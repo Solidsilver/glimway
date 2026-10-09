@@ -86,6 +86,53 @@ type wearResult struct {
 	MakerID   string        `json:"makerId,omitempty"`
 }
 
+// checkTool runs a tool use's checks without the wear — useTool's own
+// checks, shared with the fishing rod's (design 5.4): the instance is the
+// caller's in their pack, a tool with the action asked for, and it has a
+// use left. The fittings come back for the wear that follows.
+func checkTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action string, now int64) (instanceRow, *content.ItemDef, []instanceRow, error) {
+	if err := healWardens(ctx, tx, s.AccountID, now); err != nil {
+		return instanceRow{}, nil, nil, err
+	}
+	v, err := loadInstance(ctx, tx, id)
+	if err != nil {
+		return v, nil, nil, err
+	}
+	def, _ := content.ItemFor(v.Def)
+	if v.Location != "pack" || v.Owner != s.AccountID {
+		return v, def, nil, fail(404, "item-not-found")
+	}
+	if def.GetKind() != "tool" {
+		return v, def, nil, fail(409, "not-a-tool")
+	}
+	if action != "" && !slices.Contains(def.Actions, action) {
+		return v, def, nil, fail(409, "wrong-tool")
+	}
+	if action == "draw" {
+		// The well stands where the repairs data puts it (shared content).
+		well, ok := content.RepairFor("well-rope")
+		if !ok || !nearTile(s, well.Area, int(well.GetPos().GetTx()), int(well.GetPos().GetTy()), 4) {
+			return v, def, nil, fail(409, "too-far-away")
+		}
+		var mendedAt sql.NullInt64
+		err = tx.QueryRowContext(ctx, "SELECT mended_at FROM village_repairs WHERE world_id=? AND repair_id='well-rope'", s.WorldID).Scan(&mendedAt)
+		if err == sql.ErrNoRows || !mendedAt.Valid {
+			return v, def, nil, fail(409, "well-rope-broken")
+		}
+		if err != nil {
+			return v, def, nil, err
+		}
+	}
+	fittings, err := fittingRows(ctx, tx, v.ID)
+	if err != nil {
+		return v, def, nil, err
+	}
+	if v.Max > 0 && v.Condition == 0 && !hasFitting(fittings, "remember") {
+		return v, def, nil, fail(409, "tool-blunt")
+	}
+	return v, def, fittings, nil
+}
+
 // useTool spends one use of a tool in the caller's pack. The use that
 // reaches zero still happens; then a cheap tool breaks (its fittings drop
 // into the pack) and an heirloom is blunt (or cracked) until mended. A
@@ -93,50 +140,15 @@ type wearResult struct {
 // away worn out; a warden-stone sliver never wears.
 func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action string, now int64) (wearResult, error) {
 	out := wearResult{WornOut: []string{}, Returned: []string{}}
-	if err := healWardens(ctx, tx, s.AccountID, now); err != nil {
-		return out, err
-	}
-	v, err := loadInstance(ctx, tx, id)
-	if err != nil {
-		return out, err
-	}
+	v, def, fittings, err := checkTool(ctx, tx, s, id, action, now)
 	out.MakerID = v.Maker
-	def, _ := content.ItemFor(v.Def)
-	if v.Location != "pack" || v.Owner != s.AccountID {
-		return out, fail(404, "item-not-found")
-	}
-	if def.GetKind() != "tool" {
-		return out, fail(409, "not-a-tool")
-	}
-	if action != "" && !slices.Contains(def.Actions, action) {
-		return out, fail(409, "wrong-tool")
-	}
-	if action == "draw" {
-		// The well stands where the repairs data puts it (shared content).
-		well, ok := content.RepairFor("well-rope")
-		if !ok || !nearTile(s, well.Area, int(well.GetPos().GetTx()), int(well.GetPos().GetTy()), 4) {
-			return out, fail(409, "too-far-away")
-		}
-		var mendedAt sql.NullInt64
-		err = tx.QueryRowContext(ctx, "SELECT mended_at FROM village_repairs WHERE world_id=? AND repair_id='well-rope'", s.WorldID).Scan(&mendedAt)
-		if err == sql.ErrNoRows || !mendedAt.Valid {
-			return out, fail(409, "well-rope-broken")
-		}
-		if err != nil {
-			return out, err
-		}
-	}
 	out.ItemDef = v.Def
-	fittings, err := fittingRows(ctx, tx, v.ID)
 	if err != nil {
 		return out, err
 	}
 	warden := hasFitting(fittings, "remember")
 	conditionBeforeUse := v.Condition
 	if v.Max > 0 {
-		if v.Condition == 0 && !warden {
-			return out, fail(409, "tool-blunt")
-		}
 		if warden {
 			v.Condition = wardenWear(v.Max, v.Condition, fittings)
 		} else {

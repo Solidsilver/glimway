@@ -47,6 +47,11 @@ export function wire(p: ReturnType<typeof player>): Record<string, any> {
   j.account.partyId ??= null;
   for (const k of ['class', 'selectedPet', 'selectedMount', 'partyId']) j.profile[k] ??= null;
   for (const k of ['companions', 'magic', 'fishing']) j[k] ??= null;
+  // The wire spells an unset *nested* message as null too (Go's
+  // EmitUnpopulated); toJson leaves the field out and the strict decoder
+  // refuses that. Lane D's fishing (and lane C's magic) carry one.
+  if (j.fishing && typeof j.fishing === 'object') j.fishing.cast ??= null;
+  if (j.magic && typeof j.magic === 'object') j.magic.classMark ??= null;
   return j;
 }
 

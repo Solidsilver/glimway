@@ -1013,7 +1013,10 @@
         },
         "companions": null,
         "magic": null,
-        "fishing": null
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        }
       },
       "wildsClaim": {
         "epoch": "epoch",
@@ -1156,7 +1159,10 @@
         },
         "companions": null,
         "magic": null,
-        "fishing": null
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        }
       },
       "fall": {
         "vitals": {
@@ -1289,7 +1295,10 @@
         },
         "companions": null,
         "magic": null,
-        "fishing": null
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        }
       },
       "fall": {
         "vitals": {
@@ -1422,7 +1431,10 @@
         },
         "companions": null,
         "magic": null,
-        "fishing": null
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        }
       },
       "fall": {
         "vitals": {
@@ -1555,7 +1567,10 @@
         },
         "companions": null,
         "magic": null,
-        "fishing": null
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        }
       },
       "fall": {
         "vitals": {
@@ -1688,7 +1703,10 @@
         },
         "companions": null,
         "magic": null,
-        "fishing": null
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        }
       },
       "fall": {
         "vitals": {
@@ -1821,7 +1839,10 @@
         },
         "companions": null,
         "magic": null,
-        "fishing": null
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        }
       },
       "wildsLantern": {
         "epoch": "epoch",
@@ -2116,7 +2137,10 @@
         },
         "companions": null,
         "magic": null,
-        "fishing": null
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        }
       },
       "questStep": {
         "quest": "set-to-rise",
@@ -2244,7 +2268,10 @@
         },
         "companions": null,
         "magic": null,
-        "fishing": null
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        }
       },
       "report": {
         "seq": 1,
@@ -2363,7 +2390,10 @@
         },
         "companions": null,
         "magic": null,
-        "fishing": null
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        }
       },
       "questStep": {
         "quest": "lantern-road",
@@ -4393,7 +4423,10 @@
         },
         "companions": null,
         "magic": null,
-        "fishing": null
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        }
       },
       "lease": "lease",
       "reportGeneration": "generation",
@@ -4656,7 +4689,10 @@
       },
       "companions": null,
       "magic": null,
-      "fishing": null
+      "fishing": {
+        "cast": null,
+        "nextCastAt": 0
+      }
     }
   },
   {
@@ -5214,7 +5250,10 @@
         },
         "companions": null,
         "magic": null,
-        "fishing": null
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        }
       }
     }
   },
@@ -5912,7 +5951,10 @@
         },
         "companions": null,
         "magic": null,
-        "fishing": null
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        }
       },
       "leaseActive": true
     }
@@ -7550,7 +7592,10 @@
         },
         "companions": null,
         "magic": null,
-        "fishing": null
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        }
       },
       "result": {
         "gateCount": 2,
@@ -7690,7 +7735,10 @@
         },
         "companions": null,
         "magic": null,
-        "fishing": null
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        }
       },
       "result": {
         "items": {
@@ -7818,7 +7866,10 @@
         },
         "companions": null,
         "magic": null,
-        "fishing": null
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        }
       },
       "result": {
         "inventory": {
@@ -7936,7 +7987,10 @@
         },
         "companions": null,
         "magic": null,
-        "fishing": null
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        }
       },
       "result": {
         "grantablePapers": [],
@@ -8178,7 +8232,10 @@
         },
         "companions": null,
         "magic": null,
-        "fishing": null
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        }
       },
       "result": {
         "home": null,
@@ -8302,7 +8359,10 @@
         },
         "companions": null,
         "magic": null,
-        "fishing": null
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        }
       },
       "result": {
         "home": null,
@@ -8414,7 +8474,10 @@
         },
         "companions": null,
         "magic": null,
-        "fishing": null
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        }
       },
       "result": {
         "items": {

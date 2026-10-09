@@ -17,7 +17,7 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	// Log fixed route labels only. No bodies, headers, raw paths or query strings.
 	route := "unknown"
-	if slices.Contains([]string{"/api/health", "/ws", "/api/report", "/api/quest/step", "/api/story/mark", "/api/papers/take", "/api/fall", "/api/profile", "/api/wilds/echo", "/api/session", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons", "/api/calendar", "/api/storage", "/api/craft", "/api/hearth/craft", "/api/desk/copy", "/api/homestead/woodpile", "/api/mail", "/api/projects", "/api/library", "/api/library/donate", "/api/items", "/api/world", "/api/world/party", "/api/world/prompt", "/api/world/move", "/api/world/leave", "/api/world/notice", "/api/world/choice", "/api/world/choose"}, r.URL.Path) {
+	if slices.Contains([]string{"/api/health", "/ws", "/api/report", "/api/quest/step", "/api/story/mark", "/api/papers/take", "/api/fall", "/api/profile", "/api/wilds/echo", "/api/session", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons", "/api/calendar", "/api/storage", "/api/craft", "/api/hearth/craft", "/api/desk/copy", "/api/homestead/woodpile", "/api/mail", "/api/projects", "/api/library", "/api/library/donate", "/api/items", "/api/world", "/api/world/party", "/api/world/prompt", "/api/world/move", "/api/world/leave", "/api/world/notice", "/api/world/choice", "/api/world/choose", "/api/fishing/cast", "/api/fishing/settle", "/api/fishing/cancel", "/api/fishing/waters"}, r.URL.Path) {
 		route = r.URL.Path
 	}
 	observed := &statusWriter{ResponseWriter: w, status: 200}
@@ -183,6 +183,14 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = a.itemsMutation(w, r)
 	case "GET /api/repairs":
 		err = a.repairsRead(w, r)
+	case "POST /api/fishing/cast":
+		err = a.fishCast(w, r)
+	case "POST /api/fishing/settle":
+		err = a.fishSettle(w, r)
+	case "POST /api/fishing/cancel":
+		err = a.fishCancel(w, r)
+	case "GET /api/fishing/waters":
+		err = a.fishingWaters(w, r)
 	default:
 		if r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/api/mail/") {
 			if strings.HasSuffix(r.URL.Path, "/recall") {
