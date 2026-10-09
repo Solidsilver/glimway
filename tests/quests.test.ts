@@ -514,3 +514,17 @@ test('A Line in the Race: Finn’s rod, a roach from the race, Hazel’s card, o
   assert.equal(shelves[2].title, 'Crafts');
   assert.equal(shelves[2].open[0].goal, 'Catch a roach from the mill race');
 });
+
+test('who Mara speaks for: the road keeps its own rules, so the new order never moves her quest talk', () => {
+  const connected = { needs: { habitica: true } };
+  // The lantern road's talks are dialogue rules (src/content/world.ts), not step talks: they
+  // never reach triggerTalk. Mara's quest talk is Your Own Day's, road started or not.
+  assert.equal(questTalk('mara', talkCtx(DONE_OPENING, {}, connected))!.key, 'quest:your-own-day:hear-mara');
+  const roadOn = { ...DONE_OPENING, 'lantern-road': 'accepted' };
+  assert.equal(questTalk('mara', talkCtx(roadOn, {}, connected))!.key, 'quest:your-own-day:hear-mara');
+  const shown = { ...DONE_OPENING, 'your-own-day': 'do-something' };
+  assert.equal(questTalk('mara', talkCtx(shown, {}, connected))!.key, 'quest:your-own-day:show-mara');
+  assert.equal(questTalk('mara', talkCtx({ ...shown, 'lantern-road': 'lantern-lit' }, {}, connected))!.key, 'quest:your-own-day:show-mara');
+  // Without Habitica, Mara has no quest talk at all: the road speaks through its rules.
+  assert.equal(questTalk('mara', talkCtx(DONE_OPENING)), null);
+});

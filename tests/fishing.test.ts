@@ -2,6 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  bandFrom,
   bandLine,
   bankFor,
   bankNear,
@@ -16,10 +17,13 @@ import {
   nextCastAt,
   predictedCast,
   rodPose,
+  settleEnds,
+  slippedOff,
   STILL_LINE,
   waterFor,
 } from '../src/lib/fishing.ts';
 import { calendarAt, CALENDAR } from '../src/lib/clock.ts';
+import { ITEM_ERRORS } from '../src/content/errors.ts';
 
 const POND = 'water:village:mill-pond';
 const mid = (t: number) => t * 16 + 8;
@@ -109,4 +113,31 @@ test('the rod is held out toward the float, a little above its line, and mirrore
   assert.ok(Math.atan2(down.tip.y - hand.y, down.tip.x - hand.x) <= 1.1 + 1e-9);
   // The tip is the rod's length from the grip, whatever the angle.
   for (const p of [right, left, down]) assert.ok(Math.abs(Math.hypot(p.tip.x - hand.x, p.tip.y - hand.y) - Math.hypot(115, 53) / 4) < 1e-9);
+});
+
+test('an empty water reads as still, however the server spells it', () => {
+  assert.equal(bandFrom(''), 'still');
+  assert.equal(bandFrom('still'), 'still');
+  assert.equal(bandFrom('low'), 'low');
+  assert.equal(bandLine(bandFrom('')), STILL_LINE);
+});
+
+test('a fish slips off after the hold, whether it’s on the line or reeled onto the bank', () => {
+  const cast = { readyAt: 1010, holdUntil: 1610 };
+  assert.equal(slippedOff(null, null, 5000), false, 'nothing out');
+  assert.equal(slippedOff(cast, null, 1609), false);
+  assert.equal(slippedOff(cast, null, 1610), true);
+  // Reeled in but not yet kept: the server refuses a settle after hold_until, so it goes then too.
+  assert.equal(slippedOff(null, cast, 1609), false);
+  assert.equal(slippedOff(null, cast, 1610), true);
+});
+
+test('only a definitive settle refusal takes the fish off the bank; a transient one keeps it there', () => {
+  for (const code of ['no-cast', 'not-yet', 'wrong-tool']) assert.equal(settleEnds(code), true, code);
+  for (const code of ['busy', 'pending', 'offline', 'unknown', 'superseded', 'bad-response']) assert.equal(settleEnds(code), false, code);
+});
+
+test('a lost answer is said as the rest of the game says it: it may have gone through', () => {
+  assert.equal(fishingRefusal('pending'), ITEM_ERRORS.pending);
+  assert.equal(fishingRefusal('resolved'), ITEM_ERRORS.resolved);
 });

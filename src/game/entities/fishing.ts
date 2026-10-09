@@ -23,6 +23,7 @@
 import Phaser from 'phaser'
 import { calendarAt } from '../../lib/calendar'
 import {
+  bandFrom,
   bandLine,
   bankDistance,
   bankFor,
@@ -37,6 +38,8 @@ import {
   predictedCast,
   ROD_ART,
   rodPose,
+  settleEnds,
+  slippedOff,
   waterFor,
   watersForArea,
   type FishBank,
@@ -136,6 +139,7 @@ export class Fishing {
     bus.on(EV.link, onState)
     scene.events.once('shutdown', () => {
       bus.off(EV.link, onState)
+      this.leaving()
       this.clearDrawing()
       hideContextButtons('fish-')
       posing = false
@@ -169,7 +173,8 @@ export class Fishing {
             markerOffset: 18,
             label: () => this.bankLabel(water),
             verb: FISHING_VERBS.cast,
-            available: () => !this.busy && !this.line && !this.landed && heldNow().kind === 'fish' && bankOpen(bank, this.mark()) && this.live(),
+            // The point's marker sits under the tile; the offer follows the server's measure (where to the tile's middle).
+            available: () => !this.busy && !this.line && !this.landed && heldNow().kind === 'fish' && bankOpen(bank, this.mark()) && this.live() && this.heroWithin(bank, castReachPx()),
             activate: () => void this.cast(water, bank)
           })
           // While a line is out from this bank: pull it in, or reel once the float dips.
@@ -183,7 +188,7 @@ export class Fishing {
             markerOffset: 18,
             label: () => (this.landed ? this.landedLabel() : this.phase() === 'ready' ? ON_THE_LINE : 'Pull the line in'),
             verb: () => (this.landed ? FISHING_VERBS.keep : this.phase() === 'ready' ? FISHING_VERBS.reel : FISHING_VERBS.pull),
-            available: () => !this.busy && this.lineFrom(water, bank),
+            available: () => !this.busy && this.lineFrom(water, bank) && this.heroWithin(bank, leaveReachPx()),
             activate: () => {
               if (this.landed) void this.settle(true)
               else if (this.phase() === 'ready') this.reel()
@@ -194,6 +199,12 @@ export class Fishing {
       }
     }
     this.deps.interactables.register(this, points)
+  }
+
+  /** The hero's feet within `px` of the bank, measured as the server measures `where` (to a bank tile's middle). */
+  private heroWithin(bank: FishBank, px: number): boolean {
+    const hero = this.deps.hero().sprite
+    return bankDistance(bank, hero.x, hero.y) <= px
   }
 
   private lineFrom(water: FishWater, bank: FishBank): boolean {
@@ -223,7 +234,7 @@ export class Fishing {
     if (!link) return
     const r = await link.readWaters(this.deps.world.areaId)
     if (!r.ok) return
-    for (const w of r.value) this.bands.set(w.id, w.band)
+    for (const w of r.value) this.bands.set(w.id, bandFrom(w.band))
     this.deps.interactables.invalidatePrompt()
   }
 
@@ -274,7 +285,7 @@ export class Fishing {
     this.busy = true
     this.deps.notePosition()
     // Predicted at once (5.5): the band the bank last read, its wait from now.
-    const band = this.bands.get(water.id) || 'healthy'
+    const band = this.bands.get(water.id) ?? 'healthy'
     const guess = predictedCast(band, serverNow())
     this.line = { id: '', water: water.id, bank: bank.id, species: water.species[0]?.item ?? '', ...guess, band, predicted: true }
     this.bitten = false
@@ -294,7 +305,7 @@ export class Fishing {
         return
       }
       const c = r.result.cast!
-      this.bands.set(water.id, r.result.band || c.band)
+      this.bands.set(water.id, bandFrom(r.result.band || c.band))
       if (!live) return
       live.last = 'cast'
       live.line = { id: c.id, water: c.water, bank: c.bank, species: c.species, readyAt: c.readyAt, holdUntil: c.holdUntil, band: c.band, predicted: false }
@@ -316,7 +327,7 @@ export class Fishing {
     this.busy = true
     try {
       const r = await link.fishCancel(line.id)
-      if (r.ok) this.bands.set(line.water, r.result.band)
+      if (r.ok) this.bands.set(line.water, bandFrom(r.result.band))
       // Already closed (it lapsed, or another device settled it): nothing to take back.
       else if (r.code !== 'no-cast') bus.emit(EV.toast, { text: fishingRefusal(r.code), kind: 'error' })
     } finally {
@@ -337,10 +348,15 @@ export class Fishing {
     this.clearFloat()
     if (at) this.landing(at, line.species)
     this.drawRod('raised')
+    this.showButtons(line)
+    this.deps.interactables.invalidatePrompt()
+  }
+
+  /** Keep and Let it go, the two big buttons over the action corner (lane F's context row). */
+  private showButtons(line: Line): void {
     const name = itemDef(line.species)?.name ?? 'the fish'
     showContextButton({ id: 'fish-keep', label: FISHING_VERBS.keep, art: line.species, icon: 'bag', size: 'big', order: 1, key: 'E', ariaLabel: `Keep ${name}`, press: () => void this.settle(true) })
     showContextButton({ id: 'fish-release', label: FISHING_VERBS.release, icon: 'heart', size: 'big', order: 2, ariaLabel: `Let ${name} go`, press: () => void this.settle(false) })
-    this.deps.interactables.invalidatePrompt()
   }
 
   /** Keep it (into the pack, the rod wears by one) or let it go (back in the pond, nothing paid). */
@@ -357,14 +373,20 @@ export class Fishing {
     const at = this.deps.hero().sprite
     try {
       const r = await link.fishSettle({ cast: line.id, keep })
-      this.landed = null
-      this.clearDrawing()
+      const live = Fishing.live === this
       if (!r.ok) {
         this.last = `refused:${r.code}`
         bus.emit(EV.toast, { text: fishingRefusal(r.code), kind: 'error' })
+        if (settleEnds(r.code)) {
+          // The cast is over (or the world says it isn't there yet): the fish goes from the bank.
+          this.landed = null
+          this.clearDrawing()
+        } else if (live && this.landed === line) this.showButtons(line) // busy, pending…: still on the bank, press again
         return
       }
-      this.bands.set(line.water, r.result.band)
+      this.landed = null
+      this.clearDrawing()
+      this.bands.set(line.water, bandFrom(r.result.band))
       if (r.result.kept) {
         this.last = 'kept'
         const def = r.result.item || line.species
@@ -381,6 +403,20 @@ export class Fishing {
       this.busy = false
       this.deps.interactables.invalidatePrompt()
     }
+  }
+
+  /**
+   * The area goes (a warp, a fall, the turning, a door) with a line out: take
+   * it in, or let a landed fish go, so the account's one open cast and its
+   * reserved fish don't wait for the lazy lapse. Fire and forget: the answer
+   * comes to an area that's gone, and the lapse is the fallback if it's lost.
+   */
+  private leaving(): void {
+    const link = this.deps.session.link
+    // An answer already on its way (a walk-away settle, a pull-in) closes it itself.
+    if (!link || this.busy) return
+    if (this.landed?.id) void link.fishSettle({ cast: this.landed.id, keep: false })
+    else if (this.line && !this.line.predicted && this.line.id) void link.fishCancel(this.line.id)
   }
 
   /** The line comes in on this screen (the drawing and the buttons go). */
@@ -413,17 +449,18 @@ export class Fishing {
       } else void this.pullIn('left')
       return
     }
-    if (!this.line) {
-      this.drawRod('raised')
-      return
-    }
-    const phase = this.phase()
-    if (phase === 'lapsed') {
+    // Past the hold, a fish on the line or on the bank slips back to the water (the server refuses a settle then).
+    if (!this.busy && slippedOff(this.line, this.landed, serverNow())) {
       this.dropLine()
       this.last = 'lapsed'
       bus.emit(EV.toast, { text: 'It slipped off the hook and went back to the water.', icon: 'sparkle', kind: 'thought' })
       return
     }
+    if (!this.line) {
+      this.drawRod('raised')
+      return
+    }
+    const phase = this.phase()
     if (phase === 'ready' && !this.bitten && !this.line.predicted) {
       this.bitten = true
       sfx('fish-bite')

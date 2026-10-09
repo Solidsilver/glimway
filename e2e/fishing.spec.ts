@@ -124,6 +124,52 @@ test.describe('fishing at the mill pond', () => {
     await expect.poll(async () => (await fishing(page))?.line ?? null).toBeNull()
   })
 
+  test('a fish reeled in and left past the hold slips back: no buttons, nothing kept', async ({ page }) => {
+    test.setTimeout(150_000)
+    const id = await freshPlayer(page, 'Dace')
+    test.skip(!(await fishingServed(page)), 'needs lane D’s fishing routes')
+    await seasonOf(page, 'Carting')
+    giveInstance(id, 'willow-rod', { max: ROD_MAX })
+    await warp(page, 'village', 36, 18)
+    await holdRod(page)
+    await castAndWait(page)
+    await waitForLive(page)
+    await page.keyboard.press('e') // Reel
+    await expect.poll(async () => (await fishing(page))?.landed).toBe('mill-roach')
+    await expect(page.getByRole('button', { name: /Keep/ })).toBeVisible()
+    // Eleven minutes on (the hold is ten), on both clocks.
+    const later = (await moveServerClock(page, 0)) + 11 * 60
+    await moveServerClock(page, later)
+    await page.evaluate((x) => (window as unknown as { __fsDevCalendar: (t: number) => void }).__fsDevCalendar(x), later)
+    await expect.poll(async () => (await fishing(page))?.last).toBe('lapsed')
+    expect((await fishing(page))!.landed).toBeNull()
+    await expect(page.getByRole('button', { name: /Keep/ })).toBeHidden()
+    await expectToast(page, /slipped off the hook/)
+    await reloadPack(page)
+    expect(await stack(page, 'mill-roach')).toBe(0)
+  })
+
+  test('casting again within eight seconds of the last start is refused in words, and the line comes back in', async ({ page }) => {
+    test.setTimeout(120_000)
+    const id = await freshPlayer(page, 'Chub')
+    test.skip(!(await fishingServed(page)), 'needs lane D’s fishing routes')
+    await seasonOf(page, 'Carting')
+    giveInstance(id, 'willow-rod', { max: ROD_MAX })
+    await warp(page, 'village', 37, 18)
+    await holdRod(page)
+    await waitForLive(page)
+    await page.keyboard.press('e') // Cast
+    await expect.poll(async () => (await fishing(page))?.line?.predicted).toBe(false)
+    await waitForLive(page)
+    await page.keyboard.press('e') // Pull in (cancelling doesn't reset the spacing)
+    await expect.poll(async () => (await fishing(page))?.line ?? null).toBeNull()
+    await waitForLive(page)
+    await page.keyboard.press('e') // Cast again at once
+    await expectToast(page, /Give the water a moment/)
+    await expect.poll(async () => (await fishing(page))?.last).toBe('refused:cast-too-soon')
+    expect((await fishing(page))!.line).toBeNull()
+  })
+
   test('in the Quiet the pond is iced; the race above the wheel stays open', async ({ page }) => {
     test.setTimeout(240_000)
     const id = await freshPlayer(page, 'Tarn')

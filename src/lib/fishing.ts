@@ -186,6 +186,14 @@ export function bandById(id: string, data: FishingData = FISHING): FishBand | un
 /** The line a bank reads for a band (the "still" band has no row: the water's empty). */
 export const STILL_LINE = 'Nothing moving at all. The water needs a rest.';
 
+/**
+ * A band as the server sent it, for keeping: an empty water may come as ''
+ * or as 'still' (the "still" band has no row), and both mean still.
+ */
+export function bandFrom(band: string): string {
+  return band === '' ? 'still' : band;
+}
+
 export function bandLine(id: string | null | undefined, data: FishingData = FISHING): string | null {
   if (!id) return null;
   if (id === 'still') return STILL_LINE;
@@ -218,6 +226,27 @@ export function predictedCast(bandId: string, now: number, data: FishingData = F
   return { readyAt: now + wait, holdUntil: now + wait + data.holdSeconds };
 }
 
+/**
+ * Whether what's on the line has gone back to the water: a line out, or a
+ * fish reeled in but not yet kept or let go (5.3: the fish waits
+ * `holdSeconds` after the bite, then slips off). The server refuses a
+ * settle after `hold_until`, so the client lets go at the same moment.
+ */
+export function slippedOff(line: CastTimes | null, landed: CastTimes | null, now: number): boolean {
+  const held = landed ?? line;
+  return !!held && castPhase(held, now) === 'lapsed';
+}
+
+/**
+ * A settle refusal that ends the landing: the cast is gone (`no-cast`), or the
+ * world says the fish isn't on yet (`not-yet`) or the rod has left the pack
+ * (`wrong-tool`). Anything else (`busy`, `pending`, `offline`, …) leaves the
+ * fish on the bank and the buttons up, to press again.
+ */
+export function settleEnds(code: string): boolean {
+  return code === 'no-cast' || code === 'not-yet' || code === 'wrong-tool';
+}
+
 /** When the next cast may start (5.3: spacing from the last start; cancelling doesn't reset it). */
 export function nextCastAt(lastStart: number | null, data: FishingData = FISHING): number {
   return lastStart === null ? 0 : lastStart + data.castSpacingSeconds;
@@ -245,6 +274,9 @@ const REFUSALS: Readonly<Record<string, string>> = {
   offline: 'Needs a connection: the pond is shared.',
   busy: 'Hold on — the last one is still on its way.',
   superseded: 'Another device took over this journey.',
+  // A lost answer, replayed under the same key: the words src/content/errors.ts's REPLAYED uses.
+  resolved: 'Your last request went through after all. Check what you have before trying again.',
+  pending: 'No answer yet — it may have gone through. We’ll find out when the connection is back; nothing will be taken twice.',
 };
 
 export const FISHING_FALLBACK = 'The line tangled. Nothing changed — try again in a moment.';
