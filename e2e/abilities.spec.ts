@@ -29,7 +29,8 @@ test('a hero without a class fights with what’s in hand: no ✦, the finger-wi
   const before = await mana()
   await page.keyboard.press('f')
   await frames(page, 10)
-  expect(await mana()).toBe(before)
+  // (Mana may regenerate meanwhile; it never goes down.)
+  expect(await mana()).toBeGreaterThanOrEqual(before)
   expect((await moves(page)).castCooldown).toBe(0)
 
   // The opening's finger-wisp (4 HP, tile 6,17): face it and swing.

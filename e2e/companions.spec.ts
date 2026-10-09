@@ -269,7 +269,7 @@ test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, an
   await waitForLive(page)
   await page.keyboard.press('m')
   await expect.poll(async () => (await debug(page)).riding).toBe(true)
-  expect((await debug(page)).led).toBeNull()
+  await expect.poll(async () => (await debug(page)).led).toBeNull()
 
   // Build a stall: the stable grows east.
   await waitForLive(page)
