@@ -143,7 +143,7 @@ func TestAPIAnswersFollowMovableClock(t *testing.T) {
 		t.Helper()
 		r := httptest.NewRequest(http.MethodGet, path, nil)
 		r.RemoteAddr = "127.0.0.1:5000"
-		r.Header.Set("X-Glimway-Contract", "4")
+		r.Header.Set("X-Glimway-Contract", "5")
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, r)
 		if w.Code != status || w.Header().Get("X-Glimway-Now") != strconv.FormatInt(want, 10) {
