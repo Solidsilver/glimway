@@ -40,7 +40,7 @@
  * No Phaser here: events go out through the injected `emit`, so this runs
  * in tests.
  */
-import { create, equals, fromJson, toJson, type DescMessage, type JsonValue } from '@bufbuild/protobuf'
+import { create, equals, fromJson, toJson, type DescMessage, type JsonValue, type MessageShape } from '@bufbuild/protobuf'
 import { CONTRACT_NUMBER } from '../lib/contract.ts';
 import type { ApiClient, Envelope, RawApi } from '../lib/api/client.ts'
 import { newKey } from '../lib/api/client.ts'
@@ -50,8 +50,13 @@ import { browserLocks, emptyRecord, expired, holdLock, lockName, outboxStore, ty
 import { adoptable, fallRecovery, gameStateOf, isClientMark, predictedView, profileOf, whereOf, type Prediction, type WhereJson } from '../lib/api/predict.ts'
 import { REPORT_INTERVAL_MS, ReportBook, type CapturedReport, type ReportAck } from '../lib/api/reports.ts'
 import type { HomeAction, HomeActionResponse, HomeOp, HomeView, ItemsOp, CommonsResponse, Snapshot, WildsDefeatResult, WildsRegionResponse } from '../lib/api/types.ts'
+import { contributeRequest, deskCopyRequest, hearthCraftRequest, homesteadRequest, itemsRequest, mailKeyedRequest, mailSendRequest, shelfRequest, storageRequest, craftRequest, type ItemsFields, type MailSendAction, type ShelfAction, type StorageMoveAction } from '../lib/api/requests.ts'
 import { EnvelopeSchema, PlayerStateSchema, PlayRequestSchema, type PlayerState } from '../lib/gen/glimway/v1/state_pb.js'
 import { FallRequestSchema, MarkRequestSchema, ProfileReportSchema, QuestStepRequestSchema, ReportRequestSchema, SettleEchoRequestSchema, SpendRequestSchema, TakePaperRequestSchema, WildsClaimRequestSchema, WildsLanternRequestSchema, type ProfileResult, type SettleEchoResult, type WildsClaimResult as WildsClaimProto, type WildsLanternResult as WildsLanternProto } from '../lib/gen/glimway/v1/operations_pb.js'
+import { ContributeRequestSchema, CraftRequestSchema, DeskCopyRequestSchema, HearthCraftRequestSchema, MailKeyedRequestSchema, MailSendRequestSchema, StorageMoveRequestSchema } from '../lib/gen/glimway/v1/village_pb.js'
+import { HomesteadRequestSchema, ShelfRequestSchema } from '../lib/gen/glimway/v1/homestead_pb.js'
+import { ItemsRequestSchema } from '../lib/gen/glimway/v1/items_pb.js'
+import type { Keyed } from '../lib/api/requests.ts'
 import { HabiticaUserSchema } from '../lib/gen/glimway/v1/profile_pb.js'
 import { rawUserFor } from '../lib/habitica/client.ts'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types.ts'
@@ -82,20 +87,24 @@ export type HomeActionResult =
   | { ok: false; code: ApiErrorCode | 'offline' | 'superseded' | 'busy' | 'pending' | 'resolved' }
 
 /** A keyed domain POST, described as data so the outbox can replay it. */
+/** A homestead action without its op name (the URL path carries it). */
+type HomeActionFields = HomeAction extends infer A ? (A extends A ? Omit<A, 'op'> : never) : never
+
+/** The keyed domain mutations: the game action (its own fields, typed by the generated request schemas — src/lib/api/requests.ts), plus the route's own bits. */
 export type MutationOp =
-  | { kind: 'home'; op: HomeOp; fields: Record<string, unknown> }
-  | { kind: 'storage'; fields: Record<string, unknown> }
-  | { kind: 'craft'; fields: Record<string, unknown> }
-  | { kind: 'hearth'; fields: Record<string, unknown> }
-  | { kind: 'desk'; fields: Record<string, unknown> }
+  | { kind: 'home'; op: HomeOp; fields: HomeActionFields }
+  | { kind: 'storage'; fields: StorageMoveAction }
+  | { kind: 'craft'; fields: { recipeId: string; qty: number } }
+  | { kind: 'hearth'; fields: { recipeId: string; qty: number } }
+  | { kind: 'desk'; fields: { pageId: string; qty: number } }
   | { kind: 'woodpile'; fields: Record<string, unknown> }
-  | { kind: 'shelf'; fields: Record<string, unknown> }
-  | { kind: 'mail-send'; fields: Record<string, unknown> }
-  | { kind: 'mail-claim'; id: string; fields?: Record<string, unknown> }
-  | { kind: 'mail-recall'; id: string; fields?: Record<string, unknown> }
-  | { kind: 'contribute'; id: string; fields: Record<string, unknown> }
-  | { kind: 'items'; op: ItemsOp; fields: Record<string, unknown> }
-  | { kind: 'mend'; id: string; fields?: Record<string, unknown> }
+  | { kind: 'shelf'; fields: ShelfAction }
+  | { kind: 'mail-send'; fields: MailSendAction }
+  | { kind: 'mail-claim'; id: string }
+  | { kind: 'mail-recall'; id: string }
+  | { kind: 'contribute'; id: string; fields: { materials: Record<string, number> } }
+  | { kind: 'items'; op: ItemsOp; fields: ItemsFields }
+  | { kind: 'mend'; id: string }
   | { kind: 'world-move'; fields: { worldId: string } }
   | { kind: 'world-leave'; fields: Record<string, never> }
   | { kind: 'donate'; fields: { paperId: string } }
@@ -141,31 +150,34 @@ function routeFromPath(path: string): MutationRoute | null {
 export function dispatchMutation(raw: RawApi, route: MutationRoute, body: Record<string, unknown>): Promise<Snapshot> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const req = body as Envelope & any
+  // The schema-built requests go back through their generated messages (a
+  // frozen body is read into the message; the raw transport serializes it).
+  const as = <D extends DescMessage>(schema: D) => readRequest(body, schema)
   switch (route.kind) {
     case 'home':
-      return raw.homeAction(route.op as HomeOp, req)
+      return raw.homeAction(route.op as HomeOp, as(HomesteadRequestSchema))
     case 'storage':
-      return raw.storageMove(req)
+      return raw.storageMove(as(StorageMoveRequestSchema))
     case 'craft':
-      return raw.craft(req)
+      return raw.craft(as(CraftRequestSchema))
     case 'hearth':
-      return raw.hearthCraft(req)
+      return raw.hearthCraft(as(HearthCraftRequestSchema))
     case 'desk':
-      return raw.deskCopy(req)
+      return raw.deskCopy(as(DeskCopyRequestSchema))
     case 'woodpile':
       return raw.woodpileAction(req)
     case 'shelf':
-      return raw.shelfAction(req)
+      return raw.shelfAction(as(ShelfRequestSchema))
     case 'mail-send':
-      return raw.mailSend(req)
+      return raw.mailSend(as(MailSendRequestSchema))
     case 'mail-claim':
-      return raw.mailClaim(route.id ?? '', req)
+      return raw.mailClaim(route.id ?? '', as(MailKeyedRequestSchema))
     case 'mail-recall':
-      return raw.mailRecall(route.id ?? '', req)
+      return raw.mailRecall(route.id ?? '', as(MailKeyedRequestSchema))
     case 'contribute':
-      return raw.contribute(route.id ?? '', req)
+      return raw.contribute(route.id ?? '', as(ContributeRequestSchema))
     case 'items':
-      return raw.itemAction(route.op as ItemsOp, req)
+      return raw.itemAction(route.op as ItemsOp, as(ItemsRequestSchema))
     case 'mend':
       return raw.repairMend(route.id ?? '', req)
     case 'world-move':
@@ -174,6 +186,45 @@ export function dispatchMutation(raw: RawApi, route: MutationRoute, body: Record
       return raw.worldLeave(req)
     case 'donate':
       return raw.libraryDonate(req)
+  }
+}
+
+/** A frozen wire body read back into its generated request. */
+function readRequest<D extends DescMessage>(body: Record<string, unknown>, schema: D): MessageShape<D> {
+  return fromJson(schema, body as JsonValue) as MessageShape<D>
+}
+
+/** The keyed request's wire body: its game action through its generated request schema (src/lib/api/requests.ts). */
+function mutationBody(op: MutationOp, keyed: Keyed): Record<string, unknown> {
+  switch (op.kind) {
+    case 'home':
+      return homesteadRequest(keyed, { ...op.fields, op: op.op } as HomeAction)
+    case 'storage':
+      return storageRequest(keyed, op.fields)
+    case 'craft':
+      return craftRequest(keyed, op.fields.recipeId, op.fields.qty)
+    case 'hearth':
+      return hearthCraftRequest(keyed, op.fields.recipeId, op.fields.qty)
+    case 'desk':
+      return deskCopyRequest(keyed, op.fields.pageId, op.fields.qty)
+    case 'woodpile':
+      return { ...op.fields, op: { lease: keyed.lease, key: keyed.key }, where: keyed.where }
+    case 'shelf':
+      return shelfRequest(keyed, op.fields)
+    case 'mail-send':
+      return mailSendRequest(keyed, op.fields)
+    case 'mail-claim':
+    case 'mail-recall':
+      return mailKeyedRequest(keyed)
+    case 'contribute':
+      return contributeRequest(keyed, op.fields.materials)
+    case 'items':
+      return itemsRequest(keyed, op.fields)
+    case 'mend':
+    case 'world-move':
+    case 'world-leave':
+    case 'donate':
+      return { ...(op as { fields?: Record<string, unknown> }).fields, op: { lease: keyed.lease, key: keyed.key }, where: keyed.where }
   }
 }
 
@@ -1577,13 +1628,7 @@ export class Link {
     const s = this.session
     if (!s || this.stopped) return { ok: false, code: 'unknown' }
     const key = newKey()
-    const fields = { ...(op.fields ?? {}) }
-    // The domain's own `op` field moves aside for the operation header.
-    if (op.kind === 'shelf' && 'op' in fields) {
-      fields.action = fields.op
-      delete fields.op
-    }
-    const body: Record<string, unknown> = { ...fields, op: { lease: '', key }, where: whereOf(s.state) }
+    const body = mutationBody(op, { lease: '', key, where: whereOf(s.state) })
     const route = routeOf(op)
     const path = ROUTE_PATHS[op.kind](route)
     const earlier = this.pendingOperation

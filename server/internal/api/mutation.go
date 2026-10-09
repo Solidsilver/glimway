@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/itemmove"
 	"glimway/server/internal/store"
 	"net/http"
@@ -53,11 +52,6 @@ func (a *Server) finish(w http.ResponseWriter, r *http.Request, tx *sql.Tx, v an
 	}
 	write(w, 200, v)
 	return nil
-}
-
-type Mutation struct {
-	Op    *contract.OpHeader `json:"op"`
-	Where *contract.Where    `json:"where"`
 }
 
 func currency(ctx context.Context, tx *sql.Tx, id, currency string, delta int, reason, ref string, now int64) error {

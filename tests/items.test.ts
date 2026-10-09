@@ -229,6 +229,9 @@ const inst = (id: string, itemDef: string, extra: Partial<InstanceView> = {}): I
   wardenSet: false,
   fittings: [],
   maker: null,
+  // The wire answer emits every field: the wear wrappers null when unset.
+  dullness: null,
+  speed: null,
   ...extra,
 });
 
@@ -317,7 +320,9 @@ test('item responses parse, and malformed instances are refused', () => {
   const items = parseItems({ ...snapshot, items: v });
   assert.equal(items.items.instances.length, 4);
   assert.equal(items.items.offHand.class, 'warrior');
-  const action = parseItemsAction({ ...snapshot, result: { items: v, wear: { broke: true, state: 'broken', wornOut: [], returned: ['amber-bead'], itemDef: 'bench-axe', usesLeft: 0, condition: 0, instance: null } } });
+  // The wire answer carries every ItemsResult field (EmitUnpopulated).
+  const fields = { wear: null, used: '', pickup: '', given: null, mended: '', created: [], gathered: [], plant: null, land: null, returned: '', paper: null, heirloom: '', adaOilCount: 0, bought: null };
+  const action = parseItemsAction({ ...snapshot, result: { items: v, ...fields, wear: { broke: true, woreOut: false, state: 'broken', wornOut: [], returned: ['amber-bead'], itemDef: 'bench-axe', usesLeft: 0, condition: 0, instance: null, makerId: '' } } });
   assert.equal(action.result.wear?.broke, true);
   assert.deepEqual(action.result.wear?.returned, ['amber-bead']);
   assert.throws(() => parseItems({ ...snapshot, items: { ...v, instances: [{ ...v.instances[0], condition: 99, maxCondition: 90 }] } }));

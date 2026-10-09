@@ -185,9 +185,10 @@ message ItemDef {
 // Orrin) while you talk. The bills' items are checked in code.
 message ItemRepair {
   map<string, int32> bench = 1 [(buf.validate.field).map = {min_pairs: 1, values: {int32: {gte: 1, lte: 1000000}}}];
-  // The mender's bill may be absent (a bench-only mending); its ranges
-  // still hold when it's there. "Neither mender bill nor embers" is a code
-  // rule (item_def ... repair cost).
+  // The mender's bill may be absent — or present and empty; the two mean
+  // the same (no materials, embers pay). Its ranges still hold when entries
+  // are there. "Neither mender materials nor embers" is a code rule
+  // (item_def ... repair cost), identical in both loaders.
   map<string, int32> mender = 2 [(buf.validate.field).map.values.int32 = {gte: 1, lte: 1000000}];
   optional int32 mender_embers = 3 [(buf.validate.field).int32.gte = 0];
 }

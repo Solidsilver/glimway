@@ -43,15 +43,17 @@ func committedOperationProto(route, key, payloadJSON, hash, resultJSON string, v
 			}
 		}
 	}
-	var value json.RawMessage
-	if err := json.Unmarshal([]byte(resultJSON), &value); err != nil {
-		return nil, err
+	// The result answers with the operation's actual result alone: the
+	// stored value decoded into the protobuf Value. The type and refusal
+	// stay in their own fields; the wrapper they live in here was storage,
+	// never the result (a committed mark answers {"added":…,"mark":…}).
+	if len(stored.Value) > 0 {
+		result := &structpb.Value{}
+		if err := (protojson.UnmarshalOptions{}).Unmarshal(stored.Value, result); err != nil {
+			return nil, err
+		}
+		out.Result = result
 	}
-	result := &structpb.Value{}
-	if err := (protojson.UnmarshalOptions{}).Unmarshal([]byte(value), result); err != nil {
-		return nil, err
-	}
-	out.Result = result
 	return out, nil
 }
 

@@ -1,34 +1,432 @@
 {
   "loader": [
-    { "name": "shipped-contract", "valid": true, "edits": [] },
-    { "name": "zero-xp-per-ember", "valid": false, "rule": "int32.gte", "edits": [{ "path": ["xpPerEmber"], "value": 0 }] },
-    { "name": "negative-welcome", "valid": false, "rule": "int32.gte", "edits": [{ "path": ["welcomeEmbers"], "value": -1 }] },
-    { "name": "zero-rest", "valid": false, "rule": "int32.gte", "edits": [{ "path": ["costs", "rest"], "value": 0 }] },
-    { "name": "zero-road-lantern", "valid": false, "rule": "int32.gte", "edits": [{ "path": ["costs", "roadLantern"], "value": 0 }] },
-    { "name": "zero-chest", "valid": false, "rule": "int32.gte", "edits": [{ "path": ["costs", "chest"], "value": 0 }] },
-    { "name": "dear-home-rest", "valid": false, "rule": "economy.home_rest", "edits": [{ "path": ["costs", "homeRest"], "value": 5 }] },
-    { "name": "zero-home-rest", "valid": false, "rule": "int32.gte", "edits": [{ "path": ["costs", "homeRest"], "value": 0 }] },
-    { "name": "missing-costs", "valid": false, "rule": "required", "edits": [{ "path": ["costs"], "remove": true }] },
-    { "name": "two-road-lanterns", "valid": false, "rule": "repeated.min_items", "edits": [{ "path": ["roadLanterns"], "value": ["road-1", "road-2"] }] },
-    { "name": "four-road-lanterns", "valid": false, "rule": "repeated.max_items", "edits": [{ "path": ["roadLanterns"], "value": ["road-1", "road-2", "road-3", "road-4"] }] },
-    { "name": "no-chest-id", "valid": false, "rule": "string.min_len", "edits": [{ "path": ["chestId"], "value": "" }] },
-    { "name": "no-charm-item", "valid": false, "rule": "string.min_len", "edits": [{ "path": ["charmItem"], "value": "" }] },
-    { "name": "zero-sync-credit-cap", "valid": false, "rule": "int32.gte", "edits": [{ "path": ["syncCreditCap"], "value": 0 }] },
-    { "name": "negative-daily-growth", "valid": false, "rule": "int32.gte", "edits": [{ "path": ["syncCreditDailyGrowth"], "value": -1 }] },
-    { "name": "credit-max-below-cap", "valid": false, "rule": "economy.sync_credit", "edits": [{ "path": ["syncCreditMax"], "value": 100 }] },
-    { "name": "zero-pending-days", "valid": false, "rule": "int32.gte", "edits": [{ "path": ["pendingCreditDays"], "value": 0 }] },
-    { "name": "invites-outnumber-lifetime", "valid": false, "rule": "economy.invites", "edits": [{ "path": ["lifetimeInvites"], "value": 2 }] },
-    { "name": "zero-outstanding", "valid": false, "rule": "int32.gte", "edits": [{ "path": ["outstandingInvites"], "value": 0 }] },
-    { "name": "negative-gift-cap", "valid": false, "rule": "int32.gte", "edits": [{ "path": ["migrationGiftCap"], "value": -1 }] },
-    { "name": "negative-tolerance", "valid": false, "rule": "double.gte", "edits": [{ "path": ["checkpointToleranceXp"], "value": -1 }] },
-    { "name": "zero-claims-per-minute", "valid": false, "rule": "int32.gte", "edits": [{ "path": ["wildsLimits", "claimsPerMinute"], "value": 0 }] },
-    { "name": "zero-lanterns-created", "valid": false, "rule": "int32.gte", "edits": [{ "path": ["wildsLimits", "lanternsCreatedPerDay"], "value": 0 }] },
-    { "name": "zero-relights", "valid": false, "rule": "int32.gte", "edits": [{ "path": ["wildsLimits", "lanternRelightsPerDay"], "value": 0 }] },
-    { "name": "wrong-reward-material", "valid": false, "rule": "string.in", "edits": [{ "path": ["wildsLimits", "lanternReward", "material"], "value": "stone" }] },
-    { "name": "zero-reward-qty", "valid": false, "rule": "int32.gte", "edits": [{ "path": ["wildsLimits", "lanternReward", "qty"], "value": 0 }] },
-    { "name": "missing-wilds-limits", "valid": false, "rule": "required", "edits": [{ "path": ["wildsLimits"], "remove": true }] },
-    { "name": "null-field", "valid": false, "rule": "null content field", "edits": [{ "path": ["charmItem"], "value": null }] },
-    { "name": "unknown-key", "valid": false, "rule": "unknown key", "edits": [{ "path": ["giftCap"], "value": 30 }] },
-    { "name": "proto-name-key", "valid": false, "rule": "is the proto name", "edits": [{ "path": ["xp_per_ember"], "value": 10 }] }
+    {
+      "name": "shipped-contract",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "zero-xp-per-ember",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "xpPerEmber"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "negative-welcome",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "welcomeEmbers"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "zero-rest",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "costs",
+            "rest"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "zero-road-lantern",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "costs",
+            "roadLantern"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "zero-chest",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "costs",
+            "chest"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "dear-home-rest",
+      "valid": false,
+      "rule": "economy.home_rest",
+      "edits": [
+        {
+          "path": [
+            "costs",
+            "homeRest"
+          ],
+          "value": 5
+        }
+      ]
+    },
+    {
+      "name": "zero-home-rest",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "costs",
+            "homeRest"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "missing-costs",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "costs"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "two-road-lanterns",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "roadLanterns"
+          ],
+          "value": [
+            "road-1",
+            "road-2"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "four-road-lanterns",
+      "valid": false,
+      "rule": "repeated.max_items",
+      "edits": [
+        {
+          "path": [
+            "roadLanterns"
+          ],
+          "value": [
+            "road-1",
+            "road-2",
+            "road-3",
+            "road-4"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "no-chest-id",
+      "valid": false,
+      "rule": "string.min_len",
+      "edits": [
+        {
+          "path": [
+            "chestId"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "no-charm-item",
+      "valid": false,
+      "rule": "string.min_len",
+      "edits": [
+        {
+          "path": [
+            "charmItem"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "zero-sync-credit-cap",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "syncCreditCap"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "negative-daily-growth",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "syncCreditDailyGrowth"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "credit-max-below-cap",
+      "valid": false,
+      "rule": "economy.sync_credit",
+      "edits": [
+        {
+          "path": [
+            "syncCreditMax"
+          ],
+          "value": 100
+        }
+      ]
+    },
+    {
+      "name": "zero-pending-days",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "pendingCreditDays"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "invites-outnumber-lifetime",
+      "valid": false,
+      "rule": "economy.invites",
+      "edits": [
+        {
+          "path": [
+            "lifetimeInvites"
+          ],
+          "value": 2
+        }
+      ]
+    },
+    {
+      "name": "zero-outstanding",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "outstandingInvites"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "negative-gift-cap",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "migrationGiftCap"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "negative-tolerance",
+      "valid": false,
+      "rule": "double.gte",
+      "edits": [
+        {
+          "path": [
+            "checkpointToleranceXp"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "zero-claims-per-minute",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "wildsLimits",
+            "claimsPerMinute"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "zero-lanterns-created",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "wildsLimits",
+            "lanternsCreatedPerDay"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "zero-relights",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "wildsLimits",
+            "lanternRelightsPerDay"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "wrong-reward-material",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "wildsLimits",
+            "lanternReward",
+            "material"
+          ],
+          "value": "stone"
+        }
+      ]
+    },
+    {
+      "name": "zero-reward-qty",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "wildsLimits",
+            "lanternReward",
+            "qty"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "missing-wilds-limits",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "wildsLimits"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "null-field",
+      "valid": false,
+      "rule": "null content field",
+      "edits": [
+        {
+          "path": [
+            "charmItem"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "unknown-key",
+      "valid": false,
+      "rule": "unknown key",
+      "edits": [
+        {
+          "path": [
+            "giftCap"
+          ],
+          "value": 30
+        }
+      ]
+    },
+    {
+      "name": "proto-name-key",
+      "valid": false,
+      "rule": "is the proto name",
+      "edits": [
+        {
+          "path": [
+            "xp_per_ember"
+          ],
+          "value": 10
+        }
+      ]
+    },
+    {
+      "name": "non-finite-checkpoint-tolerance",
+      "valid": false,
+      "rule": "non-finite number",
+      "edits": [
+        {
+          "path": [
+            "checkpointToleranceXp"
+          ],
+          "value": "Infinity"
+        }
+      ]
+    },
+    {
+      "name": "numeric-string-welcome-embers",
+      "valid": false,
+      "rule": "non-finite number",
+      "edits": [
+        {
+          "path": [
+            "welcomeEmbers"
+          ],
+          "value": "5"
+        }
+      ]
+    }
   ]
 }

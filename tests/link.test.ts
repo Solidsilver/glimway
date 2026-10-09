@@ -225,10 +225,15 @@ test('entries older than six days, or from another contract, are dropped unsent 
   assert.deepEqual(r.session.state.flags, ['seen:new']);
 });
 
+// A faithful CraftResult (the server emits every field, EmitUnpopulated).
+const craftOutput = { kind: 'material', id: 'timber', qty: 1, instance: '', maker: null };
+const craftCounts = { materials: {}, items: {}, decorations: {}, instances: [] };
+const craftResult = { home: null, inventory: craftCounts, storage: null, personal: craftCounts, shared: 'not-a-member', instanceIds: [] };
+
 test('a domain mutation carries op and where, and a lost answer is replayed before anything else', async (t) => {
   const r = await rig(t);
   await online(r);
-  const craftAnswer = { body: { state: S({ version: 2 }), craft: { recipeId: 'plank', output: { kind: 'material', id: 'timber', qty: 1 }, inventory: {}, personal: {} } } };
+  const craftAnswer = { body: { state: S({ version: 2 }), craft: { ...craftResult, recipeId: 'plank', output: craftOutput } } };
   r.server.on('POST /api/craft', 'network', craftAnswer);
   const lost = await r.link.mutate({ kind: 'craft', fields: { recipeId: 'plank', qty: 1 } });
   assert.deepEqual(lost, { ok: false, code: 'pending' });
@@ -302,6 +307,44 @@ test('idempotency-mismatch, the same payload after all: its stored result settle
   await r.link.flush();
   assert.equal(r.link.outbox.length, 0);
   assert.deepEqual(r.session.state.flags, ['seen:a']);
+  assert.equal(toasts(r).length, 0);
+});
+
+test('idempotency-mismatch, the same payload after all: the recovered fall keeps its committed lantern status', async (t) => {
+  const r = await rig(t);
+  await online(r);
+  r.server.on('POST /api/fall', refuse('idempotency-mismatch', S({ version: 2 })));
+  const predicted = await r.link.fall();
+  assert.ok(predicted);
+  const key = r.link.outbox[0]!.key;
+  // What the server's reconciliation read answers now (operations.proto): the
+  // operation's actual result fields in their oneof case, its type beside
+  // them — the storage wrapper the row keeps never reaches the client.
+  r.server.on(lookupPath('/api/fall', key), lookup({
+    route: '/api/fall', key, payload: { where: { area: 'village', x: 400, y: 300 } }, payloadHash: 'h', version: 1,
+    result: { vitals: { hp: 13, mana: 10, vitalsSetVersion: 1 }, place: { area: 'village', placeSetVersion: 1 }, lantern: 'fallen:wilds:outer-1:4', reason: 'fell', lanternId: 'wilds:outer-1:4', epoch: 'inner-1' },
+    resultCase: 'fall', resultType: 'glimway.v1.FallResult',
+  }, S({ version: 2 })));
+  await r.link.flush();
+  assert.equal(r.link.outbox.length, 0);
+  const settled = r.events.filter(([e]) => e === EV.fallSettled).map(([, p]) => p as { lantern: string });
+  assert.equal(settled.length, 1);
+  assert.equal(settled[0]!.lantern, 'fallen:wilds:outer-1:4', 'the committed lantern status is recovered, not an empty one');
+});
+
+test('idempotency-mismatch, the same payload after all: the recovered mark carries its own fields', async (t) => {
+  const r = await rig(t);
+  await online(r);
+  r.server.on('POST /api/story/mark', refuse('idempotency-mismatch', S({ version: 2, marks: ['seen:a'] })));
+  r.link.mark('seen:a');
+  const key = r.link.outbox[0]!.key;
+  r.server.on(lookupPath('/api/story/mark', key), lookup({ route: '/api/story/mark', key, payload: { mark: 'seen:a', where: { area: 'village', x: 400, y: 300 } }, payloadHash: 'h', version: 2, result: { added: true, mark: 'seen:a' }, resultCase: 'mark', resultType: 'glimway.v1.MarkResult' }, S({ version: 2, marks: ['seen:a'] })));
+  await r.link.flush();
+  assert.equal(r.link.outbox.length, 0);
+  assert.deepEqual(r.session.state.flags, ['seen:a']);
+  // The stored record says the entry was answered (its prediction is kept
+  // durable): the recovery resolved it, no toast, no pause.
+  assert.equal(r.link.paused, null);
   assert.equal(toasts(r).length, 0);
 });
 
@@ -381,7 +424,7 @@ test('lease loss keeps the outbox and never takes over on its own', async (t) =>
   assert.equal(r.link.outbox.length, 1);
   assert.deepEqual(r.session.state.flags, ['seen:a']);
   assert.equal(r.server.sent('POST /api/play').length, 1, 'no silent take-over');
-  assert.deepEqual(await r.link.mutate({ kind: 'craft', fields: {} }), { ok: false, code: 'superseded' });
+  assert.deepEqual(await r.link.mutate({ kind: 'craft', fields: { recipeId: 'plank', qty: 1 } }), { ok: false, code: 'superseded' });
 
   r.server.on('POST /api/play', play(S(), 'L9'));
   r.server.on('POST /api/story/mark', markOk(S({ version: 2, marks: ['seen:a'] }), 'seen:a'));
@@ -641,9 +684,9 @@ test('back online after someone played elsewhere, with work unsent here: the wel
 test('asking again for an order whose answer was lost settles that order: resolved, never a second one', async (t) => {
   const r = await rig(t);
   await online(r);
-  const craftAnswer = { body: { state: S({ version: 2 }), craft: { recipeId: 'plank', output: { kind: 'material', id: 'timber', qty: 1 }, inventory: {}, personal: {} } } };
+  const craftAnswer = { body: { state: S({ version: 2 }), craft: { ...craftResult, recipeId: 'plank', output: craftOutput } } };
   const trouble = { status: 503, body: { error: { code: 'unavailable' } } };
-  r.server.on('POST /api/craft', trouble, craftAnswer, { body: { state: S({ version: 3 }), craft: { recipeId: 'nail', output: { kind: 'material', id: 'timber', qty: 1 }, inventory: {}, personal: {} } } });
+  r.server.on('POST /api/craft', trouble, craftAnswer, { body: { state: S({ version: 3 }), craft: { ...craftResult, recipeId: 'nail', output: craftOutput } } });
   assert.deepEqual(await r.link.mutate({ kind: 'craft', fields: { recipeId: 'plank', qty: 1 } }), { ok: false, code: 'pending' });
   r.server.on('GET /api/state', { body: { state: S(), leaseActive: true } });
   await new Promise((done) => setTimeout(done, 20)); // the player asks again a moment later

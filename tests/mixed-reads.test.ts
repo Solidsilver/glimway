@@ -7,7 +7,7 @@ import { BASE } from './helpers/link-rig.ts';
 /** Lane B's mixed read envelope (`{ state, result }`) through the existing domain parsers. */
 
 const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
-const storage = { home: null, inventory: { materials: { fiber: 4 }, items: {}, decorations: {} }, storage: null, personal: { materials: {}, items: {}, decorations: {} }, shared: 'not-a-member' };
+const storage = { home: null, inventory: { materials: { fiber: 4 }, items: {}, decorations: {}, instances: [] }, storage: null, personal: { materials: {}, items: {}, decorations: {}, instances: [] }, shared: 'not-a-member' };
 
 test('domain reads find their extras under result, beside the typed state', async () => {
   const fetchImpl = (async (url: string) => {

@@ -10,6 +10,8 @@ import * as profile from '../src/lib/gen/glimway/v1/profile_pb.js';
 import * as state from '../src/lib/gen/glimway/v1/state_pb.js';
 import * as wilds from '../src/lib/gen/glimway/v1/wilds_pb.js';
 import * as village from '../src/lib/gen/glimway/v1/village_pb.js';
+import * as homestead from '../src/lib/gen/glimway/v1/homestead_pb.js';
+import * as items from '../src/lib/gen/glimway/v1/items_pb.js';
 import * as world from '../src/lib/gen/glimway/v1/world_pb.js';
 import { decodeWire } from '../src/lib/api/wire.ts';
 import { decodePlayerState } from '../src/lib/api/state-contract.ts';
@@ -131,9 +133,26 @@ test('every raw client call and remote library call carries contract 4', async (
   const calls: { url: string; init?: RequestInit }[] = [];
   const fetchImpl = (async (url, init) => { calls.push({ url: String(url), init }); return new Response(JSON.stringify({ error: { code: 'internal' } }), { status: 500, headers: { 'content-type': 'application/json' } }); }) as typeof fetch;
   const client = createApiClient({ fetchImpl });
+  // The keyed requests are generated messages (requests.ts builds them);
+  // the other calls take their plain arguments as before.
+  const envelope = { op: { lease: 'L', key: 'k' }, where: { area: 'village', x: 1, y: 1 } };
+  const messageArgs: Record<string, () => unknown[]> = {
+    shelfAction: () => [create(homestead.ShelfRequestSchema, { ...envelope, action: 'stock', gate: 1, slot: 0 })],
+    homeAction: () => ['buy', create(homestead.HomesteadRequestSchema, { ...envelope })],
+    storageMove: () => [create(village.StorageMoveRequestSchema, { ...envelope, direction: 'deposit', asset: { kind: 'material', id: 'timber', qty: 1 } })],
+    craft: () => [create(village.CraftRequestSchema, { ...envelope, recipeId: 'plank', qty: 1 })],
+    hearthCraft: () => [create(village.HearthCraftRequestSchema, { ...envelope, recipeId: 'plank', qty: 1 })],
+    deskCopy: () => [create(village.DeskCopyRequestSchema, { ...envelope, pageId: 'p', qty: 1 })],
+    mailSend: () => [create(village.MailSendRequestSchema, { ...envelope, toId: 't', asset: { kind: 'item', id: 'tallow', qty: 1 } })],
+    mailClaim: () => ['m1', create(village.MailKeyedRequestSchema, { ...envelope })],
+    mailRecall: () => ['m1', create(village.MailKeyedRequestSchema, { ...envelope })],
+    contribute: () => ['p1', create(village.ContributeRequestSchema, { ...envelope, materials: { timber: 1 } })],
+    itemAction: () => ['use', create(items.ItemsRequestSchema, { ...envelope, itemDef: 'tallow' })],
+  };
   for (const [name, method] of Object.entries(client.raw)) {
     const before = calls.length;
-    try { await (method as (...args: unknown[]) => Promise<unknown>)({}, {}); } catch {}
+    const args = messageArgs[name] ? messageArgs[name]() : [{}, {}];
+    try { await (method as (...args: unknown[]) => Promise<unknown>)(...args); } catch {}
     assert.equal(calls.length, before + 1, name);
   }
   const library = createRemoteLibrary({ fetchImpl });

@@ -1,4 +1,4 @@
-import { fromJson, getExtension, type DescField, type DescMessage, type MessageShape } from '@bufbuild/protobuf';
+import { fromJson, getExtension, ScalarType, type DescField, type DescMessage, type MessageShape } from '@bufbuild/protobuf';
 import { createValidator, type Violation } from '@bufbuild/protovalidate';
 import { message as messageRulesExt, field as fieldRulesExt } from './gen/buf/validate/validate_pb.js';
 
@@ -144,7 +144,22 @@ function refuseField(path: string, v: unknown, fd: DescField): void {
 function refuseSingular(path: string, v: unknown, fd: DescField): void {
   if (v === null) throw new Error(`null content field ${path}`);
   if (fd.message) refuseContent(path, v, fd.message);
+  // A numeric scalar is a JSON number, and a finite one: numeric strings
+  // ("3", and the "Infinity"/"-Infinity"/"NaN" spellings fromJson would
+  // take) are refused, as is any number the parse left non-finite. One
+  // rule id for every position — singular, repeated and map values (the
+  // Go loader's content/protojson.go carries the same one).
+  else if (fd.scalar !== undefined && NUMERIC_SCALARS.has(fd.scalar)) {
+    if (typeof v === 'string') throw new Error(`non-finite number at ${path}: numeric strings are refused (${JSON.stringify(v)})`);
+    if (typeof v === 'number' && !Number.isFinite(v)) throw new Error(`non-finite number at ${path}`);
+  }
 }
+
+const NUMERIC_SCALARS = new Set([
+  ScalarType.INT32, ScalarType.INT64, ScalarType.UINT32, ScalarType.UINT64,
+  ScalarType.SINT32, ScalarType.SINT64, ScalarType.FIXED32, ScalarType.FIXED64,
+  ScalarType.SFIXED32, ScalarType.SFIXED64, ScalarType.FLOAT, ScalarType.DOUBLE,
+]);
 
 // violationIssue renders one violation as "path: message", with the path's
 // field names spelled the way the JSON files do (period_minutes ->

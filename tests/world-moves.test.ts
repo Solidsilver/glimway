@@ -159,10 +159,10 @@ test('a move answer carries the snapshot and the new world', () => {
 });
 
 test('the first sign-in’s world question: parsed apart from a snapshot, its copy short and in voice', () => {
-  const q = parseWorldChoice({ worldChoice: { habiticaId: 'rue', displayName: 'Rue', partyWorld: { id: 'w1', ownerId: '', ownerName: '', members: 3, ownerHere: false, party: true }, partyCanOpen: false } });
+  const q = parseWorldChoice({ worldChoice: { habiticaId: 'rue', displayName: 'Rue', partyWorld: { id: 'w1', ownerId: '', ownerName: '', members: 3, ownerHere: false, party: true }, partyCanOpen: false, partyAdmitted: false } });
   assert.deepEqual(q, { habiticaId: 'rue', displayName: 'Rue', partyWorld: { id: 'w1', ownerId: '', ownerName: '', members: 3, ownerHere: false, party: true }, partyCanOpen: false, partyAdmitted: false });
   assert.equal(parseWorldChoice({ worldChoice: { habiticaId: 'rue', displayName: 'Rue', partyWorld: null, partyCanOpen: true, partyAdmitted: true } })?.partyAdmitted, true);
-  assert.equal(parseWorldChoice({ worldChoice: { habiticaId: 'olive', displayName: 'Olive', partyWorld: null, partyCanOpen: true } })?.partyCanOpen, true);
+  assert.equal(parseWorldChoice({ worldChoice: { habiticaId: 'olive', displayName: 'Olive', partyWorld: null, partyCanOpen: true, partyAdmitted: false } })?.partyCanOpen, true);
   // A snapshot is not a question.
   assert.equal(parseWorldChoice({ accountId: 'rue', state: {} }), null);
   assert.equal(errorFromResponse(409, { error: { code: 'world-choice-required' } }).code, 'world-choice-required');
