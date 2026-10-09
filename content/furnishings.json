@@ -524,7 +524,7 @@
       "size": "medium",
       "states": {
         "flat": { "frames": ["kitchen-washtub-front-default"], "default": true },
-        "risen": { "frames": ["kitchen-washtub-front-default"] }
+        "risen": { "frames": ["kitchen-washtub-front-risen"] }
       },
       "tags": []
     },
@@ -585,6 +585,10 @@
       "base": { "x": 0, "y": 1, "w": 2, "h": 1 },
       "mount": "floor",
       "size": "large",
+      "states": {
+        "seized": { "frames": ["loft-hoist-front-default"], "default": true },
+        "working": { "frames": ["loft-hoist-front-working-0", "loft-hoist-front-working-1", "loft-hoist-front-working-2", "loft-hoist-front-working-3"], "loop": true }
+      },
       "tags": []
     },
     {
@@ -649,6 +653,10 @@
       "mount": "floor",
       "offers": { "top": 3 },
       "size": "large",
+      "states": {
+        "empty": { "frames": ["library-elara-desk-front-empty"], "default": true },
+        "writing": { "frames": ["library-elara-desk-front-writing-0", "library-elara-desk-front-writing-1"], "loop": true }
+      },
       "tags": ["books"]
     },
     {

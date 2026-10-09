@@ -89,7 +89,8 @@ import { presenceMoments } from '../entities/presence-moments'
 import { arrive } from './world-arrival'
 import { buildRoomArt, type RoomArt } from '../area/room-art'
 import { RoomSpots, LAMP_MARK, LIBRARY, spotWanted } from '../room-spots'
-import { ResidentCycle, residentIn } from '../resident-cycle'
+import { ResidentCycle, residentIn, residentPlace } from '../resident-cycle'
+import { elaraDeskState, hoistState, spongeBowlState } from '../prop-states'
 import { Doors } from '../entities/doors'
 import { HouseLights } from '../entities/house-lights'
 import { PipWalkOn } from '../entities/pip-walk-on'
@@ -593,6 +594,11 @@ export class WorldScene extends Phaser.Scene {
     // Others keep walking while a panel or dialogue holds the screen.
     this.remotePlayers.update(dt)
     this.npcs.update(dt, this.hero.sprite, uiBlocked() || this.transitioning || this.cinematic)
+    // Elara at her desk (docs/design/indoors.md 2.8): the desk's `writing`
+    // art draws her seated, so her own sprite stands down while she sits
+    // there. She walks in and out as before.
+    const elara = this.npcs.npcs.find((n) => n.id === 'elara')
+    if (elara?.present && elara.seated && !elara.path) elara.sprite.setVisible(false)
     this.samplePresence()
     if (uiBlocked() || this.transitioning || this.cinematic || this.session.persistenceInFlight || this.homesteads?.placing) {
       this.hero.halt()
@@ -900,7 +906,9 @@ export class WorldScene extends Phaser.Scene {
    * (docs/design/indoors.md 2.8: never by idling): the oven lit while Hazel
    * is home, the stones and gears turning while Finn is in, the reading
    * lamp lit once its oil is paid, the hoist working once greased, the
-   * tallow pot steaming while a quest points at it. Null: its default.
+   * tallow pot steaming while a quest points at it, the sponge risen once
+   * its wait has passed, Elara's desk drawn with her while she's at it.
+   * Null: its default.
    */
   private pieceState(f: Footprint, pointed: (f: Footprint) => boolean): string | null {
     const home = residentIn(this.world.areaId.replace(/:\d+$/, ''))
@@ -912,12 +920,14 @@ export class WorldScene extends Phaser.Scene {
         return home ? 'turning' : 'still'
       case 'reading-table':
         return this.session.state.flags.includes(LAMP_MARK) ? 'lit' : 'unlit'
-      case 'mill-hoist': {
-        const reached = this.session.state.quests?.['stuck-hoist']
-        return reached === 'grease-hoist' || reached === 'tell-finn' ? 'working' : 'seized'
-      }
+      case 'mill-hoist':
+        return hoistState(this.session.quests)
       case 'kitchen-tallow-pot':
         return pointed(f) ? 'steaming' : 'still'
+      case 'kitchen-sponge-bowl':
+        return spongeBowlState(this.session.quests, this.session.gateContext('set-to-rise'))
+      case 'elara-desk':
+        return elaraDeskState(residentPlace('elara'), this.world.areaId)
       default:
         return null
     }
