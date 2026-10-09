@@ -1,0 +1,78 @@
+{
+  "date": "2026-10-09",
+  "tool": "built-in image_gen",
+  "density": 64,
+  "backgroundHandling": "Generated source sheets contain a neutral checkerboard preview. build_pass.py clears neutral checker pixels while extracting crops; normalized frames are RGBA with transparent backgrounds.",
+  "jobs": [
+    {
+      "source": "sheets/ability-effects.png",
+      "generationId": "exec-2279265e-7ced-4d32-8598-9abedba82d60.png",
+      "prompt": "Create a transparent horizontal contact sheet with exactly three separate groups: four 128x64 frames of a pressed-earth ring with small stones (Stand); four 192x128 frames of low pale hollow-gold magical light (Kindle, not fire); and four 160x96 frames of a sage green-gold protective circle with outward pulse (Ward-light). Align frames, use crisp three-quarter top-down ground effects, 64 texels per tile, warm 1px outlines, upper-left light, no background, blur, gradients, antialiasing, or checkerboard."
+    },
+    {
+      "source": "sheets/ability-icons.png",
+      "generationId": "exec-468d0e1b-0d93-4f26-9712-3ae48e68280e.png",
+      "prompt": "One 5-column by 4-row transparent ability icon sheet, one centered icon per cell and no text. Row 1 warrior: Cleave axe arc, Heave hammer, Pin spear point, Stand planted shield, Brace shield. Row 2 mage: Fingersnap spark, Name a lamp, route stone, Kindle hollow flame, Old ways stone. Row 3 healer: Mend, working Mend, Settle, Ward-light, Mended glade. Row 4 rogue: Shadowstep, Read the drift, Walk a blind route, Echo, Sense the turning. Cohesive palette per class row (iron/oxblood/brass; violet/indigo/amber; sage/cream/green-gold; charcoal/teal/russet), readable at 16px, chunky crisp pixels, warm dark outlines, upper-left highlights, no grid, borders, labels, gradients, blur, or watermark."
+    },
+    {
+      "source": "sheets/stable-atlas.png",
+      "generationId": "exec-0b4e856e-caee-4acd-af6b-0d2318a8e00f.png",
+      "prompt": "A six-panel transparent atlas for a modular timber-and-thatch stable: west-end back layer on 256x320, west-end front layer same canvas with posts and chest-high half-door, 128x320 repeating bay back, matching shut half-door front, matching open half-door front, and 32x320 east gable. Front-facing three-quarter top-down, tack-room saddle peg and lantern, hay racks, empty interior sized for a 33px mount, warm russet wood and hay, crisp pixels, no creature or person, align foot anchors, 64 texels per tile, no background or gradients."
+    },
+    {
+      "source": "sheets/fishing-atlas.png",
+      "generationId": "exec-76c630d4-079c-4030-ad7f-f5bb4c142094.png",
+      "prompt": "Transparent pixel-art fishing atlas: willow rod inventory icon; two held rod poses (raised cast, held out) with hand anchor; six red-and-cream quill float poses (four idle, two bite); three blue-silver water ring frames; four landing splashes; silver mill roach with red fins; two floured fish in a pan with sprig; illustrated Miller's fry recipe card without lettering. Isolated groups, warm cozy woodland RPG style, 64 texels per tile, chunky crisp pixels, warm dark outline, upper-left light, no character, background, shadows, blur, labels, or watermark."
+    },
+    {
+      "source": "sheets/hud-icons.png",
+      "generationId": "exec-7929107f-d46e-461d-883d-cb975dfcd1ed.png",
+      "prompt": "A compact HUD icon sheet: paw print on tag, riding saddle, horseshoe over tiny roof, and three subtle rising warm heart frames. Centered isolated icons readable at 16px, crisp chunky pixel clusters, dark warm outline, upper-left highlights, cozy woodland game palette, transparent background, no labels, grid lines, glow gradients, blur, or watermark."
+    },
+    {
+      "source": "sheets/stable-continuous.png",
+      "generationId": "exec-6de8069a-94ee-4381-b91d-8d0d83212afe.png",
+      "prompt": "Wide pixel-art game asset sheet, exact aspect ratio 2.1:1. Fill the entire image with a single stable building: the roof ridge must start at the very top edge of the image and the stone foundation must touch the very bottom edge, with almost no empty padding. The building visible height (ridge top to ground) must be the full canvas height, proportioned as exactly 5 tiles tall for 64 texels per tile, and its total width is exactly 10.5 tiles. Front-facing three-quarter top-down, one uninterrupted broad thatched roof plane and a single straight continuous ridge/eave across all 10.5 tiles, no gable peaks, cross-gables, or separate roofs. Facade layout from left to right: 4 tiles of west end containing tack room and first stall, exactly three identical 2-tile-wide stall bays, then a half-tile east closing cap. Vertical timber posts at x=0, 4, 6, 8, 10, and 10.5 tiles; boundaries are at post centers. Repeated stable half-doors are chest height (about 0.7 tile) and each opening above is clear. Exterior timber and stone front posts only, muted sage green thatch, warm brown wood, cozy detailed handcrafted pixel clusters, crisp square pixels, consistent perspective. Transparent background outside the building. No scene, sky, ground shadow, text, labels, animals, people, or icons."
+    }
+  ],
+  "builder": "build_pass.py",
+  "outputs": "manifest.json and atlas.json",
+  "round1Fixes": {
+    "source": "sheets/ability-effects-redraw.png",
+    "generationId": "exec-00fd7348-a809-4839-a21d-4d90a49ef92e.png",
+    "prompt": "Generate one transparent two-row by four-column ground-effect sheet. Row one: four aligned 192x128 Kindle frames, a 3-tile-wide low patch of hollow pale-gold light with broad shallow crescent curls and transparent openings; no flame taller than half a tile, no campfire, no bowl, calm shimmer only. Row two: four aligned 160x96 Ward-light frames, a quiet soft green-gold rim circle about 2.5 tiles wide with an open transparent middle; base then three thin brighter outward pulses. No filled disc, spikes, emblems, glyphs or busy sparkles. Chunky crisp pixel art, 64 texels per tile, dark warm outline, upper-left light, no blur, gradients, antialiasing or watermark.",
+    "effectExtraction": "Four largest connected alpha components per requested row, sorted left-to-right; source bounding boxes are padded and centered on exact canvases. Stand uses the four largest connected alpha components from its original source band.",
+    "stableExtraction": "Superseded in round 2 by one continuous source scaled uniformly to a 320-texel height and cut at shared post centerlines."
+  },
+  "round2Fixes": {
+    "source": "sheets/stable-continuous.png",
+    "generationId": "exec-6de8069a-94ee-4381-b91d-8d0d83212afe.png",
+    "uniformScale": "320 texels / 866 source pixels; source width rounds to 671 texels and receives one transparent texel of east-cap padding",
+    "moduleCutsTexels": [
+      0,
+      256,
+      384,
+      512,
+      640,
+      672
+    ],
+    "modules": [
+      "west 256x320",
+      "repeat bay 128x320",
+      "east cap 32x320"
+    ],
+    "frontSplit": "back clears half-door panels, front posts, and stone feet; front-shut adds a 44-texel half door and front-open keeps posts and feet",
+    "previews": [
+      "stable-preview-1-bay.png",
+      "stable-preview-5-bays.png"
+    ],
+    "validation": "64 frames; exact canvas sizes, non-empty alpha, in-bounds anchors; preview canvases 416x320 and 928x320; no non-uniform image resize"
+  },
+  "round3Fixes": {
+    "source": "sheets/stable-continuous.png",
+    "backInterior": "Door slabs are removed from each back. The exposed upper stall plank texture is copied in native-size rows behind the door; a dark timber floor receives small straw-colored details. Posts and foot stones remain in the back and are also drawn in front.",
+    "alphaRule": "Every opaque source-silhouette pixel remains opaque in the west and bay back frames; build raises on a hole.",
+    "previewBackground": "#707070",
+    "validation": "64 frames; zero canvas, alpha, anchor, footprint, strip, or preview-size errors; zero back-layer alpha holes within the source silhouette"
+  }
+}
