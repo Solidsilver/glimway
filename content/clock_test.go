@@ -34,8 +34,8 @@ func TestStoryTables(t *testing.T) {
 		t.Fatal(e)
 	}
 	for _, p := range PapersByID {
-		if p.Rule.Kind != p.Source {
-			t.Fatal(p.ID)
+		if p.GetRule().GetKind() != p.GetSource() {
+			t.Fatal(p.GetId())
 		}
 	}
 }

@@ -1,0 +1,14 @@
+{
+  "loader": [
+    { "name": "shipped", "valid": true, "edits": [] },
+    { "name": "zero-regen-cap", "valid": false, "rule": "vitals.range", "edits": [{ "path": ["regenCap"], "value": 0 }] },
+    { "name": "negative-regen-cap", "valid": false, "rule": "vitals.range", "edits": [{ "path": ["regenCap"], "value": -1 }] },
+    { "name": "missing-regen-cap", "valid": false, "rule": "vitals.range", "edits": [{ "path": ["regenCap"], "remove": true }] },
+    { "name": "zero-fall-hp", "valid": false, "rule": "vitals.range", "edits": [{ "path": ["fallHpFraction"], "value": 0 }] },
+    { "name": "fall-hp-over-one", "valid": false, "rule": "vitals.range", "edits": [{ "path": ["fallHpFraction"], "value": 1.01 }] },
+    { "name": "zero-fall-mana", "valid": false, "rule": "vitals.range", "edits": [{ "path": ["fallManaFraction"], "value": 0 }] },
+    { "name": "fall-mana-over-one", "valid": false, "rule": "vitals.range", "edits": [{ "path": ["fallManaFraction"], "value": 1.5 }] },
+    { "name": "zero-report-gap-cap", "valid": false, "rule": "vitals.range", "edits": [{ "path": ["reportGapCap"], "value": 0 }] },
+    { "name": "missing-report-gap-cap", "valid": false, "rule": "vitals.range", "edits": [{ "path": ["reportGapCap"], "remove": true }] }
+  ]
+}

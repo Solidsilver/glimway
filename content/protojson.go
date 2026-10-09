@@ -145,6 +145,29 @@ type entryList struct {
 	ids   []string
 }
 
+// entryLists names the entries of the message's repeated fields (by proto
+// name), each entry by its id, for contentValidate.
+func entryLists(msg proto.Message, fields ...string) []entryList {
+	md := msg.ProtoReflect().Descriptor()
+	out := make([]entryList, 0, len(fields))
+	for _, name := range fields {
+		fd := md.Fields().ByName(protoreflect.Name(name))
+		if fd == nil || !fd.IsList() {
+			continue
+		}
+		list := msg.ProtoReflect().Get(fd).List()
+		ids := make([]string, list.Len())
+		for i := range list.Len() {
+			m, ok := list.Get(i).Interface().(interface{ GetId() string })
+			if ok {
+				ids[i] = m.GetId()
+			}
+		}
+		out = append(out, entryList{field: name, ids: ids})
+	}
+	return out
+}
+
 // contentValidate runs protovalidate and reports its violations the way the
 // hand-written loaders did: naming the entry and the field
 // ("invalid furnishings: candle footprint: ...").

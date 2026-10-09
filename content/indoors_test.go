@@ -148,6 +148,9 @@ func TestIndoorsLoaderVectors(t *testing.T) {
 			if (err == nil) != v.Valid {
 				t.Fatal(v.Valid, err)
 			}
+			if !v.Valid && v.Rule != "" {
+				checkVectorRule(t, err, v.Rule)
+			}
 		})
 	}
 }
@@ -272,13 +275,18 @@ func TestRoomFootprints(t *testing.T) {
 func TestQuestWaitVectors(t *testing.T) {
 	var cases []struct {
 		Name       string
-		Wait       QuestWait
+		Wait       json.RawMessage
 		Since, Now int64
 		Ready      bool
 	}
 	readVectors(t, "quest-waits", &cases)
 	for _, v := range cases {
-		if QuestWaitReady(v.Wait, v.Since, v.Now) != v.Ready {
+		// The wait is a proto message: the fixture decodes with protojson.
+		var w QuestWait
+		if err := protojson.Unmarshal(v.Wait, &w); err != nil {
+			t.Fatal(err)
+		}
+		if QuestWaitReady(&w, v.Since, v.Now) != v.Ready {
 			t.Fatal(v)
 		}
 	}

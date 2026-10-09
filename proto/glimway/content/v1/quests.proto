@@ -1,0 +1,181 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// The quest tree (docs/design/indoors.md 5): each quest a line of steps,
+// each step a trigger, a place, optional gates and grants. The schema
+// carries the per-step shape; everything that references the rest of the
+// content — npcs, spots, areas, papers, items, the residents — stays in
+// code beside the loader, as does the ordering of the `after` refs (its
+// graph must be acyclic) and the quest-id uniqueness. content/quests.json.
+message Quests {
+  repeated Quest quests = 1 [(buf.validate.field).repeated.min_items = 1];
+}
+
+message Quest {
+  option (buf.validate.message).cel = {
+    id: "quest.chapter_needs_road"
+    message: "a chapter is only set on a road quest"
+    expression: "!has(this.chapter) || this.line == \"road\""
+  };
+  option (buf.validate.message).cel = {
+    id: "quest.unique_step_ids"
+    message: "step ids must be unique"
+    expression: "this.steps.all(s, this.steps.filter(t, t.id == s.id).size() == 1)"
+  };
+  string id = 1 [(buf.validate.field).string = {pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$", max_len: 100}];
+  optional string title = 2;
+  optional string blurb = 3;
+  // A quest's shelf; the loader reads an empty line as "village".
+  string line = 4 [(buf.validate.field).string = {in: ["", "road", "village", "craft"]}];
+  optional int64 chapter = 5 [(buf.validate.field).int64.gte = 0];
+  // Prerequisites, `quest` or `quest:step` refs — checked in code (they
+  // must resolve and their graph must stay acyclic).
+  repeated string after = 6;
+  optional QuestTrigger start = 7;
+  string needs = 8 [(buf.validate.field).string = {in: ["", "habitica"]}];
+  repeated QuestStep steps = 9 [(buf.validate.field).repeated.min_items = 1];
+}
+
+message QuestStep {
+  option (buf.validate.message).cel = {
+    id: "quest.open_at"
+    message: "a step away from an area triggers anywhere, meets its gate, or opens the journal"
+    expression: "this.at != \"\" || this.do.carry != \"\" || this.do.open != \"\" || this.do.sync != \"\" || this.do.flag != \"\" || (has(this.gate) && this.gate.with != \"\")"
+  };
+  option (buf.validate.message).cel = {
+    id: "quest.gated_give"
+    message: "a step that gives items has a gate"
+    expression: "size(this.give) == 0 || has(this.gate)"
+  };
+  option (buf.validate.message).cel = {
+    id: "quest.unique_give"
+    message: "give names each def once"
+    expression: "this.give.all(i, this.give.filter(j, j.def == i.def).size() == 1)"
+  };
+  string id = 1 [(buf.validate.field).string = {pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$", max_len: 100}];
+  // The area the step happens in; empty means anywhere (a carry, an open,
+  // a sync, a flag, or a gate that names who to meet). Known-area and the
+  // trigger's area match are code rules.
+  string at = 2;
+  // Grants: keepsakes (quest items), story marks and papers — the targets
+  // are checked in code against the story tables.
+  repeated string items = 3;
+  repeated string marks = 4;
+  repeated string papers = 5;
+  int32 embers = 6 [(buf.validate.field).int32 = {gte: 0, lte: 5}];
+  string witness = 7 [(buf.validate.field).string = {in: ["", "warden", "lantern"]}];
+  optional string goal = 8 [(buf.validate.field).string.max_len = 40];
+  optional string objective = 9;
+  optional QuestWhere where = 10;
+  QuestTrigger do = 11 [(buf.validate.field).required = true];
+  optional QuestGate gate = 12;
+  repeated QuestItem give = 13;
+  optional QuestNote note = 14;
+  optional QuestMoment moment = 15;
+}
+
+// What a step (or a quest's start) waits for: exactly one kind, and its
+// target is not empty. `new` is only ever a quest's start, set true (the
+// loaders refuse it on a step, and refuse false on a start).
+message QuestTrigger {
+  option (buf.validate.message).cel = {
+    id: "quest.one_trigger"
+    message: "exactly one trigger kind is set"
+    expression: "(has(this.talk)?1:0)+(has(this.use)?1:0)+(has(this.reach)?1:0)+(has(this.defeat)?1:0)+(has(this.carry)?1:0)+(has(this.flag)?1:0)+(has(this.open)?1:0)+(has(this.sync)?1:0)+(has(this.new)?1:0) == 1"
+  };
+  option (buf.validate.message).cel = {
+    id: "quest.trigger_target"
+    message: "a trigger's target is not empty"
+    expression: "(!has(this.talk) || this.talk != \"\") && (!has(this.use) || this.use != \"\") && (!has(this.reach) || this.reach != \"\") && (!has(this.defeat) || this.defeat != \"\") && (!has(this.carry) || this.carry != \"\") && (!has(this.flag) || this.flag != \"\") && (!has(this.open) || this.open != \"\") && (!has(this.sync) || this.sync != \"\") && (!has(this.new) || this.new)"
+  };
+  optional string talk = 1;
+  optional string use = 2;
+  optional string reach = 3;
+  optional string defeat = 4;
+  optional string carry = 5;
+  optional string flag = 6;
+  optional string open = 7;
+  optional string sync = 8;
+  optional bool new = 9;
+}
+
+// Where a step shows: an area with at most one target on it (an npc, a
+// spot, an enemy, the journal ui — the journal never has an area). The
+// targets and the area are checked in code against the story tables.
+message QuestWhere {
+  option (buf.validate.message).cel = {
+    id: "quest.where_one_target"
+    message: "a step's place names at most one target, and an area when it names none"
+    expression: "[this.npc, this.spot, this.enemy, this.ui].filter(t, t != \"\").size() <= 1 && (this.area != \"\" || size([this.npc, this.spot, this.enemy, this.ui].filter(t, t != \"\")) > 0)"
+  };
+  option (buf.validate.message).cel = {
+    id: "quest.where_ui"
+    message: "the journal is the only ui place, and it has no area"
+    expression: "this.ui == \"\" || (this.ui == \"journal\" && this.area == \"\")"
+  };
+  string area = 1;
+  string npc = 2;
+  string spot = 3;
+  string enemy = 4;
+  string ui = 5;
+}
+
+// A wait is positive hours or a positive count of wick turnings, exactly
+// one of the two (a fractional hour is legal; a non-finite number is not).
+message QuestWait {
+  option (buf.validate.message).cel = {
+    id: "quest.wait"
+    message: "a wait is positive hours or a positive count of turnings, one of the two"
+    expression: "((has(this.hours)?1:0)+(has(this.turnings)?1:0) == 1) && ((has(this.hours) && this.hours > 0 && this.hours < 1e308) || (has(this.turnings) && this.turnings >= 1))"
+  };
+  optional double hours = 1;
+  optional int32 turnings = 2;
+}
+
+// What a step's gate asks: at least one of someone to meet, a wait, an
+// item or an ember cost. The person is checked in code; a wait on a
+// quest's first step is refused in code (there is nothing to wait from).
+message QuestGate {
+  option (buf.validate.message).cel = {
+    id: "quest.gate_present"
+    message: "a gate names someone to meet, a wait, an item or an ember cost"
+    expression: "this.with != \"\" || has(this.wait) || has(this.item) || has(this.embers)"
+  };
+  option (buf.validate.message).cel = {
+    id: "quest.gate_embers"
+    message: "an ember cost is at least one"
+    expression: "!has(this.embers) || this.embers >= 1"
+  };
+  string with = 1;
+  optional QuestWait wait = 2;
+  optional QuestGateItem item = 3;
+  optional int32 embers = 4;
+}
+
+// An item a gate spends. keep says whether it survives the step; it is
+// always spelled out (explicit presence).
+message QuestGateItem {
+  string def = 1;
+  int32 qty = 2 [(buf.validate.field).int32.gte = 1];
+  optional bool keep = 3 [(buf.validate.field).required = true];
+}
+
+// An item a step hands over (gated; the def is checked in code).
+message QuestItem {
+  string def = 1;
+  int32 qty = 2 [(buf.validate.field).int32.gte = 1];
+}
+
+// A journal note a step writes; both parts are required.
+message QuestNote {
+  string title = 1 [(buf.validate.field).string.min_len = 1];
+  string body = 2 [(buf.validate.field).string.min_len = 1];
+}
+
+// A moment card a step shows; both parts are required.
+message QuestMoment {
+  string eyebrow = 1 [(buf.validate.field).string.min_len = 1];
+  string title = 2 [(buf.validate.field).string.min_len = 1];
+}

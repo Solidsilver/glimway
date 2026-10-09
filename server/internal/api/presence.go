@@ -73,7 +73,7 @@ type presenceHub struct {
 	drainOnce sync.Once
 	slots     int
 	closing   bool
-	config    content.Presence
+	config    *content.Presence
 }
 
 // Account generations live only while physical reservations exist. A socket
@@ -91,12 +91,14 @@ type presenceReservation struct {
 func newPresenceHub(c *content.Presence) *presenceHub {
 	config := content.PresenceRules
 	if c != nil {
-		config = *c
-		if err := content.ValidatePresence(config); err != nil {
+		if err := content.ValidatePresence(c); err != nil {
 			panic(err)
 		}
+		config = c
 	}
-	config.Emotes = slices.Clone(config.Emotes)
+	// The hub mutates nothing and shares no slice: work on a clone, never
+	// on the shared rules table.
+	config = proto.Clone(config).(*content.Presence)
 	return &presenceHub{peers: map[string]*presencePeer{}, accounts: map[string]*presenceAccount{}, sessions: map[string]int{}, sockets: map[*websocket.Conn]struct{}{}, drained: make(chan struct{}), config: config}
 }
 
@@ -106,14 +108,14 @@ func (h *presenceHub) reserve(session, id string) (presenceReservation, error) {
 	if h.closing {
 		return presenceReservation{}, fail(503, "presence-full")
 	}
-	if h.sessions[session] >= h.config.MaxSessionConnections {
+	if h.sessions[session] >= int(h.config.GetMaxSessionConnections()) {
 		return presenceReservation{}, fail(429, "presence-session-limit")
 	}
 	account := h.accounts[id]
-	if account != nil && account.slots >= h.config.MaxPlayerConnections {
+	if account != nil && account.slots >= int(h.config.GetMaxPlayerConnections()) {
 		return presenceReservation{}, fail(429, "presence-player-limit")
 	}
-	if h.slots >= h.config.MaxConnections {
+	if h.slots >= int(h.config.GetMaxConnections()) {
 		return presenceReservation{}, fail(503, "presence-full")
 	}
 	if account == nil {
@@ -214,7 +216,7 @@ func (h *presenceHub) detach(p *presencePeer) {
 		h.remove(p)
 		return
 	}
-	p.grace = time.AfterFunc(millis(h.config.LeaveGraceMs), func() { h.mu.Lock(); defer h.mu.Unlock(); h.remove(p) })
+	p.grace = time.AfterFunc(millis(int(h.config.GetLeaveGraceMs())), func() { h.mu.Lock(); defer h.mu.Unlock(); h.remove(p) })
 }
 
 func (a *Server) ClosePresence() {
@@ -268,7 +270,7 @@ func (h *presenceHub) moveWorld(p *presencePeer, world string) {
 			n++
 		}
 	}
-	if n >= h.config.MaxRoomPlayers {
+	if n >= int(h.config.GetMaxRoomPlayers()) {
 		h.send(p, &contract.PresenceRoom{Area: p.area, Players: []*contract.PresencePlayer{}})
 		p.area = ""
 		return

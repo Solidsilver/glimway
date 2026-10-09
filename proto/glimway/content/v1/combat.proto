@@ -1,0 +1,35 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// Shared combat tuning (docs/m3-implementation.md): the signature
+// ability's cooldown (fixed at one second — the contract both runtimes
+// assume), one row per Habitica class and the heal formula.
+// content/combat.json.
+message Combat {
+  option (buf.validate.message).cel = {
+    id: "combat.classes"
+    message: "the four classes are all present, each with positive numbers"
+    expression: "size(this.classes) == 4 && [\"warrior\", \"mage\", \"rogue\", \"healer\"].all(id, id in this.classes && this.classes[id].basic_attack_cooldown_seconds > 0 && this.classes[id].cast_cost > 0)"
+  };
+  double signature_cooldown_seconds = 1 [(buf.validate.field).double.const = 1.0];
+  map<string, CombatClass> classes = 2 [(buf.validate.field).map.min_pairs = 1];
+  CombatHeal heal = 3 [(buf.validate.field).required = true];
+}
+
+// One class's numbers; the map key is the class id (warrior, mage, rogue,
+// healer — the combat.classes rule names them).
+message CombatClass {
+  double basic_attack_cooldown_seconds = 1 [(buf.validate.field).double.gt = 0];
+  double cast_cost = 2 [(buf.validate.field).double.gt = 0];
+}
+
+// The heal formula: hyperbolic diminishing returns, 0..maximumBonus,
+// half-saturated at `halfway`, rounded to `decimalPlaces` digits (2).
+message CombatHeal {
+  double base = 1 [(buf.validate.field).double.gt = 0];
+  double maximum_bonus = 2 [(buf.validate.field).double.gt = 0];
+  double halfway = 3 [(buf.validate.field).double.gt = 0];
+  int32 decimal_places = 4 [(buf.validate.field).int32.const = 2];
+}

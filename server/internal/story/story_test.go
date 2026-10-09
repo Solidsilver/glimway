@@ -119,7 +119,7 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 	s.WorldID = "w"
 	// Curated paper reach and stage, and a handed-over paper's stage.
 	p := content.PapersByID["pip-copybook-warden-corrections"].Rule
-	w := &contract.Where{Area: p.Area, X: float64(p.TX*16 + 8), Y: float64(p.TY*16 + 8)}
+	w := &contract.Where{Area: p.Area, X: float64(p.GetTx()*16 + 8), Y: float64(p.GetTy()*16 + 8)}
 	eligible("pip-copybook-warden-corrections", w, true)
 	s.State.Quests["lantern-road"] = "accepted"
 	eligible("pip-copybook-warden-corrections", w, true)
@@ -136,13 +136,13 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 	w = &contract.Where{Area: "commons"}
 	for _, p := range content.PapersByID {
 		if p.Source == "commons" && (p.Rule.Fact == "plot" || p.Rule.Fact == "foundation" || p.Rule.Fact == "door-fox") {
-			eligible(p.ID, w, false)
+			eligible(p.GetId(), w, false)
 		}
 	}
 	tx.Exec("INSERT INTO homestead_members VALUES('a','h'); INSERT INTO homesteads VALUES('h',1); INSERT INTO homestead_items VALUES('h','door-fox','placed')")
 	for _, p := range content.PapersByID {
 		if p.Source == "commons" && (p.Rule.Fact == "plot" || p.Rule.Fact == "foundation" || p.Rule.Fact == "door-fox") {
-			eligible(p.ID, w, true)
+			eligible(p.GetId(), w, true)
 		}
 	}
 	w = &contract.Where{Area: "wilds:outer-1", X: 56, Y: 72}
@@ -171,7 +171,7 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 				}
 			}
 			if assigned == nil {
-				t.Fatal("paper member not assigned", p.ID)
+				t.Fatal("paper member not assigned", p.GetId())
 			}
 			var at ports.EchoSite
 			for _, e := range echoSites {
@@ -180,7 +180,7 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 				}
 			}
 			where := &contract.Where{Area: "wilds:outer-1", X: float64((int(at.CX)*24+8)*16 + 8), Y: float64((int(at.CY)*24+8)*16 + 8)}
-			input := ports.PaperInput{Paper: p.ID, Epoch: "e1", Site: assigned.Site, Where: where}
+			input := ports.PaperInput{Paper: p.GetId(), Epoch: "e1", Site: assigned.Site, Where: where}
 			if due, e := r.Eligible(context.Background(), tx, s, input); e != nil || due {
 				t.Fatal("unsettled Echo paper", due, e)
 			}
@@ -213,7 +213,7 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 		t.Fatal(s.State.Flags)
 	}
 	board := content.StoryRules.Boards["commons"]
-	eligible("notices-from-the-board", &contract.Where{Area: "commons", X: float64(board.TX*16 + 8), Y: float64(board.TY*16 + 8)}, true)
+	eligible("notices-from-the-board", &contract.Where{Area: "commons", X: float64(board.GetTx()*16 + 8), Y: float64(board.GetTy()*16 + 8)}, true)
 	eligible("notices-from-the-board", &contract.Where{Area: "commons", X: 0, Y: 0}, false)
 	before := store.JSON(s.State.Flags)
 	epoch.Id = "old"

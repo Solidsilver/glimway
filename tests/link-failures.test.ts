@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { emptyRecord, memoryOutboxStore, OUTBOX_LIFETIME_MS } from '../src/lib/api/outbox.ts';
-import contract from '../content/contract.json' with { type: 'json' };
+import { CONTRACT_NUMBER } from '../src/lib/contract.ts';
 import { ackReport, env, markOk, online, refuse, rig, S, seed, stepOk, tick, type Answer, type Rig } from './helpers/link-rig.ts';
 import { roadStep } from '../src/lib/quests.ts';
 
@@ -21,7 +21,7 @@ test('an expired sent head is never replayed and stays until a state read succee
   const clock = { now: 10 * OUTBOX_LIFETIME_MS };
   const store = memoryOutboxStore();
   const record = emptyRecord('fixture-account', 'dev');
-  record.entries = [{ id: 1, kind: 'mark', path: '/api/story/mark', key: 'k1', body: JSON.stringify({ op: { lease: '', key: 'k1' }, mark: 'seen:old', where: { area: 'village', x: 1, y: 1 } }), contract: contract.number, createdAt: 0, sent: true, barrier: false, offline: true }];
+  record.entries = [{ id: 1, kind: 'mark', path: '/api/story/mark', key: 'k1', body: JSON.stringify({ op: { lease: '', key: 'k1' }, mark: 'seen:old', where: { area: 'village', x: 1, y: 1 } }), contract: CONTRACT_NUMBER, createdAt: 0, sent: true, barrier: false, offline: true }];
   record.nextId = 2;
   seed(store, record);
   const r = await rig(t, { store, record, clock });
@@ -45,7 +45,7 @@ test('a lease lost during that read stops everything and keeps the head', async 
   const clock = { now: 10 * OUTBOX_LIFETIME_MS };
   const store = memoryOutboxStore();
   const record = emptyRecord('fixture-account', 'dev');
-  record.entries = [{ id: 1, kind: 'mark', path: '/api/story/mark', key: 'k1', body: JSON.stringify({ op: { lease: '', key: 'k1' }, mark: 'seen:old', where: { area: 'village', x: 1, y: 1 } }), contract: contract.number, createdAt: 0, sent: true, barrier: false, offline: true }];
+  record.entries = [{ id: 1, kind: 'mark', path: '/api/story/mark', key: 'k1', body: JSON.stringify({ op: { lease: '', key: 'k1' }, mark: 'seen:old', where: { area: 'village', x: 1, y: 1 } }), contract: CONTRACT_NUMBER, createdAt: 0, sent: true, barrier: false, offline: true }];
   record.nextId = 2;
   seed(store, record);
   const r = await rig(t, { store, record, clock });

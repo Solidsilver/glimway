@@ -98,7 +98,7 @@ func ValidateRepairs(r Repairs) error {
 				return bad
 			}
 		}
-		if v.OpenFrom != nil && (!slices.Contains(CalendarRules.Wicks, v.OpenFrom.Wick) || v.OpenFrom.Day < 1 || v.OpenFrom.Day > CalendarRules.WickDays) {
+		if v.OpenFrom != nil && (!slices.Contains(CalendarRules.GetWicks(), v.OpenFrom.Wick) || v.OpenFrom.Day < 1 || v.OpenFrom.Day > int(CalendarRules.GetWickDays())) {
 			return bad
 		}
 		ids[v.ID] = true

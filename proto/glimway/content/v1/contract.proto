@@ -1,0 +1,10 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// The API contract number: bumped when an old client must reload before
+// using the API. content/contract.json.
+message Contract {
+  int32 number = 1 [(buf.validate.field).int32.gte = 1];
+}
