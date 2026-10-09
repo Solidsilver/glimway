@@ -13,8 +13,6 @@ import type {
   AssetCounts,
   FittingView,
   InstanceView,
-  ItemsActionResponse,
-  ItemsResponse,
   ItemsView,
   MakerView,
   SlotView,
@@ -25,9 +23,6 @@ import type {
   CraftResponse,
   DeskCopyResponse,
   HearthCraftResponse,
-  WoodpileActionResponse,
-  WoodpileResponse,
-  WoodpileView,
   Mail,
   MailActionResponse,
   MailResponse,
@@ -40,15 +35,9 @@ import type {
   RepairsView,
   RepairsResponse,
   MendResponse,
-  ShelfSlotView,
-  ShelfView,
-  ShelfResponse,
-  ShelfActionResponse,
   StorageMoveResponse,
   StorageResponse,
   CommonsResponse,
-  HomeActionResponse,
-  HomeResponse,
   HomeView,
   GateInfo,
   DeedInvite,
@@ -74,6 +63,11 @@ import type {
   WorldRef,
   WorldView,
 } from './types.ts';
+
+// The homestead and item routes moved to the generated schema (homestead.ts,
+// items.ts); their parsers are re-exported here for the one import site.
+export { parseHome, parseHomeAction, parseShelf, parseShelfAction, parseWoodpileRead, parseWoodpileAction } from './homestead.ts';
+export { parseItems, parseItemsAction, parseItemsResult } from './items.ts';
 
 type Obj = Record<string, unknown>;
 
@@ -461,15 +455,6 @@ function materials(v: unknown): Record<string, number> {
   return out;
 }
 
-function maybeHome(v: unknown): HomeView | null {
-  return v === null || v === undefined ? null : parseHomeView(v);
-}
-
-export function parseHome(raw: unknown): HomeResponse {
-  const o = obj(raw);
-  return { ...parseSnapshot(raw), gate: int(o.gate), landSeed: int(o.landSeed), home: maybeHome(o.home), materials: materials(o.materials) };
-}
-
 function person(v: unknown): { id: string; name: string } {
   const o = obj(v);
   return { id: str(o.id), name: name(o.name) };
@@ -508,19 +493,6 @@ export function parseCommons(raw: unknown): CommonsResponse {
     };
   });
   return { ...parseSnapshot(raw), gates, gateCount: int(o.gateCount ?? gates.length), mine, invites };
-}
-
-export function parseHomeAction(raw: unknown): HomeActionResponse {
-  const r = obj(obj(raw).result);
-  return {
-    ...parseSnapshot(raw),
-    result: {
-      home: maybeHome(r.home),
-      materials: materials(r.materials),
-      ...(typeof r.itemId === 'string' ? { itemId: r.itemId } : {}),
-      ...(r.status === 'joined' || r.status === 'waiting' ? { status: r.status } : {}),
-    },
-  };
 }
 
 // ------------------------------------------------------------ phase 5
@@ -607,74 +579,6 @@ function parseItemsView(raw: unknown): ItemsView {
   };
 }
 
-export function parseItems(raw: unknown): ItemsResponse {
-  return { ...parseSnapshot(raw), items: parseItemsView(obj(raw).items) };
-}
-
-export function parseItemsAction(raw: unknown): ItemsActionResponse {
-  return { ...parseSnapshot(raw), result: parseItemsResult(obj(raw).result) };
-}
-/** Shared domain parser for the server-first mixed envelope. */
-export function parseItemsResult(raw: unknown): ItemsActionResponse['result'] {
-  const r = obj(raw);
-  const result: ItemsActionResponse['result'] = { items: parseItemsView(r.items) };
-  if (r.wear) {
-    const w = obj(r.wear);
-    result.wear = {
-      broke: w.broke === true,
-      woreOut: w.woreOut === true,
-      state: typeof w.state === 'string' ? w.state : '',
-      wornOut: Array.isArray(w.wornOut) ? w.wornOut.filter((v): v is string => typeof v === 'string') : [],
-      returned: Array.isArray(w.returned) ? w.returned.filter((v): v is string => typeof v === 'string') : [],
-      itemDef: typeof w.itemDef === 'string' ? w.itemDef : '',
-      usesLeft: int(w.usesLeft ?? 0),
-      condition: int(w.condition ?? 0),
-      instance: w.instance ? parseInstance(w.instance) : null,
-    };
-  }
-  if (typeof r.used === 'string' && r.used) result.used = r.used;
-  if (typeof r.pickup === 'string' && r.pickup) result.pickup = r.pickup;
-  if (typeof r.mended === 'string' && r.mended) result.mended = r.mended;
-  if (typeof r.returned === 'string' && r.returned) result.returned = r.returned;
-  if (typeof r.paper === 'string' && r.paper) result.paper = r.paper;
-  if (r.given) result.given = parseAsset(r.given);
-  if (Array.isArray(r.created)) result.created = r.created.filter((v): v is string => typeof v === 'string');
-  if (typeof r.heirloom === 'string' && r.heirloom) result.heirloom = r.heirloom;
-  if (typeof r.adaOilCount === 'number') result.adaOilCount = r.adaOilCount;
-  if (r.bought) {
-    const b = obj(r.bought);
-    result.bought = { seller: str(b.seller), itemDef: str(b.itemDef), qty: int(b.qty), embers: int(b.embers) };
-  }
-  if (Array.isArray(r.gathered)) {
-    result.gathered = r.gathered.map((g) => {
-      const go = obj(g);
-      return { itemDef: str(go.itemDef), qty: int(go.qty) };
-    });
-  }
-  if (r.plant) {
-    const po = obj(r.plant);
-    result.plant = {
-      id: str(po.id),
-      itemDef: str(po.itemDef),
-      x: int(po.x),
-      y: int(po.y),
-      plantedAt: nullableInt(po.plantedAt) ?? undefined,
-      plantedDay: nullableInt(po.plantedDay) ?? undefined,
-      lit: po.lit === true,
-    };
-  }
-  if (r.land) {
-    const lo = obj(r.land);
-    const tile = lo.tile;
-    result.land = {
-      tile: Array.isArray(tile) && tile.length === 2 ? [int(tile[0]), int(tile[1])] : [0, 0],
-      stump: lo.stump === true,
-      cleared: lo.cleared === true,
-    };
-  }
-  return result;
-}
-
 export { parseCalendar } from './calendar.ts';
 
 /** The workshop view; older servers always sent a home and a shared chest. */
@@ -729,46 +633,6 @@ export function parseDeskCopy(raw: unknown): DeskCopyResponse {
   };
 }
 
-function parseWoodpile(v: unknown): WoodpileView {
-  const o = obj(v);
-  const stacks = Array.isArray(o.stacks) ? o.stacks : [];
-  return {
-    homesteadId: str(o.homesteadId),
-    placed: o.placed === true,
-    stacks: stacks.map((s) => {
-      const w = obj(s);
-      const remaining = num(w.remaining);
-      return {
-        id: str(w.id),
-        homesteadId: str(w.homesteadId),
-        accountId: str(w.accountId),
-        qty: int(w.qty, 1),
-        stackedAt: num(w.stackedAt),
-        ready: w.ready === true || remaining <= 0,
-        remaining: Math.max(0, remaining),
-      };
-    }),
-    readyCount: int(o.readyCount, 0),
-    totalTimber: int(o.totalTimber, 0),
-  };
-}
-
-export function parseWoodpileRead(raw: unknown): WoodpileResponse {
-  return { ...parseSnapshot(raw), woodpile: parseWoodpile(obj(raw).woodpile) };
-}
-
-export function parseWoodpileAction(raw: unknown): WoodpileActionResponse {
-  const r = obj(obj(raw).result);
-  return {
-    ...parseSnapshot(raw),
-    result: {
-      ...parseWorkshop(r),
-      woodpile: parseWoodpile(r.woodpile),
-      action: str(r.action),
-      collectedQty: typeof r.collectedQty === 'number' ? r.collectedQty : undefined,
-    },
-  };
-}
 
 function optTime(v: unknown): number | null {
   return typeof v === 'number' && Number.isFinite(v) ? v : null;
@@ -919,53 +783,3 @@ export function parseMend(raw: unknown): MendResponse {
   };
 }
 
-// ------------------------------------------------------------ gate shelf
-
-function parseShelfSlot(raw: unknown): ShelfSlotView {
-  const o = obj(raw);
-  return {
-    slot: int(o.slot),
-    kind: o.kind as ShelfSlotView['kind'],
-    itemDef: str(o.itemDef),
-    qty: int(o.qty),
-    maker: maker(o.maker),
-    instance: typeof o.instance === 'string' ? o.instance : null,
-    stockedBy: str(o.stockedBy),
-    stockedAt: num(o.stockedAt),
-  };
-}
-
-function parseShelfView(raw: unknown): ShelfView {
-  const o = obj(raw);
-  return {
-    gate: int(o.gate),
-    homeId: str(o.homeId),
-    ownerName: str(o.ownerName),
-    names: Array.isArray(o.names) ? o.names.map(name) : [],
-    slots: Array.isArray(o.slots) ? o.slots.map(parseShelfSlot) : [],
-    takenToday: o.takenToday === true,
-    canStock: o.canStock === true,
-    hasShelf: o.hasShelf === true,
-  };
-}
-
-export function parseShelf(raw: unknown): ShelfResponse {
-  const o = obj(raw);
-  return {
-    ...parseSnapshot(raw),
-    shelf: parseShelfView(o.shelf),
-  };
-}
-
-export function parseShelfAction(raw: unknown): ShelfActionResponse {
-  const o = obj(raw);
-  const r = obj(o.result);
-  const out: ShelfActionResponse = {
-    ...parseSnapshot(raw),
-    shelf: parseShelfView(r.shelf),
-    inventory: parseCounts(r.inventory),
-  };
-  if (r.taken) out.taken = parseAsset(r.taken);
-  if (typeof r.line === 'string') out.line = r.line;
-  return out;
-}

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/itemmove"
 	"glimway/server/internal/store"
 )
@@ -260,7 +261,7 @@ func addDeed(ctx context.Context, tx *sql.Tx, player string) error {
 	return err
 }
 
-func (a *Server) claim(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req homeRequest, member bool, now int64) error {
+func (a *Server) claim(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.HomesteadRequest, member bool, now int64) error {
 	if member {
 		return fail(409, "already-homesteaded")
 	}
@@ -268,10 +269,10 @@ func (a *Server) claim(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req h
 	if err != nil {
 		return err
 	}
-	if req.Gate == nil || *req.Gate < 0 || *req.Gate >= n {
+	if req.Gate == nil || req.Gate.GetValue() < 0 || req.Gate.GetValue() >= int32(n) {
 		return fail(404, "invalid-gate")
 	}
-	gate := *req.Gate
+	gate := int(req.Gate.GetValue())
 	var held string
 	var vacant *int64
 	err = tx.QueryRowContext(ctx, "SELECT id,vacant_since FROM homesteads WHERE world_id=? AND gate=?", s.WorldID, gate).Scan(&held, &vacant)
@@ -339,12 +340,12 @@ func reclaim(ctx context.Context, tx *sql.Tx, s *store.Snapshot, home string, no
 	return store.Credit(ctx, tx, s, 0, 0, "homestead-reclaim", home, nil, now)
 }
 
-func upgradeHome(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req homeRequest, now int64) error {
+func upgradeHome(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req *contract.HomesteadRequest, now int64) error {
 	tiers := content.HomeRules.Tiers
-	if req.Tier == nil || *req.Tier != h.Tier+1 || *req.Tier >= len(tiers) || !tiers[*req.Tier].Purchasable {
+	if req.Tier == nil || req.Tier.GetValue() != int32(h.Tier+1) || req.Tier.GetValue() >= int32(len(tiers)) || !tiers[req.Tier.GetValue()].Purchasable {
 		return fail(409, "tier-unavailable")
 	}
-	t := tiers[*req.Tier]
+	t := tiers[req.Tier.GetValue()]
 	if err := debitEmbers(ctx, tx, s, t.Embers, "homestead-upgrade", t.ID, now); err != nil {
 		return err
 	}
@@ -355,7 +356,7 @@ func upgradeHome(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView,
 	return err
 }
 
-func buyItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req homeRequest, now int64) (string, error) {
+func buyItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req *contract.HomesteadRequest, now int64) (string, error) {
 	def, ok := content.HomeItemFor(req.ItemDef)
 	if !ok {
 		return "", fail(400, "invalid-item")

@@ -4,15 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
 	"math"
 )
 
 // useItem: one use of a tool (instance), or eating/drinking one consumable.
-func (a *Server) useItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
+func (a *Server) useItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.ItemsRequest, now int64, out *contract.ItemsResult) error {
 	if req.Instance != "" {
 		res, err := useTool(ctx, tx, s, req.Instance, req.Action, now)
-		out.Wear = &res
+		out.Wear = wearProto(&res)
 		if err != nil {
 			return err
 		}
@@ -60,7 +61,12 @@ func (a *Server) useItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req
 	if !helps {
 		return fail(409, "not-needed")
 	}
-	split, err := packTake(ctx, tx, s.AccountID, def.ID, req.Maker, 1, "use", def.ID, now)
+	var maker *string
+	if req.Maker != nil {
+		m := req.Maker.GetValue()
+		maker = &m
+	}
+	split, err := packTake(ctx, tx, s.AccountID, def.ID, maker, 1, "use", def.ID, now)
 	if err != nil {
 		return err
 	}

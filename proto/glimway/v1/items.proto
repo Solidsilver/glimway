@@ -1,0 +1,72 @@
+syntax = "proto3";
+package glimway.v1;
+option go_package = "glimway/server/internal/gen/glimway/v1;contract";
+import "glimway/v1/op.proto";
+import "glimway/v1/homestead.proto";
+import "google/protobuf/wrappers.proto";
+
+// Every /api/items route (items.go, the item_*.go handlers and the gather
+// and plant lanes of gathering.go and plants.go): what the caller carries,
+// and what a keyed item mutation did. The instance, maker and asset
+// vocabulary and the home-land views live in homestead.proto.
+
+// A stack of made goods (one maker's).
+message Stack { string item_def = 1; int32 qty = 2; Maker maker = 3; }
+// A pocket or the off hand: what it points at (null when empty).
+message Slot {
+  string slot = 1;
+  google.protobuf.StringValue item_def = 2; google.protobuf.StringValue instance = 3;
+}
+// The off hand: it opens with a class.
+message OffHand {
+  bool open = 1; google.protobuf.StringValue class = 2;
+  google.protobuf.StringValue item_def = 3; google.protobuf.StringValue instance = 4;
+}
+// A recent thank-you for something you made (at: Unix seconds).
+message Thanks { string from_name = 1; string item_def = 2; double at = 3; }
+// What the caller carries (GET /api/items and every item mutation).
+message ItemsView {
+  repeated Stack stacks = 1; repeated Instance instances = 2;
+  repeated Slot pockets = 3; OffHand off_hand = 4;
+  repeated string picked_up = 5; repeated Thanks thanks = 6;
+}
+// One use of a tool: the wear it took, what wore out or broke.
+message WearResult {
+  bool broke = 1; bool wore_out = 2; string state = 3;
+  repeated string worn_out = 4; repeated string returned = 5; string item_def = 6;
+  double uses_left = 7; double condition = 8; Instance instance = 9; string maker_id = 10;
+}
+// What a seller just handed over (/api/items/buy).
+message Bought { string seller = 1; string item_def = 2; int32 qty = 3; int32 embers = 4; }
+
+// One request message for all fourteen item mutations, mirroring the
+// retired hand-written itemRequest: every op's fields are optional and empty
+// means unset (the op name comes from the URL path). Deliberate; don't copy
+// the grab-bag into new routes without saying why — the per-op result
+// messages in state.proto's Envelope oneof are the pattern to grow into.
+//
+// POST /api/items/{use,repair,fit,unfit,give,pocket,offhand,pickup,return,
+// heirloom,ada-oil,gather,plant,buy}. Tile is [x, y] (a home land tile), a
+// repeated-int32 pair on purpose: the gather stump proof matches stored
+// payloads with json_extract(payload_json,'$.tile[0]') (gathering.go), which
+// a {"x":…,"y":…} object would break, and the client's request building is
+// untouched by it. Region is retained in the domain body; the authoritative
+// region is where.area.
+message ItemsRequest {
+  OpHeader op = 1; Where where = 2;
+  string instance = 3; string item_def = 4; google.protobuf.StringValue maker = 5;
+  string action = 6; string at = 7; string tool = 8; int32 slot = 9; string to_id = 10;
+  Asset asset = 11; string pickup = 12; string target = 13; bool unmoored = 14;
+  string visit_id = 15; repeated int32 tile = 16; string region = 17;
+  string seller = 18; string good = 19;
+}
+// The caller's items after the change, and what happened.
+message ItemsResult {
+  ItemsView items = 1; WearResult wear = 2; string used = 3; string pickup = 4;
+  Asset given = 5; string mended = 6; repeated string created = 7;
+  repeated Stack gathered = 8; HomePlant plant = 9; HomeLandChange land = 10;
+  string returned = 11; google.protobuf.StringValue paper = 12; string heirloom = 13;
+  int32 ada_oil_count = 14; Bought bought = 15;
+}
+// GET /api/items.
+message ItemsRead { ItemsView items = 1; }

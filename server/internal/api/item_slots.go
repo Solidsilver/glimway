@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
 	"strings"
 )
@@ -136,15 +137,15 @@ func settleSlots(ctx context.Context, tx *sql.Tx, s *store.Snapshot) error {
 }
 
 // pocketItem puts a carried keepsake in pocket 1 or 2 (empty itemDef: empty it).
-func pocketItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest) error {
+func pocketItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.ItemsRequest) error {
 	n, err := pocketCount(ctx, tx, s.AccountID)
 	if err != nil {
 		return err
 	}
-	if req.Slot < 1 || req.Slot > content.ItemsRules.Rules.Pockets.WithCarryGear {
+	if req.Slot < 1 || int(req.Slot) > content.ItemsRules.Rules.Pockets.WithCarryGear {
 		return fail(400, "invalid-slot")
 	}
-	if req.Slot > n {
+	if int(req.Slot) > n {
 		return fail(409, "no-such-pocket")
 	}
 	slot := "pocket-" + string(rune('0'+req.Slot))
@@ -172,7 +173,7 @@ func pocketItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequ
 
 // offHandItem carries one thing in the off hand (it opens with a class):
 // an off-hand instance by id, or an off-hand keepsake by definition.
-func offHandItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest) error {
+func offHandItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.ItemsRequest) error {
 	if open, _ := offHandOpen(s); !open {
 		return fail(409, "off-hand-closed")
 	}

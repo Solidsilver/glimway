@@ -4,12 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
 )
 
 // repairTool mends an heirloom at the caller's bench (Workshop) or by a
 // mender (standing near Silas or Orrin). Cheap tools can't be mended.
-func repairTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
+func repairTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.ItemsRequest, now int64, out *contract.ItemsResult) error {
 	v, err := loadInstance(ctx, tx, req.Instance)
 	if err != nil {
 		return err
@@ -60,7 +61,7 @@ func repairTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequ
 // fitTool puts a fitting on a tool at the bench: from the pack, or moved
 // straight from another tool (keeping its wear). One of each kind per tool,
 // up to the tool's slots.
-func fitTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64) error {
+func fitTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.ItemsRequest, now int64) error {
 	if _, err := workshop(ctx, tx, s); err != nil {
 		return err
 	}
@@ -130,7 +131,7 @@ func fitTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest
 }
 
 // unfitTool takes a fitting off a tool (at the bench) into the pack.
-func unfitTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64) error {
+func unfitTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.ItemsRequest, now int64) error {
 	if _, err := workshop(ctx, tx, s); err != nil {
 		return err
 	}

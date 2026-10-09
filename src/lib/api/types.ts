@@ -5,8 +5,22 @@
  */
 import type { AreaId, GameState, QuestStage } from '../state.ts';
 import type { HabiticaProfile, VitalsSource } from '../habitica/types.ts';
-import type { HomeInstance } from '../homestead.ts';
 import type { PlayerState } from '../gen/glimway/v1/state_pb.js';
+
+// The homestead, gate-shelf, woodpile and item route types moved to the
+// generated schema's modules (homestead.ts, items.ts).
+export type {
+  HomeMember, HomeView, HomePlantView, HomeResponse, HomeOp, HomeAction, HomeActionRequest, HomeActionResponse,
+  ShelfSlotView, ShelfView, ShelfRequest, ShelfResponse, ShelfActionResponse,
+  WoodpileStack, WoodpileView, WoodpileResponse, WoodpileActionResponse,
+} from './homestead.ts';
+export type {
+  MakerView, FittingView, InstanceView, StackView, SlotView, ThanksView, ItemsView, ItemsResponse, ItemsOp, ItemsActionResponse,
+} from './items.ts';
+// The projections above are this module's vocabulary too (the workshop,
+// repairs and mail answers embed them).
+import type { HomeMember, HomeView } from './homestead.ts';
+import type { InstanceView, ItemsView } from './items.ts';
 
 /** The client-writable progress document (`doc` / `progress`). */
 export interface Progress {
@@ -334,58 +348,6 @@ export interface WildsLanternResponse extends Snapshot {
 
 // ------------------------------------------------------------ homesteads
 
-/** A homestead member (everyone on a deed is equal). */
-interface HomeMember {
-  id: string;
-  displayName: string;
-}
-
-/**
- * A homestead (GET /api/homestead/gate/:g, and every homestead POST): its
- * land's changes, its placed pieces, and the caller's own pack of
- * decorations when the caller is a member.
- */
-export interface HomeView {
-  id: string;
-  gate: number;
-  worldId: string;
-  tier: number;
-  members: HomeMember[];
-  /** The caller is on the deed. */
-  member: boolean;
-  /** No members for a while: overgrown, dark windows, a weathered sign. */
-  desolate: boolean;
-  vacantSince: number | null;
-  landSeed: number;
-  /** Tiles Silas has cleared (trees, stumps, boulders gone). */
-  cleared: [number, number][];
-  postsBought: number;
-  /** What the next lantern post costs. */
-  nextPost: Record<string, number>;
-  /** null below the Cottage (tier 1). */
-  indoor: { width: number; height: number } | null;
-  items: HomeInstance[];
-  stumps?: [number, number][];
-  plants?: HomePlantView[];
-}
-
-export interface HomePlantView {
-  id: string;
-  itemDef: string;
-  x: number;
-  y: number;
-  plantedAt?: number;
-  plantedDay?: number;
-  lit?: boolean;
-}
-
-export interface HomeResponse extends Snapshot {
-  gate: number;
-  landSeed: number;
-  home: HomeView | null;
-  materials: Record<string, number>;
-}
-
 /** One gate on the Commons lane. */
 export interface GateInfo {
   gate: number;
@@ -421,40 +383,6 @@ export interface CommonsResponse extends Snapshot {
   invites: DeedInvite[];
 }
 
-export type HomeOp = 'buy' | 'place' | 'move' | 'remove' | 'upgrade' | 'claim' | 'clear' | 'invite' | 'joint' | 'leave';
-
-/** The op-specific fields of a homestead POST (lease, rev, key and progress are added by the link). */
-export type HomeAction =
-  | { op: 'buy'; itemDef: string }
-  | { op: 'place' | 'move'; itemId: string; scene: 'indoor' | 'outdoor' | 'gate'; x?: number; y?: number; rotation?: number; name?: string }
-  | { op: 'remove'; itemId: string }
-  | { op: 'upgrade'; tier: number }
-  | { op: 'claim'; gate: number }
-  | { op: 'clear'; x: number; y: number }
-  | { op: 'invite'; to: string }
-  | { op: 'joint'; homeId: string; to: string }
-  | { op: 'leave' };
-
-export interface HomeActionRequest {
-  op: { lease: string; key: string };
-  where: { area: string; x: number; y: number };
-  itemDef?: string;
-  itemId?: string;
-  scene?: 'indoor' | 'outdoor' | 'gate';
-  x?: number;
-  y?: number;
-  rotation?: number;
-  tier?: number;
-  name?: string;
-  gate?: number;
-  to?: string;
-  homeId?: string;
-}
-
-export interface HomeActionResponse extends Snapshot {
-  result: { home: HomeView | null; materials: Record<string, number>; itemId?: string; status?: 'joined' | 'waiting' };
-}
-
 // ------------------------------------------------------------ phase 5
 
 /**
@@ -480,104 +408,8 @@ export interface AssetCounts {
 }
 
 // ------------------------------------------------------------ items (docs/items/)
-
-export interface MakerView {
-  id: string;
-  name: string;
-}
-export interface FittingView {
-  id: string;
-  itemDef: string;
-  fitting: string;
-  condition: number;
-  maxCondition: number;
-  usesLeft: number;
-  maker: MakerView | null;
-}
-type WearStateName = 'whole' | 'worn' | 'blunt' | 'cracked' | 'dull';
-/** One instance: condition in wear points (maxCondition 0: never wears). */
-export interface InstanceView {
-  id: string;
-  itemDef: string;
-  condition: number;
-  maxCondition: number;
-  usesLeft: number;
-  state: WearStateName;
-  wardenSet: boolean;
-  fittings: FittingView[];
-  maker: MakerView | null;
-  dullness?: number;
-  speed?: number;
-}
-export interface StackView {
-  itemDef: string;
-  qty: number;
-  maker: MakerView | null;
-}
-export interface SlotView {
-  slot: string;
-  itemDef: string | null;
-  instance: string | null;
-}
-interface OffHandView {
-  open: boolean;
-  class: string | null;
-  itemDef: string | null;
-  instance: string | null;
-}
-export interface ThanksView {
-  fromName: string;
-  itemDef: string;
-  at: number;
-}
-/** What the caller carries, in the item model (GET /api/items and every item mutation). */
-export interface ItemsView {
-  stacks: StackView[];
-  instances: InstanceView[];
-  /** One per open pocket (one, or two with carry gear). */
-  pockets: SlotView[];
-  offHand: OffHandView;
-  /** World pickups this player has already taken. */
-  pickedUp: string[];
-  /** Recent thank-yous for things you made. */
-  thanks: ThanksView[];
-}
-export interface ItemsResponse extends Snapshot {
-  items: ItemsView;
-}
-interface WearResult {
-  broke: boolean;
-  woreOut: boolean;
-  state: string;
-  wornOut: string[];
-  returned: string[];
-  itemDef: string;
-  usesLeft: number;
-  condition: number;
-  instance: InstanceView | null;
-}
-export type ItemsOp = 'use' | 'repair' | 'fit' | 'unfit' | 'give' | 'pocket' | 'offhand' | 'pickup' | 'return' | 'gather' | 'plant' | 'heirloom' | 'ada-oil' | 'buy';
-export interface ItemsActionResponse extends Snapshot {
-  result: {
-    items: ItemsView;
-    wear?: WearResult;
-    used?: string;
-    pickup?: string;
-    given?: Asset;
-    mended?: string;
-    created?: string[];
-    returned?: string;
-    paper?: string;
-    gathered?: { itemDef: string; qty: number }[];
-    plant?: HomePlantView;
-    /** A gather that changed home land inside lamplight (a stump stays, open ground stays open). */
-    land?: { tile: [number, number]; stump: boolean; cleared: boolean };
-    heirloom?: string;
-    adaOilCount?: number;
-    /** What a seller just handed over (/api/items/buy). */
-    bought?: { seller: string; itemDef: string; qty: number; embers: number };
-  };
-}
+// The item-model types (MakerView, InstanceView, ItemsView, ItemsResponse,
+// ItemsOp, ItemsActionResponse…) moved to items.ts with their parsers.
 
 export type { CalendarResponse } from './calendar.ts';
 
@@ -617,35 +449,7 @@ export interface DeskCopyResponse extends Snapshot {
   result: WorkshopView & { pageId: string; qty: number };
 }
 
-/** One stack of green timber on a placed woodpile (seasons after a real day). */
-interface WoodpileStack {
-  id: string;
-  homesteadId: string;
-  accountId: string;
-  qty: number;
-  stackedAt: number;
-  ready: boolean;
-  /** Seconds until it is seasoned (0 once ready). */
-  remaining: number;
-}
-
-export interface WoodpileView {
-  homesteadId: string;
-  placed: boolean;
-  stacks: WoodpileStack[];
-  readyCount: number;
-  totalTimber: number;
-}
-
-/** GET /api/homestead/woodpile: the stacks and the snapshot. */
-export interface WoodpileResponse extends Snapshot {
-  woodpile: WoodpileView;
-}
-
-/** Stack green timber, or collect seasoned timber (POST /api/homestead/woodpile). */
-export interface WoodpileActionResponse extends Snapshot {
-  result: WorkshopView & { woodpile: WoodpileView; action: 'stack' | 'collect' | string; collectedQty?: number };
-}
+// The gate-shelf and woodpile types moved to homestead.ts with their parsers.
 
 export interface Mail {
   id: string;
@@ -748,51 +552,6 @@ export interface MendResult {
 
 export interface MendResponse extends Snapshot {
   result: MendResult;
-}
-
-// ------------------------------------------------------------ gate shelf
-
-export interface ShelfSlotView {
-  slot: number;
-  kind: 'material' | 'item' | 'decoration' | 'instance';
-  itemDef: string;
-  qty: number;
-  maker?: MakerView | null;
-  instance?: string | null;
-  stockedBy: string;
-  stockedAt: number;
-}
-
-export interface ShelfView {
-  gate: number;
-  homeId: string;
-  ownerName: string;
-  names: string[];
-  slots: ShelfSlotView[];
-  takenToday: boolean;
-  canStock: boolean;
-  hasShelf: boolean;
-}
-
-export interface ShelfResponse extends Snapshot {
-  shelf: ShelfView;
-}
-
-export interface ShelfRequest {
-  op: { lease: string; key: string };
-  where: { area: string; x: number; y: number };
-  /** The shelf's own action (it was `op` before the operation header took that name). */
-  action: 'stock' | 'take';
-  gate: number;
-  slot: number;
-  asset?: Asset;
-}
-
-export interface ShelfActionResponse extends Snapshot {
-  shelf: ShelfView;
-  inventory: AssetCounts;
-  taken?: Asset;
-  line?: string;
 }
 
 // The v3 facade uses generated contracts directly. The GameState interfaces

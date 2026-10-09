@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
 )
 
@@ -15,7 +16,7 @@ import (
 // server's own calendar decides whether the seller is there at all
 // (docs/items/crafting-and-repair.md, "Seasonal materials"). Capped goods
 // keep their day's count in the ledger (one row a buy, reason market-buy).
-func (a *Server) marketBuy(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
+func (a *Server) marketBuy(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.ItemsRequest, now int64, out *contract.ItemsResult) error {
 	seller, ok := content.SellerFor(req.Seller)
 	if !ok {
 		return fail(400, "invalid-seller")
@@ -55,6 +56,6 @@ func (a *Server) marketBuy(ctx context.Context, tx *sql.Tx, s *store.Snapshot, r
 	if err := packPut(ctx, tx, s.AccountID, good.Item, []makerQty{{Maker: "", Qty: good.Qty}}, "market-buy", ref, now); err != nil {
 		return err
 	}
-	out.Bought = &boughtView{Seller: seller.ID, ItemDef: good.Item, Qty: good.Qty, Embers: good.Embers}
+	out.Bought = &contract.Bought{Seller: seller.ID, ItemDef: good.Item, Qty: int32(good.Qty), Embers: int32(good.Embers)}
 	return refreshItems(ctx, tx, s)
 }
