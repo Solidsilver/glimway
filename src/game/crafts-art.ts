@@ -30,8 +30,13 @@ export const CRAFTS_LOOPS: PassAnimation[] = [
   { key: 'stand-ring', frames: ['stand-ground-ring-0', 'stand-ground-ring-1', 'stand-ground-ring-2', 'stand-ground-ring-3'], frameRate: 10, repeat: 0 },
   { key: 'kindle-patch', frames: ['kindle-hollow-light-0', 'kindle-hollow-light-1', 'kindle-hollow-light-2', 'kindle-hollow-light-3'], frameRate: 5, repeat: -1 },
   // Frame 0 is the still circle; 1–3 a brighter ring moving outwards.
-  { key: 'ward-pulse', frames: ['ward-light-circle-1', 'ward-light-circle-2', 'ward-light-circle-3'], frameRate: 8, repeat: 0 }
+  { key: 'ward-pulse', frames: ['ward-light-circle-1', 'ward-light-circle-2', 'ward-light-circle-3'], frameRate: 8, repeat: 0 },
+  // Petting (crafts.md 2.1): a small heart rising, once.
+  { key: 'pet-heart', frames: ['pet-heart-0', 'pet-heart-1', 'pet-heart-2'], frameRate: 6, repeat: 0 }
 ]
+
+/** Placed pieces the crafts pass draws, by item id: the frame that stands for the whole piece (the stable's west end). */
+export const CRAFTS_WORLD_ART: Readonly<Record<string, string>> = { stable: 'stable-west-front-shut' }
 
 /** Make the crafts textures and loops, once. False when the pack didn't load. */
 export function createCraftsArt(scene: Phaser.Scene): boolean {

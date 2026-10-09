@@ -28,6 +28,7 @@ import type { Session } from '../session'
 import { hasAreaKind, type WorldData } from '../worlds'
 import { maybeNudgePip } from '../nudges' // P1 onboarding
 import { AvatarVisual } from '../entities/avatar'
+import { Petting } from '../entities/petting'
 import { Hero } from '../entities/hero'
 import { EnemySystem } from '../entities/enemies'
 import { Projectiles } from '../entities/projectiles'
@@ -129,6 +130,7 @@ export class WorldScene extends Phaser.Scene {
   private world!: WorldData
   private fx!: Effects
   private remotePlayers!: RemotePlayers
+  private petting!: Petting
   /** Wilds entities for a generated chunk scene (null in curated areas). */
   private wilds: WildsEntities | null = null
   /** Collisions for terrain tiles and prop footprints (area/collision; a cleared tile opens). */
@@ -266,7 +268,7 @@ export class WorldScene extends Phaser.Scene {
     if (Math.hypot(state.position.x - saved.x, state.position.y - saved.y) > 1) this.session.saveSoon()
     // Arriving in another area, or another Wilds region, reaches the server in a report (design 2.2).
     this.session.link?.arrived()
-    this.avatar = new AvatarVisual(this, { session: this.session, world: this.world, hero: () => this.hero, reducedMotion: this.reducedMotion })
+    this.avatar = new AvatarVisual(this, { session: this.session, world: this.world, hero: () => this.hero, reducedMotion: this.reducedMotion, live: () => this.worldLive() })
     this.offHand = new OffHandVisual(this, this.session, () => this.hero, () => this.avatar)
     this.npcs = new Npcs(this, this.world)
     this.interactables.setAway((id) => this.npcs.away(id))
@@ -473,8 +475,14 @@ export class WorldScene extends Phaser.Scene {
     const feed = presence()
     this.presenceArea = presenceAreaFor(this.world.areaId)
     feed?.setArea(this.presenceArea)
-    this.remotePlayers = createRemotePlayers(this, feed, this.presenceArea)
+    this.remotePlayers = createRemotePlayers(this, feed, this.presenceArea, false, this.reducedMotion)
     this.events.once('shutdown', () => this.remotePlayers.clear())
+    // Pet a pet (crafts.md 2.1): your follower, friends' and the yard's.
+    this.petting = new Petting(this, this.interactables, this.reducedMotion, () => [
+      ...(this.avatar.follower ? [{ id: 'mine', x: this.avatar.follower.x, y: this.avatar.follower.y, hop: () => this.avatar.follower?.hop() }] : []),
+      ...this.remotePlayers.pets(),
+      ...(this.homesteads?.yard?.petPoints() ?? [])
+    ])
     presenceMoments(this, { session: this.session, world: this.world, enemies: this.enemies, hero: () => this.hero.sprite })
     this.goalGuide = new GoalGuide(this, {
       world: this.world,
@@ -600,6 +608,7 @@ export class WorldScene extends Phaser.Scene {
     const elara = this.npcs.npcs.find((n) => n.id === 'elara')
     if (elara?.present && elara.seated && !elara.path) elara.sprite.setVisible(false)
     this.samplePresence()
+    this.petting.update()
     if (uiBlocked() || this.transitioning || this.cinematic || this.session.persistenceInFlight || this.homesteads?.placing) {
       this.hero.halt()
       // Still breathing while a conversation or panel holds the screen.
@@ -665,7 +674,7 @@ export class WorldScene extends Phaser.Scene {
     if (!feed || !this.presenceArea) return
     const body = this.hero.sprite.body as Phaser.Physics.Arcade.Body
     const moving = !this.transitioning && Math.hypot(body.velocity.x, body.velocity.y) > 5
-    feed.position({ x: this.hero.sprite.x, y: this.hero.sprite.y, facing: this.hero.facing, moving })
+    feed.position({ x: this.hero.sprite.x, y: this.hero.sprite.y, facing: this.hero.facing, moving, ...(this.avatar.riding ? { pose: 'riding' } : {}) })
   }
 
   /** Is the scene playing a Wilds chunk right now (also true mid-transition). */

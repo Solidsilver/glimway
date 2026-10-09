@@ -328,6 +328,10 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
       holdingFrame: avatar.holdingFrame,
       pet: !!avatar.pet,
       riding: avatar.riding,
+      /** Crafts (0.5): the follower drawn (its pose), the mount that's out and whether it's on the lead. */
+      follower: avatar.follower ? { pose: avatar.follower.pose, x: Math.round(avatar.follower.x), y: Math.round(avatar.follower.y) } : null,
+      mountOut: avatar.mountOut,
+      led: avatar.led ? { key: avatar.led.key, drawn: avatar.led.drawn } : null,
       playerAlpha: hero.sprite.alpha,
       playerVisible: hero.sprite.visible,
       bolts: projectiles ? projectiles.length : -1,

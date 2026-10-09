@@ -3,8 +3,8 @@
  * from the loaded art once a scene is up (EV.portraits), and the delivered
  * UI icons (EV.artIcons).
  */
-import { indoorsIconUrls } from './indoors-art'
 import { craftsIconUrls } from './crafts-art'
+import { indoorsIconUrls } from './indoors-art'
 import type Phaser from 'phaser'
 import { bus, EV } from './events'
 import { densityOf } from './density'

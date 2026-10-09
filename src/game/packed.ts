@@ -12,7 +12,7 @@ import { CRAFTS_PACKED_KEY } from './crafts-art.ts'
 /**
  * Load the packed atlases (scripts/build-atlases.ts writes them; see
  * ./atlas-plan.ts for what each holds): the Commons-pass, runtime-pass and
- * items-pass and indoors-pass native frames, the normalized terrain tileset, the playtest-1
+ * items-pass, indoors-pass and crafts-pass native frames, the normalized terrain tileset, the playtest-1
  * ground tiles and people (residents, held tools) as lossless
  * WebP (identical texels, ~35% smaller than PNG), and the hero walk,
  * enemy, foreground and props atlases under the texture keys the scenes

@@ -47,7 +47,9 @@ import { newKey } from '../lib/api/client.ts'
 import { ApiError, errorCode, isOutboxClientBug, isReloadNeeded, isSettledRefusal, isUnreachable, needsReconciliation, type ApiErrorCode } from '../lib/api/errors.ts'
 import type { OperationsApi } from '../lib/api/operations.ts'
 import { browserLocks, emptyRecord, expired, holdLock, lockName, outboxStore, type HeldLock, type LockLike, type OutboxEntry, type OutboxKind, type OutboxRecord, type OutboxStore } from '../lib/api/outbox.ts'
-import { adoptable, fallRecovery, gameStateOf, isClientMark, predictedView, profileOf, whereOf, type Prediction, type WhereJson } from '../lib/api/predict.ts'
+import { adoptable, fallRecovery, gameStateOf, isClientMark, predictCompanions, predictedView, profileOf, whereOf, type CompanionsView, type Prediction, type WhereJson } from '../lib/api/predict.ts'
+import { CompanionsRequestSchema, MountHomeRequestSchema, MountOutRequestSchema, StableExtendRequestSchema, StallRequestSchema, type StableExtendResult, type StallResult } from '../lib/gen/glimway/v1/companions_pb.js'
+import { projectHome } from '../lib/api/homestead.ts'
 import { REPORT_INTERVAL_MS, ReportBook, type CapturedReport, type ReportAck } from '../lib/api/reports.ts'
 import type { HomeAction, HomeActionResponse, HomeOp, HomeView, ItemsOp, CommonsResponse, Snapshot, WildsDefeatResult, WildsRegionResponse } from '../lib/api/types.ts'
 import { contributeRequest, deskCopyRequest, hearthCraftRequest, homesteadRequest, itemsRequest, mailKeyedRequest, mailSendRequest, shelfRequest, storageRequest, craftRequest, type ItemsFields, type MailSendAction, type ShelfAction, type StorageMoveAction } from '../lib/api/requests.ts'
@@ -303,7 +305,13 @@ const TYPED: Partial<Record<OutboxKind, { schema: DescMessage; path: string; res
   fall: { schema: FallRequestSchema, path: '/api/fall', result: 'fall', send: (ops, req) => ops.fall(req) },
   spend: { schema: SpendRequestSchema, path: '/api/spend', result: 'spend', send: (ops, req) => ops.spend(req) },
   'wilds-claim': { schema: WildsClaimRequestSchema, path: '/api/wilds/claim', result: 'wildsClaim', send: (ops, req) => ops.wildsClaim(req) },
-  'wilds-lantern': { schema: WildsLanternRequestSchema, path: '/api/wilds/lantern', result: 'wildsLantern', send: (ops, req) => ops.wildsLantern(req) }
+  'wilds-lantern': { schema: WildsLanternRequestSchema, path: '/api/wilds/lantern', result: 'wildsLantern', send: (ops, req) => ops.wildsLantern(req) },
+  // Companions and the stable (crafts.md 6.2).
+  companions: { schema: CompanionsRequestSchema, path: '/api/companions', result: 'companions', send: (ops, req) => ops.companions(req) },
+  stall: { schema: StallRequestSchema, path: '/api/stable/stall', result: 'stall', send: (ops, req) => ops.stall(req) },
+  'mount-out': { schema: MountOutRequestSchema, path: '/api/stable/out', result: 'mountOut', send: (ops, req) => ops.mountOut(req) },
+  'mount-home': { schema: MountHomeRequestSchema, path: '/api/stable/home', result: 'mountHome', send: (ops, req) => ops.mountHome(req) },
+  'stable-extend': { schema: StableExtendRequestSchema, path: '/api/stable/extend', result: 'stableExtend', send: (ops, req) => ops.stableExtend(req) }
 }
 
 /** The same mutation asked again: its route and fields, apart from the header and where the hero stands. */
@@ -325,7 +333,8 @@ const UNDONE: Partial<Record<OutboxKind, string>> = {
   mark: 'The world didn’t keep one thing you noticed. Nothing else changed.',
   'take-paper': 'That paper wasn’t there for you after all. It’s back where it was.',
   'settle-echo': 'That Echo wasn’t yours to settle just now.',
-  fall: 'Your last fall wasn’t recorded.'
+  fall: 'Your last fall wasn’t recorded.',
+  companions: 'Your choice of companions didn’t take. They’re as they were.'
 }
 
 /** The outbox for an account on this device, or a fresh one. */
@@ -352,6 +361,10 @@ function predictionOf(entry: OutboxEntry): Prediction {
         return { kind: 'settle-echo', member: String(b.member) }
       case 'fall':
         return { kind: 'fall' }
+      case 'companions':
+        return { kind: 'companions', followPet: String(b.followPet ?? ''), yardPets: Array.isArray(b.yardPets) ? b.yardPets.map(String) : [] }
+      case 'mount-home':
+        return { kind: 'mount-home' }
       default:
         return { kind: 'none' }
     }
@@ -571,6 +584,7 @@ export class Link {
     const profile = profileOf(this.server)
     s.applyServer(this.view(), { vitalsSource: profile ? 'imported' : 'demo', importedProfile: profile }, opts)
     this.noteMagic(profile)
+    this.noteCompanions()
   }
 
   /** The level and class marks the screen holds (null until a state carries them). */
@@ -596,6 +610,27 @@ export class Link {
     if (was === undefined) return
     const notice = unlockNotice(profile, was, now)
     if (notice) this.emitter(EV.toast, { text: notice, icon: 'sparkle' })
+  }
+
+
+  // ------------------------------------------------------------ companions (crafts.md 2, 3)
+
+  private companionsShown = ''
+  /** Saddling up, its answer still out: the mount shows as out at once (crafts.md 6.2, "You're riding it"). */
+  private saddling: { mount: string; home: string } | null = null
+
+  /** The companions the game shows: the server's, with unanswered choices on top. */
+  get companions(): CompanionsView {
+    const view = predictCompanions(this.server, this.entries.map(predictionOf))
+    return this.saddling ? { ...view, mountOut: this.saddling.mount, mountHome: this.saddling.home } : view
+  }
+
+  /** Tell the game when the companions it shows changed (an answer, a choice, a rollback). */
+  private noteCompanions(): void {
+    const now = JSON.stringify(this.companions)
+    if (now === this.companionsShown) return
+    this.companionsShown = now
+    this.emitter(EV.companions)
   }
 
   /** The screen's place and vitals, into the next report. */
@@ -1713,6 +1748,76 @@ export class Link {
     return res
   }
 
+  /**
+   * Choose who comes along and who lives at home (crafts.md 2.4). Predicted
+   * at once and queued offline, like a mark: it can't fail on shared state.
+   */
+  companionsChoice(followPet: string, yardPets: readonly string[]): void {
+    if (!this.session || this.stopped) return
+    const key = newKey()
+    const body = toJson(CompanionsRequestSchema, create(CompanionsRequestSchema, { op: { lease: '', key }, followPet, yardPets: [...yardPets] }), { alwaysEmitImplicit: true }) as Record<string, unknown>
+    void this.submit('companions', TYPED.companions!.path, key, body, { offline: true })
+  }
+
+  /** Send the mount that's out back to its stall (predicted; queues offline). */
+  mountHome(): void {
+    if (!this.session || this.stopped) return
+    const key = newKey()
+    const body = toJson(MountHomeRequestSchema, create(MountHomeRequestSchema, { op: { lease: '', key } }), { alwaysEmitImplicit: true }) as Record<string, unknown>
+    void this.submit('mount-home', TYPED['mount-home']!.path, key, body, { offline: true })
+  }
+
+  /** Put a mount in a stall, or empty it (`mount` ''). Needs a connection; the answer is the homestead. */
+  async stall(homeId: string, stall: number, mount: string): Promise<WildsOutcome<HomeView | null>> {
+    const s = this.session
+    if (!s) return { ok: false, code: 'unknown' }
+    const key = newKey()
+    const body = toJson(StallRequestSchema, create(StallRequestSchema, { op: { lease: '', key }, where: whereOf(s.state), homeId, stall, mount }), { alwaysEmitImplicit: true }) as Record<string, unknown>
+    const { outcome: r } = await this.submit('stall', TYPED.stall!.path, key, body, { offline: false })
+    if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
+    const res = r.result as { case?: string; value?: StallResult }
+    if (res?.case !== 'stall' || !res.value) return { ok: false, code: 'bad-response' }
+    return homeOf(res.value.home)
+  }
+
+  /**
+   * Saddle up at a stall (crafts.md 3.1). Needs a connection; `mount` (the
+   * stall's) shows as out until the answer, whose state carries
+   * `companions.mountOut`; a refusal takes it back.
+   */
+  async mountOut(homeId: string, stall: number, mount: string): Promise<{ ok: true } | { ok: false; code: ApiErrorCode | 'offline' | 'superseded' | 'busy' | 'pending' }> {
+    const s = this.session
+    if (!s) return { ok: false, code: 'unknown' }
+    const key = newKey()
+    const body = toJson(MountOutRequestSchema, create(MountOutRequestSchema, { op: { lease: '', key }, where: whereOf(s.state), homeId, stall }), { alwaysEmitImplicit: true }) as Record<string, unknown>
+    this.saddling = { mount, home: homeId }
+    this.noteCompanions()
+    let r: Outcome
+    try {
+      r = (await this.submit('mount-out', TYPED['mount-out']!.path, key, body, { offline: false })).outcome
+    } finally {
+      this.saddling = null
+      this.noteCompanions()
+    }
+    if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
+    return { ok: true }
+  }
+
+  /** Build a stall on the stable's east side. Needs a connection; the answer is the homestead and your materials. */
+  async stableExtend(homeId: string): Promise<WildsOutcome<{ home: HomeView | null; materials: Record<string, number> }>> {
+    const s = this.session
+    if (!s) return { ok: false, code: 'unknown' }
+    const key = newKey()
+    const body = toJson(StableExtendRequestSchema, create(StableExtendRequestSchema, { op: { lease: '', key }, where: whereOf(s.state), homeId }), { alwaysEmitImplicit: true }) as Record<string, unknown>
+    const { outcome: r } = await this.submit('stable-extend', TYPED['stable-extend']!.path, key, body, { offline: false })
+    if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
+    const res = r.result as { case?: string; value?: StableExtendResult }
+    if (res?.case !== 'stableExtend' || !res.value) return { ok: false, code: 'bad-response' }
+    const home = homeOf(res.value.home)
+    if (!home.ok) return home
+    return { ok: true, result: { home: home.result, materials: { ...res.value.materials } } }
+  }
+
   /** Claim a camp/node/chest/POI from where the hero stands. */
   async wildsClaim(req: { epoch: string; entityId: string; cycle: number; where?: WhereJson }): Promise<WildsOutcome<WildsClaimProto>> {
     const s = this.session
@@ -2082,3 +2187,13 @@ function defaultChannel(): ChannelLike | null {
 }
 
 /** The typed claim result as the Wilds code keeps it. */
+
+/** A homestead in an answer, projected for the game (null: none sent). */
+function homeOf(home: import('../lib/gen/glimway/v1/goods_pb.js').HomeView | undefined): WildsOutcome<HomeView | null> {
+  if (!home) return { ok: true, result: null }
+  try {
+    return { ok: true, result: projectHome(home) }
+  } catch {
+    return { ok: false, code: 'bad-response' }
+  }
+}

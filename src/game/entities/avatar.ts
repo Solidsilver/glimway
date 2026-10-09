@@ -37,6 +37,12 @@ import { ART_PX, BREATH_SPLIT, avatarMotion } from '../hero-motion'
 import { heldNow } from '../held'
 import { ITEM_ART_FALLBACK, itemIcon } from '../items-pass'
 import { PEOPLE_KEY, facingOf, heldFrame, heldOrigin, peopleDensity, type Facing } from '../people'
+import { PetFollower } from './pet-follower'
+import { LedMount } from './led-mount'
+import { followerKey } from '../../lib/companions'
+import { hideContextButton, showContextButton } from '../context-buttons'
+import { homesteadsFor } from '../homestead'
+import { HOMESTEAD_DATA } from '../../lib/homestead'
 
 /** Habitica sprite grid (source px) and its on-screen height in the 16px world. */
 const AVATAR_CANVAS = 90
@@ -59,19 +65,54 @@ const onFigure = (p: { x: number; y: number }) => ({
 const HAND = { ...onFigure(HAND_ART), size: 11 }
 const OFF_HAND = onFigure(OFF_HAND_ART)
 
-/** State carried across area changes and defeat recovery (per tab). */
+/**
+ * State carried across area changes and defeat recovery (per tab): whether
+ * the mount that's out is ridden or on the lead (crafts.md 3.1; the server
+ * keeps only which one is out).
+ */
 const carried = { riding: false, fallbackNotified: false, partialNotified: false }
+
+/** Saddle up was pressed for this mount: once it shows as out, you're on it (not on the lead). */
+let saddleWanted = ''
+
+/** The stable's Saddle up (./homestead-stable.ts): the next time this mount comes out, ride it. */
+export function wantSaddle(mount: string): void {
+  saddleWanted = mount
+}
+
+/** The lines riding says (crafts.md 3.1). */
+export const RIDE_WORDS = {
+  noStable: 'Your mount needs somewhere to stand at home first. A stable, maybe.',
+  inStall: 'Your mount is in its stall at home. Saddle up there.',
+  noMounts: 'No mount to ride yet. Raise one on Habitica, sync, and stall it in your stable.',
+  village: 'Orrin would never forgive hoofprints in the square. Lead it through on foot.',
+  gate: 'You lead your mount through the gate on foot.',
+  indoors: 'Your mount waits outside the door.',
+  up: 'You swing up into the saddle.',
+  down: 'You hop down and take the lead.',
+  noArt: 'Your mount’s art couldn’t be fetched just now. On foot it is, with it on the lead.',
+  home: 'Off it goes, home to its stall.'
+} as const
 
 export interface AvatarDeps {
   session: Session
   world: WorldData
   hero: () => Hero
   reducedMotion: boolean
+  /** The world is playing (no panel, talk or cinematic holds it): keys act. */
+  live?: () => boolean
 }
 
 export class AvatarVisual {
   container: Phaser.GameObjects.Container | null = null
-  pet: Phaser.GameObjects.Image | null = null
+  /** The pet that walks with you (./pet-follower.ts). */
+  follower: PetFollower | null = null
+  /** The follower drawn now ('' none), so a new choice rebuilds it. */
+  private followerShown = ''
+  /** The mount that's out on the lead (./led-mount.ts), drawn while not ridden. */
+  led: LedMount | null = null
+  /** The mount key on the lead or under you ('' none): `companions.mountOut`. */
+  private mountShown = ''
   riding = false
   /** Facing right (mirrored art); kept while moving straight up or down. */
   faceRight = false
@@ -104,6 +145,49 @@ export class AvatarVisual {
     this.riding = carried.riding
     this.fallbackNotified = carried.fallbackNotified
     this.partialNotified = carried.partialNotified
+    // Never ridden indoors, nor in the village: the mount waits at the door, or comes on the lead.
+    if (this.indoors || deps.world.areaId === 'village') this.riding = false
+    this.mountShown = this.mountOut
+    if (!this.mountShown) this.riding = false
+    const onCompanions = () => this.onCompanions()
+    bus.on(EV.companions, onCompanions)
+    // H sends the mount home while you're off it (crafts.md 8); M is the scene's (./world-controls.ts).
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== 'KeyH' || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+      if (this.deps.live && !this.deps.live()) return
+      this.sendHome()
+    }
+    scene.input.keyboard?.on('keydown', onKey)
+    scene.events.once('shutdown', () => {
+      bus.off(EV.companions, onCompanions)
+      scene.input.keyboard?.off('keydown', onKey)
+      hideContextButton('saddle')
+      hideContextButton('go-home')
+    })
+    this.showButtons()
+  }
+
+  /** Inside a room or a cottage: the mount waits on the doorstep. */
+  private get indoors(): boolean {
+    return this.deps.world.areaId.startsWith('in:')
+  }
+
+  /** The mount that's out, as the game shows it ('' none). */
+  get mountOut(): string {
+    return this.deps.session.link?.companions.mountOut ?? ''
+  }
+
+  /** The pet that walks with you: the chosen one, or Habitica's current pet. */
+  private get followKey(): string {
+    const profile = this.deps.session.importedProfile
+    return followerKey(profile, this.deps.session.link?.companions) ?? ''
+  }
+
+  /** Read-only, for playtests and the dev hooks: the follower image. */
+  get pet(): Phaser.GameObjects.Image | null {
+    return this.follower?.image ?? null
   }
 
   async build(): Promise<void> {
@@ -112,14 +196,15 @@ export class AvatarVisual {
     const profile = session.importedProfile
     if (!profile) return
     const token = ++this.buildToken
-    const loaded = await loadWorldAvatar(this.scene, profile, this.riding)
+    // Ridden, the mount that's out is drawn under you (never Habitica's current mount).
+    const loaded = await loadWorldAvatar(this.scene, { ...profile, selectedMount: this.riding ? this.mountOut : null }, this.riding && !!this.mountOut)
     if (token !== this.buildToken) return // a newer rebuild superseded this one
     if (this.container) {
       this.container.destroy()
       this.container = null
     }
-    this.clearPet()
     if (loaded.fallback) {
+      this.clearPet()
       // Restore the visible demo hero — a previous build may have hidden it.
       hero.sprite.setAlpha(1)
       if (!this.fallbackNotified) {
@@ -182,43 +267,123 @@ export class AvatarVisual {
     this.container = this.scene.add.container(hero.sprite.x, hero.sprite.y, images)
     hero.sprite.setAlpha(0) // physics anchor invisible; the container is the body
     hero.shadow.setAlpha(0.25)
-    void this.buildPetFollower(token)
+    // The follower outlives a rebuild (getting on or off a mount): only a new choice replaces it.
+    if (!this.follower || this.followKey !== this.followerShown) void this.buildPetFollower(token)
   }
 
-  /** Mount riding: outdoor toggle; the village is a no-ride zone. Riding is
-   * only granted when BOTH mount layers (body + head) actually load — an
-   * uncached mount never becomes an invisible speed boost. */
+  /**
+   * M (crafts.md 3.1): ridden ↔ on the lead, for the mount that's out of the
+   * stable. With none out, it says where riding starts now. Riding needs
+   * both mount layers to load: an uncached mount never becomes an invisible
+   * speed boost (it stays on the lead).
+   */
   async toggleRide(): Promise<void> {
-    const { session, world } = this.deps
-    const mountKey = (session.importedProfile as { selectedMount?: string | null } | null)?.selectedMount
+    const mountKey = this.mountOut
     if (!mountKey) {
-      bus.emit(EV.toast, { text: 'No mount chosen on Habitica — pick one there to ride here.' })
+      const mine = this.deps.session.link ? homesteadsFor(this.deps.session).mine : null
+      const stable = mine?.items.some((i) => i.itemDef === HOMESTEAD_DATA.stable.item && i.scene === 'outdoor')
+      const mounts = this.deps.session.importedProfile?.mounts.length ?? 0
+      bus.emit(EV.toast, { text: !stable ? RIDE_WORDS.noStable : mounts === 0 ? RIDE_WORDS.noMounts : RIDE_WORDS.inStall })
       return
     }
     if (this.riding) {
       this.riding = false
+      this.dismountAt = { x: this.deps.hero().sprite.x, y: this.deps.hero().sprite.y }
       void this.build()
-      bus.emit(EV.toast, { text: 'You hop down.', kind: 'thought' })
+      bus.emit(EV.toast, { text: RIDE_WORDS.down, kind: 'thought' })
+      this.showButtons()
       return
     }
-    if (world.areaId === 'village') {
-      bus.emit(EV.toast, { text: 'Orrin would never forgive hoofprints in the square. Ride outside the gate.' })
+    if (this.indoors) {
+      bus.emit(EV.toast, { text: RIDE_WORDS.indoors })
       return
     }
+    if (this.deps.world.areaId === 'village') {
+      bus.emit(EV.toast, { text: RIDE_WORDS.village })
+      return
+    }
+    await this.mountUp(mountKey)
+  }
+
+  /** Into the saddle on `mountKey` (Saddle up at the stall, or M on the lead). */
+  async mountUp(mountKey: string): Promise<boolean> {
     const mountKeys = await loadCompanion(this.scene, mountKey, 'mount')
     if (!mountKeys || mountKeys.length < 2) {
-      bus.emit(EV.toast, { text: 'Your mount stayed home this time (its art couldn\u2019t be fetched). On foot it is.' })
-      return
+      bus.emit(EV.toast, { text: RIDE_WORDS.noArt })
+      return false
     }
     this.riding = true
+    this.mountShown = mountKey
     void this.build()
-    bus.emit(EV.toast, { text: 'You saddle up. Faster on the open road!', kind: 'thought' })
+    bus.emit(EV.toast, { text: RIDE_WORDS.up, kind: 'thought' })
+    this.showButtons()
+    return true
   }
+
+  /**
+   * Go home (H, or the button) while you're off it: the mount walks off the
+   * edge of the screen (drawing only) and is back in its stall; the server
+   * hears it at once (`mount-home`, which queues offline).
+   */
+  sendHome(): void {
+    if (!this.mountOut || this.riding || this.indoors) return
+    this.led?.walkOff()
+    this.led = null
+    this.deps.session.link?.mountHome()
+    bus.emit(EV.toast, { text: RIDE_WORDS.home, kind: 'thought' })
+  }
+
+  /** The server (or a prediction) changed the companions: a new follower, a mount out or home. */
+  private onCompanions(): void {
+    if (this.followKey !== this.followerShown && this.container) void this.buildPetFollower(this.buildToken)
+    const out = this.mountOut
+    if (out !== this.mountShown) {
+      const wasRiding = this.riding
+      this.mountShown = out
+      if (!out) this.riding = false
+      if (out && out === saddleWanted && !this.indoors) {
+        saddleWanted = ''
+        void this.mountUp(out)
+        return
+      }
+      if (wasRiding !== this.riding || wasRiding) void this.build()
+      this.showButtons()
+    }
+  }
+
+  /** The saddle and Go home buttons (lane F's row), while a mount is out and you're outdoors. */
+  private showButtons(): void {
+    const out = !!this.mountOut && !this.indoors
+    if (!out) {
+      hideContextButton('saddle')
+      hideContextButton('go-home')
+      bus.emit(EV.mount, this.mountOut ? { key: this.mountOut, riding: false, led: false } : null)
+      return
+    }
+    showContextButton({
+      id: 'saddle',
+      label: this.riding ? 'Get down' : 'Ride',
+      art: 'hud-saddle',
+      icon: 'star',
+      key: 'M',
+      order: 1,
+      ariaLabel: this.riding ? 'Get down from your mount' : 'Ride your mount',
+      press: () => void this.toggleRide()
+    })
+    if (this.riding) hideContextButton('go-home')
+    else
+      showContextButton({ id: 'go-home', label: 'Go home', art: 'hud-go-home', icon: 'home', key: 'H', order: 2, ariaLabel: 'Send your mount home', press: () => this.sendHome() })
+    bus.emit(EV.mount, { key: this.mountOut, riding: this.riding, led: !this.riding })
+  }
+
+  /** Where you got down: the mount stands there, on the lead. */
+  private dismountAt: { x: number; y: number } | null = null
 
   /** A sync committed a new profile: riding rules re-checked, layers rebuilt. */
   onProfileChanged(): void {
-    this.riding = this.riding && this.deps.world.areaId !== 'village'
+    this.riding = this.riding && this.deps.world.areaId !== 'village' && !!this.mountOut
     void this.build()
+    this.showButtons()
   }
 
   update(time: number): void {
@@ -254,21 +419,59 @@ export class AvatarVisual {
       this.facing = facingOf(hero.facing.x, hero.facing.y, right ? 'right' : 'left')
       this.drawHand(!!seat, this.facing)
     }
-    if (this.pet) {
-      // The pet trails behind, on the side away from where you face.
-      const behind = this.faceRight ? -1 : 1
-      const targetX = hero.sprite.x + 14 * behind
-      const t = 0.08
-      this.pet.x += (targetX - this.pet.x) * t
-      this.pet.y += (hero.sprite.y - 2 - this.pet.y) * t
-      this.pet.setDepth(this.pet.y)
+    const dt = this.lastTime === null ? 16 : Math.min(100, Math.max(0, time - this.lastTime))
+    this.lastTime = time
+    const body = hero.sprite.body as Phaser.Physics.Arcade.Body | null
+    const walking = !seat && !!body && body.enable && Math.hypot(body.velocity.x, body.velocity.y) > 1
+    const cam = this.scene.cameras.main
+    if (this.follower) {
+      this.follower.update({
+        x: hero.sprite.x,
+        y: hero.sprite.y,
+        walking,
+        faceRight: this.faceRight,
+        seat: seat ? { x: seat.x, y: seat.y, facing: seat.facing } : null,
+        viewMidX: cam.worldView.centerX,
+        time,
+        dt
+      })
     }
-    // Auto-dismount entering the village.
+    // The mount that's out, on the lead: drawn while you're off it and outdoors.
+    const wantLed = !!this.mountOut && !this.riding && !this.indoors && !!this.container
+    if (wantLed && (!this.led || this.led.key !== this.mountOut)) this.makeLed()
+    else if (!wantLed && this.led) {
+      this.led.destroy()
+      this.led = null
+    }
+    if (this.led && this.container) {
+      const hand = this.handPoint()
+      this.led.update({ x: hero.sprite.x, y: hero.sprite.y, hand, faceRight: this.faceRight, seated: !!seat, dt, time })
+    }
+    // Auto-dismount entering the village: you lead it through the gate.
     if (this.riding && world.areaId === 'village') {
       this.riding = false
       void this.build()
-      bus.emit(EV.toast, { text: 'You lead your mount through the gate on foot.', kind: 'thought' })
+      bus.emit(EV.toast, { text: RIDE_WORDS.gate, kind: 'thought' })
+      this.showButtons()
     }
+  }
+
+  private lastTime: number | null = null
+
+  /** The weapon hand, in world px (where the lead rope starts). */
+  private handPoint(): { x: number; y: number } {
+    const c = this.container!
+    const mirrored = c.scaleX < 0
+    return { x: c.x + (mirrored ? -HAND.x : HAND.x), y: c.y + HAND.y }
+  }
+
+  /** Put the led mount down: where you got off it, or beside you (coming out of a door, a new area). */
+  private makeLed(): void {
+    this.led?.destroy()
+    const hero = this.deps.hero()
+    const at = this.dismountAt ?? { x: hero.sprite.x + (this.faceRight ? -26 : 26), y: hero.sprite.y }
+    this.dismountAt = null
+    this.led = new LedMount(this.scene, this.mountOut, at, this.deps.reducedMotion)
   }
 
   /**
@@ -364,29 +567,35 @@ export class AvatarVisual {
   invalidate(): void {
     this.buildToken++
     this.container = null
-    this.pet = null
+    this.follower = null
+    this.followerShown = ''
+    this.led = null
     carried.riding = this.riding
     carried.fallbackNotified = this.fallbackNotified
     carried.partialNotified = this.partialNotified
   }
 
   private clearPet(): void {
-    if (this.pet) {
-      this.pet.destroy()
-      this.pet = null
-    }
+    this.follower?.destroy()
+    this.follower = null
+    this.followerShown = ''
   }
 
-  /** Selected pet trails the hero (never baked into the layer stack). A
-   * petless sync leaves no duplicate or stale follower behind. */
+  /**
+   * The pet that walks with you trails the hero (never baked into the layer
+   * stack): the chosen follower, or Habitica's current pet (crafts.md 2.2).
+   * No pet is no pet: nothing is invented.
+   */
   private async buildPetFollower(token: number): Promise<void> {
-    const key = (this.deps.session.importedProfile as { selectedPet?: string | null } | null)?.selectedPet
+    const key = this.followKey
+    this.followerShown = key
     const keys = await loadCompanion(this.scene, key, 'pet')
-    if (token !== this.buildToken) return
+    if (token !== this.buildToken || key !== this.followerShown) return
+    const was = this.follower ? { x: this.follower.x, y: this.follower.y } : null
+    this.follower?.destroy()
+    this.follower = null
     if (!keys || keys.length === 0) return // unknown/empty keys: no invented visuals
-    this.clearPet()
-    this.pet = this.scene.add.image(this.deps.hero().sprite.x - 14, this.deps.hero().sprite.y - 2, keys[0])
-      .setOrigin(0.5, 1)
-      .setScale(AVATAR_DISPLAY / AVATAR_CANVAS) // companion grid matches the avatar grid
+    const hero = this.deps.hero()
+    this.follower = new PetFollower(this.scene, keys[0], was ? { x: was.x + 14, y: was.y + 2 } : { x: hero.sprite.x, y: hero.sprite.y }, this.deps.reducedMotion)
   }
 }

@@ -2,6 +2,7 @@ import type Phaser from 'phaser'
 import { PACKED_MANIFEST_KEY, type PackedManifest } from './atlas-plan.ts'
 import { addArtCanvas, artCanvas, artDataUrl, artSource, drawArt } from './density.ts'
 import { explodeFrames, type PassAnimation, type PassRect, type PassSource } from './art-pass.ts'
+import { CRAFTS_WORLD_ART, crArt } from './crafts-art.ts'
 
 /**
  * Typed port and loader module for `assets/generated/items-pass/`:
@@ -212,6 +213,9 @@ export function itemWorldArt(itemId: string, state?: string): string | null {
   // names a runtime texture the scenes already have.
   const alias = aliases[itemId]
   if (alias?.startsWith('commons:')) return 'commons-art:' + alias.slice('commons:'.length)
+  // The crafts pass's pieces (the stable).
+  const crafts = CRAFTS_WORLD_ART[itemId]
+  if (crafts) return crArt(crafts)
   return null
 }
 

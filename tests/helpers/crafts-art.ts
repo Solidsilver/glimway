@@ -1,8 +1,7 @@
 /**
- * Crafts content whose art the crafts pass delivers (docs/design/crafts.md
- * 9, lane H): the stable's back and front layers (9.2) and the willow rod's
- * icon frames (9.3). Until that pass lands these resolve to no art at all,
- * and the art tests hold their peace about exactly these ids — never about
- * anything else.
+ * Crafts content whose art isn't wired yet (docs/design/crafts.md 9.3): the
+ * willow rod's inventory frames (lane G wires the crafts pass's rod). The
+ * art tests hold their peace about exactly these ids — never about anything
+ * else. The stable resolves to the crafts pass's west end (lane E).
  */
-export const CRAFTS_ART_PENDING: ReadonlySet<string> = new Set(['stable', 'willow-rod']);
+export const CRAFTS_ART_PENDING: ReadonlySet<string> = new Set(['willow-rod']);

@@ -217,11 +217,12 @@ test('itemWorldArt resolves placed pieces to their world sprites', () => {
   assert.equal(itemWorldArt('woodpile'), 'commons-art:woodpile')
   assert.equal(itemWorldArt('candle-hulls'), 'commons-art:candle-hull-0')
   assert.equal(itemWorldArt('carting-bunting'), 'commons-art:bunting')
+  // A crafts-pass piece: the stable's west end (drawn bay by bay on the land).
+  assert.equal(itemWorldArt('stable'), 'cr-art:stable-west-front-shut')
 })
 
 test('every home good resolves to art: runtime deco, world sprite or commons alias', () => {
   for (const it of HOMESTEAD_DATA.items) {
-    // The crafts pass delivers the stable (docs/design/crafts.md 9.2).
     if (CRAFTS_ART_PENDING.has(it.id)) continue
     const ok = COMMONS_DECORATION_IDS.has(it.id) || itemWorldArt(it.id) !== null
     assert.ok(ok, `${it.id} has no deco key, world sprite or commons alias`)

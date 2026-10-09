@@ -65,6 +65,12 @@ export const EV = {
   gift: 'game:gift',
   /** Presence: someone near you reached a story beat (src/content/witness.ts): { beat, accountId, name }. */
   witness: 'game:witness',
+  /** Connected play: the companions view changed (follower, yard pets, the mount that's out). */
+  companions: 'game:companions',
+  /** Open the Character panel's Companions page (`at: 'stable'` scrolls to the stable). */
+  openCompanions: 'ui:open-companions',
+  /** The mount that's out, as the hero has it now: { key, riding, led } (MountPayload); null when none is out. */
+  mount: 'ui:mount',
   /** Connected play: a mutation whose answer was lost is now known: { op, outcome, res? | code? }. */
   mutationResolved: 'game:mutation-resolved',
   /** Connected play: balances or paid outcomes changed — markers and lanterns refresh. */
@@ -340,6 +346,13 @@ export interface RelocatePayload {
   y: number
 }
 
+/** The mount that's out (crafts.md 3.1): ridden, on the lead, or waiting at a door. */
+export interface MountPayload {
+  key: string
+  riding: boolean
+  led: boolean
+}
+
 export interface PresencePayload {
   /** 'off' for guests and before the lease; 'live' once the socket is ready. */
   status: PresenceStatus
@@ -420,6 +433,9 @@ export interface EventMap {
   [EV.emote]: EmotePayload
   [EV.gift]: GiftPayload
   [EV.witness]: WitnessPayload
+  [EV.companions]: void
+  [EV.openCompanions]: { at?: 'stable' } | undefined
+  [EV.mount]: MountPayload | null
   [EV.mutationResolved]: MutationResolvedPayload
   [EV.worldRefresh]: void
   [EV.fallSettled]: { lantern: string }
