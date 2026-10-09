@@ -15,7 +15,7 @@
  */
 import type Phaser from 'phaser'
 import { roomFootprints, roomFor } from '../lib/rooms.ts'
-import { RESIDENTS, residentAt, residentById, type ResidentSpot } from '../lib/residents.ts'
+import { RESIDENTS, residentAt, residentById, type ResidentPlace } from '../lib/residents.ts'
 import { cycleAt } from '../lib/clock.ts'
 import { tileBottom, tileFeet, tileMid } from '../lib/tile.ts'
 import { serverNow } from './clock.ts'
@@ -27,7 +27,7 @@ import type { NpcEntity, Npcs } from './entities/npcs.ts'
  * place from the shared loader (src/lib/residents.ts `residentAt`), with
  * its phase's spot name and when they move on; null for no such resident.
  */
-export function residentPlace(id: string, now: number = serverNow()): (ResidentSpot & { spot: string; until: number }) | null {
+export function residentPlace(id: string, now: number = serverNow()): (ResidentPlace & { spot: string; until: number }) | null {
   const def = residentById(id)
   const at = residentAt(id, now)
   if (!def || !at) return null
@@ -71,7 +71,7 @@ export function doorFor(id: string, area: string, other: string): { step: { tx: 
   }
   const home = residentById(id)?.home
   const front = home ? roomFor(home)?.doors.find((d) => d.kind === 'door' && d.to === area && d.outside) : null
-  return front?.outside ? { step: { ...front.entry }, door: { ...front.outside } } : null
+  return front?.outside ? { step: { tx: front.entry.tx, ty: front.entry.ty }, door: { tx: front.outside.tx, ty: front.outside.ty } } : null
 }
 
 /** A straight two-leg walk (across, then up or down: the last leg meets a door head on), in feet px. */

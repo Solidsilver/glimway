@@ -90,7 +90,8 @@ function exitFor(def: Room, door: RoomDoor): ExitDef {
   if (!g) throw new Error(`[glimway] room ${def.id}: door ${door.id} has no "${door.at}" tiles`)
   // A stair names the floor it reaches; a doorway shows its chevron alone (the HUD already names the room).
   const label = door.kind === 'stair' ? (roomFor(door.to)?.name ?? null) : ''
-  return { ...g, to: door.to, entry: { ...door.entry }, side: door.side, kind: door.kind, ...(label === undefined ? {} : { label }) }
+  // The loader's schema has checked the vocabularies.
+  return { ...g, to: door.to, entry: { ...door.entry }, side: door.side as ExitDef['side'], kind: door.kind as ExitDef['kind'], ...(label === undefined ? {} : { label }) }
 }
 
 /** A village room's WorldData, from its row in the rooms data. */
@@ -117,7 +118,7 @@ export function buildRoomArea(def: Room): WorldData {
     ground.push(g)
     solid.push(s)
   }
-  const props: Footprint[] = def.props.flatMap((p) => groupsOf(def, p.char).map((g) => ({ art: p.art, char: p.char, solid: p.solid, ...(p.facing ? { facing: p.facing } : {}), ...g })))
+  const props: Footprint[] = def.props.flatMap((p) => groupsOf(def, p.char).map((g) => ({ art: p.art, char: p.char, solid: p.solid, ...(p.facing ? { facing: p.facing as Footprint['facing'] } : {}), ...g })))
   // The stairs climb along their wall at 45°; the floor above has a railed opening over them (7.0 rule 5).
   const stairs: Footprint[] = ['^', 'v'].flatMap((c) => groupsOf(def, c).map((g) => ({ art: c === '^' ? 'mill-stairs-diag-default' : 'loft-stair-opening-front-default', char: c, solid: false, ...g })))
   const [door] = groupsOf(def, 'D')
