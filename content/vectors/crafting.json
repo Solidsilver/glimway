@@ -1137,7 +1137,7 @@
           "value": {
             "bloom-flowers": {
               "standIns": [
-                "bloom-flowers"
+                "seasoned-timber"
               ]
             }
           }
@@ -1270,7 +1270,7 @@
       ]
     },
     {
-      "name": "hearth-material-output",
+      "name": "hearth-decoration-output",
       "valid": false,
       "rule": "output",
       "edits": [
@@ -1375,6 +1375,25 @@
             "min_tier"
           ],
           "value": 2
+        }
+      ]
+    },
+    {
+      "name": "bench-material-output",
+      "valid": false,
+      "rule": "output",
+      "edits": [
+        {
+          "path": [
+            "recipes",
+            0,
+            "output"
+          ],
+          "value": {
+            "kind": "material",
+            "id": "timber",
+            "qty": 1
+          }
         }
       ]
     }

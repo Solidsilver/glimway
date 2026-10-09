@@ -245,6 +245,23 @@
           "value": "project:north-bridge:complete"
         }
       ]
+    },
+    {
+      "name": "duplicate-paper-across-projects",
+      "valid": false,
+      "rule": "duplicate paper",
+      "edits": [
+        {
+          "path": [
+            "projects",
+            1,
+            "papers"
+          ],
+          "value": [
+            "count-house-tally-book-scrap"
+          ]
+        }
+      ]
     }
   ]
 }

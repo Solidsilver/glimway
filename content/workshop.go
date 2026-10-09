@@ -55,26 +55,27 @@ func DecodeCrafting(raw []byte) (*Crafting, error) {
 	if err := decodeContentProto(raw, "crafting", doc); err != nil {
 		return doc, err
 	}
-	if err := contentValidate("crafting", entryLists(doc, "utility_items", "recipes", "hearth_recipes"), doc); err != nil {
+	if err := contentValidate("crafting", entryLists(doc, "utilityItems", "recipes", "hearthRecipes"), doc); err != nil {
 		return doc, err
 	}
 	return doc, validateCrafting(doc)
 }
 
-// validateCrafting: the rules that span entries or families. Parts and
-// recipe ids are unique across both lists (one `duplicate id` per id); a
-// utility item is a catalogue part under its catalogue name; a bill names
-// carried stacks; swaps stand in for a bill line; outputs resolve, tier 2
-// on the bench, tier 1 at the hearth, and a found recipe names its page.
+// validateCrafting: the rules that span entries or families. Recipe ids
+// are unique across recipes and hearth recipes (one `duplicate id` per
+// id); a utility item is a catalogue part under its catalogue name; a bill
+// names carried stacks; swaps stand in for a bill line; outputs resolve,
+// tier 2 on the bench, tier 1 at the hearth, and a found recipe names its
+// page.
 func validateCrafting(c *Crafting) error {
 	items := map[string]bool{}
 	recipes := map[string]bool{}
-	for _, i := range c.UtilityItems {
-		d, ok := ItemFor(i.GetId())
+	for _, i := range c.GetUtilityItems() {
 		if items[i.GetId()] {
 			return fmt.Errorf("invalid crafting: duplicate id %s", i.GetId())
 		}
-		if i.GetName() == "" || !ok || d.Kind != "part" || d.Name != i.GetName() {
+		d, ok := ItemFor(i.GetId())
+		if !ok || d.Kind != "part" || d.Name != i.GetName() {
 			return fmt.Errorf("invalid crafting: utility item %s", i.GetId())
 		}
 		items[i.GetId()] = true

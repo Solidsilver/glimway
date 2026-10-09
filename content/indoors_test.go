@@ -2,13 +2,12 @@ package content
 
 import (
 	"encoding/json"
-	"errors"
 	"os"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 
-	"buf.build/go/protovalidate"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
@@ -29,16 +28,22 @@ type loaderVector struct {
 }
 
 // checkVectorRule asserts the shared vector was refused for the shared
-// reason: a schema violation carries the rule id, a code rule its tag.
+// reason: a schema violation carries the rule id (rendered in brackets), a
+// code rule or pre-parse check its tag ("duplicate id", "unknown key", …).
+var ruleID = regexp.MustCompile(`^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$`)
+
 func checkVectorRule(t *testing.T, err error, want string) {
 	t.Helper()
-	var bad *protovalidate.ValidationError
-	if errors.As(err, &bad) {
-		for _, v := range bad.Violations {
-			if v.Proto.GetRuleId() == want {
-				return
-			}
+	if err == nil {
+		t.Fatalf("accepted, want rule %q", want)
+	}
+	// A dotted rule id must appear in the rendered text in brackets — a
+	// prefix or substring of another id does not count.
+	if ruleID.MatchString(want) {
+		if strings.Contains(err.Error(), "["+want+"]") {
+			return
 		}
+		t.Fatalf("refusal does not name rule [%s]: %v", want, err)
 	}
 	if strings.Contains(err.Error(), want) {
 		return

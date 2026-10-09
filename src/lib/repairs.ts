@@ -8,27 +8,25 @@ import { itemDef } from './items.ts';
 export type RepairsData = RepairsValid;
 export type RepairDef = RepairDefValid;
 
-/** Throws on anything content/repairs.go would refuse. */
+/**
+ * Throws on anything content/repairs.go would refuse: the rules that span
+ * entries or families, in Go's order with Go's tags — the schema's own
+ * (protovalidate) rules ran in decodeContent before these.
+ */
 export function validateRepairs(value: unknown): RepairsData {
   const data = decodeContent(RepairsSchema, value, 'repairs', ['repairs']) as RepairsData;
   const bad = (why: string): never => { throw new Error(`invalid repairs: ${why}`); };
-  if (data.rules.maxOpen <= 0 || data.rules.perWick <= 0 || data.rules.scripted.length === 0) return bad('rules');
   const ids = new Set<string>();
   for (const r of data.repairs) {
-    // The part mends it, the gift pays it: both are catalogue items of a
-    // kind a player can hold; the opening wick is a calendar one of a
-    // calendar length.
-    const part = itemDef(r.part);
-    if (!part || !['part', 'material', 'consumable'].includes(part.kind)) return bad(`part ${r.id}`);
-    if (r.gift && !itemDef(r.gift.id)) return bad(`gift ${r.id}`);
-    if (r.openFrom && (!CALENDAR.wicks.includes(r.openFrom.wick) || r.openFrom.day > CALENDAR.wickDays)) return bad(`openFrom ${r.id}`);
     if (ids.has(r.id)) return bad(`duplicate id ${r.id}`);
-    if (r.worldFlag !== `repair:${r.id}:mended`) return bad(`worldFlag ${r.id}`);
-    if (r.area !== 'village' && r.area !== 'commons') return bad(`area ${r.id}`);
-    if (!r.reaction || r.reaction.length > 160) return bad(`reaction ${r.id}`);
-    if (!r.description || r.description.length > 160) return bad(`description ${r.id}`);
-    if (!r.mendedDescription || r.mendedDescription.length > 160) return bad(`mendedDescription ${r.id}`);
     ids.add(r.id);
+    // The part mends it, the gift pays it: both are catalogue items of a
+    // kind a player can hold.
+    const part = itemDef(r.part);
+    if (!part || !['part', 'material', 'consumable'].includes(part.kind)) return bad(`${r.id} part`);
+    if (r.gift && !itemDef(r.gift.id)) return bad(`${r.id} gift`);
+    // The opening wick is a calendar wick of a calendar length.
+    if (r.openFrom && (!CALENDAR.wicks.includes(r.openFrom.wick) || r.openFrom.day > CALENDAR.wickDays)) return bad(`${r.id} openFrom`);
   }
   for (const s of data.rules.scripted) {
     if (!ids.has(s)) return bad(`scripted ${s}`);

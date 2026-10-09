@@ -555,6 +555,53 @@
           "value": 40
         }
       ]
+    },
+    {
+      "name": "home-offers-nothing",
+      "valid": false,
+      "rule": "offers nothing",
+      "edits": [
+        {
+          "path": [
+            "areas"
+          ],
+          "value": {
+            "wilds": {
+              "targets": [
+                "tangle-tree",
+                "tree",
+                "iron-oak",
+                "willow",
+                "boulder",
+                "lamp-stone",
+                "stump",
+                "herbs",
+                "bloom-patch",
+                "sapling",
+                "hollow-tree"
+              ]
+            },
+            "woodland": {
+              "targets": [
+                "tree",
+                "ash",
+                "boulder"
+              ]
+            },
+            "village": {
+              "targets": [
+                "freshet-shore",
+                "pond-ice"
+              ]
+            },
+            "commons": {
+              "targets": [
+                "bloom-patch"
+              ]
+            }
+          }
+        }
+      ]
     }
   ]
 }

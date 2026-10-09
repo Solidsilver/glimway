@@ -138,21 +138,25 @@ func refuseSingular(path string, v any, fd protoreflect.FieldDescriptor) error {
 	return nil
 }
 
-// entryList names the entries of one repeated field: the field's proto name
+// entryList names the entries of one repeated field: the field's JSON name
 // (as violation paths spell it) and each entry's id, in order.
 type entryList struct {
 	field string
 	ids   []string
 }
 
-// entryLists names the entries of the named repeated fields (by proto
-// name), each entry by its id, in order — the loaders' map for rewriting a
-// violation path ("projects[2]") to name the entry.
+// entryLists names the entries of the named repeated fields (spelled as the
+// violation paths spell them — the fields' JSON names), each entry by its
+// id, in order — the loaders' map for rewriting a violation path
+// ("projects[2]") to name the entry.
 func entryLists(msg proto.Message, fields ...string) []entryList {
 	out := make([]entryList, 0, len(fields))
 	m := msg.ProtoReflect()
 	for _, field := range fields {
-		fd := m.Descriptor().Fields().ByName(protoreflect.Name(field))
+		fd := m.Descriptor().Fields().ByJSONName(field)
+		if fd == nil {
+			fd = m.Descriptor().Fields().ByName(protoreflect.Name(field))
+		}
 		if fd == nil || !fd.IsList() {
 			continue
 		}
@@ -167,7 +171,7 @@ func entryLists(msg proto.Message, fields ...string) []entryList {
 				ids[i] = entry.Get(idFd).String()
 			}
 		}
-		out = append(out, entryList{field: field, ids: ids})
+		out = append(out, entryList{field: fd.JSONName(), ids: ids})
 	}
 	return out
 }

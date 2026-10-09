@@ -5,7 +5,11 @@
  * and the pre-parse checks — the message's own tag ("duplicate id", "stair
  * target", "unknown key"). Both languages' errors must carry it.
  */
+const RULE_ID = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/;
 export function refusalMatchesRule(err: unknown, rule: string): boolean {
   const message = err instanceof Error ? err.message : String(err);
-  return message.includes(`[${rule}]`) || message.includes(rule);
+  // A dotted rule id must appear in the rendered text in brackets — a
+  // prefix or substring of another id does not count.
+  if (RULE_ID.test(rule)) return message.includes(`[${rule}]`);
+  return message.includes(rule);
 }

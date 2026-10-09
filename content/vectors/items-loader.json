@@ -1602,6 +1602,128 @@
           "value": "dried"
         }
       ]
+    },
+    {
+      "name": "unknown-kind",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "kind"
+          ],
+          "value": "weapon"
+        }
+      ]
+    },
+    {
+      "name": "grades-incomplete",
+      "valid": false,
+      "rule": "map.min_pairs",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "grades"
+          ],
+          "value": {
+            "cheap": {
+              "slots": 1,
+              "atZero": "breaks"
+            },
+            "special": {
+              "slots": 0,
+              "atZero": "never"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "home-good-not-in-homestead",
+      "valid": false,
+      "rule": "home good not in homestead.json",
+      "edits": [
+        {
+          "path": [
+            "items",
+            42,
+            "id"
+          ],
+          "value": "tool-shed"
+        }
+      ]
+    },
+    {
+      "name": "wilds-material-missing",
+      "valid": false,
+      "rule": "wilds material",
+      "edits": [
+        {
+          "path": [
+            "items",
+            16,
+            "kind"
+          ],
+          "value": "keepsake"
+        },
+        {
+          "path": [
+            "items",
+            16,
+            "tab"
+          ],
+          "value": "keepsakes"
+        }
+      ]
+    },
+    {
+      "name": "wilds-trinket-missing",
+      "valid": false,
+      "rule": "wilds trinket",
+      "edits": [
+        {
+          "path": [
+            "items",
+            39,
+            "kind"
+          ],
+          "value": "material"
+        },
+        {
+          "path": [
+            "items",
+            39,
+            "tab"
+          ],
+          "value": "supplies"
+        }
+      ]
+    },
+    {
+      "name": "charm-not-a-keepsake",
+      "valid": false,
+      "rule": "charm",
+      "edits": [
+        {
+          "path": [
+            "items",
+            41,
+            "kind"
+          ],
+          "value": "material"
+        },
+        {
+          "path": [
+            "items",
+            41,
+            "tab"
+          ],
+          "value": "supplies"
+        }
+      ]
     }
   ]
 }

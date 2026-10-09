@@ -96,9 +96,8 @@ func (x *Items) GetSellers() []*ItemSeller {
 // a code change on both sides, never just data.
 type ItemsRules struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Exactly the three designed grades.
-	// Exactly the three designed grades: the keys' vocabulary, and the three
-	// atZero CELs above (one per grade — a missing key fails its CEL).
+	// Exactly the three designed grades: exactly those keys (the CELs above
+	// only look keys up once the size is three).
 	Grades        map[string]*ItemGrade `protobuf:"bytes,1,rep,name=grades,proto3" json:"grades,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Wear          *ItemWear             `protobuf:"bytes,2,opt,name=wear,proto3" json:"wear,omitempty"`
 	Pockets       *ItemPockets          `protobuf:"bytes,3,opt,name=pockets,proto3" json:"pockets,omitempty"`
@@ -1467,10 +1466,10 @@ const file_glimway_content_v1_items_proto_rawDesc = "" +
 	"\x05rules\x18\x01 \x01(\v2\x1e.glimway.content.v1.ItemsRulesB\x06\xbaH\x03\xc8\x01\x01R\x05rules\x12;\n" +
 	"\x05items\x18\x02 \x03(\v2\x1b.glimway.content.v1.ItemDefB\b\xbaH\x05\x92\x01\x02\b\x01R\x05items\x128\n" +
 	"\apickups\x18\x03 \x03(\v2\x1e.glimway.content.v1.ItemPickupR\apickups\x128\n" +
-	"\asellers\x18\x04 \x03(\v2\x1e.glimway.content.v1.ItemSellerR\asellers\"\xe0\x06\n" +
+	"\asellers\x18\x04 \x03(\v2\x1e.glimway.content.v1.ItemSellerR\asellers\"\xb2\a\n" +
 	"\n" +
-	"ItemsRules\x12h\n" +
-	"\x06grades\x18\x01 \x03(\v2*.glimway.content.v1.ItemsRules.GradesEntryB$\xbaH!\x9a\x01\x1e\"\x1cr\x1aR\x05cheapR\bheirloomR\aspecialR\x06grades\x128\n" +
+	"ItemsRules\x12l\n" +
+	"\x06grades\x18\x01 \x03(\v2*.glimway.content.v1.ItemsRules.GradesEntryB(\xbaH%\x9a\x01\"\b\x03\x10\x03\"\x1cr\x1aR\x05cheapR\bheirloomR\aspecialR\x06grades\x128\n" +
 	"\x04wear\x18\x02 \x01(\v2\x1c.glimway.content.v1.ItemWearB\x06\xbaH\x03\xc8\x01\x01R\x04wear\x12A\n" +
 	"\apockets\x18\x03 \x01(\v2\x1f.glimway.content.v1.ItemPocketsB\x06\xbaH\x03\xc8\x01\x01R\apockets\x12B\n" +
 	"\boff_hand\x18\x04 \x01(\v2\x1f.glimway.content.v1.ItemOffHandB\x06\xbaH\x03\xc8\x01\x01R\aoffHand\x128\n" +
@@ -1479,10 +1478,10 @@ const file_glimway_content_v1_items_proto_rawDesc = "" +
 	"\amenders\x18\a \x03(\v2\x1e.glimway.content.v1.ItemMenderR\amenders\x1aX\n" +
 	"\vGradesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x123\n" +
-	"\x05value\x18\x02 \x01(\v2\x1d.glimway.content.v1.ItemGradeR\x05value:\x028\x01:\x98\x02\xbaH\x94\x02\x1aP\n" +
-	"\x11items.grade_cheap\x12\x11cheap tools break\x1a(this.grades[\"cheap\"].at_zero == \"breaks\"\x1ad\n" +
-	"\x14items.grade_heirloom\x12\x13heirloom tools mend\x1a7this.grades[\"heirloom\"].at_zero in [\"blunt\", \"cracked\"]\x1aZ\n" +
-	"\x13items.grade_special\x12\x18special tools never wear\x1a)this.grades[\"special\"].at_zero == \"never\"\"\x90\x01\n" +
+	"\x05value\x18\x02 \x01(\v2\x1d.glimway.content.v1.ItemGradeR\x05value:\x028\x01:\xe6\x02\xbaH\xe2\x02\x1aj\n" +
+	"\x11items.grade_cheap\x12\x11cheap tools break\x1aBsize(this.grades) == 3 && this.grades[\"cheap\"].at_zero == \"breaks\"\x1a~\n" +
+	"\x14items.grade_heirloom\x12\x13heirloom tools mend\x1aQsize(this.grades) == 3 && this.grades[\"heirloom\"].at_zero in [\"blunt\", \"cracked\"]\x1at\n" +
+	"\x13items.grade_special\x12\x18special tools never wear\x1aCsize(this.grades) == 3 && this.grades[\"special\"].at_zero == \"never\"\"\x90\x01\n" +
 	"\tItemGrade\x12\x1f\n" +
 	"\x05slots\x18\x01 \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x06(\x00R\x05slots\x12=\n" +
 	"\aat_zero\x18\x02 \x01(\tB$\xbaH!r\x1fR\x06breaksR\x05bluntR\acrackedR\x05neverR\x06atZero\x12\x19\n" +
@@ -1518,7 +1517,7 @@ const file_glimway_content_v1_items_proto_rawDesc = "" +
 	"\xbaH\a\xc8\x01\x01\x1a\x02(\x00H\x01R\x02ty\x88\x01\x01\x12*\n" +
 	"\fradius_tiles\x18\x06 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\vradiusTilesB\x05\n" +
 	"\x03_txB\x05\n" +
-	"\x03_ty\"\xd1\x15\n" +
+	"\x03_ty\"\xde\x16\n" +
 	"\aItemDef\x12)\n" +
 	"\x02id\x18\x01 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x02id\x12\x1b\n" +
 	"\x04name\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12A\n" +
@@ -1547,8 +1546,8 @@ const file_glimway_content_v1_items_proto_rawDesc = "" +
 	"\x05bound\x18\x14 \x01(\bH\x05R\x05bound\x88\x01\x01\x12;\n" +
 	"\n" +
 	"belongs_to\x18\x15 \x01(\tB\x1c\xbaH\x19r\x172\x15^([a-z0-9-]{1,100})?$R\tbelongsTo\x12\x1b\n" +
-	"\x06marked\x18\x16 \x01(\bH\x06R\x06marked\x88\x01\x01:\x86\f\xbaH\x82\f\x1a\xb1\x02\n" +
-	"\fitem_def.tab\x12\x18tab is the kind's drawer\x1a\x86\x02{\"tool\": \"tools\", \"off-hand\": \"tools\", \"carry-gear\": \"tools\", \"consumable\": \"supplies\", \"material\": \"supplies\", \"fitting\": \"supplies\", \"part\": \"supplies\", \"seed\": \"supplies\", \"keepsake\": \"keepsakes\", \"home-good\": \"home\", \"paper\": \"papers\"}[this.kind] == this.tab\x1a\xef\x01\n" +
+	"\x06marked\x18\x16 \x01(\bH\x06R\x06marked\x88\x01\x01:\x93\r\xbaH\x8f\r\x1a\xbe\x03\n" +
+	"\fitem_def.tab\x12\x18tab is the kind's drawer\x1a\x93\x03!(this.kind in [\"tool\", \"off-hand\", \"carry-gear\", \"consumable\", \"material\", \"fitting\", \"part\", \"seed\", \"keepsake\", \"home-good\", \"paper\"]) || {\"tool\": \"tools\", \"off-hand\": \"tools\", \"carry-gear\": \"tools\", \"consumable\": \"supplies\", \"material\": \"supplies\", \"fitting\": \"supplies\", \"part\": \"supplies\", \"seed\": \"supplies\", \"keepsake\": \"keepsakes\", \"home-good\": \"home\", \"paper\": \"papers\"}[this.kind] == this.tab\x1a\xef\x01\n" +
 	"\x14item_def.tool_fields\x12>grade, uses, atZero, slots, actions and repair are tool fields\x1a\x96\x01this.kind == \"tool\" || (!has(this.grade) && !has(this.uses) && !has(this.at_zero) && !has(this.slots) && size(this.actions) == 0 && !has(this.repair))\x1aX\n" +
 	"\x13item_def.icon_state\x12\x17iconState needs an icon\x1a(this.icon_state == \"\" || this.icon != \"\"\x1a\xbd\x01\n" +
 	"\x10item_def.fitting\x125a fitting names a fitting kind, and nothing else does\x1arthis.kind == \"fitting\" ? this.fitting in [\"bite\", \"hold\", \"heft\", \"glow\", \"grip\", \"remember\"] : this.fitting == \"\"\x1ab\n" +

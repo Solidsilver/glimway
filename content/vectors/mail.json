@@ -1,18 +1,178 @@
 {
   "loader": [
-    { "name": "shipped-rules", "valid": true, "edits": [] },
-    { "name": "zero-sent", "valid": false, "rule": "int32.gte", "edits": [{ "path": ["maxOutstandingSent"], "value": 0 }] },
-    { "name": "over-received", "valid": false, "rule": "int32.gte_lte", "edits": [{ "path": ["maxOutstandingReceived"], "value": 101 }] },
-    { "name": "zero-window-sends", "valid": false, "rule": "int32.gte", "edits": [{ "path": ["maxSendsPerWindow"], "value": 0 }] },
-    { "name": "over-window-seconds", "valid": false, "rule": "int32.gte_lte", "edits": [{ "path": ["sendWindowSeconds"], "value": 86401 }] },
-    { "name": "over-page", "valid": false, "rule": "int32.gte_lte", "edits": [{ "path": ["historyPageSize"], "value": 101 }] },
-    { "name": "over-return-days", "valid": false, "rule": "int32.gte_lte", "edits": [{ "path": ["returnAfterDays"], "value": 366 }] },
-    { "name": "over-batch", "valid": false, "rule": "int32.gte_lte", "edits": [{ "path": ["maintenanceBatch"], "value": 501 }] },
-    { "name": "over-interval", "valid": false, "rule": "int32.gte_lte", "edits": [{ "path": ["maintenanceIntervalSeconds"], "value": 3601 }] },
-    { "name": "missing-key", "valid": false, "rule": "int32.gte", "edits": [{ "path": ["returnAfterDays"], "remove": true }] },
-    { "name": "null-field", "valid": false, "rule": "null content field", "edits": [{ "path": ["returnAfterDays"], "value": null }] },
-    { "name": "unknown-key", "valid": false, "rule": "unknown key", "edits": [{ "path": ["retentionDays"], "value": 30 }] },
-    { "name": "proto-name-key", "valid": false, "rule": "is the proto name", "edits": [{ "path": ["return_after_days"], "value": 30 }] },
-    { "name": "fractional", "valid": false, "rule": "decode", "edits": [{ "path": ["returnAfterDays"], "value": 1.5 }] }
+    {
+      "name": "shipped-rules",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "zero-sent",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "maxOutstandingSent"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "over-received",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "maxOutstandingReceived"
+          ],
+          "value": 101
+        }
+      ]
+    },
+    {
+      "name": "zero-window-sends",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "maxSendsPerWindow"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "over-window-seconds",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "sendWindowSeconds"
+          ],
+          "value": 86401
+        }
+      ]
+    },
+    {
+      "name": "over-page",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "historyPageSize"
+          ],
+          "value": 101
+        }
+      ]
+    },
+    {
+      "name": "over-return-days",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "returnAfterDays"
+          ],
+          "value": 366
+        }
+      ]
+    },
+    {
+      "name": "over-batch",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "maintenanceBatch"
+          ],
+          "value": 501
+        }
+      ]
+    },
+    {
+      "name": "over-interval",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "maintenanceIntervalSeconds"
+          ],
+          "value": 3601
+        }
+      ]
+    },
+    {
+      "name": "missing-key",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "returnAfterDays"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "null-field",
+      "valid": false,
+      "rule": "null content field",
+      "edits": [
+        {
+          "path": [
+            "returnAfterDays"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "unknown-key",
+      "valid": false,
+      "rule": "unknown key",
+      "edits": [
+        {
+          "path": [
+            "retentionDays"
+          ],
+          "value": 30
+        }
+      ]
+    },
+    {
+      "name": "proto-name-key",
+      "valid": false,
+      "rule": "is the proto name",
+      "edits": [
+        {
+          "path": [
+            "return_after_days"
+          ],
+          "value": 30
+        }
+      ]
+    },
+    {
+      "name": "fractional",
+      "valid": false,
+      "rule": "decode",
+      "edits": [
+        {
+          "path": [
+            "returnAfterDays"
+          ],
+          "value": 1.5
+        }
+      ]
+    }
   ]
 }

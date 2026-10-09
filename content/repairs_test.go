@@ -83,3 +83,7 @@ func TestRepairsContent(t *testing.T) {
 		t.Fatalf("unexpected gate-hame definition: %+v", hame)
 	}
 }
+
+func TestRepairsLoaderVectors(t *testing.T) {
+	runLoaderVectors(t, "repairs", "repairs", func(raw []byte) (any, error) { return DecodeRepairs(raw) })
+}

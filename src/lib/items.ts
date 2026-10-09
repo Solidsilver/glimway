@@ -60,15 +60,15 @@ export function validateItems(value: unknown): Items {
   };
   const v = decodeContent(ItemsSchema, value, 'items', ['items', 'pickups', 'sellers']) as unknown as Items;
   const r = v.rules;
-  const defs = new Map<string, ItemDef>();
-  for (const d of v.items) {
-    if (defs.has(d.id)) return bad(`duplicate id ${d.id}`);
-    defs.set(d.id, d);
-  }
   const npcs = new Set<string>();
   for (const m of r.menders) {
     if (npcs.has(m.npc)) return bad(`duplicate mender ${m.npc}`);
     npcs.add(m.npc);
+  }
+  const defs = new Map<string, ItemDef>();
+  for (const d of v.items) {
+    if (defs.has(d.id)) return bad(`duplicate id ${d.id}`);
+    defs.set(d.id, d);
   }
   for (const d of v.items) {
     const fail = (why: string): never => bad(`item ${d.id}: ${why}`);
@@ -76,9 +76,9 @@ export function validateItems(value: unknown): Items {
       const g = d.grade && r.grades[d.grade];
       if (!g) return fail('grade');
       if ((g.atZero === 'never') !== !d.uses) return fail('uses');
-      if (d.atZero !== undefined && !AT_ZERO_FOR_GRADE[d.grade!].includes(d.atZero)) return fail('atZero');
+      if (d.atZero && !AT_ZERO_FOR_GRADE[d.grade!].includes(d.atZero)) return fail('atZero');
       if (!d.actions.length) return fail('actions');
-      const zero = d.atZero ?? g.atZero;
+      const zero = d.atZero || g.atZero;
       if ((zero === 'blunt' || zero === 'cracked') !== !!d.repair) return fail('repair');
       if (d.repair) {
         const costsOK = (m: Record<string, number>) => Object.keys(m).length > 0 && Object.entries(m).every(([id, n]) => { const def = defs.get(id); return !!def && isStackable(def) && n >= 1 && n <= 1_000_000; });
@@ -108,7 +108,7 @@ export function validateItems(value: unknown): Items {
   const sellers = new Set<string>();
   for (const s of v.sellers ?? []) {
     if (sellers.has(s.id)) return bad(`duplicate seller ${s.id}`);
-    if (typeof s.npc !== 'string' || !s.npc || (s.with !== undefined ? !residentById(s.with) : !PICKUP_AREAS.includes(s.area as never))) return bad(`seller ${s.id}: place`);
+    if (typeof s.npc !== 'string' || !s.npc || (s.with ? !residentById(s.with) : !PICKUP_AREAS.includes(s.area as never))) return bad(`seller ${s.id}: place`);
     if (s.festival !== '' && !festivals.includes(s.festival)) return bad(`seller ${s.id}: festival`);
     sellers.add(s.id);
     const goods = new Set<string>();
@@ -172,7 +172,7 @@ export function isStackable(d: Pick<ItemDef, 'kind'>): boolean {
 
 export function atZeroRule(d: ItemDef): AtZero {
   if (d.kind !== 'tool') return 'never';
-  return (d.atZero ?? ITEM_RULES.grades[d.grade ?? 'special'].atZero) as AtZero;
+  return (d.atZero || ITEM_RULES.grades[d.grade ?? 'special'].atZero) as AtZero;
 }
 
 export function slotCount(d: ItemDef): number {

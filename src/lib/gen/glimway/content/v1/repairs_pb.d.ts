@@ -127,8 +127,8 @@ export declare type RepairDef = Message<"glimway.content.v1.RepairDef"> & {
   pos?: RepairPos | undefined;
 
   /**
-   * The resident who reacts when it's mended: checked against the residents
-   * family in code.
+   * The resident who reacts when it's mended (a name the chore views
+   * address; not validated against the residents family).
    *
    * @generated from field: string resident = 7;
    */
@@ -222,8 +222,8 @@ export declare type RepairDefValid = Message<"glimway.content.v1.RepairDef"> & {
   pos: RepairPosValid;
 
   /**
-   * The resident who reacts when it's mended: checked against the residents
-   * family in code.
+   * The resident who reacts when it's mended (a name the chore views
+   * address; not validated against the residents family).
    *
    * @generated from field: string resident = 7;
    */

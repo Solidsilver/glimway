@@ -100,8 +100,8 @@ func ItemSlotCount(d *ItemDef) int {
 	if d.GetKind() != "tool" {
 		return 0
 	}
-	if d.GetSlots() != 0 {
-		return int(d.GetSlots())
+	if d.Slots != nil {
+		return int(*d.Slots)
 	}
 	return int(ItemsRules.Rules.Grades[d.GetGrade()].GetSlots())
 }

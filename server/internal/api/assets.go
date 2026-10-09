@@ -50,7 +50,7 @@ func validAsset(v *content.Asset) error {
 	if !known {
 		return fail(400, "invalid-asset")
 	}
-	if v.GetKind() != "instance" && v.GetInstance() != "" || (v.GetKind() == "decoration" || v.GetKind() == "instance") && v.GetMaker() != "" {
+	if v.GetKind() != "instance" && v.GetInstance() != "" || (v.GetKind() == "decoration" || v.GetKind() == "instance") && v.Maker != nil {
 		return fail(400, "invalid-asset")
 	}
 	return nil

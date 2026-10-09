@@ -48,9 +48,11 @@ export function decodeContent<Desc extends DescMessage>(schema: Desc, raw: unkno
     throw new Error(`invalid ${family}: decode: ${(e as Error).message}`);
   }
   const entries = entryFields.map((field) => {
-    const fd = schema.fields.find((f) => f.name === field);
+    // entryFields spell the fields as the violation paths do (the JSON
+    // name); the message is read through the field's localName.
+    const fd = schema.fields.find((f) => f.jsonName === field) ?? schema.fields.find((f) => f.name === field);
     const list = fd ? (msg as unknown as Record<string, { id?: string }[] | undefined>)[fd.localName] : undefined;
-    return { field, ids: (list ?? []).map((e) => e.id ?? '') };
+    return { field: fd ? fd.jsonName : field, ids: (list ?? []).map((e) => e.id ?? '') };
   });
   const result = validator.validate(schema, msg);
   if (result.kind === 'valid') return msg;

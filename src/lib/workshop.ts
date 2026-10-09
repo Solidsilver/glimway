@@ -51,6 +51,7 @@ export function validateCrafting(value: unknown): Crafting {
   for (const r of c.recipes) {
     if (recipes.has(r.id)) return bad(`duplicate id ${r.id}`);
     if (r.minTier !== 2 || !validRecipeCosts(r.materials) || !validSwaps(r)) return bad(`recipe ${r.id}`);
+    if (r.output.kind !== 'decoration' && r.output.kind !== 'item' && r.output.kind !== 'instance') return bad(`recipe ${r.id} output`);
     if (r.output.kind === 'decoration') {
       const def = HOMESTEAD_DATA.items.find(v => v.id === r.output.id);
       if (!def || def.minTier > r.minTier) return bad(`recipe ${r.id} output`);

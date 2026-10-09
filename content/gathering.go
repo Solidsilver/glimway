@@ -28,7 +28,7 @@ func DecodeGathering(raw []byte) (*Gathering, error) {
 	if err := decodeContentProto(raw, "gathering", doc); err != nil {
 		return doc, err
 	}
-	if err := contentValidate("gathering", entryLists(doc, "seeds"), doc); err != nil {
+	if err := contentValidate("gathering", nil, doc); err != nil {
 		return doc, err
 	}
 	return doc, validateGathering(doc)

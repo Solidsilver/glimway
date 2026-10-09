@@ -80,9 +80,8 @@ export declare const ItemsSchema: GenMessage<Items, {validType: ItemsValid}>;
  */
 export declare type ItemsRules = Message<"glimway.content.v1.ItemsRules"> & {
   /**
-   * Exactly the three designed grades.
-   * Exactly the three designed grades: the keys' vocabulary, and the three
-   * atZero CELs above (one per grade — a missing key fails its CEL).
+   * Exactly the three designed grades: exactly those keys (the CELs above
+   * only look keys up once the size is three).
    *
    * @generated from field: map<string, glimway.content.v1.ItemGrade> grades = 1;
    */
@@ -127,9 +126,8 @@ export declare type ItemsRules = Message<"glimway.content.v1.ItemsRules"> & {
  */
 export declare type ItemsRulesValid = Message<"glimway.content.v1.ItemsRules"> & {
   /**
-   * Exactly the three designed grades.
-   * Exactly the three designed grades: the keys' vocabulary, and the three
-   * atZero CELs above (one per grade — a missing key fails its CEL).
+   * Exactly the three designed grades: exactly those keys (the CELs above
+   * only look keys up once the size is three).
    *
    * @generated from field: map<string, glimway.content.v1.ItemGrade> grades = 1;
    */

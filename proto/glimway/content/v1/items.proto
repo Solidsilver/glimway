@@ -15,25 +15,30 @@ message Items {
 // The closed wear/grade/carry rules. A new grade, fitting or effect type is
 // a code change on both sides, never just data.
 message ItemsRules {
+  // Total over the grades map: with fewer than three keys the lookup never
+  // runs (the map's own min/max pairs refuse it first, as a named rule).
   option (buf.validate.message).cel = {
     id: "items.grade_cheap"
     message: "cheap tools break"
-    expression: "this.grades[\"cheap\"].at_zero == \"breaks\""
+    expression: "size(this.grades) == 3 && this.grades[\"cheap\"].at_zero == \"breaks\""
   };
   option (buf.validate.message).cel = {
     id: "items.grade_heirloom"
     message: "heirloom tools mend"
-    expression: "this.grades[\"heirloom\"].at_zero in [\"blunt\", \"cracked\"]"
+    expression: "size(this.grades) == 3 && this.grades[\"heirloom\"].at_zero in [\"blunt\", \"cracked\"]"
   };
   option (buf.validate.message).cel = {
     id: "items.grade_special"
     message: "special tools never wear"
-    expression: "this.grades[\"special\"].at_zero == \"never\""
+    expression: "size(this.grades) == 3 && this.grades[\"special\"].at_zero == \"never\""
   };
-  // Exactly the three designed grades.
-  // Exactly the three designed grades: the keys' vocabulary, and the three
-  // atZero CELs above (one per grade — a missing key fails its CEL).
-  map<string, ItemGrade> grades = 1 [(buf.validate.field).map.keys.string = {in: ["cheap", "heirloom", "special"]}];
+  // Exactly the three designed grades: exactly those keys (the CELs above
+  // only look keys up once the size is three).
+  map<string, ItemGrade> grades = 1 [(buf.validate.field).map = {
+    min_pairs: 3
+    max_pairs: 3
+    keys: {string: {in: ["cheap", "heirloom", "special"]}}
+  }];
   ItemWear wear = 2 [(buf.validate.field).required = true];
   ItemPockets pockets = 3 [(buf.validate.field).required = true];
   ItemOffHand off_hand = 4 [(buf.validate.field).required = true];
@@ -106,7 +111,7 @@ message ItemDef {
   option (buf.validate.message).cel = {
     id: "item_def.tab"
     message: "tab is the kind's drawer"
-    expression: "{\"tool\": \"tools\", \"off-hand\": \"tools\", \"carry-gear\": \"tools\", \"consumable\": \"supplies\", \"material\": \"supplies\", \"fitting\": \"supplies\", \"part\": \"supplies\", \"seed\": \"supplies\", \"keepsake\": \"keepsakes\", \"home-good\": \"home\", \"paper\": \"papers\"}[this.kind] == this.tab"
+    expression: "!(this.kind in [\"tool\", \"off-hand\", \"carry-gear\", \"consumable\", \"material\", \"fitting\", \"part\", \"seed\", \"keepsake\", \"home-good\", \"paper\"]) || {\"tool\": \"tools\", \"off-hand\": \"tools\", \"carry-gear\": \"tools\", \"consumable\": \"supplies\", \"material\": \"supplies\", \"fitting\": \"supplies\", \"part\": \"supplies\", \"seed\": \"supplies\", \"keepsake\": \"keepsakes\", \"home-good\": \"home\", \"paper\": \"papers\"}[this.kind] == this.tab"
   };
   option (buf.validate.message).cel = {
     id: "item_def.tool_fields"

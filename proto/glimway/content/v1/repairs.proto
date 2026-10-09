@@ -37,8 +37,8 @@ message RepairDef {
   // What broke ("well", "fence"): the world map's own vocabulary.
   string target = 5;
   RepairPos pos = 6 [(buf.validate.field).required = true];
-  // The resident who reacts when it's mended: checked against the residents
-  // family in code.
+  // The resident who reacts when it's mended (a name the chore views
+  // address; not validated against the residents family).
   string resident = 7;
   string reaction = 8 [(buf.validate.field).string = {min_len: 1, max_len: 160}];
   RepairGift gift = 9;

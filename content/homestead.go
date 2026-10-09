@@ -3,6 +3,7 @@ package content
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"slices"
 
 	contentv1 "glimway/gen/glimway/content/v1"
@@ -56,10 +57,11 @@ func homeGrid(w, h int32) *HomeGrid {
 
 // HomePostCost is what the n-th lantern post (0-based) of a homestead
 // costs: the listed costs, then the last plus Growth for each one after.
+// The bill is a copy: the shared table is never handed out.
 func HomePostCost(h *Homestead, n int) map[string]int32 {
 	c := h.GetLanternPosts().GetCosts()
 	if n < len(c) {
-		return c[n].GetMaterials()
+		return maps.Clone(c[n].GetMaterials())
 	}
 	out := map[string]int32{}
 	last := c[len(c)-1].GetMaterials()
@@ -137,11 +139,11 @@ func resolveHomeGoods(h *Homestead) error {
 			return fmt.Errorf("invalid homestead: item %s not in the furnishings catalogue", v.GetId())
 		}
 		if v.GetName() != "" && v.GetName() != f.GetName() {
-			return fmt.Errorf("invalid homestead: item %s names itself %q", v.GetId(), v.GetName())
+			return fmt.Errorf("invalid homestead: item %s names itself", v.GetId())
 		}
 		fp := v.GetFootprint()
 		if len(fp) != 0 && (len(fp) != 2 || fp[0] != f.GetFootprint()[0] || fp[1] != f.GetFootprint()[1]) {
-			return fmt.Errorf("invalid homestead: item %s disagrees with the catalogue's footprint", v.GetId())
+			return fmt.Errorf("invalid homestead: item %s footprint", v.GetId())
 		}
 		v.Name = f.GetName()
 		v.Footprint = []int32{f.GetFootprint()[0], f.GetFootprint()[1]}
@@ -175,13 +177,6 @@ func validateHomestead(h *Homestead) error {
 			return fmt.Errorf("invalid homestead: duplicate id %s", v.GetId())
 		}
 		seen[v.GetId()] = true
-		for _, p := range v.GetWhere() {
-			places := map[string]bool{}
-			if places[p] {
-				return fmt.Errorf("invalid homestead: item %s where", v.GetId())
-			}
-			places[p] = true
-		}
 		for m, n := range v.GetMaterials() {
 			// A purchase bill may name any carried material (seasoned
 			// timber and their like), not only the Wilds four.

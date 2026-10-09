@@ -15,8 +15,12 @@ export type GatheringData = GatheringValid;
 
 /** Throws on anything content/gathering.go would refuse. */
 export function validateGathering(value: unknown): GatheringData {
-  const g = decodeContent(GatheringSchema, value, 'gathering', ['seeds']) as GatheringData;
+  const g = decodeContent(GatheringSchema, value, 'gathering', []) as GatheringData;
   const bad = (why: string): never => { throw new Error(`invalid gathering: ${why}`); };
+  // The three gathered places offer something.
+  for (const area of ['wilds', 'woodland', 'home'] as const) {
+    if (!g.areas[area] || g.areas[area].targets.length === 0) return bad(`area ${area} offers nothing`);
+  }
   for (const [area, list] of Object.entries(g.areas)) {
     for (const t of list.targets) {
       if (!g.targets[t]) return bad(`area ${area} names unknown target ${t}`);

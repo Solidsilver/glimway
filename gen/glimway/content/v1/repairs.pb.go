@@ -150,8 +150,8 @@ type RepairDef struct {
 	// What broke ("well", "fence"): the world map's own vocabulary.
 	Target string     `protobuf:"bytes,5,opt,name=target,proto3" json:"target,omitempty"`
 	Pos    *RepairPos `protobuf:"bytes,6,opt,name=pos,proto3" json:"pos,omitempty"`
-	// The resident who reacts when it's mended: checked against the residents
-	// family in code.
+	// The resident who reacts when it's mended (a name the chore views
+	// address; not validated against the residents family).
 	Resident          string      `protobuf:"bytes,7,opt,name=resident,proto3" json:"resident,omitempty"`
 	Reaction          string      `protobuf:"bytes,8,opt,name=reaction,proto3" json:"reaction,omitempty"`
 	Gift              *RepairGift `protobuf:"bytes,9,opt,name=gift,proto3" json:"gift,omitempty"`
