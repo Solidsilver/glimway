@@ -1,0 +1,1568 @@
+{
+  "date": "2026-10-09",
+  "sources": [
+    {
+      "key": "ability-icons.png",
+      "file": "sheets/ability-icons.png",
+      "width": 1402,
+      "height": 1122
+    },
+    {
+      "key": "ability-effects.png",
+      "file": "sheets/ability-effects.png",
+      "width": 2172,
+      "height": 724
+    },
+    {
+      "key": "ability-effects-redraw.png",
+      "file": "sheets/ability-effects-redraw.png",
+      "width": 1774,
+      "height": 887
+    },
+    {
+      "key": "stable-continuous.png",
+      "file": "sheets/stable-continuous.png",
+      "width": 1817,
+      "height": 866
+    },
+    {
+      "key": "fishing-atlas.png",
+      "file": "sheets/fishing-atlas.png",
+      "width": 1983,
+      "height": 793
+    },
+    {
+      "key": "hud-icons.png",
+      "file": "sheets/hud-icons.png",
+      "width": 1774,
+      "height": 887
+    }
+  ],
+  "frames": {
+    "ability-warrior-cleave": {
+      "file": "frames/ability-warrior-cleave.png",
+      "source": "ability-icons.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 280,
+        "h": 280
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "handPoint": null
+    },
+    "ability-warrior-heave": {
+      "file": "frames/ability-warrior-heave.png",
+      "source": "ability-icons.png",
+      "sourceRect": {
+        "x": 280,
+        "y": 0,
+        "w": 281,
+        "h": 280
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "handPoint": null
+    },
+    "ability-warrior-pin": {
+      "file": "frames/ability-warrior-pin.png",
+      "source": "ability-icons.png",
+      "sourceRect": {
+        "x": 561,
+        "y": 0,
+        "w": 280,
+        "h": 280
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "handPoint": null
+    },
+    "ability-warrior-stand": {
+      "file": "frames/ability-warrior-stand.png",
+      "source": "ability-icons.png",
+      "sourceRect": {
+        "x": 841,
+        "y": 0,
+        "w": 281,
+        "h": 280
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "handPoint": null
+    },
+    "ability-warrior-brace": {
+      "file": "frames/ability-warrior-brace.png",
+      "source": "ability-icons.png",
+      "sourceRect": {
+        "x": 1122,
+        "y": 0,
+        "w": 280,
+        "h": 280
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "handPoint": null
+    },
+    "ability-mage-fingersnap": {
+      "file": "frames/ability-mage-fingersnap.png",
+      "source": "ability-icons.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 280,
+        "w": 280,
+        "h": 281
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "handPoint": null
+    },
+    "ability-mage-name-a-lamp": {
+      "file": "frames/ability-mage-name-a-lamp.png",
+      "source": "ability-icons.png",
+      "sourceRect": {
+        "x": 280,
+        "y": 280,
+        "w": 281,
+        "h": 281
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "handPoint": null
+    },
+    "ability-mage-read-route-stone": {
+      "file": "frames/ability-mage-read-route-stone.png",
+      "source": "ability-icons.png",
+      "sourceRect": {
+        "x": 561,
+        "y": 280,
+        "w": 280,
+        "h": 281
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "handPoint": null
+    },
+    "ability-mage-kindle": {
+      "file": "frames/ability-mage-kindle.png",
+      "source": "ability-icons.png",
+      "sourceRect": {
+        "x": 841,
+        "y": 280,
+        "w": 281,
+        "h": 281
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "handPoint": null
+    },
+    "ability-mage-old-ways": {
+      "file": "frames/ability-mage-old-ways.png",
+      "source": "ability-icons.png",
+      "sourceRect": {
+        "x": 1122,
+        "y": 280,
+        "w": 280,
+        "h": 281
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "handPoint": null
+    },
+    "ability-healer-mend": {
+      "file": "frames/ability-healer-mend.png",
+      "source": "ability-icons.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 561,
+        "w": 280,
+        "h": 281
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "handPoint": null
+    },
+    "ability-healer-mend-working": {
+      "file": "frames/ability-healer-mend-working.png",
+      "source": "ability-icons.png",
+      "sourceRect": {
+        "x": 280,
+        "y": 561,
+        "w": 281,
+        "h": 281
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "handPoint": null
+    },
+    "ability-healer-settle": {
+      "file": "frames/ability-healer-settle.png",
+      "source": "ability-icons.png",
+      "sourceRect": {
+        "x": 561,
+        "y": 561,
+        "w": 280,
+        "h": 281
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "handPoint": null
+    },
+    "ability-healer-ward-light": {
+      "file": "frames/ability-healer-ward-light.png",
+      "source": "ability-icons.png",
+      "sourceRect": {
+        "x": 841,
+        "y": 561,
+        "w": 281,
+        "h": 281
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "handPoint": null
+    },
+    "ability-healer-mended-glade": {
+      "file": "frames/ability-healer-mended-glade.png",
+      "source": "ability-icons.png",
+      "sourceRect": {
+        "x": 1122,
+        "y": 561,
+        "w": 280,
+        "h": 281
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "handPoint": null
+    },
+    "ability-rogue-shadowstep": {
+      "file": "frames/ability-rogue-shadowstep.png",
+      "source": "ability-icons.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 842,
+        "w": 280,
+        "h": 280
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "handPoint": null
+    },
+    "ability-rogue-read-the-drift": {
+      "file": "frames/ability-rogue-read-the-drift.png",
+      "source": "ability-icons.png",
+      "sourceRect": {
+        "x": 280,
+        "y": 842,
+        "w": 281,
+        "h": 280
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "handPoint": null
+    },
+    "ability-rogue-walk-a-blind-route": {
+      "file": "frames/ability-rogue-walk-a-blind-route.png",
+      "source": "ability-icons.png",
+      "sourceRect": {
+        "x": 561,
+        "y": 842,
+        "w": 280,
+        "h": 280
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "handPoint": null
+    },
+    "ability-rogue-echo": {
+      "file": "frames/ability-rogue-echo.png",
+      "source": "ability-icons.png",
+      "sourceRect": {
+        "x": 841,
+        "y": 842,
+        "w": 281,
+        "h": 280
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "handPoint": null
+    },
+    "ability-rogue-sense-the-turning": {
+      "file": "frames/ability-rogue-sense-the-turning.png",
+      "source": "ability-icons.png",
+      "sourceRect": {
+        "x": 1122,
+        "y": 842,
+        "w": 280,
+        "h": 280
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "handPoint": null
+    },
+    "stand-ground-ring-0": {
+      "file": "frames/stand-ground-ring-0.png",
+      "source": "ability-effects.png",
+      "sourceRect": {
+        "x": 20,
+        "y": 342,
+        "w": 162,
+        "h": 112
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 64
+      },
+      "footprint": [
+        2.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 32
+      },
+      "handPoint": null
+    },
+    "stand-ground-ring-1": {
+      "file": "frames/stand-ground-ring-1.png",
+      "source": "ability-effects.png",
+      "sourceRect": {
+        "x": 184,
+        "y": 346,
+        "w": 162,
+        "h": 108
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 64
+      },
+      "footprint": [
+        2.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 32
+      },
+      "handPoint": null
+    },
+    "stand-ground-ring-2": {
+      "file": "frames/stand-ground-ring-2.png",
+      "source": "ability-effects.png",
+      "sourceRect": {
+        "x": 348,
+        "y": 340,
+        "w": 166,
+        "h": 114
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 64
+      },
+      "footprint": [
+        2.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 32
+      },
+      "handPoint": null
+    },
+    "stand-ground-ring-3": {
+      "file": "frames/stand-ground-ring-3.png",
+      "source": "ability-effects.png",
+      "sourceRect": {
+        "x": 514,
+        "y": 342,
+        "w": 162,
+        "h": 112
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 64
+      },
+      "footprint": [
+        2.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 32
+      },
+      "handPoint": null
+    },
+    "kindle-hollow-light-0": {
+      "file": "frames/kindle-hollow-light-0.png",
+      "source": "ability-effects-redraw.png",
+      "sourceRect": {
+        "x": 16,
+        "y": 238,
+        "w": 414,
+        "h": 154
+      },
+      "canvasSize": {
+        "w": 192,
+        "h": 128
+      },
+      "footprint": [
+        3.0,
+        2.0
+      ],
+      "footPoint": {
+        "x": 96,
+        "y": 64
+      },
+      "handPoint": null
+    },
+    "kindle-hollow-light-1": {
+      "file": "frames/kindle-hollow-light-1.png",
+      "source": "ability-effects-redraw.png",
+      "sourceRect": {
+        "x": 456,
+        "y": 238,
+        "w": 418,
+        "h": 154
+      },
+      "canvasSize": {
+        "w": 192,
+        "h": 128
+      },
+      "footprint": [
+        3.0,
+        2.0
+      ],
+      "footPoint": {
+        "x": 96,
+        "y": 64
+      },
+      "handPoint": null
+    },
+    "kindle-hollow-light-2": {
+      "file": "frames/kindle-hollow-light-2.png",
+      "source": "ability-effects-redraw.png",
+      "sourceRect": {
+        "x": 896,
+        "y": 238,
+        "w": 420,
+        "h": 154
+      },
+      "canvasSize": {
+        "w": 192,
+        "h": 128
+      },
+      "footprint": [
+        3.0,
+        2.0
+      ],
+      "footPoint": {
+        "x": 96,
+        "y": 64
+      },
+      "handPoint": null
+    },
+    "kindle-hollow-light-3": {
+      "file": "frames/kindle-hollow-light-3.png",
+      "source": "ability-effects-redraw.png",
+      "sourceRect": {
+        "x": 1342,
+        "y": 238,
+        "w": 412,
+        "h": 154
+      },
+      "canvasSize": {
+        "w": 192,
+        "h": 128
+      },
+      "footprint": [
+        3.0,
+        2.0
+      ],
+      "footPoint": {
+        "x": 96,
+        "y": 64
+      },
+      "handPoint": null
+    },
+    "ward-light-circle-0": {
+      "file": "frames/ward-light-circle-0.png",
+      "source": "ability-effects-redraw.png",
+      "sourceRect": {
+        "x": 74,
+        "y": 630,
+        "w": 306,
+        "h": 124
+      },
+      "canvasSize": {
+        "w": 160,
+        "h": 96
+      },
+      "footprint": [
+        2.5,
+        1.5
+      ],
+      "footPoint": {
+        "x": 80,
+        "y": 48
+      },
+      "handPoint": null
+    },
+    "ward-light-circle-1": {
+      "file": "frames/ward-light-circle-1.png",
+      "source": "ability-effects-redraw.png",
+      "sourceRect": {
+        "x": 494,
+        "y": 626,
+        "w": 344,
+        "h": 128
+      },
+      "canvasSize": {
+        "w": 160,
+        "h": 96
+      },
+      "footprint": [
+        2.5,
+        1.5
+      ],
+      "footPoint": {
+        "x": 80,
+        "y": 48
+      },
+      "handPoint": null
+    },
+    "ward-light-circle-2": {
+      "file": "frames/ward-light-circle-2.png",
+      "source": "ability-effects-redraw.png",
+      "sourceRect": {
+        "x": 932,
+        "y": 622,
+        "w": 354,
+        "h": 134
+      },
+      "canvasSize": {
+        "w": 160,
+        "h": 96
+      },
+      "footprint": [
+        2.5,
+        1.5
+      ],
+      "footPoint": {
+        "x": 80,
+        "y": 48
+      },
+      "handPoint": null
+    },
+    "ward-light-circle-3": {
+      "file": "frames/ward-light-circle-3.png",
+      "source": "ability-effects-redraw.png",
+      "sourceRect": {
+        "x": 1350,
+        "y": 618,
+        "w": 404,
+        "h": 150
+      },
+      "canvasSize": {
+        "w": 160,
+        "h": 96
+      },
+      "footprint": [
+        2.5,
+        1.5
+      ],
+      "footPoint": {
+        "x": 80,
+        "y": 48
+      },
+      "handPoint": null
+    },
+    "stable-west-back": {
+      "file": "frames/stable-west-back.png",
+      "source": "stable-continuous.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 693,
+        "h": 866
+      },
+      "canvasSize": {
+        "w": 256,
+        "h": 320
+      },
+      "footprint": [
+        4,
+        3
+      ],
+      "footPoint": {
+        "x": 128,
+        "y": 319
+      },
+      "handPoint": null,
+      "uniformScale": {
+        "numerator": 320,
+        "denominator": 866
+      },
+      "cutLineTexels": [
+        0,
+        256
+      ]
+    },
+    "stable-bay-back": {
+      "file": "frames/stable-bay-back.png",
+      "source": "stable-continuous.png",
+      "sourceRect": {
+        "x": 693,
+        "y": 0,
+        "w": 347,
+        "h": 866
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 320
+      },
+      "footprint": [
+        2,
+        3
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 319
+      },
+      "handPoint": null,
+      "uniformScale": {
+        "numerator": 320,
+        "denominator": 866
+      },
+      "cutLineTexels": [
+        256,
+        384
+      ]
+    },
+    "stable-east-gable": {
+      "file": "frames/stable-east-gable.png",
+      "source": "stable-continuous.png",
+      "sourceRect": {
+        "x": 1733,
+        "y": 0,
+        "w": 87,
+        "h": 866
+      },
+      "canvasSize": {
+        "w": 32,
+        "h": 320
+      },
+      "footprint": null,
+      "footPoint": {
+        "x": 16,
+        "y": 319
+      },
+      "handPoint": null,
+      "uniformScale": {
+        "numerator": 320,
+        "denominator": 866
+      },
+      "cutLineTexels": [
+        640,
+        672
+      ]
+    },
+    "stable-west-front-shut": {
+      "file": "frames/stable-west-front-shut.png",
+      "source": "stable-continuous.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 693,
+        "h": 866
+      },
+      "canvasSize": {
+        "w": 256,
+        "h": 320
+      },
+      "footprint": [
+        4,
+        3
+      ],
+      "footPoint": {
+        "x": 128,
+        "y": 319
+      },
+      "handPoint": null,
+      "uniformScale": {
+        "numerator": 320,
+        "denominator": 866
+      },
+      "cutLineTexels": [
+        0,
+        256
+      ]
+    },
+    "stable-west-front-open": {
+      "file": "frames/stable-west-front-open.png",
+      "source": "stable-continuous.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 693,
+        "h": 866
+      },
+      "canvasSize": {
+        "w": 256,
+        "h": 320
+      },
+      "footprint": [
+        4,
+        3
+      ],
+      "footPoint": {
+        "x": 128,
+        "y": 319
+      },
+      "handPoint": null,
+      "uniformScale": {
+        "numerator": 320,
+        "denominator": 866
+      },
+      "cutLineTexels": [
+        0,
+        256
+      ]
+    },
+    "stable-bay-front-shut": {
+      "file": "frames/stable-bay-front-shut.png",
+      "source": "stable-continuous.png",
+      "sourceRect": {
+        "x": 693,
+        "y": 0,
+        "w": 347,
+        "h": 866
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 320
+      },
+      "footprint": [
+        2,
+        3
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 319
+      },
+      "handPoint": null,
+      "uniformScale": {
+        "numerator": 320,
+        "denominator": 866
+      },
+      "cutLineTexels": [
+        256,
+        384
+      ]
+    },
+    "stable-bay-front-open": {
+      "file": "frames/stable-bay-front-open.png",
+      "source": "stable-continuous.png",
+      "sourceRect": {
+        "x": 693,
+        "y": 0,
+        "w": 347,
+        "h": 866
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 320
+      },
+      "footprint": [
+        2,
+        3
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 319
+      },
+      "handPoint": null,
+      "uniformScale": {
+        "numerator": 320,
+        "denominator": 866
+      },
+      "cutLineTexels": [
+        256,
+        384
+      ]
+    },
+    "rod-icon": {
+      "file": "frames/rod-icon.png",
+      "source": "fishing-atlas.png",
+      "sourceRect": {
+        "x": 15,
+        "y": 30,
+        "w": 335,
+        "h": 300
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 60
+      },
+      "handPoint": null
+    },
+    "rod-held-raised": {
+      "file": "frames/rod-held-raised.png",
+      "source": "fishing-atlas.png",
+      "sourceRect": {
+        "x": 350,
+        "y": 0,
+        "w": 320,
+        "h": 335
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      },
+      "footprint": [
+        2.0,
+        2.0
+      ],
+      "footPoint": null,
+      "handPoint": {
+        "x": 8,
+        "y": 124
+      }
+    },
+    "rod-held-out": {
+      "file": "frames/rod-held-out.png",
+      "source": "fishing-atlas.png",
+      "sourceRect": {
+        "x": 670,
+        "y": 60,
+        "w": 420,
+        "h": 270
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 128
+      },
+      "footprint": [
+        2.0,
+        2.0
+      ],
+      "footPoint": null,
+      "handPoint": {
+        "x": 8,
+        "y": 124
+      }
+    },
+    "mill-roach": {
+      "file": "frames/mill-roach.png",
+      "source": "fishing-atlas.png",
+      "sourceRect": {
+        "x": 1570,
+        "y": 300,
+        "w": 410,
+        "h": 230
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 60
+      },
+      "handPoint": null
+    },
+    "millers-fry": {
+      "file": "frames/millers-fry.png",
+      "source": "fishing-atlas.png",
+      "sourceRect": {
+        "x": 600,
+        "y": 520,
+        "w": 420,
+        "h": 270
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 60
+      },
+      "handPoint": null
+    },
+    "recipe-card-millers-fry": {
+      "file": "frames/recipe-card-millers-fry.png",
+      "source": "fishing-atlas.png",
+      "sourceRect": {
+        "x": 1035,
+        "y": 520,
+        "w": 395,
+        "h": 270
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 60
+      },
+      "handPoint": null
+    },
+    "float-0": {
+      "file": "frames/float-0.png",
+      "source": "fishing-atlas.png",
+      "sourceRect": {
+        "x": 1100,
+        "y": 100,
+        "w": 125,
+        "h": 185
+      },
+      "canvasSize": {
+        "w": 32,
+        "h": 32
+      },
+      "footprint": [
+        0.5,
+        0.5
+      ],
+      "footPoint": {
+        "x": 16,
+        "y": 28
+      },
+      "handPoint": null
+    },
+    "float-1": {
+      "file": "frames/float-1.png",
+      "source": "fishing-atlas.png",
+      "sourceRect": {
+        "x": 1225,
+        "y": 100,
+        "w": 125,
+        "h": 185
+      },
+      "canvasSize": {
+        "w": 32,
+        "h": 32
+      },
+      "footprint": [
+        0.5,
+        0.5
+      ],
+      "footPoint": {
+        "x": 16,
+        "y": 28
+      },
+      "handPoint": null
+    },
+    "float-2": {
+      "file": "frames/float-2.png",
+      "source": "fishing-atlas.png",
+      "sourceRect": {
+        "x": 1350,
+        "y": 100,
+        "w": 125,
+        "h": 185
+      },
+      "canvasSize": {
+        "w": 32,
+        "h": 32
+      },
+      "footprint": [
+        0.5,
+        0.5
+      ],
+      "footPoint": {
+        "x": 16,
+        "y": 28
+      },
+      "handPoint": null
+    },
+    "float-3": {
+      "file": "frames/float-3.png",
+      "source": "fishing-atlas.png",
+      "sourceRect": {
+        "x": 1475,
+        "y": 100,
+        "w": 125,
+        "h": 185
+      },
+      "canvasSize": {
+        "w": 32,
+        "h": 32
+      },
+      "footprint": [
+        0.5,
+        0.5
+      ],
+      "footPoint": {
+        "x": 16,
+        "y": 28
+      },
+      "handPoint": null
+    },
+    "float-4": {
+      "file": "frames/float-4.png",
+      "source": "fishing-atlas.png",
+      "sourceRect": {
+        "x": 1600,
+        "y": 100,
+        "w": 125,
+        "h": 185
+      },
+      "canvasSize": {
+        "w": 32,
+        "h": 32
+      },
+      "footprint": [
+        0.5,
+        0.5
+      ],
+      "footPoint": {
+        "x": 16,
+        "y": 28
+      },
+      "handPoint": null
+    },
+    "float-5": {
+      "file": "frames/float-5.png",
+      "source": "fishing-atlas.png",
+      "sourceRect": {
+        "x": 1725,
+        "y": 100,
+        "w": 125,
+        "h": 185
+      },
+      "canvasSize": {
+        "w": 32,
+        "h": 32
+      },
+      "footprint": [
+        0.5,
+        0.5
+      ],
+      "footPoint": {
+        "x": 16,
+        "y": 28
+      },
+      "handPoint": null
+    },
+    "water-rings-0": {
+      "file": "frames/water-rings-0.png",
+      "source": "fishing-atlas.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 335,
+        "w": 230,
+        "h": 180
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 32
+      },
+      "footprint": [
+        1.0,
+        0.5
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 28
+      },
+      "handPoint": null
+    },
+    "water-rings-1": {
+      "file": "frames/water-rings-1.png",
+      "source": "fishing-atlas.png",
+      "sourceRect": {
+        "x": 230,
+        "y": 335,
+        "w": 230,
+        "h": 180
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 32
+      },
+      "footprint": [
+        1.0,
+        0.5
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 28
+      },
+      "handPoint": null
+    },
+    "water-rings-2": {
+      "file": "frames/water-rings-2.png",
+      "source": "fishing-atlas.png",
+      "sourceRect": {
+        "x": 460,
+        "y": 335,
+        "w": 240,
+        "h": 180
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 32
+      },
+      "footprint": [
+        1.0,
+        0.5
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 28
+      },
+      "handPoint": null
+    },
+    "landing-splash-0": {
+      "file": "frames/landing-splash-0.png",
+      "source": "fishing-atlas.png",
+      "sourceRect": {
+        "x": 700,
+        "y": 335,
+        "w": 180,
+        "h": 180
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 60
+      },
+      "handPoint": null
+    },
+    "landing-splash-1": {
+      "file": "frames/landing-splash-1.png",
+      "source": "fishing-atlas.png",
+      "sourceRect": {
+        "x": 880,
+        "y": 335,
+        "w": 180,
+        "h": 180
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 60
+      },
+      "handPoint": null
+    },
+    "landing-splash-2": {
+      "file": "frames/landing-splash-2.png",
+      "source": "fishing-atlas.png",
+      "sourceRect": {
+        "x": 1060,
+        "y": 335,
+        "w": 180,
+        "h": 180
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 60
+      },
+      "handPoint": null
+    },
+    "landing-splash-3": {
+      "file": "frames/landing-splash-3.png",
+      "source": "fishing-atlas.png",
+      "sourceRect": {
+        "x": 1240,
+        "y": 335,
+        "w": 190,
+        "h": 180
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 60
+      },
+      "handPoint": null
+    },
+    "companions-tab": {
+      "file": "frames/companions-tab.png",
+      "source": "hud-icons.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 443,
+        "h": 443
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 60
+      },
+      "handPoint": null
+    },
+    "saddle": {
+      "file": "frames/saddle.png",
+      "source": "hud-icons.png",
+      "sourceRect": {
+        "x": 443,
+        "y": 0,
+        "w": 444,
+        "h": 443
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 60
+      },
+      "handPoint": null
+    },
+    "go-home": {
+      "file": "frames/go-home.png",
+      "source": "hud-icons.png",
+      "sourceRect": {
+        "x": 887,
+        "y": 0,
+        "w": 443,
+        "h": 443
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": [
+        1.0,
+        1.0
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 60
+      },
+      "handPoint": null
+    },
+    "pet-heart-0": {
+      "file": "frames/pet-heart-0.png",
+      "source": "hud-icons.png",
+      "sourceRect": {
+        "x": 1330,
+        "y": 0,
+        "w": 444,
+        "h": 443
+      },
+      "canvasSize": {
+        "w": 32,
+        "h": 32
+      },
+      "footprint": [
+        0.5,
+        0.5
+      ],
+      "footPoint": {
+        "x": 16,
+        "y": 28
+      },
+      "handPoint": null
+    },
+    "pet-heart-1": {
+      "file": "frames/pet-heart-1.png",
+      "source": "hud-icons.png",
+      "sourceRect": {
+        "x": 60,
+        "y": 443,
+        "w": 360,
+        "h": 444
+      },
+      "canvasSize": {
+        "w": 32,
+        "h": 32
+      },
+      "footprint": [
+        0.5,
+        0.5
+      ],
+      "footPoint": {
+        "x": 16,
+        "y": 28
+      },
+      "handPoint": null
+    },
+    "pet-heart-2": {
+      "file": "frames/pet-heart-2.png",
+      "source": "hud-icons.png",
+      "sourceRect": {
+        "x": 460,
+        "y": 443,
+        "w": 400,
+        "h": 444
+      },
+      "canvasSize": {
+        "w": 32,
+        "h": 32
+      },
+      "footprint": [
+        0.5,
+        0.5
+      ],
+      "footPoint": {
+        "x": 16,
+        "y": 28
+      },
+      "handPoint": null
+    }
+  }
+}
