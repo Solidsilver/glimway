@@ -34,7 +34,7 @@ func validPresenceRoom(area string) bool {
 		return false
 	}
 	y, err := strconv.Atoi(parts[3])
-	return err == nil && strconv.Itoa(y) == parts[3] && x >= 0 && y >= 0 && x < r.GridWidth && y < r.GridHeight
+	return err == nil && strconv.Itoa(y) == parts[3] && x >= 0 && y >= 0 && x < int(r.GetGridWidth()) && y < int(r.GetGridHeight())
 }
 
 func (a *Server) presenceSocket(w http.ResponseWriter, r *http.Request) error {

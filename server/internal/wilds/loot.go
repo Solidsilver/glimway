@@ -49,13 +49,13 @@ func abs(v int) int {
 	return v
 }
 
-func regionFor(data content.Wilds, regionID string) (content.WildsRegion, error) {
+func regionFor(data *content.Wilds, regionID string) (*content.WildsRegion, error) {
 	for _, r := range data.Regions {
-		if r.ID == regionID {
+		if r.GetId() == regionID {
 			return r, nil
 		}
 	}
-	return content.WildsRegion{}, fmt.Errorf("wilds: unknown region %s", regionID)
+	return nil, fmt.Errorf("wilds: unknown region %s", regionID)
 }
 
 // LootTable is the content/wilds.json loot table an entity rolls on.
@@ -87,15 +87,16 @@ func RollEntityLoot(epoch Epoch, entity Entity, cycle int) (LootDrop, error) {
 		return drop, fmt.Errorf("wilds: missing loot table %s", LootTable(entity))
 	}
 	rng := NewRng(LootSeed(epoch, entity.ID, cycle))
-	for _, entry := range table {
+	for _, entry := range table.GetEntries() {
 		chance := rng.NextInt(1000)
-		qty := entry.Min + rng.NextInt(entry.Max-entry.Min+1)
-		if chance < entry.ChancePermille {
-			drop.Materials = append(drop.Materials, MaterialQty{ID: entry.Material, Qty: qty})
+		min, max := int(entry.GetMin()), int(entry.GetMax())
+		qty := min + rng.NextInt(max-min+1)
+		if chance < int(entry.GetChancePermille()) {
+			drop.Materials = append(drop.Materials, MaterialQty{ID: entry.GetMaterial(), Qty: qty})
 		}
 	}
 	trinketChance := rng.NextInt(1000)
-	if trinketChance < data.TrinketChancePermille {
+	if trinketChance < int(data.GetTrinketChancePermille()) {
 		t := data.Trinkets[rng.NextInt(len(data.Trinkets))]
 		drop.Trinket = &t
 	}

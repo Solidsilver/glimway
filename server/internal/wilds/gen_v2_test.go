@@ -308,14 +308,14 @@ func checkChunk(t *testing.T, e Epoch, c *Chunk) {
 				t.Fatalf("%s: chest tier %d", where, en.Tier)
 			}
 		case kindPOI:
-			if !slices.Contains(content.WildsRules.POIIds, en.POI) {
+			if !slices.Contains(content.WildsRules.PoiIds, en.POI) {
 				t.Fatalf("%s: poi %q", where, en.POI)
 			}
 		}
 	}
 	for _, rule := range content.WildsRules.EntityKinds {
-		if n := perKind[rule.Kind]; n < rule.Min || n > rule.Max {
-			t.Fatalf("%s: %d %s, rule %d–%d", where, n, rule.Kind, rule.Min, rule.Max)
+		if n := perKind[rule.GetKind()]; n < int(rule.GetMin()) || n > int(rule.GetMax()) {
+			t.Fatalf("%s: %d %s, rule %d–%d", where, n, rule.GetKind(), rule.GetMin(), rule.GetMax())
 		}
 	}
 
@@ -426,7 +426,7 @@ func checkCrossing(t *testing.T, inner, outer Region) {
 	t.Helper()
 	ic := inner.Chunk(crossingChunk.TX, crossingChunk.TY)
 	outerData, _ := regionFor(content.WildsRules, OuterRegion)
-	oc := outer.Chunk(outerData.EntryX, outerData.EntryY)
+	oc := outer.Chunk(int(outerData.GetEntryX()), int(outerData.GetEntryY()))
 	there := slices.IndexFunc(ic.Exits, func(x Exit) bool { return x.To == chunkArea(OuterRegion, oc.CX, oc.CY) })
 	back := slices.IndexFunc(oc.Exits, func(x Exit) bool { return x.To == chunkArea(InnerRegion, ic.CX, ic.CY) })
 	if there < 0 || back < 0 {
@@ -455,7 +455,7 @@ func checkCrossing(t *testing.T, inner, outer Region) {
 	}
 	// The Tangle's way home is the Commons, on its entry chunk.
 	innerData, _ := regionFor(content.WildsRules, InnerRegion)
-	entry := inner.Chunk(innerData.EntryX, innerData.EntryY)
+	entry := inner.Chunk(int(innerData.GetEntryX()), int(innerData.GetEntryY()))
 	home := slices.IndexFunc(entry.Exits, func(x Exit) bool { return x.To == "commons" })
 	if home < 0 || entry.Exits[home].TX != homeGapTX || entry.Exits[home].Dir != South {
 		t.Fatal("the Tangle's way home is not at the south gap tx=1")
@@ -491,12 +491,12 @@ func checkSites(t *testing.T, e Epoch, r Region) {
 		if !ok {
 			t.Fatalf("%s %s: no site %s", e.WorldSeed, e.Season, id)
 		}
-		entry := s.CX == data.EntryX && s.CY == data.EntryY
+		entry := s.CX == int(data.GetEntryX()) && s.CY == int(data.GetEntryY())
 		if (id == "given") != entry {
 			t.Fatalf("%s %s: site %s in chunk %d,%d", e.WorldSeed, e.Season, id, s.CX, s.CY)
 		}
 	}
-	if ids["echo:0"].CX != data.GridWidth-1 {
+	if ids["echo:0"].CX != int(data.GetGridWidth())-1 {
 		t.Fatalf("%s: echo:0 not in the east column", e.WorldSeed)
 	}
 }

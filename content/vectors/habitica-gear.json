@@ -1,0 +1,12 @@
+{
+  "loader": [
+    { "name": "shipped-snapshot", "valid": true, "edits": [] },
+    { "name": "unknown-key", "valid": false, "rule": "unknown key", "edits": [{ "path": ["gears"], "value": {} }] },
+    { "name": "proto-name-key", "valid": false, "rule": "is the proto name", "edits": [{ "path": ["gif_sprites"], "value": [] }] },
+    { "name": "null-gear", "valid": false, "rule": "null content field", "edits": [{ "path": ["gear"], "value": null }] },
+    { "name": "null-gear-entry", "valid": false, "rule": "null content field", "edits": [{ "path": ["gear", "armor_armoire_admiralsUniform"], "value": null }] },
+    { "name": "null-appearances", "valid": false, "rule": "null content field", "edits": [{ "path": ["appearances"], "value": null }] },
+    { "name": "missing-appearances", "valid": false, "rule": "required", "edits": [{ "path": ["appearances"], "remove": true }] },
+    { "name": "wrong-type-str", "valid": false, "rule": "decode", "edits": [{ "path": ["gear", "armor_armoire_admiralsUniform", "str"], "value": "seven" }] }
+  ]
+}

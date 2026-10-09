@@ -100,12 +100,12 @@ func (c *Client) VerifyLimited(ctx context.Context, id, token string, allow func
 	return zero, errors.New("habitica-unavailable")
 }
 
-var gear = func() map[string]content.GearItem {
-	g, err := content.LoadGear()
+var gear = func() map[string]*content.HabiticaGearItem {
+	g, err := content.LoadHabiticaGear()
 	if err != nil {
 		panic(err)
 	}
-	return g
+	return g.Gear
 }()
 
 func Map(b []byte) (rules.Profile, error) {
@@ -207,7 +207,7 @@ func Map(b []byte) (rules.Profile, error) {
 			continue
 		}
 		m := 1.
-		if p.Class != nil && (rules.GearMatchesClass(g.Klass, *p.Class) || rules.GearMatchesClass(g.SpecialClass, *p.Class)) {
+		if p.Class != nil && (rules.GearMatchesClass(g.GetKlass(), *p.Class) || rules.GearMatchesClass(g.GetSpecialClass(), *p.Class)) {
 			m = 2
 		}
 		p.Stats.Str += m * g.Str
