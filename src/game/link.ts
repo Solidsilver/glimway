@@ -60,6 +60,7 @@ import { HomesteadRequestSchema, ShelfRequestSchema } from '../lib/gen/glimway/v
 import { ItemsRequestSchema } from '../lib/gen/glimway/v1/items_pb.js'
 import type { Keyed } from '../lib/api/requests.ts'
 import { HabiticaUserSchema } from '../lib/gen/glimway/v1/profile_pb.js'
+import { FishCancelRequestSchema, FishCastRequestSchema, FishSettleRequestSchema, type FishCancelResult, type FishCastResult, type FishSettleResult, type WaterView } from '../lib/gen/glimway/v1/fishing_pb.js'
 import { rawUserFor } from '../lib/habitica/client.ts'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types.ts'
 import { FLAGS, WELCOME_EMBERS, type EmberSpend, type SpendReason } from '../lib/embers.ts'
@@ -311,7 +312,11 @@ const TYPED: Partial<Record<OutboxKind, { schema: DescMessage; path: string; res
   stall: { schema: StallRequestSchema, path: '/api/stable/stall', result: 'stall', send: (ops, req) => ops.stall(req) },
   'mount-out': { schema: MountOutRequestSchema, path: '/api/stable/out', result: 'mountOut', send: (ops, req) => ops.mountOut(req) },
   'mount-home': { schema: MountHomeRequestSchema, path: '/api/stable/home', result: 'mountHome', send: (ops, req) => ops.mountHome(req) },
-  'stable-extend': { schema: StableExtendRequestSchema, path: '/api/stable/extend', result: 'stableExtend', send: (ops, req) => ops.stableExtend(req) }
+  'stable-extend': { schema: StableExtendRequestSchema, path: '/api/stable/extend', result: 'stableExtend', send: (ops, req) => ops.stableExtend(req) },
+  // Fishing (design crafts 5.4, lane G): online only, the pond is shared.
+  'fish-cast': { schema: FishCastRequestSchema, path: '/api/fishing/cast', result: 'fishCast', send: (ops, req) => ops.fishCast(req) },
+  'fish-settle': { schema: FishSettleRequestSchema, path: '/api/fishing/settle', result: 'fishSettle', send: (ops, req) => ops.fishSettle(req) },
+  'fish-cancel': { schema: FishCancelRequestSchema, path: '/api/fishing/cancel', result: 'fishCancel', send: (ops, req) => ops.fishCancel(req) }
 }
 
 /** The same mutation asked again: its route and fields, apart from the header and where the hero stands. */
@@ -1844,6 +1849,52 @@ export class Link {
     const res = r.result as { case?: string; value?: WildsLanternProto }
     if (res?.case !== 'wildsLantern' || !res.value) return { ok: false, code: 'bad-response' }
     return { ok: true, result: res.value }
+  }
+
+  // ------------------------------------------------------------ fishing (design crafts 5.4)
+
+  /** Cast a line from a bank with the rod in hand. The server freezes the band and the bite. */
+  async fishCast(req: { water: string; bank: string; rod: string; where?: WhereJson }): Promise<WildsOutcome<FishCastResult>> {
+    const s = this.session
+    if (!s) return { ok: false, code: 'unknown' }
+    const key = newKey()
+    const body = toJson(FishCastRequestSchema, create(FishCastRequestSchema, { op: { lease: '', key }, water: req.water, bank: req.bank, rod: req.rod, where: req.where ?? whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
+    const { outcome: r } = await this.submit('fish-cast', TYPED['fish-cast']!.path, key, body, { offline: false })
+    if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
+    const res = r.result as { case?: string; value?: FishCastResult }
+    if (res?.case !== 'fishCast' || !res.value?.cast) return { ok: false, code: 'bad-response' }
+    return { ok: true, result: res.value }
+  }
+
+  /** Keep the fish on the line, or let it go. */
+  async fishSettle(req: { cast: string; keep: boolean; where?: WhereJson }): Promise<WildsOutcome<FishSettleResult>> {
+    const s = this.session
+    if (!s) return { ok: false, code: 'unknown' }
+    const key = newKey()
+    const body = toJson(FishSettleRequestSchema, create(FishSettleRequestSchema, { op: { lease: '', key }, cast: req.cast, keep: req.keep, where: req.where ?? whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
+    const { outcome: r } = await this.submit('fish-settle', TYPED['fish-settle']!.path, key, body, { offline: false })
+    if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
+    const res = r.result as { case?: string; value?: FishSettleResult }
+    if (res?.case !== 'fishSettle' || !res.value) return { ok: false, code: 'bad-response' }
+    return { ok: true, result: res.value }
+  }
+
+  /** Pull the line in: the cast closes and its fish goes back. */
+  async fishCancel(cast: string): Promise<WildsOutcome<FishCancelResult>> {
+    const s = this.session
+    if (!s) return { ok: false, code: 'unknown' }
+    const key = newKey()
+    const body = toJson(FishCancelRequestSchema, create(FishCancelRequestSchema, { op: { lease: '', key }, cast }), { alwaysEmitImplicit: true }) as Record<string, unknown>
+    const { outcome: r } = await this.submit('fish-cancel', TYPED['fish-cancel']!.path, key, body, { offline: false })
+    if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
+    const res = r.result as { case?: string; value?: FishCancelResult }
+    if (res?.case !== 'fishCancel' || !res.value) return { ok: false, code: 'bad-response' }
+    return { ok: true, result: res.value }
+  }
+
+  /** Each water's band in an area (GET /api/fishing/waters). Reads never move the version. */
+  readWaters(area: string): Promise<HomeRead<WaterView[]>> {
+    return this.read(async () => (await this.api.run(() => this.ops.fishingWaters(area))).waters)
   }
 
   /**

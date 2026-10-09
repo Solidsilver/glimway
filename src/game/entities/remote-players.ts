@@ -23,6 +23,7 @@ import type Phaser from 'phaser'
 import { isMountLayerKey, loadCompanion, loadPresenceAvatar } from '../avatar-render'
 import { PetFollower } from './pet-follower'
 import { LedMount } from './led-mount'
+import { RemoteFishingLine } from './fishing'
 import { bus, EV, type EmotePayload } from '../events'
 import { emoteSay } from '../../content/presence'
 import { LEAVE_FADE_MS, type Peer, type PresenceFeed } from '../presence'
@@ -70,6 +71,8 @@ interface View {
   /** The pet key the follower was made for ('' none). */
   followerKey: string
   led: LedMount | null
+  /** Their rod and float while their pose says fishing (crafts.md 5). */
+  line: RemoteFishingLine | null
 }
 
 /** Where a peer's weapon hand is, px from their feet (unmirrored; as the hero's, ./avatar.ts). */
@@ -166,6 +169,7 @@ class RemotePlayersLayer implements RemotePlayers {
         pet: v.follower ? v.followerKey : null,
         riding: v.riding,
         led: v.led ? v.led.key : null,
+        fishing: v.line !== null,
         bubble: v.bubble?.active ? v.bubbleText : null,
         // 1 once the bubble's fade-in tween has finished (screenshots wait for it).
         bubbleAlpha: v.bubble?.active ? v.bubble.alpha : null
@@ -200,6 +204,7 @@ class RemotePlayersLayer implements RemotePlayers {
         void this.loadAvatar(v, peer)
       }
       this.companions(v, peer, at, dt * 1000)
+      this.fishingLine(v, peer, at)
       // Fade in on arrival, out on leaving.
       const alphaIn = Math.min(1, (t - v.bornAt) / FADE_IN_MS)
       const alphaOut = peer.leftAt === null ? 1 : Math.max(0, 1 - (t - peer.leftAt) / LEAVE_FADE_MS)
@@ -243,7 +248,7 @@ class RemotePlayersLayer implements RemotePlayers {
     }).setOrigin(0.5, 1)
     const root = scene.add.container(x, y, [shadow, body, tag]).setAlpha(0).setDepth(y + 0.5)
     const riding = peer.pose === 'riding' && !!peer.avatar?.selectedMount
-    const view: View = { peer, root, body, demo, tag, bubble: null, bubbleText: null, bornAt: now(), facingX: 1, moving: false, look: peer.look, riding, follower: null, followerKey: '', led: null }
+    const view: View = { peer, root, body, demo, tag, bubble: null, bubbleText: null, bornAt: now(), facingX: 1, moving: false, look: peer.look, riding, follower: null, followerKey: '', led: null, line: null }
     this.views.set(peer.accountId, view)
     if (peer.avatar) void this.loadAvatar(view, peer)
     return view
@@ -312,9 +317,14 @@ class RemotePlayersLayer implements RemotePlayers {
       v.led = null
     }
     v.led?.update({ x: at.x, y: at.y, faceRight, seated: false, dt, time, hand: { x: at.x + (faceRight ? -HAND.x : HAND.x), y: at.y + HAND.y } })
-    // TODO(lane G, at merge): a peer whose pose is 'fishing' draws their line here —
-    // `new RemoteFishingLine(scene, reducedMotion).update(dt, at, facing, peer.pose === 'fishing')`
-    // each frame (src/game/entities/fishing.ts), destroyed in drop().
+  }
+
+  /** Their line in the water while their pose says fishing; taken down when it doesn't. */
+  private fishingLine(v: View, peer: Peer, at: { x: number; y: number; facing: { x: number; y: number } }): void {
+    const fishing = peer.pose === 'fishing' && peer.leftAt === null
+    if (fishing && !v.line) v.line = new RemoteFishingLine(this.scene, this.reducedMotion)
+    v.line?.update(at, at.facing, fishing)
+    if (!fishing) v.line = null
   }
 
   private async loadFollower(v: View, key: string, at: { x: number; y: number }): Promise<void> {
@@ -335,6 +345,7 @@ class RemotePlayersLayer implements RemotePlayers {
     if (!v) return
     v.follower?.destroy()
     v.led?.destroy()
+    v.line?.destroy()
     v.bubble?.destroy()
     v.root.destroy()
     this.views.delete(id)

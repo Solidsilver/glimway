@@ -6,6 +6,7 @@ import { EnvelopeSchema, LoginRequestSchema, PlayRequestSchema, SessionResponseS
 import { WildsRegionResultSchema, HomesteadLandSchema, type WildsChunk, type WildsRegionResult, type HomesteadLand } from '../gen/glimway/v1/wilds_pb.js';
 import { decodeChunk } from './chunks.ts';
 import { CompanionsRequestSchema, MountHomeRequestSchema, MountOutRequestSchema, StableExtendRequestSchema, StallRequestSchema, type CompanionsRequest, type MountHomeRequest, type MountOutRequest, type StableExtendRequest, type StallRequest } from '../gen/glimway/v1/companions_pb.js';
+import { FishCastRequestSchema, FishSettleRequestSchema, FishCancelRequestSchema, FishingWatersSchema, type FishCastRequest, type FishSettleRequest, type FishCancelRequest, type FishingWaters } from '../gen/glimway/v1/fishing_pb.js';
 import { ReportRequestSchema, type ReportRequest, QuestStepRequestSchema, type QuestStepRequest, MarkRequestSchema, type MarkRequest, TakePaperRequestSchema, type TakePaperRequest, SettleEchoRequestSchema, type SettleEchoRequest, FallRequestSchema, type FallRequest, ProfileReportSchema, type ProfileReport, SpendRequestSchema, type SpendRequest, WildsClaimRequestSchema, type WildsClaimRequest, WildsLanternRequestSchema, type WildsLanternRequest } from '../gen/glimway/v1/operations_pb.js';
 
 export type Transport = (method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown, extra?: { headers?: Record<string, string>; binary?: boolean; keepalive?: boolean }) => Promise<unknown>;
@@ -36,6 +37,11 @@ export interface OperationsApi {
   mountOut(request: MountOutRequest): Promise<Envelope>;
   mountHome(request: MountHomeRequest): Promise<Envelope>;
   stableExtend(request: StableExtendRequest): Promise<Envelope>;
+  fishCast(request: FishCastRequest): Promise<Envelope>;
+  fishSettle(request: FishSettleRequest): Promise<Envelope>;
+  fishCancel(request: FishCancelRequest): Promise<Envelope>;
+  /** Each water's band in an area (design crafts 5.4: the band and nothing else). */
+  fishingWaters(area: string): Promise<FishingWaters>;
 }
 function validated<T>(read: () => T): T {
   try { return read(); } catch { throw new ApiError('bad-response', { status: 200 }); }
@@ -88,6 +94,14 @@ export function createOperationsApi(send: Transport): OperationsApi {
     async mountOut(req) { return decodeEnvelope(await send('POST', '/api/stable/out', toJson(MountOutRequestSchema, req, { alwaysEmitImplicit: true }))); },
     async mountHome(req) { return decodeEnvelope(await send('POST', '/api/stable/home', toJson(MountHomeRequestSchema, req, { alwaysEmitImplicit: true }))); },
     async stableExtend(req) { return decodeEnvelope(await send('POST', '/api/stable/extend', toJson(StableExtendRequestSchema, req, { alwaysEmitImplicit: true }))); },
+    async fishCast(req) { return decodeEnvelope(await send('POST', '/api/fishing/cast', toJson(FishCastRequestSchema, req, { alwaysEmitImplicit: true }))); },
+    async fishSettle(req) { return decodeEnvelope(await send('POST', '/api/fishing/settle', toJson(FishSettleRequestSchema, req, { alwaysEmitImplicit: true }))); },
+    async fishCancel(req) { return decodeEnvelope(await send('POST', '/api/fishing/cancel', toJson(FishCancelRequestSchema, req, { alwaysEmitImplicit: true }))); },
+    async fishingWaters(area) { const raw = await send('GET', `/api/fishing/waters?area=${encodeURIComponent(area)}`); return validated(() => {
+      const out = decodeWire(FishingWatersSchema, raw);
+      for (const w of out.waters) if (!w.id) throw new Error('invalid water');
+      return out;
+    }); },
   };
 }
 export function validatedSession(raw: unknown): SessionResponse {

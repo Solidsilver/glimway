@@ -199,6 +199,7 @@ test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, an
   const id = await heroWith(page, 'Tansy', { pets: { 'Wolf-Base': 1 }, currentPet: 'Wolf-Base', mounts: { 'Wolf-Base': true }, currentMount: 'Wolf-Base' })
   // Riding lives behind the stable now: Habitica's current mount alone doesn't ride.
   await waitForLive(page)
+  await waitForLive(page)
   await page.keyboard.press('m')
   await expect(page.getByText(/somewhere to stand at home first/)).toBeVisible()
   expect((await debug(page)).riding).toBe(false)
@@ -260,15 +261,18 @@ test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, an
   await expect(page.getByRole('button', { name: /Get down/ })).toBeVisible()
 
   // M: down, on the lead; M again: back up.
+  await waitForLive(page)
   await page.keyboard.press('m')
   await expect.poll(async () => (await debug(page)).riding).toBe(false)
   await expect.poll(async () => (await debug(page)).led?.key ?? null).toBe('Wolf-Base')
   await expect(page.getByRole('button', { name: /Send your mount home/ })).toBeVisible()
+  await waitForLive(page)
   await page.keyboard.press('m')
   await expect.poll(async () => (await debug(page)).riding).toBe(true)
   expect((await debug(page)).led).toBeNull()
 
   // Build a stall: the stable grows east.
+  await waitForLive(page)
   await page.keyboard.press('m')
   await expect.poll(async () => (await debug(page)).riding).toBe(false)
   // At the east end, just past the last bay.
@@ -279,12 +283,14 @@ test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, an
   await expect.poll(async () => (await myHome(page)).items.find((i) => i.itemDef === 'stable') as unknown as { stalls?: number }, { timeout: SERVER_ANSWER_MS }).toMatchObject({ stalls: 2 })
 
   // The village is a no-ride zone: you lead it through.
+  await waitForLive(page)
   await page.keyboard.press('m')
   await expect.poll(async () => (await debug(page)).riding).toBe(true)
   await go(page, 'village', 16, 19)
   await waitForArea(page, 'village')
   await expect.poll(async () => (await debug(page)).riding).toBe(false)
   await expect.poll(async () => (await debug(page)).led?.key ?? null).toBe('Wolf-Base')
+  await waitForLive(page)
   await page.keyboard.press('m')
   await expect(page.getByText(/hoofprints in the square/)).toBeVisible()
 

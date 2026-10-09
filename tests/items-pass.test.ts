@@ -21,6 +21,7 @@ import {
 } from '../src/game/items-pass.ts'
 import { COMMONS_DECORATION_IDS } from '../src/game/atlas-plan.ts'
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts'
+import { FISHING_FRAMES, FISHING_LOOPS } from '../src/game/fishing-art.ts'
 
 const PUBLIC_DIR = fileURLToPath(new URL('../public/assets/fingersnap/items-pass/', import.meta.url))
 const SOURCE_DIR = fileURLToPath(new URL('../assets/generated/items-pass/', import.meta.url))
@@ -50,8 +51,9 @@ test('items-pass exposes its loader and load keys', () => {
   assert.equal(itemsArtKey('item-bench-axe-whole'), 'items-art:item-bench-axe-whole')
 })
 
-test('the manifest’s 12 source sheets are delivered as transparent RGBA PNGs of the stated size', () => {
-  assert.equal(manifest.sources.length, 12)
+test('the manifest’s 12 source sheets and 4 crafts-pass fishing icons are delivered as transparent RGBA PNGs of the stated size', () => {
+  assert.equal(manifest.sources.length, 16)
+  assert.equal(manifest.sources.filter((s) => s.file.startsWith('../crafts-pass/frames/')).length, 4)
   for (const s of manifest.sources) {
     const h = pngHeader(`${SOURCE_DIR}${s.file}`)
     assert.deepEqual([h.width, h.height], [s.width, s.height], s.file)
@@ -60,7 +62,7 @@ test('the manifest’s 12 source sheets are delivered as transparent RGBA PNGs o
 })
 
 test('every frame has a measured source rect inside its sheet and a destination inside its native canvas', () => {
-  assert.equal(manifest.frames.length, 170)
+  assert.equal(manifest.frames.length, 174)
   assert.equal(frameByKey.size, manifest.frames.length, 'frame keys are unique')
   const sources = new Map(manifest.sources.map((s) => [s.key, s]))
   const rects = new Set<string>()
@@ -79,7 +81,7 @@ test('every frame has a measured source rect inside its sheet and a destination 
 
 test('inventory icons have role inventory-icon and native dimensions', () => {
   const icons = manifest.frames.filter((f) => f.role === 'inventory-icon')
-  assert.equal(icons.length, 110)
+  assert.equal(icons.length, 114)
   for (const icon of icons) {
     assert.ok(icon.key.startsWith('item-'), `${icon.key} has item- prefix`)
     assert.ok(icon.width > 0 && icon.height > 0)
@@ -227,4 +229,18 @@ test('every home good resolves to art: runtime deco, world sprite or commons ali
     const ok = COMMONS_DECORATION_IDS.has(it.id) || itemWorldArt(it.id) !== null
     assert.ok(ok, `${it.id} has no deco key, world sprite or commons alias`)
   }
+})
+
+test('fishing: the rod, the roach, the fry and the card are item icons here; the effects are the crafts pack’s', () => {
+  for (const id of ['willow-rod', 'mill-roach', 'millers-fry', 'recipe-card-millers-fry']) {
+    const f = frameByKey.get(`item-${id}`)!
+    assert.ok(f, id)
+    assert.deepEqual([f.width, f.height, f.role, f.itemId], [16, 16, 'inventory-icon', id])
+    assert.equal(itemIcon(id), itemsArtKey(`item-${id}`))
+  }
+  // The float, rings, splash and held rod are drawn from cr-art: textures, never from here.
+  assert.deepEqual(manifest.frames.filter((f) => f.key.startsWith('fish-') || f.role === 'effect').map((f) => f.key), [])
+  const crafts = (JSON.parse(readFileSync(new URL('../public/assets/fingersnap/packed/atlases.json', import.meta.url), 'utf8')) as { crafts: { frames: Record<string, unknown> } }).crafts.frames
+  for (const frame of FISHING_FRAMES) assert.ok(crafts[frame], `${frame} is in the crafts pack`)
+  assert.deepEqual(FISHING_LOOPS.map((l) => l.key), ['fish-bob', 'fish-bite', 'fish-rings', 'fish-splash'])
 })

@@ -61,6 +61,8 @@ export interface FsHooks {
     lights: { x: number; y: number; radius: number }[]
     hint: { tx: number; ty: number } | null
   } | null
+  /** Fishing here (docs/design/crafts.md 5): the line out, a landed fish, each water's band, the last outcome. */
+  __fsFishing: () => ReturnType<import('./entities/fishing').Fishing['view']> | null
   /** Whether any collision body covers a tile. */
   __fsSolidAt: (tx: number, ty: number) => boolean
   /**

@@ -37,6 +37,7 @@ import { WorldTalk } from '../entities/world-talk'
 import { PaperPickups } from '../entities/papers'
 import { ItemPickups } from '../entities/item-pickups'
 import { Gathering } from '../entities/gathering'
+import { Fishing, fishingPose } from '../entities/fishing'
 import { RepairsLayer } from '../entities/repairs'
 import { OffHandVisual } from '../entities/off-hand'
 import { Effects } from '../entities/fx'
@@ -139,6 +140,8 @@ export class WorldScene extends Phaser.Scene {
   private tileArt = new TileArt<Phaser.GameObjects.Image>()
   /** Gathering: the workable pieces of this area (null where there are none). */
   private gathering: Gathering | null = null
+  /** Fishing: the banks of this area's waters (the mill pond; null where there are none). */
+  private fishing: Fishing | null = null
   /** Atlas-prop lanterns that can glow when lit (area/lanterns owns visuals). */
   private lightProps: LightProp[] = []
   /** Foreground canopies/arches that fade when something walks beneath. */
@@ -309,6 +312,16 @@ export class WorldScene extends Phaser.Scene {
         const gone = this.tileArt.fell(tx, ty)
         if (gone.length) this.occluders = this.occluders.filter((o) => !gone.includes(o.image))
       }
+    })
+    // The banks of this area's waters (docs/design/crafts.md 5): the mill pond.
+    this.fishing = new Fishing(this, {
+      world: this.world,
+      session: this.session,
+      fx: this.fx,
+      reducedMotion: this.reducedMotion,
+      hero: () => this.hero,
+      interactables: this.interactables,
+      notePosition: () => this.notePosition()
     })
     // The village's broken things, mended with the right part (shared per world).
     const repairs = new RepairsLayer(this, { world: this.world, session: this.session, fx: this.fx, reducedMotion: this.reducedMotion, interactables: this.interactables })
@@ -633,6 +646,7 @@ export class WorldScene extends Phaser.Scene {
     // One target for the action button: the highest rank in reach (the
     // Wilds' claims, the warden's naming), then the nearest.
     this.interactables.update(this.hero.sprite, this.time.now)
+    this.fishing?.update()
     this.controls.update()
     // The wrong tool in hand by something workable: a faint hint after a moment.
     const hx = this.hero.sprite.x
@@ -674,7 +688,9 @@ export class WorldScene extends Phaser.Scene {
     if (!feed || !this.presenceArea) return
     const body = this.hero.sprite.body as Phaser.Physics.Arcade.Body
     const moving = !this.transitioning && Math.hypot(body.velocity.x, body.velocity.y) > 5
-    feed.position({ x: this.hero.sprite.x, y: this.hero.sprite.y, facing: this.hero.facing, moving, ...(this.avatar.riding ? { pose: 'riding' } : {}) })
+    // One pose at a time: a line in the water, else the saddle.
+    const pose = fishingPose() ?? (this.avatar.riding ? 'riding' : null)
+    feed.position({ x: this.hero.sprite.x, y: this.hero.sprite.y, facing: this.hero.facing, moving, ...(pose ? { pose } : {}) })
   }
 
   /** Is the scene playing a Wilds chunk right now (also true mid-transition). */

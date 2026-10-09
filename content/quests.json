@@ -691,6 +691,98 @@
           }
         }
       ]
+    },
+    {
+      "id": "a-line-in-the-race",
+      "title": "A Line in the Race",
+      "blurb": "Finn has a rod on a hook by his door that only ever gets looked at.",
+      "line": "craft",
+      "after": [
+        "signpost"
+      ],
+      "start": {
+        "talk": "finn"
+      },
+      "steps": [
+        {
+          "id": "hear-finn-line",
+          "at": "",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "embers": 0,
+          "witness": "",
+          "goal": "Ask Finn about the rod by his door",
+          "objective": "Finn keeps a rod on a hook by the mill door. Find him and ask about it.",
+          "where": {
+            "npc": "finn"
+          },
+          "do": {
+            "talk": "finn"
+          },
+          "gate": {
+            "with": "finn"
+          },
+          "give": [
+            {
+              "def": "willow-rod",
+              "qty": 1
+            }
+          ]
+        },
+        {
+          "id": "first-catch",
+          "at": "",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "embers": 0,
+          "witness": "",
+          "goal": "Catch a roach from the mill race",
+          "objective": "Take the rod from your belt and stand on the sand above the wheel, where the race runs all year. Cast, wait for the dip, and keep what comes up.",
+          "where": {
+            "area": "village"
+          },
+          "do": {
+            "carry": "mill-roach"
+          }
+        },
+        {
+          "id": "show-hazel",
+          "at": "",
+          "items": [],
+          "marks": [],
+          "papers": [],
+          "embers": 1,
+          "witness": "",
+          "goal": "Show Hazel your roach",
+          "objective": "Hazel knows what to do with a roach. Take her your first one.",
+          "where": {
+            "npc": "hazel"
+          },
+          "do": {
+            "talk": "hazel"
+          },
+          "gate": {
+            "with": "hazel",
+            "item": {
+              "def": "mill-roach",
+              "qty": 1,
+              "keep": false
+            }
+          },
+          "give": [
+            {
+              "def": "recipe-card-millers-fry",
+              "qty": 1
+            }
+          ],
+          "note": {
+            "title": "Miller’s Fry",
+            "body": "Hazel kept the fish. To check the card was right, she said, and ate it standing up."
+          }
+        }
+      ]
     }
   ]
 }

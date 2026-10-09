@@ -12,10 +12,10 @@ import { itemDef } from './items.ts';
 import type { InstanceView } from './api/types.ts';
 
 /** A belt slot's kind: the weapon, or a tool action (content/items.json `actions`). */
-export type BeltKind = 'weapon' | 'chop' | 'break' | 'dig' | 'draw' | 'water' | 'trim' | 'mark';
+export type BeltKind = 'weapon' | 'chop' | 'break' | 'dig' | 'fish' | 'draw' | 'water' | 'trim' | 'mark';
 
 /** Belt order (and keys 1, 2, … follow it, over the kinds you carry). */
-export const BELT_ORDER: readonly BeltKind[] = ['weapon', 'chop', 'break', 'dig', 'draw', 'water', 'trim', 'mark'];
+export const BELT_ORDER: readonly BeltKind[] = ['weapon', 'chop', 'break', 'dig', 'fish', 'draw', 'water', 'trim', 'mark'];
 
 export interface BeltSlot {
   kind: BeltKind;
@@ -70,6 +70,7 @@ export const KIND_WORDS: Record<BeltKind, string> = {
   chop: 'Axe',
   break: 'Pick',
   dig: 'Spade',
+  fish: 'Fish',
   draw: 'Bucket',
   water: 'Watering can',
   trim: 'Lamplighter pole',
