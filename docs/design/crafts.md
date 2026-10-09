@@ -1,6 +1,6 @@
 # 0.5 Crafts
 
-Status: **design, ready for review**, 2026-10-09. Written from the code at `1bbb7c7` on
+Status: **design, confirmed by the owner**, 2026-10-09 (all eight defaults in section 11 taken). Written from the code at `1bbb7c7` on
 `exp/design-05`, which is `expansion`: 0.4 plus One schema. The owner's earlier decisions are in
 [plan.md](plan.md) (the 0.5 row, "One schema", "Art, by release"), [pets.md](pets.md),
 [magic.md](magic.md) and [fishing.md](fishing.md), each dated there. Everything here follows
@@ -1030,7 +1030,8 @@ until it goes quiet, and come back later; cook the fry.
 
 ## 11. Open questions, with defaults
 
-These go ahead as written unless the owner says otherwise. Only real choices are here; everything
+**Confirmed, 2026-10-09:** the owner took every default below. They chose 3, 5 and 6 directly, and
+also chose to run the three game lanes (E, F, G) in parallel. Only real choices are here; everything
 the earlier docs decided is taken as decided.
 
 1. **The world-changes table now, with fishing as its first writer.** *Default: yes,* as plan.md
