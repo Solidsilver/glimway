@@ -30,46 +30,6 @@ func decodeContent(raw []byte, out any, required ...string) error {
 	decoder.DisallowUnknownFields()
 	return decoder.Decode(out)
 }
-func (v *RoomTile) UnmarshalJSON(raw []byte) error {
-	type plain RoomTile
-	return decodeContent(raw, (*plain)(v), "tx", "ty")
-}
-func (v *RoomProp) UnmarshalJSON(raw []byte) error {
-	type plain RoomProp
-	return decodeContent(raw, (*plain)(v), "art", "char", "solid")
-}
-func (v *RoomFurnishing) UnmarshalJSON(raw []byte) error {
-	type plain RoomFurnishing
-	return decodeContent(raw, (*plain)(v), "piece")
-}
-func (v *RoomSpot) UnmarshalJSON(raw []byte) error {
-	type plain RoomSpot
-	return decodeContent(raw, (*plain)(v), "tx", "ty", "label")
-}
-func (v *RoomLight) UnmarshalJSON(raw []byte) error {
-	type plain RoomLight
-	return decodeContent(raw, (*plain)(v), "tx", "ty", "kind", "r")
-}
-func (v *RoomDoor) UnmarshalJSON(raw []byte) error {
-	type plain RoomDoor
-	return decodeContent(raw, (*plain)(v), "id", "kind", "at", "side", "to", "entry")
-}
-func (v *Room) UnmarshalJSON(raw []byte) error {
-	type plain Room
-	return decodeContent(raw, (*plain)(v), "id", "name", "parent", "map", "doors", "props", "spots", "lights")
-}
-func (v *ResidentSpot) UnmarshalJSON(raw []byte) error {
-	type plain ResidentSpot
-	return decodeContent(raw, (*plain)(v), "area", "tx", "ty")
-}
-func (v *ResidentPhase) UnmarshalJSON(raw []byte) error {
-	type plain ResidentPhase
-	return decodeContent(raw, (*plain)(v), "spot", "minutes")
-}
-func (v *Resident) UnmarshalJSON(raw []byte) error {
-	type plain Resident
-	return decodeContent(raw, (*plain)(v), "id", "spots", "cycle")
-}
 func (v *QuestTrigger) UnmarshalJSON(raw []byte) error {
 	type plain QuestTrigger
 	if err := decodeContent(raw, (*plain)(v)); err != nil {

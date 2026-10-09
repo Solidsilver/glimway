@@ -1,0 +1,144 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// The hand-made places: Hazel's kitchen and the rooms behind every door, each
+// a tile map with its props, spots, lights and dressing. Rooms share one
+// legend. content/rooms.json. Map geometry (characters, footprints, doors and
+// where a piece may stand) stays in code beside the loader, as canPlace does.
+message Rooms {
+  option (buf.validate.message).cel = {
+    id: "rooms.unique_ids"
+    message: "room ids must be unique"
+    expression: "this.rooms.all(r, this.rooms.filter(q, q.id == r.id).size() == 1)"
+  };
+  option (buf.validate.message).cel = {
+    id: "rooms.legend"
+    message: "legend must be the room vocabulary"
+    expression: "this.legend == {\"#\": \"wall\", \"=\": \"back-wall\", \"w\": \"window\", \".\": \"planks\", \":\": \"flagstone\", \"D\": \"doorway\", \"^\": \"stairs-up\", \"v\": \"stairs-down\", \"@\": \"arrive\"}"
+  };
+  option (buf.validate.message).cel = {
+    id: "rooms.prop_chars_off_legend"
+    message: "a prop character is not part of the legend"
+    expression: "this.rooms.all(r, r.props.all(p, !(p.char in this.legend)))"
+  };
+  map<string, string> legend = 1;
+  repeated Room rooms = 2 [(buf.validate.field).repeated.min_items = 1];
+}
+
+// Room maps are 16-pixel tiles. Floors share an outdoor parent; the parent
+// follows from the id (in:village:bakery -> village, in:village:mill:2 ->
+// in:village:mill) and is checked in code, beside RoomParent.
+message Room {
+  option (buf.validate.message).cel = {
+    id: "room.parent_region"
+    message: "a room's parent is its region (floors included)"
+    expression: "this.id.startsWith(\"in:\" + this.parent + \":\")"
+  };
+  option (buf.validate.message).cel = {
+    id: "room.map_rows"
+    message: "map rows are 3-128 tiles and all the same width"
+    expression: "size(this.map) == 0 || this.map.all(row, size(row) == size(this.map[0]) && size(row) >= 3 && size(row) <= 128)"
+  };
+  option (buf.validate.message).cel = {
+    id: "room.door_to_parent"
+    message: "a door leads to the room's parent"
+    expression: "this.doors.all(d, d.kind != \"door\" || d.to == this.parent)"
+  };
+  option (buf.validate.message).cel = {
+    id: "room.unique_door_ids"
+    message: "door ids must be unique"
+    expression: "this.doors.all(d, this.doors.filter(e, e.id == d.id).size() == 1)"
+  };
+  option (buf.validate.message).cel = {
+    id: "room.unique_door_chars"
+    message: "each door claims its own map character"
+    expression: "this.doors.all(d, this.doors.filter(e, e.at == d.at).size() == 1)"
+  };
+  option (buf.validate.message).cel = {
+    id: "room.unique_prop_chars"
+    message: "each prop claims its own map character"
+    expression: "this.props.all(p, this.props.filter(q, q.char == p.char).size() == 1)"
+  };
+  string id = 1 [(buf.validate.field).string.pattern = "^in:(village|woodland|ruin|commons):([a-z0-9]+(-[a-z0-9]+)*)(:([2-9]|[1-9][0-9]+))?$"];
+  string name = 2 [(buf.validate.field).string.min_len = 1];
+  string parent = 3 [(buf.validate.field).string.pattern = "^(village|woodland|ruin|commons|in:(village|woodland|ruin|commons):[a-z0-9]+(-[a-z0-9]+)*)$"];
+  repeated string map = 4 [(buf.validate.field).repeated = {min_items: 3, max_items: 128}];
+  repeated RoomDoor doors = 5 [(buf.validate.field).repeated.min_items = 1];
+  repeated RoomProp props = 6;
+  map<string, RoomSpot> spots = 7 [(buf.validate.field).map.keys.string.pattern = "^[a-z0-9-]{1,100}$"];
+  repeated RoomLight lights = 8;
+  RoomOutside outside = 9;
+  repeated RoomFurnishing furnishings = 10;
+}
+
+message RoomDoor {
+  option (buf.validate.message).cel = {
+    id: "room_door.shape"
+    message: "a door has its D and an outside tile; a stair has its arrow and none"
+    expression: "(this.kind != \"door\" || (this.at == \"D\" && has(this.outside))) && (this.kind != \"stair\" || ((this.at == \"^\" || this.at == \"v\") && !has(this.outside)))"
+  };
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string kind = 2 [(buf.validate.field).string = {in: ["door", "stair"]}];
+  string at = 3 [(buf.validate.field).string = {in: ["D", "^", "v"]}];
+  string side = 4 [(buf.validate.field).string = {in: ["north", "south", "east", "west"]}];
+  string to = 5 [(buf.validate.field).string.min_len = 1];
+  RoomTile outside = 6;
+  RoomTile entry = 7 [(buf.validate.field).required = true];
+}
+
+// A signature piece drawn on its map letter: Art names a furnishings piece
+// (design 2.8), shown in Facing (one it has; empty: its default).
+message RoomProp {
+  string art = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string char = 2 [(buf.validate.field).string.pattern = "^[A-Za-z]$"];
+  optional bool solid = 3 [(buf.validate.field).required = true];
+  optional string facing = 4 [(buf.validate.field).string = {in: ["front", "left", "right", "diag"]}];
+}
+
+// A furnishing placed by catalogue id (2.8): on the floor (or a rug) by its
+// footprint's top-left tile, on the back wall, or on an earlier piece's
+// surface (Parent, its Offer and Slot). Placement is checked in code.
+message RoomFurnishing {
+  option (buf.validate.message).cel = {
+    id: "room_furnishing.placed"
+    message: "a furnishing sits either on a parent's surface or at a tile"
+    expression: "has(this.parent) ? (!has(this.tx) && !has(this.ty) && this.parent >= 0 && (!has(this.slot) || this.slot >= 0)) : (has(this.tx) && has(this.ty) && this.tx >= 0 && this.ty >= 0 && !has(this.offer) && !has(this.slot))"
+  };
+  string piece = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  optional int32 tx = 2;
+  optional int32 ty = 3;
+  optional string facing = 4 [(buf.validate.field).string = {in: ["front", "left", "right", "diag"]}];
+  optional int32 parent = 5;
+  optional string offer = 6 [(buf.validate.field).string = {in: ["top", "shelves"]}];
+  optional int32 slot = 7;
+}
+
+message RoomSpot {
+  optional int32 tx = 1 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  optional int32 ty = 2 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  string label = 3 [(buf.validate.field).string.min_len = 1];
+}
+
+message RoomLight {
+  optional int32 tx = 1 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  optional int32 ty = 2 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  string kind = 3 [(buf.validate.field).string = {in: ["hearth", "lamp", "window"]}];
+  int32 r = 4 [(buf.validate.field).int32 = {gte: 1, lte: 128}];
+}
+
+message RoomOutside {
+  string building = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  RoomTile window = 2;
+  Chimney chimney = 3;
+  message Chimney {
+    optional int32 x = 1 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+    optional int32 y = 2 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  }
+}
+
+message RoomTile {
+  optional int32 tx = 1 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  optional int32 ty = 2 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+}

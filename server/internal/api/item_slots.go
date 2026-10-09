@@ -207,9 +207,9 @@ func nearResident(s *store.Snapshot, id string, now int64, radius int) bool {
 	if !ok {
 		return false
 	}
-	for _, name := range content.CycleSpotsNear(resident, float64(now), content.ResidentRules.GraceSeconds) {
+	for _, name := range content.CycleSpotsNear(resident, float64(now), int(content.ResidentRules.GetGraceSeconds())) {
 		spot := resident.Spots[name]
-		if nearTile(s, spot.Area, spot.TX, spot.TY, radius) {
+		if nearTile(s, spot.GetArea(), int(spot.GetTx()), int(spot.GetTy()), radius) {
 			return true
 		}
 	}

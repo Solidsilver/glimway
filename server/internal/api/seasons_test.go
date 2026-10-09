@@ -263,12 +263,13 @@ func (x *rig) fundEmbers(id string, n int) {
 func bySeller(s response, seller string, now int64) rules.State {
 	doc := s.State
 	if spot, ok := content.SellerFor(seller); ok {
+		area, tx, ty := spot.Area, spot.TX, spot.TY
 		if spot.With != "" {
 			p, _ := content.ResidentAt(spot.With, float64(now))
-			spot.Area, spot.TX, spot.TY = p.Area, p.TX, p.TY
+			area, tx, ty = p.GetArea(), int(p.GetTx()), int(p.GetTy())
 		}
-		doc.Area = spot.Area
-		doc.Position = rules.Position{X: float64(spot.TX*16 + 8), Y: float64(spot.TY*16 + 12)}
+		doc.Area = area
+		doc.Position = rules.Position{X: float64(tx*16 + 8), Y: float64(ty*16 + 12)}
 	}
 	return doc
 }

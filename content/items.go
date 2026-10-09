@@ -502,7 +502,7 @@ func validSellerPlace(s ItemSeller) bool {
 	if err != nil || s.Area != "" || s.TX != 0 || s.TY != 0 {
 		return false
 	}
-	return slices.ContainsFunc(residents.Residents, func(r Resident) bool { return r.ID == s.With })
+	return slices.ContainsFunc(residents.GetResidents(), func(r *Resident) bool { return r.GetId() == s.With })
 }
 
 // SellerFor is a seller by id (shared content; the client prompts at the

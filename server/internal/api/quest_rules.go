@@ -58,7 +58,7 @@ func questPrerequisites(s store.Snapshot, q content.Quest) error {
 // with checks areas only, as talks do; seller reach additionally checks a tile.
 func personHere(id, area string, now int64) bool {
 	if resident, ok := content.ResidentByID(id); ok {
-		for _, spot := range content.CycleSpotsNear(resident, float64(now), content.ResidentRules.GraceSeconds) {
+		for _, spot := range content.CycleSpotsNear(resident, float64(now), int(content.ResidentRules.GetGraceSeconds())) {
 			if resident.Spots[spot].Area == area {
 				return true
 			}

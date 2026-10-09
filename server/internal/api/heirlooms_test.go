@@ -215,10 +215,10 @@ func TestHeirloomAdaGardenSpadeAndOil(t *testing.T) {
 	if !ok {
 		t.Fatal("resident ada not found")
 	}
-	adaPos := rules.Position{X: float64(spot.TX*16 + 8), Y: float64(spot.TY*16 + 8)}
+	adaPos := rules.Position{X: float64(spot.GetTx()*16 + 8), Y: float64(spot.GetTy()*16 + 8)}
 
 	atAdaDoc := s.State
-	atAdaDoc.Area = spot.Area
+	atAdaDoc.Area = spot.GetArea()
 	atAdaDoc.Position = adaPos
 
 	// 1. Condition unmet: oil gifts < 3
@@ -265,7 +265,7 @@ func TestHeirloomAdaGardenSpadeAndOil(t *testing.T) {
 	// 4. Give oil without oil in pack -> 409 insufficient-items (tested with a new player bob)
 	bc, b := x.ready("bob")
 	bDoc := b.State
-	bDoc.Area = spot.Area
+	bDoc.Area = spot.GetArea()
 	bDoc.Position = adaPos
 	noOil := x.items("POST", "/api/items/ada-oil", body(b, "oil-none", map[string]any{
 		"itemDef":  "hearth-oil",

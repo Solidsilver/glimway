@@ -1,0 +1,103 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// The one furnishings catalogue (design 2.8): every placeable piece, the
+// village's rooms and players' houses alike. Home goods in homestead.json
+// keep only what is homestead-specific (category, where, prices, materials)
+// and refer to these ids for name and footprint. content/furnishings.json.
+message Furnishings {
+  option (buf.validate.message).cel = {
+    id: "furnishings.unique_ids"
+    message: "piece ids must be unique"
+    expression: "this.pieces.all(p, this.pieces.filter(q, q.id == p.id).size() == 1)"
+  };
+  repeated Furnishing pieces = 1 [(buf.validate.field).repeated.min_items = 1];
+}
+
+message Furnishing {
+  option (buf.validate.message).cel = {
+    id: "furnishing.footprint"
+    message: "footprint is 1-12 tiles wide and 1-10 deep"
+    expression: "size(this.footprint) != 2 || (this.footprint[0] >= 1 && this.footprint[0] <= 12 && this.footprint[1] >= 1 && this.footprint[1] <= 10)"
+  };
+  option (buf.validate.message).cel = {
+    id: "furnishing.base_in_footprint"
+    message: "base must sit inside the footprint"
+    expression: "size(this.footprint) != 2 || !has(this.base) || (this.base.x + this.base.w <= this.footprint[0] && this.base.y + this.base.h <= this.footprint[1])"
+  };
+  option (buf.validate.message).cel = {
+    id: "furnishing.size_or_rug"
+    message: "size is required except on a rug (layer under)"
+    expression: "has(this.size) || this.layer == \"under\""
+  };
+  option (buf.validate.message).cel = {
+    id: "furnishing.rug"
+    message: "a rug is a floor piece without offers"
+    expression: "this.layer != \"under\" || (this.mount == \"floor\" && !has(this.offers))"
+  };
+  option (buf.validate.message).cel = {
+    id: "furnishing.states_default"
+    message: "states need exactly one default"
+    expression: "size(this.states) == 0 || size(this.states.filter(k, this.states[k].default)) == 1"
+  };
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string name = 2 [(buf.validate.field).string.min_len = 1];
+  // Facing ("front", "left", "right", "diag") to art frame; the frame may be
+  // empty until the art lands.
+  map<string, string> facings = 3 [(buf.validate.field).map = {
+    min_pairs: 1
+    keys: {string: {in: ["front", "left", "right", "diag"]}}
+    values: {string: {pattern: "^([a-z0-9-]{1,100})?$"}}
+  }];
+  // Width and depth in tiles; the CEL rule above gives each its range.
+  repeated int32 footprint = 4 [(buf.validate.field).repeated = {min_items: 2, max_items: 2}];
+  FurnishBase base = 5 [(buf.validate.field).required = true];
+  string mount = 6 [(buf.validate.field).string = {in: ["floor", "wall", "surface"]}];
+  FurnishOffers offers = 7;
+  optional string size = 8 [(buf.validate.field).string = {in: ["small", "medium", "large"]}];
+  optional string layer = 9 [(buf.validate.field).string = {in: ["under"]}];
+  map<string, FurnishState> states = 10 [(buf.validate.field).map.keys.string.pattern = "^[a-z0-9-]{1,100}$"];
+  // Game-internal labels ("seat", "light", "section:stories"), never
+  // placement rules; a label is one or more colon-joined ids.
+  repeated string tags = 11 [(buf.validate.field).repeated = {
+    unique: true
+    items: {string: {pattern: "^[a-z0-9-]{1,100}(:[a-z0-9-]{1,100})*$"}}
+  }];
+}
+
+// The part that touches what the piece stands on; collision uses only this.
+// Every key is required (explicit presence), so a missing one is refused.
+message FurnishBase {
+  optional int32 x = 1 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  optional int32 y = 2 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  optional int32 w = 3 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 1];
+  optional int32 h = 4 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 1];
+}
+
+// The surfaces a piece provides for other pieces, each sized in small-item
+// slots (a small piece takes one, a medium two). Each key carries a real
+// slot count, and at least one key must be present.
+message FurnishOffers {
+  option (buf.validate.message).cel = {
+    id: "furnish_offers.slot"
+    message: "offers need top or shelves"
+    expression: "has(this.top) || has(this.shelves)"
+  };
+  optional int32 top = 1 [(buf.validate.field).int32 = {gte: 1, lte: 12}];
+  optional int32 shelves = 2 [(buf.validate.field).int32 = {gte: 1, lte: 12}];
+}
+
+// One named state of a piece that changes only by something that happens (a
+// quest beat, cooking, a resident's routine), never by idling. Exactly one
+// state is the default (the rule on Furnishing); Loop marks a slow working
+// loop. Frame names may be empty until the art lands.
+message FurnishState {
+  repeated string frames = 1 [(buf.validate.field).repeated = {
+    min_items: 1
+    items: {string: {pattern: "^([a-z0-9-]{1,100})?$"}}
+  }];
+  optional bool loop = 2;
+  optional bool default = 3;
+}

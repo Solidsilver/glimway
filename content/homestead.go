@@ -215,14 +215,14 @@ func resolveHomeGoods(h *Homestead) error {
 			return fmt.Errorf("invalid homestead: item %s not in the furnishings catalogue", h.Items[i].ID)
 		}
 		v := &h.Items[i]
-		if v.Name != "" && v.Name != f.Name {
+		if v.Name != "" && v.Name != f.GetName() {
 			return fmt.Errorf("invalid homestead: item %s names itself %q", v.ID, v.Name)
 		}
-		if len(v.Footprint) != 0 && (len(v.Footprint) != 2 || v.Footprint[0] != f.Footprint[0] || v.Footprint[1] != f.Footprint[1]) {
+		if len(v.Footprint) != 0 && (len(v.Footprint) != 2 || v.Footprint[0] != int(f.GetFootprint()[0]) || v.Footprint[1] != int(f.GetFootprint()[1])) {
 			return fmt.Errorf("invalid homestead: item %s disagrees with the catalogue's footprint", v.ID)
 		}
-		v.Name = f.Name
-		v.Footprint = []int{f.Footprint[0], f.Footprint[1]}
+		v.Name = f.GetName()
+		v.Footprint = []int{int(f.GetFootprint()[0]), int(f.GetFootprint()[1])}
 	}
 	return nil
 }
@@ -266,7 +266,7 @@ func ValidateHomestead(h Homestead) error {
 		// The row must agree with the furnishing it names: its name and
 		// footprint are the catalogue's, never a second copy.
 		f, ok := FurnishingFor(v.ID)
-		if !ok || v.Name != f.Name || len(v.Footprint) != 2 || v.Footprint[0] != f.Footprint[0] || v.Footprint[1] != f.Footprint[1] {
+		if !ok || v.Name != f.GetName() || len(v.Footprint) != 2 || v.Footprint[0] != int(f.GetFootprint()[0]) || v.Footprint[1] != int(f.GetFootprint()[1]) {
 			return bad
 		}
 	}

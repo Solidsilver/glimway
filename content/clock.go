@@ -122,14 +122,14 @@ type CyclePlace struct {
 	Until float64 `json:"until"`
 }
 
-func CycleAt(resident Resident, now float64) CyclePlace {
-	period := float64(ResidentRules.PeriodMinutes * 60)
-	offset := float64(resident.OffsetMinutes * 60)
+func CycleAt(resident *Resident, now float64) CyclePlace {
+	period := float64(ResidentRules.GetPeriodMinutes() * 60)
+	offset := float64(resident.GetOffsetMinutes() * 60)
 	start := math.Floor((now-offset)/period)*period + offset
-	for _, p := range resident.Cycle {
-		until := start + float64(p.Minutes*60)
+	for _, p := range resident.GetCycle() {
+		until := start + float64(p.GetMinutes()*60)
 		if now < until {
-			return CyclePlace{p.Spot, start, until}
+			return CyclePlace{p.GetSpot(), start, until}
 		}
 		start = until
 	}
@@ -138,7 +138,7 @@ func CycleAt(resident Resident, now float64) CyclePlace {
 
 // CycleSpotsNear includes the current spot first, then previous and next
 // during the inclusive grace window. A single-phase cycle appears only once.
-func CycleSpotsNear(resident Resident, now float64, graceSeconds int) []string {
+func CycleSpotsNear(resident *Resident, now float64, graceSeconds int) []string {
 	current := CycleAt(resident, now)
 	out := []string{current.Spot}
 	add := func(spot string) {

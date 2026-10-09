@@ -8,7 +8,7 @@ import (
 func TestFurnishingsLoaderVectors(t *testing.T) {
 	var vectors struct {
 		Loader     []loaderVector
-		Pieces     map[string]Furnishing
+		Pieces     map[string]*Furnishing
 		Placements []struct {
 			Name  string
 			Piece string
@@ -25,11 +25,7 @@ func TestFurnishingsLoaderVectors(t *testing.T) {
 	base, _ := FS.ReadFile("furnishings.json")
 	for _, v := range vectors.Loader {
 		t.Run("loader/"+v.Name, func(t *testing.T) {
-			var doc Furnishings
-			err := json.Unmarshal(editVector(t, base, v), &doc)
-			if err == nil {
-				err = ValidateFurnishings(doc)
-			}
+			_, err := DecodeFurnishings(editVector(t, base, v))
 			if (err == nil) != v.Valid {
 				t.Fatal(v.Valid, err)
 			}
@@ -50,13 +46,13 @@ func TestFurnishingsLoaderVectors(t *testing.T) {
 				if !ok {
 					t.Fatal("unknown host " + v.Onto.Host)
 				}
-				onto.Host = &host
+				onto.Host = host
 			}
 			at := 0
 			if v.At != nil {
 				at = *v.At
 			}
-			if CanPlace(&piece, onto, at) != v.OK {
+			if CanPlace(piece, onto, at) != v.OK {
 				t.Fatal(v.Name)
 			}
 		})
@@ -74,7 +70,7 @@ func TestHomesteadReadsItemsThroughTheCatalogue(t *testing.T) {
 	if !ok {
 		t.Fatal("catalogue lost the wooden stool")
 	}
-	if h.Items[0].ID != "wooden-stool" || h.Items[0].Name != stool.Name || h.Items[0].Footprint[0] != stool.Footprint[0] || h.Items[0].Footprint[1] != stool.Footprint[1] {
+	if h.Items[0].ID != "wooden-stool" || h.Items[0].Name != stool.GetName() || h.Items[0].Footprint[0] != int(stool.GetFootprint()[0]) || h.Items[0].Footprint[1] != int(stool.GetFootprint()[1]) {
 		t.Fatal("home goods do not come from the catalogue")
 	}
 	for _, v := range h.Items {

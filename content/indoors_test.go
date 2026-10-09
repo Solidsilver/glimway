@@ -5,6 +5,8 @@ import (
 	"os"
 	"reflect"
 	"testing"
+
+	"google.golang.org/protobuf/proto"
 )
 
 type loaderVector struct {
@@ -68,11 +70,7 @@ func TestIndoorsLoaderVectors(t *testing.T) {
 	residentBase, _ := FS.ReadFile("residents.json")
 	for _, v := range roomVectors.Rooms {
 		t.Run("rooms/"+v.Name, func(t *testing.T) {
-			var doc Rooms
-			err := json.Unmarshal(editVector(t, roomBase, v), &doc)
-			if err == nil {
-				err = ValidateRooms(doc)
-			}
+			_, err := DecodeRooms(editVector(t, roomBase, v))
 			if (err == nil) != v.Valid {
 				t.Fatal(v.Valid, err)
 			}
@@ -80,11 +78,7 @@ func TestIndoorsLoaderVectors(t *testing.T) {
 	}
 	for _, v := range roomVectors.Residents {
 		t.Run("residents/"+v.Name, func(t *testing.T) {
-			var doc Residents
-			err := json.Unmarshal(editVector(t, residentBase, v), &doc)
-			if err == nil {
-				err = ValidateResidents(doc)
-			}
+			_, err := DecodeResidents(editVector(t, residentBase, v))
 			if (err == nil) != v.Valid {
 				t.Fatal(v.Valid, err)
 			}
@@ -112,7 +106,7 @@ func TestIndoorsLoaderVectors(t *testing.T) {
 func TestResidentCycleVectors(t *testing.T) {
 	var vectors struct {
 		Cycles []struct {
-			Resident     Resident
+			Resident     json.RawMessage
 			Now          float64
 			GraceSeconds int
 			Expected     CyclePlace
@@ -124,22 +118,30 @@ func TestResidentCycleVectors(t *testing.T) {
 		t.Fatal("no cycle vectors")
 	}
 	for _, v := range vectors.Cycles {
-		if got := CycleAt(v.Resident, v.Now); got != v.Expected {
+		var resident Resident
+		if err := decodeContentProto(v.Resident, &resident); err != nil {
+			t.Fatal(err)
+		}
+		if got := CycleAt(&resident, v.Now); got != v.Expected {
 			t.Fatal(v, got)
 		}
-		if got := CycleSpotsNear(v.Resident, v.Now, v.GraceSeconds); !reflect.DeepEqual(got, v.Near) {
+		if got := CycleSpotsNear(&resident, v.Now, v.GraceSeconds); !reflect.DeepEqual(got, v.Near) {
 			t.Fatal(v, got)
 		}
 	}
-	if got, ok := ResidentAt("finn", 2700); !ok || got != (ResidentSpot{Area: "in:village:mill:2", TX: 7, TY: 5}) {
+	spotIs := func(got *ResidentSpot, area string, tx, ty int32) bool {
+		return got != nil && got.GetArea() == area && got.GetTx() == tx && got.GetTy() == ty
+	}
+	if got, ok := ResidentAt("finn", 2700); !ok || !spotIs(got, "in:village:mill:2", 7, 5) {
 		t.Fatal(got, ok)
 	}
-	for now, want := range map[float64]ResidentSpot{
-		0:    {Area: "commons", TX: 26, TY: 5},
-		600:  {Area: "in:village:library", TX: 9, TY: 4, Seated: true},
-		2400: {Area: "commons", TX: 26, TY: 5},
+	for now, want := range map[float64][3]any{
+		0:    {"commons", int32(26), int32(5)},
+		600:  {"in:village:library", int32(9), int32(4)},
+		2400: {"commons", int32(26), int32(5)},
 	} {
-		if got, ok := ResidentAt("elara", now); !ok || got != want {
+		got, ok := ResidentAt("elara", now)
+		if !ok || !spotIs(got, want[0].(string), want[1].(int32), want[2].(int32)) {
 			t.Fatal(now, got, ok)
 		}
 	}
@@ -150,21 +152,25 @@ func TestResidentCycleVectors(t *testing.T) {
 
 func TestRevisedLibraryVectors(t *testing.T) {
 	var vectors struct {
-		Room  Room
+		Room  json.RawMessage
 		Seats []struct {
 			Name  string
-			Spot  ResidentSpot
+			Spot  *ResidentSpot
 			Valid bool
 		}
 	}
 	readVectors(t, "library", &vectors)
+	var revised Room
+	if err := decodeContentProto(vectors.Room, &revised); err != nil {
+		t.Fatal(err)
+	}
 	doc, err := LoadRooms()
 	if err != nil {
 		t.Fatal(err)
 	}
 	for i, room := range doc.Rooms {
-		if room.ID == vectors.Room.ID {
-			doc.Rooms[i] = vectors.Room
+		if room.GetId() == revised.GetId() {
+			doc.Rooms[i] = &revised
 		}
 	}
 	if err := ValidateRooms(doc); err != nil {
@@ -172,9 +178,10 @@ func TestRevisedLibraryVectors(t *testing.T) {
 	}
 	// Shelves can seal a boundary only while they are solid.
 	for i, room := range doc.Rooms {
-		if room.ID == vectors.Room.ID {
-			doc.Rooms[i].Props = append([]RoomProp(nil), room.Props...)
-			doc.Rooms[i].Props[0].Solid = false
+		if room.GetId() == revised.GetId() {
+			open := proto.Clone(&revised).(*Room)
+			open.Props[0].Solid = proto.Bool(false)
+			doc.Rooms[i] = open
 		}
 	}
 	if err := ValidateRooms(doc); err == nil {
@@ -182,7 +189,7 @@ func TestRevisedLibraryVectors(t *testing.T) {
 	}
 	for _, v := range vectors.Seats {
 		t.Run(v.Name, func(t *testing.T) {
-			if got := ResidentSpotFits(vectors.Room, v.Spot); got != v.Valid {
+			if got := ResidentSpotFits(&revised, v.Spot); got != v.Valid {
 				t.Fatal(got, v.Valid)
 			}
 		})
@@ -193,7 +200,7 @@ func TestRoomFootprints(t *testing.T) {
 	// sacks are dressing since the round-2 art).
 	piles := Room{Map: []string{"##########", "#.ff..ff.#", "#.ff..ff.#", "##########"}}
 	want := []RoomFootprint{{"f", 2, 1, 2, 2}, {"f", 6, 1, 2, 2}}
-	if got := RoomFootprints(piles, "f"); !reflect.DeepEqual(got, want) {
+	if got := RoomFootprints(&piles, "f"); !reflect.DeepEqual(got, want) {
 		t.Fatal(got)
 	}
 	if MarkWriter("library:lamp") != "server" || MarkWriter("quest-item:east-finger") != "server" {
