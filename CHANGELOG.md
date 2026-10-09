@@ -13,6 +13,8 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-09
+
 ### For players
 
 - Riding has moved home. Build a stable after the Workshop, stall a
@@ -26,9 +28,43 @@ the game can show the first part as "What's new":
 - Heroes without a class fight with what's in hand. Fingersnap is the
   mage's.
 - Fishing at the mill pond. Ask Finn about the rod by his door.
+- Silas's Yard has a Buildings section near the top. The stable is
+  there, and says it needs the Workshop until you have one.
+- Walk without a pet if you like: No pet is a choice in the Companions
+  tab.
+- A mount you're riding leaves its bay empty, and walks back into it when
+  you send it home on your own land.
+- After a catch, Keep it with E or Let it go with Q; the prompt names
+  both.
+- A click swings only a weapon or a sturdy tool (axe, pick, spade). A rod,
+  can or pair of shears isn't for fighting.
+- Esc ends a talk, unless there's a choice you have to make.
+- What your quest step needs glows softly when it's on screen, and the
+  top bar says when it's here rather than pointing at a way out.
+- The gate signs at the village's edges are signposts you can see.
 
 ### Technical
 
+- 0.5 Crafts (`docs/design/crafts.md`), contract 5. Companions:
+  `POST /api/companions` (`companions`) stores the follower and up to three
+  yard pets (`player_companions`, `yard_pets`, migration 030); a
+  `follow_pet` of `none` means no follower, empty means Habitica's current
+  pet. The stable: `stall`, `mount-out`, `mount-home` and `stable-extend`
+  operations; `HomeView.stalls` shows a stall empty while its mount is out.
+  Presence carries `avatar_change` and `ability` events to contract-5 tabs.
+- Magic: `content/abilities.json` (with its proto) is the ability table
+  both sides read. The level-20 moves unlock by the level mark,
+  `sync_baselines.level_mark` (migration 031), and the report allows each
+  move against its own budget; Ward-light's heal credit is spent after the
+  commit.
+- Buildings carry a `building` flag in `content/homestead.json`. What a
+  click does with each belt kind is `SWING` in `src/lib/belt.ts`. The quest
+  goal's route and target glow share `src/game/goal-route.ts`.
+- The container's base images come from `mirror.gcr.io` (same digests),
+  after Docker Hub rate limits failed CI builds.
+- Releases tag themselves: when CI passes on `main` and `package.json`
+  holds a version with no tag yet, `tag-release.yml` tags that commit and
+  publishes the image (`docs/releasing.md`).
 - Fishing in the game: the mill pond's three banks come from
   `content/fishing.json` and sit on the interactions path (Cast, Pull in,
   Reel, then Keep or Let it go in the context buttons). The rod is a new
@@ -287,7 +323,8 @@ The first public release.
   under its own licence; contributions under the DCO.
 - Unit tests, Go tests and Playwright playtests.
 
-[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/Solidsilver/glimway/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Solidsilver/glimway/compare/v0.2.0...v0.4.0
 [0.2.0]: https://github.com/Solidsilver/glimway/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Solidsilver/glimway/releases/tag/v0.1.0

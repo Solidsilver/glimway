@@ -2,6 +2,16 @@ name: Publish GHCR image
 on:
   push:
     tags: ['v*']
+  # Called by tag-release.yml, which tags main when a release lands there: a
+  # tag pushed with the workflow token doesn't start workflows by itself.
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+      sha:
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -10,18 +20,18 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+      RELEASE_SHA: ${{ inputs.sha || github.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ env.RELEASE_SHA }}
           lfs: true
       - name: Require a semantic version tag (a release, or a pre-release such as v0.3.0-alpha.1)
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
         run: |
           [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]
       - name: Require the tag to match package.json
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
         run: |
           version=$(jq -r .version package.json)
           if [[ "$RELEASE_TAG" != "v$version" ]]; then
@@ -42,14 +52,15 @@ jobs:
           images: ghcr.io/solidsilver/glimway
           flavor: latest=false
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}},value=${{ env.RELEASE_TAG }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ env.RELEASE_TAG }}
             # Pre-releases (vX.Y.Z-alpha.N) get only their own version tag.
-            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
-            type=sha,prefix=sha-,format=long
+            type=raw,value=latest,enable=${{ !contains(env.RELEASE_TAG, '-') }}
+            type=raw,value=sha-${{ env.RELEASE_SHA }}
           labels: |
             org.opencontainers.image.source=https://github.com/Solidsilver/glimway
             org.opencontainers.image.licenses=AGPL-3.0-or-later
+            org.opencontainers.image.revision=${{ env.RELEASE_SHA }}
       - name: Build and publish both architectures
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
@@ -59,7 +70,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            GLIMWAY_BUILD=${{ github.sha }}
+            GLIMWAY_BUILD=${{ env.RELEASE_SHA }}
           cache-from: type=gha,scope=release
           cache-to: type=gha,mode=max,scope=release
           provenance: true

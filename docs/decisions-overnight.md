@@ -11,6 +11,7 @@ tags wait for the owner's playtest.
 
 | Tag | Branch | What it adds |
 |---|---|---|
+| `v0.5.0` | `main` | **0.5 Crafts**, released straight from the owner's playtest (no alpha): companions (a follower, yard pets, No pet), the stable and riding from home, the level mark and the level-20 moves (Stand, Kindle, Ward-light, Echo), classless heroes fight with what's in hand, fishing at the mill pond and *A Line in the Race*, the crafts art pass; the owner's two playtest rounds (the bay empties while its mount is out, a Buildings section, Keep/Let go keys, tools that don't swing, Esc out of talk, the goal glow, gate signs); base images from mirror.gcr.io |
 | `v0.4.0-alpha.2` | `expansion` | **One schema**: every shared type and content file on protobuf (endpoints, 21 content families, protovalidate, shared vectors), reviewed per lane and by Sol; the production client skips content validation. 0.4 art follow-ups: the risen washtub, the working hoist, Elara writing at her desk, smaller library signs |
 | `v0.4.0-alpha.1` | `expansion` | **0.4 Indoors**: rooms (kitchen, mill and loft, library, cottage), residents on the hour, Elara keeps the library, the quest tree and Quests page, the furnishing catalogue and interior kit, the owner's playtest fixes (style rules, collision at the base, stairs along a wall), and the tab-close report fix. Full suite 206/206 |
 | `v0.3.0-alpha.5` | `expansion` | Dev mode for local playtesting (grants from a dev panel; dev builds only, never Habitica); the panel open/close sound removed (owner); the warden's rest after a naming runs on real time (the coop flake); a reconnect after offline play reports at once; e2e server-answer waits 15 s |
@@ -42,6 +43,8 @@ tags wait for the owner's playtest.
 | 17 | Content files proto can't express are reshaped (a list of lists becomes a list of named rows, a map of lists a map of messages, `$comment` a field). | Owner's call: keep full validation, our own files. | alpha.2 |
 | 18 | The production client doesn't validate bundled content (CI and the server do); dev builds and tests do. Bundle 962 → 891 kB gzip, content import 141 → 47 ms (0.4 was 846 kB, 10 ms). | Owner: keep validation where it helps. | alpha.2 |
 | 19 | Library section signs are small plaques on the shelf tops. | Owner found the first ones too large. | alpha.2 |
+| 20 | 0.5 Crafts: below level 10 a hero has no class (the mappers null it), so the classless rules apply; Esc ends any talk except one with a choice that must be made; the axe may fight, a rod may not. | Owner, 2026-10-09 playtest. | 0.5.0 |
+| 21 | Releases are cut by merging a version bump into `main`; `tag-release.yml` tags it after CI passes and publishes the image. Alphas are still tagged by hand. | Owner: "the tag should be auto-created upon merge with main". | 0.5.0 |
 
 ## Test health
 

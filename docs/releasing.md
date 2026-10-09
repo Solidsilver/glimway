@@ -23,18 +23,22 @@ that moves the changelog and bumps that version, tagged.
 
 3. **Check.** `npm run verify`, `go test ./...`, and the playtests that matter
    (`npm run test:smoke` at least).
-4. **Commit and tag** on `main`:
+4. **Commit and merge** to `main`:
 
    ```sh
    git commit -am "Release X.Y.Z"
-   git tag -a vX.Y.Z -m "Glimway X.Y.Z"
-   git push origin main vX.Y.Z
+   git push origin HEAD:main
    ```
 
-5. **Publish.** The tag starts `.github/workflows/release.yml`, which stops if
-   the tag isn't `v` + `package.json`'s version, then builds and pushes
+5. **Tag and publish (automatic).** When CI passes on `main`,
+   `.github/workflows/tag-release.yml` reads `package.json`'s version and, if
+   there's no `vX.Y.Z` tag yet, tags that commit and calls
+   `.github/workflows/release.yml`, which builds and pushes
    `ghcr.io/solidsilver/glimway` (`X.Y.Z`, `X.Y`, `latest`, `sha-<commit>`)
-   with the commit as the build id.
+   with the commit as the build id. A failed CI run tags nothing: rerun it or fix forward
+   and push again. A tag pushed by hand still publishes too (the release
+   workflow runs on `v*` tags and stops if the tag isn't `v` + `package.json`'s
+   version).
 6. **Deploy** as in [home-server.md](home-server.md). Open tabs notice the new
    build (they check `/version.json`) and offer to reload; `GET /api/health`
    names the server's version and build.
