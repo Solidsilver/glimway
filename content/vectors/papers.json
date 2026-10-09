@@ -140,7 +140,7 @@
       ]
     },
     {
-      "name": "placed-without-tile",
+      "name": "placed-without-area",
       "valid": false,
       "rule": "paper.placed",
       "edits": [
@@ -364,6 +364,31 @@
           ],
           "value": {
             "kind": "turning"
+          }
+        }
+      ]
+    },
+    {
+      "name": "placed-area-only",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "papers",
+            0,
+            "source"
+          ],
+          "value": "placed"
+        },
+        {
+          "path": [
+            "papers",
+            0,
+            "rule"
+          ],
+          "value": {
+            "kind": "placed",
+            "area": "ruin"
           }
         }
       ]

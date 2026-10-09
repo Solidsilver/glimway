@@ -1008,6 +1008,202 @@
           }
         }
       ]
+    },
+    {
+      "name": "chapter-needs-road",
+      "valid": false,
+      "rule": "quest.chapter_needs_road",
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "chapter"
+          ],
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "chapter-range",
+      "valid": false,
+      "rule": "int64.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "line"
+          ],
+          "value": "road"
+        },
+        {
+          "path": [
+            "quests",
+            0,
+            "chapter"
+          ],
+          "value": 9007199254740992
+        }
+      ]
+    },
+    {
+      "name": "where-empty",
+      "valid": false,
+      "rule": "quest.where_one_target",
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "where"
+          ],
+          "value": {}
+        }
+      ]
+    },
+    {
+      "name": "where-ui-with-area",
+      "valid": false,
+      "rule": "quest.where_ui",
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "where"
+          ],
+          "value": {
+            "ui": "journal",
+            "area": "village"
+          }
+        }
+      ]
+    },
+    {
+      "name": "duplicate-give",
+      "valid": false,
+      "rule": "quest.unique_give",
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            3,
+            "give"
+          ],
+          "value": [
+            {
+              "def": "keepers-twists",
+              "qty": 1
+            },
+            {
+              "def": "keepers-twists",
+              "qty": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "where-unknown-area",
+      "valid": false,
+      "rule": "where hear-hazel",
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "where"
+          ],
+          "value": {
+            "area": "bogus-area"
+          }
+        }
+      ]
+    },
+    {
+      "name": "missing-grant-keys",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "items"
+          ],
+          "remove": true
+        },
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "marks"
+          ],
+          "remove": true
+        },
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "papers"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "where-target-empty",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "where"
+          ],
+          "value": {
+            "npc": "hazel",
+            "spot": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "gate-empty-with",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            1,
+            "gate"
+          ],
+          "value": {
+            "with": "",
+            "wait": {
+              "hours": 1
+            }
+          }
+        }
+      ]
     }
   ]
 }

@@ -78,7 +78,9 @@ type Quest struct {
 	Title *string                `protobuf:"bytes,2,opt,name=title,proto3,oneof" json:"title,omitempty"`
 	Blurb *string                `protobuf:"bytes,3,opt,name=blurb,proto3,oneof" json:"blurb,omitempty"`
 	// A quest's shelf; the loader reads an empty line as "village".
-	Line    string `protobuf:"bytes,4,opt,name=line,proto3" json:"line,omitempty"`
+	Line string `protobuf:"bytes,4,opt,name=line,proto3" json:"line,omitempty"`
+	// A whole number of safe-integer size: the JSON files say so, and the
+	// TypeScript side reads it as a plain number.
 	Chapter *int64 `protobuf:"varint,5,opt,name=chapter,proto3,oneof" json:"chapter,omitempty"`
 	// Prerequisites, `quest` or `quest:step` refs — checked in code (they
 	// must resolve and their graph must stay acyclic).
@@ -886,13 +888,13 @@ const file_glimway_content_v1_quests_proto_rawDesc = "" +
 	"\n" +
 	"\x1fglimway/content/v1/quests.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"E\n" +
 	"\x06Quests\x12;\n" +
-	"\x06quests\x18\x01 \x03(\v2\x19.glimway.content.v1.QuestB\b\xbaH\x05\x92\x01\x02\b\x01R\x06quests\"\x9c\x05\n" +
+	"\x06quests\x18\x01 \x03(\v2\x19.glimway.content.v1.QuestB\b\xbaH\x05\x92\x01\x02\b\x01R\x06quests\"\xa5\x05\n" +
 	"\x05Quest\x123\n" +
 	"\x02id\x18\x01 \x01(\tB#\xbaH r\x1e\x18d2\x1a^[a-z0-9]+(?:-[a-z0-9]+)*$R\x02id\x12\x19\n" +
 	"\x05title\x18\x02 \x01(\tH\x00R\x05title\x88\x01\x01\x12\x19\n" +
 	"\x05blurb\x18\x03 \x01(\tH\x01R\x05blurb\x88\x01\x01\x121\n" +
-	"\x04line\x18\x04 \x01(\tB\x1d\xbaH\x1ar\x18R\x00R\x04roadR\avillageR\x05craftR\x04line\x12&\n" +
-	"\achapter\x18\x05 \x01(\x03B\a\xbaH\x04\"\x02(\x00H\x02R\achapter\x88\x01\x01\x12\x14\n" +
+	"\x04line\x18\x04 \x01(\tB\x1d\xbaH\x1ar\x18R\x00R\x04roadR\avillageR\x05craftR\x04line\x12/\n" +
+	"\achapter\x18\x05 \x01(\x03B\x10\xbaH\r\"\v\x18\xff\xff\xff\xff\xff\xff\xff\x0f(\x00H\x02R\achapter\x88\x01\x01\x12\x14\n" +
 	"\x05after\x18\x06 \x03(\tR\x05after\x12;\n" +
 	"\x05start\x18\a \x01(\v2 .glimway.content.v1.QuestTriggerH\x03R\x05start\x88\x01\x01\x12'\n" +
 	"\x05needs\x18\b \x01(\tB\x11\xbaH\x0er\fR\x00R\bhabiticaR\x05needs\x12=\n" +

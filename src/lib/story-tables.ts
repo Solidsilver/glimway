@@ -35,13 +35,33 @@ function storyRules(doc: StoryValid): void {
  * messages, each naming its pairs' `areas` — the loader reads it back
  * into the map-of-maps the client speaks.
  */
-export type Story = Omit<StoryValid, 'ids'> & { ids: Record<string, Record<string, string>> };
+export interface Story {
+  namespaces: { prefix: string; writer: string }[];
+  ids: Record<string, Record<string, string>>;
+  areas: Record<string, string>;
+  echoes: { member: string; late: boolean; east: boolean }[];
+  boards: Record<string, { tx: number; ty: number }>;
+  npcs: Record<string, string>;
+  spots: Record<string, string>;
+  questItems: string[];
+}
 export function validateStory(value: unknown): Story {
   const doc = decodeContent(StorySchema, value, 'story', ['namespaces']) as unknown as StoryValid;
   storyRules(doc);
   const ids: Record<string, Record<string, string>> = {};
   for (const [prefix, table] of Object.entries(doc.ids)) ids[prefix] = { ...table.areas };
-  return { ...doc, ids };
+  // Field by field: a spread keeps the message's $typeName own property,
+  // which leaks into deepEqual.
+  return {
+    namespaces: doc.namespaces.map(n => ({ prefix: n.prefix, writer: n.writer })),
+    ids,
+    areas: { ...doc.areas },
+    echoes: doc.echoes.map(e => ({ member: e.member, late: e.late, east: e.east })),
+    boards: Object.fromEntries(Object.entries(doc.boards).map(([k, b]) => [k, { tx: b.tx, ty: b.ty }])),
+    npcs: { ...doc.npcs },
+    spots: { ...doc.spots },
+    questItems: [...doc.questItems],
+  };
 }
 
 // ---------------------------------------------------------------- quests
@@ -51,7 +71,7 @@ export function validateStory(value: unknown): Story {
  * validateQuests in content/quests.go (same tags). The per-step shape
  * (one trigger, the wait, the gate, the grants) is on the schema.
  */
-function questsRules(doc: QuestsValid, story: StoryValid): void {
+function questsRules(doc: QuestsValid, story: Story): void {
   const bad = (s: string): never => { throw new Error(`invalid quests: ${s}`); };
   const defs = new Set(itemsRaw.items.map(d => d.id));
   const paperIDs = new Set(papersRaw.papers.map(p => p.id));
@@ -59,7 +79,7 @@ function questsRules(doc: QuestsValid, story: StoryValid): void {
   for (const r of ROOMS.rooms) for (const id of Object.keys(r.spots)) spots[id] = r.id;
   const npc = (id: string) => residentById(id) !== null || (story.npcs[id] ?? '') !== '';
   const writer = (mark: string) => story.namespaces.some(n => mark === n.prefix || n.prefix.endsWith(':') && mark.startsWith(n.prefix));
-  const enemies = (id: string) => story.ids['defeated:']?.areas[id] ?? '';
+  const enemies = (id: string) => story.ids['defeated:']?.[id] ?? '';
   const byId = new Map<string, QuestValid>();
   const questItems = new Set(story.questItems);
   for (const q of doc.quests) {
@@ -114,6 +134,7 @@ function questsRules(doc: QuestsValid, story: StoryValid): void {
       if (t.use !== undefined && s.at !== spots[t.use] || t.reach !== undefined && s.at !== t.reach || t.defeat !== undefined && s.at !== enemies(t.defeat)) return bad(`trigger area ${s.id}`);
       const w = s.where;
       if (w !== undefined) {
+        if (w.area !== '' && !knownContentArea(w.area)) return bad(`where ${s.id}`);
         if (w.npc !== '') {
           if (!npc(w.npc)) return bad(`where npc ${s.id}`);
           if (residentById(w.npc) === null && w.area !== '' && w.area !== (story.npcs[w.npc] ?? '')) return bad(`where npc area ${s.id}`);
@@ -214,8 +235,7 @@ const questOut = (q: QuestValid): Quest => ({
  */
 export function validateQuests(value: unknown): Quest[] {
   const doc = decodeContent(QuestsSchema, value, 'quests', ['quests']) as unknown as QuestsValid;
-  const story = decodeContent(StorySchema, storyRaw, 'story', ['namespaces']) as unknown as StoryValid;
-  questsRules(doc, story);
+  questsRules(doc, validateStory(storyRaw));
   return doc.quests.map(questOut);
 }
 

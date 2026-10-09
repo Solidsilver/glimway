@@ -158,7 +158,7 @@ func entryLists(msg proto.Message, fields ...string) []entryList {
 		list := msg.ProtoReflect().Get(fd).List()
 		ids := make([]string, list.Len())
 		for i := range list.Len() {
-			m, ok := list.Get(i).Interface().(interface{ GetId() string })
+			m, ok := list.Get(i).Message().Interface().(interface{ GetId() string })
 			if ok {
 				ids[i] = m.GetId()
 			}
@@ -171,6 +171,12 @@ func entryLists(msg proto.Message, fields ...string) []entryList {
 // contentValidate runs protovalidate and reports its violations the way the
 // hand-written loaders did: naming the entry and the field
 // ("invalid furnishings: candle footprint: ...").
+// evalRule is a CEL rule that errors mid-evaluation (a timestamp()
+// conversion over a malformed string): protovalidate-go names the rule in
+// the runtime error's text. Both runtimes render it like a violation, with
+// the rule id the shared vectors assert.
+var evalRule = regexp.MustCompile(`error evaluating ([^:]+): (.*)$`)
+
 func contentValidate(family string, entries []entryList, msg proto.Message) error {
 	err := contentValidator.Validate(msg)
 	if err == nil {
@@ -178,6 +184,9 @@ func contentValidate(family string, entries []entryList, msg proto.Message) erro
 	}
 	var bad *protovalidate.ValidationError
 	if !errors.As(err, &bad) {
+		if m := evalRule.FindStringSubmatch(err.Error()); m != nil {
+			return fmt.Errorf("invalid %s: %s [%s]", family, strings.TrimSpace(m[2]), m[1])
+		}
 		return err
 	}
 	md := msg.ProtoReflect().Descriptor()

@@ -77,6 +77,9 @@ export declare type Quest = Message<"glimway.content.v1.Quest"> & {
   line: string;
 
   /**
+   * A whole number of safe-integer size: the JSON files say so, and the
+   * TypeScript side reads it as a plain number.
+   *
    * @generated from field: optional int64 chapter = 5;
    */
   chapter?: bigint | undefined;
@@ -132,6 +135,9 @@ export declare type QuestValid = Message<"glimway.content.v1.Quest"> & {
   line: string;
 
   /**
+   * A whole number of safe-integer size: the JSON files say so, and the
+   * TypeScript side reads it as a plain number.
+   *
    * @generated from field: optional int64 chapter = 5;
    */
   chapter?: bigint | undefined;

@@ -197,6 +197,9 @@ func validateQuests(doc *Quests) error {
 				return bad("trigger area " + s.GetId())
 			}
 			if w := s.GetWhere(); w != nil {
+				if w.GetArea() != "" && !KnownContentArea(w.GetArea()) {
+					return bad("where " + s.GetId())
+				}
 				if w.GetNpc() != "" {
 					if !npc(w.GetNpc()) {
 						return bad("where npc " + s.GetId())

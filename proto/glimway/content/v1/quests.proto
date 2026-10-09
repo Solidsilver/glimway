@@ -29,7 +29,9 @@ message Quest {
   optional string blurb = 3;
   // A quest's shelf; the loader reads an empty line as "village".
   string line = 4 [(buf.validate.field).string = {in: ["", "road", "village", "craft"]}];
-  optional int64 chapter = 5 [(buf.validate.field).int64.gte = 0];
+  // A whole number of safe-integer size: the JSON files say so, and the
+  // TypeScript side reads it as a plain number.
+  optional int64 chapter = 5 [(buf.validate.field).int64 = {gte: 0, lte: 9007199254740991}];
   // Prerequisites, `quest` or `quest:step` refs — checked in code (they
   // must resolve and their graph must stay acyclic).
   repeated string after = 6;

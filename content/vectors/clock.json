@@ -36067,6 +36067,32 @@
           "value": "The Breaking"
         }
       ]
+    },
+    {
+      "name": "non-rfc3339-epoch",
+      "valid": false,
+      "rule": "calendar.epoch",
+      "edits": [
+        {
+          "path": [
+            "epoch"
+          ],
+          "value": "2026-01-01"
+        }
+      ]
+    },
+    {
+      "name": "lowercase-epoch",
+      "valid": false,
+      "rule": "calendar.epoch",
+      "edits": [
+        {
+          "path": [
+            "epoch"
+          ],
+          "value": "2026-01-05t00:00:00z"
+        }
+      ]
     }
   ]
 }
