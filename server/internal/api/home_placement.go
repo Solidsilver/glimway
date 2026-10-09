@@ -31,9 +31,15 @@ func (a rect) overlaps(b rect) bool {
 	return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y
 }
 
-func footprint(id string, rotation int) (int, int) {
-	v, _ := content.HomeItemFor(id)
-	w, h := int(v.GetFootprint()[0]), int(v.GetFootprint()[1])
+// footprint is a piece's placed size. The stable grows east two tiles a bay
+// (docs/design/crafts.md 3.2): its width carries its stall count, and it
+// faces front, so it is placed and moved unrotated.
+func footprint(v homeInstance, rotation int) (int, int) {
+	def, _ := content.HomeItemFor(v.ItemDef)
+	w, h := int(def.GetFootprint()[0]), int(def.GetFootprint()[1])
+	if v.ItemDef == stableItemID() {
+		w += 2 * (stallCount(v) - 1)
+	}
 	if rotation == 90 || rotation == 270 {
 		return h, w
 	}
@@ -47,7 +53,7 @@ func placedRect(v homeInstance) (rect, bool) {
 	if _, ok := content.HomeItemFor(v.ItemDef); !ok {
 		return rect{}, false
 	}
-	w, h := footprint(v.ItemDef, *v.Rotation)
+	w, h := footprint(v, *v.Rotation)
 	return rect{*v.X, *v.Y, w, h}, true
 }
 
@@ -143,6 +149,10 @@ func validatePlacement(h homeView, item homeInstance, r *contract.HomesteadReque
 	if r.X == nil || r.Y == nil || r.Rotation == nil || !slices.Contains([]int32{0, 90, 180, 270}, r.Rotation.GetValue()) || !slices.Contains(def.GetWhere(), r.Scene) {
 		return fail(400, "invalid-placement")
 	}
+	// The stable faces front and grows east (3.2): never rotated.
+	if item.ItemDef == stableItemID() && r.Rotation.GetValue() != 0 {
+		return fail(400, "invalid-placement")
+	}
 	if h.Tier < int(def.GetMinTier()) || (r.Scene == "indoor" && h.Indoor == nil) {
 		return fail(409, "tier-required")
 	}
@@ -150,7 +160,7 @@ func validatePlacement(h homeView, item homeInstance, r *contract.HomesteadReque
 	if r.Scene == "indoor" {
 		grid, reserved = h.Indoor, content.HomeRules.GetIndoorReserved()
 	}
-	w, ht := footprint(def.GetId(), int(r.Rotation.GetValue()))
+	w, ht := footprint(item, int(r.Rotation.GetValue()))
 	here := rect{int(r.X.GetValue()), int(r.Y.GetValue()), w, ht}
 	if here.x < 0 || here.y < 0 || here.x > int(grid.GetWidth())-w || here.y > int(grid.GetHeight())-ht {
 		return fail(409, "out-of-bounds")
@@ -221,6 +231,18 @@ func arrange(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, op 
 	post := item.ItemDef == content.HomeRules.GetLanternPosts().GetItem()
 	switch op {
 	case "remove":
+		if item.ItemDef == stableItemID() {
+			// The stable leaves only when every stall is empty and no
+			// stalled mount is out (docs/design/crafts.md 3.2); it goes
+			// back to the pack with its stall count.
+			used, err := stallsInUse(ctx, tx, h.ID)
+			if err != nil {
+				return "", err
+			}
+			if used {
+				return "", fail(409, "stalls-in-use")
+			}
+		}
 		if item.Scene != nil && *item.Scene == "gate" {
 			var n int
 			if err = tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM gate_shelf_slots WHERE homestead_id=?", h.ID).Scan(&n); err != nil {
@@ -240,6 +262,11 @@ func arrange(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, op 
 			err = currency(ctx, tx, s.AccountID, "decoration:"+item.ItemDef, 1, "homestead-remove", item.ID, now)
 		}
 	case "place":
+		if item.ItemDef == stableItemID() && stablePlaced(h) != nil {
+			// One stable per homestead (3.2): a carried one goes down only
+			// where none stands.
+			return "", fail(409, "stable-full")
+		}
 		var name any
 		if post {
 			n, ok := "", false

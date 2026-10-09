@@ -1011,7 +1011,12 @@
           "xpMark": 0,
           "verifiedXp": 0
         },
-        "companions": null,
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
         "magic": null,
         "fishing": {
           "cast": null,
@@ -1157,7 +1162,12 @@
           "xpMark": 0,
           "verifiedXp": 0
         },
-        "companions": null,
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
         "magic": null,
         "fishing": {
           "cast": null,
@@ -1293,7 +1303,12 @@
           "xpMark": 0,
           "verifiedXp": 0
         },
-        "companions": null,
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
         "magic": null,
         "fishing": {
           "cast": null,
@@ -1429,7 +1444,12 @@
           "xpMark": 0,
           "verifiedXp": 0
         },
-        "companions": null,
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
         "magic": null,
         "fishing": {
           "cast": null,
@@ -1565,7 +1585,12 @@
           "xpMark": 0,
           "verifiedXp": 0
         },
-        "companions": null,
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
         "magic": null,
         "fishing": {
           "cast": null,
@@ -1701,7 +1726,12 @@
           "xpMark": 0,
           "verifiedXp": 0
         },
-        "companions": null,
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
         "magic": null,
         "fishing": {
           "cast": null,
@@ -1837,7 +1867,12 @@
           "xpMark": 0,
           "verifiedXp": 0
         },
-        "companions": null,
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
         "magic": null,
         "fishing": {
           "cast": null,
@@ -2135,7 +2170,12 @@
           "xpMark": 0,
           "verifiedXp": 0
         },
-        "companions": null,
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
         "magic": null,
         "fishing": {
           "cast": null,
@@ -2266,7 +2306,12 @@
           "xpMark": 0,
           "verifiedXp": 0
         },
-        "companions": null,
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
         "magic": null,
         "fishing": {
           "cast": null,
@@ -2388,7 +2433,12 @@
           "xpMark": 0,
           "verifiedXp": 0
         },
-        "companions": null,
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
         "magic": null,
         "fishing": {
           "cast": null,
@@ -4421,7 +4471,12 @@
           "xpMark": 0,
           "verifiedXp": 0
         },
-        "companions": null,
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
         "magic": null,
         "fishing": {
           "cast": null,
@@ -4687,7 +4742,12 @@
         "xpMark": 0,
         "verifiedXp": 0
       },
-      "companions": null,
+      "companions": {
+        "followPet": "",
+        "yardPets": [],
+        "mountOut": "",
+        "mountHome": ""
+      },
       "magic": null,
       "fishing": {
         "cast": null,
@@ -5248,7 +5308,12 @@
           "xpMark": 0,
           "verifiedXp": 0
         },
-        "companions": null,
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
         "magic": null,
         "fishing": {
           "cast": null,
@@ -5949,7 +6014,12 @@
           "xpMark": 0,
           "verifiedXp": 0
         },
-        "companions": null,
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
         "magic": null,
         "fishing": {
           "cast": null,
@@ -7590,7 +7660,12 @@
           "xpMark": 0,
           "verifiedXp": 0
         },
-        "companions": null,
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
         "magic": null,
         "fishing": {
           "cast": null,
@@ -7733,7 +7808,12 @@
           "xpMark": 0,
           "verifiedXp": 0
         },
-        "companions": null,
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
         "magic": null,
         "fishing": {
           "cast": null,
@@ -7864,7 +7944,12 @@
           "xpMark": 0,
           "verifiedXp": 0
         },
-        "companions": null,
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
         "magic": null,
         "fishing": {
           "cast": null,
@@ -7985,7 +8070,12 @@
           "xpMark": 0,
           "verifiedXp": 0
         },
-        "companions": null,
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
         "magic": null,
         "fishing": {
           "cast": null,
@@ -8230,7 +8320,12 @@
           "xpMark": 0,
           "verifiedXp": 0
         },
-        "companions": null,
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
         "magic": null,
         "fishing": {
           "cast": null,
@@ -8357,7 +8452,12 @@
           "xpMark": 0,
           "verifiedXp": 0
         },
-        "companions": null,
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
         "magic": null,
         "fishing": {
           "cast": null,
@@ -8472,7 +8572,12 @@
           "xpMark": 0,
           "verifiedXp": 0
         },
-        "companions": null,
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
         "magic": null,
         "fishing": {
           "cast": null,

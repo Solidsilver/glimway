@@ -159,5 +159,11 @@ func presencePositionProto(pos *presencePosition) *presencecontract.PresencePosi
 	if pos == nil {
 		return nil
 	}
-	return &presencecontract.PresencePosition{X: proto.Float64(pos.X), Y: proto.Float64(pos.Y), Facing: &presencecontract.PresenceFacing{X: proto.Float64(pos.Facing.X), Y: proto.Float64(pos.Facing.Y)}, Moving: proto.Bool(pos.Moving)}
+	out := &presencecontract.PresencePosition{X: proto.Float64(pos.X), Y: proto.Float64(pos.Y), Facing: &presencecontract.PresenceFacing{X: proto.Float64(pos.Facing.X), Y: proto.Float64(pos.Facing.Y)}, Moving: proto.Bool(pos.Moving)}
+	// The pose travels with the position ("riding" | "fishing"; absent on
+	// foot — docs/design/crafts.md 3.4).
+	if pos.Pose != "" {
+		out.Pose = proto.String(pos.Pose)
+	}
+	return out
 }

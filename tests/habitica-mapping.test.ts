@@ -38,6 +38,19 @@ test('fixture profile carries id, name, gear keys, pets, mounts, appearance', ()
   assert.equal(profile.appearance.hairStyle, 1);
 });
 
+test('a pet raised into a mount (-1) is not owned; pets own as numbers > 0, mounts as true', () => {
+  const fixture = FIXTURES_BY_KEY.lowLevel;
+  const user = structuredClone(fixture.user) as HabiticaUserJson;
+  user.items = {
+    ...user.items,
+    pets: { released: null, zero: 0, raised: -1, truthy: true, one: 1 },
+    mounts: { released: null, zero: 0, raised: -1, truthy: true, one: 1 },
+  };
+  const profile = toHabiticaProfile(user, gearLookupFor(fixture.gearStats));
+  assert.deepEqual(profile.pets, ['one']);
+  assert.deepEqual(profile.mounts, ['truthy']);
+});
+
 test('accepts id as _id or id', () => {
   const fixture = FIXTURES_BY_KEY.lowLevel;
   const user = structuredClone(fixture.user) as HabiticaUserJson & { _id?: string };

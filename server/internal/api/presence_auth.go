@@ -8,6 +8,7 @@ import (
 	contract "glimway/server/internal/gen/glimway/v2"
 	profiles "glimway/server/internal/profile"
 	"glimway/server/internal/rules"
+	"glimway/server/internal/store"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"time"
@@ -39,7 +40,13 @@ func (a *Server) presenceIdentity(ctx context.Context, session string, withAvata
 			return v, err
 		}
 		if p != nil {
-			v.Avatar = visualAvatar(*p)
+			// The avatar carries the resolved companions, not the profile's
+			// own picks (2.4).
+			c, err := store.CompanionsFor(ctx, a.Store.DB, v.ID, v.World, source, p)
+			if err != nil {
+				return v, err
+			}
+			v.Avatar = visualAvatar(*p, c)
 		}
 	}
 	return v, nil
@@ -146,7 +153,15 @@ func (a *Server) presenceRevalidator(p *presencePeer) {
 	}
 }
 
-func visualAvatar(p rules.Profile) *contract.PresenceAvatar {
+// presenceAvatar is glimway.v2's PresenceAvatar (this file owns its fields).
+type presenceAvatarMsg = contract.PresenceAvatar
+
+// visualAvatar is a player's presence avatar: what they look like, and the
+// two companion fields the server alone writes (docs/design/crafts.md 2.4,
+// 3.4) — selected_pet is the resolved follower (the chosen pet, or Habitica's
+// current pet when nothing reads as chosen) and selected_mount is the mount
+// that is out (absent when every mount is in its stall).
+func visualAvatar(p rules.Profile, c store.Companions) *contract.PresenceAvatar {
 	// Asset keys are short ASCII identifiers. Reject controls/markup rather than
 	// allowing JSON escaping to amplify a roster beyond the outgoing byte limit.
 	assetKey := func(s string, limit int) bool {
@@ -178,14 +193,34 @@ func visualAvatar(p rules.Profile) *contract.PresenceAvatar {
 			*v = ""
 		}
 	}
-	selected := func(v *string) *wrapperspb.StringValue {
-		if v == nil || !assetKey(*v, 128) {
+	selected := func(v string) *wrapperspb.StringValue {
+		if v == "" || !assetKey(v, 128) {
 			return nil
 		}
-		return wrapperspb.String(*v)
+		return wrapperspb.String(v)
 	}
 	return &contract.PresenceAvatar{
 		Appearance: &contract.PresenceAppearance{Size: visual.Size, Shirt: visual.Shirt, Skin: visual.Skin, HairColor: visual.HairColor, HairStyle: visual.HairStyle, Background: visual.Background, HairBangs: visual.HairBangs, HairMustache: visual.HairMustache, HairBeard: visual.HairBeard, HairFlower: visual.HairFlower},
-		Equipped:   cleanMap(p.Equipped), Costume: cleanMap(p.Costume), UseCostume: p.UseCostume, SelectedPet: selected(p.SelectedPet), SelectedMount: selected(p.SelectedMount),
+		Equipped:   cleanMap(p.Equipped), Costume: cleanMap(p.Costume), UseCostume: p.UseCostume, SelectedPet: selected(c.Follower(&p)), SelectedMount: selected(c.MountOut),
 	}
+}
+
+// companionAvatar is the avatar an operation's answer leaves behind.
+func companionAvatar(c store.Companions, p rules.Profile) *presenceAvatarMsg {
+	return visualAvatar(p, c)
+}
+
+// avatarChanged tells the room what a companion change did to a player's
+// avatar (2.4, 3.4): sent after a companions, mount-out or mount-home
+// commit, so friends' screens update mid-visit.
+func (a *Server) avatarChanged(id string, avatar *presenceAvatarMsg) {
+	h := a.presence
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	p := h.peers[id]
+	if p == nil {
+		return
+	}
+	p.identity.Avatar = avatar
+	h.broadcast(p, &contract.PresenceAvatarChange{AccountId: id, Avatar: avatar})
 }

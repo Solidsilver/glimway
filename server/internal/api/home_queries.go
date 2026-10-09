@@ -33,7 +33,7 @@ func scanInstances(rows *sql.Rows, out []homeInstance) ([]homeInstance, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var v homeInstance
-		if err := rows.Scan(&v.ID, &v.ItemDef, &v.Scene, &v.X, &v.Y, &v.Rotation, &v.Name); err != nil {
+		if err := rows.Scan(&v.ID, &v.ItemDef, &v.Scene, &v.X, &v.Y, &v.Rotation, &v.Name, &v.Stalls); err != nil {
 			return out, err
 		}
 		out = append(out, v)
@@ -93,7 +93,7 @@ func loadHome(ctx context.Context, tx *sql.Tx, id, caller string, now int64) (ho
 	if err != nil {
 		return h, err
 	}
-	rows, err = tx.QueryContext(ctx, "SELECT id,item_def,scene,x,y,rotation,name FROM homestead_items WHERE homestead_id=? AND location='placed' ORDER BY id", id)
+	rows, err = tx.QueryContext(ctx, "SELECT id,item_def,scene,x,y,rotation,name,stalls FROM homestead_items WHERE homestead_id=? AND location='placed' ORDER BY id", id)
 	if err != nil {
 		return h, err
 	}
@@ -105,10 +105,17 @@ func loadHome(ctx context.Context, tx *sql.Tx, id, caller string, now int64) (ho
 		return h, err
 	}
 	h.Plants = plantsOf(h, plants, now)
+	// The yard and the stalls are the members' companions, every key
+	// resolved against its owner's latest owned list (2.4, 3.4): visitors
+	// see them too.
+	h.Stalls, h.YardPets, err = homeCompanions(ctx, tx, h)
+	if err != nil {
+		return h, err
+	}
 	if !h.Member {
 		return h, nil
 	}
-	rows, err = tx.QueryContext(ctx, "SELECT id,item_def,scene,x,y,rotation,name FROM homestead_items WHERE account_id=? AND location='inventory' ORDER BY id", caller)
+	rows, err = tx.QueryContext(ctx, "SELECT id,item_def,scene,x,y,rotation,name,stalls FROM homestead_items WHERE account_id=? AND location='inventory' ORDER BY id", caller)
 	if err != nil {
 		return h, err
 	}

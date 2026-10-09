@@ -110,13 +110,19 @@ func TestRateLimitWaitCancellation(t *testing.T) {
 	}
 }
 
+// A pet raised into a mount is stored as -1 and is no longer an owned pet;
+// a pet is owned only as a number greater than 0, a mount only as true
+// (docs/design/crafts.md 2.2). This asserted the bug once: -1 counted.
 func TestMapNullablePetAndMountOwnership(t *testing.T) {
-	raw := strings.Replace(valid, `"stats":`, `"items":{"pets":{"released":null,"zero":0,"negative":-1,"owned":true},"mounts":{"released":null,"zero":0,"negative":-1,"owned":true}},"stats":`, 1)
+	raw := strings.Replace(valid, `"stats":`, `"items":{"pets":{"released":null,"zero":0,"raised":-1,"truthy":true,"one":1},"mounts":{"released":null,"zero":0,"raised":-1,"truthy":true,"one":1}},"stats":`, 1)
 	p, err := Map([]byte(raw))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(p.Pets) != 2 || p.Pets[0] != "negative" || p.Pets[1] != "owned" || len(p.Mounts) != 2 || p.Mounts[0] != "negative" || p.Mounts[1] != "owned" {
-		t.Fatal("nullable ownership mapping", p.Pets, p.Mounts)
+	if len(p.Pets) != 1 || p.Pets[0] != "one" {
+		t.Fatal("pet ownership mapping", p.Pets)
+	}
+	if len(p.Mounts) != 1 || p.Mounts[0] != "truthy" {
+		t.Fatal("mount ownership mapping", p.Mounts)
 	}
 }

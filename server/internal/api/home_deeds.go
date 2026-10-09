@@ -370,6 +370,19 @@ func buyItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req
 	if int(def.GetMinTier()) > h.Tier {
 		return "", fail(409, "tier-required")
 	}
+	// One stable per homestead (docs/design/crafts.md 3.2): placed here,
+	// stored here, or carried by one of its members. It comes with stall 1
+	// and grows east from there.
+	if def.GetId() == stableItemID() {
+		var taken bool
+		if err := tx.QueryRowContext(ctx, `SELECT EXISTS(
+ SELECT 1 FROM homestead_items WHERE item_def=? AND (homestead_id=? OR account_id IN (SELECT account_id FROM homestead_members WHERE homestead_id=?)))`, def.GetId(), h.ID, h.ID).Scan(&taken); err != nil {
+			return "", err
+		}
+		if taken {
+			return "", fail(409, "stable-full")
+		}
+	}
 	if def.GetId() == content.HomeRules.GetLanternPosts().GetItem() {
 		// Each post costs more than the last (the homestead's count, not the buyer's).
 		cost := content.HomePostCost(content.HomeRules, h.PostsBought)
@@ -407,7 +420,11 @@ func buyItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req
 	if err != nil {
 		return "", err
 	}
-	if _, err = tx.ExecContext(ctx, "INSERT INTO homestead_items(id,item_def,location,account_id) VALUES(?,?,'inventory',?)", id, def.GetId(), s.AccountID); err != nil {
+	var stalls any
+	if def.GetId() == stableItemID() {
+		stalls = 1 // "comes with stall 1" (3.1)
+	}
+	if _, err = tx.ExecContext(ctx, "INSERT INTO homestead_items(id,item_def,location,account_id,stalls) VALUES(?,?,'inventory',?,?)", id, def.GetId(), s.AccountID, stalls); err != nil {
 		return "", err
 	}
 	return id, currency(ctx, tx, s.AccountID, "decoration:"+def.GetId(), 1, "homestead-buy", id, now)
