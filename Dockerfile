@@ -1,6 +1,8 @@
-# syntax=docker/dockerfile:1
+# syntax=mirror.gcr.io/docker/dockerfile:1
+# Base images come through Google's Docker Hub mirror (same digests): CI
+# builds kept hitting Docker Hub's anonymous pull limits.
 # Static assets are architecture independent; build them on the builder's CPU.
-FROM --platform=$BUILDPLATFORM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS web
+FROM --platform=$BUILDPLATFORM mirror.gcr.io/library/node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS web
 WORKDIR /build
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 COPY package.json package-lock.json ./
@@ -10,6 +12,7 @@ COPY scripts/build-version.mjs scripts/whats-new.mjs ./scripts/
 COPY src ./src
 COPY public ./public
 COPY content ./content
+COPY assets/generated/crafts-pass/manifest.json ./assets/generated/crafts-pass/
 # Fail loudly if the build context still contains Git LFS pointers.
 RUN if grep -rl '^version https://git-lfs.github.com/spec/v1$' public; then \
       echo 'Run git lfs pull before building: runtime art contains LFS pointers.' >&2; exit 1; \
@@ -23,7 +26,7 @@ ENV VITE_HABITICA_CREATOR_ID=$VITE_HABITICA_CREATOR_ID \
 ARG GLIMWAY_BUILD=
 RUN npm run build
 
-FROM --platform=$BUILDPLATFORM golang:1.26-alpine@sha256:8ac98ca534ac3f51e1f420a1dd2c15e74c75cfa0f23f3ad27eb5d7236c349a0c AS server
+FROM --platform=$BUILDPLATFORM mirror.gcr.io/library/golang:1.26-alpine@sha256:8ac98ca534ac3f51e1f420a1dd2c15e74c75cfa0f23f3ad27eb5d7236c349a0c AS server
 WORKDIR /build
 COPY go.mod go.sum ./
 RUN go mod download
@@ -44,7 +47,7 @@ RUN version=$(sed -n 's/^  "version": "\([0-9]*\.[0-9]*\.[0-9]*\(-[0-9A-Za-z.]*\
     && CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
     go build -trimpath -ldflags="-s -w -X main.version=$version -X main.build=$build" -o /out/glimway-server ./server/cmd/glimway-server
 
-FROM alpine:3.23@sha256:85fe1e81d6758c208f3e1eed4338a1997e19d4be002d4dd32d3100c9a8c010a0
+FROM mirror.gcr.io/library/alpine:3.23@sha256:85fe1e81d6758c208f3e1eed4338a1997e19d4be002d4dd32d3100c9a8c010a0
 RUN apk add --no-cache ca-certificates \
     && addgroup -g 10001 glimway \
     && adduser -D -u 10001 -G glimway -h /data glimway \
