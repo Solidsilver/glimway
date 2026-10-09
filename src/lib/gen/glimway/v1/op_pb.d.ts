@@ -149,6 +149,14 @@ export declare type Vitals = Message<"glimway.v1.Vitals"> & {
    * @generated from field: double cast_ready_at = 10;
    */
   castReadyAt: number;
+
+  /**
+   * Per-ability cooldown readiness (design 4.4), keyed by combat ability
+   * id; the signature's own budget stays on cast_ready_at.
+   *
+   * @generated from field: map<string, double> ability_ready_at = 11;
+   */
+  abilityReadyAt: { [key: string]: number };
 };
 
 export declare type VitalsValid = Vitals;

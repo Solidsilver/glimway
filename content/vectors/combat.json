@@ -29,16 +29,13 @@
           ],
           "value": {
             "warrior": {
-              "basicAttackCooldownSeconds": 1.2,
-              "castCost": 12
+              "basicAttackCooldownSeconds": 1.2
             },
             "mage": {
-              "basicAttackCooldownSeconds": 0.6,
-              "castCost": 15
+              "basicAttackCooldownSeconds": 0.6
             },
             "rogue": {
-              "basicAttackCooldownSeconds": 1.5,
-              "castCost": 10
+              "basicAttackCooldownSeconds": 1.5
             }
           }
         }
@@ -54,21 +51,6 @@
             "classes",
             "warrior",
             "basicAttackCooldownSeconds"
-          ],
-          "value": 0
-        }
-      ]
-    },
-    {
-      "name": "zero-cast-cost",
-      "valid": false,
-      "rule": "combat.classes",
-      "edits": [
-        {
-          "path": [
-            "classes",
-            "mage",
-            "castCost"
           ],
           "value": 0
         }

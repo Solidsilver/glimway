@@ -69,7 +69,7 @@ func spriteServer(t *testing.T, host *fakeSpriteHost) (*Server, string) {
 
 func getSprite(a *Server, path string, header http.Header) *httptest.ResponseRecorder {
 	r := httptest.NewRequest("GET", path, nil)
-	r.Header.Set("X-Glimway-Contract", "4")
+	r.Header.Set("X-Glimway-Contract", "5")
 	for k, v := range header {
 		r.Header[k] = v
 	}

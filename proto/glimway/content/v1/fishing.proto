@@ -1,0 +1,75 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// The fishery rules (docs/design/crafts.md 5.4; content/fishing.json): the
+// fullness bands and their waits, the hold and cast spacing shared by every
+// water, and one row per water with its banks, stock knobs and species
+// table. The "still" band (no fish left) has no row: an empty water
+// refuses. Text lines live here with the numbers (the server sends the
+// band id, the client shows the line). Rules across entries (the bands'
+// order, a species' item exists, a closed mark names a calendar mark) stay
+// in the loaders, identical in both languages — CEL's ordered-list helpers
+// are outside the subset both runtimes ship.
+message Fishing {
+  // Fullness bands after reserved fish: the first whose atLeastPercent the
+  // water's fullness reaches, ordered fullest to emptiest (a code rule).
+  // atLeastPercent floors at 0 (a very low water with at least one fish).
+  repeated FishBand bands = 1 [(buf.validate.field).repeated.min_items = 1];
+  // A ready fish waits this long after the bite, then slips back (5.3).
+  double hold_seconds = 2 [(buf.validate.field).double.gt = 0];
+  // At least this long between two casts' starts, per account (5.3).
+  double cast_spacing_seconds = 3 [(buf.validate.field).double.gt = 0];
+  // How close to a bank's tiles a cast may be made from (5.4).
+  double reach_tiles = 4 [(buf.validate.field).double.gt = 0];
+  repeated FishWater waters = 5 [(buf.validate.field).repeated.min_items = 1];
+}
+
+// One fullness band: id, the fullness percent it starts at (inclusive),
+// the wait to a bite in that band, and what the bank says (5.1).
+message FishBand {
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  int32 at_least_percent = 2 [(buf.validate.field).int32 = {gte: 0, lte: 100}];
+  double wait_seconds = 3 [(buf.validate.field).double.gt = 0];
+  string line = 4 [(buf.validate.field).string.min_len = 1];
+}
+
+// One fishery. Ids are entity ids ("water:village:mill-pond"): lake
+// country adds rows, not code (5.6).
+message FishWater {
+  string id = 1 [(buf.validate.field).string.pattern = "^water:(village|woodland|ruin|commons):([a-z0-9]+(-[a-z0-9]+)*)$"];
+  string area = 2 [(buf.validate.field).string = {in: ["village", "woodland", "ruin", "commons"]}];
+  // "still" in 0.5; generated habitats come with lake country.
+  string habitat = 3 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  int32 tiles = 4 [(buf.validate.field).int32.gt = 0];
+  int32 capacity = 5 [(buf.validate.field).int32.gt = 0];
+  // One fish recovers per this many seconds, fractional, up to capacity.
+  double recovery_seconds = 6 [(buf.validate.field).double.gt = 0];
+  repeated FishBank banks = 7 [(buf.validate.field).repeated.min_items = 1];
+  repeated FishSpecies species = 8 [(buf.validate.field).repeated.min_items = 1];
+}
+
+// A bank: tiles a player stands on, each facing the water, and the marks
+// it is closed in ("Quiet": the pond is iced). The race bank is open all
+// year (closed_in empty).
+message FishBank {
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  repeated FishTile tiles = 2 [(buf.validate.field).repeated.min_items = 1];
+  string facing = 3 [(buf.validate.field).string = {in: ["north", "south", "east", "west"]}];
+  // Marks are content ids ("Quiet"), checked against the calendar in code.
+  repeated string closed_in = 4 [(buf.validate.field).repeated.items.string.pattern = "^[A-Za-z][A-Za-z-]{0,99}$"];
+}
+
+// A tile a player stands on (client tiles; 0 is a legal coordinate).
+message FishTile {
+  int32 tx = 1 [(buf.validate.field).int32.gte = 0];
+  int32 ty = 2 [(buf.validate.field).int32.gte = 0];
+}
+
+// One species row: the catalogue item a kept fish becomes, and its weight
+// in the roll (5.2). The roll is seeded by the account's cast sequence.
+message FishSpecies {
+  string item = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  int32 weight = 2 [(buf.validate.field).int32.gt = 0];
+}

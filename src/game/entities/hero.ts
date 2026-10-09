@@ -1,23 +1,26 @@
 /**
  * The hero: player sprite build, movement and facing, the dodge roll,
- * attacks and class kits (melee slash, mage bolt, cleave/dash/heal
- * signatures), i-frame damage and knockback. The imported layered avatar and
+ * attacks and class kits (melee slash, mage bolt; the signatures Cleave,
+ * Fingersnap, Shadowstep and Mend on F; the level-20 moves Stand, Kindle,
+ * Ward-light and Echo on R — docs/design/crafts.md 4), i-frame damage and
+ * knockback. The imported layered avatar and
  * its mount/pet are owned by AvatarVisual; the hero renders through
  * `deps.avatar()` (the container is the visible body when present).
  *
- * Lifetime note: attack/cast/dodge cooldowns, the shadowstep dash window,
+ * Lifetime note: attack/cast/move/dodge cooldowns, the shadowstep dash window,
  * i-frames and facing deliberately outlive an area change (scene.restart
  * builds a new Hero). The carried store below keeps them; the scene writes
  * it back on shutdown.
  */
 import Phaser from 'phaser'
-import { getCombatKit, type CombatKit } from '../../lib/combat'
+import { getCombatKit, type CombatKit, type KitMove } from '../../lib/combat'
+import { CombatField } from '../../lib/combat-moves'
 import { withCharm } from '../../lib/embers'
 import { passiveRegenAllowed } from '../../lib/habitica/sync'
 import { bus, EV, type AbilityPayload } from '../events'
 import { uiBlocked, uiState } from '../input'
 import { sfx } from '../sfx'
-import { tileAt, tileMid } from '../../lib/tile'
+import { TILE, tileAt, tileMid } from '../../lib/tile'
 import type { Session } from '../session'
 import type { WorldData } from '../worlds'
 import { KNOCK } from './enemies'
@@ -25,9 +28,14 @@ import type { EnemySystem } from './enemies'
 import type { Projectiles } from './projectiles'
 import type { AvatarVisual } from './avatar'
 import type { Effects } from './fx'
+import { MoveFx } from './moves'
+import { presence } from '../presence'
+import { expose } from '../dev-hooks'
 import { SEAT_CUT, SEATED_MANA_BONUS, manaRegenRate, type SeatPose } from '../seats'
 
 const PLAYER_SPEED = 110
+/** Ridden, outdoors (crafts.md 3.1: every mount the same). */
+export const RIDING_SPEED = 155
 const ATTACK_RANGE = 26
 /** A tool swung at a creature does this share of the weapon's damage. */
 const TOOL_DAMAGE = 0.5
@@ -39,7 +47,7 @@ const DODGE = { speed: 240, time: 0.2, iframes: 0.32, cooldown: 0.75 }
 export { SEATED_MANA_BONUS }
 
 /** State carried across area changes and defeat recovery (per tab). */
-const carried = { attackCooldown: 0, castCooldown: 0, dashTime: 0, iframes: 0, facingX: 0, facingY: 1 }
+const carried = { attackCooldown: 0, castCooldown: 0, moveCooldown: 0, dashTime: 0, iframes: 0, facingX: 0, facingY: 1 }
 
 export interface HeroDeps {
   world: WorldData
@@ -67,6 +75,12 @@ export class Hero {
   readonly facing = new Phaser.Math.Vector2(0, 1)
   attackCooldown = 0
   castCooldown = 0
+  /** The level-20 move's own cooldown (R; its budget on the server is its own too, crafts.md 4.4). */
+  moveCooldown = 0
+  /** What the moves change about a fight while they last (Stand, Kindle, Echo): the creatures read it. */
+  readonly field = new CombatField()
+  /** How the moves look, the hero's and the room's. */
+  readonly moves: MoveFx
   /** Remaining shadowstep-dash window (seconds) — movement defers to it. */
   dashTime = 0
   iframes = 0
@@ -90,17 +104,38 @@ export class Hero {
   constructor(private scene: Phaser.Scene, private deps: HeroDeps, entry: { tx: number; ty: number } | null) {
     this.attackCooldown = carried.attackCooldown
     this.castCooldown = carried.castCooldown
+    this.moveCooldown = carried.moveCooldown
     this.dashTime = carried.dashTime
     this.iframes = carried.iframes
     this.facing.set(carried.facingX, carried.facingY)
     this.dodgeCooldown = 0 // create() reset this every restart
     this.build(deps.session.state, entry)
+    this.moves = new MoveFx(scene, {
+      session: deps.session,
+      fx: deps.fx,
+      reducedMotion: deps.reducedMotion,
+      hero: () => this,
+      body: () => deps.avatar().container
+    })
+    expose('__fsMoves', () => {
+      const kit = this.kit()
+      return {
+        signature: kit.signature?.id ?? null,
+        move: kit.move?.id ?? null,
+        castCooldown: this.castCooldown,
+        moveCooldown: this.moveCooldown,
+        planted: this.field.planted,
+        patches: this.field.patches.map((p) => ({ x: p.x, y: p.y, r: p.r, slow: p.slow })),
+        decoy: this.field.decoy ? { x: this.field.decoy.x, y: this.field.decoy.y } : null
+      }
+    }, scene)
   }
 
   /** Scene shutdown: carry combat timing and facing across the restart. */
   carry(): void {
     carried.attackCooldown = this.attackCooldown
     carried.castCooldown = this.castCooldown
+    carried.moveCooldown = this.moveCooldown
     carried.dashTime = this.dashTime
     carried.iframes = this.iframes
     carried.facingX = this.facing.x
@@ -111,6 +146,7 @@ export class Hero {
   tick(dt: number): void {
     this.attackCooldown = Math.max(0, this.attackCooldown - dt)
     this.castCooldown = Math.max(0, this.castCooldown - dt)
+    this.moveCooldown = Math.max(0, this.moveCooldown - dt)
     this.dodgeCooldown = Math.max(0, this.dodgeCooldown - dt)
     this.iframes = Math.max(0, this.iframes - dt)
   }
@@ -169,6 +205,7 @@ export class Hero {
   tryDodge(towards: Phaser.Math.Vector2): void {
     if (uiBlocked() || this.deps.cinematic() || this.deps.transitioning() || this.deps.session.persistenceInFlight) return
     if (this.seat) return // no rolling out of a bench; move to stand up
+    if (this.field.planted) return // Stand: feet planted until it ends
     if (this.dodgeCooldown > 0 || this.dashTime > 0) return
     const dir = towards
     if (dir.lengthSq() < 0.01) dir.set(this.facing.x, this.facing.y)
@@ -226,7 +263,8 @@ export class Hero {
     // ordinary movement (including the idle 0,0) must not cancel it.
     this.dashTime = Math.max(0, this.dashTime - dt)
     if (this.dashTime <= 0) {
-      const speed = this.deps.avatar().riding ? 155 : PLAYER_SPEED
+      // Stand: planted, no walking until it ends (pushing still turns you).
+      const speed = this.field.planted ? 0 : this.deps.avatar().riding ? RIDING_SPEED : PLAYER_SPEED
       this.sprite.setVelocity(dx * speed, dy * speed)
     }
     if (len > 0.1) {
@@ -235,7 +273,8 @@ export class Hero {
       const anim = Math.abs(dx) >= Math.abs(dy)
         ? dx < 0 ? 'demo-walk-left' : 'demo-walk-right'
         : dy < 0 ? 'demo-walk-up' : 'demo-walk-down'
-      if (this.sprite.anims.currentAnim?.key !== anim) this.sprite.play(anim, true)
+      if (this.field.planted) this.sprite.anims.stop()
+      else if (this.sprite.anims.currentAnim?.key !== anim) this.sprite.play(anim, true)
     } else {
       this.sprite.anims.stop()
     }
@@ -315,29 +354,43 @@ export class Hero {
     })
   }
 
-  /** The signature ability (F / the ability button). */
+  /** Whether a move may start now (the same gate for F and R). */
+  private canCast(): boolean {
+    if (uiBlocked() || performance.now() < uiState.blockedUntil || this.deps.transitioning() || this.deps.cinematic()) return false
+    if (this.seat) return false // no casting from a bench; move to stand up
+    return !this.deps.session.zeroHpLocked
+  }
+
+  /** Pay for a move: false (and the slot shakes or waits) when it's cooling down or the mana isn't there. */
+  private pay(m: KitMove, cooling: boolean): boolean {
+    if (cooling) {
+      bus.emit(EV.ability, { ability: m.id, status: 'cooldown' } satisfies AbilityPayload)
+      return false
+    }
+    if (this.deps.session.state.mana < m.mana) {
+      this.deps.fx.floatText(this.sprite.x, this.sprite.y - 24, 'no mana', '#9cc4ff', false)
+      bus.emit(EV.ability, { ability: m.id, status: 'no-mana' } satisfies AbilityPayload)
+      return false
+    }
+    bus.emit(EV.ability, { ability: m.id, status: 'cast', cooldown: m.cooldown } satisfies AbilityPayload)
+    this.deps.session.setVitals(this.deps.session.state.hp, this.deps.session.state.mana - m.mana)
+    return true
+  }
+
+  /** The signature (F / the ✦ button). A hero without a craft has none: F does nothing (crafts.md 4.2). */
   handleCast(): void {
     const kit = this.kit()
-    if (uiBlocked() || performance.now() < uiState.blockedUntil || this.deps.transitioning() || this.deps.cinematic()) return
-    if (this.seat) return // no casting from a bench; move to stand up
-    if (this.deps.session.zeroHpLocked) return
-    if (this.castCooldown > 0 || this.attackCooldown > kit.basicAttackCooldown) {
-      bus.emit(EV.ability, { status: 'cooldown' } satisfies AbilityPayload)
-      return
-    }
-    if (this.deps.session.state.mana < kit.manaCost) {
-      this.deps.fx.floatText(this.sprite.x, this.sprite.y - 24, 'no mana', '#9cc4ff', false)
-      bus.emit(EV.ability, { status: 'no-mana' } satisfies AbilityPayload)
-      return
-    }
-    this.castCooldown = kit.signatureCooldown
-    bus.emit(EV.ability, { status: 'cast', cooldown: this.castCooldown } satisfies AbilityPayload)
-    this.deps.session.setVitals(this.deps.session.state.hp, this.deps.session.state.mana - kit.manaCost)
+    const sig = kit.signature
+    if (!sig || !this.canCast()) return
+    if (!this.pay(sig, this.castCooldown > 0 || this.attackCooldown > kit.basicAttackCooldown)) return
+    this.castCooldown = sig.cooldown
     // The server's cast budget counts it (cooldown, mana, a healer's mend).
     this.deps.session.noteCast()
+    // Friends see it too (crafts.md 4.5).
+    presence()?.ability(sig.id, this.sprite.x, this.sprite.y)
     const dir = this.facing.clone().normalize()
-    switch (kit.signature) {
-      case 'bolt': {
+    switch (sig.id) {
+      case 'fingersnap': {
         this.deps.projectiles().spawn(this.sprite.x + dir.x * 10, this.sprite.y - 7, dir, kit.signatureDamage)
         break
       }
@@ -364,7 +417,7 @@ export class Hero {
         })
         break
       }
-      case 'dash': {
+      case 'shadowstep': {
         // Snapstrike: physics-driven dash (colliders apply — never through
         // walls), striking everything along the path at the end. The dash
         // window (dashTime) keeps ordinary movement from cancelling velocity.
@@ -396,7 +449,7 @@ export class Hero {
         })
         break
       }
-      case 'heal': {
+      case 'mend': {
         // Soothing Snap: damaging pulse around the hero + local self-heal.
         // The delivered pulse animation is centered on the caster; the glow
         // fallback stays for the no-pack path.
@@ -421,6 +474,50 @@ export class Hero {
         break
       }
     }
+  }
+
+  /**
+   * The level-20 move (R / the second ✦; crafts.md 4.3), client-side like
+   * the signatures: the server bounds its mana in the report
+   * (`ability_casts`, its own cooldown budget, 4.4). None of them touches
+   * the Warden.
+   */
+  handleMove(): void {
+    const kit = this.kit()
+    const m = kit.move
+    if (!m || !this.canCast()) return
+    if (!this.pay(m, this.moveCooldown > 0)) return
+    this.moveCooldown = m.cooldown
+    this.deps.session.link?.noteAbility(m.id)
+    const n = m.numbers
+    const feet = { x: this.sprite.x, y: this.sprite.y }
+    let at = feet
+    switch (m.id) {
+      case 'stand':
+        // Feet planted: a lunge that reaches you stops short and staggers (./enemies.ts).
+        this.sprite.setVelocity(0, 0)
+        this.field.plant(n.durationSeconds, n.staggerSeconds)
+        this.moves.local(m, feet)
+        break
+      case 'kindle':
+        // No aiming: `reachTiles` ahead in your facing, the same on every device.
+        at = this.moves.kindleAt(m)
+        this.field.kindle(at.x, at.y, n.radiusTiles * TILE, n.slow, n.durationSeconds)
+        this.moves.local(m, at)
+        break
+      case 'ward-light': {
+        // A still circle at your feet; each pulse mends you while you stand in it.
+        const r = n.radiusTiles * TILE
+        this.moves.local(m, feet, () => this.moves.mendHere(feet.x, feet.y, r, kit.wardPulseHeal))
+        break
+      }
+      case 'echo':
+        // A faded copy where you stand: creatures aim at it while you move away.
+        this.field.echo(feet.x, feet.y, n.durationSeconds)
+        this.moves.local(m, feet)
+        break
+    }
+    presence()?.ability(m.id, at.x, at.y)
   }
 
   damagePlayer(amount: number, fromX: number, fromY: number = this.sprite.y): void {
@@ -471,7 +568,7 @@ export class Hero {
   }
 
   private kit(): CombatKit {
-    return withCharm(getCombatKit(this.deps.session.importedProfile), this.deps.session.state.inventory)
+    return withCharm(getCombatKit(this.deps.session.importedProfile, this.deps.session.link?.magic ?? null), this.deps.session.state.inventory)
   }
 
   private build(state: { position: { x: number; y: number } }, entry: { tx: number; ty: number } | null): void {

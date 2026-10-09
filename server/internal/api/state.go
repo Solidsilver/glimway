@@ -1,6 +1,8 @@
 package api
 
 import (
+	"database/sql"
+	"errors"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
 	"net/http"
@@ -67,7 +69,29 @@ func (a *Server) play(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	// The mount's bay fills again: the stable's land hears it (3.4).
+	var avatar *presenceAvatarMsg
+	var room presenceRoom
 	if s.LeaseClient.String != client || !s.LeaseID.Valid {
+		// A new lease starts with the mount at home (docs/design/crafts.md
+		// 3.3): it found its own way back while the tab was away.
+		var gate int
+		var world string
+		err = tx.QueryRowContext(r.Context(), "SELECT h.gate,h.world_id FROM player_companions c JOIN homesteads h ON h.id=c.mount_home WHERE c.account_id=? AND c.mount_out!=''", s.AccountID).Scan(&gate, &world)
+		if err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+		wasOut := err == nil
+		if _, err = tx.ExecContext(r.Context(), "UPDATE player_companions SET mount_out='' WHERE account_id=?", s.AccountID); err != nil {
+			return err
+		}
+		if p := s.ImportedProfile; wasOut && p != nil {
+			c, err := store.CompanionsFor(r.Context(), tx, s.AccountID, s.WorldID, s.ProfileSource, p)
+			if err != nil {
+				return err
+			}
+			avatar, room = companionAvatar(c, *p), homeRoom(world, gate)
+		}
 		if _, err = tx.ExecContext(r.Context(), `INSERT INTO player_vitals(account_id,hp,mana,vitals_at,vitals_set_version,report_client,report_generation,cast_ready_at)
  VALUES(?,?,?,?,0,?,?,?) ON CONFLICT(account_id) DO UPDATE SET report_client=excluded.report_client,report_generation=excluded.report_generation,report_seq=0,report_at=NULL,report_basis=0,cast_ready_at=MAX(cast_ready_at,excluded.cast_ready_at)`, s.AccountID, s.State.HP, s.State.Mana, now, req.ClientId, generation, now); err != nil {
 			return err
@@ -80,5 +104,10 @@ func (a *Server) play(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finish(w, r, tx, &contract.PlayResponse{State: state, Lease: lease, ReportGeneration: generation, ReportClient: req.ClientId}, func() { a.presenceChanged(s.AccountID) })
+	return a.finish(w, r, tx, &contract.PlayResponse{State: state, Lease: lease, ReportGeneration: generation, ReportClient: req.ClientId}, func() {
+		a.presenceChanged(s.AccountID)
+		if avatar != nil {
+			a.avatarChanged(s.AccountID, avatar, room)
+		}
+	})
 }

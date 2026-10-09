@@ -279,6 +279,8 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
       hint: gathering.hinted()
     }
   })
+  // Playtests of fishing (crafts.md 5): the line, the landed fish, the bands read.
+  on('__fsFishing', () => s['fishing']?.view() ?? null)
   // A broken rock leaves no invisible wall.
   on('__fsSolidAt', (tx, ty) =>
     s['solids'].group.getChildren().some((c) => {
@@ -328,6 +330,10 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
       holdingFrame: avatar.holdingFrame,
       pet: !!avatar.pet,
       riding: avatar.riding,
+      /** Crafts (0.5): the follower drawn (its pose), the mount that's out and whether it's on the lead. */
+      follower: avatar.follower ? { pose: avatar.follower.pose, x: Math.round(avatar.follower.x), y: Math.round(avatar.follower.y) } : null,
+      mountOut: avatar.mountOut,
+      led: avatar.led ? { key: avatar.led.key, drawn: avatar.led.drawn } : null,
       playerAlpha: hero.sprite.alpha,
       playerVisible: hero.sprite.visible,
       bolts: projectiles ? projectiles.length : -1,

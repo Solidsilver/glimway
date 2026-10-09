@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { HOMESTEAD_DATA, checkPlacement, gateTile, validateHomesteadData, type HomeInstance } from '../src/lib/homestead.ts';
-import { HOMESTEAD_TIERS, DECORATIONS_EMBER, DECORATIONS_MATERIAL } from '../src/content/expansion-writing.ts';
+import { HOMESTEAD_DATA, checkPlacement, gateTile, shopSections, stallCost, validateHomesteadData, type HomeInstance } from '../src/lib/homestead.ts';
+import homesteadVectors from '../content/vectors/homestead-loader.json' with { type: 'json' };
+import { BUILDING_BLURBS, HOMESTEAD_TIERS, DECORATIONS_EMBER, DECORATIONS_MATERIAL } from '../src/content/expansion-writing.ts';
 import { createNewGame, validateSave } from '../src/lib/state.ts';
 import { checkSpend, spendEmbers } from '../src/lib/embers.ts';
 import { isSafeBoundary } from '../src/lib/habitica/sync.ts';
@@ -16,7 +17,7 @@ test('shared homes preserve writing identities, categories and footprints', () =
     else if (v.id === HOMESTEAD_DATA.lanternPosts.item) { assert.equal(v.embers, 0); assert.deepEqual(v.materials, HOMESTEAD_DATA.lanternPosts.costs[0]!.materials); }
     else { assert.equal(v.embers, 0); assert.ok(Object.keys(v.materials).length <= 2); for (const qty of Object.values(v.materials)) assert.ok(qty >= 4 && qty <= 10); }
   }
-  assert.equal(HOMESTEAD_DATA.items.length, 31);
+  assert.equal(HOMESTEAD_DATA.items.length, 32);
   assert.deepEqual(HOMESTEAD_DATA.tiers.filter(t => t.purchasable).map(t => t.tier), [1, 2]);
 });
 
@@ -25,7 +26,7 @@ test('typed homestead loader rejects malformed definitions', () => {
     (h: typeof HOMESTEAD_DATA) => { h.indoor.width = 0; },
     (h: typeof HOMESTEAD_DATA) => { h.items[1].id = h.items[0].id; },
     (h: typeof HOMESTEAD_DATA) => { h.items[0].embers = -1; },
-    (h: typeof HOMESTEAD_DATA) => { h.items[0].materials = { stone: 1 }; },
+    (h: typeof HOMESTEAD_DATA) => { h.items[0].embers = 0; h.items[0].materials = {}; },
     (h: typeof HOMESTEAD_DATA) => { h.items[8].materials = { gold: 1 }; },
     (h: typeof HOMESTEAD_DATA) => { h.items[8].materials = { stone: 0 }; },
     (h: typeof HOMESTEAD_DATA) => { h.items[0].footprint = [1, 1, 1] as unknown as [number, number]; },
@@ -73,6 +74,13 @@ test('gate tiles are where the Commons map draws them (same table as the Go test
   assert.equal(HOMESTEAD_DATA.commons.tileSize, 16);
 });
 
+test('the shared stall-cost bill matches the client growth rule', () => {
+  const vectors = (homesteadVectors as unknown as { stallCost: { extra: number; bill: Record<string, number> }[] }).stallCost;
+  assert.ok(vectors.length >= 5, 'one bill per extra bay');
+  for (const v of vectors) assert.deepEqual(stallCost(v.extra), v.bill, `extra ${v.extra}`);
+  assert.deepEqual(stallCost(1), HOMESTEAD_DATA.stable.stallCost);
+});
+
 test('the local placement check mirrors the server rules', () => {
   const fern: HomeInstance = { id: 'f', itemDef: 'potted-fern', scene: null, x: null, y: null, rotation: null };
   const stool: HomeInstance = { id: 's', itemDef: 'wooden-stool', scene: null, x: null, y: null, rotation: null };
@@ -95,3 +103,17 @@ test('the local placement check mirrors the server rules', () => {
 });
 
 const homeMinTier = (id: string) => HOMESTEAD_DATA.items.find((i) => i.id === id)!.minTier;
+
+test('Silas’s Yard: buildings come from the content flag, in a section of their own', () => {
+  const { buildings, finished, wilds } = shopSections();
+  // Today the stable; the kiln joins it by its row's flag, not by an id here.
+  assert.deepEqual(buildings.map((i) => i.id), [HOMESTEAD_DATA.stable.item]);
+  assert.ok(buildings.every((i) => i.minTier === 2 && BUILDING_BLURBS[i.id]));
+  assert.ok(![...finished, ...wilds].some((i) => i.building || i.craftOnly));
+  // Every sold piece is in exactly one section.
+  const sold = HOMESTEAD_DATA.items.filter((i) => !i.craftOnly).map((i) => i.id).sort();
+  assert.deepEqual([...buildings, ...finished, ...wilds].map((i) => i.id).sort(), sold);
+  // A flag on another row moves it, and a building the bench makes isn't sold.
+  const data = { ...HOMESTEAD_DATA, items: HOMESTEAD_DATA.items.map((i) => (i.id === 'wooden-stool' ? { ...i, building: true } : i.id === HOMESTEAD_DATA.stable.item ? { ...i, craftOnly: true } : i)) };
+  assert.deepEqual(shopSections(data).buildings.map((i) => i.id), ['wooden-stool']);
+});

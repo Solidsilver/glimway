@@ -11,9 +11,10 @@
  * one `register` call with its points; nothing here changes.
  */
 import type Phaser from 'phaser'
-import { bus, EV, type PromptPayload } from '../events.ts'
+import { bus, EV, type PromptAlt, type PromptPayload } from '../events.ts'
 import { isTouchFirst } from '../../ui/device.ts'
 import type { InteractId } from '../worlds.ts'
+import type { BeltKind } from '../../lib/belt.ts'
 
 export type MarkerKind = 'quest' | 'talk' | null
 
@@ -29,6 +30,10 @@ export interface Interactable {
   label: Live<string | null>
   /** Short word for the touch action button (default: the label's first word). */
   verb?: Live<string | null>
+  /** The belt kind whose work this is (the rod's cast): a click anywhere uses it while that tool is in hand. */
+  tool?: BeltKind
+  /** A second choice on its own key (the owning lane handles the key): the desktop prompt names both. */
+  alt?: Live<PromptAlt | null>
   /** The "!" or "…" over it, read when markers refresh. Never marked without one. */
   marker?: () => MarkerKind
   /** Height above (x, y) where its marker and the keycap hint float (default 25). */
@@ -165,10 +170,13 @@ export class Interactables {
     // Recomputed every frame: the wording follows quest progress even while
     // the hero stands still next to the target.
     const label = best ? read(best.label) : null
-    if (label !== this.lastPrompt) {
-      this.lastPrompt = label
+    const alt = label && best?.alt ? read(best.alt) : null
+    const said = alt ? `${label}\u0000${alt.key}\u0000${alt.label}` : label
+    if (said !== this.lastPrompt) {
+      this.lastPrompt = said
       const verb = best?.verb !== undefined ? read(best.verb) : null
       const payload: PromptPayload = verb && label ? { label, verb } : { label }
+      if (alt) payload.alt = alt
       bus.emit(EV.prompt, payload)
     }
     if (this.keyHint) {

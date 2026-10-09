@@ -1070,6 +1070,51 @@ export enum ErrorCode {
    * @generated from enum value: ERROR_CODE_NEEDS_HABITICA = 210;
    */
   NEEDS_HABITICA = 210,
+
+  /**
+   * @generated from enum value: ERROR_CODE_COMPANION_NOT_OWNED = 211;
+   */
+  COMPANION_NOT_OWNED = 211,
+
+  /**
+   * @generated from enum value: ERROR_CODE_NO_STABLE = 212;
+   */
+  NO_STABLE = 212,
+
+  /**
+   * @generated from enum value: ERROR_CODE_STALL_TAKEN = 213;
+   */
+  STALL_TAKEN = 213,
+
+  /**
+   * @generated from enum value: ERROR_CODE_STALLS_IN_USE = 214;
+   */
+  STALLS_IN_USE = 214,
+
+  /**
+   * @generated from enum value: ERROR_CODE_STABLE_FULL = 215;
+   */
+  STABLE_FULL = 215,
+
+  /**
+   * @generated from enum value: ERROR_CODE_ALREADY_CASTING = 216;
+   */
+  ALREADY_CASTING = 216,
+
+  /**
+   * @generated from enum value: ERROR_CODE_CAST_TOO_SOON = 217;
+   */
+  CAST_TOO_SOON = 217,
+
+  /**
+   * @generated from enum value: ERROR_CODE_WATER_STILL = 218;
+   */
+  WATER_STILL = 218,
+
+  /**
+   * @generated from enum value: ERROR_CODE_NO_CAST = 219;
+   */
+  NO_CAST = 219,
 }
 
 /**

@@ -34,6 +34,8 @@ export interface FsHooks {
   __fsRepairs: () => string[]
   __fsPlayer: () => { x: number; y: number; body: Box; blocked: Record<string, boolean> }
   __fsEnemies: () => Array<{ x: number; y: number; state: string; hp: number; texture: string; body: Box; flipX: boolean; type: string; locked: boolean; tint: string }>
+  /** The hero's moves (crafts.md 4): the kit's F and R, cooldowns, and what Stand, Kindle and Echo hold now. */
+  __fsMoves: () => { signature: string | null; move: string | null; castCooldown: number; moveCooldown: number; planted: boolean; patches: Array<{ x: number; y: number; r: number; slow: number }>; decoy: { x: number; y: number } | null }
   /** Dormant, active (and whether it stands open), or settled. */
   __fsWarden: () => WardenView
   /** The map's geometry, so a playtest can check the hero is confined to it. */
@@ -59,6 +61,8 @@ export interface FsHooks {
     lights: { x: number; y: number; radius: number }[]
     hint: { tx: number; ty: number } | null
   } | null
+  /** Fishing here (docs/design/crafts.md 5): the line out, a landed fish, each water's band, the last outcome. */
+  __fsFishing: () => ReturnType<import('./entities/fishing').Fishing['view']> | null
   /** Whether any collision body covers a tile. */
   __fsSolidAt: (tx: number, ty: number) => boolean
   /**

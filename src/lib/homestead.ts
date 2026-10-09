@@ -15,7 +15,7 @@ const MATERIAL_ITEMS = new Set(
 export type HomeScene = 'indoor' | 'outdoor' | 'gate';
 export type HomeItemCategory = 'furniture' | 'decor' | 'utility';
 interface HomeTier { tier: number; id: string; name: string; purchasable: boolean; embers: number; materials?: Record<string, number> }
-export interface HomeItem { id: string; name: string; category: HomeItemCategory; footprint: [number, number]; where: HomeScene[]; minTier: number; embers: number; materials: Record<string, number>; craftOnly?: boolean }
+export interface HomeItem { id: string; name: string; category: HomeItemCategory; footprint: [number, number]; where: HomeScene[]; minTier: number; embers: number; materials: Record<string, number>; craftOnly?: boolean; building?: boolean }
 /** A rectangle in the land's or a room's local grid tiles. */
 export interface HomeRect { x: number; y: number; w: number; h: number }
 export interface HomeGrid { width: number; height: number }
@@ -52,6 +52,8 @@ export interface CommonsLane {
   silasTable: { x: number; y: number; radius: number };
 }
 export interface LanternPosts { item: string; radius: number; nameMax: number; costs: { materials: Record<string, number> }[]; growth: Record<string, number> }
+/** The stable's growth rules (design 3.2): one piece, a bay at a time. */
+export interface HomesteadStable { item: string; maxStalls: number; stallCost: Record<string, number>; growth: Record<string, number> }
 export interface HomesteadData {
   tiers: HomeTier[];
   indoor: HomeGrid;
@@ -68,6 +70,7 @@ export interface HomesteadData {
   jointDeed: { confirmWindowSeconds: number; inviteHours: number };
   personalChest: { maxUnits: number };
   items: HomeItem[];
+  stable: HomesteadStable;
 }
 
 /** Throws on anything content/homestead.go would refuse. */
@@ -112,9 +115,27 @@ export function validateHomesteadData(value: unknown): HomesteadData {
     for (const [id, qty] of Object.entries(v.materials)) if ((!loadWilds().materials.includes(id) && !MATERIAL_ITEMS.has(id)) || qty < 1) return bad(`item ${v.id} material ${id}`);
   }
   if (!seen.has(h.lanternPosts.item)) return bad('post item');
+  // The stable grows from its own row: its piece is in the build list, its
+  // first extra bay's bill names carried materials, and each bay after that
+  // only adds to materials the bill already names.
+  const stable = h.stable;
+  if (!seen.has(stable.item)) return bad(`stable item ${stable.item}`);
+  for (const [id, qty] of Object.entries(stable.stallCost)) if ((!loadWilds().materials.includes(id) && !MATERIAL_ITEMS.has(id)) || qty < 1) return bad(`stable stall cost ${id}`);
+  for (const [id, qty] of Object.entries(stable.growth)) if (!(id in stable.stallCost) || qty < 0) return bad(`stable growth ${id}`);
   return h;
 }
 export const HOMESTEAD_DATA = validateHomesteadData(raw);
+
+/**
+ * Silas's Yard, in its sections: the buildings (structures on the plot, the
+ * content's `building` flag), then the finished pieces (priced in embers) and
+ * the pieces from the Wilds (materials only). Workbench-only pieces aren't sold.
+ */
+export function shopSections(data: HomesteadData = HOMESTEAD_DATA): { buildings: HomeItem[]; finished: HomeItem[]; wilds: HomeItem[] } {
+  const sold = data.items.filter((i) => !i.craftOnly);
+  const pieces = sold.filter((i) => !i.building);
+  return { buildings: sold.filter((i) => i.building), finished: pieces.filter((i) => i.embers > 0), wilds: pieces.filter((i) => i.embers === 0) };
+}
 
 // ------------------------------------------------------------ geometry
 
@@ -156,6 +177,14 @@ export function homeItem(id: string): HomeItem | undefined {
   return HOMESTEAD_DATA.items.find((i) => i.id === id);
 }
 
+/** The materials the `extra`-th extra bay of a homestead's stable costs (1-based). */
+export function stallCost(extra: number, data: HomesteadData = HOMESTEAD_DATA): Record<string, number> {
+  const n = Math.max(1, extra);
+  const out: Record<string, number> = {};
+  for (const [m, v] of Object.entries(data.stable.stallCost)) out[m] = v + (data.stable.growth[m] ?? 0) * (n - 1);
+  return out;
+}
+
 export type Rotation = 0 | 90 | 180 | 270;
 
 /** Footprint in tiles after rotation (a quarter turn swaps width and depth). */
@@ -165,8 +194,9 @@ export function rotatedFootprint(item: HomeItem, rotation: number): [number, num
 }
 
 /** Square footprints look the same every way round, so rotating one does nothing. */
-export function canRotate(item: HomeItem): boolean {
-  return item.footprint[0] !== item.footprint[1];
+export function canRotate(item: HomeItem, data: HomesteadData = HOMESTEAD_DATA): boolean {
+  // The stable faces front only (indoors.md 7.0's four facings; its bays grow east).
+  return item.footprint[0] !== item.footprint[1] && item.id !== data.stable.item;
 }
 
 // ------------------------------------------------------------ placement
@@ -183,6 +213,8 @@ export interface HomeInstance {
   y: number | null;
   rotation: Rotation | null;
   name?: string | null;
+  /** The stable's stall count (crafts.md 3.2); absent on every other piece. */
+  stalls?: number | null;
 }
 
 export type PlacementProblem = 'invalid-placement' | 'tier-required' | 'out-of-bounds' | 'placement-overlap' | 'plant-in-the-way' | 'land-blocked' | 'unlit' | 'post-holds-land' | 'name-required';
@@ -198,8 +230,23 @@ export interface PlacementGround {
 function footprintRect(it: HomeInstance, data: HomesteadData): HomeRect | null {
   const def = data.items.find((i) => i.id === it.itemDef);
   if (!def || it.x === null || it.y === null) return null;
-  const [w, h] = rotatedFootprint(def, it.rotation ?? 0);
+  const [w, h] = rotatedFootprint(grownItem(def, it, data), it.rotation ?? 0);
   return { x: it.x, y: it.y, w, h };
+}
+
+/**
+ * The stable grows east with its stalls (crafts.md 3.2): 4 × 3 with stall 1,
+ * plus 2 × 3 a stall. Every other piece is its catalogue footprint.
+ */
+export function stableFootprint(stalls: number, data: HomesteadData = HOMESTEAD_DATA): [number, number] {
+  const base = data.items.find((i) => i.id === data.stable.item)?.footprint ?? [4, 3];
+  const n = Math.max(1, Math.min(data.stable.maxStalls, Math.floor(stalls) || 1));
+  return [base[0] + 2 * (n - 1), base[1]];
+}
+
+/** A catalogue row with the footprint this instance stands on (the stable's grows). */
+export function grownItem(def: HomeItem, it: Pick<HomeInstance, 'itemDef' | 'stalls'>, data: HomesteadData = HOMESTEAD_DATA): HomeItem {
+  return def.id === data.stable.item ? { ...def, footprint: stableFootprint(it.stalls ?? 1, data) } : def;
 }
 
 /** Lights holding the land: the home's own and every placed post but `except`. */
@@ -244,13 +291,14 @@ export function checkPlacement(
 ): PlacementProblem | null {
   const def = data.items.find((i) => i.id === instance.itemDef);
   if (!def || ![0, 90, 180, 270].includes(rotation) || !def.where.includes(scene)) return 'invalid-placement';
+  if (def.id === data.stable.item && rotation !== 0) return 'invalid-placement';
   if (home.tier < def.minTier || (scene === 'indoor' && home.tier < 1)) return 'tier-required';
   if (scene === 'gate') {
     if (home.items.some((i) => i.id !== instance.id && i.scene === 'gate')) return 'placement-overlap';
     return null;
   }
   const grid = scene === 'indoor' ? data.indoor : landGrid(data);
-  const [w, h] = rotatedFootprint(def, rotation);
+  const [w, h] = rotatedFootprint(grownItem(def, instance, data), rotation);
   if (x < 0 || y < 0 || x > grid.width - w || y > grid.height - h) return 'out-of-bounds';
   const here = { x, y, w, h };
   const reserved = scene === 'indoor' ? data.indoorReserved : data.outdoorReserved;
@@ -271,6 +319,27 @@ export function checkPlacement(
     if (def.id === data.lanternPosts.item && !everythingLit(moved, data)) return 'post-holds-land';
   }
   return null;
+}
+
+/**
+ * The ground a new stall would take (crafts.md 3.1): the 2 × 3 tiles east of
+ * the stable's last bay must be inside the land, clear of pieces and plants,
+ * buildable and lit. Only those tiles: the stable's own ground is not asked
+ * again. Null when a bay fits, or the problem (`out-of-bounds`,
+ * `placement-overlap`, `plant-in-the-way`, `land-blocked`, `unlit`).
+ */
+export function stallGroundProblem(
+  home: { tier: number; items: readonly HomeInstance[]; plants?: readonly { x: number; y: number }[] },
+  stable: HomeInstance,
+  data: HomesteadData = HOMESTEAD_DATA,
+  ground?: PlacementGround
+): PlacementProblem | null {
+  if (stable.x === null || stable.y === null) return 'invalid-placement';
+  const [w, h] = stableFootprint(stable.stalls ?? 1, data);
+  // A bay-sized stand-in piece, checked by the ordinary placement rules.
+  const bay: HomeItem = { id: '__stable-bay', name: 'Stall', category: 'utility', footprint: [2, h], where: ['outdoor'], minTier: 0, embers: 0, materials: {} };
+  const withBay = { ...data, items: [...data.items, bay] };
+  return checkPlacement(home, { id: '__stable-bay', itemDef: bay.id, scene: null, x: null, y: null, rotation: null }, 'outdoor', stable.x + w, stable.y, 0, withBay, ground);
 }
 
 /** What planting needs to know of a home's land (its gate names the served land). */

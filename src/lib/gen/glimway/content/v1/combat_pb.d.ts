@@ -13,7 +13,9 @@ export declare const file_glimway_content_v1_combat: GenFile;
 /**
  * Shared combat tuning (docs/m3-implementation.md): the signature
  * ability's cooldown (fixed at one second — the contract both runtimes
- * assume), one row per Habitica class and the heal formula.
+ * assume), one row per Habitica class and the heal formula. The signature's
+ * mana cost moved to the ability table (design 4.1: each class's cast cost
+ * is its signature's `mana`).
  * content/combat.json.
  *
  * @generated from message glimway.content.v1.Combat
@@ -38,7 +40,9 @@ export declare type Combat = Message<"glimway.content.v1.Combat"> & {
 /**
  * Shared combat tuning (docs/m3-implementation.md): the signature
  * ability's cooldown (fixed at one second — the contract both runtimes
- * assume), one row per Habitica class and the heal formula.
+ * assume), one row per Habitica class and the heal formula. The signature's
+ * mana cost moved to the ability table (design 4.1: each class's cast cost
+ * is its signature's `mana`).
  * content/combat.json.
  *
  * @generated from message glimway.content.v1.Combat
@@ -77,11 +81,6 @@ export declare type CombatClass = Message<"glimway.content.v1.CombatClass"> & {
    * @generated from field: double basic_attack_cooldown_seconds = 1;
    */
   basicAttackCooldownSeconds: number;
-
-  /**
-   * @generated from field: double cast_cost = 2;
-   */
-  castCost: number;
 };
 
 export declare type CombatClassValid = CombatClass;

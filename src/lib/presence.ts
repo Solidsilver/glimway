@@ -30,18 +30,27 @@ export type PresenceAvatar = Omit<Fields<GeneratedAvatar>, 'appearance' | 'equip
   selectedPet: string | null;
   selectedMount: string | null;
 };
-export type PresencePosition = Required<Omit<Fields<GeneratedPosition>, 'facing' | 'accountId'>> & {
+/** `pose` is the wire's optional one ("riding" | "fishing"; absent on foot). */
+export type PresencePosition = Required<Omit<Fields<GeneratedPosition>, 'facing' | 'accountId' | 'pose'>> & {
   facing: Required<Fields<NonNullable<GeneratedPosition['facing']>>>;
+  pose?: string;
 };
 export type PresencePlayer = Omit<Fields<GeneratedPlayer>, 'avatar' | 'pos'> & {
   avatar: PresenceAvatar | null;
   pos: PresencePosition | null;
 };
+/** The poses a position may carry (crafts.md 3.4, 5.5); anything else reads as on foot. */
+export const PRESENCE_POSES = ['riding', 'fishing'] as const;
+export type PresencePose = (typeof PRESENCE_POSES)[number];
 export type PresenceClientMessage = Event<'auth'> | Pick<Event<'join'>, 'type' | 'area'>
-  | ({ type: 'pos' } & PresencePosition) | Pick<Event<'emote'>, 'type' | 'id'> | Event<'heartbeat'>;
+  | ({ type: 'pos' } & PresencePosition) | Pick<Event<'emote'>, 'type' | 'id'> | Event<'heartbeat'>
+  | Pick<Event<'ability'>, 'type' | 'ability' | 'x' | 'y'>;
 export type PresenceServerMessage = Event<'ready'> | Event<'leave'> | Event<'gift'> | Event<'witness'>
   | (Pick<Event<'room'>, 'type' | 'area'> & { players: PresencePlayer[] })
   | (Pick<Event<'join'>, 'type' | 'area'> & { player: PresencePlayer })
   | ({ type: 'pos'; accountId: string } & PresencePosition)
-  | (Event<'emote'> & { accountId: string });
+  | (Event<'emote'> & { accountId: string })
+  | (Pick<Event<'ability'>, 'type' | 'ability' | 'x' | 'y'> & { accountId: string })
+  /** A player's look changed (their follower, or the mount that's out): crafts.md 2.4, 3.4. */
+  | { type: 'avatarChange'; accountId: string; avatar: PresenceAvatar };
 export const PRESENCE_CLOSE = { unauthorized: 4001, superseded: 4002, replaced: 4003, idle: 4004, reloadNeeded: 4005 } as const;

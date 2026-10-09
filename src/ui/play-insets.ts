@@ -8,8 +8,9 @@
  * camera:
  * - `data-inset="hud"`: the HUD; each of its children counts, except those
  *   marked `data-inset-skip` (status lines, screen-reader text).
- * - `data-inset="pad"`, `"col"`, `"act"`, `"ring"`: the joystick, the
- *   roll/cast column, the action button and the belt's buttons around it.
+ * - `data-inset="pad"`, `"col"`, `"act"`, `"ring"`, `"ctx"`: the joystick,
+ *   the roll/cast column, the action button, the belt's buttons around it
+ *   and the context buttons above it (counted with the ring).
  * - `data-inset="cluster"`: the action buttons together (HomeBar's own
  *   fallback for docking the Arrange button reads it).
  * - `data-inset="arrange"`: the homestead's Arrange button.
@@ -64,7 +65,7 @@ export function watchPlayInsets(touch: boolean, onDocks: (docks: Docks) => void)
       return r.length ? { top: Math.min(...r.map((x) => x.top)), left: Math.min(...r.map((x) => x.left)) } : null
     }
     const cluster = union([box('act'), box('col')])
-    const ring = union([...document.querySelectorAll<HTMLElement>('[data-inset="ring"]')].map((el) => (el.offsetHeight > 0 ? el.getBoundingClientRect() : null)))
+    const ring = union([...document.querySelectorAll<HTMLElement>('[data-inset="ring"], [data-inset="ctx"]')].map((el) => (el.offsetHeight > 0 ? el.getBoundingClientRect() : null)))
     const pad = box('pad')
     if (vw > vh) {
       // Landscape: the thumbs sit at the sides, so the hero keeps to the middle band.

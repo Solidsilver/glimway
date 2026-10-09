@@ -193,6 +193,20 @@
       }
     },
     {
+      "id": "craft-willow-rod",
+      "name": "Willow rod",
+      "minTier": 2,
+      "materials": {
+        "timber": 1,
+        "fiber": 2
+      },
+      "output": {
+        "kind": "instance",
+        "id": "willow-rod",
+        "qty": 1
+      }
+    },
+    {
       "id": "craft-stave-bucket",
       "name": "Stave bucket",
       "minTier": 2,
@@ -631,6 +645,22 @@
       },
       "page": "recipe-card-twists",
       "found": "Found on Hazel’s recipe card in the village"
+    },
+    {
+      "id": "hearth-millers-fry",
+      "name": "Miller's fry",
+      "minTier": 1,
+      "materials": {
+        "mill-roach": 1,
+        "flour": 1
+      },
+      "output": {
+        "kind": "item",
+        "id": "millers-fry",
+        "qty": 1
+      },
+      "page": "recipe-card-millers-fry",
+      "found": "Found on Hazel’s card at the end of the mill race"
     },
     {
       "id": "hearth-oil-twists",

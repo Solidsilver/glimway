@@ -17,7 +17,7 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	// Log fixed route labels only. No bodies, headers, raw paths or query strings.
 	route := "unknown"
-	if slices.Contains([]string{"/api/health", "/ws", "/api/report", "/api/quest/step", "/api/story/mark", "/api/papers/take", "/api/fall", "/api/profile", "/api/wilds/echo", "/api/session", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons", "/api/calendar", "/api/storage", "/api/craft", "/api/hearth/craft", "/api/desk/copy", "/api/homestead/woodpile", "/api/mail", "/api/projects", "/api/library", "/api/library/donate", "/api/items", "/api/world", "/api/world/party", "/api/world/prompt", "/api/world/move", "/api/world/leave", "/api/world/notice", "/api/world/choice", "/api/world/choose"}, r.URL.Path) {
+	if slices.Contains([]string{"/api/health", "/ws", "/api/report", "/api/quest/step", "/api/story/mark", "/api/papers/take", "/api/fall", "/api/profile", "/api/wilds/echo", "/api/session", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons", "/api/calendar", "/api/storage", "/api/craft", "/api/hearth/craft", "/api/desk/copy", "/api/homestead/woodpile", "/api/mail", "/api/projects", "/api/library", "/api/library/donate", "/api/items", "/api/world", "/api/world/party", "/api/world/prompt", "/api/world/move", "/api/world/leave", "/api/world/notice", "/api/world/choice", "/api/world/choose", "/api/fishing/cast", "/api/fishing/settle", "/api/fishing/cancel", "/api/fishing/waters", "/api/companions", "/api/stable/stall", "/api/stable/out", "/api/stable/home", "/api/stable/extend"}, r.URL.Path) {
 		route = r.URL.Path
 	}
 	observed := &statusWriter{ResponseWriter: w, status: 200}
@@ -27,6 +27,9 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if strings.HasPrefix(r.URL.Path, "/api/homestead/") {
 		route = "/api/homestead/:action"
+	}
+	if strings.HasPrefix(r.URL.Path, "/api/stable/") {
+		route = "/api/stable/:action"
 	}
 	if strings.HasPrefix(r.URL.Path, "/api/mail/") {
 		route = "/api/mail/:id/claim"
@@ -183,6 +186,24 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = a.itemsMutation(w, r)
 	case "GET /api/repairs":
 		err = a.repairsRead(w, r)
+	case "POST /api/fishing/cast":
+		err = a.fishCast(w, r)
+	case "POST /api/fishing/settle":
+		err = a.fishSettle(w, r)
+	case "POST /api/fishing/cancel":
+		err = a.fishCancel(w, r)
+	case "GET /api/fishing/waters":
+		err = a.fishingWaters(w, r)
+	case "POST /api/companions":
+		err = a.companions(w, r)
+	case "POST /api/stable/stall":
+		err = a.stableStall(w, r)
+	case "POST /api/stable/out":
+		err = a.mountOut(w, r)
+	case "POST /api/stable/home":
+		err = a.mountHome(w, r)
+	case "POST /api/stable/extend":
+		err = a.stableExtend(w, r)
 	default:
 		if r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/api/mail/") {
 			if strings.HasSuffix(r.URL.Path, "/recall") {

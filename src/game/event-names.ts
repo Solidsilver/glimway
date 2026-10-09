@@ -37,8 +37,10 @@ export const EV = {
   defeat: 'ui:defeat',
   /** Session committed a new imported profile — the world avatar/pet refresh. */
   profileChanged: 'ui:profile-changed',
-  /** Signature ability fired (cooldown starts) or failed (not enough mana). */
+  /** A move (the signature or the level-20 move) fired (cooldown starts) or failed (not enough mana): { ability, status }. */
   ability: 'ui:ability',
+  /** The server's level and class marks the screen holds now (PlayerState.magic; crafts.md 4.2). */
+  magic: 'ui:magic',
   /** A scripted beat (lantern lighting) owns the screen: hide the HUD. */
   cinematic: 'ui:cinematic',
   /** Native-size portrait images for dialogue, built once from loaded art. */
@@ -63,6 +65,12 @@ export const EV = {
   gift: 'game:gift',
   /** Presence: someone near you reached a story beat (src/content/witness.ts): { beat, accountId, name }. */
   witness: 'game:witness',
+  /** Connected play: the companions view changed (follower, yard pets, the mount that's out). */
+  companions: 'game:companions',
+  /** Open the Character panel's Companions page (`at: 'stable'` scrolls to the stable). */
+  openCompanions: 'ui:open-companions',
+  /** The mount that's out, as the hero has it now: { key, riding, led } (MountPayload); null when none is out. */
+  mount: 'ui:mount',
   /** Connected play: a mutation whose answer was lost is now known: { op, outcome, res? | code? }. */
   mutationResolved: 'game:mutation-resolved',
   /** Connected play: balances or paid outcomes changed — markers and lanterns refresh. */
@@ -82,6 +90,17 @@ export const EV = {
   // ui -> game (and dialogue panel -> scene)
   action: 'game:action',
   cast: 'game:cast',
+  /** The second move (R / the second ✦ button; crafts.md 4.3). */
+  castMove: 'game:cast-move',
+  /** Someone in the room cast a move (presence `ability`, crafts.md 4.5): { accountId, ability, x, y }. */
+  abilityCast: 'game:ability-cast',
+  /**
+   * The server's word that a player's companions changed (presence
+   * `avatar_change`): { accountId }. Heard in their room, or on the land of
+   * the stable their mount came from even when they're far away (crafts.md
+   * 3.4): whoever stands at that stable re-reads its stalls.
+   */
+  companionsOf: 'game:companions-of',
   /** Touch roll button. */
   dodge: 'game:dodge',
   dialogueClosed: 'game:dialogue-closed',
@@ -224,6 +243,14 @@ export interface PromptPayload {
   label: string | null
   /** Short word for the touch action button (default "Talk"). */
   verb?: string
+  /** A second choice on its own key ("Let it go" on Q beside Keep on E): the desktop prompt names both. */
+  alt?: PromptAlt
+}
+
+/** The prompt's second choice: its key cap and what it does. */
+export interface PromptAlt {
+  key: string
+  label: string
 }
 
 export interface ToastPayload {
@@ -243,9 +270,24 @@ export interface ToastPayload {
 }
 
 export interface AbilityPayload {
+  /** The table's id (`fingersnap`, `kindle`, …): the HUD keys its slots by it. */
+  ability: string
   status: 'cast' | 'no-mana' | 'cooldown'
   /** Seconds until the ability is ready again (cast only). */
   cooldown?: number
+}
+
+export interface MagicPayload {
+  levelMark: number
+  classMark: string | null
+}
+
+/** A move someone else in the room cast, relayed by the presence hub (world px). */
+export interface AbilityCastPayload {
+  accountId: string
+  ability: string
+  x: number
+  y: number
 }
 
 export interface CinematicPayload {
@@ -319,6 +361,13 @@ export interface RelocatePayload {
   y: number
 }
 
+/** The mount that's out (crafts.md 3.1): ridden, on the lead, or waiting at a door. */
+export interface MountPayload {
+  key: string
+  riding: boolean
+  led: boolean
+}
+
 export interface PresencePayload {
   /** 'off' for guests and before the lease; 'live' once the socket is ready. */
   status: PresenceStatus
@@ -386,6 +435,7 @@ export interface EventMap {
   [EV.defeat]: DefeatPayload
   [EV.profileChanged]: { profile: HabiticaProfile | null }
   [EV.ability]: AbilityPayload
+  [EV.magic]: MagicPayload
   [EV.cinematic]: CinematicPayload
   [EV.portraits]: PortraitsPayload
   [EV.artIcons]: Record<string, string>
@@ -398,6 +448,9 @@ export interface EventMap {
   [EV.emote]: EmotePayload
   [EV.gift]: GiftPayload
   [EV.witness]: WitnessPayload
+  [EV.companions]: void
+  [EV.openCompanions]: { at?: 'stable' } | undefined
+  [EV.mount]: MountPayload | null
   [EV.mutationResolved]: MutationResolvedPayload
   [EV.worldRefresh]: void
   [EV.fallSettled]: { lantern: string }
@@ -408,6 +461,9 @@ export interface EventMap {
   [EV.notePosition]: void
   [EV.action]: void
   [EV.cast]: void
+  [EV.castMove]: void
+  [EV.abilityCast]: AbilityCastPayload
+  [EV.companionsOf]: { accountId: string }
   [EV.dodge]: void
   [EV.dialogueClosed]: DialogueClosedPayload
   [EV.clearUnmoored]: { instant: boolean }

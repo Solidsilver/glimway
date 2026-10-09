@@ -502,6 +502,35 @@ export function generateTextures(scene: Phaser.Scene): void {
     ctx.fill()
   })
 
+  // The signpost's lost east finger (the opening): a pointed board lying in the bracken.
+  addCanvasTexture(scene, 'signpost-finger', 16, 7, (ctx) => {
+    ctx.fillStyle = '#2b1d1a'
+    ctx.beginPath()
+    ctx.moveTo(0, 1)
+    ctx.lineTo(12, 1)
+    ctx.lineTo(16, 3.5)
+    ctx.lineTo(12, 6)
+    ctx.lineTo(0, 6)
+    ctx.closePath()
+    ctx.fill()
+    ctx.fillStyle = '#a8763e'
+    ctx.beginPath()
+    ctx.moveTo(1, 2)
+    ctx.lineTo(12, 2)
+    ctx.lineTo(14.5, 3.5)
+    ctx.lineTo(12, 5)
+    ctx.lineTo(1, 5)
+    ctx.closePath()
+    ctx.fill()
+    // The grain, and the old paint of its letters.
+    ctx.fillStyle = '#8a5a32'
+    ctx.fillRect(1, 4, 11, 1)
+    ctx.fillStyle = '#e8d4a4'
+    ctx.fillRect(3, 3, 1, 1)
+    ctx.fillRect(5, 3, 2, 1)
+    ctx.fillRect(8, 3, 1, 1)
+  })
+
   addCanvasTexture(scene, 'glow', 64, 64, (ctx) => {
     const g = ctx.createRadialGradient(32, 32, 2, 32, 32, 32)
     g.addColorStop(0, 'rgba(255,224,150,0.85)')

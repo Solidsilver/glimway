@@ -346,6 +346,21 @@
       }
     },
     {
+      "id": "stable",
+      "category": "utility",
+      "building": true,
+      "where": [
+        "outdoor"
+      ],
+      "minTier": 2,
+      "embers": 30,
+      "materials": {
+        "timber": 16,
+        "stone": 8,
+        "fiber": 6
+      }
+    },
+    {
       "id": "gate-shelf",
       "category": "utility",
       "where": [
@@ -526,5 +541,18 @@
       "materials": {},
       "craftOnly": true
     }
-  ]
+  ],
+  "stable": {
+    "item": "stable",
+    "maxStalls": 6,
+    "stallCost": {
+      "timber": 8,
+      "stone": 4,
+      "fiber": 2
+    },
+    "growth": {
+      "timber": 4,
+      "stone": 2
+    }
+  }
 }

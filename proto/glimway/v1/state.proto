@@ -1,6 +1,8 @@
 syntax = "proto3";
 package glimway.v1;
 option go_package = "glimway/server/internal/gen/glimway/v1;contract";
+import "glimway/v1/companions.proto";
+import "glimway/v1/fishing.proto";
 import "glimway/v1/profile.proto";
 import "glimway/v1/operations.proto";
 import "glimway/v1/op.proto";
@@ -21,9 +23,15 @@ message Story {
   map<string, double> gate_at = 8;
 }
 message Embers { double balance = 1; double xp_earned = 2; double pending = 3; double xp_mark = 4; double verified_xp = 5; }
+// Magic's marks (design 4.2): the highest level a verified login has seen,
+// and the last class a sync saw. A hero has their craft when the profile
+// has a class, or when it has none but the level mark is 10 or more and a
+// class mark exists.
+message Magic { double level_mark = 1; google.protobuf.StringValue class_mark = 2; }
 message PlayerState {
   double version = 1; Account account = 2; HabiticaProfile profile = 3;
   Vitals vitals = 4; Place place = 5; Story story = 6; Embers embers = 7;
+  Companions companions = 8; Magic magic = 9; FishingState fishing = 10;
 }
 // A wire error string from ErrorCode's hyphenated vocabulary, never an enum JSON name.
 message ErrorDetail { string code = 1; }
@@ -43,6 +51,11 @@ message Envelope {
     DeskCopyResult desk_copy = 27;
     WorldMoveResult world_move = 28; WorldLeaveResult world_leave = 29;
     ContributeResult contribute = 30; MendResult mend = 31;
+    CompanionsResult companions = 32; StallResult stall = 33;
+    MountOutResult mount_out = 34; MountHomeResult mount_home = 35;
+    StableExtendResult stable_extend = 36;
+    FishCastResult fish_cast = 37; FishSettleResult fish_settle = 38;
+    FishCancelResult fish_cancel = 39;
   }
 }
 message LoginRequest { string user_id = 1; string token = 2; string invite = 3; string party = 4; }

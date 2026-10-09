@@ -376,7 +376,24 @@
             "x": 1,
             "y": 1,
             "rotation": 1,
-            "name": "fixture"
+            "name": "fixture",
+            "stalls": 1
+          }
+        ],
+        "stalls": [
+          {
+            "stall": 1,
+            "mount": "fixture",
+            "ownerId": "fixture",
+            "ownerName": "fixture",
+            "out": true
+          }
+        ],
+        "yardPets": [
+          {
+            "ownerId": "fixture",
+            "pet": "fixture",
+            "slot": 1
           }
         ]
       },
@@ -701,7 +718,24 @@
             "x": 1,
             "y": 1,
             "rotation": 1,
-            "name": "fixture"
+            "name": "fixture",
+            "stalls": 1
+          }
+        ],
+        "stalls": [
+          {
+            "stall": 1,
+            "mount": "fixture",
+            "ownerId": "fixture",
+            "ownerName": "fixture",
+            "out": true
+          }
+        ],
+        "yardPets": [
+          {
+            "ownerId": "fixture",
+            "pet": "fixture",
+            "slot": 1
           }
         ]
       },
@@ -947,7 +981,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -975,6 +1010,20 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
         }
       },
       "wildsClaim": {
@@ -1086,7 +1135,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -1114,6 +1164,20 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
         }
       },
       "fall": {
@@ -1127,7 +1191,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -1214,7 +1279,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -1242,6 +1308,20 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
         }
       },
       "fall": {
@@ -1255,7 +1335,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -1342,7 +1423,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -1370,6 +1452,20 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
         }
       },
       "fall": {
@@ -1383,7 +1479,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -1470,7 +1567,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -1498,6 +1596,20 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
         }
       },
       "fall": {
@@ -1511,7 +1623,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -1598,7 +1711,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -1626,6 +1740,20 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
         }
       },
       "fall": {
@@ -1639,7 +1767,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -1726,7 +1855,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -1754,6 +1884,20 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
         }
       },
       "wildsLantern": {
@@ -1855,7 +1999,10 @@
           "reportGeneration": "fixture",
           "vitalsSetVersion": 1,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {
+            "fixture": 1
+          }
         },
         "place": {
           "area": "fixture",
@@ -1894,6 +2041,31 @@
           "pending": 1,
           "xpMark": 1,
           "verifiedXp": 1
+        },
+        "companions": {
+          "followPet": "fixture",
+          "yardPets": [
+            "fixture"
+          ],
+          "mountOut": "fixture",
+          "mountHome": "fixture"
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": "fixture"
+        },
+        "fishing": {
+          "cast": {
+            "id": "fixture",
+            "water": "fixture",
+            "bank": "fixture",
+            "species": "fixture",
+            "startedAt": 1,
+            "readyAt": 1,
+            "holdUntil": 1,
+            "band": "fixture"
+          },
+          "nextCastAt": 1
         }
       },
       "report": {
@@ -1904,7 +2076,11 @@
         "client": "fixture",
         "generation": "fixture",
         "basis": 1,
-        "placeIgnored": true
+        "placeIgnored": true,
+        "abilityCasts": {
+          "fixture": 1
+        },
+        "allyHeal": 1
       }
     }
   },
@@ -1979,7 +2155,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -2013,6 +2190,20 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
         }
       },
       "questStep": {
@@ -2109,7 +2300,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -2137,6 +2329,20 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
         }
       },
       "report": {
@@ -2147,7 +2353,9 @@
         "client": "client",
         "generation": "generation",
         "basis": 1,
-        "placeIgnored": false
+        "placeIgnored": false,
+        "abilityCasts": {},
+        "allyHeal": 0
       }
     }
   },
@@ -2222,7 +2430,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -2250,6 +2459,20 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
         }
       },
       "questStep": {
@@ -2362,7 +2585,10 @@
         "reportGeneration": "fixture",
         "vitalsSetVersion": 1,
         "vitalsAt": 1,
-        "castReadyAt": 1
+        "castReadyAt": 1,
+        "abilityReadyAt": {
+          "fixture": 1
+        }
       },
       "place": {
         "area": "fixture",
@@ -2926,7 +3152,24 @@
             "x": 1,
             "y": 1,
             "rotation": 1,
-            "name": "fixture"
+            "name": "fixture",
+            "stalls": 1
+          }
+        ],
+        "stalls": [
+          {
+            "stall": 1,
+            "mount": "fixture",
+            "ownerId": "fixture",
+            "ownerName": "fixture",
+            "out": true
+          }
+        ],
+        "yardPets": [
+          {
+            "ownerId": "fixture",
+            "pet": "fixture",
+            "slot": 1
           }
         ]
       },
@@ -3209,6 +3452,22 @@
       "token": "fixture",
       "invite": "fixture",
       "party": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.Magic",
+    "case": "empty",
+    "json": {
+      "levelMark": 0,
+      "classMark": null
+    }
+  },
+  {
+    "name": "glimway.v1.Magic",
+    "case": "populated",
+    "json": {
+      "levelMark": 1,
+      "classMark": "fixture"
     }
   },
   {
@@ -4067,7 +4326,10 @@
           "reportGeneration": "fixture",
           "vitalsSetVersion": 1,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {
+            "fixture": 1
+          }
         },
         "place": {
           "area": "fixture",
@@ -4106,6 +4368,31 @@
           "pending": 1,
           "xpMark": 1,
           "verifiedXp": 1
+        },
+        "companions": {
+          "followPet": "fixture",
+          "yardPets": [
+            "fixture"
+          ],
+          "mountOut": "fixture",
+          "mountHome": "fixture"
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": "fixture"
+        },
+        "fishing": {
+          "cast": {
+            "id": "fixture",
+            "water": "fixture",
+            "bank": "fixture",
+            "species": "fixture",
+            "startedAt": 1,
+            "readyAt": 1,
+            "holdUntil": 1,
+            "band": "fixture"
+          },
+          "nextCastAt": 1
         }
       },
       "lease": "fixture",
@@ -4184,7 +4471,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -4212,6 +4500,20 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
         }
       },
       "lease": "lease",
@@ -4229,7 +4531,10 @@
       "vitals": null,
       "place": null,
       "story": null,
-      "embers": null
+      "embers": null,
+      "companions": null,
+      "magic": null,
+      "fishing": null
     }
   },
   {
@@ -4300,7 +4605,10 @@
         "reportGeneration": "fixture",
         "vitalsSetVersion": 1,
         "vitalsAt": 1,
-        "castReadyAt": 1
+        "castReadyAt": 1,
+        "abilityReadyAt": {
+          "fixture": 1
+        }
       },
       "place": {
         "area": "fixture",
@@ -4339,6 +4647,31 @@
         "pending": 1,
         "xpMark": 1,
         "verifiedXp": 1
+      },
+      "companions": {
+        "followPet": "fixture",
+        "yardPets": [
+          "fixture"
+        ],
+        "mountOut": "fixture",
+        "mountHome": "fixture"
+      },
+      "magic": {
+        "levelMark": 1,
+        "classMark": "fixture"
+      },
+      "fishing": {
+        "cast": {
+          "id": "fixture",
+          "water": "fixture",
+          "bank": "fixture",
+          "species": "fixture",
+          "startedAt": 1,
+          "readyAt": 1,
+          "holdUntil": 1,
+          "band": "fixture"
+        },
+        "nextCastAt": 1
       }
     }
   },
@@ -4412,7 +4745,8 @@
         "reportGeneration": "generation",
         "vitalsSetVersion": 0,
         "vitalsAt": 1,
-        "castReadyAt": 1
+        "castReadyAt": 1,
+        "abilityReadyAt": {}
       },
       "place": {
         "area": "village",
@@ -4440,6 +4774,20 @@
         "pending": 0,
         "xpMark": 0,
         "verifiedXp": 0
+      },
+      "companions": {
+        "followPet": "",
+        "yardPets": [],
+        "mountOut": "",
+        "mountHome": ""
+      },
+      "magic": {
+        "levelMark": 1,
+        "classMark": null
+      },
+      "fishing": {
+        "cast": null,
+        "nextCastAt": 0
       }
     }
   },
@@ -4821,7 +5169,10 @@
           "reportGeneration": "fixture",
           "vitalsSetVersion": 1,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {
+            "fixture": 1
+          }
         },
         "place": {
           "area": "fixture",
@@ -4860,6 +5211,31 @@
           "pending": 1,
           "xpMark": 1,
           "verifiedXp": 1
+        },
+        "companions": {
+          "followPet": "fixture",
+          "yardPets": [
+            "fixture"
+          ],
+          "mountOut": "fixture",
+          "mountHome": "fixture"
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": "fixture"
+        },
+        "fishing": {
+          "cast": {
+            "id": "fixture",
+            "water": "fixture",
+            "bank": "fixture",
+            "species": "fixture",
+            "startedAt": 1,
+            "readyAt": 1,
+            "holdUntil": 1,
+            "band": "fixture"
+          },
+          "nextCastAt": 1
         }
       }
     }
@@ -4938,7 +5314,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -4966,6 +5343,20 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
         }
       }
     }
@@ -5087,7 +5478,8 @@
       "hp": 0,
       "mana": 0,
       "casts": 0,
-      "generation": ""
+      "generation": "",
+      "abilityCasts": {}
     }
   },
   {
@@ -5106,7 +5498,10 @@
       "hp": 1,
       "mana": 1,
       "casts": 1,
-      "generation": "fixture"
+      "generation": "fixture",
+      "abilityCasts": {
+        "fixture": 1
+      }
     }
   },
   {
@@ -5120,7 +5515,9 @@
       "client": "",
       "generation": "",
       "basis": 0,
-      "placeIgnored": false
+      "placeIgnored": false,
+      "abilityCasts": {},
+      "allyHeal": 0
     }
   },
   {
@@ -5134,7 +5531,11 @@
       "client": "fixture",
       "generation": "fixture",
       "basis": 1,
-      "placeIgnored": true
+      "placeIgnored": true,
+      "abilityCasts": {
+        "fixture": 1
+      },
+      "allyHeal": 1
     }
   },
   {
@@ -5211,7 +5612,10 @@
           "reportGeneration": "fixture",
           "vitalsSetVersion": 1,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {
+            "fixture": 1
+          }
         },
         "place": {
           "area": "fixture",
@@ -5250,6 +5654,31 @@
           "pending": 1,
           "xpMark": 1,
           "verifiedXp": 1
+        },
+        "companions": {
+          "followPet": "fixture",
+          "yardPets": [
+            "fixture"
+          ],
+          "mountOut": "fixture",
+          "mountHome": "fixture"
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": "fixture"
+        },
+        "fishing": {
+          "cast": {
+            "id": "fixture",
+            "water": "fixture",
+            "bank": "fixture",
+            "species": "fixture",
+            "startedAt": 1,
+            "readyAt": 1,
+            "holdUntil": 1,
+            "band": "fixture"
+          },
+          "nextCastAt": 1
         }
       }
     }
@@ -5451,7 +5880,10 @@
           "reportGeneration": "fixture",
           "vitalsSetVersion": 1,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {
+            "fixture": 1
+          }
         },
         "place": {
           "area": "fixture",
@@ -5490,6 +5922,31 @@
           "pending": 1,
           "xpMark": 1,
           "verifiedXp": 1
+        },
+        "companions": {
+          "followPet": "fixture",
+          "yardPets": [
+            "fixture"
+          ],
+          "mountOut": "fixture",
+          "mountHome": "fixture"
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": "fixture"
+        },
+        "fishing": {
+          "cast": {
+            "id": "fixture",
+            "water": "fixture",
+            "bank": "fixture",
+            "species": "fixture",
+            "startedAt": 1,
+            "readyAt": 1,
+            "holdUntil": 1,
+            "band": "fixture"
+          },
+          "nextCastAt": 1
         }
       },
       "leaseActive": true
@@ -5566,7 +6023,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -5594,6 +6052,20 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
         }
       },
       "leaseActive": true
@@ -5780,7 +6252,8 @@
       "reportGeneration": "",
       "vitalsSetVersion": 0,
       "vitalsAt": 0,
-      "castReadyAt": 0
+      "castReadyAt": 0,
+      "abilityReadyAt": {}
     }
   },
   {
@@ -5796,7 +6269,10 @@
       "reportGeneration": "fixture",
       "vitalsSetVersion": 1,
       "vitalsAt": 1,
-      "castReadyAt": 1
+      "castReadyAt": 1,
+      "abilityReadyAt": {
+        "fixture": 1
+      }
     }
   },
   {
@@ -6567,7 +7043,24 @@
             "x": 1,
             "y": 1,
             "rotation": 1,
-            "name": "fixture"
+            "name": "fixture",
+            "stalls": 1
+          }
+        ],
+        "stalls": [
+          {
+            "stall": 1,
+            "mount": "fixture",
+            "ownerId": "fixture",
+            "ownerName": "fixture",
+            "out": true
+          }
+        ],
+        "yardPets": [
+          {
+            "ownerId": "fixture",
+            "pet": "fixture",
+            "slot": 1
           }
         ]
       },
@@ -7179,7 +7672,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -7207,6 +7701,20 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
         }
       },
       "result": {
@@ -7315,7 +7823,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -7343,6 +7852,20 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
         }
       },
       "result": {
@@ -7439,7 +7962,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -7467,6 +7991,20 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
         }
       },
       "result": {
@@ -7553,7 +8091,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -7581,6 +8120,20 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
         }
       },
       "result": {
@@ -7791,7 +8344,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -7819,6 +8373,20 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
         }
       },
       "result": {
@@ -7911,7 +8479,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -7939,6 +8508,20 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
         }
       },
       "result": {
@@ -8019,7 +8602,8 @@
           "reportGeneration": "generation",
           "vitalsSetVersion": 0,
           "vitalsAt": 1,
-          "castReadyAt": 1
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
         },
         "place": {
           "area": "village",
@@ -8047,6 +8631,20 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
         }
       },
       "result": {

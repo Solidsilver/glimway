@@ -25,16 +25,19 @@ const (
 
 // Counters and timestamps use doubles so ProtoJSON carries numbers.
 type ReportRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Lease         string                 `protobuf:"bytes,1,opt,name=lease,proto3" json:"lease,omitempty"`
-	Client        string                 `protobuf:"bytes,2,opt,name=client,proto3" json:"client,omitempty"`
-	Seq           float64                `protobuf:"fixed64,3,opt,name=seq,proto3" json:"seq,omitempty"`
-	Basis         float64                `protobuf:"fixed64,4,opt,name=basis,proto3" json:"basis,omitempty"`
-	Place         *Where                 `protobuf:"bytes,5,opt,name=place,proto3" json:"place,omitempty"`
-	Hp            float64                `protobuf:"fixed64,6,opt,name=hp,proto3" json:"hp,omitempty"`
-	Mana          float64                `protobuf:"fixed64,7,opt,name=mana,proto3" json:"mana,omitempty"`
-	Casts         float64                `protobuf:"fixed64,8,opt,name=casts,proto3" json:"casts,omitempty"`
-	Generation    string                 `protobuf:"bytes,9,opt,name=generation,proto3" json:"generation,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	Lease      string                 `protobuf:"bytes,1,opt,name=lease,proto3" json:"lease,omitempty"`
+	Client     string                 `protobuf:"bytes,2,opt,name=client,proto3" json:"client,omitempty"`
+	Seq        float64                `protobuf:"fixed64,3,opt,name=seq,proto3" json:"seq,omitempty"`
+	Basis      float64                `protobuf:"fixed64,4,opt,name=basis,proto3" json:"basis,omitempty"`
+	Place      *Where                 `protobuf:"bytes,5,opt,name=place,proto3" json:"place,omitempty"`
+	Hp         float64                `protobuf:"fixed64,6,opt,name=hp,proto3" json:"hp,omitempty"`
+	Mana       float64                `protobuf:"fixed64,7,opt,name=mana,proto3" json:"mana,omitempty"`
+	Casts      float64                `protobuf:"fixed64,8,opt,name=casts,proto3" json:"casts,omitempty"`
+	Generation string                 `protobuf:"bytes,9,opt,name=generation,proto3" json:"generation,omitempty"`
+	// Combat ability casts by ability id (design 4.4); `casts` stays the
+	// signature's count.
+	AbilityCasts  map[string]float64 `protobuf:"bytes,10,rep,name=ability_casts,json=abilityCasts,proto3" json:"ability_casts,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -132,16 +135,26 @@ func (x *ReportRequest) GetGeneration() string {
 	return ""
 }
 
+func (x *ReportRequest) GetAbilityCasts() map[string]float64 {
+	if x != nil {
+		return x.AbilityCasts
+	}
+	return nil
+}
+
 type ReportResult struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Seq           float64                `protobuf:"fixed64,1,opt,name=seq,proto3" json:"seq,omitempty"`
-	Accepted      bool                   `protobuf:"varint,2,opt,name=accepted,proto3" json:"accepted,omitempty"`
-	StaleBasis    bool                   `protobuf:"varint,3,opt,name=stale_basis,json=staleBasis,proto3" json:"stale_basis,omitempty"`
-	Casts         float64                `protobuf:"fixed64,4,opt,name=casts,proto3" json:"casts,omitempty"`
-	Client        string                 `protobuf:"bytes,5,opt,name=client,proto3" json:"client,omitempty"`
-	Generation    string                 `protobuf:"bytes,6,opt,name=generation,proto3" json:"generation,omitempty"`
-	Basis         float64                `protobuf:"fixed64,7,opt,name=basis,proto3" json:"basis,omitempty"`
-	PlaceIgnored  bool                   `protobuf:"varint,8,opt,name=place_ignored,json=placeIgnored,proto3" json:"place_ignored,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Seq          float64                `protobuf:"fixed64,1,opt,name=seq,proto3" json:"seq,omitempty"`
+	Accepted     bool                   `protobuf:"varint,2,opt,name=accepted,proto3" json:"accepted,omitempty"`
+	StaleBasis   bool                   `protobuf:"varint,3,opt,name=stale_basis,json=staleBasis,proto3" json:"stale_basis,omitempty"`
+	Casts        float64                `protobuf:"fixed64,4,opt,name=casts,proto3" json:"casts,omitempty"`
+	Client       string                 `protobuf:"bytes,5,opt,name=client,proto3" json:"client,omitempty"`
+	Generation   string                 `protobuf:"bytes,6,opt,name=generation,proto3" json:"generation,omitempty"`
+	Basis        float64                `protobuf:"fixed64,7,opt,name=basis,proto3" json:"basis,omitempty"`
+	PlaceIgnored bool                   `protobuf:"varint,8,opt,name=place_ignored,json=placeIgnored,proto3" json:"place_ignored,omitempty"`
+	// The accepted counts by ability id, and the ward credit used (4.5).
+	AbilityCasts  map[string]float64 `protobuf:"bytes,9,rep,name=ability_casts,json=abilityCasts,proto3" json:"ability_casts,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
+	AllyHeal      float64            `protobuf:"fixed64,10,opt,name=ally_heal,json=allyHeal,proto3" json:"ally_heal,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -230,6 +243,20 @@ func (x *ReportResult) GetPlaceIgnored() bool {
 		return x.PlaceIgnored
 	}
 	return false
+}
+
+func (x *ReportResult) GetAbilityCasts() map[string]float64 {
+	if x != nil {
+		return x.AbilityCasts
+	}
+	return nil
+}
+
+func (x *ReportResult) GetAllyHeal() float64 {
+	if x != nil {
+		return x.AllyHeal
+	}
+	return 0
 }
 
 type QuestStepRequest struct {
@@ -1758,7 +1785,7 @@ var File_glimway_v1_operations_proto protoreflect.FileDescriptor
 const file_glimway_v1_operations_proto_rawDesc = "" +
 	"\n" +
 	"\x1bglimway/v1/operations.proto\x12\n" +
-	"glimway.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x13glimway/v1/op.proto\x1a\x18glimway/v1/profile.proto\x1a\x16glimway/v1/wilds.proto\"\xe8\x01\n" +
+	"glimway.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x13glimway/v1/op.proto\x1a\x18glimway/v1/profile.proto\x1a\x16glimway/v1/wilds.proto\"\xfb\x02\n" +
 	"\rReportRequest\x12\x14\n" +
 	"\x05lease\x18\x01 \x01(\tR\x05lease\x12\x16\n" +
 	"\x06client\x18\x02 \x01(\tR\x06client\x12\x10\n" +
@@ -1770,7 +1797,12 @@ const file_glimway_v1_operations_proto_rawDesc = "" +
 	"\x05casts\x18\b \x01(\x01R\x05casts\x12\x1e\n" +
 	"\n" +
 	"generation\x18\t \x01(\tR\n" +
-	"generation\"\xe6\x01\n" +
+	"generation\x12P\n" +
+	"\rability_casts\x18\n" +
+	" \x03(\v2+.glimway.v1.ReportRequest.AbilityCastsEntryR\fabilityCasts\x1a?\n" +
+	"\x11AbilityCastsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\x95\x03\n" +
 	"\fReportResult\x12\x10\n" +
 	"\x03seq\x18\x01 \x01(\x01R\x03seq\x12\x1a\n" +
 	"\baccepted\x18\x02 \x01(\bR\baccepted\x12\x1f\n" +
@@ -1782,7 +1814,13 @@ const file_glimway_v1_operations_proto_rawDesc = "" +
 	"generation\x18\x06 \x01(\tR\n" +
 	"generation\x12\x14\n" +
 	"\x05basis\x18\a \x01(\x01R\x05basis\x12#\n" +
-	"\rplace_ignored\x18\b \x01(\bR\fplaceIgnored\"\x87\x01\n" +
+	"\rplace_ignored\x18\b \x01(\bR\fplaceIgnored\x12O\n" +
+	"\rability_casts\x18\t \x03(\v2*.glimway.v1.ReportResult.AbilityCastsEntryR\fabilityCasts\x12\x1b\n" +
+	"\tally_heal\x18\n" +
+	" \x01(\x01R\ballyHeal\x1a?\n" +
+	"\x11AbilityCastsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\x87\x01\n" +
 	"\x10QuestStepRequest\x12$\n" +
 	"\x02op\x18\x01 \x01(\v2\x14.glimway.v1.OpHeaderR\x02op\x12\x14\n" +
 	"\x05quest\x18\x02 \x01(\tR\x05quest\x12\x0e\n" +
@@ -1920,7 +1958,7 @@ func file_glimway_v1_operations_proto_rawDescGZIP() []byte {
 	return file_glimway_v1_operations_proto_rawDescData
 }
 
-var file_glimway_v1_operations_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
+var file_glimway_v1_operations_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
 var file_glimway_v1_operations_proto_goTypes = []any{
 	(*ReportRequest)(nil),          // 0: glimway.v1.ReportRequest
 	(*ReportResult)(nil),           // 1: glimway.v1.ReportResult
@@ -1946,61 +1984,65 @@ var file_glimway_v1_operations_proto_goTypes = []any{
 	(*WildsLanternResult)(nil),     // 21: glimway.v1.WildsLanternResult
 	(*CommittedOperation)(nil),     // 22: glimway.v1.CommittedOperation
 	(*OperationsResult)(nil),       // 23: glimway.v1.OperationsResult
-	nil,                            // 24: glimway.v1.WildsClaimResult.MaterialsEntry
-	nil,                            // 25: glimway.v1.WildsLanternResult.MaterialsEntry
-	(*Where)(nil),                  // 26: glimway.v1.Where
-	(*OpHeader)(nil),               // 27: glimway.v1.OpHeader
-	(*Vitals)(nil),                 // 28: glimway.v1.Vitals
-	(*Place)(nil),                  // 29: glimway.v1.Place
-	(*HabiticaUser)(nil),           // 30: glimway.v1.HabiticaUser
-	(*ReportBarrier)(nil),          // 31: glimway.v1.ReportBarrier
-	(*WildsEntityState)(nil),       // 32: glimway.v1.WildsEntityState
-	(*WildsLoot)(nil),              // 33: glimway.v1.WildsLoot
-	(*WildsLantern)(nil),           // 34: glimway.v1.WildsLantern
-	(*structpb.Struct)(nil),        // 35: google.protobuf.Struct
-	(*wrapperspb.StringValue)(nil), // 36: google.protobuf.StringValue
-	(*structpb.Value)(nil),         // 37: google.protobuf.Value
+	nil,                            // 24: glimway.v1.ReportRequest.AbilityCastsEntry
+	nil,                            // 25: glimway.v1.ReportResult.AbilityCastsEntry
+	nil,                            // 26: glimway.v1.WildsClaimResult.MaterialsEntry
+	nil,                            // 27: glimway.v1.WildsLanternResult.MaterialsEntry
+	(*Where)(nil),                  // 28: glimway.v1.Where
+	(*OpHeader)(nil),               // 29: glimway.v1.OpHeader
+	(*Vitals)(nil),                 // 30: glimway.v1.Vitals
+	(*Place)(nil),                  // 31: glimway.v1.Place
+	(*HabiticaUser)(nil),           // 32: glimway.v1.HabiticaUser
+	(*ReportBarrier)(nil),          // 33: glimway.v1.ReportBarrier
+	(*WildsEntityState)(nil),       // 34: glimway.v1.WildsEntityState
+	(*WildsLoot)(nil),              // 35: glimway.v1.WildsLoot
+	(*WildsLantern)(nil),           // 36: glimway.v1.WildsLantern
+	(*structpb.Struct)(nil),        // 37: google.protobuf.Struct
+	(*wrapperspb.StringValue)(nil), // 38: google.protobuf.StringValue
+	(*structpb.Value)(nil),         // 39: google.protobuf.Value
 }
 var file_glimway_v1_operations_proto_depIdxs = []int32{
-	26, // 0: glimway.v1.ReportRequest.place:type_name -> glimway.v1.Where
-	27, // 1: glimway.v1.QuestStepRequest.op:type_name -> glimway.v1.OpHeader
-	26, // 2: glimway.v1.QuestStepRequest.where:type_name -> glimway.v1.Where
-	3,  // 3: glimway.v1.QuestStepResult.taken:type_name -> glimway.v1.ItemQty
-	3,  // 4: glimway.v1.QuestStepResult.given:type_name -> glimway.v1.ItemQty
-	27, // 5: glimway.v1.MarkRequest.op:type_name -> glimway.v1.OpHeader
-	26, // 6: glimway.v1.MarkRequest.where:type_name -> glimway.v1.Where
-	27, // 7: glimway.v1.TakePaperRequest.op:type_name -> glimway.v1.OpHeader
-	26, // 8: glimway.v1.TakePaperRequest.where:type_name -> glimway.v1.Where
-	27, // 9: glimway.v1.SettleEchoRequest.op:type_name -> glimway.v1.OpHeader
-	26, // 10: glimway.v1.SettleEchoRequest.where:type_name -> glimway.v1.Where
-	27, // 11: glimway.v1.FallRequest.op:type_name -> glimway.v1.OpHeader
-	26, // 12: glimway.v1.FallRequest.where:type_name -> glimway.v1.Where
-	28, // 13: glimway.v1.FallResult.vitals:type_name -> glimway.v1.Vitals
-	29, // 14: glimway.v1.FallResult.place:type_name -> glimway.v1.Place
-	30, // 15: glimway.v1.ProfileReport.raw:type_name -> glimway.v1.HabiticaUser
-	31, // 16: glimway.v1.ProfileReport.report:type_name -> glimway.v1.ReportBarrier
-	14, // 17: glimway.v1.ProfileResult.vitals_credit:type_name -> glimway.v1.VitalsCredit
-	27, // 18: glimway.v1.SpendRequest.op:type_name -> glimway.v1.OpHeader
-	26, // 19: glimway.v1.SpendRequest.where:type_name -> glimway.v1.Where
-	27, // 20: glimway.v1.WildsClaimRequest.op:type_name -> glimway.v1.OpHeader
-	26, // 21: glimway.v1.WildsClaimRequest.where:type_name -> glimway.v1.Where
-	32, // 22: glimway.v1.WildsClaimResult.entity:type_name -> glimway.v1.WildsEntityState
-	33, // 23: glimway.v1.WildsClaimResult.loot:type_name -> glimway.v1.WildsLoot
-	24, // 24: glimway.v1.WildsClaimResult.materials:type_name -> glimway.v1.WildsClaimResult.MaterialsEntry
-	27, // 25: glimway.v1.WildsLanternRequest.op:type_name -> glimway.v1.OpHeader
-	26, // 26: glimway.v1.WildsLanternRequest.where:type_name -> glimway.v1.Where
-	33, // 27: glimway.v1.WildsLanternResult.loot:type_name -> glimway.v1.WildsLoot
-	25, // 28: glimway.v1.WildsLanternResult.materials:type_name -> glimway.v1.WildsLanternResult.MaterialsEntry
-	34, // 29: glimway.v1.WildsLanternResult.lanterns:type_name -> glimway.v1.WildsLantern
-	35, // 30: glimway.v1.CommittedOperation.payload:type_name -> google.protobuf.Struct
-	36, // 31: glimway.v1.CommittedOperation.refused:type_name -> google.protobuf.StringValue
-	37, // 32: glimway.v1.CommittedOperation.result:type_name -> google.protobuf.Value
-	22, // 33: glimway.v1.OperationsResult.operation:type_name -> glimway.v1.CommittedOperation
-	34, // [34:34] is the sub-list for method output_type
-	34, // [34:34] is the sub-list for method input_type
-	34, // [34:34] is the sub-list for extension type_name
-	34, // [34:34] is the sub-list for extension extendee
-	0,  // [0:34] is the sub-list for field type_name
+	28, // 0: glimway.v1.ReportRequest.place:type_name -> glimway.v1.Where
+	24, // 1: glimway.v1.ReportRequest.ability_casts:type_name -> glimway.v1.ReportRequest.AbilityCastsEntry
+	25, // 2: glimway.v1.ReportResult.ability_casts:type_name -> glimway.v1.ReportResult.AbilityCastsEntry
+	29, // 3: glimway.v1.QuestStepRequest.op:type_name -> glimway.v1.OpHeader
+	28, // 4: glimway.v1.QuestStepRequest.where:type_name -> glimway.v1.Where
+	3,  // 5: glimway.v1.QuestStepResult.taken:type_name -> glimway.v1.ItemQty
+	3,  // 6: glimway.v1.QuestStepResult.given:type_name -> glimway.v1.ItemQty
+	29, // 7: glimway.v1.MarkRequest.op:type_name -> glimway.v1.OpHeader
+	28, // 8: glimway.v1.MarkRequest.where:type_name -> glimway.v1.Where
+	29, // 9: glimway.v1.TakePaperRequest.op:type_name -> glimway.v1.OpHeader
+	28, // 10: glimway.v1.TakePaperRequest.where:type_name -> glimway.v1.Where
+	29, // 11: glimway.v1.SettleEchoRequest.op:type_name -> glimway.v1.OpHeader
+	28, // 12: glimway.v1.SettleEchoRequest.where:type_name -> glimway.v1.Where
+	29, // 13: glimway.v1.FallRequest.op:type_name -> glimway.v1.OpHeader
+	28, // 14: glimway.v1.FallRequest.where:type_name -> glimway.v1.Where
+	30, // 15: glimway.v1.FallResult.vitals:type_name -> glimway.v1.Vitals
+	31, // 16: glimway.v1.FallResult.place:type_name -> glimway.v1.Place
+	32, // 17: glimway.v1.ProfileReport.raw:type_name -> glimway.v1.HabiticaUser
+	33, // 18: glimway.v1.ProfileReport.report:type_name -> glimway.v1.ReportBarrier
+	14, // 19: glimway.v1.ProfileResult.vitals_credit:type_name -> glimway.v1.VitalsCredit
+	29, // 20: glimway.v1.SpendRequest.op:type_name -> glimway.v1.OpHeader
+	28, // 21: glimway.v1.SpendRequest.where:type_name -> glimway.v1.Where
+	29, // 22: glimway.v1.WildsClaimRequest.op:type_name -> glimway.v1.OpHeader
+	28, // 23: glimway.v1.WildsClaimRequest.where:type_name -> glimway.v1.Where
+	34, // 24: glimway.v1.WildsClaimResult.entity:type_name -> glimway.v1.WildsEntityState
+	35, // 25: glimway.v1.WildsClaimResult.loot:type_name -> glimway.v1.WildsLoot
+	26, // 26: glimway.v1.WildsClaimResult.materials:type_name -> glimway.v1.WildsClaimResult.MaterialsEntry
+	29, // 27: glimway.v1.WildsLanternRequest.op:type_name -> glimway.v1.OpHeader
+	28, // 28: glimway.v1.WildsLanternRequest.where:type_name -> glimway.v1.Where
+	35, // 29: glimway.v1.WildsLanternResult.loot:type_name -> glimway.v1.WildsLoot
+	27, // 30: glimway.v1.WildsLanternResult.materials:type_name -> glimway.v1.WildsLanternResult.MaterialsEntry
+	36, // 31: glimway.v1.WildsLanternResult.lanterns:type_name -> glimway.v1.WildsLantern
+	37, // 32: glimway.v1.CommittedOperation.payload:type_name -> google.protobuf.Struct
+	38, // 33: glimway.v1.CommittedOperation.refused:type_name -> google.protobuf.StringValue
+	39, // 34: glimway.v1.CommittedOperation.result:type_name -> google.protobuf.Value
+	22, // 35: glimway.v1.OperationsResult.operation:type_name -> glimway.v1.CommittedOperation
+	36, // [36:36] is the sub-list for method output_type
+	36, // [36:36] is the sub-list for method input_type
+	36, // [36:36] is the sub-list for extension type_name
+	36, // [36:36] is the sub-list for extension extendee
+	0,  // [0:36] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_operations_proto_init() }
@@ -2017,7 +2059,7 @@ func file_glimway_v1_operations_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_glimway_v1_operations_proto_rawDesc), len(file_glimway_v1_operations_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   26,
+			NumMessages:   28,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

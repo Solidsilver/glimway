@@ -68,6 +68,10 @@ export const BANK = {
   'door-open': { files: ['door-open.mp3'], gain: 0.4, window: 0.5, world: true },
   'door-close': { files: ['door-close.mp3'], gain: 0.4, window: 0.5, world: true },
   pop: { synth: 'pop', gain: 1, jitter: 0.03 },
+  /** Fishing (crafts.md 5.5): the line going out, the float's dip, the fish landing. */
+  'fish-cast': { files: ['swing-1.mp3', 'swing-2.mp3'], gain: 0.22, jitter: 0.1, window: 0.3, world: true },
+  'fish-bite': { synth: 'pop', gain: 0.7, jitter: 0.05, window: 0.5, world: true },
+  'fish-splash': { files: ['roll.mp3'], gain: 0.3, jitter: 0.08, window: 0.3, world: true },
   settle: { synth: 'settle', gain: 1, window: 1, world: true },
 
   // Combat

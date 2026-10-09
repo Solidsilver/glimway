@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"glimway/content"
 	"glimway/server/internal/land"
@@ -21,7 +22,9 @@ func (x *rig) stand(id, world, room string, px, py float64) {
 		delete(h.peers, id)
 		return
 	}
-	h.peers[id] = &presencePeer{identity: presenceIdentity{ID: id, World: world}, area: room, pos: &presencePosition{X: px, Y: py}}
+	// A socket's peer carries its queue and cancellation (avatar changes and
+	// presence broadcasts enqueue on it).
+	h.peers[id] = &presencePeer{identity: presenceIdentity{ID: id, World: world}, account: &presenceAccount{}, ctx: context.Background(), cancel: func() {}, queue: make(chan []byte, 8), area: room, pos: &presencePosition{X: px, Y: py}}
 }
 func (x *rig) atTable(id, world string) {
 	t := content.HomeRules.GetCommons().GetSilasTable()
@@ -231,6 +234,80 @@ func TestHomes2DeedPrices(t *testing.T) {
 	if a.State.Embers != before-price {
 		t.Fatal("deed debit", a.State.Embers, before)
 	}
+}
+
+// A home good priced in embers *and* materials charges both (home_item.price
+// — the stable is the first such row), and a shortfall in either refuses the
+// buy with that currency's error, keeping neither.
+func TestHomes2BuyChargesEmbersAndMaterials(t *testing.T) {
+	x := newRig(t)
+	def, ok := content.HomeItemFor("stable")
+	if !ok || def.GetEmbers() <= 0 || len(def.GetMaterials()) == 0 {
+		t.Fatal("the stable is priced in both currencies", def)
+	}
+	tiers := content.HomeRules.GetTiers()
+	upgradeEmbers := int(tiers[1].GetEmbers()) + int(tiers[2].GetEmbers())
+
+	ac, a := x.ready("alice")
+	a = x.openWorkshop(ac, a)
+	h := x.home(ac)
+	m0 := x.exp("GET", fmt.Sprintf("/api/homestead/gate/%d", h.Gate), nil, ac, 200).Materials
+	e0 := a.State.Embers
+	buy := x.homeOpRefreshing(ac, &a, "buy", map[string]any{"itemDef": "stable"}, 200)
+	if buy.Result.ItemID == "" || buy.Result.Home == nil {
+		t.Fatal("no stable")
+	}
+	if a.State.Embers != e0-int(def.GetEmbers()) {
+		t.Fatal("stable embers", a.State.Embers, e0)
+	}
+	for m, n := range def.GetMaterials() {
+		if int(buy.Result.Materials[m]) != int(m0[m])-int(n) {
+			t.Fatal("stable materials", m, buy.Result.Materials[m], m0[m])
+		}
+	}
+
+	// Short of the materials: the purse is refused and kept.
+	bc, b := x.ready("bob")
+	x.fund(x.account("bob"), upgradeEmbers+int(def.GetEmbers()), 0)
+	for m, n := range tiers[2].GetMaterials() {
+		x.stack(x.account("bob"), m, "", int(n))
+	}
+	x.claimGate(bc, &b, 0)
+	x.homeOpRefreshing(bc, &b, "upgrade", map[string]any{"tier": 1}, 200)
+	x.homeOpRefreshing(bc, &b, "upgrade", map[string]any{"tier": 2}, 200)
+	if r := x.homeOpRefreshing(bc, &b, "buy", map[string]any{"itemDef": "stable"}, 409); r.Error.Code != "insufficient-materials" {
+		t.Fatal("stable without materials", r.Error.Code)
+	}
+	x.refresh(bc, &b)
+	if b.State.Embers != int(def.GetEmbers()) {
+		t.Fatal("a refused buy kept the purse", b.State.Embers)
+	}
+
+	// Short of the embers: the materials are refused and kept.
+	cc, c := x.ready("carol")
+	x.fund(x.account("carol"), upgradeEmbers, 0)
+	for m, n := range tiers[2].GetMaterials() {
+		x.stack(x.account("carol"), m, "", int(n))
+	}
+	for m, n := range def.GetMaterials() {
+		x.stack(x.account("carol"), m, "", int(n))
+	}
+	x.claimGate(cc, &c, 0)
+	x.homeOpRefreshing(cc, &c, "upgrade", map[string]any{"tier": 1}, 200)
+	x.homeOpRefreshing(cc, &c, "upgrade", map[string]any{"tier": 2}, 200)
+	if r := x.homeOpRefreshing(cc, &c, "buy", map[string]any{"itemDef": "stable"}, 409); r.Error.Code != "insufficient-embers" {
+		t.Fatal("stable without embers", r.Error.Code)
+	}
+	x.refresh(cc, &c)
+	m1 := x.exp("GET", "/api/homestead/gate/0", nil, cc, 200).Materials
+	for m, n := range def.GetMaterials() {
+		if int(m1[m]) != int(n) {
+			t.Fatal("a refused buy kept the materials", m, m1[m])
+		}
+	}
+	x.conserved(x.account("alice"))
+	x.conserved(x.account("bob"))
+	x.conserved(x.account("carol"))
 }
 
 func TestHomes2LeavingKeepsPackAndPersonalChest(t *testing.T) {

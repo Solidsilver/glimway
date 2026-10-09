@@ -109,6 +109,19 @@ func leave(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, now i
 	if _, err := tx.ExecContext(ctx, "DELETE FROM homestead_members WHERE account_id=?", s.AccountID); err != nil {
 		return err
 	}
+	// Their mounts come out of the stable's stalls with them: nobody can move
+	// a partner's mount, so a leaver's stalls would stand occupied for good
+	// (docs/design/crafts.md 3.1, lane B's rule). Emptying a stall refunds
+	// nothing.
+	if _, err := tx.ExecContext(ctx, "DELETE FROM homestead_stalls WHERE homestead_id=? AND owner_id=?", h.ID, s.AccountID); err != nil {
+		return err
+	}
+	// ...and the mount that is out with them goes home with them (3.3): no
+	// bay holds it from here on, and rejoining never brings it back out
+	// without a fresh Saddle up.
+	if _, err := tx.ExecContext(ctx, "UPDATE player_companions SET mount_out='',mount_home=NULL WHERE account_id=?", s.AccountID); err != nil {
+		return err
+	}
 	if _, err := tx.ExecContext(ctx, "INSERT INTO homestead_departures VALUES(?,?,?) ON CONFLICT(homestead_id,account_id) DO UPDATE SET left_at=excluded.left_at", h.ID, s.AccountID, now); err != nil {
 		return err
 	}
@@ -124,6 +137,21 @@ func leave(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, now i
 		}
 	}
 	return store.Credit(ctx, tx, s, 0, 0, "homestead-leave", h.ID, nil, now)
+}
+
+// leaverAvatar is a leaver's avatar once the leave is written (nil for a
+// guest or a hero without a Habitica profile): the choices read as gated
+// away and the mount that was out is home.
+func leaverAvatar(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (*presenceAvatarMsg, error) {
+	p := s.ImportedProfile
+	if s.ProfileSource != "habitica" || p == nil {
+		return nil, nil
+	}
+	c, err := store.CompanionsFor(ctx, tx, s.AccountID, s.WorldID, s.ProfileSource, p)
+	if err != nil {
+		return nil, err
+	}
+	return companionAvatar(c, *p), nil
 }
 
 // checkHomeRest requires the cottage on a gate named by your deed, or, before

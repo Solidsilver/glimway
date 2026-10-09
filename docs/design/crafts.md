@@ -107,6 +107,7 @@ moves like an animal now.
 - **Change** opens the pet picker: every pet you own on Habitica, grouped by species (Habitica's
   keys are `Species-Potion`, so `Fox-Golden` sits under Fox), with a search field and a row of
   species chips. The first entry is always **Habitica's current pet**, which is also the default.
+  *As built (0.5 playtest):* **No pet** comes right after it, for walking alone.
 - **At home** shows three spots; tapping one opens the same picker, with **Leave empty**.
 - **The stable** section appears once a stable stands (section 3). Without a homestead the tab
   shows your Habitica current pet and one line: *"Once you've a place of your own, you can choose
@@ -125,14 +126,17 @@ six.
 
 What the server stores (pets.md "Rules and data", trimmed to what 0.5 needs):
 
-- **Per account:** `follow_pet` (an owned pet key, or empty for Habitica's current pet) and
+- **Per account:** `follow_pet` (an owned pet key, empty for Habitica's current pet, or the
+  reserved `none` for No pet, which presence sends as no follower at all) and
   `yard_pets` (up to 3 owned keys, in slot order). Both are kept in `player_companions` and
   `yard_pets` (migration 030).
 - **Every key is checked when someone looks.** The server reads the account's owned list from its
   stored profile (the `profile` operation refreshes it at each sync). A key that's no longer owned
   falls back quietly: the follower to Habitica's current pet, a yard spot to empty. The stored row
   isn't rewritten until the player next changes it, so nothing needs a job and a pet that comes back
-  (a re-hatch) comes back to its place.
+  (a re-hatch) comes back to its place. *As built:* the next yard change writes the yard as it
+  reads then, so a lapsed pet's spot is cleared at that point; re-hatching after that means placing
+  it again.
 - **A homestead in this world gates the choices.** `follow_pet` and `yard_pets` hold while the
   account is on a deed in its current world. Without one (a fresh world, a deed left), the follower
   reads as Habitica's current pet and the yard is empty; the stored choice waits, unchanged, for
@@ -188,8 +192,11 @@ The follower's motion lives in `src/game/entities/avatar.ts` (`buildPetFollower`
 **Riding needs a stable.** Pressing M with no mount out says: *"Your mount needs somewhere to stand
 at home first. A stable, maybe."* The "What's new" card says riding moved (6.6).
 
-**Building it.** After the Workshop (tier 2), the homestead's build list offers **the stable**: 30
-embers, timber 16, stone 8, fiber 6. It's bought and placed like any outdoor piece, in placement
+**Building it.** After the Workshop (tier 2), the homestead's build list offers **the stable**
+(*as built:* Silas's Yard lists it under **Buildings**, a section of its own after the cottage and
+workshop, from content's `building` flag; locked until the Workshop stands): 30
+embers, timber 16, stone 8, fiber 6 (a home-item row's price may name embers, materials, or both;
+the stable names both, as the Workshop tier does). It's bought and placed like any outdoor piece, in placement
 mode, on cleared, lit ground. It comes with stall 1: a small tack room on its west end and one bay.
 
 **Stalling a mount.** Walk up to an empty stall and the action button says **Choose a mount**; it
@@ -270,6 +277,7 @@ mount_key, owner_id)`.
 | Stalls | `stall` and `HomeView.stalls` (index, mount, owner, owner's name, out) | The stable scene: each bay draws its back layer, the Habitica mount (body and head layers, no rider) and the front rail, so the mount stands inside |
 | Out and home | `mount-out`, `mount-home`, `PlayerState.companions.mount_out` | `toggleRide` (`avatar.ts:188`) reads `mount_out` instead of Habitica's `selectedMount`; the lead rope drawn in code from the hand to the mount's head; the walk-off on Go home is drawing only |
 | Presence | `PresenceAvatar.selected_mount` carries the mount that's out (empty when none); `PresenceAvatarChange` after `mount-out` and `mount-home`. `PresencePosition.pose` carries `riding` | Remote players draw a ridden mount (today's mount layers) or a led one behind them, from `selected_mount` and `pose` |
+| *As built (0.5 playtest)* | The `PresenceAvatarChange` after `mount-out`, `mount-home`, `stall` and a new lease that sends a mount home also goes to the stable's land (`home:<gate>`), wherever the owner is | Whoever stands on that land reads the homestead again when a member's avatar changes, so the bay empties and fills; your own bay follows your companions at once, and stays empty while the mount walks home |
 
 The hero's speed is unchanged: `hero.ts:229` reads `riding ? 155 : PLAYER_SPEED`; lane E makes 155 a
 named constant beside `PLAYER_SPEED`.
@@ -329,12 +337,16 @@ the move, from which level, what it costs, how often it can be used, and its num
 
 ### 4.2 Who has what: the level mark and the class
 
-- **The level mark already exists.** `sync_baselines.verified_high_level` is the highest level a
-  verified login has seen; today only rebirth detection reads it (`rules.IsRebirth`). 0.5 makes it
-  magic's mark:
-  - the `profile` operation raises it too (with `MAX`), once the synced profile has passed today's
-    plausibility checks;
-  - it goes on `PlayerState` as `magic.level_mark`.
+- **The level mark** is `sync_baselines.level_mark` (migration 031, backfilled from
+  `verified_high_level`). *As built:* it is its own column so that `verified_high_level` stays the
+  sign-in-only history rebirth detection trusts (`rules.IsRebirth`); raising that one from syncs
+  would let client-reported levels feed rebirth checks.
+  - sign-in, world creation and the `profile` operation raise it (with `MAX`), the last once the
+    synced profile has passed today's plausibility checks;
+  - it goes on `PlayerState` as `magic.level_mark`;
+  - unlocks read `max(level_mark, the stored profile's level)`, on the server and the client alike.
+  - Trust: a sync that passes the plausibility checks raises the mark for good. Under the
+    friends-on-invites model that is accepted; it only unlocks moves.
 - **The class mark** (new, `sync_baselines.class_mark`) is the last class a sync saw. A hero has
   their craft when the profile has a class, or when it has none but the level mark is 10 or more
   and a class mark exists (a rebirth; section 11, question 4). A hero who never had a class has
@@ -421,10 +433,14 @@ Two additions to `glimway.v2` presence (`proto/glimway/v2/presence.proto`):
   room with `account_id` filled. Anything else is dropped, like an emote over its cooldown.
 - **Ward credit.** For a `ward-light`, the hub schedules three pulse checks (`time.AfterFunc` at 1,
   2.5 and 4 s). At each one it takes the room members whose **last known position** is inside the
-  circle, other than the caster, and adds one pulse of the caster's heal to each one's credit. The
-  credit is held in memory per account for 60 seconds, and the next accepted report from that
-  account may raise HP by up to it (and uses it up). A restart loses unspent credit, which costs at
-  most one ward's heal.
+  circle, other than the caster, and adds one pulse of the caster's heal to each one's credit. Each
+  pulse is held in memory for 60 seconds. An accepted report may raise HP by up to the credit
+  waiting; after it commits, it spends only what the HP rise needed (oldest pulses first) and the
+  rest waits for the next report. A restart loses unspent pulses: with 10-second reports, about one
+  ward's heal.
+- *As built,* the hub also drops a cast sent before joining an area or placed further than the
+  move's reach (plus a tile) from the sender's last position. Its cooldown allows for network
+  jitter (a tenth of the cooldown, between 150 and 250 ms), and it survives a reconnect.
 
 On a friend's screen the pulses heal locally at the same moments (from the relayed event), so their
 HP bar rises when they see the pulse, and their next report is allowed it.
@@ -465,7 +481,8 @@ In the Quiet the rest of the pond keeps its ice and frost-glass (`pond-ice` gath
 3. About ten seconds later in healthy water (thirty when it's low, up to a minute when it's very
    low) the float dips with a soft sound and the button says **Reel**.
 4. One press: a short landing, the roach arcs out of the water, and two big buttons ask **Keep**
-   or **Let it go**.
+   or **Let it go**. *As built (0.5 playtest):* the prompt names both keys, Keep on E and Let it go
+   on Q.
 5. Keep, and it's in your pack. Let it go, and it's back in the pond; nothing is paid.
 
 There's no failure window: once the float dips, the fish waits for you. Walking more than a tile
@@ -479,7 +496,7 @@ or let it rest."* An empty pond can't be cast into (`water-still`); there's no c
 
 | Item | Kind | Numbers | Where it comes from |
 |---|---|---|---|
-| **Willow rod** (`willow-rod`) | tool, grade `cheap`, action `fish` | 20 uses; one use per **kept** fish. Release and a cancelled cast don't wear it | Finn gives the first (5.8); Finn sells another, 2 embers, wherever he is; the bench makes one (timber 1, fiber 2) for anyone with a Workshop |
+| **Willow rod** (`willow-rod`) | tool, grade `cheap`, action `fish` | 30 uses; one use per **kept** fish. Release and a cancelled cast don't wear it | Finn gives the first (5.8); Finn sells another, 2 embers, wherever he is; the bench makes one (timber 1, fiber 2) for anyone with a Workshop |
 | **Mill roach** (`mill-roach`) | material, Supplies tab | Stacks; doesn't rot; giftable and mailable | The mill pond |
 | **Miller's fry** (`millers-fry`) | consumable, marked | Restores 18 HP and 6 mana. Refused at 0 HP, like all food | Hearth recipe: 1 mill roach, 1 flour → 1 fry |
 | **Recipe card: Miller's fry** (`recipe-card-millers-fry`) | paper | Hazel's card; the hearth recipe needs it held | Hazel, at the end of the quest (5.8) |
@@ -536,9 +553,9 @@ The numbers are fishing.md's proposals, for a medium water (24–63 tiles):
       "id": "water:village:mill-pond", "area": "village", "habitat": "still",
       "tiles": 27, "capacity": 12, "recoverySeconds": 600,
       "banks": [
-        { "id": "north", "tiles": [[34,18],[35,18],[36,18],[37,18],[38,18]], "facing": "south", "closedIn": ["Quiet"] },
-        { "id": "east", "tiles": [[39,19],[39,20],[39,21],[39,22]], "facing": "west", "closedIn": ["Quiet"] },
-        { "id": "race", "tiles": [[32,19]], "facing": "south", "closedIn": [] }
+        { "id": "north", "tiles": [{ "tx": 34, "ty": 18 }, { "tx": 35, "ty": 18 }, { "tx": 36, "ty": 18 }, { "tx": 37, "ty": 18 }, { "tx": 38, "ty": 18 }], "facing": "south", "closedIn": ["Quiet"] },
+        { "id": "east", "tiles": [{ "tx": 39, "ty": 19 }, { "tx": 39, "ty": 20 }, { "tx": 39, "ty": 21 }, { "tx": 39, "ty": 22 }], "facing": "west", "closedIn": ["Quiet"] },
+        { "id": "race", "tiles": [{ "tx": 32, "ty": 19 }], "facing": "south", "closedIn": [] }
       ],
       "species": [ { "item": "mill-roach", "weight": 1 } ]
     }
@@ -546,9 +563,10 @@ The numbers are fishing.md's proposals, for a medium water (24–63 tiles):
 }
 ```
 
-The "still" band (no fish) has no row: an empty water refuses. Field rules are protovalidate
-constraints (ids, positive numbers, `closedIn` naming a mark, at least one bank and one species,
-items that exist is a cross-file check in code). Text lines live here because the server sends
+The "still" band (no fish) has no row: an empty water refuses. Bank tiles are `{tx,ty}` objects —
+the file is read as ProtoJSON, and a tuple pair does not decode into a tile message. Field rules
+are protovalidate constraints (ids, positive numbers, `closedIn` naming a mark, at least one bank
+and one species, items that exist and the last band flooring at 0% are cross-file checks in code). Text lines live here because the server sends
 the band id and the client shows the line; the server never needs the words, but one file keeps
 the water's numbers and voice together. (If the lane prefers, the lines move to
 `src/content/fishing.ts` and the file keeps ids only.)
@@ -1070,6 +1088,6 @@ the earlier docs decided is taken as decided.
    outnumber the people at the bank.
 
 **Tuning, not decisions** (playtest them, change data): capacity 12 and one fish per 10 minutes;
-the band thresholds and waits; the rod's 20 uses; the fry's 18 HP and 6 mana; the stable's 30
+the band thresholds and waits; the rod's 30 uses; the fry's 18 HP and 6 mana; the stable's 30
 embers and materials and the stall growth; the four moves' costs, cooldowns and sizes; the yard
 pets' segment lengths.

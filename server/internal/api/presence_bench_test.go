@@ -13,7 +13,7 @@ import (
 // accounting and drain. No network latency obscures time under the hub lock.
 func BenchmarkPresenceBroadcast(b *testing.B) {
 	b.Run("Binary", func(b *testing.B) {
-		h := newPresenceHub(nil)
+		h := newPresenceHub(nil, nil)
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 		peers := make([]*presencePeer, 32)

@@ -213,8 +213,11 @@ type Vitals struct {
 	VitalsSetVersion float64                `protobuf:"fixed64,8,opt,name=vitals_set_version,json=vitalsSetVersion,proto3" json:"vitals_set_version,omitempty"` // Unix seconds. Cast readiness may be fractional.
 	VitalsAt         float64                `protobuf:"fixed64,9,opt,name=vitals_at,json=vitalsAt,proto3" json:"vitals_at,omitempty"`
 	CastReadyAt      float64                `protobuf:"fixed64,10,opt,name=cast_ready_at,json=castReadyAt,proto3" json:"cast_ready_at,omitempty"`
-	unknownFields    protoimpl.UnknownFields
-	sizeCache        protoimpl.SizeCache
+	// Per-ability cooldown readiness (design 4.4), keyed by combat ability
+	// id; the signature's own budget stays on cast_ready_at.
+	AbilityReadyAt map[string]float64 `protobuf:"bytes,11,rep,name=ability_ready_at,json=abilityReadyAt,proto3" json:"ability_ready_at,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Vitals) Reset() {
@@ -317,6 +320,13 @@ func (x *Vitals) GetCastReadyAt() float64 {
 	return 0
 }
 
+func (x *Vitals) GetAbilityReadyAt() map[string]float64 {
+	if x != nil {
+		return x.AbilityReadyAt
+	}
+	return nil
+}
+
 // outer_epoch: the outer Wilds epoch this player's place was last recorded in
 // (” before any); a place left in an ended epoch is moved to the entrance.
 type Place struct {
@@ -414,7 +424,7 @@ const file_glimway_v1_op_proto_rawDesc = "" +
 	"\x05Where\x12\x12\n" +
 	"\x04area\x18\x01 \x01(\tR\x04area\x12\f\n" +
 	"\x01x\x18\x02 \x01(\x01R\x01x\x12\f\n" +
-	"\x01y\x18\x03 \x01(\x01R\x01y\"\xbe\x02\n" +
+	"\x01y\x18\x03 \x01(\x01R\x01y\"\xd3\x03\n" +
 	"\x06Vitals\x12\x0e\n" +
 	"\x02hp\x18\x01 \x01(\x01R\x02hp\x12\x12\n" +
 	"\x04mana\x18\x02 \x01(\x01R\x04mana\x12\x15\n" +
@@ -427,7 +437,11 @@ const file_glimway_v1_op_proto_rawDesc = "" +
 	"\x12vitals_set_version\x18\b \x01(\x01R\x10vitalsSetVersion\x12\x1b\n" +
 	"\tvitals_at\x18\t \x01(\x01R\bvitalsAt\x12\"\n" +
 	"\rcast_ready_at\x18\n" +
-	" \x01(\x01R\vcastReadyAt\"\x84\x01\n" +
+	" \x01(\x01R\vcastReadyAt\x12P\n" +
+	"\x10ability_ready_at\x18\v \x03(\v2&.glimway.v1.Vitals.AbilityReadyAtEntryR\x0eabilityReadyAt\x1aA\n" +
+	"\x13AbilityReadyAtEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\x84\x01\n" +
 	"\x05Place\x12\x12\n" +
 	"\x04area\x18\x01 \x01(\tR\x04area\x12\f\n" +
 	"\x01x\x18\x02 \x01(\x01R\x01x\x12\f\n" +
@@ -448,21 +462,23 @@ func file_glimway_v1_op_proto_rawDescGZIP() []byte {
 	return file_glimway_v1_op_proto_rawDescData
 }
 
-var file_glimway_v1_op_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_glimway_v1_op_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_glimway_v1_op_proto_goTypes = []any{
 	(*ReportBarrier)(nil), // 0: glimway.v1.ReportBarrier
 	(*OpHeader)(nil),      // 1: glimway.v1.OpHeader
 	(*Where)(nil),         // 2: glimway.v1.Where
 	(*Vitals)(nil),        // 3: glimway.v1.Vitals
 	(*Place)(nil),         // 4: glimway.v1.Place
+	nil,                   // 5: glimway.v1.Vitals.AbilityReadyAtEntry
 }
 var file_glimway_v1_op_proto_depIdxs = []int32{
 	0, // 0: glimway.v1.OpHeader.report:type_name -> glimway.v1.ReportBarrier
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	5, // 1: glimway.v1.Vitals.ability_ready_at:type_name -> glimway.v1.Vitals.AbilityReadyAtEntry
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_op_proto_init() }
@@ -476,7 +492,7 @@ func file_glimway_v1_op_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_glimway_v1_op_proto_rawDesc), len(file_glimway_v1_op_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

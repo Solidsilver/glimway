@@ -36,6 +36,7 @@ import {
   type QuestStepDef,
 } from '../../lib/quests.ts';
 import type { Dialogue, DialogueChoice } from '../world.ts';
+import { A_LINE_IN_THE_RACE_TALKS } from './a-line-in-the-race.ts';
 import { SEAT_BY_THE_LAMP_TALKS, READING_LAMP_LIT } from './seat-by-the-lamp.ts';
 import { SET_TO_RISE_TALKS, SPONGE_BOWL } from './set-to-rise.ts';
 import { SIGNPOST_TALKS } from './signpost.ts';
@@ -56,6 +57,7 @@ const TALKS: Readonly<Record<string, QuestTalks>> = {
   'stuck-hoist': STUCK_HOIST_TALKS,
   'seat-by-the-lamp': SEAT_BY_THE_LAMP_TALKS,
   'your-own-day': YOUR_OWN_DAY_TALKS,
+  'a-line-in-the-race': A_LINE_IN_THE_RACE_TALKS,
 };
 
 /** A choice's action that takes a step: `quest:<quest>:<step>`. */
@@ -143,9 +145,16 @@ function stepDialogue(quest: QuestDef, step: QuestStepDef, talk: StepTalk, ctx: 
   return { speaker: talk.speaker, lines, key, event: ref, ...(talk.choices ? { choices: talk.choices.map((c) => ({ ...c, reply: c.reply ? [...c.reply] : undefined })) } : {}) };
 }
 
-/** The first next step of this kind with words for `id`, as a dialogue (null: none wants it). */
+/**
+ * The first next step of this kind with words for `id`, as a dialogue (null:
+ * none wants it). A quest already under way speaks before another's start,
+ * so a step you're mid-way through (a roach for Hazel) is never hidden
+ * behind an offer you haven't taken (her sponge).
+ */
 function triggerTalk(kind: 'talk' | 'use', id: string, ctx: QuestTalkContext): Dialogue | null {
-  for (const { quest, step } of stepsBy(kind, id, ctx.quests, ctx.needs)) {
+  const steps = stepsBy(kind, id, ctx.quests, ctx.needs);
+  const started = (q: QuestDef) => ctx.quests[q.id] !== undefined;
+  for (const { quest, step } of [...steps.filter((s) => started(s.quest)), ...steps.filter((s) => !started(s.quest))]) {
     const talk = talkFor(quest, step);
     if (!talk) continue;
     const d = stepDialogue(quest, step, talk, ctx);

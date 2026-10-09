@@ -107,7 +107,24 @@ func newRig(t *testing.T) *rig {
 		if p.Class != nil {
 			class = *p.Class
 		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": map[string]any{"_id": id, "party": map[string]any{"_id": p.PartyID}, "profile": map[string]any{"name": p.Name}, "flags": map[string]any{"classSelected": p.Class != nil}, "stats": map[string]any{"lvl": p.Level, "exp": p.Exp, "hp": p.HP, "mp": p.MP, "str": 0, "int": 0, "con": 0, "per": 0, "class": class}, "apiToken": r.Header.Get("X-Api-Key"), "items": map[string]any{"gear": map[string]any{"equipped": map[string]any{"apiToken": secret}}}}})
+		// The owned lists travel the same way Habitica's do (crafts.md 2.2):
+		// pets as feed counts, mounts as true.
+		items := map[string]any{"gear": map[string]any{"equipped": map[string]any{"apiToken": secret}}}
+		pets, mounts := map[string]any{}, map[string]any{}
+		for _, key := range p.Pets {
+			pets[key] = 1
+		}
+		for _, key := range p.Mounts {
+			mounts[key] = true
+		}
+		items["pets"], items["mounts"] = pets, mounts
+		if p.SelectedPet != nil {
+			items["currentPet"] = *p.SelectedPet
+		}
+		if p.SelectedMount != nil {
+			items["currentMount"] = *p.SelectedMount
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": map[string]any{"_id": id, "party": map[string]any{"_id": p.PartyID}, "profile": map[string]any{"name": p.Name}, "flags": map[string]any{"classSelected": p.Class != nil}, "stats": map[string]any{"lvl": p.Level, "exp": p.Exp, "hp": p.HP, "mp": p.MP, "str": 0, "int": 0, "con": 0, "per": 0, "class": class}, "apiToken": r.Header.Get("X-Api-Key"), "items": items}})
 	}))
 	x.api = New(x.db, habitica.New(x.upstream.URL, "test-creator-glimway"), Config{SecureCookie: true, Logger: log.New(&x.logs, "", 0), Now: func() time.Time { return time.Unix(x.now.Load(), 0) }})
 	t.Cleanup(func() { x.upstream.Close(); x.db.Close() })
@@ -318,7 +335,7 @@ func (x *rig) rawHTTP(method, path string, body any, cookie *http.Cookie) *httpt
 		}
 	}
 	r := httptest.NewRequest(method, path, bytes.NewReader(b))
-	r.Header.Set("X-Glimway-Contract", "4")
+	r.Header.Set("X-Glimway-Contract", "5")
 	r.Header.Set("Content-Type", "application/json")
 	if cookie != nil {
 		r.AddCookie(cookie)

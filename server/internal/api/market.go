@@ -53,7 +53,19 @@ func (a *Server) marketBuy(ctx context.Context, tx *sql.Tx, s *store.Snapshot, r
 	if err := debitEmbers(ctx, tx, s, int(good.GetEmbers()), "market-buy", ref, now); err != nil {
 		return err
 	}
-	if err := packPut(ctx, tx, s.AccountID, good.Item, []makerQty{{Maker: "", Qty: int(good.GetQty())}}, "market-buy", ref, now); err != nil {
+	// A seller hands over stacks, or one instance at a time (the willow rod
+	// Finn sells): a tool at full condition, as the bench makes one. A
+	// bought thing carries no maker's mark.
+	if def, exists := content.ItemFor(good.Item); exists && content.ItemInstanced(def) {
+		for i := 0; i < int(good.GetQty()); i++ {
+			if _, err := newInstance(ctx, tx, def, instanceAt{"pack", s.AccountID}, "", -1, now); err != nil {
+				return err
+			}
+		}
+		if err := currency(ctx, tx, s.AccountID, content.StackCurrency(good.Item), int(good.GetQty()), "market-buy", ref, now); err != nil {
+			return err
+		}
+	} else if err := packPut(ctx, tx, s.AccountID, good.Item, []makerQty{{Maker: "", Qty: int(good.GetQty())}}, "market-buy", ref, now); err != nil {
 		return err
 	}
 	out.Bought = &contract.Bought{Seller: seller.GetId(), ItemDef: good.Item, Qty: int32(int(good.GetQty())), Embers: int32(int(good.GetEmbers()))}

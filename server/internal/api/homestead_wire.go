@@ -182,7 +182,18 @@ func homeInstanceProto(v homeInstance) *contract.HomeInstance {
 	if v.Name != nil {
 		out.Name = wrapperspb.String(*v.Name)
 	}
+	if v.Stalls != nil {
+		out.Stalls = wrapperspb.Int32(int32(*v.Stalls))
+	}
 	return out
+}
+
+func stallProto(v stallView) *contract.Stall {
+	return &contract.Stall{Stall: int32(v.Stall), Mount: v.Mount, OwnerId: v.OwnerID, OwnerName: v.OwnerName, Out: v.Out}
+}
+
+func yardPetProto(v yardPetView) *contract.YardPet {
+	return &contract.YardPet{OwnerId: v.OwnerID, Pet: v.Pet, Slot: int32(v.Slot)}
 }
 
 func homePlantProto(p homePlantView) *contract.HomePlant {
@@ -218,6 +229,14 @@ func homeViewProto(h homeView) *contract.HomeView {
 	out.Items = make([]*contract.HomeInstance, 0, len(h.Items))
 	for _, i := range h.Items {
 		out.Items = append(out.Items, homeInstanceProto(i))
+	}
+	out.Stalls = make([]*contract.Stall, 0, len(h.Stalls))
+	for _, v := range h.Stalls {
+		out.Stalls = append(out.Stalls, stallProto(v))
+	}
+	out.YardPets = make([]*contract.YardPet, 0, len(h.YardPets))
+	for _, v := range h.YardPets {
+		out.YardPets = append(out.YardPets, yardPetProto(v))
 	}
 	return out
 }

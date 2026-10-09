@@ -20,7 +20,8 @@
  */
 import { knownRoom } from './rooms.ts';
 import { decodePresence, encodePresence, PRESENCE_PROTOCOL } from './presence-codec.ts';
-import { PRESENCE, PRESENCE_CLOSE, type PresenceClientMessage, type PresencePlayer, type PresencePosition, type PresenceServerMessage } from './presence.ts';
+import { abilityFor } from './abilities.ts';
+import { PRESENCE, PRESENCE_CLOSE, type PresenceAvatar, type PresenceClientMessage, type PresencePlayer, type PresencePosition, type PresenceServerMessage } from './presence.ts';
 
 /** The WebSocket surface the client uses (the browser's WebSocket fits). */
 export interface SocketLike {
@@ -67,10 +68,14 @@ export interface PresenceHandlers {
   leave?(accountId: string): void;
   pos?(accountId: string, pos: PresencePosition): void;
   emote?(accountId: string, id: string): void;
+  /** Someone in the room cast a move (the hub checked it against the table and their marks). */
+  ability?(accountId: string, cast: { ability: string; x: number; y: number }): void;
   /** Someone standing by you handed you something (the server says who and what). */
   gift?(gift: { fromName: string; kind: string; itemDef: string; qty: number }): void;
   /** Someone standing near you reached a story beat (the server says who and which). */
   witness?(w: { beat: string; accountId: string; name: string }): void;
+  /** Someone's look changed: their follower, or the mount that's out (crafts.md 2.4, 3.4). */
+  avatarChange?(accountId: string, avatar: PresenceAvatar): void;
 }
 
 export interface Timers {
@@ -190,6 +195,7 @@ export class PresenceClient {
   private posTimer: unknown = null;
   private stopTimer: unknown = null;
   private lastEmoteAt = -Infinity;
+  private readonly lastAbilityAt = new Map<string, number>();
   private lastSentAt = 0;
   private heartbeatTimer: unknown = null;
   private readonly timers: Timers;
@@ -279,10 +285,11 @@ export class PresenceClient {
       y: Math.round(pos.y),
       facing: normalFacing(pos.facing),
       moving: pos.moving,
+      ...(pos.pose ? { pose: pos.pose } : {}),
     };
     if (!sample.moving && this.lastPos && !this.lastPos.moving && !this.pendingPos) {
-      // Already told them we stopped; only a new spot is worth a message.
-      if (sample.x === this.lastPos.x && sample.y === this.lastPos.y) return;
+      // Already told them we stopped; only a new spot (or a new pose) is worth a message.
+      if (sample.x === this.lastPos.x && sample.y === this.lastPos.y && sample.pose === this.lastPos.pose) return;
     }
     this.pendingPos = sample;
     this.flushPos();
@@ -296,6 +303,22 @@ export class PresenceClient {
     if (now - this.lastEmoteAt < PRESENCE.emoteCooldownMs) return false;
     this.lastEmoteAt = now;
     this.send({ type: 'emote', id });
+    return true;
+  }
+
+  /**
+   * Tell the room about a move just cast (crafts.md 4.5), at the hero's
+   * feet (world px). The hub keeps its own per-move cooldown and drops what
+   * it doesn't allow; this keeps the same one so nothing is sent to be
+   * dropped. Returns false when it wasn't sent.
+   */
+  ability(id: string, x: number, y: number): boolean {
+    const a = abilityFor(id);
+    if (!a || !this.ready || !this.sentArea || !Number.isFinite(x) || !Number.isFinite(y)) return false;
+    const now = this.timers.now();
+    if (now - (this.lastAbilityAt.get(id) ?? -Infinity) < a.cooldownSeconds * 1000) return false;
+    this.lastAbilityAt.set(id, now);
+    this.send({ type: 'ability', ability: id, x, y });
     return true;
   }
 
@@ -411,10 +434,17 @@ export class PresenceClient {
           y: m.y,
           facing: normalFacing(m.facing ?? { x: 0, y: 1 }),
           moving: m.moving === true,
+          ...(m.pose ? { pose: m.pose } : {}),
         });
+        break;
+      case 'avatarChange':
+        this.handlers.avatarChange?.(m.accountId, m.avatar);
         break;
       case 'emote':
         if (typeof m.accountId === 'string' && PRESENCE.emotes.includes(m.id)) this.handlers.emote?.(m.accountId, m.id);
+        break;
+      case 'ability':
+        if (typeof m.accountId === 'string' && abilityFor(m.ability) && Number.isFinite(m.x) && Number.isFinite(m.y)) this.handlers.ability?.(m.accountId, { ability: m.ability, x: m.x, y: m.y });
         break;
       case 'gift':
         if (typeof m.fromName === 'string' && typeof m.itemDef === 'string' && typeof m.kind === 'string' && Number.isInteger(m.qty) && m.qty > 0) {
@@ -483,7 +513,7 @@ export class PresenceClient {
   private sendPos(p: PresencePosition): void {
     this.lastPosAt = this.timers.now();
     this.lastPos = p;
-    this.send({ type: 'pos', x: p.x, y: p.y, facing: p.facing, moving: p.moving });
+    this.send({ type: 'pos', x: p.x, y: p.y, facing: p.facing, moving: p.moving, ...(p.pose ? { pose: p.pose } : {}) });
   }
 
   private armHeartbeat(): void {

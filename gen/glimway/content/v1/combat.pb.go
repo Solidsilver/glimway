@@ -24,7 +24,9 @@ const (
 
 // Shared combat tuning (docs/m3-implementation.md): the signature
 // ability's cooldown (fixed at one second — the contract both runtimes
-// assume), one row per Habitica class and the heal formula.
+// assume), one row per Habitica class and the heal formula. The signature's
+// mana cost moved to the ability table (design 4.1: each class's cast cost
+// is its signature's `mana`).
 // content/combat.json.
 type Combat struct {
 	state                    protoimpl.MessageState  `protogen:"open.v1"`
@@ -91,7 +93,6 @@ func (x *Combat) GetHeal() *CombatHeal {
 type CombatClass struct {
 	state                      protoimpl.MessageState `protogen:"open.v1"`
 	BasicAttackCooldownSeconds float64                `protobuf:"fixed64,1,opt,name=basic_attack_cooldown_seconds,json=basicAttackCooldownSeconds,proto3" json:"basic_attack_cooldown_seconds,omitempty"`
-	CastCost                   float64                `protobuf:"fixed64,2,opt,name=cast_cost,json=castCost,proto3" json:"cast_cost,omitempty"`
 	unknownFields              protoimpl.UnknownFields
 	sizeCache                  protoimpl.SizeCache
 }
@@ -129,13 +130,6 @@ func (*CombatClass) Descriptor() ([]byte, []int) {
 func (x *CombatClass) GetBasicAttackCooldownSeconds() float64 {
 	if x != nil {
 		return x.BasicAttackCooldownSeconds
-	}
-	return 0
-}
-
-func (x *CombatClass) GetCastCost() float64 {
-	if x != nil {
-		return x.CastCost
 	}
 	return 0
 }
@@ -214,18 +208,17 @@ var File_glimway_content_v1_combat_proto protoreflect.FileDescriptor
 
 const file_glimway_content_v1_combat_proto_rawDesc = "" +
 	"\n" +
-	"\x1fglimway/content/v1/combat.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\xcc\x04\n" +
+	"\x1fglimway/content/v1/combat.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\xaa\x04\n" +
 	"\x06Combat\x12L\n" +
 	"\x1asignature_cooldown_seconds\x18\x01 \x01(\x01B\x0e\xbaH\v\x12\t\t\x00\x00\x00\x00\x00\x00\xf0?R\x18signatureCooldownSeconds\x12K\n" +
 	"\aclasses\x18\x02 \x03(\v2'.glimway.content.v1.Combat.ClassesEntryB\b\xbaH\x05\x9a\x01\x02\b\x01R\aclasses\x12:\n" +
 	"\x04heal\x18\x03 \x01(\v2\x1e.glimway.content.v1.CombatHealB\x06\xbaH\x03\xc8\x01\x01R\x04heal\x1a[\n" +
 	"\fClassesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x125\n" +
-	"\x05value\x18\x02 \x01(\v2\x1f.glimway.content.v1.CombatClassR\x05value:\x028\x01:\x8d\x02\xbaH\x89\x02\x1a\x86\x02\n" +
-	"\x0ecombat.classes\x12<the four classes are all present, each with positive numbers\x1a\xb5\x01size(this.classes) == 4 && [\"warrior\", \"mage\", \"rogue\", \"healer\"].all(id, id in this.classes && this.classes[id].basic_attack_cooldown_seconds > 0 && this.classes[id].cast_cost > 0)\"\x8d\x01\n" +
+	"\x05value\x18\x02 \x01(\v2\x1f.glimway.content.v1.CombatClassR\x05value:\x028\x01:\xeb\x01\xbaH\xe7\x01\x1a\xe4\x01\n" +
+	"\x0ecombat.classes\x12<the four classes are all present, each with positive numbers\x1a\x93\x01size(this.classes) == 4 && [\"warrior\", \"mage\", \"rogue\", \"healer\"].all(id, id in this.classes && this.classes[id].basic_attack_cooldown_seconds > 0)\"`\n" +
 	"\vCombatClass\x12Q\n" +
-	"\x1dbasic_attack_cooldown_seconds\x18\x01 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x1abasicAttackCooldownSeconds\x12+\n" +
-	"\tcast_cost\x18\x02 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\bcastCost\"\xbf\x01\n" +
+	"\x1dbasic_attack_cooldown_seconds\x18\x01 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x1abasicAttackCooldownSeconds\"\xbf\x01\n" +
 	"\n" +
 	"CombatHeal\x12\"\n" +
 	"\x04base\x18\x01 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x04base\x123\n" +

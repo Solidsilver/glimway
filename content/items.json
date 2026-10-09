@@ -1115,6 +1115,52 @@
       "kind": "material",
       "icon": "stave-bucket",
       "blurb": "Fresh water drawn from the well with a stave bucket."
+    },
+    {
+      "id": "willow-rod",
+      "name": "Willow rod",
+      "tab": "tools",
+      "kind": "tool",
+      "grade": "cheap",
+      "uses": 30,
+      "actions": [
+        "fish"
+      ],
+      "marked": true,
+      "blurb": "A plain willow rod with a cork grip and a wound line. One use per kept fish."
+    },
+    {
+      "id": "mill-roach",
+      "name": "Mill roach",
+      "tab": "supplies",
+      "kind": "material",
+      "blurb": "Silver with red fins. Comes up to the wheel for the meal dust."
+    },
+    {
+      "id": "millers-fry",
+      "name": "Miller's fry",
+      "tab": "supplies",
+      "kind": "consumable",
+      "marked": true,
+      "use": [
+        {
+          "type": "restore-hp",
+          "amount": 18
+        },
+        {
+          "type": "restore-mana",
+          "amount": 6
+        }
+      ],
+      "blurb": "Two small floured fish in a pan, a sprig on top. Flour, a hot pan, and don't fuss it."
+    },
+    {
+      "id": "recipe-card-millers-fry",
+      "name": "Recipe card: Miller's fry",
+      "tab": "papers",
+      "kind": "paper",
+      "marked": true,
+      "blurb": "A flour-dusted bakery card from Hazel, checked against a roach she kept. One mill roach and a scoop of flour."
     }
   ],
   "pickups": [
@@ -1187,6 +1233,13 @@
           "embers": 1,
           "label": "Buy a sack of flour · 1 ember",
           "line": "The fine sift, not the grist — I milled it while the wheel held. Forty-one and holding, this morning."
+        },
+        {
+          "item": "willow-rod",
+          "qty": 1,
+          "embers": 2,
+          "label": "Buy a willow rod · 2 embers",
+          "line": "Another off the hook by the door — two embers, and it only wears on the fish you keep."
         }
       ],
       "with": "finn"

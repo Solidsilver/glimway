@@ -28,6 +28,7 @@ import type { Session } from '../session'
 import { hasAreaKind, type WorldData } from '../worlds'
 import { maybeNudgePip } from '../nudges' // P1 onboarding
 import { AvatarVisual } from '../entities/avatar'
+import { Petting } from '../entities/petting'
 import { Hero } from '../entities/hero'
 import { EnemySystem } from '../entities/enemies'
 import { Projectiles } from '../entities/projectiles'
@@ -36,6 +37,7 @@ import { WorldTalk } from '../entities/world-talk'
 import { PaperPickups } from '../entities/papers'
 import { ItemPickups } from '../entities/item-pickups'
 import { Gathering } from '../entities/gathering'
+import { Fishing, fishingPose } from '../entities/fishing'
 import { RepairsLayer } from '../entities/repairs'
 import { OffHandVisual } from '../entities/off-hand'
 import { Effects } from '../entities/fx'
@@ -55,6 +57,7 @@ import { homeLights } from '../../lib/homestead-land'
 import { homesteadsFor } from '../homestead'
 import { prepareHomeLand } from '../homeland'
 import { isSafeArea } from '../../lib/habitica/sync'
+import { fingerInBracken } from '../../lib/quests'
 import {
   OUTER_REGION_ID,
   WILDS_AREA,
@@ -69,7 +72,6 @@ import {
 } from '../wilds/regions'
 import { prepareWilds, setActiveWildsRegion, wildsEpoch } from '../wilds/store'
 import { GoalGuide } from '../entities/goal-guide'
-import { heldNow } from '../held'
 import { goalTarget } from '../guide-pin'
 import { QUEST_ACTION } from '../../content/quests/index.ts'
 import { LIBRARY_ACTION } from '../../content/residents.ts'
@@ -84,7 +86,7 @@ import { emitPortraits } from '../portraits'
 import { WorldCamera } from './world-camera'
 import { Turning } from './world-turning'
 import { playLanternBeat } from '../entities/lantern-beat'
-import { WorldControls } from './world-controls'
+import { WorldControls, swingHeld } from './world-controls'
 import { presenceMoments } from '../entities/presence-moments'
 import { arrive } from './world-arrival'
 import { buildRoomArt, type RoomArt } from '../area/room-art'
@@ -129,6 +131,7 @@ export class WorldScene extends Phaser.Scene {
   private world!: WorldData
   private fx!: Effects
   private remotePlayers!: RemotePlayers
+  private petting!: Petting
   /** Wilds entities for a generated chunk scene (null in curated areas). */
   private wilds: WildsEntities | null = null
   /** Collisions for terrain tiles and prop footprints (area/collision; a cleared tile opens). */
@@ -137,6 +140,8 @@ export class WorldScene extends Phaser.Scene {
   private tileArt = new TileArt<Phaser.GameObjects.Image>()
   /** Gathering: the workable pieces of this area (null where there are none). */
   private gathering: Gathering | null = null
+  /** Fishing: the banks of this area's waters (the mill pond; null where there are none). */
+  private fishing: Fishing | null = null
   /** Atlas-prop lanterns that can glow when lit (area/lanterns owns visuals). */
   private lightProps: LightProp[] = []
   /** Foreground canopies/arches that fade when something walks beneath. */
@@ -169,6 +174,8 @@ export class WorldScene extends Phaser.Scene {
   private homesteads: HomesteadLayer | null = null
   /** A village room's art and lights (null outdoors and in a cottage). */
   private roomArt: RoomArt | null = null
+  /** The signpost's lost east finger, lying where the finger-wisp sits (Brackenwood, the opening). */
+  private finger: Phaser.GameObjects.Image | null = null
   /** The residents on their hour (../resident-cycle.ts), and the lit windows outside. */
   private cycle: ResidentCycle | null = null
   private houseLights: HouseLights | null = null
@@ -266,7 +273,7 @@ export class WorldScene extends Phaser.Scene {
     if (Math.hypot(state.position.x - saved.x, state.position.y - saved.y) > 1) this.session.saveSoon()
     // Arriving in another area, or another Wilds region, reaches the server in a report (design 2.2).
     this.session.link?.arrived()
-    this.avatar = new AvatarVisual(this, { session: this.session, world: this.world, hero: () => this.hero, reducedMotion: this.reducedMotion })
+    this.avatar = new AvatarVisual(this, { session: this.session, world: this.world, hero: () => this.hero, reducedMotion: this.reducedMotion, live: () => this.worldLive() })
     this.offHand = new OffHandVisual(this, this.session, () => this.hero, () => this.avatar)
     this.npcs = new Npcs(this, this.world)
     this.interactables.setAway((id) => this.npcs.away(id))
@@ -307,6 +314,17 @@ export class WorldScene extends Phaser.Scene {
         const gone = this.tileArt.fell(tx, ty)
         if (gone.length) this.occluders = this.occluders.filter((o) => !gone.includes(o.image))
       }
+    })
+    // The banks of this area's waters (docs/design/crafts.md 5): the mill pond.
+    this.fishing = new Fishing(this, {
+      world: this.world,
+      session: this.session,
+      fx: this.fx,
+      reducedMotion: this.reducedMotion,
+      hero: () => this.hero,
+      interactables: this.interactables,
+      notePosition: () => this.notePosition(),
+      live: () => this.worldLive()
     })
     // The village's broken things, mended with the right part (shared per world).
     const repairs = new RepairsLayer(this, { world: this.world, session: this.session, fx: this.fx, reducedMotion: this.reducedMotion, interactables: this.interactables })
@@ -451,6 +469,9 @@ export class WorldScene extends Phaser.Scene {
     this.session.startAutosave()
     refreshLanternVisuals(this, this.lightProps, this.session.questStage, this.session.state)
     this.interactables.buildMarkers()
+    // A restarted scene starts with nothing drawn (the old image went with the old build).
+    this.finger = null
+    this.drawFinger()
     emitPortraits(this)
     const unlisten = listen({
       [EV.quest]: () => this.refreshMarkers(),
@@ -473,8 +494,14 @@ export class WorldScene extends Phaser.Scene {
     const feed = presence()
     this.presenceArea = presenceAreaFor(this.world.areaId)
     feed?.setArea(this.presenceArea)
-    this.remotePlayers = createRemotePlayers(this, feed, this.presenceArea)
+    this.remotePlayers = createRemotePlayers(this, feed, this.presenceArea, false, this.reducedMotion)
     this.events.once('shutdown', () => this.remotePlayers.clear())
+    // Pet a pet (crafts.md 2.1): your follower, friends' and the yard's.
+    this.petting = new Petting(this, this.interactables, this.reducedMotion, () => [
+      ...(this.avatar.follower ? [{ id: 'mine', x: this.avatar.follower.x, y: this.avatar.follower.y, hop: () => this.avatar.follower?.hop() }] : []),
+      ...this.remotePlayers.pets(),
+      ...(this.homesteads?.yard?.petPoints() ?? [])
+    ])
     presenceMoments(this, { session: this.session, world: this.world, enemies: this.enemies, hero: () => this.hero.sprite })
     this.goalGuide = new GoalGuide(this, {
       world: this.world,
@@ -495,6 +522,8 @@ export class WorldScene extends Phaser.Scene {
         const e = this.enemies.enemies.find((x) => x.id === id && !x.dead)
         return e ? { x: e.sprite.x, y: e.sprite.y - 8 } : null
       },
+      lootAt: (enemy) => (enemy === 'finger-wisp' && this.finger ? { x: this.finger.x, y: this.finger.y - 3 } : null),
+      marked: (id) => this.interactables.list.some((x) => x.id === id && x.marker?.() === 'quest'),
       placeKind: () => this.homesteads?.placeKind ?? null,
       guidePoint: (where) => this.homesteads?.guidePoint(where) ?? null,
       reducedMotion: this.reducedMotion
@@ -600,6 +629,7 @@ export class WorldScene extends Phaser.Scene {
     const elara = this.npcs.npcs.find((n) => n.id === 'elara')
     if (elara?.present && elara.seated && !elara.path) elara.sprite.setVisible(false)
     this.samplePresence()
+    this.petting.update()
     if (uiBlocked() || this.transitioning || this.cinematic || this.session.persistenceInFlight || this.homesteads?.placing) {
       this.hero.halt()
       // Still breathing while a conversation or panel holds the screen.
@@ -624,6 +654,7 @@ export class WorldScene extends Phaser.Scene {
     // One target for the action button: the highest rank in reach (the
     // Wilds' claims, the warden's naming), then the nearest.
     this.interactables.update(this.hero.sprite, this.time.now)
+    this.fishing?.update()
     this.controls.update()
     // The wrong tool in hand by something workable: a faint hint after a moment.
     const hx = this.hero.sprite.x
@@ -665,7 +696,9 @@ export class WorldScene extends Phaser.Scene {
     if (!feed || !this.presenceArea) return
     const body = this.hero.sprite.body as Phaser.Physics.Arcade.Body
     const moving = !this.transitioning && Math.hypot(body.velocity.x, body.velocity.y) > 5
-    feed.position({ x: this.hero.sprite.x, y: this.hero.sprite.y, facing: this.hero.facing, moving })
+    // One pose at a time: a line in the water, else the saddle.
+    const pose = fishingPose() ?? (this.avatar.riding ? 'riding' : null)
+    feed.position({ x: this.hero.sprite.x, y: this.hero.sprite.y, facing: this.hero.facing, moving, ...(pose ? { pose } : {}) })
   }
 
   /** Is the scene playing a Wilds chunk right now (also true mid-transition). */
@@ -690,15 +723,36 @@ export class WorldScene extends Phaser.Scene {
     // Whatever the prompt is on (free activities stay available at zero HP).
     if (this.interactables.activate()) return
     if (this.session.zeroHpLocked) return // too injured to fight; no auto revival
-    // A tool in hand swings too, weakly (you're never helpless).
-    this.hero.tryAttack({ tool: heldNow().kind !== 'weapon' })
+    // The weapon strikes; a sturdy tool swings too, weakly (you're never
+    // helpless); a rod or a bucket doesn't (src/lib/belt.ts SWING).
+    swingHeld(this.hero)
   }
 
   /** Quest progress (or a spend) changes what the markers say; owned by Interactables. */
   private refreshMarkers(): void {
     this.interactables.refreshMarkers()
+    this.drawFinger()
     // What the quest points at may move and glow; the rest of a room stands still.
     this.roomArt?.refresh()
+  }
+
+  /**
+   * The signpost's east finger lies in the bracken where the finger-wisp sits
+   * (src/lib/quests.ts fingerInBracken), from the opening until the wisp is
+   * shooed off it and the finger comes away with you.
+   */
+  private drawFinger(): void {
+    const spot = this.world.areaId === 'woodland' ? this.world.enemies.find((e) => e.id === 'finger-wisp') : undefined
+    const lies = !!spot && fingerInBracken(this.session.state.quests)
+    if (!lies) {
+      this.finger?.destroy()
+      this.finger = null
+      return
+    }
+    if (this.finger) return
+    const x = tileMid(spot.tx)
+    const y = (spot.ty + 1) * TILE - 3
+    this.finger = this.add.image(x, y, 'signpost-finger').setOrigin(0.5, 1).setAngle(-12).setDepth(y - 4)
   }
 
   private onProfileChanged(): void {

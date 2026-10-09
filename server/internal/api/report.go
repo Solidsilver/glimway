@@ -5,32 +5,22 @@ import (
 	"database/sql"
 	"glimway/content"
 	contract "glimway/server/internal/gen/glimway/v1"
+	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"math"
 	"net/http"
 )
 
-// BoundReport consumes a persistent signature budget; reporting never refills it.
-func boundReport(s store.Snapshot, hp, mana, casts, at, ready, now float64) (float64, float64, float64, float64) {
-	elapsed := math.Max(0, now-at)
-	ready = math.Max(ready, at)
-	allowed := float64(0)
-	cost, heal := float64(0), float64(0)
-	if p := s.ImportedProfile; p != nil && p.Class != nil && s.State.HP > 0 {
-		if c, ok := content.CombatRules.GetClasses()[*p.Class]; ok {
-			cost = c.GetCastCost()
-			slots := math.Max(0, 1+math.Floor((now-ready)/content.CombatRules.GetSignatureCooldownSeconds()))
-			allowed = math.Min(casts, math.Min(slots, math.Floor((s.State.Mana+content.VitalsRules.GetRegenCap()*elapsed)/cost)))
-			if *p.Class == "healer" {
-				h := content.CombatRules.GetHeal()
-				scale := math.Pow10(int(h.GetDecimalPlaces()))
-				heal = math.Floor((h.GetBase()+h.GetMaximumBonus()*p.Stats.Int/(p.Stats.Int+h.GetHalfway()))*scale+.5) / scale
-			}
-		}
-	}
-	hp = math.Min(hp, math.Min(s.State.MaxHP, s.State.HP+allowed*heal))
-	mana = math.Min(mana, math.Max(0, math.Min(s.State.MaxMana, s.State.Mana+content.VitalsRules.GetRegenCap()*elapsed-allowed*cost)))
-	return hp, mana, allowed, math.Max(now, ready+allowed*content.CombatRules.GetSignatureCooldownSeconds())
+// boundReport consumes the persistent budgets (crafts.md 4.4): the signature
+// on cast_ready_at, each combat move on player_ability_ready, one mana pool
+// across them in table order, and the ward credit other healers left. Pure
+// rules live in rules.BoundReport.
+func boundReport(s store.Snapshot, hp, mana, casts float64, abilityCasts map[string]float64, at, ready float64, abilityReady map[string]float64, now, allyCredit float64) rules.AbilityBudget {
+	return rules.BoundReport(rules.ReportInput{
+		State: s.State, Profile: s.ImportedProfile, LevelMark: s.LevelMark, ClassMark: s.ClassMark,
+		HP: hp, Mana: mana, Casts: casts, AbilityCasts: abilityCasts,
+		At: at, Ready: ready, AbilityReady: abilityReady, Now: now, AllyCredit: allyCredit,
+	})
 }
 
 func (a *Server) report(w http.ResponseWriter, r *http.Request) error {
@@ -76,7 +66,10 @@ func (a *Server) report(w http.ResponseWriter, r *http.Request) error {
 	if req.Place == nil || !validArea(req.Place.Area) || !finiteWhere(req.Place) {
 		return refuse("invalid-position")
 	}
-	out := &contract.ReportResult{Client: client, Generation: generation, Seq: req.Seq, Basis: basis, PlaceIgnored: true}
+	out := &contract.ReportResult{Client: client, Generation: generation, Seq: req.Seq, Basis: basis, PlaceIgnored: true, AbilityCasts: map[string]float64{}}
+	for id := range req.AbilityCasts {
+		out.AbilityCasts[id] = 0
+	}
 	if req.Seq > seq {
 		if err = tx.QueryRowContext(ctx, "SELECT place_set_version FROM player_place WHERE account_id=?", s.AccountID).Scan(&placeVersion); err != nil {
 			return err
@@ -88,7 +81,15 @@ func (a *Server) report(w http.ResponseWriter, r *http.Request) error {
 			out.Accepted = true
 			out.Basis = req.Basis
 			out.PlaceIgnored = req.Basis < placeVersion
-			s.State.HP, s.State.Mana, out.Casts, ready = boundReport(s, req.Hp, req.Mana, req.Casts, vitalsAt, ready, at)
+			var abilityReady map[string]float64
+			if abilityReady, err = store.AbilityReady(ctx, tx, s.AccountID); err != nil {
+				return err
+			}
+			// Ward credit is only peeked here: what the HP needed is spent
+			// after the report lands (review findings 3 and 13).
+			budget := boundReport(s, req.Hp, req.Mana, req.Casts, req.AbilityCasts, vitalsAt, ready, abilityReady, at, a.wardCredit(s.AccountID))
+			s.State.HP, s.State.Mana = budget.HP, budget.Mana
+			out.Casts, out.AbilityCasts, out.AllyHeal, ready = budget.Casts, budget.AbilityCasts, budget.AllyHeal, budget.Ready
 			if reportAt.Valid {
 				s.State.PlaySeconds += math.Min(content.VitalsRules.ReportGapCap, math.Max(0, float64(now.Unix()-reportAt.Int64)))
 			}
@@ -102,6 +103,16 @@ func (a *Server) report(w http.ResponseWriter, r *http.Request) error {
 				}
 			}
 			_, err = tx.ExecContext(ctx, "UPDATE player_vitals SET hp=?,mana=?,vitals_at=?,cast_ready_at=?,report_seq=?,report_basis=?,report_at=? WHERE account_id=?", s.State.HP, s.State.Mana, at, ready, req.Seq, req.Basis, now.Unix(), s.AccountID)
+			if err != nil {
+				return err
+			}
+			// Each move's cooldown debt (4.4), the same persistence rule as
+			// the signature's. A report that applied nothing leaves the rows.
+			for id, next := range budget.AbilityReady {
+				if _, err = tx.ExecContext(ctx, "INSERT INTO player_ability_ready(account_id,ability,ready_at) VALUES(?,?,?) ON CONFLICT(account_id,ability) DO UPDATE SET ready_at=excluded.ready_at", s.AccountID, id, next); err != nil {
+					return err
+				}
+			}
 		}
 		if err != nil {
 			return err
@@ -116,6 +127,9 @@ func (a *Server) report(w http.ResponseWriter, r *http.Request) error {
 	}
 	if err = tx.Commit(); err != nil {
 		return err
+	}
+	if out.AllyHeal > 0 {
+		a.spendWardCredit(s.AccountID, out.AllyHeal)
 	}
 	return writeOpResult(w, state, out)
 }

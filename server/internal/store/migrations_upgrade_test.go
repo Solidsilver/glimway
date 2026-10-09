@@ -25,13 +25,48 @@ func TestSchemaMigrationsWithExistingData(t *testing.T) {
 		{"022", "021_storm_finds.sql", `UPDATE worlds SET habitica_party_id='party';`, `INSERT INTO party_prompts VALUES('alice','w',17);`, []string{"SELECT count(*) FROM worlds WHERE id='w' AND habitica_party_id='party' AND owner_id='alice'", "SELECT count(*) FROM party_prompts WHERE habitica_id='alice' AND world_id='w' AND seen_at=17"}},
 		{"024", "023_party_owned_worlds.sql", `UPDATE worlds SET habitica_party_id='party';`, `INSERT INTO party_closures VALUES('party',17);`, []string{"SELECT count(*) FROM worlds WHERE id='w' AND habitica_party_id='party' AND opened_by IS NULL", "SELECT count(*) FROM party_closures WHERE party_id='party' AND closed_at=17", "SELECT count(*) FROM players WHERE habitica_id='alice' AND party_left_at IS NULL AND party_moved_out_at IS NULL"}},
 		{"025", "024_party_admission.sql", `UPDATE worlds SET opened_by='alice'; UPDATE players SET party_left_at=12,party_moved_out_at=13;`, `INSERT INTO pending_sessions VALUES('pending','newcomer','New','party',10,20,'{"level":8}',123);`, []string{`SELECT count(*) FROM pending_sessions WHERE id_hash='pending' AND habitica_id='newcomer' AND display_name='New' AND habitica_party_id='party' AND created_at=10 AND expires_at=20 AND checkpoint_json='{"level":8}' AND checkpoint_xp=123`, "SELECT count(*) FROM players WHERE habitica_id='alice' AND party_left_at=12 AND party_moved_out_at=13", "SELECT count(*) FROM worlds WHERE id='w' AND opened_by='alice'"}},
+		{"030", "029_quest_tree.sql", seedUpgradeHome + `
+INSERT INTO homestead_items(id,item_def,location,account_id) VALUES('piece','tool-rack','inventory','alice');
+INSERT INTO sync_baselines(account_id,profile_json,verified_xp,checkpoint_json,checkpoint_at,updated_at) VALUES('alice','{}',0,'{}',12,12);`, `
+INSERT INTO homestead_items(id,item_def,location,account_id,stalls) VALUES('stable','stable','inventory','alice',1);
+INSERT INTO homestead_stalls VALUES('home',1,'Wolf-Shade','alice');
+INSERT INTO player_companions(account_id) VALUES('alice');
+INSERT INTO yard_pets VALUES('alice',1,'Cat-Siamese');
+INSERT INTO player_ability_ready VALUES('alice','kindle',17);
+INSERT INTO world_changes(world_id,realm,layer,chunk,epoch,entity,kind,state,changed_at) VALUES('w','village',0,'','','water:village:mill-pond','fishery','{"stock":12}',17);
+INSERT INTO fishing_casts(id,account_id,world_id,water,bank,rod,species,band,seq,started_at,ready_at,hold_until,state) VALUES('cast','alice','w','water:village:mill-pond','north','willow-rod','mill-roach','healthy',1,10,20,620,'open');
+INSERT INTO player_fishing(account_id,cast_seq,last_start) VALUES('alice',2,10);`, []string{
+			checkUpgradeHome,
+			// Rows kept from before 030 read NULL in its new columns.
+			"SELECT count(*) FROM homestead_items WHERE id='piece' AND homestead_id IS NULL AND stalls IS NULL",
+			"SELECT count(*) FROM sync_baselines WHERE account_id='alice' AND class_mark IS NULL",
+			// And each new table takes its rows against the retained world.
+			"SELECT count(*) FROM homestead_items WHERE id='stable' AND stalls=1",
+			"SELECT count(*) FROM homestead_stalls WHERE homestead_id='home' AND stall=1 AND mount_key='Wolf-Shade' AND owner_id='alice'",
+			"SELECT count(*) FROM player_companions WHERE account_id='alice' AND follow_pet='' AND mount_out='' AND mount_home IS NULL",
+			"SELECT count(*) FROM yard_pets WHERE account_id='alice' AND slot=1 AND pet_key='Cat-Siamese'",
+			"SELECT count(*) FROM player_ability_ready WHERE account_id='alice' AND ability='kindle' AND ready_at=17",
+			`SELECT count(*) FROM world_changes WHERE world_id='w' AND realm='village' AND layer=0 AND chunk='' AND epoch='' AND entity='water:village:mill-pond' AND kind='fishery' AND state='{"stock":12}' AND changed_at=17 AND ends_at IS NULL`,
+			"SELECT count(*) FROM fishing_casts WHERE id='cast' AND account_id='alice' AND world_id='w' AND water='water:village:mill-pond' AND bank='north' AND rod='willow-rod' AND species='mill-roach' AND band='healthy' AND seq=1 AND started_at=10 AND ready_at=20 AND hold_until=620 AND state='open' AND closed_at IS NULL",
+			"SELECT count(*) FROM player_fishing WHERE account_id='alice' AND cast_seq=2 AND last_start=10",
+		}},
+		{"031", "030_crafts.sql", seedUpgradeHome + `
+INSERT INTO sync_baselines(account_id,profile_json,verified_xp,checkpoint_json,checkpoint_at,updated_at,verified_high_level) VALUES('alice','{}',0,'{}',12,12,42);`, `
+UPDATE sync_baselines SET level_mark=level_mark+1 WHERE account_id='alice';
+INSERT INTO player_ability_ready VALUES('alice','mend',17);`, []string{
+			// The level mark starts from the sign-in history it now replaces,
+			// and takes writes beside it (review finding 7).
+			"SELECT count(*) FROM sync_baselines WHERE account_id='alice' AND level_mark=43 AND verified_high_level=42",
+			"SELECT count(*) FROM player_ability_ready WHERE account_id='alice' AND ability='mend' AND ready_at=17",
+		}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.migration, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "upgrade.sqlite")
 			old := newUpgradeFixture(t, path, tt.through, nil)
-			if _, err := old.Exec(`INSERT INTO worlds(id,owner_id,seed,created_at) VALUES('w','alice','seed',10);
-INSERT INTO players(habitica_id,display_name,world_id,created_at,last_seen_at,rev) VALUES('alice','Alice','w',11,12,7);` + tt.seed); err != nil {
+			seed := `INSERT INTO worlds(id,owner_id,seed,created_at) VALUES('w','alice','seed',10);
+INSERT INTO players(account_id,display_name,world_id,created_at,last_seen_at,version) VALUES('alice','Alice','w',11,12,7);` + tt.seed
+			if _, err := old.Exec(fixtureSchemaSQL(tt.through, seed)); err != nil {
 				t.Fatal(err)
 			}
 			if tt.migration == "025" {
@@ -41,7 +76,9 @@ INSERT INTO players(habitica_id,display_name,world_id,created_at,last_seen_at,re
 				if _, err := old.Exec(`INSERT INTO progress VALUES('alice',1,7,?,12);INSERT INTO balances VALUES('alice',0,0);INSERT INTO sync_baselines(habitica_id,profile_json,verified_xp,checkpoint_json,checkpoint_at,updated_at) VALUES('alice',?,0,?,12,12)`, JSON(rules.NewState()), JSON(p), JSON(p)); err != nil {
 					t.Fatal(err)
 				}
-			} else {
+			} else if tt.through < "026_" {
+				// 026 finished null origins and dropped the column; a
+				// fixture from after it needs no marker.
 				markFixtureOrigins(t, old)
 			}
 			if err := old.Close(); err != nil {
@@ -99,3 +136,16 @@ const seedUpgradeHome = `INSERT INTO homesteads(id,world_id,gate,tier,posts_boug
 INSERT INTO homestead_members VALUES('alice','home',16);`
 const checkUpgradeHome = "SELECT count(*) FROM homesteads WHERE id='home' AND world_id='w' AND gate=2 AND tier=1 AND posts_bought=3 AND claimed_at=15"
 const seedUpgradeTool = `INSERT INTO item_instances(id,item_def,location,owner,condition,max_condition,maker_id,worn_day,created_at) VALUES('tool','axe','pack','alice',7,10,'alice',4,15);`
+
+// fixtureSchemaSQL spells seed SQL the way the fixture's schema still does:
+// 026 renamed habitica_id to account_id, 027 rev to version. Seeds are
+// written in the current names and translated back for older fixtures.
+func fixtureSchemaSQL(through, q string) string {
+	if through < "026_" {
+		q = strings.ReplaceAll(q, "account_id", "habitica_id")
+	}
+	if through < "027_" {
+		q = strings.ReplaceAll(q, "version", "rev")
+	}
+	return q
+}

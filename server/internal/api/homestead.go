@@ -34,6 +34,27 @@ type homeInstance struct {
 	Y        *int    `json:"y"`
 	Rotation *int    `json:"rotation"`
 	Name     *string `json:"name"`
+	// Stalls is the stable's bay count (the stable only; docs/design/crafts.md
+	// 3.2): the piece's footprint grows east two tiles a bay with it.
+	Stalls *int `json:"stalls"`
+}
+
+// stallView is one bay of a homestead's stable (goods.proto Stall): who
+// stands in it, and whether that mount is out with its owner (3.4).
+type stallView struct {
+	Stall     int    `json:"stall"`
+	Mount     string `json:"mount"`
+	OwnerID   string `json:"ownerId"`
+	OwnerName string `json:"ownerName"`
+	Out       bool   `json:"out"`
+}
+
+// yardPetView is one member's yard pet where it stands (goods.proto
+// YardPet); the slot is its owner's choice slot.
+type yardPetView struct {
+	OwnerID string `json:"ownerId"`
+	Pet     string `json:"pet"`
+	Slot    int    `json:"slot"`
 }
 
 // homePlantView: a seed or sapling on the land, where it stands today
@@ -66,6 +87,8 @@ type homeView struct {
 	Outdoor     *content.HomeGrid `json:"outdoor"`
 	Indoor      *content.HomeGrid `json:"indoor"`
 	Items       []homeInstance    `json:"items"`
+	Stalls      []stallView       `json:"stalls"`
+	YardPets    []yardPetView     `json:"yardPets"`
 }
 
 // tileList decodes the homestead wire's tile pairs into the domain's [2]int
@@ -111,6 +134,11 @@ func (a *Server) homeMutation(w http.ResponseWriter, r *http.Request) error {
 	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
+	// A leave changes the leaver's avatar (the choices gated away, the mount
+	// home) and empties their stalls: their room and the stable's land hear it.
+	var account string
+	var avatar *presenceAvatarMsg
+	var room presenceRoom
 	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
@@ -146,7 +174,10 @@ func (a *Server) homeMutation(w http.ResponseWriter, r *http.Request) error {
 			case "invite":
 				status, err = invite(ctx, tx, s, h, &req, now)
 			case "leave":
-				err = leave(ctx, tx, s, h, now)
+				if err = leave(ctx, tx, s, h, now); err == nil {
+					account, room = s.AccountID, homeRoom(h.WorldID, h.Gate)
+					avatar, err = leaverAvatar(ctx, tx, s)
+				}
 			default:
 				err = fail(404, "not-found")
 			}
@@ -167,5 +198,9 @@ func (a *Server) homeMutation(w http.ResponseWriter, r *http.Request) error {
 			result.Home = homeViewProto(*home)
 		}
 		return protoResult(result)
+	}, func() {
+		if avatar != nil {
+			a.avatarChanged(account, avatar, room)
+		}
 	})
 }

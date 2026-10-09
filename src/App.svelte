@@ -209,10 +209,7 @@
         pendingStats = null
       }
     }
-    const onAbility = (p: AbilityPayload) => {
-      if (p.status === 'cast') ui.ability = { ...ui.ability, readyAt: performance.now() + (p.cooldown ?? 1) * 1000, cooldown: p.cooldown ?? 1 }
-      else if (p.status === 'no-mana') ui.ability = { ...ui.ability, deniedAt: performance.now() }
-    }
+    const onAbility = (p: AbilityPayload) => ui.abilityEvent(p)
     const onRolled = (p: { cooldown: number }) => {
       ui.roll = { readyAt: performance.now() + p.cooldown * 1000, cooldown: p.cooldown }
     }
@@ -289,6 +286,13 @@
     const onHomeGoal = (v: { text: string | null }) => {
       home.goal = v?.text ?? null
     }
+    // The stable's "Choose a mount" (crafts.md 3.1): the Character panel, at Companions.
+    const onOpenCompanions = (v?: { at?: 'stable' }) => {
+      if (panel !== null) return
+      characterTab = 'companions'
+      characterAt = v?.at ?? null
+      toggle('character')
+    }
     const onVillageOpen = (v: { panel: VillagePanel; to?: string; gate?: number }) => {
       if (panel !== null) return
       mailTo = v.to ?? null
@@ -322,6 +326,7 @@
       [EV.portraits]: onPortraits,
       [EV.residentsMet]: onResidentsMet,
       [EV.artIcons]: onArtIcons,
+      [EV.openCompanions]: onOpenCompanions,
       [EV.discovery]: onDiscovery,
       [EV.link]: onLink,
       [EV.presence]: onPresence,
@@ -583,6 +588,8 @@
    */
   function onKeyGlobal(e: KeyboardEvent): void {
     if (phase !== 'playing' || blocked(layers, BLOCKS.appKeys)) return
+    // A press something else already owns (Esc that closed a conversation, src/ui/DialoguePanel.svelte).
+    if ((e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed) return
     const t = e.target as HTMLElement | null
     const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)
     // Typing J/C in a text field must never toggle panels — but Escape always
@@ -651,6 +658,15 @@
   let libraryAt = $state<LibraryOpenPayload>({})
   /** The journal page to open on (the HUD's pinned guide opens "How do I…?"). */
   let journalTab = $state<'quests' | 'papers' | 'guides'>('quests')
+  /** The Character panel's page to open on (the stable opens Companions), reset when it closes. */
+  let characterTab = $state<'hero' | 'companions'>('hero')
+  let characterAt = $state<'stable' | null>(null)
+  $effect(() => {
+    if (panel !== 'character') {
+      characterTab = 'hero'
+      characterAt = null
+    }
+  })
   /** A quest to put at the top of the Quests page (the opening while its note waits). */
   let journalFocus = $state<string | null>(null)
   $effect(() => {
@@ -762,6 +778,7 @@
         if (panel !== 'journal') toggle('journal')
       }}
       prompt={showPrompt && !touch ? ui.prompt.label : null}
+      promptAlt={showPrompt && !touch ? (ui.prompt.alt ?? null) : null}
     />
     {#if ui.emoteOpen && ui.presence.status === 'live' && !panel}
       <EmotePicker onPick={sendEmote} onClose={() => (ui.emoteOpen = false)} />
@@ -823,7 +840,7 @@
     {:else if panel === 'mail'}
       <MailPanel {session} to={mailTo} onClose={() => toggle('mail')} />
     {:else if panel === 'character'}
-      <CharacterPanel {session} onClose={closeCharacter} onInventory={() => (panel = 'inventory')} />
+      <CharacterPanel {session} initialTab={characterTab} at={characterAt} onClose={closeCharacter} onInventory={() => (panel = 'inventory')} />
     {:else if panel === 'inventory'}
       <InventoryPanel
         {session}

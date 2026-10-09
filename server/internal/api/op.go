@@ -32,6 +32,17 @@ func (a *Server) keyedOp(w http.ResponseWriter, r *http.Request, op *contract.Op
 	return a.keyedOpFinalized(w, r, op, where, request, apply, nil, afterCommit...)
 }
 
+// stayPut marks an operation whose request carries no where at all (5.4's
+// fish-cancel, 6.2's mount-home): the hero stays where the server has them
+// and no place is written. It is never a caller's own where — an absent
+// where on an operation that has one is still an invalid position.
+var stayPut = &contract.Where{}
+
+// keyedOpStay is keyedOp for one of those operations.
+func (a *Server) keyedOpStay(w http.ResponseWriter, r *http.Request, op *contract.OpHeader, request any, apply func(context.Context, *sql.Tx, *store.Snapshot, int64) (any, error), afterCommit ...func()) error {
+	return a.keyedOpFinalized(w, r, op, stayPut, request, apply, nil, afterCommit...)
+}
+
 // finalize is supplied by operations whose result includes final causal state.
 func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *contract.OpHeader, where *contract.Where, request any, apply func(context.Context, *sql.Tx, *store.Snapshot, int64) (any, error), finalize func(*contract.PlayerState, any), afterCommit ...func()) error {
 	tx, s, _, err := a.begin(r)
@@ -94,17 +105,21 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 			return refuse(err)
 		}
 	}
-	if where == nil || !validArea(where.Area) || !finiteWhere(where) {
+	if where == stayPut {
+		where = nil
+	} else if where == nil || !validArea(where.Area) || !finiteWhere(where) {
 		return refuse(fail(409, "invalid-position"))
 	}
 	if _, err = tx.ExecContext(ctx, "SAVEPOINT gameplay"); err != nil {
 		return err
 	}
-	s.PlaceWritten = true
-	s.State.Area = where.Area
-	s.State.Position = rulesPosition(where)
-	if a.Config.Placement != nil {
-		err = a.Config.Placement.Record(ctx, tx, &s, where, now)
+	if where != nil {
+		s.PlaceWritten = true
+		s.State.Area = where.Area
+		s.State.Position = rulesPosition(where)
+		if a.Config.Placement != nil {
+			err = a.Config.Placement.Record(ctx, tx, &s, where, now)
+		}
 	}
 	var result any
 	if err == nil {

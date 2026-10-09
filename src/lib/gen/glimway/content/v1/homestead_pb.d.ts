@@ -107,6 +107,13 @@ export declare type Homestead = Message<"glimway.content.v1.Homestead"> & {
    * @generated from field: repeated glimway.content.v1.HomeItem items = 13;
    */
   items: HomeItem[];
+
+  /**
+   * The stable: one placed piece that grows east a bay at a time (3.2).
+   *
+   * @generated from field: glimway.content.v1.HomesteadStable stable = 14;
+   */
+  stable?: HomesteadStable | undefined;
 };
 
 /**
@@ -206,6 +213,13 @@ export declare type HomesteadValid = Message<"glimway.content.v1.Homestead"> & {
    * @generated from field: repeated glimway.content.v1.HomeItem items = 13;
    */
   items: HomeItemValid[];
+
+  /**
+   * The stable: one placed piece that grows east a bay at a time (3.2).
+   *
+   * @generated from field: glimway.content.v1.HomesteadStable stable = 14;
+   */
+  stable: HomesteadStableValid;
 };
 
 /**
@@ -213,6 +227,45 @@ export declare type HomesteadValid = Message<"glimway.content.v1.Homestead"> & {
  * Use `create(HomesteadSchema)` to create a new message.
  */
 export declare const HomesteadSchema: GenMessage<Homestead, {validType: HomesteadValid}>;
+
+/**
+ * The stable's growth rules (docs/design/crafts.md 3.1, 3.2, 6.3). The
+ * piece's buy price is its home-item row; StallCost is the **first extra**
+ * bay's bill, and each bay after it adds Growth to each material named
+ * there (a material outside Growth — fiber — stays flat). The rules that
+ * read the item row (it exists, it is the stable) are the loaders'.
+ *
+ * @generated from message glimway.content.v1.HomesteadStable
+ */
+export declare type HomesteadStable = Message<"glimway.content.v1.HomesteadStable"> & {
+  /**
+   * @generated from field: string item = 1;
+   */
+  item: string;
+
+  /**
+   * @generated from field: int32 max_stalls = 2;
+   */
+  maxStalls: number;
+
+  /**
+   * @generated from field: map<string, int32> stall_cost = 3;
+   */
+  stallCost: { [key: string]: number };
+
+  /**
+   * @generated from field: map<string, int32> growth = 4;
+   */
+  growth: { [key: string]: number };
+};
+
+export declare type HomesteadStableValid = HomesteadStable;
+
+/**
+ * Describes the message glimway.content.v1.HomesteadStable.
+ * Use `create(HomesteadStableSchema)` to create a new message.
+ */
+export declare const HomesteadStableSchema: GenMessage<HomesteadStable, {validType: HomesteadStableValid}>;
 
 /**
  * A placement grid's size in tiles (the indoor room's 12x10 is the
@@ -948,6 +1001,14 @@ export declare type HomeItem = Message<"glimway.content.v1.HomeItem"> & {
    * @generated from field: optional bool craft_only = 9;
    */
   craftOnly?: boolean | undefined;
+
+  /**
+   * A building: a structure on the plot (the stable; later the kiln).
+   * Silas's Yard lists buildings in a section of their own.
+   *
+   * @generated from field: optional bool building = 10;
+   */
+  building?: boolean | undefined;
 };
 
 export declare type HomeItemValid = HomeItem;

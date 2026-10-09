@@ -272,7 +272,7 @@ func TestHTTPValidationAndScrubbedLogging(t *testing.T) {
 	}
 	for _, raw := range []string{`{`, strings.Repeat("x", 200001), `{} {}`} {
 		r := httptest.NewRequest("POST", "/api/session", strings.NewReader(raw))
-		r.Header.Set("X-Glimway-Contract", "4")
+		r.Header.Set("X-Glimway-Contract", "5")
 		r.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		x.api.ServeHTTP(w, r)
@@ -281,7 +281,7 @@ func TestHTTPValidationAndScrubbedLogging(t *testing.T) {
 		}
 	}
 	r := httptest.NewRequest("POST", "/api/play", strings.NewReader(`{"clientId":"tab"}`))
-	r.Header.Set("X-Glimway-Contract", "4")
+	r.Header.Set("X-Glimway-Contract", "5")
 	r.Header.Set("Content-Type", "application/json")
 	r.Header.Set("Origin", "https://evil.example")
 	r.AddCookie(c)
@@ -346,7 +346,7 @@ func TestLeaseReadHeartbeatAndSevenDayIdempotencyExpiry(t *testing.T) {
 	c, s := x.ready("alice")
 	x.now.Add(110)
 	r := httptest.NewRequest("GET", "/api/state", nil)
-	r.Header.Set("X-Glimway-Contract", "4")
+	r.Header.Set("X-Glimway-Contract", "5")
 	r.AddCookie(c)
 	r.Header.Set("X-Play-Lease", s.Lease)
 	w := httptest.NewRecorder()

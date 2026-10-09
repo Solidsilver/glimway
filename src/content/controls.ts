@@ -12,16 +12,22 @@ export interface ControlRow {
   touch: string | null
 }
 
+/** The key that lets a landed fish go (Keep is the action key): src/game/entities/fishing.ts listens for it. */
+export const LET_GO_KEY = 'Q'
+
 export const CONTROLS: ControlRow[] = [
   { keys: ['W', 'A', 'S', 'D'], does: 'Walk (arrows work too)', touch: 'Joystick, or pick how you walk in the Menu' },
   { keys: ['E', 'Space'], does: 'Talk, use, attack — or speak the naming', touch: 'The big action button (its label says what it will do)' },
-  { keys: ['F'], does: 'Signature ability', touch: 'The ✦ button (shows its mana cost)' },
+  { keys: ['F'], does: 'Signature ability (from level 10, with a class)', touch: 'The ✦ button (shows its mana cost)' },
+  { keys: ['R'], does: 'Second move (from level 20)', touch: 'The second ✦ button, above the first' },
   { keys: ['Shift'], does: 'Dodge roll — move when the enemy flashes white', touch: 'The Roll button' },
   { keys: ['J', 'C'], does: 'Journal · Character', touch: 'The book and person buttons, top right' },
   { keys: ['I'], does: 'Inventory: tools, supplies, keepsakes, home goods, papers', touch: 'The bag button, top right' },
   { keys: ['B'], does: 'Arrange your home (on your plot or in your cottage)', touch: 'The Arrange button, top right' },
   { keys: ['G'], does: 'Emotes, then 1–5 (in a world)', touch: 'The speech button, top right (in a world)' },
-  { keys: ['M'], does: 'Ride your mount (Habitica heroes, outdoors)', touch: null },
+  { keys: ['M'], does: 'Ride or get down (a mount out from your stable, outdoors)', touch: 'The saddle button, while a mount is out' },
+  { keys: ['H'], does: 'Send your mount home (while you’re off it)', touch: 'The Go home button, beside the saddle' },
+  { keys: [LET_GO_KEY], does: 'Let a landed fish go (the action keeps it)', touch: 'The Let it go button, beside Keep' },
   { keys: ['Esc'], does: 'Menu · close panels', touch: 'The menu button, top right' }
 ]
 

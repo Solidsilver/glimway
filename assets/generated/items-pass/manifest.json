@@ -73,6 +73,30 @@
       "file": "fingersnap-tolley-mill-1.png",
       "width": 1122,
       "height": 1402
+    },
+    {
+      "key": "crafts-rod-icon",
+      "file": "../crafts-pass/frames/rod-icon.png",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "key": "crafts-mill-roach",
+      "file": "../crafts-pass/frames/mill-roach.png",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "key": "crafts-millers-fry",
+      "file": "../crafts-pass/frames/millers-fry.png",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "key": "crafts-recipe-card-millers-fry",
+      "file": "../crafts-pass/frames/recipe-card-millers-fry.png",
+      "width": 64,
+      "height": 64
     }
   ],
   "frames": [
@@ -5297,6 +5321,130 @@
         "w": 15,
         "h": 16
       }
+    },
+    {
+      "key": "item-willow-rod",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "crafts-rod-icon",
+      "sheet": "crafts-pass",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "itemId": "willow-rod",
+      "name": "Willow rod",
+      "state": null,
+      "look": "A plain willow rod with a cork grip and a wound line",
+      "category": "Tools",
+      "priority": "P1",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-mill-roach",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "crafts-mill-roach",
+      "sheet": "crafts-pass",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "itemId": "mill-roach",
+      "name": "Mill roach",
+      "state": null,
+      "look": "Silver with red fins",
+      "category": "Supplies",
+      "priority": "P1",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-millers-fry",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "crafts-millers-fry",
+      "sheet": "crafts-pass",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "itemId": "millers-fry",
+      "name": "Miller's fry",
+      "state": null,
+      "look": "Two small floured fish in a pan, a sprig on top",
+      "category": "Supplies",
+      "priority": "P1",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-recipe-card-millers-fry",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "crafts-recipe-card-millers-fry",
+      "sheet": "crafts-pass",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "itemId": "recipe-card-millers-fry",
+      "name": "Recipe card: Miller's fry",
+      "state": null,
+      "look": "Hazel's card",
+      "category": "Papers",
+      "priority": "P1",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
     }
   ],
   "animations": [
@@ -5712,13 +5860,18 @@
     "river-glass-bead": "commons:icon-river-glass-bead",
     "tin-whistle": "commons:icon-tin-whistle",
     "beeswax-candle": "commons:icon-beeswax-candle",
-    "spare-bootlace": "commons:icon-spare-bootlace"
+    "spare-bootlace": "commons:icon-spare-bootlace",
+    "willow-rod": "item-willow-rod",
+    "mill-roach": "item-mill-roach",
+    "millers-fry": "item-millers-fry",
+    "recipe-card-millers-fry": "item-recipe-card-millers-fry"
   },
   "notes": [
     "All source rectangles are measured; no fixed source cell dimensions are assumed.",
     "Use the manifest exact native canvas dimensions.",
     "Inventory wear and world condition frames are discrete gameplay states, not looping animations.",
     "Existing Commons frames are referenced with the commons: alias prefix.",
-    "Physics, interaction footprints, scene wiring, and world adjacency remain runtime decisions."
+    "Physics, interaction footprints, scene wiring, and world adjacency remain runtime decisions.",
+    "Fishing (0.5 crafts, lane G): the willow rod, mill roach, Miller’s fry and recipe-card icons are the crafts pass’s normalized frames (../crafts-pass/frames), copied 1:1 at the art density, so the item lookups find them here. The fishing effects (float, rings, splash, the held rod) are drawn from the crafts pack (cr-art:)."
   ]
 }

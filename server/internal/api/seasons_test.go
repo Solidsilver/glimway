@@ -339,6 +339,53 @@ func TestSellersHazelFinnAndTheCartingStall(t *testing.T) {
 	x.conserved(ps.AccountID)
 }
 
+// Finn sells the rod: a tool is handed over as one instance at full
+// condition, never as a stack (the good's kind decides — questGive does the
+// same for a story gift).
+func TestMarketBuyGrantsAToolInstance(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	x.fundEmbers(s.AccountID, 10)
+	buy := func(status int) itemsResponse {
+		return x.opRefreshing(c, &s, "buy", map[string]any{"seller": "finns-mill-door", "good": "willow-rod", "progress": bySeller(s, "finns-mill-door", x.now.Load())}, status)
+	}
+	def, _ := content.ItemFor("willow-rod")
+	if !content.ItemInstanced(def) {
+		t.Fatal("the rod is a tool")
+	}
+	r := buy(200)
+	if r.Result.Bought == nil || r.Result.Bought.ItemDef != "willow-rod" || r.Result.Bought.Qty != 1 || r.Result.Bought.Embers != 2 {
+		t.Fatal("no rod", r.Result.Bought)
+	}
+	if stackQty(r.Result.Items, "willow-rod") != 0 {
+		t.Fatal("a tool came over as a stack")
+	}
+	var rod *instanceView
+	for i := range r.Result.Items.Instances {
+		if r.Result.Items.Instances[i].ItemDef == "willow-rod" {
+			rod = &r.Result.Items.Instances[i]
+		}
+	}
+	if rod == nil || rod.State != "whole" || rod.Condition != rod.MaxCondition || rod.MaxCondition != content.ItemMaxPoints(def) || rod.UsesLeft != int(def.GetUses()) {
+		t.Fatal("the rod came over worn", rod)
+	}
+	if s.State.Embers != 8 {
+		t.Fatal("rod embers", s.State.Embers)
+	}
+	// A second one comes over the same way, and the purse follows.
+	second := buy(200)
+	n := 0
+	for i := range second.Result.Items.Instances {
+		if second.Result.Items.Instances[i].ItemDef == "willow-rod" {
+			n++
+		}
+	}
+	if n != 2 || s.State.Embers != 6 {
+		t.Fatal("second rod", n, s.State.Embers)
+	}
+	x.conserved(s.AccountID)
+}
+
 // stormFind scans the deterministic storm-drop rolls for player `id`
 // (deep-Tangle synthetic entities, week by week) and returns two finds
 // in different weeks: the roll is seeded by the player, the entity, the

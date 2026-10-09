@@ -33,6 +33,7 @@ import { HOME_FLAGS, PAPERS, SILAS, lotName } from '../homestead'
 import { homeErrorText } from '../../content/errors'
 import type { Interactable, MarkerKind } from './interactables'
 import { DialogueHold } from '../dialogue-hold'
+import { stablePoints } from './homestead-stable'
 import { openDialogue } from '../dialogue'
 import type { HomesteadDeps, HomesteadLayer } from './homesteads'
 import { POST, SILAS_ID, short } from './homestead-art'
@@ -238,6 +239,7 @@ export class HomesteadTalk {
               : panel('woodpile')()
         })
       }
+      out.push(...stablePoints(this.home, (speaker, lines) => this.say({ speaker, lines })))
       out.push(...this.seatPoints(home, 'outdoor'))
       return out
     }

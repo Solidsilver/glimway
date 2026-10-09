@@ -337,6 +337,10 @@ func TestRepairsWeatherPacing(t *testing.T) {
 // water keeps drawing.
 func TestRepairsWeatherCyclesThroughEverything(t *testing.T) {
 	x := newRig(t)
+	// A fixed start (the calendar's epoch): which days the eight-day jumps
+	// sample, and so whether the hame's Carting Day window is hit, must not
+	// depend on the day the test runs.
+	x.now.Store(1767571200)
 	c, s := x.ready("alice")
 
 	// The scripted two, mended.

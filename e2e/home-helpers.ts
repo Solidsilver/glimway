@@ -40,6 +40,8 @@ export interface HomesView {
   land: { gate: number; door: { tx: number; ty: number }; doorstep: { tx: number; ty: number }; mailbox: { tx: number; ty: number }; site: { x: number; y: number; w: number; h: number }; desolate: boolean } | null
   guide: { x: number; y: number; arrow: boolean } | null
   placing: boolean
+  /** The mounts standing in their bays on screen (the stable's drawing). */
+  stalled: string[]
   placement: { selected: string | null; problem: string | null; spot: { x: number; y: number } | null; clearing: { x: number; y: number } | null; message: { text: string } | null } | null
 }
 
@@ -107,10 +109,11 @@ export async function talk(page: Page, prompt: RegExp, pick?: RegExp): Promise<v
  * 029 leaves every account that played before it), so a spec starts where
  * the lantern road does; `{ opening: true }` keeps the first morning.
  */
-export async function freshPlayer(page: Page, name = 'Tansy', invite?: string, opts: { opening?: boolean } = {}): Promise<string> {
+export async function freshPlayer(page: Page, name = 'Tansy', invite?: string, opts: { opening?: boolean; lvl?: number; class?: string | null } = {}): Promise<string> {
   const id = newUser()
   if (!invite) allow(id)
-  await setHabitica(id, { name })
+  // `lvl`/`class`: the Habitica hero's level and class (the default is a level-2 warrior: no moves yet).
+  await setHabitica(id, { name, ...(opts.lvl !== undefined ? { lvl: opts.lvl } : {}), ...(opts.class !== undefined ? { class: opts.class } : {}) })
   await routeHabitica(page.context())
   await openTitleGuide(page)
   await pasteAndConnect(page, id, invite ? { invite } : {})

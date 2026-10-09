@@ -1,8 +1,19 @@
-import type { AreaPayload, GoalDirPayload, GoalLinePayload, LinkPayload, PresencePayload, PromptPayload, QuestPayload, StatsPayload, ToastPayload } from '../game/events'
+import type { AbilityPayload, AreaPayload, GoalDirPayload, MagicPayload, GoalLinePayload, LinkPayload, PresencePayload, PromptPayload, QuestPayload, StatsPayload, ToastPayload } from '../game/events'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types'
 import { bus, EV } from '../game/events'
+import { onContextButtons, type ContextButton } from '../game/context-buttons'
+import { getCombatKit, type CombatKit } from '../lib/combat'
 import { itemName } from '../lib/items'
 import { isTouchFirst } from './device'
+
+/** A move's readiness on the HUD slot / touch button (crafts.md 4.3). */
+export interface AbilitySlot {
+  readyAt: number
+  cooldown: number
+  deniedAt: number
+}
+
+const IDLE_SLOT: AbilitySlot = { readyAt: 0, cooldown: 1, deniedAt: 0 }
 
 /** Stored toast = payload plus a render key and optional icon. */
 type StoredToast = ToastPayload & { id: string }
@@ -104,8 +115,14 @@ class UiStore {
   portraits = $state<Record<string, string>>({})
   /** Delivered UI icons by frame key (`icon-timber`, …): src/ui/ArtIcon.svelte. */
   artIcons = $state<Record<string, string>>({})
-  /** Signature ability readiness for the HUD slot / touch button. */
-  ability = $state<{ readyAt: number; cooldown: number; deniedAt: number }>({ readyAt: 0, cooldown: 1, deniedAt: 0 })
+  /** The moves' readiness for the HUD slots / touch buttons, keyed by ability id (`fingersnap`, `kindle`, …). */
+  ability = $state<Record<string, AbilitySlot>>({})
+  /** The server's level and class marks (PlayerState.magic); null until a connected state says. */
+  magic = $state<MagicPayload | null>(null)
+  /** The hero's kit as the interface shows it: craft, signature (F) and level-20 move (R). */
+  kit: CombatKit = $derived(getCombatKit(this.importedProfile, this.magic))
+  /** The context buttons the game has up (src/game/context-buttons.ts): saddle, Go home, Keep / Let it go. */
+  contextButtons = $state.raw<readonly ContextButton[]>([])
   /** Dodge roll cooldown for the HUD slot / touch button. */
   roll = $state<{ readyAt: number; cooldown: number }>({ readyAt: 0, cooldown: 1 })
   /** Queue of quest beats / area titles (shown one at a time). */
@@ -166,6 +183,18 @@ class UiStore {
     }
   }
 
+  /** A move's slot: idle when it was never used. */
+  slot(id: string | null | undefined): AbilitySlot {
+    return (id && this.ability[id]) || IDLE_SLOT
+  }
+
+  /** A move fired or was refused (EV.ability): its slot's sweep or shake. */
+  abilityEvent(p: AbilityPayload): void {
+    const slot = this.slot(p.ability)
+    if (p.status === 'cast') this.ability = { ...this.ability, [p.ability]: { ...slot, readyAt: performance.now() + (p.cooldown ?? 1) * 1000, cooldown: p.cooldown ?? 1 } }
+    else if (p.status === 'no-mana') this.ability = { ...this.ability, [p.ability]: { ...slot, deniedAt: performance.now() } }
+  }
+
   dismissToast(id: string): void {
     this.toasts = this.toasts.filter((t) => t.id !== id)
   }
@@ -214,3 +243,11 @@ function gainLabel(text: string): string {
 }
 
 export const ui = new UiStore()
+
+onContextButtons((buttons) => {
+  ui.contextButtons = buttons
+})
+
+bus.on(EV.magic, (p: MagicPayload) => {
+  ui.magic = p
+})

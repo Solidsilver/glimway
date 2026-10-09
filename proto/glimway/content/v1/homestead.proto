@@ -44,6 +44,23 @@ message Homestead {
   HomesteadPersonalChest personal_chest = 12 [(buf.validate.field).required = true];
   // The home goods (one row per furnishing the homestead sells).
   repeated HomeItem items = 13 [(buf.validate.field).repeated.min_items = 1];
+  // The stable: one placed piece that grows east a bay at a time (3.2).
+  HomesteadStable stable = 14 [(buf.validate.field).required = true];
+}
+
+// The stable's growth rules (docs/design/crafts.md 3.1, 3.2, 6.3). The
+// piece's buy price is its home-item row; StallCost is the **first extra**
+// bay's bill, and each bay after it adds Growth to each material named
+// there (a material outside Growth — fiber — stays flat). The rules that
+// read the item row (it exists, it is the stable) are the loaders'.
+message HomesteadStable {
+  string item = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  int32 max_stalls = 2 [(buf.validate.field).int32 = {gte: 1, lte: 6}];
+  map<string, int32> stall_cost = 3 [(buf.validate.field).map = {
+    min_pairs: 1
+    values: {int32: {gte: 1, lte: 1000000}}
+  }];
+  map<string, int32> growth = 4 [(buf.validate.field).map.values.int32 = {gte: 0, lte: 1000000}];
 }
 
 // A placement grid's size in tiles (the indoor room's 12x10 is the
@@ -191,8 +208,8 @@ message HomesteadJointDeed {
 message HomeItem {
   option (buf.validate.message).cel = {
     id: "home_item.price"
-    message: "a home good is priced in embers or materials, never both and never neither"
-    expression: "(this.embers > 0) != (size(this.materials) > 0)"
+    message: "a home good is priced in embers, in materials, or in both; never neither"
+    expression: "this.embers > 0 || size(this.materials) > 0"
   };
   option (buf.validate.message).cel = {
     id: "home_item.where"
@@ -211,4 +228,7 @@ message HomeItem {
   map<string, int32> materials = 8 [(buf.validate.field).map = {max_pairs: 3, values: {int32: {gte: 1, lte: 1000000}}}];
   // Craftable only at the workbench (never bought).
   optional bool craft_only = 9;
+  // A building: a structure on the plot (the stable; later the kiln).
+  // Silas's Yard lists buildings in a section of their own.
+  optional bool building = 10;
 }

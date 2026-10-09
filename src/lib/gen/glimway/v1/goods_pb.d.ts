@@ -482,7 +482,8 @@ export declare const HomeGridSchema: GenMessage<HomeGrid, {validType: HomeGridVa
 
 /**
  * A piece owned by a homestead: in a member's inventory, or placed
- * (scene, x, y, rotation and, for lantern posts, its name).
+ * (scene, x, y, rotation and, for lantern posts, its name). Stalls is the
+ * stable's bay count (NULL on every other piece; design 3.2).
  *
  * @generated from message glimway.v1.HomeInstance
  */
@@ -521,6 +522,11 @@ export declare type HomeInstance = Message<"glimway.v1.HomeInstance"> & {
    * @generated from field: google.protobuf.StringValue name = 7;
    */
   name?: string | undefined;
+
+  /**
+   * @generated from field: google.protobuf.Int32Value stalls = 8;
+   */
+  stalls?: number | undefined;
 };
 
 export declare type HomeInstanceValid = HomeInstance;
@@ -581,6 +587,78 @@ export declare type HomePlantValid = HomePlant;
  * Use `create(HomePlantSchema)` to create a new message.
  */
 export declare const HomePlantSchema: GenMessage<HomePlant, {validType: HomePlantValid}>;
+
+/**
+ * One stable bay (design 3.2): stalls are numbered 1 to 6 from the west.
+ * `out` is whether that mount is out with its owner right now.
+ *
+ * @generated from message glimway.v1.Stall
+ */
+export declare type Stall = Message<"glimway.v1.Stall"> & {
+  /**
+   * @generated from field: int32 stall = 1;
+   */
+  stall: number;
+
+  /**
+   * @generated from field: string mount = 2;
+   */
+  mount: string;
+
+  /**
+   * @generated from field: string owner_id = 3;
+   */
+  ownerId: string;
+
+  /**
+   * @generated from field: string owner_name = 4;
+   */
+  ownerName: string;
+
+  /**
+   * @generated from field: bool out = 5;
+   */
+  out: boolean;
+};
+
+export declare type StallValid = Stall;
+
+/**
+ * Describes the message glimway.v1.Stall.
+ * Use `create(StallSchema)` to create a new message.
+ */
+export declare const StallSchema: GenMessage<Stall, {validType: StallValid}>;
+
+/**
+ * A yard pet standing at home (design 2.1): whose it is, its owned pet key
+ * and its slot (1-3). Positions are the client's, from the seed and clock.
+ *
+ * @generated from message glimway.v1.YardPet
+ */
+export declare type YardPet = Message<"glimway.v1.YardPet"> & {
+  /**
+   * @generated from field: string owner_id = 1;
+   */
+  ownerId: string;
+
+  /**
+   * @generated from field: string pet = 2;
+   */
+  pet: string;
+
+  /**
+   * @generated from field: int32 slot = 3;
+   */
+  slot: number;
+};
+
+export declare type YardPetValid = YardPet;
+
+/**
+ * Describes the message glimway.v1.YardPet.
+ * Use `create(YardPetSchema)` to create a new message.
+ */
+export declare const YardPetSchema: GenMessage<YardPet, {validType: YardPetValid}>;
 
 /**
  * A homestead (GET /api/homestead/gate/:g, and every homestead POST): its
@@ -674,6 +752,16 @@ export declare type HomeView = Message<"glimway.v1.HomeView"> & {
    * @generated from field: repeated glimway.v1.HomeInstance items = 17;
    */
   items: HomeInstance[];
+
+  /**
+   * @generated from field: repeated glimway.v1.Stall stalls = 18;
+   */
+  stalls: Stall[];
+
+  /**
+   * @generated from field: repeated glimway.v1.YardPet yard_pets = 19;
+   */
+  yardPets: YardPet[];
 };
 
 export declare type HomeViewValid = HomeView;

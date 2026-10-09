@@ -6,6 +6,7 @@
   import { ui } from './store.svelte'
   import { isTouchFirst } from './device'
   import Icon from './Icon.svelte'
+  import { escapeMove } from '../lib/dialogue-escape'
 
   /** Name-tag colors per speaker; objects get a neutral stone tag. */
   const TAG: Record<string, string> = {
@@ -138,6 +139,24 @@
     typeLine(lines[idx])
   }
 
+  /**
+   * Esc (src/lib/dialogue-escape.ts): out of the talk as if it were read
+   * through, taking the goodbye when replies are on offer; a decision with
+   * no goodbye, or a story beat, stays (a soft fizzle).
+   */
+  function escape(): void {
+    const move = escapeMove({ choices, answered, beat: ui.cinematic })
+    if (move.kind === 'stay') {
+      sfx('fizzle')
+      return
+    }
+    if (move.kind === 'goodbye') {
+      answered = true
+      chosenAction = move.choice.action
+    }
+    close()
+  }
+
   function close(): void {
     stopTyping()
     open = false
@@ -157,6 +176,13 @@
     }
     const onKey = (e: KeyboardEvent) => {
       if (!open || e.timeStamp <= openedAt) return
+      if (e.code === 'Escape') {
+        // Ours: the Menu mustn't open on the press that closed the talk (App.svelte's Escape).
+        ;(e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed = true
+        e.preventDefault()
+        if (!e.repeat) escape()
+        return
+      }
       if (showChoices && choices) {
         const n = Number(e.key)
         if (n >= 1 && n <= choices.length) {

@@ -53,7 +53,9 @@ type Homestead struct {
 	// The personal chest's capacity.
 	PersonalChest *HomesteadPersonalChest `protobuf:"bytes,12,opt,name=personal_chest,json=personalChest,proto3" json:"personal_chest,omitempty"`
 	// The home goods (one row per furnishing the homestead sells).
-	Items         []*HomeItem `protobuf:"bytes,13,rep,name=items,proto3" json:"items,omitempty"`
+	Items []*HomeItem `protobuf:"bytes,13,rep,name=items,proto3" json:"items,omitempty"`
+	// The stable: one placed piece that grows east a bay at a time (3.2).
+	Stable        *HomesteadStable `protobuf:"bytes,14,opt,name=stable,proto3" json:"stable,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -179,6 +181,86 @@ func (x *Homestead) GetItems() []*HomeItem {
 	return nil
 }
 
+func (x *Homestead) GetStable() *HomesteadStable {
+	if x != nil {
+		return x.Stable
+	}
+	return nil
+}
+
+// The stable's growth rules (docs/design/crafts.md 3.1, 3.2, 6.3). The
+// piece's buy price is its home-item row; StallCost is the **first extra**
+// bay's bill, and each bay after it adds Growth to each material named
+// there (a material outside Growth — fiber — stays flat). The rules that
+// read the item row (it exists, it is the stable) are the loaders'.
+type HomesteadStable struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Item          string                 `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
+	MaxStalls     int32                  `protobuf:"varint,2,opt,name=max_stalls,json=maxStalls,proto3" json:"max_stalls,omitempty"`
+	StallCost     map[string]int32       `protobuf:"bytes,3,rep,name=stall_cost,json=stallCost,proto3" json:"stall_cost,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	Growth        map[string]int32       `protobuf:"bytes,4,rep,name=growth,proto3" json:"growth,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HomesteadStable) Reset() {
+	*x = HomesteadStable{}
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HomesteadStable) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HomesteadStable) ProtoMessage() {}
+
+func (x *HomesteadStable) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HomesteadStable.ProtoReflect.Descriptor instead.
+func (*HomesteadStable) Descriptor() ([]byte, []int) {
+	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *HomesteadStable) GetItem() string {
+	if x != nil {
+		return x.Item
+	}
+	return ""
+}
+
+func (x *HomesteadStable) GetMaxStalls() int32 {
+	if x != nil {
+		return x.MaxStalls
+	}
+	return 0
+}
+
+func (x *HomesteadStable) GetStallCost() map[string]int32 {
+	if x != nil {
+		return x.StallCost
+	}
+	return nil
+}
+
+func (x *HomesteadStable) GetGrowth() map[string]int32 {
+	if x != nil {
+		return x.Growth
+	}
+	return nil
+}
+
 // A placement grid's size in tiles (the indoor room's 12x10 is the
 // Homestead's own CEL).
 type HomeGrid struct {
@@ -191,7 +273,7 @@ type HomeGrid struct {
 
 func (x *HomeGrid) Reset() {
 	*x = HomeGrid{}
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[1]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -203,7 +285,7 @@ func (x *HomeGrid) String() string {
 func (*HomeGrid) ProtoMessage() {}
 
 func (x *HomeGrid) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[1]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -216,7 +298,7 @@ func (x *HomeGrid) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HomeGrid.ProtoReflect.Descriptor instead.
 func (*HomeGrid) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{1}
+	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *HomeGrid) GetWidth() int32 {
@@ -251,7 +333,7 @@ type HomeTier struct {
 
 func (x *HomeTier) Reset() {
 	*x = HomeTier{}
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[2]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -263,7 +345,7 @@ func (x *HomeTier) String() string {
 func (*HomeTier) ProtoMessage() {}
 
 func (x *HomeTier) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[2]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -276,7 +358,7 @@ func (x *HomeTier) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HomeTier.ProtoReflect.Descriptor instead.
 func (*HomeTier) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{2}
+	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *HomeTier) GetTier() int32 {
@@ -335,7 +417,7 @@ type HomeRect struct {
 
 func (x *HomeRect) Reset() {
 	*x = HomeRect{}
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[3]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -347,7 +429,7 @@ func (x *HomeRect) String() string {
 func (*HomeRect) ProtoMessage() {}
 
 func (x *HomeRect) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[3]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -360,7 +442,7 @@ func (x *HomeRect) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HomeRect.ProtoReflect.Descriptor instead.
 func (*HomeRect) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{3}
+	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *HomeRect) GetX() int32 {
@@ -413,7 +495,7 @@ type HomeLand struct {
 
 func (x *HomeLand) Reset() {
 	*x = HomeLand{}
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[4]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -425,7 +507,7 @@ func (x *HomeLand) String() string {
 func (*HomeLand) ProtoMessage() {}
 
 func (x *HomeLand) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[4]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -438,7 +520,7 @@ func (x *HomeLand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HomeLand.ProtoReflect.Descriptor instead.
 func (*HomeLand) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{4}
+	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *HomeLand) GetGenerator() int32 {
@@ -529,7 +611,7 @@ type HomeGate struct {
 
 func (x *HomeGate) Reset() {
 	*x = HomeGate{}
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[5]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -541,7 +623,7 @@ func (x *HomeGate) String() string {
 func (*HomeGate) ProtoMessage() {}
 
 func (x *HomeGate) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[5]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -554,7 +636,7 @@ func (x *HomeGate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HomeGate.ProtoReflect.Descriptor instead.
 func (*HomeGate) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{5}
+	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *HomeGate) GetX() int32 {
@@ -583,7 +665,7 @@ type HomePixelPos struct {
 
 func (x *HomePixelPos) Reset() {
 	*x = HomePixelPos{}
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[6]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -595,7 +677,7 @@ func (x *HomePixelPos) String() string {
 func (*HomePixelPos) ProtoMessage() {}
 
 func (x *HomePixelPos) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[6]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -608,7 +690,7 @@ func (x *HomePixelPos) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HomePixelPos.ProtoReflect.Descriptor instead.
 func (*HomePixelPos) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{6}
+	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *HomePixelPos) GetX() int32 {
@@ -644,7 +726,7 @@ type HomeStartLight struct {
 
 func (x *HomeStartLight) Reset() {
 	*x = HomeStartLight{}
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[7]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -656,7 +738,7 @@ func (x *HomeStartLight) String() string {
 func (*HomeStartLight) ProtoMessage() {}
 
 func (x *HomeStartLight) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[7]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -669,7 +751,7 @@ func (x *HomeStartLight) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HomeStartLight.ProtoReflect.Descriptor instead.
 func (*HomeStartLight) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{7}
+	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *HomeStartLight) GetX() int32 {
@@ -713,7 +795,7 @@ type CommonsLane struct {
 
 func (x *CommonsLane) Reset() {
 	*x = CommonsLane{}
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[8]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -725,7 +807,7 @@ func (x *CommonsLane) String() string {
 func (*CommonsLane) ProtoMessage() {}
 
 func (x *CommonsLane) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[8]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -738,7 +820,7 @@ func (x *CommonsLane) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommonsLane.ProtoReflect.Descriptor instead.
 func (*CommonsLane) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{8}
+	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *CommonsLane) GetTileSize() int32 {
@@ -801,7 +883,7 @@ type LanternPosts struct {
 
 func (x *LanternPosts) Reset() {
 	*x = LanternPosts{}
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[9]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -813,7 +895,7 @@ func (x *LanternPosts) String() string {
 func (*LanternPosts) ProtoMessage() {}
 
 func (x *LanternPosts) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[9]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -826,7 +908,7 @@ func (x *LanternPosts) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LanternPosts.ProtoReflect.Descriptor instead.
 func (*LanternPosts) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{9}
+	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *LanternPosts) GetItem() string {
@@ -874,7 +956,7 @@ type MaterialBill struct {
 
 func (x *MaterialBill) Reset() {
 	*x = MaterialBill{}
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[10]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -886,7 +968,7 @@ func (x *MaterialBill) String() string {
 func (*MaterialBill) ProtoMessage() {}
 
 func (x *MaterialBill) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[10]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -899,7 +981,7 @@ func (x *MaterialBill) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MaterialBill.ProtoReflect.Descriptor instead.
 func (*MaterialBill) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{10}
+	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *MaterialBill) GetMaterials() map[string]int32 {
@@ -919,7 +1001,7 @@ type HomesteadDeeds struct {
 
 func (x *HomesteadDeeds) Reset() {
 	*x = HomesteadDeeds{}
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[11]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -931,7 +1013,7 @@ func (x *HomesteadDeeds) String() string {
 func (*HomesteadDeeds) ProtoMessage() {}
 
 func (x *HomesteadDeeds) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[11]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -944,7 +1026,7 @@ func (x *HomesteadDeeds) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HomesteadDeeds.ProtoReflect.Descriptor instead.
 func (*HomesteadDeeds) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{11}
+	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *HomesteadDeeds) GetFirstFree() bool {
@@ -971,7 +1053,7 @@ type HomesteadDesolation struct {
 
 func (x *HomesteadDesolation) Reset() {
 	*x = HomesteadDesolation{}
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[12]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -983,7 +1065,7 @@ func (x *HomesteadDesolation) String() string {
 func (*HomesteadDesolation) ProtoMessage() {}
 
 func (x *HomesteadDesolation) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[12]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -996,7 +1078,7 @@ func (x *HomesteadDesolation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HomesteadDesolation.ProtoReflect.Descriptor instead.
 func (*HomesteadDesolation) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{12}
+	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *HomesteadDesolation) GetDesolateAfterDays() int32 {
@@ -1022,7 +1104,7 @@ type HomesteadPersonalChest struct {
 
 func (x *HomesteadPersonalChest) Reset() {
 	*x = HomesteadPersonalChest{}
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[13]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1034,7 +1116,7 @@ func (x *HomesteadPersonalChest) String() string {
 func (*HomesteadPersonalChest) ProtoMessage() {}
 
 func (x *HomesteadPersonalChest) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[13]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1047,7 +1129,7 @@ func (x *HomesteadPersonalChest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HomesteadPersonalChest.ProtoReflect.Descriptor instead.
 func (*HomesteadPersonalChest) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{13}
+	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *HomesteadPersonalChest) GetMaxUnits() int32 {
@@ -1067,7 +1149,7 @@ type HomesteadJointDeed struct {
 
 func (x *HomesteadJointDeed) Reset() {
 	*x = HomesteadJointDeed{}
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[14]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1079,7 +1161,7 @@ func (x *HomesteadJointDeed) String() string {
 func (*HomesteadJointDeed) ProtoMessage() {}
 
 func (x *HomesteadJointDeed) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[14]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1092,7 +1174,7 @@ func (x *HomesteadJointDeed) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HomesteadJointDeed.ProtoReflect.Descriptor instead.
 func (*HomesteadJointDeed) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{14}
+	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *HomesteadJointDeed) GetConfirmWindowSeconds() int32 {
@@ -1126,14 +1208,17 @@ type HomeItem struct {
 	// carried material in the items catalogue — checked in code.
 	Materials map[string]int32 `protobuf:"bytes,8,rep,name=materials,proto3" json:"materials,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
 	// Craftable only at the workbench (never bought).
-	CraftOnly     *bool `protobuf:"varint,9,opt,name=craft_only,json=craftOnly,proto3,oneof" json:"craft_only,omitempty"`
+	CraftOnly *bool `protobuf:"varint,9,opt,name=craft_only,json=craftOnly,proto3,oneof" json:"craft_only,omitempty"`
+	// A building: a structure on the plot (the stable; later the kiln).
+	// Silas's Yard lists buildings in a section of their own.
+	Building      *bool `protobuf:"varint,10,opt,name=building,proto3,oneof" json:"building,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *HomeItem) Reset() {
 	*x = HomeItem{}
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[15]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1145,7 +1230,7 @@ func (x *HomeItem) String() string {
 func (*HomeItem) ProtoMessage() {}
 
 func (x *HomeItem) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_content_v1_homestead_proto_msgTypes[15]
+	mi := &file_glimway_content_v1_homestead_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1158,7 +1243,7 @@ func (x *HomeItem) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HomeItem.ProtoReflect.Descriptor instead.
 func (*HomeItem) Descriptor() ([]byte, []int) {
-	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{15}
+	return file_glimway_content_v1_homestead_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *HomeItem) GetId() string {
@@ -1224,11 +1309,19 @@ func (x *HomeItem) GetCraftOnly() bool {
 	return false
 }
 
+func (x *HomeItem) GetBuilding() bool {
+	if x != nil && x.Building != nil {
+		return *x.Building
+	}
+	return false
+}
+
 var File_glimway_content_v1_homestead_proto protoreflect.FileDescriptor
 
 const file_glimway_content_v1_homestead_proto_rawDesc = "" +
 	"\n" +
-	"\"glimway/content/v1/homestead.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\xc5\t\n" +
+	"\"glimway/content/v1/homestead.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\x8a\n" +
+	"\n" +
 	"\tHomestead\x12>\n" +
 	"\x05tiers\x18\x01 \x03(\v2\x1c.glimway.content.v1.HomeTierB\n" +
 	"\xbaH\a\x92\x01\x04\b\x05\x10\x05R\x05tiers\x12<\n" +
@@ -1247,9 +1340,24 @@ const file_glimway_content_v1_homestead_proto_rawDesc = "" +
 	"\n" +
 	"joint_deed\x18\v \x01(\v2&.glimway.content.v1.HomesteadJointDeedB\x06\xbaH\x03\xc8\x01\x01R\tjointDeed\x12Y\n" +
 	"\x0epersonal_chest\x18\f \x01(\v2*.glimway.content.v1.HomesteadPersonalChestB\x06\xbaH\x03\xc8\x01\x01R\rpersonalChest\x12<\n" +
-	"\x05items\x18\r \x03(\v2\x1c.glimway.content.v1.HomeItemB\b\xbaH\x05\x92\x01\x02\b\x01R\x05items:\x99\x02\xbaH\x95\x02\x1a\xa2\x01\n" +
+	"\x05items\x18\r \x03(\v2\x1c.glimway.content.v1.HomeItemB\b\xbaH\x05\x92\x01\x02\b\x01R\x05items\x12C\n" +
+	"\x06stable\x18\x0e \x01(\v2#.glimway.content.v1.HomesteadStableB\x06\xbaH\x03\xc8\x01\x01R\x06stable:\x99\x02\xbaH\x95\x02\x1a\xa2\x01\n" +
 	"\"homestead.deed_lost_after_desolate\x120a deed is lost only after the land goes desolate\x1aJthis.desolation.deed_lost_after_days > this.desolation.desolate_after_days\x1an\n" +
-	"\x10homestead.indoor\x12%the indoor room is the designed 12x10\x1a3this.indoor.width == 12 && this.indoor.height == 10\"o\n" +
+	"\x10homestead.indoor\x12%the indoor room is the designed 12x10\x1a3this.indoor.width == 12 && this.indoor.height == 10\"\xa5\x03\n" +
+	"\x0fHomesteadStable\x12-\n" +
+	"\x04item\x18\x01 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x04item\x12(\n" +
+	"\n" +
+	"max_stalls\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x06(\x01R\tmaxStalls\x12e\n" +
+	"\n" +
+	"stall_cost\x18\x03 \x03(\v22.glimway.content.v1.HomesteadStable.StallCostEntryB\x12\xbaH\x0f\x9a\x01\f\b\x01*\b\x1a\x06\x18\xc0\x84=(\x01R\tstallCost\x12Y\n" +
+	"\x06growth\x18\x04 \x03(\v2/.glimway.content.v1.HomesteadStable.GrowthEntryB\x10\xbaH\r\x9a\x01\n" +
+	"*\b\x1a\x06\x18\xc0\x84=(\x00R\x06growth\x1a<\n" +
+	"\x0eStallCostEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\x1a9\n" +
+	"\vGrowthEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"o\n" +
 	"\bHomeGrid\x12%\n" +
 	"\x05width\x18\x01 \x01(\x05B\n" +
 	"\xbaH\a\xc8\x01\x01\x1a\x02(\x01H\x00R\x05width\x88\x01\x01\x12'\n" +
@@ -1363,7 +1471,7 @@ const file_glimway_content_v1_homestead_proto_rawDesc = "" +
 	"\tmax_units\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\bmaxUnits\"\x7f\n" +
 	"\x12HomesteadJointDeed\x12=\n" +
 	"\x16confirm_window_seconds\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x05R\x14confirmWindowSeconds\x12*\n" +
-	"\finvite_hours\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\vinviteHours\"\xe1\x06\n" +
+	"\finvite_hours\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\vinviteHours\"\x89\a\n" +
 	"\bHomeItem\x12)\n" +
 	"\x02id\x18\x01 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12<\n" +
@@ -1374,13 +1482,16 @@ const file_glimway_content_v1_homestead_proto_rawDesc = "" +
 	"\x06embers\x18\a \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x06embers\x12]\n" +
 	"\tmaterials\x18\b \x03(\v2+.glimway.content.v1.HomeItem.MaterialsEntryB\x12\xbaH\x0f\x9a\x01\f\x10\x03*\b\x1a\x06\x18\xc0\x84=(\x01R\tmaterials\x12\"\n" +
 	"\n" +
-	"craft_only\x18\t \x01(\bH\x00R\tcraftOnly\x88\x01\x01\x1a<\n" +
+	"craft_only\x18\t \x01(\bH\x00R\tcraftOnly\x88\x01\x01\x12\x1f\n" +
+	"\bbuilding\x18\n" +
+	" \x01(\bH\x01R\bbuilding\x88\x01\x01\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01:\x8c\x03\xbaH\x88\x03\x1a\x8e\x01\n" +
-	"\x0fhome_item.price\x12Ja home good is priced in embers or materials, never both and never neither\x1a/(this.embers > 0) != (size(this.materials) > 0)\x1a\xf4\x01\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01:\x86\x03\xbaH\x82\x03\x1a\x88\x01\n" +
+	"\x0fhome_item.price\x12Ha home good is priced in embers, in materials, or in both; never neither\x1a+this.embers > 0 || size(this.materials) > 0\x1a\xf4\x01\n" +
 	"\x0fhome_item.where\x12;where is one or two distinct scenes (indoor, outdoor, gate)\x1a\xa3\x01size(this.where) > 0 && size(this.where) <= 2 && this.where.all(w, w in [\"indoor\", \"outdoor\", \"gate\"]) && (size(this.where) == 1 || this.where[0] != this.where[1])B\r\n" +
-	"\v_craft_onlyB*Z(glimway/gen/glimway/content/v1;contentv1b\x06proto3"
+	"\v_craft_onlyB\v\n" +
+	"\t_buildingB*Z(glimway/gen/glimway/content/v1;contentv1b\x06proto3"
 
 var (
 	file_glimway_content_v1_homestead_proto_rawDescOnce sync.Once
@@ -1394,56 +1505,62 @@ func file_glimway_content_v1_homestead_proto_rawDescGZIP() []byte {
 	return file_glimway_content_v1_homestead_proto_rawDescData
 }
 
-var file_glimway_content_v1_homestead_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_glimway_content_v1_homestead_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_glimway_content_v1_homestead_proto_goTypes = []any{
 	(*Homestead)(nil),              // 0: glimway.content.v1.Homestead
-	(*HomeGrid)(nil),               // 1: glimway.content.v1.HomeGrid
-	(*HomeTier)(nil),               // 2: glimway.content.v1.HomeTier
-	(*HomeRect)(nil),               // 3: glimway.content.v1.HomeRect
-	(*HomeLand)(nil),               // 4: glimway.content.v1.HomeLand
-	(*HomeGate)(nil),               // 5: glimway.content.v1.HomeGate
-	(*HomePixelPos)(nil),           // 6: glimway.content.v1.HomePixelPos
-	(*HomeStartLight)(nil),         // 7: glimway.content.v1.HomeStartLight
-	(*CommonsLane)(nil),            // 8: glimway.content.v1.CommonsLane
-	(*LanternPosts)(nil),           // 9: glimway.content.v1.LanternPosts
-	(*MaterialBill)(nil),           // 10: glimway.content.v1.MaterialBill
-	(*HomesteadDeeds)(nil),         // 11: glimway.content.v1.HomesteadDeeds
-	(*HomesteadDesolation)(nil),    // 12: glimway.content.v1.HomesteadDesolation
-	(*HomesteadPersonalChest)(nil), // 13: glimway.content.v1.HomesteadPersonalChest
-	(*HomesteadJointDeed)(nil),     // 14: glimway.content.v1.HomesteadJointDeed
-	(*HomeItem)(nil),               // 15: glimway.content.v1.HomeItem
-	nil,                            // 16: glimway.content.v1.HomeTier.MaterialsEntry
-	nil,                            // 17: glimway.content.v1.LanternPosts.GrowthEntry
-	nil,                            // 18: glimway.content.v1.MaterialBill.MaterialsEntry
-	nil,                            // 19: glimway.content.v1.HomeItem.MaterialsEntry
+	(*HomesteadStable)(nil),        // 1: glimway.content.v1.HomesteadStable
+	(*HomeGrid)(nil),               // 2: glimway.content.v1.HomeGrid
+	(*HomeTier)(nil),               // 3: glimway.content.v1.HomeTier
+	(*HomeRect)(nil),               // 4: glimway.content.v1.HomeRect
+	(*HomeLand)(nil),               // 5: glimway.content.v1.HomeLand
+	(*HomeGate)(nil),               // 6: glimway.content.v1.HomeGate
+	(*HomePixelPos)(nil),           // 7: glimway.content.v1.HomePixelPos
+	(*HomeStartLight)(nil),         // 8: glimway.content.v1.HomeStartLight
+	(*CommonsLane)(nil),            // 9: glimway.content.v1.CommonsLane
+	(*LanternPosts)(nil),           // 10: glimway.content.v1.LanternPosts
+	(*MaterialBill)(nil),           // 11: glimway.content.v1.MaterialBill
+	(*HomesteadDeeds)(nil),         // 12: glimway.content.v1.HomesteadDeeds
+	(*HomesteadDesolation)(nil),    // 13: glimway.content.v1.HomesteadDesolation
+	(*HomesteadPersonalChest)(nil), // 14: glimway.content.v1.HomesteadPersonalChest
+	(*HomesteadJointDeed)(nil),     // 15: glimway.content.v1.HomesteadJointDeed
+	(*HomeItem)(nil),               // 16: glimway.content.v1.HomeItem
+	nil,                            // 17: glimway.content.v1.HomesteadStable.StallCostEntry
+	nil,                            // 18: glimway.content.v1.HomesteadStable.GrowthEntry
+	nil,                            // 19: glimway.content.v1.HomeTier.MaterialsEntry
+	nil,                            // 20: glimway.content.v1.LanternPosts.GrowthEntry
+	nil,                            // 21: glimway.content.v1.MaterialBill.MaterialsEntry
+	nil,                            // 22: glimway.content.v1.HomeItem.MaterialsEntry
 }
 var file_glimway_content_v1_homestead_proto_depIdxs = []int32{
-	2,  // 0: glimway.content.v1.Homestead.tiers:type_name -> glimway.content.v1.HomeTier
-	1,  // 1: glimway.content.v1.Homestead.indoor:type_name -> glimway.content.v1.HomeGrid
-	4,  // 2: glimway.content.v1.Homestead.land:type_name -> glimway.content.v1.HomeLand
-	8,  // 3: glimway.content.v1.Homestead.commons:type_name -> glimway.content.v1.CommonsLane
-	3,  // 4: glimway.content.v1.Homestead.outdoor_reserved:type_name -> glimway.content.v1.HomeRect
-	3,  // 5: glimway.content.v1.Homestead.indoor_reserved:type_name -> glimway.content.v1.HomeRect
-	9,  // 6: glimway.content.v1.Homestead.lantern_posts:type_name -> glimway.content.v1.LanternPosts
-	11, // 7: glimway.content.v1.Homestead.deeds:type_name -> glimway.content.v1.HomesteadDeeds
-	12, // 8: glimway.content.v1.Homestead.desolation:type_name -> glimway.content.v1.HomesteadDesolation
-	14, // 9: glimway.content.v1.Homestead.joint_deed:type_name -> glimway.content.v1.HomesteadJointDeed
-	13, // 10: glimway.content.v1.Homestead.personal_chest:type_name -> glimway.content.v1.HomesteadPersonalChest
-	15, // 11: glimway.content.v1.Homestead.items:type_name -> glimway.content.v1.HomeItem
-	16, // 12: glimway.content.v1.HomeTier.materials:type_name -> glimway.content.v1.HomeTier.MaterialsEntry
-	3,  // 13: glimway.content.v1.HomeLand.site:type_name -> glimway.content.v1.HomeRect
-	5,  // 14: glimway.content.v1.HomeLand.gate:type_name -> glimway.content.v1.HomeGate
-	7,  // 15: glimway.content.v1.HomeLand.start_light:type_name -> glimway.content.v1.HomeStartLight
-	6,  // 16: glimway.content.v1.CommonsLane.silas_table:type_name -> glimway.content.v1.HomePixelPos
-	10, // 17: glimway.content.v1.LanternPosts.costs:type_name -> glimway.content.v1.MaterialBill
-	17, // 18: glimway.content.v1.LanternPosts.growth:type_name -> glimway.content.v1.LanternPosts.GrowthEntry
-	18, // 19: glimway.content.v1.MaterialBill.materials:type_name -> glimway.content.v1.MaterialBill.MaterialsEntry
-	19, // 20: glimway.content.v1.HomeItem.materials:type_name -> glimway.content.v1.HomeItem.MaterialsEntry
-	21, // [21:21] is the sub-list for method output_type
-	21, // [21:21] is the sub-list for method input_type
-	21, // [21:21] is the sub-list for extension type_name
-	21, // [21:21] is the sub-list for extension extendee
-	0,  // [0:21] is the sub-list for field type_name
+	3,  // 0: glimway.content.v1.Homestead.tiers:type_name -> glimway.content.v1.HomeTier
+	2,  // 1: glimway.content.v1.Homestead.indoor:type_name -> glimway.content.v1.HomeGrid
+	5,  // 2: glimway.content.v1.Homestead.land:type_name -> glimway.content.v1.HomeLand
+	9,  // 3: glimway.content.v1.Homestead.commons:type_name -> glimway.content.v1.CommonsLane
+	4,  // 4: glimway.content.v1.Homestead.outdoor_reserved:type_name -> glimway.content.v1.HomeRect
+	4,  // 5: glimway.content.v1.Homestead.indoor_reserved:type_name -> glimway.content.v1.HomeRect
+	10, // 6: glimway.content.v1.Homestead.lantern_posts:type_name -> glimway.content.v1.LanternPosts
+	12, // 7: glimway.content.v1.Homestead.deeds:type_name -> glimway.content.v1.HomesteadDeeds
+	13, // 8: glimway.content.v1.Homestead.desolation:type_name -> glimway.content.v1.HomesteadDesolation
+	15, // 9: glimway.content.v1.Homestead.joint_deed:type_name -> glimway.content.v1.HomesteadJointDeed
+	14, // 10: glimway.content.v1.Homestead.personal_chest:type_name -> glimway.content.v1.HomesteadPersonalChest
+	16, // 11: glimway.content.v1.Homestead.items:type_name -> glimway.content.v1.HomeItem
+	1,  // 12: glimway.content.v1.Homestead.stable:type_name -> glimway.content.v1.HomesteadStable
+	17, // 13: glimway.content.v1.HomesteadStable.stall_cost:type_name -> glimway.content.v1.HomesteadStable.StallCostEntry
+	18, // 14: glimway.content.v1.HomesteadStable.growth:type_name -> glimway.content.v1.HomesteadStable.GrowthEntry
+	19, // 15: glimway.content.v1.HomeTier.materials:type_name -> glimway.content.v1.HomeTier.MaterialsEntry
+	4,  // 16: glimway.content.v1.HomeLand.site:type_name -> glimway.content.v1.HomeRect
+	6,  // 17: glimway.content.v1.HomeLand.gate:type_name -> glimway.content.v1.HomeGate
+	8,  // 18: glimway.content.v1.HomeLand.start_light:type_name -> glimway.content.v1.HomeStartLight
+	7,  // 19: glimway.content.v1.CommonsLane.silas_table:type_name -> glimway.content.v1.HomePixelPos
+	11, // 20: glimway.content.v1.LanternPosts.costs:type_name -> glimway.content.v1.MaterialBill
+	20, // 21: glimway.content.v1.LanternPosts.growth:type_name -> glimway.content.v1.LanternPosts.GrowthEntry
+	21, // 22: glimway.content.v1.MaterialBill.materials:type_name -> glimway.content.v1.MaterialBill.MaterialsEntry
+	22, // 23: glimway.content.v1.HomeItem.materials:type_name -> glimway.content.v1.HomeItem.MaterialsEntry
+	24, // [24:24] is the sub-list for method output_type
+	24, // [24:24] is the sub-list for method input_type
+	24, // [24:24] is the sub-list for extension type_name
+	24, // [24:24] is the sub-list for extension extendee
+	0,  // [0:24] is the sub-list for field type_name
 }
 
 func init() { file_glimway_content_v1_homestead_proto_init() }
@@ -1451,19 +1568,19 @@ func file_glimway_content_v1_homestead_proto_init() {
 	if File_glimway_content_v1_homestead_proto != nil {
 		return
 	}
-	file_glimway_content_v1_homestead_proto_msgTypes[1].OneofWrappers = []any{}
-	file_glimway_content_v1_homestead_proto_msgTypes[3].OneofWrappers = []any{}
-	file_glimway_content_v1_homestead_proto_msgTypes[5].OneofWrappers = []any{}
+	file_glimway_content_v1_homestead_proto_msgTypes[2].OneofWrappers = []any{}
+	file_glimway_content_v1_homestead_proto_msgTypes[4].OneofWrappers = []any{}
 	file_glimway_content_v1_homestead_proto_msgTypes[6].OneofWrappers = []any{}
 	file_glimway_content_v1_homestead_proto_msgTypes[7].OneofWrappers = []any{}
-	file_glimway_content_v1_homestead_proto_msgTypes[15].OneofWrappers = []any{}
+	file_glimway_content_v1_homestead_proto_msgTypes[8].OneofWrappers = []any{}
+	file_glimway_content_v1_homestead_proto_msgTypes[16].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_glimway_content_v1_homestead_proto_rawDesc), len(file_glimway_content_v1_homestead_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   20,
+			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

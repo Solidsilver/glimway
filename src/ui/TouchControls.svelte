@@ -1,7 +1,8 @@
 <script lang="ts">
   import { bus, EV } from '../game/events'
   import { heroScreen, touchVec } from '../game/input'
-  import { getCombatKit } from '../lib/combat'
+  import type { KitMove } from '../lib/combat'
+  import type { AbilitySlot } from './store.svelte'
   import { ui } from './store.svelte'
   import { isTouchFirst } from './device'
   import Icon from './Icon.svelte'
@@ -10,6 +11,7 @@
   import { setHeld } from '../game/held'
   import { KIND_WORDS } from '../lib/belt'
   import { noteFloatingVisit, settings } from './settings.svelte'
+  import ContextButtons from './ContextButtons.svelte'
 
   const show = isTouchFirst()
   /** fixed: the corner joystick. floating: it appears under the thumb. hold: walk toward the finger. */
@@ -178,9 +180,10 @@
     }
   }
 
-  function castDown(e: PointerEvent): void {
+  function castDown(e: PointerEvent, which: 'sig' | 'move'): void {
     e.preventDefault()
-    bus.emit(EV.cast)
+    if (which === 'move') bus.emit(EV.castMove)
+    else bus.emit(EV.cast)
   }
 
   function rollDown(e: PointerEvent): void {
@@ -188,8 +191,7 @@
     bus.emit(EV.dodge)
   }
 
-  const kit = $derived(getCombatKit(ui.importedProfile))
-  const canAfford = $derived(ui.stats.mana >= kit.manaCost)
+  const kit = $derived(ui.kit)
   const talkMode = $derived(!!ui.prompt.label && !ui.dialogueOpen)
   /**
    * The belt (src/game/held.ts): the big button shows what's in hand; the
@@ -233,6 +235,26 @@
     releaseWalk()
   })
 </script>
+
+{#snippet castButton(m: KitMove, st: AbilitySlot, which: 'sig' | 'move')}
+  <button
+    type="button"
+    class="round cast {which}"
+    class:dim={ui.stats.mana < m.mana}
+    data-ability={m.id}
+    onpointerdown={(e) => castDown(e, which)}
+    oncontextmenu={(e) => e.preventDefault()}
+    aria-label={`${m.name} (${m.mana} mana)`}
+  >
+    {#key st.deniedAt}
+      <span class="glyph" class:shake={st.deniedAt > 0}><ArtIcon art={m.icon} name="sparkle" size={24} /></span>
+    {/key}
+    {#key st.readyAt}
+      {#if st.readyAt > 0}<span class="sweep" style={`animation-duration:${st.cooldown}s`}></span>{/if}
+    {/key}
+    <span class="cost"><Icon name="drop" size={9} />{m.mana}</span>
+  </button>
+{/snippet}
 
 {#if show}
   {#if mode !== 'fixed'}
@@ -299,24 +321,13 @@
           {#if ui.roll.readyAt > 0}<span class="sweep" style={`animation-duration:${ui.roll.cooldown}s`}></span>{/if}
         {/key}
       </button>
-      <button
-        type="button"
-        class="round cast"
-        class:dim={!canAfford}
-        onpointerdown={castDown}
-        oncontextmenu={(e) => e.preventDefault()}
-        aria-label={`${kit.signatureName} (${kit.manaCost} mana)`}
-      >
-        {#key ui.ability.deniedAt}
-          <span class="glyph" class:shake={ui.ability.deniedAt > 0}><Icon name="sparkle" size={24} /></span>
-        {/key}
-        {#key ui.ability.readyAt}
-          {#if ui.ability.readyAt > 0}<span class="sweep" style={`animation-duration:${ui.ability.cooldown}s`}></span>{/if}
-        {/key}
-        <span class="cost"><Icon name="drop" size={9} />{kit.manaCost}</span>
-      </button>
+      <!-- The ✦ buttons: the level-20 move above the signature; a hero without a craft has neither (crafts.md 4.2, 8). -->
+      {#if kit.move}{@render castButton(kit.move, ui.slot(kit.move.id), 'move')}{/if}
+      {#if kit.signature}{@render castButton(kit.signature, ui.slot(kit.signature.id), 'sig')}{/if}
       </div>
       <div class="actwrap">
+        <!-- What the game has up for now (saddle, Go home, Keep / Let it go), above the action button, inside the belt's arc. -->
+        <div class="ctxwrap"><ContextButtons variant="touch" /></div>
         {#if heldUi.belt.length > 1}
           <div class="belt" role="group" aria-label="Take in hand" data-testid="belt" data-inset-watch>
             {#each others as b, i (b.kind)}
@@ -489,6 +500,12 @@
   /* The ring is an overlay over the world: App.svelte measures its buttons, not a padded box. */
   .actwrap {
     position: relative;
+  }
+  .ctxwrap {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 10px);
+    pointer-events: none;
   }
   .belt {
     position: absolute;

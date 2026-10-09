@@ -12,7 +12,6 @@
   import type { InstanceView } from '../lib/api/types'
   import { INVENTORY_FILTERS, inventoryCopy } from '../content/inventory'
   import { beltFor, heldSlot, KIND_WORDS, type BeltKind } from '../lib/belt'
-  import { getCombatKit } from '../lib/combat'
   import { GATHERING_DATA, isPlantableSeed, PLANTS_FULL_LINE } from '../lib/gathering'
   import { parseHomeArea, plantTileNear } from '../lib/homestead'
   import { ui } from './store.svelte'
@@ -80,7 +79,7 @@
   let headEl: HTMLElement | undefined = $state()
   let cardTop = $state(120)
 
-  const kit = $derived(getCombatKit(ui.importedProfile))
+  const kit = $derived(ui.kit)
 
   onMount(() => {
     inventory.syncPack(session.state.inventory)

@@ -67,9 +67,27 @@ func PlayerState(ctx context.Context, tx *sql.Tx, s Snapshot) (*contract.PlayerS
 	if s.ImportedProfile != nil {
 		out.Profile = projectProfile(*s.ImportedProfile)
 	}
+	// Companions (0.5): resolved when someone looks — a lapsed key reads as
+	// its fallback. Guests and `profile_source: none` get none of this and
+	// keep the wire's null ("nothing yet").
+	if s.ProfileSource == "habitica" {
+		c, err := CompanionsFor(ctx, tx, s.AccountID, s.WorldID, s.ProfileSource, s.ImportedProfile)
+		if err != nil {
+			return nil, err
+		}
+		out.Companions = &contract.Companions{FollowPet: c.FollowPet, YardPets: c.YardPets, MountOut: c.MountOut, MountHome: c.MountHome}
+	}
 	// Report acknowledgments and independent causal watermarks.
 	err := tx.QueryRowContext(ctx, "SELECT report_seq,report_client,report_generation,vitals_set_version,vitals_at,cast_ready_at FROM player_vitals WHERE account_id=?", s.AccountID).Scan(&out.Vitals.ReportSeq, &out.Vitals.ReportClient, &out.Vitals.ReportGeneration, &out.Vitals.VitalsSetVersion, &out.Vitals.VitalsAt, &out.Vitals.CastReadyAt)
 	if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+	// Magic's marks (crafts.md 4.2) and each move's cooldown budget (4.4).
+	out.Magic = &contract.Magic{LevelMark: s.LevelMark}
+	if s.ClassMark != "" {
+		out.Magic.ClassMark = wrapperspb.String(s.ClassMark)
+	}
+	if out.Vitals.AbilityReadyAt, err = AbilityReady(ctx, tx, s.AccountID); err != nil {
 		return nil, err
 	}
 	if err = tx.QueryRowContext(ctx, "SELECT place_set_version,last_outer_epoch FROM player_place WHERE account_id=?", s.AccountID).Scan(&out.Place.PlaceSetVersion, &out.Place.OuterEpoch); err != nil && err != sql.ErrNoRows {
