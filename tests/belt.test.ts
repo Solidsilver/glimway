@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { beltFor, heldSlot, kindForKey, stepKind } from '../src/lib/belt.ts';
+import { beltFor, heldSlot, KIND_WORDS, kindForKey, stepKind } from '../src/lib/belt.ts';
 import type { InstanceView } from '../src/lib/api/types.ts';
 
 const tool = (id: string, itemDef: string, state = 'sound', usesLeft = 30): InstanceView => ({
@@ -43,4 +43,11 @@ test('belt: keys, the wheel, and a kind no longer carried', () => {
   assert.equal(stepKind(belt, 'weapon', -1), 'dig');
   // The axe chosen but the pack lost it: the weapon is in hand.
   assert.equal(heldSlot(beltFor([tool('d', 'bench-spade')]), 'chop').kind, 'weapon');
+});
+
+test('belt: the rod is its own kind, after the spade (crafts.md 5.7)', () => {
+  const belt = beltFor([tool('r', 'willow-rod'), tool('d', 'bench-spade'), tool('b', 'stave-bucket')]);
+  assert.deepEqual(belt.map((s) => s.kind), ['weapon', 'dig', 'fish', 'draw']);
+  assert.equal(heldSlot(belt, 'fish').instance, 'r');
+  assert.equal(KIND_WORDS.fish, 'Fish');
 });

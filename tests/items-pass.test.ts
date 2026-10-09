@@ -50,8 +50,9 @@ test('items-pass exposes its loader and load keys', () => {
   assert.equal(itemsArtKey('item-bench-axe-whole'), 'items-art:item-bench-axe-whole')
 })
 
-test('the manifest’s 12 source sheets are delivered as transparent RGBA PNGs of the stated size', () => {
-  assert.equal(manifest.sources.length, 12)
+test('the manifest’s 12 source sheets and 19 crafts-pass fishing frames are delivered as transparent RGBA PNGs of the stated size', () => {
+  assert.equal(manifest.sources.length, 31)
+  assert.equal(manifest.sources.filter((s) => s.file.startsWith('../crafts-pass/frames/')).length, 19)
   for (const s of manifest.sources) {
     const h = pngHeader(`${SOURCE_DIR}${s.file}`)
     assert.deepEqual([h.width, h.height], [s.width, s.height], s.file)
@@ -60,7 +61,7 @@ test('the manifest’s 12 source sheets are delivered as transparent RGBA PNGs o
 })
 
 test('every frame has a measured source rect inside its sheet and a destination inside its native canvas', () => {
-  assert.equal(manifest.frames.length, 170)
+  assert.equal(manifest.frames.length, 189)
   assert.equal(frameByKey.size, manifest.frames.length, 'frame keys are unique')
   const sources = new Map(manifest.sources.map((s) => [s.key, s]))
   const rects = new Set<string>()
@@ -79,7 +80,7 @@ test('every frame has a measured source rect inside its sheet and a destination 
 
 test('inventory icons have role inventory-icon and native dimensions', () => {
   const icons = manifest.frames.filter((f) => f.role === 'inventory-icon')
-  assert.equal(icons.length, 110)
+  assert.equal(icons.length, 114)
   for (const icon of icons) {
     assert.ok(icon.key.startsWith('item-'), `${icon.key} has item- prefix`)
     assert.ok(icon.width > 0 && icon.height > 0)
@@ -225,5 +226,24 @@ test('every home good resolves to art: runtime deco, world sprite or commons ali
     if (CRAFTS_ART_PENDING.has(it.id)) continue
     const ok = COMMONS_DECORATION_IDS.has(it.id) || itemWorldArt(it.id) !== null
     assert.ok(ok, `${it.id} has no deco key, world sprite or commons alias`)
+  }
+})
+
+test('fishing: the rod, the roach, the fry and the card are icons; the float, rings, splash and held rod are effects at the art density', () => {
+  for (const id of ['willow-rod', 'mill-roach', 'millers-fry', 'recipe-card-millers-fry']) {
+    const f = frameByKey.get(`item-${id}`)!
+    assert.ok(f, id)
+    assert.deepEqual([f.width, f.height, f.role, f.itemId], [16, 16, 'inventory-icon', id])
+    assert.equal(itemIcon(id), itemsArtKey(`item-${id}`))
+  }
+  const sizes: Record<string, [number, number]> = { 'fish-float': [8, 8], 'fish-rings': [16, 8], 'fish-splash': [16, 16], 'fish-rod-held': [32, 32] }
+  const effects = manifest.frames.filter((f) => f.role === 'effect')
+  assert.equal(effects.length, 15)
+  for (const f of effects) {
+    const size = Object.entries(sizes).find(([k]) => f.key.startsWith(k))?.[1]
+    assert.ok(size, f.key)
+    assert.deepEqual([f.width, f.height], size, f.key)
+    // Copied 1:1: the whole delivered frame, 4 texels to a world px.
+    assert.deepEqual([f.sourceRect.w, f.sourceRect.h], [size[0] * 4, size[1] * 4], f.key)
   }
 })

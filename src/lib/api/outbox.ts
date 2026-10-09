@@ -28,8 +28,8 @@ const STORE = 'records';
 export const OUTBOX_LIFETIME_MS = 6 * 24 * 60 * 60 * 1000;
 
 /** Operations the outbox carries. `mutation` is a keyed domain route (items, homesteads, mail…). */
-export type OutboxKind = 'quest-step' | 'mark' | 'take-paper' | 'settle-echo' | 'fall' | 'spend' | 'wilds-claim' | 'wilds-lantern' | 'mutation';
-const KINDS: readonly OutboxKind[] = ['quest-step', 'mark', 'take-paper', 'settle-echo', 'fall', 'spend', 'wilds-claim', 'wilds-lantern', 'mutation'];
+export type OutboxKind = 'quest-step' | 'mark' | 'take-paper' | 'settle-echo' | 'fall' | 'spend' | 'wilds-claim' | 'wilds-lantern' | 'mutation' | 'fish-cast' | 'fish-settle' | 'fish-cancel';
+const KINDS: readonly OutboxKind[] = ['quest-step', 'mark', 'take-paper', 'settle-echo', 'fall', 'spend', 'wilds-claim', 'wilds-lantern', 'mutation', 'fish-cast', 'fish-settle', 'fish-cancel'];
 
 export interface OutboxEntry {
   /** Order within the record (allocated by the sender under the lock). */

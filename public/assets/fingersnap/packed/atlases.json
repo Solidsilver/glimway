@@ -142,6 +142,25 @@
   "assets/generated/indoors-pass/sheets/section-signs-small/library-section-sign-front-histories.png": "fdffa5b3b6c7d2d304f5eee6d655a54ff0876099f210a5f7ef54ba9bcc262876",
   "assets/generated/indoors-pass/sheets/section-signs-small/library-section-sign-front-recipes.png": "d8e5e79e1e3a460a58d408c4323ea1c2eee127869e530fc9974e6a26ce0455cc",
   "assets/generated/indoors-pass/sheets/section-signs-small/library-section-sign-front-stories.png": "439c79a04f7ea3e034686ceda5a13a55a41533340a0e8cb6c5755bdc08070150",
+  "assets/generated/items-pass/../crafts-pass/frames/float-0.png": "ce2eb927e9d2bfbc7f1e803cc60ecd6413c463b5eaec6cd0b42d3601dbce1846",
+  "assets/generated/items-pass/../crafts-pass/frames/float-1.png": "89f4b971bf66350326fc7336b95988a02a6fb240d2e0cab9b0b71d84bbf5f6fc",
+  "assets/generated/items-pass/../crafts-pass/frames/float-2.png": "b6ba83b8d219759cc733e8c67f424a04eaa68ebd2f0b8be07f2a1fc9ffc9dc9a",
+  "assets/generated/items-pass/../crafts-pass/frames/float-3.png": "c6ac69d77fed73d9257d5d216434c31de41c5bb7df978a48dd6b113216305743",
+  "assets/generated/items-pass/../crafts-pass/frames/float-4.png": "4f2b421df48f192265f54bf5cd4e72121989b30c53cfac92a9fe9a8cea185ed3",
+  "assets/generated/items-pass/../crafts-pass/frames/float-5.png": "b33ca1fc7bdb426d13b8c72dac9701e5df4e87c76d6132c9675cc6adf19a96af",
+  "assets/generated/items-pass/../crafts-pass/frames/landing-splash-0.png": "2d5eebc03fcb055ad44ac28928cd9cd6bad10d79b17139a2950d03997cb83732",
+  "assets/generated/items-pass/../crafts-pass/frames/landing-splash-1.png": "ae1a5256df0d1aac568b143634584ef7585c8e5fe6f14df04959bdf112273bac",
+  "assets/generated/items-pass/../crafts-pass/frames/landing-splash-2.png": "e96ef798ccc98e53acbfbff4b440de56fbde00afbf70dc060deded93505d9446",
+  "assets/generated/items-pass/../crafts-pass/frames/landing-splash-3.png": "dee5aaa8747af1129156dd69bae5fd953c19d27b20eaa9959ab738f722c7347d",
+  "assets/generated/items-pass/../crafts-pass/frames/mill-roach.png": "dacb943570cb37cccd6f0585a78d8fbad469b5f07b22b40c4719b0e05ed7fd85",
+  "assets/generated/items-pass/../crafts-pass/frames/millers-fry.png": "039dbf692513aaea705fd637897b2d2a601f4de9df571f14936deaf07f2a4337",
+  "assets/generated/items-pass/../crafts-pass/frames/recipe-card-millers-fry.png": "b5e49c722c21183ec59c62f8ce47aebc4ea26d70db35a649c3a6f3e1498f8ed2",
+  "assets/generated/items-pass/../crafts-pass/frames/rod-held-out.png": "92ddf5817107cabd7f7d9718379c13d117dc0bc9091123d9cf82f0759997ea27",
+  "assets/generated/items-pass/../crafts-pass/frames/rod-held-raised.png": "47cd4b702e4a350fbc07fc10a3a388a07531124bae9f215fe29d0a360d3e74c9",
+  "assets/generated/items-pass/../crafts-pass/frames/rod-icon.png": "6d04a2e2b724dbbd07926f3584afcd90ad2ce945408b5140c5e4475437ae85dc",
+  "assets/generated/items-pass/../crafts-pass/frames/water-rings-0.png": "b5b3fcb1113d2cc71596f7feba3092232b279387ca29fa2eab9166eed73d0fdf",
+  "assets/generated/items-pass/../crafts-pass/frames/water-rings-1.png": "7c7cdd78b95a5ddf4e1b827fec9a6e94a8f95a62d6e2270ab87cfa311e8ad339",
+  "assets/generated/items-pass/../crafts-pass/frames/water-rings-2.png": "5a789a52971e95251da1a35e1ce828918d3262738503fce9a24d4199b565bcfa",
   "assets/generated/items-pass/fingersnap-home-goods-1.png": "d3bf47a19dc07ab83f3b0001d0f8f5178a8eee53119a536989a55613fe696129",
   "assets/generated/items-pass/fingersnap-keepsakes-1.png": "34199b24b48eae7a076199ea021cecb5489055a70bfbef1d06f7bb0440d4dd9f",
   "assets/generated/items-pass/fingersnap-papers-1.png": "596d3f7d937e538a4b0bdea0960a11b8cf07d3f509bd1fac9b793e507ac076ad",
@@ -154,7 +173,7 @@
   "assets/generated/items-pass/fingersnap-world-sprites-1.png": "d3a1e70de525b1bc01ebb1e1698b82b837fb7fa28643985e6dd757c0263260bb",
   "assets/generated/items-pass/fingersnap-world-sprites-2.png": "933c0182123b768b484f0eb92869dbccefdb8f72f547c1656f94d786628d3153",
   "assets/generated/items-pass/fingersnap-world-sprites-3.png": "fd9d8847d1d0bf172b66fc0157febeb9b08c94021ad0ec607514fcb094b53a98",
-  "assets/generated/items-pass/manifest.json": "563ded3b4fd630a249e04e0259d3b3ac4c8b6c3da9e14d66da8b5a2c024be09a",
+  "assets/generated/items-pass/manifest.json": "e18296b26dbbcccf7e4021f238c96c0e3204a9621d3d8b4cb8e52a129accb253",
   "assets/generated/playtest1-pass/{atlas,animations}.json: frames in use": "3ae857132e0b15574345aa1bcac2cfc552a05535690dabed4d2066a3028718e3",
   "assets/generated/playtest1-pass/bridge/fingersnap-brackenwood-bridge.png": "4954285a1b3bc8367b7796767099a8bd56ec8d23038d9bb7baadb5db67ab33ca",
   "assets/generated/playtest1-pass/ground/fingersnap-ground-base.png": "e91ddfb5259364952ef30c49dde945c08792f3f6245611a686c054d34be6c4ec",
@@ -188,7 +207,7 @@
   "fingersnap-village.webp": "55741365aef1f255193af044288f16e68d9fb918b71ad464aad62dab5d42f842",
   "ground.webp": "6151b5306345edf22bdea4211e20910d3a83dbe0ede013999a3d65f5a7529d94",
   "indoors.webp": "b0156247256e33a0bcfefe2ab27fc4ad8cf687dd675649a37617ae8b356d7255",
-  "items.webp": "61c6a5e4eda99cb9e5094888a68a616ccf1b93f926de0970686a09f5b63984ff",
+  "items.webp": "8fe4000cdae9f0f1fd156b30ca58edb28d8cd13c7793851e576562e85810b5fe",
   "people.webp": "bc06b2da02a1d7c07397ed9e239337d946d7639d3d1c381a71aed29860a4f782",
   "runtime.webp": "a0e1d4ec27403d5891da88339b7b4161ca29b8a10aef79b2d7b6bc9fc2d70044",
   "terrain.webp": "9043dcf3ec13059d338f359ebe382fa1b1521af27eb99a717ddd2b652317790b"
@@ -1650,673 +1669,673 @@
  "items": {
   "image": "items.webp",
   "size": [
-   1136,
+   1180,
    1088
   ],
   "density": 4,
   "frames": {
    "item-bench-axe-whole": [
-    576,
+    832,
     512,
     64,
     64
    ],
    "item-bench-axe-worn": [
-    640,
+    896,
     512,
     64,
     64
    ],
    "item-bench-pick-whole": [
-    704,
+    960,
     512,
     64,
     64
    ],
    "item-bench-pick-worn": [
-    768,
+    1024,
     512,
     64,
     64
    ],
    "item-bench-spade-whole": [
-    832,
+    1088,
     512,
     64,
     64
    ],
    "item-bench-spade-worn": [
-    896,
-    512,
+    0,
+    576,
     64,
     64
    ],
    "item-stave-bucket-whole": [
-    192,
+    320,
     832,
     64,
     64
    ],
    "item-stave-bucket-worn": [
-    256,
+    384,
     832,
     64,
     64
    ],
    "item-watering-can": [
-    960,
+    1088,
     832,
     64,
     64
    ],
    "item-brack-felling-axe-whole": [
-    192,
+    384,
     576,
     64,
     64
    ],
    "item-brack-felling-axe-worn": [
-    256,
+    448,
     576,
     64,
     64
    ],
    "item-brack-felling-axe-blunt": [
-    128,
+    320,
     576,
     64,
     64
    ],
    "item-orrins-mason-pick-whole": [
-    768,
+    960,
     704,
     64,
     64
    ],
    "item-orrins-mason-pick-worn": [
-    832,
+    1024,
     704,
     64,
     64
    ],
    "item-orrins-mason-pick-blunt": [
-    704,
+    896,
     704,
     64,
     64
    ],
    "item-ada-garden-spade-whole": [
-    192,
+    448,
     512,
     64,
     64
    ],
    "item-ada-garden-spade-worn": [
-    256,
+    512,
     512,
     64,
     64
    ],
    "item-ada-garden-spade-blunt": [
-    128,
+    384,
     512,
     64,
     64
    ],
    "item-nans-lamplighter-pole-whole": [
-    320,
+    512,
     704,
     64,
     64
    ],
    "item-nans-lamplighter-pole-worn": [
-    384,
+    576,
     704,
     64,
     64
    ],
    "item-nans-lamplighter-pole-cracked": [
-    256,
+    448,
     704,
     64,
     64
    ],
    "item-oak-mark-punch": [
-    448,
+    640,
     704,
     64,
     64
    ],
    "item-carters-lantern-lit": [
-    384,
+    576,
     576,
     64,
     64
    ],
    "item-carters-lantern-unlit": [
-    448,
+    640,
     576,
     64,
     64
    ],
    "item-turncap-jar-fresh": [
-    640,
+    768,
     832,
     64,
     64
    ],
    "item-turncap-jar-dried-out": [
-    576,
+    704,
     832,
     64,
     64
    ],
    "item-salve-satchel": [
-    1024,
-    768,
+    64,
+    832,
     64,
     64
    ],
    "item-runners-whistle": [
-    896,
+    1088,
     768,
     64,
     64
    ],
    "item-forager-satchel": [
-    128,
+    256,
     640,
     64,
     64
    ],
    "item-work-apron": [
-    448,
+    576,
     896,
     64,
     64
    ],
    "item-carting-coat": [
-    512,
+    704,
     576,
     64,
     64
    ],
    "item-seasoned-timber": [
-    0,
+    128,
     832,
     64,
     64
    ],
    "item-drift-stone": [
-    896,
+    1088,
     576,
     64,
     64
    ],
    "item-iron-oak": [
-    512,
+    640,
     640,
     64,
     64
    ],
    "item-willow-bark": [
-    192,
+    256,
     896,
     64,
     64
    ],
    "item-beeswax": [
-    512,
+    768,
     512,
     64,
     64
    ],
    "item-storm-grade-drop": [
-    320,
+    448,
     832,
     64,
     64
    ],
    "item-tallow": [
-    448,
+    576,
     832,
     64,
     64
    ],
    "item-flour": [
-    64,
+    192,
     640,
     64,
     64
    ],
    "item-wild-honey": [
-    64,
+    128,
     896,
     64,
     64
    ],
    "item-walnut-shells": [
-    832,
+    960,
     832,
     64,
     64
    ],
    "item-madder-scraps": [
-    64,
+    128,
     704,
     64,
     64
    ],
    "item-amberfall-sap": [
-    384,
+    640,
     512,
     64,
     64
    ],
    "item-frost-glass": [
-    192,
+    320,
     640,
     64,
     64
    ],
    "item-bloom-flowers-fresh": [
-    0,
+    192,
     576,
     64,
     64
    ],
    "item-bloom-flowers-dried": [
-    1024,
-    512,
+    128,
+    576,
     64,
     64
    ],
    "item-tarrow-edge-strip": [
-    512,
+    640,
     832,
     64,
     64
    ],
    "item-loose-road-nail": [
-    0,
+    64,
     704,
     64,
     64
    ],
    "item-iron-oak-wedge": [
-    640,
+    768,
     640,
     64,
     64
    ],
    "item-tyre-iron-hoop": [
-    768,
+    896,
     832,
     64,
     64
    ],
    "item-green-ash-haft": [
-    320,
+    448,
     640,
     64,
     64
    ],
    "item-amber-bead": [
-    320,
+    576,
     512,
     64,
     64
    ],
    "item-waxed-cord": [
-    0,
+    64,
     896,
     64,
     64
    ],
    "item-warden-sliver": [
-    896,
+    1024,
     832,
     64,
     64
    ],
    "item-fibre-rope": [
-    0,
+    128,
     640,
     64,
     64
    ],
    "item-split-rail": [
-    128,
+    256,
     832,
     64,
     64
    ],
    "item-slates": [
-    64,
+    192,
     832,
     64,
     64
    ],
    "item-oak-slat": [
-    512,
+    704,
     704,
     64,
     64
    ],
    "item-lamp-head": [
-    896,
+    1024,
     640,
     64,
     64
    ],
    "item-wax-seal": [
-    1024,
-    832,
+    0,
+    896,
     64,
     64
    ],
    "item-hazel-whip": [
-    384,
+    512,
     640,
     64,
     64
    ],
    "item-birch-sapling": [
-    960,
-    512,
+    64,
+    576,
     64,
     64
    ],
    "item-rowan-sapling": [
-    832,
+    1024,
     768,
     64,
     64
    ],
    "item-comfrey-root": [
-    704,
+    896,
     576,
     64,
     64
    ],
    "item-wild-thyme": [
-    128,
+    192,
     896,
     64,
     64
    ],
    "item-turncap-spawn": [
-    704,
+    832,
     832,
     64,
     64
    ],
    "item-iron-oak-acorn": [
-    576,
+    704,
     640,
     64,
     64
    ],
    "item-keepers-twists": [
-    704,
+    832,
     640,
     64,
     64
    ],
    "item-oil-twists": [
-    640,
+    832,
     704,
     64,
     64
    ],
    "item-saltings-tea": [
-    960,
-    768,
+    0,
+    832,
     64,
     64
    ],
    "item-oatcakes": [
-    576,
+    768,
     704,
     64,
     64
    ],
    "item-comfrey-salve": [
-    768,
+    960,
     576,
     64,
     64
    ],
    "item-willow-bark-tea": [
-    256,
+    320,
     896,
     64,
     64
    ],
    "item-blue-moss": [
-    64,
+    256,
     576,
     64,
     64
    ],
    "item-candle-oil": [
-    320,
+    512,
     576,
     64,
     64
    ],
    "item-hearth-oil": [
-    448,
+    576,
     640,
     64,
     64
    ],
    "item-storm-oil": [
-    384,
+    512,
     832,
     64,
     64
    ],
    "item-knotted-halter": [
-    832,
+    960,
     640,
     64,
     64
    ],
    "item-work-glove": [
-    512,
+    640,
     896,
     64,
     64
    ],
    "item-road-nails": [
-    768,
+    960,
     768,
     64,
     64
    ],
    "item-door-fox": [
-    832,
+    1024,
     576,
     64,
     64
    ],
    "item-window-lamp-lit": [
-    320,
+    448,
     896,
     64,
     64
    ],
    "item-window-lamp-unlit": [
-    384,
+    512,
     896,
     64,
     64
    ],
    "item-gate-shelf": [
-    256,
+    384,
     640,
     64,
     64
    ],
    "item-writing-desk": [
-    576,
+    704,
     896,
     64,
     64
    ],
    "item-keepsake-cabinet": [
-    768,
+    896,
     640,
     64,
     64
    ],
    "item-drying-rack": [
-    960,
-    576,
+    0,
+    640,
     64,
     64
    ],
    "item-apothecary-shelf": [
-    448,
+    704,
     512,
     64,
     64
    ],
    "item-lantern-post-lit": [
-    960,
+    1088,
     640,
     64,
     64
    ],
    "item-lantern-post-unlit": [
-    1024,
-    640,
+    0,
+    704,
     64,
     64
    ],
    "item-raised-bed": [
-    128,
-    768,
-    64,
-    64
-   ],
-   "item-naming-frame": [
-    128,
-    704,
-    64,
-    64
-   ],
-   "item-pencil-map": [
-    0,
-    768,
-    64,
-    64
-   ],
-   "item-pressed-flowers": [
-    64,
-    768,
-    64,
-    64
-   ],
-   "item-empty-chair": [
-    1024,
-    576,
-    64,
-    64
-   ],
-   "item-closure-lamp-lit": [
-    576,
-    576,
-    64,
-    64
-   ],
-   "item-closure-lamp-unlit": [
-    640,
-    576,
-    64,
-    64
-   ],
-   "item-naming-slip": [
-    192,
-    704,
-    64,
-    64
-   ],
-   "item-recipe-page-tea": [
-    576,
-    768,
-    64,
-    64
-   ],
-   "item-recipe-page-salve": [
-    448,
-    768,
-    64,
-    64
-   ],
-   "item-recipe-page-candle-oil": [
-    320,
-    768,
-    64,
-    64
-   ],
-   "item-recipe-page-willow-tea": [
-    704,
-    768,
-    64,
-    64
-   ],
-   "item-recipe-card-twists": [
     256,
     768,
     64,
     64
    ],
-   "item-recipe-card-oil-twists": [
+   "item-naming-frame": [
+    320,
+    704,
+    64,
+    64
+   ],
+   "item-pencil-map": [
+    128,
+    768,
+    64,
+    64
+   ],
+   "item-pressed-flowers": [
     192,
     768,
     64,
     64
    ],
-   "item-recipe-page-hearth-oil": [
+   "item-empty-chair": [
+    64,
+    640,
+    64,
+    64
+   ],
+   "item-closure-lamp-lit": [
+    768,
+    576,
+    64,
+    64
+   ],
+   "item-closure-lamp-unlit": [
+    832,
+    576,
+    64,
+    64
+   ],
+   "item-naming-slip": [
     384,
+    704,
+    64,
+    64
+   ],
+   "item-recipe-page-tea": [
+    768,
     768,
     64,
     64
    ],
-   "item-recipe-page-wax-seal": [
+   "item-recipe-page-salve": [
     640,
     768,
     64,
     64
    ],
-   "item-recipe-page-storm-oil": [
+   "item-recipe-page-candle-oil": [
     512,
     768,
     64,
     64
    ],
-   "item-paper-icon-folded": [
+   "item-recipe-page-willow-tea": [
     896,
+    768,
+    64,
+    64
+   ],
+   "item-recipe-card-twists": [
+    448,
+    768,
+    64,
+    64
+   ],
+   "item-recipe-card-oil-twists": [
+    384,
+    768,
+    64,
+    64
+   ],
+   "item-recipe-page-hearth-oil": [
+    576,
+    768,
+    64,
+    64
+   ],
+   "item-recipe-page-wax-seal": [
+    832,
+    768,
+    64,
+    64
+   ],
+   "item-recipe-page-storm-oil": [
+    704,
+    768,
+    64,
+    64
+   ],
+   "item-paper-icon-folded": [
+    1088,
     704,
     64,
     64
    ],
    "item-paper-icon-scroll": [
-    960,
-    704,
+    0,
+    768,
     64,
     64
    ],
    "item-paper-icon-slate": [
-    1024,
-    704,
+    64,
+    768,
     64,
     64
    ],
    "world-door-fox": [
-    768,
+    896,
     896,
     64,
     64
@@ -2334,13 +2353,13 @@
     64
    ],
    "world-gate-shelf-empty": [
-    64,
+    128,
     960,
     64,
     64
    ],
    "world-gate-shelf-stocked-with-jars": [
-    128,
+    192,
     960,
     64,
     64
@@ -2352,158 +2371,158 @@
     64
    ],
    "world-keepsake-cabinet-empty": [
-    512,
-    960,
-    64,
-    64
-   ],
-   "world-keepsake-cabinet-displaying-trinkets": [
-    448,
-    960,
-    64,
-    64
-   ],
-   "world-drying-rack-bare-rack": [
-    832,
-    896,
-    64,
-    64
-   ],
-   "world-drying-rack-hanging-herbs": [
-    896,
-    896,
-    64,
-    64
-   ],
-   "world-apothecary-shelf-half-stocked": [
-    256,
-    384,
-    128,
-    64
-   ],
-   "world-apothecary-shelf-full-shelves": [
-    128,
-    384,
-    128,
-    64
-   ],
-   "world-raised-bed-dry-dark-soil": [
-    640,
-    384,
-    128,
-    64
-   ],
-   "world-raised-bed-watered-soil": [
-    896,
-    384,
-    128,
-    64
-   ],
-   "world-raised-bed-sprouting": [
-    768,
-    384,
-    128,
-    64
-   ],
-   "world-naming-frame": [
-    768,
-    960,
-    64,
-    64
-   ],
-   "world-pencil-map-crisp-pencil": [
-    384,
-    384,
-    128,
-    64
-   ],
-   "world-pencil-map-smudged-drift": [
-    512,
-    384,
-    128,
-    64
-   ],
-   "world-pressed-flowers-fresh-bloom-colors": [
-    1024,
-    960,
-    64,
-    64
-   ],
-   "world-pressed-flowers-dried-brown": [
-    960,
-    960,
-    64,
-    64
-   ],
-   "world-empty-chair": [
-    0,
-    960,
-    64,
-    64
-   ],
-   "world-closure-lamp-unlit": [
-    704,
-    896,
-    64,
-    64
-   ],
-   "world-closure-lamp-lit-pale-blue": [
-    640,
-    896,
-    64,
-    64
-   ],
-   "world-lantern-post-unlit": [
-    0,
-    384,
-    64,
-    128
-   ],
-   "world-lantern-post-lit-warm-amber": [
-    1024,
-    256,
-    64,
-    128
-   ],
-   "world-lantern-post-amberwake-glow": [
-    896,
-    256,
-    64,
-    128
-   ],
-   "world-lantern-post-footing": [
     576,
     960,
     64,
     64
    ],
-   "world-lantern-post-head-unlit": [
+   "world-keepsake-cabinet-displaying-trinkets": [
+    512,
     960,
-    256,
     64,
-    128
+    64
    ],
-   "world-old-lamp-stone-intact-weathered": [
+   "world-drying-rack-bare-rack": [
+    960,
+    896,
+    64,
+    64
+   ],
+   "world-drying-rack-hanging-herbs": [
+    1024,
+    896,
+    64,
+    64
+   ],
+   "world-apothecary-shelf-half-stocked": [
+    320,
+    384,
+    128,
+    64
+   ],
+   "world-apothecary-shelf-full-shelves": [
+    192,
+    384,
+    128,
+    64
+   ],
+   "world-raised-bed-dry-dark-soil": [
+    704,
+    384,
+    128,
+    64
+   ],
+   "world-raised-bed-watered-soil": [
+    960,
+    384,
+    128,
+    64
+   ],
+   "world-raised-bed-sprouting": [
+    832,
+    384,
+    128,
+    64
+   ],
+   "world-naming-frame": [
     832,
     960,
     64,
     64
    ],
-   "world-old-lamp-stone-pick-broken": [
+   "world-pencil-map-crisp-pencil": [
+    448,
+    384,
+    128,
+    64
+   ],
+   "world-pencil-map-smudged-drift": [
+    576,
+    384,
+    128,
+    64
+   ],
+   "world-pressed-flowers-fresh-bloom-colors": [
+    1088,
+    960,
+    64,
+    64
+   ],
+   "world-pressed-flowers-dried-brown": [
+    1024,
+    960,
+    64,
+    64
+   ],
+   "world-empty-chair": [
+    64,
+    960,
+    64,
+    64
+   ],
+   "world-closure-lamp-unlit": [
+    832,
     896,
+    64,
+    64
+   ],
+   "world-closure-lamp-lit-pale-blue": [
+    768,
+    896,
+    64,
+    64
+   ],
+   "world-lantern-post-unlit": [
+    64,
+    384,
+    64,
+    128
+   ],
+   "world-lantern-post-lit-warm-amber": [
+    0,
+    384,
+    64,
+    128
+   ],
+   "world-lantern-post-amberwake-glow": [
+    1024,
+    256,
+    64,
+    128
+   ],
+   "world-lantern-post-footing": [
+    640,
+    960,
+    64,
+    64
+   ],
+   "world-lantern-post-head-unlit": [
+    1088,
+    256,
+    64,
+    128
+   ],
+   "world-old-lamp-stone-intact-weathered": [
+    896,
+    960,
+    64,
+    64
+   ],
+   "world-old-lamp-stone-pick-broken": [
+    960,
     960,
     64,
     64
    ],
    "world-dug-patch-fresh-dark-earth-hole": [
-    960,
+    1088,
     896,
     64,
     64
    ],
    "world-dug-patch-settled-earth": [
-    1024,
-    896,
+    0,
+    960,
     64,
     64
    ],
@@ -2520,37 +2539,37 @@
     64
    ],
    "world-herb-patch-comfrey-lush-leafy-plant": [
-    256,
-    960,
-    64,
-    64
-   ],
-   "world-herb-patch-comfrey-dug-earth-patch": [
-    192,
-    960,
-    64,
-    64
-   ],
-   "world-herb-patch-thyme-purple-thyme-sprigs": [
-    384,
-    960,
-    64,
-    64
-   ],
-   "world-herb-patch-thyme-dug-earth-patch": [
     320,
     960,
     64,
     64
    ],
+   "world-herb-patch-comfrey-dug-earth-patch": [
+    256,
+    960,
+    64,
+    64
+   ],
+   "world-herb-patch-thyme-purple-thyme-sprigs": [
+    448,
+    960,
+    64,
+    64
+   ],
+   "world-herb-patch-thyme-dug-earth-patch": [
+    384,
+    960,
+    64,
+    64
+   ],
    "world-hollow-tree-intact-tree-with-hive-hole-and-bees": [
-    768,
+    896,
     256,
     64,
     128
    ],
    "world-hollow-tree-opened-hollow-with-comb-drips": [
-    832,
+    960,
     256,
     64,
     128
@@ -2568,13 +2587,13 @@
     192
    ],
    "world-iron-oak-windfall-mossy-fallen-trunk": [
-    640,
+    768,
     256,
     128,
     128
    ],
    "world-iron-oak-windfall-harvested-stump-with-3-leafy-branches": [
-    512,
+    640,
     256,
     128,
     128
@@ -2592,13 +2611,13 @@
     64
    ],
    "world-ledger-soup-pot-bubbling-steaming-pot-over-fire": [
-    640,
+    704,
     960,
     64,
     64
    ],
    "world-ledger-soup-pot-coldempty-pot": [
-    704,
+    768,
     960,
     64,
     64
@@ -2610,70 +2629,184 @@
     256
    ],
    "mill-wheel-0": [
-    512,
-    0,
-    128,
-    128
-   ],
-   "mill-wheel-1": [
-    640,
-    0,
-    128,
-    128
-   ],
-   "mill-wheel-2": [
     768,
     0,
     128,
     128
    ],
-   "mill-wheel-3": [
+   "mill-wheel-1": [
     896,
     0,
     128,
     128
    ],
-   "mill-wheel-mended-0": [
+   "mill-wheel-2": [
+    1024,
+    0,
+    128,
+    128
+   ],
+   "mill-wheel-3": [
     0,
     256,
     128,
     128
    ],
-   "mill-wheel-mended-1": [
+   "mill-wheel-mended-0": [
     128,
+    256,
+    128,
+    128
+   ],
+   "mill-wheel-mended-1": [
+    256,
     256,
     128,
     128
    ],
    "mill-wheel-mended-2": [
-    256,
+    384,
     256,
     128,
     128
    ],
    "mill-wheel-mended-3": [
-    384,
+    512,
     256,
     128,
     128
    ],
    "mill-froth-0": [
-    384,
+    768,
     1024,
     56,
     24
    ],
    "mill-froth-1": [
-    440,
+    824,
     1024,
     56,
     24
    ],
    "mill-hopper": [
-    64,
+    128,
     384,
     64,
     80
+   ],
+   "item-willow-rod": [
+    384,
+    896,
+    64,
+    64
+   ],
+   "item-mill-roach": [
+    192,
+    704,
+    64,
+    64
+   ],
+   "item-millers-fry": [
+    256,
+    704,
+    64,
+    64
+   ],
+   "item-recipe-card-millers-fry": [
+    320,
+    768,
+    64,
+    64
+   ],
+   "fish-float-0": [
+    576,
+    1024,
+    32,
+    32
+   ],
+   "fish-float-1": [
+    608,
+    1024,
+    32,
+    32
+   ],
+   "fish-float-2": [
+    640,
+    1024,
+    32,
+    32
+   ],
+   "fish-float-3": [
+    672,
+    1024,
+    32,
+    32
+   ],
+   "fish-float-4": [
+    704,
+    1024,
+    32,
+    32
+   ],
+   "fish-float-5": [
+    736,
+    1024,
+    32,
+    32
+   ],
+   "fish-rings-0": [
+    384,
+    1024,
+    64,
+    32
+   ],
+   "fish-rings-1": [
+    448,
+    1024,
+    64,
+    32
+   ],
+   "fish-rings-2": [
+    512,
+    1024,
+    64,
+    32
+   ],
+   "fish-splash-0": [
+    128,
+    512,
+    64,
+    64
+   ],
+   "fish-splash-1": [
+    192,
+    512,
+    64,
+    64
+   ],
+   "fish-splash-2": [
+    256,
+    512,
+    64,
+    64
+   ],
+   "fish-splash-3": [
+    320,
+    512,
+    64,
+    64
+   ],
+   "fish-rod-held-raised": [
+    640,
+    0,
+    128,
+    128
+   ],
+   "fish-rod-held-out": [
+    512,
+    0,
+    128,
+    128
    ]
   }
  },

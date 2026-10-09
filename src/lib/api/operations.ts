@@ -5,6 +5,7 @@ import { decodePlayerState, validatePlayerState } from './state-contract.ts';
 import { EnvelopeSchema, LoginRequestSchema, PlayRequestSchema, SessionResponseSchema, StateResponseSchema, PlayResponseSchema, WorldChooseRequestSchema, type Envelope, type LoginRequest, type PlayRequest, type SessionResponse, type StateResponse, type PlayResponse } from '../gen/glimway/v1/state_pb.js';
 import { WildsRegionResultSchema, HomesteadLandSchema, type WildsChunk, type WildsRegionResult, type HomesteadLand } from '../gen/glimway/v1/wilds_pb.js';
 import { decodeChunk } from './chunks.ts';
+import { FishCastRequestSchema, FishSettleRequestSchema, FishCancelRequestSchema, FishingWatersSchema, type FishCastRequest, type FishSettleRequest, type FishCancelRequest, type FishingWaters } from '../gen/glimway/v1/fishing_pb.js';
 import { ReportRequestSchema, type ReportRequest, QuestStepRequestSchema, type QuestStepRequest, MarkRequestSchema, type MarkRequest, TakePaperRequestSchema, type TakePaperRequest, SettleEchoRequestSchema, type SettleEchoRequest, FallRequestSchema, type FallRequest, ProfileReportSchema, type ProfileReport, SpendRequestSchema, type SpendRequest, WildsClaimRequestSchema, type WildsClaimRequest, WildsLanternRequestSchema, type WildsLanternRequest } from '../gen/glimway/v1/operations_pb.js';
 
 export type Transport = (method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown, extra?: { headers?: Record<string, string>; binary?: boolean; keepalive?: boolean }) => Promise<unknown>;
@@ -29,6 +30,11 @@ export interface OperationsApi {
   spend(request: SpendRequest): Promise<Envelope>;
   wildsClaim(request: WildsClaimRequest): Promise<Envelope>;
   wildsLantern(request: WildsLanternRequest): Promise<Envelope>;
+  fishCast(request: FishCastRequest): Promise<Envelope>;
+  fishSettle(request: FishSettleRequest): Promise<Envelope>;
+  fishCancel(request: FishCancelRequest): Promise<Envelope>;
+  /** Each water's band in an area (design crafts 5.4: the band and nothing else). */
+  fishingWaters(area: string): Promise<FishingWaters>;
 }
 function validated<T>(read: () => T): T {
   try { return read(); } catch { throw new ApiError('bad-response', { status: 200 }); }
@@ -76,6 +82,14 @@ export function createOperationsApi(send: Transport): OperationsApi {
     async spend(req) { return decodeEnvelope(await send('POST', '/api/spend', toJson(SpendRequestSchema, req, { alwaysEmitImplicit: true }))); },
     async wildsClaim(req) { return decodeEnvelope(await send('POST', '/api/wilds/claim', toJson(WildsClaimRequestSchema, req, { alwaysEmitImplicit: true }))); },
     async wildsLantern(req) { return decodeEnvelope(await send('POST', '/api/wilds/lantern', toJson(WildsLanternRequestSchema, req, { alwaysEmitImplicit: true }))); },
+    async fishCast(req) { return decodeEnvelope(await send('POST', '/api/fishing/cast', toJson(FishCastRequestSchema, req, { alwaysEmitImplicit: true }))); },
+    async fishSettle(req) { return decodeEnvelope(await send('POST', '/api/fishing/settle', toJson(FishSettleRequestSchema, req, { alwaysEmitImplicit: true }))); },
+    async fishCancel(req) { return decodeEnvelope(await send('POST', '/api/fishing/cancel', toJson(FishCancelRequestSchema, req, { alwaysEmitImplicit: true }))); },
+    async fishingWaters(area) { const raw = await send('GET', `/api/fishing/waters?area=${encodeURIComponent(area)}`); return validated(() => {
+      const out = decodeWire(FishingWatersSchema, raw);
+      for (const w of out.waters) if (!w.id) throw new Error('invalid water');
+      return out;
+    }); },
   };
 }
 export function validatedSession(raw: unknown): SessionResponse {

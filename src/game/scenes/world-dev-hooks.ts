@@ -279,6 +279,8 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
       hint: gathering.hinted()
     }
   })
+  // Playtests of fishing (crafts.md 5): the line, the landed fish, the bands read.
+  on('__fsFishing', () => s['fishing']?.view() ?? null)
   // A broken rock leaves no invisible wall.
   on('__fsSolidAt', (tx, ty) =>
     s['solids'].group.getChildren().some((c) => {

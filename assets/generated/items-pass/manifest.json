@@ -73,6 +73,120 @@
       "file": "fingersnap-tolley-mill-1.png",
       "width": 1122,
       "height": 1402
+    },
+    {
+      "key": "crafts-rod-icon",
+      "file": "../crafts-pass/frames/rod-icon.png",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "key": "crafts-mill-roach",
+      "file": "../crafts-pass/frames/mill-roach.png",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "key": "crafts-millers-fry",
+      "file": "../crafts-pass/frames/millers-fry.png",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "key": "crafts-recipe-card-millers-fry",
+      "file": "../crafts-pass/frames/recipe-card-millers-fry.png",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "key": "crafts-float-0",
+      "file": "../crafts-pass/frames/float-0.png",
+      "width": 32,
+      "height": 32
+    },
+    {
+      "key": "crafts-float-1",
+      "file": "../crafts-pass/frames/float-1.png",
+      "width": 32,
+      "height": 32
+    },
+    {
+      "key": "crafts-float-2",
+      "file": "../crafts-pass/frames/float-2.png",
+      "width": 32,
+      "height": 32
+    },
+    {
+      "key": "crafts-float-3",
+      "file": "../crafts-pass/frames/float-3.png",
+      "width": 32,
+      "height": 32
+    },
+    {
+      "key": "crafts-float-4",
+      "file": "../crafts-pass/frames/float-4.png",
+      "width": 32,
+      "height": 32
+    },
+    {
+      "key": "crafts-float-5",
+      "file": "../crafts-pass/frames/float-5.png",
+      "width": 32,
+      "height": 32
+    },
+    {
+      "key": "crafts-water-rings-0",
+      "file": "../crafts-pass/frames/water-rings-0.png",
+      "width": 64,
+      "height": 32
+    },
+    {
+      "key": "crafts-water-rings-1",
+      "file": "../crafts-pass/frames/water-rings-1.png",
+      "width": 64,
+      "height": 32
+    },
+    {
+      "key": "crafts-water-rings-2",
+      "file": "../crafts-pass/frames/water-rings-2.png",
+      "width": 64,
+      "height": 32
+    },
+    {
+      "key": "crafts-landing-splash-0",
+      "file": "../crafts-pass/frames/landing-splash-0.png",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "key": "crafts-landing-splash-1",
+      "file": "../crafts-pass/frames/landing-splash-1.png",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "key": "crafts-landing-splash-2",
+      "file": "../crafts-pass/frames/landing-splash-2.png",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "key": "crafts-landing-splash-3",
+      "file": "../crafts-pass/frames/landing-splash-3.png",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "key": "crafts-rod-held-raised",
+      "file": "../crafts-pass/frames/rod-held-raised.png",
+      "width": 128,
+      "height": 128
+    },
+    {
+      "key": "crafts-rod-held-out",
+      "file": "../crafts-pass/frames/rod-held-out.png",
+      "width": 128,
+      "height": 128
     }
   ],
   "frames": [
@@ -5297,6 +5411,550 @@
         "w": 15,
         "h": 16
       }
+    },
+    {
+      "key": "item-willow-rod",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "crafts-rod-icon",
+      "sheet": "crafts-pass",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "itemId": "willow-rod",
+      "name": "Willow rod",
+      "state": null,
+      "look": "A plain willow rod with a cork grip and a wound line",
+      "category": "Tools",
+      "priority": "P1",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-mill-roach",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "crafts-mill-roach",
+      "sheet": "crafts-pass",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "itemId": "mill-roach",
+      "name": "Mill roach",
+      "state": null,
+      "look": "Silver with red fins",
+      "category": "Supplies",
+      "priority": "P1",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-millers-fry",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "crafts-millers-fry",
+      "sheet": "crafts-pass",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "itemId": "millers-fry",
+      "name": "Miller's fry",
+      "state": null,
+      "look": "Two small floured fish in a pan, a sprig on top",
+      "category": "Supplies",
+      "priority": "P1",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "item-recipe-card-millers-fry",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "fit": "cell",
+      "role": "inventory-icon",
+      "source": "crafts-recipe-card-millers-fry",
+      "sheet": "crafts-pass",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "itemId": "recipe-card-millers-fry",
+      "name": "Recipe card: Miller's fry",
+      "state": null,
+      "look": "Hazel's card",
+      "category": "Papers",
+      "priority": "P1",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "fish-float-0",
+      "width": 8,
+      "height": 8,
+      "origin": [
+        0.5,
+        0.875
+      ],
+      "fit": "cell",
+      "role": "effect",
+      "source": "crafts-float-0",
+      "sheet": "crafts-pass",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "name": "Float",
+      "category": "Fishing",
+      "priority": "P1",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 8
+      }
+    },
+    {
+      "key": "fish-float-1",
+      "width": 8,
+      "height": 8,
+      "origin": [
+        0.5,
+        0.875
+      ],
+      "fit": "cell",
+      "role": "effect",
+      "source": "crafts-float-1",
+      "sheet": "crafts-pass",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "name": "Float",
+      "category": "Fishing",
+      "priority": "P1",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 8
+      }
+    },
+    {
+      "key": "fish-float-2",
+      "width": 8,
+      "height": 8,
+      "origin": [
+        0.5,
+        0.875
+      ],
+      "fit": "cell",
+      "role": "effect",
+      "source": "crafts-float-2",
+      "sheet": "crafts-pass",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "name": "Float",
+      "category": "Fishing",
+      "priority": "P1",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 8
+      }
+    },
+    {
+      "key": "fish-float-3",
+      "width": 8,
+      "height": 8,
+      "origin": [
+        0.5,
+        0.875
+      ],
+      "fit": "cell",
+      "role": "effect",
+      "source": "crafts-float-3",
+      "sheet": "crafts-pass",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "name": "Float",
+      "category": "Fishing",
+      "priority": "P1",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 8
+      }
+    },
+    {
+      "key": "fish-float-4",
+      "width": 8,
+      "height": 8,
+      "origin": [
+        0.5,
+        0.875
+      ],
+      "fit": "cell",
+      "role": "effect",
+      "source": "crafts-float-4",
+      "sheet": "crafts-pass",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "name": "Float",
+      "category": "Fishing",
+      "priority": "P1",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 8
+      }
+    },
+    {
+      "key": "fish-float-5",
+      "width": 8,
+      "height": 8,
+      "origin": [
+        0.5,
+        0.875
+      ],
+      "fit": "cell",
+      "role": "effect",
+      "source": "crafts-float-5",
+      "sheet": "crafts-pass",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "name": "Float",
+      "category": "Fishing",
+      "priority": "P1",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 8
+      }
+    },
+    {
+      "key": "fish-rings-0",
+      "width": 16,
+      "height": 8,
+      "origin": [
+        0.5,
+        0.875
+      ],
+      "fit": "cell",
+      "role": "effect",
+      "source": "crafts-water-rings-0",
+      "sheet": "crafts-pass",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 32
+      },
+      "name": "Water rings",
+      "category": "Fishing",
+      "priority": "P1",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 8
+      }
+    },
+    {
+      "key": "fish-rings-1",
+      "width": 16,
+      "height": 8,
+      "origin": [
+        0.5,
+        0.875
+      ],
+      "fit": "cell",
+      "role": "effect",
+      "source": "crafts-water-rings-1",
+      "sheet": "crafts-pass",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 32
+      },
+      "name": "Water rings",
+      "category": "Fishing",
+      "priority": "P1",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 8
+      }
+    },
+    {
+      "key": "fish-rings-2",
+      "width": 16,
+      "height": 8,
+      "origin": [
+        0.5,
+        0.875
+      ],
+      "fit": "cell",
+      "role": "effect",
+      "source": "crafts-water-rings-2",
+      "sheet": "crafts-pass",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 32
+      },
+      "name": "Water rings",
+      "category": "Fishing",
+      "priority": "P1",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 8
+      }
+    },
+    {
+      "key": "fish-splash-0",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        0.9375
+      ],
+      "fit": "cell",
+      "role": "effect",
+      "source": "crafts-landing-splash-0",
+      "sheet": "crafts-pass",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "name": "Landing splash",
+      "category": "Fishing",
+      "priority": "P1",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "fish-splash-1",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        0.9375
+      ],
+      "fit": "cell",
+      "role": "effect",
+      "source": "crafts-landing-splash-1",
+      "sheet": "crafts-pass",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "name": "Landing splash",
+      "category": "Fishing",
+      "priority": "P1",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "fish-splash-2",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        0.9375
+      ],
+      "fit": "cell",
+      "role": "effect",
+      "source": "crafts-landing-splash-2",
+      "sheet": "crafts-pass",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "name": "Landing splash",
+      "category": "Fishing",
+      "priority": "P1",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "fish-splash-3",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        0.9375
+      ],
+      "fit": "cell",
+      "role": "effect",
+      "source": "crafts-landing-splash-3",
+      "sheet": "crafts-pass",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 64,
+        "h": 64
+      },
+      "name": "Landing splash",
+      "category": "Fishing",
+      "priority": "P1",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 16
+      }
+    },
+    {
+      "key": "fish-rod-held-raised",
+      "width": 32,
+      "height": 32,
+      "origin": [
+        0.0625,
+        0.96875
+      ],
+      "fit": "cell",
+      "role": "effect",
+      "source": "crafts-rod-held-raised",
+      "sheet": "crafts-pass",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "name": "Willow rod, held",
+      "category": "Fishing",
+      "priority": "P1",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      }
+    },
+    {
+      "key": "fish-rod-held-out",
+      "width": 32,
+      "height": 32,
+      "origin": [
+        0.0625,
+        0.96875
+      ],
+      "fit": "cell",
+      "role": "effect",
+      "source": "crafts-rod-held-out",
+      "sheet": "crafts-pass",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 128
+      },
+      "name": "Willow rod, held",
+      "category": "Fishing",
+      "priority": "P1",
+      "destinationRect": {
+        "x": 0,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      }
     }
   ],
   "animations": [
@@ -5712,13 +6370,18 @@
     "river-glass-bead": "commons:icon-river-glass-bead",
     "tin-whistle": "commons:icon-tin-whistle",
     "beeswax-candle": "commons:icon-beeswax-candle",
-    "spare-bootlace": "commons:icon-spare-bootlace"
+    "spare-bootlace": "commons:icon-spare-bootlace",
+    "willow-rod": "item-willow-rod",
+    "mill-roach": "item-mill-roach",
+    "millers-fry": "item-millers-fry",
+    "recipe-card-millers-fry": "item-recipe-card-millers-fry"
   },
   "notes": [
     "All source rectangles are measured; no fixed source cell dimensions are assumed.",
     "Use the manifest exact native canvas dimensions.",
     "Inventory wear and world condition frames are discrete gameplay states, not looping animations.",
     "Existing Commons frames are referenced with the commons: alias prefix.",
-    "Physics, interaction footprints, scene wiring, and world adjacency remain runtime decisions."
+    "Physics, interaction footprints, scene wiring, and world adjacency remain runtime decisions.",
+    "Fishing (0.5 crafts, lane G): the crafts pass’s normalized frames are sources here as delivered (../crafts-pass/frames), copied 1:1 at the art density."
   ]
 }

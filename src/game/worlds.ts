@@ -41,6 +41,7 @@ export type InteractId =
   | `pickup:${string}`
   | `repair:${string}`
   | `gather:${string}`
+  | `fish:${string}`
   | `wilds:${string}`
 /** A room's spot (the rooms data's `spots`): one id across all content, the quest `use` trigger's. */
 export type RoomSpotId =

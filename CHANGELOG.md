@@ -13,6 +13,36 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+### For players
+
+- Riding has moved home. Build a stable after the Workshop, stall a
+  mount, and set out from there: M to ride or get down, and it follows
+  you on a lead through the village.
+- Choose which of your pets walks with you, and up to three to live at
+  home, in the Character panel's new Companions tab. Friends' pets follow
+  them now too, and you can pet any of them.
+- At level 20 each class learns a second move: Stand, Kindle, Ward-light
+  or Echo. It's on R, and the second ✦ on phones.
+- Heroes without a class fight with what's in hand. Fingersnap is the
+  mage's.
+- Fishing at the mill pond. Ask Finn about the rod by his door.
+
+### Technical
+
+- Fishing in the game: the mill pond's three banks come from
+  `content/fishing.json` and sit on the interactions path (Cast, Pull in,
+  Reel, then Keep or Let it go in the context buttons). The rod is a new
+  belt kind, `fish`. `fish-cast`, `fish-settle` and `fish-cancel` are
+  keyed outbox operations that need a connection; `GET
+  /api/fishing/waters` gives each water's band. A reload puts an open
+  line back from `PlayerState.fishing`, and presence carries the
+  `fishing` pose.
+- A Line in the Race opens the Quests page's Crafts shelf. A quest
+  already under way now speaks before another quest's start when both
+  want the same person.
+- The crafts pass's fishing frames (rod, float, rings, splash, roach, fry,
+  recipe card) are baked into the items pack.
+
 ## [0.4.0] - 2026-10-09
 
 0.3 (Server-first) shipped only as pre-releases; its changes are part of 0.4.0.

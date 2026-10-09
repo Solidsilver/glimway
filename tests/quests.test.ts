@@ -74,7 +74,7 @@ test('the tree: kebab-case ids, short goals, small ember grants, items that exis
     }
     for (const ref of q.after ?? []) assert.ok(ref.includes(':') ? parseRef(ref) : questById(ref), `${q.id} after ${ref}`);
   }
-  assert.deepEqual([...ids].sort(), ['lantern-road', 'seat-by-the-lamp', 'set-to-rise', 'signpost', 'stuck-hoist', 'your-own-day']);
+  assert.deepEqual([...ids].sort(), ['a-line-in-the-race', 'lantern-road', 'seat-by-the-lamp', 'set-to-rise', 'signpost', 'stuck-hoist', 'your-own-day']);
 });
 
 test('the lantern road keeps 0.3’s step ids and every grant row (028’s gift outcomes read them)', () => {
@@ -133,7 +133,7 @@ test('every dialogue rule names a real quest step (or a quest not started)', () 
 test('a new save sees the opening, and nothing else until it’s done', () => {
   const needs = { habitica: false };
   const status = Object.fromEntries(QUESTS.map((q) => [q.id, questStatus(q, {}, needs)]));
-  assert.deepEqual(status, { signpost: 'open', 'lantern-road': 'hidden', 'your-own-day': 'hidden', 'set-to-rise': 'hidden', 'stuck-hoist': 'hidden', 'seat-by-the-lamp': 'hidden' });
+  assert.deepEqual(status, { signpost: 'open', 'lantern-road': 'hidden', 'your-own-day': 'hidden', 'set-to-rise': 'hidden', 'stuck-hoist': 'hidden', 'seat-by-the-lamp': 'hidden', 'a-line-in-the-race': 'hidden' });
   assert.equal(nextStep(questById('signpost')!, {})!.id, 'meet-orrin');
 });
 
@@ -412,7 +412,7 @@ test('rumours: a resident names an open quest you haven’t pinned, never their 
 
 test('every quest talk fits the box and stays in-world', async () => {
   const OUT_OF_WORLD = /\b(habitica|xp|habits?|tasks?|to-?dos?|dailies|streaks?|app)\b/i;
-  const mods = await Promise.all(['signpost', 'set-to-rise', 'stuck-hoist', 'seat-by-the-lamp', 'your-own-day'].map((f) => import(`../src/content/quests/${f}.ts`)));
+  const mods = await Promise.all(['signpost', 'set-to-rise', 'stuck-hoist', 'seat-by-the-lamp', 'your-own-day', 'a-line-in-the-race'].map((f) => import(`../src/content/quests/${f}.ts`)));
   const lines: string[] = [];
   for (const m of mods) {
     for (const v of Object.values(m)) {
@@ -470,4 +470,47 @@ test('the Quests page: shelves by line, the next step, ticks, no spoilers, done 
   assert.match(locked.locked!, /Connect Habitica in the Menu/);
   assert.ok(!page({}).some((s) => s.line === 'craft'), 'Crafts stays hidden while empty');
   assert.ok(isDone(questById('signpost')!, DONE_OPENING));
+});
+
+// ------------------------------------------------------------------ A Line in the Race (crafts.md 5.8)
+
+test('A Line in the Race: Finn’s rod, a roach from the race, Hazel’s card, on the Crafts shelf', () => {
+  const q = questById('a-line-in-the-race')!;
+  assert.equal(questLine(q), 'craft');
+  assert.deepEqual(q.after, ['signpost']);
+  assert.deepEqual(q.steps.map((s) => s.id), ['hear-finn-line', 'first-catch', 'show-hazel']);
+  assert.deepEqual(q.steps[0].give, [{ def: 'willow-rod', qty: 1 }]);
+  assert.deepEqual(q.steps[2].gate?.item, { def: 'mill-roach', qty: 1, keep: false });
+  assert.deepEqual(q.steps[2].give, [{ def: 'recipe-card-millers-fry', qty: 1 }]);
+  assert.equal(q.steps[2].embers, 1);
+  assert.equal(q.steps[2].note?.title, 'Miller’s Fry');
+
+  // Hidden until Finn starts it; the hoist comes first at his door while it's open.
+  assert.equal(questStatus(q, DONE_OPENING, { habitica: false }), 'hidden');
+  assert.equal(questTalk('finn', talkCtx(DONE_OPENING))!.key, 'quest:stuck-hoist:hear-finn');
+  const hoisted = { ...DONE_OPENING, 'stuck-hoist': 'tell-finn' };
+  const finn = questTalk('finn', talkCtx(hoisted))!;
+  assert.equal(finn.speaker, 'Finn');
+  assert.match(finn.lines.join(' '), /rod on the hook by my door/);
+  assert.equal(finn.choices![0].action, 'quest:a-line-in-the-race:hear-finn-line');
+
+  // The roach in the pack takes the carry step on its own.
+  const out = { ...hoisted, 'a-line-in-the-race': 'hear-finn-line' };
+  const ctx = { area: 'village', flags: [] as string[], defeated: [] as string[], carrying: (d: string) => (d === 'mill-roach' ? 1 : 0) };
+  assert.deepEqual(autoSteps(out, { habitica: false }, ctx).map((a) => `${a.quest}:${a.step}`), ['a-line-in-the-race:first-catch']);
+  assert.deepEqual(autoSteps(out, { habitica: false }, { ...ctx, carrying: () => 0 }), []);
+
+  // Hazel wants the roach: shown disabled without one, taken with it.
+  const caught = { ...hoisted, 'a-line-in-the-race': 'first-catch' };
+  const kitchen = { area: 'in:village:bakery', now: HOUR + 10 * 60 };
+  const short = questTalk('hazel', talkCtx(caught, kitchen))!;
+  assert.deepEqual(short.choices![0], { text: 'Show her the roach', note: 'Needs 1 mill roach', disabled: true });
+  const ready = questTalk('hazel', talkCtx(caught, { ...kitchen, carrying: () => 1 }))!;
+  assert.equal(ready.choices![0].action, 'quest:a-line-in-the-race:show-hazel');
+
+  // The Crafts shelf shows once it's started, after the road and the village.
+  const shelves = questShelves(out, { needs: { habitica: false }, gate: () => gate(), pinned: null });
+  assert.deepEqual(shelves.map((s) => s.line), ['road', 'village', 'craft']);
+  assert.equal(shelves[2].title, 'Crafts');
+  assert.equal(shelves[2].open[0].goal, 'Catch a roach from the mill race');
 });
