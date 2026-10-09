@@ -11,7 +11,7 @@ existing Node strip-only test runner import generated enums without a transpiler
 ## Generating and checking
 
 Run `npm ci`, then `npm run proto` from the repository root. Generation pins Buf
-1.73.0, protoc-gen-go / the Go runtime 1.36.11, and protoc-gen-es / the JavaScript
+1.73.0, protoc-gen-go / the Go runtime 1.36.12, and protoc-gen-es / the JavaScript
 runtime 2.12.0. Buf is an exact `@bufbuild/buf` devDependency installed by
 `npm ci`, invoked via
 `node_modules/.bin/buf`. The Go plugin is a `tool` in `go.mod`, invoked as
@@ -26,13 +26,47 @@ main contract.
 
 Every field number and binary event number is permanent. Append fields/codes;
 reserve removed names and numbers. Review JSON field names as well as numbers:
-`buf.yaml` uses FILE breaking checks, which can be run against a committed base
-with `GIT_LFS_SKIP_SMUDGE=1 node_modules/.bin/buf breaking --against
-'.git#ref=refs/remotes/origin/main'`. Skipping LFS smudging avoids unrelated
-art downloads for the comparison. Never renumber the error enum.
+`buf.yaml` uses FILE breaking checks for the wire packages, which can be run
+against a committed base with `GIT_LFS_SKIP_SMUDGE=1 node_modules/.bin/buf
+breaking --against '.git#ref=refs/remotes/origin/main'`. Skipping LFS smudging
+avoids unrelated art downloads for the comparison. Never renumber the error enum.
+(The content schemas and the vendored `buf/validate` are exempt from breaking
+checks: their loaders change in the same commit as the files.)
 Go and TypeScript adapt enum names by removing `ERROR_CODE_`, lowercasing, and
 replacing underscores with hyphens. This preserves the existing error strings;
 raw protobuf enum JSON names are **not** the HTTP error vocabulary.
+
+## Content files (glimway.content.v1)
+
+The JSON files under `content/` are moving onto protobuf schemas one family at a
+time, with their field rules as protovalidate constraints enforced identically in
+both languages. The pilot moved `furnishings.json`, `rooms.json` and
+`residents.json`; `.agent/PATTERN.md` is the step-by-step recipe for the rest.
+
+- Schemas live in `proto/glimway/content/v1/` (a package separate from the wire
+  versions, so content and transport move independently). The JSON files keep
+  their shape; only the enforcement moves.
+- Go generation goes to `gen/glimway/content/v1` (package `contentv1`) — **not**
+  `server/internal/gen`, which `glimway/content` cannot import (Go's internal
+  rule). Docker (`COPY gen ./gen`) and `nix/server.nix` include `gen/` for this
+  reason; CI's generated-output check covers it too.
+- `buf/validate/validate.proto` is vendored at `proto/buf/validate/` (BSR module
+  `buf.build/bufbuild/protovalidate` v1.2.0, the schema protovalidate-go v1.4.0
+  pins) so builds need no network: `buf export
+  buf.build/bufbuild/protovalidate:v1.2.0 -o proto`. Never generate a second Go
+  copy of it — the runtimes provide their own constraint types and a second
+  `RegisterFile` panics; `buf.gen.yaml` filters Go generation by package.
+- The runtimes must move together: `buf.build/go/protovalidate`,
+  `@bufbuild/protovalidate` and the vendored `validate.proto` (and the generated
+  TS copy). A rule one runtime doesn't know is silently ignored there. The
+  vector tests' rule-id assertions and `tests/validate-lockstep.test.ts` guard
+  this.
+- Go loaders: `content/protojson.go` (`decodeContentProto` — refuses nulls and
+  non-canonical keys pre-parse, then protojson — and `contentValidate`, built
+  once per process) plus each family's `Decode*` with the rules that stay in
+  code. TS loaders: `src/lib/content-proto.ts` (`decodeContent`), same split.
+  `tests/helpers/vector-rule.ts` asserts the shared vectors refuse for the
+  same named rule in both languages.
 
 ## Migrated surface
 

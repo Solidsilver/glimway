@@ -10,10 +10,15 @@ export type Resident = ResidentValid;
 export type ResidentSpot = ResidentSpotValid;
 export type ResidentPhase = ResidentPhaseValid;
 
-/** The rules that reach into rooms and the cycle's arithmetic: spot areas and homes name rooms, spots stand somewhere real, and the cycle's minutes make one full period. Field rules live on the schema. */
+/** The rules that reach into rooms and the cycle's arithmetic: duplicate ids, an offset inside the period, spot areas and homes that name rooms, spots that stand somewhere real, and a cycle whose minutes make one full period. Field rules live on the schema. */
 function residentRules(doc: Residents): void {
   const bad = (s: string): never => { throw new Error(`invalid residents: ${s}`); };
+  const seen = new Set<string>();
   for (const r of doc.residents) {
+    // One id per resident: the loader's own rule, naming the duplicate.
+    if (seen.has(r.id)) bad(`duplicate id ${r.id}`);
+    seen.add(r.id);
+    if ((r.offsetMinutes ?? 0) >= doc.periodMinutes) bad(`offset ${r.id}`);
     if (r.home !== undefined && !roomFor(r.home)) bad(`home ${r.id}`);
     for (const s of Object.values(r.spots)) {
       if (!knownContentArea(s.area)) bad(`spot ${r.id}`);
@@ -25,7 +30,7 @@ function residentRules(doc: Residents): void {
 }
 
 export function validateResidents(value: unknown): Residents {
-  const doc = decodeContent(ResidentsSchema, value, 'residents', 'residents') as Residents;
+  const doc = decodeContent(ResidentsSchema, value, 'residents', ['residents']) as Residents;
   residentRules(doc);
   return doc;
 }

@@ -8,7 +8,7 @@ import (
 func TestFurnishingsLoaderVectors(t *testing.T) {
 	var vectors struct {
 		Loader     []loaderVector
-		Pieces     map[string]*Furnishing
+		Pieces     map[string]json.RawMessage
 		Placements []struct {
 			Name  string
 			Piece string
@@ -29,20 +29,32 @@ func TestFurnishingsLoaderVectors(t *testing.T) {
 			if (err == nil) != v.Valid {
 				t.Fatal(v.Valid, err)
 			}
+			if !v.Valid && v.Rule != "" {
+				checkVectorRule(t, err, v.Rule)
+			}
 		})
 	}
 	if len(vectors.Pieces) == 0 || len(vectors.Placements) == 0 {
 		t.Fatal("no placement vectors")
 	}
+	// The placement vectors' pieces are hand-written JSON fixtures, decoded
+	// with protojson: encoding/json into proto structs only works while the
+	// struct tags happen to match.
+	pieces := map[string]*Furnishing{}
+	for id, raw := range vectors.Pieces {
+		piece := &Furnishing{}
+		decodeProto(t, raw, piece)
+		pieces[id] = piece
+	}
 	for _, v := range vectors.Placements {
 		t.Run("place/"+v.Name, func(t *testing.T) {
-			piece, ok := vectors.Pieces[v.Piece]
+			piece, ok := pieces[v.Piece]
 			if !ok {
 				t.Fatal("unknown piece " + v.Piece)
 			}
 			onto := PlaceOn{Kind: v.Onto.Kind, Offer: v.Onto.Offer}
 			if v.Onto.Host != "" {
-				host, ok := vectors.Pieces[v.Onto.Host]
+				host, ok := pieces[v.Onto.Host]
 				if !ok {
 					t.Fatal("unknown host " + v.Onto.Host)
 				}

@@ -24,7 +24,15 @@ export type FurnishState = FurnishStateValid;
  * rules live in the proto; there are no rules left in code here.
  */
 export function validateFurnishings(value: unknown): Furnishings {
-  return decodeContent(FurnishingsSchema, value, 'furnishings', 'pieces') as Furnishings;
+  const doc = decodeContent(FurnishingsSchema, value, 'furnishings', ['pieces']) as Furnishings;
+  // One id per piece: the loader's own rule, naming the duplicate (the
+  // schema's CEL can't cheaply, and the old loaders named it).
+  const seen = new Set<string>();
+  for (const p of doc.pieces) {
+    if (seen.has(p.id)) throw new Error(`invalid furnishings: duplicate id ${p.id}`);
+    seen.add(p.id);
+  }
+  return doc;
 }
 export const FURNISHINGS = validateFurnishings(raw);
 export function furnishingFor(id: string): Furnishing | null { return FURNISHINGS.pieces.find(p => p.id === id) ?? null; }

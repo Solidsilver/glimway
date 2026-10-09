@@ -81,6 +81,9 @@ export declare type Resident = Message<"glimway.content.v1.Resident"> & {
   offsetMinutes?: number | undefined;
 
   /**
+   * A room id: home names a room the loader knows, and the code rule
+   * refuses anything else (a player cottage is not in rooms.json).
+   *
    * @generated from field: optional string home = 3;
    */
   home?: string | undefined;
@@ -111,6 +114,9 @@ export declare type ResidentValid = Message<"glimway.content.v1.Resident"> & {
   offsetMinutes?: number | undefined;
 
   /**
+   * A room id: home names a room the loader knows, and the code rule
+   * refuses anything else (a player cottage is not in rooms.json).
+   *
    * @generated from field: optional string home = 3;
    */
   home?: string | undefined;

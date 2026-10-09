@@ -82,17 +82,19 @@ func (x *Rooms) GetRooms() []*Room {
 // follows from the id (in:village:bakery -> village, in:village:mill:2 ->
 // in:village:mill) and is checked in code, beside RoomParent.
 type Room struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Parent        string                 `protobuf:"bytes,3,opt,name=parent,proto3" json:"parent,omitempty"`
-	Map           []string               `protobuf:"bytes,4,rep,name=map,proto3" json:"map,omitempty"`
-	Doors         []*RoomDoor            `protobuf:"bytes,5,rep,name=doors,proto3" json:"doors,omitempty"`
-	Props         []*RoomProp            `protobuf:"bytes,6,rep,name=props,proto3" json:"props,omitempty"`
-	Spots         map[string]*RoomSpot   `protobuf:"bytes,7,rep,name=spots,proto3" json:"spots,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	Lights        []*RoomLight           `protobuf:"bytes,8,rep,name=lights,proto3" json:"lights,omitempty"`
-	Outside       *RoomOutside           `protobuf:"bytes,9,opt,name=outside,proto3" json:"outside,omitempty"`
-	Furnishings   []*RoomFurnishing      `protobuf:"bytes,10,rep,name=furnishings,proto3" json:"furnishings,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name  string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// Always the region: the room.parent_region rule (id starts with
+	// "in:" + parent + ":") leaves a floor's id no other option.
+	Parent        string               `protobuf:"bytes,3,opt,name=parent,proto3" json:"parent,omitempty"`
+	Map           []string             `protobuf:"bytes,4,rep,name=map,proto3" json:"map,omitempty"`
+	Doors         []*RoomDoor          `protobuf:"bytes,5,rep,name=doors,proto3" json:"doors,omitempty"`
+	Props         []*RoomProp          `protobuf:"bytes,6,rep,name=props,proto3" json:"props,omitempty"`
+	Spots         map[string]*RoomSpot `protobuf:"bytes,7,rep,name=spots,proto3" json:"spots,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	Lights        []*RoomLight         `protobuf:"bytes,8,rep,name=lights,proto3" json:"lights,omitempty"`
+	Outside       *RoomOutside         `protobuf:"bytes,9,opt,name=outside,proto3" json:"outside,omitempty"`
+	Furnishings   []*RoomFurnishing    `protobuf:"bytes,10,rep,name=furnishings,proto3" json:"furnishings,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -750,20 +752,18 @@ var File_glimway_content_v1_rooms_proto protoreflect.FileDescriptor
 
 const file_glimway_content_v1_rooms_proto_rawDesc = "" +
 	"\n" +
-	"\x1eglimway/content/v1/rooms.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\x96\x05\n" +
+	"\x1eglimway/content/v1/rooms.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\x9d\x03\n" +
 	"\x05Rooms\x12=\n" +
 	"\x06legend\x18\x01 \x03(\v2%.glimway.content.v1.Rooms.LegendEntryR\x06legend\x128\n" +
 	"\x05rooms\x18\x02 \x03(\v2\x18.glimway.content.v1.RoomB\b\xbaH\x05\x92\x01\x02\b\x01R\x05rooms\x1a9\n" +
 	"\vLegendEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\xd8\x03\xbaH\xd4\x03\x1an\n" +
-	"\x10rooms.unique_ids\x12\x17room ids must be unique\x1aAthis.rooms.all(r, this.rooms.filter(q, q.id == r.id).size() == 1)\x1a\xd8\x01\n" +
-	"\frooms.legend\x12\"legend must be the room vocabulary\x1a\xa3\x01this.legend == {\"#\": \"wall\", \"=\": \"back-wall\", \"w\": \"window\", \".\": \"planks\", \":\": \"flagstone\", \"D\": \"doorway\", \"^\": \"stairs-up\", \"v\": \"stairs-down\", \"@\": \"arrive\"}\x1a\x86\x01\n" +
-	"\x1brooms.prop_chars_off_legend\x12*a prop character is not part of the legend\x1a;this.rooms.all(r, r.props.all(p, !(p.char in this.legend)))\"\xb2\f\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\xdf\x01\xbaH\xdb\x01\x1a\xd8\x01\n" +
+	"\frooms.legend\x12\"legend must be the room vocabulary\x1a\xa3\x01this.legend == {\"#\": \"wall\", \"=\": \"back-wall\", \"w\": \"window\", \".\": \"planks\", \":\": \"flagstone\", \"D\": \"doorway\", \"^\": \"stairs-up\", \"v\": \"stairs-down\", \"@\": \"arrive\"}\"\xf8\v\n" +
 	"\x04Room\x12k\n" +
 	"\x02id\x18\x01 \x01(\tB[\xbaHXrV2T^in:(village|woodland|ruin|commons):([a-z0-9]+(-[a-z0-9]+)*)(:([2-9]|[1-9][0-9]+))?$R\x02id\x12\x1b\n" +
-	"\x04name\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12z\n" +
-	"\x06parent\x18\x03 \x01(\tBb\xbaH_r]2[^(village|woodland|ruin|commons|in:(village|woodland|ruin|commons):[a-z0-9]+(-[a-z0-9]+)*)$R\x06parent\x12\x1d\n" +
+	"\x04name\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12@\n" +
+	"\x06parent\x18\x03 \x01(\tB(\xbaH%r#2!^(village|woodland|ruin|commons)$R\x06parent\x12\x1d\n" +
 	"\x03map\x18\x04 \x03(\tB\v\xbaH\b\x92\x01\x05\b\x03\x10\x80\x01R\x03map\x12<\n" +
 	"\x05doors\x18\x05 \x03(\v2\x1c.glimway.content.v1.RoomDoorB\b\xbaH\x05\x92\x01\x02\b\x01R\x05doors\x122\n" +
 	"\x05props\x18\x06 \x03(\v2\x1c.glimway.content.v1.RoomPropR\x05props\x12Y\n" +
@@ -790,13 +790,14 @@ const file_glimway_content_v1_rooms_proto_rawDesc = "" +
 	"\x02to\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x02to\x126\n" +
 	"\aoutside\x18\x06 \x01(\v2\x1c.glimway.content.v1.RoomTileR\aoutside\x12:\n" +
 	"\x05entry\x18\a \x01(\v2\x1c.glimway.content.v1.RoomTileB\x06\xbaH\x03\xc8\x01\x01R\x05entry:\xf7\x01\xbaH\xf3\x01\x1a\xf0\x01\n" +
-	"\x0froom_door.shape\x12Da door has its D and an outside tile; a stair has its arrow and none\x1a\x96\x01(this.kind != \"door\" || (this.at == \"D\" && has(this.outside))) && (this.kind != \"stair\" || ((this.at == \"^\" || this.at == \"v\") && !has(this.outside)))\"\xd4\x01\n" +
+	"\x0froom_door.shape\x12Da door has its D and an outside tile; a stair has its arrow and none\x1a\x96\x01(this.kind != \"door\" || (this.at == \"D\" && has(this.outside))) && (this.kind != \"stair\" || ((this.at == \"^\" || this.at == \"v\") && !has(this.outside)))\"\xc3\x02\n" +
 	"\bRoomProp\x12+\n" +
 	"\x03art\x18\x01 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x03art\x12%\n" +
 	"\x04char\x18\x02 \x01(\tB\x11\xbaH\x0er\f2\n" +
 	"^[A-Za-z]$R\x04char\x12!\n" +
 	"\x05solid\x18\x03 \x01(\bB\x06\xbaH\x03\xc8\x01\x01H\x00R\x05solid\x88\x01\x01\x12<\n" +
-	"\x06facing\x18\x04 \x01(\tB\x1f\xbaH\x1cr\x1aR\x05frontR\x04leftR\x05rightR\x04diagH\x01R\x06facing\x88\x01\x01B\b\n" +
+	"\x06facing\x18\x04 \x01(\tB\x1f\xbaH\x1cr\x1aR\x05frontR\x04leftR\x05rightR\x04diagH\x01R\x06facing\x88\x01\x01:m\xbaHj\x1ah\n" +
+	"\x19room_prop.char_off_legend\x12*a prop character is not part of the legend\x1a\x1f!(this.char in [\"D\", \"w\", \"v\"])B\b\n" +
 	"\x06_solidB\t\n" +
 	"\a_facing\"\xfe\x04\n" +
 	"\x0eRoomFurnishing\x12/\n" +

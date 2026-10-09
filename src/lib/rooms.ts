@@ -15,13 +15,18 @@ import {
   type RoomsValid,
 } from './gen/glimway/content/v1/rooms_pb.js';
 
-/** The generated messages (proto/glimway/content/v1/rooms.proto), with the schema's required fields non-optional. */
-export type Rooms = RoomsValid;
-export type Room = RoomValid;
-export type RoomDoor = RoomDoorValid;
+/**
+ * The generated messages (proto/glimway/content/v1/rooms.proto), with the
+ * schema's required fields non-optional — and the vocabularies the schema's
+ * `string.in` rules check narrowed to the unions callers want, once, here at
+ * the loader, so no caller casts a bare string.
+ */
 export type RoomFacing = 'front' | 'left' | 'right' | 'diag';
-export type RoomProp = RoomPropValid;
-export type RoomFurnishing = RoomFurnishingValid;
+export type Rooms = Omit<RoomsValid, 'rooms'> & { rooms: Room[] };
+export type Room = Omit<RoomValid, 'doors' | 'props' | 'furnishings'> & { doors: RoomDoor[]; props: RoomProp[]; furnishings: RoomFurnishing[] };
+export type RoomDoor = Omit<RoomDoorValid, 'kind' | 'side'> & { kind: 'door' | 'stair'; side: 'north' | 'south' | 'east' | 'west' };
+export type RoomProp = Omit<RoomPropValid, 'facing'> & { facing?: RoomFacing };
+export type RoomFurnishing = Omit<RoomFurnishingValid, 'facing' | 'offer'> & { facing?: RoomFacing; offer?: 'top' | 'shelves' };
 export type RoomSpot = RoomSpotValid;
 export type RoomLight = RoomLightValid;
 export type RoomOutside = RoomOutsideValid;
@@ -75,7 +80,9 @@ function roomRules(doc: Rooms): void {
   const bad = (s: string): never => { throw new Error(`invalid rooms: ${s}`); };
   const seen = new Map<string, Room>(), spots = new Set(Object.keys(story.spots));
   for (const r of doc.rooms) {
-    if (seen.has(r.id)) bad(`room ${r.id}`);
+    // One id per room: the loader's own rule, naming the duplicate (the
+    // schema's CEL can't cheaply, and the old loaders named it).
+    if (seen.has(r.id)) bad(`duplicate id ${r.id}`);
     seen.set(r.id, r);
     const props = new Set<string>(), solidProps = new Set<string>();
     for (const p of r.props) {
@@ -128,7 +135,7 @@ function roomRules(doc: Rooms): void {
 }
 
 export function validateRooms(value: unknown): Rooms {
-  const doc = decodeContent(RoomsSchema, value, 'rooms', 'rooms') as Rooms;
+  const doc = decodeContent(RoomsSchema, value, 'rooms', ['rooms']) as Rooms;
   roomRules(doc);
   return doc;
 }

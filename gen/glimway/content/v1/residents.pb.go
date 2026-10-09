@@ -87,9 +87,11 @@ func (x *Residents) GetResidents() []*Resident {
 }
 
 type Resident struct {
-	state         protoimpl.MessageState   `protogen:"open.v1"`
-	Id            string                   `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	OffsetMinutes *int32                   `protobuf:"varint,2,opt,name=offset_minutes,json=offsetMinutes,proto3,oneof" json:"offset_minutes,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	OffsetMinutes *int32                 `protobuf:"varint,2,opt,name=offset_minutes,json=offsetMinutes,proto3,oneof" json:"offset_minutes,omitempty"`
+	// A room id: home names a room the loader knows, and the code rule
+	// refuses anything else (a player cottage is not in rooms.json).
 	Home          *string                  `protobuf:"bytes,3,opt,name=home,proto3,oneof" json:"home,omitempty"`
 	Spots         map[string]*ResidentSpot `protobuf:"bytes,4,rep,name=spots,proto3" json:"spots,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Cycle         []*ResidentPhase         `protobuf:"bytes,5,rep,name=cycle,proto3" json:"cycle,omitempty"`
@@ -286,19 +288,17 @@ var File_glimway_content_v1_residents_proto protoreflect.FileDescriptor
 
 const file_glimway_content_v1_residents_proto_rawDesc = "" +
 	"\n" +
-	"\"glimway/content/v1/residents.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\xb2\x04\n" +
+	"\"glimway/content/v1/residents.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\x97\x02\n" +
 	"\tResidents\x121\n" +
 	"\x0eperiod_minutes\x18\x01 \x01(\x05B\n" +
 	"\xbaH\a\x1a\x05\x18\xa0\v(\x01R\rperiodMinutes\x12,\n" +
 	"\rgrace_seconds\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\fgraceSeconds\x12D\n" +
-	"\tresidents\x18\x03 \x03(\v2\x1c.glimway.content.v1.ResidentB\b\xbaH\x05\x92\x01\x02\b\x01R\tresidents:\xfd\x02\xbaH\xf9\x02\x1a~\n" +
-	"\x14residents.unique_ids\x12\x1bresident ids must be unique\x1aIthis.residents.all(r, this.residents.filter(q, q.id == r.id).size() == 1)\x1a^\n" +
-	"\x0fresidents.grace\x12\x1bgrace is at most one period\x1a.this.grace_seconds <= this.period_minutes * 60\x1a\x96\x01\n" +
-	"\x11residents.offsets\x12(a resident's offset is inside the period\x1aWthis.residents.all(r, !has(r.offset_minutes) || r.offset_minutes < this.period_minutes)\"\xdf\x06\n" +
+	"\tresidents\x18\x03 \x03(\v2\x1c.glimway.content.v1.ResidentB\b\xbaH\x05\x92\x01\x02\b\x01R\tresidents:c\xbaH`\x1a^\n" +
+	"\x0fresidents.grace\x12\x1bgrace is at most one period\x1a.this.grace_seconds <= this.period_minutes * 60\"\xc0\x06\n" +
 	"\bResident\x12)\n" +
 	"\x02id\x18\x01 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x02id\x123\n" +
-	"\x0eoffset_minutes\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00H\x00R\roffsetMinutes\x88\x01\x01\x12\x90\x01\n" +
-	"\x04home\x18\x03 \x01(\tBw\xbaHtrr2p^(in:(village|woodland|ruin|commons):[a-z0-9]+(-[a-z0-9]+)*(:([2-9]|[1-9][0-9]+))?|in:home:(0|[1-9][0-9]{0,3}))$H\x01R\x04home\x88\x01\x01\x12_\n" +
+	"\x0eoffset_minutes\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00H\x00R\roffsetMinutes\x88\x01\x01\x12r\n" +
+	"\x04home\x18\x03 \x01(\tBY\xbaHVrT2R^in:(village|woodland|ruin|commons):[a-z0-9]+(-[a-z0-9]+)*(:([2-9]|[1-9][0-9]+))?$H\x01R\x04home\x88\x01\x01\x12_\n" +
 	"\x05spots\x18\x04 \x03(\v2'.glimway.content.v1.Resident.SpotsEntryB \xbaH\x1d\x9a\x01\x1a\b\x01\"\x16r\x142\x12^[a-z0-9-]{1,100}$R\x05spots\x12A\n" +
 	"\x05cycle\x18\x05 \x03(\v2!.glimway.content.v1.ResidentPhaseB\b\xbaH\x05\x92\x01\x02\b\x01R\x05cycle\x1aZ\n" +
 	"\n" +

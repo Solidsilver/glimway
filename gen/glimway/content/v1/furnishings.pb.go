@@ -392,10 +392,9 @@ var File_glimway_content_v1_furnishings_proto protoreflect.FileDescriptor
 
 const file_glimway_content_v1_furnishings_proto_rawDesc = "" +
 	"\n" +
-	"$glimway/content/v1/furnishings.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\xcd\x01\n" +
+	"$glimway/content/v1/furnishings.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"O\n" +
 	"\vFurnishings\x12@\n" +
-	"\x06pieces\x18\x01 \x03(\v2\x1e.glimway.content.v1.FurnishingB\b\xbaH\x05\x92\x01\x02\b\x01R\x06pieces:|\xbaHy\x1aw\n" +
-	"\x16furnishings.unique_ids\x12\x18piece ids must be unique\x1aCthis.pieces.all(p, this.pieces.filter(q, q.id == p.id).size() == 1)\"\xa1\r\n" +
+	"\x06pieces\x18\x01 \x03(\v2\x1e.glimway.content.v1.FurnishingB\b\xbaH\x05\x92\x01\x02\b\x01R\x06pieces\"\xa1\r\n" +
 	"\n" +
 	"Furnishing\x12)\n" +
 	"\x02id\x18\x01 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x02id\x12\x1b\n" +

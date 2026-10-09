@@ -75,6 +75,9 @@ export declare type Room = Message<"glimway.content.v1.Room"> & {
   name: string;
 
   /**
+   * Always the region: the room.parent_region rule (id starts with
+   * "in:" + parent + ":") leaves a floor's id no other option.
+   *
    * @generated from field: string parent = 3;
    */
   parent: string;
@@ -134,6 +137,9 @@ export declare type RoomValid = Message<"glimway.content.v1.Room"> & {
   name: string;
 
   /**
+   * Always the region: the room.parent_region rule (id starts with
+   * "in:" + parent + ":") leaves a floor's id no other option.
+   *
    * @generated from field: string parent = 3;
    */
   parent: string;

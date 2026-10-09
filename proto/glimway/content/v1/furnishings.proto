@@ -8,11 +8,6 @@ import "buf/validate/validate.proto";
 // keep only what is homestead-specific (category, where, prices, materials)
 // and refer to these ids for name and footprint. content/furnishings.json.
 message Furnishings {
-  option (buf.validate.message).cel = {
-    id: "furnishings.unique_ids"
-    message: "piece ids must be unique"
-    expression: "this.pieces.all(p, this.pieces.filter(q, q.id == p.id).size() == 1)"
-  };
   repeated Furnishing pieces = 1 [(buf.validate.field).repeated.min_items = 1];
 }
 

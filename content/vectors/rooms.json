@@ -18,7 +18,8 @@
           ],
           "value": "#.#"
         }
-      ]
+      ],
+      "rule": "room.map_rows"
     },
     {
       "name": "unclaimed-letter",
@@ -33,7 +34,8 @@
           ],
           "value": "#......Z.....#"
         }
-      ]
+      ],
+      "rule": "unclaimed character"
     },
     {
       "name": "nonrectangular-prop",
@@ -48,7 +50,8 @@
           ],
           "value": "#..TTT....b..#"
         }
-      ]
+      ],
+      "rule": "prop footprint"
     },
     {
       "name": "duplicate-room",
@@ -62,7 +65,8 @@
           ],
           "value": "in:village:bakery"
         }
-      ]
+      ],
+      "rule": "duplicate id"
     },
     {
       "name": "unknown-parent",
@@ -76,7 +80,8 @@
           ],
           "value": "bogus"
         }
-      ]
+      ],
+      "rule": "room.parent_region"
     },
     {
       "name": "floor-one-suffix",
@@ -90,7 +95,8 @@
           ],
           "value": "in:village:bakery:1"
         }
-      ]
+      ],
+      "rule": "string.pattern"
     },
     {
       "name": "missing-base-floor",
@@ -104,7 +110,8 @@
           ],
           "value": "in:village:missing:2"
         }
-      ]
+      ],
+      "rule": "stair target"
     },
     {
       "name": "invalid-legend",
@@ -117,7 +124,8 @@
           ],
           "value": "planks"
         }
-      ]
+      ],
+      "rule": "rooms.legend"
     },
     {
       "name": "duplicate-prop-char",
@@ -133,7 +141,8 @@
           ],
           "value": "O"
         }
-      ]
+      ],
+      "rule": "room.unique_prop_chars"
     },
     {
       "name": "unclaimed-exit",
@@ -163,7 +172,8 @@
             }
           ]
         }
-      ]
+      ],
+      "rule": "unclaimed exit"
     },
     {
       "name": "wrong-door-side",
@@ -179,7 +189,8 @@
           ],
           "value": "east"
         }
-      ]
+      ],
+      "rule": "door side"
     },
     {
       "name": "stair-to-unknown-room",
@@ -195,7 +206,8 @@
           ],
           "value": "in:village:missing"
         }
-      ]
+      ],
+      "rule": "stair target"
     },
     {
       "name": "stair-arrives-in-wall",
@@ -214,7 +226,8 @@
             "ty": 0
           }
         }
-      ]
+      ],
+      "rule": "stair target"
     },
     {
       "name": "missing-stair-coordinate",
@@ -232,7 +245,8 @@
             "tx": 4
           }
         }
-      ]
+      ],
+      "rule": "required"
     },
     {
       "name": "duplicate-spot",
@@ -251,7 +265,8 @@
             "label": "Look"
           }
         }
-      ]
+      ],
+      "rule": "spot"
     },
     {
       "name": "curated-spot-collision",
@@ -270,7 +285,8 @@
             "label": "Look"
           }
         }
-      ]
+      ],
+      "rule": "spot"
     },
     {
       "name": "spot-outside-grid",
@@ -286,7 +302,8 @@
           ],
           "value": 14
         }
-      ]
+      ],
+      "rule": "spot"
     },
     {
       "name": "spot-blocked-on-all-sides",
@@ -305,7 +322,8 @@
             "label": "Look"
           }
         }
-      ]
+      ],
+      "rule": "blocked spot"
     },
     {
       "name": "nonpositive-light",
@@ -321,7 +339,8 @@
           ],
           "value": 0
         }
-      ]
+      ],
+      "rule": "int32.gte_lte"
     },
     {
       "name": "open-boundary",
@@ -336,7 +355,8 @@
           ],
           "value": ".#############"
         }
-      ]
+      ],
+      "rule": "open boundary"
     },
     {
       "name": "duplicate-arrival",
@@ -351,7 +371,8 @@
           ],
           "value": "#.....@......#"
         }
-      ]
+      ],
+      "rule": "arrival"
     },
     {
       "name": "missing-solid",
@@ -369,7 +390,8 @@
             "art": "kitchen-hearth"
           }
         }
-      ]
+      ],
+      "rule": "required"
     },
     {
       "name": "non-solid-prop",
@@ -427,7 +449,8 @@
           ],
           "value": "not-a-piece"
         }
-      ]
+      ],
+      "rule": "furnishings"
     },
     {
       "name": "furnishing-facing-it-lacks",
@@ -443,7 +466,8 @@
           ],
           "value": "left"
         }
-      ]
+      ],
+      "rule": "furnishings"
     },
     {
       "name": "furnishing-wall-piece-on-floor",
@@ -459,7 +483,8 @@
           ],
           "value": 3
         }
-      ]
+      ],
+      "rule": "furnishings"
     },
     {
       "name": "furnishing-floor-piece-on-a-prop",
@@ -485,7 +510,8 @@
           ],
           "value": 4
         }
-      ]
+      ],
+      "rule": "furnishings"
     },
     {
       "name": "furnishing-off-the-map",
@@ -501,7 +527,8 @@
           ],
           "value": 20
         }
-      ]
+      ],
+      "rule": "furnishings"
     },
     {
       "name": "furnishing-rug-on-a-piece",
@@ -517,7 +544,8 @@
           ],
           "value": "rag-rug"
         }
-      ]
+      ],
+      "rule": "furnishings"
     },
     {
       "name": "furnishing-parent-after-it",
@@ -533,7 +561,8 @@
           ],
           "value": 6
         }
-      ]
+      ],
+      "rule": "furnishings"
     },
     {
       "name": "furnishing-slot-overflow",
@@ -549,7 +578,8 @@
           ],
           "value": 1
         }
-      ]
+      ],
+      "rule": "furnishings"
     },
     {
       "name": "furnishing-medium-on-a-one-slot-top",
@@ -565,7 +595,8 @@
           ],
           "value": "woven-basket"
         }
-      ]
+      ],
+      "rule": "furnishings"
     },
     {
       "name": "furnishing-rug-on-a-rug",
@@ -601,7 +632,8 @@
           ],
           "value": 6
         }
-      ]
+      ],
+      "rule": "furnishings"
     },
     {
       "name": "prop-unknown-piece",
@@ -617,7 +649,8 @@
           ],
           "value": "not-a-piece"
         }
-      ]
+      ],
+      "rule": "prop piece"
     },
     {
       "name": "prop-footprint-not-its-piece",
@@ -633,7 +666,8 @@
           ],
           "value": "oak-table"
         }
-      ]
+      ],
+      "rule": "prop footprint"
     },
     {
       "name": "prop-facing-it-lacks",
@@ -648,6 +682,268 @@
             "facing"
           ],
           "value": "left"
+        }
+      ],
+      "rule": "prop piece"
+    },
+    {
+      "name": "room-parent-not-region",
+      "valid": false,
+      "rule": "room.parent_region",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "parent"
+          ],
+          "value": "woodland"
+        }
+      ]
+    },
+    {
+      "name": "door-to-other-room",
+      "valid": false,
+      "rule": "room.door_to_parent",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "doors",
+            0,
+            "to"
+          ],
+          "value": "in:village:mill"
+        }
+      ]
+    },
+    {
+      "name": "duplicate-door-id",
+      "valid": false,
+      "rule": "room.unique_door_ids",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            1,
+            "doors",
+            1,
+            "id"
+          ],
+          "value": "front"
+        }
+      ]
+    },
+    {
+      "name": "duplicate-door-char",
+      "valid": false,
+      "rule": "room.unique_door_chars",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            1,
+            "doors",
+            1,
+            "at"
+          ],
+          "value": "D"
+        }
+      ]
+    },
+    {
+      "name": "stair-with-outside",
+      "valid": false,
+      "rule": "room_door.shape",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            1,
+            "doors",
+            1,
+            "outside"
+          ],
+          "value": {
+            "tx": 1,
+            "ty": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "prop-char-on-legend",
+      "valid": false,
+      "rule": "room_prop.char_off_legend",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "props",
+            0,
+            "char"
+          ],
+          "value": "w"
+        }
+      ]
+    },
+    {
+      "name": "furnishing-parent-with-tile",
+      "valid": false,
+      "rule": "room_furnishing.placed",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "furnishings",
+            4,
+            "tx"
+          ],
+          "value": 3
+        }
+      ]
+    },
+    {
+      "name": "chimney-keys-required",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "outside",
+            "chimney",
+            "x"
+          ],
+          "remove": true
+        },
+        {
+          "path": [
+            "rooms",
+            0,
+            "outside",
+            "chimney",
+            "y"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "outside-unknown-key",
+      "valid": false,
+      "rule": "unknown key",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "outside",
+            "bogus"
+          ],
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "offer-empty-string",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "furnishings",
+            0,
+            "offer"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "no-spots-lights-keys-ok",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "spots"
+          ],
+          "remove": true
+        },
+        {
+          "path": [
+            "rooms",
+            0,
+            "lights"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "no-props-key-ok",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "props"
+          ],
+          "remove": true
+        },
+        {
+          "path": [
+            "rooms",
+            0,
+            "map",
+            1
+          ],
+          "value": "#==w======w==#"
+        },
+        {
+          "path": [
+            "rooms",
+            0,
+            "map",
+            2
+          ],
+          "value": "#............#"
+        },
+        {
+          "path": [
+            "rooms",
+            0,
+            "map",
+            4
+          ],
+          "value": "#............#"
+        },
+        {
+          "path": [
+            "rooms",
+            0,
+            "map",
+            5
+          ],
+          "value": "#............#"
+        },
+        {
+          "path": [
+            "rooms",
+            0,
+            "map",
+            6
+          ],
+          "value": "#............#"
         }
       ]
     }
@@ -672,7 +968,8 @@
           ],
           "value": 39
         }
-      ]
+      ],
+      "rule": "phase total"
     },
     {
       "name": "phase-duration",
@@ -688,7 +985,8 @@
           ],
           "value": 0
         }
-      ]
+      ],
+      "rule": "int32.gte"
     },
     {
       "name": "unknown-cycle-spot",
@@ -704,7 +1002,8 @@
           ],
           "value": "missing"
         }
-      ]
+      ],
+      "rule": "resident.cycle_covers_spots"
     },
     {
       "name": "unknown-area",
@@ -720,7 +1019,8 @@
           ],
           "value": "in:village:missing"
         }
-      ]
+      ],
+      "rule": "spot"
     },
     {
       "name": "resident-in-wall",
@@ -736,7 +1036,8 @@
           ],
           "value": 0
         }
-      ]
+      ],
+      "rule": "blocked spot"
     },
     {
       "name": "offset-wraps-period",
@@ -750,7 +1051,8 @@
           ],
           "value": 60
         }
-      ]
+      ],
+      "rule": "offset"
     },
     {
       "name": "duplicate-resident",
@@ -764,7 +1066,8 @@
           ],
           "value": "hazel"
         }
-      ]
+      ],
+      "rule": "duplicate id"
     },
     {
       "name": "unknown-home",
@@ -778,7 +1081,8 @@
           ],
           "value": "in:village:missing"
         }
-      ]
+      ],
+      "rule": "resident.home_used"
     },
     {
       "name": "unused-spot",
@@ -797,7 +1101,8 @@
             "ty": 1
           }
         }
-      ]
+      ],
+      "rule": "resident.cycle_covers_spots"
     },
     {
       "name": "missing-resident-coordinate",
@@ -815,7 +1120,8 @@
             "tx": 12
           }
         }
-      ]
+      ],
+      "rule": "required"
     },
     {
       "name": "grace-negative",
@@ -827,7 +1133,8 @@
           ],
           "value": -1
         }
-      ]
+      ],
+      "rule": "int32.gte"
     },
     {
       "name": "elara-desk-and-camp",
@@ -846,7 +1153,8 @@
           ],
           "value": "in:village:missing"
         }
-      ]
+      ],
+      "rule": "resident.home_used"
     },
     {
       "name": "elara-desk-outside-room",
@@ -862,7 +1170,8 @@
           ],
           "value": 14
         }
-      ]
+      ],
+      "rule": "blocked spot"
     },
     {
       "name": "seated-resident-cannot-use-wall",
@@ -888,7 +1197,8 @@
           ],
           "value": 7
         }
-      ]
+      ],
+      "rule": "blocked spot"
     },
     {
       "name": "seat-must-be-boolean",
@@ -904,7 +1214,8 @@
           ],
           "value": "yes"
         }
-      ]
+      ],
+      "rule": "decode"
     },
     {
       "name": "seat-on-existing-furniture",
@@ -946,7 +1257,8 @@
           ],
           "value": false
         }
-      ]
+      ],
+      "rule": "blocked spot"
     },
     {
       "name": "elara-missing-cycle-spot",
@@ -962,7 +1274,8 @@
           ],
           "value": "square"
         }
-      ]
+      ],
+      "rule": "resident.cycle_covers_spots"
     },
     {
       "name": "elara-cycle-must-total-hour",
@@ -978,7 +1291,8 @@
           ],
           "value": 31
         }
-      ]
+      ],
+      "rule": "phase total"
     },
     {
       "name": "seated-resident-needs-accessible-furniture",
@@ -1005,6 +1319,57 @@
             "ty": 1,
             "seated": true
           }
+        }
+      ],
+      "rule": "blocked spot"
+    },
+    {
+      "name": "grace-too-long",
+      "valid": false,
+      "rule": "residents.grace",
+      "edits": [
+        {
+          "path": [
+            "graceSeconds"
+          ],
+          "value": 86400
+        }
+      ]
+    },
+    {
+      "name": "missing-grace-ok",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "graceSeconds"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "home-not-a-room",
+      "valid": false,
+      "rule": "home",
+      "edits": [
+        {
+          "path": [
+            "residents",
+            0,
+            "home"
+          ],
+          "value": "in:village:missing"
+        },
+        {
+          "path": [
+            "residents",
+            0,
+            "spots",
+            "square",
+            "area"
+          ],
+          "value": "in:village:missing"
         }
       ]
     }

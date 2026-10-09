@@ -4,17 +4,18 @@ import vectors from '../content/vectors/furnishings.json' with { type: 'json' };
 import furnishingRaw from '../content/furnishings.json' with { type: 'json' };
 import { FURNISHINGS, validateFurnishings, furnishingFor, canPlace, type Furnishing, type PlaceOn } from '../src/lib/furnishings.ts';
 import { HOMESTEAD_DATA, validateHomesteadData, homeItem } from '../src/lib/homestead.ts';
+import { refusalMatchesRule } from './helpers/vector-rule.ts';
 
-interface Edit { path: (string | number)[]; value: unknown }
+interface Edit { path: (string | number)[]; value?: unknown; remove?: boolean }
 function edited(base: unknown, edits: Edit[]): unknown {
   const value = structuredClone(base);
-  for (const e of edits) { let target = value as any; for (const key of e.path.slice(0, -1)) target = target[key]; target[e.path.at(-1)!] = e.value; }
+  for (const e of edits) { let target = value as any; for (const key of e.path.slice(0, -1)) target = target[key]; if (e.remove) delete target[e.path.at(-1)!]; else target[e.path.at(-1)!] = e.value; }
   return value;
 }
 for (const v of vectors.loader) test(`shared furnishings loader: ${v.name}`, () => {
   const value = edited(furnishingRaw, v.edits);
   if (v.valid) assert.doesNotThrow(() => validateFurnishings(value));
-  else assert.throws(() => validateFurnishings(value));
+  else assert.throws(() => validateFurnishings(value), (e: Error) => refusalMatchesRule(e, v.rule), v.rule);
 });
 
 test('the shipped catalogue keeps every home good and the interior kit', () => {

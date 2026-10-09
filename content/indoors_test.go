@@ -2,20 +2,48 @@ package content
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 
+	"buf.build/go/protovalidate"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
 
 type loaderVector struct {
 	Name  string `json:"name"`
 	Valid bool   `json:"valid"`
+	// Rule: what a refusing vector is refused for — a protovalidate rule id
+	// ("string.pattern", "furnishing.rug", …) or, for rules the loaders keep
+	// in code and the pre-parse checks, the message's tag ("duplicate id",
+	// "unknown key", "stair target", …). Asserted in both languages.
+	Rule  string `json:"rule"`
 	Edits []struct {
-		Path  []any `json:"path"`
-		Value any   `json:"value"`
+		Path   []any `json:"path"`
+		Value  any   `json:"value"`
+		Remove bool  `json:"remove"`
 	} `json:"edits"`
+}
+
+// checkVectorRule asserts the shared vector was refused for the shared
+// reason: a schema violation carries the rule id, a code rule its tag.
+func checkVectorRule(t *testing.T, err error, want string) {
+	t.Helper()
+	var bad *protovalidate.ValidationError
+	if errors.As(err, &bad) {
+		for _, v := range bad.Violations {
+			if v.Proto.GetRuleId() == want {
+				return
+			}
+		}
+	}
+	if strings.Contains(err.Error(), want) {
+		return
+	}
+	t.Fatalf("refusal does not name rule %q: %v", want, err)
 }
 
 func readVectors(t *testing.T, name string, out any) {
@@ -44,6 +72,10 @@ func editVector(t *testing.T, base json.RawMessage, v loaderVector) []byte {
 				target = target.([]any)[int(k)]
 			}
 		}
+		if edit.Remove {
+			delete(target.(map[string]any), edit.Path[len(edit.Path)-1].(string))
+			continue
+		}
 		switch k := edit.Path[len(edit.Path)-1].(type) {
 		case string:
 			target.(map[string]any)[k] = edit.Value
@@ -56,6 +88,16 @@ func editVector(t *testing.T, base json.RawMessage, v loaderVector) []byte {
 		t.Fatal(err)
 	}
 	return raw
+}
+
+// decodeProto is protojson for the vector fixtures, which are hand-written
+// JSON: encoding/json into proto structs only works while the struct tags
+// happen to match.
+func decodeProto(t *testing.T, raw json.RawMessage, msg proto.Message) {
+	t.Helper()
+	if err := protojson.Unmarshal(raw, msg); err != nil {
+		t.Fatal(err)
+	}
 }
 func TestIndoorsLoaderVectors(t *testing.T) {
 	var roomVectors struct {
@@ -74,6 +116,9 @@ func TestIndoorsLoaderVectors(t *testing.T) {
 			if (err == nil) != v.Valid {
 				t.Fatal(v.Valid, err)
 			}
+			if !v.Valid && v.Rule != "" {
+				checkVectorRule(t, err, v.Rule)
+			}
 		})
 	}
 	for _, v := range roomVectors.Residents {
@@ -81,6 +126,9 @@ func TestIndoorsLoaderVectors(t *testing.T) {
 			_, err := DecodeResidents(editVector(t, residentBase, v))
 			if (err == nil) != v.Valid {
 				t.Fatal(v.Valid, err)
+			}
+			if !v.Valid && v.Rule != "" {
+				checkVectorRule(t, err, v.Rule)
 			}
 		})
 	}
@@ -119,7 +167,7 @@ func TestResidentCycleVectors(t *testing.T) {
 	}
 	for _, v := range vectors.Cycles {
 		var resident Resident
-		if err := decodeContentProto(v.Resident, &resident); err != nil {
+		if err := decodeContentProto(v.Resident, "residents", &resident); err != nil {
 			t.Fatal(err)
 		}
 		if got := CycleAt(&resident, v.Now); got != v.Expected {
@@ -155,41 +203,54 @@ func TestRevisedLibraryVectors(t *testing.T) {
 		Room  json.RawMessage
 		Seats []struct {
 			Name  string
-			Spot  *ResidentSpot
+			Spot  json.RawMessage
 			Valid bool
 		}
 	}
 	readVectors(t, "library", &vectors)
 	var revised Room
-	if err := decodeContentProto(vectors.Room, &revised); err != nil {
+	decodeProto(t, vectors.Room, &revised)
+	// The revised room goes through the full loader, schema rules included:
+	// splice it over the shipped one in the raw JSON and decode the lot.
+	base, _ := FS.ReadFile("rooms.json")
+	var doc any
+	if err := json.Unmarshal(base, &doc); err != nil {
 		t.Fatal(err)
 	}
-	doc, err := LoadRooms()
+	rooms := doc.(map[string]any)["rooms"].([]any)
+	for i, room := range rooms {
+		if room.(map[string]any)["id"] == revised.GetId() {
+			rooms[i] = json.RawMessage(vectors.Room)
+		}
+	}
+	spliced, err := json.Marshal(doc)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for i, room := range doc.Rooms {
-		if room.GetId() == revised.GetId() {
-			doc.Rooms[i] = &revised
-		}
-	}
-	if err := ValidateRooms(doc); err != nil {
+	decoded, err := DecodeRooms(spliced)
+	if err != nil {
 		t.Fatal("revised library:", err)
 	}
 	// Shelves can seal a boundary only while they are solid.
-	for i, room := range doc.Rooms {
+	for i, room := range decoded.Rooms {
 		if room.GetId() == revised.GetId() {
-			open := proto.Clone(&revised).(*Room)
+			open := proto.Clone(room).(*Room)
 			open.Props[0].Solid = proto.Bool(false)
-			doc.Rooms[i] = open
+			decoded.Rooms[i] = open
 		}
 	}
-	if err := ValidateRooms(doc); err == nil {
+	openJSON, err := protojson.Marshal(decoded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DecodeRooms(openJSON); err == nil {
 		t.Fatal("accepted non-solid boundary shelves")
 	}
 	for _, v := range vectors.Seats {
 		t.Run(v.Name, func(t *testing.T) {
-			if got := ResidentSpotFits(&revised, v.Spot); got != v.Valid {
+			var spot ResidentSpot
+			decodeProto(t, v.Spot, &spot)
+			if got := ResidentSpotFits(&revised, &spot); got != v.Valid {
 				t.Fatal(got, v.Valid)
 			}
 		})

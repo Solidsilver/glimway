@@ -9,19 +9,9 @@ import "buf/validate/validate.proto";
 // beside the loader. content/residents.json.
 message Residents {
   option (buf.validate.message).cel = {
-    id: "residents.unique_ids"
-    message: "resident ids must be unique"
-    expression: "this.residents.all(r, this.residents.filter(q, q.id == r.id).size() == 1)"
-  };
-  option (buf.validate.message).cel = {
     id: "residents.grace"
     message: "grace is at most one period"
     expression: "this.grace_seconds <= this.period_minutes * 60"
-  };
-  option (buf.validate.message).cel = {
-    id: "residents.offsets"
-    message: "a resident's offset is inside the period"
-    expression: "this.residents.all(r, !has(r.offset_minutes) || r.offset_minutes < this.period_minutes)"
   };
   int32 period_minutes = 1 [(buf.validate.field).int32 = {gte: 1, lte: 1440}];
   int32 grace_seconds = 2 [(buf.validate.field).int32.gte = 0];
@@ -41,7 +31,9 @@ message Resident {
   };
   string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
   optional int32 offset_minutes = 2 [(buf.validate.field).int32.gte = 0];
-  optional string home = 3 [(buf.validate.field).string.pattern = "^(in:(village|woodland|ruin|commons):[a-z0-9]+(-[a-z0-9]+)*(:([2-9]|[1-9][0-9]+))?|in:home:(0|[1-9][0-9]{0,3}))$"];
+  // A room id: home names a room the loader knows, and the code rule
+  // refuses anything else (a player cottage is not in rooms.json).
+  optional string home = 3 [(buf.validate.field).string.pattern = "^in:(village|woodland|ruin|commons):[a-z0-9]+(-[a-z0-9]+)*(:([2-9]|[1-9][0-9]+))?$"];
   map<string, ResidentSpot> spots = 4 [(buf.validate.field).map = {
     min_pairs: 1
     keys: {string: {pattern: "^[a-z0-9-]{1,100}$"}}

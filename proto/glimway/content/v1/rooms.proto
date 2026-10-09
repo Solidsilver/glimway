@@ -9,19 +9,9 @@ import "buf/validate/validate.proto";
 // where a piece may stand) stays in code beside the loader, as canPlace does.
 message Rooms {
   option (buf.validate.message).cel = {
-    id: "rooms.unique_ids"
-    message: "room ids must be unique"
-    expression: "this.rooms.all(r, this.rooms.filter(q, q.id == r.id).size() == 1)"
-  };
-  option (buf.validate.message).cel = {
     id: "rooms.legend"
     message: "legend must be the room vocabulary"
     expression: "this.legend == {\"#\": \"wall\", \"=\": \"back-wall\", \"w\": \"window\", \".\": \"planks\", \":\": \"flagstone\", \"D\": \"doorway\", \"^\": \"stairs-up\", \"v\": \"stairs-down\", \"@\": \"arrive\"}"
-  };
-  option (buf.validate.message).cel = {
-    id: "rooms.prop_chars_off_legend"
-    message: "a prop character is not part of the legend"
-    expression: "this.rooms.all(r, r.props.all(p, !(p.char in this.legend)))"
   };
   map<string, string> legend = 1;
   repeated Room rooms = 2 [(buf.validate.field).repeated.min_items = 1];
@@ -63,7 +53,9 @@ message Room {
   };
   string id = 1 [(buf.validate.field).string.pattern = "^in:(village|woodland|ruin|commons):([a-z0-9]+(-[a-z0-9]+)*)(:([2-9]|[1-9][0-9]+))?$"];
   string name = 2 [(buf.validate.field).string.min_len = 1];
-  string parent = 3 [(buf.validate.field).string.pattern = "^(village|woodland|ruin|commons|in:(village|woodland|ruin|commons):[a-z0-9]+(-[a-z0-9]+)*)$"];
+  // Always the region: the room.parent_region rule (id starts with
+  // "in:" + parent + ":") leaves a floor's id no other option.
+  string parent = 3 [(buf.validate.field).string.pattern = "^(village|woodland|ruin|commons)$"];
   repeated string map = 4 [(buf.validate.field).repeated = {min_items: 3, max_items: 128}];
   repeated RoomDoor doors = 5 [(buf.validate.field).repeated.min_items = 1];
   repeated RoomProp props = 6;
@@ -91,6 +83,12 @@ message RoomDoor {
 // A signature piece drawn on its map letter: Art names a furnishings piece
 // (design 2.8), shown in Facing (one it has; empty: its default).
 message RoomProp {
+  option (buf.validate.message).cel = {
+    id: "room_prop.char_off_legend"
+    message: "a prop character is not part of the legend"
+    // The legend's letters are the only ones the char pattern allows.
+    expression: "!(this.char in [\"D\", \"w\", \"v\"])"
+  };
   string art = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
   string char = 2 [(buf.validate.field).string.pattern = "^[A-Za-z]$"];
   optional bool solid = 3 [(buf.validate.field).required = true];

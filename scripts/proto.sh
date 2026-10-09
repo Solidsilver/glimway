@@ -8,7 +8,8 @@ cd "$(dirname "$0")/.."
 # buf.build/bufbuild/protovalidate v1.2.0 (the schema protovalidate-go v1.4.0
 # pins): `buf export buf.build/bufbuild/protovalidate:v1.2.0 -o proto` keeps
 # generation offline and reproducible; no buf deps, no BSR fetch at build
-# time. buf lint skips it (upstream's package is unversioned); code
+# time. buf.yaml ignores it in lint (upstream's package is unversioned) and
+# in breaking (neither it nor the content schemas are a wire contract); code
 # generation is restricted to glimway packages in buf.gen.yaml.
-node_modules/.bin/buf lint --exclude-path proto/buf/validate
+node_modules/.bin/buf lint
 node_modules/.bin/buf generate --path proto/glimway

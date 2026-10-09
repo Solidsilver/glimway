@@ -18,12 +18,22 @@ type (
 	ResidentPhase = contentv1.ResidentPhase
 )
 
-// ValidateResidents runs the rules that reach across files and the cycle's
-// arithmetic: spot areas and homes name rooms, spots stand somewhere real,
-// and the cycle's minutes make one full period.
-func ValidateResidents(doc *Residents) error {
+// validateResidents runs the rules that reach across files and the cycle's
+// arithmetic: duplicate ids, an offset inside the period, spot areas and
+// homes that name rooms, spots that stand somewhere real, and a cycle whose
+// minutes make one full period. It assumes the schema has passed, so it is
+// only called after protovalidate.
+func validateResidents(doc *Residents) error {
 	bad := func(s string) error { return fmt.Errorf("invalid residents: %s", s) }
+	seen := map[string]bool{}
 	for _, r := range doc.GetResidents() {
+		if seen[r.GetId()] {
+			return bad("duplicate id " + r.GetId())
+		}
+		seen[r.GetId()] = true
+		if int(r.GetOffsetMinutes()) >= int(doc.GetPeriodMinutes()) {
+			return bad("offset " + r.GetId())
+		}
 		if r.GetHome() != "" {
 			if _, ok := RoomFor(r.GetHome()); !ok {
 				return bad("home " + r.GetId())
@@ -72,21 +82,20 @@ func ResidentSpotFits(room *Room, spot *ResidentSpot) bool {
 }
 
 // DecodeResidents reads residents JSON into the generated types, refusing
-// nulls and unknown fields, then runs the schema's rules and
-// ValidateResidents.
+// nulls and unknown keys, then runs the schema's rules and validateResidents.
 func DecodeResidents(raw []byte) (*Residents, error) {
 	doc := &Residents{}
-	if err := decodeContentProto(raw, doc); err != nil {
+	if err := decodeContentProto(raw, "residents", doc); err != nil {
 		return doc, err
 	}
-	ids := make([]string, len(doc.GetResidents()))
+	entries := []entryList{{field: "residents", ids: make([]string, len(doc.GetResidents()))}}
 	for i, r := range doc.GetResidents() {
-		ids[i] = r.GetId()
+		entries[0].ids[i] = r.GetId()
 	}
-	if err := contentValidate("residents", "residents", ids, doc); err != nil {
+	if err := contentValidate("residents", entries, doc); err != nil {
 		return doc, err
 	}
-	return doc, ValidateResidents(doc)
+	return doc, validateResidents(doc)
 }
 
 func LoadResidents() (*Residents, error) {

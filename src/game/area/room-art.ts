@@ -16,7 +16,7 @@ import { layoutHash01 } from '../../lib/hash'
 import { FLOOR_VARIANTS, hasInArt, inArt } from '../indoors-art'
 import { wallFacing, type Footprint, type RoomScene } from '../room-kind'
 import { furnishingFor } from '../../lib/furnishings'
-import { drawPiece, setPieceState, type DrawnPiece, type PieceAt } from './furnishings-art'
+import { drawPiece, setPieceState, type DrawnPiece } from './furnishings-art'
 import type { RoomLight } from '../../lib/rooms'
 import type { WorldData } from '../worlds'
 
@@ -182,8 +182,7 @@ export function buildRoomArt(scene: Phaser.Scene, world: WorldData, deps: RoomAr
     const piece = furnishingFor(p.piece)
     if (!piece) continue // the loader has refused this already
     const parent = p.parent !== undefined ? dressing[p.parent] : undefined
-    // The loader's schema has checked the vocabularies.
-    dressing.push(drawPiece(scene, piece, { tx: p.tx ?? 0, ty: p.ty ?? 0, facing: p.facing as PieceAt['facing'], parent, offer: p.offer as PieceAt['offer'], slot: p.slot }))
+    dressing.push(drawPiece(scene, piece, { tx: p.tx ?? 0, ty: p.ty ?? 0, facing: p.facing, parent, offer: p.offer, slot: p.slot }))
   }
   // The loft's roof beams cross its top, over everyone.
   if (/:\d+$/.test(room.def.id) && hasInArt(scene, 'loft-roof-beams')) {

@@ -1,6 +1,8 @@
 package content
 
 import (
+	"fmt"
+
 	contentv1 "glimway/gen/glimway/content/v1"
 )
 
@@ -18,17 +20,24 @@ type (
 )
 
 // DecodeFurnishings reads furnishings JSON into the generated types, refusing
-// nulls and unknown fields, then runs the schema's rules (protovalidate).
+// nulls and unknown keys, then runs the schema's rules (protovalidate) and
+// the catalogue's own rule: one id per piece.
 func DecodeFurnishings(raw []byte) (*Furnishings, error) {
 	doc := &Furnishings{}
-	if err := decodeContentProto(raw, doc); err != nil {
+	if err := decodeContentProto(raw, "furnishings", doc); err != nil {
 		return doc, err
 	}
-	ids := make([]string, len(doc.Pieces))
+	entries := make([]entryList, 1)
+	entries[0] = entryList{field: "pieces", ids: make([]string, len(doc.Pieces))}
+	seen := map[string]bool{}
 	for i, p := range doc.Pieces {
-		ids[i] = p.GetId()
+		entries[0].ids[i] = p.GetId()
+		if seen[entries[0].ids[i]] {
+			return doc, fmt.Errorf("invalid furnishings: duplicate id %s", entries[0].ids[i])
+		}
+		seen[entries[0].ids[i]] = true
 	}
-	return doc, contentValidate("furnishings", "pieces", ids, doc)
+	return doc, contentValidate("furnishings", entries, doc)
 }
 
 func LoadFurnishings() (*Furnishings, error) {

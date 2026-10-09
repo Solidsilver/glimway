@@ -144,11 +144,12 @@ func RoomFootprints(r *Room, char string) []RoomFootprint {
 	return out
 }
 
-// ValidateRooms runs the rules that read the map or reach across rooms: prop
+// validateRooms runs the rules that read the map or reach across rooms: prop
 // and door geometry, claimed characters, where a room's spots and pieces
 // stand, stairs, and every reference between rooms. Field rules live on the
-// schema (proto/glimway/content/v1/rooms.proto).
-func ValidateRooms(doc *Rooms) error {
+// schema (proto/glimway/content/v1/rooms.proto); it assumes the schema has
+// passed, so it is only called after protovalidate.
+func validateRooms(doc *Rooms) error {
 	bad := func(s string) error { return fmt.Errorf("invalid rooms: %s", s) }
 	seen := map[string]*Room{}
 	spots := map[string]bool{}
@@ -161,7 +162,7 @@ func ValidateRooms(doc *Rooms) error {
 	}
 	for _, r := range doc.Rooms {
 		if _, ok := seen[r.GetId()]; ok {
-			return bad("room " + r.GetId())
+			return bad("duplicate id " + r.GetId())
 		}
 		seen[r.GetId()] = r
 		props := map[string]bool{}
@@ -362,20 +363,20 @@ func validRoomFurnishings(r *Room) bool {
 }
 
 // DecodeRooms reads rooms JSON into the generated types, refusing nulls and
-// unknown fields, then runs the schema's rules and ValidateRooms.
+// unknown keys, then runs the schema's rules and validateRooms.
 func DecodeRooms(raw []byte) (*Rooms, error) {
 	doc := &Rooms{}
-	if err := decodeContentProto(raw, doc); err != nil {
+	if err := decodeContentProto(raw, "rooms", doc); err != nil {
 		return doc, err
 	}
-	ids := make([]string, len(doc.Rooms))
+	entries := []entryList{{field: "rooms", ids: make([]string, len(doc.Rooms))}}
 	for i, r := range doc.Rooms {
-		ids[i] = r.GetId()
+		entries[0].ids[i] = r.GetId()
 	}
-	if err := contentValidate("rooms", "rooms", ids, doc); err != nil {
+	if err := contentValidate("rooms", entries, doc); err != nil {
 		return doc, err
 	}
-	return doc, ValidateRooms(doc)
+	return doc, validateRooms(doc)
 }
 
 func LoadRooms() (*Rooms, error) {
