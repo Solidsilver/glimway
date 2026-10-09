@@ -19,7 +19,8 @@ const seat = (page: Page) => page.evaluate(() => (window as unknown as { __fsSea
 const thought = (page: Page) => page.evaluate(() => (window as unknown as { __fsThoughts?: () => { current: string | null } }).__fsThoughts?.().current ?? null)
 const manaMeter = (page: Page) => page.getByRole('meter', { name: 'Mana' })
 test('the bench seats the hero, mana comes back, movement stands up', async ({ page }) => {
-  await freshPlayer(page)
+  // A level-10 warrior: Cleave on F spends the mana (the default level-2 hero has no moves yet).
+  await freshPlayer(page, 'Tansy', undefined, { lvl: 10 })
 
   // Spend some mana first, so the seated regen has something to fill.
   await warp(page, 'village', 9, 14)

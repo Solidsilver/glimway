@@ -20,7 +20,7 @@ test('reports coalesce: casts sum, the latest place and vitals win', () => {
   book.note({ ...village, x: 410 }, 35, 12);
   book.cast(2);
   const c = book.capture()!;
-  assert.deepEqual(c, { client: 'client', generation: 'gen-1', seq: 1, basis: 3, place: { area: 'village', x: 410, y: 300 }, hp: 35, mana: 12, casts: 3 });
+  assert.deepEqual(c, { client: 'client', generation: 'gen-1', seq: 1, basis: 3, place: { area: 'village', x: 410, y: 300 }, hp: 35, mana: 12, casts: 3, abilityCasts: {} });
   assert.equal(book.capture(), c, 'a captured report is immutable: a retry sends exactly it');
 });
 
@@ -128,4 +128,29 @@ test('a closing page sends the newest report, past one still in flight', () => {
   const before = fallen.capture()!;
   fallen.fall(7, village, { hp: 20, mana: 10 });
   assert.equal(fallen.leaving(), before);
+});
+
+test('the moves report on their own: each id coalesces, a capture empties the tally, a lost sequence keeps its casts', () => {
+  const book = bound();
+  book.note(village, 40, 30);
+  book.cast();
+  book.castMove('kindle');
+  book.castMove('kindle', 2);
+  const first = book.capture()!;
+  assert.equal(first.casts, 1);
+  assert.deepEqual(first.abilityCasts, { kindle: 3 });
+  book.castMove('kindle');
+  assert.deepEqual(book.capture(), first, 'a retry sends exactly the captured report');
+  assert.ok(book.ack({ ...first, accepted: true, staleBasis: false, casts: 1, placeIgnored: false, abilityCasts: { kindle: 3 }, allyHeal: 0 }));
+  const second = book.capture()!;
+  assert.deepEqual(second.abilityCasts, { kindle: 1 }, 'only what came after the first');
+  assert.equal(second.casts, 0);
+});
+
+test('a stored book from before the moves reads as having none, and stores them from now on', () => {
+  const old = { client: 'client', generation: 'gen-1', seq: 1, next: { place: village, hp: 1, mana: 2, casts: 1, basis: 3, boundary: null, changed: true }, captured: null };
+  const book = new ReportBook(old as never);
+  assert.deepEqual(book.next.abilityCasts, {});
+  book.castMove('echo');
+  assert.deepEqual(book.stored().next.abilityCasts, { echo: 1 });
 });

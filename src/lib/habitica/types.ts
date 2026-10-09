@@ -212,30 +212,6 @@ export interface HabiticaUserJson {
  * implements effects; this is the numbers/identity surface. Extreme imported
  * stats are bounded with diminishing returns.
  */
-export type SignatureAbility = 'bolt' | 'cleave' | 'dash' | 'heal';
-
-export interface CombatKit {
-  /** null for the classless starter kit. */
-  class: HabiticaClass | null;
-  /** Character display name (profile name, or demo name for the starter kit). */
-  name: string;
-  basicName: string;
-  signatureName: string;
-  signature: SignatureAbility;
-  meleeDamage: number;
-  signatureDamage: number;
-  /** Fraction of incoming damage absorbed, 0..~0.45. */
-  mitigation: number;
-  /** Critical hit chance, 0..~0.45. */
-  critChance: number;
-  manaCost: number;
-  /** Seconds between basic attacks. */
-  basicAttackCooldown: number;
-  /** Seconds between signature casts. */
-  signatureCooldown: number;
-  healAmount: number;
-}
-
 /** Why a sync was rejected. The save (including its baseline) is unchanged. */
 export type SyncRejectReason = 'not-at-safe-boundary' | 'account-switch';
 

@@ -5,32 +5,41 @@ import { freshPlayer } from './home-helpers'
 
 test.use({ ...devices['iPhone 13'], browserName: 'chromium' })
 
-test('phone layout: joystick, roll, ability and action buttons fit and work', async ({ page }) => {
-  await freshPlayer(page)
+test('phone layout: joystick, roll, both ✦ and action buttons fit and work', async ({ page }) => {
+  // A level-20 warrior: Cleave and Stand, so both ✦ are out (crafts.md 8).
+  await freshPlayer(page, 'Tansy', undefined, { lvl: 20 })
   await warp(page, 'woodland', 15, 20)
 
   const roll = page.getByRole('button', { name: 'Roll' })
-  const cast = page.locator('.controls .cast')
+  const cast = page.locator('.controls .cast.sig')
+  const second = page.locator('.controls .cast.move')
   const act = page.locator('.controls .act')
   const pad = page.getByRole('application', { name: 'Movement joystick' })
-  for (const el of [roll, cast, act, pad]) await expect(el).toBeVisible()
+  for (const el of [roll, cast, second, act, pad]) await expect(el).toBeVisible()
+  await expect(cast).toHaveAttribute('aria-label', 'Cleave (12 mana)')
+  await expect(second).toHaveAttribute('aria-label', 'Stand (14 mana)')
 
-  // Nothing overlaps and nothing spills off the screen.
+  // Nothing overlaps and nothing spills off the screen; every button is a thumb's size.
   const vw = page.viewportSize()!.width
-  const boxes = await Promise.all([pad, roll, cast, act].map((l) => l.boundingBox()))
+  const boxes = await Promise.all([pad, roll, cast, second, act].map((l) => l.boundingBox()))
   for (const b of boxes) {
     expect(b!.x).toBeGreaterThanOrEqual(0)
     expect(b!.x + b!.width).toBeLessThanOrEqual(vw)
+    expect(b!.width).toBeGreaterThanOrEqual(44)
   }
-  const [padBox, rollBox, castBox, actBox] = boxes.map((b) => b!)
-  const overlaps = (a: typeof padBox, b: typeof padBox) =>
+  const overlaps = (a: { x: number; y: number; width: number; height: number }, b: typeof a) =>
     a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height
-  expect(overlaps(padBox, rollBox) || overlaps(padBox, castBox) || overlaps(padBox, actBox)).toBe(false)
-  expect(overlaps(rollBox, castBox) || overlaps(castBox, actBox) || overlaps(rollBox, actBox)).toBe(false)
+  const all = boxes.map((b) => b!)
+  for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) expect(overlaps(all[i], all[j]), `buttons ${i} and ${j}`).toBe(false)
 
   // Tapping roll starts its cooldown sweep.
   await roll.tap()
   await expect(roll.locator('.sweep')).toBeVisible()
+
+  // The second ✦ casts Stand (planted, so it goes after the roll): its sweep starts, the first's doesn't.
+  await second.tap()
+  await expect(second.locator('.sweep')).toBeVisible()
+  await expect(cast.locator('.sweep')).toHaveCount(0)
   await page.screenshot({ path: 'test-results/touch-layout.png' })
 })
 

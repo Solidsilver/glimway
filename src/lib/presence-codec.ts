@@ -1,5 +1,5 @@
 import { create, fromBinary, toBinary, type Message } from '@bufbuild/protobuf';
-import { PresenceMessageSchema, PresenceAuthSchema, PresenceJoinSchema, PresencePositionSchema, PresenceEmoteSchema, PresenceHeartbeatSchema, type PresenceAvatar as WireAvatar, type PresencePlayer as WirePlayer, type PresencePosition as WirePosition } from './gen/glimway/v2/presence_pb.js';
+import { PresenceMessageSchema, PresenceAuthSchema, PresenceJoinSchema, PresencePositionSchema, PresenceEmoteSchema, PresenceHeartbeatSchema, PresenceAbilitySchema, type PresenceAvatar as WireAvatar, type PresencePlayer as WirePlayer, type PresencePosition as WirePosition } from './gen/glimway/v2/presence_pb.js';
 import type { PresenceAvatar, PresenceClientMessage, PresencePlayer, PresencePosition, PresenceServerMessage } from './presence.ts';
 
 export const PRESENCE_PROTOCOL = 'glimway.presence.v2';
@@ -13,6 +13,7 @@ export function encodePresence(message: PresenceClientMessage): Uint8Array {
     case 'pos': envelope.event = { case: 'pos', value: create(PresencePositionSchema, { x: message.x, y: message.y, facing: message.facing, moving: message.moving }) }; break;
     case 'emote': envelope.event = { case: 'emote', value: create(PresenceEmoteSchema, { id: message.id }) }; break;
     case 'heartbeat': envelope.event = { case: 'heartbeat', value: create(PresenceHeartbeatSchema) }; break;
+    case 'ability': envelope.event = { case: 'ability', value: create(PresenceAbilitySchema, { ability: message.ability, x: message.x, y: message.y }) }; break;
   }
   return toBinary(PresenceMessageSchema, envelope);
 }
@@ -48,6 +49,10 @@ export function decodePresence(data: unknown): PresenceServerMessage | null {
       return p && event.value.accountId !== undefined ? { type: 'pos', accountId: event.value.accountId, ...p } : null;
     }
     case 'emote': return event.value.accountId !== undefined ? { type: 'emote', accountId: event.value.accountId, id: event.value.id } : null;
+    case 'ability': {
+      const a = event.value;
+      return a.accountId !== undefined && Number.isFinite(a.x) && Number.isFinite(a.y) ? { type: 'ability', accountId: a.accountId, ability: a.ability, x: a.x, y: a.y } : null;
+    }
     default: return null;
   }
 }

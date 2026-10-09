@@ -7,7 +7,7 @@
  * GET  /api/v3/user        → the "Tansy" fixture, with `_id` = X-Api-User and
  *                            any per-user overrides. Any X-Api-Key but the
  *                            tests' TOKEN (e2e/connected.ts) → 401.
- * POST /__user             → { id, name?, lvl?, exp?, hp?, mp?, party? } sets overrides.
+ * POST /__user             → { id, name?, lvl?, exp?, hp?, mp?, party?, class? } sets overrides.
  * GET  /__health           → 200 (readiness check).
  *
  * Each Playwright worker starts its own in-process copy (e2e/server/backend.ts,
@@ -26,6 +26,8 @@ interface Overrides {
   mp?: number
   /** The hero's Habitica party id (none by default). */
   party?: string
+  /** Habitica's class spelling (`warrior`, `wizard`, `rogue`, `healer`), or null for a hero who never chose one. */
+  class?: string | null
 }
 
 function userFor(users: Map<string, Overrides>, id: string): unknown {
@@ -33,6 +35,7 @@ function userFor(users: Map<string, Overrides>, id: string): unknown {
     _id: string
     stats: Record<string, unknown>
     profile: { name: string }
+    flags: Record<string, unknown>
   }
   const o = users.get(id) ?? {}
   base._id = id
@@ -42,6 +45,10 @@ function userFor(users: Map<string, Overrides>, id: string): unknown {
   if (o.lvl !== undefined) base.stats.lvl = o.lvl
   if (o.hp !== undefined) base.stats.hp = o.hp
   if (o.mp !== undefined) base.stats.mp = o.mp
+  if (o.class !== undefined) {
+    base.stats.class = o.class ?? 'warrior'
+    base.flags = { ...base.flags, classSelected: o.class !== null }
+  }
   return { ...base, party: { _id: o.party ?? null } }
 }
 

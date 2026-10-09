@@ -19,7 +19,7 @@
 import { PresenceClient, type PresenceStatus, type SocketLike, type Timers } from '../lib/presence-client.ts'
 import { PeerTrack } from '../lib/presence-interp.ts'
 import type { PresenceAvatar, PresencePlayer, PresencePosition } from '../lib/presence.ts'
-import { EV, type EmotePayload, type EventMap, type PresencePayload } from './event-names.ts'
+import { EV, type AbilityCastPayload, type EmotePayload, type EventMap, type PresencePayload } from './event-names.ts'
 import type { Bus } from './events.ts'
 
 /** Peers stay drawn this long after a leave, fading out. */
@@ -93,6 +93,10 @@ export class PresenceFeed {
           const p = this.peers.get(id)
           if (p && p.leftAt === null && p.area === this.area) this.bus.emit(EV.emote, { accountId: id, id: emote } satisfies EmotePayload)
         },
+        ability: (id, cast) => {
+          const p = this.peers.get(id)
+          if (p && p.leftAt === null && p.area === this.area && id !== this.client.self) this.bus.emit(EV.abilityCast, { accountId: id, ...cast } satisfies AbilityCastPayload)
+        },
         gift: (g) => this.bus.emit(EV.gift, g),
         witness: (w) => this.bus.emit(EV.witness, w)
       }
@@ -134,6 +138,11 @@ export class PresenceFeed {
     const sent = this.client.emote(id)
     if (sent) this.bus.emit(EV.emote, { accountId: null, id } satisfies EmotePayload)
     return sent
+  }
+
+  /** A move was cast here: the room sees it (crafts.md 4.5). */
+  ability(id: string, x: number, y: number): boolean {
+    return this.client.ability(id, x, y)
   }
 
   get live(): boolean {
