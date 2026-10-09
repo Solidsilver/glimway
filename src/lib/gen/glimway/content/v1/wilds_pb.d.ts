@@ -335,17 +335,43 @@ export declare type WildsEntityKindRule = Message<"glimway.content.v1.WildsEntit
   kind: string;
 
   /**
-   * @generated from field: int32 min = 2;
+   * Zero is a legal min (the chest rule spawns none), so presence is explicit:
+   * a missing key must not read as 0.
+   *
+   * @generated from field: optional int32 min = 2;
+   */
+  min?: number | undefined;
+
+  /**
+   * @generated from field: optional int32 max = 3;
+   */
+  max?: number | undefined;
+};
+
+/**
+ * One spawn rule: how many of a kind a chunk places (inclusive range).
+ *
+ * @generated from message glimway.content.v1.WildsEntityKindRule
+ */
+export declare type WildsEntityKindRuleValid = Message<"glimway.content.v1.WildsEntityKindRule"> & {
+  /**
+   * @generated from field: string kind = 1;
+   */
+  kind: string;
+
+  /**
+   * Zero is a legal min (the chest rule spawns none), so presence is explicit:
+   * a missing key must not read as 0.
+   *
+   * @generated from field: optional int32 min = 2;
    */
   min: number;
 
   /**
-   * @generated from field: int32 max = 3;
+   * @generated from field: optional int32 max = 3;
    */
   max: number;
 };
-
-export declare type WildsEntityKindRuleValid = WildsEntityKindRule;
 
 /**
  * Describes the message glimway.content.v1.WildsEntityKindRule.

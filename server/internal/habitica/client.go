@@ -100,13 +100,8 @@ func (c *Client) VerifyLimited(ctx context.Context, id, token string, allow func
 	return zero, errors.New("habitica-unavailable")
 }
 
-var gear = func() map[string]*content.HabiticaGearItem {
-	g, err := content.LoadHabiticaGear()
-	if err != nil {
-		panic(err)
-	}
-	return g.Gear
-}()
+// The one validated snapshot (content/habitica_gear.go): no second decode.
+var gear = content.HabiticaGearRules.Gear
 
 func Map(b []byte) (rules.Profile, error) {
 	var payload struct {

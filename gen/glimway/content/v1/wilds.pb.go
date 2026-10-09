@@ -314,10 +314,12 @@ func (x *WildsCampMix) GetEnemies() []string {
 
 // One spawn rule: how many of a kind a chunk places (inclusive range).
 type WildsEntityKindRule struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Kind          string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
-	Min           int32                  `protobuf:"varint,2,opt,name=min,proto3" json:"min,omitempty"`
-	Max           int32                  `protobuf:"varint,3,opt,name=max,proto3" json:"max,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Kind  string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
+	// Zero is a legal min (the chest rule spawns none), so presence is explicit:
+	// a missing key must not read as 0.
+	Min           *int32 `protobuf:"varint,2,opt,name=min,proto3,oneof" json:"min,omitempty"`
+	Max           *int32 `protobuf:"varint,3,opt,name=max,proto3,oneof" json:"max,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -360,15 +362,15 @@ func (x *WildsEntityKindRule) GetKind() string {
 }
 
 func (x *WildsEntityKindRule) GetMin() int32 {
-	if x != nil {
-		return x.Min
+	if x != nil && x.Min != nil {
+		return *x.Min
 	}
 	return 0
 }
 
 func (x *WildsEntityKindRule) GetMax() int32 {
-	if x != nil {
-		return x.Max
+	if x != nil && x.Max != nil {
+		return *x.Max
 	}
 	return 0
 }
@@ -588,12 +590,16 @@ const file_glimway_content_v1_wilds_proto_rawDesc = "" +
 	"\n" +
 	"\b_entry_y\"J\n" +
 	"\fWildsCampMix\x12:\n" +
-	"\aenemies\x18\x01 \x03(\tB \xbaH\x1d\x92\x01\x1a\b\x01\"\x16r\x142\x12^[a-z0-9-]{1,100}$R\aenemies\"\xc8\x01\n" +
+	"\aenemies\x18\x01 \x03(\tB \xbaH\x1d\x92\x01\x1a\b\x01\"\x16r\x142\x12^[a-z0-9-]{1,100}$R\aenemies\"\xe8\x01\n" +
 	"\x13WildsEntityKindRule\x121\n" +
-	"\x04kind\x18\x01 \x01(\tB\x1d\xbaH\x1ar\x18R\x04campR\x04nodeR\x05chestR\x03poiR\x04kind\x12\x19\n" +
-	"\x03min\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x03min\x12\x19\n" +
-	"\x03max\x18\x03 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x03max:H\xbaHE\x1aC\n" +
-	"\x11entity_kind.range\x12\x18max must be at least min\x1a\x14this.max >= this.min\"\xfb\x01\n" +
+	"\x04kind\x18\x01 \x01(\tB\x1d\xbaH\x1ar\x18R\x04campR\x04nodeR\x05chestR\x03poiR\x04kind\x12!\n" +
+	"\x03min\x18\x02 \x01(\x05B\n" +
+	"\xbaH\a\xc8\x01\x01\x1a\x02(\x00H\x00R\x03min\x88\x01\x01\x12!\n" +
+	"\x03max\x18\x03 \x01(\x05B\n" +
+	"\xbaH\a\xc8\x01\x01\x1a\x02(\x00H\x01R\x03max\x88\x01\x01:H\xbaHE\x1aC\n" +
+	"\x11entity_kind.range\x12\x18max must be at least min\x1a\x14this.max >= this.minB\x06\n" +
+	"\x04_minB\x06\n" +
+	"\x04_max\"\xfb\x01\n" +
 	"\x0eWildsLootEntry\x125\n" +
 	"\bmaterial\x18\x01 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\bmaterial\x12\x19\n" +
 	"\x03min\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x03min\x12\x19\n" +
@@ -652,6 +658,7 @@ func file_glimway_content_v1_wilds_proto_init() {
 	}
 	file_glimway_content_v1_wilds_proto_msgTypes[0].OneofWrappers = []any{}
 	file_glimway_content_v1_wilds_proto_msgTypes[1].OneofWrappers = []any{}
+	file_glimway_content_v1_wilds_proto_msgTypes[3].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

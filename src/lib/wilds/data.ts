@@ -43,8 +43,10 @@ function wildsRules(doc: Wilds): void {
       if (!(id in doc.lootTables)) throw new Error(`invalid wilds: missing loot table "${id}"`);
     }
   }
-  for (const [id, table] of Object.entries(doc.lootTables)) {
-    for (const e of table.entries) {
+  // Sorted table ids, so the same table is named every run (Go's map
+  // iteration isn't; both sides spell the same message).
+  for (const id of Object.keys(doc.lootTables).sort()) {
+    for (const e of doc.lootTables[id]!.entries) {
       if (!doc.materials.includes(e.material)) throw new Error(`invalid wilds: loot table "${id}": unknown material "${e.material}"`);
     }
   }

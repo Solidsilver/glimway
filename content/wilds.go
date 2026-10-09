@@ -100,8 +100,15 @@ func wildsRules(w *Wilds) error {
 			}
 		}
 	}
-	for id, table := range w.LootTables {
-		for _, e := range table.GetEntries() {
+	// Sorted, so with two unknown-material tables the same one is named
+	// every run (map iteration is not).
+	ids := make([]string, 0, len(w.LootTables))
+	for id := range w.LootTables {
+		ids = append(ids, id)
+	}
+	slices.Sort(ids)
+	for _, id := range ids {
+		for _, e := range w.LootTables[id].GetEntries() {
 			if !slices.Contains(w.Materials, e.GetMaterial()) {
 				return fmt.Errorf("invalid wilds: loot table %q: unknown material %q", id, e.GetMaterial())
 			}

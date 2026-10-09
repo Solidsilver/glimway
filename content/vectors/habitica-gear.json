@@ -7,6 +7,10 @@
     { "name": "null-gear-entry", "valid": false, "rule": "null content field", "edits": [{ "path": ["gear", "armor_armoire_admiralsUniform"], "value": null }] },
     { "name": "null-appearances", "valid": false, "rule": "null content field", "edits": [{ "path": ["appearances"], "value": null }] },
     { "name": "missing-appearances", "valid": false, "rule": "required", "edits": [{ "path": ["appearances"], "remove": true }] },
-    { "name": "wrong-type-str", "valid": false, "rule": "decode", "edits": [{ "path": ["gear", "armor_armoire_admiralsUniform", "str"], "value": "seven" }] }
+    { "name": "wrong-type-str", "valid": false, "rule": "decode", "edits": [{ "path": ["gear", "armor_armoire_admiralsUniform", "str"], "value": "seven" }] },
+    { "name": "str-as-string", "valid": true, "edits": [{ "path": ["gear", "armor_armoire_admiralsUniform", "str"], "value": "7" }] },
+    { "name": "str-as-exponent", "valid": true, "edits": [{ "path": ["gear", "armor_armoire_admiralsUniform", "str"], "value": "7e0" }] },
+    { "name": "str-nan", "valid": true, "edits": [{ "path": ["gear", "armor_armoire_admiralsUniform", "str"], "value": "NaN" }] },
+    { "name": "str-infinity", "valid": true, "edits": [{ "path": ["gear", "armor_armoire_admiralsUniform", "str"], "value": "Infinity" }] }
   ]
 }
