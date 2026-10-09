@@ -201,7 +201,7 @@ func TestPresenceGolden(t *testing.T) {
 
 func TestPresenceEncodedQueueLimits(t *testing.T) {
 	{
-		h := newPresenceHub(nil)
+		h := newPresenceHub(nil, nil)
 		ctx, cancel := context.WithCancel(context.Background())
 		p := &presencePeer{ctx: ctx, cancel: cancel, queue: make(chan []byte, 1)}
 		m := &contract.PresenceReady{AccountId: "alice"}

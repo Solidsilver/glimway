@@ -63,6 +63,10 @@ export interface ReportAck {
   casts: number;
   basis: number;
   placeIgnored: boolean;
+  /** The moves' casts the world accepted, by ability id. */
+  abilityCasts?: Record<string, number>;
+  /** Ward credit from other healers the world used on this report (crafts.md 4.5). */
+  allyHeal?: number;
 }
 
 export const REPORT_INTERVAL_MS = 10_000;

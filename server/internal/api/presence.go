@@ -36,6 +36,9 @@ type presencePosition struct {
 type presenceIdentity struct {
 	ID, World, Name, Lease, Session string
 	Avatar                          *contract.PresenceAvatar
+	// Magic is the account's craft state a cast is checked against
+	// (crafts.md 4.5), refreshed with the hub's revalidation.
+	Magic presenceMagic
 }
 
 type presencePeer struct {
@@ -77,6 +80,13 @@ type presenceHub struct {
 	slots     int
 	closing   bool
 	config    *content.Presence
+	// Lane C (crafts.md 4.5): the per-account per-ability cooldown a cast
+	// must pass, and the ward credit pulses leave for the next report.
+	abilityReady map[string]map[string]time.Time
+	ward         map[string]*wardCredit
+	// clock is the server's (injected) time: the ward credit's expiry and
+	// the cooldowns read it, so tests can move time (review finding 12).
+	clock func() time.Time
 }
 
 // Account generations live only while physical reservations exist. A socket
@@ -91,7 +101,7 @@ type presenceReservation struct {
 	account     *presenceAccount
 }
 
-func newPresenceHub(c *content.Presence) *presenceHub {
+func newPresenceHub(c *content.Presence, now func() time.Time) *presenceHub {
 	config := content.PresenceRules
 	if c != nil {
 		if err := content.ValidatePresence(c); err != nil {
@@ -102,7 +112,15 @@ func newPresenceHub(c *content.Presence) *presenceHub {
 	// The hub mutates nothing and shares no slice: work on a clone, never
 	// on the shared rules table.
 	config = proto.Clone(config).(*content.Presence)
-	return &presenceHub{peers: map[string]*presencePeer{}, accounts: map[string]*presenceAccount{}, sessions: map[string]int{}, sockets: map[*websocket.Conn]struct{}{}, drained: make(chan struct{}), config: config}
+	return &presenceHub{peers: map[string]*presencePeer{}, accounts: map[string]*presenceAccount{}, sessions: map[string]int{}, sockets: map[*websocket.Conn]struct{}{}, drained: make(chan struct{}), config: config, abilityReady: map[string]map[string]time.Time{}, ward: map[string]*wardCredit{}, clock: now}
+}
+
+// now is the server's clock (config's, or the wall clock for a bare hub).
+func (h *presenceHub) now() time.Time {
+	if h.clock != nil {
+		return h.clock()
+	}
+	return time.Now()
 }
 
 func (h *presenceHub) reserve(session, id string) (presenceReservation, error) {
@@ -143,6 +161,10 @@ func (h *presenceHub) release(reservation presenceReservation) {
 	if reservation.account.slots == 0 {
 		delete(h.accounts, reservation.id)
 	}
+	// Cooldown memory outlives a reconnect (review finding 4): an account's
+	// entry goes only once every timestamp in it is older than the table's
+	// longest cooldown and can no longer bound a cast.
+	h.pruneAbilityReady(h.now())
 	if h.closing && h.slots == 0 {
 		h.drainOnce.Do(func() { close(h.drained) })
 	}

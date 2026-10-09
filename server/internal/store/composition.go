@@ -82,6 +82,14 @@ func PlayerState(ctx context.Context, tx *sql.Tx, s Snapshot) (*contract.PlayerS
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
+	// Magic's marks (crafts.md 4.2) and each move's cooldown budget (4.4).
+	out.Magic = &contract.Magic{LevelMark: s.LevelMark}
+	if s.ClassMark != "" {
+		out.Magic.ClassMark = wrapperspb.String(s.ClassMark)
+	}
+	if out.Vitals.AbilityReadyAt, err = AbilityReady(ctx, tx, s.AccountID); err != nil {
+		return nil, err
+	}
 	if err = tx.QueryRowContext(ctx, "SELECT place_set_version,last_outer_epoch FROM player_place WHERE account_id=?", s.AccountID).Scan(&out.Place.PlaceSetVersion, &out.Place.OuterEpoch); err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}

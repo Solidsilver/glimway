@@ -16,7 +16,7 @@ func Load(ctx context.Context, tx *sql.Tx, id string) (Snapshot, error) {
 	s.State = rules.NewState()
 	var flagged sql.NullInt64
 	var checkpoint string
-	err := tx.QueryRowContext(ctx, `SELECT p.account_id,p.display_name,p.world_id,p.habitica_party_id,p.version,p.profile_source,p.flagged_at,p.lease_id,p.lease_client,p.lease_seen_at,v.hp,v.mana,l.area,l.x,l.y,p.play_seconds,b.embers,b.xp_embers,x.xp_mark,x.pending,x.verified_xp,x.checkpoint_json,x.checkpoint_at,x.loss_level,x.loss_xp,x.loss_at,x.verified_high_level,x.checkpoint_ledger_id FROM players p JOIN player_vitals v USING(account_id) JOIN player_place l USING(account_id) JOIN balances b USING(account_id) JOIN sync_baselines x USING(account_id) WHERE p.account_id=?`, id).Scan(&s.AccountID, &s.DisplayName, &s.WorldID, &s.HabiticaPartyID, &s.Version, &s.ProfileSource, &flagged, &s.LeaseID, &s.LeaseClient, &s.LeaseSeen, &s.State.HP, &s.State.Mana, &s.State.Area, &s.State.Position.X, &s.State.Position.Y, &s.State.PlaySeconds, &s.State.Embers, &s.State.XPEmbers, &s.State.EmberXP, &s.Pending, &s.VerifiedXP, &checkpoint, &s.CheckpointAt, &s.LossReference.Level, &s.LossReference.XP, &s.LossAt, &s.VerifiedHighLevel, &s.CheckpointLedgerID)
+	err := tx.QueryRowContext(ctx, `SELECT p.account_id,p.display_name,p.world_id,p.habitica_party_id,p.version,p.profile_source,p.flagged_at,p.lease_id,p.lease_client,p.lease_seen_at,v.hp,v.mana,l.area,l.x,l.y,p.play_seconds,b.embers,b.xp_embers,x.xp_mark,x.pending,x.verified_xp,x.checkpoint_json,x.checkpoint_at,x.loss_level,x.loss_xp,x.loss_at,x.verified_high_level,x.level_mark,COALESCE(x.class_mark,''),x.checkpoint_ledger_id FROM players p JOIN player_vitals v USING(account_id) JOIN player_place l USING(account_id) JOIN balances b USING(account_id) JOIN sync_baselines x USING(account_id) WHERE p.account_id=?`, id).Scan(&s.AccountID, &s.DisplayName, &s.WorldID, &s.HabiticaPartyID, &s.Version, &s.ProfileSource, &flagged, &s.LeaseID, &s.LeaseClient, &s.LeaseSeen, &s.State.HP, &s.State.Mana, &s.State.Area, &s.State.Position.X, &s.State.Position.Y, &s.State.PlaySeconds, &s.State.Embers, &s.State.XPEmbers, &s.State.EmberXP, &s.Pending, &s.VerifiedXP, &checkpoint, &s.CheckpointAt, &s.LossReference.Level, &s.LossReference.XP, &s.LossAt, &s.VerifiedHighLevel, &s.LevelMark, &s.ClassMark, &s.CheckpointLedgerID)
 	if err != nil {
 		return s, err
 	}
@@ -69,6 +69,13 @@ func Load(ctx context.Context, tx *sql.Tx, id string) (Snapshot, error) {
 		return s, err
 	}
 	s.Flagged = flagged.Valid
+	// The class mark keeps the game's own spellings (crafts.md 4.2): anything
+	// Habitica-spelled reads through NormalizeClass at every intake.
+	if c, ok := rules.NormalizeClass(s.ClassMark); ok {
+		s.ClassMark = c
+	} else {
+		s.ClassMark = ""
+	}
 	if err = json.Unmarshal([]byte(checkpoint), &s.Checkpoint); err != nil {
 		return s, err
 	}

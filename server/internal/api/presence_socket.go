@@ -220,7 +220,7 @@ func (a *Server) presenceReader(p *presencePeer) {
 			return
 		}
 		// Client messages cannot carry server identity or roster fields.
-		if join := message.GetJoin(); join != nil && join.Player != nil || message.GetPos() != nil && message.GetPos().AccountId != nil || message.GetEmote() != nil && message.GetEmote().AccountId != nil {
+		if join := message.GetJoin(); join != nil && join.Player != nil || message.GetPos() != nil && message.GetPos().AccountId != nil || message.GetEmote() != nil && message.GetEmote().AccountId != nil || message.GetAbility() != nil && message.GetAbility().AccountId != nil {
 			p.stop(websocket.StatusPolicyViolation, "invalid-message")
 			return
 		}
@@ -239,6 +239,10 @@ func (a *Server) presenceReader(p *presencePeer) {
 			encoded, encodeErr = encodePresence(outbound)
 		} else if emote := message.GetEmote(); emote != nil {
 			encoded, encodeErr = encodePresence(&contract.PresenceEmote{Id: emote.Id, AccountId: proto.String(p.identity.ID)})
+		} else if ability := message.GetAbility(); ability != nil {
+			outbound := proto.Clone(ability).(*contract.PresenceAbility)
+			outbound.AccountId = proto.String(p.identity.ID)
+			encoded, encodeErr = encodePresence(outbound)
 		}
 		now := time.Now()
 		h.mu.Lock()
@@ -320,6 +324,17 @@ func (a *Server) presenceReader(p *presencePeer) {
 			}
 			p.lastEmote = now
 			h.broadcastEncoded(p, encoded, encodeErr)
+		case *contract.PresenceMessage_Ability:
+			// A cast on screen, a signature or a level-20 move (4.5): relayed
+			// to the room when the table knows the move, the sender's craft
+			// and level mark allow it and its own cooldown has passed.
+			// Anything else is dropped, like an emote over its cooldown.
+			if !h.allowAbility(p, h.now(), event.Ability) {
+				h.mu.Unlock()
+				continue
+			}
+			h.broadcastEncoded(p, encoded, encodeErr)
+			h.scheduleWard(p, event.Ability)
 		default:
 			p.stop(websocket.StatusPolicyViolation, "invalid-message")
 			h.mu.Unlock()

@@ -1017,7 +1017,10 @@
           "mountOut": "",
           "mountHome": ""
         },
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": {
           "cast": null,
           "nextCastAt": 0
@@ -1168,7 +1171,10 @@
           "mountOut": "",
           "mountHome": ""
         },
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": {
           "cast": null,
           "nextCastAt": 0
@@ -1309,7 +1315,10 @@
           "mountOut": "",
           "mountHome": ""
         },
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": {
           "cast": null,
           "nextCastAt": 0
@@ -1450,7 +1459,10 @@
           "mountOut": "",
           "mountHome": ""
         },
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": {
           "cast": null,
           "nextCastAt": 0
@@ -1591,7 +1603,10 @@
           "mountOut": "",
           "mountHome": ""
         },
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": {
           "cast": null,
           "nextCastAt": 0
@@ -1732,7 +1747,10 @@
           "mountOut": "",
           "mountHome": ""
         },
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": {
           "cast": null,
           "nextCastAt": 0
@@ -1873,7 +1891,10 @@
           "mountOut": "",
           "mountHome": ""
         },
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": {
           "cast": null,
           "nextCastAt": 0
@@ -2176,7 +2197,10 @@
           "mountOut": "",
           "mountHome": ""
         },
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": {
           "cast": null,
           "nextCastAt": 0
@@ -2312,7 +2336,10 @@
           "mountOut": "",
           "mountHome": ""
         },
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": {
           "cast": null,
           "nextCastAt": 0
@@ -2439,7 +2466,10 @@
           "mountOut": "",
           "mountHome": ""
         },
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": {
           "cast": null,
           "nextCastAt": 0
@@ -4477,7 +4507,10 @@
           "mountOut": "",
           "mountHome": ""
         },
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": {
           "cast": null,
           "nextCastAt": 0
@@ -4748,7 +4781,10 @@
         "mountOut": "",
         "mountHome": ""
       },
-      "magic": null,
+      "magic": {
+        "levelMark": 1,
+        "classMark": null
+      },
       "fishing": {
         "cast": null,
         "nextCastAt": 0
@@ -5314,7 +5350,10 @@
           "mountOut": "",
           "mountHome": ""
         },
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": {
           "cast": null,
           "nextCastAt": 0
@@ -6020,7 +6059,10 @@
           "mountOut": "",
           "mountHome": ""
         },
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": {
           "cast": null,
           "nextCastAt": 0
@@ -7666,7 +7708,10 @@
           "mountOut": "",
           "mountHome": ""
         },
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": {
           "cast": null,
           "nextCastAt": 0
@@ -7814,7 +7859,10 @@
           "mountOut": "",
           "mountHome": ""
         },
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": {
           "cast": null,
           "nextCastAt": 0
@@ -7950,7 +7998,10 @@
           "mountOut": "",
           "mountHome": ""
         },
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": {
           "cast": null,
           "nextCastAt": 0
@@ -8076,7 +8127,10 @@
           "mountOut": "",
           "mountHome": ""
         },
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": {
           "cast": null,
           "nextCastAt": 0
@@ -8326,7 +8380,10 @@
           "mountOut": "",
           "mountHome": ""
         },
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": {
           "cast": null,
           "nextCastAt": 0
@@ -8458,7 +8515,10 @@
           "mountOut": "",
           "mountHome": ""
         },
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": {
           "cast": null,
           "nextCastAt": 0
@@ -8578,7 +8638,10 @@
           "mountOut": "",
           "mountHome": ""
         },
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": {
           "cast": null,
           "nextCastAt": 0
