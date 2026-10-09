@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { CONTRACT, moveServerClock } from './connected'
+import { CONTRACT, moveServerClock, reenter, signInAgain } from './connected'
 import { residentsOut } from './room-helpers'
 import { freshPlayer, fund, giveInstance } from './home-helpers'
 import { expectToast, openTalk, readDialogue, untilChoices, waitForLive, waitGame, warp } from './helpers'
@@ -17,12 +17,16 @@ import { itemDef } from '../src/lib/items.ts'
  * spec puts the roach in the pack instead of catching it.
  */
 type FishingView = { line: { id: string; bank: string; phase: string; predicted: boolean } | null; landed: string | null; bands: Record<string, string>; last: string; pose: string | null }
-const fishing = (page: Page) => page.evaluate(() => (window as unknown as { __fsFishing: () => FishingView | null }).__fsFishing())
+/** The fishing hook, or null while the World scene (which installs it) isn't up yet, e.g. just after a reload. */
+const fishing = (page: Page) => page.evaluate(() => (window as unknown as { __fsFishing?: () => FishingView | null }).__fsFishing?.() ?? null)
 const quests = (page: Page) => page.evaluate(() => (window as unknown as { __fsQuests: () => { quests: Record<string, string> } }).__fsQuests().quests)
 type Pack = { stacks: { itemDef: string; qty: number }[]; instances: { id: string; itemDef: string; usesLeft: number }[] }
 const pack = (page: Page) => page.evaluate(() => (window as unknown as { __fsItems: () => Pack | null }).__fsItems())
 const reloadPack = (page: Page) => page.evaluate(() => (window as unknown as { __fsItems: { load: () => Promise<unknown> } }).__fsItems.load())
 const stack = async (page: Page, def: string) => (await pack(page))?.stacks.find((s) => s.itemDef === def)?.qty ?? 0
+
+/** What a bank's prompt reads: a band's line, or the pond's name before the first read. */
+const BANK_LINE = /Little rings among the reeds|A ring now and then|Very still here|Nothing moving at all|The mill pond/
 
 const ROD_MAX = (itemDef('willow-rod')!.uses ?? 30) * 3
 
@@ -44,13 +48,21 @@ async function holdRod(page: Page): Promise<void> {
   await expect.poll(async () => (await held()).kind).toBe('fish')
 }
 
-/** Both clocks to the first day after now whose mark is `mark` (or now, if it is), at :57. */
-async function seasonOf(page: Page, mark: string): Promise<void> {
+/**
+ * Both clocks to the first day from now whose mark is `mark`. The world's
+ * clock moves in steps under 30 days, signing in again between them: a
+ * session ends 30 days after it began however much it's used (the server's
+ * seasons tests' `jumpToAs` does the same), and a mark can be two months off.
+ */
+async function seasonOf(page: Page, id: string, mark: string): Promise<void> {
   const DAY = 86400
-  const now = await moveServerClock(page, 0)
+  let now = await moveServerClock(page, 0)
   let t = now
   while (calendarAt(t, CALENDAR).mark !== mark) t += DAY
-  if (t !== now) await moveServerClock(page, t)
+  while (now < t) {
+    now = await moveServerClock(page, Math.min(t, now + 25 * DAY))
+    if (now < t) await signInAgain(page, id)
+  }
   await page.evaluate((x) => (window as unknown as { __fsDevCalendar: (t: number) => void }).__fsDevCalendar(x), t)
 }
 
@@ -71,18 +83,18 @@ test.describe('fishing at the mill pond', () => {
     test.setTimeout(150_000)
     const id = await freshPlayer(page, 'Wren')
     test.skip(!(await fishingServed(page)), 'needs lane D’s fishing routes')
-    await seasonOf(page, 'Carting')
+    await seasonOf(page, id, 'Carting')
     const rod = giveInstance(id, 'willow-rod', { max: ROD_MAX })
     await warp(page, 'village', 36, 18)
     await holdRod(page)
-    await expect(page.locator('.prompt')).toContainText(/Little rings among the reeds|A ring now and then|Very still here/)
+    await expect(page.locator('.prompt')).toContainText(BANK_LINE)
 
     await castAndWait(page)
     expect((await fishing(page))!.pose).toBe('fishing')
     await waitForLive(page)
     await page.keyboard.press('e') // Reel
     await expect.poll(async () => (await fishing(page))?.landed).toBe('mill-roach')
-    await page.getByRole('button', { name: /Keep/ }).click()
+    await page.getByRole('button', { name: /^keep/i }).click()
     await expectToast(page, /Kept: mill roach/)
     await reloadPack(page)
     await expect.poll(() => stack(page, 'mill-roach')).toBe(1)
@@ -94,7 +106,7 @@ test.describe('fishing at the mill pond', () => {
     await waitForLive(page)
     await page.keyboard.press('e')
     await expect.poll(async () => (await fishing(page))?.landed).toBe('mill-roach')
-    await page.getByRole('button', { name: /Let mill roach go|Let it go/ }).click()
+    await page.getByRole('button', { name: /let mill roach go|let it go/i }).click()
     await expect.poll(async () => (await fishing(page))?.last).toBe('released')
     await reloadPack(page)
     expect(await stack(page, 'mill-roach')).toBe(1)
@@ -105,16 +117,18 @@ test.describe('fishing at the mill pond', () => {
     test.setTimeout(120_000)
     const id = await freshPlayer(page, 'Rook')
     test.skip(!(await fishingServed(page)), 'needs lane D’s fishing routes')
-    await seasonOf(page, 'Carting')
+    await seasonOf(page, id, 'Carting')
     giveInstance(id, 'willow-rod', { max: ROD_MAX })
     await warp(page, 'village', 39, 20)
     await holdRod(page)
+    await expect(page.locator('.prompt')).toContainText(BANK_LINE)
     await waitForLive(page)
     await page.keyboard.press('e')
     await expect.poll(async () => (await fishing(page))?.line?.predicted).toBe(false)
     const cast = (await fishing(page))!.line!.id
 
-    await page.reload()
+    // A reload lands on the title: Continue back into the world.
+    await reenter(page)
     await expect.poll(async () => (await fishing(page))?.line?.id, { timeout: 30_000 }).toBe(cast)
     await waitGame(page, () => fishing(page), (v) => v?.line?.phase === 'ready', { seconds: 20 })
     await expect(page.locator('.prompt')).toContainText('Something’s on your line')
@@ -128,7 +142,7 @@ test.describe('fishing at the mill pond', () => {
     test.setTimeout(150_000)
     const id = await freshPlayer(page, 'Dace')
     test.skip(!(await fishingServed(page)), 'needs lane D’s fishing routes')
-    await seasonOf(page, 'Carting')
+    await seasonOf(page, id, 'Carting')
     giveInstance(id, 'willow-rod', { max: ROD_MAX })
     await warp(page, 'village', 36, 18)
     await holdRod(page)
@@ -136,14 +150,14 @@ test.describe('fishing at the mill pond', () => {
     await waitForLive(page)
     await page.keyboard.press('e') // Reel
     await expect.poll(async () => (await fishing(page))?.landed).toBe('mill-roach')
-    await expect(page.getByRole('button', { name: /Keep/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^keep/i })).toBeVisible()
     // Eleven minutes on (the hold is ten), on both clocks.
     const later = (await moveServerClock(page, 0)) + 11 * 60
     await moveServerClock(page, later)
     await page.evaluate((x) => (window as unknown as { __fsDevCalendar: (t: number) => void }).__fsDevCalendar(x), later)
     await expect.poll(async () => (await fishing(page))?.last).toBe('lapsed')
     expect((await fishing(page))!.landed).toBeNull()
-    await expect(page.getByRole('button', { name: /Keep/ })).toBeHidden()
+    await expect(page.getByRole('button', { name: /^keep/i })).toBeHidden()
     await expectToast(page, /slipped off the hook/)
     await reloadPack(page)
     expect(await stack(page, 'mill-roach')).toBe(0)
@@ -153,16 +167,19 @@ test.describe('fishing at the mill pond', () => {
     test.setTimeout(120_000)
     const id = await freshPlayer(page, 'Chub')
     test.skip(!(await fishingServed(page)), 'needs lane D’s fishing routes')
-    await seasonOf(page, 'Carting')
+    await seasonOf(page, id, 'Carting')
     giveInstance(id, 'willow-rod', { max: ROD_MAX })
     await warp(page, 'village', 37, 18)
     await holdRod(page)
+    await expect(page.locator('.prompt')).toContainText(BANK_LINE)
     await waitForLive(page)
     await page.keyboard.press('e') // Cast
     await expect.poll(async () => (await fishing(page))?.line?.predicted).toBe(false)
     await waitForLive(page)
     await page.keyboard.press('e') // Pull in (cancelling doesn't reset the spacing)
     await expect.poll(async () => (await fishing(page))?.line ?? null).toBeNull()
+    // The Cast offer is back once the pull-in's answer is in (well inside the eight seconds).
+    await expect(page.locator('.prompt')).toContainText(BANK_LINE)
     await waitForLive(page)
     await page.keyboard.press('e') // Cast again at once
     await expectToast(page, /Give the water a moment/)
@@ -174,12 +191,13 @@ test.describe('fishing at the mill pond', () => {
     test.setTimeout(240_000)
     const id = await freshPlayer(page, 'Tarn')
     test.skip(!(await fishingServed(page)), 'needs lane D’s fishing routes')
-    await seasonOf(page, 'Quiet')
+    await seasonOf(page, id, 'Quiet')
     giveInstance(id, 'willow-rod', { max: ROD_MAX })
     await warp(page, 'village', 36, 18)
     await holdRod(page)
     await waitForLive(page)
-    await expect(page.locator('.prompt')).not.toContainText(/rings|Very still/)
+    // Nothing to cast from: no fishing prompt at all (the prompt may be absent altogether).
+    await expect(page.locator('.prompt', { hasText: BANK_LINE })).toHaveCount(0)
     await warp(page, 'village', 32, 19)
     await castAndWait(page)
     expect((await fishing(page))!.line!.bank).toBe('race')
@@ -224,7 +242,7 @@ test('A Line in the Race: Finn’s rod, a roach from the race, and Hazel’s car
     await waitForLive(page)
     await page.keyboard.press('e')
     await expect.poll(async () => (await fishing(page))?.landed).toBe('mill-roach')
-    await page.getByRole('button', { name: /Keep/ }).click()
+    await page.getByRole('button', { name: /^keep/i }).click()
   } else {
     fund(id, { items: { 'mill-roach': 1 } })
     await reloadPack(page)

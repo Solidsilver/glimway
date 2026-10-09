@@ -211,10 +211,25 @@ export interface CastTimes {
   holdUntil: number;
 }
 
-/** A cast's phase at `now` (5.3: the fish waits `holdSeconds` after the bite, then slips off). */
-export function castPhase(cast: CastTimes, now: number): CastPhase {
-  if (now < cast.readyAt) return 'waiting';
-  return now < cast.holdUntil ? 'ready' : 'lapsed';
+/**
+ * How far this screen's window for a fish sits inside the server's, in
+ * seconds. The client reads the server's clock through a skew good to about
+ * half a second (the `Date` header's whole seconds) plus a round trip, so a
+ * Reel the moment the float dips could reach the server before its
+ * `ready_at` (`not-yet`), and a Keep at the last moment after its
+ * `hold_until` (`no-cast`). The fish waits for you: a moment later costs
+ * nothing.
+ */
+export const CLOCK_GRACE_SECONDS = 1.5;
+
+/**
+ * A cast's phase at `now` on this screen (5.3: the fish waits `holdSeconds`
+ * after the bite, then slips off), the bite `grace` after the server's
+ * `ready_at` and the slip `grace` before its `hold_until`.
+ */
+export function castPhase(cast: CastTimes, now: number, grace = CLOCK_GRACE_SECONDS): CastPhase {
+  if (now < cast.readyAt + grace) return 'waiting';
+  return now < cast.holdUntil - grace ? 'ready' : 'lapsed';
 }
 
 /**
@@ -271,6 +286,10 @@ const REFUSALS: Readonly<Record<string, string>> = {
   'too-far-away': 'Stand on the bank to cast.',
   'tool-blunt': 'This rod’s past fishing with. Finn sells another.',
   'worn-out': 'This rod’s past fishing with. Finn sells another.',
+  'not-in-season': 'This bank is iced over. The race above the wheel runs all year.',
+  'item-not-found': 'Your rod isn’t in your pack.',
+  'not-a-tool': 'That won’t catch anything. You’d want a rod.',
+  'invalid-request': 'There’s no fishing from here.',
   offline: 'Needs a connection: the pond is shared.',
   busy: 'Hold on — the last one is still on its way.',
   superseded: 'Another device took over this journey.',

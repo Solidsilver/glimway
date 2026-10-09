@@ -355,7 +355,8 @@ export class Fishing {
 
   /** Keep and Let it go, the two big buttons over the action corner (lane F's context row). */
   private showButtons(line: Line): void {
-    const name = itemDef(line.species)?.name ?? 'the fish'
+    // Mid-sentence, as the toasts say it ("Let mill roach go").
+    const name = (itemDef(line.species)?.name ?? 'the fish').toLowerCase()
     showContextButton({ id: 'fish-keep', label: FISHING_VERBS.keep, art: line.species, icon: 'bag', size: 'big', order: 1, key: 'E', ariaLabel: `Keep ${name}`, press: () => void this.settle(true) })
     showContextButton({ id: 'fish-release', label: FISHING_VERBS.release, icon: 'heart', size: 'big', order: 2, ariaLabel: `Let ${name} go`, press: () => void this.settle(false) })
   }

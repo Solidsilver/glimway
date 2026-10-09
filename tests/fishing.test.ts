@@ -8,6 +8,7 @@ import {
   bankNear,
   bankOpen,
   castPhase,
+  CLOCK_GRACE_SECONDS,
   castReachPx,
   FISHING,
   fishingRefusal,
@@ -68,10 +69,20 @@ test('the float lands on the water in the bank’s facing, the race’s below th
 
 test('a cast waits for the bite, holds the fish, then lets it slip', () => {
   const cast = { readyAt: 1010, holdUntil: 1610 };
-  assert.equal(castPhase(cast, 1000), 'waiting');
-  assert.equal(castPhase(cast, 1010), 'ready');
-  assert.equal(castPhase(cast, 1609.9), 'ready');
-  assert.equal(castPhase(cast, 1610), 'lapsed');
+  // The server's own window, exactly.
+  assert.equal(castPhase(cast, 1000, 0), 'waiting');
+  assert.equal(castPhase(cast, 1010, 0), 'ready');
+  assert.equal(castPhase(cast, 1609.9, 0), 'ready');
+  assert.equal(castPhase(cast, 1610, 0), 'lapsed');
+  // On screen it sits inside the server's by the clock grace at both ends: a quick Reel is never
+  // `not-yet` and a last-moment Keep never `no-cast`, with the skew half a second or more out.
+  const g = CLOCK_GRACE_SECONDS;
+  assert.ok(g >= 1);
+  assert.equal(castPhase(cast, 1010), 'waiting');
+  assert.equal(castPhase(cast, 1010 + g - 0.01), 'waiting');
+  assert.equal(castPhase(cast, 1010 + g), 'ready');
+  assert.equal(castPhase(cast, 1610 - g - 0.01), 'ready');
+  assert.equal(castPhase(cast, 1610 - g), 'lapsed');
 });
 
 test('a predicted cast takes its band’s wait, then the hold', () => {
@@ -90,7 +101,7 @@ test('the banks read the water in words; refusals are plain', () => {
   assert.equal(bandLine('still'), STILL_LINE);
   assert.equal(bandLine(''), null);
   assert.equal(bandLine(undefined), null);
-  for (const code of ['already-casting', 'cast-too-soon', 'water-still', 'no-cast', 'not-yet', 'wrong-tool', 'too-far-away', 'offline']) {
+  for (const code of ['already-casting', 'cast-too-soon', 'water-still', 'no-cast', 'not-yet', 'wrong-tool', 'too-far-away', 'offline', 'not-in-season', 'item-not-found', 'not-a-tool', 'invalid-request']) {
     const words = fishingRefusal(code);
     assert.notEqual(words, FISHING_FALLBACK, code);
     assert.ok(!words.includes(code), `${code} is said in words, not as its code`);
@@ -124,12 +135,13 @@ test('an empty water reads as still, however the server spells it', () => {
 
 test('a fish slips off after the hold, whether it’s on the line or reeled onto the bank', () => {
   const cast = { readyAt: 1010, holdUntil: 1610 };
+  const g = CLOCK_GRACE_SECONDS;
   assert.equal(slippedOff(null, null, 5000), false, 'nothing out');
-  assert.equal(slippedOff(cast, null, 1609), false);
-  assert.equal(slippedOff(cast, null, 1610), true);
-  // Reeled in but not yet kept: the server refuses a settle after hold_until, so it goes then too.
-  assert.equal(slippedOff(null, cast, 1609), false);
-  assert.equal(slippedOff(null, cast, 1610), true);
+  assert.equal(slippedOff(cast, null, 1610 - g - 0.01), false);
+  assert.equal(slippedOff(cast, null, 1610 - g), true);
+  // Reeled in but not yet kept: the server refuses a settle after hold_until, so it goes (a moment before) then too.
+  assert.equal(slippedOff(null, cast, 1610 - g - 0.01), false);
+  assert.equal(slippedOff(null, cast, 1610 - g), true);
 });
 
 test('only a definitive settle refusal takes the fish off the bank; a transient one keeps it there', () => {
