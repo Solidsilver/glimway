@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { memoryOutboxStore } from '../src/lib/api/outbox.ts';
-import { ackReport, env, online, play, rig, S, tick, wire, type Call, type Rig } from './helpers/link-rig.ts';
+import { ackReport, env, online, play, player, rig, S, tick, toasts, wire, type Call, type Rig } from './helpers/link-rig.ts';
 
 /**
  * Review round 1, findings 3, 4, 12 and 13: a fall's causal boundary across
@@ -189,4 +189,43 @@ test('a fall names where the hero stands when it falls', async (t) => {
   await r.link.fall();
   assert.deepEqual(JSON.parse(r.link.outbox[0]!.body).where, { area: 'woodland', x: 812, y: 333 });
   void tick;
+});
+
+// ---------------------------------------------------------------- 0.5: the moves (crafts.md 4.2, 4.4)
+
+/** A mage hero with the server's marks. */
+function mage(levelMark: number, over: Parameters<typeof S>[0] = {}): Record<string, any> {
+  const s = S(over);
+  s.profile.class = 'mage';
+  s.profile.level = 1;
+  s.magic = { levelMark, classMark: 'mage' };
+  return s;
+}
+
+test('a combat move reports by its id beside the signature’s casts', async (t) => {
+  const r = await rig(t, { state: S({ hp: 20 }) });
+  await online(r, S({ hp: 20 }));
+  r.server.on('POST /api/report', keeper(r));
+  r.link.noteCast();
+  r.link.noteAbility('kindle');
+  r.link.noteAbility('kindle');
+  r.link.reportSoon();
+  await r.link.flush();
+  const last = reports(r).at(-1)!;
+  assert.equal(last.casts, 1);
+  assert.deepEqual(last.abilityCasts, { kindle: 2 });
+});
+
+test('the level mark: told on load without news, and a crossing of 20 names the new move once', async (t) => {
+  const r = await rig(t, { state: mage(19) });
+  const magic = () => r.events.filter(([e]) => e === 'ui:magic').map(([, p]) => p);
+  assert.deepEqual(magic().at(-1), { levelMark: 19, classMark: 'mage' });
+  await online(r, mage(19));
+  assert.deepEqual(toasts(r).filter((x) => x.startsWith('New at')), [], 'the first state is a load, not news');
+  // Adopt a newer state as any answer would (a sync's profile operation raised the mark).
+  (r.link as any).adopt(player(mage(20, { version: 60 })), { read: true });
+  assert.deepEqual(toasts(r).filter((x) => x.startsWith('New at')), ['New at level 20: Kindle. It’s on R, and the second ✦ on phones.']);
+  (r.link as any).adopt(player(mage(20, { version: 61 })), { read: true });
+  assert.equal(toasts(r).filter((x) => x.startsWith('New at')).length, 1, 'said once');
+  assert.deepEqual(r.link.magic, { levelMark: 20, classMark: 'mage' });
 });

@@ -17,7 +17,6 @@ import {
   HELD_TEXELS,
   PEOPLE,
   PLAYTEST1_DIR,
-  CRAFTS_DIR,
   PLAYTEST1_RECORDS,
   playtest1Records,
   playtest1Used,
@@ -46,7 +45,7 @@ const commons = JSON.parse(readFileSync(join(ROOT, 'assets/generated/commons-pas
 const runtime = JSON.parse(readFileSync(join(ROOT, 'assets/generated/runtime-pass/manifest.json'), 'utf8')) as RuntimeArtManifest
 const items = JSON.parse(readFileSync(join(ROOT, 'assets/generated/items-pass/manifest.json'), 'utf8')) as ItemsPassManifest
 const indoors = JSON.parse(readFileSync(join(ROOT, 'assets/generated/indoors-pass/manifest.json'), 'utf8')) as { sources: { file: string }[]; frames: { key: string; canvasSize: { w: number; h: number } }[] }
-const crafts = JSON.parse(readFileSync(join(ROOT, CRAFTS_DIR, 'manifest.json'), 'utf8')) as { frames: Record<string, { file: string; canvasSize: { w: number; h: number } }> }
+const crafts = JSON.parse(readFileSync(join(ROOT, 'assets/generated/crafts-pass/manifest.json'), 'utf8')) as { frames: Record<string, { file: string; canvasSize: { w: number; h: number } }> }
 
 type P1 = { frames: Record<string, { source: string }>; sources: Record<string, { file: string }> }
 const p1 = JSON.parse(readFileSync(join(ROOT, PLAYTEST1_DIR, 'atlas.json'), 'utf8')) as P1
@@ -95,8 +94,8 @@ test('every input the atlases were baked from is unchanged', () => {
     ...items.sources.map((s) => `assets/generated/items-pass/${s.file}`),
     'assets/generated/indoors-pass/manifest.json',
     ...indoors.sources.map((s) => `assets/generated/indoors-pass/sheets/${s.file}`),
-    `${CRAFTS_DIR}/manifest.json`,
-    ...Object.values(crafts.frames).map((f) => `${CRAFTS_DIR}/${f.file}`),
+    'assets/generated/crafts-pass/manifest.json',
+    ...Object.values(crafts.frames).map((f) => `assets/generated/crafts-pass/${f.file}`),
     'assets/generated/expansion/manifest.json',
     'assets/generated/expansion/fingersnap-terrain.png',
     'assets/generated/expansion/fingersnap-terrain.atlas.json',

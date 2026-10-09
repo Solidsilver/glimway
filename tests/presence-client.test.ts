@@ -107,6 +107,7 @@ function rig() {
       leave: (id) => events.push({ leave: id }),
       pos: (id, p) => events.push({ pos: id, x: p.x }),
       emote: (id, e) => events.push({ emote: id, id: e }),
+      ability: (id, a) => events.push({ ability: a.ability, id, x: a.x, y: a.y }),
       witness: (w) => events.push({ witness: w.beat, id: w.accountId, name: w.name }),
     },
   });
@@ -280,6 +281,23 @@ test('emotes: shared ids only, one per 2 s', () => {
   r.clock.advance(2000);
   assert.equal(r.client.emote('cheer'), true);
   assert.deepEqual(r.sock().sent.filter((m) => m.type === 'emote').map((m) => m.id), ['wave', 'cheer']);
+});
+
+test('moves: table ids only, each on its own cooldown; the room’s casts come through with their caster', () => {
+  const r = rig();
+  r.live();
+  assert.equal(r.client.ability('kindle', 10, 20), false, 'nothing before an area');
+  r.client.setArea('village');
+  assert.equal(r.client.ability('firestorm', 10, 20), false);
+  assert.equal(r.client.ability('kindle', 10, 20), true);
+  assert.equal(r.client.ability('kindle', 11, 20), false, 'Kindle cools for 5 s, as the hub keeps it');
+  assert.equal(r.client.ability('fingersnap', 10, 20), true, 'another move has its own');
+  r.clock.advance(5000);
+  assert.equal(r.client.ability('kindle', 12, 20), true);
+  assert.deepEqual(r.sock().sent.filter((m) => m.type === 'ability').map((m) => [m.ability, m.x]), [['kindle', 10], ['fingersnap', 10], ['kindle', 12]]);
+  r.sock().push({ type: 'ability', accountId: 'friend', ability: 'ward-light', x: 5, y: 6 });
+  r.sock().push({ type: 'ability', accountId: 'friend', ability: 'nonsense', x: 5, y: 6 });
+  assert.deepEqual(r.events.filter((e) => 'ability' in e), [{ ability: 'ward-light', id: 'friend', x: 5, y: 6 }]);
 });
 
 test('a still socket sends a heartbeat about every 20 s; activity postpones it', () => {

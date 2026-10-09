@@ -10,7 +10,7 @@ import { PEOPLE_KEY, hasPerson, peopleDensity, personAnim } from '../people'
 import { solidBox } from '../area/collision'
 import { HOMESTEAD_DATA, grownItem, homeItem, rotatedFootprint, type HomeInstance, type HomeItem, type HomeScene } from '../../lib/homestead'
 import { drawStable } from './homestead-stable'
-import { craftsArt } from '../crafts-art'
+import { crArt } from '../crafts-art'
 import { homeLights, isLit, type Light } from '../../lib/homestead-land'
 import type { HomeView } from '../../lib/api/types'
 import { decoSeat, type ArtBox, type SeatPose } from '../seats'
@@ -97,7 +97,7 @@ export class HomesteadArt {
     for (const it of HOMESTEAD_DATA.items) {
       try {
         // The stable's thumbnail is its west end (the crafts pass), as it stands with one stall.
-        const src = artSource(this.scene, decoKey(it.id, 0)) ?? (it.id === HOMESTEAD_DATA.stable.item ? artSource(this.scene, craftsArt('stable-west-front-shut')) : null)
+        const src = artSource(this.scene, decoKey(it.id, 0)) ?? (it.id === HOMESTEAD_DATA.stable.item ? artSource(this.scene, crArt('stable-west-front-shut')) : null)
         if (!src) continue
         // Trimmed to the art (a chair stands in the bottom of its two-tile
         // canvas), in whole world px, scaled up as it always was.

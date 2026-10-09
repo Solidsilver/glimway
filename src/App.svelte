@@ -209,10 +209,7 @@
         pendingStats = null
       }
     }
-    const onAbility = (p: AbilityPayload) => {
-      if (p.status === 'cast') ui.ability = { ...ui.ability, readyAt: performance.now() + (p.cooldown ?? 1) * 1000, cooldown: p.cooldown ?? 1 }
-      else if (p.status === 'no-mana') ui.ability = { ...ui.ability, deniedAt: performance.now() }
-    }
+    const onAbility = (p: AbilityPayload) => ui.abilityEvent(p)
     const onRolled = (p: { cooldown: number }) => {
       ui.roll = { readyAt: performance.now() + p.cooldown * 1000, cooldown: p.cooldown }
     }

@@ -187,6 +187,8 @@ export const COMPANION_ERRORS: Table = {
   'land-blocked': 'Clear and light the ground east of the stable first.',
   'placement-overlap': 'Clear and light the ground east of the stable first.',
   unlit: 'Clear and light the ground east of the stable first.',
+  'plant-in-the-way': 'Clear and light the ground east of the stable first.',
+  'invalid-placement': 'A stall can’t go there.',
   'out-of-bounds': 'There’s no more land east of the stable to build on.',
   short: 'You’re short on materials for another stall.',
   'insufficient-materials': 'You’re short on materials for another stall.',

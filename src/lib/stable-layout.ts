@@ -11,23 +11,32 @@
  *
  * Pure: world px only, no Phaser (src/game/crafts-art.ts draws it).
  */
+import manifest from '../../assets/generated/crafts-pass/manifest.json' with { type: 'json' }
 import { TILE } from './tile.ts'
+import { HOMESTEAD_DATA, stableFootprint } from './homestead.ts'
+
+/** The footprint is the homestead rules' one (content/homestead.json: 4 × 3, plus 2 × 3 a stall). */
+export { stableFootprint }
 
 export const STABLE_MIN_STALLS = 1
-export const STABLE_MAX_STALLS = 6
-/** The art's height: 320 texels at 64 per tile, 5 tiles (the roof rises 2 above the 3-tile footprint). */
-export const STABLE_ART_HEIGHT = 5 * TILE
-/** The west end: 256 texels, 4 tiles. */
-export const STABLE_WEST_WIDTH = 4 * TILE
-/** One bay: 128 texels, 2 tiles. */
-export const STABLE_BAY_WIDTH = 2 * TILE
-/** The east gable: 32 texels, half a tile. */
-export const STABLE_GABLE_WIDTH = TILE / 2
+export const STABLE_MAX_STALLS = HOMESTEAD_DATA.stable.maxStalls
 
-/** The footprint for a stall count: 4 × 3 with stall 1, plus 2 × 3 for each extra stall. */
-export function stableFootprint(stalls: number): [number, number] {
-  return [4 + 2 * (clampStalls(stalls) - 1), 3]
+/** A stable frame's canvas in world px, from the pass's manifest (its texels at `density` per tile). */
+function frameSize(name: string): { w: number; h: number } {
+  const m = manifest as { density: number; frames: Record<string, { canvasSize: { w: number; h: number } }> }
+  const c = m.frames[name]?.canvasSize
+  if (!c) throw new Error(`crafts pass: no frame ${name}`)
+  return { w: (c.w * TILE) / m.density, h: (c.h * TILE) / m.density }
 }
+
+/** The art's height (5 tiles: the roof rises 2 above the 3-tile footprint). */
+export const STABLE_ART_HEIGHT = frameSize('stable-west-back').h
+/** The west end (4 tiles). */
+export const STABLE_WEST_WIDTH = frameSize('stable-west-back').w
+/** One bay (2 tiles). */
+export const STABLE_BAY_WIDTH = frameSize('stable-bay-back').w
+/** The east gable (half a tile). */
+export const STABLE_GABLE_WIDTH = frameSize('stable-east-gable').w
 
 export function clampStalls(stalls: number): number {
   return Math.max(STABLE_MIN_STALLS, Math.min(STABLE_MAX_STALLS, Math.floor(Number.isFinite(stalls) ? stalls : 1)))

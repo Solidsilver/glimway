@@ -11,11 +11,12 @@
  */
 import type Phaser from 'phaser'
 import { loadCompanion } from '../avatar-render'
-import { bayFrontPiece, craftsArt, stableFootprint, stableLayout } from '../crafts-art'
+import { crArt } from '../crafts-art'
+import { bayFrontPiece, stableFootprint, stableLayout } from '../../lib/stable-layout'
 import { COMPANION_SCALE } from './pet-follower'
 import { TILE } from '../../lib/tile'
 import type { HomeView, StallView } from '../../lib/api/types'
-import { HOMESTEAD_DATA, checkPlacement, stallCost, type HomeInstance } from '../../lib/homestead'
+import { HOMESTEAD_DATA, stallCost, stallGroundProblem, type HomeInstance } from '../../lib/homestead'
 import { clearedSet, servedLand } from '../../lib/homestead-land'
 import { predictStableExtend } from '../../lib/api/predict'
 import { companionName } from '../../lib/companions'
@@ -62,7 +63,7 @@ export function drawStable(
     if (opts.desolate) img.setTint(0xa0a0aa)
     return img
   }
-  if (!scene.textures.exists(craftsArt('stable-west-back'))) {
+  if (!scene.textures.exists(crArt('stable-west-back'))) {
     // Placeholder until the pass is packed: a timber-coloured box over the footprint.
     const [fw, fh] = layout.footprint
     const g = add(scene.add.graphics().setDepth(opts.depth))
@@ -70,7 +71,7 @@ export function drawStable(
     g.lineStyle(1, 0x2b1d1a, 1).strokeRect(bx + 0.5, by - (fh + 2) * TILE + 0.5, fw * TILE - 1, (fh + 2) * TILE - 1)
     return
   }
-  const image = (frame: string, x: number, depth: number) => tint(add(scene.add.image(bx + x, by, craftsArt(frame)).setOrigin(0, 1).setDepth(depth)))
+  const image = (frame: string, x: number, depth: number) => tint(add(scene.add.image(bx + x, by, crArt(frame)).setOrigin(0, 1).setDepth(depth)))
   for (const p of [...layout.back, ...layout.over]) image(p.frame, p.x, opts.depth - 0.3)
   for (const bay of layout.bays) {
     const st = stalls.find((s) => s.stall === bay.stall)
@@ -210,9 +211,8 @@ async function buildStall(host: StableHost, homeId: string, stable: HomeInstance
   const link = host.deps.session.link
   const home = host.here()
   if (!link || !home) return
-  const grown = { ...stable, stalls: (stable.stalls ?? 1) + 1 }
   const land = servedLand(home.gate)
-  const problem = checkPlacement(home, grown, 'outdoor', stable.x!, stable.y!, 0, HOMESTEAD_DATA, land ? { land, cleared: clearedSet(home.cleared) } : undefined)
+  const problem = stallGroundProblem(home, stable, HOMESTEAD_DATA, land ? { land, cleared: clearedSet(home.cleared) } : undefined)
   if (problem) {
     bus.emit(EV.toast, { text: companionErrorText(problem), kind: 'error' })
     return

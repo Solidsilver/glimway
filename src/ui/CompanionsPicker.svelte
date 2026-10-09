@@ -6,6 +6,7 @@
    * scroll sideways and the grid is three or four across. `first` is the
    * option above the grid (Habitica's current pet, or Leave empty).
    */
+  import { onMount } from 'svelte'
   import { companionName, groupBySpecies, matchesSearch } from '../lib/companions'
   import CompanionArt from './CompanionArt.svelte'
   import Icon from './Icon.svelte'
@@ -30,6 +31,9 @@
   } = $props()
 
   let query = $state('')
+  let searchEl = $state<HTMLInputElement | null>(null)
+  // Focus comes into the picker as it opens (the page that opened it gives it back on close).
+  onMount(() => searchEl?.focus())
   let species = $state<string | null>(null)
   const groups = $derived(groupBySpecies(keys))
   const shown = $derived(
@@ -48,12 +52,12 @@
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<div class="picker" role="dialog" aria-label={title} tabindex="-1" onkeydown={onKey} data-testid="companions-picker">
+<div class="picker" role="dialog" aria-modal="true" aria-label={title} tabindex="-1" onkeydown={onKey} data-testid="companions-picker">
   <header>
     <button type="button" class="back" onclick={onClose} aria-label="Back to Companions"><Icon name="close" size={14} /></button>
     <h3>{title}</h3>
   </header>
-  <input type="search" placeholder={kind === 'pet' ? 'Search your pets' : 'Search your mounts'} bind:value={query} aria-label="Search" />
+  <input type="search" bind:this={searchEl} placeholder={kind === 'pet' ? 'Search your pets' : 'Search your mounts'} bind:value={query} aria-label="Search" />
   {#if groups.length > 1}
     <div class="chips" role="group" aria-label="Species">
       <button type="button" class:on={species === null} aria-pressed={species === null} onclick={() => (species = null)}>All</button>
@@ -131,7 +135,7 @@
   }
   .chips button {
     flex: none;
-    min-height: 36px;
+    min-height: 44px;
     padding: 4px 12px;
     border-radius: 999px;
     border: 2px solid var(--paper-line);

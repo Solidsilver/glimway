@@ -42,12 +42,12 @@ test('records are validated: bad entries drop one by one, order and the id alloc
     nextId: 2,
     entries: [entry(5), { ...entry(3), kind: 'progress' }, { ...entry(4), body: '{not json' }, { ...entry(2), path: 'https://elsewhere/api' }, entry(1), 'junk'],
     lease: '',
-    reports: { client: 'c', generation: 'g', seq: 2, next: { place: { area: 'village', x: 1, y: 2 }, hp: 5, mana: -3, casts: 2.7, basis: 4, boundary: null, changed: true }, captured: null },
+    reports: { client: 'c', generation: 'g', seq: 2, next: { place: { area: 'village', x: 1, y: 2 }, hp: 5, mana: -3, casts: 2.7, abilityCasts: { kindle: 2.4, echo: -1, stand: 'x' }, basis: 4, boundary: null, changed: true }, captured: null },
   })!;
   assert.deepEqual(r.entries.map((e) => e.id), [1, 5]);
   assert.equal(r.nextId, 6, 'never reuses an id still in the outbox');
   assert.equal(r.lease, null);
-  assert.deepEqual(r.reports?.next, { place: { area: 'village', x: 1, y: 2 }, hp: 5, mana: 0, casts: 2, basis: 4, boundary: null, changed: true });
+  assert.deepEqual(r.reports?.next, { place: { area: 'village', x: 1, y: 2 }, hp: 5, mana: 0, casts: 2, abilityCasts: { kindle: 2 }, basis: 4, boundary: null, changed: true });
   assert.equal(normalizeRecord({ account: '', device: 'dev' }), null);
   assert.equal(normalizeRecord('nope'), null);
 });

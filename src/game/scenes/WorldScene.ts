@@ -475,10 +475,10 @@ export class WorldScene extends Phaser.Scene {
     const feed = presence()
     this.presenceArea = presenceAreaFor(this.world.areaId)
     feed?.setArea(this.presenceArea)
-    this.remotePlayers = createRemotePlayers(this, feed, this.presenceArea)
+    this.remotePlayers = createRemotePlayers(this, feed, this.presenceArea, false, this.reducedMotion)
     this.events.once('shutdown', () => this.remotePlayers.clear())
     // Pet a pet (crafts.md 2.1): your follower, friends' and the yard's.
-    this.petting = new Petting(this, this.interactables, () => [
+    this.petting = new Petting(this, this.interactables, this.reducedMotion, () => [
       ...(this.avatar.follower ? [{ id: 'mine', x: this.avatar.follower.x, y: this.avatar.follower.y, hop: () => this.avatar.follower?.hop() }] : []),
       ...this.remotePlayers.pets(),
       ...(this.homesteads?.yard?.petPoints() ?? [])

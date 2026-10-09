@@ -7,7 +7,7 @@ import { projectHome } from '../src/lib/api/homestead.ts';
 import { predictCompanions, predictStableExtend, predictStall } from '../src/lib/api/predict.ts';
 import { HomeViewSchema } from '../src/lib/gen/glimway/v1/goods_pb.js';
 import { PlayerStateSchema } from '../src/lib/gen/glimway/v1/state_pb.js';
-import { HOMESTEAD_DATA, checkPlacement, stableFootprint } from '../src/lib/homestead.ts';
+import { HOMESTEAD_DATA, checkPlacement, stableFootprint, stallGroundProblem } from '../src/lib/homestead.ts';
 import { stableFootprint as layoutFootprint } from '../src/lib/stable-layout.ts';
 
 const fixtures = new Map(
@@ -67,4 +67,19 @@ test('the stable grows east 2 tiles a stall, faces front only, and its footprint
   if (where.includes('outdoor')) {
     assert.equal(checkPlacement(placed, stool, 'outdoor', 9, 3, 0, HOMESTEAD_DATA) === 'placement-overlap', true);
   }
+});
+
+test('a new stall asks only for the 2 × 3 tiles east of the stable', () => {
+  const stable = { id: 's', itemDef: 'stable', scene: 'outdoor' as const, x: 0, y: 0, rotation: 0 as const, stalls: 2 };
+  // Find a spot where the east bay fits on the grid and in the light.
+  let at: { x: number; y: number } | null = null;
+  for (let y = 0; y < 40 && !at; y++) for (let x = 0; x < 40 && !at; x++) if (stallGroundProblem({ tier: 2, items: [{ ...stable, x, y }] }, { ...stable, x, y }) === null) at = { x, y };
+  assert.ok(at, 'somewhere a bay fits');
+  const placed = { ...stable, ...at! };
+  const east = placed.x + stableFootprint(2)[0];
+  assert.equal(stallGroundProblem({ tier: 2, items: [placed], plants: [{ x: east + 1, y: placed.y + 2 }] }, placed), 'plant-in-the-way');
+  const stool = { id: 'w', itemDef: 'wooden-stool', scene: 'outdoor' as const, x: east, y: placed.y, rotation: 0 as const };
+  assert.equal(stallGroundProblem({ tier: 2, items: [placed, stool] }, placed), 'placement-overlap');
+  // A plant west of the bay (under or beside the stable itself) is not asked about.
+  assert.equal(stallGroundProblem({ tier: 2, items: [placed], plants: [{ x: east - 1, y: placed.y }] }, placed), null);
 });

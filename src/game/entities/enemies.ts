@@ -24,6 +24,7 @@ import { WARDEN, WardenEncounter } from './warden'
 import { curatedToRestore } from '../rollback'
 import { Creatures } from './creatures'
 import { roadStep } from '../../lib/quests'
+import { STAND_MARGIN, type CombatField } from '../../lib/combat-moves'
 
 export interface Enemy {
   id: string
@@ -84,6 +85,8 @@ export interface HeroView {
   readonly sprite: Phaser.Physics.Arcade.Sprite
   readonly facing: Phaser.Math.Vector2
   damagePlayer(amount: number, fromX: number, fromY?: number): void
+  /** The level-20 moves' effects on a fight (crafts.md 4.3): Stand, Kindle's patches, Echo's decoy. */
+  readonly field?: CombatField
 }
 
 export interface EnemyDeps {
@@ -185,16 +188,26 @@ export class EnemySystem {
     if (enemy.hp <= 0) this.killEnemy(enemy)
   }
 
-  /** Per-frame AI + contact damage. */
+  /**
+   * Per-frame AI + contact damage. The level-20 moves (the hero's `field`)
+   * bend it for the creatures, never the Warden: an Echo's copy is what they
+   * chase and aim at, a Kindle patch slows them, and a lunge that would
+   * reach a planted hero (Stand) stops short and staggers.
+   */
   update(dt: number): void {
     const hero = this.deps.hero()
+    const field = hero.field
+    field?.tick(dt)
     const px = hero.sprite.x
     const py = hero.sprite.y - 8
+    // Where the creatures aim (the hero, or an Echo's copy standing where they were).
+    const aim = field?.decoy ? { x: field.decoy.x, y: field.decoy.y - 8 } : { x: px, y: py }
     for (const enemy of [...this.enemies]) {
       if (enemy.dead || enemy.parked) continue
       const ex = enemy.sprite.x
       const ey = enemy.sprite.y - 6
       const dist = Math.hypot(px - ex, py - ey)
+      const aimDist = Math.hypot(aim.x - ex, aim.y - ey)
       const body = enemy.sprite.body as Phaser.Physics.Arcade.Body
       if (enemy.type === 'guardian' && this.warden.witnessResting()) {
         // Resting for someone else's naming: no AI, no contact, until it remembers its pose.
@@ -206,15 +219,19 @@ export class EnemySystem {
         // Shoved: physics owns the body for a beat, the AI waits.
         enemy.knockTimer -= dt
         body.setVelocity(enemy.knockX, enemy.knockY)
+        // A shove through a Kindle patch is slowed like any other movement.
+        this.creatures.slowIn(enemy, field)
         enemy.stateTimer -= dt
         if (enemy.knockTimer <= 0) {
           body.setVelocity(0, 0)
           if (enemy.type !== 'guardian' && enemy.state !== 'telegraph' && enemy.state !== 'stunned') this.setEnemyPose(enemy, 'idle')
         }
       } else if (enemy.type === 'wisp') {
-        this.creatures.updateHopper(enemy, dt, dist, px, py)
+        this.creatures.updateHopper(enemy, dt, aimDist, aim.x, aim.y)
+        this.creatures.slowIn(enemy, field)
       } else if (enemy.type === 'beetle') {
-        this.creatures.updateBeetle(enemy, dt, dist, px, py)
+        this.creatures.updateBeetle(enemy, dt, aimDist, aim.x, aim.y)
+        this.creatures.slowIn(enemy, field)
       } else {
         this.warden.updateGuardian(enemy, dt, dist, px, py)
       }
@@ -238,10 +255,36 @@ export class EnemySystem {
       } else if (enemy.type === 'beetle' && enemy.state === 'stunned') {
         dmg = 0
       }
-      if (dmg > 0 && dist < reach) hero.damagePlayer(dmg, ex, enemy.sprite.y)
+      if (dmg > 0 && field?.stand && enemy.type !== 'guardian' && enemy.state === 'lunge' && dist < reach + STAND_MARGIN) {
+        // Stand: the lunge stops short of the planted hero and staggers.
+        this.stagger(enemy, field.stand.stagger)
+      } else if (dmg > 0 && dist < reach) hero.damagePlayer(dmg, ex, enemy.sprite.y)
       enemy.sprite.setDepth(enemy.sprite.y)
       if (enemy.type === 'guardian') this.warden.updateHeart(enemy)
     }
+  }
+
+  /**
+   * A lunge stopped short against a planted hero (Stand): beetles go into
+   * their dazed state (which takes 1.5× damage), hoppers stand still,
+   * squashed, for `seconds`.
+   */
+  stagger(enemy: Enemy, seconds: number): void {
+    if (enemy.type === 'guardian') return
+    const body = enemy.sprite.body as Phaser.Physics.Arcade.Body
+    body.setVelocity(0, 0)
+    enemy.lungeX = 0
+    enemy.lungeY = 0
+    enemy.sprite.clearTint()
+    if (enemy.type === 'beetle') {
+      enemy.state = 'stunned'
+      this.setEnemyPose(enemy, 'hurt')
+    } else {
+      enemy.state = 'recover'
+      this.setEnemyPose(enemy, 'squash')
+    }
+    enemy.stateTimer = seconds
+    this.deps.fx.floatText(enemy.sprite.x, enemy.sprite.y - 18, 'Staggered', '#e8d8b0', false)
   }
 
   updateEnemyBars(): void {

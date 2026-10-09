@@ -149,7 +149,9 @@ class RemotePlayersLayer implements RemotePlayers {
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly feed: PresenceFeed,
-    private readonly area: string
+    private readonly area: string,
+    /** Calm companions: no hops for friends' pets and mounts. */
+    private readonly reducedMotion: boolean
   ) {
     bus.on(EV.emote, this.onEmote)
     expose('__fsRemote', () =>
@@ -304,7 +306,7 @@ class RemotePlayersLayer implements RemotePlayers {
     const wantLed = !!mount && !v.riding && !this.area.startsWith('in:') && peer.leftAt === null
     if (wantLed && (!v.led || v.led.key !== mount)) {
       v.led?.destroy()
-      v.led = new LedMount(this.scene, mount, { x: at.x + (faceRight ? -26 : 26), y: at.y }, true)
+      v.led = new LedMount(this.scene, mount, { x: at.x + (faceRight ? -26 : 26), y: at.y }, this.reducedMotion)
     } else if (!wantLed && v.led) {
       v.led.destroy()
       v.led = null
@@ -318,7 +320,7 @@ class RemotePlayersLayer implements RemotePlayers {
   private async loadFollower(v: View, key: string, at: { x: number; y: number }): Promise<void> {
     const keys = await loadCompanion(this.scene, key, 'pet')
     if (this.destroyed || v.followerKey !== key || !v.root.active || !keys) return
-    v.follower = new PetFollower(this.scene, keys[0], at, false)
+    v.follower = new PetFollower(this.scene, keys[0], at, this.reducedMotion)
   }
 
   /** The pets drawn here now (yours to pet, crafts.md 2.1): each follower with its owner. */
@@ -362,7 +364,7 @@ function showHeart(scene: Phaser.Scene, follow: { x: number; y: number }, offset
  * The scene hands itself in. `area` is the presence room (null: none here),
  * and `hidden` skips drawing (inside a cottage, where map coordinates differ).
  */
-export function createRemotePlayers(scene: Phaser.Scene, feed: PresenceFeed | null, area: string | null, hidden = false): RemotePlayers {
+export function createRemotePlayers(scene: Phaser.Scene, feed: PresenceFeed | null, area: string | null, hidden = false, reducedMotion = false): RemotePlayers {
   if (!feed || !area || hidden) return new NoopRemotePlayers()
-  return new RemotePlayersLayer(scene, feed, area)
+  return new RemotePlayersLayer(scene, feed, area, reducedMotion)
 }

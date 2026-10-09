@@ -1,13 +1,14 @@
 /**
  * Pet a pet (crafts.md 2.1): stand by any pet, yours or a friend's or a yard
  * pet, and the action button says Pet. A small heart rises and the pet
- * hops. Nothing is earned, nothing is sent: only you see it.
+ * hops (with reduced motion: no hop, and the heart fades in place).
+ * Nothing is earned, nothing is sent: only you see it.
  *
  * The pets move, so their points read live positions; the list is rebuilt
  * only when the set of pets here changes.
  */
 import type Phaser from 'phaser'
-import { craftsArt } from '../crafts-art'
+import { crArt } from '../crafts-art'
 import type { Interactable, Interactables } from './interactables'
 
 export interface PetPoint {
@@ -30,6 +31,7 @@ export class Petting {
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly interactables: Interactables,
+    private readonly reducedMotion: boolean,
     private readonly sources: () => PetPoint[]
   ) {
     scene.events.once('shutdown', () => interactables.register(this, []))
@@ -65,7 +67,7 @@ export class Petting {
             const live = self.points.get(p.id)
             if (!live) return
             live.hop()
-            heart(self.scene, live)
+            heart(self.scene, live, self.reducedMotion)
           }
         })
       )
@@ -74,12 +76,12 @@ export class Petting {
 }
 
 /** A small warm heart rising over the pet (the crafts pass's, or one drawn in code). */
-function heart(scene: Phaser.Scene, at: { x: number; y: number }): void {
+function heart(scene: Phaser.Scene, at: { x: number; y: number }, reducedMotion: boolean): void {
   const y = at.y - 12
   let obj: Phaser.GameObjects.Sprite | Phaser.GameObjects.Graphics
-  if (scene.textures.exists(craftsArt('pet-heart-0'))) {
-    const s = scene.add.sprite(at.x, y, craftsArt('pet-heart-0')).setOrigin(0.5, 1)
-    if (scene.anims.exists(craftsArt('pet-heart'))) s.play(craftsArt('pet-heart'))
+  if (scene.textures.exists(crArt('pet-heart-0'))) {
+    const s = scene.add.sprite(at.x, y, crArt('pet-heart-0')).setOrigin(0.5, 1)
+    if (!reducedMotion && scene.anims.exists(crArt('pet-heart'))) s.play(crArt('pet-heart'))
     obj = s
   } else {
     const g = scene.add.graphics({ x: at.x, y })
@@ -88,5 +90,6 @@ function heart(scene: Phaser.Scene, at: { x: number; y: number }): void {
     obj = g
   }
   obj.setDepth(9000)
-  scene.tweens.add({ targets: obj, y: y - 8, alpha: { from: 1, to: 0 }, delay: 300, duration: 700, ease: 'Sine.easeOut', onComplete: () => obj.destroy() })
+  // Reduced motion: it fades where it is, never rises.
+  scene.tweens.add({ targets: obj, ...(reducedMotion ? {} : { y: y - 8 }), alpha: { from: 1, to: 0 }, delay: 300, duration: 700, ease: 'Sine.easeOut', onComplete: () => obj.destroy() })
 }

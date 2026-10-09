@@ -69,7 +69,7 @@ export class BootScene extends Phaser.Scene {
     createBuildings(this)
     // The 0.4 indoors pass: the rooms' kit and furniture, smoke and lit windows.
     createIndoorsArt(this)
-    // The 0.5 crafts pass: abilities, the stable, fishing, the HUD icons (crafts-art:<frame>).
+    // The 0.5 crafts pass: ability icons and effects, the stable, fishing, HUD icons.
     createCraftsArt(this)
 
     this.scene.start('World')

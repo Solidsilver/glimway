@@ -37,8 +37,10 @@ export const EV = {
   defeat: 'ui:defeat',
   /** Session committed a new imported profile — the world avatar/pet refresh. */
   profileChanged: 'ui:profile-changed',
-  /** Signature ability fired (cooldown starts) or failed (not enough mana). */
+  /** A move (the signature or the level-20 move) fired (cooldown starts) or failed (not enough mana): { ability, status }. */
   ability: 'ui:ability',
+  /** The server's level and class marks the screen holds now (PlayerState.magic; crafts.md 4.2). */
+  magic: 'ui:magic',
   /** A scripted beat (lantern lighting) owns the screen: hide the HUD. */
   cinematic: 'ui:cinematic',
   /** Native-size portrait images for dialogue, built once from loaded art. */
@@ -67,7 +69,7 @@ export const EV = {
   companions: 'game:companions',
   /** Open the Character panel's Companions page (`at: 'stable'` scrolls to the stable). */
   openCompanions: 'ui:open-companions',
-  /** The mount that's out, as the hero has it now: { out, riding, led }; null when none is out. */
+  /** The mount that's out, as the hero has it now: { key, riding, led } (MountPayload); null when none is out. */
   mount: 'ui:mount',
   /** Connected play: a mutation whose answer was lost is now known: { op, outcome, res? | code? }. */
   mutationResolved: 'game:mutation-resolved',
@@ -88,6 +90,10 @@ export const EV = {
   // ui -> game (and dialogue panel -> scene)
   action: 'game:action',
   cast: 'game:cast',
+  /** The second move (R / the second ✦ button; crafts.md 4.3). */
+  castMove: 'game:cast-move',
+  /** Someone in the room cast a move (presence `ability`, crafts.md 4.5): { accountId, ability, x, y }. */
+  abilityCast: 'game:ability-cast',
   /** Touch roll button. */
   dodge: 'game:dodge',
   dialogueClosed: 'game:dialogue-closed',
@@ -249,9 +255,24 @@ export interface ToastPayload {
 }
 
 export interface AbilityPayload {
+  /** The table's id (`fingersnap`, `kindle`, …): the HUD keys its slots by it. */
+  ability: string
   status: 'cast' | 'no-mana' | 'cooldown'
   /** Seconds until the ability is ready again (cast only). */
   cooldown?: number
+}
+
+export interface MagicPayload {
+  levelMark: number
+  classMark: string | null
+}
+
+/** A move someone else in the room cast, relayed by the presence hub (world px). */
+export interface AbilityCastPayload {
+  accountId: string
+  ability: string
+  x: number
+  y: number
 }
 
 export interface CinematicPayload {
@@ -399,6 +420,7 @@ export interface EventMap {
   [EV.defeat]: DefeatPayload
   [EV.profileChanged]: { profile: HabiticaProfile | null }
   [EV.ability]: AbilityPayload
+  [EV.magic]: MagicPayload
   [EV.cinematic]: CinematicPayload
   [EV.portraits]: PortraitsPayload
   [EV.artIcons]: Record<string, string>
@@ -424,6 +446,8 @@ export interface EventMap {
   [EV.notePosition]: void
   [EV.action]: void
   [EV.cast]: void
+  [EV.castMove]: void
+  [EV.abilityCast]: AbilityCastPayload
   [EV.dodge]: void
   [EV.dialogueClosed]: DialogueClosedPayload
   [EV.clearUnmoored]: { instant: boolean }

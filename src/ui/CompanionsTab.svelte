@@ -40,6 +40,19 @@
   let message = $state<{ text: string; kind: 'ok' | 'error' } | null>(null)
   let busy = $state(false)
   let stableEl = $state<HTMLElement | null>(null)
+  /** The button that opened the picker (its test id): focus goes back to it when the picker closes. */
+  let returnTo = ''
+
+  function open(p: Picking, from: string): void {
+    returnTo = from
+    picking = p
+  }
+
+  function close(): void {
+    picking = null
+    const from = returnTo
+    void tick().then(() => (document.querySelector(`[data-testid="${from}"]`) as HTMLElement | null)?.focus())
+  }
 
   onMount(() => {
     // Your homestead in this world gates the choices: read it if it hasn't been.
@@ -49,13 +62,13 @@
   })
 
   function chooseFollower(key: string): void {
-    picking = null
+    close()
     link?.companionsChoice(key, yard)
     message = null
   }
 
   function chooseYard(spot: number, key: string): void {
-    picking = null
+    close()
     const next = [...yard]
     if (key) next[spot] = key
     else next.splice(spot, 1)
@@ -66,7 +79,7 @@
   }
 
   async function chooseStall(stall: number, key: string): Promise<void> {
-    picking = null
+    close()
     if (!link || !homes || !home || busy) return
     const before = home
     busy = true
@@ -97,7 +110,7 @@
     selected={view?.followPet ?? ''}
     first={{ label: 'Habitica’s current pet', hint: current ? companionName(current) : 'None chosen on Habitica' }}
     onPick={chooseFollower}
-    onClose={() => (picking = null)}
+    onClose={close}
   />
 {:else if picking?.what === 'yard'}
   {@const spot = picking.spot}
@@ -108,7 +121,7 @@
     selected={yard[spot] ?? ''}
     first={{ label: 'Leave empty' }}
     onPick={(k) => chooseYard(spot, k)}
-    onClose={() => (picking = null)}
+    onClose={close}
   />
 {:else if picking?.what === 'stall'}
   {@const stall = picking.stall}
@@ -120,7 +133,7 @@
     selected={st?.ownerId === me ? (st?.mount ?? '') : ''}
     first={st?.mount && st.ownerId === me ? { label: 'Leave empty' } : null}
     onPick={(k) => void chooseStall(stall, k)}
-    onClose={() => (picking = null)}
+    onClose={close}
   />
 {:else}
   <div class="companions" data-testid="companions-page">
@@ -138,7 +151,7 @@
         <span class="who"><small>No pet walks with you. Choose one here, or on Habitica.</small></span>
       {/if}
       {#if home}
-        <button type="button" onclick={() => (picking = { what: 'follower' })} data-testid="companions-change-follower">Change</button>
+        <button type="button" onclick={() => open({ what: 'follower' }, 'companions-change-follower')} data-testid="companions-change-follower">Change</button>
       {/if}
     </div>
 
@@ -157,7 +170,7 @@
               <button
                 type="button"
                 class="spot"
-                onclick={() => (picking = { what: 'yard', spot })}
+                onclick={() => open({ what: 'yard', spot }, `companions-yard-${spot}`)}
                 aria-label={key ? `${companionName(key)}, at home: change` : 'Choose a pet to live at home'}
                 data-testid={`companions-yard-${spot}`}
               >
@@ -186,7 +199,7 @@
                 <span class="who"><small>empty</small></span>
               {/if}
               {#if mine}
-                <button type="button" disabled={busy} onclick={() => (picking = { what: 'stall', stall: n })} data-testid={`companions-stall-${n}`}>{st?.mount ? 'Change' : 'Choose'}</button>
+                <button type="button" disabled={busy} onclick={() => open({ what: 'stall', stall: n }, `companions-stall-${n}`)} data-testid={`companions-stall-${n}`}>{st?.mount ? 'Change' : 'Choose'}</button>
               {/if}
             </li>
           {/each}

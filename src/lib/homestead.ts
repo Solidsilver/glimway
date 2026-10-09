@@ -310,6 +310,27 @@ export function checkPlacement(
   return null;
 }
 
+/**
+ * The ground a new stall would take (crafts.md 3.1): the 2 × 3 tiles east of
+ * the stable's last bay must be inside the land, clear of pieces and plants,
+ * buildable and lit. Only those tiles: the stable's own ground is not asked
+ * again. Null when a bay fits, or the problem (`out-of-bounds`,
+ * `placement-overlap`, `plant-in-the-way`, `land-blocked`, `unlit`).
+ */
+export function stallGroundProblem(
+  home: { tier: number; items: readonly HomeInstance[]; plants?: readonly { x: number; y: number }[] },
+  stable: HomeInstance,
+  data: HomesteadData = HOMESTEAD_DATA,
+  ground?: PlacementGround
+): PlacementProblem | null {
+  if (stable.x === null || stable.y === null) return 'invalid-placement';
+  const [w, h] = stableFootprint(stable.stalls ?? 1, data);
+  // A bay-sized stand-in piece, checked by the ordinary placement rules.
+  const bay: HomeItem = { id: '__stable-bay', name: 'Stall', category: 'utility', footprint: [2, h], where: ['outdoor'], minTier: 0, embers: 0, materials: {} };
+  const withBay = { ...data, items: [...data.items, bay] };
+  return checkPlacement(home, { id: '__stable-bay', itemDef: bay.id, scene: null, x: null, y: null, rotation: null }, 'outdoor', stable.x + w, stable.y, 0, withBay, ground);
+}
+
 /** What planting needs to know of a home's land (its gate names the served land). */
 export interface PlantLand {
   gate: number;

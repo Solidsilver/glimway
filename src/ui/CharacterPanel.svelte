@@ -1,7 +1,6 @@
 <script lang="ts">
   import { DEMO_CHARACTER, discoveryInfo } from '../content/world'
   import { inventoryCopy } from '../content/inventory'
-  import { getCombatKit } from '../lib/combat'
   import { EMBER_COSTS, ROAD_LANTERNS, XP_PER_EMBER, chestOpened, isLit, withCharm } from '../lib/embers'
   import type { Session } from '../game/session'
   import { ui } from './store.svelte'
@@ -10,6 +9,7 @@
   import { isTouchFirst } from './device'
   import { heroLine } from './hero'
   import CompanionsTab from './CompanionsTab.svelte'
+  import AbilitiesSection from './AbilitiesSection.svelte'
 
   // Keyboard open/close (C / Escape) is owned by App.svelte's global handler.
   // The pack, materials and keepsakes live in the Inventory (I); this panel
@@ -50,7 +50,7 @@
   // Tracks quest/inventory changes: a quest step (session.reachStep) replaces the state object.
   const snapshot = $derived(session.state)
   const profile = $derived(ui.importedProfile)
-  const kit = $derived(withCharm(getCombatKit(profile), snapshot.inventory))
+  const kit = $derived(withCharm(ui.kit, snapshot.inventory))
   const litCount = $derived(ROAD_LANTERNS.filter((id) => isLit(snapshot, id)).length)
   const chestDone = $derived(chestOpened(snapshot))
   const who = $derived(heroLine(profile))
@@ -60,11 +60,6 @@
   const stats = $derived(profile?.stats ?? DEMO_CHARACTER.stats)
   const hpPct = $derived(Math.max(0, Math.min(100, (ui.stats.hp / ui.stats.maxHp) * 100)))
   const manaPct = $derived(Math.max(0, Math.min(100, (ui.stats.mana / ui.stats.maxMana) * 100)))
-
-  /** Whole numbers only: "~8 damage", never "~8.13 dmg". */
-  const n = (v: number) => Math.max(1, Math.round(v))
-  const pct = (v: number) => Math.round(v * 100)
-  const secs = (v: number) => (Math.round(v * 10) / 10).toString()
 
   const STAT_ROWS = [
     { key: 'str', label: 'Strength', hint: 'Melee power' },
@@ -166,28 +161,7 @@
     {/each}
   </div>
 
-  <!-- Lane F replaces this Abilities block (through the chips) with its AbilitiesSection component. -->
-  <h3 class="section-title">Abilities</h3>
-  <div class="abilities">
-    <div class="ability">
-      <div class="ai"><Icon name="sword" size={22} /></div>
-      <div class="ab">
-        <div class="ah"><b>{kit.basicName}</b> <span class="kbd">E</span></div>
-        <p>Hits for about <b>{n(kit.meleeDamage)}</b>. Ready again in {secs(kit.basicAttackCooldown)}s.</p>
-      </div>
-    </div>
-    <div class="ability sig">
-      <div class="ai"><Icon name="sparkle" size={22} /></div>
-      <div class="ab">
-        <div class="ah"><b>{kit.signatureName}</b> <span class="kbd">F</span> <span class="cost"><Icon name="drop" size={10} />{kit.manaCost}</span></div>
-        <p>Hits for about <b>{n(kit.signatureDamage)}</b>{#if kit.healAmount > 0} and mends <b>{n(kit.healAmount)}</b> health{/if}.</p>
-      </div>
-    </div>
-  </div>
-  <div class="chips">
-    <span class="chip"><Icon name="star" size={12} /> {pct(kit.critChance)}% critical hits (2×)</span>
-    <span class="chip"><Icon name="heart" size={12} /> Shrugs off {pct(kit.mitigation)}% of damage</span>
-  </div>
+  <AbilitiesSection {kit} />
 
   <div class="to-inv">
     <span class="ii"><Icon name="bag" size={20} /></span>
@@ -380,80 +354,6 @@
     font-size: 11.5px;
     color: var(--text-faint);
   }
-  .abilities {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-  .ability {
-    display: flex;
-    gap: 10px;
-    padding: 10px;
-    background: rgba(255, 255, 255, 0.4);
-    border: 2px solid var(--paper-line);
-    border-radius: 10px;
-  }
-  .ai {
-    width: 42px;
-    height: 42px;
-    flex: none;
-    display: grid;
-    place-items: center;
-    border: 2px solid var(--wood-dark);
-    border-radius: 10px;
-    background: linear-gradient(180deg, var(--paper-hi), var(--paper-dark));
-    color: var(--wood-dark);
-  }
-  .sig .ai {
-    background: linear-gradient(180deg, #d6e6ff, #8fb3ec);
-    color: #20365c;
-  }
-  .ah {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-family: var(--font-display);
-    font-size: 16px;
-  }
-  .ah b {
-    font-weight: 600;
-  }
-  .ab p {
-    margin: 2px 0 0;
-    font-size: 13.5px;
-    color: var(--text-soft);
-  }
-  .cost {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    padding: 0 5px;
-    font-size: 11px;
-    color: #fff;
-    background: var(--mana);
-    border-radius: 6px;
-  }
-  .chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 8px;
-  }
-  .chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 3px 9px;
-    font-size: 12.5px;
-    font-weight: 700;
-    color: var(--text-soft);
-    background: rgba(255, 255, 255, 0.45);
-    border: 1.5px solid var(--paper-line);
-    border-radius: 999px;
-  }
-  .chip :global(.icon) {
-    color: var(--gold-deep);
-  }
   .items {
     list-style: none;
     margin: 0;
@@ -526,9 +426,6 @@
   @media (max-width: 560px) {
     .stats {
       grid-template-columns: repeat(2, 1fr);
-    }
-    .abilities {
-      grid-template-columns: 1fr;
     }
     .avatar {
       width: 68px;

@@ -218,7 +218,7 @@ test('itemWorldArt resolves placed pieces to their world sprites', () => {
   assert.equal(itemWorldArt('candle-hulls'), 'commons-art:candle-hull-0')
   assert.equal(itemWorldArt('carting-bunting'), 'commons-art:bunting')
   // A crafts-pass piece: the stable's west end (drawn bay by bay on the land).
-  assert.equal(itemWorldArt('stable'), 'crafts-art:stable-west-front-shut')
+  assert.equal(itemWorldArt('stable'), 'cr-art:stable-west-front-shut')
 })
 
 test('every home good resolves to art: runtime deco, world sprite or commons alias', () => {

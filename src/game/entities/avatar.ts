@@ -84,6 +84,7 @@ export function wantSaddle(mount: string): void {
 export const RIDE_WORDS = {
   noStable: 'Your mount needs somewhere to stand at home first. A stable, maybe.',
   inStall: 'Your mount is in its stall at home. Saddle up there.',
+  noMounts: 'No mount to ride yet. Raise one on Habitica, sync, and stall it in your stable.',
   village: 'Orrin would never forgive hoofprints in the square. Lead it through on foot.',
   gate: 'You lead your mount through the gate on foot.',
   indoors: 'Your mount waits outside the door.',
@@ -281,7 +282,8 @@ export class AvatarVisual {
     if (!mountKey) {
       const mine = this.deps.session.link ? homesteadsFor(this.deps.session).mine : null
       const stable = mine?.items.some((i) => i.itemDef === HOMESTEAD_DATA.stable.item && i.scene === 'outdoor')
-      bus.emit(EV.toast, { text: stable ? RIDE_WORDS.inStall : RIDE_WORDS.noStable })
+      const mounts = this.deps.session.importedProfile?.mounts.length ?? 0
+      bus.emit(EV.toast, { text: !stable ? RIDE_WORDS.noStable : mounts === 0 ? RIDE_WORDS.noMounts : RIDE_WORDS.inStall })
       return
     }
     if (this.riding) {
@@ -361,7 +363,7 @@ export class AvatarVisual {
     showContextButton({
       id: 'saddle',
       label: this.riding ? 'Get down' : 'Ride',
-      art: 'saddle',
+      art: 'hud-saddle',
       icon: 'star',
       key: 'M',
       order: 1,
@@ -370,7 +372,7 @@ export class AvatarVisual {
     })
     if (this.riding) hideContextButton('go-home')
     else
-      showContextButton({ id: 'go-home', label: 'Go home', art: 'go-home', icon: 'home', key: 'H', order: 2, ariaLabel: 'Send your mount home', press: () => this.sendHome() })
+      showContextButton({ id: 'go-home', label: 'Go home', art: 'hud-go-home', icon: 'home', key: 'H', order: 2, ariaLabel: 'Send your mount home', press: () => this.sendHome() })
     bus.emit(EV.mount, { key: this.mountOut, riding: this.riding, led: !this.riding })
   }
 
@@ -381,6 +383,7 @@ export class AvatarVisual {
   onProfileChanged(): void {
     this.riding = this.riding && this.deps.world.areaId !== 'village' && !!this.mountOut
     void this.build()
+    this.showButtons()
   }
 
   update(time: number): void {
