@@ -13,6 +13,10 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-09
+
+0.3 (Server-first) shipped only as pre-releases; its changes are part of 0.4.0.
+
 ### For players
 
 - Hazel's sponge rises in its washtub, Finn's hoist works when it's
@@ -253,6 +257,7 @@ The first public release.
   under its own licence; contributions under the DCO.
 - Unit tests, Go tests and Playwright playtests.
 
-[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/Solidsilver/glimway/compare/v0.2.0...v0.4.0
 [0.2.0]: https://github.com/Solidsilver/glimway/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Solidsilver/glimway/releases/tag/v0.1.0
