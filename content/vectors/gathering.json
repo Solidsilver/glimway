@@ -1,0 +1,560 @@
+{
+  "loader": [
+    {
+      "name": "shipped-gathering",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "zero-visit-cap",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "caps",
+            "visit",
+            "chop"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "zero-day-cap",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "caps",
+            "day",
+            "dig"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "missing-caps",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "caps"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "zero-plants-per-home",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "plantsPerHome"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "two-swings",
+      "valid": false,
+      "rule": "map.min_pairs",
+      "edits": [
+        {
+          "path": [
+            "swings"
+          ],
+          "value": {
+            "chop": 3,
+            "break": 3
+          }
+        }
+      ]
+    },
+    {
+      "name": "unknown-swing",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "swings"
+          ],
+          "value": {
+            "chop": 3,
+            "break": 3,
+            "dig": 2,
+            "fly": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "zero-swing",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "swings"
+          ],
+          "value": {
+            "chop": 3,
+            "break": 3,
+            "dig": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "empty-areas",
+      "valid": false,
+      "rule": "map.min_pairs",
+      "edits": [
+        {
+          "path": [
+            "areas"
+          ],
+          "value": {}
+        }
+      ]
+    },
+    {
+      "name": "unknown-area",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "areas"
+          ],
+          "value": {
+            "sky": {
+              "targets": [
+                "tree"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "unknown-area-target",
+      "valid": false,
+      "rule": "names unknown target",
+      "edits": [
+        {
+          "path": [
+            "areas",
+            "woodland"
+          ],
+          "value": {
+            "targets": [
+              "missing"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "duplicate-area-target",
+      "valid": false,
+      "rule": "repeated.unique",
+      "edits": [
+        {
+          "path": [
+            "areas",
+            "woodland"
+          ],
+          "value": {
+            "targets": [
+              "tree",
+              "tree"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "empty-targets",
+      "valid": false,
+      "rule": "map.min_pairs",
+      "edits": [
+        {
+          "path": [
+            "targets"
+          ],
+          "value": {}
+        }
+      ]
+    },
+    {
+      "name": "bad-target-id",
+      "valid": false,
+      "rule": "string.pattern",
+      "edits": [
+        {
+          "path": [
+            "targets"
+          ],
+          "value": {
+            "Tree!": {
+              "action": "chop",
+              "toolAction": "chop",
+              "name": "Tree",
+              "yields": [
+                {
+                  "item": "timber",
+                  "min": 1,
+                  "max": 2
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "unknown-target-action",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "targets",
+            "tree",
+            "action"
+          ],
+          "value": "fly"
+        }
+      ]
+    },
+    {
+      "name": "unknown-tool-action",
+      "valid": false,
+      "rule": "gathering_target.tool_action",
+      "edits": [
+        {
+          "path": [
+            "targets",
+            "tree",
+            "toolAction"
+          ],
+          "value": "fly"
+        }
+      ]
+    },
+    {
+      "name": "empty-target-name",
+      "valid": false,
+      "rule": "string.min_len",
+      "edits": [
+        {
+          "path": [
+            "targets",
+            "tree",
+            "name"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "empty-yields",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "targets",
+            "tree",
+            "yields"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "long-verb",
+      "valid": false,
+      "rule": "string.max_len",
+      "edits": [
+        {
+          "path": [
+            "targets",
+            "tree",
+            "verb"
+          ],
+          "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      ]
+    },
+    {
+      "name": "unknown-target-mark",
+      "valid": false,
+      "rule": "invalid season",
+      "edits": [
+        {
+          "path": [
+            "targets",
+            "tree",
+            "mark"
+          ],
+          "value": "Missing"
+        }
+      ]
+    },
+    {
+      "name": "unknown-target-wick",
+      "valid": false,
+      "rule": "invalid season",
+      "edits": [
+        {
+          "path": [
+            "targets",
+            "tree",
+            "wick"
+          ],
+          "value": "Missing"
+        }
+      ]
+    },
+    {
+      "name": "unknown-yield-item",
+      "valid": false,
+      "rule": "yields unknown item",
+      "edits": [
+        {
+          "path": [
+            "targets",
+            "tree",
+            "yields",
+            0,
+            "item"
+          ],
+          "value": "missing"
+        }
+      ]
+    },
+    {
+      "name": "zero-yield-min",
+      "valid": false,
+      "rule": "gathering_yield.range",
+      "edits": [
+        {
+          "path": [
+            "targets",
+            "tree",
+            "yields",
+            0,
+            "min"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "inverted-yield-range",
+      "valid": false,
+      "rule": "gathering_yield.range",
+      "edits": [
+        {
+          "path": [
+            "targets",
+            "tree",
+            "yields",
+            0,
+            "max"
+          ],
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "oversized-yield-range",
+      "valid": false,
+      "rule": "gathering_yield.range",
+      "edits": [
+        {
+          "path": [
+            "targets",
+            "tree",
+            "yields",
+            0,
+            "max"
+          ],
+          "value": 2147483647
+        }
+      ]
+    },
+    {
+      "name": "negative-chance",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "targets",
+            "tree",
+            "yields",
+            0,
+            "chancePermille"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "chance-over-1000",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "targets",
+            "tree",
+            "yields",
+            0,
+            "chancePermille"
+          ],
+          "value": 1001
+        }
+      ]
+    },
+    {
+      "name": "zero-chance-ok",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "targets",
+            "tree",
+            "yields",
+            0,
+            "chancePermille"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "unknown-yield-mark",
+      "valid": false,
+      "rule": "invalid mark",
+      "edits": [
+        {
+          "path": [
+            "targets",
+            "tree",
+            "yields",
+            0,
+            "mark"
+          ],
+          "value": "Missing"
+        }
+      ]
+    },
+    {
+      "name": "empty-seeds",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "seeds"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "duplicate-seed",
+      "valid": false,
+      "rule": "repeated.unique",
+      "edits": [
+        {
+          "path": [
+            "seeds"
+          ],
+          "value": [
+            "hazel-whip",
+            "hazel-whip"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "unknown-seed",
+      "valid": false,
+      "rule": "unknown or not a seed",
+      "edits": [
+        {
+          "path": [
+            "seeds",
+            0
+          ],
+          "value": "missing"
+        }
+      ]
+    },
+    {
+      "name": "wrong-kind-seed",
+      "valid": false,
+      "rule": "unknown or not a seed",
+      "edits": [
+        {
+          "path": [
+            "seeds",
+            0
+          ],
+          "value": "timber"
+        }
+      ]
+    },
+    {
+      "name": "null-field",
+      "valid": false,
+      "rule": "null content field",
+      "edits": [
+        {
+          "path": [
+            "softCapLine"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "unknown-key",
+      "valid": false,
+      "rule": "unknown key",
+      "edits": [
+        {
+          "path": [
+            "cap"
+          ],
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "proto-name-key",
+      "valid": false,
+      "rule": "is the proto name",
+      "edits": [
+        {
+          "path": [
+            "plants_per_home"
+          ],
+          "value": 40
+        }
+      ]
+    }
+  ]
+}

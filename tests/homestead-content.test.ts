@@ -13,7 +13,7 @@ test('shared homes preserve writing identities, categories and footprints', () =
     assert.ok(v);
     assert.deepEqual([v.name, v.category, v.footprint], [expected.name, expected.category, expected.footprint]);
     if (group === DECORATIONS_EMBER) assert.ok(v.embers >= 2 && v.embers <= 6);
-    else if (v.id === HOMESTEAD_DATA.lanternPosts.item) { assert.equal(v.embers, 0); assert.deepEqual(v.materials, HOMESTEAD_DATA.lanternPosts.costs[0]); }
+    else if (v.id === HOMESTEAD_DATA.lanternPosts.item) { assert.equal(v.embers, 0); assert.deepEqual(v.materials, HOMESTEAD_DATA.lanternPosts.costs[0]!.materials); }
     else { assert.equal(v.embers, 0); assert.ok(Object.keys(v.materials).length <= 2); for (const qty of Object.values(v.materials)) assert.ok(qty >= 4 && qty <= 10); }
   }
   assert.equal(HOMESTEAD_DATA.items.length, 31);

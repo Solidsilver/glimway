@@ -1,0 +1,1021 @@
+{
+  "loader": [
+    {
+      "name": "shipped-homestead",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "four-tiers",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "tiers"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "tier-out-of-order",
+      "valid": false,
+      "rule": "tier 3",
+      "edits": [
+        {
+          "path": [
+            "tiers",
+            3,
+            "tier"
+          ],
+          "value": 9
+        }
+      ]
+    },
+    {
+      "name": "tier-renamed",
+      "valid": false,
+      "rule": "string.min_len",
+      "edits": [
+        {
+          "path": [
+            "tiers",
+            0,
+            "name"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "tier-id",
+      "valid": false,
+      "rule": "tier 1",
+      "edits": [
+        {
+          "path": [
+            "tiers",
+            1,
+            "id"
+          ],
+          "value": "cottage"
+        }
+      ]
+    },
+    {
+      "name": "free-cottage",
+      "valid": false,
+      "rule": "tier 1",
+      "edits": [
+        {
+          "path": [
+            "tiers",
+            1,
+            "embers"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "priced-camp",
+      "valid": false,
+      "rule": "tier 0",
+      "edits": [
+        {
+          "path": [
+            "tiers",
+            0,
+            "embers"
+          ],
+          "value": 5
+        }
+      ]
+    },
+    {
+      "name": "purchasable-garden",
+      "valid": false,
+      "rule": "tier 3",
+      "edits": [
+        {
+          "path": [
+            "tiers",
+            3,
+            "purchasable"
+          ],
+          "value": true
+        }
+      ]
+    },
+    {
+      "name": "workshop-without-bill",
+      "valid": false,
+      "rule": "tier 2",
+      "edits": [
+        {
+          "path": [
+            "tiers",
+            2,
+            "materials"
+          ],
+          "value": {}
+        }
+      ]
+    },
+    {
+      "name": "bill-on-camp",
+      "valid": false,
+      "rule": "tier 0",
+      "edits": [
+        {
+          "path": [
+            "tiers",
+            0,
+            "materials"
+          ],
+          "value": {
+            "timber": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "unknown-tier-material",
+      "valid": false,
+      "rule": "tier 2",
+      "edits": [
+        {
+          "path": [
+            "tiers",
+            2,
+            "materials"
+          ],
+          "value": {
+            "gold": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "wrong-indoor-grid",
+      "valid": false,
+      "rule": "homestead.indoor",
+      "edits": [
+        {
+          "path": [
+            "indoor",
+            "width"
+          ],
+          "value": 11
+        }
+      ]
+    },
+    {
+      "name": "missing-indoor",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "indoor"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "wrong-generator",
+      "valid": false,
+      "rule": "int32.const",
+      "edits": [
+        {
+          "path": [
+            "land",
+            "generator"
+          ],
+          "value": 2
+        }
+      ]
+    },
+    {
+      "name": "small-land",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "land",
+            "width"
+          ],
+          "value": 10
+        }
+      ]
+    },
+    {
+      "name": "short-land",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "land",
+            "height"
+          ],
+          "value": 15
+        }
+      ]
+    },
+    {
+      "name": "huge-land",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "land",
+            "width"
+          ],
+          "value": 121
+        }
+      ]
+    },
+    {
+      "name": "site-off-the-land",
+      "valid": false,
+      "rule": "home_land.site_inside",
+      "edits": [
+        {
+          "path": [
+            "land",
+            "site",
+            "x"
+          ],
+          "value": 39
+        }
+      ]
+    },
+    {
+      "name": "gate-off-the-land",
+      "valid": false,
+      "rule": "home_land.gate_inside",
+      "edits": [
+        {
+          "path": [
+            "land",
+            "gate",
+            "x"
+          ],
+          "value": 39
+        }
+      ]
+    },
+    {
+      "name": "light-off-the-land",
+      "valid": false,
+      "rule": "home_land.light_inside",
+      "edits": [
+        {
+          "path": [
+            "land",
+            "startLight",
+            "x"
+          ],
+          "value": 99
+        }
+      ]
+    },
+    {
+      "name": "dark-home",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "land",
+            "startLight",
+            "radius"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "negative-trees",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "land",
+            "trees"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "permille-over",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "land",
+            "streamPermille"
+          ],
+          "value": 1001
+        }
+      ]
+    },
+    {
+      "name": "reserved-off-the-land",
+      "valid": false,
+      "rule": "reserved",
+      "edits": [
+        {
+          "path": [
+            "outdoorReserved",
+            0,
+            "x"
+          ],
+          "value": 39
+        }
+      ]
+    },
+    {
+      "name": "reserved-off-the-room",
+      "valid": false,
+      "rule": "reserved",
+      "edits": [
+        {
+          "path": [
+            "indoorReserved",
+            0,
+            "x"
+          ],
+          "value": 11
+        }
+      ]
+    },
+    {
+      "name": "negative-reserved",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "outdoorReserved",
+            1,
+            "y"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "fences-together",
+      "valid": false,
+      "rule": "commons.fence_order",
+      "edits": [
+        {
+          "path": [
+            "commons",
+            "fenceX"
+          ],
+          "value": [
+            28,
+            28
+          ]
+        }
+      ]
+    },
+    {
+      "name": "one-fence",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "commons",
+            "fenceX"
+          ],
+          "value": [
+            19
+          ]
+        }
+      ]
+    },
+    {
+      "name": "crowded-gate-rows",
+      "valid": false,
+      "rule": "gate rows",
+      "edits": [
+        {
+          "path": [
+            "commons",
+            "gateRows"
+          ],
+          "value": [
+            9,
+            10
+          ]
+        }
+      ]
+    },
+    {
+      "name": "no-gate-rows",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "commons",
+            "gateRows"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "short-row-pitch",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "commons",
+            "rowPitch"
+          ],
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "no-spare-gates",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "commons",
+            "spareGates"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "dim-silas-table",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "commons",
+            "silasTable",
+            "radius"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "no-posts",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "lanternPosts",
+            "costs"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "post-radius-zero",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "lanternPosts",
+            "radius"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "post-name-max",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "lanternPosts",
+            "nameMax"
+          ],
+          "value": 81
+        }
+      ]
+    },
+    {
+      "name": "post-bill-empty",
+      "valid": false,
+      "rule": "map.min_pairs",
+      "edits": [
+        {
+          "path": [
+            "lanternPosts",
+            "costs",
+            0,
+            "materials"
+          ],
+          "value": {}
+        }
+      ]
+    },
+    {
+      "name": "post-bill-wild",
+      "valid": false,
+      "rule": "post bills",
+      "edits": [
+        {
+          "path": [
+            "lanternPosts",
+            "costs",
+            0,
+            "materials"
+          ],
+          "value": {
+            "gold": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "growth-wild",
+      "valid": false,
+      "rule": "post bills",
+      "edits": [
+        {
+          "path": [
+            "lanternPosts",
+            "growth"
+          ],
+          "value": {
+            "gold": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "negative-growth",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "lanternPosts",
+            "growth"
+          ],
+          "value": {
+            "timber": -1
+          }
+        }
+      ]
+    },
+    {
+      "name": "free-deed",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "deeds",
+            "embers"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "free-clearing",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "clearTileEmbers"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "deed-lost-first",
+      "valid": false,
+      "rule": "homestead.deed_lost_after_desolate",
+      "edits": [
+        {
+          "path": [
+            "desolation",
+            "deedLostAfterDays"
+          ],
+          "value": 3
+        }
+      ]
+    },
+    {
+      "name": "desolate-at-zero",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "desolation",
+            "desolateAfterDays"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "short-window",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "jointDeed",
+            "confirmWindowSeconds"
+          ],
+          "value": 4
+        }
+      ]
+    },
+    {
+      "name": "invite-less-than-an-hour",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "jointDeed",
+            "inviteHours"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "no-chest",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "personalChest",
+            "maxUnits"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "no-items",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "items"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "duplicate-item",
+      "valid": false,
+      "rule": "duplicate id",
+      "edits": [
+        {
+          "path": [
+            "items",
+            1,
+            "id"
+          ],
+          "value": "wooden-stool"
+        }
+      ]
+    },
+    {
+      "name": "unknown-good",
+      "valid": false,
+      "rule": "not in the furnishings catalogue",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "id"
+          ],
+          "value": "no-such-piece"
+        }
+      ]
+    },
+    {
+      "name": "renamed-good",
+      "valid": false,
+      "rule": "names itself",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "name"
+          ],
+          "value": "Stool"
+        }
+      ]
+    },
+    {
+      "name": "footprint-disagrees",
+      "valid": false,
+      "rule": "footprint",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "footprint"
+          ],
+          "value": [
+            9,
+            9
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bad-footprint-shape",
+      "valid": false,
+      "rule": "footprint",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "footprint"
+          ],
+          "value": [
+            1,
+            1,
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "name": "unknown-category",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "category"
+          ],
+          "value": "weapon"
+        }
+      ]
+    },
+    {
+      "name": "tier-too-deep",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "minTier"
+          ],
+          "value": 5
+        }
+      ]
+    },
+    {
+      "name": "nowhere",
+      "valid": false,
+      "rule": "home_item.where",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "where"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "three-scenes",
+      "valid": false,
+      "rule": "home_item.where",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "where"
+          ],
+          "value": [
+            "indoor",
+            "outdoor",
+            "gate"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "attic",
+      "valid": false,
+      "rule": "home_item.where",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "where"
+          ],
+          "value": [
+            "attic"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "same-scene-twice",
+      "valid": false,
+      "rule": "home_item.where",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "where"
+          ],
+          "value": [
+            "indoor",
+            "indoor"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "unpriced",
+      "valid": false,
+      "rule": "home_item.price",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "embers"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "double-priced",
+      "valid": false,
+      "rule": "home_item.price",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "materials"
+          ],
+          "value": {
+            "timber": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "free-material",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "items",
+            8,
+            "materials",
+            "stone"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "unknown-item-material",
+      "valid": false,
+      "rule": "material",
+      "edits": [
+        {
+          "path": [
+            "items",
+            8,
+            "materials"
+          ],
+          "value": {
+            "gold": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "four-materials",
+      "valid": false,
+      "rule": "map.max_pairs",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "materials"
+          ],
+          "value": {
+            "timber": 2,
+            "stone": 2,
+            "fiber": 2,
+            "amber": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "missing-post-item",
+      "valid": false,
+      "rule": "post item",
+      "edits": [
+        {
+          "path": [
+            "lanternPosts",
+            "item"
+          ],
+          "value": "nope"
+        }
+      ]
+    },
+    {
+      "name": "null-field",
+      "valid": false,
+      "rule": "null content field",
+      "edits": [
+        {
+          "path": [
+            "clearTileEmbers"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "unknown-key",
+      "valid": false,
+      "rule": "unknown key",
+      "edits": [
+        {
+          "path": [
+            "indoorGrid"
+          ],
+          "value": {}
+        }
+      ]
+    },
+    {
+      "name": "proto-name-key",
+      "valid": false,
+      "rule": "is the proto name",
+      "edits": [
+        {
+          "path": [
+            "clear_tile_embers"
+          ],
+          "value": 1
+        }
+      ]
+    }
+  ]
+}

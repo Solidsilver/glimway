@@ -6,58 +6,37 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+
+	contentv1 "glimway/gen/glimway/content/v1"
 )
 
 //go:embed *.json
 var FS embed.FS
 
-type Economy struct {
-	WildsLimits struct {
-		ClaimsPerMinute       int `json:"claimsPerMinute"`
-		LanternsCreatedPerDay int `json:"lanternsCreatedPerDay"`
-		LanternRelightsPerDay int `json:"lanternRelightsPerDay"`
-		LanternReward         struct {
-			Material string `json:"material"`
-			Qty      int    `json:"qty"`
-		} `json:"lanternReward"`
-	} `json:"wildsLimits"`
-	XPPerEmber    int `json:"xpPerEmber"`
-	WelcomeEmbers int `json:"welcomeEmbers"`
-	Costs         struct {
-		HomeRest    int `json:"homeRest"`
-		Rest        int `json:"rest"`
-		RoadLantern int `json:"roadLantern"`
-		Chest       int `json:"chest"`
-	} `json:"costs"`
-	RoadLanterns          []string `json:"roadLanterns"`
-	ChestID               string   `json:"chestId"`
-	CharmItem             string   `json:"charmItem"`
-	OutstandingInvites    int      `json:"outstandingInvites"`
-	SyncCreditDailyGrowth int      `json:"syncCreditDailyGrowth"`
-	SyncCreditMax         int      `json:"syncCreditMax"`
-	PendingCreditDays     int      `json:"pendingCreditDays"`
-	LifetimeInvites       int      `json:"lifetimeInvites"`
-	SyncCreditCap         int      `json:"syncCreditCap"`
-	MigrationGiftCap      int      `json:"migrationGiftCap"`
-	CheckpointToleranceXP float64  `json:"checkpointToleranceXp"`
+// The shared economy contract (content/economy.json): ember pricing, sync
+// credit, invites and the Wilds' rate limits. The schema and its rules live
+// in proto/glimway/content/v1/economy.proto; there are no rules left in code.
+type Economy = contentv1.Economy
+
+// DecodeEconomy reads economy JSON into the generated types, refusing nulls
+// and unknown keys, then runs the schema's rules (protovalidate).
+func DecodeEconomy(raw []byte) (*Economy, error) {
+	doc := &Economy{}
+	if err := decodeContentProto(raw, "economy", doc); err != nil {
+		return doc, err
+	}
+	return doc, contentValidate("economy", nil, doc)
 }
 
-func LoadEconomy() (Economy, error) {
-	var e Economy
-	b, err := FS.ReadFile("economy.json")
+func LoadEconomy() (*Economy, error) {
+	raw, err := FS.ReadFile("economy.json")
 	if err != nil {
-		return e, err
+		return nil, err
 	}
-	if err = json.Unmarshal(b, &e); err != nil {
-		return e, err
-	}
-	if e.WildsLimits.LanternsCreatedPerDay <= 0 || e.WildsLimits.ClaimsPerMinute <= 0 || e.WildsLimits.LanternRelightsPerDay <= 0 || e.WildsLimits.LanternReward.Material != "amber" || e.WildsLimits.LanternReward.Qty <= 0 || e.Costs.HomeRest <= 0 || e.Costs.HomeRest >= e.Costs.Rest || e.XPPerEmber <= 0 || e.WelcomeEmbers < 0 || e.Costs.Rest <= 0 || e.Costs.RoadLantern <= 0 || e.Costs.Chest <= 0 || e.SyncCreditCap <= 0 || e.SyncCreditDailyGrowth < 0 || e.SyncCreditMax < e.SyncCreditCap || e.PendingCreditDays <= 0 || e.LifetimeInvites < e.OutstandingInvites || e.OutstandingInvites <= 0 || e.MigrationGiftCap < 0 || e.CheckpointToleranceXP < 0 || len(e.RoadLanterns) != 3 || e.ChestID == "" || e.CharmItem == "" {
-		return e, fmt.Errorf("invalid economy")
-	}
-	return e, nil
+	return DecodeEconomy(raw)
 }
 
-var Rules = func() Economy {
+var Rules = func() *Economy {
 	e, err := LoadEconomy()
 	if err != nil {
 		panic(err)

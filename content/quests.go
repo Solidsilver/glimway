@@ -133,7 +133,7 @@ func ValidateQuests(quests []Quest) error {
 	}
 	defs := map[string]bool{}
 	for _, d := range items.Items {
-		defs[d.ID] = true
+		defs[d.GetId()] = true
 	}
 	papers, err := LoadPapers()
 	if err != nil {

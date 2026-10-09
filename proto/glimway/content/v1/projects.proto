@@ -1,0 +1,30 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// The village projects (content/projects.json): the shared builds players
+// fund together, each completed on the world flag it names.
+message Projects {
+  repeated Project projects = 1 [(buf.validate.field).repeated.min_items = 1];
+}
+
+message Project {
+  option (buf.validate.message).cel = {
+    id: "project.world_flag"
+    message: "worldFlag is project:<id>:complete"
+    expression: "this.world_flag == \"project:\" + this.id + \":complete\""
+  };
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string name = 2 [(buf.validate.field).string.min_len = 1];
+  // The material bill (Wilds materials, 1..1000000 each): checked against
+  // the wilds catalogue in code — the bill spans content families.
+  map<string, int32> materials = 3 [(buf.validate.field).map = {
+    min_pairs: 1
+    values: {int32: {gte: 1, lte: 1000000}}
+  }];
+  // The project papers completing it needs (each turned in once): checked
+  // against papers.json in code.
+  repeated string papers = 4 [(buf.validate.field).repeated.unique = true];
+  string world_flag = 5;
+}

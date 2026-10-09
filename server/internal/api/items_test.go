@@ -232,8 +232,8 @@ func TestItemsHeirloomBluntsAndIsMendedAtTheBenchOrByAMender(t *testing.T) {
 	x.opRefreshing(c, &s, "repair", map[string]any{"instance": brack, "at": "nobody"}, 400)
 	m, _ := content.MenderFor("silas")
 	doc := s.State
-	doc.Area = m.Area
-	doc.Position = rules.Position{X: float64(m.TX*16 + 8), Y: float64(m.TY*16 + 20)}
+	doc.Area = m.GetArea()
+	doc.Position = rules.Position{X: float64(int(m.GetTx())*16 + 8), Y: float64(int(m.GetTy())*16 + 20)}
 	mended := x.opRefreshing(c, &s, "repair", map[string]any{"instance": brack, "at": "silas", "progress": doc}, 200)
 	if axe := findInstance(mended.Result.Items, brack); axe == nil || axe.Condition != 240 || axe.State != "whole" || stackQty(mended.Result.Items, "timber") != 2 || stackQty(mended.Result.Items, "wooden-peg") != 1 {
 		t.Fatal("mended", axe)
@@ -656,28 +656,28 @@ func TestItemsPickupsOncePerPlayerStandingThere(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	p, _ := content.PickupFor("dropped-bucket")
-	if x.opRefreshing(c, &s, "pickup", map[string]any{"pickup": p.ID}, 409).Error.Code != "too-far-away" {
+	if x.opRefreshing(c, &s, "pickup", map[string]any{"pickup": p.GetId()}, 409).Error.Code != "too-far-away" {
 		t.Fatal("picked up from afar")
 	}
 	doc := s.State
 	doc.Area = p.Area
-	doc.Position = rules.Position{X: float64(p.TX*16 + 8), Y: float64(p.TY*16 + 12)}
-	v := x.opRefreshing(c, &s, "pickup", map[string]any{"pickup": p.ID, "progress": doc}, 200)
-	if v.Result.Pickup != p.ID || len(v.Result.Created) != 1 || len(v.Result.Items.PickedUp) != 1 {
+	doc.Position = rules.Position{X: float64(int(p.GetTx())*16 + 8), Y: float64(int(p.GetTy())*16 + 12)}
+	v := x.opRefreshing(c, &s, "pickup", map[string]any{"pickup": p.GetId(), "progress": doc}, 200)
+	if v.Result.Pickup != p.GetId() || len(v.Result.Created) != 1 || len(v.Result.Items.PickedUp) != 1 {
 		t.Fatal("picked up")
 	}
-	if b := findInstance(v.Result.Items, v.Result.Created[0]); b == nil || b.ItemDef != "stave-bucket" || b.Condition != p.UsesLeft*3 || b.Maker != nil || b.State != "worn" {
+	if b := findInstance(v.Result.Items, v.Result.Created[0]); b == nil || b.ItemDef != "stave-bucket" || b.Condition != int(p.GetUsesLeft())*3 || b.Maker != nil || b.State != "worn" {
 		t.Fatal("found bucket", b)
 	}
-	if x.opRefreshing(c, &s, "pickup", map[string]any{"pickup": p.ID}, 409).Error.Code != "already-picked-up" {
+	if x.opRefreshing(c, &s, "pickup", map[string]any{"pickup": p.GetId()}, 409).Error.Code != "already-picked-up" {
 		t.Fatal("twice")
 	}
 	x.opRefreshing(c, &s, "pickup", map[string]any{"pickup": "nothing-here"}, 404)
 	cakes, _ := content.PickupFor("oatcake-parcel")
 	doc.Area = cakes.Area
-	doc.Position = rules.Position{X: float64(cakes.TX * 16), Y: float64(cakes.TY * 16)}
-	v = x.opRefreshing(c, &s, "pickup", map[string]any{"pickup": cakes.ID, "progress": doc}, 200)
-	if stackQty(v.Result.Items, "oatcakes") != cakes.Qty {
+	doc.Position = rules.Position{X: float64(int(cakes.GetTx()) * 16), Y: float64(int(cakes.GetTy()) * 16)}
+	v = x.opRefreshing(c, &s, "pickup", map[string]any{"pickup": cakes.GetId(), "progress": doc}, 200)
+	if stackQty(v.Result.Items, "oatcakes") != int(cakes.GetQty()) {
 		t.Fatal("oatcakes")
 	}
 	x.conserved(x.account("alice"))
@@ -693,7 +693,7 @@ func TestItemsTravelByParcelAndChest(t *testing.T) {
 	x.opRefreshing(c, &s, "fit", map[string]any{"tool": axe, "instance": nail}, 200)
 	x.stack(x.account("alice"), "lamp-wick", x.account("alice"), 2)
 	x.refresh(c, &s)
-	asset := content.Asset{Kind: "instance", ID: "bench-axe", Qty: 1, Instance: axe}
+	asset := content.Asset{Kind: "instance", Id: "bench-axe", Qty: 1, Instance: axe}
 	sent := x.p5("POST", "/api/mail", body(s, "post-axe", map[string]any{"toId": x.account("bob"), "asset": asset}), c, 200)
 	s.Snapshot = sent.Snapshot
 	if count(t, x.db, "SELECT count(*) FROM item_instances WHERE id=? AND location='mail' AND owner='"+x.account("alice")+"'", axe) != 1 {
@@ -717,7 +717,7 @@ func TestItemsTravelByParcelAndChest(t *testing.T) {
 	x.conserved(x.account("bob"))
 	// Marked stacks keep their maker through the post and back.
 	maker := x.account("alice")
-	wicks := content.Asset{Kind: "item", ID: "lamp-wick", Qty: 2, Maker: &maker}
+	wicks := content.Asset{Kind: "item", Id: "lamp-wick", Qty: 2, Maker: &maker}
 	x.refresh(c, &s)
 	sent = x.p5("POST", "/api/mail", body(s, "post-wicks", map[string]any{"toId": x.account("bob"), "asset": wicks}), c, 200)
 	s.Snapshot = sent.Snapshot
@@ -728,18 +728,18 @@ func TestItemsTravelByParcelAndChest(t *testing.T) {
 	// A tool in the personal chest and back.
 	pick := x.instance(x.account("alice"), "bench-pick", -1, "")
 	x.refresh(c, &s)
-	dep := x.p5("POST", "/api/storage", body(s, "chest-pick", map[string]any{"direction": "deposit", "chest": "personal", "asset": content.Asset{Kind: "instance", ID: "bench-pick", Qty: 1, Instance: pick}}), c, 200)
+	dep := x.p5("POST", "/api/storage", body(s, "chest-pick", map[string]any{"direction": "deposit", "chest": "personal", "asset": content.Asset{Kind: "instance", Id: "bench-pick", Qty: 1, Instance: pick}}), c, 200)
 	s.Snapshot = dep.Snapshot
 	if len(dep.Result.Personal.Instances) != 1 || len(dep.Result.Inventory.Instances) != 0 {
 		t.Fatal("pick in the chest")
 	}
-	x.p5("POST", "/api/storage", body(s, "chest-pick-2", map[string]any{"direction": "deposit", "chest": "personal", "asset": content.Asset{Kind: "instance", ID: "bench-pick", Qty: 1, Instance: pick}}), c, 409)
-	back := x.p5("POST", "/api/storage", body(s, "chest-pick-back", map[string]any{"direction": "withdraw", "chest": "personal", "asset": content.Asset{Kind: "instance", ID: "bench-pick", Qty: 1, Instance: pick}}), c, 200)
+	x.p5("POST", "/api/storage", body(s, "chest-pick-2", map[string]any{"direction": "deposit", "chest": "personal", "asset": content.Asset{Kind: "instance", Id: "bench-pick", Qty: 1, Instance: pick}}), c, 409)
+	back := x.p5("POST", "/api/storage", body(s, "chest-pick-back", map[string]any{"direction": "withdraw", "chest": "personal", "asset": content.Asset{Kind: "instance", Id: "bench-pick", Qty: 1, Instance: pick}}), c, 200)
 	if len(back.Result.Inventory.Instances) != 1 {
 		t.Fatal("pick back")
 	}
 	s.Snapshot = back.Snapshot
-	x.p5("POST", "/api/storage", body(s, "bad-asset", map[string]any{"direction": "deposit", "chest": "personal", "asset": content.Asset{Kind: "item", ID: "bench-pick", Qty: 1}}), c, 400)
+	x.p5("POST", "/api/storage", body(s, "bad-asset", map[string]any{"direction": "deposit", "chest": "personal", "asset": content.Asset{Kind: "item", Id: "bench-pick", Qty: 1}}), c, 400)
 	for _, id := range []string{"alice", "bob"} {
 		x.conserved(x.account(id))
 	}

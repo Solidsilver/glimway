@@ -22,40 +22,40 @@ func (a *Server) marketBuy(ctx context.Context, tx *sql.Tx, s *store.Snapshot, r
 		return fail(400, "invalid-seller")
 	}
 	var good *content.ItemGood
-	for i := range seller.Goods {
-		if seller.Goods[i].Item == req.Good {
-			good = &seller.Goods[i]
+	for _, g := range seller.GetGoods() {
+		if g.GetItem() == req.Good {
+			good = g
 			break
 		}
 	}
 	if good == nil {
 		return fail(400, "invalid-good")
 	}
-	if seller.With != "" && !nearResident(s, seller.With, now, seller.RadiusTiles) || seller.With == "" && !nearTile(s, seller.Area, seller.TX, seller.TY, seller.RadiusTiles) {
+	if seller.GetWith() != "" && !nearResident(s, seller.GetWith(), now, int(seller.GetRadiusTiles())) || seller.GetWith() == "" && !nearTile(s, seller.GetArea(), int(seller.GetTx()), int(seller.GetTy()), int(seller.GetRadiusTiles())) {
 		return fail(409, "too-far-away")
 	}
 	day := content.CalendarAt(content.CalendarRules, now)
-	if seller.Festival != "" && (day.Festival == nil || *day.Festival != seller.Festival) {
+	if seller.GetFestival() != "" && (day.Festival == nil || *day.Festival != seller.GetFestival()) {
 		return fail(409, "not-in-season")
 	}
-	ref := seller.ID + ":" + good.Item
-	if good.Cap > 0 {
+	ref := seller.GetId() + ":" + good.GetItem()
+	if good.GetCap() > 0 {
 		dayStart := (now / 86400) * 86400
 		var n int
-		err := tx.QueryRowContext(ctx, "SELECT count(*) FROM ledger WHERE account_id=? AND currency=? AND reason='market-buy' AND ref=? AND created_at>=?", s.AccountID, content.StackCurrency(good.Item), ref, dayStart).Scan(&n)
+		err := tx.QueryRowContext(ctx, "SELECT count(*) FROM ledger WHERE account_id=? AND currency=? AND reason='market-buy' AND ref=? AND created_at>=?", s.AccountID, content.StackCurrency(good.GetItem()), ref, dayStart).Scan(&n)
 		if err != nil {
 			return err
 		}
-		if n >= good.Cap {
+		if n >= int(good.GetCap()) {
 			return fail(409, "sold-out")
 		}
 	}
-	if err := debitEmbers(ctx, tx, s, good.Embers, "market-buy", ref, now); err != nil {
+	if err := debitEmbers(ctx, tx, s, int(good.GetEmbers()), "market-buy", ref, now); err != nil {
 		return err
 	}
-	if err := packPut(ctx, tx, s.AccountID, good.Item, []makerQty{{Maker: "", Qty: good.Qty}}, "market-buy", ref, now); err != nil {
+	if err := packPut(ctx, tx, s.AccountID, good.Item, []makerQty{{Maker: "", Qty: int(good.GetQty())}}, "market-buy", ref, now); err != nil {
 		return err
 	}
-	out.Bought = &contract.Bought{Seller: seller.ID, ItemDef: good.Item, Qty: int32(good.Qty), Embers: int32(good.Embers)}
+	out.Bought = &contract.Bought{Seller: seller.GetId(), ItemDef: good.Item, Qty: int32(int(good.GetQty())), Embers: int32(int(good.GetEmbers()))}
 	return refreshItems(ctx, tx, s)
 }

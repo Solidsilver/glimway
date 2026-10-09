@@ -89,8 +89,8 @@ func (a *Server) hearthCraft(w http.ResponseWriter, r *http.Request) error {
 		}
 		// A found recipe is only known once its page is held (the doc's
 		// "Recipe source" column; starting recipes need no page).
-		if recipe.Page != "" {
-			held, err := stackTotal(ctx, tx, packOf(s.AccountID), recipe.Page)
+		if recipe.GetPage() != "" {
+			held, err := stackTotal(ctx, tx, packOf(s.AccountID), recipe.GetPage())
 			if err != nil {
 				return nil, err
 			}
@@ -106,20 +106,19 @@ func (a *Server) hearthCraft(w http.ResponseWriter, r *http.Request) error {
 		if err := dryFlowers(ctx, tx, s, now); err != nil {
 			return nil, err
 		}
-		if err := checkMaterialsAny(ctx, tx, s.AccountID, scaled(recipe.Materials, qty), recipe.Swaps); err != nil {
+		if err := checkMaterialsAny(ctx, tx, s.AccountID, scaled32(recipe.GetMaterials(), int32(qty)), recipe.GetSwaps()); err != nil {
 			return nil, err
 		}
-		if err := debitMaterialsAny(ctx, tx, s, recipe.Materials, recipe.Swaps, qty, "hearth", recipe.ID, now); err != nil {
+		if err := debitMaterialsAny(ctx, tx, s, recipe.GetMaterials(), recipe.GetSwaps(), qty, "hearth", recipe.GetId(), now); err != nil {
 			return nil, err
 		}
-		output := recipe.Output
-		output.Qty *= qty
-		def, ok := content.ItemFor(output.ID)
+		output := outputOf(recipe, qty)
+		def, ok := content.ItemFor(output.GetId())
 		maker := ""
-		if ok && def.Marked {
+		if ok && def.GetMarked() {
 			maker = s.AccountID
 		}
-		if err := packPut(ctx, tx, s.AccountID, output.ID, []makerQty{{Maker: maker, Qty: output.Qty}}, "hearth", recipe.ID, now); err != nil {
+		if err := packPut(ctx, tx, s.AccountID, output.GetId(), []makerQty{{Maker: maker, Qty: int(output.GetQty())}}, "hearth", recipe.GetId(), now); err != nil {
 			return nil, err
 		}
 		if err := refreshItems(ctx, tx, s); err != nil {
@@ -129,7 +128,7 @@ func (a *Server) hearthCraft(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		out := &contract.HearthCraftResult{RecipeId: recipe.ID, Output: assetProto(output)}
+		out := &contract.HearthCraftResult{RecipeId: recipe.GetId(), Output: assetProto(output)}
 		fillHearthWorkshop(out, v)
 		return out, nil
 	})
@@ -164,8 +163,8 @@ func (a *Server) deskCopy(w http.ResponseWriter, r *http.Request) error {
 		if held <= 0 {
 			return nil, fail(409, "page-not-held")
 		}
-		cost := map[string]int{"fiber": 1}
-		if err := checkMaterials(ctx, tx, s.AccountID, scaled(cost, qty)); err != nil {
+		cost := map[string]int32{"fiber": 1}
+		if err := checkMaterials(ctx, tx, s.AccountID, scaled32(cost, int32(qty))); err != nil {
 			return nil, err
 		}
 		if err := debitMaterials(ctx, tx, s, cost, qty, "desk", req.PageId, now); err != nil {
@@ -279,10 +278,10 @@ func (a *Server) woodpileMutation(w http.ResponseWriter, r *http.Request) error 
 			if req.Qty < 1 || req.Qty > 1000 {
 				return nil, fail(400, "invalid-quantity")
 			}
-			if err := checkMaterials(ctx, tx, s.AccountID, map[string]int{"timber": int(req.Qty)}); err != nil {
+			if err := checkMaterials(ctx, tx, s.AccountID, map[string]int32{"timber": int32(req.Qty)}); err != nil {
 				return nil, err
 			}
-			if err := debitMaterials(ctx, tx, s, map[string]int{"timber": 1}, int(req.Qty), "woodpile:stack", homeID, now); err != nil {
+			if err := debitMaterials(ctx, tx, s, map[string]int32{"timber": 1}, int(req.Qty), "woodpile:stack", homeID, now); err != nil {
 				return nil, err
 			}
 			id, err := store.Random()

@@ -280,7 +280,7 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 				}
 			}
 			takeQty := 1
-			takenAsset := content.Asset{Kind: slotKind, ID: itemDef, Qty: takeQty}
+			takenAsset := &content.Asset{Kind: slotKind, Id: itemDef, Qty: int32(takeQty)}
 			got := moved{Makers: []makerQty{}, IDs: []string{}}
 			if instanceID.Valid {
 				got.IDs = []string{instanceID.String}

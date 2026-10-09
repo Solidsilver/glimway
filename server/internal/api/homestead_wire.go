@@ -28,8 +28,8 @@ func protoResult(message proto.Message) (json.RawMessage, error) {
 	return json.RawMessage(raw), nil
 }
 
-func gridProto(g content.HomeGrid) *contract.HomeGrid {
-	return &contract.HomeGrid{Width: int32(g.Width), Height: int32(g.Height)}
+func gridProto(g *content.HomeGrid) *contract.HomeGrid {
+	return &contract.HomeGrid{Width: g.GetWidth(), Height: g.GetHeight()}
 }
 
 // materialCountsProto copies the carried material counts (int) into the wire map.
@@ -48,22 +48,22 @@ func makerProto(m *makerView) *contract.Maker {
 	return &contract.Maker{Id: m.ID, Name: m.Name}
 }
 
-func assetProto(v content.Asset) *contract.Asset {
-	out := &contract.Asset{Kind: v.Kind, Id: v.ID, Qty: int32(v.Qty), Instance: v.Instance}
-	if v.Maker != nil {
-		out.Maker = wrapperspb.String(*v.Maker)
+func assetProto(v *content.Asset) *contract.Asset {
+	out := &contract.Asset{Kind: v.GetKind(), Id: v.GetId(), Qty: v.GetQty(), Instance: v.GetInstance()}
+	if v.GetMaker() != "" {
+		out.Maker = wrapperspb.String(v.GetMaker())
 	}
 	return out
 }
 
 // assetOf converts a request's asset back to the domain shape.
-func assetOf(a *contract.Asset) content.Asset {
+func assetOf(a *contract.Asset) *content.Asset {
 	if a == nil {
-		return content.Asset{}
+		return &content.Asset{}
 	}
-	v := content.Asset{Kind: a.Kind, ID: a.Id, Qty: int(a.Qty), Instance: a.Instance}
-	if a.Maker != nil {
-		maker := a.Maker.GetValue()
+	v := &content.Asset{Kind: a.GetKind(), Id: a.GetId(), Qty: a.GetQty(), Instance: a.GetInstance()}
+	if a.GetMaker() != nil {
+		maker := a.GetMaker().GetValue()
 		v.Maker = &maker
 	}
 	return v
@@ -196,14 +196,14 @@ func homeViewProto(h homeView) *contract.HomeView {
 	out := &contract.HomeView{
 		Id: h.ID, Gate: int32(h.Gate), WorldId: h.WorldID, Tier: int32(h.Tier),
 		Member: h.Member, Desolate: h.Desolate, LandSeed: h.LandSeed,
-		PostsBought: int32(h.PostsBought), NextPost: materialCountsProto(h.NextPost),
+		PostsBought: int32(h.PostsBought), NextPost: materialCounts32(h.NextPost),
 		Outdoor: gridProto(h.Outdoor),
 	}
 	if h.VacantSince != nil {
 		out.VacantSince = wrapperspb.Double(float64(*h.VacantSince))
 	}
 	if h.Indoor != nil {
-		out.Indoor = gridProto(*h.Indoor)
+		out.Indoor = gridProto(h.Indoor)
 	}
 	out.Members = make([]*contract.HomeMember, 0, len(h.Members))
 	for _, m := range h.Members {
@@ -240,3 +240,6 @@ func shelfViewProto(v shelfView) *contract.ShelfView {
 	}
 	return out
 }
+
+// materialCounts32 copies int32 counts into the wire map unchanged.
+func materialCounts32(m map[string]int32) map[string]int32 { return m }

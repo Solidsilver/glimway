@@ -221,7 +221,7 @@ func TestPendingCheckpointSettlementAndFlagging(t *testing.T) {
 			p := profile("alice", 20, 0, 20)
 			sync := x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200)
 			total := int(rules.LifetimeXP(p.Level, 0) / 10)
-			if sync.State.XPEmbers != rules.E.SyncCreditCap || sync.Pending != total-rules.E.SyncCreditCap {
+			if sync.State.XPEmbers != int(rules.E.GetSyncCreditCap()) || sync.Pending != total-int(rules.E.GetSyncCreditCap()) {
 				t.Fatalf("cap: %s", store.JSON(sync))
 			}
 			if verified {
@@ -238,7 +238,7 @@ func TestPendingCheckpointSettlementAndFlagging(t *testing.T) {
 				if next.State.XPEmbers != total || next.Flagged {
 					t.Fatal("verified pending not settled")
 				}
-			} else if !next.Flagged || next.State.XPEmbers != rules.E.SyncCreditCap {
+			} else if !next.Flagged || next.State.XPEmbers != int(rules.E.GetSyncCreditCap()) {
 				t.Fatal("unverified pending not retained/flagged")
 			}
 			if next.State.EmberXP != sync.State.EmberXP || next.ImportedProfile.HP != sync.ImportedProfile.HP {

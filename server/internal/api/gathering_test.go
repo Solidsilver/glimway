@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"google.golang.org/protobuf/proto"
 	"net/http"
 	"slices"
 	"testing"
@@ -23,8 +24,8 @@ func TestGatheringUnknownDefinitionsRollBack(t *testing.T) {
 				}
 			} else {
 				original := content.GatheringRules.Targets["tree"]
-				broken := original
-				broken.Yields = []content.GatheringYield{{Item: "missing-item", Min: 1, Max: 1}}
+				broken := proto.Clone(original).(*content.GatheringTarget)
+				broken.Yields = []*content.GatheringYield{{Item: "missing-item", Min: 1, Max: 1}}
 				content.GatheringRules.Targets["tree"] = broken
 				t.Cleanup(func() { content.GatheringRules.Targets["tree"] = original })
 			}
@@ -121,8 +122,8 @@ func gatheredDelta(g []stackView) map[string]int {
 func landTiles(h homeView, kind byte, lit bool) [][2]int {
 	lights := connectedLights(placedItems(h), "")
 	out := [][2]int{}
-	for y := 1; y < content.HomeRules.Land.Height-1; y++ {
-		for x := 1; x < content.HomeRules.Land.Width-1; x++ {
+	for y := 1; y < int(content.HomeRules.GetLand().GetHeight())-1; y++ {
+		for x := 1; x < int(content.HomeRules.GetLand().GetWidth())-1; x++ {
 			if landKind(h, x, y) == kind && land.Lit(lights, x, y) == lit {
 				out = append(out, [2]int{x, y})
 			}
@@ -244,7 +245,7 @@ func TestGatheringInstancedYieldsAndReplay(t *testing.T) {
 	// miss it about one run in 130; chop on for up to five days.
 	hafts := 0
 	for d := 0; d < 5 && hafts == 0; d++ {
-		for i := 0; i < content.GatheringRules.Caps.Day.Chop && hafts == 0; i++ {
+		for i := 0; i < int(content.GatheringRules.GetCaps().GetDay().GetChop()) && hafts == 0; i++ {
 			r := x.opRefreshing(c, &s, "gather", gatherIn(s, "woodland", here, axe, "chop", "ash", fmt.Sprintf("d%dv%d", d, i/8)), 200)
 			for _, id := range r.Result.Created {
 				if findInstance(r.Result.Items, id).ItemDef == "green-ash-haft" {
@@ -279,10 +280,10 @@ func TestGatheringCaps(t *testing.T) {
 	chop := func(visit string, status int) itemsResponse {
 		return x.opRefreshing(c, &s, "gather", gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", visit), status)
 	}
-	caps := content.GatheringRules.Caps
+	caps := content.GatheringRules.GetCaps()
 
 	// Eight trees a visit; the ninth is the wood's soft line, and wears nothing.
-	for i := 0; i < caps.Visit.Chop; i++ {
+	for i := 0; i < int(caps.GetVisit().GetChop()); i++ {
 		chop("first", 200)
 	}
 	before := findInstance(x.items("GET", "/api/items", nil, c, 200).Items, axe).Condition
@@ -297,12 +298,12 @@ func TestGatheringCaps(t *testing.T) {
 	// Another area is another visit, even with the same visit id.
 	x.opRefreshing(c, &s, "gather", gatherIn(s, "woodland", here, axe, "chop", "tree", "first"), 200)
 	// Back in the Tangle with a new visit: the trees give again.
-	done := caps.Visit.Chop + 1
+	done := int(caps.GetVisit().GetChop()) + 1
 	chop("second", 200)
 	done++
 	// Up to the day's cap, a visit at a time.
-	for v := 3; done < caps.Day.Chop; v++ {
-		for j := 0; j < caps.Visit.Chop && done < caps.Day.Chop; j++ {
+	for v := 3; done < int(caps.GetDay().GetChop()); v++ {
+		for j := 0; j < int(caps.GetVisit().GetChop()) && done < int(caps.GetDay().GetChop()); j++ {
 			chop(fmt.Sprintf("visit-%d", v), 200)
 			done++
 		}
@@ -507,7 +508,7 @@ func TestPlantingNeverStacksIsCappedAndBlocksPlacement(t *testing.T) {
 	area := fmt.Sprintf("home:%d", h.Gate)
 	x.seedAssets(s.AccountID)
 	x.refresh(c, &s)
-	x.stack(s.AccountID, "wild-thyme", "", content.GatheringRules.PlantsPerHome+5)
+	x.stack(s.AccountID, "wild-thyme", "", int(content.GatheringRules.GetPlantsPerHome())+5)
 	plant := func(tile [2]int, status int) itemsResponse {
 		t.Helper()
 		return x.opRefreshing(c, &s, "plant", map[string]any{"itemDef": "wild-thyme", "tile": tile, "progress": standAt(s, area, tile[0], tile[1])}, status)
@@ -571,8 +572,8 @@ func TestPlantingNeverStacksIsCappedAndBlocksPlacement(t *testing.T) {
 	// plant can move where they stand: read the home again before each one.
 	h = x.home(c)
 	open = plantGround(h)
-	for y := 1; y < content.HomeRules.Land.Height-1 && len(h.Plants) < content.GatheringRules.PlantsPerHome; y++ {
-		for x2 := 1; x2 < content.HomeRules.Land.Width-1 && len(h.Plants) < content.GatheringRules.PlantsPerHome; x2 += 3 {
+	for y := 1; y < int(content.HomeRules.GetLand().GetHeight())-1 && len(h.Plants) < int(content.GatheringRules.GetPlantsPerHome()); y++ {
+		for x2 := 1; x2 < int(content.HomeRules.GetLand().GetWidth())-1 && len(h.Plants) < int(content.GatheringRules.GetPlantsPerHome()); x2 += 3 {
 			tl := [2]int{x2, y}
 			if !open[tl] || slices.ContainsFunc(h.Plants, func(p homePlantView) bool { return p.X == tl[0] && p.Y == tl[1] }) {
 				continue
@@ -582,7 +583,7 @@ func TestPlantingNeverStacksIsCappedAndBlocksPlacement(t *testing.T) {
 		}
 	}
 	h = x.home(c)
-	if len(h.Plants) != content.GatheringRules.PlantsPerHome {
+	if len(h.Plants) != int(content.GatheringRules.GetPlantsPerHome()) {
 		t.Fatal("plants", len(h.Plants))
 	}
 	unique(h)

@@ -320,8 +320,8 @@ func leaving(ctx context.Context, tx *sql.Tx, s store.Snapshot) (leavingView, er
 	if err = tx.QueryRowContext(ctx, "SELECT COALESCE((SELECT deeds FROM player_deeds WHERE account_id=?),0)", s.AccountID).Scan(&deeds); err != nil {
 		return l, err
 	}
-	if !content.HomeRules.Deeds.FirstFree || deeds > 0 {
-		l.DeedCost = content.HomeRules.Deeds.Embers
+	if !content.HomeRules.GetDeeds().GetFirstFree() || deeds > 0 {
+		l.DeedCost = int(content.HomeRules.GetDeeds().GetEmbers())
 	}
 	return l, nil
 }

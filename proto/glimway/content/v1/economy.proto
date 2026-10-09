@@ -1,0 +1,73 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// The shared economy contract (content/economy.json): ember pricing, sync
+// credit, invites and the Wilds' rate limits.
+message Economy {
+  option (buf.validate.message).cel = {
+    id: "economy.home_rest"
+    message: "homeRest is a discounted rest"
+    expression: "this.costs.home_rest < this.costs.rest"
+  };
+  option (buf.validate.message).cel = {
+    id: "economy.sync_credit"
+    message: "syncCreditMax is syncCreditCap's ceiling"
+    expression: "this.sync_credit_max >= this.sync_credit_cap"
+  };
+  option (buf.validate.message).cel = {
+    id: "economy.invites"
+    message: "lifetimeInvites covers outstandingInvites"
+    expression: "this.lifetime_invites >= this.outstanding_invites"
+  };
+  // XP: how much one ember buys, and what a fresh account is given.
+  int32 xp_per_ember = 1 [(buf.validate.field).int32.gte = 1];
+  int32 welcome_embers = 2 [(buf.validate.field).int32.gte = 0];
+  // Ember prices (in embers): resting at home (discounted), resting, a road
+  // lantern, a chest.
+  EconomyCosts costs = 3 [(buf.validate.field).required = true];
+  // The village road lanterns' ids, in map order.
+  repeated string road_lanterns = 4 [(buf.validate.field).repeated = {min_items: 3, max_items: 3}];
+  string chest_id = 5 [(buf.validate.field).string.min_len = 1];
+  // The story charm every account keeps (a keepsake in the items catalogue).
+  string charm_item = 6 [(buf.validate.field).string.min_len = 1];
+  // Sync credit: the day's cap, what one day grows it, its ceiling, and how
+  // long an unverified checkpoint may still be credited.
+  int32 sync_credit_cap = 7 [(buf.validate.field).int32.gte = 1];
+  int32 sync_credit_daily_growth = 8 [(buf.validate.field).int32.gte = 0];
+  int32 sync_credit_max = 9 [(buf.validate.field).int32.gte = 0];
+  int32 pending_credit_days = 10 [(buf.validate.field).int32.gte = 1];
+  // Invites: a lifetime's most, and the most outstanding at once.
+  int32 lifetime_invites = 11 [(buf.validate.field).int32.gte = 0];
+  int32 outstanding_invites = 12 [(buf.validate.field).int32.gte = 1];
+  // The most uncredited gift XP one migration may carry.
+  int32 migration_gift_cap = 13 [(buf.validate.field).int32.gte = 0];
+  // How far a restored checkpoint may trail the server's tally (in XP).
+  double checkpoint_tolerance_xp = 14 [(buf.validate.field).double.gte = 0];
+  // The Wilds' rate limits and their lantern reward.
+  EconomyWildsLimits wilds_limits = 15 [(buf.validate.field).required = true];
+}
+
+// Ember prices. Each is at least one; the Economy CEL above discounts
+// homeRest below rest.
+message EconomyCosts {
+  int32 home_rest = 1 [(buf.validate.field).int32.gte = 1];
+  int32 rest = 2 [(buf.validate.field).int32.gte = 1];
+  int32 road_lantern = 3 [(buf.validate.field).int32.gte = 1];
+  int32 chest = 4 [(buf.validate.field).int32.gte = 1];
+}
+
+// What the Wilds allow one player, per minute and per day.
+message EconomyWildsLimits {
+  int32 claims_per_minute = 1 [(buf.validate.field).int32.gte = 1];
+  int32 lanterns_created_per_day = 2 [(buf.validate.field).int32.gte = 1];
+  int32 lantern_relights_per_day = 3 [(buf.validate.field).int32.gte = 1];
+  // Relighting a lantern yields this much of this material.
+  EconomyLanternReward lantern_reward = 4 [(buf.validate.field).required = true];
+}
+
+message EconomyLanternReward {
+  string material = 1 [(buf.validate.field).string = {in: ["amber"]}];
+  int32 qty = 2 [(buf.validate.field).int32.gte = 1];
+}

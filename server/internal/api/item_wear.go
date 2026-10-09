@@ -20,9 +20,9 @@ func hasFitting(fittings []instanceRow, kind string) bool {
 func wearCost(fittings []instanceRow) int {
 	w := content.ItemsRules.Rules.Wear
 	if hasFitting(fittings, "hold") {
-		return w.HoldPointsPerUse
+		return int(w.GetHoldPointsPerUse())
 	}
-	return w.PointsPerUse
+	return int(w.GetPointsPerUse())
 }
 
 func max1(n int) int { return max(1, n) }
@@ -35,7 +35,7 @@ func usesLeft(condition, cost int) int {
 // every tool, half as fast with Hold. Dulling is counted in half-uses: a
 // use takes two (one with Hold) out of 2×wardenDullUses, and condition is
 // that count scaled onto the tool's points.
-func wardenSteps() int { return 2 * content.ItemsRules.Rules.Wear.WardenDullUses }
+func wardenSteps() int { return 2 * int(content.ItemsRules.Rules.Wear.GetWardenDullUses()) }
 
 func wardenStep(fittings []instanceRow) int {
 	if hasFitting(fittings, "hold") {
@@ -105,7 +105,7 @@ func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action stri
 	if v.Location != "pack" || v.Owner != s.AccountID {
 		return out, fail(404, "item-not-found")
 	}
-	if def.Kind != "tool" {
+	if def.GetKind() != "tool" {
 		return out, fail(409, "not-a-tool")
 	}
 	if action != "" && !slices.Contains(def.Actions, action) {
@@ -114,7 +114,7 @@ func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action stri
 	if action == "draw" {
 		// The well stands where the repairs data puts it (shared content).
 		well, ok := content.RepairFor("well-rope")
-		if !ok || !nearTile(s, well.Area, well.Pos.TX, well.Pos.TY, 4) {
+		if !ok || !nearTile(s, well.Area, int(well.GetPos().GetTx()), int(well.GetPos().GetTy()), 4) {
 			return out, fail(409, "too-far-away")
 		}
 		var mendedAt sql.NullInt64
@@ -153,7 +153,7 @@ func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action stri
 		}
 	}
 	// Fittings wear on their own.
-	per := content.ItemsRules.Rules.Wear.PointsPerUse
+	per := int(content.ItemsRules.Rules.Wear.GetPointsPerUse())
 	for _, f := range fittings {
 		if f.Max == 0 {
 			continue
@@ -173,7 +173,7 @@ func useTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id, action stri
 		}
 		out.WornOut = append(out.WornOut, f.Def)
 	}
-	if v.Max > 0 && v.Condition == 0 && !warden && def.AtZeroRule() == "breaks" {
+	if v.Max > 0 && v.Condition == 0 && !warden && content.ItemAtZeroRule(def) == "breaks" {
 		// Broken and gone. Whatever was fitted drops into the pack.
 		remaining, err := fittingRows(ctx, tx, v.ID)
 		if err != nil {

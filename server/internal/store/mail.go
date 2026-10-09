@@ -141,7 +141,7 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 // and removal tombstones both revoke a recipient's ability to claim.
 func ReturnDueMailTx(ctx context.Context, tx *sql.Tx, now int64, participant string) (int, error) {
 	filter := ""
-	args := []any{now - int64(content.MailRules.ReturnAfterDays)*86400}
+	args := []any{now - int64(content.MailRules.GetReturnAfterDays())*86400}
 	if participant != "" {
 		filter = " AND (m.from_id=? OR m.to_id=?)"
 		args = append(args, participant, participant)
@@ -150,7 +150,7 @@ func ReturnDueMailTx(ctx context.Context, tx *sql.Tx, now int64, participant str
 	return returnMailBatch(ctx, tx, now, returnDue+filter, args)
 }
 func returnMailBatch(ctx context.Context, tx *sql.Tx, now int64, filter string, args []any) (int, error) {
-	args = append(args, content.MailRules.MaintenanceBatch)
+	args = append(args, int(content.MailRules.GetMaintenanceBatch()))
 	rows, err := tx.QueryContext(ctx, `SELECT m.id,CASE WHEN NOT EXISTS(SELECT 1 FROM allowlist a WHERE a.habitica_id=(SELECT subject FROM sign_ins WHERE account_id=m.to_id AND method='habitica')) OR EXISTS(SELECT 1 FROM access_removals r WHERE r.habitica_id=(SELECT subject FROM sign_ins WHERE account_id=m.to_id AND method='habitica')) THEN 'recipient-removed' ELSE 'expired' END FROM mail m WHERE m.claimed_at IS NULL AND m.returned_at IS NULL AND `+filter+` ORDER BY m.sent_at,m.id LIMIT ?`, args...)
 	if err != nil {
 		return 0, err

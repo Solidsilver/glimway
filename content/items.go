@@ -1,166 +1,37 @@
 package content
 
 import (
-	"encoding/json"
 	"fmt"
 	"slices"
 	"sort"
+
+	contentv1 "glimway/gen/glimway/content/v1"
 )
 
-// Item definitions (content/items.json; docs/items/). Typed loaders on both
-// sides: this one for Go, src/lib/items.ts for TypeScript. Catalogue entries
-// and their rules are described in docs/items/catalogue.md and overview.md.
-
-// ItemEffect is one small, typed help. Which types are allowed depends on
-// where the effect sits: `use` (a consumable, once), `pocket` (a keepsake in
-// a pocket) or `held` (the off hand). Amount, seconds and target are optional
-// and mean what the type says.
-type ItemEffect struct {
-	Type    string `json:"type"`
-	Amount  int    `json:"amount,omitempty"`
-	Seconds int    `json:"seconds,omitempty"`
-	Target  string `json:"target,omitempty"`
-}
-type ItemAffinity struct {
-	Class string       `json:"class"`
-	Held  []ItemEffect `json:"held"`
-}
-
-// ItemRepair is what mending an heirloom costs: at your own bench, or by a
-// mender (Silas, Orrin) while you talk.
-type ItemRepair struct {
-	Bench        map[string]int `json:"bench"`
-	Mender       map[string]int `json:"mender,omitempty"`
-	MenderEmbers int            `json:"menderEmbers,omitempty"`
-}
-type ItemDef struct {
-	ID        string        `json:"id"`
-	Name      string        `json:"name"`
-	Tab       string        `json:"tab"`
-	Kind      string        `json:"kind"`
-	Blurb     string        `json:"blurb"`
-	Icon      string        `json:"icon,omitempty"`
-	IconState string        `json:"iconState,omitempty"` // the icon's drawn state ("dried": the bloom flowers' dried posy); only with an icon
-	Grade     string        `json:"grade,omitempty"`
-	Uses      int           `json:"uses,omitempty"`
-	AtZero    string        `json:"atZero,omitempty"`
-	Slots     *int          `json:"slots,omitempty"`
-	Actions   []string      `json:"actions,omitempty"`
-	Repair    *ItemRepair   `json:"repair,omitempty"`
-	Fitting   string        `json:"fitting,omitempty"`
-	Use       []ItemEffect  `json:"use,omitempty"`
-	Pocket    []ItemEffect  `json:"pocket,omitempty"`
-	Held      []ItemEffect  `json:"held,omitempty"`
-	Affinity  *ItemAffinity `json:"affinity,omitempty"`
-	OffHand   bool          `json:"offHand,omitempty"`
-	Bound     bool          `json:"bound,omitempty"`
-	BelongsTo string        `json:"belongsTo,omitempty"`
-	Marked    bool          `json:"marked,omitempty"`
-}
-type ItemGrade struct {
-	Slots  int    `json:"slots"`
-	AtZero string `json:"atZero"`
-	Bound  bool   `json:"bound,omitempty"`
-}
-type ItemMender struct {
-	NPC         string `json:"npc"`
-	Name        string `json:"name"`
-	Area        string `json:"area"`
-	TX          int    `json:"tx"`
-	TY          int    `json:"ty"`
-	RadiusTiles int    `json:"radiusTiles"`
-}
-type ItemPickup struct {
-	ID       string `json:"id"`
-	Item     string `json:"item"`
-	Qty      int    `json:"qty"`
-	Area     string `json:"area"`
-	TX       int    `json:"tx"`
-	TY       int    `json:"ty"`
-	UsesLeft int    `json:"usesLeft,omitempty"`
-	Label    string `json:"label"`
-	Found    string `json:"found"`
-}
-
-// ItemGood is one thing a seller sells (for embers), and what it says.
-type ItemGood struct {
-	Item   string `json:"item"`
-	Qty    int    `json:"qty"`
-	Embers int    `json:"embers"`
-	// Cap: the most one player can buy of it a day (0: no cap).
-	Cap   int    `json:"cap,omitempty"`
-	Label string `json:"label"`
-	Line  string `json:"line"`
-}
-
-// ItemSeller is a person or stall in the world who sells goods: a named
-// resident at their spot (Hazel, Finn), or a stall that stands on a
-// festival day only (the Carting Day market). The spot is shared content,
-// the same rows the client prompts at.
-type ItemSeller struct {
-	With        string     `json:"with,omitempty"`
-	ID          string     `json:"id"`
-	NPC         string     `json:"npc"`
-	Area        string     `json:"area,omitempty"`
-	TX          int        `json:"tx,omitempty"`
-	TY          int        `json:"ty,omitempty"`
-	RadiusTiles int        `json:"radiusTiles"`
-	Festival    string     `json:"festival,omitempty"`
-	Goods       []ItemGood `json:"goods"`
-}
-
-func (s *ItemSeller) UnmarshalJSON(raw []byte) error {
-	type seller ItemSeller
-	var decoded seller
-	if err := json.Unmarshal(raw, &decoded); err != nil {
-		return err
-	}
-	if decoded.With != "" {
-		var fields map[string]json.RawMessage
-		if err := json.Unmarshal(raw, &fields); err != nil {
-			return err
-		}
-		for _, field := range []string{"area", "tx", "ty"} {
-			if _, ok := fields[field]; ok {
-				return fmt.Errorf("seller %s mixes resident and fixed spot", decoded.ID)
-			}
-		}
-	}
-	*s = ItemSeller(decoded)
-	return nil
-}
-
-type ItemRules struct {
-	Grades map[string]ItemGrade `json:"grades"`
-	Wear   struct {
-		PointsPerUse     int `json:"pointsPerUse"`
-		HoldPointsPerUse int `json:"holdPointsPerUse"`
-		FittingUses      int `json:"fittingUses"`
-		WornBelowPercent int `json:"wornBelowPercent"`
-		WardenDullUses   int `json:"wardenDullUses"`
-	} `json:"wear"`
-	Pockets struct {
-		Base          int `json:"base"`
-		WithCarryGear int `json:"withCarryGear"`
-	} `json:"pockets"`
-	OffHand struct {
-		TuckDuring []string `json:"tuckDuring"`
-	} `json:"offHand"`
-	Give struct {
-		RadiusTiles int `json:"radiusTiles"`
-	} `json:"give"`
-	Thanks struct {
-		NearbyTiles int `json:"nearbyTiles"`
-	} `json:"thanks"`
-	Menders []ItemMender `json:"menders"`
-}
-
-type Items struct {
-	Rules   ItemRules    `json:"rules"`
-	Items   []ItemDef    `json:"items"`
-	Pickups []ItemPickup `json:"pickups"`
-	Sellers []ItemSeller `json:"sellers"`
-}
+// Item definitions (content/items.json; docs/items/), on the generated
+// types (proto/glimway/content/v1/items.proto). Catalogue entries and their
+// rules are described in docs/items/catalogue.md and overview.md.
+type (
+	Items        = contentv1.Items
+	ItemRules    = contentv1.ItemsRules
+	ItemGrade    = contentv1.ItemGrade
+	ItemWear     = contentv1.ItemWear
+	ItemPockets  = contentv1.ItemPockets
+	ItemOffHand  = contentv1.ItemOffHand
+	ItemGive     = contentv1.ItemGive
+	ItemThanks   = contentv1.ItemThanks
+	ItemMender   = contentv1.ItemMender
+	ItemDef      = contentv1.ItemDef
+	ItemRepair   = contentv1.ItemRepair
+	ItemEffect   = contentv1.UseEffect
+	UseEffect    = contentv1.UseEffect
+	PocketEffect = contentv1.PocketEffect
+	HeldEffect   = contentv1.HeldEffect
+	ItemAffinity = contentv1.ItemAffinity
+	ItemPickup   = contentv1.ItemPickup
+	ItemGood     = contentv1.ItemGood
+	ItemSeller   = contentv1.ItemSeller
+)
 
 // The closed sets. A new kind, tab, fitting or effect type is a code change
 // on both sides (src/lib/items.ts mirrors these), never just data.
@@ -183,281 +54,235 @@ var (
 // Instanced items are kept one by one (condition, fittings, maker); every
 // other carried item is a stack by count (per maker). Home goods are
 // homestead instances (homestead_items) and papers are story flags.
-func (d ItemDef) Instanced() bool { return slices.Contains(instancedKinds, d.Kind) }
-func (d ItemDef) Stackable() bool {
-	return !d.Instanced() && d.Kind != "home-good"
+func ItemInstanced(d *ItemDef) bool { return slices.Contains(instancedKinds, d.GetKind()) }
+func ItemStackable(d *ItemDef) bool {
+	return !ItemInstanced(d) && d.GetKind() != "home-good"
 }
 
-// AssetKind is the wire kind for moving it (mail, chests, gifts).
-func (d ItemDef) AssetKind() string {
+// ItemAssetKind is the wire kind for moving it (mail, chests, gifts).
+func ItemAssetKind(d *ItemDef) string {
 	switch {
-	case d.Kind == "material":
+	case d.GetKind() == "material":
 		return "material"
-	case d.Kind == "home-good":
+	case d.GetKind() == "home-good":
 		return "decoration"
-	case d.Instanced():
+	case ItemInstanced(d):
 		return "instance"
 	}
 	return "item"
 }
 
-// Giveable: heirlooms and story keepsakes stay with the one they were given to.
-func (d ItemDef) Giveable() bool {
-	if d.Bound {
+// ItemGiveable: heirlooms and story keepsakes stay with the one they were
+// given to.
+func ItemGiveable(d *ItemDef) bool {
+	if d.GetBound() {
 		return false
 	}
-	if g, ok := ItemsRules.Rules.Grades[d.Grade]; ok && g.Bound {
+	if g, ok := ItemsRules.Rules.Grades[d.GetGrade()]; ok && g.GetBound() {
 		return false
 	}
 	return true
 }
 
-// AtZeroRule: "breaks" (gone), "blunt"/"cracked" (kept, unusable until
+// ItemAtZeroRule: "breaks" (gone), "blunt"/"cracked" (kept, unusable until
 // mended) or "never" (does not wear). Fittings and carry gear never break
 // as tools do; fittings wear out on their own count (rules.wear.fittingUses).
-func (d ItemDef) AtZeroRule() string {
-	if d.Kind != "tool" {
+func ItemAtZeroRule(d *ItemDef) string {
+	if d.GetKind() != "tool" {
 		return "never"
 	}
-	if d.AtZero != "" {
-		return d.AtZero
+	if d.GetAtZero() != "" {
+		return d.GetAtZero()
 	}
-	return ItemsRules.Rules.Grades[d.Grade].AtZero
+	return ItemsRules.Rules.Grades[d.GetGrade()].GetAtZero()
 }
-func (d ItemDef) SlotCount() int {
-	if d.Kind != "tool" {
+func ItemSlotCount(d *ItemDef) int {
+	if d.GetKind() != "tool" {
 		return 0
 	}
-	if d.Slots != nil {
-		return *d.Slots
+	if d.GetSlots() != 0 {
+		return int(d.GetSlots())
 	}
-	return ItemsRules.Rules.Grades[d.Grade].Slots
+	return int(ItemsRules.Rules.Grades[d.GetGrade()].GetSlots())
 }
 
-// MaxPoints is full condition in wear points (uses × rules.wear.pointsPerUse);
-// zero means it does not wear.
-func (d ItemDef) MaxPoints() int {
-	per := ItemsRules.Rules.Wear.PointsPerUse
+// ItemMaxPoints is full condition in wear points (uses ×
+// rules.wear.pointsPerUse); zero means it does not wear.
+func ItemMaxPoints(d *ItemDef) int {
+	per := int(ItemsRules.Rules.Wear.PointsPerUse)
 	switch {
-	case d.Kind == "tool" && d.AtZeroRule() != "never":
-		return d.Uses * per
-	case d.Kind == "fitting" && d.Fitting != "remember":
-		return ItemsRules.Rules.Wear.FittingUses * per
+	case d.GetKind() == "tool" && ItemAtZeroRule(d) != "never":
+		return int(d.GetUses()) * per
+	case d.GetKind() == "fitting" && d.GetFitting() != "remember":
+		return int(ItemsRules.Rules.Wear.FittingUses) * per
 	}
 	return 0
 }
 
-// UsableNow: a consumable whose every effect the game can apply today.
-func (d ItemDef) UsableNow() bool {
-	if d.Kind != "consumable" || len(d.Use) == 0 {
+// ItemUsableNow: a consumable whose every effect the game can apply today.
+func ItemUsableNow(d *ItemDef) bool {
+	if d.GetKind() != "consumable" || len(d.GetUse()) == 0 {
 		return false
 	}
-	for _, e := range d.Use {
-		if !slices.Contains(ImplementedUses, e.Type) {
+	for _, e := range d.GetUse() {
+		if !slices.Contains(ImplementedUses, e.GetType()) {
 			return false
 		}
 	}
 	return true
 }
 
-// Carryable in the off hand.
-func (d ItemDef) OffHandable() bool { return d.Kind == "off-hand" || d.OffHand }
+// ItemOffHandable: carryable in the off hand.
+func ItemOffHandable(d *ItemDef) bool { return d.GetKind() == "off-hand" || d.GetOffHand() }
 
-func validEffects(list []ItemEffect, allowed []string) bool {
-	for _, e := range list {
-		if !slices.Contains(allowed, e.Type) || e.Amount < 0 || e.Amount > 1000 || e.Seconds < 0 || e.Seconds > 86400 || len(e.Target) > 100 {
-			return false
-		}
-		if (e.Type == "restore-hp" || e.Type == "restore-mana") && e.Amount < 1 {
-			return false
-		}
+// DecodeItems reads items JSON into the generated types, refusing nulls and
+// unknown keys, then runs the schema's rules (protovalidate) and the
+// catalogue's own rules.
+func DecodeItems(raw []byte) (*Items, error) {
+	doc := &Items{}
+	if err := decodeContentProto(raw, "items", doc); err != nil {
+		return doc, err
 	}
-	return true
+	if err := contentValidate("items", entryLists(doc, "items", "pickups", "sellers"), doc); err != nil {
+		return doc, err
+	}
+	return doc, validateItems(doc)
 }
 
-// validStackCosts: a non-empty bill of carried stackable items.
-func validStackCosts(costs map[string]int, defs map[string]ItemDef) bool {
-	if len(costs) == 0 {
-		return false
-	}
-	for id, n := range costs {
-		d, ok := defs[id]
-		if !ok || !d.Stackable() || n < 1 || n > 1000000 {
-			return false
-		}
-	}
-	return true
-}
-
-func ValidateItems(v Items) error {
-	bad := func(f string, a ...any) error { return fmt.Errorf("invalid items: "+f, a...) }
-	r := v.Rules
-	if len(r.Grades) != 3 {
-		return bad("grades")
-	}
-	for name, allowed := range atZeroForGrade {
-		g, ok := r.Grades[name]
-		if !ok || !slices.Contains(allowed, g.AtZero) || g.Slots < 0 || g.Slots > len(FittingKinds) {
-			return bad("grade %q", name)
-		}
-	}
-	if r.Wear.PointsPerUse < 1 || r.Wear.HoldPointsPerUse < 1 || r.Wear.HoldPointsPerUse > r.Wear.PointsPerUse || r.Wear.FittingUses < 1 || r.Wear.WornBelowPercent < 1 || r.Wear.WornBelowPercent > 99 || r.Wear.WardenDullUses < 1 {
-		return bad("wear")
-	}
-	if r.Pockets.Base < 1 || r.Pockets.WithCarryGear < r.Pockets.Base || r.Pockets.WithCarryGear > 4 || r.Give.RadiusTiles < 1 || r.Thanks.NearbyTiles < 1 {
-		return bad("pockets/give/thanks")
-	}
-	for _, a := range r.OffHand.TuckDuring {
-		if a == "" {
-			return bad("tuck")
-		}
-	}
+// validateItems: the rules that span entries or families, after the
+// schema's (protovalidate) have passed. Uniqueness first: one map loop per
+// list, naming the duplicate.
+func validateItems(v *Items) error {
+	r := v.GetRules()
 	npcs := map[string]bool{}
-	for _, m := range r.Menders {
-		if !ValidContentID(m.NPC) || m.Name == "" || npcs[m.NPC] || !slices.Contains(PickupAreas, m.Area) || m.TX < 0 || m.TY < 0 || m.RadiusTiles < 1 {
-			return bad("mender %q", m.NPC)
+	for _, m := range r.GetMenders() {
+		if npcs[m.GetNpc()] {
+			return fmt.Errorf("invalid items: duplicate mender %s", m.GetNpc())
 		}
-		npcs[m.NPC] = true
+		npcs[m.GetNpc()] = true
 	}
-	defs := map[string]ItemDef{}
-	for _, d := range v.Items {
-		if !ValidContentID(d.ID) || defs[d.ID].ID != "" || d.Name == "" || d.Blurb == "" || !slices.Contains(ItemKinds, d.Kind) || kindTab[d.Kind] != d.Tab || (d.Icon != "" && !ValidContentID(d.Icon)) || (d.IconState != "" && (d.Icon == "" || !ValidContentID(d.IconState))) {
-			return bad("item %q", d.ID)
+	defs := map[string]bool{}
+	for _, d := range v.GetItems() {
+		if defs[d.GetId()] {
+			return fmt.Errorf("invalid items: duplicate id %s", d.GetId())
 		}
-		defs[d.ID] = d
+		defs[d.GetId()] = true
 	}
-	for _, d := range v.Items {
-		fail := func(why string) error { return bad("item %q: %s", d.ID, why) }
-		if d.Kind == "tool" {
-			g, ok := r.Grades[d.Grade]
+	loaded := map[string]*ItemDef{}
+	for _, d := range v.GetItems() {
+		loaded[d.GetId()] = d
+	}
+	for _, d := range v.GetItems() {
+		if d.GetKind() == "tool" {
+			g, ok := r.GetGrades()[d.GetGrade()]
 			if !ok {
-				return fail("grade")
+				return fmt.Errorf("invalid items: item %s: grade", d.GetId())
 			}
-			if (g.AtZero == "never") != (d.Uses == 0) || d.Uses < 0 || d.Uses > 10000 {
-				return fail("uses")
+			if (g.GetAtZero() == "never") != (d.GetUses() == 0) {
+				return fmt.Errorf("invalid items: item %s: uses", d.GetId())
 			}
-			if d.AtZero != "" && !slices.Contains(atZeroForGrade[d.Grade], d.AtZero) {
-				return fail("atZero")
+			if d.GetAtZero() != "" && !slices.Contains(atZeroForGrade[d.GetGrade()], d.GetAtZero()) {
+				return fmt.Errorf("invalid items: item %s: atZero", d.GetId())
 			}
-			if d.Slots != nil && (*d.Slots < 0 || *d.Slots > len(FittingKinds)) {
-				return fail("slots")
+			if len(d.GetActions()) == 0 {
+				return fmt.Errorf("invalid items: item %s: actions", d.GetId())
 			}
-			if len(d.Actions) == 0 {
-				return fail("actions")
-			}
-			for _, a := range d.Actions {
-				if !slices.Contains(ToolActions, a) {
-					return fail("action " + a)
-				}
-			}
-			atZero := d.AtZero
+			atZero := d.GetAtZero()
 			if atZero == "" {
-				atZero = g.AtZero
+				atZero = g.GetAtZero()
 			}
 			mends := atZero == "blunt" || atZero == "cracked"
-			if mends != (d.Repair != nil) {
-				return fail("repair")
+			if mends != (d.GetRepair() != nil) {
+				return fmt.Errorf("invalid items: item %s: repair", d.GetId())
 			}
-			if d.Repair != nil {
-				if !validStackCosts(d.Repair.Bench, defs) || (d.Repair.Mender != nil && !validStackCosts(d.Repair.Mender, defs)) || d.Repair.MenderEmbers < 0 || (d.Repair.Mender == nil && d.Repair.MenderEmbers == 0) {
-					return fail("repair cost")
+			if d.GetRepair() != nil {
+				rep := d.GetRepair()
+				if !validStackCosts(rep.GetBench(), loaded) || (rep.GetMender() != nil && !validStackCosts(rep.GetMender(), loaded)) || (rep.GetMender() == nil && rep.GetMenderEmbers() == 0) {
+					return fmt.Errorf("invalid items: item %s: repair cost", d.GetId())
 				}
 			}
-		} else if d.Grade != "" || d.Uses != 0 || d.AtZero != "" || d.Slots != nil || len(d.Actions) > 0 || d.Repair != nil {
-			return fail("tool fields on a non-tool")
 		}
-		if (d.Kind == "fitting") != slices.Contains(FittingKinds, d.Fitting) {
-			return fail("fitting")
+		if (d.GetKind() == "consumable") != (len(d.GetUse()) > 0) {
+			return fmt.Errorf("invalid items: item %s: use", d.GetId())
 		}
-		if (d.Kind == "consumable") != (len(d.Use) > 0) || !validEffects(d.Use, UseEffects) {
-			return fail("use")
-		}
-		if (len(d.Pocket) > 0 && d.Kind != "keepsake") || !validEffects(d.Pocket, PocketEffects) {
-			return fail("pocket")
-		}
-		if d.OffHand && d.Kind != "keepsake" && d.Kind != "tool" {
-			return fail("offHand")
-		}
-		if (len(d.Held) > 0) != d.OffHandable() || !validEffects(d.Held, HeldEffects) {
-			return fail("held")
-		}
-		if d.Affinity != nil && (!slices.Contains(PlayerClasses, d.Affinity.Class) || len(d.Affinity.Held) == 0 || !validEffects(d.Affinity.Held, HeldEffects) || !d.OffHandable()) {
-			return fail("affinity")
-		}
-		if d.BelongsTo != "" && (d.Kind != "keepsake" || !ValidContentID(d.BelongsTo)) {
-			return fail("belongsTo")
-		}
-		if d.Kind == "home-good" {
-			h, ok := HomeItemFor(d.ID)
-			if !ok || h.Name != d.Name {
-				return fail("home good not in homestead.json")
+		if d.GetKind() == "home-good" {
+			h, ok := HomeItemFor(d.GetId())
+			if !ok || h.GetName() != d.GetName() {
+				return fmt.Errorf("invalid items: item %s: home good not in homestead.json", d.GetId())
 			}
 		}
 	}
 	// Everything that can already be carried has a definition.
 	for _, m := range WildsRules.Materials {
-		if defs[m].Kind != "material" {
-			return bad("wilds material %q", m)
+		if d := loaded[m]; d == nil || d.GetKind() != "material" {
+			return fmt.Errorf("invalid items: wilds material %s", m)
 		}
 	}
 	for _, t := range WildsRules.Trinkets {
-		if defs[t].Kind != "keepsake" {
-			return bad("wilds trinket %q", t)
+		if d := loaded[t]; d == nil || d.GetKind() != "keepsake" {
+			return fmt.Errorf("invalid items: wilds trinket %s", t)
 		}
 	}
-	if defs[Rules.CharmItem].Kind != "keepsake" {
-		return bad("charm")
+	if d := loaded[Rules.GetCharmItem()]; d == nil || d.GetKind() != "keepsake" {
+		return fmt.Errorf("invalid items: charm")
 	}
 	pickups := map[string]bool{}
-	for _, p := range v.Pickups {
-		d, ok := defs[p.Item]
-		if !ValidContentID(p.ID) || pickups[p.ID] || !ok || !(d.Stackable() || d.Instanced()) || p.Qty < 1 || p.Qty > 100 || (d.Instanced() && p.Qty != 1) ||
-			!slices.Contains(PickupAreas, p.Area) || p.TX < 0 || p.TY < 0 || p.Label == "" || p.Found == "" ||
-			p.UsesLeft < 0 || (p.UsesLeft > 0 && (d.Kind != "tool" || p.UsesLeft > d.Uses)) {
-			return bad("pickup %q", p.ID)
+	for _, p := range v.GetPickups() {
+		d, ok := loaded[p.GetItem()]
+		if pickups[p.GetId()] {
+			return fmt.Errorf("invalid items: duplicate pickup %s", p.GetId())
 		}
-		pickups[p.ID] = true
+		if !ok || !(ItemStackable(d) || ItemInstanced(d)) || (ItemInstanced(d) && p.GetQty() != 1) {
+			return fmt.Errorf("invalid items: pickup %s", p.GetId())
+		}
+		if p.GetUsesLeft() > 0 && (d.GetKind() != "tool" || p.GetUsesLeft() > d.GetUses()) {
+			return fmt.Errorf("invalid items: pickup %s: usesLeft", p.GetId())
+		}
+		pickups[p.GetId()] = true
 	}
 	// Sellers: people and stalls that sell goods for embers. A festival
 	// seller stands on its day only; the calendar is loaded, not a global,
 	// so validation never depends on init order.
 	cal, err := LoadCalendar()
 	if err != nil {
-		return bad("calendar")
+		return fmt.Errorf("invalid items: calendar")
 	}
 	sellers := map[string]bool{}
-	for _, s := range v.Sellers {
-		if !ValidContentID(s.ID) || sellers[s.ID] || s.NPC == "" || len(s.NPC) > 40 || !validSellerPlace(s) ||
-			s.TX < 0 || s.TY < 0 || s.RadiusTiles < 1 || s.RadiusTiles > 16 || len(s.Goods) == 0 ||
-			s.Festival != "" && !slices.ContainsFunc(cal.Festivals, func(f Festival) bool { return f.Name == s.Festival }) {
-			return bad("seller %q", s.ID)
+	for _, s := range v.GetSellers() {
+		if sellers[s.GetId()] {
+			return fmt.Errorf("invalid items: duplicate seller %s", s.GetId())
+		}
+		if !validSellerPlace(s) {
+			return fmt.Errorf("invalid items: seller %s: place", s.GetId())
+		}
+		if s.GetFestival() != "" && !slices.ContainsFunc(cal.Festivals, func(f Festival) bool { return f.Name == s.GetFestival() }) {
+			return fmt.Errorf("invalid items: seller %s: festival", s.GetId())
 		}
 		goods := map[string]bool{}
-		for _, g := range s.Goods {
-			d, ok := defs[g.Item]
-			if goods[g.Item] || !ok || !d.Stackable() || g.Qty < 1 || g.Qty > 100 || g.Embers < 1 || g.Embers > 1000 ||
-				g.Cap < 0 || g.Cap > 1000 || g.Label == "" || len(g.Label) > 80 || g.Line == "" || len(g.Line) > 160 {
-				return bad("seller %q good %q", s.ID, g.Item)
+		for _, g := range s.GetGoods() {
+			d, ok := loaded[g.GetItem()]
+			if goods[g.GetItem()] {
+				return fmt.Errorf("invalid items: seller %s: duplicate good %s", s.GetId(), g.GetItem())
 			}
-			goods[g.Item] = true
+			if !ok || !ItemStackable(d) {
+				return fmt.Errorf("invalid items: seller %s good %s", s.GetId(), g.GetItem())
+			}
+			goods[g.GetItem()] = true
 		}
-		sellers[s.ID] = true
+		sellers[s.GetId()] = true
 	}
 	return nil
 }
-func LoadItems() (Items, error) {
-	var v Items
-	b, err := FS.ReadFile("items.json")
-	if err == nil {
-		err = json.Unmarshal(b, &v)
+
+func LoadItems() (*Items, error) {
+	raw, err := FS.ReadFile("items.json")
+	if err != nil {
+		return nil, err
 	}
-	if err == nil {
-		err = ValidateItems(v)
-	}
-	return v, err
+	return DecodeItems(raw)
 }
 
-var ItemsRules = func() Items {
+var ItemsRules = func() *Items {
 	v, err := LoadItems()
 	if err != nil {
 		panic(err)
@@ -465,59 +290,60 @@ var ItemsRules = func() Items {
 	return v
 }()
 
-var itemsByID = func() map[string]ItemDef {
-	m := map[string]ItemDef{}
+var itemsByID = func() map[string]*ItemDef {
+	m := map[string]*ItemDef{}
 	for _, d := range ItemsRules.Items {
-		m[d.ID] = d
+		m[d.GetId()] = d
 	}
 	return m
 }()
 
-func ItemFor(id string) (ItemDef, bool) {
+func ItemFor(id string) (*ItemDef, bool) {
 	d, ok := itemsByID[id]
 	return d, ok
 }
-func PickupFor(id string) (ItemPickup, bool) {
+
+func PickupFor(id string) (*ItemPickup, bool) {
 	for _, p := range ItemsRules.Pickups {
-		if p.ID == id {
+		if p.GetId() == id {
 			return p, true
 		}
 	}
-	return ItemPickup{}, false
+	return nil, false
 }
-func MenderFor(npc string) (ItemMender, bool) {
+func MenderFor(npc string) (*ItemMender, bool) {
 	for _, m := range ItemsRules.Rules.Menders {
-		if m.NPC == npc {
+		if m.GetNpc() == npc {
 			return m, true
 		}
 	}
-	return ItemMender{}, false
+	return nil, false
 }
 
-func validSellerPlace(s ItemSeller) bool {
-	if s.With == "" {
-		return slices.Contains(PickupAreas, s.Area)
+func validSellerPlace(s *ItemSeller) bool {
+	if s.GetWith() == "" {
+		return slices.Contains(PickupAreas, s.GetArea())
 	}
 	residents, err := LoadResidents()
-	if err != nil || s.Area != "" || s.TX != 0 || s.TY != 0 {
+	if err != nil || s.GetArea() != "" || s.GetTx() != 0 || s.GetTy() != 0 {
 		return false
 	}
-	return slices.ContainsFunc(residents.GetResidents(), func(r *Resident) bool { return r.GetId() == s.With })
+	return slices.ContainsFunc(residents.GetResidents(), func(r *Resident) bool { return r.GetId() == s.GetWith() })
 }
 
 // SellerFor is a seller by id (shared content; the client prompts at the
 // same spots).
-func SellerFor(id string) (ItemSeller, bool) {
+func SellerFor(id string) (*ItemSeller, bool) {
 	for _, s := range ItemsRules.Sellers {
-		if s.ID == id {
+		if s.GetId() == id {
 			return s, true
 		}
 	}
-	return ItemSeller{}, false
+	return nil, false
 }
 
 // SortedCosts walks a bill in a fixed order (stable ledgers and errors).
-func SortedCosts(costs map[string]int) []string {
+func SortedCosts(costs map[string]int32) []string {
 	ids := make([]string, 0, len(costs))
 	for id := range costs {
 		ids = append(ids, id)
@@ -529,7 +355,7 @@ func SortedCosts(costs map[string]int) []string {
 // StackCurrency is the ledger currency for a carried stack: materials keep
 // their historical "material:" prefix, everything else is "item:".
 func StackCurrency(id string) string {
-	if d, ok := ItemFor(id); ok && d.Kind == "material" {
+	if d, ok := ItemFor(id); ok && d.GetKind() == "material" {
 		return "material:" + id
 	}
 	return "item:" + id

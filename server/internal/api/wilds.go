@@ -441,7 +441,7 @@ func claimRate(ctx context.Context, tx *sql.Tx, id string, now int64) error {
 		_, err = tx.ExecContext(ctx, "INSERT INTO claim_rate VALUES(?,?,1) ON CONFLICT(account_id) DO UPDATE SET window_at=excluded.window_at,qty=1", id, now)
 		return err
 	}
-	if n >= content.Rules.WildsLimits.ClaimsPerMinute {
+	if n >= int(content.Rules.GetWildsLimits().GetClaimsPerMinute()) {
 		return fail(429, "claim-rate-limited")
 	}
 	_, err = tx.ExecContext(ctx, "UPDATE claim_rate SET qty=qty+1 WHERE account_id=?", id)
@@ -633,10 +633,10 @@ func (a *Server) wildsRelight(w http.ResponseWriter, r *http.Request) error {
 			if err != nil && err != sql.ErrNoRows {
 				return nil, err
 			}
-			if n < content.Rules.WildsLimits.LanternRelightsPerDay {
+			if n < int(content.Rules.GetWildsLimits().GetLanternRelightsPerDay()) {
 				rewarded = true
-				reward := content.Rules.WildsLimits.LanternReward
-				loot.Materials = append(loot.Materials, wilds.MaterialQty{ID: reward.Material, Qty: reward.Qty})
+				reward := content.Rules.GetWildsLimits().GetLanternReward()
+				loot.Materials = append(loot.Materials, wilds.MaterialQty{ID: reward.Material, Qty: int(reward.GetQty())})
 				if _, err = tx.ExecContext(ctx, "INSERT INTO lantern_rewards VALUES(?,?,1) ON CONFLICT(account_id,utc_day) DO UPDATE SET qty=qty+1", s.AccountID, day); err != nil {
 					return nil, err
 				}
@@ -785,7 +785,7 @@ func (w wildsService) PlaceFallen(ctx context.Context, tx *sql.Tx, s *store.Snap
 	if err != nil && err != sql.ErrNoRows {
 		return ports.FallLantern{}, err
 	}
-	if n >= content.Rules.WildsLimits.LanternsCreatedPerDay {
+	if n >= int(content.Rules.GetWildsLimits().GetLanternsCreatedPerDay()) {
 		return none("daily-cap")
 	}
 	if _, err = tx.ExecContext(ctx, "INSERT INTO lantern_creations VALUES(?,?,1) ON CONFLICT(account_id,utc_day) DO UPDATE SET qty=qty+1", s.AccountID, day); err != nil {
@@ -818,7 +818,7 @@ func grantLoot(ctx context.Context, tx *sql.Tx, s *store.Snapshot, loot wilds.Lo
 		// A story keepsake is a single, real thing: the Wilds give a bound
 		// keepsake to a player once, and never repeat it (the roll may name
 		// it again, but nothing is granted). Unbound trinkets repeat.
-		if def, ok := content.ItemFor(*loot.Trinket); ok && def.Kind == "keepsake" && def.Bound {
+		if def, ok := content.ItemFor(*loot.Trinket); ok && def.GetKind() == "keepsake" && def.GetBound() {
 			first, err := store.Outcome(ctx, tx, s.AccountID, "story-keepsake:"+*loot.Trinket, reason, now)
 			if err != nil {
 				return err
@@ -908,7 +908,7 @@ func maybeGrantWardenSliver(ctx context.Context, tx *sql.Tx, s *store.Snapshot, 
 	if !ok {
 		return false, nil
 	}
-	if _, err = newInstance(ctx, tx, sliverDef, instanceAt{"pack", s.AccountID}, "", sliverDef.MaxPoints(), now); err != nil {
+	if _, err = newInstance(ctx, tx, sliverDef, instanceAt{"pack", s.AccountID}, "", content.ItemMaxPoints(sliverDef), now); err != nil {
 		return false, err
 	}
 	if err = currency(ctx, tx, s.AccountID, content.StackCurrency("warden-sliver"), 1, "wilds-find", entity.ID, now); err != nil {

@@ -325,7 +325,7 @@ func TestGateShelfTakeAndDailyLimit(t *testing.T) {
 		"op":   "take",
 		"gate": 0,
 		"slot": 1}, 200)
-	if takeAxe.Result.Taken == nil || takeAxe.Result.Taken.Kind != "instance" || takeAxe.Result.Taken.ID != "bench-axe" {
+	if takeAxe.Result.Taken == nil || takeAxe.Result.Taken.GetKind() != "instance" || takeAxe.Result.Taken.GetId() != "bench-axe" {
 		t.Fatal("expected charlie to take bench-axe instance")
 	}
 
@@ -337,7 +337,7 @@ func TestGateShelfTakeAndDailyLimit(t *testing.T) {
 		"asset": map[string]any{"kind": "decoration", "id": "writing-desk", "qty": 1}}, 200)
 	dc, d := x.member("dave", a.WorldID)
 	deskTake := x.shelfOp(dc, &d, map[string]any{"op": "take", "gate": 0, "slot": 2}, 200)
-	if deskTake.Result.Taken == nil || deskTake.Result.Taken.Kind != "decoration" || deskTake.Result.Taken.ID != "writing-desk" {
+	if deskTake.Result.Taken == nil || deskTake.Result.Taken.GetKind() != "decoration" || deskTake.Result.Taken.GetId() != "writing-desk" {
 		t.Fatal("expected dave to take the writing desk")
 	}
 	if count(t, x.db, "SELECT COUNT(*) FROM homestead_items WHERE id='"+desk+"' AND location='inventory' AND account_id='"+x.account("dave")+"'") != 1 {
@@ -400,7 +400,7 @@ func TestGateShelfTakeReplayIsConserved(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if first.Result.Taken == nil || second.Result.Taken == nil || first.Result.Taken.ID != second.Result.Taken.ID {
+	if first.Result.Taken == nil || second.Result.Taken == nil || first.Result.Taken.GetId() != second.Result.Taken.GetId() {
 		t.Fatal("retry did not replay the taken item")
 	}
 	if count(t, x.db, "SELECT COUNT(*) FROM item_stacks WHERE location='pack' AND owner='"+x.account("bob")+"' AND item_def='comfrey-salve'") != 1 {
@@ -509,7 +509,7 @@ func TestGateShelfLostDeedWriteOff(t *testing.T) {
 	x.homeOpRefreshing(ac, &a, "leave", nil, 200)
 
 	// Fast-forward past deed loss window
-	lostDays := int64(content.HomeRules.Desolation.DeedLostAfterDays) + 1
+	lostDays := int64(content.HomeRules.GetDesolation().GetDeedLostAfterDays()) + 1
 	x.now.Add(lostDays * 86400)
 
 	// Alice signs in again because session expired over the fortnight
@@ -566,7 +566,7 @@ func TestMakerThankYouMail(t *testing.T) {
 		t.Fatalf("expected 1 mail, got %d", len(mailList.Mail))
 	}
 	m := mailList.Mail[0]
-	if m.Asset.Kind != "thanks" || m.Asset.ID != "keepers-twists" || m.FromID != x.account("bob") {
+	if m.Asset.GetKind() != "thanks" || m.Asset.GetId() != "keepers-twists" || m.FromID != x.account("bob") {
 		t.Fatalf("unexpected mail: %+v", m)
 	}
 
@@ -660,7 +660,7 @@ func TestToolWearOutThankYouMail(t *testing.T) {
 	if len(mailList.Mail) != 1 {
 		t.Fatalf("expected 1 mail, got %d", len(mailList.Mail))
 	}
-	if mailList.Mail[0].Asset.Kind != "thanks" || mailList.Mail[0].Asset.ID != "bench-axe" {
+	if mailList.Mail[0].Asset.GetKind() != "thanks" || mailList.Mail[0].Asset.GetId() != "bench-axe" {
 		t.Fatalf("unexpected thank-you mail: %+v", mailList.Mail[0])
 	}
 }

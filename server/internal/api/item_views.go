@@ -10,7 +10,7 @@ import (
 	"net/http"
 )
 
-func toolState(def content.ItemDef, v instanceRow, warden bool) string {
+func toolState(def *content.ItemDef, v instanceRow, warden bool) string {
 	if v.Max == 0 {
 		return "whole"
 	}
@@ -18,12 +18,12 @@ func toolState(def content.ItemDef, v instanceRow, warden bool) string {
 		if warden {
 			return "dull"
 		}
-		if r := def.AtZeroRule(); r == "blunt" || r == "cracked" {
+		if r := content.ItemAtZeroRule(def); r == "blunt" || r == "cracked" {
 			return r
 		}
 		return "worn"
 	}
-	if v.Condition*100 < v.Max*content.ItemsRules.Rules.Wear.WornBelowPercent {
+	if v.Condition*100 < v.Max*int(content.ItemsRules.Rules.Wear.GetWornBelowPercent()) {
 		return "worn"
 	}
 	return "whole"
@@ -56,9 +56,9 @@ func viewInstance(ctx context.Context, tx *sql.Tx, v instanceRow, makers map[str
 	}
 	for _, f := range fittings {
 		fd, _ := content.ItemFor(f.Def)
-		fv := fittingView{ID: f.ID, ItemDef: f.Def, Fitting: fd.Fitting, Condition: f.Condition, MaxCondition: f.Max}
+		fv := fittingView{ID: f.ID, ItemDef: f.Def, Fitting: fd.GetFitting(), Condition: f.Condition, MaxCondition: f.Max}
 		if f.Max > 0 {
-			fv.UsesLeft = usesLeft(f.Condition, content.ItemsRules.Rules.Wear.PointsPerUse)
+			fv.UsesLeft = usesLeft(f.Condition, int(content.ItemsRules.Rules.Wear.GetPointsPerUse()))
 		}
 		if fv.Maker, err = makerOf(ctx, tx, f.Maker, makers); err != nil {
 			return out, err

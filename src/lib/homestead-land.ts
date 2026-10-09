@@ -112,8 +112,8 @@ export function isLit(lights: readonly Light[], x: number, y: number): boolean {
 /** The materials the n-th lantern post of a homestead costs (0-based). */
 export function postCost(n: number, data: HomesteadData = HOMESTEAD_DATA): Record<string, number> {
   const c = data.lanternPosts.costs;
-  if (n < c.length) return { ...c[n] };
-  const last = c[c.length - 1];
+  if (n < c.length) return { ...c[n].materials };
+  const last = c[c.length - 1].materials;
   const out: Record<string, number> = {};
   for (const [m, v] of Object.entries(last)) out[m] = v + (data.lanternPosts.growth[m] ?? 0) * (n - c.length + 1);
   return out;

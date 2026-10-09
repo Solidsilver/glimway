@@ -31,12 +31,16 @@ type projectsView struct {
 func readProjects(ctx context.Context, tx *sql.Tx, s store.Snapshot) (projectsView, error) {
 	out := projectsView{Projects: []projectView{}, WorldFlags: []string{}, GrantablePapers: []string{}}
 	for _, def := range content.ProjectRules.Projects {
-		v := projectView{ID: def.ID, Name: def.Name, Stage: "open", Required: def.Materials, Contributed: map[string]int{}, Mine: map[string]int{}, GrantablePapers: []string{}}
-		for id := range def.Materials {
+		required := map[string]int{}
+		for id, n := range def.GetMaterials() {
+			required[id] = int(n)
+		}
+		v := projectView{ID: def.GetId(), Name: def.GetName(), Stage: "open", Required: required, Contributed: map[string]int{}, Mine: map[string]int{}, GrantablePapers: []string{}}
+		for id := range def.GetMaterials() {
 			v.Contributed[id] = 0
 			v.Mine[id] = 0
 		}
-		mine, err := tx.QueryContext(ctx, "SELECT material,SUM(qty) FROM contributions WHERE world_id=? AND project_def=? AND account_id=? GROUP BY material", s.WorldID, def.ID, s.AccountID)
+		mine, err := tx.QueryContext(ctx, "SELECT material,SUM(qty) FROM contributions WHERE world_id=? AND project_def=? AND account_id=? GROUP BY material", s.WorldID, def.GetId(), s.AccountID)
 		if err != nil {
 			return out, err
 		}
@@ -54,11 +58,11 @@ func readProjects(ctx context.Context, tx *sql.Tx, s store.Snapshot) (projectsVi
 		if err != nil {
 			return out, err
 		}
-		err = tx.QueryRowContext(ctx, "SELECT completed_at,world_flag FROM projects WHERE world_id=? AND project_def=?", s.WorldID, def.ID).Scan(&v.CompletedAt, &v.WorldFlag)
+		err = tx.QueryRowContext(ctx, "SELECT completed_at,world_flag FROM projects WHERE world_id=? AND project_def=?", s.WorldID, def.GetId()).Scan(&v.CompletedAt, &v.WorldFlag)
 		if err != nil && err != sql.ErrNoRows {
 			return out, err
 		}
-		rows, err := tx.QueryContext(ctx, "SELECT material,qty FROM project_materials WHERE world_id=? AND project_def=?", s.WorldID, def.ID)
+		rows, err := tx.QueryContext(ctx, "SELECT material,qty FROM project_materials WHERE world_id=? AND project_def=?", s.WorldID, def.GetId())
 		if err != nil {
 			return out, err
 		}
@@ -80,7 +84,7 @@ func readProjects(ctx context.Context, tx *sql.Tx, s store.Snapshot) (projectsVi
 		if v.CompletedAt != nil {
 			v.Stage = "complete"
 			out.WorldFlags = append(out.WorldFlags, *v.WorldFlag)
-			rows, err = tx.QueryContext(ctx, `SELECT paper_id FROM project_papers WHERE world_id=? AND project_def=? AND EXISTS(SELECT 1 FROM contributions WHERE world_id=? AND project_def=? AND account_id=?) ORDER BY paper_id`, s.WorldID, def.ID, s.WorldID, def.ID, s.AccountID)
+			rows, err = tx.QueryContext(ctx, `SELECT paper_id FROM project_papers WHERE world_id=? AND project_def=? AND EXISTS(SELECT 1 FROM contributions WHERE world_id=? AND project_def=? AND account_id=?) ORDER BY paper_id`, s.WorldID, def.GetId(), s.WorldID, def.GetId(), s.AccountID)
 			if err != nil {
 				return out, err
 			}
@@ -139,11 +143,11 @@ func (a *Server) projectContribute(w http.ResponseWriter, r *http.Request) error
 		if !ok {
 			return nil, fail(404, "project-not-found")
 		}
-		if len(given) == 0 || len(given) > len(def.Materials) {
+		if len(given) == 0 || len(given) > len(def.GetMaterials()) {
 			return nil, fail(400, "invalid-contribution")
 		}
 		for material, n := range given {
-			if def.Materials[material] == 0 || n < 1 || n > 10000 {
+			if int(def.GetMaterials()[material]) == 0 || n < 1 || n > 10000 {
 				return nil, fail(400, "invalid-contribution")
 			}
 		}
@@ -171,7 +175,7 @@ func (a *Server) projectContribute(w http.ResponseWriter, r *http.Request) error
 			if err != nil && err != sql.ErrNoRows {
 				return nil, err
 			}
-			if n > max(0, def.Materials[material]-current) {
+			if n > max(0, int(def.GetMaterials()[material])-current) {
 				return nil, fail(409, "project-overfilled")
 			}
 			if err = materialChange(ctx, tx, s.AccountID, material, -n, "project-contribute", s.WorldID+":"+id+":"+ref, now); err != nil {
@@ -210,18 +214,18 @@ func (a *Server) projectContribute(w http.ResponseWriter, r *http.Request) error
 
 // Reconcile tuned requirements against durable totals without changing any
 // player revision. Existing completion records and paper grants remain frozen.
-func completeProject(ctx context.Context, tx *sql.Tx, world string, def content.Project, now int64) error {
-	for material, required := range def.Materials {
+func completeProject(ctx context.Context, tx *sql.Tx, world string, def *content.Project, now int64) error {
+	for material, required := range def.GetMaterials() {
 		var n int
-		err := tx.QueryRowContext(ctx, "SELECT qty FROM project_materials WHERE world_id=? AND project_def=? AND material=?", world, def.ID, material).Scan(&n)
+		err := tx.QueryRowContext(ctx, "SELECT qty FROM project_materials WHERE world_id=? AND project_def=? AND material=?", world, def.GetId(), material).Scan(&n)
 		if err != nil && err != sql.ErrNoRows {
 			return err
 		}
-		if n < required {
+		if n < int(required) {
 			return nil
 		}
 	}
-	res, err := tx.ExecContext(ctx, "UPDATE projects SET completed_at=?,world_flag=? WHERE world_id=? AND project_def=? AND completed_at IS NULL", now, def.WorldFlag, world, def.ID)
+	res, err := tx.ExecContext(ctx, "UPDATE projects SET completed_at=?,world_flag=? WHERE world_id=? AND project_def=? AND completed_at IS NULL", now, def.GetWorldFlag(), world, def.GetId())
 	if err != nil {
 		return err
 	}
@@ -229,8 +233,8 @@ func completeProject(ctx context.Context, tx *sql.Tx, world string, def content.
 	if err != nil || n == 0 {
 		return err
 	}
-	for _, paper := range def.Papers {
-		if _, err = tx.ExecContext(ctx, "INSERT INTO project_papers VALUES(?,?,?,?)", world, def.ID, paper, now); err != nil {
+	for _, paper := range def.GetPapers() {
+		if _, err = tx.ExecContext(ctx, "INSERT INTO project_papers VALUES(?,?,?,?)", world, def.GetId(), paper, now); err != nil {
 			return err
 		}
 	}

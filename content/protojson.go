@@ -145,6 +145,33 @@ type entryList struct {
 	ids   []string
 }
 
+// entryLists names the entries of the named repeated fields (by proto
+// name), each entry by its id, in order — the loaders' map for rewriting a
+// violation path ("projects[2]") to name the entry.
+func entryLists(msg proto.Message, fields ...string) []entryList {
+	out := make([]entryList, 0, len(fields))
+	m := msg.ProtoReflect()
+	for _, field := range fields {
+		fd := m.Descriptor().Fields().ByName(protoreflect.Name(field))
+		if fd == nil || !fd.IsList() {
+			continue
+		}
+		list := m.Get(fd).List()
+		ids := make([]string, list.Len())
+		for i := range ids {
+			if fd.Message() == nil {
+				continue // scalars name no entry
+			}
+			entry := list.Get(i).Message()
+			if idFd := entry.Descriptor().Fields().ByName("id"); idFd != nil {
+				ids[i] = entry.Get(idFd).String()
+			}
+		}
+		out = append(out, entryList{field: field, ids: ids})
+	}
+	return out
+}
+
 // contentValidate runs protovalidate and reports its violations the way the
 // hand-written loaders did: naming the entry and the field
 // ("invalid furnishings: candle footprint: ...").

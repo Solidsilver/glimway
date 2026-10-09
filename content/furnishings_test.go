@@ -3,6 +3,8 @@ package content
 import (
 	"encoding/json"
 	"testing"
+
+	"google.golang.org/protobuf/proto"
 )
 
 func TestFurnishingsLoaderVectors(t *testing.T) {
@@ -82,35 +84,31 @@ func TestHomesteadReadsItemsThroughTheCatalogue(t *testing.T) {
 	if !ok {
 		t.Fatal("catalogue lost the wooden stool")
 	}
-	if h.Items[0].ID != "wooden-stool" || h.Items[0].Name != stool.GetName() || h.Items[0].Footprint[0] != int(stool.GetFootprint()[0]) || h.Items[0].Footprint[1] != int(stool.GetFootprint()[1]) {
+	if h.Items[0].GetId() != "wooden-stool" || h.Items[0].GetName() != stool.GetName() || h.Items[0].GetFootprint()[0] != stool.GetFootprint()[0] || h.Items[0].GetFootprint()[1] != stool.GetFootprint()[1] {
 		t.Fatal("home goods do not come from the catalogue")
 	}
 	for _, v := range h.Items {
-		if _, ok := FurnishingFor(v.ID); !ok {
-			t.Fatal("unresolved home good " + v.ID)
+		if _, ok := FurnishingFor(v.GetId()); !ok {
+			t.Fatal("unresolved home good " + v.GetId())
 		}
 	}
-	var broken Homestead
-	b, _ := json.Marshal(h)
-	if err := json.Unmarshal(b, &broken); err != nil {
-		t.Fatal(err)
-	}
-	broken.Items[0].ID = "no-such-piece"
-	if err := resolveHomeGoods(&broken); err == nil {
+	broken := proto.Clone(h).(*Homestead)
+	broken.Items[0].Id = "no-such-piece"
+	if err := resolveHomeGoods(broken); err == nil {
 		t.Fatal("accepted an unknown furnishing reference")
 	}
-	broken.Items[0].ID = h.Items[0].ID
+	broken.Items[0].Id = h.Items[0].GetId()
 	broken.Items[0].Name = "Wrong Name"
-	if err := resolveHomeGoods(&broken); err == nil {
+	if err := resolveHomeGoods(broken); err == nil {
 		t.Fatal("accepted a row naming itself differently from the catalogue")
 	}
-	broken.Items[0].Name = h.Items[0].Name
-	broken.Items[0].Footprint = []int{9, 9}
-	if err := resolveHomeGoods(&broken); err == nil {
+	broken.Items[0].Name = h.Items[0].GetName()
+	broken.Items[0].Footprint = []int32{9, 9}
+	if err := resolveHomeGoods(broken); err == nil {
 		t.Fatal("accepted a footprint disagreeing with the catalogue")
 	}
-	broken.Items[0].Footprint = []int{1, 1, 1}
-	if err := ValidateHomestead(broken); err == nil {
+	broken.Items[0].Footprint = []int32{1, 1, 1}
+	if err := validateHomestead(broken); err == nil {
 		t.Fatal("accepted a malformed footprint")
 	}
 }

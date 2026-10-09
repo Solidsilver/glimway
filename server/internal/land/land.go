@@ -36,18 +36,18 @@ type Land struct {
 }
 
 // Seed is the land seed of a gate in a world (the world's id, not its secret seed).
-func Seed(worldID string, gate int, cfg content.HomeLand) uint32 {
-	return wilds.Hash(worldID, "homestead-land", cfg.Generator, gate)
+func Seed(worldID string, gate int, cfg *content.HomeLand) uint32 {
+	return wilds.Hash(worldID, "homestead-land", int(cfg.GetGenerator()), gate)
 }
 
 // Generate builds the land for a seed.
-func Generate(seed uint32, cfg content.HomeLand) Land {
-	W, H := cfg.Width, cfg.Height
+func Generate(seed uint32, cfg *content.HomeLand) Land {
+	W, H := int(cfg.GetWidth()), int(cfg.GetHeight())
 	tiles := make([]byte, W*H)
 	at := func(x, y int) byte { return tiles[y*W+x] }
 	put := func(x, y int, k byte) { tiles[y*W+x] = k }
-	site, gate := cfg.Site, cfg.Gate
-	siteBottom := site.Y + site.H
+	site, gate := cfg.GetSite(), cfg.GetGate()
+	siteBottom := int(site.GetY()) + int(site.GetH())
 	for y := 0; y < H; y++ {
 		for x := 0; x < W; x++ {
 			if x == 0 || y == 0 || x == W-1 || y == H-1 {
@@ -58,16 +58,16 @@ func Generate(seed uint32, cfg content.HomeLand) Land {
 		}
 	}
 	for y := siteBottom; y < H; y++ {
-		for x := gate.X; x < gate.X+gate.W; x++ {
+		for x := int(gate.GetX()); x < int(gate.GetX())+int(gate.GetW()); x++ {
 			put(x, y, Path)
 		}
 	}
 	protected := func(x, y int) bool {
-		return (x >= site.X-1 && x <= site.X+site.W && y >= site.Y-1 && y <= siteBottom) ||
-			(x >= gate.X-1 && x <= gate.X+gate.W && y >= siteBottom)
+		return (x >= int(site.GetX())-1 && x <= int(site.GetX())+int(site.GetW()) && y >= int(site.GetY())-1 && y <= siteBottom) ||
+			(x >= int(gate.GetX())-1 && x <= int(gate.GetX())+int(gate.GetW()) && y >= siteBottom)
 	}
 	rng := wilds.NewRng(seed)
-	if rng.NextInt(1000) < cfg.StreamPermille {
+	if rng.NextInt(1000) < int(cfg.GetStreamPermille()) {
 		side := rng.NextInt(2)
 		lo, hi := 2, 9
 		if side != 0 {
@@ -91,7 +91,7 @@ func Generate(seed uint32, cfg content.HomeLand) Land {
 			}
 		}
 	}
-	if rng.NextInt(1000) < cfg.SlopePermille {
+	if rng.NextInt(1000) < int(cfg.GetSlopePermille()) {
 		y0 := 2 + rng.NextInt(3)
 		x0 := 2 + rng.NextInt(W/3)
 		n := 8 + rng.NextInt(10)
@@ -113,9 +113,9 @@ func Generate(seed uint32, cfg content.HomeLand) Land {
 			}
 		}
 	}
-	scatter(cfg.Trees, Tree)
-	scatter(cfg.Stumps, Stump)
-	scatter(cfg.Boulders, Boulder)
+	scatter(int(cfg.GetTrees()), Tree)
+	scatter(int(cfg.GetStumps()), Stump)
+	scatter(int(cfg.GetBoulders()), Boulder)
 	return Land{W, H, tiles}
 }
 

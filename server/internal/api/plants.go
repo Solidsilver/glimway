@@ -23,8 +23,8 @@ func plantGround(h homeView) map[[2]int]bool {
 			}
 		}
 	}
-	for _, v := range content.HomeRules.OutdoorReserved {
-		mark(rect{v.X, v.Y, v.W, v.H})
+	for _, v := range content.HomeRules.GetOutdoorReserved() {
+		mark(rect{int(v.GetX()), int(v.GetY()), int(v.GetW()), int(v.GetH())})
 	}
 	for _, v := range placedItems(h) {
 		if r, ok := placedRect(v); ok && *v.Scene == "outdoor" {
@@ -118,7 +118,7 @@ func (a *Server) plant(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *
 		return fail(409, "too-far-away")
 	}
 	// A home tends so many plants, then the ground is full.
-	if len(h.Plants) >= content.GatheringRules.PlantsPerHome || !plantGround(*h)[[2]int{x, y}] {
+	if len(h.Plants) >= int(content.GatheringRules.GetPlantsPerHome()) || !plantGround(*h)[[2]int{x, y}] {
 		return fail(409, "land-blocked")
 	}
 	for _, p := range h.Plants {

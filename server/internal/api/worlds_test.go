@@ -458,7 +458,7 @@ func TestWorldMoveRefusedWhenUnsafe(t *testing.T) {
 	x.worldReq("POST", "/api/world/move", moveBody(h, "here", h.WorldID, "village"), hc, 409)
 
 	// Parcels on the road from them must come home first.
-	sent := x.p5("POST", "/api/mail", body(h, "send", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", ID: "timber", Qty: 5}}), hc, 200)
+	sent := x.p5("POST", "/api/mail", body(h, "send", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", Id: "timber", Qty: 5}}), hc, 200)
 	h.Snapshot = sent.Snapshot
 	if v := x.worldReq("GET", "/api/world", nil, hc, 200); v.Leaving.Outgoing != 1 {
 		t.Fatal("outgoing", v.raw)
@@ -502,12 +502,12 @@ func TestWorldMoveCarriesPackAndChestAndLeavesTheRest(t *testing.T) {
 	h.Snapshot = crafted.Snapshot
 	spot := litSpots(*crafted.Result.Home)[0]
 	update(&h, x.exp("POST", "/api/homestead/place", body(h, "place", map[string]any{"itemId": crafted.Result.InstanceIDs[0], "scene": "outdoor", "x": spot[0], "y": spot[1], "rotation": 0}), hc, 200))
-	h.Snapshot = x.p5("POST", "/api/storage", body(h, "shared", map[string]any{"direction": "deposit", "asset": content.Asset{Kind: "material", ID: "timber", Qty: 7}}), hc, 200).Snapshot
-	h.Snapshot = x.p5("POST", "/api/storage", body(h, "personal", map[string]any{"direction": "deposit", "chest": "personal", "asset": content.Asset{Kind: "material", ID: "stone", Qty: 4}}), hc, 200).Snapshot
+	h.Snapshot = x.p5("POST", "/api/storage", body(h, "shared", map[string]any{"direction": "deposit", "asset": content.Asset{Kind: "material", Id: "timber", Qty: 7}}), hc, 200).Snapshot
+	h.Snapshot = x.p5("POST", "/api/storage", body(h, "personal", map[string]any{"direction": "deposit", "chest": "personal", "asset": content.Asset{Kind: "material", Id: "stone", Qty: 4}}), hc, 200).Snapshot
 	home := x.home(hc)
 
 	// Bob's parcel waiting for Hal goes back to Bob.
-	sent := x.p5("POST", "/api/mail", body(b, "gift", map[string]any{"toId": x.account("hal"), "asset": content.Asset{Kind: "material", ID: "fiber", Qty: 3}}), bc, 200)
+	sent := x.p5("POST", "/api/mail", body(b, "gift", map[string]any{"toId": x.account("hal"), "asset": content.Asset{Kind: "material", Id: "fiber", Qty: 3}}), bc, 200)
 	b.Snapshot = sent.Snapshot
 
 	x.refresh(hc, &h)
@@ -881,9 +881,9 @@ func TestWorldMoveLeavingWarnings(t *testing.T) {
 	axe := x.instance(x.account("hal"), "bench-axe", -1, "")
 	sliver := x.instance(x.account("hal"), "warden-sliver", -1, "")
 	x.opRefreshing(hc, &h, "fit", map[string]any{"tool": axe, "instance": sliver}, 200)
-	h.Snapshot = x.p5("POST", "/api/storage", body(h, "rack", map[string]any{"direction": "deposit", "asset": content.Asset{Kind: "instance", ID: "bench-axe", Qty: 1, Instance: axe}}), hc, 200).Snapshot
+	h.Snapshot = x.p5("POST", "/api/storage", body(h, "rack", map[string]any{"direction": "deposit", "asset": content.Asset{Kind: "instance", Id: "bench-axe", Qty: 1, Instance: axe}}), hc, 200).Snapshot
 	v := x.worldReq("GET", "/api/world", nil, hc, 200)
-	if v.Leaving.WardenTools != 1 || v.Leaving.DeedCost != content.HomeRules.Deeds.Embers || v.Leaving.DeedCost == 0 {
+	if v.Leaving.WardenTools != 1 || v.Leaving.DeedCost != int(content.HomeRules.GetDeeds().GetEmbers()) || v.Leaving.DeedCost == 0 {
 		t.Fatal("leaving warnings", v.raw)
 	}
 }

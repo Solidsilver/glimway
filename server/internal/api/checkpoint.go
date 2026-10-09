@@ -11,7 +11,7 @@ import (
 // Pending has its own retention clock. Neither death nor flagging confiscates
 // held credit; expiry and verification are audited in the same transaction.
 func expirePending(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (bool, error) {
-	cutoff := now - int64(rules.E.PendingCreditDays)*86400
+	cutoff := now - int64(int(rules.E.GetPendingCreditDays()))*86400
 	var expired int
 	if err := tx.QueryRowContext(ctx, "SELECT COALESCE(SUM(embers),0) FROM pending_credits WHERE account_id=? AND created_at<=?", s.AccountID, cutoff).Scan(&expired); err != nil {
 		return false, err

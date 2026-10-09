@@ -100,8 +100,8 @@ func litSpots(h homeView) [][2]int {
 				continue
 			}
 			reserved := false
-			for _, r := range content.HomeRules.OutdoorReserved {
-				if (rect{x, y, 1, 1}).overlaps(rect{r.X, r.Y, r.W, r.H}) {
+			for _, r := range content.HomeRules.GetOutdoorReserved() {
+				if (rect{x, y, 1, 1}).overlaps(rect{int(r.GetX()), int(r.GetY()), int(r.GetW()), int(r.GetH())}) {
 					reserved = true
 				}
 			}
@@ -124,7 +124,7 @@ func TestHomesteadClaimAccessAndCommonsRoster(t *testing.T) {
 	}
 	rev := s.Version
 	lane := x.exp("GET", "/api/commons", nil, c, 200)
-	if lane.Version != rev || lane.GateCount != content.HomeRules.Lane.SpareGates || lane.Mine != nil || len(lane.Gates) != lane.GateCount || lane.Gates[0].HomeID != nil || lane.Gates[0].Price == nil || *lane.Gates[0].Price != 0 {
+	if lane.Version != rev || lane.GateCount != int(content.HomeRules.GetCommons().GetSpareGates()) || lane.Mine != nil || len(lane.Gates) != lane.GateCount || lane.Gates[0].HomeID != nil || lane.Gates[0].Price == nil || *lane.Gates[0].Price != 0 {
 		t.Fatal("empty lane", lane.GateCount)
 	}
 	// An unclaimed gate can be visited: wild land, no home.
@@ -182,10 +182,10 @@ func TestHomesteadTransactionsIdempotencyAndPlacement(t *testing.T) {
 		return x.exp("POST", "/api/homestead/place", body(s, key, map[string]any{"itemId": id, "scene": scene, "x": px, "y": py, "rotation": rotation}), c, status)
 	}
 	place("no-indoor", fern, "indoor", 0, 0, 0, 409)
-	place("bounds", fern, "outdoor", content.HomeRules.Land.Width, 0, 0, 409)
+	place("bounds", fern, "outdoor", int(content.HomeRules.GetLand().GetWidth()), 0, 0, 409)
 	place("rotation", fern, "outdoor", 0, 0, 45, 400)
-	site := content.HomeRules.Land.Site
-	if v := place("on-the-cottage", fern, "outdoor", site.X+2, site.Y+2, 0, 409); v.Error.Code != "placement-overlap" {
+	site := content.HomeRules.GetLand().GetSite() // pointers: read with getters
+	if v := place("on-the-cottage", fern, "outdoor", int(site.GetX())+2, int(site.GetY())+2, 0, 409); v.Error.Code != "placement-overlap" {
 		t.Fatal("reserved cottage tiles", v.Error.Code)
 	}
 	x.exp("POST", "/api/homestead/place", body(s, "missing-coordinate", map[string]any{"itemId": fern, "scene": "outdoor", "rotation": 0}), c, 400)
@@ -220,7 +220,7 @@ func TestHomesteadTransactionsIdempotencyAndPlacement(t *testing.T) {
 	}
 	update(&s, place("rotated-fit", chair, "indoor", 10, 8, 90, 200))
 	before := s.Snapshot
-	x.exp("POST", "/api/homestead/move", body(s, "collide", map[string]any{"itemId": stool, "scene": "outdoor", "x": site.X, "y": site.Y, "rotation": 0}), c, 409)
+	x.exp("POST", "/api/homestead/move", body(s, "collide", map[string]any{"itemId": stool, "scene": "outdoor", "x": site.GetX(), "y": site.GetY(), "rotation": 0}), c, 409)
 	unchanged(t, before, x.expect("GET", "/api/state", nil, c, 200).Snapshot)
 	if count(t, x.db, "SELECT count(*) FROM idempotency WHERE key='collide'") != 1 {
 		t.Fatal("terminal placement refusal missing")

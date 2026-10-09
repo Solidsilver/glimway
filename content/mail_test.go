@@ -2,16 +2,21 @@ package content
 
 import "testing"
 
-func TestMailContent(t *testing.T) {
-	m, err := LoadMail()
-	if err != nil || m.MaxOutstandingSent != 50 || m.MaxOutstandingReceived != 50 || m.MaxSendsPerWindow != 10 || m.ReturnAfterDays != 30 || m.HistoryPageSize != 50 {
-		t.Fatal("mail defaults", err)
+func TestMailLoaderVectors(t *testing.T) {
+	var vectors struct {
+		Loader []loaderVector
 	}
-	for _, mutate := range []func(*Mail){func(m *Mail) { m.MaxOutstandingSent = 0 }, func(m *Mail) { m.MaxOutstandingReceived = 101 }, func(m *Mail) { m.MaxSendsPerWindow = 0 }, func(m *Mail) { m.SendWindowSeconds = 86401 }, func(m *Mail) { m.HistoryPageSize = 101 }, func(m *Mail) { m.ReturnAfterDays = 366 }, func(m *Mail) { m.MaintenanceBatch = 501 }, func(m *Mail) { m.MaintenanceIntervalSeconds = 3601 }} {
-		copy := m
-		mutate(&copy)
-		if ValidateMail(copy) == nil {
-			t.Fatal("accepted invalid mail limits")
-		}
+	readVectors(t, "mail", &vectors)
+	base, _ := FS.ReadFile("mail.json")
+	for _, v := range vectors.Loader {
+		t.Run("loader/"+v.Name, func(t *testing.T) {
+			_, err := DecodeMail(editVector(t, base, v))
+			if (err == nil) != v.Valid {
+				t.Fatal(v.Valid, err)
+			}
+			if !v.Valid && v.Rule != "" {
+				checkVectorRule(t, err, v.Rule)
+			}
+		})
 	}
 }

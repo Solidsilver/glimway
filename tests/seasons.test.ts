@@ -85,7 +85,7 @@ test('bloom flowers dry into dried flowers, and the frame takes either', () => {
   const frame = CRAFTING.recipes.find((r) => r.id === 'craft-pressed-flowers');
   assert.ok(frame, 'the pressed-flower frame recipe');
   assert.equal(frame?.materials['bloom-flowers'], 3);
-  assert.deepEqual(frame?.swaps?.['bloom-flowers'], ['dried-flowers']);
+  assert.deepEqual(frame?.swaps?.['bloom-flowers']?.standIns, ['dried-flowers']);
 });
 
 test('the last materials have their people: Hazel’s tallow, Finn’s flour, and the day’s stall', () => {

@@ -1,0 +1,250 @@
+{
+  "loader": [
+    {
+      "name": "shipped-projects",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "empty",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "projects"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "duplicate-id",
+      "valid": false,
+      "rule": "duplicate id",
+      "edits": [
+        {
+          "path": [
+            "projects",
+            1,
+            "id"
+          ],
+          "value": "north-bridge"
+        },
+        {
+          "path": [
+            "projects",
+            1,
+            "worldFlag"
+          ],
+          "value": "project:north-bridge:complete"
+        }
+      ]
+    },
+    {
+      "name": "bad-id",
+      "valid": false,
+      "rule": "string.pattern",
+      "edits": [
+        {
+          "path": [
+            "projects",
+            0,
+            "id"
+          ],
+          "value": "North Bridge"
+        }
+      ]
+    },
+    {
+      "name": "no-name",
+      "valid": false,
+      "rule": "string.min_len",
+      "edits": [
+        {
+          "path": [
+            "projects",
+            0,
+            "name"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "no-materials",
+      "valid": false,
+      "rule": "map.min_pairs",
+      "edits": [
+        {
+          "path": [
+            "projects",
+            0,
+            "materials"
+          ],
+          "value": {}
+        }
+      ]
+    },
+    {
+      "name": "zero-material",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "projects",
+            0,
+            "materials",
+            "timber"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "unknown-material",
+      "valid": false,
+      "rule": "materials",
+      "edits": [
+        {
+          "path": [
+            "projects",
+            0,
+            "materials"
+          ],
+          "value": {
+            "gold": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "wrong-world-flag",
+      "valid": false,
+      "rule": "project.world_flag",
+      "edits": [
+        {
+          "path": [
+            "projects",
+            0,
+            "worldFlag"
+          ],
+          "value": "elsewhere"
+        }
+      ]
+    },
+    {
+      "name": "unknown-paper",
+      "valid": false,
+      "rule": "paper",
+      "edits": [
+        {
+          "path": [
+            "projects",
+            0,
+            "papers"
+          ],
+          "value": [
+            "missing"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "wrong-source-paper",
+      "valid": false,
+      "rule": "paper",
+      "edits": [
+        {
+          "path": [
+            "projects",
+            0,
+            "papers"
+          ],
+          "value": [
+            "will-of-elias-fenn"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "duplicate-paper",
+      "valid": false,
+      "rule": "repeated.unique",
+      "edits": [
+        {
+          "path": [
+            "projects",
+            0,
+            "papers"
+          ],
+          "value": [
+            "count-house-tally-book-scrap",
+            "count-house-tally-book-scrap"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "paper-without-a-project",
+      "valid": false,
+      "rule": "paper without a project",
+      "edits": [
+        {
+          "path": [
+            "projects",
+            0,
+            "papers"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "null-field",
+      "valid": false,
+      "rule": "null content field",
+      "edits": [
+        {
+          "path": [
+            "projects",
+            0,
+            "name"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "unknown-key",
+      "valid": false,
+      "rule": "unknown key",
+      "edits": [
+        {
+          "path": [
+            "projects",
+            0,
+            "flag"
+          ],
+          "value": "x"
+        }
+      ]
+    },
+    {
+      "name": "proto-name-key",
+      "valid": false,
+      "rule": "is the proto name",
+      "edits": [
+        {
+          "path": [
+            "projects",
+            0,
+            "world_flag"
+          ],
+          "value": "project:north-bridge:complete"
+        }
+      ]
+    }
+  ]
+}

@@ -1,46 +1,60 @@
 package content
 
 import (
-	"math"
 	"strconv"
 	"strings"
 	"testing"
+
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
+
+// decodeSpliced re-marshals a spliced message with protojson and decodes it
+// the way the loader does (schema rules included).
+func decodeSpliced(t *testing.T, g *Gathering) error {
+	t.Helper()
+	raw, err := protojson.Marshal(g)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = DecodeGathering(raw)
+	return err
+}
 
 func TestGatheringContent(t *testing.T) {
 	g, err := LoadGathering()
 	if err != nil {
 		t.Fatalf("LoadGathering: %v", err)
 	}
-	if g.Caps.Visit.Chop != 8 || g.Caps.Visit.Break != 5 || g.Caps.Visit.Dig != 6 {
-		t.Errorf("unexpected visit caps: %+v", g.Caps.Visit)
+	if g.GetCaps().GetVisit().GetChop() != 8 || g.GetCaps().GetVisit().GetBreak() != 5 || g.GetCaps().GetVisit().GetDig() != 6 {
+		t.Errorf("unexpected visit caps: %+v", g.GetCaps().GetVisit())
 	}
-	if g.Caps.Day.Chop != 30 || g.Caps.Day.Break != 20 || g.Caps.Day.Dig != 25 {
-		t.Errorf("unexpected day caps: %+v", g.Caps.Day)
+	if g.GetCaps().GetDay().GetChop() != 30 || g.GetCaps().GetDay().GetBreak() != 20 || g.GetCaps().GetDay().GetDig() != 25 {
+		t.Errorf("unexpected day caps: %+v", g.GetCaps().GetDay())
 	}
-	if g.SoftCapLine != "The wood’s given enough here today." {
-		t.Errorf("unexpected soft cap line: %q", g.SoftCapLine)
+	if g.GetSoftCapLine() != "The wood’s given enough here today." {
+		t.Errorf("unexpected soft cap line: %q", g.GetSoftCapLine())
 	}
 
 	// Verify all target items exist in ItemsRules.
-	for id, target := range g.Targets {
-		for _, y := range target.Yields {
-			if _, ok := ItemFor(y.Item); !ok {
-				t.Errorf("target %s yield item %s does not exist in items.json", id, y.Item)
+	for id, target := range g.GetTargets() {
+		for _, y := range target.GetYields() {
+			if _, ok := ItemFor(y.GetItem()); !ok {
+				t.Errorf("target %s yield item %s does not exist in items.json", id, y.GetItem())
 			}
-			if y.Min <= 0 || y.Max < y.Min {
-				t.Errorf("target %s yield item %s has invalid range %d..%d", id, y.Item, y.Min, y.Max)
+			if y.GetMin() <= 0 || y.GetMax() < y.GetMin() {
+				t.Errorf("target %s yield item %s has invalid range %d..%d", id, y.GetItem(), y.GetMin(), y.GetMax())
 			}
 		}
 	}
 
 	// Verify all seeds exist in ItemsRules with kind "seed".
-	for _, seed := range g.Seeds {
+	for _, seed := range g.GetSeeds() {
 		d, ok := ItemFor(seed)
 		if !ok {
 			t.Errorf("seed %s does not exist in items.json", seed)
-		} else if d.Kind != "seed" {
-			t.Errorf("seed %s has kind %q, expected \"seed\"", seed, d.Kind)
+		} else if d.GetKind() != "seed" {
+			t.Errorf("seed %s has kind %q, expected \"seed\"", seed, d.GetKind())
 		}
 	}
 }
@@ -56,23 +70,23 @@ func TestValidateGatheringNegativeFixtures(t *testing.T) {
 		{"no plants", func(g *Gathering) { g.PlantsPerHome = 0 }, "plantsPerHome"},
 		{"missing swings", func(g *Gathering) { delete(g.Swings, "dig") }, "swings"},
 		{"negative swings", func(g *Gathering) { g.Swings["break"] = -1 }, "swings"},
-		{"unknown swing action", func(g *Gathering) { g.Swings["fly"] = 3 }, "action"},
+		{"unknown swing action", func(g *Gathering) { g.Swings["fly"] = 3 }, "swings"},
 		{"missing area", func(g *Gathering) { delete(g.Areas, "home") }, "area"},
-		{"unknown area", func(g *Gathering) { g.Areas["sky"] = []string{"tree"} }, "area"},
-		{"unknown area target", func(g *Gathering) { g.Areas["woodland"] = []string{"missing"} }, "target"},
-		{"duplicate area target", func(g *Gathering) { g.Areas["home"] = []string{"tree", "tree"} }, "duplicate"},
+		{"unknown area", func(g *Gathering) { g.Areas["sky"] = &GatheringArea{Targets: []string{"tree"}} }, "area"},
+		{"unknown area target", func(g *Gathering) { g.Areas["woodland"] = &GatheringArea{Targets: []string{"missing"}} }, "target"},
+		{"duplicate area target", func(g *Gathering) { g.Areas["home"] = &GatheringArea{Targets: []string{"tree", "tree"}} }, "unique"},
 		{"no seeds", func(g *Gathering) { g.Seeds = nil }, "seeds"},
 		{"unknown seed", func(g *Gathering) { g.Seeds[0] = "missing" }, "seed"},
 		{"wrong seed kind", func(g *Gathering) { g.Seeds[0] = "timber" }, "seed"},
-		{"duplicate seed", func(g *Gathering) { g.Seeds = append(g.Seeds, g.Seeds[0]) }, "seed"},
+		{"duplicate seed", func(g *Gathering) { g.Seeds = append(g.Seeds, g.Seeds[0]) }, "unique"},
 	}
 	for _, scope := range []string{"visit", "day"} {
 		for _, action := range []string{"chop", "break", "dig"} {
-			for _, value := range []int{0, -1} {
-				fixtures = append(fixtures, fixture{scope + " " + action + " cap " + strconv.Itoa(value), func(g *Gathering) {
-					caps := &g.Caps.Visit
+			for _, value := range []int32{0, -1} {
+				fixtures = append(fixtures, fixture{scope + " " + action + " cap " + strconv.Itoa(int(value)), func(g *Gathering) {
+					caps := g.GetCaps().GetVisit()
 					if scope == "day" {
-						caps = &g.Caps.Day
+						caps = g.GetCaps().GetDay()
 					}
 					switch action {
 					case "chop":
@@ -100,9 +114,9 @@ func TestValidateGatheringNegativeFixtures(t *testing.T) {
 		{"zero min", func(v *GatheringTarget) { v.Yields[0].Min = 0 }, "range"},
 		{"negative min", func(v *GatheringTarget) { v.Yields[0].Min = -1 }, "range"},
 		{"inverted range", func(v *GatheringTarget) { v.Yields[0].Max = 1 }, "range"},
-		{"oversized range", func(v *GatheringTarget) { v.Yields[0].Max = math.MaxInt32 }, "range"},
-		{"negative chance", func(v *GatheringTarget) { v.Yields[0].ChancePermille = -1 }, "chance"},
-		{"chance over 1000", func(v *GatheringTarget) { v.Yields[0].ChancePermille = 1001 }, "chance"},
+		{"oversized range", func(v *GatheringTarget) { v.Yields[0].Max = 2147483647 }, "range"},
+		{"negative chance", func(v *GatheringTarget) { v.Yields[0].ChancePermille = proto.Int32(-1) }, "chance"},
+		{"chance over 1000", func(v *GatheringTarget) { v.Yields[0].ChancePermille = proto.Int32(1001) }, "chance"},
 		{"long verb", func(v *GatheringTarget) { v.Verb = strings.Repeat("x", 31) }, "verb"},
 		{"unknown mark", func(v *GatheringTarget) { v.Mark = "missing" }, "season"},
 		{"unknown wick", func(v *GatheringTarget) { v.Wick = "missing" }, "season"},
@@ -110,8 +124,8 @@ func TestValidateGatheringNegativeFixtures(t *testing.T) {
 	}
 	for _, f := range targets {
 		fixtures = append(fixtures, fixture{f.name, func(g *Gathering) {
-			target := g.Targets["tree"]
-			f.edit(&target)
+			target := proto.Clone(g.Targets["tree"]).(*GatheringTarget)
+			f.edit(target)
 			g.Targets["tree"] = target
 		}, f.want})
 	}
@@ -121,23 +135,27 @@ func TestValidateGatheringNegativeFixtures(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			f.edit(&g)
-			if err := ValidateGathering(g); err == nil || !strings.Contains(err.Error(), f.want) {
-				t.Fatalf("ValidateGathering = %v; want %s refusal", err, f.want)
+			f.edit(g)
+			if err := decodeSpliced(t, g); err == nil || !strings.Contains(err.Error(), f.want) {
+				t.Fatalf("DecodeGathering = %v; want %s refusal", err, f.want)
 			}
 		})
 	}
 }
 
 func TestValidateGatheringChanceBoundaries(t *testing.T) {
-	for _, chance := range []int{0, 1, 1000} {
+	for _, chance := range []int32{0, 1, 1000} {
 		g, err := LoadGathering()
 		if err != nil {
 			t.Fatal(err)
 		}
-		g.Targets["tree"].Yields[0].ChancePermille = chance
-		if err := ValidateGathering(g); err != nil {
+		g.Targets["tree"].Yields[0].ChancePermille = proto.Int32(chance)
+		if err := decodeSpliced(t, g); err != nil {
 			t.Fatalf("valid chance %d: %v", chance, err)
 		}
 	}
+}
+
+func TestGatheringLoaderVectors(t *testing.T) {
+	runLoaderVectors(t, "gathering", "gathering", func(raw []byte) (any, error) { return DecodeGathering(raw) })
 }

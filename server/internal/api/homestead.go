@@ -62,8 +62,8 @@ type homeView struct {
 	Stumps      tileList          `json:"stumps"`
 	Plants      []homePlantView   `json:"plants"`
 	PostsBought int               `json:"postsBought"`
-	NextPost    map[string]int    `json:"nextPost"`
-	Outdoor     content.HomeGrid  `json:"outdoor"`
+	NextPost    map[string]int32  `json:"nextPost"`
+	Outdoor     *content.HomeGrid `json:"outdoor"`
 	Indoor      *content.HomeGrid `json:"indoor"`
 	Items       []homeInstance    `json:"items"`
 }
@@ -100,7 +100,7 @@ func cleanPostName(raw string) (string, bool) {
 		}
 	}
 	name := strings.Join(strings.Fields(raw), " ")
-	if name == "" || !utf8.ValidString(name) || utf8.RuneCountInString(name) > content.HomeRules.LanternPosts.NameMax {
+	if name == "" || !utf8.ValidString(name) || utf8.RuneCountInString(name) > int(content.HomeRules.GetLanternPosts().GetNameMax()) {
 		return "", false
 	}
 	return name, true

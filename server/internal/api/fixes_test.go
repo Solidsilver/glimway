@@ -128,7 +128,7 @@ func TestRepeatedSyncsCannotBypassUnverifiedCap(t *testing.T) {
 		next := x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200)
 		next.Lease = s.Lease
 		s = next
-		if s.State.XPEmbers != rules.E.SyncCreditCap {
+		if s.State.XPEmbers != int(rules.E.GetSyncCreditCap()) {
 			t.Fatal("sync bypassed checkpoint credit ceiling")
 		}
 	}

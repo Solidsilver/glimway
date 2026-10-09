@@ -18,7 +18,7 @@ type ground struct {
 }
 
 func groundOf(h homeView) ground {
-	g := ground{land.Generate(h.LandSeed, content.HomeRules.Land), map[[2]int]bool{}}
+	g := ground{land.Generate(h.LandSeed, content.HomeRules.GetLand()), map[[2]int]bool{}}
 	for _, c := range h.Cleared {
 		g.cleared[c] = true
 	}
@@ -33,7 +33,7 @@ func (a rect) overlaps(b rect) bool {
 
 func footprint(id string, rotation int) (int, int) {
 	v, _ := content.HomeItemFor(id)
-	w, h := v.Footprint[0], v.Footprint[1]
+	w, h := int(v.GetFootprint()[0]), int(v.GetFootprint()[1])
 	if rotation == 90 || rotation == 270 {
 		return h, w
 	}
@@ -56,11 +56,11 @@ func placedRect(v homeInstance) (rect, bool) {
 // stands in the home's light or in the light of a post that already counts.
 // Posts can't hold each other up out in the dark.
 func connectedLights(items []homeInstance, except string) []land.Light {
-	s := content.HomeRules.Land.StartLight
-	out := []land.Light{{X: s.X, Y: s.Y, Radius: s.Radius}}
+	s := content.HomeRules.GetLand().GetStartLight()
+	out := []land.Light{{X: int(s.GetX()), Y: int(s.GetY()), Radius: int(s.GetRadius())}}
 	waiting := []homeInstance{}
 	for _, v := range items {
-		if v.ItemDef == content.HomeRules.LanternPosts.Item && v.ID != except && v.Scene != nil && *v.Scene == "outdoor" && v.X != nil && v.Y != nil {
+		if v.ItemDef == content.HomeRules.GetLanternPosts().GetItem() && v.ID != except && v.Scene != nil && *v.Scene == "outdoor" && v.X != nil && v.Y != nil {
 			waiting = append(waiting, v)
 		}
 	}
@@ -69,7 +69,7 @@ func connectedLights(items []homeInstance, except string) []land.Light {
 		for i := 0; i < len(waiting); i++ {
 			v := waiting[i]
 			if land.Lit(out, *v.X, *v.Y) {
-				out = append(out, land.Light{X: *v.X, Y: *v.Y, Radius: content.HomeRules.LanternPosts.Radius})
+				out = append(out, land.Light{X: *v.X, Y: *v.Y, Radius: int(content.HomeRules.GetLanternPosts().GetRadius())})
 				waiting = append(waiting[:i], waiting[i+1:]...)
 				i--
 				grew = true
@@ -99,7 +99,7 @@ func everythingLit(items []homeInstance) bool {
 			continue
 		}
 		lights := all
-		if v.ItemDef == content.HomeRules.LanternPosts.Item {
+		if v.ItemDef == content.HomeRules.GetLanternPosts().GetItem() {
 			lights = connectedLights(items, v.ID)
 		}
 		if r, ok := placedRect(v); ok && !rectLit(lights, r) {
@@ -127,10 +127,10 @@ func validatePlacement(h homeView, item homeInstance, r *contract.HomesteadReque
 		return fail(400, "invalid-item")
 	}
 	if r.Scene == "gate" {
-		if !slices.Contains(def.Where, "gate") {
+		if !slices.Contains(def.GetWhere(), "gate") {
 			return fail(400, "invalid-placement")
 		}
-		if h.Tier < def.MinTier {
+		if h.Tier < int(def.GetMinTier()) {
 			return fail(409, "tier-required")
 		}
 		for _, v := range placedItems(h) {
@@ -140,24 +140,24 @@ func validatePlacement(h homeView, item homeInstance, r *contract.HomesteadReque
 		}
 		return nil
 	}
-	if r.X == nil || r.Y == nil || r.Rotation == nil || !slices.Contains([]int32{0, 90, 180, 270}, r.Rotation.GetValue()) || !slices.Contains(def.Where, r.Scene) {
+	if r.X == nil || r.Y == nil || r.Rotation == nil || !slices.Contains([]int32{0, 90, 180, 270}, r.Rotation.GetValue()) || !slices.Contains(def.GetWhere(), r.Scene) {
 		return fail(400, "invalid-placement")
 	}
-	if h.Tier < def.MinTier || (r.Scene == "indoor" && h.Indoor == nil) {
+	if h.Tier < int(def.GetMinTier()) || (r.Scene == "indoor" && h.Indoor == nil) {
 		return fail(409, "tier-required")
 	}
-	grid, reserved := h.Outdoor, content.HomeRules.OutdoorReserved
+	grid, reserved := h.Outdoor, content.HomeRules.GetOutdoorReserved()
 	if r.Scene == "indoor" {
-		grid, reserved = *h.Indoor, content.HomeRules.IndoorReserved
+		grid, reserved = h.Indoor, content.HomeRules.GetIndoorReserved()
 	}
-	w, ht := footprint(def.ID, int(r.Rotation.GetValue()))
+	w, ht := footprint(def.GetId(), int(r.Rotation.GetValue()))
 	here := rect{int(r.X.GetValue()), int(r.Y.GetValue()), w, ht}
-	if here.x < 0 || here.y < 0 || here.x > grid.Width-w || here.y > grid.Height-ht {
+	if here.x < 0 || here.y < 0 || here.x > int(grid.GetWidth())-w || here.y > int(grid.GetHeight())-ht {
 		return fail(409, "out-of-bounds")
 	}
 	// The home site, the gate path and the doorway are kept clear.
 	for _, v := range reserved {
-		if here.overlaps(rect{v.X, v.Y, v.W, v.H}) {
+		if here.overlaps(rect{int(v.GetX()), int(v.GetY()), int(v.GetW()), int(v.GetH())}) {
 			return fail(409, "placement-overlap")
 		}
 	}
@@ -175,7 +175,7 @@ func validatePlacement(h homeView, item homeInstance, r *contract.HomesteadReque
 	}
 	// Nothing goes down on top of something growing.
 	for _, p := range h.Plants {
-		if here.overlaps(rect{p.X, p.Y, 1, 1}) {
+		if here.overlaps(rect{p.X, p.Y, 1, 1}) { // plants are plain ints
 			return fail(409, "plant-in-the-way")
 		}
 	}
@@ -190,7 +190,7 @@ func validatePlacement(h homeView, item homeInstance, r *contract.HomesteadReque
 	if !rectLit(connectedLights(placed, item.ID), here) {
 		return fail(409, "unlit")
 	}
-	if def.ID == content.HomeRules.LanternPosts.Item {
+	if def.GetId() == content.HomeRules.GetLanternPosts().GetItem() {
 		scene, x, y, rot := r.Scene, int(r.X.GetValue()), int(r.Y.GetValue()), int(r.Rotation.GetValue())
 		moved := append(slices.DeleteFunc(slices.Clone(placed), func(v homeInstance) bool { return v.ID == item.ID }), homeInstance{ID: item.ID, ItemDef: item.ItemDef, Scene: &scene, X: &x, Y: &y, Rotation: &rot})
 		if !everythingLit(moved) {
@@ -218,7 +218,7 @@ func arrange(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, op 
 		return "", fail(409, "not-placed")
 	}
 	var err error
-	post := item.ItemDef == content.HomeRules.LanternPosts.Item
+	post := item.ItemDef == content.HomeRules.GetLanternPosts().GetItem()
 	switch op {
 	case "remove":
 		if item.Scene != nil && *item.Scene == "gate" {
@@ -298,7 +298,7 @@ func clearTile(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, r
 	if !land.Lit(connectedLights(placedItems(h), ""), x, y) {
 		return fail(409, "unlit")
 	}
-	if err := debitEmbers(ctx, tx, s, content.HomeRules.ClearTileEmbers, "homestead-clear", fmt.Sprintf("%s:%d,%d", h.ID, x, y), now); err != nil {
+	if err := debitEmbers(ctx, tx, s, int(content.HomeRules.GetClearTileEmbers()), "homestead-clear", fmt.Sprintf("%s:%d,%d", h.ID, x, y), now); err != nil {
 		return err
 	}
 	// Cleared ground has no stump: drop a kept one with it.

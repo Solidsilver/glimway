@@ -35,10 +35,10 @@ func repairTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contrac
 		if !ok {
 			return fail(400, "invalid-mender")
 		}
-		if !nearTile(s, m.Area, m.TX, m.TY, m.RadiusTiles) {
+		if !nearTile(s, m.GetArea(), int(m.GetTx()), int(m.GetTy()), int(m.GetRadiusTiles())) {
 			return fail(409, "too-far-away")
 		}
-		cost, embers = def.Repair.Mender, def.Repair.MenderEmbers
+		cost, embers = def.GetRepair().GetMender(), int(def.GetRepair().GetMenderEmbers())
 	}
 	if err = checkMaterials(ctx, tx, s.AccountID, cost); err != nil {
 		return err
@@ -99,7 +99,7 @@ func fitTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.I
 	if err != nil {
 		return err
 	}
-	if len(fitted) >= tdef.SlotCount() {
+	if len(fitted) >= content.ItemSlotCount(tdef) {
 		return fail(409, "no-free-slot")
 	}
 	if hasFitting(fitted, fdef.Fitting) {

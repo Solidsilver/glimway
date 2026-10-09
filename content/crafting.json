@@ -461,7 +461,7 @@
         "bloom-flowers": 3
       },
       "swaps": {
-        "bloom-flowers": ["dried-flowers"]
+        "bloom-flowers": { "standIns": ["dried-flowers"] }
       },
       "output": {
         "kind": "decoration",

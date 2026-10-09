@@ -146,11 +146,11 @@ func checkQuestGate(ctx context.Context, tx *sql.Tx, s *store.Snapshot, quest st
 			return fail(409, "short")
 		}
 	}
-	if g.Embers > 0 {
-		if s.State.Embers < g.Embers {
+	if int(g.Embers) > 0 {
+		if s.State.Embers < int(g.Embers) {
 			return fail(409, "short")
 		}
-		if s.State.HP <= 0 && s.ProfileSource == "habitica" && s.State.XPEmbers < g.Embers {
+		if s.State.HP <= 0 && s.ProfileSource == "habitica" && s.State.XPEmbers < int(g.Embers) {
 			return fail(409, "needs-earned")
 		}
 	}
@@ -168,15 +168,15 @@ func spendQuestGate(ctx context.Context, tx *sql.Tx, s *store.Snapshot, quest st
 		}
 		out.Taken = append(out.Taken, &contract.ItemQty{Def: item.Def, Qty: float64(item.Qty)})
 	}
-	if g.Embers > 0 {
-		earned := max(0, g.Embers-(s.State.Embers-s.State.XPEmbers))
+	if int(g.Embers) > 0 {
+		earned := max(0, int(g.Embers)-(s.State.Embers-s.State.XPEmbers))
 		if s.State.HP <= 0 && s.ProfileSource == "habitica" {
-			earned = g.Embers
+			earned = int(g.Embers)
 		}
-		if err := store.Credit(ctx, tx, s, -g.Embers, -earned, "quest", ref, nil, now); err != nil {
+		if err := store.Credit(ctx, tx, s, -int(g.Embers), -earned, "quest", ref, nil, now); err != nil {
 			return err
 		}
-		out.EmbersSpent = float64(g.Embers)
+		out.EmbersSpent = float64(int(g.Embers))
 	}
 	return nil
 }
@@ -185,7 +185,7 @@ func questItemCount(ctx context.Context, tx *sql.Tx, account, def string) (int, 
 	if !ok {
 		return 0, nil
 	}
-	if !d.Instanced() {
+	if !content.ItemInstanced(d) {
 		return stackTotal(ctx, tx, packOf(account), def)
 	}
 	var count int
@@ -197,7 +197,7 @@ func questItemCount(ctx context.Context, tx *sql.Tx, account, def string) (int, 
 // fittings return to the pack before their parent instance is consumed.
 func questTake(ctx context.Context, tx *sql.Tx, s *store.Snapshot, def string, qty int, ref string, now int64) error {
 	d, _ := content.ItemFor(def)
-	if !d.Instanced() {
+	if !content.ItemInstanced(d) {
 		_, err := packTake(ctx, tx, s.AccountID, def, nil, qty, "quest", ref, now)
 		if err != nil {
 			return err
@@ -255,7 +255,7 @@ func questTake(ctx context.Context, tx *sql.Tx, s *store.Snapshot, def string, q
 }
 func questGive(ctx context.Context, tx *sql.Tx, s *store.Snapshot, item content.QuestItem, ref string, now int64) error {
 	d, _ := content.ItemFor(item.Def)
-	if !d.Instanced() {
+	if !content.ItemInstanced(d) {
 		return itemChange(ctx, tx, s, item.Def, item.Qty, "quest", ref, now)
 	}
 	for i := 0; i < item.Qty; i++ {

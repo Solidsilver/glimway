@@ -360,7 +360,7 @@ func TestRound3InviteListQuotasAndReadableCodeLifecycle(t *testing.T) {
 		if err := json.Unmarshal(testSnapshotJSON(w.Body.Bytes()), &doc); err != nil {
 			t.Fatal(err)
 		}
-		if w.Code != 200 || doc.Remaining != remaining || doc.OutstandingLimit != rules.E.OutstandingInvites || len(doc.Invites) != entries {
+		if w.Code != 200 || doc.Remaining != remaining || doc.OutstandingLimit != int(rules.E.GetOutstandingInvites()) || len(doc.Invites) != entries {
 			t.Fatal("invite quota contract", w.Body.String())
 		}
 	}

@@ -292,11 +292,7 @@ func TestSellerLoaderVectors(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, v := range vectors {
-		var items Items
-		err = json.Unmarshal(editVector(t, raw, v), &items)
-		if err == nil {
-			err = ValidateItems(items)
-		}
+		_, err = DecodeItems(editVector(t, raw, v))
 		if (err == nil) != v.Valid {
 			t.Fatal(v.Name, err)
 		}

@@ -82,7 +82,7 @@ func TestPresenceLiveFixtures(t *testing.T) {
 	alice.expect("pos") // establishes witness proximity through the real reader
 	alice.send(map[string]any{"type": "emote", "id": "wave"})
 	check("emote", bob.expect("emote"))
-	x.api.presenceGift(s.WorldID, x.account("bob"), "Hero", content.Asset{Kind: "item", ID: "timber", Qty: 1})
+	x.api.presenceGift(s.WorldID, x.account("bob"), "Hero", &content.Asset{Kind: "item", Id: "timber", Qty: 1})
 	check("gift", bob.expect("gift"))
 	x.api.presenceWitness(s.WorldID, x.account("alice"), "Hero", "ruin", "warden")
 	check("witness", bob.expect("witness"))
