@@ -121,15 +121,17 @@ function readEquipped(raw: unknown): Record<string, string | null> {
   return sanitizeStringMap(raw);
 }
 
-function readKeyList(raw: unknown, nonzero: boolean): string[] {
+/**
+ * The owned keys of one companion list (docs/design/crafts.md 2.2): a pet is
+ * owned when its value is a number greater than 0 — a pet raised into a mount
+ * is stored as -1 and is not an owned pet — and a mount when its value is
+ * true. Released nulls, zeroes and every other kind count as nothing.
+ */
+function readKeyList(raw: unknown, pets: boolean): string[] {
   if (!isRecord(raw)) return [];
   const keys: string[] = [];
   for (const [key, value] of Object.entries(raw)) {
-    if (nonzero) {
-      if (typeof value === 'number' && value !== 0) keys.push(key);
-    } else if (value) {
-      keys.push(key);
-    }
+    if (pets ? typeof value === 'number' && value > 0 : value === true) keys.push(key);
   }
   keys.sort();
   return keys;

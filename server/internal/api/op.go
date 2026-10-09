@@ -94,7 +94,12 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 			return refuse(err)
 		}
 	}
-	if where == nil || !validArea(where.Area) || !finiteWhere(where) {
+	// Operations that move nothing (companions, mount-home) carry no where
+	// (0.5): they run where the player already stands.
+	if where == nil {
+		where = &contract.Where{Area: s.State.Area, X: s.State.Position.X, Y: s.State.Position.Y}
+	}
+	if !validArea(where.Area) || !finiteWhere(where) {
 		return refuse(fail(409, "invalid-position"))
 	}
 	if _, err = tx.ExecContext(ctx, "SAVEPOINT gameplay"); err != nil {

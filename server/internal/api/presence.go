@@ -28,6 +28,9 @@ type presencePosition struct {
 	Y      float64        `json:"y"`
 	Facing rules.Position `json:"facing"`
 	Moving bool           `json:"moving"`
+	// Pose is the movement state the screen owns (3.4): "riding", "fishing"
+	// or '' (on foot).
+	Pose string `json:"pose"`
 }
 
 type presenceIdentity struct {

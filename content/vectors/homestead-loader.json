@@ -34,6 +34,22 @@
       ]
     },
     {
+      "name": "stable-stall-material",
+      "valid": false,
+      "rule": "stable stall cost gold",
+      "edits": [
+        {
+          "path": [
+            "stable",
+            "stallCost"
+          ],
+          "value": {
+            "gold": 1
+          }
+        }
+      ]
+    },
+    {
       "name": "stable-growth",
       "valid": false,
       "rule": "stable growth",

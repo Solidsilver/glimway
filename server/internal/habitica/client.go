@@ -213,12 +213,12 @@ func Map(b []byte) (rules.Profile, error) {
 	p.MaxMP = 2*p.Stats.Int + 30
 
 	for k, v := range u.Items.Pets {
-		if owned(v) {
+		if ownedPet(v) {
 			p.Pets = append(p.Pets, k)
 		}
 	}
 	for k, v := range u.Items.Mounts {
-		if owned(v) {
+		if ownedMount(v) {
 			p.Mounts = append(p.Mounts, k)
 		}
 	}
@@ -241,18 +241,24 @@ func Map(b []byte) (rules.Profile, error) {
 	return p, nil
 }
 
-// Habitica may retain released pets/mounts as null. Match the client truthy
-// ownership projection for booleans and numbers; ignore other input kinds.
-func owned(raw json.RawMessage) bool {
+// Habitica may retain released pets/mounts as null. A pet is owned when its
+// value is a number greater than 0: a pet raised into a mount is stored as
+// -1 and is not an owned pet (docs/design/crafts.md 2.2). A mount is owned
+// when its value is true. Other input kinds count as nothing.
+func ownedPet(raw json.RawMessage) bool {
 	var value any
 	if json.Unmarshal(raw, &value) != nil {
 		return false
 	}
-	switch v := value.(type) {
-	case bool:
-		return v
-	case float64:
-		return v != 0
+	n, ok := value.(float64)
+	return ok && n > 0
+}
+
+func ownedMount(raw json.RawMessage) bool {
+	var value any
+	if json.Unmarshal(raw, &value) != nil {
+		return false
 	}
-	return false
+	b, ok := value.(bool)
+	return ok && b
 }

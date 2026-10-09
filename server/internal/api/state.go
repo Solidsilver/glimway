@@ -68,6 +68,11 @@ func (a *Server) play(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if s.LeaseClient.String != client || !s.LeaseID.Valid {
+		// A new lease starts with the mount at home (docs/design/crafts.md
+		// 3.3): it found its own way back while the tab was away.
+		if _, err = tx.ExecContext(r.Context(), "UPDATE player_companions SET mount_out='' WHERE account_id=?", s.AccountID); err != nil {
+			return err
+		}
 		if _, err = tx.ExecContext(r.Context(), `INSERT INTO player_vitals(account_id,hp,mana,vitals_at,vitals_set_version,report_client,report_generation,cast_ready_at)
  VALUES(?,?,?,?,0,?,?,?) ON CONFLICT(account_id) DO UPDATE SET report_client=excluded.report_client,report_generation=excluded.report_generation,report_seq=0,report_at=NULL,report_basis=0,cast_ready_at=MAX(cast_ready_at,excluded.cast_ready_at)`, s.AccountID, s.State.HP, s.State.Mana, now, req.ClientId, generation, now); err != nil {
 			return err
