@@ -71,8 +71,8 @@ func (x *rig) wilds(c *http.Cookie, region string) wildsView {
 		x.t.Fatal(err)
 	}
 	def, _ := regionDefinition(region)
-	for cy := 0; cy < def.GridHeight; cy++ {
-		for cx := 0; cx < def.GridWidth; cx++ {
+	for cy := 0; cy < int(def.GetGridHeight()); cy++ {
+		for cx := 0; cx < int(def.GetGridWidth()); cx++ {
 			m := x.chunk(c, v.Epoch.Id, 0, cx, cy, 200)
 			v.chunks = append(v.chunks, m)
 			v.bodies = append(v.bodies, m.Entities...)
@@ -101,7 +101,7 @@ func (x *rig) chunk(c *http.Cookie, epoch string, layer, cx, cy, status int) *co
 func at(region string, e *contract.WildsEntity, dx int) *contract.Where {
 	var cx, cy int
 	fmt.Sscanf(e.Id, e.Kind+":%d:%d:", &cx, &cy)
-	S := content.WildsRules.ChunkSize
+	S := int(content.WildsRules.GetChunkSize())
 	return &contract.Where{Area: wildsArea(region), X: float64((cx*S + int(e.Tx) + dx) * 16), Y: float64((cy*S + int(e.Ty)) * 16)}
 }
 

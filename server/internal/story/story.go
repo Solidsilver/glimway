@@ -49,8 +49,8 @@ func (r Rules) Echoes(ctx context.Context, tx *sql.Tx, s store.Snapshot, in port
 	sort.Slice(sites, func(i, j int) bool { return sites[i].Site.Id < sites[j].Site.Id })
 	east := int32(-1)
 	for _, region := range content.WildsRules.Regions {
-		if region.ID == in.Epoch.RegionId {
-			east = int32(region.GridWidth - 1)
+		if region.GetId() == in.Epoch.RegionId {
+			east = int32(region.GetGridWidth()) - 1
 		}
 	}
 	used := map[string]bool{}
@@ -156,16 +156,16 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 	if epoch.Id != in.Epoch {
 		return false, nil
 	}
-	var def content.WildsRegion
+	var def *content.WildsRegion
 	for _, reg := range content.WildsRules.Regions {
-		if reg.ID == region {
+		if reg.GetId() == region {
 			def = reg
 		}
 	}
 	if p.Source == "echo" {
 		sites := []ports.EchoSite{}
-		for cy := 0; cy < def.GridHeight; cy++ {
-			for cx := 0; cx < def.GridWidth; cx++ {
+		for cy := 0; cy < int(def.GetGridHeight()); cy++ {
+			for cx := 0; cx < int(def.GetGridWidth()); cx++ {
 				m, e := r.Chunks.Chunk(ctx, tx, s.WorldID, epoch.Id, 0, int32(cx), int32(cy))
 				if e != nil {
 					return false, e
@@ -183,7 +183,7 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 			if a.Site == in.Site && a.Member == q.Member && a.Settled {
 				for _, site := range sites {
 					if site.Site.Id == in.Site {
-						return near(w, float64((int(site.CX)*content.WildsRules.ChunkSize+int(site.Site.Tx))*16+8), float64((int(site.CY)*content.WildsRules.ChunkSize+int(site.Site.Ty))*16+8)), nil
+						return near(w, float64((int(site.CX)*int(content.WildsRules.GetChunkSize())+int(site.Site.Tx))*16+8), float64((int(site.CY)*int(content.WildsRules.GetChunkSize())+int(site.Site.Ty))*16+8)), nil
 					}
 				}
 			}
@@ -191,9 +191,9 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 		return false, nil
 	}
 	// Read geometry throughout the region, including sites across a chunk boundary.
-	for cy := 0; cy < def.GridHeight; cy++ {
-		for cx := 0; cx < def.GridWidth; cx++ {
-			if q.East && cx != def.GridWidth-1 {
+	for cy := 0; cy < int(def.GetGridHeight()); cy++ {
+		for cx := 0; cx < int(def.GetGridWidth()); cx++ {
+			if q.East && cx != int(def.GetGridWidth())-1 {
 				continue
 			}
 			chunk, err := r.Chunks.Chunk(ctx, tx, s.WorldID, in.Epoch, 0, int32(cx), int32(cy))

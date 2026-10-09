@@ -3,7 +3,6 @@ package api
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"glimway/content"
@@ -102,44 +101,16 @@ func newSpriteProxy(dir, base string, now func() time.Time) *spriteProxy {
 }
 
 // knownSprites lists every sprite name the avatar helpers can ask for
-// (src/lib/habitica/avatar.ts assetSourceFor), from the shared catalog.
+// (src/lib/habitica/avatar.ts assetSourceFor), from the shared catalog
+// (content/habitica_gear.go's generated types).
 func knownSprites() (map[string]string, error) {
-	var c struct {
-		Gear map[string]struct {
-			Type string `json:"type"`
-		} `json:"gear"`
-		Pets        []string `json:"pets"`
-		Mounts      []string `json:"mounts"`
-		GifSprites  []string `json:"gifSprites"`
-		Spriteless  []string `json:"spritelessGear"`
-		Appearances struct {
-			Size  []string `json:"size"`
-			Skin  []string `json:"skin"`
-			Shirt []string `json:"shirt"`
-			Chair []string `json:"chair"`
-			Hair  struct {
-				Color    []string `json:"color"`
-				Bangs    []string `json:"bangs"`
-				Base     []string `json:"base"`
-				Mustache []string `json:"mustache"`
-				Beard    []string `json:"beard"`
-				Flower   []string `json:"flower"`
-			} `json:"hair"`
-		} `json:"appearances"`
-	}
-	b, err := content.FS.ReadFile("habitica-gear.json")
-	if err != nil {
-		return nil, err
-	}
-	if err = json.Unmarshal(b, &c); err != nil {
-		return nil, err
-	}
+	c := content.HabiticaGearRules
 	gif := map[string]bool{}
 	for _, n := range c.GifSprites {
 		gif[n] = true
 	}
 	none := map[string]bool{}
-	for _, n := range c.Spriteless {
+	for _, n := range c.SpritelessGear {
 		none[n] = true
 	}
 	out := map[string]string{}
@@ -150,7 +121,7 @@ func knownSprites() (map[string]string, error) {
 			out[n] = "png"
 		}
 	}
-	a := c.Appearances
+	a := c.GetAppearances()
 	add("head_0")
 	for _, s := range a.Skin {
 		add("skin_" + s)
@@ -160,17 +131,17 @@ func knownSprites() (map[string]string, error) {
 			add(size + "_shirt_" + s)
 		}
 	}
-	for slot, styles := range map[string][]string{"bangs": a.Hair.Bangs, "base": a.Hair.Base, "mustache": a.Hair.Mustache, "beard": a.Hair.Beard} {
+	for slot, styles := range map[string][]string{"bangs": a.GetHair().Bangs, "base": a.GetHair().Base, "mustache": a.GetHair().Mustache, "beard": a.GetHair().Beard} {
 		for _, style := range styles {
 			if style == "0" {
 				continue // style 0 is "none": no sprite
 			}
-			for _, color := range a.Hair.Color {
+			for _, color := range a.GetHair().Color {
 				add(fmt.Sprintf("hair_%s_%s_%s", slot, style, color))
 			}
 		}
 	}
-	for _, f := range a.Hair.Flower {
+	for _, f := range a.GetHair().Flower {
 		if f != "0" {
 			add("hair_flower_" + f)
 		}
@@ -184,7 +155,7 @@ func knownSprites() (map[string]string, error) {
 		if none[key] {
 			continue
 		}
-		if g.Type == "armor" {
+		if g.GetType() == "armor" {
 			// Armor sprites are size-prefixed upstream; a bare armor key 403s.
 			for _, size := range a.Size {
 				add(size + "_" + key)

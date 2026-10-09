@@ -1,0 +1,114 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// Bundled Habitica gear/appearance catalog snapshot for Glimway
+// (content/habitica-gear.json). Numeric item data derived from Habitica
+// content; art is NOT bundled here. Generated from
+// GET https://habitica.com/api/v3/content (public, x-client only).
+//
+// The snapshot's own documentation keys ($comment, $rules in the old file)
+// are data here: comment and rules (the house rule for keys protojson
+// refuses). The old hand-written loaders checked nothing per entry — the
+// snapshot is generated upstream — so the schema carries no constraints,
+// only the vocabulary: unknown keys, nulls and wrong types are refused,
+// everything the snapshot itself says is trusted.
+message HabiticaGear {
+  // The file's own provenance comment (was $comment).
+  string comment = 1;
+  // Where the snapshot came from and what it may be used for.
+  HabiticaGearProvenance provenance = 2;
+  // Numeric gear stats, by catalog key (armor_armoire_…).
+  map<string, HabiticaGearItem> gear = 3;
+  // Pet/mount catalog keys.
+  repeated string pets = 4;
+  repeated string mounts = 5;
+  // Sprite names rendered as .gif upstream (constants/gifSprites.js).
+  repeated string gif_sprites = 6;
+  // Appearance vocabularies the avatar's sprite names are built from;
+  // the avatar builder reads them unconditionally, so they are required.
+  HabiticaGearAppearances appearances = 7 [(buf.validate.field).required = true];
+  // Catalog keys that are intentional no-visual "none" pieces (*_base_0).
+  repeated string spriteless_gear = 8;
+  // Local same-origin cache subset: sprite name -> extension.
+  map<string, string> local_sprites = 9;
+  // The snapshot's own rules of interpretation (was $rules).
+  map<string, string> rules = 10;
+}
+
+// Where the snapshot came from; kept verbatim for the NOTICE and
+// docs/habitica-assets.md story. No rules: generated upstream.
+message HabiticaGearProvenance {
+  string name = 1;
+  string source_endpoint = 2;
+  string source_project = 3;
+  string source_revision = 4;
+  string source_revision_date = 5;
+  string retrieved_at = 6;
+  string client_tag = 7;
+  string auth = 8;
+  HabiticaGearLicenses licenses = 9;
+  HabiticaGearCounts counts = 10;
+  string modifications = 11;
+}
+
+message HabiticaGearLicenses {
+  string gear_data = 1;
+  string art = 2;
+}
+
+message HabiticaGearCounts {
+  int32 gear = 1;
+  int32 pets = 2;
+  int32 mounts = 3;
+  int32 gif_sprites = 4;
+}
+
+// One gear entry's numeric data. Every key is present on every entry;
+// zero is a legal value (zero-stat gear exists), so nothing is required
+// and nothing is ranged — the old loaders checked nothing either.
+message HabiticaGearItem {
+  string type = 1;
+  // Habitica spells the mage class "wizard" here (rules.go normalizes).
+  string klass = 2;
+  // Real class for non-class gear (klass "special"/"mystery"/"armoire").
+  optional string special_class = 3;
+  string index = 4;
+  string set = 5;
+  double str = 6;
+  double int = 7;
+  double con = 8;
+  double per = 9;
+  double value = 10;
+  optional bool two_handed = 11;
+  optional bool last = 12;
+  optional string mystery = 13;
+  optional string season = 14;
+  // The event window some event gear names.
+  optional HabiticaGearEvent event = 15;
+  optional string gear_set = 16;
+}
+
+// An event gear's window, dates as upstream spells them.
+message HabiticaGearEvent {
+  string start = 1;
+  string end = 2;
+}
+
+message HabiticaGearAppearances {
+  repeated string size = 1;
+  repeated string skin = 2;
+  repeated string shirt = 3;
+  HabiticaGearHair hair = 4 [(buf.validate.field).required = true];
+  repeated string chair = 5;
+}
+
+message HabiticaGearHair {
+  repeated string color = 1;
+  repeated string bangs = 2;
+  repeated string base = 3;
+  repeated string mustache = 4;
+  repeated string beard = 5;
+  repeated string flower = 6;
+}
