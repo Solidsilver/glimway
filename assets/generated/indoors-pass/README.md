@@ -9,6 +9,10 @@ whole sheet. No room call sites were changed.
 
 The image tool rendered checkerboard backdrops instead of true transparency. Source sheets preserve sprite pixels while converting edge-connected neutral checkerboard pixels to alpha. Frame crops are hand measured and aspect-contained in native-size transparent canvases; no sprites are stretched. The Round 2b crop files have a 4 px transparent gutter. `audit_frame_edges.py` checks every frame and removes small disconnected alpha fragments at crop edges; five older frames received that cleanup, and `edge-audit.json` records the audit. `render_contact_sheets.py` regenerates the room and kit sheets from the audited manifest. Round 2b sprites were matched to residents in scale, view, shading, and pixel density. The packed plank and flagstone families are seam-healed by the atlas build using the existing minimum-error quilting helper.
 
+### Library section plaques (small-sign pass)
+
+The four section plaques retain the original painted lettering and icons, reduced with nearest-neighbour sampling to 128×42 transparent source pixels on a 128×48 frame canvas. Each is two tiles wide (one shelf unit), with its bottom-centre anchor on the top wall row. `small-signs-jobs.json` records the source crops, labels, icons, and canvas geometry; `build_small_signs.py` regenerates the small source PNGs and updates the manifest, source atlas, and furnishing catalogue. The comparison sheet is `.agent/screens/signs-sheet.png` at 1× and 3×.
+
 
 ## Round 2b furnishing catalogue
 
@@ -20,10 +24,10 @@ Frame keys follow `<piece>-<facing>-<state>[-<index>]`. `furnishings.json` is th
 | `library-shelf-short` | 1×1 | [0, 0.5, 1, 0.5] | medium | wall | left/sparse: `library-shelf-short-left-sparse`; left/half: `library-shelf-short-left-half`; left/full: `library-shelf-short-left-full`; right/sparse: `library-shelf-short-right-sparse`; right/half: `library-shelf-short-right-half`; right/full: `library-shelf-short-right-full` | shelves (2 slots) |
 | `library-reading-nook` | 3×2 | [0, 1.5, 3, 0.5] | large | wall | front/default: `library-reading-nook-front-default` | top (2 slots) |
 | `library-elara-desk` | 2×1 | [0, 0.5, 2, 0.5] | large | floor | front/empty: `library-elara-desk-front-empty`; front/writing: `library-elara-desk-front-writing-0`, `library-elara-desk-front-writing-1` | top (3 slots) |
-| `library-section-sign-stories` | 3×1 | [0, 0.75, 3, 0.25] | small | wall | front/default: `library-section-sign-front-stories` | — |
-| `library-section-sign-histories` | 3×1 | [0, 0.75, 3, 0.25] | small | wall | front/default: `library-section-sign-front-histories` | — |
-| `library-section-sign-recipes` | 3×1 | [0, 0.75, 3, 0.25] | small | wall | front/default: `library-section-sign-front-recipes` | — |
-| `library-section-sign-field-notes` | 3×1 | [0, 0.75, 3, 0.25] | small | wall | front/default: `library-section-sign-front-field-notes` | — |
+| `library-section-sign-stories` | 2×1 | [0, 0, 2, 1] | small | wall | front/default: `library-section-sign-front-stories` | — |
+| `library-section-sign-histories` | 2×1 | [0, 0, 2, 1] | small | wall | front/default: `library-section-sign-front-histories` | — |
+| `library-section-sign-recipes` | 2×1 | [0, 0, 2, 1] | small | wall | front/default: `library-section-sign-front-recipes` | — |
+| `library-section-sign-field-notes` | 2×1 | [0, 0, 2, 1] | small | wall | front/default: `library-section-sign-front-field-notes` | — |
 | `rug-woven` | 3×2 | [0, 1.75, 3, 0.25] | large | floor | front/default: `rug-woven-front-default` | — |
 | `rug-braided` | 3×2 | [0, 1.75, 3, 0.25] | large | floor | front/default: `rug-braided-front-default` | — |
 | `rug-patchwork` | 4×2 | [0, 1.75, 4, 0.25] | large | floor | front/default: `rug-patchwork-front-default` | — |

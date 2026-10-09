@@ -95,7 +95,16 @@ export function pieceFoot(piece: Furnishing, at: PieceAt): { x: number; y: numbe
     return { x, y: p.foot.y - surfaceHeight(p, offer), depth: p.depth + 0.5 + slot * 0.01 }
   }
   const x = (at.tx + tw / 2) * TILE
-  if (piece.mount === 'wall') return { x, y: (at.ty + 1) * TILE - 3, depth: (at.ty + 1) * TILE + 0.5 }
+  if (piece.mount === 'wall') {
+    // The library plaques are fixed to the top crest of their shelf unit.
+    // Their room tile remains row 1 so placement validation sees the shelf;
+    // lift the drawing above the books instead of hanging it across them.
+    if (piece.id.startsWith('library-section-sign-')) {
+      const y = (at.ty + 1) * TILE - 27
+      return { x, y, depth: y + 0.5 }
+    }
+    return { x, y: (at.ty + 1) * TILE - 3, depth: (at.ty + 1) * TILE + 0.5 }
+  }
   const y = (at.ty + th) * TILE
   return { x, y, depth: piece.layer === 'under' ? -8.5 : y }
 }

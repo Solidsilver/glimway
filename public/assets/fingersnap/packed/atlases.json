@@ -39,7 +39,7 @@
   "assets/generated/fingersnap-props.png": "ad450ddc744b78fc9fcd74136b015974e106158a6f252436ffc89c4638f48bd2",
   "assets/generated/fingersnap-shrine.png": "66410699ea96728c271e35edd907389757b027cda7ee8cf87fa63fb6b9d29292",
   "assets/generated/fingersnap-village.png": "b14b4f2cfd9fa6b25712aea709e868d6a2a980f7d8923869043f19d408f46c8c",
-  "assets/generated/indoors-pass/manifest.json": "73fdeea97000d2daf58b50b4622e949a80124968b1c17d1222a3722347ed1b96",
+  "assets/generated/indoors-pass/manifest.json": "7c002164a907320483239b16eb568c9ab8ecb54b9dd286160e3b035fb2e20562",
   "assets/generated/indoors-pass/sheets/edge-clean/cellar-ladder.png": "247bbd8e77d9950f2bd5c980139e8bdec4b8e6d6b20bd492fe6018fb75bcd424",
   "assets/generated/indoors-pass/sheets/edge-clean/chimney-smoke-5.png": "47b54c84740536f8a503c9f30ce4bd8450a3dd668231b1f04199c57a3ff924d3",
   "assets/generated/indoors-pass/sheets/edge-clean/chute-meal-bin-2.png": "1fc38857dd2e732b34cf796406eac0ef1040c98a707af15d545328910e963c2c",
@@ -138,6 +138,10 @@
   "assets/generated/indoors-pass/sheets/round2-crops/side-table-front-default.png": "f4b3cfa8df1c4a2a6b802e159186abb02c374703ea0e2d4c45bbc5897a37f0a3",
   "assets/generated/indoors-pass/sheets/round2-crops/stool-front-default.png": "9faa32fdf9ef5d816146adb9d1956eec8313e24c198b47db6efbf5f3d86ce34b",
   "assets/generated/indoors-pass/sheets/round2-crops/wall-pegs-front-tools.png": "1b86198426afc7ab11526631a06f5810b10c6ea975666a1db7983ff203e00375",
+  "assets/generated/indoors-pass/sheets/section-signs-small/library-section-sign-front-field-notes.png": "057e62c53376d9f5697c8046b9c3c8955d9371fb50fc85d150bbdc43d62b29e7",
+  "assets/generated/indoors-pass/sheets/section-signs-small/library-section-sign-front-histories.png": "fdffa5b3b6c7d2d304f5eee6d655a54ff0876099f210a5f7ef54ba9bcc262876",
+  "assets/generated/indoors-pass/sheets/section-signs-small/library-section-sign-front-recipes.png": "d8e5e79e1e3a460a58d408c4323ea1c2eee127869e530fc9974e6a26ce0455cc",
+  "assets/generated/indoors-pass/sheets/section-signs-small/library-section-sign-front-stories.png": "439c79a04f7ea3e034686ceda5a13a55a41533340a0e8cb6c5755bdc08070150",
   "assets/generated/items-pass/fingersnap-home-goods-1.png": "d3bf47a19dc07ab83f3b0001d0f8f5178a8eee53119a536989a55613fe696129",
   "assets/generated/items-pass/fingersnap-keepsakes-1.png": "34199b24b48eae7a076199ea021cecb5489055a70bfbef1d06f7bb0440d4dd9f",
   "assets/generated/items-pass/fingersnap-papers-1.png": "596d3f7d937e538a4b0bdea0960a11b8cf07d3f509bd1fac9b793e507ac076ad",
@@ -183,7 +187,7 @@
   "fingersnap-shrine.webp": "c6d638e3b8091fa8befdd72f44a8cbe862c07cf50c8f248f941a310475b0ce96",
   "fingersnap-village.webp": "55741365aef1f255193af044288f16e68d9fb918b71ad464aad62dab5d42f842",
   "ground.webp": "6151b5306345edf22bdea4211e20910d3a83dbe0ede013999a3d65f5a7529d94",
-  "indoors.webp": "b0cc0562826e5f8c4868aa613bf9b3ba78f2db5dd703bb32bfbe5975b5b4c6aa",
+  "indoors.webp": "b0156247256e33a0bcfefe2ab27fc4ad8cf687dd675649a37617ae8b356d7255",
   "items.webp": "61c6a5e4eda99cb9e5094888a68a616ccf1b93f926de0970686a09f5b63984ff",
   "people.webp": "bc06b2da02a1d7c07397ed9e239337d946d7639d3d1c381a71aed29860a4f782",
   "runtime.webp": "a0e1d4ec27403d5891da88339b7b4161ca29b8a10aef79b2d7b6bc9fc2d70044",
@@ -2676,56 +2680,56 @@
  "indoors": {
   "image": "indoors.webp",
   "size": [
-   1815,
+   1806,
    1504
   ],
   "density": 64,
   "frames": {
    "plank-floor-0": [
-    640,
-    1440,
+    1600,
+    1376,
     64,
     64
    ],
    "plank-floor-1": [
-    704,
-    1440,
+    1664,
+    1376,
     64,
     64
    ],
    "plank-floor-2": [
-    768,
-    1440,
+    1728,
+    1376,
     64,
     64
    ],
    "plank-floor-3": [
-    832,
+    0,
     1440,
     64,
     64
    ],
    "flagstone-floor-0": [
-    576,
-    1376,
+    1536,
+    1280,
     64,
     64
    ],
    "flagstone-floor-1": [
-    640,
-    1376,
+    1600,
+    1280,
     64,
     64
    ],
    "flagstone-floor-2": [
-    704,
-    1376,
+    1664,
+    1280,
     64,
     64
    ],
    "flagstone-floor-3": [
-    768,
-    1376,
+    1728,
+    1280,
     64,
     64
    ],
@@ -2754,55 +2758,55 @@
     128
    ],
    "interior-wall-0": [
-    1280,
+    448,
     1376,
     64,
     64
    ],
    "interior-wall-1": [
-    1344,
+    512,
     1376,
     64,
     64
    ],
    "interior-wall-2": [
-    1408,
+    576,
     1376,
     64,
     64
    ],
    "interior-wall-3": [
-    1472,
+    640,
     1376,
     64,
     64
    ],
    "interior-wall-4": [
-    1536,
+    704,
     1376,
     64,
     64
    ],
    "interior-wall-5": [
-    1600,
+    768,
     1376,
     64,
     64
    ],
    "interior-wall-6": [
-    1664,
+    832,
     1376,
     64,
     64
    ],
    "interior-wall-7": [
-    1728,
+    896,
     1376,
     64,
     64
    ],
    "doorway": [
-    1600,
+    832,
     1280,
     128,
     64
@@ -2826,13 +2830,13 @@
     128
    ],
    "trapdoor-shut": [
-    1728,
+    896,
     1440,
     64,
     64
    ],
    "trapdoor-open": [
-    1664,
+    832,
     1440,
     64,
     64
@@ -2856,7 +2860,7 @@
     128
    ],
    "room-surround": [
-    1088,
+    256,
     1440,
     64,
     64
@@ -2868,8 +2872,8 @@
     128
    ],
    "counting-stool-window": [
-    448,
-    1376,
+    1408,
+    1280,
     64,
     64
    ],
@@ -2916,25 +2920,25 @@
     128
    ],
    "hearth-fire-0": [
-    1024,
+    192,
     1376,
     64,
     64
    ],
    "hearth-fire-1": [
-    1088,
+    256,
     1376,
     64,
     64
    ],
    "hearth-fire-2": [
-    1152,
+    320,
     1376,
     64,
     64
    ],
    "hearth-fire-3": [
-    1216,
+    384,
     1376,
     64,
     64
@@ -3090,19 +3094,19 @@
     160
    ],
    "reading-lamp-flame-0": [
-    896,
+    64,
     1440,
     64,
     64
    ],
    "reading-lamp-flame-1": [
-    960,
+    128,
     1440,
     64,
     64
    ],
    "reading-lamp-flame-2": [
-    1024,
+    192,
     1440,
     64,
     64
@@ -3168,98 +3172,98 @@
     128
    ],
    "lit-window-bakery": [
-    192,
-    1440,
+    1152,
+    1376,
     64,
     64
    ],
    "lit-window-mill": [
-    320,
-    1440,
+    1280,
+    1376,
     64,
     64
    ],
    "lit-window-library": [
-    256,
-    1440,
+    1216,
+    1376,
     64,
     64
    ],
    "shelf-icon-road": [
-    1344,
-    1440,
-    64,
-    64
-   ],
-   "shelf-icon-village": [
-    1408,
-    1440,
-    64,
-    64
-   ],
-   "shelf-icon-craft": [
-    1280,
-    1440,
-    64,
-    64
-   ],
-   "pin-unpinned": [
-    576,
-    1440,
-    64,
-    64
-   ],
-   "pin-pinned": [
     512,
     1440,
     64,
     64
    ],
+   "shelf-icon-village": [
+    576,
+    1440,
+    64,
+    64
+   ],
+   "shelf-icon-craft": [
+    448,
+    1440,
+    64,
+    64
+   ],
+   "pin-unpinned": [
+    1536,
+    1376,
+    64,
+    64
+   ],
+   "pin-pinned": [
+    1472,
+    1376,
+    64,
+    64
+   ],
    "gate-waiting": [
-    960,
+    128,
     1376,
     64,
     64
    ],
    "gate-needs-embers": [
-    896,
+    64,
     1376,
     64,
     64
    ],
    "gate-locked": [
-    832,
+    0,
     1376,
     64,
     64
    ],
    "signpost-plumb-missing-east": [
-    1536,
+    704,
     1440,
     64,
     64
    ],
    "east-finger-bracken": [
-    0,
-    1376,
+    960,
+    1280,
     128,
     64
    ],
    "east-finger-painted": [
-    128,
-    1376,
+    1088,
+    1280,
     128,
     64
    ],
    "keepsake-east-finger": [
-    0,
-    1440,
+    960,
+    1376,
     64,
     64
    ],
    "keepsake-tally-token": [
-    64,
-    1440,
+    1024,
+    1376,
     64,
     64
    ],
@@ -3383,30 +3387,6 @@
     192,
     192
    ],
-   "library-section-sign-front-stories": [
-    1408,
-    1280,
-    192,
-    64
-   ],
-   "library-section-sign-front-histories": [
-    1024,
-    1280,
-    192,
-    64
-   ],
-   "library-section-sign-front-recipes": [
-    1216,
-    1280,
-    192,
-    64
-   ],
-   "library-section-sign-front-field-notes": [
-    832,
-    1280,
-    192,
-    64
-   ],
    "rug-woven-front-default": [
     576,
     768,
@@ -3450,32 +3430,32 @@
     128
    ],
    "crate-front-default": [
-    512,
-    1376,
+    1472,
+    1280,
     64,
     64
    ],
    "barrel-front-default": [
-    256,
-    1376,
+    1216,
+    1280,
     64,
     64
    ],
    "sack-large-front-upright": [
-    1216,
+    384,
     1440,
     64,
     64
    ],
    "sack-large-front-slumped": [
-    1152,
+    320,
     1440,
     64,
     64
    ],
    "basket-front-default": [
-    320,
-    1376,
+    1280,
+    1280,
     64,
     64
    ],
@@ -3528,7 +3508,7 @@
     128
    ],
    "side-table-front-default": [
-    1472,
+    640,
     1440,
     64,
     64
@@ -3552,14 +3532,14 @@
     96
    ],
    "stool-front-default": [
-    1600,
+    768,
     1440,
     64,
     64
    ],
    "chest-front-default": [
-    384,
-    1376,
+    1344,
+    1280,
     64,
     64
    ],
@@ -3618,8 +3598,8 @@
     128
    ],
    "kitchen-flour-handprint-wall-default": [
-    128,
-    1440,
+    1088,
+    1376,
     64,
     64
    ],
@@ -3684,14 +3664,14 @@
     128
    ],
    "mill-sack-front-upright": [
-    448,
-    1440,
+    1408,
+    1376,
     64,
     64
    ],
    "mill-sack-front-slumped": [
-    384,
-    1440,
+    1344,
+    1376,
     64,
     64
    ],
@@ -3772,6 +3752,30 @@
     896,
     128,
     128
+   ],
+   "library-section-sign-front-stories": [
+    1344,
+    1440,
+    128,
+    48
+   ],
+   "library-section-sign-front-histories": [
+    1088,
+    1440,
+    128,
+    48
+   ],
+   "library-section-sign-front-recipes": [
+    1216,
+    1440,
+    128,
+    48
+   ],
+   "library-section-sign-front-field-notes": [
+    960,
+    1440,
+    128,
+    48
    ]
   }
  },

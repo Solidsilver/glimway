@@ -395,6 +395,22 @@
     {
       "key": "gaps-library-elara-desk-front-writing-1",
       "file": "gaps-crops/library-elara-desk-front-writing-1.png"
+    },
+    {
+      "key": "small-sign-stories",
+      "file": "section-signs-small/library-section-sign-front-stories.png"
+    },
+    {
+      "key": "small-sign-histories",
+      "file": "section-signs-small/library-section-sign-front-histories.png"
+    },
+    {
+      "key": "small-sign-recipes",
+      "file": "section-signs-small/library-section-sign-front-recipes.png"
+    },
+    {
+      "key": "small-sign-field-notes",
+      "file": "section-signs-small/library-section-sign-front-field-notes.png"
     }
   ],
   "frames": [
@@ -4645,218 +4661,6 @@
       }
     },
     {
-      "key": "library-section-sign-front-stories",
-      "source": "round2-library-section-sign-front-stories",
-      "sourceRect": {
-        "x": 0,
-        "y": 0,
-        "w": 233,
-        "h": 76
-      },
-      "canvasSize": {
-        "w": 192,
-        "h": 64
-      },
-      "destinationRect": {
-        "x": 0,
-        "y": 1,
-        "w": 192,
-        "h": 63
-      },
-      "footprint": [
-        3,
-        1
-      ],
-      "footPoint": {
-        "x": 96,
-        "y": 64
-      },
-      "origin": [
-        0.5,
-        1
-      ],
-      "role": "prop",
-      "furnishing": {
-        "id": "library-section-sign-stories",
-        "facing": "front",
-        "state": "default",
-        "footprint": [
-          3,
-          1
-        ],
-        "base": [
-          0,
-          0.75,
-          3,
-          0.25
-        ],
-        "size": "small",
-        "mount": "wall",
-        "tags": [
-          "section:stories"
-        ]
-      }
-    },
-    {
-      "key": "library-section-sign-front-histories",
-      "source": "round2-library-section-sign-front-histories",
-      "sourceRect": {
-        "x": 0,
-        "y": 0,
-        "w": 233,
-        "h": 75
-      },
-      "canvasSize": {
-        "w": 192,
-        "h": 64
-      },
-      "destinationRect": {
-        "x": 0,
-        "y": 1,
-        "w": 192,
-        "h": 62
-      },
-      "footprint": [
-        3,
-        1
-      ],
-      "footPoint": {
-        "x": 96,
-        "y": 64
-      },
-      "origin": [
-        0.5,
-        1
-      ],
-      "role": "prop",
-      "furnishing": {
-        "id": "library-section-sign-histories",
-        "facing": "front",
-        "state": "default",
-        "footprint": [
-          3,
-          1
-        ],
-        "base": [
-          0,
-          0.75,
-          3,
-          0.25
-        ],
-        "size": "small",
-        "mount": "wall",
-        "tags": [
-          "section:histories"
-        ]
-      }
-    },
-    {
-      "key": "library-section-sign-front-recipes",
-      "source": "round2-library-section-sign-front-recipes",
-      "sourceRect": {
-        "x": 0,
-        "y": 0,
-        "w": 233,
-        "h": 77
-      },
-      "canvasSize": {
-        "w": 192,
-        "h": 64
-      },
-      "destinationRect": {
-        "x": 0,
-        "y": 1,
-        "w": 192,
-        "h": 63
-      },
-      "footprint": [
-        3,
-        1
-      ],
-      "footPoint": {
-        "x": 96,
-        "y": 64
-      },
-      "origin": [
-        0.5,
-        1
-      ],
-      "role": "prop",
-      "furnishing": {
-        "id": "library-section-sign-recipes",
-        "facing": "front",
-        "state": "default",
-        "footprint": [
-          3,
-          1
-        ],
-        "base": [
-          0,
-          0.75,
-          3,
-          0.25
-        ],
-        "size": "small",
-        "mount": "wall",
-        "tags": [
-          "section:recipes"
-        ]
-      }
-    },
-    {
-      "key": "library-section-sign-front-field-notes",
-      "source": "round2-library-section-sign-front-field-notes",
-      "sourceRect": {
-        "x": 0,
-        "y": 0,
-        "w": 233,
-        "h": 78
-      },
-      "canvasSize": {
-        "w": 192,
-        "h": 64
-      },
-      "destinationRect": {
-        "x": 1,
-        "y": 0,
-        "w": 191,
-        "h": 64
-      },
-      "footprint": [
-        3,
-        1
-      ],
-      "footPoint": {
-        "x": 96,
-        "y": 64
-      },
-      "origin": [
-        0.5,
-        1
-      ],
-      "role": "prop",
-      "furnishing": {
-        "id": "library-section-sign-field-notes",
-        "facing": "front",
-        "state": "default",
-        "footprint": [
-          3,
-          1
-        ],
-        "base": [
-          0,
-          0.75,
-          3,
-          0.25
-        ],
-        "size": "small",
-        "mount": "wall",
-        "tags": [
-          "section:field-notes"
-        ]
-      }
-    },
-    {
       "key": "rug-woven-front-default",
       "source": "round2-rug-woven-front-default",
       "sourceRect": {
@@ -8135,6 +7939,218 @@
           "frameRate": 1.5
         }
       }
+    },
+    {
+      "key": "library-section-sign-front-stories",
+      "source": "small-sign-stories",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 42
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 48
+      },
+      "destinationRect": {
+        "x": 0,
+        "y": 6,
+        "w": 128,
+        "h": 42
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 48
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "furnishing": {
+        "id": "library-section-sign-stories",
+        "facing": "front",
+        "state": "default",
+        "footprint": [
+          2,
+          1
+        ],
+        "base": [
+          0,
+          0,
+          2,
+          1
+        ],
+        "size": "small",
+        "mount": "wall",
+        "tags": [
+          "section:stories"
+        ]
+      }
+    },
+    {
+      "key": "library-section-sign-front-histories",
+      "source": "small-sign-histories",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 42
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 48
+      },
+      "destinationRect": {
+        "x": 0,
+        "y": 6,
+        "w": 128,
+        "h": 42
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 48
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "furnishing": {
+        "id": "library-section-sign-histories",
+        "facing": "front",
+        "state": "default",
+        "footprint": [
+          2,
+          1
+        ],
+        "base": [
+          0,
+          0,
+          2,
+          1
+        ],
+        "size": "small",
+        "mount": "wall",
+        "tags": [
+          "section:histories"
+        ]
+      }
+    },
+    {
+      "key": "library-section-sign-front-recipes",
+      "source": "small-sign-recipes",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 42
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 48
+      },
+      "destinationRect": {
+        "x": 0,
+        "y": 6,
+        "w": 128,
+        "h": 42
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 48
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "furnishing": {
+        "id": "library-section-sign-recipes",
+        "facing": "front",
+        "state": "default",
+        "footprint": [
+          2,
+          1
+        ],
+        "base": [
+          0,
+          0,
+          2,
+          1
+        ],
+        "size": "small",
+        "mount": "wall",
+        "tags": [
+          "section:recipes"
+        ]
+      }
+    },
+    {
+      "key": "library-section-sign-front-field-notes",
+      "source": "small-sign-field-notes",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 42
+      },
+      "canvasSize": {
+        "w": 128,
+        "h": 48
+      },
+      "destinationRect": {
+        "x": 0,
+        "y": 6,
+        "w": 128,
+        "h": 42
+      },
+      "footprint": [
+        2,
+        1
+      ],
+      "footPoint": {
+        "x": 64,
+        "y": 48
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "furnishing": {
+        "id": "library-section-sign-field-notes",
+        "facing": "front",
+        "state": "default",
+        "footprint": [
+          2,
+          1
+        ],
+        "base": [
+          0,
+          0,
+          2,
+          1
+        ],
+        "size": "small",
+        "mount": "wall",
+        "tags": [
+          "section:field-notes"
+        ]
+      }
     }
   ],
   "animations": [
@@ -8732,90 +8748,6 @@
         "seat",
         "light",
         "library-signature"
-      ]
-    },
-    {
-      "frame": "library-section-sign-front-stories",
-      "id": "library-section-sign-stories",
-      "facing": "front",
-      "state": "default",
-      "footprint": [
-        3,
-        1
-      ],
-      "base": [
-        0,
-        0.75,
-        3,
-        0.25
-      ],
-      "size": "small",
-      "mount": "wall",
-      "tags": [
-        "section:stories"
-      ]
-    },
-    {
-      "frame": "library-section-sign-front-histories",
-      "id": "library-section-sign-histories",
-      "facing": "front",
-      "state": "default",
-      "footprint": [
-        3,
-        1
-      ],
-      "base": [
-        0,
-        0.75,
-        3,
-        0.25
-      ],
-      "size": "small",
-      "mount": "wall",
-      "tags": [
-        "section:histories"
-      ]
-    },
-    {
-      "frame": "library-section-sign-front-recipes",
-      "id": "library-section-sign-recipes",
-      "facing": "front",
-      "state": "default",
-      "footprint": [
-        3,
-        1
-      ],
-      "base": [
-        0,
-        0.75,
-        3,
-        0.25
-      ],
-      "size": "small",
-      "mount": "wall",
-      "tags": [
-        "section:recipes"
-      ]
-    },
-    {
-      "frame": "library-section-sign-front-field-notes",
-      "id": "library-section-sign-field-notes",
-      "facing": "front",
-      "state": "default",
-      "footprint": [
-        3,
-        1
-      ],
-      "base": [
-        0,
-        0.75,
-        3,
-        0.25
-      ],
-      "size": "small",
-      "mount": "wall",
-      "tags": [
-        "section:field-notes"
       ]
     },
     {
@@ -10145,6 +10077,90 @@
       "loop": {
         "frameRate": 1.5
       }
+    },
+    {
+      "frame": "library-section-sign-front-stories",
+      "id": "library-section-sign-stories",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0,
+        2,
+        1
+      ],
+      "size": "small",
+      "mount": "wall",
+      "tags": [
+        "section:stories"
+      ]
+    },
+    {
+      "frame": "library-section-sign-front-histories",
+      "id": "library-section-sign-histories",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0,
+        2,
+        1
+      ],
+      "size": "small",
+      "mount": "wall",
+      "tags": [
+        "section:histories"
+      ]
+    },
+    {
+      "frame": "library-section-sign-front-recipes",
+      "id": "library-section-sign-recipes",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0,
+        2,
+        1
+      ],
+      "size": "small",
+      "mount": "wall",
+      "tags": [
+        "section:recipes"
+      ]
+    },
+    {
+      "frame": "library-section-sign-front-field-notes",
+      "id": "library-section-sign-field-notes",
+      "facing": "front",
+      "state": "default",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0,
+        2,
+        1
+      ],
+      "size": "small",
+      "mount": "wall",
+      "tags": [
+        "section:field-notes"
+      ]
     }
   ]
 }

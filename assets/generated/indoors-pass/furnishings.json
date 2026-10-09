@@ -189,134 +189,6 @@
       }
     },
     {
-      "id": "library-section-sign-stories",
-      "footprint": [
-        3,
-        1
-      ],
-      "base": [
-        0,
-        0.75,
-        3,
-        0.25
-      ],
-      "size": "small",
-      "mount": "wall",
-      "facings": {
-        "front": {
-          "default": [
-            "library-section-sign-front-stories"
-          ]
-        }
-      },
-      "states": {
-        "default": {
-          "frames": [
-            "library-section-sign-front-stories"
-          ]
-        }
-      },
-      "tags": [
-        "section:stories"
-      ]
-    },
-    {
-      "id": "library-section-sign-histories",
-      "footprint": [
-        3,
-        1
-      ],
-      "base": [
-        0,
-        0.75,
-        3,
-        0.25
-      ],
-      "size": "small",
-      "mount": "wall",
-      "facings": {
-        "front": {
-          "default": [
-            "library-section-sign-front-histories"
-          ]
-        }
-      },
-      "states": {
-        "default": {
-          "frames": [
-            "library-section-sign-front-histories"
-          ]
-        }
-      },
-      "tags": [
-        "section:histories"
-      ]
-    },
-    {
-      "id": "library-section-sign-recipes",
-      "footprint": [
-        3,
-        1
-      ],
-      "base": [
-        0,
-        0.75,
-        3,
-        0.25
-      ],
-      "size": "small",
-      "mount": "wall",
-      "facings": {
-        "front": {
-          "default": [
-            "library-section-sign-front-recipes"
-          ]
-        }
-      },
-      "states": {
-        "default": {
-          "frames": [
-            "library-section-sign-front-recipes"
-          ]
-        }
-      },
-      "tags": [
-        "section:recipes"
-      ]
-    },
-    {
-      "id": "library-section-sign-field-notes",
-      "footprint": [
-        3,
-        1
-      ],
-      "base": [
-        0,
-        0.75,
-        3,
-        0.25
-      ],
-      "size": "small",
-      "mount": "wall",
-      "facings": {
-        "front": {
-          "default": [
-            "library-section-sign-front-field-notes"
-          ]
-        }
-      },
-      "states": {
-        "default": {
-          "frames": [
-            "library-section-sign-front-field-notes"
-          ]
-        }
-      },
-      "tags": [
-        "section:field-notes"
-      ]
-    },
-    {
       "id": "rug-woven",
       "footprint": [
         3,
@@ -1723,6 +1595,134 @@
       "offers": {
         "top": 3
       }
+    },
+    {
+      "id": "library-section-sign-stories",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0,
+        2,
+        1
+      ],
+      "size": "small",
+      "mount": "wall",
+      "facings": {
+        "front": {
+          "default": [
+            "library-section-sign-front-stories"
+          ]
+        }
+      },
+      "states": {
+        "default": {
+          "frames": [
+            "library-section-sign-front-stories"
+          ]
+        }
+      },
+      "tags": [
+        "section:stories"
+      ]
+    },
+    {
+      "id": "library-section-sign-histories",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0,
+        2,
+        1
+      ],
+      "size": "small",
+      "mount": "wall",
+      "facings": {
+        "front": {
+          "default": [
+            "library-section-sign-front-histories"
+          ]
+        }
+      },
+      "states": {
+        "default": {
+          "frames": [
+            "library-section-sign-front-histories"
+          ]
+        }
+      },
+      "tags": [
+        "section:histories"
+      ]
+    },
+    {
+      "id": "library-section-sign-recipes",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0,
+        2,
+        1
+      ],
+      "size": "small",
+      "mount": "wall",
+      "facings": {
+        "front": {
+          "default": [
+            "library-section-sign-front-recipes"
+          ]
+        }
+      },
+      "states": {
+        "default": {
+          "frames": [
+            "library-section-sign-front-recipes"
+          ]
+        }
+      },
+      "tags": [
+        "section:recipes"
+      ]
+    },
+    {
+      "id": "library-section-sign-field-notes",
+      "footprint": [
+        2,
+        1
+      ],
+      "base": [
+        0,
+        0,
+        2,
+        1
+      ],
+      "size": "small",
+      "mount": "wall",
+      "facings": {
+        "front": {
+          "default": [
+            "library-section-sign-front-field-notes"
+          ]
+        }
+      },
+      "states": {
+        "default": {
+          "frames": [
+            "library-section-sign-front-field-notes"
+          ]
+        }
+      },
+      "tags": [
+        "section:field-notes"
+      ]
     }
   ]
 }

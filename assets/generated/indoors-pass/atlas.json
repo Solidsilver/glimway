@@ -71,6 +71,22 @@
     {
       "key": "gaps-library-elara-desk-front-writing-1",
       "file": "sheets/gaps-crops/library-elara-desk-front-writing-1.png"
+    },
+    {
+      "key": "small-sign-stories",
+      "file": "sheets/section-signs-small/library-section-sign-front-stories.png"
+    },
+    {
+      "key": "small-sign-histories",
+      "file": "sheets/section-signs-small/library-section-sign-front-histories.png"
+    },
+    {
+      "key": "small-sign-recipes",
+      "file": "sheets/section-signs-small/library-section-sign-front-recipes.png"
+    },
+    {
+      "key": "small-sign-field-notes",
+      "file": "sheets/section-signs-small/library-section-sign-front-field-notes.png"
     }
   ],
   "frames": {
@@ -3801,98 +3817,6 @@
         "h": 691
       }
     },
-    "library-section-sign-front-stories": {
-      "filename": "round2-library-section-sign-front-stories",
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 233,
-        "h": 76
-      },
-      "rotated": false,
-      "trimmed": true,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 233,
-        "h": 76
-      },
-      "sourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 233,
-        "h": 76
-      }
-    },
-    "library-section-sign-front-histories": {
-      "filename": "round2-library-section-sign-front-histories",
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 233,
-        "h": 75
-      },
-      "rotated": false,
-      "trimmed": true,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 233,
-        "h": 75
-      },
-      "sourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 233,
-        "h": 75
-      }
-    },
-    "library-section-sign-front-recipes": {
-      "filename": "round2-library-section-sign-front-recipes",
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 233,
-        "h": 77
-      },
-      "rotated": false,
-      "trimmed": true,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 233,
-        "h": 77
-      },
-      "sourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 233,
-        "h": 77
-      }
-    },
-    "library-section-sign-front-field-notes": {
-      "filename": "round2-library-section-sign-front-field-notes",
-      "frame": {
-        "x": 0,
-        "y": 0,
-        "w": 233,
-        "h": 78
-      },
-      "rotated": false,
-      "trimmed": true,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 233,
-        "h": 78
-      },
-      "sourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 233,
-        "h": 78
-      }
-    },
     "rug-woven-front-default": {
       "filename": "round2-rug-woven-front-default",
       "frame": {
@@ -5257,6 +5181,90 @@
       "sourceSize": {
         "w": 691,
         "h": 691
+      }
+    },
+    "library-section-sign-front-stories": {
+      "filename": "small-sign-stories",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 42
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 42
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 42
+      }
+    },
+    "library-section-sign-front-histories": {
+      "filename": "small-sign-histories",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 42
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 42
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 42
+      }
+    },
+    "library-section-sign-front-recipes": {
+      "filename": "small-sign-recipes",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 42
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 42
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 42
+      }
+    },
+    "library-section-sign-front-field-notes": {
+      "filename": "small-sign-field-notes",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 42
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 128,
+        "h": 42
+      },
+      "sourceSize": {
+        "w": 128,
+        "h": 42
       }
     }
   },

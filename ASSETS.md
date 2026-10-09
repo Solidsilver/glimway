@@ -336,6 +336,12 @@ Delivered 2026-10-08 to `assets/generated/indoors-pass/`; generated source sheet
 
 Provenance: original art generated 2026-10-08 with the built-in image generation tool; prompts and generation IDs are recorded in `prompts.json`, `round2-jobs.json` and `gaps-jobs.json`. Original Round 2b checkerboard edge pixels were converted to alpha; the added gap sprites were generated with true transparent backgrounds. Hand-measured crops are aspect-contained on transparent native-size canvases, with 64 texels per 16 px tile. Crops include a 4 px transparent gutter; the 176-frame Round 2b audit is in `edge-audit.json`. `manifest.json` and `atlas.json` record frame geometry; `furnishings.json` records 48 placeable pieces with facing/state frames, footprint, base, size, mount, and offered surfaces. Contact and room preview sheets are in `.agent/screens/`; `assets/generated/indoors-pass/README.md` lists them.
 
+The four library plaques keep their original lettering and icons, reduced with
+nearest-neighbour sampling to transparent 128×42 sources and 128×48 frame
+canvases. `small-signs-jobs.json` and `build_small_signs.py` document the derived
+frames; the new 1×/3× sheet is `.agent/screens/signs-sheet.png`. Their two-tile
+footprints match one shelf unit, and the room places them on the top wall row.
+
 | File | Keys / contents | Role |
 |---|---|---|
 | `sheets/floors-seamless.png` | `plank-floor-0..3`, `flagstone-floor-0..3` | Four variants per seamless floor family |

@@ -125,6 +125,19 @@ The job definitions and crop/build step are `assets/generated/indoors-pass/gaps-
 and `build_gaps_frames.py`. The 1×/3× neighbour comparison is
 `.agent/screens/gaps.png`.
 
+## Library section plaques (2026-10-08)
+
+The four plaques looked oversized and covered the books. Keep the painted labels
+and icons, but reduce each plaque to one shelf unit (two tiles) wide with true
+transparent alpha. Reposition their anchors to the back wall's top row, centred
+over their corresponding shelf units, so the shelf books remain fully visible.
+The source crops are reduced with nearest-neighbour sampling into 128×42 PNGs
+and 128×48 frame canvases. The source job and build step are
+`assets/generated/indoors-pass/small-signs-jobs.json` and
+`build_small_signs.py`; review the 1×/3× comparison at
+`.agent/screens/signs-sheet.png` and the in-game placement at
+`.agent/screens/signs-after.png`.
+
 
 ## Round 2b delivery: shared furnishing kit and room refinements
 

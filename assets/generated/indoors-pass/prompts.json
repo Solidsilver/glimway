@@ -54,5 +54,17 @@
       "generationId": "exec-150b5420-9dd6-4612-bc8f-421c6343e395.png",
       "prompt": "Create a 4x2 sheet of eight square seamless RPG floor tiles: four warm east-west plank variants in row one and four golden flagstone variants in row two, each 64x64 texels at game tile scale. Each tile independently repeats seamlessly in both directions; left and right edges match, top and bottom edges match; no shadows, no vignette, no focal point, flat stepped pixel shading, crisp warm outlined pixels, upper-left light, no blur or labels."
     }
-  ]
+  ],
+  "smallSignPass": {
+    "date": "2026-10-08",
+    "method": "nearest-neighbour reduction from the original transparent section-plaque crops; lettering, palette and icons retained",
+    "jobs": "small-signs-jobs.json",
+    "builder": "build_small_signs.py",
+    "frameKeys": [
+      "library-section-sign-front-stories",
+      "library-section-sign-front-histories",
+      "library-section-sign-front-recipes",
+      "library-section-sign-front-field-notes"
+    ]
+  }
 }
