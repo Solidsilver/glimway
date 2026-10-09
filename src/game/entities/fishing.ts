@@ -52,6 +52,8 @@ import { hideContextButtons, showContextButton } from '../context-buttons'
 import { bus, EV } from '../events'
 import { heldNow } from '../held'
 import { itemsFor } from '../items'
+import { crArt } from '../crafts-art'
+import { registerFishingLoops } from '../fishing-art'
 import { itemsArtKey } from '../items-pass'
 import { sfx } from '../sfx'
 import { tileMid, tileBottom } from '../../lib/tile'
@@ -88,9 +90,8 @@ interface Line {
 /** Water terrain (the float lands only on water). */
 const WATER = new Set<number>([TERRAIN.water_a, TERRAIN.water_b])
 
-/** Frame rates for the float's bob and the rings (the art's 2 fps feels sleepy at game scale). */
-const BOB_MS = 420
-const RINGS_MS = 380
+/** A crafts frame's texture key, when it loaded. */
+const has = (scene: Phaser.Scene, frame: string): string | null => (scene.textures.exists(crArt(frame)) ? crArt(frame) : null)
 /** The held rod's art is two tiles long at the hand: drawn at about a tile beside the hero. */
 const ROD_SCALE = 0.55
 
@@ -119,15 +120,15 @@ export class Fishing {
   // ---- drawing
   private rod: Phaser.GameObjects.Image | null = null
   private cord: Phaser.GameObjects.Graphics | null = null
-  private float: Phaser.GameObjects.Image | Phaser.GameObjects.Arc | null = null
-  private rings: Phaser.GameObjects.Image | null = null
+  private float: Phaser.GameObjects.Sprite | Phaser.GameObjects.Arc | null = null
+  private rings: Phaser.GameObjects.Sprite | null = null
   private word: Phaser.GameObjects.Text | null = null
   private floatAt: { x: number; y: number } | null = null
-  private frameClock = 0
 
   constructor(private scene: Phaser.Scene, private deps: FishingDeps) {
     this.waters = watersForArea(deps.world.areaId)
     if (this.waters.length === 0) return
+    registerFishingLoops(scene)
     Fishing.live = this
     this.publish()
     // A line out already (a reload at the bank, or another device): it's the account's.
@@ -432,7 +433,7 @@ export class Fishing {
 
   // ------------------------------------------------------------ every frame
 
-  update(dt: number): void {
+  update(): void {
     if (Fishing.live !== this) return
     const hero = this.deps.hero().sprite
     const l = this.landed ?? this.line
@@ -466,7 +467,6 @@ export class Fishing {
       sfx('fish-bite')
       this.deps.interactables.invalidatePrompt()
     }
-    this.frameClock += dt * 1000
     this.animate()
   }
 
@@ -492,12 +492,11 @@ export class Fishing {
     hero.facing.set(x - hero.sprite.x, y - hero.sprite.y).normalize()
     this.drawRod('out')
     this.clearFloat()
-    const key = itemsArtKey('fish-float-0')
-    this.float = this.scene.textures.exists(key)
-      ? this.scene.add.image(x, y, key).setOrigin(0.5, 28 / 32).setDepth(y - 6)
-      : this.scene.add.circle(x, y - 2, 1.5, 0xd94a3a).setDepth(y - 6)
-    const rings = itemsArtKey('fish-rings-0')
-    if (this.scene.textures.exists(rings)) this.rings = this.scene.add.image(x, y + 1, rings).setOrigin(0.5, 28 / 32).setDepth(y - 7).setAlpha(0.8).setVisible(!this.deps.reducedMotion)
+    // The float and rings on the crafts pack; without it, a dot for the float (design 10, "Order").
+    const key = has(this.scene, 'float-0')
+    this.float = key ? this.scene.add.sprite(x, y, key).setOrigin(0.5, 28 / 32).setDepth(y - 6) : this.scene.add.circle(x, y - 2, 1.5, 0xd94a3a).setDepth(y - 6)
+    const rings = has(this.scene, 'water-rings-0')
+    if (rings) this.rings = this.scene.add.sprite(x, y + 1, rings).setOrigin(0.5, 28 / 32).setDepth(y - 7).setAlpha(0.8).setVisible(!this.deps.reducedMotion)
     this.cord = this.scene.add.graphics().setDepth(Math.max(y, hero.sprite.y) + 2)
     if (fresh && !this.deps.reducedMotion && this.float) {
       // The float flies out from the rod tip and lands.
@@ -521,8 +520,8 @@ export class Fishing {
   /** The rod at the hero's hand: raised (a fish landed), or held out toward the float. */
   private drawRod(pose: 'raised' | 'out'): void {
     const hero = this.deps.hero().sprite
-    const key = itemsArtKey(`fish-rod-held-${pose}`)
-    if (!this.scene.textures.exists(key)) return
+    const key = has(this.scene, `rod-held-${pose}`)
+    if (!key) return
     const hand = this.hand()
     const aim = pose === 'out' && this.floatAt ? rodPose(hand, this.floatAt, ROD_SCALE) : { flipX: hero.flipX, rotation: 0 }
     if (!this.rod) this.rod = this.scene.add.image(0, 0, key).setScale(ROD_SCALE)
@@ -548,17 +547,20 @@ export class Fishing {
     this.drawRod('out')
     const ready = this.phase() === 'ready' && !this.line.predicted
     const still = this.deps.reducedMotion
-    if (this.float instanceof Phaser.GameObjects.Image) {
-      const img = this.float
-      const frame = ready ? (still ? 4 : 4 + (Math.floor(this.frameClock / BOB_MS) % 2)) : still ? 0 : Math.floor(this.frameClock / BOB_MS) % 4
-      const key = itemsArtKey(`fish-float-${frame}`)
-      if (this.scene.textures.exists(key) && img.texture.key !== key) img.setTexture(key)
+    if (this.float instanceof Phaser.GameObjects.Sprite) {
+      // Bobbing, then the dip; with reduced motion one still frame for each.
+      if (still) {
+        const key = has(this.scene, ready ? 'float-4' : 'float-0')
+        if (key && this.float.texture.key !== key) this.float.stop().setTexture(key)
+      } else this.loop(this.float, ready ? 'fish-bite' : 'fish-bob')
     }
     if (this.rings) {
       // Reduced motion: no rings while waiting; one still ring is the bite.
       this.rings.setVisible(!still || ready)
-      const key = itemsArtKey(`fish-rings-${still ? 2 : Math.floor(this.frameClock / RINGS_MS) % 3}`)
-      if (this.scene.textures.exists(key) && this.rings.texture.key !== key) this.rings.setTexture(key)
+      if (still) {
+        const key = has(this.scene, 'water-rings-2')
+        if (key && this.rings.texture.key !== key) this.rings.stop().setTexture(key)
+      } else this.loop(this.rings, 'fish-rings')
     }
     // Reduced motion says the bite in a word too.
     if (still && ready && !this.word) {
@@ -587,27 +589,24 @@ export class Fishing {
     }
   }
 
+  /** Play a fishing loop on a sprite, unless it's playing already (or didn't register: the frame stays). */
+  private loop(sprite: Phaser.GameObjects.Sprite, key: string): void {
+    const anim = crArt(key)
+    if (sprite.anims.currentAnim?.key === anim || !this.scene.anims.exists(anim)) return
+    sprite.play(anim)
+  }
+
   /** The landing: a splash where the float was, and the fish arcing out to the hero. */
   private landing(at: { x: number; y: number }, species: string): void {
     const hero = this.deps.hero().sprite
-    const splash = itemsArtKey('fish-splash-0')
-    if (this.scene.textures.exists(splash)) {
-      const img = this.scene.add.image(at.x, at.y + 2, splash).setOrigin(0.5, 60 / 64).setDepth(at.y)
-      if (this.deps.reducedMotion) this.scene.time.delayedCall(400, () => img.destroy())
-      else {
-        let f = 0
-        this.scene.time.addEvent({
-          delay: 90,
-          repeat: 3,
-          callback: () => {
-            f += 1
-            if (f > 3) img.destroy()
-            else img.setTexture(itemsArtKey(`fish-splash-${f}`))
-          }
-        })
-      }
+    const splash = has(this.scene, 'landing-splash-0')
+    if (splash) {
+      const img = this.scene.add.sprite(at.x, at.y + 2, splash).setOrigin(0.5, 60 / 64).setDepth(at.y)
+      if (this.deps.reducedMotion || !this.scene.anims.exists(crArt('fish-splash'))) this.scene.time.delayedCall(400, () => img.destroy())
+      else img.play(crArt('fish-splash')).once('animationcomplete', () => img.destroy())
     }
-    const fishKey = itemsArtKey(`item-${species}`)
+    // The fish as the crafts pass draws it (its frame is the item's id), else its inventory icon.
+    const fishKey = has(this.scene, species) ?? itemsArtKey(`item-${species}`)
     if (!this.scene.textures.exists(fishKey)) return
     const fish = this.scene.add.image(at.x, at.y - 4, fishKey).setOrigin(0.5, 0.5).setDepth(hero.y + 30).setScale(0.75)
     const to = { x: hero.x + (at.x < hero.x ? -6 : 6), y: hero.y - 22 }
@@ -665,22 +664,22 @@ export class Fishing {
  */
 export class RemoteFishingLine {
   private rod: Phaser.GameObjects.Image | null = null
-  private float: Phaser.GameObjects.Image | null = null
+  private float: Phaser.GameObjects.Sprite | null = null
   private cord: Phaser.GameObjects.Graphics | null = null
-  private clock = 0
 
-  constructor(private scene: Phaser.Scene, private reducedMotion: boolean) {}
+  constructor(private scene: Phaser.Scene, private reducedMotion: boolean) {
+    registerFishingLoops(scene)
+  }
 
   /** Draw (or take down) the line for a player at (x, y) facing (fx, fy). */
-  update(dt: number, at: { x: number; y: number }, facing: { x: number; y: number }, fishing: boolean): void {
+  update(at: { x: number; y: number }, facing: { x: number; y: number }, fishing: boolean): void {
     if (!fishing) {
       this.destroy()
       return
     }
-    const rodKey = itemsArtKey('fish-rod-held-out')
-    const floatKey = itemsArtKey('fish-float-0')
-    if (!this.scene.textures.exists(rodKey) || !this.scene.textures.exists(floatKey)) return
-    this.clock += dt * 1000
+    const rodKey = has(this.scene, 'rod-held-out')
+    const floatKey = has(this.scene, 'float-0')
+    if (!rodKey || !floatKey) return
     const len = Math.hypot(facing.x, facing.y) || 1
     const fx = at.x + (facing.x / len) * 36
     const fy = at.y + (facing.y / len) * 36
@@ -689,9 +688,11 @@ export class RemoteFishingLine {
     if (!this.rod) this.rod = this.scene.add.image(0, 0, rodKey).setScale(ROD_SCALE)
     const gx = ROD_ART.grip.x / 128
     this.rod.setFlipX(aim.flipX).setOrigin(aim.flipX ? 1 - gx : gx, ROD_ART.grip.y / 128).setRotation(aim.rotation).setPosition(hand.x, hand.y).setDepth(at.y + 1)
-    if (!this.float) this.float = this.scene.add.image(fx, fy, floatKey).setOrigin(0.5, 28 / 32)
-    const frame = this.reducedMotion ? 0 : Math.floor(this.clock / BOB_MS) % 4
-    this.float.setTexture(itemsArtKey(`fish-float-${frame}`)).setPosition(fx, fy).setDepth(fy - 6)
+    if (!this.float) {
+      this.float = this.scene.add.sprite(fx, fy, floatKey).setOrigin(0.5, 28 / 32)
+      if (!this.reducedMotion && this.scene.anims.exists(crArt('fish-bob'))) this.float.play(crArt('fish-bob'))
+    }
+    this.float.setPosition(fx, fy).setDepth(fy - 6)
     if (!this.cord) this.cord = this.scene.add.graphics()
     const tip = aim.tip
     this.cord.setDepth(Math.max(fy, at.y) + 2).clear().lineStyle(0.5, 0xf2ead8, 0.85)

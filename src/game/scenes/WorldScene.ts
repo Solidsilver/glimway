@@ -637,7 +637,7 @@ export class WorldScene extends Phaser.Scene {
     // One target for the action button: the highest rank in reach (the
     // Wilds' claims, the warden's naming), then the nearest.
     this.interactables.update(this.hero.sprite, this.time.now)
-    this.fishing?.update(dt)
+    this.fishing?.update()
     this.controls.update()
     // The wrong tool in hand by something workable: a faint hint after a moment.
     const hx = this.hero.sprite.x
