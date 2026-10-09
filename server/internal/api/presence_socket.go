@@ -320,7 +320,7 @@ func (a *Server) presenceReader(p *presencePeer) {
 			// to the room when the table knows the move, the sender's craft
 			// and level mark allow it and its own cooldown has passed.
 			// Anything else is dropped, like an emote over its cooldown.
-			if !h.allowAbility(p, now, event.Ability) {
+			if !h.allowAbility(p, h.now(), event.Ability) {
 				h.mu.Unlock()
 				continue
 			}

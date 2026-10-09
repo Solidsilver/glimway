@@ -106,7 +106,6 @@ export class ReportBook {
    */
   bind(client: string, generation: string, serverSeq: number, serverGeneration: string): void {
     if (client !== this.client || generation !== this.generation) {
-      console.error('DBG bind clears', client, generation, 'was', this.client, this.generation);
       this.captured = null;
       this.seq = 0;
       this.acked = 0;
@@ -122,7 +121,6 @@ export class ReportBook {
   /** The screen's latest place and vitals. */
   note(place: WhereJson, hp: number, mana: number): void {
     const n = this.next;
-    console.error('DBG note', JSON.stringify(place), hp, mana, 'was', JSON.stringify(n.place), n.hp, n.mana, 'changed', n.changed);
     if (n.place && n.place.area === place.area && n.place.x === place.x && n.place.y === place.y && n.hp === hp && n.mana === mana) return;
     this.next = { ...n, place: { ...place }, hp, mana, changed: true };
   }
@@ -215,7 +213,6 @@ export class ReportBook {
    */
   ack(ack: ReportAck): CapturedReport | null {
     const c = this.captured;
-    console.error('DBG ack', JSON.stringify(ack), 'captured', c?.seq, !!(c && ack.client === c.client && ack.generation === c.generation && ack.seq === c.seq));
     if (!c || ack.client !== c.client || ack.generation !== c.generation || ack.seq !== c.seq) return null;
     this.captured = null;
     this.acked = Math.max(this.acked, c.seq);
@@ -229,7 +226,6 @@ export class ReportBook {
 
   /** The generation retired (`superseded` on a report): its captured report goes. */
   drop(): void {
-    console.error('DBG drop');
     this.captured = null;
   }
 }

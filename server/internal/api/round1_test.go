@@ -138,7 +138,7 @@ func TestReportCooldownWithAmpleManaAndPlayTimeGeneration(t *testing.T) {
 		t.Fatal(err)
 	}
 	// The level mark unlocks the signature (crafts.md 4.2).
-	if _, err = x.db.DB.Exec("UPDATE sync_baselines SET verified_high_level=10 WHERE account_id=?", x.account("alice")); err != nil {
+	if _, err = x.db.DB.Exec("UPDATE sync_baselines SET level_mark=10 WHERE account_id=?", x.account("alice")); err != nil {
 		t.Fatal(err)
 	}
 	a := x.sendReport(c, p, 1, float64(s.Version), 50, 200, 1, "village")

@@ -127,7 +127,7 @@ func createPlayer(ctx context.Context, tx *sql.Tx, id string, p rules.Profile, w
 	if _, err := tx.ExecContext(ctx, "INSERT INTO balances VALUES(?,0,0)", id); err != nil {
 		return err
 	}
-	if _, err := tx.ExecContext(ctx, "INSERT INTO sync_baselines(account_id,profile_json,xp_mark,verified_xp,checkpoint_json,checkpoint_at,updated_at,loss_level,loss_xp,loss_at,verified_high_level) VALUES(?,?,?,?,?,?,?,?,?,?,?)", id, store.JSON(p), verified, verified, store.JSON(p), verifiedAt, now, p.Level, verified, verifiedAt, p.Level); err != nil {
+	if _, err := tx.ExecContext(ctx, "INSERT INTO sync_baselines(account_id,profile_json,xp_mark,verified_xp,checkpoint_json,checkpoint_at,updated_at,loss_level,loss_xp,loss_at,verified_high_level,level_mark) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)", id, store.JSON(p), verified, verified, store.JSON(p), verifiedAt, now, p.Level, verified, verifiedAt, p.Level, p.Level); err != nil {
 		return err
 	}
 	// B replaces the document row above after 028; these initial rows are already

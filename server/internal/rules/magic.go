@@ -10,6 +10,17 @@ import (
 // `sync_baselines.verified_high_level` (the highest level a verified sync has
 // seen), the class mark is the last class a sync saw.
 
+// LevelMark is the mark unlocks read (crafts.md 4.2): the server's mark, or
+// the stored profile's level when that is higher (the next sync raises the
+// mark to it). Same as lane F's `levelMarkOf`, so the two agree before the
+// first post-merge sync (review finding 9).
+func LevelMark(p *Profile, mark float64) float64 {
+	if p == nil {
+		return mark
+	}
+	return math.Max(mark, p.Level)
+}
+
 // Craft is the hero's craft (4.2): the profile's class, or, after a rebirth
 // left the profile classless, the last class a sync saw once the level mark
 // is 10 or more. A hero who never had a class has none, and a missing
@@ -88,10 +99,10 @@ type ReportInput struct {
 	Casts        float64
 	AbilityCasts map[string]float64
 	// Stored: vitals_at, cast_ready_at and player_ability_ready.
-	At          float64
-	Ready       float64
+	At           float64
+	Ready        float64
 	AbilityReady map[string]float64
-	Now         float64
+	Now          float64
 	// AllyCredit is ward credit other healers left (4.5); the report uses
 	// it up.
 	AllyCredit float64
@@ -136,7 +147,8 @@ func BoundReport(in ReportInput) AbilityBudget {
 	ready := math.Max(in.Ready, in.At)
 	pool := s.Mana + content.VitalsRules.GetRegenCap()*elapsed
 	alive := in.Profile != nil && s.HP > 0
-	craft := Craft(in.Profile, in.ClassMark, in.LevelMark)
+	mark := LevelMark(in.Profile, in.LevelMark)
+	craft := Craft(in.Profile, in.ClassMark, mark)
 	heal := float64(0)
 	if craft == "healer" {
 		heal = MendHeal(in.Profile)
@@ -170,7 +182,7 @@ func BoundReport(in ReportInput) AbilityBudget {
 		// way); no other key does.
 		reported += clampCount(in.AbilityCasts[sig.GetId()])
 	}
-	total, next := take(reported, sigReadyAt, content.CombatRules.GetSignatureCooldownSeconds(), sigCost, Unlocked(craft, in.LevelMark, sig))
+	total, next := take(reported, sigReadyAt, content.CombatRules.GetSignatureCooldownSeconds(), sigCost, Unlocked(craft, mark, sig))
 	out.Signature = total
 	out.Casts = math.Min(clampCount(in.Casts), total)
 	out.Ready = next
@@ -189,7 +201,7 @@ func BoundReport(in ReportInput) AbilityBudget {
 		if !seen {
 			continue
 		}
-		n, next := take(reported, in.AbilityReady[a.GetId()], a.GetCooldownSeconds(), float64(a.GetMana()), Unlocked(craft, in.LevelMark, a))
+		n, next := take(reported, in.AbilityReady[a.GetId()], a.GetCooldownSeconds(), float64(a.GetMana()), Unlocked(craft, mark, a))
 		out.AbilityCasts[a.GetId()] = n
 		out.AbilityReady[a.GetId()] = next
 	}
@@ -202,8 +214,7 @@ func BoundReport(in ReportInput) AbilityBudget {
 
 	// HP may rise by the healer's accepted Mends (today's rule), the
 	// accepted Ward-lights (the caster stands in their own circle) and the
-	// ward credit other healers left. The zero-HP lock holds for all three;
-	// the credit is used up either way (4.5).
+	// ward credit other healers left. The zero-HP lock holds for all three.
 	ward := float64(0)
 	for _, a := range content.AbilitiesRules.GetAbilities() {
 		n := a.GetNumbers()
@@ -212,15 +223,20 @@ func BoundReport(in ReportInput) AbilityBudget {
 		}
 		ward += out.AbilityCasts[a.GetId()] * float64(n.GetPulses()) * n.GetPulseHealFraction() * heal
 	}
-	out.AllyHeal = in.AllyCredit
-	if !finite(out.AllyHeal) || out.AllyHeal < 0 {
-		out.AllyHeal = 0
+	credit := in.AllyCredit
+	if !finite(credit) || credit < 0 {
+		credit = 0
 	}
-	raise := out.Signature*heal + ward
+	own := out.Signature*heal + ward
+	raise := own
 	if alive {
-		raise += out.AllyHeal
+		raise += credit
 	}
 	out.HP = math.Min(in.HP, math.Min(s.MaxHP, s.HP+raise))
+	// Only what the HP actually needed is ward credit spent (review finding
+	// 3): the rest of the pulses wait for their own report or their expiry,
+	// and this echoes the part used.
+	out.AllyHeal = math.Min(math.Max(out.HP-math.Min(s.MaxHP, s.HP+own), 0), credit)
 	out.Mana = math.Min(in.Mana, math.Max(0, math.Min(s.MaxMana, pool)))
 	return out
 }

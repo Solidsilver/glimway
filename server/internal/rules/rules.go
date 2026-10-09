@@ -412,18 +412,11 @@ type LossReference struct{ Level, XP float64 }
 func DeathWindow(level float64) float64 {
 	return XPToNextLevel(level) + XPToNextLevel(level+1)
 }
-// IsRebirth(p, prior, verifiedHighLevel) reports a rebirth from the level
-// history the world may trust. VerifiedHistory is what that history is:
-// the level mark follows profile syncs too now (crafts.md 4.2, magic's
-// mark), so a rebirth trusts no more than the level the last verified
-// sign-in saw — a client-reported level is never verified history.
-func VerifiedHistory(levelMark, signedInLevel float64) float64 {
-	if signedInLevel >= 1 && signedInLevel < levelMark {
-		return signedInLevel
-	}
-	return levelMark
-}
 
+// IsRebirth(p, prior, verifiedHighLevel) reports a rebirth from the level
+// history the world may trust: `sync_baselines.verified_high_level`, the
+// highest level a verified sign-in saw (magic's level mark is separate,
+// crafts.md 4.2 and review finding 7).
 func IsRebirth(p Profile, prior LossReference, verifiedHighLevel float64) bool {
 	return p.Level == 1 && prior.Level > 1 && verifiedHighLevel > 1
 }

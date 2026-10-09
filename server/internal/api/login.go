@@ -194,7 +194,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 		if _, err = tx.ExecContext(ctx, "UPDATE players SET display_name=?,last_seen_at=?,habitica_party_id=? WHERE account_id=?", p.Name, now, p.PartyID, id); err != nil {
 			return err
 		}
-		if _, err = tx.ExecContext(ctx, "UPDATE sync_baselines SET verified_xp=?,checkpoint_json=?,checkpoint_at=?,verified_high_level=MAX(verified_high_level,?),checkpoint_ledger_id=COALESCE((SELECT MAX(id) FROM ledger WHERE account_id=?),0) WHERE account_id=?", verified, store.JSON(p), now, p.Level, id, id); err != nil {
+		if _, err = tx.ExecContext(ctx, "UPDATE sync_baselines SET verified_xp=?,checkpoint_json=?,checkpoint_at=?,verified_high_level=MAX(verified_high_level,?),level_mark=MAX(level_mark,?),checkpoint_ledger_id=COALESCE((SELECT MAX(id) FROM ledger WHERE account_id=?),0) WHERE account_id=?", verified, store.JSON(p), now, p.Level, p.Level, id, id); err != nil {
 			return err
 		}
 		if s.Version == beforeVersion {

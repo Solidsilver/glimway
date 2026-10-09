@@ -214,12 +214,17 @@ type Snapshot struct {
 	LossReference      rules.LossReference `json:"-"`
 	LossAt             int64               `json:"-"`
 	VerifiedHighLevel  float64             `json:"-"`
+	// LevelMark is magic's mark (crafts.md 4.2): the highest level a
+	// verified sync has seen, sign-ins and profile syncs alike. It unlocks
+	// moves; VerifiedHighLevel stays the sign-in history the rebirth and
+	// forgery checks trust.
+	LevelMark float64 `json:"-"`
 	// ClassMark is the last class a sync saw (magic's craft memory, crafts.md
 	// 4.2): kept through a rebirth's classless profile.
-	ClassMark string `json:"-"`
-	LeaseID            sql.NullString      `json:"-"`
-	LeaseClient        sql.NullString      `json:"-"`
-	LeaseSeen          sql.NullInt64       `json:"-"`
+	ClassMark   string         `json:"-"`
+	LeaseID     sql.NullString `json:"-"`
+	LeaseClient sql.NullString `json:"-"`
+	LeaseSeen   sql.NullInt64  `json:"-"`
 }
 
 // PackItems: the carried items that join the save's inventory list, every

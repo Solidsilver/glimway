@@ -31,13 +31,13 @@ func (x *rig) abilityReport(c *http.Cookie, p *contract.PlayResponse, seq, basis
 
 // setVitals is a server vitals write (a refill, a fall): it resets the
 // watermark and returns the version the next report must name.
-func setVitals(t *testing.T, x *rig, hp, mana float64) float64 {
+func setVitals(t *testing.T, x *rig, id string, hp, mana float64) float64 {
 	t.Helper()
 	tx, err := x.db.DB.Begin()
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := store.Load(context.Background(), tx, x.account("alice"))
+	s, err := store.Load(context.Background(), tx, x.account(id))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,7 +66,7 @@ func TestReportAbilityBudgetsAndReadyRows(t *testing.T) {
 	c, play, p := x.healer()
 	ward, _ := content.AbilityFor("ward-light")
 	pulse := rules.WardPulseHeal(&p, ward)
-	basis := setVitals(t, x, 10, 100)
+	basis := setVitals(t, x, "alice", 10, 100)
 	first := x.abilityReport(c, play, 1, basis, 50, 200, 0, map[string]float64{"ward-light": 1})
 	if !first.GetReport().Accepted || first.GetReport().AbilityCasts["ward-light"] != 1 {
 		t.Fatal(first)
@@ -130,7 +130,7 @@ func TestReportSignatureBudgetSharesThePool(t *testing.T) {
 	c, play, _ := x.healer()
 	// The signature by casts and by id are one budget (lane F sends either
 	// way): one initial allowance, one mana pool.
-	basis := setVitals(t, x, 10, 30)
+	basis := setVitals(t, x, "alice", 10, 30)
 	out := x.abilityReport(c, play, 1, basis, 50, 200, 1, map[string]float64{"mend": 1})
 	if out.GetReport().Casts != 1 || out.GetReport().AbilityCasts["mend"] != 0 {
 		t.Fatal("signature double budget", out.GetReport())
@@ -141,7 +141,7 @@ func TestReportSignatureBudgetSharesThePool(t *testing.T) {
 	// A classless hero's report allows no casts at all.
 	y := newRig(t)
 	c2, play2 := y.reportSetup()
-	basis2 := setVitals(t, y, 10, 30)
+	basis2 := setVitals(t, y, "alice", 10, 30)
 	none := y.abilityReport(c2, play2, 1, basis2, 50, 200, 1, map[string]float64{"mend": 1})
 	if none.GetReport().Casts != 0 || none.GetReport().AbilityCasts["mend"] != 0 {
 		t.Fatal("classless cast", none.GetReport())
@@ -163,17 +163,19 @@ func TestProfileRaisesMagicMarks(t *testing.T) {
 	p := profile("alice", 20, 0, 20)
 	p.Class = &wizard
 	x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200)
-	read := func() (string, float64) {
+	read := func() (string, float64, float64) {
 		var classMark string
-		var level float64
-		if err := x.db.DB.QueryRow("SELECT COALESCE(class_mark,''),verified_high_level FROM sync_baselines WHERE account_id=?", x.account("alice")).Scan(&classMark, &level); err != nil {
+		var level, verified float64
+		if err := x.db.DB.QueryRow("SELECT COALESCE(class_mark,''),level_mark,verified_high_level FROM sync_baselines WHERE account_id=?", x.account("alice")).Scan(&classMark, &level, &verified); err != nil {
 			t.Fatal(err)
 		}
-		return classMark, level
+		return classMark, level, verified
 	}
-	// The mark keeps the game's spellings and the highest level seen.
-	if classMark, level := read(); classMark != "mage" || level != 20 {
-		t.Fatal("marks", classMark, level)
+	// The mark keeps the game's spellings and the highest level a sync saw,
+	// while `verified_high_level` keeps the sign-in history the rebirth
+	// checks trust (review finding 7).
+	if classMark, level, verified := read(); classMark != "mage" || level != 20 || verified != 1 {
+		t.Fatal("marks", classMark, level, verified)
 	}
 	state := decodeProtoState(t, x, c)
 	if state.State.Magic.LevelMark != 20 || classMarkOf(state.State.Magic) != "mage" {
@@ -182,12 +184,49 @@ func TestProfileRaisesMagicMarks(t *testing.T) {
 	// A classless sync (a rebirth) keeps the class mark, and the level mark
 	// only ever rises.
 	s = x.expect("POST", "/api/profile", x.profileBody(s, profile("alice", 1, 0, 20), s.State), c, 200)
-	if classMark, level := read(); classMark != "mage" || level != 20 {
-		t.Fatal("classless sync moved the marks", classMark, level)
+	if classMark, level, verified := read(); classMark != "mage" || level != 20 || verified != 1 {
+		t.Fatal("classless sync moved the marks", classMark, level, verified)
 	}
 	state = decodeProtoState(t, x, c)
 	if classMarkOf(state.State.Magic) != "mage" || state.State.Magic.LevelMark != 20 {
 		t.Fatal("reborn hero lost the craft", state.State.Magic)
+	}
+}
+
+func TestRebirthIsRecognizedAgainAfterClimbingBySyncs(t *testing.T) {
+	// Review finding 7: a hero reborn, signed in at 1, climbing by syncs
+	// alone and reborn again is still a rebirth. The checks read the sign-in
+	// history (`verified_high_level`, a high-water mark), which profile
+	// syncs never raise.
+	x := newRig(t)
+	x.set(profile("alice", 30, 0, 20))
+	c, s := x.ready("alice")
+	// Reborn on Habitica: the sign-in at level 1 is a rebirth.
+	x.set(profile("alice", 1, 0, 20))
+	c = x.login("alice", "")
+	s = x.expect("POST", "/api/play", map[string]any{"clientId": "tab-b", "takeOver": true}, c, 200)
+	// Climbing by syncs alone: the level mark follows, the sign-in history
+	// does not.
+	s = x.expect("POST", "/api/profile", x.profileBody(s, profile("alice", 20, 0, 20), s.State), c, 200)
+	if _, level, verified := (func() (string, float64, float64) {
+		var classMark string
+		var level, verified float64
+		if err := x.db.DB.QueryRow("SELECT COALESCE(class_mark,''),level_mark,verified_high_level FROM sync_baselines WHERE account_id=?", x.account("alice")).Scan(&classMark, &level, &verified); err != nil {
+			t.Fatal(err)
+		}
+		return classMark, level, verified
+	})(); level != 30 || verified != 30 {
+		t.Fatal("marks after the climb", level, verified)
+	}
+	// Reborn again: the next sign-in recognizes it and flags nothing.
+	x.set(profile("alice", 1, 0, 20))
+	c = x.login("alice", "")
+	if n := count(t, x.db, "SELECT COUNT(*) FROM ledger WHERE account_id=? AND reason='rebirth'", x.account("alice")); n != 2 {
+		t.Fatal("second rebirth not recognized", n)
+	}
+	state := decodeProtoState(t, x, c)
+	if state.State.Account.Flagged {
+		t.Fatal("a real rebirth was flagged as forgery")
 	}
 }
 

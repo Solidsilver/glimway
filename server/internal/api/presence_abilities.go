@@ -22,13 +22,15 @@ type presenceMagic struct {
 	Heal      float64
 }
 
-// presenceMagicFor: the craft and level mark allow the moves; a missing
-// profile (no Habitica hero) has no craft and casts nothing.
+// presenceMagicFor: the craft and the level mark allow the moves (the mark
+// reads max(mark, profile level), lane F's `levelMarkOf`); a missing profile
+// (no Habitica hero) has no craft and casts nothing.
 func presenceMagicFor(p *rules.Profile, classMark string, levelMark float64) presenceMagic {
 	if p == nil {
 		return presenceMagic{}
 	}
-	m := presenceMagic{Class: rules.Craft(p, classMark, levelMark), LevelMark: levelMark}
+	mark := rules.LevelMark(p, levelMark)
+	m := presenceMagic{Class: rules.Craft(p, classMark, mark), LevelMark: mark}
 	if m.Class == "healer" {
 		m.Heal = rules.MendHeal(p)
 	}
@@ -44,15 +46,15 @@ const wardCreditSeconds = 60
 
 // wardGrant is one pulse of one ward's heal on one account.
 type wardGrant struct {
-	// amount is one pulse; full is the whole ward it came from.
-	amount, full float64
-	at           time.Time
+	amount float64
+	at     time.Time
 }
 
 // wardCredit: the pulses other healers' ward-lights left on an account
-// (4.5). It lives in memory for a minute, so a restart loses what is
-// unspent — at most one ward's heal, because the credit never grows past
-// the fullest single ward behind it.
+// (4.5). Each pulse waits a minute for a report, so a restart loses whatever
+// pulses are unspent — with lane F's 10 s reports that is about one ward's
+// heal (review finding 2). A report spends only what its HP needed; the
+// rest waits for the next report or its expiry (review finding 3).
 type wardCredit struct {
 	grants []wardGrant
 }
@@ -67,16 +69,28 @@ func (c *wardCredit) prune(now time.Time) {
 	c.grants = live
 }
 
-// use is the credit one report may raise HP by (4.5): everything still
-// live, no more than one ward's heal. It is used up either way.
+// use is the credit one report may raise HP by: every pulse still waiting.
 func (c *wardCredit) use(now time.Time) float64 {
 	c.prune(now)
-	sum, full := 0.0, 0.0
+	sum := 0.0
 	for _, g := range c.grants {
 		sum += g.amount
-		full = math.Max(full, g.full)
 	}
-	return math.Min(sum, full)
+	return sum
+}
+
+// spend takes what a landed report used up, oldest pulses first.
+func (c *wardCredit) spend(now time.Time, used float64) {
+	c.prune(now)
+	for len(c.grants) > 0 && used > 0 {
+		take := math.Min(used, c.grants[0].amount)
+		c.grants[0].amount -= take
+		used -= take
+		// A rounding sliver is spent, not left to the next report.
+		if c.grants[0].amount <= 1e-9 {
+			c.grants = c.grants[1:]
+		}
+	}
 }
 
 // addWardCredit: one pulse on an account. Callers hold h.mu.
@@ -90,9 +104,10 @@ func (h *presenceHub) addWardCredit(id string, grant wardGrant) {
 	c.grants = append(c.grants, grant)
 }
 
-// takeWardCredit: the ward credit an accepted report may raise HP by, gone
-// once taken (crafts.md 4.5).
-func (h *presenceHub) takeWardCredit(id string) float64 {
+// wardCreditFor: what an accepted report may raise HP by right now. It only
+// peeks: what the HP needed is spent when the report lands (review findings
+// 3 and 13).
+func (h *presenceHub) wardCreditFor(id string) float64 {
 	if h == nil {
 		return 0
 	}
@@ -102,26 +117,69 @@ func (h *presenceHub) takeWardCredit(id string) float64 {
 	if c == nil {
 		return 0
 	}
-	now := time.Now()
-	used := c.use(now)
-	delete(h.ward, id)
-	return used
+	credit := c.use(h.now())
+	if len(c.grants) == 0 {
+		delete(h.ward, id)
+	}
+	return credit
 }
 
-// takeWardCredit: the report's view of it (no hub: no credit).
-func (a *Server) takeWardCredit(id string) float64 {
+// spendWardCredit: the part a landed report used; the rest waits.
+func (h *presenceHub) spendWardCredit(id string, used float64) {
+	if h == nil || used <= 0 {
+		return
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	c := h.ward[id]
+	if c == nil {
+		return
+	}
+	c.spend(h.now(), used)
+	if len(c.grants) == 0 {
+		delete(h.ward, id)
+	}
+}
+
+// wardCredit and spendWardCredit are the report's view of it (no hub: no
+// credit).
+func (a *Server) wardCredit(id string) float64 {
 	if a.presence == nil {
 		return 0
 	}
-	return a.presence.takeWardCredit(id)
+	return a.presence.wardCreditFor(id)
+}
+
+func (a *Server) spendWardCredit(id string, used float64) {
+	if a.presence == nil {
+		return
+	}
+	a.presence.spendWardCredit(id, used)
+}
+
+// cooldownTolerance: the client sends on its own clock while the hub
+// measures arrivals, so a cast counts as on time at cooldown − tolerance
+// (review finding 5): 150 ms or a tenth of the cooldown, capped at 250 ms.
+func cooldownTolerance(cooldown time.Duration) time.Duration {
+	t := cooldown / 10
+	if t < 150*time.Millisecond {
+		t = 150 * time.Millisecond
+	}
+	if t > 250*time.Millisecond {
+		t = 250 * time.Millisecond
+	}
+	return t
 }
 
 // allowAbility is the hub's PresenceAbility check (4.5): the move is in the
-// table, the sender's craft and level mark allow it, and its own cooldown
-// (kept in memory) has passed. Anything else is dropped, like an emote over
-// its cooldown. Signatures go the same way, so friends see a Fingersnap.
-// Callers hold h.mu.
+// table, the sender's craft and level mark allow it, it is cast where the
+// sender stands, and its own cooldown (kept in memory) has passed. Anything
+// else is dropped, like an emote over its cooldown. Signatures go the same
+// way, so friends see a Fingersnap. Callers hold h.mu.
 func (h *presenceHub) allowAbility(p *presencePeer, now time.Time, event *contract.PresenceAbility) bool {
+	if p.area == "" {
+		return false
+	}
 	a, ok := content.AbilityFor(event.GetAbility())
 	if !ok || !finitePresence(event.GetX()) || !finitePresence(event.GetY()) || math.Abs(event.GetX()) > 1e6 || math.Abs(event.GetY()) > 1e6 {
 		return false
@@ -130,8 +188,19 @@ func (h *presenceHub) allowAbility(p *presencePeer, now time.Time, event *contra
 	if !rules.Unlocked(m.Class, m.LevelMark, a) {
 		return false
 	}
+	// 4.5 puts the effect at the caster's feet (Kindle, two tiles ahead):
+	// a cast further than its reach, with a tile of slack, from their last
+	// known position goes (review finding 10).
+	if p.pos != nil {
+		reach := (a.GetNumbers().GetReachTiles() + 1) * wildsTileSize
+		dx, dy := event.GetX()-p.pos.X, event.GetY()-p.pos.Y
+		if dx*dx+dy*dy > reach*reach {
+			return false
+		}
+	}
+	cooldown := time.Duration(a.GetCooldownSeconds() * float64(time.Second))
 	last := h.abilityReady[p.identity.ID][a.GetId()]
-	if !last.IsZero() && now.Sub(last) < time.Duration(a.GetCooldownSeconds()*float64(time.Second)) {
+	if !last.IsZero() && now.Sub(last) < cooldown-cooldownTolerance(cooldown) {
 		return false
 	}
 	if h.abilityReady[p.identity.ID] == nil {
@@ -159,7 +228,6 @@ func (h *presenceHub) scheduleWard(p *presencePeer, event *contract.PresenceAbil
 	if pulse <= 0 {
 		return
 	}
-	grant := wardGrant{amount: pulse, full: pulse * float64(n.GetPulses())}
 	world, area, caster := p.identity.World, p.area, p.identity.ID
 	cx, cy := event.GetX(), event.GetY()
 	radius := n.GetRadiusTiles() * wildsTileSize
@@ -167,16 +235,16 @@ func (h *presenceHub) scheduleWard(p *presencePeer, event *contract.PresenceAbil
 		if i >= int(n.GetPulses()) {
 			break
 		}
-		time.AfterFunc(offset, func() { h.wardPulse(world, area, caster, cx, cy, radius, grant) })
+		time.AfterFunc(offset, func() { h.wardPulse(world, area, caster, cx, cy, radius, pulse) })
 	}
 }
 
 // wardPulse: one pulse of one ward (4.5). Idle players count: the hub keeps
 // the last position each socket sent until they move or leave.
-func (h *presenceHub) wardPulse(world, area, caster string, cx, cy, radius float64, grant wardGrant) {
+func (h *presenceHub) wardPulse(world, area, caster string, cx, cy, radius, pulse float64) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	grant.at = time.Now()
+	grant := wardGrant{amount: pulse, at: h.now()}
 	for _, q := range h.peers {
 		if q.identity.ID == caster || q.detached || q.identity.World != world || q.area != area || q.pos == nil {
 			continue
@@ -184,6 +252,37 @@ func (h *presenceHub) wardPulse(world, area, caster string, cx, cy, radius float
 		dx, dy := q.pos.X-cx, q.pos.Y-cy
 		if dx*dx+dy*dy <= radius*radius {
 			h.addWardCredit(q.identity.ID, grant)
+		}
+	}
+}
+
+// maxAbilityCooldown: the longest cooldown in the table. Older cooldown
+// memory can no longer bound a cast.
+func maxAbilityCooldown() time.Duration {
+	var longest time.Duration
+	for _, a := range content.AbilitiesRules.GetAbilities() {
+		if d := time.Duration(a.GetCooldownSeconds() * float64(time.Second)); d > longest {
+			longest = d
+		}
+	}
+	return longest
+}
+
+// pruneAbilityReady keeps the cooldown map bounded without resetting it
+// (review finding 4): an account's entry goes only when every timestamp in
+// it is older than the table's longest cooldown.
+func (h *presenceHub) pruneAbilityReady(now time.Time) {
+	older := maxAbilityCooldown()
+	for id, per := range h.abilityReady {
+		stale := true
+		for _, at := range per {
+			if now.Sub(at) < older {
+				stale = false
+				break
+			}
+		}
+		if stale {
+			delete(h.abilityReady, id)
 		}
 	}
 }

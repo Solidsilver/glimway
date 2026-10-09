@@ -49,7 +49,7 @@ func TestReportPersistentManaCooldownAndReplay(t *testing.T) {
 	}
 	s.ImportedProfile.Class = &class
 	// The level mark unlocks the signature (crafts.md 4.2).
-	s.VerifiedHighLevel = 10
+	s.LevelMark = 10
 	s.State.Mana = 18
 	s.State.HP = 10
 	s.VitalsWritten = true
@@ -59,7 +59,7 @@ func TestReportPersistentManaCooldownAndReplay(t *testing.T) {
 	if e = tx.Commit(); e != nil {
 		t.Fatal(e)
 	}
-	if _, e = x.db.DB.Exec("UPDATE sync_baselines SET verified_high_level=10 WHERE account_id=?", x.account("alice")); e != nil {
+	if _, e = x.db.DB.Exec("UPDATE sync_baselines SET level_mark=10 WHERE account_id=?", x.account("alice")); e != nil {
 		t.Fatal(e)
 	}
 	first := x.sendReport(c, p, 1, float64(s.Version), 50, 18, 1, "village")
@@ -127,7 +127,7 @@ func TestReportPartitionBudget(t *testing.T) {
 	class := "healer"
 	p := profile("hero", 1, 0, 50)
 	p.Class = &class
-	s := store.Snapshot{State: rules.NewState(), ImportedProfile: &p, VerifiedHighLevel: 10}
+	s := store.Snapshot{State: rules.NewState(), ImportedProfile: &p, LevelMark: 10}
 	s.State.HP = 10
 	s.State.MaxMana = 200
 	s.State.Mana = 100

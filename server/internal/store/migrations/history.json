@@ -120,5 +120,9 @@
   {
     "name": "030_crafts.sql",
     "sha256": "3526f439d53c1d40ecc8d670834ee8d106d6e9394bc0bebae3d6d3d7df81a78a"
+  },
+  {
+    "name": "031_level_mark.sql",
+    "sha256": "ec3b602bfc0b5dbb84d79d02e9607e50fe8013a08ba7795934fd5e038880a79a"
   }
 ]

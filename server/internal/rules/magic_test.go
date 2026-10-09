@@ -55,17 +55,24 @@ func TestUnlockedNeedsCraftAndLevelMark(t *testing.T) {
 	}
 }
 
-func TestVerifiedHistoryTrustsSignInsOnly(t *testing.T) {
-	// The level mark follows profile syncs (4.2); a rebirth may trust no
-	// more than the level the last verified sign-in saw.
-	if got := VerifiedHistory(40, 5); got != 5 {
-		t.Fatal("client-reported level trusted", got)
+func TestLevelMarkReadsTheHighestLevelSeen(t *testing.T) {
+	// The mark unlocks moves (crafts.md 4.2) and reads the server's mark or
+	// the stored profile's level, whichever is higher (lane F's
+	// `levelMarkOf`, review finding 9): the two agree before the first
+	// post-merge sync raises the mark.
+	kindle, _ := content.AbilityFor("kindle")
+	if got := LevelMark(mage(20, 0), 5); got != 20 {
+		t.Fatal("profile level", got)
 	}
-	if got := VerifiedHistory(40, 40); got != 40 {
-		t.Fatal("sign-in history capped away", got)
+	if got := LevelMark(mage(1, 0), 30); got != 30 {
+		t.Fatal("the mark", got)
 	}
-	if got := VerifiedHistory(3, 0); got != 3 {
-		t.Fatal("degenerate sign-in level", got)
+	if got := LevelMark(nil, 30); got != 30 {
+		t.Fatal("no profile", got)
+	}
+	// A reborn hero keeps the mark their magic earned.
+	if !Unlocked("mage", LevelMark(mage(1, 0), 30), kindle) {
+		t.Fatal("rebirth lost the move")
 	}
 }
 
@@ -160,21 +167,24 @@ func TestBoundReportTwoMovePartitionAndDebt(t *testing.T) {
 }
 
 func TestBoundReportMovesNeedTheirLevel(t *testing.T) {
-	in := ReportInput{State: State{HP: 10, MaxHP: 50, Mana: 100, MaxMana: 200}, Profile: withClass(mage(20, 0), "healer"), LevelMark: 20, At: 100, Now: 100, AbilityReady: map[string]float64{}}
-	in.HP, in.Mana = 50, 200
-	in.Casts, in.AbilityCasts = 1, map[string]float64{"ward-light": 1}
-	// A level mark below 10: no craft's move, not even the signature.
-	in.LevelMark = 9
-	if out := bound(in); out.Casts != 0 || out.AbilityCasts["ward-light"] != 0 || out.Mana != 100 {
+	// A hero whose stored profile level and mark agree: the mark reads the
+	// higher of the two, so the moves wait for their level either way.
+	at := func(level float64) ReportInput {
+		in := ReportInput{State: State{HP: 10, MaxHP: 50, Mana: 100, MaxMana: 200}, Profile: withClass(mage(level, 0), "healer"), LevelMark: level, At: 100, Now: 100, AbilityReady: map[string]float64{}}
+		in.HP, in.Mana = 50, 200
+		in.Casts, in.AbilityCasts = 1, map[string]float64{"ward-light": 1}
+		return in
+	}
+	// Below ten: no craft's move, not even the signature.
+	if out := bound(at(9)); out.Casts != 0 || out.AbilityCasts["ward-light"] != 0 || out.Mana != 100 {
 		t.Fatal("locked hero cast", out)
 	}
-	// A level mark below 20: the signature, no second move.
-	in.LevelMark = 19
-	if out := bound(in); out.Casts != 1 || out.AbilityCasts["ward-light"] != 0 {
+	// Below twenty: the signature, no second move.
+	if out := bound(at(19)); out.Casts != 1 || out.AbilityCasts["ward-light"] != 0 {
 		t.Fatal("level gates", out.Casts, out.AbilityCasts)
 	}
 	// Not my craft, not my move; unknown ids and junk counts are clamped.
-	in.LevelMark = 20
+	in := at(20)
 	in.Casts = 0
 	in.AbilityCasts = map[string]float64{"kindle": 2.7, "mend": -3, "walk-a-route": 4, "": 5}
 	out := bound(in)
@@ -192,22 +202,28 @@ func TestBoundReportMovesNeedTheirLevel(t *testing.T) {
 	}
 }
 
-func TestBoundReportWardCreditRaisesAndIsUsedUp(t *testing.T) {
+func TestBoundReportSpendsOnlyTheWardCreditItNeeds(t *testing.T) {
 	in := ReportInput{State: State{HP: 30, MaxHP: 50, Mana: 50, MaxMana: 200}, Profile: mage(20, 0), LevelMark: 30, At: 100, Now: 100, AbilityReady: map[string]float64{}}
 	in.HP, in.Mana, in.AllyCredit = 37.2, 50, 7.2
 	out := bound(in)
 	if math.Abs(out.HP-37.2) > 1e-9 || out.AllyHeal != 7.2 {
 		t.Fatal("ward credit refused", out.HP, out.AllyHeal)
 	}
-	// The credit is capped by the hero's maximum, and used up regardless.
+	// A report that kept its old HP spends nothing: the pulses wait for the
+	// report that raises it (review finding 3).
+	in.HP = 30
+	if out = bound(in); out.HP != 30 || out.AllyHeal != 0 {
+		t.Fatal("a low report used credit", out.HP, out.AllyHeal)
+	}
+	// Only what the HP needed is spent past the maximum.
 	in.HP, in.State.HP = 50, 49
 	in.AllyCredit = 30
-	if out = bound(in); out.HP != 50 || out.AllyHeal != 30 {
+	if out = bound(in); out.HP != 50 || out.AllyHeal != 1 {
 		t.Fatal("credit over the maximum", out.HP, out.AllyHeal)
 	}
-	// The zero-HP lock holds for heals and credit alike.
+	// The zero-HP lock holds for heals and credit alike, and spends none.
 	in.State.HP, in.HP, in.AllyCredit = 0, 10, 7.2
-	if out = bound(in); out.HP != 0 || out.AllyHeal != 7.2 {
+	if out = bound(in); out.HP != 0 || out.AllyHeal != 0 {
 		t.Fatal("zero-HP lock", out.HP, out.AllyHeal)
 	}
 }

@@ -71,7 +71,7 @@ func (a *Server) profileReport(w http.ResponseWriter, r *http.Request) error {
 	p.MP = math.Min(p.MP, p.MaxMP)
 	before := s.State
 	reported := rules.LifetimeXP(p.Level, *p.Exp)
-	if rules.IsRebirth(p, s.LossReference, rules.VerifiedHistory(s.VerifiedHighLevel, s.Checkpoint.Level)) {
+	if rules.IsRebirth(p, s.LossReference, s.VerifiedHighLevel) {
 		if err = store.Credit(ctx, tx, &s, 0, 0, "rebirth", "sync", &reported, now); err != nil {
 			return err
 		}
@@ -86,18 +86,21 @@ func (a *Server) profileReport(w http.ResponseWriter, r *http.Request) error {
 	if err = store.SetLossReference(ctx, tx, &s, p, now); err != nil {
 		return err
 	}
-	// Magic's marks (crafts.md 4.2): the highest level a verified sync has
-	// seen, and the last class one saw. The class mark keeps the game's own
+	// Magic's marks (crafts.md 4.2): the level mark follows every verified
+	// sync (it unlocks moves and remembers a rebirth's magic), and the class
+	// mark is the last class one saw. The class mark keeps the game's own
 	// spellings (warrior, mage, rogue, healer — Habitica's "wizard" reads as
 	// "mage" at intake and here). A rebirth comes back classless and keeps
 	// its craft through the class mark; a classless sync never overwrites it.
+	// `verified_high_level` is left over: sign-ins alone raise the history
+	// the rebirth and forgery checks trust (review finding 7).
 	if p.Class != nil {
 		if c, ok := rules.NormalizeClass(*p.Class); ok {
 			s.ClassMark = c
 		}
 	}
-	s.VerifiedHighLevel = math.Max(s.VerifiedHighLevel, p.Level)
-	if _, err = tx.ExecContext(ctx, "UPDATE sync_baselines SET verified_high_level=MAX(verified_high_level,?),class_mark=CASE WHEN ?!='' THEN ? ELSE class_mark END WHERE account_id=?", p.Level, s.ClassMark, s.ClassMark, s.AccountID); err != nil {
+	s.LevelMark = math.Max(s.LevelMark, p.Level)
+	if _, err = tx.ExecContext(ctx, "UPDATE sync_baselines SET level_mark=MAX(level_mark,?),class_mark=CASE WHEN ?!='' THEN ? ELSE class_mark END WHERE account_id=?", p.Level, s.ClassMark, s.ClassMark, s.AccountID); err != nil {
 		return err
 	}
 	r0 := rules.Sync(rules.Save{State: s.State, VitalsSource: s.VitalsSource, ImportedProfile: s.ImportedProfile}, p, true)

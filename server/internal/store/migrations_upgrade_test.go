@@ -50,6 +50,15 @@ INSERT INTO player_fishing(account_id,cast_seq,last_start) VALUES('alice',2,10);
 			"SELECT count(*) FROM fishing_casts WHERE id='cast' AND account_id='alice' AND world_id='w' AND water='water:village:mill-pond' AND bank='north' AND rod='willow-rod' AND species='mill-roach' AND band='healthy' AND seq=1 AND started_at=10 AND ready_at=20 AND hold_until=620 AND state='open' AND closed_at IS NULL",
 			"SELECT count(*) FROM player_fishing WHERE account_id='alice' AND cast_seq=2 AND last_start=10",
 		}},
+		{"031", "030_crafts.sql", seedUpgradeHome + `
+INSERT INTO sync_baselines(account_id,profile_json,verified_xp,checkpoint_json,checkpoint_at,updated_at,verified_high_level) VALUES('alice','{}',0,'{}',12,12,42);`, `
+UPDATE sync_baselines SET level_mark=level_mark+1 WHERE account_id='alice';
+INSERT INTO player_ability_ready VALUES('alice','mend',17);`, []string{
+			// The level mark starts from the sign-in history it now replaces,
+			// and takes writes beside it (review finding 7).
+			"SELECT count(*) FROM sync_baselines WHERE account_id='alice' AND level_mark=43 AND verified_high_level=42",
+			"SELECT count(*) FROM player_ability_ready WHERE account_id='alice' AND ability='mend' AND ready_at=17",
+		}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.migration, func(t *testing.T) {

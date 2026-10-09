@@ -17,7 +17,7 @@ import (
 // rules live in rules.BoundReport.
 func boundReport(s store.Snapshot, hp, mana, casts float64, abilityCasts map[string]float64, at, ready float64, abilityReady map[string]float64, now, allyCredit float64) rules.AbilityBudget {
 	return rules.BoundReport(rules.ReportInput{
-		State: s.State, Profile: s.ImportedProfile, LevelMark: s.VerifiedHighLevel, ClassMark: s.ClassMark,
+		State: s.State, Profile: s.ImportedProfile, LevelMark: s.LevelMark, ClassMark: s.ClassMark,
 		HP: hp, Mana: mana, Casts: casts, AbilityCasts: abilityCasts,
 		At: at, Ready: ready, AbilityReady: abilityReady, Now: now, AllyCredit: allyCredit,
 	})
@@ -82,10 +82,12 @@ func (a *Server) report(w http.ResponseWriter, r *http.Request) error {
 			out.Basis = req.Basis
 			out.PlaceIgnored = req.Basis < placeVersion
 			var abilityReady map[string]float64
-			if abilityReady, err = abilityReadyAt(ctx, tx, s.AccountID); err != nil {
+			if abilityReady, err = store.AbilityReady(ctx, tx, s.AccountID); err != nil {
 				return err
 			}
-			budget := boundReport(s, req.Hp, req.Mana, req.Casts, req.AbilityCasts, vitalsAt, ready, abilityReady, at, a.takeWardCredit(s.AccountID))
+			// Ward credit is only peeked here: what the HP needed is spent
+			// after the report lands (review findings 3 and 13).
+			budget := boundReport(s, req.Hp, req.Mana, req.Casts, req.AbilityCasts, vitalsAt, ready, abilityReady, at, a.wardCredit(s.AccountID))
 			s.State.HP, s.State.Mana = budget.HP, budget.Mana
 			out.Casts, out.AbilityCasts, out.AllyHeal, ready = budget.Casts, budget.AbilityCasts, budget.AllyHeal, budget.Ready
 			if reportAt.Valid {
@@ -126,6 +128,9 @@ func (a *Server) report(w http.ResponseWriter, r *http.Request) error {
 	if err = tx.Commit(); err != nil {
 		return err
 	}
+	if out.AllyHeal > 0 {
+		a.spendWardCredit(s.AccountID, out.AllyHeal)
+	}
 	return writeOpResult(w, state, out)
 }
 
@@ -135,23 +140,4 @@ func barrier(ctx context.Context, tx *sql.Tx, s *store.Snapshot, op *contract.Op
 		return fail(409, "report-required")
 	}
 	return requireReportBarrier(ctx, tx, s.AccountID, op.Report)
-}
-
-// abilityReadyAt: the per-move cooldown budgets (4.4, `player_ability_ready`).
-func abilityReadyAt(ctx context.Context, tx *sql.Tx, account string) (map[string]float64, error) {
-	out := map[string]float64{}
-	rows, err := tx.QueryContext(ctx, "SELECT ability,ready_at FROM player_ability_ready WHERE account_id=?", account)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var id string
-		var ready float64
-		if err = rows.Scan(&id, &ready); err != nil {
-			return nil, err
-		}
-		out[id] = ready
-	}
-	return out, rows.Err()
 }
