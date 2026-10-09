@@ -33,6 +33,9 @@ type presencePosition struct {
 type presenceIdentity struct {
 	ID, World, Name, Lease, Session string
 	Avatar                          *contract.PresenceAvatar
+	// Magic is the account's craft state a cast is checked against
+	// (crafts.md 4.5), refreshed with the hub's revalidation.
+	Magic presenceMagic
 }
 
 type presencePeer struct {
@@ -74,6 +77,10 @@ type presenceHub struct {
 	slots     int
 	closing   bool
 	config    *content.Presence
+	// Lane C (crafts.md 4.5): the per-account per-ability cooldown a cast
+	// must pass, and the ward credit pulses leave for the next report.
+	abilityReady map[string]map[string]time.Time
+	ward         map[string]*wardCredit
 }
 
 // Account generations live only while physical reservations exist. A socket
@@ -99,7 +106,7 @@ func newPresenceHub(c *content.Presence) *presenceHub {
 	// The hub mutates nothing and shares no slice: work on a clone, never
 	// on the shared rules table.
 	config = proto.Clone(config).(*content.Presence)
-	return &presenceHub{peers: map[string]*presencePeer{}, accounts: map[string]*presenceAccount{}, sessions: map[string]int{}, sockets: map[*websocket.Conn]struct{}{}, drained: make(chan struct{}), config: config}
+	return &presenceHub{peers: map[string]*presencePeer{}, accounts: map[string]*presenceAccount{}, sessions: map[string]int{}, sockets: map[*websocket.Conn]struct{}{}, drained: make(chan struct{}), config: config, abilityReady: map[string]map[string]time.Time{}, ward: map[string]*wardCredit{}}
 }
 
 func (h *presenceHub) reserve(session, id string) (presenceReservation, error) {
@@ -139,6 +146,7 @@ func (h *presenceHub) release(reservation presenceReservation) {
 	reservation.account.slots--
 	if reservation.account.slots == 0 {
 		delete(h.accounts, reservation.id)
+		delete(h.abilityReady, reservation.id)
 	}
 	if h.closing && h.slots == 0 {
 		h.drainOnce.Do(func() { close(h.drained) })

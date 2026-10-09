@@ -47,6 +47,9 @@ export function wire(p: ReturnType<typeof player>): Record<string, any> {
   j.account.partyId ??= null;
   for (const k of ['class', 'selectedPet', 'selectedMount', 'partyId']) j.profile[k] ??= null;
   for (const k of ['companions', 'magic', 'fishing']) j[k] ??= null;
+  // Magic's class mark is a wrapper inside the message (lane C): the wire
+  // spells it too, or the strict decoder counts the message incomplete.
+  if (j.magic && typeof j.magic === 'object') j.magic.classMark ??= null;
   return j;
 }
 

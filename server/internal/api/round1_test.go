@@ -137,6 +137,10 @@ func TestReportCooldownWithAmpleManaAndPlayTimeGeneration(t *testing.T) {
 	if err = tx.Commit(); err != nil {
 		t.Fatal(err)
 	}
+	// The level mark unlocks the signature (crafts.md 4.2).
+	if _, err = x.db.DB.Exec("UPDATE sync_baselines SET verified_high_level=10 WHERE account_id=?", x.account("alice")); err != nil {
+		t.Fatal(err)
+	}
 	a := x.sendReport(c, p, 1, float64(s.Version), 50, 200, 1, "village")
 	if a.GetReport().Casts != 1 || a.State.Story.PlaySeconds != 0 || a.State.Vitals.Mana < 60 {
 		t.Fatal(a)

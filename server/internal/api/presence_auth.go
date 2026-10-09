@@ -20,8 +20,10 @@ func (a *Server) presenceIdentity(ctx context.Context, session string, withAvata
 	v.Session = session
 	var source string
 	var lease sql.NullString
+	var levelMark float64
+	var classMark string
 	now := a.Config.Now().Unix()
-	err := a.Store.DB.QueryRowContext(ctx, `SELECT p.account_id,p.world_id,p.display_name,p.profile_source,p.lease_id FROM sessions s JOIN sign_ins i ON i.account_id=s.account_id AND i.method='habitica' JOIN allowlist l ON l.habitica_id=i.subject JOIN players p ON p.account_id=s.account_id WHERE s.id_hash=? AND s.expires_at>? AND s.created_at>?`, session, now, now-int64(SessionTTL.Seconds())).Scan(&v.ID, &v.World, &v.Name, &source, &lease)
+	err := a.Store.DB.QueryRowContext(ctx, `SELECT p.account_id,p.world_id,p.display_name,p.profile_source,p.lease_id,x.verified_high_level,COALESCE(x.class_mark,'') FROM sessions s JOIN sign_ins i ON i.account_id=s.account_id AND i.method='habitica' JOIN allowlist l ON l.habitica_id=i.subject JOIN players p ON p.account_id=s.account_id JOIN sync_baselines x ON x.account_id=p.account_id WHERE s.id_hash=? AND s.expires_at>? AND s.created_at>?`, session, now, now-int64(SessionTTL.Seconds())).Scan(&v.ID, &v.World, &v.Name, &source, &lease, &levelMark, &classMark)
 	if err == sql.ErrNoRows {
 		return v, fail(401, "unauthorized")
 	}
@@ -33,12 +35,15 @@ func (a *Server) presenceIdentity(ctx context.Context, session string, withAvata
 	}
 	v.Lease = lease.String
 	v.Name = capDonor(v.Name)
-	if withAvatar {
-		p, err := profiles.For(ctx, a.Store.DB, profiles.Account{ID: v.ID, Source: source})
-		if err != nil {
-			return v, err
-		}
-		if p != nil {
+	// The profile is the account's state at auth (4.5): the craft and the
+	// level mark gate casts, the avatar draws the hero.
+	p, err := profiles.For(ctx, a.Store.DB, profiles.Account{ID: v.ID, Source: source})
+	if err != nil {
+		return v, err
+	}
+	if p != nil {
+		v.Magic = presenceMagicFor(p, classMark, levelMark)
+		if withAvatar {
 			v.Avatar = visualAvatar(*p)
 		}
 	}
@@ -47,29 +52,32 @@ func (a *Server) presenceIdentity(ctx context.Context, session string, withAvata
 
 // Query outside the hub lock. An error is unknown, not proof of revocation.
 // A player who moved worlds under the same lease keeps the socket: the new
-// world comes back for checkPresence to move them into its rooms.
-func (a *Server) revalidatePresence(ctx context.Context, p *presencePeer, world string) (websocket.StatusCode, string, string, error) {
+// world comes back for checkPresence to move them into its rooms, and the
+// refreshed magic state with it.
+func (a *Server) revalidatePresence(ctx context.Context, p *presencePeer, world string) (websocket.StatusCode, string, string, presenceMagic, error) {
+	var fresh presenceMagic
 	v, err := a.presenceIdentity(ctx, p.identity.Session, false)
 	if err != nil {
 		var f *failure
 		if errors.As(err, &f) {
 			if f.code == "superseded" {
-				return presenceSuperseded, "superseded", "", nil
+				return presenceSuperseded, "superseded", "", fresh, nil
 			}
-			return presenceUnauthorized, "unauthorized", "", nil
+			return presenceUnauthorized, "unauthorized", "", fresh, nil
 		}
-		return 0, "", "", err
+		return 0, "", "", fresh, err
 	}
 	if v.Lease != p.identity.Lease {
-		return presenceSuperseded, "superseded", "", nil
+		return presenceSuperseded, "superseded", "", fresh, nil
 	}
 	if v.ID != p.identity.ID {
-		return presenceUnauthorized, "unauthorized", "", nil
+		return presenceUnauthorized, "unauthorized", "", fresh, nil
 	}
+	fresh = v.Magic
 	if v.World != world {
-		return 0, "", v.World, nil
+		return 0, "", v.World, fresh, nil
 	}
-	return 0, "", "", nil
+	return 0, "", "", fresh, nil
 }
 
 func (a *Server) checkPresence(parent context.Context, p *presencePeer) {
@@ -86,7 +94,7 @@ func (a *Server) checkPresence(parent context.Context, p *presencePeer) {
 	check := p.authCheck
 	h.mu.Unlock()
 	ctx, cancel := context.WithTimeout(parent, millis(int(h.config.GetWriteTimeoutMs())))
-	code, reason, world, err := a.revalidatePresence(ctx, p, known)
+	code, reason, world, magic, err := a.revalidatePresence(ctx, p, known)
 	cancel()
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -113,6 +121,7 @@ func (a *Server) checkPresence(parent context.Context, p *presencePeer) {
 		h.remove(p)
 		return
 	}
+	p.identity.Magic = magic
 	if world != "" && world != p.identity.World {
 		h.moveWorld(p, world)
 	}

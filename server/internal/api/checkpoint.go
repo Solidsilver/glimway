@@ -38,11 +38,11 @@ func checkpoint(ctx context.Context, tx *sql.Tx, s *store.Snapshot, p rules.Prof
 	if err != nil {
 		return err
 	}
-	if rules.IsRebirth(p, s.LossReference, s.VerifiedHighLevel) {
+	if rules.IsRebirth(p, s.LossReference, rules.VerifiedHistory(s.VerifiedHighLevel, s.Checkpoint.Level)) {
 		if err = store.Credit(ctx, tx, s, 0, 0, "rebirth", "checkpoint", &verified, now); err != nil {
 			return err
 		}
-	} else if rules.CheckpointForgery(p, s.LossReference, s.VerifiedHighLevel, rules.CreditReference(high), now-highAt) && !s.Flagged {
+	} else if rules.CheckpointForgery(p, s.LossReference, rules.VerifiedHistory(s.VerifiedHighLevel, s.Checkpoint.Level), rules.CreditReference(high), now-highAt) && !s.Flagged {
 		if _, err = tx.ExecContext(ctx, "UPDATE players SET flagged_at=? WHERE account_id=?", now, s.AccountID); err != nil {
 			return err
 		}

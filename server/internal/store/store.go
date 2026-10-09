@@ -214,6 +214,9 @@ type Snapshot struct {
 	LossReference      rules.LossReference `json:"-"`
 	LossAt             int64               `json:"-"`
 	VerifiedHighLevel  float64             `json:"-"`
+	// ClassMark is the last class a sync saw (magic's craft memory, crafts.md
+	// 4.2): kept through a rebirth's classless profile.
+	ClassMark string `json:"-"`
 	LeaseID            sql.NullString      `json:"-"`
 	LeaseClient        sql.NullString      `json:"-"`
 	LeaseSeen          sql.NullInt64       `json:"-"`

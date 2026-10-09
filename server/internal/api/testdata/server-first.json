@@ -1012,7 +1012,10 @@
           "verifiedXp": 0
         },
         "companions": null,
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": null
       },
       "wildsClaim": {
@@ -1155,7 +1158,10 @@
           "verifiedXp": 0
         },
         "companions": null,
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": null
       },
       "fall": {
@@ -1288,7 +1294,10 @@
           "verifiedXp": 0
         },
         "companions": null,
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": null
       },
       "fall": {
@@ -1421,7 +1430,10 @@
           "verifiedXp": 0
         },
         "companions": null,
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": null
       },
       "fall": {
@@ -1554,7 +1566,10 @@
           "verifiedXp": 0
         },
         "companions": null,
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": null
       },
       "fall": {
@@ -1687,7 +1702,10 @@
           "verifiedXp": 0
         },
         "companions": null,
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": null
       },
       "fall": {
@@ -1820,7 +1838,10 @@
           "verifiedXp": 0
         },
         "companions": null,
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": null
       },
       "wildsLantern": {
@@ -2115,7 +2136,10 @@
           "verifiedXp": 0
         },
         "companions": null,
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": null
       },
       "questStep": {
@@ -2243,7 +2267,10 @@
           "verifiedXp": 0
         },
         "companions": null,
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": null
       },
       "report": {
@@ -2362,7 +2389,10 @@
           "verifiedXp": 0
         },
         "companions": null,
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": null
       },
       "questStep": {
@@ -4392,7 +4422,10 @@
           "verifiedXp": 0
         },
         "companions": null,
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": null
       },
       "lease": "lease",
@@ -4655,7 +4688,10 @@
         "verifiedXp": 0
       },
       "companions": null,
-      "magic": null,
+      "magic": {
+        "levelMark": 1,
+        "classMark": null
+      },
       "fishing": null
     }
   },
@@ -5213,7 +5249,10 @@
           "verifiedXp": 0
         },
         "companions": null,
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": null
       }
     }
@@ -5911,7 +5950,10 @@
           "verifiedXp": 0
         },
         "companions": null,
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": null
       },
       "leaseActive": true
@@ -7549,7 +7591,10 @@
           "verifiedXp": 0
         },
         "companions": null,
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": null
       },
       "result": {
@@ -7689,7 +7734,10 @@
           "verifiedXp": 0
         },
         "companions": null,
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": null
       },
       "result": {
@@ -7817,7 +7865,10 @@
           "verifiedXp": 0
         },
         "companions": null,
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": null
       },
       "result": {
@@ -7935,7 +7986,10 @@
           "verifiedXp": 0
         },
         "companions": null,
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": null
       },
       "result": {
@@ -8177,7 +8231,10 @@
           "verifiedXp": 0
         },
         "companions": null,
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": null
       },
       "result": {
@@ -8301,7 +8358,10 @@
           "verifiedXp": 0
         },
         "companions": null,
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": null
       },
       "result": {
@@ -8413,7 +8473,10 @@
           "verifiedXp": 0
         },
         "companions": null,
-        "magic": null,
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
         "fishing": null
       },
       "result": {

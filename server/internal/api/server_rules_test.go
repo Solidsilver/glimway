@@ -48,6 +48,8 @@ func TestReportPersistentManaCooldownAndReplay(t *testing.T) {
 		t.Fatal(e)
 	}
 	s.ImportedProfile.Class = &class
+	// The level mark unlocks the signature (crafts.md 4.2).
+	s.VerifiedHighLevel = 10
 	s.State.Mana = 18
 	s.State.HP = 10
 	s.VitalsWritten = true
@@ -55,6 +57,9 @@ func TestReportPersistentManaCooldownAndReplay(t *testing.T) {
 		t.Fatal(e)
 	}
 	if e = tx.Commit(); e != nil {
+		t.Fatal(e)
+	}
+	if _, e = x.db.DB.Exec("UPDATE sync_baselines SET verified_high_level=10 WHERE account_id=?", x.account("alice")); e != nil {
 		t.Fatal(e)
 	}
 	first := x.sendReport(c, p, 1, float64(s.Version), 50, 18, 1, "village")
@@ -122,24 +127,24 @@ func TestReportPartitionBudget(t *testing.T) {
 	class := "healer"
 	p := profile("hero", 1, 0, 50)
 	p.Class = &class
-	s := store.Snapshot{State: rules.NewState(), ImportedProfile: &p}
+	s := store.Snapshot{State: rules.NewState(), ImportedProfile: &p, VerifiedHighLevel: 10}
 	s.State.HP = 10
 	s.State.MaxMana = 200
 	s.State.Mana = 100
-	hp, mp, n, ready := boundReport(s, 50, 200, 1, 100, 100, 100)
-	s.State.HP, s.State.Mana = hp, mp
-	_, split, n2, _ := boundReport(s, 50, 200, 1, 100, ready, 101)
+	first := boundReport(s, 50, 200, 1, nil, 100, 100, nil, 100, 0)
+	s.State.HP, s.State.Mana = first.HP, first.Mana
+	split := boundReport(s, 50, 200, 1, nil, 100, first.Ready, nil, 101, 0)
 	original := s
 	original.State.HP = 10
 	original.State.Mana = 100
-	_, coalesced, n3, _ := boundReport(original, 50, 200, 2, 100, 100, 101)
-	if n+n2 != n3 || split != coalesced {
-		t.Fatal("partition creates budget", n, n2, n3, split, coalesced)
+	coalesced := boundReport(original, 50, 200, 2, nil, 100, 100, nil, 101, 0)
+	if first.Casts+split.Casts != coalesced.Casts || split.Mana != coalesced.Mana {
+		t.Fatal("partition creates budget", first.Casts, split.Casts, coalesced.Casts, split.Mana, coalesced.Mana)
 	}
 	// Refill preserves a future cooldown debt.
-	_, _, allowed, _ := boundReport(original, 50, 200, 10, 101, 104, 102)
-	if allowed != 0 {
-		t.Fatal("refill erased debt")
+	refill := boundReport(original, 50, 200, 10, nil, 101, 104, nil, 102, 0)
+	if refill.Casts != 0 {
+		t.Fatal("refill erased debt", refill.Casts)
 	}
 }
 func TestQuestOperationsMarksAndPaperRules(t *testing.T) {
