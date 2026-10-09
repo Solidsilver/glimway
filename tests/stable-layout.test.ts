@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { bayFrontPiece, stableFootprint, stableLayout } from '../src/lib/stable-layout.ts'
+import { STALL_REACH, bayFront, bayFrontPiece, stableFootprint, stableLayout } from '../src/lib/stable-layout.ts'
 
 const manifest = JSON.parse(readFileSync(new URL('../assets/generated/crafts-pass/manifest.json', import.meta.url), 'utf8')) as {
   frames: Record<string, { canvasSize: { w: number; h: number }; footprint: [number, number] | null }>
@@ -55,4 +55,26 @@ test('stable layout: every piece is a delivered frame drawn at its canvas size',
   // The delivered footprints agree with the layout's.
   assert.deepEqual(manifest.frames['stable-west-back'].footprint, [4, 3])
   assert.deepEqual(manifest.frames['stable-bay-back'].footprint, [2, 3])
+})
+
+test('stable layout: a stall is only offered where the server lets you saddle up (two tiles from its bay)', () => {
+  // The server's walk-up check (server/internal/api stable.go `stallRect`/`nearStall`): the bay's
+  // tiles are x = stable.x + 2·stall, 2 wide, 3 deep; `where` within two tiles of them.
+  const T = 16
+  const near = (sx: number, sy: number, stall: number, wx: number, wy: number) => {
+    const x0 = (sx + 2 * stall) * T, y0 = sy * T, x1 = x0 + 2 * T, y1 = y0 + 3 * T
+    const dx = Math.max(x0 - wx, 0, wx - x1), dy = Math.max(y0 - wy, 0, wy - y1)
+    return dx * dx + dy * dy <= (2 * T) ** 2
+  }
+  const sx = 10, sy = 7
+  for (let count = 1; count <= 6; count++) {
+    for (let stall = 1; stall <= count; stall++) {
+      const at = bayFront(sx * T, (sy + 3) * T, count, stall)
+      for (let a = 0; a < 360; a += 5) {
+        const r = STALL_REACH
+        const wx = at.x + r * Math.cos((a * Math.PI) / 180), wy = at.y + r * Math.sin((a * Math.PI) / 180)
+        assert.ok(near(sx, sy, stall, wx, wy), `stall ${stall} of ${count}: (${wx.toFixed(1)}, ${wy.toFixed(1)}) is out of the server's reach`)
+      }
+    }
+  }
 })

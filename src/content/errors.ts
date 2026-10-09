@@ -177,6 +177,7 @@ export const HOME_ERRORS: Table = {
  */
 export const COMPANION_ERRORS: Table = {
   ...REPLAYED,
+  'invalid-request': 'That choice didn’t make sense to the world. Nothing changed.',
   'companion-not-owned': 'That one isn’t among your Habitica companions any more. Sync, and look again.',
   'homestead-not-found': 'Once you’ve a place of your own, you can choose who comes along.',
   'needs-habitica': 'Companions come from your Habitica hero. Connect it in the Menu.',

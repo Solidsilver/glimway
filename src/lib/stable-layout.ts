@@ -109,3 +109,18 @@ export function bayFrontPiece(bay: StableBay, shut: boolean): StablePiece {
     ? { frame, x: 0, w: STABLE_WEST_WIDTH, h: STABLE_ART_HEIGHT }
     : { frame, x: bay.x, w: STABLE_BAY_WIDTH, h: STABLE_ART_HEIGHT }
 }
+
+/** How far in front of a bay you stand to use it, px below the footprint's bottom edge. */
+export const STALL_FRONT_DROP = 6
+/**
+ * A stall's reach (its prompt and its click): with the point STALL_FRONT_DROP
+ * below the bay, this keeps the hero strictly inside the server's walk-up
+ * check, two tiles from the bay's tiles (`nearStall`, crafts.md 3.3).
+ */
+export const STALL_REACH = 24
+
+/** Where to stand to use a bay (its front, just south of the footprint), px from (bx, by), the footprint's bottom-left. */
+export function bayFront(bx: number, by: number, count: number, stall: number): { x: number; y: number } {
+  const bay = stableLayout(count).bays.find((b) => b.stall === stall)
+  return { x: bx + (bay ? bay.x + bay.w / 2 : 0), y: by + STALL_FRONT_DROP }
+}

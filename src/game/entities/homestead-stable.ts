@@ -12,7 +12,7 @@
 import type Phaser from 'phaser'
 import { loadCompanion } from '../avatar-render'
 import { crArt } from '../crafts-art'
-import { bayFrontPiece, stableFootprint, stableLayout } from '../../lib/stable-layout'
+import { STALL_REACH, bayFront, bayFrontPiece, stableFootprint, stableLayout } from '../../lib/stable-layout'
 import { COMPANION_SCALE } from './pet-follower'
 import { TILE } from '../../lib/tile'
 import type { HomeView, StallView } from '../../lib/api/types'
@@ -101,12 +101,6 @@ async function drawMount(
   }
 }
 
-/** Where to stand to use a bay (its front, just south of the footprint), px. */
-export function bayFront(bx: number, by: number, count: number, stall: number): { x: number; y: number } {
-  const bay = stableLayout(count).bays.find((b) => b.stall === stall)
-  return { x: bx + (bay ? bay.x + bay.w / 2 : 0), y: by + 6 }
-}
-
 /** Where to stand to build a bay on (the stable's east end), px. */
 export function stableEastEnd(bx: number, by: number, count: number): { x: number; y: number } {
   // Just past the east edge, so it's never the nearer point at stall 1's or the last bay's door.
@@ -162,6 +156,9 @@ export function stablePoints(host: StableHost, say: (speaker: string, lines: str
         },
         markerOffset: 30,
         rank: 1,
+        // Strictly inside the server's walk-up check (too-far-away), prompt and click alike.
+        reach: STALL_REACH,
+        clickReach: STALL_REACH,
         activate: () => {
           const s = st()
           if (s?.mount && s.ownerId !== me) {
@@ -199,6 +196,8 @@ async function saddleUp(host: StableHost, homeId: string, stall: number, mount: 
   const link = host.deps.session.link
   if (!link) return
   wantSaddle(mount)
+  // The `where` it carries is where you stand now, not the last second's sample.
+  bus.emit(EV.notePosition)
   const r = await link.mountOut(homeId, stall, mount)
   if (!r.ok) {
     wantSaddle('')
