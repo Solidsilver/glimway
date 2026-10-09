@@ -46,8 +46,9 @@ export class Creatures {
 
   /**
    * Kindle (crafts.md 4.3): inside a patch of hollow light a creature moves
-   * at the patch's `slow` of whatever speed it just set — walking, hopping
-   * or charging alike. Called right after its update sets the velocity.
+   * at the patch's `slow` of whatever speed it just set — walking, hopping,
+   * charging or being knocked back alike. Called right after the velocity
+   * is set. Never the Warden.
    */
   slowIn(enemy: Enemy, field: CombatField | undefined): void {
     if (!field || enemy.type === 'guardian') return

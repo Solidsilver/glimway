@@ -207,11 +207,6 @@ export interface HabiticaUserJson {
   [k: string]: unknown;
 }
 
-/**
- * Shared combat contract for the runtime (src/lib/combat.ts). The runtime
- * implements effects; this is the numbers/identity surface. Extreme imported
- * stats are bounded with diminishing returns.
- */
 /** Why a sync was rejected. The save (including its baseline) is unchanged. */
 export type SyncRejectReason = 'not-at-safe-boundary' | 'account-switch';
 

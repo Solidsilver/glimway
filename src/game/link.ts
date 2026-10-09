@@ -64,7 +64,7 @@ import { FLAGS, WELCOME_EMBERS, type EmberSpend, type SpendReason } from '../lib
 import type { GameState } from '../lib/state.ts'
 import { EV, type Emit, type LinkPayload, type LinkStatus } from './event-names.ts'
 import { serverNow } from './clock.ts'
-import { newlyUnlocked, unlockLine, type MagicMarks } from '../lib/combat.ts'
+import { unlockNotice, type MagicMarks } from '../lib/combat.ts'
 
 const HEARTBEAT_MS = 30_000
 /** After this long without an answer the chip says "Reaching the world…". */
@@ -593,10 +593,9 @@ export class Link {
     if (was !== undefined && was?.levelMark === now?.levelMark && was?.classMark === now?.classMark) return
     this.toldMagic = now
     this.emitter(EV.magic, { levelMark: now?.levelMark ?? 0, classMark: now?.classMark ?? null })
-    if (was === undefined || !now) return
-    // The marks alone decide the news: a sync that also raised the profile's level is still news.
-    const marked = profile ? { ...profile, level: 0 } : null
-    for (const m of newlyUnlocked(marked, was, now)) this.emitter(EV.toast, { text: unlockLine(m), icon: 'sparkle' })
+    if (was === undefined) return
+    const notice = unlockNotice(profile, was, now)
+    if (notice) this.emitter(EV.toast, { text: notice, icon: 'sparkle' })
   }
 
   /** The screen's place and vitals, into the next report. */

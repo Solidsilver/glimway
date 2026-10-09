@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { craftOf, getCombatKit, levelMarkOf, newlyUnlocked, unlockLine } from '../src/lib/combat.ts';
+import { craftOf, getCombatKit, levelMarkOf, unlockNotice } from '../src/lib/combat.ts';
 import { ABILITIES } from '../src/lib/abilities.ts';
 import { abilityIconFrame } from '../src/game/crafts-art.ts';
 import { toHabiticaProfile } from '../src/lib/habitica/mapping.ts';
@@ -96,6 +96,10 @@ test('rebirth: no class on Habitica, but a class mark and a level mark of 10+ ke
   assert.equal(craftOf(reborn, { levelMark: 9, classMark: 'healer' }), null, 'under 10: no craft');
   assert.equal(craftOf(reborn, { levelMark: 40, classMark: null }), null, 'no class ever seen: none');
   assert.equal(craftOf(hero('rogue', 30), { levelMark: 40, classMark: 'healer' }), 'rogue', 'the current class wins');
+  // A mark in Habitica's own spelling reads as the game's.
+  assert.equal(craftOf(reborn, { levelMark: 40, classMark: 'wizard' }), 'mage');
+  assert.deepEqual(getCombatKit(reborn, { levelMark: 40, classMark: 'wizard' }).signature?.id, 'fingersnap');
+  assert.equal(craftOf(reborn, { levelMark: 40, classMark: 'bard' }), null, 'an unknown class is none');
 });
 
 test('the healer’s Mend is a damaging pulse PLUS a heal; a Ward-light pulse is its share of the Mend', () => {
@@ -128,16 +132,18 @@ test('kit numbers scale with stats but never below their floors', () => {
   assert.ok(strong.critChance > weak.critChance);
 });
 
-test('the unlock notice: a level mark crossing 10 or 20 names what arrived, and where it is', () => {
+test('the unlock notice: only when the level mark crosses 10 or 20, one line even for both', () => {
   const p = hero('mage', 0);
-  assert.deepEqual(newlyUnlocked(p, { levelMark: 19 }, { levelMark: 20 }).map((m) => m.id), ['kindle']);
-  assert.deepEqual(newlyUnlocked(p, { levelMark: 9 }, { levelMark: 25 }).map((m) => m.id), ['fingersnap', 'kindle']);
-  assert.deepEqual(newlyUnlocked(p, { levelMark: 20 }, { levelMark: 21 }), []);
-  assert.deepEqual(newlyUnlocked(hero(null, 0), { levelMark: 19 }, { levelMark: 20 }), [], 'no craft: nothing to announce');
-  const [kindle] = newlyUnlocked(p, { levelMark: 19 }, { levelMark: 20 });
-  assert.equal(unlockLine(kindle), 'New at level 20: Kindle. It’s on R, and the second ✦ on phones.');
-  const [snap] = newlyUnlocked(p, { levelMark: 9 }, { levelMark: 10 });
-  assert.equal(unlockLine(snap), 'New at level 10: Fingersnap. It’s on F, and the ✦ on phones.');
+  const mage = (levelMark: number) => ({ levelMark, classMark: 'mage' });
+  assert.equal(unlockNotice(p, mage(19), mage(20)), 'New at level 20: Kindle. It’s on R, and the second ✦ on phones.');
+  assert.equal(unlockNotice(p, mage(9), mage(10)), 'New at level 10: Fingersnap. It’s on F, and the ✦ on phones.');
+  assert.equal(unlockNotice(hero('warrior', 0), { levelMark: 9 }, { levelMark: 25 }), 'New at level 20: Cleave on F and Stand on R.');
+  assert.equal(unlockNotice(p, mage(20), mage(21)), null, 'no crossing');
+  assert.equal(unlockNotice(p, mage(12), mage(18)), null, 'a rise between the levels');
+  assert.equal(unlockNotice(hero(null, 0), { levelMark: 19 }, { levelMark: 20 }), null, 'no craft: nothing to announce');
+  // A class-mark change alone is never news: a reborn hero coming back as a healer, mark unchanged.
+  assert.equal(unlockNotice(hero(null, 0), { levelMark: 40, classMark: 'mage' }, { levelMark: 40, classMark: 'healer' }), null);
+  assert.equal(unlockNotice(hero(null, 0), { levelMark: 40, classMark: null }, { levelMark: 40, classMark: 'healer' }), null);
 });
 
 test('every ability’s icon is in the crafts art pass (crafts.md 4.1: a test, not the loader)', () => {

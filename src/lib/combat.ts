@@ -2,6 +2,7 @@ import { SIGNATURE_COOLDOWN_SECONDS, BASIC_ATTACK_COOLDOWN_SECONDS, HEAL_FORMULA
 import { profileFor } from './profile.ts';
 import { abilitiesForClass, type Ability } from './abilities.ts';
 import { DEMO_CHARACTER } from '../content/world.ts';
+import { toInternalClass } from './habitica/mapping.ts';
 import type { EffectiveStats, HabiticaClass, HabiticaProfile } from './habitica/types.ts';
 
 /**
@@ -70,7 +71,6 @@ const BASIC_NAMES: Record<HabiticaClass, string> = { warrior: 'Slash', mage: 'Bo
 const DAMAGE_STAT: Record<HabiticaClass, keyof EffectiveStats> = { warrior: 'str', mage: 'int', rogue: 'per', healer: 'int' };
 /** What's in hand: a plain slash at the old starter's cadence (crafts.md 4.2). */
 const CLASSLESS_BASIC = { name: 'Slash', cooldown: 0.6 };
-const CLASSES: readonly HabiticaClass[] = ['warrior', 'mage', 'rogue', 'healer'];
 
 /** The server's level and class marks (`PlayerState.magic`, crafts.md 4.2). */
 export interface MagicMarks {
@@ -92,9 +92,9 @@ export function levelMarkOf(profile: HabiticaProfile | null, magic: MagicMarks |
 export function craftOf(profile: HabiticaProfile | null, magic: MagicMarks | null | undefined): HabiticaClass | null {
   if (!profile) return null;
   if (profile.class) return profile.class;
-  const mark = magic?.classMark;
-  if (mark && levelMarkOf(profile, magic) >= 10 && (CLASSES as readonly string[]).includes(mark)) return mark as HabiticaClass;
-  return null;
+  // Habitica's spelling (`wizard`) reads as the game's (`mage`), whichever the server stored.
+  const mark = toInternalClass(magic?.classMark);
+  return mark && levelMarkOf(profile, magic) >= 10 ? mark : null;
 }
 
 function kitMove(a: Ability): KitMove {
@@ -155,14 +155,31 @@ export function getCombatKit(profile: HabiticaProfile | null, magic: MagicMarks 
   };
 }
 
-/** The moves a level-mark change brought (crossing 10 or 20 against what the client held; crafts.md 4.2). */
-export function newlyUnlocked(profile: HabiticaProfile | null, before: MagicMarks | null, after: MagicMarks | null): KitMove[] {
-  const was = getCombatKit(profile, before);
-  const now = getCombatKit(profile, after);
-  return [now.signature, now.move].filter((m): m is KitMove => !!m && m.id !== was.signature?.id && m.id !== was.move?.id);
+/** The levels a move arrives at: the unlock notice is for the level mark crossing one of them (crafts.md 4.2). */
+const UNLOCK_LEVELS = [10, 20];
+
+/**
+ * The unlock notice, or null: only when the level mark crosses 10 or 20
+ * against the one the client held (never for a class-mark change alone),
+ * and one line even when a mark crosses both — "New at level 20: Cleave on
+ * F and Stand on R." The marks alone decide: the profile's own level is
+ * left out, since a sync that raised the mark raised it too.
+ */
+export function unlockNotice(profile: HabiticaProfile | null, before: MagicMarks | null, after: MagicMarks | null): string | null {
+  const from = before?.levelMark ?? 0;
+  const to = after?.levelMark ?? 0;
+  if (!after || !UNLOCK_LEVELS.some((level) => from < level && level <= to)) return null;
+  const marked = profile ? { ...profile, level: 0 } : null;
+  const was = getCombatKit(marked, { ...after, levelMark: from });
+  const now = getCombatKit(marked, after);
+  const fresh = [now.signature, now.move].filter((m): m is KitMove => !!m && m.id !== was.signature?.id && m.id !== was.move?.id);
+  if (fresh.length === 0) return null;
+  if (fresh.length === 1) return unlockLine(fresh[0]);
+  const [sig, move] = fresh;
+  return `New at level ${move.level}: ${sig.name} on F and ${move.name} on R.`;
 }
 
-/** The unlock toast: "New at level 20: Kindle. It's on R, and the second ✦ on phones." */
+/** One move's notice: "New at level 20: Kindle. It's on R, and the second ✦ on phones." */
 export function unlockLine(m: KitMove): string {
   return m.kind === 'signature'
     ? `New at level ${m.level}: ${m.name}. It’s on F, and the ✦ on phones.`

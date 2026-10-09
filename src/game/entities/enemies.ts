@@ -219,6 +219,8 @@ export class EnemySystem {
         // Shoved: physics owns the body for a beat, the AI waits.
         enemy.knockTimer -= dt
         body.setVelocity(enemy.knockX, enemy.knockY)
+        // A shove through a Kindle patch is slowed like any other movement.
+        this.creatures.slowIn(enemy, field)
         enemy.stateTimer -= dt
         if (enemy.knockTimer <= 0) {
           body.setVelocity(0, 0)

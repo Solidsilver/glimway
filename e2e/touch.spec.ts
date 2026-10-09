@@ -1,12 +1,17 @@
 import { devices } from '@playwright/test'
-import { expect, test } from './fixtures'
+import { expect, test, type Page } from './fixtures'
 import { frames, player, stepToWarden, talkThrough, waitForLive, warden, warp } from './helpers'
 import { freshPlayer } from './home-helpers'
 
 test.use({ ...devices['iPhone 13'], browserName: 'chromium' })
 
-test('phone layout: joystick, roll, both ✦ and action buttons fit and work', async ({ page }) => {
-  // A level-20 warrior: Cleave and Stand, so both ✦ are out (crafts.md 8).
+/**
+ * The touch cluster with everything out: the joystick, roll, both ✦ (a
+ * level-20 warrior: Cleave and Stand, crafts.md 8) and the action button.
+ * Nothing overlaps, nothing spills off the screen, every button is at least
+ * 44 px; then the buttons work.
+ */
+async function layoutFitsAndWorks(page: Page, shot: string): Promise<void> {
   await freshPlayer(page, 'Tansy', undefined, { lvl: 20 })
   await warp(page, 'woodland', 15, 20)
 
@@ -19,7 +24,6 @@ test('phone layout: joystick, roll, both ✦ and action buttons fit and work', a
   await expect(cast).toHaveAttribute('aria-label', 'Cleave (12 mana)')
   await expect(second).toHaveAttribute('aria-label', 'Stand (14 mana)')
 
-  // Nothing overlaps and nothing spills off the screen; every button is a thumb's size.
   const vw = page.viewportSize()!.width
   const boxes = await Promise.all([pad, roll, cast, second, act].map((l) => l.boundingBox()))
   for (const b of boxes) {
@@ -40,7 +44,20 @@ test('phone layout: joystick, roll, both ✦ and action buttons fit and work', a
   await second.tap()
   await expect(second.locator('.sweep')).toBeVisible()
   await expect(cast.locator('.sweep')).toHaveCount(0)
-  await page.screenshot({ path: 'test-results/touch-layout.png' })
+  await page.screenshot({ path: `test-results/${shot}.png` })
+}
+
+test('phone layout: joystick, roll, both ✦ and action buttons fit and work', async ({ page }) => {
+  await layoutFitsAndWorks(page, 'touch-layout')
+})
+
+test.describe('a narrow phone (320 px)', () => {
+  // The iPhone 13's touch and pixel ratio (set above), on an iPhone SE's 320 px screen.
+  test.use({ viewport: devices['iPhone SE'].viewport })
+  test('phone layout fits at 320 px too', async ({ page }) => {
+    expect(page.viewportSize()!.width).toBe(320)
+    await layoutFitsAndWorks(page, 'touch-layout-320')
+  })
 })
 
 test('phone: the action button speaks the naming to the warden', async ({ page }) => {
