@@ -182,11 +182,13 @@ export async function loadWorldAvatar(scene: Phaser.Scene, profile: HabiticaProf
 /**
  * Another player's walking avatar (presence, phase 6) from the compact
  * visual shape the server relays: same layer stack and sources as the
- * hero's, on foot, with no companions baked in.
+ * hero's. Their pet is never baked in (it follows as its own sprite, from
+ * `selectedPet`, the server's resolved follower); their mount is drawn under
+ * them only while they ride it (`riding`: their position's pose).
  */
-export async function loadPresenceAvatar(scene: Phaser.Scene, avatar: PresenceAvatar): Promise<string[]> {
+export async function loadPresenceAvatar(scene: Phaser.Scene, avatar: PresenceAvatar, riding = false): Promise<string[]> {
   try {
-    const profile = { ...avatar, selectedPet: undefined, selectedMount: undefined } as unknown as AvatarProfileFull
+    const profile = { ...avatar, selectedPet: undefined, selectedMount: riding && avatar.selectedMount ? avatar.selectedMount : undefined } as unknown as AvatarProfileFull
     const now = resolveLayers(avatarLayersFor(profile))
     const { refs } = now instanceof Promise ? await now : now
     if (refs.length === 0) return []
@@ -194,6 +196,12 @@ export async function loadPresenceAvatar(scene: Phaser.Scene, avatar: PresenceAv
   } catch {
     return []
   }
+}
+
+/** A loaded layer key that is a mount's (body or head): drawn on the mount's own canvas offset. */
+export function isMountLayerKey(key: string): boolean {
+  const name = key.startsWith(ASSET_PREFIX) ? key.slice(ASSET_PREFIX.length) : key
+  return name.startsWith('Mount_Body_') || name.startsWith('Mount_Head_')
 }
 
 /** Resolve ALL companion layers (pet: one; mount: body + head).

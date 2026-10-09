@@ -21,6 +21,23 @@ import { projectAsset, projectCounts } from './items.ts';
 import type { Asset, AssetCounts, Snapshot } from './types.ts';
 import type { HomeInstance } from '../homestead.ts';
 
+/** One stable bay (crafts.md 3.2): who stands in it. `mount` '' is an empty stall. */
+export interface StallView {
+  stall: number;
+  mount: string;
+  ownerId: string;
+  ownerName: string;
+  /** Its mount is out with its owner (the bay stands open and empty). */
+  out: boolean;
+}
+
+/** A member's yard pet, resolved by the server (a lapsed key is already gone). */
+export interface YardPetView {
+  ownerId: string;
+  pet: string;
+  slot: number;
+}
+
 export interface HomeMember {
   id: string;
   displayName: string;
@@ -63,6 +80,10 @@ export interface HomeView {
   items: HomeInstance[];
   stumps: [number, number][];
   plants: HomePlantView[];
+  /** The stable's bays, west to east (empty without a stable). */
+  stalls: StallView[];
+  /** Every member's yard pets, so visitors see them too. */
+  yardPets: YardPetView[];
 }
 
 export interface HomeResponse extends Snapshot {
@@ -199,6 +220,7 @@ function homeInstance(v: GeneratedHomeInstance): HomeInstance {
     y: placed ? int(v.y) : null,
     rotation: placed ? (v.rotation as HomeInstance['rotation']) : null,
     name: v.name ? v.name.slice(0, 80) : null,
+    ...(v.stalls !== undefined ? { stalls: int(v.stalls, 1) } : {}),
   };
 }
 
@@ -230,6 +252,8 @@ export function projectHome(h: GeneratedHomeView): HomeView {
     nextPost: countMap(h.nextPost),
     indoor: h.indoor ? { width: int(h.indoor.width, 1), height: int(h.indoor.height, 1) } : null,
     items: h.items.map(homeInstance),
+    stalls: h.stalls.map((st): StallView => ({ stall: int(st.stall, 1), mount: st.mount, ownerId: st.ownerId, ownerName: st.ownerName.slice(0, 64), out: st.out })),
+    yardPets: h.yardPets.map((y): YardPetView => ({ ownerId: y.ownerId, pet: y.pet, slot: int(y.slot, 1) })),
   };
 }
 

@@ -289,6 +289,13 @@
     const onHomeGoal = (v: { text: string | null }) => {
       home.goal = v?.text ?? null
     }
+    // The stable's "Choose a mount" (crafts.md 3.1): the Character panel, at Companions.
+    const onOpenCompanions = (v?: { at?: 'stable' }) => {
+      if (panel !== null) return
+      characterTab = 'companions'
+      characterAt = v?.at ?? null
+      toggle('character')
+    }
     const onVillageOpen = (v: { panel: VillagePanel; to?: string; gate?: number }) => {
       if (panel !== null) return
       mailTo = v.to ?? null
@@ -322,6 +329,7 @@
       [EV.portraits]: onPortraits,
       [EV.residentsMet]: onResidentsMet,
       [EV.artIcons]: onArtIcons,
+      [EV.openCompanions]: onOpenCompanions,
       [EV.discovery]: onDiscovery,
       [EV.link]: onLink,
       [EV.presence]: onPresence,
@@ -651,6 +659,15 @@
   let libraryAt = $state<LibraryOpenPayload>({})
   /** The journal page to open on (the HUD's pinned guide opens "How do I…?"). */
   let journalTab = $state<'quests' | 'papers' | 'guides'>('quests')
+  /** The Character panel's page to open on (the stable opens Companions), reset when it closes. */
+  let characterTab = $state<'hero' | 'companions'>('hero')
+  let characterAt = $state<'stable' | null>(null)
+  $effect(() => {
+    if (panel !== 'character') {
+      characterTab = 'hero'
+      characterAt = null
+    }
+  })
   /** A quest to put at the top of the Quests page (the opening while its note waits). */
   let journalFocus = $state<string | null>(null)
   $effect(() => {
@@ -823,7 +840,7 @@
     {:else if panel === 'mail'}
       <MailPanel {session} to={mailTo} onClose={() => toggle('mail')} />
     {:else if panel === 'character'}
-      <CharacterPanel {session} onClose={closeCharacter} onInventory={() => (panel = 'inventory')} />
+      <CharacterPanel {session} initialTab={characterTab} at={characterAt} onClose={closeCharacter} onInventory={() => (panel = 'inventory')} />
     {:else if panel === 'inventory'}
       <InventoryPanel
         {session}

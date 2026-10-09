@@ -5,13 +5,14 @@
  * a clearable tile can be cleared with Silas's saw.
  */
 import Phaser from 'phaser'
-import { HOMESTEAD_DATA, canRotate, checkPlacement, checkRemoval, homeItem, rotatedFootprint, type HomeInstance, type HomeScene, type PlacementGround, type Rotation } from '../../lib/homestead'
+import { HOMESTEAD_DATA, canRotate, checkPlacement, checkRemoval, grownItem, homeItem as catalogItem, rotatedFootprint, type HomeInstance, type HomeScene, type PlacementGround, type Rotation } from '../../lib/homestead'
 import { LAND, buildableKind, clearable, clearedSet, effectiveKind, isLit } from '../../lib/homestead-land'
 import { bus, EV } from '../events'
 import { touchVec, uiBlocked, uiState } from '../input'
 import { sfx } from '../sfx'
 import { TILE, tileBottom, tileMid } from '../../lib/tile'
 import { decoKey } from '../commons-art'
+import { drawStable } from './homestead-stable'
 import { itemsFrame, itemWorldArt } from '../items-pass'
 import { ROOM_GRID } from '../cottage'
 import { itemName, type ArrangeView, type PlacementCommand, type PlacementView } from '../homestead'
@@ -35,9 +36,17 @@ interface Placement {
   /** A clearable tile picked (outdoors, nothing in hand). */
   clearing: { x: number; y: number } | null
   overlay: Phaser.GameObjects.Graphics
-  ghost: Phaser.GameObjects.Image | null
+  /** The piece in hand, drawn faint (an image, or the stable's bays in a container). */
+  ghost: Phaser.GameObjects.Image | Phaser.GameObjects.Container | null
 }
 
+
+
+/** A piece's catalogue row with the footprint it stands on (the stable grows with its stalls). */
+function homeItem(it: HomeInstance) {
+  const def = catalogItem(it.itemDef)
+  return def && grownItem(def, it)
+}
 
 export class HomesteadArranging {
   private readonly scene: Phaser.Scene
@@ -144,7 +153,7 @@ export class HomesteadArranging {
     const p = this.placement
     if (!p) return
     const it = p.selected ? this.instance(p.selected) : undefined
-    const def = it && homeItem(it.itemDef)
+    const def = it && homeItem(it)
     if (!def && p.scene === 'outdoor') {
       const h = this.deps.hero()
       const c = this.frame(h.x, h.y)
@@ -234,7 +243,7 @@ export class HomesteadArranging {
       return
     }
     const it = this.instance(p.selected)
-    const def = it && homeItem(it.itemDef)
+    const def = it && homeItem(it)
     if (!def) return
     const [w, h] = rotatedFootprint(def, p.rotation)
     p.x = Phaser.Math.Clamp(gx - Math.floor((w - 1) / 2), 0, p.cols - w)
@@ -250,7 +259,7 @@ export class HomesteadArranging {
   private instanceAt(scene: HomeScene, gx: number, gy: number): HomeInstance | undefined {
     return this.home.here()?.items.find((i) => {
       if (i.scene !== scene || i.x === null || i.y === null) return false
-      const def = homeItem(i.itemDef)
+      const def = homeItem(i)
       if (!def) return false
       const [w, h] = rotatedFootprint(def, i.rotation ?? 0)
       return gx >= i.x && gx < i.x + w && gy >= i.y && gy < i.y + h
@@ -260,7 +269,7 @@ export class HomesteadArranging {
   private select(id: string): void {
     const p = this.placement
     const it = this.instance(id)
-    const def = it && homeItem(it.itemDef)
+    const def = it && homeItem(it)
     if (!p || !it || !def) return
     p.selected = id
     p.clearing = null
@@ -319,7 +328,7 @@ export class HomesteadArranging {
         return this.refreshPlacement()
       case 'nudge': {
         const it = p.selected ? this.instance(p.selected) : undefined
-        const def = it && homeItem(it.itemDef)
+        const def = it && homeItem(it)
         if (!def) return
         const [w, h] = rotatedFootprint(def, p.rotation)
         p.x = Phaser.Math.Clamp(p.x + c.dx, 0, p.cols - w)
@@ -330,7 +339,7 @@ export class HomesteadArranging {
       }
       case 'rotate': {
         const it = p.selected ? this.instance(p.selected) : undefined
-        const def = it && homeItem(it.itemDef)
+        const def = it && homeItem(it)
         if (!def || !canRotate(def)) return
         p.rotation = (((p.rotation + 90) % 360) as Rotation)
         const [w, h] = rotatedFootprint(def, p.rotation)
@@ -518,7 +527,7 @@ export class HomesteadArranging {
         for (let x = r.x; x < r.x + r.w; x++) g.lineBetween(p.ox + x * TILE + 2, p.oy + tileBottom(y) - 2, p.ox + (x + 1) * TILE - 2, p.oy + y * TILE + 2)
     for (const it of home.items) {
       if (it.scene !== p.scene || it.x === null || it.y === null || it.id === p.selected) continue
-      const def = homeItem(it.itemDef)
+      const def = homeItem(it)
       if (!def) continue
       const [w, h] = rotatedFootprint(def, it.rotation ?? 0)
       g.lineStyle(1, 0xffd24a, 0.8)
@@ -531,7 +540,7 @@ export class HomesteadArranging {
     // The piece in hand (a lantern post shows the ground its light would hold).
     let problem: string | null = null
     const it = p.selected ? this.instance(p.selected) : undefined
-    const def = it && homeItem(it.itemDef)
+    const def = it && homeItem(it)
     p.ghost?.destroy()
     p.ghost = null
     if (it && def) {
@@ -549,13 +558,19 @@ export class HomesteadArranging {
       // its commons alias) — the same fallback the placed piece draws.
       const art = this.scene.textures.exists(key) ? null : itemWorldArt(it.itemDef)
       const hasArt = !!art && this.scene.textures.exists(art)
-      if (hasArt) {
+      if (it.itemDef === HOMESTEAD_DATA.stable.item) {
+        // The stable's ghost is its own bays at its stall count (./homestead-stable.ts).
+        const parts: Phaser.GameObjects.GameObject[] = []
+        drawStable(this.scene, bx, by, it.stalls ?? 1, [], { ghost: true, depth: 5300 }, (o) => (parts.push(o), o), () => false)
+        p.ghost = this.scene.add.container(0, 0, parts).setDepth(5300)
+      } else if (hasArt) {
         const f = itemsFrame(art!.slice('items-art:'.length))
         const fw = f ? f.width : w * TILE
         const fh = f ? f.height : h * TILE
         const scale = Math.min((w * TILE) / fw, (h * TILE) / fh) || 1
-        p.ghost = this.scene.add.image(bx + (w * TILE) / 2, by, art!).setOrigin(0.5, 1).setScale(scale).setDepth(5300).setAlpha(0.85)
-        if (p.rotation === 180 || p.rotation === 270) p.ghost.setFlipX(true)
+        const ghost = this.scene.add.image(bx + (w * TILE) / 2, by, art!).setOrigin(0.5, 1).setScale(scale).setDepth(5300).setAlpha(0.85)
+        if (p.rotation === 180 || p.rotation === 270) ghost.setFlipX(true)
+        p.ghost = ghost
       } else if (!art) {
         p.ghost = this.scene.add.image(bx, by, key).setOrigin(0, 1).setDepth(5300).setAlpha(0.85)
         if (p.rotation === 180 || p.rotation === 270) p.ghost.setFlipX(true)
@@ -581,7 +596,7 @@ export class HomesteadArranging {
         name: i.itemDef === POST && i.name ? `${itemName(i.itemDef)}: ${i.name}` : itemName(i.itemDef),
         placed: i.scene === p.scene,
         elsewhere: i.scene !== null && i.scene !== p.scene,
-        fits: homeItem(i.itemDef)?.where.includes(p.scene) ?? false
+        fits: homeItem(i)?.where.includes(p.scene) ?? false
       })),
       selected: p.selected,
       problem,

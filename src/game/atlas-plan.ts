@@ -131,6 +131,8 @@ export interface PackedManifest {
   items: PackedCanvasPack
   /** The 0.4 indoors source pass, preserved at 64 texels per world tile. */
   indoors: PackedCanvasPack
+  /** The 0.5 crafts pass (assets/generated/crafts-pass/), every frame whole at 64 texels per world tile. */
+  crafts: PackedCanvasPack
   /** The 16 terrain cells, 4×4, each `cell` texels a side (one 16-px world tile at `density`). */
   terrain: { image: string; size: [number, number]; cell: number; density: number }
   ground: PackedGround
@@ -141,6 +143,9 @@ export interface PackedManifest {
   atlases: Record<string, { image: string; json: string }>
   backdrops: Record<string, string>
 }
+
+/** The 0.5 crafts pass (docs/design/crafts.md 9): normalized frames and their manifest (./crafts-art.ts). */
+export const CRAFTS_DIR = 'assets/generated/crafts-pass'
 
 /** The playtest-1 pass (assets/generated/playtest1-pass/): its frame atlas and animations. */
 export const PLAYTEST1_DIR = 'assets/generated/playtest1-pass'

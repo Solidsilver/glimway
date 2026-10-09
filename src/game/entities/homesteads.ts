@@ -37,6 +37,7 @@ import { onSceneEnd } from '../scene-end'
 import { HomesteadArt } from './homestead-art'
 import { HomesteadTalk } from './homestead-talk'
 import { HomesteadArranging } from './homestead-placement'
+import { HomesteadYard } from './homestead-yard'
 
 export interface HomesteadDeps {
   world: WorldData
@@ -70,6 +71,8 @@ export class HomesteadLayer {
   readonly land: LandWorld | null
   /** The homestead this scene stands on (its land, or a cottage on it). */
   readonly gate: number | null
+  /** Its yard pets, on the land (./homestead-yard.ts). */
+  readonly yard: HomesteadYard | null
 
   constructor(
     readonly scene: Phaser.Scene,
@@ -84,6 +87,7 @@ export class HomesteadLayer {
     this.art = new HomesteadArt(this)
     this.talk = new HomesteadTalk(this)
     this.arranging = new HomesteadArranging(this)
+    this.yard = this.land ? new HomesteadYard(scene, deps.reducedMotion, () => deps.hero()) : null
     if (this.commons) this.art.buildCommonsFixtures()
     this.art.emitThumbs()
     const onChange = (p?: { gate?: number }) => this.scheduleRedraw(p?.gate)
@@ -109,6 +113,7 @@ export class HomesteadLayer {
       bus.off(EV.homeArrangeToggle, onArrange)
       bus.off(EV.homeAction, onHomeAction)
       if (this.arranging.placement) this.arranging.endPlacement(false)
+      this.yard?.destroy()
       this.arranging.emitArrange({ available: false, scene: null, tier: 0 })
     })
     // Read-only view of homesteads for playtests.
@@ -127,6 +132,8 @@ export class HomesteadLayer {
       land: this.land ? { gate: this.land.gate, door: this.land.door, doorstep: this.land.doorstep, mailbox: this.land.mailbox, site: this.land.site, desolate: this.land.desolate } : null,
       guide: this.art.guide ? { x: this.art.guide.marker.x, y: this.art.guide.marker.y, arrow: this.art.guide.arrow.visible } : null,
       placing: !!this.arranging.placement,
+      yard: this.yard?.debug() ?? [],
+      stalls: this.here()?.stalls ?? [],
       placement: this.arranging.placement ? this.arranging.placementView : null,
       stats: {
         gateDraws: this.art.gateDraws,
@@ -241,6 +248,7 @@ export class HomesteadLayer {
       if (this.land) {
         this.checkLandMatches()
         this.art.drawLand()
+        this.yard?.sync(this.here())
       } else this.art.drawRoom()
     }
     this.deps.interactables.register(this, this.talk.interactionList())
@@ -330,6 +338,7 @@ export class HomesteadLayer {
   update(dt: number): void {
     this.art.updateGuide()
     this.arranging.update(dt)
+    this.yard?.update(dt)
   }
 
   /** A homestead action decided in a conversation or outside one (EV.homeAction). */

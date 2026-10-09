@@ -28,6 +28,8 @@ import type { Effects } from './fx'
 import { SEAT_CUT, SEATED_MANA_BONUS, manaRegenRate, type SeatPose } from '../seats'
 
 const PLAYER_SPEED = 110
+/** Riding the mount that's out, outdoors (crafts.md 3.1: every mount the same). */
+export const RIDE_SPEED = 155
 const ATTACK_RANGE = 26
 /** A tool swung at a creature does this share of the weapon's damage. */
 const TOOL_DAMAGE = 0.5
@@ -226,7 +228,7 @@ export class Hero {
     // ordinary movement (including the idle 0,0) must not cancel it.
     this.dashTime = Math.max(0, this.dashTime - dt)
     if (this.dashTime <= 0) {
-      const speed = this.deps.avatar().riding ? 155 : PLAYER_SPEED
+      const speed = this.deps.avatar().riding ? RIDE_SPEED : PLAYER_SPEED
       this.sprite.setVelocity(dx * speed, dy * speed)
     }
     if (len > 0.1) {

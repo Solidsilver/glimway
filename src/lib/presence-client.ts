@@ -20,7 +20,7 @@
  */
 import { knownRoom } from './rooms.ts';
 import { decodePresence, encodePresence, PRESENCE_PROTOCOL } from './presence-codec.ts';
-import { PRESENCE, PRESENCE_CLOSE, type PresenceClientMessage, type PresencePlayer, type PresencePosition, type PresenceServerMessage } from './presence.ts';
+import { PRESENCE, PRESENCE_CLOSE, type PresenceAvatar, type PresenceClientMessage, type PresencePlayer, type PresencePosition, type PresenceServerMessage } from './presence.ts';
 
 /** The WebSocket surface the client uses (the browser's WebSocket fits). */
 export interface SocketLike {
@@ -71,6 +71,8 @@ export interface PresenceHandlers {
   gift?(gift: { fromName: string; kind: string; itemDef: string; qty: number }): void;
   /** Someone standing near you reached a story beat (the server says who and which). */
   witness?(w: { beat: string; accountId: string; name: string }): void;
+  /** Someone's look changed: their follower, or the mount that's out (crafts.md 2.4, 3.4). */
+  avatarChange?(accountId: string, avatar: PresenceAvatar): void;
 }
 
 export interface Timers {
@@ -279,10 +281,11 @@ export class PresenceClient {
       y: Math.round(pos.y),
       facing: normalFacing(pos.facing),
       moving: pos.moving,
+      ...(pos.pose ? { pose: pos.pose } : {}),
     };
     if (!sample.moving && this.lastPos && !this.lastPos.moving && !this.pendingPos) {
-      // Already told them we stopped; only a new spot is worth a message.
-      if (sample.x === this.lastPos.x && sample.y === this.lastPos.y) return;
+      // Already told them we stopped; only a new spot (or a new pose) is worth a message.
+      if (sample.x === this.lastPos.x && sample.y === this.lastPos.y && sample.pose === this.lastPos.pose) return;
     }
     this.pendingPos = sample;
     this.flushPos();
@@ -411,7 +414,11 @@ export class PresenceClient {
           y: m.y,
           facing: normalFacing(m.facing ?? { x: 0, y: 1 }),
           moving: m.moving === true,
+          ...(m.pose ? { pose: m.pose } : {}),
         });
+        break;
+      case 'avatarChange':
+        this.handlers.avatarChange?.(m.accountId, m.avatar);
         break;
       case 'emote':
         if (typeof m.accountId === 'string' && PRESENCE.emotes.includes(m.id)) this.handlers.emote?.(m.accountId, m.id);
@@ -483,7 +490,7 @@ export class PresenceClient {
   private sendPos(p: PresencePosition): void {
     this.lastPosAt = this.timers.now();
     this.lastPos = p;
-    this.send({ type: 'pos', x: p.x, y: p.y, facing: p.facing, moving: p.moving });
+    this.send({ type: 'pos', x: p.x, y: p.y, facing: p.facing, moving: p.moving, ...(p.pose ? { pose: p.pose } : {}) });
   }
 
   private armHeartbeat(): void {

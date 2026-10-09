@@ -11,6 +11,7 @@
 import { toJson } from '@bufbuild/protobuf';
 import { HabiticaProfileSchema } from '../gen/glimway/v1/profile_pb.js';
 import type { PlayerState } from '../gen/glimway/v1/state_pb.js';
+import type { HomeView } from './homestead.ts';
 import { validateHabiticaProfile } from '../habitica/mapping.ts';
 import type { HabiticaProfile } from '../habitica/types.ts';
 import { profileFor } from '../profile.ts';
@@ -125,6 +126,9 @@ export type Prediction =
   | { kind: 'take-paper'; paper: string }
   | { kind: 'settle-echo'; member: string }
   | { kind: 'fall' }
+  // Companions and the stable (crafts.md 6.2): they change `PlayerState.companions`, not the game state (`predictCompanions`).
+  | { kind: 'companions'; followPet: string; yardPets: string[] }
+  | { kind: 'mount-home' }
   | { kind: 'none' };
 
 export interface PredictContext {
@@ -165,6 +169,8 @@ export function predict(state: GameState, op: Prediction, ctx: PredictContext): 
       return { ...state, flags: unique(state.flags, `echo:${op.member}`) };
     case 'fall':
       return { ...state, ...fallRecovery(state, ctx.profile), area: 'village', position: { ...VILLAGE_SPAWN }, wildsRegion: undefined };
+    case 'companions':
+    case 'mount-home':
     case 'none':
       return state;
   }
@@ -176,4 +182,66 @@ export function predictedView(server: PlayerState, pending: readonly Prediction[
   for (const op of pending) state = predict(state, op, ctx);
   if (state.wildsRegion === undefined) delete state.wildsRegion;
   return state;
+}
+
+// ------------------------------------------------------------ companions and the stable
+
+/** The companions the game shows: the server's resolved ones, with unanswered choices on top. */
+export interface CompanionsView {
+  /** '' is Habitica's current pet. */
+  followPet: string;
+  yardPets: string[];
+  /** '' when every mount is in its stall. */
+  mountOut: string;
+  mountHome: string;
+}
+
+/**
+ * `server.companions` with `pending` applied in order (crafts.md 2.4, 3.4).
+ * A choice shows at once; the answer (or a refusal) replaces it.
+ */
+export function predictCompanions(server: PlayerState | null, pending: readonly Prediction[]): CompanionsView {
+  const c = server?.companions;
+  let view: CompanionsView = { followPet: c?.followPet ?? '', yardPets: [...(c?.yardPets ?? [])], mountOut: c?.mountOut ?? '', mountHome: c?.mountHome ?? '' };
+  for (const op of pending) {
+    if (op.kind === 'companions') view = { ...view, followPet: op.followPet, yardPets: [...op.yardPets] };
+    else if (op.kind === 'mount-home') view = { ...view, mountOut: '' };
+  }
+  return view;
+}
+
+/**
+ * A stall shown with its new mount before the answer (`stall`, crafts.md
+ * 6.2): the same mount moves out of any other stall of yours rather than
+ * standing twice, and '' empties it. A stall that isn't yours to change is
+ * left alone (the server will refuse it).
+ */
+export function predictStall(home: HomeView, stall: number, mount: string, owner: { id: string; name: string }): HomeView {
+  const at = home.stalls.find((s) => s.stall === stall);
+  if (at && at.mount && at.ownerId !== owner.id) return home;
+  const empty = (s: HomeView['stalls'][number]) => ({ ...s, mount: '', ownerId: '', ownerName: '', out: false });
+  const stalls = home.stalls.map((s) => {
+    if (s.stall === stall) return mount ? { ...s, mount, ownerId: owner.id, ownerName: owner.name, out: false } : empty(s);
+    return mount && s.ownerId === owner.id && s.mount === mount ? empty(s) : s;
+  });
+  if (!at) stalls.push(mount ? { stall, mount, ownerId: owner.id, ownerName: owner.name, out: false } : { stall, mount: '', ownerId: '', ownerName: '', out: false });
+  stalls.sort((a, b) => a.stall - b.stall);
+  return { ...home, stalls };
+}
+
+/** One more bay on the stable (`stable-extend`), up to `max`. */
+export function predictStableExtend(home: HomeView, stableItem: string, max: number): HomeView {
+  return {
+    ...home,
+    items: home.items.map((it) => (it.itemDef === stableItem && it.scene === 'outdoor' && (it.stalls ?? 1) < max ? { ...it, stalls: (it.stalls ?? 1) + 1 } : it)),
+    stalls: grown(home, stableItem, max),
+  };
+}
+
+/** The bays with one more, empty, at the east end (when the stable can grow). */
+function grown(home: HomeView, stableItem: string, max: number): HomeView['stalls'] {
+  const stable = home.items.find((it) => it.itemDef === stableItem && it.scene === 'outdoor');
+  const n = stable?.stalls ?? 1;
+  if (!stable || n >= max || home.stalls.some((s) => s.stall === n + 1)) return home.stalls;
+  return [...home.stalls, { stall: n + 1, mount: '', ownerId: '', ownerName: '', out: false }];
 }

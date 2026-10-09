@@ -164,8 +164,33 @@ export const HOME_ERRORS: Table = {
   'partner-not-at-table': 'Both names go on at once. Your partner needs to be at the table too.',
   'invite-not-found': 'That offer has lapsed. Ask again.',
   'chest-full': 'Your own chest is full.',
+  // The stable (crafts.md 3.2).
+  'stable-full': 'One stable to a homestead, and six stalls to a stable.',
+  'stalls-in-use': 'Empty the stalls first, and bring home any mount that’s out.',
   resolved: 'Your last order with Silas went through after all. Check what you have before trying again.',
   pending: 'No answer yet — it may have gone through. We’ll find out when the connection is back; nothing will be charged twice.'
+}
+
+/**
+ * Companions and the stable (crafts.md 6.2): a choice, a stall, Saddle up,
+ * Build a stall. Every refusal changes nothing.
+ */
+export const COMPANION_ERRORS: Table = {
+  ...REPLAYED,
+  'companion-not-owned': 'That one isn’t among your Habitica companions any more. Sync, and look again.',
+  'homestead-not-found': 'Once you’ve a place of your own, you can choose who comes along.',
+  'needs-habitica': 'Companions come from your Habitica hero. Connect it in the Menu.',
+  'no-stable': 'There’s no stall there now.',
+  'stall-taken': 'That stall holds a partner’s mount.',
+  'stable-full': 'Six stalls is as long as a stable grows.',
+  'too-far-away': 'Stand at the stall to do that.',
+  'land-blocked': 'Clear and light the ground east of the stable first.',
+  'placement-overlap': 'Clear and light the ground east of the stable first.',
+  unlit: 'Clear and light the ground east of the stable first.',
+  'out-of-bounds': 'There’s no more land east of the stable to build on.',
+  short: 'You’re short on materials for another stall.',
+  'insufficient-materials': 'You’re short on materials for another stall.',
+  'not-a-member': 'That’s for the folk on this deed.'
 }
 
 /**
@@ -206,4 +231,5 @@ export const itemErrorText = (code: string): string => errorText(ITEM_ERRORS, co
 export const villageErrorText = (code: string): string => errorText(VILLAGE_ERRORS, code)
 export const homeErrorText = (code: string): string => errorText(HOME_ERRORS, code, 'Silas didn’t catch that. Nothing changed — try again in a moment.')
 export const spendErrorText = (code: string): string => errorText(SPEND_ERRORS, code, 'The lantern didn’t answer. Nothing was spent — try again in a moment.')
+export const companionErrorText = (code: string): string => errorText(COMPANION_ERRORS, code)
 export const questErrorText = (code: string): string => errorText(QUEST_ERRORS, code, 'That story step didn’t take. Nothing was lost.')

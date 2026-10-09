@@ -12,10 +12,17 @@
  * and out on leaving. They have no physics body: they never collide with or
  * block the hero, and nothing about them affects gameplay.
  *
+ * Each peer brings their follower (./pet-follower.ts, the server's resolved
+ * pet) and the mount that's out: under them while their pose says riding,
+ * else on the lead behind them (./led-mount.ts; not indoors, where it waits
+ * at the door). A look change mid-visit (`peer.look`) redraws them.
+ *
  * Emote bubbles (`showEmoteBubble`) are shared with the hero's own emotes.
  */
 import type Phaser from 'phaser'
-import { loadPresenceAvatar } from '../avatar-render'
+import { isMountLayerKey, loadCompanion, loadPresenceAvatar } from '../avatar-render'
+import { PetFollower } from './pet-follower'
+import { LedMount } from './led-mount'
 import { bus, EV, type EmotePayload } from '../events'
 import { emoteSay } from '../../content/presence'
 import { LEAVE_FADE_MS, type Peer, type PresenceFeed } from '../presence'
@@ -32,11 +39,16 @@ export interface RemotePlayers {
   update(dt: number): void
   /** Drop every remote sprite (area change, scene shutdown). */
   clear(): void
+  /** Friends' pets drawn here, for Pet (crafts.md 2.1). */
+  pets(): { id: string; x: number; y: number; hop: () => void }[]
 }
 
 class NoopRemotePlayers implements RemotePlayers {
   update(_dt: number): void {}
   clear(): void {}
+  pets(): { id: string; x: number; y: number; hop: () => void }[] {
+    return []
+  }
 }
 
 /** One drawn peer. */
@@ -51,7 +63,17 @@ interface View {
   bornAt: number
   facingX: 1 | -1
   moving: boolean
+  /** The look drawn: the peer's `look` counter and whether they rode, when it loaded. */
+  look: number
+  riding: boolean
+  follower: PetFollower | null
+  /** The pet key the follower was made for ('' none). */
+  followerKey: string
+  led: LedMount | null
 }
+
+/** Where a peer's weapon hand is, px from their feet (unmirrored; as the hero's, ./avatar.ts). */
+const HAND = { x: -0.4, y: -5.5 }
 
 const now = () => performance.now()
 
@@ -139,6 +161,9 @@ class RemotePlayersLayer implements RemotePlayers {
         alpha: v.root.alpha,
         moving: v.moving,
         avatar: v.demo === null,
+        pet: v.follower ? v.followerKey : null,
+        riding: v.riding,
+        led: v.led ? v.led.key : null,
         bubble: v.bubble?.active ? v.bubbleText : null,
         // 1 once the bubble's fade-in tween has finished (screenshots wait for it).
         bubbleAlpha: v.bubble?.active ? v.bubble.alpha : null
@@ -147,7 +172,7 @@ class RemotePlayersLayer implements RemotePlayers {
     )
   }
 
-  update(_dt: number): void {
+  update(dt: number): void {
     if (this.destroyed) return
     const t = now()
     const seen = new Set<string>()
@@ -166,6 +191,13 @@ class RemotePlayersLayer implements RemotePlayers {
       if (Math.abs(at.facing.x) > 0.2) v.facingX = at.facing.x < 0 ? -1 : 1
       v.moving = at.moving
       this.animate(v, at.facing, t)
+      const riding = peer.pose === 'riding' && !!peer.avatar?.selectedMount
+      if (peer.avatar && (peer.look !== v.look || riding !== v.riding)) {
+        v.look = peer.look
+        v.riding = riding
+        void this.loadAvatar(v, peer)
+      }
+      this.companions(v, peer, at, dt * 1000)
       // Fade in on arrival, out on leaving.
       const alphaIn = Math.min(1, (t - v.bornAt) / FADE_IN_MS)
       const alphaOut = peer.leftAt === null ? 1 : Math.max(0, 1 - (t - peer.leftAt) / LEAVE_FADE_MS)
@@ -208,7 +240,8 @@ class RemotePlayersLayer implements RemotePlayers {
       resolution: 8
     }).setOrigin(0.5, 1)
     const root = scene.add.container(x, y, [shadow, body, tag]).setAlpha(0).setDepth(y + 0.5)
-    const view: View = { peer, root, body, demo, tag, bubble: null, bubbleText: null, bornAt: now(), facingX: 1, moving: false }
+    const riding = peer.pose === 'riding' && !!peer.avatar?.selectedMount
+    const view: View = { peer, root, body, demo, tag, bubble: null, bubbleText: null, bornAt: now(), facingX: 1, moving: false, look: peer.look, riding, follower: null, followerKey: '', led: null }
     this.views.set(peer.accountId, view)
     if (peer.avatar) void this.loadAvatar(view, peer)
     return view
@@ -216,10 +249,16 @@ class RemotePlayersLayer implements RemotePlayers {
 
   /** Swap the stand-in for the Habitica layers once they load (if any do). */
   private async loadAvatar(view: View, peer: Peer): Promise<void> {
-    const keys = await loadPresenceAvatar(this.scene, peer.avatar!)
-    if (this.destroyed || this.views.get(peer.accountId) !== view || keys.length === 0 || !view.root.active) return
+    const look = view.look
+    const keys = await loadPresenceAvatar(this.scene, peer.avatar!, view.riding)
+    if (this.destroyed || this.views.get(peer.accountId) !== view || view.look !== look || keys.length === 0 || !view.root.active) return
     const scale = AVATAR_DISPLAY / AVATAR_CANVAS
-    const images = keys.map((k) => this.scene.add.image(0, -AVATAR_DISPLAY / 2, k).setOrigin(0.5, 0.5).setScale(scale))
+    // A mount's canvas sits lower and right of the rider's (as the hero's, ./avatar.ts).
+    const images = keys.map((k) =>
+      isMountLayerKey(k)
+        ? this.scene.add.image(22.5 * scale, -AVATAR_DISPLAY / 2 + 40.5 * scale, k).setOrigin(0.5, 0.5).setScale(scale)
+        : this.scene.add.image(0, -AVATAR_DISPLAY / 2, k).setOrigin(0.5, 0.5).setScale(scale)
+    )
     view.demo?.destroy()
     view.demo = null
     view.body.removeAll(true)
@@ -245,9 +284,55 @@ class RemotePlayersLayer implements RemotePlayers {
     v.body.setY(bob)
   }
 
+  /** Their follower and their led mount, drawn beside them and faded with them (`dt` in ms). */
+  private companions(v: View, peer: Peer, at: { x: number; y: number }, dt: number): void {
+    const petKey = peer.avatar?.selectedPet ?? ''
+    if (petKey !== v.followerKey) {
+      v.followerKey = petKey
+      v.follower?.destroy()
+      v.follower = null
+      if (petKey) void this.loadFollower(v, petKey, at)
+    }
+    const time = this.scene.time.now
+    const faceRight = v.facingX > 0
+    const alpha = v.root.alpha
+    if (v.follower) {
+      v.follower.update({ x: at.x, y: at.y, walking: v.moving, faceRight, seat: null, viewMidX: this.scene.cameras.main.worldView.centerX, time, dt })
+      v.follower.image.setAlpha(alpha)
+    }
+    const mount = peer.avatar?.selectedMount ?? ''
+    const wantLed = !!mount && !v.riding && !this.area.startsWith('in:') && peer.leftAt === null
+    if (wantLed && (!v.led || v.led.key !== mount)) {
+      v.led?.destroy()
+      v.led = new LedMount(this.scene, mount, { x: at.x + (faceRight ? -26 : 26), y: at.y }, true)
+    } else if (!wantLed && v.led) {
+      v.led.destroy()
+      v.led = null
+    }
+    v.led?.update({ x: at.x, y: at.y, faceRight, seated: false, dt, time, hand: { x: at.x + (faceRight ? -HAND.x : HAND.x), y: at.y + HAND.y } })
+    // TODO(lane G, at merge): a peer whose pose is 'fishing' draws their line here —
+    // `new RemoteFishingLine(scene, reducedMotion).update(dt, at, facing, peer.pose === 'fishing')`
+    // each frame (src/game/entities/fishing.ts), destroyed in drop().
+  }
+
+  private async loadFollower(v: View, key: string, at: { x: number; y: number }): Promise<void> {
+    const keys = await loadCompanion(this.scene, key, 'pet')
+    if (this.destroyed || v.followerKey !== key || !v.root.active || !keys) return
+    v.follower = new PetFollower(this.scene, keys[0], at, false)
+  }
+
+  /** The pets drawn here now (yours to pet, crafts.md 2.1): each follower with its owner. */
+  pets(): { id: string; x: number; y: number; hop: () => void }[] {
+    return [...this.views.values()]
+      .filter((v) => v.follower && v.peer.leftAt === null)
+      .map((v) => ({ id: `peer:${v.peer.accountId}`, x: v.follower!.x, y: v.follower!.y, hop: () => v.follower?.hop() }))
+  }
+
   private drop(id: string): void {
     const v = this.views.get(id)
     if (!v) return
+    v.follower?.destroy()
+    v.led?.destroy()
     v.bubble?.destroy()
     v.root.destroy()
     this.views.delete(id)

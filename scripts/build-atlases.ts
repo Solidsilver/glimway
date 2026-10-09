@@ -39,6 +39,7 @@ import {
   ATLAS_GENERATOR_VERSION,
   BACKDROPS,
   BUILDINGS,
+  CRAFTS_DIR,
   MAX_SCREEN_SCALE,
   SCALED_ATLASES,
   blitKey,
@@ -94,6 +95,11 @@ function read(path: string): Buffer {
   return data
 }
 const readJson = <T>(path: string): T => JSON.parse(read(path).toString('utf8')) as T
+/** A PNG's pixel size, from its IHDR. */
+function pngDims(data: Buffer): [number, number] {
+  if (data.subarray(1, 4).toString('latin1') !== 'PNG') throw new Error('not a PNG')
+  return [data.readUInt32BE(16), data.readUInt32BE(20)]
+}
 
 /**
  * One canvas to bake: a source crop sampled into a `w`×`h` canvas. `box`
@@ -277,6 +283,20 @@ async function main(): Promise<void> {
     const [dw, dh] = [Math.max(1, Math.round(sw * k)), Math.max(1, Math.round(sh * k))]
     const d: Job['d'] = tiling ? [r.x, r.y, r.w, r.h] : [r.x + Math.floor((r.w - dw) / 2), r.y + r.h - dh, dw, dh]
     return { id: f.key, src, s: [f.sourceRect.x, f.sourceRect.y, sw, sh], w: cw, h: ch, d, box: true }
+  })
+
+  // The 0.5 crafts pass (docs/design/crafts.md 9): ability icons and effects,
+  // the stable's layers, fishing, the HUD icons and the pet heart. Its frames
+  // are delivered already normalized, each its exact canvas at 64 texels per
+  // 16px tile, so each is copied whole, texel for texel.
+  type CraftsFrame = { file: string; canvasSize: { w: number; h: number } }
+  const crafts = readJson<{ density: number; frames: Record<string, CraftsFrame> }>(`${CRAFTS_DIR}/manifest.json`)
+  if (crafts.density !== 64) throw new Error(`crafts-pass: density ${crafts.density}, expected 64 texels per tile`)
+  const craftsJobs: Job[] = Object.entries(crafts.frames).map(([id, f]) => {
+    const src = `${CRAFTS_DIR}/${f.file}`
+    const [w, h] = pngDims(read(src))
+    if (w !== f.canvasSize.w || h !== f.canvasSize.h) throw new Error(`crafts-pass: ${id} is ${w}×${h}, its canvas ${f.canvasSize.w}×${f.canvasSize.h}`)
+    return { id, src, s: [0, 0, w, h], w, h, d: [0, 0, w, h], box: true }
   })
 
   // The terrain tileset: 16 named cells → 4×4, one 16-px world tile each at
@@ -670,6 +690,8 @@ async function main(): Promise<void> {
     family.forEach((id, i) => putIndoor(id, healed[i]))
   }
   const indoorsImage = await encodeRawWebp('indoors', Buffer.from(indoorsPixels.data), indoorPack.size, true)
+  const craftsPack = pack(craftsJobs.map((j) => ({ id: j.id, w: j.w, h: j.h })), 0)
+  const craftsImage = await bakeDenseWebp('crafts', craftsJobs, craftsPack.at, craftsPack.size)
   const bPack = pack(buildingJobs.map((j) => ({ id: j.id, w: j.w, h: j.h })), 0)
   const buildingsImage = await bakeDenseWebp('buildings', buildingJobs, bPack.at, bPack.size)
   const tAt = new Map(terrainJobs.map((j, i) => [j.id, [(i % 4) * TILE, Math.floor(i / 4) * TILE] as [number, number]]))
@@ -881,6 +903,7 @@ async function main(): Promise<void> {
     runtime: { image: runtimeImage, size: rPack.size, density: ART_DENSITY, frames: rects(runtimeJobs, rPack.at) },
     items: { image: itemsImage, size: iPack.size, density: ART_DENSITY, frames: rects(itemsJobs, iPack.at) },
     indoors: { image: indoorsImage, size: indoorPack.size, density: 64, frames: rects(indoorsJobs, indoorPack.at) },
+    crafts: { image: craftsImage, size: craftsPack.size, density: 64, frames: rects(craftsJobs, craftsPack.at) },
     terrain: { image: terrainImage, size: [TILE * 4, TILE * 4], cell: TILE, density: ART_DENSITY },
     ground: { image: groundImage, size: gSize, cell: TILE, density: ART_DENSITY, cols: GROUND_COLS, tiles: Object.fromEntries(GROUND_TILES.map((t, i) => [t, i])), healed: heal },
     people,
@@ -890,7 +913,7 @@ async function main(): Promise<void> {
   }
   writeFileSync(join(OUT, 'atlases.json'), JSON.stringify(manifest, null, 1) + '\n')
   installStaged(PACKED, DIRS)
-  console.log(`packed ${commonsJobs.length} + ${blitJobs.length} commons, ${runtimeJobs.length} runtime, ${itemsJobs.length} items, 16 terrain cells, ${groundJobs.length} ground tiles (${heal ? "healed" : "NOT healed"}), ${peopleJobs.length} people frames, ${buildingJobs.length} buildings, ${scaled.length} scaled atlases, ${BACKDROPS.length} backdrops → ${PACKED}`)
+  console.log(`packed ${commonsJobs.length} + ${blitJobs.length} commons, ${runtimeJobs.length} runtime, ${itemsJobs.length} items, 16 terrain cells, ${groundJobs.length} ground tiles (${heal ? "healed" : "NOT healed"}), ${peopleJobs.length} people frames, ${buildingJobs.length} buildings, ${craftsJobs.length} crafts, ${scaled.length} scaled atlases, ${BACKDROPS.length} backdrops → ${PACKED}`)
 }
 
 try {

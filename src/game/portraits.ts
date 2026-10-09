@@ -3,6 +3,7 @@
  * from the loaded art once a scene is up (EV.portraits), and the delivered
  * UI icons (EV.artIcons).
  */
+import { craftsIconUrls } from './crafts-art'
 import { indoorsIconUrls } from './indoors-art'
 import type Phaser from 'phaser'
 import { bus, EV } from './events'
@@ -82,5 +83,5 @@ export function emitPortraits(scene: Phaser.Scene): void {
     if (url) out[name] = url
   }
   bus.emit(EV.portraits, out)
-  bus.emit(EV.artIcons, { ...commonsIconUrls(scene), ...itemIconUrls(scene), ...indoorsIconUrls(scene) })
+  bus.emit(EV.artIcons, { ...commonsIconUrls(scene), ...itemIconUrls(scene), ...indoorsIconUrls(scene), ...craftsIconUrls(scene) })
 }

@@ -5,6 +5,7 @@ import { decodePlayerState, validatePlayerState } from './state-contract.ts';
 import { EnvelopeSchema, LoginRequestSchema, PlayRequestSchema, SessionResponseSchema, StateResponseSchema, PlayResponseSchema, WorldChooseRequestSchema, type Envelope, type LoginRequest, type PlayRequest, type SessionResponse, type StateResponse, type PlayResponse } from '../gen/glimway/v1/state_pb.js';
 import { WildsRegionResultSchema, HomesteadLandSchema, type WildsChunk, type WildsRegionResult, type HomesteadLand } from '../gen/glimway/v1/wilds_pb.js';
 import { decodeChunk } from './chunks.ts';
+import { CompanionsRequestSchema, MountHomeRequestSchema, MountOutRequestSchema, StableExtendRequestSchema, StallRequestSchema, type CompanionsRequest, type MountHomeRequest, type MountOutRequest, type StableExtendRequest, type StallRequest } from '../gen/glimway/v1/companions_pb.js';
 import { ReportRequestSchema, type ReportRequest, QuestStepRequestSchema, type QuestStepRequest, MarkRequestSchema, type MarkRequest, TakePaperRequestSchema, type TakePaperRequest, SettleEchoRequestSchema, type SettleEchoRequest, FallRequestSchema, type FallRequest, ProfileReportSchema, type ProfileReport, SpendRequestSchema, type SpendRequest, WildsClaimRequestSchema, type WildsClaimRequest, WildsLanternRequestSchema, type WildsLanternRequest } from '../gen/glimway/v1/operations_pb.js';
 
 export type Transport = (method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown, extra?: { headers?: Record<string, string>; binary?: boolean; keepalive?: boolean }) => Promise<unknown>;
@@ -29,6 +30,12 @@ export interface OperationsApi {
   spend(request: SpendRequest): Promise<Envelope>;
   wildsClaim(request: WildsClaimRequest): Promise<Envelope>;
   wildsLantern(request: WildsLanternRequest): Promise<Envelope>;
+  /** Companions and the stable (crafts.md 6.2). */
+  companions(request: CompanionsRequest): Promise<Envelope>;
+  stall(request: StallRequest): Promise<Envelope>;
+  mountOut(request: MountOutRequest): Promise<Envelope>;
+  mountHome(request: MountHomeRequest): Promise<Envelope>;
+  stableExtend(request: StableExtendRequest): Promise<Envelope>;
 }
 function validated<T>(read: () => T): T {
   try { return read(); } catch { throw new ApiError('bad-response', { status: 200 }); }
@@ -76,6 +83,11 @@ export function createOperationsApi(send: Transport): OperationsApi {
     async spend(req) { return decodeEnvelope(await send('POST', '/api/spend', toJson(SpendRequestSchema, req, { alwaysEmitImplicit: true }))); },
     async wildsClaim(req) { return decodeEnvelope(await send('POST', '/api/wilds/claim', toJson(WildsClaimRequestSchema, req, { alwaysEmitImplicit: true }))); },
     async wildsLantern(req) { return decodeEnvelope(await send('POST', '/api/wilds/lantern', toJson(WildsLanternRequestSchema, req, { alwaysEmitImplicit: true }))); },
+    async companions(req) { return decodeEnvelope(await send('POST', '/api/companions', toJson(CompanionsRequestSchema, req, { alwaysEmitImplicit: true }))); },
+    async stall(req) { return decodeEnvelope(await send('POST', '/api/stable/stall', toJson(StallRequestSchema, req, { alwaysEmitImplicit: true }))); },
+    async mountOut(req) { return decodeEnvelope(await send('POST', '/api/stable/out', toJson(MountOutRequestSchema, req, { alwaysEmitImplicit: true }))); },
+    async mountHome(req) { return decodeEnvelope(await send('POST', '/api/stable/home', toJson(MountHomeRequestSchema, req, { alwaysEmitImplicit: true }))); },
+    async stableExtend(req) { return decodeEnvelope(await send('POST', '/api/stable/extend', toJson(StableExtendRequestSchema, req, { alwaysEmitImplicit: true }))); },
   };
 }
 export function validatedSession(raw: unknown): SessionResponse {

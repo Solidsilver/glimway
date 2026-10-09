@@ -12,7 +12,7 @@ import type { PlayerState } from '../gen/glimway/v1/state_pb.js';
 // themselves are the generated ones (HomesteadRequest, ShelfRequest, …,
 // built by requests.ts).
 export type {
-  HomeMember, HomeView, HomePlantView, HomeResponse, HomeOp, HomeAction, HomeActionResponse,
+  HomeMember, HomeView, HomePlantView, StallView, YardPetView, HomeResponse, HomeOp, HomeAction, HomeActionResponse,
   ShelfSlotView, ShelfView, ShelfResponse, ShelfActionResponse,
   WoodpileStack, WoodpileView, WoodpileResponse, WoodpileActionResponse,
 } from './homestead.ts';

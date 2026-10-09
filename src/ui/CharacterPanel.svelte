@@ -22,8 +22,9 @@
     session,
     onClose,
     onInventory,
-    initialTab = 'hero'
-  }: { session: Session; onClose: () => void; onInventory: () => void; initialTab?: CharacterTab } = $props()
+    initialTab = 'hero',
+    at = null
+  }: { session: Session; onClose: () => void; onInventory: () => void; initialTab?: CharacterTab; at?: 'stable' | null } = $props()
 
   type CharacterTab = 'hero' | 'companions'
   const TABS: { id: CharacterTab; label: string }[] = [
@@ -101,7 +102,7 @@
 
   {#if page === 'companions'}
   <div role="tabpanel" id="char-page-companions" aria-labelledby="char-tab-companions">
-    <CompanionsTab />
+    <CompanionsTab {session} {at} />
   </div>
   {:else}
   <div role="tabpanel" id="char-page-hero" aria-labelledby={showTabs ? 'char-tab-hero' : undefined}>

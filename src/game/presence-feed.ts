@@ -18,7 +18,7 @@
  */
 import { PresenceClient, type PresenceStatus, type SocketLike, type Timers } from '../lib/presence-client.ts'
 import { PeerTrack } from '../lib/presence-interp.ts'
-import type { PresenceAvatar, PresencePlayer, PresencePosition } from '../lib/presence.ts'
+import type { PresenceAvatar, PresencePlayer, PresencePose, PresencePosition } from '../lib/presence.ts'
 import { EV, type EmotePayload, type EventMap, type PresencePayload } from './event-names.ts'
 import type { Bus } from './events.ts'
 
@@ -31,6 +31,10 @@ export interface Peer {
   accountId: string
   displayName: string
   avatar: PresenceAvatar | null
+  /** Bumped when their look changes mid-visit (a new follower, a mount out or home): the renderer redraws. */
+  look: number
+  /** Riding or fishing, from their newest position; absent on foot. */
+  pose?: PresencePose
   area: string
   track: PeerTrack
   /** Set when they left; the renderer fades them out, then they are dropped. */
@@ -94,6 +98,12 @@ export class PresenceFeed {
           if (p && p.leftAt === null && p.area === this.area) this.bus.emit(EV.emote, { accountId: id, id: emote } satisfies EmotePayload)
         },
         gift: (g) => this.bus.emit(EV.gift, g),
+        avatarChange: (id, avatar) => {
+          const p = this.peers.get(id)
+          if (!p || p.leftAt !== null) return
+          p.avatar = avatar
+          p.look++
+        },
         witness: (w) => this.bus.emit(EV.witness, w)
       }
     })
@@ -237,10 +247,14 @@ export class PresenceFeed {
     const existing = this.peers.get(player.accountId)
     const peer: Peer = existing && existing.area === area && existing.leftAt === null
       ? existing
-      : { accountId: player.accountId, displayName: '', avatar: null, area, track: new PeerTrack(), leftAt: null }
+      : { accountId: player.accountId, displayName: '', avatar: null, look: 0, area, track: new PeerTrack(), leftAt: null }
     peer.displayName = (player.displayName || 'Traveller').slice(0, 60)
+    if (!sameLook(peer.avatar, player.avatar ?? null)) peer.look++
     peer.avatar = player.avatar ?? null
-    if (player.pos) peer.track.push(player.pos, this.now())
+    if (player.pos) {
+      peer.track.push(player.pos, this.now())
+      peer.pose = player.pos.pose as PresencePose | undefined
+    }
     else if (!peer.track.empty) peer.track = new PeerTrack()
     this.peers.set(player.accountId, peer)
     this.publish()
@@ -257,6 +271,7 @@ export class PresenceFeed {
     const p = this.peers.get(id)
     if (!p || p.leftAt !== null) return
     p.track.push(pos, this.now())
+    p.pose = pos.pose as PresencePose | undefined
   }
 
   private publish(): void {
@@ -264,4 +279,10 @@ export class PresenceFeed {
     for (const p of this.peers.values()) if (p.leftAt === null && p.area === this.area) here++
     this.bus.emit(EV.presence, { status: this.client.status, here } satisfies PresencePayload)
   }
+}
+
+/** Whether two looks draw the same: their companions and their outfit. */
+function sameLook(a: PresenceAvatar | null, b: PresenceAvatar | null): boolean {
+  if (!a || !b) return a === b
+  return a.selectedPet === b.selectedPet && a.selectedMount === b.selectedMount && JSON.stringify(a) === JSON.stringify(b)
 }

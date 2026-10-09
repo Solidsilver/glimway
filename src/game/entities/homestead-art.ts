@@ -8,7 +8,9 @@
 import Phaser from 'phaser'
 import { PEOPLE_KEY, hasPerson, peopleDensity, personAnim } from '../people'
 import { solidBox } from '../area/collision'
-import { HOMESTEAD_DATA, homeItem, rotatedFootprint, type HomeInstance, type HomeItem, type HomeScene } from '../../lib/homestead'
+import { HOMESTEAD_DATA, grownItem, homeItem, rotatedFootprint, type HomeInstance, type HomeItem, type HomeScene } from '../../lib/homestead'
+import { drawStable } from './homestead-stable'
+import { craftsArt } from '../crafts-art'
 import { homeLights, isLit, type Light } from '../../lib/homestead-land'
 import type { HomeView } from '../../lib/api/types'
 import { decoSeat, type ArtBox, type SeatPose } from '../seats'
@@ -94,7 +96,8 @@ export class HomesteadArt {
     const out: Record<string, string> = {}
     for (const it of HOMESTEAD_DATA.items) {
       try {
-        const src = artSource(this.scene, decoKey(it.id, 0))
+        // The stable's thumbnail is its west end (the crafts pass), as it stands with one stall.
+        const src = artSource(this.scene, decoKey(it.id, 0)) ?? (it.id === HOMESTEAD_DATA.stable.item ? artSource(this.scene, craftsArt('stable-west-front-shut')) : null)
         if (!src) continue
         // Trimmed to the art (a chair stands in the bottom of its two-tile
         // canvas), in whole world px, scaled up as it always was.
@@ -398,9 +401,15 @@ export class HomesteadArt {
       const def = homeItem(it.itemDef)
       if (!def) continue
       const rot = it.rotation ?? 0
-      const [fw, fh] = rotatedFootprint(def, rot)
+      const [fw, fh] = rotatedFootprint(grownItem(def, it), rot)
       const bx = ox + it.x * TILE
       const by = oy + (it.y + fh) * TILE
+      if (it.itemDef === HOMESTEAD_DATA.stable.item) {
+        // The stable draws its bays and the mounts stalled in them (./homestead-stable.ts).
+        drawStable(this.scene, bx, by, it.stalls ?? 1, home.stalls, { depth: by, desolate }, (o) => this.add(d, o), () => !this.home.gone && d.objects.length > 0)
+        this.addBody(d, bx + (fw * TILE) / 2, by - (fh * TILE) / 2 - 1, fw * TILE - 4, fh * TILE - 6)
+        continue
+      }
       const flat = decoFlat(it.itemDef)
       const key = decoKey(it.itemDef, rot)
       // Pieces without runtime art draw the items-pass world sprite (the
@@ -473,7 +482,7 @@ export class HomesteadArt {
   /** Where a placed piece stands (px, its footprint's bottom-centre). */
   decoSpot(it: HomeInstance, scene: HomeScene): { x: number; y: number } {
     const def = homeItem(it.itemDef)
-    const [fw, fh] = rotatedFootprint(def ?? { footprint: [1, 1] } as HomeItem, it.rotation ?? 0)
+    const [fw, fh] = rotatedFootprint(def ? grownItem(def, it) : ({ footprint: [1, 1] } as HomeItem), it.rotation ?? 0)
     const ox = (scene === 'indoor' ? ROOM_GRID.tx * TILE : 0)
     const oy = (scene === 'indoor' ? ROOM_GRID.ty * TILE : 0)
     return { x: ox + (it.x ?? 0) * TILE + (fw * TILE) / 2, y: oy + ((it.y ?? 0) + fh) * TILE - 4 }

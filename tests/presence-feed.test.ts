@@ -218,3 +218,34 @@ test('stop closes the socket and removes the poll and the bus listener (review-6
   assert.equal(r.feed.running, false);
   r.feed.stop(); // idempotent
 });
+
+test('crafts: a peer\'s pose follows their positions, a look change mid-visit is redrawn, and our pose goes out', () => {
+  const r = rig();
+  r.feed.setArea('village');
+  r.ready();
+  const avatar = JSON.parse(JSON.stringify(
+    { appearance: { size: 'slim', shirt: 'blue', skin: 'fair', hairColor: 'brown', hairStyle: 1, background: '', hairBangs: 0, hairMustache: 0, hairBeard: 0, hairFlower: 0 }, equipped: {}, costume: {}, useCostume: false, selectedPet: 'Fox-Golden', selectedMount: 'Wolf-Shade' },
+  ));
+  r.sock().push({ type: 'room', area: 'village', players: [{ accountId: 'bob', displayName: 'Bob', avatar, pos: { x: 10, y: 20, facing: { x: 1, y: 0 }, moving: true, pose: 'riding' } }] });
+  const bob = () => r.feed.peersIn('village').find((p) => p.accountId === 'bob')!;
+  assert.equal(bob().pose, 'riding');
+  assert.equal(bob().avatar?.selectedPet, 'Fox-Golden');
+  r.sock().push({ type: 'pos', accountId: 'bob', x: 12, y: 20, facing: { x: 1, y: 0 }, moving: true });
+  assert.equal(bob().pose, undefined, 'on foot again');
+  const look = bob().look;
+  r.sock().push({ type: 'avatarChange', accountId: 'bob', avatar: { ...avatar, selectedPet: 'Cat-Siamese', selectedMount: '' } });
+  assert.equal(bob().avatar?.selectedPet, 'Cat-Siamese');
+  assert.equal(bob().avatar?.selectedMount, null, 'the mount went home');
+  assert.ok(bob().look > look, 'the renderer redraws them');
+  // Ours: a pose change at the same spot is still news.
+  r.c.advance(1_000);
+  r.feed.position({ x: 5, y: 5, facing: { x: 0, y: 1 }, moving: false });
+  r.c.advance(1_000);
+  const before = r.sock().sent.filter((m) => m.type === 'pos').length;
+  r.feed.position({ x: 5, y: 5, facing: { x: 0, y: 1 }, moving: false, pose: 'riding' });
+  r.c.advance(1_000);
+  const pos = r.sock().sent.filter((m) => m.type === 'pos');
+  assert.ok(pos.length > before);
+  assert.equal(pos.at(-1).pose, 'riding');
+  r.feed.stop();
+});

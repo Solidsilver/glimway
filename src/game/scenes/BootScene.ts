@@ -10,6 +10,7 @@ import { preloadPacked } from '../packed'
 import { createPeople } from '../people'
 import { createBuildings } from '../buildings'
 import { createIndoorsArt } from '../indoors-art'
+import { createCraftsArt } from '../crafts-art'
 import { HOMESTEAD_DATA } from '../../lib/homestead'
 
 /**
@@ -68,6 +69,8 @@ export class BootScene extends Phaser.Scene {
     createBuildings(this)
     // The 0.4 indoors pass: the rooms' kit and furniture, smoke and lit windows.
     createIndoorsArt(this)
+    // The 0.5 crafts pass: abilities, the stable, fishing, the HUD icons (crafts-art:<frame>).
+    createCraftsArt(this)
 
     this.scene.start('World')
   }
