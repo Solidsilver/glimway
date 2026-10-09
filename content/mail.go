@@ -1,46 +1,31 @@
 package content
 
-import (
-	"encoding/json"
-	"fmt"
-)
+import contentv1 "glimway/gen/glimway/content/v1"
 
-type Mail struct {
-	MaxOutstandingSent         int `json:"maxOutstandingSent"`
-	MaxOutstandingReceived     int `json:"maxOutstandingReceived"`
-	MaxSendsPerWindow          int `json:"maxSendsPerWindow"`
-	SendWindowSeconds          int `json:"sendWindowSeconds"`
-	HistoryPageSize            int `json:"historyPageSize"`
-	ReturnAfterDays            int `json:"returnAfterDays"`
-	MaintenanceBatch           int `json:"maintenanceBatch"`
-	MaintenanceIntervalSeconds int `json:"maintenanceIntervalSeconds"`
-}
+// Mail pacing rules (content/mail.json): the server's send, history and
+// maintenance limits. The schema and its bounds live in
+// proto/glimway/content/v1/mail.proto; there are no rules left in code.
+type Mail = contentv1.Mail
 
-func ValidateMail(m Mail) error {
-	for _, bound := range []struct{ value, max int }{
-		{m.MaxOutstandingSent, 100}, {m.MaxOutstandingReceived, 100}, {m.MaxSendsPerWindow, 100},
-		{m.SendWindowSeconds, 86400}, {m.HistoryPageSize, 100}, {m.ReturnAfterDays, 365},
-		{m.MaintenanceBatch, 500}, {m.MaintenanceIntervalSeconds, 3600},
-	} {
-		if bound.value < 1 || bound.value > bound.max {
-			return fmt.Errorf("invalid mail rules")
-		}
+// DecodeMail reads mail JSON into the generated types, refusing nulls and
+// unknown keys, then runs the schema's rules (protovalidate).
+func DecodeMail(raw []byte) (*Mail, error) {
+	doc := &Mail{}
+	if err := decodeContentProto(raw, "mail", doc); err != nil {
+		return doc, err
 	}
-	return nil
+	return doc, contentValidate("mail", nil, doc)
 }
-func LoadMail() (Mail, error) {
-	var m Mail
+
+func LoadMail() (*Mail, error) {
 	raw, err := FS.ReadFile("mail.json")
-	if err == nil {
-		err = json.Unmarshal(raw, &m)
+	if err != nil {
+		return nil, err
 	}
-	if err == nil {
-		err = ValidateMail(m)
-	}
-	return m, err
+	return DecodeMail(raw)
 }
 
-var MailRules = func() Mail {
+var MailRules = func() *Mail {
 	m, err := LoadMail()
 	if err != nil {
 		panic(err)

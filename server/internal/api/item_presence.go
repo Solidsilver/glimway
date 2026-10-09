@@ -21,7 +21,7 @@ func (h *presenceHub) together(world, a, b string, radius float64) bool {
 }
 
 // presenceGift tells the recipient, if connected, what was handed to them.
-func (a *Server) presenceGift(world, to, fromName string, v content.Asset) {
+func (a *Server) presenceGift(world, to, fromName string, v *content.Asset) {
 	h := a.presence
 	if h == nil {
 		return
@@ -32,5 +32,5 @@ func (a *Server) presenceGift(world, to, fromName string, v content.Asset) {
 	if p == nil || p.identity.World != world || p.queue == nil {
 		return
 	}
-	h.send(p, &contract.PresenceGift{FromName: capDonor(fromName), Kind: v.Kind, ItemDef: v.ID, Qty: int32(v.Qty)})
+	h.send(p, &contract.PresenceGift{FromName: capDonor(fromName), Kind: v.GetKind(), ItemDef: v.GetId(), Qty: int32(int(v.GetQty()))})
 }

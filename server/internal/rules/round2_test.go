@@ -14,7 +14,7 @@ func TestRound2AForgerySignalsAndVerifiedRebirth(t *testing.T) {
 		flag bool
 	}{
 		{"three windows tolerated", LossReference{10, xp + 3*window}, 5, false},
-		{"above generous window", LossReference{10, xp + 3*window + E.CheckpointToleranceXP + 1}, 5, true},
+		{"above generous window", LossReference{10, xp + 3*window + E.GetCheckpointToleranceXp() + 1}, 5, true},
 		{"inconsistent small synthetic loss", LossReference{4, xp + 1}, 5, false},
 		{"ordinary loss", LossReference{6, xp + 10}, 5, false},
 	} {

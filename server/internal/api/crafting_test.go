@@ -18,13 +18,13 @@ type craftingResponse struct {
 	store.Snapshot
 	Woodpile woodpileWire `json:"woodpile"`
 	Result   struct {
-		Output       content.Asset `json:"output"`
-		Woodpile     woodpileWire  `json:"woodpile"`
-		Action       string        `json:"action"`
-		CollectedQty int           `json:"collectedQty"`
-		PageID       string        `json:"pageId"`
-		Qty          int           `json:"qty"`
-		InstanceIDs  []string      `json:"instanceIds"`
+		Output       *content.Asset `json:"output"`
+		Woodpile     woodpileWire   `json:"woodpile"`
+		Action       string         `json:"action"`
+		CollectedQty int            `json:"collectedQty"`
+		PageID       string         `json:"pageId"`
+		Qty          int            `json:"qty"`
+		InstanceIDs  []string       `json:"instanceIds"`
 	} `json:"result"`
 	Error struct {
 		Code string `json:"code"`
@@ -103,7 +103,7 @@ func TestHearthCraftingGatingAndMakerMarks(t *testing.T) {
 	v := x.craftReq("POST", "/api/hearth/craft", req, c, 200)
 	s.Snapshot = v.Snapshot
 
-	if v.Result.Output.Qty != 4 || v.Result.Output.ID != "saltings-tea" {
+	if v.Result.Output.GetQty() != 4 || v.Result.Output.GetId() != "saltings-tea" {
 		t.Fatalf("unexpected output: %+v", v.Result.Output)
 	}
 	if !slices.Contains(v.State.Inventory, "saltings-tea") {
@@ -136,7 +136,7 @@ func TestHearthCraftingGatingAndMakerMarks(t *testing.T) {
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	seals := x.craftReq("POST", "/api/hearth/craft", body(s, "craft-seals", map[string]any{"recipeId": "hearth-wax-seal", "qty": 1}), c, 200)
 	s.Snapshot = seals.Snapshot
-	if seals.Result.Output.Qty != 2 || seals.Result.Output.ID != "wax-seal" {
+	if seals.Result.Output.GetQty() != 2 || seals.Result.Output.GetId() != "wax-seal" {
 		t.Fatalf("unexpected seal output: %+v", seals.Result.Output)
 	}
 	var sealMaker string
@@ -345,7 +345,7 @@ func TestWoodpileCollectsAcrossMembersAndWritesOffLostDeeds(t *testing.T) {
 
 	// Past the deed-lost period, the world settles the deed without a 500 —
 	// and the pile's timber is written off on the last member's ledger.
-	x.now.Add(int64(content.HomeRules.Desolation.DeedLostAfterDays) * 86400)
+	x.now.Add(int64(content.HomeRules.GetDesolation().GetDeedLostAfterDays()) * 86400)
 	// The players went away with the deed; the session idled out over the
 	// fortnight: sign in again.
 	x.stand(x.account("alice"), sa.WorldID, "", 0, 0)

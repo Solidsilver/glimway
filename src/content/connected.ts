@@ -2,10 +2,7 @@
  * Copy for connected play: signing in to a Glimway world, the play lease,
  * offline play, and invites. Plain and short.
  */
-import economyJson from '../../content/economy.json' with { type: 'json' }
-import type { Economy } from '../lib/economy.ts'
-
-const economy = economyJson as unknown as Economy
+import { ECONOMY as economy } from '../lib/economy.ts'
 export const INVITE_LIMIT = economy.outstandingInvites
 export const INVITE_LIFETIME = economy.lifetimeInvites
 

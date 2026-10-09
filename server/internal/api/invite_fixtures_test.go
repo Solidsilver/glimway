@@ -47,7 +47,7 @@ func inviteFixtureResponse(t *testing.T, f inviteFixture) map[string]any {
 		exec("INSERT INTO invites(code_hash,created_by,world_id,created_at,expires_at,revoked_at) VALUES(?,?,?,?,?,?)", strings.Repeat("c", 64), x.account("alice"), s.WorldID, 1, 0, nil)
 		exec("INSERT INTO invites(code_hash,created_by,world_id,created_at,expires_at,revoked_at) VALUES(?,?,?,?,?,?)", strings.Repeat("d", 64), x.account("alice"), s.WorldID, 1, f.Unix+InviteTTL, 1)
 	case "exhausted":
-		for i := 0; i < rules.E.LifetimeInvites; i++ {
+		for i := 0; i < int(rules.E.GetLifetimeInvites()); i++ {
 			exec("INSERT INTO invites(code_hash,created_by,world_id,created_at,expires_at,revoked_at) VALUES(?,?,?,?,?,?)", fmt.Sprintf("%064x", i), x.account("alice"), s.WorldID, 0, 0, 1)
 		}
 	case "party-admitted-own-world":

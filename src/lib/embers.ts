@@ -1,8 +1,5 @@
-import economyJson from '../../content/economy.json' with { type: 'json' };
-import type { Economy } from './economy.ts';
+import { ECONOMY as economy } from './economy.ts';
 import { validateSave, type GameState } from './state.ts';
-
-const economy = economyJson as unknown as Economy;
 
 /**
  * Embers: real-life progress turned into something to spend in the world.

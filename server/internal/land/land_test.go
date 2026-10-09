@@ -29,7 +29,7 @@ func TestGoldenLands(t *testing.T) {
 	if err = json.Unmarshal(b, &lands); err != nil || len(lands) == 0 {
 		t.Fatal("goldens", err)
 	}
-	cfg := content.HomeRules.Land
+	cfg := content.HomeRules.GetLand()
 	for _, l := range lands {
 		if s := Seed(l.WorldID, l.Gate, cfg); s != l.Seed {
 			t.Fatalf("seed %s/%d: %d want %d", l.WorldID, l.Gate, s, l.Seed)
@@ -57,28 +57,33 @@ func TestPostCostParity(t *testing.T) {
 		t.Fatal("empty vectors", err)
 	}
 	for _, p := range v.Posts {
-		if got := content.HomeRules.PostCost(p.N); !maps.Equal(got, p.Cost) {
+		got32 := content.HomePostCost(content.HomeRules, p.N)
+		got := map[string]int{}
+		for m, n := range got32 {
+			got[m] = int(n)
+		}
+		if !maps.Equal(got, p.Cost) {
 			t.Fatalf("post %d: %v want %v", p.N, got, p.Cost)
 		}
 	}
 }
 
 func TestEveryLandKeepsItsSitePathAndGateClear(t *testing.T) {
-	cfg := content.HomeRules.Land
-	site, gate := cfg.Site, cfg.Gate
+	cfg := content.HomeRules.GetLand()
+	site, gate := cfg.GetSite(), cfg.GetGate()
 	seen := map[string]bool{}
 	for _, world := range []string{"guest", "w1", "w2"} {
 		for g := range 40 {
 			l := Generate(Seed(world, g, cfg), cfg)
-			for y := site.Y; y < site.Y+site.H; y++ {
-				for x := site.X; x < site.X+site.W; x++ {
+			for y := int(site.GetY()); y < int(site.GetY())+int(site.GetH()); y++ {
+				for x := int(site.GetX()); x < int(site.GetX())+int(site.GetW()); x++ {
 					if l.At(x, y) != Grass {
 						t.Fatalf("%s/%d: site tile %d,%d is %c", world, g, x, y, Chars[l.At(x, y)])
 					}
 				}
 			}
-			for y := site.Y + site.H; y < l.Height; y++ {
-				for x := gate.X; x < gate.X+gate.W; x++ {
+			for y := int(site.GetY()) + int(site.GetH()); y < l.Height; y++ {
+				for x := int(gate.GetX()); x < int(gate.GetX())+int(gate.GetW()); x++ {
 					if l.At(x, y) != Path {
 						t.Fatalf("%s/%d: path tile %d,%d is %c", world, g, x, y, Chars[l.At(x, y)])
 					}

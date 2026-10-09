@@ -17,17 +17,17 @@ import (
 )
 
 type mailView struct {
-	ID           string        `json:"id"`
-	WorldID      string        `json:"worldId"`
-	FromID       string        `json:"fromId"`
-	ToID         string        `json:"toId"`
-	FromName     string        `json:"fromName"`
-	ToName       string        `json:"toName"`
-	Asset        content.Asset `json:"asset"`
-	SentAt       int64         `json:"sentAt"`
-	ClaimedAt    *int64        `json:"claimedAt"`
-	ReturnedAt   *int64        `json:"returnedAt"`
-	ReturnReason *string       `json:"returnReason"`
+	ID           string         `json:"id"`
+	WorldID      string         `json:"worldId"`
+	FromID       string         `json:"fromId"`
+	ToID         string         `json:"toId"`
+	FromName     string         `json:"fromName"`
+	ToName       string         `json:"toName"`
+	Asset        *content.Asset `json:"asset"`
+	SentAt       int64          `json:"sentAt"`
+	ClaimedAt    *int64         `json:"claimedAt"`
+	ReturnedAt   *int64         `json:"returnedAt"`
+	ReturnReason *string        `json:"returnReason"`
 }
 
 type mailPage struct {
@@ -81,9 +81,13 @@ func mailSlice(ctx context.Context, tx *sql.Tx, s store.Snapshot, pending bool, 
 	out := []mailView{}
 	for rows.Next() {
 		var v mailView
-		if err = rows.Scan(&v.ID, &v.WorldID, &v.FromID, &v.ToID, &v.FromName, &v.ToName, &v.Asset.Kind, &v.Asset.ID, &v.Asset.Qty, &v.SentAt, &v.ClaimedAt, &v.ReturnedAt, &v.ReturnReason); err != nil {
+		v.Asset = &content.Asset{}
+		var kind, id string
+		var qty int32
+		if err = rows.Scan(&v.ID, &v.WorldID, &v.FromID, &v.ToID, &v.FromName, &v.ToName, &kind, &id, &qty, &v.SentAt, &v.ClaimedAt, &v.ReturnedAt, &v.ReturnReason); err != nil {
 			return nil, nil, err
 		}
+		v.Asset.Kind, v.Asset.Id, v.Asset.Qty = kind, id, qty
 		v.FromName = capDonor(v.FromName)
 		v.ToName = capDonor(v.ToName)
 		out = append(out, v)
@@ -102,11 +106,11 @@ func mailSlice(ctx context.Context, tx *sql.Tx, s store.Snapshot, pending bool, 
 }
 func mailList(ctx context.Context, tx *sql.Tx, s store.Snapshot, history, pending *mailCursor) (mailPage, error) {
 	out := mailPage{Mail: []mailView{}}
-	active, nextPending, err := mailSlice(ctx, tx, s, true, pending, content.MailRules.MaxOutstandingSent+content.MailRules.MaxOutstandingReceived)
+	active, nextPending, err := mailSlice(ctx, tx, s, true, pending, int(content.MailRules.GetMaxOutstandingSent()+content.MailRules.GetMaxOutstandingReceived()))
 	if err != nil {
 		return out, err
 	}
-	completed, next, err := mailSlice(ctx, tx, s, false, history, content.MailRules.HistoryPageSize)
+	completed, next, err := mailSlice(ctx, tx, s, false, history, int(content.MailRules.GetHistoryPageSize()))
 	if err != nil {
 		return out, err
 	}
@@ -181,7 +185,7 @@ func (a *Server) mailSend(w http.ResponseWriter, r *http.Request) error {
 		if err = validAsset(asset); err != nil {
 			return nil, err
 		}
-		if d, ok := content.ItemFor(asset.ID); ok && asset.Kind != "decoration" && !d.Giveable() {
+		if d, ok := content.ItemFor(asset.GetId()); ok && asset.GetKind() != "decoration" && !content.ItemGiveable(d) {
 			return nil, fail(409, "not-giveable")
 		}
 		if err = mailSendLimits(ctx, tx, s.AccountID, req.ToId, now, w); err != nil {
@@ -195,10 +199,10 @@ func (a *Server) mailSend(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		if _, err = tx.ExecContext(ctx, "INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES(?,?,?,?,?,?,?,?,?,?)", id, s.WorldID, s.AccountID, req.ToId, asset.Kind, asset.ID, asset.Qty, store.JSON(got.IDs), store.JSON(got.Makers), now); err != nil {
+		if _, err = tx.ExecContext(ctx, "INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES(?,?,?,?,?,?,?,?,?,?)", id, s.WorldID, s.AccountID, req.ToId, asset.GetKind(), asset.GetId(), int(asset.GetQty()), store.JSON(got.IDs), store.JSON(got.Makers), now); err != nil {
 			return nil, err
 		}
-		if err = currency(ctx, tx, s.AccountID, itemmove.LocationCurrency("mail", asset.Kind, asset.ID), asset.Qty, "mail-send", id, now); err != nil {
+		if err = currency(ctx, tx, s.AccountID, itemmove.LocationCurrency("mail", asset.GetKind(), asset.GetId()), int(asset.GetQty()), "mail-send", id, now); err != nil {
 			return nil, err
 		}
 		list, err := mailList(ctx, tx, *s, nil, nil)
@@ -233,11 +237,14 @@ func (a *Server) mailClaim(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		var v content.Asset
+		v := &content.Asset{}
 		var from, world, to, raw, makers string
+		var kind, def string
+		var qty int32
 		var claimed, returned sql.NullInt64
 		var sentAt int64
-		err := tx.QueryRowContext(ctx, "SELECT world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,claimed_at,returned_at,sent_at FROM mail WHERE id=?", id).Scan(&world, &from, &to, &v.Kind, &v.ID, &v.Qty, &raw, &makers, &claimed, &returned, &sentAt)
+		err := tx.QueryRowContext(ctx, "SELECT world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,claimed_at,returned_at,sent_at FROM mail WHERE id=?", id).Scan(&world, &from, &to, &kind, &def, &qty, &raw, &makers, &claimed, &returned, &sentAt)
+		v.Kind, v.Id, v.Qty = kind, def, qty
 		if err == sql.ErrNoRows {
 			return nil, fail(404, "mail-not-found")
 		}
@@ -253,7 +260,7 @@ func (a *Server) mailClaim(w http.ResponseWriter, r *http.Request) error {
 		if returned.Valid {
 			return nil, fail(409, "already-returned")
 		}
-		if sentAt <= now-int64(content.MailRules.ReturnAfterDays)*86400 {
+		if sentAt <= now-int64(content.MailRules.GetReturnAfterDays())*86400 {
 			return nil, fail(409, "mail-expired")
 		}
 		// Senders of goods must still belong to the recorded world (a move
@@ -273,14 +280,14 @@ func (a *Server) mailClaim(w http.ResponseWriter, r *http.Request) error {
 		if err = json.Unmarshal([]byte(makers), &got.Makers); err != nil {
 			return nil, err
 		}
-		if v.Kind == "instance" && len(got.IDs) == 1 {
+		if v.GetKind() == "instance" && len(got.IDs) == 1 {
 			v.Instance = got.IDs[0]
 		}
 		if v.Kind != "thanks" {
 			if err = giveAsset(ctx, tx, s, v, got, holder{"mail", from, ""}, "mail-claim", id, now); err != nil {
 				return nil, err
 			}
-			if err = currency(ctx, tx, from, itemmove.LocationCurrency("mail", v.Kind, v.ID), -v.Qty, "mail-claim", id, now); err != nil {
+			if err = currency(ctx, tx, from, itemmove.LocationCurrency("mail", v.GetKind(), v.GetId()), -int(v.GetQty()), "mail-claim", id, now); err != nil {
 				return nil, err
 			}
 		}
@@ -304,7 +311,7 @@ func mailSendLimits(ctx context.Context, tx *sql.Tx, sender, recipient string, n
 	for _, check := range []struct {
 		column, id, code string
 		limit            int
-	}{{"from_id", sender, "mail-sender-limit", content.MailRules.MaxOutstandingSent}, {"to_id", recipient, "mail-recipient-limit", content.MailRules.MaxOutstandingReceived}} {
+	}{{"from_id", sender, "mail-sender-limit", int(content.MailRules.GetMaxOutstandingSent())}, {"to_id", recipient, "mail-recipient-limit", int(content.MailRules.GetMaxOutstandingReceived())}} {
 		var n int
 		if err := tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM mail WHERE "+check.column+"=? AND kind != 'thanks' AND claimed_at IS NULL AND returned_at IS NULL", check.id).Scan(&n); err != nil {
 			return err
@@ -315,11 +322,11 @@ func mailSendLimits(ctx context.Context, tx *sql.Tx, sender, recipient string, n
 	}
 	var n int
 	var first sql.NullInt64
-	window := int64(content.MailRules.SendWindowSeconds)
+	window := int64(content.MailRules.GetSendWindowSeconds())
 	if err := tx.QueryRowContext(ctx, "SELECT COUNT(*),MIN(sent_at) FROM mail WHERE from_id=? AND sent_at>?", sender, now-window).Scan(&n, &first); err != nil {
 		return err
 	}
-	if n >= content.MailRules.MaxSendsPerWindow {
+	if n >= int(content.MailRules.GetMaxSendsPerWindow()) {
 		w.Header().Set("Retry-After", strconv.FormatInt(max(1, first.Int64+window-now), 10))
 		return fail(429, "mail-rate-limited")
 	}
@@ -337,9 +344,12 @@ func (a *Server) mailRecall(w http.ResponseWriter, r *http.Request) error {
 	}
 	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		var from, world string
-		var asset content.Asset
+		asset := &content.Asset{}
+		var kind, def string
+		var qty int32
 		var claimed, returned sql.NullInt64
-		err := tx.QueryRowContext(ctx, "SELECT world_id,from_id,kind,item_def,qty,claimed_at,returned_at FROM mail WHERE id=?", id).Scan(&world, &from, &asset.Kind, &asset.ID, &asset.Qty, &claimed, &returned)
+		err := tx.QueryRowContext(ctx, "SELECT world_id,from_id,kind,item_def,qty,claimed_at,returned_at FROM mail WHERE id=?", id).Scan(&world, &from, &kind, &def, &qty, &claimed, &returned)
+		asset.Kind, asset.Id, asset.Qty = kind, def, qty
 		if err == sql.ErrNoRows {
 			return nil, fail(404, "mail-not-found")
 		}
@@ -349,7 +359,7 @@ func (a *Server) mailRecall(w http.ResponseWriter, r *http.Request) error {
 		if world != s.WorldID || from != s.AccountID {
 			return nil, fail(403, "mail-access-denied")
 		}
-		if asset.Kind == "thanks" {
+		if asset.GetKind() == "thanks" {
 			return nil, fail(400, "cannot-recall-thanks")
 		}
 		if claimed.Valid {
@@ -380,7 +390,7 @@ func (a *Server) mailRecall(w http.ResponseWriter, r *http.Request) error {
 // Called by the executable on startup and every shared interval. Each sweep is
 // a bounded immediate transaction; request paths also settle their own mail.
 func (a *Server) RunMailMaintenance(ctx context.Context) {
-	ticker := time.NewTicker(time.Duration(content.MailRules.MaintenanceIntervalSeconds) * time.Second)
+	ticker := time.NewTicker(time.Duration(content.MailRules.GetMaintenanceIntervalSeconds()) * time.Second)
 	defer ticker.Stop()
 	for {
 		sweep, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -388,7 +398,7 @@ func (a *Server) RunMailMaintenance(ctx context.Context) {
 		for {
 			var n int
 			n, err = a.Store.ReturnDueMail(sweep, a.Config.Now().Unix())
-			if err != nil || n < content.MailRules.MaintenanceBatch {
+			if err != nil || n < int(content.MailRules.GetMaintenanceBatch()) {
 				break
 			}
 		}

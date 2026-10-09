@@ -1,0 +1,1401 @@
+{
+  "loader": [
+    {
+      "name": "shipped-crafting",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "no-utility-items",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "utilityItems"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "no-recipes",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "recipes"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "sixty-one-recipes",
+      "valid": false,
+      "rule": "repeated.max_items",
+      "edits": [
+        {
+          "path": [
+            "recipes"
+          ],
+          "value": [
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            },
+            {
+              "id": "craft-wooden-stool",
+              "name": "Wooden Stool",
+              "minTier": 2,
+              "materials": {
+                "timber": 3
+              },
+              "output": {
+                "kind": "decoration",
+                "id": "wooden-stool",
+                "qty": 1
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "bad-utility-id",
+      "valid": false,
+      "rule": "string.pattern",
+      "edits": [
+        {
+          "path": [
+            "utilityItems",
+            0,
+            "id"
+          ],
+          "value": "Lamp Wick"
+        }
+      ]
+    },
+    {
+      "name": "empty-utility-name",
+      "valid": false,
+      "rule": "string.min_len",
+      "edits": [
+        {
+          "path": [
+            "utilityItems",
+            0,
+            "name"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "duplicate-utility",
+      "valid": false,
+      "rule": "duplicate id",
+      "edits": [
+        {
+          "path": [
+            "utilityItems",
+            2,
+            "id"
+          ],
+          "value": "lamp-wick"
+        }
+      ]
+    },
+    {
+      "name": "utility-not-a-part",
+      "valid": false,
+      "rule": "utility item",
+      "edits": [
+        {
+          "path": [
+            "utilityItems",
+            0,
+            "id"
+          ],
+          "value": "timber"
+        }
+      ]
+    },
+    {
+      "name": "utility-renamed",
+      "valid": false,
+      "rule": "utility item",
+      "edits": [
+        {
+          "path": [
+            "utilityItems",
+            0,
+            "name"
+          ],
+          "value": "Wick"
+        }
+      ]
+    },
+    {
+      "name": "unknown-utility",
+      "valid": false,
+      "rule": "utility item",
+      "edits": [
+        {
+          "path": [
+            "utilityItems",
+            0,
+            "id"
+          ],
+          "value": "missing"
+        }
+      ]
+    },
+    {
+      "name": "duplicate-recipe",
+      "valid": false,
+      "rule": "duplicate id",
+      "edits": [
+        {
+          "path": [
+            "recipes",
+            1,
+            "id"
+          ],
+          "value": "craft-wooden-stool"
+        }
+      ]
+    },
+    {
+      "name": "duplicate-across-lists",
+      "valid": false,
+      "rule": "duplicate id",
+      "edits": [
+        {
+          "path": [
+            "hearthRecipes",
+            0,
+            "id"
+          ],
+          "value": "craft-wooden-stool"
+        }
+      ]
+    },
+    {
+      "name": "bad-recipe-id",
+      "valid": false,
+      "rule": "string.pattern",
+      "edits": [
+        {
+          "path": [
+            "recipes",
+            0,
+            "id"
+          ],
+          "value": "Wooden Stool"
+        }
+      ]
+    },
+    {
+      "name": "empty-recipe-name",
+      "valid": false,
+      "rule": "string.min_len",
+      "edits": [
+        {
+          "path": [
+            "recipes",
+            0,
+            "name"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "wrong-bench-tier",
+      "valid": false,
+      "rule": "recipe",
+      "edits": [
+        {
+          "path": [
+            "recipes",
+            0,
+            "minTier"
+          ],
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "wrong-hearth-tier",
+      "valid": false,
+      "rule": "hearth recipe",
+      "edits": [
+        {
+          "path": [
+            "hearthRecipes",
+            0,
+            "minTier"
+          ],
+          "value": 2
+        }
+      ]
+    },
+    {
+      "name": "empty-materials",
+      "valid": false,
+      "rule": "map.min_pairs",
+      "edits": [
+        {
+          "path": [
+            "recipes",
+            0,
+            "materials"
+          ],
+          "value": {}
+        }
+      ]
+    },
+    {
+      "name": "zero-material",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "recipes",
+            0,
+            "materials",
+            "timber"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "unstackable-material",
+      "valid": false,
+      "rule": "recipe",
+      "edits": [
+        {
+          "path": [
+            "recipes",
+            0,
+            "materials"
+          ],
+          "value": {
+            "bench-axe": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "unknown-material",
+      "valid": false,
+      "rule": "recipe",
+      "edits": [
+        {
+          "path": [
+            "recipes",
+            0,
+            "materials"
+          ],
+          "value": {
+            "gold": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "swap-not-on-bill",
+      "valid": false,
+      "rule": "recipe",
+      "edits": [
+        {
+          "path": [
+            "recipes",
+            32,
+            "swaps"
+          ],
+          "value": {
+            "timber": {
+              "standIns": [
+                "dried-flowers"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "swap-empty",
+      "valid": false,
+      "rule": "recipe",
+      "edits": [
+        {
+          "path": [
+            "recipes",
+            32,
+            "swaps"
+          ],
+          "value": {
+            "bloom-flowers": {
+              "standIns": []
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "swap-on-bill",
+      "valid": false,
+      "rule": "recipe",
+      "edits": [
+        {
+          "path": [
+            "recipes",
+            32,
+            "swaps"
+          ],
+          "value": {
+            "bloom-flowers": {
+              "standIns": [
+                "seasoned-timber"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "swap-unstackable",
+      "valid": false,
+      "rule": "recipe",
+      "edits": [
+        {
+          "path": [
+            "recipes",
+            32,
+            "swaps"
+          ],
+          "value": {
+            "bloom-flowers": {
+              "standIns": [
+                "bench-axe"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "missing-output",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "recipes",
+            0,
+            "output"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "zero-output-qty",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "recipes",
+            0,
+            "output",
+            "qty"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "output-qty-over-100",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "recipes",
+            0,
+            "output",
+            "qty"
+          ],
+          "value": 101
+        }
+      ]
+    },
+    {
+      "name": "unknown-decoration",
+      "valid": false,
+      "rule": "output",
+      "edits": [
+        {
+          "path": [
+            "recipes",
+            0,
+            "output"
+          ],
+          "value": {
+            "kind": "decoration",
+            "id": "no-such-good",
+            "qty": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "tool-as-stack",
+      "valid": false,
+      "rule": "output",
+      "edits": [
+        {
+          "path": [
+            "recipes",
+            10,
+            "output"
+          ],
+          "value": {
+            "kind": "item",
+            "id": "bench-axe",
+            "qty": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "instance-qty-two",
+      "valid": false,
+      "rule": "output",
+      "edits": [
+        {
+          "path": [
+            "recipes",
+            10,
+            "output"
+          ],
+          "value": {
+            "kind": "instance",
+            "id": "bench-axe",
+            "qty": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "hearth-decoration-output",
+      "valid": false,
+      "rule": "output",
+      "edits": [
+        {
+          "path": [
+            "hearthRecipes",
+            0,
+            "output"
+          ],
+          "value": {
+            "kind": "decoration",
+            "id": "wooden-stool",
+            "qty": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "page-without-found",
+      "valid": false,
+      "rule": "page",
+      "edits": [
+        {
+          "path": [
+            "hearthRecipes",
+            0,
+            "page"
+          ],
+          "value": "recipe-paper"
+        }
+      ]
+    },
+    {
+      "name": "found-without-page",
+      "valid": false,
+      "rule": "page",
+      "edits": [
+        {
+          "path": [
+            "hearthRecipes",
+            0,
+            "found"
+          ],
+          "value": "by the hearth"
+        }
+      ]
+    },
+    {
+      "name": "page-not-a-paper",
+      "valid": false,
+      "rule": "page",
+      "edits": [
+        {
+          "path": [
+            "hearthRecipes",
+            0,
+            "page"
+          ],
+          "value": "timber"
+        }
+      ]
+    },
+    {
+      "name": "null-field",
+      "valid": false,
+      "rule": "null content field",
+      "edits": [
+        {
+          "path": [
+            "recipes",
+            0,
+            "name"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "unknown-key",
+      "valid": false,
+      "rule": "unknown key",
+      "edits": [
+        {
+          "path": [
+            "recipes",
+            0,
+            "tier"
+          ],
+          "value": 2
+        }
+      ]
+    },
+    {
+      "name": "proto-name-key",
+      "valid": false,
+      "rule": "is the proto name",
+      "edits": [
+        {
+          "path": [
+            "recipes",
+            0,
+            "min_tier"
+          ],
+          "value": 2
+        }
+      ]
+    },
+    {
+      "name": "bench-material-output",
+      "valid": false,
+      "rule": "output",
+      "edits": [
+        {
+          "path": [
+            "recipes",
+            0,
+            "output"
+          ],
+          "value": {
+            "kind": "material",
+            "id": "timber",
+            "qty": 1
+          }
+        }
+      ]
+    }
+  ]
+}

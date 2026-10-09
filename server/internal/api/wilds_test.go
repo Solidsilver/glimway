@@ -451,7 +451,7 @@ func TestWildsClaimRateIsDurableAtomicAndReplayExempt(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	v := x.wilds(c, "inner-1")
-	limit := content.Rules.WildsLimits.ClaimsPerMinute
+	limit := int(content.Rules.GetWildsLimits().GetClaimsPerMinute())
 	if len(v.bodies) <= limit {
 		t.Fatal("insufficient entities for limit")
 	}
@@ -576,7 +576,7 @@ func TestWildsRelight(t *testing.T) {
 	}
 	oc, o := x.ready("outsider")
 	relight(oc, o, "other-world", "alice", second.ID, here, 403)
-	limit := content.Rules.WildsLimits.LanternRelightsPerDay
+	limit := int(content.Rules.GetWildsLimits().GetLanternRelightsPerDay())
 	for i := 0; i <= limit; i++ {
 		owner := fmt.Sprintf("fallen%d", i)
 		x.member(owner, s.WorldID)
@@ -591,7 +591,7 @@ func TestWildsRelight(t *testing.T) {
 			t.Fatal("relight replay")
 		}
 	}
-	if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner=? AND item_def='amber'", x.account("bob")) != limit*content.Rules.WildsLimits.LanternReward.Qty {
+	if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner=? AND item_def='amber'", x.account("bob")) != limit*int(content.Rules.GetWildsLimits().GetLanternReward().GetQty()) {
 		t.Fatal("relight balance")
 	}
 	x.now.Store(time.Unix(x.now.Load(), 0).UTC().Truncate(24 * time.Hour).Add(24 * time.Hour).Unix())

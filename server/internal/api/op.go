@@ -184,7 +184,7 @@ func finiteWhere(where *contract.Where) bool {
 	if strings.HasPrefix(where.Area, "in:home:") && content.KnownRoom(where.Area) {
 		// The cottage's map is its floor grid plus the walls: a column each side, three rows of
 		// back wall and the doorway's row (src/game/cottage.ts ROOM_COLS, ROOM_ROWS).
-		return where.X >= 0 && where.Y >= 0 && where.X < float64((content.HomeRules.Indoor.Width+2)*16) && where.Y < float64((content.HomeRules.Indoor.Height+4)*16)
+		return where.X >= 0 && where.Y >= 0 && where.X < float64((int(content.HomeRules.GetIndoor().GetWidth())+2)*16) && where.Y < float64((int(content.HomeRules.GetIndoor().GetHeight())+4)*16)
 	}
 	return true
 }

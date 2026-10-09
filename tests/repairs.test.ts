@@ -60,7 +60,7 @@ test('repairs rules match crafting and lore canon', () => {
 
   // The hame waits for its Carting Day window (content, read finding 2);
   // the well never breaks again (N1): water is a dependency, not a chore.
-  assert.deepEqual(hame.openFrom, { wick: 'Cart', day: 5 });
+  assert.deepEqual({ wick: hame.openFrom!.wick, day: hame.openFrom!.day }, { wick: 'Cart', day: 5 });
   assert.equal(repairFor('well-rope')?.weather, false);
   assert.equal(repairFor('fence-rail')?.weather ?? true, true);
   for (const r of REPAIR_RULES.repairs) {

@@ -185,7 +185,7 @@ func questItemCount(ctx context.Context, tx *sql.Tx, account, def string) (int, 
 	if !ok {
 		return 0, nil
 	}
-	if !d.Instanced() {
+	if !content.ItemInstanced(d) {
 		return stackTotal(ctx, tx, packOf(account), def)
 	}
 	var count int
@@ -197,7 +197,7 @@ func questItemCount(ctx context.Context, tx *sql.Tx, account, def string) (int, 
 // fittings return to the pack before their parent instance is consumed.
 func questTake(ctx context.Context, tx *sql.Tx, s *store.Snapshot, def string, qty int, ref string, now int64) error {
 	d, _ := content.ItemFor(def)
-	if !d.Instanced() {
+	if !content.ItemInstanced(d) {
 		_, err := packTake(ctx, tx, s.AccountID, def, nil, qty, "quest", ref, now)
 		if err != nil {
 			return err
@@ -255,7 +255,7 @@ func questTake(ctx context.Context, tx *sql.Tx, s *store.Snapshot, def string, q
 }
 func questGive(ctx context.Context, tx *sql.Tx, s *store.Snapshot, item *content.QuestItem, ref string, now int64) error {
 	d, _ := content.ItemFor(item.Def)
-	if !d.Instanced() {
+	if !content.ItemInstanced(d) {
 		return itemChange(ctx, tx, s, item.GetDef(), int(item.GetQty()), "quest", ref, now)
 	}
 	for i := 0; i < int(item.GetQty()); i++ {

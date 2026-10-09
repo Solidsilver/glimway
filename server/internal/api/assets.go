@@ -29,39 +29,39 @@ func emptyCounts() assetCounts {
 	return assetCounts{Materials: map[string]int{}, Items: map[string]int{}, Decorations: map[string]int{}, Instances: []instanceView{}}
 }
 
-func validAsset(v content.Asset) error {
-	if v.Qty < 1 || v.Qty > 10000 {
+func validAsset(v *content.Asset) error {
+	if v.GetQty() < 1 || v.GetQty() > 10000 {
 		return fail(400, "invalid-quantity")
 	}
-	if v.Maker != nil && len(*v.Maker) > 128 {
+	if v.GetMaker() != "" && len(v.GetMaker()) > 128 {
 		return fail(400, "invalid-asset")
 	}
 	known := false
-	switch v.Kind {
+	switch v.GetKind() {
 	case "material", "item", "instance":
-		d, ok := content.ItemFor(v.ID)
-		known = ok && d.AssetKind() == v.Kind
-		if v.Kind == "instance" && (v.Qty != 1 || v.Instance == "" || len(v.Instance) > 128) {
+		d, ok := content.ItemFor(v.GetId())
+		known = ok && content.ItemAssetKind(d) == v.GetKind()
+		if v.GetKind() == "instance" && (v.GetQty() != 1 || v.GetInstance() == "" || len(v.GetInstance()) > 128) {
 			return fail(400, "invalid-asset")
 		}
 	case "decoration":
-		_, known = content.HomeItemFor(v.ID)
+		_, known = content.HomeItemFor(v.GetId())
 	}
 	if !known {
 		return fail(400, "invalid-asset")
 	}
-	if v.Kind != "instance" && v.Instance != "" || (v.Kind == "decoration" || v.Kind == "instance") && v.Maker != nil {
+	if v.GetKind() != "instance" && v.GetInstance() != "" || (v.GetKind() == "decoration" || v.GetKind() == "instance") && v.Maker != nil {
 		return fail(400, "invalid-asset")
 	}
 	return nil
 }
 
-func isGiveable(v content.Asset) bool {
-	if v.Kind == "decoration" {
-		return v.ID != "door-fox"
+func isGiveable(v *content.Asset) bool {
+	if v.GetKind() == "decoration" {
+		return v.GetId() != "door-fox"
 	}
-	d, ok := content.ItemFor(v.ID)
-	return ok && d.Giveable()
+	d, ok := content.ItemFor(v.GetId())
+	return ok && content.ItemGiveable(d)
 }
 
 // ------------------------------------------------------------ stacks
@@ -333,46 +333,46 @@ type moved struct {
 
 // takeAsset takes goods out of the caller's pack; instances and home goods
 // go to `to` (a chest or a parcel), stacks are returned for the caller to put.
-func takeAsset(ctx context.Context, tx *sql.Tx, s *store.Snapshot, v content.Asset, to holder, reason, ref string, now int64) (moved, error) {
+func takeAsset(ctx context.Context, tx *sql.Tx, s *store.Snapshot, v *content.Asset, to holder, reason, ref string, now int64) (moved, error) {
 	if err := validAsset(v); err != nil {
 		return moved{}, err
 	}
-	switch v.Kind {
+	switch v.GetKind() {
 	case "material", "item":
-		split, err := packTake(ctx, tx, s.AccountID, v.ID, v.Maker, v.Qty, reason, ref, now)
+		split, err := packTake(ctx, tx, s.AccountID, v.GetId(), v.Maker, int(v.GetQty()), reason, ref, now)
 		if err != nil {
 			return moved{}, err
 		}
 		return moved{Makers: split, IDs: []string{}}, refreshItems(ctx, tx, s)
 	case "instance":
-		if err := moveInstance(ctx, tx, v.Instance, v.ID, instanceAt{"pack", s.AccountID}, to.instancePlace(), now); err != nil {
+		if err := moveInstance(ctx, tx, v.GetInstance(), v.GetId(), instanceAt{"pack", s.AccountID}, to.instancePlace(), now); err != nil {
 			return moved{}, err
 		}
-		if err := fittedLedger(ctx, tx, s.AccountID, v.Instance, -1, reason, ref, now); err != nil {
+		if err := fittedLedger(ctx, tx, s.AccountID, v.GetInstance(), -1, reason, ref, now); err != nil {
 			return moved{}, err
 		}
-		return moved{Makers: []makerQty{}, IDs: []string{v.Instance}}, currency(ctx, tx, s.AccountID, content.StackCurrency(v.ID), -1, reason, ref, now)
+		return moved{Makers: []makerQty{}, IDs: []string{v.GetInstance()}}, currency(ctx, tx, s.AccountID, content.StackCurrency(v.GetId()), -1, reason, ref, now)
 	default:
-		ids, err := decorationIDs(ctx, tx, pack(s.AccountID), v.ID, v.Qty)
+		ids, err := decorationIDs(ctx, tx, pack(s.AccountID), v.GetId(), int(v.GetQty()))
 		if err != nil {
 			return moved{}, err
 		}
 		if err = moveDecorations(ctx, tx, ids, pack(s.AccountID), to); err != nil {
 			return moved{}, err
 		}
-		return moved{Makers: []makerQty{}, IDs: ids}, currency(ctx, tx, s.AccountID, "decoration:"+v.ID, -v.Qty, reason, ref, now)
+		return moved{Makers: []makerQty{}, IDs: ids}, currency(ctx, tx, s.AccountID, "decoration:"+v.GetId(), -int(v.GetQty()), reason, ref, now)
 	}
 }
 
 // giveAsset puts goods into the caller's pack: stacks from their shares,
 // instances and home goods from `from`.
-func giveAsset(ctx context.Context, tx *sql.Tx, s *store.Snapshot, v content.Asset, got moved, from holder, reason, ref string, now int64) error {
-	switch v.Kind {
+func giveAsset(ctx context.Context, tx *sql.Tx, s *store.Snapshot, v *content.Asset, got moved, from holder, reason, ref string, now int64) error {
+	switch v.GetKind() {
 	case "material", "item":
-		if splitTotal(got.Makers) != v.Qty {
+		if splitTotal(got.Makers) != int(v.GetQty()) {
 			return fail(409, "item-not-available")
 		}
-		if err := packPut(ctx, tx, s.AccountID, v.ID, got.Makers, reason, ref, now); err != nil {
+		if err := packPut(ctx, tx, s.AccountID, v.GetId(), got.Makers, reason, ref, now); err != nil {
 			return err
 		}
 		return refreshItems(ctx, tx, s)
@@ -393,21 +393,21 @@ func giveAsset(ctx context.Context, tx *sql.Tx, s *store.Snapshot, v content.Ass
 				return fail(409, "two-wardens-grind")
 			}
 		}
-		if err := moveInstance(ctx, tx, got.IDs[0], v.ID, from.instancePlace(), instanceAt{"pack", s.AccountID}, now); err != nil {
+		if err := moveInstance(ctx, tx, got.IDs[0], v.GetId(), from.instancePlace(), instanceAt{"pack", s.AccountID}, now); err != nil {
 			return err
 		}
 		if err := fittedLedger(ctx, tx, s.AccountID, got.IDs[0], 1, reason, ref, now); err != nil {
 			return err
 		}
-		return currency(ctx, tx, s.AccountID, content.StackCurrency(v.ID), 1, reason, ref, now)
+		return currency(ctx, tx, s.AccountID, content.StackCurrency(v.GetId()), 1, reason, ref, now)
 	case "decoration":
-		if len(got.IDs) != v.Qty {
+		if len(got.IDs) != int(v.GetQty()) {
 			return fail(409, "item-not-available")
 		}
 		if err := moveDecorations(ctx, tx, got.IDs, from, pack(s.AccountID)); err != nil {
 			return err
 		}
-		return currency(ctx, tx, s.AccountID, "decoration:"+v.ID, v.Qty, reason, ref, now)
+		return currency(ctx, tx, s.AccountID, "decoration:"+v.GetId(), int(v.GetQty()), reason, ref, now)
 	}
 	return fail(400, "invalid-asset")
 }
@@ -439,9 +439,9 @@ func chestCounts(ctx context.Context, tx *sql.Tx, chest holder) (assetCounts, er
 }
 
 // debitMaterials takes a bill of stacks (any maker) in a fixed order.
-func debitMaterials(ctx context.Context, tx *sql.Tx, s *store.Snapshot, costs map[string]int, qty int, reason, ref string, now int64) error {
+func debitMaterials(ctx context.Context, tx *sql.Tx, s *store.Snapshot, costs map[string]int32, qty int, reason, ref string, now int64) error {
 	for _, id := range content.SortedCosts(costs) {
-		if n := costs[id] * qty; n > 0 {
+		if n := int(costs[id]) * qty; n > 0 {
 			if err := materialChange(ctx, tx, s.AccountID, id, -n, reason, ref, now); err != nil {
 				return err
 			}
@@ -451,13 +451,13 @@ func debitMaterials(ctx context.Context, tx *sql.Tx, s *store.Snapshot, costs ma
 }
 
 // checkMaterials refuses before any ledger row is written.
-func checkMaterials(ctx context.Context, tx *sql.Tx, id string, cost map[string]int) error {
+func checkMaterials(ctx context.Context, tx *sql.Tx, id string, cost map[string]int32) error {
 	for _, def := range content.SortedCosts(cost) {
 		n, err := stackTotal(ctx, tx, packOf(id), def)
 		if err != nil {
 			return err
 		}
-		if n < cost[def] {
+		if n < int(cost[def]) {
 			return shortfall(def)
 		}
 	}
@@ -465,19 +465,19 @@ func checkMaterials(ctx context.Context, tx *sql.Tx, id string, cost map[string]
 }
 
 // swapOK: a recipe's swaps (a material's stand-ins, one for one), or none.
-func swapFor(swaps map[string][]string, def string) []string {
+func swapFor(swaps map[string]*content.RecipeSwap, def string) []string {
 	if swaps == nil {
 		return nil
 	}
-	return swaps[def]
+	return swaps[def].GetStandIns()
 }
 
 // checkMaterialsAny is checkMaterials, with each bill line payable in its
 // primary material or any of its swaps (a pressed-flower frame takes dried
 // flowers when the fresh ones are gone). Refuses before any ledger row.
-func checkMaterialsAny(ctx context.Context, tx *sql.Tx, id string, cost map[string]int, swaps map[string][]string) error {
+func checkMaterialsAny(ctx context.Context, tx *sql.Tx, id string, cost map[string]int32, swaps map[string]*content.RecipeSwap) error {
 	for _, def := range content.SortedCosts(cost) {
-		need := cost[def]
+		need := int(cost[def])
 		have := 0
 		for _, d := range append([]string{def}, swapFor(swaps, def)...) {
 			n, err := stackTotal(ctx, tx, packOf(id), d)
@@ -498,9 +498,9 @@ func checkMaterialsAny(ctx context.Context, tx *sql.Tx, id string, cost map[stri
 
 // debitMaterialsAny pays a bill with swaps: the primary first, then its
 // stand-ins in a fixed order, so the ledger reads the same way every time.
-func debitMaterialsAny(ctx context.Context, tx *sql.Tx, s *store.Snapshot, costs map[string]int, swaps map[string][]string, qty int, reason, ref string, now int64) error {
+func debitMaterialsAny(ctx context.Context, tx *sql.Tx, s *store.Snapshot, costs map[string]int32, swaps map[string]*content.RecipeSwap, qty int, reason, ref string, now int64) error {
 	for _, id := range content.SortedCosts(costs) {
-		left := costs[id] * qty
+		left := int(costs[id]) * qty
 		if left <= 0 {
 			continue
 		}
@@ -575,7 +575,7 @@ func workshop(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (string, error
 }
 
 // ledgerKind is an asset's chest/mail ledger kind ("storage:<kind>:<id>").
-func ledgerKind(v content.Asset) string { return itemmove.Currency(v.Kind, v.ID) }
+func ledgerKind(v *content.Asset) string { return itemmove.Currency(v.GetKind(), v.GetId()) }
 
 // grantOnce gives one unmarked item unless the pack already holds one (the
 // Ember Charm: opened chests and migrated saves never stack it).

@@ -3,53 +3,46 @@
  * Shared with the Go server (content/gathering.go).
  */
 import raw from '../../content/gathering.json' with { type: 'json' };
+import { decodeContent } from './content-proto.ts';
+import { GatheringSchema, type GatheringValid, type GatheringTargetValid, type GatheringYieldValid } from './gen/glimway/content/v1/gathering_pb.js';
+import { CALENDAR } from './calendar.ts';
 import { giftPhrase, itemDef, itemName } from './items.ts';
 
-interface GatheringActionCaps {
-  chop: number;
-  break: number;
-  dig: number;
+export type GatheringYield = GatheringYieldValid;
+export type GatheringTarget = GatheringTargetValid;
+/** The gathering rules (proto/glimway/content/v1/gathering.proto), with the schema's required fields non-optional. */
+export type GatheringData = GatheringValid;
+
+/** Throws on anything content/gathering.go would refuse. */
+export function validateGathering(value: unknown): GatheringData {
+  const g = decodeContent(GatheringSchema, value, 'gathering', []) as GatheringData;
+  const bad = (why: string): never => { throw new Error(`invalid gathering: ${why}`); };
+  // The three gathered places offer something.
+  for (const area of ['wilds', 'woodland', 'home'] as const) {
+    if (!g.areas[area] || g.areas[area].targets.length === 0) return bad(`area ${area} offers nothing`);
+  }
+  for (const [area, list] of Object.entries(g.areas)) {
+    for (const t of list.targets) {
+      if (!g.targets[t]) return bad(`area ${area} names unknown target ${t}`);
+    }
+  }
+  const marks: readonly string[] = CALENDAR.marks;
+  const wicks: readonly string[] = CALENDAR.wicks;
+  for (const [id, t] of Object.entries(g.targets)) {
+    if (t.mark !== '' && !marks.includes(t.mark) || t.wick !== '' && !wicks.includes(t.wick)) return bad(`target ${id} has an invalid season`);
+    for (const y of t.yields) {
+      if (!itemDef(y.item)) return bad(`target ${id} yields unknown item ${y.item}`);
+      if (y.mark !== '' && !marks.includes(y.mark)) return bad(`target ${id} yield ${y.item} has an invalid mark`);
+    }
+  }
+  for (const id of g.seeds) {
+    const d = itemDef(id);
+    if (!d || d.kind !== 'seed') return bad(`seed ${id} is unknown or not a seed`);
+  }
+  return g;
 }
 
-interface GatheringCaps {
-  visit: GatheringActionCaps;
-  day: GatheringActionCaps;
-}
-
-interface GatheringYield {
-  item: string;
-  min: number;
-  max: number;
-  chancePermille?: number;
-  /** The yield only turns up in this mark (a season; the server's clock decides). */
-  mark?: string;
-}
-
-export interface GatheringTarget {
-  action: 'chop' | 'break' | 'dig';
-  toolAction: 'chop' | 'break' | 'dig';
-  name: string;
-  yields: GatheringYield[];
-  /** The button word when the work isn't a chop, break or dig ("Sweep", "Pick"). */
-  verb?: string;
-  /** The piece only stands in its season: a mark, or one wick's week. */
-  mark?: string;
-  wick?: string;
-}
-
-export interface GatheringData {
-  caps: GatheringCaps;
-  softCapLine: string;
-  /** How many plants one home's land tends; past it the ground is full. */
-  plantsPerHome: number;
-  /** The targets each kind of place has: wilds (the Tangle, the Whitequiet), woodland, home, the village, the Commons. */
-  areas: Record<string, string[]>;
-  swings: Record<string, number>;
-  targets: Record<string, GatheringTarget>;
-  seeds: string[];
-}
-
-export const GATHERING_DATA = raw as GatheringData;
+export const GATHERING_DATA = validateGathering(raw);
 
 export function gatheringTarget(id: string): GatheringTarget | undefined {
   return GATHERING_DATA.targets[id];
@@ -58,7 +51,7 @@ export function gatheringTarget(id: string): GatheringTarget | undefined {
 /** Whether a place (a progress area) has pieces of a target at all (the server checks the same). */
 export function gatheringOffered(area: string, target: string): boolean {
   const kind = area.startsWith('home:') ? 'home' : area;
-  return (GATHERING_DATA.areas[kind] ?? []).includes(target);
+  return (GATHERING_DATA.areas[kind]?.targets ?? []).includes(target);
 }
 
 /**

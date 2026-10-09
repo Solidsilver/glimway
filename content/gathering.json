@@ -14,11 +14,48 @@
   "softCapLine": "The wood’s given enough here today.",
   "plantsPerHome": 40,
   "areas": {
-    "wilds": ["tangle-tree", "tree", "iron-oak", "willow", "boulder", "lamp-stone", "stump", "herbs", "bloom-patch", "sapling", "hollow-tree"],
-    "woodland": ["tree", "ash", "boulder"],
-    "home": ["tree", "iron-oak", "boulder", "lamp-stone", "stump"],
-    "village": ["freshet-shore", "pond-ice"],
-    "commons": ["bloom-patch"]
+    "wilds": {
+      "targets": [
+        "tangle-tree",
+        "tree",
+        "iron-oak",
+        "willow",
+        "boulder",
+        "lamp-stone",
+        "stump",
+        "herbs",
+        "bloom-patch",
+        "sapling",
+        "hollow-tree"
+      ]
+    },
+    "woodland": {
+      "targets": [
+        "tree",
+        "ash",
+        "boulder"
+      ]
+    },
+    "home": {
+      "targets": [
+        "tree",
+        "iron-oak",
+        "boulder",
+        "lamp-stone",
+        "stump"
+      ]
+    },
+    "village": {
+      "targets": [
+        "freshet-shore",
+        "pond-ice"
+      ]
+    },
+    "commons": {
+      "targets": [
+        "bloom-patch"
+      ]
+    }
   },
   "swings": {
     "chop": 3,
@@ -31,7 +68,11 @@
       "toolAction": "chop",
       "name": "Tree",
       "yields": [
-        { "item": "timber", "min": 2, "max": 4 }
+        {
+          "item": "timber",
+          "min": 2,
+          "max": 4
+        }
       ]
     },
     "tangle-tree": {
@@ -39,8 +80,18 @@
       "toolAction": "chop",
       "name": "Tree",
       "yields": [
-        { "item": "timber", "min": 2, "max": 4 },
-        { "item": "amberfall-sap", "min": 1, "max": 2, "chancePermille": 400, "mark": "Amberfall" }
+        {
+          "item": "timber",
+          "min": 2,
+          "max": 4
+        },
+        {
+          "item": "amberfall-sap",
+          "min": 1,
+          "max": 2,
+          "chancePermille": 400,
+          "mark": "Amberfall"
+        }
       ]
     },
     "freshet-shore": {
@@ -50,7 +101,11 @@
       "verb": "Sweep",
       "mark": "Mudrise",
       "yields": [
-        { "item": "walnut-shells", "min": 1, "max": 2 }
+        {
+          "item": "walnut-shells",
+          "min": 1,
+          "max": 2
+        }
       ]
     },
     "bloom-patch": {
@@ -60,7 +115,11 @@
       "verb": "Pick",
       "wick": "Bloom",
       "yields": [
-        { "item": "bloom-flowers", "min": 1, "max": 2 }
+        {
+          "item": "bloom-flowers",
+          "min": 1,
+          "max": 2
+        }
       ]
     },
     "pond-ice": {
@@ -69,7 +128,11 @@
       "name": "Frozen pond",
       "mark": "Quiet",
       "yields": [
-        { "item": "frost-glass", "min": 1, "max": 2 }
+        {
+          "item": "frost-glass",
+          "min": 1,
+          "max": 2
+        }
       ]
     },
     "ash": {
@@ -77,8 +140,17 @@
       "toolAction": "chop",
       "name": "Ash tree",
       "yields": [
-        { "item": "timber", "min": 2, "max": 4 },
-        { "item": "green-ash-haft", "min": 1, "max": 1, "chancePermille": 150 }
+        {
+          "item": "timber",
+          "min": 2,
+          "max": 4
+        },
+        {
+          "item": "green-ash-haft",
+          "min": 1,
+          "max": 1,
+          "chancePermille": 150
+        }
       ]
     },
     "willow": {
@@ -86,8 +158,16 @@
       "toolAction": "chop",
       "name": "Willow tree",
       "yields": [
-        { "item": "timber", "min": 1, "max": 2 },
-        { "item": "willow-bark", "min": 2, "max": 2 }
+        {
+          "item": "timber",
+          "min": 1,
+          "max": 2
+        },
+        {
+          "item": "willow-bark",
+          "min": 2,
+          "max": 2
+        }
       ]
     },
     "iron-oak": {
@@ -95,7 +175,11 @@
       "toolAction": "chop",
       "name": "Iron-oak windfall",
       "yields": [
-        { "item": "iron-oak", "min": 1, "max": 2 }
+        {
+          "item": "iron-oak",
+          "min": 1,
+          "max": 2
+        }
       ]
     },
     "boulder": {
@@ -103,8 +187,17 @@
       "toolAction": "break",
       "name": "Boulder",
       "yields": [
-        { "item": "stone", "min": 2, "max": 4 },
-        { "item": "drift-stone", "min": 1, "max": 2, "chancePermille": 700 }
+        {
+          "item": "stone",
+          "min": 2,
+          "max": 4
+        },
+        {
+          "item": "drift-stone",
+          "min": 1,
+          "max": 2,
+          "chancePermille": 700
+        }
       ]
     },
     "lamp-stone": {
@@ -112,8 +205,17 @@
       "toolAction": "break",
       "name": "Old lamp-stone",
       "yields": [
-        { "item": "loose-road-nail", "min": 1, "max": 2 },
-        { "item": "lamp-head", "min": 1, "max": 1, "chancePermille": 200 }
+        {
+          "item": "loose-road-nail",
+          "min": 1,
+          "max": 2
+        },
+        {
+          "item": "lamp-head",
+          "min": 1,
+          "max": 1,
+          "chancePermille": 200
+        }
       ]
     },
     "herbs": {
@@ -121,8 +223,18 @@
       "toolAction": "dig",
       "name": "Herb patch",
       "yields": [
-        { "item": "comfrey-root", "min": 1, "max": 2, "chancePermille": 500 },
-        { "item": "wild-thyme", "min": 1, "max": 2, "chancePermille": 500 }
+        {
+          "item": "comfrey-root",
+          "min": 1,
+          "max": 2,
+          "chancePermille": 500
+        },
+        {
+          "item": "wild-thyme",
+          "min": 1,
+          "max": 2,
+          "chancePermille": 500
+        }
       ]
     },
     "sapling": {
@@ -130,9 +242,24 @@
       "toolAction": "dig",
       "name": "Sapling",
       "yields": [
-        { "item": "hazel-whip", "min": 1, "max": 1, "chancePermille": 400 },
-        { "item": "birch-sapling", "min": 1, "max": 1, "chancePermille": 350 },
-        { "item": "rowan-sapling", "min": 1, "max": 1, "chancePermille": 250 }
+        {
+          "item": "hazel-whip",
+          "min": 1,
+          "max": 1,
+          "chancePermille": 400
+        },
+        {
+          "item": "birch-sapling",
+          "min": 1,
+          "max": 1,
+          "chancePermille": 350
+        },
+        {
+          "item": "rowan-sapling",
+          "min": 1,
+          "max": 1,
+          "chancePermille": 250
+        }
       ]
     },
     "stump": {
@@ -140,8 +267,17 @@
       "toolAction": "dig",
       "name": "Stump",
       "yields": [
-        { "item": "turncap-spawn", "min": 1, "max": 1 },
-        { "item": "iron-oak-acorn", "min": 1, "max": 1, "chancePermille": 100 }
+        {
+          "item": "turncap-spawn",
+          "min": 1,
+          "max": 1
+        },
+        {
+          "item": "iron-oak-acorn",
+          "min": 1,
+          "max": 1,
+          "chancePermille": 100
+        }
       ]
     },
     "hollow-tree": {
@@ -149,8 +285,16 @@
       "toolAction": "dig",
       "name": "Hollow tree",
       "yields": [
-        { "item": "wild-honey", "min": 1, "max": 1 },
-        { "item": "beeswax", "min": 1, "max": 1 }
+        {
+          "item": "wild-honey",
+          "min": 1,
+          "max": 1
+        },
+        {
+          "item": "beeswax",
+          "min": 1,
+          "max": 1
+        }
       ]
     }
   },

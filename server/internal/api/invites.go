@@ -58,14 +58,14 @@ func (a *Server) createInvite(w http.ResponseWriter, r *http.Request) error {
 	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM invites WHERE created_by=?", s.AccountID).Scan(&lifetime); err != nil {
 		return err
 	}
-	if lifetime >= rules.E.LifetimeInvites {
+	if lifetime >= int(rules.E.GetLifetimeInvites()) {
 		return fail(409, "invite-budget")
 	}
 	var outstanding int
 	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM invites WHERE created_by=? AND used_by IS NULL AND revoked_at IS NULL AND expires_at>?", s.AccountID, now).Scan(&outstanding); err != nil {
 		return err
 	}
-	if outstanding >= rules.E.OutstandingInvites {
+	if outstanding >= int(rules.E.GetOutstandingInvites()) {
 		return fail(409, "invite-limit")
 	}
 	code, err := store.InviteCode()
@@ -120,11 +120,11 @@ func (a *Server) listInvites(w http.ResponseWriter, r *http.Request) error {
 	}
 	// partyWorld: they live in a party's world, which takes no codes.
 	// partyAdmitted: they came in through a party and make no codes anywhere.
-	remaining := max(0, rules.E.LifetimeInvites-lifetime)
-	if remaining > math.MaxInt32 || rules.E.OutstandingInvites < 0 || rules.E.OutstandingInvites > math.MaxInt32 {
+	remaining := max(0, int(rules.E.GetLifetimeInvites())-lifetime)
+	if remaining > math.MaxInt32 || int(rules.E.GetOutstandingInvites()) < 0 || int(rules.E.GetOutstandingInvites()) > math.MaxInt32 {
 		return fmt.Errorf("invite quota outside protobuf range")
 	}
-	return a.finish(w, r, tx, &contract.ListInvitesResponse{Invites: entries, Remaining: int32(remaining), OutstandingLimit: int32(rules.E.OutstandingInvites), PartyWorld: partyWorld, PartyAdmitted: admitted})
+	return a.finish(w, r, tx, &contract.ListInvitesResponse{Invites: entries, Remaining: int32(remaining), OutstandingLimit: int32(int(rules.E.GetOutstandingInvites())), PartyWorld: partyWorld, PartyAdmitted: admitted})
 }
 func (a *Server) revokeInvite(w http.ResponseWriter, r *http.Request) error {
 	id := strings.TrimPrefix(r.URL.Path, "/api/invites/")

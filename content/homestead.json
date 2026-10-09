@@ -124,19 +124,25 @@
     "nameMax": 40,
     "costs": [
       {
-        "timber": 6,
-        "stone": 4,
-        "amber": 1
+        "materials": {
+          "timber": 6,
+          "stone": 4,
+          "amber": 1
+        }
       },
       {
-        "timber": 10,
-        "stone": 6,
-        "amber": 2
+        "materials": {
+          "timber": 10,
+          "stone": 6,
+          "amber": 2
+        }
       },
       {
-        "timber": 16,
-        "stone": 10,
-        "amber": 3
+        "materials": {
+          "timber": 16,
+          "stone": 10,
+          "amber": 3
+        }
       }
     ],
     "growth": {

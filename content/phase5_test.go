@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -89,22 +90,28 @@ func TestPhase5ContentValidation(t *testing.T) {
 	if err != nil || len(p.Projects) != 6 {
 		t.Fatal("projects", err)
 	}
-	for name, mutate := range map[string]func(*Crafting){"unknown-output": func(c *Crafting) { c.Recipes[0].Output.ID = "absent" }, "free": func(c *Crafting) { c.Recipes[0].Materials = map[string]int{} }, "material": func(c *Crafting) { c.Recipes[0].Materials = map[string]int{"absent": 1} }, "duplicate": func(c *Crafting) { c.Recipes[1].ID = c.Recipes[0].ID }, "tier": func(c *Crafting) { c.Recipes[0].MinTier = 1 }, "quantity": func(c *Crafting) { c.Recipes[0].Output.Qty = 0 }, "utility": func(c *Crafting) { c.UtilityItems[0].ID = WildsRules.Trinkets[0] }} {
+	for name, mutate := range map[string]func(*Crafting){"unknown-output": func(c *Crafting) { c.Recipes[0].Output.Id = "absent" }, "free": func(c *Crafting) { c.Recipes[0].Materials = map[string]int32{} }, "material": func(c *Crafting) { c.Recipes[0].Materials = map[string]int32{"absent": 1} }, "duplicate": func(c *Crafting) { c.Recipes[1].Id = c.Recipes[0].GetId() }, "tier": func(c *Crafting) { c.Recipes[0].MinTier = 1 }, "quantity": func(c *Crafting) { c.Recipes[0].Output.Qty = 0 }, "utility": func(c *Crafting) { c.UtilityItems[0].Id = WildsRules.Trinkets[0] }} {
 		t.Run(name, func(t *testing.T) {
-			copy := Crafting{}
-			json.Unmarshal([]byte(mustJSON(c)), &copy)
-			mutate(&copy)
-			if ValidateCrafting(copy) == nil {
+			copy := proto.Clone(c).(*Crafting)
+			mutate(copy)
+			raw, err := protojson.Marshal(copy)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err = DecodeCrafting(raw); err == nil {
 				t.Fatal("accepted malformed recipe")
 			}
 		})
 	}
-	for name, mutate := range map[string]func(*Projects){"unknown-paper": func(p *Projects) { p.Projects[0].Papers = []string{"missing"} }, "wrong-source": func(p *Projects) { p.Projects[0].Papers = []string{"will-of-elias-fenn"} }, "missing-paper-path": func(p *Projects) { p.Projects[0].Papers = []string{} }, "flag": func(p *Projects) { p.Projects[0].WorldFlag = "elsewhere" }, "duplicate": func(p *Projects) { p.Projects[1].ID = p.Projects[0].ID }, "cost": func(p *Projects) { p.Projects[0].Materials["timber"] = 0 }} {
+	for name, mutate := range map[string]func(*Projects){"unknown-paper": func(p *Projects) { p.Projects[0].Papers = []string{"missing"} }, "wrong-source": func(p *Projects) { p.Projects[0].Papers = []string{"will-of-elias-fenn"} }, "missing-paper-path": func(p *Projects) { p.Projects[0].Papers = []string{} }, "flag": func(p *Projects) { p.Projects[0].WorldFlag = "elsewhere" }, "duplicate": func(p *Projects) { p.Projects[1].Id = p.Projects[0].GetId() }, "cost": func(p *Projects) { p.Projects[0].Materials["timber"] = 0 }} {
 		t.Run(name, func(t *testing.T) {
-			copy := Projects{}
-			json.Unmarshal([]byte(mustJSON(p)), &copy)
-			mutate(&copy)
-			if ValidateProjects(copy) == nil {
+			copy := proto.Clone(p).(*Projects)
+			mutate(copy)
+			raw, err := protojson.Marshal(copy)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err = DecodeProjects(raw); err == nil {
 				t.Fatal("accepted malformed project")
 			}
 		})

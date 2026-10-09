@@ -35786,7 +35786,7 @@
     {
       "name": "zero-wick-duration",
       "valid": false,
-      "rule": "int32.gte",
+      "rule": "int32.gte_lte",
       "edits": [
         {
           "path": [
@@ -35799,7 +35799,7 @@
     {
       "name": "short-wick-duration",
       "valid": false,
-      "rule": "int32.gte",
+      "rule": "int32.gte_lte",
       "edits": [
         {
           "path": [

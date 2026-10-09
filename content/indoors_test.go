@@ -2,13 +2,12 @@ package content
 
 import (
 	"encoding/json"
-	"errors"
 	"os"
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 
-	"buf.build/go/protovalidate"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
@@ -29,16 +28,37 @@ type loaderVector struct {
 }
 
 // checkVectorRule asserts the shared vector was refused for the shared
-// reason: a schema violation carries the rule id, a code rule its tag.
-func checkVectorRule(t *testing.T, err error, want string) {
-	t.Helper()
-	var bad *protovalidate.ValidationError
-	if errors.As(err, &bad) {
-		for _, v := range bad.Violations {
-			if v.Proto.GetRuleId() == want {
-				return
+// reason: a schema violation carries the rule id (rendered in brackets), a
+// code rule or pre-parse check its tag ("duplicate id", "unknown key", …).
+var ruleID = regexp.MustCompile(`^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$`)
+
+// namesRuleID: a dotted rule id appears as a whole member of a bracket
+// group — "[string.pattern]", or the multi-id form a CEL that errors
+// mid-evaluation renders ("[calendar.epoch, calendar.festivals]"). A prefix
+// ("[int32.gte]" for "int32.gte_lte") does not count.
+func namesRuleID(text, want string) bool {
+	for _, group := range bracketGroup.FindAllStringSubmatch(text, -1) {
+		for _, id := range strings.Split(group[1], ",") {
+			if strings.TrimSpace(id) == want {
+				return true
 			}
 		}
+	}
+	return false
+}
+
+var bracketGroup = regexp.MustCompile(`\[([^\]]*)\]`)
+
+func checkVectorRule(t *testing.T, err error, want string) {
+	t.Helper()
+	if err == nil {
+		t.Fatalf("accepted, want rule %q", want)
+	}
+	if ruleID.MatchString(want) {
+		if namesRuleID(err.Error(), want) {
+			return
+		}
+		t.Fatalf("refusal does not name rule [%s]: %v", want, err)
 	}
 	if strings.Contains(err.Error(), want) {
 		return
@@ -300,11 +320,7 @@ func TestSellerLoaderVectors(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, v := range vectors {
-		var items Items
-		err = json.Unmarshal(editVector(t, raw, v), &items)
-		if err == nil {
-			err = ValidateItems(items)
-		}
+		_, err = DecodeItems(editVector(t, raw, v))
 		if (err == nil) != v.Valid {
 			t.Fatal(v.Name, err)
 		}

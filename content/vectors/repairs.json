@@ -1,0 +1,436 @@
+{
+  "loader": [
+    {
+      "name": "shipped-repairs",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "zero-max-open",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "maxOpen"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "zero-per-wick",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "perWick"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "empty-scripted",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "scripted"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "unknown-scripted",
+      "valid": false,
+      "rule": "scripted",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "scripted"
+          ],
+          "value": [
+            "well-rope",
+            "fence-rail",
+            "missing"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "no-repairs",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "repairs"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "duplicate-id",
+      "valid": false,
+      "rule": "duplicate id",
+      "edits": [
+        {
+          "path": [
+            "repairs",
+            1,
+            "id"
+          ],
+          "value": "well-rope"
+        },
+        {
+          "path": [
+            "repairs",
+            1,
+            "worldFlag"
+          ],
+          "value": "repair:well-rope:mended"
+        }
+      ]
+    },
+    {
+      "name": "bad-id",
+      "valid": false,
+      "rule": "string.pattern",
+      "edits": [
+        {
+          "path": [
+            "repairs",
+            0,
+            "id"
+          ],
+          "value": "Well Rope"
+        }
+      ]
+    },
+    {
+      "name": "no-name",
+      "valid": false,
+      "rule": "string.min_len",
+      "edits": [
+        {
+          "path": [
+            "repairs",
+            0,
+            "name"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "wrong-world-flag",
+      "valid": false,
+      "rule": "repair.world_flag",
+      "edits": [
+        {
+          "path": [
+            "repairs",
+            0,
+            "worldFlag"
+          ],
+          "value": "elsewhere"
+        }
+      ]
+    },
+    {
+      "name": "unknown-area",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "repairs",
+            0,
+            "area"
+          ],
+          "value": "woodland"
+        }
+      ]
+    },
+    {
+      "name": "negative-pos",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "repairs",
+            0,
+            "pos",
+            "tx"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "missing-pos",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "repairs",
+            0,
+            "pos"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "empty-reaction",
+      "valid": false,
+      "rule": "string.min_len",
+      "edits": [
+        {
+          "path": [
+            "repairs",
+            0,
+            "reaction"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "long-reaction",
+      "valid": false,
+      "rule": "string.max_len",
+      "edits": [
+        {
+          "path": [
+            "repairs",
+            0,
+            "reaction"
+          ],
+          "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      ]
+    },
+    {
+      "name": "long-description",
+      "valid": false,
+      "rule": "string.max_len",
+      "edits": [
+        {
+          "path": [
+            "repairs",
+            0,
+            "description"
+          ],
+          "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      ]
+    },
+    {
+      "name": "long-mended-description",
+      "valid": false,
+      "rule": "string.max_len",
+      "edits": [
+        {
+          "path": [
+            "repairs",
+            0,
+            "mendedDescription"
+          ],
+          "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      ]
+    },
+    {
+      "name": "unknown-part",
+      "valid": false,
+      "rule": "part",
+      "edits": [
+        {
+          "path": [
+            "repairs",
+            0,
+            "part"
+          ],
+          "value": "gold"
+        }
+      ]
+    },
+    {
+      "name": "wrong-kind-part",
+      "valid": false,
+      "rule": "part",
+      "edits": [
+        {
+          "path": [
+            "repairs",
+            0,
+            "part"
+          ],
+          "value": "whittled-fox"
+        }
+      ]
+    },
+    {
+      "name": "empty-gift-id",
+      "valid": false,
+      "rule": "string.min_len",
+      "edits": [
+        {
+          "path": [
+            "repairs",
+            0,
+            "gift",
+            "id"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "zero-gift-qty",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "repairs",
+            0,
+            "gift",
+            "qty"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "unknown-gift",
+      "valid": false,
+      "rule": "gift",
+      "edits": [
+        {
+          "path": [
+            "repairs",
+            0,
+            "gift"
+          ],
+          "value": {
+            "kind": "item",
+            "id": "gold",
+            "qty": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "unknown-wick",
+      "valid": false,
+      "rule": "openFrom",
+      "edits": [
+        {
+          "path": [
+            "repairs",
+            5,
+            "openFrom"
+          ],
+          "value": {
+            "wick": "Missing",
+            "day": 5
+          }
+        }
+      ]
+    },
+    {
+      "name": "day-past-the-wick",
+      "valid": false,
+      "rule": "openFrom",
+      "edits": [
+        {
+          "path": [
+            "repairs",
+            5,
+            "openFrom"
+          ],
+          "value": {
+            "wick": "Cart",
+            "day": 99
+          }
+        }
+      ]
+    },
+    {
+      "name": "zero-day",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "repairs",
+            5,
+            "openFrom"
+          ],
+          "value": {
+            "wick": "Cart",
+            "day": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "null-field",
+      "valid": false,
+      "rule": "null content field",
+      "edits": [
+        {
+          "path": [
+            "repairs",
+            0,
+            "reaction"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "unknown-key",
+      "valid": false,
+      "rule": "unknown key",
+      "edits": [
+        {
+          "path": [
+            "repairs",
+            0,
+            "hintText"
+          ],
+          "value": "x"
+        }
+      ]
+    },
+    {
+      "name": "proto-name-key",
+      "valid": false,
+      "rule": "is the proto name",
+      "edits": [
+        {
+          "path": [
+            "repairs",
+            0,
+            "world_flag"
+          ],
+          "value": "repair:well-rope:mended"
+        }
+      ]
+    }
+  ]
+}

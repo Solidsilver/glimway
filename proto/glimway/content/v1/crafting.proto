@@ -1,0 +1,59 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// The workshops' recipes (content/crafting.json): the bench recipes every
+// tier-2 homestead knows, and the hearth recipes a found page teaches.
+message Crafting {
+  repeated UtilityItem utility_items = 1 [(buf.validate.field).repeated.min_items = 1];
+  repeated Recipe recipes = 2 [(buf.validate.field).repeated = {min_items: 1, max_items: 60}];
+  repeated Recipe hearth_recipes = 3;
+}
+
+// A workshop part the benches keep (the item catalogue names its kind).
+message UtilityItem {
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string name = 2 [(buf.validate.field).string.min_len = 1];
+}
+
+message Recipe {
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string name = 2 [(buf.validate.field).string.min_len = 1];
+  // Tier 2 for a bench recipe, tier 1 for a hearth recipe — the two lists
+  // share this message, so the value stays a code rule.
+  int32 min_tier = 3 [(buf.validate.field).int32.gte = 1];
+  // The bill: carried stacks (1..1000000 each) — the keys are checked
+  // against the item catalogue in code.
+  map<string, int32> materials = 4 [(buf.validate.field).map = {
+    min_pairs: 1
+    values: {int32: {gte: 1, lte: 1000000}}
+  }];
+  // Swaps: a material's stand-ins, one for one ("bloom-flowers" accept
+  // "dried-flowers"). The bill still names the primary.
+  map<string, RecipeSwap> swaps = 5;
+  Asset output = 6 [(buf.validate.field).required = true];
+  // Hearth recipes only: the recipe page a found recipe asks for (empty
+  // for a starting recipe), and where the world says it is found.
+  string page = 7;
+  string found = 8;
+}
+
+// One swap row: the stand-ins a bill line may be paid in.
+message RecipeSwap {
+  repeated string stand_ins = 1;
+}
+
+// Goods on the move (crafting output; the same shape mail and gifts carry
+// on the wire). Kind is "material", "item" (any other stack), "decoration"
+// (a home good) or "instance" (one tool, off-hand item, carry gear or
+// fitting, by Instance) — which kinds a list accepts stays a code rule.
+message Asset {
+  string kind = 1;
+  string id = 2;
+  int32 qty = 3 [(buf.validate.field).int32 = {gte: 1, lte: 100}];
+  string instance = 4;
+  // Maker picks one maker's stack ("" = unmarked); absent takes any,
+  // unmarked first.
+  optional string maker = 5;
+}

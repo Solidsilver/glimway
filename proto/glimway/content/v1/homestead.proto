@@ -1,0 +1,214 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// The homestead contract (content/homestead.json): the tiers a home grows
+// through, the indoor room and wild land every homestead is generated on,
+// the Commons lane's gates, and the home goods a player can buy.
+message Homestead {
+  option (buf.validate.message).cel = {
+    id: "homestead.deed_lost_after_desolate"
+    message: "a deed is lost only after the land goes desolate"
+    expression: "this.desolation.deed_lost_after_days > this.desolation.desolate_after_days"
+  };
+  option (buf.validate.message).cel = {
+    id: "homestead.indoor"
+    message: "the indoor room is the designed 12x10"
+    expression: "this.indoor.width == 12 && this.indoor.height == 10"
+  };
+  // The tier ladder is exactly the designed five (Campsite, Cottage,
+  // Workshop, Garden, Hall); the per-tier rules stay in code.
+  repeated HomeTier tiers = 1 [(buf.validate.field).repeated = {min_items: 5, max_items: 5}];
+  // The indoor room: 12x10 tiles.
+  HomeGrid indoor = 2 [(buf.validate.field).required = true];
+  // Every homestead's wild land.
+  HomeLand land = 3 [(buf.validate.field).required = true];
+  // The Commons lane's gates (client tiles).
+  CommonsLane commons = 4 [(buf.validate.field).required = true];
+  // Reserved tiles (the home site, the gate path, the indoor doorway):
+  // decorations may not cover them. The bounds against their grids are
+  // code rules — one list sits on the land, one in the room.
+  repeated HomeRect outdoor_reserved = 5 [(buf.validate.field).repeated.min_items = 1];
+  repeated HomeRect indoor_reserved = 6 [(buf.validate.field).repeated.min_items = 1];
+  LanternPosts lantern_posts = 7 [(buf.validate.field).required = true];
+  // Deeding: the first deed is free, then it costs embers.
+  HomesteadDeeds deeds = 8 [(buf.validate.field).required = true];
+  // Clearing one wild tile costs embers.
+  int32 clear_tile_embers = 9 [(buf.validate.field).int32.gte = 1];
+  // Neglect: how long away turns the land desolate, then loses the deed.
+  HomesteadDesolation desolation = 10 [(buf.validate.field).required = true];
+  // A joint deed's confirmation window and invite lifetime.
+  HomesteadJointDeed joint_deed = 11 [(buf.validate.field).required = true];
+  // The personal chest's capacity.
+  HomesteadPersonalChest personal_chest = 12 [(buf.validate.field).required = true];
+  // The home goods (one row per furnishing the homestead sells).
+  repeated HomeItem items = 13 [(buf.validate.field).repeated.min_items = 1];
+}
+
+// A placement grid's size in tiles (the indoor room's 12x10 is the
+// Homestead's own CEL).
+message HomeGrid {
+  optional int32 width = 1 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 1];
+  optional int32 height = 2 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 1];
+}
+
+// One step of the tier ladder. Tier and id are positional (tier 2 is
+// "tier-2"); only the Cottage and the Workshop are bought.
+message HomeTier {
+  int32 tier = 1;
+  string id = 2;
+  string name = 3 [(buf.validate.field).string.min_len = 1];
+  bool purchasable = 4;
+  int32 embers = 5 [(buf.validate.field).int32.gte = 0];
+  // The Workshop's material bill (the only priced-in-materials tier);
+  // checked against the wilds catalogue in code.
+  map<string, int32> materials = 6 [(buf.validate.field).map.values.int32 = {gte: 1, lte: 1000000}];
+}
+
+// A rectangle in local grid tiles (reserved scenery on the land or in a
+// room; the bounds against the grid it sits in are a code rule).
+message HomeRect {
+  optional int32 x = 1 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  optional int32 y = 2 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  optional int32 w = 3 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 1];
+  optional int32 h = 4 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 1];
+}
+
+// Every homestead's wild land: its size, the home site (camp/cottage), the
+// gate mouth on the south edge, the starting light, and how much of the
+// wild the generator scatters (server/internal/land).
+message HomeLand {
+  option (buf.validate.message).cel = {
+    id: "home_land.site_inside"
+    message: "the home site sits inside the land"
+    expression: "this.site.x + this.site.w <= this.width && this.site.y + this.site.h <= this.height"
+  };
+  option (buf.validate.message).cel = {
+    id: "home_land.gate_inside"
+    message: "the gate mouth sits inside the land"
+    expression: "this.gate.x + this.gate.w < this.width"
+  };
+  option (buf.validate.message).cel = {
+    id: "home_land.light_inside"
+    message: "the starting light sits inside the land"
+    expression: "this.start_light.x < this.width && this.start_light.y < this.height"
+  };
+  int32 generator = 1 [(buf.validate.field).int32.const = 1];
+  int32 width = 2 [(buf.validate.field).int32 = {gte: 20, lte: 120}];
+  int32 height = 3 [(buf.validate.field).int32 = {gte: 16, lte: 120}];
+  HomeRect site = 4 [(buf.validate.field).required = true];
+  HomeGate gate = 5 [(buf.validate.field).required = true];
+  HomeStartLight start_light = 6 [(buf.validate.field).required = true];
+  int32 trees = 7 [(buf.validate.field).int32.gte = 0];
+  int32 stumps = 8 [(buf.validate.field).int32.gte = 0];
+  int32 boulders = 9 [(buf.validate.field).int32.gte = 0];
+  int32 stream_permille = 10 [(buf.validate.field).int32 = {gte: 0, lte: 1000}];
+  int32 slope_permille = 11 [(buf.validate.field).int32 = {gte: 0, lte: 1000}];
+}
+
+// The gate mouth: a span of the south edge (its x and width in tiles).
+message HomeGate {
+  optional int32 x = 1 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 1];
+  optional int32 w = 2 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 1];
+}
+
+// A point on the Commons map (pixels, with a reach in pixels).
+message HomePixelPos {
+  optional int32 x = 1 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  optional int32 y = 2 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  optional int32 radius = 3 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 1];
+}
+
+// The homestead's own lamp.
+message HomeStartLight {
+  optional int32 x = 1 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 1];
+  optional int32 y = 2 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 1];
+  optional int32 radius = 3 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 1];
+}
+
+// The homestead gates along the Commons lane (client tiles). Gate g is on
+// side g%2 (fence column FenceX[side]) in row g/2: the listed rows, then
+// one more every RowPitch tiles. SilasTable is where a joint deed is
+// signed (pixels, with the reach both partners must be within).
+message CommonsLane {
+  option (buf.validate.message).cel = {
+    id: "commons.fence_order"
+    message: "the east fence stands right of the west fence"
+    expression: "size(this.fence_x) == 2 && this.fence_x[0] >= 0 && this.fence_x[1] > this.fence_x[0]"
+  };
+  // The gate rows' two-apart monotonicity is a code rule: CEL's all_idx is
+  // outside the subset both runtimes ship.
+  int32 tile_size = 1 [(buf.validate.field).int32.gte = 1];
+  repeated int32 fence_x = 2 [(buf.validate.field).repeated = {min_items: 2, max_items: 2, items: {int32: {gte: 0}}}];
+  repeated int32 gate_rows = 3 [(buf.validate.field).repeated = {min_items: 1, items: {int32: {gte: 0}}}]; // rows two apart: code rule (commons.gate_rows)
+  int32 row_pitch = 4 [(buf.validate.field).int32.gte = 2];
+  int32 spare_gates = 5 [(buf.validate.field).int32.gte = 1];
+  HomePixelPos silas_table = 6 [(buf.validate.field).required = true];
+}
+
+// The post item, its light radius, and what the n-th post costs (the
+// listed costs, then the last plus Growth for each one after).
+message LanternPosts {
+  string item = 1 [(buf.validate.field).string.min_len = 1];
+  int32 radius = 2 [(buf.validate.field).int32.gte = 1];
+  int32 name_max = 3 [(buf.validate.field).int32 = {gte: 1, lte: 80}];
+  // The first posts' bills; checked against the wilds catalogue in code.
+  repeated MaterialBill costs = 4 [(buf.validate.field).repeated.min_items = 1];
+  // What each post after the list costs more; checked against the wilds
+  // catalogue in code.
+  map<string, int32> growth = 5 [(buf.validate.field).map.values.int32.gte = 0];
+}
+
+// One post's bill (a non-empty map; the keys are code rules).
+message MaterialBill {
+  map<string, int32> materials = 1 [(buf.validate.field).map = {min_pairs: 1, values: {int32: {gte: 1, lte: 1000000}}}];
+}
+
+message HomesteadDeeds {
+  bool first_free = 1;
+  int32 embers = 2 [(buf.validate.field).int32.gte = 1];
+}
+
+message HomesteadDesolation {
+  int32 desolate_after_days = 1 [(buf.validate.field).int32.gte = 1];
+  int32 deed_lost_after_days = 2 [(buf.validate.field).int32.gte = 1];
+}
+
+message HomesteadPersonalChest {
+  int32 max_units = 1 [(buf.validate.field).int32.gte = 1];
+}
+
+message HomesteadJointDeed {
+  int32 confirm_window_seconds = 1 [(buf.validate.field).int32.gte = 5];
+  int32 invite_hours = 2 [(buf.validate.field).int32.gte = 1];
+}
+
+// One home good. The row only refers to the furnishings catalogue
+// (content/furnishings.json) by id for its name and footprint; the loader
+// fills those in, so nothing is copied in two places. A row that spells
+// them out must match the catalogue, never disagree with it (a code rule).
+message HomeItem {
+  option (buf.validate.message).cel = {
+    id: "home_item.price"
+    message: "a home good is priced in embers or materials, never both and never neither"
+    expression: "(this.embers > 0) != (size(this.materials) > 0)"
+  };
+  option (buf.validate.message).cel = {
+    id: "home_item.where"
+    message: "where is one or two distinct scenes (indoor, outdoor, gate)"
+    expression: "size(this.where) > 0 && size(this.where) <= 2 && this.where.all(w, w in [\"indoor\", \"outdoor\", \"gate\"]) && (size(this.where) == 1 || this.where[0] != this.where[1])"
+  };
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string name = 2;
+  string category = 3 [(buf.validate.field).string = {in: ["furniture", "decor", "utility"]}];
+  repeated int32 footprint = 4;
+  repeated string where = 5;
+  int32 min_tier = 6 [(buf.validate.field).int32 = {gte: 0, lte: 4}];
+  int32 embers = 7 [(buf.validate.field).int32.gte = 0];
+  // The purchase bill (at most three lines): Wilds materials or any
+  // carried material in the items catalogue — checked in code.
+  map<string, int32> materials = 8 [(buf.validate.field).map = {max_pairs: 3, values: {int32: {gte: 1, lte: 1000000}}}];
+  // Craftable only at the workbench (never bought).
+  optional bool craft_only = 9;
+}

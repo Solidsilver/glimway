@@ -138,55 +138,59 @@ func refuseSingular(path string, v any, fd protoreflect.FieldDescriptor) error {
 	return nil
 }
 
-// entryList names the entries of one repeated field: the field's proto name
+// entryList names the entries of one repeated field: the field's JSON name
 // (as violation paths spell it) and each entry's id, in order.
 type entryList struct {
 	field string
 	ids   []string
 }
 
-// entryLists names the entries of the message's repeated fields (by proto
-// name), each entry by its id, for contentValidate.
+// entryLists names the entries of the named repeated fields (spelled as the
+// violation paths spell them — the fields' JSON names), each entry by its
+// id, in order — the loaders' map for rewriting a violation path
+// ("projects[2]") to name the entry.
 func entryLists(msg proto.Message, fields ...string) []entryList {
 	md := msg.ProtoReflect().Descriptor()
 	out := make([]entryList, 0, len(fields))
-	for _, name := range fields {
-		fd := md.Fields().ByName(protoreflect.Name(name))
+	for _, field := range fields {
+		fd := md.Fields().ByJSONName(field)
+		if fd == nil {
+			fd = md.Fields().ByName(protoreflect.Name(field))
+		}
 		if fd == nil || !fd.IsList() {
 			continue
 		}
 		list := msg.ProtoReflect().Get(fd).List()
 		ids := make([]string, list.Len())
 		for i := range list.Len() {
-			m, ok := list.Get(i).Message().Interface().(interface{ GetId() string })
-			if ok {
-				ids[i] = m.GetId()
+			if e, ok := list.Get(i).Message().Interface().(interface{ GetId() string }); ok {
+				ids[i] = e.GetId()
 			}
 		}
-		out = append(out, entryList{field: name, ids: ids})
+		out = append(out, entryList{field: fd.JSONName(), ids: ids})
 	}
 	return out
 }
 
-// contentValidate runs protovalidate and reports its violations the way the
-// hand-written loaders did: naming the entry and the field
-// ("invalid furnishings: candle footprint: ...").
 // evalRule is a CEL rule that errors mid-evaluation (a timestamp()
 // conversion over a malformed string): protovalidate-go names the rule in
 // the runtime error's text. Both runtimes render it like a violation, with
 // the rule id the shared vectors assert.
 var evalRule = regexp.MustCompile(`error evaluating ([^:]+): (.*)$`)
 
+// contentValidate runs protovalidate and reports its violations the way the
+// hand-written loaders did: naming the entry and the field
+// ("invalid furnishings: candle footprint: ...").
 func contentValidate(family string, entries []entryList, msg proto.Message) error {
 	err := contentValidator.Validate(msg)
 	if err == nil {
 		return nil
 	}
+	if m := evalRule.FindStringSubmatch(err.Error()); m != nil {
+		return fmt.Errorf("invalid %s: %s [%s]", family, strings.TrimSpace(m[2]), m[1])
+	}
 	var bad *protovalidate.ValidationError
 	if !errors.As(err, &bad) {
-		if m := evalRule.FindStringSubmatch(err.Error()); m != nil {
-			return fmt.Errorf("invalid %s: %s [%s]", family, strings.TrimSpace(m[2]), m[1])
-		}
 		return err
 	}
 	md := msg.ProtoReflect().Descriptor()

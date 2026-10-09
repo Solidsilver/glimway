@@ -1,24 +1,22 @@
 /**
- * Item definitions (content/items.json; docs/items/), typed and validated
- * the same way as the Go loader (content/items.go), plus the pure helpers
- * the inventory panel and the game use: grade rules, wear states, icons,
- * effects in words, pockets and the off hand. No Phaser, no network.
+ * Item definitions (content/items.json; docs/items/), validated against the
+ * schema (proto/glimway/content/v1/items.proto) the same way the Go loader
+ * (content/items.go) is, plus the pure helpers the inventory panel and the
+ * game use: grade rules, wear states, icons, effects in words, pockets and
+ * the off hand. No Phaser, no network.
  */
 import { RESIDENTS, residentById, residentAt } from './residents.ts';
 import itemsRaw from '../../content/items.json' with { type: 'json' };
+import { decodeContent } from './content-proto.ts';
+import { ItemsSchema, type ItemAffinityValid, type ItemDefValid, type ItemGoodValid, type ItemGradeValid, type ItemMenderValid, type ItemPickupValid, type ItemSellerValid, type ItemsRulesValid, type PocketEffectValid, type HeldEffectValid, type UseEffectValid } from './gen/glimway/content/v1/items_pb.js';
 import { HOMESTEAD_DATA } from './homestead.ts';
 import { loadWilds } from './wilds/data.ts';
 import { CALENDAR } from './calendar.ts';
-import economy from '../../content/economy.json' with { type: 'json' };
+import { ECONOMY } from './economy.ts';
 
 const ITEM_TABS = ['tools', 'supplies', 'keepsakes', 'home', 'papers'] as const;
 const ITEM_KINDS = ['tool', 'consumable', 'material', 'fitting', 'part', 'seed', 'keepsake', 'home-good', 'paper', 'off-hand', 'carry-gear'] as const;
 const FITTING_KINDS = ['bite', 'hold', 'heft', 'glow', 'grip', 'remember'] as const;
-const TOOL_ACTIONS = ['chop', 'break', 'dig', 'draw', 'water', 'trim', 'mark'] as const;
-const PLAYER_CLASSES = ['warrior', 'mage', 'healer', 'rogue'] as const;
-const USE_EFFECTS = ['restore-hp', 'restore-mana', 'clear-unmoored', 'ease-unmoored', 'wisps-forget', 'refill-lantern', 'light-post'] as const;
-const POCKET_EFFECTS = ['papers-glint', 'notice-later', 'gather-more', 'pond-skip', 'wend-gives-more'] as const;
-const HELD_EFFECTS = ['light', 'wisps-keep-off', 'compass', 'remedy-at-hand', 'whistle', 'papers-chime'] as const;
 /** Use effects the game applies today; a consumable is usable when all of its are. */
 const IMPLEMENTED_USES: readonly string[] = ['restore-hp', 'restore-mana', 'clear-unmoored', 'ease-unmoored'];
 const PICKUP_AREAS = ['village', 'woodland', 'ruin', 'commons'] as const;
@@ -26,182 +24,50 @@ const PICKUP_AREAS = ['village', 'woodland', 'ruin', 'commons'] as const;
 type ItemTab = (typeof ITEM_TABS)[number];
 type ItemKind = (typeof ITEM_KINDS)[number];
 type FittingKind = (typeof FITTING_KINDS)[number];
-type PlayerClass = (typeof PLAYER_CLASSES)[number];
 export type AtZero = 'breaks' | 'blunt' | 'cracked' | 'never';
 /** How a tool looks and behaves now (server-computed; also the icon state). */
 export type WearState = 'whole' | 'worn' | 'blunt' | 'cracked' | 'dull';
 
-export interface ItemEffect {
-  type: string;
-  amount?: number;
-  seconds?: number;
-  target?: string;
-}
-export interface ItemDef {
-  id: string;
-  name: string;
-  tab: ItemTab;
+/** One small, typed help (use, pocket or held: each carries its own type vocabulary). */
+export type ItemEffect = UseEffectValid | PocketEffectValid | HeldEffectValid;
+export type ItemAffinity = ItemAffinityValid;
+/** One item definition, vocabularies narrowed once, at the loader. */
+export type ItemDef = Omit<ItemDefValid, 'kind' | 'tab' | 'grade' | 'atZero' | 'fitting'> & {
   kind: ItemKind;
-  blurb: string;
-  icon?: string;
-  /** The icon's drawn state ("dried": the bloom flowers' dried posy); only with an icon. */
-  iconState?: string;
+  tab: ItemTab;
   grade?: 'cheap' | 'heirloom' | 'special';
-  uses?: number;
   atZero?: 'breaks' | 'blunt' | 'cracked';
-  slots?: number;
-  actions?: string[];
-  repair?: { bench: Record<string, number>; mender?: Record<string, number>; menderEmbers?: number };
   fitting?: FittingKind;
-  use?: ItemEffect[];
-  pocket?: ItemEffect[];
-  held?: ItemEffect[];
-  affinity?: { class: PlayerClass; held: ItemEffect[] };
-  offHand?: boolean;
-  bound?: boolean;
-  belongsTo?: string;
-  marked?: boolean;
-}
-export interface ItemPickup {
-  id: string;
-  item: string;
-  qty: number;
-  area: (typeof PICKUP_AREAS)[number];
-  tx: number;
-  ty: number;
-  usesLeft?: number;
-  label: string;
-  found: string;
-}
-/** One thing a seller sells (for embers), and what they say. */
-interface ItemGood {
-  item: string;
-  qty: number;
-  embers: number;
-  /** The most one player can buy of it a day (0: no cap). */
-  cap?: number;
-  label: string;
-  line: string;
-}
-/** A person or stall that sells goods: a named resident, or a festival-day stall. */
-export interface ItemSeller {
-  id: string;
-  npc: string;
-  with?: string;
-  area: string;
-  tx: number;
-  ty: number;
-  radiusTiles: number;
-  /** The seller stands on its festival day only. */
-  festival?: string;
-  goods: ItemGood[];
-}
-export interface ItemMender {
-  npc: string;
-  name: string;
-  area: string;
-  tx: number;
-  ty: number;
-  radiusTiles: number;
-}
-interface ItemResident {
-  id: string;
-  area: string;
-  tx: number;
-  ty: number;
-}
-export interface ItemRules {
-  grades: Record<'cheap' | 'heirloom' | 'special', { slots: number; atZero: AtZero; bound?: boolean }>;
-  wear: { pointsPerUse: number; holdPointsPerUse: number; fittingUses: number; wornBelowPercent: number; wardenDullUses: number };
-  pockets: { base: number; withCarryGear: number };
-  offHand: { tuckDuring: string[] };
-  give: { radiusTiles: number };
-  thanks: { nearbyTiles: number };
-  menders: ItemMender[];
-  /** Where the named residents stand (shared with the server's checks). */
-  residents: ItemResident[];
-}
-export interface Items {
-  rules: ItemRules;
-  items: ItemDef[];
-  pickups: ItemPickup[];
-  sellers?: ItemSeller[];
-}
-
-const KIND_TAB: Record<ItemKind, ItemTab> = {
-  tool: 'tools',
-  'off-hand': 'tools',
-  'carry-gear': 'tools',
-  consumable: 'supplies',
-  material: 'supplies',
-  fitting: 'supplies',
-  part: 'supplies',
-  seed: 'supplies',
-  keepsake: 'keepsakes',
-  'home-good': 'home',
-  paper: 'papers',
 };
-const INSTANCED: readonly ItemKind[] = ['tool', 'off-hand', 'carry-gear', 'fitting'];
+export type ItemPickup = Omit<ItemPickupValid, 'area'> & { area: (typeof PICKUP_AREAS)[number] };
+/** One thing a seller sells (for embers), and what they say. */
+export type ItemGood = ItemGoodValid;
+/** A person or stall that sells goods: a named resident, or a festival-day stall. */
+export type ItemSeller = Omit<ItemSellerValid, 'area' | 'tx' | 'ty'> & { area: string; tx: number; ty: number };
+export type ItemMender = Omit<ItemMenderValid, 'area'> & { area: (typeof PICKUP_AREAS)[number] };
+export type ItemGrade = ItemGradeValid;
+/** Where the named residents stand (shared with the server's checks; derived, never authored). */
+interface ItemResident { id: string; area: string; tx: number; ty: number }
+export interface ItemRules extends Omit<ItemsRulesValid, 'menders'> { menders: ItemMender[]; residents: ItemResident[] }
+export interface Items { rules: ItemRules; items: ItemDef[]; pickups: ItemPickup[]; sellers?: ItemSeller[] }
+
 const AT_ZERO_FOR_GRADE: Record<string, readonly string[]> = { cheap: ['breaks'], heirloom: ['blunt', 'cracked'], special: ['never'] };
-
-const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
-const validId = (v: unknown): v is string => typeof v === 'string' && /^[a-z0-9-]{1,100}$/.test(v);
-const isInt = (v: unknown, min = 0, max = 1_000_000): v is number => Number.isSafeInteger(v) && (v as number) >= min && (v as number) <= max;
-
-function validEffects(list: unknown, allowed: readonly string[]): boolean {
-  if (list === undefined) return true;
-  if (!Array.isArray(list)) return false;
-  return list.every(
-    (e) =>
-      isObj(e) &&
-      allowed.includes(e.type as string) &&
-      (e.amount === undefined || isInt(e.amount, 0, 1000)) &&
-      (e.seconds === undefined || isInt(e.seconds, 0, 86400)) &&
-      (e.target === undefined || (typeof e.target === 'string' && e.target.length <= 100)) &&
-      !((e.type === 'restore-hp' || e.type === 'restore-mana') && !isInt(e.amount, 1, 1000)),
-  );
-}
-
-export const isInstanced = (d: Pick<ItemDef, 'kind'>): boolean => INSTANCED.includes(d.kind);
-export const isStackable = (d: Pick<ItemDef, 'kind'>): boolean => !isInstanced(d) && d.kind !== 'home-good';
-
-function validCosts(v: unknown, defs: Map<string, ItemDef>): boolean {
-  if (!isObj(v) || Object.keys(v).length === 0) return false;
-  return Object.entries(v).every(([id, n]) => {
-    const d = defs.get(id);
-    return !!d && isStackable(d) && isInt(n, 1);
-  });
-}
 
 /** Throws on anything content/items.go would refuse. */
 export function validateItems(value: unknown): Items {
   const bad = (why: string): never => {
     throw new Error(`invalid items: ${why}`);
   };
-  if (!isObj(value) || !isObj(value.rules) || !Array.isArray(value.items) || !Array.isArray(value.pickups)) return bad('shape');
-  const v = value as unknown as Items;
+  const v = decodeContent(ItemsSchema, value, 'items', ['items', 'pickups', 'sellers']) as unknown as Items;
   const r = v.rules;
-  if (!isObj(r.grades) || Object.keys(r.grades).length !== 3) return bad('grades');
-  for (const [name, allowed] of Object.entries(AT_ZERO_FOR_GRADE)) {
-    const g = (r.grades as Record<string, { slots: number; atZero: string }>)[name];
-    if (!g || !allowed.includes(g.atZero) || !isInt(g.slots, 0, FITTING_KINDS.length)) return bad(`grade ${name}`);
-  }
-  const w = r.wear;
-  if (!isObj(w) || !isInt(w.pointsPerUse, 1) || !isInt(w.holdPointsPerUse, 1, w.pointsPerUse) || !isInt(w.fittingUses, 1) || !isInt(w.wornBelowPercent, 1, 99) || !isInt(w.wardenDullUses, 1)) return bad('wear');
-  if (!isInt(r.pockets?.base, 1) || !isInt(r.pockets.withCarryGear, r.pockets.base, 4) || !isInt(r.give?.radiusTiles, 1) || !isInt(r.thanks?.nearbyTiles, 1)) return bad('pockets');
   const npcs = new Set<string>();
-  for (const m of r.menders ?? []) {
-    if (!validId(m.npc) || !m.name || npcs.has(m.npc) || !(PICKUP_AREAS as readonly string[]).includes(m.area) || !isInt(m.tx) || !isInt(m.ty) || !isInt(m.radiusTiles, 1)) return bad(`mender ${m.npc}`);
+  for (const m of r.menders) {
+    if (npcs.has(m.npc)) return bad(`duplicate mender ${m.npc}`);
     npcs.add(m.npc);
-  }
-  const placed = new Set<string>();
-  for (const res of r.residents ?? []) {
-    if (!validId(res.id) || placed.has(res.id) || !(PICKUP_AREAS as readonly string[]).includes(res.area) || !isInt(res.tx) || !isInt(res.ty)) return bad(`resident ${res.id}`);
-    placed.add(res.id);
   }
   const defs = new Map<string, ItemDef>();
   for (const d of v.items) {
-    if (!isObj(d) || !validId(d.id) || defs.has(d.id) || typeof d.name !== 'string' || !d.name || typeof d.blurb !== 'string' || !d.blurb || !ITEM_KINDS.includes(d.kind) || KIND_TAB[d.kind] !== d.tab || (d.icon !== undefined && !validId(d.icon)) || (d.iconState !== undefined && (d.icon === undefined || !validId(d.iconState)))) return bad(`item ${String(d?.id)}`);
+    if (defs.has(d.id)) return bad(`duplicate id ${d.id}`);
     defs.set(d.id, d);
   }
   for (const d of v.items) {
@@ -209,37 +75,31 @@ export function validateItems(value: unknown): Items {
     if (d.kind === 'tool') {
       const g = d.grade && r.grades[d.grade];
       if (!g) return fail('grade');
-      if ((g.atZero === 'never') !== !d.uses || (d.uses !== undefined && !isInt(d.uses, 1, 10000))) return fail('uses');
-      if (d.atZero !== undefined && !AT_ZERO_FOR_GRADE[d.grade!].includes(d.atZero)) return fail('atZero');
-      if (d.slots !== undefined && !isInt(d.slots, 0, FITTING_KINDS.length)) return fail('slots');
-      if (!Array.isArray(d.actions) || !d.actions.length || !d.actions.every((a) => (TOOL_ACTIONS as readonly string[]).includes(a))) return fail('actions');
-      const zero = d.atZero ?? g.atZero;
+      if ((g.atZero === 'never') !== !d.uses) return fail('uses');
+      if (d.atZero && !AT_ZERO_FOR_GRADE[d.grade!].includes(d.atZero)) return fail('atZero');
+      if (!d.actions.length) return fail('actions');
+      const zero = d.atZero || g.atZero;
       if ((zero === 'blunt' || zero === 'cracked') !== !!d.repair) return fail('repair');
-      if (d.repair && (!validCosts(d.repair.bench, defs) || (d.repair.mender !== undefined && !validCosts(d.repair.mender, defs)) || (d.repair.menderEmbers !== undefined && !isInt(d.repair.menderEmbers)) || (!d.repair.mender && !d.repair.menderEmbers))) return fail('repair cost');
-    } else if (d.grade !== undefined || d.uses !== undefined || d.atZero !== undefined || d.slots !== undefined || d.actions !== undefined || d.repair !== undefined) {
-      return fail('tool fields on a non-tool');
+      if (d.repair) {
+        const costsOK = (m: Record<string, number>) => Object.keys(m).length > 0 && Object.entries(m).every(([id, n]) => { const def = defs.get(id); return !!def && isStackable(def) && n >= 1 && n <= 1_000_000; });
+        const rep = d.repair;
+        if (!costsOK(rep.bench) || (rep.mender !== undefined && !costsOK(rep.mender)) || (!rep.mender && !rep.menderEmbers)) return fail('repair cost');
+      }
     }
-    if ((d.kind === 'fitting') !== (FITTING_KINDS as readonly string[]).includes(d.fitting as string)) return fail('fitting');
-    if ((d.kind === 'consumable') !== !!d.use?.length || !validEffects(d.use, USE_EFFECTS)) return fail('use');
-    if ((d.pocket?.length && d.kind !== 'keepsake') || !validEffects(d.pocket, POCKET_EFFECTS)) return fail('pocket');
-    if (d.offHand && d.kind !== 'keepsake' && d.kind !== 'tool') return fail('offHand');
-    if (!!d.held?.length !== offHandable(d) || !validEffects(d.held, HELD_EFFECTS)) return fail('held');
-    if (d.affinity && (!(PLAYER_CLASSES as readonly string[]).includes(d.affinity.class) || !d.affinity.held?.length || !validEffects(d.affinity.held, HELD_EFFECTS) || !offHandable(d))) return fail('affinity');
-    if (d.belongsTo !== undefined && (d.kind !== 'keepsake' || !validId(d.belongsTo))) return fail('belongsTo');
+    if ((d.kind === 'consumable') !== !!d.use?.length) return fail('use');
     if (d.kind === 'home-good' && HOMESTEAD_DATA.items.find((h) => h.id === d.id)?.name !== d.name) return fail('home good not in homestead.json');
   }
+  // Everything that can already be carried has a definition.
   const wilds = loadWilds();
   for (const m of wilds.materials) if (defs.get(m)?.kind !== 'material') bad(`wilds material ${m}`);
   for (const t of wilds.trinkets) if (defs.get(t)?.kind !== 'keepsake') bad(`wilds trinket ${t}`);
-  if (defs.get(economy.charmItem)?.kind !== 'keepsake') bad('charm');
+  if (defs.get(ECONOMY.charmItem)?.kind !== 'keepsake') bad('charm');
   const pickups = new Set<string>();
   for (const p of v.pickups) {
     const d = defs.get(p.item);
-    if (
-      !validId(p.id) || pickups.has(p.id) || !d || !(isStackable(d) || isInstanced(d)) || !isInt(p.qty, 1, 100) || (isInstanced(d) && p.qty !== 1) ||
-      !(PICKUP_AREAS as readonly string[]).includes(p.area) || !isInt(p.tx) || !isInt(p.ty) || !p.label || !p.found ||
-      (p.usesLeft !== undefined && (!isInt(p.usesLeft, 1) || d.kind !== 'tool' || p.usesLeft > (d.uses ?? 0)))
-    ) return bad(`pickup ${p.id}`);
+    if (pickups.has(p.id)) return bad(`duplicate pickup ${p.id}`);
+    if (!d || !(isStackable(d) || isInstanced(d)) || (isInstanced(d) && p.qty !== 1)) return bad(`pickup ${p.id}`);
+    if (p.usesLeft !== undefined && p.usesLeft > 0 && (d.kind !== 'tool' || p.usesLeft > (d.uses ?? 0))) return bad(`pickup ${p.id}: usesLeft`);
     pickups.add(p.id);
   }
   // Sellers: people and stalls that sell goods for embers (a festival
@@ -247,16 +107,15 @@ export function validateItems(value: unknown): Items {
   const festivals = CALENDAR.festivals.map((f) => f.name);
   const sellers = new Set<string>();
   for (const s of v.sellers ?? []) {
-    if (!isObj(s) || !validId(s.id) || sellers.has(s.id) || typeof s.npc !== 'string' || !s.npc || s.npc.length > 40 ||
-      (s.with !== undefined ? typeof s.with !== 'string' || !residentById(s.with) || s.area !== undefined || s.tx !== undefined || s.ty !== undefined : !(PICKUP_AREAS as readonly string[]).includes(s.area) || !isInt(s.tx) || !isInt(s.ty)) || !isInt(s.radiusTiles, 1, 16) ||
-      !Array.isArray(s.goods) || !s.goods.length || (s.festival !== undefined && !festivals.includes(s.festival))) return bad(`seller ${String(s?.id)}`);
+    if (sellers.has(s.id)) return bad(`duplicate seller ${s.id}`);
+    if (typeof s.npc !== 'string' || !s.npc || (s.with ? !residentById(s.with) : !PICKUP_AREAS.includes(s.area as never))) return bad(`seller ${s.id}: place`);
+    if (s.festival !== '' && !festivals.includes(s.festival)) return bad(`seller ${s.id}: festival`);
     sellers.add(s.id);
     const goods = new Set<string>();
     for (const g of s.goods) {
-      const d = isObj(g) ? defs.get(g.item as string) : null;
-      if (!isObj(g) || !validId(g.item) || goods.has(g.item) || !d || !isStackable(d) || !isInt(g.qty, 1, 100) || !isInt(g.embers, 1, 1000) ||
-        (g.cap !== undefined && !isInt(g.cap, 0, 1000)) || typeof g.label !== 'string' || !g.label || g.label.length > 80 ||
-        typeof g.line !== 'string' || !g.line || g.line.length > 160) return bad(`seller ${s.id} good ${String(g?.item)}`);
+      const d = defs.get(g.item);
+      if (goods.has(g.item)) return bad(`seller ${s.id}: duplicate good ${g.item}`);
+      if (!d || !isStackable(d)) return bad(`seller ${s.id} good ${g.item}`);
       goods.add(g.item);
     }
   }
@@ -266,7 +125,15 @@ export function validateItems(value: unknown): Items {
     const res = residentById(id)!;
     return Object.values(res.spots).find(s => !s.area.startsWith('in:')) ?? Object.values(res.spots)[0]!;
   };
-  return { ...v, rules: { ...r, residents: RESIDENTS.residents.filter(res => res.id !== 'finn').map(res => ({ id: res.id, ...exterior(res.id) })) }, sellers: v.sellers?.map(s => s.with ? { ...s, ...exterior(s.with) } : s) };
+  return {
+    ...v,
+    rules: {
+      ...r,
+      menders: r.menders.map((m) => ({ ...m, area: m.area as (typeof PICKUP_AREAS)[number] })),
+      residents: RESIDENTS.residents.filter(res => res.id !== 'finn').map(res => ({ id: res.id, area: exterior(res.id).area, tx: exterior(res.id).tx, ty: exterior(res.id).ty })),
+    },
+    sellers: v.sellers?.map(s => s.with ? { ...s, area: exterior(s.with).area, tx: exterior(s.with).tx, ty: exterior(s.with).ty } : s),
+  };
 }
 
 export const ITEMS: Items = validateItems(itemsRaw);
@@ -295,9 +162,17 @@ export function offHandable(d: Pick<ItemDef, 'kind' | 'offHand'>): boolean {
   return d.kind === 'off-hand' || d.offHand === true;
 }
 
+/** Instanced items are kept one by one; every other carried item is a stack by count. */
+export function isInstanced(d: Pick<ItemDef, 'kind'>): boolean {
+  return ['tool', 'off-hand', 'carry-gear', 'fitting'].includes(d.kind);
+}
+export function isStackable(d: Pick<ItemDef, 'kind'>): boolean {
+  return !isInstanced(d) && d.kind !== 'home-good';
+}
+
 export function atZeroRule(d: ItemDef): AtZero {
   if (d.kind !== 'tool') return 'never';
-  return d.atZero ?? ITEM_RULES.grades[d.grade ?? 'special'].atZero;
+  return (d.atZero || ITEM_RULES.grades[d.grade ?? 'special'].atZero) as AtZero;
 }
 
 export function slotCount(d: ItemDef): number {
@@ -348,7 +223,8 @@ export function iconState(id: string, state: WearState): string | undefined {
 
 /** The art id to draw (an icon override, else the id). */
 export function iconId(id: string): string {
-  return itemDef(id)?.icon ?? id;
+  const icon = itemDef(id)?.icon;
+  return icon ? icon : id;
 }
 
 /** "Breaks at zero" / "Blunt at zero until mended" / "Never wears". */

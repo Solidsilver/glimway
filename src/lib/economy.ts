@@ -1,18 +1,16 @@
-/** Shared economy contract; JSON is validated by both language test suites. */
-export interface Economy {
-  xpPerEmber: number;
-  welcomeEmbers: number;
-  costs: { homeRest: number; rest: number; roadLantern: number; chest: number };
-  roadLanterns: readonly ['road-1', 'road-2', 'road-3'];
-  chestId: string;
-  charmItem: string;
-  syncCreditCap: number;
-  syncCreditDailyGrowth: number;
-  syncCreditMax: number;
-  pendingCreditDays: number;
-  lifetimeInvites: number;
-  wildsLimits: { claimsPerMinute: number; lanternRelightsPerDay: number; lanternsCreatedPerDay: number; lanternReward: { material: string; qty: number } };
-  outstandingInvites: number;
-  migrationGiftCap: number;
-  checkpointToleranceXp: number;
+/**
+ * The shared economy contract (content/economy.json): ember pricing, sync
+ * credit, invites and the Wilds' rate limits. Validated against the schema
+ * (proto/glimway/content/v1/economy.proto) the same way the Go loader is.
+ */
+import raw from '../../content/economy.json' with { type: 'json' };
+import { decodeContent } from './content-proto.ts';
+import { EconomySchema, type EconomyValid } from './gen/glimway/content/v1/economy_pb.js';
+
+export type Economy = EconomyValid;
+
+/** Throws on anything content/embed.go would refuse. */
+export function validateEconomy(value: unknown): Economy {
+  return decodeContent(EconomySchema, value, 'economy', []) as Economy;
 }
+export const ECONOMY = validateEconomy(raw);

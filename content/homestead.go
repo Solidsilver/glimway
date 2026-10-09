@@ -3,180 +3,104 @@ package content
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"slices"
+
+	contentv1 "glimway/gen/glimway/content/v1"
+	"google.golang.org/protobuf/proto"
 )
 
-type HomeGrid struct {
-	Width  int `json:"width"`
-	Height int `json:"height"`
-}
-type HomeTier struct {
-	Tier        int            `json:"tier"`
-	ID          string         `json:"id"`
-	Name        string         `json:"name"`
-	Purchasable bool           `json:"purchasable"`
-	Embers      int            `json:"embers"`
-	Materials   map[string]int `json:"materials,omitempty"`
-}
+// The homestead contract (content/homestead.json), on the generated types
+// (proto/glimway/content/v1/homestead.proto): the tier ladder, the indoor
+// room and wild land, the Commons lane's gates, and the home goods.
+type (
+	Homestead      = contentv1.Homestead
+	HomeGrid       = contentv1.HomeGrid
+	HomeTier       = contentv1.HomeTier
+	HomeRect       = contentv1.HomeRect
+	HomeLand       = contentv1.HomeLand
+	HomeGate       = contentv1.HomeGate
+	HomeStartLight = contentv1.HomeStartLight
+	HomePixelPos   = contentv1.HomePixelPos
+	CommonsLane    = contentv1.CommonsLane
+	LanternPosts   = contentv1.LanternPosts
+	MaterialBill   = contentv1.MaterialBill
+	HomeItem       = contentv1.HomeItem
+)
 
-// HomeItem is one home good. The row only refers to the furnishings
-// catalogue (content/furnishings.json) by id for its name and footprint;
-// LoadHomestead fills those in, so nothing is copied in two places.
-type HomeItem struct {
-	ID        string         `json:"id"`
-	Name      string         `json:"name"`
-	Category  string         `json:"category"`
-	Footprint []int          `json:"footprint"`
-	Where     []string       `json:"where"`
-	MinTier   int            `json:"minTier"`
-	Embers    int            `json:"embers"`
-	Materials map[string]int `json:"materials"`
-	CraftOnly bool           `json:"craftOnly,omitempty"`
-}
-
-// HomeRect is a rectangle in local grid tiles (reserved scenery on the land or in a room).
-type HomeRect struct {
-	X int `json:"x"`
-	Y int `json:"y"`
-	W int `json:"w"`
-	H int `json:"h"`
-}
-
-// HomeLand describes every homestead's wild land: its size, the home site
-// (camp/cottage), the gate mouth on the south edge, the starting light, and
-// how much of the wild the generator scatters (server/internal/land).
-type HomeLand struct {
-	Generator int      `json:"generator"`
-	Width     int      `json:"width"`
-	Height    int      `json:"height"`
-	Site      HomeRect `json:"site"`
-	Gate      struct {
-		X int `json:"x"`
-		W int `json:"w"`
-	} `json:"gate"`
-	StartLight struct {
-		X      int `json:"x"`
-		Y      int `json:"y"`
-		Radius int `json:"radius"`
-	} `json:"startLight"`
-	Trees          int `json:"trees"`
-	Stumps         int `json:"stumps"`
-	Boulders       int `json:"boulders"`
-	StreamPermille int `json:"streamPermille"`
-	SlopePermille  int `json:"slopePermille"`
-}
-
-// CommonsLane lays the homestead gates along the Commons lane (client tiles).
-// Gate g is on side g%2 (fence column FenceX[side]) in row g/2: the listed
-// rows, then one more every RowPitch tiles. SilasTable is where a joint deed
-// is signed (pixels, with the reach both partners must be within).
-type CommonsLane struct {
-	TileSize   int   `json:"tileSize"`
-	FenceX     []int `json:"fenceX"`
-	GateRows   []int `json:"gateRows"`
-	RowPitch   int   `json:"rowPitch"`
-	SpareGates int   `json:"spareGates"`
-	SilasTable struct {
-		X      int `json:"x"`
-		Y      int `json:"y"`
-		Radius int `json:"radius"`
-	} `json:"silasTable"`
-}
-
-// LanternPosts: the post item, its light radius, and what the n-th post costs
-// (the listed costs, then the last plus Growth for each one after).
-type LanternPosts struct {
-	Item    string           `json:"item"`
-	Radius  int              `json:"radius"`
-	NameMax int              `json:"nameMax"`
-	Costs   []map[string]int `json:"costs"`
-	Growth  map[string]int   `json:"growth"`
-}
-
-type Homestead struct {
-	Tiers  []HomeTier  `json:"tiers"`
-	Indoor HomeGrid    `json:"indoor"`
-	Land   HomeLand    `json:"land"`
-	Lane   CommonsLane `json:"commons"`
-	// Reserved land tiles (the home site and the gate mouth) and the indoor
-	// doorway: decorations may not cover them.
-	OutdoorReserved []HomeRect   `json:"outdoorReserved"`
-	IndoorReserved  []HomeRect   `json:"indoorReserved"`
-	LanternPosts    LanternPosts `json:"lanternPosts"`
-	Deeds           struct {
-		FirstFree bool `json:"firstFree"`
-		Embers    int  `json:"embers"`
-	} `json:"deeds"`
-	ClearTileEmbers int `json:"clearTileEmbers"`
-	Desolation      struct {
-		DesolateAfterDays int `json:"desolateAfterDays"`
-		DeedLostAfterDays int `json:"deedLostAfterDays"`
-	} `json:"desolation"`
-	JointDeed struct {
-		ConfirmWindowSeconds int `json:"confirmWindowSeconds"`
-		InviteHours          int `json:"inviteHours"`
-	} `json:"jointDeed"`
-	PersonalChest struct {
-		MaxUnits int `json:"maxUnits"`
-	} `json:"personalChest"`
-	Items []HomeItem `json:"items"`
+// DecodeHomestead reads homestead JSON into the generated types, refusing
+// nulls and unknown keys, fills each home good's name and footprint from
+// the furnishings catalogue, then runs the schema's rules (protovalidate)
+// and the homestead's own rules.
+func DecodeHomestead(raw []byte) (*Homestead, error) {
+	doc := &Homestead{}
+	if err := decodeContentProto(raw, "homestead", doc); err != nil {
+		return doc, err
+	}
+	if err := resolveHomeGoods(doc); err != nil {
+		return doc, err
+	}
+	if err := contentValidate("homestead", entryLists(doc, "tiers", "items"), doc); err != nil {
+		return doc, err
+	}
+	return doc, validateHomestead(doc)
 }
 
 // Outdoor is the land as a placement grid.
-func (h Homestead) Outdoor() HomeGrid { return HomeGrid{h.Land.Width, h.Land.Height} }
+func Outdoor(h *Homestead) *HomeGrid {
+	return homeGrid(h.GetLand().GetWidth(), h.GetLand().GetHeight())
+}
 
-// PostCost is what the n-th lantern post (0-based) of a homestead costs.
-func (h Homestead) PostCost(n int) map[string]int {
-	c := h.LanternPosts.Costs
+func homeGrid(w, h int32) *HomeGrid {
+	return &HomeGrid{Width: proto.Int32(w), Height: proto.Int32(h)}
+}
+
+// HomePostCost is what the n-th lantern post (0-based) of a homestead
+// costs: the listed costs, then the last plus Growth for each one after.
+// The bill is a copy: the shared table is never handed out.
+func HomePostCost(h *Homestead, n int) map[string]int32 {
+	c := h.GetLanternPosts().GetCosts()
 	if n < len(c) {
-		return c[n]
+		return maps.Clone(c[n].GetMaterials())
 	}
-	out := map[string]int{}
-	for m, v := range c[len(c)-1] {
-		out[m] = v + h.LanternPosts.Growth[m]*(n-len(c)+1)
+	out := map[string]int32{}
+	last := c[len(c)-1].GetMaterials()
+	for m, v := range last {
+		out[m] = v + h.GetLanternPosts().GetGrowth()[m]*int32(n-len(c)+1)
 	}
 	return out
 }
 
-func validReserved(rects []HomeRect, g HomeGrid) bool {
+func validReserved(rects []*HomeRect, g *HomeGrid) bool { //nolint:unparam
 	for _, r := range rects {
-		if r.X < 0 || r.Y < 0 || r.W <= 0 || r.H <= 0 || r.X+r.W > g.Width || r.Y+r.H > g.Height {
+		if r.GetX()+r.GetW() > g.GetWidth() || r.GetY()+r.GetH() > g.GetHeight() {
 			return false
 		}
 	}
 	return true
 }
 
-func validLand(l HomeLand) bool {
-	g := HomeGrid{l.Width, l.Height}
-	return l.Generator == 1 && l.Width >= 20 && l.Width <= 120 && l.Height >= 16 && l.Height <= 120 &&
-		validReserved([]HomeRect{l.Site}, g) && l.Gate.X > 0 && l.Gate.W > 0 && l.Gate.X+l.Gate.W < l.Width &&
-		l.StartLight.Radius > 0 && l.StartLight.X > 0 && l.StartLight.Y > 0 && l.StartLight.X < l.Width && l.StartLight.Y < l.Height &&
-		l.Trees >= 0 && l.Stumps >= 0 && l.Boulders >= 0 && l.StreamPermille >= 0 && l.StreamPermille <= 1000 && l.SlopePermille >= 0 && l.SlopePermille <= 1000
-}
-
-func validLane(c CommonsLane) bool {
-	if c.TileSize <= 0 || len(c.FenceX) != 2 || len(c.GateRows) == 0 || c.RowPitch < 2 || c.SpareGates < 1 || c.SilasTable.Radius <= 0 {
-		return false
-	}
-	for i, y := range c.GateRows {
-		if y < 0 || (i > 0 && y < c.GateRows[i-1]+2) {
+// validLane: the code rules of the Commons lane (the field rules are the
+// schema's): gate rows go down the lane two tiles apart.
+func validLane(c *CommonsLane) bool {
+	rows := c.GetGateRows()
+	for i, y := range rows {
+		if i > 0 && y < rows[i-1]+2 {
 			return false
 		}
 	}
-	return c.FenceX[0] >= 0 && c.FenceX[1] > c.FenceX[0]
+	return true
 }
 
-func validPosts(p LanternPosts) bool {
-	if p.Item == "" || p.Radius <= 0 || p.NameMax < 1 || p.NameMax > 80 || len(p.Costs) == 0 {
-		return false
-	}
-	for _, c := range p.Costs {
-		if !ValidMaterialCosts(c) {
+// validPosts: the lantern posts' bills name Wilds materials (the ranges
+// are the schema's), and growth never takes a material back.
+func validPosts(p *LanternPosts) bool {
+	for _, c := range p.GetCosts() {
+		if !ValidMaterialCosts(c.GetMaterials()) {
 			return false
 		}
 	}
-	for m, n := range p.Growth {
+	for m, n := range p.GetGrowth() {
 		if !slices.Contains(WildsRules.Materials, m) || n < 0 {
 			return false
 		}
@@ -209,88 +133,82 @@ var catalogueMaterials = func() map[string]bool {
 // catalogue; the homestead file keeps only the homestead-specific fields. A
 // row that spells them out must match the catalogue, never disagree with it.
 func resolveHomeGoods(h *Homestead) error {
-	for i := range h.Items {
-		f, ok := FurnishingFor(h.Items[i].ID)
+	for _, v := range h.Items {
+		f, ok := FurnishingFor(v.GetId())
 		if !ok {
-			return fmt.Errorf("invalid homestead: item %s not in the furnishings catalogue", h.Items[i].ID)
+			return fmt.Errorf("invalid homestead: item %s not in the furnishings catalogue", v.GetId())
 		}
-		v := &h.Items[i]
-		if v.Name != "" && v.Name != f.GetName() {
-			return fmt.Errorf("invalid homestead: item %s names itself %q", v.ID, v.Name)
+		if v.GetName() != "" && v.GetName() != f.GetName() {
+			return fmt.Errorf("invalid homestead: item %s names itself", v.GetId())
 		}
-		if len(v.Footprint) != 0 && (len(v.Footprint) != 2 || v.Footprint[0] != int(f.GetFootprint()[0]) || v.Footprint[1] != int(f.GetFootprint()[1])) {
-			return fmt.Errorf("invalid homestead: item %s disagrees with the catalogue's footprint", v.ID)
+		fp := v.GetFootprint()
+		if len(fp) != 0 && (len(fp) != 2 || fp[0] != f.GetFootprint()[0] || fp[1] != f.GetFootprint()[1]) {
+			return fmt.Errorf("invalid homestead: item %s footprint", v.GetId())
 		}
 		v.Name = f.GetName()
-		v.Footprint = []int{int(f.GetFootprint()[0]), int(f.GetFootprint()[1])}
+		v.Footprint = []int32{f.GetFootprint()[0], f.GetFootprint()[1]}
 	}
 	return nil
 }
 
-func ValidateHomestead(h Homestead) error {
-	bad := fmt.Errorf("invalid homestead")
-	if len(h.Tiers) != 5 || h.Indoor.Width != 12 || h.Indoor.Height != 10 || !validLand(h.Land) || !validLane(h.Lane) || !validReserved(h.OutdoorReserved, h.Outdoor()) || !validReserved(h.IndoorReserved, h.Indoor) || !validPosts(h.LanternPosts) || len(h.Items) == 0 {
-		return bad
-	}
-	if h.Deeds.Embers <= 0 || h.ClearTileEmbers <= 0 || h.Desolation.DesolateAfterDays < 1 || h.Desolation.DeedLostAfterDays <= h.Desolation.DesolateAfterDays || h.JointDeed.ConfirmWindowSeconds < 5 || h.JointDeed.InviteHours < 1 || h.PersonalChest.MaxUnits < 1 {
-		return bad
-	}
-	for i, t := range h.Tiers {
-		if t.Tier != i || t.ID != fmt.Sprintf("tier-%d", i) || t.Name == "" || t.Purchasable != (i == 1 || i == 2) || ((i == 1 || i == 2) && t.Embers <= 0) || ((i == 0 || i > 2) && t.Embers != 0) || (i == 2 && !ValidMaterialCosts(t.Materials)) || (i != 2 && len(t.Materials) != 0) {
-			return bad
+// validateHomestead: the rules that span entries or grids. The tier ladder
+// is the designed five; reserved rectangles sit inside their grids; home
+// good rows are unique, priced in Wilds or catalogue materials, and agree
+// with the furnishing they name.
+func validateHomestead(h *Homestead) error {
+	tiers := h.GetTiers()
+	for i, t := range tiers {
+		if t.GetTier() != int32(i) || t.GetId() != fmt.Sprintf("tier-%d", i) || t.GetPurchasable() != (i == 1 || i == 2) || ((i == 1 || i == 2) && t.GetEmbers() <= 0) || ((i == 0 || i > 2) && t.GetEmbers() != 0) || (i == 2 && !ValidMaterialCosts(t.GetMaterials())) || (i != 2 && len(t.GetMaterials()) != 0) {
+			return fmt.Errorf("invalid homestead: tier %d", i)
 		}
+	}
+	if !validReserved(h.GetOutdoorReserved(), Outdoor(h)) || !validReserved(h.GetIndoorReserved(), h.GetIndoor()) {
+		return fmt.Errorf("invalid homestead: reserved")
+	}
+	if !validLane(h.GetCommons()) {
+		return fmt.Errorf("invalid homestead: gate rows")
+	}
+	if !validPosts(h.GetLanternPosts()) {
+		return fmt.Errorf("invalid homestead: post bills")
 	}
 	seen := map[string]bool{}
 	for _, v := range h.Items {
-		if v.ID == "" || v.Name == "" || seen[v.ID] || !slices.Contains([]string{"furniture", "decor", "utility"}, v.Category) || v.MinTier < 0 || v.MinTier > 4 || len(v.Footprint) != 2 || v.Footprint[0] <= 0 || v.Footprint[1] <= 0 || v.Footprint[0] > 12 || v.Footprint[1] > 10 || len(v.Where) == 0 || len(v.Where) > 2 || len(v.Materials) > 3 || (v.Embers > 0) == (len(v.Materials) > 0) || v.Embers < 0 {
-			return bad
+		if seen[v.GetId()] {
+			return fmt.Errorf("invalid homestead: duplicate id %s", v.GetId())
 		}
-		seen[v.ID] = true
-		places := map[string]bool{}
-		for _, p := range v.Where {
-			if (p != "indoor" && p != "outdoor" && p != "gate") || places[p] {
-				return bad
-			}
-			places[p] = true
-		}
-		for m, n := range v.Materials {
+		seen[v.GetId()] = true
+		for m, n := range v.GetMaterials() {
 			// A purchase bill may name any carried material (seasoned
 			// timber and their like), not only the Wilds four.
 			if !slices.Contains(WildsRules.Materials, m) && !catalogueMaterials[m] {
-				return bad
+				return fmt.Errorf("invalid homestead: item %s material %s", v.GetId(), m)
 			}
 			if n <= 0 {
-				return bad
+				return fmt.Errorf("invalid homestead: item %s material %s", v.GetId(), m)
 			}
 		}
 		// The row must agree with the furnishing it names: its name and
 		// footprint are the catalogue's, never a second copy.
-		f, ok := FurnishingFor(v.ID)
-		if !ok || v.Name != f.GetName() || len(v.Footprint) != 2 || v.Footprint[0] != int(f.GetFootprint()[0]) || v.Footprint[1] != int(f.GetFootprint()[1]) {
-			return bad
+		f, ok := FurnishingFor(v.GetId())
+		if !ok || v.GetName() != f.GetName() || len(v.GetFootprint()) != 2 || v.GetFootprint()[0] != f.GetFootprint()[0] || v.GetFootprint()[1] != f.GetFootprint()[1] {
+			return fmt.Errorf("invalid homestead: item %s disagrees with the catalogue", v.GetId())
 		}
 	}
-	if !seen[h.LanternPosts.Item] {
-		return bad
+	if !seen[h.GetLanternPosts().GetItem()] {
+		return fmt.Errorf("invalid homestead: lantern post item %s", h.GetLanternPosts().GetItem())
 	}
 	return nil
 }
-func LoadHomestead() (Homestead, error) {
-	var h Homestead
-	b, err := FS.ReadFile("homestead.json")
-	if err == nil {
-		err = json.Unmarshal(b, &h)
+
+func LoadHomestead() (*Homestead, error) {
+	raw, err := FS.ReadFile("homestead.json")
+	if err != nil {
+		return nil, err
 	}
-	if err == nil {
-		err = resolveHomeGoods(&h)
-	}
-	if err == nil {
-		err = ValidateHomestead(h)
-	}
-	return h, err
+	return DecodeHomestead(raw)
 }
 
-var HomeRules = func() Homestead {
+var HomeRules = func() *Homestead {
 	h, err := LoadHomestead()
 	if err != nil {
 		panic(err)
@@ -298,11 +216,11 @@ var HomeRules = func() Homestead {
 	return h
 }()
 
-func HomeItemFor(id string) (HomeItem, bool) {
+func HomeItemFor(id string) (*HomeItem, bool) {
 	for _, v := range HomeRules.Items {
-		if v.ID == id {
+		if v.GetId() == id {
 			return v, true
 		}
 	}
-	return HomeItem{}, false
+	return nil, false
 }

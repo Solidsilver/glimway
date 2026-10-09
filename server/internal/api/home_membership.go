@@ -40,8 +40,8 @@ ON CONFLICT(homestead_id,to_id) DO UPDATE SET from_id=excluded.from_id,created_a
 
 // atTable: connected to presence in this world, in the Commons, by Silas's table.
 func (a *Server) atTable(world, id string) bool {
-	t := content.HomeRules.Lane.SilasTable
-	return a.presence != nil && a.presence.near(world, id, "commons", float64(t.X), float64(t.Y), float64(t.Radius))
+	t := content.HomeRules.GetCommons().GetSilasTable()
+	return a.presence != nil && a.presence.near(world, id, "commons", float64(t.GetX()), float64(t.GetY()), float64(t.GetRadius()))
 }
 
 // joint is one partner's signature on a joint deed. Both partners must stand

@@ -4,7 +4,7 @@ import "testing"
 
 func TestRound3HighestCreditBoundAndFullDayAllowance(t *testing.T) {
 	high := LossReference{Level: 60, XP: LifetimeXP(60, 0)}
-	target := high.XP - 3*DeathWindow(high.Level) - E.CheckpointToleranceXP - 1
+	target := high.XP - 3*DeathWindow(high.Level) - E.GetCheckpointToleranceXp() - 1
 	ref := CreditReference(target)
 	exp := target - LifetimeXP(ref.Level, 0)
 	p := Profile{Level: ref.Level, Exp: &exp}

@@ -1,0 +1,1729 @@
+{
+  "loader": [
+    {
+      "name": "shipped-items",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "no-rules",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "rules"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "no-items",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "items"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "duplicate-item",
+      "valid": false,
+      "rule": "duplicate id",
+      "edits": [
+        {
+          "path": [
+            "items",
+            1,
+            "id"
+          ],
+          "value": "bench-axe"
+        }
+      ]
+    },
+    {
+      "name": "bad-item-id",
+      "valid": false,
+      "rule": "string.pattern",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "id"
+          ],
+          "value": "Bench Axe"
+        }
+      ]
+    },
+    {
+      "name": "empty-name",
+      "valid": false,
+      "rule": "string.min_len",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "name"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "empty-blurb",
+      "valid": false,
+      "rule": "string.min_len",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "blurb"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "unknown-tab",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "tab"
+          ],
+          "value": "barn"
+        }
+      ]
+    },
+    {
+      "name": "tab-mismatch",
+      "valid": false,
+      "rule": "item_def.tab",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "tab"
+          ],
+          "value": "supplies"
+        }
+      ]
+    },
+    {
+      "name": "grade-on-material",
+      "valid": false,
+      "rule": "item_def.tool_fields",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "kind"
+          ],
+          "value": "material"
+        }
+      ]
+    },
+    {
+      "name": "actions-on-material",
+      "valid": false,
+      "rule": "item_def.tool_fields",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "kind"
+          ],
+          "value": "material"
+        },
+        {
+          "path": [
+            "items",
+            0,
+            "grade"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unknown-action",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "actions",
+            0
+          ],
+          "value": "juggle"
+        }
+      ]
+    },
+    {
+      "name": "no-actions",
+      "valid": false,
+      "rule": "actions",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "actions"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "icon-state-without-icon",
+      "valid": false,
+      "rule": "item_def.icon_state",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "iconState"
+          ],
+          "value": "dried"
+        }
+      ]
+    },
+    {
+      "name": "bad-icon",
+      "valid": false,
+      "rule": "string.pattern",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "icon"
+          ],
+          "value": "Not An Icon"
+        }
+      ]
+    },
+    {
+      "name": "unknown-grade",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "grade"
+          ],
+          "value": "sturdy"
+        }
+      ]
+    },
+    {
+      "name": "tool-without-grade",
+      "valid": false,
+      "rule": "grade",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "grade"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "tool-without-uses",
+      "valid": false,
+      "rule": "uses",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "uses"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unknown-at-zero",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "atZero"
+          ],
+          "value": "splits"
+        }
+      ]
+    },
+    {
+      "name": "at-zero-outside-grade",
+      "valid": false,
+      "rule": "atZero",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "atZero"
+          ],
+          "value": "cracked"
+        }
+      ]
+    },
+    {
+      "name": "slots-too-many",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "slots"
+          ],
+          "value": 7
+        }
+      ]
+    },
+    {
+      "name": "repair-without-mending",
+      "valid": false,
+      "rule": "repair",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "repair"
+          ],
+          "value": {
+            "bench": {
+              "timber": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "mending-without-repair",
+      "valid": false,
+      "rule": "repair",
+      "edits": [
+        {
+          "path": [
+            "items",
+            5,
+            "repair"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "repair-empty-bill",
+      "valid": false,
+      "rule": "map.min_pairs",
+      "edits": [
+        {
+          "path": [
+            "items",
+            5,
+            "repair",
+            "bench"
+          ],
+          "value": {}
+        }
+      ]
+    },
+    {
+      "name": "repair-unknown-item",
+      "valid": false,
+      "rule": "repair cost",
+      "edits": [
+        {
+          "path": [
+            "items",
+            5,
+            "repair",
+            "bench"
+          ],
+          "value": {
+            "gold": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "repair-instance-item",
+      "valid": false,
+      "rule": "repair cost",
+      "edits": [
+        {
+          "path": [
+            "items",
+            5,
+            "repair",
+            "bench"
+          ],
+          "value": {
+            "bench-axe": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "mender-repair-without-cost",
+      "valid": false,
+      "rule": "repair cost",
+      "edits": [
+        {
+          "path": [
+            "items",
+            5,
+            "repair",
+            "mender"
+          ],
+          "remove": true
+        },
+        {
+          "path": [
+            "items",
+            5,
+            "repair",
+            "menderEmbers"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "no-fitting",
+      "valid": false,
+      "rule": "item_def.fitting",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "kind"
+          ],
+          "value": "fitting"
+        }
+      ]
+    },
+    {
+      "name": "fitting-on-material",
+      "valid": false,
+      "rule": "item_def.fitting",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "kind"
+          ],
+          "value": "material"
+        },
+        {
+          "path": [
+            "items",
+            0,
+            "fitting"
+          ],
+          "value": "bite"
+        }
+      ]
+    },
+    {
+      "name": "unknown-fitting",
+      "valid": false,
+      "rule": "item_def.fitting",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "fitting"
+          ],
+          "value": "sparkle"
+        }
+      ]
+    },
+    {
+      "name": "use-on-keepsake",
+      "valid": false,
+      "rule": "use",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "kind"
+          ],
+          "value": "keepsake"
+        }
+      ]
+    },
+    {
+      "name": "consumable-without-use",
+      "valid": false,
+      "rule": "use",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "kind"
+          ],
+          "value": "consumable"
+        }
+      ]
+    },
+    {
+      "name": "unknown-use-effect",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "use"
+          ],
+          "value": [
+            {
+              "type": "fly"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "restore-without-amount",
+      "valid": false,
+      "rule": "use_effect.restore_amount",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "use"
+          ],
+          "value": [
+            {
+              "type": "restore-hp"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "effect-amount-over-1000",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "use"
+          ],
+          "value": [
+            {
+              "type": "restore-hp",
+              "amount": 1001
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "effect-seconds-over-a-day",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "use"
+          ],
+          "value": [
+            {
+              "type": "refill-lantern",
+              "seconds": 86401
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "long-effect-target",
+      "valid": false,
+      "rule": "string.max_len",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "use"
+          ],
+          "value": [
+            {
+              "type": "refill-lantern",
+              "target": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "pocket-on-tool",
+      "valid": false,
+      "rule": "item_def.pocket",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "pocket"
+          ],
+          "value": [
+            {
+              "type": "papers-glint"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "unknown-pocket-effect",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "pocket"
+          ],
+          "value": [
+            {
+              "type": "pond-sink"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "held-on-plain-tool",
+      "valid": false,
+      "rule": "item_def.held",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "held"
+          ],
+          "value": [
+            {
+              "type": "light"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "off-hand-without-held",
+      "valid": false,
+      "rule": "item_def.held",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "kind"
+          ],
+          "value": "off-hand"
+        }
+      ]
+    },
+    {
+      "name": "unknown-held-effect",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "held"
+          ],
+          "value": [
+            {
+              "type": "glow"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "affinity-unknown-class",
+      "valid": false,
+      "rule": "item_def.affinity",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "affinity"
+          ],
+          "value": {
+            "class": "bard",
+            "held": [
+              {
+                "type": "light"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "affinity-empty-held",
+      "valid": false,
+      "rule": "item_def.affinity",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "affinity"
+          ],
+          "value": {
+            "class": "warrior",
+            "held": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "belongs-to-on-material",
+      "valid": false,
+      "rule": "item_def.belongs_to",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "kind"
+          ],
+          "value": "material"
+        },
+        {
+          "path": [
+            "items",
+            0,
+            "belongsTo"
+          ],
+          "value": "hazel"
+        }
+      ]
+    },
+    {
+      "name": "unknown-grade-name",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "grades"
+          ],
+          "value": {
+            "cheap": {
+              "slots": 1,
+              "atZero": "breaks"
+            },
+            "sturdy": {
+              "slots": 1,
+              "atZero": "breaks"
+            },
+            "heirloom": {
+              "slots": 3,
+              "atZero": "blunt"
+            },
+            "special": {
+              "slots": 0,
+              "atZero": "never"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "grade-cheap-mends",
+      "valid": false,
+      "rule": "items.grade_cheap",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "grades",
+            "cheap",
+            "atZero"
+          ],
+          "value": "blunt"
+        }
+      ]
+    },
+    {
+      "name": "grade-heirloom-breaks",
+      "valid": false,
+      "rule": "items.grade_heirloom",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "grades",
+            "heirloom",
+            "atZero"
+          ],
+          "value": "breaks"
+        }
+      ]
+    },
+    {
+      "name": "grade-special-wears",
+      "valid": false,
+      "rule": "items.grade_special",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "grades",
+            "special",
+            "atZero"
+          ],
+          "value": "blunt"
+        }
+      ]
+    },
+    {
+      "name": "grade-slots-too-many",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "grades",
+            "cheap",
+            "slots"
+          ],
+          "value": 7
+        }
+      ]
+    },
+    {
+      "name": "hold-costs-more-than-a-use",
+      "valid": false,
+      "rule": "item_wear.hold",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "wear",
+            "holdPointsPerUse"
+          ],
+          "value": 9
+        }
+      ]
+    },
+    {
+      "name": "zero-points-per-use",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "wear",
+            "pointsPerUse"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "zero-fitting-uses",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "wear",
+            "fittingUses"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "worn-below-zero",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "wear",
+            "wornBelowPercent"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "worn-below-100",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "wear",
+            "wornBelowPercent"
+          ],
+          "value": 100
+        }
+      ]
+    },
+    {
+      "name": "zero-warden-uses",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "wear",
+            "wardenDullUses"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "pockets-carry-shrinks",
+      "valid": false,
+      "rule": "item_pockets.carry",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "pockets",
+            "withCarryGear"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "pockets-carry-over-four",
+      "valid": false,
+      "rule": "item_pockets.carry",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "pockets",
+            "withCarryGear"
+          ],
+          "value": 5
+        }
+      ]
+    },
+    {
+      "name": "pockets-base-zero",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "pockets",
+            "base"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "empty-tuck",
+      "valid": false,
+      "rule": "string.min_len",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "offHand",
+            "tuckDuring",
+            0
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "give-radius-zero",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "give",
+            "radiusTiles"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "thanks-radius-zero",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "thanks",
+            "nearbyTiles"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "duplicate-mender",
+      "valid": false,
+      "rule": "duplicate mender",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "menders",
+            1,
+            "npc"
+          ],
+          "value": "silas"
+        }
+      ]
+    },
+    {
+      "name": "mender-bad-npc",
+      "valid": false,
+      "rule": "string.pattern",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "menders",
+            0,
+            "npc"
+          ],
+          "value": "Silas"
+        }
+      ]
+    },
+    {
+      "name": "mender-unknown-area",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "menders",
+            0,
+            "area"
+          ],
+          "value": "moon"
+        }
+      ]
+    },
+    {
+      "name": "mender-negative-tx",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "menders",
+            0,
+            "tx"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "mender-zero-radius",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "menders",
+            0,
+            "radiusTiles"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "duplicate-pickup",
+      "valid": false,
+      "rule": "duplicate pickup",
+      "edits": [
+        {
+          "path": [
+            "pickups",
+            1,
+            "id"
+          ],
+          "value": "well-rope-coil"
+        }
+      ]
+    },
+    {
+      "name": "pickup-unknown-item",
+      "valid": false,
+      "rule": "pickup",
+      "edits": [
+        {
+          "path": [
+            "pickups",
+            0,
+            "item"
+          ],
+          "value": "gold"
+        }
+      ]
+    },
+    {
+      "name": "pickup-two-instances-2",
+      "valid": false,
+      "rule": "pickup",
+      "edits": [
+        {
+          "path": [
+            "pickups",
+            0,
+            "item"
+          ],
+          "value": "bench-axe"
+        },
+        {
+          "path": [
+            "pickups",
+            0,
+            "qty"
+          ],
+          "value": 2
+        }
+      ]
+    },
+    {
+      "name": "pickup-qty-zero",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "pickups",
+            0,
+            "qty"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "pickup-qty-over-100",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "pickups",
+            0,
+            "qty"
+          ],
+          "value": 101
+        }
+      ]
+    },
+    {
+      "name": "pickup-two-instances",
+      "valid": false,
+      "rule": "pickup",
+      "edits": [
+        {
+          "path": [
+            "pickups",
+            2,
+            "qty"
+          ],
+          "value": 2
+        }
+      ]
+    },
+    {
+      "name": "pickup-unknown-area",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "pickups",
+            0,
+            "area"
+          ],
+          "value": "wilds"
+        }
+      ]
+    },
+    {
+      "name": "pickup-negative-ty",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "pickups",
+            0,
+            "ty"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "pickup-empty-label",
+      "valid": false,
+      "rule": "string.min_len",
+      "edits": [
+        {
+          "path": [
+            "pickups",
+            0,
+            "label"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "pickup-empty-found",
+      "valid": false,
+      "rule": "string.min_len",
+      "edits": [
+        {
+          "path": [
+            "pickups",
+            0,
+            "found"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "pickup-worn-past-the-tool",
+      "valid": false,
+      "rule": "usesLeft",
+      "edits": [
+        {
+          "path": [
+            "pickups",
+            2,
+            "usesLeft"
+          ],
+          "value": 999
+        }
+      ]
+    },
+    {
+      "name": "pickup-uses-left-negative",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "pickups",
+            2,
+            "usesLeft"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "duplicate-seller",
+      "valid": false,
+      "rule": "duplicate seller",
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            1,
+            "id"
+          ],
+          "value": "hazels-kitchen"
+        }
+      ]
+    },
+    {
+      "name": "seller-mixes-spots",
+      "valid": false,
+      "rule": "seller.place_mix",
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            0,
+            "tx"
+          ],
+          "value": 3
+        }
+      ]
+    },
+    {
+      "name": "seller-unknown-resident",
+      "valid": false,
+      "rule": "place",
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            0,
+            "with"
+          ],
+          "value": "unknown"
+        }
+      ]
+    },
+    {
+      "name": "seller-unknown-area",
+      "valid": false,
+      "rule": "seller.place",
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            2,
+            "area"
+          ],
+          "value": "moon"
+        }
+      ]
+    },
+    {
+      "name": "seller-radius-over-16",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            0,
+            "radiusTiles"
+          ],
+          "value": 17
+        }
+      ]
+    },
+    {
+      "name": "seller-npc-too-long",
+      "valid": false,
+      "rule": "string.max_len",
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            0,
+            "npc"
+          ],
+          "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      ]
+    },
+    {
+      "name": "seller-unknown-festival",
+      "valid": false,
+      "rule": "festival",
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            0,
+            "festival"
+          ],
+          "value": "Missing"
+        }
+      ]
+    },
+    {
+      "name": "seller-no-goods",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            0,
+            "goods"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "duplicate-good",
+      "valid": false,
+      "rule": "duplicate good",
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            0,
+            "goods"
+          ],
+          "value": [
+            {
+              "item": "tallow",
+              "qty": 1,
+              "embers": 1,
+              "label": "Tallow",
+              "line": "Tallow."
+            },
+            {
+              "item": "tallow",
+              "qty": 1,
+              "embers": 1,
+              "label": "Tallow",
+              "line": "Tallow."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "good-unstackable",
+      "valid": false,
+      "rule": "good",
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            0,
+            "goods"
+          ],
+          "value": [
+            {
+              "item": "bench-axe",
+              "qty": 1,
+              "embers": 1,
+              "label": "Axe",
+              "line": "An axe."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "good-qty-over-100",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            0,
+            "goods",
+            0,
+            "qty"
+          ],
+          "value": 101
+        }
+      ]
+    },
+    {
+      "name": "good-free",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            0,
+            "goods",
+            0,
+            "embers"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "good-cap-over-1000",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            0,
+            "goods",
+            0,
+            "cap"
+          ],
+          "value": 1001
+        }
+      ]
+    },
+    {
+      "name": "good-long-label",
+      "valid": false,
+      "rule": "string.max_len",
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            0,
+            "goods",
+            0,
+            "label"
+          ],
+          "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      ]
+    },
+    {
+      "name": "good-long-line",
+      "valid": false,
+      "rule": "string.max_len",
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            0,
+            "goods",
+            0,
+            "line"
+          ],
+          "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        }
+      ]
+    },
+    {
+      "name": "null-field",
+      "valid": false,
+      "rule": "null content field",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "name"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "unknown-key",
+      "valid": false,
+      "rule": "unknown key",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "price"
+          ],
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "proto-name-key",
+      "valid": false,
+      "rule": "is the proto name",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "icon_state"
+          ],
+          "value": "dried"
+        }
+      ]
+    },
+    {
+      "name": "unknown-kind",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "items",
+            0,
+            "kind"
+          ],
+          "value": "weapon"
+        }
+      ]
+    },
+    {
+      "name": "grades-incomplete",
+      "valid": false,
+      "rule": "map.min_pairs",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "grades"
+          ],
+          "value": {
+            "cheap": {
+              "slots": 1,
+              "atZero": "breaks"
+            },
+            "special": {
+              "slots": 0,
+              "atZero": "never"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "home-good-not-in-homestead",
+      "valid": false,
+      "rule": "home good not in homestead.json",
+      "edits": [
+        {
+          "path": [
+            "items",
+            42,
+            "id"
+          ],
+          "value": "tool-shed"
+        }
+      ]
+    },
+    {
+      "name": "wilds-material-missing",
+      "valid": false,
+      "rule": "wilds material",
+      "edits": [
+        {
+          "path": [
+            "items",
+            16,
+            "kind"
+          ],
+          "value": "keepsake"
+        },
+        {
+          "path": [
+            "items",
+            16,
+            "tab"
+          ],
+          "value": "keepsakes"
+        }
+      ]
+    },
+    {
+      "name": "wilds-trinket-missing",
+      "valid": false,
+      "rule": "wilds trinket",
+      "edits": [
+        {
+          "path": [
+            "items",
+            39,
+            "kind"
+          ],
+          "value": "material"
+        },
+        {
+          "path": [
+            "items",
+            39,
+            "tab"
+          ],
+          "value": "supplies"
+        }
+      ]
+    },
+    {
+      "name": "charm-not-a-keepsake",
+      "valid": false,
+      "rule": "charm",
+      "edits": [
+        {
+          "path": [
+            "items",
+            41,
+            "kind"
+          ],
+          "value": "material"
+        },
+        {
+          "path": [
+            "items",
+            41,
+            "tab"
+          ],
+          "value": "supplies"
+        }
+      ]
+    }
+  ]
+}

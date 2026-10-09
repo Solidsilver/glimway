@@ -124,7 +124,7 @@ func projectsViewProto(v projectsView) *contract.ProjectsResult {
 }
 
 func choreViewProto(v choreView) *contract.ChoreView {
-	return &contract.ChoreView{Id: v.ID, Name: v.Name, Part: v.Part, Area: v.Area, Target: v.Target, Pos: &contract.RepairPos{Tx: int32(v.Pos.TX), Ty: int32(v.Pos.TY)}, Resident: v.Resident, Hint: v.Hint, Description: v.Description}
+	return &contract.ChoreView{Id: v.ID, Name: v.Name, Part: v.Part, Area: v.Area, Target: v.Target, Pos: &contract.RepairPos{Tx: int32(v.Pos.GetTx()), Ty: int32(v.Pos.GetTy())}, Resident: v.Resident, Hint: v.Hint, Description: v.Description}
 }
 
 func mendedViewProto(v mendedView) *contract.MendedView {

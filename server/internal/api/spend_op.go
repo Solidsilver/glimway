@@ -17,7 +17,7 @@ func (a *Server) spendOp(w http.ResponseWriter, r *http.Request) error {
 		return e
 	}
 	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		if !slices.Contains([]string{"rest", "home-rest", "road-lantern", "chest"}, req.Kind) || req.Kind == "road-lantern" && !slices.Contains(rules.E.RoadLanterns, req.Target) {
+		if !slices.Contains([]string{"rest", "home-rest", "road-lantern", "chest"}, req.Kind) || req.Kind == "road-lantern" && !slices.Contains(rules.E.GetRoadLanterns(), req.Target) {
 			return nil, fail(400, "invalid-spend")
 		}
 		if req.Kind == "rest" || req.Kind == "home-rest" {
@@ -51,8 +51,8 @@ func (a *Server) spendOp(w http.ResponseWriter, r *http.Request) error {
 			outcome = "lit:" + req.Target
 		}
 		if req.Kind == "chest" {
-			outcome = "opened:" + rules.E.ChestID
-			if e = grantOnce(ctx, tx, s.AccountID, rules.E.CharmItem, "chest-charm", now); e != nil {
+			outcome = "opened:" + rules.E.GetChestId()
+			if e = grantOnce(ctx, tx, s.AccountID, rules.E.GetCharmItem(), "chest-charm", now); e != nil {
 				return nil, e
 			}
 		}

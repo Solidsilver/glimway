@@ -1,26 +1,12 @@
 import raw from '../../content/mail.json' with { type: 'json' };
+import { decodeContent } from './content-proto.ts';
+import { MailSchema, type MailValid } from './gen/glimway/content/v1/mail_pb.js';
 
-export interface MailRules {
-  maxOutstandingSent: number;
-  maxOutstandingReceived: number;
-  maxSendsPerWindow: number;
-  sendWindowSeconds: number;
-  historyPageSize: number;
-  returnAfterDays: number;
-  maintenanceBatch: number;
-  maintenanceIntervalSeconds: number;
-}
+/** Mail pacing rules (content/mail.json): the server's send, history and maintenance limits. */
+export type MailRules = MailValid;
+
+/** Throws on anything content/mail.go would refuse. */
 export function validateMail(value: unknown): MailRules {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('invalid mail rules');
-  const m = value as MailRules;
-  for (const [n, max] of [
-    [m.maxOutstandingSent, 100], [m.maxOutstandingReceived, 100],
-    [m.maxSendsPerWindow, 100], [m.sendWindowSeconds, 86400],
-    [m.historyPageSize, 100], [m.returnAfterDays, 365],
-    [m.maintenanceBatch, 500], [m.maintenanceIntervalSeconds, 3600],
-  ]) {
-    if (!Number.isSafeInteger(n) || n < 1 || n > max) throw new Error('invalid mail rules');
-  }
-  return m;
+  return decodeContent(MailSchema, value, 'mail', []) as MailRules;
 }
-export const MAIL = validateMail(raw);
+export const MAIL: MailRules = validateMail(raw);

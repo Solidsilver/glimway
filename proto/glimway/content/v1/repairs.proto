@@ -1,0 +1,74 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// The village repairs (content/repairs.json): weather-broken chores, each
+// mending a piece of the village and paying a gift.
+message Repairs {
+  // Pacing and the weather-proof list.
+  RepairsRulesConfig rules = 1 [(buf.validate.field).required = true];
+  repeated RepairDef repairs = 2 [(buf.validate.field).repeated.min_items = 1];
+}
+
+// Pacing: the most open at once, one new weather breakage every perWick
+// wicks, and the scripted repairs weather never touches.
+message RepairsRulesConfig {
+  int32 max_open = 1 [(buf.validate.field).int32.gte = 1];
+  int32 per_wick = 2 [(buf.validate.field).int32.gte = 1];
+  repeated string scripted = 3 [(buf.validate.field).repeated = {
+    min_items: 1
+    items: {string: {pattern: "^[a-z0-9-]{1,100}$"}}
+  }];
+}
+
+message RepairDef {
+  option (buf.validate.message).cel = {
+    id: "repair.world_flag"
+    message: "worldFlag is repair:<id>:mended"
+    expression: "this.world_flag == \"repair:\" + this.id + \":mended\""
+  };
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string name = 2 [(buf.validate.field).string.min_len = 1];
+  // The part that mends it: an item id in the catalogue, of a kind a player
+  // can hold — checked in code (the items catalogue is another family).
+  string part = 3;
+  string area = 4 [(buf.validate.field).string = {in: ["village", "commons"]}];
+  // What broke ("well", "fence"): the world map's own vocabulary.
+  string target = 5;
+  RepairPos pos = 6 [(buf.validate.field).required = true];
+  // The resident who reacts when it's mended (a name the chore views
+  // address; not validated against the residents family).
+  string resident = 7;
+  string reaction = 8 [(buf.validate.field).string = {min_len: 1, max_len: 160}];
+  RepairGift gift = 9;
+  string hint = 10;
+  string description = 11 [(buf.validate.field).string = {min_len: 1, max_len: 160}];
+  string mended_description = 12 [(buf.validate.field).string = {min_len: 1, max_len: 160}];
+  string world_flag = 13;
+  // Festival chores only open from this day of this wick (the hame before
+  // Carting Day): the wick and its length live in the calendar family, so
+  // the range's ceiling is checked in code.
+  RepairOpenFrom open_from = 14;
+  // Weather can break it again (the default). Repairs the village can't do
+  // without — the well's rope — mend once and stay mended.
+  optional bool weather = 15;
+}
+
+// Where the broken piece stands (village tiles).
+message RepairPos {
+  optional int32 tx = 1 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  optional int32 ty = 2 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+}
+
+// The gift mending pays.
+message RepairGift {
+  string kind = 1;
+  string id = 2 [(buf.validate.field).string.min_len = 1];
+  int32 qty = 3 [(buf.validate.field).int32.gte = 1];
+}
+
+message RepairOpenFrom {
+  optional int32 day = 1 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 1];
+  string wick = 2;
+}

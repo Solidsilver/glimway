@@ -92,7 +92,7 @@ func WardenDefsSQL() string {
 	ids := []string{}
 	for _, d := range content.ItemsRules.Items {
 		if d.Fitting == "remember" {
-			ids = append(ids, "'"+d.ID+"'")
+			ids = append(ids, "'"+d.GetId()+"'")
 		}
 	}
 	if len(ids) == 0 {

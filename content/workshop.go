@@ -1,55 +1,26 @@
 package content
 
 import (
-	"encoding/json"
 	"fmt"
 	"slices"
+
+	contentv1 "glimway/gen/glimway/content/v1"
 )
 
-// Asset is goods on the move (mail, chests, gifts, crafting output). Kind
-// is "material", "item" (any other stack), "decoration" (a home good) or
+// Goods on the move (mail, chests, gifts, crafting output). Kind is
+// "material", "item" (any other stack), "decoration" (a home good) or
 // "instance" (one tool, off-hand item, carry gear or fitting, by Instance).
-// Maker picks one maker's stack ("" = unmarked); nil takes any, unmarked first.
-type Asset struct {
-	Kind     string  `json:"kind"`
-	ID       string  `json:"id"`
-	Qty      int     `json:"qty"`
-	Instance string  `json:"instance,omitempty"`
-	Maker    *string `json:"maker,omitempty"`
-}
-type UtilityItem struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
-type Recipe struct {
-	ID        string         `json:"id"`
-	Name      string         `json:"name"`
-	MinTier   int            `json:"minTier"`
-	Materials map[string]int `json:"materials"`
-	Output    Asset          `json:"output"`
-	// Swaps: a material's stand-ins, one for one ("bloom-flowers" accept
-	// "dried-flowers"). The bill still names the primary.
-	Swaps map[string][]string `json:"swaps,omitempty"`
-	// Hearth recipes only: the recipe page a found recipe asks for (empty
-	// for a starting recipe), and where the world says it is found.
-	Page  string `json:"page,omitempty"`
-	Found string `json:"found,omitempty"`
-}
-type Crafting struct {
-	UtilityItems  []UtilityItem `json:"utilityItems"`
-	Recipes       []Recipe      `json:"recipes"`
-	HearthRecipes []Recipe      `json:"hearthRecipes,omitempty"`
-}
-type Project struct {
-	ID        string         `json:"id"`
-	Name      string         `json:"name"`
-	Materials map[string]int `json:"materials"`
-	Papers    []string       `json:"papers"`
-	WorldFlag string         `json:"worldFlag"`
-}
-type Projects struct {
-	Projects []Project `json:"projects"`
-}
+// Maker picks one maker's stack ("" = unmarked); absent takes any, unmarked
+// first.
+type (
+	Asset       = contentv1.Asset
+	UtilityItem = contentv1.UtilityItem
+	Recipe      = contentv1.Recipe
+	RecipeSwap  = contentv1.RecipeSwap
+	Crafting    = contentv1.Crafting
+	Project     = contentv1.Project
+	Projects    = contentv1.Projects
+)
 
 func ValidContentID(id string) bool {
 	if len(id) == 0 || len(id) > 100 {
@@ -62,7 +33,9 @@ func ValidContentID(id string) bool {
 	}
 	return true
 }
-func ValidMaterialCosts(costs map[string]int) bool {
+
+// ValidMaterialCosts: a non-empty bill of Wilds materials.
+func ValidMaterialCosts(costs map[string]int32) bool {
 	if len(costs) == 0 {
 		return false
 	}
@@ -74,102 +47,103 @@ func ValidMaterialCosts(costs map[string]int) bool {
 	return true
 }
 
-// validateSwaps: a swap names a material on the bill and stand-ins that
-// are carried stacks of their own, never a bill item or a repeat.
-func validateSwaps(r Recipe, defs map[string]ItemDef) bool {
-	for key, swaps := range r.Swaps {
-		if _, ok := r.Materials[key]; !ok || len(swaps) == 0 {
-			return false
-		}
-		for _, s := range swaps {
-			if s == key {
-				return false
-			}
-			if _, onBill := r.Materials[s]; onBill {
-				return false
-			}
-			d, ok := defs[s]
-			if !ok || !d.Stackable() {
-				return false
-			}
-		}
+// DecodeCrafting reads crafting JSON into the generated types, refusing
+// nulls and unknown keys, then runs the schema's rules (protovalidate) and
+// the workshops' own rules.
+func DecodeCrafting(raw []byte) (*Crafting, error) {
+	doc := &Crafting{}
+	if err := decodeContentProto(raw, "crafting", doc); err != nil {
+		return doc, err
 	}
-	return true
+	if err := contentValidate("crafting", entryLists(doc, "utilityItems", "recipes", "hearthRecipes"), doc); err != nil {
+		return doc, err
+	}
+	return doc, validateCrafting(doc)
 }
 
-func ValidateCrafting(c Crafting) error {
-	bad := fmt.Errorf("invalid crafting")
-	if len(c.Recipes) == 0 || len(c.Recipes) > 60 || len(c.UtilityItems) == 0 {
-		return bad
-	}
+// validateCrafting: the rules that span entries or families. Recipe ids
+// are unique across recipes and hearth recipes (one `duplicate id` per
+// id); a utility item is a catalogue part under its catalogue name; a bill
+// names carried stacks; swaps stand in for a bill line; outputs resolve,
+// tier 2 on the bench, tier 1 at the hearth, and a found recipe names its
+// page.
+func validateCrafting(c *Crafting) error {
 	items := map[string]bool{}
 	recipes := map[string]bool{}
-	for _, i := range c.UtilityItems {
-		d, ok := ItemFor(i.ID)
-		if !ValidContentID(i.ID) || i.Name == "" || items[i.ID] || !ok || d.Kind != "part" || d.Name != i.Name {
-			return bad
+	for _, i := range c.GetUtilityItems() {
+		if items[i.GetId()] {
+			return fmt.Errorf("invalid crafting: duplicate id %s", i.GetId())
 		}
-		items[i.ID] = true
+		d, ok := ItemFor(i.GetId())
+		if !ok || d.Kind != "part" || d.Name != i.GetName() {
+			return fmt.Errorf("invalid crafting: utility item %s", i.GetId())
+		}
+		items[i.GetId()] = true
 	}
+	// A bench recipe: tier 2, its output any catalogue good.
 	for _, r := range c.Recipes {
-		if !ValidContentID(r.ID) || r.Name == "" || recipes[r.ID] || r.MinTier != 2 || !validStackCosts(r.Materials, itemsByID) || r.Output.Qty < 1 || r.Output.Qty > 100 || !validateSwaps(r, itemsByID) {
-			return bad
+		if recipes[r.GetId()] {
+			return fmt.Errorf("invalid crafting: duplicate id %s", r.GetId())
 		}
-		switch r.Output.Kind {
+		if r.GetMinTier() != 2 || !validStackCosts(r.GetMaterials(), itemsByID) || !validateSwaps(r, itemsByID) {
+			return fmt.Errorf("invalid crafting: recipe %s", r.GetId())
+		}
+		switch r.GetOutput().GetKind() {
 		case "decoration":
-			d, ok := HomeItemFor(r.Output.ID)
-			if !ok || d.MinTier > r.MinTier {
-				return bad
+			d, ok := HomeItemFor(r.GetOutput().GetId())
+			if !ok || int32(d.MinTier) > r.GetMinTier() {
+				return fmt.Errorf("invalid crafting: recipe %s output", r.GetId())
 			}
 		case "item", "instance":
-			d, ok := ItemFor(r.Output.ID)
-			if !ok || d.AssetKind() != r.Output.Kind || (r.Output.Kind == "instance" && r.Output.Qty != 1) {
-				return bad
+			d, ok := ItemFor(r.GetOutput().GetId())
+			if !ok || ItemAssetKind(d) != r.GetOutput().GetKind() || (r.GetOutput().GetKind() == "instance" && r.GetOutput().GetQty() != 1) {
+				return fmt.Errorf("invalid crafting: recipe %s output", r.GetId())
 			}
 		default:
-			return bad
+			return fmt.Errorf("invalid crafting: recipe %s output", r.GetId())
 		}
-		recipes[r.ID] = true
+		recipes[r.GetId()] = true
 	}
+	// A hearth recipe: tier 1, its output a carried stack, and a found
+	// recipe names the page that teaches it (a starting recipe names
+	// neither).
 	for _, r := range c.HearthRecipes {
-		if !ValidContentID(r.ID) || r.Name == "" || recipes[r.ID] || r.MinTier != 1 || !validStackCosts(r.Materials, itemsByID) || r.Output.Qty < 1 || r.Output.Qty > 100 || !validateSwaps(r, itemsByID) {
-			return bad
+		if recipes[r.GetId()] {
+			return fmt.Errorf("invalid crafting: duplicate id %s", r.GetId())
 		}
-		// A found recipe names the page that teaches it (a recipe paper you
-		// hold); a starting recipe names neither.
-		if (r.Page == "") != (r.Found == "") {
-			return bad
+		if r.GetMinTier() != 1 || !validStackCosts(r.GetMaterials(), itemsByID) || !validateSwaps(r, itemsByID) {
+			return fmt.Errorf("invalid crafting: hearth recipe %s", r.GetId())
 		}
-		if r.Page != "" {
-			d, ok := ItemFor(r.Page)
+		if (r.GetPage() == "") != (r.GetFound() == "") {
+			return fmt.Errorf("invalid crafting: hearth recipe %s page", r.GetId())
+		}
+		if r.GetPage() != "" {
+			d, ok := ItemFor(r.GetPage())
 			if !ok || d.Kind != "paper" {
-				return bad
+				return fmt.Errorf("invalid crafting: hearth recipe %s page", r.GetId())
 			}
 		}
-		if r.Output.Kind != "item" && r.Output.Kind != "material" {
-			return bad
+		if r.GetOutput().GetKind() != "item" && r.GetOutput().GetKind() != "material" {
+			return fmt.Errorf("invalid crafting: hearth recipe %s output", r.GetId())
 		}
-		d, ok := ItemFor(r.Output.ID)
-		if !ok || d.AssetKind() != r.Output.Kind {
-			return bad
+		d, ok := ItemFor(r.GetOutput().GetId())
+		if !ok || ItemAssetKind(d) != r.GetOutput().GetKind() {
+			return fmt.Errorf("invalid crafting: hearth recipe %s output", r.GetId())
 		}
-		recipes[r.ID] = true
+		recipes[r.GetId()] = true
 	}
 	return nil
 }
-func LoadCrafting() (Crafting, error) {
-	var c Crafting
-	b, err := FS.ReadFile("crafting.json")
-	if err == nil {
-		err = json.Unmarshal(b, &c)
+
+func LoadCrafting() (*Crafting, error) {
+	raw, err := FS.ReadFile("crafting.json")
+	if err != nil {
+		return nil, err
 	}
-	if err == nil {
-		err = ValidateCrafting(c)
-	}
-	return c, err
+	return DecodeCrafting(raw)
 }
 
-var CraftingRules = func() Crafting {
+var CraftingRules = func() *Crafting {
 	c, err := LoadCrafting()
 	if err != nil {
 		panic(err)
@@ -177,63 +151,79 @@ var CraftingRules = func() Crafting {
 	return c
 }()
 
-func RecipeFor(id string) (Recipe, bool) {
+func RecipeFor(id string) (*Recipe, bool) {
 	for _, r := range CraftingRules.Recipes {
-		if r.ID == id {
+		if r.GetId() == id {
 			return r, true
 		}
 	}
-	return Recipe{}, false
+	return nil, false
 }
-func HearthRecipeFor(id string) (Recipe, bool) {
+func HearthRecipeFor(id string) (*Recipe, bool) {
 	for _, r := range CraftingRules.HearthRecipes {
-		if r.ID == id {
+		if r.GetId() == id {
 			return r, true
 		}
 	}
-	return Recipe{}, false
+	return nil, false
 }
-func ValidateProjects(p Projects) error {
-	bad := fmt.Errorf("invalid projects")
-	if len(p.Projects) == 0 {
-		return bad
+
+// DecodeProjects reads projects JSON into the generated types, refusing
+// nulls and unknown keys, then runs the schema's rules (protovalidate) and
+// the projects' own rules.
+func DecodeProjects(raw []byte) (*Projects, error) {
+	doc := &Projects{}
+	if err := decodeContentProto(raw, "projects", doc); err != nil {
+		return doc, err
 	}
+	if err := contentValidate("projects", entryLists(doc, "projects"), doc); err != nil {
+		return doc, err
+	}
+	return doc, validateProjects(doc)
+}
+
+// validateProjects: the rules that span families. The bill names Wilds
+// materials; each paper is a village-project paper turned in once; and
+// every authored project paper has a completion path.
+func validateProjects(p *Projects) error {
 	ids := map[string]bool{}
 	papers := map[string]bool{}
 	for _, v := range p.Projects {
-		if !ValidContentID(v.ID) || v.Name == "" || ids[v.ID] || !ValidMaterialCosts(v.Materials) || v.WorldFlag != "project:"+v.ID+":complete" {
-			return bad
+		if ids[v.GetId()] {
+			return fmt.Errorf("invalid projects: duplicate id %s", v.GetId())
 		}
-		ids[v.ID] = true
-		for _, id := range v.Papers {
+		if !ValidMaterialCosts(v.GetMaterials()) {
+			return fmt.Errorf("invalid projects: %s materials", v.GetId())
+		}
+		ids[v.GetId()] = true
+		for _, id := range v.GetPapers() {
 			paper, ok := PapersByID[id]
-			if !ok || paper.Source != "village-project" || papers[id] {
-				return bad
+			if !ok || paper.Source != "village-project" {
+				return fmt.Errorf("invalid projects: %s paper %s", v.GetId(), id)
+			}
+			if papers[id] {
+				return fmt.Errorf("invalid projects: duplicate paper %s", id)
 			}
 			papers[id] = true
 		}
 	}
-	// Every authored project paper has a completion path.
 	for id, paper := range PapersByID {
 		if paper.Source == "village-project" && !papers[id] {
-			return bad
+			return fmt.Errorf("invalid projects: paper without a project %s", id)
 		}
 	}
 	return nil
 }
-func LoadProjects() (Projects, error) {
-	var p Projects
-	b, err := FS.ReadFile("projects.json")
-	if err == nil {
-		err = json.Unmarshal(b, &p)
+
+func LoadProjects() (*Projects, error) {
+	raw, err := FS.ReadFile("projects.json")
+	if err != nil {
+		return nil, err
 	}
-	if err == nil {
-		err = ValidateProjects(p)
-	}
-	return p, err
+	return DecodeProjects(raw)
 }
 
-var ProjectRules = func() Projects {
+var ProjectRules = func() *Projects {
 	p, err := LoadProjects()
 	if err != nil {
 		panic(err)
@@ -241,11 +231,48 @@ var ProjectRules = func() Projects {
 	return p
 }()
 
-func ProjectFor(id string) (Project, bool) {
+func ProjectFor(id string) (*Project, bool) {
 	for _, p := range ProjectRules.Projects {
-		if p.ID == id {
+		if p.GetId() == id {
 			return p, true
 		}
 	}
-	return Project{}, false
+	return nil, false
+}
+
+// validStackCosts: a non-empty bill of carried stackable items.
+func validStackCosts(costs map[string]int32, defs map[string]*ItemDef) bool {
+	if len(costs) == 0 {
+		return false
+	}
+	for id, n := range costs {
+		d, ok := defs[id]
+		if !ok || !ItemStackable(d) || n < 1 || n > 1000000 {
+			return false
+		}
+	}
+	return true
+}
+
+// validateSwaps: a swap names a material on the bill and stand-ins that
+// are carried stacks of their own, never a bill item or a repeat.
+func validateSwaps(r *Recipe, defs map[string]*ItemDef) bool {
+	for key, swaps := range r.GetSwaps() {
+		if _, ok := r.GetMaterials()[key]; !ok || len(swaps.GetStandIns()) == 0 {
+			return false
+		}
+		for _, s := range swaps.GetStandIns() {
+			if s == key {
+				return false
+			}
+			if _, onBill := r.GetMaterials()[s]; onBill {
+				return false
+			}
+			d, ok := defs[s]
+			if !ok || !ItemStackable(d) {
+				return false
+			}
+		}
+	}
+	return true
 }

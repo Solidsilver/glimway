@@ -24,8 +24,8 @@ func (x *rig) stand(id, world, room string, px, py float64) {
 	h.peers[id] = &presencePeer{identity: presenceIdentity{ID: id, World: world}, area: room, pos: &presencePosition{X: px, Y: py}}
 }
 func (x *rig) atTable(id, world string) {
-	t := content.HomeRules.Lane.SilasTable
-	x.stand(id, world, "commons", float64(t.X+4), float64(t.Y-4))
+	t := content.HomeRules.GetCommons().GetSilasTable()
+	x.stand(id, world, "commons", float64(int(t.GetX())+4), float64(int(t.GetY())-4))
 }
 
 // home is the caller's homestead as the server shows it.
@@ -118,7 +118,7 @@ func TestHomes2JointDeedNeedsBothAtTheTableWithinTheWindow(t *testing.T) {
 		t.Fatal("first signature")
 	}
 	// The second signature comes too late: it waits for a fresh one.
-	x.now.Add(int64(content.HomeRules.JointDeed.ConfirmWindowSeconds) + 1)
+	x.now.Add(int64(content.HomeRules.GetJointDeed().GetConfirmWindowSeconds()) + 1)
 	if x.homeOpRefreshing(ac, &a, "joint", joint, 200).Result.Status != "waiting" {
 		t.Fatal("stale signature joined")
 	}
@@ -217,7 +217,7 @@ func TestHomes2DeedPrices(t *testing.T) {
 	x.claimGate(ac, &a, 0)
 	x.homeOpRefreshing(ac, &a, "leave", nil, 200)
 	lane = x.exp("GET", "/api/commons", nil, ac, 200)
-	price := content.HomeRules.Deeds.Embers
+	price := int(content.HomeRules.GetDeeds().GetEmbers())
 	if lane.Mine != nil || lane.Gates[1].Price == nil || *lane.Gates[1].Price != price {
 		t.Fatal("second deed price")
 	}
@@ -344,14 +344,14 @@ func TestHomes2DesolationAndLostDeeds(t *testing.T) {
 		t.Fatal("vacant land is still under its deed")
 	}
 	day := int64(86400)
-	x.now.Add(int64(content.HomeRules.Desolation.DesolateAfterDays)*day - 1)
+	x.now.Add(int64(content.HomeRules.GetDesolation().GetDesolateAfterDays())*day - 1)
 	check("almost desolate", false, true)
 	x.now.Add(1)
 	check("desolate", true, true)
 	if v := x.exp("GET", fmt.Sprintf("/api/homestead/gate/%d", gate), nil, dc, 200); v.Home == nil || !v.Home.Desolate || placed(*v.Home, stools.Result.InstanceIDs[0]) == nil {
 		t.Fatal("desolate home keeps its pieces")
 	}
-	x.now.Add(int64(content.HomeRules.Desolation.DeedLostAfterDays-content.HomeRules.Desolation.DesolateAfterDays)*day - 1)
+	x.now.Add(int64(content.HomeRules.GetDesolation().GetDeedLostAfterDays()-content.HomeRules.GetDesolation().GetDesolateAfterDays())*day - 1)
 	// Dora's session idled out over the fortnight: she signs in again.
 	dc = x.login("dora", "")
 	d = x.expect("POST", "/api/play", map[string]any{"clientId": "tab-a"}, dc, 200)
@@ -363,7 +363,7 @@ func TestHomes2DesolationAndLostDeeds(t *testing.T) {
 	}
 	// Dora has never held a deed, but this land's was lost: it costs embers.
 	lane := x.exp("GET", "/api/commons", nil, dc, 200)
-	price := content.HomeRules.Deeds.Embers
+	price := int(content.HomeRules.GetDeeds().GetEmbers())
 	if *lane.Gates[gate].Price != price || *lane.Gates[gate+1].Price != 0 {
 		t.Fatal("lost deed price")
 	}
@@ -389,14 +389,14 @@ func lanternSpots(t *testing.T, h homeView) (post, beyond [2]int) {
 		if !land.Buildable(g.land.Effective(g.cleared, x, y)) {
 			return false
 		}
-		for _, r := range content.HomeRules.OutdoorReserved {
-			if (rect{x, y, 1, 1}).overlaps(rect{r.X, r.Y, r.W, r.H}) {
+		for _, r := range content.HomeRules.GetOutdoorReserved() {
+			if (rect{x, y, 1, 1}).overlaps(rect{int(r.GetX()), int(r.GetY()), int(r.GetW()), int(r.GetH())}) {
 				return false
 			}
 		}
 		return true
 	}
-	r := content.HomeRules.LanternPosts.Radius
+	r := int(content.HomeRules.GetLanternPosts().GetRadius())
 	for _, p := range litSpots(h) {
 		lights := []land.Light{{X: p[0], Y: p[1], Radius: r}}
 		for y := 0; y < g.land.Height; y++ {
@@ -416,18 +416,18 @@ func TestHomes2LanternLightAndClearing(t *testing.T) {
 	ac, a := x.ready("alice")
 	x.seedAssets(x.account("alice"))
 	h := x.claimGate(ac, &a, 0)
-	item := content.HomeRules.LanternPosts.Item
+	item := content.HomeRules.GetLanternPosts().GetItem()
 	// Each post costs more than the last, from shared content.
 	m0 := x.exp("GET", "/api/homestead/gate/0", nil, ac, 200).Materials
 	post := x.homeOpRefreshing(ac, &a, "buy", map[string]any{"itemDef": item}, 200)
 	second := x.homeOpRefreshing(ac, &a, "buy", map[string]any{"itemDef": item}, 200)
-	c0, c1 := content.HomeRules.PostCost(0), content.HomeRules.PostCost(1)
+	c0, c1 := content.HomePostCost(content.HomeRules, 0), content.HomePostCost(content.HomeRules, 1)
 	for m, n := range c0 {
-		if post.Result.Materials[m] != m0[m]-n || second.Result.Materials[m] != m0[m]-n-c1[m] {
+		if int(post.Result.Materials[m]) != int(m0[m])-int(n) || int(second.Result.Materials[m]) != int(m0[m])-int(n)-int(c1[m]) {
 			t.Fatal("post price", m)
 		}
 	}
-	if second.Result.Home.PostsBought != 2 || fmt.Sprint(second.Result.Home.NextPost) != fmt.Sprint(content.HomeRules.PostCost(2)) {
+	if second.Result.Home.PostsBought != 2 || fmt.Sprint(second.Result.Home.NextPost) != fmt.Sprint(content.HomePostCost(content.HomeRules, 2)) {
 		t.Fatal("next post price")
 	}
 	p, beyond := lanternSpots(t, h)
@@ -464,7 +464,7 @@ func TestHomes2LanternLightAndClearing(t *testing.T) {
 	far := litSpots(h)
 	away := far[0]
 	for _, s := range far {
-		lights := []land.Light{{X: s[0], Y: s[1], Radius: content.HomeRules.LanternPosts.Radius}}
+		lights := []land.Light{{X: s[0], Y: s[1], Radius: int(content.HomeRules.GetLanternPosts().GetRadius())}}
 		if !land.Lit(lights, beyond[0], beyond[1]) && s != p {
 			away = s
 			break
@@ -512,7 +512,7 @@ func TestHomes2LanternLightAndClearing(t *testing.T) {
 	x.refresh(ac, &a)
 	before := a.State.Embers
 	cleared := x.homeOpRefreshing(ac, &a, "clear", map[string]any{"x": tree[0], "y": tree[1]}, 200)
-	if a.State.Embers != before-content.HomeRules.ClearTileEmbers || len(cleared.Result.Home.Cleared) != 1 || cleared.Result.Home.Cleared[0] != tree {
+	if a.State.Embers != before-int(content.HomeRules.GetClearTileEmbers()) || len(cleared.Result.Home.Cleared) != 1 || cleared.Result.Home.Cleared[0] != tree {
 		t.Fatal("clear tile")
 	}
 	if x.homeOpRefreshing(ac, &a, "clear", map[string]any{"x": tree[0], "y": tree[1]}, 409).Error.Code != "already-cleared" {

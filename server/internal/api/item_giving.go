@@ -21,11 +21,11 @@ func (a *Server) giveItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, re
 	if err := validAsset(v); err != nil {
 		return "", err
 	}
-	if v.Kind == "decoration" {
-		if v.ID == "door-fox" {
+	if v.GetKind() == "decoration" {
+		if v.GetId() == "door-fox" {
 			return "", fail(409, "not-giveable")
 		}
-	} else if d, _ := content.ItemFor(v.ID); !d.Giveable() {
+	} else if d, _ := content.ItemFor(v.GetId()); !content.ItemGiveable(d) {
 		return "", fail(409, "not-giveable")
 	}
 	var world string
@@ -50,8 +50,8 @@ func (a *Server) giveItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, re
 	if a.presence == nil || !a.presence.together(s.WorldID, s.AccountID, req.ToId, radius) {
 		return "", fail(409, "not-together")
 	}
-	if v.Kind == "instance" {
-		warden, err := isWardenSet(ctx, tx, v.Instance)
+	if v.GetKind() == "instance" {
+		warden, err := isWardenSet(ctx, tx, v.GetInstance())
 		if err != nil {
 			return "", err
 		}
@@ -70,15 +70,15 @@ func (a *Server) giveItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, re
 	if err != nil {
 		return "", err
 	}
-	switch v.Kind {
+	switch v.GetKind() {
 	case "material", "item":
-		err = packPut(ctx, tx, req.ToId, v.ID, got.Makers, "gift", s.AccountID, now)
+		err = packPut(ctx, tx, req.ToId, v.GetId(), got.Makers, "gift", s.AccountID, now)
 	case "instance":
-		if err = currency(ctx, tx, req.ToId, content.StackCurrency(v.ID), 1, "gift", s.AccountID, now); err == nil {
-			err = fittedLedger(ctx, tx, req.ToId, v.Instance, 1, "gift", s.AccountID, now)
+		if err = currency(ctx, tx, req.ToId, content.StackCurrency(v.GetId()), 1, "gift", s.AccountID, now); err == nil {
+			err = fittedLedger(ctx, tx, req.ToId, v.GetInstance(), 1, "gift", s.AccountID, now)
 		}
 	default:
-		err = currency(ctx, tx, req.ToId, "decoration:"+v.ID, v.Qty, "gift", s.AccountID, now)
+		err = currency(ctx, tx, req.ToId, "decoration:"+v.GetId(), int(v.GetQty()), "gift", s.AccountID, now)
 	}
 	if err != nil {
 		return "", err

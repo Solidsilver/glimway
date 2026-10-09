@@ -19,14 +19,14 @@ import (
 // ------------------------------------------------------------ gathering & planting
 
 func gatherCaps(action string) (visit, day int) {
-	c := content.GatheringRules.Caps
+	c := content.GatheringRules.GetCaps()
 	switch action {
 	case "chop":
-		return c.Visit.Chop, c.Day.Chop
+		return int(c.GetVisit().GetChop()), int(c.GetDay().GetChop())
 	case "break":
-		return c.Visit.Break, c.Day.Break
+		return int(c.GetVisit().GetBreak()), int(c.GetDay().GetBreak())
 	}
-	return c.Visit.Dig, c.Day.Dig
+	return int(c.GetVisit().GetDig()), int(c.GetDay().GetDig())
 }
 
 // ownLand: the caller's homestead when `area` is its land (nil, refused,
@@ -115,7 +115,7 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 	// a seasonal piece only stands in its mark or wick, whatever the
 	// client's map says.
 	calDay := content.CalendarAt(content.CalendarRules, now)
-	if !target.InSeason(calDay) {
+	if !content.GatheringTargetInSeason(target, calDay) {
 		return fail(409, "not-in-season")
 	}
 	if len(req.VisitId) > 64 {
@@ -264,36 +264,36 @@ ON CONFLICT(account_id,action) DO UPDATE SET day=excluded.day,day_count=excluded
 		if !ok {
 			return fmt.Errorf("gathering slot names unknown item %q", sl.def)
 		}
-		for _, e := range d.Pocket {
-			if e.Type == "gather-more" {
-				more[e.Target] = true
+		for _, e := range d.GetPocket() {
+			if e.GetType() == "gather-more" {
+				more[e.GetTarget()] = true
 			}
 		}
 	}
 	rng := wilds.NewRng(wilds.Hash(s.AccountID, req.Target, int(now), int(day), dayCount))
 	out.Gathered = []*contract.Stack{}
 	for _, y := range target.Yields {
-		if !y.InSeason(calDay) {
+		if !content.GatheringYieldInSeason(y, calDay) {
 			continue
 		}
-		if y.ChancePermille > 0 && rng.NextInt(1000) >= y.ChancePermille {
+		if y.GetChancePermille() > 0 && rng.NextInt(1000) >= int(y.GetChancePermille()) {
 			continue
 		}
-		qty := y.Min + rng.NextInt(y.Max-y.Min+1)
-		if more[y.Item] {
+		qty := int(y.GetMin()) + rng.NextInt(int(y.GetMax()-y.GetMin())+1)
+		if more[y.GetItem()] {
 			qty++
 		}
 		def, ok := content.ItemFor(y.Item)
 		if !ok {
 			return fmt.Errorf("gathering yield names unknown item %q", y.Item)
 		}
-		if def.Instanced() {
+		if content.ItemInstanced(def) {
 			for range qty {
 				id, err := newInstance(ctx, tx, def, instanceAt{"pack", s.AccountID}, "", -1, now)
 				if err != nil {
 					return err
 				}
-				if err = currency(ctx, tx, s.AccountID, content.StackCurrency(def.ID), 1, "gather", req.Target, now); err != nil {
+				if err = currency(ctx, tx, s.AccountID, content.StackCurrency(def.GetId()), 1, "gather", req.Target, now); err != nil {
 					return err
 				}
 				out.Created = append(out.Created, id)

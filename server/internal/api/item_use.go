@@ -25,10 +25,10 @@ func (a *Server) useItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req
 		return nil
 	}
 	def, ok := content.ItemFor(req.ItemDef)
-	if !ok || def.Kind != "consumable" {
+	if !ok || def.GetKind() != "consumable" {
 		return fail(400, "invalid-item")
 	}
-	if !def.UsableNow() {
+	if !content.ItemUsableNow(def) {
 		return fail(409, "not-usable-yet")
 	}
 	// A hero at 0 HP is too far gone to eat or drink. Only a sync, a rest or
@@ -44,13 +44,13 @@ func (a *Server) useItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req
 			if s.State.HP < s.State.MaxHP {
 				helps = true
 				s.VitalsWritten = true
-				s.State.HP = math.Min(s.State.MaxHP, s.State.HP+float64(e.Amount))
+				s.State.HP = math.Min(s.State.MaxHP, s.State.HP+float64(e.GetAmount()))
 			}
 		case "restore-mana":
 			if s.State.Mana < s.State.MaxMana {
 				helps = true
 				s.VitalsWritten = true
-				s.State.Mana = math.Min(s.State.MaxMana, s.State.Mana+float64(e.Amount))
+				s.State.Mana = math.Min(s.State.MaxMana, s.State.Mana+float64(e.GetAmount()))
 			}
 		case "clear-unmoored", "ease-unmoored":
 			if req.Unmoored {
@@ -66,14 +66,14 @@ func (a *Server) useItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req
 		m := req.Maker.GetValue()
 		maker = &m
 	}
-	split, err := packTake(ctx, tx, s.AccountID, def.ID, maker, 1, "use", def.ID, now)
+	split, err := packTake(ctx, tx, s.AccountID, def.GetId(), maker, 1, "use", def.GetId(), now)
 	if err != nil {
 		return err
 	}
-	out.Used = def.ID
+	out.Used = def.GetId()
 	// A quiet thank-you to the maker, unless they're right here.
 	for _, m := range split {
-		if err = a.thankMaker(ctx, tx, s, m.Maker, def.ID, now); err != nil {
+		if err = a.thankMaker(ctx, tx, s, m.Maker, def.GetId(), now); err != nil {
 			return err
 		}
 	}
