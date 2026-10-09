@@ -10,6 +10,7 @@
   import { setHeld } from '../game/held'
   import { KIND_WORDS } from '../lib/belt'
   import { noteFloatingVisit, settings } from './settings.svelte'
+  import ContextButtons from './ContextButtons.svelte'
 
   const show = isTouchFirst()
   /** fixed: the corner joystick. floating: it appears under the thumb. hold: walk toward the finger. */
@@ -317,6 +318,8 @@
       </button>
       </div>
       <div class="actwrap">
+        <!-- What the game has up for now (saddle, Go home, Keep / Let it go), above the action button, inside the belt's arc. -->
+        <div class="ctxwrap"><ContextButtons variant="touch" /></div>
         {#if heldUi.belt.length > 1}
           <div class="belt" role="group" aria-label="Take in hand" data-testid="belt" data-inset-watch>
             {#each others as b, i (b.kind)}
@@ -489,6 +492,12 @@
   /* The ring is an overlay over the world: App.svelte measures its buttons, not a padded box. */
   .actwrap {
     position: relative;
+  }
+  .ctxwrap {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 10px);
+    pointer-events: none;
   }
   .belt {
     position: absolute;

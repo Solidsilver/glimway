@@ -1,6 +1,7 @@
 import type { AreaPayload, GoalDirPayload, GoalLinePayload, LinkPayload, PresencePayload, PromptPayload, QuestPayload, StatsPayload, ToastPayload } from '../game/events'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types'
 import { bus, EV } from '../game/events'
+import { onContextButtons, type ContextButton } from '../game/context-buttons'
 import { itemName } from '../lib/items'
 import { isTouchFirst } from './device'
 
@@ -106,6 +107,8 @@ class UiStore {
   artIcons = $state<Record<string, string>>({})
   /** Signature ability readiness for the HUD slot / touch button. */
   ability = $state<{ readyAt: number; cooldown: number; deniedAt: number }>({ readyAt: 0, cooldown: 1, deniedAt: 0 })
+  /** The context buttons the game has up (src/game/context-buttons.ts): saddle, Go home, Keep / Let it go. */
+  contextButtons = $state.raw<readonly ContextButton[]>([])
   /** Dodge roll cooldown for the HUD slot / touch button. */
   roll = $state<{ readyAt: number; cooldown: number }>({ readyAt: 0, cooldown: 1 })
   /** Queue of quest beats / area titles (shown one at a time). */
@@ -214,3 +217,7 @@ function gainLabel(text: string): string {
 }
 
 export const ui = new UiStore()
+
+onContextButtons((buttons) => {
+  ui.contextButtons = buttons
+})

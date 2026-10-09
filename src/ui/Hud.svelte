@@ -14,6 +14,7 @@
   import { heldUi } from './held.svelte'
   import { setHeld } from '../game/held'
   import { KIND_WORDS } from '../lib/belt'
+  import ContextButtons from './ContextButtons.svelte'
 
   let {
     onJournal,
@@ -326,6 +327,8 @@
       <!-- The E slot says what it will do here; tests and players read it as the prompt. -->
       <div class="prompt" role="status"><span class="kbd">E</span><span>{prompt}</span></div>
     {/if}
+    <!-- What the game has up for now (a saddle, Go home, Keep / Let it go): src/game/context-buttons.ts. -->
+    <div class="ctxbar"><ContextButtons variant="bar" /></div>
     {#if heldUi.belt.length > 1}
       <!-- The belt: what you carry to hand, by number key; click or press to take one. -->
       <div class="belt" role="group" aria-label="Take in hand" data-testid="belt">
@@ -988,6 +991,16 @@
     z-index: 20;
     pointer-events: none;
     transition: opacity 250ms ease, transform 250ms ease;
+  }
+  /* The context buttons, first on the bar (bottom-aligned with the slots' faces). */
+  .ctxbar {
+    display: flex;
+    align-items: flex-end;
+    padding-bottom: 0;
+    margin-right: 4px;
+  }
+  .ctxbar:empty {
+    display: none;
   }
   /* The belt beside the E slot: small slots, the one in hand lit. */
   .belt {
