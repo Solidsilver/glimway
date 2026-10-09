@@ -29,8 +29,8 @@ jobs:
       - name: Verify committed protobuf output
         run: |
           npm run proto
-          git diff --exit-code -- server/internal/gen src/lib/gen
-          test -z "$(git ls-files --others --exclude-standard server/internal/gen src/lib/gen)"
+          git diff --exit-code -- server/internal/gen gen src/lib/gen
+          test -z "$(git ls-files --others --exclude-standard server/internal/gen gen src/lib/gen)"
       - name: Check protobuf breaking changes against main
         run: |
           git rev-parse --verify refs/remotes/origin/main

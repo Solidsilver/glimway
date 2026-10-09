@@ -2,18 +2,48 @@ package content
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
+
+	"buf.build/go/protovalidate"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
 type loaderVector struct {
 	Name  string `json:"name"`
 	Valid bool   `json:"valid"`
+	// Rule: what a refusing vector is refused for — a protovalidate rule id
+	// ("string.pattern", "furnishing.rug", …) or, for rules the loaders keep
+	// in code and the pre-parse checks, the message's tag ("duplicate id",
+	// "unknown key", "stair target", …). Asserted in both languages.
+	Rule  string `json:"rule"`
 	Edits []struct {
-		Path  []any `json:"path"`
-		Value any   `json:"value"`
+		Path   []any `json:"path"`
+		Value  any   `json:"value"`
+		Remove bool  `json:"remove"`
 	} `json:"edits"`
+}
+
+// checkVectorRule asserts the shared vector was refused for the shared
+// reason: a schema violation carries the rule id, a code rule its tag.
+func checkVectorRule(t *testing.T, err error, want string) {
+	t.Helper()
+	var bad *protovalidate.ValidationError
+	if errors.As(err, &bad) {
+		for _, v := range bad.Violations {
+			if v.Proto.GetRuleId() == want {
+				return
+			}
+		}
+	}
+	if strings.Contains(err.Error(), want) {
+		return
+	}
+	t.Fatalf("refusal does not name rule %q: %v", want, err)
 }
 
 func readVectors(t *testing.T, name string, out any) {
@@ -42,6 +72,10 @@ func editVector(t *testing.T, base json.RawMessage, v loaderVector) []byte {
 				target = target.([]any)[int(k)]
 			}
 		}
+		if edit.Remove {
+			delete(target.(map[string]any), edit.Path[len(edit.Path)-1].(string))
+			continue
+		}
 		switch k := edit.Path[len(edit.Path)-1].(type) {
 		case string:
 			target.(map[string]any)[k] = edit.Value
@@ -54,6 +88,16 @@ func editVector(t *testing.T, base json.RawMessage, v loaderVector) []byte {
 		t.Fatal(err)
 	}
 	return raw
+}
+
+// decodeProto is protojson for the vector fixtures, which are hand-written
+// JSON: encoding/json into proto structs only works while the struct tags
+// happen to match.
+func decodeProto(t *testing.T, raw json.RawMessage, msg proto.Message) {
+	t.Helper()
+	if err := protojson.Unmarshal(raw, msg); err != nil {
+		t.Fatal(err)
+	}
 }
 func TestIndoorsLoaderVectors(t *testing.T) {
 	var roomVectors struct {
@@ -68,25 +112,23 @@ func TestIndoorsLoaderVectors(t *testing.T) {
 	residentBase, _ := FS.ReadFile("residents.json")
 	for _, v := range roomVectors.Rooms {
 		t.Run("rooms/"+v.Name, func(t *testing.T) {
-			var doc Rooms
-			err := json.Unmarshal(editVector(t, roomBase, v), &doc)
-			if err == nil {
-				err = ValidateRooms(doc)
-			}
+			_, err := DecodeRooms(editVector(t, roomBase, v))
 			if (err == nil) != v.Valid {
 				t.Fatal(v.Valid, err)
+			}
+			if !v.Valid && v.Rule != "" {
+				checkVectorRule(t, err, v.Rule)
 			}
 		})
 	}
 	for _, v := range roomVectors.Residents {
 		t.Run("residents/"+v.Name, func(t *testing.T) {
-			var doc Residents
-			err := json.Unmarshal(editVector(t, residentBase, v), &doc)
-			if err == nil {
-				err = ValidateResidents(doc)
-			}
+			_, err := DecodeResidents(editVector(t, residentBase, v))
 			if (err == nil) != v.Valid {
 				t.Fatal(v.Valid, err)
+			}
+			if !v.Valid && v.Rule != "" {
+				checkVectorRule(t, err, v.Rule)
 			}
 		})
 	}
@@ -112,7 +154,7 @@ func TestIndoorsLoaderVectors(t *testing.T) {
 func TestResidentCycleVectors(t *testing.T) {
 	var vectors struct {
 		Cycles []struct {
-			Resident     Resident
+			Resident     json.RawMessage
 			Now          float64
 			GraceSeconds int
 			Expected     CyclePlace
@@ -124,22 +166,30 @@ func TestResidentCycleVectors(t *testing.T) {
 		t.Fatal("no cycle vectors")
 	}
 	for _, v := range vectors.Cycles {
-		if got := CycleAt(v.Resident, v.Now); got != v.Expected {
+		var resident Resident
+		if err := decodeContentProto(v.Resident, "residents", &resident); err != nil {
+			t.Fatal(err)
+		}
+		if got := CycleAt(&resident, v.Now); got != v.Expected {
 			t.Fatal(v, got)
 		}
-		if got := CycleSpotsNear(v.Resident, v.Now, v.GraceSeconds); !reflect.DeepEqual(got, v.Near) {
+		if got := CycleSpotsNear(&resident, v.Now, v.GraceSeconds); !reflect.DeepEqual(got, v.Near) {
 			t.Fatal(v, got)
 		}
 	}
-	if got, ok := ResidentAt("finn", 2700); !ok || got != (ResidentSpot{Area: "in:village:mill:2", TX: 7, TY: 5}) {
+	spotIs := func(got *ResidentSpot, area string, tx, ty int32) bool {
+		return got != nil && got.GetArea() == area && got.GetTx() == tx && got.GetTy() == ty
+	}
+	if got, ok := ResidentAt("finn", 2700); !ok || !spotIs(got, "in:village:mill:2", 7, 5) {
 		t.Fatal(got, ok)
 	}
-	for now, want := range map[float64]ResidentSpot{
-		0:    {Area: "commons", TX: 26, TY: 5},
-		600:  {Area: "in:village:library", TX: 9, TY: 4, Seated: true},
-		2400: {Area: "commons", TX: 26, TY: 5},
+	for now, want := range map[float64][3]any{
+		0:    {"commons", int32(26), int32(5)},
+		600:  {"in:village:library", int32(9), int32(4)},
+		2400: {"commons", int32(26), int32(5)},
 	} {
-		if got, ok := ResidentAt("elara", now); !ok || got != want {
+		got, ok := ResidentAt("elara", now)
+		if !ok || !spotIs(got, want[0].(string), want[1].(int32), want[2].(int32)) {
 			t.Fatal(now, got, ok)
 		}
 	}
@@ -150,39 +200,57 @@ func TestResidentCycleVectors(t *testing.T) {
 
 func TestRevisedLibraryVectors(t *testing.T) {
 	var vectors struct {
-		Room  Room
+		Room  json.RawMessage
 		Seats []struct {
 			Name  string
-			Spot  ResidentSpot
+			Spot  json.RawMessage
 			Valid bool
 		}
 	}
 	readVectors(t, "library", &vectors)
-	doc, err := LoadRooms()
+	var revised Room
+	decodeProto(t, vectors.Room, &revised)
+	// The revised room goes through the full loader, schema rules included:
+	// splice it over the shipped one in the raw JSON and decode the lot.
+	base, _ := FS.ReadFile("rooms.json")
+	var doc any
+	if err := json.Unmarshal(base, &doc); err != nil {
+		t.Fatal(err)
+	}
+	rooms := doc.(map[string]any)["rooms"].([]any)
+	for i, room := range rooms {
+		if room.(map[string]any)["id"] == revised.GetId() {
+			rooms[i] = json.RawMessage(vectors.Room)
+		}
+	}
+	spliced, err := json.Marshal(doc)
 	if err != nil {
 		t.Fatal(err)
 	}
-	for i, room := range doc.Rooms {
-		if room.ID == vectors.Room.ID {
-			doc.Rooms[i] = vectors.Room
-		}
-	}
-	if err := ValidateRooms(doc); err != nil {
+	decoded, err := DecodeRooms(spliced)
+	if err != nil {
 		t.Fatal("revised library:", err)
 	}
 	// Shelves can seal a boundary only while they are solid.
-	for i, room := range doc.Rooms {
-		if room.ID == vectors.Room.ID {
-			doc.Rooms[i].Props = append([]RoomProp(nil), room.Props...)
-			doc.Rooms[i].Props[0].Solid = false
+	for i, room := range decoded.Rooms {
+		if room.GetId() == revised.GetId() {
+			open := proto.Clone(room).(*Room)
+			open.Props[0].Solid = proto.Bool(false)
+			decoded.Rooms[i] = open
 		}
 	}
-	if err := ValidateRooms(doc); err == nil {
+	openJSON, err := protojson.Marshal(decoded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DecodeRooms(openJSON); err == nil {
 		t.Fatal("accepted non-solid boundary shelves")
 	}
 	for _, v := range vectors.Seats {
 		t.Run(v.Name, func(t *testing.T) {
-			if got := ResidentSpotFits(vectors.Room, v.Spot); got != v.Valid {
+			var spot ResidentSpot
+			decodeProto(t, v.Spot, &spot)
+			if got := ResidentSpotFits(&revised, &spot); got != v.Valid {
 				t.Fatal(got, v.Valid)
 			}
 		})
@@ -193,7 +261,7 @@ func TestRoomFootprints(t *testing.T) {
 	// sacks are dressing since the round-2 art).
 	piles := Room{Map: []string{"##########", "#.ff..ff.#", "#.ff..ff.#", "##########"}}
 	want := []RoomFootprint{{"f", 2, 1, 2, 2}, {"f", 6, 1, 2, 2}}
-	if got := RoomFootprints(piles, "f"); !reflect.DeepEqual(got, want) {
+	if got := RoomFootprints(&piles, "f"); !reflect.DeepEqual(got, want) {
 		t.Fatal(got)
 	}
 	if MarkWriter("library:lamp") != "server" || MarkWriter("quest-item:east-finger") != "server" {

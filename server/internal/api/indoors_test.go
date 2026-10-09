@@ -51,7 +51,7 @@ func TestRoomPositionAndPresence(t *testing.T) {
 		}
 	}
 	room, _ := content.RoomFor("in:village:bakery")
-	if finiteWhere(&contract.Where{Area: room.ID, X: float64(len(room.Map[0]) * 16), Y: 8}) || finiteWhere(&contract.Where{Area: room.ID, X: 8, Y: float64(len(room.Map) * 16)}) {
+	if finiteWhere(&contract.Where{Area: room.GetId(), X: float64(len(room.GetMap()[0]) * 16), Y: 8}) || finiteWhere(&contract.Where{Area: room.GetId(), X: 8, Y: float64(len(room.GetMap()) * 16)}) {
 		t.Fatal("exclusive bounds")
 	}
 	// The cottage: its floor grid plus the walls (14 x 14 tiles); you come in at the doorway, low in the room.
@@ -66,8 +66,8 @@ func TestRoomPositionAndPresence(t *testing.T) {
 		t.Fatal(refusal)
 	}
 	unchanged(t, before, x.expect("GET", "/api/state", nil, c, 200).Snapshot)
-	s = x.reportState(c, s, s.State.HP, s.State.Mana, map[string]any{"area": room.ID, "x": 80, "y": 80})
-	if x.expect("GET", "/api/state", nil, c, 200).State.Area != room.ID {
+	s = x.reportState(c, s, s.State.HP, s.State.Mana, map[string]any{"area": room.GetId(), "x": 80, "y": 80})
+	if x.expect("GET", "/api/state", nil, c, 200).State.Area != room.GetId() {
 		t.Fatal("room not saved")
 	}
 }
@@ -80,10 +80,10 @@ func TestResidentChecksWithGraceAndReach(t *testing.T) {
 		spot string
 		yes  bool
 	}{{0, "kitchen", true}, {1200, "square", false}, {2310, "square", true}, {2400, "kitchen", true}, {2490, "kitchen", true}, {2491, "kitchen", false}, {3000, "square", true}} {
-		p := hazel.Spots[row.spot]
-		s.State.Area = p.Area
-		s.State.Position = rules.Position{X: float64(p.TX*16 + 8), Y: float64(p.TY*16 + 8)}
-		if personHere("hazel", p.Area, row.now) != row.yes || nearResident(&s, "hazel", row.now, 4) != row.yes {
+		p := hazel.GetSpots()[row.spot]
+		s.State.Area = p.GetArea()
+		s.State.Position = rules.Position{X: float64(p.GetTx()*16 + 8), Y: float64(p.GetTy()*16 + 8)}
+		if personHere("hazel", p.GetArea(), row.now) != row.yes || nearResident(&s, "hazel", row.now, 4) != row.yes {
 			t.Fatal(row)
 		}
 		s.State.Position.X += 100
@@ -95,9 +95,9 @@ func TestResidentChecksWithGraceAndReach(t *testing.T) {
 		t.Fatal("fixed talk area")
 	}
 	finn, _ := content.ResidentAt("finn", 3000)
-	s.State.Area = finn.Area
-	s.State.Position = rules.Position{X: float64(finn.TX*16 + 8), Y: float64(finn.TY*16 + 8)}
-	if finn.Area != "in:village:mill:2" || !nearResident(&s, "finn", 3000, 4) {
+	s.State.Area = finn.GetArea()
+	s.State.Position = rules.Position{X: float64(finn.GetTx()*16 + 8), Y: float64(finn.GetTy()*16 + 8)}
+	if finn.GetArea() != "in:village:mill:2" || !nearResident(&s, "finn", 3000, 4) {
 		t.Fatal(finn)
 	}
 }

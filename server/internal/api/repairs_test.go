@@ -208,8 +208,8 @@ func TestReturningKeepsakes(t *testing.T) {
 	x.conserved(x.account("alice"))
 	hazelDoc := s.State
 	hazel, _ := content.ResidentAt("hazel", float64(x.now.Load()))
-	hazelDoc.Area = hazel.Area
-	hazelDoc.Position = rules.Position{X: float64(hazel.TX*16 + 8), Y: float64(hazel.TY*16 + 8)}
+	hazelDoc.Area = hazel.GetArea()
+	hazelDoc.Position = rules.Position{X: float64(hazel.GetTx()*16 + 8), Y: float64(hazel.GetTy()*16 + 8)}
 
 	retHazel := x.opRefreshing(c, &s, "return", map[string]any{"itemDef": "tin-whistle", "target": "hazel", "progress": hazelDoc}, 200)
 	if retHazel.Result.Returned != "tin-whistle" || retHazel.Result.Paper == nil || *retHazel.Result.Paper != "keepers-twists-recipe-card" {

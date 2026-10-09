@@ -3,5 +3,12 @@ modules:
   - path: proto
 lint:
   use: [STANDARD]
+  # The vendored buf/validate schema (BSR v1.2.0) is upstream's: its package
+  # is unversioned, which STANDARD rejects, and it must never be edited.
+  ignore: [proto/buf]
 breaking:
   use: [FILE]
+  # The content schemas are read by the file's own loaders, both of which
+  # change in the same commit as the file — not a wire contract, so FILE
+  # would only force reserved-field noise. Same for the vendored schema.
+  ignore: [proto/glimway/content, proto/buf]

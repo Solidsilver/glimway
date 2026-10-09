@@ -10,10 +10,11 @@ import { ROOMS, validateRooms, roomParent, rootArea, knownRoom, roomFootprints, 
 import { validateResidents, residentAt, residentById, residentSpotFits } from '../src/lib/residents.ts';
 import { cycleAt, cycleSpotsNear } from '../src/lib/clock.ts';
 import { validateQuests } from '../src/lib/story-tables.ts';
-interface Edit { path: (string | number)[]; value: unknown }
+import { refusalMatchesRule } from './helpers/vector-rule.ts';
+interface Edit { path: (string | number)[]; value?: unknown; remove?: boolean }
 function edited(base: unknown, edits: Edit[]): unknown {
   const value = structuredClone(base);
-  for (const e of edits) { let target = value as any; for (const key of e.path.slice(0,-1)) target = target[key]; target[e.path.at(-1)!] = e.value; }
+  for (const e of edits) { let target = value as any; for (const key of e.path.slice(0,-1)) target = target[key]; if (e.remove) delete target[e.path.at(-1)!]; else target[e.path.at(-1)!] = e.value; }
   return value;
 }
 for (const [kind, base, vectors, validate] of [
@@ -23,7 +24,8 @@ for (const [kind, base, vectors, validate] of [
 ] as const) {
   for (const v of vectors) test(`shared ${kind} loader: ${v.name}`, () => {
     const value = edited(base, v.edits);
-    if (v.valid) assert.doesNotThrow(() => validate(value)); else assert.throws(() => validate(value));
+    if (v.valid) assert.doesNotThrow(() => validate(value));
+    else assert.throws(() => validate(value), (e: Error) => !('rule' in v) || v.rule === undefined || refusalMatchesRule(e, v.rule!), v.rule);
   });
 }
 test('shared room parent, root and known-id vectors', () => {

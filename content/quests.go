@@ -116,8 +116,8 @@ func LoadQuests() ([]Quest, error) {
 }
 func QuestSpotArea(id string) string {
 	for _, r := range RoomRules.Rooms {
-		if _, ok := r.Spots[id]; ok {
-			return r.ID
+		if _, ok := r.GetSpots()[id]; ok {
+			return r.GetId()
 		}
 	}
 	return StoryRules.Spots[id]
@@ -152,8 +152,8 @@ func ValidateQuests(quests []Quest) error {
 		spots[id] = area
 	}
 	for _, r := range RoomRules.Rooms {
-		for id := range r.Spots {
-			spots[id] = r.ID
+		for id := range r.GetSpots() {
+			spots[id] = r.GetId()
 		}
 	}
 	npc := func(id string) bool { _, resident := ResidentByID(id); return resident || story.NPCs[id] != "" }

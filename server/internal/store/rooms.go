@@ -6,14 +6,16 @@ import (
 	"glimway/content"
 	"glimway/server/internal/rules"
 	"strings"
+
+	"google.golang.org/protobuf/proto"
 )
 
 // Keep the shipped doorsteps when a room's authored row is retired. New
 // retired rooms should retain their last doorstep here before deleting data.
-var retiredRoomDoors = map[string]content.RoomTile{
-	"in:village:bakery":  {TX: 7, TY: 8},
-	"in:village:mill":    {TX: 29, TY: 23},
-	"in:village:library": {TX: 4, TY: 18},
+var retiredRoomDoors = map[string]*content.RoomTile{
+	"in:village:bakery":  {Tx: proto.Int32(7), Ty: proto.Int32(8)},
+	"in:village:mill":    {Tx: proto.Int32(29), Ty: proto.Int32(23)},
+	"in:village:library": {Tx: proto.Int32(4), Ty: proto.Int32(18)},
 }
 
 // Recover removed rooms on reads too, before projecting a saved place.
@@ -25,10 +27,10 @@ func recoverRoom(ctx context.Context, tx *sql.Tx, s *Snapshot) error {
 	parent := content.RoomParent(area)
 	next, position := "village", rules.NewState().Position
 	if room, ok := content.RoomFor(parent); ok {
-		for _, door := range room.Doors {
-			if door.To == area {
+		for _, door := range room.GetDoors() {
+			if door.GetTo() == area {
 				// The staircase tiles remain on the parent map.
-				for y, row := range room.Map {
+				for y, row := range room.GetMap() {
 					if x := strings.Index(row, door.At); x >= 0 {
 						next, position = parent, rules.Position{X: float64(x*16 + 8), Y: float64(y*16 + 8)}
 						break
@@ -37,7 +39,7 @@ func recoverRoom(ctx context.Context, tx *sql.Tx, s *Snapshot) error {
 			}
 		}
 		if next != parent {
-			for y, row := range room.Map {
+			for y, row := range room.GetMap() {
 				if x := strings.Index(row, "@"); x >= 0 {
 					next, position = parent, rules.Position{X: float64(x*16 + 8), Y: float64(y*16 + 8)}
 				}
@@ -46,17 +48,17 @@ func recoverRoom(ctx context.Context, tx *sql.Tx, s *Snapshot) error {
 	} else {
 		// A surviving floor may retain the building's front-door metadata.
 		for _, room := range content.RoomRules.Rooms {
-			if content.RootArea(room.ID) != parent || content.RoomParent(room.ID) != area {
+			if content.RootArea(room.GetId()) != parent || content.RoomParent(room.GetId()) != area {
 				continue
 			}
-			for _, door := range room.Doors {
-				if door.To == parent && door.Outside != nil {
-					next, position = parent, rules.Position{X: float64(door.Entry.TX*16 + 8), Y: float64(door.Entry.TY*16 + 8)}
+			for _, door := range room.GetDoors() {
+				if door.GetTo() == parent && door.Outside != nil {
+					next, position = parent, rules.Position{X: float64(door.GetEntry().GetTx()*16 + 8), Y: float64(door.GetEntry().GetTy()*16 + 8)}
 				}
 			}
 		}
 		if door, ok := retiredRoomDoors[strings.TrimSuffix(area, ":2")]; ok && position == rules.NewState().Position {
-			next, position = "village", rules.Position{X: float64(door.TX*16 + 8), Y: float64(door.TY*16 + 8)}
+			next, position = "village", rules.Position{X: float64(door.GetTx()*16 + 8), Y: float64(door.GetTy()*16 + 8)}
 		}
 	}
 	if err := BumpVersion(ctx, tx, s); err != nil {
