@@ -240,17 +240,22 @@ func TestGatheringInstancedYieldsAndReplay(t *testing.T) {
 	axe := x.instance(s.AccountID, "brack-felling-axe", -1, "")
 	here := [2]int{20, 20}
 	// Ash now and then gives a green-ash haft: a fitting, so an instance.
+	// A haft is a 15% roll seeded by the (random) account, so one day's chops
+	// miss it about one run in 130; chop on for up to five days.
 	hafts := 0
-	for i := 0; i < content.GatheringRules.Caps.Day.Chop && hafts == 0; i++ {
-		r := x.opRefreshing(c, &s, "gather", gatherIn(s, "woodland", here, axe, "chop", "ash", fmt.Sprintf("v%d", i/8)), 200)
-		for _, id := range r.Result.Created {
-			if findInstance(r.Result.Items, id).ItemDef == "green-ash-haft" {
-				hafts++
+	for d := 0; d < 5 && hafts == 0; d++ {
+		for i := 0; i < content.GatheringRules.Caps.Day.Chop && hafts == 0; i++ {
+			r := x.opRefreshing(c, &s, "gather", gatherIn(s, "woodland", here, axe, "chop", "ash", fmt.Sprintf("d%dv%d", d, i/8)), 200)
+			for _, id := range r.Result.Created {
+				if findInstance(r.Result.Items, id).ItemDef == "green-ash-haft" {
+					hafts++
+				}
 			}
 		}
+		x.now.Add(24 * 60 * 60)
 	}
 	if hafts == 0 {
-		t.Fatal("no haft from a day of ash")
+		t.Fatal("no haft from five days of ash")
 	}
 	x.conserved(s.AccountID)
 
