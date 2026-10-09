@@ -196,37 +196,19 @@ func closeOpenCasts(ctx context.Context, tx *sql.Tx, account string, at float64,
 	return closeCasts(ctx, tx, at, now, "cancelled", "account_id=?", account)
 }
 
+// fractionalNow is the operation's sub-second clock: 5.3's cast times are
+// fractional, and the stock's `at` must never move backwards under
+// contention, so it is read inside the operation, after the write lock.
+func fractionalNow(a *Server) float64 { return float64(a.Config.Now().UnixNano()) / 1e9 }
+
 // ------------------------------------------------------------ the rod
 
-// fishingRod runs useTool's checks without the wear (5.4): the rod is one of
-// the caller's instances in their pack, a tool with the fish action, with a
-// use left. settle wears it for real.
+// fishingRod is the rod a cast is made with (5.4): useTool's checks without
+// the wear, which settle applies for real. Both run `checkTool`, so the
+// checks cannot drift.
 func fishingRod(ctx context.Context, tx *sql.Tx, s *store.Snapshot, id string, now int64) error {
-	if err := healWardens(ctx, tx, s.AccountID, now); err != nil {
-		return err
-	}
-	v, err := loadInstance(ctx, tx, id)
-	if err != nil {
-		return err
-	}
-	def, ok := content.ItemFor(v.Def)
-	if !ok || v.Location != "pack" || v.Owner != s.AccountID {
-		return fail(404, "item-not-found")
-	}
-	if def.GetKind() != "tool" {
-		return fail(409, "not-a-tool")
-	}
-	if !slices.Contains(def.Actions, "fish") {
-		return fail(409, "wrong-tool")
-	}
-	fittings, err := fittingRows(ctx, tx, v.ID)
-	if err != nil {
-		return err
-	}
-	if v.Condition == 0 && !hasFitting(fittings, "remember") {
-		return fail(409, "tool-blunt")
-	}
-	return nil
+	_, _, _, err := checkTool(ctx, tx, s, id, "fish", now)
+	return err
 }
 
 // rollSpecies is the species roll (5.2): weighted from the water's table and
@@ -281,8 +263,8 @@ func (a *Server) fishCast(w http.ResponseWriter, r *http.Request) error {
 	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
-	at := float64(a.Config.Now().UnixNano()) / 1e9
 	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+		at := fractionalNow(a)
 		if err := lapseCasts(ctx, tx, at, now, "account_id=?", s.AccountID); err != nil {
 			return nil, err
 		}
@@ -292,6 +274,12 @@ func (a *Server) fishCast(w http.ResponseWriter, r *http.Request) error {
 		water, ok := content.WaterFor(req.Water)
 		if !ok {
 			return nil, fail(400, "invalid-request")
+		}
+		// The cast touches the water, so a hold of anyone's on it that ran
+		// out lapses first and its fish is back before the band is read
+		// (5.4: "the next operation or read that touches that water").
+		if err := lapseCasts(ctx, tx, at, now, "world_id=? AND water=?", s.WorldID, water.GetId()); err != nil {
+			return nil, err
 		}
 		bank, ok := content.BankFor(water, req.Bank)
 		if !ok {
@@ -369,8 +357,8 @@ func (a *Server) fishSettle(w http.ResponseWriter, r *http.Request) error {
 	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
-	at := float64(a.Config.Now().UnixNano()) / 1e9
 	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+		at := fractionalNow(a)
 		if err := lapseCasts(ctx, tx, at, now, "account_id=?", s.AccountID); err != nil {
 			return nil, err
 		}
@@ -381,9 +369,14 @@ func (a *Server) fishSettle(w http.ResponseWriter, r *http.Request) error {
 		if at < c.ReadyAt {
 			return nil, fail(409, "not-yet")
 		}
+		// The cast's own water and world: the fish goes back where it was
+		// reserved, whatever happens to the account's world later.
 		water, ok := content.WaterFor(c.Water)
 		if !ok {
 			return nil, fmt.Errorf("fishing: %s is not a water", c.Water)
+		}
+		if err := lapseCasts(ctx, tx, at, now, "world_id=? AND water=?", c.World, c.Water); err != nil {
+			return nil, err
 		}
 		out := &contract.FishSettleResult{Cast: c.ID, Kept: req.Keep}
 		if req.Keep {
@@ -410,7 +403,7 @@ func (a *Server) fishSettle(w http.ResponseWriter, r *http.Request) error {
 		}
 		// Keep takes the fish out of the water; letting it go gives the
 		// reserved fish back (5.3). Either way the cast closes.
-		f, err := changeFishery(ctx, tx, s.WorldID, s.AccountID, water, at, now, func(f *contract.FisheryState) {
+		f, err := changeFishery(ctx, tx, c.World, s.AccountID, water, at, now, func(f *contract.FisheryState) {
 			if req.Keep {
 				f.Stock = max(0, f.Stock-1)
 			}
@@ -440,8 +433,8 @@ func (a *Server) fishCancel(w http.ResponseWriter, r *http.Request) error {
 	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
-	at := float64(a.Config.Now().UnixNano()) / 1e9
 	return a.keyedOpStay(w, r, req.Op, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+		at := fractionalNow(a)
 		if err := lapseCasts(ctx, tx, at, now, "account_id=?", s.AccountID); err != nil {
 			return nil, err
 		}
@@ -449,11 +442,16 @@ func (a *Server) fishCancel(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
+		// The cast's own water and world, with everyone's stale holds on it
+		// lapsed before the band is read.
 		water, ok := content.WaterFor(c.Water)
 		if !ok {
 			return nil, fmt.Errorf("fishing: %s is not a water", c.Water)
 		}
-		f, err := changeFishery(ctx, tx, s.WorldID, s.AccountID, water, at, now, func(f *contract.FisheryState) {
+		if err := lapseCasts(ctx, tx, at, now, "world_id=? AND water=?", c.World, c.Water); err != nil {
+			return nil, err
+		}
+		f, err := changeFishery(ctx, tx, c.World, s.AccountID, water, at, now, func(f *contract.FisheryState) {
 			f.Reserved = max(0, f.Reserved-1)
 		})
 		if err != nil {

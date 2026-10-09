@@ -219,6 +219,29 @@ func (x *rig) packQty(account, def string) int {
 	return n
 }
 
+// staleCast writes an open cast past its hold straight to the table (a
+// player who walked away mid-cast), holding one fish of the water's stock.
+func (x *rig) staleCast(account, world, water, bank string, at float64) string {
+	x.t.Helper()
+	id := "cast:stale-" + account
+	_, err := x.db.DB.Exec(`INSERT INTO fishing_casts(id,account_id,world_id,water,bank,rod,species,band,seq,started_at,ready_at,hold_until,state)
+ VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`, id, account, world, water, bank, "rod:gone", "mill-roach", "healthy", 0, at-700, at-690, at-40, "open")
+	if err != nil {
+		x.t.Fatal(err)
+	}
+	return id
+}
+
+// rodCondition is what one use of the rod took off.
+func (x *rig) rodCondition(rod string) int {
+	x.t.Helper()
+	var condition int
+	if err := x.db.DB.QueryRow(`SELECT condition FROM item_instances WHERE id=?`, rod).Scan(&condition); err != nil {
+		x.t.Fatal(err)
+	}
+	return condition
+}
+
 // ------------------------------------------------------------ cast, settle, cancel
 
 // A cast reserves its fish; keep takes it out of the water, wears the rod
@@ -673,6 +696,144 @@ func TestFishWorldMoveClosesAnOpenCast(t *testing.T) {
 	}
 	if x.stateFishing(c).Cast != nil {
 		t.Fatal("the line is still out after the move")
+	}
+	x.conserved(s.AccountID)
+}
+
+// One water, two accounts (5.3's shared stock): a reserved fish is nobody
+// else's to take or settle, and a hold of anyone's that ran out lapses the
+// moment the water is touched (5.4).
+func TestFishTwoAccountsShareTheWater(t *testing.T) {
+	x := newRig(t)
+	x.hero("alice", "Alice", "p1")
+	x.hero("bob", "Bob", "p1")
+	cA, sA := x.ready("alice")
+	cB, sB := x.ready("bob")
+	if sA.WorldID == "" || sA.WorldID != sB.WorldID {
+		t.Fatal("the two are not at one pond", sA.WorldID, sB.WorldID)
+	}
+	rodA := x.instance(sA.AccountID, "willow-rod", -1, "")
+	rodB := x.instance(sB.AccountID, "willow-rod", -1, "")
+
+	// The one free fish is the caster's: bob has nothing to take.
+	x.setStock(sA.WorldID, millPondID, float64(x.now.Load()), 1, 0)
+	w := x.rawHTTP("POST", "/api/fishing/cast", castBody(sA, fishKey(x, "cast"), "north", rodA, bankSpot(t, sA, "north")), cA)
+	if w.Code != 200 {
+		t.Fatalf("alice's cast: %d %s", w.Code, w.Body.String())
+	}
+	fA := decodeHTTP[castResponse](x.t, w).Result.Cast
+	if st, _, e, _ := x.request("POST", "/api/fishing/cast", castBody(sB, fishKey(x, "cast"), "east", rodB, bankSpot(t, sB, "east")), cB); st != 409 || e != "water-still" {
+		t.Fatal("bob took the fish on alice's line", st, e)
+	}
+	// And it isn't his to settle or cancel.
+	if st, _, e, _ := x.request("POST", "/api/fishing/settle", settleBody(sB, fishKey(x, "settle"), fA.ID, true, bankSpot(t, sB, "east")), cB); st != 409 || e != "no-cast" {
+		t.Fatal("bob settled alice's cast", st, e)
+	}
+	if st, _, e, _ := x.request("POST", "/api/fishing/cancel", cancelBody(sB, fishKey(x, "cancel"), fA.ID), cB); st != 409 || e != "no-cast" {
+		t.Fatal("bob cancelled alice's cast", st, e)
+	}
+	w = x.rawHTTP("POST", "/api/fishing/cancel", cancelBody(sA, fishKey(x, "cancel"), fA.ID), cA)
+	if w.Code != 200 {
+		t.Fatalf("alice's cancel: %d %s", w.Code, w.Body.String())
+	}
+
+	// A hold of bob's that ran out stops holding a fish the moment anyone
+	// touches the water: alice's cast is answered, never refused as still.
+	x.now.Add(8)
+	now := float64(x.now.Load())
+	stale := x.staleCast(sB.AccountID, sA.WorldID, millPondID, "east", now)
+	x.setStock(sA.WorldID, millPondID, now, 1, 1)
+	w = x.rawHTTP("POST", "/api/fishing/cast", castBody(sA, fishKey(x, "cast"), "north", rodA, bankSpot(t, sA, "north")), cA)
+	if w.Code != 200 {
+		t.Fatalf("alice's cast at a lapsed hold: %d %s", w.Code, w.Body.String())
+	}
+	if state := x.castState(sB.AccountID, stale); state != "lapsed" {
+		t.Fatal("bob's stale hold", state)
+	}
+	if stock, _ := x.storedStock(sA.WorldID, millPondID); stock.Stock != 1 || stock.Reserved != 1 {
+		t.Fatal("the stale fish did not go back before the reserve", stock)
+	}
+	x.conserved(sA.AccountID)
+	x.conserved(sB.AccountID)
+}
+
+// A replayed operation answers its stored result and does nothing twice
+// (keyed and idempotent, 5.4): the same cast id, one reservation, one roach,
+// one wear of the rod, one fish back.
+func TestFishReplaysAnswerOnce(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	rod := x.instance(s.AccountID, "willow-rod", -1, "")
+	at := bankSpot(t, s, "north")
+
+	// A cast, asked again with the same key and body.
+	castReq := castBody(s, "replay-cast", "north", rod, at)
+	w := x.rawHTTP("POST", "/api/fishing/cast", castReq, c)
+	if w.Code != 200 {
+		t.Fatalf("cast: %d %s", w.Code, w.Body.String())
+	}
+	f := decodeHTTP[castResponse](x.t, w).Result.Cast
+	w = x.rawHTTP("POST", "/api/fishing/cast", castReq, c)
+	if w.Code != 200 {
+		t.Fatalf("cast replay: %d %s", w.Code, w.Body.String())
+	}
+	if again := decodeHTTP[castResponse](x.t, w).Result.Cast; again.ID != f.ID {
+		t.Fatal("a replay rolled a new cast", again)
+	}
+	if stock, _ := x.storedStock(s.WorldID, millPondID); stock.Stock != 12 || stock.Reserved != 1 {
+		t.Fatal("a replay reserved twice", stock)
+	}
+
+	// Keep, asked again: one roach and one wear, one fish out of the water.
+	x.now.Add(10)
+	keepReq := settleBody(s, "replay-keep", f.ID, true, at)
+	w = x.rawHTTP("POST", "/api/fishing/settle", keepReq, c)
+	if w.Code != 200 {
+		t.Fatalf("keep: %d %s", w.Code, w.Body.String())
+	}
+	first := decodeHTTP[settleResponse](x.t, w).Result
+	w = x.rawHTTP("POST", "/api/fishing/settle", keepReq, c)
+	if w.Code != 200 {
+		t.Fatalf("keep replay: %d %s", w.Code, w.Body.String())
+	}
+	again := decodeHTTP[settleResponse](x.t, w).Result
+	if again.Kept != first.Kept || again.Item != first.Item || again.Wear == nil || again.Wear.UsesLeft != first.Wear.UsesLeft {
+		t.Fatal("a replay answered something else", again)
+	}
+	if n := x.packQty(s.AccountID, "mill-roach"); n != 1 {
+		t.Fatal("a replay kept two fish", n)
+	}
+	if cond := x.rodCondition(rod); cond != int(first.Wear.Condition) {
+		t.Fatal("a replay wore the rod twice", cond, first.Wear.Condition)
+	}
+	if stock, _ := x.storedStock(s.WorldID, millPondID); stock.Stock != 11 || stock.Reserved != 0 {
+		t.Fatal("a replay took the fish twice", stock)
+	}
+
+	// A cancel, asked again: the same answer, and the fish goes back once.
+	x.now.Add(8)
+	w = x.rawHTTP("POST", "/api/fishing/cast", castBody(s, fishKey(x, "cast"), "north", rod, at), c)
+	if w.Code != 200 {
+		t.Fatalf("second cast: %d %s", w.Code, w.Body.String())
+	}
+	f2 := decodeHTTP[castResponse](x.t, w).Result.Cast
+	before, _ := x.storedStock(s.WorldID, millPondID)
+	cancelReq := cancelBody(s, "replay-cancel", f2.ID)
+	w = x.rawHTTP("POST", "/api/fishing/cancel", cancelReq, c)
+	if w.Code != 200 {
+		t.Fatalf("cancel: %d %s", w.Code, w.Body.String())
+	}
+	firstCancel := decodeHTTP[cancelResponse](x.t, w).Result
+	w = x.rawHTTP("POST", "/api/fishing/cancel", cancelReq, c)
+	if w.Code != 200 {
+		t.Fatalf("cancel replay: %d %s", w.Code, w.Body.String())
+	}
+	if r := decodeHTTP[cancelResponse](x.t, w).Result; r.Cast != firstCancel.Cast || r.Band != firstCancel.Band {
+		t.Fatal("a replay answered something else", r)
+	}
+	after, _ := x.storedStock(s.WorldID, millPondID)
+	if after.Stock != before.Stock || after.Reserved != 0 || before.Reserved != 1 {
+		t.Fatal("a replay gave the fish back twice", before, after)
 	}
 	x.conserved(s.AccountID)
 }
