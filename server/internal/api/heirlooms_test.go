@@ -477,7 +477,7 @@ func TestHeirloomSharedStorageRefusal(t *testing.T) {
 	x.refresh(c, &s)
 
 	// Depositing non-giveable heirloom into shared storage must be refused with 409 not-giveable
-	asset := content.Asset{Kind: "instance", Id: "brack-felling-axe", Qty: 1, Instance: axe}
+	asset := &content.Asset{Kind: "instance", Id: "brack-felling-axe", Qty: 1, Instance: axe}
 	bad := x.p5("POST", "/api/storage", body(s, "dep-shared", map[string]any{
 		"direction": "deposit",
 		"chest":     "shared",

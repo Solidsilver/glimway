@@ -150,31 +150,33 @@ type entryList struct {
 // id, in order — the loaders' map for rewriting a violation path
 // ("projects[2]") to name the entry.
 func entryLists(msg proto.Message, fields ...string) []entryList {
+	md := msg.ProtoReflect().Descriptor()
 	out := make([]entryList, 0, len(fields))
-	m := msg.ProtoReflect()
 	for _, field := range fields {
-		fd := m.Descriptor().Fields().ByJSONName(field)
+		fd := md.Fields().ByJSONName(field)
 		if fd == nil {
-			fd = m.Descriptor().Fields().ByName(protoreflect.Name(field))
+			fd = md.Fields().ByName(protoreflect.Name(field))
 		}
 		if fd == nil || !fd.IsList() {
 			continue
 		}
-		list := m.Get(fd).List()
+		list := msg.ProtoReflect().Get(fd).List()
 		ids := make([]string, list.Len())
-		for i := range ids {
-			if fd.Message() == nil {
-				continue // scalars name no entry
-			}
-			entry := list.Get(i).Message()
-			if idFd := entry.Descriptor().Fields().ByName("id"); idFd != nil {
-				ids[i] = entry.Get(idFd).String()
+		for i := range list.Len() {
+			if e, ok := list.Get(i).Message().Interface().(interface{ GetId() string }); ok {
+				ids[i] = e.GetId()
 			}
 		}
 		out = append(out, entryList{field: fd.JSONName(), ids: ids})
 	}
 	return out
 }
+
+// evalRule is a CEL rule that errors mid-evaluation (a timestamp()
+// conversion over a malformed string): protovalidate-go names the rule in
+// the runtime error's text. Both runtimes render it like a violation, with
+// the rule id the shared vectors assert.
+var evalRule = regexp.MustCompile(`error evaluating ([^:]+): (.*)$`)
 
 // contentValidate runs protovalidate and reports its violations the way the
 // hand-written loaders did: naming the entry and the field
@@ -183,6 +185,9 @@ func contentValidate(family string, entries []entryList, msg proto.Message) erro
 	err := contentValidator.Validate(msg)
 	if err == nil {
 		return nil
+	}
+	if m := evalRule.FindStringSubmatch(err.Error()); m != nil {
+		return fmt.Errorf("invalid %s: %s [%s]", family, strings.TrimSpace(m[2]), m[1])
 	}
 	var bad *protovalidate.ValidationError
 	if !errors.As(err, &bad) {

@@ -54,7 +54,7 @@ func validateRepairs(r *Repairs) error {
 			}
 		}
 		if o := v.GetOpenFrom(); o != nil {
-			if !slices.Contains(CalendarRules.Wicks, o.GetWick()) || o.GetDay() > int32(CalendarRules.WickDays) {
+			if !slices.Contains(CalendarRules.GetWicks(), o.GetWick()) || o.GetDay() > CalendarRules.GetWickDays() {
 				return fmt.Errorf("invalid repairs: %s openFrom", v.GetId())
 			}
 		}

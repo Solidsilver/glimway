@@ -35,21 +35,21 @@ func questHasMark(s *store.Snapshot, mark string) bool {
 	}
 	return slices.Contains(s.State.Flags, mark)
 }
-func questPrerequisites(s store.Snapshot, q content.Quest) error {
-	for _, ref := range q.After {
+func questPrerequisites(s store.Snapshot, q *content.Quest) error {
+	for _, ref := range q.GetAfter() {
 		quest, step, part := strings.Cut(ref, ":")
 		other, ok := content.QuestFor(quest)
 		if !ok {
 			return fail(409, "not-next-step")
 		}
 		if !part {
-			step = other.Steps[len(other.Steps)-1].ID
+			step = other.GetSteps()[len(other.GetSteps())-1].GetId()
 		}
 		if content.QuestIndex(quest, s.State.Quests[quest]) < content.QuestIndex(quest, step) {
 			return fail(409, "not-next-step")
 		}
 	}
-	if q.Needs == "habitica" && s.ProfileSource != "habitica" {
+	if q.GetNeeds() == "habitica" && s.ProfileSource != "habitica" {
 		return fail(409, "needs-habitica")
 	}
 	return nil
@@ -65,37 +65,37 @@ func personHere(id, area string, now int64) bool {
 		}
 		return false
 	}
-	return content.StoryRules.NPCs[id] == area
+	return content.StoryRules.GetNpcs()[id] == area
 }
-func questTrigger(ctx context.Context, tx *sql.Tx, s *store.Snapshot, quest string, step content.QuestStep, now int64) error {
-	t := step.Do
+func questTrigger(ctx context.Context, tx *sql.Tx, s *store.Snapshot, quest string, step *content.QuestStep, now int64) error {
+	t := step.GetDo()
 	if t == nil {
 		return fail(409, "not-next-step")
 	}
 	switch {
-	case t.Talk != "":
-		if !personHere(t.Talk, s.State.Area, now) {
+	case t.GetTalk() != "":
+		if !personHere(t.GetTalk(), s.State.Area, now) {
 			return fail(409, "not-here")
 		}
-	case t.Use != "":
-		if s.State.Area != content.QuestSpotArea(t.Use) {
+	case t.GetUse() != "":
+		if s.State.Area != content.QuestSpotArea(t.GetUse()) {
 			return fail(409, "wrong-area")
 		}
-	case t.Reach != "":
-		if s.State.Area != t.Reach {
+	case t.GetReach() != "":
+		if s.State.Area != t.GetReach() {
 			return fail(409, "wrong-area")
 		}
-	case t.Defeat != "":
-		if !questHasMark(s, "defeated:"+t.Defeat) {
+	case t.GetDefeat() != "":
+		if !questHasMark(s, "defeated:"+t.GetDefeat()) {
 			return fail(409, "not-next-step")
 		}
-	case t.Carry != "":
-		if slices.Contains(content.StoryRules.QuestItems, t.Carry) {
-			if !questHasMark(s, "quest-item:"+t.Carry) {
+	case t.GetCarry() != "":
+		if slices.Contains(content.StoryRules.GetQuestItems(), t.GetCarry()) {
+			if !questHasMark(s, "quest-item:"+t.GetCarry()) {
 				return fail(409, "short")
 			}
 		} else {
-			n, err := questItemCount(ctx, tx, s.AccountID, t.Carry)
+			n, err := questItemCount(ctx, tx, s.AccountID, t.GetCarry())
 			if err != nil {
 				return err
 			}
@@ -103,11 +103,11 @@ func questTrigger(ctx context.Context, tx *sql.Tx, s *store.Snapshot, quest stri
 				return fail(409, "short")
 			}
 		}
-	case t.Flag != "":
-		if !questHasMark(s, t.Flag) {
+	case t.GetFlag() != "":
+		if !questHasMark(s, t.GetFlag()) {
 			return fail(409, "not-next-step")
 		}
-	case t.Sync != "":
+	case t.GetSync() != "":
 		var credited bool
 		err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM ledger WHERE account_id=? AND currency='embers' AND reason='sync' AND delta>0 AND created_at>?)`, s.AccountID, s.State.ReachedAt[quest]).Scan(&credited)
 		if err != nil {
@@ -120,63 +120,63 @@ func questTrigger(ctx context.Context, tx *sql.Tx, s *store.Snapshot, quest stri
 	}
 	return nil
 }
-func checkQuestGate(ctx context.Context, tx *sql.Tx, s *store.Snapshot, quest string, step content.QuestStep, now int64) error {
-	g := step.Gate
+func checkQuestGate(ctx context.Context, tx *sql.Tx, s *store.Snapshot, quest string, step *content.QuestStep, now int64) error {
+	g := step.GetGate()
 	if g == nil {
 		return nil
 	}
-	if g.With != "" && !personHere(g.With, s.State.Area, now) {
+	if g.GetWith() != "" && !personHere(g.GetWith(), s.State.Area, now) {
 		return fail(409, "not-here")
 	}
-	if wait := g.Wait; wait != nil {
+	if wait := g.GetWait(); wait != nil {
 		at, ok := s.State.GateAt[quest]
 		if !ok {
 			return fail(409, "not-yet")
 		}
-		if !content.QuestWaitReady(*wait, at, now) {
+		if !content.QuestWaitReady(wait, at, now) {
 			return fail(409, "not-yet")
 		}
 	}
-	if item := g.Item; item != nil {
-		n, err := questItemCount(ctx, tx, s.AccountID, item.Def)
+	if item := g.GetItem(); item != nil {
+		n, err := questItemCount(ctx, tx, s.AccountID, item.GetDef())
 		if err != nil {
 			return err
 		}
-		if n < item.Qty {
+		if n < int(item.GetQty()) {
 			return fail(409, "short")
 		}
 	}
-	if int(g.Embers) > 0 {
-		if s.State.Embers < int(g.Embers) {
+	if g.GetEmbers() > 0 {
+		if s.State.Embers < int(g.GetEmbers()) {
 			return fail(409, "short")
 		}
-		if s.State.HP <= 0 && s.ProfileSource == "habitica" && s.State.XPEmbers < int(g.Embers) {
+		if s.State.HP <= 0 && s.ProfileSource == "habitica" && s.State.XPEmbers < int(g.GetEmbers()) {
 			return fail(409, "needs-earned")
 		}
 	}
 	return nil
 }
-func spendQuestGate(ctx context.Context, tx *sql.Tx, s *store.Snapshot, quest string, step content.QuestStep, now int64, out *contract.QuestStepResult) error {
-	g := step.Gate
+func spendQuestGate(ctx context.Context, tx *sql.Tx, s *store.Snapshot, quest string, step *content.QuestStep, now int64, out *contract.QuestStepResult) error {
+	g := step.GetGate()
 	if g == nil {
 		return nil
 	}
-	ref := quest + ":" + step.ID
-	if item := g.Item; item != nil && item.Keep != nil && !*item.Keep {
-		if err := questTake(ctx, tx, s, item.Def, item.Qty, ref, now); err != nil {
+	ref := quest + ":" + step.GetId()
+	if item := g.GetItem(); item != nil && item.Keep != nil && !*item.Keep {
+		if err := questTake(ctx, tx, s, item.GetDef(), int(item.GetQty()), ref, now); err != nil {
 			return err
 		}
-		out.Taken = append(out.Taken, &contract.ItemQty{Def: item.Def, Qty: float64(item.Qty)})
+		out.Taken = append(out.Taken, &contract.ItemQty{Def: item.GetDef(), Qty: float64(item.GetQty())})
 	}
-	if int(g.Embers) > 0 {
-		earned := max(0, int(g.Embers)-(s.State.Embers-s.State.XPEmbers))
+	if g.GetEmbers() > 0 {
+		earned := max(0, int(g.GetEmbers())-(s.State.Embers-s.State.XPEmbers))
 		if s.State.HP <= 0 && s.ProfileSource == "habitica" {
-			earned = int(g.Embers)
+			earned = int(g.GetEmbers())
 		}
-		if err := store.Credit(ctx, tx, s, -int(g.Embers), -earned, "quest", ref, nil, now); err != nil {
+		if err := store.Credit(ctx, tx, s, -int(g.GetEmbers()), -earned, "quest", ref, nil, now); err != nil {
 			return err
 		}
-		out.EmbersSpent = float64(int(g.Embers))
+		out.EmbersSpent = float64(g.GetEmbers())
 	}
 	return nil
 }
@@ -253,15 +253,15 @@ func questTake(ctx context.Context, tx *sql.Tx, s *store.Snapshot, def string, q
 	}
 	return refreshItems(ctx, tx, s)
 }
-func questGive(ctx context.Context, tx *sql.Tx, s *store.Snapshot, item content.QuestItem, ref string, now int64) error {
+func questGive(ctx context.Context, tx *sql.Tx, s *store.Snapshot, item *content.QuestItem, ref string, now int64) error {
 	d, _ := content.ItemFor(item.Def)
 	if !content.ItemInstanced(d) {
-		return itemChange(ctx, tx, s, item.Def, item.Qty, "quest", ref, now)
+		return itemChange(ctx, tx, s, item.GetDef(), int(item.GetQty()), "quest", ref, now)
 	}
-	for i := 0; i < item.Qty; i++ {
+	for i := 0; i < int(item.GetQty()); i++ {
 		if _, err := newInstance(ctx, tx, d, instanceAt{"pack", s.AccountID}, "", -1, now); err != nil {
 			return err
 		}
 	}
-	return currency(ctx, tx, s.AccountID, content.StackCurrency(item.Def), item.Qty, "quest", ref, now)
+	return currency(ctx, tx, s.AccountID, content.StackCurrency(item.GetDef()), int(item.GetQty()), "quest", ref, now)
 }

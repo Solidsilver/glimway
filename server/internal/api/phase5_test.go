@@ -30,7 +30,7 @@ type phase5Response struct {
 		NextPendingCursor *string        `json:"nextPendingCursor"`
 		MailID            string         `json:"mailId"`
 		InstanceIDs       []string       `json:"instanceIds"`
-		Output            content.Asset  `json:"output"`
+		Output            *content.Asset `json:"output"`
 		Materials         map[string]int `json:"materials"`
 	}
 	Error struct {
@@ -198,7 +198,7 @@ func TestPhase5StorageConservationAndPlacement(t *testing.T) {
 	spot := litSpots(*crafted.Result.Home)[0]
 	place := body(s, "place", map[string]any{"itemId": ids[0], "scene": "outdoor", "x": spot[0], "y": spot[1], "rotation": 0})
 	update(&s, x.exp("POST", "/api/homestead/place", place, c, 200))
-	assets := []content.Asset{{Kind: "material", Id: "timber", Qty: 7}, {Kind: "item", Id: giftTrinket, Qty: 5}, {Kind: "decoration", Id: "wooden-stool", Qty: 1}}
+	assets := []*content.Asset{{Kind: "material", Id: "timber", Qty: 7}, {Kind: "item", Id: giftTrinket, Qty: 5}, {Kind: "decoration", Id: "wooden-stool", Qty: 1}}
 	original := x.p5("GET", "/api/storage", nil, c, 200)
 	for i, v := range assets {
 		req := body(s, fmt.Sprintf("put%d", i), map[string]any{"direction": "deposit", "asset": v})
@@ -245,10 +245,10 @@ func TestPhase5MailAssetsWorldScopeAndReplay(t *testing.T) {
 	chair := crafted.Result.InstanceIDs[0]
 	// Placed goods are unavailable for shipping.
 	update(&s, x.exp("POST", "/api/homestead/place", body(s, "place-chair", map[string]any{"itemId": chair, "scene": "indoor", "x": 0, "y": 0, "rotation": 0}), c, 200))
-	deco := content.Asset{Kind: "decoration", Id: "reading-chair", Qty: 1}
+	deco := &content.Asset{Kind: "decoration", Id: "reading-chair", Qty: 1}
 	x.p5("POST", "/api/mail", body(s, "placed", map[string]any{"toId": x.account("bob"), "asset": deco}), c, 409)
 	update(&s, x.exp("POST", "/api/homestead/remove", body(s, "remove-chair", map[string]any{"itemId": chair}), c, 200))
-	for i, asset := range []content.Asset{{Kind: "material", Id: "timber", Qty: 9}, {Kind: "item", Id: giftTrinket, Qty: 5}, deco} {
+	for i, asset := range []*content.Asset{{Kind: "material", Id: "timber", Qty: 9}, {Kind: "item", Id: giftTrinket, Qty: 5}, deco} {
 		req := body(s, fmt.Sprintf("send%d", i), map[string]any{"toId": x.account("bob"), "asset": asset})
 		beforeRecipient := x.expect("GET", "/api/state", nil, bc, 200).Snapshot
 		sent := x.p5("POST", "/api/mail", req, c, 200)
@@ -288,11 +288,11 @@ func TestPhase5MailAssetsWorldScopeAndReplay(t *testing.T) {
 	if count(t, x.db, "SELECT count(*) FROM homestead_items WHERE id=? AND account_id='"+x.account("bob")+"' AND location='inventory'", chair) != 1 {
 		t.Fatal("decoration identity lost")
 	}
-	x.p5("POST", "/api/mail", body(s, "cross-world", map[string]any{"toId": x.account("outsider"), "asset": content.Asset{Kind: "material", Id: "timber", Qty: 1}}), c, 403)
+	x.p5("POST", "/api/mail", body(s, "cross-world", map[string]any{"toId": x.account("outsider"), "asset": &content.Asset{Kind: "material", Id: "timber", Qty: 1}}), c, 403)
 	x.p5("POST", "/api/mail", body(s, "self", map[string]any{"toId": x.account("alice"), "asset": deco}), c, 400)
 	x.p5("POST", "/api/mail", body(s, "missing", map[string]any{"toId": "missing", "asset": deco}), c, 404)
-	x.p5("POST", "/api/mail", body(s, "forged", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "item", Id: "lamp-wick", Qty: 1}}), c, 409)
-	x.p5("POST", "/api/mail", body(s, "bound", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "item", Id: "ember-charm", Qty: 1}}), c, 409)
+	x.p5("POST", "/api/mail", body(s, "forged", map[string]any{"toId": x.account("bob"), "asset": &content.Asset{Kind: "item", Id: "lamp-wick", Qty: 1}}), c, 409)
+	x.p5("POST", "/api/mail", body(s, "bound", map[string]any{"toId": x.account("bob"), "asset": &content.Asset{Kind: "item", Id: "ember-charm", Qty: 1}}), c, 409)
 }
 
 // Independent connections exercise the SQLite transaction boundary, not just

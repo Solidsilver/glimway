@@ -360,7 +360,7 @@ func stormFind(id string) (first, second struct {
 		for kind, chance := range map[string]uint32{"camp": 2, "chest": 5} {
 			for cx := 0; cx < 3; cx++ {
 				for cy := 0; cy < 3; cy++ {
-					if intAbs(cx-1)+intAbs(cy-1) < content.WildsRules.DeepTangleManhattanDistance {
+					if intAbs(cx-1)+intAbs(cy-1) < int(content.WildsRules.GetDeepTangleManhattanDistance()) {
 						continue // not deep enough
 					}
 					for i := 0; i < 60; i++ {

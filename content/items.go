@@ -255,7 +255,7 @@ func validateItems(v *Items) error {
 		if !validSellerPlace(s) {
 			return fmt.Errorf("invalid items: seller %s: place", s.GetId())
 		}
-		if s.GetFestival() != "" && !slices.ContainsFunc(cal.Festivals, func(f Festival) bool { return f.Name == s.GetFestival() }) {
+		if s.GetFestival() != "" && !slices.ContainsFunc(cal.Festivals, func(f *Festival) bool { return f.GetName() == s.GetFestival() }) {
 			return fmt.Errorf("invalid items: seller %s: festival", s.GetId())
 		}
 		goods := map[string]bool{}

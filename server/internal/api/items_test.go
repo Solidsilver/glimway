@@ -693,7 +693,7 @@ func TestItemsTravelByParcelAndChest(t *testing.T) {
 	x.opRefreshing(c, &s, "fit", map[string]any{"tool": axe, "instance": nail}, 200)
 	x.stack(x.account("alice"), "lamp-wick", x.account("alice"), 2)
 	x.refresh(c, &s)
-	asset := content.Asset{Kind: "instance", Id: "bench-axe", Qty: 1, Instance: axe}
+	asset := &content.Asset{Kind: "instance", Id: "bench-axe", Qty: 1, Instance: axe}
 	sent := x.p5("POST", "/api/mail", body(s, "post-axe", map[string]any{"toId": x.account("bob"), "asset": asset}), c, 200)
 	s.Snapshot = sent.Snapshot
 	if count(t, x.db, "SELECT count(*) FROM item_instances WHERE id=? AND location='mail' AND owner='"+x.account("alice")+"'", axe) != 1 {
@@ -717,7 +717,7 @@ func TestItemsTravelByParcelAndChest(t *testing.T) {
 	x.conserved(x.account("bob"))
 	// Marked stacks keep their maker through the post and back.
 	maker := x.account("alice")
-	wicks := content.Asset{Kind: "item", Id: "lamp-wick", Qty: 2, Maker: &maker}
+	wicks := &content.Asset{Kind: "item", Id: "lamp-wick", Qty: 2, Maker: &maker}
 	x.refresh(c, &s)
 	sent = x.p5("POST", "/api/mail", body(s, "post-wicks", map[string]any{"toId": x.account("bob"), "asset": wicks}), c, 200)
 	s.Snapshot = sent.Snapshot

@@ -1,0 +1,252 @@
+{
+  "loader": [
+    {
+      "name": "shipped",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "duplicate-emote",
+      "valid": false,
+      "rule": "repeated.unique",
+      "edits": [
+        {
+          "path": [
+            "emotes"
+          ],
+          "value": [
+            "wave",
+            "nod",
+            "cheer",
+            "thanks",
+            "lantern",
+            "wave"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "emote-vocabulary",
+      "valid": false,
+      "rule": "string.pattern",
+      "edits": [
+        {
+          "path": [
+            "emotes"
+          ],
+          "value": [
+            "<script>"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "no-emotes",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "emotes"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "hz-range",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "positionHz"
+          ],
+          "value": 100
+        }
+      ]
+    },
+    {
+      "name": "zero-connections",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "maxConnections"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "connections-range",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "maxConnections"
+          ],
+          "value": 513
+        }
+      ]
+    },
+    {
+      "name": "rooms-over-hub",
+      "valid": false,
+      "rule": "presence.room_capacity",
+      "edits": [
+        {
+          "path": [
+            "maxRoomPlayers"
+          ],
+          "value": 129
+        }
+      ]
+    },
+    {
+      "name": "session-over-player",
+      "valid": false,
+      "rule": "presence.session_player",
+      "edits": [
+        {
+          "path": [
+            "maxSessionConnections"
+          ],
+          "value": 5
+        }
+      ]
+    },
+    {
+      "name": "player-connections-range",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "maxPlayerConnections"
+          ],
+          "value": 33
+        }
+      ]
+    },
+    {
+      "name": "revalidate-failures-range",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "revalidateFailures"
+          ],
+          "value": 11
+        }
+      ]
+    },
+    {
+      "name": "ingress-rate-range",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "incomingMessagesPerSecond"
+          ],
+          "value": 121
+        }
+      ]
+    },
+    {
+      "name": "ingress-burst-range",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "incomingBurst"
+          ],
+          "value": 241
+        }
+      ]
+    },
+    {
+      "name": "message-range",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "messageBytes"
+          ],
+          "value": 100000
+        }
+      ]
+    },
+    {
+      "name": "queue-range",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "queueMessages"
+          ],
+          "value": 10000
+        }
+      ]
+    },
+    {
+      "name": "idle-zero",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "idleTimeoutMs"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "idle-range",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "idleTimeoutMs"
+          ],
+          "value": 120001
+        }
+      ]
+    },
+    {
+      "name": "ping-after-idle",
+      "valid": false,
+      "rule": "presence.ping_before_idle",
+      "edits": [
+        {
+          "path": [
+            "pingIntervalMs"
+          ],
+          "value": 60000
+        }
+      ]
+    },
+    {
+      "name": "pong-after-idle",
+      "valid": false,
+      "rule": "presence.ping_before_idle",
+      "edits": [
+        {
+          "path": [
+            "idleTimeoutMs"
+          ],
+          "value": 5000
+        }
+      ]
+    }
+  ]
+}

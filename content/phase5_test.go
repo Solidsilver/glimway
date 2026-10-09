@@ -34,8 +34,9 @@ func TestCalendarParity(t *testing.T) {
 		t.Fatal("insufficient parity coverage")
 	}
 	for _, v := range cases {
-		c := CalendarRules
-		c.WickDays = v.WickDays
+		// The calendar is a proto message: never copied, cloned instead.
+		c := proto.Clone(CalendarRules).(*Calendar)
+		c.WickDays = int32(v.WickDays)
 		actual := CalendarAt(c, v.Unix)
 		if !reflect.DeepEqual(actual, v.Result) {
 			t.Fatalf("calendar %d/%d: got %s want %s", v.WickDays, v.Unix, mustJSON(actual), mustJSON(v.Result))
@@ -58,7 +59,7 @@ func TestCalendarBoundariesAndFestivals(t *testing.T) {
 				i = n
 			}
 		}
-		d := CalendarAt(CalendarRules, epoch.Unix()+int64((i*7+f.Day-1)*86400))
+		d := CalendarAt(CalendarRules, epoch.Unix()+int64((i*7+int(f.GetDay())-1)*86400))
 		if d.Festival == nil || *d.Festival != f.Name {
 			t.Fatal("festival", f, d)
 		}
@@ -115,14 +116,32 @@ func TestPhase5ContentValidation(t *testing.T) {
 			}
 		})
 	}
-	cal := CalendarRules
-	cal.WickDays = 0
-	if ValidateCalendar(cal) == nil {
-		t.Fatal("zero wick duration")
+}
+
+// The epoch and wick-duration rules are on the schema; the loader vectors
+// (content/vectors/clock.json, "loader") mutate the shipped file and both
+// runtimes refuse each malformation for its rule.
+func TestCalendarLoaderVectors(t *testing.T) {
+	var vectors struct {
+		Loader []loaderVector
 	}
-	cal = CalendarRules
-	cal.Epoch = "2026-01-05T01:00:00Z"
-	if ValidateCalendar(cal) == nil {
-		t.Fatal("nonmidnight epoch")
+	readVectors(t, "clock", &vectors)
+	if len(vectors.Loader) == 0 {
+		t.Fatal("no calendar loader vectors")
+	}
+	raw, err := FS.ReadFile("clock.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range vectors.Loader {
+		t.Run(v.Name, func(t *testing.T) {
+			_, err := DecodeCalendar(editVector(t, raw, v))
+			if (err == nil) != v.Valid {
+				t.Fatal(v.Valid, err)
+			}
+			if !v.Valid && v.Rule != "" {
+				checkVectorRule(t, err, v.Rule)
+			}
+		})
 	}
 }

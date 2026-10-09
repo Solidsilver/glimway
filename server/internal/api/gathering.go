@@ -155,7 +155,7 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 		if len(req.Tile) != 2 {
 			return fail(400, "tile-required")
 		}
-		size := content.WildsRules.ChunkSize
+		size := int(content.WildsRules.GetChunkSize())
 		cx, cy := int(math.Floor(float64(req.Tile[0])/float64(size))), int(math.Floor(float64(req.Tile[1])/float64(size)))
 		chunk, err := a.Config.Chunks.Chunk(ctx, tx, s.WorldID, epoch.Id, 0, int32(cx), int32(cy))
 		if err != nil {

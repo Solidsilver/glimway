@@ -41,7 +41,7 @@
  * in tests.
  */
 import { create, equals, fromJson, toJson, type DescMessage, type JsonValue } from '@bufbuild/protobuf'
-import contract from '../../content/contract.json' with { type: 'json' }
+import { CONTRACT_NUMBER } from '../lib/contract.ts';
 import type { ApiClient, Envelope, RawApi } from '../lib/api/client.ts'
 import { newKey } from '../lib/api/client.ts'
 import { ApiError, errorCode, isOutboxClientBug, isReloadNeeded, isSettledRefusal, isUnreachable, needsReconciliation, type ApiErrorCode } from '../lib/api/errors.ts'
@@ -831,7 +831,7 @@ export class Link {
       return refused('offline')
     }
     if (this.fence === null && !(await this.own(false))) return refused('superseded')
-    const entry: OutboxEntry = { id: this.nextId++, kind, path, key, body: JSON.stringify(body), contract: contract.number, createdAt: this.now(), sent: false, barrier: opts.barrier === true, offline: opts.offline, ...(opts.fall ? { fall: opts.fall } : {}) }
+    const entry: OutboxEntry = { id: this.nextId++, kind, path, key, body: JSON.stringify(body), contract: CONTRACT_NUMBER, createdAt: this.now(), sent: false, barrier: opts.barrier === true, offline: opts.offline, ...(opts.fall ? { fall: opts.fall } : {}) }
     this.entries.push(entry)
     opts.prepare?.(entry.id)
     if (opts.offline && kind !== 'fall') this.refresh({ predicted: true })
@@ -1174,7 +1174,7 @@ export class Link {
    * holds, and only then goes. False: that read failed (stop draining).
    */
   private async expire(): Promise<boolean> {
-    const old = expired(this.entries, this.now(), contract.number)
+    const old = expired(this.entries, this.now(), CONTRACT_NUMBER)
     if (!old.length) return true
     const unsent = old.filter((e) => !e.sent)
     const sent = old.filter((e) => e.sent)

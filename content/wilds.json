@@ -3,62 +3,239 @@
   "chunkSize": 24,
   "deepTangleManhattanDistance": 2,
   "regions": [
-    { "id": "inner-1", "kind": "inner", "gridWidth": 3, "gridHeight": 3, "entryX": 1, "entryY": 1 },
-    { "id": "outer-1", "kind": "outer", "gridWidth": 3, "gridHeight": 3, "entryX": 1, "entryY": 1 }
+    {
+      "id": "inner-1",
+      "kind": "inner",
+      "gridWidth": 3,
+      "gridHeight": 3,
+      "entryX": 1,
+      "entryY": 1
+    },
+    {
+      "id": "outer-1",
+      "kind": "outer",
+      "gridWidth": 3,
+      "gridHeight": 3,
+      "entryX": 1,
+      "entryY": 1
+    }
   ],
-  "enemyKinds": ["wisp", "beetle"],
+  "enemyKinds": [
+    "wisp",
+    "beetle"
+  ],
   "campMixes": [
-    ["wisp"],
-    ["wisp", "wisp"],
-    ["beetle"],
-    ["wisp", "beetle"],
-    ["beetle", "beetle"],
-    ["wisp", "wisp", "beetle"]
+    {
+      "enemies": [
+        "wisp"
+      ]
+    },
+    {
+      "enemies": [
+        "wisp",
+        "wisp"
+      ]
+    },
+    {
+      "enemies": [
+        "beetle"
+      ]
+    },
+    {
+      "enemies": [
+        "wisp",
+        "beetle"
+      ]
+    },
+    {
+      "enemies": [
+        "beetle",
+        "beetle"
+      ]
+    },
+    {
+      "enemies": [
+        "wisp",
+        "wisp",
+        "beetle"
+      ]
+    }
   ],
-  "materials": ["timber", "stone", "fiber", "amber"],
-  "poiIds": ["old-shrine", "waystone", "frozen-pond", "abandoned-cart", "mossy-arch"],
-  "trinkets": ["whittled-fox", "beeswax-candle", "river-glass-bead", "spare-bootlace", "tin-whistle"],
+  "materials": [
+    "timber",
+    "stone",
+    "fiber",
+    "amber"
+  ],
+  "poiIds": [
+    "old-shrine",
+    "waystone",
+    "frozen-pond",
+    "abandoned-cart",
+    "mossy-arch"
+  ],
+  "trinkets": [
+    "whittled-fox",
+    "beeswax-candle",
+    "river-glass-bead",
+    "spare-bootlace",
+    "tin-whistle"
+  ],
   "entityKinds": [
-    { "kind": "camp", "min": 1, "max": 2 },
-    { "kind": "node", "min": 2, "max": 4 },
-    { "kind": "chest", "min": 0, "max": 1 },
-    { "kind": "poi", "min": 0, "max": 1 }
+    {
+      "kind": "camp",
+      "min": 1,
+      "max": 2
+    },
+    {
+      "kind": "node",
+      "min": 2,
+      "max": 4
+    },
+    {
+      "kind": "chest",
+      "min": 0,
+      "max": 1
+    },
+    {
+      "kind": "poi",
+      "min": 0,
+      "max": 1
+    }
   ],
   "lootTables": {
-    "camp": [
-      { "material": "amber", "min": 1, "max": 2, "chancePermille": 450 },
-      { "material": "fiber", "min": 1, "max": 3, "chancePermille": 550 },
-      { "material": "stone", "min": 1, "max": 2, "chancePermille": 350 }
-    ],
-    "node:timber": [
-      { "material": "timber", "min": 2, "max": 4, "chancePermille": 1000 }
-    ],
-    "node:stone": [
-      { "material": "stone", "min": 2, "max": 4, "chancePermille": 1000 }
-    ],
-    "node:fiber": [
-      { "material": "fiber", "min": 2, "max": 5, "chancePermille": 1000 }
-    ],
-    "node:amber": [
-      { "material": "amber", "min": 1, "max": 2, "chancePermille": 1000 },
-      { "material": "stone", "min": 1, "max": 1, "chancePermille": 400 }
-    ],
-    "chest:1": [
-      { "material": "stone", "min": 1, "max": 3, "chancePermille": 800 },
-      { "material": "fiber", "min": 1, "max": 2, "chancePermille": 600 }
-    ],
-    "chest:2": [
-      { "material": "timber", "min": 1, "max": 3, "chancePermille": 700 },
-      { "material": "amber", "min": 1, "max": 2, "chancePermille": 500 },
-      { "material": "stone", "min": 1, "max": 2, "chancePermille": 500 }
-    ],
-    "chest:3": [
-      { "material": "amber", "min": 1, "max": 3, "chancePermille": 800 },
-      { "material": "timber", "min": 2, "max": 4, "chancePermille": 600 }
-    ],
-    "poi": [
-      { "material": "fiber", "min": 1, "max": 2, "chancePermille": 500 }
-    ]
+    "camp": {
+      "entries": [
+        {
+          "material": "amber",
+          "min": 1,
+          "max": 2,
+          "chancePermille": 450
+        },
+        {
+          "material": "fiber",
+          "min": 1,
+          "max": 3,
+          "chancePermille": 550
+        },
+        {
+          "material": "stone",
+          "min": 1,
+          "max": 2,
+          "chancePermille": 350
+        }
+      ]
+    },
+    "node:timber": {
+      "entries": [
+        {
+          "material": "timber",
+          "min": 2,
+          "max": 4,
+          "chancePermille": 1000
+        }
+      ]
+    },
+    "node:stone": {
+      "entries": [
+        {
+          "material": "stone",
+          "min": 2,
+          "max": 4,
+          "chancePermille": 1000
+        }
+      ]
+    },
+    "node:fiber": {
+      "entries": [
+        {
+          "material": "fiber",
+          "min": 2,
+          "max": 5,
+          "chancePermille": 1000
+        }
+      ]
+    },
+    "node:amber": {
+      "entries": [
+        {
+          "material": "amber",
+          "min": 1,
+          "max": 2,
+          "chancePermille": 1000
+        },
+        {
+          "material": "stone",
+          "min": 1,
+          "max": 1,
+          "chancePermille": 400
+        }
+      ]
+    },
+    "chest:1": {
+      "entries": [
+        {
+          "material": "stone",
+          "min": 1,
+          "max": 3,
+          "chancePermille": 800
+        },
+        {
+          "material": "fiber",
+          "min": 1,
+          "max": 2,
+          "chancePermille": 600
+        }
+      ]
+    },
+    "chest:2": {
+      "entries": [
+        {
+          "material": "timber",
+          "min": 1,
+          "max": 3,
+          "chancePermille": 700
+        },
+        {
+          "material": "amber",
+          "min": 1,
+          "max": 2,
+          "chancePermille": 500
+        },
+        {
+          "material": "stone",
+          "min": 1,
+          "max": 2,
+          "chancePermille": 500
+        }
+      ]
+    },
+    "chest:3": {
+      "entries": [
+        {
+          "material": "amber",
+          "min": 1,
+          "max": 3,
+          "chancePermille": 800
+        },
+        {
+          "material": "timber",
+          "min": 2,
+          "max": 4,
+          "chancePermille": 600
+        }
+      ]
+    },
+    "poi": {
+      "entries": [
+        {
+          "material": "fiber",
+          "min": 1,
+          "max": 2,
+          "chancePermille": 500
+        }
+      ]
+    }
   },
   "trinketChancePermille": 90,
   "timers": {

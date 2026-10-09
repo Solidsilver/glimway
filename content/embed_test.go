@@ -10,8 +10,8 @@ func TestSharedContent(t *testing.T) {
 	if e.RoadLanterns[0] != "road-1" || e.RoadLanterns[1] != "road-2" || e.RoadLanterns[2] != "road-3" {
 		t.Fatal("invalid lantern content")
 	}
-	gear, err := LoadGear()
-	if err != nil || len(gear) == 0 {
+	gear, err := LoadHabiticaGear()
+	if err != nil || len(gear.Gear) == 0 {
 		t.Fatalf("gear catalog: %v", err)
 	}
 	papers, err := LoadPapers()

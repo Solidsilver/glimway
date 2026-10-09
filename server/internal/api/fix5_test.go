@@ -208,7 +208,8 @@ func TestFix5MailItemsAndDecorationsReturnOriginalGoods(t *testing.T) {
 			s.Snapshot = crafted.Snapshot
 			instance := crafted.Result.InstanceIDs[0]
 			trinket := giftTrinket
-			for i, asset := range []content.Asset{{Kind: "item", Id: trinket, Qty: 5}, {Kind: "decoration", Id: "reading-chair", Qty: 1}} {
+			assets := []*content.Asset{{Kind: "item", Id: trinket, Qty: 5}, {Kind: "decoration", Id: "reading-chair", Qty: 1}}
+			for i, asset := range assets {
 				sent := x.p5("POST", "/api/mail", body(s, fmt.Sprintf("send-%d", i), map[string]any{"toId": x.account("bob"), "asset": asset}), c, 200)
 				s.Snapshot = sent.Snapshot
 				if mode == "recall" {
@@ -332,7 +333,7 @@ func TestFix5MailCursorsAndLegacyPendingBounds(t *testing.T) {
 		t.Fatal("missing old history")
 	}
 	seen := map[string]bool{}
-	for _, page := range []phase5Response{first, second} {
+	for _, page := range []*phase5Response{&first, &second} {
 		for _, m := range page.Mail {
 			if m.ClaimedAt != nil {
 				if seen[m.ID] {
@@ -357,7 +358,7 @@ func TestFix5MailCursorsAndLegacyPendingBounds(t *testing.T) {
 	}
 	second = x.p5("GET", "/api/mail?pendingCursor="+*first.NextPendingCursor, nil, c, 200)
 	seen = map[string]bool{}
-	for _, page := range []phase5Response{first, second} {
+	for _, page := range []*phase5Response{&first, &second} {
 		for _, m := range page.Mail {
 			if m.ClaimedAt == nil {
 				if seen[m.ID] {

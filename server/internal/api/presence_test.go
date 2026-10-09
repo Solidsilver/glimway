@@ -134,17 +134,18 @@ type wsClient struct {
 	closed chan error
 }
 
-func startPresence(t *testing.T, x *rig, c content.Presence) *httptest.Server {
+func startPresence(t *testing.T, x *rig, c *content.Presence) *httptest.Server {
 	t.Helper()
 	cfg := x.api.Config
-	cfg.Presence = &c
+	cfg.Presence = c
 	x.api = New(x.db, x.api.Habitica, cfg)
 	ts := httptest.NewServer(x.api)
 	t.Cleanup(func() { x.api.ClosePresence(); ts.Close() })
 	return ts
 }
-func presenceTestConfig() content.Presence {
-	c := content.PresenceRules
+func presenceTestConfig() *content.Presence {
+	// A clone: tests mutate their copy, never the shared rules table.
+	c := proto.Clone(content.PresenceRules).(*content.Presence)
 	c.LeaveGraceMs = 120
 	c.JoinCooldownMs = 1
 	c.RevalidateMs = 50

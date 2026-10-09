@@ -9,7 +9,7 @@
  * The Habitica token passes through `login` only, and is never stored here.
  */
 import { noteServerClock } from '../server-time.ts';
-import contract from '../../../content/contract.json' with { type: 'json' };
+import { CONTRACT_NUMBER } from '../contract.ts';
 import { createOperationsApi, decodeMixed, type OperationsApi } from './operations.ts';
 import { OperationsResultSchema } from '../gen/glimway/v1/operations_pb.js';
 import { decodeWire } from './wire.ts';
@@ -214,7 +214,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     body?: unknown,
     extra: { headers?: Record<string, string>; keepalive?: boolean; binary?: boolean } = {},
   ): Promise<unknown> {
-    const headers: Record<string, string> = { Accept: 'application/json', 'X-Glimway-Contract': String(contract.number), ...extra.headers };
+    const headers: Record<string, string> = { Accept: 'application/json', 'X-Glimway-Contract': String(CONTRACT_NUMBER), ...extra.headers };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     if (extra.binary) headers.Accept = 'application/x-protobuf';
     const controller = new AbortController();

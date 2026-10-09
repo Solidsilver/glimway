@@ -1,0 +1,119 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// The Wilds generator's shared data (content/wilds.json): read by the
+// server's generator (server/internal/wilds) and the client's chunk math
+// (src/lib/wilds). The JSON is the single copy; both sides load these types.
+message Wilds {
+  option (buf.validate.message).cel = {
+    id: "wilds.chunk_even"
+    message: "chunkSize must be an even integer"
+    expression: "this.chunk_size % 2 == 0"
+  };
+  // The generator's rules version; a stored chunk's epoch carries it.
+  int32 generator_version = 1 [(buf.validate.field).int32.const = 2];
+  // One chunk's side length in tiles; the generators keep margins around it.
+  int32 chunk_size = 2 [(buf.validate.field).int32.gte = 16];
+  // How far from the Tangle entry the deep tangle begins.
+  int32 deep_tangle_manhattan_distance = 3 [(buf.validate.field).int32.gte = 1];
+  // The two regions (inner Tangle, outer Wilds); ids unique (code rule).
+  repeated WildsRegion regions = 4 [(buf.validate.field).repeated.min_items = 1];
+  // Enemy vocabularies; camp mixes may name only these (code rule).
+  repeated string enemy_kinds = 5 [(buf.validate.field).repeated = {
+    min_items: 1
+    items: {string: {pattern: "^[a-z0-9-]{1,100}$"}}
+  }];
+  // Each mix is one camp's enemy roll, non-empty, of known enemy kinds.
+  repeated WildsCampMix camp_mixes = 6 [(buf.validate.field).repeated.min_items = 1];
+  // Gathering materials (the node vocabularies and every loot table's pays).
+  repeated string materials = 7 [(buf.validate.field).repeated = {
+    min_items: 1
+    items: {string: {pattern: "^[a-z0-9-]{1,100}$"}}
+  }];
+  // Points of interest the outer Wilds place.
+  repeated string poi_ids = 8 [(buf.validate.field).repeated = {
+    min_items: 1
+    items: {string: {pattern: "^[a-z0-9-]{1,100}$"}}
+  }];
+  // Rare keepsake drops, one per win of the trinket chance.
+  repeated string trinkets = 9 [(buf.validate.field).repeated = {
+    min_items: 1
+    items: {string: {pattern: "^[a-z0-9-]{1,100}$"}}
+  }];
+  // Spawn rules, one per entity kind, in rule order.
+  repeated WildsEntityKindRule entity_kinds = 10 [(buf.validate.field).repeated.min_items = 1];
+  // One table per lootable id ("camp", "node:<material>", "chest:<tier>",
+  // "poi"); every spawn rule's ids must exist (code rule).
+  map<string, WildsLootTable> loot_tables = 11 [(buf.validate.field).map.min_pairs = 1];
+  // Trinket drop chance, permille of one roll.
+  optional int32 trinket_chance_permille = 12 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: 0, lte: 1000}];
+  // Respawn/regrow waits, seconds.
+  WildsTimers timers = 13 [(buf.validate.field).required = true];
+}
+
+// One region: its chunk grid and the chunk the player enters by.
+// Zero is a legal entry coordinate, so entry is explicit presence: a
+// missing key must not read as tile 0.
+message WildsRegion {
+  option (buf.validate.message).cel = {
+    id: "region.entry_in_grid"
+    message: "entry must sit inside the grid"
+    expression: "this.entry_x >= 0 && this.entry_x < this.grid_width && this.entry_y >= 0 && this.entry_y < this.grid_height"
+  };
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string kind = 2 [(buf.validate.field).string = {in: ["inner", "outer"]}];
+  int32 grid_width = 3 [(buf.validate.field).int32.gte = 1];
+  int32 grid_height = 4 [(buf.validate.field).int32.gte = 1];
+  optional int32 entry_x = 5 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  optional int32 entry_y = 6 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+}
+
+// One camp's enemy roll: the old file carried a bare list of lists, which
+// proto can't express, so each row is a message naming its mix.
+message WildsCampMix {
+  repeated string enemies = 1 [(buf.validate.field).repeated = {
+    min_items: 1
+    items: {string: {pattern: "^[a-z0-9-]{1,100}$"}}
+  }];
+}
+
+// One spawn rule: how many of a kind a chunk places (inclusive range).
+message WildsEntityKindRule {
+  option (buf.validate.message).cel = {
+    id: "entity_kind.range"
+    message: "max must be at least min"
+    expression: "this.max >= this.min"
+  };
+  string kind = 1 [(buf.validate.field).string = {in: ["camp", "node", "chest", "poi"]}];
+  // Zero is a legal min (the chest rule spawns none), so presence is explicit:
+  // a missing key must not read as 0.
+  optional int32 min = 2 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  optional int32 max = 3 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+}
+
+// One table's row: a pay of `min`..`max` of a material on a permille chance.
+// A table never pays an unknown material (code rule).
+message WildsLootEntry {
+  option (buf.validate.message).cel = {
+    id: "loot_entry.range"
+    message: "max must be at least min"
+    expression: "this.max >= this.min"
+  };
+  string material = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  int32 min = 2 [(buf.validate.field).int32.gte = 1];
+  int32 max = 3 [(buf.validate.field).int32.gte = 1];
+  int32 chance_permille = 4 [(buf.validate.field).int32 = {gte: 1, lte: 1000}];
+}
+
+// One table: at least one row (the map's value rule on Wilds).
+message WildsLootTable {
+  repeated WildsLootEntry entries = 1 [(buf.validate.field).repeated.min_items = 1];
+}
+
+// Seconds the Wilds wait before a camp respawns or a node regrows.
+message WildsTimers {
+  int32 camp_respawn_seconds = 1 [(buf.validate.field).int32.gte = 1];
+  int32 node_regrow_seconds = 2 [(buf.validate.field).int32.gte = 1];
+}

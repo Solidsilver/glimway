@@ -210,7 +210,8 @@
           ],
           "value": "sponge"
         }
-      ]
+      ],
+      "rule": "duplicate id"
     },
     {
       "name": "duplicate-step",
@@ -226,7 +227,8 @@
           ],
           "value": "hear-hazel"
         }
-      ]
+      ],
+      "rule": "quest.unique_step_ids"
     },
     {
       "name": "unknown-after",
@@ -242,7 +244,8 @@
             "missing"
           ]
         }
-      ]
+      ],
+      "rule": "after missing"
     },
     {
       "name": "unknown-after-step",
@@ -258,7 +261,8 @@
             "sponge:missing"
           ]
         }
-      ]
+      ],
+      "rule": "after sponge:missing"
     },
     {
       "name": "cyclic-after",
@@ -274,7 +278,8 @@
             "lamp"
           ]
         }
-      ]
+      ],
+      "rule": "after cycle"
     },
     {
       "name": "self-step-cycle",
@@ -290,7 +295,8 @@
             "sponge:set-sponge"
           ]
         }
-      ]
+      ],
+      "rule": "after cycle"
     },
     {
       "name": "unknown-npc",
@@ -308,7 +314,8 @@
             "talk": "nobody"
           }
         }
-      ]
+      ],
+      "rule": "unknown trigger target"
     },
     {
       "name": "two-triggers",
@@ -327,7 +334,8 @@
             "open": "journal"
           }
         }
-      ]
+      ],
+      "rule": "quest.one_trigger"
     },
     {
       "name": "empty-trigger-key",
@@ -346,7 +354,8 @@
             "open": "journal"
           }
         }
-      ]
+      ],
+      "rule": "quest.trigger_target"
     },
     {
       "name": "new-not-a-step-trigger",
@@ -364,7 +373,8 @@
             "new": true
           }
         }
-      ]
+      ],
+      "rule": "new trigger"
     },
     {
       "name": "resident-needs-with",
@@ -382,7 +392,8 @@
             "embers": 1
           }
         }
-      ]
+      ],
+      "rule": "quest.open_at"
     },
     {
       "name": "unknown-with",
@@ -399,7 +410,8 @@
           ],
           "value": "nobody"
         }
-      ]
+      ],
+      "rule": "gate hear-hazel"
     },
     {
       "name": "deferred-world-gate",
@@ -416,7 +428,8 @@
           ],
           "value": "project:kiln"
         }
-      ]
+      ],
+      "rule": "unknown key"
     },
     {
       "name": "deferred-project-gate",
@@ -433,7 +446,8 @@
           ],
           "value": "kiln"
         }
-      ]
+      ],
+      "rule": "unknown key"
     },
     {
       "name": "unknown-give",
@@ -451,7 +465,8 @@
           ],
           "value": "missing"
         }
-      ]
+      ],
+      "rule": "give let-it-rise"
     },
     {
       "name": "give-needs-gate",
@@ -472,7 +487,8 @@
             }
           ]
         }
-      ]
+      ],
+      "rule": "quest.gated_give"
     },
     {
       "name": "missing-keep",
@@ -492,7 +508,8 @@
             "qty": 1
           }
         }
-      ]
+      ],
+      "rule": "required"
     },
     {
       "name": "zero-item",
@@ -510,7 +527,8 @@
           ],
           "value": 0
         }
-      ]
+      ],
+      "rule": "int32.gte"
     },
     {
       "name": "unknown-gate-item",
@@ -528,7 +546,8 @@
           ],
           "value": "east-finger"
         }
-      ]
+      ],
+      "rule": "gate item set-sponge"
     },
     {
       "name": "both-waits",
@@ -548,7 +567,8 @@
             "turnings": 1
           }
         }
-      ]
+      ],
+      "rule": "quest.wait"
     },
     {
       "name": "zero-wait",
@@ -567,7 +587,8 @@
             "hours": 0
           }
         }
-      ]
+      ],
+      "rule": "quest.wait"
     },
     {
       "name": "first-step-wait",
@@ -586,7 +607,8 @@
             "hours": 1
           }
         }
-      ]
+      ],
+      "rule": "wait hear-hazel"
     },
     {
       "name": "empty-gate",
@@ -602,7 +624,8 @@
           ],
           "value": {}
         }
-      ]
+      ],
+      "rule": "quest.gate_present"
     },
     {
       "name": "zero-spend-even-with",
@@ -619,7 +642,8 @@
           ],
           "value": 0
         }
-      ]
+      ],
+      "rule": "quest.gate_embers"
     },
     {
       "name": "ember-grant-cap",
@@ -635,7 +659,8 @@
           ],
           "value": 6
         }
-      ]
+      ],
+      "rule": "int32.gte_lte"
     },
     {
       "name": "goal-length",
@@ -651,7 +676,8 @@
           ],
           "value": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
         }
-      ]
+      ],
+      "rule": "string.max_len"
     },
     {
       "name": "unknown-use",
@@ -669,7 +695,8 @@
             "use": "missing"
           }
         }
-      ]
+      ],
+      "rule": "unknown trigger target"
     },
     {
       "name": "use-wrong-room",
@@ -685,7 +712,8 @@
           ],
           "value": "in:village:mill"
         }
-      ]
+      ],
+      "rule": "trigger area oil-lamp"
     },
     {
       "name": "where-spot-wrong-area",
@@ -702,7 +730,8 @@
           ],
           "value": "village"
         }
-      ]
+      ],
+      "rule": "where target oil-lamp"
     },
     {
       "name": "where-unknown-enemy",
@@ -721,7 +750,8 @@
             "enemy": "missing"
           }
         }
-      ]
+      ],
+      "rule": "where target hear-hazel"
     },
     {
       "name": "needs-world-deferred",
@@ -735,7 +765,8 @@
           ],
           "value": "world"
         }
-      ]
+      ],
+      "rule": "string.in"
     },
     {
       "name": "anywhere-open",
@@ -783,7 +814,8 @@
             "carry": "missing"
           }
         }
-      ]
+      ],
+      "rule": "unknown trigger target"
     },
     {
       "name": "quest-keepsake-carry",
@@ -829,7 +861,8 @@
           ],
           "value": ""
         }
-      ]
+      ],
+      "rule": "quest.open_at"
     },
     {
       "name": "unknown-paper",
@@ -847,7 +880,8 @@
             "missing"
           ]
         }
-      ]
+      ],
+      "rule": "unknown paper missing"
     },
     {
       "name": "empty-note",
@@ -866,7 +900,8 @@
             "body": ""
           }
         }
-      ]
+      ],
+      "rule": "string.min_len"
     },
     {
       "name": "unknown-quest-item",
@@ -884,7 +919,8 @@
             "not-a-keepsake"
           ]
         }
-      ]
+      ],
+      "rule": "unknown quest item not-a-keepsake"
     },
     {
       "name": "quest-id-kebab-case",
@@ -898,7 +934,8 @@
           ],
           "value": "-sponge"
         }
-      ]
+      ],
+      "rule": "string.pattern"
     },
     {
       "name": "step-id-kebab-case",
@@ -913,6 +950,258 @@
             "id"
           ],
           "value": "hear--hazel"
+        }
+      ],
+      "rule": "string.pattern"
+    },
+    {
+      "name": "resident-talk-away",
+      "valid": false,
+      "rule": "resident talk hear-hazel",
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "at"
+          ],
+          "value": "village"
+        }
+      ]
+    },
+    {
+      "name": "npc-area",
+      "valid": false,
+      "rule": "npc area hear-hazel",
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "do"
+          ],
+          "value": {
+            "talk": "mara"
+          }
+        }
+      ]
+    },
+    {
+      "name": "where-unknown-npc",
+      "valid": false,
+      "rule": "where npc hear-hazel",
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "where"
+          ],
+          "value": {
+            "npc": "nobody"
+          }
+        }
+      ]
+    },
+    {
+      "name": "chapter-needs-road",
+      "valid": false,
+      "rule": "quest.chapter_needs_road",
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "chapter"
+          ],
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "chapter-range",
+      "valid": false,
+      "rule": "int64.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "line"
+          ],
+          "value": "road"
+        },
+        {
+          "path": [
+            "quests",
+            0,
+            "chapter"
+          ],
+          "value": 9007199254740992
+        }
+      ]
+    },
+    {
+      "name": "where-empty",
+      "valid": false,
+      "rule": "quest.where_one_target",
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "where"
+          ],
+          "value": {}
+        }
+      ]
+    },
+    {
+      "name": "where-ui-with-area",
+      "valid": false,
+      "rule": "quest.where_ui",
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "where"
+          ],
+          "value": {
+            "ui": "journal",
+            "area": "village"
+          }
+        }
+      ]
+    },
+    {
+      "name": "duplicate-give",
+      "valid": false,
+      "rule": "quest.unique_give",
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            3,
+            "give"
+          ],
+          "value": [
+            {
+              "def": "keepers-twists",
+              "qty": 1
+            },
+            {
+              "def": "keepers-twists",
+              "qty": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "where-unknown-area",
+      "valid": false,
+      "rule": "where hear-hazel",
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "where"
+          ],
+          "value": {
+            "area": "bogus-area"
+          }
+        }
+      ]
+    },
+    {
+      "name": "missing-grant-keys",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "items"
+          ],
+          "remove": true
+        },
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "marks"
+          ],
+          "remove": true
+        },
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "papers"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "where-target-empty",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            0,
+            "where"
+          ],
+          "value": {
+            "npc": "hazel",
+            "spot": ""
+          }
+        }
+      ]
+    },
+    {
+      "name": "gate-empty-with",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "quests",
+            0,
+            "steps",
+            1,
+            "gate"
+          ],
+          "value": {
+            "with": "",
+            "wait": {
+              "hours": 1
+            }
+          }
         }
       ]
     }

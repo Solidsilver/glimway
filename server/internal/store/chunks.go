@@ -200,7 +200,7 @@ func (c *Chunks) version() int {
 	if c.GeneratorVersion != 0 {
 		return c.GeneratorVersion
 	}
-	return content.WildsRules.GeneratorVersion
+	return int(content.WildsRules.GetGeneratorVersion())
 }
 
 func (c *Chunks) now() int64 {
@@ -242,11 +242,11 @@ func (c *Chunks) put(k chunkKey, m *contract.WildsChunk) {
 	}
 }
 
-func regionDef(id string) (content.WildsRegion, bool) {
+func regionDef(id string) (*content.WildsRegion, bool) {
 	for _, r := range content.WildsRules.Regions {
-		if r.ID == id {
+		if r.GetId() == id {
 			return r, true
 		}
 	}
-	return content.WildsRegion{}, false
+	return nil, false
 }

@@ -32,15 +32,30 @@ type loaderVector struct {
 // code rule or pre-parse check its tag ("duplicate id", "unknown key", …).
 var ruleID = regexp.MustCompile(`^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$`)
 
+// namesRuleID: a dotted rule id appears as a whole member of a bracket
+// group — "[string.pattern]", or the multi-id form a CEL that errors
+// mid-evaluation renders ("[calendar.epoch, calendar.festivals]"). A prefix
+// ("[int32.gte]" for "int32.gte_lte") does not count.
+func namesRuleID(text, want string) bool {
+	for _, group := range bracketGroup.FindAllStringSubmatch(text, -1) {
+		for _, id := range strings.Split(group[1], ",") {
+			if strings.TrimSpace(id) == want {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+var bracketGroup = regexp.MustCompile(`\[([^\]]*)\]`)
+
 func checkVectorRule(t *testing.T, err error, want string) {
 	t.Helper()
 	if err == nil {
 		t.Fatalf("accepted, want rule %q", want)
 	}
-	// A dotted rule id must appear in the rendered text in brackets — a
-	// prefix or substring of another id does not count.
 	if ruleID.MatchString(want) {
-		if strings.Contains(err.Error(), "["+want+"]") {
+		if namesRuleID(err.Error(), want) {
 			return
 		}
 		t.Fatalf("refusal does not name rule [%s]: %v", want, err)
@@ -152,6 +167,9 @@ func TestIndoorsLoaderVectors(t *testing.T) {
 			_, err := DecodeQuests(editVector(t, questVectors.Base, v))
 			if (err == nil) != v.Valid {
 				t.Fatal(v.Valid, err)
+			}
+			if !v.Valid && v.Rule != "" {
+				checkVectorRule(t, err, v.Rule)
 			}
 		})
 	}
@@ -277,13 +295,18 @@ func TestRoomFootprints(t *testing.T) {
 func TestQuestWaitVectors(t *testing.T) {
 	var cases []struct {
 		Name       string
-		Wait       QuestWait
+		Wait       json.RawMessage
 		Since, Now int64
 		Ready      bool
 	}
 	readVectors(t, "quest-waits", &cases)
 	for _, v := range cases {
-		if QuestWaitReady(v.Wait, v.Since, v.Now) != v.Ready {
+		// The wait is a proto message: the fixture decodes with protojson.
+		var w QuestWait
+		if err := protojson.Unmarshal(v.Wait, &w); err != nil {
+			t.Fatal(err)
+		}
+		if QuestWaitReady(&w, v.Since, v.Now) != v.Ready {
 			t.Fatal(v)
 		}
 	}

@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"glimway/content"
 	"net/http"
 	"strings"
@@ -160,14 +159,14 @@ func TestFix6PresenceRevalidationDoesNotBlockOutbound(t *testing.T) {
 		t.Fatal("DB revalidation blocked outbound")
 	}
 }
-func fix6IngressConfig(t *testing.T) content.Presence {
+func fix6IngressConfig(t *testing.T) *content.Presence {
 	t.Helper()
 	cfg := presenceTestConfig()
-	// Unknown fields are ignored by the pre-fix Go config, so this regression
-	// compiles and fails behaviorally before the new shared limits exist.
-	if err := json.Unmarshal([]byte(`{"incomingMessagesPerSecond":30,"incomingBurst":4,"incomingExcessMs":120}`), &cfg); err != nil {
-		t.Fatal(err)
-	}
+	// The pre-fix Go config ignored the shared ingress limits, so this
+	// regression compiled and failed behaviorally before fix 6 existed.
+	cfg.IncomingMessagesPerSecond = 30
+	cfg.IncomingBurst = 4
+	cfg.IncomingExcessMs = 120
 	return cfg
 }
 func TestFix6PresenceSustainedIngressExcessCloses(t *testing.T) {

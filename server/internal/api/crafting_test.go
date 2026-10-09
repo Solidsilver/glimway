@@ -18,13 +18,13 @@ type craftingResponse struct {
 	store.Snapshot
 	Woodpile woodpileWire `json:"woodpile"`
 	Result   struct {
-		Output       content.Asset `json:"output"`
-		Woodpile     woodpileWire  `json:"woodpile"`
-		Action       string        `json:"action"`
-		CollectedQty int           `json:"collectedQty"`
-		PageID       string        `json:"pageId"`
-		Qty          int           `json:"qty"`
-		InstanceIDs  []string      `json:"instanceIds"`
+		Output       *content.Asset `json:"output"`
+		Woodpile     woodpileWire   `json:"woodpile"`
+		Action       string         `json:"action"`
+		CollectedQty int            `json:"collectedQty"`
+		PageID       string         `json:"pageId"`
+		Qty          int            `json:"qty"`
+		InstanceIDs  []string       `json:"instanceIds"`
 	} `json:"result"`
 	Error struct {
 		Code string `json:"code"`

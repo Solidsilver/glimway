@@ -288,7 +288,7 @@ func TestSettlingTheWardenGrantsNoSliver(t *testing.T) {
 		t.Fatal("missing lantern road")
 	}
 	for _, step := range road.Steps {
-		stage := step.ID
+		stage := step.GetId()
 		doc.Area = step.At
 		if stage == "guardian-defeated" {
 			s.Snapshot = x.expect("POST", "/api/story/mark", body(s, "defeat-mark", map[string]any{"mark": "defeated:stone-warden", "where": testWhere(doc)}), c, 200).Snapshot
