@@ -107,6 +107,7 @@ moves like an animal now.
 - **Change** opens the pet picker: every pet you own on Habitica, grouped by species (Habitica's
   keys are `Species-Potion`, so `Fox-Golden` sits under Fox), with a search field and a row of
   species chips. The first entry is always **Habitica's current pet**, which is also the default.
+  *As built (0.5 playtest):* **No pet** comes right after it, for walking alone.
 - **At home** shows three spots; tapping one opens the same picker, with **Leave empty**.
 - **The stable** section appears once a stable stands (section 3). Without a homestead the tab
   shows your Habitica current pet and one line: *"Once you've a place of your own, you can choose
@@ -125,7 +126,8 @@ six.
 
 What the server stores (pets.md "Rules and data", trimmed to what 0.5 needs):
 
-- **Per account:** `follow_pet` (an owned pet key, or empty for Habitica's current pet) and
+- **Per account:** `follow_pet` (an owned pet key, empty for Habitica's current pet, or the
+  reserved `none` for No pet, which presence sends as no follower at all) and
   `yard_pets` (up to 3 owned keys, in slot order). Both are kept in `player_companions` and
   `yard_pets` (migration 030).
 - **Every key is checked when someone looks.** The server reads the account's owned list from its
@@ -190,7 +192,9 @@ The follower's motion lives in `src/game/entities/avatar.ts` (`buildPetFollower`
 **Riding needs a stable.** Pressing M with no mount out says: *"Your mount needs somewhere to stand
 at home first. A stable, maybe."* The "What's new" card says riding moved (6.6).
 
-**Building it.** After the Workshop (tier 2), the homestead's build list offers **the stable**: 30
+**Building it.** After the Workshop (tier 2), the homestead's build list offers **the stable**
+(*as built:* Silas's Yard lists it under **Buildings**, a section of its own after the cottage and
+workshop, from content's `building` flag; locked until the Workshop stands): 30
 embers, timber 16, stone 8, fiber 6 (a home-item row's price may name embers, materials, or both;
 the stable names both, as the Workshop tier does). It's bought and placed like any outdoor piece, in placement
 mode, on cleared, lit ground. It comes with stall 1: a small tack room on its west end and one bay.
@@ -273,6 +277,7 @@ mount_key, owner_id)`.
 | Stalls | `stall` and `HomeView.stalls` (index, mount, owner, owner's name, out) | The stable scene: each bay draws its back layer, the Habitica mount (body and head layers, no rider) and the front rail, so the mount stands inside |
 | Out and home | `mount-out`, `mount-home`, `PlayerState.companions.mount_out` | `toggleRide` (`avatar.ts:188`) reads `mount_out` instead of Habitica's `selectedMount`; the lead rope drawn in code from the hand to the mount's head; the walk-off on Go home is drawing only |
 | Presence | `PresenceAvatar.selected_mount` carries the mount that's out (empty when none); `PresenceAvatarChange` after `mount-out` and `mount-home`. `PresencePosition.pose` carries `riding` | Remote players draw a ridden mount (today's mount layers) or a led one behind them, from `selected_mount` and `pose` |
+| *As built (0.5 playtest)* | The `PresenceAvatarChange` after `mount-out`, `mount-home`, `stall` and a new lease that sends a mount home also goes to the stable's land (`home:<gate>`), wherever the owner is | Whoever stands on that land reads the homestead again when a member's avatar changes, so the bay empties and fills; your own bay follows your companions at once, and stays empty while the mount walks home |
 
 The hero's speed is unchanged: `hero.ts:229` reads `riding ? 155 : PLAYER_SPEED`; lane E makes 155 a
 named constant beside `PLAYER_SPEED`.
@@ -476,7 +481,8 @@ In the Quiet the rest of the pond keeps its ice and frost-glass (`pond-ice` gath
 3. About ten seconds later in healthy water (thirty when it's low, up to a minute when it's very
    low) the float dips with a soft sound and the button says **Reel**.
 4. One press: a short landing, the roach arcs out of the water, and two big buttons ask **Keep**
-   or **Let it go**.
+   or **Let it go**. *As built (0.5 playtest):* the prompt names both keys, Keep on E and Let it go
+   on Q.
 5. Keep, and it's in your pack. Let it go, and it's back in the pond; nothing is paid.
 
 There's no failure window: once the float dips, the fish waits for you. Walking more than a tile

@@ -22,7 +22,7 @@ const (
 )
 
 // What the account shows: the resolved follower (” = Habitica's current
-// pet), the resolved yard pets in slot order (at most 3), the mount that is
+// pet, "none" = No pet: the hero walks alone), the resolved yard pets in slot order (at most 3), the mount that is
 // out (” when every mount is in its stall) and the homestead it came from.
 type Companions struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -92,7 +92,8 @@ func (x *Companions) GetMountHome() string {
 	return ""
 }
 
-// POST /api/companions: choose the follower and the yard.
+// POST /api/companions: choose the follower (” for Habitica's current pet,
+// "none" for No pet, else an owned key) and the yard.
 type CompanionsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Op            *OpHeader              `protobuf:"bytes,1,opt,name=op,proto3" json:"op,omitempty"`

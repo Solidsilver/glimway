@@ -2,8 +2,8 @@
   import type { Session } from '../game/session'
   import { SILAS, homesteadsFor } from '../game/homestead'
   import { bus, EV } from '../game/events'
-  import { HOMESTEAD_DATA, type HomeItem } from '../lib/homestead'
-  import { DECORATIONS_EMBER, DECORATIONS_MATERIAL, HOMESTEAD_TIERS } from '../content/expansion-writing'
+  import { HOMESTEAD_DATA, shopSections, type HomeItem } from '../lib/homestead'
+  import { BUILDING_BLURBS, DECORATIONS_EMBER, DECORATIONS_MATERIAL, HOMESTEAD_TIERS } from '../content/expansion-writing'
   import { MATERIALS } from '../content/expansion-writing'
   import { actionRunner, busVersion } from './panel-state.svelte'
   import { ui } from './store.svelte'
@@ -14,7 +14,7 @@
   import { workshopShort } from '../lib/village'
   import { costPhrase } from '../lib/village'
 
-  // Silas's yard: the cottage, and the pieces he has finished. Prices come
+  // Silas's yard: the cottage, the buildings, and the pieces he has finished. Prices come
   // from content/homestead.json; the server charges what it says, not us.
   let { session, onClose }: { session: Session; onClose: () => void } = $props()
 
@@ -24,7 +24,7 @@
   /** Silas's own word for being short of embers. */
   const refused = (r: { code: string; text: string }) => (r.code === 'insufficient-embers' ? SILAS.dialogue.notEnoughEmbers.lines[0] : r.text)
 
-  const blurb = (id: string) => [...DECORATIONS_EMBER, ...DECORATIONS_MATERIAL].find((d) => d.id === id)?.blurb ?? ''
+  const blurb = (id: string) => BUILDING_BLURBS[id] ?? [...DECORATIONS_EMBER, ...DECORATIONS_MATERIAL].find((d) => d.id === id)?.blurb ?? ''
   const materialName = (id: string) => MATERIALS.find((m) => m.id === id)?.name ?? id
   const where = (it: HomeItem) => (it.where.length === 2 ? 'Indoors or out' : it.where[0] === 'indoor' ? 'Indoors' : 'Outdoors')
 
@@ -40,8 +40,7 @@
     }
   })
 
-  const emberItems = HOMESTEAD_DATA.items.filter((i) => i.embers > 0 && !i.craftOnly)
-  const materialItems = HOMESTEAD_DATA.items.filter((i) => i.embers === 0 && !i.craftOnly)
+  const { buildings, finished: emberItems, wilds: materialItems } = shopSections()
   const cottage = HOMESTEAD_DATA.tiers[1]
   const cottageBlurb = HOMESTEAD_TIERS[1].blurb
   const workshop = HOMESTEAD_DATA.tiers[2]
@@ -57,9 +56,14 @@
     return it.id === HOMESTEAD_DATA.lanternPosts.item ? homes.mine?.nextPost ?? it.materials : it.materials
   }
 
+  /** A building waiting on a tier: its row says so plainly. */
+  const locked = (it: HomeItem) => view.tier < it.minTier
+
   function why(it: HomeItem): string | null {
     // The tier the piece wants, by name: the stable waits on the Workshop.
-    if (view.tier < it.minTier) return `Needs the ${HOMESTEAD_TIERS[it.minTier].name.toLowerCase()}`
+    if (locked(it)) return `Needs the ${HOMESTEAD_TIERS[it.minTier].name.toLowerCase()}`
+    // One stable to a homestead (crafts.md 3.2).
+    if (it.id === HOMESTEAD_DATA.stable.item && view.owned(it.id) > 0) return 'Built'
     if (it.embers > 0 && ui.stats.embers < it.embers) return `Needs ${it.embers} embers`
     for (const [m, n] of Object.entries(price(it))) if ((view.materials[m] ?? 0) < n) return `Needs ${n} ${materialName(m).toLowerCase()}`
     return null
@@ -132,6 +136,31 @@
             {action.busy === 'cottage' ? 'Building…' : workshopWhy ?? 'Build it'}
           </button>
         </div>
+      </section>
+    {/if}
+
+    {#if buildings.length > 0}
+      <section aria-label="Buildings" data-testid="shop-buildings">
+        <h3 class="section-title">Buildings</h3>
+        <ul>
+          {#each buildings as it (it.id)}
+            {@const reason = why(it)}
+            <li class="row building" class:locked={locked(it)} data-building={it.id}>
+              <span class="thumb" aria-hidden="true">{#if home.thumbs[it.id]}<img src={home.thumbs[it.id]} alt="" />{/if}</span>
+              <span class="txt">
+                <span class="name">{it.name}</span>
+                <span class="desc">{blurb(it.id)}</span>
+                {#if locked(it)}
+                  <span class="lock" data-testid={`shop-locked-${it.id}`}>Silas builds it once your {HOMESTEAD_TIERS[it.minTier].name.toLowerCase()} stands.</span>
+                {/if}
+                <span class="meta">{where(it)} · {it.footprint[0]}×{it.footprint[1]} · {cost(it)}</span>
+              </span>
+              <button type="button" class="small" class:primary={!reason} data-buy={it.id} disabled={action.busy !== null || !!reason} onclick={() => buy(it)} title={reason ?? ''}>
+                {action.busy === it.id ? 'Buying…' : reason ?? 'Buy'}
+              </button>
+            </li>
+          {/each}
+        </ul>
       </section>
     {/if}
 
@@ -247,6 +276,21 @@
   .meta {
     font-size: 12px;
     color: var(--text-faint);
+  }
+  .row.building {
+    border-color: var(--wood);
+  }
+  .row.locked {
+    border-style: dashed;
+    background: transparent;
+  }
+  .row.locked .thumb {
+    opacity: 0.55;
+  }
+  .lock {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--wood-dark);
   }
   .thumb {
     flex: none;

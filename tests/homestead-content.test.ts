@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { HOMESTEAD_DATA, checkPlacement, gateTile, stallCost, validateHomesteadData, type HomeInstance } from '../src/lib/homestead.ts';
+import { HOMESTEAD_DATA, checkPlacement, gateTile, shopSections, stallCost, validateHomesteadData, type HomeInstance } from '../src/lib/homestead.ts';
 import homesteadVectors from '../content/vectors/homestead-loader.json' with { type: 'json' };
-import { HOMESTEAD_TIERS, DECORATIONS_EMBER, DECORATIONS_MATERIAL } from '../src/content/expansion-writing.ts';
+import { BUILDING_BLURBS, HOMESTEAD_TIERS, DECORATIONS_EMBER, DECORATIONS_MATERIAL } from '../src/content/expansion-writing.ts';
 import { createNewGame, validateSave } from '../src/lib/state.ts';
 import { checkSpend, spendEmbers } from '../src/lib/embers.ts';
 import { isSafeBoundary } from '../src/lib/habitica/sync.ts';
@@ -103,3 +103,17 @@ test('the local placement check mirrors the server rules', () => {
 });
 
 const homeMinTier = (id: string) => HOMESTEAD_DATA.items.find((i) => i.id === id)!.minTier;
+
+test('Silas’s Yard: buildings come from the content flag, in a section of their own', () => {
+  const { buildings, finished, wilds } = shopSections();
+  // Today the stable; the kiln joins it by its row's flag, not by an id here.
+  assert.deepEqual(buildings.map((i) => i.id), [HOMESTEAD_DATA.stable.item]);
+  assert.ok(buildings.every((i) => i.minTier === 2 && BUILDING_BLURBS[i.id]));
+  assert.ok(![...finished, ...wilds].some((i) => i.building || i.craftOnly));
+  // Every sold piece is in exactly one section.
+  const sold = HOMESTEAD_DATA.items.filter((i) => !i.craftOnly).map((i) => i.id).sort();
+  assert.deepEqual([...buildings, ...finished, ...wilds].map((i) => i.id).sort(), sold);
+  // A flag on another row moves it, and a building the bench makes isn't sold.
+  const data = { ...HOMESTEAD_DATA, items: HOMESTEAD_DATA.items.map((i) => (i.id === 'wooden-stool' ? { ...i, building: true } : i.id === HOMESTEAD_DATA.stable.item ? { ...i, craftOnly: true } : i)) };
+  assert.deepEqual(shopSections(data).buildings.map((i) => i.id), ['wooden-stool']);
+});

@@ -17,6 +17,7 @@
     keys,
     selected,
     first = null,
+    also = [],
     onPick,
     onClose
   }: {
@@ -26,6 +27,7 @@
     /** The key chosen now ('' for the first option). */
     selected: string
     first?: { label: string; hint?: string } | null
+    also?: readonly { key: string; label: string; hint?: string }[]
     onPick: (key: string) => void
     onClose: () => void
   } = $props()
@@ -73,6 +75,12 @@
         {#if first.hint}<small>{first.hint}</small>{/if}
       </button>
     {/if}
+    {#each also as o (o.key)}
+      <button type="button" class="first" class:on={selected === o.key} onclick={() => onPick(o.key)} data-testid={`companions-pick-${o.key}`}>
+        <span class="fl">{o.label}</span>
+        {#if o.hint}<small>{o.hint}</small>{/if}
+      </button>
+    {/each}
     {#if keys.length === 0}
       <p class="empty">{kind === 'pet' ? 'No pets on your Habitica account yet. Hatch one there and sync.' : 'No mounts on your Habitica account yet. Raise a pet there and sync.'}</p>
     {:else if shown.length === 0}

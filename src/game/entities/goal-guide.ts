@@ -13,6 +13,12 @@
  * Brackenwood leads to the ruin, and each room opens off its parent (the
  * mill loft is two steps from the square). A resident's place is the
  * cycle's: the needle points at the mill door while Finn is in.
+ *
+ * In the goal's own area, a quest step's target wears a soft warm glow
+ * while it's on screen (the owner's playtest: "it can glow or have a glowing
+ * border"): the person, the thing to use, the enemy (or what it lies on).
+ * A slow gentle pulse, steady with reduced motion; never on a person who
+ * already carries the "!" (that marker says it).
  */
 import Phaser from 'phaser'
 import { bus, EV, type GoalDirPayload } from '../events'
@@ -25,7 +31,7 @@ import type { GoalTarget } from '../guide-pin'
 import type { QuestWhere } from '../../lib/quests'
 import { serverNow } from '../clock'
 import { ROOMS, roomParent } from '../../lib/rooms'
-import { residentAt } from '../../lib/residents'
+import { questPlace, questPointHere } from '../goal-route'
 
 /**
  * The places and the ways between them. Homesteads are by whose they are:
@@ -93,6 +99,10 @@ export interface GoalGuideDeps {
   wardenAt: () => { x: number; y: number } | null
   /** A curated enemy still standing here (the finger-wisp), by its id. */
   enemyAt: (id: string) => { x: number; y: number } | null
+  /** What a quest enemy lies on (the lost finger under the finger-wisp), while it's drawn. */
+  lootAt: (enemy: string) => { x: number; y: number } | null
+  /** A point that already shows the quest's "!" (no glow on top of it). */
+  marked: (id: string) => boolean
   /** Whose homestead this is (null: not a homestead), and a guide step's point here. */
   placeKind: () => 'home' | 'cottage' | 'other-home' | 'other-cottage' | null
   guidePoint: (where: GuideWhere) => { x: number; y: number } | null
@@ -102,6 +112,10 @@ export interface GoalGuideDeps {
 export class GoalGuide {
   private glow: Phaser.GameObjects.Image
   private chevron: Phaser.GameObjects.Image
+  /** The warm glow on the step's target, in the world (behind it). */
+  private mark: Phaser.GameObjects.Image
+  /** What the glow is on now (null: nothing), for playtests. */
+  private marking: { id: string; x: number; y: number } | null = null
   private last: GoalDirPayload = { angle: null, here: false }
   private sent = false
   private t = 0
@@ -112,11 +126,13 @@ export class GoalGuide {
   ) {
     this.glow = scene.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setScrollFactor(0).setDepth(5600).setAlpha(0.8).setVisible(false)
     this.chevron = scene.add.image(0, 0, 'mark-chevron').setScrollFactor(0).setDepth(5601).setVisible(false)
-    // Read-only, for playtests: what the guide points at, and whether the edge glint shows.
-    expose('__fsGoal', () => ({ target: this.target(), dir: this.last, glint: this.glow.visible }), scene)
+    this.mark = scene.add.image(0, 0, 'glow').setBlendMode(Phaser.BlendModes.ADD).setTint(0xffc860).setVisible(false)
+    // Read-only, for playtests: what the guide points at, whether the edge glint shows, and what glows.
+    expose('__fsGoal', () => ({ target: this.target(), dir: this.last, glint: this.glow.visible, glow: this.mark.visible ? this.marking : null }), scene)
     scene.events.once('shutdown', () => {
       this.glow.destroy()
       this.chevron.destroy()
+      this.mark.destroy()
       bus.emit(EV.goalDir, { angle: null, here: false } satisfies GoalDirPayload)
     })
   }
@@ -128,30 +144,23 @@ export class GoalGuide {
     return this.deps.placeKind() ?? id
   }
 
-  /** The point to head for now, in world px, and whether it's the goal itself. */
-  target(): { x: number; y: number; here: boolean } | null {
+  /** The point to head for now, in world px, and whether it's the goal itself (`id`: a quest step's target, here). */
+  target(): { x: number; y: number; here: boolean; id?: string } | null {
     const goal = this.deps.goal()
     if (!goal) return null
     if (goal.kind === 'guide') return goal.where ? this.towardGuide(goal.where) : null
     return this.towardQuest(goal.where)
   }
 
-  /** A quest step's `where`: the person, spot or enemy when it's here, else the way toward its area. */
-  private towardQuest(where: QuestWhere): { x: number; y: number; here: boolean } | null {
-    if (where.ui) return null // the journal: the book button glows instead
-    const resident = where.npc ? residentAt(where.npc, serverNow()) : null
-    const area = where.area ?? resident?.area
-    if (!area) return null
-    if (String(this.deps.world.areaId) === area) {
-      const p =
-        // The warden, or its route stone while it isn't standing up to be settled.
-        (where.enemy === 'stone-warden' ? this.deps.wardenAt() ?? this.deps.spotAt('clue') : where.enemy ? this.deps.enemyAt(where.enemy) : null) ??
-        (where.npc ? this.deps.npcAt(where.npc) : null) ??
-        (where.spot ? this.deps.spotAt(where.spot) : null) ??
-        (resident ? { x: (resident.tx + 0.5) * TILE, y: (resident.ty + 0.5) * TILE } : null)
+  /** A quest step's `where`: the person, spot or enemy when it's here, else the way toward its area (../goal-route.ts). */
+  private towardQuest(where: QuestWhere): { x: number; y: number; here: boolean; id?: string } | null {
+    const place = questPlace(where, serverNow())
+    if (!place) return null
+    if (String(this.deps.world.areaId) === place.area) {
+      const p = questPointHere(where, place.resident, this.deps)
       return p ? { ...p, here: true } : null
     }
-    return this.wayToward(area)
+    return this.wayToward(place.area)
   }
 
   /** A pinned guide's step: its point when it's here, else the way toward its place. */
@@ -201,6 +210,7 @@ export class GoalGuide {
       return
     }
     const target = this.target()
+    this.placeMark(target)
     if (!target) {
       this.hide()
       this.emit({ angle: null, here: false })
@@ -211,6 +221,27 @@ export class GoalGuide {
     const step = Math.PI / 8
     this.emit({ angle: Math.round(a / step) * step, here: target.here })
     this.placeGlint(target)
+  }
+
+  /**
+   * The glow on a quest step's target in this area: behind it, warm, a slow
+   * breath (steady with reduced motion). Kept up through a conversation
+   * with it; gone when the step moves on (the target changes).
+   */
+  private placeMark(target: { x: number; y: number; here: boolean; id?: string } | null): void {
+    if (!target?.here || !target.id || this.deps.marked(target.id)) {
+      this.mark.setVisible(false)
+      this.marking = null
+      return
+    }
+    const breath = this.deps.reducedMotion ? 0 : Math.sin((this.t * Math.PI * 2) / 2.8)
+    this.mark
+      .setPosition(target.x, target.y)
+      .setDepth(target.y + 6)
+      .setScale(0.7 + breath * 0.03)
+      .setAlpha(0.72 + breath * 0.1)
+      .setVisible(true)
+    this.marking = { id: target.id, x: Math.round(target.x), y: Math.round(target.y) }
   }
 
   private emit(p: GoalDirPayload): void {

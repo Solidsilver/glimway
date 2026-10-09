@@ -130,6 +130,7 @@ func (a *Server) stableStall(w http.ResponseWriter, r *http.Request) error {
 	}
 	var account string
 	var avatar *presenceAvatarMsg
+	var room presenceRoom
 	err := a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		h, err := stableHome(ctx, tx, s, req.GetHomeId(), now)
 		if err != nil {
@@ -193,6 +194,7 @@ func (a *Server) stableStall(w http.ResponseWriter, r *http.Request) error {
 		}
 		account = s.AccountID
 		avatar = companionAvatar(c, *p)
+		room = homeRoom(s.WorldID, h.Gate)
 		out := &contract.StallResult{}
 		if home != nil {
 			out.Home = homeViewProto(*home)
@@ -200,7 +202,7 @@ func (a *Server) stableStall(w http.ResponseWriter, r *http.Request) error {
 		return out, nil
 	}, func() {
 		if avatar != nil {
-			a.avatarChanged(account, avatar)
+			a.avatarChanged(account, avatar, room)
 		}
 	})
 	return err
@@ -217,6 +219,7 @@ func (a *Server) mountOut(w http.ResponseWriter, r *http.Request) error {
 	}
 	var account string
 	var avatar *presenceAvatarMsg
+	var room presenceRoom
 	err := a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		h, err := stableHome(ctx, tx, s, req.GetHomeId(), now)
 		if err != nil {
@@ -253,10 +256,12 @@ func (a *Server) mountOut(w http.ResponseWriter, r *http.Request) error {
 		}
 		account = s.AccountID
 		avatar = companionAvatar(c, *p)
+		// The bay stands empty now: the stable's land hears it (3.4).
+		room = homeRoom(s.WorldID, h.Gate)
 		return &contract.MountOutResult{Companions: companionsProto(c)}, nil
 	}, func() {
 		if avatar != nil {
-			a.avatarChanged(account, avatar)
+			a.avatarChanged(account, avatar, room)
 		}
 	})
 	return err
@@ -272,13 +277,30 @@ func (a *Server) mountHome(w http.ResponseWriter, r *http.Request) error {
 	}
 	var account string
 	var avatar *presenceAvatarMsg
+	var room presenceRoom
 	err := a.keyedOpStay(w, r, req.Op, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		if _, err := tx.ExecContext(ctx, "UPDATE player_companions SET mount_out='' WHERE account_id=?", s.AccountID); err != nil {
-			return nil, err
-		}
 		p := s.ImportedProfile
 		if s.ProfileSource != "habitica" || p == nil {
+			if _, err := tx.ExecContext(ctx, "UPDATE player_companions SET mount_out='' WHERE account_id=?", s.AccountID); err != nil {
+				return nil, err
+			}
 			return &contract.MountHomeResult{Companions: &contract.Companions{YardPets: []string{}}}, nil
+		}
+		// The bay it fills again: the stable's land hears it (3.4), wherever
+		// its owner is.
+		before, err := store.CompanionsFor(ctx, tx, s.AccountID, s.WorldID, s.ProfileSource, p)
+		if err != nil {
+			return nil, err
+		}
+		if before.MountHome != "" {
+			var gate int
+			if err := tx.QueryRowContext(ctx, "SELECT gate FROM homesteads WHERE id=?", before.MountHome).Scan(&gate); err != nil {
+				return nil, err
+			}
+			room = homeRoom(s.WorldID, gate)
+		}
+		if _, err := tx.ExecContext(ctx, "UPDATE player_companions SET mount_out='' WHERE account_id=?", s.AccountID); err != nil {
+			return nil, err
 		}
 		c, err := store.CompanionsFor(ctx, tx, s.AccountID, s.WorldID, s.ProfileSource, p)
 		if err != nil {
@@ -289,7 +311,7 @@ func (a *Server) mountHome(w http.ResponseWriter, r *http.Request) error {
 		return &contract.MountHomeResult{Companions: companionsProto(c)}, nil
 	}, func() {
 		if avatar != nil {
-			a.avatarChanged(account, avatar)
+			a.avatarChanged(account, avatar, room)
 		}
 	})
 	return err

@@ -1001,6 +1001,14 @@ export declare type HomeItem = Message<"glimway.content.v1.HomeItem"> & {
    * @generated from field: optional bool craft_only = 9;
    */
   craftOnly?: boolean | undefined;
+
+  /**
+   * A building: a structure on the plot (the stable; later the kiln).
+   * Silas's Yard lists buildings in a section of their own.
+   *
+   * @generated from field: optional bool building = 10;
+   */
+  building?: boolean | undefined;
 };
 
 export declare type HomeItemValid = HomeItem;

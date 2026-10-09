@@ -85,6 +85,9 @@
     width: 56px;
     height: 56px;
     border-radius: 14px;
+    /* The moment's choice (Keep / Let it go): ringed in the prompt's gold, steady, right under it. */
+    border-color: #5a3a12;
+    box-shadow: 0 0 0 2px rgba(255, 210, 74, 0.85), 0 3px 0 rgba(20, 12, 16, 0.45);
   }
   .bar .kbd {
     position: absolute;

@@ -1,13 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CONTROLS, TOUCH_CONTROLS } from '../src/content/controls.ts';
+import { CONTROLS, LET_GO_KEY, TOUCH_CONTROLS } from '../src/content/controls.ts';
 
 test('the controls list names B (arrange your home) and G (emotes)', () => {
   const row = (key: string) => CONTROLS.find((r) => r.keys.includes(key));
   assert.match(row('B')?.does ?? '', /Arrange your home/);
   assert.match(row('G')?.does ?? '', /Emotes/);
   // The whole keyboard surface is there.
-  for (const key of ['W', 'E', 'Space', 'F', 'R', 'Shift', 'J', 'C', 'I', 'M', 'H', 'Esc']) assert.ok(row(key), key);
+  for (const key of ['W', 'E', 'Space', 'F', 'R', 'Shift', 'J', 'C', 'I', 'M', 'H', 'Q', 'Esc']) assert.ok(row(key), key);
+});
+
+test('Q lets a landed fish go, the key fishing listens for, and touch has its button', () => {
+  assert.equal(LET_GO_KEY, 'Q');
+  const row = CONTROLS.find((r) => r.keys.includes(LET_GO_KEY));
+  assert.match(row?.does ?? '', /Let a landed fish go/);
+  assert.match(row?.touch ?? '', /Let it go button/);
+  // No other row claims the key.
+  assert.equal(CONTROLS.filter((r) => r.keys.includes(LET_GO_KEY)).length, 1);
 });
 
 test('every control has a touch equivalent (riding has the saddle button now)', () => {

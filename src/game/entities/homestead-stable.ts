@@ -113,6 +113,8 @@ export function stableEastEnd(bx: number, by: number, count: number): { x: numbe
 export interface StableHost {
   readonly gone: boolean
   here(): HomeView | null
+  /** The stalls as this screen shows them (your own mount out while it's out with you or walking home). */
+  stallsHere(): StallView[]
   readonly homes: { readonly myId: string | null; readonly connected: boolean; adoptHome(home: HomeView | null): void; materials: Record<string, number> }
   readonly deps: { session: Session; hero: () => { x: number; y: number } }
   readonly land: unknown
@@ -137,7 +139,7 @@ export function stablePoints(host: StableHost, say: (speaker: string, lines: str
     const by = (it.y + fh) * TILE
     for (let stall = 1; stall <= count; stall++) {
       const at = bayFront(bx, by, count, stall)
-      const st = () => host.here()?.stalls.find((s) => s.stall === stall) ?? null
+      const st = () => host.stallsHere().find((s) => s.stall === stall) ?? null
       const label = () => {
         const s = st()
         if (s?.mount && s.ownerId !== me) return `${short(s.ownerName || 'A neighbour', 16)}’s ${companionName(s.mount)}`

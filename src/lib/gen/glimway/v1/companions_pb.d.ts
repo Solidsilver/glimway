@@ -14,7 +14,7 @@ export declare const file_glimway_v1_companions: GenFile;
 
 /**
  * What the account shows: the resolved follower ('' = Habitica's current
- * pet), the resolved yard pets in slot order (at most 3), the mount that is
+ * pet, "none" = No pet: the hero walks alone), the resolved yard pets in slot order (at most 3), the mount that is
  * out ('' when every mount is in its stall) and the homestead it came from.
  *
  * @generated from message glimway.v1.Companions
@@ -50,7 +50,8 @@ export declare type CompanionsValid = Companions;
 export declare const CompanionsSchema: GenMessage<Companions, {validType: CompanionsValid}>;
 
 /**
- * POST /api/companions: choose the follower and the yard.
+ * POST /api/companions: choose the follower ('' for Habitica's current pet,
+ * "none" for No pet, else an owned key) and the yard.
  *
  * @generated from message glimway.v1.CompanionsRequest
  */

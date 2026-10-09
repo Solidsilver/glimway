@@ -15,6 +15,7 @@ import { expectStage, expectToast, readDialogue, openTalk, talkThrough, waitForL
 type QuestsHook = { quests: Record<string, string> }
 const step = (page: Page, quest: string) => page.evaluate((q) => (window as unknown as { __fsQuests: () => QuestsHook }).__fsQuests().quests[q], quest)
 const goal = (page: Page) => page.locator('.objective').first()
+const goalHook = (page: Page) => page.evaluate(() => (window as unknown as { __fsGoal: () => { glow: { id: string } | null } }).__fsGoal())
 
 test('the opening: Orrin, the finger, the lean in the journal, Mara’s ledger, the first lamp', async ({ page }) => {
   test.setTimeout(150_000)
@@ -30,10 +31,17 @@ test('the opening: Orrin, the finger, the lean in the journal, Mara’s ledger, 
 
   // The finger-wisp, seeded settled, and the hero where it sat (the step is Brackenwood's): the trigger sees the mark.
   await warp(page, 'woodland', 10, 15)
+  // The lost finger lies there, and it glows (the owner's playtest): the
+  // step's target stands out, and the tracker says the goal is here.
+  await expect.poll(async () => (await goalHook(page)).glow?.id ?? null).toBe('finger-wisp')
+  await expect(goal(page).getByTestId('goal-here')).toBeVisible()
   seedMarks(id, 'defeated:finger-wisp')
   await reenter(page, 'woodland')
   await expect.poll(() => step(page, 'signpost')).toBe('fetch-finger')
   await expect(goal(page)).toContainText('Take the finger back to Orrin')
+  // Done: the glow goes, and the needle points at the way out, not "here".
+  await expect.poll(async () => (await goalHook(page)).glow).toBeNull()
+  await expect(goal(page).getByTestId('goal-here')).toHaveCount(0)
 
   await warp(page, 'village', 21, 10)
   await talkThrough(page, /Talk to Orrin/)

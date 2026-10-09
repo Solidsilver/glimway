@@ -14,9 +14,14 @@ import (
 	"slices"
 )
 
+// NoFollower is the follower choice "No pet": the hero walks alone. It is a
+// reserved value of follow_pet (Habitica's keys are `Species-Potion`, so no
+// pet is ever called this), held and gated like any other choice.
+const NoFollower = "none"
+
 // Companions is what an account shows, resolved. FollowPet is '' when the
 // follower reads as Habitica's current pet (nothing chosen, the choice lapsed
-// or gated away — or a guest); YardPets is slot order, with a lapsed spot
+// or gated away — or a guest), NoFollower when the player chose No pet; YardPets is slot order, with a lapsed spot
 // empty (its pet drops out and its stored row keeps the slot, so a pet that
 // comes back comes back to its place); MountOut is '' when every mount reads
 // as in its stall, and MountHome names the homestead it came from only while
@@ -29,9 +34,12 @@ type Companions struct {
 }
 
 // Follower is the pet that walks with the account: the resolved choice, or
-// Habitica's current pet when the choice reads as its fallback. This is what
-// presence carries (3.4).
+// Habitica's current pet when the choice reads as its fallback, '' for No
+// pet. This is what presence carries (3.4).
 func (c Companions) Follower(p *rules.Profile) string {
+	if c.FollowPet == NoFollower {
+		return ""
+	}
 	if c.FollowPet != "" {
 		return c.FollowPet
 	}
@@ -69,7 +77,7 @@ func CompanionsFor(ctx context.Context, q companionReader, id, world, source str
 		return out, err
 	}
 	if deed != "" {
-		if slices.Contains(p.Pets, follow) {
+		if follow == NoFollower || slices.Contains(p.Pets, follow) {
 			out.FollowPet = follow
 		}
 		rows, err := q.QueryContext(ctx, "SELECT slot,pet_key FROM yard_pets WHERE account_id=? ORDER BY slot", id)

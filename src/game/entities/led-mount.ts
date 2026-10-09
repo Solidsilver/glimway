@@ -26,6 +26,13 @@ export const LEAD_PACE = 120
 const HOME_PACE = 60
 
 /**
+ * Mounts walking home off the screen: key → when they're gone (Date.now()
+ * ms). Until then the bay at home stays empty (./homestead-stable.ts): it's
+ * back in its stall once it has walked out of sight.
+ */
+export const homeward = new Map<string, number>()
+
+/**
  * Where the Habitica mount canvas (135 px, body and head) sits on its feet,
  * in canvas px from the canvas centre: the art's feet are near row 110, its
  * middle near column 61 (Mount_Body_Wolf-Base and Mount_Head_Wolf-Base).
@@ -153,11 +160,13 @@ export class LedMount {
     const view = this.scene.cameras.main.worldView
     const right = this.state.x > view.centerX
     const toX = right ? view.right + 30 : view.left - 30
+    const duration = (Math.abs(toX - this.state.x) / HOME_PACE) * 1000
+    homeward.set(this.key, Date.now() + duration)
     this.body.setScale(right ? -1 : 1, 1)
     this.scene.tweens.add({
       targets: this.body,
       x: toX,
-      duration: (Math.abs(toX - this.state.x) / HOME_PACE) * 1000,
+      duration,
       onComplete: () => this.destroy()
     })
     if (!this.reducedMotion) this.scene.tweens.add({ targets: this.body, y: this.body.y - 1, duration: STEP_MS, yoyo: true, repeat: -1 })

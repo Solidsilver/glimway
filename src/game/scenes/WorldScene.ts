@@ -57,6 +57,7 @@ import { homeLights } from '../../lib/homestead-land'
 import { homesteadsFor } from '../homestead'
 import { prepareHomeLand } from '../homeland'
 import { isSafeArea } from '../../lib/habitica/sync'
+import { fingerInBracken } from '../../lib/quests'
 import {
   OUTER_REGION_ID,
   WILDS_AREA,
@@ -71,7 +72,6 @@ import {
 } from '../wilds/regions'
 import { prepareWilds, setActiveWildsRegion, wildsEpoch } from '../wilds/store'
 import { GoalGuide } from '../entities/goal-guide'
-import { heldNow } from '../held'
 import { goalTarget } from '../guide-pin'
 import { QUEST_ACTION } from '../../content/quests/index.ts'
 import { LIBRARY_ACTION } from '../../content/residents.ts'
@@ -86,7 +86,7 @@ import { emitPortraits } from '../portraits'
 import { WorldCamera } from './world-camera'
 import { Turning } from './world-turning'
 import { playLanternBeat } from '../entities/lantern-beat'
-import { WorldControls } from './world-controls'
+import { WorldControls, swingHeld } from './world-controls'
 import { presenceMoments } from '../entities/presence-moments'
 import { arrive } from './world-arrival'
 import { buildRoomArt, type RoomArt } from '../area/room-art'
@@ -174,6 +174,8 @@ export class WorldScene extends Phaser.Scene {
   private homesteads: HomesteadLayer | null = null
   /** A village room's art and lights (null outdoors and in a cottage). */
   private roomArt: RoomArt | null = null
+  /** The signpost's lost east finger, lying where the finger-wisp sits (Brackenwood, the opening). */
+  private finger: Phaser.GameObjects.Image | null = null
   /** The residents on their hour (../resident-cycle.ts), and the lit windows outside. */
   private cycle: ResidentCycle | null = null
   private houseLights: HouseLights | null = null
@@ -321,7 +323,8 @@ export class WorldScene extends Phaser.Scene {
       reducedMotion: this.reducedMotion,
       hero: () => this.hero,
       interactables: this.interactables,
-      notePosition: () => this.notePosition()
+      notePosition: () => this.notePosition(),
+      live: () => this.worldLive()
     })
     // The village's broken things, mended with the right part (shared per world).
     const repairs = new RepairsLayer(this, { world: this.world, session: this.session, fx: this.fx, reducedMotion: this.reducedMotion, interactables: this.interactables })
@@ -466,6 +469,9 @@ export class WorldScene extends Phaser.Scene {
     this.session.startAutosave()
     refreshLanternVisuals(this, this.lightProps, this.session.questStage, this.session.state)
     this.interactables.buildMarkers()
+    // A restarted scene starts with nothing drawn (the old image went with the old build).
+    this.finger = null
+    this.drawFinger()
     emitPortraits(this)
     const unlisten = listen({
       [EV.quest]: () => this.refreshMarkers(),
@@ -516,6 +522,8 @@ export class WorldScene extends Phaser.Scene {
         const e = this.enemies.enemies.find((x) => x.id === id && !x.dead)
         return e ? { x: e.sprite.x, y: e.sprite.y - 8 } : null
       },
+      lootAt: (enemy) => (enemy === 'finger-wisp' && this.finger ? { x: this.finger.x, y: this.finger.y - 3 } : null),
+      marked: (id) => this.interactables.list.some((x) => x.id === id && x.marker?.() === 'quest'),
       placeKind: () => this.homesteads?.placeKind ?? null,
       guidePoint: (where) => this.homesteads?.guidePoint(where) ?? null,
       reducedMotion: this.reducedMotion
@@ -715,15 +723,36 @@ export class WorldScene extends Phaser.Scene {
     // Whatever the prompt is on (free activities stay available at zero HP).
     if (this.interactables.activate()) return
     if (this.session.zeroHpLocked) return // too injured to fight; no auto revival
-    // A tool in hand swings too, weakly (you're never helpless).
-    this.hero.tryAttack({ tool: heldNow().kind !== 'weapon' })
+    // The weapon strikes; a sturdy tool swings too, weakly (you're never
+    // helpless); a rod or a bucket doesn't (src/lib/belt.ts SWING).
+    swingHeld(this.hero)
   }
 
   /** Quest progress (or a spend) changes what the markers say; owned by Interactables. */
   private refreshMarkers(): void {
     this.interactables.refreshMarkers()
+    this.drawFinger()
     // What the quest points at may move and glow; the rest of a room stands still.
     this.roomArt?.refresh()
+  }
+
+  /**
+   * The signpost's east finger lies in the bracken where the finger-wisp sits
+   * (src/lib/quests.ts fingerInBracken), from the opening until the wisp is
+   * shooed off it and the finger comes away with you.
+   */
+  private drawFinger(): void {
+    const spot = this.world.areaId === 'woodland' ? this.world.enemies.find((e) => e.id === 'finger-wisp') : undefined
+    const lies = !!spot && fingerInBracken(this.session.state.quests)
+    if (!lies) {
+      this.finger?.destroy()
+      this.finger = null
+      return
+    }
+    if (this.finger) return
+    const x = tileMid(spot.tx)
+    const y = (spot.ty + 1) * TILE - 3
+    this.finger = this.add.image(x, y, 'signpost-finger').setOrigin(0.5, 1).setAngle(-12).setDepth(y - 4)
   }
 
   private onProfileChanged(): void {

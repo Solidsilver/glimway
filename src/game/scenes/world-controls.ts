@@ -5,7 +5,8 @@
  * world. Each acts only while the hero has control (`live`).
  */
 import Phaser from 'phaser'
-import { kindForKey, stepKind } from '../../lib/belt'
+import { SWING, kindForKey, noSwingThought, stepKind } from '../../lib/belt'
+import { itemDef } from '../../lib/items'
 import { ui } from '../../ui/store.svelte'
 import { bus, EV } from '../events'
 import { held, heldNow, setHeld, trackBelt, type HeldPayload } from '../held'
@@ -29,6 +30,25 @@ export interface WorldControlsDeps {
   live: () => boolean
   /** The action button: use what the prompt is on, or swing. */
   act: () => void
+}
+
+/** A tool that doesn't swing says so at most this often (ms): a thought, never a nag. */
+const NO_SWING_QUIET_MS = 8_000
+let noSwingSaidAt = -Infinity
+
+/**
+ * The action with nothing prompted, or a click at nothing (src/lib/belt.ts
+ * SWING): the weapon strikes, a sturdy tool swings dully, and any other tool
+ * does nothing but, now and then, a thought.
+ */
+export function swingHeld(hero: Hero, toward?: { x: number; y: number }): void {
+  const slot = heldNow()
+  const swing = SWING[slot.kind]
+  if (swing) return hero.tryAttack({ tool: swing === 'tool', toward })
+  const now = performance.now()
+  if (now - noSwingSaidAt < NO_SWING_QUIET_MS) return
+  noSwingSaidAt = now
+  bus.emit(EV.toast, { text: noSwingThought(slot.itemDef ? itemDef(slot.itemDef)?.name : null), kind: 'thought' })
 }
 
 export class WorldControls {
@@ -163,8 +183,12 @@ export class WorldControls {
     if (onPrompt) return this.deps.act()
     if (this.deps.gathering()?.workAt(at, hero.sprite)) return
     if (thing) return interactables.use(thing)
+    // A tool that doesn't swing does its work where it's offered (the rod
+    // casts at the bank you stand on), wherever you click.
+    const kind = heldNow().kind
+    if (!SWING[kind] && interactables.currentTarget?.tool === kind) return this.deps.act()
     if (this.deps.session.zeroHpLocked) return
-    hero.tryAttack({ tool: heldNow().kind !== 'weapon', toward: at })
+    swingHeld(hero, at)
   }
 
   /** Something else in hand: the prompt follows at once, and the tool shows over the hero for a moment. */

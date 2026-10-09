@@ -348,6 +348,7 @@
     {
       "id": "stable",
       "category": "utility",
+      "building": true,
       "where": [
         "outdoor"
       ],

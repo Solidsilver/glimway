@@ -39,7 +39,8 @@ func companionsProto(c store.Companions) *contract.Companions {
 }
 
 // companions chooses the follower and the yard (6.2, `POST /api/companions`):
-// profile source habitica, a deed in this world, each key owned, at most
+// profile source habitica, a deed in this world, each key owned (the
+// follower may also be '' or store.NoFollower), at most
 // three yard pets and no repeats. It writes the rows and the room hears an
 // avatar change.
 func (a *Server) companions(w http.ResponseWriter, r *http.Request) error {
@@ -62,8 +63,10 @@ func (a *Server) companions(w http.ResponseWriter, r *http.Request) error {
 		if p == nil {
 			return nil, fail(409, "needs-habitica")
 		}
+		// '' is Habitica's current pet and NoFollower is No pet: neither
+		// names a key to own.
 		follow := req.GetFollowPet()
-		if follow != "" && !slices.Contains(p.Pets, follow) {
+		if follow != "" && follow != store.NoFollower && !slices.Contains(p.Pets, follow) {
 			return nil, fail(409, "companion-not-owned")
 		}
 		yard := req.GetYardPets()

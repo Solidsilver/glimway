@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { beltFor, heldSlot, KIND_WORDS, kindForKey, stepKind } from '../src/lib/belt.ts';
+import { BELT_ORDER, SWING, beltFor, heldSlot, KIND_WORDS, kindForKey, noSwingThought, stepKind } from '../src/lib/belt.ts';
 import type { InstanceView } from '../src/lib/api/types.ts';
 
 const tool = (id: string, itemDef: string, state = 'sound', usesLeft = 30): InstanceView => ({
@@ -50,4 +50,15 @@ test('belt: the rod is its own kind, after the spade (crafts.md 5.7)', () => {
   assert.deepEqual(belt.map((s) => s.kind), ['weapon', 'dig', 'fish', 'draw']);
   assert.equal(heldSlot(belt, 'fish').instance, 'r');
   assert.equal(KIND_WORDS.fish, 'Fish');
+});
+
+test('a click or a press swings only what can be swung: the weapon, then the sturdy tools', () => {
+  assert.equal(SWING.weapon, 'weapon');
+  for (const k of ['chop', 'break', 'dig'] as const) assert.equal(SWING[k], 'tool', k);
+  for (const k of ['fish', 'draw', 'water', 'trim', 'mark'] as const) assert.equal(SWING[k], null, k);
+  // Every kind on the belt has a rule.
+  assert.deepEqual(Object.keys(SWING).sort(), [...BELT_ORDER].sort());
+  assert.equal(noSwingThought('Willow rod'), 'You can’t fight with a willow rod.');
+  assert.equal(noSwingThought('Oak-mark punch'), 'You can’t fight with an oak-mark punch.');
+  assert.match(noSwingThought(null), /no thing to fight with/);
 });

@@ -103,6 +103,8 @@ export class PresenceFeed {
         },
         gift: (g) => this.bus.emit(EV.gift, g),
         avatarChange: (id, avatar) => {
+          // Their mount went out or came home: its stable's land re-reads the stalls (crafts.md 3.4).
+          this.bus.emit(EV.companionsOf, { accountId: id })
           const p = this.peers.get(id)
           if (!p || p.leftAt !== null) return
           p.avatar = avatar

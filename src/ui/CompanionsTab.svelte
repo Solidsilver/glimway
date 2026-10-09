@@ -10,7 +10,7 @@
   import type { Session } from '../game/session'
   import { bus, EV } from '../game/events'
   import { homesteadsFor } from '../game/homestead'
-  import { companionName } from '../lib/companions'
+  import { NO_PET, companionName, stallsShown } from '../lib/companions'
   import { HOMESTEAD_DATA } from '../lib/homestead'
   import { predictStall } from '../lib/api/predict'
   import { companionErrorText } from '../content/errors'
@@ -30,7 +30,8 @@
   const home = $derived<HomeView | null>((changed.value, homes?.mine ?? null))
   const stable = $derived(home?.items.find((i) => i.itemDef === HOMESTEAD_DATA.stable.item && i.scene === 'outdoor') ?? null)
   const current = $derived(profile?.selectedPet ?? null)
-  const follower = $derived(view?.followPet || current || '')
+  const noPet = $derived(view?.followPet === NO_PET)
+  const follower = $derived(noPet ? '' : view?.followPet || current || '')
   const yard = $derived(view?.yardPets ?? [])
   const me = $derived(link?.accountId ?? null)
   const ownedMounts = $derived(profile?.mounts ?? [])
@@ -99,7 +100,9 @@
     }
   }
 
-  const stallOf = (n: number) => home?.stalls.find((s) => s.stall === n) ?? null
+  /** Your own mount reads out from your companions, not the homestead as last read (crafts.md 3.1). */
+  const stalls = $derived(home ? stallsShown(home.stalls, home.id, me, view, new Map(), 0) : [])
+  const stallOf = (n: number) => stalls.find((s) => s.stall === n) ?? null
 </script>
 
 {#if picking?.what === 'follower'}
@@ -109,6 +112,7 @@
     keys={profile?.pets ?? []}
     selected={view?.followPet ?? ''}
     first={{ label: 'Habitica’s current pet', hint: current ? companionName(current) : 'None chosen on Habitica' }}
+    also={[{ key: NO_PET, label: 'No pet', hint: 'Walk on your own' }]}
     onPick={chooseFollower}
     onClose={close}
   />
@@ -147,6 +151,8 @@
           ><b data-testid="companions-follower-name">{companionName(follower)}</b>
           <small>{view?.followPet ? 'Chosen here' : 'Habitica’s current pet'}</small></span
         >
+      {:else if noPet}
+        <span class="who"><b data-testid="companions-follower-name">No pet</b> <small>You walk on your own</small></span>
       {:else}
         <span class="who"><small>No pet walks with you. Choose one here, or on Habitica.</small></span>
       {/if}

@@ -91,3 +91,13 @@ test('a click uses each point’s click reach: 40 px by default, the working rea
   assert.equal(it.pointAt(cursor({ x: 200, y: 96 }), { x: 200, y: 136 })?.id, 'touch:sign', '40 px for a sign, as before');
   assert.equal(it.pointAt(cursor({ x: 200, y: 96 }), { x: 200, y: 137 }), null);
 });
+
+test('a second choice on its own key rides with the prompt, and a change to it alone is news', () => {
+  const it = new Interactables(scene, { reducedMotion: true });
+  let landed = false;
+  it.register('fishing', [point('fish:line', 104, 100, { label: () => (landed ? 'Mill Roach! Keep it' : 'Pull the line in'), verb: () => (landed ? 'Keep' : 'Pull in'), alt: () => (landed ? { key: 'Q', label: 'Let it go' } : null) })]);
+  assert.deepEqual(prompts(() => it.update(hero, 0)), [{ label: 'Pull the line in', verb: 'Pull in' }]);
+  landed = true;
+  assert.deepEqual(prompts(() => it.update(hero, 0)), [{ label: 'Mill Roach! Keep it', verb: 'Keep', alt: { key: 'Q', label: 'Let it go' } }]);
+  assert.deepEqual(prompts(() => it.update(hero, 0)), [], 'said once');
+});

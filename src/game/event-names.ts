@@ -94,6 +94,13 @@ export const EV = {
   castMove: 'game:cast-move',
   /** Someone in the room cast a move (presence `ability`, crafts.md 4.5): { accountId, ability, x, y }. */
   abilityCast: 'game:ability-cast',
+  /**
+   * The server's word that a player's companions changed (presence
+   * `avatar_change`): { accountId }. Heard in their room, or on the land of
+   * the stable their mount came from even when they're far away (crafts.md
+   * 3.4): whoever stands at that stable re-reads its stalls.
+   */
+  companionsOf: 'game:companions-of',
   /** Touch roll button. */
   dodge: 'game:dodge',
   dialogueClosed: 'game:dialogue-closed',
@@ -236,6 +243,14 @@ export interface PromptPayload {
   label: string | null
   /** Short word for the touch action button (default "Talk"). */
   verb?: string
+  /** A second choice on its own key ("Let it go" on Q beside Keep on E): the desktop prompt names both. */
+  alt?: PromptAlt
+}
+
+/** The prompt's second choice: its key cap and what it does. */
+export interface PromptAlt {
+  key: string
+  label: string
 }
 
 export interface ToastPayload {
@@ -448,6 +463,7 @@ export interface EventMap {
   [EV.cast]: void
   [EV.castMove]: void
   [EV.abilityCast]: AbilityCastPayload
+  [EV.companionsOf]: { accountId: string }
   [EV.dodge]: void
   [EV.dialogueClosed]: DialogueClosedPayload
   [EV.clearUnmoored]: { instant: boolean }

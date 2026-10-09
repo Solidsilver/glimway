@@ -143,6 +143,11 @@ export const HOMESTEAD_TIERS: HomesteadTier[] = [
 ];
 
 // 3. Decorations
+/** Silas's words for the buildings in his yard (content/homestead.json's `building` rows). */
+export const BUILDING_BLURBS: Record<string, string> = {
+  stable: 'Timber walls, a tack room and one bay with a half door. Your mounts stand here between rides, and it grows a stall at a time.'
+};
+
 export const DECORATIONS_EMBER: Decoration[] = [
   { id: 'wooden-stool', name: 'Wooden Stool', blurb: 'Three uneven legs, perfectly balanced. Silas swears he meant it.', category: 'furniture', footprint: [1, 1] },
   { id: 'reading-chair', name: 'Reading Chair', blurb: 'Overstuffed, a little frayed, and exactly the right distance from the lamp.', category: 'furniture', footprint: [1, 2] },

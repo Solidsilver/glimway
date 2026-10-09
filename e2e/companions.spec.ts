@@ -88,6 +88,27 @@ test('the follower you choose walks with you, and is still yours after a reload'
   await page.getByTestId('companions-pick-first').click()
   await expect(page.getByTestId('companions-follower-name')).toHaveText('Base Wolf')
   await expect(page.getByTestId('companions-follower')).toContainText('Habitica’s current pet')
+
+  // No pet (the owner's playtest): its own choice, kept, and nothing follows.
+  await page.getByTestId('companions-change-follower').click()
+  await expect(page.getByTestId('companions-pick-none')).toContainText('No pet')
+  await page.getByTestId('companions-pick-none').click()
+  await expect(page.getByTestId('companions-follower-name')).toHaveText('No pet')
+  await closePanel(page)
+  await expect.poll(async () => (await debug(page)).follower, { timeout: SERVER_ANSWER_MS }).toBeNull()
+  await expect
+    .poll(async () => (await (await page.request.get('/api/state', CONTRACT)).json()).state?.companions?.followPet ?? null, { timeout: SERVER_ANSWER_MS })
+    .toBe('none')
+  await reenter(page, 'commons')
+  await openCompanions(page)
+  await expect(page.getByTestId('companions-follower-name')).toHaveText('No pet')
+  await page.getByTestId('companions-change-follower').click()
+  await expect(page.getByTestId('companions-pick-none')).toHaveClass(/\bon\b/)
+  await page.keyboard.press('Escape')
+  await closePanel(page)
+  // Give the follower time to have come back, were it going to.
+  await page.waitForTimeout(1_000)
+  expect((await debug(page)).follower).toBeNull()
 })
 
 test('a friend\'s pet follows them on your screen, and you can pet it', async ({ page, browser, baseURL }) => {
@@ -124,6 +145,18 @@ test('a friend\'s pet follows them on your screen, and you can pet it', async ({
   await expect.poll(async () => (await remotes(other)).map((r) => [r.name, r.pet]), { timeout: 15_000 }).toEqual([['Ash', 'Wolf-Base']])
   await other.bringToFront()
   await expect(other.locator('.prompt')).toContainText('Pet', { timeout: 15_000 })
+
+  // Ash chooses No pet (a deed opens the choice): on Rowan's screen nothing
+  // follows Ash, not even Habitica's current pet.
+  await page.bringToFront()
+  await claimDeed(page)
+  await openCompanions(page)
+  await page.getByTestId('companions-change-follower').click()
+  await page.getByTestId('companions-pick-none').click()
+  await expect(page.getByTestId('companions-follower-name')).toHaveText('No pet')
+  await closePanel(page)
+  await go(other, 'commons', 23, 21)
+  await expect.poll(async () => (await remotes(other)).map((r) => [r.name, r.pet]), { timeout: 15_000 }).toEqual([['Ash', null]])
   await ctx.close()
 })
 
@@ -194,7 +227,7 @@ async function carryTo(page: Page, piece: string, x: number, y: number): Promise
   await expect.poll(async () => (await homes(page)).placement?.spot).toEqual({ x, y, rotation: 0 })
 }
 
-test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, and the village lead', async ({ page }) => {
+test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, and the village lead', async ({ page, browser, baseURL }) => {
   test.setTimeout(300_000)
   const id = await heroWith(page, 'Tansy', { pets: { 'Wolf-Base': 1 }, currentPet: 'Wolf-Base', mounts: { 'Wolf-Base': true }, currentMount: 'Wolf-Base' })
   // Riding lives behind the stable now: Habitica's current mount alone doesn't ride.
@@ -206,6 +239,29 @@ test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, an
 
   await earnPlenty(page, id)
   const gate = await claimDeed(page)
+  // Esc gets you out of a talk (the owner's playtest): Silas's replies have
+  // a goodbye, so Esc takes it, and the Menu doesn't open on the same press.
+  const silasAt = (await homes(page)).features?.silas ?? { tx: 0, ty: 0 }
+  await go(page, 'commons', silasAt.tx, silasAt.ty + 1)
+  await expect(page.locator('.prompt')).toContainText('Talk to Silas')
+  await waitForLive(page)
+  await page.keyboard.press('e')
+  const talking = page.getByRole('dialog', { name: /Conversation with/ })
+  await expect(talking).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(talking).toHaveCount(0)
+  await expect(page.getByTestId('world-card')).toHaveCount(0)
+  // Silas's Yard: the stable heads its own Buildings section, after the
+  // cottage and before the finished pieces, locked until the Workshop stands.
+  await silasSays(page, /See what you’ve finished/)
+  const yard = page.getByRole('dialog', { name: 'Silas’s Yard' })
+  const sections = await yard.locator('section').evaluateAll((all) => all.map((el) => el.getAttribute('aria-label')))
+  expect(sections.indexOf('Buildings')).toBeGreaterThan(sections.indexOf('The cottage'))
+  expect(sections.indexOf('Buildings')).toBeLessThan(sections.indexOf('Finished pieces'))
+  await expect(yard.getByTestId('shop-locked-stable')).toContainText('workshop')
+  await expect(yard.locator('[data-buy="stable"]')).toBeDisabled()
+  await expect(yard.getByRole('region', { name: 'Finished pieces' }).locator('[data-buy="stable"]')).toHaveCount(0)
+  await yard.getByRole('button', { name: 'Close Silas’s yard' }).click()
   // Test lever: the Workshop tier (the stable comes after it) without the build-up.
   const mine = await myHome(page)
   sql(`UPDATE homesteads SET tier=2 WHERE id='${mine.id}';`)
@@ -251,14 +307,36 @@ test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, an
     .poll(async () => ((await myHome(page)) as unknown as { stalls?: { stall: number; mount: string }[] }).stalls?.find((s) => s.stall === 1)?.mount ?? null, { timeout: SERVER_ANSWER_MS })
     .toBe('Wolf-Base')
   await closePanel(page)
+  // It stands in its bay.
+  await expect.poll(async () => (await homes(page)).stalled, { timeout: SERVER_ANSWER_MS }).toEqual(['Wolf-Base'])
+
+  // A visitor (a friend in this world) stands at the stable and sees it too.
+  const invite = await (await page.request.post('/api/invites', { data: {}, ...CONTRACT })).json()
+  const ctx: BrowserContext = await (browser as Browser).newContext({ baseURL, viewport: { width: 1200, height: 760 } })
+  await routeHabitica(ctx)
+  const visitor = await ctx.newPage()
+  const rowan = newUser()
+  await setHabitica(rowan, { name: 'Rowan', pets: {}, currentPet: '', mounts: {}, currentMount: '' })
+  await openTitleGuide(visitor)
+  await pasteAndConnect(visitor, rowan, { invite: invite.code })
+  await waitForWorld(visitor)
+  await go(visitor, 'commons', 23, 21)
+  await throughGate(visitor, gate)
+  await go(visitor, `home:${gate}`, spot.x + 2, spot.y + 5)
+  await waitForLive(visitor)
+  await expect.poll(async () => (await homes(visitor)).stalled, { timeout: SERVER_ANSWER_MS }).toEqual(['Wolf-Base'])
 
   // Saddle up at the stall: you're on it, and it's out with you.
+  await page.bringToFront()
   await expect(page.locator('.prompt')).toContainText('Saddle up')
   await waitForLive(page)
   await page.keyboard.press('e')
   await expect.poll(async () => (await debug(page)).riding, { timeout: SERVER_ANSWER_MS }).toBe(true)
   expect((await debug(page)).mountOut).toBe('Wolf-Base')
   await expect(page.getByRole('button', { name: /Get down/ })).toBeVisible()
+  // The bay stands empty while it's out (the owner's playtest): for you, and for the visitor.
+  await expect.poll(async () => (await homes(page)).stalled).toEqual([])
+  await expect.poll(async () => (await homes(visitor)).stalled, { timeout: SERVER_ANSWER_MS }).toEqual([])
 
   // M: down, on the lead; M again: back up.
   await waitForLive(page)
@@ -301,4 +379,10 @@ test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, an
     .poll(async () => (await (await page.request.get('/api/state', CONTRACT)).json()).state?.companions?.mountOut ?? null, { timeout: SERVER_ANSWER_MS })
     .toBe('')
   await expect(page.getByRole('button', { name: /Send your mount home/ })).toHaveCount(0)
+  // Home from the village, far from the stable: the visitor sees it back in its bay.
+  await expect.poll(async () => (await homes(visitor)).stalled, { timeout: SERVER_ANSWER_MS }).toEqual(['Wolf-Base'])
+  // And so do you, once you're back.
+  await go(page, `home:${gate}`, spot.x + 2, spot.y + 5)
+  await expect.poll(async () => (await homes(page)).stalled, { timeout: SERVER_ANSWER_MS }).toEqual(['Wolf-Base'])
+  await ctx.close()
 })

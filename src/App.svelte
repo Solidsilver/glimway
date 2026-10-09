@@ -588,6 +588,8 @@
    */
   function onKeyGlobal(e: KeyboardEvent): void {
     if (phase !== 'playing' || blocked(layers, BLOCKS.appKeys)) return
+    // A press something else already owns (Esc that closed a conversation, src/ui/DialoguePanel.svelte).
+    if ((e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed) return
     const t = e.target as HTMLElement | null
     const typing = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)
     // Typing J/C in a text field must never toggle panels — but Escape always
@@ -776,6 +778,7 @@
         if (panel !== 'journal') toggle('journal')
       }}
       prompt={showPrompt && !touch ? ui.prompt.label : null}
+      promptAlt={showPrompt && !touch ? (ui.prompt.alt ?? null) : null}
     />
     {#if ui.emoteOpen && ui.presence.status === 'live' && !panel}
       <EmotePicker onPick={sendEmote} onClose={() => (ui.emoteOpen = false)} />

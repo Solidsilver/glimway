@@ -803,3 +803,101 @@ func TestAbsentWhereIsStillInvalid(t *testing.T) {
 		t.Fatal("mount-home without a where", r.Result.Companions)
 	}
 }
+
+// The owner's playtest: a mount that is out leaves its bay empty for
+// everyone looking at the stable, and fills it again when it is home. The
+// stall reads out on HomeView, and the stable's land (home:<gate>) hears
+// every change — Saddle up, Go home from far away, a new lease — so whoever
+// stands there re-reads the stalls, wherever the owner is.
+func TestTheStablesLandHearsTheMountGoAndCome(t *testing.T) {
+	x := newRig(t)
+	alice := profile("alice", 1, 0, 20)
+	alice.Mounts = []string{"Wolf-Shade"}
+	x.set(alice)
+	ac, a := x.ready("alice")
+	x.pinWorld(&a)
+	h, x0, y0 := standingStable(x, ac, &a, 1)
+	x.companionOp("POST", "/api/stable/stall", body(a, "in", map[string]any{"homeId": h.ID, "stall": 1, "mount": "Wolf-Shade"}), ac, 200)
+	land := fmt.Sprintf("home:%d", h.Gate)
+	visitor := x.peerAt("visitor", a.WorldID, land)
+	away := x.peerAt("away", a.WorldID, "village")
+	otherWorld := x.peerAt("other-world", "elsewhere", land)
+	heard := func(p *presencePeer) *presenceAvatarMsg {
+		t.Helper()
+		select {
+		case b := <-p.queue:
+			m, err := decodePresence(b)
+			if err != nil || m.GetAvatarChange() == nil || m.GetAvatarChange().GetAccountId() != x.account("alice") {
+				t.Fatal("not an avatar change", m, err)
+			}
+			return m.GetAvatarChange().GetAvatar()
+		default:
+			t.Fatal("heard nothing")
+		}
+		return nil
+	}
+	quiet := func(p *presencePeer) {
+		t.Helper()
+		select {
+		case b := <-p.queue:
+			t.Fatal("heard it", b)
+		default:
+		}
+	}
+	drain := func(p *presencePeer) {
+		for len(p.queue) > 0 {
+			<-p.queue
+		}
+	}
+	drain(visitor)
+
+	// Saddle up: the bay reads out, and the land hears it even though the
+	// owner's own socket (not connected here) carries nothing.
+	at := body(a, "up", map[string]any{"homeId": h.ID, "stall": 1})
+	at["where"] = atBay(h, x0, y0, 1)
+	x.companionOp("POST", "/api/stable/out", at, ac, 200)
+	if v := heard(visitor); v.SelectedMount.GetValue() != "Wolf-Shade" {
+		t.Fatal("the land hears the mount go out", v)
+	}
+	quiet(away)
+	quiet(otherWorld)
+	if s := x.home(ac).Stalls; !s[0].Out {
+		t.Fatal("the bay reads out", s)
+	}
+
+	// The owner rides off to the village; Go home from there still reaches
+	// the stable's land, once (the owner's own room hears it as before).
+	me := x.peerAt(x.account("alice"), a.WorldID, "village")
+	x.companionOp("POST", "/api/stable/home", map[string]any{"op": map[string]any{"lease": a.Lease, "key": "home"}}, ac, 200)
+	if v := heard(visitor); v.SelectedMount != nil {
+		t.Fatal("the land hears the mount come home", v)
+	}
+	quiet(visitor)
+	heard(away)
+	quiet(otherWorld)
+	if len(me.queue) != 0 {
+		t.Fatal("the sender hears nothing")
+	}
+	if s := x.home(ac).Stalls; s[0].Out || s[0].Mount != "Wolf-Shade" {
+		t.Fatal("the bay is full again", s)
+	}
+
+	// Out again, then a new lease finds it home: the land hears that too.
+	at = body(a, "again", map[string]any{"homeId": h.ID, "stall": 1})
+	at["where"] = atBay(h, x0, y0, 1)
+	x.companionOp("POST", "/api/stable/out", at, ac, 200)
+	drain(visitor)
+	drain(away)
+	x.now.Add(130)
+	x.expect("POST", "/api/play", map[string]any{"clientId": "tab-b"}, ac, 200)
+	if v := heard(visitor); v.SelectedMount != nil {
+		t.Fatal("the land hears the new lease bring it home", v)
+	}
+	if s := x.home(ac).Stalls; s[0].Out {
+		t.Fatal("home after a new lease", s)
+	}
+	// A lease without a mount out says nothing to the land.
+	x.now.Add(130)
+	x.expect("POST", "/api/play", map[string]any{"clientId": "tab-c"}, ac, 200)
+	quiet(visitor)
+}

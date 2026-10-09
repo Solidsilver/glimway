@@ -15,6 +15,7 @@
   import { setHeld } from '../game/held'
   import { KIND_WORDS } from '../lib/belt'
   import ContextButtons from './ContextButtons.svelte'
+  import type { PromptAlt } from '../game/events'
 
   let {
     onJournal,
@@ -24,7 +25,8 @@
     onMenu,
     onEmote,
     onGuides,
-    prompt = null
+    prompt = null,
+    promptAlt = null
   }: {
     onJournal: () => void
     onCharacter: () => void
@@ -37,6 +39,8 @@
     onGuides?: () => void
     /** What E does here right now ("Talk to Mara"), when the world may act on it (desktop shows it on the E slot). */
     prompt?: string | null
+    /** A second choice on its own key, named beside the first ("Let it go" on Q). */
+    promptAlt?: PromptAlt | null
   } = $props()
   const presenceLive = $derived(ui.presence.status === 'live')
   /** The needle in words, for screen readers: "this way: north-east", and whether it's here or onward. */
@@ -178,6 +182,21 @@
   {/if}
 {/snippet}
 
+{#snippet needle()}
+  {#if ui.goalDir.angle !== null}
+    <!-- Here: the goal is in this place (the arrow points at it, and says so). Onward: the arrow points at the way out toward it. -->
+    {#if ui.goalDir.here}<span class="here-word" data-testid="goal-here" aria-hidden="true">here</span>{/if}
+    <span class="needle" class:here={ui.goalDir.here} data-testid="goal-needle" aria-hidden="true" style={`--a:${ui.goalDir.angle}rad`}>
+      {#if ui.goalDir.here}
+        <!-- A pointer with a dot at its heel: the goal itself, not a road. -->
+        <svg viewBox="0 0 12 12" width="14" height="14"><path d="M11 6 L5 3 L5 9 Z" /><circle cx="3" cy="6" r="1.6" /></svg>
+      {:else}
+        <svg viewBox="0 0 12 12" width="14" height="14"><path d="M11 6 L3 2 L5 6 L3 10 Z" /></svg>
+      {/if}
+    </span>
+  {/if}
+{/snippet}
+
 {#snippet goal()}
   {#if ui.goalLine.guide}
     {@const g = ui.goalLine.guide}
@@ -185,11 +204,7 @@
     <button type="button" class="objective pinned" onclick={() => onGuides?.()} title={`${g.title}: ${g.step}`} aria-label={`Pinned guide, ${g.title}, step ${g.index + 1} of ${g.count}: ${g.step}${needleWords ? ` (${needleWords})` : ''}`} data-testid="goal-pinned">
       <span class="goal-icon pin"><Icon name="pin" size={14} /></span>
       <span class="goal-text">{g.step}</span>
-      {#if ui.goalDir.angle !== null}
-        <span class="needle" class:here={ui.goalDir.here} data-testid="goal-needle" aria-hidden="true" style={`--a:${ui.goalDir.angle}rad`}>
-          <svg viewBox="0 0 12 12" width="14" height="14"><path d="M11 6 L3 2 L5 6 L3 10 Z" /></svg>
-        </span>
-      {/if}
+      {@render needle()}
     </button>
   {:else if ui.goalLine.quest}
     {@const q = ui.goalLine.quest}
@@ -197,22 +212,14 @@
     <button type="button" class="objective pinned" onclick={onJournal} title={`${q.title}: ${q.objective}`} aria-label={`Pinned quest, ${q.title}: ${q.objective}${needleWords ? ` (${needleWords})` : ''}`} data-testid="goal-pinned-quest">
       <span class="goal-icon pin"><Icon name="pin" size={14} /></span>
       <span class="goal-text">{q.step}</span>
-      {#if ui.goalDir.angle !== null}
-        <span class="needle" class:here={ui.goalDir.here} data-testid="goal-needle" aria-hidden="true" style={`--a:${ui.goalDir.angle}rad`}>
-          <svg viewBox="0 0 12 12" width="14" height="14"><path d="M11 6 L3 2 L5 6 L3 10 Z" /></svg>
-        </span>
-      {/if}
+      {@render needle()}
     </button>
   {:else}
   <!-- The goal in a few words, and a needle toward it; open, the whole objective. -->
   <button type="button" class="objective" onclick={() => (objectiveOpen = !objectiveOpen)} aria-expanded={objectiveOpen} title={ui.quest.objective} aria-label={`Current goal: ${ui.quest.objective}${needleWords ? ` (${needleWords})` : ''}`}>
     <span class="goal-icon"><Icon name="star" size={12} /></span>
     <span class="goal-text">{objectiveOpen ? ui.quest.objective : (ui.quest.short ?? ui.quest.objective)}</span>
-    {#if ui.goalDir.angle !== null}
-      <span class="needle" class:here={ui.goalDir.here} data-testid="goal-needle" aria-hidden="true" style={`--a:${ui.goalDir.angle}rad`}>
-        <svg viewBox="0 0 12 12" width="14" height="14"><path d="M11 6 L3 2 L5 6 L3 10 Z" /></svg>
-      </span>
-    {/if}
+    {@render needle()}
   </button>
   {/if}
   {#if home.goal}
@@ -343,7 +350,10 @@
   <div class="actionbar" class:hidden={ui.cinematic || ui.dialogueOpen}>
     {#if prompt}
       <!-- The E slot says what it will do here; tests and players read it as the prompt. -->
-      <div class="prompt" role="status"><span class="kbd">E</span><span>{prompt}</span></div>
+      <div class="prompt" role="status">
+        <span class="kbd">E</span><span>{prompt}</span>
+        {#if promptAlt}<span class="or">·</span><span class="kbd">{promptAlt.key}</span><span>{promptAlt.label}</span>{/if}
+      </div>
     {/if}
     <!-- What the game has up for now (a saddle, Go home, Keep / Let it go): src/game/context-buttons.ts. -->
     <div class="ctxbar"><ContextButtons variant="bar" /></div>
@@ -661,6 +671,20 @@
   }
   .needle path {
     fill: var(--wood-dark);
+  }
+  .needle circle {
+    fill: var(--wood-dark);
+  }
+  .here-word {
+    flex: none;
+    margin-left: auto;
+    font-family: var(--font-display);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--gold-deep);
+  }
+  .here-word + .needle {
+    margin-left: 4px;
   }
   .needle.here {
     background: radial-gradient(circle, #fff3c4 0%, var(--gold) 100%);
@@ -1082,6 +1106,9 @@
   }
   .prompt .kbd {
     position: static;
+  }
+  .prompt .or {
+    color: rgba(255, 246, 220, 0.6);
   }
   @keyframes prompt-in {
     from { opacity: 0; transform: translateY(4px); }

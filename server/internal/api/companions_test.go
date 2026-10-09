@@ -325,3 +325,54 @@ func TestCompanionOpsChangeTheRoomsAvatar(t *testing.T) {
 		t.Fatal("the sender keeps its own avatar")
 	}
 }
+
+// No pet (the owner's playtest): "none" is a choice of its own, held across
+// reads like a key, and the room sees no follower — not Habitica's current
+// pet. Without a deed it is gated away like any other choice.
+func TestNoPetIsAChoice(t *testing.T) {
+	x := newRig(t)
+	p := profile("alice", 1, 0, 20)
+	p.Pets = []string{"Fox-Golden"}
+	p.SelectedPet = strPtr("Fox-Golden")
+	x.set(p)
+	ac, a := x.ready("alice")
+	x.claimGate(ac, &a, 0)
+	x.peerAt(x.account("alice"), a.WorldID, "village")
+	friend := x.peerAt("friend", a.WorldID, "village")
+	choose := x.companionOp("POST", "/api/companions", chooseBody(a, "alone", store.NoFollower, nil), ac, 200)
+	if choose.Result.Companions.FollowPet != store.NoFollower {
+		t.Fatal("the answer keeps No pet", choose.Result.Companions)
+	}
+	if c := x.companionsInState(ac); c.FollowPet != store.NoFollower {
+		t.Fatal("the state keeps No pet", c)
+	}
+	select {
+	case b := <-friend.queue:
+		m, err := decodePresence(b)
+		if err != nil || m.GetAvatarChange() == nil || m.GetAvatarChange().GetAvatar().GetSelectedPet() != nil {
+			t.Fatal("friends see no follower", m, err)
+		}
+	default:
+		t.Fatal("the room heard nothing")
+	}
+	v, err := x.api.presenceIdentity(context.Background(), store.Hash(ac.Value), true)
+	if err != nil || v.Avatar.SelectedPet != nil {
+		t.Fatal("a fresh join draws no follower", err, v.Avatar.SelectedPet)
+	}
+	// Habitica's current pet is still its own choice.
+	x.companionOp("POST", "/api/companions", chooseBody(a, "current", "", nil), ac, 200)
+	if v, _ := x.api.presenceIdentity(context.Background(), store.Hash(ac.Value), true); v.Avatar.SelectedPet == nil || v.Avatar.SelectedPet.Value != "Fox-Golden" {
+		t.Fatal("back to Habitica's current pet", v.Avatar.SelectedPet)
+	}
+	// Gated away with the deed, and waiting for the next one.
+	x.companionOp("POST", "/api/companions", chooseBody(a, "alone-again", store.NoFollower, nil), ac, 200)
+	x.homeOpRefreshing(ac, &a, "leave", nil, 200)
+	if c := x.companionsInState(ac); c.FollowPet != "" {
+		t.Fatal("no deed, no choice", c)
+	}
+	x.fund(x.account("alice"), 500, 0)
+	x.claimGate(ac, &a, 1)
+	if c := x.companionsInState(ac); c.FollowPet != store.NoFollower {
+		t.Fatal("the next deed keeps No pet", c)
+	}
+}

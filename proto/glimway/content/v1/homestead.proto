@@ -228,4 +228,7 @@ message HomeItem {
   map<string, int32> materials = 8 [(buf.validate.field).map = {max_pairs: 3, values: {int32: {gte: 1, lte: 1000000}}}];
   // Craftable only at the workbench (never bought).
   optional bool craft_only = 9;
+  // A building: a structure on the plot (the stable; later the kiln).
+  // Silas's Yard lists buildings in a section of their own.
+  optional bool building = 10;
 }

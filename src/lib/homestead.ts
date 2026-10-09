@@ -15,7 +15,7 @@ const MATERIAL_ITEMS = new Set(
 export type HomeScene = 'indoor' | 'outdoor' | 'gate';
 export type HomeItemCategory = 'furniture' | 'decor' | 'utility';
 interface HomeTier { tier: number; id: string; name: string; purchasable: boolean; embers: number; materials?: Record<string, number> }
-export interface HomeItem { id: string; name: string; category: HomeItemCategory; footprint: [number, number]; where: HomeScene[]; minTier: number; embers: number; materials: Record<string, number>; craftOnly?: boolean }
+export interface HomeItem { id: string; name: string; category: HomeItemCategory; footprint: [number, number]; where: HomeScene[]; minTier: number; embers: number; materials: Record<string, number>; craftOnly?: boolean; building?: boolean }
 /** A rectangle in the land's or a room's local grid tiles. */
 export interface HomeRect { x: number; y: number; w: number; h: number }
 export interface HomeGrid { width: number; height: number }
@@ -125,6 +125,17 @@ export function validateHomesteadData(value: unknown): HomesteadData {
   return h;
 }
 export const HOMESTEAD_DATA = validateHomesteadData(raw);
+
+/**
+ * Silas's Yard, in its sections: the buildings (structures on the plot, the
+ * content's `building` flag), then the finished pieces (priced in embers) and
+ * the pieces from the Wilds (materials only). Workbench-only pieces aren't sold.
+ */
+export function shopSections(data: HomesteadData = HOMESTEAD_DATA): { buildings: HomeItem[]; finished: HomeItem[]; wilds: HomeItem[] } {
+  const sold = data.items.filter((i) => !i.craftOnly);
+  const pieces = sold.filter((i) => !i.building);
+  return { buildings: sold.filter((i) => i.building), finished: pieces.filter((i) => i.embers > 0), wilds: pieces.filter((i) => i.embers === 0) };
+}
 
 // ------------------------------------------------------------ geometry
 

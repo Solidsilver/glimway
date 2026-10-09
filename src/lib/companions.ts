@@ -6,6 +6,7 @@
  */
 import type { HabiticaProfile } from './habitica/types.ts'
 import type { Companions } from './gen/glimway/v1/companions_pb.js'
+import type { StallView } from './api/homestead.ts'
 
 /** "CottonCandyBlue" → "Cotton Candy Blue"; "BearCub" → "Bear Cub". */
 function words(part: string): string {
@@ -50,13 +51,55 @@ export function matchesSearch(key: string, query: string): boolean {
 }
 
 /**
+ * The follower choice "No pet": the hero walks alone. A reserved value of
+ * `follow_pet`, as the server spells it (store.NoFollower): Habitica's keys
+ * are `Species-Potion`, so no pet is ever called this.
+ */
+export const NO_PET = 'none'
+
+/**
  * The pet that walks with the hero: the chosen follower when the server's
- * resolved state names one (it already fell back for a lapsed key), else
- * Habitica's current pet. Null: no follower at all (no pets is no pet, never
- * a stand-in).
+ * resolved state names one (it already fell back for a lapsed key), none for
+ * No pet, else Habitica's current pet. Null: no follower at all (no pets is
+ * no pet, never a stand-in).
  */
 export function followerKey(profile: Pick<HabiticaProfile, 'selectedPet'> | null, companions: Pick<Companions, 'followPet'> | null | undefined): string | null {
   const chosen = companions?.followPet ?? ''
+  if (chosen === NO_PET) return null
   if (chosen) return chosen
   return profile?.selectedPet || null
+}
+
+/**
+ * The stable's bays as this screen shows them (crafts.md 3.1): the server's
+ * `HomeView.stalls`, with your own mount's comings and goings on top, since
+ * your screen knows them before the homestead is read again. Your stalled
+ * mount is out while your companions say so (ridden, on the lead, or
+ * saddling up) and while it's still walking home (`homeward`: mount key →
+ * when it's off the screen, ms on `now`'s clock). A partner's stays as the
+ * server last said.
+ */
+export function stallsShown(
+  stalls: readonly StallView[],
+  homeId: string,
+  me: string | null,
+  mine: { mountOut: string; mountHome: string } | null,
+  homeward: ReadonlyMap<string, number>,
+  now: number
+): StallView[] {
+  return stalls.map((s) => {
+    if (!me || !s.mount || s.ownerId !== me) return s
+    const out = (!!mine && mine.mountOut === s.mount && mine.mountHome === homeId) || (homeward.get(s.mount) ?? 0) > now
+    return out === s.out ? s : { ...s, out }
+  })
+}
+
+/** When the next of your mounts walking home is off the screen and back in its bay (null: none is). */
+export function nextHomecoming(stalls: readonly StallView[], me: string | null, homeward: ReadonlyMap<string, number>, now: number): number | null {
+  let next: number | null = null
+  for (const s of stalls) {
+    const until = s.mount && s.ownerId === me ? homeward.get(s.mount) ?? 0 : 0
+    if (until > now && (next === null || until < next)) next = until
+  }
+  return next
 }

@@ -1208,7 +1208,10 @@ type HomeItem struct {
 	// carried material in the items catalogue — checked in code.
 	Materials map[string]int32 `protobuf:"bytes,8,rep,name=materials,proto3" json:"materials,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
 	// Craftable only at the workbench (never bought).
-	CraftOnly     *bool `protobuf:"varint,9,opt,name=craft_only,json=craftOnly,proto3,oneof" json:"craft_only,omitempty"`
+	CraftOnly *bool `protobuf:"varint,9,opt,name=craft_only,json=craftOnly,proto3,oneof" json:"craft_only,omitempty"`
+	// A building: a structure on the plot (the stable; later the kiln).
+	// Silas's Yard lists buildings in a section of their own.
+	Building      *bool `protobuf:"varint,10,opt,name=building,proto3,oneof" json:"building,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1302,6 +1305,13 @@ func (x *HomeItem) GetMaterials() map[string]int32 {
 func (x *HomeItem) GetCraftOnly() bool {
 	if x != nil && x.CraftOnly != nil {
 		return *x.CraftOnly
+	}
+	return false
+}
+
+func (x *HomeItem) GetBuilding() bool {
+	if x != nil && x.Building != nil {
+		return *x.Building
 	}
 	return false
 }
@@ -1461,7 +1471,7 @@ const file_glimway_content_v1_homestead_proto_rawDesc = "" +
 	"\tmax_units\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\bmaxUnits\"\x7f\n" +
 	"\x12HomesteadJointDeed\x12=\n" +
 	"\x16confirm_window_seconds\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x05R\x14confirmWindowSeconds\x12*\n" +
-	"\finvite_hours\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\vinviteHours\"\xdb\x06\n" +
+	"\finvite_hours\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\vinviteHours\"\x89\a\n" +
 	"\bHomeItem\x12)\n" +
 	"\x02id\x18\x01 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12<\n" +
@@ -1472,13 +1482,16 @@ const file_glimway_content_v1_homestead_proto_rawDesc = "" +
 	"\x06embers\x18\a \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x06embers\x12]\n" +
 	"\tmaterials\x18\b \x03(\v2+.glimway.content.v1.HomeItem.MaterialsEntryB\x12\xbaH\x0f\x9a\x01\f\x10\x03*\b\x1a\x06\x18\xc0\x84=(\x01R\tmaterials\x12\"\n" +
 	"\n" +
-	"craft_only\x18\t \x01(\bH\x00R\tcraftOnly\x88\x01\x01\x1a<\n" +
+	"craft_only\x18\t \x01(\bH\x00R\tcraftOnly\x88\x01\x01\x12\x1f\n" +
+	"\bbuilding\x18\n" +
+	" \x01(\bH\x01R\bbuilding\x88\x01\x01\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01:\x86\x03\xbaH\x82\x03\x1a\x88\x01\n" +
 	"\x0fhome_item.price\x12Ha home good is priced in embers, in materials, or in both; never neither\x1a+this.embers > 0 || size(this.materials) > 0\x1a\xf4\x01\n" +
 	"\x0fhome_item.where\x12;where is one or two distinct scenes (indoor, outdoor, gate)\x1a\xa3\x01size(this.where) > 0 && size(this.where) <= 2 && this.where.all(w, w in [\"indoor\", \"outdoor\", \"gate\"]) && (size(this.where) == 1 || this.where[0] != this.where[1])B\r\n" +
-	"\v_craft_onlyB*Z(glimway/gen/glimway/content/v1;contentv1b\x06proto3"
+	"\v_craft_onlyB\v\n" +
+	"\t_buildingB*Z(glimway/gen/glimway/content/v1;contentv1b\x06proto3"
 
 var (
 	file_glimway_content_v1_homestead_proto_rawDescOnce sync.Once

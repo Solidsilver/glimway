@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"github.com/coder/websocket"
 	contract "glimway/server/internal/gen/glimway/v2"
 	profiles "glimway/server/internal/profile"
@@ -11,6 +12,7 @@ import (
 	"glimway/server/internal/store"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"slices"
 	"time"
 )
 
@@ -219,17 +221,46 @@ func companionAvatar(c store.Companions, p rules.Profile) *presenceAvatarMsg {
 	return visualAvatar(p, c)
 }
 
+// presenceRoom names a presence room: an area in a world.
+type presenceRoom struct{ world, area string }
+
+// homeRoom is a homestead land's room (the stable stands there).
+func homeRoom(world string, gate int) presenceRoom {
+	return presenceRoom{world: world, area: fmt.Sprintf("home:%d", gate)}
+}
+
 // avatarChanged tells the room what a companion change did to a player's
 // avatar (2.4, 3.4): sent after a companions, mount-out or mount-home
-// commit, so friends' screens update mid-visit.
-func (a *Server) avatarChanged(id string, avatar *presenceAvatarMsg) {
+// commit, so friends' screens update mid-visit. `also` are rooms that hear
+// it too, wherever the player is: a mount going out or home empties or
+// fills its bay, so the land its stable stands on hears it even when the
+// owner is far away (or not connected), and whoever is there re-reads the
+// stalls.
+func (a *Server) avatarChanged(id string, avatar *presenceAvatarMsg, also ...presenceRoom) {
 	h := a.presence
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	msg := &contract.PresenceAvatarChange{AccountId: id, Avatar: avatar}
 	p := h.peers[id]
-	if p == nil {
+	if p != nil {
+		p.identity.Avatar = avatar
+		h.broadcast(p, msg)
+	}
+	if len(also) == 0 {
 		return
 	}
-	p.identity.Avatar = avatar
-	h.broadcast(p, &contract.PresenceAvatarChange{AccountId: id, Avatar: avatar})
+	b, err := encodePresence(msg)
+	for _, other := range h.peers {
+		if other == p || other.area == "" || p != nil && other.identity.World == p.identity.World && other.area == p.area {
+			continue // the player, and their own room, which heard it above
+		}
+		if !slices.Contains(also, presenceRoom{world: other.identity.World, area: other.area}) {
+			continue
+		}
+		if err != nil {
+			other.stop(websocket.StatusInternalError, "internal")
+			continue
+		}
+		h.enqueue(other, b)
+	}
 }

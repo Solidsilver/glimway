@@ -18,7 +18,8 @@
 import Phaser from 'phaser'
 import { HOMESTEAD_DATA, parseHomeArea } from '../../lib/homestead'
 import { clearable, servedLand } from '../../lib/homestead-land'
-import type { HomeView } from '../../lib/api/types'
+import type { HomeView, StallView } from '../../lib/api/types'
+import { nextHomecoming, stallsShown } from '../../lib/companions'
 import { type SeatPose } from '../seats'
 import { bus, EV } from '../events'
 import type { Session } from '../session'
@@ -38,6 +39,7 @@ import { HomesteadArt } from './homestead-art'
 import { HomesteadTalk } from './homestead-talk'
 import { HomesteadArranging } from './homestead-placement'
 import { HomesteadYard } from './homestead-yard'
+import { homeward } from './led-mount'
 
 export interface HomesteadDeps {
   world: WorldData
@@ -101,6 +103,13 @@ export class HomesteadLayer {
     bus.on(EV.villageChanged, onVillage)
     bus.on(EV.homeCommand, onCommand)
     bus.on(EV.homeArrangeToggle, onArrange)
+    // The stable's bays follow the mounts (crafts.md 3.1): yours from your own
+    // companions, a partner's from the homestead read again when the land
+    // hears their mount went out or came home.
+    const onCompanions = () => this.land && this.stallsSig() !== this.stallsDrawn && this.scheduleRedraw(this.gate!)
+    const onCompanionsOf = (p: { accountId: string }) => this.onCompanionsOf(p.accountId)
+    bus.on(EV.companions, onCompanions)
+    bus.on(EV.companionsOf, onCompanionsOf)
     // A destroyed game never shuts its scene down: either way, async work stops.
     onSceneEnd(scene, () => {
       this.gone = true
@@ -112,6 +121,8 @@ export class HomesteadLayer {
       bus.off(EV.homeCommand, onCommand)
       bus.off(EV.homeArrangeToggle, onArrange)
       bus.off(EV.homeAction, onHomeAction)
+      bus.off(EV.companions, onCompanions)
+      bus.off(EV.companionsOf, onCompanionsOf)
       if (this.arranging.placement) this.arranging.endPlacement(false)
       this.yard?.destroy()
       this.arranging.emitArrange({ available: false, scene: null, tier: 0 })
@@ -134,6 +145,8 @@ export class HomesteadLayer {
       placing: !!this.arranging.placement,
       yard: this.yard?.debug() ?? [],
       stalls: this.here()?.stalls ?? [],
+      // The mounts standing in their bays on screen (./homestead-stable.ts tags each image).
+      stalled: [...new Set(this.scene.children.list.filter((o) => o.active && typeof o.getData('stalled') === 'string').map((o) => o.getData('stalled') as string))],
       placement: this.arranging.placement ? this.arranging.placementView : null,
       stats: {
         gateDraws: this.art.gateDraws,
@@ -166,6 +179,34 @@ export class HomesteadLayer {
   /** The homestead this scene shows (null: unclaimed land, or not read yet). */
   here(): HomeView | null {
     return this.gate === null ? null : this.homes.homes.get(this.gate) ?? null
+  }
+
+  /**
+   * The stable's bays as this screen shows them (../../lib/companions.ts):
+   * the server's stalls, with your own mount out while it's out with you or
+   * still walking home.
+   */
+  stallsHere(): StallView[] {
+    const home = this.here()
+    if (!home) return []
+    return stallsShown(home.stalls, home.id, this.homes.myId, this.deps.session.link?.companions ?? null, homeward, Date.now())
+  }
+
+  /** Which bays stand full, as last drawn (a companions change redraws only when it changes this). */
+  private stallsDrawn = ''
+  private stallsSig(): string {
+    return this.stallsHere()
+      .map((s) => (s.mount && !s.out ? s.mount : ''))
+      .join(',')
+  }
+  /** The redraw that puts a mount walking home back in its bay. */
+  private homecoming: Phaser.Time.TimerEvent | null = null
+
+  /** Someone's mount went out or came home (presence): read this homestead again if it's theirs to show. */
+  private onCompanionsOf(accountId: string): void {
+    const home = this.here()
+    if (!this.land || !home || accountId === this.homes.myId) return
+    if (home.members.some((m) => m.id === accountId) || home.stalls.some((s) => s.ownerId === accountId)) void this.homes.fetchHome(this.gate!)
   }
 
   /** Walking onto a homestead's land (or into its cottage): read it fresh. */
@@ -249,6 +290,10 @@ export class HomesteadLayer {
         this.checkLandMatches()
         this.art.drawLand()
         this.yard?.sync(this.here())
+        this.stallsDrawn = this.stallsSig()
+        this.homecoming?.remove()
+        const next = nextHomecoming(this.here()?.stalls ?? [], this.homes.myId, homeward, Date.now())
+        this.homecoming = next === null ? null : this.scene.time.delayedCall(next - Date.now() + 20, () => this.scheduleRedraw(this.gate!))
       } else this.art.drawRoom()
     }
     this.deps.interactables.register(this, this.talk.interactionList())

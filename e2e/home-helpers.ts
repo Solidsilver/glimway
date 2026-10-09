@@ -40,6 +40,8 @@ export interface HomesView {
   land: { gate: number; door: { tx: number; ty: number }; doorstep: { tx: number; ty: number }; mailbox: { tx: number; ty: number }; site: { x: number; y: number; w: number; h: number }; desolate: boolean } | null
   guide: { x: number; y: number; arrow: boolean } | null
   placing: boolean
+  /** The mounts standing in their bays on screen (the stable's drawing). */
+  stalled: string[]
   placement: { selected: string | null; problem: string | null; spot: { x: number; y: number } | null; clearing: { x: number; y: number } | null; message: { text: string } | null } | null
 }
 

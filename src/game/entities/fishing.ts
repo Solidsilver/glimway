@@ -22,6 +22,7 @@
  */
 import Phaser from 'phaser'
 import { calendarAt } from '../../lib/calendar'
+import { LET_GO_KEY } from '../../content/controls'
 import {
   bandFrom,
   bandLine,
@@ -72,7 +73,10 @@ export interface FishingDeps {
   interactables: Interactables
   /** Write the hero's spot into the save now (the server measures the bank's reach from it). */
   notePosition: () => void
+  /** The hero has control (no panel, move or beat holds the world): Q lets a fish go only then. */
+  live?: () => boolean
 }
+
 
 /** A line out, as this screen holds it: the server's cast, or the prediction before its answer. */
 interface Line {
@@ -138,8 +142,18 @@ export class Fishing {
       if (!this.busy && !this.landed) this.adoptServerLine()
     }
     bus.on(EV.link, onState)
+    // Q lets a landed fish go, as the Let it go button does (Keep is E, the action key).
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== `Key${LET_GO_KEY}` || e.repeat || e.ctrlKey || e.metaKey || e.altKey || !this.landed) return
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+      if (deps.live && !deps.live()) return
+      void this.settle(false)
+    }
+    scene.input.keyboard?.on('keydown', onKey)
     scene.events.once('shutdown', () => {
       bus.off(EV.link, onState)
+      scene.input.keyboard?.off('keydown', onKey)
       this.leaving()
       this.clearDrawing()
       hideContextButtons('fish-')
@@ -174,6 +188,7 @@ export class Fishing {
             markerOffset: 18,
             label: () => this.bankLabel(water),
             verb: FISHING_VERBS.cast,
+            tool: 'fish',
             // The point's marker sits under the tile; the offer follows the server's measure (where to the tile's middle).
             available: () => !this.busy && !this.line && !this.landed && heldNow().kind === 'fish' && bankOpen(bank, this.mark()) && this.live() && this.heroWithin(bank, castReachPx()),
             activate: () => void this.cast(water, bank)
@@ -187,8 +202,11 @@ export class Fishing {
             clickReach: leaveReachPx() + 4,
             rank: 1,
             markerOffset: 18,
+            tool: 'fish',
             label: () => (this.landed ? this.landedLabel() : this.phase() === 'ready' ? ON_THE_LINE : 'Pull the line in'),
             verb: () => (this.landed ? FISHING_VERBS.keep : this.phase() === 'ready' ? FISHING_VERBS.reel : FISHING_VERBS.pull),
+            // Landed: the prompt names both choices and their keys (Keep on E, Let it go on Q).
+            alt: () => (this.landed ? { key: LET_GO_KEY, label: FISHING_VERBS.release } : null),
             available: () => !this.busy && this.lineFrom(water, bank) && this.heroWithin(bank, leaveReachPx()),
             activate: () => {
               if (this.landed) void this.settle(true)
@@ -220,7 +238,7 @@ export class Fishing {
 
   private landedLabel(): string {
     const name = itemDef(this.landed?.species ?? '')?.name ?? 'A fish'
-    return `${name}! Keep it, or let it go`
+    return `${name}! Keep it`
   }
 
   private phase(): 'waiting' | 'ready' | 'lapsed' | null {
@@ -358,7 +376,7 @@ export class Fishing {
     // Mid-sentence, as the toasts say it ("Let mill roach go").
     const name = (itemDef(line.species)?.name ?? 'the fish').toLowerCase()
     showContextButton({ id: 'fish-keep', label: FISHING_VERBS.keep, art: line.species, icon: 'bag', size: 'big', order: 1, key: 'E', ariaLabel: `Keep ${name}`, press: () => void this.settle(true) })
-    showContextButton({ id: 'fish-release', label: FISHING_VERBS.release, icon: 'heart', size: 'big', order: 2, ariaLabel: `Let ${name} go`, press: () => void this.settle(false) })
+    showContextButton({ id: 'fish-release', label: FISHING_VERBS.release, icon: 'heart', size: 'big', order: 2, key: LET_GO_KEY, ariaLabel: `Let ${name} go`, press: () => void this.settle(false) })
   }
 
   /** Keep it (into the pack, the rod wears by one) or let it go (back in the pond, nothing paid). */

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { companionName, followerKey, groupBySpecies, matchesSearch, speciesOf } from '../src/lib/companions.ts';
+import { NO_PET, companionName, followerKey, groupBySpecies, matchesSearch, speciesOf } from '../src/lib/companions.ts';
 
 test('companions: Habitica keys read as names, potion first', () => {
   assert.equal(companionName('Fox-Golden'), 'Golden Fox');
@@ -31,4 +31,10 @@ test('companions: the follower is the chosen pet, else Habitica\'s current one, 
   assert.equal(followerKey({ selectedPet: 'Wolf-Base' }, null), 'Wolf-Base');
   assert.equal(followerKey({ selectedPet: null }, null), null);
   assert.equal(followerKey(null, undefined), null);
+});
+
+test('companions: No pet is its own choice, never Habitica\'s current pet', () => {
+  assert.equal(NO_PET, 'none');
+  assert.equal(followerKey({ selectedPet: 'Wolf-Base' }, { followPet: NO_PET }), null);
+  assert.equal(followerKey({ selectedPet: null }, { followPet: NO_PET }), null);
 });

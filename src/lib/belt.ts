@@ -17,6 +17,32 @@ export type BeltKind = 'weapon' | 'chop' | 'break' | 'dig' | 'fish' | 'draw' | '
 /** Belt order (and keys 1, 2, … follow it, over the kinds you carry). */
 export const BELT_ORDER: readonly BeltKind[] = ['weapon', 'chop', 'break', 'dig', 'fish', 'draw', 'water', 'trim', 'mark'];
 
+/**
+ * What a press or a click does with each kind in hand when there's nothing
+ * for it to work on (the owner's playtest: "you probably couldn't attack with
+ * a fishing rod"). The weapon strikes; the sturdy tools (axe, pick, spade)
+ * swing, a duller arc at half the damage, enough to fend off a wisp; the rest
+ * (rod, bucket, can, pole, punch) don't swing at all.
+ */
+export const SWING: Readonly<Record<BeltKind, 'weapon' | 'tool' | null>> = {
+  weapon: 'weapon',
+  chop: 'tool',
+  break: 'tool',
+  dig: 'tool',
+  fish: null,
+  draw: null,
+  water: null,
+  trim: null,
+  mark: null
+};
+
+/** The hero's thought when a tool that doesn't swing is pressed at nothing ("You can’t fight with a willow rod."). */
+export function noSwingThought(toolName: string | null | undefined): string {
+  const name = toolName?.trim().toLowerCase();
+  if (!name) return 'That’s no thing to fight with.';
+  return `You can’t fight with ${/^[aeiou]/.test(name) ? 'an' : 'a'} ${name}.`;
+}
+
 export interface BeltSlot {
   kind: BeltKind;
   /** The carried tool in this slot (null for the weapon). */

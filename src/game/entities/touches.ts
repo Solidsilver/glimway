@@ -12,13 +12,14 @@
  */
 import { FLOWER_LINES, SIT_LINES, nextLine, signCopy } from '../../content/touches'
 import { bus, EV } from '../events'
-import { TERRAIN, TILE, tileBottom, tileMid } from '../../lib/tile'
+import { TERRAIN, tileBottom, tileMid } from '../../lib/tile'
 import { sfx } from '../sfx'
 import type { InteractId, PropSpot, WorldData } from '../worlds'
 import type { Interactable, Interactables } from './interactables'
 import type { Hero } from './hero'
 import type { Effects } from './fx'
 import { benchSeat } from '../seats'
+import { gateSignAt } from '../area/exits'
 import { openDialogue } from '../dialogue'
 
 /** A touchable spot: what it is, where, and (for signs) what it says. */
@@ -122,13 +123,13 @@ export class Touches {
         )
       }
     }
-    // Exit signs, just inside the map edge so reading them doesn't walk you out
-    // (a room's doorway and stairs have no sign to read).
+    // Exit signs: the post each named edge exit's label stands on (../area/exits.ts),
+    // inside the map edge so reading one doesn't walk you out (a room's doorway
+    // and stairs have no sign to read).
     for (const e of w.exits) {
-      if (e.label === null || (e.kind && e.kind !== 'edge')) continue
-      const eastWest = e.tw === 1 && e.th > 1
-      const x = eastWest ? (e.tx === 0 ? (e.tx + 1) * TILE - 4 : e.tx * TILE + 4) : (e.tx + e.tw / 2) * TILE
-      const y = eastWest ? (e.ty + e.th / 2) * TILE : e.ty === 0 ? tileBottom(e.ty) - 4 : e.ty * TILE + 4
+      const at = gateSignAt(w, e)
+      if (!at) continue
+      const { x, y } = at
       this.add(`touch:sign:gate:${e.tx},${e.ty}` as InteractId, x, y, 'Read the sign', {
         kind: 'sign',
         x,

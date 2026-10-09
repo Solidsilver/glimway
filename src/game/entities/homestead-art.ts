@@ -406,7 +406,7 @@ export class HomesteadArt {
       const by = oy + (it.y + fh) * TILE
       if (it.itemDef === HOMESTEAD_DATA.stable.item) {
         // The stable draws its bays and the mounts stalled in them (./homestead-stable.ts).
-        drawStable(this.scene, bx, by, it.stalls ?? 1, home.stalls, { depth: by, desolate }, (o) => this.add(d, o), () => !this.home.gone && d.objects.length > 0)
+        drawStable(this.scene, bx, by, it.stalls ?? 1, this.home.stallsHere(), { depth: by, desolate }, (o) => this.add(d, o), () => !this.home.gone && d.objects.length > 0)
         this.addBody(d, bx + (fw * TILE) / 2, by - (fh * TILE) / 2 - 1, fw * TILE - 4, fh * TILE - 6)
         continue
       }
