@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
 	"net/http"
 	"strconv"
@@ -142,32 +143,19 @@ func (a *Server) shelfRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finishRead(w, r, tx, s, struct {
-		Shelf shelfView `json:"shelf"`
-	}{view})
-}
-
-type shelfRequest struct {
-	Mutation
-	Action string         `json:"action"`
-	Gate   int            `json:"gate"`
-	Slot   int            `json:"slot"`
-	Asset  *content.Asset `json:"asset,omitempty"`
-}
-
-type shelfActionResponse struct {
-	Shelf     shelfView      `json:"shelf"`
-	Inventory assetCounts    `json:"inventory"`
-	Taken     *content.Asset `json:"taken,omitempty"`
-	Line      string         `json:"line,omitempty"`
+	raw, err := protoResult(&contract.ShelfRead{Shelf: shelfViewProto(view)})
+	if err != nil {
+		return err
+	}
+	return a.finishRead(w, r, tx, s, raw)
 }
 
 func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
-	var req shelfRequest
-	if err := decode(w, r, &req); err != nil {
+	var req contract.ShelfRequest
+	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}
@@ -212,10 +200,10 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 			if req.Asset.Qty != 1 {
 				return nil, fail(400, "invalid-quantity")
 			}
-			if err = validAsset(*req.Asset); err != nil {
+			if err = validAsset(assetOf(req.Asset)); err != nil {
 				return nil, err
 			}
-			if !isGiveable(*req.Asset) {
+			if !isGiveable(assetOf(req.Asset)) {
 				return nil, fail(409, "not-giveable")
 			}
 			var occupied bool
@@ -226,7 +214,7 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 				return nil, fail(409, "slot-occupied")
 			}
 			to := holder{"shelf", "", homeID}
-			got, err := takeAsset(ctx, tx, s, *req.Asset, to, "shelf-stock", req.Op.Key, now)
+			got, err := takeAsset(ctx, tx, s, assetOf(req.Asset), to, "shelf-stock", req.Op.Key, now)
 			if err != nil {
 				return nil, err
 			}
@@ -243,13 +231,13 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 					}
 				}
 			}
-			if _, err = tx.ExecContext(ctx, "INSERT INTO gate_shelf_slots(homestead_id, slot, kind, item_def, qty, maker_id, instance_id, stocked_by, stocked_at) VALUES(?,?,?,?,?,?,?,?,?)", homeID, req.Slot, req.Asset.Kind, req.Asset.ID, req.Asset.Qty, makerID, instanceID, s.AccountID, now); err != nil {
+			if _, err = tx.ExecContext(ctx, "INSERT INTO gate_shelf_slots(homestead_id, slot, kind, item_def, qty, maker_id, instance_id, stocked_by, stocked_at) VALUES(?,?,?,?,?,?,?,?,?)", homeID, req.Slot, req.Asset.Kind, req.Asset.Id, int(req.Asset.Qty), makerID, instanceID, s.AccountID, now); err != nil {
 				return nil, err
 			}
-			if err = currency(ctx, tx, s.AccountID, "shelf:"+req.Asset.Kind+":"+req.Asset.ID, req.Asset.Qty, "shelf-stock", req.Op.Key, now); err != nil {
+			if err = currency(ctx, tx, s.AccountID, "shelf:"+req.Asset.Kind+":"+req.Asset.Id, int(req.Asset.Qty), "shelf-stock", req.Op.Key, now); err != nil {
 				return nil, err
 			}
-			shelf, err := loadShelfView(ctx, tx, *s, homeID, req.Gate, now)
+			shelf, err := loadShelfView(ctx, tx, *s, homeID, int(req.Gate), now)
 			if err != nil {
 				return nil, err
 			}
@@ -257,7 +245,8 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 			if err != nil {
 				return nil, err
 			}
-			return shelfActionResponse{Shelf: shelf, Inventory: inv}, nil
+			result := &contract.ShelfResult{Shelf: shelfViewProto(shelf), Inventory: countsProto(inv)}
+			return protoResult(result)
 
 		case "take":
 			day := utcDay(now)
@@ -291,7 +280,7 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 				}
 			}
 			takeQty := 1
-			takenAsset := content.Asset{Kind: slotKind, ID: itemDef, Qty: takeQty}
+			takenAsset := &content.Asset{Kind: slotKind, Id: itemDef, Qty: int32(takeQty)}
 			got := moved{Makers: []makerQty{}, IDs: []string{}}
 			if instanceID.Valid {
 				got.IDs = []string{instanceID.String}
@@ -306,7 +295,7 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 			if err = currency(ctx, tx, s.AccountID, "shelf:"+slotKind+":"+itemDef, -takeQty, "shelf-take", req.Op.Key, now); err != nil {
 				return nil, err
 			}
-			shelf, err := loadShelfView(ctx, tx, *s, homeID, req.Gate, now)
+			shelf, err := loadShelfView(ctx, tx, *s, homeID, int(req.Gate), now)
 			if err != nil {
 				return nil, err
 			}
@@ -322,14 +311,9 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 			}
 			line := fmt.Sprintf("You took %s from %s’s shelf.", giftPhrase(itemDisplayName, 1), shelf.OwnerName)
 			if shelf.OwnerName == "" {
-				line = fmt.Sprintf("You took %s from Lot %d’s shelf.", giftPhrase(itemDisplayName, 1), req.Gate+1)
+				line = fmt.Sprintf("You took %s from Lot %d’s shelf.", giftPhrase(itemDisplayName, 1), int(req.Gate)+1)
 			}
-			return shelfActionResponse{
-				Shelf:     shelf,
-				Inventory: inv,
-				Taken:     &takenAsset,
-				Line:      line,
-			}, nil
+			return protoResult(&contract.ShelfResult{Shelf: shelfViewProto(shelf), Inventory: countsProto(inv), Taken: assetProto(takenAsset), Line: line})
 
 		default:
 			return nil, fail(400, "invalid-operation")

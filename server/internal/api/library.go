@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"net/http"
@@ -14,11 +15,7 @@ import (
 
 // The Hearthwick Library has one shared donation shelf per world. Donations
 // are keyed play operations; the first donor keeps the credit.
-type shelfEntry struct {
-	PaperID   string `json:"paperId"`
-	DonatedBy string `json:"donatedBy"`
-	DonatedAt string `json:"donatedAt"`
-}
+type shelfEntry = contract.LibraryEntry
 
 // donorNameCap matches the client's own trim of a display name.
 const donorNameCap = 60
@@ -34,10 +31,10 @@ func capDonor(name string) string {
 	return string(r)
 }
 
-func scanShelfEntry(rows *sql.Rows) (shelfEntry, error) {
-	var e shelfEntry
+func scanShelfEntry(rows *sql.Rows) (*shelfEntry, error) {
+	e := &shelfEntry{}
 	var at int64
-	if err := rows.Scan(&e.PaperID, &e.DonatedBy, &at); err != nil {
+	if err := rows.Scan(&e.PaperId, &e.DonatedBy, &at); err != nil {
 		return e, err
 	}
 	e.DonatedBy = capDonor(e.DonatedBy)
@@ -47,13 +44,13 @@ func scanShelfEntry(rows *sql.Rows) (shelfEntry, error) {
 
 // worldShelf reads a world's donations, oldest first, credited with the
 // donor's current display name, capped.
-func worldShelf(ctx context.Context, tx *sql.Tx, world string) ([]shelfEntry, error) {
+func worldShelf(ctx context.Context, tx *sql.Tx, world string) ([]*shelfEntry, error) {
 	rows, err := tx.QueryContext(ctx, "SELECT s.paper_id,p.display_name,s.donated_at FROM library_shelves s JOIN players p ON p.account_id=s.donor_id WHERE s.world_id=? ORDER BY s.donated_at,s.paper_id", world)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	shelves := []shelfEntry{}
+	shelves := []*shelfEntry{}
 	for rows.Next() {
 		e, err := scanShelfEntry(rows)
 		if err != nil {
@@ -65,14 +62,14 @@ func worldShelf(ctx context.Context, tx *sql.Tx, world string) ([]shelfEntry, er
 }
 
 // shelvedEntry reads the one donation of a paper in a world (the winner's).
-func shelvedEntry(ctx context.Context, tx *sql.Tx, world, paperID string) (shelfEntry, error) {
+func shelvedEntry(ctx context.Context, tx *sql.Tx, world, paperID string) (*shelfEntry, error) {
 	rows, err := tx.QueryContext(ctx, "SELECT s.paper_id,p.display_name,s.donated_at FROM library_shelves s JOIN players p ON p.account_id=s.donor_id WHERE s.world_id=? AND s.paper_id=?", world, paperID)
 	if err != nil {
-		return shelfEntry{}, err
+		return nil, err
 	}
 	defer rows.Close()
 	if !rows.Next() {
-		return shelfEntry{}, rows.Err()
+		return nil, rows.Err()
 	}
 	return scanShelfEntry(rows)
 }
@@ -87,21 +84,16 @@ func (a *Server) libraryRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finishRead(w, r, tx, s, struct {
-		Shelves []shelfEntry `json:"shelves"`
-	}{shelves})
+	return a.finishRead(w, r, tx, s, &contract.LibraryReadResult{Shelves: shelves})
 }
 
 func (a *Server) libraryDonate(w http.ResponseWriter, r *http.Request) error {
-	var req struct {
-		Mutation
-		PaperID string `json:"paperId"`
-	}
-	if err := decode(w, r, &req); err != nil {
+	var req contract.LibraryDonateRequest
+	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		paper, known := content.PapersByID[req.PaperID]
+	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+		paper, known := content.PapersByID[req.PaperId]
 		if !known {
 			return nil, fail(422, "unknown-paper")
 		}
@@ -111,10 +103,10 @@ func (a *Server) libraryDonate(w http.ResponseWriter, r *http.Request) error {
 		if s.State.Area != "in:village:library" || !personHere("elara", s.State.Area, now) {
 			return nil, fail(409, "not-here")
 		}
-		if !slices.Contains(s.State.Flags, "paper:"+req.PaperID) {
+		if !slices.Contains(s.State.Flags, "paper:"+req.PaperId) {
 			return nil, fail(403, "not-held")
 		}
-		res, err := tx.ExecContext(ctx, "INSERT OR IGNORE INTO library_shelves(world_id,paper_id,donor_id,donated_at) VALUES(?,?,?,?)", s.WorldID, req.PaperID, s.AccountID, now)
+		res, err := tx.ExecContext(ctx, "INSERT OR IGNORE INTO library_shelves(world_id,paper_id,donor_id,donated_at) VALUES(?,?,?,?)", s.WorldID, req.PaperId, s.AccountID, now)
 		if err != nil {
 			return nil, err
 		}
@@ -125,13 +117,11 @@ func (a *Server) libraryDonate(w http.ResponseWriter, r *http.Request) error {
 		if won != 1 {
 			return nil, fail(409, "already-shelved")
 		}
-		entry, err := shelvedEntry(ctx, tx, s.WorldID, req.PaperID)
+		entry, err := shelvedEntry(ctx, tx, s.WorldID, req.PaperId)
 		if err != nil {
 			return nil, err
 		}
-		s.State.Flags = rules.AddUnique(s.State.Flags, "donated:"+req.PaperID+"@"+time.Unix(now, 0).UTC().Format("2006-01-02"))
-		return struct {
-			Entry shelfEntry `json:"entry"`
-		}{entry}, nil
+		s.State.Flags = rules.AddUnique(s.State.Flags, "donated:"+req.PaperId+"@"+time.Unix(now, 0).UTC().Format("2006-01-02"))
+		return &contract.LibraryDonateResult{Entry: entry}, nil
 	})
 }

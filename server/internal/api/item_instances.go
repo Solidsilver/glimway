@@ -101,12 +101,12 @@ func fittingRows(ctx context.Context, tx *sql.Tx, tool string) ([]instanceRow, e
 }
 
 // newInstance makes one instance at a place; condition < 0 means full.
-func newInstance(ctx context.Context, tx *sql.Tx, def content.ItemDef, at instanceAt, maker string, condition int, now int64) (string, error) {
+func newInstance(ctx context.Context, tx *sql.Tx, def *content.ItemDef, at instanceAt, maker string, condition int, now int64) (string, error) {
 	id, err := store.Random()
 	if err != nil {
 		return "", err
 	}
-	full := def.MaxPoints()
+	full := content.ItemMaxPoints(def)
 	if condition < 0 || condition > full {
 		condition = full
 	}
@@ -114,7 +114,7 @@ func newInstance(ctx context.Context, tx *sql.Tx, def content.ItemDef, at instan
 	if at.location == "storage" {
 		rackedAt = now
 	}
-	_, err = tx.ExecContext(ctx, "INSERT INTO item_instances(id,item_def,location,owner,condition,max_condition,maker_id,worn_day,worn_at,racked_at,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)", id, def.ID, at.location, at.owner, condition, full, maker, 0, now, rackedAt, now)
+	_, err = tx.ExecContext(ctx, "INSERT INTO item_instances(id,item_def,location,owner,condition,max_condition,maker_id,worn_day,worn_at,racked_at,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?)", id, def.GetId(), at.location, at.owner, condition, full, maker, 0, now, rackedAt, now)
 	return id, err
 }
 

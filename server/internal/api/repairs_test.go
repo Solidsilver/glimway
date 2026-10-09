@@ -89,7 +89,7 @@ func TestRepairsScriptedProgressionAndMending(t *testing.T) {
 	if mended.Result.Reaction != "Bread tastes of the well again." {
 		t.Fatalf("unexpected reaction: %s", mended.Result.Reaction)
 	}
-	if mended.Result.Gift == nil || mended.Result.Gift.ID != "keepers-twists" || mended.Result.Gift.Qty != 1 {
+	if mended.Result.Gift == nil || mended.Result.Gift.GetId() != "keepers-twists" || mended.Result.Gift.GetQty() != 1 {
 		t.Fatalf("unexpected gift: %+v", mended.Result.Gift)
 	}
 	// Gift placed into pack: check conservation
@@ -208,8 +208,8 @@ func TestReturningKeepsakes(t *testing.T) {
 	x.conserved(x.account("alice"))
 	hazelDoc := s.State
 	hazel, _ := content.ResidentAt("hazel", float64(x.now.Load()))
-	hazelDoc.Area = hazel.Area
-	hazelDoc.Position = rules.Position{X: float64(hazel.TX*16 + 8), Y: float64(hazel.TY*16 + 8)}
+	hazelDoc.Area = hazel.GetArea()
+	hazelDoc.Position = rules.Position{X: float64(hazel.GetTx()*16 + 8), Y: float64(hazel.GetTy()*16 + 8)}
 
 	retHazel := x.opRefreshing(c, &s, "return", map[string]any{"itemDef": "tin-whistle", "target": "hazel", "progress": hazelDoc}, 200)
 	if retHazel.Result.Returned != "tin-whistle" || retHazel.Result.Paper == nil || *retHazel.Result.Paper != "keepers-twists-recipe-card" {
@@ -340,19 +340,19 @@ func TestRepairsWeatherCyclesThroughEverything(t *testing.T) {
 	c, s := x.ready("alice")
 
 	// The scripted two, mended.
-	byID := map[string]content.RepairDef{}
+	byID := map[string]*content.RepairDef{}
 	for _, def := range content.RepairRules.Repairs {
-		byID[def.ID] = def
+		byID[def.GetId()] = def
 	}
 	doc := func(id string, st *response) map[string]any {
 		def := byID[id]
 		d := st.State
-		d.Area = def.Area
-		d.Position = rules.Position{X: float64(def.Pos.TX*16 + 8), Y: float64(def.Pos.TY*16 + 8)}
+		d.Area = def.GetArea()
+		d.Position = rules.Position{X: float64(int(def.GetPos().GetTx())*16 + 8), Y: float64(int(def.GetPos().GetTy())*16 + 8)}
 		return map[string]any{"progress": d}
 	}
 	for _, id := range content.RepairRules.Rules.Scripted {
-		x.stack(x.account("alice"), byID[id].Part, "", 1)
+		x.stack(x.account("alice"), byID[id].GetPart(), "", 1)
 		x.mendRefreshing(c, &s, id, doc(id, &s), 200)
 	}
 

@@ -1,9 +1,25 @@
 package content
 
 import (
-	"encoding/json"
 	"testing"
+
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
+
+// decodeSpliced re-marshals a spliced homestead with protojson and decodes
+// it the way the loader does (schema rules included). resolveHomeGoods runs
+// on the shipped file's already-resolved rows, so a spliced row's name and
+// footprint are the catalogue's own and pass the agreement checks.
+func decodeSplicedHomestead(t *testing.T, h *Homestead) error {
+	t.Helper()
+	raw, err := protojson.Marshal(h)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = DecodeHomestead(raw)
+	return err
+}
 
 func TestHomesteadContent(t *testing.T) {
 	h, err := LoadHomestead()
@@ -11,22 +27,22 @@ func TestHomesteadContent(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := []string{"Campsite", "Cottage", "Workshop", "Garden", "Hall"}
-	for i, tier := range h.Tiers {
-		if tier.Name != want[i] {
+	for i, tier := range h.GetTiers() {
+		if tier.GetName() != want[i] {
 			t.Fatal("tier identity")
 		}
 	}
-	if h.Tiers[1].Embers != 15 || len(h.Items) != 31 {
+	if h.GetTiers()[1].GetEmbers() != 15 || len(h.GetItems()) != 31 {
 		t.Fatal("starting content")
 	}
-	for _, v := range h.Items {
-		if v.ID == h.LanternPosts.Item {
+	for _, v := range h.GetItems() {
+		if v.GetId() == h.GetLanternPosts().GetItem() {
 			continue
 		}
-		if v.Embers > 0 && (v.Embers < 2 || v.Embers > 6) {
+		if v.GetEmbers() > 0 && (v.GetEmbers() < 2 || v.GetEmbers() > 6) {
 			t.Fatal("ember price")
 		}
-		for _, n := range v.Materials {
+		for _, n := range v.GetMaterials() {
 			if n < 4 || n > 10 {
 				t.Fatal("material price")
 			}
@@ -35,19 +51,17 @@ func TestHomesteadContent(t *testing.T) {
 }
 func TestHomesteadRejectsMalformed(t *testing.T) {
 	for name, mutate := range map[string]func(*Homestead){
-		"grid": func(h *Homestead) { h.Indoor.Width = 0 }, "duplicate": func(h *Homestead) { h.Items[1].ID = h.Items[0].ID }, "price": func(h *Homestead) { h.Items[0].Embers = -1 }, "mixed-price": func(h *Homestead) { h.Items[0].Materials = map[string]int{"stone": 1} }, "unknown-material": func(h *Homestead) { h.Items[8].Materials = map[string]int{"gold": 1} }, "zero-material": func(h *Homestead) { h.Items[8].Materials = map[string]int{"stone": 0} }, "footprint": func(h *Homestead) { h.Items[0].Footprint = []int{1, 1, 1} }, "location": func(h *Homestead) { h.Items[0].Where = []string{"attic"} }, "tier": func(h *Homestead) { h.Tiers[3].Purchasable = true }, "min-tier": func(h *Homestead) { h.Items[0].MinTier = 5 }, "category": func(h *Homestead) { h.Items[0].Category = "weapon" }, "layout": func(h *Homestead) { h.Lane.FenceX = nil }, "crowded-rows": func(h *Homestead) { h.Lane.GateRows = []int{4, 5} }, "short-pitch": func(h *Homestead) { h.Lane.RowPitch = 1 }, "no-spares": func(h *Homestead) { h.Lane.SpareGates = 0 }, "reserved": func(h *Homestead) { h.OutdoorReserved = []HomeRect{{X: 39, Y: 0, W: 2, H: 1}} },
-		"land-size": func(h *Homestead) { h.Land.Width = 4 }, "generator": func(h *Homestead) { h.Land.Generator = 2 }, "gate": func(h *Homestead) { h.Land.Gate.X = 39 }, "permille": func(h *Homestead) { h.Land.StreamPermille = 1001 },
-		"post-item": func(h *Homestead) { h.LanternPosts.Item = "nope" }, "post-cost": func(h *Homestead) { h.LanternPosts.Costs = nil }, "post-material": func(h *Homestead) { h.LanternPosts.Growth = map[string]int{"gold": 1} },
+		"grid": func(h *Homestead) { h.Indoor.Width = proto.Int32(0) }, "duplicate": func(h *Homestead) { h.Items[1].Id = h.Items[0].GetId() }, "price": func(h *Homestead) { h.Items[0].Embers = -1 }, "mixed-price": func(h *Homestead) { h.Items[0].Materials = map[string]int32{"stone": 1} }, "unknown-material": func(h *Homestead) { h.Items[8].Materials = map[string]int32{"gold": 1} }, "zero-material": func(h *Homestead) { h.Items[8].Materials = map[string]int32{"stone": 0} }, "footprint": func(h *Homestead) { h.Items[0].Footprint = []int32{1, 1, 1} }, "location": func(h *Homestead) { h.Items[0].Where = []string{"attic"} }, "tier": func(h *Homestead) { h.Tiers[3].Purchasable = true }, "min-tier": func(h *Homestead) { h.Items[0].MinTier = 5 }, "category": func(h *Homestead) { h.Items[0].Category = "weapon" }, "layout": func(h *Homestead) { h.Commons.FenceX = nil }, "crowded-rows": func(h *Homestead) { h.Commons.GateRows = []int32{4, 5} }, "short-pitch": func(h *Homestead) { h.Commons.RowPitch = 1 }, "no-spares": func(h *Homestead) { h.Commons.SpareGates = 0 }, "reserved": func(h *Homestead) {
+			h.OutdoorReserved = []*HomeRect{{X: proto.Int32(39), Y: proto.Int32(0), W: proto.Int32(2), H: proto.Int32(1)}}
+		},
+		"land-size": func(h *Homestead) { h.Land.Width = 4 }, "generator": func(h *Homestead) { h.Land.Generator = 2 }, "gate": func(h *Homestead) { h.Land.Gate.X = proto.Int32(39) }, "permille": func(h *Homestead) { h.Land.StreamPermille = 1001 },
+		"post-item": func(h *Homestead) { h.LanternPosts.Item = "nope" }, "post-cost": func(h *Homestead) { h.LanternPosts.Costs = nil }, "post-material": func(h *Homestead) { h.LanternPosts.Growth = map[string]int32{"gold": 1} },
 		"deed": func(h *Homestead) { h.Deeds.Embers = 0 }, "desolation": func(h *Homestead) { h.Desolation.DeedLostAfterDays = h.Desolation.DesolateAfterDays }, "window": func(h *Homestead) { h.JointDeed.ConfirmWindowSeconds = 0 }, "chest": func(h *Homestead) { h.PersonalChest.MaxUnits = 0 },
 	} {
 		t.Run(name, func(t *testing.T) {
-			var h Homestead
-			b, _ := json.Marshal(HomeRules)
-			if err := json.Unmarshal(b, &h); err != nil {
-				t.Fatal(err)
-			}
-			mutate(&h)
-			if ValidateHomestead(h) == nil {
+			h := proto.Clone(HomeRules).(*Homestead)
+			mutate(h)
+			if err := decodeSplicedHomestead(t, h); err == nil {
 				t.Fatal("accepted invalid content")
 			}
 		})
@@ -59,12 +73,16 @@ func TestPostCostGrows(t *testing.T) {
 	prev := 0
 	for n := 0; n < 6; n++ {
 		total := 0
-		for _, v := range h.PostCost(n) {
-			total += v
+		for _, v := range HomePostCost(h, n) {
+			total += int(v)
 		}
 		if total <= prev {
 			t.Fatalf("post %d costs %d, not more than %d", n, total, prev)
 		}
 		prev = total
 	}
+}
+
+func TestHomesteadLoaderVectors(t *testing.T) {
+	runLoaderVectors(t, "homestead", "homestead-loader", func(raw []byte) (any, error) { return DecodeHomestead(raw) })
 }

@@ -27,13 +27,13 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-func regionDefinition(id string) (content.WildsRegion, bool) {
+func regionDefinition(id string) (*content.WildsRegion, bool) {
 	for _, r := range content.WildsRules.Regions {
-		if r.ID == id {
+		if r.GetId() == id {
 			return r, true
 		}
 	}
-	return content.WildsRegion{}, false
+	return nil, false
 }
 
 // wildsArea is the `where` area of a region: "wilds:<region>".
@@ -92,9 +92,9 @@ func (a *Server) regionChunks(ctx context.Context, tx *sql.Tx, world string, e *
 	if !ok {
 		return nil, sql.ErrNoRows
 	}
-	out := make([]*contract.WildsChunk, 0, r.GridWidth*r.GridHeight)
-	for cy := 0; cy < r.GridHeight; cy++ {
-		for cx := 0; cx < r.GridWidth; cx++ {
+	out := make([]*contract.WildsChunk, 0, int(r.GetGridWidth())*int(r.GetGridHeight()))
+	for cy := 0; cy < int(r.GetGridHeight()); cy++ {
+		for cx := 0; cx < int(r.GetGridWidth()); cx++ {
 			m, err := a.Config.Chunks.Chunk(ctx, tx, world, e.Id, 0, int32(cx), int32(cy))
 			if err != nil {
 				return nil, err
@@ -370,7 +370,7 @@ func nearWilds(s store.Snapshot, region string, x, y int) error {
 	}
 	px, py := math.Floor(s.State.Position.X/wildsTileSize), math.Floor(s.State.Position.Y/wildsTileSize)
 	dx, dy := px-float64(x), py-float64(y)
-	if px < 0 || py < 0 || px >= float64(r.GridWidth*content.WildsRules.ChunkSize) || py >= float64(r.GridHeight*content.WildsRules.ChunkSize) || dx*dx+dy*dy > wildsInteractionRadius*wildsInteractionRadius {
+	if px < 0 || py < 0 || px >= float64(int(r.GetGridWidth())*int(content.WildsRules.GetChunkSize())) || py >= float64(int(r.GetGridHeight())*int(content.WildsRules.GetChunkSize())) || dx*dx+dy*dy > wildsInteractionRadius*wildsInteractionRadius {
 		return fail(409, "too-far-away")
 	}
 	return nil
@@ -441,7 +441,7 @@ func claimRate(ctx context.Context, tx *sql.Tx, id string, now int64) error {
 		_, err = tx.ExecContext(ctx, "INSERT INTO claim_rate VALUES(?,?,1) ON CONFLICT(account_id) DO UPDATE SET window_at=excluded.window_at,qty=1", id, now)
 		return err
 	}
-	if n >= content.Rules.WildsLimits.ClaimsPerMinute {
+	if n >= int(content.Rules.GetWildsLimits().GetClaimsPerMinute()) {
 		return fail(429, "claim-rate-limited")
 	}
 	_, err = tx.ExecContext(ctx, "UPDATE claim_rate SET qty=qty+1 WHERE account_id=?", id)
@@ -450,14 +450,14 @@ func claimRate(ctx context.Context, tx *sql.Tx, id string, now int64) error {
 
 // entityChunk: the chunk an entity id names (`kind:cx:cy:index`), if inside
 // the region's grid.
-func entityChunk(id string, region content.WildsRegion) (cx, cy int, ok bool) {
+func entityChunk(id string, region *content.WildsRegion) (cx, cy int, ok bool) {
 	parts := strings.Split(id, ":")
 	if len(parts) != 4 || len(id) > 128 {
 		return 0, 0, false
 	}
 	cx, e1 := strconv.Atoi(parts[1])
 	cy, e2 := strconv.Atoi(parts[2])
-	if e1 != nil || e2 != nil || cx < 0 || cy < 0 || cx >= region.GridWidth || cy >= region.GridHeight {
+	if e1 != nil || e2 != nil || cx < 0 || cy < 0 || cx >= int(region.GetGridWidth()) || cy >= int(region.GetGridHeight()) {
 		return 0, 0, false
 	}
 	return cx, cy, true
@@ -513,7 +513,7 @@ func (a *Server) wildsClaim(w http.ResponseWriter, r *http.Request) error {
 			return nil, fail(404, "entity-not-found")
 		}
 		entity := wilds.EntityFromProto(pe)
-		S := content.WildsRules.ChunkSize
+		S := int(content.WildsRules.GetChunkSize())
 		if err = nearWilds(*s, e.RegionId, cx*S+entity.TX, cy*S+entity.TY); err != nil {
 			return nil, err
 		}
@@ -633,10 +633,10 @@ func (a *Server) wildsRelight(w http.ResponseWriter, r *http.Request) error {
 			if err != nil && err != sql.ErrNoRows {
 				return nil, err
 			}
-			if n < content.Rules.WildsLimits.LanternRelightsPerDay {
+			if n < int(content.Rules.GetWildsLimits().GetLanternRelightsPerDay()) {
 				rewarded = true
-				reward := content.Rules.WildsLimits.LanternReward
-				loot.Materials = append(loot.Materials, wilds.MaterialQty{ID: reward.Material, Qty: reward.Qty})
+				reward := content.Rules.GetWildsLimits().GetLanternReward()
+				loot.Materials = append(loot.Materials, wilds.MaterialQty{ID: reward.Material, Qty: int(reward.GetQty())})
 				if _, err = tx.ExecContext(ctx, "INSERT INTO lantern_rewards VALUES(?,?,1) ON CONFLICT(account_id,utc_day) DO UPDATE SET qty=qty+1", s.AccountID, day); err != nil {
 					return nil, err
 				}
@@ -694,7 +694,7 @@ func (a *Server) settleEcho(w http.ResponseWriter, r *http.Request) error {
 				}
 			}
 		}
-		S := content.WildsRules.ChunkSize
+		S := int(content.WildsRules.GetChunkSize())
 		if here == nil || nearWilds(*s, e.RegionId, int(here.CX)*S+int(here.Site.Tx), int(here.CY)*S+int(here.Site.Ty)) != nil {
 			return nil, fail(409, "echo-not-here")
 		}
@@ -758,15 +758,15 @@ func (w wildsService) PlaceFallen(ctx context.Context, tx *sql.Tx, s *store.Snap
 	if epoch == nil || epoch.Id == "" {
 		return none("epoch-missing")
 	}
-	if epoch.RegionId != region.ID {
+	if epoch.RegionId != region.GetId() {
 		return none("invalid-place")
 	}
-	S := content.WildsRules.ChunkSize
+	S := int(content.WildsRules.GetChunkSize())
 	if !finiteWhere(where) || where.X < 0 || where.Y < 0 {
 		return none("invalid-place")
 	}
 	tx0, ty0 := int(where.X/wildsTileSize), int(where.Y/wildsTileSize)
-	if tx0 >= region.GridWidth*S || ty0 >= region.GridHeight*S {
+	if tx0 >= int(region.GetGridWidth())*S || ty0 >= int(region.GetGridHeight())*S {
 		return none("invalid-place")
 	}
 	m, err := w.a.Config.Chunks.Chunk(ctx, tx, s.WorldID, epoch.Id, 0, int32(tx0/S), int32(ty0/S))
@@ -785,7 +785,7 @@ func (w wildsService) PlaceFallen(ctx context.Context, tx *sql.Tx, s *store.Snap
 	if err != nil && err != sql.ErrNoRows {
 		return ports.FallLantern{}, err
 	}
-	if n >= content.Rules.WildsLimits.LanternsCreatedPerDay {
+	if n >= int(content.Rules.GetWildsLimits().GetLanternsCreatedPerDay()) {
 		return none("daily-cap")
 	}
 	if _, err = tx.ExecContext(ctx, "INSERT INTO lantern_creations VALUES(?,?,1) ON CONFLICT(account_id,utc_day) DO UPDATE SET qty=qty+1", s.AccountID, day); err != nil {
@@ -795,7 +795,7 @@ func (w wildsService) PlaceFallen(ctx context.Context, tx *sql.Tx, s *store.Snap
 	if err != nil {
 		return ports.FallLantern{}, err
 	}
-	_, err = tx.ExecContext(ctx, `INSERT INTO lanterns(id,epoch,world_id,region_id,owner_id,x,y,at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(world_id,region_id,owner_id) DO UPDATE SET id=excluded.id,epoch=excluded.epoch,x=excluded.x,y=excluded.y,lit_by=NULL,lit_at=NULL,at=excluded.at`, id, epoch.Id, s.WorldID, region.ID, s.AccountID, tx0, ty0, now)
+	_, err = tx.ExecContext(ctx, `INSERT INTO lanterns(id,epoch,world_id,region_id,owner_id,x,y,at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(world_id,region_id,owner_id) DO UPDATE SET id=excluded.id,epoch=excluded.epoch,x=excluded.x,y=excluded.y,lit_by=NULL,lit_at=NULL,at=excluded.at`, id, epoch.Id, s.WorldID, region.GetId(), s.AccountID, tx0, ty0, now)
 	if err != nil {
 		return ports.FallLantern{}, err
 	}
@@ -818,7 +818,7 @@ func grantLoot(ctx context.Context, tx *sql.Tx, s *store.Snapshot, loot wilds.Lo
 		// A story keepsake is a single, real thing: the Wilds give a bound
 		// keepsake to a player once, and never repeat it (the roll may name
 		// it again, but nothing is granted). Unbound trinkets repeat.
-		if def, ok := content.ItemFor(*loot.Trinket); ok && def.Kind == "keepsake" && def.Bound {
+		if def, ok := content.ItemFor(*loot.Trinket); ok && def.GetKind() == "keepsake" && def.GetBound() {
 			first, err := store.Outcome(ctx, tx, s.AccountID, "story-keepsake:"+*loot.Trinket, reason, now)
 			if err != nil {
 				return err
@@ -866,11 +866,11 @@ func deepCountry(regionID string, cx, cy int) bool {
 	if regionID == whitequietRegion {
 		return true
 	}
-	r, ok := regionDefinition(regionID)
-	if !ok {
-		r.EntryX, r.EntryY = 1, 1
+	entryX, entryY := 1, 1
+	if r, ok := regionDefinition(regionID); ok {
+		entryX, entryY = int(r.GetEntryX()), int(r.GetEntryY())
 	}
-	return regionID == tangleRegion && intAbs(cx-r.EntryX)+intAbs(cy-r.EntryY) >= content.WildsRules.DeepTangleManhattanDistance
+	return regionID == tangleRegion && intAbs(cx-entryX)+intAbs(cy-entryY) >= int(content.WildsRules.GetDeepTangleManhattanDistance())
 }
 
 // weeklyFind rolls one rare find on a deep-country claim: a thin chance (a
@@ -908,7 +908,7 @@ func maybeGrantWardenSliver(ctx context.Context, tx *sql.Tx, s *store.Snapshot, 
 	if !ok {
 		return false, nil
 	}
-	if _, err = newInstance(ctx, tx, sliverDef, instanceAt{"pack", s.AccountID}, "", sliverDef.MaxPoints(), now); err != nil {
+	if _, err = newInstance(ctx, tx, sliverDef, instanceAt{"pack", s.AccountID}, "", content.ItemMaxPoints(sliverDef), now); err != nil {
 		return false, err
 	}
 	if err = currency(ctx, tx, s.AccountID, content.StackCurrency("warden-sliver"), 1, "wilds-find", entity.ID, now); err != nil {

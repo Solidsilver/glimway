@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
 	"net/http"
 )
@@ -71,29 +72,25 @@ func woodpilePlaced(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (string,
 // hearthCraft makes consumables, remedies, oils and wax seals at the
 // cottage hearth (membership in a tier 1+ homestead).
 func (a *Server) hearthCraft(w http.ResponseWriter, r *http.Request) error {
-	var req struct {
-		Mutation
-		RecipeID string `json:"recipeId"`
-		Qty      int    `json:"qty"`
-	}
-	if err := decode(w, r, &req); err != nil {
+	var req contract.HearthCraftRequest
+	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}
 		if _, err := cottageHearth(ctx, tx, s); err != nil {
 			return nil, err
 		}
-		recipe, ok := content.HearthRecipeFor(req.RecipeID)
+		recipe, ok := content.HearthRecipeFor(req.RecipeId)
 		if !ok {
 			return nil, fail(400, "invalid-recipe")
 		}
 		// A found recipe is only known once its page is held (the doc's
 		// "Recipe source" column; starting recipes need no page).
-		if recipe.Page != "" {
-			held, err := stackTotal(ctx, tx, packOf(s.AccountID), recipe.Page)
+		if recipe.GetPage() != "" {
+			held, err := stackTotal(ctx, tx, packOf(s.AccountID), recipe.GetPage())
 			if err != nil {
 				return nil, err
 			}
@@ -101,27 +98,27 @@ func (a *Server) hearthCraft(w http.ResponseWriter, r *http.Request) error {
 				return nil, fail(409, "recipe-unknown")
 			}
 		}
-		if req.Qty < 1 || req.Qty > 100 {
+		qty := int(req.Qty)
+		if qty < 1 || qty > 100 {
 			return nil, fail(400, "invalid-quantity")
 		}
 		// Bloom flowers in the pack dry once their wick has turned.
 		if err := dryFlowers(ctx, tx, s, now); err != nil {
 			return nil, err
 		}
-		if err := checkMaterialsAny(ctx, tx, s.AccountID, scaled(recipe.Materials, req.Qty), recipe.Swaps); err != nil {
+		if err := checkMaterialsAny(ctx, tx, s.AccountID, scaled32(recipe.GetMaterials(), int32(qty)), recipe.GetSwaps()); err != nil {
 			return nil, err
 		}
-		if err := debitMaterialsAny(ctx, tx, s, recipe.Materials, recipe.Swaps, req.Qty, "hearth", recipe.ID, now); err != nil {
+		if err := debitMaterialsAny(ctx, tx, s, recipe.GetMaterials(), recipe.GetSwaps(), qty, "hearth", recipe.GetId(), now); err != nil {
 			return nil, err
 		}
-		output := recipe.Output
-		output.Qty *= req.Qty
-		def, ok := content.ItemFor(output.ID)
+		output := outputOf(recipe, qty)
+		def, ok := content.ItemFor(output.GetId())
 		maker := ""
-		if ok && def.Marked {
+		if ok && def.GetMarked() {
 			maker = s.AccountID
 		}
-		if err := packPut(ctx, tx, s.AccountID, output.ID, []makerQty{{Maker: maker, Qty: output.Qty}}, "hearth", recipe.ID, now); err != nil {
+		if err := packPut(ctx, tx, s.AccountID, output.GetId(), []makerQty{{Maker: maker, Qty: int(output.GetQty())}}, "hearth", recipe.GetId(), now); err != nil {
 			return nil, err
 		}
 		if err := refreshItems(ctx, tx, s); err != nil {
@@ -131,56 +128,51 @@ func (a *Server) hearthCraft(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		return struct {
-			workshopView
-			RecipeID string        `json:"recipeId"`
-			Output   content.Asset `json:"output"`
-		}{v, recipe.ID, output}, nil
+		out := &contract.HearthCraftResult{RecipeId: recipe.GetId(), Output: assetProto(output)}
+		fillHearthWorkshop(out, v)
+		return out, nil
 	})
 }
 
 // deskCopy copies any recipe page the player holds using 1 fiber per copy,
 // bearing the player's maker's mark.
 func (a *Server) deskCopy(w http.ResponseWriter, r *http.Request) error {
-	var req struct {
-		Mutation
-		PageID string `json:"pageId"`
-		Qty    int    `json:"qty"`
-	}
-	if err := decode(w, r, &req); err != nil {
+	var req contract.DeskCopyRequest
+	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}
 		if _, err := writingDeskPlaced(ctx, tx, s); err != nil {
 			return nil, err
 		}
-		if req.Qty < 1 || req.Qty > 100 {
+		qty := int(req.Qty)
+		if qty < 1 || qty > 100 {
 			return nil, fail(400, "invalid-quantity")
 		}
-		def, ok := content.ItemFor(req.PageID)
+		def, ok := content.ItemFor(req.PageId)
 		if !ok || def.Kind != "paper" {
 			return nil, fail(400, "invalid-page")
 		}
-		held, err := stackTotal(ctx, tx, packOf(s.AccountID), req.PageID)
+		held, err := stackTotal(ctx, tx, packOf(s.AccountID), req.PageId)
 		if err != nil {
 			return nil, err
 		}
 		if held <= 0 {
 			return nil, fail(409, "page-not-held")
 		}
-		cost := map[string]int{"fiber": 1}
-		if err := checkMaterials(ctx, tx, s.AccountID, scaled(cost, req.Qty)); err != nil {
+		cost := map[string]int32{"fiber": 1}
+		if err := checkMaterials(ctx, tx, s.AccountID, scaled32(cost, int32(qty))); err != nil {
 			return nil, err
 		}
-		if err := debitMaterials(ctx, tx, s, cost, req.Qty, "desk", req.PageID, now); err != nil {
+		if err := debitMaterials(ctx, tx, s, cost, qty, "desk", req.PageId, now); err != nil {
 			return nil, err
 		}
 		// Maker's mark carries player's ID
 		maker := s.AccountID
-		if err := packPut(ctx, tx, s.AccountID, req.PageID, []makerQty{{Maker: maker, Qty: req.Qty}}, "desk", req.PageID, now); err != nil {
+		if err := packPut(ctx, tx, s.AccountID, req.PageId, []makerQty{{Maker: maker, Qty: qty}}, "desk", req.PageId, now); err != nil {
 			return nil, err
 		}
 		if err := refreshItems(ctx, tx, s); err != nil {
@@ -190,22 +182,10 @@ func (a *Server) deskCopy(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		return struct {
-			workshopView
-			PageID string `json:"pageId"`
-			Qty    int    `json:"qty"`
-		}{v, req.PageID, req.Qty}, nil
+		out := &contract.DeskCopyResult{PageId: req.PageId, Qty: req.Qty}
+		fillDeskWorkshop(out, v)
+		return out, nil
 	})
-}
-
-type woodpileStackView struct {
-	ID          string `json:"id"`
-	HomesteadID string `json:"homesteadId"`
-	AccountID   string `json:"accountId"`
-	Qty         int    `json:"qty"`
-	StackedAt   int64  `json:"stackedAt"`
-	Ready       bool   `json:"ready"`
-	Remaining   int64  `json:"remaining"`
 }
 
 // woodpileCurrency is the ledger currency for timber on a woodpile: +n on
@@ -214,16 +194,9 @@ type woodpileStackView struct {
 // chest's storage:<kind>:<id> currencies are.
 const woodpileCurrency = "woodpile:material:timber"
 
-type woodpileView struct {
-	HomesteadID string              `json:"homesteadId"`
-	Placed      bool                `json:"placed"`
-	Stacks      []woodpileStackView `json:"stacks"`
-	ReadyCount  int                 `json:"readyCount"`
-	TotalTimber int                 `json:"totalTimber"`
-}
-
-func readWoodpile(ctx context.Context, tx *sql.Tx, homeID string, now int64) (woodpileView, error) {
-	v := woodpileView{HomesteadID: homeID, Stacks: []woodpileStackView{}}
+// readWoodpile reads the pile as its contract message (contract.WoodpileView).
+func readWoodpile(ctx context.Context, tx *sql.Tx, homeID string, now int64) (*contract.WoodpileView, error) {
+	v := &contract.WoodpileView{HomesteadId: homeID}
 	var placed bool
 	if err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM homestead_items WHERE homestead_id=? AND item_def='woodpile' AND location='placed')", homeID).Scan(&placed); err != nil {
 		return v, err
@@ -235,21 +208,25 @@ func readWoodpile(ctx context.Context, tx *sql.Tx, homeID string, now int64) (wo
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var st woodpileStackView
-		if err := rows.Scan(&st.ID, &st.HomesteadID, &st.AccountID, &st.Qty, &st.StackedAt); err != nil {
+		var st contract.WoodpileStack
+		var qty int
+		var stackedAt int64
+		if err := rows.Scan(&st.Id, &st.HomesteadId, &st.AccountId, &qty, &stackedAt); err != nil {
 			return v, err
 		}
-		rem := int64(86400) - (now - st.StackedAt)
+		st.Qty = int32(qty)
+		st.StackedAt = float64(stackedAt)
+		rem := int64(86400) - (now - stackedAt)
 		if rem <= 0 {
 			st.Ready = true
 			st.Remaining = 0
 			v.ReadyCount += st.Qty
 		} else {
 			st.Ready = false
-			st.Remaining = rem
+			st.Remaining = float64(rem)
 		}
 		v.TotalTimber += st.Qty
-		v.Stacks = append(v.Stacks, st)
+		v.Stacks = append(v.Stacks, &st)
 	}
 	return v, rows.Err()
 }
@@ -275,22 +252,19 @@ func (a *Server) woodpileRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finishRead(w, r, tx, s, struct {
-		Woodpile woodpileView `json:"woodpile"`
-	}{wv})
+	raw, err := protoResult(&contract.WoodpileRead{Woodpile: wv})
+	if err != nil {
+		return err
+	}
+	return a.finishRead(w, r, tx, s, raw)
 }
 
 func (a *Server) woodpileMutation(w http.ResponseWriter, r *http.Request) error {
-	var req struct {
-		Mutation
-		Action  string `json:"action"` // "stack" or "collect"
-		Qty     int    `json:"qty,omitempty"`
-		StackID string `json:"stackId,omitempty"`
-	}
-	if err := decode(w, r, &req); err != nil {
+	var req contract.WoodpileRequest
+	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}
@@ -304,28 +278,28 @@ func (a *Server) woodpileMutation(w http.ResponseWriter, r *http.Request) error 
 			if req.Qty < 1 || req.Qty > 1000 {
 				return nil, fail(400, "invalid-quantity")
 			}
-			if err := checkMaterials(ctx, tx, s.AccountID, map[string]int{"timber": req.Qty}); err != nil {
+			if err := checkMaterials(ctx, tx, s.AccountID, map[string]int32{"timber": int32(req.Qty)}); err != nil {
 				return nil, err
 			}
-			if err := debitMaterials(ctx, tx, s, map[string]int{"timber": 1}, req.Qty, "woodpile:stack", homeID, now); err != nil {
+			if err := debitMaterials(ctx, tx, s, map[string]int32{"timber": 1}, int(req.Qty), "woodpile:stack", homeID, now); err != nil {
 				return nil, err
 			}
 			id, err := store.Random()
 			if err != nil {
 				return nil, err
 			}
-			if _, err := tx.ExecContext(ctx, "INSERT INTO woodpile_stacks(id, homestead_id, account_id, qty, stacked_at) VALUES(?, ?, ?, ?, ?)", id, homeID, s.AccountID, req.Qty, now); err != nil {
+			if _, err := tx.ExecContext(ctx, "INSERT INTO woodpile_stacks(id, homestead_id, account_id, qty, stacked_at) VALUES(?, ?, ?, ?, ?)", id, homeID, s.AccountID, int(req.Qty), now); err != nil {
 				return nil, err
 			}
 			// The pile's own currency, so the ledger can see the timber on
 			// it (as the shared chest's storage:<kind>:<id> does).
-			if err := currency(ctx, tx, s.AccountID, woodpileCurrency, req.Qty, "woodpile:stack", homeID, now); err != nil {
+			if err := currency(ctx, tx, s.AccountID, woodpileCurrency, int(req.Qty), "woodpile:stack", homeID, now); err != nil {
 				return nil, err
 			}
 		case "collect":
 			var rows *sql.Rows
-			if req.StackID != "" {
-				rows, err = tx.QueryContext(ctx, "SELECT id, qty FROM woodpile_stacks WHERE homestead_id=? AND id=? AND (?-stacked_at) >= 86400", homeID, req.StackID, now)
+			if req.StackId != "" {
+				rows, err = tx.QueryContext(ctx, "SELECT id, qty FROM woodpile_stacks WHERE homestead_id=? AND id=? AND (?-stacked_at) >= 86400", homeID, req.StackId, now)
 			} else {
 				rows, err = tx.QueryContext(ctx, "SELECT id, qty FROM woodpile_stacks WHERE homestead_id=? AND (?-stacked_at) >= 86400", homeID, now)
 			}
@@ -373,11 +347,15 @@ func (a *Server) woodpileMutation(w http.ResponseWriter, r *http.Request) error 
 		if err != nil {
 			return nil, err
 		}
-		return struct {
-			workshopView
-			Woodpile     woodpileView `json:"woodpile"`
-			Action       string       `json:"action"`
-			CollectedQty int          `json:"collectedQty,omitempty"`
-		}{wv2, wv, req.Action, collectedQty}, nil
+		result := &contract.WoodpileResult{Woodpile: wv, Action: req.Action, CollectedQty: int32(collectedQty), Shared: wv2.Shared}
+		if wv2.Home != nil {
+			result.Home = homeViewProto(*wv2.Home)
+		}
+		result.Inventory = countsProto(wv2.Inventory)
+		if wv2.Storage != nil {
+			result.Storage = countsProto(*wv2.Storage)
+		}
+		result.Personal = countsProto(wv2.Personal)
+		return protoResult(result)
 	})
 }

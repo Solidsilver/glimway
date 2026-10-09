@@ -1,0 +1,20 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// Vitals tuning: the regen cap, the fall-recovery fractions and the report
+// gap cap. A missing key reads as zero and is refused; NaN and infinities
+// are refused by the same comparisons (NaN fails `> 0`, an infinity fails
+// the `< 1e308` / `<= 1` bounds). content/vitals.json.
+message Vitals {
+  option (buf.validate.message).cel = {
+    id: "vitals.range"
+    message: "regenCap and reportGapCap are positive and finite; the fall fractions are in (0, 1]"
+    expression: "this.regen_cap > 0 && this.regen_cap < 1e308 && this.fall_hp_fraction > 0 && this.fall_hp_fraction <= 1 && this.fall_mana_fraction > 0 && this.fall_mana_fraction <= 1 && this.report_gap_cap > 0 && this.report_gap_cap < 1e308"
+  };
+  double regen_cap = 1;
+  double fall_hp_fraction = 2;
+  double fall_mana_fraction = 3;
+  double report_gap_cap = 4;
+}

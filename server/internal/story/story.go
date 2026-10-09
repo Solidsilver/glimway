@@ -49,8 +49,8 @@ func (r Rules) Echoes(ctx context.Context, tx *sql.Tx, s store.Snapshot, in port
 	sort.Slice(sites, func(i, j int) bool { return sites[i].Site.Id < sites[j].Site.Id })
 	east := int32(-1)
 	for _, region := range content.WildsRules.Regions {
-		if region.ID == in.Epoch.RegionId {
-			east = int32(region.GridWidth - 1)
+		if region.GetId() == in.Epoch.RegionId {
+			east = int32(region.GetGridWidth()) - 1
 		}
 	}
 	used := map[string]bool{}
@@ -58,9 +58,9 @@ func (r Rules) Echoes(ctx context.Context, tx *sql.Tx, s store.Snapshot, in port
 		if site.Site.Kind != contract.SiteKind_SITE_KIND_ECHO {
 			continue
 		}
-		eligible := []content.Echo{}
+		eligible := []*content.Echo{}
 		for _, e := range content.StoryRules.Echoes {
-			if !used[e.Member] && (!e.Late || RoadLit(s)) && (!e.East || site.CX == east) {
+			if !used[e.GetMember()] && (!e.GetLate() || RoadLit(s)) && (!e.GetEast() || site.CX == east) {
 				eligible = append(eligible, e)
 			}
 		}
@@ -68,32 +68,32 @@ func (r Rules) Echoes(ctx context.Context, tx *sql.Tx, s store.Snapshot, in port
 			continue
 		}
 		pick := eligible[uint32(wilds.Hash(in.Epoch.WorldSeed, in.Epoch.RegionId, in.Epoch.Season, "echo", site.Site.Id))%uint32(len(eligible))]
-		used[pick.Member] = true
-		out = append(out, &contract.EchoAssignment{Site: site.Site.Id, Member: pick.Member, Settled: slices.Contains(s.State.Flags, "echo:"+pick.Member)})
+		used[pick.GetMember()] = true
+		out = append(out, &contract.EchoAssignment{Site: site.Site.Id, Member: pick.GetMember(), Settled: slices.Contains(s.State.Flags, "echo:"+pick.Member)})
 	}
 	return out, nil
 }
 func near(w *contract.Where, x, y float64) bool { dx, dy := w.X-x, w.Y-y; return dx*dx+dy*dy <= 32*32 }
 func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in ports.PaperInput) (bool, error) {
 	p, ok := content.PapersByID[in.Paper]
-	if !ok || p.Rule.Unbuilt || in.Where == nil {
+	if !ok || p.GetRule().GetUnbuilt() || in.Where == nil {
 		return false, nil
 	}
-	q := p.Rule
+	q := p.GetRule()
 	w := in.Where
-	if q.RoadLit && !RoadLit(s) || q.Paper != "" && !slices.Contains(s.State.Flags, "paper:"+q.Paper) {
+	if q.GetRoadLit() && !RoadLit(s) || q.GetPaper() != "" && !slices.Contains(s.State.Flags, "paper:"+q.GetPaper()) {
 		return false, nil
 	}
-	if q.Fact == "turned" || q.Fact == "board" {
+	if q.GetFact() == "turned" || q.GetFact() == "board" {
 		if !slices.Contains(s.State.Flags, "wilds:turned") {
 			return false, nil
 		}
 	}
 	switch p.Source {
 	case "placed":
-		return w.Area == q.Area && content.QuestIndex("lantern-road", s.State.Quests["lantern-road"]) >= content.QuestIndex(defaultStage(q.After)) && near(w, float64(q.TX*16+8), float64(q.TY*16+8)), nil
+		return w.Area == q.GetArea() && content.QuestIndex("lantern-road", s.State.Quests["lantern-road"]) >= content.QuestIndex(defaultStage(q.GetAfter())) && near(w, float64(q.GetTx()*16+8), float64(q.GetTy()*16+8)), nil
 	case "quest", "gift":
-		return q.From != "" && w.Area == q.Area && content.QuestIndex("lantern-road", s.State.Quests["lantern-road"]) >= content.QuestIndex(q.Stage), nil
+		return q.GetFrom() != "" && w.Area == q.GetArea() && content.QuestIndex("lantern-road", s.State.Quests["lantern-road"]) >= content.QuestIndex(q.GetStage()), nil
 	case "village-project":
 		var due bool
 		// A finished project in this world holds the paper, and this player helped build it
@@ -106,7 +106,7 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 		}
 		var due bool
 		var query string
-		switch q.Fact {
+		switch q.GetFact() {
 		case "silas-toolbox":
 			return true, nil
 		case "carting-day":
@@ -127,15 +127,15 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 		err := tx.QueryRowContext(ctx, query, s.AccountID).Scan(&due)
 		return due, err
 	case "turning":
-		if q.Fact == "board" {
-			board, ok := content.StoryRules.Boards[w.Area]
-			return ok && near(w, float64(board.TX*16+8), float64(board.TY*16+8)), nil
+		if q.GetFact() == "board" {
+			board, ok := content.StoryRules.GetBoards()[w.Area]
+			return ok && near(w, float64(board.GetTx()*16+8), float64(board.GetTy()*16+8)), nil
 		}
-		if q.Fact == "turning" {
+		if q.GetFact() == "turning" {
 			return false, nil
 		}
 	}
-	if q.Site == "" && in.Entity == "" && q.Member == "" {
+	if q.GetSite() == "" && in.Entity == "" && q.GetMember() == "" {
 		return false, nil
 	}
 	region, ok := strings.CutPrefix(w.Area, "wilds:")
@@ -156,16 +156,16 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 	if epoch.Id != in.Epoch {
 		return false, nil
 	}
-	var def content.WildsRegion
+	var def *content.WildsRegion
 	for _, reg := range content.WildsRules.Regions {
-		if reg.ID == region {
+		if reg.GetId() == region {
 			def = reg
 		}
 	}
 	if p.Source == "echo" {
 		sites := []ports.EchoSite{}
-		for cy := 0; cy < def.GridHeight; cy++ {
-			for cx := 0; cx < def.GridWidth; cx++ {
+		for cy := 0; cy < int(def.GetGridHeight()); cy++ {
+			for cx := 0; cx < int(def.GetGridWidth()); cx++ {
 				m, e := r.Chunks.Chunk(ctx, tx, s.WorldID, epoch.Id, 0, int32(cx), int32(cy))
 				if e != nil {
 					return false, e
@@ -183,7 +183,7 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 			if a.Site == in.Site && a.Member == q.Member && a.Settled {
 				for _, site := range sites {
 					if site.Site.Id == in.Site {
-						return near(w, float64((int(site.CX)*content.WildsRules.ChunkSize+int(site.Site.Tx))*16+8), float64((int(site.CY)*content.WildsRules.ChunkSize+int(site.Site.Ty))*16+8)), nil
+						return near(w, float64((int(site.CX)*int(content.WildsRules.GetChunkSize())+int(site.Site.Tx))*16+8), float64((int(site.CY)*int(content.WildsRules.GetChunkSize())+int(site.Site.Ty))*16+8)), nil
 					}
 				}
 			}
@@ -191,9 +191,9 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 		return false, nil
 	}
 	// Read geometry throughout the region, including sites across a chunk boundary.
-	for cy := 0; cy < def.GridHeight; cy++ {
-		for cx := 0; cx < def.GridWidth; cx++ {
-			if q.East && cx != def.GridWidth-1 {
+	for cy := 0; cy < int(def.GetGridHeight()); cy++ {
+		for cx := 0; cx < int(def.GetGridWidth()); cx++ {
+			if q.East && cx != int(def.GetGridWidth())-1 {
 				continue
 			}
 			chunk, err := r.Chunks.Chunk(ctx, tx, s.WorldID, in.Epoch, 0, int32(cx), int32(cy))
@@ -210,10 +210,10 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 				}
 			}
 			for _, entity := range chunk.Entities {
-				if entity.Id != in.Entity || q.POI != "" && (entity.Kind != "poi" || entity.Poi != q.POI) || q.Tier != 0 && (entity.Kind != "chest" || int(entity.Tier) != q.Tier) {
+				if entity.Id != in.Entity || q.GetPoi() != "" && (entity.Kind != "poi" || entity.Poi != q.GetPoi()) || q.Tier != 0 && (entity.Kind != "chest" || int(entity.Tier) != int(q.GetTier())) {
 					continue
 				}
-				if q.POI == "" && q.Tier == 0 {
+				if q.GetPoi() == "" && q.Tier == 0 {
 					continue
 				}
 				var claimed bool

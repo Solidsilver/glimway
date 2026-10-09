@@ -8,17 +8,18 @@ import (
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 	"math"
 	"slices"
 	"testing"
 )
 
-func fixtureQuests(t *testing.T, quests ...content.Quest) {
+func fixtureQuests(t *testing.T, quests ...*content.Quest) {
 	t.Helper()
 	old := content.QuestRules
-	content.QuestRules = append([]content.Quest{}, old...)
+	content.QuestRules = append([]*content.Quest{}, old...)
 	for _, quest := range quests {
-		i := slices.IndexFunc(content.QuestRules, func(q content.Quest) bool { return q.ID == quest.ID })
+		i := slices.IndexFunc(content.QuestRules, func(q *content.Quest) bool { return q.GetId() == quest.GetId() })
 		if i < 0 {
 			content.QuestRules = append(content.QuestRules, quest)
 		} else {
@@ -27,8 +28,36 @@ func fixtureQuests(t *testing.T, quests ...content.Quest) {
 	}
 	t.Cleanup(func() { content.QuestRules = old })
 }
-func plainStep(id string) content.QuestStep {
-	return content.QuestStep{ID: id, Do: &content.QuestTrigger{Open: "journal"}}
+
+// trig builds a one-kind step trigger (the generated trigger's optional
+// scalars are pointers; the kind is set through the field named kind).
+func trig(kind, target string) *content.QuestTrigger {
+	t := &content.QuestTrigger{}
+	switch kind {
+	case "talk":
+		t.Talk = proto.String(target)
+	case "use":
+		t.Use = proto.String(target)
+	case "reach":
+		t.Reach = proto.String(target)
+	case "defeat":
+		t.Defeat = proto.String(target)
+	case "carry":
+		t.Carry = proto.String(target)
+	case "flag":
+		t.Flag = proto.String(target)
+	case "open":
+		t.Open = proto.String(target)
+	case "sync":
+		t.Sync = proto.String(target)
+	}
+	return t
+}
+
+func plainStep(id string) *content.QuestStep {
+	// Optional scalars are pointers on the generated type; open is set.
+	open := "journal"
+	return &content.QuestStep{Id: id, Do: &content.QuestTrigger{Open: &open}}
 }
 
 func TestRoomPositionAndPresence(t *testing.T) {
@@ -51,7 +80,7 @@ func TestRoomPositionAndPresence(t *testing.T) {
 		}
 	}
 	room, _ := content.RoomFor("in:village:bakery")
-	if finiteWhere(&contract.Where{Area: room.ID, X: float64(len(room.Map[0]) * 16), Y: 8}) || finiteWhere(&contract.Where{Area: room.ID, X: 8, Y: float64(len(room.Map) * 16)}) {
+	if finiteWhere(&contract.Where{Area: room.GetId(), X: float64(len(room.GetMap()[0]) * 16), Y: 8}) || finiteWhere(&contract.Where{Area: room.GetId(), X: 8, Y: float64(len(room.GetMap()) * 16)}) {
 		t.Fatal("exclusive bounds")
 	}
 	// The cottage: its floor grid plus the walls (14 x 14 tiles); you come in at the doorway, low in the room.
@@ -66,8 +95,8 @@ func TestRoomPositionAndPresence(t *testing.T) {
 		t.Fatal(refusal)
 	}
 	unchanged(t, before, x.expect("GET", "/api/state", nil, c, 200).Snapshot)
-	s = x.reportState(c, s, s.State.HP, s.State.Mana, map[string]any{"area": room.ID, "x": 80, "y": 80})
-	if x.expect("GET", "/api/state", nil, c, 200).State.Area != room.ID {
+	s = x.reportState(c, s, s.State.HP, s.State.Mana, map[string]any{"area": room.GetId(), "x": 80, "y": 80})
+	if x.expect("GET", "/api/state", nil, c, 200).State.Area != room.GetId() {
 		t.Fatal("room not saved")
 	}
 }
@@ -80,10 +109,10 @@ func TestResidentChecksWithGraceAndReach(t *testing.T) {
 		spot string
 		yes  bool
 	}{{0, "kitchen", true}, {1200, "square", false}, {2310, "square", true}, {2400, "kitchen", true}, {2490, "kitchen", true}, {2491, "kitchen", false}, {3000, "square", true}} {
-		p := hazel.Spots[row.spot]
-		s.State.Area = p.Area
-		s.State.Position = rules.Position{X: float64(p.TX*16 + 8), Y: float64(p.TY*16 + 8)}
-		if personHere("hazel", p.Area, row.now) != row.yes || nearResident(&s, "hazel", row.now, 4) != row.yes {
+		p := hazel.GetSpots()[row.spot]
+		s.State.Area = p.GetArea()
+		s.State.Position = rules.Position{X: float64(p.GetTx()*16 + 8), Y: float64(p.GetTy()*16 + 8)}
+		if personHere("hazel", p.GetArea(), row.now) != row.yes || nearResident(&s, "hazel", row.now, 4) != row.yes {
 			t.Fatal(row)
 		}
 		s.State.Position.X += 100
@@ -95,9 +124,9 @@ func TestResidentChecksWithGraceAndReach(t *testing.T) {
 		t.Fatal("fixed talk area")
 	}
 	finn, _ := content.ResidentAt("finn", 3000)
-	s.State.Area = finn.Area
-	s.State.Position = rules.Position{X: float64(finn.TX*16 + 8), Y: float64(finn.TY*16 + 8)}
-	if finn.Area != "in:village:mill:2" || !nearResident(&s, "finn", 3000, 4) {
+	s.State.Area = finn.GetArea()
+	s.State.Position = rules.Position{X: float64(finn.GetTx()*16 + 8), Y: float64(finn.GetTy()*16 + 8)}
+	if finn.GetArea() != "in:village:mill:2" || !nearResident(&s, "finn", 3000, 4) {
 		t.Fatal(finn)
 	}
 }
@@ -107,14 +136,16 @@ func TestQuestGatesAtomicReplayAndTimes(t *testing.T) {
 	start := plainStep("start")
 	middle := plainStep("middle")
 	finish := plainStep("finish")
-	finish.Gate = &content.QuestGate{With: "hazel", Wait: &content.QuestWait{Hours: 2}, Item: &content.QuestGateItem{Def: "flour", Qty: 1, Keep: &keep}, Embers: 2}
-	finish.Give = []content.QuestItem{{Def: "keepers-twists", Qty: 2}}
+	hours2, hours1, two := 2.0, 1.0, int32(2)
+	withHazel := "hazel"
+	finish.Gate = &content.QuestGate{With: withHazel, Wait: &content.QuestWait{Hours: &hours2}, Item: &content.QuestGateItem{Def: "flour", Qty: 1, Keep: &keep}, Embers: &two}
+	finish.Give = []*content.QuestItem{{Def: "keepers-twists", Qty: 2}}
 	finish.Embers = 2
 	finish.Items = []string{"tally-token"}
 	finish.Marks = []string{"library:lamp"}
 	later := plainStep("later")
-	later.Gate = &content.QuestGate{Wait: &content.QuestWait{Hours: 1}}
-	fixtureQuests(t, content.Quest{ID: "test-bread", Steps: []content.QuestStep{start, middle, finish, later}}, content.Quest{ID: "test-other", Steps: []content.QuestStep{plainStep("start")}})
+	later.Gate = &content.QuestGate{Wait: &content.QuestWait{Hours: &hours1}}
+	fixtureQuests(t, &content.Quest{Id: "test-bread", Steps: []*content.QuestStep{start, middle, finish, later}}, &content.Quest{Id: "test-other", Steps: []*content.QuestStep{plainStep("start")}})
 	x := newRig(t)
 	x.now.Store(0)
 	c, s := x.ready("alice")
@@ -192,11 +223,11 @@ func TestQuestTriggerPredicates(t *testing.T) {
 	}
 	snap.State.Area = "in:village:library"
 	cases := []struct {
-		trigger content.QuestTrigger
+		trigger *content.QuestTrigger
 		success bool
-	}{{content.QuestTrigger{Open: "journal"}, true}, {content.QuestTrigger{Reach: "in:village:library"}, true}, {content.QuestTrigger{Reach: "village"}, false}, {content.QuestTrigger{Use: "library-shelf"}, true}, {content.QuestTrigger{Use: "sponge-bowl"}, false}, {content.QuestTrigger{Talk: "mara"}, false}, {content.QuestTrigger{Defeat: "stone-warden"}, false}, {content.QuestTrigger{Carry: "flour"}, false}, {content.QuestTrigger{Carry: "tally-token"}, false}, {content.QuestTrigger{Flag: "library:lamp"}, false}, {content.QuestTrigger{Sync: "embers"}, false}}
+	}{{trig("open", "journal"), true}, {trig("reach", "in:village:library"), true}, {trig("reach", "village"), false}, {trig("use", "library-shelf"), true}, {trig("use", "sponge-bowl"), false}, {trig("talk", "mara"), false}, {trig("defeat", "stone-warden"), false}, {trig("carry", "flour"), false}, {trig("carry", "tally-token"), false}, {trig("flag", "library:lamp"), false}, {trig("sync", "embers"), false}}
 	for _, row := range cases {
-		err = questTrigger(context.Background(), tx, &snap, "test", content.QuestStep{Do: &row.trigger}, 100)
+		err = questTrigger(context.Background(), tx, &snap, "test", &content.QuestStep{Do: row.trigger}, 100)
 		if (err == nil) != row.success {
 			t.Fatal(row, err)
 		}
@@ -204,8 +235,8 @@ func TestQuestTriggerPredicates(t *testing.T) {
 	snap.State.DefeatedEnemies = append(snap.State.DefeatedEnemies, "stone-warden")
 	snap.State.Inventory = append(snap.State.Inventory, "tally-token")
 	snap.State.Flags = append(snap.State.Flags, "library:lamp")
-	for _, trigger := range []content.QuestTrigger{{Defeat: "stone-warden"}, {Carry: "tally-token"}, {Flag: "library:lamp"}} {
-		if err = questTrigger(context.Background(), tx, &snap, "test", content.QuestStep{Do: &trigger}, 100); err != nil {
+	for _, trigger := range []*content.QuestTrigger{trig("defeat", "stone-warden"), trig("carry", "tally-token"), trig("flag", "library:lamp")} {
+		if err = questTrigger(context.Background(), tx, &snap, "test", &content.QuestStep{Do: trigger}, 100); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -213,7 +244,7 @@ func TestQuestTriggerPredicates(t *testing.T) {
 	if err = store.Credit(context.Background(), tx, &snap, 1, 1, "sync", "test", nil, 100); err != nil {
 		t.Fatal(err)
 	}
-	trigger := content.QuestStep{Do: &content.QuestTrigger{Sync: "embers"}}
+	trigger := &content.QuestStep{Do: trig("sync", "embers")}
 	if questTrigger(context.Background(), tx, &snap, "test", trigger, 100) == nil {
 		t.Fatal("same-second sync")
 	}
@@ -228,9 +259,10 @@ func TestQuestTriggerPredicates(t *testing.T) {
 func TestQuestPrerequisitesAndHabitica(t *testing.T) {
 	first := plainStep("first")
 	last := plainStep("last")
-	fixtureQuests(t, content.Quest{ID: "test-before", Steps: []content.QuestStep{first, last}})
+	fixtureQuests(t, &content.Quest{Id: "test-before", Steps: []*content.QuestStep{first, last}})
 	s := store.Snapshot{State: rules.NewState(), ProfileSource: "demo"}
-	q := content.Quest{After: []string{"test-before:first"}, Needs: "habitica"}
+	habitica := "habitica"
+	q := &content.Quest{After: []string{"test-before:first"}, Needs: habitica}
 	if questPrerequisites(s, q) == nil {
 		t.Fatal("missing prerequisite")
 	}
@@ -274,7 +306,8 @@ func TestQuestKeepInstancesAndEarnedEmbers(t *testing.T) {
 	}
 	keep := true
 	step := plainStep("take")
-	step.Gate = &content.QuestGate{Item: &content.QuestGateItem{Def: "bench-axe", Qty: 1, Keep: &keep}, Embers: 2}
+	two := int32(2)
+	step.Gate = &content.QuestGate{Item: &content.QuestGateItem{Def: "bench-axe", Qty: 1, Keep: &keep}, Embers: &two}
 	snap.State.Embers = 3
 	snap.State.XPEmbers = 1
 	snap.State.HP = 0
@@ -298,7 +331,7 @@ func TestQuestKeepInstancesAndEarnedEmbers(t *testing.T) {
 		t.Fatal("keep lost instance")
 	}
 	keep = false
-	step.Gate.Embers = 0
+	step.Gate.Embers = nil
 	if err = spendQuestGate(context.Background(), tx, &snap, "test", step, 101, out); err != nil {
 		t.Fatal(err)
 	}
@@ -310,7 +343,7 @@ func TestQuestKeepInstancesAndEarnedEmbers(t *testing.T) {
 	if err = tx.QueryRow("SELECT location,owner FROM item_instances WHERE id=?", fitted).Scan(&location, &owner); err != nil || location != "pack" || owner != id {
 		t.Fatal(location, owner, err)
 	}
-	if err = questGive(context.Background(), tx, &snap, content.QuestItem{Def: "bench-axe", Qty: 2}, "test:give", 102); err != nil {
+	if err = questGive(context.Background(), tx, &snap, &content.QuestItem{Def: "bench-axe", Qty: 2}, "test:give", 102); err != nil {
 		t.Fatal(err)
 	}
 	n, err = questItemCount(context.Background(), tx, id, "bench-axe")
@@ -323,7 +356,7 @@ func TestOpeningTopupOnce(t *testing.T) {
 	first := plainStep("see-mara")
 	first.Embers = 5
 	first.Marks = []string{"lit:road-1", "quest-item:tally-token"}
-	fixtureQuests(t, content.Quest{ID: "signpost", Steps: []content.QuestStep{first}})
+	fixtureQuests(t, &content.Quest{Id: "signpost", Steps: []*content.QuestStep{first}})
 	for _, balance := range []int{0, 1, 3, 9} {
 		t.Run(fmt.Sprint(balance), func(t *testing.T) {
 			x := newRig(t)
@@ -445,7 +478,7 @@ func (x *rig) seedOpeningDone(account string) {
 	if !ok {
 		x.t.Fatal("missing opening")
 	}
-	_, err := x.db.DB.Exec("INSERT INTO quest_progress(account_id,quest,step,reached_at,gate_at) VALUES(?,'signpost',?,?,?)", account, opening.Steps[len(opening.Steps)-1].ID, x.now.Load(), x.now.Load())
+	_, err := x.db.DB.Exec("INSERT INTO quest_progress(account_id,quest,step,reached_at,gate_at) VALUES(?,'signpost',?,?,?)", account, opening.GetSteps()[len(opening.GetSteps())-1].GetId(), x.now.Load(), x.now.Load())
 	if err != nil {
 		x.t.Fatal(err)
 	}
@@ -465,18 +498,18 @@ func TestAuthoredOpeningUnlocksLanternRoad(t *testing.T) {
 	for _, step := range opening.Steps {
 		doc := s.State
 		if step.At != "" {
-			doc.Area = step.At
-		} else if step.Where != nil && step.Where.Area != "" {
-			doc.Area = step.Where.Area
+			doc.Area = step.GetAt()
+		} else if step.GetWhere() != nil && step.GetWhere().GetArea() != "" {
+			doc.Area = step.GetWhere().GetArea()
 		}
-		if step.Do.Defeat != "" {
-			s.Snapshot = x.expect("POST", "/api/story/mark", body(s, "defeat-"+step.ID, map[string]any{"mark": "defeated:" + step.Do.Defeat, "where": testWhere(doc)}), c, 200).Snapshot
+		if step.GetDo().GetDefeat() != "" {
+			s.Snapshot = x.expect("POST", "/api/story/mark", body(s, "defeat-"+step.GetId(), map[string]any{"mark": "defeated:" + step.GetDo().GetDefeat(), "where": testWhere(doc)}), c, 200).Snapshot
 		}
-		if step.Do.Flag == "lit:road-1" {
+		if step.GetDo().GetFlag() == "lit:road-1" {
 			s.Snapshot = x.expect("POST", "/api/spend", body(s, "first-lamp", map[string]any{"kind": "road-lantern", "target": "road-1", "where": testWhere(doc)}), c, 200).Snapshot
 		}
-		s.Snapshot = x.expect("POST", "/api/quest/step", body(s, "opening-"+step.ID, map[string]any{"quest": opening.ID, "to": step.ID, "where": testWhere(doc)}), c, 200).Snapshot
-		if s.State.Quests[opening.ID] != step.ID {
+		s.Snapshot = x.expect("POST", "/api/quest/step", body(s, "opening-"+step.GetId(), map[string]any{"quest": opening.GetId(), "to": step.GetId(), "where": testWhere(doc)}), c, 200).Snapshot
+		if s.State.Quests[opening.GetId()] != step.GetId() {
 			t.Fatal(s.State.Quests)
 		}
 	}

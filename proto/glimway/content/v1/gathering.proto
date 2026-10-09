@@ -1,0 +1,99 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// Gathering rules and yields (content/gathering.json;
+// docs/items/crafting-and-repair.md). Zero chancePermille means guaranteed,
+// as does an omitted chance; positive values are probabilities out of 1000.
+message Gathering {
+  // The swings/strikes a piece takes (per action; exactly the three).
+  map<string, int32> swings = 1 [(buf.validate.field).map = {
+    min_pairs: 3
+    keys: {string: {in: ["chop", "break", "dig"]}}
+    values: {int32: {gte: 1}}
+  }];
+  // The caps per visit and per day.
+  GatheringCaps caps = 2 [(buf.validate.field).required = true];
+  // The line when a visit runs into a cap.
+  string soft_cap_line = 3;
+  // How many plants one home's land tends; past it the ground is full.
+  int32 plants_per_home = 4 [(buf.validate.field).int32.gte = 1];
+  // The targets each kind of place has: wilds (the Tangle and the
+  // Whitequiet), woodland, home (any homestead's land), the village, the
+  // Commons. Which named targets exist is a code rule.
+  map<string, GatheringArea> areas = 5 [(buf.validate.field).map = {
+    min_pairs: 3
+    keys: {string: {in: ["wilds", "woodland", "home", "village", "commons"]}}
+  }];
+  // The gatherable pieces, by id.
+  map<string, GatheringTarget> targets = 6 [(buf.validate.field).map = {
+    min_pairs: 1
+    keys: {string: {pattern: "^[a-z0-9-]{1,100}$"}}
+  }];
+  // The seeds planting tends (seed-kind items — checked in code).
+  repeated string seeds = 7 [(buf.validate.field).repeated = {
+    min_items: 1
+    unique: true
+    items: {string: {pattern: "^[a-z0-9-]{1,100}$"}}
+  }];
+}
+
+// A place's target list (non-empty — checked in code, with the named
+// targets' existence).
+message GatheringArea {
+  repeated string targets = 1 [(buf.validate.field).repeated = {
+    min_items: 1
+    unique: true
+    items: {string: {pattern: "^[a-z0-9-]{1,100}$"}}
+  }];
+}
+
+message GatheringCaps {
+  GatheringActionCaps visit = 1 [(buf.validate.field).required = true];
+  GatheringActionCaps day = 2 [(buf.validate.field).required = true];
+}
+
+message GatheringActionCaps {
+  int32 chop = 1 [(buf.validate.field).int32.gte = 1];
+  int32 break = 2 [(buf.validate.field).int32.gte = 1];
+  int32 dig = 3 [(buf.validate.field).int32.gte = 1];
+}
+
+// One gatherable piece: the work it takes and what it yields.
+message GatheringTarget {
+  option (buf.validate.message).cel = {
+    id: "gathering_target.tool_action"
+    message: "toolAction is one of the three actions"
+    expression: "this.tool_action in [\"chop\", \"break\", \"dig\"]"
+  };
+  string action = 1 [(buf.validate.field).string = {in: ["chop", "break", "dig"]}];
+  string tool_action = 2;
+  string name = 3 [(buf.validate.field).string.min_len = 1];
+  repeated GatheringYield yields = 4 [(buf.validate.field).repeated.min_items = 1];
+  // The button word when the work isn't a chop, break or dig ("Sweep",
+  // "Pick"); the action's own word when empty.
+  string verb = 5 [(buf.validate.field).string.max_len = 30];
+  // Mark or Wick: the piece only stands in its season (a Mark for the
+  // seasons, a wick for a single wick's week). Empty: always there. Both
+  // are calendar names — checked in code.
+  string mark = 6;
+  string wick = 7;
+}
+
+// What working a piece can bring up.
+message GatheringYield {
+  option (buf.validate.message).cel = {
+    id: "gathering_yield.range"
+    message: "a yield's range is at least one and increasing"
+    expression: "this.min >= 1 && this.max >= this.min && this.max < 2147483647"
+  };
+  // The item yielded: an item id — checked in code.
+  string item = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  int32 min = 2;
+  int32 max = 3;
+  optional int32 chance_permille = 4 [(buf.validate.field).int32 = {gte: 0, lte: 1000}];
+  // The yield only turns up in this Mark (a season; the server's clock and
+  // calendar decide, never the client).
+  string mark = 5;
+}

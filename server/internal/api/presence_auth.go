@@ -85,7 +85,7 @@ func (a *Server) checkPresence(parent context.Context, p *presencePeer) {
 	p.authCheck++
 	check := p.authCheck
 	h.mu.Unlock()
-	ctx, cancel := context.WithTimeout(parent, millis(h.config.WriteTimeoutMs))
+	ctx, cancel := context.WithTimeout(parent, millis(int(h.config.GetWriteTimeoutMs())))
 	code, reason, world, err := a.revalidatePresence(ctx, p, known)
 	cancel()
 	h.mu.Lock()
@@ -100,7 +100,7 @@ func (a *Server) checkPresence(parent context.Context, p *presencePeer) {
 			return
 		}
 		p.authFailures++
-		if p.authFailures < h.config.RevalidateFailures {
+		if p.authFailures < int(h.config.GetRevalidateFailures()) {
 			return
 		}
 		code = websocket.StatusInternalError
@@ -134,7 +134,7 @@ func (a *Server) presenceChanged(id string) {
 }
 
 func (a *Server) presenceRevalidator(p *presencePeer) {
-	ticker := time.NewTicker(millis(a.presence.config.RevalidateMs))
+	ticker := time.NewTicker(millis(int(a.presence.config.GetRevalidateMs())))
 	defer ticker.Stop()
 	for {
 		select {

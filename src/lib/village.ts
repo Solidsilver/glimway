@@ -177,7 +177,7 @@ export function batchesAffordable(r: Recipe, carried: Record<string, number>): n
   let n = Infinity;
   for (const [m, cost] of Object.entries(r.materials)) {
     let have = carried[m] ?? 0;
-    for (const s of r.swaps?.[m] ?? []) have += carried[s] ?? 0;
+    for (const s of r.swaps?.[m]?.standIns ?? []) have += carried[s] ?? 0;
     n = Math.min(n, Math.floor(have / cost));
   }
   return Number.isFinite(n) ? Math.min(100, n) : 0;

@@ -126,8 +126,8 @@ func TestAmberfallSapFromTangleTreesOnly(t *testing.T) {
 
 	c = x.jumpToAs("alice", "mark", "Amberfall")
 	sap := 0
-	for i := 0; i < content.GatheringRules.Caps.Day.Chop && sap == 0; i++ {
-		r := x.opRefreshing(c, &s, "gather", gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", fmt.Sprintf("v%d", i/content.GatheringRules.Caps.Visit.Chop)), 200)
+	for i := 0; i < int(content.GatheringRules.GetCaps().GetDay().GetChop()) && sap == 0; i++ {
+		r := x.opRefreshing(c, &s, "gather", gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", fmt.Sprintf("v%d", i/int(content.GatheringRules.GetCaps().GetVisit().GetChop()))), 200)
 		for _, g := range r.Result.Gathered {
 			if g.ItemDef == "amberfall-sap" {
 				sap += g.Qty
@@ -143,8 +143,8 @@ func TestAmberfallSapFromTangleTreesOnly(t *testing.T) {
 	// waits for tomorrow.
 	x.now.Add(86400)
 	c = x.login("alice", "")
-	for i := 0; i < content.GatheringRules.Caps.Day.Chop; i++ {
-		r := x.opRefreshing(c, &s, "gather", gatherIn(s, "woodland", here, axe, "chop", "tree", fmt.Sprintf("w%d", i/content.GatheringRules.Caps.Visit.Chop)), 200)
+	for i := 0; i < int(content.GatheringRules.GetCaps().GetDay().GetChop()); i++ {
+		r := x.opRefreshing(c, &s, "gather", gatherIn(s, "woodland", here, axe, "chop", "tree", fmt.Sprintf("w%d", i/int(content.GatheringRules.GetCaps().GetVisit().GetChop()))), 200)
 		for _, g := range r.Result.Gathered {
 			if g.ItemDef == "amberfall-sap" {
 				t.Fatal("the village woods gave sap")
@@ -160,8 +160,8 @@ func TestAmberfallSapFromTangleTreesOnly(t *testing.T) {
 	if x.opRefreshing(c, &s, "gather", inRegion(gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", "o0"), whitequietRegion), 409).Error.Code != "cannot-gather-here" {
 		t.Fatal("a Tangle tree out in the drift")
 	}
-	for i := 0; i < content.GatheringRules.Caps.Day.Chop; i++ {
-		r := x.opRefreshing(c, &s, "gather", inRegion(gatherIn(s, "wilds", here, axe, "chop", "tree", fmt.Sprintf("o%d", i/content.GatheringRules.Caps.Visit.Chop)), whitequietRegion), 200)
+	for i := 0; i < int(content.GatheringRules.GetCaps().GetDay().GetChop()); i++ {
+		r := x.opRefreshing(c, &s, "gather", inRegion(gatherIn(s, "wilds", here, axe, "chop", "tree", fmt.Sprintf("o%d", i/int(content.GatheringRules.GetCaps().GetVisit().GetChop()))), whitequietRegion), 200)
 		for _, g := range r.Result.Gathered {
 			if g.ItemDef == "amberfall-sap" {
 				t.Fatal("the outer drift's trees gave sap")
@@ -212,7 +212,7 @@ func TestBloomFlowersDryAfterTheirSeason(t *testing.T) {
 	x.refresh(c, &s)
 	x.stack(s.AccountID, "seasoned-timber", "", 10)
 	r := x.p5("POST", "/api/craft", body(s, "press", map[string]any{"recipeId": "craft-pressed-flowers", "qty": 1}), c, 200)
-	if r.Result.Output.ID != "pressed-flowers" {
+	if r.Result.Output.GetId() != "pressed-flowers" {
 		t.Fatalf("frame %+v", r.Result.Output)
 	}
 	v = x.items("GET", "/api/items", nil, c, 200)
@@ -224,7 +224,7 @@ func TestBloomFlowersDryAfterTheirSeason(t *testing.T) {
 	x.refresh(c, &s)
 	x.stack(s.AccountID, "bloom-flowers", "", 1)
 	r = x.p5("POST", "/api/craft", body(s, "press-mixed", map[string]any{"recipeId": "craft-pressed-flowers", "qty": 1}), c, 200)
-	if r.Result.Output.ID != "pressed-flowers" {
+	if r.Result.Output.GetId() != "pressed-flowers" {
 		t.Fatalf("frame %+v", r.Result.Output)
 	}
 	v = x.items("GET", "/api/items", nil, c, 200)
@@ -263,12 +263,13 @@ func (x *rig) fundEmbers(id string, n int) {
 func bySeller(s response, seller string, now int64) rules.State {
 	doc := s.State
 	if spot, ok := content.SellerFor(seller); ok {
-		if spot.With != "" {
-			p, _ := content.ResidentAt(spot.With, float64(now))
-			spot.Area, spot.TX, spot.TY = p.Area, p.TX, p.TY
+		area, tx, ty := spot.GetArea(), int(spot.GetTx()), int(spot.GetTy())
+		if spot.GetWith() != "" {
+			p, _ := content.ResidentAt(spot.GetWith(), float64(now))
+			area, tx, ty = p.GetArea(), int(p.GetTx()), int(p.GetTy())
 		}
-		doc.Area = spot.Area
-		doc.Position = rules.Position{X: float64(spot.TX*16 + 8), Y: float64(spot.TY*16 + 12)}
+		doc.Area = area
+		doc.Position = rules.Position{X: float64(tx*16 + 8), Y: float64(ty*16 + 12)}
 	}
 	return doc
 }
@@ -359,7 +360,7 @@ func stormFind(id string) (first, second struct {
 		for kind, chance := range map[string]uint32{"camp": 2, "chest": 5} {
 			for cx := 0; cx < 3; cx++ {
 				for cy := 0; cy < 3; cy++ {
-					if intAbs(cx-1)+intAbs(cy-1) < content.WildsRules.DeepTangleManhattanDistance {
+					if intAbs(cx-1)+intAbs(cy-1) < int(content.WildsRules.GetDeepTangleManhattanDistance()) {
 						continue // not deep enough
 					}
 					for i := 0; i < 60; i++ {

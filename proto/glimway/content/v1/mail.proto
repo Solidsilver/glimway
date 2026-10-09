@@ -1,0 +1,23 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// Mail pacing rules (content/mail.json): the server's send, history and
+// maintenance limits. Every field is bounded 1..N; the lower bound also
+// refuses a missing key (a missing int reads as 0).
+message Mail {
+  // Mailboxes: the most undelivered mail each side may hold at once.
+  int32 max_outstanding_sent = 1 [(buf.validate.field).int32 = {gte: 1, lte: 100}];
+  int32 max_outstanding_received = 2 [(buf.validate.field).int32 = {gte: 1, lte: 100}];
+  // Sends: the most per window, and how long the window is.
+  int32 max_sends_per_window = 3 [(buf.validate.field).int32 = {gte: 1, lte: 100}];
+  int32 send_window_seconds = 4 [(buf.validate.field).int32 = {gte: 1, lte: 86400}];
+  // History: the page size the reader asks for, and how long returned mail
+  // stays before the maintenance sweep drops it.
+  int32 history_page_size = 5 [(buf.validate.field).int32 = {gte: 1, lte: 100}];
+  int32 return_after_days = 6 [(buf.validate.field).int32 = {gte: 1, lte: 365}];
+  // Maintenance: the sweep's batch size and how often it runs.
+  int32 maintenance_batch = 7 [(buf.validate.field).int32 = {gte: 1, lte: 500}];
+  int32 maintenance_interval_seconds = 8 [(buf.validate.field).int32 = {gte: 1, lte: 3600}];
+}

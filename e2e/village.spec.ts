@@ -115,7 +115,7 @@ test('workshop: Silas builds it on; store and take out at the chest; make things
   await readOn(page, /Steady as a route stone/)
   await expect.poll(async () => (await myHome(page, id)).tier).toBe(1)
   await silasSays(page, /Build on a workshop/)
-  await readOn(page, /Steady|eaves/)
+  await readOn(page, /There\. Deep eaves/)
   await expect.poll(async () => (await myHome(page, id)).tier).toBe(2)
   await onMyLand(page, 2, 2)
   await shot(page, 'land-workshop-desktop')

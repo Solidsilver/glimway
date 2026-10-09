@@ -6,6 +6,9 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestCalendarParity(t *testing.T) {
@@ -31,8 +34,9 @@ func TestCalendarParity(t *testing.T) {
 		t.Fatal("insufficient parity coverage")
 	}
 	for _, v := range cases {
-		c := CalendarRules
-		c.WickDays = v.WickDays
+		// The calendar is a proto message: never copied, cloned instead.
+		c := proto.Clone(CalendarRules).(*Calendar)
+		c.WickDays = int32(v.WickDays)
 		actual := CalendarAt(c, v.Unix)
 		if !reflect.DeepEqual(actual, v.Result) {
 			t.Fatalf("calendar %d/%d: got %s want %s", v.WickDays, v.Unix, mustJSON(actual), mustJSON(v.Result))
@@ -55,7 +59,7 @@ func TestCalendarBoundariesAndFestivals(t *testing.T) {
 				i = n
 			}
 		}
-		d := CalendarAt(CalendarRules, epoch.Unix()+int64((i*7+f.Day-1)*86400))
+		d := CalendarAt(CalendarRules, epoch.Unix()+int64((i*7+int(f.GetDay())-1)*86400))
 		if d.Festival == nil || *d.Festival != f.Name {
 			t.Fatal("festival", f, d)
 		}
@@ -86,34 +90,58 @@ func TestPhase5ContentValidation(t *testing.T) {
 	if err != nil || len(p.Projects) != 6 {
 		t.Fatal("projects", err)
 	}
-	for name, mutate := range map[string]func(*Crafting){"unknown-output": func(c *Crafting) { c.Recipes[0].Output.ID = "absent" }, "free": func(c *Crafting) { c.Recipes[0].Materials = map[string]int{} }, "material": func(c *Crafting) { c.Recipes[0].Materials = map[string]int{"absent": 1} }, "duplicate": func(c *Crafting) { c.Recipes[1].ID = c.Recipes[0].ID }, "tier": func(c *Crafting) { c.Recipes[0].MinTier = 1 }, "quantity": func(c *Crafting) { c.Recipes[0].Output.Qty = 0 }, "utility": func(c *Crafting) { c.UtilityItems[0].ID = WildsRules.Trinkets[0] }} {
+	for name, mutate := range map[string]func(*Crafting){"unknown-output": func(c *Crafting) { c.Recipes[0].Output.Id = "absent" }, "free": func(c *Crafting) { c.Recipes[0].Materials = map[string]int32{} }, "material": func(c *Crafting) { c.Recipes[0].Materials = map[string]int32{"absent": 1} }, "duplicate": func(c *Crafting) { c.Recipes[1].Id = c.Recipes[0].GetId() }, "tier": func(c *Crafting) { c.Recipes[0].MinTier = 1 }, "quantity": func(c *Crafting) { c.Recipes[0].Output.Qty = 0 }, "utility": func(c *Crafting) { c.UtilityItems[0].Id = WildsRules.Trinkets[0] }} {
 		t.Run(name, func(t *testing.T) {
-			copy := Crafting{}
-			json.Unmarshal([]byte(mustJSON(c)), &copy)
-			mutate(&copy)
-			if ValidateCrafting(copy) == nil {
+			copy := proto.Clone(c).(*Crafting)
+			mutate(copy)
+			raw, err := protojson.Marshal(copy)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err = DecodeCrafting(raw); err == nil {
 				t.Fatal("accepted malformed recipe")
 			}
 		})
 	}
-	for name, mutate := range map[string]func(*Projects){"unknown-paper": func(p *Projects) { p.Projects[0].Papers = []string{"missing"} }, "wrong-source": func(p *Projects) { p.Projects[0].Papers = []string{"will-of-elias-fenn"} }, "missing-paper-path": func(p *Projects) { p.Projects[0].Papers = []string{} }, "flag": func(p *Projects) { p.Projects[0].WorldFlag = "elsewhere" }, "duplicate": func(p *Projects) { p.Projects[1].ID = p.Projects[0].ID }, "cost": func(p *Projects) { p.Projects[0].Materials["timber"] = 0 }} {
+	for name, mutate := range map[string]func(*Projects){"unknown-paper": func(p *Projects) { p.Projects[0].Papers = []string{"missing"} }, "wrong-source": func(p *Projects) { p.Projects[0].Papers = []string{"will-of-elias-fenn"} }, "missing-paper-path": func(p *Projects) { p.Projects[0].Papers = []string{} }, "flag": func(p *Projects) { p.Projects[0].WorldFlag = "elsewhere" }, "duplicate": func(p *Projects) { p.Projects[1].Id = p.Projects[0].GetId() }, "cost": func(p *Projects) { p.Projects[0].Materials["timber"] = 0 }} {
 		t.Run(name, func(t *testing.T) {
-			copy := Projects{}
-			json.Unmarshal([]byte(mustJSON(p)), &copy)
-			mutate(&copy)
-			if ValidateProjects(copy) == nil {
+			copy := proto.Clone(p).(*Projects)
+			mutate(copy)
+			raw, err := protojson.Marshal(copy)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err = DecodeProjects(raw); err == nil {
 				t.Fatal("accepted malformed project")
 			}
 		})
 	}
-	cal := CalendarRules
-	cal.WickDays = 0
-	if ValidateCalendar(cal) == nil {
-		t.Fatal("zero wick duration")
+}
+
+// The epoch and wick-duration rules are on the schema; the loader vectors
+// (content/vectors/clock.json, "loader") mutate the shipped file and both
+// runtimes refuse each malformation for its rule.
+func TestCalendarLoaderVectors(t *testing.T) {
+	var vectors struct {
+		Loader []loaderVector
 	}
-	cal = CalendarRules
-	cal.Epoch = "2026-01-05T01:00:00Z"
-	if ValidateCalendar(cal) == nil {
-		t.Fatal("nonmidnight epoch")
+	readVectors(t, "clock", &vectors)
+	if len(vectors.Loader) == 0 {
+		t.Fatal("no calendar loader vectors")
+	}
+	raw, err := FS.ReadFile("clock.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, v := range vectors.Loader {
+		t.Run(v.Name, func(t *testing.T) {
+			_, err := DecodeCalendar(editVector(t, raw, v))
+			if (err == nil) != v.Valid {
+				t.Fatal(v.Valid, err)
+			}
+			if !v.Valid && v.Rule != "" {
+				checkVectorRule(t, err, v.Rule)
+			}
+		})
 	}
 }

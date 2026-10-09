@@ -39,8 +39,8 @@ func onEdge(size uint32, e *contract.Exit) bool {
 
 func entryOf(region string) ([2]int32, bool) {
 	for _, r := range content.WildsRules.Regions {
-		if r.ID == region {
-			return [2]int32{int32(r.EntryX), int32(r.EntryY)}, true
+		if r.GetId() == region {
+			return [2]int32{r.GetEntryX(), r.GetEntryY()}, true
 		}
 	}
 	return [2]int32{}, false

@@ -243,8 +243,8 @@ func TestPartyLeaverMovedOutAfterGrace(t *testing.T) {
 	x.seedAssets(x.account("sage"))
 	x.refresh(sc, &s)
 	s = x.openWorkshop(sc, s)
-	s.Snapshot = x.p5("POST", "/api/storage", body(s, "shared", map[string]any{"direction": "deposit", "asset": content.Asset{Kind: "material", ID: "timber", Qty: 3}}), sc, 200).Snapshot
-	s.Snapshot = x.p5("POST", "/api/storage", body(s, "personal", map[string]any{"direction": "deposit", "chest": "personal", "asset": content.Asset{Kind: "material", ID: "stone", Qty: 2}}), sc, 200).Snapshot
+	s.Snapshot = x.p5("POST", "/api/storage", body(s, "shared", map[string]any{"direction": "deposit", "asset": content.Asset{Kind: "material", Id: "timber", Qty: 3}}), sc, 200).Snapshot
+	s.Snapshot = x.p5("POST", "/api/storage", body(s, "personal", map[string]any{"direction": "deposit", "chest": "personal", "asset": content.Asset{Kind: "material", Id: "stone", Qty: 2}}), sc, 200).Snapshot
 	home := x.home(sc)
 	stacks := func(location, owner string) map[string]int {
 		rows, err := x.db.DB.Query("SELECT item_def,maker_id,qty FROM item_stacks WHERE location=? AND owner=?", location, owner)

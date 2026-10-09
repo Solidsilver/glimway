@@ -71,8 +71,8 @@ func (x *rig) wilds(c *http.Cookie, region string) wildsView {
 		x.t.Fatal(err)
 	}
 	def, _ := regionDefinition(region)
-	for cy := 0; cy < def.GridHeight; cy++ {
-		for cx := 0; cx < def.GridWidth; cx++ {
+	for cy := 0; cy < int(def.GetGridHeight()); cy++ {
+		for cx := 0; cx < int(def.GetGridWidth()); cx++ {
 			m := x.chunk(c, v.Epoch.Id, 0, cx, cy, 200)
 			v.chunks = append(v.chunks, m)
 			v.bodies = append(v.bodies, m.Entities...)
@@ -101,7 +101,7 @@ func (x *rig) chunk(c *http.Cookie, epoch string, layer, cx, cy, status int) *co
 func at(region string, e *contract.WildsEntity, dx int) *contract.Where {
 	var cx, cy int
 	fmt.Sscanf(e.Id, e.Kind+":%d:%d:", &cx, &cy)
-	S := content.WildsRules.ChunkSize
+	S := int(content.WildsRules.GetChunkSize())
 	return &contract.Where{Area: wildsArea(region), X: float64((cx*S + int(e.Tx) + dx) * 16), Y: float64((cy*S + int(e.Ty)) * 16)}
 }
 
@@ -451,7 +451,7 @@ func TestWildsClaimRateIsDurableAtomicAndReplayExempt(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	v := x.wilds(c, "inner-1")
-	limit := content.Rules.WildsLimits.ClaimsPerMinute
+	limit := int(content.Rules.GetWildsLimits().GetClaimsPerMinute())
 	if len(v.bodies) <= limit {
 		t.Fatal("insufficient entities for limit")
 	}
@@ -576,7 +576,7 @@ func TestWildsRelight(t *testing.T) {
 	}
 	oc, o := x.ready("outsider")
 	relight(oc, o, "other-world", "alice", second.ID, here, 403)
-	limit := content.Rules.WildsLimits.LanternRelightsPerDay
+	limit := int(content.Rules.GetWildsLimits().GetLanternRelightsPerDay())
 	for i := 0; i <= limit; i++ {
 		owner := fmt.Sprintf("fallen%d", i)
 		x.member(owner, s.WorldID)
@@ -591,7 +591,7 @@ func TestWildsRelight(t *testing.T) {
 			t.Fatal("relight replay")
 		}
 	}
-	if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner=? AND item_def='amber'", x.account("bob")) != limit*content.Rules.WildsLimits.LanternReward.Qty {
+	if count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner=? AND item_def='amber'", x.account("bob")) != limit*int(content.Rules.GetWildsLimits().GetLanternReward().GetQty()) {
 		t.Fatal("relight balance")
 	}
 	x.now.Store(time.Unix(x.now.Load(), 0).UTC().Truncate(24 * time.Hour).Add(24 * time.Hour).Unix())
@@ -704,6 +704,9 @@ func TestWildsCalendarRetuningDoesNotReuseEndedEpoch(t *testing.T) {
 	for _, change := range []string{"wick-days", "epoch", "same-start-new-end"} {
 		t.Run(change, func(t *testing.T) {
 			saved := content.CalendarRules
+			// A clone: the subtest retunes its own calendar, and the
+			// restore hands the shared table back untouched.
+			content.CalendarRules = proto.Clone(saved).(*content.Calendar)
 			defer func() { content.CalendarRules = saved }()
 			epoch, _ := time.Parse(time.RFC3339, saved.Epoch)
 			x := newRig(t)

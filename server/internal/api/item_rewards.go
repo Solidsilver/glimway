@@ -5,22 +5,24 @@ import (
 	"database/sql"
 	"fmt"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	"slices"
 	"strings"
 )
 
-func (a *Server) returnKeepsake(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
+func (a *Server) returnKeepsake(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.ItemsRequest, now int64, out *contract.ItemsResult) error {
 	itemID := req.ItemDef
 	if itemID == "" {
 		return fail(400, "invalid-item")
 	}
 	def, ok := content.ItemFor(itemID)
-	if !ok || def.Kind != "keepsake" {
+	if !ok || def.GetKind() != "keepsake" {
 		return fail(400, "not-a-keepsake")
 	}
-	if !def.Bound {
+	if !def.GetBound() {
 		// Only story keepsakes come back to a person (the mirror foxes stay carved).
 		return fail(400, "not-giveable")
 	}
@@ -46,7 +48,7 @@ func (a *Server) returnKeepsake(ctx context.Context, tx *sql.Tx, s *store.Snapsh
 		}
 	case "silas":
 		m, ok := content.MenderFor("silas")
-		if !ok || !nearTile(s, m.Area, m.TX, m.TY, m.RadiusTiles) {
+		if !ok || !nearTile(s, m.GetArea(), int(m.GetTx()), int(m.GetTy()), int(m.GetRadiusTiles())) {
 			return fail(409, "too-far-away")
 		}
 	case "bett", "nan":
@@ -83,18 +85,20 @@ func (a *Server) returnKeepsake(ctx context.Context, tx *sql.Tx, s *store.Snapsh
 	}
 
 	out.Returned = itemID
-	out.Paper = paperGranted
+	if paperGranted != nil {
+		out.Paper = wrapperspb.String(*paperGranted)
+	}
 	return nil
 }
 
 // grantHeirloom validates conditions and grants an heirloom tool once per player.
-func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
+func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.ItemsRequest, now int64, out *contract.ItemsResult) error {
 	itemID := req.ItemDef
 	if itemID == "" {
 		return fail(400, "invalid-item")
 	}
 	def, ok := content.ItemFor(itemID)
-	if !ok || def.Grade != "heirloom" {
+	if !ok || def.GetGrade() != "heirloom" {
 		return fail(400, "invalid-item")
 	}
 
@@ -102,12 +106,12 @@ func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapsho
 	switch itemID {
 	case "brack-felling-axe":
 		m, ok := content.MenderFor("silas")
-		if !ok || !nearTile(s, m.Area, m.TX, m.TY, m.RadiusTiles) {
+		if !ok || !nearTile(s, m.GetArea(), int(m.GetTx()), int(m.GetTy()), int(m.GetRadiusTiles())) {
 			return fail(409, "too-far-away")
 		}
 	case "orrins-mason-pick":
 		m, ok := content.MenderFor("orrin")
-		if !ok || !nearTile(s, m.Area, m.TX, m.TY, m.RadiusTiles) {
+		if !ok || !nearTile(s, m.GetArea(), int(m.GetTx()), int(m.GetTy()), int(m.GetRadiusTiles())) {
 			return fail(409, "too-far-away")
 		}
 	case "ada-garden-spade":
@@ -186,8 +190,8 @@ func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapsho
 	}
 
 	condition := -1
-	if def.Uses > 0 {
-		condition = def.Uses * content.ItemsRules.Rules.Wear.PointsPerUse
+	if def.GetUses() > 0 {
+		condition = int(def.GetUses()) * int(content.ItemsRules.Rules.Wear.GetPointsPerUse())
 	}
 	instID, err := newInstance(ctx, tx, def, instanceAt{"pack", s.AccountID}, "", condition, now)
 	if err != nil {
@@ -201,7 +205,7 @@ func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapsho
 }
 
 // giveAdaOil accepts hearth-oil for Ada's window, up to 3 gifts.
-func (a *Server) giveAdaOil(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
+func (a *Server) giveAdaOil(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.ItemsRequest, now int64, out *contract.ItemsResult) error {
 	if !nearResident(s, "ada", now, residentReachTiles) {
 		return fail(409, "too-far-away")
 	}
@@ -238,7 +242,7 @@ func (a *Server) giveAdaOil(ctx context.Context, tx *sql.Tx, s *store.Snapshot, 
 	}
 
 	s.State.Flags = rules.AddUnique(s.State.Flags, fmt.Sprintf("ada-oil-gifts:%d", nextCount))
-	out.AdaOilCount = nextCount
+	out.AdaOilCount = int32(nextCount)
 	out.Used = "hearth-oil"
 	return nil
 }

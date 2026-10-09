@@ -1,0 +1,286 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// Item definitions (content/items.json; docs/items/): the carried catalogue,
+// its wear rules, where pickups lie, and who sells what.
+message Items {
+  ItemsRules rules = 1 [(buf.validate.field).required = true];
+  repeated ItemDef items = 2 [(buf.validate.field).repeated.min_items = 1];
+  repeated ItemPickup pickups = 3;
+  repeated ItemSeller sellers = 4;
+}
+
+// The closed wear/grade/carry rules. A new grade, fitting or effect type is
+// a code change on both sides, never just data.
+message ItemsRules {
+  // Total over the grades map: with fewer than three keys the lookup never
+  // runs (the map's own min/max pairs refuse it first, as a named rule).
+  option (buf.validate.message).cel = {
+    id: "items.grade_cheap"
+    message: "cheap tools break"
+    expression: "size(this.grades) == 3 && this.grades[\"cheap\"].at_zero == \"breaks\""
+  };
+  option (buf.validate.message).cel = {
+    id: "items.grade_heirloom"
+    message: "heirloom tools mend"
+    expression: "size(this.grades) == 3 && this.grades[\"heirloom\"].at_zero in [\"blunt\", \"cracked\"]"
+  };
+  option (buf.validate.message).cel = {
+    id: "items.grade_special"
+    message: "special tools never wear"
+    expression: "size(this.grades) == 3 && this.grades[\"special\"].at_zero == \"never\""
+  };
+  // Exactly the three designed grades: exactly those keys (the CELs above
+  // only look keys up once the size is three).
+  map<string, ItemGrade> grades = 1 [(buf.validate.field).map = {
+    min_pairs: 3
+    max_pairs: 3
+    keys: {string: {in: ["cheap", "heirloom", "special"]}}
+  }];
+  ItemWear wear = 2 [(buf.validate.field).required = true];
+  ItemPockets pockets = 3 [(buf.validate.field).required = true];
+  ItemOffHand off_hand = 4 [(buf.validate.field).required = true];
+  ItemGive give = 5 [(buf.validate.field).required = true];
+  ItemThanks thanks = 6 [(buf.validate.field).required = true];
+  repeated ItemMender menders = 7;
+}
+
+// What a grade means: its small-item slots, what zero condition does, and
+// whether its things stay with their first owner.
+message ItemGrade {
+  int32 slots = 1 [(buf.validate.field).int32 = {gte: 0, lte: 6}];
+  string at_zero = 2 [(buf.validate.field).string = {in: ["breaks", "blunt", "cracked", "never"]}];
+  optional bool bound = 3;
+}
+
+// Wear: condition points per use, how much the off hand's hold costs, the
+// fittings' own count, when wear shows, and the warden-set dulling count.
+message ItemWear {
+  option (buf.validate.message).cel = {
+    id: "item_wear.hold"
+    message: "holding costs no more than a use"
+    expression: "this.hold_points_per_use <= this.points_per_use"
+  };
+  int32 points_per_use = 1 [(buf.validate.field).int32.gte = 1];
+  int32 hold_points_per_use = 2 [(buf.validate.field).int32.gte = 1];
+  int32 fitting_uses = 3 [(buf.validate.field).int32.gte = 1];
+  int32 worn_below_percent = 4 [(buf.validate.field).int32 = {gte: 1, lte: 99}];
+  int32 warden_dull_uses = 5 [(buf.validate.field).int32.gte = 1];
+}
+
+// Pockets: the base count, and what carry gear adds (at most four).
+message ItemPockets {
+  option (buf.validate.message).cel = {
+    id: "item_pockets.carry"
+    message: "carry gear grows the base pockets, to at most four"
+    expression: "this.with_carry_gear >= this.base && this.with_carry_gear <= 4"
+  };
+  int32 base = 1 [(buf.validate.field).int32.gte = 1];
+  int32 with_carry_gear = 2 [(buf.validate.field).int32.gte = 1];
+}
+
+// What the off hand may tuck away mid-action.
+message ItemOffHand {
+  repeated string tuck_during = 1 [(buf.validate.field).repeated.items.string.min_len = 1];
+}
+
+message ItemGive {
+  int32 radius_tiles = 1 [(buf.validate.field).int32.gte = 1];
+}
+
+message ItemThanks {
+  int32 nearby_tiles = 1 [(buf.validate.field).int32.gte = 1];
+}
+
+// A mender: who can mend at their side, and where they stand.
+message ItemMender {
+  string npc = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string name = 2 [(buf.validate.field).string.min_len = 1];
+  string area = 3 [(buf.validate.field).string = {in: ["village", "woodland", "ruin", "commons"]}];
+  optional int32 tx = 4 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  optional int32 ty = 5 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  int32 radius_tiles = 6 [(buf.validate.field).int32.gte = 1];
+}
+
+// One item definition. The tool-only fields (grade, uses, atZero, slots,
+// actions, repair) are refused on any other kind (item_def.tool_fields);
+// the per-tool rules that read the grade table stay in code.
+message ItemDef {
+  option (buf.validate.message).cel = {
+    id: "item_def.tab"
+    message: "tab is the kind's drawer"
+    expression: "!(this.kind in [\"tool\", \"off-hand\", \"carry-gear\", \"consumable\", \"material\", \"fitting\", \"part\", \"seed\", \"keepsake\", \"home-good\", \"paper\"]) || {\"tool\": \"tools\", \"off-hand\": \"tools\", \"carry-gear\": \"tools\", \"consumable\": \"supplies\", \"material\": \"supplies\", \"fitting\": \"supplies\", \"part\": \"supplies\", \"seed\": \"supplies\", \"keepsake\": \"keepsakes\", \"home-good\": \"home\", \"paper\": \"papers\"}[this.kind] == this.tab"
+  };
+  option (buf.validate.message).cel = {
+    id: "item_def.tool_fields"
+    message: "grade, uses, atZero, slots, actions and repair are tool fields"
+    expression: "this.kind == \"tool\" || (!has(this.grade) && !has(this.uses) && !has(this.at_zero) && !has(this.slots) && size(this.actions) == 0 && !has(this.repair))"
+  };
+  option (buf.validate.message).cel = {
+    id: "item_def.icon_state"
+    message: "iconState needs an icon"
+    expression: "this.icon_state == \"\" || this.icon != \"\""
+  };
+  option (buf.validate.message).cel = {
+    id: "item_def.fitting"
+    message: "a fitting names a fitting kind, and nothing else does"
+    expression: "this.kind == \"fitting\" ? this.fitting in [\"bite\", \"hold\", \"heft\", \"glow\", \"grip\", \"remember\"] : this.fitting == \"\""
+  };
+  option (buf.validate.message).cel = {
+    id: "item_def.pocket"
+    message: "pocket effects are keepsakes"
+    expression: "size(this.pocket) == 0 || this.kind == \"keepsake\""
+  };
+  option (buf.validate.message).cel = {
+    id: "item_def.off_hand"
+    message: "only keepsakes and tools ride in the off hand"
+    expression: "!this.off_hand || this.kind in [\"keepsake\", \"tool\"]"
+  };
+  option (buf.validate.message).cel = {
+    id: "item_def.held"
+    message: "held effects come with the off hand, and only with it"
+    expression: "(size(this.held) > 0) == (this.kind == \"off-hand\" || this.off_hand)"
+  };
+  option (buf.validate.message).cel = {
+    id: "item_def.affinity"
+    message: "an affinity names a class and rides in the off hand"
+    expression: "!has(this.affinity) || (this.affinity.class in [\"warrior\", \"mage\", \"healer\", \"rogue\"] && size(this.affinity.held) > 0 && (this.kind == \"off-hand\" || this.off_hand))"
+  };
+  option (buf.validate.message).cel = {
+    id: "item_def.belongs_to"
+    message: "belongsTo marks a keepsake"
+    expression: "this.belongs_to == \"\" || this.kind == \"keepsake\""
+  };
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string name = 2 [(buf.validate.field).string.min_len = 1];
+  string tab = 3 [(buf.validate.field).string = {in: ["tools", "supplies", "keepsakes", "home", "papers"]}];
+  string kind = 4 [(buf.validate.field).string = {in: ["tool", "consumable", "material", "fitting", "part", "seed", "keepsake", "home-good", "paper", "off-hand", "carry-gear"]}];
+  string blurb = 5 [(buf.validate.field).string.min_len = 1];
+  string icon = 6 [(buf.validate.field).string.pattern = "^([a-z0-9-]{1,100})?$"];
+  // The icon's drawn state ("dried": the bloom flowers' dried posy); only
+  // with an icon.
+  string icon_state = 7 [(buf.validate.field).string.pattern = "^([a-z0-9-]{1,100})?$"];
+  optional string grade = 8 [(buf.validate.field).string = {in: ["", "cheap", "heirloom", "special"]}];
+  // The uses a whole tool has (0: it does not wear).
+  optional int32 uses = 9 [(buf.validate.field).int32 = {gte: 0, lte: 10000}];
+  optional string at_zero = 10 [(buf.validate.field).string = {in: ["", "breaks", "blunt", "cracked"]}];
+  optional int32 slots = 11 [(buf.validate.field).int32 = {gte: 0, lte: 6}];
+  repeated string actions = 12 [(buf.validate.field).repeated.items.string = {in: ["chop", "break", "dig", "draw", "water", "trim", "mark"]}];
+  ItemRepair repair = 13;
+  string fitting = 14;
+  repeated UseEffect use = 15;
+  repeated PocketEffect pocket = 16;
+  repeated HeldEffect held = 17;
+  ItemAffinity affinity = 18;
+  optional bool off_hand = 19;
+  optional bool bound = 20;
+  // The keepsake set this belongs to (a content id).
+  string belongs_to = 21 [(buf.validate.field).string.pattern = "^([a-z0-9-]{1,100})?$"];
+  optional bool marked = 22;
+}
+
+// What mending a tool costs: at your own bench, or by a mender (Silas,
+// Orrin) while you talk. The bills' items are checked in code.
+message ItemRepair {
+  map<string, int32> bench = 1 [(buf.validate.field).map = {min_pairs: 1, values: {int32: {gte: 1, lte: 1000000}}}];
+  // The mender's bill may be absent — or present and empty; the two mean
+  // the same (no materials, embers pay). Its ranges still hold when entries
+  // are there. "Neither mender materials nor embers" is a code rule
+  // (item_def ... repair cost), identical in both loaders.
+  map<string, int32> mender = 2 [(buf.validate.field).map.values.int32 = {gte: 1, lte: 1000000}];
+  optional int32 mender_embers = 3 [(buf.validate.field).int32.gte = 0];
+}
+
+// One small, typed help. Which types are allowed depends on where the
+// effect sits — use (a consumable, once), pocket (a keepsake) or held (the
+// off hand) — so each position has its own message; the ranges are the
+// schema's, and a restore's amount is its own rule.
+message UseEffect {
+  option (buf.validate.message).cel = {
+    id: "use_effect.restore_amount"
+    message: "restoring needs an amount"
+    expression: "!(this.type in [\"restore-hp\", \"restore-mana\"]) || this.amount >= 1"
+  };
+  string type = 1 [(buf.validate.field).string = {in: ["restore-hp", "restore-mana", "clear-unmoored", "ease-unmoored", "wisps-forget", "refill-lantern", "light-post"]}];
+  optional int32 amount = 2 [(buf.validate.field).int32 = {gte: 0, lte: 1000}];
+  optional int32 seconds = 3 [(buf.validate.field).int32 = {gte: 0, lte: 86400}];
+  optional string target = 4 [(buf.validate.field).string.max_len = 100];
+}
+
+message PocketEffect {
+  string type = 1 [(buf.validate.field).string = {in: ["papers-glint", "notice-later", "gather-more", "pond-skip", "wend-gives-more"]}];
+  optional int32 amount = 2 [(buf.validate.field).int32 = {gte: 0, lte: 1000}];
+  optional int32 seconds = 3 [(buf.validate.field).int32 = {gte: 0, lte: 86400}];
+  optional string target = 4 [(buf.validate.field).string.max_len = 100];
+}
+
+message HeldEffect {
+  string type = 1 [(buf.validate.field).string = {in: ["light", "wisps-keep-off", "compass", "remedy-at-hand", "whistle", "papers-chime"]}];
+  optional int32 amount = 2 [(buf.validate.field).int32 = {gte: 0, lte: 1000}];
+  optional int32 seconds = 3 [(buf.validate.field).int32 = {gte: 0, lte: 86400}];
+  optional string target = 4 [(buf.validate.field).string.max_len = 100];
+}
+
+// A class affinity: what the item does for its class when held.
+message ItemAffinity {
+  string class = 1 [(buf.validate.field).string = {in: ["warrior", "mage", "healer", "rogue"]}];
+  repeated HeldEffect held = 2 [(buf.validate.field).repeated.min_items = 1];
+}
+
+// A pickup lying in the world.
+message ItemPickup {
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  // The item it is: a carried definition — checked in code.
+  string item = 2;
+  int32 qty = 3 [(buf.validate.field).int32 = {gte: 1, lte: 100}];
+  string area = 4 [(buf.validate.field).string = {in: ["village", "woodland", "ruin", "commons"]}];
+  optional int32 tx = 5 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  optional int32 ty = 6 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  // What's left of a worn tool found lying about.
+  optional int32 uses_left = 7 [(buf.validate.field).int32.gte = 0];
+  string label = 8 [(buf.validate.field).string.min_len = 1];
+  string found = 9 [(buf.validate.field).string.min_len = 1];
+}
+
+// One thing a seller sells (for embers), and what it says.
+message ItemGood {
+  // The item sold: a carried stack — checked in code.
+  string item = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  int32 qty = 2 [(buf.validate.field).int32 = {gte: 1, lte: 100}];
+  int32 embers = 3 [(buf.validate.field).int32 = {gte: 1, lte: 1000}];
+  // The most one player can buy of it a day (0: no cap).
+  optional int32 cap = 4 [(buf.validate.field).int32 = {gte: 0, lte: 1000}];
+  string label = 5 [(buf.validate.field).string = {min_len: 1, max_len: 80}];
+  string line = 6 [(buf.validate.field).string = {min_len: 1, max_len: 160}];
+}
+
+// A person or stall in the world who sells goods: a named resident at
+// their spot (Hazel, Finn), or a stall that stands on a festival day only
+// (the Carting Day market). The spot is shared content, the same rows the
+// client prompts at.
+message ItemSeller {
+  option (buf.validate.message).cel = {
+    id: "seller.place_mix"
+    message: "seller mixes resident and fixed spot"
+    expression: "this.with == \"\" || (!has(this.area) && !has(this.tx) && !has(this.ty))"
+  };
+  option (buf.validate.message).cel = {
+    id: "seller.place"
+    message: "a seller without a resident stands in a known area"
+    expression: "this.with != \"\" || this.area in [\"village\", \"woodland\", \"ruin\", \"commons\"]"
+  };
+  // The resident this seller stands with (their spot is the shared one).
+  optional string with = 1 [(buf.validate.field).string.pattern = "^([a-z0-9-]{1,100})?$"];
+  string id = 2 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string npc = 3 [(buf.validate.field).string = {min_len: 1, max_len: 40}];
+  optional int32 tx = 4 [(buf.validate.field).int32.gte = 0];
+  optional int32 ty = 5 [(buf.validate.field).int32.gte = 0];
+  optional string area = 6 [(buf.validate.field).string = {in: ["village", "woodland", "ruin", "commons"]}];
+  int32 radius_tiles = 7 [(buf.validate.field).int32 = {gte: 1, lte: 16}];
+  // The seller stands on its festival day only (a calendar festival —
+  // checked in code).
+  string festival = 8;
+  repeated ItemGood goods = 9 [(buf.validate.field).repeated.min_items = 1];
+}

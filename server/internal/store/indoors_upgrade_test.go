@@ -106,7 +106,7 @@ func TestRemovedRoomReadRecovery(t *testing.T) {
 	for _, area := range []string{"in:village:mill:2", "in:village:bakery", "in:village:removed", "in:unknown:missing"} {
 		content.RoomRules.Rooms = nil
 		for _, room := range original {
-			if room.ID != "in:village:mill:2" && room.ID != "in:village:bakery" {
+			if room.GetId() != "in:village:mill:2" && room.GetId() != "in:village:bakery" {
 				content.RoomRules.Rooms = append(content.RoomRules.Rooms, room)
 			}
 		}

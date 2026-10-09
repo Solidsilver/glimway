@@ -184,7 +184,7 @@ func finiteWhere(where *contract.Where) bool {
 	if strings.HasPrefix(where.Area, "in:home:") && content.KnownRoom(where.Area) {
 		// The cottage's map is its floor grid plus the walls: a column each side, three rows of
 		// back wall and the doorway's row (src/game/cottage.ts ROOM_COLS, ROOM_ROWS).
-		return where.X >= 0 && where.Y >= 0 && where.X < float64((content.HomeRules.Indoor.Width+2)*16) && where.Y < float64((content.HomeRules.Indoor.Height+4)*16)
+		return where.X >= 0 && where.Y >= 0 && where.X < float64((int(content.HomeRules.GetIndoor().GetWidth())+2)*16) && where.Y < float64((int(content.HomeRules.GetIndoor().GetHeight())+4)*16)
 	}
 	return true
 }
@@ -226,6 +226,10 @@ func writeOpResult(w http.ResponseWriter, state *contract.PlayerState, result an
 	_, err = w.Write(append(raw, '\n'))
 	return err
 }
+
+// mixedBytes is the domain-read envelope: the same current PlayerState the
+// keyed answers carry, beside the read's own result — a typed proto message
+// (protojson) or an existing domain's JSON result.
 func mixedBytes(state *contract.PlayerState, result any) ([]byte, error) {
 	if state == nil {
 		return nil, errors.New("missing player state")
@@ -236,6 +240,16 @@ func mixedBytes(state *contract.PlayerState, result any) ([]byte, error) {
 	raw, err := (protojson.MarshalOptions{EmitUnpopulated: true}).Marshal(state)
 	if err != nil {
 		return nil, err
+	}
+	if message, ok := result.(proto.Message); ok {
+		if err := finiteProto(message.ProtoReflect()); err != nil {
+			return nil, err
+		}
+		encoded, err := (protojson.MarshalOptions{EmitUnpopulated: true}).Marshal(message)
+		if err != nil {
+			return nil, err
+		}
+		result = json.RawMessage(encoded)
 	}
 	return json.Marshal(struct {
 		State  json.RawMessage `json:"state"`

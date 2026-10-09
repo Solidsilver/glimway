@@ -34,7 +34,7 @@ func validPresenceRoom(area string) bool {
 		return false
 	}
 	y, err := strconv.Atoi(parts[3])
-	return err == nil && strconv.Itoa(y) == parts[3] && x >= 0 && y >= 0 && x < r.GridWidth && y < r.GridHeight
+	return err == nil && strconv.Itoa(y) == parts[3] && x >= 0 && y >= 0 && x < int(r.GetGridWidth()) && y < int(r.GetGridHeight())
 }
 
 func (a *Server) presenceSocket(w http.ResponseWriter, r *http.Request) error {
@@ -49,13 +49,13 @@ func (a *Server) presenceSocket(w http.ResponseWriter, r *http.Request) error {
 	h := a.presence
 	// Already-full sessions need no additional DB proof query.
 	h.mu.Lock()
-	sessionFull := h.sessions[session] >= h.config.MaxSessionConnections
+	sessionFull := h.sessions[session] >= int(h.config.GetMaxSessionConnections())
 	h.mu.Unlock()
 	if sessionFull {
 		w.Header().Set("Retry-After", "5")
 		return fail(429, "presence-session-limit")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), millis(a.presence.config.AuthTimeoutMs))
+	ctx, cancel := context.WithTimeout(context.Background(), millis(int(a.presence.config.GetAuthTimeoutMs())))
 	identity, err := a.presenceIdentity(ctx, session, false)
 	cancel()
 	if err != nil {
@@ -89,8 +89,8 @@ func (a *Server) presenceSocket(w http.ResponseWriter, r *http.Request) error {
 	h.sockets[conn] = struct{}{}
 	h.mu.Unlock()
 	defer func() { h.mu.Lock(); delete(h.sockets, conn); h.mu.Unlock() }()
-	conn.SetReadLimit(int64(h.config.MessageBytes))
-	ctx, cancel = context.WithTimeout(context.Background(), millis(h.config.AuthTimeoutMs))
+	conn.SetReadLimit(int64(int(h.config.GetMessageBytes())))
+	ctx, cancel = context.WithTimeout(context.Background(), millis(int(h.config.GetAuthTimeoutMs())))
 	typ, b, err := conn.Read(ctx)
 	cancel()
 	if err != nil {
@@ -102,7 +102,7 @@ func (a *Server) presenceSocket(w http.ResponseWriter, r *http.Request) error {
 		_ = conn.Close(presenceUnauthorized, "unauthorized")
 		return nil
 	}
-	ctx, cancel = context.WithTimeout(context.Background(), millis(h.config.AuthTimeoutMs))
+	ctx, cancel = context.WithTimeout(context.Background(), millis(int(h.config.GetAuthTimeoutMs())))
 	defer cancel()
 	for {
 		h.mu.Lock()
@@ -147,13 +147,13 @@ func (a *Server) presenceSocket(w http.ResponseWriter, r *http.Request) error {
 		// Successful registration continues with the lock held and a current generation.
 		break
 	}
-	if len(h.peers) >= h.config.MaxConnections && h.peers[identity.ID] == nil {
+	if len(h.peers) >= int(h.config.GetMaxConnections()) && h.peers[identity.ID] == nil {
 		h.mu.Unlock()
 		_ = conn.Close(websocket.StatusTryAgainLater, "presence-full")
 		return nil
 	}
 	peerCtx, peerCancel := context.WithCancel(context.Background())
-	p := &presencePeer{identity: identity, account: reservation.account, conn: conn, ctx: peerCtx, cancel: peerCancel, queue: make(chan []byte, h.config.QueueMessages), lastActivity: time.Now()}
+	p := &presencePeer{identity: identity, account: reservation.account, conn: conn, ctx: peerCtx, cancel: peerCancel, queue: make(chan []byte, int(h.config.GetQueueMessages())), lastActivity: time.Now()}
 	if old := h.peers[identity.ID]; old != nil {
 		if old.identity.Lease == identity.Lease && old.identity.World == identity.World {
 			if old.grace != nil {
@@ -250,7 +250,7 @@ func (a *Server) presenceReader(p *presencePeer) {
 				h.mu.Unlock()
 				return
 			}
-			if !p.lastJoin.IsZero() && now.Sub(p.lastJoin) < millis(h.config.JoinCooldownMs) {
+			if !p.lastJoin.IsZero() && now.Sub(p.lastJoin) < millis(int(h.config.GetJoinCooldownMs())) {
 				h.mu.Unlock()
 				continue
 			}
@@ -266,7 +266,7 @@ func (a *Server) presenceReader(p *presencePeer) {
 					n++
 				}
 			}
-			if n >= h.config.MaxRoomPlayers {
+			if n >= int(h.config.GetMaxRoomPlayers()) {
 				p.stop(websocket.StatusTryAgainLater, "room-full")
 				h.mu.Unlock()
 				return
@@ -292,7 +292,7 @@ func (a *Server) presenceReader(p *presencePeer) {
 				h.mu.Unlock()
 				return
 			}
-			if !p.lastPos.IsZero() && now.Sub(p.lastPos) < time.Second/time.Duration(h.config.PositionHz) {
+			if !p.lastPos.IsZero() && now.Sub(p.lastPos) < time.Second/time.Duration(int(h.config.GetPositionHz())) {
 				h.mu.Unlock()
 				continue
 			}
@@ -300,12 +300,12 @@ func (a *Server) presenceReader(p *presencePeer) {
 			p.pos = &presencePosition{x, y, rules.Position{X: fx, Y: fy}, *position.Moving}
 			h.broadcastEncoded(p, encoded, encodeErr)
 		case *contract.PresenceMessage_Emote:
-			if p.area == "" || !slices.Contains(h.config.Emotes, event.Emote.Id) {
+			if p.area == "" || !slices.Contains(h.config.GetEmotes(), event.Emote.Id) {
 				p.stop(websocket.StatusPolicyViolation, "invalid-emote")
 				h.mu.Unlock()
 				return
 			}
-			if !p.lastEmote.IsZero() && now.Sub(p.lastEmote) < millis(h.config.EmoteCooldownMs) {
+			if !p.lastEmote.IsZero() && now.Sub(p.lastEmote) < millis(int(h.config.GetEmoteCooldownMs())) {
 				h.mu.Unlock()
 				continue
 			}
@@ -324,9 +324,9 @@ func finitePresence(n float64) bool { return !math.IsNaN(n) && !math.IsInf(n, 0)
 
 func (a *Server) presenceWriter(p *presencePeer) {
 	h := a.presence
-	idle := time.NewTicker(min(millis(h.config.IdleTimeoutMs)/4, time.Second))
+	idle := time.NewTicker(min(millis(int(h.config.GetIdleTimeoutMs()))/4, time.Second))
 	defer idle.Stop()
-	ping := time.NewTicker(millis(h.config.PingIntervalMs))
+	ping := time.NewTicker(millis(int(h.config.GetPingIntervalMs())))
 	defer ping.Stop()
 	for {
 		if p.ctx.Err() != nil {
@@ -343,14 +343,14 @@ func (a *Server) presenceWriter(p *presencePeer) {
 			h.mu.Unlock()
 			// Cancelling coder/websocket Write closes the transport. Let a bounded
 			// in-flight write finish so takeover can send its explicit close code.
-			ctx, cancel := context.WithTimeout(context.Background(), millis(h.config.WriteTimeoutMs))
+			ctx, cancel := context.WithTimeout(context.Background(), millis(int(h.config.GetWriteTimeoutMs())))
 			err := p.conn.Write(ctx, websocket.MessageBinary, b)
 			cancel()
 			if err != nil {
 				p.stop(websocket.StatusTryAgainLater, "slow-consumer")
 			}
 		case <-ping.C:
-			ctx, cancel := context.WithTimeout(context.Background(), millis(h.config.PongTimeoutMs))
+			ctx, cancel := context.WithTimeout(context.Background(), millis(int(h.config.GetPongTimeoutMs())))
 			err := p.conn.Ping(ctx)
 			cancel()
 			if err != nil {
@@ -358,7 +358,7 @@ func (a *Server) presenceWriter(p *presencePeer) {
 			}
 		case <-idle.C:
 			h.mu.Lock()
-			expired := time.Since(p.lastActivity) >= millis(h.config.IdleTimeoutMs)
+			expired := time.Since(p.lastActivity) >= millis(int(h.config.GetIdleTimeoutMs()))
 			h.mu.Unlock()
 			if expired {
 				p.stop(presenceIdle, "idle-timeout")
@@ -374,11 +374,11 @@ type presenceIngress struct {
 	last, excessSince, lastExcess time.Time
 }
 
-func newPresenceIngress(c content.Presence) presenceIngress {
+func newPresenceIngress(c *content.Presence) presenceIngress {
 	return presenceIngress{tokens: float64(c.IncomingBurst), last: time.Now()}
 }
 
-func (b *presenceIngress) admit(now time.Time, c content.Presence) (bool, bool) {
+func (b *presenceIngress) admit(now time.Time, c *content.Presence) (bool, bool) {
 	b.tokens = min(float64(c.IncomingBurst), b.tokens+max(0, now.Sub(b.last).Seconds())*float64(c.IncomingMessagesPerSecond))
 	b.last = now
 	if b.tokens >= float64(c.IncomingBurst) || now.Sub(b.lastExcess) >= time.Second {
@@ -392,5 +392,5 @@ func (b *presenceIngress) admit(now time.Time, c content.Presence) (bool, bool) 
 		b.excessSince = now
 	}
 	b.lastExcess = now
-	return false, now.Sub(b.excessSince) >= millis(c.IncomingExcessMs)
+	return false, now.Sub(b.excessSince) >= millis(int(c.GetIncomingExcessMs()))
 }

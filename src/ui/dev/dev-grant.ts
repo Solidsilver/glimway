@@ -6,7 +6,7 @@
  * bag and the HUD read from are read again. Imported only by the dev panel,
  * which only Vite dev mode loads.
  */
-import contract from '../../../content/contract.json' with { type: 'json' };
+import { CONTRACT_NUMBER } from '../../lib/contract.ts';
 import { decodePlayerState } from '../../lib/api/state-contract.ts';
 import type { Session } from '../../game/session.ts';
 import { itemsFor } from '../../game/items.ts';
@@ -35,7 +35,7 @@ export async function devGrant(session: Session, grants: GrantRequest[]): Promis
     const res = await fetch('/api/dev/grant', {
       method: 'POST',
       credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json', 'X-Glimway-Contract': String(contract.number) },
+      headers: { 'Content-Type': 'application/json', 'X-Glimway-Contract': String(CONTRACT_NUMBER) },
       body: JSON.stringify({ grants }),
     });
     let body: unknown;

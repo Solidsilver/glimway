@@ -10,6 +10,7 @@ import (
 
 	contract "glimway/server/internal/gen/glimway/v1"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -50,4 +51,21 @@ func TestMissingErrorCodeLogsAndFails(t *testing.T) {
 		}
 	}()
 	errorCodeProto("uncatalogued-refusal")
+}
+
+// The Envelope's result cases resolve by message type name (typedEnvelope,
+// replayResult, the reconciliation read's resultCase): two cases sharing one
+// message type would answer under the first case's name and the rest would
+// be unreachable. Recall and leave carry their own result messages for this.
+func TestEnvelopeResultCasesHaveDistinctTypes(t *testing.T) {
+	fields := (&contract.Envelope{}).ProtoReflect().Descriptor().Oneofs().ByName("result").Fields()
+	seen := map[string]protoreflect.FieldDescriptor{}
+	for i := 0; i < fields.Len(); i++ {
+		f := fields.Get(i)
+		name := string(f.Message().FullName())
+		if prev, ok := seen[name]; ok {
+			t.Fatalf("Envelope.result cases %s and %s share message type %s: the later case can never be emitted", prev.JSONName(), f.JSONName(), name)
+		}
+		seen[name] = f
+	}
 }

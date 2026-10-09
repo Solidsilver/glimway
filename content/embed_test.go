@@ -10,8 +10,8 @@ func TestSharedContent(t *testing.T) {
 	if e.RoadLanterns[0] != "road-1" || e.RoadLanterns[1] != "road-2" || e.RoadLanterns[2] != "road-3" {
 		t.Fatal("invalid lantern content")
 	}
-	gear, err := LoadGear()
-	if err != nil || len(gear) == 0 {
+	gear, err := LoadHabiticaGear()
+	if err != nil || len(gear.Gear) == 0 {
 		t.Fatalf("gear catalog: %v", err)
 	}
 	papers, err := LoadPapers()
@@ -37,5 +37,24 @@ func TestSharedContent(t *testing.T) {
 	}
 	if start != 13 {
 		t.Fatalf("library-start papers: %d", start)
+	}
+}
+
+func TestEconomyLoaderVectors(t *testing.T) {
+	var vectors struct {
+		Loader []loaderVector
+	}
+	readVectors(t, "economy", &vectors)
+	base, _ := FS.ReadFile("economy.json")
+	for _, v := range vectors.Loader {
+		t.Run("loader/"+v.Name, func(t *testing.T) {
+			_, err := DecodeEconomy(editVector(t, base, v))
+			if (err == nil) != v.Valid {
+				t.Fatal(v.Valid, err)
+			}
+			if !v.Valid && v.Rule != "" {
+				checkVectorRule(t, err, v.Rule)
+			}
+		})
 	}
 }

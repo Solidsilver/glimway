@@ -164,13 +164,13 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
   fund(id, { materials: { timber: 40, stone: 30, amber: 6, fiber: 10 } })
   await silasSays(page, /See what you’ve finished/)
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
-  const first = HOMESTEAD_DATA.lanternPosts.costs[0]
+  const first = HOMESTEAD_DATA.lanternPosts.costs[0]!.materials
   await expect(shop.locator('.row', { hasText: 'Lantern Post' })).toContainText(`${first.timber} timber`)
   await shop.locator('[data-buy="wooden-stool"]').click()
   await expect(shop.locator('.msg.ok')).toContainText('Wooden Stool is yours')
   await shop.locator('[data-buy="lantern-post"]').click()
   await expect(shop.locator('.msg.ok')).toContainText('Lantern Post is yours')
-  const second = HOMESTEAD_DATA.lanternPosts.costs[1]
+  const second = HOMESTEAD_DATA.lanternPosts.costs[1]!.materials
   await expect(shop.locator('.row', { hasText: 'Lantern Post' })).toContainText(`${second.timber} timber`)
   await shot(page, 'silas-shop-desktop')
   await shop.getByRole('button', { name: 'Close Silas’s yard' }).click()

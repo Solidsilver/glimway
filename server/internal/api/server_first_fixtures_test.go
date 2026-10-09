@@ -75,6 +75,8 @@ func populated(m protoreflect.Message, depth int) {
 				v = protoreflect.ValueOfFloat64(1)
 			case protoreflect.BoolKind:
 				v = protoreflect.ValueOfBool(true)
+			case protoreflect.Int32Kind:
+				v = protoreflect.ValueOfInt32(1)
 			case protoreflect.MessageKind:
 				populated(v.Message(), depth+1)
 			default:
@@ -103,7 +105,7 @@ func populated(m protoreflect.Message, depth int) {
 }
 func TestServerFirstWireFixtures(t *testing.T) {
 	var fixtures []wireFixture
-	files := []protoreflect.FileDescriptor{contract.File_glimway_v1_op_proto, contract.File_glimway_v1_operations_proto, contract.File_glimway_v1_profile_proto, contract.File_glimway_v1_state_proto, contract.File_glimway_v1_wilds_proto}
+	files := []protoreflect.FileDescriptor{contract.File_glimway_v1_op_proto, contract.File_glimway_v1_operations_proto, contract.File_glimway_v1_profile_proto, contract.File_glimway_v1_state_proto, contract.File_glimway_v1_wilds_proto, contract.File_glimway_v1_village_proto, contract.File_glimway_v1_world_proto}
 	for _, file := range files {
 		messages := file.Messages()
 		for i := 0; i < messages.Len(); i++ {
@@ -249,7 +251,12 @@ func TestServerFirstWireFixtures(t *testing.T) {
 			return nil, err
 		}
 		items, err := readItems(ctx, tx, s, now)
-		return itemResult{Items: items, Gathered: []stackView{{ItemDef: "timber", Qty: 2}}}, err
+		if err != nil {
+			return nil, err
+		}
+		result := &contract.ItemsResult{Items: itemsViewProto(items), Gathered: []*contract.Stack{{ItemDef: "timber", Qty: 2}}}
+		raw, err := protoResult(result)
+		return raw, err
 	}); err != nil {
 		t.Fatal(err)
 	}

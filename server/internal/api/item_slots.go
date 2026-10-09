@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
 	"strings"
 )
@@ -39,7 +40,7 @@ func carriesGear(ctx context.Context, tx *sql.Tx, player string) (bool, error) {
 	ids := []string{}
 	for _, d := range content.ItemsRules.Items {
 		if d.Kind == "carry-gear" {
-			ids = append(ids, "'"+d.ID+"'")
+			ids = append(ids, "'"+d.GetId()+"'")
 		}
 	}
 	if len(ids) == 0 {
@@ -53,9 +54,9 @@ func carriesGear(ctx context.Context, tx *sql.Tx, player string) (bool, error) {
 func pocketCount(ctx context.Context, tx *sql.Tx, player string) (int, error) {
 	gear, err := carriesGear(ctx, tx, player)
 	if gear {
-		return content.ItemsRules.Rules.Pockets.WithCarryGear, err
+		return int(content.ItemsRules.Rules.Pockets.GetWithCarryGear()), err
 	}
-	return content.ItemsRules.Rules.Pockets.Base, err
+	return int(content.ItemsRules.Rules.Pockets.GetBase()), err
 }
 
 type slotRow struct {
@@ -89,13 +90,13 @@ func slotHolds(ctx context.Context, tx *sql.Tx, player string, v slotRow) (bool,
 	if v.instance.Valid {
 		var n int
 		err := tx.QueryRowContext(ctx, "SELECT count(*) FROM item_instances WHERE id=? AND item_def=? AND location='pack' AND owner=?", v.instance.String, v.def, player).Scan(&n)
-		return n == 1 && v.slot == "off-hand" && def.OffHandable(), err
+		return n == 1 && v.slot == "off-hand" && content.ItemOffHandable(def), err
 	}
 	n, err := stackTotal(ctx, tx, packOf(player), v.def)
 	if v.slot == "off-hand" {
-		return n > 0 && def.OffHandable() && def.Kind == "keepsake", err
+		return n > 0 && content.ItemOffHandable(def) && def.GetKind() == "keepsake", err
 	}
-	return n > 0 && def.Kind == "keepsake", err
+	return n > 0 && def.GetKind() == "keepsake", err
 }
 
 // settleSlots drops anything a pocket or the off hand points at that is no
@@ -136,15 +137,15 @@ func settleSlots(ctx context.Context, tx *sql.Tx, s *store.Snapshot) error {
 }
 
 // pocketItem puts a carried keepsake in pocket 1 or 2 (empty itemDef: empty it).
-func pocketItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest) error {
+func pocketItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.ItemsRequest) error {
 	n, err := pocketCount(ctx, tx, s.AccountID)
 	if err != nil {
 		return err
 	}
-	if req.Slot < 1 || req.Slot > content.ItemsRules.Rules.Pockets.WithCarryGear {
+	if req.Slot < 1 || int(req.Slot) > int(content.ItemsRules.Rules.Pockets.GetWithCarryGear()) {
 		return fail(400, "invalid-slot")
 	}
-	if req.Slot > n {
+	if int(req.Slot) > n {
 		return fail(409, "no-such-pocket")
 	}
 	slot := "pocket-" + string(rune('0'+req.Slot))
@@ -155,24 +156,24 @@ func pocketItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequ
 		return nil
 	}
 	def, ok := content.ItemFor(req.ItemDef)
-	if !ok || def.Kind != "keepsake" {
+	if !ok || def.GetKind() != "keepsake" {
 		return fail(400, "not-a-keepsake")
 	}
-	if have, err := stackTotal(ctx, tx, packOf(s.AccountID), def.ID); err != nil {
+	if have, err := stackTotal(ctx, tx, packOf(s.AccountID), def.GetId()); err != nil {
 		return err
 	} else if have == 0 {
 		return fail(409, "insufficient-items")
 	}
-	if _, err = tx.ExecContext(ctx, "DELETE FROM item_slots WHERE account_id=? AND slot LIKE 'pocket-%' AND item_def=?", s.AccountID, def.ID); err != nil {
+	if _, err = tx.ExecContext(ctx, "DELETE FROM item_slots WHERE account_id=? AND slot LIKE 'pocket-%' AND item_def=?", s.AccountID, def.GetId()); err != nil {
 		return err
 	}
-	_, err = tx.ExecContext(ctx, "INSERT INTO item_slots(account_id,slot,item_def) VALUES(?,?,?)", s.AccountID, slot, def.ID)
+	_, err = tx.ExecContext(ctx, "INSERT INTO item_slots(account_id,slot,item_def) VALUES(?,?,?)", s.AccountID, slot, def.GetId())
 	return err
 }
 
 // offHandItem carries one thing in the off hand (it opens with a class):
 // an off-hand instance by id, or an off-hand keepsake by definition.
-func offHandItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest) error {
+func offHandItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.ItemsRequest) error {
 	if open, _ := offHandOpen(s); !open {
 		return fail(409, "off-hand-closed")
 	}
@@ -207,9 +208,9 @@ func nearResident(s *store.Snapshot, id string, now int64, radius int) bool {
 	if !ok {
 		return false
 	}
-	for _, name := range content.CycleSpotsNear(resident, float64(now), content.ResidentRules.GraceSeconds) {
+	for _, name := range content.CycleSpotsNear(resident, float64(now), int(content.ResidentRules.GetGraceSeconds())) {
 		spot := resident.Spots[name]
-		if nearTile(s, spot.Area, spot.TX, spot.TY, radius) {
+		if nearTile(s, spot.GetArea(), int(spot.GetTx()), int(spot.GetTy()), radius) {
 			return true
 		}
 	}

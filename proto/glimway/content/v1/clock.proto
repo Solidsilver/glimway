@@ -1,0 +1,44 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// The village calendar: twelve wicks of `wickDays` days each, a mark per
+// wick and one festival a wick. The epoch is a midnight-UTC RFC3339 date —
+// `string(timestamp(epoch))` is its canonical spelling, so a non-canonical
+// string, a non-midnight time or an impossible date all refuse. Wicks and
+// marks are the fixed twelve, in order (the calendar math names them).
+// content/clock.json.
+message Calendar {
+  option (buf.validate.message).cel = {
+    id: "calendar.epoch"
+    message: "epoch is a canonical midnight-UTC RFC3339 date"
+    expression: "string(timestamp(this.epoch)) == this.epoch && timestamp(this.epoch).getHours() == 0 && timestamp(this.epoch).getMinutes() == 0 && timestamp(this.epoch).getSeconds() == 0"
+  };
+  option (buf.validate.message).cel = {
+    id: "calendar.festivals"
+    message: "each festival names one of the wicks, on a day of the wick"
+    expression: "this.festivals.all(f, f.wick in this.wicks && f.day >= 1 && f.day <= this.wick_days)"
+  };
+  string epoch = 1;
+  int32 wick_days = 2 [(buf.validate.field).int32 = {gte: 7, lte: 365}];
+  repeated string wicks = 3 [(buf.validate.field).repeated = {min_items: 12, max_items: 12}, (buf.validate.field).cel = {
+    id: "calendar.wicks"
+    message: "wicks are the twelve fixed wick names, in order"
+    expression: "this == [\"Thaw\", \"Mud\", \"Bud\", \"Bloom\", \"Light\", \"Cart\", \"Haze\", \"Sap\", \"Amber\", \"Leaf\", \"Smoke\", \"Quiet\"]"
+  }];
+  repeated string marks = 4 [(buf.validate.field).repeated = {min_items: 12, max_items: 12}, (buf.validate.field).cel = {
+    id: "calendar.marks"
+    message: "marks are the twelve fixed marks, in order"
+    expression: "this == [\"Mudrise\", \"Mudrise\", \"Mudrise\", \"Carting\", \"Carting\", \"Carting\", \"Amberfall\", \"Amberfall\", \"Amberfall\", \"Quiet\", \"Quiet\", \"Quiet\"]"
+  }];
+  repeated Festival festivals = 5 [(buf.validate.field).repeated = {min_items: 4, max_items: 4}];
+}
+
+// One festival day. Names are unique per calendar (the loader's rule: it
+// names the doubled festival).
+message Festival {
+  string name = 1 [(buf.validate.field).string.min_len = 1];
+  string wick = 2;
+  int32 day = 3;
+}

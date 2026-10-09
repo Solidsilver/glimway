@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/land"
 	"net/http"
 	"slices"
@@ -43,17 +44,16 @@ func scanInstances(rows *sql.Rows, out []homeInstance) ([]homeInstance, error) {
 // loadHome is a homestead as `caller` sees it: everything placed, and the
 // caller's own pack decorations when they are a member (to set out).
 func loadHome(ctx context.Context, tx *sql.Tx, id, caller string, now int64) (homeView, error) {
-	h := homeView{ID: id, Outdoor: content.HomeRules.Outdoor(), Items: []homeInstance{}, Cleared: [][2]int{}, Stumps: [][2]int{}, Plants: []homePlantView{}}
+	h := homeView{ID: id, Outdoor: content.Outdoor(content.HomeRules), Items: []homeInstance{}, Cleared: [][2]int{}, Stumps: [][2]int{}, Plants: []homePlantView{}}
 	err := tx.QueryRowContext(ctx, "SELECT world_id,gate,tier,posts_bought,vacant_since FROM homesteads WHERE id=?", id).Scan(&h.WorldID, &h.Gate, &h.Tier, &h.PostsBought, &h.VacantSince)
 	if err != nil {
 		return h, err
 	}
 	h.Desolate = desolate(h.VacantSince, now)
-	h.LandSeed = land.Seed(h.WorldID, h.Gate, content.HomeRules.Land)
-	h.NextPost = content.HomeRules.PostCost(h.PostsBought)
+	h.LandSeed = land.Seed(h.WorldID, h.Gate, content.HomeRules.GetLand())
+	h.NextPost = content.HomePostCost(content.HomeRules, h.PostsBought)
 	if h.Tier >= 1 {
-		g := content.HomeRules.Indoor
-		h.Indoor = &g
+		h.Indoor = content.HomeRules.GetIndoor()
 	}
 	if h.Members, err = members(ctx, tx, id); err != nil {
 		return h, err
@@ -185,10 +185,13 @@ func (a *Server) homeRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finishRead(w, r, tx, s, struct {
-		Gate      int            `json:"gate"`
-		LandSeed  uint32         `json:"landSeed"`
-		Home      *homeView      `json:"home"`
-		Materials map[string]int `json:"materials"`
-	}{gate, land.Seed(s.WorldID, gate, content.HomeRules.Land), home, m})
+	result := &contract.HomesteadRead{Gate: int32(gate), LandSeed: land.Seed(s.WorldID, gate, content.HomeRules.GetLand()), Materials: materialCountsProto(m)}
+	if home != nil {
+		result.Home = homeViewProto(*home)
+	}
+	body, err := protoResult(result)
+	if err != nil {
+		return err
+	}
+	return a.finishRead(w, r, tx, s, body)
 }

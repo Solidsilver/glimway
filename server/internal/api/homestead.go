@@ -8,7 +8,9 @@ package api
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
 	"net/http"
 	"strings"
@@ -16,6 +18,9 @@ import (
 	"unicode/utf8"
 )
 
+// The homestead views below are the domain's own shape: the workshop's read
+// (workshop.go) still serves them directly, and the homestead routes project
+// them onto the generated contract messages at the wire (homestead_wire.go).
 type homeMember struct {
 	ID          string `json:"id"`
 	DisplayName string `json:"displayName"`
@@ -43,15 +48,6 @@ type homePlantView struct {
 	Lit        bool   `json:"lit"`
 }
 
-// homeLandChange: a gather that changed home land inside lamplight (the
-// drift rule: a stump stays, open ground stays open). The client reads the
-// home again when it sees one, so the next build of the land shows it.
-type homeLandChange struct {
-	Tile    [2]int `json:"tile"`
-	Stump   bool   `json:"stump"`
-	Cleared bool   `json:"cleared"`
-}
-
 type homeView struct {
 	ID          string            `json:"id"`
 	Gate        int               `json:"gate"`
@@ -62,29 +58,36 @@ type homeView struct {
 	Desolate    bool              `json:"desolate"`
 	VacantSince *int64            `json:"vacantSince"`
 	LandSeed    uint32            `json:"landSeed"`
-	Cleared     [][2]int          `json:"cleared"`
-	Stumps      [][2]int          `json:"stumps"`
+	Cleared     tileList          `json:"cleared"`
+	Stumps      tileList          `json:"stumps"`
 	Plants      []homePlantView   `json:"plants"`
 	PostsBought int               `json:"postsBought"`
-	NextPost    map[string]int    `json:"nextPost"`
-	Outdoor     content.HomeGrid  `json:"outdoor"`
+	NextPost    map[string]int32  `json:"nextPost"`
+	Outdoor     *content.HomeGrid `json:"outdoor"`
 	Indoor      *content.HomeGrid `json:"indoor"`
 	Items       []homeInstance    `json:"items"`
 }
 
-type homeRequest struct {
-	Mutation
-	ItemDef  string  `json:"itemDef,omitempty"`
-	ItemID   string  `json:"itemId,omitempty"`
-	Tier     *int    `json:"tier,omitempty"`
-	Scene    string  `json:"scene,omitempty"`
-	X        *int    `json:"x,omitempty"`
-	Y        *int    `json:"y,omitempty"`
-	Rotation *int    `json:"rotation,omitempty"`
-	Name     *string `json:"name,omitempty"`
-	Gate     *int    `json:"gate,omitempty"`
-	To       string  `json:"to,omitempty"`
-	HomeID   string  `json:"homeId,omitempty"`
+// tileList decodes the homestead wire's tile pairs into the domain's [2]int
+// pairs. Every HomeView on the wire (the homestead reads and the workshop's
+// storage and craft answers alike) carries Coord objects — goods.proto's
+// shared message; the pair shape survives only in the client's projections.
+type tileList [][2]int
+
+func (t *tileList) UnmarshalJSON(b []byte) error {
+	var raw []struct {
+		X int `json:"x"`
+		Y int `json:"y"`
+	}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	out := make(tileList, 0, len(raw))
+	for _, c := range raw {
+		out = append(out, [2]int{c.X, c.Y})
+	}
+	*t = out
+	return nil
 }
 
 // cleanPostName rejects Unicode controls before tidying whitespace, so tabs,
@@ -97,18 +100,18 @@ func cleanPostName(raw string) (string, bool) {
 		}
 	}
 	name := strings.Join(strings.Fields(raw), " ")
-	if name == "" || !utf8.ValidString(name) || utf8.RuneCountInString(name) > content.HomeRules.LanternPosts.NameMax {
+	if name == "" || !utf8.ValidString(name) || utf8.RuneCountInString(name) > int(content.HomeRules.GetLanternPosts().GetNameMax()) {
 		return "", false
 	}
 	return name, true
 }
 
 func (a *Server) homeMutation(w http.ResponseWriter, r *http.Request) error {
-	var req homeRequest
-	if err := decode(w, r, &req); err != nil {
+	var req contract.HomesteadRequest
+	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}
@@ -120,9 +123,9 @@ func (a *Server) homeMutation(w http.ResponseWriter, r *http.Request) error {
 		var instanceID, status string
 		switch op {
 		case "claim":
-			err = a.claim(ctx, tx, s, req, member, now)
+			err = a.claim(ctx, tx, s, &req, member, now)
 		case "joint":
-			status, err = a.joint(ctx, tx, s, req, now)
+			status, err = a.joint(ctx, tx, s, &req, now)
 		default:
 			if !member {
 				return nil, fail(409, "not-a-member")
@@ -133,15 +136,15 @@ func (a *Server) homeMutation(w http.ResponseWriter, r *http.Request) error {
 			}
 			switch op {
 			case "upgrade":
-				err = upgradeHome(ctx, tx, s, h, req, now)
+				err = upgradeHome(ctx, tx, s, h, &req, now)
 			case "buy":
-				instanceID, err = buyItem(ctx, tx, s, h, req, now)
+				instanceID, err = buyItem(ctx, tx, s, h, &req, now)
 			case "place", "move", "remove":
-				instanceID, err = arrange(ctx, tx, s, h, op, req, now)
+				instanceID, err = arrange(ctx, tx, s, h, op, &req, now)
 			case "clear":
-				err = clearTile(ctx, tx, s, h, req, now)
+				err = clearTile(ctx, tx, s, h, &req, now)
 			case "invite":
-				status, err = invite(ctx, tx, s, h, req, now)
+				status, err = invite(ctx, tx, s, h, &req, now)
 			case "leave":
 				err = leave(ctx, tx, s, h, now)
 			default:
@@ -159,11 +162,10 @@ func (a *Server) homeMutation(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		return struct {
-			Home      *homeView      `json:"home"`
-			Materials map[string]int `json:"materials"`
-			ItemID    string         `json:"itemId,omitempty"`
-			Status    string         `json:"status,omitempty"`
-		}{home, m, instanceID, status}, nil
+		result := &contract.HomesteadResult{Materials: materialCountsProto(m), ItemId: instanceID, Status: status}
+		if home != nil {
+			result.Home = homeViewProto(*home)
+		}
+		return protoResult(result)
 	})
 }

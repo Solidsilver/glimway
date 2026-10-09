@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/itemmove"
 	"glimway/server/internal/store"
 )
@@ -129,7 +130,7 @@ func writeOffLostDeed(ctx context.Context, tx *sql.Tx, home string, gate int, no
 		}
 		kind := "item"
 		if d, ok := content.ItemFor(def); ok {
-			kind = d.AssetKind()
+			kind = content.ItemAssetKind(d)
 		}
 		out = append(out, row{itemmove.LocationCurrency("storage", kind, def), -n, ref})
 	}
@@ -239,7 +240,7 @@ func gateCount(ctx context.Context, tx *sql.Tx, world string) (int, error) {
 	if err := tx.QueryRowContext(ctx, "SELECT count(*),COALESCE(MAX(gate)+1,0) FROM homesteads WHERE world_id=?", world).Scan(&n, &top); err != nil {
 		return 0, err
 	}
-	return max(top, n+content.HomeRules.Lane.SpareGates), nil
+	return max(top, n+int(content.HomeRules.GetCommons().GetSpareGates())), nil
 }
 
 // deedPrice is what a player pays Silas for the deed to an unclaimed gate:
@@ -249,10 +250,10 @@ func deedPrice(ctx context.Context, tx *sql.Tx, player, world string, gate int) 
 	if err := tx.QueryRowContext(ctx, "SELECT COALESCE((SELECT deeds FROM player_deeds WHERE account_id=?),0),(SELECT count(*) FROM lost_gates WHERE world_id=? AND gate=?)", player, world, gate).Scan(&deeds, &lost); err != nil {
 		return 0, err
 	}
-	if content.HomeRules.Deeds.FirstFree && deeds == 0 && lost == 0 {
+	if content.HomeRules.GetDeeds().GetFirstFree() && deeds == 0 && lost == 0 {
 		return 0, nil
 	}
-	return content.HomeRules.Deeds.Embers, nil
+	return int(content.HomeRules.GetDeeds().GetEmbers()), nil
 }
 
 func addDeed(ctx context.Context, tx *sql.Tx, player string) error {
@@ -260,7 +261,7 @@ func addDeed(ctx context.Context, tx *sql.Tx, player string) error {
 	return err
 }
 
-func (a *Server) claim(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req homeRequest, member bool, now int64) error {
+func (a *Server) claim(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.HomesteadRequest, member bool, now int64) error {
 	if member {
 		return fail(409, "already-homesteaded")
 	}
@@ -268,10 +269,10 @@ func (a *Server) claim(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req h
 	if err != nil {
 		return err
 	}
-	if req.Gate == nil || *req.Gate < 0 || *req.Gate >= n {
+	if req.Gate == nil || req.Gate.GetValue() < 0 || req.Gate.GetValue() >= int32(n) {
 		return fail(404, "invalid-gate")
 	}
-	gate := *req.Gate
+	gate := int(req.Gate.GetValue())
 	var held string
 	var vacant *int64
 	err = tx.QueryRowContext(ctx, "SELECT id,vacant_since FROM homesteads WHERE world_id=? AND gate=?", s.WorldID, gate).Scan(&held, &vacant)
@@ -339,52 +340,52 @@ func reclaim(ctx context.Context, tx *sql.Tx, s *store.Snapshot, home string, no
 	return store.Credit(ctx, tx, s, 0, 0, "homestead-reclaim", home, nil, now)
 }
 
-func upgradeHome(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req homeRequest, now int64) error {
+func upgradeHome(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req *contract.HomesteadRequest, now int64) error {
 	tiers := content.HomeRules.Tiers
-	if req.Tier == nil || *req.Tier != h.Tier+1 || *req.Tier >= len(tiers) || !tiers[*req.Tier].Purchasable {
+	if req.Tier == nil || req.Tier.GetValue() != int32(h.Tier+1) || req.Tier.GetValue() >= int32(len(tiers)) || !tiers[req.Tier.GetValue()].GetPurchasable() {
 		return fail(409, "tier-unavailable")
 	}
-	t := tiers[*req.Tier]
-	if err := debitEmbers(ctx, tx, s, t.Embers, "homestead-upgrade", t.ID, now); err != nil {
+	t := tiers[req.Tier.GetValue()]
+	if err := debitEmbers(ctx, tx, s, int(t.GetEmbers()), "homestead-upgrade", t.GetId(), now); err != nil {
 		return err
 	}
-	if err := debitMaterials(ctx, tx, s, t.Materials, 1, "homestead-upgrade", t.ID, now); err != nil {
+	if err := debitMaterials(ctx, tx, s, t.GetMaterials(), 1, "homestead-upgrade", t.GetId(), now); err != nil {
 		return err
 	}
-	_, err := tx.ExecContext(ctx, "UPDATE homesteads SET tier=? WHERE id=?", t.Tier, h.ID)
+	_, err := tx.ExecContext(ctx, "UPDATE homesteads SET tier=? WHERE id=?", t.GetTier(), h.ID)
 	return err
 }
 
-func buyItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req homeRequest, now int64) (string, error) {
+func buyItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req *contract.HomesteadRequest, now int64) (string, error) {
 	def, ok := content.HomeItemFor(req.ItemDef)
 	if !ok {
 		return "", fail(400, "invalid-item")
 	}
 	// Pieces made at the bench (or given by the story) are never sold.
-	if def.CraftOnly {
+	if def.GetCraftOnly() {
 		return "", fail(409, "craft-only")
 	}
-	if def.MinTier > h.Tier {
+	if int(def.GetMinTier()) > h.Tier {
 		return "", fail(409, "tier-required")
 	}
 	var err error
-	if def.ID == content.HomeRules.LanternPosts.Item {
+	if def.GetId() == content.HomeRules.GetLanternPosts().GetItem() {
 		// Each post costs more than the last (the homestead's count, not the buyer's).
-		cost := content.HomeRules.PostCost(h.PostsBought)
+		cost := content.HomePostCost(content.HomeRules, h.PostsBought)
 		if err = checkMaterials(ctx, tx, s.AccountID, cost); err != nil {
 			return "", err
 		}
-		if err = debitMaterials(ctx, tx, s, cost, 1, "homestead-buy", def.ID, now); err != nil {
+		if err = debitMaterials(ctx, tx, s, cost, 1, "homestead-buy", def.GetId(), now); err != nil {
 			return "", err
 		}
 		_, err = tx.ExecContext(ctx, "UPDATE homesteads SET posts_bought=posts_bought+1 WHERE id=?", h.ID)
-	} else if def.Embers > 0 {
-		err = debitEmbers(ctx, tx, s, def.Embers, "homestead-buy", def.ID, now)
+	} else if def.GetEmbers() > 0 {
+		err = debitEmbers(ctx, tx, s, int(def.GetEmbers()), "homestead-buy", def.GetId(), now)
 	} else {
-		if err = checkMaterials(ctx, tx, s.AccountID, def.Materials); err != nil {
+		if err = checkMaterials(ctx, tx, s.AccountID, def.GetMaterials()); err != nil {
 			return "", err
 		}
-		err = debitMaterials(ctx, tx, s, def.Materials, 1, "homestead-buy", def.ID, now)
+		err = debitMaterials(ctx, tx, s, def.GetMaterials(), 1, "homestead-buy", def.GetId(), now)
 	}
 	if err != nil {
 		return "", err
@@ -393,8 +394,8 @@ func buyItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req
 	if err != nil {
 		return "", err
 	}
-	if _, err = tx.ExecContext(ctx, "INSERT INTO homestead_items(id,item_def,location,account_id) VALUES(?,?,'inventory',?)", id, def.ID, s.AccountID); err != nil {
+	if _, err = tx.ExecContext(ctx, "INSERT INTO homestead_items(id,item_def,location,account_id) VALUES(?,?,'inventory',?)", id, def.GetId(), s.AccountID); err != nil {
 		return "", err
 	}
-	return id, currency(ctx, tx, s.AccountID, "decoration:"+def.ID, 1, "homestead-buy", id, now)
+	return id, currency(ctx, tx, s.AccountID, "decoration:"+def.GetId(), 1, "homestead-buy", id, now)
 }

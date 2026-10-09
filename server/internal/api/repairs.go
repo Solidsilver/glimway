@@ -4,21 +4,22 @@ import (
 	"context"
 	"database/sql"
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
 	"net/http"
 	"slices"
 )
 
 type choreView struct {
-	ID          string            `json:"id"`
-	Name        string            `json:"name"`
-	Part        string            `json:"part"`
-	Area        string            `json:"area"`
-	Target      string            `json:"target"`
-	Pos         content.RepairPos `json:"pos"`
-	Resident    string            `json:"resident"`
-	Hint        string            `json:"hint"`
-	Description string            `json:"description"`
+	ID          string             `json:"id"`
+	Name        string             `json:"name"`
+	Part        string             `json:"part"`
+	Area        string             `json:"area"`
+	Target      string             `json:"target"`
+	Pos         *content.RepairPos `json:"pos"`
+	Resident    string             `json:"resident"`
+	Hint        string             `json:"hint"`
+	Description string             `json:"description"`
 }
 
 type mendedView struct {
@@ -92,7 +93,7 @@ func readRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (
 		return out, err
 	}
 
-	maxOpen := content.RepairRules.Rules.MaxOpen
+	maxOpen := int(content.RepairRules.GetRules().GetMaxOpen())
 	if maxOpen <= 0 {
 		maxOpen = 3
 	}
@@ -160,17 +161,17 @@ func readRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (
 			// wick (the clock), never a festival chore, which breaks on
 			// its own day (the hame before Carting Day) without spending
 			// the weather's allowance.
-			openBreak := func(def content.RepairDef) error {
+			openBreak := func(def *content.RepairDef) error {
 				// First time it breaks, or it's mended and rots again: the
 				// row is reset, the log keeps the history.
-				if known[def.ID] {
-					if _, err := tx.ExecContext(ctx, "UPDATE village_repairs SET mended_by=NULL, mended_at=NULL, created_at=? WHERE world_id=? AND repair_id=? AND mended_at IS NOT NULL", now, s.WorldID, def.ID); err != nil {
+				if known[def.GetId()] {
+					if _, err := tx.ExecContext(ctx, "UPDATE village_repairs SET mended_by=NULL, mended_at=NULL, created_at=? WHERE world_id=? AND repair_id=? AND mended_at IS NOT NULL", now, s.WorldID, def.GetId()); err != nil {
 						return err
 					}
-				} else if _, err := tx.ExecContext(ctx, "INSERT OR IGNORE INTO village_repairs(world_id, repair_id, created_at) VALUES(?, ?, ?)", s.WorldID, def.ID, now); err != nil {
+				} else if _, err := tx.ExecContext(ctx, "INSERT OR IGNORE INTO village_repairs(world_id, repair_id, created_at) VALUES(?, ?, ?)", s.WorldID, def.GetId(), now); err != nil {
 					return err
 				}
-				isOpen[def.ID] = true
+				isOpen[def.GetId()] = true
 				currentOpen++
 				return nil
 			}
@@ -184,24 +185,24 @@ func readRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (
 				// is a dependency, not a chore).
 				var pick *content.RepairDef
 				var pickMended int64 = -1
-				for i, def := range content.RepairRules.Repairs {
+				for _, def := range content.RepairRules.Repairs {
 					if currentOpen >= maxOpen {
 						break
 					}
-					if !def.WeatherTakes() || def.OpenFrom != nil || isOpen[def.ID] || def.ID == lastMended {
+					if !content.RepairWeatherTakes(def) || def.GetOpenFrom() != nil || isOpen[def.GetId()] || def.GetId() == lastMended {
 						continue
 					}
 					mAt := int64(-1)
-					if known[def.ID] {
-						mAt = mendedAt[def.ID]
+					if known[def.GetId()] {
+						mAt = mendedAt[def.GetId()]
 					}
 					if pick == nil || mAt < pickMended {
-						pick = &content.RepairRules.Repairs[i]
+						pick = def
 						pickMended = mAt
 					}
 				}
 				if pick != nil {
-					if err = openBreak(*pick); err != nil {
+					if err = openBreak(pick); err != nil {
 						return out, err
 					}
 					// One breakage per read; the clock paces the rest by wick.
@@ -216,10 +217,10 @@ func readRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (
 				if currentOpen >= maxOpen {
 					break
 				}
-				if def.OpenFrom == nil || isOpen[def.ID] || def.ID == lastMended {
+				if def.GetOpenFrom() == nil || isOpen[def.GetId()] || def.GetId() == lastMended {
 					continue
 				}
-				if day.Wick != def.OpenFrom.Wick || day.Day < def.OpenFrom.Day {
+				if day.Wick != def.GetOpenFrom().GetWick() || day.Day < int(def.GetOpenFrom().GetDay()) {
 					continue
 				}
 				if err = openBreak(def); err != nil {
@@ -245,15 +246,15 @@ func readRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (
 			continue
 		}
 		out.Open = append(out.Open, choreView{
-			ID:          def.ID,
-			Name:        def.Name,
-			Part:        def.Part,
-			Area:        def.Area,
-			Target:      def.Target,
-			Pos:         def.Pos,
-			Resident:    def.Resident,
-			Hint:        def.Hint,
-			Description: def.Description,
+			ID:          def.GetId(),
+			Name:        def.GetName(),
+			Part:        def.GetPart(),
+			Area:        def.GetArea(),
+			Target:      def.GetTarget(),
+			Pos:         def.GetPos(),
+			Resident:    def.GetResident(),
+			Hint:        def.GetHint(),
+			Description: def.GetDescription(),
 		})
 	}
 	if err = openRows.Err(); err != nil {
@@ -312,7 +313,7 @@ func readRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (
 		}
 		h.DisplayName = capDonor(h.DisplayName)
 		if def, ok := content.RepairFor(h.RepairID); ok {
-			h.RepairName = def.Name
+			h.RepairName = def.GetName()
 		} else {
 			h.RepairName = h.RepairID
 		}
@@ -332,9 +333,7 @@ func (a *Server) repairsRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finishRead(w, r, tx, s, struct {
-		repairsView
-	}{v})
+	return a.finishRead(w, r, tx, s, repairsViewProto(v))
 }
 
 func (a *Server) repairMend(w http.ResponseWriter, r *http.Request) error {
@@ -342,14 +341,12 @@ func (a *Server) repairMend(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	var req struct {
-		Mutation
-	}
-	if err = decode(w, r, &req); err != nil {
+	var req contract.MendRequest
+	if err = decodeOp(w, r, &req); err != nil {
 		return err
 	}
 
-	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		def, ok := content.RepairFor(id)
 		if !ok {
 			return nil, fail(404, "repair-not-found")
@@ -375,13 +372,13 @@ func (a *Server) repairMend(w http.ResponseWriter, r *http.Request) error {
 		}
 
 		// Proximity check (must be near broken thing)
-		if !nearTile(s, def.Area, def.Pos.TX, def.Pos.TY, 4) {
+		if !nearTile(s, def.GetArea(), int(def.GetPos().GetTx()), int(def.GetPos().GetTy()), 4) {
 			return nil, fail(409, "too-far-away")
 		}
 
 		// Take the required part from player pack
 		ref := s.WorldID + ":" + id
-		if _, err = packTake(ctx, tx, s.AccountID, def.Part, nil, 1, "village-repair", ref, now); err != nil {
+		if _, err = packTake(ctx, tx, s.AccountID, def.GetPart(), nil, 1, "village-repair", ref, now); err != nil {
 			return nil, err
 		}
 
@@ -407,8 +404,8 @@ func (a *Server) repairMend(w http.ResponseWriter, r *http.Request) error {
 		}
 
 		// Optional reward gift: its ledger row must land with the mend.
-		if def.Gift != nil {
-			if err = packPut(ctx, tx, s.AccountID, def.Gift.ID, []makerQty{{Maker: "", Qty: def.Gift.Qty}}, "village-reward", ref, now); err != nil {
+		if def.GetGift() != nil {
+			if err = packPut(ctx, tx, s.AccountID, def.GetGift().GetId(), []makerQty{{Maker: "", Qty: int(def.GetGift().GetQty())}}, "village-reward", ref, now); err != nil {
 				return nil, err
 			}
 		}
@@ -416,7 +413,7 @@ func (a *Server) repairMend(w http.ResponseWriter, r *http.Request) error {
 		// The scripted chores teach mending once; the weather starts the
 		// wick after the last of them is mended (it only ever sets this if
 		// it never started — the clock is not rewound later).
-		if slices.Contains(content.RepairRules.Rules.Scripted, id) {
+		if slices.Contains(content.RepairRules.GetRules().GetScripted(), id) {
 			wick := content.CalendarAt(content.CalendarRules, now).WickNumber
 			if _, err = tx.ExecContext(ctx, `
 				INSERT INTO village_repair_clock(world_id, last_break_wick) VALUES(?, ?)
@@ -440,18 +437,10 @@ func (a *Server) repairMend(w http.ResponseWriter, r *http.Request) error {
 			return nil, err
 		}
 
-		return struct {
-			Repairs  repairsView         `json:"repairs"`
-			Mended   string              `json:"mended"`
-			Reaction string              `json:"reaction"`
-			Gift     *content.RepairGift `json:"gift,omitempty"`
-			Items    itemsView           `json:"items"`
-		}{
-			Repairs:  v,
-			Mended:   id,
-			Reaction: def.Reaction,
-			Gift:     def.Gift,
-			Items:    items,
-		}, nil
+		out := &contract.MendResult{Mended: id, Reaction: def.GetReaction(), Repairs: repairsViewProto(v), Items: itemsViewProto(items)}
+		if def.GetGift() != nil {
+			out.Gift = &contract.RepairGift{Kind: def.GetGift().GetKind(), Id: def.GetGift().GetId(), Qty: def.GetGift().GetQty()}
+		}
+		return out, nil
 	})
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"glimway/content"
 	"glimway/server/internal/chunks"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/land"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
@@ -18,14 +19,14 @@ import (
 // ------------------------------------------------------------ gathering & planting
 
 func gatherCaps(action string) (visit, day int) {
-	c := content.GatheringRules.Caps
+	c := content.GatheringRules.GetCaps()
 	switch action {
 	case "chop":
-		return c.Visit.Chop, c.Day.Chop
+		return int(c.GetVisit().GetChop()), int(c.GetDay().GetChop())
 	case "break":
-		return c.Visit.Break, c.Day.Break
+		return int(c.GetVisit().GetBreak()), int(c.GetDay().GetBreak())
 	}
-	return c.Visit.Dig, c.Day.Dig
+	return int(c.GetVisit().GetDig()), int(c.GetDay().GetDig())
 }
 
 // ownLand: the caller's homestead when `area` is its land (nil, refused,
@@ -95,7 +96,7 @@ func nearPiece(s *store.Snapshot, area string, tx, ty int) bool {
 
 // gather checks stored Wilds decor or home land before charging wear and caps.
 // Curated scenery retains its area rules.
-func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req itemRequest, now int64, out *itemResult) error {
+func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.ItemsRequest, now int64, out *contract.ItemsResult) error {
 	if strings.HasPrefix(s.State.Area, "in:") {
 		return fail(409, "cannot-gather-here")
 	}
@@ -114,10 +115,10 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 	// a seasonal piece only stands in its mark or wick, whatever the
 	// client's map says.
 	calDay := content.CalendarAt(content.CalendarRules, now)
-	if !target.InSeason(calDay) {
+	if !content.GatheringTargetInSeason(target, calDay) {
 		return fail(409, "not-in-season")
 	}
-	if len(req.VisitID) > 64 {
+	if len(req.VisitId) > 64 {
 		return fail(400, "invalid-visit")
 	}
 	// Where the player is, from this operation's where, and
@@ -151,20 +152,20 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 		if err != nil {
 			return chunkError(err)
 		}
-		if req.Tile == nil {
+		if len(req.Tile) != 2 {
 			return fail(400, "tile-required")
 		}
-		size := content.WildsRules.ChunkSize
+		size := int(content.WildsRules.GetChunkSize())
 		cx, cy := int(math.Floor(float64(req.Tile[0])/float64(size))), int(math.Floor(float64(req.Tile[1])/float64(size)))
 		chunk, err := a.Config.Chunks.Chunk(ctx, tx, s.WorldID, epoch.Id, 0, int32(cx), int32(cy))
 		if err != nil {
 			return chunkError(err)
 		}
-		if !nearPiece(s, area, req.Tile[0], req.Tile[1]) {
+		if !nearPiece(s, area, int(req.Tile[0]), int(req.Tile[1])) {
 			return fail(409, "too-far-away")
 		}
 		matched, tree := false, false
-		for _, i := range chunks.DecorAt(chunk, uint32(req.Tile[0]-cx*size), uint32(req.Tile[1]-cy*size)) {
+		for _, i := range chunks.DecorAt(chunk, uint32(int(req.Tile[0])-cx*size), uint32(int(req.Tile[1])-cy*size)) {
 			kind := chunk.Decor.Kinds[chunk.Decor.Kind[i]]
 			if slices.Contains([]string{"oak", "pine", "birch", "iron-oak", "snag"}, kind) {
 				tree = true
@@ -177,7 +178,7 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 		// The prior committed chop proves that transition without changing shared
 		// chunk geometry or trusting a client-supplied stump on a standing tree.
 		if !matched && tree && req.Target == "stump" {
-			err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM idempotency WHERE account_id=? AND op='/api/items/gather' AND json_extract(result_json,'$.refused') IS NULL AND created_at>=? AND json_extract(payload_json,'$.action')='chop' AND json_extract(payload_json,'$.where.area')=? AND COALESCE(json_extract(payload_json,'$.visitId'),'')=? AND json_extract(payload_json,'$.tile[0]')=? AND json_extract(payload_json,'$.tile[1]')=?)`, s.AccountID, epoch.StartsAt, area, req.VisitID, req.Tile[0], req.Tile[1]).Scan(&matched)
+			err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM idempotency WHERE account_id=? AND op='/api/items/gather' AND json_extract(result_json,'$.refused') IS NULL AND created_at>=? AND json_extract(payload_json,'$.action')='chop' AND json_extract(payload_json,'$.where.area')=? AND COALESCE(json_extract(payload_json,'$.visitId'),'')=? AND json_extract(payload_json,'$.tile[0]')=? AND json_extract(payload_json,'$.tile[1]')=?)`, s.AccountID, epoch.StartsAt, area, req.VisitId, req.Tile[0], req.Tile[1]).Scan(&matched)
 			if err != nil {
 				return err
 			}
@@ -194,10 +195,10 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 		if home, err = ownLand(ctx, tx, s, area, now, "cannot-gather-here"); err != nil {
 			return chunkError(err)
 		}
-		if req.Tile == nil {
+		if len(req.Tile) != 2 {
 			return fail(400, "tile-required")
 		}
-		tile = *req.Tile
+		tile = [2]int{int(req.Tile[0]), int(req.Tile[1])}
 		if !nearPiece(s, area, tile[0], tile[1]) {
 			return fail(409, "too-far-away")
 		}
@@ -209,7 +210,7 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 
 	// The caps: per area visit and per day, per kind of work.
 	day := utcDay(now)
-	visit := req.VisitID
+	visit := req.VisitId
 	if visit == "" {
 		visit = area
 	}
@@ -235,7 +236,7 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 	if err != nil {
 		return err
 	}
-	out.Wear = &res
+	out.Wear = wearProto(&res)
 	// A made tool that wears out on this swing thanks its maker, as any use does.
 	if (res.Broke || res.WoreOut) && res.MakerID != "" {
 		if err = a.thankMaker(ctx, tx, s, res.MakerID, res.ItemDef, now); err != nil {
@@ -263,36 +264,36 @@ ON CONFLICT(account_id,action) DO UPDATE SET day=excluded.day,day_count=excluded
 		if !ok {
 			return fmt.Errorf("gathering slot names unknown item %q", sl.def)
 		}
-		for _, e := range d.Pocket {
-			if e.Type == "gather-more" {
-				more[e.Target] = true
+		for _, e := range d.GetPocket() {
+			if e.GetType() == "gather-more" {
+				more[e.GetTarget()] = true
 			}
 		}
 	}
 	rng := wilds.NewRng(wilds.Hash(s.AccountID, req.Target, int(now), int(day), dayCount))
-	out.Gathered = []stackView{}
+	out.Gathered = []*contract.Stack{}
 	for _, y := range target.Yields {
-		if !y.InSeason(calDay) {
+		if !content.GatheringYieldInSeason(y, calDay) {
 			continue
 		}
-		if y.ChancePermille > 0 && rng.NextInt(1000) >= y.ChancePermille {
+		if y.GetChancePermille() > 0 && rng.NextInt(1000) >= int(y.GetChancePermille()) {
 			continue
 		}
-		qty := y.Min + rng.NextInt(y.Max-y.Min+1)
-		if more[y.Item] {
+		qty := int(y.GetMin()) + rng.NextInt(int(y.GetMax()-y.GetMin())+1)
+		if more[y.GetItem()] {
 			qty++
 		}
 		def, ok := content.ItemFor(y.Item)
 		if !ok {
 			return fmt.Errorf("gathering yield names unknown item %q", y.Item)
 		}
-		if def.Instanced() {
+		if content.ItemInstanced(def) {
 			for range qty {
 				id, err := newInstance(ctx, tx, def, instanceAt{"pack", s.AccountID}, "", -1, now)
 				if err != nil {
 					return err
 				}
-				if err = currency(ctx, tx, s.AccountID, content.StackCurrency(def.ID), 1, "gather", req.Target, now); err != nil {
+				if err = currency(ctx, tx, s.AccountID, content.StackCurrency(def.GetId()), 1, "gather", req.Target, now); err != nil {
 					return err
 				}
 				out.Created = append(out.Created, id)
@@ -300,7 +301,7 @@ ON CONFLICT(account_id,action) DO UPDATE SET day=excluded.day,day_count=excluded
 		} else if err = packPut(ctx, tx, s.AccountID, y.Item, []makerQty{{Maker: "", Qty: qty}}, "gather", req.Target, now); err != nil {
 			return err
 		}
-		out.Gathered = append(out.Gathered, stackView{ItemDef: y.Item, Qty: qty})
+		out.Gathered = append(out.Gathered, &contract.Stack{ItemDef: y.Item, Qty: int32(qty)})
 	}
 
 	// Home land inside lamplight remembers: a felled tree stays a stump, a
@@ -309,7 +310,7 @@ ON CONFLICT(account_id,action) DO UPDATE SET day=excluded.day,day_count=excluded
 	if home == nil || !lit {
 		return nil
 	}
-	change := homeLandChange{Tile: tile}
+	change := &contract.HomeLandChange{Tile: []int32{int32(tile[0]), int32(tile[1])}}
 	switch {
 	case req.Action == "chop":
 		_, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO homestead_stumps VALUES(?,?,?,?)", home.ID, tile[0], tile[1], now)
@@ -320,7 +321,7 @@ ON CONFLICT(account_id,action) DO UPDATE SET day=excluded.day,day_count=excluded
 		}
 		change.Cleared = true
 	}
-	out.Land = &change
+	out.Land = change
 	return err
 }
 

@@ -2,17 +2,26 @@ import raw from '../../content/clock.json' with { type: 'json' };
 import residentRaw from '../../content/residents.json' with { type: 'json' };
 import type { Resident } from './residents.ts';
 import { TURNING_NOTICE_FORMAT } from '../content/expansion-writing.ts';
-interface Festival { name: string; wick: string; day: number }
+import { decodeContent } from './content-proto.ts';
+import { CalendarSchema, type CalendarValid } from './gen/glimway/content/v1/clock_pb.js';
+export interface Festival { name: string; wick: string; day: number }
 export interface Calendar { epoch: string; wickDays: number; wicks: string[]; marks: string[]; festivals: Festival[] }
 export interface CalendarDay { wick: string; wickNumber: number; year: number; day: number; mark: string; festival: string | null; startsAt: number; nextTurning: number; notice: string | null; wickDays: number }
+/**
+ * Reads clock JSON through the schema (proto/glimway/content/v1/
+ * clock.proto): the epoch's canonical midnight-UTC spelling, the fixed
+ * wicks and marks, the festival count and each festival's wick and day
+ * are all on it. The calendar's own rule — one name per festival — stays
+ * here, naming the duplicate.
+ */
 export function validateCalendar(value: unknown): Calendar {
-  const c = value as Calendar;
-  const wicks = ['Thaw','Mud','Bud','Bloom','Light','Cart','Haze','Sap','Amber','Leaf','Smoke','Quiet'];
-  const marks = ['Mudrise','Mudrise','Mudrise','Carting','Carting','Carting','Amberfall','Amberfall','Amberfall','Quiet','Quiet','Quiet'];
-  if (!c || typeof c.epoch !== 'string' || !/^\d{4}-\d\d-\d\dT00:00:00Z$/.test(c.epoch) || !Number.isFinite(Date.parse(c.epoch)) || new Date(c.epoch).toISOString() !== c.epoch.replace('Z','.000Z') || !Number.isSafeInteger(c.wickDays) || c.wickDays < 7 || c.wickDays > 365 || JSON.stringify(c.wicks) !== JSON.stringify(wicks) || JSON.stringify(c.marks) !== JSON.stringify(marks) || !Array.isArray(c.festivals) || c.festivals.length !== 4) throw new Error('invalid calendar');
+  const doc = decodeContent(CalendarSchema, value, 'calendar', ['festivals']) as unknown as CalendarValid;
   const seen = new Set<string>();
-  for (const f of c.festivals) { if (!f || typeof f.name !== 'string' || !f.name || seen.has(f.name) || !wicks.includes(f.wick) || !Number.isSafeInteger(f.day) || f.day < 1 || f.day > c.wickDays) throw new Error('invalid calendar festival'); seen.add(f.name); }
-  return c;
+  for (const f of doc.festivals) {
+    if (seen.has(f.name)) throw new Error(`invalid calendar: duplicate festival ${f.name}`);
+    seen.add(f.name);
+  }
+  return doc as unknown as Calendar;
 }
 export const CALENDAR = validateCalendar(raw);
 /** Unix seconds; no local timezone or wall clock dependency. */

@@ -40,7 +40,7 @@ func TestWardenSliverFittingAndSingleCarriedRestriction(t *testing.T) {
 	dep := x.p5("POST", "/api/storage", body(s, "store-axe", map[string]any{
 		"direction": "deposit",
 		"chest":     "personal",
-		"asset":     content.Asset{Kind: "instance", ID: "bench-axe", Qty: 1, Instance: axe},
+		"asset":     content.Asset{Kind: "instance", Id: "bench-axe", Qty: 1, Instance: axe},
 	}), c, 200)
 	s.Snapshot = dep.Snapshot
 
@@ -55,7 +55,7 @@ func TestWardenSliverFittingAndSingleCarriedRestriction(t *testing.T) {
 	errWithdraw := x.p5("POST", "/api/storage", body(s, "withdraw-axe", map[string]any{
 		"direction": "withdraw",
 		"chest":     "personal",
-		"asset":     content.Asset{Kind: "instance", ID: "bench-axe", Qty: 1, Instance: axe},
+		"asset":     content.Asset{Kind: "instance", Id: "bench-axe", Qty: 1, Instance: axe},
 	}), c, 409)
 	if errWithdraw.Error.Code != "two-wardens-grind" {
 		t.Fatalf("expected two-wardens-grind on withdraw, got %s", errWithdraw.Error.Code)
@@ -70,7 +70,7 @@ func TestWardenSliverFittingAndSingleCarriedRestriction(t *testing.T) {
 	// Alice tries to give her warden-set pick to Bob: refused with two-wardens-grind.
 	errGive := x.opRefreshing(c, &s, "give", map[string]any{
 		"toId":  x.account("bob"),
-		"asset": content.Asset{Kind: "instance", ID: "bench-pick", Qty: 1, Instance: pick},
+		"asset": content.Asset{Kind: "instance", Id: "bench-pick", Qty: 1, Instance: pick},
 	}, 409)
 	if errGive.Error.Code != "two-wardens-grind" {
 		t.Fatalf("expected two-wardens-grind on give, got %s", errGive.Error.Code)
@@ -110,7 +110,7 @@ func TestWardenMailReturnsAvoidSecondCarriedTool(t *testing.T) {
 			pick := x.instance(x.account("alice"), "bench-pick", -1, "")
 			pickSliver := x.instance(x.account("alice"), "warden-sliver", -1, "")
 			x.opRefreshing(c, &s, "fit", map[string]any{"tool": axe, "instance": axeSliver}, 200)
-			sent := x.p5("POST", "/api/mail", body(s, "send-warden", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "instance", ID: "bench-axe", Qty: 1, Instance: axe}}), c, 200)
+			sent := x.p5("POST", "/api/mail", body(s, "send-warden", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "instance", Id: "bench-axe", Qty: 1, Instance: axe}}), c, 200)
 			s.Snapshot = sent.Snapshot
 			x.opRefreshing(c, &s, "fit", map[string]any{"tool": pick, "instance": pickSliver}, 200)
 			senderRev := count(t, x.db, "SELECT version FROM players WHERE account_id='"+x.account("alice")+"'")
@@ -221,7 +221,7 @@ func TestWardenToolWearDullnessSpeedAndHealing(t *testing.T) {
 	dep := x.p5("POST", "/api/storage", body(s, "store-dull-axe", map[string]any{
 		"direction": "deposit",
 		"chest":     "shared",
-		"asset":     content.Asset{Kind: "instance", ID: "bench-axe", Qty: 1, Instance: axe},
+		"asset":     content.Asset{Kind: "instance", Id: "bench-axe", Qty: 1, Instance: axe},
 	}), c, 200)
 	s.Snapshot = dep.Snapshot
 
@@ -251,7 +251,7 @@ func TestWardenToolWearDullnessSpeedAndHealing(t *testing.T) {
 func TestWardenDullingUseCountAcrossToolsAndHold(t *testing.T) {
 	hold := []instanceRow{{Def: "loose-road-nail"}}
 	for _, tool := range content.ItemsRules.Items {
-		if tool.Kind != "tool" || tool.MaxPoints() <= 0 {
+		if tool.Kind != "tool" || content.ItemMaxPoints(tool) <= 0 {
 			continue
 		}
 		for _, tc := range []struct {
@@ -259,16 +259,16 @@ func TestWardenDullingUseCountAcrossToolsAndHold(t *testing.T) {
 			fittings []instanceRow
 			want     int
 		}{{"plain", nil, 40}, {"hold", hold, 80}} {
-			condition, uses := tool.MaxPoints(), 0
+			condition, uses := content.ItemMaxPoints(tool), 0
 			for condition > 0 {
-				condition = wardenWear(tool.MaxPoints(), condition, tc.fittings)
+				condition = wardenWear(content.ItemMaxPoints(tool), condition, tc.fittings)
 				uses++
 				if uses > 100 {
-					t.Fatalf("%s/%s never dulled", tool.ID, tc.name)
+					t.Fatalf("%s/%s never dulled", tool.GetId(), tc.name)
 				}
 			}
 			if uses != tc.want {
-				t.Errorf("%s/%s dulled after %d uses, want %d", tool.ID, tc.name, uses, tc.want)
+				t.Errorf("%s/%s dulled after %d uses, want %d", tool.GetId(), tc.name, uses, tc.want)
 			}
 		}
 	}
@@ -288,7 +288,7 @@ func TestSettlingTheWardenGrantsNoSliver(t *testing.T) {
 		t.Fatal("missing lantern road")
 	}
 	for _, step := range road.Steps {
-		stage := step.ID
+		stage := step.GetId()
 		doc.Area = step.At
 		if stage == "guardian-defeated" {
 			s.Snapshot = x.expect("POST", "/api/story/mark", body(s, "defeat-mark", map[string]any{"mark": "defeated:stone-warden", "where": testWhere(doc)}), c, 200).Snapshot

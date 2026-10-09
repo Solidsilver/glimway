@@ -4,7 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"glimway/content"
+	contentv1 "glimway/gen/glimway/content/v1"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
+	"google.golang.org/protobuf/proto"
 	"net/http"
 )
 
@@ -66,9 +69,7 @@ func (a *Server) storageRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finishRead(w, r, tx, s, struct {
-		workshopView
-	}{v})
+	return a.finishRead(w, r, tx, s, workshopProto(v))
 }
 
 // chestUnits is everything in a chest, counted in units (the personal cap).
@@ -82,16 +83,12 @@ func chestUnits(c assetCounts) int {
 	return n
 }
 func (a *Server) storageMutation(w http.ResponseWriter, r *http.Request) error {
-	var req struct {
-		Mutation
-		Direction string        `json:"direction"`
-		Chest     string        `json:"chest,omitempty"`
-		Asset     content.Asset `json:"asset"`
-	}
-	if err := decode(w, r, &req); err != nil {
+	var req contract.StorageMoveRequest
+	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	asset := assetOf(req.Asset)
+	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}
@@ -119,7 +116,7 @@ func (a *Server) storageMutation(w http.ResponseWriter, r *http.Request) error {
 		default:
 			return nil, fail(400, "invalid-chest")
 		}
-		v := req.Asset
+		v := asset
 		if err := validAsset(v); err != nil {
 			return nil, err
 		}
@@ -127,7 +124,7 @@ func (a *Server) storageMutation(w http.ResponseWriter, r *http.Request) error {
 		switch req.Direction {
 		case "deposit":
 			if chest.location != "personal" {
-				if d, ok := content.ItemFor(v.ID); ok && v.Kind != "decoration" && !d.Giveable() {
+				if d, ok := content.ItemFor(v.GetId()); ok && v.GetKind() != "decoration" && !content.ItemGiveable(d) {
 					return nil, fail(409, "not-giveable")
 				}
 			}
@@ -136,7 +133,7 @@ func (a *Server) storageMutation(w http.ResponseWriter, r *http.Request) error {
 				if err != nil {
 					return nil, err
 				}
-				if chestUnits(c)+v.Qty > content.HomeRules.PersonalChest.MaxUnits {
+				if chestUnits(c)+int(v.GetQty()) > int(content.HomeRules.GetPersonalChest().GetMaxUnits()) {
 					return nil, fail(409, "chest-full")
 				}
 			}
@@ -144,22 +141,22 @@ func (a *Server) storageMutation(w http.ResponseWriter, r *http.Request) error {
 			if err != nil {
 				return nil, err
 			}
-			if err = putStack(ctx, tx, chest.stackPlace(), v.ID, got.Makers); err != nil {
+			if err = putStack(ctx, tx, chest.stackPlace(), v.GetId(), got.Makers); err != nil {
 				return nil, err
 			}
-			if err = currency(ctx, tx, s.AccountID, ledger, v.Qty, "storage-deposit", req.Op.Key, now); err != nil {
+			if err = currency(ctx, tx, s.AccountID, ledger, int(v.GetQty()), "storage-deposit", req.Op.GetKey(), now); err != nil {
 				return nil, err
 			}
 		case "withdraw":
 			got := moved{Makers: []makerQty{}, IDs: []string{}}
 			var err error
-			switch v.Kind {
+			switch v.GetKind() {
 			case "decoration":
-				got.IDs, err = decorationIDs(ctx, tx, chest, v.ID, v.Qty)
+				got.IDs, err = decorationIDs(ctx, tx, chest, v.GetId(), int(v.GetQty()))
 			case "instance":
-				got.IDs = []string{v.Instance}
+				got.IDs = []string{v.GetInstance()}
 			default:
-				got.Makers, err = takeStack(ctx, tx, chest.stackPlace(), v.ID, v.Maker, v.Qty)
+				got.Makers, err = takeStack(ctx, tx, chest.stackPlace(), v.GetId(), v.Maker, int(v.GetQty()))
 				var f *failure
 				if err != nil && asFailure(err, &f) {
 					err = fail(409, "insufficient-storage")
@@ -171,35 +168,35 @@ func (a *Server) storageMutation(w http.ResponseWriter, r *http.Request) error {
 			if err = giveAsset(ctx, tx, s, v, got, chest, "storage-withdraw", req.Op.Key, now); err != nil {
 				return nil, err
 			}
-			if err = currency(ctx, tx, s.AccountID, ledger, -v.Qty, "storage-withdraw", req.Op.Key, now); err != nil {
+			if err = currency(ctx, tx, s.AccountID, ledger, -int(v.GetQty()), "storage-withdraw", req.Op.GetKey(), now); err != nil {
 				return nil, err
 			}
 		default:
 			return nil, fail(400, "invalid-direction")
 		}
-		return readWorkshop(ctx, tx, s, now)
+		v2, err := readWorkshop(ctx, tx, s, now)
+		if err != nil {
+			return nil, err
+		}
+		return workshopProto(v2), nil
 	})
 }
 
 // craft makes things at the Workshop bench. Made things carry the maker's
 // mark when their definition says so ("marked").
 func (a *Server) craft(w http.ResponseWriter, r *http.Request) error {
-	var req struct {
-		Mutation
-		RecipeID string `json:"recipeId"`
-		Qty      int    `json:"qty"`
-	}
-	if err := decode(w, r, &req); err != nil {
+	var req contract.CraftRequest
+	if err := decodeOp(w, r, &req); err != nil {
 		return err
 	}
-	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		if err := settleHomes(ctx, tx, s.WorldID, now); err != nil {
 			return nil, err
 		}
 		if _, err := workshop(ctx, tx, s); err != nil {
 			return nil, err
 		}
-		recipe, ok := content.RecipeFor(req.RecipeID)
+		recipe, ok := content.RecipeFor(req.RecipeId)
 		if !ok {
 			return nil, fail(400, "invalid-recipe")
 		}
@@ -211,56 +208,56 @@ func (a *Server) craft(w http.ResponseWriter, r *http.Request) error {
 		if err := dryFlowers(ctx, tx, s, now); err != nil {
 			return nil, err
 		}
-		if err := checkMaterialsAny(ctx, tx, s.AccountID, scaled(recipe.Materials, req.Qty), recipe.Swaps); err != nil {
+		qty := int(req.Qty)
+		if err := checkMaterialsAny(ctx, tx, s.AccountID, scaled32(recipe.GetMaterials(), int32(qty)), recipe.GetSwaps()); err != nil {
 			return nil, err
 		}
-		if err := debitMaterialsAny(ctx, tx, s, recipe.Materials, recipe.Swaps, req.Qty, "craft", recipe.ID, now); err != nil {
+		if err := debitMaterialsAny(ctx, tx, s, recipe.GetMaterials(), recipe.GetSwaps(), qty, "craft", recipe.GetId(), now); err != nil {
 			return nil, err
 		}
-		output := recipe.Output
-		output.Qty *= req.Qty
+		output := outputOf(recipe, qty)
 		ids := []string{}
-		switch output.Kind {
+		switch output.GetKind() {
 		case "item":
-			def, _ := content.ItemFor(output.ID)
+			def, _ := content.ItemFor(output.GetId())
 			maker := ""
-			if def.Marked {
+			if def.GetMarked() {
 				maker = s.AccountID
 			}
-			if err := packPut(ctx, tx, s.AccountID, output.ID, []makerQty{{Maker: maker, Qty: output.Qty}}, "craft", recipe.ID, now); err != nil {
+			if err := packPut(ctx, tx, s.AccountID, output.GetId(), []makerQty{{Maker: maker, Qty: int(output.GetQty())}}, "craft", recipe.GetId(), now); err != nil {
 				return nil, err
 			}
 			if err := refreshItems(ctx, tx, s); err != nil {
 				return nil, err
 			}
 		case "instance":
-			def, _ := content.ItemFor(output.ID)
+			def, _ := content.ItemFor(output.GetId())
 			maker := ""
-			if def.Marked {
+			if def.GetMarked() {
 				maker = s.AccountID
 			}
-			for i := 0; i < output.Qty; i++ {
+			for i := 0; i < int(output.GetQty()); i++ {
 				id, err := newInstance(ctx, tx, def, instanceAt{"pack", s.AccountID}, maker, -1, now)
 				if err != nil {
 					return nil, err
 				}
 				ids = append(ids, id)
 			}
-			if err := currency(ctx, tx, s.AccountID, content.StackCurrency(output.ID), output.Qty, "craft", recipe.ID, now); err != nil {
+			if err := currency(ctx, tx, s.AccountID, content.StackCurrency(output.GetId()), int(output.GetQty()), "craft", recipe.GetId(), now); err != nil {
 				return nil, err
 			}
 		default:
-			for i := 0; i < output.Qty; i++ {
+			for i := 0; i < int(output.GetQty()); i++ {
 				id, err := store.Random()
 				if err != nil {
 					return nil, err
 				}
-				if _, err = tx.ExecContext(ctx, "INSERT INTO homestead_items(id,item_def,location,account_id) VALUES(?,?,'inventory',?)", id, output.ID, s.AccountID); err != nil {
+				if _, err = tx.ExecContext(ctx, "INSERT INTO homestead_items(id,item_def,location,account_id) VALUES(?,?,'inventory',?)", id, output.GetId(), s.AccountID); err != nil {
 					return nil, err
 				}
 				ids = append(ids, id)
 			}
-			if err := currency(ctx, tx, s.AccountID, "decoration:"+output.ID, output.Qty, "craft", recipe.ID, now); err != nil {
+			if err := currency(ctx, tx, s.AccountID, "decoration:"+output.GetId(), int(output.GetQty()), "craft", recipe.GetId(), now); err != nil {
 				return nil, err
 			}
 		}
@@ -268,20 +265,26 @@ func (a *Server) craft(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		return struct {
-			workshopView
-			RecipeID    string        `json:"recipeId"`
-			Output      content.Asset `json:"output"`
-			InstanceIDs []string      `json:"instanceIds"`
-		}{v, recipe.ID, output, ids}, nil
+		out := &contract.CraftResult{RecipeId: recipe.GetId(), Output: assetProto(output), InstanceIds: ids}
+		fillWorkshop(out, v)
+		return out, nil
 	})
 }
 
-func scaled(costs map[string]int, qty int) map[string]int {
-	out := map[string]int{}
+// scaled32 scales a recipe's bill by the batches crafted. outputOf copies
+// the recipe's output with the quantity multiplied (recipes must not be
+// mutated: they are pointers into the shared table).
+func scaled32(costs map[string]int32, qty int32) map[string]int32 {
+	out := map[string]int32{}
 	for k, n := range costs {
 		out[k] = n * qty
 	}
+	return out
+}
+
+func outputOf(recipe *content.Recipe, qty int) *contentv1.Asset {
+	out := proto.Clone(recipe.GetOutput()).(*contentv1.Asset)
+	out.Qty *= int32(qty)
 	return out
 }
 

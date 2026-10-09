@@ -2,10 +2,10 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"glimway/content"
 	"glimway/server/internal/store"
+	"google.golang.org/protobuf/proto"
 	"net/http"
 	"slices"
 	"testing"
@@ -18,7 +18,7 @@ func TestFix5MailRecallConservesAndReplays(t *testing.T) {
 	bc, b := x.member("bob", s.WorldID)
 	x.seedAssets(x.account("alice"))
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
-	sent := x.p5("POST", "/api/mail", body(s, "send", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", ID: "timber", Qty: 50}}), c, 200)
+	sent := x.p5("POST", "/api/mail", body(s, "send", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", Id: "timber", Qty: 50}}), c, 200)
 	s.Snapshot = sent.Snapshot
 	path := "/api/mail/" + sent.Result.MailID + "/recall"
 	x.p5("POST", path, body(b, "not-sender", nil), bc, 403)
@@ -44,7 +44,7 @@ func TestFix5MailAutoReturns(t *testing.T) {
 			x.member("bob", s.WorldID)
 			x.seedAssets(x.account("alice"))
 			s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
-			sent := x.p5("POST", "/api/mail", body(s, "send", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", ID: "timber", Qty: 50}}), c, 200)
+			sent := x.p5("POST", "/api/mail", body(s, "send", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", Id: "timber", Qty: 50}}), c, 200)
 			if reason == "expired" {
 				if _, err := x.db.DB.Exec("UPDATE mail SET sent_at=? WHERE id=?", x.now.Load()-30*86400, sent.Result.MailID); err != nil {
 					t.Fatal(err)
@@ -79,7 +79,7 @@ func TestFix5MailRemovedRecipientRejected(t *testing.T) {
 	if err := x.db.Allow(context.Background(), "bob", false); err != nil {
 		t.Fatal(err)
 	}
-	rejected := x.p5("POST", "/api/mail", body(s, "removed", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", ID: "timber", Qty: 1}}), c, 403)
+	rejected := x.p5("POST", "/api/mail", body(s, "removed", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", Id: "timber", Qty: 1}}), c, 403)
 	if rejected.Error.Code != "recipient-unavailable" || count(t, x.db, "SELECT count(*) FROM mail") != 0 {
 		t.Fatal("removed recipient accepted")
 	}
@@ -112,7 +112,7 @@ func TestFix5MailOutstandingCaps(t *testing.T) {
 			} else {
 				seedFix5Mail(t, x, s.WorldID, "carol", "bob", 50, false)
 			}
-			v := x.p5("POST", "/api/mail", body(s, "full", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", ID: "timber", Qty: 1}}), c, 409)
+			v := x.p5("POST", "/api/mail", body(s, "full", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", Id: "timber", Qty: 1}}), c, 409)
 			if v.Error.Code != "mail-"+cap+"-limit" || count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner='"+x.account("alice")+"' AND item_def='timber'") != 1000 || count(t, x.db, "SELECT count(*) FROM mail") != 50 {
 				t.Fatal("mail capacity not enforced")
 			}
@@ -126,12 +126,12 @@ func TestFix5MailSendRateIsNotResetByClaim(t *testing.T) {
 	x.seedAssets(x.account("alice"))
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	for i := 0; i < 10; i++ {
-		sent := x.p5("POST", "/api/mail", body(s, fmt.Sprintf("send-%d", i), map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", ID: "timber", Qty: 1}}), c, 200)
+		sent := x.p5("POST", "/api/mail", body(s, fmt.Sprintf("send-%d", i), map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", Id: "timber", Qty: 1}}), c, 200)
 		s.Snapshot = sent.Snapshot
 		claimed := x.p5("POST", "/api/mail/"+sent.Result.MailID+"/claim", body(b, fmt.Sprintf("claim-%d", i), nil), bc, 200)
 		b.Snapshot = claimed.Snapshot
 	}
-	req := body(s, "limited", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", ID: "timber", Qty: 1}})
+	req := body(s, "limited", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", Id: "timber", Qty: 1}})
 	if x.p5("POST", "/api/mail", req, c, 429).Error.Code != "mail-rate-limited" {
 		t.Fatal("mail rate")
 	}
@@ -157,9 +157,9 @@ func TestFix5ProjectCostsCanBeLowered(t *testing.T) {
 		t.Run(finish, func(t *testing.T) {
 			saved := content.ProjectRules
 			defer func() { content.ProjectRules = saved }()
-			var tuned content.Projects
-			if err := json.Unmarshal([]byte(store.JSON(saved)), &tuned); err != nil {
-				t.Fatal(err)
+			tuned, ok := proto.Clone(saved).(*content.Projects)
+			if !ok {
+				t.Fatal("clone")
 			}
 			x := newRig(t)
 			c, s := x.ready("alice")
@@ -208,7 +208,8 @@ func TestFix5MailItemsAndDecorationsReturnOriginalGoods(t *testing.T) {
 			s.Snapshot = crafted.Snapshot
 			instance := crafted.Result.InstanceIDs[0]
 			trinket := giftTrinket
-			for i, asset := range []content.Asset{{Kind: "item", ID: trinket, Qty: 5}, {Kind: "decoration", ID: "reading-chair", Qty: 1}} {
+			assets := []*content.Asset{{Kind: "item", Id: trinket, Qty: 5}, {Kind: "decoration", Id: "reading-chair", Qty: 1}}
+			for i, asset := range assets {
 				sent := x.p5("POST", "/api/mail", body(s, fmt.Sprintf("send-%d", i), map[string]any{"toId": x.account("bob"), "asset": asset}), c, 200)
 				s.Snapshot = sent.Snapshot
 				if mode == "recall" {
@@ -259,7 +260,7 @@ func TestFix5MailReturnFailuresRollBack(t *testing.T) {
 			x.member("bob", s.WorldID)
 			x.seedAssets(x.account("alice"))
 			s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
-			sent := x.p5("POST", "/api/mail", body(s, "send", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", ID: "timber", Qty: 50}}), c, 200)
+			sent := x.p5("POST", "/api/mail", body(s, "send", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", Id: "timber", Qty: 50}}), c, 200)
 			s.Snapshot = sent.Snapshot
 			if _, err := x.db.DB.Exec("CREATE TRIGGER fail_return BEFORE INSERT ON ledger WHEN NEW.reason IN ('mail-recall','mail-return') AND NEW.delta<0 BEGIN SELECT RAISE(FAIL,'return failed'); END"); err != nil {
 				t.Fatal(err)
@@ -300,7 +301,7 @@ func TestFix5MailRecallRacesClaim(t *testing.T) {
 	bc, b := x.member("bob", s.WorldID)
 	x.seedAssets(x.account("alice"))
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
-	sent := x.p5("POST", "/api/mail", body(s, "send", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", ID: "stone", Qty: 7}}), c, 200)
+	sent := x.p5("POST", "/api/mail", body(s, "send", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", Id: "stone", Qty: 7}}), c, 200)
 	s.Snapshot = sent.Snapshot
 	path := "/api/mail/" + sent.Result.MailID
 	statuses := racePhase5(t, x, []struct {
@@ -332,7 +333,7 @@ func TestFix5MailCursorsAndLegacyPendingBounds(t *testing.T) {
 		t.Fatal("missing old history")
 	}
 	seen := map[string]bool{}
-	for _, page := range []phase5Response{first, second} {
+	for _, page := range []*phase5Response{&first, &second} {
 		for _, m := range page.Mail {
 			if m.ClaimedAt != nil {
 				if seen[m.ID] {
@@ -357,7 +358,7 @@ func TestFix5MailCursorsAndLegacyPendingBounds(t *testing.T) {
 	}
 	second = x.p5("GET", "/api/mail?pendingCursor="+*first.NextPendingCursor, nil, c, 200)
 	seen = map[string]bool{}
-	for _, page := range []phase5Response{first, second} {
+	for _, page := range []*phase5Response{&first, &second} {
 		for _, m := range page.Mail {
 			if m.ClaimedAt == nil {
 				if seen[m.ID] {
@@ -378,7 +379,7 @@ func TestFix5MailExpiryBoundaryAndMaintenance(t *testing.T) {
 	x.member("bob", s.WorldID)
 	x.seedAssets(x.account("alice"))
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
-	sent := x.p5("POST", "/api/mail", body(s, "send", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", ID: "fiber", Qty: 7}}), c, 200)
+	sent := x.p5("POST", "/api/mail", body(s, "send", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", Id: "fiber", Qty: 7}}), c, 200)
 	if _, err := x.db.DB.Exec("UPDATE mail SET sent_at=?", x.now.Load()-30*86400+1); err != nil {
 		t.Fatal(err)
 	}

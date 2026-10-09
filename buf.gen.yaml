@@ -1,9 +1,25 @@
 version: v2
 clean: true
 plugins:
+  # The wire contract (glimway.v1/v2) is only read by the server. Content
+  # messages are read by glimway/content too, so they generate outside
+  # server/internal (Go's internal rule would refuse that import).
+  # scripts/proto.sh generates with --path proto/glimway: the vendored
+  # buf/validate schemas carry the constraints and are never generated for
+  # Go (the runtimes provide those types; a second copy would double-register
+  # the extensions). protoc-gen-es sets include_imports because its generated
+  # descriptors reference buf/validate by import.
   - local: [go, tool, protoc-gen-go]
     out: server/internal/gen
     opt: paths=source_relative
+    types: [glimway.v1.**, glimway.v2.**]
+  - local: [go, tool, protoc-gen-go]
+    out: gen
+    opt: paths=source_relative
+    types: [glimway.content.v1.**]
   - local: node_modules/.bin/protoc-gen-es
     out: src/lib/gen
-    opt: target=js+dts,import_extension=js
+    include_imports: true
+    # valid_types: a message with protovalidate `required` fields gains a
+    # Valid type where those fields are non-optional; the loaders export it.
+    opt: target=js+dts,import_extension=js,valid_types=protovalidate_required

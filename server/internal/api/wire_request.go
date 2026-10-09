@@ -23,6 +23,19 @@ func strictRequestJSON(raw json.RawMessage, md protoreflect.MessageDescriptor) e
 		var v float64
 		return json.Unmarshal(raw, &v)
 	}
+	// Int32/Int64/UInt32/Bool wrappers ride the wire as bare JSON values too
+	// (ProtoJSON's wrapper spelling); the numeric ones stay finite numbers.
+	switch md.FullName() {
+	case "google.protobuf.Int32Value", "google.protobuf.Int64Value", "google.protobuf.UInt32Value":
+		var v float64
+		if string(raw) == "null" {
+			return fmt.Errorf("null number")
+		}
+		return json.Unmarshal(raw, &v)
+	case "google.protobuf.BoolValue":
+		var v bool
+		return json.Unmarshal(raw, &v)
+	}
 	var fields map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &fields); err != nil {
 		return err

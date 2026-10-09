@@ -12,12 +12,31 @@ import (
 	"time"
 )
 
+// A shelf entry as the wire names it (protojson); the generated messages
+// answer through protojson, so the JSON keys stay camelCase.
+type shelfRow struct {
+	PaperID   string `json:"paperId"`
+	DonatedBy string `json:"donatedBy"`
+	DonatedAt string `json:"donatedAt"`
+}
+
 type libraryResponse struct {
-	Shelves []shelfEntry `json:"shelves"`
-	Entry   *shelfEntry  `json:"entry"`
-	Error   struct {
+	Shelves []shelfRow `json:"shelves"`
+	// The donate answer's result (the test helper lifts the Envelope's oneof
+	// case there); a refusal leaves it unset.
+	Result *struct {
+		Entry *shelfRow `json:"entry"`
+	} `json:"result"`
+	Error struct {
 		Code string `json:"code"`
 	} `json:"error"`
+}
+
+func (r libraryResponse) Entry() *shelfRow {
+	if r.Result == nil {
+		return nil
+	}
+	return r.Result.Entry
 }
 
 func (x *rig) lib(method, path string, body any, c *http.Cookie, status int) libraryResponse {
@@ -63,11 +82,11 @@ func TestLibraryDonateShelfAndIdempotency(t *testing.T) {
 	before := x.expect("GET", "/api/state", nil, c, 200)
 
 	donated := x.lib("POST", "/api/library/donate", donateBody(s, "will-of-elias-fenn", "d1"), c, 200)
-	if donated.Entry == nil || donated.Entry.PaperID != "will-of-elias-fenn" || donated.Entry.DonatedBy != "Alice" {
+	if donated.Entry() == nil || donated.Entry().PaperID != "will-of-elias-fenn" || donated.Entry().DonatedBy != "Alice" {
 		t.Fatalf("donation: %s", store.JSON(donated))
 	}
-	if _, err := time.Parse(time.RFC3339, donated.Entry.DonatedAt); err != nil {
-		t.Fatalf("donatedAt %q is not ISO-8601", donated.Entry.DonatedAt)
+	if _, err := time.Parse(time.RFC3339, donated.Entry().DonatedAt); err != nil {
+		t.Fatalf("donatedAt %q is not ISO-8601", donated.Entry().DonatedAt)
 	}
 	// Donation advances the player version and adds its mark without a ledger payment.
 	after := x.expect("GET", "/api/state", nil, c, 200)
@@ -80,11 +99,11 @@ func TestLibraryDonateShelfAndIdempotency(t *testing.T) {
 
 	// The same key replays the first answer; a new key loses to the first donor.
 	replay := x.lib("POST", "/api/library/donate", donateBody(s, "will-of-elias-fenn", "d1"), c, 200)
-	if replay.Entry == nil || *replay.Entry != *donated.Entry || count(t, x.db, "SELECT count(*) FROM idempotency WHERE op='/api/library/donate'") != 1 {
+	if replay.Entry() == nil || store.JSON(replay.Entry()) != store.JSON(donated.Entry()) || count(t, x.db, "SELECT count(*) FROM idempotency WHERE op='/api/library/donate'") != 1 {
 		t.Fatal("replay was not idempotent")
 	}
 	lost := x.lib("POST", "/api/library/donate", donateBody(s, "will-of-elias-fenn", "d2"), c, 409)
-	if lost.Error.Code != "already-shelved" || lost.Entry != nil {
+	if lost.Error.Code != "already-shelved" || lost.Entry() != nil {
 		t.Fatalf("second donor: %s", store.JSON(lost))
 	}
 	if count(t, x.db, "SELECT count(*) FROM library_shelves") != 1 {
@@ -148,10 +167,10 @@ func TestLibraryRaceFirstDonorWins(t *testing.T) {
 	if winner.status != 200 {
 		winner, loser = loser, winner
 	}
-	if winner.v.Entry == nil || loser.v.Error.Code != "already-shelved" {
+	if winner.v.Entry() == nil || loser.v.Error.Code != "already-shelved" {
 		t.Fatal("race did not identify winner and refusal")
 	}
-	if winner.v.Entry.DonatedBy != "Alice" && winner.v.Entry.DonatedBy != "Bob" {
+	if winner.v.Entry().DonatedBy != "Alice" && winner.v.Entry().DonatedBy != "Bob" {
 		t.Fatalf("winner credit: %s", store.JSON(winner.v))
 	}
 	if count(t, x.db, "SELECT count(*) FROM library_shelves") != 1 {
@@ -263,7 +282,7 @@ func TestLibraryDonationNeedsElaraWithinGrace(t *testing.T) {
 				if count(t, x.db, "SELECT count(*) FROM library_shelves") != 0 {
 					t.Fatal("refused donation stored")
 				}
-			} else if answer.Entry == nil {
+			} else if answer.Entry() == nil {
 				t.Fatal("missing donated shelf entry")
 			}
 			// Browsing is available even outside the room and without Elara.
@@ -290,7 +309,7 @@ func TestLibraryDonationClockMovesKeepStatefulReplays(t *testing.T) {
 	donated := x.lib("POST", "/api/library/donate", request, c, 200)
 	x.now.Store(base + 6600) // Back at camp.
 	replay := x.lib("POST", "/api/library/donate", request, c, 200)
-	if donated.Entry == nil || replay.Entry == nil || *donated.Entry != *replay.Entry {
+	if donated.Entry() == nil || replay.Entry() == nil || store.JSON(donated.Entry()) != store.JSON(replay.Entry()) {
 		t.Fatal("successful donation did not replay after departure")
 	}
 	if count(t, x.db, "SELECT count(*) FROM library_shelves") != 1 {

@@ -1,0 +1,204 @@
+{
+  "loader": [
+    {
+      "name": "shipped",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "signature-cooldown",
+      "valid": false,
+      "rule": "double.const",
+      "edits": [
+        {
+          "path": [
+            "signatureCooldownSeconds"
+          ],
+          "value": 2
+        }
+      ]
+    },
+    {
+      "name": "missing-class",
+      "valid": false,
+      "rule": "combat.classes",
+      "edits": [
+        {
+          "path": [
+            "classes"
+          ],
+          "value": {
+            "warrior": {
+              "basicAttackCooldownSeconds": 1.2,
+              "castCost": 12
+            },
+            "mage": {
+              "basicAttackCooldownSeconds": 0.6,
+              "castCost": 15
+            },
+            "rogue": {
+              "basicAttackCooldownSeconds": 1.5,
+              "castCost": 10
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "zero-cooldown",
+      "valid": false,
+      "rule": "combat.classes",
+      "edits": [
+        {
+          "path": [
+            "classes",
+            "warrior",
+            "basicAttackCooldownSeconds"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "zero-cast-cost",
+      "valid": false,
+      "rule": "combat.classes",
+      "edits": [
+        {
+          "path": [
+            "classes",
+            "mage",
+            "castCost"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "class-field-rules",
+      "valid": false,
+      "rule": "double.gt",
+      "edits": [
+        {
+          "path": [
+            "classes",
+            "rogue",
+            "basicAttackCooldownSeconds"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "zero-heal-base",
+      "valid": false,
+      "rule": "double.gt",
+      "edits": [
+        {
+          "path": [
+            "heal",
+            "base"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "zero-heal-bonus",
+      "valid": false,
+      "rule": "double.gt",
+      "edits": [
+        {
+          "path": [
+            "heal",
+            "maximumBonus"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "zero-heal-halfway",
+      "valid": false,
+      "rule": "double.gt",
+      "edits": [
+        {
+          "path": [
+            "heal",
+            "halfway"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "decimal-places",
+      "valid": false,
+      "rule": "int32.const",
+      "edits": [
+        {
+          "path": [
+            "heal",
+            "decimalPlaces"
+          ],
+          "value": 3
+        }
+      ]
+    },
+    {
+      "name": "missing-heal",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "heal"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "non-finite-map-value",
+      "valid": false,
+      "rule": "non-finite number",
+      "edits": [
+        {
+          "path": [
+            "classes",
+            "warrior",
+            "basicAttackCooldownSeconds"
+          ],
+          "value": "Infinity"
+        }
+      ]
+    },
+    {
+      "name": "non-finite-heal-base",
+      "valid": false,
+      "rule": "non-finite number",
+      "edits": [
+        {
+          "path": [
+            "heal",
+            "base"
+          ],
+          "value": "-Infinity"
+        }
+      ]
+    },
+    {
+      "name": "numeric-string-cooldown",
+      "valid": false,
+      "rule": "non-finite number",
+      "edits": [
+        {
+          "path": [
+            "signatureCooldownSeconds"
+          ],
+          "value": "1"
+        }
+      ]
+    }
+  ]
+}

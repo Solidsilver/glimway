@@ -1,88 +1,56 @@
 package content
 
 import (
-	"encoding/json"
 	"fmt"
-	"slices"
 	"strings"
+
+	contentv1 "glimway/gen/glimway/content/v1"
 )
 
-type Namespace struct {
-	Prefix string `json:"prefix"`
-	Writer string `json:"writer"`
-}
-type Echo struct {
-	Member string `json:"member"`
-	Late   bool   `json:"late"`
-	East   bool   `json:"east"`
-}
-type Story struct {
-	QuestItems []string                     `json:"questItems"`
-	NPCs       map[string]string            `json:"npcs"`
-	Spots      map[string]string            `json:"spots"`
-	Namespaces []Namespace                  `json:"namespaces"`
-	IDs        map[string]map[string]string `json:"ids"`
-	Areas      map[string]string            `json:"areas"`
-	Boards     map[string]struct {
-		TX int `json:"tx"`
-		TY int `json:"ty"`
-	} `json:"boards"`
-	Echoes []Echo `json:"echoes"`
-}
+type (
+	Story     = contentv1.Story
+	Namespace = contentv1.Namespace
+	Echo      = contentv1.Echo
+)
 
-func readTable(name string, out any) error {
-	b, e := FS.ReadFile(name)
-	if e != nil {
-		return e
+// DecodeStory reads story JSON into the generated type, refusing nulls and
+// unknown keys, then runs the schema's rules and the tables' own rules:
+// one prefix per namespace (the schema's writer vocabulary and the
+// npc/spot/quest-item shapes are on it).
+func DecodeStory(raw []byte) (*Story, error) {
+	doc := &Story{}
+	if err := decodeContentProto(raw, "story", doc); err != nil {
+		return doc, err
 	}
-	return json.Unmarshal(b, out)
-}
-func LoadStory() (Story, error) {
-	var s Story
-	if e := readTable("story.json", &s); e != nil {
-		return s, e
-	}
+	entries := make([]entryList, 1)
+	entries[0] = entryList{field: "namespaces", ids: make([]string, len(doc.GetNamespaces()))}
 	seen := map[string]bool{}
-	for _, n := range s.Namespaces {
-		if n.Prefix == "" || seen[n.Prefix] || (n.Writer != "client" && n.Writer != "server") {
-			return s, fmt.Errorf("invalid namespace %s", n.Prefix)
+	for i, n := range doc.GetNamespaces() {
+		entries[0].ids[i] = n.GetPrefix()
+		if seen[entries[0].ids[i]] {
+			return doc, fmt.Errorf("invalid story: duplicate namespace %s", entries[0].ids[i])
 		}
-		seen[n.Prefix] = true
+		seen[entries[0].ids[i]] = true
 	}
-	if len(seen) == 0 || len(s.Echoes) != 6 {
-		return s, fmt.Errorf("invalid story")
-	}
-	for _, table := range []map[string]string{s.NPCs, s.Spots} {
-		if len(table) == 0 {
-			return s, fmt.Errorf("empty story targets")
-		}
-		for id, area := range table {
-			if !ValidContentID(id) || !slices.Contains([]string{"village", "woodland", "ruin", "commons"}, area) {
-				return s, fmt.Errorf("invalid story target %s", id)
-			}
-		}
-	}
-	items := map[string]bool{}
-	for _, id := range s.QuestItems {
-		if !ValidContentID(id) || items[id] {
-			return s, fmt.Errorf("invalid story quest item %s", id)
-		}
-		items[id] = true
-	}
-	if len(items) == 0 {
-		return s, fmt.Errorf("empty story quest items")
-	}
-	return s, nil
+	return doc, contentValidate("story", entries, doc)
 }
 
-var QuestRules = func() []Quest {
+func LoadStory() (*Story, error) {
+	raw, err := FS.ReadFile("story.json")
+	if err != nil {
+		return nil, err
+	}
+	return DecodeStory(raw)
+}
+
+var QuestRules = func() []*Quest {
 	q, e := LoadQuests()
 	if e != nil {
 		panic(e)
 	}
-	return q
+	return q.GetQuests()
 }()
-var StoryRules = func() Story {
+var StoryRules = func() *Story {
 	s, e := LoadStory()
 	if e != nil {
 		panic(e)
@@ -93,22 +61,22 @@ var StoryRules = func() Story {
 // MarkWriter uses the longest matching namespace, including exact singleton marks.
 func MarkWriter(mark string) string {
 	best, writer := 0, ""
-	for _, n := range StoryRules.Namespaces {
-		if (mark == n.Prefix || strings.HasSuffix(n.Prefix, ":") && strings.HasPrefix(mark, n.Prefix)) && len(n.Prefix) > best {
-			best, writer = len(n.Prefix), n.Writer
+	for _, n := range StoryRules.GetNamespaces() {
+		if (mark == n.GetPrefix() || strings.HasSuffix(n.GetPrefix(), ":") && strings.HasPrefix(mark, n.GetPrefix())) && len(n.GetPrefix()) > best {
+			best, writer = len(n.GetPrefix()), n.GetWriter()
 		}
 	}
 	return writer
 }
 
 // QuestFor returns a quest by id; array order never determines its identity.
-func QuestFor(id string) (Quest, bool) {
+func QuestFor(id string) (*Quest, bool) {
 	for _, q := range QuestRules {
-		if q.ID == id {
+		if q.GetId() == id {
 			return q, true
 		}
 	}
-	return Quest{}, false
+	return nil, false
 }
 
 // The one-argument form remains for the frozen 028 backfill's lantern road.
@@ -126,8 +94,8 @@ func QuestIndex(quest string, reached ...string) int {
 	if step == "" || step == "new" {
 		return -1
 	}
-	for i, s := range q.Steps {
-		if s.ID == step {
+	for i, s := range q.GetSteps() {
+		if s.GetId() == step {
 			return i
 		}
 	}

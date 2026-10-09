@@ -29,6 +29,8 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY server ./server
 COPY content ./content
+# Content loaders import the generated content messages (gen/glimway/content/v1).
+COPY gen ./gen
 COPY package.json ./
 ARG TARGETOS=linux
 ARG TARGETARCH

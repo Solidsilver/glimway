@@ -1,5 +1,7 @@
 import raw from '../../content/homestead.json' with { type: 'json' };
 import itemsRaw from '../../content/items.json' with { type: 'json' };
+import { decodeContent } from './content-proto.ts';
+import { HomesteadSchema } from './gen/glimway/content/v1/homestead_pb.js';
 import { furnishingFor } from './furnishings.ts';
 import { loadWilds } from './wilds/data.ts';
 import { LAND, buildableKind, clearedSet, effectiveKind, homeLights, isLit, servedLand, type Land, type Light } from './homestead-land.ts';
@@ -10,17 +12,19 @@ const MATERIAL_ITEMS = new Set(
   ((itemsRaw as { items: { id: string; kind: string }[] }).items ?? []).filter((i) => i.kind === 'material').map((i) => i.id)
 );
 
-interface HomeGrid { width: number; height: number }
+export type HomeScene = 'indoor' | 'outdoor' | 'gate';
+export type HomeItemCategory = 'furniture' | 'decor' | 'utility';
 interface HomeTier { tier: number; id: string; name: string; purchasable: boolean; embers: number; materials?: Record<string, number> }
-export interface HomeItem { id: string; name: string; category: 'furniture' | 'decor' | 'utility'; footprint: [number, number]; where: ('indoor' | 'outdoor' | 'gate')[]; minTier: number; embers: number; materials: Record<string, number>; craftOnly?: boolean }
+export interface HomeItem { id: string; name: string; category: HomeItemCategory; footprint: [number, number]; where: HomeScene[]; minTier: number; embers: number; materials: Record<string, number>; craftOnly?: boolean }
 /** A rectangle in the land's or a room's local grid tiles. */
-interface HomeRect { x: number; y: number; w: number; h: number }
+export interface HomeRect { x: number; y: number; w: number; h: number }
+export interface HomeGrid { width: number; height: number }
 /**
  * Every homestead's wild land (generated per gate: src/lib/homestead-land.ts,
  * server/internal/land): its size, the home site (camp/cottage), the gate
  * mouth in the south edge, the home's own light, and how wild it is.
  */
-interface HomeLand {
+export interface HomeLand {
   generator: number;
   width: number;
   height: number;
@@ -39,7 +43,7 @@ interface HomeLand {
  * rows, then one more every `rowPitch` tiles. Silas's table (px) is where
  * a joint deed is signed: both partners within `radius`.
  */
-interface CommonsLane {
+export interface CommonsLane {
   tileSize: number;
   fenceX: [number, number];
   gateRows: number[];
@@ -47,7 +51,7 @@ interface CommonsLane {
   spareGates: number;
   silasTable: { x: number; y: number; radius: number };
 }
-interface LanternPosts { item: string; radius: number; nameMax: number; costs: Record<string, number>[]; growth: Record<string, number> }
+export interface LanternPosts { item: string; radius: number; nameMax: number; costs: { materials: Record<string, number> }[]; growth: Record<string, number> }
 export interface HomesteadData {
   tiers: HomeTier[];
   indoor: HomeGrid;
@@ -65,61 +69,49 @@ export interface HomesteadData {
   personalChest: { maxUnits: number };
   items: HomeItem[];
 }
-export type HomeScene = 'indoor' | 'outdoor' | 'gate';
-const integer = (n: unknown, min = 0): n is number => Number.isSafeInteger(n) && (n as number) >= min;
-const object = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
-function validReserved(list: unknown, g: HomeGrid): boolean {
-  return Array.isArray(list) && list.every((r) => object(r) && integer(r.x) && integer(r.y) && integer(r.w, 1) && integer(r.h, 1) && r.x + r.w <= g.width && r.y + r.h <= g.height);
-}
-function validLand(l: unknown): l is HomeLand {
-  if (!object(l) || l.generator !== 1 || !integer(l.width, 20) || l.width > 120 || !integer(l.height, 16) || l.height > 120) return false;
-  const g = { width: l.width, height: l.height };
-  const gate = l.gate as Record<string, unknown>;
-  const light = l.startLight as Record<string, unknown>;
-  return validReserved([l.site], g) && object(gate) && integer(gate.x, 1) && integer(gate.w, 1) && gate.x + gate.w < l.width &&
-    object(light) && integer(light.x, 1) && integer(light.y, 1) && integer(light.radius, 1) && light.x < l.width && light.y < l.height &&
-    integer(l.trees) && integer(l.stumps) && integer(l.boulders) && integer(l.streamPermille) && l.streamPermille <= 1000 && integer(l.slopePermille) && l.slopePermille <= 1000;
-}
-function validLane(c: unknown): c is CommonsLane {
-  if (!object(c) || !integer(c.tileSize, 1) || !Array.isArray(c.fenceX) || c.fenceX.length !== 2 || !Array.isArray(c.gateRows) || c.gateRows.length === 0 || !integer(c.rowPitch, 2) || !integer(c.spareGates, 1)) return false;
-  const t = c.silasTable as Record<string, unknown>;
-  if (!object(t) || !integer(t.x) || !integer(t.y) || !integer(t.radius, 1)) return false;
-  const rows = c.gateRows as unknown[];
-  return integer(c.fenceX[0]) && integer(c.fenceX[1]) && c.fenceX[1] > c.fenceX[0] && rows.every((y, i) => integer(y) && (i === 0 || y >= (rows[i - 1] as number) + 2));
-}
-function validCosts(m: unknown, allowEmpty = false): boolean {
-  return object(m) && (allowEmpty || Object.keys(m).length > 0) && Object.entries(m).every(([id, n]) => loadWilds().materials.includes(id) && integer(n, allowEmpty ? 0 : 1));
-}
-function validPosts(p: unknown): p is LanternPosts {
-  return object(p) && typeof p.item === 'string' && !!p.item && integer(p.radius, 1) && integer(p.nameMax, 1) && p.nameMax <= 80 && Array.isArray(p.costs) && p.costs.length > 0 && p.costs.every((c) => validCosts(c)) && validCosts(p.growth, true);
-}
+
+/** Throws on anything content/homestead.go would refuse. */
 export function validateHomesteadData(value: unknown): HomesteadData {
-  const bad = () => { throw new Error('invalid homestead'); };
-  if (!object(value)) return bad();
-  const h = value as unknown as HomesteadData;
-  if (!Array.isArray(h.tiers) || h.tiers.length !== 5 || !object(h.indoor) || h.indoor.width !== 12 || h.indoor.height !== 10 || !validLand(h.land) || !validLane(h.commons) || !validReserved(h.outdoorReserved, { width: h.land.width, height: h.land.height }) || !validReserved(h.indoorReserved, h.indoor) || !validPosts(h.lanternPosts) || !Array.isArray(h.items) || h.items.length === 0) return bad();
-  if (!object(h.deeds) || typeof h.deeds.firstFree !== 'boolean' || !integer(h.deeds.embers, 1) || !integer(h.clearTileEmbers, 1) || !object(h.desolation) || !integer(h.desolation.desolateAfterDays, 1) || !integer(h.desolation.deedLostAfterDays, h.desolation.desolateAfterDays + 1) || !object(h.jointDeed) || !integer(h.jointDeed.confirmWindowSeconds, 5) || !integer(h.jointDeed.inviteHours, 1) || !object(h.personalChest) || !integer(h.personalChest.maxUnits, 1)) return bad();
-  h.tiers.forEach((t, i) => { if (!object(t) || t.tier !== i || t.id !== `tier-${i}` || typeof t.name !== 'string' || !t.name || t.purchasable !== (i === 1 || i === 2) || !integer(t.embers) || (i === 1 || i === 2 ? t.embers <= 0 : t.embers !== 0)) bad(); });
-  for (const t of h.tiers) {
-    if (t.tier === 2 ? !object(t.materials) || Object.keys(t.materials).length === 0 : t.materials !== undefined && Object.keys(t.materials).length !== 0) return bad();
-    for (const [id, qty] of Object.entries(t.materials ?? {})) if (!loadWilds().materials.includes(id) || !integer(qty, 1) || qty > 1_000_000) return bad();
+  const bad = (why = ''): never => { throw new Error(`invalid homestead${why ? ': ' + why : ''}`); };
+  const h = decodeContent(HomesteadSchema, value, 'homestead', ['tiers', 'items']) as unknown as HomesteadData;
+  // Each row only refers to the furnishings catalogue by id for its name
+  // and footprint; the loader fills them in (a row that spells them out
+  // must match the catalogue, never disagree with it).
+  for (const v of h.items) {
+    const f = furnishingFor(v.id);
+    if (!f) return bad(`item ${v.id} not in the furnishings catalogue`);
+    if (v.name !== '' && v.name !== f.name) return bad(`item ${v.id} names itself`);
+    const fp: unknown = v.footprint;
+    if (fp !== undefined && (fp as unknown[]).length !== 0 && ((fp as unknown[]).length !== 2 || v.footprint[0] !== f.footprint[0] || v.footprint[1] !== f.footprint[1])) return bad(`item ${v.id} footprint`);
+    (v as { name: string }).name = f.name;
+    (v as { footprint: [number, number] }).footprint = [f.footprint[0], f.footprint[1]];
   }
+  // The tier ladder is the designed five; only Cottage and Workshop are
+  // bought, and only the Workshop takes a materials bill.
+  h.tiers.forEach((t, i) => {
+    if (t.tier !== i || t.id !== `tier-${i}` || !t.name || t.purchasable !== (i === 1 || i === 2) || (i === 1 || i === 2 ? t.embers <= 0 : t.embers !== 0)) bad(`tier ${i}`);
+  });
+  for (const t of h.tiers) {
+    const materials = t.materials ?? {};
+    if (t.tier === 2 ? Object.keys(materials).length === 0 : Object.keys(materials).length !== 0) return bad(`tier ${t.tier} materials`);
+    for (const [id, qty] of Object.entries(materials)) if (!loadWilds().materials.includes(id) || qty < 1 || qty > 1_000_000) return bad(`tier ${t.tier} material ${id}`);
+  }
+  // Reserved rectangles sit inside their grids.
+  const reservedOK = (list: HomeRect[], w: number, ht: number) => list.every((r) => r.x + r.w <= w && r.y + r.h <= ht);
+  if (!reservedOK(h.outdoorReserved, h.land.width, h.land.height) || !reservedOK(h.indoorReserved, h.indoor.width, h.indoor.height)) return bad('reserved');
+  // Gate rows go down the lane two tiles apart.
+  const rows = h.commons.gateRows;
+  if (rows.some((y, i) => i > 0 && y < rows[i - 1] + 2)) return bad('gate rows');
+  // The lantern posts' bills name Wilds materials; growth never takes one back.
+  const billsOK = (m: Record<string, number>, allowEmpty: boolean) => (allowEmpty || Object.keys(m).length > 0) && Object.entries(m).every(([id, n]) => loadWilds().materials.includes(id) && (allowEmpty ? n >= 0 : n >= 1) && n <= 1_000_000);
+  if (!h.lanternPosts.costs.every((c) => billsOK(c.materials, false)) || !billsOK(h.lanternPosts.growth, true)) return bad('post bills');
   const seen = new Set<string>();
   for (const v of h.items) {
-    if (!object(v) || typeof v.id !== 'string' || !v.id || seen.has(v.id) || !['furniture', 'decor', 'utility'].includes(v.category) || !integer(v.minTier) || v.minTier > 4 || !Array.isArray(v.where) || v.where.length < 1 || v.where.length > 2 || new Set(v.where).size !== v.where.length || !v.where.every(p => ['indoor', 'outdoor', 'gate'].includes(p)) || !integer(v.embers) || !object(v.materials) || Object.keys(v.materials).length > 3 || (v.embers > 0) === (Object.keys(v.materials).length > 0)) return bad();
-    // The row only refers to the furnishings catalogue by id for its name
-    // and footprint; if a row spells them out they must be the catalogue's,
-    // never a second copy.
-    const f = furnishingFor(v.id);
-    const row = v as unknown as { name?: unknown; footprint?: unknown };
-    if (!f || (row.name !== undefined && row.name !== f.name) || (row.footprint !== undefined && (!Array.isArray(row.footprint) || row.footprint.length !== 2 || row.footprint[0] !== f.footprint[0] || row.footprint[1] !== f.footprint[1]))) return bad();
-    v.name = f.name;
-    v.footprint = [f.footprint[0], f.footprint[1]];
-    if (v.craftOnly !== undefined && typeof v.craftOnly !== 'boolean') return bad();
-    for (const [id, qty] of Object.entries(v.materials)) if ((!loadWilds().materials.includes(id) && !MATERIAL_ITEMS.has(id)) || !integer(qty, 1)) return bad();
+    if (seen.has(v.id)) return bad(`duplicate id ${v.id}`);
     seen.add(v.id);
+    for (const [id, qty] of Object.entries(v.materials)) if ((!loadWilds().materials.includes(id) && !MATERIAL_ITEMS.has(id)) || qty < 1) return bad(`item ${v.id} material ${id}`);
   }
-  if (!seen.has(h.lanternPosts.item)) return bad();
+  if (!seen.has(h.lanternPosts.item)) return bad('post item');
   return h;
 }
 export const HOMESTEAD_DATA = validateHomesteadData(raw);

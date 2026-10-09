@@ -234,7 +234,7 @@ func CreditXP(mark *float64, p Profile) Credit {
 		return c
 	}
 	c.XP = math.Floor(now - *mark + .5)
-	c.Embers = int(math.Floor(now/float64(E.XPPerEmber)) - math.Floor(*mark/float64(E.XPPerEmber)))
+	c.Embers = int(math.Floor(now/float64(int(E.GetXpPerEmber()))) - math.Floor(*mark/float64(int(E.GetXpPerEmber()))))
 	c.Mark = &now
 	return c
 }
@@ -256,9 +256,9 @@ func Welcome(s State) (State, int) {
 	if slices.Contains(s.Flags, "embers:welcome") {
 		return s, 0
 	}
-	s.Embers += E.WelcomeEmbers
+	s.Embers += int(E.GetWelcomeEmbers())
 	s.Flags = AddUnique(s.Flags, "embers:welcome")
-	return s, E.WelcomeEmbers
+	return s, int(E.GetWelcomeEmbers())
 }
 
 type Save struct {
@@ -353,19 +353,19 @@ func CheckSpend(s State, sp Spend, imported bool) Check {
 	cost := 0
 	switch sp.Kind {
 	case "home-rest":
-		cost = E.Costs.HomeRest
+		cost = int(E.GetCosts().GetHomeRest())
 	case "rest":
-		cost = E.Costs.Rest
+		cost = int(E.GetCosts().GetRest())
 	case "road-lantern":
-		cost = E.Costs.RoadLantern
+		cost = int(E.GetCosts().GetRoadLantern())
 	case "chest":
-		cost = E.Costs.Chest
+		cost = int(E.GetCosts().GetChest())
 	default:
 		return Check{Reason: "invalid-spend"}
 	}
 	c := Check{Cost: cost}
 	switch {
-	case sp.Kind == "road-lantern" && slices.Contains(s.Flags, "lit:"+sp.ID), sp.Kind == "chest" && slices.Contains(s.Flags, "opened:"+E.ChestID):
+	case sp.Kind == "road-lantern" && slices.Contains(s.Flags, "lit:"+sp.ID), sp.Kind == "chest" && slices.Contains(s.Flags, "opened:"+E.GetChestId()):
 		c.Reason = "done"
 	case (sp.Kind == "rest" || sp.Kind == "home-rest") && s.HP >= s.MaxHP && s.Mana >= s.MaxMana:
 		c.Reason = "full"
@@ -396,8 +396,8 @@ func SpendEmbers(s State, sp Spend, imported bool) (State, error) {
 	case "road-lantern":
 		s.Flags = AddUnique(s.Flags, "lit:"+sp.ID)
 	case "chest":
-		s.Flags = AddUnique(s.Flags, "opened:"+E.ChestID)
-		s.Inventory = AddUnique(s.Inventory, E.CharmItem)
+		s.Flags = AddUnique(s.Flags, "opened:"+E.GetChestId())
+		s.Inventory = AddUnique(s.Inventory, E.GetCharmItem())
 	}
 	return s, nil
 }
@@ -432,7 +432,7 @@ func CheckpointForgery(p Profile, latest LossReference, verifiedHighLevel float6
 		return false
 	}
 	days := max(int64(0), ageSeconds) / 86400
-	bound := (3+float64(days))*DeathWindow(highest.Level) + E.CheckpointToleranceXP
+	bound := (3+float64(days))*DeathWindow(highest.Level) + E.GetCheckpointToleranceXp()
 	return highest.XP-LifetimeXP(p.Level, *p.Exp) > bound
 }
 

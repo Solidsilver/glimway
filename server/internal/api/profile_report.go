@@ -93,9 +93,9 @@ func (a *Server) profileReport(w http.ResponseWriter, r *http.Request) error {
 	credit := s.State.Embers - before.Embers
 	// The checkpoint allowance grows by full days, never by request count.
 	days := max(int64(0), (now-s.CheckpointAt)/86400)
-	cap := rules.E.SyncCreditCap + int(min(days, int64(rules.E.SyncCreditMax)))*rules.E.SyncCreditDailyGrowth
-	cap = min(cap, rules.E.SyncCreditMax)
-	payable := max(0, int(math.Floor(s.VerifiedXP/float64(rules.E.XPPerEmber)))+cap-int(math.Floor(before.EmberXP/float64(rules.E.XPPerEmber))))
+	cap := int(rules.E.GetSyncCreditCap()) + int(min(days, int64(int(rules.E.GetSyncCreditMax()))))*int(rules.E.GetSyncCreditDailyGrowth())
+	cap = min(cap, int(rules.E.GetSyncCreditMax()))
+	payable := max(0, int(math.Floor(s.VerifiedXP/float64(int(rules.E.GetXpPerEmber()))))+cap-int(math.Floor(before.EmberXP/float64(int(rules.E.GetXpPerEmber())))))
 	paid := min(credit, payable)
 	s.State.Embers = before.Embers
 	s.State.XPEmbers = before.XPEmbers
@@ -118,7 +118,7 @@ func (a *Server) profileReport(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if welcomed {
-		if err = store.Credit(ctx, tx, &s, rules.E.WelcomeEmbers, 0, "welcome", "first-sync", nil, now); err != nil {
+		if err = store.Credit(ctx, tx, &s, int(rules.E.GetWelcomeEmbers()), 0, "welcome", "first-sync", nil, now); err != nil {
 			return err
 		}
 		s.State.Flags = rules.AddUnique(s.State.Flags, "embers:welcome")

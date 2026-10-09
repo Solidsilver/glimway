@@ -3,7 +3,12 @@ package api
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
+	"strings"
 	"testing"
+
+	contract "glimway/server/internal/gen/glimway/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type operationLookup struct {
@@ -67,6 +72,141 @@ func TestCommittedOperationLookupIdentifiesMismatchedPayload(t *testing.T) {
 	x.db.DB.Exec("UPDATE idempotency SET created_at=? WHERE key='collision'", x.now.Load()-7*86400)
 	if lookup(c).Result.Operation != nil {
 		t.Fatal("lookup exposed expired key")
+	}
+}
+
+// lookupOperation reads the reconciliation answer for one route and key.
+func lookupOperation(t *testing.T, x *rig, c *http.Cookie, route, key string) struct {
+	Route, Key, PayloadHash, ResultType, ResultCase string
+	Version                                         float64
+	Payload                                         map[string]json.RawMessage
+	Result                                          json.RawMessage
+	Refused                                         *string
+} {
+	t.Helper()
+	w := x.rawHTTP("GET", "/api/operations/result?route="+url.QueryEscape(route)+"&key="+url.QueryEscape(key), nil, c)
+	if w.Code != 200 {
+		t.Fatal(w.Body.String())
+	}
+	var out struct {
+		Result struct {
+			Operation *struct {
+				Route, Key, PayloadHash, ResultType, ResultCase string
+				Version                                         float64
+				Payload                                         map[string]json.RawMessage
+				Result                                          json.RawMessage
+				Refused                                         *string
+			} `json:"operation"`
+		} `json:"result"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil {
+		t.Fatal(err)
+	}
+	if out.Result.Operation == nil {
+		t.Fatalf("no committed operation for %s %s", route, key)
+	}
+	op := out.Result.Operation
+	if op.Route != route || op.Key != key {
+		t.Fatalf("lookup: %+v", out)
+	}
+	return struct {
+		Route, Key, PayloadHash, ResultType, ResultCase string
+		Version                                         float64
+		Payload                                         map[string]json.RawMessage
+		Result                                          json.RawMessage
+		Refused                                         *string
+	}{op.Route, op.Key, op.PayloadHash, op.ResultType, op.ResultCase, op.Version, op.Payload, op.Result, op.Refused}
+}
+
+// The reconciliation read answers the operation's actual result: the stored
+// value's own fields, never the storage wrapper it was saved in.
+func TestCommittedOperationCarriesTheActualResult(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+
+	// A mark: {"added":…,"mark":…}, oneof case `mark`.
+	if w := x.rawHTTP("POST", "/api/story/mark", body(s, "settled", map[string]any{"mark": "seen:original"}), c); w.Code != 200 {
+		t.Fatal(w.Body.String())
+	}
+	op := lookupOperation(t, x, c, "/api/story/mark", "settled")
+	if op.ResultType != "glimway.v1.MarkResult" || op.ResultCase != "mark" {
+		t.Fatalf("mark answer: %s", op.Result)
+	}
+	var mark struct {
+		Added bool
+		Mark  string
+	}
+	if err := json.Unmarshal(op.Result, &mark); err != nil {
+		t.Fatal(err, string(op.Result))
+	}
+	if !mark.Added || mark.Mark != "seen:original" || strings.Contains(string(op.Result), "\"type\"") || strings.Contains(string(op.Result), "\"value\"") {
+		t.Fatalf("mark result: %s", op.Result)
+	}
+
+	// A fall: the recovered answer carries the committed lantern status.
+	s = x.reportState(c, s, 0, 0, map[string]any{"area": "woodland", "x": 250, "y": 250})
+	w := x.rawHTTP("POST", "/api/fall", body(s, "fallen", map[string]any{}), c)
+	if w.Code != 200 {
+		t.Fatal(w.Body.String())
+	}
+	var env contract.Envelope
+	if err := protojson.Unmarshal(w.Body.Bytes(), &env); err != nil {
+		t.Fatal(err)
+	}
+	fallen := env.GetFall()
+	if fallen == nil {
+		t.Fatalf("no fall result: %s", w.Body.String())
+	}
+	op = lookupOperation(t, x, c, "/api/fall", "fallen")
+	if op.ResultType != "glimway.v1.FallResult" || op.ResultCase != "fall" {
+		t.Fatalf("fall answer: %s", op.Result)
+	}
+	var fall struct {
+		Lantern string
+		Reason  string
+		Place   struct{ Area string }
+	}
+	if err := json.Unmarshal(op.Result, &fall); err != nil {
+		t.Fatal(err, string(op.Result))
+	}
+	if fall.Lantern != fallen.GetLantern() || fall.Reason != fallen.GetReason() || fall.Place.Area != fallen.GetPlace().GetArea() || fall.Lantern == "" {
+		t.Fatalf("fall result: %s (answered %v)", op.Result, fallen)
+	}
+
+	// A domain result (the mixed envelope's `result`, no type): its own fields.
+	w = x.rawHTTP("POST", "/api/items/pocket", body(s, "pocketed", map[string]any{"slot": 1}), c)
+	if w.Code != 200 {
+		t.Fatal(w.Body.String())
+	}
+	op = lookupOperation(t, x, c, "/api/items/pocket", "pocketed")
+	if op.ResultType != "" || op.ResultCase != "result" {
+		t.Fatalf("domain answer: %s", op.Result)
+	}
+	var domain struct {
+		Items struct {
+			Stacks []any
+		}
+	}
+	if err := json.Unmarshal(op.Result, &domain); err != nil {
+		t.Fatal(err, string(op.Result))
+	}
+	if domain.Items.Stacks == nil {
+		t.Fatalf("domain result: %s", op.Result)
+	}
+
+	// A terminal refusal: the refusal in its own field, no result.
+	poor := body(s, "poor", map[string]any{"recipeId": "craft-plank", "qty": 1})
+	if w = x.rawHTTP("POST", "/api/craft", poor, c); w.Code != 409 {
+		t.Fatal(w.Body.String())
+	}
+	op = lookupOperation(t, x, c, "/api/craft", "poor")
+	if op.Refused == nil || *op.Refused != "not-a-member" || string(op.Result) != "null" {
+		t.Fatalf("refusal: %s %s", op.Result, func() string {
+			if op.Refused == nil {
+				return "<none>"
+			}
+			return *op.Refused
+		}())
 	}
 }
 

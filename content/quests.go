@@ -1,139 +1,85 @@
 package content
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
-	"math"
-	"regexp"
 	"slices"
 	"strings"
-	"unicode/utf8"
+
+	contentv1 "glimway/gen/glimway/content/v1"
 )
 
-var questID = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
+type (
+	Quests        = contentv1.Quests
+	Quest         = contentv1.Quest
+	QuestStep     = contentv1.QuestStep
+	QuestTrigger  = contentv1.QuestTrigger
+	QuestWhere    = contentv1.QuestWhere
+	QuestWait     = contentv1.QuestWait
+	QuestItem     = contentv1.QuestItem
+	QuestGate     = contentv1.QuestGate
+	QuestGateItem = contentv1.QuestGateItem
+	QuestNote     = contentv1.QuestNote
+	QuestMoment   = contentv1.QuestMoment
+)
 
-func validQuestID(id string) bool { return len(id) <= 100 && questID.MatchString(id) }
-
-type QuestTrigger struct {
-	Talk   string `json:"talk,omitempty"`
-	Use    string `json:"use,omitempty"`
-	Reach  string `json:"reach,omitempty"`
-	Defeat string `json:"defeat,omitempty"`
-	Carry  string `json:"carry,omitempty"`
-	Flag   string `json:"flag,omitempty"`
-	Open   string `json:"open,omitempty"`
-	Sync   string `json:"sync,omitempty"`
-	New    *bool  `json:"new,omitempty"`
-}
-type QuestWhere struct {
-	Area  string `json:"area,omitempty"`
-	NPC   string `json:"npc,omitempty"`
-	Spot  string `json:"spot,omitempty"`
-	Enemy string `json:"enemy,omitempty"`
-	UI    string `json:"ui,omitempty"`
-}
-type QuestWait struct {
-	Hours    float64 `json:"hours,omitempty"`
-	Turnings int     `json:"turnings,omitempty"`
-}
-type QuestItem struct {
-	Def string `json:"def"`
-	Qty int    `json:"qty"`
-}
-type QuestGateItem struct {
-	Def  string `json:"def"`
-	Qty  int    `json:"qty"`
-	Keep *bool  `json:"keep"`
-}
-type QuestGate struct {
-	With   string         `json:"with,omitempty"`
-	Wait   *QuestWait     `json:"wait,omitempty"`
-	Item   *QuestGateItem `json:"item,omitempty"`
-	Embers int            `json:"embers,omitempty"`
-}
-type QuestNote struct {
-	Title string `json:"title"`
-	Body  string `json:"body"`
-}
-type QuestMoment struct {
-	Eyebrow string `json:"eyebrow"`
-	Title   string `json:"title"`
-}
-type QuestStep struct {
-	ID        string        `json:"id"`
-	At        string        `json:"at"`
-	Items     []string      `json:"items"`
-	Marks     []string      `json:"marks"`
-	Papers    []string      `json:"papers"`
-	Embers    int           `json:"embers"`
-	Witness   string        `json:"witness"`
-	Goal      string        `json:"goal,omitempty"`
-	Objective string        `json:"objective,omitempty"`
-	Where     *QuestWhere   `json:"where,omitempty"`
-	Do        *QuestTrigger `json:"do"`
-	Gate      *QuestGate    `json:"gate,omitempty"`
-	Give      []QuestItem   `json:"give,omitempty"`
-	Note      *QuestNote    `json:"note,omitempty"`
-	Moment    *QuestMoment  `json:"moment,omitempty"`
-}
-type Quest struct {
-	ID      string        `json:"id"`
-	Title   string        `json:"title,omitempty"`
-	Blurb   string        `json:"blurb,omitempty"`
-	Line    string        `json:"line,omitempty"`
-	Chapter *int          `json:"chapter,omitempty"`
-	After   []string      `json:"after,omitempty"`
-	Start   *QuestTrigger `json:"start,omitempty"`
-	Needs   string        `json:"needs,omitempty"`
-	Steps   []QuestStep   `json:"steps"`
+// DecodeQuests reads quests JSON into the generated types, refusing nulls
+// and unknown keys, then runs the schema's rules (the per-step shape: one
+// trigger, wait, gate, give, note and moment) and the tree's own rules in
+// code: quest-id uniqueness and every reference into the other tables
+// (npcs, spots, areas, papers, items), with the after-graph acyclic.
+func DecodeQuests(raw []byte) (*Quests, error) {
+	doc := &Quests{}
+	if err := decodeContentProto(raw, "quests", doc); err != nil {
+		return doc, err
+	}
+	if err := contentValidate("quests", entryLists(doc, "quests"), doc); err != nil {
+		return doc, err
+	}
+	if err := validateQuests(doc); err != nil {
+		return doc, err
+	}
+	return doc, nil
 }
 
-func DecodeQuests(raw []byte) ([]Quest, error) {
-	var doc struct {
-		Quests []Quest `json:"quests"`
-	}
-	decoder := json.NewDecoder(bytes.NewReader(raw))
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&doc); err != nil {
-		return nil, err
-	}
-	if err := decoder.Decode(new(any)); err != io.EOF {
-		return nil, fmt.Errorf("invalid quests: trailing JSON")
-	}
-	if err := ValidateQuests(doc.Quests); err != nil {
-		return nil, err
-	}
-	return doc.Quests, nil
-}
-func LoadQuests() ([]Quest, error) {
+func LoadQuests() (*Quests, error) {
 	raw, err := FS.ReadFile("quests.json")
 	if err != nil {
 		return nil, err
 	}
 	return DecodeQuests(raw)
 }
+
+// triggerHasNew: `new` is an optional bool, so a plain Get reads an
+// explicit false as unset; the trigger rule needs the presence.
+func triggerHasNew(t *QuestTrigger) bool {
+	fd := t.ProtoReflect().Descriptor().Fields().ByName("new")
+	return t.ProtoReflect().Has(fd)
+}
+
 func QuestSpotArea(id string) string {
-	for _, r := range RoomRules.Rooms {
-		if _, ok := r.Spots[id]; ok {
-			return r.ID
+	for _, r := range RoomRules.GetRooms() {
+		if _, ok := r.GetSpots()[id]; ok {
+			return r.GetId()
 		}
 	}
-	return StoryRules.Spots[id]
+	return StoryRules.GetSpots()[id]
 }
-func ValidateQuests(quests []Quest) error {
+
+// validateQuests runs the rules that reach across entries: quest-id
+// uniqueness and every reference into the story tables, papers, items and
+// rooms. Field rules live on the schema (proto/glimway/content/v1/
+// quests.proto); it assumes the schema has passed, so it is only called
+// after protovalidate.
+func validateQuests(doc *Quests) error {
 	bad := func(s string) error { return fmt.Errorf("invalid quests: %s", s) }
-	if len(quests) == 0 {
-		return bad("empty")
-	}
+	quests := doc.GetQuests()
 	items, err := LoadItems()
 	if err != nil {
 		return err
 	}
 	defs := map[string]bool{}
 	for _, d := range items.Items {
-		defs[d.ID] = true
+		defs[d.GetId()] = true
 	}
 	papers, err := LoadPapers()
 	if err != nil {
@@ -141,171 +87,137 @@ func ValidateQuests(quests []Quest) error {
 	}
 	paperIDs := map[string]bool{}
 	for _, p := range papers {
-		paperIDs[p.ID] = true
+		paperIDs[p.GetId()] = true
 	}
 	story, err := LoadStory()
 	if err != nil {
 		return err
 	}
 	spots := map[string]string{}
-	for id, area := range story.Spots {
+	for id, area := range story.GetSpots() {
 		spots[id] = area
 	}
-	for _, r := range RoomRules.Rooms {
-		for id := range r.Spots {
-			spots[id] = r.ID
+	for _, r := range RoomRules.GetRooms() {
+		for id := range r.GetSpots() {
+			spots[id] = r.GetId()
 		}
 	}
-	npc := func(id string) bool { _, resident := ResidentByID(id); return resident || story.NPCs[id] != "" }
+	npc := func(id string) bool { _, resident := ResidentByID(id); return resident || story.GetNpcs()[id] != "" }
 	writer := func(mark string) bool {
-		for _, n := range story.Namespaces {
-			if mark == n.Prefix || strings.HasSuffix(n.Prefix, ":") && strings.HasPrefix(mark, n.Prefix) {
+		for _, n := range story.GetNamespaces() {
+			if mark == n.GetPrefix() || strings.HasSuffix(n.GetPrefix(), ":") && strings.HasPrefix(mark, n.GetPrefix()) {
 				return true
 			}
 		}
 		return false
 	}
-	byID := map[string]Quest{}
+	byID := map[string]*Quest{}
 	questItems := map[string]bool{}
-	for _, id := range story.QuestItems {
+	for _, id := range story.GetQuestItems() {
 		questItems[id] = true
 	}
 	for _, q := range quests {
-		if !validQuestID(q.ID) || byID[q.ID].ID != "" || len(q.Steps) == 0 || q.Line != "" && !slices.Contains([]string{"road", "village", "craft"}, q.Line) || q.Chapter != nil && (*q.Chapter < 0 || *q.Chapter > 9007199254740991 || q.Line != "road") || q.Needs != "" && q.Needs != "habitica" {
-			return bad("quest " + q.ID)
+		if byID[q.GetId()] != nil {
+			return bad("duplicate id " + q.GetId())
 		}
-		byID[q.ID] = q
-		for _, s := range q.Steps {
-			for _, id := range s.Items {
+		byID[q.GetId()] = q
+		for _, s := range q.GetSteps() {
+			for _, id := range s.GetItems() {
 				if !questItems[id] {
 					return bad("unknown quest item " + id)
 				}
 			}
 		}
 	}
+	// A step's trigger names a target in the tables; `new` is only ever a
+	// quest's start, and only true.
 	trigger := func(t *QuestTrigger, start bool) error {
 		if t == nil {
 			return bad("missing trigger")
 		}
-		count := 0
-		for _, v := range []string{t.Talk, t.Use, t.Reach, t.Defeat, t.Carry, t.Flag, t.Open, t.Sync} {
-			if v != "" {
-				count++
-			}
+		if triggerHasNew(t) && (!start || !t.GetNew()) {
+			return bad("new trigger")
 		}
-		if t.New != nil {
-			count++
-			if !start || !*t.New {
-				return bad("new trigger")
-			}
-		}
-		if count != 1 {
-			return bad("one trigger required")
-		}
-		if t.Talk != "" && !npc(t.Talk) || t.Use != "" && spots[t.Use] == "" || t.Reach != "" && !KnownContentArea(t.Reach) || t.Defeat != "" && story.IDs["defeated:"][t.Defeat] == "" || t.Carry != "" && !defs[t.Carry] && !questItems[t.Carry] || t.Flag != "" && !writer(t.Flag) || t.Open != "" && t.Open != "journal" || t.Sync != "" && t.Sync != "embers" {
+		if t.GetTalk() != "" && !npc(t.GetTalk()) || t.GetUse() != "" && spots[t.GetUse()] == "" || t.GetReach() != "" && !KnownContentArea(t.GetReach()) || t.GetDefeat() != "" && story.GetIds()["defeated:"].GetAreas()[t.GetDefeat()] == "" || t.GetCarry() != "" && !defs[t.GetCarry()] && !questItems[t.GetCarry()] || t.GetFlag() != "" && !writer(t.GetFlag()) || t.GetOpen() != "" && t.GetOpen() != "journal" || t.GetSync() != "" && t.GetSync() != "embers" {
 			return bad("unknown trigger target")
 		}
 		return nil
 	}
 	for _, q := range quests {
-		if q.Start != nil {
-			if err := trigger(q.Start, true); err != nil {
+		if q.GetStart() != nil {
+			if err := trigger(q.GetStart(), true); err != nil {
 				return err
 			}
 		}
-		seen := map[string]bool{}
-		for i, s := range q.Steps {
-			if !validQuestID(s.ID) || seen[s.ID] || s.Embers < 0 || s.Embers > 5 || utf8.RuneCountInString(s.Goal) > 40 || s.At != "" && !KnownContentArea(s.At) || s.Items == nil || s.Marks == nil || s.Papers == nil || s.Witness != "" && !slices.Contains([]string{"warden", "lantern"}, s.Witness) {
-				return bad("step " + q.ID + ":" + s.ID)
+		for i, s := range q.GetSteps() {
+			if s.GetAt() != "" && !KnownContentArea(s.GetAt()) {
+				return bad("step " + q.GetId() + ":" + s.GetId())
 			}
-			seen[s.ID] = true
-			if err := trigger(s.Do, false); err != nil {
-				return err
-			}
-			for _, mark := range s.Marks {
+			for _, mark := range s.GetMarks() {
 				if !writer(mark) {
 					return bad("unknown mark " + mark)
 				}
 			}
-			for _, id := range s.Papers {
+			for _, id := range s.GetPapers() {
 				if !paperIDs[id] {
 					return bad("unknown paper " + id)
 				}
 			}
-			g := s.Gate
+			g := s.GetGate()
 			if g != nil {
-				if g.With == "" && g.Wait == nil && g.Item == nil && g.Embers == 0 || g.With != "" && !npc(g.With) || g.Embers < 0 || g.Embers > 9007199254740991 {
-					return bad("gate " + s.ID)
+				if g.GetWith() != "" && !npc(g.GetWith()) {
+					return bad("gate " + s.GetId())
 				}
-				if w := g.Wait; w != nil {
-					if i == 0 || math.IsNaN(w.Hours) || math.IsInf(w.Hours, 0) || w.Hours < 0 || w.Turnings < 0 || w.Turnings > 9007199254740991 || (w.Hours > 0) == (w.Turnings > 0) {
-						return bad("wait " + s.ID)
+				if w := g.GetWait(); w != nil && i == 0 {
+					return bad("wait " + s.GetId())
+				}
+				if item := g.GetItem(); item != nil && !defs[item.GetDef()] {
+					return bad("gate item " + s.GetId())
+				}
+			}
+			for _, item := range s.GetGive() {
+				if !defs[item.GetDef()] {
+					return bad("give " + s.GetId())
+				}
+			}
+			if err := trigger(s.GetDo(), false); err != nil {
+				return err
+			}
+			t := s.GetDo()
+			if t.GetTalk() != "" {
+				if _, moving := ResidentByID(t.GetTalk()); moving {
+					if s.GetAt() != "" || g == nil || g.GetWith() != t.GetTalk() {
+						return bad("resident talk " + s.GetId())
+					}
+				} else if s.GetAt() != story.GetNpcs()[t.GetTalk()] {
+					return bad("npc area " + s.GetId())
+				}
+			}
+			if t.GetUse() != "" && s.GetAt() != spots[t.GetUse()] || t.GetReach() != "" && s.GetAt() != t.GetReach() || t.GetDefeat() != "" && s.GetAt() != story.GetIds()["defeated:"].GetAreas()[t.GetDefeat()] {
+				return bad("trigger area " + s.GetId())
+			}
+			if w := s.GetWhere(); w != nil {
+				if w.GetArea() != "" && !KnownContentArea(w.GetArea()) {
+					return bad("where " + s.GetId())
+				}
+				if w.GetNpc() != "" {
+					if !npc(w.GetNpc()) {
+						return bad("where npc " + s.GetId())
+					}
+					if _, moving := ResidentByID(w.GetNpc()); !moving && w.GetArea() != "" && w.GetArea() != story.GetNpcs()[w.GetNpc()] {
+						return bad("where npc area " + s.GetId())
 					}
 				}
-				if item := g.Item; item != nil {
-					if !defs[item.Def] || item.Qty < 1 || item.Qty > 9007199254740991 || item.Keep == nil {
-						return bad("gate item " + s.ID)
-					}
-				}
-			}
-			if len(s.Give) > 0 && g == nil {
-				return bad("ungated give " + s.ID)
-			}
-			give := map[string]bool{}
-			for _, item := range s.Give {
-				if !defs[item.Def] || item.Qty < 1 || item.Qty > 9007199254740991 || give[item.Def] {
-					return bad("give " + s.ID)
-				}
-				give[item.Def] = true
-			}
-			if s.Note != nil && (s.Note.Title == "" || s.Note.Body == "") || s.Moment != nil && (s.Moment.Title == "" || s.Moment.Eyebrow == "") {
-				return bad("note/moment " + s.ID)
-			}
-			t := s.Do
-			anywhere := t.Carry != "" || t.Open != "" || t.Sync != "" || t.Flag != ""
-			if s.At == "" && !anywhere && (g == nil || g.With == "") {
-				return bad("empty at " + s.ID)
-			}
-			if t.Talk != "" {
-				if _, moving := ResidentByID(t.Talk); moving {
-					if s.At != "" || g == nil || g.With != t.Talk {
-						return bad("resident talk " + s.ID)
-					}
-				} else if s.At != story.NPCs[t.Talk] {
-					return bad("npc area " + s.ID)
-				}
-			}
-			if t.Use != "" && s.At != spots[t.Use] || t.Reach != "" && s.At != t.Reach || t.Defeat != "" && s.At != story.IDs["defeated:"][t.Defeat] {
-				return bad("trigger area " + s.ID)
-			}
-			if w := s.Where; w != nil {
-				count := 0
-				for _, v := range []string{w.NPC, w.Spot, w.Enemy, w.UI} {
-					if v != "" {
-						count++
-					}
-				}
-				if count > 1 || count == 0 && w.Area == "" || w.Area != "" && !KnownContentArea(w.Area) || w.UI != "" && (w.UI != "journal" || w.Area != "") {
-					return bad("where " + s.ID)
-				}
-				if w.NPC != "" {
-					if !npc(w.NPC) {
-						return bad("where npc " + s.ID)
-					}
-					if _, moving := ResidentByID(w.NPC); !moving && w.Area != "" && w.Area != story.NPCs[w.NPC] {
-						return bad("where npc area " + s.ID)
-					}
-				}
-				if w.Spot != "" && (spots[w.Spot] == "" || w.Area != "" && w.Area != spots[w.Spot]) || w.Enemy != "" && (story.IDs["defeated:"][w.Enemy] == "" || w.Area != "" && w.Area != story.IDs["defeated:"][w.Enemy]) {
-					return bad("where target " + s.ID)
+				if w.GetSpot() != "" && (spots[w.GetSpot()] == "" || w.GetArea() != "" && w.GetArea() != spots[w.GetSpot()]) || w.GetEnemy() != "" && (story.GetIds()["defeated:"].GetAreas()[w.GetEnemy()] == "" || w.GetArea() != "" && w.GetArea() != story.GetIds()["defeated:"].GetAreas()[w.GetEnemy()]) {
+					return bad("where target " + s.GetId())
 				}
 			}
 		}
 		refs := map[string]bool{}
-		for _, ref := range q.After {
+		for _, ref := range q.GetAfter() {
 			parts := strings.Split(ref, ":")
 			target, ok := byID[parts[0]]
-			if !ok || len(parts) > 2 || refs[ref] || len(parts) == 2 && !slices.ContainsFunc(target.Steps, func(s QuestStep) bool { return s.ID == parts[1] }) {
+			if !ok || len(parts) > 2 || refs[ref] || len(parts) == 2 && !slices.ContainsFunc(target.GetSteps(), func(s *QuestStep) bool { return s.GetId() == parts[1] }) {
 				return bad("after " + ref)
 			}
 			refs[ref] = true
@@ -321,7 +233,7 @@ func ValidateQuests(quests []Quest) error {
 			return true
 		}
 		visiting[id] = true
-		for _, ref := range byID[id].After {
+		for _, ref := range byID[id].GetAfter() {
 			if !visit(strings.Split(ref, ":")[0]) {
 				return false
 			}
@@ -330,8 +242,8 @@ func ValidateQuests(quests []Quest) error {
 		done[id] = true
 		return true
 	}
-	for id := range byID {
-		if !visit(id) {
+	for _, q := range quests {
+		if !visit(q.GetId()) {
 			return bad("after cycle")
 		}
 	}

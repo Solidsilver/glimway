@@ -7,7 +7,7 @@ import { BASE } from './helpers/link-rig.ts';
 /** Lane B's mixed read envelope (`{ state, result }`) through the existing domain parsers. */
 
 const json = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } });
-const storage = { home: null, inventory: { materials: { fiber: 4 }, items: {}, decorations: {} }, storage: null, personal: { materials: {}, items: {}, decorations: {} }, shared: 'not-a-member' };
+const storage = { home: null, inventory: { materials: { fiber: 4 }, items: {}, decorations: {}, instances: [] }, storage: null, personal: { materials: {}, items: {}, decorations: {}, instances: [] }, shared: 'not-a-member' };
 
 test('domain reads find their extras under result, beside the typed state', async () => {
   const fetchImpl = (async (url: string) => {
@@ -35,7 +35,8 @@ test('the library shelf reads the mixed envelope too', async () => {
 });
 
 test('the reconciliation read: a committed operation, or none; malformed rows are bad responses', () => {
-  const op = { route: '/api/story/mark', key: 'k', payload: { mark: 'seen:a' }, payloadHash: 'h', version: 1, result: { mark: 'seen:a', added: true }, resultCase: 'mark', resultType: 'glimway.v1.MarkResult' };
+  // The wire (operations.proto) always carries the row's fields, null when unset.
+  const op = { route: '/api/story/mark', key: 'k', payload: { mark: 'seen:a' }, payloadHash: 'h', version: 1, refused: null, result: { mark: 'seen:a', added: true }, resultCase: 'mark', resultType: 'glimway.v1.MarkResult' };
   assert.equal(parseOperationResult({ state: BASE, result: { operation: op } }).operation?.resultCase, 'mark');
   assert.equal(parseOperationResult({ state: BASE, result: { operation: null } }).operation, null);
   assert.throws(() => parseOperationResult({ state: BASE, result: { operation: { route: 1 } } }));

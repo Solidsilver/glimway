@@ -1,0 +1,91 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// The shared paper catalog: the owner's found texts and where each is
+// found (the find is the story flag `paper:<id>`, so ids cap under 128
+// characters). One row per paper; each row's rule carries its own source's
+// fields, and the per-source requirements are the paper.* rules below.
+// The catalog's own rule — one id per paper — stays in the loader, which
+// names the duplicate. content/papers.json.
+message Papers {
+  repeated Paper papers = 1 [(buf.validate.field).repeated.min_items = 1];
+}
+
+message Paper {
+  option (buf.validate.message).cel = {
+    id: "paper.kind"
+    message: "a find rule's kind is its source"
+    expression: "this.rule.kind == this.source"
+  };
+  option (buf.validate.message).cel = {
+    id: "paper.placed"
+    message: "a placed paper names an area and a tile on it"
+    expression: "this.source != \"placed\" || (this.rule.area != \"\" && this.rule.tx >= 0 && this.rule.ty >= 0)"
+  };
+  option (buf.validate.message).cel = {
+    id: "paper.stage"
+    message: "a quest or gift paper names the stage it comes at"
+    expression: "!(this.source in [\"quest\", \"gift\"]) || this.rule.stage != \"\""
+  };
+  option (buf.validate.message).cel = {
+    id: "paper.project"
+    message: "a village-project paper names its project"
+    expression: "this.source != \"village-project\" || this.rule.project != \"\""
+  };
+  option (buf.validate.message).cel = {
+    id: "paper.fact"
+    message: "a commons paper names its fact"
+    expression: "this.source != \"commons\" || this.rule.fact != \"\""
+  };
+  option (buf.validate.message).cel = {
+    id: "paper.poi"
+    message: "a wilds-poi paper names a poi or a site"
+    expression: "this.source != \"wilds-poi\" || (this.rule.poi != \"\" || this.rule.site != \"\")"
+  };
+  option (buf.validate.message).cel = {
+    id: "paper.tier"
+    message: "a wilds-chest paper comes from the tier-3 chest"
+    expression: "this.source != \"wilds-chest\" || this.rule.tier == 3"
+  };
+  option (buf.validate.message).cel = {
+    id: "paper.member"
+    message: "an echo paper names its member"
+    expression: "this.source != \"echo\" || this.rule.member != \"\""
+  };
+  option (buf.validate.message).cel = {
+    id: "paper.turning"
+    message: "a turning paper is declared: unbuilt, a fact or a site"
+    expression: "this.source != \"turning\" || (this.rule.unbuilt || this.rule.fact != \"\" || this.rule.site != \"\")"
+  };
+  string id = 1 [(buf.validate.field).string = {min_len: 1, max_len: 122}];
+  string collection = 2 [(buf.validate.field).string.min_len = 1];
+  string source = 3 [(buf.validate.field).string = {in: ["library-start", "placed", "quest", "gift", "commons", "wilds-poi", "wilds-chest", "village-project", "turning", "echo"]}];
+  // The library's shelf sign (docs/design/indoors.md 3.3).
+  string section = 4 [(buf.validate.field).string = {in: ["stories", "histories", "recipes", "field-notes"]}];
+  PaperRule rule = 5 [(buf.validate.field).required = true];
+}
+
+// Where a paper is found. The fields a source uses are set only on its own
+// rows (the paper.* rules above say which).
+message PaperRule {
+  string kind = 1;
+  string area = 2;
+  int32 tx = 3;
+  int32 ty = 4;
+  string after = 5;
+  string stage = 6;
+  string from = 7;
+  string project = 8;
+  string fact = 9;
+  string poi = 10;
+  string site = 11;
+  string member = 12;
+  string paper = 13;
+  bool road_lit = 14;
+  bool east = 15;
+  string mark = 16;
+  int32 tier = 17;
+  bool unbuilt = 18;
+}

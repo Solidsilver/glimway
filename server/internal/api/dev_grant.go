@@ -53,9 +53,9 @@ func devGrantKind(id string) (kind string, max int, err error) {
 		return "embers", devMaxEmbers, nil
 	}
 	if d, ok := content.ItemFor(id); ok {
-		switch d.AssetKind() {
+		switch content.ItemAssetKind(d) {
 		case "material", "item":
-			return d.AssetKind(), devMaxStack, nil
+			return content.ItemAssetKind(d), devMaxStack, nil
 		case "instance":
 			return "instance", devMaxOneByOne, nil
 		}
@@ -120,7 +120,7 @@ func (a *Server) devGrant(w http.ResponseWriter, r *http.Request) error {
 			def, _ := content.ItemFor(g.ID)
 			for n := 0; n < g.Qty && err == nil; n++ {
 				if _, err = newInstance(ctx, tx, def, instanceAt{"pack", s.AccountID}, "", -1, now); err == nil {
-					err = currency(ctx, tx, s.AccountID, content.StackCurrency(def.ID), 1, "dev-grant", g.ID, now)
+					err = currency(ctx, tx, s.AccountID, content.StackCurrency(def.GetId()), 1, "dev-grant", g.ID, now)
 				}
 			}
 		case "decoration":

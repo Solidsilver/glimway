@@ -1,0 +1,8 @@
+{
+  "loader": [
+    { "name": "shipped", "valid": true, "edits": [] },
+    { "name": "zero-number", "valid": false, "rule": "int32.gte", "edits": [{ "path": ["number"], "value": 0 }] },
+    { "name": "negative-number", "valid": false, "rule": "int32.gte", "edits": [{ "path": ["number"], "value": -4 }] },
+    { "name": "missing-number", "valid": false, "rule": "int32.gte", "edits": [{ "path": ["number"], "remove": true }] }
+  ]
+}

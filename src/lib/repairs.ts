@@ -1,79 +1,41 @@
 import repairsRaw from '../../content/repairs.json' with { type: 'json' };
+import { decodeContent } from './content-proto.ts';
+import { RepairsSchema, type RepairDefValid, type RepairsValid } from './gen/glimway/content/v1/repairs_pb.js';
+import { CALENDAR } from './calendar.ts';
+import { itemDef } from './items.ts';
 
-interface RepairPos {
-  tx: number;
-  ty: number;
-}
+/** The village repairs (proto/glimway/content/v1/repairs.proto), with the schema's required fields non-optional. */
+export type RepairsData = RepairsValid;
+export type RepairDef = RepairDefValid;
 
-interface RepairGift {
-  kind: string;
-  id: string;
-  qty: number;
-}
-
-interface RepairOpenFrom {
-  wick: string;
-  day: number;
-}
-
-export interface RepairDef {
-  id: string;
-  name: string;
-  part: string;
-  area: 'village' | 'commons';
-  target: string;
-  pos: RepairPos;
-  resident: string;
-  reaction: string;
-  gift?: RepairGift;
-  hint: string;
-  description: string;
-  mendedDescription: string;
-  worldFlag: string;
-  /** Festival chores only break from this day of this wick (the hame before Carting Day). */
-  openFrom?: RepairOpenFrom;
-  /** Weather can break it again (default true). The well's rope mends once and stays mended. */
-  weather?: boolean;
-}
-
-interface RepairsRulesConfig {
-  maxOpen: number;
-  /** One new weather breakage every `perWick` wicks. */
-  perWick: number;
-  scripted: string[];
-}
-
-export interface RepairsData {
-  rules: RepairsRulesConfig;
-  repairs: RepairDef[];
-}
-
-function validateRepairs(data: RepairsData): RepairsData {
-  if (!data.rules || data.rules.maxOpen <= 0 || data.rules.perWick <= 0 || !Array.isArray(data.rules.scripted) || data.rules.scripted.length === 0) {
-    throw new Error('invalid repairs: rules');
-  }
-  if (!Array.isArray(data.repairs) || data.repairs.length === 0) {
-    throw new Error('invalid repairs: empty');
-  }
+/**
+ * Throws on anything content/repairs.go would refuse: the rules that span
+ * entries or families, in Go's order with Go's tags — the schema's own
+ * (protovalidate) rules ran in decodeContent before these, outside a
+ * production build.
+ */
+export function validateRepairs(value: unknown): RepairsData {
+  const data = decodeContent(RepairsSchema, value, 'repairs', ['repairs']) as RepairsData;
+  const bad = (why: string): never => { throw new Error(`invalid repairs: ${why}`); };
   const ids = new Set<string>();
   for (const r of data.repairs) {
-    if (!r.id || ids.has(r.id)) throw new Error(`invalid repairs: id ${r.id}`);
-    if (!r.name) throw new Error(`invalid repairs: name ${r.id}`);
-    if (r.worldFlag !== `repair:${r.id}:mended`) throw new Error(`invalid repairs: worldFlag ${r.id}`);
-    if (r.area !== 'village' && r.area !== 'commons') throw new Error(`invalid repairs: area ${r.id}`);
-    if (r.pos.tx < 0 || r.pos.ty < 0) throw new Error(`invalid repairs: pos ${r.id}`);
-    if (!r.reaction || r.reaction.length > 160) throw new Error(`invalid repairs: reaction ${r.id}`);
-    if (!r.description || r.description.length > 160) throw new Error(`invalid repairs: description ${r.id}`);
-    if (!r.mendedDescription || r.mendedDescription.length > 160) throw new Error(`invalid repairs: mendedDescription ${r.id}`);
+    if (ids.has(r.id)) return bad(`duplicate id ${r.id}`);
     ids.add(r.id);
+    // The part mends it, the gift pays it: both are catalogue items of a
+    // kind a player can hold.
+    const part = itemDef(r.part);
+    if (!part || !['part', 'material', 'consumable'].includes(part.kind)) return bad(`${r.id} part`);
+    if (r.gift && !itemDef(r.gift.id)) return bad(`${r.id} gift`);
+    // The opening wick is a calendar wick of a calendar length.
+    if (r.openFrom && (!CALENDAR.wicks.includes(r.openFrom.wick) || r.openFrom.day > CALENDAR.wickDays)) return bad(`${r.id} openFrom`);
   }
   for (const s of data.rules.scripted) {
-    if (!ids.has(s)) throw new Error(`invalid repairs: missing scripted id ${s}`);
+    if (!ids.has(s)) return bad(`scripted ${s}`);
   }
   return data;
 }
 
-export const REPAIR_RULES: RepairsData = validateRepairs(repairsRaw as unknown as RepairsData);
+export const REPAIR_RULES: RepairsData = validateRepairs(repairsRaw);
 
 export function repairFor(id: string): RepairDef | undefined {
   return REPAIR_RULES.repairs.find((r) => r.id === id);

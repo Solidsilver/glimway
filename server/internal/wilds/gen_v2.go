@@ -161,9 +161,9 @@ func GenerateRegion(epoch Epoch) (Region, error) {
 	if err != nil {
 		return Region{}, err
 	}
-	out := Region{RegionID: region.ID, Width: region.GridWidth, Height: region.GridHeight, Sites: []Site{}}
-	for cy := 0; cy < region.GridHeight; cy++ {
-		for cx := 0; cx < region.GridWidth; cx++ {
+	out := Region{RegionID: region.GetId(), Width: int(region.GetGridWidth()), Height: int(region.GetGridHeight()), Sites: []Site{}}
+	for cy := 0; cy < int(region.GetGridHeight()); cy++ {
+		for cx := 0; cx < int(region.GetGridWidth()); cx++ {
 			c, err := GenerateChunk(epoch, cx, cy)
 			if err != nil {
 				return Region{}, err
@@ -181,16 +181,16 @@ func GenerateChunk(epoch Epoch, cx, cy int) (Chunk, error) {
 	if err != nil {
 		return Chunk{}, err
 	}
-	if cx < 0 || cy < 0 || cx >= region.GridWidth || cy >= region.GridHeight {
-		return Chunk{}, fmt.Errorf("wilds: chunk %d,%d is outside region %s", cx, cy, region.ID)
+	if cx < 0 || cy < 0 || cx >= int(region.GetGridWidth()) || cy >= int(region.GetGridHeight()) {
+		return Chunk{}, fmt.Errorf("wilds: chunk %d,%d is outside region %s", cx, cy, region.GetId())
 	}
 	mark, err := seasonMark(epoch.Season)
 	if err != nil {
 		return Chunk{}, err
 	}
 	data := content.WildsRules
-	S := data.ChunkSize
-	outer := region.Kind == "outer"
+	S := int(data.GetChunkSize())
+	outer := region.GetKind() == "outer"
 	seed := ChunkSeed(epoch, cx, cy)
 
 	exits := chunkExits(epoch, region, cx, cy)
@@ -204,7 +204,7 @@ func GenerateChunk(epoch Epoch, cx, cy int) (Chunk, error) {
 	// Turncaps lean toward a light that held: in the Tangle, home (the
 	// Commons gap on the entry chunk); past the crossing, east, toward
 	// Sallow Ford.
-	home := Tile{(region.EntryX-cx)*S + homeGapTX + 1, (region.EntryY-cy)*S + S - 1}
+	home := Tile{(int(region.GetEntryX())-cx)*S + homeGapTX + 1, (int(region.GetEntryY())-cy)*S + S - 1}
 	if outer {
 		home = Tile{100 * S, 0}
 	}
@@ -215,7 +215,7 @@ func GenerateChunk(epoch Epoch, cx, cy int) (Chunk, error) {
 	w.lay()
 
 	c := Chunk{
-		RegionID:         region.ID,
+		RegionID:         region.GetId(),
 		CX:               cx,
 		CY:               cy,
 		GeneratorVersion: GeneratorV2,
@@ -236,9 +236,9 @@ func GenerateChunk(epoch Epoch, cx, cy int) (Chunk, error) {
 	return c, nil
 }
 
-func v2Region(epoch Epoch) (content.WildsRegion, error) {
+func v2Region(epoch Epoch) (*content.WildsRegion, error) {
 	if epoch.GeneratorVersion != GeneratorV2 {
-		return content.WildsRegion{}, fmt.Errorf("%w: version %d", ErrGeneratorUnavailable, epoch.GeneratorVersion)
+		return nil, fmt.Errorf("%w: version %d", ErrGeneratorUnavailable, epoch.GeneratorVersion)
 	}
 	return regionFor(content.WildsRules, epoch.RegionID)
 }
@@ -317,12 +317,12 @@ func gap(S int, dir Dir, offset int) (tx, ty, tw, th int) {
 // edgeOffset is where the 3-tile gap sits along the shared edge east of
 // (cx, cy) (vertical) or south of it (horizontal). Both chunks of the edge
 // compute the same value from the epoch.
-func edgeOffset(epoch Epoch, region content.WildsRegion, S, cx, cy int, vertical bool) int {
+func edgeOffset(epoch Epoch, region *content.WildsRegion, S, cx, cy int, vertical bool) int {
 	lo, hi := edgeMargin, S-edgeMargin-exitGap
 	axis := "south"
 	if vertical {
 		axis = "east"
-	} else if cx == region.EntryX && cy == region.EntryY {
+	} else if cx == int(region.GetEntryX()) && cy == int(region.GetEntryY()) {
 		lo = homeGapTX + exitGap + edgeMargin // keep clear of the way home on the same edge
 	}
 	h := Hash(epoch.WorldSeed, epoch.RegionID, epoch.GeneratorVersion, epoch.Season, "edge", axis, cx, cy)
@@ -332,8 +332,8 @@ func edgeOffset(epoch Epoch, region content.WildsRegion, S, cx, cy int, vertical
 // chunkExits lists a chunk's exits in a fixed order: north, east, south,
 // west to neighbouring chunks, then the way home (entry chunk) or the
 // crossing (the Tangle's crossing chunk).
-func chunkExits(epoch Epoch, region content.WildsRegion, cx, cy int) []Exit {
-	S := content.WildsRules.ChunkSize
+func chunkExits(epoch Epoch, region *content.WildsRegion, cx, cy int) []Exit {
+	S := int(content.WildsRules.GetChunkSize())
 	out := []Exit{}
 	add := func(dir Dir, offset int, to string, entry Tile) {
 		tx, ty, tw, th := gap(S, dir, offset)
@@ -341,31 +341,31 @@ func chunkExits(epoch Epoch, region content.WildsRegion, cx, cy int) []Exit {
 	}
 	if cy > 0 {
 		o := edgeOffset(epoch, region, S, cx, cy-1, false)
-		add(North, o, chunkArea(region.ID, cx, cy-1), inward(S, South, o))
+		add(North, o, chunkArea(region.GetId(), cx, cy-1), inward(S, South, o))
 	}
-	if cx < region.GridWidth-1 {
+	if cx < int(region.GetGridWidth())-1 {
 		o := edgeOffset(epoch, region, S, cx, cy, true)
-		add(East, o, chunkArea(region.ID, cx+1, cy), inward(S, West, o))
+		add(East, o, chunkArea(region.GetId(), cx+1, cy), inward(S, West, o))
 	}
-	if cy < region.GridHeight-1 {
+	if cy < int(region.GetGridHeight())-1 {
 		o := edgeOffset(epoch, region, S, cx, cy, false)
-		add(South, o, chunkArea(region.ID, cx, cy+1), inward(S, North, o))
+		add(South, o, chunkArea(region.GetId(), cx, cy+1), inward(S, North, o))
 	}
 	if cx > 0 {
 		o := edgeOffset(epoch, region, S, cx-1, cy, true)
-		add(West, o, chunkArea(region.ID, cx-1, cy), inward(S, East, o))
+		add(West, o, chunkArea(region.GetId(), cx-1, cy), inward(S, East, o))
 	}
 	crossingOffset := S/2 - 1
-	if cx == region.EntryX && cy == region.EntryY {
-		if region.ID == OuterRegion {
+	if cx == int(region.GetEntryX()) && cy == int(region.GetEntryY()) {
+		if region.GetId() == OuterRegion {
 			add(South, homeGapTX, chunkArea(InnerRegion, crossingChunk.TX, crossingChunk.TY), inward(S, North, crossingOffset))
 		} else {
 			add(South, homeGapTX, "commons", inward(S, South, homeGapTX))
 		}
 	}
-	if region.ID == InnerRegion && cx == crossingChunk.TX && cy == crossingChunk.TY {
+	if region.GetId() == InnerRegion && cx == crossingChunk.TX && cy == crossingChunk.TY {
 		if outer, err := regionFor(content.WildsRules, OuterRegion); err == nil {
-			add(North, crossingOffset, chunkArea(OuterRegion, outer.EntryX, outer.EntryY), inward(S, South, homeGapTX))
+			add(North, crossingOffset, chunkArea(OuterRegion, int(outer.GetEntryX()), int(outer.GetEntryY())), inward(S, South, homeGapTX))
 		}
 	}
 	return out
@@ -440,23 +440,23 @@ func placeEntities(rng *Rng, S, cx, cy int, exits []Exit, spawn Tile) ([]Entity,
 	}
 	out := []Entity{}
 	for _, rule := range data.EntityKinds {
-		count := rng.Between(rule.Min, rule.Max)
+		count := rng.Between(int(rule.GetMin()), int(rule.GetMax()))
 		for i := 0; i < count; i++ {
 			t, ok := place()
 			if !ok {
-				return nil, fmt.Errorf("wilds: no room for a %s in chunk %d,%d", rule.Kind, cx, cy)
+				return nil, fmt.Errorf("wilds: no room for a %s in chunk %d,%d", rule.GetKind(), cx, cy)
 			}
 			occupied = append(occupied, t)
-			e := Entity{ID: fmt.Sprintf("%s:%d:%d:%d", rule.Kind, cx, cy, i), Kind: rule.Kind, TX: t.TX, TY: t.TY, Enemies: []string{}}
-			switch rule.Kind {
+			e := Entity{ID: fmt.Sprintf("%s:%d:%d:%d", rule.GetKind(), cx, cy, i), Kind: rule.GetKind(), TX: t.TX, TY: t.TY, Enemies: []string{}}
+			switch rule.GetKind() {
 			case kindCamp:
-				e.Enemies = slices.Clone(data.CampMixes[rng.NextInt(len(data.CampMixes))])
+				e.Enemies = slices.Clone(data.CampMixes[rng.NextInt(len(data.CampMixes))].GetEnemies())
 			case kindNode:
 				e.Material = data.Materials[rng.NextInt(len(data.Materials))]
 			case kindChest:
 				e.Tier = rng.Between(1, 3)
 			default:
-				e.POI = data.POIIds[rng.NextInt(len(data.POIIds))]
+				e.POI = data.PoiIds[rng.NextInt(len(data.PoiIds))]
 			}
 			out = append(out, e)
 		}
@@ -482,19 +482,19 @@ type siteSlot struct {
 // column (toward Sallow Ford), two more Echoes, the cairn, the nest and the
 // reeds, spread over the other chunks; in the Tangle only the plank by the
 // crossing.
-func siteSlots(epoch Epoch, region content.WildsRegion) []siteSlot {
-	if region.Kind != "outer" {
-		if region.ID == InnerRegion {
+func siteSlots(epoch Epoch, region *content.WildsRegion) []siteSlot {
+	if region.GetKind() != "outer" {
+		if region.GetId() == InnerRegion {
 			return []siteSlot{{"plank", SitePlank, crossingChunk.TX, crossingChunk.TY}}
 		}
 		return nil
 	}
 	rng := NewRng(Hash(epoch.WorldSeed, epoch.RegionID, epoch.GeneratorVersion, epoch.Season, "sites"))
-	load := map[Tile]int{{region.EntryX, region.EntryY}: 1}
+	load := map[Tile]int{{int(region.GetEntryX()), int(region.GetEntryY())}: 1}
 	var away []Tile
-	for cy := 0; cy < region.GridHeight; cy++ {
-		for cx := 0; cx < region.GridWidth; cx++ {
-			if cx != region.EntryX || cy != region.EntryY {
+	for cy := 0; cy < int(region.GetGridHeight()); cy++ {
+		for cx := 0; cx < int(region.GetGridWidth()); cx++ {
+			if cx != int(region.GetEntryX()) || cy != int(region.GetEntryY()) {
 				away = append(away, Tile{cx, cy})
 			}
 		}
@@ -517,10 +517,10 @@ func siteSlots(epoch Epoch, region content.WildsRegion) []siteSlot {
 		load[c]++
 		return c
 	}
-	out := []siteSlot{{"given", SiteGiven, region.EntryX, region.EntryY}}
+	out := []siteSlot{{"given", SiteGiven, int(region.GetEntryX()), int(region.GetEntryY())}}
 	var east []Tile
 	for _, c := range away {
-		if c.TX == region.GridWidth-1 {
+		if c.TX == int(region.GetGridWidth())-1 {
 			east = append(east, c)
 		}
 	}

@@ -9,26 +9,18 @@
  * The Habitica token passes through `login` only, and is never stored here.
  */
 import { noteServerClock } from '../server-time.ts';
-import contract from '../../../content/contract.json' with { type: 'json' };
+import { toJson } from '@bufbuild/protobuf';
+import { ValueSchema } from '@bufbuild/protobuf/wkt';
+import { CONTRACT_NUMBER } from '../contract.ts';
 import { createOperationsApi, decodeMixed, type OperationsApi } from './operations.ts';
+import { OperationsResultSchema } from '../gen/glimway/v1/operations_pb.js';
+import { decodeWire } from './wire.ts';
 import type { PlayerState } from '../gen/glimway/v1/state_pb.js';
 import { ApiError, errorFromResponse, isReloadNeeded, isServerErrorCode, type ServerErrorCode } from './errors.ts';
 import {
   parseCalendar,
-  parseContribute,
-  parseCraft,
-  parseDeskCopy,
-  parseHearthCraft,
   parseWoodpileRead,
   parseWoodpileAction,
-  parseMail,
-  parseMailAction,
-  parseProjects,
-  parseRepairs,
-  parseMend,
-  parseStorage,
-  parseStorageMove,
-  parseCommons,
   parseHome,
   parseHomeAction,
   parseShelf,
@@ -41,14 +33,12 @@ import {
   parseSnapshot,
   parseState,
   parseWildsRegion,
-  parseWorld,
-  parseWorldChoice,
-  parseWorldMove,
 } from './parse.ts';
+import { parseStorage, parseStorageMove, parseCraft, parseHearthCraft, parseDeskCopy, parseMail, parseMailSend, parseMailClaim, parseMailRecall, parseCommons, parseProjects, parseContribute, parseRepairs, parseMend, parseLibraryDonate } from './village.ts';
+import { parseWorld, parseWorldChoice, parseWorldMove, parseWorldLeave } from './world.ts';
 import { createQueue, type SerialQueue } from './queue.ts';
-import { parseEntry, type ShelfEntry } from '../papers/library.ts';
+import type { ShelfEntry } from '../papers/library.ts';
 import type {
-  Asset,
   CalendarResponse,
   ContributeResponse,
   CraftResponse,
@@ -62,13 +52,10 @@ import type {
   RepairsResponse,
   MendResponse,
   ShelfResponse,
-  ShelfRequest,
   ShelfActionResponse,
   StorageMoveResponse,
   StorageResponse,
-  ChestId,
   CommonsResponse,
-  HomeActionRequest,
   HomeActionResponse,
   HomeOp,
   HomeResponse,
@@ -86,6 +73,9 @@ import type {
   WorldMoveResponse,
   WorldView,
 } from './types.ts';
+import { HomesteadRequestSchema, ShelfRequestSchema, type HomesteadRequest, type ShelfRequest } from '../gen/glimway/v1/homestead_pb.js';
+import { ItemsRequestSchema, type ItemsRequest } from '../gen/glimway/v1/items_pb.js';
+import { ContributeRequestSchema, CraftRequestSchema, DeskCopyRequestSchema, HearthCraftRequestSchema, MailKeyedRequestSchema, MailSendRequestSchema, StorageMoveRequestSchema, type ContributeRequest, type CraftRequest, type DeskCopyRequest, type HearthCraftRequest, type MailKeyedRequest, type MailSendRequest, type StorageMoveRequest } from '../gen/glimway/v1/village_pb.js';
 
 export interface ApiClientOptions {
   /** Injectable for tests; defaults to global fetch. */
@@ -138,31 +128,31 @@ export interface RawApi {
   /** A keyed gate shelf mutation (stock or take). */
   shelfAction(req: ShelfRequest): Promise<ShelfActionResponse>;
   /** A keyed homestead mutation (claim, buy, place, …, joint, leave). */
-  homeAction(op: HomeOp, req: HomeActionRequest): Promise<HomeActionResponse>;
+  homeAction(op: HomeOp, req: HomesteadRequest): Promise<HomeActionResponse>;
   /** The Hearthwick calendar (public, no session). */
   calendar(): Promise<CalendarResponse>;
   /** Workshop storage: carried and stored counts. */
   storage(): Promise<StorageResponse>;
-  storageMove(req: Envelope & { direction: 'deposit' | 'withdraw'; asset: Asset; chest?: ChestId }): Promise<StorageMoveResponse>;
-  craft(req: Envelope & { recipeId: string; qty: number }): Promise<CraftResponse>;
+  storageMove(req: StorageMoveRequest): Promise<StorageMoveResponse>;
+  craft(req: CraftRequest): Promise<CraftResponse>;
   /** Make food, remedies and oils at the cottage hearth (membership in a tier 1+ homestead). */
-  hearthCraft(req: Envelope & { recipeId: string; qty: number }): Promise<HearthCraftResponse>;
+  hearthCraft(req: HearthCraftRequest): Promise<HearthCraftResponse>;
   /** Copy a recipe page you hold at a placed writing desk (1 fiber a copy). */
-  deskCopy(req: Envelope & { pageId: string; qty: number }): Promise<DeskCopyResponse>;
+  deskCopy(req: DeskCopyRequest): Promise<DeskCopyResponse>;
   /** The woodpile's green-timber stacks and how far each has seasoned. */
   woodpile(): Promise<WoodpileResponse>;
   woodpileAction(req: Envelope & { action: 'stack' | 'collect'; qty?: number; stackId?: string }): Promise<WoodpileActionResponse>;
   mail(page?: { cursor?: string; pendingCursor?: string }): Promise<MailResponse>;
-  mailSend(req: Envelope & { toId: string; asset: Asset }): Promise<MailActionResponse>;
-  mailClaim(id: string, req: Envelope): Promise<MailActionResponse>;
+  mailSend(req: MailSendRequest): Promise<MailActionResponse>;
+  mailClaim(id: string, req: MailKeyedRequest): Promise<MailActionResponse>;
   /** Take back unclaimed mail (server fix round 5; 404/405 from older servers). */
-  mailRecall(id: string, req: Envelope): Promise<MailActionResponse>;
+  mailRecall(id: string, req: MailKeyedRequest): Promise<MailActionResponse>;
   projects(): Promise<ProjectsResponse>;
-  contribute(id: string, req: Envelope & { materials: Record<string, number> }): Promise<ContributeResponse>;
+  contribute(id: string, req: ContributeRequest): Promise<ContributeResponse>;
   /** What you carry in the item model: stacks, instances, pockets, the off hand. */
   items(): Promise<ItemsResponse>;
   /** A keyed item mutation (use, repair, fit, unfit, give, pocket, offhand, pickup, return). */
-  itemAction(op: ItemsOp, req: Envelope & Record<string, unknown>): Promise<ItemsActionResponse>;
+  itemAction(op: ItemsOp, req: ItemsRequest): Promise<ItemsActionResponse>;
   /** Village repairs and chores list. */
   repairs(): Promise<RepairsResponse>;
   /** Mend a village repair. */
@@ -196,7 +186,9 @@ export interface LibraryDonateResponse extends Snapshot {
 /**
  * The common keyed-mutation fields (Link.mutate fills them): the operation
  * header and where the hero stands (design server-first 2.1). No `baseRev`,
- * no `progress`.
+ * no `progress`. The homestead, shelf, storage, crafting, mail, project and
+ * item routes now carry these inside their generated request messages
+ * (built by requests.ts); this hand-written shape serves the rest.
  */
 export interface Envelope {
   op: { lease: string; key: string; report?: { client: string; generation: string; seq: number } };
@@ -225,7 +217,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     body?: unknown,
     extra: { headers?: Record<string, string>; keepalive?: boolean; binary?: boolean } = {},
   ): Promise<unknown> {
-    const headers: Record<string, string> = { Accept: 'application/json', 'X-Glimway-Contract': String(contract.number), ...extra.headers };
+    const headers: Record<string, string> = { Accept: 'application/json', 'X-Glimway-Contract': String(CONTRACT_NUMBER), ...extra.headers };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     if (extra.binary) headers.Accept = 'application/x-protobuf';
     const controller = new AbortController();
@@ -312,7 +304,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       return parseWorldMove(await request('POST', '/api/world/move', req));
     },
     async worldLeave(req) {
-      return parseWorldMove(await request('POST', '/api/world/leave', req));
+      return parseWorldLeave(await request('POST', '/api/world/leave', req));
     },
     async worldNotice() {
       return parseWorld(await request('POST', '/api/world/notice', {}));
@@ -338,10 +330,10 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       return parseShelf(mixedRead(await request('GET', `/api/homestead/shelf?gate=${encodeURIComponent(gate)}`)));
     },
     async shelfAction(req) {
-      return parseShelfAction(await request('POST', '/api/homestead/shelf', req));
+      return parseShelfAction(await request('POST', '/api/homestead/shelf', toJson(ShelfRequestSchema, req, { alwaysEmitImplicit: true })));
     },
     async homeAction(op, req) {
-      return parseHomeAction(await request('POST', `/api/homestead/${op}`, req));
+      return parseHomeAction(await request('POST', `/api/homestead/${op}`, toJson(HomesteadRequestSchema, req, { alwaysEmitImplicit: true })));
     },
     async calendar() {
       return parseCalendar(await request('GET', '/api/calendar'));
@@ -350,16 +342,16 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       return parseStorage(mixedRead(await request('GET', '/api/storage')));
     },
     async storageMove(req) {
-      return parseStorageMove(await request('POST', '/api/storage', req));
+      return parseStorageMove(await request('POST', '/api/storage', toJson(StorageMoveRequestSchema, req, { alwaysEmitImplicit: true })));
     },
     async craft(req) {
-      return parseCraft(await request('POST', '/api/craft', req));
+      return parseCraft(await request('POST', '/api/craft', toJson(CraftRequestSchema, req, { alwaysEmitImplicit: true })));
     },
     async hearthCraft(req) {
-      return parseHearthCraft(await request('POST', '/api/hearth/craft', req));
+      return parseHearthCraft(await request('POST', '/api/hearth/craft', toJson(HearthCraftRequestSchema, req, { alwaysEmitImplicit: true })));
     },
     async deskCopy(req) {
-      return parseDeskCopy(await request('POST', '/api/desk/copy', req));
+      return parseDeskCopy(await request('POST', '/api/desk/copy', toJson(DeskCopyRequestSchema, req, { alwaysEmitImplicit: true })));
     },
     async woodpile() {
       return parseWoodpileRead(mixedRead(await request('GET', '/api/homestead/woodpile')));
@@ -375,25 +367,25 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       return parseMail(mixedRead(await request('GET', `/api/mail${qs ? `?${qs}` : ''}`)));
     },
     async mailSend(req) {
-      return parseMailAction(await request('POST', '/api/mail', req));
+      return parseMailSend(await request('POST', '/api/mail', toJson(MailSendRequestSchema, req, { alwaysEmitImplicit: true })));
     },
     async mailClaim(id, req) {
-      return parseMailAction(await request('POST', `/api/mail/${encodeURIComponent(id)}/claim`, req));
+      return parseMailClaim(await request('POST', `/api/mail/${encodeURIComponent(id)}/claim`, toJson(MailKeyedRequestSchema, req, { alwaysEmitImplicit: true })));
     },
     async mailRecall(id, req) {
-      return parseMailAction(await request('POST', `/api/mail/${encodeURIComponent(id)}/recall`, req));
+      return parseMailRecall(await request('POST', `/api/mail/${encodeURIComponent(id)}/recall`, toJson(MailKeyedRequestSchema, req, { alwaysEmitImplicit: true })));
     },
     async projects() {
       return parseProjects(mixedRead(await request('GET', '/api/projects')));
     },
     async contribute(id, req) {
-      return parseContribute(await request('POST', `/api/projects/${encodeURIComponent(id)}/contribute`, req));
+      return parseContribute(await request('POST', `/api/projects/${encodeURIComponent(id)}/contribute`, toJson(ContributeRequestSchema, req, { alwaysEmitImplicit: true })));
     },
     async items() {
       return parseItems(mixedRead(await request('GET', '/api/items')));
     },
     async itemAction(op, req) {
-      return parseItemsAction(await request('POST', `/api/items/${op}`, req));
+      return parseItemsAction(await request('POST', `/api/items/${op}`, toJson(ItemsRequestSchema, req, { alwaysEmitImplicit: true })));
     },
     async repairs() {
       return parseRepairs(mixedRead(await request('GET', '/api/repairs')));
@@ -406,10 +398,7 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
       return parseOperationResult(raw);
     },
     async libraryDonate(req) {
-      const res = await request('POST', '/api/library/donate', req);
-      const entry = parseEntry((res as { result?: { entry?: unknown } } | null)?.result?.entry);
-      if (!entry) throw new ApiError('bad-response', { status: 200 });
-      return { ...parseSnapshot(res), result: { entry } };
+      return parseLibraryDonate(await request('POST', '/api/library/donate', req));
     },
   };
 
@@ -476,18 +465,24 @@ export function mixedRead(raw: unknown): unknown {
   return { ...(result as Record<string, unknown>), state };
 }
 
-/** The reconciliation read, validated: a current state, and the committed operation or null. */
+/** The reconciliation read, validated: a current state, and the committed
+ * operation or null (operations.proto, decoded through the generated
+ * `OperationsResult`). */
 export function parseOperationResult(raw: unknown): { state: PlayerState; operation: CommittedOperation | null } {
-  const { state, result } = decodeMixed(raw, (r) => r);
-  const op = (result as { operation?: unknown } | null)?.operation;
-  if (op === null || op === undefined) return { state, operation: null };
-  const o = op as Record<string, unknown>;
-  if (typeof o.route !== 'string' || typeof o.key !== 'string' || !o.payload || typeof o.payload !== 'object' || Array.isArray(o.payload) || typeof o.resultCase !== 'string' || typeof o.version !== 'number') {
-    throw new ApiError('bad-response', { status: 200 });
-  }
-  const refused = o.refused;
-  if (refused !== undefined && (typeof refused !== 'string' || !isServerErrorCode(refused))) throw new ApiError('bad-response', { status: 200 });
-  return { state, operation: { route: o.route, key: o.key, payload: o.payload as Record<string, unknown>, version: o.version, result: o.result, resultCase: o.resultCase, ...(refused ? { refused } : {}) } };
+  const { state, result } = decodeMixed(raw, (r) => {
+    const out = decodeWire(OperationsResultSchema, r);
+    const op = out.operation;
+    if (!op) return null;
+    if (!op.route || !op.key || !op.resultCase) throw new Error('missing committed operation fields');
+    const refused = op.refused;
+    if (refused !== undefined && !isServerErrorCode(refused)) throw new Error('unknown refusal code');
+    // The result as JSON (its own fields, null for a refusal): the decoded
+    // protobuf Value goes back to its wire spelling, the form the outbox's
+    // mismatch resolution reads into the Envelope.
+    const result = op.result ? toJson(ValueSchema, op.result) : undefined;
+    return { route: op.route, key: op.key, payload: op.payload as Record<string, unknown>, version: op.version, result, resultCase: op.resultCase, ...(refused ? { refused } : {}) };
+  });
+  return { state, operation: result };
 }
 
 /**

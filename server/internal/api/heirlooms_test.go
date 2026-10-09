@@ -30,11 +30,11 @@ func TestHeirloomBrackFellingAxe(t *testing.T) {
 	if !ok {
 		t.Fatal("mender silas not found")
 	}
-	silasPos := rules.Position{X: float64(m.TX*16 + 8), Y: float64(m.TY*16 + 20)}
+	silasPos := rules.Position{X: float64(int(m.GetTx())*16 + 8), Y: float64(int(m.GetTy())*16 + 20)}
 
 	// 1. Condition unmet: Hollis's name unknown (Alice at Silas)
 	atSilasDoc := s.State
-	atSilasDoc.Area = m.Area
+	atSilasDoc.Area = m.GetArea()
 	atSilasDoc.Position = silasPos
 	bad := x.items("POST", "/api/items/heirloom", body(s, "axe-unmet", map[string]any{
 		"itemDef":  "brack-felling-axe",
@@ -123,11 +123,11 @@ func TestHeirloomOrrinsMasonPick(t *testing.T) {
 	if !ok {
 		t.Fatal("mender orrin not found")
 	}
-	orrinPos := rules.Position{X: float64(m.TX*16 + 8), Y: float64(m.TY*16 + 8)}
+	orrinPos := rules.Position{X: float64(int(m.GetTx())*16 + 8), Y: float64(int(m.GetTy())*16 + 8)}
 
 	// 1. Condition unmet: north bridge not mended in DB
 	atOrrinDoc := s.State
-	atOrrinDoc.Area = m.Area
+	atOrrinDoc.Area = m.GetArea()
 	atOrrinDoc.Position = orrinPos
 	bad := x.items("POST", "/api/items/heirloom", body(s, "pick-unmet", map[string]any{
 		"itemDef":  "orrins-mason-pick",
@@ -215,10 +215,10 @@ func TestHeirloomAdaGardenSpadeAndOil(t *testing.T) {
 	if !ok {
 		t.Fatal("resident ada not found")
 	}
-	adaPos := rules.Position{X: float64(spot.TX*16 + 8), Y: float64(spot.TY*16 + 8)}
+	adaPos := rules.Position{X: float64(spot.GetTx()*16 + 8), Y: float64(spot.GetTy()*16 + 8)}
 
 	atAdaDoc := s.State
-	atAdaDoc.Area = spot.Area
+	atAdaDoc.Area = spot.GetArea()
 	atAdaDoc.Position = adaPos
 
 	// 1. Condition unmet: oil gifts < 3
@@ -265,7 +265,7 @@ func TestHeirloomAdaGardenSpadeAndOil(t *testing.T) {
 	// 4. Give oil without oil in pack -> 409 insufficient-items (tested with a new player bob)
 	bc, b := x.ready("bob")
 	bDoc := b.State
-	bDoc.Area = spot.Area
+	bDoc.Area = spot.GetArea()
 	bDoc.Position = adaPos
 	noOil := x.items("POST", "/api/items/ada-oil", body(b, "oil-none", map[string]any{
 		"itemDef":  "hearth-oil",
@@ -463,7 +463,7 @@ func TestHeirloomsNotGiveable(t *testing.T) {
 		if !ok {
 			t.Fatalf("item not found: %s", id)
 		}
-		if def.Giveable() {
+		if content.ItemGiveable(def) {
 			t.Fatalf("heirloom %s must not be giveable", id)
 		}
 	}
@@ -477,7 +477,7 @@ func TestHeirloomSharedStorageRefusal(t *testing.T) {
 	x.refresh(c, &s)
 
 	// Depositing non-giveable heirloom into shared storage must be refused with 409 not-giveable
-	asset := content.Asset{Kind: "instance", ID: "brack-felling-axe", Qty: 1, Instance: axe}
+	asset := &content.Asset{Kind: "instance", Id: "brack-felling-axe", Qty: 1, Instance: axe}
 	bad := x.p5("POST", "/api/storage", body(s, "dep-shared", map[string]any{
 		"direction": "deposit",
 		"chest":     "shared",
