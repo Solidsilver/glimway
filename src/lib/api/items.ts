@@ -126,6 +126,11 @@ const int = (v: number | undefined, min = 0): number => {
   return v;
 };
 
+const num = (v: number | undefined): number => {
+  if (typeof v !== 'number' || !Number.isFinite(v)) throw new Error('invalid number');
+  return v;
+};
+
 const countMap = (v: Record<string, number> | undefined): Record<string, number> => {
   const out: Record<string, number> = {};
   if (v) for (const [k, n] of Object.entries(v)) if (Number.isInteger(n) && n >= 0) out[k] = n;
@@ -186,7 +191,7 @@ function itemsView(v: GeneratedItemsView): ItemsView {
     pockets: v.pockets.map((p): SlotView => ({ slot: p.slot, itemDef: p.itemDef ?? null, instance: p.instance ?? null })),
     offHand: { open: v.offHand.open, class: v.offHand.class ?? null, itemDef: v.offHand.itemDef ?? null, instance: v.offHand.instance ?? null },
     pickedUp: v.pickedUp.filter((p): p is string => typeof p === 'string'),
-    thanks: v.thanks.map((t): ThanksView => ({ fromName: t.fromName.slice(0, 64), itemDef: t.itemDef, at: t.at })),
+    thanks: v.thanks.map((t): ThanksView => ({ fromName: t.fromName.slice(0, 64), itemDef: t.itemDef, at: num(t.at) })),
   };
 }
 
@@ -224,7 +229,8 @@ function result(r: ItemsResult): ItemsActionResponse['result'] {
   if (r.mended) out.mended = r.mended;
   if (r.returned) out.returned = r.returned;
   if (r.paper) out.paper = r.paper;
-  out.given = projectAsset(r.given);
+  const given = projectAsset(r.given);
+  if (given) out.given = given;
   if (r.created?.length) out.created = r.created.filter((c): c is string => typeof c === 'string');
   if (r.heirloom) out.heirloom = r.heirloom;
   if (r.adaOilCount) out.adaOilCount = int(r.adaOilCount);
@@ -236,8 +242,8 @@ function result(r: ItemsResult): ItemsActionResponse['result'] {
       itemDef: r.plant.itemDef,
       x: int(r.plant.x),
       y: int(r.plant.y),
-      plantedAt: r.plant.plantedAt || undefined,
-      plantedDay: r.plant.plantedDay || undefined,
+      plantedAt: r.plant.plantedAt ?? undefined,
+      plantedDay: r.plant.plantedDay ?? undefined,
       lit: r.plant.lit,
     };
   }

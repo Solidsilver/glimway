@@ -8,7 +8,7 @@
  */
 import { fromJson, type JsonValue } from '@bufbuild/protobuf';
 import {
-  HomeViewSchema, HomesteadReadSchema, HomesteadResultSchema, ShelfReadSchema, ShelfResultSchema,
+  HomesteadReadSchema, HomesteadResultSchema, ShelfReadSchema, ShelfResultSchema,
   WoodpileReadSchema, WoodpileResultSchema,
   type HomeView as GeneratedHomeView, type HomesteadRead, type HomesteadResult,
   type ShelfRead, type ShelfResult, type ShelfView as GeneratedShelfView,
@@ -196,6 +196,11 @@ const int = (v: number | undefined, min = 0): number => {
   return v;
 };
 
+const num = (v: number | undefined): number => {
+  if (typeof v !== 'number' || !Number.isFinite(v)) throw new Error('invalid number');
+  return v;
+};
+
 const countMap = (v: Record<string, number> | undefined): Record<string, number> => {
   const out: Record<string, number> = {};
   if (v) for (const [k, n] of Object.entries(v)) if (Number.isInteger(n) && n >= 0) out[k] = n;
@@ -222,38 +227,35 @@ function homeInstance(v: GeneratedHomeInstance): HomeInstance {
   };
 }
 
-/** The homestead view, decoded and projected (tiles as tuples, nulls kept). */
-export function parseHomeView(raw: unknown): HomeView {
-  return decoded(() => {
-    const h = fromJson(HomeViewSchema, raw as JsonValue, { ignoreUnknownFields: true });
-    if (!h.id || !Array.isArray(h.members)) throw new Error('invalid home');
-    return {
-      id: h.id,
-      gate: int(h.gate),
-      worldId: h.worldId,
-      tier: int(h.tier),
-      members: h.members.map((m): HomeMember => ({ id: m.id, displayName: m.displayName.slice(0, 64) })),
-      member: h.member,
-      desolate: h.desolate,
-      vacantSince: h.vacantSince ?? null,
-      landSeed: int(h.landSeed),
-      cleared: h.cleared.map(pair),
-      stumps: h.stumps.map(pair),
-      plants: h.plants.map((p): HomePlantView => ({
-        id: p.id,
-        itemDef: p.itemDef,
-        x: int(p.x),
-        y: int(p.y),
-        plantedAt: p.plantedAt || undefined,
-        plantedDay: p.plantedDay || undefined,
-        lit: p.lit,
-      })),
-      postsBought: int(h.postsBought),
-      nextPost: countMap(h.nextPost),
-      indoor: h.indoor ? { width: int(h.indoor.width, 1), height: int(h.indoor.height, 1) } : null,
-      items: h.items.map(homeInstance),
-    };
-  });
+/** The homestead view, projected (tiles as tuples, nulls kept). */
+function projectHome(h: GeneratedHomeView): HomeView {
+  if (!h.id || !Array.isArray(h.members)) throw new Error('invalid home');
+  return {
+    id: h.id,
+    gate: int(h.gate),
+    worldId: h.worldId,
+    tier: int(h.tier),
+    members: h.members.map((m): HomeMember => ({ id: m.id, displayName: m.displayName.slice(0, 64) })),
+    member: h.member,
+    desolate: h.desolate,
+    vacantSince: h.vacantSince ?? null,
+    landSeed: int(h.landSeed),
+    cleared: h.cleared.map(pair),
+    stumps: h.stumps.map(pair),
+    plants: h.plants.map((p): HomePlantView => ({
+      id: p.id,
+      itemDef: p.itemDef,
+      x: int(p.x),
+      y: int(p.y),
+      plantedAt: p.plantedAt ?? undefined,
+      plantedDay: p.plantedDay ?? undefined,
+      lit: p.lit,
+    })),
+    postsBought: int(h.postsBought),
+    nextPost: countMap(h.nextPost),
+    indoor: h.indoor ? { width: int(h.indoor.width, 1), height: int(h.indoor.height, 1) } : null,
+    items: h.items.map(homeInstance),
+  };
 }
 
 /** GET /api/homestead/gate/:g — the homestead behind a Commons gate. */
@@ -265,7 +267,7 @@ export function parseHome(raw: unknown): HomeResponse {
       ...parseSnapshot(raw),
       gate: int(read.gate),
       landSeed: int(read.landSeed),
-      home: read.home ? parseHomeView(read.home) : null,
+      home: read.home ? projectHome(read.home) : null,
       materials: countMap(read.materials),
     };
   });
@@ -277,7 +279,7 @@ export function parseHomeAction(raw: unknown): HomeActionResponse {
     const o = raw as Record<string, unknown>;
     if (!o.result || typeof o.result !== 'object') throw new Error('missing result');
     const r = fromJson(HomesteadResultSchema, (o.result ?? null) as JsonValue, { ignoreUnknownFields: true }) as HomesteadResult;
-    const result: HomeActionResponse['result'] = { home: r.home ? parseHomeView(r.home) : null, materials: countMap(r.materials) };
+    const result: HomeActionResponse['result'] = { home: r.home ? projectHome(r.home) : null, materials: countMap(r.materials) };
     if (r.itemId) result.itemId = r.itemId;
     if (r.status === 'joined' || r.status === 'waiting') result.status = r.status;
     return { ...parseSnapshot(raw), result };
@@ -298,7 +300,7 @@ function shelfView(v: GeneratedShelfView): ShelfView {
       maker: s.maker ? { id: s.maker.id, name: s.maker.name.slice(0, 64) } : null,
       instance: s.instance ?? null,
       stockedBy: s.stockedBy,
-      stockedAt: s.stockedAt,
+      stockedAt: num(s.stockedAt),
     })),
     takenToday: v.takenToday,
     canStock: v.canStock,
@@ -338,13 +340,13 @@ function woodpile(v: GeneratedWoodpileView): WoodpileView {
     homesteadId: v.homesteadId,
     placed: v.placed,
     stacks: v.stacks.map((s) => {
-      const remaining = Math.max(0, s.remaining);
+      const remaining = Math.max(0, num(s.remaining));
       return {
         id: s.id,
         homesteadId: s.homesteadId,
         accountId: s.accountId,
         qty: int(s.qty, 1),
-        stackedAt: s.stackedAt,
+        stackedAt: num(s.stackedAt),
         ready: s.ready || remaining <= 0,
         remaining,
       };
@@ -374,14 +376,16 @@ export function parseWoodpileAction(raw: unknown): WoodpileActionResponse {
     return {
       ...parseSnapshot(raw),
       result: {
-        home: r.home ? parseHomeView(r.home) : null,
+        home: r.home ? projectHome(r.home) : null,
         inventory: projectCounts(r.inventory),
-        storage: projectCounts(r.storage),
+        // A null storage means no shared chest ("not-a-member" and friends
+        // say why); an empty one would read as an empty chest.
+        storage: r.storage ? projectCounts(r.storage) : null,
         personal: projectCounts(r.personal),
         shared: r.shared,
         woodpile: woodpile(r.woodpile),
         action: r.action,
-        collectedQty: r.collectedQty || undefined,
+        collectedQty: r.collectedQty ?? undefined,
       },
     };
   });

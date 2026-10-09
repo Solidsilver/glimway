@@ -143,9 +143,11 @@ func (a *Server) shelfRead(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	return a.finishRead(w, r, tx, s, struct {
-		Shelf shelfView `json:"shelf"`
-	}{view})
+	raw, err := protoResult(&contract.ShelfRead{Shelf: shelfViewProto(view)})
+	if err != nil {
+		return err
+	}
+	return a.finishRead(w, r, tx, s, raw)
 }
 
 func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {

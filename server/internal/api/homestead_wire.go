@@ -240,5 +240,3 @@ func shelfViewProto(v shelfView) *contract.ShelfView {
 	}
 	return out
 }
-
-

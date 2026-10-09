@@ -48,15 +48,6 @@ type homePlantView struct {
 	Lit        bool   `json:"lit"`
 }
 
-// homeLandChange: a gather that changed home land inside lamplight (the
-// drift rule: a stump stays, open ground stays open). The client reads the
-// home again when it sees one, so the next build of the land shows it.
-type homeLandChange struct {
-	Tile    [2]int `json:"tile"`
-	Stump   bool   `json:"stump"`
-	Cleared bool   `json:"cleared"`
-}
-
 type homeView struct {
 	ID          string            `json:"id"`
 	Gate        int               `json:"gate"`

@@ -269,10 +269,19 @@ export declare type Bought = Message<"glimway.v1.Bought"> & {
 export declare const BoughtSchema: GenMessage<Bought>;
 
 /**
+ * One request message for all fourteen item mutations, mirroring the
+ * retired hand-written itemRequest: every op's fields are optional and empty
+ * means unset (the op name comes from the URL path). Deliberate; don't copy
+ * the grab-bag into new routes without saying why — the per-op result
+ * messages in state.proto's Envelope oneof are the pattern to grow into.
+ *
  * POST /api/items/{use,repair,fit,unfit,give,pocket,offhand,pickup,return,
- * heirloom,ada-oil,gather,plant,buy}. Tile is [x, y] (a home land tile);
- * region is retained in the domain body, the authoritative region is
- * where.area.
+ * heirloom,ada-oil,gather,plant,buy}. Tile is [x, y] (a home land tile), a
+ * repeated-int32 pair on purpose: the gather stump proof matches stored
+ * payloads with json_extract(payload_json,'$.tile[0]') (gathering.go), which
+ * a {"x":…,"y":…} object would break, and the client's request building is
+ * untouched by it. Region is retained in the domain body; the authoritative
+ * region is where.area.
  *
  * @generated from message glimway.v1.ItemsRequest
  */

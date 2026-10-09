@@ -35,7 +35,12 @@ export declare type HomeMember = Message<"glimway.v1.HomeMember"> & {
 export declare const HomeMemberSchema: GenMessage<HomeMember>;
 
 /**
- * A land tile (column, row).
+ * A land tile (column, row). Tile PAIRS on this lane's wire stay [x, y]
+ * arrays, not Coord — the gather stump proof matches stored payloads with
+ * json_extract(payload_json,'$.tile[0]'), which an object tile would break
+ * (see gathering.go), and the client's request building is untouched by it.
+ * Coord is only for the home's cleared/stump lists, which carry no such
+ * proof.
  *
  * @generated from message glimway.v1.Coord
  */
@@ -396,7 +401,8 @@ export declare const HomePlantSchema: GenMessage<HomePlant>;
 /**
  * A gather that changed home land inside lamplight (the drift rule: a stump
  * stays, open ground stays open). The client reads the home again when it
- * sees one, so the next build of the land shows it. Tile is [x, y].
+ * sees one, so the next build of the land shows it. Tile is [x, y], keeping
+ * the pair shape the retired homeLandChange struct served.
  *
  * @generated from message glimway.v1.HomeLandChange
  */
@@ -524,6 +530,12 @@ export declare type HomeView = Message<"glimway.v1.HomeView"> & {
 export declare const HomeViewSchema: GenMessage<HomeView>;
 
 /**
+ * One request message for all ten lane mutations, mirroring the retired
+ * hand-written homeRequest: every op's fields are optional and empty means
+ * unset (the op name comes from the URL path). Deliberate; don't copy the
+ * grab-bag into new routes without saying why — the per-op result messages
+ * in state.proto's Envelope oneof are the pattern to grow into.
+ *
  * POST /api/homestead/{buy,place,remove,move,upgrade,claim,clear,invite,joint,leave}.
  *
  * @generated from message glimway.v1.HomesteadRequest
