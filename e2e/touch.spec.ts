@@ -1,37 +1,63 @@
 import { devices } from '@playwright/test'
-import { expect, test } from './fixtures'
+import { expect, test, type Page } from './fixtures'
 import { frames, player, stepToWarden, talkThrough, waitForLive, warden, warp } from './helpers'
 import { freshPlayer } from './home-helpers'
 
 test.use({ ...devices['iPhone 13'], browserName: 'chromium' })
 
-test('phone layout: joystick, roll, ability and action buttons fit and work', async ({ page }) => {
-  await freshPlayer(page)
+/**
+ * The touch cluster with everything out: the joystick, roll, both ✦ (a
+ * level-20 warrior: Cleave and Stand, crafts.md 8) and the action button.
+ * Nothing overlaps, nothing spills off the screen, every button is at least
+ * 44 px; then the buttons work.
+ */
+async function layoutFitsAndWorks(page: Page, shot: string): Promise<void> {
+  await freshPlayer(page, 'Tansy', undefined, { lvl: 20 })
   await warp(page, 'woodland', 15, 20)
 
   const roll = page.getByRole('button', { name: 'Roll' })
-  const cast = page.locator('.controls .cast')
+  const cast = page.locator('.controls .cast.sig')
+  const second = page.locator('.controls .cast.move')
   const act = page.locator('.controls .act')
   const pad = page.getByRole('application', { name: 'Movement joystick' })
-  for (const el of [roll, cast, act, pad]) await expect(el).toBeVisible()
+  for (const el of [roll, cast, second, act, pad]) await expect(el).toBeVisible()
+  await expect(cast).toHaveAttribute('aria-label', 'Cleave (12 mana)')
+  await expect(second).toHaveAttribute('aria-label', 'Stand (14 mana)')
 
-  // Nothing overlaps and nothing spills off the screen.
   const vw = page.viewportSize()!.width
-  const boxes = await Promise.all([pad, roll, cast, act].map((l) => l.boundingBox()))
+  const boxes = await Promise.all([pad, roll, cast, second, act].map((l) => l.boundingBox()))
   for (const b of boxes) {
     expect(b!.x).toBeGreaterThanOrEqual(0)
     expect(b!.x + b!.width).toBeLessThanOrEqual(vw)
+    expect(b!.width).toBeGreaterThanOrEqual(44)
   }
-  const [padBox, rollBox, castBox, actBox] = boxes.map((b) => b!)
-  const overlaps = (a: typeof padBox, b: typeof padBox) =>
+  const overlaps = (a: { x: number; y: number; width: number; height: number }, b: typeof a) =>
     a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height
-  expect(overlaps(padBox, rollBox) || overlaps(padBox, castBox) || overlaps(padBox, actBox)).toBe(false)
-  expect(overlaps(rollBox, castBox) || overlaps(castBox, actBox) || overlaps(rollBox, actBox)).toBe(false)
+  const all = boxes.map((b) => b!)
+  for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) expect(overlaps(all[i], all[j]), `buttons ${i} and ${j}`).toBe(false)
 
   // Tapping roll starts its cooldown sweep.
   await roll.tap()
   await expect(roll.locator('.sweep')).toBeVisible()
-  await page.screenshot({ path: 'test-results/touch-layout.png' })
+
+  // The second ✦ casts Stand (planted, so it goes after the roll): its sweep starts, the first's doesn't.
+  await second.tap()
+  await expect(second.locator('.sweep')).toBeVisible()
+  await expect(cast.locator('.sweep')).toHaveCount(0)
+  await page.screenshot({ path: `test-results/${shot}.png` })
+}
+
+test('phone layout: joystick, roll, both ✦ and action buttons fit and work', async ({ page }) => {
+  await layoutFitsAndWorks(page, 'touch-layout')
+})
+
+test.describe('a narrow phone (320 px)', () => {
+  // The iPhone 13's touch and pixel ratio (set above), on an iPhone SE's 320 px screen.
+  test.use({ viewport: devices['iPhone SE'].viewport })
+  test('phone layout fits at 320 px too', async ({ page }) => {
+    expect(page.viewportSize()!.width).toBe(320)
+    await layoutFitsAndWorks(page, 'touch-layout-320')
+  })
 })
 
 test('phone: the action button speaks the naming to the warden', async ({ page }) => {

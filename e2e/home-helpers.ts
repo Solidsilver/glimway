@@ -107,10 +107,11 @@ export async function talk(page: Page, prompt: RegExp, pick?: RegExp): Promise<v
  * 029 leaves every account that played before it), so a spec starts where
  * the lantern road does; `{ opening: true }` keeps the first morning.
  */
-export async function freshPlayer(page: Page, name = 'Tansy', invite?: string, opts: { opening?: boolean } = {}): Promise<string> {
+export async function freshPlayer(page: Page, name = 'Tansy', invite?: string, opts: { opening?: boolean; lvl?: number; class?: string | null } = {}): Promise<string> {
   const id = newUser()
   if (!invite) allow(id)
-  await setHabitica(id, { name })
+  // `lvl`/`class`: the Habitica hero's level and class (the default is a level-2 warrior: no moves yet).
+  await setHabitica(id, { name, ...(opts.lvl !== undefined ? { lvl: opts.lvl } : {}), ...(opts.class !== undefined ? { class: opts.class } : {}) })
   await routeHabitica(page.context())
   await openTitleGuide(page)
   await pasteAndConnect(page, id, invite ? { invite } : {})

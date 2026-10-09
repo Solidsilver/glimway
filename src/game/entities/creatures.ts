@@ -6,6 +6,7 @@
 import Phaser from 'phaser'
 import { sfx } from '../sfx'
 import { ENEMY_TUNING, type Enemy, type EnemyDeps, type EnemySystem } from './enemies'
+import type { CombatField } from '../../lib/combat-moves'
 
 export class Creatures {
   private readonly scene: Phaser.Scene
@@ -41,6 +42,18 @@ export class Creatures {
     body.setVelocity(enemy.dirX * speed, enemy.dirY * speed)
     if (home.length() > 90 && enemy.detourTimer <= 0) body.setVelocity(home.x * 0.5, home.y * 0.5)
     if (Math.abs(enemy.dirX) > 0.2) enemy.sprite.setFlipX(enemy.dirX < 0)
+  }
+
+  /**
+   * Kindle (crafts.md 4.3): inside a patch of hollow light a creature moves
+   * at the patch's `slow` of whatever speed it just set — walking, hopping,
+   * charging or being knocked back alike. Called right after the velocity
+   * is set. Never the Warden.
+   */
+  slowIn(enemy: Enemy, field: CombatField | undefined): void {
+    if (!field || enemy.type === 'guardian') return
+    const k = field.slowAt(enemy.sprite.x, enemy.sprite.y)
+    if (k < 1) (enemy.sprite.body as Phaser.Physics.Arcade.Body).velocity.scale(k)
   }
 
   /**

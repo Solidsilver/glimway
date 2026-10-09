@@ -26,6 +26,71 @@
   "assets/generated/commons-pass/fingersnap-wilds-nature.png": "5aa84a4244c8f6ef0a7b3180253b7caf0b6aab4bd7a5123866c836a01024f462",
   "assets/generated/commons-pass/fingersnap-yard.png": "63ba0fc00b99625f707b5107f98138a7ef9618468f183e74aff7dbc90e7f3b53",
   "assets/generated/commons-pass/manifest.json": "54020efd7ee920b39c5cfe2b276a2ff3db5d18e779357bde9582261e522d49fb",
+  "assets/generated/crafts-pass/frames/ability-healer-mend-working.png": "05214ca1c270144deea0aafc4785dd52a800661e9e31700b96ab62ae4b4fd2db",
+  "assets/generated/crafts-pass/frames/ability-healer-mend.png": "d515f0c3b530e4559b9928bbecb36bc53ac2e4d0cc87cf22e13fe3dfcea97505",
+  "assets/generated/crafts-pass/frames/ability-healer-mended-glade.png": "839a2e8b67643b209ef885fddcb85a87b19540ec62e11ace870ef6f0b3a7d98c",
+  "assets/generated/crafts-pass/frames/ability-healer-settle.png": "7fb6dc9476c56916398d2219530bd7dfbb8b11cc1dd582c773095f46fe2fca0b",
+  "assets/generated/crafts-pass/frames/ability-healer-ward-light.png": "5c8dcc78ff09baebf2c407812b79ca305e89cbc3016a549af5969858e89204f3",
+  "assets/generated/crafts-pass/frames/ability-mage-fingersnap.png": "7557cd4b0f65fe7aecf2695506acc718c46d75587f665faf5143bbc10ecc4737",
+  "assets/generated/crafts-pass/frames/ability-mage-kindle.png": "1150f21236a340e6a45352f8f4f7a961e9dec21bc183c42f46ee9dde2b34357b",
+  "assets/generated/crafts-pass/frames/ability-mage-name-a-lamp.png": "83c7d157aa51eaab530dc347b30522f70433b4e2ef57cc40cd1cd5b9d40e5fd2",
+  "assets/generated/crafts-pass/frames/ability-mage-old-ways.png": "db16522bc9d2d7ed6e884612d7e724ecff8c263e71e19db2ccd316155d0fb67a",
+  "assets/generated/crafts-pass/frames/ability-mage-read-route-stone.png": "c06e6ed7e874343259a181f7070d577f38d025407a7b4a7856f9097c9de29ca7",
+  "assets/generated/crafts-pass/frames/ability-rogue-echo.png": "44ce03870d34e82cf8c412c65621e3351e0720772735b37cab6ea7b58184cc48",
+  "assets/generated/crafts-pass/frames/ability-rogue-read-the-drift.png": "e03dea1d13b664be6b873b8ea4fcd85a323af27d1ab411204fabfec9d6472a28",
+  "assets/generated/crafts-pass/frames/ability-rogue-sense-the-turning.png": "d2ee8e74f057df94c9d74ab2a7b7954f2149b73248e8cdc989b44daa084a4de3",
+  "assets/generated/crafts-pass/frames/ability-rogue-shadowstep.png": "e8fe20fcbd36c2ee7ad1e5fd80b2f23b81e066982dfe6c39858a0fd981f26693",
+  "assets/generated/crafts-pass/frames/ability-rogue-walk-a-blind-route.png": "eb0a4dce692cfe0b5be77a3c80fef6ae8a94d8db77e6c99f9f26e9b1367dd4f9",
+  "assets/generated/crafts-pass/frames/ability-warrior-brace.png": "2622dc423776754f59e9f5258d891932e625d032308bfabad50a262c35b8fabe",
+  "assets/generated/crafts-pass/frames/ability-warrior-cleave.png": "3c6ea6c3513a4ca5c4c9696fc3d28c0b227bc8f347fc9a952175f2d009098a7c",
+  "assets/generated/crafts-pass/frames/ability-warrior-heave.png": "6ad473c88012a1ef1f1e3897a57fa1efb516a6f7aba6725a43f5de911a627c47",
+  "assets/generated/crafts-pass/frames/ability-warrior-pin.png": "81776dd2370b01b81c561f907a3f60122bedcb4873d998ab648b2fd68cc4c61f",
+  "assets/generated/crafts-pass/frames/ability-warrior-stand.png": "38223fbdc0c5726b9d7013bfa1ec28e65ca76e37340a0df84bab924e305e3e4a",
+  "assets/generated/crafts-pass/frames/companions-tab.png": "20bd3c10bcf285f3c433d8aca73609d609d2fa341b20449a69a6e4d3a7e32a27",
+  "assets/generated/crafts-pass/frames/float-0.png": "ce2eb927e9d2bfbc7f1e803cc60ecd6413c463b5eaec6cd0b42d3601dbce1846",
+  "assets/generated/crafts-pass/frames/float-1.png": "89f4b971bf66350326fc7336b95988a02a6fb240d2e0cab9b0b71d84bbf5f6fc",
+  "assets/generated/crafts-pass/frames/float-2.png": "b6ba83b8d219759cc733e8c67f424a04eaa68ebd2f0b8be07f2a1fc9ffc9dc9a",
+  "assets/generated/crafts-pass/frames/float-3.png": "c6ac69d77fed73d9257d5d216434c31de41c5bb7df978a48dd6b113216305743",
+  "assets/generated/crafts-pass/frames/float-4.png": "4f2b421df48f192265f54bf5cd4e72121989b30c53cfac92a9fe9a8cea185ed3",
+  "assets/generated/crafts-pass/frames/float-5.png": "b33ca1fc7bdb426d13b8c72dac9701e5df4e87c76d6132c9675cc6adf19a96af",
+  "assets/generated/crafts-pass/frames/go-home.png": "4e26098e7f4af73a14847f6e77cee4ccda1c1abcf7bdb300454431a48ae0520b",
+  "assets/generated/crafts-pass/frames/kindle-hollow-light-0.png": "8967ab66511a01bb3a1353c2532125821a28d88623d3973f51aa994685203b00",
+  "assets/generated/crafts-pass/frames/kindle-hollow-light-1.png": "a92c76de2603944ce9031267fca64420e22e432a88f177faae192432ada2635a",
+  "assets/generated/crafts-pass/frames/kindle-hollow-light-2.png": "637f4bb8fa25f93cdce9ac7709a7a4c18cfb00e4189ebaec4a77674e5b231591",
+  "assets/generated/crafts-pass/frames/kindle-hollow-light-3.png": "f2188406b9b84c8ac5820b92e285b45dfd8d13b9bebf8b8f1676663b79c2bb28",
+  "assets/generated/crafts-pass/frames/landing-splash-0.png": "2d5eebc03fcb055ad44ac28928cd9cd6bad10d79b17139a2950d03997cb83732",
+  "assets/generated/crafts-pass/frames/landing-splash-1.png": "ae1a5256df0d1aac568b143634584ef7585c8e5fe6f14df04959bdf112273bac",
+  "assets/generated/crafts-pass/frames/landing-splash-2.png": "e96ef798ccc98e53acbfbff4b440de56fbde00afbf70dc060deded93505d9446",
+  "assets/generated/crafts-pass/frames/landing-splash-3.png": "dee5aaa8747af1129156dd69bae5fd953c19d27b20eaa9959ab738f722c7347d",
+  "assets/generated/crafts-pass/frames/mill-roach.png": "dacb943570cb37cccd6f0585a78d8fbad469b5f07b22b40c4719b0e05ed7fd85",
+  "assets/generated/crafts-pass/frames/millers-fry.png": "039dbf692513aaea705fd637897b2d2a601f4de9df571f14936deaf07f2a4337",
+  "assets/generated/crafts-pass/frames/pet-heart-0.png": "13001892b6b25e0d5a8134cc77a3b4907f3ef4940efce6340f208f842fa82c13",
+  "assets/generated/crafts-pass/frames/pet-heart-1.png": "da58d621c582bd7b3365c7744808de16326c0b20f111eff94c3af639afeb7a91",
+  "assets/generated/crafts-pass/frames/pet-heart-2.png": "2bcc82c024196dca6829266d4a0c22ac176c18644999f0fcc8af6b6e3a853299",
+  "assets/generated/crafts-pass/frames/recipe-card-millers-fry.png": "b5e49c722c21183ec59c62f8ce47aebc4ea26d70db35a649c3a6f3e1498f8ed2",
+  "assets/generated/crafts-pass/frames/rod-held-out.png": "92ddf5817107cabd7f7d9718379c13d117dc0bc9091123d9cf82f0759997ea27",
+  "assets/generated/crafts-pass/frames/rod-held-raised.png": "47cd4b702e4a350fbc07fc10a3a388a07531124bae9f215fe29d0a360d3e74c9",
+  "assets/generated/crafts-pass/frames/rod-icon.png": "6d04a2e2b724dbbd07926f3584afcd90ad2ce945408b5140c5e4475437ae85dc",
+  "assets/generated/crafts-pass/frames/saddle.png": "6996ac8b632470ea8ea4cb9eae0441ac1494af2f4b5581ef3c535222848c8919",
+  "assets/generated/crafts-pass/frames/stable-bay-back.png": "1c5fb6a1dfe61154100226dfdd2109ac542bbcfadcf926bf98ecfd53fbb91953",
+  "assets/generated/crafts-pass/frames/stable-bay-front-open.png": "def5ef73541f19d2366c76e662cd28a4350e494a0fcef823e27885e7fa386695",
+  "assets/generated/crafts-pass/frames/stable-bay-front-shut.png": "8c632f897b5bd9afc083c32dc460ed8cd9d394b93e3da208e580c46c38c6c3ba",
+  "assets/generated/crafts-pass/frames/stable-east-gable.png": "417da3188d52b28a9207b0902f5f3fffcee1fd18db6457bd9901cc0497590e6f",
+  "assets/generated/crafts-pass/frames/stable-west-back.png": "710b14d459caafb17e88668482f353177a704c4d3af8cb790467be356843a2fc",
+  "assets/generated/crafts-pass/frames/stable-west-front-open.png": "0ab8e1a3f3a68ccdb2749768da72fcf66a9d410026c531c1b0ae432264848f4a",
+  "assets/generated/crafts-pass/frames/stable-west-front-shut.png": "aff33f1cb66df5650e8f4c064ca7db9f929910b56ef5834c516ec60b9cad176c",
+  "assets/generated/crafts-pass/frames/stand-ground-ring-0.png": "a6a9efd3420094abe48206a2635e527909cf25ce0a9cbb7e6658c3a628bb2ed0",
+  "assets/generated/crafts-pass/frames/stand-ground-ring-1.png": "96918f9ae41386dd7917c2bd5977cbefc9507241bd59475092586959da781065",
+  "assets/generated/crafts-pass/frames/stand-ground-ring-2.png": "adb0cf2161fba7805df5f4f52ca70ff4f8ea593413d6914897d26c76032aa02d",
+  "assets/generated/crafts-pass/frames/stand-ground-ring-3.png": "08c4c4eea7bf72d3b052682b500c0ea5d1f3e47fd4221a3b5e0b0c9f3e136187",
+  "assets/generated/crafts-pass/frames/ward-light-circle-0.png": "803937b34a9ee06297489a7fc358d07f66b21e410b6fa7747f596c3551f14c8f",
+  "assets/generated/crafts-pass/frames/ward-light-circle-1.png": "ad56685df045a0417c9814bf80784838de1431ef0c6b72dea03659bf3a859720",
+  "assets/generated/crafts-pass/frames/ward-light-circle-2.png": "839f6ea7df9ce14b0f5a18d81251e72257994448711ad3d40e24fd7287063346",
+  "assets/generated/crafts-pass/frames/ward-light-circle-3.png": "0c19b67bad1979e0566ecd2c5ad5f37dead66ae498e6d22f6115a1c9403873a5",
+  "assets/generated/crafts-pass/frames/water-rings-0.png": "b5b3fcb1113d2cc71596f7feba3092232b279387ca29fa2eab9166eed73d0fdf",
+  "assets/generated/crafts-pass/frames/water-rings-1.png": "7c7cdd78b95a5ddf4e1b827fec9a6e94a8f95a62d6e2270ab87cfa311e8ad339",
+  "assets/generated/crafts-pass/frames/water-rings-2.png": "5a789a52971e95251da1a35e1ce828918d3262738503fce9a24d4199b565bcfa",
+  "assets/generated/crafts-pass/manifest.json": "b8f965174aae59124f3b661fbb25a05253d88c39acef612af01657d4e1ae5410",
   "assets/generated/expansion/fingersnap-demo-walk.atlas.json": "99cd4a015537c90d3f1f5736a84dfab6c51b88a11110fbc9f0018c985dd1fd78",
   "assets/generated/expansion/fingersnap-demo-walk.png": "3ddb7ce037ba0ea5f589e9dbf5786ab77c5e228058f8b3c9a3e93528cddaa21c",
   "assets/generated/expansion/fingersnap-enemies.atlas.json": "5e3bc43f96a60fa1194b53060bd998a3fbf9d62cc2c1141035c731a00625a495",
@@ -199,6 +264,7 @@
  "outputs": {
   "buildings.webp": "0f4dd3afdf6ddcbd8ec7a842f293591275166d34ca6245555277fd25b2d88cd3",
   "commons.webp": "874ee414b6c1834f29f571ae6ae0a509d2b5f65a9b736db5034e036621cefcde",
+  "crafts.webp": "2efa7eaadb7cc6874311d27284d0e93a0baaae7797e2c18f69f99a83d3608e99",
   "fingersnap-demo-walk.png": "17ee5d810665b334e8406fc62714aea736e8c7ffb17f2f1530974303dd132a9f",
   "fingersnap-enemies.png": "adedf5d4b5728224ad1a13ed34d0057c4f922f79421151c8183774b0934582b4",
   "fingersnap-foreground.png": "1f11d2e6b110445499109eb6db0b54bbcbb5a8709912ca91f57543538862536d",
@@ -3909,6 +3975,400 @@
     1440,
     128,
     48
+   ]
+  }
+ },
+ "crafts": {
+  "image": "crafts.webp",
+  "size": [
+   994,
+   1024
+  ],
+  "density": 64,
+  "frames": {
+   "ability-warrior-cleave": [
+    704,
+    864,
+    64,
+    64
+   ],
+   "ability-warrior-heave": [
+    768,
+    864,
+    64,
+    64
+   ],
+   "ability-warrior-pin": [
+    832,
+    864,
+    64,
+    64
+   ],
+   "ability-warrior-stand": [
+    896,
+    864,
+    64,
+    64
+   ],
+   "ability-warrior-brace": [
+    640,
+    864,
+    64,
+    64
+   ],
+   "ability-mage-fingersnap": [
+    0,
+    864,
+    64,
+    64
+   ],
+   "ability-mage-name-a-lamp": [
+    128,
+    864,
+    64,
+    64
+   ],
+   "ability-mage-read-route-stone": [
+    256,
+    864,
+    64,
+    64
+   ],
+   "ability-mage-kindle": [
+    64,
+    864,
+    64,
+    64
+   ],
+   "ability-mage-old-ways": [
+    192,
+    864,
+    64,
+    64
+   ],
+   "ability-healer-mend": [
+    672,
+    768,
+    64,
+    64
+   ],
+   "ability-healer-mend-working": [
+    736,
+    768,
+    64,
+    64
+   ],
+   "ability-healer-settle": [
+    864,
+    768,
+    64,
+    64
+   ],
+   "ability-healer-ward-light": [
+    928,
+    768,
+    64,
+    64
+   ],
+   "ability-healer-mended-glade": [
+    800,
+    768,
+    64,
+    64
+   ],
+   "ability-rogue-shadowstep": [
+    512,
+    864,
+    64,
+    64
+   ],
+   "ability-rogue-read-the-drift": [
+    384,
+    864,
+    64,
+    64
+   ],
+   "ability-rogue-walk-a-blind-route": [
+    576,
+    864,
+    64,
+    64
+   ],
+   "ability-rogue-echo": [
+    320,
+    864,
+    64,
+    64
+   ],
+   "ability-rogue-sense-the-turning": [
+    448,
+    864,
+    64,
+    64
+   ],
+   "stand-ground-ring-0": [
+    160,
+    768,
+    128,
+    64
+   ],
+   "stand-ground-ring-1": [
+    288,
+    768,
+    128,
+    64
+   ],
+   "stand-ground-ring-2": [
+    416,
+    768,
+    128,
+    64
+   ],
+   "stand-ground-ring-3": [
+    544,
+    768,
+    128,
+    64
+   ],
+   "kindle-hollow-light-0": [
+    288,
+    320,
+    192,
+    128
+   ],
+   "kindle-hollow-light-1": [
+    480,
+    320,
+    192,
+    128
+   ],
+   "kindle-hollow-light-2": [
+    672,
+    320,
+    192,
+    128
+   ],
+   "kindle-hollow-light-3": [
+    0,
+    640,
+    192,
+    128
+   ],
+   "ward-light-circle-0": [
+    448,
+    640,
+    160,
+    96
+   ],
+   "ward-light-circle-1": [
+    608,
+    640,
+    160,
+    96
+   ],
+   "ward-light-circle-2": [
+    768,
+    640,
+    160,
+    96
+   ],
+   "ward-light-circle-3": [
+    0,
+    768,
+    160,
+    96
+   ],
+   "stable-west-back": [
+    0,
+    0,
+    256,
+    320
+   ],
+   "stable-bay-back": [
+    768,
+    0,
+    128,
+    320
+   ],
+   "stable-east-gable": [
+    256,
+    320,
+    32,
+    320
+   ],
+   "stable-west-front-shut": [
+    512,
+    0,
+    256,
+    320
+   ],
+   "stable-west-front-open": [
+    256,
+    0,
+    256,
+    320
+   ],
+   "stable-bay-front-shut": [
+    128,
+    320,
+    128,
+    320
+   ],
+   "stable-bay-front-open": [
+    0,
+    320,
+    128,
+    320
+   ],
+   "rod-icon": [
+    576,
+    928,
+    64,
+    64
+   ],
+   "rod-held-raised": [
+    320,
+    640,
+    128,
+    128
+   ],
+   "rod-held-out": [
+    192,
+    640,
+    128,
+    128
+   ],
+   "mill-roach": [
+    384,
+    928,
+    64,
+    64
+   ],
+   "millers-fry": [
+    448,
+    928,
+    64,
+    64
+   ],
+   "recipe-card-millers-fry": [
+    512,
+    928,
+    64,
+    64
+   ],
+   "float-0": [
+    896,
+    928,
+    32,
+    32
+   ],
+   "float-1": [
+    928,
+    928,
+    32,
+    32
+   ],
+   "float-2": [
+    960,
+    928,
+    32,
+    32
+   ],
+   "float-3": [
+    0,
+    992,
+    32,
+    32
+   ],
+   "float-4": [
+    32,
+    992,
+    32,
+    32
+   ],
+   "float-5": [
+    64,
+    992,
+    32,
+    32
+   ],
+   "water-rings-0": [
+    704,
+    928,
+    64,
+    32
+   ],
+   "water-rings-1": [
+    768,
+    928,
+    64,
+    32
+   ],
+   "water-rings-2": [
+    832,
+    928,
+    64,
+    32
+   ],
+   "landing-splash-0": [
+    128,
+    928,
+    64,
+    64
+   ],
+   "landing-splash-1": [
+    192,
+    928,
+    64,
+    64
+   ],
+   "landing-splash-2": [
+    256,
+    928,
+    64,
+    64
+   ],
+   "landing-splash-3": [
+    320,
+    928,
+    64,
+    64
+   ],
+   "companions-tab": [
+    0,
+    928,
+    64,
+    64
+   ],
+   "saddle": [
+    640,
+    928,
+    64,
+    64
+   ],
+   "go-home": [
+    64,
+    928,
+    64,
+    64
+   ],
+   "pet-heart-0": [
+    96,
+    992,
+    32,
+    32
+   ],
+   "pet-heart-1": [
+    128,
+    992,
+    32,
+    32
+   ],
+   "pet-heart-2": [
+    160,
+    992,
+    32,
+    32
    ]
   }
  },

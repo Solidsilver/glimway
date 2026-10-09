@@ -65,6 +65,7 @@ import { FLAGS, WELCOME_EMBERS, type EmberSpend, type SpendReason } from '../lib
 import type { GameState } from '../lib/state.ts'
 import { EV, type Emit, type LinkPayload, type LinkStatus } from './event-names.ts'
 import { serverNow } from './clock.ts'
+import { unlockNotice, type MagicMarks } from '../lib/combat.ts'
 
 const HEARTBEAT_MS = 30_000
 /** After this long without an answer the chip says "Reaching the world…". */
@@ -574,6 +575,32 @@ export class Link {
     if (!s) return
     const profile = profileOf(this.server)
     s.applyServer(this.view(), { vitalsSource: profile ? 'imported' : 'demo', importedProfile: profile }, opts)
+    this.noteMagic(profile)
+  }
+
+  /** The level and class marks the screen holds (null until a state carries them). */
+  get magic(): MagicMarks | null {
+    const m = this.server.magic
+    return m ? { levelMark: m.levelMark, classMark: m.classMark ?? null } : null
+  }
+
+  /** The marks last told to the interface (undefined: not yet, so the first is a load, not news). */
+  private toldMagic: MagicMarks | null | undefined = undefined
+
+  /**
+   * Tell the interface the marks, and when an adopted level mark crosses a
+   * move's level against the one held (never on the first load), say what
+   * arrived: "New at level 20: Kindle. It's on R, …" (crafts.md 4.2).
+   */
+  private noteMagic(profile: HabiticaProfile | null): void {
+    const now = this.magic
+    const was = this.toldMagic
+    if (was !== undefined && was?.levelMark === now?.levelMark && was?.classMark === now?.classMark) return
+    this.toldMagic = now
+    this.emitter(EV.magic, { levelMark: now?.levelMark ?? 0, classMark: now?.classMark ?? null })
+    if (was === undefined) return
+    const notice = unlockNotice(profile, was, now)
+    if (notice) this.emitter(EV.toast, { text: notice, icon: 'sparkle' })
   }
 
   /** The screen's place and vitals, into the next report. */
@@ -1295,6 +1322,11 @@ export class Link {
     this.reports.cast(n)
   }
 
+  /** A combat move was cast on screen (its own budget on the server, crafts.md 4.4). */
+  noteAbility(id: string, n = 1): void {
+    this.reports.castMove(id, n)
+  }
+
   /** Send a report: the captured one, or the next one frozen now. */
   private async sendReport(force: boolean): Promise<{ ok: boolean; sent?: CapturedReport; ack?: ReportAck | null }> {
     const c = this.reports.capture(force)
@@ -1359,7 +1391,7 @@ export class Link {
   }
 
   private reportRequest(c: CapturedReport) {
-    return create(ReportRequestSchema, { lease: this.lease ?? '', client: c.client, generation: c.generation, seq: c.seq, basis: c.basis, place: c.place, hp: c.hp, mana: c.mana, casts: c.casts })
+    return create(ReportRequestSchema, { lease: this.lease ?? '', client: c.client, generation: c.generation, seq: c.seq, basis: c.basis, place: c.place, hp: c.hp, mana: c.mana, casts: c.casts, abilityCasts: c.abilityCasts })
   }
 
   /** Page hide: the report goes now with keepalive, unqueued. */

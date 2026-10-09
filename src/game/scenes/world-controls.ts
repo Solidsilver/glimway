@@ -1,6 +1,6 @@
 /**
  * The world's controls: movement keys, the action keys (E/Space, F to cast,
- * M to ride, Shift to roll) and their touch buttons on the bus, the belt
+ * R for the level-20 move, M to ride, Shift to roll) and their touch buttons on the bus, the belt
  * (number keys and the wheel pick what's in hand), and the mouse on the
  * world. Each acts only while the hero has control (`live`).
  */
@@ -46,20 +46,22 @@ export class WorldControls {
     private deps: WorldControlsDeps
   ) {
     const kb = scene.input.keyboard!
-    kb.addCapture('SPACE,UP,DOWN,LEFT,RIGHT,W,A,S,D,E,F,M,SHIFT')
+    kb.addCapture('SPACE,UP,DOWN,LEFT,RIGHT,W,A,S,D,E,F,R,M,SHIFT')
     this.cursors = kb.createCursorKeys()
     this.wasd = kb.addKeys('W,A,S,D') as Record<string, Phaser.Input.Keyboard.Key>
-    this.keys = kb.addKeys('E,SPACE,F,M,SHIFT') as Record<string, Phaser.Input.Keyboard.Key>
+    this.keys = kb.addKeys('E,SPACE,F,R,M,SHIFT') as Record<string, Phaser.Input.Keyboard.Key>
     // Event-driven, not polled: Key.onUp clears _justDown, so polling
     // JustDown once per frame silently drops taps shorter than a frame
     // (common on slower devices). DOWN fires once per press, never on repeat.
     const onAction = () => this.whenLive(() => deps.act())
     const onCast = () => this.whenLive(() => deps.hero().handleCast())
+    const onMove = () => this.whenLive(() => deps.hero().handleMove())
     const onRide = () => this.whenLive(() => void deps.avatar().toggleRide())
     const onDodge = () => this.whenLive(() => deps.hero().tryDodge(this.vector()))
     this.keys.E.on('down', onAction)
     this.keys.SPACE.on('down', onAction)
     this.keys.F.on('down', onCast)
+    this.keys.R.on('down', onMove)
     this.keys.M.on('down', onRide)
     this.keys.SHIFT.on('down', onDodge)
     // What's in hand (src/game/held.ts): number keys and the wheel pick from
@@ -74,6 +76,7 @@ export class WorldControls {
     bus.on(EV.held, this.onHeldChanged, this)
     bus.on(EV.action, onBusAction)
     bus.on(EV.cast, onCast)
+    bus.on(EV.castMove, onMove)
     bus.on(EV.dodge, onDodge)
     scene.events.once('shutdown', () => {
       stopBelt()
@@ -84,6 +87,7 @@ export class WorldControls {
       bus.off(EV.held, this.onHeldChanged, this)
       bus.off(EV.action, onBusAction)
       bus.off(EV.cast, onCast)
+      bus.off(EV.castMove, onMove)
       bus.off(EV.dodge, onDodge)
     })
   }

@@ -105,16 +105,18 @@ function normalizeReports(raw: unknown): StoredReports | null {
   const n = raw.next;
   const place = isObj(n.place) && typeof n.place.area === 'string' && typeof n.place.x === 'number' && typeof n.place.y === 'number' ? { area: n.place.area, x: n.place.x, y: n.place.y } : null;
   const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : 0);
+  // The moves' casts by ability id (crafts.md 4.4); a record from before them has none.
+  const tally = (v: unknown): Record<string, number> => (isObj(v) ? Object.fromEntries(Object.entries(v).map(([id, k]) => [id, Math.floor(num(k))]).filter(([, k]) => (k as number) > 0)) : {});
   const c = raw.captured;
   const captured =
     isObj(c) && typeof c.client === 'string' && typeof c.generation === 'string' && whole(c.seq) && c.seq > 0 && isObj(c.place) && typeof c.place.area === 'string'
-      ? { client: c.client, generation: c.generation, seq: c.seq, basis: num(c.basis), place: { area: c.place.area, x: num(c.place.x), y: num(c.place.y) }, hp: num(c.hp), mana: num(c.mana), casts: Math.floor(num(c.casts)) }
+      ? { client: c.client, generation: c.generation, seq: c.seq, basis: num(c.basis), place: { area: c.place.area, x: num(c.place.x), y: num(c.place.y) }, hp: num(c.hp), mana: num(c.mana), casts: Math.floor(num(c.casts)), abilityCasts: tally(c.abilityCasts) }
       : null;
   return {
     client: str(raw.client),
     generation: str(raw.generation),
     seq: raw.seq,
-    next: { place, hp: num(n.hp), mana: num(n.mana), casts: Math.floor(num(n.casts)), basis: num(n.basis), boundary: whole(n.boundary) ? n.boundary : null, changed: n.changed === true },
+    next: { place, hp: num(n.hp), mana: num(n.mana), casts: Math.floor(num(n.casts)), abilityCasts: tally(n.abilityCasts), basis: num(n.basis), boundary: whole(n.boundary) ? n.boundary : null, changed: n.changed === true },
     captured,
   };
 }
