@@ -35,7 +35,8 @@ test('the library shelf reads the mixed envelope too', async () => {
 });
 
 test('the reconciliation read: a committed operation, or none; malformed rows are bad responses', () => {
-  const op = { route: '/api/story/mark', key: 'k', payload: { mark: 'seen:a' }, payloadHash: 'h', version: 1, result: { mark: 'seen:a', added: true }, resultCase: 'mark', resultType: 'glimway.v1.MarkResult' };
+  // The wire (operations.proto) always carries the row's fields, null when unset.
+  const op = { route: '/api/story/mark', key: 'k', payload: { mark: 'seen:a' }, payloadHash: 'h', version: 1, refused: null, result: { mark: 'seen:a', added: true }, resultCase: 'mark', resultType: 'glimway.v1.MarkResult' };
   assert.equal(parseOperationResult({ state: BASE, result: { operation: op } }).operation?.resultCase, 'mark');
   assert.equal(parseOperationResult({ state: BASE, result: { operation: null } }).operation, null);
   assert.throws(() => parseOperationResult({ state: BASE, result: { operation: { route: 1 } } }));

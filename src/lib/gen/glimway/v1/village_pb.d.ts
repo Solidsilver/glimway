@@ -490,35 +490,6 @@ export declare type MailView = Message<"glimway.v1.MailView"> & {
 export declare const MailViewSchema: GenMessage<MailView>;
 
 /**
- * @generated from message glimway.v1.MailPage
- */
-export declare type MailPage = Message<"glimway.v1.MailPage"> & {
-  /**
-   * @generated from field: repeated glimway.v1.MailView mail = 1;
-   */
-  mail: MailView[];
-
-  /**
-   * History continues at ?cursor= (opaque); pending mail repeats on every
-   * page and continues at ?pendingCursor= (only for legacy backlogs).
-   *
-   * @generated from field: google.protobuf.StringValue next_cursor = 2;
-   */
-  nextCursor?: string | undefined;
-
-  /**
-   * @generated from field: google.protobuf.StringValue next_pending_cursor = 3;
-   */
-  nextPendingCursor?: string | undefined;
-};
-
-/**
- * Describes the message glimway.v1.MailPage.
- * Use `create(MailPageSchema)` to create a new message.
- */
-export declare const MailPageSchema: GenMessage<MailPage>;
-
-/**
  * @generated from message glimway.v1.MailReadResult
  */
 export declare type MailReadResult = Message<"glimway.v1.MailReadResult"> & {
@@ -679,6 +650,50 @@ export declare type MailActionResult = Message<"glimway.v1.MailActionResult"> & 
  * Use `create(MailActionResultSchema)` to create a new message.
  */
 export declare const MailActionResultSchema: GenMessage<MailActionResult>;
+
+/**
+ * A recall's answer is its own message: the Envelope's result cases resolve
+ * by message type name, so two cases may not share one.
+ *
+ * @generated from message glimway.v1.MailRecallResult
+ */
+export declare type MailRecallResult = Message<"glimway.v1.MailRecallResult"> & {
+  /**
+   * @generated from field: string mail_id = 1;
+   */
+  mailId: string;
+
+  /**
+   * @generated from field: glimway.v1.Asset asset = 2;
+   */
+  asset?: Asset | undefined;
+
+  /**
+   * @generated from field: repeated glimway.v1.MailView mail = 3;
+   */
+  mail: MailView[];
+
+  /**
+   * @generated from field: google.protobuf.StringValue next_cursor = 4;
+   */
+  nextCursor?: string | undefined;
+
+  /**
+   * @generated from field: google.protobuf.StringValue next_pending_cursor = 5;
+   */
+  nextPendingCursor?: string | undefined;
+
+  /**
+   * @generated from field: glimway.v1.AssetCounts inventory = 6;
+   */
+  inventory?: AssetCounts | undefined;
+};
+
+/**
+ * Describes the message glimway.v1.MailRecallResult.
+ * Use `create(MailRecallResultSchema)` to create a new message.
+ */
+export declare const MailRecallResultSchema: GenMessage<MailRecallResult>;
 
 /**
  * @generated from message glimway.v1.Person

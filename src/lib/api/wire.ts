@@ -19,6 +19,13 @@ function message(schema: DescMessage, raw: unknown): void {
     if (typeof raw === 'number' && !Number.isFinite(raw)) throw new Error('invalid value');
     return;
   }
+  if (schema.typeName === 'google.protobuf.Struct') {
+    if (raw === null) return;
+    for (const value of Object.values(record(raw))) {
+      if (typeof value === 'number' && !Number.isFinite(value)) throw new Error('invalid value');
+    }
+    return;
+  }
   if (schema.typeName === 'google.protobuf.StringValue') { if (raw !== null) scalar(ScalarType.STRING, raw); return; }
   if (schema.typeName === 'google.protobuf.DoubleValue') { if (raw !== null) scalar(ScalarType.DOUBLE, raw); return; }
   if (schema.typeName === 'google.protobuf.Int32Value' || schema.typeName === 'google.protobuf.Int64Value') { if (raw !== null) scalar(ScalarType.INT64, raw); return; }

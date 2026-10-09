@@ -595,7 +595,8 @@ func (a *Server) worldLeave(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		return moveResultProto(v, from, left, returned), nil
+		out := moveResultProto(v, from, left, returned)
+		return &contract.WorldLeaveResult{World: out.World, From: out.From, LeftHome: out.LeftHome, Returned: out.Returned}, nil
 	}, func() {
 		if mover != "" {
 			a.presenceChanged(mover)

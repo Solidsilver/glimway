@@ -37,11 +37,11 @@ message Envelope {
     WildsClaimResult wilds_claim = 18; WildsLanternResult wilds_lantern = 19;
     LibraryDonateResult library_donate = 20;
     MailSendResult mail_send = 21; MailActionResult mail_claim = 22;
-    MailActionResult mail_recall = 23;
+    MailRecallResult mail_recall = 23;
     WorkshopView storage_move = 24;
     CraftResult craft = 25; HearthCraftResult hearth_craft = 26;
     DeskCopyResult desk_copy = 27;
-    WorldMoveResult world_move = 28; WorldMoveResult world_leave = 29;
+    WorldMoveResult world_move = 28; WorldLeaveResult world_leave = 29;
     ContributeResult contribute = 30; MendResult mend = 31;
   }
 }

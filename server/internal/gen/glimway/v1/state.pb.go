@@ -665,7 +665,7 @@ func (x *Envelope) GetMailClaim() *MailActionResult {
 	return nil
 }
 
-func (x *Envelope) GetMailRecall() *MailActionResult {
+func (x *Envelope) GetMailRecall() *MailRecallResult {
 	if x != nil {
 		if x, ok := x.Result.(*Envelope_MailRecall); ok {
 			return x.MailRecall
@@ -719,7 +719,7 @@ func (x *Envelope) GetWorldMove() *WorldMoveResult {
 	return nil
 }
 
-func (x *Envelope) GetWorldLeave() *WorldMoveResult {
+func (x *Envelope) GetWorldLeave() *WorldLeaveResult {
 	if x != nil {
 		if x, ok := x.Result.(*Envelope_WorldLeave); ok {
 			return x.WorldLeave
@@ -803,7 +803,7 @@ type Envelope_MailClaim struct {
 }
 
 type Envelope_MailRecall struct {
-	MailRecall *MailActionResult `protobuf:"bytes,23,opt,name=mail_recall,json=mailRecall,proto3,oneof"`
+	MailRecall *MailRecallResult `protobuf:"bytes,23,opt,name=mail_recall,json=mailRecall,proto3,oneof"`
 }
 
 type Envelope_StorageMove struct {
@@ -827,7 +827,7 @@ type Envelope_WorldMove struct {
 }
 
 type Envelope_WorldLeave struct {
-	WorldLeave *WorldMoveResult `protobuf:"bytes,29,opt,name=world_leave,json=worldLeave,proto3,oneof"`
+	WorldLeave *WorldLeaveResult `protobuf:"bytes,29,opt,name=world_leave,json=worldLeave,proto3,oneof"`
 }
 
 type Envelope_Contribute struct {
@@ -1301,7 +1301,7 @@ const file_glimway_v1_state_proto_rawDesc = "" +
 	"\x04code\x18\x01 \x01(\tR\x04code\"g\n" +
 	"\aRefusal\x12-\n" +
 	"\x05error\x18\x01 \x01(\v2\x17.glimway.v1.ErrorDetailR\x05error\x12-\n" +
-	"\x05state\x18\x02 \x01(\v2\x17.glimway.v1.PlayerStateR\x05state\"\xe0\n" +
+	"\x05state\x18\x02 \x01(\v2\x17.glimway.v1.PlayerStateR\x05state\"\xe1\n" +
 	"\n" +
 	"\bEnvelope\x12-\n" +
 	"\x05state\x18\x01 \x01(\v2\x17.glimway.v1.PlayerStateR\x05state\x122\n" +
@@ -1324,15 +1324,15 @@ const file_glimway_v1_state_proto_rawDesc = "" +
 	"\tmail_send\x18\x15 \x01(\v2\x1a.glimway.v1.MailSendResultH\x00R\bmailSend\x12=\n" +
 	"\n" +
 	"mail_claim\x18\x16 \x01(\v2\x1c.glimway.v1.MailActionResultH\x00R\tmailClaim\x12?\n" +
-	"\vmail_recall\x18\x17 \x01(\v2\x1c.glimway.v1.MailActionResultH\x00R\n" +
+	"\vmail_recall\x18\x17 \x01(\v2\x1c.glimway.v1.MailRecallResultH\x00R\n" +
 	"mailRecall\x12=\n" +
 	"\fstorage_move\x18\x18 \x01(\v2\x18.glimway.v1.WorkshopViewH\x00R\vstorageMove\x12/\n" +
 	"\x05craft\x18\x19 \x01(\v2\x17.glimway.v1.CraftResultH\x00R\x05craft\x12B\n" +
 	"\fhearth_craft\x18\x1a \x01(\v2\x1d.glimway.v1.HearthCraftResultH\x00R\vhearthCraft\x129\n" +
 	"\tdesk_copy\x18\x1b \x01(\v2\x1a.glimway.v1.DeskCopyResultH\x00R\bdeskCopy\x12<\n" +
 	"\n" +
-	"world_move\x18\x1c \x01(\v2\x1b.glimway.v1.WorldMoveResultH\x00R\tworldMove\x12>\n" +
-	"\vworld_leave\x18\x1d \x01(\v2\x1b.glimway.v1.WorldMoveResultH\x00R\n" +
+	"world_move\x18\x1c \x01(\v2\x1b.glimway.v1.WorldMoveResultH\x00R\tworldMove\x12?\n" +
+	"\vworld_leave\x18\x1d \x01(\v2\x1c.glimway.v1.WorldLeaveResultH\x00R\n" +
 	"worldLeave\x12>\n" +
 	"\n" +
 	"contribute\x18\x1e \x01(\v2\x1c.glimway.v1.ContributeResultH\x00R\n" +
@@ -1409,14 +1409,16 @@ var file_glimway_v1_state_proto_goTypes = []any{
 	(*LibraryDonateResult)(nil),    // 30: glimway.v1.LibraryDonateResult
 	(*MailSendResult)(nil),         // 31: glimway.v1.MailSendResult
 	(*MailActionResult)(nil),       // 32: glimway.v1.MailActionResult
-	(*WorkshopView)(nil),           // 33: glimway.v1.WorkshopView
-	(*CraftResult)(nil),            // 34: glimway.v1.CraftResult
-	(*HearthCraftResult)(nil),      // 35: glimway.v1.HearthCraftResult
-	(*DeskCopyResult)(nil),         // 36: glimway.v1.DeskCopyResult
-	(*WorldMoveResult)(nil),        // 37: glimway.v1.WorldMoveResult
-	(*ContributeResult)(nil),       // 38: glimway.v1.ContributeResult
-	(*MendResult)(nil),             // 39: glimway.v1.MendResult
-	(*WorldChoice)(nil),            // 40: glimway.v1.WorldChoice
+	(*MailRecallResult)(nil),       // 33: glimway.v1.MailRecallResult
+	(*WorkshopView)(nil),           // 34: glimway.v1.WorkshopView
+	(*CraftResult)(nil),            // 35: glimway.v1.CraftResult
+	(*HearthCraftResult)(nil),      // 36: glimway.v1.HearthCraftResult
+	(*DeskCopyResult)(nil),         // 37: glimway.v1.DeskCopyResult
+	(*WorldMoveResult)(nil),        // 38: glimway.v1.WorldMoveResult
+	(*WorldLeaveResult)(nil),       // 39: glimway.v1.WorldLeaveResult
+	(*ContributeResult)(nil),       // 40: glimway.v1.ContributeResult
+	(*MendResult)(nil),             // 41: glimway.v1.MendResult
+	(*WorldChoice)(nil),            // 42: glimway.v1.WorldChoice
 }
 var file_glimway_v1_state_proto_depIdxs = []int32{
 	16, // 0: glimway.v1.Account.party_id:type_name -> google.protobuf.StringValue
@@ -1445,17 +1447,17 @@ var file_glimway_v1_state_proto_depIdxs = []int32{
 	30, // 23: glimway.v1.Envelope.library_donate:type_name -> glimway.v1.LibraryDonateResult
 	31, // 24: glimway.v1.Envelope.mail_send:type_name -> glimway.v1.MailSendResult
 	32, // 25: glimway.v1.Envelope.mail_claim:type_name -> glimway.v1.MailActionResult
-	32, // 26: glimway.v1.Envelope.mail_recall:type_name -> glimway.v1.MailActionResult
-	33, // 27: glimway.v1.Envelope.storage_move:type_name -> glimway.v1.WorkshopView
-	34, // 28: glimway.v1.Envelope.craft:type_name -> glimway.v1.CraftResult
-	35, // 29: glimway.v1.Envelope.hearth_craft:type_name -> glimway.v1.HearthCraftResult
-	36, // 30: glimway.v1.Envelope.desk_copy:type_name -> glimway.v1.DeskCopyResult
-	37, // 31: glimway.v1.Envelope.world_move:type_name -> glimway.v1.WorldMoveResult
-	37, // 32: glimway.v1.Envelope.world_leave:type_name -> glimway.v1.WorldMoveResult
-	38, // 33: glimway.v1.Envelope.contribute:type_name -> glimway.v1.ContributeResult
-	39, // 34: glimway.v1.Envelope.mend:type_name -> glimway.v1.MendResult
+	33, // 26: glimway.v1.Envelope.mail_recall:type_name -> glimway.v1.MailRecallResult
+	34, // 27: glimway.v1.Envelope.storage_move:type_name -> glimway.v1.WorkshopView
+	35, // 28: glimway.v1.Envelope.craft:type_name -> glimway.v1.CraftResult
+	36, // 29: glimway.v1.Envelope.hearth_craft:type_name -> glimway.v1.HearthCraftResult
+	37, // 30: glimway.v1.Envelope.desk_copy:type_name -> glimway.v1.DeskCopyResult
+	38, // 31: glimway.v1.Envelope.world_move:type_name -> glimway.v1.WorldMoveResult
+	39, // 32: glimway.v1.Envelope.world_leave:type_name -> glimway.v1.WorldLeaveResult
+	40, // 33: glimway.v1.Envelope.contribute:type_name -> glimway.v1.ContributeResult
+	41, // 34: glimway.v1.Envelope.mend:type_name -> glimway.v1.MendResult
 	3,  // 35: glimway.v1.SessionResponse.state:type_name -> glimway.v1.PlayerState
-	40, // 36: glimway.v1.SessionResponse.world_choice:type_name -> glimway.v1.WorldChoice
+	42, // 36: glimway.v1.SessionResponse.world_choice:type_name -> glimway.v1.WorldChoice
 	3,  // 37: glimway.v1.StateResponse.state:type_name -> glimway.v1.PlayerState
 	3,  // 38: glimway.v1.PlayResponse.state:type_name -> glimway.v1.PlayerState
 	39, // [39:39] is the sub-list for method output_type

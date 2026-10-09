@@ -6,7 +6,7 @@
  * parse.ts as before.
  */
 import { fromJson, type JsonValue } from '@bufbuild/protobuf';
-import { WorldChoiceSchema, WorldViewSchema, WorldMoveResultSchema, type WorldRef as GeneratedWorldRef, type WorldView as GeneratedWorldView, type WorldMoveResult } from '../gen/glimway/v1/world_pb.js';
+import { WorldChoiceSchema, WorldViewSchema, WorldMoveResultSchema, WorldLeaveResultSchema, type WorldRef as GeneratedWorldRef, type WorldView as GeneratedWorldView, type WorldMoveResult, type WorldLeaveResult } from '../gen/glimway/v1/world_pb.js';
 import { ApiError } from './errors.ts';
 import { parseSnapshot } from './parse.ts';
 import type { Snapshot } from './types.ts';
@@ -20,7 +20,9 @@ function worldRef(ref: GeneratedWorldRef | undefined): WorldRef | null {
   if (!ref) return null;
   const { $typeName, $unknown, ...out } = ref;
   void $typeName;
-  return out;
+  // The display name is capped like the old parser's (and the server caps
+  // the column it reads at write time).
+  return { ...out, ownerName: out.ownerName.slice(0, 128) };
 }
 
 function refOrNull(raw: unknown): WorldRef | null {
@@ -138,11 +140,6 @@ export interface WorldMoveResponse extends Snapshot {
   result: { world: WorldView; from: string; leftHome: boolean; returned: number };
 }
 
-function result(raw: WorldMoveResult | undefined): WorldMoveResponse['result'] {
-  if (!raw) throw new Error('missing move result');
-  return { world: message(raw.world), from: raw.from, leftHome: raw.leftHome, returned: raw.returned };
-}
-
 /** A held first sign-in's question, or null when the answer is something else. */
 export function parseWorldChoice(raw: unknown): WorldChoice | null {
   const held = (raw as { worldChoice?: unknown } | null)?.worldChoice;
@@ -150,16 +147,31 @@ export function parseWorldChoice(raw: unknown): WorldChoice | null {
   return decode(() => {
     const c = fromJson(WorldChoiceSchema, held as JsonValue, { ignoreUnknownFields: true });
     if (!c.habiticaId) throw new Error('missing choice');
-    const choice: WorldChoice = { habiticaId: c.habiticaId, displayName: c.displayName, partyWorld: refOrNull(c.partyWorld), partyCanOpen: c.partyCanOpen, partyAdmitted: c.partyAdmitted };
+    const choice: WorldChoice = { habiticaId: c.habiticaId, displayName: c.displayName.slice(0, 128), partyWorld: refOrNull(c.partyWorld), partyCanOpen: c.partyCanOpen, partyAdmitted: c.partyAdmitted };
     return choice;
   });
 }
 
+function moveResult(raw: WorldMoveResult | WorldLeaveResult | undefined): WorldMoveResponse['result'] {
+  if (!raw) throw new Error('missing move result');
+  return { world: message(raw.world), from: raw.from, leftHome: raw.leftHome, returned: raw.returned };
+}
+
+/** POST /api/world/move (keyed): the answer sits under `worldMove`. */
 export function parseWorldMove(raw: unknown): WorldMoveResponse {
   return decode(() => {
     // The keyed answer carries its result under the Envelope's case name.
     const caseRaw = (raw as Record<string, unknown> | null)?.worldMove;
     if (!caseRaw || typeof caseRaw !== 'object') throw new Error('missing move result');
-    return { ...parseSnapshot(raw), result: result(fromJson(WorldMoveResultSchema, caseRaw as JsonValue, { ignoreUnknownFields: true })) };
+    return { ...parseSnapshot(raw), result: moveResult(fromJson(WorldMoveResultSchema, caseRaw as JsonValue, { ignoreUnknownFields: true })) };
+  });
+}
+
+/** POST /api/world/leave (keyed): its own Envelope case, own message. */
+export function parseWorldLeave(raw: unknown): WorldMoveResponse {
+  return decode(() => {
+    const caseRaw = (raw as Record<string, unknown> | null)?.worldLeave;
+    if (!caseRaw || typeof caseRaw !== 'object') throw new Error('missing leave result');
+    return { ...parseSnapshot(raw), result: moveResult(fromJson(WorldLeaveResultSchema, caseRaw as JsonValue, { ignoreUnknownFields: true })) };
   });
 }

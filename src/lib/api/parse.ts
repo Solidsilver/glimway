@@ -35,7 +35,7 @@ export { parseItems, parseItemsAction, parseItemsResult } from './items.ts';
 // The worlds (world.ts) and the village domains (village.ts) decode through
 // the generated messages.
 export { parseWorld, parseWorldChoice, parseWorldMove } from './world.ts';
-export { parseStorage, parseStorageMove, parseCraft, parseHearthCraft, parseDeskCopy, parseMail, parseMailAction, parseCommons, parseProjects, parseContribute, parseRepairs, parseMend } from './village.ts';
+export { parseStorage, parseStorageMove, parseCraft, parseHearthCraft, parseDeskCopy, parseMail, parseMailSend, parseMailClaim, parseMailRecall, parseCommons, parseProjects, parseContribute, parseRepairs, parseMend } from './village.ts';
 
 type Obj = Record<string, unknown>;
 

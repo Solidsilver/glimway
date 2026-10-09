@@ -11,11 +11,12 @@ import contract from '../../../content/contract.json' with { type: 'json' };
  *   game/papers.ts still calls it: TODO(C2), donations go through the
  *   operation queue and the local half goes with it.
  *
- * Server contract (server/internal/api/library.go):
- *   GET  /api/library        → 200 { shelves: [{ paperId, donatedBy, donatedAt }] }
- *   POST /api/library/donate   { paperId, key }
- *                            → 200 { entry: { paperId, donatedBy, donatedAt } }
- *                            → 409 { error: { code: 'already-shelved' }, entry }
+ * Server contract (server/internal/api/library.go, village.proto):
+ *   GET  /api/library        → 200 { state, result: { shelves: [{ paperId, donatedBy, donatedAt }] } }
+ *                              (the adapter flattens the mixed envelope before parsing)
+ *   POST /api/library/donate   { paperId, op, where }
+ *                            → 200 { state, libraryDonate: { entry: { paperId, donatedBy, donatedAt } } }
+ *                            → 409 { error: { code: 'already-shelved' } }
  *                                  (no entry for a starting-shelf paper)
  *                            → 403 { error: { code: 'not-held' } }
  *                            → 422 { error: { code: 'unknown-paper' } }

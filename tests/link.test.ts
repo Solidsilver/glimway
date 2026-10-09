@@ -262,7 +262,19 @@ test('things the server decides need a connection; never-sent ones go when it do
   assert.deepEqual(r.link.outbox.map((e) => e.kind), ['mark']);
 });
 
-const lookup = (operation: unknown, state = S({ version: 2 })): Answer => ({ body: { state, result: { operation } } });
+// The reconciliation read's wire shape (operations.proto): the operation's
+// fields are always present (null when unset), per EmitUnpopulated.
+const lookup = (operation: unknown, state = S({ version: 2 })): Answer => ({
+  body: {
+    state,
+    result: {
+      operation: operation === null ? null : {
+        payloadHash: 'h', refused: null, result: null, resultType: '',
+        ...(operation as Record<string, unknown>),
+      },
+    },
+  },
+});
 const lookupPath = (route: string, key: string) => `GET /api/operations/result?route=${encodeURIComponent(route)}&key=${encodeURIComponent(key)}`;
 
 test('idempotency-mismatch, a different payload committed: that action is not this one, its prediction goes, the queue goes on', async (t) => {

@@ -131,8 +131,8 @@ func (a *Server) projectContribute(w http.ResponseWriter, r *http.Request) error
 		return err
 	}
 	given := map[string]int{}
-	for id, n := range req.Materials {
-		given[id] = int(n)
+	for material, n := range req.Materials {
+		given[material] = int(n)
 	}
 	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		def, ok := content.ProjectFor(id)

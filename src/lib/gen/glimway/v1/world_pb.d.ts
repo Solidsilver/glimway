@@ -402,3 +402,37 @@ export declare type WorldMoveResult = Message<"glimway.v1.WorldMoveResult"> & {
  */
 export declare const WorldMoveResultSchema: GenMessage<WorldMoveResult>;
 
+/**
+ * A leave's answer is its own message: the Envelope's result cases resolve
+ * by message type name, so two cases may not share one.
+ *
+ * @generated from message glimway.v1.WorldLeaveResult
+ */
+export declare type WorldLeaveResult = Message<"glimway.v1.WorldLeaveResult"> & {
+  /**
+   * @generated from field: glimway.v1.WorldView world = 1;
+   */
+  world?: WorldView | undefined;
+
+  /**
+   * @generated from field: string from = 2;
+   */
+  from: string;
+
+  /**
+   * @generated from field: bool left_home = 3;
+   */
+  leftHome: boolean;
+
+  /**
+   * @generated from field: int32 returned = 4;
+   */
+  returned: number;
+};
+
+/**
+ * Describes the message glimway.v1.WorldLeaveResult.
+ * Use `create(WorldLeaveResultSchema)` to create a new message.
+ */
+export declare const WorldLeaveResultSchema: GenMessage<WorldLeaveResult>;
+

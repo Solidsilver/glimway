@@ -796,6 +796,76 @@ func (x *WorldMoveResult) GetReturned() int32 {
 	return 0
 }
 
+// A leave's answer is its own message: the Envelope's result cases resolve
+// by message type name, so two cases may not share one.
+type WorldLeaveResult struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	World         *WorldView             `protobuf:"bytes,1,opt,name=world,proto3" json:"world,omitempty"`
+	From          string                 `protobuf:"bytes,2,opt,name=from,proto3" json:"from,omitempty"`
+	LeftHome      bool                   `protobuf:"varint,3,opt,name=left_home,json=leftHome,proto3" json:"left_home,omitempty"`
+	Returned      int32                  `protobuf:"varint,4,opt,name=returned,proto3" json:"returned,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WorldLeaveResult) Reset() {
+	*x = WorldLeaveResult{}
+	mi := &file_glimway_v1_world_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WorldLeaveResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WorldLeaveResult) ProtoMessage() {}
+
+func (x *WorldLeaveResult) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_world_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WorldLeaveResult.ProtoReflect.Descriptor instead.
+func (*WorldLeaveResult) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_world_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *WorldLeaveResult) GetWorld() *WorldView {
+	if x != nil {
+		return x.World
+	}
+	return nil
+}
+
+func (x *WorldLeaveResult) GetFrom() string {
+	if x != nil {
+		return x.From
+	}
+	return ""
+}
+
+func (x *WorldLeaveResult) GetLeftHome() bool {
+	if x != nil {
+		return x.LeftHome
+	}
+	return false
+}
+
+func (x *WorldLeaveResult) GetReturned() int32 {
+	if x != nil {
+		return x.Returned
+	}
+	return 0
+}
+
 var File_glimway_v1_world_proto protoreflect.FileDescriptor
 
 const file_glimway_v1_world_proto_rawDesc = "" +
@@ -864,6 +934,11 @@ const file_glimway_v1_world_proto_rawDesc = "" +
 	"\x05world\x18\x01 \x01(\v2\x15.glimway.v1.WorldViewR\x05world\x12\x12\n" +
 	"\x04from\x18\x02 \x01(\tR\x04from\x12\x1b\n" +
 	"\tleft_home\x18\x03 \x01(\bR\bleftHome\x12\x1a\n" +
+	"\breturned\x18\x04 \x01(\x05R\breturned\"\x8c\x01\n" +
+	"\x10WorldLeaveResult\x12+\n" +
+	"\x05world\x18\x01 \x01(\v2\x15.glimway.v1.WorldViewR\x05world\x12\x12\n" +
+	"\x04from\x18\x02 \x01(\tR\x04from\x12\x1b\n" +
+	"\tleft_home\x18\x03 \x01(\bR\bleftHome\x12\x1a\n" +
 	"\breturned\x18\x04 \x01(\x05R\breturnedB1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
 
 var (
@@ -878,7 +953,7 @@ func file_glimway_v1_world_proto_rawDescGZIP() []byte {
 	return file_glimway_v1_world_proto_rawDescData
 }
 
-var file_glimway_v1_world_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_glimway_v1_world_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
 var file_glimway_v1_world_proto_goTypes = []any{
 	(*WorldRef)(nil),           // 0: glimway.v1.WorldRef
 	(*WorldChoice)(nil),        // 1: glimway.v1.WorldChoice
@@ -891,8 +966,9 @@ var file_glimway_v1_world_proto_goTypes = []any{
 	(*WorldMoveRequest)(nil),   // 8: glimway.v1.WorldMoveRequest
 	(*WorldLeaveRequest)(nil),  // 9: glimway.v1.WorldLeaveRequest
 	(*WorldMoveResult)(nil),    // 10: glimway.v1.WorldMoveResult
-	(*OpHeader)(nil),           // 11: glimway.v1.OpHeader
-	(*Where)(nil),              // 12: glimway.v1.Where
+	(*WorldLeaveResult)(nil),   // 11: glimway.v1.WorldLeaveResult
+	(*OpHeader)(nil),           // 12: glimway.v1.OpHeader
+	(*Where)(nil),              // 13: glimway.v1.Where
 }
 var file_glimway_v1_world_proto_depIdxs = []int32{
 	0,  // 0: glimway.v1.WorldChoice.party_world:type_name -> glimway.v1.WorldRef
@@ -901,16 +977,17 @@ var file_glimway_v1_world_proto_depIdxs = []int32{
 	0,  // 3: glimway.v1.WorldView.own_world:type_name -> glimway.v1.WorldRef
 	2,  // 4: glimway.v1.WorldView.leaving:type_name -> glimway.v1.WorldLeaving
 	3,  // 5: glimway.v1.WorldView.leaver:type_name -> glimway.v1.WorldLeaver
-	11, // 6: glimway.v1.WorldMoveRequest.op:type_name -> glimway.v1.OpHeader
-	12, // 7: glimway.v1.WorldMoveRequest.where:type_name -> glimway.v1.Where
-	11, // 8: glimway.v1.WorldLeaveRequest.op:type_name -> glimway.v1.OpHeader
-	12, // 9: glimway.v1.WorldLeaveRequest.where:type_name -> glimway.v1.Where
+	12, // 6: glimway.v1.WorldMoveRequest.op:type_name -> glimway.v1.OpHeader
+	13, // 7: glimway.v1.WorldMoveRequest.where:type_name -> glimway.v1.Where
+	12, // 8: glimway.v1.WorldLeaveRequest.op:type_name -> glimway.v1.OpHeader
+	13, // 9: glimway.v1.WorldLeaveRequest.where:type_name -> glimway.v1.Where
 	4,  // 10: glimway.v1.WorldMoveResult.world:type_name -> glimway.v1.WorldView
-	11, // [11:11] is the sub-list for method output_type
-	11, // [11:11] is the sub-list for method input_type
-	11, // [11:11] is the sub-list for extension type_name
-	11, // [11:11] is the sub-list for extension extendee
-	0,  // [0:11] is the sub-list for field type_name
+	4,  // 11: glimway.v1.WorldLeaveResult.world:type_name -> glimway.v1.WorldView
+	12, // [12:12] is the sub-list for method output_type
+	12, // [12:12] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_world_proto_init() }
@@ -925,7 +1002,7 @@ func file_glimway_v1_world_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_glimway_v1_world_proto_rawDesc), len(file_glimway_v1_world_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   12,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

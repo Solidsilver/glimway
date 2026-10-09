@@ -373,7 +373,7 @@ func (a *Server) mailRecall(w http.ResponseWriter, r *http.Request) error {
 			return nil, err
 		}
 		mail, next, nextPending := mailPageFields(list)
-		return &contract.MailActionResult{MailId: id, Asset: assetProto(asset), Mail: mail, NextCursor: next, NextPendingCursor: nextPending, Inventory: countsProto(inventory)}, nil
+		return &contract.MailRecallResult{MailId: id, Asset: assetProto(asset), Mail: mail, NextCursor: next, NextPendingCursor: nextPending, Inventory: countsProto(inventory)}, nil
 	})
 }
 

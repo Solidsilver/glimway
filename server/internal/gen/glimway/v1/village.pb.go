@@ -1003,68 +1003,6 @@ func (x *MailView) GetReturnReason() *wrapperspb.StringValue {
 	return nil
 }
 
-type MailPage struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	Mail  []*MailView            `protobuf:"bytes,1,rep,name=mail,proto3" json:"mail,omitempty"`
-	// History continues at ?cursor= (opaque); pending mail repeats on every
-	// page and continues at ?pendingCursor= (only for legacy backlogs).
-	NextCursor        *wrapperspb.StringValue `protobuf:"bytes,2,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
-	NextPendingCursor *wrapperspb.StringValue `protobuf:"bytes,3,opt,name=next_pending_cursor,json=nextPendingCursor,proto3" json:"next_pending_cursor,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
-}
-
-func (x *MailPage) Reset() {
-	*x = MailPage{}
-	mi := &file_glimway_v1_village_proto_msgTypes[13]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *MailPage) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*MailPage) ProtoMessage() {}
-
-func (x *MailPage) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_village_proto_msgTypes[13]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use MailPage.ProtoReflect.Descriptor instead.
-func (*MailPage) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_village_proto_rawDescGZIP(), []int{13}
-}
-
-func (x *MailPage) GetMail() []*MailView {
-	if x != nil {
-		return x.Mail
-	}
-	return nil
-}
-
-func (x *MailPage) GetNextCursor() *wrapperspb.StringValue {
-	if x != nil {
-		return x.NextCursor
-	}
-	return nil
-}
-
-func (x *MailPage) GetNextPendingCursor() *wrapperspb.StringValue {
-	if x != nil {
-		return x.NextPendingCursor
-	}
-	return nil
-}
-
 type MailReadResult struct {
 	state             protoimpl.MessageState  `protogen:"open.v1"`
 	Mail              []*MailView             `protobuf:"bytes,1,rep,name=mail,proto3" json:"mail,omitempty"`
@@ -1077,7 +1015,7 @@ type MailReadResult struct {
 
 func (x *MailReadResult) Reset() {
 	*x = MailReadResult{}
-	mi := &file_glimway_v1_village_proto_msgTypes[14]
+	mi := &file_glimway_v1_village_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1089,7 +1027,7 @@ func (x *MailReadResult) String() string {
 func (*MailReadResult) ProtoMessage() {}
 
 func (x *MailReadResult) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_village_proto_msgTypes[14]
+	mi := &file_glimway_v1_village_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1102,7 +1040,7 @@ func (x *MailReadResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MailReadResult.ProtoReflect.Descriptor instead.
 func (*MailReadResult) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_village_proto_rawDescGZIP(), []int{14}
+	return file_glimway_v1_village_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *MailReadResult) GetMail() []*MailView {
@@ -1145,7 +1083,7 @@ type MailSendRequest struct {
 
 func (x *MailSendRequest) Reset() {
 	*x = MailSendRequest{}
-	mi := &file_glimway_v1_village_proto_msgTypes[15]
+	mi := &file_glimway_v1_village_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1157,7 +1095,7 @@ func (x *MailSendRequest) String() string {
 func (*MailSendRequest) ProtoMessage() {}
 
 func (x *MailSendRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_village_proto_msgTypes[15]
+	mi := &file_glimway_v1_village_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1170,7 +1108,7 @@ func (x *MailSendRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MailSendRequest.ProtoReflect.Descriptor instead.
 func (*MailSendRequest) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_village_proto_rawDescGZIP(), []int{15}
+	return file_glimway_v1_village_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *MailSendRequest) GetOp() *OpHeader {
@@ -1214,7 +1152,7 @@ type MailSendResult struct {
 
 func (x *MailSendResult) Reset() {
 	*x = MailSendResult{}
-	mi := &file_glimway_v1_village_proto_msgTypes[16]
+	mi := &file_glimway_v1_village_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1226,7 +1164,7 @@ func (x *MailSendResult) String() string {
 func (*MailSendResult) ProtoMessage() {}
 
 func (x *MailSendResult) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_village_proto_msgTypes[16]
+	mi := &file_glimway_v1_village_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1239,7 +1177,7 @@ func (x *MailSendResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MailSendResult.ProtoReflect.Descriptor instead.
 func (*MailSendResult) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_village_proto_rawDescGZIP(), []int{16}
+	return file_glimway_v1_village_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *MailSendResult) GetMailId() string {
@@ -1288,7 +1226,7 @@ type MailKeyedRequest struct {
 
 func (x *MailKeyedRequest) Reset() {
 	*x = MailKeyedRequest{}
-	mi := &file_glimway_v1_village_proto_msgTypes[17]
+	mi := &file_glimway_v1_village_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1300,7 +1238,7 @@ func (x *MailKeyedRequest) String() string {
 func (*MailKeyedRequest) ProtoMessage() {}
 
 func (x *MailKeyedRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_village_proto_msgTypes[17]
+	mi := &file_glimway_v1_village_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1313,7 +1251,7 @@ func (x *MailKeyedRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MailKeyedRequest.ProtoReflect.Descriptor instead.
 func (*MailKeyedRequest) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_village_proto_rawDescGZIP(), []int{17}
+	return file_glimway_v1_village_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *MailKeyedRequest) GetOp() *OpHeader {
@@ -1344,7 +1282,7 @@ type MailActionResult struct {
 
 func (x *MailActionResult) Reset() {
 	*x = MailActionResult{}
-	mi := &file_glimway_v1_village_proto_msgTypes[18]
+	mi := &file_glimway_v1_village_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1356,7 +1294,7 @@ func (x *MailActionResult) String() string {
 func (*MailActionResult) ProtoMessage() {}
 
 func (x *MailActionResult) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_village_proto_msgTypes[18]
+	mi := &file_glimway_v1_village_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1369,7 +1307,7 @@ func (x *MailActionResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MailActionResult.ProtoReflect.Descriptor instead.
 func (*MailActionResult) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_village_proto_rawDescGZIP(), []int{18}
+	return file_glimway_v1_village_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *MailActionResult) GetMailId() string {
@@ -1408,6 +1346,92 @@ func (x *MailActionResult) GetNextPendingCursor() *wrapperspb.StringValue {
 }
 
 func (x *MailActionResult) GetInventory() *AssetCounts {
+	if x != nil {
+		return x.Inventory
+	}
+	return nil
+}
+
+// A recall's answer is its own message: the Envelope's result cases resolve
+// by message type name, so two cases may not share one.
+type MailRecallResult struct {
+	state             protoimpl.MessageState  `protogen:"open.v1"`
+	MailId            string                  `protobuf:"bytes,1,opt,name=mail_id,json=mailId,proto3" json:"mail_id,omitempty"`
+	Asset             *Asset                  `protobuf:"bytes,2,opt,name=asset,proto3" json:"asset,omitempty"`
+	Mail              []*MailView             `protobuf:"bytes,3,rep,name=mail,proto3" json:"mail,omitempty"`
+	NextCursor        *wrapperspb.StringValue `protobuf:"bytes,4,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
+	NextPendingCursor *wrapperspb.StringValue `protobuf:"bytes,5,opt,name=next_pending_cursor,json=nextPendingCursor,proto3" json:"next_pending_cursor,omitempty"`
+	Inventory         *AssetCounts            `protobuf:"bytes,6,opt,name=inventory,proto3" json:"inventory,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *MailRecallResult) Reset() {
+	*x = MailRecallResult{}
+	mi := &file_glimway_v1_village_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MailRecallResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MailRecallResult) ProtoMessage() {}
+
+func (x *MailRecallResult) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_village_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MailRecallResult.ProtoReflect.Descriptor instead.
+func (*MailRecallResult) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_village_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *MailRecallResult) GetMailId() string {
+	if x != nil {
+		return x.MailId
+	}
+	return ""
+}
+
+func (x *MailRecallResult) GetAsset() *Asset {
+	if x != nil {
+		return x.Asset
+	}
+	return nil
+}
+
+func (x *MailRecallResult) GetMail() []*MailView {
+	if x != nil {
+		return x.Mail
+	}
+	return nil
+}
+
+func (x *MailRecallResult) GetNextCursor() *wrapperspb.StringValue {
+	if x != nil {
+		return x.NextCursor
+	}
+	return nil
+}
+
+func (x *MailRecallResult) GetNextPendingCursor() *wrapperspb.StringValue {
+	if x != nil {
+		return x.NextPendingCursor
+	}
+	return nil
+}
+
+func (x *MailRecallResult) GetInventory() *AssetCounts {
 	if x != nil {
 		return x.Inventory
 	}
@@ -2765,12 +2789,7 @@ const file_glimway_v1_village_proto_rawDesc = "" +
 	"\vreturned_at\x18\n" +
 	" \x01(\v2\x1c.google.protobuf.DoubleValueR\n" +
 	"returnedAt\x12A\n" +
-	"\rreturn_reason\x18\v \x01(\v2\x1c.google.protobuf.StringValueR\freturnReason\"\xc1\x01\n" +
-	"\bMailPage\x12(\n" +
-	"\x04mail\x18\x01 \x03(\v2\x14.glimway.v1.MailViewR\x04mail\x12=\n" +
-	"\vnext_cursor\x18\x02 \x01(\v2\x1c.google.protobuf.StringValueR\n" +
-	"nextCursor\x12L\n" +
-	"\x13next_pending_cursor\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\x11nextPendingCursor\"\xfe\x01\n" +
+	"\rreturn_reason\x18\v \x01(\v2\x1c.google.protobuf.StringValueR\freturnReason\"\xfe\x01\n" +
 	"\x0eMailReadResult\x12(\n" +
 	"\x04mail\x18\x01 \x03(\v2\x14.glimway.v1.MailViewR\x04mail\x12=\n" +
 	"\vnext_cursor\x18\x02 \x01(\v2\x1c.google.protobuf.StringValueR\n" +
@@ -2793,6 +2812,14 @@ const file_glimway_v1_village_proto_rawDesc = "" +
 	"\x02op\x18\x01 \x01(\v2\x14.glimway.v1.OpHeaderR\x02op\x12'\n" +
 	"\x05where\x18\x02 \x01(\v2\x11.glimway.v1.WhereR\x05where\"\xc2\x02\n" +
 	"\x10MailActionResult\x12\x17\n" +
+	"\amail_id\x18\x01 \x01(\tR\x06mailId\x12'\n" +
+	"\x05asset\x18\x02 \x01(\v2\x11.glimway.v1.AssetR\x05asset\x12(\n" +
+	"\x04mail\x18\x03 \x03(\v2\x14.glimway.v1.MailViewR\x04mail\x12=\n" +
+	"\vnext_cursor\x18\x04 \x01(\v2\x1c.google.protobuf.StringValueR\n" +
+	"nextCursor\x12L\n" +
+	"\x13next_pending_cursor\x18\x05 \x01(\v2\x1c.google.protobuf.StringValueR\x11nextPendingCursor\x125\n" +
+	"\tinventory\x18\x06 \x01(\v2\x17.glimway.v1.AssetCountsR\tinventory\"\xc2\x02\n" +
+	"\x10MailRecallResult\x12\x17\n" +
 	"\amail_id\x18\x01 \x01(\tR\x06mailId\x12'\n" +
 	"\x05asset\x18\x02 \x01(\v2\x11.glimway.v1.AssetR\x05asset\x12(\n" +
 	"\x04mail\x18\x03 \x03(\v2\x14.glimway.v1.MailViewR\x04mail\x12=\n" +
@@ -2954,12 +2981,12 @@ var file_glimway_v1_village_proto_goTypes = []any{
 	(*LibraryDonateRequest)(nil),   // 10: glimway.v1.LibraryDonateRequest
 	(*LibraryDonateResult)(nil),    // 11: glimway.v1.LibraryDonateResult
 	(*MailView)(nil),               // 12: glimway.v1.MailView
-	(*MailPage)(nil),               // 13: glimway.v1.MailPage
-	(*MailReadResult)(nil),         // 14: glimway.v1.MailReadResult
-	(*MailSendRequest)(nil),        // 15: glimway.v1.MailSendRequest
-	(*MailSendResult)(nil),         // 16: glimway.v1.MailSendResult
-	(*MailKeyedRequest)(nil),       // 17: glimway.v1.MailKeyedRequest
-	(*MailActionResult)(nil),       // 18: glimway.v1.MailActionResult
+	(*MailReadResult)(nil),         // 13: glimway.v1.MailReadResult
+	(*MailSendRequest)(nil),        // 14: glimway.v1.MailSendRequest
+	(*MailSendResult)(nil),         // 15: glimway.v1.MailSendResult
+	(*MailKeyedRequest)(nil),       // 16: glimway.v1.MailKeyedRequest
+	(*MailActionResult)(nil),       // 17: glimway.v1.MailActionResult
+	(*MailRecallResult)(nil),       // 18: glimway.v1.MailRecallResult
 	(*Person)(nil),                 // 19: glimway.v1.Person
 	(*GateView)(nil),               // 20: glimway.v1.GateView
 	(*DeedInvite)(nil),             // 21: glimway.v1.DeedInvite
@@ -3029,62 +3056,64 @@ var file_glimway_v1_village_proto_depIdxs = []int32{
 	46, // 32: glimway.v1.MailView.claimed_at:type_name -> google.protobuf.DoubleValue
 	46, // 33: glimway.v1.MailView.returned_at:type_name -> google.protobuf.DoubleValue
 	47, // 34: glimway.v1.MailView.return_reason:type_name -> google.protobuf.StringValue
-	12, // 35: glimway.v1.MailPage.mail:type_name -> glimway.v1.MailView
-	47, // 36: glimway.v1.MailPage.next_cursor:type_name -> google.protobuf.StringValue
-	47, // 37: glimway.v1.MailPage.next_pending_cursor:type_name -> google.protobuf.StringValue
-	12, // 38: glimway.v1.MailReadResult.mail:type_name -> glimway.v1.MailView
-	47, // 39: glimway.v1.MailReadResult.next_cursor:type_name -> google.protobuf.StringValue
-	47, // 40: glimway.v1.MailReadResult.next_pending_cursor:type_name -> google.protobuf.StringValue
-	42, // 41: glimway.v1.MailReadResult.inventory:type_name -> glimway.v1.AssetCounts
-	43, // 42: glimway.v1.MailSendRequest.op:type_name -> glimway.v1.OpHeader
-	44, // 43: glimway.v1.MailSendRequest.where:type_name -> glimway.v1.Where
-	45, // 44: glimway.v1.MailSendRequest.asset:type_name -> glimway.v1.Asset
-	12, // 45: glimway.v1.MailSendResult.mail:type_name -> glimway.v1.MailView
-	47, // 46: glimway.v1.MailSendResult.next_cursor:type_name -> google.protobuf.StringValue
-	47, // 47: glimway.v1.MailSendResult.next_pending_cursor:type_name -> google.protobuf.StringValue
-	42, // 48: glimway.v1.MailSendResult.inventory:type_name -> glimway.v1.AssetCounts
-	43, // 49: glimway.v1.MailKeyedRequest.op:type_name -> glimway.v1.OpHeader
-	44, // 50: glimway.v1.MailKeyedRequest.where:type_name -> glimway.v1.Where
-	45, // 51: glimway.v1.MailActionResult.asset:type_name -> glimway.v1.Asset
-	12, // 52: glimway.v1.MailActionResult.mail:type_name -> glimway.v1.MailView
-	47, // 53: glimway.v1.MailActionResult.next_cursor:type_name -> google.protobuf.StringValue
-	47, // 54: glimway.v1.MailActionResult.next_pending_cursor:type_name -> google.protobuf.StringValue
-	42, // 55: glimway.v1.MailActionResult.inventory:type_name -> glimway.v1.AssetCounts
-	47, // 56: glimway.v1.GateView.home_id:type_name -> google.protobuf.StringValue
-	48, // 57: glimway.v1.GateView.members:type_name -> glimway.v1.HomeMember
-	49, // 58: glimway.v1.GateView.price:type_name -> google.protobuf.Int32Value
-	19, // 59: glimway.v1.DeedInvite.from:type_name -> glimway.v1.Person
-	19, // 60: glimway.v1.DeedInvite.to:type_name -> glimway.v1.Person
-	46, // 61: glimway.v1.DeedInvite.from_confirmed_at:type_name -> google.protobuf.DoubleValue
-	46, // 62: glimway.v1.DeedInvite.to_confirmed_at:type_name -> google.protobuf.DoubleValue
-	20, // 63: glimway.v1.CommonsResult.gates:type_name -> glimway.v1.GateView
-	22, // 64: glimway.v1.CommonsResult.mine:type_name -> glimway.v1.CommonsMine
-	21, // 65: glimway.v1.CommonsResult.invites:type_name -> glimway.v1.DeedInvite
-	36, // 66: glimway.v1.ProjectView.required:type_name -> glimway.v1.ProjectView.RequiredEntry
-	37, // 67: glimway.v1.ProjectView.contributed:type_name -> glimway.v1.ProjectView.ContributedEntry
-	38, // 68: glimway.v1.ProjectView.mine:type_name -> glimway.v1.ProjectView.MineEntry
-	46, // 69: glimway.v1.ProjectView.completed_at:type_name -> google.protobuf.DoubleValue
-	47, // 70: glimway.v1.ProjectView.world_flag:type_name -> google.protobuf.StringValue
-	24, // 71: glimway.v1.ProjectsResult.projects:type_name -> glimway.v1.ProjectView
-	43, // 72: glimway.v1.ContributeRequest.op:type_name -> glimway.v1.OpHeader
-	44, // 73: glimway.v1.ContributeRequest.where:type_name -> glimway.v1.Where
-	39, // 74: glimway.v1.ContributeRequest.materials:type_name -> glimway.v1.ContributeRequest.MaterialsEntry
-	24, // 75: glimway.v1.ContributeResult.projects:type_name -> glimway.v1.ProjectView
-	40, // 76: glimway.v1.ContributeResult.materials:type_name -> glimway.v1.ContributeResult.MaterialsEntry
-	28, // 77: glimway.v1.ChoreView.pos:type_name -> glimway.v1.RepairPos
-	29, // 78: glimway.v1.RepairsResult.open:type_name -> glimway.v1.ChoreView
-	30, // 79: glimway.v1.RepairsResult.mended:type_name -> glimway.v1.MendedView
-	31, // 80: glimway.v1.RepairsResult.history:type_name -> glimway.v1.ChoreHistoryView
-	43, // 81: glimway.v1.MendRequest.op:type_name -> glimway.v1.OpHeader
-	44, // 82: glimway.v1.MendRequest.where:type_name -> glimway.v1.Where
-	32, // 83: glimway.v1.MendResult.repairs:type_name -> glimway.v1.RepairsResult
-	34, // 84: glimway.v1.MendResult.gift:type_name -> glimway.v1.RepairGift
-	50, // 85: glimway.v1.MendResult.items:type_name -> glimway.v1.ItemsView
-	86, // [86:86] is the sub-list for method output_type
-	86, // [86:86] is the sub-list for method input_type
-	86, // [86:86] is the sub-list for extension type_name
-	86, // [86:86] is the sub-list for extension extendee
-	0,  // [0:86] is the sub-list for field type_name
+	12, // 35: glimway.v1.MailReadResult.mail:type_name -> glimway.v1.MailView
+	47, // 36: glimway.v1.MailReadResult.next_cursor:type_name -> google.protobuf.StringValue
+	47, // 37: glimway.v1.MailReadResult.next_pending_cursor:type_name -> google.protobuf.StringValue
+	42, // 38: glimway.v1.MailReadResult.inventory:type_name -> glimway.v1.AssetCounts
+	43, // 39: glimway.v1.MailSendRequest.op:type_name -> glimway.v1.OpHeader
+	44, // 40: glimway.v1.MailSendRequest.where:type_name -> glimway.v1.Where
+	45, // 41: glimway.v1.MailSendRequest.asset:type_name -> glimway.v1.Asset
+	12, // 42: glimway.v1.MailSendResult.mail:type_name -> glimway.v1.MailView
+	47, // 43: glimway.v1.MailSendResult.next_cursor:type_name -> google.protobuf.StringValue
+	47, // 44: glimway.v1.MailSendResult.next_pending_cursor:type_name -> google.protobuf.StringValue
+	42, // 45: glimway.v1.MailSendResult.inventory:type_name -> glimway.v1.AssetCounts
+	43, // 46: glimway.v1.MailKeyedRequest.op:type_name -> glimway.v1.OpHeader
+	44, // 47: glimway.v1.MailKeyedRequest.where:type_name -> glimway.v1.Where
+	45, // 48: glimway.v1.MailActionResult.asset:type_name -> glimway.v1.Asset
+	12, // 49: glimway.v1.MailActionResult.mail:type_name -> glimway.v1.MailView
+	47, // 50: glimway.v1.MailActionResult.next_cursor:type_name -> google.protobuf.StringValue
+	47, // 51: glimway.v1.MailActionResult.next_pending_cursor:type_name -> google.protobuf.StringValue
+	42, // 52: glimway.v1.MailActionResult.inventory:type_name -> glimway.v1.AssetCounts
+	45, // 53: glimway.v1.MailRecallResult.asset:type_name -> glimway.v1.Asset
+	12, // 54: glimway.v1.MailRecallResult.mail:type_name -> glimway.v1.MailView
+	47, // 55: glimway.v1.MailRecallResult.next_cursor:type_name -> google.protobuf.StringValue
+	47, // 56: glimway.v1.MailRecallResult.next_pending_cursor:type_name -> google.protobuf.StringValue
+	42, // 57: glimway.v1.MailRecallResult.inventory:type_name -> glimway.v1.AssetCounts
+	47, // 58: glimway.v1.GateView.home_id:type_name -> google.protobuf.StringValue
+	48, // 59: glimway.v1.GateView.members:type_name -> glimway.v1.HomeMember
+	49, // 60: glimway.v1.GateView.price:type_name -> google.protobuf.Int32Value
+	19, // 61: glimway.v1.DeedInvite.from:type_name -> glimway.v1.Person
+	19, // 62: glimway.v1.DeedInvite.to:type_name -> glimway.v1.Person
+	46, // 63: glimway.v1.DeedInvite.from_confirmed_at:type_name -> google.protobuf.DoubleValue
+	46, // 64: glimway.v1.DeedInvite.to_confirmed_at:type_name -> google.protobuf.DoubleValue
+	20, // 65: glimway.v1.CommonsResult.gates:type_name -> glimway.v1.GateView
+	22, // 66: glimway.v1.CommonsResult.mine:type_name -> glimway.v1.CommonsMine
+	21, // 67: glimway.v1.CommonsResult.invites:type_name -> glimway.v1.DeedInvite
+	36, // 68: glimway.v1.ProjectView.required:type_name -> glimway.v1.ProjectView.RequiredEntry
+	37, // 69: glimway.v1.ProjectView.contributed:type_name -> glimway.v1.ProjectView.ContributedEntry
+	38, // 70: glimway.v1.ProjectView.mine:type_name -> glimway.v1.ProjectView.MineEntry
+	46, // 71: glimway.v1.ProjectView.completed_at:type_name -> google.protobuf.DoubleValue
+	47, // 72: glimway.v1.ProjectView.world_flag:type_name -> google.protobuf.StringValue
+	24, // 73: glimway.v1.ProjectsResult.projects:type_name -> glimway.v1.ProjectView
+	43, // 74: glimway.v1.ContributeRequest.op:type_name -> glimway.v1.OpHeader
+	44, // 75: glimway.v1.ContributeRequest.where:type_name -> glimway.v1.Where
+	39, // 76: glimway.v1.ContributeRequest.materials:type_name -> glimway.v1.ContributeRequest.MaterialsEntry
+	24, // 77: glimway.v1.ContributeResult.projects:type_name -> glimway.v1.ProjectView
+	40, // 78: glimway.v1.ContributeResult.materials:type_name -> glimway.v1.ContributeResult.MaterialsEntry
+	28, // 79: glimway.v1.ChoreView.pos:type_name -> glimway.v1.RepairPos
+	29, // 80: glimway.v1.RepairsResult.open:type_name -> glimway.v1.ChoreView
+	30, // 81: glimway.v1.RepairsResult.mended:type_name -> glimway.v1.MendedView
+	31, // 82: glimway.v1.RepairsResult.history:type_name -> glimway.v1.ChoreHistoryView
+	43, // 83: glimway.v1.MendRequest.op:type_name -> glimway.v1.OpHeader
+	44, // 84: glimway.v1.MendRequest.where:type_name -> glimway.v1.Where
+	32, // 85: glimway.v1.MendResult.repairs:type_name -> glimway.v1.RepairsResult
+	34, // 86: glimway.v1.MendResult.gift:type_name -> glimway.v1.RepairGift
+	50, // 87: glimway.v1.MendResult.items:type_name -> glimway.v1.ItemsView
+	88, // [88:88] is the sub-list for method output_type
+	88, // [88:88] is the sub-list for method input_type
+	88, // [88:88] is the sub-list for extension type_name
+	88, // [88:88] is the sub-list for extension extendee
+	0,  // [0:88] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_village_proto_init() }

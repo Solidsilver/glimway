@@ -81,6 +81,38 @@
     }
   },
   {
+    "name": "glimway.v1.CommittedOperation",
+    "case": "empty",
+    "json": {
+      "route": "",
+      "key": "",
+      "payload": null,
+      "payloadHash": "",
+      "version": 0,
+      "refused": null,
+      "result": null,
+      "resultCase": "",
+      "resultType": ""
+    }
+  },
+  {
+    "name": "glimway.v1.CommittedOperation",
+    "case": "populated",
+    "json": {
+      "route": "fixture",
+      "key": "fixture",
+      "payload": {
+        "fixture": null
+      },
+      "payloadHash": "fixture",
+      "version": 1,
+      "refused": "fixture",
+      "result": "fixture",
+      "resultCase": "fixture",
+      "resultType": "fixture"
+    }
+  },
+  {
     "name": "glimway.v1.CommonsMine",
     "case": "empty",
     "json": {
@@ -3299,16 +3331,17 @@
     }
   },
   {
-    "name": "glimway.v1.MailPage",
+    "name": "glimway.v1.MailReadResult",
     "case": "empty",
     "json": {
       "mail": [],
       "nextCursor": null,
-      "nextPendingCursor": null
+      "nextPendingCursor": null,
+      "inventory": null
     }
   },
   {
-    "name": "glimway.v1.MailPage",
+    "name": "glimway.v1.MailReadResult",
     "case": "populated",
     "json": {
       "mail": [
@@ -3333,13 +3366,57 @@
         }
       ],
       "nextCursor": "fixture",
-      "nextPendingCursor": "fixture"
+      "nextPendingCursor": "fixture",
+      "inventory": {
+        "materials": {
+          "fixture": 1
+        },
+        "items": {
+          "fixture": 1
+        },
+        "decorations": {
+          "fixture": 1
+        },
+        "instances": [
+          {
+            "id": "fixture",
+            "itemDef": "fixture",
+            "condition": 1,
+            "maxCondition": 1,
+            "usesLeft": 1,
+            "state": "fixture",
+            "wardenSet": true,
+            "dullness": 1,
+            "speed": 1,
+            "fittings": [
+              {
+                "id": "fixture",
+                "itemDef": "fixture",
+                "fitting": "fixture",
+                "condition": 1,
+                "maxCondition": 1,
+                "usesLeft": 1,
+                "maker": {
+                  "id": "fixture",
+                  "name": "fixture"
+                }
+              }
+            ],
+            "maker": {
+              "id": "fixture",
+              "name": "fixture"
+            }
+          }
+        ]
+      }
     }
   },
   {
-    "name": "glimway.v1.MailReadResult",
+    "name": "glimway.v1.MailRecallResult",
     "case": "empty",
     "json": {
+      "mailId": "",
+      "asset": null,
       "mail": [],
       "nextCursor": null,
       "nextPendingCursor": null,
@@ -3347,9 +3424,17 @@
     }
   },
   {
-    "name": "glimway.v1.MailReadResult",
+    "name": "glimway.v1.MailRecallResult",
     "case": "populated",
     "json": {
+      "mailId": "fixture",
+      "asset": {
+        "kind": "fixture",
+        "id": "fixture",
+        "qty": 1,
+        "instance": "fixture",
+        "maker": "fixture"
+      },
       "mail": [
         {
           "id": "fixture",
@@ -3820,6 +3905,32 @@
         "client": "fixture",
         "generation": "fixture",
         "seq": 1
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.OperationsResult",
+    "case": "empty",
+    "json": {
+      "operation": null
+    }
+  },
+  {
+    "name": "glimway.v1.OperationsResult",
+    "case": "populated",
+    "json": {
+      "operation": {
+        "route": "fixture",
+        "key": "fixture",
+        "payload": {
+          "fixture": null
+        },
+        "payloadHash": "fixture",
+        "version": 1,
+        "refused": "fixture",
+        "result": "fixture",
+        "resultCase": "fixture",
+        "resultType": "fixture"
       }
     }
   },
@@ -6658,6 +6769,73 @@
         "x": 1,
         "y": 1
       }
+    }
+  },
+  {
+    "name": "glimway.v1.WorldLeaveResult",
+    "case": "empty",
+    "json": {
+      "world": null,
+      "from": "",
+      "leftHome": false,
+      "returned": 0
+    }
+  },
+  {
+    "name": "glimway.v1.WorldLeaveResult",
+    "case": "populated",
+    "json": {
+      "world": {
+        "world": {
+          "id": "fixture",
+          "ownerId": "fixture",
+          "ownerName": "fixture",
+          "members": 1,
+          "ownerHere": true,
+          "party": true
+        },
+        "isOwner": true,
+        "inParty": true,
+        "partyHome": true,
+        "partyWorld": {
+          "id": "fixture",
+          "ownerId": "fixture",
+          "ownerName": "fixture",
+          "members": 1,
+          "ownerHere": true,
+          "party": true
+        },
+        "partyCanOpen": true,
+        "ownWorld": {
+          "id": "fixture",
+          "ownerId": "fixture",
+          "ownerName": "fixture",
+          "members": 1,
+          "ownerHere": true,
+          "party": true
+        },
+        "prompt": true,
+        "leaving": {
+          "gate": 1,
+          "last": true,
+          "outgoing": 1,
+          "incoming": 1,
+          "wardenTools": 1,
+          "deedCost": 1
+        },
+        "moveOpensAt": 1,
+        "moveOpensIn": 1,
+        "leaver": {
+          "leftAt": 1,
+          "moveOutAt": 1,
+          "moveOutIn": 1,
+          "hasOwn": true
+        },
+        "movedOutAt": 1
+      },
+      "from": "fixture",
+      "leftHome": true,
+      "returned": 1
     }
   },
   {

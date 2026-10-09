@@ -7,8 +7,8 @@ import type { Message } from "@bufbuild/protobuf";
 import type { HabiticaProfile } from "./profile_pb.js";
 import type { Place, Vitals } from "./op_pb.js";
 import type { FallResult, MarkResult, ProfileResult, QuestStepResult, ReportResult, SettleEchoResult, SpendResult, TakePaperResult, WildsClaimResult, WildsLanternResult } from "./operations_pb.js";
-import type { ContributeResult, CraftResult, DeskCopyResult, HearthCraftResult, LibraryDonateResult, MailActionResult, MailSendResult, MendResult, WorkshopView } from "./village_pb.js";
-import type { WorldChoice, WorldMoveResult } from "./world_pb.js";
+import type { ContributeResult, CraftResult, DeskCopyResult, HearthCraftResult, LibraryDonateResult, MailActionResult, MailRecallResult, MailSendResult, MendResult, WorkshopView } from "./village_pb.js";
+import type { WorldChoice, WorldLeaveResult, WorldMoveResult } from "./world_pb.js";
 
 /**
  * Describes the file glimway/v1/state.proto.
@@ -322,9 +322,9 @@ export declare type Envelope = Message<"glimway.v1.Envelope"> & {
     case: "mailClaim";
   } | {
     /**
-     * @generated from field: glimway.v1.MailActionResult mail_recall = 23;
+     * @generated from field: glimway.v1.MailRecallResult mail_recall = 23;
      */
-    value: MailActionResult;
+    value: MailRecallResult;
     case: "mailRecall";
   } | {
     /**
@@ -358,9 +358,9 @@ export declare type Envelope = Message<"glimway.v1.Envelope"> & {
     case: "worldMove";
   } | {
     /**
-     * @generated from field: glimway.v1.WorldMoveResult world_leave = 29;
+     * @generated from field: glimway.v1.WorldLeaveResult world_leave = 29;
      */
-    value: WorldMoveResult;
+    value: WorldLeaveResult;
     case: "worldLeave";
   } | {
     /**

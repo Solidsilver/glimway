@@ -80,3 +80,11 @@ message WorldMoveResult {
   bool left_home = 3;
   int32 returned = 4;
 }
+// A leave's answer is its own message: the Envelope's result cases resolve
+// by message type name, so two cases may not share one.
+message WorldLeaveResult {
+  WorldView world = 1;
+  string from = 2;
+  bool left_home = 3;
+  int32 returned = 4;
+}

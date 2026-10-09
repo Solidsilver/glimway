@@ -10,8 +10,8 @@
  */
 import { fromJson, type JsonValue } from '@bufbuild/protobuf';
 import {
-  LibraryEntrySchema, LibraryDonateResultSchema, type LibraryEntry as GeneratedLibraryEntry,
-  MailReadResultSchema, MailActionResultSchema, type MailView as GeneratedMailView,
+  LibraryDonateResultSchema,
+  MailReadResultSchema, MailSendResultSchema, MailActionResultSchema, MailRecallResultSchema, type MailView as GeneratedMailView,
   WorkshopViewSchema, CraftResultSchema, HearthCraftResultSchema, DeskCopyResultSchema,
   type WorkshopView as GeneratedWorkshopView,
   CommonsResultSchema, type GateView as GeneratedGateView,
@@ -20,12 +20,10 @@ import {
 } from '../gen/glimway/v1/village_pb.js';
 import {
   type Asset as GeneratedAsset, type AssetCounts as GeneratedAssetCounts,
-  type HomeView as GeneratedHomeView, type HomePlant as GeneratedHomePlant,
+  type HomeView as GeneratedHomeView,
 } from '../gen/glimway/v1/goods_pb.js';
 import { ApiError } from './errors.ts';
-import type { HomeMember } from './homestead.ts';
-import type { HomeInstance } from '../homestead.ts';
-import type { HomeView, HomePlantView } from './homestead.ts';
+import { projectHome, type HomeMember, type HomeView } from './homestead.ts';
 import { projectAsset, projectCounts, projectItemsView } from './items.ts';
 import type { Asset, AssetCounts, Snapshot } from './types.ts';
 import { parseSnapshot } from './parse.ts';
@@ -66,11 +64,9 @@ function envelopeResult(raw: unknown, caseName: string): unknown {
 
 // ------------------------------------------------------------- goods views
 
-// The goods views (Asset, counts, instances, homes) are the items and
-// homestead lanes' projectors, shared now that the messages live in
-// goods.proto. The home is projected here (the workshop view needs it from
-// a decoded message, not raw JSON).
-
+// The goods views (Asset, counts, instances) are the items lane's
+// projectors, shared now that the messages live in goods.proto; the home is
+// the homestead lane's.
 function asset(raw: GeneratedAsset | undefined): Asset {
   const out = projectAsset(raw);
   if (!out) throw new Error('missing asset');
@@ -78,40 +74,7 @@ function asset(raw: GeneratedAsset | undefined): Asset {
 }
 
 function home(raw: GeneratedHomeView | undefined): HomeView | null {
-  if (!raw) return null;
-  return {
-    id: raw.id,
-    gate: raw.gate,
-    worldId: raw.worldId,
-    tier: raw.tier,
-    members: raw.members.map((m): HomeMember => ({ id: m.id, displayName: m.displayName })),
-    member: raw.member,
-    desolate: raw.desolate,
-    vacantSince: raw.vacantSince ?? null,
-    landSeed: raw.landSeed,
-    cleared: raw.cleared.map((t) => [t.x, t.y]),
-    postsBought: raw.postsBought,
-    nextPost: { ...raw.nextPost },
-    indoor: raw.indoor ? { width: raw.indoor.width, height: raw.indoor.height } : null,
-    items: raw.items.map((i): HomeInstance => ({
-      id: i.id,
-      itemDef: i.itemDef,
-      scene: (i.scene ?? null) as HomeInstance['scene'],
-      x: i.x ?? null,
-      y: i.y ?? null,
-      rotation: (i.rotation ?? null) as HomeInstance['rotation'],
-      name: i.name || null,
-    })),
-    stumps: raw.stumps.map((t) => [t.x, t.y]),
-    plants: raw.plants.map(plant),
-  };
-}
-
-function plant(raw: GeneratedHomePlant): HomePlantView {
-  const out: HomePlantView = { id: raw.id, itemDef: raw.itemDef, x: raw.x, y: raw.y, lit: raw.lit };
-  if (raw.plantedAt) out.plantedAt = raw.plantedAt;
-  if (raw.plantedDay) out.plantedDay = raw.plantedDay;
-  return out;
+  return raw ? projectHome(raw) : null;
 }
 
 function workshop(raw: GeneratedWorkshopView | undefined): WorkshopView {
@@ -121,34 +84,29 @@ function workshop(raw: GeneratedWorkshopView | undefined): WorkshopView {
 
 /** The craft answers repeat the workshop view's fields (village.proto). */
 function workshopFields(out: Partial<Pick<GeneratedWorkshopView, 'home' | 'inventory' | 'storage' | 'personal' | 'shared'>>): WorkshopView {
+  const shared = out.shared;
   return {
     home: home(out.home),
     inventory: projectCounts(out.inventory),
     storage: out.storage ? projectCounts(out.storage) : null,
     personal: projectCounts(out.personal),
-    shared: out.shared ?? '',
+    // An older server without `shared` says why like its answers did.
+    shared: shared || (out.home ? 'open' : 'not-a-member'),
   };
 }
 
 // ------------------------------------------------------------- the library
 
-export type LibraryShelfEntry = { paperId: string; donatedBy: string | null; donatedAt: string | null };
-
-function shelfEntry(raw: GeneratedLibraryEntry): LibraryShelfEntry {
-  return { paperId: raw.paperId, donatedBy: raw.donatedBy || null, donatedAt: raw.donatedAt || null };
-}
-
-/** A donate answer's shelved entry (the outbox's donate op reads it). */
-export function parseLibraryEntry(raw: unknown): LibraryShelfEntry {
-  return decode(() => shelfEntry(fromJson(LibraryEntrySchema, raw as JsonValue, { ignoreUnknownFields: true })));
-}
+type LibraryShelfEntry = { paperId: string; donatedBy: string | null; donatedAt: string | null };
 
 /** POST /api/library/donate: the paper just shelved, beside the snapshot. */
 export function parseLibraryDonate(raw: unknown): Snapshot & { result: { entry: LibraryShelfEntry } } {
   return decode(() => {
     const out = fromJson(LibraryDonateResultSchema, envelopeResult(raw, 'libraryDonate') as JsonValue, { ignoreUnknownFields: true });
     if (!out.entry) throw new Error('missing shelf entry');
-    return { ...parseSnapshot(raw), result: { entry: shelfEntry(out.entry) } };
+    // Empty names and dates read as null, as the read's rows always have.
+    const entry: LibraryShelfEntry = { paperId: out.entry.paperId, donatedBy: out.entry.donatedBy || null, donatedAt: out.entry.donatedAt || null };
+    return { ...parseSnapshot(raw), result: { entry } };
   });
 }
 
@@ -211,8 +169,10 @@ export type MailActionResponse = Snapshot & {
   };
 };
 
-/** GET /api/mail, POST /api/mail, POST /api/mail/:id/claim|recall. */
-function parseMailAnswer(raw: unknown, result: { mailId: string; mail: GeneratedMailView[]; nextCursor?: string; nextPendingCursor?: string; inventory?: GeneratedAssetCounts; asset?: GeneratedAsset }): MailActionResponse {
+/** POST /api/mail, /api/mail/:id/claim, /api/mail/:id/recall: each answer's
+ * own result message (the Envelope's cases resolve by type name), one
+ * projection. Claim and recall also carry the parcel just moved. */
+function mailAnswer(raw: unknown, result: { mailId: string; mail: GeneratedMailView[]; nextCursor?: string; nextPendingCursor?: string; inventory?: GeneratedAssetCounts; asset?: GeneratedAsset }): MailActionResponse {
   return {
     ...parseSnapshot(raw),
     result: {
@@ -237,8 +197,16 @@ export function parseMail(raw: unknown): MailResponse {
   });
 }
 
-export function parseMailAction(raw: unknown): MailActionResponse {
-  return decode(() => parseMailAnswer(raw, fromJson(MailActionResultSchema, envelopeResult(raw, obj(raw).mailClaim !== undefined ? 'mailClaim' : obj(raw).mailRecall !== undefined ? 'mailRecall' : 'mailSend') as JsonValue, { ignoreUnknownFields: true })));
+export function parseMailSend(raw: unknown): MailActionResponse {
+  return decode(() => mailAnswer(raw, fromJson(MailSendResultSchema, envelopeResult(raw, 'mailSend') as JsonValue, { ignoreUnknownFields: true })));
+}
+
+export function parseMailClaim(raw: unknown): MailActionResponse {
+  return decode(() => mailAnswer(raw, fromJson(MailActionResultSchema, envelopeResult(raw, 'mailClaim') as JsonValue, { ignoreUnknownFields: true })));
+}
+
+export function parseMailRecall(raw: unknown): MailActionResponse {
+  return decode(() => mailAnswer(raw, fromJson(MailRecallResultSchema, envelopeResult(raw, 'mailRecall') as JsonValue, { ignoreUnknownFields: true })));
 }
 
 // ------------------------------------------------------------- storage and crafting

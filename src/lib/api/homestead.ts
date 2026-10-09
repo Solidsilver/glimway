@@ -229,7 +229,7 @@ function homeInstance(v: GeneratedHomeInstance): HomeInstance {
 }
 
 /** The homestead view, projected (tiles as tuples, nulls kept). */
-function projectHome(h: GeneratedHomeView): HomeView {
+export function projectHome(h: GeneratedHomeView): HomeView {
   if (!h.id || !Array.isArray(h.members)) throw new Error('invalid home');
   return {
     id: h.id,

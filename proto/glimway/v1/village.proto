@@ -73,13 +73,6 @@ message MailView {
   google.protobuf.DoubleValue returned_at = 10;
   google.protobuf.StringValue return_reason = 11; // recalled | expired | recipient-removed
 }
-message MailPage {
-  repeated MailView mail = 1;
-  // History continues at ?cursor= (opaque); pending mail repeats on every
-  // page and continues at ?pendingCursor= (only for legacy backlogs).
-  google.protobuf.StringValue next_cursor = 2;
-  google.protobuf.StringValue next_pending_cursor = 3;
-}
 message MailReadResult {
   repeated MailView mail = 1;
   google.protobuf.StringValue next_cursor = 2;
@@ -97,6 +90,16 @@ message MailSendResult {
 // Body of both POST /api/mail/{id}/claim and POST /api/mail/{id}/recall.
 message MailKeyedRequest { OpHeader op = 1; Where where = 2; }
 message MailActionResult {
+  string mail_id = 1;
+  Asset asset = 2;
+  repeated MailView mail = 3;
+  google.protobuf.StringValue next_cursor = 4;
+  google.protobuf.StringValue next_pending_cursor = 5;
+  AssetCounts inventory = 6;
+}
+// A recall's answer is its own message: the Envelope's result cases resolve
+// by message type name, so two cases may not share one.
+message MailRecallResult {
   string mail_id = 1;
   Asset asset = 2;
   repeated MailView mail = 3;
