@@ -384,5 +384,20 @@ test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, an
   // And so do you, once you're back.
   await go(page, `home:${gate}`, spot.x + 2, spot.y + 5)
   await expect.poll(async () => (await homes(page)).stalled, { timeout: SERVER_ANSWER_MS }).toEqual(['Wolf-Base'])
+
+  // Go home on your own land (review round 1): the bay stays empty while it
+  // walks off the screen, then it's back in its stall.
+  await go(page, `home:${gate}`, spot.x + 3, spot.y + 3)
+  await expect(page.locator('.prompt')).toContainText('Saddle up')
+  await waitForLive(page)
+  await page.keyboard.press('e')
+  await expect.poll(async () => (await debug(page)).riding, { timeout: SERVER_ANSWER_MS }).toBe(true)
+  await waitForLive(page)
+  await page.keyboard.press('m')
+  await expect.poll(async () => (await debug(page)).led?.key ?? null).toBe('Wolf-Base')
+  await expect.poll(async () => (await homes(page)).stalled).toEqual([])
+  await page.keyboard.press('h')
+  await expect.poll(async () => (await debug(page)).mountOut).toBe('')
+  await expect.poll(async () => (await homes(page)).stalled, { timeout: 20_000 }).toEqual(['Wolf-Base'])
   await ctx.close()
 })

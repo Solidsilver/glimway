@@ -139,6 +139,21 @@ func leave(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, now i
 	return store.Credit(ctx, tx, s, 0, 0, "homestead-leave", h.ID, nil, now)
 }
 
+// leaverAvatar is a leaver's avatar once the leave is written (nil for a
+// guest or a hero without a Habitica profile): the choices read as gated
+// away and the mount that was out is home.
+func leaverAvatar(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (*presenceAvatarMsg, error) {
+	p := s.ImportedProfile
+	if s.ProfileSource != "habitica" || p == nil {
+		return nil, nil
+	}
+	c, err := store.CompanionsFor(ctx, tx, s.AccountID, s.WorldID, s.ProfileSource, p)
+	if err != nil {
+		return nil, err
+	}
+	return companionAvatar(c, *p), nil
+}
+
 // checkHomeRest requires the cottage on a gate named by your deed, or, before
 // there is a cottage (tier 0), the bedroll on that land.
 func checkHomeRest(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) error {

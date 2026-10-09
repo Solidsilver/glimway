@@ -77,7 +77,6 @@ export interface FishingDeps {
   live?: () => boolean
 }
 
-
 /** A line out, as this screen holds it: the server's cast, or the prediction before its answer. */
 interface Line {
   id: string

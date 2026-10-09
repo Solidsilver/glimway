@@ -630,6 +630,11 @@ export class Link {
     return this.saddling ? { ...view, mountOut: this.saddling.mount, mountHome: this.saddling.home } : view
   }
 
+  /** Whether the server's companions have been read (before that, `companions` is only empty defaults). */
+  get companionsRead(): boolean {
+    return !!this.server?.companions || !!this.saddling
+  }
+
   /** Tell the game when the companions it shows changed (an answer, a choice, a rollback). */
   private noteCompanions(): void {
     const now = JSON.stringify(this.companions)

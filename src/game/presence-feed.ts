@@ -103,9 +103,13 @@ export class PresenceFeed {
         },
         gift: (g) => this.bus.emit(EV.gift, g),
         avatarChange: (id, avatar) => {
-          // Their mount went out or came home: its stable's land re-reads the stalls (crafts.md 3.4).
-          this.bus.emit(EV.companionsOf, { accountId: id })
           const p = this.peers.get(id)
+          // Their mount went out or came home: its stable's land re-reads the
+          // stalls (crafts.md 3.4). Someone not in the room was heard only
+          // because their stable stands here; for someone in it, only a
+          // change of mount matters (not an outfit or a follower).
+          const here = !!p && p.leftAt === null
+          if (!here || (p.avatar?.selectedMount ?? null) !== (avatar.selectedMount ?? null)) this.bus.emit(EV.companionsOf, { accountId: id })
           if (!p || p.leftAt !== null) return
           p.avatar = avatar
           p.look++

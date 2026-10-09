@@ -242,7 +242,9 @@ test('crafts: a peer\'s pose follows their positions, a look change mid-visit is
   const heard: string[] = [];
   r.bus.on(EV.companionsOf, (p) => heard.push(p.accountId));
   r.sock().push({ type: 'avatarChange', accountId: 'carol', avatar: { ...avatar, selectedMount: '' } });
-  r.sock().push({ type: 'avatarChange', accountId: 'bob', avatar: { ...avatar, selectedMount: '' } });
+  // Bob, in the room: a new follower is no news for the stable; a mount going out is.
+  r.sock().push({ type: 'avatarChange', accountId: 'bob', avatar: { ...avatar, selectedPet: 'Owl-Spooky', selectedMount: '' } });
+  r.sock().push({ type: 'avatarChange', accountId: 'bob', avatar: { ...avatar, selectedPet: 'Owl-Spooky', selectedMount: 'Wolf-Shade' } });
   assert.deepEqual(heard, ['carol', 'bob']);
   assert.equal(r.feed.peersIn('village').some((p) => p.accountId === 'carol'), false);
   // Ours: a pose change at the same spot is still news.

@@ -287,7 +287,7 @@ func (a *Server) mountHome(w http.ResponseWriter, r *http.Request) error {
 			return &contract.MountHomeResult{Companions: &contract.Companions{YardPets: []string{}}}, nil
 		}
 		// The bay it fills again: the stable's land hears it (3.4), wherever
-		// its owner is.
+		// its owner is (none when no mount was out).
 		before, err := store.CompanionsFor(ctx, tx, s.AccountID, s.WorldID, s.ProfileSource, p)
 		if err != nil {
 			return nil, err
@@ -310,7 +310,12 @@ func (a *Server) mountHome(w http.ResponseWriter, r *http.Request) error {
 		avatar = companionAvatar(c, *p)
 		return &contract.MountHomeResult{Companions: companionsProto(c)}, nil
 	}, func() {
-		if avatar != nil {
+		switch {
+		case avatar == nil:
+		case room.area == "":
+			// No mount was out: no bay fills, so no land hears it.
+			a.avatarChanged(account, avatar)
+		default:
 			a.avatarChanged(account, avatar, room)
 		}
 	})

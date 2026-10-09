@@ -101,7 +101,7 @@
   }
 
   /** Your own mount reads out from your companions, not the homestead as last read (crafts.md 3.1). */
-  const stalls = $derived(home ? stallsShown(home.stalls, home.id, me, view, new Map(), 0) : [])
+  const stalls = $derived(home ? stallsShown(home.stalls, home.id, me, link?.companionsRead ? view : null, new Map(), 0) : [])
   const stallOf = (n: number) => stalls.find((s) => s.stall === n) ?? null
 </script>
 

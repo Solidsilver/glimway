@@ -901,3 +901,46 @@ func TestTheStablesLandHearsTheMountGoAndCome(t *testing.T) {
 	x.expect("POST", "/api/play", map[string]any{"clientId": "tab-c"}, ac, 200)
 	quiet(visitor)
 }
+
+// Review round 1: a Go home with nothing out tells no land (only the
+// owner's own room hears the avatar), and a leave that sends the mount home
+// and empties the leaver's stalls tells the stable's land.
+func TestTheLandHearsALeaveButNotAnEmptyGoHome(t *testing.T) {
+	x := newRig(t)
+	alice := profile("alice", 1, 0, 20)
+	alice.Mounts = []string{"Wolf-Shade"}
+	x.set(alice)
+	ac, a := x.ready("alice")
+	x.pinWorld(&a)
+	h, x0, y0 := standingStable(x, ac, &a, 1)
+	x.companionOp("POST", "/api/stable/stall", body(a, "in", map[string]any{"homeId": h.ID, "stall": 1, "mount": "Wolf-Shade"}), ac, 200)
+	visitor := x.peerAt("visitor", a.WorldID, fmt.Sprintf("home:%d", h.Gate))
+	drain := func() {
+		for len(visitor.queue) > 0 {
+			<-visitor.queue
+		}
+	}
+	drain()
+
+	// Nothing out: Go home answers, and the land hears nothing.
+	x.companionOp("POST", "/api/stable/home", map[string]any{"op": map[string]any{"lease": a.Lease, "key": "home-none"}}, ac, 200)
+	if len(visitor.queue) != 0 {
+		t.Fatal("the land heard a Go home with nothing out")
+	}
+
+	// Out, then a leave: the land hears the mount come home with its owner.
+	at := body(a, "up", map[string]any{"homeId": h.ID, "stall": 1})
+	at["where"] = atBay(h, x0, y0, 1)
+	x.companionOp("POST", "/api/stable/out", at, ac, 200)
+	drain()
+	x.homeOpRefreshing(ac, &a, "leave", nil, 200)
+	select {
+	case b := <-visitor.queue:
+		m, err := decodePresence(b)
+		if err != nil || m.GetAvatarChange() == nil || m.GetAvatarChange().GetAccountId() != x.account("alice") || m.GetAvatarChange().GetAvatar().GetSelectedMount() != nil {
+			t.Fatal("the land hears the leave", m, err)
+		}
+	default:
+		t.Fatal("the land heard nothing of the leave")
+	}
+}

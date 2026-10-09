@@ -77,7 +77,8 @@ export function followerKey(profile: Pick<HabiticaProfile, 'selectedPet'> | null
  * mount is out while your companions say so (ridden, on the lead, or
  * saddling up) and while it's still walking home (`homeward`: mount key →
  * when it's off the screen, ms on `now`'s clock). A partner's stays as the
- * server last said.
+ * server last said, and so does yours while your companions aren't read
+ * yet (`mine` null).
  */
 export function stallsShown(
   stalls: readonly StallView[],
@@ -89,7 +90,7 @@ export function stallsShown(
 ): StallView[] {
   return stalls.map((s) => {
     if (!me || !s.mount || s.ownerId !== me) return s
-    const out = (!!mine && mine.mountOut === s.mount && mine.mountHome === homeId) || (homeward.get(s.mount) ?? 0) > now
+    const out = (mine ? mine.mountOut === s.mount && mine.mountHome === homeId : s.out) || (homeward.get(s.mount) ?? 0) > now
     return out === s.out ? s : { ...s, out }
   })
 }
@@ -102,4 +103,28 @@ export function nextHomecoming(stalls: readonly StallView[], me: string | null, 
     if (until > now && (next === null || until < next)) next = until
   }
   return next
+}
+
+/** The bays standing full, as a signature: when it changes, the stable is drawn again. */
+export function baySig(shown: readonly StallView[]): string {
+  return shown.map((s) => (s.mount && !s.out ? s.mount : '')).join(',')
+}
+
+/**
+ * What a change to your companions asks of the stable's drawing (`drawn`:
+ * the signature last drawn): a redraw when a bay filled or emptied; else,
+ * while a mount of yours walks home, a recheck for when it's off the screen.
+ * A Go home on your own land changes nothing visible at first (the bay stays
+ * empty while it walks), so only that recheck ever fills the bay.
+ */
+export function stableNext(
+  stalls: readonly StallView[],
+  shown: readonly StallView[],
+  drawn: string,
+  me: string | null,
+  homeward: ReadonlyMap<string, number>,
+  now: number
+): { redraw: boolean; recheckAt: number | null } {
+  if (baySig(shown) !== drawn) return { redraw: true, recheckAt: null }
+  return { redraw: false, recheckAt: nextHomecoming(stalls, me, homeward, now) }
 }
