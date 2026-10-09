@@ -132,7 +132,9 @@ What the server stores (pets.md "Rules and data", trimmed to what 0.5 needs):
   stored profile (the `profile` operation refreshes it at each sync). A key that's no longer owned
   falls back quietly: the follower to Habitica's current pet, a yard spot to empty. The stored row
   isn't rewritten until the player next changes it, so nothing needs a job and a pet that comes back
-  (a re-hatch) comes back to its place.
+  (a re-hatch) comes back to its place. *As built:* the next yard change writes the yard as it
+  reads then, so a lapsed pet's spot is cleared at that point; re-hatching after that means placing
+  it again.
 - **A homestead in this world gates the choices.** `follow_pet` and `yard_pets` hold while the
   account is on a deed in its current world. Without one (a fresh world, a deed left), the follower
   reads as Habitica's current pet and the yard is empty; the stored choice waits, unchanged, for
@@ -330,12 +332,16 @@ the move, from which level, what it costs, how often it can be used, and its num
 
 ### 4.2 Who has what: the level mark and the class
 
-- **The level mark already exists.** `sync_baselines.verified_high_level` is the highest level a
-  verified login has seen; today only rebirth detection reads it (`rules.IsRebirth`). 0.5 makes it
-  magic's mark:
-  - the `profile` operation raises it too (with `MAX`), once the synced profile has passed today's
-    plausibility checks;
-  - it goes on `PlayerState` as `magic.level_mark`.
+- **The level mark** is `sync_baselines.level_mark` (migration 031, backfilled from
+  `verified_high_level`). *As built:* it is its own column so that `verified_high_level` stays the
+  sign-in-only history rebirth detection trusts (`rules.IsRebirth`); raising that one from syncs
+  would let client-reported levels feed rebirth checks.
+  - sign-in, world creation and the `profile` operation raise it (with `MAX`), the last once the
+    synced profile has passed today's plausibility checks;
+  - it goes on `PlayerState` as `magic.level_mark`;
+  - unlocks read `max(level_mark, the stored profile's level)`, on the server and the client alike.
+  - Trust: a sync that passes the plausibility checks raises the mark for good. Under the
+    friends-on-invites model that is accepted; it only unlocks moves.
 - **The class mark** (new, `sync_baselines.class_mark`) is the last class a sync saw. A hero has
   their craft when the profile has a class, or when it has none but the level mark is 10 or more
   and a class mark exists (a rebirth; section 11, question 4). A hero who never had a class has
@@ -422,10 +428,14 @@ Two additions to `glimway.v2` presence (`proto/glimway/v2/presence.proto`):
   room with `account_id` filled. Anything else is dropped, like an emote over its cooldown.
 - **Ward credit.** For a `ward-light`, the hub schedules three pulse checks (`time.AfterFunc` at 1,
   2.5 and 4 s). At each one it takes the room members whose **last known position** is inside the
-  circle, other than the caster, and adds one pulse of the caster's heal to each one's credit. The
-  credit is held in memory per account for 60 seconds, and the next accepted report from that
-  account may raise HP by up to it (and uses it up). A restart loses unspent credit, which costs at
-  most one ward's heal.
+  circle, other than the caster, and adds one pulse of the caster's heal to each one's credit. Each
+  pulse is held in memory for 60 seconds. An accepted report may raise HP by up to the credit
+  waiting; after it commits, it spends only what the HP rise needed (oldest pulses first) and the
+  rest waits for the next report. A restart loses unspent pulses: with 10-second reports, about one
+  ward's heal.
+- *As built,* the hub also drops a cast sent before joining an area or placed further than the
+  move's reach (plus a tile) from the sender's last position. Its cooldown allows for network
+  jitter (a tenth of the cooldown, between 150 and 250 ms), and it survives a reconnect.
 
 On a friend's screen the pulses heal locally at the same moments (from the relayed event), so their
 HP bar rises when they see the pulse, and their next report is allowed it.
