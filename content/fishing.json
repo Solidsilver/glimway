@@ -1,0 +1,22 @@
+{
+  "bands": [
+    { "id": "healthy", "atLeastPercent": 50, "waitSeconds": 10, "line": "Little rings among the reeds." },
+    { "id": "low", "atLeastPercent": 20, "waitSeconds": 30, "line": "A ring now and then, out by the wheel." },
+    { "id": "very-low", "atLeastPercent": 0, "waitSeconds": 60, "line": "Very still here. Try another bank, or let it rest." }
+  ],
+  "holdSeconds": 600,
+  "castSpacingSeconds": 8,
+  "reachTiles": 1.5,
+  "waters": [
+    {
+      "id": "water:village:mill-pond", "area": "village", "habitat": "still",
+      "tiles": 27, "capacity": 12, "recoverySeconds": 600,
+      "banks": [
+        { "id": "north", "tiles": [{ "tx": 34, "ty": 18 }, { "tx": 35, "ty": 18 }, { "tx": 36, "ty": 18 }, { "tx": 37, "ty": 18 }, { "tx": 38, "ty": 18 }], "facing": "south", "closedIn": ["Quiet"] },
+        { "id": "east", "tiles": [{ "tx": 39, "ty": 19 }, { "tx": 39, "ty": 20 }, { "tx": 39, "ty": 21 }, { "tx": 39, "ty": 22 }], "facing": "west", "closedIn": ["Quiet"] },
+        { "id": "race", "tiles": [{ "tx": 32, "ty": 19 }], "facing": "south", "closedIn": [] }
+      ],
+      "species": [ { "item": "mill-roach", "weight": 1 } ]
+    }
+  ]
+}

@@ -24,7 +24,8 @@ test('generated calendar decoder reads the original Go HTTP fixtures without sha
 
 test('generated error enum preserves every original wire string and unknown-version behavior', () => {
   const responses = fixture('errors-v3');
-  assert.deepEqual([...SERVER_ERROR_CODES].sort(), [...responses.map((r: any) => r.error.code), 'not-yet', 'not-here', 'needs-habitica'].sort());
+  const since = ['not-yet', 'not-here', 'needs-habitica', 'companion-not-owned', 'no-stable', 'stall-taken', 'stalls-in-use', 'stable-full', 'already-casting', 'cast-too-soon', 'water-still', 'no-cast'];
+  assert.deepEqual([...SERVER_ERROR_CODES].sort(), [...responses.map((r: any) => r.error.code), ...since].sort());
   for (const response of responses) assert.equal(errorFromResponse(409, response).code, response.error.code);
   assert.equal(errorFromResponse(409, { error: { code: 'a-future-server-code' } }).code, 'unknown');
 });

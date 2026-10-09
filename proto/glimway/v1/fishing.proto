@@ -1,0 +1,44 @@
+syntax = "proto3";
+package glimway.v1;
+option go_package = "glimway/server/internal/gen/glimway/v1;contract";
+import "glimway/v1/items.proto";
+import "glimway/v1/op.proto";
+
+// Fishing (design 5): the account's open cast, the shared water's stock as
+// a world change stores it, and the three keyed operations. The water's
+// rules (bands, waits, banks, species) are content
+// (proto/glimway/content/v1/fishing.proto); this file carries only what
+// travels or is stored.
+
+// One cast. Band and species are frozen at acceptance; ready_at is when the
+// float dips, hold_until when the fish slips back (design 5.3).
+message FishingCast {
+  string id = 1; string water = 2; string bank = 3; string species = 4;
+  double started_at = 5; double ready_at = 6; double hold_until = 7; string band = 8;
+}
+
+// The account's fishing state (PlayerState.fishing): the open cast, if any,
+// and the earliest time the next cast may start.
+message FishingState { FishingCast cast = 1; double next_cast_at = 2; }
+
+// A fishery's stored stock (world_changes.state for kind "fishery").
+// Stock is a double so fractional recovery survives between writes; the
+// row's `at` is the write's clock. Never served to a client as-is.
+message FisheryState { double stock = 1; double reserved = 2; double at = 3; }
+
+// POST /api/fishing/cast.
+message FishCastRequest { OpHeader op = 1; Where where = 2; string water = 3; string bank = 4; string rod = 5; }
+message FishCastResult { FishingCast cast = 1; string band = 2; }
+
+// POST /api/fishing/settle: keep the fish or let it go.
+message FishSettleRequest { OpHeader op = 1; Where where = 2; string cast = 3; bool keep = 4; }
+message FishSettleResult { string cast = 1; bool kept = 2; string item = 3; WearResult wear = 4; string band = 5; }
+
+// POST /api/fishing/cancel: pull the line in and return the fish.
+message FishCancelRequest { OpHeader op = 1; string cast = 2; }
+message FishCancelResult { string cast = 1; string band = 2; }
+
+// GET /api/fishing/waters?area=: each water's band, and nothing else (no
+// counts, no countdown — design 5.4).
+message WaterView { string id = 1; string band = 2; }
+message FishingWaters { repeated WaterView waters = 1; }

@@ -11,8 +11,13 @@ import "glimway/v1/wilds.proto";
 message ReportRequest {
   string lease = 1; string client = 2; double seq = 3; double basis = 4;
   Where place = 5; double hp = 6; double mana = 7; double casts = 8; string generation = 9;
+  // Combat ability casts by ability id (design 4.4); `casts` stays the
+  // signature's count.
+  map<string, double> ability_casts = 10;
 }
-message ReportResult { double seq = 1; bool accepted = 2; bool stale_basis = 3; double casts = 4; string client = 5; string generation = 6; double basis = 7; bool place_ignored = 8; }
+message ReportResult { double seq = 1; bool accepted = 2; bool stale_basis = 3; double casts = 4; string client = 5; string generation = 6; double basis = 7; bool place_ignored = 8;
+  // The accepted counts by ability id, and the ward credit used (4.5).
+  map<string, double> ability_casts = 9; double ally_heal = 10; }
 message QuestStepRequest { OpHeader op = 1; string quest = 2; string to = 3; Where where = 4; }
 message ItemQty { string def = 1; double qty = 2; }
 message QuestStepResult {

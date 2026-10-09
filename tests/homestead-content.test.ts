@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { HOMESTEAD_DATA, checkPlacement, gateTile, validateHomesteadData, type HomeInstance } from '../src/lib/homestead.ts';
+import { HOMESTEAD_DATA, checkPlacement, gateTile, stallCost, validateHomesteadData, type HomeInstance } from '../src/lib/homestead.ts';
+import homesteadVectors from '../content/vectors/homestead-loader.json' with { type: 'json' };
 import { HOMESTEAD_TIERS, DECORATIONS_EMBER, DECORATIONS_MATERIAL } from '../src/content/expansion-writing.ts';
 import { createNewGame, validateSave } from '../src/lib/state.ts';
 import { checkSpend, spendEmbers } from '../src/lib/embers.ts';
@@ -16,7 +17,7 @@ test('shared homes preserve writing identities, categories and footprints', () =
     else if (v.id === HOMESTEAD_DATA.lanternPosts.item) { assert.equal(v.embers, 0); assert.deepEqual(v.materials, HOMESTEAD_DATA.lanternPosts.costs[0]!.materials); }
     else { assert.equal(v.embers, 0); assert.ok(Object.keys(v.materials).length <= 2); for (const qty of Object.values(v.materials)) assert.ok(qty >= 4 && qty <= 10); }
   }
-  assert.equal(HOMESTEAD_DATA.items.length, 31);
+  assert.equal(HOMESTEAD_DATA.items.length, 32);
   assert.deepEqual(HOMESTEAD_DATA.tiers.filter(t => t.purchasable).map(t => t.tier), [1, 2]);
 });
 
@@ -25,7 +26,7 @@ test('typed homestead loader rejects malformed definitions', () => {
     (h: typeof HOMESTEAD_DATA) => { h.indoor.width = 0; },
     (h: typeof HOMESTEAD_DATA) => { h.items[1].id = h.items[0].id; },
     (h: typeof HOMESTEAD_DATA) => { h.items[0].embers = -1; },
-    (h: typeof HOMESTEAD_DATA) => { h.items[0].materials = { stone: 1 }; },
+    (h: typeof HOMESTEAD_DATA) => { h.items[0].embers = 0; h.items[0].materials = {}; },
     (h: typeof HOMESTEAD_DATA) => { h.items[8].materials = { gold: 1 }; },
     (h: typeof HOMESTEAD_DATA) => { h.items[8].materials = { stone: 0 }; },
     (h: typeof HOMESTEAD_DATA) => { h.items[0].footprint = [1, 1, 1] as unknown as [number, number]; },
@@ -71,6 +72,13 @@ test('gate tiles are where the Commons map draws them (same table as the Go test
   const want = [[19, 9], [28, 9], [19, 13], [28, 13], [19, 28], [28, 28], [19, 33], [28, 33], [19, 38], [28, 38], [19, 43]];
   want.forEach(([tx, ty], g) => assert.deepEqual([gateTile(g).tx, gateTile(g).ty], [tx, ty], `gate ${g}`));
   assert.equal(HOMESTEAD_DATA.commons.tileSize, 16);
+});
+
+test('the shared stall-cost bill matches the client growth rule', () => {
+  const vectors = (homesteadVectors as unknown as { stallCost: { extra: number; bill: Record<string, number> }[] }).stallCost;
+  assert.ok(vectors.length >= 5, 'one bill per extra bay');
+  for (const v of vectors) assert.deepEqual(stallCost(v.extra), v.bill, `extra ${v.extra}`);
+  assert.deepEqual(stallCost(1), HOMESTEAD_DATA.stable.stallCost);
 });
 
 test('the local placement check mirrors the server rules', () => {

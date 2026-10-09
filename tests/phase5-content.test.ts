@@ -23,13 +23,13 @@ test('calendar loader rejects invalid durations, order, epochs and festivals', (
   assert.throws(()=>calendarAt(NaN));
 });
 test('workshop has bounded recipes using known decorations, utility items and item definitions', () => {
-  assert.equal(CRAFTING.recipes.length,38); assert.equal(HOMESTEAD_DATA.tiers[2].purchasable,true);assert.ok(HOMESTEAD_DATA.tiers[2].embers>0);assert.ok(Object.keys(HOMESTEAD_DATA.tiers[2].materials!).length>0);
+  assert.equal(CRAFTING.recipes.length,39); assert.equal(HOMESTEAD_DATA.tiers[2].purchasable,true);assert.ok(HOMESTEAD_DATA.tiers[2].embers>0);assert.ok(Object.keys(HOMESTEAD_DATA.tiers[2].materials!).length>0);
   for (const r of CRAFTING.recipes) if (r.output.kind==='decoration') assert.ok(HOMESTEAD_DATA.items.some(v=>v.id===r.output.id));
   for (const mutate of [(c: typeof CRAFTING)=>{c.recipes[0].output.id='absent';},(c: typeof CRAFTING)=>{c.recipes[0].materials={};},(c: typeof CRAFTING)=>{c.recipes[0].output.qty=0;},(c: typeof CRAFTING)=>{c.recipes[0].minTier=1;},(c: typeof CRAFTING)=>{c.recipes[1].id=c.recipes[0].id;}]){const c=structuredClone(CRAFTING);mutate(c);assert.throws(()=>validateCrafting(c));}
   for (const v of [null,{},[],{...CRAFTING,recipes:[null]}]) assert.throws(()=>validateCrafting(v));
 });
 test('the hearth has the craft-and-repair recipes: tier 1, food, remedies and oils, unique ids', () => {
-  assert.equal(CRAFTING.hearthRecipes?.length, 9);
+  assert.equal(CRAFTING.hearthRecipes?.length, 10);
   const ids = new Set(CRAFTING.recipes.map(r=>r.id));
   for (const r of CRAFTING.hearthRecipes!) {
     assert.equal(r.minTier, 1, `${r.id} cooks at the cottage`);

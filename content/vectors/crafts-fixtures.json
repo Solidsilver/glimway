@@ -1,0 +1,961 @@
+{
+  "comment": "Sample messages for the 0.5 Crafts lanes (docs/design/crafts.md 6.1), in their ProtoJSON spellings \u2014 the shapes lanes B-G send, store and draw. Both languages decode them in tests (tests/crafts-fixtures.test.ts, server/internal/api/crafts_fixtures_test.go). Every field the wire spells is here: unset messages are null, collections are empty, zeros and falses are spelled; only proto3-optional fields (PresenceAbility.accountId) are omitted when unset.",
+  "messages": [
+    {
+      "name": "companions",
+      "type": "glimway.v1.Companions",
+      "json": {
+        "followPet": "Fox-Golden",
+        "yardPets": [
+          "Cat-Siamese",
+          "Owl-Spooky",
+          "Wolf-Cubic"
+        ],
+        "mountOut": "Wolf-Shade",
+        "mountHome": "home:12"
+      }
+    },
+    {
+      "name": "companions-fallbacks",
+      "type": "glimway.v1.Companions",
+      "json": {
+        "followPet": "",
+        "yardPets": [],
+        "mountOut": "",
+        "mountHome": ""
+      }
+    },
+    {
+      "name": "companions-result",
+      "type": "glimway.v1.CompanionsResult",
+      "json": {
+        "companions": {
+          "followPet": "Fox-Golden",
+          "yardPets": [
+            "Cat-Siamese"
+          ],
+          "mountOut": "",
+          "mountHome": ""
+        }
+      }
+    },
+    {
+      "name": "stall",
+      "type": "glimway.v1.Stall",
+      "json": {
+        "stall": 1,
+        "mount": "Wolf-Shade",
+        "ownerId": "fixture-account",
+        "ownerName": "Tam",
+        "out": true
+      }
+    },
+    {
+      "name": "stall-empty",
+      "type": "glimway.v1.Stall",
+      "json": {
+        "stall": 3,
+        "mount": "",
+        "ownerId": "",
+        "ownerName": "",
+        "out": false
+      }
+    },
+    {
+      "name": "yard-pet",
+      "type": "glimway.v1.YardPet",
+      "json": {
+        "ownerId": "fixture-account",
+        "pet": "Cat-Siamese",
+        "slot": 1
+      }
+    },
+    {
+      "name": "magic",
+      "type": "glimway.v1.Magic",
+      "json": {
+        "levelMark": 20,
+        "classMark": "mage"
+      }
+    },
+    {
+      "name": "magic-no-craft",
+      "type": "glimway.v1.Magic",
+      "json": {
+        "levelMark": 4,
+        "classMark": null
+      }
+    },
+    {
+      "name": "vitals-ability-ready",
+      "type": "glimway.v1.Vitals",
+      "json": {
+        "hp": 41,
+        "mana": 12,
+        "maxHp": 50,
+        "maxMana": 30,
+        "reportSeq": 7,
+        "reportClient": "client",
+        "reportGeneration": "generation",
+        "vitalsSetVersion": 3,
+        "vitalsAt": 1791400000.5,
+        "castReadyAt": 1791400001.25,
+        "abilityReadyAt": {
+          "kindle": 1791400004.5,
+          "ward-light": 1791400008
+        }
+      }
+    },
+    {
+      "name": "report-request",
+      "type": "glimway.v1.ReportRequest",
+      "json": {
+        "lease": "lease",
+        "client": "client",
+        "seq": 8,
+        "basis": 3,
+        "place": {
+          "area": "village",
+          "x": 412,
+          "y": 318
+        },
+        "hp": 41,
+        "mana": 12,
+        "casts": 1,
+        "generation": "generation",
+        "abilityCasts": {}
+      }
+    },
+    {
+      "name": "report-result",
+      "type": "glimway.v1.ReportResult",
+      "json": {
+        "seq": 8,
+        "accepted": true,
+        "staleBasis": false,
+        "casts": 1,
+        "client": "client",
+        "generation": "generation",
+        "basis": 3,
+        "placeIgnored": false,
+        "abilityCasts": {
+          "kindle": 1
+        },
+        "allyHeal": 7.2
+      }
+    },
+    {
+      "name": "fishing-cast",
+      "type": "glimway.v1.FishingCast",
+      "json": {
+        "id": "cast:1",
+        "water": "water:village:mill-pond",
+        "bank": "north",
+        "species": "mill-roach",
+        "startedAt": 1791400000.25,
+        "readyAt": 1791400010.25,
+        "holdUntil": 1791400610.25,
+        "band": "healthy"
+      }
+    },
+    {
+      "name": "fishing-state",
+      "type": "glimway.v1.FishingState",
+      "json": {
+        "cast": {
+          "id": "cast:1",
+          "water": "water:village:mill-pond",
+          "bank": "north",
+          "species": "mill-roach",
+          "startedAt": 1791400000.25,
+          "readyAt": 1791400010.25,
+          "holdUntil": 1791400610.25,
+          "band": "healthy"
+        },
+        "nextCastAt": 1791400008.25
+      }
+    },
+    {
+      "name": "fishing-state-empty",
+      "type": "glimway.v1.FishingState",
+      "json": {
+        "cast": null,
+        "nextCastAt": 0
+      }
+    },
+    {
+      "name": "fishery-state",
+      "type": "glimway.v1.FisheryState",
+      "json": {
+        "stock": 11.5,
+        "reserved": 1,
+        "at": 1791400000.25
+      }
+    },
+    {
+      "name": "fish-cast-result",
+      "type": "glimway.v1.FishCastResult",
+      "json": {
+        "cast": {
+          "id": "cast:1",
+          "water": "water:village:mill-pond",
+          "bank": "north",
+          "species": "mill-roach",
+          "startedAt": 1791400000.25,
+          "readyAt": 1791400010.25,
+          "holdUntil": 1791400610.25,
+          "band": "healthy"
+        },
+        "band": "healthy"
+      }
+    },
+    {
+      "name": "fish-settle-result",
+      "type": "glimway.v1.FishSettleResult",
+      "json": {
+        "cast": "cast:1",
+        "kept": true,
+        "item": "mill-roach",
+        "wear": {
+          "broke": false,
+          "woreOut": false,
+          "state": "worn",
+          "wornOut": [],
+          "returned": [],
+          "itemDef": "willow-rod",
+          "usesLeft": 29,
+          "condition": 87,
+          "instance": null,
+          "makerId": ""
+        },
+        "band": "low"
+      }
+    },
+    {
+      "name": "fish-cancel-result",
+      "type": "glimway.v1.FishCancelResult",
+      "json": {
+        "cast": "cast:1",
+        "band": "low"
+      }
+    },
+    {
+      "name": "fishing-waters",
+      "type": "glimway.v1.FishingWaters",
+      "json": {
+        "waters": [
+          {
+            "id": "water:village:mill-pond",
+            "band": "healthy"
+          }
+        ]
+      }
+    },
+    {
+      "name": "presence-ability",
+      "type": "glimway.v2.PresenceAbility",
+      "json": {
+        "ability": "kindle",
+        "x": 412.5,
+        "y": 318,
+        "accountId": "fixture-account"
+      }
+    },
+    {
+      "name": "presence-ability-outgoing",
+      "type": "glimway.v2.PresenceAbility",
+      "json": {
+        "ability": "fingersnap",
+        "x": 400,
+        "y": 300
+      }
+    },
+    {
+      "name": "presence-avatar-change",
+      "type": "glimway.v2.PresenceAvatarChange",
+      "json": {
+        "accountId": "fixture-account",
+        "avatar": {
+          "appearance": {
+            "size": "slim",
+            "shirt": "blue",
+            "skin": "fair",
+            "hairColor": "brown",
+            "hairStyle": 1,
+            "background": "plain",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "equipped": {},
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": "Fox-Golden",
+          "selectedMount": "Wolf-Shade"
+        }
+      }
+    },
+    {
+      "name": "presence-position-riding",
+      "type": "glimway.v2.PresencePosition",
+      "json": {
+        "x": 412.5,
+        "y": 318,
+        "facing": {
+          "x": 0,
+          "y": 1
+        },
+        "moving": true,
+        "accountId": "fixture-account",
+        "pose": "riding"
+      }
+    },
+    {
+      "name": "presence-position-fishing",
+      "type": "glimway.v2.PresencePosition",
+      "json": {
+        "x": 412.5,
+        "y": 318,
+        "facing": {
+          "x": 0,
+          "y": 1
+        },
+        "moving": false,
+        "accountId": "fixture-account",
+        "pose": "fishing"
+      }
+    },
+    {
+      "name": "home-view",
+      "type": "glimway.v1.HomeView",
+      "json": {
+        "id": "home:12",
+        "gate": 12,
+        "worldId": "world",
+        "tier": 2,
+        "members": [
+          {
+            "id": "fixture-account",
+            "displayName": "Tam"
+          }
+        ],
+        "member": true,
+        "desolate": false,
+        "vacantSince": null,
+        "landSeed": 1234,
+        "cleared": [
+          {
+            "x": 3,
+            "y": 4
+          }
+        ],
+        "stumps": [],
+        "plants": [],
+        "postsBought": 1,
+        "nextPost": {
+          "amber": 1,
+          "stone": 5,
+          "timber": 10
+        },
+        "outdoor": {
+          "width": 24,
+          "height": 18
+        },
+        "indoor": {
+          "width": 12,
+          "height": 10
+        },
+        "items": [
+          {
+            "id": "piece-1",
+            "itemDef": "wooden-stool",
+            "scene": null,
+            "x": null,
+            "y": null,
+            "rotation": null,
+            "name": null,
+            "stalls": null
+          },
+          {
+            "id": "stable-1",
+            "itemDef": "stable",
+            "scene": "outdoor",
+            "x": 10,
+            "y": 12,
+            "rotation": 0,
+            "name": null,
+            "stalls": 2
+          }
+        ],
+        "stalls": [
+          {
+            "stall": 1,
+            "mount": "Wolf-Shade",
+            "ownerId": "fixture-account",
+            "ownerName": "Tam",
+            "out": true
+          },
+          {
+            "stall": 2,
+            "mount": "",
+            "ownerId": "",
+            "ownerName": "",
+            "out": false
+          }
+        ],
+        "yardPets": [
+          {
+            "ownerId": "fixture-account",
+            "pet": "Cat-Siamese",
+            "slot": 1
+          }
+        ]
+      }
+    },
+    {
+      "name": "stall-result",
+      "type": "glimway.v1.StallResult",
+      "json": {
+        "home": {
+          "id": "home:12",
+          "gate": 12,
+          "worldId": "world",
+          "tier": 2,
+          "members": [
+            {
+              "id": "fixture-account",
+              "displayName": "Tam"
+            }
+          ],
+          "member": true,
+          "desolate": false,
+          "vacantSince": null,
+          "landSeed": 1234,
+          "cleared": [
+            {
+              "x": 3,
+              "y": 4
+            }
+          ],
+          "stumps": [],
+          "plants": [],
+          "postsBought": 1,
+          "nextPost": {
+            "amber": 1,
+            "stone": 5,
+            "timber": 10
+          },
+          "outdoor": {
+            "width": 24,
+            "height": 18
+          },
+          "indoor": {
+            "width": 12,
+            "height": 10
+          },
+          "items": [
+            {
+              "id": "piece-1",
+              "itemDef": "wooden-stool",
+              "scene": null,
+              "x": null,
+              "y": null,
+              "rotation": null,
+              "name": null,
+              "stalls": null
+            },
+            {
+              "id": "stable-1",
+              "itemDef": "stable",
+              "scene": "outdoor",
+              "x": 10,
+              "y": 12,
+              "rotation": 0,
+              "name": null,
+              "stalls": 2
+            }
+          ],
+          "stalls": [
+            {
+              "stall": 1,
+              "mount": "Wolf-Shade",
+              "ownerId": "fixture-account",
+              "ownerName": "Tam",
+              "out": true
+            },
+            {
+              "stall": 2,
+              "mount": "",
+              "ownerId": "",
+              "ownerName": "",
+              "out": false
+            }
+          ],
+          "yardPets": [
+            {
+              "ownerId": "fixture-account",
+              "pet": "Cat-Siamese",
+              "slot": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "mount-out-result",
+      "type": "glimway.v1.MountOutResult",
+      "json": {
+        "companions": {
+          "followPet": "Fox-Golden",
+          "yardPets": [
+            "Cat-Siamese",
+            "Owl-Spooky",
+            "Wolf-Cubic"
+          ],
+          "mountOut": "Wolf-Shade",
+          "mountHome": "home:12"
+        }
+      }
+    },
+    {
+      "name": "stable-extend-result",
+      "type": "glimway.v1.StableExtendResult",
+      "json": {
+        "home": {
+          "id": "home:12",
+          "gate": 12,
+          "worldId": "world",
+          "tier": 2,
+          "members": [
+            {
+              "id": "fixture-account",
+              "displayName": "Tam"
+            }
+          ],
+          "member": true,
+          "desolate": false,
+          "vacantSince": null,
+          "landSeed": 1234,
+          "cleared": [
+            {
+              "x": 3,
+              "y": 4
+            }
+          ],
+          "stumps": [],
+          "plants": [],
+          "postsBought": 1,
+          "nextPost": {
+            "amber": 1,
+            "stone": 5,
+            "timber": 10
+          },
+          "outdoor": {
+            "width": 24,
+            "height": 18
+          },
+          "indoor": {
+            "width": 12,
+            "height": 10
+          },
+          "items": [
+            {
+              "id": "piece-1",
+              "itemDef": "wooden-stool",
+              "scene": null,
+              "x": null,
+              "y": null,
+              "rotation": null,
+              "name": null,
+              "stalls": null
+            },
+            {
+              "id": "stable-1",
+              "itemDef": "stable",
+              "scene": "outdoor",
+              "x": 10,
+              "y": 12,
+              "rotation": 0,
+              "name": null,
+              "stalls": 2
+            }
+          ],
+          "stalls": [
+            {
+              "stall": 1,
+              "mount": "Wolf-Shade",
+              "ownerId": "fixture-account",
+              "ownerName": "Tam",
+              "out": true
+            },
+            {
+              "stall": 2,
+              "mount": "",
+              "ownerId": "",
+              "ownerName": "",
+              "out": false
+            }
+          ],
+          "yardPets": [
+            {
+              "ownerId": "fixture-account",
+              "pet": "Cat-Siamese",
+              "slot": 1
+            }
+          ]
+        },
+        "materials": {
+          "fiber": 2,
+          "stone": 6,
+          "timber": 12
+        }
+      }
+    },
+    {
+      "name": "envelope-stall",
+      "type": "glimway.v1.Envelope",
+      "json": {
+        "state": {
+          "version": 1,
+          "account": {
+            "accountId": "fixture-account",
+            "displayName": "Hero",
+            "profileSource": "habitica",
+            "partyId": null,
+            "worldId": "fixture-world",
+            "flagged": false
+          },
+          "profile": {
+            "id": "fixture-hero",
+            "name": "Hero",
+            "class": null,
+            "level": 1,
+            "exp": 0,
+            "hp": 20,
+            "maxHp": 50,
+            "mp": 10,
+            "maxMp": 30,
+            "stats": {
+              "str": 0,
+              "int": 0,
+              "con": 0,
+              "per": 0
+            },
+            "equipped": {
+              "armor": null,
+              "back": null,
+              "body": null,
+              "eyewear": null,
+              "head": null,
+              "headAccessory": null,
+              "shield": null,
+              "weapon": null,
+              "weaponSpecial": null
+            },
+            "pets": [],
+            "mounts": [],
+            "appearance": {
+              "size": "",
+              "shirt": "",
+              "skin": "",
+              "hairColor": "",
+              "hairStyle": 0,
+              "background": "",
+              "hairBangs": 0,
+              "hairMustache": 0,
+              "hairBeard": 0,
+              "hairFlower": 0
+            },
+            "costume": {},
+            "useCostume": false,
+            "selectedPet": null,
+            "selectedMount": null,
+            "partyId": null
+          },
+          "vitals": {
+            "hp": 20,
+            "mana": 10,
+            "maxHp": 50,
+            "maxMana": 30,
+            "reportSeq": 0,
+            "reportClient": "client",
+            "reportGeneration": "generation",
+            "vitalsSetVersion": 0,
+            "vitalsAt": 1,
+            "castReadyAt": 1,
+            "abilityReadyAt": {}
+          },
+          "place": {
+            "area": "village",
+            "x": 400,
+            "y": 300,
+            "placeSetVersion": 0,
+            "outerEpoch": ""
+          },
+          "story": {
+            "quests": {},
+            "marks": [],
+            "discoveries": [],
+            "defeated": [],
+            "questItems": [
+              "field-journal",
+              "hearthwick-map"
+            ],
+            "playSeconds": 0,
+            "reachedAt": {},
+            "gateAt": {}
+          },
+          "embers": {
+            "balance": 0,
+            "xpEarned": 0,
+            "pending": 0,
+            "xpMark": 0,
+            "verifiedXp": 0
+          },
+          "companions": {
+            "followPet": "Fox-Golden",
+            "yardPets": [
+              "Cat-Siamese",
+              "Owl-Spooky",
+              "Wolf-Cubic"
+            ],
+            "mountOut": "Wolf-Shade",
+            "mountHome": "home:12"
+          },
+          "magic": {
+            "levelMark": 20,
+            "classMark": "mage"
+          },
+          "fishing": {
+            "cast": {
+              "id": "cast:1",
+              "water": "water:village:mill-pond",
+              "bank": "north",
+              "species": "mill-roach",
+              "startedAt": 1791400000.25,
+              "readyAt": 1791400010.25,
+              "holdUntil": 1791400610.25,
+              "band": "healthy"
+            },
+            "nextCastAt": 1791400008.25
+          }
+        },
+        "stall": {
+          "home": {
+            "id": "home:12",
+            "gate": 12,
+            "worldId": "world",
+            "tier": 2,
+            "members": [
+              {
+                "id": "fixture-account",
+                "displayName": "Tam"
+              }
+            ],
+            "member": true,
+            "desolate": false,
+            "vacantSince": null,
+            "landSeed": 1234,
+            "cleared": [
+              {
+                "x": 3,
+                "y": 4
+              }
+            ],
+            "stumps": [],
+            "plants": [],
+            "postsBought": 1,
+            "nextPost": {
+              "amber": 1,
+              "stone": 5,
+              "timber": 10
+            },
+            "outdoor": {
+              "width": 24,
+              "height": 18
+            },
+            "indoor": {
+              "width": 12,
+              "height": 10
+            },
+            "items": [
+              {
+                "id": "piece-1",
+                "itemDef": "wooden-stool",
+                "scene": null,
+                "x": null,
+                "y": null,
+                "rotation": null,
+                "name": null,
+                "stalls": null
+              },
+              {
+                "id": "stable-1",
+                "itemDef": "stable",
+                "scene": "outdoor",
+                "x": 10,
+                "y": 12,
+                "rotation": 0,
+                "name": null,
+                "stalls": 2
+              }
+            ],
+            "stalls": [
+              {
+                "stall": 1,
+                "mount": "Wolf-Shade",
+                "ownerId": "fixture-account",
+                "ownerName": "Tam",
+                "out": true
+              },
+              {
+                "stall": 2,
+                "mount": "",
+                "ownerId": "",
+                "ownerName": "",
+                "out": false
+              }
+            ],
+            "yardPets": [
+              {
+                "ownerId": "fixture-account",
+                "pet": "Cat-Siamese",
+                "slot": 1
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "player-state",
+      "type": "glimway.v1.PlayerState",
+      "json": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0,
+          "outerEpoch": ""
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
+        },
+        "embers": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        },
+        "companions": {
+          "followPet": "Fox-Golden",
+          "yardPets": [
+            "Cat-Siamese",
+            "Owl-Spooky",
+            "Wolf-Cubic"
+          ],
+          "mountOut": "Wolf-Shade",
+          "mountHome": "home:12"
+        },
+        "magic": {
+          "levelMark": 20,
+          "classMark": "mage"
+        },
+        "fishing": {
+          "cast": {
+            "id": "cast:1",
+            "water": "water:village:mill-pond",
+            "bank": "north",
+            "species": "mill-roach",
+            "startedAt": 1791400000.25,
+            "readyAt": 1791400010.25,
+            "holdUntil": 1791400610.25,
+            "band": "healthy"
+          },
+          "nextCastAt": 1791400008.25
+        }
+      }
+    }
+  ]
+}

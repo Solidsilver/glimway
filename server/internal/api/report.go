@@ -17,8 +17,9 @@ func boundReport(s store.Snapshot, hp, mana, casts, at, ready, now float64) (flo
 	allowed := float64(0)
 	cost, heal := float64(0), float64(0)
 	if p := s.ImportedProfile; p != nil && p.Class != nil && s.State.HP > 0 {
-		if c, ok := content.CombatRules.GetClasses()[*p.Class]; ok {
-			cost = c.GetCastCost()
+		if _, ok := content.CombatRules.GetClasses()[*p.Class]; ok {
+			// The class's cast cost is its signature's mana (design 4.1).
+			cost = content.SignatureMana(*p.Class)
 			slots := math.Max(0, 1+math.Floor((now-ready)/content.CombatRules.GetSignatureCooldownSeconds()))
 			allowed = math.Min(casts, math.Min(slots, math.Floor((s.State.Mana+content.VitalsRules.GetRegenCap()*elapsed)/cost)))
 			if *p.Class == "healer" {

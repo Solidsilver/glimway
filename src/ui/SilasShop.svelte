@@ -58,7 +58,8 @@
   }
 
   function why(it: HomeItem): string | null {
-    if (view.tier < it.minTier) return 'Needs the cottage'
+    // The tier the piece wants, by name: the stable waits on the Workshop.
+    if (view.tier < it.minTier) return `Needs the ${HOMESTEAD_TIERS[it.minTier].name.toLowerCase()}`
     if (it.embers > 0 && ui.stats.embers < it.embers) return `Needs ${it.embers} embers`
     for (const [m, n] of Object.entries(price(it))) if ((view.materials[m] ?? 0) < n) return `Needs ${n} ${materialName(m).toLowerCase()}`
     return null
@@ -77,8 +78,12 @@
     await action.run('cottage', () => homes.upgrade(), () => (homes.mine?.tier === 2 ? 'There. Deep eaves, a heavy bench, and a chest that won’t drink the damp. Go and make something.' : SILAS.dialogue.afterUpgrade.lines[0]), refused)
   }
 
-  const cost = (it: HomeItem) =>
-    it.embers > 0 ? `${it.embers} embers` : Object.entries(price(it)).map(([m, n]) => `${n} ${materialName(m).toLowerCase()}`).join(' · ')
+  /** A price may name embers, materials, or both (the stable): show all of it. */
+  const cost = (it: HomeItem) => {
+    const embers = it.embers > 0 ? `${it.embers} embers` : ''
+    const materials = Object.entries(price(it)).map(([m, n]) => `${n} ${materialName(m).toLowerCase()}`).join(' · ')
+    return [embers, materials].filter(Boolean).join(' · ')
+  }
 </script>
 
 <Panel id="shop" icon="home" title="Silas’s Yard" closeLabel="Close Silas’s yard" {onClose}>

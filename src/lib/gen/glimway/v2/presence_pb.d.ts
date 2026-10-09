@@ -80,6 +80,18 @@ export declare type PresenceMessage = Message<"glimway.v2.PresenceMessage"> & {
      */
     value: PresenceWitness;
     case: "witness";
+  } | {
+    /**
+     * @generated from field: glimway.v2.PresenceAbility ability = 11;
+     */
+    value: PresenceAbility;
+    case: "ability";
+  } | {
+    /**
+     * @generated from field: glimway.v2.PresenceAvatarChange avatar_change = 12;
+     */
+    value: PresenceAvatarChange;
+    case: "avatarChange";
   } | { case: undefined; value?: undefined };
 };
 
@@ -229,6 +241,71 @@ export declare type PresenceEmoteValid = PresenceEmote;
 export declare const PresenceEmoteSchema: GenMessage<PresenceEmote, {validType: PresenceEmoteValid}>;
 
 /**
+ * A combat move cast on screen (design 4.5), so friends see it. The client
+ * sends it without account_id; the hub checks the table and the caster's
+ * class and level, then relays it with account_id filled.
+ *
+ * @generated from message glimway.v2.PresenceAbility
+ */
+export declare type PresenceAbility = Message<"glimway.v2.PresenceAbility"> & {
+  /**
+   * @generated from field: string ability = 1;
+   */
+  ability: string;
+
+  /**
+   * @generated from field: double x = 2;
+   */
+  x: number;
+
+  /**
+   * @generated from field: double y = 3;
+   */
+  y: number;
+
+  /**
+   * @generated from field: optional string account_id = 4;
+   */
+  accountId?: string | undefined;
+};
+
+export declare type PresenceAbilityValid = PresenceAbility;
+
+/**
+ * Describes the message glimway.v2.PresenceAbility.
+ * Use `create(PresenceAbilitySchema)` to create a new message.
+ */
+export declare const PresenceAbilitySchema: GenMessage<PresenceAbility, {validType: PresenceAbilityValid}>;
+
+/**
+ * The server's own word that one player's avatar changed (the resolved
+ * follower, the mount that is out): sent after a companions, mount-out or
+ * mount-home commit. The server is the only writer of PresenceAvatar's
+ * selected_pet and selected_mount.
+ *
+ * @generated from message glimway.v2.PresenceAvatarChange
+ */
+export declare type PresenceAvatarChange = Message<"glimway.v2.PresenceAvatarChange"> & {
+  /**
+   * @generated from field: string account_id = 1;
+   */
+  accountId: string;
+
+  /**
+   * @generated from field: glimway.v2.PresenceAvatar avatar = 2;
+   */
+  avatar?: PresenceAvatar | undefined;
+};
+
+export declare type PresenceAvatarChangeValid = PresenceAvatarChange;
+
+/**
+ * Describes the message glimway.v2.PresenceAvatarChange.
+ * Use `create(PresenceAvatarChangeSchema)` to create a new message.
+ */
+export declare const PresenceAvatarChangeSchema: GenMessage<PresenceAvatarChange, {validType: PresenceAvatarChangeValid}>;
+
+/**
  * @generated from message glimway.v2.PresenceGift
  */
 export declare type PresenceGift = Message<"glimway.v2.PresenceGift"> & {
@@ -342,6 +419,13 @@ export declare type PresencePosition = Message<"glimway.v2.PresencePosition"> & 
    * @generated from field: optional string account_id = 5;
    */
   accountId?: string | undefined;
+
+  /**
+   * "riding" or "fishing"; absent on foot (design 3.4, 5.5).
+   *
+   * @generated from field: optional string pose = 6;
+   */
+  pose?: string | undefined;
 };
 
 export declare type PresencePositionValid = PresencePosition;

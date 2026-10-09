@@ -64,6 +64,14 @@ export declare type ReportRequest = Message<"glimway.v1.ReportRequest"> & {
    * @generated from field: string generation = 9;
    */
   generation: string;
+
+  /**
+   * Combat ability casts by ability id (design 4.4); `casts` stays the
+   * signature's count.
+   *
+   * @generated from field: map<string, double> ability_casts = 10;
+   */
+  abilityCasts: { [key: string]: number };
 };
 
 export declare type ReportRequestValid = ReportRequest;
@@ -117,6 +125,18 @@ export declare type ReportResult = Message<"glimway.v1.ReportResult"> & {
    * @generated from field: bool place_ignored = 8;
    */
   placeIgnored: boolean;
+
+  /**
+   * The accepted counts by ability id, and the ward credit used (4.5).
+   *
+   * @generated from field: map<string, double> ability_casts = 9;
+   */
+  abilityCasts: { [key: string]: number };
+
+  /**
+   * @generated from field: double ally_heal = 10;
+   */
+  allyHeal: number;
 };
 
 export declare type ReportResultValid = ReportResult;

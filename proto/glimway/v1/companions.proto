@@ -1,0 +1,42 @@
+syntax = "proto3";
+package glimway.v1;
+option go_package = "glimway/server/internal/gen/glimway/v1;contract";
+import "glimway/v1/goods.proto";
+import "glimway/v1/op.proto";
+
+// Companions (design 2.2 and 3.3): which pet walks with you, which live in
+// the yard, and which mount is out. Every key is resolved when the state is
+// read (a lapsed key reads as its fallback), so the values here are what
+// the player sees, not what they once chose. The stable's stalls live on
+// the homestead's view (goods.proto); the operations that move a mount
+// between them are here.
+
+// What the account shows: the resolved follower ('' = Habitica's current
+// pet), the resolved yard pets in slot order (at most 3), the mount that is
+// out ('' when every mount is in its stall) and the homestead it came from.
+message Companions {
+  string follow_pet = 1;
+  repeated string yard_pets = 2;
+  string mount_out = 3;
+  string mount_home = 4;
+}
+
+// POST /api/companions: choose the follower and the yard.
+message CompanionsRequest { OpHeader op = 1; string follow_pet = 2; repeated string yard_pets = 3; }
+message CompanionsResult { Companions companions = 1; }
+
+// POST /api/stable/stall: put a mount in a stall, or empty one ('' mount).
+message StallRequest { OpHeader op = 1; Where where = 2; string home_id = 3; int32 stall = 4; string mount = 5; }
+message StallResult { HomeView home = 1; }
+
+// POST /api/stable/out: saddle up the stalled mount at `stall`.
+message MountOutRequest { OpHeader op = 1; Where where = 2; string home_id = 3; int32 stall = 4; }
+message MountOutResult { Companions companions = 1; }
+
+// POST /api/stable/home: send the mount that is out back to its stall.
+message MountHomeRequest { OpHeader op = 1; }
+message MountHomeResult { Companions companions = 1; }
+
+// POST /api/stable/extend: build one more bay on the stable's east side.
+message StableExtendRequest { OpHeader op = 1; Where where = 2; string home_id = 3; }
+message StableExtendResult { HomeView home = 1; map<string, int32> materials = 2; }

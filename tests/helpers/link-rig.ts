@@ -46,6 +46,7 @@ export function wire(p: ReturnType<typeof player>): Record<string, any> {
   const j = toJson(PlayerStateSchema, p, { alwaysEmitImplicit: true }) as Record<string, any>;
   j.account.partyId ??= null;
   for (const k of ['class', 'selectedPet', 'selectedMount', 'partyId']) j.profile[k] ??= null;
+  for (const k of ['companions', 'magic', 'fishing']) j[k] ??= null;
   return j;
 }
 
@@ -103,7 +104,7 @@ export const refuse = (code: string, state?: Record<string, any>, status = 409):
 export const ackReport =
   (state: (c: Call) => Record<string, any>, over: Partial<{ accepted: boolean; staleBasis: boolean }> = {}) =>
   (c: Call): Answer =>
-    env(state(c), { report: { seq: c.body.seq, accepted: over.accepted ?? true, staleBasis: over.staleBasis ?? false, casts: over.accepted === false ? 0 : c.body.casts, client: c.body.client, generation: c.body.generation, basis: c.body.basis, placeIgnored: false } });
+    env(state(c), { report: { seq: c.body.seq, accepted: over.accepted ?? true, staleBasis: over.staleBasis ?? false, casts: over.accepted === false ? 0 : c.body.casts, client: c.body.client, generation: c.body.generation, basis: c.body.basis, placeIgnored: false, abilityCasts: {}, allyHeal: 0 } });
 
 /** The part of a Session the link drives, with Session's merge of live fields. */
 export class FakeSession implements LinkSession {

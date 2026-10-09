@@ -1,0 +1,381 @@
+{
+  "loader": [
+    {
+      "name": "shipped",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "duplicate-id",
+      "valid": false,
+      "rule": "duplicate id",
+      "edits": [
+        {
+          "path": [
+            "abilities",
+            1,
+            "id"
+          ],
+          "value": "cleave"
+        }
+      ]
+    },
+    {
+      "name": "signature-level",
+      "valid": false,
+      "rule": "signature level",
+      "edits": [
+        {
+          "path": [
+            "abilities",
+            0,
+            "level"
+          ],
+          "value": 20
+        }
+      ]
+    },
+    {
+      "name": "second-signature",
+      "valid": false,
+      "rule": "second signature",
+      "edits": [
+        {
+          "path": [
+            "abilities",
+            1,
+            "kind"
+          ],
+          "value": "signature"
+        },
+        {
+          "path": [
+            "abilities",
+            1,
+            "level"
+          ],
+          "value": 10
+        },
+        {
+          "path": [
+            "abilities",
+            1,
+            "cooldownSeconds"
+          ],
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "second-move",
+      "valid": false,
+      "rule": "second move",
+      "edits": [
+        {
+          "path": [
+            "abilities",
+            0,
+            "kind"
+          ],
+          "value": "combat"
+        },
+        {
+          "path": [
+            "abilities",
+            0,
+            "level"
+          ],
+          "value": 15
+        }
+      ]
+    },
+    {
+      "name": "missing-signature",
+      "valid": false,
+      "rule": "has no signature",
+      "edits": [
+        {
+          "path": [
+            "abilities"
+          ],
+          "value": [
+            {
+              "id": "cleave",
+              "name": "Cleave",
+              "class": "warrior",
+              "kind": "signature",
+              "level": 10,
+              "mana": 12,
+              "cooldownSeconds": 1,
+              "icon": "ability-cleave"
+            },
+            {
+              "id": "fingersnap",
+              "name": "Fingersnap",
+              "class": "mage",
+              "kind": "signature",
+              "level": 10,
+              "mana": 15,
+              "cooldownSeconds": 1,
+              "icon": "ability-fingersnap"
+            },
+            {
+              "id": "shadowstep",
+              "name": "Shadowstep",
+              "class": "rogue",
+              "kind": "signature",
+              "level": 10,
+              "mana": 10,
+              "cooldownSeconds": 1,
+              "icon": "ability-shadowstep"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "signature-cooldown",
+      "valid": false,
+      "rule": "ability.signature_cooldown",
+      "edits": [
+        {
+          "path": [
+            "abilities",
+            0,
+            "cooldownSeconds"
+          ],
+          "value": 2
+        }
+      ]
+    },
+    {
+      "name": "unknown-kind",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "abilities",
+            1,
+            "kind"
+          ],
+          "value": "working"
+        }
+      ]
+    },
+    {
+      "name": "unknown-class",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "abilities",
+            0,
+            "class"
+          ],
+          "value": "wizard"
+        }
+      ]
+    },
+    {
+      "name": "unknown-level",
+      "valid": false,
+      "rule": "int32.in",
+      "edits": [
+        {
+          "path": [
+            "abilities",
+            1,
+            "level"
+          ],
+          "value": 12
+        }
+      ]
+    },
+    {
+      "name": "zero-mana",
+      "valid": false,
+      "rule": "int32.gt",
+      "edits": [
+        {
+          "path": [
+            "abilities",
+            0,
+            "mana"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "zero-cooldown",
+      "valid": false,
+      "rule": "double.gt",
+      "edits": [
+        {
+          "path": [
+            "abilities",
+            1,
+            "cooldownSeconds"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "empty-name",
+      "valid": false,
+      "rule": "string.min_len",
+      "edits": [
+        {
+          "path": [
+            "abilities",
+            0,
+            "name"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "bad-icon",
+      "valid": false,
+      "rule": "string.pattern",
+      "edits": [
+        {
+          "path": [
+            "abilities",
+            0,
+            "icon"
+          ],
+          "value": "Ability Cleave"
+        }
+      ]
+    },
+    {
+      "name": "slow-over-one",
+      "valid": false,
+      "rule": "double.gt_lte",
+      "edits": [
+        {
+          "path": [
+            "abilities",
+            3,
+            "numbers",
+            "slow"
+          ],
+          "value": 2
+        }
+      ]
+    },
+    {
+      "name": "pulse-fraction-zero",
+      "valid": false,
+      "rule": "double.gt_lte",
+      "edits": [
+        {
+          "path": [
+            "abilities",
+            7,
+            "numbers",
+            "pulseHealFraction"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "zero-duration",
+      "valid": false,
+      "rule": "double.gt",
+      "edits": [
+        {
+          "path": [
+            "abilities",
+            1,
+            "numbers",
+            "durationSeconds"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "zero-pulses",
+      "valid": false,
+      "rule": "int32.gt",
+      "edits": [
+        {
+          "path": [
+            "abilities",
+            7,
+            "numbers",
+            "pulses"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "non-finite-cooldown",
+      "valid": false,
+      "rule": "non-finite number",
+      "edits": [
+        {
+          "path": [
+            "abilities",
+            0,
+            "cooldownSeconds"
+          ],
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "name": "null-field",
+      "valid": false,
+      "rule": "null content field",
+      "edits": [
+        {
+          "path": [
+            "abilities",
+            0,
+            "name"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "unknown-key",
+      "valid": false,
+      "rule": "unknown key",
+      "edits": [
+        {
+          "path": [
+            "abilities",
+            0,
+            "price"
+          ],
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "proto-name-key",
+      "valid": false,
+      "rule": "is the proto name",
+      "edits": [
+        {
+          "path": [
+            "abilities",
+            0,
+            "cooldown_seconds"
+          ],
+          "value": 1
+        }
+      ]
+    }
+  ]
+}

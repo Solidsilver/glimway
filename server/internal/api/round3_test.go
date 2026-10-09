@@ -151,7 +151,7 @@ func TestRound3SessionIdleSlidingAbsoluteAndRollback(t *testing.T) {
 }
 func proofRequest(x *rig, id, token, remote string) (int, string, string) {
 	r := httptest.NewRequest("POST", "/api/session", bytes.NewBufferString(store.JSON(map[string]any{"userId": id, "token": token})))
-	r.Header.Set("X-Glimway-Contract", "4")
+	r.Header.Set("X-Glimway-Contract", "5")
 	r.Header.Set("Content-Type", "application/json")
 	r.RemoteAddr = remote
 	w := httptest.NewRecorder()
@@ -304,7 +304,7 @@ func TestRound3StateLeaseActivityAndDisplayName(t *testing.T) {
 	}
 	read := func(lease string, want bool) response {
 		r := httptest.NewRequest("GET", "/api/state", nil)
-		r.Header.Set("X-Glimway-Contract", "4")
+		r.Header.Set("X-Glimway-Contract", "5")
 		r.AddCookie(c)
 		if lease != "" {
 			r.Header.Set("X-Play-Lease", lease)
@@ -348,7 +348,7 @@ func TestRound3InviteListQuotasAndReadableCodeLifecycle(t *testing.T) {
 	c := x.login("owner", "")
 	list := func(remaining, entries int) {
 		r := httptest.NewRequest("GET", "/api/invites", nil)
-		r.Header.Set("X-Glimway-Contract", "4")
+		r.Header.Set("X-Glimway-Contract", "5")
 		r.AddCookie(c)
 		w := httptest.NewRecorder()
 		x.api.ServeHTTP(w, r)

@@ -30,8 +30,10 @@ export type PresenceAvatar = Omit<Fields<GeneratedAvatar>, 'appearance' | 'equip
   selectedPet: string | null;
   selectedMount: string | null;
 };
-export type PresencePosition = Required<Omit<Fields<GeneratedPosition>, 'facing' | 'accountId'>> & {
+/** `pose` is the wire's optional one ("riding" | "fishing"; absent on foot). */
+export type PresencePosition = Required<Omit<Fields<GeneratedPosition>, 'facing' | 'accountId' | 'pose'>> & {
   facing: Required<Fields<NonNullable<GeneratedPosition['facing']>>>;
+  pose?: string;
 };
 export type PresencePlayer = Omit<Fields<GeneratedPlayer>, 'avatar' | 'pos'> & {
   avatar: PresenceAvatar | null;

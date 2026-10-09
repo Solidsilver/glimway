@@ -463,6 +463,26 @@
       "tags": []
     },
     {
+      "id": "stable",
+      "name": "Stable",
+      "facings": {
+        "front": ""
+      },
+      "footprint": [
+        4,
+        3
+      ],
+      "base": {
+        "x": 0,
+        "y": 0,
+        "w": 4,
+        "h": 3
+      },
+      "mount": "floor",
+      "size": "large",
+      "tags": []
+    },
+    {
       "id": "raised-bed",
       "name": "Raised bed",
       "facings": {

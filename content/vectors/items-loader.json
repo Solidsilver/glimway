@@ -1463,11 +1463,56 @@
           ],
           "value": [
             {
+              "item": "tool-rack",
+              "qty": 1,
+              "embers": 1,
+              "label": "Rack",
+              "line": "A rack."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "good-instance",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            0,
+            "goods"
+          ],
+          "value": [
+            {
               "item": "bench-axe",
               "qty": 1,
               "embers": 1,
               "label": "Axe",
               "line": "An axe."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "good-instance-qty",
+      "valid": false,
+      "rule": "good",
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            0,
+            "goods"
+          ],
+          "value": [
+            {
+              "item": "bench-axe",
+              "qty": 2,
+              "embers": 1,
+              "label": "Axes",
+              "line": "Two axes."
             }
           ]
         }

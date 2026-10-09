@@ -119,7 +119,9 @@ export function validateItems(value: unknown): Items {
     for (const g of s.goods) {
       const d = defs.get(g.item);
       if (goods.has(g.item)) return bad(`seller ${s.id}: duplicate good ${g.item}`);
-      if (!d || !isStackable(d)) return bad(`seller ${s.id} good ${g.item}`);
+      // A seller hands over stacks, or one instance (the willow rod, sold by
+      // Finn) — always one at a time.
+      if (!d || !(isStackable(d) || isInstanced(d)) || (isInstanced(d) && g.qty !== 1)) return bad(`seller ${s.id} good ${g.item}`);
       goods.add(g.item);
     }
   }

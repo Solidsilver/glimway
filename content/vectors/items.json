@@ -1306,5 +1306,53 @@
   "giveable": true,
   "usableNow": false,
   "offHand": false
+ },
+ {
+  "id": "willow-rod",
+  "instanced": true,
+  "stackable": false,
+  "assetKind": "instance",
+  "atZero": "breaks",
+  "slots": 1,
+  "maxPoints": 90,
+  "giveable": true,
+  "usableNow": false,
+  "offHand": false
+ },
+ {
+  "id": "mill-roach",
+  "instanced": false,
+  "stackable": true,
+  "assetKind": "material",
+  "atZero": "never",
+  "slots": 0,
+  "maxPoints": 0,
+  "giveable": true,
+  "usableNow": false,
+  "offHand": false
+ },
+ {
+  "id": "millers-fry",
+  "instanced": false,
+  "stackable": true,
+  "assetKind": "item",
+  "atZero": "never",
+  "slots": 0,
+  "maxPoints": 0,
+  "giveable": true,
+  "usableNow": true,
+  "offHand": false
+ },
+ {
+  "id": "recipe-card-millers-fry",
+  "instanced": false,
+  "stackable": true,
+  "assetKind": "item",
+  "atZero": "never",
+  "slots": 0,
+  "maxPoints": 0,
+  "giveable": true,
+  "usableNow": false,
+  "offHand": false
  }
 ]

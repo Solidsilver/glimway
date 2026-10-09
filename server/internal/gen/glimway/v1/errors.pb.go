@@ -237,6 +237,15 @@ const (
 	ErrorCode_ERROR_CODE_NOT_YET                   ErrorCode = 208
 	ErrorCode_ERROR_CODE_NOT_HERE                  ErrorCode = 209
 	ErrorCode_ERROR_CODE_NEEDS_HABITICA            ErrorCode = 210
+	ErrorCode_ERROR_CODE_COMPANION_NOT_OWNED       ErrorCode = 211
+	ErrorCode_ERROR_CODE_NO_STABLE                 ErrorCode = 212
+	ErrorCode_ERROR_CODE_STALL_TAKEN               ErrorCode = 213
+	ErrorCode_ERROR_CODE_STALLS_IN_USE             ErrorCode = 214
+	ErrorCode_ERROR_CODE_STABLE_FULL               ErrorCode = 215
+	ErrorCode_ERROR_CODE_ALREADY_CASTING           ErrorCode = 216
+	ErrorCode_ERROR_CODE_CAST_TOO_SOON             ErrorCode = 217
+	ErrorCode_ERROR_CODE_WATER_STILL               ErrorCode = 218
+	ErrorCode_ERROR_CODE_NO_CAST                   ErrorCode = 219
 )
 
 // Enum value maps for ErrorCode.
@@ -453,6 +462,15 @@ var (
 		208: "ERROR_CODE_NOT_YET",
 		209: "ERROR_CODE_NOT_HERE",
 		210: "ERROR_CODE_NEEDS_HABITICA",
+		211: "ERROR_CODE_COMPANION_NOT_OWNED",
+		212: "ERROR_CODE_NO_STABLE",
+		213: "ERROR_CODE_STALL_TAKEN",
+		214: "ERROR_CODE_STALLS_IN_USE",
+		215: "ERROR_CODE_STABLE_FULL",
+		216: "ERROR_CODE_ALREADY_CASTING",
+		217: "ERROR_CODE_CAST_TOO_SOON",
+		218: "ERROR_CODE_WATER_STILL",
+		219: "ERROR_CODE_NO_CAST",
 	}
 	ErrorCode_value = map[string]int32{
 		"ERROR_CODE_UNSPECIFIED":               0,
@@ -666,6 +684,15 @@ var (
 		"ERROR_CODE_NOT_YET":                   208,
 		"ERROR_CODE_NOT_HERE":                  209,
 		"ERROR_CODE_NEEDS_HABITICA":            210,
+		"ERROR_CODE_COMPANION_NOT_OWNED":       211,
+		"ERROR_CODE_NO_STABLE":                 212,
+		"ERROR_CODE_STALL_TAKEN":               213,
+		"ERROR_CODE_STALLS_IN_USE":             214,
+		"ERROR_CODE_STABLE_FULL":               215,
+		"ERROR_CODE_ALREADY_CASTING":           216,
+		"ERROR_CODE_CAST_TOO_SOON":             217,
+		"ERROR_CODE_WATER_STILL":               218,
+		"ERROR_CODE_NO_CAST":                   219,
 	}
 )
 
@@ -701,7 +728,7 @@ var File_glimway_v1_errors_proto protoreflect.FileDescriptor
 const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\n" +
 	"\x17glimway/v1/errors.proto\x12\n" +
-	"glimway.v1*\xbc4\n" +
+	"glimway.v1*\xcb6\n" +
 	"\tErrorCode\x12\x1a\n" +
 	"\x16ERROR_CODE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17ERROR_CODE_INVALID_JSON\x10\x01\x12\"\n" +
@@ -914,7 +941,16 @@ const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\x1aERROR_CODE_REPORT_REQUIRED\x10\xcf\x01\x12\x17\n" +
 	"\x12ERROR_CODE_NOT_YET\x10\xd0\x01\x12\x18\n" +
 	"\x13ERROR_CODE_NOT_HERE\x10\xd1\x01\x12\x1e\n" +
-	"\x19ERROR_CODE_NEEDS_HABITICA\x10\xd2\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
+	"\x19ERROR_CODE_NEEDS_HABITICA\x10\xd2\x01\x12#\n" +
+	"\x1eERROR_CODE_COMPANION_NOT_OWNED\x10\xd3\x01\x12\x19\n" +
+	"\x14ERROR_CODE_NO_STABLE\x10\xd4\x01\x12\x1b\n" +
+	"\x16ERROR_CODE_STALL_TAKEN\x10\xd5\x01\x12\x1d\n" +
+	"\x18ERROR_CODE_STALLS_IN_USE\x10\xd6\x01\x12\x1b\n" +
+	"\x16ERROR_CODE_STABLE_FULL\x10\xd7\x01\x12\x1f\n" +
+	"\x1aERROR_CODE_ALREADY_CASTING\x10\xd8\x01\x12\x1d\n" +
+	"\x18ERROR_CODE_CAST_TOO_SOON\x10\xd9\x01\x12\x1b\n" +
+	"\x16ERROR_CODE_WATER_STILL\x10\xda\x01\x12\x17\n" +
+	"\x12ERROR_CODE_NO_CAST\x10\xdb\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
 
 var (
 	file_glimway_v1_errors_proto_rawDescOnce sync.Once

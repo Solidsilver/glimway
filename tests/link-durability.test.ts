@@ -4,6 +4,7 @@ import { emptyRecord, idbOutboxStore, memoryOutboxStore } from '../src/lib/api/o
 import { TxIDB } from './helpers/fake-idb-tx.ts';
 import { env, FakeLocks, fakeServer, markOk, online, play, refuse, rig, S, seed, stepOk, tick, toasts } from './helpers/link-rig.ts';
 import { roadStep } from '../src/lib/quests.ts';
+import { CONTRACT_NUMBER } from '../src/lib/contract.ts';
 
 /**
  * Review round 1, findings 1, 2, 9 and 10: who may write the outbox, when a
@@ -54,7 +55,7 @@ test('without Web Locks the newest tab owns the record; the older one is fenced 
 test('a slow lock: nothing is allocated before the record is claimed, so ids never collide with a previous page’s', async (t) => {
   const store = memoryOutboxStore();
   const old = emptyRecord('fixture-account', 'dev');
-  old.entries = [{ id: 6, kind: 'mark', path: '/api/story/mark', key: 'k6', body: JSON.stringify({ op: { lease: '', key: 'k6' }, mark: 'seen:old', where: { area: 'village', x: 1, y: 1 } }), contract: 4, createdAt: Date.now(), sent: false, barrier: false, offline: true }];
+  old.entries = [{ id: 6, kind: 'mark', path: '/api/story/mark', key: 'k6', body: JSON.stringify({ op: { lease: '', key: 'k6' }, mark: 'seen:old', where: { area: 'village', x: 1, y: 1 } }), contract: CONTRACT_NUMBER, createdAt: Date.now(), sent: false, barrier: false, offline: true }];
   old.nextId = 7;
   seed(store, old);
   let grant!: () => void;
@@ -228,7 +229,7 @@ test('a failed logout mark is reported, not assumed', async (t) => {
 test('recovery: work from an earlier page that needed a connection and was never sent goes; sent work replays only after a state read', async (t) => {
   const store = memoryOutboxStore();
   const record = emptyRecord('fixture-account', 'dev');
-  const craft = (id: number, sent: boolean) => ({ id, kind: 'mutation' as const, path: '/api/craft', key: `k${id}`, body: JSON.stringify({ recipeId: 'plank', qty: 1, op: { lease: '', key: `k${id}` }, where: { area: 'village', x: 1, y: 1 } }), contract: 4, createdAt: Date.now(), sent, barrier: false, offline: false });
+  const craft = (id: number, sent: boolean) => ({ id, kind: 'mutation' as const, path: '/api/craft', key: `k${id}`, body: JSON.stringify({ recipeId: 'plank', qty: 1, op: { lease: '', key: `k${id}` }, where: { area: 'village', x: 1, y: 1 } }), contract: CONTRACT_NUMBER, createdAt: Date.now(), sent, barrier: false, offline: false });
   record.entries = [craft(1, true), craft(2, false)];
   record.nextId = 3;
   seed(store, record);

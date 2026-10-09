@@ -52,6 +52,8 @@ export interface CommonsLane {
   silasTable: { x: number; y: number; radius: number };
 }
 export interface LanternPosts { item: string; radius: number; nameMax: number; costs: { materials: Record<string, number> }[]; growth: Record<string, number> }
+/** The stable's growth rules (design 3.2): one piece, a bay at a time. */
+export interface HomesteadStable { item: string; maxStalls: number; stallCost: Record<string, number>; growth: Record<string, number> }
 export interface HomesteadData {
   tiers: HomeTier[];
   indoor: HomeGrid;
@@ -68,6 +70,7 @@ export interface HomesteadData {
   jointDeed: { confirmWindowSeconds: number; inviteHours: number };
   personalChest: { maxUnits: number };
   items: HomeItem[];
+  stable: HomesteadStable;
 }
 
 /** Throws on anything content/homestead.go would refuse. */
@@ -112,6 +115,13 @@ export function validateHomesteadData(value: unknown): HomesteadData {
     for (const [id, qty] of Object.entries(v.materials)) if ((!loadWilds().materials.includes(id) && !MATERIAL_ITEMS.has(id)) || qty < 1) return bad(`item ${v.id} material ${id}`);
   }
   if (!seen.has(h.lanternPosts.item)) return bad('post item');
+  // The stable grows from its own row: its piece is in the build list, its
+  // first extra bay's bill names carried materials, and each bay after that
+  // only adds to materials the bill already names.
+  const stable = h.stable;
+  if (!seen.has(stable.item)) return bad(`stable item ${stable.item}`);
+  for (const [id, qty] of Object.entries(stable.stallCost)) if ((!loadWilds().materials.includes(id) && !MATERIAL_ITEMS.has(id)) || qty < 1) return bad(`stable stall cost ${id}`);
+  for (const [id, qty] of Object.entries(stable.growth)) if (!(id in stable.stallCost) || qty < 0) return bad(`stable growth ${id}`);
   return h;
 }
 export const HOMESTEAD_DATA = validateHomesteadData(raw);
@@ -154,6 +164,14 @@ export function parseHomeArea(area: string): number | null {
 
 export function homeItem(id: string): HomeItem | undefined {
   return HOMESTEAD_DATA.items.find((i) => i.id === id);
+}
+
+/** The materials the `extra`-th extra bay of a homestead's stable costs (1-based). */
+export function stallCost(extra: number, data: HomesteadData = HOMESTEAD_DATA): Record<string, number> {
+  const n = Math.max(1, extra);
+  const out: Record<string, number> = {};
+  for (const [m, v] of Object.entries(data.stable.stallCost)) out[m] = v + (data.stable.growth[m] ?? 0) * (n - 1);
+  return out;
 }
 
 export type Rotation = 0 | 90 | 180 | 270;

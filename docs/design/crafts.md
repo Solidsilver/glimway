@@ -189,7 +189,8 @@ The follower's motion lives in `src/game/entities/avatar.ts` (`buildPetFollower`
 at home first. A stable, maybe."* The "What's new" card says riding moved (6.6).
 
 **Building it.** After the Workshop (tier 2), the homestead's build list offers **the stable**: 30
-embers, timber 16, stone 8, fiber 6. It's bought and placed like any outdoor piece, in placement
+embers, timber 16, stone 8, fiber 6 (a home-item row's price may name embers, materials, or both;
+the stable names both, as the Workshop tier does). It's bought and placed like any outdoor piece, in placement
 mode, on cleared, lit ground. It comes with stall 1: a small tack room on its west end and one bay.
 
 **Stalling a mount.** Walk up to an empty stall and the action button says **Choose a mount**; it
@@ -479,7 +480,7 @@ or let it rest."* An empty pond can't be cast into (`water-still`); there's no c
 
 | Item | Kind | Numbers | Where it comes from |
 |---|---|---|---|
-| **Willow rod** (`willow-rod`) | tool, grade `cheap`, action `fish` | 20 uses; one use per **kept** fish. Release and a cancelled cast don't wear it | Finn gives the first (5.8); Finn sells another, 2 embers, wherever he is; the bench makes one (timber 1, fiber 2) for anyone with a Workshop |
+| **Willow rod** (`willow-rod`) | tool, grade `cheap`, action `fish` | 30 uses; one use per **kept** fish. Release and a cancelled cast don't wear it | Finn gives the first (5.8); Finn sells another, 2 embers, wherever he is; the bench makes one (timber 1, fiber 2) for anyone with a Workshop |
 | **Mill roach** (`mill-roach`) | material, Supplies tab | Stacks; doesn't rot; giftable and mailable | The mill pond |
 | **Miller's fry** (`millers-fry`) | consumable, marked | Restores 18 HP and 6 mana. Refused at 0 HP, like all food | Hearth recipe: 1 mill roach, 1 flour → 1 fry |
 | **Recipe card: Miller's fry** (`recipe-card-millers-fry`) | paper | Hazel's card; the hearth recipe needs it held | Hazel, at the end of the quest (5.8) |
@@ -536,9 +537,9 @@ The numbers are fishing.md's proposals, for a medium water (24–63 tiles):
       "id": "water:village:mill-pond", "area": "village", "habitat": "still",
       "tiles": 27, "capacity": 12, "recoverySeconds": 600,
       "banks": [
-        { "id": "north", "tiles": [[34,18],[35,18],[36,18],[37,18],[38,18]], "facing": "south", "closedIn": ["Quiet"] },
-        { "id": "east", "tiles": [[39,19],[39,20],[39,21],[39,22]], "facing": "west", "closedIn": ["Quiet"] },
-        { "id": "race", "tiles": [[32,19]], "facing": "south", "closedIn": [] }
+        { "id": "north", "tiles": [{ "tx": 34, "ty": 18 }, { "tx": 35, "ty": 18 }, { "tx": 36, "ty": 18 }, { "tx": 37, "ty": 18 }, { "tx": 38, "ty": 18 }], "facing": "south", "closedIn": ["Quiet"] },
+        { "id": "east", "tiles": [{ "tx": 39, "ty": 19 }, { "tx": 39, "ty": 20 }, { "tx": 39, "ty": 21 }, { "tx": 39, "ty": 22 }], "facing": "west", "closedIn": ["Quiet"] },
+        { "id": "race", "tiles": [{ "tx": 32, "ty": 19 }], "facing": "south", "closedIn": [] }
       ],
       "species": [ { "item": "mill-roach", "weight": 1 } ]
     }
@@ -546,9 +547,10 @@ The numbers are fishing.md's proposals, for a medium water (24–63 tiles):
 }
 ```
 
-The "still" band (no fish) has no row: an empty water refuses. Field rules are protovalidate
-constraints (ids, positive numbers, `closedIn` naming a mark, at least one bank and one species,
-items that exist is a cross-file check in code). Text lines live here because the server sends
+The "still" band (no fish) has no row: an empty water refuses. Bank tiles are `{tx,ty}` objects —
+the file is read as ProtoJSON, and a tuple pair does not decode into a tile message. Field rules
+are protovalidate constraints (ids, positive numbers, `closedIn` naming a mark, at least one bank
+and one species, items that exist and the last band flooring at 0% are cross-file checks in code). Text lines live here because the server sends
 the band id and the client shows the line; the server never needs the words, but one file keeps
 the water's numbers and voice together. (If the lane prefers, the lines move to
 `src/content/fishing.ts` and the file keeps ids only.)
@@ -1070,6 +1072,6 @@ the earlier docs decided is taken as decided.
    outnumber the people at the bank.
 
 **Tuning, not decisions** (playtest them, change data): capacity 12 and one fish per 10 minutes;
-the band thresholds and waits; the rod's 20 uses; the fry's 18 HP and 6 mana; the stable's 30
+the band thresholds and waits; the rod's 30 uses; the fry's 18 HP and 6 mana; the stable's 30
 embers and materials and the stall growth; the four moves' costs, cooldowns and sizes; the yard
 pets' segment lengths.

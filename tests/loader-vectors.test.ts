@@ -6,18 +6,24 @@ import { validateHomesteadData } from '../src/lib/homestead.ts';
 import { validateGathering } from '../src/lib/gathering.ts';
 import { validateRepairs } from '../src/lib/repairs.ts';
 import { validateCrafting, validateProjects } from '../src/lib/workshop.ts';
+import { validateAbilities } from '../src/lib/abilities.ts';
+import { validateFishing } from '../src/lib/fishing.ts';
 import itemsRaw from '../content/items.json' with { type: 'json' };
 import homesteadRaw from '../content/homestead.json' with { type: 'json' };
 import gatheringRaw from '../content/gathering.json' with { type: 'json' };
 import repairsRaw from '../content/repairs.json' with { type: 'json' };
 import craftingRaw from '../content/crafting.json' with { type: 'json' };
 import projectsRaw from '../content/projects.json' with { type: 'json' };
+import abilitiesRaw from '../content/abilities.json' with { type: 'json' };
+import fishingRaw from '../content/fishing.json' with { type: 'json' };
 import itemsVectors from '../content/vectors/items-loader.json' with { type: 'json' };
 import homesteadVectors from '../content/vectors/homestead-loader.json' with { type: 'json' };
 import gatheringVectors from '../content/vectors/gathering.json' with { type: 'json' };
 import repairsVectors from '../content/vectors/repairs.json' with { type: 'json' };
 import craftingVectors from '../content/vectors/crafting.json' with { type: 'json' };
 import projectsVectors from '../content/vectors/projects.json' with { type: 'json' };
+import abilitiesVectors from '../content/vectors/abilities.json' with { type: 'json' };
+import fishingVectors from '../content/vectors/fishing.json' with { type: 'json' };
 
 interface Edit { path: (string | number)[]; value?: unknown; remove?: boolean }
 function edited(base: unknown, edits: Edit[]): unknown {
@@ -33,6 +39,8 @@ const families: [string, unknown, { loader: { name: string; valid: boolean; rule
   ['repairs', repairsRaw, repairsVectors as never, validateRepairs],
   ['crafting', craftingRaw, craftingVectors as never, validateCrafting],
   ['projects', projectsRaw, projectsVectors as never, validateProjects],
+  ['abilities', abilitiesRaw, abilitiesVectors as never, validateAbilities],
+  ['fishing', fishingRaw, fishingVectors as never, validateFishing],
 ];
 for (const [family, raw, vectors, validate] of families) {
   for (const v of vectors.loader) test(`shared ${family} loader: ${v.name}`, () => {

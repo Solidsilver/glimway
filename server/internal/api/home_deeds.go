@@ -71,6 +71,8 @@ func settleHomes(ctx context.Context, tx *sql.Tx, world string, now int64) error
 			"DELETE FROM item_instances WHERE (location='storage' OR location='shelf') AND owner=?",
 			// The woodpile's stacks reference the homestead: they go before it.
 			"DELETE FROM woodpile_stacks WHERE homestead_id=?",
+			// So do the stable's stalls (030).
+			"DELETE FROM homestead_stalls WHERE homestead_id=?",
 			"DELETE FROM homestead_items WHERE homestead_id=?",
 			"DELETE FROM homestead_members WHERE homestead_id=?",
 			"DELETE FROM homesteads WHERE id=?",
@@ -368,27 +370,38 @@ func buyItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req
 	if int(def.GetMinTier()) > h.Tier {
 		return "", fail(409, "tier-required")
 	}
-	var err error
 	if def.GetId() == content.HomeRules.GetLanternPosts().GetItem() {
 		// Each post costs more than the last (the homestead's count, not the buyer's).
 		cost := content.HomePostCost(content.HomeRules, h.PostsBought)
-		if err = checkMaterials(ctx, tx, s.AccountID, cost); err != nil {
+		if err := checkMaterials(ctx, tx, s.AccountID, cost); err != nil {
 			return "", err
 		}
-		if err = debitMaterials(ctx, tx, s, cost, 1, "homestead-buy", def.GetId(), now); err != nil {
+		if err := debitMaterials(ctx, tx, s, cost, 1, "homestead-buy", def.GetId(), now); err != nil {
 			return "", err
 		}
-		_, err = tx.ExecContext(ctx, "UPDATE homesteads SET posts_bought=posts_bought+1 WHERE id=?", h.ID)
-	} else if def.GetEmbers() > 0 {
-		err = debitEmbers(ctx, tx, s, int(def.GetEmbers()), "homestead-buy", def.GetId(), now)
+		if _, err := tx.ExecContext(ctx, "UPDATE homesteads SET posts_bought=posts_bought+1 WHERE id=?", h.ID); err != nil {
+			return "", err
+		}
 	} else {
-		if err = checkMaterials(ctx, tx, s.AccountID, def.GetMaterials()); err != nil {
-			return "", err
+		// A home good's price may name embers, materials, or both
+		// (home_item.price — the stable is priced in both). Both are
+		// charged together, the Workshop upgrade does the same, and a
+		// shortfall in either refuses the buy with the error that currency
+		// owes. A refused buy keeps nothing: the keyed operation rolls its
+		// gameplay savepoint back.
+		if def.GetEmbers() > 0 {
+			if err := debitEmbers(ctx, tx, s, int(def.GetEmbers()), "homestead-buy", def.GetId(), now); err != nil {
+				return "", err
+			}
 		}
-		err = debitMaterials(ctx, tx, s, def.GetMaterials(), 1, "homestead-buy", def.GetId(), now)
-	}
-	if err != nil {
-		return "", err
+		if len(def.GetMaterials()) > 0 {
+			if err := checkMaterials(ctx, tx, s.AccountID, def.GetMaterials()); err != nil {
+				return "", err
+			}
+			if err := debitMaterials(ctx, tx, s, def.GetMaterials(), 1, "homestead-buy", def.GetId(), now); err != nil {
+				return "", err
+			}
+		}
 	}
 	id, err := store.Random()
 	if err != nil {

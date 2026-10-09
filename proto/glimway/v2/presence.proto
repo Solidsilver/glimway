@@ -17,6 +17,8 @@ message PresenceMessage {
     PresenceLeave leave = 8;
     PresenceGift gift = 9;
     PresenceWitness witness = 10;
+    PresenceAbility ability = 11;
+    PresenceAvatarChange avatar_change = 12;
   }
 }
 message PresenceAuth { string lease = 1; }
@@ -26,6 +28,15 @@ message PresenceJoin { string area = 1; PresencePlayer player = 2; }
 message PresenceRoom { string area = 1; repeated PresencePlayer players = 2; }
 message PresenceLeave { string account_id = 1; }
 message PresenceEmote { string id = 1; optional string account_id = 2; }
+// A combat move cast on screen (design 4.5), so friends see it. The client
+// sends it without account_id; the hub checks the table and the caster's
+// class and level, then relays it with account_id filled.
+message PresenceAbility { string ability = 1; double x = 2; double y = 3; optional string account_id = 4; }
+// The server's own word that one player's avatar changed (the resolved
+// follower, the mount that is out): sent after a companions, mount-out or
+// mount-home commit. The server is the only writer of PresenceAvatar's
+// selected_pet and selected_mount.
+message PresenceAvatarChange { string account_id = 1; PresenceAvatar avatar = 2; }
 message PresenceGift { string from_name = 1; string kind = 2; string item_def = 3; int32 qty = 4; }
 message PresenceWitness { string beat = 1; string account_id = 2; string name = 3; }
 // Explicit presence preserves the JSON reader's required-coordinate checks.
@@ -36,6 +47,8 @@ message PresencePosition {
   PresenceFacing facing = 3;
   optional bool moving = 4;
   optional string account_id = 5;
+  // "riding" or "fishing"; absent on foot (design 3.4, 5.5).
+  optional string pose = 6;
 }
 message PresencePlayer {
   string account_id = 1;

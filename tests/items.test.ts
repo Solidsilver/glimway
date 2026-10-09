@@ -1,6 +1,7 @@
 import itemsRaw from '../content/items.json' with { type: 'json' };
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { CRAFTS_ART_PENDING } from './helpers/crafts-art.ts';
 import { readFileSync } from 'node:fs';
 import {
   assetKind,
@@ -123,8 +124,9 @@ test('wear states pick the delivered icon frames; condition is a fraction', () =
   const manifest = JSON.parse(readFileSync(new URL('../public/assets/fingersnap/items-pass/manifest.json', import.meta.url), 'utf8')) as { frames: { key: string }[] };
   const frames = new Set(manifest.frames.map((f) => f.key));
   // Every tool that wears has its state frames, or one plain frame (the
-  // watering can) that the panel shows in every state.
-  for (const d of ITEMS.items.filter((d) => d.kind === 'tool' && atZeroRule(d) !== 'never')) {
+  // watering can) that the panel shows in every state. The crafts pass
+  // delivers the willow rod's frames (docs/design/crafts.md 9.3).
+  for (const d of ITEMS.items.filter((d) => d.kind === 'tool' && atZeroRule(d) !== 'never' && !CRAFTS_ART_PENDING.has(d.id))) {
     const states = ['whole', 'worn', ...(atZeroRule(d) === 'breaks' ? [] : [atZeroRule(d)])];
     assert.ok(states.every((s) => frames.has(`item-${d.id}-${s}`)) || frames.has(`item-${d.id}`), d.id);
   }

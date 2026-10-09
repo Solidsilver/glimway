@@ -1,0 +1,556 @@
+{
+  "loader": [
+    {
+      "name": "shipped",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "duplicate-band",
+      "valid": false,
+      "rule": "duplicate band",
+      "edits": [
+        {
+          "path": [
+            "bands",
+            1,
+            "id"
+          ],
+          "value": "healthy"
+        }
+      ]
+    },
+    {
+      "name": "band-order",
+      "valid": false,
+      "rule": "band order",
+      "edits": [
+        {
+          "path": [
+            "bands",
+            1,
+            "atLeastPercent"
+          ],
+          "value": 60
+        }
+      ]
+    },
+    {
+      "name": "band-floor",
+      "valid": false,
+      "rule": "band floor",
+      "edits": [
+        {
+          "path": [
+            "bands",
+            2,
+            "atLeastPercent"
+          ],
+          "value": 5
+        }
+      ]
+    },
+    {
+      "name": "duplicate-water",
+      "valid": false,
+      "rule": "duplicate water",
+      "edits": [
+        {
+          "path": [
+            "waters"
+          ],
+          "value": [
+            {
+              "id": "water:village:mill-pond",
+              "area": "village",
+              "habitat": "still",
+              "tiles": 27,
+              "capacity": 12,
+              "recoverySeconds": 600,
+              "banks": [
+                {
+                  "id": "north",
+                  "tiles": [
+                    {
+                      "tx": 34,
+                      "ty": 18
+                    }
+                  ],
+                  "facing": "south",
+                  "closedIn": [
+                    "Quiet"
+                  ]
+                }
+              ],
+              "species": [
+                {
+                  "item": "mill-roach",
+                  "weight": 1
+                }
+              ]
+            },
+            {
+              "id": "water:village:mill-pond",
+              "area": "village",
+              "habitat": "still",
+              "tiles": 27,
+              "capacity": 12,
+              "recoverySeconds": 600,
+              "banks": [
+                {
+                  "id": "east",
+                  "tiles": [
+                    {
+                      "tx": 39,
+                      "ty": 19
+                    }
+                  ],
+                  "facing": "west",
+                  "closedIn": []
+                }
+              ],
+              "species": [
+                {
+                  "item": "mill-roach",
+                  "weight": 1
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "duplicate-bank",
+      "valid": false,
+      "rule": "duplicate bank",
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "banks",
+            1,
+            "id"
+          ],
+          "value": "north"
+        }
+      ]
+    },
+    {
+      "name": "closed-mark",
+      "valid": false,
+      "rule": "closed mark",
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "banks",
+            0,
+            "closedIn"
+          ],
+          "value": [
+            "Frost"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "duplicate-species",
+      "valid": false,
+      "rule": "duplicate species",
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "species"
+          ],
+          "value": [
+            {
+              "item": "mill-roach",
+              "weight": 1
+            },
+            {
+              "item": "mill-roach",
+              "weight": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "unknown-species",
+      "valid": false,
+      "rule": "unknown species",
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "species",
+            0,
+            "item"
+          ],
+          "value": "trout"
+        }
+      ]
+    },
+    {
+      "name": "instanced-species",
+      "valid": false,
+      "rule": "unknown species",
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "species",
+            0,
+            "item"
+          ],
+          "value": "bench-axe"
+        }
+      ]
+    },
+    {
+      "name": "percent-over-100",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "bands",
+            0,
+            "atLeastPercent"
+          ],
+          "value": 101
+        }
+      ]
+    },
+    {
+      "name": "band-wait-zero",
+      "valid": false,
+      "rule": "double.gt",
+      "edits": [
+        {
+          "path": [
+            "bands",
+            0,
+            "waitSeconds"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "empty-line",
+      "valid": false,
+      "rule": "string.min_len",
+      "edits": [
+        {
+          "path": [
+            "bands",
+            0,
+            "line"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "hold-zero",
+      "valid": false,
+      "rule": "double.gt",
+      "edits": [
+        {
+          "path": [
+            "holdSeconds"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "spacing-zero",
+      "valid": false,
+      "rule": "double.gt",
+      "edits": [
+        {
+          "path": [
+            "castSpacingSeconds"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "reach-zero",
+      "valid": false,
+      "rule": "double.gt",
+      "edits": [
+        {
+          "path": [
+            "reachTiles"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "bad-water-id",
+      "valid": false,
+      "rule": "string.pattern",
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "id"
+          ],
+          "value": "mill-pond"
+        }
+      ]
+    },
+    {
+      "name": "bad-area",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "area"
+          ],
+          "value": "wilds"
+        }
+      ]
+    },
+    {
+      "name": "zero-tiles",
+      "valid": false,
+      "rule": "int32.gt",
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "tiles"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "zero-capacity",
+      "valid": false,
+      "rule": "int32.gt",
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "capacity"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "zero-recovery",
+      "valid": false,
+      "rule": "double.gt",
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "recoverySeconds"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "no-banks",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "banks"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "no-species",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "species"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "bad-facing",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "banks",
+            0,
+            "facing"
+          ],
+          "value": "up"
+        }
+      ]
+    },
+    {
+      "name": "bad-bank-id",
+      "valid": false,
+      "rule": "string.pattern",
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "banks",
+            0,
+            "id"
+          ],
+          "value": "North Bank"
+        }
+      ]
+    },
+    {
+      "name": "bad-mark-spelling",
+      "valid": false,
+      "rule": "string.pattern",
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "banks",
+            0,
+            "closedIn"
+          ],
+          "value": [
+            "Frost!"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "negative-tx",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "banks",
+            2,
+            "tiles",
+            0,
+            "tx"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "zero-weight",
+      "valid": false,
+      "rule": "int32.gt",
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "species",
+            0,
+            "weight"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "non-finite-hold",
+      "valid": false,
+      "rule": "non-finite number",
+      "edits": [
+        {
+          "path": [
+            "holdSeconds"
+          ],
+          "value": "600"
+        }
+      ]
+    },
+    {
+      "name": "null-field",
+      "valid": false,
+      "rule": "null content field",
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "banks",
+            0,
+            "facing"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "unknown-key",
+      "valid": false,
+      "rule": "unknown key",
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "fish"
+          ],
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "proto-name-key",
+      "valid": false,
+      "rule": "is the proto name",
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "recovery_seconds"
+          ],
+          "value": 600
+        }
+      ]
+    }
+  ]
+}

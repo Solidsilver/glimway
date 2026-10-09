@@ -1,0 +1,47 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// The ability table (docs/design/crafts.md 4.1; content/abilities.json):
+// who has the move, from which level, what it costs, how often it can be
+// used, and its numbers. Both sides read it: the report bounds mana and
+// cooldowns from it, the client draws the buttons from it. Rules across
+// entries (one signature per class, at most one combat move, unique ids)
+// stay in the loaders, identical in both languages.
+message Abilities {
+  repeated Ability abilities = 1 [(buf.validate.field).repeated.min_items = 1];
+}
+
+// One move. `working` joins `kind` with the first working (magic.md); until
+// then the schema refuses it, so a working never half-lands in data.
+message Ability {
+  option (buf.validate.message).cel = {
+    id: "ability.signature_cooldown"
+    message: "a signature's cooldown is exactly one second"
+    expression: "this.kind != \"signature\" || this.cooldown_seconds == 1.0"
+  };
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string name = 2 [(buf.validate.field).string.min_len = 1];
+  string class = 3 [(buf.validate.field).string = {in: ["warrior", "mage", "healer", "rogue"]}];
+  string kind = 4 [(buf.validate.field).string = {in: ["signature", "combat"]}];
+  int32 level = 5 [(buf.validate.field).int32 = {in: [10, 15, 20, 30]}];
+  int32 mana = 6 [(buf.validate.field).int32.gt = 0];
+  double cooldown_seconds = 7 [(buf.validate.field).double.gt = 0];
+  string icon = 8 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  // The move's own numbers (4.3); only the ones its effect reads.
+  AbilityNumbers numbers = 9;
+}
+
+// Per-move numbers: the ranges are the schema's, which numbers a move uses
+// is its row in the design. slow and pulse_heal_fraction are fractions in
+// (0, 1]; pulses counts the ward's heals.
+message AbilityNumbers {
+  optional double duration_seconds = 1 [(buf.validate.field).double.gt = 0];
+  optional double stagger_seconds = 2 [(buf.validate.field).double.gt = 0];
+  optional double radius_tiles = 3 [(buf.validate.field).double.gt = 0];
+  optional double slow = 4 [(buf.validate.field).double = {gt: 0, lte: 1}];
+  optional double reach_tiles = 5 [(buf.validate.field).double.gt = 0];
+  optional int32 pulses = 6 [(buf.validate.field).int32.gt = 0];
+  optional double pulse_heal_fraction = 7 [(buf.validate.field).double = {gt: 0, lte: 1}];
+}

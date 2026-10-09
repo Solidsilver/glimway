@@ -1,0 +1,24 @@
+{
+  "abilities": [
+    { "id": "cleave", "name": "Cleave", "class": "warrior", "kind": "signature", "level": 10,
+      "mana": 12, "cooldownSeconds": 1, "icon": "ability-cleave" },
+    { "id": "stand", "name": "Stand", "class": "warrior", "kind": "combat", "level": 20,
+      "mana": 14, "cooldownSeconds": 4, "icon": "ability-stand",
+      "numbers": { "durationSeconds": 1.5, "staggerSeconds": 0.8 } },
+    { "id": "fingersnap", "name": "Fingersnap", "class": "mage", "kind": "signature", "level": 10,
+      "mana": 15, "cooldownSeconds": 1, "icon": "ability-fingersnap" },
+    { "id": "kindle", "name": "Kindle", "class": "mage", "kind": "combat", "level": 20,
+      "mana": 16, "cooldownSeconds": 5, "icon": "ability-kindle",
+      "numbers": { "durationSeconds": 6, "radiusTiles": 1.5, "slow": 0.6, "reachTiles": 2 } },
+    { "id": "shadowstep", "name": "Shadowstep", "class": "rogue", "kind": "signature", "level": 10,
+      "mana": 10, "cooldownSeconds": 1, "icon": "ability-shadowstep" },
+    { "id": "echo", "name": "Echo", "class": "rogue", "kind": "combat", "level": 20,
+      "mana": 12, "cooldownSeconds": 6, "icon": "ability-echo",
+      "numbers": { "durationSeconds": 3 } },
+    { "id": "mend", "name": "Mend", "class": "healer", "kind": "signature", "level": 10,
+      "mana": 18, "cooldownSeconds": 1, "icon": "ability-mend" },
+    { "id": "ward-light", "name": "Ward-light", "class": "healer", "kind": "combat", "level": 20,
+      "mana": 20, "cooldownSeconds": 8, "icon": "ability-ward-light",
+      "numbers": { "durationSeconds": 5, "radiusTiles": 1.25, "pulses": 3, "pulseHealFraction": 0.4 } }
+  ]
+}

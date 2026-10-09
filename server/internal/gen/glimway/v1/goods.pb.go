@@ -941,7 +941,8 @@ func (x *HomeGrid) GetHeight() int32 {
 }
 
 // A piece owned by a homestead: in a member's inventory, or placed
-// (scene, x, y, rotation and, for lantern posts, its name).
+// (scene, x, y, rotation and, for lantern posts, its name). Stalls is the
+// stable's bay count (NULL on every other piece; design 3.2).
 type HomeInstance struct {
 	state         protoimpl.MessageState  `protogen:"open.v1"`
 	Id            string                  `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -951,6 +952,7 @@ type HomeInstance struct {
 	Y             *wrapperspb.Int32Value  `protobuf:"bytes,5,opt,name=y,proto3" json:"y,omitempty"`
 	Rotation      *wrapperspb.Int32Value  `protobuf:"bytes,6,opt,name=rotation,proto3" json:"rotation,omitempty"`
 	Name          *wrapperspb.StringValue `protobuf:"bytes,7,opt,name=name,proto3" json:"name,omitempty"`
+	Stalls        *wrapperspb.Int32Value  `protobuf:"bytes,8,opt,name=stalls,proto3" json:"stalls,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1030,6 +1032,13 @@ func (x *HomeInstance) GetRotation() *wrapperspb.Int32Value {
 func (x *HomeInstance) GetName() *wrapperspb.StringValue {
 	if x != nil {
 		return x.Name
+	}
+	return nil
+}
+
+func (x *HomeInstance) GetStalls() *wrapperspb.Int32Value {
+	if x != nil {
+		return x.Stalls
 	}
 	return nil
 }
@@ -1128,6 +1137,146 @@ func (x *HomePlant) GetLit() bool {
 	return false
 }
 
+// One stable bay (design 3.2): stalls are numbered 1 to 6 from the west.
+// `out` is whether that mount is out with its owner right now.
+type Stall struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Stall         int32                  `protobuf:"varint,1,opt,name=stall,proto3" json:"stall,omitempty"`
+	Mount         string                 `protobuf:"bytes,2,opt,name=mount,proto3" json:"mount,omitempty"`
+	OwnerId       string                 `protobuf:"bytes,3,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	OwnerName     string                 `protobuf:"bytes,4,opt,name=owner_name,json=ownerName,proto3" json:"owner_name,omitempty"`
+	Out           bool                   `protobuf:"varint,5,opt,name=out,proto3" json:"out,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Stall) Reset() {
+	*x = Stall{}
+	mi := &file_glimway_v1_goods_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Stall) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Stall) ProtoMessage() {}
+
+func (x *Stall) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_goods_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Stall.ProtoReflect.Descriptor instead.
+func (*Stall) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_goods_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *Stall) GetStall() int32 {
+	if x != nil {
+		return x.Stall
+	}
+	return 0
+}
+
+func (x *Stall) GetMount() string {
+	if x != nil {
+		return x.Mount
+	}
+	return ""
+}
+
+func (x *Stall) GetOwnerId() string {
+	if x != nil {
+		return x.OwnerId
+	}
+	return ""
+}
+
+func (x *Stall) GetOwnerName() string {
+	if x != nil {
+		return x.OwnerName
+	}
+	return ""
+}
+
+func (x *Stall) GetOut() bool {
+	if x != nil {
+		return x.Out
+	}
+	return false
+}
+
+// A yard pet standing at home (design 2.1): whose it is, its owned pet key
+// and its slot (1-3). Positions are the client's, from the seed and clock.
+type YardPet struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	OwnerId       string                 `protobuf:"bytes,1,opt,name=owner_id,json=ownerId,proto3" json:"owner_id,omitempty"`
+	Pet           string                 `protobuf:"bytes,2,opt,name=pet,proto3" json:"pet,omitempty"`
+	Slot          int32                  `protobuf:"varint,3,opt,name=slot,proto3" json:"slot,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *YardPet) Reset() {
+	*x = YardPet{}
+	mi := &file_glimway_v1_goods_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *YardPet) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*YardPet) ProtoMessage() {}
+
+func (x *YardPet) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_goods_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use YardPet.ProtoReflect.Descriptor instead.
+func (*YardPet) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_goods_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *YardPet) GetOwnerId() string {
+	if x != nil {
+		return x.OwnerId
+	}
+	return ""
+}
+
+func (x *YardPet) GetPet() string {
+	if x != nil {
+		return x.Pet
+	}
+	return ""
+}
+
+func (x *YardPet) GetSlot() int32 {
+	if x != nil {
+		return x.Slot
+	}
+	return 0
+}
+
 // A homestead (GET /api/homestead/gate/:g, and every homestead POST): its
 // land's changes, its placed pieces, and the caller's own pack of
 // decorations when the caller is a member.
@@ -1150,13 +1299,15 @@ type HomeView struct {
 	Outdoor       *HomeGrid               `protobuf:"bytes,15,opt,name=outdoor,proto3" json:"outdoor,omitempty"`
 	Indoor        *HomeGrid               `protobuf:"bytes,16,opt,name=indoor,proto3" json:"indoor,omitempty"`
 	Items         []*HomeInstance         `protobuf:"bytes,17,rep,name=items,proto3" json:"items,omitempty"`
+	Stalls        []*Stall                `protobuf:"bytes,18,rep,name=stalls,proto3" json:"stalls,omitempty"`
+	YardPets      []*YardPet              `protobuf:"bytes,19,rep,name=yard_pets,json=yardPets,proto3" json:"yard_pets,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *HomeView) Reset() {
 	*x = HomeView{}
-	mi := &file_glimway_v1_goods_proto_msgTypes[15]
+	mi := &file_glimway_v1_goods_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1168,7 +1319,7 @@ func (x *HomeView) String() string {
 func (*HomeView) ProtoMessage() {}
 
 func (x *HomeView) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_goods_proto_msgTypes[15]
+	mi := &file_glimway_v1_goods_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1181,7 +1332,7 @@ func (x *HomeView) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HomeView.ProtoReflect.Descriptor instead.
 func (*HomeView) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_goods_proto_rawDescGZIP(), []int{15}
+	return file_glimway_v1_goods_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *HomeView) GetId() string {
@@ -1303,6 +1454,20 @@ func (x *HomeView) GetItems() []*HomeInstance {
 	return nil
 }
 
+func (x *HomeView) GetStalls() []*Stall {
+	if x != nil {
+		return x.Stalls
+	}
+	return nil
+}
+
+func (x *HomeView) GetYardPets() []*YardPet {
+	if x != nil {
+		return x.YardPets
+	}
+	return nil
+}
+
 var File_glimway_v1_goods_proto protoreflect.FileDescriptor
 
 const file_glimway_v1_goods_proto_rawDesc = "" +
@@ -1388,7 +1553,7 @@ const file_glimway_v1_goods_proto_rawDesc = "" +
 	"\x01y\x18\x02 \x01(\x05R\x01y\"8\n" +
 	"\bHomeGrid\x12\x14\n" +
 	"\x05width\x18\x01 \x01(\x05R\x05width\x12\x16\n" +
-	"\x06height\x18\x02 \x01(\x05R\x06height\"\xae\x02\n" +
+	"\x06height\x18\x02 \x01(\x05R\x06height\"\xe3\x02\n" +
 	"\fHomeInstance\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bitem_def\x18\x02 \x01(\tR\aitemDef\x122\n" +
@@ -1396,7 +1561,8 @@ const file_glimway_v1_goods_proto_rawDesc = "" +
 	"\x01x\x18\x04 \x01(\v2\x1b.google.protobuf.Int32ValueR\x01x\x12)\n" +
 	"\x01y\x18\x05 \x01(\v2\x1b.google.protobuf.Int32ValueR\x01y\x127\n" +
 	"\brotation\x18\x06 \x01(\v2\x1b.google.protobuf.Int32ValueR\brotation\x120\n" +
-	"\x04name\x18\a \x01(\v2\x1c.google.protobuf.StringValueR\x04name\"\xa4\x01\n" +
+	"\x04name\x18\a \x01(\v2\x1c.google.protobuf.StringValueR\x04name\x123\n" +
+	"\x06stalls\x18\b \x01(\v2\x1b.google.protobuf.Int32ValueR\x06stalls\"\xa4\x01\n" +
 	"\tHomePlant\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\bitem_def\x18\x02 \x01(\tR\aitemDef\x12\f\n" +
@@ -1406,7 +1572,18 @@ const file_glimway_v1_goods_proto_rawDesc = "" +
 	"planted_at\x18\x05 \x01(\x01R\tplantedAt\x12\x1f\n" +
 	"\vplanted_day\x18\x06 \x01(\x01R\n" +
 	"plantedDay\x12\x10\n" +
-	"\x03lit\x18\a \x01(\bR\x03lit\"\xd7\x05\n" +
+	"\x03lit\x18\a \x01(\bR\x03lit\"\x7f\n" +
+	"\x05Stall\x12\x14\n" +
+	"\x05stall\x18\x01 \x01(\x05R\x05stall\x12\x14\n" +
+	"\x05mount\x18\x02 \x01(\tR\x05mount\x12\x19\n" +
+	"\bowner_id\x18\x03 \x01(\tR\aownerId\x12\x1d\n" +
+	"\n" +
+	"owner_name\x18\x04 \x01(\tR\townerName\x12\x10\n" +
+	"\x03out\x18\x05 \x01(\bR\x03out\"J\n" +
+	"\aYardPet\x12\x19\n" +
+	"\bowner_id\x18\x01 \x01(\tR\aownerId\x12\x10\n" +
+	"\x03pet\x18\x02 \x01(\tR\x03pet\x12\x12\n" +
+	"\x04slot\x18\x03 \x01(\x05R\x04slot\"\xb4\x06\n" +
 	"\bHomeView\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04gate\x18\x02 \x01(\x05R\x04gate\x12\x19\n" +
@@ -1425,7 +1602,9 @@ const file_glimway_v1_goods_proto_rawDesc = "" +
 	"\tnext_post\x18\x0e \x03(\v2\".glimway.v1.HomeView.NextPostEntryR\bnextPost\x12.\n" +
 	"\aoutdoor\x18\x0f \x01(\v2\x14.glimway.v1.HomeGridR\aoutdoor\x12,\n" +
 	"\x06indoor\x18\x10 \x01(\v2\x14.glimway.v1.HomeGridR\x06indoor\x12.\n" +
-	"\x05items\x18\x11 \x03(\v2\x18.glimway.v1.HomeInstanceR\x05items\x1a;\n" +
+	"\x05items\x18\x11 \x03(\v2\x18.glimway.v1.HomeInstanceR\x05items\x12)\n" +
+	"\x06stalls\x18\x12 \x03(\v2\x11.glimway.v1.StallR\x06stalls\x120\n" +
+	"\tyard_pets\x18\x13 \x03(\v2\x13.glimway.v1.YardPetR\byardPets\x1a;\n" +
 	"\rNextPostEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
@@ -1442,7 +1621,7 @@ func file_glimway_v1_goods_proto_rawDescGZIP() []byte {
 	return file_glimway_v1_goods_proto_rawDescData
 }
 
-var file_glimway_v1_goods_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_glimway_v1_goods_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_glimway_v1_goods_proto_goTypes = []any{
 	(*Maker)(nil),                  // 0: glimway.v1.Maker
 	(*Asset)(nil),                  // 1: glimway.v1.Asset
@@ -1459,56 +1638,61 @@ var file_glimway_v1_goods_proto_goTypes = []any{
 	(*HomeGrid)(nil),               // 12: glimway.v1.HomeGrid
 	(*HomeInstance)(nil),           // 13: glimway.v1.HomeInstance
 	(*HomePlant)(nil),              // 14: glimway.v1.HomePlant
-	(*HomeView)(nil),               // 15: glimway.v1.HomeView
-	nil,                            // 16: glimway.v1.AssetCounts.MaterialsEntry
-	nil,                            // 17: glimway.v1.AssetCounts.ItemsEntry
-	nil,                            // 18: glimway.v1.AssetCounts.DecorationsEntry
-	nil,                            // 19: glimway.v1.HomeView.NextPostEntry
-	(*wrapperspb.StringValue)(nil), // 20: google.protobuf.StringValue
-	(*wrapperspb.DoubleValue)(nil), // 21: google.protobuf.DoubleValue
-	(*wrapperspb.Int32Value)(nil),  // 22: google.protobuf.Int32Value
+	(*Stall)(nil),                  // 15: glimway.v1.Stall
+	(*YardPet)(nil),                // 16: glimway.v1.YardPet
+	(*HomeView)(nil),               // 17: glimway.v1.HomeView
+	nil,                            // 18: glimway.v1.AssetCounts.MaterialsEntry
+	nil,                            // 19: glimway.v1.AssetCounts.ItemsEntry
+	nil,                            // 20: glimway.v1.AssetCounts.DecorationsEntry
+	nil,                            // 21: glimway.v1.HomeView.NextPostEntry
+	(*wrapperspb.StringValue)(nil), // 22: google.protobuf.StringValue
+	(*wrapperspb.DoubleValue)(nil), // 23: google.protobuf.DoubleValue
+	(*wrapperspb.Int32Value)(nil),  // 24: google.protobuf.Int32Value
 }
 var file_glimway_v1_goods_proto_depIdxs = []int32{
-	20, // 0: glimway.v1.Asset.maker:type_name -> google.protobuf.StringValue
+	22, // 0: glimway.v1.Asset.maker:type_name -> google.protobuf.StringValue
 	0,  // 1: glimway.v1.Fitting.maker:type_name -> glimway.v1.Maker
-	21, // 2: glimway.v1.Instance.dullness:type_name -> google.protobuf.DoubleValue
-	21, // 3: glimway.v1.Instance.speed:type_name -> google.protobuf.DoubleValue
+	23, // 2: glimway.v1.Instance.dullness:type_name -> google.protobuf.DoubleValue
+	23, // 3: glimway.v1.Instance.speed:type_name -> google.protobuf.DoubleValue
 	2,  // 4: glimway.v1.Instance.fittings:type_name -> glimway.v1.Fitting
 	0,  // 5: glimway.v1.Instance.maker:type_name -> glimway.v1.Maker
-	16, // 6: glimway.v1.AssetCounts.materials:type_name -> glimway.v1.AssetCounts.MaterialsEntry
-	17, // 7: glimway.v1.AssetCounts.items:type_name -> glimway.v1.AssetCounts.ItemsEntry
-	18, // 8: glimway.v1.AssetCounts.decorations:type_name -> glimway.v1.AssetCounts.DecorationsEntry
+	18, // 6: glimway.v1.AssetCounts.materials:type_name -> glimway.v1.AssetCounts.MaterialsEntry
+	19, // 7: glimway.v1.AssetCounts.items:type_name -> glimway.v1.AssetCounts.ItemsEntry
+	20, // 8: glimway.v1.AssetCounts.decorations:type_name -> glimway.v1.AssetCounts.DecorationsEntry
 	3,  // 9: glimway.v1.AssetCounts.instances:type_name -> glimway.v1.Instance
 	0,  // 10: glimway.v1.Stack.maker:type_name -> glimway.v1.Maker
-	20, // 11: glimway.v1.Slot.item_def:type_name -> google.protobuf.StringValue
-	20, // 12: glimway.v1.Slot.instance:type_name -> google.protobuf.StringValue
-	20, // 13: glimway.v1.OffHand.class:type_name -> google.protobuf.StringValue
-	20, // 14: glimway.v1.OffHand.item_def:type_name -> google.protobuf.StringValue
-	20, // 15: glimway.v1.OffHand.instance:type_name -> google.protobuf.StringValue
+	22, // 11: glimway.v1.Slot.item_def:type_name -> google.protobuf.StringValue
+	22, // 12: glimway.v1.Slot.instance:type_name -> google.protobuf.StringValue
+	22, // 13: glimway.v1.OffHand.class:type_name -> google.protobuf.StringValue
+	22, // 14: glimway.v1.OffHand.item_def:type_name -> google.protobuf.StringValue
+	22, // 15: glimway.v1.OffHand.instance:type_name -> google.protobuf.StringValue
 	5,  // 16: glimway.v1.ItemsView.stacks:type_name -> glimway.v1.Stack
 	3,  // 17: glimway.v1.ItemsView.instances:type_name -> glimway.v1.Instance
 	6,  // 18: glimway.v1.ItemsView.pockets:type_name -> glimway.v1.Slot
 	7,  // 19: glimway.v1.ItemsView.off_hand:type_name -> glimway.v1.OffHand
 	8,  // 20: glimway.v1.ItemsView.thanks:type_name -> glimway.v1.Thanks
-	20, // 21: glimway.v1.HomeInstance.scene:type_name -> google.protobuf.StringValue
-	22, // 22: glimway.v1.HomeInstance.x:type_name -> google.protobuf.Int32Value
-	22, // 23: glimway.v1.HomeInstance.y:type_name -> google.protobuf.Int32Value
-	22, // 24: glimway.v1.HomeInstance.rotation:type_name -> google.protobuf.Int32Value
-	20, // 25: glimway.v1.HomeInstance.name:type_name -> google.protobuf.StringValue
-	10, // 26: glimway.v1.HomeView.members:type_name -> glimway.v1.HomeMember
-	21, // 27: glimway.v1.HomeView.vacant_since:type_name -> google.protobuf.DoubleValue
-	11, // 28: glimway.v1.HomeView.cleared:type_name -> glimway.v1.Coord
-	11, // 29: glimway.v1.HomeView.stumps:type_name -> glimway.v1.Coord
-	14, // 30: glimway.v1.HomeView.plants:type_name -> glimway.v1.HomePlant
-	19, // 31: glimway.v1.HomeView.next_post:type_name -> glimway.v1.HomeView.NextPostEntry
-	12, // 32: glimway.v1.HomeView.outdoor:type_name -> glimway.v1.HomeGrid
-	12, // 33: glimway.v1.HomeView.indoor:type_name -> glimway.v1.HomeGrid
-	13, // 34: glimway.v1.HomeView.items:type_name -> glimway.v1.HomeInstance
-	35, // [35:35] is the sub-list for method output_type
-	35, // [35:35] is the sub-list for method input_type
-	35, // [35:35] is the sub-list for extension type_name
-	35, // [35:35] is the sub-list for extension extendee
-	0,  // [0:35] is the sub-list for field type_name
+	22, // 21: glimway.v1.HomeInstance.scene:type_name -> google.protobuf.StringValue
+	24, // 22: glimway.v1.HomeInstance.x:type_name -> google.protobuf.Int32Value
+	24, // 23: glimway.v1.HomeInstance.y:type_name -> google.protobuf.Int32Value
+	24, // 24: glimway.v1.HomeInstance.rotation:type_name -> google.protobuf.Int32Value
+	22, // 25: glimway.v1.HomeInstance.name:type_name -> google.protobuf.StringValue
+	24, // 26: glimway.v1.HomeInstance.stalls:type_name -> google.protobuf.Int32Value
+	10, // 27: glimway.v1.HomeView.members:type_name -> glimway.v1.HomeMember
+	23, // 28: glimway.v1.HomeView.vacant_since:type_name -> google.protobuf.DoubleValue
+	11, // 29: glimway.v1.HomeView.cleared:type_name -> glimway.v1.Coord
+	11, // 30: glimway.v1.HomeView.stumps:type_name -> glimway.v1.Coord
+	14, // 31: glimway.v1.HomeView.plants:type_name -> glimway.v1.HomePlant
+	21, // 32: glimway.v1.HomeView.next_post:type_name -> glimway.v1.HomeView.NextPostEntry
+	12, // 33: glimway.v1.HomeView.outdoor:type_name -> glimway.v1.HomeGrid
+	12, // 34: glimway.v1.HomeView.indoor:type_name -> glimway.v1.HomeGrid
+	13, // 35: glimway.v1.HomeView.items:type_name -> glimway.v1.HomeInstance
+	15, // 36: glimway.v1.HomeView.stalls:type_name -> glimway.v1.Stall
+	16, // 37: glimway.v1.HomeView.yard_pets:type_name -> glimway.v1.YardPet
+	38, // [38:38] is the sub-list for method output_type
+	38, // [38:38] is the sub-list for method input_type
+	38, // [38:38] is the sub-list for extension type_name
+	38, // [38:38] is the sub-list for extension extendee
+	0,  // [0:38] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_goods_proto_init() }
@@ -1522,7 +1706,7 @@ func file_glimway_v1_goods_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_glimway_v1_goods_proto_rawDesc), len(file_glimway_v1_goods_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   20,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

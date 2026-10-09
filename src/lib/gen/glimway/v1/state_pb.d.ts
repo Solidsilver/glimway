@@ -6,6 +6,8 @@ import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import type { Message } from "@bufbuild/protobuf";
 import type { HabiticaProfile } from "./profile_pb.js";
 import type { Place, Vitals } from "./op_pb.js";
+import type { Companions, CompanionsResult, MountHomeResult, MountOutResult, StableExtendResult, StallResult } from "./companions_pb.js";
+import type { FishCancelResult, FishCastResult, FishingState, FishSettleResult } from "./fishing_pb.js";
 import type { FallResult, MarkResult, ProfileResult, QuestStepResult, ReportResult, SettleEchoResult, SpendResult, TakePaperResult, WildsClaimResult, WildsLanternResult } from "./operations_pb.js";
 import type { ContributeResult, CraftResult, DeskCopyResult, HearthCraftResult, LibraryDonateResult, MailActionResult, MailRecallResult, MailSendResult, MendResult, WorkshopView } from "./village_pb.js";
 import type { WorldChoice, WorldLeaveResult, WorldMoveResult } from "./world_pb.js";
@@ -152,6 +154,34 @@ export declare type EmbersValid = Embers;
 export declare const EmbersSchema: GenMessage<Embers, {validType: EmbersValid}>;
 
 /**
+ * Magic's marks (design 4.2): the highest level a verified login has seen,
+ * and the last class a sync saw. A hero has their craft when the profile
+ * has a class, or when it has none but the level mark is 10 or more and a
+ * class mark exists.
+ *
+ * @generated from message glimway.v1.Magic
+ */
+export declare type Magic = Message<"glimway.v1.Magic"> & {
+  /**
+   * @generated from field: double level_mark = 1;
+   */
+  levelMark: number;
+
+  /**
+   * @generated from field: google.protobuf.StringValue class_mark = 2;
+   */
+  classMark?: string | undefined;
+};
+
+export declare type MagicValid = Magic;
+
+/**
+ * Describes the message glimway.v1.Magic.
+ * Use `create(MagicSchema)` to create a new message.
+ */
+export declare const MagicSchema: GenMessage<Magic, {validType: MagicValid}>;
+
+/**
  * @generated from message glimway.v1.PlayerState
  */
 export declare type PlayerState = Message<"glimway.v1.PlayerState"> & {
@@ -189,6 +219,21 @@ export declare type PlayerState = Message<"glimway.v1.PlayerState"> & {
    * @generated from field: glimway.v1.Embers embers = 7;
    */
   embers?: Embers | undefined;
+
+  /**
+   * @generated from field: glimway.v1.Companions companions = 8;
+   */
+  companions?: Companions | undefined;
+
+  /**
+   * @generated from field: glimway.v1.Magic magic = 9;
+   */
+  magic?: Magic | undefined;
+
+  /**
+   * @generated from field: glimway.v1.FishingState fishing = 10;
+   */
+  fishing?: FishingState | undefined;
 };
 
 export declare type PlayerStateValid = PlayerState;
@@ -386,6 +431,54 @@ export declare type Envelope = Message<"glimway.v1.Envelope"> & {
      */
     value: MendResult;
     case: "mend";
+  } | {
+    /**
+     * @generated from field: glimway.v1.CompanionsResult companions = 32;
+     */
+    value: CompanionsResult;
+    case: "companions";
+  } | {
+    /**
+     * @generated from field: glimway.v1.StallResult stall = 33;
+     */
+    value: StallResult;
+    case: "stall";
+  } | {
+    /**
+     * @generated from field: glimway.v1.MountOutResult mount_out = 34;
+     */
+    value: MountOutResult;
+    case: "mountOut";
+  } | {
+    /**
+     * @generated from field: glimway.v1.MountHomeResult mount_home = 35;
+     */
+    value: MountHomeResult;
+    case: "mountHome";
+  } | {
+    /**
+     * @generated from field: glimway.v1.StableExtendResult stable_extend = 36;
+     */
+    value: StableExtendResult;
+    case: "stableExtend";
+  } | {
+    /**
+     * @generated from field: glimway.v1.FishCastResult fish_cast = 37;
+     */
+    value: FishCastResult;
+    case: "fishCast";
+  } | {
+    /**
+     * @generated from field: glimway.v1.FishSettleResult fish_settle = 38;
+     */
+    value: FishSettleResult;
+    case: "fishSettle";
+  } | {
+    /**
+     * @generated from field: glimway.v1.FishCancelResult fish_cancel = 39;
+     */
+    value: FishCancelResult;
+    case: "fishCancel";
   } | { case: undefined; value?: undefined };
 };
 

@@ -261,7 +261,9 @@ func validateItems(v *Items) error {
 			if goods[g.GetItem()] {
 				return fmt.Errorf("invalid items: seller %s: duplicate good %s", s.GetId(), g.GetItem())
 			}
-			if !ok || !ItemStackable(d) {
+			// A seller hands over stacks, or one instance (the willow rod,
+			// sold by Finn) — always one at a time.
+			if !ok || !(ItemStackable(d) || ItemInstanced(d)) || (ItemInstanced(d) && g.GetQty() != 1) {
 				return fmt.Errorf("invalid items: seller %s good %s", s.GetId(), g.GetItem())
 			}
 			goods[g.GetItem()] = true

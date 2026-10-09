@@ -6,6 +6,65 @@
       "edits": []
     },
     {
+      "name": "stable-item",
+      "valid": false,
+      "rule": "stable item",
+      "edits": [
+        {
+          "path": [
+            "stable",
+            "item"
+          ],
+          "value": "nope"
+        }
+      ]
+    },
+    {
+      "name": "stable-cost",
+      "valid": false,
+      "rule": "map.min_pairs",
+      "edits": [
+        {
+          "path": [
+            "stable",
+            "stallCost"
+          ],
+          "value": {}
+        }
+      ]
+    },
+    {
+      "name": "stable-growth",
+      "valid": false,
+      "rule": "stable growth",
+      "edits": [
+        {
+          "path": [
+            "stable",
+            "growth"
+          ],
+          "value": {
+            "amber": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "stable-free",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "stable",
+            "stallCost",
+            "timber"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
       "name": "four-tiers",
       "valid": false,
       "rule": "repeated.min_items",
@@ -895,9 +954,8 @@
       ]
     },
     {
-      "name": "double-priced",
-      "valid": false,
-      "rule": "home_item.price",
+      "name": "priced-in-both",
+      "valid": true,
       "edits": [
         {
           "path": [
@@ -1016,6 +1074,48 @@
           "value": 1
         }
       ]
+    }
+  ],
+  "stallCost": [
+    {
+      "extra": 1,
+      "bill": {
+        "timber": 8,
+        "stone": 4,
+        "fiber": 2
+      }
+    },
+    {
+      "extra": 2,
+      "bill": {
+        "timber": 12,
+        "stone": 6,
+        "fiber": 2
+      }
+    },
+    {
+      "extra": 3,
+      "bill": {
+        "timber": 16,
+        "stone": 8,
+        "fiber": 2
+      }
+    },
+    {
+      "extra": 4,
+      "bill": {
+        "timber": 20,
+        "stone": 10,
+        "fiber": 2
+      }
+    },
+    {
+      "extra": 5,
+      "bill": {
+        "timber": 24,
+        "stone": 12,
+        "fiber": 2
+      }
     }
   ]
 }

@@ -30,7 +30,7 @@ test('a report whose place the world refuses: the hero goes where the world says
   assert.deepEqual(r.session.state.position, { x: 400, y: 300 });
   assert.equal(r.link.status, 'online', 'a refused place is not server trouble');
   // The refused report is gone; the next one names the world's place.
-  r.server.on('POST /api/report', (c: Call) => env(S({ version: 3 }), { report: { seq: c.body.seq, accepted: true, staleBasis: false, casts: 0, client: c.body.client, generation: c.body.generation, basis: c.body.basis, placeIgnored: false } }));
+  r.server.on('POST /api/report', (c: Call) => env(S({ version: 3 }), { report: { seq: c.body.seq, accepted: true, staleBasis: false, casts: 0, client: c.body.client, generation: c.body.generation, basis: c.body.basis, placeIgnored: false, abilityCasts: {}, allyHeal: 0 } }));
   r.link.reportSoon();
   await r.link.flush();
   const sent = r.server.sent('POST /api/report').map((c) => c.body.place.area);
@@ -81,7 +81,7 @@ test('an accepted report whose place the world ignored: still standing there, th
   const r = await rig(t);
   await online(r);
   walkIn(r);
-  const ignored = (c: Call) => env(S({ version: 2 }), { report: { seq: c.body.seq, accepted: true, staleBasis: false, casts: 0, client: c.body.client, generation: c.body.generation, basis: c.body.basis, placeIgnored: true } });
+  const ignored = (c: Call) => env(S({ version: 2 }), { report: { seq: c.body.seq, accepted: true, staleBasis: false, casts: 0, client: c.body.client, generation: c.body.generation, basis: c.body.basis, placeIgnored: true, abilityCasts: {}, allyHeal: 0 } });
   r.server.on('POST /api/report', ignored);
   r.link.reportSoon();
   await r.link.flush();
@@ -114,7 +114,7 @@ test('an ignored place in the same area is a stale sample: nobody is pulled back
   const r = await rig(t);
   await online(r);
   r.session.state.position = { x: 520, y: 260 };
-  r.server.on('POST /api/report', (c: Call) => env(S({ version: 2 }), { report: { seq: c.body.seq, accepted: true, staleBasis: false, casts: 0, client: c.body.client, generation: c.body.generation, basis: c.body.basis, placeIgnored: true } }));
+  r.server.on('POST /api/report', (c: Call) => env(S({ version: 2 }), { report: { seq: c.body.seq, accepted: true, staleBasis: false, casts: 0, client: c.body.client, generation: c.body.generation, basis: c.body.basis, placeIgnored: true, abilityCasts: {}, allyHeal: 0 } }));
   r.link.reportSoon();
   await r.link.flush();
   assert.equal(r.session.state.area, 'village');

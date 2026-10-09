@@ -167,7 +167,7 @@ message ItemDef {
   optional int32 uses = 9 [(buf.validate.field).int32 = {gte: 0, lte: 10000}];
   optional string at_zero = 10 [(buf.validate.field).string = {in: ["", "breaks", "blunt", "cracked"]}];
   optional int32 slots = 11 [(buf.validate.field).int32 = {gte: 0, lte: 6}];
-  repeated string actions = 12 [(buf.validate.field).repeated.items.string = {in: ["chop", "break", "dig", "draw", "water", "trim", "mark"]}];
+  repeated string actions = 12 [(buf.validate.field).repeated.items.string = {in: ["chop", "break", "dig", "draw", "water", "trim", "mark", "fish"]}];
   ItemRepair repair = 13;
   string fitting = 14;
   repeated UseEffect use = 15;

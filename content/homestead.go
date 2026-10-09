@@ -14,18 +14,19 @@ import (
 // (proto/glimway/content/v1/homestead.proto): the tier ladder, the indoor
 // room and wild land, the Commons lane's gates, and the home goods.
 type (
-	Homestead      = contentv1.Homestead
-	HomeGrid       = contentv1.HomeGrid
-	HomeTier       = contentv1.HomeTier
-	HomeRect       = contentv1.HomeRect
-	HomeLand       = contentv1.HomeLand
-	HomeGate       = contentv1.HomeGate
-	HomeStartLight = contentv1.HomeStartLight
-	HomePixelPos   = contentv1.HomePixelPos
-	CommonsLane    = contentv1.CommonsLane
-	LanternPosts   = contentv1.LanternPosts
-	MaterialBill   = contentv1.MaterialBill
-	HomeItem       = contentv1.HomeItem
+	Homestead       = contentv1.Homestead
+	HomeGrid        = contentv1.HomeGrid
+	HomeTier        = contentv1.HomeTier
+	HomeRect        = contentv1.HomeRect
+	HomeLand        = contentv1.HomeLand
+	HomeGate        = contentv1.HomeGate
+	HomeStartLight  = contentv1.HomeStartLight
+	HomePixelPos    = contentv1.HomePixelPos
+	CommonsLane     = contentv1.CommonsLane
+	LanternPosts    = contentv1.LanternPosts
+	MaterialBill    = contentv1.MaterialBill
+	HomeItem        = contentv1.HomeItem
+	HomesteadStable = contentv1.HomesteadStable
 )
 
 // DecodeHomestead reads homestead JSON into the generated types, refusing
@@ -67,6 +68,22 @@ func HomePostCost(h *Homestead, n int) map[string]int32 {
 	last := c[len(c)-1].GetMaterials()
 	for m, v := range last {
 		out[m] = v + h.GetLanternPosts().GetGrowth()[m]*int32(n-len(c)+1)
+	}
+	return out
+}
+
+// HomeStallCost is what the `extra`-th extra bay of a homestead's stable
+// costs (extra is 1-based: the first bay after stall 1), grown by the
+// stable's growth map per bay before it. The bill is a copy: the shared
+// table is never handed out.
+func HomeStallCost(h *Homestead, extra int) map[string]int32 {
+	base := h.GetStable().GetStallCost()
+	if extra < 1 {
+		extra = 1
+	}
+	out := map[string]int32{}
+	for m, v := range base {
+		out[m] = v + h.GetStable().GetGrowth()[m]*int32(extra-1)
 	}
 	return out
 }
@@ -196,6 +213,23 @@ func validateHomestead(h *Homestead) error {
 	}
 	if !seen[h.GetLanternPosts().GetItem()] {
 		return fmt.Errorf("invalid homestead: lantern post item %s", h.GetLanternPosts().GetItem())
+	}
+	// The stable grows from its own row: its piece is in the build list,
+	// its first extra bay's bill names carried materials, and each bay
+	// after that only adds to materials the bill already names.
+	s := h.GetStable()
+	if !seen[s.GetItem()] {
+		return fmt.Errorf("invalid homestead: stable item %s", s.GetItem())
+	}
+	for m, n := range s.GetStallCost() {
+		if (!slices.Contains(WildsRules.Materials, m) && !catalogueMaterials[m]) || n <= 0 {
+			return fmt.Errorf("invalid homestead: stable stall cost %s", m)
+		}
+	}
+	for m, n := range s.GetGrowth() {
+		if _, ok := s.GetStallCost()[m]; !ok || n < 0 {
+			return fmt.Errorf("invalid homestead: stable growth %s", m)
+		}
 	}
 	return nil
 }

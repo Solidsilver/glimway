@@ -283,6 +283,62 @@ func (x *Embers) GetVerifiedXp() float64 {
 	return 0
 }
 
+// Magic's marks (design 4.2): the highest level a verified login has seen,
+// and the last class a sync saw. A hero has their craft when the profile
+// has a class, or when it has none but the level mark is 10 or more and a
+// class mark exists.
+type Magic struct {
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	LevelMark     float64                 `protobuf:"fixed64,1,opt,name=level_mark,json=levelMark,proto3" json:"level_mark,omitempty"`
+	ClassMark     *wrapperspb.StringValue `protobuf:"bytes,2,opt,name=class_mark,json=classMark,proto3" json:"class_mark,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Magic) Reset() {
+	*x = Magic{}
+	mi := &file_glimway_v1_state_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Magic) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Magic) ProtoMessage() {}
+
+func (x *Magic) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_state_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Magic.ProtoReflect.Descriptor instead.
+func (*Magic) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_state_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *Magic) GetLevelMark() float64 {
+	if x != nil {
+		return x.LevelMark
+	}
+	return 0
+}
+
+func (x *Magic) GetClassMark() *wrapperspb.StringValue {
+	if x != nil {
+		return x.ClassMark
+	}
+	return nil
+}
+
 type PlayerState struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Version       float64                `protobuf:"fixed64,1,opt,name=version,proto3" json:"version,omitempty"`
@@ -292,13 +348,16 @@ type PlayerState struct {
 	Place         *Place                 `protobuf:"bytes,5,opt,name=place,proto3" json:"place,omitempty"`
 	Story         *Story                 `protobuf:"bytes,6,opt,name=story,proto3" json:"story,omitempty"`
 	Embers        *Embers                `protobuf:"bytes,7,opt,name=embers,proto3" json:"embers,omitempty"`
+	Companions    *Companions            `protobuf:"bytes,8,opt,name=companions,proto3" json:"companions,omitempty"`
+	Magic         *Magic                 `protobuf:"bytes,9,opt,name=magic,proto3" json:"magic,omitempty"`
+	Fishing       *FishingState          `protobuf:"bytes,10,opt,name=fishing,proto3" json:"fishing,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *PlayerState) Reset() {
 	*x = PlayerState{}
-	mi := &file_glimway_v1_state_proto_msgTypes[3]
+	mi := &file_glimway_v1_state_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -310,7 +369,7 @@ func (x *PlayerState) String() string {
 func (*PlayerState) ProtoMessage() {}
 
 func (x *PlayerState) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_state_proto_msgTypes[3]
+	mi := &file_glimway_v1_state_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -323,7 +382,7 @@ func (x *PlayerState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayerState.ProtoReflect.Descriptor instead.
 func (*PlayerState) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_state_proto_rawDescGZIP(), []int{3}
+	return file_glimway_v1_state_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *PlayerState) GetVersion() float64 {
@@ -375,6 +434,27 @@ func (x *PlayerState) GetEmbers() *Embers {
 	return nil
 }
 
+func (x *PlayerState) GetCompanions() *Companions {
+	if x != nil {
+		return x.Companions
+	}
+	return nil
+}
+
+func (x *PlayerState) GetMagic() *Magic {
+	if x != nil {
+		return x.Magic
+	}
+	return nil
+}
+
+func (x *PlayerState) GetFishing() *FishingState {
+	if x != nil {
+		return x.Fishing
+	}
+	return nil
+}
+
 // A wire error string from ErrorCode's hyphenated vocabulary, never an enum JSON name.
 type ErrorDetail struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -385,7 +465,7 @@ type ErrorDetail struct {
 
 func (x *ErrorDetail) Reset() {
 	*x = ErrorDetail{}
-	mi := &file_glimway_v1_state_proto_msgTypes[4]
+	mi := &file_glimway_v1_state_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -397,7 +477,7 @@ func (x *ErrorDetail) String() string {
 func (*ErrorDetail) ProtoMessage() {}
 
 func (x *ErrorDetail) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_state_proto_msgTypes[4]
+	mi := &file_glimway_v1_state_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -410,7 +490,7 @@ func (x *ErrorDetail) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ErrorDetail.ProtoReflect.Descriptor instead.
 func (*ErrorDetail) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_state_proto_rawDescGZIP(), []int{4}
+	return file_glimway_v1_state_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *ErrorDetail) GetCode() string {
@@ -430,7 +510,7 @@ type Refusal struct {
 
 func (x *Refusal) Reset() {
 	*x = Refusal{}
-	mi := &file_glimway_v1_state_proto_msgTypes[5]
+	mi := &file_glimway_v1_state_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -442,7 +522,7 @@ func (x *Refusal) String() string {
 func (*Refusal) ProtoMessage() {}
 
 func (x *Refusal) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_state_proto_msgTypes[5]
+	mi := &file_glimway_v1_state_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -455,7 +535,7 @@ func (x *Refusal) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Refusal.ProtoReflect.Descriptor instead.
 func (*Refusal) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_state_proto_rawDescGZIP(), []int{5}
+	return file_glimway_v1_state_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Refusal) GetError() *ErrorDetail {
@@ -499,6 +579,14 @@ type Envelope struct {
 	//	*Envelope_WorldLeave
 	//	*Envelope_Contribute
 	//	*Envelope_Mend
+	//	*Envelope_Companions
+	//	*Envelope_Stall
+	//	*Envelope_MountOut
+	//	*Envelope_MountHome
+	//	*Envelope_StableExtend
+	//	*Envelope_FishCast
+	//	*Envelope_FishSettle
+	//	*Envelope_FishCancel
 	Result        isEnvelope_Result `protobuf_oneof:"result"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -506,7 +594,7 @@ type Envelope struct {
 
 func (x *Envelope) Reset() {
 	*x = Envelope{}
-	mi := &file_glimway_v1_state_proto_msgTypes[6]
+	mi := &file_glimway_v1_state_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -518,7 +606,7 @@ func (x *Envelope) String() string {
 func (*Envelope) ProtoMessage() {}
 
 func (x *Envelope) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_state_proto_msgTypes[6]
+	mi := &file_glimway_v1_state_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -531,7 +619,7 @@ func (x *Envelope) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Envelope.ProtoReflect.Descriptor instead.
 func (*Envelope) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_state_proto_rawDescGZIP(), []int{6}
+	return file_glimway_v1_state_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *Envelope) GetState() *PlayerState {
@@ -746,6 +834,78 @@ func (x *Envelope) GetMend() *MendResult {
 	return nil
 }
 
+func (x *Envelope) GetCompanions() *CompanionsResult {
+	if x != nil {
+		if x, ok := x.Result.(*Envelope_Companions); ok {
+			return x.Companions
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetStall() *StallResult {
+	if x != nil {
+		if x, ok := x.Result.(*Envelope_Stall); ok {
+			return x.Stall
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetMountOut() *MountOutResult {
+	if x != nil {
+		if x, ok := x.Result.(*Envelope_MountOut); ok {
+			return x.MountOut
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetMountHome() *MountHomeResult {
+	if x != nil {
+		if x, ok := x.Result.(*Envelope_MountHome); ok {
+			return x.MountHome
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetStableExtend() *StableExtendResult {
+	if x != nil {
+		if x, ok := x.Result.(*Envelope_StableExtend); ok {
+			return x.StableExtend
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetFishCast() *FishCastResult {
+	if x != nil {
+		if x, ok := x.Result.(*Envelope_FishCast); ok {
+			return x.FishCast
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetFishSettle() *FishSettleResult {
+	if x != nil {
+		if x, ok := x.Result.(*Envelope_FishSettle); ok {
+			return x.FishSettle
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetFishCancel() *FishCancelResult {
+	if x != nil {
+		if x, ok := x.Result.(*Envelope_FishCancel); ok {
+			return x.FishCancel
+		}
+	}
+	return nil
+}
+
 type isEnvelope_Result interface {
 	isEnvelope_Result()
 }
@@ -838,6 +998,38 @@ type Envelope_Mend struct {
 	Mend *MendResult `protobuf:"bytes,31,opt,name=mend,proto3,oneof"`
 }
 
+type Envelope_Companions struct {
+	Companions *CompanionsResult `protobuf:"bytes,32,opt,name=companions,proto3,oneof"`
+}
+
+type Envelope_Stall struct {
+	Stall *StallResult `protobuf:"bytes,33,opt,name=stall,proto3,oneof"`
+}
+
+type Envelope_MountOut struct {
+	MountOut *MountOutResult `protobuf:"bytes,34,opt,name=mount_out,json=mountOut,proto3,oneof"`
+}
+
+type Envelope_MountHome struct {
+	MountHome *MountHomeResult `protobuf:"bytes,35,opt,name=mount_home,json=mountHome,proto3,oneof"`
+}
+
+type Envelope_StableExtend struct {
+	StableExtend *StableExtendResult `protobuf:"bytes,36,opt,name=stable_extend,json=stableExtend,proto3,oneof"`
+}
+
+type Envelope_FishCast struct {
+	FishCast *FishCastResult `protobuf:"bytes,37,opt,name=fish_cast,json=fishCast,proto3,oneof"`
+}
+
+type Envelope_FishSettle struct {
+	FishSettle *FishSettleResult `protobuf:"bytes,38,opt,name=fish_settle,json=fishSettle,proto3,oneof"`
+}
+
+type Envelope_FishCancel struct {
+	FishCancel *FishCancelResult `protobuf:"bytes,39,opt,name=fish_cancel,json=fishCancel,proto3,oneof"`
+}
+
 func (*Envelope_Report) isEnvelope_Result() {}
 
 func (*Envelope_QuestStep) isEnvelope_Result() {}
@@ -882,6 +1074,22 @@ func (*Envelope_Contribute) isEnvelope_Result() {}
 
 func (*Envelope_Mend) isEnvelope_Result() {}
 
+func (*Envelope_Companions) isEnvelope_Result() {}
+
+func (*Envelope_Stall) isEnvelope_Result() {}
+
+func (*Envelope_MountOut) isEnvelope_Result() {}
+
+func (*Envelope_MountHome) isEnvelope_Result() {}
+
+func (*Envelope_StableExtend) isEnvelope_Result() {}
+
+func (*Envelope_FishCast) isEnvelope_Result() {}
+
+func (*Envelope_FishSettle) isEnvelope_Result() {}
+
+func (*Envelope_FishCancel) isEnvelope_Result() {}
+
 type LoginRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
@@ -894,7 +1102,7 @@ type LoginRequest struct {
 
 func (x *LoginRequest) Reset() {
 	*x = LoginRequest{}
-	mi := &file_glimway_v1_state_proto_msgTypes[7]
+	mi := &file_glimway_v1_state_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -906,7 +1114,7 @@ func (x *LoginRequest) String() string {
 func (*LoginRequest) ProtoMessage() {}
 
 func (x *LoginRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_state_proto_msgTypes[7]
+	mi := &file_glimway_v1_state_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -919,7 +1127,7 @@ func (x *LoginRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LoginRequest.ProtoReflect.Descriptor instead.
 func (*LoginRequest) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_state_proto_rawDescGZIP(), []int{7}
+	return file_glimway_v1_state_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *LoginRequest) GetUserId() string {
@@ -963,7 +1171,7 @@ type SessionResponse struct {
 
 func (x *SessionResponse) Reset() {
 	*x = SessionResponse{}
-	mi := &file_glimway_v1_state_proto_msgTypes[8]
+	mi := &file_glimway_v1_state_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -975,7 +1183,7 @@ func (x *SessionResponse) String() string {
 func (*SessionResponse) ProtoMessage() {}
 
 func (x *SessionResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_state_proto_msgTypes[8]
+	mi := &file_glimway_v1_state_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -988,7 +1196,7 @@ func (x *SessionResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SessionResponse.ProtoReflect.Descriptor instead.
 func (*SessionResponse) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_state_proto_rawDescGZIP(), []int{8}
+	return file_glimway_v1_state_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *SessionResponse) GetAnswer() isSessionResponse_Answer {
@@ -1041,7 +1249,7 @@ type WorldChooseRequest struct {
 
 func (x *WorldChooseRequest) Reset() {
 	*x = WorldChooseRequest{}
-	mi := &file_glimway_v1_state_proto_msgTypes[9]
+	mi := &file_glimway_v1_state_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1053,7 +1261,7 @@ func (x *WorldChooseRequest) String() string {
 func (*WorldChooseRequest) ProtoMessage() {}
 
 func (x *WorldChooseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_state_proto_msgTypes[9]
+	mi := &file_glimway_v1_state_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1066,7 +1274,7 @@ func (x *WorldChooseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WorldChooseRequest.ProtoReflect.Descriptor instead.
 func (*WorldChooseRequest) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_state_proto_rawDescGZIP(), []int{9}
+	return file_glimway_v1_state_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *WorldChooseRequest) GetChoice() string {
@@ -1086,7 +1294,7 @@ type StateResponse struct {
 
 func (x *StateResponse) Reset() {
 	*x = StateResponse{}
-	mi := &file_glimway_v1_state_proto_msgTypes[10]
+	mi := &file_glimway_v1_state_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1098,7 +1306,7 @@ func (x *StateResponse) String() string {
 func (*StateResponse) ProtoMessage() {}
 
 func (x *StateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_state_proto_msgTypes[10]
+	mi := &file_glimway_v1_state_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1111,7 +1319,7 @@ func (x *StateResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StateResponse.ProtoReflect.Descriptor instead.
 func (*StateResponse) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_state_proto_rawDescGZIP(), []int{10}
+	return file_glimway_v1_state_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *StateResponse) GetState() *PlayerState {
@@ -1138,7 +1346,7 @@ type PlayRequest struct {
 
 func (x *PlayRequest) Reset() {
 	*x = PlayRequest{}
-	mi := &file_glimway_v1_state_proto_msgTypes[11]
+	mi := &file_glimway_v1_state_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1150,7 +1358,7 @@ func (x *PlayRequest) String() string {
 func (*PlayRequest) ProtoMessage() {}
 
 func (x *PlayRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_state_proto_msgTypes[11]
+	mi := &file_glimway_v1_state_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1163,7 +1371,7 @@ func (x *PlayRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayRequest.ProtoReflect.Descriptor instead.
 func (*PlayRequest) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_state_proto_rawDescGZIP(), []int{11}
+	return file_glimway_v1_state_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *PlayRequest) GetClientId() string {
@@ -1192,7 +1400,7 @@ type PlayResponse struct {
 
 func (x *PlayResponse) Reset() {
 	*x = PlayResponse{}
-	mi := &file_glimway_v1_state_proto_msgTypes[12]
+	mi := &file_glimway_v1_state_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1204,7 +1412,7 @@ func (x *PlayResponse) String() string {
 func (*PlayResponse) ProtoMessage() {}
 
 func (x *PlayResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_state_proto_msgTypes[12]
+	mi := &file_glimway_v1_state_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1217,7 +1425,7 @@ func (x *PlayResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PlayResponse.ProtoReflect.Descriptor instead.
 func (*PlayResponse) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_state_proto_rawDescGZIP(), []int{12}
+	return file_glimway_v1_state_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *PlayResponse) GetState() *PlayerState {
@@ -1253,7 +1461,7 @@ var File_glimway_v1_state_proto protoreflect.FileDescriptor
 const file_glimway_v1_state_proto_rawDesc = "" +
 	"\n" +
 	"\x16glimway/v1/state.proto\x12\n" +
-	"glimway.v1\x1a\x18glimway/v1/profile.proto\x1a\x1bglimway/v1/operations.proto\x1a\x13glimway/v1/op.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x18glimway/v1/village.proto\x1a\x16glimway/v1/world.proto\"\xe0\x01\n" +
+	"glimway.v1\x1a\x1bglimway/v1/companions.proto\x1a\x18glimway/v1/fishing.proto\x1a\x18glimway/v1/profile.proto\x1a\x1bglimway/v1/operations.proto\x1a\x13glimway/v1/op.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x18glimway/v1/village.proto\x1a\x16glimway/v1/world.proto\"\xe0\x01\n" +
 	"\aAccount\x12\x1d\n" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tR\taccountId\x12!\n" +
@@ -1288,7 +1496,12 @@ const file_glimway_v1_state_proto_rawDesc = "" +
 	"\apending\x18\x03 \x01(\x01R\apending\x12\x17\n" +
 	"\axp_mark\x18\x04 \x01(\x01R\x06xpMark\x12\x1f\n" +
 	"\vverified_xp\x18\x05 \x01(\x01R\n" +
-	"verifiedXp\"\xb7\x02\n" +
+	"verifiedXp\"c\n" +
+	"\x05Magic\x12\x1d\n" +
+	"\n" +
+	"level_mark\x18\x01 \x01(\x01R\tlevelMark\x12;\n" +
+	"\n" +
+	"class_mark\x18\x02 \x01(\v2\x1c.google.protobuf.StringValueR\tclassMark\"\xcc\x03\n" +
 	"\vPlayerState\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\x01R\aversion\x12-\n" +
 	"\aaccount\x18\x02 \x01(\v2\x13.glimway.v1.AccountR\aaccount\x125\n" +
@@ -1296,13 +1509,18 @@ const file_glimway_v1_state_proto_rawDesc = "" +
 	"\x06vitals\x18\x04 \x01(\v2\x12.glimway.v1.VitalsR\x06vitals\x12'\n" +
 	"\x05place\x18\x05 \x01(\v2\x11.glimway.v1.PlaceR\x05place\x12'\n" +
 	"\x05story\x18\x06 \x01(\v2\x11.glimway.v1.StoryR\x05story\x12*\n" +
-	"\x06embers\x18\a \x01(\v2\x12.glimway.v1.EmbersR\x06embers\"!\n" +
+	"\x06embers\x18\a \x01(\v2\x12.glimway.v1.EmbersR\x06embers\x126\n" +
+	"\n" +
+	"companions\x18\b \x01(\v2\x16.glimway.v1.CompanionsR\n" +
+	"companions\x12'\n" +
+	"\x05magic\x18\t \x01(\v2\x11.glimway.v1.MagicR\x05magic\x122\n" +
+	"\afishing\x18\n" +
+	" \x01(\v2\x18.glimway.v1.FishingStateR\afishing\"!\n" +
 	"\vErrorDetail\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\"g\n" +
 	"\aRefusal\x12-\n" +
 	"\x05error\x18\x01 \x01(\v2\x17.glimway.v1.ErrorDetailR\x05error\x12-\n" +
-	"\x05state\x18\x02 \x01(\v2\x17.glimway.v1.PlayerStateR\x05state\"\xe1\n" +
-	"\n" +
+	"\x05state\x18\x02 \x01(\v2\x17.glimway.v1.PlayerStateR\x05state\"\xcf\x0e\n" +
 	"\bEnvelope\x12-\n" +
 	"\x05state\x18\x01 \x01(\v2\x17.glimway.v1.PlayerStateR\x05state\x122\n" +
 	"\x06report\x18\n" +
@@ -1337,7 +1555,20 @@ const file_glimway_v1_state_proto_rawDesc = "" +
 	"\n" +
 	"contribute\x18\x1e \x01(\v2\x1c.glimway.v1.ContributeResultH\x00R\n" +
 	"contribute\x12,\n" +
-	"\x04mend\x18\x1f \x01(\v2\x16.glimway.v1.MendResultH\x00R\x04mendB\b\n" +
+	"\x04mend\x18\x1f \x01(\v2\x16.glimway.v1.MendResultH\x00R\x04mend\x12>\n" +
+	"\n" +
+	"companions\x18  \x01(\v2\x1c.glimway.v1.CompanionsResultH\x00R\n" +
+	"companions\x12/\n" +
+	"\x05stall\x18! \x01(\v2\x17.glimway.v1.StallResultH\x00R\x05stall\x129\n" +
+	"\tmount_out\x18\" \x01(\v2\x1a.glimway.v1.MountOutResultH\x00R\bmountOut\x12<\n" +
+	"\n" +
+	"mount_home\x18# \x01(\v2\x1b.glimway.v1.MountHomeResultH\x00R\tmountHome\x12E\n" +
+	"\rstable_extend\x18$ \x01(\v2\x1e.glimway.v1.StableExtendResultH\x00R\fstableExtend\x129\n" +
+	"\tfish_cast\x18% \x01(\v2\x1a.glimway.v1.FishCastResultH\x00R\bfishCast\x12?\n" +
+	"\vfish_settle\x18& \x01(\v2\x1c.glimway.v1.FishSettleResultH\x00R\n" +
+	"fishSettle\x12?\n" +
+	"\vfish_cancel\x18' \x01(\v2\x1c.glimway.v1.FishCancelResultH\x00R\n" +
+	"fishCancelB\b\n" +
 	"\x06result\"k\n" +
 	"\fLoginRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
@@ -1374,97 +1605,120 @@ func file_glimway_v1_state_proto_rawDescGZIP() []byte {
 	return file_glimway_v1_state_proto_rawDescData
 }
 
-var file_glimway_v1_state_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_glimway_v1_state_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_glimway_v1_state_proto_goTypes = []any{
 	(*Account)(nil),                // 0: glimway.v1.Account
 	(*Story)(nil),                  // 1: glimway.v1.Story
 	(*Embers)(nil),                 // 2: glimway.v1.Embers
-	(*PlayerState)(nil),            // 3: glimway.v1.PlayerState
-	(*ErrorDetail)(nil),            // 4: glimway.v1.ErrorDetail
-	(*Refusal)(nil),                // 5: glimway.v1.Refusal
-	(*Envelope)(nil),               // 6: glimway.v1.Envelope
-	(*LoginRequest)(nil),           // 7: glimway.v1.LoginRequest
-	(*SessionResponse)(nil),        // 8: glimway.v1.SessionResponse
-	(*WorldChooseRequest)(nil),     // 9: glimway.v1.WorldChooseRequest
-	(*StateResponse)(nil),          // 10: glimway.v1.StateResponse
-	(*PlayRequest)(nil),            // 11: glimway.v1.PlayRequest
-	(*PlayResponse)(nil),           // 12: glimway.v1.PlayResponse
-	nil,                            // 13: glimway.v1.Story.QuestsEntry
-	nil,                            // 14: glimway.v1.Story.ReachedAtEntry
-	nil,                            // 15: glimway.v1.Story.GateAtEntry
-	(*wrapperspb.StringValue)(nil), // 16: google.protobuf.StringValue
-	(*HabiticaProfile)(nil),        // 17: glimway.v1.HabiticaProfile
-	(*Vitals)(nil),                 // 18: glimway.v1.Vitals
-	(*Place)(nil),                  // 19: glimway.v1.Place
-	(*ReportResult)(nil),           // 20: glimway.v1.ReportResult
-	(*QuestStepResult)(nil),        // 21: glimway.v1.QuestStepResult
-	(*MarkResult)(nil),             // 22: glimway.v1.MarkResult
-	(*TakePaperResult)(nil),        // 23: glimway.v1.TakePaperResult
-	(*SettleEchoResult)(nil),       // 24: glimway.v1.SettleEchoResult
-	(*FallResult)(nil),             // 25: glimway.v1.FallResult
-	(*ProfileResult)(nil),          // 26: glimway.v1.ProfileResult
-	(*SpendResult)(nil),            // 27: glimway.v1.SpendResult
-	(*WildsClaimResult)(nil),       // 28: glimway.v1.WildsClaimResult
-	(*WildsLanternResult)(nil),     // 29: glimway.v1.WildsLanternResult
-	(*LibraryDonateResult)(nil),    // 30: glimway.v1.LibraryDonateResult
-	(*MailSendResult)(nil),         // 31: glimway.v1.MailSendResult
-	(*MailActionResult)(nil),       // 32: glimway.v1.MailActionResult
-	(*MailRecallResult)(nil),       // 33: glimway.v1.MailRecallResult
-	(*WorkshopView)(nil),           // 34: glimway.v1.WorkshopView
-	(*CraftResult)(nil),            // 35: glimway.v1.CraftResult
-	(*HearthCraftResult)(nil),      // 36: glimway.v1.HearthCraftResult
-	(*DeskCopyResult)(nil),         // 37: glimway.v1.DeskCopyResult
-	(*WorldMoveResult)(nil),        // 38: glimway.v1.WorldMoveResult
-	(*WorldLeaveResult)(nil),       // 39: glimway.v1.WorldLeaveResult
-	(*ContributeResult)(nil),       // 40: glimway.v1.ContributeResult
-	(*MendResult)(nil),             // 41: glimway.v1.MendResult
-	(*WorldChoice)(nil),            // 42: glimway.v1.WorldChoice
+	(*Magic)(nil),                  // 3: glimway.v1.Magic
+	(*PlayerState)(nil),            // 4: glimway.v1.PlayerState
+	(*ErrorDetail)(nil),            // 5: glimway.v1.ErrorDetail
+	(*Refusal)(nil),                // 6: glimway.v1.Refusal
+	(*Envelope)(nil),               // 7: glimway.v1.Envelope
+	(*LoginRequest)(nil),           // 8: glimway.v1.LoginRequest
+	(*SessionResponse)(nil),        // 9: glimway.v1.SessionResponse
+	(*WorldChooseRequest)(nil),     // 10: glimway.v1.WorldChooseRequest
+	(*StateResponse)(nil),          // 11: glimway.v1.StateResponse
+	(*PlayRequest)(nil),            // 12: glimway.v1.PlayRequest
+	(*PlayResponse)(nil),           // 13: glimway.v1.PlayResponse
+	nil,                            // 14: glimway.v1.Story.QuestsEntry
+	nil,                            // 15: glimway.v1.Story.ReachedAtEntry
+	nil,                            // 16: glimway.v1.Story.GateAtEntry
+	(*wrapperspb.StringValue)(nil), // 17: google.protobuf.StringValue
+	(*HabiticaProfile)(nil),        // 18: glimway.v1.HabiticaProfile
+	(*Vitals)(nil),                 // 19: glimway.v1.Vitals
+	(*Place)(nil),                  // 20: glimway.v1.Place
+	(*Companions)(nil),             // 21: glimway.v1.Companions
+	(*FishingState)(nil),           // 22: glimway.v1.FishingState
+	(*ReportResult)(nil),           // 23: glimway.v1.ReportResult
+	(*QuestStepResult)(nil),        // 24: glimway.v1.QuestStepResult
+	(*MarkResult)(nil),             // 25: glimway.v1.MarkResult
+	(*TakePaperResult)(nil),        // 26: glimway.v1.TakePaperResult
+	(*SettleEchoResult)(nil),       // 27: glimway.v1.SettleEchoResult
+	(*FallResult)(nil),             // 28: glimway.v1.FallResult
+	(*ProfileResult)(nil),          // 29: glimway.v1.ProfileResult
+	(*SpendResult)(nil),            // 30: glimway.v1.SpendResult
+	(*WildsClaimResult)(nil),       // 31: glimway.v1.WildsClaimResult
+	(*WildsLanternResult)(nil),     // 32: glimway.v1.WildsLanternResult
+	(*LibraryDonateResult)(nil),    // 33: glimway.v1.LibraryDonateResult
+	(*MailSendResult)(nil),         // 34: glimway.v1.MailSendResult
+	(*MailActionResult)(nil),       // 35: glimway.v1.MailActionResult
+	(*MailRecallResult)(nil),       // 36: glimway.v1.MailRecallResult
+	(*WorkshopView)(nil),           // 37: glimway.v1.WorkshopView
+	(*CraftResult)(nil),            // 38: glimway.v1.CraftResult
+	(*HearthCraftResult)(nil),      // 39: glimway.v1.HearthCraftResult
+	(*DeskCopyResult)(nil),         // 40: glimway.v1.DeskCopyResult
+	(*WorldMoveResult)(nil),        // 41: glimway.v1.WorldMoveResult
+	(*WorldLeaveResult)(nil),       // 42: glimway.v1.WorldLeaveResult
+	(*ContributeResult)(nil),       // 43: glimway.v1.ContributeResult
+	(*MendResult)(nil),             // 44: glimway.v1.MendResult
+	(*CompanionsResult)(nil),       // 45: glimway.v1.CompanionsResult
+	(*StallResult)(nil),            // 46: glimway.v1.StallResult
+	(*MountOutResult)(nil),         // 47: glimway.v1.MountOutResult
+	(*MountHomeResult)(nil),        // 48: glimway.v1.MountHomeResult
+	(*StableExtendResult)(nil),     // 49: glimway.v1.StableExtendResult
+	(*FishCastResult)(nil),         // 50: glimway.v1.FishCastResult
+	(*FishSettleResult)(nil),       // 51: glimway.v1.FishSettleResult
+	(*FishCancelResult)(nil),       // 52: glimway.v1.FishCancelResult
+	(*WorldChoice)(nil),            // 53: glimway.v1.WorldChoice
 }
 var file_glimway_v1_state_proto_depIdxs = []int32{
-	16, // 0: glimway.v1.Account.party_id:type_name -> google.protobuf.StringValue
-	13, // 1: glimway.v1.Story.quests:type_name -> glimway.v1.Story.QuestsEntry
-	14, // 2: glimway.v1.Story.reached_at:type_name -> glimway.v1.Story.ReachedAtEntry
-	15, // 3: glimway.v1.Story.gate_at:type_name -> glimway.v1.Story.GateAtEntry
-	0,  // 4: glimway.v1.PlayerState.account:type_name -> glimway.v1.Account
-	17, // 5: glimway.v1.PlayerState.profile:type_name -> glimway.v1.HabiticaProfile
-	18, // 6: glimway.v1.PlayerState.vitals:type_name -> glimway.v1.Vitals
-	19, // 7: glimway.v1.PlayerState.place:type_name -> glimway.v1.Place
-	1,  // 8: glimway.v1.PlayerState.story:type_name -> glimway.v1.Story
-	2,  // 9: glimway.v1.PlayerState.embers:type_name -> glimway.v1.Embers
-	4,  // 10: glimway.v1.Refusal.error:type_name -> glimway.v1.ErrorDetail
-	3,  // 11: glimway.v1.Refusal.state:type_name -> glimway.v1.PlayerState
-	3,  // 12: glimway.v1.Envelope.state:type_name -> glimway.v1.PlayerState
-	20, // 13: glimway.v1.Envelope.report:type_name -> glimway.v1.ReportResult
-	21, // 14: glimway.v1.Envelope.quest_step:type_name -> glimway.v1.QuestStepResult
-	22, // 15: glimway.v1.Envelope.mark:type_name -> glimway.v1.MarkResult
-	23, // 16: glimway.v1.Envelope.take_paper:type_name -> glimway.v1.TakePaperResult
-	24, // 17: glimway.v1.Envelope.settle_echo:type_name -> glimway.v1.SettleEchoResult
-	25, // 18: glimway.v1.Envelope.fall:type_name -> glimway.v1.FallResult
-	26, // 19: glimway.v1.Envelope.profile:type_name -> glimway.v1.ProfileResult
-	27, // 20: glimway.v1.Envelope.spend:type_name -> glimway.v1.SpendResult
-	28, // 21: glimway.v1.Envelope.wilds_claim:type_name -> glimway.v1.WildsClaimResult
-	29, // 22: glimway.v1.Envelope.wilds_lantern:type_name -> glimway.v1.WildsLanternResult
-	30, // 23: glimway.v1.Envelope.library_donate:type_name -> glimway.v1.LibraryDonateResult
-	31, // 24: glimway.v1.Envelope.mail_send:type_name -> glimway.v1.MailSendResult
-	32, // 25: glimway.v1.Envelope.mail_claim:type_name -> glimway.v1.MailActionResult
-	33, // 26: glimway.v1.Envelope.mail_recall:type_name -> glimway.v1.MailRecallResult
-	34, // 27: glimway.v1.Envelope.storage_move:type_name -> glimway.v1.WorkshopView
-	35, // 28: glimway.v1.Envelope.craft:type_name -> glimway.v1.CraftResult
-	36, // 29: glimway.v1.Envelope.hearth_craft:type_name -> glimway.v1.HearthCraftResult
-	37, // 30: glimway.v1.Envelope.desk_copy:type_name -> glimway.v1.DeskCopyResult
-	38, // 31: glimway.v1.Envelope.world_move:type_name -> glimway.v1.WorldMoveResult
-	39, // 32: glimway.v1.Envelope.world_leave:type_name -> glimway.v1.WorldLeaveResult
-	40, // 33: glimway.v1.Envelope.contribute:type_name -> glimway.v1.ContributeResult
-	41, // 34: glimway.v1.Envelope.mend:type_name -> glimway.v1.MendResult
-	3,  // 35: glimway.v1.SessionResponse.state:type_name -> glimway.v1.PlayerState
-	42, // 36: glimway.v1.SessionResponse.world_choice:type_name -> glimway.v1.WorldChoice
-	3,  // 37: glimway.v1.StateResponse.state:type_name -> glimway.v1.PlayerState
-	3,  // 38: glimway.v1.PlayResponse.state:type_name -> glimway.v1.PlayerState
-	39, // [39:39] is the sub-list for method output_type
-	39, // [39:39] is the sub-list for method input_type
-	39, // [39:39] is the sub-list for extension type_name
-	39, // [39:39] is the sub-list for extension extendee
-	0,  // [0:39] is the sub-list for field type_name
+	17, // 0: glimway.v1.Account.party_id:type_name -> google.protobuf.StringValue
+	14, // 1: glimway.v1.Story.quests:type_name -> glimway.v1.Story.QuestsEntry
+	15, // 2: glimway.v1.Story.reached_at:type_name -> glimway.v1.Story.ReachedAtEntry
+	16, // 3: glimway.v1.Story.gate_at:type_name -> glimway.v1.Story.GateAtEntry
+	17, // 4: glimway.v1.Magic.class_mark:type_name -> google.protobuf.StringValue
+	0,  // 5: glimway.v1.PlayerState.account:type_name -> glimway.v1.Account
+	18, // 6: glimway.v1.PlayerState.profile:type_name -> glimway.v1.HabiticaProfile
+	19, // 7: glimway.v1.PlayerState.vitals:type_name -> glimway.v1.Vitals
+	20, // 8: glimway.v1.PlayerState.place:type_name -> glimway.v1.Place
+	1,  // 9: glimway.v1.PlayerState.story:type_name -> glimway.v1.Story
+	2,  // 10: glimway.v1.PlayerState.embers:type_name -> glimway.v1.Embers
+	21, // 11: glimway.v1.PlayerState.companions:type_name -> glimway.v1.Companions
+	3,  // 12: glimway.v1.PlayerState.magic:type_name -> glimway.v1.Magic
+	22, // 13: glimway.v1.PlayerState.fishing:type_name -> glimway.v1.FishingState
+	5,  // 14: glimway.v1.Refusal.error:type_name -> glimway.v1.ErrorDetail
+	4,  // 15: glimway.v1.Refusal.state:type_name -> glimway.v1.PlayerState
+	4,  // 16: glimway.v1.Envelope.state:type_name -> glimway.v1.PlayerState
+	23, // 17: glimway.v1.Envelope.report:type_name -> glimway.v1.ReportResult
+	24, // 18: glimway.v1.Envelope.quest_step:type_name -> glimway.v1.QuestStepResult
+	25, // 19: glimway.v1.Envelope.mark:type_name -> glimway.v1.MarkResult
+	26, // 20: glimway.v1.Envelope.take_paper:type_name -> glimway.v1.TakePaperResult
+	27, // 21: glimway.v1.Envelope.settle_echo:type_name -> glimway.v1.SettleEchoResult
+	28, // 22: glimway.v1.Envelope.fall:type_name -> glimway.v1.FallResult
+	29, // 23: glimway.v1.Envelope.profile:type_name -> glimway.v1.ProfileResult
+	30, // 24: glimway.v1.Envelope.spend:type_name -> glimway.v1.SpendResult
+	31, // 25: glimway.v1.Envelope.wilds_claim:type_name -> glimway.v1.WildsClaimResult
+	32, // 26: glimway.v1.Envelope.wilds_lantern:type_name -> glimway.v1.WildsLanternResult
+	33, // 27: glimway.v1.Envelope.library_donate:type_name -> glimway.v1.LibraryDonateResult
+	34, // 28: glimway.v1.Envelope.mail_send:type_name -> glimway.v1.MailSendResult
+	35, // 29: glimway.v1.Envelope.mail_claim:type_name -> glimway.v1.MailActionResult
+	36, // 30: glimway.v1.Envelope.mail_recall:type_name -> glimway.v1.MailRecallResult
+	37, // 31: glimway.v1.Envelope.storage_move:type_name -> glimway.v1.WorkshopView
+	38, // 32: glimway.v1.Envelope.craft:type_name -> glimway.v1.CraftResult
+	39, // 33: glimway.v1.Envelope.hearth_craft:type_name -> glimway.v1.HearthCraftResult
+	40, // 34: glimway.v1.Envelope.desk_copy:type_name -> glimway.v1.DeskCopyResult
+	41, // 35: glimway.v1.Envelope.world_move:type_name -> glimway.v1.WorldMoveResult
+	42, // 36: glimway.v1.Envelope.world_leave:type_name -> glimway.v1.WorldLeaveResult
+	43, // 37: glimway.v1.Envelope.contribute:type_name -> glimway.v1.ContributeResult
+	44, // 38: glimway.v1.Envelope.mend:type_name -> glimway.v1.MendResult
+	45, // 39: glimway.v1.Envelope.companions:type_name -> glimway.v1.CompanionsResult
+	46, // 40: glimway.v1.Envelope.stall:type_name -> glimway.v1.StallResult
+	47, // 41: glimway.v1.Envelope.mount_out:type_name -> glimway.v1.MountOutResult
+	48, // 42: glimway.v1.Envelope.mount_home:type_name -> glimway.v1.MountHomeResult
+	49, // 43: glimway.v1.Envelope.stable_extend:type_name -> glimway.v1.StableExtendResult
+	50, // 44: glimway.v1.Envelope.fish_cast:type_name -> glimway.v1.FishCastResult
+	51, // 45: glimway.v1.Envelope.fish_settle:type_name -> glimway.v1.FishSettleResult
+	52, // 46: glimway.v1.Envelope.fish_cancel:type_name -> glimway.v1.FishCancelResult
+	4,  // 47: glimway.v1.SessionResponse.state:type_name -> glimway.v1.PlayerState
+	53, // 48: glimway.v1.SessionResponse.world_choice:type_name -> glimway.v1.WorldChoice
+	4,  // 49: glimway.v1.StateResponse.state:type_name -> glimway.v1.PlayerState
+	4,  // 50: glimway.v1.PlayResponse.state:type_name -> glimway.v1.PlayerState
+	51, // [51:51] is the sub-list for method output_type
+	51, // [51:51] is the sub-list for method input_type
+	51, // [51:51] is the sub-list for extension type_name
+	51, // [51:51] is the sub-list for extension extendee
+	0,  // [0:51] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_state_proto_init() }
@@ -1472,12 +1726,14 @@ func file_glimway_v1_state_proto_init() {
 	if File_glimway_v1_state_proto != nil {
 		return
 	}
+	file_glimway_v1_companions_proto_init()
+	file_glimway_v1_fishing_proto_init()
 	file_glimway_v1_profile_proto_init()
 	file_glimway_v1_operations_proto_init()
 	file_glimway_v1_op_proto_init()
 	file_glimway_v1_village_proto_init()
 	file_glimway_v1_world_proto_init()
-	file_glimway_v1_state_proto_msgTypes[6].OneofWrappers = []any{
+	file_glimway_v1_state_proto_msgTypes[7].OneofWrappers = []any{
 		(*Envelope_Report)(nil),
 		(*Envelope_QuestStep)(nil),
 		(*Envelope_Mark)(nil),
@@ -1500,8 +1756,16 @@ func file_glimway_v1_state_proto_init() {
 		(*Envelope_WorldLeave)(nil),
 		(*Envelope_Contribute)(nil),
 		(*Envelope_Mend)(nil),
+		(*Envelope_Companions)(nil),
+		(*Envelope_Stall)(nil),
+		(*Envelope_MountOut)(nil),
+		(*Envelope_MountHome)(nil),
+		(*Envelope_StableExtend)(nil),
+		(*Envelope_FishCast)(nil),
+		(*Envelope_FishSettle)(nil),
+		(*Envelope_FishCancel)(nil),
 	}
-	file_glimway_v1_state_proto_msgTypes[8].OneofWrappers = []any{
+	file_glimway_v1_state_proto_msgTypes[9].OneofWrappers = []any{
 		(*SessionResponse_State)(nil),
 		(*SessionResponse_WorldChoice)(nil),
 	}
@@ -1511,7 +1775,7 @@ func file_glimway_v1_state_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_glimway_v1_state_proto_rawDesc), len(file_glimway_v1_state_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   16,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
