@@ -1,13 +1,14 @@
 /**
  * Reports (design server-first 2.2 "Reports" and 2.4 "Tab and report
  * ownership"): what the screen shows of place and vitals, plus the
- * signature casts made since the last report, sent about every 10 seconds.
+ * signature casts and the level-20 moves' casts (`abilityCasts`, by ability
+ * id; crafts.md 4.4) made since the last report, sent about every 10 seconds.
  *
  * Two reports at most exist at a time:
  * - the **captured** one: immutable once its sequence is allocated. A retry
  *   sends exactly it again; a lost sequence's casts never enter its
  *   successor.
- * - the **next** one, coalescing: casts summed, the latest place and vitals.
+ * - the **next** one, coalescing: casts summed (each move's on its own), the latest place and vitals.
  *
  * Every report names its `basis`, the server's `vitalsSetVersion` its
  * vitals start from. A server vitals write (a rest, a fall, a refill) is a
@@ -29,6 +30,8 @@ export interface CapturedReport {
   hp: number;
   mana: number;
   casts: number;
+  /** A combat move's casts, by ability id (absent: none). */
+  abilityCasts: Record<string, number>;
 }
 
 export interface NextReport {
@@ -36,6 +39,7 @@ export interface NextReport {
   hp: number;
   mana: number;
   casts: number;
+  abilityCasts: Record<string, number>;
   basis: number;
   /** An unanswered fall (outbox id): the next report waits for its answer. */
   boundary: number | null;
@@ -71,7 +75,17 @@ export interface ReportAck {
 
 export const REPORT_INTERVAL_MS = 10_000;
 
-const blank = (basis: number): NextReport => ({ place: null, hp: 0, mana: 0, casts: 0, basis, boundary: null, changed: false });
+const blank = (basis: number): NextReport => ({ place: null, hp: 0, mana: 0, casts: 0, abilityCasts: {}, basis, boundary: null, changed: false });
+
+/** Sum two moves' tallies (a coalescing report, a lost sequence's casts). */
+export function addCasts(a: Readonly<Record<string, number>>, b: Readonly<Record<string, number>>): Record<string, number> {
+  const out: Record<string, number> = { ...a };
+  for (const [id, n] of Object.entries(b)) if (n > 0) out[id] = (out[id] ?? 0) + n;
+  return out;
+}
+
+/** A stored report from before the moves (0.4's record) reads as having none. */
+const withMoves = <T extends { abilityCasts?: Record<string, number> }>(r: T): T & { abilityCasts: Record<string, number> } => ({ ...r, abilityCasts: { ...(r.abilityCasts ?? {}) } });
 
 export class ReportBook {
   client = '';
@@ -90,12 +104,12 @@ export class ReportBook {
     this.client = stored.client;
     this.generation = stored.generation;
     this.seq = stored.seq;
-    this.next = { ...stored.next };
-    this.captured = stored.captured ? { ...stored.captured } : null;
+    this.next = withMoves(stored.next);
+    this.captured = stored.captured ? withMoves(stored.captured) : null;
   }
 
   stored(): StoredReports {
-    return { client: this.client, generation: this.generation, seq: this.seq, next: { ...this.next }, captured: this.captured ? { ...this.captured } : null };
+    return { client: this.client, generation: this.generation, seq: this.seq, next: withMoves(this.next), captured: this.captured ? withMoves(this.captured) : null };
   }
 
   /**
@@ -130,6 +144,11 @@ export class ReportBook {
     this.next = { ...this.next, casts: this.next.casts + n, changed: true };
   }
 
+  /** A combat move (Stand, Kindle, Ward-light, Echo) was cast on screen. */
+  castMove(id: string, n = 1): void {
+    this.next = { ...this.next, abilityCasts: addCasts(this.next.abilityCasts, { [id]: n }), changed: true };
+  }
+
   get due(): boolean {
     return !!this.captured || (this.next.changed && this.next.boundary === null && !!this.next.place);
   }
@@ -154,8 +173,8 @@ export class ReportBook {
 
   /** Back to a stored book (a fall that never reached the outbox). */
   restore(stored: StoredReports): void {
-    this.next = { ...stored.next };
-    this.captured = stored.captured ? { ...stored.captured } : null;
+    this.next = withMoves(stored.next);
+    this.captured = stored.captured ? withMoves(stored.captured) : null;
     this.seq = stored.seq;
   }
 
@@ -188,8 +207,8 @@ export class ReportBook {
     if (!this.generation || !n.place || n.boundary !== null || (!n.changed && !force)) return null;
     this.seq += 1;
     this.reportedArea = n.place.area;
-    this.captured = { client: this.client, generation: this.generation, seq: this.seq, basis: n.basis, place: { ...n.place }, hp: n.hp, mana: n.mana, casts: n.casts };
-    this.next = { ...n, casts: 0, changed: false };
+    this.captured = { client: this.client, generation: this.generation, seq: this.seq, basis: n.basis, place: { ...n.place }, hp: n.hp, mana: n.mana, casts: n.casts, abilityCasts: { ...n.abilityCasts } };
+    this.next = { ...n, casts: 0, abilityCasts: {}, changed: false };
     return this.captured;
   }
 

@@ -40,10 +40,12 @@ export type PresencePlayer = Omit<Fields<GeneratedPlayer>, 'avatar' | 'pos'> & {
   pos: PresencePosition | null;
 };
 export type PresenceClientMessage = Event<'auth'> | Pick<Event<'join'>, 'type' | 'area'>
-  | ({ type: 'pos' } & PresencePosition) | Pick<Event<'emote'>, 'type' | 'id'> | Event<'heartbeat'>;
+  | ({ type: 'pos' } & PresencePosition) | Pick<Event<'emote'>, 'type' | 'id'> | Event<'heartbeat'>
+  | Pick<Event<'ability'>, 'type' | 'ability' | 'x' | 'y'>;
 export type PresenceServerMessage = Event<'ready'> | Event<'leave'> | Event<'gift'> | Event<'witness'>
   | (Pick<Event<'room'>, 'type' | 'area'> & { players: PresencePlayer[] })
   | (Pick<Event<'join'>, 'type' | 'area'> & { player: PresencePlayer })
   | ({ type: 'pos'; accountId: string } & PresencePosition)
-  | (Event<'emote'> & { accountId: string });
+  | (Event<'emote'> & { accountId: string })
+  | (Pick<Event<'ability'>, 'type' | 'ability' | 'x' | 'y'> & { accountId: string });
 export const PRESENCE_CLOSE = { unauthorized: 4001, superseded: 4002, replaced: 4003, idle: 4004, reloadNeeded: 4005 } as const;

@@ -45,6 +45,7 @@ const commons = JSON.parse(readFileSync(join(ROOT, 'assets/generated/commons-pas
 const runtime = JSON.parse(readFileSync(join(ROOT, 'assets/generated/runtime-pass/manifest.json'), 'utf8')) as RuntimeArtManifest
 const items = JSON.parse(readFileSync(join(ROOT, 'assets/generated/items-pass/manifest.json'), 'utf8')) as ItemsPassManifest
 const indoors = JSON.parse(readFileSync(join(ROOT, 'assets/generated/indoors-pass/manifest.json'), 'utf8')) as { sources: { file: string }[]; frames: { key: string; canvasSize: { w: number; h: number } }[] }
+const crafts = JSON.parse(readFileSync(join(ROOT, 'assets/generated/crafts-pass/manifest.json'), 'utf8')) as { frames: Record<string, { file: string; canvasSize: { w: number; h: number } }> }
 
 type P1 = { frames: Record<string, { source: string }>; sources: Record<string, { file: string }> }
 const p1 = JSON.parse(readFileSync(join(ROOT, PLAYTEST1_DIR, 'atlas.json'), 'utf8')) as P1
@@ -93,6 +94,8 @@ test('every input the atlases were baked from is unchanged', () => {
     ...items.sources.map((s) => `assets/generated/items-pass/${s.file}`),
     'assets/generated/indoors-pass/manifest.json',
     ...indoors.sources.map((s) => `assets/generated/indoors-pass/sheets/${s.file}`),
+    'assets/generated/crafts-pass/manifest.json',
+    ...Object.values(crafts.frames).map((f) => `assets/generated/crafts-pass/${f.file}`),
     'assets/generated/expansion/manifest.json',
     'assets/generated/expansion/fingersnap-terrain.png',
     'assets/generated/expansion/fingersnap-terrain.atlas.json',
@@ -153,7 +156,7 @@ test('canvas packs hold every native frame whole, at ART_DENSITY, inside their a
     }
   }
   // Every atlas fits a phone GPU's texture limit.
-  for (const image of [built.commons.image, built.runtime.image, built.items.image, built.indoors.image, built.terrain.image, built.ground.image, built.people.image, built.buildings.image, ...Object.values(built.atlases).map((a) => a.image)]) {
+  for (const image of [built.commons.image, built.runtime.image, built.items.image, built.indoors.image, built.crafts.image, built.terrain.image, built.ground.image, built.people.image, built.buildings.image, ...Object.values(built.atlases).map((a) => a.image)]) {
     const [w, h] = imageSize(join(PACKED, image))
     assert.ok(w <= 4096 && h <= 4096, `${image} is ${w}×${h}, past 4096`)
   }
@@ -198,6 +201,18 @@ test('the indoors pass: every named 64-texel canvas is packed whole', () => {
     const r = built.indoors.frames[f.key]
     assert.deepEqual([r[2], r[3]], [f.canvasSize.w, f.canvasSize.h], `${f.key} keeps its requested canvas`)
     assert.ok(r[0] + r[2] <= w && r[1] + r[3] <= h, `${f.key} inside the indoors atlas`)
+  }
+})
+
+test('the crafts pass: every 64-texel frame is packed whole', () => {
+  const [w, h] = webpSize(join(PACKED, built.crafts.image))
+  assert.deepEqual([w, h], built.crafts.size)
+  assert.equal(built.crafts.density, 64)
+  assert.deepEqual(Object.keys(built.crafts.frames).sort(), Object.keys(crafts.frames).sort())
+  for (const [key, f] of Object.entries(crafts.frames)) {
+    const r = built.crafts.frames[key]
+    assert.deepEqual([r[2], r[3]], [f.canvasSize.w, f.canvasSize.h], `${key} keeps its canvas`)
+    assert.ok(r[0] + r[2] <= w && r[1] + r[3] <= h, `${key} inside the crafts atlas`)
   }
 })
 
@@ -259,6 +274,7 @@ test('public/assets/fingersnap ships its licence, manifests and packed art only 
     `packed/${built.runtime.image}`,
     `packed/${built.items.image}`,
     `packed/${built.indoors.image}`,
+    `packed/${built.crafts.image}`,
     `packed/${built.terrain.image}`,
     `packed/${built.ground.image}`,
     `packed/${built.people.image}`,

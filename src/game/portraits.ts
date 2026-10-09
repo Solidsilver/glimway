@@ -4,6 +4,7 @@
  * UI icons (EV.artIcons).
  */
 import { indoorsIconUrls } from './indoors-art'
+import { craftsIconUrls } from './crafts-art'
 import type Phaser from 'phaser'
 import { bus, EV } from './events'
 import { densityOf } from './density'
@@ -82,5 +83,5 @@ export function emitPortraits(scene: Phaser.Scene): void {
     if (url) out[name] = url
   }
   bus.emit(EV.portraits, out)
-  bus.emit(EV.artIcons, { ...commonsIconUrls(scene), ...itemIconUrls(scene), ...indoorsIconUrls(scene) })
+  bus.emit(EV.artIcons, { ...commonsIconUrls(scene), ...itemIconUrls(scene), ...indoorsIconUrls(scene), ...craftsIconUrls(scene) })
 }

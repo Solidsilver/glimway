@@ -7,6 +7,7 @@ import { GROUND_PACKED_KEY } from './area/terrain.ts'
 import { PEOPLE_PACKED_KEY } from './people.ts'
 import { BUILDINGS_PACKED_KEY } from './buildings.ts'
 import { INDOORS_PACKED_KEY } from './indoors-art.ts'
+import { CRAFTS_PACKED_KEY } from './crafts-art.ts'
 
 /**
  * Load the packed atlases (scripts/build-atlases.ts writes them; see
@@ -28,5 +29,6 @@ export function preloadPacked(scene: Phaser.Scene, base: string = PACKED_BASE): 
   scene.load.image(PEOPLE_PACKED_KEY, `${base}people.webp`)
   scene.load.image(BUILDINGS_PACKED_KEY, `${base}buildings.webp`)
   scene.load.image(INDOORS_PACKED_KEY, `${base}indoors.webp`)
+  scene.load.image(CRAFTS_PACKED_KEY, `${base}crafts.webp`)
   for (const a of SCALED_ATLASES) scene.load.atlas(a.key, `${base}${a.key}.png`, `${base}${a.key}.json`)
 }

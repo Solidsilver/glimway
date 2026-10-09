@@ -2,8 +2,8 @@
   import { home } from './home.svelte'
   import { villageUi } from './village.svelte'
   import { calendarLine, MARK_NOTES } from '../lib/village'
-  import { ui, type Gain } from './store.svelte'
-  import { getCombatKit } from '../lib/combat'
+  import { ui, type AbilitySlot, type Gain } from './store.svelte'
+  import type { KitMove } from '../lib/combat'
   import { EMBER_COSTS } from '../lib/embers'
   import { isTouchFirst } from './device'
   import Icon from './Icon.svelte'
@@ -57,8 +57,10 @@
   const hpPct = $derived(Math.max(0, Math.min(100, (ui.stats.hp / ui.stats.maxHp) * 100)))
   const manaPct = $derived(Math.max(0, Math.min(100, (ui.stats.mana / ui.stats.maxMana) * 100)))
   const lowHp = $derived(ui.stats.hp > 0 && hpPct <= 30)
-  const kit = $derived(getCombatKit(ui.importedProfile))
-  const canAfford = $derived(ui.stats.mana >= kit.manaCost)
+  const kit = $derived(ui.kit)
+  /** The F and R slots: a hero without a craft has neither (crafts.md 4.2). */
+  const sigSlot = $derived(ui.slot(kit.signature?.id))
+  const moveSlot = $derived(ui.slot(kit.move?.id))
   const resting = $derived(ui.stats.hp <= 0 && ui.vitalsSource === 'imported')
   /** The E/Space slot says what it will do here: the prompt's verb, else the swing. */
   const actLabel = $derived(ui.prompt.label ? (ui.prompt.verb ?? 'Use') : heldUi.kind === 'weapon' ? kit.basicName : KIND_WORDS[heldUi.kind])
@@ -321,6 +323,22 @@
   <p class="sr" role="status" data-inset-skip>{statusLine}</p>
 </div>
 
+{#snippet moveSlotView(m: KitMove, st: AbilitySlot, key: string, which: 'sig' | 'move')}
+  <div class="slot {which}" class:dim={ui.stats.mana < m.mana} class:denied={st.deniedAt > 0} data-ability={m.id}>
+    {#key st.deniedAt}
+      <div class="face" class:shake={st.deniedAt > 0}><ArtIcon art={m.icon} name="sparkle" size={32} /></div>
+    {/key}
+    {#key st.readyAt}
+      {#if st.readyAt > 0}
+        <div class="sweep" style={`animation-duration:${st.cooldown}s`}></div>
+      {/if}
+    {/key}
+    <span class="kbd">{key}</span>
+    <span class="label">{m.name}</span>
+    <span class="cost"><Icon name="drop" size={10} />{m.mana}</span>
+  </div>
+{/snippet}
+
 {#if !touch && showBars}
   <div class="actionbar" class:hidden={ui.cinematic || ui.dialogueOpen}>
     {#if prompt}
@@ -358,19 +376,12 @@
       <span class="kbd">E</span>
       <span class="label">{actLabel}</span>
     </div>
-    <div class="slot sig" class:dim={!canAfford} class:denied={ui.ability.deniedAt > 0}>
-      {#key ui.ability.deniedAt}
-        <div class="face" class:shake={ui.ability.deniedAt > 0}><Icon name="sparkle" size={22} /></div>
-      {/key}
-      {#key ui.ability.readyAt}
-        {#if ui.ability.readyAt > 0}
-          <div class="sweep" style={`animation-duration:${ui.ability.cooldown}s`}></div>
-        {/if}
-      {/key}
-      <span class="kbd">F</span>
-      <span class="label">{kit.signatureName}</span>
-      <span class="cost"><Icon name="drop" size={10} />{kit.manaCost}</span>
-    </div>
+    {#if kit.signature}
+      {@render moveSlotView(kit.signature, sigSlot, 'F', 'sig')}
+    {/if}
+    {#if kit.move}
+      {@render moveSlotView(kit.move, moveSlot, 'R', 'move')}
+    {/if}
     <div class="slot roll">
       <div class="face"><Icon name="roll" size={20} /></div>
       {#key ui.roll.readyAt}
@@ -1097,7 +1108,8 @@
   .slot.context .face {
     background: linear-gradient(180deg, #fff3b8, #f5cf5c);
   }
-  .slot.sig .face {
+  .slot.sig .face,
+  .slot.move .face {
     background: linear-gradient(180deg, #d6e6ff, #8fb3ec);
     color: #20365c;
   }
