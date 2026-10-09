@@ -12,7 +12,7 @@
  * start and at each turning (pruneChunks).
  */
 import { toBinary } from '@bufbuild/protobuf';
-import contract from '../../../content/contract.json' with { type: 'json' };
+import { CONTRACT_NUMBER } from '../../lib/contract.ts';
 import { WildsChunkSchema, type WildsChunk } from '../../lib/gen/glimway/v1/wilds_pb.js';
 import { decodeChunk } from '../../lib/api/chunks.ts';
 import type { OperationsApi } from '../../lib/api/operations.ts';
@@ -21,7 +21,7 @@ import { terrainOf, type ChunkTerrain } from './terrain.ts';
 
 const DB_NAME = 'glimway-chunks';
 const STORE = 'chunks';
-const PREFIX = `${contract.number}:${loadWilds().generatorVersion}:`;
+const PREFIX = `${CONTRACT_NUMBER}:${loadWilds().generatorVersion}:`;
 
 const chunkKey = (epochId: string, cx: number, cy: number) => `${PREFIX}${epochId}:${cx}:${cy}`;
 

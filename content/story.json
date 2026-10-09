@@ -99,19 +99,23 @@
   ],
   "ids": {
     "found:": {
-      "old-route-marker": "ruin",
-      "hilltop-lantern": "ruin",
-      "lantern-road-restored": "village",
-      "route-marker": "woodland"
+      "areas": {
+        "old-route-marker": "ruin",
+        "hilltop-lantern": "ruin",
+        "lantern-road-restored": "village",
+        "route-marker": "woodland"
+      }
     },
     "defeated:": {
-      "stone-warden": "ruin",
-      "wisp-a": "woodland",
-      "wisp-b": "woodland",
-      "wisp-c": "woodland",
-      "beetle-a": "woodland",
-      "beetle-b": "woodland",
-      "finger-wisp": "woodland"
+      "areas": {
+        "stone-warden": "ruin",
+        "wisp-a": "woodland",
+        "wisp-b": "woodland",
+        "wisp-c": "woodland",
+        "beetle-a": "woodland",
+        "beetle-b": "woodland",
+        "finger-wisp": "woodland"
+      }
     }
   },
   "areas": {

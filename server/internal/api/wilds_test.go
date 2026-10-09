@@ -704,6 +704,9 @@ func TestWildsCalendarRetuningDoesNotReuseEndedEpoch(t *testing.T) {
 	for _, change := range []string{"wick-days", "epoch", "same-start-new-end"} {
 		t.Run(change, func(t *testing.T) {
 			saved := content.CalendarRules
+			// A clone: the subtest retunes its own calendar, and the
+			// restore hands the shared table back untouched.
+			content.CalendarRules = proto.Clone(saved).(*content.Calendar)
 			defer func() { content.CalendarRules = saved }()
 			epoch, _ := time.Parse(time.RFC3339, saved.Epoch)
 			x := newRig(t)

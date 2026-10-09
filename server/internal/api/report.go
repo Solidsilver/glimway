@@ -17,20 +17,20 @@ func boundReport(s store.Snapshot, hp, mana, casts, at, ready, now float64) (flo
 	allowed := float64(0)
 	cost, heal := float64(0), float64(0)
 	if p := s.ImportedProfile; p != nil && p.Class != nil && s.State.HP > 0 {
-		if c, ok := content.CombatRules.Classes[*p.Class]; ok {
-			cost = c.CastCost
-			slots := math.Max(0, 1+math.Floor((now-ready)/content.CombatRules.SignatureCooldownSeconds))
-			allowed = math.Min(casts, math.Min(slots, math.Floor((s.State.Mana+content.VitalsRules.RegenCap*elapsed)/cost)))
+		if c, ok := content.CombatRules.GetClasses()[*p.Class]; ok {
+			cost = c.GetCastCost()
+			slots := math.Max(0, 1+math.Floor((now-ready)/content.CombatRules.GetSignatureCooldownSeconds()))
+			allowed = math.Min(casts, math.Min(slots, math.Floor((s.State.Mana+content.VitalsRules.GetRegenCap()*elapsed)/cost)))
 			if *p.Class == "healer" {
-				h := content.CombatRules.Heal
-				scale := math.Pow10(h.DecimalPlaces)
-				heal = math.Floor((h.Base+h.MaximumBonus*p.Stats.Int/(p.Stats.Int+h.Halfway))*scale+.5) / scale
+				h := content.CombatRules.GetHeal()
+				scale := math.Pow10(int(h.GetDecimalPlaces()))
+				heal = math.Floor((h.GetBase()+h.GetMaximumBonus()*p.Stats.Int/(p.Stats.Int+h.GetHalfway()))*scale+.5) / scale
 			}
 		}
 	}
 	hp = math.Min(hp, math.Min(s.State.MaxHP, s.State.HP+allowed*heal))
-	mana = math.Min(mana, math.Max(0, math.Min(s.State.MaxMana, s.State.Mana+content.VitalsRules.RegenCap*elapsed-allowed*cost)))
-	return hp, mana, allowed, math.Max(now, ready+allowed*content.CombatRules.SignatureCooldownSeconds)
+	mana = math.Min(mana, math.Max(0, math.Min(s.State.MaxMana, s.State.Mana+content.VitalsRules.GetRegenCap()*elapsed-allowed*cost)))
+	return hp, mana, allowed, math.Max(now, ready+allowed*content.CombatRules.GetSignatureCooldownSeconds())
 }
 
 func (a *Server) report(w http.ResponseWriter, r *http.Request) error {

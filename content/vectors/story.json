@@ -1,0 +1,270 @@
+{
+  "loader": [
+    {
+      "name": "shipped-tables",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "no-namespaces",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "namespaces"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "duplicate-namespace",
+      "valid": false,
+      "rule": "duplicate namespace",
+      "edits": [
+        {
+          "path": [
+            "namespaces",
+            1,
+            "prefix"
+          ],
+          "value": "seen:"
+        }
+      ]
+    },
+    {
+      "name": "empty-namespace-prefix",
+      "valid": false,
+      "rule": "string.min_len",
+      "edits": [
+        {
+          "path": [
+            "namespaces",
+            0,
+            "prefix"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "namespace-writer",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "namespaces",
+            0,
+            "writer"
+          ],
+          "value": "both"
+        }
+      ]
+    },
+    {
+      "name": "five-echoes",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "echoes"
+          ],
+          "value": [
+            {
+              "member": "hollis",
+              "late": false,
+              "east": false
+            },
+            {
+              "member": "tam",
+              "late": true,
+              "east": true
+            },
+            {
+              "member": "bett",
+              "late": true,
+              "east": false
+            },
+            {
+              "member": "dorrit",
+              "late": false,
+              "east": false
+            },
+            {
+              "member": "joss",
+              "late": false,
+              "east": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "seven-echoes",
+      "valid": false,
+      "rule": "repeated.max_items",
+      "edits": [
+        {
+          "path": [
+            "echoes"
+          ],
+          "value": [
+            {
+              "member": "hollis",
+              "late": false,
+              "east": false
+            },
+            {
+              "member": "tam",
+              "late": true,
+              "east": true
+            },
+            {
+              "member": "bett",
+              "late": true,
+              "east": false
+            },
+            {
+              "member": "dorrit",
+              "late": false,
+              "east": false
+            },
+            {
+              "member": "joss",
+              "late": false,
+              "east": false
+            },
+            {
+              "member": "nan",
+              "late": false,
+              "east": false
+            },
+            {
+              "member": "mara",
+              "late": false,
+              "east": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "empty-npcs",
+      "valid": false,
+      "rule": "map.min_pairs",
+      "edits": [
+        {
+          "path": [
+            "npcs"
+          ],
+          "value": {}
+        }
+      ]
+    },
+    {
+      "name": "npc-id",
+      "valid": false,
+      "rule": "string.pattern",
+      "edits": [
+        {
+          "path": [
+            "npcs"
+          ],
+          "value": {
+            "Mara Hood": "village"
+          }
+        }
+      ]
+    },
+    {
+      "name": "npc-area",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "npcs"
+          ],
+          "value": {
+            "mara": "mill"
+          }
+        }
+      ]
+    },
+    {
+      "name": "empty-spots",
+      "valid": false,
+      "rule": "map.min_pairs",
+      "edits": [
+        {
+          "path": [
+            "spots"
+          ],
+          "value": {}
+        }
+      ]
+    },
+    {
+      "name": "spot-area",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "spots"
+          ],
+          "value": {
+            "clue": "mill"
+          }
+        }
+      ]
+    },
+    {
+      "name": "no-quest-items",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "questItems"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "quest-item-id",
+      "valid": false,
+      "rule": "string.pattern",
+      "edits": [
+        {
+          "path": [
+            "questItems"
+          ],
+          "value": [
+            "Field Journal"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "duplicate-quest-item",
+      "valid": false,
+      "rule": "repeated.unique",
+      "edits": [
+        {
+          "path": [
+            "questItems"
+          ],
+          "value": [
+            "field-journal",
+            "field-journal"
+          ]
+        }
+      ]
+    }
+  ]
+}

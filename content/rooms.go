@@ -153,11 +153,7 @@ func validateRooms(doc *Rooms) error {
 	bad := func(s string) error { return fmt.Errorf("invalid rooms: %s", s) }
 	seen := map[string]*Room{}
 	spots := map[string]bool{}
-	var story Story
-	if err := readTable("story.json", &story); err != nil {
-		return err
-	}
-	for id := range story.Spots {
+	for id := range StoryRules.GetSpots() {
 		spots[id] = true
 	}
 	for _, r := range doc.Rooms {

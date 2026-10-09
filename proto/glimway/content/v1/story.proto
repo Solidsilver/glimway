@@ -1,0 +1,65 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// The story tables: the mark namespaces (who may write each mark), the
+// well-known ids and areas marks resolve to, the six Echo villagers, the
+// notice boards, the village NPCs' area, the outdoor story spots and the
+// quest keepsakes. Cross-entry checks (an area that exists, a spot that
+// fits) stay in code beside the loader. content/story.json.
+//
+// Shape note (the owner's reshape rule): `ids` was a map of maps — a map
+// prefix to id-area pairs, which proto can't express — and is now a map of
+// messages, each naming its pairs' `areas`:
+//   {"found:": {"old-route-marker": "ruin"}}
+//   -> {"found:": {"areas": {"old-route-marker": "ruin"}}}
+message Story {
+  repeated Namespace namespaces = 1 [(buf.validate.field).repeated.min_items = 1];
+  map<string, IdTable> ids = 2;
+  map<string, string> areas = 3;
+  // Always the six Echo villagers, in reveal order (the loaders' rule).
+  repeated Echo echoes = 4 [(buf.validate.field).repeated = {min_items: 6, max_items: 6}];
+  map<string, Board> boards = 5;
+  map<string, string> npcs = 6 [(buf.validate.field).map = {
+    min_pairs: 1
+    keys: {string: {pattern: "^[a-z0-9-]{1,100}$"}}
+    values: {string: {in: ["village", "woodland", "ruin", "commons"]}}
+  }];
+  map<string, string> spots = 7 [(buf.validate.field).map = {
+    min_pairs: 1
+    keys: {string: {pattern: "^[a-z0-9-]{1,100}$"}}
+    values: {string: {in: ["village", "woodland", "ruin", "commons"]}}
+  }];
+  repeated string quest_items = 8 [(buf.validate.field).repeated = {
+    min_items: 1
+    unique: true
+    items: {string: {pattern: "^[a-z0-9-]{1,100}$"}}
+  }];
+}
+
+// One mark namespace: the prefix ("found:", or a whole singleton mark) and
+// who may write it. Prefixes are unique (the loader's rule).
+message Namespace {
+  string prefix = 1 [(buf.validate.field).string.min_len = 1];
+  string writer = 2 [(buf.validate.field).string = {in: ["client", "server"]}];
+}
+
+// One Echo villager: a member of the residents table, whether their echo
+// waits for the road to be lit and whether they settled in the east.
+message Echo {
+  string member = 1;
+  bool late = 2;
+  bool east = 3;
+}
+
+// A notice board's tile in its area.
+message Board {
+  int32 tx = 1;
+  int32 ty = 2;
+}
+
+// The ids one mark prefix resolves to: mark id -> area.
+message IdTable {
+  map<string, string> areas = 1;
+}

@@ -76,7 +76,7 @@ func TestPresenceLiveFixtures(t *testing.T) {
 	check("join", alice.expect("join"))
 	alice.send(map[string]any{"type": "pos", "x": 100.5, "y": 200.25, "facing": map[string]any{"x": 0, "y": 1}, "moving": false})
 	check("pos", bob.expect("pos"))
-	time.Sleep(millis(cfg.JoinCooldownMs))
+	time.Sleep(millis(int(cfg.GetJoinCooldownMs())))
 	check("positionedRoom", bob.join("ruin"))
 	bob.send(map[string]any{"type": "pos", "x": 100.5, "y": 200.25, "facing": map[string]any{"x": 0, "y": 1}, "moving": false})
 	alice.expect("pos") // establishes witness proximity through the real reader
@@ -86,7 +86,7 @@ func TestPresenceLiveFixtures(t *testing.T) {
 	check("gift", bob.expect("gift"))
 	x.api.presenceWitness(s.WorldID, x.account("alice"), "Hero", "ruin", "warden")
 	check("witness", bob.expect("witness"))
-	time.Sleep(millis(cfg.JoinCooldownMs))
+	time.Sleep(millis(int(cfg.GetJoinCooldownMs())))
 	alice.join("woodland")
 	check("leave", bob.expect("leave"))
 }

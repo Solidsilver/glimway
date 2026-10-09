@@ -31,14 +31,14 @@ func (a *Server) questStep(w http.ResponseWriter, r *http.Request) error {
 			return nil, fail(409, "not-next-step")
 		}
 		idx := content.QuestIndex(req.Quest, s.State.Quests[req.Quest]) + 1
-		if idx < 0 || idx >= len(quest.Steps) || quest.Steps[idx].ID != req.To {
+		if idx < 0 || idx >= len(quest.GetSteps()) || quest.GetSteps()[idx].GetId() != req.To {
 			return nil, fail(409, "not-next-step")
 		}
-		step := quest.Steps[idx]
+		step := quest.GetSteps()[idx]
 		if err := questPrerequisites(*s, quest); err != nil {
 			return nil, err
 		}
-		if step.At != "" && s.State.Area != step.At {
+		if step.GetAt() != "" && s.State.Area != step.GetAt() {
 			return nil, fail(409, "wrong-area")
 		}
 		if err := questTrigger(ctx, tx, s, req.Quest, step, now); err != nil {
@@ -47,8 +47,8 @@ func (a *Server) questStep(w http.ResponseWriter, r *http.Request) error {
 		if err := checkQuestGate(ctx, tx, s, req.Quest, step, now); err != nil {
 			return nil, err
 		}
-		out := &contract.QuestStepResult{Quest: req.Quest, Step: step.ID}
-		outcome := "quest-gift:" + req.Quest + ":" + step.ID
+		out := &contract.QuestStepResult{Quest: req.Quest, Step: step.GetId()}
+		outcome := "quest-gift:" + req.Quest + ":" + step.GetId()
 		added, err := store.Outcome(ctx, tx, s.AccountID, outcome, "quest", now)
 		if err != nil {
 			return nil, err
@@ -57,8 +57,8 @@ func (a *Server) questStep(w http.ResponseWriter, r *http.Request) error {
 			if err = spendQuestGate(ctx, tx, s, req.Quest, step, now, out); err != nil {
 				return nil, err
 			}
-			s.State.Inventory = rules.AddUnique(s.State.Inventory, step.Items...)
-			for _, m := range step.Marks {
+			s.State.Inventory = rules.AddUnique(s.State.Inventory, step.GetItems()...)
+			for _, m := range step.GetMarks() {
 				if rules.EconomyFlag(m) {
 					if _, err = store.Outcome(ctx, tx, s.AccountID, m, "quest", now); err != nil {
 						return nil, err
@@ -66,13 +66,13 @@ func (a *Server) questStep(w http.ResponseWriter, r *http.Request) error {
 				}
 				questMark(s, m)
 			}
-			for _, p := range step.Papers {
+			for _, p := range step.GetPapers() {
 				if _, err = a.Config.Story.Grant(ctx, tx, s, p, now); err != nil {
 					return nil, err
 				}
 			}
-			paid := step.Embers
-			if req.Quest == "signpost" && step.ID == "see-mara" {
+			paid := int(step.GetEmbers())
+			if req.Quest == "signpost" && step.GetId() == "see-mara" {
 				topup := max(0, 3-s.State.Embers)
 				fresh, e := store.Outcome(ctx, tx, s.AccountID, "quest-gift:signpost:topup", "quest", now)
 				if e != nil {
@@ -87,23 +87,23 @@ func (a *Server) questStep(w http.ResponseWriter, r *http.Request) error {
 					return nil, err
 				}
 			}
-			for _, item := range step.Give {
+			for _, item := range step.GetGive() {
 				if err = questGive(ctx, tx, s, item, outcome, now); err != nil {
 					return nil, err
 				}
-				out.Given = append(out.Given, &contract.ItemQty{Def: item.Def, Qty: float64(item.Qty)})
+				out.Given = append(out.Given, &contract.ItemQty{Def: item.GetDef(), Qty: float64(item.GetQty())})
 			}
-			out.Items = step.Items
-			out.Marks = step.Marks
-			out.Papers = step.Papers
+			out.Items = step.GetItems()
+			out.Marks = step.GetMarks()
+			out.Papers = step.GetPapers()
 			out.Embers = float64(paid)
 		}
-		s.State.Quests[req.Quest] = step.ID
+		s.State.Quests[req.Quest] = step.GetId()
 		s.State.ReachedAt[req.Quest] = now
-		if idx == 0 || step.Gate != nil {
+		if idx == 0 || step.GetGate() != nil {
 			s.State.GateAt[req.Quest] = now
 		}
-		if step.Witness != "" {
+		if step.GetWitness() != "" {
 			relay = a.witnessed(*s, []string{step.Witness})
 		}
 		return out, nil
@@ -126,9 +126,9 @@ func (a *Server) mark(w http.ResponseWriter, r *http.Request) error {
 		if writer == "" {
 			return nil, fail(409, "unknown-mark")
 		}
-		for prefix, ids := range content.StoryRules.IDs {
+		for prefix, table := range content.StoryRules.GetIds() {
 			if strings.HasPrefix(req.Mark, prefix) {
-				area, ok := ids[strings.TrimPrefix(req.Mark, prefix)]
+				area, ok := table.GetAreas()[strings.TrimPrefix(req.Mark, prefix)]
 				if !ok {
 					return nil, fail(409, "unknown-mark")
 				}
@@ -137,7 +137,7 @@ func (a *Server) mark(w http.ResponseWriter, r *http.Request) error {
 				}
 			}
 		}
-		if area := content.StoryRules.Areas[req.Mark]; area != "" && !(area == "home" && rules.HomeGate(s.State.Area) >= 0) && s.State.Area != area {
+		if area := content.StoryRules.GetAreas()[req.Mark]; area != "" && !(area == "home" && rules.HomeGate(s.State.Area) >= 0) && s.State.Area != area {
 			return nil, fail(409, "wrong-area")
 		}
 		added := false
@@ -194,8 +194,8 @@ func (a *Server) fall(w http.ResponseWriter, r *http.Request) error {
 		if p := s.ImportedProfile; p != nil {
 			hp, mp = p.HP, p.MP
 		}
-		s.State.HP = math.Min(hp, math.Ceil(s.State.MaxHP*content.VitalsRules.FallHPFraction))
-		s.State.Mana = math.Min(mp, math.Ceil(s.State.MaxMana*content.VitalsRules.FallManaFraction))
+		s.State.HP = math.Min(hp, math.Ceil(s.State.MaxHP*content.VitalsRules.GetFallHpFraction()))
+		s.State.Mana = math.Min(mp, math.Ceil(s.State.MaxMana*content.VitalsRules.GetFallManaFraction()))
 		s.VitalsWritten = true
 		s.State.Area = "village"
 		s.State.Position = rules.NewState().Position

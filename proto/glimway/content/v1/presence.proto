@@ -1,0 +1,51 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// Presence tuning (docs/design/presence.md): the emote vocabulary and the
+// connection, ingress and timing bounds the hub and its clients share.
+// content/presence.json.
+message Presence {
+  option (buf.validate.message).cel = {
+    id: "presence.room_capacity"
+    message: "a room holds no more players than the hub"
+    expression: "this.max_room_players <= this.max_connections"
+  };
+  option (buf.validate.message).cel = {
+    id: "presence.session_player"
+    message: "one session holds no more connections than one player"
+    expression: "this.max_session_connections <= this.max_player_connections"
+  };
+  option (buf.validate.message).cel = {
+    id: "presence.ping_before_idle"
+    message: "the ping and pong timeouts come before the idle timeout"
+    expression: "this.ping_interval_ms < this.idle_timeout_ms && this.pong_timeout_ms < this.idle_timeout_ms"
+  };
+  repeated string emotes = 1 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 16
+    unique: true
+    items: {string: {pattern: "^[a-z0-9-]{1,32}$"}}
+  }];
+  int32 position_hz = 2 [(buf.validate.field).int32 = {gte: 1, lte: 20}];
+  int32 emote_cooldown_ms = 3 [(buf.validate.field).int32 = {gte: 1, lte: 120000}];
+  int32 join_cooldown_ms = 4 [(buf.validate.field).int32 = {gte: 1, lte: 120000}];
+  int32 max_connections = 5 [(buf.validate.field).int32 = {gte: 1, lte: 512}];
+  int32 max_room_players = 6 [(buf.validate.field).int32 = {gte: 1, lte: 512}];
+  int32 message_bytes = 7 [(buf.validate.field).int32 = {gte: 128, lte: 4096}];
+  int32 queue_messages = 8 [(buf.validate.field).int32 = {gte: 4, lte: 128}];
+  int32 auth_timeout_ms = 9 [(buf.validate.field).int32 = {gte: 1, lte: 120000}];
+  int32 idle_timeout_ms = 10 [(buf.validate.field).int32 = {gte: 1, lte: 120000}];
+  int32 ping_interval_ms = 11 [(buf.validate.field).int32 = {gte: 1, lte: 120000}];
+  int32 pong_timeout_ms = 12 [(buf.validate.field).int32 = {gte: 1, lte: 120000}];
+  int32 leave_grace_ms = 13 [(buf.validate.field).int32 = {gte: 1, lte: 120000}];
+  int32 revalidate_ms = 14 [(buf.validate.field).int32 = {gte: 1, lte: 120000}];
+  int32 write_timeout_ms = 15 [(buf.validate.field).int32 = {gte: 1, lte: 120000}];
+  int32 max_session_connections = 16 [(buf.validate.field).int32 = {gte: 1, lte: 16}];
+  int32 max_player_connections = 17 [(buf.validate.field).int32 = {gte: 1, lte: 32}];
+  int32 revalidate_failures = 18 [(buf.validate.field).int32 = {gte: 1, lte: 10}];
+  int32 incoming_messages_per_second = 19 [(buf.validate.field).int32 = {gte: 1, lte: 120}];
+  int32 incoming_burst = 20 [(buf.validate.field).int32 = {gte: 1, lte: 240}];
+  int32 incoming_excess_ms = 21 [(buf.validate.field).int32 = {gte: 1, lte: 120000}];
+}

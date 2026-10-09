@@ -1,0 +1,397 @@
+{
+  "loader": [
+    {
+      "name": "shipped-catalog",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "empty-catalog",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "papers"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "duplicate-id",
+      "valid": false,
+      "rule": "duplicate id",
+      "edits": [
+        {
+          "path": [
+            "papers",
+            1,
+            "id"
+          ],
+          "value": "ashwatch-ledger-excerpts"
+        }
+      ]
+    },
+    {
+      "name": "empty-id",
+      "valid": false,
+      "rule": "string.min_len",
+      "edits": [
+        {
+          "path": [
+            "papers",
+            0,
+            "id"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "long-id",
+      "valid": false,
+      "rule": "string.max_len",
+      "edits": [
+        {
+          "path": [
+            "papers",
+            0,
+            "id"
+          ],
+          "value": "a-very-long-paper-id-that-keeps-going-and-going-and-going-and-going-and-going-and-going-and-going-and-going-and-going-on-ward"
+        }
+      ]
+    },
+    {
+      "name": "empty-collection",
+      "valid": false,
+      "rule": "string.min_len",
+      "edits": [
+        {
+          "path": [
+            "papers",
+            0,
+            "collection"
+          ],
+          "value": ""
+        }
+      ]
+    },
+    {
+      "name": "unknown-source",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "papers",
+            0,
+            "source"
+          ],
+          "value": "library"
+        }
+      ]
+    },
+    {
+      "name": "unknown-section",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "papers",
+            0,
+            "section"
+          ],
+          "value": "shelves"
+        }
+      ]
+    },
+    {
+      "name": "missing-rule",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "papers",
+            0,
+            "rule"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "kind-is-not-source",
+      "valid": false,
+      "rule": "paper.kind",
+      "edits": [
+        {
+          "path": [
+            "papers",
+            0,
+            "rule",
+            "kind"
+          ],
+          "value": "gift"
+        }
+      ]
+    },
+    {
+      "name": "placed-without-area",
+      "valid": false,
+      "rule": "paper.placed",
+      "edits": [
+        {
+          "path": [
+            "papers",
+            0,
+            "source"
+          ],
+          "value": "placed"
+        },
+        {
+          "path": [
+            "papers",
+            0,
+            "rule"
+          ],
+          "value": {
+            "kind": "placed"
+          }
+        }
+      ]
+    },
+    {
+      "name": "placed-below-map",
+      "valid": false,
+      "rule": "paper.placed",
+      "edits": [
+        {
+          "path": [
+            "papers",
+            0,
+            "source"
+          ],
+          "value": "placed"
+        },
+        {
+          "path": [
+            "papers",
+            0,
+            "rule"
+          ],
+          "value": {
+            "kind": "placed",
+            "area": "ruin",
+            "tx": -1,
+            "ty": 4
+          }
+        }
+      ]
+    },
+    {
+      "name": "quest-without-stage",
+      "valid": false,
+      "rule": "paper.stage",
+      "edits": [
+        {
+          "path": [
+            "papers",
+            0,
+            "source"
+          ],
+          "value": "quest"
+        },
+        {
+          "path": [
+            "papers",
+            0,
+            "rule"
+          ],
+          "value": {
+            "kind": "quest"
+          }
+        }
+      ]
+    },
+    {
+      "name": "project-without-def",
+      "valid": false,
+      "rule": "paper.project",
+      "edits": [
+        {
+          "path": [
+            "papers",
+            0,
+            "source"
+          ],
+          "value": "village-project"
+        },
+        {
+          "path": [
+            "papers",
+            0,
+            "rule"
+          ],
+          "value": {
+            "kind": "village-project"
+          }
+        }
+      ]
+    },
+    {
+      "name": "commons-without-fact",
+      "valid": false,
+      "rule": "paper.fact",
+      "edits": [
+        {
+          "path": [
+            "papers",
+            0,
+            "source"
+          ],
+          "value": "commons"
+        },
+        {
+          "path": [
+            "papers",
+            0,
+            "rule"
+          ],
+          "value": {
+            "kind": "commons"
+          }
+        }
+      ]
+    },
+    {
+      "name": "poi-without-target",
+      "valid": false,
+      "rule": "paper.poi",
+      "edits": [
+        {
+          "path": [
+            "papers",
+            0,
+            "source"
+          ],
+          "value": "wilds-poi"
+        },
+        {
+          "path": [
+            "papers",
+            0,
+            "rule"
+          ],
+          "value": {
+            "kind": "wilds-poi"
+          }
+        }
+      ]
+    },
+    {
+      "name": "chest-wrong-tier",
+      "valid": false,
+      "rule": "paper.tier",
+      "edits": [
+        {
+          "path": [
+            "papers",
+            0,
+            "source"
+          ],
+          "value": "wilds-chest"
+        },
+        {
+          "path": [
+            "papers",
+            0,
+            "rule"
+          ],
+          "value": {
+            "kind": "wilds-chest",
+            "tier": 2
+          }
+        }
+      ]
+    },
+    {
+      "name": "echo-without-member",
+      "valid": false,
+      "rule": "paper.member",
+      "edits": [
+        {
+          "path": [
+            "papers",
+            0,
+            "source"
+          ],
+          "value": "echo"
+        },
+        {
+          "path": [
+            "papers",
+            0,
+            "rule"
+          ],
+          "value": {
+            "kind": "echo"
+          }
+        }
+      ]
+    },
+    {
+      "name": "turning-undeclared",
+      "valid": false,
+      "rule": "paper.turning",
+      "edits": [
+        {
+          "path": [
+            "papers",
+            0,
+            "source"
+          ],
+          "value": "turning"
+        },
+        {
+          "path": [
+            "papers",
+            0,
+            "rule"
+          ],
+          "value": {
+            "kind": "turning"
+          }
+        }
+      ]
+    },
+    {
+      "name": "placed-area-only",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "papers",
+            0,
+            "source"
+          ],
+          "value": "placed"
+        },
+        {
+          "path": [
+            "papers",
+            0,
+            "rule"
+          ],
+          "value": {
+            "kind": "placed",
+            "area": "ruin"
+          }
+        }
+      ]
+    }
+  ]
+}

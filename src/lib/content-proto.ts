@@ -1,5 +1,6 @@
-import { fromJson, type DescField, type DescMessage, type MessageShape } from '@bufbuild/protobuf';
+import { fromJson, getExtension, type DescField, type DescMessage, type MessageShape } from '@bufbuild/protobuf';
 import { createValidator, type Violation } from '@bufbuild/protovalidate';
+import { message as messageRulesExt, field as fieldRulesExt } from './gen/buf/validate/validate_pb.js';
 
 /**
  * Content files are JSON read into the generated proto messages
@@ -54,9 +55,45 @@ export function decodeContent<Desc extends DescMessage>(schema: Desc, raw: unkno
   });
   const result = validator.validate(schema, msg);
   if (result.kind === 'valid') return msg;
-  if (result.kind === 'error') throw result.error;
+  if (result.kind === 'error') {
+    // A CEL rule that errors mid-evaluation (a timestamp() conversion over
+    // a malformed string) comes back as a bare RuntimeError without the
+    // rule's id — Go's runtime names it in the text. Map it onto the rules
+    // being evaluated (the schema's CEL ids), so both runtimes' texts carry
+    // the id the shared vectors assert.
+    const ids = celRuleIds(schema);
+    throw new ContentValidationError(`invalid ${family}: ${result.error.message}${ids.length > 0 ? ` [${ids.join(', ')}]` : ''}`, ids);
+  }
   const issues = result.violations.map((v) => nameEntry(entries, violationIssue(v)));
   throw new ContentValidationError(`invalid ${family}: ${issues.join('; ')}`, result.violations.map((v) => v.ruleId));
+}
+
+// celRuleIds collects the CEL rule ids declared on the schema's message
+// tree — the message rules and the field rules (the generated descriptors
+// keep the options; the runtime's own errors don't name the rule).
+function celRuleIds(desc: DescMessage): string[] {
+  const ids: string[] = [];
+  const optionsOf = (o: unknown): { options?: object } | undefined => (o as { proto?: { options?: object } } | undefined)?.proto;
+  const visit = (md: DescMessage): void => {
+    const opts = optionsOf(md)?.options;
+    if (opts) {
+      try {
+        const rules = getExtension(opts as never, messageRulesExt);
+        for (const c of rules?.cel ?? []) if (c.id) ids.push(c.id);
+      } catch { /* no message rules */ }
+    }
+    for (const f of md.fields) {
+      const fo = optionsOf(f)?.options;
+      if (!fo) continue;
+      try {
+        const rules = getExtension(fo as never, fieldRulesExt);
+        for (const c of rules?.cel ?? []) if (c.id) ids.push(c.id);
+      } catch { /* no field rules */ }
+    }
+    for (const n of md.nestedMessages) visit(n);
+  };
+  visit(desc);
+  return ids;
 }
 
 // refuseContent walks the parsed content beside the message descriptor,

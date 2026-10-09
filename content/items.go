@@ -429,7 +429,7 @@ func ValidateItems(v Items) error {
 	for _, s := range v.Sellers {
 		if !ValidContentID(s.ID) || sellers[s.ID] || s.NPC == "" || len(s.NPC) > 40 || !validSellerPlace(s) ||
 			s.TX < 0 || s.TY < 0 || s.RadiusTiles < 1 || s.RadiusTiles > 16 || len(s.Goods) == 0 ||
-			s.Festival != "" && !slices.ContainsFunc(cal.Festivals, func(f Festival) bool { return f.Name == s.Festival }) {
+			s.Festival != "" && !slices.ContainsFunc(cal.Festivals, func(f *Festival) bool { return f.GetName() == s.Festival }) {
 			return bad("seller %q", s.ID)
 		}
 		goods := map[string]bool{}

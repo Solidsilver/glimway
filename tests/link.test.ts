@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EV } from '../src/game/event-names.ts';
 import { emptyRecord, memoryOutboxStore, OUTBOX_LIFETIME_MS, type OutboxRecord } from '../src/lib/api/outbox.ts';
-import contract from '../content/contract.json' with { type: 'json' };
+import { CONTRACT_NUMBER } from '../src/lib/contract.ts';
 import { FIXTURES_BY_KEY } from '../src/lib/habitica/fixtures.ts';
 import { claimEntity, settleEcho } from '../src/game/wilds/remote.ts';
 import type { Session } from '../src/game/session.ts';
@@ -139,7 +139,7 @@ test('persist before send: the entry is in the store before its request leaves',
   const entry = (storedAtSend as unknown as OutboxRecord).entries[0]!;
   assert.equal(entry.kind, 'mark');
   assert.equal(entry.sent, true, 'marked as possibly sent before it was');
-  assert.equal(entry.contract, contract.number);
+  assert.equal(entry.contract, CONTRACT_NUMBER);
   assert.equal(JSON.parse(entry.body).op.lease, '', 'the stored bytes never hold a lease');
 });
 
@@ -209,9 +209,9 @@ test('entries older than six days, or from another contract, are dropped unsent 
   const record = emptyRecord('fixture-account', 'dev');
   const body = (mark: string) => JSON.stringify({ op: { lease: '', key: `k-${mark}` }, mark, where: { area: 'village', x: 1, y: 1 } });
   record.entries = [
-    { id: 1, kind: 'mark', path: '/api/story/mark', key: 'k-old', body: body('seen:old'), contract: contract.number, createdAt: clock.now - OUTBOX_LIFETIME_MS - 1, sent: false, barrier: false, offline: true },
-    { id: 2, kind: 'mark', path: '/api/story/mark', key: 'k-c', body: body('seen:contract'), contract: contract.number - 1, createdAt: clock.now, sent: false, barrier: false, offline: true },
-    { id: 3, kind: 'mark', path: '/api/story/mark', key: 'k-new', body: body('seen:new'), contract: contract.number, createdAt: clock.now - 1000, sent: false, barrier: false, offline: true },
+    { id: 1, kind: 'mark', path: '/api/story/mark', key: 'k-old', body: body('seen:old'), contract: CONTRACT_NUMBER, createdAt: clock.now - OUTBOX_LIFETIME_MS - 1, sent: false, barrier: false, offline: true },
+    { id: 2, kind: 'mark', path: '/api/story/mark', key: 'k-c', body: body('seen:contract'), contract: CONTRACT_NUMBER - 1, createdAt: clock.now, sent: false, barrier: false, offline: true },
+    { id: 3, kind: 'mark', path: '/api/story/mark', key: 'k-new', body: body('seen:new'), contract: CONTRACT_NUMBER, createdAt: clock.now - 1000, sent: false, barrier: false, offline: true },
   ];
   record.nextId = 4;
   const store = memoryOutboxStore();
