@@ -36,9 +36,11 @@ that moves the changelog and bumps that version, tagged.
    `.github/workflows/release.yml`, which builds and pushes
    `ghcr.io/solidsilver/glimway` (`X.Y.Z`, `X.Y`, `latest`, `sha-<commit>`)
    with the commit as the build id. A failed CI run tags nothing: rerun it or fix forward
-   and push again. A tag pushed by hand still publishes too (the release
+   and push again. The release commit must not be `[skip ci]`: with no CI
+   run, nothing tags it. A tag pushed by hand still publishes too (the release
    workflow runs on `v*` tags and stops if the tag isn't `v` + `package.json`'s
-   version).
+   version). If the tag exists but publishing failed, run "Publish GHCR image"
+   by hand (Actions → Run workflow) with that tag.
 6. **Deploy** as in [home-server.md](home-server.md). Open tabs notice the new
    build (they check `/version.json`) and offer to reload; `GET /api/health`
    names the server's version and build.

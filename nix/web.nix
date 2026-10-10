@@ -14,10 +14,12 @@ buildNpmPackage {
       ../package.json ../package-lock.json ../index.html
       ../vite.config.ts ../svelte.config.js ../tsconfig.json ../CHANGELOG.md
       ../scripts/build-version.mjs ../scripts/whats-new.mjs ../src ../public ../content
+      # The stable's layout reads the crafts pass's manifest (src/lib/stable-layout.ts).
+      ../assets/generated/crafts-pass/manifest.json
     ];
   };
   nodejs = nodejs_24;
-  npmDepsHash = "sha256-PgJGvhO9mUCCYDOlCNcEXWt8dNi0uW9Z+uThd7LLvKU=";
+  npmDepsHash = "sha256-H25k0GAH9Jhr/kisf0P2A42O8yqacOPlNWoJ1a4/RcI=";
   npmFlags = [ "--no-audit" "--no-fund" ];
   # Never download Playwright browsers or regenerate committed atlases.
   env = {

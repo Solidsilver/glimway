@@ -13,6 +13,20 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-10-09
+
+### For players
+
+- A fix for servers that build Glimway with Nix. Nothing changes in play.
+
+### Technical
+
+- The Nix web package includes the crafts pass's manifest, which the
+  stable's layout reads; 0.5.0 failed to build with Nix.
+- Releasing: a release commit's full e2e run on `main` is never cancelled
+  by a later push (so the right commit is tagged), the tagger runs one at a
+  time, and "Publish GHCR image" can be run by hand for an existing tag.
+
 ## [0.5.0] - 2026-10-09
 
 ### For players
@@ -323,7 +337,8 @@ The first public release.
   under its own licence; contributions under the DCO.
 - Unit tests, Go tests and Playwright playtests.
 
-[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/Solidsilver/glimway/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/Solidsilver/glimway/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Solidsilver/glimway/compare/v0.2.0...v0.4.0
 [0.2.0]: https://github.com/Solidsilver/glimway/compare/v0.1.0...v0.2.0

@@ -12,6 +12,11 @@ on:
 permissions:
   contents: read
 
+# Two main runs finishing together would both find the tag missing.
+concurrency:
+  group: tag-release
+  cancel-in-progress: false
+
 jobs:
   tag:
     if: >-
@@ -22,7 +27,6 @@ jobs:
       contents: write
     outputs:
       tag: ${{ steps.tag.outputs.tag }}
-      sha: ${{ github.event.workflow_run.head_sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -58,4 +62,3 @@ jobs:
     uses: ./.github/workflows/release.yml
     with:
       tag: ${{ needs.tag.outputs.tag }}
-      sha: ${{ needs.tag.outputs.sha }}

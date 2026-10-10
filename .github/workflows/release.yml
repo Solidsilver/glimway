@@ -9,7 +9,11 @@ on:
       tag:
         required: true
         type: string
-      sha:
+  # By hand, to publish an existing tag again (say, after a failed publish).
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The existing tag to publish, such as v0.5.1
         required: true
         type: string
 
@@ -22,12 +26,13 @@ jobs:
     runs-on: ubuntu-latest
     env:
       RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
-      RELEASE_SHA: ${{ inputs.sha || github.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ env.RELEASE_SHA }}
+          ref: refs/tags/${{ env.RELEASE_TAG }}
           lfs: true
+      - name: The tagged commit
+        run: echo "RELEASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
       - name: Require a semantic version tag (a release, or a pre-release such as v0.3.0-alpha.1)
         run: |
           [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]
