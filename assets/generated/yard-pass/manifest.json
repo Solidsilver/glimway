@@ -1,0 +1,440 @@
+{
+  "id": "glimway-yard-pass",
+  "date": "2026-10-10",
+  "tool": "built-in image_gen",
+  "density": 64,
+  "sources": [
+    {
+      "key": "yard-props-source",
+      "file": "sheets/yard-props-source.png"
+    },
+    {
+      "key": "yard-vertical-props-source",
+      "file": "sheets/yard-vertical-props-source.png"
+    },
+    {
+      "key": "deeds-table-source",
+      "file": "sheets/deeds-table-source.png"
+    },
+    {
+      "key": "cottage-silas-source-v2",
+      "file": "sheets/cottage-silas-source-v2.png"
+    },
+    {
+      "key": "kit-side-doorway-source-round1",
+      "file": "sheets/kit-side-doorway-source-round1.png"
+    },
+    {
+      "key": "pell-resident-source-round1",
+      "file": "sheets/pell-resident-source-round1.png"
+    },
+    {
+      "key": "pell-portrait-source-round1",
+      "file": "sheets/pell-portrait-source-round1.png"
+    },
+    {
+      "key": "yard-counter-source-round2",
+      "file": "sheets/yard-counter-source-round2.png"
+    },
+    {
+      "key": "yard-timber-rack-source-round2",
+      "file": "sheets/yard-timber-rack-source-round2.png"
+    }
+  ],
+  "frames": [
+    {
+      "key": "yard-counter",
+      "source": "yard-counter-source-round2",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 1536,
+        "h": 1024
+      },
+      "canvasSize": {
+        "w": 192,
+        "h": 128
+      },
+      "destinationRect": {
+        "x": 8,
+        "y": 27,
+        "w": 176,
+        "h": 85
+      },
+      "footprint": [
+        3,
+        1
+      ],
+      "footPoint": {
+        "x": 96,
+        "y": 128
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "file": "frames/yard-counter.png"
+    },
+    {
+      "key": "yard-timber-rack",
+      "source": "yard-timber-rack-source-round2",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 1536,
+        "h": 1024
+      },
+      "canvasSize": {
+        "w": 192,
+        "h": 192
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 73,
+        "w": 184,
+        "h": 107
+      },
+      "footprint": [
+        3,
+        2
+      ],
+      "footPoint": {
+        "x": 96,
+        "y": 192
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "file": "frames/yard-timber-rack.png"
+    },
+    {
+      "key": "yard-mending-bench",
+      "source": "yard-vertical-props-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 1536
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 192
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 0,
+        "w": 56,
+        "h": 176
+      },
+      "footprint": [
+        1,
+        2
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 192
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "file": "frames/yard-mending-bench.png"
+    },
+    {
+      "key": "kit-side-doorway",
+      "source": "kit-side-doorway-source-round1",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 1122,
+        "h": 1402
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 128
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 0,
+        "w": 56,
+        "h": 124
+      },
+      "footprint": [
+        1,
+        2
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "file": "frames/kit-side-doorway.png"
+    },
+    {
+      "key": "deeds-pigeonholes",
+      "source": "yard-props-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 444,
+        "w": 438,
+        "h": 443
+      },
+      "canvasSize": {
+        "w": 192,
+        "h": 192
+      },
+      "destinationRect": {
+        "x": 2,
+        "y": 7,
+        "w": 188,
+        "h": 177
+      },
+      "footprint": [
+        3,
+        2
+      ],
+      "footPoint": {
+        "x": 96,
+        "y": 192
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "file": "frames/deeds-pigeonholes.png"
+    },
+    {
+      "key": "deeds-clerk-desk",
+      "source": "yard-vertical-props-source",
+      "sourceRect": {
+        "x": 512,
+        "y": 0,
+        "w": 512,
+        "h": 1536
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 128
+      },
+      "destinationRect": {
+        "x": 9,
+        "y": 0,
+        "w": 45,
+        "h": 124
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "file": "frames/deeds-clerk-desk.png"
+    },
+    {
+      "key": "deeds-table",
+      "source": "deeds-table-source",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 1536,
+        "h": 1024
+      },
+      "canvasSize": {
+        "w": 192,
+        "h": 128
+      },
+      "destinationRect": {
+        "x": 2,
+        "y": 25,
+        "w": 188,
+        "h": 99
+      },
+      "footprint": [
+        3,
+        2
+      ],
+      "footPoint": {
+        "x": 96,
+        "y": 128
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "prop",
+      "file": "frames/deeds-table.png"
+    },
+    {
+      "key": "cottage-silas",
+      "source": "cottage-silas-source-v2",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 1312,
+        "h": 1199
+      },
+      "canvasSize": {
+        "w": 96,
+        "h": 92
+      },
+      "destinationRect": {
+        "x": 12,
+        "y": 26,
+        "w": 71,
+        "h": 66
+      },
+      "footprint": [
+        6,
+        5.75
+      ],
+      "footPoint": {
+        "x": 48,
+        "y": 92
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "building",
+      "file": "frames/cottage-silas.png"
+    },
+    {
+      "key": "portrait-pell",
+      "source": "pell-portrait-source-round1",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 1774,
+        "h": 887
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "destinationRect": {
+        "x": 0,
+        "y": 6,
+        "w": 64,
+        "h": 58
+      },
+      "footprint": [
+        1,
+        1
+      ],
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "portrait",
+      "file": "frames/portrait-pell.png"
+    },
+    {
+      "key": "pell-idle-0",
+      "source": "pell-resident-source-round1",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 718,
+        "h": 1095
+      },
+      "canvasSize": {
+        "w": 186,
+        "h": 283
+      },
+      "destinationRect": {
+        "x": 20,
+        "y": 0,
+        "w": 146,
+        "h": 283
+      },
+      "footprint": [
+        1,
+        2
+      ],
+      "footPoint": {
+        "x": 93,
+        "y": 283
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "resident",
+      "facing": "front",
+      "state": "idle",
+      "file": "frames/pell-idle-0.png"
+    },
+    {
+      "key": "pell-idle-1",
+      "source": "pell-resident-source-round1",
+      "sourceRect": {
+        "x": 718,
+        "y": 0,
+        "w": 719,
+        "h": 1095
+      },
+      "canvasSize": {
+        "w": 186,
+        "h": 283
+      },
+      "destinationRect": {
+        "x": 20,
+        "y": 0,
+        "w": 145,
+        "h": 283
+      },
+      "footprint": [
+        1,
+        2
+      ],
+      "footPoint": {
+        "x": 93,
+        "y": 283
+      },
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "resident",
+      "facing": "front",
+      "state": "idle",
+      "file": "frames/pell-idle-1.png"
+    }
+  ],
+  "animations": [
+    {
+      "key": "pell-breathing",
+      "frames": [
+        "pell-idle-0",
+        "pell-idle-1"
+      ],
+      "frameRate": 1.5,
+      "repeat": -1
+    }
+  ],
+  "notes": [
+    "Frames are nearest-neighbour aspect-contained on native transparent canvases.",
+    "Pell is front-facing idle only, on the same 186x283 canvas as the in-game resident sheet.",
+    "The cottage retains the existing 96x92 canvas."
+  ]
+}
