@@ -49,7 +49,10 @@ type itemsResponse struct {
 			ItemDef string `json:"itemDef"`
 			Qty     int    `json:"qty"`
 			Embers  int    `json:"embers"`
+			Gold    int    `json:"gold"`
 		} `json:"bought"`
+		// give: the gold handed over (3.4).
+		GoldGiven int `json:"goldGiven"`
 	} `json:"result"`
 	Error struct {
 		Code string `json:"code"`

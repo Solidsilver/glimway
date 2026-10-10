@@ -151,7 +151,7 @@ func leaverAvatar(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (*presence
 	if err != nil {
 		return nil, err
 	}
-	return visualAvatar(*p, c), nil
+	return visualAvatarFor(ctx, tx, s.AccountID, *p, c)
 }
 
 // checkHomeRest requires the cottage on a gate named by your deed, or, before

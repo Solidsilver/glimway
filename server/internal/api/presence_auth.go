@@ -48,12 +48,16 @@ func (a *Server) presenceIdentity(ctx context.Context, session string, withAvata
 		v.Magic = presenceMagicFor(p, classMark, levelMark)
 		if withAvatar {
 			// The avatar carries the resolved companions, not the profile's
-			// own picks (2.4).
+			// own picks (2.4), and the wardrobe's resolved look (4.4).
 			c, err := store.CompanionsFor(ctx, a.Store.DB, v.ID, v.World, source, p)
 			if err != nil {
 				return v, err
 			}
-			v.Avatar = visualAvatar(*p, c)
+			avatar, err := visualAvatarFor(ctx, a.Store.DB, v.ID, *p, c)
+			if err != nil {
+				return v, err
+			}
+			v.Avatar = avatar
 		}
 	}
 	return v, nil
@@ -171,8 +175,12 @@ type presenceAvatarMsg = contract.PresenceAvatar
 // two companion fields the server alone writes (docs/design/crafts.md 2.4,
 // 3.4) — selected_pet is the resolved follower (the chosen pet, or Habitica's
 // current pet when nothing reads as chosen) and selected_mount is the mount
-// that is out (absent when every mount is in its stall).
-func visualAvatar(p rules.Profile, c store.Companions) *contract.PresenceAvatar {
+// that is out (absent when every mount is in its stall). `chosen` is the
+// wardrobe's resolved choice (docs/design/purse-and-wardrobe.md 4.4): when
+// any slot is chosen, the resolved look goes out as the costume map with
+// use_costume true, and friends' screens draw it with today's code. Nothing
+// chosen keeps the profile's own costume and its setting.
+func visualAvatar(p rules.Profile, c store.Companions, chosen map[string]string) *contract.PresenceAvatar {
 	// Asset keys are short ASCII identifiers. Reject controls/markup rather than
 	// allowing JSON escaping to amplify a roster beyond the outgoing byte limit.
 	assetKey := func(s string, limit int) bool {
@@ -210,9 +218,13 @@ func visualAvatar(p rules.Profile, c store.Companions) *contract.PresenceAvatar 
 		}
 		return wrapperspb.String(v)
 	}
+	costume, useCostume := p.Costume, p.UseCostume
+	if len(chosen) > 0 {
+		costume, useCostume = rules.Look(p, chosen), true
+	}
 	return &contract.PresenceAvatar{
 		Appearance: &contract.PresenceAppearance{Size: visual.Size, Shirt: visual.Shirt, Skin: visual.Skin, HairColor: visual.HairColor, HairStyle: visual.HairStyle, Background: visual.Background, HairBangs: visual.HairBangs, HairMustache: visual.HairMustache, HairBeard: visual.HairBeard, HairFlower: visual.HairFlower},
-		Equipped:   cleanMap(p.Equipped), Costume: cleanMap(p.Costume), UseCostume: p.UseCostume, SelectedPet: selected(c.Follower(&p)), SelectedMount: selected(c.MountOut),
+		Equipped:   cleanMap(p.Equipped), Costume: cleanMap(costume), UseCostume: useCostume, SelectedPet: selected(c.Follower(&p)), SelectedMount: selected(c.MountOut),
 	}
 }
 

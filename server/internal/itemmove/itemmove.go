@@ -84,6 +84,19 @@ func movedOne(res sql.Result) error {
 
 func Currency(kind, def string) string                   { return kind + ":" + def }
 func LocationCurrency(location, kind, def string) string { return location + ":" + Currency(kind, def) }
+
+// Typed ledger-currency constructors (0.6 step 0, review finding 10 and
+// prior finding 6): one spelling per currency kind, so no call site writes
+// a currency as a string literal. Embers and gold are the two balances;
+// Stack is a carried stack (materials keep their historical prefix),
+// Decoration a placed piece, Fitted a fitting on a tool. Currency and
+// LocationCurrency stay for the open kinds a caller names — the mail escrow
+// (LocationCurrency("mail", "gold", "gold")) is one.
+func Embers() string               { return "embers" }
+func Gold() string                 { return "gold" }
+func Stack(def string) string      { return content.StackCurrency(def) }
+func Decoration(def string) string { return Currency("decoration", def) }
+func Fitted(def string) string     { return Currency("fitted", def) }
 func RecordCurrency(ctx context.Context, tx *sql.Tx, id, currency string, delta int, reason, ref string, now int64) error {
 	_, err := tx.ExecContext(ctx, "INSERT INTO ledger(account_id,currency,delta,earned_delta,reason,ref,created_at) VALUES(?,?,?,0,?,?,?)", id, currency, delta, reason, ref, now)
 	return err

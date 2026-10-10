@@ -38,11 +38,23 @@ func (a *Server) marketBuy(ctx context.Context, tx *sql.Tx, s *store.Snapshot, r
 	if seller.GetFestival() != "" && (day.Festival == nil || *day.Festival != seller.GetFestival()) {
 		return fail(409, "not-in-season")
 	}
-	// A good is priced in embers, in gold, or in both (design 3.1). This
-	// buy pays in embers — the `pay` field is lane C's — so a good with no
-	// ember price (Silas's gold-only bundles) is not for sale here. Lane C
-	// extends this with `pay`; until then the empty `pay` is embers.
-	if good.GetEmbers() == 0 {
+	// A good is priced in embers, in gold, or in both (design 3.1). `pay`
+	// names the currency: "" and "embers" are today's buy, "gold" takes the
+	// price out of the purse. A good without that price is not for sale that
+	// way — an ember buy of Silas's gold-only bundles, or a gold buy of an
+	// ember-only good, is `invalid-good`.
+	pay := req.GetPay()
+	if pay == "" {
+		pay = "embers"
+	}
+	if pay != "embers" && pay != "gold" {
+		return fail(400, "invalid-request")
+	}
+	price := int(good.GetEmbers())
+	if pay == "gold" {
+		price = int(good.GetGold())
+	}
+	if price == 0 {
 		return fail(400, "invalid-good")
 	}
 	ref := seller.GetId() + ":" + good.GetItem()
@@ -57,7 +69,14 @@ func (a *Server) marketBuy(ctx context.Context, tx *sql.Tx, s *store.Snapshot, r
 			return fail(409, "sold-out")
 		}
 	}
-	if err := debitEmbers(ctx, tx, s, int(good.GetEmbers()), "market-buy", ref, now); err != nil {
+	if pay == "gold" {
+		// Gold buys goods from the sellers (3.1). The price leaves the purse
+		// and goes out of play: a seller is one of the two things that ever
+		// takes gold out of the game (3.5).
+		if err := store.DebitGold(ctx, tx, s.AccountID, price, "market-buy", ref, now); err != nil {
+			return insufficientGold(err)
+		}
+	} else if err := debitEmbers(ctx, tx, s, price, "market-buy", ref, now); err != nil {
 		return err
 	}
 	// A seller hands over stacks, or one instance at a time (the willow rod
@@ -75,6 +94,12 @@ func (a *Server) marketBuy(ctx context.Context, tx *sql.Tx, s *store.Snapshot, r
 	} else if err := packPut(ctx, tx, s.AccountID, good.Item, []makerQty{{Maker: "", Qty: int(good.GetQty())}}, "market-buy", ref, now); err != nil {
 		return err
 	}
-	out.Bought = &contract.Bought{Seller: seller.GetId(), ItemDef: good.Item, Qty: int32(int(good.GetQty())), Embers: int32(int(good.GetEmbers()))}
+	bought := &contract.Bought{Seller: seller.GetId(), ItemDef: good.Item, Qty: int32(int(good.GetQty()))}
+	if pay == "gold" {
+		bought.Gold = int32(price)
+	} else {
+		bought.Embers = int32(price)
+	}
+	out.Bought = bought
 	return refreshItems(ctx, tx, s)
 }

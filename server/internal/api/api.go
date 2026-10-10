@@ -80,6 +80,8 @@ func New(s *store.Store, h *habitica.Client, c Config) *Server {
 	}
 	// Every answer carries the account's fishing (design 5.5).
 	c.State = fishingComposition{StateComposition: c.State, now: c.Now, logf: fishingLogf(c.Logger)}
+	// …and the wardrobe's resolved choice (design 4.4).
+	c.State = wardrobeComposition{StateComposition: c.State}
 	if c.Chunks == nil || c.Epochs == nil {
 		stored := store.NewChunks(c.Now)
 		stored.GeneratorVersion = c.WildsGeneratorVersion

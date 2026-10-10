@@ -1026,7 +1026,9 @@
           "nextCastAt": 0
         },
         "purse": null,
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "wildsClaim": {
         "epoch": "epoch",
@@ -1182,7 +1184,9 @@
           "nextCastAt": 0
         },
         "purse": null,
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "fall": {
         "vitals": {
@@ -1328,7 +1332,9 @@
           "nextCastAt": 0
         },
         "purse": null,
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "fall": {
         "vitals": {
@@ -1474,7 +1480,9 @@
           "nextCastAt": 0
         },
         "purse": null,
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "fall": {
         "vitals": {
@@ -1620,7 +1628,9 @@
           "nextCastAt": 0
         },
         "purse": null,
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "fall": {
         "vitals": {
@@ -1766,7 +1776,9 @@
           "nextCastAt": 0
         },
         "purse": null,
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "fall": {
         "vitals": {
@@ -1912,7 +1924,9 @@
           "nextCastAt": 0
         },
         "purse": null,
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "wildsLantern": {
         "epoch": "epoch",
@@ -2240,7 +2254,9 @@
           "nextCastAt": 0
         },
         "purse": null,
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "questStep": {
         "quest": "set-to-rise",
@@ -2381,7 +2397,9 @@
           "nextCastAt": 0
         },
         "purse": null,
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "report": {
         "seq": 1,
@@ -2513,7 +2531,9 @@
           "nextCastAt": 0
         },
         "purse": null,
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "questStep": {
         "quest": "lantern-road",
@@ -4578,7 +4598,9 @@
           "nextCastAt": 0
         },
         "purse": null,
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "lease": "lease",
       "reportGeneration": "generation",
@@ -4876,7 +4898,9 @@
         "nextCastAt": 0
       },
       "purse": null,
-      "wardrobe": null
+      "wardrobe": {
+        "chosen": {}
+      }
     }
   },
   {
@@ -5467,7 +5491,9 @@
           "nextCastAt": 0
         },
         "purse": null,
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       }
     }
   },
@@ -6218,7 +6244,9 @@
           "nextCastAt": 0
         },
         "purse": null,
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "leaseActive": true
     }
@@ -7869,7 +7897,9 @@
           "nextCastAt": 0
         },
         "purse": null,
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "result": {
         "gateCount": 2,
@@ -8022,7 +8052,9 @@
           "nextCastAt": 0
         },
         "purse": null,
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "result": {
         "items": {
@@ -8163,7 +8195,9 @@
           "nextCastAt": 0
         },
         "purse": null,
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "result": {
         "inventory": {
@@ -8294,7 +8328,9 @@
           "nextCastAt": 0
         },
         "purse": null,
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "result": {
         "grantablePapers": [],
@@ -8549,7 +8585,9 @@
           "nextCastAt": 0
         },
         "purse": null,
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "result": {
         "home": null,
@@ -8686,7 +8724,9 @@
           "nextCastAt": 0
         },
         "purse": null,
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "result": {
         "home": null,
@@ -8811,7 +8851,9 @@
           "nextCastAt": 0
         },
         "purse": null,
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "result": {
         "items": {

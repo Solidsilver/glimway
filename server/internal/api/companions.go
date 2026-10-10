@@ -97,7 +97,9 @@ func (a *Server) companions(w http.ResponseWriter, r *http.Request) error {
 			return nil, err
 		}
 		account = s.AccountID
-		avatar = visualAvatar(*p, c)
+		if avatar, err = visualAvatarFor(ctx, tx, s.AccountID, *p, c); err != nil {
+			return nil, err
+		}
 		return &contract.CompanionsResult{Companions: store.CompanionsProto(c)}, nil
 	}, func() {
 		if avatar != nil {

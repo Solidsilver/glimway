@@ -250,7 +250,7 @@ func shelfViewProto(v shelfView) *contract.ShelfView {
 	for _, s := range v.Slots {
 		slot := &contract.ShelfSlot{
 			Slot: int32(s.Slot), Kind: s.Kind, ItemDef: s.ItemDef, Qty: int32(s.Qty),
-			Maker: makerProto(s.Maker), StockedBy: s.StockedBy, StockedAt: float64(s.StockedAt),
+			Maker: makerProto(s.Maker), StockedBy: s.StockedBy, StockedAt: float64(s.StockedAt), Price: int32(s.Price),
 		}
 		if s.Instance != nil {
 			slot.Instance = wrapperspb.String(*s.Instance)
