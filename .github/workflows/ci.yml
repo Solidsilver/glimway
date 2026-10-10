@@ -130,7 +130,7 @@ jobs:
       (github.event_name == 'workflow_dispatch' ||
        (github.event_name == 'push' &&
         (github.ref == 'refs/heads/main' ||
-         github.ref == 'refs/heads/expansion' ||
+         github.ref == 'refs/heads/dev' ||
          startsWith(github.ref, 'refs/heads/exp/'))))
     runs-on: [self-hosted, linux, x64, glimway-e2e]
     timeout-minutes: 30

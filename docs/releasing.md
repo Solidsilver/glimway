@@ -5,6 +5,16 @@ tags `vX.Y.Z`. `package.json`'s `version` is the one source: the web build,
 both Nix packages and the Docker image all read it. A release is a commit
 that moves the changelog and bumps that version, tagged.
 
+## Branches
+
+- `main`: releases only. Every commit on it is a released version.
+- `dev`: the next release, playable. Each release's work comes together on an
+  integration branch (`exp/<feature>`, with one worktree per lane), and once it
+  passes CI it merges into `dev`. The playtest runs on `dev`, in the main
+  checkout. Fixes found there go out to worktrees again and merge back into
+  `dev`. When the playtest passes, the release commit (below) goes on `dev`, and
+  `main` fast-forwards to it once its CI is green.
+
 1. **Changelog.** In `CHANGELOG.md`, rename `## [Unreleased]` to
    `## [X.Y.Z] - YYYY-MM-DD` and start a fresh, empty `## [Unreleased]` above
    it. Keep both parts, `### For players` first, then `### Technical`; the
@@ -23,11 +33,13 @@ that moves the changelog and bumps that version, tagged.
 
 3. **Check.** `npm run verify`, `go test ./...`, and the playtests that matter
    (`npm run test:smoke` at least).
-4. **Commit and merge** to `main`:
+4. **Commit on `dev`, then move `main`** once CI on that commit is green:
 
    ```sh
    git commit -am "Release X.Y.Z"
-   git push origin HEAD:main
+   git push origin dev
+   # after CI on that commit passes:
+   git push origin dev:main
    ```
 
 5. **Tag and publish (automatic).** When CI passes on `main`,
@@ -52,7 +64,7 @@ Never move or reuse a published tag: fix forward with the next patch version.
 Milestones on the way to a release are tagged `vX.Y.Z-alpha.N`, so a problem can
 be traced to the step that brought it. Bump `package.json` to the same version
 (`npm version X.Y.Z-alpha.N --no-git-tag-version`), commit, and tag the commit on
-the branch where it was built (usually `expansion` or the release's integration
+the branch where it was built (usually `dev` or the release's integration
 branch); `main` stays on the last release. The release workflow publishes the
 image as `X.Y.Z-alpha.N` and `sha-<commit>` only: never `X.Y` or `latest`. The
 changelog keeps collecting under `## [Unreleased]` until the real release.
