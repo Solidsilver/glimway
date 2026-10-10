@@ -18,7 +18,7 @@ import { type HomeView as GeneratedHomeView } from '../gen/glimway/v1/goods_pb.j
 import { ApiError } from './errors.ts';
 import { parseSnapshot } from './parse.ts';
 import { projectAsset, projectCounts } from './items.ts';
-import type { Asset, AssetCounts, Snapshot } from './types.ts';
+import type { AssetCounts, AssetView, Snapshot } from './types.ts';
 import type { HomeInstance } from '../homestead.ts';
 
 /** One stable bay (crafts.md 3.2): who stands in it. `mount` '' is an empty stall. */
@@ -116,6 +116,8 @@ export interface ShelfSlotView {
   kind: 'material' | 'item' | 'decoration' | 'instance';
   itemDef: string;
   qty: number;
+  /** A price in gold (0.6, 3.2); 0 is a free gift. */
+  price: number;
   maker?: { id: string; name: string } | null;
   instance?: string | null;
   stockedBy: string;
@@ -140,7 +142,7 @@ export interface ShelfResponse extends Snapshot {
 export interface ShelfActionResponse extends Snapshot {
   shelf: ShelfView;
   inventory: import('./types.ts').AssetCounts;
-  taken?: Asset;
+  taken?: AssetView;
   line?: string;
 }
 
@@ -296,6 +298,7 @@ function shelfView(v: GeneratedShelfView): ShelfView {
       kind: s.kind as ShelfSlotView['kind'],
       itemDef: s.itemDef,
       qty: int(s.qty),
+      price: int(s.price),
       maker: s.maker ? { id: s.maker.id, name: s.maker.name.slice(0, 64) } : null,
       instance: s.instance ?? null,
       stockedBy: s.stockedBy,

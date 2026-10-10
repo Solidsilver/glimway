@@ -6,6 +6,8 @@ import "glimway/v1/fishing.proto";
 import "glimway/v1/profile.proto";
 import "glimway/v1/operations.proto";
 import "glimway/v1/op.proto";
+import "glimway/v1/purse.proto";
+import "glimway/v1/wardrobe.proto";
 import "google/protobuf/wrappers.proto";
 import "glimway/v1/village.proto";
 import "glimway/v1/world.proto";
@@ -32,6 +34,8 @@ message PlayerState {
   double version = 1; Account account = 2; HabiticaProfile profile = 3;
   Vitals vitals = 4; Place place = 5; Story story = 6; Embers embers = 7;
   Companions companions = 8; Magic magic = 9; FishingState fishing = 10;
+  // The gold purse (0.6) and the wardrobe's resolved choice (4.2).
+  Purse purse = 11; Wardrobe wardrobe = 12;
 }
 // A wire error string from ErrorCode's hyphenated vocabulary, never an enum JSON name.
 message ErrorDetail { string code = 1; }
@@ -56,6 +60,8 @@ message Envelope {
     StableExtendResult stable_extend = 36;
     FishCastResult fish_cast = 37; FishSettleResult fish_settle = 38;
     FishCancelResult fish_cancel = 39;
+    PurseTopUpResult purse_top_up = 40; WardrobeResult wardrobe = 41;
+    WardrobeCheckResult wardrobe_check = 42;
   }
 }
 message LoginRequest { string user_id = 1; string token = 2; string invite = 3; string party = 4; }

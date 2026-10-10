@@ -38,7 +38,7 @@ const shelfView = {
   homeId: 'h1',
   ownerName: 'Ora',
   names: ['Ora'],
-  slots: [{ slot: 0, kind: 'item', itemDef: 'tallow', qty: 1, maker: null, instance: null, stockedBy: 'o', stockedAt: 100 }],
+  slots: [{ slot: 0, kind: 'item', itemDef: 'tallow', qty: 1, price: 0, maker: null, instance: null, stockedBy: 'o', stockedAt: 100 }],
   takenToday: false,
   canStock: true,
   hasShelf: true,
@@ -68,6 +68,7 @@ const itemsResult = {
   paper: null,
   heirloom: '',
   adaOilCount: 0,
+  goldGiven: 0,
   bought: null,
 };
 const workshopView = { home: null, inventory: { materials: {}, items: {}, decorations: {}, instances: [] }, storage: null, personal: { materials: {}, items: {}, decorations: {}, instances: [] }, shared: 'not-a-member' };
@@ -121,6 +122,19 @@ test('malformed homestead, items, mail and craft answers are refused', () => {
   assert.throws(() => parseCraft(deep(snapshot, { hearthCraft: null, craft: { ...workshopView, recipeId: 'plank', output: { kind: 'item', id: 'plank', qty: 1, instance: '', maker: 'Infinity' } } })), 'non-finite maker');
   assert.throws(() => parseMail(deep(snapshot, { mail: [{ ...mailView, sentAt: '100' }] })), 'numeric string sentAt');
   assert.throws(() => parseMail(deep(snapshot, { mail: [{ ...mailView, asset: { ...mailView.asset, qty: '1' } }] })), 'numeric string qty');
+});
+
+test('a gold letter reads as a gold asset — on the read side only', () => {
+  // 6.1: MailView.asset (and the claim and recall answers) carry a gold
+  // letter as Asset { kind: 'gold', id: 'gold', qty: the amount }, display
+  // only. The widened kind is the read side's (types.ts's AssetView); a
+  // request Asset can't spell it, and the server's validAsset refuses
+  // "gold" as something to take from a pack anyway.
+  const gold = { ...mailView, asset: { kind: 'gold', id: 'gold', qty: 20, instance: '', maker: null } };
+  const answer = { mail: [gold], nextCursor: null, nextPendingCursor: null, inventory: { materials: {}, items: {}, decorations: {}, instances: [] } };
+  const read = parseMail(deep(snapshot, answer));
+  assert.deepEqual(read.mail[0]!.asset, { kind: 'gold', id: 'gold', qty: 20 });
+  assert.throws(() => parseMail(deep(snapshot, { ...answer, mail: [{ ...gold, asset: { ...gold.asset, kind: 'gems' } }] })), 'an unknown kind');
 });
 
 test('unknown future fields are tolerated, wherever they sit', () => {

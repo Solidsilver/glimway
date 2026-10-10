@@ -38,9 +38,16 @@ func (a *Server) marketBuy(ctx context.Context, tx *sql.Tx, s *store.Snapshot, r
 	if seller.GetFestival() != "" && (day.Festival == nil || *day.Festival != seller.GetFestival()) {
 		return fail(409, "not-in-season")
 	}
+	// A good is priced in embers, in gold, or in both (design 3.1). This
+	// buy pays in embers — the `pay` field is lane C's — so a good with no
+	// ember price (Silas's gold-only bundles) is not for sale here. Lane C
+	// extends this with `pay`; until then the empty `pay` is embers.
+	if good.GetEmbers() == 0 {
+		return fail(400, "invalid-good")
+	}
 	ref := seller.GetId() + ":" + good.GetItem()
 	if good.GetCap() > 0 {
-		dayStart := (now / 86400) * 86400
+		dayStart := utcDayStart(now)
 		var n int
 		err := tx.QueryRowContext(ctx, "SELECT count(*) FROM ledger WHERE account_id=? AND currency=? AND reason='market-buy' AND ref=? AND created_at>=?", s.AccountID, content.StackCurrency(good.GetItem()), ref, dayStart).Scan(&n)
 		if err != nil {

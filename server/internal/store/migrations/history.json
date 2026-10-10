@@ -124,5 +124,9 @@
   {
     "name": "031_level_mark.sql",
     "sha256": "ec3b602bfc0b5dbb84d79d02e9607e50fe8013a08ba7795934fd5e038880a79a"
+  },
+  {
+    "name": "032_purse_wardrobe.sql",
+    "sha256": "f825679bee5cdbe86e2cb0ab9c6cf1c6bde0b37dd0fe4baed3175d24fe5added"
   }
 ]

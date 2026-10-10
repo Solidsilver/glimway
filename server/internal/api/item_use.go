@@ -99,7 +99,7 @@ func (a *Server) thankMaker(ctx context.Context, tx *sql.Tx, s *store.Snapshot, 
 	if makerWorld != s.WorldID {
 		return nil
 	}
-	todayStart := now - (now % 86400)
+	todayStart := utcDayStart(now)
 	var already bool
 	if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM mail WHERE kind='thanks' AND from_id=? AND to_id=? AND sent_at>=?)", s.AccountID, makerID, todayStart).Scan(&already); err != nil {
 		return err

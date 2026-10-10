@@ -96,7 +96,7 @@ func TestStory028Upgrade(t *testing.T) {
 					t.Fatal("mark lost", mark)
 				}
 			}
-			for q, want := range map[string]int{"SELECT count(*) FROM story_marks WHERE writer='quest-item'": 3, "SELECT count(*) FROM outcomes WHERE outcome_id IN ('quest-gift:lantern-road:guardian-defeated','quest-gift:lantern-road:complete')": 2, "SELECT SUM(delta) FROM ledger": 9} {
+			for q, want := range map[string]int{"SELECT count(*) FROM story_marks WHERE writer='quest-item'": 3, "SELECT count(*) FROM outcomes WHERE outcome_id IN ('quest-gift:lantern-road:guardian-defeated','quest-gift:lantern-road:complete')": 2, "SELECT SUM(delta) FROM ledger WHERE currency='embers'": 9} {
 				var got int
 				if e = tx.QueryRow(q).Scan(&got); e != nil || got != want {
 					t.Fatal(q, got, e)

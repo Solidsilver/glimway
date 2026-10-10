@@ -371,15 +371,17 @@ func (x *HomesteadRead) GetMaterials() map[string]int32 {
 }
 
 type ShelfSlot struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
-	Slot          int32                   `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty"`
-	Kind          string                  `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
-	ItemDef       string                  `protobuf:"bytes,3,opt,name=item_def,json=itemDef,proto3" json:"item_def,omitempty"`
-	Qty           int32                   `protobuf:"varint,4,opt,name=qty,proto3" json:"qty,omitempty"`
-	Maker         *Maker                  `protobuf:"bytes,5,opt,name=maker,proto3" json:"maker,omitempty"`
-	Instance      *wrapperspb.StringValue `protobuf:"bytes,6,opt,name=instance,proto3" json:"instance,omitempty"`
-	StockedBy     string                  `protobuf:"bytes,7,opt,name=stocked_by,json=stockedBy,proto3" json:"stocked_by,omitempty"`
-	StockedAt     float64                 `protobuf:"fixed64,8,opt,name=stocked_at,json=stockedAt,proto3" json:"stocked_at,omitempty"`
+	state     protoimpl.MessageState  `protogen:"open.v1"`
+	Slot      int32                   `protobuf:"varint,1,opt,name=slot,proto3" json:"slot,omitempty"`
+	Kind      string                  `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
+	ItemDef   string                  `protobuf:"bytes,3,opt,name=item_def,json=itemDef,proto3" json:"item_def,omitempty"`
+	Qty       int32                   `protobuf:"varint,4,opt,name=qty,proto3" json:"qty,omitempty"`
+	Maker     *Maker                  `protobuf:"bytes,5,opt,name=maker,proto3" json:"maker,omitempty"`
+	Instance  *wrapperspb.StringValue `protobuf:"bytes,6,opt,name=instance,proto3" json:"instance,omitempty"`
+	StockedBy string                  `protobuf:"bytes,7,opt,name=stocked_by,json=stockedBy,proto3" json:"stocked_by,omitempty"`
+	StockedAt float64                 `protobuf:"fixed64,8,opt,name=stocked_at,json=stockedAt,proto3" json:"stocked_at,omitempty"`
+	// A price in gold (0.6, 3.2): 0 is a free gift as before.
+	Price         int32 `protobuf:"varint,9,opt,name=price,proto3" json:"price,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -466,6 +468,13 @@ func (x *ShelfSlot) GetStockedBy() string {
 func (x *ShelfSlot) GetStockedAt() float64 {
 	if x != nil {
 		return x.StockedAt
+	}
+	return 0
+}
+
+func (x *ShelfSlot) GetPrice() int32 {
+	if x != nil {
+		return x.Price
 	}
 	return 0
 }
@@ -614,15 +623,17 @@ func (x *ShelfRead) GetShelf() *ShelfView {
 	return nil
 }
 
-// POST /api/homestead/shelf (stock or take).
+// POST /api/homestead/shelf (stock, take or buy).
 type ShelfRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Op            *OpHeader              `protobuf:"bytes,1,opt,name=op,proto3" json:"op,omitempty"`
-	Where         *Where                 `protobuf:"bytes,2,opt,name=where,proto3" json:"where,omitempty"`
-	Action        string                 `protobuf:"bytes,3,opt,name=action,proto3" json:"action,omitempty"`
-	Gate          int32                  `protobuf:"varint,4,opt,name=gate,proto3" json:"gate,omitempty"`
-	Slot          int32                  `protobuf:"varint,5,opt,name=slot,proto3" json:"slot,omitempty"`
-	Asset         *Asset                 `protobuf:"bytes,6,opt,name=asset,proto3" json:"asset,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Op     *OpHeader              `protobuf:"bytes,1,opt,name=op,proto3" json:"op,omitempty"`
+	Where  *Where                 `protobuf:"bytes,2,opt,name=where,proto3" json:"where,omitempty"`
+	Action string                 `protobuf:"bytes,3,opt,name=action,proto3" json:"action,omitempty"`
+	Gate   int32                  `protobuf:"varint,4,opt,name=gate,proto3" json:"gate,omitempty"`
+	Slot   int32                  `protobuf:"varint,5,opt,name=slot,proto3" json:"slot,omitempty"`
+	Asset  *Asset                 `protobuf:"bytes,6,opt,name=asset,proto3" json:"asset,omitempty"`
+	// stock: the price in gold for the slot (0–9,999; 0 stocks a free gift).
+	Price         int32 `protobuf:"varint,7,opt,name=price,proto3" json:"price,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -697,6 +708,13 @@ func (x *ShelfRequest) GetAsset() *Asset {
 		return x.Asset
 	}
 	return nil
+}
+
+func (x *ShelfRequest) GetPrice() int32 {
+	if x != nil {
+		return x.Price
+	}
+	return 0
 }
 
 type ShelfResult struct {
@@ -1199,7 +1217,7 @@ const file_glimway_v1_homestead_proto_rawDesc = "" +
 	"\tmaterials\x18\x04 \x03(\v2(.glimway.v1.HomesteadRead.MaterialsEntryR\tmaterials\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"\x81\x02\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"\x97\x02\n" +
 	"\tShelfSlot\x12\x12\n" +
 	"\x04slot\x18\x01 \x01(\x05R\x04slot\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x19\n" +
@@ -1210,7 +1228,8 @@ const file_glimway_v1_homestead_proto_rawDesc = "" +
 	"\n" +
 	"stocked_by\x18\a \x01(\tR\tstockedBy\x12\x1d\n" +
 	"\n" +
-	"stocked_at\x18\b \x01(\x01R\tstockedAt\"\xf5\x01\n" +
+	"stocked_at\x18\b \x01(\x01R\tstockedAt\x12\x14\n" +
+	"\x05price\x18\t \x01(\x05R\x05price\"\xf5\x01\n" +
 	"\tShelfView\x12\x12\n" +
 	"\x04gate\x18\x01 \x01(\x05R\x04gate\x12\x17\n" +
 	"\ahome_id\x18\x02 \x01(\tR\x06homeId\x12\x1d\n" +
@@ -1223,14 +1242,15 @@ const file_glimway_v1_homestead_proto_rawDesc = "" +
 	"\tcan_stock\x18\a \x01(\bR\bcanStock\x12\x1b\n" +
 	"\thas_shelf\x18\b \x01(\bR\bhasShelf\"8\n" +
 	"\tShelfRead\x12+\n" +
-	"\x05shelf\x18\x01 \x01(\v2\x15.glimway.v1.ShelfViewR\x05shelf\"\xc6\x01\n" +
+	"\x05shelf\x18\x01 \x01(\v2\x15.glimway.v1.ShelfViewR\x05shelf\"\xdc\x01\n" +
 	"\fShelfRequest\x12$\n" +
 	"\x02op\x18\x01 \x01(\v2\x14.glimway.v1.OpHeaderR\x02op\x12'\n" +
 	"\x05where\x18\x02 \x01(\v2\x11.glimway.v1.WhereR\x05where\x12\x16\n" +
 	"\x06action\x18\x03 \x01(\tR\x06action\x12\x12\n" +
 	"\x04gate\x18\x04 \x01(\x05R\x04gate\x12\x12\n" +
 	"\x04slot\x18\x05 \x01(\x05R\x04slot\x12'\n" +
-	"\x05asset\x18\x06 \x01(\v2\x11.glimway.v1.AssetR\x05asset\"\xae\x01\n" +
+	"\x05asset\x18\x06 \x01(\v2\x11.glimway.v1.AssetR\x05asset\x12\x14\n" +
+	"\x05price\x18\a \x01(\x05R\x05price\"\xae\x01\n" +
 	"\vShelfResult\x12+\n" +
 	"\x05shelf\x18\x01 \x01(\v2\x15.glimway.v1.ShelfViewR\x05shelf\x125\n" +
 	"\tinventory\x18\x02 \x01(\v2\x17.glimway.v1.AssetCountsR\tinventory\x12'\n" +

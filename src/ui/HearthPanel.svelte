@@ -6,7 +6,7 @@
   import { sfx } from '../game/sfx'
   import { batchesAffordable, costPhrase, effectiveBatches, recipeCost } from '../lib/village'
   import { HEARTH_RECIPES } from '../lib/workshop'
-  import type { Asset } from '../lib/api/types'
+  import type { AssetView } from '../lib/api/types'
   import { itemName } from '../lib/items'
   import { actionRunner, busVersion } from './panel-state.svelte'
   import Panel from './Panel.svelte'
@@ -54,7 +54,7 @@
     }
   }
 
-  function phrase(a: Asset): string {
+  function phrase(a: AssetView): string {
     const name = itemName(a.id)
     if (a.qty === 1) return /^[aeiou]/i.test(name) ? `an ${name}` : `a ${name}`
     return `${a.qty} ${name}${name.endsWith('s') ? '' : 's'}`

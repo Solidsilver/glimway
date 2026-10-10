@@ -323,7 +323,7 @@ test('item responses parse, and malformed instances are refused', () => {
   assert.equal(items.items.instances.length, 4);
   assert.equal(items.items.offHand.class, 'warrior');
   // The wire answer carries every ItemsResult field (EmitUnpopulated).
-  const fields = { wear: null, used: '', pickup: '', given: null, mended: '', created: [], gathered: [], plant: null, land: null, returned: '', paper: null, heirloom: '', adaOilCount: 0, bought: null };
+  const fields = { wear: null, used: '', pickup: '', given: null, mended: '', created: [], gathered: [], plant: null, land: null, returned: '', paper: null, heirloom: '', adaOilCount: 0, goldGiven: 0, bought: null };
   const action = parseItemsAction({ ...snapshot, result: { items: v, ...fields, wear: { broke: true, woreOut: false, state: 'broken', wornOut: [], returned: ['amber-bead'], itemDef: 'bench-axe', usesLeft: 0, condition: 0, instance: null, makerId: '' } } });
   assert.equal(action.result.wear?.broke, true);
   assert.deepEqual(action.result.wear?.returned, ['amber-bead']);

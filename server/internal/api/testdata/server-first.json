@@ -1024,7 +1024,9 @@
         "fishing": {
           "cast": null,
           "nextCastAt": 0
-        }
+        },
+        "purse": null,
+        "wardrobe": null
       },
       "wildsClaim": {
         "epoch": "epoch",
@@ -1178,7 +1180,9 @@
         "fishing": {
           "cast": null,
           "nextCastAt": 0
-        }
+        },
+        "purse": null,
+        "wardrobe": null
       },
       "fall": {
         "vitals": {
@@ -1322,7 +1326,9 @@
         "fishing": {
           "cast": null,
           "nextCastAt": 0
-        }
+        },
+        "purse": null,
+        "wardrobe": null
       },
       "fall": {
         "vitals": {
@@ -1466,7 +1472,9 @@
         "fishing": {
           "cast": null,
           "nextCastAt": 0
-        }
+        },
+        "purse": null,
+        "wardrobe": null
       },
       "fall": {
         "vitals": {
@@ -1610,7 +1618,9 @@
         "fishing": {
           "cast": null,
           "nextCastAt": 0
-        }
+        },
+        "purse": null,
+        "wardrobe": null
       },
       "fall": {
         "vitals": {
@@ -1754,7 +1764,9 @@
         "fishing": {
           "cast": null,
           "nextCastAt": 0
-        }
+        },
+        "purse": null,
+        "wardrobe": null
       },
       "fall": {
         "vitals": {
@@ -1898,7 +1910,9 @@
         "fishing": {
           "cast": null,
           "nextCastAt": 0
-        }
+        },
+        "purse": null,
+        "wardrobe": null
       },
       "wildsLantern": {
         "epoch": "epoch",
@@ -2066,6 +2080,26 @@
             "band": "fixture"
           },
           "nextCastAt": 1
+        },
+        "purse": {
+          "gold": 1,
+          "topUpsLeft": 1,
+          "working": {
+            "id": "fixture",
+            "amount": 1,
+            "state": "fixture",
+            "goldBefore": 1,
+            "goldAfter": 1,
+            "startedAt": 1,
+            "settledAt": 1,
+            "leftover": true,
+            "note": "fixture"
+          }
+        },
+        "wardrobe": {
+          "chosen": {
+            "fixture": "fixture"
+          }
         }
       },
       "report": {
@@ -2204,7 +2238,9 @@
         "fishing": {
           "cast": null,
           "nextCastAt": 0
-        }
+        },
+        "purse": null,
+        "wardrobe": null
       },
       "questStep": {
         "quest": "set-to-rise",
@@ -2343,7 +2379,9 @@
         "fishing": {
           "cast": null,
           "nextCastAt": 0
-        }
+        },
+        "purse": null,
+        "wardrobe": null
       },
       "report": {
         "seq": 1,
@@ -2473,7 +2511,9 @@
         "fishing": {
           "cast": null,
           "nextCastAt": 0
-        }
+        },
+        "purse": null,
+        "wardrobe": null
       },
       "questStep": {
         "quest": "lantern-road",
@@ -3768,7 +3808,8 @@
       "op": null,
       "where": null,
       "toId": "",
-      "asset": null
+      "asset": null,
+      "gold": 0
     }
   },
   {
@@ -3796,7 +3837,8 @@
         "qty": 1,
         "instance": "fixture",
         "maker": "fixture"
-      }
+      },
+      "gold": 1
     }
   },
   {
@@ -4393,6 +4435,26 @@
             "band": "fixture"
           },
           "nextCastAt": 1
+        },
+        "purse": {
+          "gold": 1,
+          "topUpsLeft": 1,
+          "working": {
+            "id": "fixture",
+            "amount": 1,
+            "state": "fixture",
+            "goldBefore": 1,
+            "goldAfter": 1,
+            "startedAt": 1,
+            "settledAt": 1,
+            "leftover": true,
+            "note": "fixture"
+          }
+        },
+        "wardrobe": {
+          "chosen": {
+            "fixture": "fixture"
+          }
         }
       },
       "lease": "fixture",
@@ -4514,7 +4576,9 @@
         "fishing": {
           "cast": null,
           "nextCastAt": 0
-        }
+        },
+        "purse": null,
+        "wardrobe": null
       },
       "lease": "lease",
       "reportGeneration": "generation",
@@ -4534,7 +4598,9 @@
       "embers": null,
       "companions": null,
       "magic": null,
-      "fishing": null
+      "fishing": null,
+      "purse": null,
+      "wardrobe": null
     }
   },
   {
@@ -4672,6 +4738,26 @@
           "band": "fixture"
         },
         "nextCastAt": 1
+      },
+      "purse": {
+        "gold": 1,
+        "topUpsLeft": 1,
+        "working": {
+          "id": "fixture",
+          "amount": 1,
+          "state": "fixture",
+          "goldBefore": 1,
+          "goldAfter": 1,
+          "startedAt": 1,
+          "settledAt": 1,
+          "leftover": true,
+          "note": "fixture"
+        }
+      },
+      "wardrobe": {
+        "chosen": {
+          "fixture": "fixture"
+        }
       }
     }
   },
@@ -4788,7 +4874,9 @@
       "fishing": {
         "cast": null,
         "nextCastAt": 0
-      }
+      },
+      "purse": null,
+      "wardrobe": null
     }
   },
   {
@@ -5236,6 +5324,26 @@
             "band": "fixture"
           },
           "nextCastAt": 1
+        },
+        "purse": {
+          "gold": 1,
+          "topUpsLeft": 1,
+          "working": {
+            "id": "fixture",
+            "amount": 1,
+            "state": "fixture",
+            "goldBefore": 1,
+            "goldAfter": 1,
+            "startedAt": 1,
+            "settledAt": 1,
+            "leftover": true,
+            "note": "fixture"
+          }
+        },
+        "wardrobe": {
+          "chosen": {
+            "fixture": "fixture"
+          }
         }
       }
     }
@@ -5357,7 +5465,9 @@
         "fishing": {
           "cast": null,
           "nextCastAt": 0
-        }
+        },
+        "purse": null,
+        "wardrobe": null
       }
     }
   },
@@ -5679,6 +5789,26 @@
             "band": "fixture"
           },
           "nextCastAt": 1
+        },
+        "purse": {
+          "gold": 1,
+          "topUpsLeft": 1,
+          "working": {
+            "id": "fixture",
+            "amount": 1,
+            "state": "fixture",
+            "goldBefore": 1,
+            "goldAfter": 1,
+            "startedAt": 1,
+            "settledAt": 1,
+            "leftover": true,
+            "note": "fixture"
+          }
+        },
+        "wardrobe": {
+          "chosen": {
+            "fixture": "fixture"
+          }
         }
       }
     }
@@ -5947,6 +6077,26 @@
             "band": "fixture"
           },
           "nextCastAt": 1
+        },
+        "purse": {
+          "gold": 1,
+          "topUpsLeft": 1,
+          "working": {
+            "id": "fixture",
+            "amount": 1,
+            "state": "fixture",
+            "goldBefore": 1,
+            "goldAfter": 1,
+            "startedAt": 1,
+            "settledAt": 1,
+            "leftover": true,
+            "note": "fixture"
+          }
+        },
+        "wardrobe": {
+          "chosen": {
+            "fixture": "fixture"
+          }
         }
       },
       "leaseActive": true
@@ -6066,7 +6216,9 @@
         "fishing": {
           "cast": null,
           "nextCastAt": 0
-        }
+        },
+        "purse": null,
+        "wardrobe": null
       },
       "leaseActive": true
     }
@@ -7715,7 +7867,9 @@
         "fishing": {
           "cast": null,
           "nextCastAt": 0
-        }
+        },
+        "purse": null,
+        "wardrobe": null
       },
       "result": {
         "gateCount": 2,
@@ -7866,7 +8020,9 @@
         "fishing": {
           "cast": null,
           "nextCastAt": 0
-        }
+        },
+        "purse": null,
+        "wardrobe": null
       },
       "result": {
         "items": {
@@ -8005,7 +8161,9 @@
         "fishing": {
           "cast": null,
           "nextCastAt": 0
-        }
+        },
+        "purse": null,
+        "wardrobe": null
       },
       "result": {
         "inventory": {
@@ -8134,7 +8292,9 @@
         "fishing": {
           "cast": null,
           "nextCastAt": 0
-        }
+        },
+        "purse": null,
+        "wardrobe": null
       },
       "result": {
         "grantablePapers": [],
@@ -8387,7 +8547,9 @@
         "fishing": {
           "cast": null,
           "nextCastAt": 0
-        }
+        },
+        "purse": null,
+        "wardrobe": null
       },
       "result": {
         "home": null,
@@ -8522,7 +8684,9 @@
         "fishing": {
           "cast": null,
           "nextCastAt": 0
-        }
+        },
+        "purse": null,
+        "wardrobe": null
       },
       "result": {
         "home": null,
@@ -8645,7 +8809,9 @@
         "fishing": {
           "cast": null,
           "nextCastAt": 0
-        }
+        },
+        "purse": null,
+        "wardrobe": null
       },
       "result": {
         "items": {
@@ -8692,7 +8858,8 @@
         "paper": null,
         "heirloom": "",
         "adaOilCount": 0,
-        "bought": null
+        "bought": null,
+        "goldGiven": 0
       }
     }
   }

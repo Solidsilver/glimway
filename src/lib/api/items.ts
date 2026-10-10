@@ -17,7 +17,7 @@ import {
 } from '../gen/glimway/v1/items_pb.js';
 import { ApiError } from './errors.ts';
 import { parseSnapshot } from './parse.ts';
-import type { Asset, AssetCounts, Snapshot } from './types.ts';
+import type { AssetCounts, AssetView, Snapshot } from './types.ts';
 import type { HomePlantView } from './homestead.ts';
 
 export interface MakerView {
@@ -102,7 +102,7 @@ export interface ItemsActionResponse extends Snapshot {
     wear?: WearResult;
     used?: string;
     pickup?: string;
-    given?: Asset;
+    given?: AssetView;
     mended?: string;
     created?: string[];
     returned?: string;
@@ -113,8 +113,10 @@ export interface ItemsActionResponse extends Snapshot {
     land?: { tile: [number, number]; stump: boolean; cleared: boolean };
     heirloom?: string;
     adaOilCount?: number;
-    /** What a seller just handed over (/api/items/buy). */
-    bought?: { seller: string; itemDef: string; qty: number; embers: number };
+    /** give: the gold handed over (0.6, 3.4), when any did. */
+    goldGiven?: number;
+    /** What a seller just handed over (/api/items/buy), and what it cost in either currency. */
+    bought?: { seller: string; itemDef: string; qty: number; embers: number; gold: number };
   };
 }
 
@@ -139,7 +141,10 @@ const countMap = (v: Record<string, number> | undefined): Record<string, number>
 };
 
 const WEAR_STATES = ['whole', 'worn', 'blunt', 'cracked', 'dull'];
+// The request vocabulary (a request Asset can't be gold); reads widen it —
+// projectAsset's kind check is the read side's.
 const ASSET_KINDS = ['material', 'item', 'decoration', 'instance', 'thanks'];
+const READ_ASSET_KINDS = [...ASSET_KINDS, 'gold'];
 
 /** The maker's mark, projected. */
 function maker(v: { id: string; name: string } | undefined): MakerView | null {
@@ -211,11 +216,11 @@ function wear(v: GeneratedWearResult | undefined): WearResult | undefined {
   };
 }
 
-/** Goods on the move, projected (kind in the vocabulary, empty optionals gone). */
-export function projectAsset(v: { kind: string; id: string; qty: number; instance: string; maker?: string } | undefined): Asset | undefined {
+/** Goods on the move, projected (kind in the vocabulary, empty optionals gone). Reads only: a gold letter shows as kind "gold" (display only), while a request Asset still can't carry it. */
+export function projectAsset(v: { kind: string; id: string; qty: number; instance: string; maker?: string } | undefined): AssetView | undefined {
   if (!v) return undefined;
-  if (!ASSET_KINDS.includes(v.kind)) throw new Error('invalid asset kind');
-  const out: Asset = { kind: v.kind as Asset['kind'], id: v.id, qty: int(v.qty, 0) };
+  if (!READ_ASSET_KINDS.includes(v.kind)) throw new Error('invalid asset kind');
+  const out: AssetView = { kind: v.kind as AssetView['kind'], id: v.id, qty: int(v.qty, 0) };
   if (v.instance) out.instance = v.instance;
   if (v.maker) out.maker = v.maker;
   return out;
@@ -235,7 +240,8 @@ function result(r: ItemsResult): ItemsActionResponse['result'] {
   if (r.created?.length) out.created = r.created.filter((c): c is string => typeof c === 'string');
   if (r.heirloom) out.heirloom = r.heirloom;
   if (r.adaOilCount) out.adaOilCount = int(r.adaOilCount);
-  if (r.bought) out.bought = { seller: r.bought.seller, itemDef: r.bought.itemDef, qty: int(r.bought.qty), embers: int(r.bought.embers) };
+  if (r.goldGiven) out.goldGiven = int(r.goldGiven);
+  if (r.bought) out.bought = { seller: r.bought.seller, itemDef: r.bought.itemDef, qty: int(r.bought.qty), embers: int(r.bought.embers), gold: int(r.bought.gold) };
   if (r.gathered?.length) out.gathered = r.gathered.map((g) => ({ itemDef: g.itemDef, qty: int(g.qty) }));
   if (r.plant) {
     out.plant = {

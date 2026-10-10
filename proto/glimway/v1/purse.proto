@@ -1,0 +1,79 @@
+syntax = "proto3";
+package glimway.v1;
+option go_package = "glimway/server/internal/gen/glimway/v1;contract";
+import "google/protobuf/wrappers.proto";
+import "glimway/v1/op.proto";
+
+// The gold purse (docs/design/purse-and-wardrobe.md 2): a gold balance per
+// account, a ledger currency beside embers, and the top-up that fills it
+// from Habitica. Gold never goes back to Habitica and never leaves the game
+// (3.5); the only sources are a top-up and the owner settling one.
+//
+// The top-up carries a Habitica token. It is used for this one request and
+// then dropped: never stored, logged, hashed or returned. The operation is
+// keyed by its own purse_topups(account_id, op_key) — a repeated key returns
+// the same top-up, a different amount is idempotency-mismatch (2.2) — and
+// never through keyedOp, so the token must never reach the idempotency
+// cache's payload. That is why op_secret_test.go names it as a credential
+// carrier outside the keyed pipeline.
+
+// One top-up: what it asked for, what Habitica's gold was before and after,
+// and where it landed.
+message PurseTopUp {
+  string id = 1;
+  int32 amount = 2;
+  // working | moved | not-enough | not-moved | unconfirmed. "working" is the
+  // reserved/created/scoring/checking run still in flight (2.4).
+  string state = 3;
+  // Habitica's gold, floored; absent until the worker's read.
+  google.protobuf.Int32Value gold_before = 4;
+  google.protobuf.Int32Value gold_after = 5;
+  double started_at = 6;
+  google.protobuf.DoubleValue settled_at = 7;
+  // A "Glimway purse" reward may still sit in the player's Habitica Rewards
+  // (2.4); the next top-up deletes it first thing.
+  bool leftover = 8;
+  // A code: habitica-auth, timeout, checked, settled-by-owner.
+  string note = 9;
+}
+
+// The purse itself, on every PlayerState (2.5 carries what is left today).
+message Purse {
+  int32 gold = 1;
+  // Top-ups left today, UTC.
+  int32 top_ups_left = 2;
+  // The top-up still working, absent when none is.
+  PurseTopUp working = 3;
+}
+
+// POST /api/purse/top-up. The token is used for this one request and never
+// stored, logged or returned. Keyed by its own purse_topups row, never
+// through keyedOp.
+message PurseTopUpRequest { OpHeader op = 1; string token = 2; int32 amount = 3; }
+message PurseTopUpResult { PurseTopUp top_up = 1; }
+
+// One purse log line (2.1): every top-up with Habitica's gold before and
+// after, and every gold spend and sale.
+message PurseLine {
+  double at = 1;
+  int32 delta = 2;
+  // habitica-topup | purse-settle | market-buy | shelf-buy | shelf-sale |
+  // mail-send | mail-claim | mail-return | mail-recall | give | gift
+  string reason = 3;
+  string item_def = 4;
+  int32 qty = 5;
+  // The other player in a shelf trade, letter or give.
+  string other_name = 6;
+  // A letter's id, so the line can say which one it was.
+  string mail_id = 7;
+  // That letter's state: waiting | collected | came-back. A collected gold
+  // letter writes only the sender's mail:gold:gold row, so the state can't
+  // be read off the gold lines alone (design 2.7).
+  string mail_state = 8;
+  // The seller on a market-buy line (their npc name): "Bought timber ×4
+  // from Silas". other_name stays the other player.
+  string seller = 9;
+}
+
+// GET /api/purse: the purse, the last 50 top-ups and gold lines.
+message PurseRead { Purse purse = 1; repeated PurseTopUp top_ups = 2; repeated PurseLine lines = 3; }

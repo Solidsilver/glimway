@@ -7,7 +7,7 @@
   import { assetKey, assetName, assetPhrase, mailBuckets, movableAssets, settledLine } from '../lib/village'
   import { giftPhrase } from '../lib/items'
   import { MAIL } from '../lib/mail'
-  import type { Asset, Mail } from '../lib/api/types'
+  import type { Asset, AssetView, Mail } from '../lib/api/types'
   import { actionRunner, busVersion } from './panel-state.svelte'
   import { home } from './home.svelte'
   import Icon from './Icon.svelte'
@@ -69,12 +69,12 @@
     }
   }
 
-  function art(a: Asset): string | null {
+  function art(a: AssetView): string | null {
     return a.kind === 'decoration' ? home.thumbs[a.id] ?? null : null
   }
 
   /** Materials, trinkets and crafted goods have delivered icons (src/ui/ArtIcon.svelte). */
-  function icon(a: Pick<Asset, 'kind' | 'id'>): string | null {
+  function icon(a: Pick<AssetView, 'kind' | 'id'>): string | null {
     return a.kind === 'decoration' ? null : `icon-${a.id}`
   }
 </script>

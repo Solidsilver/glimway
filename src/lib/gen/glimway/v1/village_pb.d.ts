@@ -480,6 +480,10 @@ export declare type MailView = Message<"glimway.v1.MailView"> & {
   toName: string;
 
   /**
+   * A gold letter carries Asset { kind: "gold", id: "gold", qty: the
+   * amount }: display only. validAsset still refuses "gold" as something
+   * to take from a pack (3.3).
+   *
    * @generated from field: glimway.v1.Asset asset = 7;
    */
   asset?: Asset | undefined;
@@ -549,6 +553,10 @@ export declare type MailReadResultValid = MailReadResult;
 export declare const MailReadResultSchema: GenMessage<MailReadResult, {validType: MailReadResultValid}>;
 
 /**
+ * POST /api/mail (send). A gold letter: `gold` set, `asset` absent — a
+ * letter carries one thing (3.3, question 11). Both, or neither, is
+ * invalid-request.
+ *
  * @generated from message glimway.v1.MailSendRequest
  */
 export declare type MailSendRequest = Message<"glimway.v1.MailSendRequest"> & {
@@ -571,6 +579,11 @@ export declare type MailSendRequest = Message<"glimway.v1.MailSendRequest"> & {
    * @generated from field: glimway.v1.Asset asset = 4;
    */
   asset?: Asset | undefined;
+
+  /**
+   * @generated from field: int32 gold = 5;
+   */
+  gold: number;
 };
 
 export declare type MailSendRequestValid = MailSendRequest;
@@ -654,6 +667,10 @@ export declare type MailActionResult = Message<"glimway.v1.MailActionResult"> & 
   mailId: string;
 
   /**
+   * A gold letter's asset is Asset { kind: "gold", id: "gold", qty: the
+   * amount }, display only (3.3); validAsset still refuses "gold" as
+   * something to take from a pack.
+   *
    * @generated from field: glimway.v1.Asset asset = 2;
    */
   asset?: Asset | undefined;
@@ -700,6 +717,10 @@ export declare type MailRecallResult = Message<"glimway.v1.MailRecallResult"> & 
   mailId: string;
 
   /**
+   * A gold letter's asset is Asset { kind: "gold", id: "gold", qty: the
+   * amount }, display only (3.3); validAsset still refuses "gold" as
+   * something to take from a pack.
+   *
    * @generated from field: glimway.v1.Asset asset = 2;
    */
   asset?: Asset | undefined;

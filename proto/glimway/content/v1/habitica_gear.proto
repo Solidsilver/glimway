@@ -51,6 +51,9 @@ message HabiticaGearProvenance {
   HabiticaGearLicenses licenses = 9;
   HabiticaGearCounts counts = 10;
   string modifications = 11;
+  // When the English names (HabiticaGearItem.text) were retrieved, kept
+  // beside the snapshot's own retrieval date.
+  string text_retrieved_at = 12;
 }
 
 message HabiticaGearLicenses {
@@ -88,6 +91,9 @@ message HabiticaGearItem {
   // The event window some event gear names.
   optional HabiticaGearEvent event = 15;
   optional string gear_set = 16;
+  // The English name from Habitica's content (question 3): what the
+  // wardrobe calls the piece, with the key's words as a fallback.
+  optional string text = 17;
 }
 
 // An event gear's window, dates as upstream spells them.

@@ -322,7 +322,7 @@ func racePhase5(t *testing.T, x *rig, requests []struct {
 			defer wg.Done()
 			<-start
 			r := httptest.NewRequest("POST", v.path, bytes.NewBufferString(store.JSON(v.body)))
-			r.Header.Set("X-Glimway-Contract", "5")
+			r.Header.Set("X-Glimway-Contract", "6")
 			r.Header.Set("Content-Type", "application/json")
 			r.AddCookie(v.c)
 			w := httptest.NewRecorder()

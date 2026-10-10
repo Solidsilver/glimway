@@ -1217,7 +1217,9 @@
           "qty": 1,
           "embers": 1,
           "label": "Buy a lump of tallow · 1 ember",
-          "line": "Tallow's an ember a lump and worth two, the pot renders sweet. Mind your sleeves, it spits."
+          "line": "Tallow's an ember a lump and worth two, the pot renders sweet. Mind your sleeves, it spits.",
+          "gold": 2,
+          "goldLabel": "Buy a lump of tallow · 2 gold"
         }
       ],
       "with": "hazel"
@@ -1232,14 +1234,18 @@
           "qty": 1,
           "embers": 1,
           "label": "Buy a sack of flour · 1 ember",
-          "line": "The fine sift, not the grist — I milled it while the wheel held. Forty-one and holding, this morning."
+          "line": "The fine sift, not the grist — I milled it while the wheel held. Forty-one and holding, this morning.",
+          "gold": 2,
+          "goldLabel": "Buy a sack of flour · 2 gold"
         },
         {
           "item": "willow-rod",
           "qty": 1,
           "embers": 2,
           "label": "Buy a willow rod · 2 embers",
-          "line": "Another off the hook by the door — two embers, and it only wears on the fish you keep."
+          "line": "Another off the hook by the door — two embers, and it only wears on the fish you keep.",
+          "gold": 5,
+          "goldLabel": "Buy a willow rod · 5 gold"
         }
       ],
       "with": "finn"
@@ -1259,7 +1265,49 @@
           "embers": 1,
           "cap": 4,
           "label": "Buy madder scraps · 1 ember",
-          "line": "Red scraps off the dyer's boards. An ember a handful — no haggling, it's fair day."
+          "line": "Red scraps off the dyer's boards. An ember a handful — no haggling, it's fair day.",
+          "gold": 2,
+          "goldLabel": "Buy madder scraps · 2 gold"
+        }
+      ]
+    },
+    {
+      "id": "silas-yard",
+      "npc": "Silas",
+      "area": "commons",
+      "tx": 51,
+      "ty": 21,
+      "radiusTiles": 4,
+      "goods": [
+        {
+          "item": "timber",
+          "qty": 4,
+          "embers": 0,
+          "cap": 3,
+          "label": "Buy timber ×4 · 6 gold",
+          "line": "Offcuts from the yard. I'll not sell you the good beams, you'll want to fell those yourself.",
+          "gold": 6,
+          "goldLabel": "Buy timber ×4 · 6 gold"
+        },
+        {
+          "item": "stone",
+          "qty": 4,
+          "embers": 0,
+          "cap": 3,
+          "label": "Buy stone ×4 · 8 gold",
+          "line": "Offcuts from the yard. I'll not sell you the good beams, you'll want to fell those yourself.",
+          "gold": 8,
+          "goldLabel": "Buy stone ×4 · 8 gold"
+        },
+        {
+          "item": "fiber",
+          "qty": 4,
+          "embers": 0,
+          "cap": 3,
+          "label": "Buy fiber ×4 · 5 gold",
+          "line": "Offcuts from the yard. I'll not sell you the good beams, you'll want to fell those yourself.",
+          "gold": 5,
+          "goldLabel": "Buy fiber ×4 · 5 gold"
         }
       ]
     }

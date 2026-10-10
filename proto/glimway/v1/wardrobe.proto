@@ -1,0 +1,34 @@
+syntax = "proto3";
+package glimway.v1;
+option go_package = "glimway/server/internal/gen/glimway/v1;contract";
+import "google/protobuf/wrappers.proto";
+import "glimway/v1/op.proto";
+
+// The Habitica wardrobe (docs/design/purse-and-wardrobe.md 4): per slot,
+// what the hero wears here — Habitica's look, a piece the player owns, or
+// nothing. Drawn and never counted: stats come from the battle gear on
+// Habitica, and nothing is ever written back there.
+
+// Per slot, resolved: absent = as on Habitica; "none" = nothing worn there;
+// else an owned gear key (the catalog's type_klass_index).
+message Wardrobe { map<string, string> chosen = 1; }
+
+// POST /api/wardrobe: the whole choice at once. Slots left out go back to
+// As on Habitica.
+message WardrobeRequest { OpHeader op = 1; map<string, string> chosen = 2; }
+message WardrobeResult { Wardrobe wardrobe = 1; }
+
+// GET /api/wardrobe: what the picker offers (the owned, catalogued keys),
+// when the server last read them, and the choice.
+message WardrobeRead {
+  repeated string owned = 1;
+  Wardrobe wardrobe = 2;
+  // The last server read; absent before the first.
+  google.protobuf.DoubleValue checked_at = 3;
+}
+
+// POST /api/wardrobe/check ("Check for new gear", 4.3): one server read of
+// items.gear.owned. Not keyed (running it twice only reads twice), and the
+// token is used for this one request and never stored, logged or returned.
+message WardrobeCheckRequest { string lease = 1; string token = 2; }
+message WardrobeCheckResult { repeated string owned = 1; double checked_at = 2; int32 new_pieces = 3; }

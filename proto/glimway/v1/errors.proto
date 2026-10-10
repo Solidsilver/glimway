@@ -225,4 +225,10 @@ enum ErrorCode {
   ERROR_CODE_CAST_TOO_SOON = 217;
   ERROR_CODE_WATER_STILL = 218;
   ERROR_CODE_NO_CAST = 219;
+  // 0.6 The purse and the wardrobe (docs/design/purse-and-wardrobe.md 6.1).
+  ERROR_CODE_PURSE_BUSY = 220;
+  ERROR_CODE_TOP_UP_LIMIT = 221;
+  ERROR_CODE_INSUFFICIENT_GOLD = 222;
+  ERROR_CODE_OWN_STOCK = 223;
+  ERROR_CODE_GEAR_NOT_OWNED = 224;
 }

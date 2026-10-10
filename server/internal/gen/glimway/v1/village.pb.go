@@ -880,13 +880,16 @@ func (x *LibraryDonateResult) GetEntry() *LibraryEntry {
 }
 
 type MailView struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
-	Id            string                  `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	WorldId       string                  `protobuf:"bytes,2,opt,name=world_id,json=worldId,proto3" json:"world_id,omitempty"`
-	FromId        string                  `protobuf:"bytes,3,opt,name=from_id,json=fromId,proto3" json:"from_id,omitempty"`
-	ToId          string                  `protobuf:"bytes,4,opt,name=to_id,json=toId,proto3" json:"to_id,omitempty"`
-	FromName      string                  `protobuf:"bytes,5,opt,name=from_name,json=fromName,proto3" json:"from_name,omitempty"`
-	ToName        string                  `protobuf:"bytes,6,opt,name=to_name,json=toName,proto3" json:"to_name,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Id       string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	WorldId  string                 `protobuf:"bytes,2,opt,name=world_id,json=worldId,proto3" json:"world_id,omitempty"`
+	FromId   string                 `protobuf:"bytes,3,opt,name=from_id,json=fromId,proto3" json:"from_id,omitempty"`
+	ToId     string                 `protobuf:"bytes,4,opt,name=to_id,json=toId,proto3" json:"to_id,omitempty"`
+	FromName string                 `protobuf:"bytes,5,opt,name=from_name,json=fromName,proto3" json:"from_name,omitempty"`
+	ToName   string                 `protobuf:"bytes,6,opt,name=to_name,json=toName,proto3" json:"to_name,omitempty"`
+	// A gold letter carries Asset { kind: "gold", id: "gold", qty: the
+	// amount }: display only. validAsset still refuses "gold" as something
+	// to take from a pack (3.3).
 	Asset         *Asset                  `protobuf:"bytes,7,opt,name=asset,proto3" json:"asset,omitempty"`
 	SentAt        float64                 `protobuf:"fixed64,8,opt,name=sent_at,json=sentAt,proto3" json:"sent_at,omitempty"`
 	ClaimedAt     *wrapperspb.DoubleValue `protobuf:"bytes,9,opt,name=claimed_at,json=claimedAt,proto3" json:"claimed_at,omitempty"`
@@ -1071,12 +1074,16 @@ func (x *MailReadResult) GetInventory() *AssetCounts {
 	return nil
 }
 
+// POST /api/mail (send). A gold letter: `gold` set, `asset` absent — a
+// letter carries one thing (3.3, question 11). Both, or neither, is
+// invalid-request.
 type MailSendRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Op            *OpHeader              `protobuf:"bytes,1,opt,name=op,proto3" json:"op,omitempty"`
 	Where         *Where                 `protobuf:"bytes,2,opt,name=where,proto3" json:"where,omitempty"`
 	ToId          string                 `protobuf:"bytes,3,opt,name=to_id,json=toId,proto3" json:"to_id,omitempty"`
 	Asset         *Asset                 `protobuf:"bytes,4,opt,name=asset,proto3" json:"asset,omitempty"`
+	Gold          int32                  `protobuf:"varint,5,opt,name=gold,proto3" json:"gold,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1137,6 +1144,13 @@ func (x *MailSendRequest) GetAsset() *Asset {
 		return x.Asset
 	}
 	return nil
+}
+
+func (x *MailSendRequest) GetGold() int32 {
+	if x != nil {
+		return x.Gold
+	}
+	return 0
 }
 
 type MailSendResult struct {
@@ -1269,8 +1283,11 @@ func (x *MailKeyedRequest) GetWhere() *Where {
 }
 
 type MailActionResult struct {
-	state             protoimpl.MessageState  `protogen:"open.v1"`
-	MailId            string                  `protobuf:"bytes,1,opt,name=mail_id,json=mailId,proto3" json:"mail_id,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	MailId string                 `protobuf:"bytes,1,opt,name=mail_id,json=mailId,proto3" json:"mail_id,omitempty"`
+	// A gold letter's asset is Asset { kind: "gold", id: "gold", qty: the
+	// amount }, display only (3.3); validAsset still refuses "gold" as
+	// something to take from a pack.
 	Asset             *Asset                  `protobuf:"bytes,2,opt,name=asset,proto3" json:"asset,omitempty"`
 	Mail              []*MailView             `protobuf:"bytes,3,rep,name=mail,proto3" json:"mail,omitempty"`
 	NextCursor        *wrapperspb.StringValue `protobuf:"bytes,4,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
@@ -1355,8 +1372,11 @@ func (x *MailActionResult) GetInventory() *AssetCounts {
 // A recall's answer is its own message: the Envelope's result cases resolve
 // by message type name, so two cases may not share one.
 type MailRecallResult struct {
-	state             protoimpl.MessageState  `protogen:"open.v1"`
-	MailId            string                  `protobuf:"bytes,1,opt,name=mail_id,json=mailId,proto3" json:"mail_id,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	MailId string                 `protobuf:"bytes,1,opt,name=mail_id,json=mailId,proto3" json:"mail_id,omitempty"`
+	// A gold letter's asset is Asset { kind: "gold", id: "gold", qty: the
+	// amount }, display only (3.3); validAsset still refuses "gold" as
+	// something to take from a pack.
 	Asset             *Asset                  `protobuf:"bytes,2,opt,name=asset,proto3" json:"asset,omitempty"`
 	Mail              []*MailView             `protobuf:"bytes,3,rep,name=mail,proto3" json:"mail,omitempty"`
 	NextCursor        *wrapperspb.StringValue `protobuf:"bytes,4,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
@@ -2795,12 +2815,13 @@ const file_glimway_v1_village_proto_rawDesc = "" +
 	"\vnext_cursor\x18\x02 \x01(\v2\x1c.google.protobuf.StringValueR\n" +
 	"nextCursor\x12L\n" +
 	"\x13next_pending_cursor\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\x11nextPendingCursor\x125\n" +
-	"\tinventory\x18\x04 \x01(\v2\x17.glimway.v1.AssetCountsR\tinventory\"\x9e\x01\n" +
+	"\tinventory\x18\x04 \x01(\v2\x17.glimway.v1.AssetCountsR\tinventory\"\xb2\x01\n" +
 	"\x0fMailSendRequest\x12$\n" +
 	"\x02op\x18\x01 \x01(\v2\x14.glimway.v1.OpHeaderR\x02op\x12'\n" +
 	"\x05where\x18\x02 \x01(\v2\x11.glimway.v1.WhereR\x05where\x12\x13\n" +
 	"\x05to_id\x18\x03 \x01(\tR\x04toId\x12'\n" +
-	"\x05asset\x18\x04 \x01(\v2\x11.glimway.v1.AssetR\x05asset\"\x97\x02\n" +
+	"\x05asset\x18\x04 \x01(\v2\x11.glimway.v1.AssetR\x05asset\x12\x12\n" +
+	"\x04gold\x18\x05 \x01(\x05R\x04gold\"\x97\x02\n" +
 	"\x0eMailSendResult\x12\x17\n" +
 	"\amail_id\x18\x01 \x01(\tR\x06mailId\x12(\n" +
 	"\x04mail\x18\x02 \x03(\v2\x14.glimway.v1.MailViewR\x04mail\x12=\n" +

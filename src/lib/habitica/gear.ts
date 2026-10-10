@@ -1,7 +1,8 @@
 /**
  * Habitica gear catalog.
  *
- * NUMERIC item data bundled in `content/habitica-gear.json`, snapshotted
+ * Numeric item data and the English gear names (the `text` field) bundled
+ * in `content/habitica-gear.json`, snapshotted
  * from Habitica's public content endpoint (see provenance below and
  * docs/habitica-assets.md). No account credentials are used or stored here;
  * the snapshot is a static, unauthenticated content GET.

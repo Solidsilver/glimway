@@ -79,7 +79,8 @@ export declare type WearResultValid = WearResult;
 export declare const WearResultSchema: GenMessage<WearResult, {validType: WearResultValid}>;
 
 /**
- * What a seller just handed over (/api/items/buy).
+ * What a seller just handed over (/api/items/buy), and what it cost — in
+ * embers, in gold, or in both.
  *
  * @generated from message glimway.v1.Bought
  */
@@ -103,6 +104,11 @@ export declare type Bought = Message<"glimway.v1.Bought"> & {
    * @generated from field: int32 embers = 4;
    */
   embers: number;
+
+  /**
+   * @generated from field: int32 gold = 5;
+   */
+  gold: number;
 };
 
 export declare type BoughtValid = Bought;
@@ -225,6 +231,22 @@ export declare type ItemsRequest = Message<"glimway.v1.ItemsRequest"> & {
    * @generated from field: string good = 19;
    */
   good: string;
+
+  /**
+   * buy: "" | "embers" | "gold" — which currency pays (0.6; "embers" is
+   * today's behaviour and the empty default).
+   *
+   * @generated from field: string pay = 20;
+   */
+  pay: string;
+
+  /**
+   * give: an amount of gold in place of `asset` (3.4). A request with both
+   * `gold` and `asset`, or with neither, is refused as invalid-request.
+   *
+   * @generated from field: int32 gold = 21;
+   */
+  gold: number;
 };
 
 export declare type ItemsRequestValid = ItemsRequest;
@@ -315,6 +337,13 @@ export declare type ItemsResult = Message<"glimway.v1.ItemsResult"> & {
    * @generated from field: glimway.v1.Bought bought = 15;
    */
   bought?: Bought | undefined;
+
+  /**
+   * give: the gold handed over (3.4).
+   *
+   * @generated from field: int32 gold_given = 16;
+   */
+  goldGiven: number;
 };
 
 export declare type ItemsResultValid = ItemsResult;
