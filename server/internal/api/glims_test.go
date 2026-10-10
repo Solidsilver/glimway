@@ -3,7 +3,9 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -32,7 +34,10 @@ func (x *rig) noGlims(ids ...string) {
 	}
 }
 
-// topUpGlims credits glims the way a settled top-up does (`habitica-topup`).
+// topUpGlims credits glims the way a settled top-up does: a `moved`
+// purse_topups row of 2n gold and n glims, and its `habitica-topup` credit
+// (store.SettleTopUp). The row is dated two days back so it uses up nothing
+// of today's two top-ups or 30 glims.
 func (x *rig) topUpGlims(id string, n int) {
 	x.t.Helper()
 	ctx := context.Background()
@@ -41,7 +46,16 @@ func (x *rig) topUpGlims(id string, n int) {
 		x.t.Fatal(err)
 	}
 	defer tx.Rollback()
-	if err = store.MoveGlims(ctx, tx, nil, id, n, "habitica-topup", "test-topup", x.now.Load()); err != nil {
+	x.fundings++
+	row, at := fmt.Sprintf("test-topup-%d", x.fundings), x.now.Load()-2*86400
+	if err = store.InsertTopUp(ctx, tx, row, id, row, int64(n*store.GoldPerGlim), at); err != nil {
+		x.t.Fatal(err)
+	}
+	t, err := store.TopUpFor(ctx, tx, row)
+	if err != nil {
+		x.t.Fatal(err)
+	}
+	if err = store.SettleTopUp(ctx, tx, t, store.TopUpOutcome{State: "moved", SettledBy: "worker"}, at); err != nil {
 		x.t.Fatal(err)
 	}
 	if err = tx.Commit(); err != nil {
@@ -114,6 +128,129 @@ func (x *rig) glimsConserved() {
 	}
 	if count(x.t, x.db, "SELECT count(*) FROM ledger WHERE currency='glims' AND reason='market-buy' AND delta>=0") != 0 {
 		x.t.Fatal("a market-buy row added glims")
+	}
+	x.topUpsReconciled()
+	x.glimPairsConserved()
+}
+
+// topUpsReconciled ties the ledger to purse_topups (review B finding 1): the
+// only glims Habitica brings are a `moved` row's own, credited once. Per
+// row, its habitica-topup/purse-settle credits sum to its glims when it is
+// moved and to nothing otherwise; per account, every such credit names a
+// row of that account. A doubled or dropped settle fails here.
+func (x *rig) topUpsReconciled() {
+	x.t.Helper()
+	rows, err := x.db.DB.Query(`SELECT t.id,t.account_id,t.state,t.glims,
+		COALESCE((SELECT SUM(l.delta) FROM ledger l WHERE l.currency='glims' AND l.reason IN ('habitica-topup','purse-settle') AND l.ref=t.id AND l.account_id=t.account_id),0)
+		FROM purse_topups t`)
+	if err != nil {
+		x.t.Fatal(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id, account, state string
+		var glims, credited int
+		if err = rows.Scan(&id, &account, &state, &glims, &credited); err != nil {
+			x.t.Fatal(err)
+		}
+		want := 0
+		if state == "moved" {
+			want = glims
+		}
+		if credited != want {
+			x.t.Fatalf("top-up %s (%s, %d glims) credited %d", id, state, glims, credited)
+		}
+	}
+	if err = rows.Err(); err != nil {
+		x.t.Fatal(err)
+	}
+	if stray := count(x.t, x.db, "SELECT count(*) FROM ledger l WHERE l.currency='glims' AND l.reason IN ('habitica-topup','purse-settle') AND NOT EXISTS(SELECT 1 FROM purse_topups t WHERE t.id=l.ref AND t.account_id=l.account_id)"); stray != 0 {
+		x.t.Fatalf("%d top-up credits name no top-up of their account", stray)
+	}
+}
+
+// glimPairsConserved is conservation per transfer, not per reason (review B
+// finding 1): every shelf trade, give and glim letter is a pair of rows that
+// name each other and net to zero, so a credit landing on the wrong account
+// fails here even when every reason still sums to zero.
+//
+//   - shelf: the buyer's shelf-buy names `<stocker>:<item>`, the stocker's
+//     shelf-sale names `<buyer>:<item>`, at the same moment, for the same price;
+//   - give: the giver's give names the recipient, the recipient's gift names
+//     the giver;
+//   - a letter: its rows (glims and the sender's mail:glims:glims escrow) net
+//     to zero; the send and the escrow are the sender's, a claim's glims go
+//     to the recipient, and a return's or recall's back to the sender.
+func (x *rig) glimPairsConserved() {
+	x.t.Helper()
+	type side struct{ out, in, n int }
+	pairs := map[string]*side{}
+	rows, err := x.db.DB.Query("SELECT account_id,delta,reason,ref,created_at FROM ledger WHERE currency='glims' AND reason IN ('shelf-buy','shelf-sale','give','gift')")
+	if err != nil {
+		x.t.Fatal(err)
+	}
+	for rows.Next() {
+		var account, reason, ref string
+		var delta int
+		var at int64
+		if err = rows.Scan(&account, &delta, &reason, &ref, &at); err != nil {
+			rows.Close()
+			x.t.Fatal(err)
+		}
+		other, item, _ := strings.Cut(ref, ":")
+		payer, payee := account, other
+		if reason == "shelf-sale" || reason == "gift" {
+			payer, payee = other, account
+		}
+		kind := map[string]string{"shelf-buy": "shelf", "shelf-sale": "shelf", "give": "give", "gift": "give"}[reason]
+		key := fmt.Sprintf("%s %s>%s %s @%d", kind, payer, payee, item, at)
+		p := pairs[key]
+		if p == nil {
+			p = &side{}
+			pairs[key] = p
+		}
+		if delta < 0 {
+			p.out++
+		} else {
+			p.in++
+		}
+		p.n += delta
+	}
+	rows.Close()
+	for key, p := range pairs {
+		if p.out != p.in || p.n != 0 {
+			x.t.Fatalf("%s: %d out, %d in, net %d", key, p.out, p.in, p.n)
+		}
+	}
+	letters, err := x.db.DB.Query(`SELECT l.ref,l.account_id,l.currency,l.reason,l.delta,m.from_id,m.to_id FROM ledger l JOIN mail m ON m.id=l.ref
+		WHERE m.kind='glims' AND l.currency IN ('glims','mail:glims:glims') AND l.reason IN ('mail-send','mail-claim','mail-return','mail-recall')`)
+	if err != nil {
+		x.t.Fatal(err)
+	}
+	defer letters.Close()
+	net := map[string]int{}
+	for letters.Next() {
+		var id, account, currency, reason, from, to string
+		var delta int
+		if err = letters.Scan(&id, &account, &currency, &reason, &delta, &from, &to); err != nil {
+			x.t.Fatal(err)
+		}
+		net[id] += delta
+		owner := from
+		if currency == "glims" && reason == "mail-claim" {
+			owner = to
+		}
+		if account != owner {
+			x.t.Fatalf("letter %s: a %s %s row is on %s, not %s", id, reason, currency, account, owner)
+		}
+	}
+	if err = letters.Err(); err != nil {
+		x.t.Fatal(err)
+	}
+	for id, n := range net {
+		if n != 0 {
+			x.t.Fatalf("letter %s: its rows net %d", id, n)
+		}
 	}
 }
 
@@ -735,6 +872,7 @@ func TestTopUpCapThirtyGlimsADay(t *testing.T) {
 	if read := x.purseRead(c); read.Purse.GlimsLeft != 0 || read.Purse.TopUpsLeft != 0 {
 		t.Fatalf("two top-ups, no more %+v", read.Purse)
 	}
+	x.glimsConserved()
 }
 
 // TestGlimLogShowsTopUpsSpendsAndTransfers (silas-yard.md 1.6): the Glim

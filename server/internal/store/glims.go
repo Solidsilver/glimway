@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"glimway/server/internal/itemmove"
 )
 
@@ -49,11 +48,18 @@ func Credit(ctx context.Context, tx *sql.Tx, s *Snapshot, n, earned int, reason,
 //
 // A credit is never XP-earned. A debit spends XP-earned glims last and is
 // refused with ErrShortOfGlims, writing nothing, when the balance is short.
+//
+// A zero change is a free price, not an error: on the caller's own account it
+// writes the zero-delta ledger mark Credit writes (as 0.6's ember debit did),
+// and on any other account it writes nothing.
 func MoveGlims(ctx context.Context, tx *sql.Tx, s *Snapshot, account string, n int, reason, ref string, now int64) error {
-	if n == 0 {
-		return fmt.Errorf("a glim move must move glims")
-	}
 	own := s != nil && s.AccountID == account
+	if n == 0 {
+		if own {
+			return Credit(ctx, tx, s, 0, 0, reason, ref, nil, now)
+		}
+		return nil
+	}
 	var held, earned int
 	if own {
 		held, earned = s.State.Glims, s.State.XPGlims

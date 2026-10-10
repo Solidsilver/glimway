@@ -65,8 +65,10 @@ func TestMoveGlimsToOtherAccounts(t *testing.T) {
 	if err = MoveGlims(ctx, tx, nil, "alice", -100000, "give", "bob", 12); !errors.Is(err, ErrShortOfGlims) {
 		t.Fatal("overspend:", err)
 	}
-	if err = MoveGlims(ctx, tx, nil, "alice", 0, "give", "bob", 12); err == nil {
-		t.Fatal("a move of nothing")
+	// A zero change to another account is free and writes nothing: no row,
+	// no version (the versions below count only the two real moves).
+	if err = MoveGlims(ctx, tx, nil, "alice", 0, "zero-price", "bob", 12); err != nil {
+		t.Fatal("a move of nothing:", err)
 	}
 	// Glims from XP go last (1.4 rule 4): of carol's 10, 8 are earned;
 	// spending 5 takes the other 2 first, then 3 earned.
@@ -89,6 +91,7 @@ func TestMoveGlimsToOtherAccounts(t *testing.T) {
 	mustQuery(t, s.DB, "SELECT COALESCE(SUM(delta),0) FROM ledger WHERE account_id='bob' AND currency='glims'", 20)
 	// The versions moved, one per write.
 	mustQuery(t, s.DB, "SELECT version FROM players WHERE account_id='alice'", 3)
+	mustQuery(t, s.DB, "SELECT count(*) FROM ledger WHERE reason='zero-price'", 0)
 	mustQuery(t, s.DB, "SELECT version FROM players WHERE account_id='bob'", 2)
 	// The transfer's two rows name each other.
 	mustQuery(t, s.DB, "SELECT count(*) FROM ledger WHERE account_id='alice' AND currency='"+itemmove.Glims()+"' AND reason='give' AND ref='bob'", 1)
@@ -120,6 +123,12 @@ func TestMoveGlimsOnTheOwnSnapshot(t *testing.T) {
 	if err = MoveGlims(ctx, tx, &snap, "alice", 3, "mail-claim", "m1", 21); err != nil {
 		t.Fatal(err)
 	}
+	// A free price on one's own account is the zero-delta mark Credit
+	// writes, and moves nothing.
+	if err = MoveGlims(ctx, tx, &snap, "alice", 0, "homestead-clear", "free", 21); err != nil {
+		t.Fatal("a free price:", err)
+	}
+	mustQueryTx(t, tx, "SELECT count(*) FROM ledger WHERE reason='homestead-clear' AND delta=0 AND earned_delta=0", 1)
 	if snap.State.Glims != 17 || snap.State.XPGlims != 12 {
 		t.Fatal("the snapshot", snap.State.Glims, snap.State.XPGlims)
 	}

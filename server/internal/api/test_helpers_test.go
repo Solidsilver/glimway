@@ -42,7 +42,9 @@ var rigStart = func() int64 {
 }()
 
 type rig struct {
-	t        *testing.T
+	t *testing.T
+	// fundings numbers topUpGlims's purse_topups rows.
+	fundings int
 	db       *store.Store
 	api      *Server
 	upstream *httptest.Server

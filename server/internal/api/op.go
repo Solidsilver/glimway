@@ -136,6 +136,12 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 		// A held refusal (review finding 16) keeps the writes its apply made
 		// before raising it — 5.4's "either way the cast closes". Every other
 		// refusal takes back everything since the savepoint.
+		//
+		// A held refusal never reaches Persist, and the snapshot is loaded
+		// again below: a glim moved on the snapshot before one would keep its
+		// ledger row and lose its balance write (store/glims.go). So no glim
+		// may move before a held refusal; today's one (fishing's) writes
+		// items only.
 		if !isHeld(err) {
 			if _, e := tx.ExecContext(ctx, "ROLLBACK TO gameplay"); e != nil {
 				return e

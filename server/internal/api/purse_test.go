@@ -258,6 +258,7 @@ func TestPurseTopUpTurnsGoldIntoGlims(t *testing.T) {
 	if !found {
 		t.Fatalf("log lines %+v", read.Lines)
 	}
+	x.glimsConserved()
 }
 
 func queryGear(t *testing.T, x *rig, account string) []string {
@@ -361,6 +362,7 @@ func TestPurseTopUpRefusals(t *testing.T) {
 	if row := x.topUpOK(s, "n6", 10, c); row.State != "moved" {
 		t.Fatal(row.State)
 	}
+	x.glimsConserved()
 }
 
 // setPurseChecks is the balance-check schedule for a test (design 2.3 is
@@ -411,6 +413,7 @@ func TestPurseTopUpUnknownOutcomes(t *testing.T) {
 			if tc.want == "moved" && (row.GoldAfter == nil || *row.GoldAfter != 960) {
 				t.Fatalf("gold_after %v", row.GoldAfter)
 			}
+			x.glimsConserved()
 		})
 	}
 }

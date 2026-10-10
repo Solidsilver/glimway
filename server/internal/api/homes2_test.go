@@ -555,7 +555,7 @@ func TestHomes2LanternLightAndClearing(t *testing.T) {
 	if count(t, x.db, "SELECT count(*) FROM homestead_items WHERE id=? AND name IS NULL AND location='inventory'", postID) != 1 {
 		t.Fatal("post put away")
 	}
-	// Trees take tiles until Silas clears them for embers.
+	// Trees take tiles until Silas clears them for glims.
 	g := groundOf(h)
 	start := connectedLights(nil, "")
 	var tree, darkTree, grass [2]int
@@ -596,6 +596,30 @@ func TestHomes2LanternLightAndClearing(t *testing.T) {
 		t.Fatal("cleared twice")
 	}
 	x.homeOpRefreshing(ac, &a, "place", at(stool, tree, nil), 200)
+
+	// A free clearing (a price of 0, which content refuses today) is a
+	// zero-delta mark, never a 500 (review B finding 2).
+	price := content.HomeRules.ClearTileGlims
+	content.HomeRules.ClearTileGlims = 0
+	defer func() { content.HomeRules.ClearTileGlims = price }()
+	var free [2]int
+	for y := 0; y < g.land.Height && free == ([2]int{}); y++ {
+		for x := 0; x < g.land.Width; x++ {
+			if p := [2]int{x, y}; land.Clearable(g.land.At(x, y)) && land.Lit(start, x, y) && p != tree {
+				free = p
+				break
+			}
+		}
+	}
+	if free == ([2]int{}) {
+		t.Fatal("land fixture: one lit tree")
+	}
+	x.refresh(ac, &a)
+	before = a.State.Glims
+	x.homeOpRefreshing(ac, &a, "clear", map[string]any{"x": free[0], "y": free[1]}, 200)
+	if a.State.Glims != before || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='homestead-clear' AND delta=0") != 1 {
+		t.Fatal("a free clearing", a.State.Glims, before)
+	}
 }
 
 func TestHomes2CrossWorldIsolation(t *testing.T) {
