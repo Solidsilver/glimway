@@ -141,9 +141,3 @@ export class Library {
     return { ok: true, entry: { paperId, donatedBy: playerName(this.session), donatedAt: donationFlag(paperId, now).split('@')[1] } }
   }
 }
-
-/** Test seam: forget what this page learned about the server's library. */
-export function resetLibraryCache(): void {
-  remoteUnsupported = false
-  lastShared = []
-}

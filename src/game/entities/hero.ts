@@ -28,7 +28,7 @@ import type { EnemySystem } from './enemies'
 import type { Projectiles } from './projectiles'
 import type { AvatarVisual } from './avatar'
 import type { Effects } from './fx'
-import { MoveFx } from './moves'
+import { MoveFx, healHero } from './moves'
 import { presence } from '../presence'
 import { expose } from '../dev-hooks'
 import { SEAT_CUT, SEATED_MANA_BONUS, manaRegenRate, type SeatPose } from '../seats'
@@ -122,6 +122,8 @@ export class Hero {
       return {
         signature: kit.signature?.id ?? null,
         move: kit.move?.id ?? null,
+        wardPulseHeal: kit.wardPulseHeal,
+        shown: this.moves.shown(),
         castCooldown: this.castCooldown,
         moveCooldown: this.moveCooldown,
         planted: this.field.planted,
@@ -469,7 +471,7 @@ export class Hero {
         }
         if (kit.healAmount > 0) {
           this.deps.fx.sparkBurst(this.sprite.x, this.sprite.y - 12, 6)
-          this.deps.session.setVitals(this.deps.session.state.hp + kit.healAmount, this.deps.session.state.mana)
+          healHero(this.deps.session, this.deps.fx, this.sprite, kit.healAmount)
         }
         break
       }

@@ -243,7 +243,10 @@ export declare const PresenceEmoteSchema: GenMessage<PresenceEmote, {validType: 
 /**
  * A combat move cast on screen (design 4.5), so friends see it. The client
  * sends it without account_id; the hub checks the table and the caster's
- * class and level, then relays it with account_id filled.
+ * class and level, then relays it with account_id filled. For Ward-light the
+ * hub also fills pulse_heal: one pulse of the caster's ward, from the
+ * caster's profile (rules.WardPulseHeal), so a friend's screen mends what the
+ * world credits. Whatever a client sends there is overwritten.
  *
  * @generated from message glimway.v2.PresenceAbility
  */
@@ -267,6 +270,11 @@ export declare type PresenceAbility = Message<"glimway.v2.PresenceAbility"> & {
    * @generated from field: optional string account_id = 4;
    */
   accountId?: string | undefined;
+
+  /**
+   * @generated from field: optional double pulse_heal = 5;
+   */
+  pulseHeal?: number | undefined;
 };
 
 export declare type PresenceAbilityValid = PresenceAbility;

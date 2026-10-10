@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { MAX_CANVAS_RATIO, canvasZoomFor, screenCanvasRatio, zoomFor } from '../src/game/viewport.ts'
+import { MAX_CANVAS_RATIO, canvasZoomFor, screenCanvasRatio, snapScroll, zoomFor } from '../src/game/viewport.ts'
 import { PHONE_SCREEN_SCALE, densityFor } from '../src/game/density.ts'
 import { ART_DENSITY, PHONE_ART_DENSITY } from '../src/game/atlas-plan.ts'
 
@@ -47,4 +47,18 @@ test('densityFor: phones keep the texels their canvas shows', () => {
   assert.equal(densityFor(true, true, 2), PHONE_ART_DENSITY, 'a 2× phone: 4 canvas px a world px')
   assert.equal(densityFor(true, true, 3), PHONE_ART_DENSITY, 'a 3× phone: 6 canvas px a world px')
   assert.ok(PHONE_ART_DENSITY <= ART_DENSITY, 'phones never keep more than the packs hold')
+})
+
+test('snapScroll: the world lands on whole canvas pixels at a fractional zoom, at most half a pixel from the eased scroll', () => {
+  for (const zoom of [1.5, 2.5, 3, 2.25, 4.5]) {
+    for (const origin of [400, 400.5, 683]) {
+      for (let scroll = -20; scroll < 40; scroll += 0.37) {
+        const s = snapScroll(scroll, origin, zoom)
+        const px = (s + origin) * zoom
+        assert.ok(Math.abs(px - Math.round(px)) < 1e-9, `zoom ${zoom} origin ${origin} scroll ${scroll}: ${px}`)
+        assert.ok(Math.abs(s - scroll) * zoom <= 0.5 + 1e-9, 'never more than half a canvas pixel off')
+      }
+    }
+  }
+  assert.equal(snapScroll(12.5, 400, 0), 12.5, 'no zoom yet: left as it is')
 })

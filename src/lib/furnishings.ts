@@ -2,19 +2,13 @@ import raw from '../../content/furnishings.json' with { type: 'json' };
 import { decodeContent } from './content-proto.ts';
 import {
   FurnishingsSchema,
-  type FurnishBaseValid,
   type FurnishingValid,
   type FurnishingsValid,
-  type FurnishOffersValid,
-  type FurnishStateValid,
 } from './gen/glimway/content/v1/furnishings_pb.js';
 
 /** The generated messages (proto/glimway/content/v1/furnishings.proto), with the schema's required fields non-optional. */
 export type Furnishings = FurnishingsValid;
 export type Furnishing = FurnishingValid;
-export type FurnishBase = FurnishBaseValid;
-export type FurnishOffers = FurnishOffersValid;
-export type FurnishState = FurnishStateValid;
 
 /**
  * The one furnishings catalogue (design 2.8): every placeable piece, the

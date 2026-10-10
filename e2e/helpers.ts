@@ -265,6 +265,30 @@ export async function waitGame<T>(
 }
 
 /**
+ * Waits until `read` gives the same value for `n` frames in a row (compared
+ * as JSON): "it has stopped", without betting on two samples landing after
+ * the last coasting frame. Returns that value. `seconds` is game time, as in
+ * waitGame.
+ */
+export async function steady<T>(page: Page, read: () => Promise<T>, opts: { frames: number; seconds: number; message?: string }): Promise<T> {
+  let last = ''
+  let same = 0
+  const out = await waitGame(
+    page,
+    async () => {
+      const v = await read()
+      const k = JSON.stringify(v)
+      same = k === last ? same + 1 : 0
+      last = k
+      return { v, same }
+    },
+    (s) => s.same >= opts.frames,
+    { seconds: opts.seconds, message: opts.message ?? 'a steady value' }
+  )
+  return out.v
+}
+
+/**
  * Like waitGame, but checked inside the page on every frame, so a short-lived
  * state (a slime's wind-up) can't slip between two polls. `predicate` runs
  * in the page (no outer variables; pass them in `arg`) and returns a truthy

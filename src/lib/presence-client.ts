@@ -69,7 +69,7 @@ export interface PresenceHandlers {
   pos?(accountId: string, pos: PresencePosition): void;
   emote?(accountId: string, id: string): void;
   /** Someone in the room cast a move (the hub checked it against the table and their marks). */
-  ability?(accountId: string, cast: { ability: string; x: number; y: number }): void;
+  ability?(accountId: string, cast: { ability: string; x: number; y: number; pulseHeal?: number }): void;
   /** Someone standing by you handed you something (the server says who and what). */
   gift?(gift: { fromName: string; kind: string; itemDef: string; qty: number }): void;
   /** Someone standing near you reached a story beat (the server says who and which). */
@@ -444,7 +444,7 @@ export class PresenceClient {
         if (typeof m.accountId === 'string' && PRESENCE.emotes.includes(m.id)) this.handlers.emote?.(m.accountId, m.id);
         break;
       case 'ability':
-        if (typeof m.accountId === 'string' && abilityFor(m.ability) && Number.isFinite(m.x) && Number.isFinite(m.y)) this.handlers.ability?.(m.accountId, { ability: m.ability, x: m.x, y: m.y });
+        if (typeof m.accountId === 'string' && abilityFor(m.ability) && Number.isFinite(m.x) && Number.isFinite(m.y)) this.handlers.ability?.(m.accountId, { ability: m.ability, x: m.x, y: m.y, ...(m.pulseHeal !== undefined ? { pulseHeal: m.pulseHeal } : {}) });
         break;
       case 'gift':
         if (typeof m.fromName === 'string' && typeof m.itemDef === 'string' && typeof m.kind === 'string' && Number.isInteger(m.qty) && m.qty > 0) {

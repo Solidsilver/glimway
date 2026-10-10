@@ -12,25 +12,20 @@
 import type Phaser from 'phaser'
 import { loadCompanion } from '../avatar-render'
 import { crArt } from '../crafts-art'
-import { STALL_REACH, bayFront, bayFrontPiece, stableFootprint, stableLayout } from '../../lib/stable-layout'
+import { STALL_REACH, bayFront, bayFrontPiece, bayStand, stableFootprint, stableLayout, STALLED_DEPTH } from '../../lib/stable-layout'
 import { COMPANION_SCALE } from './pet-follower'
 import { TILE } from '../../lib/tile'
 import type { HomeView, StallView } from '../../lib/api/types'
 import { HOMESTEAD_DATA, stallCost, stallGroundProblem, type HomeInstance } from '../../lib/homestead'
 import { clearedSet, servedLand } from '../../lib/homestead-land'
 import { predictStableExtend } from '../../lib/api/predict'
-import { companionName } from '../../lib/companions'
+import { MOUNT_FEET, companionName } from '../../lib/companions'
 import { companionErrorText } from '../../content/errors'
 import { bus, EV } from '../events'
 import type { Session } from '../session'
 import type { Interactable } from './interactables'
 import { wantSaddle } from './avatar'
 import { short } from './homestead-art'
-
-/** Where a stalled mount's feet stand: this far above the footprint's bottom edge, inside the bay. */
-const MOUNT_FLOOR = 7
-/** Habitica's mount canvas (135 px): its feet near row 110, its middle near column 61 (as ./led-mount.ts). */
-const MOUNT_FEET = { x: -6, y: 42.5 }
 
 export interface StableDrawOpts {
   /** Ghost (placement mode): faint, no mounts. */
@@ -77,7 +72,10 @@ export function drawStable(
     const st = stalls.find((s) => s.stall === bay.stall)
     const home = !!st?.mount && !st.out
     image(bayFrontPiece(bay, home && !opts.ghost).frame, bayFrontPiece(bay, home && !opts.ghost).x, opts.depth)
-    if (home && !opts.ghost) void drawMount(scene, st!.mount, bx + bay.x + bay.w / 2, by - MOUNT_FLOOR, opts, add, alive)
+    if (home && !opts.ghost) {
+      const at = bayStand(bx, by, count, bay.stall)
+      void drawMount(scene, st!.mount, at.x, at.y, opts, add, alive)
+    }
   }
 }
 
@@ -95,7 +93,7 @@ async function drawMount(
   if (!keys || !alive()) return
   const s = COMPANION_SCALE
   for (const k of keys) {
-    const img = add(scene.add.image(x - MOUNT_FEET.x * s, y - MOUNT_FEET.y * s, k).setScale(s).setDepth(opts.depth - 0.15))
+    const img = add(scene.add.image(x - MOUNT_FEET.x * s, y - MOUNT_FEET.y * s, k).setScale(s).setDepth(opts.depth + STALLED_DEPTH))
     img.setData('stalled', key)
     if (opts.desolate) img.setTint(0xa0a0aa)
   }

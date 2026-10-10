@@ -107,7 +107,7 @@ function rig() {
       leave: (id) => events.push({ leave: id }),
       pos: (id, p) => events.push({ pos: id, x: p.x }),
       emote: (id, e) => events.push({ emote: id, id: e }),
-      ability: (id, a) => events.push({ ability: a.ability, id, x: a.x, y: a.y }),
+      ability: (id, a) => events.push({ ability: a.ability, id, x: a.x, y: a.y, ...(a.pulseHeal !== undefined ? { pulseHeal: a.pulseHeal } : {}) }),
       witness: (w) => events.push({ witness: w.beat, id: w.accountId, name: w.name }),
     },
   });
@@ -297,7 +297,8 @@ test('moves: table ids only, each on its own cooldown; the room’s casts come t
   assert.deepEqual(r.sock().sent.filter((m) => m.type === 'ability').map((m) => [m.ability, m.x]), [['kindle', 10], ['fingersnap', 10], ['kindle', 12]]);
   r.sock().push({ type: 'ability', accountId: 'friend', ability: 'ward-light', x: 5, y: 6 });
   r.sock().push({ type: 'ability', accountId: 'friend', ability: 'nonsense', x: 5, y: 6 });
-  assert.deepEqual(r.events.filter((e) => 'ability' in e), [{ ability: 'ward-light', id: 'friend', x: 5, y: 6 }]);
+  r.sock().push({ type: 'ability', accountId: 'friend', ability: 'ward-light', x: 5, y: 6, pulseHeal: 6.4 });
+  assert.deepEqual(r.events.filter((e) => 'ability' in e), [{ ability: 'ward-light', id: 'friend', x: 5, y: 6 }, { ability: 'ward-light', id: 'friend', x: 5, y: 6, pulseHeal: 6.4 }], 'the hub\'s pulse travels with the cast');
 });
 
 test('a still socket sends a heartbeat about every 20 s; activity postpones it', () => {

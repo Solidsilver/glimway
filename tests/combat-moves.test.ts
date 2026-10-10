@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CombatField, inCircle, kindleSpot, wardPulseTimes } from '../src/lib/combat-moves.ts';
+import { CombatField, friendPulseHeal, inCircle, kindleSpot, wardPulseHeal, wardPulseTimes } from '../src/lib/combat-moves.ts';
+import { getCombatKit } from '../src/lib/combat.ts';
+import { HEAL_FORMULA } from '../src/lib/combat-timing.ts';
+import { toHabiticaProfile } from '../src/lib/habitica/mapping.ts';
+import { FIXTURES_BY_KEY, gearLookupFor } from '../src/lib/habitica/fixtures.ts';
 import { abilityFor } from '../src/lib/abilities.ts';
 
 test('Ward-light pulses at 1, 2.5 and 4 s for the table’s 5 s and 3 pulses', () => {
@@ -51,4 +55,17 @@ test('the field: Stand plants for its seconds, patches slow what stands in them,
 test('inCircle counts the rim', () => {
   assert.ok(inCircle(3, 4, 0, 0, 5));
   assert.ok(!inCircle(3, 4.01, 0, 0, 5));
+});
+
+test('one pulse formula on both screens: the caster\'s pulse is what the friend mends when the hub relays it', () => {
+  const fraction = abilityFor('ward-light')!.numbers!.pulseHealFraction!;
+  const f = FIXTURES_BY_KEY.lowLevel;
+  const healer = getCombatKit({ ...toHabiticaProfile(f.user, gearLookupFor(f.gearStats)), class: 'healer', level: 20, stats: { str: 0, int: 60, con: 0, per: 0 } });
+  // The caster's own screen.
+  assert.equal(healer.wardPulseHeal, wardPulseHeal(healer.healAmount, fraction));
+  assert.ok(healer.wardPulseHeal > wardPulseHeal(HEAL_FORMULA.base, fraction), 'INT 60 out-heals the base share');
+  // The friend's screen, with the hub's number on the cast (it fills rules.WardPulseHeal, the same product).
+  assert.equal(friendPulseHeal(healer.wardPulseHeal, fraction), healer.wardPulseHeal);
+  // A cast that carried none (or nonsense) falls back to the base share.
+  for (const none of [undefined, 0, -2, Number.NaN]) assert.equal(friendPulseHeal(none, fraction), wardPulseHeal(HEAL_FORMULA.base, fraction));
 });

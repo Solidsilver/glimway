@@ -288,6 +288,8 @@ export interface AbilityCastPayload {
   ability: string
   x: number
   y: number
+  /** A Ward-light's pulse, from the hub (the caster's own Mend share); absent on anything else. */
+  pulseHeal?: number
 }
 
 export interface CinematicPayload {

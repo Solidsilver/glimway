@@ -1,5 +1,5 @@
 import raw from '../../content/residents.json' with { type: 'json' };
-import { ResidentsSchema, type ResidentPhaseValid, type ResidentSpotValid, type ResidentValid, type ResidentsValid } from './gen/glimway/content/v1/residents_pb.js';
+import { ResidentsSchema, type ResidentSpotValid, type ResidentValid, type ResidentsValid } from './gen/glimway/content/v1/residents_pb.js';
 import { knownContentArea, roomFor, roomContainsTile, roomWalkable, type Room } from './rooms.ts';
 import { cycleAt } from './clock.ts';
 import { decodeContent } from './content-proto.ts';
@@ -8,7 +8,6 @@ import { decodeContent } from './content-proto.ts';
 export type Residents = ResidentsValid;
 export type Resident = ResidentValid;
 export type ResidentSpot = ResidentSpotValid;
-export type ResidentPhase = ResidentPhaseValid;
 
 /** The rules that reach into rooms and the cycle's arithmetic: duplicate ids, an offset inside the period, spot areas and homes that name rooms, spots that stand somewhere real, and a cycle whose minutes make one full period. Field rules live on the schema. */
 function residentRules(doc: Residents): void {

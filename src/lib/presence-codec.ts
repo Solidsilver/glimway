@@ -61,7 +61,9 @@ export function decodePresence(data: unknown): PresenceServerMessage | null {
     }
     case 'ability': {
       const a = event.value;
-      return a.accountId !== undefined && Number.isFinite(a.x) && Number.isFinite(a.y) ? { type: 'ability', accountId: a.accountId, ability: a.ability, x: a.x, y: a.y } : null;
+      if (a.accountId === undefined || !Number.isFinite(a.x) || !Number.isFinite(a.y)) return null;
+      const heal = a.pulseHeal !== undefined && Number.isFinite(a.pulseHeal) && a.pulseHeal > 0 ? { pulseHeal: a.pulseHeal } : {};
+      return { type: 'ability', accountId: a.accountId, ability: a.ability, x: a.x, y: a.y, ...heal };
     }
     default: return null;
   }

@@ -5,10 +5,9 @@
  */
 import raw from '../../content/abilities.json' with { type: 'json' };
 import { decodeContent } from './content-proto.ts';
-import { AbilitiesSchema, type AbilityValid, type AbilitiesValid, type AbilityNumbersValid } from './gen/glimway/content/v1/abilities_pb.js';
+import { AbilitiesSchema, type AbilityValid, type AbilitiesValid } from './gen/glimway/content/v1/abilities_pb.js';
 
 export type Ability = AbilityValid;
-export type AbilityNumbers = AbilityNumbersValid;
 /** The ability table (proto/glimway/content/v1/abilities.proto), with the schema's required fields non-optional. */
 export type AbilitiesData = AbilitiesValid;
 
@@ -46,11 +45,6 @@ export function abilityFor(id: string): Ability | undefined {
 /** A hero's moves: their class's signature and combat move (design 4.2). */
 export function abilitiesForClass(klass: string): Ability[] {
   return ABILITIES.abilities.filter((a) => a.class === klass);
-}
-
-/** What the class's signature costs (its `mana`; design 4.1). */
-export function signatureMana(klass: string): number {
-  return abilitiesForClass(klass).find((a) => a.kind === 'signature')?.mana ?? 0;
 }
 
 /** The moves a hero has: their craft's moves at or below their level mark. */

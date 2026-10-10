@@ -138,6 +138,40 @@ test('a profile sync carries a barrier', async (t) => {
   assert.equal(reports(r)[0]!.hp, 5);
 });
 
+test('a rest right after an answered report stands on that report: no twin goes (review F5)', async (t) => {
+  const r = await rig(t, { state: S({ hp: 20 }) });
+  await online(r, S({ hp: 20 }));
+  r.server.on('POST /api/report', keeper(r));
+  r.session.state.hp = 12;
+  r.link.reportDeadline();
+  await r.link.flush();
+  assert.equal(reports(r).length, 1);
+  r.server.on('POST /api/spend', env(S({ version: 9, hp: 50, vitalsSetVersion: 9 }), { spend: { outcome: '' } }));
+  assert.equal(await r.link.spend({ kind: 'rest' }), null);
+  assert.equal(reports(r).length, 1, 'nothing happened since: the last acknowledgment is the barrier');
+  assert.deepEqual(r.server.sent('POST /api/spend')[0]!.body.op.report, { client: 'rc', generation: 'gen-1', seq: 1 });
+  // The rest wrote the vitals: the next barrier needs a report on them.
+  r.server.on('POST /api/spend', env(S({ version: 11, hp: 50, vitalsSetVersion: 11 }), { spend: { outcome: '' } }));
+  assert.equal(await r.link.spend({ kind: 'rest' }), null);
+  assert.deepEqual(reports(r).map((b) => b.seq), [1, 2]);
+  assert.equal(r.server.sent('POST /api/spend')[1]!.body.op.report.seq, 2);
+});
+
+test('a captured report settled by a barrier is the barrier when nothing happened after it (review F5)', async (t) => {
+  const r = await rig(t, { state: S({ hp: 20 }) });
+  await online(r, S({ hp: 20 }));
+  // The first answer is for some other report: this one stays captured.
+  r.server.on('POST /api/report', (c) => ackReport(() => S({ hp: 20 }))({ ...c, body: { ...c.body, seq: 99 } }), keeper(r));
+  r.session.state.hp = 10;
+  r.link.reportSoon();
+  await r.link.flush();
+  assert.equal(r.link.reports.captured?.hp, 10);
+  r.server.on('POST /api/spend', env(S({ version: 9, hp: 50, vitalsSetVersion: 9 }), { spend: { outcome: '' } }));
+  assert.equal(await r.link.spend({ kind: 'rest' }), null);
+  assert.deepEqual(reports(r).map((b) => [b.seq, b.hp]), [[1, 10], [1, 10]], 'the captured report again, and no twin after it');
+  assert.equal(r.server.sent('POST /api/spend')[0]!.body.op.report.seq, 1);
+});
+
 // ---------------------------------------------------------------- 12. periodic reports
 
 test('the ten-second deadline reports even an idle hero at full vitals, every time', async (t) => {

@@ -6,6 +6,8 @@ import (
 	"glimway/server/internal/rules"
 	"math"
 	"time"
+
+	"google.golang.org/protobuf/proto"
 )
 
 // The hub's side of the moves (docs/design/crafts.md 4.5): what a cast must
@@ -224,7 +226,7 @@ func (h *presenceHub) scheduleWard(p *presencePeer, event *contract.PresenceAbil
 	if n == nil || n.GetPulses() <= 0 || n.GetPulseHealFraction() <= 0 {
 		return
 	}
-	pulse := p.identity.Magic.Heal * n.GetPulseHealFraction()
+	pulse := wardPulseOf(p.identity.Magic, a)
 	if pulse <= 0 {
 		return
 	}
@@ -237,6 +239,29 @@ func (h *presenceHub) scheduleWard(p *presencePeer, event *contract.PresenceAbil
 		}
 		time.AfterFunc(offset, func() { h.wardPulse(world, area, caster, cx, cy, radius, pulse) })
 	}
+}
+
+// wardPulseOf: one pulse of a ward the caster casts, rules.WardPulseHeal
+// from their profile (presenceMagic keeps the Mend); 0 for any other move or
+// craft. The relay and the credit both read it, so a friend's screen mends
+// what the world credits (review finding 11).
+func wardPulseOf(m presenceMagic, a *content.Ability) float64 {
+	return m.Heal * a.GetNumbers().GetPulseHealFraction()
+}
+
+// relayedAbility is the cast the room hears (4.5): the sender's account_id
+// and, for a Ward-light, the hub's own pulse_heal; whatever the client put
+// there goes. Callers hold h.mu (the caster's magic refreshes under it).
+func relayedAbility(p *presencePeer, event *contract.PresenceAbility) ([]byte, error) {
+	out := proto.Clone(event).(*contract.PresenceAbility)
+	out.AccountId = proto.String(p.identity.ID)
+	out.PulseHeal = nil
+	if a, ok := content.AbilityFor(event.GetAbility()); ok {
+		if pulse := wardPulseOf(p.identity.Magic, a); pulse > 0 {
+			out.PulseHeal = proto.Float64(pulse)
+		}
+	}
+	return encodePresence(out)
 }
 
 // wardPulse: one pulse of one ward (4.5). Idle players count: the hub keeps

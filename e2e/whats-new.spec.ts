@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { devices } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
 import { freshPlayer } from './home-helpers'
+import { frames, waitForLive } from './helpers'
 
 /**
  * The "What's new" card (src/ui/whats-new.svelte.ts): after an update, the
@@ -33,6 +34,18 @@ async function seenBefore(page: Page, version = PREVIOUS): Promise<void> {
   }, [KEY, version] as const)
 }
 
+/**
+ * The moment the catch-up card would show, instead of waiting out a guess at
+ * it: the world is live (play began, so the card's choice is made) and no
+ * banner holds the notices (a first visit's arrival card comes first), then
+ * a few frames more.
+ */
+async function wouldShowBy(page: Page): Promise<void> {
+  await waitForLive(page)
+  await page.waitForFunction(() => (window as unknown as { __fsBanners?: () => { current: unknown } }).__fsBanners?.()?.current === null, undefined, { timeout: 20_000 })
+  await frames(page, 10)
+}
+
 const stored = (page: Page) => page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? 'null'), KEY)
 
 test('after an update the card says what’s new, once', async ({ page }) => {
@@ -51,13 +64,13 @@ test('after an update the card says what’s new, once', async ({ page }) => {
 
   await page.reload()
   await page.getByTestId('continue-world').click()
-  await page.waitForTimeout(3000)
+  await wouldShowBy(page)
   await expect(card(page)).toBeHidden()
 })
 
 test('a first visit catches up quietly, and the Menu shows the newest lines any time', async ({ page }) => {
   await freshPlayer(page)
-  await page.waitForTimeout(2500)
+  await wouldShowBy(page)
   await expect(card(page)).toBeHidden()
   expect(await stored(page)).toEqual({ version: RUNNING, build: 'dev' })
 

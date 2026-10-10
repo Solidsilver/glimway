@@ -1,7 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { STALL_REACH, bayFront, bayFrontPiece, stableFootprint, stableLayout } from '../src/lib/stable-layout.ts'
+import { MOUNT_FLOOR, STALLED_DEPTH, STALL_REACH, bayFront, bayFrontPiece, bayStand, homeBay, stableFootprint, stableLayout } from '../src/lib/stable-layout.ts'
+import { HOMESTEAD_DATA } from '../src/lib/homestead.ts'
+import type { HomeView } from '../src/lib/api/homestead.ts'
 
 const manifest = JSON.parse(readFileSync(new URL('../assets/generated/crafts-pass/manifest.json', import.meta.url), 'utf8')) as {
   frames: Record<string, { canvasSize: { w: number; h: number }; footprint: [number, number] | null }>
@@ -77,4 +79,32 @@ test('stable layout: a stall is only offered where the server lets you saddle up
       }
     }
   }
+})
+
+test('Go home on your own land: your mount walks to its bay’s front, then in to where the stable draws it', () => {
+  // A three-stall stable at tile (10, 4): its footprint is 8 × 3, so its bottom edge is row 7.
+  const home = {
+    id: 'h1',
+    items: [{ itemDef: HOMESTEAD_DATA.stable.item, scene: 'outdoor', x: 10, y: 4, stalls: 3 }],
+    stalls: [
+      { stall: 1, mount: 'Lion-Golden', ownerId: 'ivy', ownerName: 'Ivy', out: false },
+      { stall: 2, mount: 'Wolf-Shade', ownerId: 'me', ownerName: 'Me', out: true },
+      { stall: 3, mount: '', ownerId: '', ownerName: '', out: false },
+    ],
+  } as unknown as HomeView
+  const bx = 10 * 16
+  const by = (4 + stableFootprint(3)[1]) * 16
+  const walk = homeBay(home, 'me', 'Wolf-Shade')
+  assert.ok(walk)
+  assert.deepEqual(walk.front, bayFront(bx, by, 3, 2), 'first to the bay’s front, where you stand to use it')
+  assert.deepEqual(walk.stand, bayStand(bx, by, 3, 2), 'then in, where a stalled mount stands')
+  assert.equal(walk.stand.x, walk.front.x, 'straight in through the half door')
+  assert.equal(walk.stand.y, by - MOUNT_FLOOR)
+  assert.equal(walk.depth, by + STALLED_DEPTH, 'between the bay’s back and its front')
+  // Elsewhere it walks off the screen: a partner’s mount, a mount not stalled here, no stable, no land.
+  assert.equal(homeBay(home, 'me', 'Lion-Golden'), null)
+  assert.equal(homeBay(home, 'me', 'Fox-Base'), null)
+  assert.equal(homeBay({ ...home, items: [] }, 'me', 'Wolf-Shade'), null)
+  assert.equal(homeBay(null, 'me', 'Wolf-Shade'), null)
+  assert.equal(homeBay(home, null, 'Wolf-Shade'), null)
 })

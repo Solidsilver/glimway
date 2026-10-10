@@ -182,27 +182,6 @@ export interface WildsClaimResponse extends Snapshot {
   result: WildsClaimResult;
 }
 
-export interface WildsDefeatRequest {
-  lease: string;
-  baseRev: number;
-  epoch: string;
-  /** Region-wide tile coordinates ([0,72) for inner-1). */
-  x: number;
-  y: number;
-  key: string;
-  progress?: Progress;
-}
-
-export interface WildsDefeatResult {
-  epoch: string;
-  lanternId: string;
-  lanterns: WildsLanternView[];
-}
-
-export interface WildsDefeatResponse extends Snapshot {
-  result: WildsDefeatResult;
-}
-
 export interface WildsLanternRequest {
   lease: string;
   baseRev: number;
@@ -219,10 +198,6 @@ export interface WildsLanternResult {
   loot: WildsLoot;
   materials: WildsMaterials;
   lanterns: WildsLanternView[];
-}
-
-export interface WildsLanternResponse extends Snapshot {
-  result: WildsLanternResult;
 }
 
 // ------------------------------------------------------------ homesteads

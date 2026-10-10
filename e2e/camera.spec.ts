@@ -285,3 +285,30 @@ test('phone at 3×, turned to landscape: the same framing, the hero clear of the
   expect(errors, 'uncaught page errors').toEqual([])
   await context.close()
 })
+
+test('a 1× screen: the camera pans on whole canvas pixels, so the pixel art holds still while it moves', async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ baseURL, viewport: { width: 1200, height: 760 }, deviceScaleFactor: 1 })
+  const page = await context.newPage()
+  await freshPlayer(page)
+  await warp(page, 'village', 16, 18)
+  await waitForLive(page)
+  const camera = () => page.evaluate(() => (window as unknown as { __fsDevCamera: () => { scrollX: number; scrollY: number; zoom: number; originX: number; originY: number } }).__fsDevCamera())
+  const samples: Awaited<ReturnType<typeof camera>>[] = []
+  // Walk right and down a little: the follow eases the camera after the hero.
+  await page.keyboard.down('d')
+  await page.keyboard.down('s')
+  for (let i = 0; i < 24; i++) {
+    await frames(page, 2)
+    samples.push(await camera())
+  }
+  await page.keyboard.up('s')
+  await page.keyboard.up('d')
+  expect(new Set(samples.map((c) => c.scrollX)).size, 'the camera panned').toBeGreaterThan(3)
+  for (const c of samples) {
+    const x = (c.scrollX + c.originX) * c.zoom
+    const y = (c.scrollY + c.originY) * c.zoom
+    expect(Math.abs(x - Math.round(x)), `x at zoom ${c.zoom}`).toBeLessThan(1e-6)
+    expect(Math.abs(y - Math.round(y)), `y at zoom ${c.zoom}`).toBeLessThan(1e-6)
+  }
+  await context.close()
+})

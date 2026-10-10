@@ -7,6 +7,7 @@
  * None of it touches the Warden.
  */
 import { TILE } from './tile.ts';
+import { HEAL_FORMULA } from './combat-timing.ts';
 
 /** Planted (Stand): a lunge that would reach the hero stops short and staggers. */
 export interface FieldStand {
@@ -108,4 +109,23 @@ export function wardPulseTimes(durationSeconds: number, pulses: number): number[
   const last = Math.max(first, durationSeconds - 1);
   const step = (last - first) / (pulses - 1);
   return Array.from({ length: pulses }, (_, i) => Math.round((first + step * i) * 1000) / 1000);
+}
+
+/**
+ * One Ward-light pulse (crafts.md 4.3: "each pulse is 0.4 of your Mend"):
+ * the caster's Mend times the table's share, unrounded, exactly as the
+ * server's rules.WardPulseHeal credits it (content/vectors/magic.json pins
+ * the two together).
+ */
+export function wardPulseHeal(mend: number, pulseHealFraction: number): number {
+  return mend * pulseHealFraction;
+}
+
+/**
+ * A friend's pulse on this screen: the hub's own number when the relayed
+ * cast carries one (filled from the caster's profile), else a Mend's base
+ * share — the friend's stats aren't on this screen.
+ */
+export function friendPulseHeal(relayed: number | undefined, pulseHealFraction: number): number {
+  return relayed !== undefined && Number.isFinite(relayed) && relayed > 0 ? relayed : wardPulseHeal(HEAL_FORMULA.base, pulseHealFraction);
 }
