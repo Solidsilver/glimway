@@ -46,7 +46,8 @@ test('guide tabs show the verified per-platform steps', async ({ page }) => {
   await page.getByText('Why does it need my token?').click()
   await expect(page.getByText('Habitica API tokens aren’t read-only')).toBeVisible()
   // The token reaches the world server once, at sign-in, and is never kept.
-  await expect(page.locator('.guide')).toContainText('sees it once, at sign-in')
+  // 0.6: the server also sees it in a top-up or a gear check the player starts (purse-and-wardrobe.md 6.6).
+  await expect(page.locator('.guide')).toContainText('sees it at sign-in to prove your account, and in a top-up or a gear check you start')
 })
 
 test('labeled paste → the world signs in → play', async ({ page }) => {

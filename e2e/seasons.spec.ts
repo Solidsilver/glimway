@@ -56,8 +56,9 @@ test('Hazel sells a lump of tallow for an ember, in her own words', async ({ pag
   await openTalk(page, 'Talk to Hazel')
   const choices = await untilChoices(page)
   expect(choices.map((c) => c.text)).toContain(tallow.label)
-  expect(choices.map((c) => c.text)).toEqual(['Give it back', tallow.label, 'Not yet'])
-  await readDialogue(page, { pick: /Buy a lump of tallow/ })
+  // 0.6: her goods carry a gold price too, offered beside the ember one (purse-and-wardrobe.md 3.1).
+  expect(choices.map((c) => c.text)).toEqual(['Give it back', tallow.label, tallow.goldLabel, 'Not yet'])
+  await readDialogue(page, { pick: new RegExp(`^${tallow.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) })
   // Her line is the reply, and the toast says it again when the tallow lands.
   const said = (await page.evaluate(() => (window as unknown as { __fsDialogue: () => { said: string[] } }).__fsDialogue().said)) ?? []
   expect(said).toContain(tallow.line)
