@@ -71,6 +71,12 @@ type purseReadWire struct {
 // wardrobeCheckAnswer is the envelope lane E reads: the list under
 // wardrobeCheck, or the refusal's code.
 type wardrobeCheckAnswer struct {
+	State struct {
+		Version  int64 `json:"version"`
+		Wardrobe struct {
+			Chosen map[string]string `json:"chosen"`
+		} `json:"wardrobe"`
+	} `json:"state"`
 	WardrobeCheck struct {
 		Owned     []string `json:"owned"`
 		CheckedAt float64  `json:"checkedAt"`
@@ -762,12 +768,23 @@ func TestWardrobeCheck(t *testing.T) {
 	if got := queryGear(t, x, account); strings.Join(got, ",") != "armor_warrior_1,weapon_warrior_1" {
 		t.Fatal("player_gear", got)
 	}
+	// A check that changes nothing moves no version.
+	x.chooseWardrobe(c, s, "wear", map[string]string{"armor": "armor_warrior_1"}, 200)
+	version := count(t, x.db, "SELECT version FROM players WHERE account_id=?", account)
+	if _, same := x.checkGear(s.Lease, secret, c); same.State.Version != int64(version) || same.State.Wardrobe.Chosen["armor"] != "armor_warrior_1" {
+		t.Fatalf("an unchanged check: version %d (was %d), %v", same.State.Version, version, same.State.Wardrobe.Chosen)
+	}
 	// A lapsed piece reads as gone after a check without it (4.2's rule is
-	// the wardrobe's; the stored list is the server's own read).
+	// the wardrobe's; the stored list is the server's own read). The resolved
+	// choice on the state changed, so the answer is a newer version: a
+	// client holding the old one adopts it.
 	x.setOwned(map[string]bool{"weapon_warrior_1": true})
-	x.checkGear(s.Lease, secret, c)
+	_, lapsed := x.checkGear(s.Lease, secret, c)
 	if got := queryGear(t, x, account); strings.Join(got, ",") != "weapon_warrior_1" {
 		t.Fatal("player_gear after a lapsed piece", got)
+	}
+	if lapsed.State.Version <= int64(version) || len(lapsed.State.Wardrobe.Chosen) != 0 {
+		t.Fatalf("a lapsed piece: version %d (was %d), %v", lapsed.State.Version, version, lapsed.State.Wardrobe.Chosen)
 	}
 	// A guest has no wardrobe (section 5).
 	if _, err := x.db.DB.Exec("UPDATE players SET profile_source='none' WHERE account_id=?", account); err != nil {

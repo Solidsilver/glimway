@@ -572,10 +572,29 @@ func (s *Store) SettleTopUpByOwner(ctx context.Context, id, outcome string, now 
 // (4.3): sign-in, a top-up, and the wardrobe's gear check. The list is the
 // sorted keys the catalog knows and the player owns; the browser never
 // writes it, and it is never part of PlayerState.
+//
+// PlayerState.wardrobe is the choice resolved against this list, so a list
+// that changes under a stored choice (a piece lapsed or came back) moves the
+// account's version: the answer carrying the new resolution is newer, and a
+// client adopts it.
 func WritePlayerGear(ctx context.Context, tx *sql.Tx, account string, owned []string, now int64) error {
 	list := JSON(append([]string{}, owned...))
-	_, err := tx.ExecContext(ctx, "INSERT INTO player_gear(account_id,owned_json,checked_at) VALUES(?,?,?) ON CONFLICT(account_id) DO UPDATE SET owned_json=excluded.owned_json,checked_at=excluded.checked_at", account, list, now)
-	return err
+	var before sql.NullString
+	err := tx.QueryRowContext(ctx, "SELECT owned_json FROM player_gear WHERE account_id=?", account).Scan(&before)
+	if err != nil && err != sql.ErrNoRows {
+		return err
+	}
+	if _, err = tx.ExecContext(ctx, "INSERT INTO player_gear(account_id,owned_json,checked_at) VALUES(?,?,?) ON CONFLICT(account_id) DO UPDATE SET owned_json=excluded.owned_json,checked_at=excluded.checked_at", account, list, now); err != nil {
+		return err
+	}
+	if before.String == list {
+		return nil
+	}
+	var chosen bool
+	if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM player_wardrobe WHERE account_id=?)", account).Scan(&chosen); err != nil || !chosen {
+		return err
+	}
+	return BumpAccountVersion(ctx, tx, account)
 }
 
 // PlayerGear reads the owned list back, and when the server last read it

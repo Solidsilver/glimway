@@ -61,9 +61,12 @@ async function rereadState(page: Page): Promise<void> {
 
 const menu = (page: Page) => page.getByRole('dialog', { name: 'Menu' })
 
+/** Escape until the Menu is up: a panel still open (a shelf, a mailbox) takes the first one. */
 async function openMenu(page: Page): Promise<void> {
-  if (!(await menu(page).isVisible())) await page.keyboard.press('Escape')
-  await expect(menu(page)).toBeVisible()
+  await expect(async () => {
+    if (!(await menu(page).isVisible())) await page.keyboard.press('Escape')
+    await expect(menu(page)).toBeVisible({ timeout: 1_000 })
+  }).toPass({ timeout: 10_000 })
   await expect(menu(page).getByTestId('purse-card')).toBeVisible()
 }
 
@@ -296,6 +299,9 @@ test('a priced shelf slot: a friend buys it, and both purse logs name the other'
   await expectToast(other, /12 gold/)
   await expect.poll(() => purseOf(ivy)).toBe(8)
   await expect.poll(() => purseOf(wren)).toBe(12)
+  // The shelf stays open after a buy (as after a Take): close it before the Menu.
+  await theirs.getByLabel('Close the gift shelf').click()
+  await expect(theirs).toHaveCount(0)
   expect((await logLines(other))[0]).toMatch(/Bought a comfrey salve from Wren’s shelf\s*− 12/)
   await rereadState(page)
   expect((await logLines(page))[0]).toMatch(/Ivy bought a comfrey salve from your shelf\s*\+ 12/)
@@ -395,7 +401,10 @@ test('handing gold to a friend standing near; refused from across the square', a
   await row.locator(`[data-give-gold-to="${accountOf(rowan)}"]`).click()
   await row.getByTestId('give-gold-amount').fill('5')
   await go(other, 'commons', 8, 30)
-  await expect.poll(() => remotes(page), { timeout: 15_000 }).not.toEqual(['Rowan'])
+  // Still in the Commons (so still on Ash's screen), but past the give
+  // radius (content/items.json: 3 tiles) from Ash at (30, 24).
+  const tilesFromAsh = (p: Page) => p.evaluate(() => ((window as unknown as { __fsRemote?: () => { name: string; x: number; y: number }[] }).__fsRemote?.() ?? []).filter((r) => r.name === 'Rowan').map((r) => Math.hypot(r.x - (30 * 16 + 8), r.y - (24 * 16 + 8)) / 16))
+  await expect.poll(async () => (await tilesFromAsh(page))[0] ?? 0, { timeout: 15_000 }).toBeGreaterThan(3)
   await row.getByTestId('give-gold').click()
   await expect(inv.getByTestId('inv-message')).toHaveText('Stand next to them to hand it over.')
   expect(purseOf(ash)).toBe(25)

@@ -97,9 +97,12 @@ test('the purse read decodes the log, and a working top-up shows', async (t) => 
   await online(r, withPurse(10));
   r.server.on('GET /api/purse', {
     body: {
-      purse: { gold: 10, topUpsLeft: 1, working: topUpRow({ state: 'working', goldAfter: null, settledAt: null }) },
-      topUps: [topUpRow({ state: 'working', goldAfter: null, settledAt: null })],
-      lines: [{ at: 5, delta: -6, reason: 'market-buy', itemDef: 'timber', qty: 4, otherName: '', mailId: '', mailState: '', seller: 'Silas' }],
+      state: withPurse(10),
+      result: {
+        purse: { gold: 10, topUpsLeft: 1, working: topUpRow({ state: 'working', goldAfter: null, settledAt: null }) },
+        topUps: [topUpRow({ state: 'working', goldAfter: null, settledAt: null })],
+        lines: [{ at: 5, delta: -6, reason: 'market-buy', itemDef: 'timber', qty: 4, otherName: '', mailId: '', mailState: '', seller: 'Silas' }],
+      },
     },
   });
   r.server.on('GET /api/state', { body: { state: withPurse(10, { version: 3 }), leaseActive: true } });
@@ -107,4 +110,11 @@ test('the purse read decodes the log, and a working top-up shows', async (t) => 
   assert.ok(read.ok);
   assert.equal(read.ok && read.value.topUps[0]!.state, 'working');
   assert.equal(read.ok && read.value.lines[0]!.seller, 'Silas');
+  // One read shape (the domain reads' { state, result }): a bare read, or one
+  // under an Envelope's oneof, is refused rather than read as empty.
+  const purse = { purse: { gold: 10, topUpsLeft: 1, working: null }, topUps: [], lines: [] };
+  r.server.on('GET /api/purse', { body: purse });
+  assert.deepEqual(await r.link.purseRead(), { ok: false, code: 'bad-response' }, 'a bare read');
+  r.server.on('GET /api/purse', { body: { state: withPurse(10), purseRead: purse } });
+  assert.deepEqual(await r.link.purseRead(), { ok: false, code: 'bad-response' }, 'an envelope case');
 });

@@ -117,20 +117,19 @@ export function createOperationsApi(send: Transport): OperationsApi {
       if (out.result.case !== 'purseTopUp' || !out.result.value.topUp) throw new ApiError('bad-response', { status: 200 });
       return out;
     },
-    async purse() { const raw = await send('GET', '/api/purse'); return validated(() => {
-      // The read's own message; a mixed { state, result } answer is read the same way.
-      const body = raw && typeof raw === 'object' && 'result' in raw && 'state' in raw ? (raw as { result: unknown }).result : raw;
-      const out = decodeWire(PurseReadSchema, body);
+    // Domain reads answer the mixed { state, result } envelope; the read's own message is the result.
+    async purse() { return decodeMixed(await send('GET', '/api/purse'), (r) => {
+      const out = decodeWire(PurseReadSchema, r);
       if (!out.purse || out.purse.gold < 0 || out.purse.topUpsLeft < 0) throw new Error('invalid purse');
       return out;
-    }); },
+    }).result; },
     async fishingWaters(area) { const raw = await send('GET', `/api/fishing/waters?area=${encodeURIComponent(area)}`); return validated(() => {
       const out = decodeWire(FishingWatersSchema, raw);
       for (const w of out.waters) if (!w.id) throw new Error('invalid water');
       return out;
     }); },
     async wardrobe(req) { return decodeEnvelope(await send('POST', '/api/wardrobe', toJson(WardrobeRequestSchema, req, { alwaysEmitImplicit: true }))); },
-    async wardrobeRead() { const raw = await send('GET', '/api/wardrobe'); return validated(() => decodeWire(WardrobeReadSchema, raw)); },
+    async wardrobeRead() { return decodeMixed(await send('GET', '/api/wardrobe'), (r) => decodeWire(WardrobeReadSchema, r)).result; },
     async wardrobeCheck(req) { return decodeEnvelope(await send('POST', '/api/wardrobe/check', toJson(WardrobeCheckRequestSchema, req, { alwaysEmitImplicit: true }))); },
   };
 }

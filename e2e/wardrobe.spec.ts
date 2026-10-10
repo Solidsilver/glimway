@@ -119,7 +119,11 @@ test('a wardrobe choice holds through a reload, and a friend sees it', async ({ 
   await expect(page.getByTestId('wardrobe-slot-head-name')).toHaveText('As on Habitica · none')
   await closePanel(page)
   await expect.poll(() => serverWardrobe(page), { timeout: SERVER_ANSWER_MS }).toEqual({})
-  await expect.poll(async () => (await remotes(other)).map((r) => r.gear?.head ?? null), { timeout: 15_000 }).toEqual([null])
+  // Habitica's own look again: the fixture hero's equipped none-pieces (4.2's
+  // lookFor passes `*_base_0` keys through; they draw nothing).
+  await expect
+    .poll(async () => (await remotes(other)).map((r) => [r.gear?.head ?? null, r.gear?.shield ?? null]), { timeout: 15_000 })
+    .toEqual([['head_base_0', 'shield_base_0']])
   await ctx.close()
 })
 

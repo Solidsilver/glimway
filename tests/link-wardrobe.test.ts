@@ -48,10 +48,16 @@ test('the picker\'s read: owned keys and when they were checked; a read needs a 
   const r = await rig(t);
   assert.deepEqual(await r.link.readWardrobe(), { ok: false, code: 'offline' });
   await online(r);
-  r.server.on('GET /api/wardrobe', { body: { owned: ['head_warrior_1'], wardrobe: { chosen: {} }, checkedAt: 1700000000 } });
+  r.server.on('GET /api/wardrobe', { body: { state: S(), result: { owned: ['head_warrior_1'], wardrobe: { chosen: {} }, checkedAt: 1700000000 } } });
   assert.deepEqual(await r.link.readWardrobe(), { ok: true, value: { owned: ['head_warrior_1'], checkedAt: 1700000000 } });
-  r.server.on('GET /api/wardrobe', { body: { owned: [], wardrobe: { chosen: {} }, checkedAt: null } });
+  r.server.on('GET /api/wardrobe', { body: { state: S(), result: { owned: [], wardrobe: { chosen: {} }, checkedAt: null } } });
   assert.deepEqual(await r.link.readWardrobe(), { ok: true, value: { owned: [], checkedAt: null } }, 'before the first check');
+  // One read shape (the domain reads' { state, result }): a bare read, or one
+  // under an Envelope's oneof, is refused rather than read as empty.
+  r.server.on('GET /api/wardrobe', { body: { owned: [], wardrobe: { chosen: {} }, checkedAt: null } });
+  assert.deepEqual(await r.link.readWardrobe(), { ok: false, code: 'bad-response' }, 'a bare read');
+  r.server.on('GET /api/wardrobe', { body: { state: S(), wardrobeRead: { owned: [], wardrobe: { chosen: {} }, checkedAt: null } } });
+  assert.deepEqual(await r.link.readWardrobe(), { ok: false, code: 'bad-response' }, 'an envelope case');
 });
 
 test('Check for new gear carries the token in that one request, unkeyed, and never keeps it', async (t) => {

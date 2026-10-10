@@ -76,10 +76,18 @@ func TestWardrobeChoosesOwnedGearAndRefusesTheRest(t *testing.T) {
 	// knew): only the catalogue check can refuse it.
 	x.ownGear(alice, "weapon_warrior_1", "head_armoire_admiralsBicorne", "headAccessory_base_0", "head_armoire_futurePiece")
 
-	// Before the first check an account has no list at all: the picker
-	// offers only As on Habitica and Nothing, and the read says so.
+	// The sign-in read stores the owned list (4.3), so a fresh sign-in
+	// reads as checked. Before the first check (an account that signed in
+	// before 0.6, so no row) there's no list at all: the picker offers only
+	// As on Habitica and Nothing, and the read says so.
 	empty := newRig(t)
 	ec, _ := empty.ready("alice")
+	if v := empty.wardrobeRead(ec, 200); v.Result.CheckedAt == nil {
+		t.Fatal("the sign-in stored no owned list", v.Result)
+	}
+	if _, err := empty.db.DB.Exec("DELETE FROM player_gear WHERE account_id=?", empty.account("alice")); err != nil {
+		t.Fatal(err)
+	}
 	if v := empty.wardrobeRead(ec, 200); len(v.Result.Owned) != 0 || v.Result.CheckedAt != nil || len(v.Result.Wardrobe.Chosen) != 0 {
 		t.Fatal("an unchecked account", v.Result)
 	}
