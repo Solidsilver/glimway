@@ -3,7 +3,8 @@
  * leads out to this area puts its door here, on the door tile the rooms data
  * names (`outside`). Face it and press: **Go in**. When the room's resident
  * is elsewhere on their cycle, the door says **Knock**, you hear where they
- * are, and you go in anyway: doors never latch.
+ * are, and you go in anyway: doors never latch. A shop (Silas's Yard) has
+ * no knock: it's open whether or not he's behind the counter.
  */
 import { ROOMS } from '../../lib/rooms'
 import { tileBottom, tileMid } from '../../lib/tile'
@@ -28,7 +29,8 @@ export class Doors {
       const door = room.doors.find((d) => d.kind === 'door' && d.to === deps.world.areaId && d.outside)
       if (!door?.outside) continue
       const who = residentOf(room.id)
-      const out = () => who !== null && !residentIn(room.id)
+      // A shop stays open while its keeper steps out (Silas's Yard: no knock line, so no knock).
+      const out = () => who !== null && !!KNOCK_LINES[who] && !residentIn(room.id)
       points.push({
         id: `door:${room.id}`,
         x: tileMid(door.outside.tx),

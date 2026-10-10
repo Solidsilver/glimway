@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { serverState, CONTRACT, served } from './connected'
 import { waitForLive, expectToast } from './helpers'
-import { atMyMailbox, claimDeed, earnPlenty, freshPlayer, fund, go, homes, intoCottage, myHome, onMyLand, place, readOn, shot, silasSays } from './home-helpers'
+import { atMyMailbox, claimDeed, earnPlenty, freshPlayer, fund, go, homes, intoCottage, myHome, onMyLand, place, shot, yardBuild } from './home-helpers'
 import { calendarAt } from '../src/lib/calendar'
 import { dateLine } from '../src/lib/village'
 
@@ -111,11 +111,9 @@ test('workshop: Silas builds it on; store and take out at the chest; make things
   await earnPlenty(page, id)
   fund(id, { materials: { timber: 60, stone: 30, fiber: 30, amber: 5 } })
   await claim(page)
-  await silasSays(page, /Raise a cottage/)
-  await readOn(page, /Steady as a route stone/)
+  await yardBuild(page, 'cottage')
   await expect.poll(async () => (await myHome(page, id)).tier).toBe(1)
-  await silasSays(page, /Build on a workshop/)
-  await readOn(page, /There\. Deep eaves/)
+  await yardBuild(page, 'workshop')
   await expect.poll(async () => (await myHome(page, id)).tier).toBe(2)
   await onMyLand(page, 2, 2)
   await shot(page, 'land-workshop-desktop')

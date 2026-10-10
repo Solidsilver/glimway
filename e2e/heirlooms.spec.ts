@@ -93,10 +93,9 @@ test.describe('heirloom story beats', () => {
     const state = await dialogueState(page)
     expect(state.speaker).toBe('Silas')
 
-    // Read lines and check choices include the axe and "Not yet"
+    // His short talk: See the Yard, the axe, and Just passing
     const choices = await untilChoices(page)
-    expect(choices.some((c) => /Take the Brack felling axe/i.test(c.text))).toBe(true)
-    expect(choices.some((c) => /Not yet/i.test(c.text))).toBe(true)
+    expect(choices.map((c) => c.text)).toEqual(['See the Yard', 'Take the Brack felling axe', 'Just passing'])
 
     await readDialogue(page, { pick: /Take the Brack felling axe/i })
     await expectToast(page, 'Silas gave you the Brack felling axe.')

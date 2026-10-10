@@ -1,9 +1,10 @@
 import { expect, test, type Page } from './fixtures'
 import { accountOf, CONTRACT } from './connected'
-import { claimDeed, earnGlims, freshPlayer, fund, giveInstance, go, homes, lane, myHome, shot, talk } from './home-helpers'
-import { expectToast } from './helpers'
+import { AT_COUNTER, AT_PELL, DEED_BOUGHT, DEEDS, YARD, bySilas, claimDeed, earnGlims, freshPlayer, fund, giveInstance, go, homes, lane, myHome, readOn, shot, talk } from './home-helpers'
+import { dialogueState, expectAreaCard, expectToast, readDialogue, untilChoices, waitForArea, waitForLive } from './helpers'
+import { setHour } from './room-helpers'
 import { SILAS_YARD } from '../src/content/expansion-writing.ts'
-import { DEED_PANEL_COPY, PELL_DEED } from '../src/content/pell.ts'
+import { DEED_PANEL_COPY, PELL, PELL_DEED } from '../src/content/pell.ts'
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts'
 
 /**
@@ -12,7 +13,9 @@ import { HOMESTEAD_DATA } from '../src/lib/homestead.ts'
  * while Silas is out of reach, then done beside him), and Pell's Manage your
  * deed panel (sharing with someone at the deed table, then giving up a
  * place). The panels open through their entry points (src/game/yard-open.ts
- * emits these events); the walk into the shop is lane Y-B's.
+ * emits these events). The walk-in Yard: in at the front door, Silas's short
+ * talk at his counter, Pell's first deed through the side door, a display
+ * opening its tab, and the tin while Silas is out.
  *
  * SCREENS=1 also saves review screenshots to .agent/screens/.
  */
@@ -20,12 +23,6 @@ import { HOMESTEAD_DATA } from '../src/lib/homestead.ts'
 const openYard = (page: Page, tab?: string) => page.evaluate((t) => (window as unknown as { __fsEmit: (e: string, p: unknown) => void }).__fsEmit('ui:home-shop', t ? { tab: t } : {}), tab)
 const openDeed = (page: Page) => page.evaluate(() => (window as unknown as { __fsEmit: (e: string) => void }).__fsEmit('ui:home-deed'))
 const reloadItems = (page: Page) => page.evaluate(() => (window as unknown as { __fsItems: { load: () => Promise<unknown> } }).__fsItems.load())
-
-/** Silas's spot (the menders row today; his cycle's counter in 0.7). */
-async function bySilas(page: Page): Promise<void> {
-  const silas = (await homes(page)).features?.silas ?? { tx: 51, ty: 21 }
-  await go(page, 'commons', silas.tx, silas.ty + 1)
-}
 
 test('the Yard panel: Build first while the cottage is to raise, a buy on Furnish and Materials, Mend only beside Silas', async ({ page }) => {
   test.setTimeout(180_000)
@@ -88,7 +85,7 @@ test('the Yard panel: Build first while the cottage is to raise, a buy on Furnis
   await bySilas(page)
   await openYard(page, 'mend')
   await expect(yard.getByTestId('mend-away')).toHaveCount(0)
-  await expect(yard.locator(`[data-mend-row="brack-felling-axe"]`)).toContainText('2 timber, 1 wooden peg')
+  await expect(yard.locator(`[data-mend-row="brack-felling-axe"]`)).toContainText('4 glims')
   await mend.click()
   await expect(yard.locator('.msg.ok')).toContainText('Silas mended the brack felling axe')
   await expect(yard.getByTestId('mend-none')).toBeVisible()
@@ -145,9 +142,9 @@ test('Manage your deed: offer to sign with someone at the table; then they give 
   await expect(deed.getByTestId('deed-not-at-table')).toBeVisible()
   await deed.getByRole('button', { name: 'Close your deed' }).click()
 
-  // Both at the table (presence: same room, within its radius).
+  // Both at the table (presence: same room, within its radius): Bram by Pell's desk, Tansy across the table.
   const t = HOMESTEAD_DATA.commons.deedTable
-  await go(other, t.area, Math.floor(t.x / 16), Math.floor(t.y / 16))
+  await go(other, t.area, AT_PELL.tx, AT_PELL.ty)
   await go(page, t.area, Math.floor(t.x / 16), Math.floor(t.y / 16) + 1)
   const peers = (p: Page) => p.evaluate(() => (window as unknown as { __fsPresence: () => { peers: string[] } }).__fsPresence().peers)
   await expect.poll(() => peers(page), { timeout: 20_000 }).toContain(accountOf(b))
@@ -163,8 +160,8 @@ test('Manage your deed: offer to sign with someone at the table; then they give 
   await expect.poll(async () => (await lane(other)).invites.length).toBe(1)
   await expect(deed.getByTestId('deed-offered')).toHaveText(DEED_PANEL_COPY.offered('Bram'), { timeout: 10_000 })
 
-  // Bram has no home: he signs in the talk, at the table, within the window.
-  await talk(other, /Talk to Silas/, /Sign Tansy’s deed/)
+  // Bram has no home: he signs in Pell's talk, at the table, within the window.
+  await talk(other, /Talk to Pell/, /Sign Tansy’s deed/)
   await expect.poll(async () => (await homes(other)).myGate).toBe(gate)
   await expect(deed.getByTestId('deed-names')).toHaveText(DEED_PANEL_COPY.onTheDeed('Tansy, Bram'), { timeout: 15_000 })
   await deed.getByRole('button', { name: 'Close your deed' }).click()
@@ -183,4 +180,87 @@ test('Manage your deed: offer to sign with someone at the table; then they give 
   expect((await myHome(page)).members.map((m) => m.displayName)).toEqual(['Tansy'])
   expect(errors).toEqual([])
   await ctx.close()
+})
+
+test('the walk-in Yard: in at the front door, Silas’s short talk, Pell’s first deed through the side door, a display, and the tin while he’s out', async ({ page }) => {
+  test.setTimeout(180_000)
+  const id = await freshPlayer(page, 'Tansy')
+  await earnGlims(page, id)
+  // Silas behind his counter (minute 30 of his hour), on both clocks.
+  await setHour(page, { minute: 30, server: true })
+
+  // The front door under his sign on the Commons: in, without a knock.
+  await go(page, 'commons', 53, 18)
+  await expect(page.locator('.prompt')).toContainText(/Go into Silas.s Yard/)
+  await waitForLive(page)
+  await page.keyboard.press('e')
+  await waitForArea(page, YARD)
+  await expectAreaCard(page, 'Silas’s Yard')
+  await shot(page, 'yard-walk-in-desktop')
+
+  // Silas at the counter: his line, the pointer to Pell (no deed yet), and two choices.
+  await go(page, YARD, AT_COUNTER.tx, AT_COUNTER.ty)
+  await expect(page.locator('.prompt')).toContainText('Talk to Silas')
+  await waitForLive(page)
+  await page.keyboard.press('e')
+  // He finds your page in the plot book first (the world holds still), then talks.
+  const conversation = page.getByRole('dialog', { name: /Conversation with/ })
+  await expect(conversation).toBeVisible()
+  const choices = await untilChoices(page)
+  expect(choices.map((c) => c.text)).toEqual([SILAS_YARD.seeTheYard, SILAS_YARD.justPassing])
+  expect((await dialogueState(page)).said.join(' ')).toContain(SILAS_YARD.pellPointer)
+  await readDialogue(page, { pick: /See the Yard/ })
+  const yard = page.getByRole('dialog', { name: 'Silas’s Yard' })
+  await expect(yard).toBeVisible()
+  await yard.getByRole('button', { name: 'Close Silas’s yard' }).click()
+  // The needle points at Pell now (the claim guide, pinned since nothing else was).
+  await expect(page.getByTestId('goal-pinned')).toContainText('Pell')
+
+  // A display opens its own tab.
+  await go(page, YARD, 4, 3)
+  await expect(page.locator('.prompt')).toContainText(SILAS_YARD.spots.materials)
+  await waitForLive(page)
+  await page.keyboard.press('e')
+  await expect(yard.getByRole('tab', { name: 'Materials' })).toHaveAttribute('aria-selected', 'true')
+  await yard.getByRole('button', { name: 'Close Silas’s yard' }).click()
+
+  // Through the side door to Pell's office.
+  await go(page, YARD, 12, 4)
+  await page.keyboard.down('ArrowRight')
+  await waitForArea(page, DEEDS)
+  await page.keyboard.up('ArrowRight')
+  await expectAreaCard(page, 'Pell’s office')
+
+  // Pell: the first meeting, with the first deed (free, on the Compact).
+  await expect.poll(async () => (await homes(page)).status).toBe('ready')
+  const free = (await homes(page)).gates.find((g) => g.homeId === null)!
+  await go(page, DEEDS, AT_PELL.tx, AT_PELL.ty)
+  await expect(page.locator('.prompt')).toContainText('Talk to Pell')
+  await waitForLive(page)
+  await page.keyboard.press('e')
+  await expect(conversation).toBeVisible()
+  const deeds = await untilChoices(page)
+  expect((await dialogueState(page)).said.join(' ')).toContain(PELL.firstMeeting.lines[0])
+  expect(deeds.at(-1)!.text).toBe(PELL_DEED.notToday)
+  expect(deeds.find((c) => c.text === `The deed to Lot ${free.gate + 1}`)).toBeTruthy()
+  await shot(page, 'yard-pell-desktop')
+  await readDialogue(page, { pick: new RegExp(`The deed to Lot ${free.gate + 1}`) })
+  await expect.poll(async () => (await homes(page)).myGate).toBe(free.gate)
+  await readOn(page, DEED_BOUGHT)
+
+  // Back through the side door; Silas steps out to the sawhorse (minute 10).
+  await go(page, DEEDS, 1, 3)
+  await page.keyboard.down('ArrowLeft')
+  await waitForArea(page, YARD)
+  await page.keyboard.up('ArrowLeft')
+  await setHour(page, { minute: 10, server: true })
+  await go(page, YARD, AT_COUNTER.tx, AT_COUNTER.ty)
+  // The counter: the tin, and the panel still sells.
+  await talk(page, new RegExp(SILAS_YARD.spots.counter), /See the Yard/)
+  expect((await dialogueState(page)).said.join(' ')).toContain(SILAS_YARD.tin)
+  await expect(yard).toBeVisible()
+  await yard.getByRole('tab', { name: 'Materials' }).click()
+  await yard.locator('[data-buy-bundle="timber"]').click()
+  await expect(yard.locator('.msg.ok')).toContainText('Timber ×4 is yours')
+  await shot(page, 'yard-tin-desktop')
 })

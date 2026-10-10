@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { sql, accountOf, CONTRACT, served } from './connected'
-import { dialogueState, frames, waitForLive, waitGame } from './helpers'
-import { claimDeed, earnGlims, earnPlenty, fund, freshPlayer, homes, intoCottage, myHome, place, readOn, shot, silasSays } from './home-helpers'
+import { dialogueState, waitForLive, waitGame } from './helpers'
+import { claimDeed, earnGlims, earnPlenty, fund, freshPlayer, homes, intoCottage, myHome, place, shot, silasSays, yardBuild } from './home-helpers'
 
 /**
  * Crafting at the hearth and the writing desk, against the real Go server
@@ -44,54 +44,21 @@ async function cottagePlayer(page: Page): Promise<string> {
   const id = await freshPlayer(page)
   await earnGlims(page, id)
   await claimDeed(page)
-  await silasSays(page, /Raise a cottage/)
-  await readOn(page, /Steady as a route stone/)
+  await yardBuild(page, 'cottage')
   await expect.poll(async () => (await myHome(page)).tier).toBe(1)
   return id
 }
 
 /** A cottage with the Workshop built on (tier 2); one round of glims, and
- * the workshop build's materials in the pack before Silas first reads them. */
+ * the workshop build's materials in the pack before the Yard panel first reads them. */
 async function workshopPlayer(page: Page): Promise<string> {
   const id = await freshPlayer(page)
   await fund(id, { materials: { timber: 20, stone: 10, fiber: 13, 'seasoned-timber': 6 } })
   await earnPlenty(page, id)
   await claimDeed(page)
-  await silasSays(page, /Raise a cottage/)
-  await readOn(page, /Steady as a route stone/)
-  // Let the offer close before the build answer reaches the client. The
-  // offer also says "Deep eaves": accepting that as the completion used to
-  // leave the late reply open, hiding the next "Talk to Silas" prompt in CI.
-  let release!: () => void
-  const held = new Promise<void>((resolve) => { release = resolve })
-  let committed!: () => void
-  const arrived = new Promise<void>((resolve) => { committed = resolve })
-  let answering: Promise<void> | undefined
-  const upgrade = '**/api/homestead/upgrade'
-  await page.route(upgrade, (route) => {
-    answering = (async () => {
-      const response = await route.fetch()
-      committed()
-      await held
-      await route.fulfill({ response })
-    })()
-    return answering
-  })
-  try {
-    await silasSays(page, /Build on a workshop/)
-    await arrived
-    let finished = false
-    const reading = readOn(page, /There\. Deep eaves/).then(() => { finished = true })
-    // Observe the wait while the answer is held, across several drawn frames.
-    await frames(page, 8)
-    expect(finished, 'the workshop offer is not the build completion').toBe(false)
-    release()
-    await reading
-  } finally {
-    release()
-    await answering
-    await page.unroute(upgrade)
-  }
+  await yardBuild(page, 'cottage')
+  await expect.poll(async () => (await myHome(page)).tier).toBe(1)
+  await yardBuild(page, 'workshop')
   await expect.poll(async () => (await myHome(page)).tier).toBe(2)
   return id
 }
@@ -160,7 +127,7 @@ test('the writing desk: craft it at the bench, set it out, sit down, copy a reci
   const id = await workshopPlayer(page)
 
   // Silas doesn't sell the desk (it's made at the bench): no row of his.
-  await silasSays(page, /See what you’ve finished/)
+  await silasSays(page, /See the Yard/)
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
   await expect(shop.locator('[data-buy="writing-desk"]')).toHaveCount(0)
   await shop.getByRole('button', { name: 'Close Silas’s yard' }).click()

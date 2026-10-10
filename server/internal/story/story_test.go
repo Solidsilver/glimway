@@ -143,6 +143,9 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 	for _, p := range content.PapersByID {
 		if p.Source == "commons" && (p.Rule.Fact == "plot" || p.Rule.Fact == "foundation" || p.Rule.Fact == "door-fox") {
 			eligible(p.GetId(), w, true)
+			// The Commons' rooms count (the deed is bought in Pell's office); the village's don't.
+			eligible(p.GetId(), &contract.Where{Area: "in:commons:yard:deeds"}, true)
+			eligible(p.GetId(), &contract.Where{Area: "in:village:bakery"}, false)
 		}
 	}
 	w = &contract.Where{Area: "wilds:outer-1", X: 56, Y: 72}

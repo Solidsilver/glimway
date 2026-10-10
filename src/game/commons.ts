@@ -304,15 +304,15 @@ export function buildCommons(gateCount = 0): CommonsWorld {
   fenceV(YARD.x0, YARD.y0 + 1, CROSS.y0 - 1)
   fenceV(YARD.x0, CROSS.y1 + 1, YARD.y1 - 1)
   fenceV(YARD.x1, YARD.y0 + 1, YARD.y1 - 1)
-  // Silas's own cottage: finished, with a fox over the lintel.
+  // Silas's own cottage, the Yard: its sign, and the door into the shop (content/rooms.json `in:commons:yard`).
   fill(50, 14, 55, 17, TERRAIN.dirt, true)
   put('cottage-silas', 52, 17, { x: 53 * TILE, y: 18 * TILE })
   props.push({ frame: 'lantern-post', tx: 56, ty: 17, h: 28, body: [8, 6], light: 'commons' })
   lamps.push({ tx: 56, ty: 17 })
   // Silas's spot out in the yard, by the sawhorse: his cycle (content/residents.json)
   // has him there part of each hour, at his counter inside the rest (the
-  // server checks mending and the fox against the same cycle). Lane Y-B
-  // draws him by the cycle.
+  // server checks mending and the fox against the same cycle). He's one of
+  // the area's NPCs, shown only while his hour has him out here.
   const silasSpot = residentById('silas')?.spots.yard ?? { tx: 48, ty: 19 }
   const silas = { tx: silasSpot.tx, ty: silasSpot.ty }
   const toolbox = { tx: 49, ty: 24 }
@@ -453,7 +453,7 @@ export function buildCommons(gateCount = 0): CommonsWorld {
     trees,
     bushes,
     rocks,
-    npcs: [{ id: 'elara', ...elara }],
+    npcs: [{ id: 'elara', ...elara }, { id: 'silas', ...silas, spot: 'yard' }],
     enemies: [],
     exits,
     props,

@@ -1,12 +1,11 @@
 /**
- * Homesteads, drawn: Silas and the hame on the Commons, every gate's sign
+ * Homesteads, drawn: the hame on the Commons, every gate's sign
  * and gift shelf, the way to your own gate; on a homestead's land the camp
  * or cottage, the mailbox, every placed piece, the lantern posts and the
  * shade past their light; inside, the room and its furniture. Everything
  * here is redrawn when the homestead data changes (./homesteads.ts).
  */
 import Phaser from 'phaser'
-import { PEOPLE_KEY, hasPerson, peopleDensity, personAnim } from '../people'
 import { solidBox } from '../area/collision'
 import { HOMESTEAD_DATA, grownItem, homeItem, rotatedFootprint, type HomeInstance, type HomeItem, type HomeScene } from '../../lib/homestead'
 import { drawStable } from './homestead-stable'
@@ -29,7 +28,6 @@ import { canvasRatio } from '../viewport'
 /** The cottage's height on its land (its collision body follows it). */
 const COTTAGE_H = 92
 
-export const SILAS_ID = 'home:silas'
 export const POST = HOMESTEAD_DATA.lanternPosts.item
 
 /** What one drawing put up: its game objects and its collision bodies. */
@@ -49,8 +47,6 @@ export class HomesteadArt {
 
   private gateDrawn = new Map<number, Drawn>()
   private homeDrawn: Drawn = { objects: [], bodies: [] }
-  private fixtures: Drawn = { objects: [], bodies: [] }
-  private silas: Phaser.GameObjects.Sprite | null = null
   /** Each seat art's opaque box, by texture and frame (seatPose). */
   private opaque = new Map<string, { l: number; t: number; r: number; b: number }>()
   /** The way to your gate (Commons): a bobbing marker over it and an arrow at the screen's edge. */
@@ -66,20 +62,7 @@ export class HomesteadArt {
 
   buildCommonsFixtures(): void {
     const f = this.home.commons!.features
-    // Silas, at his sawhorse (the Commons pass; code-drawn fallback).
-    const sx = tileMid(f.silas.tx)
-    const sy = tileBottom(f.silas.ty)
-    const k = peopleDensity(this.scene)
-    if (k && hasPerson(this.scene, 'silas')) {
-      // The playtest-1 walking art: he breathes at his post, facing the lane.
-      this.silas = this.scene.add.sprite(sx, sy, PEOPLE_KEY, 'resident-silas-down-idle-0').setOrigin(0.5, 1).setScale(1 / k).setDepth(sy)
-      this.silas.play(personAnim('silas', 'down', false))
-    } else {
-      this.silas = this.scene.add.sprite(sx, sy, 'silas-idle-0').setOrigin(0.5, 1).setDepth(sy)
-      const breathing = commonsAnim(this.scene, 'silas-breathing') ?? 'silas-breathing'
-      if (this.scene.anims.exists(breathing)) this.silas.play(breathing)
-    }
-    this.addBody(this.fixtures, sx, sy - 4, 12, 8)
+    // (Silas is one of the Commons' NPCs, out by his sawhorse while his hour has him there: ../entities/npcs.ts.)
     // The hame on the north gatepost, kept polished: a glint now and then.
     const hx = tileMid(f.hame.tx)
     const hy = tileBottom(f.hame.ty) - 34

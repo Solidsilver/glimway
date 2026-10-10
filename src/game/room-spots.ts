@@ -1,6 +1,7 @@
 /**
  * A room's spots (the rooms data's `spots`): the hearth, the sponge bowl,
- * the counting stool, the hoist, the library's shelves and table. Each
+ * the counting stool, the hoist, the library's shelves and table, and the
+ * Yard's displays (each opens its tab of the Yard panel) and counter. Each
  * registers on the interactions path under its spot id (one id space across
  * all content: the quest `use` trigger names them, and the goal guide finds
  * them by id).
@@ -18,6 +19,8 @@ import type { Session } from './session'
 import type { Interactable, Interactables, MarkerKind } from './entities/interactables'
 import type { RoomSpotId, WorldData } from './worlds'
 import { TILE, tileBottom, tileMid } from '../lib/tile'
+import { SILAS_YARD } from '../content/expansion-writing'
+import { openYard } from './yard-open'
 
 /** A quest's say about a spot (null throughout: no quest wants it now). */
 export interface SpotQuests {
@@ -80,6 +83,7 @@ export class RoomSpots {
         verb: () => (quests.label(id, deps.session) ? null : own.verb ?? null),
         marker: () => quests.marker(id, deps.session),
         markerOffset: 22,
+        ...(own.available ? { available: own.available } : {}),
         activate: () => {
           const q = quests.talk(id, deps.session)
           if (q) return void openDialogue({ id, ...q })
@@ -112,7 +116,7 @@ export class RoomSpots {
   }
 
   /** What each spot does when no quest wants it. */
-  private defaults(id: RoomSpotId, label: string, spot: { tx: number; ty: number }): { label: string | (() => string); verb?: string; activate: () => void } {
+  private defaults(id: RoomSpotId, label: string, spot: { tx: number; ty: number }): { label: string | (() => string); verb?: string; available?: () => boolean; activate: () => void } {
     const seated = () => this.deps.hero().isSeated
     const seat = (line?: string) => ({ label: () => (seated() ? 'Stand up' : label), verb: 'Sit', activate: () => this.sit(seatAt(this.deps.world, spot), line) })
     switch (id) {
@@ -159,6 +163,27 @@ export class RoomSpots {
       // The nook: a plain seat, with a bench's seated regen.
       case 'reading-nook':
         return seat('Cushions, a lamp, and somebody’s book left open on them. The glass is cold.')
+      // Silas's Yard (silas-yard.md 2.3): each display opens its own tab.
+      case 'yard-furnish':
+        return { label: SILAS_YARD.spots.furnish, verb: 'Look', activate: () => openYard('furnish') }
+      case 'yard-materials':
+        return { label: SILAS_YARD.spots.materials, verb: 'Look', activate: () => openYard('materials') }
+      case 'yard-mend':
+        return { label: SILAS_YARD.spots.mend, verb: 'Look', activate: () => openYard('mend') }
+      // The counter is Silas's while he's behind it; out in the yard, the tin still sells.
+      case 'yard-counter':
+        return {
+          label: SILAS_YARD.spots.counter,
+          verb: 'Look',
+          available: () => !this.deps.present('silas'),
+          activate: () =>
+            openDialogue({
+              id,
+              speaker: 'The counter',
+              lines: [SILAS_YARD.tin],
+              choices: [{ text: SILAS_YARD.seeTheYard, action: 'home:shop' }, { text: SILAS_YARD.justPassing }]
+            })
+        }
     }
   }
 }

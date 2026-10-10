@@ -83,6 +83,7 @@ import { exposeWorldHooks } from './world-dev-hooks'
 import { Unmoored } from '../entities/unmoored'
 import { WorldActions } from './world-actions'
 import { emitPortraits } from '../portraits'
+import { isYardRoom } from '../yard-talk'
 import { WorldCamera } from './world-camera'
 import { Turning } from './world-turning'
 import { playLanternBeat } from '../entities/lantern-beat'
@@ -351,7 +352,7 @@ export class WorldScene extends Phaser.Scene {
     new RoomSpots({ world: this.world, session: this.session, interactables: this.interactables, hero: () => this.hero, present: (id) => this.npcs.npcs.some((n) => n.id === id && n.present) })
     const homeRoom = parseHomeRoom(this.world.areaId)
     this.homesteads = null
-    if (this.world.areaId === 'commons' || parseHomeArea(this.world.areaId) !== null || homeRoom !== null) {
+    if (this.world.areaId === 'commons' || parseHomeArea(this.world.areaId) !== null || homeRoom !== null || isYardRoom(this.world.areaId)) {
       this.homesteads = new HomesteadLayer(this, {
         world: this.world,
         session: this.session,

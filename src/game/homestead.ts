@@ -112,7 +112,7 @@ export class Homesteads {
   readonly homes = new Map<number, HomeView | null>()
   /** Land seeds the server sent, by gate. */
   readonly seeds = new Map<number, number>()
-  /** Last unclaimed gate whose sign the player read (Silas offers it first). */
+  /** Last unclaimed gate whose sign the player read (Pell offers it first). */
   chosenGate: number | null = null
   /**
    * The caller's carried materials. One view for the whole game: it lives in
@@ -171,7 +171,7 @@ export class Homesteads {
     return free.sort((a, b) => (a.gate === this.chosenGate ? -1 : b.gate === this.chosenGate ? 1 : a.gate - b.gate))
   }
 
-  /** Empty homes you were on the deed of: Silas gives them back, free, until the deed is lost. */
+  /** Empty homes you were on the deed of: Pell gives them back, free, until the deed is lost. */
   reclaimable(): GateInfo[] {
     return this.gates.filter((g) => g.reclaim)
   }

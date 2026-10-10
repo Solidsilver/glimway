@@ -64,6 +64,8 @@ export class WorldTalk {
     const points: Interactable[] = []
     for (const n of world.npcs) {
       const id = n.id
+      // Silas and Pell talk through the homestead layer (./homestead-talk.ts).
+      if (id === 'silas' || id === 'pell') continue
       points.push({
         id,
         x: tileMid(n.tx),

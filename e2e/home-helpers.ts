@@ -1,4 +1,5 @@
 import { expect, type Page } from './fixtures'
+import type { Locator } from '@playwright/test'
 import { accountOf, allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, pastOpening, routeHabitica, setHabitica, sql, syncFromMenu, waitForWorld, served } from './connected'
 import { landFromCells, type Land } from '../src/lib/homestead-land.ts'
 import { dialogueState, frames, readDialogue, settled, waitForArea, waitForLive, expectToast, SERVER_ANSWER_MS } from './helpers'
@@ -9,7 +10,7 @@ import { dialogueState, frames, readDialogue, settled, waitForArea, waitForLive,
  */
 
 const OUT = '.agent/screens'
-export type Area = 'village' | 'woodland' | 'ruin' | 'commons' | `in:home:${number}` | `home:${number}`
+export type Area = 'village' | 'woodland' | 'ruin' | 'commons' | 'in:commons:yard' | 'in:commons:yard:deeds' | `in:home:${number}` | `home:${number}`
 
 type Item = { id: string; itemDef: string; scene: string | null; x: number | null; y: number | null; rotation: number | null; name?: string | null }
 export interface Home {
@@ -171,11 +172,80 @@ export async function readOn(page: Page, says: RegExp): Promise<void> {
 
 /** Silas's spot in his yard, by the sawhorse (the Commons map; his cycle's yard spot). */
 const SILAS_AT = { tx: 48, ty: 19 }
+/** The Yard's shop and Pell's office (content/rooms.json). */
+export const YARD = 'in:commons:yard'
+export const DEEDS = 'in:commons:yard:deeds'
+/** In front of Silas's counter (the shop): where you talk to him while his hour has him inside. */
+export const AT_COUNTER = { tx: 7, ty: 6 }
+/** Beside Pell's desk, and within the deed table's reach: where Pell talks, and where a deed is signed. */
+export const AT_PELL = { tx: 7, ty: 3 }
 
-export async function silasSays(page: Page, pick?: RegExp): Promise<void> {
+/**
+ * Stand by Silas wherever his hour has him (out by the sawhorse, or behind
+ * his counter in the shop) and talk; pick `pick` if given. His talk is the
+ * same in both places.
+ */
+export async function bySilas(page: Page): Promise<void> {
   const silas = (await homes(page).catch(() => null))?.features?.silas ?? SILAS_AT
   await go(page, 'commons', silas.tx, silas.ty + 1)
+  const out = await expect(page.locator('.prompt')).toContainText('Talk to Silas', { timeout: 3_000 }).then(() => true, () => false)
+  if (!out) await go(page, YARD, AT_COUNTER.tx, AT_COUNTER.ty)
+}
+
+export async function silasSays(page: Page, pick?: RegExp): Promise<void> {
+  await bySilas(page)
   await talk(page, /Talk to Silas/, pick)
+}
+
+/** Into Pell's office, beside the desk (and the deed table), and talk; pick `pick` if given. */
+export async function pellSays(page: Page, pick?: RegExp): Promise<void> {
+  await go(page, DEEDS, AT_PELL.tx, AT_PELL.ty)
+  await talk(page, /Talk to Pell/, pick)
+}
+
+/** Pell's Manage your deed panel, opened from Pell's talk (you must be on a deed). */
+export async function manageDeed(page: Page): Promise<Locator> {
+  await pellSays(page, /Manage your deed/)
+  const deed = page.getByRole('dialog', { name: 'Your deed' })
+  await expect(deed).toBeVisible()
+  return deed
+}
+
+/**
+ * Give up your place on the deed from the Manage your deed panel: Pell's
+ * confirm (`says`, if given, is checked against it), then off the deed.
+ */
+export async function giveUpPlace(page: Page, says?: string | RegExp): Promise<void> {
+  const deed = await manageDeed(page)
+  await deed.getByTestId('deed-give-up').click()
+  const confirm = page.getByRole('alertdialog', { name: /Give up your place/ })
+  if (says) await expect(confirm).toContainText(says)
+  await confirm.getByRole('button', { name: 'Strike my name' }).click()
+  await expect.poll(async () => (await lane(page)).mine, { timeout: SERVER_ANSWER_MS }).toBeNull()
+  await expect(deed).toHaveCount(0)
+  await expectToast(page, /One line through it/)
+}
+
+/** Silas's Yard panel, opened from his talk ("See the Yard"). */
+export async function seeTheYard(page: Page): Promise<Locator> {
+  await silasSays(page, /See the Yard/)
+  const yard = page.getByRole('dialog', { name: 'Silas’s Yard' })
+  await expect(yard).toBeVisible()
+  return yard
+}
+
+/**
+ * Raise the cottage (or build on the workshop) from the Yard panel's Build
+ * tab, read Silas's word on it, and close the panel. The tier is the
+ * server's once it answers.
+ */
+export async function yardBuild(page: Page, what: 'cottage' | 'workshop'): Promise<void> {
+  const yard = await seeTheYard(page)
+  await yard.getByRole('tab', { name: 'Build' }).click()
+  await yard.getByTestId(what === 'cottage' ? 'raise-cottage' : 'build-workshop').click()
+  await expect(yard.locator('.msg.ok')).toContainText(what === 'cottage' ? /Steady as a route stone/ : /Deep eaves/, { timeout: SERVER_ANSWER_MS })
+  await yard.getByRole('button', { name: 'Close Silas’s yard' }).click()
+  await expect(yard).toBeHidden()
 }
 
 /** Glims without a top-up or a sync (both sides of the ledger, never XP-earned). */
@@ -222,6 +292,8 @@ export async function myHome(page: Page, _id?: string): Promise<Home> {
 
 /** Walk through gate g from the lane in front of it, onto its land. */
 export async function throughGate(page: Page, gate: number): Promise<void> {
+  // The lane's slots are the Commons scene's (from the Yard, say, step out first).
+  if ((await area(page)) !== 'commons') await go(page, 'commons', 23, 19)
   const v = await homes(page)
   const slot = v.slots.find((s) => s.gate === gate)!
   await go(page, 'commons', slot.entry.tx, slot.entry.ty)
@@ -275,17 +347,22 @@ export async function earnPlenty(page: Page, id: string): Promise<void> {
   expect(balance).toBeGreaterThanOrEqual(60)
 }
 
-/** Claim the first unclaimed gate on the lane from Silas (read his reply); returns the gate. */
+/** Claim the first unclaimed gate on the lane from Pell (read the reply), then step back out onto the lane; returns the gate. */
 export async function claimDeed(page: Page): Promise<number> {
   await go(page, 'commons', 23, 19)
   await expect.poll(async () => (await homes(page)).status, { timeout: SERVER_ANSWER_MS }).toBe('ready')
   const free = (await homes(page)).gates.find((g) => g.homeId === null)!
-  await silasSays(page, new RegExp(`The deed to Lot ${free.gate + 1}`))
+  await pellSays(page, new RegExp(`The deed to Lot ${free.gate + 1}`))
   await expect.poll(async () => (await homes(page)).myGate, { timeout: SERVER_ANSWER_MS }).toBe(free.gate)
-  // Silas answers once the server has the claim: read it (it would hold the screen).
-  await readOn(page, /in my square hand/)
+  // Pell answers once the server has the claim: read it (it would hold the screen).
+  await readOn(page, DEED_BOUGHT)
+  // Back out on the lane, as a deed bought from Silas used to leave you.
+  await go(page, 'commons', 23, 19)
   return free.gate
 }
+
+/** Pell's word on a deed bought (src/content/pell.ts PELL_DEED.bought). */
+export const DEED_BOUGHT = /Entered: Lot|received and logged/
 
 /** Through your own gate onto your land; the land's fixed spots (door, doorstep, mailbox, site). */
 export async function toMyLand(page: Page): Promise<NonNullable<HomesView['land']>> {

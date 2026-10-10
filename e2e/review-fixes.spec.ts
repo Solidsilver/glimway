@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { linkRev, linkStatus, serverState } from './connected'
 import { frames, expectToast } from './helpers'
-import { claimDeed, earnGlims, freshPlayer, fund, go, homes, myHome, onMyLand, readOn, silasSays } from './home-helpers'
+import { claimDeed, earnGlims, freshPlayer, fund, go, homes, myHome, onMyLand, seeTheYard, silasSays, yardBuild } from './home-helpers'
 
 /**
  * Regressions for the phase 3 review, against the real
@@ -34,7 +34,7 @@ test('finding 1: a purchase and an upgrade whose answers are lost resolve on rec
   await claim(page)
   const before = (await serverState(page)).body.state.glims
   await loseNextAnswer(page, '/api/homestead/buy')
-  await silasSays(page, /See what you’ve finished/)
+  await silasSays(page, /See the Yard/)
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
   await shop.getByRole('tab', { name: 'Furnish' }).click()
   await shop.locator('[data-buy="wooden-stool"]').click()
@@ -43,8 +43,7 @@ test('finding 1: a purchase and an upgrade whose answers are lost resolve on rec
   // A step while offline: the reconnect has a write of its own to send before
   // it replays the purchase (whose stored answer then carries an older rev).
   await expect.poll(() => linkStatus(page)).toBe('offline')
-  const silas = (await homes(page)).features!.silas
-  await go(page, 'commons', silas.tx, silas.ty + 3)
+  await go(page, 'commons', 48, 22)
   // The link reconnects by itself and replays the same request: it landed.
   await expectToast(page, 'went through after all', { timeout: 30_000 })
   await expect.poll(() => linkStatus(page)).toBe('online')
@@ -60,8 +59,11 @@ test('finding 1: a purchase and an upgrade whose answers are lost resolve on rec
     .poll(async () => (await linkRev(page)) === (await serverState(page)).body.rev, { message: 'the link is on the server’s revision', timeout: 5_000 })
     .toBe(true)
   await loseNextAnswer(page, '/api/homestead/upgrade')
-  await silasSays(page, /Raise a cottage/)
-  await expectToast(page, 'may have gone through')
+  const yard = await seeTheYard(page)
+  await yard.getByRole('tab', { name: 'Build' }).click()
+  await yard.getByTestId('raise-cottage').click()
+  await expect(yard.locator('.msg.error')).toContainText('may have gone through')
+  await yard.getByRole('button', { name: 'Close Silas’s yard' }).click()
   // The server has it at once; the client learns on the reconnect (8 s retry) and says so.
   await expect.poll(async () => (await myHome(page, id)).tier).toBe(1)
   await expectToast(page, 'went through after all', { timeout: 30_000 })
@@ -101,10 +103,13 @@ test('findings 4 and 6: materials show on a fresh read; purchases redraw one plo
   await earnGlims(page, id)
   fund(id, { materials: { fiber: 20 } })
   await claim(page)
+  // Back on the lane (the deed was bought in Pell's office): the panel opens where you stand.
+  await go(page, 'commons', 23, 19)
+  await expect.poll(async () => (await homes(page)).status).toBe('ready')
   const loaded = await stats(page)
   // The lane's gates drawn once at start, plus the claimed gate: never N² rebuilds.
   expect(loaded.gateDraws).toBeLessThanOrEqual(12)
-  await silasSays(page, /See what you’ve finished/)
+  await page.evaluate(() => (window as unknown as { __fsEmit: (e: string, p: unknown) => void }).__fsEmit('ui:home-shop', {}))
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
   await shop.getByRole('tab', { name: 'Furnish' }).click()
   // The basket costs 4 fiber: the read's materials (20) make it buyable straight away.
@@ -126,11 +131,9 @@ test('findings 5 and 7: placement ignores keys under a modal; Space presses a fo
   const id = await freshPlayer(page)
   await earnGlims(page, id)
   await claim(page)
-  await silasSays(page, /Raise a cottage/)
+  await yardBuild(page, 'cottage')
   await expect.poll(async () => (await myHome(page, id)).tier).toBe(1)
-  // Silas answers once the server has the cottage: read it (it would hold the screen).
-  await readOn(page, /Steady as a route stone/)
-  await silasSays(page, /See what you’ve finished/)
+  await silasSays(page, /See the Yard/)
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
   await shop.getByRole('tab', { name: 'Furnish' }).click()
   await shop.locator('[data-buy="wooden-stool"]').click()

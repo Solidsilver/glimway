@@ -1,7 +1,7 @@
 import { expect, test } from './fixtures'
 import { sql, accountOf, CONTRACT } from './connected'
 import { waitForLive, expectToast } from './helpers'
-import { claimDeed, earnGlims, freshPlayer, fund, homes, myHome, place, readOn, silasSays, go, atMyMailbox, hurt, type HomesView } from './home-helpers'
+import { claimDeed, earnGlims, freshPlayer, fund, homes, myHome, place, go, atMyMailbox, hurt, type HomesView, yardBuild } from './home-helpers'
 
 /**
  * Gate shelf and maker's-mark thank-you mail (exp/gifts):
@@ -20,8 +20,7 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   const idWren = await freshPlayer(page, 'Wren')
   await earnGlims(page, idWren)
   await claimDeed(page)
-  await silasSays(page, /Raise a cottage/)
-  await readOn(page, /Steady as a route stone/)
+  await yardBuild(page, 'cottage')
   await expect.poll(async () => (await myHome(page)).tier).toBe(1)
   const homeWren = await myHome(page, idWren)
   const gateWren = homeWren.gate
@@ -210,8 +209,7 @@ test('maker thank-you mail: when item made by someone else is used, maker receiv
   const idWren = await freshPlayer(page, 'Wren')
   await earnGlims(page, idWren)
   await claimDeed(page)
-  await silasSays(page, /Raise a cottage/)
-  await readOn(page, /Steady as a route stone/)
+  await yardBuild(page, 'cottage')
   await expect.poll(async () => (await myHome(page)).tier).toBe(1)
 
   // 2. Finn joins in a separate context and carries a comfrey salve marked as made by Wren

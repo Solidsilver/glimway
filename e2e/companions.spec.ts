@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import type { Browser, BrowserContext } from '@playwright/test'
 import { allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, pastOpening, reenter, routeHabitica, setHabitica, sql, waitForWorld } from './connected'
-import { claimDeed, earnPlenty, fund, go, homes, landOf, myHome, silasSays, throughGate, type Home } from './home-helpers'
+import { claimDeed, earnPlenty, fund, go, homes, landOf, myHome, silasSays, throughGate, type Home, bySilas } from './home-helpers'
 import { SERVER_ANSWER_MS, frames, waitForArea, waitForLive } from './helpers'
 import { HOMESTEAD_DATA, checkPlacement } from '../src/lib/homestead.ts'
 import { buildableKind, clearable, clearedSet, effectiveKind, homeLights, isLit, type Land } from '../src/lib/homestead-land.ts'
@@ -242,8 +242,7 @@ test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, an
   const gate = await claimDeed(page)
   // Esc gets you out of a talk (the owner's playtest): Silas's replies have
   // a goodbye, so Esc takes it, and the Menu doesn't open on the same press.
-  const silasAt = (await homes(page)).features?.silas ?? { tx: 0, ty: 0 }
-  await go(page, 'commons', silasAt.tx, silasAt.ty + 1)
+  await bySilas(page)
   await expect(page.locator('.prompt')).toContainText('Talk to Silas')
   await waitForLive(page)
   await page.keyboard.press('e')
@@ -254,7 +253,7 @@ test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, an
   await expect(page.getByTestId('world-card')).toHaveCount(0)
   // Silas's Yard: the stable is on Build, in the Buildings section under the
   // cottage, locked until the Workshop stands; Furnish doesn't sell it.
-  await silasSays(page, /See what you’ve finished/)
+  await silasSays(page, /See the Yard/)
   const yard = page.getByRole('dialog', { name: 'Silas’s Yard' })
   await expect(yard.getByRole('tab', { name: 'Build' })).toHaveAttribute('aria-selected', 'true')
   const sections = await yard.locator('section').evaluateAll((all) => all.map((el) => el.getAttribute('aria-label')))
@@ -272,7 +271,7 @@ test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, an
   fund(id, { materials: { timber: 16 + bill.timber, stone: 8 + bill.stone, fiber: 6 + bill.fiber } })
 
   // Silas sells the stable.
-  await silasSays(page, /See what you’ve finished/)
+  await silasSays(page, /See the Yard/)
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
   // The workshop stands: it opens on Furnish; the stable is on Build.
   await shop.getByRole('tab', { name: 'Build' }).click()
