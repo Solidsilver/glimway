@@ -1107,26 +1107,13 @@ Folded into the sections above.
 | 9 | The off-hand name | **As proposed:** the wardrobe says "Shield"; Glimway's off hand becomes "at your belt" in the copy (lane D) |
 | — | Guests' purse | **Accepted:** an empty purse that fills from other players; no top-up, no wardrobe (section 5) |
 | — | The consent card's **All** | **Kept:** it fills the amount and never sends (2.1) |
+| 10 | Owned gear only from the server's own reads | **As proposed** (4.3) |
+| 11 | A gold letter carries gold alone | **As proposed** (3.3) |
+| 12 | No extra limits on gold letters and gives | **As proposed** (3.4) |
 
-### 11.2 Still open, with defaults
+### 11.2 Still open
 
-These go ahead as written unless the owner says otherwise.
-
-10. **Owned gear only from the server's own reads.** *Default: yes.* The step-back review (server,
-    finding 10) showed that a browser-reported list lets a forged report "own" any gear, and the
-    wardrobe would then draw Habitica items the player never earned. So the server fills the list
-    itself at sign-in, during a top-up, and when the player presses **Check for new gear**, which
-    sends the token for that one read (4.3). The cost: gear earned on Habitica shows up after one of
-    those, not after an ordinary Sync. The alternative is to read it from the Sync report like pets
-    and mounts, trusting friends, with no extra button.
-11. **A gold letter carries gold alone.** *Default: yes,* one thing per letter as today. Gold
-    together with an item (a gift and a coin for the road) would mean a letter that holds two
-    things, which touches every mail path; it can come later.
-12. **No extra limits on gold letters and gives.** *Default: none beyond what's there:* the amount
-    is 1 to your purse; letters keep the mail's limits (50 waiting each way, 10 sends a minute);
-    gives need you standing together. The owner set no cap on top-ups, and among invited friends a
-    daily cap on gifts would mostly get in the way. The alternative is a daily cap per sender (say
-    500 gold), which would also slow a mistaken **All**.
+Nothing: the owner answered questions 10–12 as proposed (11.1).
 
 **Tuning, not decisions** (playtest them, change data): Silas's bundle sizes, gold prices and caps;
 the gold prices on Hazel's, Finn's and the stall's goods; the check times after a timeout (2, 5,
