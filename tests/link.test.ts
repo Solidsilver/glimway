@@ -22,11 +22,11 @@ test('a state is adopted only at an equal or higher version', async (t) => {
   r.server.on('POST /api/play', play(S({ version: 4, balance: 9 })));
   await r.link.reconnect(false);
   assert.equal(r.link.rev, 5, 'an older answer never moves the client back in time');
-  assert.equal(r.session.state.embers, 3);
+  assert.equal(r.session.state.glims, 3);
   r.server.on('GET /api/state', { body: { state: S({ version: 7, balance: 8 }), leaseActive: true } });
   await r.link.beat(true);
   assert.equal(r.link.rev, 7);
-  assert.equal(r.session.state.embers, 8);
+  assert.equal(r.session.state.glims, 8);
 });
 
 test('an unrelated answer never heals the combat overlay', async (t) => {
@@ -35,7 +35,7 @@ test('an unrelated answer never heals the combat overlay', async (t) => {
   r.session.state.hp = 22; // hit on screen, not yet reported
   r.server.on('GET /api/state', { body: { state: S({ version: 3, hp: 40, balance: 5 }), leaseActive: true } });
   await r.link.beat(true);
-  assert.equal(r.session.state.embers, 5);
+  assert.equal(r.session.state.glims, 5);
   assert.equal(r.session.state.hp, 22);
 });
 
@@ -81,7 +81,7 @@ test('a gated quest step waits for the world: nothing predicted before its answe
   const answered = S({ version: 2 });
   answered.story.quests = { signpost: 'light-first-lamp', 'set-to-rise': 'hear-hazel' };
   const release = r.server.hold('POST /api/quest/step');
-  r.server.on('POST /api/quest/step', env(answered, { questStep: { quest: 'set-to-rise', step: 'hear-hazel', items: [], marks: [], papers: [], embers: 0, embersSpent: 0, taken: [], given: [] } }));
+  r.server.on('POST /api/quest/step', env(answered, { questStep: { quest: 'set-to-rise', step: 'hear-hazel', items: [], marks: [], papers: [], glims: 0, glimsSpent: 0, taken: [], given: [] } }));
   const done = r.link.questStep('set-to-rise', 'hear-hazel', { server: true });
   await tick();
   assert.equal(r.session.state.quests['set-to-rise'], undefined, 'not shown before the answer');
@@ -109,7 +109,7 @@ test('a refused step rolls back, takes the steps after it along, and says so onc
   assert.equal(r.server.sent('POST /api/quest/step').length, 1, 'the dependent step was never sent');
   assert.equal(r.server.sent('POST /api/story/mark').length, 1, 'an unrelated mark still goes');
   assert.deepEqual(r.session.state.flags, ['met:mara']);
-  assert.equal(r.session.state.embers, 1, 'the refusal’s state is adopted');
+  assert.equal(r.session.state.glims, 1, 'the refusal’s state is adopted');
   assert.equal(toasts(r).filter((x) => x.includes('story step')).length, 1);
 });
 
@@ -615,7 +615,7 @@ test('a first profile sync reports the welcome even when no XP is credited', asy
   const first = await r.link.profile(raw);
   assert.ok(first.ok);
   assert.deepEqual([first.welcome, first.gained], [3, 0]);
-  assert.equal(r.session.state.embers, 3);
+  assert.equal(r.session.state.glims, 3);
   r.server.on('POST /api/profile', env(S({ version: 3, balance: 3, marks: ['embers:welcome'] }), { profile: { status: 'unchanged', credit: 0, pending: 0, vitalsCredit: { hp: 0, mana: 0 } } }));
   const again = await r.link.profile(raw);
   assert.ok(again.ok);
@@ -718,7 +718,7 @@ test('Wilds operations go through the outbox: the lease, a key and where, and th
   assert.deepEqual(sent.where, { area: 'wilds:outer-1', x: 100, y: 200 });
   assert.equal(sent.cycle, 2);
   assert.equal(r.link.rev, 2, 'the answer’s state is the world’s now');
-  assert.equal(r.session.state.embers, 4);
+  assert.equal(r.session.state.glims, 4);
   r.server.on('POST /api/wilds/echo', refuse('echo-not-here', S({ version: 2, balance: 4 })));
   const settled = await settleEcho(session, { epoch: 'e', site: 'echo:0', member: 'tam', where: { region: 'outer-1', x: 1, y: 2 } });
   assert.deepEqual(settled, { ok: false, code: 'echo-not-here' });

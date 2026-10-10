@@ -1004,13 +1004,6 @@
           "reachedAt": {},
           "gateAt": {}
         },
-        "embers": {
-          "balance": 0,
-          "xpEarned": 0,
-          "pending": 0,
-          "xpMark": 0,
-          "verifiedXp": 0
-        },
         "companions": {
           "followPet": "",
           "yardPets": [],
@@ -1026,12 +1019,19 @@
           "nextCastAt": 0
         },
         "purse": {
-          "gold": 0,
           "topUpsLeft": 2,
-          "working": null
+          "working": null,
+          "glimsLeft": 30
         },
         "wardrobe": {
           "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
         }
       },
       "wildsClaim": {
@@ -1166,13 +1166,6 @@
           "reachedAt": {},
           "gateAt": {}
         },
-        "embers": {
-          "balance": 0,
-          "xpEarned": 0,
-          "pending": 0,
-          "xpMark": 0,
-          "verifiedXp": 0
-        },
         "companions": {
           "followPet": "",
           "yardPets": [],
@@ -1188,12 +1181,19 @@
           "nextCastAt": 0
         },
         "purse": {
-          "gold": 0,
           "topUpsLeft": 2,
-          "working": null
+          "working": null,
+          "glimsLeft": 30
         },
         "wardrobe": {
           "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
         }
       },
       "fall": {
@@ -1318,13 +1318,6 @@
           "reachedAt": {},
           "gateAt": {}
         },
-        "embers": {
-          "balance": 0,
-          "xpEarned": 0,
-          "pending": 0,
-          "xpMark": 0,
-          "verifiedXp": 0
-        },
         "companions": {
           "followPet": "",
           "yardPets": [],
@@ -1340,12 +1333,19 @@
           "nextCastAt": 0
         },
         "purse": {
-          "gold": 0,
           "topUpsLeft": 2,
-          "working": null
+          "working": null,
+          "glimsLeft": 30
         },
         "wardrobe": {
           "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
         }
       },
       "fall": {
@@ -1470,13 +1470,6 @@
           "reachedAt": {},
           "gateAt": {}
         },
-        "embers": {
-          "balance": 0,
-          "xpEarned": 0,
-          "pending": 0,
-          "xpMark": 0,
-          "verifiedXp": 0
-        },
         "companions": {
           "followPet": "",
           "yardPets": [],
@@ -1492,12 +1485,19 @@
           "nextCastAt": 0
         },
         "purse": {
-          "gold": 0,
           "topUpsLeft": 2,
-          "working": null
+          "working": null,
+          "glimsLeft": 30
         },
         "wardrobe": {
           "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
         }
       },
       "fall": {
@@ -1622,13 +1622,6 @@
           "reachedAt": {},
           "gateAt": {}
         },
-        "embers": {
-          "balance": 0,
-          "xpEarned": 0,
-          "pending": 0,
-          "xpMark": 0,
-          "verifiedXp": 0
-        },
         "companions": {
           "followPet": "",
           "yardPets": [],
@@ -1644,12 +1637,19 @@
           "nextCastAt": 0
         },
         "purse": {
-          "gold": 0,
           "topUpsLeft": 2,
-          "working": null
+          "working": null,
+          "glimsLeft": 30
         },
         "wardrobe": {
           "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
         }
       },
       "fall": {
@@ -1774,13 +1774,6 @@
           "reachedAt": {},
           "gateAt": {}
         },
-        "embers": {
-          "balance": 0,
-          "xpEarned": 0,
-          "pending": 0,
-          "xpMark": 0,
-          "verifiedXp": 0
-        },
         "companions": {
           "followPet": "",
           "yardPets": [],
@@ -1796,12 +1789,19 @@
           "nextCastAt": 0
         },
         "purse": {
-          "gold": 0,
           "topUpsLeft": 2,
-          "working": null
+          "working": null,
+          "glimsLeft": 30
         },
         "wardrobe": {
           "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
         }
       },
       "fall": {
@@ -1926,13 +1926,6 @@
           "reachedAt": {},
           "gateAt": {}
         },
-        "embers": {
-          "balance": 0,
-          "xpEarned": 0,
-          "pending": 0,
-          "xpMark": 0,
-          "verifiedXp": 0
-        },
         "companions": {
           "followPet": "",
           "yardPets": [],
@@ -1948,12 +1941,19 @@
           "nextCastAt": 0
         },
         "purse": {
-          "gold": 0,
           "topUpsLeft": 2,
-          "working": null
+          "working": null,
+          "glimsLeft": 30
         },
         "wardrobe": {
           "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
         }
       },
       "wildsLantern": {
@@ -2091,13 +2091,6 @@
             "fixture": 1
           }
         },
-        "embers": {
-          "balance": 1,
-          "xpEarned": 1,
-          "pending": 1,
-          "xpMark": 1,
-          "verifiedXp": 1
-        },
         "companions": {
           "followPet": "fixture",
           "yardPets": [
@@ -2124,7 +2117,6 @@
           "nextCastAt": 1
         },
         "purse": {
-          "gold": 1,
           "topUpsLeft": 1,
           "working": {
             "id": "fixture",
@@ -2135,13 +2127,22 @@
             "startedAt": 1,
             "settledAt": 1,
             "leftover": true,
-            "note": "fixture"
-          }
+            "note": "fixture",
+            "glims": 1
+          },
+          "glimsLeft": 1
         },
         "wardrobe": {
           "chosen": {
             "fixture": "fixture"
           }
+        },
+        "glims": {
+          "balance": 1,
+          "xpEarned": 1,
+          "pending": 1,
+          "xpMark": 1,
+          "verifiedXp": 1
         }
       },
       "report": {
@@ -2260,13 +2261,6 @@
             "set-to-rise": 1791400000
           }
         },
-        "embers": {
-          "balance": 0,
-          "xpEarned": 0,
-          "pending": 0,
-          "xpMark": 0,
-          "verifiedXp": 0
-        },
         "companions": {
           "followPet": "",
           "yardPets": [],
@@ -2282,12 +2276,19 @@
           "nextCastAt": 0
         },
         "purse": {
-          "gold": 0,
           "topUpsLeft": 2,
-          "working": null
+          "working": null,
+          "glimsLeft": 30
         },
         "wardrobe": {
           "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
         }
       },
       "questStep": {
@@ -2296,8 +2297,6 @@
         "items": [],
         "marks": [],
         "papers": [],
-        "embers": 2,
-        "embersSpent": 1,
         "taken": [
           {
             "def": "flour",
@@ -2309,7 +2308,9 @@
             "def": "keepers-twists",
             "qty": 2
           }
-        ]
+        ],
+        "glims": 2,
+        "glimsSpent": 1
       }
     }
   },
@@ -2407,13 +2408,6 @@
           "reachedAt": {},
           "gateAt": {}
         },
-        "embers": {
-          "balance": 0,
-          "xpEarned": 0,
-          "pending": 0,
-          "xpMark": 0,
-          "verifiedXp": 0
-        },
         "companions": {
           "followPet": "",
           "yardPets": [],
@@ -2429,12 +2423,19 @@
           "nextCastAt": 0
         },
         "purse": {
-          "gold": 0,
           "topUpsLeft": 2,
-          "working": null
+          "working": null,
+          "glimsLeft": 30
         },
         "wardrobe": {
           "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
         }
       },
       "report": {
@@ -2545,13 +2546,6 @@
           "reachedAt": {},
           "gateAt": {}
         },
-        "embers": {
-          "balance": 0,
-          "xpEarned": 0,
-          "pending": 0,
-          "xpMark": 0,
-          "verifiedXp": 0
-        },
         "companions": {
           "followPet": "",
           "yardPets": [],
@@ -2567,12 +2561,19 @@
           "nextCastAt": 0
         },
         "purse": {
-          "gold": 0,
           "topUpsLeft": 2,
-          "working": null
+          "working": null,
+          "glimsLeft": 30
         },
         "wardrobe": {
           "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
         }
       },
       "questStep": {
@@ -2581,10 +2582,10 @@
         "items": [],
         "marks": [],
         "papers": [],
-        "embers": 0,
-        "embersSpent": 0,
         "taken": [],
-        "given": []
+        "given": [],
+        "glims": 0,
+        "glimsSpent": 0
       }
     }
   },
@@ -2742,6 +2743,28 @@
       "reclaim": true,
       "shelf": true,
       "shelfStocked": true
+    }
+  },
+  {
+    "name": "glimway.v1.Glims",
+    "case": "empty",
+    "json": {
+      "balance": 0,
+      "xpEarned": 0,
+      "pending": 0,
+      "xpMark": 0,
+      "verifiedXp": 0
+    }
+  },
+  {
+    "name": "glimway.v1.Glims",
+    "case": "populated",
+    "json": {
+      "balance": 1,
+      "xpEarned": 1,
+      "pending": 1,
+      "xpMark": 1,
+      "verifiedXp": 1
     }
   },
   {
@@ -3869,7 +3892,7 @@
       "where": null,
       "toId": "",
       "asset": null,
-      "gold": 0
+      "glims": 0
     }
   },
   {
@@ -3898,7 +3921,7 @@
         "instance": "fixture",
         "maker": "fixture"
       },
-      "gold": 1
+      "glims": 1
     }
   },
   {
@@ -4464,13 +4487,6 @@
             "fixture": 1
           }
         },
-        "embers": {
-          "balance": 1,
-          "xpEarned": 1,
-          "pending": 1,
-          "xpMark": 1,
-          "verifiedXp": 1
-        },
         "companions": {
           "followPet": "fixture",
           "yardPets": [
@@ -4497,7 +4513,6 @@
           "nextCastAt": 1
         },
         "purse": {
-          "gold": 1,
           "topUpsLeft": 1,
           "working": {
             "id": "fixture",
@@ -4508,13 +4523,22 @@
             "startedAt": 1,
             "settledAt": 1,
             "leftover": true,
-            "note": "fixture"
-          }
+            "note": "fixture",
+            "glims": 1
+          },
+          "glimsLeft": 1
         },
         "wardrobe": {
           "chosen": {
             "fixture": "fixture"
           }
+        },
+        "glims": {
+          "balance": 1,
+          "xpEarned": 1,
+          "pending": 1,
+          "xpMark": 1,
+          "verifiedXp": 1
         }
       },
       "lease": "fixture",
@@ -4616,13 +4640,6 @@
           "reachedAt": {},
           "gateAt": {}
         },
-        "embers": {
-          "balance": 0,
-          "xpEarned": 0,
-          "pending": 0,
-          "xpMark": 0,
-          "verifiedXp": 0
-        },
         "companions": {
           "followPet": "",
           "yardPets": [],
@@ -4638,12 +4655,19 @@
           "nextCastAt": 0
         },
         "purse": {
-          "gold": 0,
           "topUpsLeft": 2,
-          "working": null
+          "working": null,
+          "glimsLeft": 30
         },
         "wardrobe": {
           "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
         }
       },
       "lease": "lease",
@@ -4661,12 +4685,12 @@
       "vitals": null,
       "place": null,
       "story": null,
-      "embers": null,
       "companions": null,
       "magic": null,
       "fishing": null,
       "purse": null,
-      "wardrobe": null
+      "wardrobe": null,
+      "glims": null
     }
   },
   {
@@ -4773,13 +4797,6 @@
           "fixture": 1
         }
       },
-      "embers": {
-        "balance": 1,
-        "xpEarned": 1,
-        "pending": 1,
-        "xpMark": 1,
-        "verifiedXp": 1
-      },
       "companions": {
         "followPet": "fixture",
         "yardPets": [
@@ -4806,7 +4823,6 @@
         "nextCastAt": 1
       },
       "purse": {
-        "gold": 1,
         "topUpsLeft": 1,
         "working": {
           "id": "fixture",
@@ -4817,13 +4833,22 @@
           "startedAt": 1,
           "settledAt": 1,
           "leftover": true,
-          "note": "fixture"
-        }
+          "note": "fixture",
+          "glims": 1
+        },
+        "glimsLeft": 1
       },
       "wardrobe": {
         "chosen": {
           "fixture": "fixture"
         }
+      },
+      "glims": {
+        "balance": 1,
+        "xpEarned": 1,
+        "pending": 1,
+        "xpMark": 1,
+        "verifiedXp": 1
       }
     }
   },
@@ -4920,13 +4945,6 @@
         "reachedAt": {},
         "gateAt": {}
       },
-      "embers": {
-        "balance": 0,
-        "xpEarned": 0,
-        "pending": 0,
-        "xpMark": 0,
-        "verifiedXp": 0
-      },
       "companions": {
         "followPet": "",
         "yardPets": [],
@@ -4942,12 +4960,19 @@
         "nextCastAt": 0
       },
       "purse": {
-        "gold": 0,
         "topUpsLeft": 2,
-        "working": null
+        "working": null,
+        "glimsLeft": 30
       },
       "wardrobe": {
         "chosen": {}
+      },
+      "glims": {
+        "balance": 0,
+        "xpEarned": 0,
+        "pending": 0,
+        "xpMark": 0,
+        "verifiedXp": 0
       }
     }
   },
@@ -5212,10 +5237,10 @@
       "items": [],
       "marks": [],
       "papers": [],
-      "embers": 0,
-      "embersSpent": 0,
       "taken": [],
-      "given": []
+      "given": [],
+      "glims": 0,
+      "glimsSpent": 0
     }
   },
   {
@@ -5233,8 +5258,6 @@
       "papers": [
         "fixture"
       ],
-      "embers": 1,
-      "embersSpent": 1,
       "taken": [
         {
           "def": "fixture",
@@ -5246,7 +5269,9 @@
           "def": "fixture",
           "qty": 1
         }
-      ]
+      ],
+      "glims": 1,
+      "glimsSpent": 1
     }
   },
   {
@@ -5365,13 +5390,6 @@
             "fixture": 1
           }
         },
-        "embers": {
-          "balance": 1,
-          "xpEarned": 1,
-          "pending": 1,
-          "xpMark": 1,
-          "verifiedXp": 1
-        },
         "companions": {
           "followPet": "fixture",
           "yardPets": [
@@ -5398,7 +5416,6 @@
           "nextCastAt": 1
         },
         "purse": {
-          "gold": 1,
           "topUpsLeft": 1,
           "working": {
             "id": "fixture",
@@ -5409,13 +5426,22 @@
             "startedAt": 1,
             "settledAt": 1,
             "leftover": true,
-            "note": "fixture"
-          }
+            "note": "fixture",
+            "glims": 1
+          },
+          "glimsLeft": 1
         },
         "wardrobe": {
           "chosen": {
             "fixture": "fixture"
           }
+        },
+        "glims": {
+          "balance": 1,
+          "xpEarned": 1,
+          "pending": 1,
+          "xpMark": 1,
+          "verifiedXp": 1
         }
       }
     }
@@ -5517,13 +5543,6 @@
           "reachedAt": {},
           "gateAt": {}
         },
-        "embers": {
-          "balance": 0,
-          "xpEarned": 0,
-          "pending": 0,
-          "xpMark": 0,
-          "verifiedXp": 0
-        },
         "companions": {
           "followPet": "",
           "yardPets": [],
@@ -5539,12 +5558,19 @@
           "nextCastAt": 0
         },
         "purse": {
-          "gold": 0,
           "topUpsLeft": 2,
-          "working": null
+          "working": null,
+          "glimsLeft": 30
         },
         "wardrobe": {
           "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
         }
       }
     }
@@ -5836,13 +5862,6 @@
             "fixture": 1
           }
         },
-        "embers": {
-          "balance": 1,
-          "xpEarned": 1,
-          "pending": 1,
-          "xpMark": 1,
-          "verifiedXp": 1
-        },
         "companions": {
           "followPet": "fixture",
           "yardPets": [
@@ -5869,7 +5888,6 @@
           "nextCastAt": 1
         },
         "purse": {
-          "gold": 1,
           "topUpsLeft": 1,
           "working": {
             "id": "fixture",
@@ -5880,13 +5898,22 @@
             "startedAt": 1,
             "settledAt": 1,
             "leftover": true,
-            "note": "fixture"
-          }
+            "note": "fixture",
+            "glims": 1
+          },
+          "glimsLeft": 1
         },
         "wardrobe": {
           "chosen": {
             "fixture": "fixture"
           }
+        },
+        "glims": {
+          "balance": 1,
+          "xpEarned": 1,
+          "pending": 1,
+          "xpMark": 1,
+          "verifiedXp": 1
         }
       }
     }
@@ -6124,13 +6151,6 @@
             "fixture": 1
           }
         },
-        "embers": {
-          "balance": 1,
-          "xpEarned": 1,
-          "pending": 1,
-          "xpMark": 1,
-          "verifiedXp": 1
-        },
         "companions": {
           "followPet": "fixture",
           "yardPets": [
@@ -6157,7 +6177,6 @@
           "nextCastAt": 1
         },
         "purse": {
-          "gold": 1,
           "topUpsLeft": 1,
           "working": {
             "id": "fixture",
@@ -6168,13 +6187,22 @@
             "startedAt": 1,
             "settledAt": 1,
             "leftover": true,
-            "note": "fixture"
-          }
+            "note": "fixture",
+            "glims": 1
+          },
+          "glimsLeft": 1
         },
         "wardrobe": {
           "chosen": {
             "fixture": "fixture"
           }
+        },
+        "glims": {
+          "balance": 1,
+          "xpEarned": 1,
+          "pending": 1,
+          "xpMark": 1,
+          "verifiedXp": 1
         }
       },
       "leaseActive": true
@@ -6274,13 +6302,6 @@
           "reachedAt": {},
           "gateAt": {}
         },
-        "embers": {
-          "balance": 0,
-          "xpEarned": 0,
-          "pending": 0,
-          "xpMark": 0,
-          "verifiedXp": 0
-        },
         "companions": {
           "followPet": "",
           "yardPets": [],
@@ -6296,12 +6317,19 @@
           "nextCastAt": 0
         },
         "purse": {
-          "gold": 0,
           "topUpsLeft": 2,
-          "working": null
+          "working": null,
+          "glimsLeft": 30
         },
         "wardrobe": {
           "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
         }
       },
       "leaseActive": true
@@ -7931,13 +7959,6 @@
           "reachedAt": {},
           "gateAt": {}
         },
-        "embers": {
-          "balance": 0,
-          "xpEarned": 0,
-          "pending": 0,
-          "xpMark": 0,
-          "verifiedXp": 0
-        },
         "companions": {
           "followPet": "",
           "yardPets": [],
@@ -7953,12 +7974,19 @@
           "nextCastAt": 0
         },
         "purse": {
-          "gold": 0,
           "topUpsLeft": 2,
-          "working": null
+          "working": null,
+          "glimsLeft": 30
         },
         "wardrobe": {
           "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
         }
       },
       "result": {
@@ -8090,13 +8118,6 @@
           "reachedAt": {},
           "gateAt": {}
         },
-        "embers": {
-          "balance": 0,
-          "xpEarned": 0,
-          "pending": 0,
-          "xpMark": 0,
-          "verifiedXp": 0
-        },
         "companions": {
           "followPet": "",
           "yardPets": [],
@@ -8112,12 +8133,19 @@
           "nextCastAt": 0
         },
         "purse": {
-          "gold": 0,
           "topUpsLeft": 2,
-          "working": null
+          "working": null,
+          "glimsLeft": 30
         },
         "wardrobe": {
           "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
         }
       },
       "result": {
@@ -8237,13 +8265,6 @@
           "reachedAt": {},
           "gateAt": {}
         },
-        "embers": {
-          "balance": 0,
-          "xpEarned": 0,
-          "pending": 0,
-          "xpMark": 0,
-          "verifiedXp": 0
-        },
         "companions": {
           "followPet": "",
           "yardPets": [],
@@ -8259,12 +8280,19 @@
           "nextCastAt": 0
         },
         "purse": {
-          "gold": 0,
           "topUpsLeft": 2,
-          "working": null
+          "working": null,
+          "glimsLeft": 30
         },
         "wardrobe": {
           "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
         }
       },
       "result": {
@@ -8374,13 +8402,6 @@
           "reachedAt": {},
           "gateAt": {}
         },
-        "embers": {
-          "balance": 0,
-          "xpEarned": 0,
-          "pending": 0,
-          "xpMark": 0,
-          "verifiedXp": 0
-        },
         "companions": {
           "followPet": "",
           "yardPets": [],
@@ -8396,12 +8417,19 @@
           "nextCastAt": 0
         },
         "purse": {
-          "gold": 0,
           "topUpsLeft": 2,
-          "working": null
+          "working": null,
+          "glimsLeft": 30
         },
         "wardrobe": {
           "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
         }
       },
       "result": {
@@ -8635,13 +8663,6 @@
           "reachedAt": {},
           "gateAt": {}
         },
-        "embers": {
-          "balance": 0,
-          "xpEarned": 0,
-          "pending": 0,
-          "xpMark": 0,
-          "verifiedXp": 0
-        },
         "companions": {
           "followPet": "",
           "yardPets": [],
@@ -8657,12 +8678,19 @@
           "nextCastAt": 0
         },
         "purse": {
-          "gold": 0,
           "topUpsLeft": 2,
-          "working": null
+          "working": null,
+          "glimsLeft": 30
         },
         "wardrobe": {
           "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
         }
       },
       "result": {
@@ -8778,13 +8806,6 @@
           "reachedAt": {},
           "gateAt": {}
         },
-        "embers": {
-          "balance": 0,
-          "xpEarned": 0,
-          "pending": 0,
-          "xpMark": 0,
-          "verifiedXp": 0
-        },
         "companions": {
           "followPet": "",
           "yardPets": [],
@@ -8800,12 +8821,19 @@
           "nextCastAt": 0
         },
         "purse": {
-          "gold": 0,
           "topUpsLeft": 2,
-          "working": null
+          "working": null,
+          "glimsLeft": 30
         },
         "wardrobe": {
           "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
         }
       },
       "result": {
@@ -8909,13 +8937,6 @@
           "reachedAt": {},
           "gateAt": {}
         },
-        "embers": {
-          "balance": 0,
-          "xpEarned": 0,
-          "pending": 0,
-          "xpMark": 0,
-          "verifiedXp": 0
-        },
         "companions": {
           "followPet": "",
           "yardPets": [],
@@ -8931,12 +8952,19 @@
           "nextCastAt": 0
         },
         "purse": {
-          "gold": 0,
           "topUpsLeft": 2,
-          "working": null
+          "working": null,
+          "glimsLeft": 30
         },
         "wardrobe": {
           "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
         }
       },
       "result": {
@@ -8985,7 +9013,7 @@
         "heirloom": "",
         "adaOilCount": 0,
         "bought": null,
-        "goldGiven": 0
+        "glimsGiven": 0
       }
     }
   }

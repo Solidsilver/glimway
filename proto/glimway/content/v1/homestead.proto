@@ -32,10 +32,10 @@ message Homestead {
   repeated HomeRect outdoor_reserved = 5 [(buf.validate.field).repeated.min_items = 1];
   repeated HomeRect indoor_reserved = 6 [(buf.validate.field).repeated.min_items = 1];
   LanternPosts lantern_posts = 7 [(buf.validate.field).required = true];
-  // Deeding: the first deed is free, then it costs embers.
+  // Deeding: the first deed is free, then it costs glims.
   HomesteadDeeds deeds = 8 [(buf.validate.field).required = true];
-  // Clearing one wild tile costs embers.
-  int32 clear_tile_embers = 9 [(buf.validate.field).int32.gte = 1];
+  // Clearing one wild tile costs glims.
+  int32 clear_tile_glims = 9 [(buf.validate.field).int32.gte = 1];
   // Neglect: how long away turns the land desolate, then loses the deed.
   HomesteadDesolation desolation = 10 [(buf.validate.field).required = true];
   // A joint deed's confirmation window and invite lifetime.
@@ -77,7 +77,7 @@ message HomeTier {
   string id = 2;
   string name = 3 [(buf.validate.field).string.min_len = 1];
   bool purchasable = 4;
-  int32 embers = 5 [(buf.validate.field).int32.gte = 0];
+  int32 glims = 5 [(buf.validate.field).int32.gte = 0];
   // The Workshop's material bill (the only priced-in-materials tier);
   // checked against the wilds catalogue in code.
   map<string, int32> materials = 6 [(buf.validate.field).map.values.int32 = {gte: 1, lte: 1000000}];
@@ -184,7 +184,7 @@ message MaterialBill {
 
 message HomesteadDeeds {
   bool first_free = 1;
-  int32 embers = 2 [(buf.validate.field).int32.gte = 1];
+  int32 glims = 2 [(buf.validate.field).int32.gte = 1];
 }
 
 message HomesteadDesolation {
@@ -208,8 +208,8 @@ message HomesteadJointDeed {
 message HomeItem {
   option (buf.validate.message).cel = {
     id: "home_item.price"
-    message: "a home good is priced in embers, in materials, or in both; never neither"
-    expression: "this.embers > 0 || size(this.materials) > 0"
+    message: "a home good is priced in glims, in materials, or in both; never neither"
+    expression: "this.glims > 0 || size(this.materials) > 0"
   };
   option (buf.validate.message).cel = {
     id: "home_item.where"
@@ -222,7 +222,7 @@ message HomeItem {
   repeated int32 footprint = 4;
   repeated string where = 5;
   int32 min_tier = 6 [(buf.validate.field).int32 = {gte: 0, lte: 4}];
-  int32 embers = 7 [(buf.validate.field).int32.gte = 0];
+  int32 glims = 7 [(buf.validate.field).int32.gte = 0];
   // The purchase bill (at most three lines): Wilds materials or any
   // carried material in the items catalogue — checked in code.
   map<string, int32> materials = 8 [(buf.validate.field).map = {max_pairs: 3, values: {int32: {gte: 1, lte: 1000000}}}];

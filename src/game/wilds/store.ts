@@ -50,7 +50,7 @@ export interface WildsEpoch {
 
 export interface LootDrop {
   materials: { id: string; qty: number }[];
-  /** Ember-free trinket id, or null. */
+  /** Glim-free trinket id, or null. */
   trinket: string | null;
 }
 

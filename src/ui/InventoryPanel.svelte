@@ -27,7 +27,8 @@
   import ArtIcon from './ArtIcon.svelte'
   import PapersTab from './PapersTab.svelte'
   import PurseAmount from './PurseAmount.svelte'
-  import { goldPhrase, purseCopy } from '../content/purse'
+  import { glimsCount, glimsPhrase, purseCopy } from '../content/purse'
+  import Glim from './Glim.svelte'
   import { parseAmount } from '../lib/purse'
 
   /**
@@ -361,27 +362,27 @@
     return feed.nearby(p.x, p.y, ITEM_RULES.give.radiusTiles * 16)
   }
 
-  // ---- the Purse row (purse-and-wardrobe.md 3.4): gold handed to someone standing near
-  const purseGold = $derived(ui.purse?.gold ?? 0)
-  /** Who the gold goes to (picked from the people nearby), then how much. */
-  let goldTo = $state<{ accountId: string; displayName: string } | null>(null)
-  let goldText = $state('')
-  const goldAmount = $derived(parseAmount(goldText, purseGold))
+  // ---- the Glims row (silas-yard.md 1.6, glims by hand): glims handed to someone standing near
+  const haveGlims = $derived(ui.stats.glims)
+  /** Who the glims go to (picked from the people nearby), then how many. */
+  let glimsTo = $state<{ accountId: string; displayName: string } | null>(null)
+  let glimsText = $state('')
+  const glimsAmount = $derived(parseAmount(glimsText, haveGlims))
 
-  function toggleGold(): void {
-    toggleOpen('give:purse')
-    goldTo = null
-    goldText = ''
+  function toggleGlims(): void {
+    toggleOpen('give:glims')
+    glimsTo = null
+    glimsText = ''
   }
 
-  function giveGold(): void {
-    const to = goldTo
-    const n = goldAmount
+  function giveGlims(): void {
+    const to = glimsTo
+    const n = glimsAmount
     if (!to || n === null) return
-    void act('give:purse', () => items.giveGold(to.accountId, n), purseCopy.gave(to.displayName, n)).then(() => {
+    void act('give:glims', () => items.giveGlims(to.accountId, n), purseCopy.gave(to.displayName, n)).then(() => {
       if (open === null) {
-        goldTo = null
-        goldText = ''
+        glimsTo = null
+        glimsText = ''
       }
     })
   }
@@ -552,7 +553,7 @@
       <span class="chooser" data-testid="mend-at">
         <button type="button" class="act" data-mend="bench" disabled={action.busy !== null} onclick={() => mendIt(e, 'bench', '')}>{inventoryCopy.mendAt(inventoryCopy.mendBench, costLine(d?.repair?.bench))}</button>
         {#if mender}
-          <button type="button" class="act" data-mend={mender.npc} disabled={action.busy !== null} onclick={() => mendIt(e, mender.npc, mender.name)}>{inventoryCopy.mendAt(mender.name, costLine(d?.repair?.mender) + (d?.repair?.menderEmbers ? `, ${d.repair.menderEmbers} embers` : ''))}</button>
+          <button type="button" class="act" data-mend={mender.npc} disabled={action.busy !== null} onclick={() => mendIt(e, mender.npc, mender.name)}>{inventoryCopy.mendAt(mender.name, costLine(d?.repair?.mender) + (d?.repair?.menderGlims ? `, ${glimsCount(d.repair.menderGlims)}` : ''))}</button>
         {/if}
       </span>
     {:else if open === `fit:${e.key}` && e.instance && model}
@@ -670,27 +671,27 @@
       <button type="button" class="act chest" data-testid="own-chest" onclick={onOwnChest}><Icon name="key" size={12} /> {inventoryCopy.ownChest}</button>
     {/if}
   </section>
-  {#if model && purseGold > 0}
-    <section class="purse-row" data-testid="purse-row" aria-label={purseCopy.title} data-dirty={open === 'give:purse' && goldText ? 'true' : undefined}>
-      <span class="purse-coin"><ArtIcon art="purse-gold" name="coin" size={16} /></span>
-      <b class="purse-gold">{goldPhrase(purseGold)}</b>
-      <button type="button" class="act" data-act="give-gold" aria-expanded={open === 'give:purse'} disabled={action.busy !== null} onclick={toggleGold}>{purseCopy.give}</button>
-      {#if open === 'give:purse'}
+  {#if model && haveGlims > 0}
+    <section class="glims-row" data-testid="glims-row" aria-label={purseCopy.title} data-dirty={open === 'give:glims' && glimsText ? 'true' : undefined}>
+      <Glim size={16} />
+      <b class="glims-count">{glimsPhrase(haveGlims)}</b>
+      <button type="button" class="act" data-act="give-glims" aria-expanded={open === 'give:glims'} disabled={action.busy !== null} onclick={toggleGlims}>{purseCopy.give}</button>
+      {#if open === 'give:glims'}
         {@const people = nearby()}
-        <div class="chooser purse-give" data-testid="give-gold-to">
-          {#if !goldTo}
+        <div class="chooser glims-give" data-testid="give-glims-to">
+          {#if !glimsTo}
             {#if people.length === 0}
               <small>{purseCopy.giveNobody}</small>
             {:else}
               <small>{purseCopy.giveTo}</small>
               {#each people as p (p.accountId)}
-                <button type="button" class="act" data-give-gold-to={p.accountId} onclick={() => (goldTo = p)}>{p.displayName}</button>
+                <button type="button" class="act" data-give-glims-to={p.accountId} onclick={() => (glimsTo = p)}>{p.displayName}</button>
               {/each}
             {/if}
           {:else}
-            <small>{purseCopy.giveTo} {goldTo.displayName}</small>
-            <PurseAmount bind:value={goldText} max={purseGold} label="How much gold" testid="give-gold-amount" autofocus />
-            <button type="button" class="act primary" disabled={action.busy !== null || goldAmount === null} onclick={giveGold} data-testid="give-gold">{purseCopy.giveButton(goldAmount)}</button>
+            <small>{purseCopy.giveTo} {glimsTo.displayName}</small>
+            <PurseAmount bind:value={glimsText} max={haveGlims} label={purseCopy.giveLabel} maxTitle={purseCopy.maxSendTitle} testid="give-glims-amount" autofocus />
+            <button type="button" class="act primary" disabled={action.busy !== null || glimsAmount === null} onclick={giveGlims} data-testid="give-glims">{purseCopy.giveButton(glimsAmount)}</button>
           {/if}
         </div>
       {/if}
@@ -788,8 +789,8 @@
   .fine {
     margin: 0 0 10px;
   }
-  /* ---- the Purse row ---- */
-  .purse-row {
+  /* ---- the Glims row ---- */
+  .glims-row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -800,20 +801,15 @@
     border-radius: 10px;
     background: rgba(255, 255, 255, 0.3);
   }
-  .purse-coin {
-    display: inline-grid;
-    place-items: center;
-    color: var(--gold-deep);
-  }
-  .purse-gold {
+  .glims-count {
     font-family: var(--font-display);
     font-weight: normal;
     color: var(--wood-dark);
   }
-  .purse-row > .act {
+  .glims-row > .act {
     margin-left: auto;
   }
-  .chooser.purse-give {
+  .chooser.glims-give {
     flex: 1 1 100%;
     display: grid;
     gap: 8px;

@@ -26,7 +26,7 @@ message WorldLeaving {
   // Warden-set tools resting in the homestead's shared chest, which stays
   // behind (take them first).
   int32 warden_tools = 5;
-  // DeedCost: embers a deed costs in the next world (the first is free).
+  // DeedCost: glims a deed costs in the next world (the first is free).
   int32 deed_cost = 6;
 }
 // The caller lives in a party's world but has left that party.

@@ -147,7 +147,7 @@
           "path": [
             "tiers",
             1,
-            "embers"
+            "glims"
           ],
           "value": 0
         }
@@ -162,7 +162,7 @@
           "path": [
             "tiers",
             0,
-            "embers"
+            "glims"
           ],
           "value": 5
         }
@@ -671,7 +671,7 @@
         {
           "path": [
             "deeds",
-            "embers"
+            "glims"
           ],
           "value": 0
         }
@@ -684,7 +684,7 @@
       "edits": [
         {
           "path": [
-            "clearTileEmbers"
+            "clearTileGlims"
           ],
           "value": 0
         }
@@ -963,7 +963,7 @@
           "path": [
             "items",
             0,
-            "embers"
+            "glims"
           ],
           "value": 0
         }
@@ -1059,7 +1059,7 @@
       "edits": [
         {
           "path": [
-            "clearTileEmbers"
+            "clearTileGlims"
           ],
           "value": null
         }
@@ -1085,7 +1085,7 @@
       "edits": [
         {
           "path": [
-            "clear_tile_embers"
+            "clear_tile_glims"
           ],
           "value": 1
         }

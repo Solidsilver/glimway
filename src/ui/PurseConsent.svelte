@@ -1,15 +1,16 @@
 <script lang="ts">
   /**
-   * The consent card (purse-and-wardrobe.md 2.1, step 2): shown on every
-   * top-up, nothing pre-filled and nothing remembered. The amount starts
-   * empty; **All** only fills it; the main button names the number and is
-   * the one thing to confirm. **Not now** is the same size beside it.
-   * While the gold moves the card stays calm: one line, no spinner.
+   * The consent card, "Turn Habitica gold into glims" (silas-yard.md 1.5;
+   * purse-and-wardrobe.md 2.1, step 2): shown on every top-up, nothing
+   * pre-filled and nothing remembered. The player picks glims and the card
+   * shows the gold, two for each. **Max** only fills the field with the most
+   * this top-up can get; the main button names the number and is the one
+   * thing to confirm. **Not now** is the same size beside it. While the gold
+   * moves the card stays calm: one line, no spinner.
    */
   import type { Session } from '../game/session'
   import { purseCopy } from '../content/purse'
-  import { TOP_UPS_PER_DAY } from '../lib/purse'
-  import { ui } from './store.svelte'
+  import { GOLD_PER_GLIM } from '../lib/purse'
   import { purseUi } from './purse.svelte'
   import Panel from './Panel.svelte'
   import PurseAmount from './PurseAmount.svelte'
@@ -17,28 +18,31 @@
   let { session }: { session: Session } = $props()
 
   const n = $derived(purseUi.parsed)
-  const left = $derived(ui.purse?.topUpsLeft ?? TOP_UPS_PER_DAY)
+  const max = $derived(purseUi.max)
   const working = $derived(purseUi.phase === 'moving' || purseUi.phase === 'checking')
   const typed = $derived(purseUi.amount.trim() !== '')
 </script>
 
-<Panel id="purse-consent" icon="coin" title={purseCopy.consentTitle} closeLabel={purseCopy.closeConsent} onClose={() => purseUi.closeSheet()} class="purse-consent">
+<Panel id="purse-consent" icon="glim" title={purseCopy.consentTitle} closeLabel={purseCopy.closeConsent} onClose={() => purseUi.closeSheet()} class="purse-consent">
   <div class="body" data-testid="purse-consent" data-dirty={typed ? 'true' : undefined}>
     <p class="have" data-testid="consent-habitica-gold">{purseCopy.youHave(purseUi.habiticaGold)}</p>
 
-    {#if purseUi.habiticaGold < 1}
-      <p class="fine">{purseCopy.nothingThere}</p>
+    {#if purseUi.glimsLeft < 1 || purseUi.topUpsLeft < 1}
+      <p class="fine" data-testid="consent-cap">{purseCopy.capReached}</p>
+    {:else if purseUi.habiticaGold < GOLD_PER_GLIM}
+      <p class="fine">{purseCopy.tooLittleGold(GOLD_PER_GLIM)}</p>
     {:else}
-      <PurseAmount bind:value={purseUi.amount} max={purseUi.habiticaGold} disabled={working} testid="consent-amount" autofocus />
-      {#if typed && n === null && !working}<p class="hint">{purseCopy.amountHint(purseUi.habiticaGold)}</p>{/if}
+      <PurseAmount bind:value={purseUi.amount} {max} disabled={working} testid="consent-amount" autofocus />
+      {#if typed && n === null && !working}<p class="hint">{purseCopy.amountHint(max)}</p>{/if}
+      <p class="rate" data-testid="consent-rate">{purseCopy.rate(n, GOLD_PER_GLIM)}</p>
+      <p class="left" data-testid="consent-left">{purseCopy.glimsLeft(purseUi.glimsLeft, purseUi.topUpsLeft)}</p>
     {/if}
 
     <p class="terms">{purseCopy.spends}</p>
     <p class="terms">{purseCopy.how}</p>
-    <p class="left">{purseCopy.topUpsLeft(left, TOP_UPS_PER_DAY)}</p>
 
     {#if working}
-      <p class="status" role="status" data-testid="consent-status">{purseUi.phase === 'moving' ? purseCopy.moving : purseCopy.checking}</p>
+      <p class="status" role="status" data-testid="consent-status">{purseUi.phase === 'moving' ? purseCopy.getting : purseCopy.checking}</p>
       <p class="tiny">{purseCopy.closeNote}</p>
     {:else if purseUi.outcome && purseUi.phase === 'idle'}
       <p class="outcome" class:ok={purseUi.outcome.ok} role="status" data-testid="consent-outcome">{purseUi.outcome.text}</p>
@@ -48,10 +52,10 @@
     <div class="buttons">
       {#if purseUi.phase === 'consent'}
         <button type="button" onclick={() => purseUi.cancel()} data-testid="consent-not-now">{purseCopy.notNow}</button>
-        <button type="button" class="primary" disabled={n === null} onclick={() => purseUi.confirm(session)} data-testid="consent-move">{purseCopy.move(n)}</button>
+        <button type="button" class="primary" disabled={n === null} onclick={() => purseUi.confirm(session)} data-testid="consent-get">{purseCopy.get(n)}</button>
       {:else}
         <button type="button" onclick={() => purseUi.closeSheet()} data-testid="consent-close">{purseCopy.closeConsent}</button>
-        <button type="button" class="primary" disabled>{working ? purseCopy.moving : purseCopy.move(null)}</button>
+        <button type="button" class="primary" disabled>{working ? purseCopy.getting : purseCopy.get(null)}</button>
       {/if}
     </div>
   </div>
@@ -77,6 +81,7 @@
   }
   .fine,
   .hint,
+  .rate,
   .terms,
   .left,
   .tiny {
@@ -92,6 +97,7 @@
     font-size: 12.5px;
     color: var(--text-faint);
   }
+  .rate,
   .left {
     font-size: 13.5px;
   }

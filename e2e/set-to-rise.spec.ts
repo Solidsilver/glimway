@@ -69,14 +69,14 @@ test('Set to Rise: Hazel asks, the flour goes in, and the sponge rises two hours
 
   // Two hours on from when the sponge was set (the world's clock ran on from `start`), back in
   // the square in her time out, it has risen.
-  const embers = (await serverState(page)).body.state.embers as number
+  const glims = (await serverState(page)).body.state.glims as number
   await clockTo(page, setAt + 2 * 3600 + 5)
   await waitForLive(page)
   await openTalk(page, /Talk to Hazel/)
   await readDialogue(page, { pick: /Lift the cloth/ })
   await expect.poll(async () => (await quests(page)).quests['set-to-rise'], { timeout: 15_000 }).toBe('let-it-rise')
-  await expectToast(page, /\+2 embers/, { timeout: 15_000 })
-  await expect.poll(async () => (await serverState(page)).body.state.embers).toBe(embers + 2)
+  await expectToast(page, /\+2 glims/, { timeout: 15_000 })
+  await expect.poll(async () => (await serverState(page)).body.state.glims).toBe(glims + 2)
   await reloadPack(page)
   await expect.poll(() => stack(page, 'keepers-twists')).toBe(2)
 

@@ -2,7 +2,7 @@ import { writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { createNewGame, validateSave, type GameState } from '../src/lib/state.ts';
 import { syncProfile, type SyncedSave } from '../src/lib/habitica/sync.ts';
-import { creditXp, lifetimeXp, xpToNextLevel, checkSpend, spendEmbers, grantWelcome, type EmberSpend } from '../src/lib/embers.ts';
+import { creditXp, lifetimeXp, xpToNextLevel, checkSpend, spendGlims, grantWelcome, type GlimSpend } from '../src/lib/glims.ts';
 import { toHabiticaProfile, validateHabiticaProfile } from '../src/lib/habitica/mapping.ts';
 import { FIXTURES_BY_KEY } from '../src/lib/habitica/fixtures.ts';
 import { gearStatsFor } from '../src/lib/habitica/gear.ts';
@@ -26,7 +26,7 @@ export function vectors() {
   for (const area of ['village', 'woodland', 'ruin', 'commons', 'wilds'] as const) {
     for (const hp of [0, 4.5, base.hp, base.maxHp]) {
       for (const mode of ['same', 'heal', 'fall', 'max-up', 'cosmetic', 'account', 'no-exp', 'no-baseline', 'first', 'restricted']) {
-        const state = { ...createNewGame(), area, hp, maxHp: base.maxHp, mana: 2, maxMana: base.maxMp, emberXp: lifetimeXp(base.level, base.exp ?? 0) };
+        const state = { ...createNewGame(), area, hp, maxHp: base.maxHp, mana: 2, maxMana: base.maxMp, glimXp: lifetimeXp(base.level, base.exp ?? 0) };
         let profile = { ...base };
         if (mode === 'heal') profile = { ...base, hp: base.hp + 5, mp: base.mp + 7, exp: (base.exp ?? 0) + 22.6 };
         if (mode === 'fall') profile = { ...base, hp: 0, mp: 0, exp: 0 };
@@ -52,13 +52,13 @@ export function vectors() {
     sequential = { ...result.save, state: { ...result.save.state, hp: 0 } };
   }
   const spend = [];
-  const spends: EmberSpend[] = [{ kind: 'rest' }, { kind: 'home-rest' }, { kind: 'road-lantern', id: 'road-1' }, { kind: 'road-lantern', id: 'road-3' }, { kind: 'chest' }];
-  for (const hp of [0, 1, 40]) for (const mana of [0, 20]) for (const embers of [0, 2, 5, 10]) for (const earned of new Set([0, Math.min(2, embers), embers])) for (const imported of [false, true]) for (const done of [false, true]) for (const operation of spends) {
-    const state = validateSave({ ...createNewGame(), hp, mana, embers, xpEmbers: earned, flags: done ? ['lit:road-1', 'opened:ashwatch-chest'] : [] });
+  const spends: GlimSpend[] = [{ kind: 'rest' }, { kind: 'home-rest' }, { kind: 'road-lantern', id: 'road-1' }, { kind: 'road-lantern', id: 'road-3' }, { kind: 'chest' }];
+  for (const hp of [0, 1, 40]) for (const mana of [0, 20]) for (const glims of [0, 2, 5, 10]) for (const earned of new Set([0, Math.min(2, glims), glims])) for (const imported of [false, true]) for (const done of [false, true]) for (const operation of spends) {
+    const state = validateSave({ ...createNewGame(), hp, mana, glims, xpGlims: earned, flags: done ? ['lit:road-1', 'opened:ashwatch-chest'] : [] });
     const check = checkSpend(state, operation, { imported });
-    spend.push({ state, operation, imported, check, ...(check.ok ? { result: spendEmbers(state, operation, { imported }) } : {}) });
+    spend.push({ state, operation, imported, check, ...(check.ok ? { result: spendGlims(state, operation, { imported }) } : {}) });
   }
-  const welcome = [createNewGame(), { ...createNewGame(), embers: 10, xpEmbers: 5 }, { ...createNewGame(), flags: ['embers:welcome'], embers: 7 }].map(state => ({ state, result: grantWelcome(state) }));
+  const welcome = [createNewGame(), { ...createNewGame(), glims: 10, xpGlims: 5 }, { ...createNewGame(), flags: ['embers:welcome'], glims: 7 }].map(state => ({ state, result: grantWelcome(state) }));
   const mapping = Object.values(FIXTURES_BY_KEY).map(f => ({ payload: { success: true, data: f.user }, result: validateHabiticaProfile(toHabiticaProfile(f.user, gearStatsFor)) }));
   return { xp, sync, spend, welcome, mapping };
 }

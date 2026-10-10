@@ -197,7 +197,7 @@ type QuestStep struct {
 	Items         []string      `protobuf:"bytes,3,rep,name=items,proto3" json:"items,omitempty"`
 	Marks         []string      `protobuf:"bytes,4,rep,name=marks,proto3" json:"marks,omitempty"`
 	Papers        []string      `protobuf:"bytes,5,rep,name=papers,proto3" json:"papers,omitempty"`
-	Embers        int32         `protobuf:"varint,6,opt,name=embers,proto3" json:"embers,omitempty"`
+	Glims         int32         `protobuf:"varint,6,opt,name=glims,proto3" json:"glims,omitempty"`
 	Witness       string        `protobuf:"bytes,7,opt,name=witness,proto3" json:"witness,omitempty"`
 	Goal          *string       `protobuf:"bytes,8,opt,name=goal,proto3,oneof" json:"goal,omitempty"`
 	Objective     *string       `protobuf:"bytes,9,opt,name=objective,proto3,oneof" json:"objective,omitempty"`
@@ -276,9 +276,9 @@ func (x *QuestStep) GetPapers() []string {
 	return nil
 }
 
-func (x *QuestStep) GetEmbers() int32 {
+func (x *QuestStep) GetGlims() int32 {
 	if x != nil {
-		return x.Embers
+		return x.Glims
 	}
 	return 0
 }
@@ -591,14 +591,14 @@ func (x *QuestWait) GetTurnings() int32 {
 }
 
 // What a step's gate asks: at least one of someone to meet, a wait, an
-// item or an ember cost. The person is checked in code; a wait on a
+// item or a glim cost. The person is checked in code; a wait on a
 // quest's first step is refused in code (there is nothing to wait from).
 type QuestGate struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	With          string                 `protobuf:"bytes,1,opt,name=with,proto3" json:"with,omitempty"`
 	Wait          *QuestWait             `protobuf:"bytes,2,opt,name=wait,proto3,oneof" json:"wait,omitempty"`
 	Item          *QuestGateItem         `protobuf:"bytes,3,opt,name=item,proto3,oneof" json:"item,omitempty"`
-	Embers        *int32                 `protobuf:"varint,4,opt,name=embers,proto3,oneof" json:"embers,omitempty"`
+	Glims         *int32                 `protobuf:"varint,4,opt,name=glims,proto3,oneof" json:"glims,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -654,9 +654,9 @@ func (x *QuestGate) GetItem() *QuestGateItem {
 	return nil
 }
 
-func (x *QuestGate) GetEmbers() int32 {
-	if x != nil && x.Embers != nil {
-		return *x.Embers
+func (x *QuestGate) GetGlims() int32 {
+	if x != nil && x.Glims != nil {
+		return *x.Glims
 	}
 	return 0
 }
@@ -905,14 +905,14 @@ const file_glimway_content_v1_quests_proto_rawDesc = "" +
 	"\x06_blurbB\n" +
 	"\n" +
 	"\b_chapterB\b\n" +
-	"\x06_start\"\x96\t\n" +
+	"\x06_start\"\x94\t\n" +
 	"\tQuestStep\x123\n" +
 	"\x02id\x18\x01 \x01(\tB#\xbaH r\x1e\x18d2\x1a^[a-z0-9]+(?:-[a-z0-9]+)*$R\x02id\x12\x0e\n" +
 	"\x02at\x18\x02 \x01(\tR\x02at\x12\x14\n" +
 	"\x05items\x18\x03 \x03(\tR\x05items\x12\x14\n" +
 	"\x05marks\x18\x04 \x03(\tR\x05marks\x12\x16\n" +
-	"\x06papers\x18\x05 \x03(\tR\x06papers\x12!\n" +
-	"\x06embers\x18\x06 \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x05(\x00R\x06embers\x122\n" +
+	"\x06papers\x18\x05 \x03(\tR\x06papers\x12\x1f\n" +
+	"\x05glims\x18\x06 \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x05(\x00R\x05glims\x122\n" +
 	"\awitness\x18\a \x01(\tB\x18\xbaH\x15r\x13R\x00R\x06wardenR\alanternR\awitness\x12 \n" +
 	"\x04goal\x18\b \x01(\tB\a\xbaH\x04r\x02\x18(H\x00R\x04goal\x88\x01\x01\x12!\n" +
 	"\tobjective\x18\t \x01(\tH\x01R\tobjective\x88\x01\x01\x129\n" +
@@ -969,17 +969,17 @@ const file_glimway_content_v1_quests_proto_rawDesc = "" +
 	"\n" +
 	"quest.wait\x12Ha wait is positive hours or a positive count of turnings, one of the two\x1a\xa2\x01((has(this.hours)?1:0)+(has(this.turnings)?1:0) == 1) && ((has(this.hours) && this.hours > 0 && this.hours < 1e308) || (has(this.turnings) && this.turnings >= 1))B\b\n" +
 	"\x06_hoursB\v\n" +
-	"\t_turnings\"\xcf\x03\n" +
+	"\t_turnings\"\xc4\x03\n" +
 	"\tQuestGate\x12\x12\n" +
 	"\x04with\x18\x01 \x01(\tR\x04with\x126\n" +
 	"\x04wait\x18\x02 \x01(\v2\x1d.glimway.content.v1.QuestWaitH\x00R\x04wait\x88\x01\x01\x12:\n" +
-	"\x04item\x18\x03 \x01(\v2!.glimway.content.v1.QuestGateItemH\x01R\x04item\x88\x01\x01\x12\x1b\n" +
-	"\x06embers\x18\x04 \x01(\x05H\x02R\x06embers\x88\x01\x01:\xff\x01\xbaH\xfb\x01\x1a\x9d\x01\n" +
-	"\x12quest.gate_present\x12>a gate names someone to meet, a wait, an item or an ember cost\x1aGthis.with != \"\" || has(this.wait) || has(this.item) || has(this.embers)\x1aY\n" +
-	"\x11quest.gate_embers\x12\x1dan ember cost is at least one\x1a%!has(this.embers) || this.embers >= 1B\a\n" +
+	"\x04item\x18\x03 \x01(\v2!.glimway.content.v1.QuestGateItemH\x01R\x04item\x88\x01\x01\x12\x19\n" +
+	"\x05glims\x18\x04 \x01(\x05H\x02R\x05glims\x88\x01\x01:\xf7\x01\xbaH\xf3\x01\x1a\x9a\x01\n" +
+	"\x12quest.gate_present\x12<a gate names someone to meet, a wait, an item or a glim cost\x1aFthis.with != \"\" || has(this.wait) || has(this.item) || has(this.glims)\x1aT\n" +
+	"\x10quest.gate_glims\x12\x1ba glim cost is at least one\x1a#!has(this.glims) || this.glims >= 1B\a\n" +
 	"\x05_waitB\a\n" +
-	"\x05_itemB\t\n" +
-	"\a_embers\"f\n" +
+	"\x05_itemB\b\n" +
+	"\x06_glims\"f\n" +
 	"\rQuestGateItem\x12\x10\n" +
 	"\x03def\x18\x01 \x01(\tR\x03def\x12\x19\n" +
 	"\x03qty\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x03qty\x12\x1f\n" +

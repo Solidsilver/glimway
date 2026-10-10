@@ -2,7 +2,7 @@ import type { AreaId, GameState, QuestStage } from '../lib/state.ts';
 import { LANTERN_ROAD, QUESTS, reachedIndex, type QuestRecord } from '../lib/quests.ts';
 import { SIGNPOST_BETWEEN } from './quests/signpost.ts';
 import { roomFor } from '../lib/rooms.ts';
-import { EMBER_COSTS, XP_PER_EMBER, checkSpend, chestOpened, isLit, type RoadLanternId } from '../lib/embers.ts';
+import { GLIM_COSTS, XP_PER_GLIM, checkSpend, chestOpened, isLit, type RoadLanternId } from '../lib/glims.ts';
 import { HEARTHWICK_COMMONS, WILDS_INNER } from './expansion-writing.ts';
 import { WILDS_OUTER, echoKeepsakeJournalEntries } from './echoes.ts';
 import { witnessJournalEntries } from './witness.ts';
@@ -13,9 +13,9 @@ export interface DialogueChoice {
   text: string;
   /** Lines the speaker answers with before the conversation closes. */
   reply?: string[];
-  /** Something the world does when this choice is picked (e.g. an ember spend). */
+  /** Something the world does when this choice is picked (e.g. a glim spend). */
   action?: string;
-  /** Shown but not pickable (e.g. not enough embers); `note` says why. */
+  /** Shown but not pickable (e.g. not enough glims); `note` says why. */
   disabled?: boolean;
   /** Small side text: a cost, or why the choice is unavailable. */
   note?: string;
@@ -623,19 +623,19 @@ export function journalEntries(record: QuestRecord, flags: readonly string[] = [
   return entries;
 }
 
-// ------------------------------------------------------------------ embers
+// ------------------------------------------------------------------ glims
 
-export type EmberSpotKind = 'hearth' | RoadLanternId | 'chest';
+export type GlimSpotKind = 'hearth' | RoadLanternId | 'chest';
 
 function plural(n: number, word: string): string {
   return `${n} ${word}${n === 1 ? '' : 's'}`;
 }
 
-/** How to get more embers, in the world's voice. */
-function emberHint(connected: boolean): string {
+/** How to get more glims, in the world's voice. */
+function glimHint(connected: boolean): string {
   return connected
-    ? `Every ${XP_PER_EMBER} XP you earn in Habitica becomes an ember. Sync from the Menu in Hearthwick or the Commons to collect them.`
-    : `Embers come from real-life progress: connect Habitica in the Menu, and every ${XP_PER_EMBER} XP you earn there becomes an ember.`;
+    ? `Every ${XP_PER_GLIM} XP you earn in Habitica becomes a glim. Sync from the Menu in Hearthwick or the Commons to collect them.`
+    : `Glims come from real-life progress: connect Habitica in the Menu, and every ${XP_PER_GLIM} XP you earn there becomes a glim.`;
 }
 
 /** Connected play: `online` spends wait for the server, `offline` can't spend. */
@@ -643,7 +643,7 @@ export type RemoteMode = 'online' | 'offline' | null;
 
 function spendChoice(state: GameState, label: string, spend: Parameters<typeof checkSpend>[1], action: string, reply: string[], imported: boolean, remote: RemoteMode = null): DialogueChoice {
   const check = checkSpend(state, spend, { imported });
-  const cost = plural(check.cost, 'ember');
+  const cost = plural(check.cost, 'glim');
   if (check.ok && remote === 'offline') return { text: label, note: 'Needs a connection', disabled: true };
   // Online, the payoff is told after the server says yes (no reply here).
   if (check.ok) return remote === 'online' ? { text: label, note: cost, action } : { text: label, note: cost, action, reply };
@@ -659,16 +659,16 @@ function spendChoice(state: GameState, label: string, spend: Parameters<typeof c
 }
 
 /**
- * Conversations at the places where embers are spent. Built from the live
+ * Conversations at the places where glims are spent. Built from the live
  * state so costs, balances and already-done states are always current.
  */
-export function emberDialogue(id: EmberSpotKind, state: GameState, opts: { connected: boolean; remote?: RemoteMode }): Dialogue {
-  const balance = state.embers > 0 ? `You carry ${plural(state.embers, 'ember')}.` : 'You have no embers yet.';
-  const short = (cost: number) => state.embers < cost;
+export function glimDialogue(id: GlimSpotKind, state: GameState, opts: { connected: boolean; remote?: RemoteMode }): Dialogue {
+  const balance = state.glims > 0 ? `You carry ${plural(state.glims, 'glim')}.` : 'You have no glims yet.';
+  const short = (cost: number) => state.glims < cost;
 
   if (id === 'hearth') {
     const lines = ['The square\u2019s lamp burns low and patient, named and tended every dusk. Its warmth reaches as far as the well.', balance];
-    if (short(EMBER_COSTS.rest)) lines.push(emberHint(opts.connected));
+    if (short(GLIM_COSTS.rest)) lines.push(glimHint(opts.connected));
     return {
       speaker: 'Hearth Lantern',
       lines,
@@ -690,10 +690,10 @@ export function emberDialogue(id: EmberSpotKind, state: GameState, opts: { conne
     }
     const lines = [
       'A Keeper\u2019s chest, oak pegged into oak: no Hall-price hinges here. Its lock is shaped like a lantern with no flame.',
-      'It looks like it wants an ember, not a key.',
+      'It looks like it wants a glim, not a key.',
       balance,
     ];
-    if (short(EMBER_COSTS.chest)) lines.push(emberHint(opts.connected));
+    if (short(GLIM_COSTS.chest)) lines.push(glimHint(opts.connected));
     return {
       speaker: 'Ashwatch Chest',
       lines,
@@ -714,7 +714,7 @@ export function emberDialogue(id: EmberSpotKind, state: GameState, opts: { conne
     };
   }
   const lines = ['A cold road lantern leans over the path, one of the old chain. Its wick is dry but whole.', balance];
-  if (short(EMBER_COSTS.roadLantern)) lines.push(emberHint(opts.connected));
+  if (short(GLIM_COSTS.roadLantern)) lines.push(glimHint(opts.connected));
   return {
     speaker: 'Road Lantern',
     lines,

@@ -8,7 +8,7 @@ const HOUR = Date.UTC(2026, 9, 8, 10) / 1000;
 const LIBRARY = 'in:village:library';
 
 function gate(over: Partial<GateContext> = {}): GateContext {
-  return { now: HOUR + 10 * 60, area: 'village', embers: 0, carrying: () => 0, gateAt: undefined, online: true, ...over };
+  return { now: HOUR + 10 * 60, area: 'village', glims: 0, carrying: () => 0, gateAt: undefined, online: true, ...over };
 }
 
 // ---------------------------------------------------------------- the sponge bowl

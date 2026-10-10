@@ -887,8 +887,8 @@ type MailView struct {
 	ToId     string                 `protobuf:"bytes,4,opt,name=to_id,json=toId,proto3" json:"to_id,omitempty"`
 	FromName string                 `protobuf:"bytes,5,opt,name=from_name,json=fromName,proto3" json:"from_name,omitempty"`
 	ToName   string                 `protobuf:"bytes,6,opt,name=to_name,json=toName,proto3" json:"to_name,omitempty"`
-	// A gold letter carries Asset { kind: "gold", id: "gold", qty: the
-	// amount }: display only. validAsset still refuses "gold" as something
+	// A glim letter carries Asset { kind: "glims", id: "glims", qty: the
+	// amount }: display only. validAsset still refuses "glims" as something
 	// to take from a pack (3.3).
 	Asset         *Asset                  `protobuf:"bytes,7,opt,name=asset,proto3" json:"asset,omitempty"`
 	SentAt        float64                 `protobuf:"fixed64,8,opt,name=sent_at,json=sentAt,proto3" json:"sent_at,omitempty"`
@@ -1074,7 +1074,7 @@ func (x *MailReadResult) GetInventory() *AssetCounts {
 	return nil
 }
 
-// POST /api/mail (send). A gold letter: `gold` set, `asset` absent — a
+// POST /api/mail (send). A glim letter: `glims` set, `asset` absent — a
 // letter carries one thing (3.3, question 11). Both, or neither, is
 // invalid-request.
 type MailSendRequest struct {
@@ -1083,7 +1083,7 @@ type MailSendRequest struct {
 	Where         *Where                 `protobuf:"bytes,2,opt,name=where,proto3" json:"where,omitempty"`
 	ToId          string                 `protobuf:"bytes,3,opt,name=to_id,json=toId,proto3" json:"to_id,omitempty"`
 	Asset         *Asset                 `protobuf:"bytes,4,opt,name=asset,proto3" json:"asset,omitempty"`
-	Gold          int32                  `protobuf:"varint,5,opt,name=gold,proto3" json:"gold,omitempty"`
+	Glims         int32                  `protobuf:"varint,6,opt,name=glims,proto3" json:"glims,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1146,9 +1146,9 @@ func (x *MailSendRequest) GetAsset() *Asset {
 	return nil
 }
 
-func (x *MailSendRequest) GetGold() int32 {
+func (x *MailSendRequest) GetGlims() int32 {
 	if x != nil {
-		return x.Gold
+		return x.Glims
 	}
 	return 0
 }
@@ -1285,8 +1285,8 @@ func (x *MailKeyedRequest) GetWhere() *Where {
 type MailActionResult struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	MailId string                 `protobuf:"bytes,1,opt,name=mail_id,json=mailId,proto3" json:"mail_id,omitempty"`
-	// A gold letter's asset is Asset { kind: "gold", id: "gold", qty: the
-	// amount }, display only (3.3); validAsset still refuses "gold" as
+	// A glim letter's asset is Asset { kind: "glims", id: "glims", qty: the
+	// amount }, display only (3.3); validAsset still refuses "glims" as
 	// something to take from a pack.
 	Asset             *Asset                  `protobuf:"bytes,2,opt,name=asset,proto3" json:"asset,omitempty"`
 	Mail              []*MailView             `protobuf:"bytes,3,rep,name=mail,proto3" json:"mail,omitempty"`
@@ -1374,8 +1374,8 @@ func (x *MailActionResult) GetInventory() *AssetCounts {
 type MailRecallResult struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	MailId string                 `protobuf:"bytes,1,opt,name=mail_id,json=mailId,proto3" json:"mail_id,omitempty"`
-	// A gold letter's asset is Asset { kind: "gold", id: "gold", qty: the
-	// amount }, display only (3.3); validAsset still refuses "gold" as
+	// A glim letter's asset is Asset { kind: "glims", id: "glims", qty: the
+	// amount }, display only (3.3); validAsset still refuses "glims" as
 	// something to take from a pack.
 	Asset             *Asset                  `protobuf:"bytes,2,opt,name=asset,proto3" json:"asset,omitempty"`
 	Mail              []*MailView             `protobuf:"bytes,3,rep,name=mail,proto3" json:"mail,omitempty"`
@@ -1519,7 +1519,7 @@ type GateView struct {
 	Tier     int32                   `protobuf:"varint,5,opt,name=tier,proto3" json:"tier,omitempty"`
 	Desolate bool                    `protobuf:"varint,6,opt,name=desolate,proto3" json:"desolate,omitempty"`
 	Mine     bool                    `protobuf:"varint,7,opt,name=mine,proto3" json:"mine,omitempty"`
-	// Unclaimed: what the deed costs the caller in embers.
+	// Unclaimed: what the deed costs the caller in glims.
 	Price *wrapperspb.Int32Value `protobuf:"bytes,8,opt,name=price,proto3" json:"price,omitempty"`
 	// The caller was on this empty home's deed and can take it back, free,
 	// until the deed is lost.
@@ -2815,13 +2815,13 @@ const file_glimway_v1_village_proto_rawDesc = "" +
 	"\vnext_cursor\x18\x02 \x01(\v2\x1c.google.protobuf.StringValueR\n" +
 	"nextCursor\x12L\n" +
 	"\x13next_pending_cursor\x18\x03 \x01(\v2\x1c.google.protobuf.StringValueR\x11nextPendingCursor\x125\n" +
-	"\tinventory\x18\x04 \x01(\v2\x17.glimway.v1.AssetCountsR\tinventory\"\xb2\x01\n" +
+	"\tinventory\x18\x04 \x01(\v2\x17.glimway.v1.AssetCountsR\tinventory\"\xc0\x01\n" +
 	"\x0fMailSendRequest\x12$\n" +
 	"\x02op\x18\x01 \x01(\v2\x14.glimway.v1.OpHeaderR\x02op\x12'\n" +
 	"\x05where\x18\x02 \x01(\v2\x11.glimway.v1.WhereR\x05where\x12\x13\n" +
 	"\x05to_id\x18\x03 \x01(\tR\x04toId\x12'\n" +
-	"\x05asset\x18\x04 \x01(\v2\x11.glimway.v1.AssetR\x05asset\x12\x12\n" +
-	"\x04gold\x18\x05 \x01(\x05R\x04gold\"\x97\x02\n" +
+	"\x05asset\x18\x04 \x01(\v2\x11.glimway.v1.AssetR\x05asset\x12\x14\n" +
+	"\x05glims\x18\x06 \x01(\x05R\x05glimsJ\x04\b\x05\x10\x06R\x04gold\"\x97\x02\n" +
 	"\x0eMailSendResult\x12\x17\n" +
 	"\amail_id\x18\x01 \x01(\tR\x06mailId\x12(\n" +
 	"\x04mail\x18\x02 \x03(\v2\x14.glimway.v1.MailViewR\x04mail\x12=\n" +

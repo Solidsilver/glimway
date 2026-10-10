@@ -175,7 +175,7 @@ func resolveHomeGoods(h *Homestead) error {
 func validateHomestead(h *Homestead) error {
 	tiers := h.GetTiers()
 	for i, t := range tiers {
-		if t.GetTier() != int32(i) || t.GetId() != fmt.Sprintf("tier-%d", i) || t.GetPurchasable() != (i == 1 || i == 2) || ((i == 1 || i == 2) && t.GetEmbers() <= 0) || ((i == 0 || i > 2) && t.GetEmbers() != 0) || (i == 2 && !ValidMaterialCosts(t.GetMaterials())) || (i != 2 && len(t.GetMaterials()) != 0) {
+		if t.GetTier() != int32(i) || t.GetId() != fmt.Sprintf("tier-%d", i) || t.GetPurchasable() != (i == 1 || i == 2) || ((i == 1 || i == 2) && t.GetGlims() <= 0) || ((i == 0 || i > 2) && t.GetGlims() != 0) || (i == 2 && !ValidMaterialCosts(t.GetMaterials())) || (i != 2 && len(t.GetMaterials()) != 0) {
 			return fmt.Errorf("invalid homestead: tier %d", i)
 		}
 	}

@@ -221,12 +221,12 @@ export interface Asset {
 }
 
 /**
- * Goods on the move, read side: the wire also shows a gold letter as
- * `Asset { kind: "gold", id: "gold", qty: the amount }` (6.1, display only),
- * so every read widens the kind. A request `Asset` still can't be gold —
+ * Goods on the move, read side: the wire also shows a glim letter as
+ * `Asset { kind: "glims", id: "glims", qty: the amount }` (6.1, display only),
+ * so every read widens the kind. A request `Asset` still can't be glims —
  * the server's `validAsset` refuses it as something to take from a pack.
  */
-export type AssetView = Omit<Asset, 'kind'> & { kind: Asset['kind'] | 'gold' };
+export type AssetView = Omit<Asset, 'kind'> & { kind: Asset['kind'] | 'glims' };
 
 /** Counts by kind; a missing key means zero. Carried decorations are the pack's (placed ones belong to the homestead). */
 export interface AssetCounts {

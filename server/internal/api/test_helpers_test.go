@@ -42,7 +42,9 @@ var rigStart = func() int64 {
 }()
 
 type rig struct {
-	t        *testing.T
+	t *testing.T
+	// fundings numbers topUpGlims's purse_topups rows.
+	fundings int
 	db       *store.Store
 	api      *Server
 	upstream *httptest.Server
@@ -576,7 +578,7 @@ func (x *rig) rawHTTP(method, path string, body any, cookie *http.Cookie) *httpt
 		}
 	}
 	r := httptest.NewRequest(method, path, bytes.NewReader(b))
-	r.Header.Set("X-Glimway-Contract", "6")
+	r.Header.Set("X-Glimway-Contract", "7")
 	r.Header.Set("Content-Type", "application/json")
 	if cookie != nil {
 		r.AddCookie(cookie)

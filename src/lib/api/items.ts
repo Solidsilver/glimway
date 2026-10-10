@@ -113,10 +113,10 @@ export interface ItemsActionResponse extends Snapshot {
     land?: { tile: [number, number]; stump: boolean; cleared: boolean };
     heirloom?: string;
     adaOilCount?: number;
-    /** give: the gold handed over (0.6, 3.4), when any did. */
-    goldGiven?: number;
-    /** What a seller just handed over (/api/items/buy), and what it cost in either currency. */
-    bought?: { seller: string; itemDef: string; qty: number; embers: number; gold: number };
+    /** give: the glims handed over (3.4), when any did. */
+    glimsGiven?: number;
+    /** What a seller just handed over (/api/items/buy), and what it cost in glims. */
+    bought?: { seller: string; itemDef: string; qty: number; glims: number };
   };
 }
 
@@ -141,10 +141,10 @@ const countMap = (v: Record<string, number> | undefined): Record<string, number>
 };
 
 const WEAR_STATES = ['whole', 'worn', 'blunt', 'cracked', 'dull'];
-// The request vocabulary (a request Asset can't be gold); reads widen it —
+// The request vocabulary (a request Asset can't be glims); reads widen it —
 // projectAsset's kind check is the read side's.
 const ASSET_KINDS = ['material', 'item', 'decoration', 'instance', 'thanks'];
-const READ_ASSET_KINDS = [...ASSET_KINDS, 'gold'];
+const READ_ASSET_KINDS = [...ASSET_KINDS, 'glims'];
 
 /** The maker's mark, projected. */
 function maker(v: { id: string; name: string } | undefined): MakerView | null {
@@ -216,7 +216,7 @@ function wear(v: GeneratedWearResult | undefined): WearResult | undefined {
   };
 }
 
-/** Goods on the move, projected (kind in the vocabulary, empty optionals gone). Reads only: a gold letter shows as kind "gold" (display only), while a request Asset still can't carry it. */
+/** Goods on the move, projected (kind in the vocabulary, empty optionals gone). Reads only: a glim letter shows as kind "glims" (display only), while a request Asset still can't carry it. */
 export function projectAsset(v: { kind: string; id: string; qty: number; instance: string; maker?: string } | undefined): AssetView | undefined {
   if (!v) return undefined;
   if (!READ_ASSET_KINDS.includes(v.kind)) throw new Error('invalid asset kind');
@@ -240,8 +240,8 @@ function result(r: ItemsResult): ItemsActionResponse['result'] {
   if (r.created?.length) out.created = r.created.filter((c): c is string => typeof c === 'string');
   if (r.heirloom) out.heirloom = r.heirloom;
   if (r.adaOilCount) out.adaOilCount = int(r.adaOilCount);
-  if (r.goldGiven) out.goldGiven = int(r.goldGiven);
-  if (r.bought) out.bought = { seller: r.bought.seller, itemDef: r.bought.itemDef, qty: int(r.bought.qty), embers: int(r.bought.embers), gold: int(r.bought.gold) };
+  if (r.glimsGiven) out.glimsGiven = int(r.glimsGiven);
+  if (r.bought) out.bought = { seller: r.bought.seller, itemDef: r.bought.itemDef, qty: int(r.bought.qty), glims: int(r.bought.glims) };
   if (r.gathered?.length) out.gathered = r.gathered.map((g) => ({ itemDef: g.itemDef, qty: int(g.qty) }));
   if (r.plant) {
     out.plant = {

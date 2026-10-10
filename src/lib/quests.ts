@@ -168,7 +168,7 @@ export interface GateContext {
   now: number;
   /** The `where.area` the step would be sent with. */
   area: string;
-  embers: number;
+  glims: number;
   /** How many of a server item (or a keepsake) you carry. */
   carrying: (def: string) => number;
   /** When this quest last reached a gated step, or its first (Unix seconds; undefined: not known). */
@@ -183,7 +183,7 @@ export type GateResult =
   | { ok: false; why: 'not-here' }
   | { ok: false; why: 'not-yet'; opensAt: number }
   | { ok: false; why: 'short'; def: string; need: number }
-  | { ok: false; why: 'short-embers'; need: number }
+  | { ok: false; why: 'short-glims'; need: number }
   | { ok: false; why: 'needs-connection' };
 
 /** The areas a person can be met in near `now`: a resident's spots near now (with the grace), else the step's own `at`. */
@@ -207,7 +207,7 @@ export function waitOpensAt(wait: QuestWait, since: number, calendar: Calendar =
   return t;
 }
 
-/** The gate on `step`, checked in the server's order (with, wait, item, embers); then the connection. */
+/** The gate on `step`, checked in the server's order (with, wait, item, glims); then the connection. */
 export function checkGate(step: QuestStepDef, ctx: GateContext): GateResult {
   const g = step.gate;
   if (!g) return { ok: true };
@@ -217,7 +217,7 @@ export function checkGate(step: QuestStepDef, ctx: GateContext): GateResult {
     if (ctx.now < opensAt) return { ok: false, why: 'not-yet', opensAt };
   }
   if (g.item && ctx.carrying(g.item.def) < g.item.qty) return { ok: false, why: 'short', def: g.item.def, need: g.item.qty };
-  if (g.embers && ctx.embers < g.embers) return { ok: false, why: 'short-embers', need: g.embers };
+  if (g.glims && ctx.glims < g.glims) return { ok: false, why: 'short-glims', need: g.glims };
   if (!ctx.online) return { ok: false, why: 'needs-connection' };
   return { ok: true };
 }
@@ -290,8 +290,8 @@ const unique = (list: readonly string[], item: string): string[] => (list.includ
 
 /**
  * Reach `to` on `quest` (the predicted `quest-step`): the record, the
- * step's keepsakes and marks, and an `embers` gate's spend. Grants of
- * embers and server items arrive with the answer. Null when `to` isn't the
+ * step's keepsakes and marks, and a `glims` gate's spend. Grants of
+ * glims and server items arrive with the answer. Null when `to` isn't the
  * next step.
  */
 export function reachStep(state: GameState, quest: string, to: string, now: number): GameState | null {
@@ -308,7 +308,7 @@ export function reachStep(state: GameState, quest: string, to: string, now: numb
     else if (mark.startsWith(DEFEATED)) next = { ...next, defeatedEnemies: unique(next.defeatedEnemies, mark.slice(DEFEATED.length)) };
     else next = { ...next, flags: unique(next.flags, mark) };
   }
-  if (s.gate?.embers) next = { ...next, embers: Math.max(0, next.embers - s.gate.embers), xpEmbers: Math.min(next.xpEmbers, Math.max(0, next.embers - s.gate.embers)) };
+  if (s.gate?.glims) next = { ...next, glims: Math.max(0, next.glims - s.gate.glims), xpGlims: Math.min(next.xpGlims, Math.max(0, next.glims - s.gate.glims)) };
   return next;
 }
 

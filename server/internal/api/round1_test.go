@@ -75,7 +75,7 @@ func TestTerminalSpendRefusalReplaysWithCurrentState(t *testing.T) {
 	x.fund(x.account("alice"), 10, 0)
 	req.Op.Report = nil // Replays need no report; header changes do not change identity.
 	replay := send()
-	if replay.State.Embers.Balance != 10 || replay.State.Version <= refused.State.Version || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='spend'") != 0 {
+	if replay.State.Glims.Balance != 10 || replay.State.Version <= refused.State.Version || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='spend'") != 0 {
 		t.Fatal("refused key committed", replay)
 	}
 	w := x.rawHTTP("GET", "/api/operations/result?route=%2Fapi%2Fspend&key=short-forever", nil, c)

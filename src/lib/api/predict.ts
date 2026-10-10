@@ -17,7 +17,6 @@ import type { HabiticaProfile } from '../habitica/types.ts';
 import { profileFor } from '../profile.ts';
 import { reachStep } from '../quests.ts';
 import { createNewGame, validateSave, type GameState } from '../state.ts';
-import { purseOf, type PurseView } from '../purse.ts';
 
 /** Marks that hold discoveries and curated defeats (design 2.2, `content/story.json`). */
 export const FOUND = 'found:';
@@ -73,8 +72,8 @@ export function profileOf(p: PlayerState): HabiticaProfile | null {
  * the rest are flags.
  */
 export function gameStateOf(p: PlayerState): GameState {
-  const { place, vitals, story, embers } = p;
-  if (!place || !vitals || !story || !embers) throw new Error('incomplete state');
+  const { place, vitals, story, glims } = p;
+  if (!place || !vitals || !story || !glims) throw new Error('incomplete state');
   const flags: string[] = [];
   const discoveries: string[] = [];
   const defeatedEnemies: string[] = [];
@@ -108,9 +107,9 @@ export function gameStateOf(p: PlayerState): GameState {
     discoveries,
     defeatedEnemies,
     playSeconds: story.playSeconds,
-    embers: embers.balance,
-    xpEmbers: embers.xpEarned,
-    emberXp: embers.xpMark,
+    glims: glims.balance,
+    xpGlims: glims.xpEarned,
+    glimXp: glims.xpMark,
     ...(place.outerEpoch ? { outerEpoch: place.outerEpoch } : {}),
   });
 }
@@ -130,9 +129,9 @@ export type Prediction =
   // Companions and the stable (crafts.md 6.2): they change `PlayerState.companions`, not the game state (`predictCompanions`).
   | { kind: 'companions'; followPet: string; yardPets: string[] }
   | { kind: 'mount-home' }
-  // Gold (purse-and-wardrobe.md 6.5): a gold buy, shelf buy, letter or give takes it out of the purse,
-  // a gold letter collected or recalled puts it in. It changes `PlayerState.purse` (`predictPurse`).
-  | { kind: 'gold'; delta: number }
+  // Glims (purse-and-wardrobe.md 6.5, in glims since silas-yard.md 1.6): a buy, shelf buy, letter or
+  // give takes them away, a glim letter collected or recalled brings them back.
+  | { kind: 'glims'; delta: number }
   // The wardrobe (purse-and-wardrobe.md 6.5): it changes `PlayerState.wardrobe` (`predictWardrobe`).
   | { kind: 'wardrobe'; chosen: Record<string, string> }
   | { kind: 'none' };
@@ -175,9 +174,10 @@ export function predict(state: GameState, op: Prediction, ctx: PredictContext): 
       return { ...state, flags: unique(state.flags, `echo:${op.member}`) };
     case 'fall':
       return { ...state, ...fallRecovery(state, ctx.profile), area: 'village', position: { ...VILLAGE_SPAWN }, wildsRegion: undefined };
+    case 'glims':
+      return predictGlims(state, op.delta);
     case 'companions':
     case 'mount-home':
-    case 'gold':
     case 'wardrobe':
     case 'none':
       return state;
@@ -265,17 +265,17 @@ function grown(home: HomeView, stableItem: string, max: number): HomeView['stall
   return [...home.stalls, { stall: n + 1, mount: '', ownerId: '', ownerName: '', out: false }];
 }
 
-// ------------------------------------------------------------ the purse
+// ------------------------------------------------------------ glims
 
 /**
- * `server.purse` with `pending` applied in order (purse-and-wardrobe.md 6.5):
- * gold down at once for a buy, a letter or a give, and up for a letter
- * collected or recalled, until the answer replaces it. Never below zero:
- * the server refuses a spend the purse can't cover, and the prediction
- * rolls back with it. The top-up is never predicted.
+ * A glims change shown before its answer (purse-and-wardrobe.md 6.5, in
+ * glims since silas-yard.md 1.6): down at once for a buy, a letter or a
+ * give, up for a letter collected or recalled. Never below zero: the server
+ * refuses a spend glims can't cover, and the prediction rolls back with it.
+ * A spend uses the other glims before XP-earned ones (1.4 rule 4), and
+ * glims that arrive are never XP-earned. The top-up is never predicted.
  */
-export function predictPurse(server: PlayerState | null, pending: readonly Prediction[]): PurseView {
-  const view = purseOf(server);
-  for (const op of pending) if (op.kind === 'gold') view.gold = Math.max(0, view.gold + op.delta);
-  return view;
+export function predictGlims(state: GameState, delta: number): GameState {
+  const glims = Math.max(0, state.glims + delta);
+  return { ...state, glims, xpGlims: Math.min(state.xpGlims, glims) };
 }

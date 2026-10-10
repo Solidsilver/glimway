@@ -16,9 +16,10 @@ import type { GameState, QuestEvent, QuestStage } from '../lib/state.ts'
 import { autoSteps, checkGate, needsServer, parseRef, questById, reachStep, roadStep, ROAD_EVENT_STEP, LANTERN_ROAD, stepsBy, type GateContext, type GateResult, type NeedsContext, type QuestRecord } from '../lib/quests.ts'
 import { roadGoal } from '../content/quests/index.ts'
 import { questErrorText } from '../content/errors.ts'
+import { glimsGift } from '../content/purse.ts'
 import type { HabiticaProfile, LoadedSave, VitalsSource } from '../lib/habitica/types.ts'
 import { resolveDefeatRecovery } from '../lib/habitica/sync.ts'
-import { checkSpend, grantEmbers, spendEmbers, type EmberSpend, type SpendCheck, type SpendReason } from '../lib/embers.ts'
+import { checkSpend, grantGlims, spendGlims, type GlimSpend, type SpendCheck, type SpendReason } from '../lib/glims.ts'
 import { saveCurrent, saveGame } from '../lib/save.ts'
 import { bus, EV, type StatsPayload } from './events.ts'
 import type { Link, QuestStepOutcome } from './link.ts'
@@ -52,7 +53,7 @@ export class Session {
    * Connected play: the server link. Null for guests, whose saves stay on
    * this device exactly as before. With a link, saves go to the connected
    * cache and the server, spends and syncs go through the server, and quest
-   * embers arrive from the server instead of being granted here.
+   * glims arrive from the server instead of being granted here.
    */
   readonly link: Link | null
   /** A server spend or sync is out: the world waits for its answer. */
@@ -182,7 +183,7 @@ export class Session {
       // The world's clock (and the dev clock): the cycle and the waits are the server's.
       now: serverNow(),
       area: placeArea(this.state),
-      embers: this.state.embers,
+      glims: this.state.glims,
       carrying: (def) => this.carrying(def),
       gateAt: this.state.questGateAt?.[quest],
       // No link, no world: a gated step needs a connection.
@@ -248,7 +249,7 @@ export class Session {
     if (step.gate || step.give?.length) return 'offline'
     this.state = next
     this.emitQuest({ quest, step: to })
-    if (step.embers > 0) this.addEmbers(step.embers, `+${step.embers} embers — a little warmth from the road.`)
+    if (step.glims > 0) this.addGlims(step.glims, glimsGift(step.glims))
     this.saveSoon()
     return null
   }
@@ -258,7 +259,7 @@ export class Session {
     for (const { quest, step } of stepsBy(kind, id, this.state.quests, this.needs)) void this.reachStep(quest.id, step.id)
   }
 
-  /** XP embers when `sync: embers` became the next step (a sync after it pays the step). */
+  /** XP glims when `sync: glims` became the next step (a sync after it pays the step). */
   private syncBase = new Map<string, number>()
   /**
    * Automatic steps already tried this visit. A refused one rolls back (the
@@ -286,21 +287,21 @@ export class Session {
     const s = this.state
     const ctx = { area: placeArea(s), flags: s.flags, defeated: s.defeatedEnemies, carrying: (def: string) => this.carrying(def) }
     for (const { quest, step } of autoSteps(s.quests, this.needs, ctx)) this.autoStep(quest, step)
-    for (const { quest, step } of stepsBy('sync', 'embers', s.quests, this.needs)) {
+    for (const { quest, step } of stepsBy('sync', 'glims', s.quests, this.needs)) {
       const base = this.syncBase.get(quest.id)
-      if (base === undefined) this.syncBase.set(quest.id, s.xpEmbers)
-      else if (s.xpEmbers > base) this.autoStep(quest.id, step.id)
+      if (base === undefined) this.syncBase.set(quest.id, s.xpGlims)
+      else if (s.xpGlims > base) this.autoStep(quest.id, step.id)
     }
   }
 
-  /** Credit embers locally (quest beats). Habitica-earned embers arrive via
+  /** Credit glims locally (quest beats). Habitica-earned glims arrive via
    *  applySynced, already folded into the synced state. Never for connected
    *  play: balances are server-owned. */
-  addEmbers(n: number, toast?: string): void {
+  addGlims(n: number, toast?: string): void {
     if (this.destroyed || n <= 0 || this.link) return
-    this.state = grantEmbers(this.state, n)
+    this.state = grantGlims(this.state, n)
     this.emitStats()
-    if (toast) bus.emit(EV.toast, { text: toast, icon: 'ember' })
+    if (toast) bus.emit(EV.toast, { text: toast, icon: 'glim', art: 'glims-few' })
     this.saveSoon()
   }
 
@@ -321,18 +322,18 @@ export class Session {
     this.saveSoon()
   }
 
-  checkSpend(spend: EmberSpend): SpendCheck {
+  checkSpend(spend: GlimSpend): SpendCheck {
     return checkSpend(this.state, spend, { imported: this.vitalsSource === 'imported' })
   }
 
-  /** Spend embers via the shared rules. Returns null on success, or why it
+  /** Spend glims via the shared rules. Returns null on success, or why it
    *  was refused (and nothing changed). Saved promptly: it is a purchase. */
-  spend(spend: EmberSpend): null | 'busy' | SpendReason {
+  spend(spend: GlimSpend): null | 'busy' | SpendReason {
     if (this.destroyed || this.syncInFlight || this.link) return 'busy'
     const ctx = { imported: this.vitalsSource === 'imported' }
     const check = checkSpend(this.state, spend, ctx)
     if (!check.ok) return check.reason
-    this.state = spendEmbers(this.state, spend, ctx)
+    this.state = spendGlims(this.state, spend, ctx)
     this.emitStats()
     this.saveSoon()
     return null
@@ -411,8 +412,7 @@ export class Session {
       maxHp: s.maxHp,
       mana: Math.floor(s.mana),
       maxMana: s.maxMana,
-      embers: s.embers,
-      gold: this.link?.purse.gold ?? 0
+      glims: s.glims
     }
     bus.emit(EV.stats, payload)
   }

@@ -72,9 +72,9 @@ test('Wilds claim parser preserves and validates rare warden sliver finds', () =
 test('items parser keeps what a seller handed over (/api/items/buy)', () => {
   const items = { stacks: [{ itemDef: 'tallow', qty: 1, maker: null }], instances: [], pockets: [], offHand: { open: false, class: null, itemDef: null, instance: null }, pickedUp: [], thanks: [] };
   // The wire answer carries every ItemsResult field (EmitUnpopulated).
-  const fields = { wear: null, used: '', pickup: '', given: null, mended: '', created: [], gathered: [], plant: null, land: null, returned: '', paper: null, heirloom: '', adaOilCount: 0, goldGiven: 0 };
-  const raw = { ...snapshot(), result: { items, ...fields, bought: { seller: 'hazels-kitchen', itemDef: 'tallow', qty: 1, embers: 1, gold: 0 } } };
-  assert.deepEqual(parseItemsAction(raw).result.bought, { seller: 'hazels-kitchen', itemDef: 'tallow', qty: 1, embers: 1, gold: 0 });
+  const fields = { wear: null, used: '', pickup: '', given: null, mended: '', created: [], gathered: [], plant: null, land: null, returned: '', paper: null, heirloom: '', adaOilCount: 0, glimsGiven: 0 };
+  const raw = { ...snapshot(), result: { items, ...fields, bought: { seller: 'hazels-kitchen', itemDef: 'tallow', qty: 1, glims: 1 } } };
+  assert.deepEqual(parseItemsAction(raw).result.bought, { seller: 'hazels-kitchen', itemDef: 'tallow', qty: 1, glims: 1 });
   assert.equal(parseItemsAction({ ...raw, result: { items, ...fields, bought: null } }).result.bought, undefined);
 });
 

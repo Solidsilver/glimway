@@ -279,7 +279,7 @@ export function buildLand(gate: number): LandWorld {
     mural: null,
     shrine: null,
     villageLantern: null,
-    emberSpots: [],
+    glimSpots: [],
     spawn: landEntry(),
     gate,
     land,

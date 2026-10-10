@@ -2,23 +2,24 @@ import { ECONOMY as economy } from './economy.ts';
 import { validateSave, type GameState } from './state.ts';
 
 /**
- * Embers: real-life progress turned into something to spend in the world.
+ * Glims: real-life progress turned into something to spend in the world
+ * (docs/design/silas-yard.md 1.2, 1.4).
  *
  * Source: XP earned in Habitica between two explicit syncs (read-only — the
  * game never writes to the account). Each XP counts once, because the saved
  * profile is the baseline and advances with every accepted sync, exactly like
- * the HP credit rule in sync.ts. A few story beats also grant embers so a
+ * the HP credit rule in sync.ts. A few story beats also grant glims so a
  * player without Habitica can still try every spend.
  *
  * Pure logic only: no network, no Phaser, no randomness.
  */
 
-export const XP_PER_EMBER = economy.xpPerEmber;
+export const XP_PER_GLIM = economy.xpPerGlim;
 /** One-off gift on the first Habitica import (flag-guarded, so reconnecting
  *  after a disconnect does not pay it again). */
-export const WELCOME_EMBERS = economy.welcomeEmbers;
+export const WELCOME_GLIMS = economy.welcomeGlims;
 
-export const EMBER_COSTS = economy.costs;
+export const GLIM_COSTS = economy.costs;
 
 /** Road lanterns along Brackenwood that can be lit as rest spots. */
 export const ROAD_LANTERNS = economy.roadLanterns;
@@ -36,6 +37,7 @@ export function withCharm<K extends { critChance: number }>(kit: K, inventory: r
 }
 
 export const FLAGS = {
+  // A stored story mark (outcomes and saves), so its old name stays.
   welcome: 'embers:welcome',
   lit: (id: RoadLanternId) => `lit:${id}`,
   chest: `opened:${CHEST_ID}`,
@@ -66,19 +68,19 @@ export interface XpPoint {
 }
 
 /**
- * Embers earned between two profile snapshots of the same account. Remainders
+ * Glims earned between two profile snapshots of the same account. Remainders
  * carry over naturally (both sides are floored on lifetime XP), and losing XP
- * (a Habitica death costs a level) never takes embers away. Returns zero when
+ * (a Habitica death costs a level) never takes glims away. Returns zero when
  * either side predates XP tracking.
  */
-export function embersBetween(before: XpPoint, after: XpPoint): { xp: number; embers: number } {
-  if (before.exp === undefined || after.exp === undefined) return { xp: 0, embers: 0 };
+export function glimsBetween(before: XpPoint, after: XpPoint): { xp: number; glims: number } {
+  if (before.exp === undefined || after.exp === undefined) return { xp: 0, glims: 0 };
   const a = lifetimeXp(before.level, before.exp);
   const b = lifetimeXp(after.level, after.exp);
-  if (b <= a) return { xp: 0, embers: 0 };
+  if (b <= a) return { xp: 0, glims: 0 };
   return {
     xp: Math.round(b - a),
-    embers: Math.floor(b / XP_PER_EMBER) - Math.floor(a / XP_PER_EMBER),
+    glims: Math.floor(b / XP_PER_GLIM) - Math.floor(a / XP_PER_GLIM),
   };
 }
 
@@ -88,28 +90,28 @@ export function embersBetween(before: XpPoint, after: XpPoint): { xp: number; em
  * unchecking and re-checking a task) pays nothing new. `mark` undefined means
  * no paid history yet: nothing is credited and the mark is established.
  */
-export function creditXp(mark: number | undefined, after: XpPoint): { xp: number; embers: number; mark: number | undefined } {
-  if (after.exp === undefined) return { xp: 0, embers: 0, mark };
+export function creditXp(mark: number | undefined, after: XpPoint): { xp: number; glims: number; mark: number | undefined } {
+  if (after.exp === undefined) return { xp: 0, glims: 0, mark };
   const now = lifetimeXp(after.level, after.exp);
-  if (mark === undefined) return { xp: 0, embers: 0, mark: now };
-  if (now <= mark) return { xp: 0, embers: 0, mark };
+  if (mark === undefined) return { xp: 0, glims: 0, mark: now };
+  if (now <= mark) return { xp: 0, glims: 0, mark };
   return {
     xp: Math.round(now - mark),
-    embers: Math.floor(now / XP_PER_EMBER) - Math.floor(mark / XP_PER_EMBER),
+    glims: Math.floor(now / XP_PER_GLIM) - Math.floor(mark / XP_PER_GLIM),
     mark: now,
   };
 }
 
-/** Add embers. `fromXp` marks them as earned on Habitica (the only kind
+/** Add glims. `fromXp` marks them as earned on Habitica (the only kind
  *  that can revive an imported hero from 0 HP). */
-export function grantEmbers(state: GameState, n: number, opts: { fromXp?: boolean } = {}): GameState {
+export function grantGlims(state: GameState, n: number, opts: { fromXp?: boolean } = {}): GameState {
   const current = validateSave(state);
   if (!Number.isFinite(n) || n <= 0) return current;
   const add = Math.floor(n);
   return {
     ...current,
-    embers: current.embers + add,
-    xpEmbers: opts.fromXp ? current.xpEmbers + add : current.xpEmbers,
+    glims: current.glims + add,
+    xpGlims: opts.fromXp ? current.xpGlims + add : current.xpGlims,
   };
 }
 
@@ -118,12 +120,12 @@ export function grantWelcome(state: GameState): { state: GameState; granted: num
   const current = validateSave(state);
   if (current.flags.includes(FLAGS.welcome)) return { state: current, granted: 0 };
   return {
-    state: { ...current, embers: current.embers + WELCOME_EMBERS, flags: [...current.flags, FLAGS.welcome] },
-    granted: WELCOME_EMBERS,
+    state: { ...current, glims: current.glims + WELCOME_GLIMS, flags: [...current.flags, FLAGS.welcome] },
+    granted: WELCOME_GLIMS,
   };
 }
 
-export type EmberSpend =
+export type GlimSpend =
   | { kind: 'rest' }
   | { kind: 'home-rest' }
   | { kind: 'road-lantern'; id: RoadLanternId }
@@ -136,25 +138,25 @@ export type SpendCheck =
   | { ok: false; cost: number; reason: SpendReason };
 
 /** Who is spending: an imported hero at 0 HP can only be revived by a rest
- *  paid with XP-earned embers (gifts and quest embers don't lift the lock). */
+ *  paid with XP-earned glims (gifts and quest glims don't lift the lock). */
 export interface SpendContext {
   imported?: boolean;
 }
 
-function isRevive(state: GameState, spend: EmberSpend, ctx: SpendContext): boolean {
+function isRevive(state: GameState, spend: GlimSpend, ctx: SpendContext): boolean {
   return (spend.kind === 'rest' || spend.kind === 'home-rest') && ctx.imported === true && state.hp <= 0;
 }
 
-function spendCost(spend: EmberSpend): number {
+function spendCost(spend: GlimSpend): number {
   switch (spend.kind) {
     case 'home-rest':
-      return EMBER_COSTS.homeRest;
+      return GLIM_COSTS.homeRest;
     case 'rest':
-      return EMBER_COSTS.rest;
+      return GLIM_COSTS.rest;
     case 'road-lantern':
-      return EMBER_COSTS.roadLantern;
+      return GLIM_COSTS.roadLantern;
     case 'chest':
-      return EMBER_COSTS.chest;
+      return GLIM_COSTS.chest;
   }
 }
 
@@ -168,47 +170,47 @@ export function chestOpened(state: GameState): boolean {
 
 /** Whether a spend would go through, and why not ('done' = already bought,
  *  'full' = a rest would restore nothing, 'needs-earned' = a 0-HP revive
- *  needs embers earned on Habitica). */
-export function checkSpend(state: GameState, spend: EmberSpend, ctx: SpendContext = {}): SpendCheck {
+ *  needs glims earned on Habitica). */
+export function checkSpend(state: GameState, spend: GlimSpend, ctx: SpendContext = {}): SpendCheck {
   const cost = spendCost(spend);
   if (spend.kind === 'road-lantern' && isLit(state, spend.id)) return { ok: false, cost, reason: 'done' };
   if (spend.kind === 'chest' && chestOpened(state)) return { ok: false, cost, reason: 'done' };
   if ((spend.kind === 'rest' || spend.kind === 'home-rest') && state.hp >= state.maxHp && state.mana >= state.maxMana) {
     return { ok: false, cost, reason: 'full' };
   }
-  if (state.embers < cost) return { ok: false, cost, reason: 'short' };
-  if (isRevive(state, spend, ctx) && state.xpEmbers < cost) return { ok: false, cost, reason: 'needs-earned' };
+  if (state.glims < cost) return { ok: false, cost, reason: 'short' };
+  if (isRevive(state, spend, ctx) && state.xpGlims < cost) return { ok: false, cost, reason: 'needs-earned' };
   return { ok: true, cost };
 }
 
-export class EmberSpendError extends Error {
+export class GlimSpendError extends Error {
   readonly reason: SpendReason;
 
   constructor(reason: SpendReason) {
     super(
       reason === 'short'
-        ? 'Not enough embers.'
+        ? 'Not enough glims.'
         : reason === 'done'
           ? 'Already done.'
           : reason === 'full'
             ? 'Already rested.'
-            : 'Reviving needs embers earned on Habitica.',
+            : 'Reviving needs glims earned on Habitica.',
     );
-    this.name = 'EmberSpendError';
+    this.name = 'GlimSpendError';
     this.reason = reason;
   }
 }
 
-/** Apply a spend immutably; throws EmberSpendError when checkSpend says no. */
-export function spendEmbers(state: GameState, spend: EmberSpend, ctx: SpendContext = {}): GameState {
+/** Apply a spend immutably; throws GlimSpendError when checkSpend says no. */
+export function spendGlims(state: GameState, spend: GlimSpend, ctx: SpendContext = {}): GameState {
   const current = validateSave(state);
   const check = checkSpend(current, spend, ctx);
-  if (!check.ok) throw new EmberSpendError(check.reason);
-  // A revive is paid from XP-earned embers; anything else spends gifted and
-  // quest embers first, keeping earned ones for when they matter most.
-  const gifted = current.embers - current.xpEmbers;
+  if (!check.ok) throw new GlimSpendError(check.reason);
+  // A revive is paid from XP-earned glims; anything else spends gifted and
+  // quest glims first, keeping earned ones for when they matter most.
+  const gifted = current.glims - current.xpGlims;
   const fromXp = isRevive(current, spend, ctx) ? check.cost : Math.max(0, check.cost - gifted);
-  const paid = { ...current, embers: current.embers - check.cost, xpEmbers: current.xpEmbers - fromXp };
+  const paid = { ...current, glims: current.glims - check.cost, xpGlims: current.xpGlims - fromXp };
   switch (spend.kind) {
     case 'rest':
     case 'home-rest':

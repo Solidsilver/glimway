@@ -1,5 +1,5 @@
 /**
- * The shared economy contract (content/economy.json): ember pricing, sync
+ * The shared economy contract (content/economy.json): glim pricing, sync
  * credit, invites and the Wilds' rate limits. Validated against the schema
  * (proto/glimway/content/v1/economy.proto) the same way the Go loader is.
  */

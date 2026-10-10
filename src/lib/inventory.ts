@@ -12,11 +12,11 @@
  * item model (wear, effects) lands.
  */
 import { ITEM_INFO } from '../content/world.ts';
-import { DECORATIONS_EMBER, DECORATIONS_MATERIAL, MATERIALS, MORE_TRINKETS, TRINKETS } from '../content/expansion-writing.ts';
+import { DECORATIONS_GLIMS, DECORATIONS_MATERIAL, MATERIALS, MORE_TRINKETS, TRINKETS } from '../content/expansion-writing.ts';
 import { CRAFTED_BLURBS, inventoryCopy as INVENTORY_WEAR } from '../content/inventory.ts';
 import { CRAFTING } from './workshop.ts';
 import { QUEST_ITEMS } from './api/progress.ts';
-import { CHARM_ITEM } from './embers.ts';
+import { CHARM_ITEM } from './glims.ts';
 import type { Asset, InstanceView, ItemsView, MakerView } from './api/types.ts';
 import { assetKind, itemName, effectLine, slotCount, giveable, heldEffects, iconId, iconState, itemDef, offHandable, usableNow, wearRuleLine, type ItemDef } from './items.ts';
 
@@ -114,7 +114,7 @@ export function materialsFromPack(pack: readonly string[]): Record<string, numbe
 const MATERIAL_ICON: Record<string, string> = { timber: 'menu', stone: 'stone', fiber: 'roll', amber: 'ember' };
 const TRINKET_BY_ID = new Map([...TRINKETS, ...MORE_TRINKETS].map((t) => [t.id, t]));
 const CRAFTED_BY_ID = new Map(CRAFTING.utilityItems.map((u) => [u.id, u]));
-const DECORATION_BY_ID = new Map([...DECORATIONS_EMBER, ...DECORATIONS_MATERIAL].map((d) => [d.id, d]));
+const DECORATION_BY_ID = new Map([...DECORATIONS_GLIMS, ...DECORATIONS_MATERIAL].map((d) => [d.id, d]));
 /** Trinkets and crafted pieces with delivered icons (the art pack's `icon-*` frames). */
 const ART_ICONS = new Set(['whittled-fox', 'beeswax-candle', 'river-glass-bead', 'spare-bootlace', 'tin-whistle', 'lamp-wick', 'oilcloth-wrap', 'wooden-peg']);
 

@@ -23,10 +23,13 @@ same UI are appended at the end of this file.
   Ordinary gameplay causes zero Habitica requests; sync is one explicit
   `GET /user` per user action.
 - **The server writes for a top-up, and nowhere else** (0.6, the purse,
-  `docs/design/purse-and-wardrobe.md` 2.2): when the player presses Top up and
-  agrees, it creates a reward, scores it `down` once and deletes it, for the
-  amount the player typed. The token rides in that one request and is never
-  stored, logged or returned.
+  `docs/design/purse-and-wardrobe.md` 2.2; glims since 0.6.1,
+  `docs/design/silas-yard.md` 1.5): when the player presses **Turn gold into
+  glims** and agrees, it creates a reward, scores it `down` once and deletes
+  it. The player picks the glims; the reward costs two gold for each glim. At
+  most 30 glims a UTC day come from top-ups, in up to two top-ups (more is
+  refused with `top-up-cap`). Glims never turn back into gold. The token
+  rides in that one request and is never stored, logged or returned.
 - **Token in memory only, unless the player opts in**: `HabiticaCredentials`
   lives in a JS variable for the session. It is never written to GameState,
   IndexedDB saves, save exports, logs, error messages, URLs, or source
@@ -59,32 +62,34 @@ same UI are appended at the end of this file.
 - Errors from the client are typed and carry status codes only — never
   credentials or response bodies that might echo them.
 
-## Embers (added 2026-10-03)
+## Glims (added 2026-10-03 as embers, renamed in 0.6.1)
 
-Embers turn Habitica XP into an in-game currency without any write path:
+Glims turn Habitica XP into an in-game currency without any write path. (A
+top-up, above, is the only other way to get glims from Habitica.)
 
 - **Source**: `syncProfile` computes lifetime XP (`level` + `exp`, on
   Habitica's level curve) and credits `floor(now / 10) - floor(mark / 10)`
-  embers, where `GameState.emberXp` is the highest lifetime XP ever paid. The
+  glims, where `GameState.glimXp` is the highest lifetime XP ever paid. The
   mark only rises, so XP lost and regained (unchecking and re-checking a task,
   or a Habitica death followed by recovery) never pays twice. The import sets
   the mark to the account's current XP (past XP is not paid). Rejected syncs
   (outside the village, account switch) credit nothing and keep the mark.
-  XP loss never removes embers. Saves from before the mark fall back to the
+  XP loss never removes glims. Saves from before the mark fall back to the
   saved profile's XP once. Habitica's "Fix Character Values" can still set
   XP directly; a read-only client cannot tell that apart from earned XP.
-- **First import**: pays a one-off `WELCOME_EMBERS` gift, guarded by a save
+- **First import**: pays a one-off `WELCOME_GLIMS` gift, guarded by a save
   flag so disconnecting and reconnecting cannot repeat it. Past XP is not paid.
-- **Earned vs gifted**: `GameState.xpEmbers` counts embers that came from XP.
-  Ordinary spends use gifted (welcome/quest) embers first.
-- **Guest spending** is local (`spendEmbers`); connected spending uses the
+- **Earned vs gifted**: `GameState.xpGlims` counts glims that came from XP.
+  Ordinary spends use gifted (welcome/quest) glims first. Glims that arrive by
+  top-up, shelf sale, letter or hand are never XP-earned.
+- **Guest spending** is local (`spendGlims`); connected spending uses the
   server transaction and ledger: a warm rest restores local HP and
   mana. For an imported hero at 0 HP it lifts the zero-HP lock only when paid
-  with XP-earned embers (`needs-earned` otherwise), so the welcome gift can't
+  with XP-earned glims (`needs-earned` otherwise), so the welcome gift can't
   bypass the lock. Lit road lanterns restore mana for everyone but HP only for
   demo vitals (no passive HP refill for imported heroes). The chest grants the
   Ember Charm. None of these touch the Habitica account.
-- **Save shape**: `embers`, `flags`, `emberXp` and `xpEmbers` are optional on
+- **Save shape**: `glims`, `flags`, `glimXp` and `xpGlims` are optional on
   load (older saves read as 0 / `[]`), so `SAVE_VERSION` stays 1.
 
 ## Module API
@@ -348,7 +353,7 @@ ledger notes. Checkpoints flag only a loss beyond three death windows (plus
 10 XP tolerance), or a higher verified level with lower lifetime XP. A level-1
 rebirth exemption requires earlier verified history above level 1.
 
-The unverified credit allowance starts at 200 embers and grows by 100 per full
+The unverified credit allowance starts at 200 glims and grows by 100 per full
 24 hours since the last login checkpoint, capped at 3000. Repeating syncs cannot
 refresh it. Excess credit is held in lots tagged with their original reported XP.
 A verified login pays lots whose reported XP it reaches; deaths and flagging
@@ -368,5 +373,5 @@ merges only story progress; the server retains health, mana, area and position.
 Syncs and spends require a current revision and play lease and commit their
 carried progress atomically. All uploads ignore balances, maxima, paid flags
 and purchased items. Migration is once per account, carries at most 30 gifted
-embers, and never trusts local XP marks or earned provenance. The complete
+glims, and never trusts local XP marks or earned provenance. The complete
 phase-2 wire contract and validation decisions are in `.agent/REPORT.md`.

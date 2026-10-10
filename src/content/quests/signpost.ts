@@ -35,11 +35,13 @@ export const SIGNPOST_TALKS: QuestTalks = {
     lines: ({ connected }) => [
       'You’re the one off the Low Road. And Orrin’s had you on the signpost, so you’ve done a job for the village. That goes in the ledger.',
       '“East finger recovered, lean set. Traveller’s hand.” There.',
-      'Gran’s rule. Work done and written down is warmth you carry. Here we call it embers.',
+      'Gran’s rule. Work done and written down is light you carry. Here we call it glims.',
+      'A glim’s a bead of amber, cut to the Count House’s measure, with a glint of light in it. The Compact paid its lamplighters in them.',
+      'We never stopped. When you get things done, a glim catches the light.',
       connected
         ? 'It doesn’t have to be done here, either. Whatever you get done in your own day counts. Bring it back and I’ll write it in.'
         : 'Where you come from, folk carry their own day’s work in with them. Pip can tell you how, at the gate.',
-      'Two embers buys a rest by the well if that wisp knocked you about. Three lights a lamp.',
+      'Two glims buys a rest by the well if that wisp knocked you about. Three lights a lamp.',
       'The first one past the east gate has been dark thirty years. Never two dark in a row, Gran said. Go on. I want to see it from here.',
     ],
   },
@@ -57,7 +59,7 @@ export const SIGNPOST_BETWEEN = {
     'Mind the ladder by the signpost. Orrin’s been arguing with it since dawn, and it’s winning. He could use a hand.',
   ],
   maraLamp: [
-    'The first lamp’s just past the east gate, by the bracken. Three embers lights it.',
+    'The first lamp’s just past the east gate, by the bracken. Three glims lights it.',
     'Go on. I’ll be watching from here.',
   ],
 } as const;

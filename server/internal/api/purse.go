@@ -11,14 +11,14 @@ import (
 	"time"
 )
 
-// The gold purse (docs/design/purse-and-wardrobe.md 2): one top-up that
-// moves gold off Habitica into the account's purse — one consent, one token,
-// one request — and the read that shows it. Gold never goes back to Habitica
-// and never leaves the game.
+// The top-up (docs/design/purse-and-wardrobe.md 2, silas-yard.md 1.5): one
+// top-up turns Habitica gold into glims, two gold to a glim — one consent,
+// one token, one request — and the Glim log shows it. Glims never go back to
+// Habitica.
 
-// purseComposition fills PlayerState.purse on every answer (2.5): the gold
-// balance from balances.gold, what is left of today's two top-ups, and the
-// top-up still working. The purse is the account's, not a screen's: guests
+// purseComposition fills PlayerState.purse on every answer (2.5): what is
+// left of today's two top-ups and of its 30 glims, and the top-up still
+// working. The purse is the account's, not a screen's: guests
 // have one too (it starts empty, section 5), and nothing about it comes from
 // a browser report.
 type purseComposition struct {
@@ -39,6 +39,8 @@ func (p purseComposition) PlayerState(ctx context.Context, tx *sql.Tx, s store.S
 		return nil, err
 	}
 	if version != 0 {
+		// A lazy settle never credits (it lands `unconfirmed` or
+		// `not-moved`), so the snapshot's glims stand.
 		s.Version = version
 	}
 	state, err := p.StateComposition.PlayerState(ctx, tx, s)
@@ -145,17 +147,23 @@ func (a *Server) purseTopUp(w http.ResponseWriter, r *http.Request) error {
 	if working != nil {
 		return a.refuseOp(w, r, tx, s, fail(409, "purse-busy"))
 	}
-	used, err := store.CountedTopUps(ctx, tx, s.AccountID, utcDayStart(now))
+	used, glims, err := store.CountedTopUps(ctx, tx, s.AccountID, utcDayStart(now))
 	if err != nil {
 		return err
 	}
 	if used >= store.TopUpsADay {
 		return a.refuseOp(w, r, tx, s, fail(409, "top-up-limit"))
 	}
-	// Habitica's gold cap, a whole number (2.2 step 1).
+	// The amount is Habitica gold, two to a glim (silas-yard.md 1.5): a
+	// whole, even number of at least 2 (2.2 step 1).
 	amount := int(req.Amount)
-	if amount < 1 || amount > 99999999 {
+	if amount < store.GoldPerGlim || amount%store.GoldPerGlim != 0 || amount > 99999999 {
 		return a.refuseOp(w, r, tx, s, fail(400, "invalid-quantity"))
+	}
+	// The day's cap: at most 30 glims from top-ups a UTC day, counting
+	// today's moved, unconfirmed and working rows (1.5).
+	if glims+amount/store.GoldPerGlim > store.TopUpGlimsADay {
+		return a.refuseOp(w, r, tx, s, fail(409, "top-up-cap"))
 	}
 	subject, err := store.HabiticaSubject(ctx, tx, s.AccountID)
 	if err != nil {
@@ -165,7 +173,7 @@ func (a *Server) purseTopUp(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	top := store.TopUp{ID: id, AccountID: s.AccountID, OpKey: req.Op.Key, Amount: amount, State: "reserved", CreatedAt: now}
+	top := store.TopUp{ID: id, AccountID: s.AccountID, OpKey: req.Op.Key, Amount: amount, Glims: amount / store.GoldPerGlim, State: "reserved", CreatedAt: now}
 	done := make(chan struct{})
 	// The Habitica budget — the sign-in's four limits — is spent before any
 	// row is written (2.2 step 1). The worker is started under it and runs
@@ -380,7 +388,7 @@ func (a *Server) runTopUp(parent context.Context, t store.TopUp, subject, token 
 	err = a.Habitica.CreateReward(call, subject, token, habitica.Reward{
 		Type:  "reward",
 		Text:  "Glimway purse: " + itoa(t.Amount) + " gold",
-		Notes: "Glimway is moving gold into your purse. It removes this reward when it's done.",
+		Notes: "Glimway is turning " + itoa(t.Amount) + " gold into " + glimsPhrase(t.Glims) + ". It removes this reward when it's done.",
 		Value: t.Amount,
 		Alias: topUpAlias(t.ID),
 	}, b.Allow)
@@ -503,7 +511,7 @@ func (a *Server) checkAfterUnknown(ctx context.Context, t store.TopUp, subject, 
 }
 
 // settleTopUp is 2.2 step 3: the row's final state and evidence, and for a
-// move the purse credited. The owned gear from the top-up's read lands here
+// move the row's glims credited. The owned gear from the top-up's read lands here
 // too (4.3).
 func (a *Server) settleTopUp(ctx context.Context, t store.TopUp, out store.TopUpOutcome, owned []string) {
 	// The settle is a database write and must land even at the worker's
@@ -688,9 +696,9 @@ func habiticaFailure(err error) error {
 	return fail(502, "habitica-unavailable")
 }
 
-// purseRead (GET /api/purse) is the log (2.1, 2.7): the purse, the last 50
-// top-ups and the last 50 gold lines — every kind of them, letters and
-// gives included. It settles stale working rows first (2.4), so a row whose
+// purseRead (GET /api/purse) is the Glim log (2.1, 2.7, silas-yard.md 1.6):
+// the purse, the last 50 top-ups and the last 50 glim lines — every top-up,
+// spend, sale, letter and give. It settles stale working rows first (2.4), so a row whose
 // worker died reads as what it is.
 func (a *Server) purseRead(w http.ResponseWriter, r *http.Request) error {
 	tx, s, _, err := a.begin(r)

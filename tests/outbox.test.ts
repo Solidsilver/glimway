@@ -116,7 +116,7 @@ test('the game state is the server state: marks are the single source of discove
       j.story.marks = ['seen:gate', 'found:old-route-marker', 'defeated:stone-warden', 'paper:eleven-days'];
       j.story.quests = { 'lantern-road': 'clue-found' };
       j.place = { area: 'wilds:outer-1', x: 10, y: 20, placeSetVersion: 0 };
-      j.embers = { balance: 9, xpEarned: 4, pending: 0, xpMark: 300, verifiedXp: 0 };
+      j.glims = { balance: 9, xpEarned: 4, pending: 0, xpMark: 300, verifiedXp: 0 };
     }),
   );
   assert.deepEqual(s.flags, ['seen:gate', 'paper:eleven-days']);
@@ -125,7 +125,7 @@ test('the game state is the server state: marks are the single source of discove
   assert.equal(roadStep(s), 'clue-found');
   assert.equal(s.area, 'wilds');
   assert.equal(s.wildsRegion, 'outer-1');
-  assert.deepEqual([s.embers, s.xpEmbers, s.emberXp], [9, 4, 300]);
+  assert.deepEqual([s.glims, s.xpGlims, s.glimXp], [9, 4, 300]);
 });
 
 test('a Wilds place loads: wilds:<region> becomes the Wilds area plus its region marker', () => {

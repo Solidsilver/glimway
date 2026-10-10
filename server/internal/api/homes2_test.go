@@ -220,19 +220,19 @@ func TestHomes2DeedPrices(t *testing.T) {
 	x.claimGate(ac, &a, 0)
 	x.homeOpRefreshing(ac, &a, "leave", nil, 200)
 	lane = x.exp("GET", "/api/commons", nil, ac, 200)
-	price := int(content.HomeRules.GetDeeds().GetEmbers())
+	price := int(content.HomeRules.GetDeeds().GetGlims())
 	if lane.Mine != nil || lane.Gates[1].Price == nil || *lane.Gates[1].Price != price {
 		t.Fatal("second deed price")
 	}
-	if x.homeOpRefreshing(ac, &a, "claim", map[string]any{"gate": 1}, 409).Error.Code != "insufficient-embers" {
+	if x.homeOpRefreshing(ac, &a, "claim", map[string]any{"gate": 1}, 409).Error.Code != "insufficient-glims" {
 		t.Fatal("unpaid deed")
 	}
 	x.fund(x.account("alice"), price, 0)
 	x.refresh(ac, &a)
-	before := a.State.Embers
+	before := a.State.Glims
 	x.claimGate(ac, &a, 1)
-	if a.State.Embers != before-price {
-		t.Fatal("deed debit", a.State.Embers, before)
+	if a.State.Glims != before-price {
+		t.Fatal("deed debit", a.State.Glims, before)
 	}
 }
 
@@ -242,23 +242,23 @@ func TestHomes2DeedPrices(t *testing.T) {
 func TestHomes2BuyChargesEmbersAndMaterials(t *testing.T) {
 	x := newRig(t)
 	def, ok := content.HomeItemFor("stable")
-	if !ok || def.GetEmbers() <= 0 || len(def.GetMaterials()) == 0 {
+	if !ok || def.GetGlims() <= 0 || len(def.GetMaterials()) == 0 {
 		t.Fatal("the stable is priced in both currencies", def)
 	}
 	tiers := content.HomeRules.GetTiers()
-	upgradeEmbers := int(tiers[1].GetEmbers()) + int(tiers[2].GetEmbers())
+	upgradeGlims := int(tiers[1].GetGlims()) + int(tiers[2].GetGlims())
 
 	ac, a := x.ready("alice")
 	a = x.openWorkshop(ac, a)
 	h := x.home(ac)
 	m0 := x.exp("GET", fmt.Sprintf("/api/homestead/gate/%d", h.Gate), nil, ac, 200).Materials
-	e0 := a.State.Embers
+	e0 := a.State.Glims
 	buy := x.homeOpRefreshing(ac, &a, "buy", map[string]any{"itemDef": "stable"}, 200)
 	if buy.Result.ItemID == "" || buy.Result.Home == nil {
 		t.Fatal("no stable")
 	}
-	if a.State.Embers != e0-int(def.GetEmbers()) {
-		t.Fatal("stable embers", a.State.Embers, e0)
+	if a.State.Glims != e0-int(def.GetGlims()) {
+		t.Fatal("stable embers", a.State.Glims, e0)
 	}
 	for m, n := range def.GetMaterials() {
 		if int(buy.Result.Materials[m]) != int(m0[m])-int(n) {
@@ -268,7 +268,7 @@ func TestHomes2BuyChargesEmbersAndMaterials(t *testing.T) {
 
 	// Short of the materials: the purse is refused and kept.
 	bc, b := x.ready("bob")
-	x.fund(x.account("bob"), upgradeEmbers+int(def.GetEmbers()), 0)
+	x.fund(x.account("bob"), upgradeGlims+int(def.GetGlims()), 0)
 	for m, n := range tiers[2].GetMaterials() {
 		x.stack(x.account("bob"), m, "", int(n))
 	}
@@ -279,13 +279,13 @@ func TestHomes2BuyChargesEmbersAndMaterials(t *testing.T) {
 		t.Fatal("stable without materials", r.Error.Code)
 	}
 	x.refresh(bc, &b)
-	if b.State.Embers != int(def.GetEmbers()) {
-		t.Fatal("a refused buy kept the purse", b.State.Embers)
+	if b.State.Glims != int(def.GetGlims()) {
+		t.Fatal("a refused buy kept the purse", b.State.Glims)
 	}
 
 	// Short of the embers: the materials are refused and kept.
 	cc, c := x.ready("carol")
-	x.fund(x.account("carol"), upgradeEmbers, 0)
+	x.fund(x.account("carol"), upgradeGlims, 0)
 	for m, n := range tiers[2].GetMaterials() {
 		x.stack(x.account("carol"), m, "", int(n))
 	}
@@ -295,7 +295,7 @@ func TestHomes2BuyChargesEmbersAndMaterials(t *testing.T) {
 	x.claimGate(cc, &c, 0)
 	x.homeOpRefreshing(cc, &c, "upgrade", map[string]any{"tier": 1}, 200)
 	x.homeOpRefreshing(cc, &c, "upgrade", map[string]any{"tier": 2}, 200)
-	if r := x.homeOpRefreshing(cc, &c, "buy", map[string]any{"itemDef": "stable"}, 409); r.Error.Code != "insufficient-embers" {
+	if r := x.homeOpRefreshing(cc, &c, "buy", map[string]any{"itemDef": "stable"}, 409); r.Error.Code != "insufficient-glims" {
 		t.Fatal("stable without embers", r.Error.Code)
 	}
 	x.refresh(cc, &c)
@@ -440,18 +440,18 @@ func TestHomes2DesolationAndLostDeeds(t *testing.T) {
 	}
 	// Dora has never held a deed, but this land's was lost: it costs embers.
 	lane := x.exp("GET", "/api/commons", nil, dc, 200)
-	price := int(content.HomeRules.GetDeeds().GetEmbers())
+	price := int(content.HomeRules.GetDeeds().GetGlims())
 	if *lane.Gates[gate].Price != price || *lane.Gates[gate+1].Price != 0 {
 		t.Fatal("lost deed price")
 	}
-	if x.homeOpRefreshing(dc, &d, "claim", map[string]any{"gate": gate}, 409).Error.Code != "insufficient-embers" {
+	if x.homeOpRefreshing(dc, &d, "claim", map[string]any{"gate": gate}, 409).Error.Code != "insufficient-glims" {
 		t.Fatal("free lost deed")
 	}
 	x.fund(x.account("dora"), price, 0)
 	x.refresh(dc, &d)
-	before := d.State.Embers
+	before := d.State.Glims
 	nh := x.claimGate(dc, &d, gate)
-	if d.State.Embers != before-price || nh.ID == h.ID || len(nh.Items) != 0 || nh.Tier != 0 || count(t, x.db, "SELECT count(*) FROM lost_gates") != 0 {
+	if d.State.Glims != before-price || nh.ID == h.ID || len(nh.Items) != 0 || nh.Tier != 0 || count(t, x.db, "SELECT count(*) FROM lost_gates") != 0 {
 		t.Fatal("resettled land")
 	}
 }
@@ -555,7 +555,7 @@ func TestHomes2LanternLightAndClearing(t *testing.T) {
 	if count(t, x.db, "SELECT count(*) FROM homestead_items WHERE id=? AND name IS NULL AND location='inventory'", postID) != 1 {
 		t.Fatal("post put away")
 	}
-	// Trees take tiles until Silas clears them for embers.
+	// Trees take tiles until Silas clears them for glims.
 	g := groundOf(h)
 	start := connectedLights(nil, "")
 	var tree, darkTree, grass [2]int
@@ -587,15 +587,39 @@ func TestHomes2LanternLightAndClearing(t *testing.T) {
 		t.Fatal("cleared in the dark")
 	}
 	x.refresh(ac, &a)
-	before := a.State.Embers
+	before := a.State.Glims
 	cleared := x.homeOpRefreshing(ac, &a, "clear", map[string]any{"x": tree[0], "y": tree[1]}, 200)
-	if a.State.Embers != before-int(content.HomeRules.GetClearTileEmbers()) || len(cleared.Result.Home.Cleared) != 1 || cleared.Result.Home.Cleared[0] != tree {
+	if a.State.Glims != before-int(content.HomeRules.GetClearTileGlims()) || len(cleared.Result.Home.Cleared) != 1 || cleared.Result.Home.Cleared[0] != tree {
 		t.Fatal("clear tile")
 	}
 	if x.homeOpRefreshing(ac, &a, "clear", map[string]any{"x": tree[0], "y": tree[1]}, 409).Error.Code != "already-cleared" {
 		t.Fatal("cleared twice")
 	}
 	x.homeOpRefreshing(ac, &a, "place", at(stool, tree, nil), 200)
+
+	// A free clearing (a price of 0, which content refuses today) is a
+	// zero-delta mark, never a 500 (review B finding 2).
+	price := content.HomeRules.ClearTileGlims
+	content.HomeRules.ClearTileGlims = 0
+	defer func() { content.HomeRules.ClearTileGlims = price }()
+	var free [2]int
+	for y := 0; y < g.land.Height && free == ([2]int{}); y++ {
+		for x := 0; x < g.land.Width; x++ {
+			if p := [2]int{x, y}; land.Clearable(g.land.At(x, y)) && land.Lit(start, x, y) && p != tree {
+				free = p
+				break
+			}
+		}
+	}
+	if free == ([2]int{}) {
+		t.Fatal("land fixture: one lit tree")
+	}
+	x.refresh(ac, &a)
+	before = a.State.Glims
+	x.homeOpRefreshing(ac, &a, "clear", map[string]any{"x": free[0], "y": free[1]}, 200)
+	if a.State.Glims != before || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='homestead-clear' AND delta=0") != 1 {
+		t.Fatal("a free clearing", a.State.Glims, before)
+	}
 }
 
 func TestHomes2CrossWorldIsolation(t *testing.T) {

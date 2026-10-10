@@ -63,8 +63,8 @@ export interface HabiticaProfile {
   level: number;
   /**
    * stats.exp — XP toward the next level. With `level` it gives the account's
-   * lifetime XP, which is what Embers are credited from (src/lib/embers.ts).
-   * Optional: profiles saved before Embers existed lack it.
+   * lifetime XP, which is what glims are credited from (src/lib/glims.ts).
+   * Optional: profiles saved before XP tracking lack it.
    */
   exp?: number;
   hp: number;

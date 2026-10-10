@@ -1,18 +1,19 @@
 /**
  * The people and places an area is built with, as interaction points: the
  * quest NPCs and residents, the route marker, the shrine lantern and the
- * ember spots. Each point carries its prompt wording (it follows the story),
+ * glim spots. Each point carries its prompt wording (it follows the story),
  * its marker ("!" moves the story on, "…" someone has news) and the
  * conversation it opens.
  */
-import { dialogueFor, emberDialogue, type Dialogue, type DialogueChoice } from '../../content/world'
-import { EMBER_COSTS, isLit, ROAD_LANTERNS, type EmberSpend, type RoadLanternId } from '../../lib/embers'
+import { dialogueFor, glimDialogue, type Dialogue, type DialogueChoice } from '../../content/world'
+import { GLIM_COSTS, isLit, ROAD_LANTERNS, type GlimSpend, type RoadLanternId } from '../../lib/glims'
 import { ITEMS } from '../../lib/items'
 import { sellerChoices } from '../../lib/purse'
+import { glimsCount } from '../../content/purse'
 import { bus, EV } from '../events'
 import type { Session } from '../session'
 import { tileBottom, tileMid } from '../../lib/tile'
-import type { EmberSpotId, WorldData } from '../worlds'
+import type { GlimSpotId, WorldData } from '../worlds'
 import { NPC_NAMES } from './npcs'
 import { handoverFor } from '../../content/papers'
 import { isResident, keeperTalk, metAt, residentFullName, residentTalk, type ResidentId } from '../../content/residents'
@@ -55,7 +56,7 @@ function residentHasNews(session: Session, id: string): boolean {
   return story || (!!talk.day && !heardDay(id, talk.day.topic))
 }
 
-const isEmberSpot = (id: string): id is EmberSpotId => id === 'hearth' || id === 'chest' || (ROAD_LANTERNS as readonly string[]).includes(id)
+const isGlimSpot = (id: string): id is GlimSpotId => id === 'hearth' || id === 'chest' || (ROAD_LANTERNS as readonly string[]).includes(id)
 
 export class WorldTalk {
   constructor(private deps: WorldTalkDeps) {
@@ -94,14 +95,14 @@ export class WorldTalk {
         activate: () => this.talk('lantern')
       })
     }
-    for (const spot of world.emberSpots) {
+    for (const spot of world.glimSpots) {
       const id = spot.id
       points.push({
         id,
         x: tileMid(spot.tx),
         y: tileBottom(spot.ty),
-        label: () => this.emberLabel(id),
-        marker: () => (this.emberSpotReady(id) ? 'talk' : null),
+        label: () => this.glimLabel(id),
+        marker: () => (this.glimSpotReady(id) ? 'talk' : null),
         markerOffset: id === 'hearth' ? 36 : id === 'chest' ? 22 : 32,
         activate: () => this.talk(id)
       })
@@ -137,17 +138,17 @@ export class WorldTalk {
     return null
   }
 
-  /** What pressing at an ember spot buys, with its price. */
-  private emberLabel(id: EmberSpotId): string {
+  /** What pressing at a glim spot buys, with its price. */
+  private glimLabel(id: GlimSpotId): string {
     const { session } = this.deps
-    if (id === 'chest') return session.state.flags.includes('opened:ashwatch-chest') ? 'Look at the chest' : `Open the chest · ${EMBER_COSTS.chest} embers`
-    if (id === 'hearth') return `Rest by the lantern · ${EMBER_COSTS.rest} embers`
-    return isLit(session.state, id as RoadLanternId) ? 'Look at the lantern' : `Light the lantern · ${EMBER_COSTS.roadLantern} embers`
+    if (id === 'chest') return session.state.flags.includes('opened:ashwatch-chest') ? 'Look at the chest' : `Open the chest · ${glimsCount(GLIM_COSTS.chest)}`
+    if (id === 'hearth') return `Rest by the lantern · ${glimsCount(GLIM_COSTS.rest)}`
+    return isLit(session.state, id as RoadLanternId) ? 'Look at the lantern' : `Light the lantern · ${glimsCount(GLIM_COSTS.roadLantern)}`
   }
 
-  /** Whether an ember spot has something to buy right now (drives its marker). */
-  private emberSpotReady(id: EmberSpotId): boolean {
-    const spend: EmberSpend = id === 'hearth' ? { kind: 'rest' } : id === 'chest' ? { kind: 'chest' } : { kind: 'road-lantern', id }
+  /** Whether a glim spot has something to buy right now (drives its marker). */
+  private glimSpotReady(id: GlimSpotId): boolean {
+    const spend: GlimSpend = id === 'hearth' ? { kind: 'rest' } : id === 'chest' ? { kind: 'chest' } : { kind: 'road-lantern', id }
     return this.deps.session.checkSpend(spend).ok
   }
 
@@ -186,8 +187,8 @@ export class WorldTalk {
         if (id === 'elara' && placeArea(session.state) === LIBRARY) payload = keeperTalk(payload, talk.first)
         // Another quest's start or reminder: after they've said their piece.
         if (step && !takes) payload = afterTheirTalk(payload, step)
-      } else payload = isEmberSpot(id)
-        ? emberDialogue(id, session.state, {
+      } else payload = isGlimSpot(id)
+        ? glimDialogue(id, session.state, {
           connected: session.vitalsSource === 'imported',
           remote: session.link ? (session.link.online ? 'online' : 'offline') : null
         })
@@ -197,7 +198,7 @@ export class WorldTalk {
       return
     }
     // A paper to hand over rides at the end of the NPC's usual lines.
-    const handover = !isEmberSpot(id) && id in NPC_NAMES ? papers?.handover(id) : null
+    const handover = !isGlimSpot(id) && id in NPC_NAMES ? papers?.handover(id) : null
     if (handover) payload = { ...payload, lines: [...payload.lines, ...handover] }
     // Carrying a resident's keepsake adds the quiet line (give it back / not yet).
     const ask = isResident(id)
@@ -215,8 +216,8 @@ export class WorldTalk {
     }
     // What a resident sells at their own door (Hazel's kitchen, Finn's
     // mill door): a choice at the end of the talk, when there's a world to
-    // keep the books. Their words for it are the reply. A good priced in
-    // embers and in gold is two choices (purse-and-wardrobe.md 3.1).
+    // keep the books. Their words for it are the reply. One choice per good,
+    // at its one price in glims (silas-yard.md 1.6).
     const seller = (ITEMS.sellers ?? []).find((sl) => sl.npc.toLowerCase() === id && !sl.festival)
     if (seller && session.link) {
       for (const c of sellerChoices(seller, { reply: true })) {

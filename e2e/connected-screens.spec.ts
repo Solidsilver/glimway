@@ -105,7 +105,7 @@ for (const [name, vp] of sizes) {
     // Pending: the world waits for the server's answer to a spend.
     await page.keyboard.press('Escape')
     await page.getByRole('button', { name: 'Sync character' }).click()
-    await expectToast(page, 'embers into your hand')
+    await expectToast(page, 'glims into your hand')
     await page.getByRole('button', { name: 'Back to the road' }).click()
     await hurt(page, 6)
     await page.route('**/api/spend', async (route) => {

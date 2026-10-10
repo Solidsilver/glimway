@@ -20,7 +20,7 @@ type shelfSlotView struct {
 	Instance  *string    `json:"instance,omitempty"`
 	StockedBy string     `json:"stockedBy"`
 	StockedAt int64      `json:"stockedAt"`
-	// Price in gold (3.2): 0 is a free gift, as before.
+	// Price in glims (3.2): 0 is a free gift, as before.
 	Price int `json:"price"`
 }
 
@@ -194,7 +194,7 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 			if !isMember {
 				return nil, fail(403, "not-a-member")
 			}
-			// A slot stocks with an optional price in gold (3.2): 0 is a free
+			// A slot stocks with an optional price in glims (3.2): 0 is a free
 			// gift as before, up to 9,999.
 			if req.Price < 0 || req.Price > 9999 {
 				return nil, fail(400, "invalid-quantity")
@@ -349,13 +349,13 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 			if stockedBy == s.AccountID {
 				return nil, fail(409, "own-stock")
 			}
-			// The buyer's purse pays whoever stocked the slot (3.2): both
+			// The buyer's glims pay whoever stocked the slot (3.2): both
 			// sides in one transaction, each row naming the other player and
 			// the item (3.5). A partner on a joint deed buys the other's stock.
-			if err = store.DebitGold(ctx, tx, s.AccountID, price, "shelf-buy", shelfTradeRef(stockedBy, itemDef), now); err != nil {
-				return nil, insufficientGold(err)
+			if err = debitGlims(ctx, tx, s, price, "shelf-buy", shelfTradeRef(stockedBy, itemDef), now); err != nil {
+				return nil, err
 			}
-			if err = store.CreditGold(ctx, tx, stockedBy, price, "shelf-sale", shelfTradeRef(s.AccountID, itemDef), now); err != nil {
+			if err = store.MoveGlims(ctx, tx, s, stockedBy, price, "shelf-sale", shelfTradeRef(s.AccountID, itemDef), now); err != nil {
 				return nil, err
 			}
 			if slotQty > 1 {
@@ -395,9 +395,9 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 			} else if h, ok := content.HomeItemFor(itemDef); ok {
 				itemDisplayName = h.Name
 			}
-			line := fmt.Sprintf("You bought %s from %s’s shelf for %d gold.", giftPhrase(itemDisplayName, 1), shelf.OwnerName, price)
+			line := fmt.Sprintf("You bought %s from %s’s shelf for %s.", giftPhrase(itemDisplayName, 1), shelf.OwnerName, glimsPhrase(price))
 			if shelf.OwnerName == "" {
-				line = fmt.Sprintf("You bought %s from Lot %d’s shelf for %d gold.", giftPhrase(itemDisplayName, 1), int(req.Gate)+1, price)
+				line = fmt.Sprintf("You bought %s from Lot %d’s shelf for %s.", giftPhrase(itemDisplayName, 1), int(req.Gate)+1, glimsPhrase(price))
 			}
 			return protoResult(&contract.ShelfResult{Shelf: shelfViewProto(shelf), Inventory: countsProto(inv), Taken: assetProto(boughtAsset), Line: line})
 

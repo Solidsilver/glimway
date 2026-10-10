@@ -50,7 +50,7 @@ export interface OperationsApi {
    * outbox (which stores bodies) or a replay.
    */
   purseTopUp(request: PurseTopUpRequest): Promise<Envelope>;
-  /** The purse, the last 50 top-ups and gold lines (GET /api/purse). */
+  /** Today's top-ups, the last 50 top-ups and glim lines (GET /api/purse). */
   purse(): Promise<PurseRead>;
   /** The wardrobe (purse-and-wardrobe.md 4, 6.2): the choice (keyed), the picker's read, and Check for new gear. */
   wardrobe(request: WardrobeRequest): Promise<Envelope>;
@@ -120,7 +120,7 @@ export function createOperationsApi(send: Transport): OperationsApi {
     // Domain reads answer the mixed { state, result } envelope; the read's own message is the result.
     async purse() { return decodeMixed(await send('GET', '/api/purse'), (r) => {
       const out = decodeWire(PurseReadSchema, r);
-      if (!out.purse || out.purse.gold < 0 || out.purse.topUpsLeft < 0) throw new Error('invalid purse');
+      if (!out.purse || out.purse.topUpsLeft < 0 || out.purse.glimsLeft < 0) throw new Error('invalid purse');
       return out;
     }).result; },
     async fishingWaters(area) { const raw = await send('GET', `/api/fishing/waters?area=${encodeURIComponent(area)}`); return validated(() => {

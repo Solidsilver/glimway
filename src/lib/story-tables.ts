@@ -104,7 +104,7 @@ function questsRules(doc: QuestsValid, story: Story): void {
       : t.carry !== undefined ? defs.has(t.carry) || questItems.has(t.carry)
       : t.flag !== undefined ? writer(t.flag)
       : t.open !== undefined ? t.open === 'journal'
-      : t.sync !== undefined ? t.sync === 'embers'
+      : t.sync !== undefined ? t.sync === 'glims'
       : false;
     if (!ok) return bad('unknown trigger target');
   };
@@ -177,7 +177,7 @@ const triggerOut = (t: QuestTriggerValid | undefined): QuestStart | undefined =>
   if (t.carry !== undefined) return { carry: t.carry };
   if (t.flag !== undefined) return { flag: t.flag };
   if (t.open !== undefined) return { open: 'journal' };
-  return { sync: 'embers' };
+  return { sync: 'glims' };
 };
 const whereOut = (w: QuestWhereValid | undefined): QuestWhere | undefined => {
   if (w === undefined) return undefined;
@@ -196,7 +196,7 @@ const gateOut = (g: QuestGateValid | undefined): QuestGate | undefined => {
   if (g.with !== '') out.with = g.with;
   if (g.wait !== undefined) out.wait = g.wait.hours !== undefined ? { hours: g.wait.hours } : { turnings: g.wait.turnings! };
   if (g.item !== undefined) out.item = { ...itemOut(g.item), keep: g.item.keep ?? false };
-  if (g.embers !== undefined) out.embers = g.embers;
+  if (g.glims !== undefined) out.glims = g.glims;
   return out;
 };
 const stepOut = (s: QuestStepValid): QuestStep => ({
@@ -205,7 +205,7 @@ const stepOut = (s: QuestStepValid): QuestStep => ({
   items: s.items,
   marks: s.marks,
   papers: s.papers,
-  embers: s.embers,
+  glims: s.glims,
   witness: s.witness,
   goal: s.goal,
   objective: s.objective,

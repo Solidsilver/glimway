@@ -272,7 +272,7 @@ test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, an
   // Silas sells the stable.
   await silasSays(page, /See what you’ve finished/)
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
-  await expect(shop.locator('.row', { hasText: 'Stable' })).toContainText('30 embers')
+  await expect(shop.locator('.row', { hasText: 'Stable' })).toContainText('30 glims')
   await shop.locator('[data-buy="stable"]').click()
   await expect(shop.locator('.msg.ok')).toContainText('is yours')
   await shop.getByRole('button', { name: 'Close Silas’s yard' }).click()

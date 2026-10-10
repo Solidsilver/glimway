@@ -44,8 +44,8 @@ export interface FsHooks {
   __fsFrame: () => { areaId: AreaId; frames: number; loop: number; fading: boolean; transitioning: boolean; cinematic: boolean; live: boolean }
   /** The server revision this tab's link is based on (null for guests). */
   __fsLinkRev: () => number | null
-  /** The purse the game shows (null for guests); `reread` reads the state again (purse-and-wardrobe.md 2). */
-  __fsPurse: (() => { gold: number; topUpsLeft: number } | null) & { reread: () => Promise<void> }
+  /** Today's top-ups as the game shows them (null for guests); `reread` reads the state again (silas-yard.md 1.5). */
+  __fsPurse: (() => { glimsLeft: number; topUpsLeft: number } | null) & { reread: () => Promise<void> }
   /** The item model as last read (null for guests or before a read). */
   __fsItems: (() => ItemsView | null) & { load: () => Promise<Result> }
   __fsVitals: () => { hp: number; maxHp: number; mana: number; maxMana: number }

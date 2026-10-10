@@ -195,7 +195,7 @@ type WorldLeaving struct {
 	// Warden-set tools resting in the homestead's shared chest, which stays
 	// behind (take them first).
 	WardenTools int32 `protobuf:"varint,5,opt,name=warden_tools,json=wardenTools,proto3" json:"warden_tools,omitempty"`
-	// DeedCost: embers a deed costs in the next world (the first is free).
+	// DeedCost: glims a deed costs in the next world (the first is free).
 	DeedCost      int32 `protobuf:"varint,6,opt,name=deed_cost,json=deedCost,proto3" json:"deed_cost,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

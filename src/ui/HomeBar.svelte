@@ -98,7 +98,7 @@
       {:else if selected}
         {touch ? 'Tap a spot on the grid, or nudge it.' : 'Arrows to move, R to turn, E to set it down.'}
       {:else if p.clearing}
-        A {p.clearing.what} in your light. Silas can clear it for {p.clearing.cost} ember{p.clearing.cost === 1 ? '' : 's'}.
+        A {p.clearing.what} in your light. Silas can clear it for {p.clearing.cost} glim{p.clearing.cost === 1 ? '' : 's'}.
       {:else if p.scene === 'outdoor'}
         {touch ? 'Pick a piece, tap one that’s set out to move it, or tap a tree or rock in your light to clear it.' : 'Pick a piece, click one that’s set out to move it, or click a tree or rock in your light to clear it.'}
       {:else}
@@ -108,7 +108,7 @@
 
     {#if p.clearing && !selected}
       <div class="controls">
-        <button type="button" class="primary" disabled={p.busy} data-testid="clear-tile" onclick={() => send({ kind: 'clear' })}>Have Silas clear it · {p.clearing.cost} ember{p.clearing.cost === 1 ? '' : 's'}</button>
+        <button type="button" class="primary" disabled={p.busy} data-testid="clear-tile" onclick={() => send({ kind: 'clear' })}>Have Silas clear it · {p.clearing.cost} glim{p.clearing.cost === 1 ? '' : 's'}</button>
         <button type="button" class="ghost" onclick={() => send({ kind: 'cancel' })}>Leave it</button>
       </div>
     {/if}

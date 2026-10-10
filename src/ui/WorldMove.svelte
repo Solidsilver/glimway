@@ -8,6 +8,7 @@
   import { ui } from './store.svelte'
   import { focusTrap } from './focus'
   import Icon from './Icon.svelte'
+  import Glim from './Glim.svelte'
 
   /**
    * The move confirmation (design: "Moving to another world"): what comes
@@ -172,7 +173,7 @@
         <h3 id="comes-title"><Icon name="bag" size={14} /> {worldCopy.comes}</h3>
         <ul>
           <li><span class="ic ok"><Icon name="check" size={11} /></span>{worldCopy.comeHero}</li>
-          <li><span class="ic ember"><Icon name="ember" size={12} /></span>{worldCopy.comeEmbers(session.state.embers)}</li>
+          <li><span class="ic glim"><Glim size={12} /></span>{worldCopy.comeGlims(session.state.glims)}</li>
           <li><span class="ic ok"><Icon name="check" size={11} /></span>{worldCopy.comePack}</li>
           <li><span class="ic ok"><Icon name="check" size={11} /></span>{worldCopy.comeChest}</li>
         </ul>
@@ -205,7 +206,7 @@
       <p class="note" data-testid="move-incoming"><Icon name="scroll" size={13} /> {worldCopy.incoming(leaving.incoming)}</p>
     {/if}
     {#if leaving && leaving.deedCost > 0}
-      <p class="note" data-testid="move-deed"><Icon name="ember" size={13} /> {worldCopy.deedCost(leaving.deedCost)}</p>
+      <p class="note" data-testid="move-deed"><Glim size={13} /> {worldCopy.deedCost(leaving.deedCost)}</p>
     {/if}
 
     {#if view && blocks.length > 0}
@@ -329,7 +330,7 @@
     background: var(--accent);
     color: #fff;
   }
-  .ic.ember {
+  .ic.glim {
     color: var(--ember-deep);
   }
   .ic.stay {

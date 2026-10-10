@@ -116,7 +116,7 @@ export interface ShelfSlotView {
   kind: 'material' | 'item' | 'decoration' | 'instance';
   itemDef: string;
   qty: number;
-  /** A price in gold (0.6, 3.2); 0 is a free gift. */
+  /** A price in glims (0.6, 3.2; glims since 0.6.1); 0 is a free gift. */
   price: number;
   maker?: { id: string; name: string } | null;
   instance?: string | null;

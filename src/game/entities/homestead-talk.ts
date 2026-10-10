@@ -6,7 +6,8 @@
  */
 import Phaser from 'phaser'
 import { HOMESTEAD_DATA, type HomeScene } from '../../lib/homestead'
-import { checkSpend } from '../../lib/embers'
+import { checkSpend } from '../../lib/glims'
+import { glimsCount } from '../../content/purse'
 import type { HomeView } from '../../lib/api/types'
 import { CARTING_DAY_NOTICE } from '../../content/expansion-writing'
 import type { Dialogue, DialogueChoice } from '../../content/world'
@@ -41,9 +42,9 @@ import { openDialogue } from '../dialogue'
 import type { HomesteadDeps, HomesteadLayer } from './homesteads'
 import { POST, SILAS_ID, short } from './homestead-art'
 
-/** "30 embers, 20 timber, 10 stone, 8 fiber" */
+/** "30 glims, 20 timber, 10 stone, 8 fiber" */
 function workshopPrice(): string {
-  return `${WORKSHOP_TIER.embers} embers, ${costPhrase(WORKSHOP_TIER.materials ?? {})}`
+  return `${WORKSHOP_TIER.glims} glims, ${costPhrase(WORKSHOP_TIER.materials ?? {})}`
 }
 
 export class HomesteadTalk {
@@ -119,7 +120,7 @@ export class HomesteadTalk {
         id: 'home:hearth',
         x: ROOM_HEARTH.x + 8,
         y: ROOM_HEARTH.y + 10,
-        label: () => (this.ownRoom() ? `Rest by your hearth · ${restCost()} ember` : 'Sit by the hearth'),
+        label: () => (this.ownRoom() ? `Rest by your hearth · ${glimsCount(restCost())}` : 'Sit by the hearth'),
         verb: 'Rest',
         markerOffset: 16,
         activate: () =>
@@ -208,7 +209,7 @@ export class HomesteadTalk {
           id: 'home:bed',
           x: L.origin.x + 96,
           y: L.origin.y + 52,
-          label: () => `Rest at your bedroll · ${restCost()} ember`,
+          label: () => `Rest at your bedroll · ${glimsCount(restCost())}`,
           verb: 'Rest',
           markerOffset: 16,
           activate: () => this.offerRest('Your bedroll')
@@ -357,7 +358,7 @@ export class HomesteadTalk {
         lines: [
           this.home.homes.status === 'guest'
             ? 'UNCLAIMED. Wild land past the gate. Deeds are for people with a world: sign in to yours from the Menu.'
-            : `UNCLAIMED. Wild land past the gate. Deeds from S. at the yard${price === 0 ? ' — first deed on the Compact' : price ? ` — ${price} embers` : ''}.`,
+            : `UNCLAIMED. Wild land past the gate. Deeds from S. at the yard${price === 0 ? ' — first deed on the Compact' : price ? ` — ${glimsCount(price)}` : ''}.`,
           'Walk through and have a look, if you like. The woods don’t mind.'
         ]
       })
@@ -504,9 +505,9 @@ export class HomesteadTalk {
       if (invite) choices.push({ text: `Sign ${short(invite.from.name, 14)}’s deed`, note: `${lotName(invite.gate)} · together, at the table`, action: `home:sign:${invite.homeId}` })
       for (const g of this.home.homes.reclaimable().slice(0, 2)) choices.push({ text: `Take back ${lotName(g.gate)}`, note: 'Your old deed, as it stands · free', action: `home:claim:${g.gate}` })
       for (const g of this.home.homes.unclaimed().slice(0, 4)) {
-        const price = g.price ?? HOMESTEAD_DATA.deeds.embers
-        const short = price > s.state.embers
-        choices.push(short ? { text: `The deed to ${lotName(g.gate)}`, note: `Needs ${price} embers`, disabled: true } : { text: `The deed to ${lotName(g.gate)}`, note: price === 0 ? 'First deed: on the Compact' : `${price} embers`, action: `home:claim:${g.gate}` })
+        const price = g.price ?? HOMESTEAD_DATA.deeds.glims
+        const short = price > s.state.glims
+        choices.push(short ? { text: `The deed to ${lotName(g.gate)}`, note: `Needs ${glimsCount(price)}`, disabled: true } : { text: `The deed to ${lotName(g.gate)}`, note: price === 0 ? 'First deed: on the Compact' : glimsCount(price), action: `home:claim:${g.gate}` })
       }
       choices.push({ text: 'Not yet' })
       // An invite or an old page is news every time; the lantern-light speech plays once.
@@ -545,11 +546,11 @@ export class HomesteadTalk {
     if (canAxe) choices.push(axeChoice)
     if (mine.tier === 0) {
       const cost = this.home.homes.cottagePrice()
-      const short = s.state.embers < cost
-      choices.push(short ? { text: 'Raise a cottage', note: `Needs ${cost} embers`, disabled: true } : { text: 'Raise a cottage', note: `${cost} embers`, action: 'home:upgrade' })
+      const short = s.state.glims < cost
+      choices.push(short ? { text: 'Raise a cottage', note: `Needs ${glimsCount(cost)}`, disabled: true } : { text: 'Raise a cottage', note: glimsCount(cost), action: 'home:upgrade' })
     }
     if (mine.tier === 1) {
-      const why = workshopShort(s.state.embers, this.home.homes.materials)
+      const why = workshopShort(s.state.glims, this.home.homes.materials)
       choices.push(why ? { text: 'Build on a workshop', note: why, disabled: true } : { text: 'Build on a workshop', note: workshopPrice(), action: 'home:upgrade' })
     }
     choices.push({ text: 'See what you’ve finished', action: 'home:shop' })
@@ -557,12 +558,12 @@ export class HomesteadTalk {
     choices.push({ text: 'Give up my place on the deed', action: 'home:leave' })
     choices.push({ text: canAxe ? 'Not yet' : 'Just passing' })
     const intro = mine.tier === 0
-      ? [s.state.embers < this.home.homes.cottagePrice() ? lines.notEnoughEmbers.lines[0] : 'Your camp’s holding. Four skids and a slate roof, and you’d have a door to hang a fox over. Say the word.']
+      ? [s.state.glims < this.home.homes.cottagePrice() ? lines.notEnoughGlims.lines[0] : 'Your camp’s holding. Four skids and a slate roof, and you’d have a door to hang a fox over. Say the word.']
       : mine.tier === 1
         ? ['Deep eaves, a heavy bench and a chest that doesn’t drink the damp. Bring me timber, stone and fiber from the Wilds and I’ll build you a workshop.', lines.sellDecorations.lines[0]]
         : [lines.sellDecorations.lines[0]]
     // What he says about your place plays once per state; then a nod and "Hear it again".
-    const state = mine.tier === 0 ? `tier:0:${s.state.embers < this.home.homes.cottagePrice() ? 'saving' : 'ready'}` : `tier:${mine.tier}`
+    const state = mine.tier === 0 ? `tier:0:${s.state.glims < this.home.homes.cottagePrice() ? 'saving' : 'ready'}` : `tier:${mine.tier}`
     const told = this.toldBefore(state, first, intro, choices)
     const greet = first ? lines.firstMeeting.lines : mine.tier === 0 && !told.short ? [] : [lines.idleLines[this.nextIdle()]]
     this.say({
@@ -597,8 +598,8 @@ export class HomesteadTalk {
     const choice: DialogueChoice = offline
       ? { text: 'Rest a while', note: 'Needs a connection', disabled: true }
       : check.ok
-        ? { text: 'Rest a while', note: `${check.cost} ember`, action: 'home-rest' }
-        : { text: 'Rest a while', note: check.reason === 'full' ? 'Already rested' : check.reason === 'needs-earned' ? `Needs ${check.cost} ember earned on Habitica` : `Needs ${check.cost} ember`, disabled: true }
+        ? { text: 'Rest a while', note: glimsCount(check.cost), action: 'home-rest' }
+        : { text: 'Rest a while', note: check.reason === 'full' ? 'Already rested' : check.reason === 'needs-earned' ? `Needs ${glimsCount(check.cost)} earned on Habitica` : `Needs ${glimsCount(check.cost)}`, disabled: true }
     this.say({
       speaker,
       lines: [speaker === 'Your bedroll'
@@ -646,8 +647,8 @@ export class HomesteadTalk {
             ? ['There. Deep eaves, a heavy bench, and a chest that won’t drink the damp. Clean your tools. Rust is just iron forgetting it is a saw.']
             : [...SILAS.dialogue.afterUpgrade.lines.map((l) => l.replace('Go on in.', 'It’s up on your land, past your gate. Go on in.'))]
         })
-      } else if (r.code === 'insufficient-embers') {
-        this.say({ speaker: SILAS.name, lines: SILAS.dialogue.notEnoughEmbers.lines })
+      } else if (r.code === 'insufficient-glims') {
+        this.say({ speaker: SILAS.name, lines: SILAS.dialogue.notEnoughGlims.lines })
       } else {
         bus.emit(EV.toast, { text: r.text, kind: 'error' })
       }
@@ -670,7 +671,7 @@ export class HomesteadTalk {
     const r = await this.home.homes.claim(gate)
     if (!this.scene.sys.isActive()) return
     if (!r.ok) {
-      this.say({ speaker: SILAS.name, lines: [r.code === 'insufficient-embers' ? SILAS.dialogue.notEnoughEmbers.lines[0] : r.text] })
+      this.say({ speaker: SILAS.name, lines: [r.code === 'insufficient-glims' ? SILAS.dialogue.notEnoughGlims.lines[0] : r.text] })
       return
     }
     sfx('quest')

@@ -178,10 +178,8 @@ export interface StatsPayload {
   maxHp: number
   mana: number
   maxMana: number
-  /** Ember balance (spent at lanterns and the Ashwatch chest). */
-  embers: number
-  /** The purse's gold (purse-and-wardrobe.md 2.1), with unanswered gold spends on top; 0 without a world. */
-  gold: number
+  /** Glim balance (silas-yard.md 1.2), with unanswered glim spends on top. */
+  glims: number
 }
 
 export interface QuestPayload {
@@ -319,7 +317,7 @@ export interface DefeatPayload {
 export interface DialogueChoice {
   text: string
   reply?: string[]
-  /** World action applied when the conversation closes (e.g. an ember spend). */
+  /** World action applied when the conversation closes (e.g. a glim spend). */
   action?: string
   disabled?: boolean
   /** Cost, or why the choice is unavailable. */

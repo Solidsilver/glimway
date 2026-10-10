@@ -40,20 +40,20 @@ export interface GameState {
   discoveries: string[];
   defeatedEnemies: string[];
   playSeconds: number;
-  /** Ember balance (src/lib/embers.ts). Saves from before Embers load as 0. */
-  embers: number;
+  /** Glim balance (src/lib/glims.ts). Saves without one load as 0. */
+  glims: number;
   /** One-way world flags: lit road lanterns, opened chests, one-off gifts. */
   flags: string[];
   /**
-   * Highest lifetime Habitica XP already paid out as embers (0 = not yet
+   * Highest lifetime Habitica XP already paid out as glims (0 = not yet
    * known). It only ever rises, so XP lost and earned back never pays twice.
    */
-  emberXp: number;
+  glimXp: number;
   /**
-   * How many of `embers` were earned from Habitica XP (not gifts or quest
-   * beats). Only these can revive an imported hero from 0 HP. Always <= embers.
+   * How many of `glims` were earned from Habitica XP (not gifts or quest
+   * beats). Only these can revive an imported hero from 0 HP. Always <= glims.
    */
-  xpEmbers: number;
+  xpGlims: number;
   /**
    * Client-only (never uploaded): which Wilds region a saved `wilds`
    * position is in. Absent means the Tangle; `outer-1` the outer Wilds.
@@ -123,10 +123,10 @@ export function createNewGame(): GameState {
     discoveries: [],
     defeatedEnemies: [],
     playSeconds: 0,
-    embers: 0,
+    glims: 0,
     flags: [],
-    emberXp: 0,
-    xpEmbers: 0,
+    glimXp: 0,
+    xpGlims: 0,
   };
 }
 
@@ -283,14 +283,14 @@ export function validateSave(data: unknown): GameState {
     min: 0,
   });
   // Added after save version 1 shipped: absent means "none yet".
-  const embers =
-    data.embers === undefined ? 0 : Math.floor(requireFiniteNumber(data.embers, 'embers', { min: 0 }));
+  const glims =
+    data.glims === undefined ? 0 : Math.floor(requireFiniteNumber(data.glims, 'glims', { min: 0 }));
   const flags = data.flags === undefined ? [] : requireStringArray(data.flags, 'flags');
-  const emberXp =
-    data.emberXp === undefined ? 0 : requireFiniteNumber(data.emberXp, 'emberXp', { min: 0 });
-  const xpEmbers = Math.min(
-    embers,
-    data.xpEmbers === undefined ? 0 : Math.floor(requireFiniteNumber(data.xpEmbers, 'xpEmbers', { min: 0 })),
+  const glimXp =
+    data.glimXp === undefined ? 0 : requireFiniteNumber(data.glimXp, 'glimXp', { min: 0 });
+  const xpGlims = Math.min(
+    glims,
+    data.xpGlims === undefined ? 0 : Math.floor(requireFiniteNumber(data.xpGlims, 'xpGlims', { min: 0 })),
   );
 
   // Client-only Wilds markers (added later): short strings, else dropped.
@@ -317,10 +317,10 @@ export function validateSave(data: unknown): GameState {
     discoveries,
     defeatedEnemies,
     playSeconds,
-    embers,
+    glims,
     flags,
-    emberXp,
-    xpEmbers,
+    glimXp,
+    xpGlims,
   };
 }
 

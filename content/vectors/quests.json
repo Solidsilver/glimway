@@ -15,7 +15,7 @@
             "items": [],
             "marks": [],
             "papers": [],
-            "embers": 0,
+            "glims": 0,
             "witness": "",
             "gate": {
               "with": "hazel"
@@ -33,7 +33,7 @@
             "items": [],
             "marks": [],
             "papers": [],
-            "embers": 0,
+            "glims": 0,
             "witness": ""
           },
           {
@@ -45,7 +45,7 @@
             "items": [],
             "marks": [],
             "papers": [],
-            "embers": 0,
+            "glims": 0,
             "witness": "",
             "gate": {
               "with": "hazel",
@@ -65,7 +65,7 @@
             "items": [],
             "marks": [],
             "papers": [],
-            "embers": 0,
+            "glims": 0,
             "witness": "",
             "gate": {
               "with": "hazel",
@@ -98,7 +98,7 @@
             "items": [],
             "marks": [],
             "papers": [],
-            "embers": 0,
+            "glims": 0,
             "witness": ""
           },
           {
@@ -112,10 +112,10 @@
               "library:lamp"
             ],
             "papers": [],
-            "embers": 0,
+            "glims": 0,
             "witness": "",
             "gate": {
-              "embers": 1
+              "glims": 1
             },
             "where": {
               "area": "in:village:library",
@@ -131,7 +131,7 @@
             "items": [],
             "marks": [],
             "papers": [],
-            "embers": 0,
+            "glims": 0,
             "witness": ""
           }
         ]
@@ -389,7 +389,7 @@
             "gate"
           ],
           "value": {
-            "embers": 1
+            "glims": 1
           }
         }
       ],
@@ -638,15 +638,15 @@
             "steps",
             0,
             "gate",
-            "embers"
+            "glims"
           ],
           "value": 0
         }
       ],
-      "rule": "quest.gate_embers"
+      "rule": "quest.gate_glims"
     },
     {
-      "name": "ember-grant-cap",
+      "name": "glim-grant-cap",
       "valid": false,
       "edits": [
         {
@@ -655,7 +655,7 @@
             0,
             "steps",
             0,
-            "embers"
+            "glims"
           ],
           "value": 6
         }

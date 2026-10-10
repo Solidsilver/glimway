@@ -11,9 +11,12 @@ import (
 )
 
 // ReturnMail settles transit exactly once inside the caller's immediate tx.
-// Explicit recalls use the keyed mutation's Persist; unattended returns bump
-// the sender's revision here without rewriting their progress or last-seen time.
-func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, bumpRevision bool) (bool, error) {
+// s is the operation's own snapshot, or nil when nobody's op is running (the
+// sweep). A recall is the sender's own op: its glims go on its snapshot and
+// its keyed mutation's Persist moves the version. Every other return bumps
+// the sender's revision here without rewriting their progress or last-seen
+// time.
+func ReturnMail(ctx context.Context, tx *sql.Tx, s *Snapshot, id, reason string, now int64) (bool, error) {
 	var sender, kind, def, raw, makers string
 	var qty int
 	var claimed, returned sql.NullInt64
@@ -37,11 +40,11 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 	}
 	pack := itemmove.Currency(kind, def)
 	switch kind {
-	case "gold":
-		// A gold letter's gold waited in the letter (3.3): it comes back to
-		// the sender's purse below, both sides in one transaction (3.5).
-		if def != "gold" || qty <= 0 {
-			return false, fmt.Errorf("invalid mail gold")
+	case "glims":
+		// A glim letter's glims waited in the letter (3.3): they come back to
+		// the sender below, both sides in one transaction (3.5).
+		if def != "glims" || qty <= 0 {
+			return false, fmt.Errorf("invalid mail glims")
 		}
 	case "material", "item":
 		var split []itemmove.MakerQty
@@ -125,14 +128,15 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 		ledgerReason = "mail-recall"
 	}
 	switch {
-	case kind == "gold":
+	case kind == "glims":
 		// Recall, expiry, a world move and access removal all come through
-		// here, so an uncollected gold letter can never strand gold: the
-		// purse is credited and the mail:gold:gold escrow closes (3.3).
-		if err = CreditGold(ctx, tx, sender, qty, ledgerReason, id, now); err != nil {
+		// here, so an uncollected glim letter can never strand glims: the
+		// sender is credited, never XP-earned, and the mail:glims:glims
+		// escrow closes (3.3).
+		if err = MoveGlims(ctx, tx, s, sender, qty, ledgerReason, id, now); err != nil {
 			return false, err
 		}
-		if err = itemmove.RecordCurrency(ctx, tx, sender, itemmove.LocationCurrency("mail", "gold", "gold"), -qty, ledgerReason, id, now); err != nil {
+		if err = itemmove.RecordCurrency(ctx, tx, sender, itemmove.LocationCurrency("mail", "glims", "glims"), -qty, ledgerReason, id, now); err != nil {
 			return false, err
 		}
 	case kind != "thanks":
@@ -145,7 +149,7 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 			}
 		}
 	}
-	if bumpRevision {
+	if s == nil || s.AccountID != sender {
 		if err = BumpVersion(ctx, tx, &Snapshot{AccountID: sender}); err != nil {
 			return false, err
 		}
@@ -188,7 +192,7 @@ func returnMailBatch(ctx context.Context, tx *sql.Tx, now int64, filter string, 
 		return 0, err
 	}
 	for _, v := range batch {
-		if _, err = ReturnMail(ctx, tx, v.id, v.reason, now, true); err != nil {
+		if _, err = ReturnMail(ctx, tx, nil, v.id, v.reason, now); err != nil {
 			return 0, err
 		}
 	}

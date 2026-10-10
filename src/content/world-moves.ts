@@ -68,7 +68,7 @@ export const worldCopy = {
   comes: 'Comes with you',
   stays: 'Stays behind',
   comeHero: 'Your hero and your story so far',
-  comeEmbers: (n: number) => `Your embers (${n})`,
+  comeGlims: (n: number) => `Your glims (${n})`,
   comePack: 'Everything in your pack',
   comeChest: 'Your personal chest',
   stayHome: (lot: number) => `Your name on the deed at lot ${lot}`,
@@ -80,7 +80,7 @@ export const worldCopy = {
   incoming: (n: number) => `${n} ${plural(n, 'parcel', 'parcels')} waiting for you will go back to ${plural(n, 'its sender', 'their senders')}.`,
   wardenTools: (n: number) =>
     `${n} warden-set ${plural(n, 'tool rests', 'tools rest')} in the shared chest. Take ${plural(n, 'it', 'them')} first, or ${plural(n, 'it stays', 'they stay')} behind.`,
-  deedCost: (n: number) => `A deed there costs ${n} embers from Silas: only your first was free.`,
+  deedCost: (n: number) => `A deed there costs ${n} glims from Silas: only your first was free.`,
   blockArea: 'Walk to the village or the Commons first.',
   blockMail: (n: number) => `${n} ${plural(n, 'parcel you sent is', 'parcels you sent are')} still on the road. Recall ${plural(n, 'it', 'them')} at a mailbox first.`,
   blockOffline: 'Moving needs a connection.',

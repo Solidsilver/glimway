@@ -25,9 +25,10 @@ const (
 // One top-up: what it asked for, what Habitica's gold was before and after,
 // and where it landed.
 type PurseTopUp struct {
-	state  protoimpl.MessageState `protogen:"open.v1"`
-	Id     string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Amount int32                  `protobuf:"varint,2,opt,name=amount,proto3" json:"amount,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// The Habitica gold it spends.
+	Amount int32 `protobuf:"varint,2,opt,name=amount,proto3" json:"amount,omitempty"`
 	// working | moved | not-enough | not-moved | unconfirmed. "working" is the
 	// reserved/created/scoring/checking run still in flight (2.4).
 	State string `protobuf:"bytes,3,opt,name=state,proto3" json:"state,omitempty"`
@@ -40,7 +41,9 @@ type PurseTopUp struct {
 	// (2.4); the next top-up deletes it first thing.
 	Leftover bool `protobuf:"varint,8,opt,name=leftover,proto3" json:"leftover,omitempty"`
 	// A code: habitica-auth, timeout, checked, settled-by-owner.
-	Note          string `protobuf:"bytes,9,opt,name=note,proto3" json:"note,omitempty"`
+	Note string `protobuf:"bytes,9,opt,name=note,proto3" json:"note,omitempty"`
+	// The glims it credits (amount / 2).
+	Glims         int32 `protobuf:"varint,10,opt,name=glims,proto3" json:"glims,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -138,14 +141,24 @@ func (x *PurseTopUp) GetNote() string {
 	return ""
 }
 
-// The purse itself, on every PlayerState (2.5 carries what is left today).
+func (x *PurseTopUp) GetGlims() int32 {
+	if x != nil {
+		return x.Glims
+	}
+	return 0
+}
+
+// The top-up's state, on every PlayerState (2.5 carries what is left today).
+// Its gold balance left in 0.6.1: the purse's gold became glims.
 type Purse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Gold  int32                  `protobuf:"varint,1,opt,name=gold,proto3" json:"gold,omitempty"`
 	// Top-ups left today, UTC.
 	TopUpsLeft int32 `protobuf:"varint,2,opt,name=top_ups_left,json=topUpsLeft,proto3" json:"top_ups_left,omitempty"`
 	// The top-up still working, absent when none is.
-	Working       *PurseTopUp `protobuf:"bytes,3,opt,name=working,proto3" json:"working,omitempty"`
+	Working *PurseTopUp `protobuf:"bytes,3,opt,name=working,proto3" json:"working,omitempty"`
+	// Glims top-ups can still bring today, UTC (the day's cap less today's
+	// moved, checking and unconfirmed top-ups; 1.5).
+	GlimsLeft     int32 `protobuf:"varint,4,opt,name=glims_left,json=glimsLeft,proto3" json:"glims_left,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -180,13 +193,6 @@ func (*Purse) Descriptor() ([]byte, []int) {
 	return file_glimway_v1_purse_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *Purse) GetGold() int32 {
-	if x != nil {
-		return x.Gold
-	}
-	return 0
-}
-
 func (x *Purse) GetTopUpsLeft() int32 {
 	if x != nil {
 		return x.TopUpsLeft
@@ -201,9 +207,16 @@ func (x *Purse) GetWorking() *PurseTopUp {
 	return nil
 }
 
+func (x *Purse) GetGlimsLeft() int32 {
+	if x != nil {
+		return x.GlimsLeft
+	}
+	return 0
+}
+
 // POST /api/purse/top-up. The token is used for this one request and never
 // stored, logged or returned. Keyed by its own purse_topups row, never
-// through keyedOp.
+// through keyedOp. The amount is the Habitica gold to spend (two per glim).
 type PurseTopUpRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Op            *OpHeader              `protobuf:"bytes,1,opt,name=op,proto3" json:"op,omitempty"`
@@ -308,24 +321,30 @@ func (x *PurseTopUpResult) GetTopUp() *PurseTopUp {
 	return nil
 }
 
-// One purse log line (2.1): every top-up with Habitica's gold before and
-// after, and every gold spend and sale.
+// One glim log line (2.1): every top-up with Habitica's gold before and
+// after, and every glim spend, sale, letter and give. Delta is in glims.
 type PurseLine struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	At    float64                `protobuf:"fixed64,1,opt,name=at,proto3" json:"at,omitempty"`
 	Delta int32                  `protobuf:"varint,2,opt,name=delta,proto3" json:"delta,omitempty"`
 	// habitica-topup | purse-settle | market-buy | shelf-buy | shelf-sale |
-	// mail-send | mail-claim | mail-return | mail-recall | give | gift
-	Reason  string `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	// mail-send | mail-claim | mail-return | mail-recall | give | gift |
+	// currency-merge | spend (a rest, a road lantern, the chest) | quest (a
+	// quest gate's price) | mend | homestead-deed | homestead-upgrade |
+	// homestead-buy | homestead-clear
+	Reason string `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	// The item on a market-buy, shelf, mend or homestead-buy line.
 	ItemDef string `protobuf:"bytes,4,opt,name=item_def,json=itemDef,proto3" json:"item_def,omitempty"`
-	Qty     int32  `protobuf:"varint,5,opt,name=qty,proto3" json:"qty,omitempty"`
+	// How many on a market-buy or shelf line; on a currency-merge line, the
+	// 0.6 purse's gold that migration 033 turned in.
+	Qty int32 `protobuf:"varint,5,opt,name=qty,proto3" json:"qty,omitempty"`
 	// The other player in a shelf trade, letter or give.
 	OtherName string `protobuf:"bytes,6,opt,name=other_name,json=otherName,proto3" json:"other_name,omitempty"`
 	// A letter's id, so the line can say which one it was.
 	MailId string `protobuf:"bytes,7,opt,name=mail_id,json=mailId,proto3" json:"mail_id,omitempty"`
-	// That letter's state: waiting | collected | came-back. A collected gold
-	// letter writes only the sender's mail:gold:gold row, so the state can't
-	// be read off the gold lines alone (design 2.7).
+	// That letter's state: waiting | collected | came-back. A collected glim
+	// letter writes only the sender's mail:glims:glims row, so the state can't
+	// be read off the log lines alone (design 2.7).
 	MailState string `protobuf:"bytes,8,opt,name=mail_state,json=mailState,proto3" json:"mail_state,omitempty"`
 	// The seller on a market-buy line (their npc name): "Bought timber ×4
 	// from Silas". other_name stays the other player.
@@ -427,7 +446,7 @@ func (x *PurseLine) GetSeller() string {
 	return ""
 }
 
-// GET /api/purse: the purse, the last 50 top-ups and gold lines.
+// GET /api/purse: the purse, the last 50 top-ups and log lines.
 type PurseRead struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Purse         *Purse                 `protobuf:"bytes,1,opt,name=purse,proto3" json:"purse,omitempty"`
@@ -493,7 +512,7 @@ var File_glimway_v1_purse_proto protoreflect.FileDescriptor
 const file_glimway_v1_purse_proto_rawDesc = "" +
 	"\n" +
 	"\x16glimway/v1/purse.proto\x12\n" +
-	"glimway.v1\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x13glimway/v1/op.proto\"\xd0\x02\n" +
+	"glimway.v1\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x13glimway/v1/op.proto\"\xe6\x02\n" +
 	"\n" +
 	"PurseTopUp\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x16\n" +
@@ -508,12 +527,15 @@ const file_glimway_v1_purse_proto_rawDesc = "" +
 	"\n" +
 	"settled_at\x18\a \x01(\v2\x1c.google.protobuf.DoubleValueR\tsettledAt\x12\x1a\n" +
 	"\bleftover\x18\b \x01(\bR\bleftover\x12\x12\n" +
-	"\x04note\x18\t \x01(\tR\x04note\"o\n" +
-	"\x05Purse\x12\x12\n" +
-	"\x04gold\x18\x01 \x01(\x05R\x04gold\x12 \n" +
+	"\x04note\x18\t \x01(\tR\x04note\x12\x14\n" +
+	"\x05glims\x18\n" +
+	" \x01(\x05R\x05glims\"\x86\x01\n" +
+	"\x05Purse\x12 \n" +
 	"\ftop_ups_left\x18\x02 \x01(\x05R\n" +
 	"topUpsLeft\x120\n" +
-	"\aworking\x18\x03 \x01(\v2\x16.glimway.v1.PurseTopUpR\aworking\"g\n" +
+	"\aworking\x18\x03 \x01(\v2\x16.glimway.v1.PurseTopUpR\aworking\x12\x1d\n" +
+	"\n" +
+	"glims_left\x18\x04 \x01(\x05R\tglimsLeftJ\x04\b\x01\x10\x02R\x04gold\"g\n" +
 	"\x11PurseTopUpRequest\x12$\n" +
 	"\x02op\x18\x01 \x01(\v2\x14.glimway.v1.OpHeaderR\x02op\x12\x14\n" +
 	"\x05token\x18\x02 \x01(\tR\x05token\x12\x16\n" +

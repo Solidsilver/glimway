@@ -83,11 +83,11 @@ func TestAccounts026NoSessionAndStateBridge027(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if snap.ProfileSource != "habitica" || wire.Account.AccountId != "owner-subject" || snap.State.Embers != 9 || snap.State.XPEmbers != 3 {
+			if snap.ProfileSource != "habitica" || wire.Account.AccountId != "owner-subject" || snap.State.Glims != 9 || snap.State.XPGlims != 3 {
 				t.Fatal("identity or balances changed")
 			}
 			if nullOrigin {
-				if snap.State.Area != "village" || snap.State.HP != 32 || snap.Version != 9 || snap.State.EmberXP != rules.LifetimeXP(2, 5) {
+				if snap.State.Area != "village" || snap.State.HP != 32 || snap.Version != 9 || snap.State.GlimXP != rules.LifetimeXP(2, 5) {
 					t.Fatal("fresh checkpoint baseline", JSON(snap))
 				}
 			} else if snap.State.Area != "woodland" || !strings.Contains(JSON(snap.State.Flags), "seen:retained") || snap.Version != 8 {
@@ -132,7 +132,7 @@ func TestAccounts026InconsistentCheckpointFallsBack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if snap.State.EmberXP != rules.LifetimeXP(2, 5)+1 || snap.State.HP != 32 || snap.Version != 9 {
+	if snap.State.GlimXP != rules.LifetimeXP(2, 5)+1 || snap.State.HP != 32 || snap.Version != 9 {
 		t.Fatal("fallback lost verified mark/profile", JSON(snap))
 	}
 	if err = foreignKeysClean(tx); err != nil {
@@ -191,7 +191,7 @@ func TestAccounts026FallbacksNeverRequirePerfectEvidence(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if snap.State.Embers != 9 || snap.State.XPEmbers != 3 || snap.Version != 9 {
+			if snap.State.Glims != 9 || snap.State.XPGlims != 3 || snap.Version != 9 {
 				t.Fatal("fallback lost existing entitlements")
 			}
 			if kind == "missing-baseline" || kind == "invalid-both" {

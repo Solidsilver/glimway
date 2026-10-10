@@ -706,7 +706,7 @@
             "reachedAt": {},
             "gateAt": {}
           },
-          "embers": {
+          "glims": {
             "balance": 0,
             "xpEarned": 0,
             "pending": 0,
@@ -741,7 +741,7 @@
             "nextCastAt": 1791400008.25
           },
           "purse": {
-            "gold": 240,
+            "glimsLeft": 30,
             "topUpsLeft": 2,
             "working": null
           },
@@ -932,7 +932,7 @@
           "reachedAt": {},
           "gateAt": {}
         },
-        "embers": {
+        "glims": {
           "balance": 0,
           "xpEarned": 0,
           "pending": 0,
@@ -967,7 +967,7 @@
           "nextCastAt": 1791400008.25
         },
         "purse": {
-          "gold": 240,
+          "glimsLeft": 30,
           "topUpsLeft": 2,
           "working": null
         },

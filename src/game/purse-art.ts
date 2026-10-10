@@ -7,7 +7,7 @@
  * (scripts/build-atlases.ts → purse.webp, loaded as `packed-purse`); at boot
  * each becomes a dense texture `pu-art:<frame>`, and the interface gets them
  * as icon URLs (EV.artIcons). Missing art is never fatal: the interface
- * draws its own coin (src/ui/Icon.svelte `coin`).
+ * draws its own (src/ui/Icon.svelte).
  */
 import type Phaser from 'phaser'
 import { PACKED_MANIFEST_KEY, type PackedManifest } from './atlas-plan.ts'
@@ -23,13 +23,11 @@ export const puArt = (frame: string): string => `pu-art:${frame}`
 /**
  * The interface's icon keys (ui.artIcons, src/ui/ArtIcon.svelte), by the
  * pass's frame. `wardrobe` is lane E's (the Character panel's Wardrobe tab).
+ * The coin, the purse and the gold letter stay packed but unused: glims
+ * replaced the purse's gold (silas-yard.md 1.9, ./glims-art.ts).
  */
 export const PURSE_ICONS: Readonly<Record<string, string>> = {
-  'purse-gold': 'gold-coin',
-  'purse-gold-hud': 'gold-coin-hud',
-  purse: 'purse',
   'purse-price-tag': 'price-tag',
-  'purse-gold-letter': 'gold-letter',
   wardrobe: 'wardrobe'
 }
 

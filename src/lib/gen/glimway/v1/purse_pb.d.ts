@@ -24,6 +24,8 @@ export declare type PurseTopUp = Message<"glimway.v1.PurseTopUp"> & {
   id: string;
 
   /**
+   * The Habitica gold it spends.
+   *
    * @generated from field: int32 amount = 2;
    */
   amount: number;
@@ -72,6 +74,13 @@ export declare type PurseTopUp = Message<"glimway.v1.PurseTopUp"> & {
    * @generated from field: string note = 9;
    */
   note: string;
+
+  /**
+   * The glims it credits (amount / 2).
+   *
+   * @generated from field: int32 glims = 10;
+   */
+  glims: number;
 };
 
 export declare type PurseTopUpValid = PurseTopUp;
@@ -83,16 +92,12 @@ export declare type PurseTopUpValid = PurseTopUp;
 export declare const PurseTopUpSchema: GenMessage<PurseTopUp, {validType: PurseTopUpValid}>;
 
 /**
- * The purse itself, on every PlayerState (2.5 carries what is left today).
+ * The top-up's state, on every PlayerState (2.5 carries what is left today).
+ * Its gold balance left in 0.6.1: the purse's gold became glims.
  *
  * @generated from message glimway.v1.Purse
  */
 export declare type Purse = Message<"glimway.v1.Purse"> & {
-  /**
-   * @generated from field: int32 gold = 1;
-   */
-  gold: number;
-
   /**
    * Top-ups left today, UTC.
    *
@@ -106,6 +111,14 @@ export declare type Purse = Message<"glimway.v1.Purse"> & {
    * @generated from field: glimway.v1.PurseTopUp working = 3;
    */
   working?: PurseTopUp | undefined;
+
+  /**
+   * Glims top-ups can still bring today, UTC (the day's cap less today's
+   * moved, checking and unconfirmed top-ups; 1.5).
+   *
+   * @generated from field: int32 glims_left = 4;
+   */
+  glimsLeft: number;
 };
 
 export declare type PurseValid = Purse;
@@ -119,7 +132,7 @@ export declare const PurseSchema: GenMessage<Purse, {validType: PurseValid}>;
 /**
  * POST /api/purse/top-up. The token is used for this one request and never
  * stored, logged or returned. Keyed by its own purse_topups row, never
- * through keyedOp.
+ * through keyedOp. The amount is the Habitica gold to spend (two per glim).
  *
  * @generated from message glimway.v1.PurseTopUpRequest
  */
@@ -167,8 +180,8 @@ export declare type PurseTopUpResultValid = PurseTopUpResult;
 export declare const PurseTopUpResultSchema: GenMessage<PurseTopUpResult, {validType: PurseTopUpResultValid}>;
 
 /**
- * One purse log line (2.1): every top-up with Habitica's gold before and
- * after, and every gold spend and sale.
+ * One glim log line (2.1): every top-up with Habitica's gold before and
+ * after, and every glim spend, sale, letter and give. Delta is in glims.
  *
  * @generated from message glimway.v1.PurseLine
  */
@@ -185,18 +198,26 @@ export declare type PurseLine = Message<"glimway.v1.PurseLine"> & {
 
   /**
    * habitica-topup | purse-settle | market-buy | shelf-buy | shelf-sale |
-   * mail-send | mail-claim | mail-return | mail-recall | give | gift
+   * mail-send | mail-claim | mail-return | mail-recall | give | gift |
+   * currency-merge | spend (a rest, a road lantern, the chest) | quest (a
+   * quest gate's price) | mend | homestead-deed | homestead-upgrade |
+   * homestead-buy | homestead-clear
    *
    * @generated from field: string reason = 3;
    */
   reason: string;
 
   /**
+   * The item on a market-buy, shelf, mend or homestead-buy line.
+   *
    * @generated from field: string item_def = 4;
    */
   itemDef: string;
 
   /**
+   * How many on a market-buy or shelf line; on a currency-merge line, the
+   * 0.6 purse's gold that migration 033 turned in.
+   *
    * @generated from field: int32 qty = 5;
    */
   qty: number;
@@ -216,9 +237,9 @@ export declare type PurseLine = Message<"glimway.v1.PurseLine"> & {
   mailId: string;
 
   /**
-   * That letter's state: waiting | collected | came-back. A collected gold
-   * letter writes only the sender's mail:gold:gold row, so the state can't
-   * be read off the gold lines alone (design 2.7).
+   * That letter's state: waiting | collected | came-back. A collected glim
+   * letter writes only the sender's mail:glims:glims row, so the state can't
+   * be read off the log lines alone (design 2.7).
    *
    * @generated from field: string mail_state = 8;
    */
@@ -242,7 +263,7 @@ export declare type PurseLineValid = PurseLine;
 export declare const PurseLineSchema: GenMessage<PurseLine, {validType: PurseLineValid}>;
 
 /**
- * GET /api/purse: the purse, the last 50 top-ups and gold lines.
+ * GET /api/purse: the purse, the last 50 top-ups and log lines.
  *
  * @generated from message glimway.v1.PurseRead
  */

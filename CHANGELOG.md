@@ -13,6 +13,45 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+### For players
+
+- Embers and the purse's gold are now one currency: glims. A glim is a bead
+  of amber holding a glint of light. You earn them from Habitica XP as you
+  earned embers, 10 XP to a glim.
+- The gold you had in your purse was turned into glims, two gold for each
+  glim.
+- One counter on the screen, glims, on desktop and phones.
+- In the Menu, **Turn gold into glims** spends Habitica gold, two gold for
+  each glim. You pick the glims and the card shows the gold. **Max** fills in
+  the most you can get. You can get up to 30 glims a day this way, in up to
+  two top-ups.
+- The purse log is now the **Glim log**.
+- Every good has one price, in glims. Silas's bundles cost 3 or 4 glims.
+- Shelf prices, letters and gifts by hand use glims. Glims you get from a
+  friend or a top-up can't pay for a rest at 0 HP; only glims earned from XP
+  can.
+
+### Technical
+
+- Contract 7: `PlayerState.glims` (a new `Glims` message), glims fields on
+  quest steps, buys, gives, mail and the purse (`Purse.glims_left`,
+  `PurseTopUp.glims`). The old ember and gold fields are reserved. A buy has
+  no `pay`.
+- Error codes `insufficient-glims` (225) and `top-up-cap` (226). The
+  `insufficient-embers` and `insufficient-gold` codes are deprecated and no
+  longer sent.
+- Migration 033 `glims`: balances and the ledger move to one `glims`
+  currency. Purse gold is turned in at 2:1 with a `currency-merge` ledger
+  row, gold letters become glim letters (the mail rebuild), and
+  `purse_topups` gains `glims`.
+- A top-up credits one glim for every two gold, with a cap of 30 glims per
+  UTC day across up to two top-ups (`top-up-cap`). Glims from top-ups,
+  shelves, letters and gives are never XP-earned.
+- The client's game state, content keys, vectors and words say glims; the
+  Ember Charm keeps its name. The glim art is packed for the HUD.
+- `buf.yaml`'s breaking rules let a field go only once its number and name
+  are both reserved (`docs/proto-migration.md`).
+
 ## [0.6.0] - 2026-10-10
 
 ### For players

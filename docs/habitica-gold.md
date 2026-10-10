@@ -1,5 +1,9 @@
 # Habitica gold and the purse
 
+> **Since 0.6.1** the purse's gold is gone: a top-up turns Habitica gold into **glims**, the one
+> in-game currency, two gold for each glim, at most 30 glims a UTC day. See
+> [design/silas-yard.md](design/silas-yard.md) part 1. The research below is unchanged.
+
 See also [habitica-policy.md](habitica-policy.md): Habitica's rules for third-party tools and our plan for telling them.
 
 Status: research for the owner, 2026-10-07. **The design to build is

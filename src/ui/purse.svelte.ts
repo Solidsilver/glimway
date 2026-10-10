@@ -1,7 +1,7 @@
 /**
- * The top-up and the purse log, interface side (purse-and-wardrobe.md 2.1,
- * 2.2): Top up syncs first, then shows the consent card; Move sends the one
- * request that carries the token; a top-up still working is polled on the
+ * The top-up and the Glim log, interface side (silas-yard.md 1.5;
+ * purse-and-wardrobe.md 2.1, 2.2): Turn gold into glims syncs first, then
+ * shows the consent card; Get sends the one request that carries the token; a top-up still working is polled on the
  * purse read every few seconds until it settles; every outcome is one line,
  * in the card and as a toast. It lives outside the Menu so a closed card
  * still hears how its top-up came out.
@@ -13,7 +13,7 @@ import type { Session } from '../game/session.ts'
 import { bus, EV } from '../game/events.ts'
 import { purseCopy } from '../content/purse.ts'
 import { purseErrorText } from '../content/errors.ts'
-import { parseAmount, purseLog, settled, topUpMoved, topUpOutcome, topUpView, TOP_UP_POLL_LIMIT_MS, TOP_UP_POLL_MS, type LogEntry, type TopUpView } from '../lib/purse.ts'
+import { goldFor, maxGlims, parseAmount, purseLog, settled, topUpMoved, topUpOutcome, topUpView, TOP_UP_POLL_LIMIT_MS, TOP_UP_POLL_MS, type LogEntry, type PurseView, type TopUpView } from '../lib/purse.ts'
 import { memoryCredentials } from './habitica-local.ts'
 
 /** What the sync before a top-up found: Habitica's gold (display only), or why it stopped (it says so itself). */
@@ -28,7 +28,24 @@ class PurseUi {
   phase = $state<Phase>('idle')
   /** The gold the sync just read on Habitica (the consent card's line). */
   habiticaGold = $state(0)
-  /** The consent card's field: empty at first, every time. */
+  /**
+   * Today's top-ups as the game shows them now (the caller's live purse;
+   * null until a world says). Max, the card's "Today you can still get …"
+   * line and its cap check all read through it, so they can't disagree when
+   * a purse read lands while the card is open. The server checks again.
+   */
+  private day: () => PurseView | null = () => null
+
+  /** Glims top-ups can still bring today (0 while no world has said). */
+  get glimsLeft(): number {
+    return Math.max(0, this.day()?.glimsLeft ?? 0)
+  }
+
+  /** Top-ups left today (0 while no world has said). */
+  get topUpsLeft(): number {
+    return Math.max(0, this.day()?.topUpsLeft ?? 0)
+  }
+  /** The consent card's field, in glims: empty at first, every time. */
   amount = $state('')
   /** The last outcome, in the card (it's a toast too). */
   outcome = $state<{ text: string; ok: boolean } | null>(null)
@@ -42,17 +59,23 @@ class PurseUi {
   private following: string | null = null
   private pollTimer: ReturnType<typeof setTimeout> | null = null
 
-  /** The amount as a number, or null while it isn't a whole number from 1 to Habitica's gold. */
+  /** The most glims this top-up can get: Habitica's gold at two a glim, within today's cap (**Max**). */
+  get max(): number {
+    return maxGlims(this.habiticaGold, this.glimsLeft)
+  }
+
+  /** The glims as a number, or null while it isn't a whole number from 1 to `max`. */
   get parsed(): number | null {
-    return parseAmount(this.amount, this.habiticaGold)
+    return parseAmount(this.amount, this.max)
   }
 
   get busy(): boolean {
     return this.phase === 'syncing' || this.phase === 'moving' || this.phase === 'checking'
   }
 
-  /** Top up from Habitica: sync first (the sync's own safe places and messages), then the consent card. */
-  async start(sync: () => Promise<SyncForTopUp>): Promise<void> {
+  /** Turn gold into glims: sync first (the sync's own safe places and messages), then the consent card. */
+  /** `day` is the live purse (the sync's answer carries the day's top-ups; it is read whenever Max is). */
+  async start(sync: () => Promise<SyncForTopUp>, day: () => PurseView | null): Promise<void> {
     if (this.busy) return
     this.outcome = null
     this.error = ''
@@ -65,6 +88,7 @@ class PurseUi {
     }
     if (!r.ok) return
     this.habiticaGold = r.gold
+    this.day = day
     this.amount = ''
     this.phase = 'consent'
     this.sheet = 'consent'
@@ -84,11 +108,12 @@ class PurseUi {
     this.sheet = null
   }
 
-  /** Move: the one request that carries the token. */
+  /** Get: the one request that carries the token. It asks for the gold, two for each glim. */
   async confirm(session: Session): Promise<void> {
-    const amount = this.parsed
+    const glims = this.parsed
     const link = session.link
-    if (this.phase !== 'consent' || amount === null || !link) return
+    if (this.phase !== 'consent' || glims === null || !link) return
+    const amount = goldFor(glims)
     const creds = memoryCredentials()
     if (!creds) {
       this.error = purseCopy.connectFirst
@@ -178,7 +203,7 @@ class PurseUi {
     this.phase = 'idle'
     this.following = null
     this.amount = ''
-    bus.emit(EV.toast, { text, icon: 'coin', ...(ok ? {} : { kind: 'error' as const }) })
+    bus.emit(EV.toast, { text, icon: 'glim', art: 'glims-few', ...(ok ? {} : { kind: 'error' as const }) })
     // An open log gains the new line.
     if (this.sheet === 'log' && this.lastSession) void this.openLog(this.lastSession)
   }
@@ -188,12 +213,12 @@ class PurseUi {
     this.outcome = { text, ok: false }
     this.phase = 'idle'
     this.following = null
-    bus.emit(EV.toast, { text, icon: 'coin', kind: 'error' })
+    bus.emit(EV.toast, { text, icon: 'glim', kind: 'error' })
   }
 
   private lastSession: Session | null = null
 
-  /** The purse log sheet: the last 50 lines, newest first. */
+  /** The Glim log sheet: the last 50 lines, newest first. */
   async openLog(session: Session): Promise<void> {
     this.lastSession = session
     this.sheet = 'log'
@@ -224,6 +249,7 @@ class PurseUi {
     this.logStatus = 'idle'
     this.following = null
     this.lastSession = null
+    this.day = () => null
   }
 }
 

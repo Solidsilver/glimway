@@ -74,7 +74,7 @@ func TestItemsMigrationMovesGoodsAndParcels(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer tx.Rollback()
-	if ok, err := ReturnMail(ctx, tx, "m1", "recalled", 60, false); err != nil || !ok {
+	if ok, err := ReturnMail(ctx, tx, &Snapshot{AccountID: "alice"}, "m1", "recalled", 60); err != nil || !ok {
 		t.Fatal("return", err)
 	}
 	var n int

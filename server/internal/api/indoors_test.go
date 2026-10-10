@@ -138,9 +138,9 @@ func TestQuestGatesAtomicReplayAndTimes(t *testing.T) {
 	finish := plainStep("finish")
 	hours2, hours1, two := 2.0, 1.0, int32(2)
 	withHazel := "hazel"
-	finish.Gate = &content.QuestGate{With: withHazel, Wait: &content.QuestWait{Hours: &hours2}, Item: &content.QuestGateItem{Def: "flour", Qty: 1, Keep: &keep}, Embers: &two}
+	finish.Gate = &content.QuestGate{With: withHazel, Wait: &content.QuestWait{Hours: &hours2}, Item: &content.QuestGateItem{Def: "flour", Qty: 1, Keep: &keep}, Glims: &two}
 	finish.Give = []*content.QuestItem{{Def: "keepers-twists", Qty: 2}}
-	finish.Embers = 2
+	finish.Glims = 2
 	finish.Items = []string{"tally-token"}
 	finish.Marks = []string{"library:lamp"}
 	later := plainStep("later")
@@ -182,7 +182,7 @@ func TestQuestGatesAtomicReplayAndTimes(t *testing.T) {
 	x.fund(id, 2, 0)
 	req := body(s, "finish", map[string]any{"quest": "test-bread", "to": "finish", "where": map[string]any{"area": "in:village:bakery", "x": 80, "y": 80}})
 	result := x.expect("POST", "/api/quest/step", req, c, 200)
-	if result.State.Quests["test-bread"] != "finish" || result.State.Quests["test-other"] != "start" || result.State.GateAt["test-bread"] != 7200 || result.State.Embers != 2 {
+	if result.State.Quests["test-bread"] != "finish" || result.State.Quests["test-other"] != "start" || result.State.GateAt["test-bread"] != 7200 || result.State.Glims != 2 {
 		t.Fatal(result)
 	}
 	var envelope contract.Envelope
@@ -193,10 +193,10 @@ func TestQuestGatesAtomicReplayAndTimes(t *testing.T) {
 	if err := protojson.Unmarshal(w.Body.Bytes(), &envelope); err != nil {
 		t.Fatal(err)
 	}
-	if envelope.GetQuestStep().EmbersSpent != 2 || len(envelope.GetQuestStep().Taken) != 1 || len(envelope.GetQuestStep().Given) != 1 {
+	if envelope.GetQuestStep().GlimsSpent != 2 || len(envelope.GetQuestStep().Taken) != 1 || len(envelope.GetQuestStep().Given) != 1 {
 		t.Fatal(&envelope)
 	}
-	if count(t, x.db, "SELECT qty FROM item_stacks WHERE item_def='keepers-twists'") != 2 || count(t, x.db, "SELECT count(*) FROM item_stacks WHERE item_def='flour'") != 0 || count(t, x.db, "SELECT count(*) FROM ledger WHERE currency='embers' AND reason='quest'") != 2 {
+	if count(t, x.db, "SELECT qty FROM item_stacks WHERE item_def='keepers-twists'") != 2 || count(t, x.db, "SELECT count(*) FROM item_stacks WHERE item_def='flour'") != 0 || count(t, x.db, "SELECT count(*) FROM ledger WHERE currency='glims' AND reason='quest'") != 2 {
 		t.Fatal("duplicate or missing spending/grants")
 	}
 	if call("test-bread", "finish", "repeat", "in:village:bakery", 409).Error.Code != "not-next-step" {
@@ -225,7 +225,7 @@ func TestQuestTriggerPredicates(t *testing.T) {
 	cases := []struct {
 		trigger *content.QuestTrigger
 		success bool
-	}{{trig("open", "journal"), true}, {trig("reach", "in:village:library"), true}, {trig("reach", "village"), false}, {trig("use", "library-shelf"), true}, {trig("use", "sponge-bowl"), false}, {trig("talk", "mara"), false}, {trig("defeat", "stone-warden"), false}, {trig("carry", "flour"), false}, {trig("carry", "tally-token"), false}, {trig("flag", "library:lamp"), false}, {trig("sync", "embers"), false}}
+	}{{trig("open", "journal"), true}, {trig("reach", "in:village:library"), true}, {trig("reach", "village"), false}, {trig("use", "library-shelf"), true}, {trig("use", "sponge-bowl"), false}, {trig("talk", "mara"), false}, {trig("defeat", "stone-warden"), false}, {trig("carry", "flour"), false}, {trig("carry", "tally-token"), false}, {trig("flag", "library:lamp"), false}, {trig("sync", "glims"), false}}
 	for _, row := range cases {
 		err = questTrigger(context.Background(), tx, &snap, "test", &content.QuestStep{Do: row.trigger}, 100)
 		if (err == nil) != row.success {
@@ -244,7 +244,7 @@ func TestQuestTriggerPredicates(t *testing.T) {
 	if err = store.Credit(context.Background(), tx, &snap, 1, 1, "sync", "test", nil, 100); err != nil {
 		t.Fatal(err)
 	}
-	trigger := &content.QuestStep{Do: trig("sync", "embers")}
+	trigger := &content.QuestStep{Do: trig("sync", "glims")}
 	if questTrigger(context.Background(), tx, &snap, "test", trigger, 100) == nil {
 		t.Fatal("same-second sync")
 	}
@@ -284,7 +284,7 @@ func TestQuestPrerequisitesAndHabitica(t *testing.T) {
 	}
 }
 
-func TestQuestKeepInstancesAndEarnedEmbers(t *testing.T) {
+func TestQuestKeepInstancesAndEarnedGlims(t *testing.T) {
 	x := newRig(t)
 	_, s := x.ready("alice")
 	id := s.AccountID
@@ -307,14 +307,14 @@ func TestQuestKeepInstancesAndEarnedEmbers(t *testing.T) {
 	keep := true
 	step := plainStep("take")
 	two := int32(2)
-	step.Gate = &content.QuestGate{Item: &content.QuestGateItem{Def: "bench-axe", Qty: 1, Keep: &keep}, Embers: &two}
-	snap.State.Embers = 3
-	snap.State.XPEmbers = 1
+	step.Gate = &content.QuestGate{Item: &content.QuestGateItem{Def: "bench-axe", Qty: 1, Keep: &keep}, Glims: &two}
+	snap.State.Glims = 3
+	snap.State.XPGlims = 1
 	snap.State.HP = 0
 	if err = checkQuestGate(context.Background(), tx, &snap, "test", step, 100); err == nil || err.(*failure).code != "needs-earned" {
 		t.Fatal(err)
 	}
-	snap.State.XPEmbers = 2
+	snap.State.XPGlims = 2
 	if err = checkQuestGate(context.Background(), tx, &snap, "test", step, 100); err != nil {
 		t.Fatal(err)
 	}
@@ -322,7 +322,7 @@ func TestQuestKeepInstancesAndEarnedEmbers(t *testing.T) {
 	if err = spendQuestGate(context.Background(), tx, &snap, "test", step, 100, out); err != nil {
 		t.Fatal(err)
 	}
-	if snap.State.XPEmbers != 0 || snap.State.Embers != 1 || len(out.Taken) != 0 {
+	if snap.State.XPGlims != 0 || snap.State.Glims != 1 || len(out.Taken) != 0 {
 		t.Fatal(snap.State, out)
 	}
 	var n int
@@ -331,7 +331,7 @@ func TestQuestKeepInstancesAndEarnedEmbers(t *testing.T) {
 		t.Fatal("keep lost instance")
 	}
 	keep = false
-	step.Gate.Embers = nil
+	step.Gate.Glims = nil
 	if err = spendQuestGate(context.Background(), tx, &snap, "test", step, 101, out); err != nil {
 		t.Fatal(err)
 	}
@@ -354,7 +354,7 @@ func TestQuestKeepInstancesAndEarnedEmbers(t *testing.T) {
 
 func TestOpeningTopupOnce(t *testing.T) {
 	first := plainStep("see-mara")
-	first.Embers = 5
+	first.Glims = 5
 	first.Marks = []string{"lit:road-1", "quest-item:tally-token"}
 	fixtureQuests(t, &content.Quest{Id: "signpost", Steps: []*content.QuestStep{first}})
 	for _, balance := range []int{0, 1, 3, 9} {
@@ -364,12 +364,12 @@ func TestOpeningTopupOnce(t *testing.T) {
 			x.fund(s.AccountID, balance, 0)
 			req := body(s, "mara", map[string]any{"quest": "signpost", "to": "see-mara"})
 			s.Snapshot = x.expect("POST", "/api/quest/step", req, c, 200).Snapshot
-			if s.State.Embers != balance+5+max(0, 3-balance) {
-				t.Fatal(s.State.Embers)
+			if s.State.Glims != balance+5+max(0, 3-balance) {
+				t.Fatal(s.State.Glims)
 			}
 			x.expect("POST", "/api/quest/step", req, c, 200)
 			reloaded := x.expect("GET", "/api/state", nil, c, 200)
-			if reloaded.State.Embers != s.State.Embers || !questHasMark(&reloaded.Snapshot, "lit:road-1") || !questHasMark(&reloaded.Snapshot, "quest-item:tally-token") {
+			if reloaded.State.Glims != s.State.Glims || !questHasMark(&reloaded.Snapshot, "lit:road-1") || !questHasMark(&reloaded.Snapshot, "quest-item:tally-token") {
 				t.Fatal(reloaded.State)
 			}
 			if count(t, x.db, "SELECT count(*) FROM outcomes WHERE outcome_id='quest-gift:signpost:topup'") != 1 {

@@ -1,7 +1,7 @@
 import { devices } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
 import { reenter, seedStory, sql, accountOf } from './connected'
-import { claimDeed, earnEmbers, freshPlayer, fund, myHome, shot } from './home-helpers'
+import { claimDeed, earnGlims, freshPlayer, fund, myHome, shot } from './home-helpers'
 
 /**
  * The inventory panel (I, or the HUD's bag): tools, supplies, keepsakes,
@@ -170,7 +170,7 @@ test.describe('in a world', () => {
   test('in a world the inventory shows server counts and your home goods, placed and stored', { tag: '@smoke' }, async ({ page }) => {
     const id = await freshPlayer(page)
     // Homesteads v2: a home is a deed you claim from Silas.
-    await earnEmbers(page, id)
+    await earnGlims(page, id)
     await claimDeed(page)
     const plot = await myHome(page, id)
     expect(plot).toBeTruthy()

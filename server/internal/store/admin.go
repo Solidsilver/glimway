@@ -27,7 +27,7 @@ func (s *Store) ClearFlag(ctx context.Context, id string, now int64) error {
 		if _, err = tx.ExecContext(ctx, "UPDATE players SET flagged_at=NULL WHERE account_id=?", id); err != nil {
 			return err
 		}
-		if _, err = tx.ExecContext(ctx, "INSERT INTO ledger(account_id,currency,delta,earned_delta,reason,ref,created_at) VALUES(?,'embers',0,0,'flag-cleared','cli',?)", id, now); err != nil {
+		if _, err = tx.ExecContext(ctx, "INSERT INTO ledger(account_id,currency,delta,earned_delta,reason,ref,created_at) VALUES(?,'glims',0,0,'flag-cleared','cli',?)", id, now); err != nil {
 			return err
 		}
 	}

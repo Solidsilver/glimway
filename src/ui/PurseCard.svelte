@@ -1,15 +1,15 @@
 <script lang="ts">
   /**
-   * The purse block in the Menu's Habitica card (purse-and-wardrobe.md 2.1):
-   * the gold, what it's for, **Top up from Habitica** and the **Purse log**.
-   * Top up syncs first (the sync's safe places and messages, through
-   * `sync`), then opens the consent card (./PurseConsent.svelte). Guests
-   * have a purse but no top-up (section 5).
+   * The glims block in the Menu's Habitica card (silas-yard.md 1.6): what
+   * glims are, **Turn gold into glims** and the **Glim log**. The balance
+   * is the HUD's one counter, so it isn't repeated here. Turn gold into
+   * glims syncs first (the sync's safe places and messages, through `sync`),
+   * then opens the consent card (./PurseConsent.svelte). Guests have the log
+   * but no top-up (purse-and-wardrobe.md 5).
    */
   import type { Session } from '../game/session'
   import { ui } from './store.svelte'
-  import { goldPhrase, purseCopy } from '../content/purse'
-  import { TOP_UPS_PER_DAY } from '../lib/purse'
+  import { purseCopy } from '../content/purse'
   import { offlineCopy } from '../content/connected'
   import { isConnected } from './habitica-local'
   import { purseUi, type SyncForTopUp } from './purse.svelte'
@@ -18,56 +18,53 @@
 
   let { session, sync }: { session: Session; sync: () => Promise<SyncForTopUp> } = $props()
 
+  /** Null until a world says: no top-up before then. */
   const purse = $derived(ui.purse)
-  const gold = $derived(purse?.gold ?? ui.stats.gold ?? 0)
   const habitica = $derived(ui.vitalsSource === 'imported')
   const offline = $derived(ui.link?.status !== 'online')
-  const left = $derived(purse?.topUpsLeft ?? TOP_UPS_PER_DAY)
+  const canTopUp = $derived(!!purse && purse.topUpsLeft > 0 && purse.glimsLeft > 0)
   /** A top-up from another tab, or one this tab lost track of. */
-  const workingElsewhere = $derived(!!purse?.working && !purseUi.busy)
+  const workingElsewhere = $derived(!!ui.purse?.working && !purseUi.busy)
 
   function topUp(): void {
     if (!isConnected()) {
       purseUi.error = purseCopy.connectFirst
       return
     }
-    void purseUi.start(sync)
+    void purseUi.start(sync, () => ui.purse)
   }
 </script>
 
 <div class="purse" data-testid="purse-card">
-  <h4 class="purse-title"><ArtIcon art="purse" name="coin" size={16} /> {purseCopy.title}</h4>
-  <p class="gold" data-testid="purse-gold"><span class="coin"><ArtIcon art="purse-gold" name="coin" size={16} /></span> {goldPhrase(gold)}</p>
+  <h4 class="purse-title"><ArtIcon art="glim" name="glim" size={16} /> {purseCopy.title}</h4>
   <p class="fine">{habitica ? purseCopy.blurb : purseCopy.guest}</p>
-
   {#if habitica}
     <div class="row">
       <button
         type="button"
         class="primary top-up"
-        disabled={purseUi.busy || offline || left <= 0 || workingElsewhere}
+        disabled={purseUi.busy || offline || !canTopUp || workingElsewhere}
         title={offline ? offlineCopy.needs : undefined}
         onclick={topUp}
         data-testid="purse-top-up"
       >{purseUi.phase === 'syncing' ? purseCopy.topUpBusy : purseCopy.topUp}</button>
       <button type="button" class="ghost log" onclick={() => purseUi.openLog(session)} data-testid="purse-log-open">{purseCopy.log}&nbsp;›</button>
     </div>
-    <p class="tiny" data-testid="top-ups-left">{left > 0 ? purseCopy.topUpsLeft(left, TOP_UPS_PER_DAY) : purseCopy.noTopUpsLeft}</p>
+    {#if purse}<p class="tiny" data-testid="top-ups-left">{canTopUp ? purseCopy.glimsLeft(purse.glimsLeft, purse.topUpsLeft) : purseCopy.noTopUpsLeft}</p>{/if}
   {:else}
     <div class="row">
       <button type="button" class="ghost log" onclick={() => purseUi.openLog(session)} data-testid="purse-log-open">{purseCopy.log}&nbsp;›</button>
     </div>
   {/if}
-
   {#if offline && habitica}<p class="tiny">{purseCopy.offline}</p>{/if}
   {#if purseUi.phase === 'moving' || purseUi.phase === 'checking'}
-    <p class="status" role="status">{purseUi.phase === 'moving' ? purseCopy.moving : purseCopy.checking}</p>
+    <p class="status" role="status">{purseUi.phase === 'moving' ? purseCopy.getting : purseCopy.checking}</p>
   {:else if workingElsewhere}
     <p class="status" role="status">{purseCopy.working}</p>
   {/if}
   {#if purseUi.error && !purseUi.sheet}<p class="error" role="alert">{purseUi.error}</p>{/if}
   {#if purseUi.outcome && !purseUi.sheet}
-    <p class="outcome" class:ok={purseUi.outcome.ok} role="status" data-testid="purse-outcome"><Icon name={purseUi.outcome.ok ? 'check' : 'coin'} size={12} /> {purseUi.outcome.text}</p>
+    <p class="outcome" class:ok={purseUi.outcome.ok} role="status" data-testid="purse-outcome"><Icon name={purseUi.outcome.ok ? 'check' : 'glim'} size={12} /> {purseUi.outcome.text}</p>
   {/if}
 </div>
 
@@ -86,20 +83,6 @@
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--text-soft);
-  }
-  .gold {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin: 0 0 4px;
-    font-family: var(--font-display);
-    font-size: 18px;
-    color: var(--wood-dark);
-  }
-  .coin {
-    display: inline-grid;
-    place-items: center;
-    color: var(--gold-deep);
   }
   .fine {
     margin: 0 0 10px;

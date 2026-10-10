@@ -462,7 +462,7 @@ export function buildCommons(gateCount = 0): CommonsWorld {
     mural: null,
     shrine: null,
     villageLantern: null,
-    emberSpots: [],
+    glimSpots: [],
     spawn: { ...COMMONS_FROM_VILLAGE },
     board: { ...board },
     gates,

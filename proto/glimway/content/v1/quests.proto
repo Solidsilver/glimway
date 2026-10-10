@@ -66,7 +66,7 @@ message QuestStep {
   repeated string items = 3;
   repeated string marks = 4;
   repeated string papers = 5;
-  int32 embers = 6 [(buf.validate.field).int32 = {gte: 0, lte: 5}];
+  int32 glims = 6 [(buf.validate.field).int32 = {gte: 0, lte: 5}];
   string witness = 7 [(buf.validate.field).string = {in: ["", "warden", "lantern"]}];
   optional string goal = 8 [(buf.validate.field).string.max_len = 40];
   optional string objective = 9;
@@ -137,23 +137,23 @@ message QuestWait {
 }
 
 // What a step's gate asks: at least one of someone to meet, a wait, an
-// item or an ember cost. The person is checked in code; a wait on a
+// item or a glim cost. The person is checked in code; a wait on a
 // quest's first step is refused in code (there is nothing to wait from).
 message QuestGate {
   option (buf.validate.message).cel = {
     id: "quest.gate_present"
-    message: "a gate names someone to meet, a wait, an item or an ember cost"
-    expression: "this.with != \"\" || has(this.wait) || has(this.item) || has(this.embers)"
+    message: "a gate names someone to meet, a wait, an item or a glim cost"
+    expression: "this.with != \"\" || has(this.wait) || has(this.item) || has(this.glims)"
   };
   option (buf.validate.message).cel = {
-    id: "quest.gate_embers"
-    message: "an ember cost is at least one"
-    expression: "!has(this.embers) || this.embers >= 1"
+    id: "quest.gate_glims"
+    message: "a glim cost is at least one"
+    expression: "!has(this.glims) || this.glims >= 1"
   };
   string with = 1;
   optional QuestWait wait = 2;
   optional QuestGateItem item = 3;
-  optional int32 embers = 4;
+  optional int32 glims = 4;
 }
 
 // An item a gate spends. keep says whether it survives the step; it is

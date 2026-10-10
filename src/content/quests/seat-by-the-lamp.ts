@@ -11,8 +11,8 @@ export const SEAT_BY_THE_LAMP_TALKS: QuestTalks = {
   },
   'oil-lamp': {
     speaker: 'Reading Lamp',
-    lines: ['A brass reading lamp, dry as old bread. The tin tag on its handle says, in Mara’s hand: “One ember the oil. Ledger. M.H.”'],
-    offer: { text: 'Pay for the oil', note: '1 ember', reply: ['You fill the lamp from the stores jug and trim the wick. It catches gold and steady, and the reading table glows.'] },
+    lines: ['A brass reading lamp, dry as old bread. The tin tag on its handle says, in Mara’s hand: “One glim the oil. Ledger. M.H.”'],
+    offer: { text: 'Pay for the oil', note: '1 glim', reply: ['You fill the lamp from the stores jug and trim the wick. It catches gold and steady, and the reading table glows.'] },
   },
   'read-awhile': {
     speaker: 'Reading Table',

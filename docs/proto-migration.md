@@ -29,7 +29,11 @@ had no Buf schema yet; later runs require both contracts.
 ### Compatibility: what may move
 
 Every field number and binary event number is permanent. Append fields/codes;
-reserve removed names and numbers. Never renumber the error enum. (The content
+reserve removed names and numbers. Never renumber the error enum. `buf.yaml`
+enforces the reservation (0.6.1): `breaking` uses FILE with `except:
+[FIELD_NO_DELETE]` plus `FIELD_NO_DELETE_UNLESS_NUMBER_RESERVED` and
+`FIELD_NO_DELETE_UNLESS_NAME_RESERVED`, so a removed field passes only once
+both its number and its name are reserved. (The content
 schemas and the vendored `buf/validate` are exempt from breaking checks: their
 loaders change in the same commit as the files.)
 

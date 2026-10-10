@@ -244,7 +244,7 @@ export declare type ShelfSlot = Message<"glimway.v1.ShelfSlot"> & {
   stockedAt: number;
 
   /**
-   * A price in gold (0.6, 3.2): 0 is a free gift as before.
+   * A price in glims (0.6.1; gold in 0.6, 3.2): 0 is a free gift as before.
    *
    * @generated from field: int32 price = 9;
    */
@@ -367,7 +367,7 @@ export declare type ShelfRequest = Message<"glimway.v1.ShelfRequest"> & {
   asset?: Asset | undefined;
 
   /**
-   * stock: the price in gold for the slot (0–9,999; 0 stocks a free gift).
+   * stock: the price in glims for the slot (0–9,999; 0 stocks a free gift).
    *
    * @generated from field: int32 price = 7;
    */

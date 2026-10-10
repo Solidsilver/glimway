@@ -23,6 +23,7 @@ import (
 type purseTopUpWire struct {
 	Id         string   `json:"id"`
 	Amount     int      `json:"amount"`
+	Glims      int      `json:"glims"`
 	State      string   `json:"state"`
 	GoldBefore *int     `json:"goldBefore"`
 	GoldAfter  *int     `json:"goldAfter"`
@@ -58,11 +59,11 @@ type purseLineWire struct {
 }
 
 // purseReadWire is GET /api/purse's result (2.7): the purse, the last 50
-// top-ups and the last 50 gold lines.
+// top-ups and the last 50 glim lines.
 type purseReadWire struct {
 	Purse struct {
-		Gold       int             `json:"gold"`
 		TopUpsLeft int             `json:"topUpsLeft"`
+		GlimsLeft  int             `json:"glimsLeft"`
 		Working    *purseTopUpWire `json:"working"`
 	} `json:"purse"`
 	TopUps []purseTopUpWire `json:"topUps"`
@@ -132,9 +133,10 @@ func (x *rig) purseRead(c *http.Cookie) purseReadWire {
 	return envelope.Result
 }
 
-func (x *rig) goldBalance(account string) int {
+func (x *rig) glimsBalance(account string) int {
 	x.t.Helper()
-	return count(x.t, x.db, "SELECT gold FROM balances WHERE account_id=?", account)
+	// The glims top-ups brought (the balance also holds the welcome).
+	return count(x.t, x.db, "SELECT COALESCE(SUM(delta),0) FROM ledger WHERE account_id=? AND currency='glims' AND reason IN ('habitica-topup','purse-settle')", account)
 }
 
 func (x *rig) topUpRow(id string) purseTopUpWire {
@@ -145,7 +147,7 @@ func (x *rig) topUpRow(id string) purseTopUpWire {
 	var goldBefore, goldAfter, settledAt int64
 	var started float64
 	var before, after, settled sqlNull
-	err := x.db.DB.QueryRow("SELECT amount,state,gold_before,gold_after,note,leftover,created_at,settled_at FROM purse_topups WHERE id=?", id).Scan(&out.Amount, &state, &before, &after, &note, &leftover, &started, &settled)
+	err := x.db.DB.QueryRow("SELECT amount,glims,state,gold_before,gold_after,note,leftover,created_at,settled_at FROM purse_topups WHERE id=?", id).Scan(&out.Amount, &out.Glims, &state, &before, &after, &note, &leftover, &started, &settled)
 	if err != nil {
 		x.t.Fatal(err)
 	}
@@ -188,33 +190,42 @@ func (n *sqlNull) Scan(src any) error {
 	return nil
 }
 
-// TestPurseTopUpMovesGold walks 2.2's happy row: the read, the create, the
-// score down, the delete, and the settle — the purse credited, one ledger
-// row, the version moved, the owned gear stored (4.3), one top-up left
-// today (2.5).
-func TestPurseTopUpMovesGold(t *testing.T) {
+// TestPurseTopUpTurnsGoldIntoGlims walks 2.2's happy row: the read, the
+// create, the score down, the delete, and the settle — 40 Habitica gold
+// turned into 20 glims (silas-yard.md 1.5), one ledger row, never
+// XP-earned, the version moved, the owned gear stored (4.3), one top-up and
+// 10 glims left today (2.5).
+func TestPurseTopUpTurnsGoldIntoGlims(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	x.setGold(1240)
 	// Owned gear (4.3): `true` is owned, `false` is gear had and lost, and
 	// an unknown key can't be drawn and is dropped.
 	x.setOwned(map[string]bool{"weapon_warrior_1": true, "armor_warrior_1": true, "head_armoire_0": false, "head_futurePiece": true})
-	row := x.topUpOK(s, "k1", 200, c)
-	if row.State != "moved" || row.Amount != 200 {
+	row := x.topUpOK(s, "k1", 40, c)
+	if row.State != "moved" || row.Amount != 40 || row.Glims != 20 {
 		t.Fatalf("row %+v", row)
 	}
-	if row.GoldBefore == nil || *row.GoldBefore != 1240 || row.GoldAfter == nil || *row.GoldAfter != 1040 {
+	if stored := x.topUpRow(row.Id); stored.Amount != 40 || stored.Glims != 20 {
+		t.Fatalf("purse_topups row %+v", stored)
+	}
+	// The reward was priced in gold, two to a glim: Habitica's 1240 → 1200.
+	if row.GoldBefore == nil || *row.GoldBefore != 1240 || row.GoldAfter == nil || *row.GoldAfter != 1200 {
 		t.Fatalf("Habitica's gold: %+v", row)
 	}
 	if row.Leftover || row.Note != "" || row.SettledAt == nil {
 		t.Fatalf("settling: %+v", row)
 	}
 	account := x.account("alice")
-	if x.goldBalance(account) != 200 {
-		t.Fatal("purse not credited")
+	if x.glimsBalance(account) != 20 {
+		t.Fatal("glims not credited", x.glimsBalance(account))
 	}
-	if count(x.t, x.db, "SELECT count(*) FROM ledger WHERE account_id=? AND currency='gold' AND earned_delta=0 AND reason='habitica-topup' AND ref=?", account, row.Id) != 1 {
+	if count(x.t, x.db, "SELECT count(*) FROM ledger WHERE account_id=? AND currency='glims' AND delta=20 AND earned_delta=0 AND reason='habitica-topup' AND ref=?", account, row.Id) != 1 {
 		t.Fatal("top-up's ledger row")
+	}
+	// Never XP-earned (1.4 rule 4): the earned share is the sync's alone.
+	if count(x.t, x.db, "SELECT xp_glims FROM balances WHERE account_id=?", account) != count(x.t, x.db, "SELECT COALESCE(SUM(earned_delta),0) FROM ledger WHERE account_id=? AND currency='glims' AND reason='sync'", account) {
+		t.Fatal("the top-up's glims counted as XP-earned")
 	}
 	var version int
 	if err := x.db.DB.QueryRow("SELECT version FROM players WHERE account_id=?", account).Scan(&version); err != nil || version < 2 {
@@ -232,7 +243,7 @@ func TestPurseTopUpMovesGold(t *testing.T) {
 	}
 	// The purse on the next answer (PlayerState.purse), and the log.
 	read := x.purseRead(c)
-	if read.Purse.Gold != 200 || read.Purse.TopUpsLeft != 1 || read.Purse.Working != nil {
+	if x.glimsBalance(account) != 20 || read.Purse.TopUpsLeft != 1 || read.Purse.GlimsLeft != 10 || read.Purse.Working != nil {
 		t.Fatalf("purse %+v", read.Purse)
 	}
 	if len(read.TopUps) != 1 || read.TopUps[0].Id != row.Id {
@@ -240,13 +251,14 @@ func TestPurseTopUpMovesGold(t *testing.T) {
 	}
 	found := false
 	for _, line := range read.Lines {
-		if line.Reason == "habitica-topup" && line.Delta == 200 {
+		if line.Reason == "habitica-topup" && line.Delta == 20 {
 			found = true
 		}
 	}
 	if !found {
 		t.Fatalf("log lines %+v", read.Lines)
 	}
+	x.glimsConserved()
 }
 
 func queryGear(t *testing.T, x *rig, account string) []string {
@@ -268,16 +280,16 @@ func TestPurseTopUpRepeatedKey(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	x.setGold(500)
-	first := x.topUpOK(s, "same-key", 100, c)
+	first := x.topUpOK(s, "same-key", 20, c)
 	callsAfter := len(x.habiticaCalls())
-	again := x.topUpOK(s, "same-key", 100, c)
+	again := x.topUpOK(s, "same-key", 20, c)
 	if again.Id != first.Id || again.State != "moved" {
 		t.Fatalf("repeat answered %+v", again)
 	}
 	if len(x.habiticaCalls()) != callsAfter {
 		t.Fatal("a repeated key called Habitica again:", x.habiticaCalls())
 	}
-	status, out := x.topUp(s.Lease, "same-key", 200, secret, c)
+	status, out := x.topUp(s.Lease, "same-key", 40, secret, c)
 	if status != 409 || out.Error == nil || out.Error.Code != "idempotency-mismatch" {
 		t.Fatalf("mismatch: %d %+v", status, out.Error)
 	}
@@ -293,7 +305,8 @@ func TestPurseTopUpRefusals(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	x.setGold(1000)
-	for _, amount := range []int{0, -5, 100000000} {
+	// The amount is Habitica gold, two to a glim: whole, even, at least 2.
+	for _, amount := range []int{0, -5, -4, 1, 7, 100000000} {
 		status, out := x.topUp(s.Lease, "bad", amount, secret, c)
 		if status != 400 || out.Error == nil || out.Error.Code != "invalid-quantity" {
 			t.Fatalf("amount %d: %d %+v", amount, status, out.Error)
@@ -349,6 +362,7 @@ func TestPurseTopUpRefusals(t *testing.T) {
 	if row := x.topUpOK(s, "n6", 10, c); row.State != "moved" {
 		t.Fatal(row.State)
 	}
+	x.glimsConserved()
 }
 
 // setPurseChecks is the balance-check schedule for a test (design 2.3 is
@@ -367,7 +381,7 @@ func TestPurseTopUpUnknownOutcomes(t *testing.T) {
 		note        string
 		credited    int
 	}{
-		{"a check confirms the move", "timeout-moved", 0, "moved", "checked", 300},
+		{"a check confirms the move", "timeout-moved", 0, "moved", "checked", 20},
 		{"the last check says not moved", "error", 0, "not-moved", "timeout", 0},
 		{"a check reads between", "timeout-partial", 0, "unconfirmed", "timeout", 0},
 		{"every check fails", "error", 4, "unconfirmed", "timeout", 0},
@@ -380,12 +394,12 @@ func TestPurseTopUpUnknownOutcomes(t *testing.T) {
 			x.setScore(tc.score)
 			x.setDownAfter(tc.downAfter)
 			x.setPurseChecks([]time.Duration{time.Millisecond, 2 * time.Millisecond})
-			row := x.topUpOK(s, "k", 300, c)
+			row := x.topUpOK(s, "k", 40, c)
 			if row.State != tc.want || row.Note != tc.note {
 				t.Fatalf("got %+v, want %s/%s", row, tc.want, tc.note)
 			}
-			if x.goldBalance(x.account("alice")) != tc.credited {
-				t.Fatal("credited", x.goldBalance(x.account("alice")))
+			if x.glimsBalance(x.account("alice")) != tc.credited {
+				t.Fatal("credited", x.glimsBalance(x.account("alice")))
 			}
 			// The score is sent once, never twice after an unknown outcome.
 			if x.scoreCalls() != 1 {
@@ -396,9 +410,10 @@ func TestPurseTopUpUnknownOutcomes(t *testing.T) {
 			if row.GoldBefore == nil || *row.GoldBefore != 1000 {
 				t.Fatalf("gold_before %v", row.GoldBefore)
 			}
-			if tc.want == "moved" && (row.GoldAfter == nil || *row.GoldAfter != 700) {
+			if tc.want == "moved" && (row.GoldAfter == nil || *row.GoldAfter != 960) {
 				t.Fatalf("gold_after %v", row.GoldAfter)
 			}
+			x.glimsConserved()
 		})
 	}
 }
@@ -413,23 +428,23 @@ func TestPurseTopUpCreateFailure(t *testing.T) {
 	c, s := x.ready("alice")
 	x.setGold(500)
 	x.setCreate("refused")
-	row := x.topUpOK(s, "k", 100, c)
+	row := x.topUpOK(s, "k", 20, c)
 	if row.State != "not-moved" || row.Leftover {
 		t.Fatalf("a refused create: %+v", row)
 	}
-	if x.goldBalance(x.account("alice")) != 0 || x.scoreCalls() != 0 {
+	if x.glimsBalance(x.account("alice")) != 0 || x.scoreCalls() != 0 {
 		t.Fatal("a refused create charged something")
 	}
 	// The create timed out on our side and may still be running on
 	// Habitica's: the mark stays even though the delete found nothing.
 	x.setCreate("error")
-	row = x.topUpOK(s, "k2", 100, c)
+	row = x.topUpOK(s, "k2", 20, c)
 	if row.State != "not-moved" || !row.Leftover {
 		t.Fatalf("an unknown create: %+v", row)
 	}
 	// The same create failing while the delete fails too.
 	x.setDelete("error")
-	row = x.topUpOK(s, "k3", 100, c)
+	row = x.topUpOK(s, "k3", 20, c)
 	if row.State != "not-moved" || !row.Leftover {
 		t.Fatalf("%+v", row)
 	}
@@ -442,7 +457,7 @@ func TestPurseTopUpLeftoversDeletedFirst(t *testing.T) {
 	c, s := x.ready("alice")
 	x.setGold(500)
 	x.setDelete("error")
-	first := x.topUpOK(s, "k1", 100, c)
+	first := x.topUpOK(s, "k1", 20, c)
 	if !first.Leftover {
 		t.Fatal("expected a leftover mark")
 	}
@@ -452,7 +467,7 @@ func TestPurseTopUpLeftoversDeletedFirst(t *testing.T) {
 	}
 	x.setDelete("ok")
 	callsBefore := x.habiticaCalls()
-	second := x.topUpOK(s, "k2", 100, c)
+	second := x.topUpOK(s, "k2", 20, c)
 	if second.State != "moved" {
 		t.Fatal(second.State)
 	}
@@ -530,7 +545,7 @@ func TestPurseSettlesWorkingRowsWhenSomeoneLooks(t *testing.T) {
 		}
 	}
 	// Nothing was credited: a row nobody confirmed never adds gold.
-	if x.goldBalance(account) != 0 {
+	if x.glimsBalance(account) != 0 {
 		t.Fatal("a lazy settle credited gold")
 	}
 }
@@ -564,11 +579,11 @@ func TestPurseReadShowsEveryLineKind(t *testing.T) {
 		if letter.returned != "" {
 			returned, reason = "2", "'"+letter.reason+"'"
 		}
-		if _, err := x.db.DB.Exec("INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at,claimed_at,returned_at,return_reason) VALUES('" + letter.id + "','" + world + "','" + letter.from + "','" + letter.to + "','gold','gold',20,'[]','[]'," + strconv.FormatInt(now, 10) + "," + claimed + "," + returned + "," + reason + ")"); err != nil {
+		if _, err := x.db.DB.Exec("INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at,claimed_at,returned_at,return_reason) VALUES('" + letter.id + "','" + world + "','" + letter.from + "','" + letter.to + "','glims','glims',20,'[]','[]'," + strconv.FormatInt(now, 10) + "," + claimed + "," + returned + "," + reason + ")"); err != nil {
 			t.Fatal(err)
 		}
 	}
-	// The gold rows, exactly as lane C writes them.
+	// The glims rows, exactly as lane C writes them.
 	rows := []struct {
 		delta       int
 		reason, ref string
@@ -583,7 +598,7 @@ func TestPurseReadShowsEveryLineKind(t *testing.T) {
 		{-15, "give", bobID},
 	}
 	for i, row := range rows {
-		if _, err := x.db.DB.Exec("INSERT INTO ledger(account_id,currency,delta,earned_delta,reason,ref,created_at) VALUES(?,'gold',?,0,?,?,?)", alice, row.delta, row.reason, row.ref, now-100+int64(i)); err != nil {
+		if _, err := x.db.DB.Exec("INSERT INTO ledger(account_id,currency,delta,earned_delta,reason,ref,created_at) VALUES(?,'glims',?,0,?,?,?)", alice, row.delta, row.reason, row.ref, now-100+int64(i)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -642,7 +657,7 @@ func TestPurseTopUpSettlesADeadWorkersRow(t *testing.T) {
 	if _, err := x.db.DB.Exec("INSERT INTO purse_topups(id,account_id,op_key,amount,state,created_at) VALUES('live',?,'live',20,'checking',?)", account, now-10); err != nil {
 		t.Fatal(err)
 	}
-	if status, out := x.topUp(s.Lease, "k1", 100, secret, c); status != 409 || out.Error == nil || out.Error.Code != "purse-busy" {
+	if status, out := x.topUp(s.Lease, "k1", 20, secret, c); status != 409 || out.Error == nil || out.Error.Code != "purse-busy" {
 		t.Fatalf("a live worker's row: %d %v", status, out.Error)
 	}
 	// The same row, ninety seconds on: it has no live worker behind it and
@@ -650,7 +665,7 @@ func TestPurseTopUpSettlesADeadWorkersRow(t *testing.T) {
 	if _, err := x.db.DB.Exec("UPDATE purse_topups SET created_at=? WHERE id='live'", now-91); err != nil {
 		t.Fatal(err)
 	}
-	row := x.topUpOK(s, "k2", 100, c)
+	row := x.topUpOK(s, "k2", 20, c)
 	if row.State != "moved" {
 		t.Fatal(row.State)
 	}
@@ -685,7 +700,7 @@ func TestPurseHangsWhileAnotherPlayerReadsState(t *testing.T) {
 	x.api.Config.PurseAnswerWait = 50 * time.Millisecond
 	done := make(chan int, 1)
 	go func() {
-		status, _ := x.topUp(s.Lease, "slow", 100, secret, c)
+		status, _ := x.topUp(s.Lease, "slow", 20, secret, c)
 		done <- status
 	}()
 	// While the score hangs, another player's state answers at once.
@@ -710,7 +725,7 @@ func TestWrongTokenCountsAsFailedProof(t *testing.T) {
 	c, s := x.ready("alice")
 	x.setGold(500)
 	for i := 0; i < proofFailureLimit; i++ {
-		status, out := x.topUp(s.Lease, fmt.Sprintf("bad-%d", i), 100, "WRONG-TOKEN", c)
+		status, out := x.topUp(s.Lease, fmt.Sprintf("bad-%d", i), 20, "WRONG-TOKEN", c)
 		if status != 200 {
 			t.Fatalf("attempt %d: %d %v", i, status, out.Error)
 		}
@@ -722,7 +737,7 @@ func TestWrongTokenCountsAsFailedProof(t *testing.T) {
 	if x.scoreCalls() != 0 {
 		t.Fatal("a wrong token got as far as scoring")
 	}
-	status, out := x.topUp(s.Lease, "one-too-many", 100, secret, c)
+	status, out := x.topUp(s.Lease, "one-too-many", 20, secret, c)
 	if status != 429 || out.Error == nil || out.Error.Code != "login-user-rate-limited" {
 		t.Fatalf("proofs not counted: %d %+v", status, out.Error)
 	}
@@ -825,14 +840,14 @@ func TestPurseTopUpViaStub(t *testing.T) {
 	stub := &timedOutAfterScore{subject: "alice", gold: 1000}
 	x.api.Habitica = stub
 	x.setPurseChecks([]time.Duration{time.Millisecond, 2 * time.Millisecond})
-	row := x.topUpOK(s, "k", 250, c)
+	row := x.topUpOK(s, "k", 40, c)
 	if row.State != "moved" || row.Note != "checked" {
 		t.Fatalf("%+v", row)
 	}
 	if stub.scored != 1 {
 		t.Fatal("scored", stub.scored)
 	}
-	if x.goldBalance(x.account("alice")) != 250 {
+	if x.glimsBalance(x.account("alice")) != 20 {
 		t.Fatal("not credited")
 	}
 }
@@ -865,7 +880,7 @@ func (s *timedOutAfterScore) CreateReward(_ context.Context, _ string, _ string,
 func (s *timedOutAfterScore) ScoreDown(_ context.Context, _ string, _ string, _ string, _ func() bool) (int, error) {
 	s.scored++
 	// Habitica ran the charge; the answer never arrived.
-	s.gold -= 250
+	s.gold -= 40
 	return 0, &habitica.Error{Code: "habitica-unavailable", Status: 502, Sent: true}
 }
 
@@ -884,13 +899,13 @@ func TestPurseTopUpScoreRateLimited(t *testing.T) {
 	c, s := x.ready("alice")
 	x.setGold(1000)
 	x.setScore("rate-limited-once")
-	row := x.topUpOK(s, "k1", 300, c)
+	row := x.topUpOK(s, "k1", 20, c)
 	if row.State != "moved" || x.scoreCalls() != 2 {
 		t.Fatalf("one 429 then moved: %+v after %d scores", row, x.scoreCalls())
 	}
 	x.setScore("rate-limited")
 	x.setPurseChecks([]time.Duration{time.Millisecond, 2 * time.Millisecond})
-	row = x.topUpOK(s, "k2", 300, c)
+	row = x.topUpOK(s, "k2", 20, c)
 	if x.scoreCalls() != 4 {
 		t.Fatal("two 429s sent the score more than twice:", x.scoreCalls())
 	}
@@ -911,14 +926,14 @@ func TestPurseTopUpScoreRefusedByOurBudget(t *testing.T) {
 	// budget refuses the third, the score, before it goes out.
 	x.api.loginGlobal.rate = 2
 	x.setPurseChecks([]time.Duration{time.Millisecond})
-	row := x.topUpOK(s, "k", 100, c)
+	row := x.topUpOK(s, "k", 20, c)
 	if row.State != "not-moved" || row.Note != "habitica-rate-limited" {
 		t.Fatalf("%+v", row)
 	}
 	if x.scoreCalls() != 0 {
 		t.Fatal("a refused score reached Habitica")
 	}
-	if x.goldBalance(x.account("alice")) != 0 {
+	if x.glimsBalance(x.account("alice")) != 0 {
 		t.Fatal("a refused score credited gold")
 	}
 }
@@ -930,7 +945,7 @@ func TestPurseTopUpGoldReadIdentityMismatch(t *testing.T) {
 	c, s := x.ready("alice")
 	stub := &timedOutAfterScore{subject: "someone-else", gold: 1000}
 	x.api.Habitica = stub
-	row := x.topUpOK(s, "k", 100, c)
+	row := x.topUpOK(s, "k", 20, c)
 	if row.State != "not-moved" || row.Note != "habitica-auth" {
 		t.Fatalf("%+v", row)
 	}
@@ -952,7 +967,7 @@ func TestPurseTopUpLastCheckDecides(t *testing.T) {
 	// Habitica goes down and the last check fails.
 	x.setDownAfter(5)
 	x.setPurseChecks([]time.Duration{time.Millisecond, 2 * time.Millisecond})
-	row := x.topUpOK(s, "k", 300, c)
+	row := x.topUpOK(s, "k", 40, c)
 	if row.State != "unconfirmed" {
 		t.Fatalf("%+v: the last check failed, so nothing is decided", row)
 	}
@@ -977,7 +992,7 @@ func TestPurseTopUpCheckingMarkFailure(t *testing.T) {
 	failMark(x)
 	x.setScore("timeout-moved") // the charge happened; the answer didn't
 	x.setPurseChecks([]time.Duration{time.Millisecond, 2 * time.Millisecond})
-	row := x.topUpOK(s, "k", 300, c)
+	row := x.topUpOK(s, "k", 40, c)
 	if row.State != "moved" || row.Note != "checked" {
 		t.Fatalf("%+v: the checks ran despite the failed mark", row)
 	}
@@ -989,7 +1004,7 @@ func TestPurseTopUpCheckingMarkFailure(t *testing.T) {
 	x2.setScore("error")
 	x2.setDownAfter(4) // every check fails
 	x2.setPurseChecks([]time.Duration{time.Millisecond, 2 * time.Millisecond})
-	if row := x2.topUpOK(s2, "k", 300, c2); row.State != "unconfirmed" {
+	if row := x2.topUpOK(s2, "k", 40, c2); row.State != "unconfirmed" {
 		t.Fatalf("%+v", row)
 	}
 }
@@ -1003,7 +1018,7 @@ func TestPurseTopUpScoreRefusedInAnotherLanguage(t *testing.T) {
 	x.setGold(500)
 	x.setScore("not-enough-gold-fr")
 	x.setPurseChecks([]time.Duration{time.Millisecond})
-	row := x.topUpOK(s, "k", 100, c)
+	row := x.topUpOK(s, "k", 20, c)
 	if row.State != "not-enough" {
 		t.Fatalf("%+v", row)
 	}
@@ -1023,7 +1038,7 @@ func TestPurseTopUpDeletesAtMostTwoLeftovers(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	x.topUpOK(s, "k", 100, c)
+	x.topUpOK(s, "k", 20, c)
 	seen := []string{}
 	for _, call := range x.habiticaCalls() {
 		if strings.HasPrefix(call, "delete:glimway-topup-old-") {
@@ -1046,7 +1061,7 @@ func TestPurseChangesMoveTheVersion(t *testing.T) {
 	x.setGold(500)
 	x.setScore("error") // unknown → `unconfirmed`, a settle with no credit
 	x.setPurseChecks([]time.Duration{time.Millisecond, 2 * time.Millisecond})
-	x.topUpOK(s, "k", 100, c)
+	x.topUpOK(s, "k", 20, c)
 	after := x.version(t, account)
 	if after < before+2 {
 		t.Fatalf("version %d → %d: the reserve and the settle should each move it", before, after)

@@ -13,7 +13,7 @@ import (
 func expirePending(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (bool, error) {
 	cutoff := now - int64(int(rules.E.GetPendingCreditDays()))*86400
 	var expired int
-	if err := tx.QueryRowContext(ctx, "SELECT COALESCE(SUM(embers),0) FROM pending_credits WHERE account_id=? AND created_at<=?", s.AccountID, cutoff).Scan(&expired); err != nil {
+	if err := tx.QueryRowContext(ctx, "SELECT COALESCE(SUM(glims),0) FROM pending_credits WHERE account_id=? AND created_at<=?", s.AccountID, cutoff).Scan(&expired); err != nil {
 		return false, err
 	}
 	if expired == 0 {
@@ -53,7 +53,7 @@ func checkpoint(ctx context.Context, tx *sql.Tx, s *store.Snapshot, p rules.Prof
 		changed = true
 	}
 	var confirmed int
-	if err = tx.QueryRowContext(ctx, "SELECT COALESCE(SUM(embers),0) FROM pending_credits WHERE account_id=? AND reported_xp<=?", s.AccountID, verified).Scan(&confirmed); err != nil {
+	if err = tx.QueryRowContext(ctx, "SELECT COALESCE(SUM(glims),0) FROM pending_credits WHERE account_id=? AND reported_xp<=?", s.AccountID, verified).Scan(&confirmed); err != nil {
 		return err
 	}
 	if confirmed > 0 {

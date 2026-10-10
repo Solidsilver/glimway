@@ -15,7 +15,7 @@
 import Phaser from 'phaser'
 import { getCombatKit, type CombatKit, type KitMove } from '../../lib/combat'
 import { CombatField } from '../../lib/combat-moves'
-import { withCharm } from '../../lib/embers'
+import { withCharm } from '../../lib/glims'
 import { passiveRegenAllowed } from '../../lib/habitica/sync'
 import { bus, EV, type AbilityPayload } from '../events'
 import { uiBlocked, uiState } from '../input'
@@ -286,7 +286,7 @@ export class Hero {
     // - HP regen only when the shared policy allows it (demo vitals, in the
     //   village). Imported vitals get NO passive refill anywhere.
     const state = this.deps.session.state
-    // Lit road lanterns are ember-bought rest spots: mana for everyone, HP
+    // Lit road lanterns are glim-bought rest spots: mana for everyone, HP
     // for demo heroes (still local only — Habitica is never touched).
     const rest = this.deps.restRate()
     // Standing still at a hearth warms you like a seat (mana only).

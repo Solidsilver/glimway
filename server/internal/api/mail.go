@@ -161,13 +161,13 @@ func (a *Server) mailSend(w http.ResponseWriter, r *http.Request) error {
 	}
 	asset := assetOf(req.Asset)
 	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		// A letter carries one thing, and a gold letter carries gold alone
+		// A letter carries one thing, and a glim letter carries glims alone
 		// (3.3, question 11): both, or neither, is invalid-request.
-		gold := int(req.GetGold())
-		if (req.Asset != nil) == (gold != 0) {
+		glims := int(req.GetGlims())
+		if (req.Asset != nil) == (glims != 0) {
 			return nil, fail(400, "invalid-request")
 		}
-		if gold < 0 {
+		if glims < 0 {
 			return nil, fail(400, "invalid-quantity")
 		}
 		if req.ToId == s.AccountID {
@@ -191,14 +191,14 @@ func (a *Server) mailSend(w http.ResponseWriter, r *http.Request) error {
 		if !eligible {
 			return nil, fail(403, "recipient-unavailable")
 		}
-		if gold == 0 {
+		if glims == 0 {
 			if err = validAsset(asset); err != nil {
 				return nil, err
 			}
 			if d, ok := content.ItemFor(asset.GetId()); ok && asset.GetKind() != "decoration" && !content.ItemGiveable(d) {
 				return nil, fail(409, "not-giveable")
 			}
-		} else if gold < 1 {
+		} else if glims < 1 {
 			return nil, fail(400, "invalid-quantity")
 		}
 		if err = mailSendLimits(ctx, tx, s.AccountID, req.ToId, now, w); err != nil {
@@ -210,15 +210,15 @@ func (a *Server) mailSend(w http.ResponseWriter, r *http.Request) error {
 		}
 		kind, itemDef, qty := asset.GetKind(), asset.GetId(), int(asset.GetQty())
 		got := moved{IDs: []string{}, Makers: []makerQty{}}
-		if gold > 0 {
-			// The gold leaves the purse into the letter in one transaction
-			// (3.3, 3.5): until it is collected or comes back it belongs to
-			// neither purse, and waits in the sender's mail:gold:gold.
-			kind, itemDef, qty = "gold", "gold", gold
-			if err = store.DebitGold(ctx, tx, s.AccountID, gold, "mail-send", id, now); err != nil {
-				return nil, insufficientGold(err)
+		if glims > 0 {
+			// The glims leave the sender into the letter in one transaction
+			// (3.3, 3.5): until they are collected or come back they belong
+			// to neither player, and wait in the sender's mail:glims:glims.
+			kind, itemDef, qty = "glims", "glims", glims
+			if err = debitGlims(ctx, tx, s, glims, "mail-send", id, now); err != nil {
+				return nil, err
 			}
-			if err = currency(ctx, tx, s.AccountID, mailGoldCurrency(), gold, "mail-send", id, now); err != nil {
+			if err = currency(ctx, tx, s.AccountID, mailGlimsCurrency(), glims, "mail-send", id, now); err != nil {
 				return nil, err
 			}
 		} else {
@@ -310,10 +310,11 @@ func (a *Server) mailClaim(w http.ResponseWriter, r *http.Request) error {
 		if v.GetKind() == "instance" && len(got.IDs) == 1 {
 			v.Instance = got.IDs[0]
 		}
-		if v.Kind == "gold" {
-			// The letter's gold goes into the recipient's purse (3.3, 3.5):
-			// the escrow on the sender's mail:gold:gold closes below.
-			if err = store.CreditGold(ctx, tx, s.AccountID, int(v.GetQty()), "mail-claim", id, now); err != nil {
+		if v.Kind == "glims" {
+			// The letter's glims go to the recipient (3.3, 3.5), never
+			// XP-earned: the escrow on the sender's mail:glims:glims closes
+			// below.
+			if err = store.MoveGlims(ctx, tx, s, s.AccountID, int(v.GetQty()), "mail-claim", id, now); err != nil {
 				return nil, err
 			}
 		} else if v.Kind != "thanks" {
@@ -403,7 +404,7 @@ func (a *Server) mailRecall(w http.ResponseWriter, r *http.Request) error {
 		if returned.Valid {
 			return nil, fail(409, "already-returned")
 		}
-		if _, err = store.ReturnMail(ctx, tx, id, "recalled", now, false); err != nil {
+		if _, err = store.ReturnMail(ctx, tx, s, id, "recalled", now); err != nil {
 			return nil, err
 		}
 		if err = refreshItems(ctx, tx, s); err != nil {

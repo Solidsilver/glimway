@@ -25,7 +25,7 @@ func repairTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contrac
 	if v.Condition >= v.Max {
 		return fail(409, "not-needed")
 	}
-	cost, embers := def.Repair.Bench, 0
+	cost, glims := def.Repair.Bench, 0
 	if req.At == "bench" {
 		if _, err = workshop(ctx, tx, s); err != nil {
 			return err
@@ -38,13 +38,13 @@ func repairTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contrac
 		if !nearTile(s, m.GetArea(), int(m.GetTx()), int(m.GetTy()), int(m.GetRadiusTiles())) {
 			return fail(409, "too-far-away")
 		}
-		cost, embers = def.GetRepair().GetMender(), int(def.GetRepair().GetMenderEmbers())
+		cost, glims = def.GetRepair().GetMender(), int(def.GetRepair().GetMenderGlims())
 	}
 	if err = checkMaterials(ctx, tx, s.AccountID, cost); err != nil {
 		return err
 	}
-	if embers > 0 {
-		if err = debitEmbers(ctx, tx, s, embers, "mend", v.Def, now); err != nil {
+	if glims > 0 {
+		if err = debitGlims(ctx, tx, s, glims, "mend", v.Def, now); err != nil {
 			return err
 		}
 	}

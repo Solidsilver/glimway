@@ -7,7 +7,12 @@ lint:
   # is unversioned, which STANDARD rejects, and it must never be edited.
   ignore: [proto/buf]
 breaking:
-  use: [FILE]
+  # FILE, except that a field may go once its number and name are both
+  # reserved (docs/proto-migration.md, "Compatibility": reserve removed
+  # names and numbers). FILE alone refuses every field deletion, reserved
+  # or not; the two UNLESS rules are WIRE_JSON's.
+  use: [FILE, FIELD_NO_DELETE_UNLESS_NUMBER_RESERVED, FIELD_NO_DELETE_UNLESS_NAME_RESERVED]
+  except: [FIELD_NO_DELETE]
   # The content schemas are read by the file's own loaders, both of which
   # change in the same commit as the file — not a wire contract, so FILE
   # would only force reserved-field noise. Same for the vendored schema.

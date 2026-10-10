@@ -107,7 +107,7 @@ func TestHistoricalAccountUpgradeThroughAPI(t *testing.T) {
 	legacy := &http.Cookie{Name: CookieName, Value: cookie}
 	held := &http.Cookie{Name: CookieName, Value: heldCookie}
 	s := x.expect("GET", "/api/state", nil, legacy, 200)
-	if s.AccountID != "legacy-owner" || s.State.HP != 32 || s.State.Embers != 9 {
+	if s.AccountID != "legacy-owner" || s.State.HP != 32 || s.State.Glims != 9 {
 		t.Fatal("historical fresh baseline", s)
 	}
 	if w := x.rawHTTP("GET", "/api/mail", nil, legacy); w.Code != 200 || !strings.Contains(w.Body.String(), "old-mail") {
@@ -129,7 +129,7 @@ func TestHistoricalAccountUpgradeThroughAPI(t *testing.T) {
 	play = x.reportState(login, play, 10, 0, map[string]any{"area": "village", "x": 400, "y": 300})
 	request := body(play, "upgrade-complete", map[string]any{"quest": "lantern-road", "to": "complete"})
 	completed := x.expect("POST", "/api/quest/step", request, login, 200)
-	if completed.State.Quest != "complete" || completed.State.Embers != 12 {
+	if completed.State.Quest != "complete" || completed.State.Glims != 12 {
 		t.Fatal("first quest completion", completed)
 	}
 	x.expect("POST", "/api/quest/step", request, login, 200)
@@ -143,8 +143,8 @@ func TestHistoricalAccountUpgradeThroughAPI(t *testing.T) {
 	x.flushFixtureReport(login, rest["op"].(map[string]any))
 	x.expect("POST", "/api/spend", rest, login, 200)
 	x.expect("POST", "/api/story/mark", body(completed, "upgrade-met", map[string]any{"mark": "met:mara@complete"}), login, 200)
-	if count(t, upgraded, "SELECT SUM(delta) FROM ledger WHERE currency='embers'") != 12-int(rules.E.GetCosts().GetRest()) {
-		t.Fatal("ledger not conserved", count(t, upgraded, "SELECT SUM(delta) FROM ledger WHERE currency='embers'"))
+	if count(t, upgraded, "SELECT SUM(delta) FROM ledger WHERE currency='glims'") != 12-int(rules.E.GetCosts().GetRest()) {
+		t.Fatal("ledger not conserved", count(t, upgraded, "SELECT SUM(delta) FROM ledger WHERE currency='glims'"))
 	}
 	mutation := x.p5("POST", "/api/mail/old-mail/claim", body(play, "upgrade-claim", map[string]any{}), login, 200)
 	if mutation.Version <= play.Version {

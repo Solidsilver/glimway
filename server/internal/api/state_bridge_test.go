@@ -24,7 +24,7 @@ func testSnapshotJSON(raw []byte) []byte {
 	if protojson.Unmarshal(fields["state"], &p) != nil {
 		return raw
 	}
-	s := store.Snapshot{Version: int64(p.Version), AccountID: p.Account.AccountId, DisplayName: p.Account.DisplayName, WorldID: p.Account.WorldId, ProfileSource: p.Account.ProfileSource, Flagged: p.Account.Flagged, VitalsSource: "imported", State: rules.NewState(), Pending: int(p.Embers.Pending), VerifiedXP: p.Embers.VerifiedXp}
+	s := store.Snapshot{Version: int64(p.Version), AccountID: p.Account.AccountId, DisplayName: p.Account.DisplayName, WorldID: p.Account.WorldId, ProfileSource: p.Account.ProfileSource, Flagged: p.Account.Flagged, VitalsSource: "imported", State: rules.NewState(), Pending: int(p.Glims.Pending), VerifiedXP: p.Glims.VerifiedXp}
 	if p.Account.PartyId != nil {
 		s.HabiticaPartyID = &p.Account.PartyId.Value
 	}
@@ -60,9 +60,9 @@ func testSnapshotJSON(raw []byte) []byte {
 	s.State.DefeatedEnemies = append([]string{}, p.Story.Defeated...)
 	s.State.Inventory = append([]string{}, p.Story.QuestItems...)
 	s.State.PlaySeconds = p.Story.PlaySeconds
-	s.State.Embers = int(p.Embers.Balance)
-	s.State.XPEmbers = int(p.Embers.XpEarned)
-	s.State.EmberXP = p.Embers.XpMark
+	s.State.Glims = int(p.Glims.Balance)
+	s.State.XPGlims = int(p.Glims.XpEarned)
+	s.State.GlimXP = p.Glims.XpMark
 	var projected map[string]json.RawMessage
 	_ = json.Unmarshal([]byte(store.JSON(s)), &projected)
 	for k, v := range projected {

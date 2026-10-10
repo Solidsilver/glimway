@@ -57,13 +57,6 @@ func (a *Server) finish(w http.ResponseWriter, r *http.Request, tx *sql.Tx, v an
 func currency(ctx context.Context, tx *sql.Tx, id, currency string, delta int, reason, ref string, now int64) error {
 	return itemmove.RecordCurrency(ctx, tx, id, currency, delta, reason, ref, now)
 }
-func debitEmbers(ctx context.Context, tx *sql.Tx, s *store.Snapshot, n int, reason, ref string, now int64) error {
-	if s.State.Embers < n {
-		return fail(409, "insufficient-embers")
-	}
-	earned := max(0, n-(s.State.Embers-s.State.XPEmbers))
-	return store.Credit(ctx, tx, s, -n, -earned, reason, ref, nil, now)
-}
 
 // Domain reads carry the same current PlayerState as keyed answers; their
 // independent home, storage and social data lives under result.

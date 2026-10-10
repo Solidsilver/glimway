@@ -1,6 +1,6 @@
 /**
  * Dev mode (local playtesting only): everything the dev panel can give, from
- * Glimway's own content tables — embers, every item in content/items.json
+ * Glimway's own content tables — glims, every item in content/items.json
  * (materials, tools, recipe pages, keepsakes, seeds…) and every home good in
  * content/homestead.json. Nothing from Habitica. The caps mirror the
  * server's (server/internal/api/dev_grant.go), which refuses anything else.
@@ -10,7 +10,7 @@ import { ITEMS, assetKind, type ItemDef } from '../../lib/items.ts';
 import { HOMESTEAD_DATA } from '../../lib/homestead.ts';
 import { itemArt } from '../../lib/inventory.ts';
 
-export type GrantKind = 'embers' | 'material' | 'item' | 'instance' | 'decoration';
+export type GrantKind = 'glims' | 'material' | 'item' | 'instance' | 'decoration';
 
 export interface Grantable {
   id: string;
@@ -25,8 +25,11 @@ export interface Grantable {
   icon: string;
 }
 
-/** The server's caps: stacks and embers by the thousand, tools and home goods one at a time. */
-export const GRANT_MAX: Record<GrantKind, number> = { embers: 100_000, material: 9999, item: 9999, instance: 20, decoration: 20 };
+/** The server's grant id for glims (server/internal/api/dev_grant.go). */
+export const GLIMS_GRANT_ID = 'glims';
+
+/** The server's caps: stacks and glims by the thousand, tools and home goods one at a time. */
+export const GRANT_MAX: Record<GrantKind, number> = { glims: 100_000, material: 9999, item: 9999, instance: 20, decoration: 20 };
 
 const GROUP: Record<string, string> = {
   material: 'Material',
@@ -47,12 +50,12 @@ function fromItem(d: ItemDef): Grantable {
   return { id: d.id, name: d.name, kind, group: GROUP[d.kind] ?? d.kind, max: GRANT_MAX[kind], art: pic.art, icon: pic.icon };
 }
 
-/** Everything grantable: embers first, then items and home goods by name. */
+/** Everything grantable: glims first, then items and home goods by name. */
 export function grantables(): Grantable[] {
   const items = ITEMS.items.filter((d) => d.kind !== 'home-good').map(fromItem);
   const homes: Grantable[] = HOMESTEAD_DATA.items.map((h) => ({ id: h.id, name: h.name, kind: 'decoration', group: 'Home good', max: GRANT_MAX.decoration, art: null, icon: 'home' }));
   const byName = (a: Grantable, b: Grantable) => a.name.localeCompare(b.name);
-  return [{ id: 'embers', name: 'Embers', kind: 'embers', group: 'Embers', max: GRANT_MAX.embers, art: null, icon: 'ember' }, ...[...items, ...homes].sort(byName)];
+  return [{ id: GLIMS_GRANT_ID, name: 'Glims', kind: 'glims', group: 'Glims', max: GRANT_MAX.glims, art: 'glim', icon: 'glim' }, ...[...items, ...homes].sort(byName)];
 }
 
 /** The list filtered by a search: every word must match the name, id or group. */

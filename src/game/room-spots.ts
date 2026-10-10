@@ -154,7 +154,7 @@ export class RoomSpots {
           // Oiling it is the quest's (its label comes through setSpotQuests).
           label: 'Look at the lamp',
           verb: 'Look',
-          activate: () => this.say(id, 'The reading lamp', this.lampLit() ? ['Lit, and trimmed low. Somebody paid for the oil.'] : ['A tin tag on the handle: “One ember the oil. Ledger. — M.H.”'])
+          activate: () => this.say(id, 'The reading lamp', this.lampLit() ? ['Lit, and trimmed low. Somebody paid for the oil.'] : ['A tin tag on the handle: “One glim the oil. Ledger. — M.H.”'])
         }
       // The nook: a plain seat, with a bench's seated regen.
       case 'reading-nook':

@@ -275,7 +275,7 @@ export type GateInfo = {
   tier: number;
   desolate: boolean;
   mine: boolean;
-  /** Unclaimed: what the deed costs the caller in embers. */
+  /** Unclaimed: what the deed costs the caller in glims. */
   price: number | null;
   /** The caller was on this empty home's deed and can take it back, free, until the deed is lost. */
   reclaim: boolean;

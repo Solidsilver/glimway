@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { residentsOut } from './room-helpers'
 import { serverState } from './connected'
-import { earnEmbers, freshPlayer, fund, giveInstance } from './home-helpers'
+import { earnGlims, freshPlayer, fund, giveInstance } from './home-helpers'
 import { expectToast, openTalk, readDialogue, untilChoices, waitForLive, warp } from './helpers'
 import { CALENDAR, calendarAt } from '../src/lib/calendar.ts'
 import { sellerFor } from '../src/lib/items.ts'
@@ -9,7 +9,7 @@ import { sellerFor } from '../src/lib/items.ts'
 /**
  * The seasons against the worker's own Go server (docs/items/crafting-and-repair.md,
  * "Seasonal materials"; docs/items/catalogue.md, tallow): Hazel sells a lump
- * of tallow at her kitchen door for an ember, in her own words; and in the
+ * of tallow at her kitchen door for a glim, in her own words; and in the
  * Quiet the frozen village pond is broken for frost-glass. The dev calendar
  * hook moves only the client's clock: the server reads its own, so the pond
  * answers with frost-glass when the real calendar is in the Quiet, and with
@@ -40,11 +40,11 @@ async function packReads(page: Page, holds: () => Promise<boolean>): Promise<voi
 type GatherView = { area: string; spots: { target: string; tx: number; ty: number }[]; prompt: { target: string; tx: number; ty: number; label: string } | null; last: string }
 const gather = (page: Page) => page.evaluate(() => (window as unknown as { __fsGather: () => GatherView | null }).__fsGather())
 
-test('Hazel sells a lump of tallow for an ember, in her own words', async ({ page }) => {
+test('Hazel sells a lump of tallow for a glim, in her own words', async ({ page }) => {
   test.setTimeout(120_000)
   const id = await freshPlayer(page, 'Bryn')
-  await earnEmbers(page, id)
-  const before = (await serverState(page)).body.state.embers as number
+  await earnGlims(page, id)
+  const before = (await serverState(page)).body.state.glims as number
   const tallow = sellerFor('hazels-kitchen')!.goods[0]
   // Carrying Joss's whistle: her keepsake ask and the sale share one "Not yet".
   fund(id, { items: { 'tin-whistle': 1 } })
@@ -56,8 +56,8 @@ test('Hazel sells a lump of tallow for an ember, in her own words', async ({ pag
   await openTalk(page, 'Talk to Hazel')
   const choices = await untilChoices(page)
   expect(choices.map((c) => c.text)).toContain(tallow.label)
-  // 0.6: her goods carry a gold price too, offered beside the ember one (purse-and-wardrobe.md 3.1).
-  expect(choices.map((c) => c.text)).toEqual(['Give it back', tallow.label, tallow.goldLabel, 'Not yet'])
+  // 0.6.1: one choice per good, at its one price in glims (silas-yard.md 1.7).
+  expect(choices.map((c) => c.text)).toEqual(['Give it back', tallow.label, 'Not yet'])
   await readDialogue(page, { pick: new RegExp(`^${tallow.label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`) })
   // Her line is the reply, and the toast says it again when the tallow lands.
   const said = (await page.evaluate(() => (window as unknown as { __fsDialogue: () => { said: string[] } }).__fsDialogue().said)) ?? []
@@ -65,7 +65,7 @@ test('Hazel sells a lump of tallow for an ember, in her own words', async ({ pag
   await expectToast(page, tallow.line, { timeout: 15_000 })
 
   await expect.poll(async () => stack(page, 'tallow')).toBe(1)
-  await expect.poll(async () => (await serverState(page)).body.state.embers).toBe(before - 1)
+  await expect.poll(async () => (await serverState(page)).body.state.glims).toBe(before - 1)
 })
 
 test('in the Quiet the frozen pond breaks for frost-glass, by the server’s own calendar', async ({ page }) => {

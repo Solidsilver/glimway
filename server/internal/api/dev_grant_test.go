@@ -37,7 +37,7 @@ func TestDevGrantGivesGlimwaysOwnThingsThroughTheStore(t *testing.T) {
 	c, before := x.ready("dev-hero")
 	account := x.accounts["dev-hero"]
 	w := x.devGrant(c, `{"grants":[
-		{"id":"embers","qty":100},
+		{"id":"glims","qty":100},
 		{"id":"timber","qty":40},
 		{"id":"recipe-page-tea","qty":2},
 		{"id":"bench-axe","qty":2},
@@ -48,9 +48,9 @@ func TestDevGrantGivesGlimwaysOwnThingsThroughTheStore(t *testing.T) {
 	var out struct {
 		State struct {
 			Version float64 `json:"version"`
-			Embers  struct {
+			Glims   struct {
 				Balance float64 `json:"balance"`
-			} `json:"embers"`
+			} `json:"glims"`
 		} `json:"state"`
 		Result struct {
 			Granted []devGranted `json:"granted"`
@@ -60,7 +60,7 @@ func TestDevGrantGivesGlimwaysOwnThingsThroughTheStore(t *testing.T) {
 		t.Fatal(err)
 	}
 	// The answer carries the new state, at a newer version, like any operation's.
-	if out.State.Embers.Balance < 100 || out.State.Version <= float64(before.Version) {
+	if out.State.Glims.Balance < 100 || out.State.Version <= float64(before.Version) {
 		t.Fatal("state", out.State)
 	}
 	if len(out.Result.Granted) != 5 || out.Result.Granted[3].Kind != "instance" || out.Result.Granted[4].Kind != "decoration" {
@@ -100,7 +100,7 @@ func TestDevGrantRefusesAnythingElse(t *testing.T) {
 		`{"grants":[{"id":"timber","qty":0}]}`,
 		`{"grants":[{"id":"timber","qty":10000}]}`,
 		`{"grants":[{"id":"bench-axe","qty":21}]}`,
-		`{"grants":[{"id":"embers","qty":100001}]}`,
+		`{"grants":[{"id":"glims","qty":100001}]}`,
 		// Shape.
 		`{"grants":[]}`,
 		`{"grants":[{"id":"timber","qty":1}],"extra":1}`,
@@ -115,7 +115,7 @@ func TestDevGrantRefusesAnythingElse(t *testing.T) {
 		t.Fatal("something was given:", n)
 	}
 	// Signed out: nothing.
-	if w := x.devGrant(nil, `{"grants":[{"id":"embers","qty":1}]}`); w.Code != 401 {
+	if w := x.devGrant(nil, `{"grants":[{"id":"glims","qty":1}]}`); w.Code != 401 {
 		t.Fatal(w.Code)
 	}
 	r := httptest.NewRequest(http.MethodGet, DevGrantPath, nil)
@@ -131,12 +131,12 @@ func TestDevGrantAnswersUseMovedClock(t *testing.T) {
 	x := newRig(t)
 	cookie, _ := x.ready("dev-hero")
 	x.now.Add(3600)
-	w := x.devGrant(cookie, `{"grants":[{"id":"embers","qty":1}]}`)
+	w := x.devGrant(cookie, `{"grants":[{"id":"glims","qty":1}]}`)
 	if w.Code != 200 || w.Header().Get("X-Glimway-Now") != strconv.FormatInt(x.now.Load(), 10) {
 		t.Fatal(w.Code, w.Header())
 	}
 	x.now.Add(3600)
-	w = x.devGrant(nil, `{"grants":[{"id":"embers","qty":1}]}`)
+	w = x.devGrant(nil, `{"grants":[{"id":"glims","qty":1}]}`)
 	if w.Code != 401 || w.Header().Get("X-Glimway-Now") != strconv.FormatInt(x.now.Load(), 10) {
 		t.Fatal(w.Code, w.Header())
 	}

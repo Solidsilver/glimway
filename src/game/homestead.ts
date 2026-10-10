@@ -296,7 +296,7 @@ export class Homesteads {
     void this.load()
     bus.emit(EV.toast, {
       text: p.outcome === 'landed' ? 'Your last order with Silas went through after all.' : 'Your last order with Silas didn’t go through. Nothing was charged.',
-      icon: 'ember'
+      icon: 'glim'
     })
   }
 
@@ -414,7 +414,7 @@ export class Homesteads {
   }
 
   cottagePrice(): number {
-    return HOMESTEAD_DATA.tiers[1].embers
+    return HOMESTEAD_DATA.tiers[1].glims
   }
 
   /** What the deed to this gate costs you (null: not for sale). */

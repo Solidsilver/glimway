@@ -138,7 +138,7 @@ func validateQuests(doc *Quests) error {
 		if triggerHasNew(t) && (!start || !t.GetNew()) {
 			return bad("new trigger")
 		}
-		if t.GetTalk() != "" && !npc(t.GetTalk()) || t.GetUse() != "" && spots[t.GetUse()] == "" || t.GetReach() != "" && !KnownContentArea(t.GetReach()) || t.GetDefeat() != "" && story.GetIds()["defeated:"].GetAreas()[t.GetDefeat()] == "" || t.GetCarry() != "" && !defs[t.GetCarry()] && !questItems[t.GetCarry()] || t.GetFlag() != "" && !writer(t.GetFlag()) || t.GetOpen() != "" && t.GetOpen() != "journal" || t.GetSync() != "" && t.GetSync() != "embers" {
+		if t.GetTalk() != "" && !npc(t.GetTalk()) || t.GetUse() != "" && spots[t.GetUse()] == "" || t.GetReach() != "" && !KnownContentArea(t.GetReach()) || t.GetDefeat() != "" && story.GetIds()["defeated:"].GetAreas()[t.GetDefeat()] == "" || t.GetCarry() != "" && !defs[t.GetCarry()] && !questItems[t.GetCarry()] || t.GetFlag() != "" && !writer(t.GetFlag()) || t.GetOpen() != "" && t.GetOpen() != "journal" || t.GetSync() != "" && t.GetSync() != "glims" {
 			return bad("unknown trigger target")
 		}
 		return nil

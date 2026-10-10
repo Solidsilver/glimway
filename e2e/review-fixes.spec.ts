@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { linkRev, linkStatus, serverState } from './connected'
 import { frames, expectToast } from './helpers'
-import { claimDeed, earnEmbers, freshPlayer, fund, go, homes, myHome, onMyLand, readOn, silasSays } from './home-helpers'
+import { claimDeed, earnGlims, freshPlayer, fund, go, homes, myHome, onMyLand, readOn, silasSays } from './home-helpers'
 
 /**
  * Regressions for the phase 3 review, against the real
@@ -30,9 +30,9 @@ async function loseNextAnswer(page: Page, path: string): Promise<void> {
 test('finding 1: a purchase and an upgrade whose answers are lost resolve on reconnect, never charged twice', async ({ page }) => {
   test.setTimeout(150_000)
   const id = await freshPlayer(page)
-  await earnEmbers(page, id)
+  await earnGlims(page, id)
   await claim(page)
-  const before = (await serverState(page)).body.state.embers
+  const before = (await serverState(page)).body.state.glims
   await loseNextAnswer(page, '/api/homestead/buy')
   await silasSays(page, /See what you’ve finished/)
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
@@ -49,7 +49,7 @@ test('finding 1: a purchase and an upgrade whose answers are lost resolve on rec
   await expect.poll(() => linkStatus(page)).toBe('online')
   expect((await myHome(page, id)).items.filter((i) => i.itemDef === 'wooden-stool')).toHaveLength(1)
   await expect.poll(async () => (await homes(page)).mine?.items.length).toBe(1)
-  expect((await serverState(page)).body.state.embers).toBe(before - 2)
+  expect((await serverState(page)).body.state.glims).toBe(before - 2)
 
   // A lost upgrade: tier 1 lands, and Orrin's foundation paper still arrives.
   // (expectToast below needs a newer 'went through' toast than the purchase's.)
@@ -67,7 +67,7 @@ test('finding 1: a purchase and an upgrade whose answers are lost resolve on rec
   await expect.poll(async () => (await homes(page)).mine?.tier, { timeout: 15_000 }).toBe(1)
   // The paper is granted on recovery and reaches the server with the next upload.
   await expect.poll(async () => (await serverState(page)).body.state.flags, { timeout: 15_000 }).toContain('paper:orrins-drift-slap-foundation-standard')
-  expect((await serverState(page)).body.state.embers).toBe(before - 2 - 15)
+  expect((await serverState(page)).body.state.glims).toBe(before - 2 - 15)
 })
 
 test('finding 2: an exit to an unregistered area is overgrown (no crash, the save stays put)', async ({ page, pageErrors }) => {
@@ -97,7 +97,7 @@ test('finding 2: an exit to an unregistered area is overgrown (no crash, the sav
 test('findings 4 and 6: materials show on a fresh read; purchases redraw one plot and leave no orphaned tweens', async ({ page }) => {
   test.setTimeout(150_000)
   const id = await freshPlayer(page)
-  await earnEmbers(page, id)
+  await earnGlims(page, id)
   fund(id, { materials: { fiber: 20 } })
   await claim(page)
   const loaded = await stats(page)
@@ -122,7 +122,7 @@ test('findings 4 and 6: materials show on a fresh read; purchases redraw one plo
 test('findings 5 and 7: placement ignores keys under a modal; Space presses a focused tray button', async ({ page }) => {
   test.setTimeout(150_000)
   const id = await freshPlayer(page)
-  await earnEmbers(page, id)
+  await earnGlims(page, id)
   await claim(page)
   await silasSays(page, /Raise a cottage/)
   await expect.poll(async () => (await myHome(page, id)).tier).toBe(1)

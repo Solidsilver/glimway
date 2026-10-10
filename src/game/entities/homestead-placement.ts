@@ -464,7 +464,7 @@ export class HomesteadArranging {
       return this.refreshPlacement()
     }
     sfx('pop')
-    bus.emit(EV.toast, { text: 'Silas comes by with his saw and a bar. That tile’s clear.', icon: 'ember' })
+    bus.emit(EV.toast, { text: 'Silas comes by with his saw and a bar. That tile’s clear.', icon: 'glim' })
     this.endPlacement()
     this.deps.rebuild()
   }
@@ -603,7 +603,7 @@ export class HomesteadArranging {
       canRotate: !!def && canRotate(def),
       busy: p.busy,
       message: p.message,
-      clearing: p.clearing && clearKind !== null ? { ...p.clearing, what: clearKind === LAND.TREE ? 'tree' : clearKind === LAND.STUMP ? 'stump' : 'boulder', cost: HOMESTEAD_DATA.clearTileEmbers } : null,
+      clearing: p.clearing && clearKind !== null ? { ...p.clearing, what: clearKind === LAND.TREE ? 'tree' : clearKind === LAND.STUMP ? 'stump' : 'boulder', cost: HOMESTEAD_DATA.clearTileGlims } : null,
       spot: it && def ? { x: p.x, y: p.y, rotation: p.rotation } : null
     }
     this.placementView = view

@@ -71,9 +71,9 @@ func (a *Server) questStep(w http.ResponseWriter, r *http.Request) error {
 					return nil, err
 				}
 			}
-			paid := int(step.GetEmbers())
+			paid := int(step.GetGlims())
 			if req.Quest == "signpost" && step.GetId() == "see-mara" {
-				topup := max(0, 3-s.State.Embers)
+				topup := max(0, 3-s.State.Glims)
 				fresh, e := store.Outcome(ctx, tx, s.AccountID, "quest-gift:signpost:topup", "quest", now)
 				if e != nil {
 					return nil, e
@@ -96,7 +96,7 @@ func (a *Server) questStep(w http.ResponseWriter, r *http.Request) error {
 			out.Items = step.GetItems()
 			out.Marks = step.GetMarks()
 			out.Papers = step.GetPapers()
-			out.Embers = float64(paid)
+			out.Glims = float64(paid)
 		}
 		s.State.Quests[req.Quest] = step.GetId()
 		s.State.ReachedAt[req.Quest] = now
