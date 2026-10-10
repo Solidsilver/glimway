@@ -68,6 +68,40 @@ test('saddle up answered: the state carries the mount that is out', async (t) =>
   assert.equal(r.link.companions.mountOut, 'Wolf-Shade');
 });
 
+test('saddle up answered: the mount never reads as back in its stall on the way', async (t) => {
+  const r = await rig(t);
+  await online(r);
+  // What the game reads each time it hears the companions changed.
+  const seen: string[] = [];
+  const push = r.events.push.bind(r.events);
+  r.events.push = (...items) => {
+    for (const [e] of items) if (e === EV.companions) seen.push(r.link.companions.mountOut);
+    return push(...items);
+  };
+  const answered = withCompanions(2, { mountOut: 'Wolf-Shade', mountHome: 'home:12' });
+  r.server.on('POST /api/stable/out', env(answered, { mountOut: { companions: answered.companions } }));
+  assert.deepEqual(await r.link.mountOut('home:12', 1, 'Wolf-Shade'), { ok: true });
+  assert.ok(seen.length > 0, 'the game heard it come out');
+  assert.deepEqual(seen.filter((m) => m !== 'Wolf-Shade'), [], 'never back in its stall in between');
+  assert.equal(r.link.companions.mountOut, 'Wolf-Shade');
+});
+
+test('saddle up holds the world from the press, not from the send (an M right after E waits for the answer)', async (t) => {
+  const r = await rig(t);
+  await online(r);
+  const release = r.server.hold('POST /api/stable/out');
+  const answered = withCompanions(2, { mountOut: 'Wolf-Shade', mountHome: 'home:12' });
+  r.server.on('POST /api/stable/out', env(answered, { mountOut: { companions: answered.companions } }));
+  const done = r.link.mountOut('home:12', 1, 'Wolf-Shade');
+  // Before the outbox write lands: already busy, so the world isn't live.
+  assert.equal(r.session.remoteBusy, true);
+  assert.deepEqual(await r.link.stableExtend('home:12'), { ok: false, code: 'busy' }, 'a second connected operation waits its turn');
+  release();
+  assert.deepEqual(await done, { ok: true });
+  assert.equal(r.session.remoteBusy, false);
+  assert.equal(r.link.companions.mountOut, 'Wolf-Shade');
+});
+
 test('Go home queues offline and clears the mount at once', async (t) => {
   const r = await rig(t, { state: withCompanions(1, { mountOut: 'Wolf-Shade', mountHome: 'home:12' }) });
   assert.equal(r.link.companions.mountOut, 'Wolf-Shade');
