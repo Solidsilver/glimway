@@ -9,7 +9,7 @@ import (
 func TestNewRandomIdentityMailAndRemoval(t *testing.T) {
 	x := newRig(t)
 	for _, subject := range []string{"sender-subject", "recipient-subject"} {
-		if err := x.db.Allow(context.Background(), subject, true); err != nil {
+		if err := x.db.Allow(context.Background(), subject, true, x.now.Load()); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -20,7 +20,7 @@ func TestNewRandomIdentityMailAndRemoval(t *testing.T) {
 	if first.AccountID == "sender-subject" || len(first.AccountID) != 64 {
 		t.Fatal("new account id is not random", first.AccountID)
 	}
-	invite, err := x.db.Invite(context.Background(), first.WorldID)
+	invite, err := x.db.Invite(context.Background(), first.WorldID, x.now.Load())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestNewRandomIdentityMailAndRemoval(t *testing.T) {
 	if err = x.db.DB.QueryRow("SELECT count(*) FROM mail WHERE returned_at IS NOT NULL").Scan(&returned); err != nil || returned != 0 {
 		t.Fatal("random-id recipient was treated as removed")
 	}
-	if err = x.db.Allow(context.Background(), "recipient-subject", false); err != nil {
+	if err = x.db.Allow(context.Background(), "recipient-subject", false, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	x.expect("GET", "/api/state", nil, recipient, 401)
@@ -65,7 +65,7 @@ func TestRandomIdentityGivingMakerRevocationAndSyncSubject(t *testing.T) {
 		t.Fatal("fixture conflated accounts and subjects")
 	}
 	invite := inviteReq(t, x, "POST", "/api/invites", makerCookie, 200).Code
-	if err := x.db.Allow(context.Background(), "maker-subject", false); err != nil {
+	if err := x.db.Allow(context.Background(), "maker-subject", false, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	if count(t, x.db, "SELECT count(*) FROM invites WHERE created_by=? AND code_hash=? AND revoked_at IS NOT NULL", maker.AccountID, store.Hash(invite)) != 1 {

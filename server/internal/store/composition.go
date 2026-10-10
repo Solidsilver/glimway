@@ -75,7 +75,7 @@ func PlayerState(ctx context.Context, tx *sql.Tx, s Snapshot) (*contract.PlayerS
 		if err != nil {
 			return nil, err
 		}
-		out.Companions = &contract.Companions{FollowPet: c.FollowPet, YardPets: c.YardPets, MountOut: c.MountOut, MountHome: c.MountHome}
+		out.Companions = CompanionsProto(c)
 	}
 	// Report acknowledgments and independent causal watermarks.
 	err := tx.QueryRowContext(ctx, "SELECT report_seq,report_client,report_generation,vitals_set_version,vitals_at,cast_ready_at FROM player_vitals WHERE account_id=?", s.AccountID).Scan(&out.Vitals.ReportSeq, &out.Vitals.ReportClient, &out.Vitals.ReportGeneration, &out.Vitals.VitalsSetVersion, &out.Vitals.VitalsAt, &out.Vitals.CastReadyAt)

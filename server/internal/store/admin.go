@@ -5,11 +5,10 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"fmt"
-	"time"
 )
 
 // ClearFlag changes no balances, marks, pending lots or healing baselines.
-func (s *Store) ClearFlag(ctx context.Context, id string) error {
+func (s *Store) ClearFlag(ctx context.Context, id string, now int64) error {
 	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -28,13 +27,13 @@ func (s *Store) ClearFlag(ctx context.Context, id string) error {
 		if _, err = tx.ExecContext(ctx, "UPDATE players SET flagged_at=NULL WHERE account_id=?", id); err != nil {
 			return err
 		}
-		if _, err = tx.ExecContext(ctx, "INSERT INTO ledger(account_id,currency,delta,earned_delta,reason,ref,created_at) VALUES(?,'embers',0,0,'flag-cleared','cli',?)", id, time.Now().Unix()); err != nil {
+		if _, err = tx.ExecContext(ctx, "INSERT INTO ledger(account_id,currency,delta,earned_delta,reason,ref,created_at) VALUES(?,'embers',0,0,'flag-cleared','cli',?)", id, now); err != nil {
 			return err
 		}
 	}
 	return tx.Commit()
 }
-func (s *Store) RevokeInvite(ctx context.Context, hash string) error {
+func (s *Store) RevokeInvite(ctx context.Context, hash string, now int64) error {
 	decoded, err := hex.DecodeString(hash)
 	if err != nil || len(decoded) != 32 {
 		return fmt.Errorf("invalid invite hash")
@@ -53,7 +52,7 @@ func (s *Store) RevokeInvite(ctx context.Context, hash string) error {
 	if used.Valid {
 		return fmt.Errorf("invite already used")
 	}
-	if _, err = tx.ExecContext(ctx, "UPDATE invites SET revoked_at=COALESCE(revoked_at,?) WHERE code_hash=?", time.Now().Unix(), hash); err != nil {
+	if _, err = tx.ExecContext(ctx, "UPDATE invites SET revoked_at=COALESCE(revoked_at,?) WHERE code_hash=?", now, hash); err != nil {
 		return err
 	}
 	return tx.Commit()

@@ -171,7 +171,7 @@ func validProof(w http.ResponseWriter, r *http.Request) {
 func TestRound3FailedProofsPerClaimedUser(t *testing.T) {
 	x := newRig(t)
 	for _, id := range []string{"alice", "bob"} {
-		if err := x.db.Allow(t.Context(), id, true); err != nil {
+		if err := x.db.Allow(t.Context(), id, true, x.now.Load()); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -208,7 +208,7 @@ func TestRound3FailedProofsPerClaimedUser(t *testing.T) {
 }
 func TestRound3ConcurrentFailedProofReservations(t *testing.T) {
 	x := newRig(t)
-	if err := x.db.Allow(t.Context(), "alice", true); err != nil {
+	if err := x.db.Allow(t.Context(), "alice", true, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	x.api = New(x.db, x.api.Habitica, Config{LoginConcurrency: 10, Now: x.api.Config.Now, Logger: x.api.Config.Logger})
@@ -250,7 +250,7 @@ func TestRound3ConcurrentFailedProofReservations(t *testing.T) {
 }
 func TestRound3ProofQuotaIgnoresUpstreamAndGlobalFailures(t *testing.T) {
 	x := newRig(t)
-	if err := x.db.Allow(t.Context(), "alice", true); err != nil {
+	if err := x.db.Allow(t.Context(), "alice", true, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	up := proofUpstream(x, func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(500) })
@@ -295,7 +295,7 @@ func TestRound3StateLeaseActivityAndDisplayName(t *testing.T) {
 	p := profile("alice", 1, 0, 20)
 	p.Name = "Lantern Keeper"
 	x.set(p)
-	if err := x.db.Allow(t.Context(), "alice", true); err != nil {
+	if err := x.db.Allow(t.Context(), "alice", true, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	status, s, _, c := x.request("POST", "/api/session", map[string]any{"userId": "alice", "token": secret}, nil)
@@ -387,7 +387,7 @@ func TestRound3InviteListQuotasAndReadableCodeLifecycle(t *testing.T) {
 	list(0, 2)
 	inviteReq(t, x, "POST", "/api/invites", c, 409)
 	// A readable CLI invite accepts alternate separators and remains single-use.
-	cli, err := x.db.Invite(t.Context(), "")
+	cli, err := x.db.Invite(t.Context(), "", x.now.Load())
 	if err != nil {
 		t.Fatal(err)
 	}

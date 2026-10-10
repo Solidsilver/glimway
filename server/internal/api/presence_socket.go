@@ -231,9 +231,9 @@ func (a *Server) presenceReader(p *presencePeer) {
 		if pos := message.GetPos(); pos != nil {
 			outbound := proto.Clone(pos).(*contract.PresencePosition)
 			outbound.AccountId = proto.String(p.identity.ID)
-			// Only the poses this contract names travel on ("riding" |
-			// "fishing"); anything else reads as on foot (3.4).
-			if pose := outbound.GetPose(); pose != "" && pose != "riding" && pose != "fishing" {
+			// Only the poses this contract names travel on (3.4);
+			// anything else reads as on foot.
+			if pose := outbound.GetPose(); poseOf(pose) != pose {
 				outbound.Pose = nil
 			}
 			encoded, encodeErr = encodePresence(outbound)
@@ -306,10 +306,7 @@ func (a *Server) presenceReader(p *presencePeer) {
 				continue
 			}
 			p.lastPos = now
-			pose := position.GetPose()
-			if pose != "riding" && pose != "fishing" {
-				pose = ""
-			}
+			pose := poseOf(position.GetPose())
 			p.pos = &presencePosition{x, y, rules.Position{X: fx, Y: fy}, *position.Moving, pose}
 			h.broadcastEncoded(p, encoded, encodeErr)
 		case *contract.PresenceMessage_Emote:

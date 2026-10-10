@@ -45,11 +45,6 @@ are not a habit: keep messages in the file that owns their domain, and move
 only when a dependency arrangement demands it — never in a way that creates
 an import cycle between the files.
 
-The two moves this release made (both out of `state.proto` into
-`world.proto`, same names and fields): `WorldRef` and `WorldChoice` — they
-are the accepted lines in `scripts/buf-breaking.sh` until the next release
-ships.
-
 Review JSON field names as well as numbers: `buf.yaml` uses FILE breaking
 checks for the wire packages, which can be run against a committed base with
 `GIT_LFS_SKIP_SMUDGE=1 node_modules/.bin/buf breaking --against

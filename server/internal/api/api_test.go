@@ -84,7 +84,7 @@ func TestInviteRaceAndWorld(t *testing.T) {
 	x := newRig(t)
 	owner, _ := x.ready("owner")
 	world := x.expect("GET", "/api/state", nil, owner, 200).WorldID
-	code, err := x.db.Invite(context.Background(), world)
+	code, err := x.db.Invite(context.Background(), world, x.now.Load())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +134,7 @@ func TestAccessAndSessionSliding(t *testing.T) {
 	x.now.Add(86400)
 	x.expect("GET", "/api/state", nil, c, 401)
 	c = x.login("alice", "")
-	if err := x.db.Allow(context.Background(), "alice", false); err != nil {
+	if err := x.db.Allow(context.Background(), "alice", false, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	x.expect("GET", "/api/state", nil, c, 401)

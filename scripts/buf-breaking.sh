@@ -16,9 +16,9 @@ BUF=node_modules/.bin/buf
 # on the tag baseline and the line matches nothing).
 accepted=$(mktemp)
 trap 'rm -f "$accepted"' EXIT
+# One line per accepted message move (buf's exact FILE-rule line); the
+# entries are dropped once a release ships the move.
 cat >"$accepted" <<'EOF'
-proto/glimway/v1/state.proto:1:1:Previously present message "WorldChoice" was deleted from file.
-proto/glimway/v1/state.proto:1:1:Previously present message "WorldRef" was deleted from file.
 EOF
 
 check() {

@@ -22,6 +22,15 @@ import (
 
 const secret = "RECOGNIZABLE-HABITICA-TOKEN-NEVER-PERSIST-9238"
 
+// rigStart is the clock every rig starts on (review findings 4 and 5): a
+// fixed day, never the day the suite happens to run. It is Bloom wick, day 5
+// of the calendar's first year (2026-01-30T00:00:00Z) — a Carting-mark day
+// with no festival on it — so the seasonal tests walk the same calendar
+// every run and the madder stall, the Quiet banks and Carting Day are always
+// reached by an explicit jump. Tests that need another season move the clock
+// there themselves.
+const rigStart = 1769731200
+
 type rig struct {
 	t        *testing.T
 	db       *store.Store
@@ -34,6 +43,8 @@ type rig struct {
 	logs     bytes.Buffer
 	calls    atomic.Int64
 	dir      string
+	// pulses is the hub's ward-pulse timer, fired by hand (review finding 12).
+	pulses *wardPulseQueue
 }
 
 type response struct {
@@ -84,7 +95,7 @@ func fixtureDatabase(t *testing.T, path string) (*store.Store, error) {
 func newRig(t *testing.T) *rig {
 	t.Helper()
 	x := &rig{t: t, accounts: map[string]string{}, profiles: map[string]rules.Profile{}, dir: t.TempDir()}
-	x.now.Store(time.Now().Unix())
+	x.now.Store(rigStart)
 	var err error
 	x.db, err = fixtureDatabase(t, filepath.Join(x.dir, "game.sqlite"))
 	if err != nil {
@@ -172,7 +183,7 @@ func (x *rig) expect(method, path string, body any, c *http.Cookie, code int) re
 func (x *rig) login(id, invite string) *http.Cookie {
 	x.t.Helper()
 	if invite == "" {
-		if err := x.db.Allow(context.Background(), id, true); err != nil {
+		if err := x.db.Allow(context.Background(), id, true, x.now.Load()); err != nil {
 			x.t.Fatal(err)
 		}
 	}

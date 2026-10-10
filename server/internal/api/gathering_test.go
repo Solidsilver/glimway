@@ -135,10 +135,14 @@ func landTiles(h homeView, kind byte, lit bool) [][2]int {
 // homePlayer is a new player (in a world of their own) with a home whose
 // land has lit and unlit trees and a lit boulder. Land is seeded by the
 // world and the gate, and a new world's lane offers the first gates only,
-// so this tries a few worlds.
+// so this tries a few worlds. Each candidate signs in on its own login
+// window: every rig request comes from one address, so without moving the
+// clock the per-IP limiter stops the walk after ten worlds (review finding
+// 6). The clock never moves on its own.
 func (x *rig) homePlayer(name string) (*http.Cookie, response, homeView) {
 	x.t.Helper()
 	for i := 0; i < 40; i++ {
+		x.now.Add(int64(x.api.Config.LoginWindow.Seconds()))
 		id := fmt.Sprintf("%s-%d", name, i)
 		c, s := x.ready(id)
 		var world string

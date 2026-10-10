@@ -59,7 +59,7 @@ func TestNoInviteCodesIntoAPartyWorld(t *testing.T) {
 		t.Fatal("invite list doesn't say party world", raw)
 	}
 	// The CLI can't name it either.
-	if _, err := x.db.Invite(ctx, o.WorldID); err == nil {
+	if _, err := x.db.Invite(ctx, o.WorldID, x.now.Load()); err == nil {
 		t.Fatal("a CLI code named a party's world")
 	}
 	// An older code that names it admits no one (and doesn't reach Habitica).
@@ -82,7 +82,7 @@ func TestNoInviteCodesIntoAPartyWorld(t *testing.T) {
 	}
 	// Allowlisted, the newcomer's code is still refused (it isn't used up),
 	// and they land in a world of their own.
-	if err := x.db.Allow(ctx, "ned", true); err != nil {
+	if err := x.db.Allow(ctx, "ned", true, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	if st, _, e, _ := x.request("POST", "/api/session", map[string]any{"userId": "ned", "token": secret, "invite": old.Code}, nil); st != 200 {
@@ -133,7 +133,7 @@ func TestPartyAdopt(t *testing.T) {
 	if !v.World.Party || !v.PartyHome || v.IsOwner || v.World.Members != 2 || v.PartyWorld != nil || v.Prompt {
 		t.Fatal("bob after adopt", v.raw)
 	}
-	parties, err := x.db.Parties(ctx)
+	parties, err := x.db.Parties(ctx, x.now.Load())
 	if err != nil || len(parties) != 1 || parties[0].WorldID == nil || *parties[0].WorldID != bobWorld || parties[0].OpenedBy == nil || *parties[0].OpenedBy != x.account("bob") || parties[0].Members != 2 {
 		t.Fatal("parties", store.JSON(parties), err)
 	}

@@ -99,6 +99,13 @@ func (a *Server) profileReport(w http.ResponseWriter, r *http.Request) error {
 			s.ClassMark = c
 		}
 	}
+	// An account whose mark never got written (0.4 accounts, and anyone who
+	// never synced a class) remembers the craft from the profile this sync is
+	// about to overwrite: a rebirth's classless sync must not take the hero's
+	// magic away (review finding 2). A classless sync keeps the mark as is.
+	if s.ClassMark == "" {
+		s.ClassMark = rules.ClassMarkOf(s.ImportedProfile)
+	}
 	s.LevelMark = math.Max(s.LevelMark, p.Level)
 	if _, err = tx.ExecContext(ctx, "UPDATE sync_baselines SET level_mark=MAX(level_mark,?),class_mark=CASE WHEN ?!='' THEN ? ELSE class_mark END WHERE account_id=?", p.Level, s.ClassMark, s.ClassMark, s.AccountID); err != nil {
 		return err

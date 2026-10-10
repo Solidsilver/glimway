@@ -33,11 +33,6 @@ func deedHere(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (string, bool,
 	return id, world == s.WorldID, nil
 }
 
-// companionsProto is the resolved view on the wire.
-func companionsProto(c store.Companions) *contract.Companions {
-	return &contract.Companions{FollowPet: c.FollowPet, YardPets: c.YardPets, MountOut: c.MountOut, MountHome: c.MountHome}
-}
-
 // companions chooses the follower and the yard (6.2, `POST /api/companions`):
 // profile source habitica, a deed in this world, each key owned (the
 // follower may also be '' or store.NoFollower), at most
@@ -102,8 +97,8 @@ func (a *Server) companions(w http.ResponseWriter, r *http.Request) error {
 			return nil, err
 		}
 		account = s.AccountID
-		avatar = companionAvatar(c, *p)
-		return &contract.CompanionsResult{Companions: companionsProto(c)}, nil
+		avatar = visualAvatar(*p, c)
+		return &contract.CompanionsResult{Companions: store.CompanionsProto(c)}, nil
 	}, func() {
 		if avatar != nil {
 			a.avatarChanged(account, avatar)

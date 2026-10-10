@@ -82,7 +82,7 @@ func (a *Server) play(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 		wasOut := err == nil
-		if _, err = tx.ExecContext(r.Context(), "UPDATE player_companions SET mount_out='' WHERE account_id=?", s.AccountID); err != nil {
+		if err = store.SendMountHome(r.Context(), tx, s.AccountID); err != nil {
 			return err
 		}
 		if p := s.ImportedProfile; wasOut && p != nil {
@@ -90,7 +90,7 @@ func (a *Server) play(w http.ResponseWriter, r *http.Request) error {
 			if err != nil {
 				return err
 			}
-			avatar, room = companionAvatar(c, *p), homeRoom(world, gate)
+			avatar, room = visualAvatar(*p, c), homeRoom(world, gate)
 		}
 		if _, err = tx.ExecContext(r.Context(), `INSERT INTO player_vitals(account_id,hp,mana,vitals_at,vitals_set_version,report_client,report_generation,cast_ready_at)
  VALUES(?,?,?,?,0,?,?,?) ON CONFLICT(account_id) DO UPDATE SET report_client=excluded.report_client,report_generation=excluded.report_generation,report_seq=0,report_at=NULL,report_basis=0,cast_ready_at=MAX(cast_ready_at,excluded.cast_ready_at)`, s.AccountID, s.State.HP, s.State.Mana, now, req.ClientId, generation, now); err != nil {

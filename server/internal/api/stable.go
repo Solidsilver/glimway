@@ -184,7 +184,7 @@ func (a *Server) stableStall(w http.ResponseWriter, r *http.Request) error {
 			return nil, err
 		}
 		if c.MountOut == "" {
-			if _, err := tx.ExecContext(ctx, "UPDATE player_companions SET mount_out='',mount_home=NULL WHERE account_id=?", s.AccountID); err != nil {
+			if err := store.SendMountHome(ctx, tx, s.AccountID); err != nil {
 				return nil, err
 			}
 		}
@@ -193,7 +193,7 @@ func (a *Server) stableStall(w http.ResponseWriter, r *http.Request) error {
 			return nil, err
 		}
 		account = s.AccountID
-		avatar = companionAvatar(c, *p)
+		avatar = visualAvatar(*p, c)
 		room = homeRoom(s.WorldID, h.Gate)
 		out := &contract.StallResult{}
 		if home != nil {
@@ -255,10 +255,10 @@ func (a *Server) mountOut(w http.ResponseWriter, r *http.Request) error {
 			return nil, err
 		}
 		account = s.AccountID
-		avatar = companionAvatar(c, *p)
+		avatar = visualAvatar(*p, c)
 		// The bay stands empty now: the stable's land hears it (3.4).
 		room = homeRoom(s.WorldID, h.Gate)
-		return &contract.MountOutResult{Companions: companionsProto(c)}, nil
+		return &contract.MountOutResult{Companions: store.CompanionsProto(c)}, nil
 	}, func() {
 		if avatar != nil {
 			a.avatarChanged(account, avatar, room)
@@ -281,7 +281,7 @@ func (a *Server) mountHome(w http.ResponseWriter, r *http.Request) error {
 	err := a.keyedOpStay(w, r, req.Op, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		p := s.ImportedProfile
 		if s.ProfileSource != "habitica" || p == nil {
-			if _, err := tx.ExecContext(ctx, "UPDATE player_companions SET mount_out='' WHERE account_id=?", s.AccountID); err != nil {
+			if err := store.SendMountHome(ctx, tx, s.AccountID); err != nil {
 				return nil, err
 			}
 			return &contract.MountHomeResult{Companions: &contract.Companions{YardPets: []string{}}}, nil
@@ -299,7 +299,7 @@ func (a *Server) mountHome(w http.ResponseWriter, r *http.Request) error {
 			}
 			room = homeRoom(s.WorldID, gate)
 		}
-		if _, err := tx.ExecContext(ctx, "UPDATE player_companions SET mount_out='' WHERE account_id=?", s.AccountID); err != nil {
+		if err := store.SendMountHome(ctx, tx, s.AccountID); err != nil {
 			return nil, err
 		}
 		c, err := store.CompanionsFor(ctx, tx, s.AccountID, s.WorldID, s.ProfileSource, p)
@@ -307,8 +307,8 @@ func (a *Server) mountHome(w http.ResponseWriter, r *http.Request) error {
 			return nil, err
 		}
 		account = s.AccountID
-		avatar = companionAvatar(c, *p)
-		return &contract.MountHomeResult{Companions: companionsProto(c)}, nil
+		avatar = visualAvatar(*p, c)
+		return &contract.MountHomeResult{Companions: store.CompanionsProto(c)}, nil
 	}, func() {
 		switch {
 		case avatar == nil:
@@ -347,8 +347,8 @@ func (a *Server) stableExtend(w http.ResponseWriter, r *http.Request) error {
 		}
 		// The next bay's tiles: two tiles east of the last one (3.2).
 		next := n + 1
-		w, _ := footprint(*stable, 0)
-		ext := rect{*stable.X + w, *stable.Y, 2, 3}
+		stableWidth, _ := footprint(*stable, 0)
+		ext := rect{*stable.X + stableWidth, *stable.Y, 2, 3}
 		if *stable.Scene != "outdoor" {
 			return nil, fail(409, "no-stable")
 		}

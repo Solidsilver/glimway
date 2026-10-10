@@ -270,14 +270,8 @@ func (h holder) stackPlace() stackAt {
 	return stackAt{h.location, h.player}
 }
 
-func nullable(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
-}
 func decorationIDs(ctx context.Context, tx *sql.Tx, from holder, def string, n int) ([]string, error) {
-	rows, err := tx.QueryContext(ctx, "SELECT id FROM homestead_items WHERE location=? AND account_id IS ? AND homestead_id IS ? AND item_def=? AND scene IS NULL ORDER BY id LIMIT ?", from.location, nullable(from.player), nullable(from.home), def, n)
+	rows, err := tx.QueryContext(ctx, "SELECT id FROM homestead_items WHERE location=? AND account_id IS ? AND homestead_id IS ? AND item_def=? AND scene IS NULL ORDER BY id LIMIT ?", from.location, itemmove.Nullable(from.player), itemmove.Nullable(from.home), def, n)
 	if err != nil {
 		return nil, err
 	}
@@ -306,7 +300,7 @@ func moveDecorations(ctx context.Context, tx *sql.Tx, ids []string, from, to hol
 	return err
 }
 func decorationCounts(ctx context.Context, tx *sql.Tx, at holder, out map[string]int) error {
-	rows, err := tx.QueryContext(ctx, "SELECT item_def,count(*) FROM homestead_items WHERE location=? AND account_id IS ? AND homestead_id IS ? GROUP BY item_def ORDER BY item_def", at.location, nullable(at.player), nullable(at.home))
+	rows, err := tx.QueryContext(ctx, "SELECT item_def,count(*) FROM homestead_items WHERE location=? AND account_id IS ? AND homestead_id IS ? GROUP BY item_def ORDER BY item_def", at.location, itemmove.Nullable(at.player), itemmove.Nullable(at.home))
 	if err != nil {
 		return err
 	}

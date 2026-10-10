@@ -4,6 +4,7 @@ import (
 	"context"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestWALMigrationsBackupAndAdmin(t *testing.T) {
@@ -19,13 +20,13 @@ func TestWALMigrationsBackupAndAdmin(t *testing.T) {
 	if s.DB.Stats().MaxOpenConnections != 1 {
 		t.Fatal("not one writer")
 	}
-	if err = s.Allow(context.Background(), "alice", true); err != nil {
+	if err = s.Allow(context.Background(), "alice", true, time.Now().Unix()); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = s.Invite(context.Background(), "nonexistent"); err == nil {
+	if _, err = s.Invite(context.Background(), "nonexistent", time.Now().Unix()); err == nil {
 		t.Fatal("invalid invite world allowed")
 	}
-	code, err := s.Invite(context.Background(), "")
+	code, err := s.Invite(context.Background(), "", time.Now().Unix())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +75,7 @@ func TestWALMigrationsBackupAndAdmin(t *testing.T) {
 			t.Fatal("migration history", applied)
 		}
 	}
-	if err = s.Allow(context.Background(), "alice", false); err != nil {
+	if err = s.Allow(context.Background(), "alice", false, time.Now().Unix()); err != nil {
 		t.Fatal(err)
 	}
 }

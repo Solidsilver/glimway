@@ -129,7 +129,7 @@ func TestFix6PresenceTransientRevalidationKeepsSocket(t *testing.T) {
 	tx.Rollback()
 	alice.join("village")
 	time.Sleep(70 * time.Millisecond)
-	if err := x.db.Allow(context.Background(), "alice", false); err != nil {
+	if err := x.db.Allow(context.Background(), "alice", false, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	alice.closeStatus(presenceUnauthorized)

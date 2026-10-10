@@ -393,13 +393,14 @@ func TestRepairsWeatherCyclesThroughEverything(t *testing.T) {
 // in its content window (openFrom: Cart wick, day 5).
 func TestRepairsHameWaitsForCartingDay(t *testing.T) {
 	x := newRig(t)
-	c, _ := x.ready("alice")
-
 	// The world has mended everything else; only the hame is left, and the
-	// weather clock spent last wick's breakage.
+	// weather clock spent last wick's breakage. The clock moves before the
+	// sign-in: the calendar day here is fixed (review finding 4), never the
+	// day the suite runs.
 	epoch := int64(1767571200) // the calendar's epoch (2026-01-05)
 	cartDay5 := epoch + (5*7+4)*86400
 	x.now.Store(cartDay5 - 86400) // Cart wick, day 4: the window is shut
+	c, _ := x.ready("alice")
 	_, err := x.db.DB.Exec("INSERT INTO village_repairs(world_id, repair_id, mended_by, mended_at, created_at) SELECT id, 'well-rope', NULL, 1, 0 FROM worlds")
 	if err != nil {
 		t.Fatal(err)

@@ -18,6 +18,24 @@ func (e *failure) Error() string { return e.code }
 
 func fail(status int, code string) error { return &failure{status, code} }
 
+// heldRefusal is a refusal whose writes stand (review finding 16). The keyed
+// pipeline's savepoint rolls a refusal's effects back; 5.4's "either way the
+// cast closes" needs one that does not, so a settle whose keep is refused
+// still releases the catch and the line. Only an operation's own apply raises
+// one, and only after writing everything the refusal must keep.
+type heldRefusal struct{ err error }
+
+func (e *heldRefusal) Error() string { return e.err.Error() }
+func (e *heldRefusal) Unwrap() error { return e.err }
+
+// held marks a refusal as one whose writes stand.
+func held(err error) error { return &heldRefusal{err} }
+
+func isHeld(err error) bool {
+	var h *heldRefusal
+	return errors.As(err, &h)
+}
+
 func problem(w http.ResponseWriter, err error) {
 	var f *failure
 	if !errors.As(err, &f) {

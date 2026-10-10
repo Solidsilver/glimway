@@ -478,7 +478,7 @@ func relocate(ctx context.Context, tx *sql.Tx, s *store.Snapshot, target worldRe
 	}
 	// A world move sends the mount that is out home (docs/design/crafts.md
 	// 3.3): each world's stable holds its own mounts.
-	if _, err = tx.ExecContext(ctx, "UPDATE player_companions SET mount_out='' WHERE account_id=?", s.AccountID); err != nil {
+	if err = store.SendMountHome(ctx, tx, s.AccountID); err != nil {
 		return false, 0, err
 	}
 	// Codes they handed out follow them: a friend joins them, not the world

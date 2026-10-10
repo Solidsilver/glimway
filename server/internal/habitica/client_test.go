@@ -22,7 +22,7 @@ func TestWizardUserImportsAsMageWithClassBonus(t *testing.T) {
 		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_, _ = w.Write([]byte(strings.Replace(wizardUser, "%s", class, 1)))
 		}))
-		p, err := New(s.URL, "tag").Verify(context.Background(), "vesper", "secret")
+		p, err := New(s.URL, "tag").VerifyLimited(context.Background(), "vesper", "secret", nil)
 		s.Close()
 		if err != nil {
 			t.Fatalf("class %q rejected: %v", class, err)
@@ -54,7 +54,7 @@ func TestRetryAfterOnce(t *testing.T) {
 			_, _ = w.Write([]byte(valid))
 		}))
 		c := New(s.URL, "creator-app")
-		p, err := c.Verify(context.Background(), "alice", "secret")
+		p, err := c.VerifyLimited(context.Background(), "alice", "secret", nil)
 		s.Close()
 		if n.Load() != 2 {
 			t.Fatalf("retried %d times", n.Load())
@@ -78,7 +78,7 @@ func TestUpstreamErrorsAreScrubbedAndRedirectsBlocked(t *testing.T) {
 			w.WriteHeader(status)
 			_, _ = w.Write([]byte("secret"))
 		}))
-		_, err := New(s.URL, "creator-app").Verify(context.Background(), "alice", "secret")
+		_, err := New(s.URL, "creator-app").VerifyLimited(context.Background(), "alice", "secret", nil)
 		s.Close()
 		if err == nil || strings.Contains(err.Error(), "secret") || calls.Load() != 1 {
 			t.Fatalf("unsafe error/retry: %v", err)
@@ -88,7 +88,7 @@ func TestUpstreamErrorsAreScrubbedAndRedirectsBlocked(t *testing.T) {
 		_, _ = w.Write([]byte(strings.Replace(valid, `"alice"`, `"bob"`, 1)))
 	}))
 	defer s.Close()
-	if _, err := New(s.URL, "tag").Verify(context.Background(), "alice", "secret"); err == nil {
+	if _, err := New(s.URL, "tag").VerifyLimited(context.Background(), "alice", "secret", nil); err == nil {
 		t.Fatal("identity mismatch accepted")
 	}
 }
@@ -105,7 +105,7 @@ func TestRateLimitWaitCancellation(t *testing.T) {
 	defer s.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
-	if _, err := New(s.URL, "tag").Verify(ctx, "alice", "secret"); err == nil {
+	if _, err := New(s.URL, "tag").VerifyLimited(ctx, "alice", "secret", nil); err == nil {
 		t.Fatal("cancelled login succeeded")
 	}
 }
