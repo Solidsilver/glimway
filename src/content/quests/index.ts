@@ -128,8 +128,8 @@ function stepDialogue(quest: QuestDef, step: QuestStepDef, talk: StepTalk, ctx: 
     const note =
       g.why === 'short'
         ? `Needs ${plural(g.need, itemDef(g.def)?.name.toLowerCase() ?? g.def)}`
-        : g.why === 'short-embers'
-          ? `Needs ${plural(g.need, 'ember')}`
+        : g.why === 'short-glims'
+          ? `Needs ${plural(g.need, 'glim')}`
           : 'Needs a connection';
     const choices: DialogueChoice[] = offer ? [{ text: offer.text, note, disabled: true }, { text: 'Not yet', dismiss: true }] : [];
     return { speaker: talk.speaker, lines, key, ...(choices.length ? { choices } : {}) };
@@ -231,7 +231,7 @@ export function questSpotTalk(spot: string, ctx: QuestTalkContext): Dialogue | n
 export function questSpotLabel(spot: string, ctx: QuestTalkContext): string | null {
   for (const { quest, step } of stepsBy('use', spot, ctx.quests, ctx.needs)) {
     if (!talkFor(quest, step)) continue;
-    const cost = step.gate?.embers ? ` · ${plural(step.gate.embers, 'ember')}` : '';
+    const cost = step.gate?.glims ? ` · ${plural(step.gate.glims, 'glim')}` : '';
     return `${step.goal ?? talkFor(quest, step)!.speaker}${cost}`;
   }
   return spot === 'sponge-bowl' ? 'Look in the bowl' : null;

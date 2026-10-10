@@ -66,7 +66,7 @@ export function buildRoom(gate: number, doorstep: { tx: number; ty: number }): W
     mural: null,
     shrine: null,
     villageLantern: null,
-    emberSpots: [],
+    glimSpots: [],
     spawn: { ...ROOM_ENTRY }
   }
 }

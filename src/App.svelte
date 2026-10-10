@@ -65,8 +65,8 @@
   import Icon from './ui/Icon.svelte'
   import ConnectGuide from './ui/ConnectGuide.svelte'
   import { loadRemembered } from './lib/habitica/remembered'
-  import { XP_PER_EMBER } from './lib/embers'
-  import { emberLine, titleChoice, unreachableCopy } from './content/connect-guide'
+  import { XP_PER_GLIM } from './lib/glims'
+  import { glimLine, titleChoice, unreachableCopy } from './content/connect-guide'
   import { connectSession, isConnected } from './ui/habitica-local'
   import { accountName, api, connectedSession, probeServer } from './ui/account'
   import { AccountFlow } from './ui/account-flow.svelte'
@@ -160,11 +160,9 @@
       }
       ui.stats = p
     }
-    // The purse (purse-and-wardrobe.md 2.1): its card, the HUD's gold and the Hero page read it.
+    // Today's top-ups (silas-yard.md 1.5): the Menu's glims block and the consent card read them.
     const onPurse = (p: PurseView) => {
       ui.purse = p
-      ui.stats = { ...ui.stats, gold: p.gold }
-      if (pendingStats) pendingStats = { ...pendingStats, gold: p.gold }
     }
     const onQuest = (p: QuestPayload) => {
       // The first snapshot after load is a reading, not a change.
@@ -942,7 +940,7 @@
               <div class="choice-col">
                 <button type="button" class="primary continue" data-testid="connect-hero" onclick={() => (titleView = 'guide')}>
                   <span class="big">{titleChoice.habitica}</span>
-                  <span class="meta">{emberLine(XP_PER_EMBER)}</span>
+                  <span class="meta">{glimLine(XP_PER_GLIM)}</span>
                 </button>
               </div>
             {/if}

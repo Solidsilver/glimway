@@ -181,7 +181,7 @@ test('DEMO_CHARACTER has the contract shape', () => {
   }
 });
 
-/** Story text stays in-world: embers and warmth, never real-life apps or tallies. */
+/** Story text stays in-world: glims and warmth, never real-life apps or tallies. */
 const OUT_OF_WORLD = /\b(habitica|xp|habits?|tasks?|to-?dos?|dailies|streaks?|app)\b/i;
 
 test('story dialogue lines fit the box (160 characters) and stay in-world', async () => {
@@ -201,7 +201,7 @@ test('story dialogue lines fit the box (160 characters) and stay in-world', asyn
     }
   }
   const builder = expansion.BUILDER_NPC_DATA.dialogue;
-  for (const d of [builder.firstMeeting, builder.offerCampsite, builder.sellDecorations, builder.notEnoughEmbers, builder.afterUpgrade]) {
+  for (const d of [builder.firstMeeting, builder.offerCampsite, builder.sellDecorations, builder.notEnoughGlims, builder.afterUpgrade]) {
     lines.push(...d.lines);
   }
   lines.push(...builder.idleLines, ...Object.values(expansion.NEW_NPC_LINES).flat());

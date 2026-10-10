@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { linkStatus, serverState, CONTRACT } from './connected'
 import { waitForLive, expectToast } from './helpers'
-import { atMyMailbox, claimDeed, earnEmbers, earnPlenty, freshPlayer, fund, go, homes, intoCottage, myHome, place, readOn, silasSays } from './home-helpers'
+import { atMyMailbox, claimDeed, earnGlims, earnPlenty, freshPlayer, fund, go, homes, intoCottage, myHome, place, readOn, silasSays } from './home-helpers'
 
 /**
  * Regressions for the phase 5 review, against the real
@@ -40,9 +40,9 @@ async function loseNextAnswer(page: Page, path: string): Promise<void> {
 test('finding 2: a 200 with a truncated body is replayed with the same key, never a second purchase', async ({ page }) => {
   test.setTimeout(150_000)
   const id = await freshPlayer(page)
-  await earnEmbers(page, id)
+  await earnGlims(page, id)
   await claim(page)
-  const before = (await serverState(page)).body.state.embers
+  const before = (await serverState(page)).body.state.glims
   await silasSays(page, /See what you’ve finished/)
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
   const keys: string[] = []
@@ -57,7 +57,7 @@ test('finding 2: a 200 with a truncated body is replayed with the same key, neve
   expect(keys).toHaveLength(2)
   expect(keys[1]).toBe(keys[0])
   expect((await myHome(page, id)).items.filter((i) => i.itemDef === 'wooden-stool')).toHaveLength(1)
-  expect((await serverState(page)).body.state.embers).toBe(before - 2)
+  expect((await serverState(page)).body.state.glims).toBe(before - 2)
   await page.unrouteAll({ behavior: 'wait' })
 
   // Unreadable twice: the outcome is unknown; asking again resolves it, not a third stool.
@@ -69,7 +69,7 @@ test('finding 2: a 200 with a truncated body is replayed with the same key, neve
   await expect(shop.locator('.msg')).toContainText('went through after all')
   expect(new Set(keys.slice(2)).size).toBe(1)
   expect((await myHome(page, id)).items.filter((i) => i.itemDef === 'wooden-stool')).toHaveLength(2)
-  expect((await serverState(page)).body.state.embers).toBe(before - 4)
+  expect((await serverState(page)).body.state.glims).toBe(before - 4)
   await expect.poll(async () => (await homes(page)).mine?.items.length).toBe(2)
 })
 
@@ -96,7 +96,7 @@ test('finding 3: giving to a project updates the board’s carried balance at on
 test('finding 4: a lost parcel send of a piece leaves Arrange showing it gone once recovered', async ({ page, browser, baseURL }) => {
   test.setTimeout(180_000)
   const a = await freshPlayer(page, 'Tansy')
-  await earnEmbers(page, a)
+  await earnGlims(page, a)
   await claim(page)
   await silasSays(page, /See what you’ve finished/)
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })

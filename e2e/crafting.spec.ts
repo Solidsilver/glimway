@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { sql, accountOf, CONTRACT, served } from './connected'
 import { dialogueState, frames, waitForLive, waitGame } from './helpers'
-import { claimDeed, earnEmbers, earnPlenty, fund, freshPlayer, homes, intoCottage, myHome, place, readOn, shot, silasSays } from './home-helpers'
+import { claimDeed, earnGlims, earnPlenty, fund, freshPlayer, homes, intoCottage, myHome, place, readOn, shot, silasSays } from './home-helpers'
 
 /**
  * Crafting at the hearth and the writing desk, against the real Go server
@@ -39,10 +39,10 @@ async function carryTo(page: Page, piece: string, x: number, y: number): Promise
   await expect.poll(async () => (await homes(page)).placement?.spot).toEqual({ x, y, rotation: 0 })
 }
 
-/** Raise a cottage on a fresh deed (embers funded, tier 1); returns the player's id. */
+/** Raise a cottage on a fresh deed (glims funded, tier 1); returns the player's id. */
 async function cottagePlayer(page: Page): Promise<string> {
   const id = await freshPlayer(page)
-  await earnEmbers(page, id)
+  await earnGlims(page, id)
   await claimDeed(page)
   await silasSays(page, /Raise a cottage/)
   await readOn(page, /Steady as a route stone/)
@@ -50,7 +50,7 @@ async function cottagePlayer(page: Page): Promise<string> {
   return id
 }
 
-/** A cottage with the Workshop built on (tier 2); one round of embers, and
+/** A cottage with the Workshop built on (tier 2); one round of glims, and
  * the workshop build's materials in the pack before Silas first reads them. */
 async function workshopPlayer(page: Page): Promise<string> {
   const id = await freshPlayer(page)

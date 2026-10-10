@@ -216,7 +216,7 @@ function wear(v: GeneratedWearResult | undefined): WearResult | undefined {
   };
 }
 
-/** Goods on the move, projected (kind in the vocabulary, empty optionals gone). Reads only: a gold letter shows as kind "gold" (display only), while a request Asset still can't carry it. */
+/** Goods on the move, projected (kind in the vocabulary, empty optionals gone). Reads only: a glim letter shows as kind "glims" (display only), while a request Asset still can't carry it. */
 export function projectAsset(v: { kind: string; id: string; qty: number; instance: string; maker?: string } | undefined): AssetView | undefined {
   if (!v) return undefined;
   if (!READ_ASSET_KINDS.includes(v.kind)) throw new Error('invalid asset kind');

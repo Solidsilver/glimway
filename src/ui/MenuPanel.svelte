@@ -168,7 +168,7 @@
   {#if import.meta.env.DEV && onDev}
     <section class="card dev-row" data-testid="menu-dev">
       <h3 class="section-title"><Icon name="key" size={14} /> Dev</h3>
-      <p class="fine">Local playtesting: give yourself embers, materials and items. Only in dev builds. Key: <span class="kbd">`</span></p>
+      <p class="fine">Local playtesting: give yourself glims, materials and items. Only in dev builds. Key: <span class="kbd">`</span></p>
       <button type="button" onclick={onDev}>Open dev mode</button>
     </section>
   {/if}

@@ -56,8 +56,8 @@ export interface OutboxEntry {
   offline: boolean;
   /** A fall's predicted recovery (the vitals overlay's point for its answer), stored with it. */
   fall?: { hp: number; mana: number };
-  /** A gold mutation's predicted purse change (a buy, letter or give: −; a letter collected or recalled: +), stored with it. */
-  gold?: number;
+  /** A glims mutation's predicted balance change (a buy, letter or give: −; a letter collected or recalled: +), stored with it. */
+  glims?: number;
 }
 
 export interface OutboxRecord {
@@ -103,8 +103,8 @@ function normalizeEntry(raw: unknown): OutboxEntry | null {
   }
   const f = raw.fall;
   const fall = isObj(f) && typeof f.hp === 'number' && typeof f.mana === 'number' && f.hp >= 0 && f.mana >= 0 ? { hp: f.hp, mana: f.mana } : undefined;
-  const gold = kind === 'mutation' && typeof raw.gold === 'number' && Number.isSafeInteger(raw.gold) && raw.gold !== 0 ? raw.gold : undefined;
-  return { id, kind: kind as OutboxKind, path, key, body, contract, createdAt, sent: raw.sent === true, barrier: raw.barrier === true, offline: raw.offline === true, ...(kind === 'fall' && fall ? { fall } : {}), ...(gold !== undefined ? { gold } : {}) };
+  const glims = kind === 'mutation' && typeof raw.glims === 'number' && Number.isSafeInteger(raw.glims) && raw.glims !== 0 ? raw.glims : undefined;
+  return { id, kind: kind as OutboxKind, path, key, body, contract, createdAt, sent: raw.sent === true, barrier: raw.barrier === true, offline: raw.offline === true, ...(kind === 'fall' && fall ? { fall } : {}), ...(glims !== undefined ? { glims } : {}) };
 }
 
 function normalizeReports(raw: unknown): StoredReports | null {

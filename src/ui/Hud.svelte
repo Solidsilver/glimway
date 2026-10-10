@@ -4,10 +4,12 @@
   import { calendarLine, MARK_NOTES } from '../lib/village'
   import { ui, type AbilitySlot, type Gain } from './store.svelte'
   import type { KitMove } from '../lib/combat'
-  import { EMBER_COSTS } from '../lib/embers'
+  import { GLIM_COSTS } from '../lib/glims'
   import { isTouchFirst } from './device'
   import Icon from './Icon.svelte'
   import ArtIcon from './ArtIcon.svelte'
+  import Glim from './Glim.svelte'
+  import { glimsPhrase } from '../content/purse'
   import { offlineCopy } from '../content/connected'
   import { presenceCopy } from '../content/presence'
   import { papers } from './papers.svelte'
@@ -71,19 +73,17 @@
   /** What's in hand (src/game/held.ts): its icon on the E slot, the belt beside it. */
   const heldDef = $derived(heldUi.slot?.itemDef ?? null)
   let objectiveOpen = $state(false)
-  const showEmbers = $derived(ui.stats.embers > 0 || ui.vitalsSource === 'imported')
-  /** Gold beside embers on desktop once the purse holds some (purse-and-wardrobe.md 2.1; phones: the Hero page and the Menu). */
-  const showGold = $derived(!touch && (ui.stats.gold ?? 0) > 0)
+  const showGlims = $derived(ui.stats.glims > 0 || ui.vitalsSource === 'imported')
   /** Phones show the numbers on the bars only when asked or when health runs low. */
   let numbersOpen = $state(false)
   const showNumbers = $derived(!touch || numbersOpen || lowHp)
   /** Bumps when the balance grows, to replay the little glow. */
-  let emberPulse = $state(0)
-  let lastEmbers = -1
+  let glimPulse = $state(0)
+  let lastGlims = -1
   $effect(() => {
-    const n = ui.stats.embers
-    if (lastEmbers >= 0 && n > lastEmbers) emberPulse += 1
-    lastEmbers = n
+    const n = ui.stats.glims
+    if (lastGlims >= 0 && n > lastGlims) glimPulse += 1
+    lastGlims = n
   })
 
   // ---- the place name: it changes over in place, and says where you came from
@@ -113,7 +113,7 @@
     else if ((ui.link?.status === 'online' || ui.link?.status === 'offline') && ui.link.trouble) out.push({ id: 'trouble', icon: 'cloud', text: offlineCopy.troubleChip, why: offlineCopy.troubleTitle, tone: 'trouble', testid: 'net-trouble' })
     else if (ui.link?.status === 'offline') out.push({ id: 'offline', icon: 'cloud', text: offlineCopy.chip, why: offlineCopy.chipTitle, tone: 'off', testid: 'net-offline' })
     if (presenceLive && ui.presence.here > 0) out.push({ id: 'here', icon: 'person', text: presenceCopy.here(ui.presence.here), why: presenceCopy.hereTitle, tone: 'here', testid: 'presence-here' })
-    if (resting) out.push({ id: 'resting', icon: 'heart', text: 'Resting', why: `Resting in Hearthwick: heal on Habitica and sync, or rest by the lantern with ${EMBER_COSTS.rest} embers earned on Habitica.`, tone: 'trouble' })
+    if (resting) out.push({ id: 'resting', icon: 'heart', text: 'Resting', why: `Resting in Hearthwick: heal on Habitica and sync, or rest by the lantern with ${GLIM_COSTS.rest} glims earned on Habitica.`, tone: 'trouble' })
     return out
   })
   let openChip = $state<string | null>(null)
@@ -150,18 +150,14 @@
   </span>
 {/snippet}
 
-{#snippet embers()}
-  {#if showEmbers}
-    {#key emberPulse}
-      <span class="embers" class:pulse={emberPulse > 0} title="Embers: earned from your Habitica XP, spent at lanterns" aria-label={`${ui.stats.embers} embers`}>
-        <Icon name="ember" size={13} />{ui.stats.embers}
+{#snippet glims()}
+  <!-- One counter, glims, on desktop and phones (silas-yard.md 1.6). -->
+  {#if showGlims}
+    {#key glimPulse}
+      <span class="glims" class:pulse={glimPulse > 0} title="Glims: earned from your Habitica XP, spent on rests, lanterns, sellers and friends" aria-label={glimsPhrase(ui.stats.glims)} data-testid="hud-glims">
+        <Glim size={13} />{ui.stats.glims.toLocaleString('en-US')}
       </span>
     {/key}
-  {/if}
-  {#if showGold}
-    <span class="gold" title="Gold in your purse: moved in from Habitica, for sellers, shelves and friends" aria-label={`${ui.stats.gold} gold`} data-testid="hud-gold">
-      <ArtIcon art="purse-gold-hud" name="coin" size={13} />{ui.stats.gold.toLocaleString('en-US')}
-    </span>
   {/if}
 {/snippet}
 
@@ -305,7 +301,7 @@
   {#if touch}
     <div class="strip panel">
       {@render bars()}
-      {@render embers()}
+      {@render glims()}
       <span class="place"><Icon name="lantern" size={12} />{@render placeName()}</span>
     </div>
     <div class="goalbar panel" class:open={objectiveOpen}>
@@ -318,7 +314,7 @@
       <div class="place">
         <Icon name="lantern" size={14} />
         {@render placeName()}
-        {@render embers()}
+        {@render glims()}
       </div>
       <div class="row chips">
         {@render statusChips()}
@@ -511,7 +507,7 @@
   .card .chips:empty {
     display: none;
   }
-  .embers {
+  .glims {
     margin-left: auto;
     flex: none;
     display: inline-flex;
@@ -527,35 +523,14 @@
     box-shadow: 0 2px 0 var(--wood-dark);
     font-family: var(--font-display);
   }
-  .embers :global(.icon) {
-    color: var(--ember-deep);
-  }
-  .gold {
-    flex: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    margin-left: 4px;
-    padding: 1px 8px 1px 6px;
-    font-size: 14px;
-    letter-spacing: 0.02em;
-    color: #4a3410;
-    background: linear-gradient(180deg, #fff1b8, #f2d270);
-    border: 2px solid var(--wood-dark);
-    border-radius: 999px;
-    box-shadow: 0 2px 0 var(--wood-dark);
-    font-family: var(--font-display);
-  }
-  .gold :global(.icon),
-  .gold :global(.art-icon) {
-    color: var(--gold-deep);
+  .glims :global(.art-icon) {
     width: 13px;
     height: 13px;
   }
-  .embers.pulse {
-    animation: ember-pop 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.4);
+  .glims.pulse {
+    animation: glim-pop 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.4);
   }
-  @keyframes ember-pop {
+  @keyframes glim-pop {
     0% { transform: scale(1); box-shadow: 0 2px 0 var(--wood-dark), 0 0 0 0 rgba(255, 179, 92, 0.9); }
     40% { transform: scale(1.18); box-shadow: 0 2px 0 var(--wood-dark), 0 0 0 8px rgba(255, 179, 92, 0); }
     100% { transform: scale(1); }
@@ -962,7 +937,7 @@
   .slim .num small {
     font-size: 9px;
   }
-  .slim .embers {
+  .slim .glims {
     margin-left: 0;
     padding: 0 6px 0 4px;
     font-size: 12px;

@@ -6,26 +6,26 @@ import { freshPlayer } from './home-helpers'
 /**
  * Dev mode (local playtesting only): the e2e page is Vite dev and its server
  * a `-tags dev` build, so the dev panel and its grant route are here. Opened
- * with the backquote key (and from the Menu), it gives this account embers
+ * with the backquote key (and from the Menu), it gives this account glims
  * and Glimway's own things, and the game shows them like any other answer.
  */
 
 const devPanel = (page: Page) => page.getByRole('dialog', { name: 'Dev' })
-const hud = (page: Page) => page.locator('.hud .embers')
+const hud = (page: Page) => page.locator('.hud .glims')
 
-test('dev mode: ` opens the panel; embers and a material arrive in the HUD and the bag', async ({ page }) => {
+test('dev mode: ` opens the panel; glims and a material arrive in the HUD and the bag', async ({ page }) => {
   await freshPlayer(page)
-  const before = (await serverState(page)).body.state.embers as number
+  const before = (await serverState(page)).body.state.glims as number
 
   await page.keyboard.press('Backquote')
   await expect(devPanel(page)).toBeVisible()
   await expect(devPanel(page).getByTestId('dev-banner')).toHaveText(/Dev mode \(local only\)/)
 
-  // +100 embers: the answer's state is the game's at once.
-  await devPanel(page).getByTestId('dev-embers').click()
-  await expect(page.getByTestId('dev-message')).toContainText('Given: 100 × Embers')
+  // +100 glims: the answer's state is the game's at once.
+  await devPanel(page).getByTestId('dev-glims').click()
+  await expect(page.getByTestId('dev-message')).toContainText('Given: 100 × Glims')
   await expect(hud(page)).toHaveText(String(before + 100))
-  expect((await serverState(page)).body.state.embers).toBe(before + 100)
+  expect((await serverState(page)).body.state.glims).toBe(before + 100)
 
   // One material, found by search, a count of 7.
   await devPanel(page).getByTestId('dev-search').fill('timber')
@@ -56,7 +56,7 @@ test.describe('on a phone', () => {
 
   test('dev mode on a phone: from the Menu, it fits and gives', async ({ page }) => {
     await freshPlayer(page)
-    const before = (await serverState(page)).body.state.embers as number
+    const before = (await serverState(page)).body.state.glims as number
     await page.getByRole('button', { name: /^Menu/ }).tap()
     await page.getByTestId('menu-dev').getByRole('button', { name: 'Open dev mode' }).tap()
     await expect(devPanel(page)).toBeVisible()
@@ -67,7 +67,7 @@ test.describe('on a phone', () => {
       expect(box.x).toBeGreaterThanOrEqual(0)
       expect(box.x + box.width).toBeLessThanOrEqual(vw)
     }
-    await devPanel(page).getByTestId('dev-embers').tap()
+    await devPanel(page).getByTestId('dev-glims').tap()
     await expect(hud(page)).toHaveText(String(before + 100))
   })
 })

@@ -10,7 +10,7 @@ import { expectStage, expectToast, readDialogue, openTalk, talkThrough, waitForL
  * rather than the whole game.
  *
  * Needs A2 (the server takes `quest-step` for every quest, pays see-mara's
- * 5 embers) to pass.
+ * 5 glims) to pass.
  */
 type QuestsHook = { quests: Record<string, string> }
 const step = (page: Page, quest: string) => page.evaluate((q) => (window as unknown as { __fsQuests: () => QuestsHook }).__fsQuests().quests[q], quest)
@@ -69,11 +69,11 @@ test('the opening: Orrin, the finger, the lean in the journal, Mara’s ledger, 
   await readDialogue(page, { pick: /Three fingers off plumb, east/ })
   await expect.poll(() => step(page, 'signpost')).toBe('set-post')
 
-  // Mara writes it in the ledger: five embers, and her top-up of three more for a hero with none.
+  // Mara writes it in the ledger: five glims, and her top-up of three more for a hero with none.
   await warp(page, 'village', 16, 14)
   await talkThrough(page, /Talk to Mara/)
   await expect.poll(() => step(page, 'signpost')).toBe('see-mara')
-  await expectToast(page, /\+8 embers/, { timeout: 15_000 })
+  await expectToast(page, /\+8 glims/, { timeout: 15_000 })
   await expect(goal(page)).toContainText('Light the first lamp past the gate')
 
   // The first lamp: lighting it is the step (its `lit:` mark), with its moment.

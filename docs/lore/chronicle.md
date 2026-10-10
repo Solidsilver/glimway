@@ -40,6 +40,7 @@ One hundred and fifty-five years ago, Hearthwick was founded as a company town. 
     *   *Candle-grade:* Keeps a flame's light a few minutes after the flame is out.
     *   *Hearth-grade:* Lasts an hour. Used in village window-lamps.
     *   *Storm-grade:* Lasts overnight. Extremely rare and highly prized.
+*   **Glims:** A glim is a bead of amber cut to the Count House's measure, holding a glint of light. The Compact paid its lamplighters in them, and Hearthwick never stopped. Glims don't fade. Raw amber is still sold by the drop; a glim is amber someone has already cut and lit.
 
 **The Carters' Compact**
 To ensure the trade flowed safely, the **Carters’ Compact** and the Oak Hall funded the creation of the **Lantern Road**. Keepers placed lamp-stones every bowshot. The toll was a **wheel-tax**: a copper per wheel per lantern-lit league, receipted with a punched token. 
@@ -114,7 +115,7 @@ Because drift-stone moves when unobserved, the Warden walks. But because of its 
 **The Deep Drift and The Echoes**
 The deep drift preserves objects and impressions in a state of "White Quiet." When the outer Wilds turn, the land gives these memories back. 
 *   **Trinkets:** The Wilds spit out objects meant to come home: a dropped work glove, an unlit beeswax candle saved for a birthday, Tam's knotted ox-halter, and eleven stamped road-nails.
-*   **Echoes:** Phantom camps appear—not ghosts, but the woods replaying the mundane, waiting moments of the Six. A player can settle these Echoes by spending embers to light an "owed lamp." Lighting the lamp allows the kettle to finally boil, the tune to finish gracefully, and the memory to file itself away kindly. 
+*   **Echoes:** Phantom camps appear—not ghosts, but the woods replaying the mundane, waiting moments of the Six. A player can settle these Echoes by spending glims to light an "owed lamp." Lighting the lamp allows the kettle to finally boil, the tune to finish gracefully, and the memory to file itself away kindly. 
 
 **Wenna's Secret**
 By the third autumn, a carved pine fox washed down the river Wend and caught in the mill grate. It had a long right ear. Silas always carved his foxes mirror-wise, with the long ear on the left. Hollis carved them with the long ear on the right. 

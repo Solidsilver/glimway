@@ -207,8 +207,8 @@ export function routeSounds(bus: Bus<EventMap>, director: SoundDirector): () => 
       if (kind === 'gain') {
         if (p.gain?.to === 'bag') director.play('pickup')
       } else if (kind === 'error') director.play('fizzle')
-      // Embers (earned, spent, or Silas's work): the coins, never a chime as well.
-      else if (kind === 'info') director.play(p.icon === 'ember' ? 'ember' : 'notice')
+      // Glims (earned, spent, or Silas's work): the coins, never a chime as well.
+      else if (kind === 'info') director.play(p.icon === 'glim' ? 'glim' : 'notice')
     },
     [EV.homeChanged]: (p) => {
       if (p.reason === 'buy' || p.reason === 'upgrade') director.play('confirm')

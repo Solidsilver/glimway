@@ -60,7 +60,7 @@ const ASKS: Record<string, Ask> = {
     line: 'That’s Hollis’s work. Long ear right — he carved his looking in a mirror, the daft man. May I?',
     giveReply: [
       'Thirty years I’ve carved the long ear left. One fox, looking right. Thank you.',
-      'Keep your ember. Hearing that ear the right way round is worth more than the shop holds.'
+      'Keep your glim. Hearing that ear the right way round is worth more than the shop holds.'
     ],
     notYetReply: ['Keep him, then. He’s seen more road than I have.']
   }

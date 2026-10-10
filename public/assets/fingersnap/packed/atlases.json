@@ -104,6 +104,10 @@
   "assets/generated/fingersnap-props.png": "ad450ddc744b78fc9fcd74136b015974e106158a6f252436ffc89c4638f48bd2",
   "assets/generated/fingersnap-shrine.png": "66410699ea96728c271e35edd907389757b027cda7ee8cf87fa63fb6b9d29292",
   "assets/generated/fingersnap-village.png": "b14b4f2cfd9fa6b25712aea709e868d6a2a980f7d8923869043f19d408f46c8c",
+  "assets/generated/glims-pass/frames/glim-hud.png": "78143c8a0ff0567bf66889bbdd6faa26f12ff00216781d195f02dec0bd16c023",
+  "assets/generated/glims-pass/frames/glim.png": "420c98d535afec31f16cf3a9c9570c36c67385fc2cddb3308c41feeef27d2596",
+  "assets/generated/glims-pass/frames/glims-few.png": "028b6b9c6178966cd38950c8c1d73d5ef4b3904ff95281d7ce388e557e4c2c70",
+  "assets/generated/glims-pass/manifest.json": "b1e10349d4ed507a0abd23689bdc1fcaa1f979c66b458c34acbef0c2a5121158",
   "assets/generated/indoors-pass/manifest.json": "7c002164a907320483239b16eb568c9ab8ecb54b9dd286160e3b035fb2e20562",
   "assets/generated/indoors-pass/sheets/edge-clean/cellar-ladder.png": "247bbd8e77d9950f2bd5c980139e8bdec4b8e6d6b20bd492fe6018fb75bcd424",
   "assets/generated/indoors-pass/sheets/edge-clean/chimney-smoke-5.png": "47b54c84740536f8a503c9f30ce4bd8450a3dd668231b1f04199c57a3ff924d3",
@@ -263,6 +267,7 @@
   "fingersnap-props.png": "b4a3525672e1638ce5f18a5a1e7c8d75ff437aab9a08209c5dee73b5a04a7e5b",
   "fingersnap-shrine.webp": "c6d638e3b8091fa8befdd72f44a8cbe862c07cf50c8f248f941a310475b0ce96",
   "fingersnap-village.webp": "55741365aef1f255193af044288f16e68d9fb918b71ad464aad62dab5d42f842",
+  "glims.webp": "64e0c927c1d0dd1dd4a101d2de9b19e6a7fe7ef7a907589815a1b5f50e81214e",
   "ground.webp": "6151b5306345edf22bdea4211e20910d3a83dbe0ede013999a3d65f5a7529d94",
   "indoors.webp": "b0156247256e33a0bcfefe2ab27fc4ad8cf687dd675649a37617ae8b356d7255",
   "items.webp": "ecd2b4d308db0615f50126868db6e5acb40718c52e0c098296c25bf323ceb020",
@@ -4316,6 +4321,34 @@
    "gold-letter": [
     64,
     0,
+    64,
+    64
+   ]
+  }
+ },
+ "glims": {
+  "image": "glims.webp",
+  "size": [
+   111,
+   128
+  ],
+  "density": 64,
+  "frames": {
+   "glim": [
+    0,
+    0,
+    64,
+    64
+   ],
+   "glim-hud": [
+    64,
+    64,
+    32,
+    32
+   ],
+   "glims-few": [
+    0,
+    64,
     64,
     64
    ]

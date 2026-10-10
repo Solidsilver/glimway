@@ -375,7 +375,10 @@ user-facing applications"; Epic MegaGrants targets Unreal and 3D tools (likely).
 services), what came in, and where any surplus goes (art commissions, a better server, saved for
 next year). Lichess and Open Collective projects show how much trust this buys.
 
-### The gold purse
+### The gold purse (glims since 0.6.1)
+
+Since 0.6.1 the purse's gold is gone: a top-up turns Habitica gold into glims, two gold for each
+glim, at most 30 glims a day, and glims never turn back into gold. What follows holds for glims.
 
 Habitica gold isn't money and can't be bought. But subscribers can turn 20 gold into one gem, up
 to 24 or more gems a month, and gems are also sold for money (certain,
@@ -385,9 +388,9 @@ So gold has a small, indirect, capped link to real money.
 Interpretation: a one-way purse that never pays out, isn't sold and isn't traded for cash is far
 from money-transmission rules, and spending it on fixed-price goods is not gambling. Three lines
 keep it that way, and they line up with funding:
-- never sell purse gold, embers or items for money, and never let a donation buy them;
+- never sell glims or items for money, and never let a donation buy them;
 - no real-money trading between players, and say so in the rules;
-- no chance-based rewards (loot draws, gacha) that cost purse gold. Fishing-style random finds that
+- no chance-based rewards (loot draws, gacha) that cost glims. Fishing-style random finds that
   cost time are fine.
 
 ## 7. AI and the Habitica audience

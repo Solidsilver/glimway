@@ -9,6 +9,7 @@ import { CALENDAR, calendarAt, type CalendarDay } from './calendar.ts';
 import { HOMESTEAD_DATA, homeItem } from './homestead.ts';
 import { CRAFTING, PROJECTS, type Recipe } from './workshop.ts';
 import { giftPhrase, giveable, itemDef, itemName } from './items.ts';
+import { glimsPhrase } from '../content/purse.ts';
 import type { Asset, AssetCounts, AssetView, Mail, ProjectView } from './api/types.ts';
 
 export type { CalendarDay };
@@ -200,8 +201,7 @@ export const RECIPES = CRAFTING.recipes;
 // ------------------------------------------------------------ names
 
 export function assetName(a: Pick<AssetView, 'kind' | 'id'>): string {
-  // G-C: the words for glims.
-  if (a.kind === 'glims') return 'Gold';
+  if (a.kind === 'glims') return 'Glims';
   if (a.kind === 'decoration') return homeItem(a.id)?.name ?? a.id;
   return itemName(a.id);
 }
@@ -210,8 +210,8 @@ export function assetName(a: Pick<AssetView, 'kind' | 'id'>): string {
 export function assetPhrase(a: AssetView): string {
   const name = assetName(a);
   if (a.kind === 'thanks') return `a thank-you for ${giftPhrase(a.id, 1)} you made`;
-  // A glim letter (purse-and-wardrobe.md 3.3): "20 gold" (G-C: the words).
-  if (a.kind === 'glims') return `${a.qty.toLocaleString('en-US')} gold`;
+  // A glim letter (silas-yard.md 1.6): "20 glims", "a glim".
+  if (a.kind === 'glims') return glimsPhrase(a.qty);
   if (a.kind === 'material') return `${a.qty} ${name.toLowerCase()}`;
   if (a.qty === 1) return `${/^[aeiou]/i.test(name) ? 'an' : 'a'} ${name}`;
   return `${a.qty} ${name}${name.endsWith('s') ? '' : 's'}`;
@@ -257,8 +257,8 @@ export function settledLine(m: Mail): string {
 }
 
 /** Why the workshop can't be built yet (null: it can). */
-export function workshopShort(embers: number, materials: Record<string, number>): string | null {
-  if (embers < WORKSHOP_TIER.glims) return `Needs ${WORKSHOP_TIER.glims} embers`;
+export function workshopShort(glims: number, materials: Record<string, number>): string | null {
+  if (glims < WORKSHOP_TIER.glims) return `Needs ${WORKSHOP_TIER.glims} glims`;
   for (const [m, n] of Object.entries(WORKSHOP_TIER.materials ?? {})) if ((materials[m] ?? 0) < n) return `Needs ${n} ${m}`;
   return null;
 }

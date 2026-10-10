@@ -135,6 +135,8 @@ export interface PackedManifest {
   crafts: PackedCanvasPack
   /** The 0.6 purse pass (assets/generated/purse-pass/): the coin, purse, wardrobe, price tag and gold letter icons; 64 texels per world tile. */
   purse: PackedCanvasPack
+  /** The 0.6.1 glims pass (assets/generated/glims-pass/): a glim, its HUD size and a few glims; 64 texels per world tile. */
+  glims: PackedCanvasPack
   /** The 16 terrain cells, 4×4, each `cell` texels a side (one 16-px world tile at `density`). */
   terrain: { image: string; size: [number, number]; cell: number; density: number }
   ground: PackedGround

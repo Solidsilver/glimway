@@ -122,12 +122,12 @@ export async function freshPlayer(page: Page, name = 'Tansy', invite?: string, o
   return id
 }
 
-/** Two syncs: the welcome, then a big Habitica day (three levels: about 30 embers). */
-export async function earnEmbers(page: Page, id: string): Promise<void> {
+/** Two syncs: the welcome, then a big Habitica day (three levels: about 30 glims). */
+export async function earnGlims(page: Page, id: string): Promise<void> {
   let balance = 0
-  for (const [lvl, exp, toast] of [[2, 20, /embers into your hand/], [5, 100, /embers — from the XP you earned/]] as const) {
+  for (const [lvl, exp, toast] of [[2, 20, /glims into your hand/], [5, 100, /glims caught the light/]] as const) {
     await setHabitica(id, { lvl, exp })
-    balance = await syncEmberBalance(page)
+    balance = await syncGlimBalance(page)
     await expectToast(page, toast)
     await page.getByRole('button', { name: 'Back to the road' }).click()
   }
@@ -139,7 +139,7 @@ export async function earnEmbers(page: Page, id: string): Promise<void> {
  * page.request read can spend the whole poll budget resolving localhost even
  * after the browser has received the successful sync and shown its toast.
  */
-async function syncEmberBalance(page: Page): Promise<number> {
+async function syncGlimBalance(page: Page): Promise<number> {
   const [response] = await Promise.all([
     page.waitForResponse((r) => r.url().endsWith('/api/profile') && r.request().method() === 'POST'),
     syncFromMenu(page)
@@ -256,12 +256,12 @@ export function giveInstance(habiticaId: string, def: string, opts: { uses?: num
   return instance
 }
 
-/** Three syncs: the welcome, then two big Habitica days (enough embers for a workshop). */
+/** Three syncs: the welcome, then two big Habitica days (enough glims for a workshop). */
 export async function earnPlenty(page: Page, id: string): Promise<void> {
-  await earnEmbers(page, id)
+  await earnGlims(page, id)
   await setHabitica(id, { lvl: 9, exp: 100 })
-  const balance = await syncEmberBalance(page)
-  await expectToast(page, /embers — from the XP you earned/)
+  const balance = await syncGlimBalance(page)
+  await expectToast(page, /glims caught the light/)
   await page.getByRole('button', { name: 'Back to the road' }).click()
   expect(balance).toBeGreaterThanOrEqual(60)
 }

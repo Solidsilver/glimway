@@ -62,19 +62,19 @@ test('setVitals clamps to the maxima, tells the HUD once, and saves on a loss', 
   assert.equal(s.state.hp, 50);
   assert.equal(s.state.mana, 0);
   assert.equal(heard.length, 1, 'no change, no second emit');
-  assert.deepEqual(heard[0].payload, { hp: 50, maxHp: 50, mana: 0, maxMana: 30, embers: s.state.embers, gold: 0 });
+  assert.deepEqual(heard[0].payload, { hp: 50, maxHp: 50, mana: 0, maxMana: 30, glims: s.state.glims });
   assert.equal(timers.length, 1, 'the mana loss is saved soon');
 });
 
-test('embers are earned with a toast; a discovery is recorded once', async () => {
+test('glims are earned with a toast; a discovery is recorded once', async () => {
   const s = guest();
-  const before = s.state.embers;
+  const before = s.state.glims;
   const heard = await hear([EV.stats, EV.toast, EV.discovery], () => {
-    s.addEmbers(3, 'Warm.');
+    s.addGlims(3, 'Warm.');
     assert.equal(s.recordDiscovery('well', 'The old well'), true);
     assert.equal(s.recordDiscovery('well', 'The old well'), false);
   });
-  assert.equal(s.state.embers, before + 3);
+  assert.equal(s.state.glims, before + 3);
   assert.deepEqual(
     heard.map((h) => h.name),
     [EV.stats, EV.toast, EV.discovery]

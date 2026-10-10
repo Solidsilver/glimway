@@ -1,13 +1,15 @@
 /**
- * The gold purse, client side (docs/design/purse-and-wardrobe.md 2, 3, 6.5):
- * amounts, the consent card's numbers, top-ups left, every top-up's outcome
- * line, the purse log's lines, and the sellers' gold choices. No network and
- * no storage: the server owns the purse, and these only read what it sent.
+ * Glims' top-up and log, client side (docs/design/silas-yard.md 1.5, 1.6;
+ * the 0.6 purse, purse-and-wardrobe.md 2, 3, 6.5): the consent card's
+ * numbers, top-ups and glims left today, every top-up's outcome line, the
+ * Glim log's lines, and the sellers' choices. No network and no storage: the
+ * server owns glims, and these only read what it sent.
  *
- * Gold comes into the purse only by a top-up the player asks for, and never
- * goes back to Habitica. The browser's Habitica client stays read-only: the
- * gold shown on the consent card is the sync's own read (display only); the
- * server reads Habitica again itself before anything moves.
+ * Habitica gold turns into glims only by a top-up the player asks for, two
+ * gold to a glim, and nothing goes back to Habitica. The browser's Habitica
+ * client stays read-only: the gold shown on the consent card is the sync's
+ * own read (display only); the server reads Habitica again itself before
+ * anything moves.
  */
 import type { PurseLine, PurseRead, PurseTopUp } from './gen/glimway/v1/purse_pb.js';
 import type { PlayerState } from './gen/glimway/v1/state_pb.js';
@@ -17,8 +19,10 @@ import { homeItem } from './homestead.ts';
 
 /** Two top-ups a UTC day (2.5); the server counts, this only words it. */
 export const TOP_UPS_PER_DAY = 2;
-/** Habitica's gold cap: the most one top-up can ask for (2.2). */
-export const TOP_UP_MAX = 99_999_999;
+/** At most 30 glims a UTC day from top-ups (silas-yard.md 1.5); the server counts. */
+export const GLIMS_PER_DAY = 30;
+/** Two Habitica gold for each glim (silas-yard.md 1.5): a top-up's gold is `GOLD_PER_GLIM × glims`. */
+export const GOLD_PER_GLIM = 2;
 /** The purse read's rhythm while a top-up is working (2.2, "The answer"). */
 export const TOP_UP_POLL_MS = 3_000;
 /** How long the client keeps polling a working top-up (the worker's limit is 60 s; a stale row settles at 90). */
@@ -29,7 +33,10 @@ export const LOG_LINES = 50;
 /** A top-up as the game keeps it. */
 export interface TopUpView {
   id: string;
+  /** The Habitica gold it spends. */
   amount: number;
+  /** The glims it brings (amount / 2). */
+  glims: number;
   /** working | moved | not-enough | not-moved | unconfirmed */
   state: string;
   goldBefore: number | null;
@@ -42,19 +49,22 @@ export interface TopUpView {
   note: string;
 }
 
-/** The purse as the game shows it: the server's, with unanswered gold operations on top. */
+/** Today's top-ups as the game shows them (the balance is `GameState.glims`). */
 export interface PurseView {
-  gold: number;
+  /** Glims top-ups can still bring today (the day's cap less today's top-ups). */
+  glimsLeft: number;
   topUpsLeft: number;
   working: TopUpView | null;
 }
 
-export const EMPTY_PURSE: PurseView = { gold: 0, topUpsLeft: TOP_UPS_PER_DAY, working: null };
+export const EMPTY_PURSE: PurseView = { glimsLeft: GLIMS_PER_DAY, topUpsLeft: TOP_UPS_PER_DAY, working: null };
 
 export function topUpView(t: PurseTopUp): TopUpView {
   return {
     id: t.id,
     amount: t.amount,
+    // A row from before the 2:1 credit carries no glims; its gold says them.
+    glims: t.glims > 0 ? t.glims : Math.floor(t.amount / GOLD_PER_GLIM),
     state: t.state,
     goldBefore: t.goldBefore ?? null,
     goldAfter: t.goldAfter ?? null,
@@ -69,10 +79,20 @@ export function topUpView(t: PurseTopUp): TopUpView {
 export function purseOf(state: Pick<PlayerState, 'purse'> | null | undefined): PurseView {
   const p = state?.purse;
   if (!p) return { ...EMPTY_PURSE };
-  // G-C: the purse's gold balance left the wire (glims are the one
-  // balance, silas-yard.md 1.6); the purse UI goes with it.
-  return { gold: 0, topUpsLeft: Math.max(0, p.topUpsLeft), working: p.working ? topUpView(p.working) : null };
+  return { glimsLeft: Math.max(0, p.glimsLeft), topUpsLeft: Math.max(0, p.topUpsLeft), working: p.working ? topUpView(p.working) : null };
 }
+
+/**
+ * The most glims this top-up can get (silas-yard.md 1.5's **Max**): what
+ * Habitica's gold pays for at two a glim, and no more than today's cap
+ * leaves. 0 when it can't get any.
+ */
+export function maxGlims(habiticaGold: number, glimsLeft: number): number {
+  return Math.max(0, Math.min(Math.floor(habiticaGold / GOLD_PER_GLIM), Math.floor(glimsLeft)));
+}
+
+/** The Habitica gold a top-up of `glims` spends (the request's `amount`). */
+export const goldFor = (glims: number): number => glims * GOLD_PER_GLIM;
 
 /** The gold the sync's own read saw on Habitica (`stats.gp`, floored), or null when it carried none. */
 export function habiticaGoldOf(rawUser: unknown): number | null {
@@ -90,7 +110,7 @@ export function parseAmount(text: string, max: number): number | null {
   const t = String(text).replace(/[\s,]/g, '');
   if (!/^\d{1,9}$/.test(t)) return null;
   const n = Number(t);
-  if (!Number.isSafeInteger(n) || n < 1 || n > Math.min(max, TOP_UP_MAX)) return null;
+  if (!Number.isSafeInteger(n) || n < 1 || n > max) return null;
   return n;
 }
 
@@ -108,7 +128,7 @@ export function topUpOutcome(t: TopUpView): string | null {
     case 'working':
       return null;
     case 'moved':
-      line = t.note === 'checked' ? purseCopy.movedChecked(t.amount) : purseCopy.moved(t.amount, t.goldBefore, t.goldAfter);
+      line = t.note === 'checked' ? purseCopy.movedChecked(t.glims, t.amount) : purseCopy.moved(t.glims, t.goldBefore, t.goldAfter);
       break;
     case 'not-enough':
       line = purseCopy.notEnough;
@@ -135,9 +155,9 @@ export interface LogEntry {
   at: number;
   /** "Bought timber ×4 from Silas". */
   text: string;
-  /** "Habitica 1,240 → 1,040" (top-ups only). */
+  /** "Habitica 1,240 → 1,200 gold" (top-ups only). */
   detail: string;
-  /** Gold in (+) or out (−); null for a top-up that moved nothing. */
+  /** Glims in (+) or out (−); null for a top-up that moved nothing. */
   delta: number | null;
   kind: 'top-up' | 'line';
 }
@@ -146,19 +166,39 @@ export interface LogEntry {
 function whatOf(itemDef: string, qty: number): string {
   if (!itemDef) return 'something';
   const home = homeItem(itemDef);
-  if (home && !ITEMS.items.some((d) => d.id === itemDef)) return qty > 1 ? `${home.name.toLowerCase()} ×${qty}` : home.name.toLowerCase();
+  if (home && !ITEMS.items.some((d) => d.id === itemDef)) {
+    const name = home.name.toLowerCase();
+    return qty > 1 ? `${name} ×${qty}` : `${/^[aeiou]/.test(name) ? 'an' : 'a'} ${name}`;
+  }
   const def = ITEMS.items.find((d) => d.id === itemDef);
   // Materials are counted, not numbered: "timber", "timber ×4".
   if (def?.kind === 'material') return qty > 1 ? `${def.name.toLowerCase()} ×${qty}` : def.name.toLowerCase();
   return qty > 1 ? `${giftPhrase(itemDef, 1).replace(/^(a|an) /, '')} ×${qty}` : giftPhrase(itemDef, 1);
 }
 
-/** One gold ledger line, in words (2.1's sheet). */
+/** One glim ledger line, in words (2.1's sheet). */
 export function lineText(l: Pick<PurseLine, 'reason' | 'itemDef' | 'qty' | 'otherName' | 'mailState' | 'seller'>): string {
   const who = l.otherName;
   switch (l.reason) {
     case 'purse-settle':
       return logReasonCopy.settled;
+    case 'currency-merge':
+      // The line's qty is the 0.6 purse's gold turned in.
+      return logReasonCopy.merged(l.qty);
+    case 'spend':
+      return logReasonCopy.spend;
+    case 'quest':
+      return logReasonCopy.quest;
+    case 'mend':
+      return logReasonCopy.mend(whatOf(l.itemDef, 1));
+    case 'homestead-deed':
+      return logReasonCopy.deed;
+    case 'homestead-upgrade':
+      return logReasonCopy.upgrade;
+    case 'homestead-buy':
+      return logReasonCopy.homeBuy(whatOf(l.itemDef, 1));
+    case 'homestead-clear':
+      return logReasonCopy.clear;
     case 'habitica-topup':
       return logReasonCopy.topUpLine;
     case 'market-buy':
@@ -184,19 +224,19 @@ export function lineText(l: Pick<PurseLine, 'reason' | 'itemDef' | 'qty' | 'othe
   }
 }
 
-/** A top-up's log line: its amount, its outcome, and Habitica's gold before and after. */
+/** A top-up's log line: its glims, its outcome, and Habitica's gold before and after. */
 export function topUpEntry(t: TopUpView): LogEntry {
   return {
     at: t.settledAt ?? t.startedAt,
-    text: logReasonCopy.topUp(t.amount, topUpStateWords[t.state] ?? t.state),
+    text: logReasonCopy.topUp(t.glims, topUpStateWords[t.state] ?? t.state),
     detail: logReasonCopy.topUpHabitica(t.goldBefore, t.state === 'moved' ? t.goldAfter : t.goldBefore === null ? null : t.goldAfter),
-    delta: t.state === 'moved' ? t.amount : null,
+    delta: t.state === 'moved' ? t.glims : null,
     kind: 'top-up',
   };
 }
 
 /**
- * The purse log (GET /api/purse), newest first, at most LOG_LINES. Top-ups
+ * The Glim log (GET /api/purse), newest first, at most LOG_LINES. Top-ups
  * come from their own rows, which say what Habitica's gold read before and
  * after; their `habitica-topup` ledger lines would only repeat them.
  */

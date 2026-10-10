@@ -8,13 +8,14 @@
   import { habiticaGoldOf } from '../lib/purse'
   import type { SyncForTopUp } from './purse.svelte'
   import type { HabiticaProfile } from '../lib/habitica/types'
-  import { XP_PER_EMBER } from '../lib/embers'
-  import { emberLine, guideCopy, guideTabs, syncCopy, unverifiedNote, whyToken, type GuideTabId } from '../content/connect-guide'
+  import { XP_PER_GLIM } from '../lib/glims'
+  import { glimLine, guideCopy, guideTabs, syncCopy, syncGlimsCopy, unverifiedNote, whyToken, type GuideTabId } from '../content/connect-guide'
   import type { Session } from '../game/session'
   import { sfx } from '../game/sfx'
   import { syncSafety } from '../game/sync-safety'
   import { ui } from './store.svelte'
   import Icon from './Icon.svelte'
+  import Glim from './Glim.svelte'
   import { connectedClient, connectSession, disconnectSession, friendlyErrorCopy, isConnected, memoryCredentials } from './habitica-local'
   import { api } from './account'
   import { errorCode, isUnreachable } from '../lib/api/errors'
@@ -331,7 +332,7 @@
         heroPreview = profile
         connection = 'connected'
         step = 3
-        welcome = result.embers?.welcome ?? 0
+        welcome = result.glims?.welcome ?? 0
         if (mode === 'menu') {
           ui.toast({
             text: firstImport
@@ -339,7 +340,7 @@
               : `Synced — ${profile.name} is up to date.`,
             icon: 'person'
           })
-          emberToast(result)
+          glimToast(result)
         }
         return true
       } else if (applied === 'stale') {
@@ -377,11 +378,11 @@
       ui.vitalsSource = s.vitalsSource
       ui.importedProfile = s.importedProfile
       if (result.welcome > 0) {
-        sfx('ember')
-        ui.toast({ text: `Mara presses ${result.welcome} embers into your hand. “For the lanterns. Earn more out there.”`, icon: 'ember' })
+        sfx('glim')
+        ui.toast({ text: syncGlimsCopy.welcome(result.welcome), icon: 'glim', art: 'glims-few' })
       } else if (result.gained > 0) {
-        sfx('ember')
-        ui.toast({ text: `+${result.gained} ember${result.gained === 1 ? '' : 's'} — from the XP you earned on Habitica.`, icon: 'ember' })
+        sfx('glim')
+        ui.toast({ text: syncGlimsCopy.gained(result.gained), icon: 'glim', art: 'glims-few' })
       } else if (result.status === 'unchanged') {
         ui.toast({ text: 'All caught up — nothing new on Habitica.' })
       } else {
@@ -408,15 +409,15 @@
   }
 
   /** Tell the player what their real-life XP turned into. */
-  function emberToast(result: SyncResult): void {
-    const e = result.embers
+  function glimToast(result: SyncResult): void {
+    const e = result.glims
     if (!e || e.gained <= 0) return
-    sfx('ember')
+    sfx('glim')
     if (e.welcome > 0) {
-      ui.toast({ text: `Mara presses ${e.welcome} embers into your hand. “For the lanterns. Earn more out there.”`, icon: 'ember' })
+      ui.toast({ text: syncGlimsCopy.welcome(e.welcome), icon: 'glim', art: 'glims-few' })
       return
     }
-    ui.toast({ text: `+${e.gained} ember${e.gained === 1 ? '' : 's'} — from the ${e.xp} XP you earned on Habitica.`, icon: 'ember' })
+    ui.toast({ text: syncGlimsCopy.gained(e.gained, e.xp), icon: 'glim', art: 'glims-few' })
   }
 
   function disconnect(alsoForget: boolean): void {
@@ -500,9 +501,9 @@
   </ol>
 
     {#if step !== 2}
-    <div class="embers-note">
-      <span class="ei"><Icon name="ember" size={18} /></span>
-      <p><strong>Your real-life progress lights the road.</strong> {emberLine(XP_PER_EMBER)}</p>
+    <div class="glims-note">
+      <span class="ei"><Glim size={18} /></span>
+      <p><strong>Your real-life progress lights the road.</strong> {glimLine(XP_PER_GLIM)}</p>
     </div>
     {/if}
 
@@ -646,7 +647,7 @@
       {#if ui.account}
         <p class="world-line" data-testid="world-line"><Icon name="lantern" size={12} /> {signInCopy.signedIn(ui.account.name)}</p>
       {/if}
-      {#if welcome > 0}<p class="fine">Mara is holding {welcome} embers for you to start.</p>{/if}
+      {#if welcome > 0}<p class="fine">{syncGlimsCopy.holding(welcome)}</p>{/if}
 
       {#if ui.remembered}
         <p class="remembered" role="status">
@@ -1021,7 +1022,7 @@
     align-self: center;
     margin: 0;
   }
-  .embers-note {
+  .glims-note {
     display: flex;
     gap: 10px;
     align-items: flex-start;
@@ -1031,13 +1032,13 @@
     background: linear-gradient(180deg, rgba(255, 194, 122, 0.22), rgba(255, 179, 92, 0.12));
     border: 2px dashed rgba(181, 72, 31, 0.35);
   }
-  .embers-note p {
+  .glims-note p {
     margin: 0;
     font-size: 13.5px;
     line-height: 1.5;
     color: var(--text);
   }
-  .embers-note .ei {
+  .glims-note .ei {
     color: var(--ember-deep);
     margin-top: 1px;
   }

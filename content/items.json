@@ -1217,7 +1217,7 @@
           "qty": 1,
           "glims": 1,
           "label": "Buy a lump of tallow · 1 glim",
-          "line": "Tallow's an ember a lump and worth two, the pot renders sweet. Mind your sleeves, it spits."
+          "line": "Tallow's a glim a lump and worth two, the pot renders sweet. Mind your sleeves, it spits."
         }
       ],
       "with": "hazel"
@@ -1239,7 +1239,7 @@
           "qty": 1,
           "glims": 2,
           "label": "Buy a willow rod · 2 glims",
-          "line": "Another off the hook by the door — two embers, and it only wears on the fish you keep."
+          "line": "Another off the hook by the door — two glims, and it only wears on the fish you keep."
         }
       ],
       "with": "finn"
@@ -1259,7 +1259,7 @@
           "glims": 1,
           "cap": 4,
           "label": "Buy madder scraps · 1 glim",
-          "line": "Red scraps off the dyer's boards. An ember a handful — no haggling, it's fair day."
+          "line": "Red scraps off the dyer's boards. A glim a handful — no haggling, it's fair day."
         }
       ]
     },

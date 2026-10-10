@@ -464,7 +464,7 @@ export class HomesteadArranging {
       return this.refreshPlacement()
     }
     sfx('pop')
-    bus.emit(EV.toast, { text: 'Silas comes by with his saw and a bar. That tile’s clear.', icon: 'ember' })
+    bus.emit(EV.toast, { text: 'Silas comes by with his saw and a bar. That tile’s clear.', icon: 'glim' })
     this.endPlacement()
     this.deps.rebuild()
   }

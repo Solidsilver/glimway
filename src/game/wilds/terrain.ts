@@ -258,7 +258,7 @@ export function toWorldData(chunk: ChunkTerrain, areaId: AreaId, day?: { wick: s
     mural: null,
     shrine: null,
     villageLantern: null,
-    emberSpots: [],
+    glimSpots: [],
     spawn: chunk.spawn,
   };
 }

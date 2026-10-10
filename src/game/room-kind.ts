@@ -143,7 +143,7 @@ export function buildRoomArea(def: Room): WorldData {
     mural: null,
     shrine: null,
     villageLantern: null,
-    emberSpots: [],
+    glimSpots: [],
     spawn: { ...arrive },
     room,
     bodies: props.filter((p) => p.solid).map(baseBox)

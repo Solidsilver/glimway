@@ -62,10 +62,10 @@ type State struct {
 	Discoveries     []string          `json:"discoveries"`
 	DefeatedEnemies []string          `json:"defeatedEnemies"`
 	PlaySeconds     float64           `json:"playSeconds"`
-	Embers          int               `json:"embers"`
+	Embers          int               `json:"glims"`
 	Flags           []string          `json:"flags"`
-	EmberXP         float64           `json:"emberXp"`
-	XPEmbers        int               `json:"xpEmbers"`
+	EmberXP         float64           `json:"glimXp"`
+	XPEmbers        int               `json:"xpGlims"`
 }
 type Stats struct {
 	Str float64 `json:"str"`
@@ -216,7 +216,7 @@ func LifetimeXP(level, exp float64) float64 {
 
 type Credit struct {
 	XP     float64  `json:"xp"`
-	Embers int      `json:"embers"`
+	Embers int      `json:"glims"`
 	Mark   *float64 `json:"mark"`
 }
 

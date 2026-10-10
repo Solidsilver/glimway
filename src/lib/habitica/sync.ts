@@ -1,7 +1,7 @@
 import { rootArea } from '../rooms.ts';
 import { HOME_AREA_RE, recoverFromDefeat, validateSave, type GameState } from '../state.ts';
 import { validateHabiticaProfile } from './mapping.ts';
-import { creditXp, grantEmbers, grantWelcome, lifetimeXp } from '../embers.ts';
+import { creditXp, grantGlims, grantWelcome, lifetimeXp } from '../glims.ts';
 import type {
   HabiticaProfile,
   LoadedSave,
@@ -28,9 +28,9 @@ export interface SyncResult {
   /** Unchanged input save for 'rejected' and 'unchanged'. */
   save: SyncedSave;
   notes: string[];
-  /** Embers credited by this sync: from Habitica XP since the baseline, plus
+  /** Glims credited by this sync: from Habitica XP since the baseline, plus
    *  the one-off welcome gift on a first import. */
-  embers?: { xp: number; gained: number; welcome: number };
+  glims?: { xp: number; gained: number; welcome: number };
 }
 
 /**
@@ -111,7 +111,7 @@ export function applyImportedProfile(current: GameState, profile: HabiticaProfil
     mana: Math.min(p.mp, p.maxMp),
     maxMana: p.maxMp,
     // Past XP is not paid: the import marks today's lifetime XP as paid.
-    emberXp: Math.max(state.emberXp, creditXp(undefined, p).mark ?? 0),
+    glimXp: Math.max(state.glimXp, creditXp(undefined, p).mark ?? 0),
   });
   return { state: next, vitalsSource: 'imported', importedProfile: p };
 }
@@ -162,7 +162,7 @@ export function syncProfile(
       status: 'imported',
       save: { ...imported, state: welcome.state },
       notes: ['first import: demo vitals replaced by imported vitals at the village'],
-      embers: { xp: 0, gained: welcome.granted, welcome: welcome.granted },
+      glims: { xp: 0, gained: welcome.granted, welcome: welcome.granted },
     };
   }
 
@@ -204,19 +204,19 @@ export function syncProfile(
     notes.push('baseline established; no vitals credited');
   }
 
-  // XP earned in Habitica becomes embers exactly once: credit is measured
-  // against the highest lifetime XP ever paid (state.emberXp), which never
+  // XP earned in Habitica becomes glims exactly once: credit is measured
+  // against the highest lifetime XP ever paid (state.glimXp), which never
   // falls — so XP lost and regained (an unchecked-then-rechecked task)
   // cannot pay twice. Saves from before the mark fall back to the baseline.
   const priorMark =
-    state.emberXp > 0
-      ? state.emberXp
+    state.glimXp > 0
+      ? state.glimXp
       : baseline?.exp !== undefined
         ? lifetimeXp(baseline.level, baseline.exp)
         : undefined;
   const earned = creditXp(priorMark, p);
-  const emberXp = Math.max(state.emberXp, earned.mark ?? 0);
-  if (earned.embers > 0) notes.push(`+${earned.xp} XP since last sync credited as ${earned.embers} embers`);
+  const glimXp = Math.max(state.glimXp, earned.mark ?? 0);
+  if (earned.glims > 0) notes.push(`+${earned.xp} XP since last sync credited as ${earned.glims} glims`);
 
   // The profile itself is the new baseline even when local vitals did not
   // move (capped delta, clamped already equal, or appearance/stat/gear-only
@@ -228,7 +228,7 @@ export function syncProfile(
     mana !== state.mana ||
     maxHp !== state.maxHp ||
     maxMana !== state.maxMana ||
-    emberXp !== state.emberXp;
+    glimXp !== state.glimXp;
 
   if (!changed) {
     return {
@@ -241,12 +241,12 @@ export function syncProfile(
   return {
     status: 'synced',
     save: {
-      state: grantEmbers(validateSave({ ...state, hp, maxHp, mana, maxMana, emberXp }), earned.embers, { fromXp: true }),
+      state: grantGlims(validateSave({ ...state, hp, maxHp, mana, maxMana, glimXp }), earned.glims, { fromXp: true }),
       vitalsSource: 'imported',
       importedProfile: p,
     },
     notes,
-    embers: { xp: earned.xp, gained: earned.embers, welcome: 0 },
+    glims: { xp: earned.xp, gained: earned.glims, welcome: 0 },
   };
 }
 

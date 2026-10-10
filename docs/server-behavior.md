@@ -159,7 +159,7 @@ stored, and the party is never read in between.
     takes back a gift on its own). A recalled or returned warden-set tool goes
     to the sender's personal chest when they already carry one, so it travels
     with them.
-  - Your character, story, embers, pack and personal chest come along (they
+  - Your character, story, glims, pack and personal chest come along (they
     belong to the player, not the world). Your homestead membership ends as a
     "leave" does (the last member out starts desolation); placed furniture,
     the shared chest (`GET /api/world` counts warden-set tools left in it, for
@@ -236,7 +236,7 @@ codes as well as its own. `notes` lists rebirth and large sync-loss audit events
 `flag clear ID` clears a flag, advances the snapshot revision once and records an
 audit entry. Access removal and flags are separate owner controls.
 
-Unverified credit starts at 200 embers above the login checkpoint, grows by
+Unverified credit starts at 200 glims above the login checkpoint, grows by
 100 per full day, and caps at 3000. Pending lots are confirmed only by a verified
 login reaching their original reported XP and expire after 90 days. Both syncs
 and logins advance the separate loss reference. Several deaths can be synced
@@ -292,8 +292,8 @@ Unsupported versions fail with `generator-unavailable` rather than silently
 regenerating land. No scheduled reset runs in this phase.
 
 Shared `content/homestead.json` contains the five tier identities and fourteen
-items. The free Campsite, 15-ember Cottage, and Workshop ship now. The Workshop
-costs 30 embers, 20 timber, 10 stone and 8 fiber; Garden and Hall remain unavailable. Decoration placement requires the Cottage; buying tier-0
+items. The free Campsite, 15-glim Cottage, and Workshop ship now. The Workshop
+costs 30 glims, 20 timber, 10 stone and 8 fiber; Garden and Hall remain unavailable. Decoration placement requires the Cottage; buying tier-0
 items is allowed. Its `commons` block is the one source of plot geometry, in the
 client's 16-pixel tiles: plot `i` sits in column `i % columns.length` and row
 `i / columns.length`, at the listed `rows`, then every `rowPitch` tiles down the
@@ -301,7 +301,7 @@ lane. Plot bounds and the home-rest check use it, and the client draws the same
 plots from it. `outdoorReserved`/`indoorReserved` are the camp/cottage tiles and
 the inside doorway; placements covering them fail with `placement-overlap`. `rest`/`revive` require the village hearth; `home-rest` requires
 the caller's own Commons plot. Sync remains allowed in both safe areas.
-`content/economy.json` contains the one-ember home rest, twenty
+`content/economy.json` contains the one-glim home rest, twenty
 successful claims per minute, two fallen lantern creations per owner per UTC day,
 three rewarded relights per UTC day, and one-amber
 relight reward. These are starting values for playtesting. Camps respawn after
@@ -378,7 +378,7 @@ For a locked imported hero (stored HP 0 and imported baseline HP 0), sync and
 spend must carry the **pre-sync local progress with `hp: 0`**. Supply new Habitica
 healing only in sync's `profile`; apply the server's returned snapshot after
 it accepts the operation. Pre-applying healing to `progress.hp` fails with
-400 `invalid-progress`. A zero-HP revive/rest needs XP-earned embers, with
+400 `invalid-progress`. A zero-HP revive/rest needs XP-earned glims, with
 zero-HP progress still carried. The same rule applies to home rest.
 
 Migration 005 adds the private checkpoint ledger cursor and a partial index
@@ -412,7 +412,8 @@ region. Inner-1 stays permanent. Generator v1 and its generation data are unchan
 Storage/crafting require tier 2. Decorations move as original unplaced instances;
 placed instances must first be removed. Mail transfers only server-owned gathered
 materials, Wilds trinkets, crafted utilities and unplaced decorations, never
-embers, quest items or paid quest entitlements. Assets are debited immediately on
+quest items or paid quest entitlements. Glims travel only in a glim letter,
+which carries glims alone (kind `glims`). Assets are debited immediately on
 send and remain unusable in transit until the named recipient claims them or the
 sender recalls them. Unclaimed mail returns after 30 days, on recipient
 removal, or when the recipient moves to another world.

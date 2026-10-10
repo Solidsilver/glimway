@@ -19,7 +19,7 @@ import { readDialogue, settleWarden, talkThrough, untilChoices, warp, waitForAre
  * with a fresh database, plus the fake Habitica its login reads). Each test
  * signs in as a new Habitica id, so tests share no server state.
  */
-const hud = (page: Page) => page.locator('.hud .embers')
+const hud = (page: Page) => page.locator('.hud .glims')
 const hurt = (page: Page, n: number) => page.evaluate((d) => (window as unknown as { __fsDevHurt: (n: number) => void }).__fsDevHurt(d), n)
 const leaseGate = (page: Page) => page.getByRole('alertdialog', { name: 'Playing on another device' })
 const shownHp = (page: Page) => page.evaluate(() => Number(document.querySelector('[aria-label="Health"]')?.getAttribute('aria-valuenow')))
@@ -91,9 +91,9 @@ test('login + fresh start: the guide signs in, the world starts fresh, a sync pa
   // Fresh imports the verified Habitica vitals right away, under the name Habitica reports.
   expect(s.body.displayName).toBe('Tansy')
   expect(s.body.vitalsSource).toBe('imported')
-  await sync(page, /embers into your hand/)
+  await sync(page, /glims into your hand/)
   await expect(hud(page)).toHaveText('3')
-  await expect.poll(async () => (await serverState(page)).body.state.embers).toBe(3)
+  await expect.poll(async () => (await serverState(page)).body.state.glims).toBe(3)
   // Nothing about the token reached the connected cache.
   await expect.poll(() => cacheRecord(page, accountOf(id))).not.toBeNull()
   const cache = JSON.stringify(await cacheRecord(page, accountOf(id)))
@@ -121,17 +121,17 @@ test('invite-only: denied without a code, then joins with one', async ({ page, c
 })
 
 
-test('sync credits embers from the server, counted against its XP mark', async ({ page }) => {
+test('sync credits glims from the server, counted against its XP mark', async ({ page }) => {
   const id = await freshPlayer(page)
-  await sync(page, /embers into your hand/)
+  await sync(page, /glims into your hand/)
   await expect(hud(page)).toHaveText('3')
-  // 25 more XP on Habitica: lifetime 45 → 70, three ember steps.
+  // 25 more XP on Habitica: lifetime 45 → 70, three glim steps.
   await setHabitica(id, { exp: 45 })
-  await sync(page, /\+3 embers — from the XP you earned on Habitica/)
+  await sync(page, /3 glims caught the light/)
   await expect(hud(page)).toHaveText('6')
   const s = (await serverState(page)).body
-  expect(s.state.embers).toBe(6)
-  expect(s.state.xpEmbers).toBe(3)
+  expect(s.state.glims).toBe(6)
+  expect(s.state.xpGlims).toBe(3)
   // The same profile again pays nothing.
   await sync(page, /All caught up/)
   await expect(hud(page)).toHaveText('6')
@@ -139,7 +139,7 @@ test('sync credits embers from the server, counted against its XP mark', async (
 
 test('a rest is paid on the server, and the world waits for its answer', async ({ page }) => {
   await freshPlayer(page)
-  await sync(page, /embers into your hand/)
+  await sync(page, /glims into your hand/)
   await hurt(page, 6)
   // The hurt goes up with the next report (about every 10 s).
   await expect.poll(async () => (await serverState(page)).body.state.hp, { timeout: 15_000 }).toBeLessThan(41)
@@ -151,22 +151,22 @@ test('a rest is paid on the server, and the world waits for its answer', async (
   await expectToast(page, 'Warm and rested')
   await expect(hud(page)).toHaveText('1')
   const s = (await serverState(page)).body
-  expect(s.state.embers).toBe(1)
+  expect(s.state.glims).toBe(1)
   expect(s.state.hp).toBe(s.state.maxHp)
 })
 
-test('quest embers come from the server once the story upload lands', async ({ page }) => {
+test('quest glims come from the server once the story upload lands', async ({ page }) => {
   await freshPlayer(page)
   await warp(page, 'village', 16, 14)
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)
   await talkThrough(page, /Copy the naming from the stone/)
   await settleWarden(page)
-  await expectToast(page, '+2 embers — a little warmth from the road.')
+  await expectToast(page, '+2 glims. A little warmth from the road.')
   await expect(hud(page)).toHaveText('2')
   const s = (await serverState(page)).body
   expect(s.state.quests['lantern-road']).toBe('guardian-defeated')
-  expect(s.state.embers).toBe(2)
+  expect(s.state.glims).toBe(2)
 })
 
 test('the shared library shelf: a connected donation lands on the world shelf and stays', async ({ page }) => {
@@ -243,7 +243,7 @@ test('a second tab finds the journey playing elsewhere, and either tab can take 
 
 test('offline play keeps going, spends wait for a connection, and reconnecting uploads it', async ({ page, context }) => {
   await freshPlayer(page)
-  await sync(page, /embers into your hand/)
+  await sync(page, /glims into your hand/)
   await context.setOffline(true)
   await hurt(page, 5)
   // The next report (about every 10 s) finds no connection.

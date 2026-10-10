@@ -17,8 +17,8 @@ import { rng01 } from '../lib/hash.ts'
 
 /** Quest NPCs, then the residents (src/content/residents.ts), who talk around the quest. */
 export type NpcId = 'mara' | 'pip' | 'orrin' | 'elara' | 'finn' | 'hazel' | 'ada'
-/** Ember spots: the hearth lantern (warm rest), road lanterns, the chest. */
-export type EmberSpotId = 'hearth' | 'road-1' | 'road-2' | 'road-3' | 'chest'
+/** Glim spots: the hearth lantern (warm rest), road lanterns, the chest. */
+export type GlimSpotId = 'hearth' | 'road-1' | 'road-2' | 'road-3' | 'chest'
 /**
  * What can be used (src/game/entities/interactables.ts), by the feature that
  * owns it: 'library' is the Hearthwick Library door, `paper:<id>` a
@@ -29,7 +29,7 @@ export type InteractId =
   | NpcId
   | 'clue'
   | 'lantern'
-  | EmberSpotId
+  | GlimSpotId
   | 'library'
   | 'warden'
   | RoomSpotId
@@ -177,8 +177,8 @@ export interface WorldData {
   mural: { tx: number; ty: number } | null
   shrine: { tx: number; ty: number } | null
   villageLantern: { tx: number; ty: number } | null
-  /** Places where embers are spent (each sits on a solid prop). */
-  emberSpots: { id: EmberSpotId; tx: number; ty: number }[]
+  /** Places where glims are spent (each sits on a solid prop). */
+  glimSpots: { id: GlimSpotId; tx: number; ty: number }[]
   spawn: { tx: number; ty: number }
   /** The Hearthwick Library's door tile (village only): opens the reading room. */
   library?: { tx: number; ty: number }
@@ -480,7 +480,7 @@ function buildVillage(): WorldData {
     mural: null,
     shrine: null,
     villageLantern,
-    emberSpots: [{ id: 'hearth', tx: villageLantern.tx, ty: villageLantern.ty }],
+    glimSpots: [{ id: 'hearth', tx: villageLantern.tx, ty: villageLantern.ty }],
     spawn: { tx: 7, ty: 11 },
     library,
     board,
@@ -631,7 +631,7 @@ function buildWoodland(): WorldData {
     mural: null,
     shrine: null,
     villageLantern: null,
-    emberSpots: roadLanterns,
+    glimSpots: roadLanterns,
     spawn: { tx: 3, ty: 15 }
   }
 }
@@ -722,7 +722,7 @@ function buildRuin(): WorldData {
     mural,
     shrine,
     villageLantern: null,
-    emberSpots: [{ id: 'chest', tx: 29, ty: 3 }],
+    glimSpots: [{ id: 'chest', tx: 29, ty: 3 }],
     spawn: { tx: 3, ty: 13 }
   }
 }

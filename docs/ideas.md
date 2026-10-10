@@ -13,7 +13,7 @@ Tags: **(agreed)** means the owner wants it and it has a place in the order; **(
 worth thinking about; **(later)** means parked on purpose.
 
 ## Habitica integration
-- **Gold purse** (agreed): a Top-up button in the account settings first syncs the latest Habitica
+- **Gold purse** (shipped in 0.6; glims replace its gold in 0.6.1, below): a Top-up button in the account settings first syncs the latest Habitica
   gold, then moves gold into an in-game purse, with clear consent. Gold flows into the game only and
   never pays out to Habitica.
   - **Limits:** 2 top-ups per UTC day, with no amount cap.
@@ -89,8 +89,8 @@ worth thinking about; **(later)** means parked on purpose.
 Glimway without Habitica, with Habitica as one mode. The owner plays with Habitica, so this waits.
 - **Guest accounts** (agreed, designed): key phrase sign-in, devices, linking. Steps 3–6 of
   [design/guests.md](design/guests.md).
-- **Embers without Habitica** (needs a design session): today guests earn embers only from story
-  and gifts, so ember gates stop them. A standalone game needs its own source.
+- **Glims without Habitica** (needs a design session): today guests earn glims only from story
+  and gifts, so glim prices stop them. A standalone game needs its own source.
 - **Our own look, classes, levels and companions** (agreed, standing goal): the backups listed
   above, plugged in through the profile source.
 

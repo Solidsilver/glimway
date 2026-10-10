@@ -5,14 +5,14 @@ import { validateHabiticaProfile } from '../habitica/mapping.ts';
 import { decodeWire } from './wire.ts';
 
 export function validatePlayerState(state: PlayerState): PlayerState {
-  const { account, vitals, place, story, glims: embers } = state;
-  if (!account || !vitals || !place || !story || !embers || !account.accountId || !account.worldId) throw new Error('incomplete state');
+  const { account, vitals, place, story, glims } = state;
+  if (!account || !vitals || !place || !story || !glims || !account.accountId || !account.worldId) throw new Error('incomplete state');
   if (!['habitica', 'none'].includes(account.profileSource)) throw new Error('unknown profile source');
-  for (const n of [state.version, vitals.reportSeq, vitals.vitalsSetVersion, place.placeSetVersion, embers.balance, embers.xpEarned, embers.pending]) {
+  for (const n of [state.version, vitals.reportSeq, vitals.vitalsSetVersion, place.placeSetVersion, glims.balance, glims.xpEarned, glims.pending]) {
     if (!Number.isSafeInteger(n) || n < 0) throw new Error('invalid state counter');
   }
-  if (place.placeSetVersion > state.version || vitals.vitalsSetVersion > state.version || embers.xpEarned > embers.balance || vitals.hp < 0 || vitals.hp > vitals.maxHp || vitals.mana < 0 || vitals.mana > vitals.maxMana || vitals.maxHp <= 0 || vitals.maxMana <= 0 || !place.area) throw new Error('invalid state bounds');
-  if (embers.xpMark < 0 || embers.verifiedXp < 0 || story.playSeconds < 0) throw new Error('invalid state totals');
+  if (place.placeSetVersion > state.version || vitals.vitalsSetVersion > state.version || glims.xpEarned > glims.balance || vitals.hp < 0 || vitals.hp > vitals.maxHp || vitals.mana < 0 || vitals.mana > vitals.maxMana || vitals.maxHp <= 0 || vitals.maxMana <= 0 || !place.area) throw new Error('invalid state bounds');
+  if (glims.xpMark < 0 || glims.verifiedXp < 0 || story.playSeconds < 0) throw new Error('invalid state totals');
   for (const times of [story.reachedAt, story.gateAt]) {
     for (const [quest, at] of Object.entries(times)) {
       if (!quest || !Number.isFinite(at) || at < 0) throw new Error('invalid quest time');

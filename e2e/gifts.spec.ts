@@ -1,7 +1,7 @@
 import { expect, test } from './fixtures'
 import { sql, accountOf, CONTRACT } from './connected'
 import { waitForLive, expectToast } from './helpers'
-import { claimDeed, earnEmbers, freshPlayer, fund, homes, myHome, place, readOn, silasSays, go, atMyMailbox, hurt, type HomesView } from './home-helpers'
+import { claimDeed, earnGlims, freshPlayer, fund, homes, myHome, place, readOn, silasSays, go, atMyMailbox, hurt, type HomesView } from './home-helpers'
 
 /**
  * Gate shelf and maker's-mark thank-you mail (exp/gifts):
@@ -18,7 +18,7 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
 
   // 1. Wren claims a deed and raises homestead to tier 1
   const idWren = await freshPlayer(page, 'Wren')
-  await earnEmbers(page, idWren)
+  await earnGlims(page, idWren)
   await claimDeed(page)
   await silasSays(page, /Raise a cottage/)
   await readOn(page, /Steady as a route stone/)
@@ -208,7 +208,7 @@ test('maker thank-you mail: when item made by someone else is used, maker receiv
 
   // 1. Wren registers and gets their home
   const idWren = await freshPlayer(page, 'Wren')
-  await earnEmbers(page, idWren)
+  await earnGlims(page, idWren)
   await claimDeed(page)
   await silasSays(page, /Raise a cottage/)
   await readOn(page, /Steady as a route stone/)

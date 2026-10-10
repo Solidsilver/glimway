@@ -3,7 +3,7 @@ import type { BrowserContext, Page } from '@playwright/test'
 import { expect, test } from './fixtures'
 import { dialogueState, frames, holdUntil, openTalk, readDialogue, untilChoices, waitForLive, warp } from './helpers'
 import { allow, habiticaURL, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, sql, syncFromMenu, waitForWorld, accountOf, refusal, seedMarks } from './connected'
-import { claimDeed, earnEmbers, freshPlayer, homes, intoCottage, toMyLand, go } from './home-helpers'
+import { claimDeed, earnGlims, freshPlayer, homes, intoCottage, toMyLand, go } from './home-helpers'
 import { HEIRLOOM_REFUSALS } from '../src/content/heirlooms.ts'
 
 /**
@@ -227,7 +227,7 @@ for (const device of ['desktop', 'phone'] as const) {
       test('a stool set out at home is sat on, like a bench', async ({ page }) => {
         await standInSprites(page.context())
         const id = await outfittedPlayer(page)
-        await earnEmbers(page, id)
+        await earnGlims(page, id)
         await claimDeed(page)
         const land = await toMyLand(page)
         const tx = land.doorstep.tx + 3
@@ -261,7 +261,7 @@ for (const device of ['desktop', 'phone'] as const) {
       test('in the cottage a reading chair is sat in, turned or not; the Empty Chair stays empty', async ({ page }) => {
         await standInSprites(page.context())
         const id = await outfittedPlayer(page)
-        await earnEmbers(page, id)
+        await earnGlims(page, id)
         await claimDeed(page)
         const home = `(SELECT homestead_id FROM homestead_members WHERE account_id='${accountOf(id)}')`
         // Item ids are unique per run: the desktop and phone runs can share a worker's database.
@@ -369,8 +369,8 @@ for (const device of ['desktop', 'phone'] as const) {
           speaker: 'Silas',
           lines: ['I measure land in lantern-light, not yards.'],
           choices: [
-            { text: 'The deed to Lot 3', note: 'Needs 15 embers', disabled: true },
-            { text: 'Raise a cottage', note: '4 embers', action: 'noop' },
+            { text: 'The deed to Lot 3', note: 'Needs 15 glims', disabled: true },
+            { text: 'Raise a cottage', note: '4 glims', action: 'noop' },
             { text: 'Not yet' }
           ]
         })

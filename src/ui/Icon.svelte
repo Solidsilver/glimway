@@ -5,6 +5,22 @@
    * match the game's pixel art at any size.
    */
   const ICONS: Record<string, string[]> = {
+    // A glim (silas-yard.md 1.2, 1.9): a round faceted amber bead with a
+    // bright core and a small glint; the drawn stand-in for the glims art.
+    glim: [
+      '............',
+      '....####....',
+      '..##-####...',
+      '.#-######+#.',
+      '.#-##++###-.',
+      '#-##++++##-#',
+      '#-##++++###-',
+      '.#-##++###-.',
+      '.#--#####-#.',
+      '..##-----#..',
+      '....####....',
+      '............'
+    ],
     // A purse coin (purse-and-wardrobe.md 9): round, a lamp stamped on its face.
     coin: [
       '....####....',

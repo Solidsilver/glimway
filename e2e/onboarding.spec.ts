@@ -26,7 +26,7 @@ async function openPaste(page: Page): Promise<void> {
 test('the title asks for the Habitica hero; there is no guest start', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByTestId('connect-hero')).toContainText('Play as your Habitica hero')
-  await expect(page.getByTestId('connect-hero')).toContainText('every 10 XP you earn in Habitica becomes an ember')
+  await expect(page.getByTestId('connect-hero')).toContainText('every 10 XP you earn in Habitica becomes a glim')
   await expect(page.getByRole('button', { name: /Wander as a guest/ })).toHaveCount(0)
 })
 

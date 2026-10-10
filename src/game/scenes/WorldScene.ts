@@ -756,7 +756,7 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private onProfileChanged(): void {
-    // A sync may have brought embers: ember-spot markers can change.
+    // A sync may have brought glims: glim-spot markers can change.
     this.refreshMarkers()
     this.avatar.onProfileChanged()
   }

@@ -6,7 +6,7 @@ export const YOUR_OWN_DAY_TALKS: QuestTalks = {
     speaker: 'Mara',
     lines: [
       'Your own day, I said. Anything you finish out there counts: a job done, a chore, a promise kept.',
-      'Bring it back and I’ll write it in. The embers find their own way here.',
+      'Bring it back and I’ll write it in. The glims find their own way here.',
     ],
   },
   'show-mara': {

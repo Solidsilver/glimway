@@ -10,7 +10,7 @@
 import type { Asset, ItemsActionResponse, ItemsOp, ItemsView } from '../lib/api/types.ts'
 import type { Refusal, Result } from '../lib/api/errors.ts'
 import { itemErrorText } from '../content/errors.ts'
-import { giftPhrase, ITEM_RULES, menderNear, pickupById, pocketHelps } from '../lib/items.ts'
+import { giftPhrase, ITEM_RULES, menderNear, pickupById, pocketHelps, sellerFor } from '../lib/items.ts'
 import { purseCopy } from '../content/purse.ts'
 import { TILE } from '../lib/tile.ts'
 import { bus, EV } from './events.ts'
@@ -42,7 +42,7 @@ export class Items {
       if (current?.items !== this) return
       if (g.kind === 'glims') {
         // Glims are part of the state, not the pack (purse-and-wardrobe.md 3.4): read the state again.
-        bus.emit(EV.toast, { text: purseCopy.gaveYou(g.fromName, g.qty), icon: 'coin' })
+        bus.emit(EV.toast, { text: purseCopy.gaveYou(g.fromName, g.qty), icon: 'glim', art: 'glims-few' })
         void this.session.link?.refreshState()
         return
       }
@@ -76,10 +76,10 @@ export class Items {
     this.adopt(v)
   }
 
-  /** `gold`: the purse change to show until the answer (a gold buy or give: negative). */
-  private async run(op: ItemsOp, fields: Record<string, unknown>, gold?: number): Promise<Result<ItemsActionResponse['result']>> {
+  /** `glims`: the balance change to show until the answer (a buy or give: negative). */
+  private async run(op: ItemsOp, fields: Record<string, unknown>, glims?: number): Promise<Result<ItemsActionResponse['result']>> {
     const link = this.session.link!
-    const r = await link.mutate<ItemsActionResponse>({ kind: 'items', op, fields }, gold ? { gold } : {})
+    const r = await link.mutate<ItemsActionResponse>({ kind: 'items', op, fields }, glims ? { glims } : {})
     if (!r.ok) return fail(r.code)
     this.adopt(r.res.result.items, op)
     return { ok: true, value: r.res.result }
@@ -147,9 +147,9 @@ export class Items {
   give(toId: string, asset: Asset) {
     return this.run('give', { toId, asset })
   }
-  /** Hand gold to someone standing near (purse-and-wardrobe.md 3.4): the same give, with an amount in place of an asset. */
-  giveGold(toId: string, gold: number) {
-    return this.run('give', { toId, glims: gold }, -gold)
+  /** Hand glims to someone standing near (silas-yard.md 1.6): the same give, with an amount in place of an asset. */
+  giveGlims(toId: string, glims: number) {
+    return this.run('give', { toId, glims }, -glims)
   }
   /** Pocket 1 or 2; null empties it. */
   pocket(slot: number, itemDef: string | null) {
@@ -193,7 +193,8 @@ export class Items {
   }
   /** Buy a good from a seller (Hazel's kitchen, Finn's mill door, the Carting Day stall, Silas's yard), at its one price in glims. */
   buy(seller: string, good: string) {
-    return this.run('buy', { seller, good })
+    const price = sellerFor(seller)?.goods.find((g) => g.item === good)?.glims ?? 0
+    return this.run('buy', { seller, good }, -price)
   }
 
   // ------------------------------------------------------------ reads

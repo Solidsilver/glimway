@@ -125,7 +125,7 @@ test('the game state is the server state: marks are the single source of discove
   assert.equal(roadStep(s), 'clue-found');
   assert.equal(s.area, 'wilds');
   assert.equal(s.wildsRegion, 'outer-1');
-  assert.deepEqual([s.embers, s.xpEmbers, s.emberXp], [9, 4, 300]);
+  assert.deepEqual([s.glims, s.xpGlims, s.glimXp], [9, 4, 300]);
 });
 
 test('a Wilds place loads: wilds:<region> becomes the Wilds area plus its region marker', () => {

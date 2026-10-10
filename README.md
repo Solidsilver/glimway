@@ -2,13 +2,13 @@
 
 A cozy pixel RPG for [Habitica](https://habitica.com) players. Walk the old
 lantern road, relight it, and let the progress you make on Habitica light the
-way: every 10 XP you earn there becomes an ember to spend in the world.
+way: every 10 XP you earn there becomes a glim to spend in the world.
 "Glim" is an old word for a candle, so a glimway is a road of little lights.
 
 It runs in the browser (Svelte 5, TypeScript, Phaser 3, Vite) with a Go server
 for small invite-only worlds shared with friends. Every player signs in with
 their Habitica details and plays in a world: your class, gear, look and health
-come along, and the XP you earn on Habitica becomes embers. The server keeps
+come along, and the XP you earn on Habitica becomes glims. The server keeps
 the journey; there is no local-only play.
 
 **Glimway is not affiliated with or endorsed by Habitica.** It's a
@@ -57,17 +57,21 @@ are shown unmodified, with credit, and are not AI-generated.
 
 ## How your Habitica token is handled
 
-**Glimway reads your Habitica profile, and writes to it only when you top up
-your purse.** The game makes one explicit `GET /user` per connect or **Sync**
-press, from your browser. It never scores your tasks, changes your stats or
-gear, or buys any of your own rewards; the one write is the top-up below.
+**Glimway reads your Habitica profile, and writes to it only when you turn
+Habitica gold into glims.** The game makes one explicit `GET /user` per
+connect or **Sync** press, from your browser. It never scores your tasks,
+changes your stats or gear, or buys any of your own rewards; the one write is
+the top-up below.
 
-The one write: when you press **Top up** in the Menu and agree on the card,
-the Glimway server moves the gold you chose into your purse. It adds a reward
-called "Glimway purse" to your Habitica Rewards, buys it once, and removes it,
-so your Habitica gold goes down by that amount. Nothing ever goes back to
-Habitica, and nothing else there changes. (The token itself *can* do more;
-the game limits itself to this, and the code is public so you can check.)
+The one write: when you press **Turn gold into glims** in the Menu and agree
+on the card, the Glimway server turns the gold into glims, two gold for each
+glim. You pick the glims, and the card shows the gold. You can get at most
+30 glims a day (UTC) this way, in up to two top-ups. It adds a reward called
+"Glimway purse" to your Habitica Rewards, buys it once, and removes it, so
+your Habitica gold goes down by that amount. Glims can't be turned back into
+gold: nothing ever goes back to Habitica, and nothing else there changes.
+(The token itself *can* do more; the game limits itself to this, and the
+code is public so you can check.)
 The `X-Client` header identifies the tool's creator, never you.
 
 **Where your token goes.**
@@ -125,23 +129,26 @@ for good.
   reloads. Reloading is **never** a heal. Falling wakes you by the village
   well with your story kept.
 
-## Embers: real-life progress lights the road
+## Glims: real-life progress lights the road
 
-Every 10 XP you earn **on Habitica** becomes an ember the next time you sync.
+A glim is a bead of amber holding a glint of light. Every 10 XP you earn
+**on Habitica** becomes a glim the next time you sync.
 Each XP pays once: the game remembers the highest lifetime XP it has paid and
 credits only XP above it, so unchecking and re-checking a task pays nothing
-new. The first import pays a one-off welcome of 3 embers (not your past XP),
-and two story beats leave a few embers to spend.
+new. The first import pays a one-off welcome of 3 glims (not your past XP),
+and two story beats leave a few glims to spend. You can also turn Habitica
+gold into glims (above), and glims move between friends on shelves, in
+letters and by hand.
 
 | Where | Cost | What you get |
 |---|---|---|
-| Hearthwick's lantern, by the well | 2 | A warm rest: full health and mana. At 0 HP an imported hero needs embers earned from XP. |
+| Hearthwick's lantern, by the well | 2 | A warm rest: full health and mana. At 0 HP an imported hero needs glims earned from XP. |
 | Three road lanterns along Brackenwood | 3 each | A lit rest spot while no enemy is near: mana for everyone |
 | The chest in Ashwatch Ruin | 5 | The Ember Charm (+10% critical hits) |
 | Your bedroll or hearth at home (in a world) | 1 | Rest at your own place |
-| Silas in the Commons (in a world) | 15 / 30 + materials | Raise a cottage, then a workshop; furniture from 2 embers |
+| Silas in the Commons (in a world) | 15 / 30 + materials | Raise a cottage, then a workshop; furniture from 2 glims |
 
-Rules: `src/lib/embers.ts` and `content/economy.json` (shared with the server).
+Rules: `src/lib/glims.ts` and `content/economy.json` (shared with the server).
 
 ## Beyond the village
 
@@ -156,14 +163,14 @@ free), then raise it:
 | Tier | Cost | What it adds |
 |---|---|---|
 | Campsite | free | Fire ring, cot, lamp post; rest at your bedroll |
-| Cottage | 15 embers | A room to go into, a hearth to rest by, and decorations to set out |
-| Workshop | 30 embers, 20 timber, 10 stone, 8 fiber | A storage chest and a crafting bench inside |
+| Cottage | 15 glims | A room to go into, a hearth to rest by, and decorations to set out |
+| Workshop | 30 glims, 20 timber, 10 stone, 8 fiber | A storage chest and a crafting bench inside |
 
-Silas's yard sells fourteen pieces of furniture, some for embers and some for
+Silas's yard sells fourteen pieces of furniture, some for glims and some for
 materials from the Wilds. Press **B** (or the Arrange button) on your plot or
 in your cottage to set them out: pick a piece, nudge it (arrows / WASD), turn
 it (R), set it (E), put it away (X); Esc steps back out. Resting at home costs
-1 ember and needs you on your own plot. Neighbours' places are visible on the
+1 glim and needs you on your own plot. Neighbours' places are visible on the
 lane: walk into their cottage to look around (read-only), or leave something
 in their mailbox.
 
@@ -225,7 +232,8 @@ lit) and everyone who gave something gets the project's papers.
 **Mail** sends materials, trinkets, crafted pieces and unplaced furniture to
 someone in your world: use your mailbox on the Commons, or theirs to address
 it to them. Parcels wait until claimed, can be recalled while unclaimed, and
-come back after 30 days. Embers and quest items can't be mailed.
+come back after 30 days. A letter can also carry glims, alone. Quest items
+can't be mailed.
 
 ### Seeing each other
 
@@ -251,7 +259,7 @@ genuine external HP/MP changes **exactly once** (damage plus an unchanged
 profile never refills), and only somewhere safe: Hearthwick, or the Commons
 (your cottage included). Imported vitals get no passive healing (lit road lanterns give them mana only). Defeat wakes you at
 capped vitals (zero stays zero) and locks expeditions until a genuine heal on
-Habitica or a warm rest paid with embers earned from XP. See [docs/import-contract.md](docs/import-contract.md).
+Habitica or a warm rest paid with glims earned from XP. See [docs/import-contract.md](docs/import-contract.md).
 
 ## Playing in a world
 
@@ -295,7 +303,7 @@ devices; the layout is responsive with safe-area insets for phones.
 
 ## Interface
 
-- **HUD:** area, current goal (tap to expand), health and mana, embers, the
+- **HUD:** area, current goal (tap to expand), health and mana, glims, the
   calendar line, and small chips for "Offline", "Server trouble" or how many
   others are here. A desktop action bar shows the E action, the signature
   ability with its mana cost and cooldown, and the roll.
@@ -330,8 +338,8 @@ npm run dev        # Vite proxies /api and the /ws socket to 127.0.0.1:8090
 
 **Dev mode.** For playtesting on your own machine: press <kbd>`</kbd> (backquote)
 in a world, or open the Menu's **Dev** row, and the dev panel gives your account
-Glimway's own things: embers, any material, item, tool, recipe page, keepsake or
-home good, with a count, plus quick buttons for +100 embers and a stack of every
+Glimway's own things: glims, any material, item, tool, recipe page, keepsake or
+home good, with a count, plus quick buttons for +100 glims and a stack of every
 material. It goes through the server like any other change, so what you're given
 is real in your world. It never calls Habitica and never grants Habitica gear,
 gold or gems; the server refuses anything outside Glimway's content tables.
@@ -461,7 +469,7 @@ servers, how to write a playtest and how to debug a flaky one are in
 [docs/testing.md](docs/testing.md).
 
 The playtests in `e2e/` cover the whole quest including settling the warden,
-combat and dodging, embers, onboarding and its layout, the Commons and
+combat and dodging, glims, onboarding and its layout, the Commons and
 homesteads, papers and the library, the Tangle, the calendar, notice board,
 workshop and mail, connected play (sign-in, invites, takeover, offline,
 logout), presence with two players, and touch. `*-screens.spec.ts` specs
@@ -484,7 +492,7 @@ src/                 the browser game
   game/              Phaser runtime: scenes, entities, areas, the Wilds, homes,
                      the server link (link.ts) and presence (presence*.ts)
   ui/                Svelte interface: HUD, panels, connect guide, gates
-  lib/               shared rules and clients: state, saves, embers, Habitica
+  lib/               shared rules and clients: state, saves, glims, Habitica
                      import, Wilds generator, calendar, API client (lib/api),
                      presence protocol
   content/           dialogue, places, papers, copy
@@ -510,7 +518,7 @@ deploy/nixos/        NixOS modules for the static site and the server
   and ledger-backed, and the server checks reported Habitica profiles for
   plausibility. There is no local-only play.
 - **One copy of shared data.** `content/` is the single source for rules both
-  sides need. Logic that must agree exactly (sync and ember rules, the Wilds
+  sides need. Logic that must agree exactly (sync and glim rules, the Wilds
   generator, the calendar) has generated **parity vectors** that both the
   TypeScript and Go test suites replay.
 
