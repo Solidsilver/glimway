@@ -132,6 +132,7 @@ test('a friend’s Ward-light, as the hub relays it, mends the hero inside its c
     emit('game:ability-cast', { accountId: 'friend', ability: 'ward-light', x, y, pulseHeal: 5 })
   }, at)
   await expect.poll(async () => (await hp(page)) - before, { timeout: 8_000, intervals: [50] }).not.toBe(0)
+  // One read is enough: the poll returns within 50 ms of the first pulse, the next is 1.5 s away.
   expect((await hp(page)) - before).toBeCloseTo(5, 5)
   await page.screenshot({ path: 'test-results/abilities-ward-relayed.png' })
 })
@@ -155,7 +156,7 @@ test('a friend’s Stand, Kindle and Echo, as the hub relays them, are drawn whe
   await expect.poll(shown).toEqual(casts.map((c) => [c.ability, c.x, c.y]).sort())
   await page.screenshot({ path: 'test-results/abilities-friend-moves.png' })
   // Only drawn: none of them changes this hero.
-  expect(await moves(page)).toMatchObject({ planted: false, patches: [], decoy: null })
+  await expect.poll(() => moves(page)).toMatchObject({ planted: false, patches: [], decoy: null })
   // Each fades when its time is up (Stand 1.5 s, Echo 3 s, Kindle 6 s: game time).
   await waitGame(page, shown, (s) => s.length === 0, { seconds: 10, message: 'the friend’s moves fade' })
 })
@@ -200,6 +201,7 @@ test('two players: one Ward-light, and the other’s health rises with its pulse
   expect(status, 'the presence hub must relay `ability` (lane C)').toBe('live')
   // Three pulses over five seconds, each the caster's own: the hub put it on the cast.
   await expect.poll(async () => (await health()) - before, { timeout: 10_000, intervals: [50] }).not.toBe(0)
+  // One read is enough: the poll returns within 50 ms of the first pulse, the next is 1.5 s away.
   expect((await health()) - before).toBeCloseTo(pulse, 5)
   await other.screenshot({ path: 'test-results/abilities-ward-friend.png' })
   const healed = await health()

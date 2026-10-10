@@ -85,8 +85,9 @@ export interface FsHooks {
   __fsDevInsets: (v?: Insets) => Insets
   /** The hero sprite's box on screen (CSS px from the canvas's top left). */
   __fsDevHeroScreen: () => Box & { zoom: number }
-  /** A world point on screen (CSS px from the canvas's top left). */
+  /** The camera's scroll, zoom and centre as drawn (canvas px). */
   __fsDevCamera: () => { scrollX: number; scrollY: number; zoom: number; originX: number; originY: number }
+  /** A world point on screen (CSS px from the canvas's top left). */
   __fsDevToScreen: (x: number, y: number) => { x: number; y: number }
   /** The world point under the pointer. */
   __fsDevPointerWorld: () => { x: number; y: number }

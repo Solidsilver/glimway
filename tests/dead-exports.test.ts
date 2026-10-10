@@ -7,8 +7,14 @@ import { join } from 'node:path';
  * No export in src/ that nothing reads (review F9): the identifier scan the
  * step-back reviews ran by hand, kept in `npm test` so the pile doesn't grow
  * back. An export counts as read when its name appears anywhere else in
- * src/, tests/, e2e/ or scripts/ (generated code aside). Each kept-anyway
- * export says why below.
+ * src/, tests/, e2e/ or scripts/ (generated code aside); a re-export
+ * (`export { X }`, `export { X as Y } from …`) when its exported name appears
+ * in another file. Each kept-anyway export says why below.
+ *
+ * It is a word scan, not a type checker, so it errs towards "read": a name
+ * mentioned in a comment or a string counts as a use, and so does the same
+ * name exported from somewhere else. `export default` isn't checked (an
+ * importer names it as it likes; src/main.ts's is the only one).
  */
 const KEPT: Record<string, string> = {
   // The client's mirror of rules.Unlocked: the craft-table vectors (server review 15) replay it.
@@ -42,6 +48,15 @@ test('every export in src/ is read somewhere (or kept on purpose)', () => {
     if (!f.startsWith('src/')) continue;
     for (const m of t.matchAll(/^export (?:declare )?(?:async )?(?:type|interface|function|const|class|enum|let) ([A-Za-z_$][\w$]*)/gm)) {
       if (uses.get(m[1]) === 1 && KEPT[m[1]] !== f) unread.push(`${f}: ${m[1]}`);
+    }
+    // Re-exports name things declared elsewhere, so only another file's mention reads them.
+    const here = new Map<string, number>();
+    for (const w of t.match(/[A-Za-z_$][\w$]*/g) ?? []) here.set(w, (here.get(w) ?? 0) + 1);
+    for (const m of t.matchAll(/^export (?:type )?\{([^}]*)\}/gm)) {
+      for (const item of m[1].split(',')) {
+        const name = item.trim().replace(/^type\s+/, '').split(/\s+as\s+/).pop()!.trim();
+        if (name && (uses.get(name) ?? 0) - (here.get(name) ?? 0) === 0 && KEPT[name] !== f) unread.push(`${f}: ${name} (re-export)`);
+      }
     }
   }
   assert.deepEqual(unread, [], 'exports nothing reads: delete them, or say in KEPT why they stay');
