@@ -45,6 +45,14 @@ func TestEveryClientMarkNamespaceThroughOperation(t *testing.T) {
 			t.Fatal(ns.Prefix, w.Code, w.Body.String())
 		}
 	}
+	// An area's mark holds in its rooms (Silas at his counter in the Yard), never elsewhere.
+	for area, ok := range map[string]bool{"in:commons:yard": true, "in:commons:yard:deeds": true, "village": false, "in:village:bakery": false} {
+		c2, s2 := x.ready("met-" + strings.ReplaceAll(area, ":", "-"))
+		w := x.rawHTTP("POST", "/api/story/mark", body(s2, "met-silas", map[string]any{"mark": "home:met-silas", "where": map[string]any{"area": area, "x": 40, "y": 40}}), c2)
+		if ok && w.Code != 200 || !ok && (w.Code != 409 || !strings.Contains(w.Body.String(), "wrong-area")) {
+			t.Fatal(area, w.Code, w.Body.String())
+		}
+	}
 	for _, mark := range []string{"met:mara@future", "met:@accepted", "heard:mara@", "heard:mara@@intro", "heard:mara@bad.name"} {
 		w := x.rawHTTP("POST", "/api/story/mark", body(s, "invalid", map[string]any{"mark": mark}), c)
 		if w.Code != 400 || !strings.Contains(w.Body.String(), "invalid-json") {

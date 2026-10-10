@@ -194,6 +194,16 @@ const ROOM_CARDS: Record<string, Omit<LocationInfo, 'name'>> = {
     tagline: 'Elara keeps it half of each hour. She calls it fieldwork.',
     description: 'Shelves on every wall under four painted signs, the reading table with its lamp, a nook in the alcove, and Elara’s desk, where the drift gets measured and the donations get written in.',
   },
+  'in:commons:yard': {
+    eyebrow: 'Under the sign on the Commons',
+    tagline: 'Sawdust, linseed oil, and a fox on the counter.',
+    description: 'Silas’s front room is his shop: the timber rack, the mending bench, a few finished pieces by the door, and the counter where he keeps the plot book. Pell’s office is through the side door.',
+  },
+  'in:commons:yard:deeds': {
+    eyebrow: 'Through the side door of the Yard',
+    tagline: 'Ink, rolled deeds, and a table for signing.',
+    description: 'Pell keeps the Commons plot ledger here: a page for every gate in the pigeonholes, the plot map pinned above, a tall desk, and the table where deeds are signed together.',
+  },
 };
 
 /** A room's card, or null when `areaId` isn't one of the rooms. */

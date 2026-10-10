@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { linkStatus, serverState, CONTRACT } from './connected'
 import { waitForLive, expectToast } from './helpers'
-import { atMyMailbox, claimDeed, earnGlims, earnPlenty, freshPlayer, fund, go, homes, intoCottage, myHome, place, readOn, silasSays } from './home-helpers'
+import { atMyMailbox, claimDeed, earnGlims, earnPlenty, freshPlayer, fund, go, homes, intoCottage, myHome, place, silasSays, yardBuild } from './home-helpers'
 
 /**
  * Regressions for the phase 5 review, against the real
@@ -43,7 +43,7 @@ test('finding 2: a 200 with a truncated body is replayed with the same key, neve
   await earnGlims(page, id)
   await claim(page)
   const before = (await serverState(page)).body.state.glims
-  await silasSays(page, /See what you’ve finished/)
+  await silasSays(page, /See the Yard/)
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
   await shop.getByRole('tab', { name: 'Furnish' }).click()
   const keys: string[] = []
@@ -99,7 +99,7 @@ test('finding 4: a lost parcel send of a piece leaves Arrange showing it gone on
   const a = await freshPlayer(page, 'Tansy')
   await earnGlims(page, a)
   await claim(page)
-  await silasSays(page, /See what you’ve finished/)
+  await silasSays(page, /See the Yard/)
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
   await shop.getByRole('tab', { name: 'Furnish' }).click()
   await shop.locator('[data-buy="wooden-stool"]').click()
@@ -141,11 +141,9 @@ test('finding 5: crafting sends the batch it shows, after the stock runs low', a
   await earnPlenty(page, id)
   fund(id, { materials: { timber: 60, stone: 30, fiber: 30 } })
   await claim(page)
-  await silasSays(page, /Raise a cottage/)
-  await readOn(page, /Steady as a route stone/)
+  await yardBuild(page, 'cottage')
   await expect.poll(async () => (await myHome(page, id)).tier).toBe(1)
-  await silasSays(page, /Build on a workshop/)
-  await readOn(page, /There\. Deep eaves/)
+  await yardBuild(page, 'workshop')
   await expect.poll(async () => (await myHome(page, id)).tier).toBe(2)
   fund(id, { materials: { timber: 12 } })
   await intoCottage(page)

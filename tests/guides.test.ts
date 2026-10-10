@@ -52,7 +52,7 @@ test('guides: a tool given or found (an heirloom, no deed) is not "your first to
 test('guides: materials carried with no deed tick nothing before them', () => {
   const p = guideProgress(guideById('first-tool')!, base({ materials: { timber: 20, stone: 10, fiber: 8 } }));
   assert.deepEqual(p.steps.map((s) => s.done), [false, false, false, false, false]);
-  assert.equal(p.steps[0].where, 'silas');
+  assert.equal(p.steps[0].where, 'pell');
 });
 
 test('guides: a met step is remembered in the save and never un-ticks', () => {
@@ -68,10 +68,13 @@ test('guides: a met step is remembered in the save and never un-ticks', () => {
   assert.deepEqual(newlyMet(base({ connected: false, claimed: true, tier: 1, cooked: 2 })), []);
 });
 
-test('guides: a fresh player starts at the first step; the Silas steps point at Silas', () => {
+test('guides: a fresh player starts at the first step; the deed is Pell’s, the building Silas’s', () => {
   const p = guideProgress(guideById('first-tool')!, base());
   assert.equal(p.current, 0);
-  assert.equal(p.steps[0].where, 'silas');
+  assert.equal(p.steps[0].where, 'pell');
+  assert.deepEqual(p.steps.map((s) => s.where), ['pell', 'silas', 'wilds', 'silas', 'bench']);
+  // Every deed step goes to Pell; Silas keeps the building.
+  for (const g of GUIDES) for (const s of g.steps) if (/deed/i.test(s.text)) assert.equal(s.where, 'pell', s.text);
   // Enough materials but no workshop yet: that step is done, Silas is next.
   const q = guideProgress(guideById('first-tool')!, base({ claimed: true, tier: 1, materials: { timber: 20, stone: 10, fiber: 8 } }));
   assert.equal(q.current, 3);

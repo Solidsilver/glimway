@@ -3,7 +3,7 @@ import { devices } from '@playwright/test'
 import { expect, test } from './fixtures'
 import type { Page } from './fixtures'
 import { warp, waitForLive } from './helpers'
-import { claimDeed, earnPlenty, freshPlayer, intoCottage, myHome, place, readOn, silasSays } from './home-helpers'
+import { claimDeed, earnPlenty, freshPlayer, intoCottage, myHome, place, yardBuild } from './home-helpers'
 
 /**
  * Screens for the art-density review (.agent/screens/<DENSITY_TAG>-*.png):
@@ -104,8 +104,7 @@ test.describe('in a world', () => {
     const id = await freshPlayer(page)
     await earnPlenty(page, id)
     await claimDeed(page)
-    await silasSays(page, /Raise a cottage/)
-    await readOn(page, /Steady as a route stone/)
+    await yardBuild(page, 'cottage')
     await expect.poll(async () => (await myHome(page, id)).tier).toBe(1)
     await intoCottage(page)
     await place(page, 104, 104)

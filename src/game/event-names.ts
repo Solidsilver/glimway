@@ -149,8 +149,6 @@ export const EV = {
   homeNamePrompt: 'ui:home-name-prompt',
   /** The name given (null: cancelled). */
   homeNamed: 'game:home-named',
-  /** Ask the player to confirm leaving the deed. */
-  homeConfirmLeave: 'ui:home-confirm-leave',
   /** UI → scene: a homestead action decided outside a conversation: { action }. */
   homeAction: 'game:home-action',
 
@@ -502,7 +500,6 @@ export interface EventMap {
   [EV.homeGoal]: { text: string | null }
   [EV.homeNamePrompt]: NamePrompt
   [EV.homeNamed]: { name: string | null }
-  [EV.homeConfirmLeave]: { place: string; shared: boolean }
   [EV.homeAction]: { action: string }
   [EV.paperFound]: PaperFoundPayload
   [EV.papersSync]: PapersSyncPayload

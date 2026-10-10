@@ -1,6 +1,6 @@
 /**
- * Area NPCs (Mara, Orrin, Pip, and the residents Elara, Finn, Hazel and
- * Ada). The playtest-1 walking art (../people.ts) when it loaded: each
+ * Area NPCs (Mara, Orrin, Pip, the residents Elara, Finn, Hazel and Ada, and
+ * Silas and Pell at the Yard). The playtest-1 walking art (../people.ts) when it loaded: each
  * breathes facing one of four ways, faces you when you're close, walks the
  * way it goes, and sits on a bench in its sit pose; some keep a small
  * routine (../npc-routines.ts). Otherwise the earlier breathing art, or the
@@ -13,6 +13,8 @@ import type Phaser from 'phaser'
 import { tileBottom, tileMid } from '../../lib/tile'
 import { commonsAnim, commonsArt } from '../commons-pass'
 import { isResident, residentName, RESIDENT_IDS } from '../../content/residents'
+import { BUILDER_NPC_DATA } from '../../content/expansion-writing'
+import { PELL } from '../../content/pell'
 import type { InteractId, WorldData } from '../worlds'
 import { PEOPLE_KEY, hasPerson, peopleDensity, personAnim, sitFrame } from '../people'
 import type { PersonId } from '../atlas-plan'
@@ -24,8 +26,13 @@ export const NPC_NAMES: Record<string, string> = {
   mara: 'Mara',
   orrin: 'Orrin',
   pip: 'Pip',
-  ...Object.fromEntries(RESIDENT_IDS.map((id) => [id, residentName(id)]))
+  ...Object.fromEntries(RESIDENT_IDS.map((id) => [id, residentName(id)])),
+  silas: BUILDER_NPC_DATA.name,
+  pell: PELL.name
 }
+
+/** Drawn from the Commons pass (`commons-art:<id>-…`): the residents, and Silas and Pell. */
+const COMMONS_PEOPLE = new Set<string>([...RESIDENT_IDS, 'silas', 'pell'])
 
 /**
  * The residents' art comes with the Commons pass (`commons-art:<id>-…`);
@@ -40,10 +47,11 @@ const RESIDENT_FALLBACK: Record<string, { key: string; tint: number }> = {
 
 /** The breathing animation and first idle frame for an NPC, when delivered. */
 function idleArt(scene: Phaser.Scene, id: string): { anim: string; texture: string } | null {
-  if (isResident(id)) {
+  if (COMMONS_PEOPLE.has(id)) {
     const anim = commonsAnim(scene, `${id}-breathing`)
     const texture = commonsArt(scene, `${id}-idle-0`)
-    return anim && texture ? { anim, texture } : null
+    if (anim && texture) return { anim, texture }
+    if (isResident(id)) return null
   }
   const anim = `${id}-breathing`
   return scene.anims.exists(anim) && scene.textures.exists(`${id}-idle-0`) ? { anim, texture: `${id}-idle-0` } : null

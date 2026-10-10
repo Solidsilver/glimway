@@ -57,24 +57,37 @@ test.describe('pinned guides', () => {
     await page.getByRole('tab', { name: 'How do I…?' }).click()
     const guide = page.locator('[data-guide="first-tool"]')
     await guide.getByRole('button', { name: /Make your first tool/ }).click()
-    await expect(guide).toContainText('Sign a deed with Silas')
+    await expect(guide).toContainText('Sign a deed with Pell')
     await page.getByTestId('pin-first-tool').click()
     await page.keyboard.press('Escape')
 
     // The goal line follows the guide's first step, and the needle points on toward the Commons (east).
-    await expect(page.getByTestId('goal-pinned')).toContainText('Sign a deed with Silas')
+    await expect(page.getByTestId('goal-pinned')).toContainText('Sign a deed with Pell')
     await waitForLive(page)
     await frames(page, 30)
     let g = await goal(page)
     expect(g.dir.here).toBe(false)
     expect(Math.cos(g.dir.angle!), 'toward the Commons gate: east').toBeGreaterThan(0.3)
 
-    // On the Commons, Silas's table itself.
+    // On the Commons: the way in is the Yard's front door, under Silas's sign (content/rooms.json).
     await go(page, 'commons', 23, 19)
     await waitForLive(page)
     await frames(page, 30)
     g = await goal(page)
-    expect(g.dir.here, 'Silas is here').toBe(true)
+    expect(g.dir.here, 'Pell is indoors').toBe(false)
+    expect(g.target).toMatchObject({ x: 53.5 * 16, y: 17.5 * 16 })
+    // In the shop, the side door; in Pell's office, Pell.
+    await go(page, 'in:commons:yard', 7, 7)
+    await waitForLive(page)
+    await frames(page, 30)
+    g = await goal(page)
+    expect(g.dir.here).toBe(false)
+    expect(Math.cos(g.dir.angle!), 'toward the side door: east').toBeGreaterThan(0.3)
+    await go(page, 'in:commons:yard:deeds', 2, 5)
+    await waitForLive(page)
+    await frames(page, 30)
+    g = await goal(page)
+    expect(g.dir.here, 'Pell is here').toBe(true)
 
     // Tapping the pinned goal opens the guide in the journal; unpinning brings the story back.
     await page.getByTestId('goal-pinned').click()

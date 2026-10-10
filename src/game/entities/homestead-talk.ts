@@ -1,8 +1,9 @@
 /**
- * Homesteads, talked to: everything you can use on the Commons, on a
- * homestead's land and in a cottage (each point with its own prompt and
- * action), Silas's deeds and upgrades at his table, the deed's sharing and
- * leaving, resting at home, and the placed seats.
+ * Homesteads, talked to: everything you can use on the Commons, at Silas's
+ * Yard, on a homestead's land and in a cottage (each point with its own
+ * prompt and action): Silas's short talk and Pell's deeds (../yard-talk.ts),
+ * resting at home, and the placed seats. The Yard panel sells and builds;
+ * the Manage your deed panel shares and gives up (../yard-open.ts).
  */
 import Phaser from 'phaser'
 import { HOMESTEAD_DATA, type HomeScene } from '../../lib/homestead'
@@ -11,10 +12,9 @@ import { glimsCount } from '../../content/purse'
 import type { HomeView } from '../../lib/api/types'
 import { CARTING_DAY_NOTICE } from '../../content/expansion-writing'
 import type { Dialogue, DialogueChoice } from '../../content/world'
-import { shortTalk } from '../../content/talk'
 import { heardStory, markStory } from '../heard'
 import { paperFlag } from '../../content/papers'
-import { HEIRLOOM_GUEST_LINES, knowsHollisName } from '../../content/heirlooms'
+import { knowsHollisName } from '../../content/heirlooms'
 import { heirloomBeat } from '../heirloom-beats'
 import { EMPTY_CHAIR_LINE, SEAT_LINES } from '../../content/touches'
 import { KEPT_EMPTY, isSeatItem } from '../seats'
@@ -25,37 +25,34 @@ import { TILE, tileBottom, tileMid } from '../../lib/tile'
 import { ROOM_BENCH, ROOM_CHEST, ROOM_HEARTH } from '../cottage'
 import { grantPaper } from '../papers'
 import { itemsFor } from '../items'
-import { sellerFor } from '../../lib/items'
-import { sellerChoices } from '../../lib/purse'
-import { purseCopy } from '../../content/purse'
 import { keepsakeAsk } from '../keepsakes'
 import type { VillagePanel } from '../village'
 import { openBoard } from './village-life'
-import { costPhrase, WORKSHOP_TIER, workshopShort } from '../../lib/village'
 import { HOME_FLAGS, PAPERS, SILAS, lotName } from '../homestead'
-import { homeErrorText } from '../../content/errors'
 import type { Interactable, MarkerKind } from './interactables'
 import { DialogueHold } from '../dialogue-hold'
 import { stablePoints } from './homestead-stable'
 import { openDialogue } from '../dialogue'
 import type { HomesteadDeps, HomesteadLayer } from './homesteads'
-import { POST, SILAS_ID, short } from './homestead-art'
-import { openYard } from '../yard-open'
-import { atTable as atDeedTable, shareCandidates, standsAtTable } from '../deed-table'
+import { POST, short } from './homestead-art'
+import { openDeedPanel, openYard } from '../yard-open'
+import { PELL, PELL_DEED } from '../../content/pell'
+import { MANAGE_DEED, SEE_THE_YARD, pellTalk, silasTalk } from '../yard-talk'
+import { pinned, setPinned } from '../guide-pin'
 
-/** "30 glims, 20 timber, 10 stone, 8 fiber" */
-function workshopPrice(): string {
-  return `${WORKSHOP_TIER.glims} glims, ${costPhrase(WORKSHOP_TIER.materials ?? {})}`
-}
+/** Story marks (src/game/heard.ts): you've met Pell, and heard Pell's pitch for a first deed. */
+const PELL_MET = 'met'
+const PELL_PITCH = 'pitch'
 
 export class HomesteadTalk {
   private readonly scene: Phaser.Scene
   private readonly deps: HomesteadDeps
 
   private idleLine = Math.floor(Math.random() * SILAS.dialogue.idleLines.length)
+  private pellLine = Math.floor(Math.random() * PELL.idleLines.length)
   /** The next sit line for a placed seat (cycling). */
   private seatLine = 0
-  /** The world held still while Silas reads his plot book. */
+  /** The world held still while Silas or Pell reads the plot book. */
   readonly silasHold = new DialogueHold(uiState)
 
   constructor(private readonly home: HomesteadLayer) {
@@ -248,10 +245,12 @@ export class HomesteadTalk {
       out.push(...this.seatPoints(home, 'outdoor'))
       return out
     }
+    // Silas's Yard: Silas at his counter, Pell at the desk (the displays are the room's spots: ../room-spots.ts).
+    if (this.home.yardRoom) return this.yardPeople()
     if (!this.home.commons) return out
     const f = this.home.commons.features
     const at = (t: { tx: number; ty: number }, dy = 0) => ({ x: tileMid(t.tx), y: tileBottom(t.ty) + dy })
-    out.push({ id: SILAS_ID, ...at(f.silas, -4), label: 'Talk to Silas', verb: 'Talk', marker: () => this.silasMarker(), markerOffset: 24, activate: () => this.talkToSilas() })
+    out.push(...this.yardPeople())
     out.push({
       id: 'home:hame',
       ...at(f.hame, 6),
@@ -287,13 +286,6 @@ export class HomesteadTalk {
       }
     }
     return out
-  }
-
-  /** "!" while Silas has a deed (or an invite) for you; "…" until you've met him. */
-  private silasMarker(): MarkerKind {
-    if (this.home.homes.connected && this.home.homes.status === 'ready' && (!this.home.homes.claimed || this.home.homes.inviteForMe())) return 'quest'
-    if (!this.deps.session.state.flags.includes(HOME_FLAGS.met)) return 'talk'
-    return null
   }
 
   /** The stake on an unclaimed lot. */
@@ -394,191 +386,117 @@ export class HomesteadTalk {
     return !!this.deps.room && !!this.home.here()?.member
   }
 
-  /** `yard`: his yard talk (talkToSilasNow), where his offcut bundles are on offer. */
-  private say(d: Dialogue, opts: { yard?: boolean } = {}): void {
-    // Carrying Hollis's fox adds the quiet line (give it back / not yet).
-    let lines = d.lines
-    let choices = d.choices
-    if (d.speaker === SILAS.name) {
-      const ask = keepsakeAsk('silas', this.deps.session.state.flags, itemsFor(this.deps.session).view?.stacks.map((s) => s.itemDef) ?? [])
-      if (ask) {
-        lines = [...lines, ask.line]
-        choices = [...(choices ?? []), ...ask.choices]
-      }
-      // His yard's offcut bundles, for gold only (purse-and-wardrobe.md 3.1), before the goodbye.
-      const yard = opts.yard && this.deps.session.link ? sellerFor('silas-yard') : null
-      if (yard) {
-        const bundles = sellerChoices(yard, { reply: true })
-        const list = choices ?? []
-        const last = list.at(-1)
-        const bye = last && !last.action && !last.disabled && !last.replay ? last : null
-        choices = bye ? [...list.slice(0, -1), ...bundles, bye] : [...list, ...bundles, { text: purseCopy.notYet }]
-      }
+  private say(d: Dialogue): void {
+    openDialogue({ id: 'home', speaker: d.speaker, lines: d.lines, choices: d.choices })
+  }
+
+  /** Silas and Pell, where their hour has them here (the Commons by the sawhorse, the shop's counter, Pell's desk). */
+  private yardPeople(): Interactable[] {
+    const out: Interactable[] = []
+    for (const n of this.deps.world.npcs) {
+      if (n.id !== 'silas' && n.id !== 'pell') continue
+      const silas = n.id === 'silas'
+      out.push({
+        id: n.id,
+        x: tileMid(n.tx),
+        y: tileBottom(n.ty) - 4,
+        label: `Talk to ${silas ? SILAS.name : PELL.name}`,
+        verb: 'Talk',
+        marker: () => (silas ? this.silasMarker() : this.pellMarker()),
+        markerOffset: 24,
+        // Across the counter (or Pell's desk) indoors: a little further than arm's length.
+        ...(this.home.yardRoom ? { reach: 42 } : {}),
+        activate: () => this.talkAtTheYard(silas ? 'silas' : 'pell')
+      })
     }
-    openDialogue({ id: 'home', speaker: d.speaker, lines, choices })
+    return out
   }
 
-  /** Who stands at the deed table right now (presence, this world), but you (src/game/deed-table.ts). */
-  private atTable(): { id: string; name: string }[] {
-    return atDeedTable()
+  /** "…" until you've met Silas. */
+  private silasMarker(): MarkerKind {
+    return this.deps.session.state.flags.includes(HOME_FLAGS.met) ? null : 'talk'
   }
 
-  private heroAtTable(): boolean {
-    const h = this.deps.hero()
-    return standsAtTable(this.deps.world.areaId, h)
+  /** "!" while Pell has a deed (or an invite) for you; "…" until you've met. */
+  private pellMarker(): MarkerKind {
+    if (this.home.homes.connected && this.home.homes.status === 'ready' && (!this.home.homes.claimed || this.home.homes.inviteForMe())) return 'quest'
+    return heardStory(this.deps.session.state.flags, 'pell', PELL_MET) ? null : 'talk'
   }
 
-  /** Silas checks his plot book first (who holds what, who wants a joint deed), then talks. */
-  private talkToSilas(): void {
+  /** Silas and Pell check the plot book first (who holds what, who wants a joint deed), then talk. */
+  private talkAtTheYard(who: 'silas' | 'pell'): void {
+    const now = () => (who === 'silas' ? this.talkToSilasNow() : this.talkToPellNow())
     if (this.home.homes.connected && this.home.homes.status === 'ready') {
-      // The world holds still while he reads (the scene's end lets go, never this late answer).
+      // The world holds still while they read (the scene's end lets go, never this late answer).
       this.silasHold.take()
       void this.home.homes.load().finally(() => {
         if (this.home.gone) return
         this.silasHold.settle()
-        this.talkToSilasNow()
+        now()
       })
       return
     }
-    this.talkToSilasNow()
+    now()
   }
 
+  /** Silas's short talk (silas-yard.md 2.2): the same at his counter and out in the yard. */
   private talkToSilasNow(): void {
     const s = this.deps.session
-    const lines = SILAS.dialogue
+    const homes = this.home.homes
     const first = !s.state.flags.includes(HOME_FLAGS.met)
     s.addFlag(HOME_FLAGS.met)
-
     // The axe is offered only when Silas can hand it over now (the server's
     // checks, from where you stand); otherwise he says why instead.
-    const axe = this.home.homes.connected ? heirloomBeat(s, 'brack-felling-axe', 'Take the Brack felling axe') : null
-    const canAxe = !!axe?.choices.length
-    const axeChoice = axe?.choices[0] as DialogueChoice
-    const axeLines = axe?.lines ?? []
-
-    if (!this.home.homes.connected) {
-      const guestAxe = knowsHollisName(s.state.flags, s.questStage) && !s.state.flags.includes('heirloom:brack-felling-axe')
-      const deeds = ['Deeds out here are for folk with a world, mind. Sign in to your world and I’ll sell you one. Land past any gate on the lane.']
-      const told = this.toldBefore('guest', first, deeds)
-      this.say({
-        speaker: SILAS.name,
-        lines: [
-          ...(first ? lines.firstMeeting.lines : [lines.idleLines[this.nextIdle()]]),
-          ...(guestAxe ? [HEIRLOOM_GUEST_LINES.silas] : []),
-          ...told.lines
-        ],
-        choices: told.choices
-      })
-      return
-    }
-    if (this.home.homes.status !== 'ready') {
-      const choices: DialogueChoice[] = canAxe ? [axeChoice, { text: 'Not yet' }] : []
-      this.say({
-        speaker: SILAS.name,
-        lines: [
-          ...(first ? lines.firstMeeting.lines : []),
-          ...axeLines,
-          this.home.homes.status === 'offline'
-            ? 'Can’t make out the plot book just now. Weather, likely. Come back when the road to your world is clear.'
-            : 'Hold on, I’m finding your page in the plot book.'
-        ],
-        choices: choices.length ? choices : undefined
-      })
-      if (this.home.homes.status !== 'loading') void this.home.homes.load()
-      return
-    }
-    const mine = this.home.homes.mine
-    if (!this.home.homes.claimed) {
-      const invite = this.home.homes.inviteForMe()
-      const choices: DialogueChoice[] = []
-      if (canAxe) choices.push(axeChoice)
-      if (invite) choices.push({ text: `Sign ${short(invite.from.name, 14)}’s deed`, note: `${lotName(invite.gate)} · together, at the table`, action: `home:sign:${invite.homeId}` })
-      for (const g of this.home.homes.reclaimable().slice(0, 2)) choices.push({ text: `Take back ${lotName(g.gate)}`, note: 'Your old deed, as it stands · free', action: `home:claim:${g.gate}` })
-      for (const g of this.home.homes.unclaimed().slice(0, 4)) {
-        const price = g.price ?? HOMESTEAD_DATA.deeds.glims
-        const short = price > s.state.glims
-        choices.push(short ? { text: `The deed to ${lotName(g.gate)}`, note: `Needs ${glimsCount(price)}`, disabled: true } : { text: `The deed to ${lotName(g.gate)}`, note: price === 0 ? 'First deed: on the Compact' : glimsCount(price), action: `home:claim:${g.gate}` })
-      }
-      choices.push({ text: 'Not yet' })
-      // An invite or an old page is news every time; the lantern-light speech plays once.
-      const pitch = invite
-        ? [`${invite.from.name} wants your name on their deed, ${lotName(invite.gate)}. Both of you here at my table, both of you sign, and it’s done.`]
-        : this.home.homes.reclaimable().length
-          ? [`Your old page’s still in the book: ${lotName(this.home.homes.reclaimable()[0].gate)}. Nobody’s struck it out. Say the word and your name goes back on, or pick fresh land.`]
-          : null
-      const told = pitch ? { lines: pitch, choices } : this.toldBefore('unclaimed', first, ['I measure land in lantern-light, not yards. Pick a gate on the lane, read the sign, walk the ground if you like. Then I’ll draw you the deed.'], choices)
-      this.say({
-        speaker: SILAS.name,
-        lines: [
-          ...(first ? lines.firstMeeting.lines : ['There you are, neighbour.']),
-          ...axeLines,
-          ...told.lines
-        ],
-        choices: told.choices
-      }, { yard: true })
-      return
-    }
-    if (!mine) {
-      const choices: DialogueChoice[] = canAxe ? [axeChoice, { text: 'Not yet' }] : []
-      this.say({
-        speaker: SILAS.name,
-        lines: [
-          ...(first ? lines.firstMeeting.lines : []),
-          ...axeLines,
-          'Hold on, I’m finding your page in the plot book.'
-        ],
-        choices: choices.length ? choices : undefined
-      })
-      void this.home.homes.load()
-      return
-    }
-    const choices: DialogueChoice[] = []
-    if (canAxe) choices.push(axeChoice)
-    if (mine.tier === 0) {
-      const cost = this.home.homes.cottagePrice()
-      const short = s.state.glims < cost
-      choices.push(short ? { text: 'Raise a cottage', note: `Needs ${glimsCount(cost)}`, disabled: true } : { text: 'Raise a cottage', note: glimsCount(cost), action: 'home:upgrade' })
-    }
-    if (mine.tier === 1) {
-      const why = workshopShort(s.state.glims, this.home.homes.materials)
-      choices.push(why ? { text: 'Build on a workshop', note: why, disabled: true } : { text: 'Build on a workshop', note: workshopPrice(), action: 'home:upgrade' })
-    }
-    choices.push({ text: 'See what you’ve finished', action: 'home:shop' })
-    choices.push({ text: 'Share the deed', note: 'Someone at the table with you', action: 'home:share' })
-    choices.push({ text: 'Give up my place on the deed', action: 'home:leave' })
-    choices.push({ text: canAxe ? 'Not yet' : 'Just passing' })
-    const intro = mine.tier === 0
-      ? [s.state.glims < this.home.homes.cottagePrice() ? lines.notEnoughGlims.lines[0] : 'Your camp’s holding. Four skids and a slate roof, and you’d have a door to hang a fox over. Say the word.']
-      : mine.tier === 1
-        ? ['Deep eaves, a heavy bench and a chest that doesn’t drink the damp. Bring me timber, stone and fiber from the Wilds and I’ll build you a workshop.', lines.sellDecorations.lines[0]]
-        : [lines.sellDecorations.lines[0]]
-    // What he says about your place plays once per state; then a nod and "Hear it again".
-    const state = mine.tier === 0 ? `tier:0:${s.state.glims < this.home.homes.cottagePrice() ? 'saving' : 'ready'}` : `tier:${mine.tier}`
-    const told = this.toldBefore(state, first, intro, choices)
-    const greet = first ? lines.firstMeeting.lines : mine.tier === 0 && !told.short ? [] : [lines.idleLines[this.nextIdle()]]
-    this.say({
-      speaker: SILAS.name,
-      lines: [...greet, ...axeLines, ...told.lines],
-      choices: told.choices
-    }, { yard: true })
+    const beat = homes.connected ? heirloomBeat(s, 'brack-felling-axe', 'Take the Brack felling axe') : null
+    const fox = keepsakeAsk('silas', s.state.flags, itemsFor(s).view?.stacks.map((x) => x.itemDef) ?? [])
+    const talk = silasTalk({
+      first,
+      idle: SILAS.dialogue.idleLines[this.nextIdle()],
+      connected: homes.connected,
+      claimed: homes.status === 'ready' ? homes.claimed : null,
+      axe: beat ? { lines: beat.lines, choice: beat.choices[0] ?? null } : null,
+      guestAxe: !homes.connected && knowsHollisName(s.state.flags, s.questStage) && !s.state.flags.includes('heirloom:brack-felling-axe'),
+      fox
+    })
+    this.say(talk)
+    // No deed yet: the needle points at Pell (the claim guide), unless you've pinned something else.
+    if (talk.pointsAtPell && homes.connected && !pinned.slot) setPinned('guide:claim')
+    if (homes.connected && homes.status !== 'ready' && homes.status !== 'loading') void homes.load()
   }
 
-  /**
-   * Silas's say about something plays in full once (src/game/heard.ts);
-   * after that he leaves it out and offers "Hear it again" among the choices.
-   */
-  private toldBefore(what: string, first: boolean, lines: string[], choices?: DialogueChoice[]): { lines: string[]; choices: DialogueChoice[] | undefined; short: boolean } {
+  /** Pell at the desk (silas-yard.md 2.6): deed things only. */
+  private talkToPellNow(): void {
     const s = this.deps.session
-    const heard = !first && heardStory(s.state.flags, 'silas', what)
-    markStory(s, 'silas', what)
-    if (!heard) return { lines, choices, short: false }
-    const t = shortTalk({ greeting: '', fresh: [], full: lines, choices })
-    return { lines: [], choices: t.choices, short: true }
+    const homes = this.home.homes
+    const first = !heardStory(s.state.flags, 'pell', PELL_MET)
+    markStory(s, 'pell', PELL_MET)
+    const invite = homes.inviteForMe()
+    const talk = pellTalk({
+      first,
+      idle: PELL.idleLines[this.nextPellIdle()],
+      status: homes.connected ? homes.status : 'guest',
+      claimed: homes.claimed,
+      homeRead: !!homes.mine,
+      glims: s.state.glims,
+      invite: invite ? { homeId: invite.homeId, gate: invite.gate, from: invite.from.name } : null,
+      reclaimable: homes.reclaimable().map((g) => g.gate),
+      unclaimed: homes.unclaimed().map((g) => ({ gate: g.gate, price: g.price ?? HOMESTEAD_DATA.deeds.glims })),
+      pitchHeard: heardStory(s.state.flags, 'pell', PELL_PITCH)
+    })
+    // The pitch (or the first meeting, which says the same) plays once.
+    if (homes.status === 'ready' && !homes.claimed) markStory(s, 'pell', PELL_PITCH)
+    this.say(talk)
+    if (talk.needsRead) void homes.load()
   }
 
   private nextIdle(): number {
     this.idleLine = (this.idleLine + 1) % SILAS.dialogue.idleLines.length
     return this.idleLine
+  }
+
+  private nextPellIdle(): number {
+    this.pellLine = (this.pellLine + 1) % PELL.idleLines.length
+    return this.pellLine
   }
 
   private offerRest(speaker: string): void {
@@ -614,35 +532,8 @@ export class HomesteadTalk {
     if (action.startsWith('home:place-shelf:')) return this.placeGateShelf(action.slice('home:place-shelf:'.length))
     if (action.startsWith('home:claim:')) return this.claim(Number(action.slice('home:claim:'.length)))
     if (action.startsWith('home:sign:')) return this.signDeed(action.slice('home:sign:'.length))
-    if (action.startsWith('home:offer:')) return this.offerDeed(action.slice('home:offer:'.length))
-    if (action === 'home:share') return this.share()
-    if (action === 'home:leave') {
-      bus.emit(EV.homeConfirmLeave, { place: this.home.placeName(this.home.homes.mine, this.home.homes.myGate ?? 0), shared: (this.home.homes.mine?.members.length ?? 1) > 1 })
-      return
-    }
-    if (action === 'home:leave-confirmed') return this.leave()
-    if (action === 'home:shop') {
-      openYard()
-      return
-    }
-    if (action === 'home:upgrade') {
-      const r = await this.home.homes.upgrade()
-      if (!this.scene.sys.isActive()) return
-      if (r.ok) {
-        sfx('lantern')
-        const workshop = (this.home.homes.mine?.tier ?? 0) >= 2
-        this.say({
-          speaker: SILAS.name,
-          lines: workshop
-            ? ['There. Deep eaves, a heavy bench, and a chest that won’t drink the damp. Clean your tools. Rust is just iron forgetting it is a saw.']
-            : [...SILAS.dialogue.afterUpgrade.lines.map((l) => l.replace('Go on in.', 'It’s up on your land, past your gate. Go on in.'))]
-        })
-      } else if (r.code === 'insufficient-glims') {
-        this.say({ speaker: SILAS.name, lines: SILAS.dialogue.notEnoughGlims.lines })
-      } else {
-        bus.emit(EV.toast, { text: r.text, kind: 'error' })
-      }
-    }
+    if (action === SEE_THE_YARD) return openYard()
+    if (action === MANAGE_DEED) return openDeedPanel()
   }
 
   private async placeGateShelf(itemId: string): Promise<void> {
@@ -656,94 +547,43 @@ export class HomesteadTalk {
     }
   }
 
+  /** Pell enters your name: a new deed, or an old one taken back. */
   private async claim(gate: number): Promise<void> {
     const back = this.home.homes.gateInfo(gate)?.reclaim ?? false
+    const price = this.home.homes.gateInfo(gate)?.price ?? HOMESTEAD_DATA.deeds.glims
     const r = await this.home.homes.claim(gate)
     if (!this.scene.sys.isActive()) return
     if (!r.ok) {
-      this.say({ speaker: SILAS.name, lines: [r.code === 'insufficient-glims' ? SILAS.dialogue.notEnoughGlims.lines[0] : r.text] })
+      this.say({ speaker: PELL.name, lines: [r.code === 'insufficient-glims' ? PELL_DEED.notEnoughGlims : r.text] })
       return
     }
     sfx('quest')
     this.home.scheduleRedraw()
     if (back) {
-      this.say({ speaker: SILAS.name, lines: [`There. Your name’s back on ${lotName(gate)}, same ink. It’s all as you left it, give or take the weeds.`] })
+      this.say({ speaker: PELL.name, lines: [PELL_DEED.takenBack(lotName(gate))] })
       bus.emit(EV.toast, { text: `${lotName(gate)} is yours again.`, icon: 'lantern' })
       return
     }
-    this.say({
-      speaker: SILAS.name,
-      lines: [
-        ...SILAS.dialogue.offerCampsite.lines,
-        `There: ${lotName(gate)}, in my square hand, measured in lantern-light. Your camp’s set up past the gate. Follow the lane; you’ll see your sign.`
-      ]
-    })
+    this.say({ speaker: PELL.name, lines: [PELL_DEED.bought(lotName(gate), price)] })
     bus.emit(EV.toast, { text: `${lotName(gate)} is yours. Follow the marker to your gate.`, icon: 'lantern' })
   }
 
-  private async leave(): Promise<void> {
-    const r = await this.home.homes.leave()
-    if (!this.scene.sys.isActive()) return
-    if (!r.ok) {
-      bus.emit(EV.toast, { text: r.text, kind: 'error' })
-      return
-    }
-    this.home.scheduleRedraw()
-    this.say({
-      speaker: SILAS.name,
-      lines: ['I’ll strike your name. What’s in your pack is yours, and your own chest goes with you. The rest stays with the land.', 'Plenty of gates on the lane when you’re ready.']
-    })
-  }
-
-  /** Who could share the deed: everyone else standing at Silas's table. */
-  private share(): void {
-    if (!this.heroAtTable()) {
-      this.say({ speaker: SILAS.name, lines: [homeErrorText('not-at-table')] })
-      return
-    }
-    const candidates = shareCandidates(this.atTable(), this.home.homes.mine?.members ?? []).slice(0, 4)
-    if (candidates.length === 0) {
-      this.say({ speaker: SILAS.name, lines: ['Both names go on together, and both of you sign here at my table. Bring them by. I’ll wait. I’m good at it.'] })
-      return
-    }
-    this.say({
-      speaker: SILAS.name,
-      lines: ['A joint deed, then. Same land, same say, both names. Who’s it to be?'],
-      choices: [...candidates.map((p) => ({ text: short(p.name, 22), note: 'Sign together', action: `home:offer:${p.id}` })), { text: 'Not now' }]
-    })
-  }
-
-  private async offerDeed(to: string): Promise<void> {
-    const r = await this.home.homes.offerDeed(to)
-    if (!this.scene.sys.isActive()) return
-    if (!r.ok) {
-      this.say({ speaker: SILAS.name, lines: [r.text] })
-      return
-    }
-    this.deedAnswer(r.status)
-  }
-
+  /** Your signature on someone's deed, at the table in Pell's office. */
   private async signDeed(homeId: string): Promise<void> {
     const me = this.home.homes.myId
     if (!me) return
     const r = await this.home.homes.sign(homeId, me)
     if (!this.scene.sys.isActive()) return
     if (!r.ok) {
-      this.say({ speaker: SILAS.name, lines: [r.text] })
+      this.say({ speaker: PELL.name, lines: [r.text] })
       return
     }
-    this.deedAnswer(r.status)
-  }
-
-  private deedAnswer(status: 'joined' | 'waiting' | undefined): void {
-    if (status === 'joined') {
+    if (r.status === 'joined') {
       sfx('quest')
       this.home.scheduleRedraw()
-      this.say({ speaker: SILAS.name, lines: ['There. Both names, same land, same say. Mind you both keep the lamps lit.'] })
+      this.say({ speaker: PELL.name, lines: [PELL_DEED.signedTogether] })
       return
     }
-    const window = HOMESTEAD_DATA.jointDeed.confirmWindowSeconds
-    this.say({ speaker: SILAS.name, lines: [`Your name’s down. Now the other one signs, here at the table. I’ll hold the ink about ${window >= 60 ? `${Math.round(window / 60)} minute${window >= 120 ? 's' : ''}` : `${window} seconds`}.`] })
+    this.say({ speaker: PELL.name, lines: [PELL_DEED.signedWaiting(HOMESTEAD_DATA.jointDeed.confirmWindowSeconds)] })
   }
-
 }
