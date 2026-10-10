@@ -282,6 +282,91 @@ func TestWardrobeLookGoesOutAsTheCostume(t *testing.T) {
 	}
 }
 
+// TestALapsedPieceReachesFriendsScreens (4.3, 4.4): a player_gear write
+// that changes the resolved look tells the room once it commits, as the
+// wardrobe operation does. A lapsed slot falls back to Habitica's piece on
+// the friend's screen, and a piece that comes back (here at sign-in) returns.
+func TestALapsedPieceReachesFriendsScreens(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	alice, lease := x.account("alice"), s.Lease
+	// Habitica's own look wears the warrior's helm.
+	p := profile("alice", 2, 5, 30)
+	p.Equipped = map[string]*string{"head": strPtr("head_warrior_1")}
+	x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200)
+	worn := map[string]bool{"head_armoire_admiralsBicorne": true, "armor_warrior_1": true}
+	x.setOwned(worn)
+	if status, out := x.checkGear(lease, secret, c); status != 200 {
+		t.Fatalf("check: %d %v", status, out.Error)
+	}
+	x.chooseWardrobe(c, s, "wear", map[string]string{"head": "head_armoire_admiralsBicorne", "armor": "armor_warrior_1"}, 200)
+
+	x.stand(alice, s.WorldID, "village", 100, 100)
+	x.stand("friend", s.WorldID, "village", 130, 110)
+	h := x.api.presence
+	h.mu.Lock()
+	friend := h.peers["friend"]
+	h.mu.Unlock()
+	heard := func() []*presenceAvatarMsg {
+		var out []*presenceAvatarMsg
+		for {
+			select {
+			case raw := <-friend.queue:
+				m, err := decodePresence(raw)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if ch := m.GetAvatarChange(); ch != nil && ch.GetAccountId() == alice {
+					out = append(out, ch.GetAvatar())
+				}
+			default:
+				return out
+			}
+		}
+	}
+	heard()
+
+	// A check that changes nothing says nothing.
+	x.checkGear(lease, secret, c)
+	if got := heard(); len(got) != 0 {
+		t.Fatal("an unchanged check told the room", got)
+	}
+
+	// The bicorne lapses: the friend's screen draws Habitica's helm in its
+	// slot, and the chosen armor stays.
+	x.setOwned(map[string]bool{"head_armoire_admiralsBicorne": false, "armor_warrior_1": true})
+	if status, out := x.checkGear(lease, secret, c); status != 200 {
+		t.Fatalf("check: %d %v", status, out.Error)
+	}
+	got := heard()
+	if len(got) != 1 {
+		t.Fatal("the room heard", got)
+	}
+	look := got[0]
+	if !look.GetUseCostume() || look.GetCostume()["head"].GetStringValue() != "head_warrior_1" || look.GetCostume()["armor"].GetStringValue() != "armor_warrior_1" {
+		t.Fatal("the lapsed look", store.JSON(look))
+	}
+
+	// It comes back with a top-up's read (the settle tells the room)…
+	lapsed := map[string]bool{"head_armoire_admiralsBicorne": false, "armor_warrior_1": true}
+	x.setOwned(worn)
+	x.setGold(100)
+	if row := x.topUpOK(s, "back", 10, c); row.State != "moved" {
+		t.Fatal("top-up", row.State)
+	}
+	got = heard()
+	if len(got) != 1 || got[0].GetCostume()["head"].GetStringValue() != "head_armoire_admiralsBicorne" {
+		t.Fatal("the piece came back", got)
+	}
+	// …and lapses again at the next sign-in, whose read tells the room too.
+	x.setOwned(lapsed)
+	x.login("alice", "")
+	got = heard()
+	if len(got) != 1 || got[0].GetCostume()["head"].GetStringValue() == "head_armoire_admiralsBicorne" || got[0].GetCostume()["armor"].GetStringValue() != "armor_warrior_1" {
+		t.Fatal("the sign-in's lapse", got)
+	}
+}
+
 // The look's fallbacks come from the shared vectors (content/vectors/
 // wardrobe.json), replayed in the rules package; this checks the two halves
 // agree where the avatar draws (rules.Slots still spells weaponSpecial, which

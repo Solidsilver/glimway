@@ -511,14 +511,22 @@ func (a *Server) settleTopUp(ctx context.Context, t store.TopUp, out store.TopUp
 	db, stop := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
 	defer stop()
 	now := a.Config.Now().Unix()
+	var look *presenceAvatarMsg
 	err := a.withTx(db, func(tx *sql.Tx) error {
 		if owned != nil {
-			if e := store.WritePlayerGear(db, tx, t.AccountID, owned, now); e != nil {
+			moved, e := store.WritePlayerGear(db, tx, t.AccountID, owned, now)
+			if e != nil {
+				return e
+			}
+			if look, e = gearLook(db, tx, t.AccountID, moved); e != nil {
 				return e
 			}
 		}
 		return store.SettleTopUp(db, tx, t, out, now)
 	})
+	if err == nil && look != nil {
+		a.avatarChanged(t.AccountID, look)
+	}
 	if err != nil && !errors.Is(err, store.ErrTopUpSettled) {
 		a.Config.Logger.Printf("purse: settle top-up %s state=%s error=%v", t.ID, out.State, err)
 	}

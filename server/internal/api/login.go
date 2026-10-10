@@ -231,7 +231,8 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 	// alone, never a browser report. A sign-in held for the world question
 	// has no player row yet (player_gear keys on it); that account's first
 	// gear check or top-up fills the list.
-	if err = store.WritePlayerGear(ctx, tx, id, owned, now); err != nil {
+	gearMoved, err := store.WritePlayerGear(ctx, tx, id, owned, now)
+	if err != nil {
 		return err
 	}
 	if _, err = tx.ExecContext(ctx, "INSERT INTO sessions VALUES(?,?,?,?,?,?)", store.Hash(session), id, now, expires.Unix(), store.JSON(p), verified); err != nil {
@@ -245,11 +246,18 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	look, err := gearLook(ctx, tx, id, gearMoved)
+	if err != nil {
+		return err
+	}
 	if err = tx.Commit(); err != nil {
 		return err
 	}
 	if movedOut {
 		a.presenceChanged(id)
+	}
+	if look != nil {
+		a.avatarChanged(id, look)
 	}
 	a.cookie(w, session, expires)
 	writeProto(w, 200, &contract.SessionResponse{Answer: &contract.SessionResponse_State{State: state}})

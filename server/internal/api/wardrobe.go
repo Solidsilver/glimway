@@ -153,6 +153,21 @@ func visualAvatarFor(ctx context.Context, q wardrobeReader, account string, p ru
 	return visualAvatar(p, c, chosen), nil
 }
 
+// gearLook is the look to tell the room after a player_gear write that moved
+// the version (store.WritePlayerGear's answer): a chosen piece that lapsed
+// or came back changes the resolved look. Nil when nothing moved. The caller
+// sends it with avatarChanged once its transaction commits, never inside it.
+func gearLook(ctx context.Context, tx *sql.Tx, account string, moved bool) (*presenceAvatarMsg, error) {
+	if !moved {
+		return nil, nil
+	}
+	s, err := store.Load(ctx, tx, account)
+	if err != nil {
+		return nil, err
+	}
+	return heroAvatar(ctx, tx, &s)
+}
+
 // wardrobe is the operation (`POST /api/wardrobe`, 6.2): the whole choice at
 // once, a map of slot to key or "none"; slots left out go back to As on
 // Habitica. Each key must be in the account's owned list, known to the

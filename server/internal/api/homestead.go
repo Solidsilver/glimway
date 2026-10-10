@@ -176,7 +176,7 @@ func (a *Server) homeMutation(w http.ResponseWriter, r *http.Request) error {
 			case "leave":
 				if err = leave(ctx, tx, s, h, now); err == nil {
 					account, room = s.AccountID, homeRoom(h.WorldID, h.Gate)
-					avatar, err = leaverAvatar(ctx, tx, s)
+					avatar, err = heroAvatar(ctx, tx, s)
 				}
 			default:
 				err = fail(404, "not-found")

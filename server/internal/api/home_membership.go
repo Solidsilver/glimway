@@ -139,10 +139,11 @@ func leave(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, now i
 	return store.Credit(ctx, tx, s, 0, 0, "homestead-leave", h.ID, nil, now)
 }
 
-// leaverAvatar is a leaver's avatar once the leave is written (nil for a
-// guest or a hero without a Habitica profile): the choices read as gated
-// away and the mount that was out is home.
-func leaverAvatar(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (*presenceAvatarMsg, error) {
+// heroAvatar is the hero's avatar as this transaction reads it (nil for a
+// guest or a hero without a Habitica profile). After a leave is written the
+// choices read as gated away and the mount that was out is home; after a
+// player_gear write the wardrobe resolves against the new list.
+func heroAvatar(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (*presenceAvatarMsg, error) {
 	p := s.ImportedProfile
 	if s.ProfileSource != "habitica" || p == nil {
 		return nil, nil

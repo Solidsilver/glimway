@@ -59,6 +59,7 @@ func (a *Server) wardrobeCheck(w http.ResponseWriter, r *http.Request) error {
 	account := s.AccountID
 	now := a.Config.Now().Unix()
 	result := &contract.WardrobeCheckResult{Owned: []string{}}
+	var look *presenceAvatarMsg
 	err = a.withHabitica(r, subject, func(b habiticaBudget) error {
 		call, stop := context.WithTimeout(r.Context(), habiticaCallTime)
 		gotID, owned, e := a.Habitica.OwnedGear(call, subject, token, b.Allow)
@@ -88,7 +89,11 @@ func (a *Server) wardrobeCheck(w http.ResponseWriter, r *http.Request) error {
 					result.NewPieces++
 				}
 			}
-			if err = store.WritePlayerGear(r.Context(), tx, account, owned, now); err != nil {
+			moved, err := store.WritePlayerGear(r.Context(), tx, account, owned, now)
+			if err != nil {
+				return err
+			}
+			if look, err = gearLook(r.Context(), tx, account, moved); err != nil {
 				return err
 			}
 			result.Owned, result.CheckedAt = owned, float64(now)
@@ -101,6 +106,11 @@ func (a *Server) wardrobeCheck(w http.ResponseWriter, r *http.Request) error {
 			err = budgetFailure(w, err)
 		}
 		return a.refuseWithState(w, r, err)
+	}
+	// Committed: a piece the player wears that lapsed (or came back) shows
+	// on friends' screens too.
+	if look != nil {
+		a.avatarChanged(account, look)
 	}
 	return a.answerWithState(w, r, result)
 }
