@@ -421,10 +421,10 @@ export class HomesteadTalk {
   private atTable(): { id: string; name: string }[] {
     const feed = presence()
     if (!feed) return []
-    const t = HOMESTEAD_DATA.commons.silasTable
+    const t = HOMESTEAD_DATA.commons.deedTable
     const now = performance.now()
     const out: { id: string; name: string }[] = []
-    for (const p of feed.peersIn('commons')) {
+    for (const p of feed.peersIn(t.area)) {
       if (p.leftAt !== null) continue
       const at = p.track.at(now)
       if (at && Math.hypot(at.x - t.x, at.y - t.y) <= t.radius) out.push({ id: p.accountId, name: p.displayName || 'A neighbour' })
@@ -433,7 +433,7 @@ export class HomesteadTalk {
   }
 
   private heroAtTable(): boolean {
-    const t = HOMESTEAD_DATA.commons.silasTable
+    const t = HOMESTEAD_DATA.commons.deedTable
     const h = this.deps.hero()
     return Math.hypot(h.x - t.x, h.y - t.y) <= t.radius
   }

@@ -146,8 +146,9 @@ message HomeStartLight {
 
 // The homestead gates along the Commons lane (client tiles). Gate g is on
 // side g%2 (fence column FenceX[side]) in row g/2: the listed rows, then
-// one more every RowPitch tiles. SilasTable is where a joint deed is
-// signed (pixels, with the reach both partners must be within).
+// one more every RowPitch tiles. DeedTable is where a joint deed is
+// signed: Pell's table, in the deed office (a room's pixels, with the reach
+// both partners must be within).
 message CommonsLane {
   option (buf.validate.message).cel = {
     id: "commons.fence_order"
@@ -161,7 +162,18 @@ message CommonsLane {
   repeated int32 gate_rows = 3 [(buf.validate.field).repeated = {min_items: 1, items: {int32: {gte: 0}}}]; // rows two apart: code rule (commons.gate_rows)
   int32 row_pitch = 4 [(buf.validate.field).int32.gte = 2];
   int32 spare_gates = 5 [(buf.validate.field).int32.gte = 1];
-  HomePixelPos silas_table = 6 [(buf.validate.field).required = true];
+  reserved 6;
+  reserved "silas_table";
+  HomeDeedTable deed_table = 7 [(buf.validate.field).required = true];
+}
+
+// The deed table: a point in a room (pixels, with a reach in pixels). The
+// room is checked in code.
+message HomeDeedTable {
+  string area = 1 [(buf.validate.field).string.pattern = "^in:[a-z0-9:-]{1,100}$"];
+  optional int32 x = 2 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  optional int32 y = 3 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  optional int32 radius = 4 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 1];
 }
 
 // The post item, its light radius, and what the n-th post costs (the

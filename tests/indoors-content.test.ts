@@ -35,7 +35,7 @@ test('prop footprints preserve separate rectangular sack piles', () => {
   // A fixture: the loft's sacks are dressing since the round-2 art.
   const piles = { ...roomFor('in:village:mill:2')!, map: ['##########', '#.ff..ff.#', '#.ff..ff.#', '##########'] };
   assert.deepEqual(roomFootprints(piles,'f'), [{ char:'f',tx:2,ty:1,tw:2,th:2 },{ char:'f',tx:6,ty:1,tw:2,th:2 }]);
-  assert.equal(ROOMS.rooms.length,4);
+  assert.equal(ROOMS.rooms.length,6);
 });
 test('shared resident cycle phase and grace vectors', () => {
   for (const v of clockVectors.cycles) { assert.deepEqual(cycleAt(v.resident,v.now),v.expected); assert.deepEqual(cycleSpotsNear(v.resident,v.now,v.graceSeconds),v.near); }

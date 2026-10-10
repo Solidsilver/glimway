@@ -514,15 +514,18 @@ func (x *ItemThanks) GetNearbyTiles() int32 {
 	return 0
 }
 
-// A mender: who can mend at their side, and where they stand.
+// A mender: who can mend at their side, and where they stand: a fixed spot
+// (area, tx, ty), or with a resident, wherever that resident's cycle has
+// them (with; the resident is checked in code).
 type ItemMender struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Npc           string                 `protobuf:"bytes,1,opt,name=npc,proto3" json:"npc,omitempty"`
 	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Area          string                 `protobuf:"bytes,3,opt,name=area,proto3" json:"area,omitempty"`
+	Area          *string                `protobuf:"bytes,3,opt,name=area,proto3,oneof" json:"area,omitempty"`
 	Tx            *int32                 `protobuf:"varint,4,opt,name=tx,proto3,oneof" json:"tx,omitempty"`
 	Ty            *int32                 `protobuf:"varint,5,opt,name=ty,proto3,oneof" json:"ty,omitempty"`
 	RadiusTiles   int32                  `protobuf:"varint,6,opt,name=radius_tiles,json=radiusTiles,proto3" json:"radius_tiles,omitempty"`
+	With          *string                `protobuf:"bytes,7,opt,name=with,proto3,oneof" json:"with,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -572,8 +575,8 @@ func (x *ItemMender) GetName() string {
 }
 
 func (x *ItemMender) GetArea() string {
-	if x != nil {
-		return x.Area
+	if x != nil && x.Area != nil {
+		return *x.Area
 	}
 	return ""
 }
@@ -597,6 +600,13 @@ func (x *ItemMender) GetRadiusTiles() int32 {
 		return x.RadiusTiles
 	}
 	return 0
+}
+
+func (x *ItemMender) GetWith() string {
+	if x != nil && x.With != nil {
+		return *x.With
+	}
+	return ""
 }
 
 // One item definition. The tool-only fields (grade, uses, atZero, slots,
@@ -1362,8 +1372,11 @@ type ItemSeller struct {
 	RadiusTiles int32   `protobuf:"varint,7,opt,name=radius_tiles,json=radiusTiles,proto3" json:"radius_tiles,omitempty"`
 	// The seller stands on its festival day only (a calendar festival —
 	// checked in code).
-	Festival      string      `protobuf:"bytes,8,opt,name=festival,proto3" json:"festival,omitempty"`
-	Goods         []*ItemGood `protobuf:"bytes,9,rep,name=goods,proto3" json:"goods,omitempty"`
+	Festival string      `protobuf:"bytes,8,opt,name=festival,proto3" json:"festival,omitempty"`
+	Goods    []*ItemGood `protobuf:"bytes,9,rep,name=goods,proto3" json:"goods,omitempty"`
+	// A room where the goods sell whoever is in it (Silas's shop: the honesty
+	// tin); the room is checked in code. Near the seller still sells too.
+	Shop          *string `protobuf:"bytes,10,opt,name=shop,proto3,oneof" json:"shop,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1461,6 +1474,13 @@ func (x *ItemSeller) GetGoods() []*ItemGood {
 	return nil
 }
 
+func (x *ItemSeller) GetShop() string {
+	if x != nil && x.Shop != nil {
+		return *x.Shop
+	}
+	return ""
+}
+
 var File_glimway_content_v1_items_proto protoreflect.FileDescriptor
 
 const file_glimway_content_v1_items_proto_rawDesc = "" +
@@ -1509,19 +1529,21 @@ const file_glimway_content_v1_items_proto_rawDesc = "" +
 	"\fradius_tiles\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\vradiusTiles\"8\n" +
 	"\n" +
 	"ItemThanks\x12*\n" +
-	"\fnearby_tiles\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\vnearbyTiles\"\x8f\x02\n" +
+	"\fnearby_tiles\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\vnearbyTiles\"\xb8\x04\n" +
 	"\n" +
 	"ItemMender\x12+\n" +
 	"\x03npc\x18\x01 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x03npc\x12\x1b\n" +
-	"\x04name\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12;\n" +
-	"\x04area\x18\x03 \x01(\tB'\xbaH$r\"R\avillageR\bwoodlandR\x04ruinR\acommonsR\x04area\x12\x1f\n" +
-	"\x02tx\x18\x04 \x01(\x05B\n" +
-	"\xbaH\a\xc8\x01\x01\x1a\x02(\x00H\x00R\x02tx\x88\x01\x01\x12\x1f\n" +
-	"\x02ty\x18\x05 \x01(\x05B\n" +
-	"\xbaH\a\xc8\x01\x01\x1a\x02(\x00H\x01R\x02ty\x88\x01\x01\x12*\n" +
-	"\fradius_tiles\x18\x06 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\vradiusTilesB\x05\n" +
+	"\x04name\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12\x17\n" +
+	"\x04area\x18\x03 \x01(\tH\x00R\x04area\x88\x01\x01\x12\x1c\n" +
+	"\x02tx\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00H\x01R\x02tx\x88\x01\x01\x12\x1c\n" +
+	"\x02ty\x18\x05 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00H\x02R\x02ty\x88\x01\x01\x12*\n" +
+	"\fradius_tiles\x18\x06 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\vradiusTiles\x125\n" +
+	"\x04with\x18\a \x01(\tB\x1c\xbaH\x19r\x172\x15^([a-z0-9-]{1,100})?$H\x03R\x04with\x88\x01\x01:\x87\x02\xbaH\x83\x02\x1a\x80\x02\n" +
+	"\fmender.place\x12La mender stands with a resident or at a fixed spot in a known area, not both\x1a\xa1\x01this.with != \"\" ? (!has(this.area) && !has(this.tx) && !has(this.ty)) : (this.area in [\"village\", \"woodland\", \"ruin\", \"commons\"] && has(this.tx) && has(this.ty))B\a\n" +
+	"\x05_areaB\x05\n" +
 	"\x03_txB\x05\n" +
-	"\x03_ty\"\xe4\x16\n" +
+	"\x03_tyB\a\n" +
+	"\x05_with\"\xe4\x16\n" +
 	"\aItemDef\x12)\n" +
 	"\x02id\x18\x01 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x02id\x12\x1b\n" +
 	"\x04name\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12A\n" +
@@ -1647,7 +1669,7 @@ const file_glimway_content_v1_items_proto_rawDesc = "" +
 	"\x04line\x18\x06 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xa0\x01R\x04lineB\x06\n" +
 	"\x04_capJ\x04\b\a\x10\bJ\x04\b\b\x10\tR\x04goldR\n" +
-	"gold_label\"\xcc\x05\n" +
+	"gold_label\"\x90\x06\n" +
 	"\n" +
 	"ItemSeller\x125\n" +
 	"\x04with\x18\x01 \x01(\tB\x1c\xbaH\x19r\x172\x15^([a-z0-9-]{1,100})?$H\x00R\x04with\x88\x01\x01\x12)\n" +
@@ -1658,13 +1680,16 @@ const file_glimway_content_v1_items_proto_rawDesc = "" +
 	"\x04area\x18\x06 \x01(\tB'\xbaH$r\"R\avillageR\bwoodlandR\x04ruinR\acommonsH\x03R\x04area\x88\x01\x01\x12,\n" +
 	"\fradius_tiles\x18\a \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x10(\x01R\vradiusTiles\x12\x1a\n" +
 	"\bfestival\x18\b \x01(\tR\bfestival\x12<\n" +
-	"\x05goods\x18\t \x03(\v2\x1c.glimway.content.v1.ItemGoodB\b\xbaH\x05\x92\x01\x02\b\x01R\x05goods:\x98\x02\xbaH\x94\x02\x1a\x80\x01\n" +
+	"\x05goods\x18\t \x03(\v2\x1c.glimway.content.v1.ItemGoodB\b\xbaH\x05\x92\x01\x02\b\x01R\x05goods\x129\n" +
+	"\x04shop\x18\n" +
+	" \x01(\tB \xbaH\x1dr\x1b2\x19^(in:[a-z0-9:-]{1,100})?$H\x04R\x04shop\x88\x01\x01:\x98\x02\xbaH\x94\x02\x1a\x80\x01\n" +
 	"\x10seller.place_mix\x12$seller mixes resident and fixed spot\x1aFthis.with == \"\" || (!has(this.area) && !has(this.tx) && !has(this.ty))\x1a\x8e\x01\n" +
 	"\fseller.place\x122a seller without a resident stands in a known area\x1aJthis.with != \"\" || this.area in [\"village\", \"woodland\", \"ruin\", \"commons\"]B\a\n" +
 	"\x05_withB\x05\n" +
 	"\x03_txB\x05\n" +
 	"\x03_tyB\a\n" +
-	"\x05_areaB*Z(glimway/gen/glimway/content/v1;contentv1b\x06proto3"
+	"\x05_areaB\a\n" +
+	"\x05_shopB*Z(glimway/gen/glimway/content/v1;contentv1b\x06proto3"
 
 var (
 	file_glimway_content_v1_items_proto_rawDescOnce sync.Once

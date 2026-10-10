@@ -94,14 +94,22 @@ message ItemThanks {
   int32 nearby_tiles = 1 [(buf.validate.field).int32.gte = 1];
 }
 
-// A mender: who can mend at their side, and where they stand.
+// A mender: who can mend at their side, and where they stand: a fixed spot
+// (area, tx, ty), or with a resident, wherever that resident's cycle has
+// them (with; the resident is checked in code).
 message ItemMender {
+  option (buf.validate.message).cel = {
+    id: "mender.place"
+    message: "a mender stands with a resident or at a fixed spot in a known area, not both"
+    expression: "this.with != \"\" ? (!has(this.area) && !has(this.tx) && !has(this.ty)) : (this.area in [\"village\", \"woodland\", \"ruin\", \"commons\"] && has(this.tx) && has(this.ty))"
+  };
   string npc = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
   string name = 2 [(buf.validate.field).string.min_len = 1];
-  string area = 3 [(buf.validate.field).string = {in: ["village", "woodland", "ruin", "commons"]}];
-  optional int32 tx = 4 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
-  optional int32 ty = 5 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  optional string area = 3;
+  optional int32 tx = 4 [(buf.validate.field).int32.gte = 0];
+  optional int32 ty = 5 [(buf.validate.field).int32.gte = 0];
   int32 radius_tiles = 6 [(buf.validate.field).int32.gte = 1];
+  optional string with = 7 [(buf.validate.field).string.pattern = "^([a-z0-9-]{1,100})?$"];
 }
 
 // One item definition. The tool-only fields (grade, uses, atZero, slots,
@@ -287,4 +295,7 @@ message ItemSeller {
   // checked in code).
   string festival = 8;
   repeated ItemGood goods = 9 [(buf.validate.field).repeated.min_items = 1];
+  // A room where the goods sell whoever is in it (Silas's shop: the honesty
+  // tin); the room is checked in code. Near the seller still sells too.
+  optional string shop = 10 [(buf.validate.field).string.pattern = "^(in:[a-z0-9:-]{1,100})?$"];
 }

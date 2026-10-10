@@ -38,9 +38,9 @@ func (a *Server) returnKeepsake(ctx context.Context, tx *sql.Tx, s *store.Snapsh
 		return fail(409, "already-returned")
 	}
 
-	// Proximity check: where each resident stands is shared content — Ada
-	// and Hazel from the residents' spots, Silas from the menders, the Echo
-	// camps anywhere in the deep Wilds until camps are placed per person.
+	// Proximity check: where each resident stands is shared content — Ada,
+	// Hazel and Silas by their cycles (Silas within his mender's reach), the
+	// Echo camps anywhere in the deep Wilds until camps are placed per person.
 	switch target {
 	case "ada", "hazel":
 		if !nearResident(s, target, now, residentReachTiles) {
@@ -48,7 +48,7 @@ func (a *Server) returnKeepsake(ctx context.Context, tx *sql.Tx, s *store.Snapsh
 		}
 	case "silas":
 		m, ok := content.MenderFor("silas")
-		if !ok || !nearTile(s, m.GetArea(), int(m.GetTx()), int(m.GetTy()), int(m.GetRadiusTiles())) {
+		if !ok || !nearMender(s, m, now) {
 			return fail(409, "too-far-away")
 		}
 	case "bett", "nan":
@@ -105,13 +105,14 @@ func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapsho
 	// Proximity check per heirloom giver
 	switch itemID {
 	case "brack-felling-axe":
+		// Silas, wherever his cycle has him (the counter or the yard).
 		m, ok := content.MenderFor("silas")
-		if !ok || !nearTile(s, m.GetArea(), int(m.GetTx()), int(m.GetTy()), int(m.GetRadiusTiles())) {
+		if !ok || !nearMender(s, m, now) {
 			return fail(409, "too-far-away")
 		}
 	case "orrins-mason-pick":
 		m, ok := content.MenderFor("orrin")
-		if !ok || !nearTile(s, m.GetArea(), int(m.GetTx()), int(m.GetTy()), int(m.GetRadiusTiles())) {
+		if !ok || !nearMender(s, m, now) {
 			return fail(409, "too-far-away")
 		}
 	case "ada-garden-spade":

@@ -72,7 +72,7 @@ function toward(side: Side): { x: number; y: number } {
  * the door; off a stair, whose `side` is the side you step onto it from,
  * facing the other way, off the stair on the floor you reach.
  */
-export function facingFor(exit: { side: Side; kind?: 'edge' | 'door' | 'stair' }): { x: number; y: number } {
+export function facingFor(exit: { side: Side; kind?: 'edge' | 'door' | 'stair' | 'inner' }): { x: number; y: number } {
   const f = toward(exit.side)
   return exit.kind === 'stair' ? { x: -f.x || 0, y: -f.y || 0 } : f
 }
@@ -88,8 +88,8 @@ export function residentSpotsIn(area: string): NpcSpot[] {
 function exitFor(def: Room, door: RoomDoor): ExitDef {
   const [g] = groupsOf(def, door.at)
   if (!g) throw new Error(`[glimway] room ${def.id}: door ${door.id} has no "${door.at}" tiles`)
-  // A stair names the floor it reaches; a doorway shows its chevron alone (the HUD already names the room).
-  const label = door.kind === 'stair' ? (roomFor(door.to)?.name ?? null) : ''
+  // A stair or an inner doorway names the room it reaches; the front doorway shows its chevron alone (the HUD already names the room).
+  const label = door.kind === 'door' ? '' : (roomFor(door.to)?.name ?? null)
   // The loader's schema has checked the vocabularies.
   return { ...g, to: door.to, entry: { tx: door.entry.tx, ty: door.entry.ty }, side: door.side, kind: door.kind, ...(label === undefined ? {} : { label }) }
 }

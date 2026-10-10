@@ -57,9 +57,10 @@ export declare type RoomsValid = Message<"glimway.content.v1.Rooms"> & {
 export declare const RoomsSchema: GenMessage<Rooms, {validType: RoomsValid}>;
 
 /**
- * Room maps are 16-pixel tiles. Floors share an outdoor parent; the parent
- * follows from the id (in:village:bakery -> village, in:village:mill:2 ->
- * in:village:mill) and is checked in code, beside RoomParent.
+ * Room maps are 16-pixel tiles. Floors and side rooms share an outdoor
+ * parent; the building follows from the id (in:village:bakery -> village,
+ * in:village:mill:2 -> in:village:mill, in:commons:yard:deeds ->
+ * in:commons:yard) and is checked in code, beside RoomParent.
  *
  * @generated from message glimway.content.v1.Room
  */
@@ -119,9 +120,10 @@ export declare type Room = Message<"glimway.content.v1.Room"> & {
 };
 
 /**
- * Room maps are 16-pixel tiles. Floors share an outdoor parent; the parent
- * follows from the id (in:village:bakery -> village, in:village:mill:2 ->
- * in:village:mill) and is checked in code, beside RoomParent.
+ * Room maps are 16-pixel tiles. Floors and side rooms share an outdoor
+ * parent; the building follows from the id (in:village:bakery -> village,
+ * in:village:mill:2 -> in:village:mill, in:commons:yard:deeds ->
+ * in:commons:yard) and is checked in code, beside RoomParent.
  *
  * @generated from message glimway.content.v1.Room
  */
@@ -196,6 +198,10 @@ export declare type RoomDoor = Message<"glimway.content.v1.RoomDoor"> & {
   id: string;
 
   /**
+   * door: the front door out to the parent region; stair: to another floor;
+   * inner: a doorway in a side wall to another room of the same building
+   * (its tiles are a non-solid prop's letter, the prop drawing the opening).
+   *
    * @generated from field: string kind = 2;
    */
   kind: string;
@@ -236,6 +242,10 @@ export declare type RoomDoorValid = Message<"glimway.content.v1.RoomDoor"> & {
   id: string;
 
   /**
+   * door: the front door out to the parent region; stair: to another floor;
+   * inner: a doorway in a side wall to another room of the same building
+   * (its tiles are a non-solid prop's letter, the prop drawing the opening).
+   *
    * @generated from field: string kind = 2;
    */
   kind: string;

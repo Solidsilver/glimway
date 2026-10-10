@@ -1067,13 +1067,13 @@
     {
       "name": "mender-unknown-area",
       "valid": false,
-      "rule": "string.in",
+      "rule": "mender.place",
       "edits": [
         {
           "path": [
             "rules",
             "menders",
-            0,
+            1,
             "area"
           ],
           "value": "moon"
@@ -1089,10 +1089,88 @@
           "path": [
             "rules",
             "menders",
-            0,
+            1,
             "tx"
           ],
           "value": -1
+        }
+      ]
+    },
+    {
+      "name": "mender-with-unknown-resident",
+      "valid": false,
+      "rule": "mender silas: place",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "menders",
+            0,
+            "with"
+          ],
+          "value": "nobody"
+        }
+      ]
+    },
+    {
+      "name": "mender-with-and-a-spot",
+      "valid": false,
+      "rule": "mender.place",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "menders",
+            0,
+            "area"
+          ],
+          "value": "commons"
+        }
+      ]
+    },
+    {
+      "name": "mender-without-a-place",
+      "valid": false,
+      "rule": "mender.place",
+      "edits": [
+        {
+          "path": [
+            "rules",
+            "menders",
+            1,
+            "tx"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "seller-shop-unknown-room",
+      "valid": false,
+      "rule": "seller silas-yard: place",
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            3,
+            "shop"
+          ],
+          "value": "in:commons:nowhere"
+        }
+      ]
+    },
+    {
+      "name": "seller-shop-outdoors",
+      "valid": false,
+      "rule": "string.pattern",
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            3,
+            "shop"
+          ],
+          "value": "commons"
         }
       ]
     },

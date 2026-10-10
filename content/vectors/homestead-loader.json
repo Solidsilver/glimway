@@ -541,17 +541,80 @@
       ]
     },
     {
-      "name": "dim-silas-table",
+      "name": "dim-deed-table",
       "valid": false,
       "rule": "int32.gte",
       "edits": [
         {
           "path": [
             "commons",
-            "silasTable",
+            "deedTable",
             "radius"
           ],
           "value": 0
+        }
+      ]
+    },
+    {
+      "name": "deed-table-outdoors",
+      "valid": false,
+      "rule": "string.pattern",
+      "edits": [
+        {
+          "path": [
+            "commons",
+            "deedTable",
+            "area"
+          ],
+          "value": "commons"
+        }
+      ]
+    },
+    {
+      "name": "deed-table-no-such-room",
+      "valid": false,
+      "rule": "deed table",
+      "edits": [
+        {
+          "path": [
+            "commons",
+            "deedTable",
+            "area"
+          ],
+          "value": "in:commons:nowhere"
+        }
+      ]
+    },
+    {
+      "name": "deed-table-outside-the-room",
+      "valid": false,
+      "rule": "deed table",
+      "edits": [
+        {
+          "path": [
+            "commons",
+            "deedTable",
+            "x"
+          ],
+          "value": 824
+        }
+      ]
+    },
+    {
+      "name": "old-silas-table",
+      "valid": false,
+      "rule": "unknown key",
+      "edits": [
+        {
+          "path": [
+            "commons",
+            "silasTable"
+          ],
+          "value": {
+            "x": 824,
+            "y": 344,
+            "radius": 56
+          }
         }
       ]
     },

@@ -16,6 +16,7 @@ import { TILE } from '../lib/tile.ts'
 import { bus, EV } from './events.ts'
 import type { Session } from './session.ts'
 import { presence } from './presence.ts'
+import { serverNow } from './clock.ts'
 
 export type ItemsStatus = 'idle' | 'loading' | 'ready' | 'offline'
 
@@ -216,7 +217,7 @@ export class Items {
   /** The mender standing near the hero right now, if any. */
   menderHere(): { npc: string; name: string } | null {
     const s = this.session.state
-    return menderNear(s.area, s.position.x, s.position.y)
+    return menderNear(s.area, s.position.x, s.position.y, serverNow())
   }
 
   private emit(what: string): void {

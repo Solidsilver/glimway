@@ -16,7 +16,7 @@
  * when that data changes.
  */
 import Phaser from 'phaser'
-import { HOMESTEAD_DATA, parseHomeArea } from '../../lib/homestead'
+import { parseHomeArea } from '../../lib/homestead'
 import { clearable, servedLand } from '../../lib/homestead-land'
 import type { HomeView, StallView } from '../../lib/api/types'
 import { baySig, nextHomecoming, stableNext, stallsShown } from '../../lib/companions'
@@ -25,6 +25,7 @@ import { type SeatPose } from '../seats'
 import { bus, EV } from '../events'
 import type { Session } from '../session'
 import { tileCenter, tileFeet, tileKey, tileMid } from '../../lib/tile'
+import { roomFor } from '../../lib/rooms'
 import type { WorldData } from '../worlds'
 import type { CommonsWorld } from '../commons'
 import type { LandWorld } from '../homeland'
@@ -395,8 +396,9 @@ export class HomesteadLayer {
     const mine = this.homes.myGate
     if (this.commons) {
       if (where === 'silas') {
-        const t = HOMESTEAD_DATA.commons.silasTable
-        return { x: t.x, y: t.y }
+        // The Yard's front door (the deed table is inside, in Pell's office).
+        const door = roomFor('in:commons:yard')?.doors.find((d) => d.kind === 'door')?.outside
+        return door ? tileCenter(door.tx, door.ty) : null
       }
       if (where === 'gate' && mine !== null) {
         const slot = this.commons.gates.find((g) => g.gate === mine)

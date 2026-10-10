@@ -169,13 +169,22 @@ export async function readOn(page: Page, says: RegExp): Promise<void> {
   await expect(dialogue).toBeHidden()
 }
 
-/** Silas's spot in his yard (the Commons map; fixed). */
-const SILAS_AT = { tx: 51, ty: 21 }
+/** Silas's spot in his yard, by the sawhorse (the Commons map; his cycle's yard spot). */
+const SILAS_AT = { tx: 48, ty: 19 }
 
 export async function silasSays(page: Page, pick?: RegExp): Promise<void> {
   const silas = (await homes(page).catch(() => null))?.features?.silas ?? SILAS_AT
   await go(page, 'commons', silas.tx, silas.ty + 1)
   await talk(page, /Talk to Silas/, pick)
+}
+
+/** Glims without a top-up or a sync (both sides of the ledger, never XP-earned). */
+export function seedGlims(habiticaId: string, glims: number): void {
+  const a = accountOf(habiticaId)
+  sql(`UPDATE balances SET glims = glims + ${glims} WHERE account_id = '${a}';
+       INSERT INTO ledger (account_id, currency, delta, earned_delta, reason, ref, created_at)
+       VALUES ('${a}', 'glims', ${glims}, 0, 'test-grant', 'e2e', unixepoch());
+       UPDATE players SET version = version + 1 WHERE account_id = '${a}';`)
 }
 
 /** The homestead behind a gate, as the server tells this player (null: unclaimed). */

@@ -3,6 +3,9 @@
  "generator": "scripts/build-atlases.ts",
  "generatorVersion": 8,
  "inputs": {
+  "assets/generated/commons-pass/../yard-pass/sheets/cottage-silas-source-v2.png": "2dde649c4461683d4990c69df858a5434616ea711d65fde6fdd04fbf814595fa",
+  "assets/generated/commons-pass/../yard-pass/sheets/pell-portrait-source-round1.png": "294dce3fbbf64f7a079616ed6bf42ffa7735fd5b8eb5681626204c00759c3bf2",
+  "assets/generated/commons-pass/../yard-pass/sheets/pell-resident-source-round1.png": "e0ea1043d65e243fd5ef54652e195bd7f96d55b794b494b02e2e15288e7145b5",
   "assets/generated/commons-pass/fingersnap-boundaries.png": "aa3cf7d00571238f58ac2d1062d34f353449442b47ed770e476287ac39fc6ed0",
   "assets/generated/commons-pass/fingersnap-camp-home.png": "aa16ced58fa79bbf3535242cb39de18412c0cdf12f9f9d9ba645ab9db14af771",
   "assets/generated/commons-pass/fingersnap-commons.png": "9fe2d2cc6bde7efb64f719d8bcc5644c8a11036be323e1591eade782147572ff",
@@ -25,7 +28,7 @@
   "assets/generated/commons-pass/fingersnap-wilds-camp.png": "c91a3214d593ce105a21f28b486cde09532cd496228d5196650edecaab8a18a6",
   "assets/generated/commons-pass/fingersnap-wilds-nature.png": "5aa84a4244c8f6ef0a7b3180253b7caf0b6aab4bd7a5123866c836a01024f462",
   "assets/generated/commons-pass/fingersnap-yard.png": "63ba0fc00b99625f707b5107f98138a7ef9618468f183e74aff7dbc90e7f3b53",
-  "assets/generated/commons-pass/manifest.json": "54020efd7ee920b39c5cfe2b276a2ff3db5d18e779357bde9582261e522d49fb",
+  "assets/generated/commons-pass/manifest.json": "aeee9e6ea44c45eb494c550483b9bbcb5bf848467f51cdfd733f2066d4e0c02c",
   "assets/generated/crafts-pass/frames/ability-healer-mend-working.png": "05214ca1c270144deea0aafc4785dd52a800661e9e31700b96ab62ae4b4fd2db",
   "assets/generated/crafts-pass/frames/ability-healer-mend.png": "d515f0c3b530e4559b9928bbecb36bc53ac2e4d0cc87cf22e13fe3dfcea97505",
   "assets/generated/crafts-pass/frames/ability-healer-mended-glade.png": "839a2e8b67643b209ef885fddcb85a87b19540ec62e11ace870ef6f0b3a7d98c",
@@ -255,11 +258,18 @@
   "assets/generated/runtime-pass/fingersnap-class-effects.png": "d9f5dea940c4cc74e7d9489036c9ab01017475dc44d302a0149a0a23aaf05ea2",
   "assets/generated/runtime-pass/fingersnap-guardian.png": "8d0c6fc4f5652202cc580356605281fffb11f550c00862bbb2e31ac118a8598f",
   "assets/generated/runtime-pass/fingersnap-npcs.png": "7f19632c18daae28772e4f1ead8c835e9ca1ceae3b26b94cbc6d3edf3647576b",
-  "assets/generated/runtime-pass/manifest.json": "0d9ab39e655bf945dcdb4181b47db37370e68cdd1e74e12927a420e16627eda4"
+  "assets/generated/runtime-pass/manifest.json": "0d9ab39e655bf945dcdb4181b47db37370e68cdd1e74e12927a420e16627eda4",
+  "assets/generated/yard-pass/manifest.json": "dff785cd205dc02bf45d387334e216267eedaf2e8d765679eec64e4e3a701633",
+  "assets/generated/yard-pass/sheets/deeds-table-source.png": "6d9098c0373408349ab1cd8d5435f4c1b2a2e2952d14eddbb73e7ac75e3a9919",
+  "assets/generated/yard-pass/sheets/kit-side-doorway-source-round1.png": "dc0e01906af8be2fbace14dfbe748ed4f0d37f3916d741f1498ce553e199ba75",
+  "assets/generated/yard-pass/sheets/yard-counter-source-round2.png": "7f2e834f92f5dbeb1a895c2ea877312aa8d6df97a4094e1e492f3e2861b1208d",
+  "assets/generated/yard-pass/sheets/yard-props-source.png": "0f487e98ea67dca35f1102e02cb14689e943a2aa49f6a7331bf3a75d59e5bce7",
+  "assets/generated/yard-pass/sheets/yard-timber-rack-source-round2.png": "6bb501e0a55b044153416d7291d49b3aafa30986b767e170cb06ac53f6ff155a",
+  "assets/generated/yard-pass/sheets/yard-vertical-props-source.png": "cb6d98ec10fe72beb74bc216dca4f9ac20d7da3312273fea59c6d0ce8990e8d8"
  },
  "outputs": {
   "buildings.webp": "0f4dd3afdf6ddcbd8ec7a842f293591275166d34ca6245555277fd25b2d88cd3",
-  "commons.webp": "874ee414b6c1834f29f571ae6ae0a509d2b5f65a9b736db5034e036621cefcde",
+  "commons.webp": "40e91952e764f2e160854333ef2054448fb93c071c4501944338c3e04b2fd91b",
   "crafts.webp": "2efa7eaadb7cc6874311d27284d0e93a0baaae7797e2c18f69f99a83d3608e99",
   "fingersnap-demo-walk.png": "17ee5d810665b334e8406fc62714aea736e8c7ffb17f2f1530974303dd132a9f",
   "fingersnap-enemies.png": "adedf5d4b5728224ad1a13ed34d0057c4f922f79421151c8183774b0934582b4",
@@ -269,7 +279,7 @@
   "fingersnap-village.webp": "55741365aef1f255193af044288f16e68d9fb918b71ad464aad62dab5d42f842",
   "glims.webp": "64e0c927c1d0dd1dd4a101d2de9b19e6a7fe7ef7a907589815a1b5f50e81214e",
   "ground.webp": "6151b5306345edf22bdea4211e20910d3a83dbe0ede013999a3d65f5a7529d94",
-  "indoors.webp": "b0156247256e33a0bcfefe2ab27fc4ad8cf687dd675649a37617ae8b356d7255",
+  "indoors.webp": "68027533a18e793784f43230740d2196342fe5296196deeecacfd342cf894d57",
   "items.webp": "ecd2b4d308db0615f50126868db6e5acb40718c52e0c098296c25bf323ceb020",
   "people.webp": "bc06b2da02a1d7c07397ed9e239337d946d7639d3d1c381a71aed29860a4f782",
   "purse.webp": "cffd867b431c323653d66485b7a26c70621f785a544673bb0a75bee57a3a9c78",
@@ -373,68 +383,80 @@
  "commons": {
   "image": "commons.webp",
   "size": [
-   1836,
-   1616
+   1862,
+   1632
   ],
   "density": 4,
   "frames": {
    "silas-idle-0": [
-    1152,
-    1448,
+    1280,
+    1464,
     64,
     64
    ],
    "silas-idle-1": [
-    1216,
-    1448,
+    1344,
+    1464,
     64,
     64
    ],
    "elara-idle-0": [
-    644,
-    1320,
+    772,
+    1336,
     64,
     64
    ],
    "elara-idle-1": [
-    708,
-    1320,
+    836,
+    1336,
     64,
     64
    ],
    "finn-idle-0": [
-    1092,
-    1320,
+    1220,
+    1336,
     64,
     64
    ],
    "finn-idle-1": [
-    1156,
-    1320,
+    1284,
+    1336,
     64,
     64
    ],
    "hazel-idle-0": [
-    1220,
-    1320,
+    1348,
+    1336,
     64,
     64
    ],
    "hazel-idle-1": [
-    1284,
-    1320,
+    1412,
+    1336,
     64,
     64
    ],
    "ada-idle-0": [
-    324,
-    1320,
+    452,
+    1336,
     64,
     64
    ],
    "ada-idle-1": [
-    388,
-    1320,
+    516,
+    1336,
+    64,
+    64
+   ],
+   "pell-idle-0": [
+    1088,
+    1464,
+    64,
+    64
+   ],
+   "pell-idle-1": [
+    1152,
+    1464,
     64,
     64
    ],
@@ -457,488 +479,488 @@
     368
    ],
    "workshop-addon": [
-    0,
+    256,
     624,
     128,
     240
    ],
    "interior-back-wall": [
-    128,
+    384,
     624,
     896,
     192
    ],
    "hearth-fire-0": [
-    0,
-    1512,
+    124,
+    1528,
     96,
     56
    ],
    "hearth-fire-1": [
-    96,
-    1512,
+    220,
+    1528,
     96,
     56
    ],
    "hearth-fire-2": [
-    192,
-    1512,
+    316,
+    1528,
     96,
     56
    ],
    "hearth-fire-3": [
-    288,
-    1512,
+    412,
+    1528,
     96,
     56
    ],
    "camp-flame-0": [
-    712,
-    1568,
+    808,
+    1584,
     32,
     36
    ],
    "camp-flame-1": [
-    744,
-    1568,
+    840,
+    1584,
     32,
     36
    ],
    "camp-flame-2": [
-    776,
-    1568,
+    872,
+    1584,
     32,
     36
    ],
    "campsite-0": [
-    304,
-    1024,
+    496,
+    1040,
     128,
     96
    ],
    "campsite-1": [
-    432,
-    1024,
+    624,
+    1040,
     128,
     96
    ],
    "campsite-2": [
-    560,
-    1024,
+    752,
+    1040,
     128,
     96
    ],
    "camp-windbreak": [
-    320,
-    1224,
+    448,
+    1240,
     160,
     92
    ],
    "camp-cot": [
-    1712,
-    1448,
+    0,
+    1528,
     124,
     56
    ],
    "camp-ring": [
-    384,
-    1512,
+    508,
+    1528,
     88,
     56
    ],
    "wooden-stool": [
-    1472,
-    1448,
+    1600,
+    1464,
     64,
     64
    ],
    "reading-chair": [
-    1076,
-    864,
+    1420,
+    880,
     64,
     128
    ],
    "braided-rug": [
-    576,
-    864,
+    920,
+    880,
     128,
     128
    ],
    "iron-lantern": [
-    1216,
-    1384,
+    1280,
+    1400,
     64,
     64
    ],
    "oak-table": [
-    832,
-    864,
+    1176,
+    880,
     128,
     128
    ],
    "potted-fern": [
-    1088,
-    1448,
+    1216,
+    1464,
     64,
     64
    ],
    "bookshelf": [
-    1540,
-    1224,
+    1668,
+    1240,
     128,
     64
    ],
    "wash-basin": [
-    1344,
-    1448,
+    1472,
+    1464,
     64,
     64
    ],
    "stone-hearth": [
-    0,
-    1320,
+    128,
+    1336,
     128,
     64
    ],
    "carved-bed": [
-    704,
-    864,
+    1048,
+    880,
     128,
     128
    ],
    "woven-basket": [
-    1536,
-    1448,
+    1664,
+    1464,
     64,
     64
    ],
    "display-stand": [
-    516,
-    1320,
+    644,
+    1336,
     64,
     64
    ],
    "tool-rack": [
-    128,
-    1320,
+    256,
+    1336,
     128,
     64
    ],
    "amber-sconce": [
-    452,
-    1320,
+    580,
+    1336,
     64,
     64
    ],
    "workshop-chest": [
-    640,
-    1224,
+    768,
+    1240,
     112,
     88
    ],
    "workshop-bench": [
-    0,
-    1024,
+    192,
+    1040,
     176,
     104
    ],
    "mailbox": [
-    752,
-    1224,
+    880,
+    1240,
     76,
     88
    ],
    "hame": [
-    828,
-    1224,
+    956,
+    1240,
     68,
     88
    ],
    "gatepost": [
-    1280,
+    1536,
     624,
     56,
     176
    ],
    "gate-leaf": [
-    1372,
-    1224,
+    1500,
+    1240,
     168,
     64
    ],
    "plot-sign": [
-    480,
-    1224,
+    608,
+    1240,
     160,
     88
    ],
    "commons-well": [
-    1336,
+    1592,
     624,
     128,
     168
    ],
    "notice-board": [
-    1268,
-    864,
+    1612,
+    880,
     96,
     120
    ],
    "commons-gateway": [
-    1024,
+    1280,
     624,
     256,
     192
    ],
    "hedge-straight-h": [
-    1732,
-    1320,
+    0,
+    1400,
     64,
     64
    ],
    "hedge-straight-v": [
-    0,
-    1384,
+    64,
+    1400,
     64,
     64
    ],
    "hedge-corner-ne": [
-    1348,
-    1320,
+    1476,
+    1336,
     64,
     64
    ],
    "hedge-corner-nw": [
-    1412,
-    1320,
+    1540,
+    1336,
     64,
     64
    ],
    "hedge-end-e": [
-    1604,
-    1320,
+    1732,
+    1336,
     64,
     64
    ],
    "hedge-end-w": [
-    1668,
-    1320,
+    1796,
+    1336,
     64,
     64
    ],
    "hedge-corner-se": [
-    1476,
-    1320,
+    1604,
+    1336,
     64,
     64
    ],
    "hedge-corner-sw": [
-    1540,
-    1320,
+    1668,
+    1336,
     64,
     64
    ],
    "fence-straight-h": [
-    964,
-    1320,
+    1092,
+    1336,
     64,
     64
    ],
    "fence-straight-v": [
-    1028,
-    1320,
+    1156,
+    1336,
     64,
     64
    ],
    "fence-corner": [
-    772,
-    1320,
+    900,
+    1336,
     64,
     64
    ],
    "fence-gateway": [
-    900,
-    1320,
+    1028,
+    1336,
     64,
     64
    ],
    "sawhorse": [
-    1336,
-    1512,
+    1460,
+    1528,
     72,
     48
    ],
    "timber-stack": [
-    896,
-    1224,
+    1024,
+    1240,
     124,
     80
    ],
    "skids": [
-    1464,
-    624,
+    0,
+    880,
     344,
     160
    ],
    "firebox": [
-    1148,
-    1224,
+    1276,
+    1240,
     64,
     72
    ],
    "toolbox": [
-    1536,
-    1512,
+    1660,
+    1528,
     64,
     48
    ],
    "woodpile": [
-    952,
-    1512,
+    1076,
+    1528,
     64,
     56
    ],
    "path-dirt-edge-n": [
     640,
-    1448,
+    1464,
     64,
     64
    ],
    "path-dirt-edge-e": [
     576,
-    1448,
+    1464,
     64,
     64
    ],
    "path-dirt-edge-s": [
     704,
-    1448,
+    1464,
     64,
     64
    ],
    "path-dirt-edge-w": [
     768,
-    1448,
+    1464,
     64,
     64
    ],
    "path-dirt-end-n": [
     896,
-    1448,
+    1464,
     64,
     64
    ],
    "path-dirt-end-e": [
     832,
-    1448,
+    1464,
     64,
     64
    ],
    "path-dirt-corner-ne": [
     320,
-    1448,
+    1464,
     64,
     64
    ],
    "path-dirt-corner-nw": [
     384,
-    1448,
+    1464,
     64,
     64
    ],
    "path-dirt-corner-se": [
     448,
-    1448,
+    1464,
     64,
     64
    ],
    "path-dirt-corner-sw": [
     512,
-    1448,
+    1464,
     64,
     64
    ],
    "path-dirt-end-s": [
     960,
-    1448,
+    1464,
     64,
     64
    ],
    "path-dirt-end-w": [
     1024,
-    1448,
+    1464,
     64,
     64
    ],
    "path-cobble-edge-n": [
-    1664,
-    1384,
+    1728,
+    1400,
     64,
     64
    ],
    "path-cobble-edge-e": [
-    1600,
-    1384,
+    1664,
+    1400,
     64,
     64
    ],
    "path-cobble-edge-s": [
-    1728,
-    1384,
+    1792,
+    1400,
     64,
     64
    ],
    "path-cobble-edge-w": [
     0,
-    1448,
+    1464,
     64,
     64
    ],
    "path-cobble-end-n": [
     128,
-    1448,
+    1464,
     64,
     64
    ],
    "path-cobble-end-e": [
     64,
-    1448,
+    1464,
     64,
     64
    ],
    "path-cobble-corner-ne": [
-    1344,
-    1384,
+    1408,
+    1400,
     64,
     64
    ],
    "path-cobble-corner-nw": [
-    1408,
-    1384,
+    1472,
+    1400,
     64,
     64
    ],
    "path-cobble-corner-se": [
-    1472,
-    1384,
+    1536,
+    1400,
     64,
     64
    ],
    "path-cobble-corner-sw": [
-    1536,
-    1384,
+    1600,
+    1400,
     64,
     64
    ],
    "path-cobble-end-s": [
     192,
-    1448,
+    1464,
     64,
     64
    ],
    "path-cobble-end-w": [
     256,
-    1448,
+    1464,
     64,
     64
    ],
@@ -949,446 +971,446 @@
     256
    ],
    "stall-a": [
-    96,
-    864,
+    440,
+    880,
     160,
     144
    ],
    "stall-b": [
-    256,
-    864,
+    600,
+    880,
     160,
     144
    ],
    "stall-c": [
-    416,
-    864,
+    760,
+    880,
     160,
     144
    ],
    "well-canopy": [
-    1364,
-    864,
+    1708,
+    880,
     120,
     112
    ],
    "mended-bridge": [
-    1484,
-    864,
+    0,
+    1040,
     192,
     104
    ],
    "candle-hull-0": [
-    544,
-    1568,
+    640,
+    1584,
     40,
     40
    ],
    "candle-hull-1": [
-    584,
-    1568,
+    680,
+    1584,
     40,
     40
    ],
    "candle-hull-2": [
-    624,
-    1568,
+    720,
+    1584,
     40,
     40
    ],
    "window-lamp-glow": [
-    0,
-    1224,
+    128,
+    1240,
     128,
     96
    ],
    "bunting": [
-    288,
-    1568,
+    384,
+    1584,
     256,
     40
    ],
    "library-sign": [
-    1408,
-    1512,
+    1532,
+    1528,
     64,
     48
    ],
    "paper-folded-0": [
-    1664,
-    1512,
+    1788,
+    1528,
     48,
     48
    ],
    "paper-folded-1": [
-    1712,
-    1512,
+    0,
+    1584,
     48,
     48
    ],
    "paper-folded-2": [
-    1760,
-    1512,
+    48,
+    1584,
     48,
     48
    ],
    "paper-scroll-0": [
-    0,
-    1568,
+    96,
+    1584,
     48,
     48
    ],
    "paper-scroll-1": [
-    48,
-    1568,
+    144,
+    1584,
     48,
     48
    ],
    "paper-scroll-2": [
-    96,
-    1568,
+    192,
+    1584,
     48,
     48
    ],
    "paper-slate-0": [
-    144,
-    1568,
+    240,
+    1584,
     48,
     48
    ],
    "paper-slate-1": [
-    192,
-    1568,
+    288,
+    1584,
     48,
     48
    ],
    "paper-slate-2": [
-    240,
-    1568,
+    336,
+    1584,
     48,
     48
    ],
    "turncaps-east": [
-    1280,
-    1448,
+    1408,
+    1464,
     64,
     64
    ],
    "cairn": [
-    1020,
-    1224,
+    1148,
+    1240,
     64,
     80
    ],
    "cairn-white-stones": [
-    1084,
-    1224,
+    1212,
+    1240,
     64,
     80
    ],
    "iron-oak-stump": [
-    1280,
-    1384,
+    1344,
+    1400,
     64,
     64
    ],
    "dead-birch-turncaps": [
-    0,
-    864,
+    344,
+    880,
     96,
     160
    ],
    "fallen-log": [
-    1668,
-    1224,
+    0,
+    1336,
     128,
     64
    ],
    "mossy-boulder": [
-    224,
-    1224,
+    352,
+    1240,
     96,
     96
    ],
    "drift-stone": [
-    580,
-    1320,
+    708,
+    1336,
     64,
     64
    ],
    "reed-pool": [
-    512,
-    1128,
+    640,
+    1144,
     128,
     96
    ],
    "resource-timber-available": [
-    1408,
-    1128,
+    1536,
+    1144,
     128,
     96
    ],
    "resource-timber-depleted": [
-    1536,
-    1128,
+    1664,
+    1144,
     128,
     96
    ],
    "resource-stone-available": [
-    1152,
-    1128,
+    1280,
+    1144,
     128,
     96
    ],
    "resource-stone-depleted": [
-    1280,
-    1128,
+    1408,
+    1144,
     128,
     96
    ],
    "resource-fiber-available": [
-    896,
-    1128,
+    1024,
+    1144,
     128,
     96
    ],
    "resource-fiber-depleted": [
-    1024,
-    1128,
+    1152,
+    1144,
     128,
     96
    ],
    "resource-amber-available": [
-    640,
-    1128,
+    768,
+    1144,
     128,
     96
    ],
    "resource-amber-depleted": [
-    768,
-    1128,
+    896,
+    1144,
     128,
     96
    ],
    "wilds-tent": [
-    1664,
-    1128,
+    0,
+    1240,
     128,
     96
    ],
    "wilds-fire-ring": [
-    1600,
-    1512,
+    1724,
+    1528,
     64,
     48
    ],
    "wilds-pack": [
-    1408,
-    1448,
+    1536,
+    1464,
     64,
     64
    ],
    "fallen-hero-lantern-lit": [
-    1276,
-    1224,
+    1404,
+    1240,
     48,
     72
    ],
    "fallen-hero-lantern-unlit": [
-    1324,
-    1224,
+    1452,
+    1240,
     48,
     72
    ],
    "echo-hollis-solid": [
-    1328,
-    1024,
+    1520,
+    1040,
     128,
     96
    ],
    "echo-tam-solid": [
-    384,
-    1128,
+    512,
+    1144,
     128,
     96
    ],
    "echo-bett-solid": [
-    816,
-    1024,
+    1008,
+    1040,
     128,
     96
    ],
    "echo-dorrit-solid": [
-    1072,
-    1024,
+    1264,
+    1040,
     128,
     96
    ],
    "echo-joss-solid": [
-    1584,
-    1024,
+    0,
+    1144,
     128,
     96
    ],
    "echo-nan-solid": [
-    128,
-    1128,
+    256,
+    1144,
     128,
     96
    ],
    "echo-hollis-faint": [
-    1200,
-    1024,
+    1392,
+    1040,
     128,
     96
    ],
    "echo-tam-faint": [
-    256,
-    1128,
+    384,
+    1144,
     128,
     96
    ],
    "echo-bett-faint": [
-    688,
-    1024,
+    880,
+    1040,
     128,
     96
    ],
    "echo-dorrit-faint": [
-    944,
-    1024,
+    1136,
+    1040,
     128,
     96
    ],
    "echo-joss-faint": [
-    1456,
-    1024,
+    1648,
+    1040,
     128,
     96
    ],
    "echo-nan-faint": [
-    0,
-    1128,
+    128,
+    1144,
     128,
     96
    ],
    "icon-timber": [
-    896,
-    1384,
+    960,
+    1400,
     64,
     64
    ],
    "icon-stone": [
-    832,
-    1384,
+    896,
+    1400,
     64,
     64
    ],
    "icon-fiber": [
-    512,
-    1384,
+    576,
+    1400,
     64,
     64
    ],
    "icon-amber": [
-    64,
-    1384,
+    128,
+    1400,
     64,
     64
    ],
    "icon-whittled-fox": [
-    1024,
-    1384,
+    1088,
+    1400,
     64,
     64
    ],
    "icon-beeswax-candle": [
-    128,
-    1384,
+    192,
+    1400,
     64,
     64
    ],
    "icon-river-glass-bead": [
-    704,
-    1384,
+    768,
+    1400,
     64,
     64
    ],
    "icon-spare-bootlace": [
-    768,
-    1384,
+    832,
+    1400,
     64,
     64
    ],
    "icon-tin-whistle": [
-    960,
-    1384,
+    1024,
+    1400,
     64,
     64
    ],
    "icon-lamp-wick": [
-    576,
-    1384,
+    640,
+    1400,
     64,
     64
    ],
    "icon-oilcloth-wrap": [
-    640,
-    1384,
+    704,
+    1400,
     64,
     64
    ],
    "icon-wooden-peg": [
-    1088,
-    1384,
+    1152,
+    1400,
     64,
     64
    ],
    "icon-emote-wave": [
-    448,
-    1384,
+    512,
+    1400,
     64,
     64
    ],
    "icon-emote-nod": [
-    320,
-    1384,
+    384,
+    1400,
     64,
     64
    ],
    "icon-emote-cheer": [
-    192,
-    1384,
+    256,
+    1400,
     64,
     64
    ],
    "icon-emote-thanks": [
-    384,
-    1384,
+    448,
+    1400,
     64,
     64
    ],
    "icon-emote-lantern": [
-    256,
-    1384,
+    320,
+    1400,
     64,
     64
    ],
    "interior-floor": [
-    1152,
-    1384,
+    1216,
+    1400,
     64,
     64
    ],
    "guardian-settled": [
-    128,
-    1224,
+    256,
+    1240,
     96,
     96
    ],
    "portrait-silas": [
-    1536,
-    368,
+    0,
+    624,
     256,
     256
    ],
@@ -1429,6 +1451,12 @@
     256
    ],
    "portrait-pip": [
+    1536,
+    368,
+    256,
+    256
+   ],
+   "portrait-pell": [
     1280,
     368,
     256,
@@ -1437,122 +1465,122 @@
   },
   "blits": {
    "reading-chair@17x16": [
-    256,
-    1320,
+    384,
+    1336,
     68,
     64
    ],
    "bookshelf@32x31": [
-    1140,
-    864,
+    1484,
+    880,
     128,
     124
    ],
    "stone-hearth@29x32": [
-    960,
-    864,
+    1304,
+    880,
     116,
     128
    ],
    "stone-hearth@16x18": [
-    1212,
-    1224,
+    1340,
+    1240,
     64,
     72
    ],
    "tool-rack@32x25": [
-    176,
-    1024,
+    368,
+    1040,
     128,
     100
    ],
    "tool-rack@16x12": [
-    1472,
-    1512,
+    1596,
+    1528,
     64,
     48
    ],
    "fallen-log@26x13": [
-    1128,
-    1512,
+    1252,
+    1528,
     104,
     52
    ],
    "fallen-log@26x13~f": [
-    1232,
-    1512,
+    1356,
+    1528,
     104,
     52
    ],
    "mossy-boulder@20x14": [
-    792,
-    1512,
+    916,
+    1528,
     80,
     56
    ],
    "mossy-boulder@20x14~f": [
-    872,
-    1512,
+    996,
+    1528,
     80,
     56
    ],
    "cairn@14x14": [
-    1016,
-    1512,
+    1140,
+    1528,
     56,
     56
    ],
    "cairn@14x14~f": [
-    1072,
-    1512,
+    1196,
+    1528,
     56,
     56
    ],
    "turncaps-east@12x9": [
-    664,
-    1568,
+    760,
+    1584,
     48,
     36
    ],
    "iron-oak-stump@20x14": [
-    632,
-    1512,
+    756,
+    1528,
     80,
     56
    ],
    "iron-oak-stump@20x14~f": [
-    712,
-    1512,
+    836,
+    1528,
     80,
     56
    ],
    "drift-stone@20x14": [
-    472,
-    1512,
+    596,
+    1528,
     80,
     56
    ],
    "drift-stone@20x14~f": [
-    552,
-    1512,
+    676,
+    1528,
     80,
     56
    ],
    "cairn-white-stones@14x16": [
-    1600,
-    1448,
+    1728,
+    1464,
     56,
     64
    ],
    "cairn-white-stones@14x16~f": [
-    1656,
-    1448,
+    1784,
+    1464,
     56,
     64
    ],
    "fence-corner@16x16~f": [
-    836,
-    1320,
+    964,
+    1336,
     64,
     64
    ]
@@ -2787,1102 +2815,1150 @@
  "indoors": {
   "image": "indoors.webp",
   "size": [
-   1806,
-   1504
+   1864,
+   1552
   ],
   "density": 64,
   "frames": {
    "plank-floor-0": [
-    1600,
-    1376,
+    256,
+    1440,
     64,
     64
    ],
    "plank-floor-1": [
-    1664,
-    1376,
+    320,
+    1440,
     64,
     64
    ],
    "plank-floor-2": [
-    1728,
-    1376,
+    384,
+    1440,
     64,
     64
    ],
    "plank-floor-3": [
-    0,
+    448,
     1440,
     64,
     64
    ],
    "flagstone-floor-0": [
-    1536,
-    1280,
+    256,
+    1376,
     64,
     64
    ],
    "flagstone-floor-1": [
-    1600,
-    1280,
+    320,
+    1376,
     64,
     64
    ],
    "flagstone-floor-2": [
-    1664,
-    1280,
+    384,
+    1376,
     64,
     64
    ],
    "flagstone-floor-3": [
-    1728,
-    1280,
+    448,
+    1376,
     64,
     64
    ],
    "back-wall-0": [
-    896,
+    1408,
     1024,
     64,
     128
    ],
    "back-wall-1": [
-    960,
+    1472,
     1024,
     64,
     128
    ],
    "back-wall-2": [
-    1024,
+    1536,
     1024,
     64,
     128
    ],
    "back-wall-window": [
-    1088,
+    1600,
     1024,
     64,
     128
    ],
    "interior-wall-0": [
-    448,
+    960,
     1376,
     64,
     64
    ],
    "interior-wall-1": [
-    512,
+    1024,
     1376,
     64,
     64
    ],
    "interior-wall-2": [
-    576,
+    1088,
     1376,
     64,
     64
    ],
    "interior-wall-3": [
-    640,
+    1152,
     1376,
     64,
     64
    ],
    "interior-wall-4": [
-    704,
+    1216,
     1376,
     64,
     64
    ],
    "interior-wall-5": [
-    768,
+    1280,
     1376,
     64,
     64
    ],
    "interior-wall-6": [
-    832,
+    1344,
     1376,
     64,
     64
    ],
    "interior-wall-7": [
-    896,
+    1408,
     1376,
     64,
     64
    ],
    "doorway": [
-    832,
+    1408,
     1280,
     128,
     64
    ],
    "stairs-up": [
-    256,
+    768,
     1024,
     128,
     128
    ],
    "stairs-down": [
-    128,
+    640,
     1024,
     128,
     128
    ],
    "cellar-ladder": [
-    1216,
+    1728,
     1024,
     64,
     128
    ],
    "trapdoor-shut": [
-    896,
+    1344,
     1440,
     64,
     64
    ],
    "trapdoor-open": [
-    832,
+    1280,
     1440,
     64,
     64
    ],
    "rug-rag": [
-    384,
+    768,
     768,
     192,
     128
    ],
    "rug-braided": [
-    0,
+    384,
     768,
     192,
     128
    ],
    "counter": [
-    1536,
-    576,
+    0,
+    768,
     192,
     128
    ],
    "room-surround": [
-    256,
+    704,
     1440,
     64,
     64
    ],
    "worktable": [
-    1280,
+    1600,
     576,
     256,
     128
    ],
    "counting-stool-window": [
-    1408,
-    1280,
+    128,
+    1376,
     64,
     64
    ],
    "crock-shelves": [
-    1472,
-    768,
+    256,
+    896,
     128,
     128
    ],
    "tallow-pot-steam-0": [
-    384,
+    896,
     1024,
     128,
     128
    ],
    "tallow-pot-steam-1": [
-    512,
+    1024,
     1024,
     128,
     128
    ],
    "tallow-pot-steam-2": [
-    640,
+    1152,
     1024,
     128,
     128
    ],
    "sponge-bowl-flat": [
-    960,
+    1600,
     1152,
     64,
     128
    ],
    "sponge-bowl-risen": [
-    1024,
+    1664,
     1152,
     64,
     128
    ],
    "bread-rack": [
-    1152,
+    1664,
     1024,
     64,
     128
    ],
    "hearth-fire-0": [
-    192,
+    704,
     1376,
     64,
     64
    ],
    "hearth-fire-1": [
-    256,
+    768,
     1376,
     64,
     64
    ],
    "hearth-fire-2": [
-    320,
+    832,
     1376,
     64,
     64
    ],
    "hearth-fire-3": [
-    384,
+    896,
     1376,
     64,
     64
    ],
    "millstones-0": [
-    384,
+    640,
     384,
     128,
     192
    ],
    "millstones-1": [
-    512,
+    768,
     384,
     128,
     192
    ],
    "millstones-2": [
-    640,
+    896,
     384,
     128,
     192
    ],
    "millstones-3": [
-    768,
+    1024,
     384,
     128,
     192
    ],
    "gear-train-0": [
-    0,
+    192,
     0,
     192,
     192
    ],
    "gear-train-1": [
-    192,
+    384,
     0,
     192,
     192
    ],
    "gear-train-2": [
-    384,
+    576,
     0,
     192,
     192
    ],
    "gear-train-3": [
-    576,
+    768,
     0,
     192,
     192
    ],
    "chute-meal-bin-0": [
-    960,
+    1536,
     768,
     128,
     128
    ],
    "chute-meal-bin-1": [
-    1088,
+    1664,
     768,
     128,
     128
    ],
    "chute-meal-bin-2": [
-    1216,
-    768,
+    0,
+    896,
     128,
     128
    ],
    "chute-meal-bin-3": [
-    1344,
-    768,
+    128,
+    896,
     128,
     128
    ],
    "flour-sacks-0": [
-    384,
+    896,
     896,
     128,
     128
    ],
    "flour-sacks-1": [
-    512,
+    1024,
     896,
     128,
     128
    ],
    "sack-hoist-seized": [
-    896,
+    1152,
     384,
     128,
     192
    ],
    "sack-hoist-working": [
-    1408,
+    1664,
     384,
     128,
     192
    ],
    "sack-hoist-swing-0": [
-    1024,
+    1280,
     384,
     128,
     192
    ],
    "sack-hoist-swing-1": [
-    1152,
+    1408,
     384,
     128,
     192
    ],
    "sack-hoist-swing-2": [
-    1280,
+    1536,
     384,
     128,
     192
    ],
    "loft-roof-beams": [
-    64,
+    640,
     1280,
     768,
     64
    ],
    "library-shelf-0": [
-    192,
+    576,
     192,
     128,
     192
    ],
    "library-shelf-1": [
-    320,
+    704,
     192,
     128,
     192
    ],
    "library-shelf-2": [
-    448,
+    832,
     192,
     128,
     192
    ],
    "reading-table-unlit": [
-    512,
+    832,
     576,
     256,
     160
    ],
    "reading-table-lit": [
-    256,
+    576,
     576,
     256,
     160
    ],
    "reading-lamp-flame-0": [
-    64,
+    512,
     1440,
     64,
     64
    ],
    "reading-lamp-flame-1": [
-    128,
+    576,
     1440,
     64,
     64
    ],
    "reading-lamp-flame-2": [
-    192,
+    640,
     1440,
     64,
     64
    ],
    "donation-shelf-0": [
-    0,
+    512,
     896,
     128,
     128
    ],
    "donation-shelf-1": [
-    128,
+    640,
     896,
     128,
     128
    ],
    "donation-shelf-2": [
-    256,
+    768,
     896,
     128,
     128
    ],
    "window-seat": [
-    768,
+    1280,
     1024,
     128,
     128
    ],
    "chimney-smoke-0": [
-    1280,
+    1792,
     1024,
     64,
     128
    ],
    "chimney-smoke-1": [
-    1344,
-    1024,
+    0,
+    1152,
     64,
     128
    ],
    "chimney-smoke-2": [
-    1408,
-    1024,
+    64,
+    1152,
     64,
     128
    ],
    "chimney-smoke-3": [
-    1472,
-    1024,
+    128,
+    1152,
     64,
     128
    ],
    "chimney-smoke-4": [
-    1536,
-    1024,
+    192,
+    1152,
     64,
     128
    ],
    "chimney-smoke-5": [
-    1600,
-    1024,
+    256,
+    1152,
     64,
     128
    ],
    "lit-window-bakery": [
-    1152,
+    1664,
     1376,
     64,
     64
    ],
    "lit-window-mill": [
-    1280,
+    1792,
     1376,
     64,
     64
    ],
    "lit-window-library": [
-    1216,
+    1728,
     1376,
     64,
     64
    ],
    "shelf-icon-road": [
-    512,
+    960,
     1440,
     64,
     64
    ],
    "shelf-icon-village": [
-    576,
+    1024,
     1440,
     64,
     64
    ],
    "shelf-icon-craft": [
-    448,
+    896,
     1440,
     64,
     64
    ],
    "pin-unpinned": [
-    1536,
-    1376,
+    192,
+    1440,
     64,
     64
    ],
    "pin-pinned": [
-    1472,
-    1376,
+    128,
+    1440,
     64,
     64
    ],
    "gate-waiting": [
-    128,
+    640,
     1376,
     64,
     64
    ],
    "gate-needs-embers": [
-    64,
+    576,
     1376,
     64,
     64
    ],
    "gate-locked": [
-    0,
+    512,
     1376,
     64,
     64
    ],
    "signpost-plumb-missing-east": [
-    704,
+    1152,
     1440,
     64,
     64
    ],
    "east-finger-bracken": [
-    960,
+    1536,
     1280,
     128,
     64
    ],
    "east-finger-painted": [
-    1088,
+    1664,
     1280,
     128,
     64
    ],
    "keepsake-east-finger": [
-    960,
+    1472,
     1376,
     64,
     64
    ],
    "keepsake-tally-token": [
-    1024,
+    1536,
     1376,
     64,
     64
    ],
    "oven-hearth-fire-0": [
-    1152,
+    1344,
     0,
     192,
     192
    ],
    "oven-hearth-fire-1": [
-    1344,
+    1536,
     0,
     192,
     192
    ],
    "oven-hearth-fire-2": [
-    1536,
     0,
+    192,
     192,
     192
    ],
    "oven-hearth-fire-3": [
-    0,
+    192,
     192,
     192,
     192
    ],
    "library-shelf-front-sparse": [
-    832,
+    1216,
     192,
     128,
     192
    ],
    "library-shelf-front-half": [
-    704,
+    1088,
     192,
     128,
     192
    ],
    "library-shelf-front-full": [
-    576,
+    960,
     192,
     128,
     192
    ],
    "library-shelf-tall-left-sparse": [
-    0,
+    256,
     576,
     64,
     192
    ],
    "library-shelf-tall-right-sparse": [
-    192,
+    448,
     576,
     64,
     192
    ],
    "library-shelf-tall-left-half": [
-    1728,
-    384,
+    192,
+    576,
     64,
     192
    ],
    "library-shelf-tall-right-half": [
-    128,
+    384,
     576,
     64,
     192
    ],
    "library-shelf-tall-left-full": [
-    1664,
-    384,
+    128,
+    576,
     64,
     192
    ],
    "library-shelf-tall-right-full": [
-    64,
+    320,
     576,
     64,
     192
    ],
    "library-shelf-short-left-sparse": [
-    448,
+    1088,
     1152,
     64,
     128
    ],
    "library-shelf-short-right-sparse": [
-    640,
+    1280,
     1152,
     64,
     128
    ],
    "library-shelf-short-left-half": [
-    384,
+    1024,
     1152,
     64,
     128
    ],
    "library-shelf-short-right-half": [
-    576,
+    1216,
     1152,
     64,
     128
    ],
    "library-shelf-short-left-full": [
-    320,
+    960,
     1152,
     64,
     128
    ],
    "library-shelf-short-right-full": [
-    512,
+    1152,
     1152,
     64,
     128
    ],
    "library-reading-nook-front-default": [
-    960,
+    1152,
     0,
     192,
     192
    ],
    "rug-woven-front-default": [
-    576,
+    960,
     768,
     192,
     128
    ],
    "rug-braided-front-default": [
-    192,
+    576,
     768,
     192,
     128
    ],
    "rug-patchwork-front-default": [
-    1024,
+    1344,
     576,
     256,
     128
    ],
    "shelf-generic-front-default": [
-    1536,
-    384,
+    0,
+    576,
     128,
     192
    ],
    "shelf-generic-left-default": [
-    832,
+    1472,
     1152,
     64,
     128
    ],
    "shelf-generic-right-default": [
-    896,
+    1536,
     1152,
     64,
     128
    ],
    "wall-pegs-front-tools": [
-    768,
+    1152,
     768,
     192,
     128
    ],
    "crate-front-default": [
-    1472,
-    1280,
+    192,
+    1376,
     64,
     64
    ],
    "barrel-front-default": [
-    1216,
+    1792,
     1280,
     64,
     64
    ],
    "sack-large-front-upright": [
-    384,
+    832,
     1440,
     64,
     64
    ],
    "sack-large-front-slumped": [
-    320,
+    768,
     1440,
     64,
     64
    ],
    "basket-front-default": [
-    1280,
-    1280,
+    0,
+    1376,
     64,
     64
    ],
    "plant-leafy-front-default": [
-    0,
+    576,
     1280,
     64,
     96
    ],
    "plant-flowering-front-default": [
-    1728,
-    1152,
+    512,
+    1280,
     64,
     96
    ],
    "lamp-oil-front-default": [
-    1536,
-    1152,
+    320,
+    1280,
     64,
     96
    ],
    "candle-holder-front-default": [
-    1152,
+    1792,
     1152,
     64,
     96
    ],
    "candle-stick-front-default": [
-    1216,
-    1152,
+    0,
+    1280,
     64,
     96
    ],
    "picture-frame-front-default": [
-    1664,
-    1152,
+    448,
+    1280,
     64,
     96
    ],
    "calendar-front-default": [
-    1088,
+    1728,
     1152,
     64,
     96
    ],
    "curtains-front-default": [
-    1600,
-    768,
+    384,
+    896,
     128,
     128
    ],
    "side-table-front-default": [
-    640,
+    1088,
     1440,
     64,
     64
    ],
    "chair-front-default": [
+    64,
     1280,
-    1152,
     64,
     96
    ],
    "chair-left-default": [
-    1344,
-    1152,
+    128,
+    1280,
     64,
     96
    ],
    "chair-right-default": [
-    1408,
-    1152,
+    192,
+    1280,
     64,
     96
    ],
    "stool-front-default": [
-    768,
+    1216,
     1440,
     64,
     64
    ],
    "chest-front-default": [
-    1344,
-    1280,
+    64,
+    1376,
     64,
     64
    ],
    "kitchen-oven-front-fire": [
-    768,
+    960,
     0,
     192,
     192
    ],
    "kitchen-worktable-front-default": [
-    768,
+    1088,
     576,
     256,
     128
    ],
    "kitchen-washtub-front-default": [
-    192,
+    832,
     1152,
     64,
     128
    ],
    "kitchen-cauldron-front-steaming-0": [
-    1728,
-    1024,
+    576,
+    1152,
     64,
     128
    ],
    "kitchen-cauldron-front-steaming-1": [
-    0,
+    640,
     1152,
     64,
     128
    ],
    "kitchen-cauldron-front-steaming-2": [
-    64,
-    1152,
-    64,
-    128
-   ],
-   "kitchen-cauldron-front-steaming-3": [
-    128,
-    1152,
-    64,
-    128
-   ],
-   "kitchen-bread-rack-front-default": [
-    1664,
-    1024,
-    64,
-    128
-   ],
-   "kitchen-jar-shelf-front-default": [
-    640,
-    896,
-    128,
-    128
-   ],
-   "kitchen-flour-handprint-wall-default": [
-    1088,
-    1376,
-    64,
-    64
-   ],
-   "kitchen-oven-peel-wall-default": [
-    1472,
-    1152,
-    64,
-    96
-   ],
-   "millstone-hopper-front-turn-0": [
-    1600,
-    192,
-    128,
-    192
-   ],
-   "millstone-hopper-front-turn-1": [
-    0,
-    384,
-    128,
-    192
-   ],
-   "millstone-hopper-front-turn-2": [
-    128,
-    384,
-    128,
-    192
-   ],
-   "millstone-hopper-front-turn-3": [
-    256,
-    384,
-    128,
-    192
-   ],
-   "mill-sifter-front-default": [
-    768,
-    1152,
-    64,
-    128
-   ],
-   "mill-gear-wheel-left-turn-0": [
-    1280,
-    896,
-    128,
-    128
-   ],
-   "mill-gear-wheel-left-turn-1": [
-    1408,
-    896,
-    128,
-    128
-   ],
-   "mill-gear-wheel-left-turn-2": [
-    1536,
-    896,
-    128,
-    128
-   ],
-   "mill-gear-wheel-left-turn-3": [
-    1664,
-    896,
-    128,
-    128
-   ],
-   "mill-sack-front-upright": [
-    1408,
-    1376,
-    64,
-    64
-   ],
-   "mill-sack-front-slumped": [
-    1344,
-    1376,
-    64,
-    64
-   ],
-   "mill-stairs-diag-default": [
-    0,
-    1024,
-    128,
-    128
-   ],
-   "loft-stair-opening-front-default": [
-    1152,
-    896,
-    128,
-    128
-   ],
-   "loft-hoist-front-default": [
-    960,
-    192,
-    128,
-    192
-   ],
-   "mill-tally-board-wall-default": [
-    1600,
-    1152,
-    64,
-    96
-   ],
-   "mill-gear-wall-small-default": [
     704,
     1152,
     64,
     128
    ],
-   "kitchen-washtub-front-risen": [
+   "kitchen-cauldron-front-steaming-3": [
+    768,
+    1152,
+    64,
+    128
+   ],
+   "kitchen-bread-rack-front-default": [
+    512,
+    1152,
+    64,
+    128
+   ],
+   "kitchen-jar-shelf-front-default": [
+    1152,
+    896,
+    128,
+    128
+   ],
+   "kitchen-flour-handprint-wall-default": [
+    1600,
+    1376,
+    64,
+    64
+   ],
+   "kitchen-oven-peel-wall-default": [
     256,
+    1280,
+    64,
+    96
+   ],
+   "millstone-hopper-front-turn-0": [
+    128,
+    384,
+    128,
+    192
+   ],
+   "millstone-hopper-front-turn-1": [
+    256,
+    384,
+    128,
+    192
+   ],
+   "millstone-hopper-front-turn-2": [
+    384,
+    384,
+    128,
+    192
+   ],
+   "millstone-hopper-front-turn-3": [
+    512,
+    384,
+    128,
+    192
+   ],
+   "mill-sifter-front-default": [
+    1408,
+    1152,
+    64,
+    128
+   ],
+   "mill-gear-wheel-left-turn-0": [
+    0,
+    1024,
+    128,
+    128
+   ],
+   "mill-gear-wheel-left-turn-1": [
+    128,
+    1024,
+    128,
+    128
+   ],
+   "mill-gear-wheel-left-turn-2": [
+    256,
+    1024,
+    128,
+    128
+   ],
+   "mill-gear-wheel-left-turn-3": [
+    384,
+    1024,
+    128,
+    128
+   ],
+   "mill-sack-front-upright": [
+    64,
+    1440,
+    64,
+    64
+   ],
+   "mill-sack-front-slumped": [
+    0,
+    1440,
+    64,
+    64
+   ],
+   "mill-stairs-diag-default": [
+    512,
+    1024,
+    128,
+    128
+   ],
+   "loft-stair-opening-front-default": [
+    1664,
+    896,
+    128,
+    128
+   ],
+   "loft-hoist-front-default": [
+    1344,
+    192,
+    128,
+    192
+   ],
+   "mill-tally-board-wall-default": [
+    384,
+    1280,
+    64,
+    96
+   ],
+   "mill-gear-wall-small-default": [
+    1344,
+    1152,
+    64,
+    128
+   ],
+   "kitchen-washtub-front-risen": [
+    896,
     1152,
     64,
     128
    ],
    "loft-hoist-front-working-0": [
-    1088,
-    192,
-    128,
-    192
-   ],
-   "loft-hoist-front-working-1": [
-    1216,
-    192,
-    128,
-    192
-   ],
-   "loft-hoist-front-working-2": [
-    1344,
-    192,
-    128,
-    192
-   ],
-   "loft-hoist-front-working-3": [
     1472,
     192,
     128,
     192
    ],
+   "loft-hoist-front-working-1": [
+    1600,
+    192,
+    128,
+    192
+   ],
+   "loft-hoist-front-working-2": [
+    1728,
+    192,
+    128,
+    192
+   ],
+   "loft-hoist-front-working-3": [
+    0,
+    384,
+    128,
+    192
+   ],
    "library-elara-desk-front-empty": [
-    768,
+    1280,
     896,
     128,
     128
    ],
    "library-elara-desk-front-writing-0": [
-    896,
+    1408,
     896,
     128,
     128
    ],
    "library-elara-desk-front-writing-1": [
-    1024,
+    1536,
     896,
     128,
     128
    ],
    "library-section-sign-front-stories": [
-    1344,
-    1440,
+    0,
+    1504,
     128,
     48
    ],
    "library-section-sign-front-histories": [
-    1088,
+    1536,
     1440,
     128,
     48
    ],
    "library-section-sign-front-recipes": [
-    1216,
+    1664,
     1440,
     128,
     48
    ],
    "library-section-sign-front-field-notes": [
-    960,
+    1408,
     1440,
     128,
     48
+   ],
+   "yard-counter": [
+    1344,
+    768,
+    192,
+    128
+   ],
+   "yard-timber-rack": [
+    384,
+    192,
+    192,
+    192
+   ],
+   "yard-mending-bench": [
+    512,
+    576,
+    64,
+    192
+   ],
+   "kit-side-doorway": [
+    384,
+    1152,
+    64,
+    128
+   ],
+   "kit-side-doorway-right": [
+    448,
+    1152,
+    64,
+    128
+   ],
+   "deeds-pigeonholes": [
+    0,
+    0,
+    192,
+    192
+   ],
+   "deeds-clerk-desk": [
+    320,
+    1152,
+    64,
+    128
+   ],
+   "deeds-table": [
+    192,
+    768,
+    192,
+    128
    ]
   }
  },

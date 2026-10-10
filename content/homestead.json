@@ -84,10 +84,11 @@
     ],
     "rowPitch": 5,
     "spareGates": 2,
-    "silasTable": {
-      "x": 824,
-      "y": 344,
-      "radius": 56
+    "deedTable": {
+      "area": "in:commons:yard:deeds",
+      "x": 88,
+      "y": 80,
+      "radius": 40
     }
   },
   "outdoorReserved": [

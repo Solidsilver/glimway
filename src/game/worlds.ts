@@ -92,7 +92,7 @@ export interface ExitDef {
   /** The side you step out of (the chevron, and which way you face arriving). Edge exits infer it. */
   side?: 'north' | 'south' | 'east' | 'west'
   /** A map edge (the default), a room's doorway, or a stair to another floor. */
-  kind?: 'edge' | 'door' | 'stair'
+  kind?: 'edge' | 'door' | 'stair' | 'inner'
 }
 
 /** Supplied atlas props placed in the world at a consistent small-world scale. */

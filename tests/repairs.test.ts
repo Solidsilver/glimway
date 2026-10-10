@@ -5,6 +5,8 @@ import { allKeepsakeLines, echoKeepsakeOffer, keepsakeAsk, keepsakeReturnAction,
 import { itemDef, ITEMS, ITEM_RULES } from '../src/lib/items.ts';
 import { CRAFTING } from '../src/lib/workshop.ts';
 import { buildArea } from '../src/game/worlds.ts';
+import { buildCommons } from '../src/game/commons.ts';
+import { residentById } from '../src/lib/residents.ts';
 
 test('repairs rules match crafting and lore canon', () => {
   assert.equal(REPAIR_RULES.rules.maxOpen, 3);
@@ -167,10 +169,10 @@ test('the world is built from the shared spots the server checks', () => {
     assert.ok(npc, `${res.id} stands in ${res.area}`);
     assert.deepEqual({ tx: npc!.tx, ty: npc!.ty }, { tx: res.tx, ty: res.ty });
   }
-  // Silas from the menders rows, in the Commons.
-  const c = buildArea('commons');
+  // Silas mends with his cycle (the menders row names him); out in the
+  // Commons he stands by the sawhorse, at his cycle's yard spot.
   const silas = ITEM_RULES.menders.find((m) => m.npc === 'silas')!;
-  assert.ok(silas);
-  const silasInteractable = c.npcs.find((n) => n.id === 'silas');
-  if (silasInteractable) assert.deepEqual({ tx: silasInteractable.tx, ty: silasInteractable.ty }, { tx: silas.tx, ty: silas.ty });
+  assert.equal(silas.with, 'silas');
+  const yard = residentById('silas')!.spots.yard!;
+  assert.deepEqual(buildCommons().features.silas, { tx: yard.tx, ty: yard.ty });
 });

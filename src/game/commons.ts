@@ -26,7 +26,7 @@
  * the signs on the gates, Silas, the way to your own gate.
  */
 import { HOMESTEAD_DATA, gateRowCount, gateTile, homeArea } from '../lib/homestead.ts'
-import { ITEM_RULES } from '../lib/items.ts'
+import { residentById } from '../lib/residents.ts'
 import { calendarAt } from '../lib/calendar.ts'
 import { landEntry } from './homeland.ts'
 import { gameNow } from './clock.ts'
@@ -309,9 +309,11 @@ export function buildCommons(gateCount = 0): CommonsWorld {
   put('cottage-silas', 52, 17, { x: 53 * TILE, y: 18 * TILE })
   props.push({ frame: 'lantern-post', tx: 56, ty: 17, h: 28, body: [8, 6], light: 'commons' })
   lamps.push({ tx: 56, ty: 17 })
-  // Silas stands where the shared menders data puts him (the server checks
-  // mending and keepsake returns against the same rows).
-  const silasSpot = ITEM_RULES.menders.find((m) => m.npc === 'silas') ?? { tx: 51, ty: 21 }
+  // Silas's spot out in the yard, by the sawhorse: his cycle (content/residents.json)
+  // has him there part of each hour, at his counter inside the rest (the
+  // server checks mending and the fox against the same cycle). Lane Y-B
+  // draws him by the cycle.
+  const silasSpot = residentById('silas')?.spots.yard ?? { tx: 48, ty: 19 }
   const silas = { tx: silasSpot.tx, ty: silasSpot.ty }
   const toolbox = { tx: 49, ty: 24 }
   props.push({ frame: 'tool-crate', tx: toolbox.tx, ty: toolbox.ty, h: 14, body: [12, 7] })

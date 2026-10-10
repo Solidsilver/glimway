@@ -78,9 +78,10 @@ func (x *Rooms) GetRooms() []*Room {
 	return nil
 }
 
-// Room maps are 16-pixel tiles. Floors share an outdoor parent; the parent
-// follows from the id (in:village:bakery -> village, in:village:mill:2 ->
-// in:village:mill) and is checked in code, beside RoomParent.
+// Room maps are 16-pixel tiles. Floors and side rooms share an outdoor
+// parent; the building follows from the id (in:village:bakery -> village,
+// in:village:mill:2 -> in:village:mill, in:commons:yard:deeds ->
+// in:commons:yard) and is checked in code, beside RoomParent.
 type Room struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -200,14 +201,17 @@ func (x *Room) GetFurnishings() []*RoomFurnishing {
 }
 
 type RoomDoor struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Kind          string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
-	At            string                 `protobuf:"bytes,3,opt,name=at,proto3" json:"at,omitempty"`
-	Side          string                 `protobuf:"bytes,4,opt,name=side,proto3" json:"side,omitempty"`
-	To            string                 `protobuf:"bytes,5,opt,name=to,proto3" json:"to,omitempty"`
-	Outside       *RoomTile              `protobuf:"bytes,6,opt,name=outside,proto3" json:"outside,omitempty"`
-	Entry         *RoomTile              `protobuf:"bytes,7,opt,name=entry,proto3" json:"entry,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// door: the front door out to the parent region; stair: to another floor;
+	// inner: a doorway in a side wall to another room of the same building
+	// (its tiles are a non-solid prop's letter, the prop drawing the opening).
+	Kind          string    `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
+	At            string    `protobuf:"bytes,3,opt,name=at,proto3" json:"at,omitempty"`
+	Side          string    `protobuf:"bytes,4,opt,name=side,proto3" json:"side,omitempty"`
+	To            string    `protobuf:"bytes,5,opt,name=to,proto3" json:"to,omitempty"`
+	Outside       *RoomTile `protobuf:"bytes,6,opt,name=outside,proto3" json:"outside,omitempty"`
+	Entry         *RoomTile `protobuf:"bytes,7,opt,name=entry,proto3" json:"entry,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -759,9 +763,9 @@ const file_glimway_content_v1_rooms_proto_rawDesc = "" +
 	"\vLegendEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01:\xdf\x01\xbaH\xdb\x01\x1a\xd8\x01\n" +
-	"\frooms.legend\x12\"legend must be the room vocabulary\x1a\xa3\x01this.legend == {\"#\": \"wall\", \"=\": \"back-wall\", \"w\": \"window\", \".\": \"planks\", \":\": \"flagstone\", \"D\": \"doorway\", \"^\": \"stairs-up\", \"v\": \"stairs-down\", \"@\": \"arrive\"}\"\xf8\v\n" +
-	"\x04Room\x12k\n" +
-	"\x02id\x18\x01 \x01(\tB[\xbaHXrV2T^in:(village|woodland|ruin|commons):([a-z0-9]+(-[a-z0-9]+)*)(:([2-9]|[1-9][0-9]+))?$R\x02id\x12\x1b\n" +
+	"\frooms.legend\x12\"legend must be the room vocabulary\x1a\xa3\x01this.legend == {\"#\": \"wall\", \"=\": \"back-wall\", \"w\": \"window\", \".\": \"planks\", \":\": \"flagstone\", \"D\": \"doorway\", \"^\": \"stairs-up\", \"v\": \"stairs-down\", \"@\": \"arrive\"}\"\x89\f\n" +
+	"\x04Room\x12|\n" +
+	"\x02id\x18\x01 \x01(\tBl\xbaHirg2e^in:(village|woodland|ruin|commons):([a-z0-9]+(-[a-z0-9]+)*)(:([2-9]|[1-9][0-9]+|[a-z]+(-[a-z]+)*))?$R\x02id\x12\x1b\n" +
 	"\x04name\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12@\n" +
 	"\x06parent\x18\x03 \x01(\tB(\xbaH%r#2!^(village|woodland|ruin|commons)$R\x06parent\x12\x1d\n" +
 	"\x03map\x18\x04 \x03(\tB\v\xbaH\b\x92\x01\x05\b\x03\x10\x80\x01R\x03map\x12<\n" +
@@ -781,16 +785,16 @@ const file_glimway_content_v1_rooms_proto_rawDesc = "" +
 	"\x13room.door_to_parent\x12!a door leads to the room's parent\x1a:this.doors.all(d, d.kind != \"door\" || d.to == this.parent)\x1ar\n" +
 	"\x14room.unique_door_ids\x12\x17door ids must be unique\x1aAthis.doors.all(d, this.doors.filter(e, e.id == d.id).size() == 1)\x1a\x83\x01\n" +
 	"\x16room.unique_door_chars\x12&each door claims its own map character\x1aAthis.doors.all(d, this.doors.filter(e, e.at == d.at).size() == 1)\x1a\x87\x01\n" +
-	"\x16room.unique_prop_chars\x12&each prop claims its own map character\x1aEthis.props.all(p, this.props.filter(q, q.char == p.char).size() == 1)\"\xb9\x04\n" +
+	"\x16room.unique_prop_chars\x12&each prop claims its own map character\x1aEthis.props.all(p, this.props.filter(q, q.char == p.char).size() == 1)\"\xca\x05\n" +
 	"\bRoomDoor\x12)\n" +
-	"\x02id\x18\x01 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x02id\x12&\n" +
-	"\x04kind\x18\x02 \x01(\tB\x12\xbaH\x0fr\rR\x04doorR\x05stairR\x04kind\x12\x1e\n" +
-	"\x02at\x18\x03 \x01(\tB\x0e\xbaH\vr\tR\x01DR\x01^R\x01vR\x02at\x123\n" +
+	"\x02id\x18\x01 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x02id\x12-\n" +
+	"\x04kind\x18\x02 \x01(\tB\x19\xbaH\x16r\x14R\x04doorR\x05stairR\x05innerR\x04kind\x12$\n" +
+	"\x02at\x18\x03 \x01(\tB\x14\xbaH\x11r\x0f2\r^[D^vA-Za-z]$R\x02at\x123\n" +
 	"\x04side\x18\x04 \x01(\tB\x1f\xbaH\x1cr\x1aR\x05northR\x05southR\x04eastR\x04westR\x04side\x12\x17\n" +
 	"\x02to\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x02to\x126\n" +
 	"\aoutside\x18\x06 \x01(\v2\x1c.glimway.content.v1.RoomTileR\aoutside\x12:\n" +
-	"\x05entry\x18\a \x01(\v2\x1c.glimway.content.v1.RoomTileB\x06\xbaH\x03\xc8\x01\x01R\x05entry:\xf7\x01\xbaH\xf3\x01\x1a\xf0\x01\n" +
-	"\x0froom_door.shape\x12Da door has its D and an outside tile; a stair has its arrow and none\x1a\x96\x01(this.kind != \"door\" || (this.at == \"D\" && has(this.outside))) && (this.kind != \"stair\" || ((this.at == \"^\" || this.at == \"v\") && !has(this.outside)))\"\xc3\x02\n" +
+	"\x05entry\x18\a \x01(\v2\x1c.glimway.content.v1.RoomTileB\x06\xbaH\x03\xc8\x01\x01R\x05entry:\xfb\x02\xbaH\xf7\x02\x1a\xf4\x02\n" +
+	"\x0froom_door.shape\x12ua door has its D and an outside tile; a stair has its arrow and none; an inner doorway has its prop's letter and none\x1a\xe9\x01(this.kind != \"door\" || (this.at == \"D\" && has(this.outside))) && (this.kind != \"stair\" || ((this.at == \"^\" || this.at == \"v\") && !has(this.outside))) && (this.kind != \"inner\" || (!(this.at in [\"D\", \"^\", \"v\"]) && !has(this.outside)))\"\xc3\x02\n" +
 	"\bRoomProp\x12+\n" +
 	"\x03art\x18\x01 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x03art\x12%\n" +
 	"\x04char\x18\x02 \x01(\tB\x11\xbaH\x0er\f2\n" +

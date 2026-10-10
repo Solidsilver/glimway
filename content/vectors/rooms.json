@@ -946,6 +946,138 @@
           "value": "#............#"
         }
       ]
+    },
+    {
+      "name": "inner-door-on-a-solid-prop",
+      "valid": false,
+      "rule": "inner door",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            4,
+            "props",
+            3,
+            "solid"
+          ],
+          "value": true
+        }
+      ]
+    },
+    {
+      "name": "inner-door-to-another-building",
+      "valid": false,
+      "rule": "inner target",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            4,
+            "doors",
+            1,
+            "to"
+          ],
+          "value": "in:village:bakery"
+        }
+      ]
+    },
+    {
+      "name": "inner-door-arrives-in-wall",
+      "valid": false,
+      "rule": "inner target",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            5,
+            "doors",
+            0,
+            "entry"
+          ],
+          "value": {
+            "tx": 0,
+            "ty": 0
+          }
+        }
+      ]
+    },
+    {
+      "name": "inner-door-wrong-side",
+      "valid": false,
+      "rule": "door side",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            4,
+            "doors",
+            1,
+            "side"
+          ],
+          "value": "west"
+        }
+      ]
+    },
+    {
+      "name": "inner-door-with-outside",
+      "valid": false,
+      "rule": "room_door.shape",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            4,
+            "doors",
+            1,
+            "outside"
+          ],
+          "value": {
+            "tx": 1,
+            "ty": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "non-solid-prop-in-the-wall",
+      "valid": false,
+      "rule": "open boundary",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            4,
+            "doors"
+          ],
+          "value": [
+            {
+              "id": "front",
+              "kind": "door",
+              "at": "D",
+              "side": "south",
+              "to": "commons",
+              "outside": {
+                "tx": 53,
+                "ty": 17
+              },
+              "entry": {
+                "tx": 53,
+                "ty": 18
+              }
+            }
+          ]
+        },
+        {
+          "path": [
+            "rooms",
+            5,
+            "doors",
+            0,
+            "to"
+          ],
+          "value": "in:commons:yard"
+        }
+      ]
     }
   ],
   "residents": [
@@ -1433,6 +1565,24 @@
       "area": "in:village:mill:1",
       "parent": "in:village:mill:1",
       "root": "in:village:mill:1",
+      "known": false
+    },
+    {
+      "area": "in:commons:yard:deeds",
+      "parent": "in:commons:yard",
+      "root": "commons",
+      "known": true
+    },
+    {
+      "area": "in:commons:yard:attic",
+      "parent": "in:commons:yard",
+      "root": "commons",
+      "known": false
+    },
+    {
+      "area": "in:commons:yard:Deeds",
+      "parent": "in:commons:yard:Deeds",
+      "root": "in:commons:yard:Deeds",
       "known": false
     }
   ]

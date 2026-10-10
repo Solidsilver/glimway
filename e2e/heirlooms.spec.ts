@@ -9,6 +9,7 @@ import {
   warp
 } from './helpers'
 import { freshPlayer, fund } from './home-helpers'
+import { setHour } from './room-helpers'
 import { serverState, sql, accountOf, seedMarks } from './connected'
 
 
@@ -81,8 +82,9 @@ test.describe('heirloom story beats', () => {
       ;(window as unknown as { __fsDevAddFlag?: (f: string) => void }).__fsDevAddFlag?.('paper:ashwatch-ledger-excerpts')
     })
 
-    // Stand by Silas in Commons (tx: 51, ty: 22)
-    await warp(page, 'commons', 51, 22)
+    // Stand by Silas out in his yard (his cycle: minute 10 of the hour), by the sawhorse
+    await setHour(page, { minute: 10, server: true })
+    await warp(page, 'commons', 48, 20)
     await expect(page.locator('.prompt')).toContainText('Talk to Silas')
     await waitForLive(page)
 

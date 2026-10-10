@@ -15,6 +15,7 @@ import {
   itemName,
   ITEMS,
   ITEM_RULES,
+  menderAt,
   menderNear,
   giftPhrase,
   offHandTuck,
@@ -161,10 +162,19 @@ test('menders stand where Silas and Orrin do', () => {
   const orrin = ITEM_RULES.menders.find((m) => m.npc === 'orrin')!;
   const o = village.npcs.find((n) => n.id === 'orrin')!;
   assert.deepEqual([orrin.tx, orrin.ty], [o.tx, o.ty]);
-  assert.deepEqual([silas.tx, silas.ty], [commons.features.silas.tx, commons.features.silas.ty]);
-  assert.equal(menderNear('village', o.tx * 16 + 8, o.ty * 16 + 30)?.npc, 'orrin');
-  assert.equal(menderNear('village', 0, 0), null);
-  assert.equal(menderNear('commons', o.tx * 16 + 8, o.ty * 16 + 8), null, 'right spot, wrong area');
+  assert.equal(menderNear('village', o.tx * 16 + 8, o.ty * 16 + 30, 0)?.npc, 'orrin');
+  assert.equal(menderNear('village', 0, 0, 0), null);
+  assert.equal(menderNear('commons', o.tx * 16 + 8, o.ty * 16 + 8, 0), null, 'right spot, wrong area');
+  // Silas mends wherever his cycle has him: by the sawhorse at minute 10
+  // of the hour, at his counter at minute 40 (content/residents.json).
+  const yard = commons.features.silas;
+  assert.deepEqual(menderAt(silas, 600), { area: 'commons', ...yard });
+  assert.equal(menderNear('commons', yard.tx * 16 + 8, yard.ty * 16 + 8, 600)?.npc, 'silas');
+  assert.equal(menderNear('commons', yard.tx * 16 + 8, yard.ty * 16 + 8, 2400), null, 'he is inside');
+  const counter = menderAt(silas, 2400)!;
+  assert.equal(counter.area, 'in:commons:yard');
+  assert.equal(menderNear('in:commons:yard', counter.tx * 16 + 8, counter.ty * 16 + 24, 2400)?.npc, 'silas');
+  assert.equal(menderNear('in:commons:yard', counter.tx * 16 + 8, counter.ty * 16 + 24, 600), null, 'he is out in the yard');
 });
 
 test('a gift reads like a line someone would say', () => {

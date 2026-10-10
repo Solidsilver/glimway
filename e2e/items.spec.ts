@@ -1,7 +1,8 @@
 import type { Browser, BrowserContext } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
 import { accountOf, allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, setHabitica, waitForWorld, CONTRACT } from './connected'
-import { freshPlayer, fund, giveInstance, go, hurt, shot } from './home-helpers'
+import { freshPlayer, fund, giveInstance, go, hurt, seedGlims, shot } from './home-helpers'
+import { setHour } from './room-helpers'
 import { waitForLive, waitFrames, expectToast } from './helpers'
 
 /**
@@ -90,19 +91,22 @@ test('a bench axe wears to nothing and breaks; an heirloom blunts, and Silas men
   await shot(page, 'items-heirloom-blunt-desktop')
   await closeInventory(page)
 
-  // At Silas's table he mends it while you talk.
-  await go(page, 'commons', 51, 23)
+  // Out in his yard by the sawhorse (his cycle: minute 10 of the hour), Silas
+  // mends it for glims while you talk; the materials stay in the pack.
+  seedGlims(id, 4)
+  await setHour(page, { minute: 10, server: true })
+  await go(page, 'commons', 48, 21)
   await openInventory(page, /Tools/)
   await pick(page, `inst:${brack}`)
   await brackRow.getByRole('button', { name: 'Mend…' }).click()
   const silas = brackRow.locator('[data-mend="silas"]')
-  await expect(silas).toContainText('Silas (2 timber, 1 wooden peg)')
+  await expect(silas).toContainText('4 glims')
   await silas.click()
   await expect(dialog(page).getByTestId('inv-message')).toHaveText('Silas mended the brack felling axe while you talked.')
   await expect(brackRow).toHaveAttribute('data-state', 'whole')
   await expect(brackRow.getByTestId('condition')).toHaveAttribute('aria-valuenow', '100')
   await tab(page, /Supplies/).click()
-  await expect(dialog(page).getByTestId('material-timber')).toHaveText('2')
+  await expect(dialog(page).getByTestId('material-timber')).toHaveText('4')
   await shot(page, 'items-mended-desktop')
 })
 

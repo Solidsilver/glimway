@@ -9,7 +9,8 @@ import (
 )
 
 // repairTool mends an heirloom at the caller's bench (Workshop) or by a
-// mender (standing near Silas or Orrin). Cheap tools can't be mended.
+// mender (standing near Silas, wherever his cycle has him, or Orrin).
+// Cheap tools can't be mended.
 func repairTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.ItemsRequest, now int64, out *contract.ItemsResult) error {
 	v, err := loadInstance(ctx, tx, req.Instance)
 	if err != nil {
@@ -35,7 +36,7 @@ func repairTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contrac
 		if !ok {
 			return fail(400, "invalid-mender")
 		}
-		if !nearTile(s, m.GetArea(), int(m.GetTx()), int(m.GetTy()), int(m.GetRadiusTiles())) {
+		if !nearMender(s, m, now) {
 			return fail(409, "too-far-away")
 		}
 		cost, glims = def.GetRepair().GetMender(), int(def.GetRepair().GetMenderGlims())

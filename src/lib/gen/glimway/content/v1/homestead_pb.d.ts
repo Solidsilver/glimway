@@ -697,8 +697,9 @@ export declare const HomeStartLightSchema: GenMessage<HomeStartLight, {validType
 /**
  * The homestead gates along the Commons lane (client tiles). Gate g is on
  * side g%2 (fence column FenceX[side]) in row g/2: the listed rows, then
- * one more every RowPitch tiles. SilasTable is where a joint deed is
- * signed (pixels, with the reach both partners must be within).
+ * one more every RowPitch tiles. DeedTable is where a joint deed is
+ * signed: Pell's table, in the deed office (a room's pixels, with the reach
+ * both partners must be within).
  *
  * @generated from message glimway.content.v1.CommonsLane
  */
@@ -734,16 +735,17 @@ export declare type CommonsLane = Message<"glimway.content.v1.CommonsLane"> & {
   spareGates: number;
 
   /**
-   * @generated from field: glimway.content.v1.HomePixelPos silas_table = 6;
+   * @generated from field: glimway.content.v1.HomeDeedTable deed_table = 7;
    */
-  silasTable?: HomePixelPos | undefined;
+  deedTable?: HomeDeedTable | undefined;
 };
 
 /**
  * The homestead gates along the Commons lane (client tiles). Gate g is on
  * side g%2 (fence column FenceX[side]) in row g/2: the listed rows, then
- * one more every RowPitch tiles. SilasTable is where a joint deed is
- * signed (pixels, with the reach both partners must be within).
+ * one more every RowPitch tiles. DeedTable is where a joint deed is
+ * signed: Pell's table, in the deed office (a room's pixels, with the reach
+ * both partners must be within).
  *
  * @generated from message glimway.content.v1.CommonsLane
  */
@@ -779,9 +781,9 @@ export declare type CommonsLaneValid = Message<"glimway.content.v1.CommonsLane">
   spareGates: number;
 
   /**
-   * @generated from field: glimway.content.v1.HomePixelPos silas_table = 6;
+   * @generated from field: glimway.content.v1.HomeDeedTable deed_table = 7;
    */
-  silasTable: HomePixelPosValid;
+  deedTable: HomeDeedTableValid;
 };
 
 /**
@@ -789,6 +791,68 @@ export declare type CommonsLaneValid = Message<"glimway.content.v1.CommonsLane">
  * Use `create(CommonsLaneSchema)` to create a new message.
  */
 export declare const CommonsLaneSchema: GenMessage<CommonsLane, {validType: CommonsLaneValid}>;
+
+/**
+ * The deed table: a point in a room (pixels, with a reach in pixels). The
+ * room is checked in code.
+ *
+ * @generated from message glimway.content.v1.HomeDeedTable
+ */
+export declare type HomeDeedTable = Message<"glimway.content.v1.HomeDeedTable"> & {
+  /**
+   * @generated from field: string area = 1;
+   */
+  area: string;
+
+  /**
+   * @generated from field: optional int32 x = 2;
+   */
+  x?: number | undefined;
+
+  /**
+   * @generated from field: optional int32 y = 3;
+   */
+  y?: number | undefined;
+
+  /**
+   * @generated from field: optional int32 radius = 4;
+   */
+  radius?: number | undefined;
+};
+
+/**
+ * The deed table: a point in a room (pixels, with a reach in pixels). The
+ * room is checked in code.
+ *
+ * @generated from message glimway.content.v1.HomeDeedTable
+ */
+export declare type HomeDeedTableValid = Message<"glimway.content.v1.HomeDeedTable"> & {
+  /**
+   * @generated from field: string area = 1;
+   */
+  area: string;
+
+  /**
+   * @generated from field: optional int32 x = 2;
+   */
+  x: number;
+
+  /**
+   * @generated from field: optional int32 y = 3;
+   */
+  y: number;
+
+  /**
+   * @generated from field: optional int32 radius = 4;
+   */
+  radius: number;
+};
+
+/**
+ * Describes the message glimway.content.v1.HomeDeedTable.
+ * Use `create(HomeDeedTableSchema)` to create a new message.
+ */
+export declare const HomeDeedTableSchema: GenMessage<HomeDeedTable, {validType: HomeDeedTableValid}>;
 
 /**
  * The post item, its light radius, and what the n-th post costs (the

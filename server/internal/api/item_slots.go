@@ -203,6 +203,15 @@ func offHandItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contra
 	return err
 }
 
+// nearMender: within a mender's reach, at their fixed spot or, for a mender
+// with a resident (Silas), wherever the resident's cycle has them now.
+func nearMender(s *store.Snapshot, m *content.ItemMender, now int64) bool {
+	if m.GetWith() != "" {
+		return nearResident(s, m.GetWith(), now, int(m.GetRadiusTiles()))
+	}
+	return nearTile(s, m.GetArea(), int(m.GetTx()), int(m.GetTy()), int(m.GetRadiusTiles()))
+}
+
 func nearResident(s *store.Snapshot, id string, now int64, radius int) bool {
 	resident, ok := content.ResidentByID(id)
 	if !ok {

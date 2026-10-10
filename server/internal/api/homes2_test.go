@@ -27,8 +27,8 @@ func (x *rig) stand(id, world, room string, px, py float64) {
 	h.peers[id] = &presencePeer{identity: presenceIdentity{ID: id, World: world}, account: &presenceAccount{}, ctx: context.Background(), cancel: func() {}, queue: make(chan []byte, 8), area: room, pos: &presencePosition{X: px, Y: py}}
 }
 func (x *rig) atTable(id, world string) {
-	t := content.HomeRules.GetCommons().GetSilasTable()
-	x.stand(id, world, "commons", float64(int(t.GetX())+4), float64(int(t.GetY())-4))
+	t := content.HomeRules.GetCommons().GetDeedTable()
+	x.stand(id, world, t.GetArea(), float64(int(t.GetX())+4), float64(int(t.GetY())-4))
 }
 
 // home is the caller's homestead as the server shows it.
@@ -53,7 +53,7 @@ func (x *rig) homeOpRefreshing(c *http.Cookie, s *response, op string, fields ma
 	return v
 }
 
-// share signs a joint deed: from (a member) invites to, both at Silas's table.
+// share signs a joint deed: from (a member) invites to, both at the deed table.
 func (x *rig) share(fc *http.Cookie, f *response, tc *http.Cookie, to *response) {
 	x.t.Helper()
 	h := x.home(fc)
@@ -96,7 +96,8 @@ func TestHomes2JointDeedNeedsBothAtTheTableWithinTheWindow(t *testing.T) {
 	if len(lane.Invites) != 1 || lane.Invites[0].From.ID != x.account("alice") || lane.Invites[0].To.ID != x.account("bob") || lane.Invites[0].Gate != 0 {
 		t.Fatal("invite listing")
 	}
-	// Neither at the table, then only one of them, then one in another room.
+	// Neither at the table, then only one of them, then one in another room,
+	// then one where Silas's table used to stand on the Commons.
 	if x.homeOpRefreshing(bc, &b, "joint", joint, 409).Error.Code != "not-at-table" {
 		t.Fatal("invitee away")
 	}
@@ -104,15 +105,20 @@ func TestHomes2JointDeedNeedsBothAtTheTableWithinTheWindow(t *testing.T) {
 	if x.homeOpRefreshing(bc, &b, "joint", joint, 409).Error.Code != "partner-not-at-table" {
 		t.Fatal("partner away")
 	}
-	x.stand(x.account("alice"), a.WorldID, "village", 824, 344)
+	table := content.HomeRules.GetCommons().GetDeedTable()
+	x.stand(x.account("alice"), a.WorldID, "in:commons:yard", float64(table.GetX()), float64(table.GetY()))
 	if x.homeOpRefreshing(bc, &b, "joint", joint, 409).Error.Code != "partner-not-at-table" {
 		t.Fatal("partner in another room")
 	}
-	x.stand(x.account("alice"), a.WorldID, "commons", 100, 100)
+	x.stand(x.account("alice"), a.WorldID, "commons", 824, 344)
 	if x.homeOpRefreshing(bc, &b, "joint", joint, 409).Error.Code != "partner-not-at-table" {
-		t.Fatal("partner too far from Silas")
+		t.Fatal("partner at the old table on the Commons")
 	}
-	x.stand(x.account("alice"), "another-world", "commons", 824, 344)
+	x.stand(x.account("alice"), a.WorldID, table.GetArea(), float64(table.GetX()+table.GetRadius()+8), float64(table.GetY()))
+	if x.homeOpRefreshing(bc, &b, "joint", joint, 409).Error.Code != "partner-not-at-table" {
+		t.Fatal("partner in the office, too far from the table")
+	}
+	x.stand(x.account("alice"), "another-world", table.GetArea(), float64(table.GetX()), float64(table.GetY()))
 	if x.homeOpRefreshing(bc, &b, "joint", joint, 409).Error.Code != "partner-not-at-table" {
 		t.Fatal("partner in another world")
 	}

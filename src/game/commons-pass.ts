@@ -184,6 +184,7 @@ export const COMMONS_RESIDENT_PORTRAITS: Readonly<Record<string, string>> = {
   Mara: 'portrait-mara',
   Orrin: 'portrait-orrin',
   Pip: 'portrait-pip',
+  Pell: 'portrait-pell',
 }
 
 /** Every delivered 16-px UI icon (`icon-*` frames) as a data URL. */
