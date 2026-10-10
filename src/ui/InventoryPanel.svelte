@@ -7,7 +7,7 @@
   import { itemErrorText } from '../content/errors'
   import { presence } from '../game/presence'
   import { bus, EV } from '../game/events'
-  import { assetOf, costLine, fitTargets, inventoryEntries, modelEntries, newestFirst, newTabs, wearWords, type InventoryEntry, type InventoryTab } from '../lib/inventory'
+  import { assetOf, fitTargets, inventoryEntries, mendLabel, modelEntries, newestFirst, newTabs, wearWords, type InventoryEntry, type InventoryTab } from '../lib/inventory'
   import { conditionFraction, fittingLine, itemDef, itemName, ITEM_RULES } from '../lib/items'
   import type { InstanceView } from '../lib/api/types'
   import { INVENTORY_FILTERS, inventoryCopy } from '../content/inventory'
@@ -27,7 +27,7 @@
   import ArtIcon from './ArtIcon.svelte'
   import PapersTab from './PapersTab.svelte'
   import PurseAmount from './PurseAmount.svelte'
-  import { glimsCount, glimsPhrase, purseCopy } from '../content/purse'
+  import { glimsPhrase, purseCopy } from '../content/purse'
   import Glim from './Glim.svelte'
   import { parseAmount } from '../lib/purse'
 
@@ -551,9 +551,9 @@
       {@const d = itemDef(e.id)}
       {@const mender = items.menderHere()}
       <span class="chooser" data-testid="mend-at">
-        <button type="button" class="act" data-mend="bench" disabled={action.busy !== null} onclick={() => mendIt(e, 'bench', '')}>{inventoryCopy.mendAt(inventoryCopy.mendBench, costLine(d?.repair?.bench))}</button>
+        <button type="button" class="act" data-mend="bench" disabled={action.busy !== null} onclick={() => mendIt(e, 'bench', '')}>{mendLabel(inventoryCopy.mendBench, d?.repair?.bench)}</button>
         {#if mender}
-          <button type="button" class="act" data-mend={mender.npc} disabled={action.busy !== null} onclick={() => mendIt(e, mender.npc, mender.name)}>{inventoryCopy.mendAt(mender.name, costLine(d?.repair?.mender) + (d?.repair?.menderGlims ? `, ${glimsCount(d.repair.menderGlims)}` : ''))}</button>
+          <button type="button" class="act" data-mend={mender.npc} disabled={action.busy !== null} onclick={() => mendIt(e, mender.npc, mender.name)}>{mendLabel(mender.name, d?.repair?.mender, d?.repair?.menderGlims)}</button>
         {/if}
       </span>
     {:else if open === `fit:${e.key}` && e.instance && model}

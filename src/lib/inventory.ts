@@ -17,6 +17,7 @@ import { CRAFTED_BLURBS, inventoryCopy as INVENTORY_WEAR } from '../content/inve
 import { CRAFTING } from './workshop.ts';
 import { QUEST_ITEMS } from './api/progress.ts';
 import { CHARM_ITEM } from './glims.ts';
+import { glimsCount } from '../content/purse.ts';
 import type { Asset, InstanceView, ItemsView, MakerView } from './api/types.ts';
 import { assetKind, itemName, effectLine, slotCount, giveable, heldEffects, iconId, iconState, itemDef, offHandable, usableNow, wearRuleLine, type ItemDef } from './items.ts';
 
@@ -376,6 +377,12 @@ export function costLine(cost: Record<string, number> | undefined): string {
   return Object.entries(cost ?? {})
     .map(([id, n]) => `${n} ${itemName(id).toLowerCase()}`)
     .join(', ');
+}
+
+/** A mend button's words: who mends, and the price ("Silas (4 glims)", "Your bench (2 timber, 1 wooden peg)", or just who when it's free). */
+export function mendLabel(who: string, materials: Record<string, number> | undefined, glims = 0): string {
+  const cost = [costLine(materials), glims > 0 ? glimsCount(glims) : ''].filter(Boolean).join(', ');
+  return cost ? INVENTORY_WEAR.mendAt(who, cost) : who;
 }
 
 /** The asset one of an entry is, for a hand-over (an instance by id; a stack with its maker). */

@@ -298,9 +298,6 @@
     const onNamePrompt = (v: NamePromptView) => {
       home.namePrompt = v
     }
-    const onConfirmLeave = (v: { place: string; shared: boolean }) => {
-      home.leaveAsk = v
-    }
     const onHomeGoal = (v: { text: string | null }) => {
       home.goal = v?.text ?? null
     }
@@ -360,7 +357,6 @@
       [EV.homePlacement]: onPlacement,
       [EV.homeThumbs]: onThumbs,
       [EV.homeNamePrompt]: onNamePrompt,
-      [EV.homeConfirmLeave]: onConfirmLeave,
       [EV.homeGoal]: onHomeGoal,
       [EV.homeRoom]: onRoom,
       [EV.villageOpen]: onVillageOpen,
@@ -1053,8 +1049,7 @@
       onConfirm={() => {
         const ask = home.leaveAsk
         home.leaveAsk = null
-        if (ask?.onConfirm) ask.onConfirm()
-        else bus.emit(EV.homeAction, { action: 'home:leave-confirmed' })
+        ask?.onConfirm()
       }}
       onCancel={() => (home.leaveAsk = null)}
     />

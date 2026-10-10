@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assetOf, costLine, inventoryEntries, materialsFromPack, newestFirst, newTabs, unseen, wearWords, type InventoryEntry } from '../src/lib/inventory.ts';
+import { assetOf, costLine, inventoryEntries, materialsFromPack, mendLabel, newestFirst, newTabs, unseen, wearWords, type InventoryEntry } from '../src/lib/inventory.ts';
 /** Entries by tab, in the bag's usual order (nothing seen yet): the old tab groups. */
 const group = (entries: readonly InventoryEntry[]) => {
   const out = {} as Record<'tools' | 'supplies' | 'keepsakes' | 'home', { main: InventoryEntry[]; road: InventoryEntry[] }>;
@@ -109,6 +109,12 @@ test('newest first: things seen in one look keep the usual order among themselve
 test('the card helpers: cost lines, hand-over assets, wear in words', () => {
   assert.equal(costLine({ timber: 2, fiber: 1 }), '2 timber, 1 fiber');
   assert.equal(costLine(undefined), '');
+  // A mender who takes glims only reads cleanly (no stray comma), and a free mend names just who.
+  assert.equal(mendLabel('Silas', {}, 4), 'Silas (4 glims)');
+  assert.equal(mendLabel('Silas', undefined, 1), 'Silas (1 glim)');
+  assert.equal(mendLabel('Your bench', { timber: 2, 'wooden-peg': 1 }), 'Your bench (2 timber, 1 wooden peg)');
+  assert.equal(mendLabel('Orrin', { timber: 1 }, 2), 'Orrin (1 timber, 2 glims)');
+  assert.equal(mendLabel('Silas', undefined), 'Silas');
   assert.deepEqual(assetOf({ id: 'timber', instance: null, maker: null }), { kind: 'material', id: 'timber', qty: 1, maker: '' });
   assert.deepEqual(assetOf({ id: 'lamp-wick', instance: null, maker: { id: 'u1', name: 'Wren' } }), { kind: 'item', id: 'lamp-wick', qty: 1, maker: 'u1' });
   const tool = { id: 'a1', itemDef: 'bench-axe', condition: 20, maxCondition: 30, usesLeft: 20, state: 'worn', wardenSet: false, fittings: [], maker: null } as const;

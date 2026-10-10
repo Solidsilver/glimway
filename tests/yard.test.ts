@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { YARD_TABS, boughtToday, defaultYardTab, furnishFilter, leftToday, mendList, nextTier, silasInReach, utcDayStart, yardGoods } from '../src/ui/yard.ts';
+import { YARD_TABS, boughtToday, defaultYardTab, furnishFilter, leftToday, mendList, mergeBought, nextTier, silasInReach, utcDayStart, yardGoods } from '../src/ui/yard.ts';
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts';
 import { ITEM_RULES, itemDef } from '../src/lib/items.ts';
 import { residentAt, residentById } from '../src/lib/residents.ts';
@@ -101,4 +101,13 @@ test('a bundle’s cap counts today’s buys from the Glim log, from the UTC day
   assert.equal(leftToday(3, 1), '2 of 3 left today');
   assert.equal(leftToday(3, 5), '0 of 3 left today');
   assert.equal(leftToday(0, 2), null);
+});
+
+test('a Glim log read merges with buys the panel counted meanwhile, never counting one twice', () => {
+  // Nothing counted yet: the read stands.
+  assert.deepEqual(mergeBought(null, { timber: 1 }), { timber: 1 });
+  // A buy landed while the read was out and the read missed it: the panel's count stays.
+  assert.deepEqual(mergeBought({ timber: 2 }, { timber: 1, stone: 1 }), { timber: 2, stone: 1 });
+  // The read caught it: still two, not three.
+  assert.deepEqual(mergeBought({ timber: 2 }, { timber: 2 }), { timber: 2 });
 });

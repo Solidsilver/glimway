@@ -3,6 +3,7 @@
   import type { Session } from '../game/session'
   import { homesteadsFor, lotName } from '../game/homestead'
   import { bus, EV } from '../game/events'
+  import { serverNow } from '../game/clock'
   import { atTable, deedOffers, deedPlaceName, shareCandidates, standsAtTable, type AtTable } from '../game/deed-table'
   import { HOMESTEAD_DATA } from '../lib/homestead'
   import { DEED_PANEL_COPY as COPY, PELL_DEED } from '../content/pell'
@@ -50,10 +51,19 @@
       place: deedPlaceName(mine, gate),
       names: mine?.members.map((m) => m.displayName || 'A neighbour').join(', ') ?? '',
       atTable: standsAtTable(s.area, s.position),
+      here: new Set(here.map((p) => p.id)),
       candidates: mine ? shareCandidates(here, mine.members) : [],
-      offers: deedOffers(homes.invites, homes.myId, mine?.id ?? null, Date.now() / 1000)
+      // Invite times are the server's: its clock, not the device's.
+      offers: deedOffers(homes.invites, homes.myId, mine?.id ?? null, serverNow())
     }
   })
+
+  /** Why a signature waiting on you can't go down yet: both of you sign at the table (`joint` checks it too). */
+  function signWhy(i: { to: { id: string; name: string } }): string | null {
+    if (!view.atTable) return 'Sign at the deed table.'
+    if (!view.here.has(i.to.id)) return `${i.to.name || 'A neighbour'} needs to be at the table too.`
+    return null
+  }
 
   function answered(status: 'joined' | 'waiting' | undefined): string {
     return status === 'joined' ? PELL_DEED.signedTogether : PELL_DEED.signedWaiting(WINDOW)
@@ -94,7 +104,14 @@
 
 <Panel id="deed" icon="scroll" title={COPY.title} closeLabel="Close your deed" {onClose} message={action.message} messageTestId="deed-message" class="deed">
   {#if !view.mine}
-    <p class="msg" data-testid="deed-none">You’re not on a deed. Pell sells them at the desk.</p>
+    <!-- The lane says whether you hold a deed; your page follows it. Until both are read, nothing is said about having none. -->
+    {#if homes.status === 'offline'}
+      <p class="msg" data-testid="deed-offline">{PELL_DEED.offline}</p>
+    {:else if homes.status === 'ready' && !homes.claimed}
+      <p class="msg" data-testid="deed-none">You’re not on a deed. Pell sells them at the desk.</p>
+    {:else}
+      <p class="msg" data-testid="deed-loading">{PELL_DEED.loading}</p>
+    {/if}
   {:else}
     <section class="who" aria-label="Your deed">
       <p class="place" data-testid="deed-place">{COPY.where(view.place, lotName(view.gate))}</p>
@@ -111,11 +128,14 @@
         <p class="fine">{COPY.atTable}</p>
         <ul>
           {#each view.candidates as p (p.id)}
-            {@const offered = view.offers.offered.get(p.id)}
+            {@const theirs = view.offers.theirs.get(p.id)}
             <li class="row" data-candidate={p.id}>
               <span class="name">{p.name}</span>
-              {#if offered && offered.fromConfirmedAt !== null && Date.now() / 1000 - offered.fromConfirmedAt <= WINDOW}
+              {#if view.offers.offered.has(p.id)}
                 <span class="note" data-testid="deed-offered">{COPY.offered(p.name)}</span>
+              {:else if theirs}
+                <!-- A co-owner's offer: only they sign it, and an offer from you would start it over. -->
+                <span class="note" data-testid="deed-theirs">{theirs.from.name || 'Someone on your deed'} has offered {p.name} a place.</span>
               {:else}
                 <button type="button" class="small primary" data-offer={p.id} disabled={action.busy !== null} onclick={() => offer(p)}>
                   {action.busy === `offer:${p.id}` ? 'Signing…' : COPY.offer}
@@ -133,11 +153,13 @@
         <h3 class="section-title" id="deed-waiting">{COPY.waitingHeading}</h3>
         <ul>
           {#each view.offers.signBack as i (i.to.id)}
+            {@const why = signWhy(i)}
             <li class="row" data-sign-back={i.to.id}>
               <span class="name">{i.to.name} has signed. Your name goes next to it.</span>
-              <button type="button" class="small primary" disabled={action.busy !== null} onclick={() => signBack(i.homeId, i.to.id)}>
+              <button type="button" class="small primary" disabled={action.busy !== null || why !== null} onclick={() => signBack(i.homeId, i.to.id)}>
                 {action.busy === `sign:${i.to.id}` ? 'Signing…' : COPY.sign}
               </button>
+              {#if why}<span class="note" data-testid="deed-sign-why">{why}</span>{/if}
             </li>
           {/each}
           {#each view.offers.toMe as i (i.homeId)}

@@ -25,6 +25,7 @@
     defaultYardTab,
     furnishFilter,
     leftToday,
+    mergeBought,
     mendList,
     nextTier,
     silasInReach,
@@ -162,13 +163,20 @@
   /** Today's buys from the yard, by good (null until the Glim log is read). */
   let bought = $state<Record<string, number> | null>(null)
   let boughtAsked = false
+  /** The read is out, and whether a buy landed meanwhile (the read may have missed it: read again once it's back). */
+  let reading = false
+  let boughtSince = false
 
-  async function readBought(): Promise<void> {
+  async function readBought(again = false): Promise<void> {
     const link = session.link
-    if (!link || !yard || boughtAsked) return
+    if (!link || !yard || (boughtAsked && !again)) return
     boughtAsked = true
+    reading = true
+    boughtSince = false
     const r = await link.purseRead()
-    if (r.ok) bought = boughtToday(r.value.lines, yard.npc, serverNow())
+    reading = false
+    if (r.ok) bought = mergeBought(bought, boughtToday(r.value.lines, yard.npc, serverNow()))
+    if (boughtSince) void readBought(true)
   }
 
   $effect(() => {
@@ -188,6 +196,7 @@
     const r = await action.run(`bundle:${good.item}`, () => items.buy(yard.id, good.item), `${name} is yours.`)
     if (!r) return
     if (r.ok) syncMaterials([good.item])
+    if (r.ok && reading) boughtSince = true
     if (r.ok && bought) bought = { ...bought, [good.item]: (bought[good.item] ?? 0) + 1 }
     if (!r.ok && r.code === 'sold-out') bought = { ...(bought ?? {}), [good.item]: good.cap ?? 0 }
   }

@@ -72,21 +72,28 @@ export function deedPlaceName(home: Pick<HomeView, 'members'> | null, gate: numb
 
 /** The deed's offers as the panel shows them: yours waiting on the other signature, and those waiting on yours. */
 export interface DeedOffers {
-  /** Offers you made that the other has yet to sign, by their account id. */
+  /** Offers you made, your signature still fresh, that the other has yet to sign: by their account id. */
   offered: Map<string, DeedInvite>
   /** Offers you made that they signed and your own signature has lapsed: sign again. */
   signBack: DeedInvite[]
+  /**
+   * A co-owner's offers with a signature still fresh, by the invitee's id:
+   * only they can sign those, and an offer of yours would start the page
+   * over (the server keeps one invite per home and person).
+   */
+  theirs: Map<string, DeedInvite>
   /** Someone else's deed offered to you (you sign it once you're off your own). */
   toMe: DeedInvite[]
 }
 
 /**
- * Sort the lane's live invites (`nowS`: Unix seconds) for the deed panel. A
- * signature counts within the confirm window; the second within it amends
- * the deed (`joint`, home_membership.go).
+ * Sort the lane's live invites (`nowS`: the server's Unix seconds) for the
+ * deed panel. A signature counts within the confirm window; the second
+ * within it amends the deed (`joint`, home_membership.go). The lane lists
+ * every invite on your home, whichever member made it.
  */
 export function deedOffers(invites: readonly DeedInvite[], me: string | null, homeId: string | null, nowS: number, windowS: number = HOMESTEAD_DATA.jointDeed.confirmWindowSeconds): DeedOffers {
-  const out: DeedOffers = { offered: new Map(), signBack: [], toMe: [] }
+  const out: DeedOffers = { offered: new Map(), signBack: [], theirs: new Map(), toMe: [] }
   const fresh = (at: number | null) => at !== null && nowS - at <= windowS
   for (const i of invites) {
     if (i.expiresAt <= nowS) continue
@@ -94,9 +101,13 @@ export function deedOffers(invites: readonly DeedInvite[], me: string | null, ho
       out.toMe.push(i)
       continue
     }
-    if (i.homeId !== homeId) continue
+    if (homeId === null || i.homeId !== homeId) continue
+    if (i.from.id !== me) {
+      if (fresh(i.fromConfirmedAt) || fresh(i.toConfirmedAt)) out.theirs.set(i.to.id, i)
+      continue
+    }
     if (fresh(i.toConfirmedAt) && !fresh(i.fromConfirmedAt)) out.signBack.push(i)
-    else out.offered.set(i.to.id, i)
+    else if (fresh(i.fromConfirmedAt)) out.offered.set(i.to.id, i)
   }
   return out
 }

@@ -123,6 +123,17 @@ export function boughtToday(lines: readonly BuyLine[], sellerName: string, nowS:
   return out
 }
 
+/**
+ * Today's counts after a Glim log read lands: the larger of the read and
+ * what the panel already counted, good by good (a buy made while the read
+ * was out may or may not be in it; neither side counts it twice).
+ */
+export function mergeBought(had: Readonly<Record<string, number>> | null, read: Readonly<Record<string, number>>): Record<string, number> {
+  const out: Record<string, number> = { ...read }
+  for (const [item, n] of Object.entries(had ?? {})) out[item] = Math.max(n, out[item] ?? 0)
+  return out
+}
+
 /** "2 of 3 left today", or null for a good with no cap. */
 export function leftToday(cap: number, bought: number): string | null {
   if (cap <= 0) return null

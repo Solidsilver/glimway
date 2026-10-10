@@ -8,6 +8,7 @@ import type { DeedInvite } from '../src/lib/api/types.ts';
 /** The deed table (silas-yard.md 2.6): who is at it, who could share, which signatures wait on you. */
 
 const t = { area: 'commons', x: 100, y: 100, radius: 40 };
+const inv = (to: string, from: string, homeId: string, fromAt: number | null, toAt: number | null, expiresAt = 13_600): DeedInvite => ({ homeId, gate: 4, from: { id: from, name: from }, to: { id: to, name: to }, expiresAt, fromConfirmedAt: fromAt, toConfirmedAt: toAt });
 
 test('the table is one place: an area, a spot and a radius', () => {
   const real = deedTable();
@@ -35,11 +36,11 @@ test('a place’s name: one name, two, or the lot', () => {
 
 test('offers: yours waiting on them, theirs signed while yours lapsed, and deeds offered to you', () => {
   const now = 10_000;
-  const inv = (to: string, from: string, homeId: string, fromAt: number | null, toAt: number | null, expiresAt = now + 3_600): DeedInvite => ({ homeId, gate: 4, from: { id: from, name: from }, to: { id: to, name: to }, expiresAt, fromConfirmedAt: fromAt, toConfirmedAt: toAt });
   const o = deedOffers(
     [
       inv('ivy', 'me', 'h1', now - 10, null), // just offered: waiting on Ivy
       inv('rowan', 'me', 'h1', now - 500, now - 5), // Rowan signed; mine lapsed
+      inv('ash', 'me', 'h1', now - 500, null), // both lapsed: offer again
       inv('me', 'oak', 'h9', null, null), // Oak's deed, offered to me
       inv('pip', 'me', 'h1', now - 10, null, now - 1), // expired
       inv('zed', 'other', 'h7', now - 10, null) // not mine at all
@@ -52,6 +53,20 @@ test('offers: yours waiting on them, theirs signed while yours lapsed, and deeds
   assert.deepEqual([...o.offered.keys()], ['ivy']);
   assert.deepEqual(o.signBack.map((i) => i.to.id), ['rowan']);
   assert.deepEqual(o.toMe.map((i) => i.from.id), ['oak']);
+  assert.deepEqual([...o.theirs.keys()], []);
+});
+
+test('offers: a co-owner’s invites are theirs, never yours to sign or to offer over', () => {
+  const now = 10_000;
+  // Tansy and I share h1. She offered Ivy (hers lapsed, Ivy signed) and Wren (just now); an old offer to Moss lapsed both ways.
+  const o = deedOffers([inv('ivy', 'tansy', 'h1', now - 500, now - 5), inv('wren', 'tansy', 'h1', now - 10, null), inv('moss', 'tansy', 'h1', now - 900, now - 800)], 'me', 'h1', now, 60);
+  assert.deepEqual(o.signBack, []);
+  assert.deepEqual([...o.offered.keys()], []);
+  assert.deepEqual([...o.theirs.keys()], ['ivy', 'wren']);
+  assert.equal(o.theirs.get('ivy')?.from.id, 'tansy');
+  // Without a home of your own, the lane's invites on it are nobody's offers.
+  const none = deedOffers([inv('ivy', 'me', 'h1', now - 10, null)], 'me', null, now, 60);
+  assert.equal(none.offered.size + none.signBack.length + none.theirs.size, 0);
 });
 
 test('the entry points: the Yard panel on a tab or its default, and the deed panel', () => {
