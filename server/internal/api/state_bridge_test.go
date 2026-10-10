@@ -70,7 +70,7 @@ func testSnapshotJSON(raw []byte) []byte {
 	}
 	// A typed operation's answer sits under its Envelope oneof case name
 	// (protojson); the test responses read it as the domain's result.
-	for _, c := range []string{"report", "questStep", "mark", "takePaper", "settleEcho", "fall", "profile", "spend", "wildsClaim", "wildsLantern", "libraryDonate", "mailSend", "mailClaim", "mailRecall", "storageMove", "craft", "hearthCraft", "deskCopy", "worldMove", "worldLeave", "contribute", "mend", "fishCast", "fishSettle", "fishCancel", "companions", "stall", "mountOut", "mountHome", "stableExtend"} {
+	for _, c := range []string{"report", "questStep", "mark", "takePaper", "settleEcho", "fall", "profile", "spend", "wildsClaim", "wildsLantern", "libraryDonate", "mailSend", "mailClaim", "mailRecall", "storageMove", "craft", "hearthCraft", "deskCopy", "worldMove", "worldLeave", "contribute", "mend", "fishCast", "fishSettle", "fishCancel", "companions", "stall", "mountOut", "mountHome", "stableExtend", "purseTopUp", "wardrobe", "wardrobeCheck"} {
 		if fields[c] != nil {
 			fields["result"] = fields[c]
 			delete(fields, c)

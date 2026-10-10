@@ -285,6 +285,33 @@ func run(args []string) error {
 				fmt.Printf("%s\t%s\t%q\t%d\n", id, subject, name, at)
 			}
 			return rows.Err()
+		case "purse":
+			// The owner's purse line (design 2.6): what each top-up did, and
+			// the hand settlement of one the checks could not decide.
+			if len(cmd) < 2 {
+				return fmt.Errorf("usage: purse list [--unconfirmed] | purse settle ID moved|not-moved")
+			}
+			switch cmd[1] {
+			case "list":
+				unconfirmed := len(cmd) == 3 && cmd[2] == "--unconfirmed"
+				if len(cmd) > 3 || len(cmd) == 3 && !unconfirmed {
+					return fmt.Errorf("usage: purse list [--unconfirmed]")
+				}
+				rows, err := s.PurseTopUpList(ctx, unconfirmed)
+				if err != nil {
+					return err
+				}
+				for _, v := range rows {
+					fmt.Println(store.JSON(v))
+				}
+				return nil
+			case "settle":
+				if len(cmd) != 4 {
+					return fmt.Errorf("usage: purse settle ID moved|not-moved")
+				}
+				return s.SettleTopUpByOwner(ctx, cmd[2], cmd[3], clock.now().Unix())
+			}
+			return fmt.Errorf("unknown purse command")
 		case "backup":
 			if len(cmd) != 2 {
 				return fmt.Errorf("usage: backup destination.sqlite")

@@ -38,36 +38,30 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 	if route == "party" {
 		budget = a.loginParty
 	}
-	if !a.loginLimit.allow(a.clientIP(r), a.Config.Now()) {
-		w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(a.Config.LoginWindow.Seconds()))))
-		return fail(429, "login-rate-limited")
-	}
-	finishProof, retry, ok := a.loginProofs.begin(req.UserId, a.Config.Now())
-	if !ok {
-		w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(retry.Seconds()))))
-		return fail(429, "login-user-rate-limited")
-	}
-	failedProof := false
-	defer func() { finishProof(failedProof) }()
-	select {
-	case a.loginSlots <- struct{}{}:
-		defer func() { <-a.loginSlots }()
-	default:
-		w.Header().Set("Retry-After", "1")
-		return fail(429, "login-busy")
-	}
-	p, err := a.Habitica.VerifyLimited(r.Context(), req.UserId, req.Token, func() bool { return budget.allow("global", a.Config.Now()) })
+	// The token is used for this one call and then dropped: it comes off the
+	// request before the budget is spent (0.6 step 0).
+	token := req.Token
 	req.Token = ""
-	if err != nil {
-		var h *habitica.Error
-		if errors.As(err, &h) {
-			failedProof = h.Code == "habitica-auth"
-			if h.Status == 429 {
-				w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(h.RetryAfter.Seconds()))))
+	var p rules.Profile
+	var owned []string
+	err = a.withHabiticaBudget(r, req.UserId, budget, func(b habiticaBudget) error {
+		var e error
+		p, owned, e = a.Habitica.VerifyLimited(r.Context(), req.UserId, token, b.Allow)
+		token = ""
+		if e != nil {
+			var h *habitica.Error
+			if errors.As(e, &h) {
+				if h.Status == 429 {
+					w.Header().Set("Retry-After", strconv.Itoa(int(math.Ceil(h.RetryAfter.Seconds()))))
+				}
+				return fail(h.Status, h.Code)
 			}
-			return fail(h.Status, h.Code)
+			return fail(502, "habitica-unavailable")
 		}
-		return fail(502, "habitica-unavailable")
+		return nil
+	})
+	if err != nil {
+		return budgetFailure(w, err)
 	}
 	ctx := r.Context()
 	tx, err := a.Store.DB.BeginTx(ctx, nil)
@@ -231,6 +225,14 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 		a.cookie(w, session, expires)
 		writeProto(w, 200, &contract.SessionResponse{Answer: &contract.SessionResponse_WorldChoice{WorldChoice: worldChoiceProto(*offer)}})
 		return nil
+	}
+	// The sign-in's own read is one of the three that fill player_gear
+	// (design 4.3): what the hero owns on Habitica, from the server's read
+	// alone, never a browser report. A sign-in held for the world question
+	// has no player row yet (player_gear keys on it); that account's first
+	// gear check or top-up fills the list.
+	if err = store.WritePlayerGear(ctx, tx, id, owned, now); err != nil {
+		return err
 	}
 	if _, err = tx.ExecContext(ctx, "INSERT INTO sessions VALUES(?,?,?,?,?,?)", store.Hash(session), id, now, expires.Unix(), store.JSON(p), verified); err != nil {
 		return err

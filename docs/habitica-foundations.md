@@ -210,3 +210,33 @@ identifiers exist, (e) an authenticated browser request. Record results here.
 - Combat/defeat/healing stay local; imported HP only constrains expedition
   health at sync boundaries.
 - This document records research; it does not authorize purchases code.
+
+## `items.gear.owned`: what the wardrobe reads (0.6)
+
+The wardrobe's picker is filled from `items.gear.owned` (design 4.3), read **by the server** in
+three places — sign-in, a purse top-up, and the wardrobe's **Check for new gear** — and stored in
+its own table (`player_gear`). It is never part of a profile report: a browser that sends
+`items.gear.owned` is ignored.
+
+What the map holds (source: Habitica's user model and `scoreTask`/`death` handling; the shape is
+**unverified against a live account** until the owner's live check, `docs/habitica-gold.md`
+"Live check"):
+
+- **Keys** are Habitica's gear keys, `type_klass_index` (`weapon_warrior_1`,
+  `armor_mystery_201403`, `headAccessory_armoire_gogglesOfBookbinding`) — the same keys the
+  sprite proxy and `content/habitica-gear.json` use (1,860 of them, in the eight drawn slots).
+- **`true` is owned.** Every starter piece the class begins with (`*_base_0`, zero gold) reads
+  `true` from the start; earned, bought, mystery, armoire, quest and subscriber gear appear when
+  the account owns them.
+- **`false` is gear the hero had and lost** — the warrior's death penalty takes pieces away, and
+  the key stays in the map with `false` until it is bought again. Glimway reads `false` as "not
+  owned": the wardrobe shows the Habitica look for that slot (4.2), never a piece the hero lost.
+- **Keys the catalog doesn't know** turn up occasionally (event or retired gear). They can't be
+  drawn here, so the server drops them on write; the list in `player_gear` is sorted and
+  catalogued only.
+- The map can run to a few hundred keys for a collector (about 60 KB of JSON). It is read only by
+  the wardrobe's operation and read and by `visualAvatar` (4.3), and never sent on every answer.
+
+To confirm at the live check: that the starters are `true`, that a hero who died shows `false`
+for the lost pieces, and that an unknown key really does appear in the raw map (so the filter has
+something to do).

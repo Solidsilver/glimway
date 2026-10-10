@@ -46,6 +46,12 @@ func TestClientErrorCodesCoverServer(t *testing.T) {
 		"mailSendLimits:check.code": true,
 		"login:h.Code":              true,
 		"spendOp:e.Error()":         true,
+		// The purse's upstream errors are forwarded as refusals: their codes
+		// are the habitica package's own literals (scanned below) and the
+		// budget's three words (login-rate-limited, login-user-rate-limited,
+		// login-busy), all of them in the catalog.
+		"habiticaFailure:h.Code": true,
+		"budgetFailure:b.code":   true,
 	}
 	for _, dir := range []string{".", "../habitica", "../rules"} {
 		paths, err := filepath.Glob(filepath.Join(dir, "*.go"))
