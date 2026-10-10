@@ -13,6 +13,41 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-10-09
+
+### For players
+
+- Send your mount home on your own land and it walks back into its bay in
+  the stable.
+- A friend's Ward-light heals you as much as it heals them.
+- Friends see the moves you make while walking or riding.
+- A hero who comes back from the Orb of Rebirth keeps their class moves.
+- The picture holds still when the camera follows you on a plain screen.
+- Mend shows how much it healed, as the ward does.
+
+### Technical
+
+- The step-back reviews after 0.5 (`docs/reviews/2026-10-09-step-back-*.md`)
+  and the two cleanup lanes that acted on them.
+- Presence: `PresenceAbility.pulse_heal`, filled by the hub from the
+  caster's Mend; the reach check allows for movement only while the caster
+  walks or rides; no cast before a position. Ward credit is reserved per
+  report and settled at commit.
+- `sync_baselines.class_mark` is written at sign-in, at account creation
+  and before a sync.
+- The idempotency cache refuses any request with a credential-shaped field,
+  checked over every keyed request type.
+- Shared magic vectors (`content/vectors/magic.json`), replayed in Go and
+  TypeScript. Pulse times come from the ability's own numbers.
+- Tests: the Go rig starts on a fixed date (`GLIMWAY_RIG_START` overrides
+  it), store functions take the clock, ward pulses fire by hand (the api
+  package runs in 13 s, not 30), and e2e polls what's still settling. CI
+  runs `go vet` and `-race` on the api package; dev-tagged tests are named
+  `TestDev…`.
+- A refused fishing keep closes the line; a water missing from content
+  closes its casts. The report pump moved out of `link.ts`; dead exports
+  are removed and guarded by a test.
+
 ## [0.5.1] - 2026-10-09
 
 ### For players
@@ -337,7 +372,8 @@ The first public release.
   under its own licence; contributions under the DCO.
 - Unit tests, Go tests and Playwright playtests.
 
-[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/Solidsilver/glimway/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/Solidsilver/glimway/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/Solidsilver/glimway/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/Solidsilver/glimway/compare/v0.2.0...v0.4.0
