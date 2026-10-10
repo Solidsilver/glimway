@@ -20,6 +20,8 @@ type shelfSlotView struct {
 	Instance  *string    `json:"instance,omitempty"`
 	StockedBy string     `json:"stockedBy"`
 	StockedAt int64      `json:"stockedAt"`
+	// Price in gold (3.2): 0 is a free gift, as before.
+	Price int `json:"price"`
 }
 
 type shelfView struct {
@@ -65,7 +67,7 @@ func loadShelfView(ctx context.Context, tx *sql.Tx, s store.Snapshot, homeID str
 	if !out.HasShelf {
 		return out, nil
 	}
-	rows, err := tx.QueryContext(ctx, "SELECT slot, kind, item_def, qty, maker_id, instance_id, stocked_by, stocked_at FROM gate_shelf_slots WHERE homestead_id=? ORDER BY slot", homeID)
+	rows, err := tx.QueryContext(ctx, "SELECT slot, kind, item_def, qty, maker_id, instance_id, stocked_by, stocked_at, price FROM gate_shelf_slots WHERE homestead_id=? ORDER BY slot", homeID)
 	if err != nil {
 		return out, err
 	}
@@ -75,7 +77,7 @@ func loadShelfView(ctx context.Context, tx *sql.Tx, s store.Snapshot, homeID str
 		var slot shelfSlotView
 		var makerID string
 		var instanceID sql.NullString
-		if err = rows.Scan(&slot.Slot, &slot.Kind, &slot.ItemDef, &slot.Qty, &makerID, &instanceID, &slot.StockedBy, &slot.StockedAt); err != nil {
+		if err = rows.Scan(&slot.Slot, &slot.Kind, &slot.ItemDef, &slot.Qty, &makerID, &instanceID, &slot.StockedBy, &slot.StockedAt, &slot.Price); err != nil {
 			return out, err
 		}
 		if instanceID.Valid {
@@ -192,6 +194,11 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 			if !isMember {
 				return nil, fail(403, "not-a-member")
 			}
+			// A slot stocks with an optional price in gold (3.2): 0 is a free
+			// gift as before, up to 9,999.
+			if req.Price < 0 || req.Price > 9999 {
+				return nil, fail(400, "invalid-quantity")
+			}
 			if req.Asset == nil {
 				return nil, fail(400, "asset-required")
 			}
@@ -231,7 +238,7 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 					}
 				}
 			}
-			if _, err = tx.ExecContext(ctx, "INSERT INTO gate_shelf_slots(homestead_id, slot, kind, item_def, qty, maker_id, instance_id, stocked_by, stocked_at) VALUES(?,?,?,?,?,?,?,?,?)", homeID, req.Slot, req.Asset.Kind, req.Asset.Id, int(req.Asset.Qty), makerID, instanceID, s.AccountID, now); err != nil {
+			if _, err = tx.ExecContext(ctx, "INSERT INTO gate_shelf_slots(homestead_id, slot, kind, item_def, qty, maker_id, instance_id, stocked_by, stocked_at, price) VALUES(?,?,?,?,?,?,?,?,?,?)", homeID, req.Slot, req.Asset.Kind, req.Asset.Id, int(req.Asset.Qty), makerID, instanceID, s.AccountID, now, int(req.Price)); err != nil {
 				return nil, err
 			}
 			if err = currency(ctx, tx, s.AccountID, "shelf:"+req.Asset.Kind+":"+req.Asset.Id, int(req.Asset.Qty), "shelf-stock", req.Op.Key, now); err != nil {
@@ -249,6 +256,23 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 			return protoResult(result)
 
 		case "take":
+			var slotKind, itemDef, makerID string
+			var slotQty, price int
+			var instanceID sql.NullString
+			err = tx.QueryRowContext(ctx, "SELECT kind, item_def, qty, maker_id, instance_id, price FROM gate_shelf_slots WHERE homestead_id=? AND slot=?", homeID, req.Slot).Scan(&slotKind, &itemDef, &slotQty, &makerID, &instanceID, &price)
+			if err == sql.ErrNoRows {
+				return nil, fail(404, "slot-empty")
+			}
+			if err != nil {
+				return nil, err
+			}
+			// A priced slot is a good, not a gift (3.2): it is bought, and a
+			// free Take never costs anything by surprise. The check sits above
+			// the daily-take one so a priced slot answers the same way however
+			// many takes the traveller has used.
+			if price > 0 {
+				return nil, fail(409, "invalid-operation")
+			}
 			day := utcDay(now)
 			var alreadyTaken bool
 			if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM gate_shelf_takes WHERE homestead_id=? AND account_id=? AND day=?)", homeID, s.AccountID, day).Scan(&alreadyTaken); err != nil {
@@ -256,16 +280,6 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 			}
 			if alreadyTaken {
 				return nil, fail(409, "already-taken-today")
-			}
-			var slotKind, itemDef, makerID string
-			var slotQty int
-			var instanceID sql.NullString
-			err = tx.QueryRowContext(ctx, "SELECT kind, item_def, qty, maker_id, instance_id FROM gate_shelf_slots WHERE homestead_id=? AND slot=?", homeID, req.Slot).Scan(&slotKind, &itemDef, &slotQty, &makerID, &instanceID)
-			if err == sql.ErrNoRows {
-				return nil, fail(404, "slot-empty")
-			}
-			if err != nil {
-				return nil, err
 			}
 			if _, err = tx.ExecContext(ctx, "INSERT INTO gate_shelf_takes(homestead_id, account_id, day) VALUES(?,?,?)", homeID, s.AccountID, day); err != nil {
 				return nil, err
@@ -314,6 +328,78 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 				line = fmt.Sprintf("You took %s from Lot %d’s shelf.", giftPhrase(itemDisplayName, 1), int(req.Gate)+1)
 			}
 			return protoResult(&contract.ShelfResult{Shelf: shelfViewProto(shelf), Inventory: countsProto(inv), Taken: assetProto(takenAsset), Line: line})
+
+		case "buy":
+			// Buying is its own action (3.2): a free Take never costs anything
+			// by surprise, and a bought slot is a good, not a gift — it doesn't
+			// use up the one free take a day.
+			var slotKind, itemDef, stockedBy, makerID string
+			var slotQty, price int
+			var instanceID sql.NullString
+			err = tx.QueryRowContext(ctx, "SELECT kind, item_def, qty, maker_id, instance_id, stocked_by, price FROM gate_shelf_slots WHERE homestead_id=? AND slot=?", homeID, req.Slot).Scan(&slotKind, &itemDef, &slotQty, &makerID, &instanceID, &stockedBy, &price)
+			if err == sql.ErrNoRows {
+				return nil, fail(404, "slot-empty")
+			}
+			if err != nil {
+				return nil, err
+			}
+			if price == 0 {
+				return nil, fail(409, "invalid-operation")
+			}
+			if stockedBy == s.AccountID {
+				return nil, fail(409, "own-stock")
+			}
+			// The buyer's purse pays whoever stocked the slot (3.2): both
+			// sides in one transaction, each row naming the other player and
+			// the item (3.5). A partner on a joint deed buys the other's stock.
+			if err = store.DebitGold(ctx, tx, s.AccountID, price, "shelf-buy", shelfTradeRef(stockedBy, itemDef), now); err != nil {
+				return nil, insufficientGold(err)
+			}
+			if err = store.CreditGold(ctx, tx, stockedBy, price, "shelf-sale", shelfTradeRef(s.AccountID, itemDef), now); err != nil {
+				return nil, err
+			}
+			if slotQty > 1 {
+				if _, err = tx.ExecContext(ctx, "UPDATE gate_shelf_slots SET qty=qty-1 WHERE homestead_id=? AND slot=?", homeID, req.Slot); err != nil {
+					return nil, err
+				}
+			} else if _, err = tx.ExecContext(ctx, "DELETE FROM gate_shelf_slots WHERE homestead_id=? AND slot=?", homeID, req.Slot); err != nil {
+				return nil, err
+			}
+			buyQty := 1
+			boughtAsset := &content.Asset{Kind: slotKind, Id: itemDef, Qty: int32(buyQty)}
+			got := moved{Makers: []makerQty{}, IDs: []string{}}
+			if instanceID.Valid {
+				got.IDs = []string{instanceID.String}
+				boughtAsset.Instance = instanceID.String
+			} else {
+				got.Makers = []makerQty{{Maker: makerID, Qty: buyQty}}
+			}
+			from := holder{"shelf", "", homeID}
+			if err = giveAsset(ctx, tx, s, boughtAsset, got, from, "shelf-buy", req.Op.Key, now); err != nil {
+				return nil, err
+			}
+			if err = currency(ctx, tx, s.AccountID, "shelf:"+slotKind+":"+itemDef, -buyQty, "shelf-buy", req.Op.Key, now); err != nil {
+				return nil, err
+			}
+			shelf, err := loadShelfView(ctx, tx, *s, homeID, int(req.Gate), now)
+			if err != nil {
+				return nil, err
+			}
+			inv, err := packCounts(ctx, tx, s.AccountID)
+			if err != nil {
+				return nil, err
+			}
+			itemDisplayName := itemDef
+			if d, ok := content.ItemFor(itemDef); ok {
+				itemDisplayName = d.Name
+			} else if h, ok := content.HomeItemFor(itemDef); ok {
+				itemDisplayName = h.Name
+			}
+			line := fmt.Sprintf("You bought %s from %s’s shelf for %d gold.", giftPhrase(itemDisplayName, 1), shelf.OwnerName, price)
+			if shelf.OwnerName == "" {
+				line = fmt.Sprintf("You bought %s from Lot %d’s shelf for %d gold.", giftPhrase(itemDisplayName, 1), int(req.Gate)+1, price)
+			}
+			return protoResult(&contract.ShelfResult{Shelf: shelfViewProto(shelf), Inventory: countsProto(inv), Taken: assetProto(boughtAsset), Line: line})
 
 		default:
 			return nil, fail(400, "invalid-operation")

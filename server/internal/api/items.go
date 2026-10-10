@@ -43,7 +43,7 @@ func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
 			var to string
 			to, err = a.giveItem(ctx, tx, s, &req, now, out)
 			if err == nil {
-				notify = append(notify, func() { a.presenceGift(s.WorldID, to, s.DisplayName, assetOf(req.Asset)) })
+				notify = append(notify, func() { a.presenceGift(s.WorldID, to, s.DisplayName, givenAsset(&req)) })
 			}
 		case "pocket":
 			err = pocketItem(ctx, tx, s, &req)

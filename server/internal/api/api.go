@@ -91,6 +91,8 @@ func New(s *store.Store, h habitica.Upstream, c Config) *Server {
 	// (design 2): the same state composition, one decorator each.
 	c.State = fishingComposition{StateComposition: c.State, now: c.Now, logf: fishingLogf(c.Logger)}
 	c.State = purseComposition{StateComposition: c.State, now: c.Now}
+	// …and the wardrobe's resolved choice (design 4.4).
+	c.State = wardrobeComposition{StateComposition: c.State}
 	if c.Chunks == nil || c.Epochs == nil {
 		stored := store.NewChunks(c.Now)
 		stored.GeneratorVersion = c.WildsGeneratorVersion

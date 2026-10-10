@@ -112,7 +112,7 @@ func TestPresenceAvatarIsBoundedVisualData(t *testing.T) {
 	p.SelectedPet = &unsafe
 	p.Appearance.Skin = strings.Repeat("a", 65)
 	p.Appearance.Background = "<script>"
-	v := visualAvatar(p, store.Companions{})
+	v := visualAvatar(p, store.Companions{}, nil)
 	if len(v.Equipped) != len(rules.Slots) || len(v.Costume) != len(rules.Slots) || v.Equipped["weapon"].GetStringValue() != gear || v.Equipped["shield"].GetKind() == nil || v.Equipped["shield"].GetStringValue() != "" || v.Costume["head"].GetKind() == nil || v.Costume["head"].GetStringValue() != "" || v.SelectedPet != nil || v.SelectedMount != nil || v.Appearance.Skin != "" || v.Appearance.Background != "" {
 		t.Fatal("unsafe or oversized avatar descriptor", store.JSON(v))
 	}

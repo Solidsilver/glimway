@@ -37,6 +37,12 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 	}
 	pack := itemmove.Currency(kind, def)
 	switch kind {
+	case "gold":
+		// A gold letter's gold waited in the letter (3.3): it comes back to
+		// the sender's purse below, both sides in one transaction (3.5).
+		if def != "gold" || qty <= 0 {
+			return false, fmt.Errorf("invalid mail gold")
+		}
 	case "material", "item":
 		var split []itemmove.MakerQty
 		if err = json.Unmarshal([]byte(makers), &split); err != nil {
@@ -118,7 +124,18 @@ func ReturnMail(ctx context.Context, tx *sql.Tx, id, reason string, now int64, b
 	if reason == "recalled" {
 		ledgerReason = "mail-recall"
 	}
-	if kind != "thanks" {
+	switch {
+	case kind == "gold":
+		// Recall, expiry, a world move and access removal all come through
+		// here, so an uncollected gold letter can never strand gold: the
+		// purse is credited and the mail:gold:gold escrow closes (3.3).
+		if err = CreditGold(ctx, tx, sender, qty, ledgerReason, id, now); err != nil {
+			return false, err
+		}
+		if err = itemmove.RecordCurrency(ctx, tx, sender, itemmove.LocationCurrency("mail", "gold", "gold"), -qty, ledgerReason, id, now); err != nil {
+			return false, err
+		}
+	case kind != "thanks":
 		for _, delta := range []struct {
 			currency string
 			amount   int

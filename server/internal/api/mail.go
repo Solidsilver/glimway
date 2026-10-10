@@ -161,6 +161,15 @@ func (a *Server) mailSend(w http.ResponseWriter, r *http.Request) error {
 	}
 	asset := assetOf(req.Asset)
 	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
+		// A letter carries one thing, and a gold letter carries gold alone
+		// (3.3, question 11): both, or neither, is invalid-request.
+		gold := int(req.GetGold())
+		if (req.Asset != nil) == (gold != 0) {
+			return nil, fail(400, "invalid-request")
+		}
+		if gold < 0 {
+			return nil, fail(400, "invalid-quantity")
+		}
 		if req.ToId == s.AccountID {
 			return nil, fail(400, "self-mail")
 		}
@@ -182,11 +191,15 @@ func (a *Server) mailSend(w http.ResponseWriter, r *http.Request) error {
 		if !eligible {
 			return nil, fail(403, "recipient-unavailable")
 		}
-		if err = validAsset(asset); err != nil {
-			return nil, err
-		}
-		if d, ok := content.ItemFor(asset.GetId()); ok && asset.GetKind() != "decoration" && !content.ItemGiveable(d) {
-			return nil, fail(409, "not-giveable")
+		if gold == 0 {
+			if err = validAsset(asset); err != nil {
+				return nil, err
+			}
+			if d, ok := content.ItemFor(asset.GetId()); ok && asset.GetKind() != "decoration" && !content.ItemGiveable(d) {
+				return nil, fail(409, "not-giveable")
+			}
+		} else if gold < 1 {
+			return nil, fail(400, "invalid-quantity")
 		}
 		if err = mailSendLimits(ctx, tx, s.AccountID, req.ToId, now, w); err != nil {
 			return nil, err
@@ -195,14 +208,28 @@ func (a *Server) mailSend(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		got, err := takeAsset(ctx, tx, s, asset, holder{"mail", s.AccountID, ""}, "mail-send", id, now)
-		if err != nil {
-			return nil, err
+		kind, itemDef, qty := asset.GetKind(), asset.GetId(), int(asset.GetQty())
+		got := moved{IDs: []string{}, Makers: []makerQty{}}
+		if gold > 0 {
+			// The gold leaves the purse into the letter in one transaction
+			// (3.3, 3.5): until it is collected or comes back it belongs to
+			// neither purse, and waits in the sender's mail:gold:gold.
+			kind, itemDef, qty = "gold", "gold", gold
+			if err = store.DebitGold(ctx, tx, s.AccountID, gold, "mail-send", id, now); err != nil {
+				return nil, insufficientGold(err)
+			}
+			if err = currency(ctx, tx, s.AccountID, mailGoldCurrency(), gold, "mail-send", id, now); err != nil {
+				return nil, err
+			}
+		} else {
+			if got, err = takeAsset(ctx, tx, s, asset, holder{"mail", s.AccountID, ""}, "mail-send", id, now); err != nil {
+				return nil, err
+			}
+			if err = currency(ctx, tx, s.AccountID, itemmove.LocationCurrency("mail", kind, itemDef), qty, "mail-send", id, now); err != nil {
+				return nil, err
+			}
 		}
-		if _, err = tx.ExecContext(ctx, "INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES(?,?,?,?,?,?,?,?,?,?)", id, s.WorldID, s.AccountID, req.ToId, asset.GetKind(), asset.GetId(), int(asset.GetQty()), store.JSON(got.IDs), store.JSON(got.Makers), now); err != nil {
-			return nil, err
-		}
-		if err = currency(ctx, tx, s.AccountID, itemmove.LocationCurrency("mail", asset.GetKind(), asset.GetId()), int(asset.GetQty()), "mail-send", id, now); err != nil {
+		if _, err = tx.ExecContext(ctx, "INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES(?,?,?,?,?,?,?,?,?,?)", id, s.WorldID, s.AccountID, req.ToId, kind, itemDef, qty, store.JSON(got.IDs), store.JSON(got.Makers), now); err != nil {
 			return nil, err
 		}
 		list, err := mailList(ctx, tx, *s, nil, nil)
@@ -283,10 +310,18 @@ func (a *Server) mailClaim(w http.ResponseWriter, r *http.Request) error {
 		if v.GetKind() == "instance" && len(got.IDs) == 1 {
 			v.Instance = got.IDs[0]
 		}
-		if v.Kind != "thanks" {
+		if v.Kind == "gold" {
+			// The letter's gold goes into the recipient's purse (3.3, 3.5):
+			// the escrow on the sender's mail:gold:gold closes below.
+			if err = store.CreditGold(ctx, tx, s.AccountID, int(v.GetQty()), "mail-claim", id, now); err != nil {
+				return nil, err
+			}
+		} else if v.Kind != "thanks" {
 			if err = giveAsset(ctx, tx, s, v, got, holder{"mail", from, ""}, "mail-claim", id, now); err != nil {
 				return nil, err
 			}
+		}
+		if v.Kind != "thanks" {
 			if err = currency(ctx, tx, from, itemmove.LocationCurrency("mail", v.GetKind(), v.GetId()), -int(v.GetQty()), "mail-claim", id, now); err != nil {
 				return nil, err
 			}

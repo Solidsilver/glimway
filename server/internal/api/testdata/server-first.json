@@ -1030,7 +1030,9 @@
           "topUpsLeft": 2,
           "working": null
         },
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "wildsClaim": {
         "epoch": "epoch",
@@ -1190,7 +1192,9 @@
           "topUpsLeft": 2,
           "working": null
         },
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "fall": {
         "vitals": {
@@ -1340,7 +1344,9 @@
           "topUpsLeft": 2,
           "working": null
         },
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "fall": {
         "vitals": {
@@ -1490,7 +1496,9 @@
           "topUpsLeft": 2,
           "working": null
         },
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "fall": {
         "vitals": {
@@ -1640,7 +1648,9 @@
           "topUpsLeft": 2,
           "working": null
         },
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "fall": {
         "vitals": {
@@ -1790,7 +1800,9 @@
           "topUpsLeft": 2,
           "working": null
         },
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "fall": {
         "vitals": {
@@ -1940,7 +1952,9 @@
           "topUpsLeft": 2,
           "working": null
         },
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "wildsLantern": {
         "epoch": "epoch",
@@ -2272,7 +2286,9 @@
           "topUpsLeft": 2,
           "working": null
         },
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "questStep": {
         "quest": "set-to-rise",
@@ -2417,7 +2433,9 @@
           "topUpsLeft": 2,
           "working": null
         },
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "report": {
         "seq": 1,
@@ -2553,7 +2571,9 @@
           "topUpsLeft": 2,
           "working": null
         },
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "questStep": {
         "quest": "lantern-road",
@@ -4622,7 +4642,9 @@
           "topUpsLeft": 2,
           "working": null
         },
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "lease": "lease",
       "reportGeneration": "generation",
@@ -4924,7 +4946,9 @@
         "topUpsLeft": 2,
         "working": null
       },
-      "wardrobe": null
+      "wardrobe": {
+        "chosen": {}
+      }
     }
   },
   {
@@ -5519,7 +5543,9 @@
           "topUpsLeft": 2,
           "working": null
         },
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       }
     }
   },
@@ -6274,7 +6300,9 @@
           "topUpsLeft": 2,
           "working": null
         },
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "leaseActive": true
     }
@@ -7929,7 +7957,9 @@
           "topUpsLeft": 2,
           "working": null
         },
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "result": {
         "gateCount": 2,
@@ -8086,7 +8116,9 @@
           "topUpsLeft": 2,
           "working": null
         },
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "result": {
         "items": {
@@ -8231,7 +8263,9 @@
           "topUpsLeft": 2,
           "working": null
         },
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "result": {
         "inventory": {
@@ -8366,7 +8400,9 @@
           "topUpsLeft": 2,
           "working": null
         },
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "result": {
         "grantablePapers": [],
@@ -8625,7 +8661,9 @@
           "topUpsLeft": 2,
           "working": null
         },
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "result": {
         "home": null,
@@ -8766,7 +8804,9 @@
           "topUpsLeft": 2,
           "working": null
         },
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "result": {
         "home": null,
@@ -8895,7 +8935,9 @@
           "topUpsLeft": 2,
           "working": null
         },
-        "wardrobe": null
+        "wardrobe": {
+          "chosen": {}
+        }
       },
       "result": {
         "items": {
