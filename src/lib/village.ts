@@ -9,7 +9,7 @@ import { CALENDAR, calendarAt, type CalendarDay } from './calendar.ts';
 import { HOMESTEAD_DATA, homeItem } from './homestead.ts';
 import { CRAFTING, PROJECTS, type Recipe } from './workshop.ts';
 import { giftPhrase, giveable, itemDef, itemName } from './items.ts';
-import type { Asset, AssetCounts, Mail, ProjectView } from './api/types.ts';
+import type { Asset, AssetCounts, AssetView, Mail, ProjectView } from './api/types.ts';
 
 export type { CalendarDay };
 
@@ -112,7 +112,7 @@ export function movableAssets(c: AssetCounts | null | undefined): Asset[] {
 }
 
 /** A stable key for one choice in a goods list (instances by their own id). */
-export function assetKey(a: Pick<Asset, 'kind' | 'id' | 'instance'>): string {
+export function assetKey(a: Pick<AssetView, 'kind' | 'id' | 'instance'>): string {
   return a.instance ? `${a.kind}:${a.id}:${a.instance}` : `${a.kind}:${a.id}`;
 }
 
@@ -199,13 +199,13 @@ export const RECIPES = CRAFTING.recipes;
 
 // ------------------------------------------------------------ names
 
-export function assetName(a: Pick<Asset, 'kind' | 'id'>): string {
+export function assetName(a: Pick<AssetView, 'kind' | 'id'>): string {
   if (a.kind === 'decoration') return homeItem(a.id)?.name ?? a.id;
   return itemName(a.id);
 }
 
 /** "12 timber", "a Whittled Fox", "2 Wooden Stools". */
-export function assetPhrase(a: Asset): string {
+export function assetPhrase(a: AssetView): string {
   const name = assetName(a);
   if (a.kind === 'thanks') return `a thank-you for ${giftPhrase(a.id, 1)} you made`;
   if (a.kind === 'material') return `${a.qty} ${name.toLowerCase()}`;

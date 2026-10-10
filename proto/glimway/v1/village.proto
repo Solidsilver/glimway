@@ -97,6 +97,9 @@ message MailSendResult {
 message MailKeyedRequest { OpHeader op = 1; Where where = 2; }
 message MailActionResult {
   string mail_id = 1;
+  // A gold letter's asset is Asset { kind: "gold", id: "gold", qty: the
+  // amount }, display only (3.3); validAsset still refuses "gold" as
+  // something to take from a pack.
   Asset asset = 2;
   repeated MailView mail = 3;
   google.protobuf.StringValue next_cursor = 4;
@@ -107,6 +110,9 @@ message MailActionResult {
 // by message type name, so two cases may not share one.
 message MailRecallResult {
   string mail_id = 1;
+  // A gold letter's asset is Asset { kind: "gold", id: "gold", qty: the
+  // amount }, display only (3.3); validAsset still refuses "gold" as
+  // something to take from a pack.
   Asset asset = 2;
   repeated MailView mail = 3;
   google.protobuf.StringValue next_cursor = 4;

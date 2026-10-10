@@ -17,14 +17,18 @@ CREATE TABLE purse_topups(
  op_key TEXT NOT NULL,
  amount INTEGER NOT NULL CHECK(amount>0),
  state TEXT NOT NULL CHECK(state IN ('reserved','created','scoring','checking','moved','not-enough','not-moved','unconfirmed')),
- gold_before INTEGER,
- gold_after INTEGER,
+ gold_before INTEGER CHECK(gold_before IS NULL OR gold_before>=0),
+ gold_after INTEGER CHECK(gold_after IS NULL OR gold_after>=0),
  note TEXT NOT NULL DEFAULT '',
- leftover INTEGER NOT NULL DEFAULT 0,
+ leftover INTEGER NOT NULL DEFAULT 0 CHECK(leftover IN (0,1)),
  created_at INTEGER NOT NULL,
  settled_at INTEGER,
  settled_by TEXT CHECK(settled_by IS NULL OR settled_by IN ('worker','look','owner')),
- UNIQUE(account_id, op_key)
+ UNIQUE(account_id, op_key),
+ -- A row settles once: the four working states are exactly the unsettled
+ -- ones, and a settled row carries who settled it (2.2, 2.4).
+ CHECK((state IN ('reserved','created','scoring','checking')) = (settled_at IS NULL)),
+ CHECK((settled_at IS NULL) = (settled_by IS NULL))
 );
 -- One working top-up per account (2.4); the four working states.
 CREATE UNIQUE INDEX purse_topups_working ON purse_topups(account_id)
@@ -51,14 +55,15 @@ ALTER TABLE gate_shelf_slots ADD COLUMN price INTEGER NOT NULL DEFAULT 0 CHECK(p
 -- report — and never part of PlayerState.
 CREATE TABLE player_gear(
  account_id TEXT PRIMARY KEY REFERENCES players(account_id),
- owned_json TEXT NOT NULL,
+ owned_json TEXT NOT NULL CHECK(json_valid(owned_json)),
  checked_at INTEGER NOT NULL
 );
 
 -- The mail rebuild (6.4): SQLite can't change a CHECK in place, so the
 -- table is rebuilt the way 013 and 020 did it — a new table from the live
--- definition with 'gold' in the kind list and qty > 0 for it, the rows
--- copied, the old table dropped, the new one renamed, and every mail index
+-- definition with 'gold' in the kind list, a qty rule of qty > 0 for it and
+-- the gold-letter shape (6.4: kind 'gold', item_def 'gold', instance_ids and
+-- makers '[]'), the rows copied, the old table dropped, the new one renamed, and every mail index
 -- recreated (the nine CREATE INDEX writes of 020_gifts.sql — the table's
 -- tenth index is its primary key's autoindex — and nothing later adds one).
 -- A gold
@@ -79,7 +84,8 @@ CREATE TABLE mail_v4(
   (returned_at IS NOT NULL AND return_reason IS NOT NULL AND return_reason IN ('recalled','expired','recipient-removed'))
  ),
  makers TEXT NOT NULL DEFAULT '[]',
- CHECK(from_id!=to_id)
+ CHECK(from_id!=to_id),
+ CHECK(kind <> 'gold' OR (item_def = 'gold' AND instance_ids = '[]' AND makers = '[]'))
 );
 INSERT INTO mail_v4(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,sent_at,claimed_at,returned_at,return_reason,makers)
  SELECT id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,sent_at,claimed_at,returned_at,return_reason,makers FROM mail;

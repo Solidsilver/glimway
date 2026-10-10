@@ -124,6 +124,19 @@ test('malformed homestead, items, mail and craft answers are refused', () => {
   assert.throws(() => parseMail(deep(snapshot, { mail: [{ ...mailView, asset: { ...mailView.asset, qty: '1' } }] })), 'numeric string qty');
 });
 
+test('a gold letter reads as a gold asset — on the read side only', () => {
+  // 6.1: MailView.asset (and the claim and recall answers) carry a gold
+  // letter as Asset { kind: 'gold', id: 'gold', qty: the amount }, display
+  // only. The widened kind is the read side's (types.ts's AssetView); a
+  // request Asset can't spell it, and the server's validAsset refuses
+  // "gold" as something to take from a pack anyway.
+  const gold = { ...mailView, asset: { kind: 'gold', id: 'gold', qty: 20, instance: '', maker: null } };
+  const answer = { mail: [gold], nextCursor: null, nextPendingCursor: null, inventory: { materials: {}, items: {}, decorations: {}, instances: [] } };
+  const read = parseMail(deep(snapshot, answer));
+  assert.deepEqual(read.mail[0]!.asset, { kind: 'gold', id: 'gold', qty: 20 });
+  assert.throws(() => parseMail(deep(snapshot, { ...answer, mail: [{ ...gold, asset: { ...gold.asset, kind: 'gems' } }] })), 'an unknown kind');
+});
+
 test('unknown future fields are tolerated, wherever they sit', () => {
   const next = { someFutureField: { nested: [1, 2] } };
   const w = parseWorld(deep(snapshot, deep(worldView, next) as Record<string, unknown>));

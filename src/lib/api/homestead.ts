@@ -18,7 +18,7 @@ import { type HomeView as GeneratedHomeView } from '../gen/glimway/v1/goods_pb.j
 import { ApiError } from './errors.ts';
 import { parseSnapshot } from './parse.ts';
 import { projectAsset, projectCounts } from './items.ts';
-import type { Asset, AssetCounts, Snapshot } from './types.ts';
+import type { AssetCounts, AssetView, Snapshot } from './types.ts';
 import type { HomeInstance } from '../homestead.ts';
 
 /** One stable bay (crafts.md 3.2): who stands in it. `mount` '' is an empty stall. */
@@ -142,7 +142,7 @@ export interface ShelfResponse extends Snapshot {
 export interface ShelfActionResponse extends Snapshot {
   shelf: ShelfView;
   inventory: import('./types.ts').AssetCounts;
-  taken?: Asset;
+  taken?: AssetView;
   line?: string;
 }
 

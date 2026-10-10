@@ -10,7 +10,7 @@
  */
 import { calendarAt, type CalendarDay } from '../lib/calendar.ts'
 import { blankProjects, emptyCounts, papersDue } from '../lib/village.ts'
-import type { Asset, AssetCounts, ChestId, ContributeResponse, CraftResponse, DeskCopyResponse, HearthCraftResponse, Mail, MailActionResponse, MendResponse, MendResult, ProjectView, ProjectsView, RepairsView, ShelfActionResponse, ShelfView, StorageMoveResponse, WoodpileActionResponse, WoodpileView, WorkshopView } from '../lib/api/types.ts'
+import type { Asset, AssetCounts, AssetView, ChestId, ContributeResponse, CraftResponse, DeskCopyResponse, HearthCraftResponse, Mail, MailActionResponse, MendResponse, MendResult, ProjectView, ProjectsView, RepairsView, ShelfActionResponse, ShelfView, StorageMoveResponse, WoodpileActionResponse, WoodpileView, WorkshopView } from '../lib/api/types.ts'
 import type { Refusal, Result } from '../lib/api/errors.ts'
 import { villageErrorText } from '../content/errors.ts'
 import { paperFlag } from '../content/papers.ts'
@@ -294,7 +294,7 @@ export class Village {
     return { ok: true, value: undefined }
   }
 
-  async craft(recipeId: string, qty: number): Promise<Result<Asset>> {
+  async craft(recipeId: string, qty: number): Promise<Result<AssetView>> {
     const r = await this.link.mutate<CraftResponse>({ kind: 'craft', fields: { recipeId, qty } })
     if (!r.ok) return fail(r.code)
     this.inventory = r.res.result.inventory
@@ -307,7 +307,7 @@ export class Village {
   }
 
   /** Cook food, remedies and oils at the cottage hearth. Everything made carries your maker's mark. */
-  async hearthCraft(recipeId: string, qty: number): Promise<Result<Asset>> {
+  async hearthCraft(recipeId: string, qty: number): Promise<Result<AssetView>> {
     const r = await this.link.mutate<HearthCraftResponse>({ kind: 'hearth', fields: { recipeId, qty } })
     if (!r.ok) return fail(r.code)
     this.adoptWorkshop(r.res.result)
@@ -440,7 +440,7 @@ export class Village {
     return { ok: true, value: undefined }
   }
 
-  async claim(id: string): Promise<Result<Asset | undefined>> {
+  async claim(id: string): Promise<Result<AssetView | undefined>> {
     const r = await this.link.mutate<MailActionResponse>({ kind: 'mail-claim', id })
     if (!r.ok) return fail(r.code)
     this.adoptMail(r.res.result)

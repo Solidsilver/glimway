@@ -74,8 +74,8 @@ func TestNoMessageButTheSignInCarriesACredential(t *testing.T) {
 	// token is the one credential the contract carried — login is never
 	// keyed, and requestBytes must refuse it outright. 0.6 adds two more
 	// credential carriers, both handled outside the keyed pipeline for the
-	// same reason: the purse top-up (PurseTopUpRequest, 2.2 step 0 — its own
-	// key in its own table, never near the idempotency cache) and the
+	// same reason: the purse top-up (PurseTopUpRequest — keyed by its own
+	// purse_topups(account_id, op_key), never through keyedOp, 2.2) and the
 	// wardrobe's gear check (WardrobeCheckRequest, 4.3 — not keyed at all).
 	// Their tokens are copied off the request and dropped; both routes must
 	// never reach keyedOp, requestBytes or savePayload.
@@ -99,6 +99,14 @@ func TestNoMessageButTheSignInCarriesACredential(t *testing.T) {
 	})
 	if _, err := requestBytes(&contract.LoginRequest{}); err == nil {
 		t.Fatal("the sign-in token passed the cache's guard")
+	}
+	// So must both 0.6 carriers, so a route mistakenly aimed at keyedOp
+	// fails at once (review finding 7).
+	if _, err := requestBytes(&contract.PurseTopUpRequest{}); err == nil {
+		t.Fatal("the top-up token passed the cache's guard")
+	}
+	if _, err := requestBytes(&contract.WardrobeCheckRequest{}); err == nil {
+		t.Fatal("the gear-check token passed the cache's guard")
 	}
 	// A credential under an invented key goes the same way: Struct and map
 	// keys are runtime data, not descriptor fields.

@@ -1623,6 +1623,23 @@
       ]
     },
     {
+      "name": "good-gold-zero",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            0,
+            "goods",
+            0,
+            "gold"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
       "name": "good-cap-over-1000",
       "valid": false,
       "rule": "int32.gte_lte",

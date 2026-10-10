@@ -202,7 +202,8 @@ func (x *Purse) GetWorking() *PurseTopUp {
 }
 
 // POST /api/purse/top-up. The token is used for this one request and never
-// stored, logged or returned.
+// stored, logged or returned. Keyed by its own purse_topups row, never
+// through keyedOp.
 type PurseTopUpRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Op            *OpHeader              `protobuf:"bytes,1,opt,name=op,proto3" json:"op,omitempty"`
@@ -320,8 +321,15 @@ type PurseLine struct {
 	Qty     int32  `protobuf:"varint,5,opt,name=qty,proto3" json:"qty,omitempty"`
 	// The other player in a shelf trade, letter or give.
 	OtherName string `protobuf:"bytes,6,opt,name=other_name,json=otherName,proto3" json:"other_name,omitempty"`
-	// A letter's id, so "waiting" can become "collected" or "came back".
-	MailId        string `protobuf:"bytes,7,opt,name=mail_id,json=mailId,proto3" json:"mail_id,omitempty"`
+	// A letter's id, so the line can say which one it was.
+	MailId string `protobuf:"bytes,7,opt,name=mail_id,json=mailId,proto3" json:"mail_id,omitempty"`
+	// That letter's state: waiting | collected | came-back. A collected gold
+	// letter writes only the sender's mail:gold:gold row, so the state can't
+	// be read off the gold lines alone (design 2.7).
+	MailState string `protobuf:"bytes,8,opt,name=mail_state,json=mailState,proto3" json:"mail_state,omitempty"`
+	// The seller on a market-buy line (their npc name): "Bought timber ×4
+	// from Silas". other_name stays the other player.
+	Seller        string `protobuf:"bytes,9,opt,name=seller,proto3" json:"seller,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -401,6 +409,20 @@ func (x *PurseLine) GetOtherName() string {
 func (x *PurseLine) GetMailId() string {
 	if x != nil {
 		return x.MailId
+	}
+	return ""
+}
+
+func (x *PurseLine) GetMailState() string {
+	if x != nil {
+		return x.MailState
+	}
+	return ""
+}
+
+func (x *PurseLine) GetSeller() string {
+	if x != nil {
+		return x.Seller
 	}
 	return ""
 }
@@ -497,7 +519,7 @@ const file_glimway_v1_purse_proto_rawDesc = "" +
 	"\x05token\x18\x02 \x01(\tR\x05token\x12\x16\n" +
 	"\x06amount\x18\x03 \x01(\x05R\x06amount\"A\n" +
 	"\x10PurseTopUpResult\x12-\n" +
-	"\x06top_up\x18\x01 \x01(\v2\x16.glimway.v1.PurseTopUpR\x05topUp\"\xae\x01\n" +
+	"\x06top_up\x18\x01 \x01(\v2\x16.glimway.v1.PurseTopUpR\x05topUp\"\xe5\x01\n" +
 	"\tPurseLine\x12\x0e\n" +
 	"\x02at\x18\x01 \x01(\x01R\x02at\x12\x14\n" +
 	"\x05delta\x18\x02 \x01(\x05R\x05delta\x12\x16\n" +
@@ -506,7 +528,10 @@ const file_glimway_v1_purse_proto_rawDesc = "" +
 	"\x03qty\x18\x05 \x01(\x05R\x03qty\x12\x1d\n" +
 	"\n" +
 	"other_name\x18\x06 \x01(\tR\totherName\x12\x17\n" +
-	"\amail_id\x18\a \x01(\tR\x06mailId\"\x92\x01\n" +
+	"\amail_id\x18\a \x01(\tR\x06mailId\x12\x1d\n" +
+	"\n" +
+	"mail_state\x18\b \x01(\tR\tmailState\x12\x16\n" +
+	"\x06seller\x18\t \x01(\tR\x06seller\"\x92\x01\n" +
 	"\tPurseRead\x12'\n" +
 	"\x05purse\x18\x01 \x01(\v2\x11.glimway.v1.PurseR\x05purse\x12/\n" +
 	"\atop_ups\x18\x02 \x03(\v2\x16.glimway.v1.PurseTopUpR\x06topUps\x12+\n" +

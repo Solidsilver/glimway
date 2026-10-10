@@ -360,6 +360,35 @@ func TestSellersHazelFinnAndTheCartingStall(t *testing.T) {
 	x.conserved(ps.AccountID)
 }
 
+// Silas's bundles are gold-only (design 3.1). This buy path pays in embers —
+// `pay` is lane C's — so a good with no ember price must be refused outright,
+// not handed over for the zero the price carries (review finding 1). Lane C
+// extends this with `pay`.
+func TestSilasYardBundlesAreGoldOnly(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	x.fundEmbers(s.AccountID, 10)
+	before := count(t, x.db, "SELECT embers FROM balances WHERE account_id=?", s.AccountID)
+	buy := func(good string, status int) itemsResponse {
+		return x.opRefreshing(c, &s, "buy", map[string]any{"seller": "silas-yard", "good": good, "progress": bySeller(s, "silas-yard", x.now.Load())}, status)
+	}
+	for _, good := range []string{"timber", "stone", "fiber"} {
+		if r := buy(good, 400); r.Error.Code != "invalid-good" {
+			t.Fatal(good, r.Error.Code)
+		}
+	}
+	// Nothing was handed over, nothing was charged, and no day's cap was spent.
+	for _, good := range []string{"timber", "stone", "fiber"} {
+		if count(t, x.db, "SELECT COALESCE(SUM(qty),0) FROM item_stacks WHERE location='pack' AND owner=? AND item_def=?", s.AccountID, good) != 0 {
+			t.Fatal("a refused buy handed over", good)
+		}
+	}
+	if count(t, x.db, "SELECT embers FROM balances WHERE account_id=?", s.AccountID) != before || count(t, x.db, "SELECT count(*) FROM ledger WHERE account_id=? AND reason='market-buy'", s.AccountID) != 0 {
+		t.Fatal("a refused buy was charged")
+	}
+	x.conserved(s.AccountID)
+}
+
 // Finn sells the rod: a tool is handed over as one instance at full
 // condition, never as a stack (the good's kind decides — questGive does the
 // same for a story gift).

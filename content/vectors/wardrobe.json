@@ -1,6 +1,55 @@
 {
-  "comment": "Shared lookFor vectors (docs/design/purse-and-wardrobe.md 4.2, 6.3): what the hero wears, per drawn slot, resolved from the Habitica profile, the wardrobe's choice and the owned list. Both implementations read this file — rules.Look on the server (server/internal/rules) and lookFor in src/lib/wardrobe.ts — and must give the same map. lookFor(profile, chosen, owned) for each drawn slot: chosen[slot] == \"none\" -> null; chosen[slot] is a key in owned -> that key; chosen[slot] is any other key (a lapsed piece, or one the catalog no longer knows) -> the Habitica look, exactly as if the slot were unchosen (the stored row stays, so a piece that comes back returns to its place); otherwise profile.useCostume ? profile.costume[slot] : profile.equipped[slot]. A missing profile key resolves to null (nothing worn there); a *_base_0 key is returned as a key and draws nothing downstream. weaponSpecial is never drawn and never appears. The avatar's own rules apply after lookFor, unchanged: a two-handed weapon hides the shield (the two-handed case below keeps both keys in the look and says so).",
+  "comment": "Shared wardrobe vectors (docs/design/purse-and-wardrobe.md 4.2). Two sets, replayed by different sides — pick the right one. `resolve` is server only (lane C, server/internal/rules): resolve(chosen, owned, catalog) drops a chosen key the player no longer owns (a lapsed piece) or the catalog no longer knows, and keeps the rest — the stored row survives, only the resolved choice shrinks, so a piece that comes back returns to its place. Its cases pin their own `catalog` list so a key added upstream later can never flip an expectation. `lookFor` is shared by both sides (lane C's rules.Look and lane E's src/lib/wardrobe.ts): lookFor(profile, chosen) exactly as 4.2, for each drawn slot (the `slots` list) — chosen[slot] == \"none\" -> null; chosen[slot] is a key -> that key; otherwise profile.useCostume ? profile.costume[slot] : profile.equipped[slot]. `chosen` arrives already resolved (PlayerState.wardrobe is the resolved choice), so this set has no owned list. A missing profile key resolves to null (nothing worn there); a *_base_0 key is returned as a key and draws nothing downstream; weaponSpecial is never drawn and never appears. The avatar's own rules apply after lookFor, unchanged: a two-handed weapon hides the shield (the two-handed case keeps both keys in the look and says so).",
   "slots": ["head", "headAccessory", "eyewear", "armor", "body", "back", "weapon", "shield"],
+  "resolve": [
+    {
+      "name": "owned-and-catalogued-stays",
+      "chosen": {
+        "head": "head_armoire_admiralsBicorne",
+        "armor": "none",
+        "weapon": "weapon_warrior_1"
+      },
+      "owned": ["head_armoire_admiralsBicorne", "weapon_warrior_1"],
+      "catalog": ["head_armoire_admiralsBicorne", "weapon_warrior_1", "armor_warrior_1"],
+      "resolved": {
+        "head": "head_armoire_admiralsBicorne",
+        "armor": "none",
+        "weapon": "weapon_warrior_1"
+      },
+      "note": "Owned keys the catalog knows hold their slots; the reserved 'none' (Nothing) is kept — it can never collide with a Habitica key."
+    },
+    {
+      "name": "a-lapsed-key",
+      "chosen": {
+        "head": "head_armoire_astronomersHat",
+        "back": "back_armoire_harpsichord"
+      },
+      "owned": ["back_armoire_harpsichord"],
+      "catalog": ["head_armoire_astronomersHat", "back_armoire_harpsichord"],
+      "resolved": {
+        "back": "back_armoire_harpsichord"
+      },
+      "note": "The head piece is no longer owned (a lapsed key): it drops out of the resolved choice and the slot reads As on Habitica until it is back. The stored row stays; only the resolution shrinks."
+    },
+    {
+      "name": "an-uncatalogued-key",
+      "chosen": {
+        "head": "head_armoire_futurePiece"
+      },
+      "owned": ["head_armoire_futurePiece"],
+      "catalog": ["head_warrior_1"],
+      "resolved": {},
+      "note": "A key the catalog no longer (or never) knew drops out even when it is owned: an unknown key can't be drawn."
+    },
+    {
+      "name": "nothing-chosen-resolves-to-nothing",
+      "chosen": {},
+      "owned": [],
+      "catalog": ["head_warrior_1"],
+      "resolved": {},
+      "note": "No rows at all: the whole choice is As on Habitica."
+    }
+  ],
   "lookFor": [
     {
       "name": "as-on-habitica",
@@ -26,7 +75,6 @@
         }
       },
       "chosen": {},
-      "owned": [],
       "look": {
         "head": "head_warrior_1",
         "headAccessory": "headAccessory_base_0",
@@ -63,7 +111,6 @@
         }
       },
       "chosen": {},
-      "owned": [],
       "look": {
         "head": "head_armoire_admiralsBicorne",
         "headAccessory": "headAccessory_armoire_comicalArrow",
@@ -75,6 +122,42 @@
         "shield": "shield_armoire_bagpipes"
       },
       "note": "Show costume is on at Habitica: As on Habitica means the costume, exactly what Habitica shows."
+    },
+    {
+      "name": "a-chosen-key-beats-the-costume",
+      "profile": {
+        "useCostume": true,
+        "equipped": {
+          "weapon": "weapon_warrior_1",
+          "shield": "shield_warrior_1",
+          "armor": "armor_warrior_1",
+          "head": "head_warrior_1",
+          "headAccessory": "headAccessory_base_0",
+          "back": "back_base_0"
+        },
+        "costume": {
+          "weapon": "weapon_armoire_arcaneScroll",
+          "shield": "shield_armoire_bagpipes",
+          "armor": "armor_armoire_admiralsUniform",
+          "head": "head_armoire_admiralsBicorne",
+          "headAccessory": "headAccessory_armoire_comicalArrow",
+          "eyewear": "eyewear_armoire_clownsNose",
+          "body": "body_armoire_cozyScarf",
+          "back": "back_armoire_harpsichord"
+        }
+      },
+      "chosen": { "head": "head_warrior_1" },
+      "look": {
+        "head": "head_warrior_1",
+        "headAccessory": "headAccessory_armoire_comicalArrow",
+        "eyewear": "eyewear_armoire_clownsNose",
+        "armor": "armor_armoire_admiralsUniform",
+        "body": "body_armoire_cozyScarf",
+        "back": "back_armoire_harpsichord",
+        "weapon": "weapon_armoire_arcaneScroll",
+        "shield": "shield_armoire_bagpipes"
+      },
+      "note": "useCostume true with one chosen slot: the choice wins there (the battle gear's helm, not the costume's bicorne); every other slot still reads the costume."
     },
     {
       "name": "none",
@@ -91,7 +174,6 @@
         "costume": {}
       },
       "chosen": { "armor": "none", "weapon": "none", "back": "none" },
-      "owned": [],
       "look": {
         "head": "head_warrior_1",
         "headAccessory": "headAccessory_base_0",
@@ -119,7 +201,6 @@
         "costume": {}
       },
       "chosen": { "head": "head_armoire_admiralsBicorne", "back": "back_armoire_harpsichord" },
-      "owned": ["head_armoire_admiralsBicorne", "back_armoire_harpsichord", "head_warrior_1"],
       "look": {
         "head": "head_armoire_admiralsBicorne",
         "headAccessory": "headAccessory_base_0",
@@ -130,35 +211,7 @@
         "weapon": "weapon_warrior_1",
         "shield": "shield_warrior_1"
       },
-      "note": "A piece the player owns, chosen for its slot: it wins over the Habitica look there and nowhere else."
-    },
-    {
-      "name": "a-lapsed-key",
-      "profile": {
-        "useCostume": false,
-        "equipped": {
-          "weapon": "weapon_warrior_1",
-          "shield": "shield_warrior_1",
-          "armor": "armor_warrior_1",
-          "head": "head_warrior_1",
-          "headAccessory": "headAccessory_base_0",
-          "back": "back_base_0"
-        },
-        "costume": {}
-      },
-      "chosen": { "head": "head_armoire_astronomersHat", "back": "back_armoire_harpsichord" },
-      "owned": ["back_armoire_harpsichord"],
-      "look": {
-        "head": "head_warrior_1",
-        "headAccessory": "headAccessory_base_0",
-        "eyewear": null,
-        "armor": "armor_warrior_1",
-        "body": null,
-        "back": "back_armoire_harpsichord",
-        "weapon": "weapon_warrior_1",
-        "shield": "shield_warrior_1"
-      },
-      "note": "The chosen head piece is no longer owned (a lapsed key; equally one the catalog no longer knows): it reads as As on Habitica until it is back. The row stays stored; only the look falls back. The back piece, still owned, holds its place."
+      "note": "A piece chosen for its slot wins over the Habitica look there and nowhere else. (Whether the player still owns it is resolve's business, not this function's.)"
     },
     {
       "name": "two-handed-weapon-over-a-chosen-shield",
@@ -175,7 +228,6 @@
         "costume": {}
       },
       "chosen": { "weapon": "weapon_wizard_1", "shield": "shield_armoire_beekeepersHive" },
-      "owned": ["weapon_wizard_1", "shield_armoire_beekeepersHive"],
       "look": {
         "head": "head_warrior_1",
         "headAccessory": "headAccessory_base_0",

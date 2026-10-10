@@ -25,7 +25,7 @@ import {
 import { ApiError } from './errors.ts';
 import { projectHome, type HomeMember, type HomeView } from './homestead.ts';
 import { projectAsset, projectCounts, projectItemsView } from './items.ts';
-import type { Asset, AssetCounts, Snapshot } from './types.ts';
+import type { AssetCounts, AssetView, Snapshot } from './types.ts';
 import { parseSnapshot } from './parse.ts';
 
 type Json = Record<string, unknown>;
@@ -67,7 +67,7 @@ function envelopeResult(raw: unknown, caseName: string): unknown {
 // The goods views (Asset, counts, instances) are the items lane's
 // projectors, shared now that the messages live in goods.proto; the home is
 // the homestead lane's.
-function asset(raw: GeneratedAsset | undefined): Asset {
+function asset(raw: GeneratedAsset | undefined): AssetView {
   const out = projectAsset(raw);
   if (!out) throw new Error('missing asset');
   return out;
@@ -141,7 +141,7 @@ export type Mail = {
   toId: string;
   fromName: string;
   toName: string;
-  asset: Asset;
+  asset: AssetView;
   sentAt: number;
   claimedAt: number | null;
   /** Set when it went back to the sender (recall, 30-day return, recipient removed). */
@@ -165,7 +165,7 @@ export type MailActionResponse = Snapshot & {
     mail: Mail[];
     inventory: AssetCounts;
     /** Claim and recall only: the parcel just moved. */
-    asset?: Asset;
+    asset?: AssetView;
   };
 };
 
@@ -219,12 +219,12 @@ export type StorageResponse = Snapshot & WorkshopView;
 export type StorageMoveResponse = Snapshot & { result: WorkshopView };
 
 export type CraftResponse = Snapshot & {
-  result: WorkshopView & { recipeId: string; output: Asset; instanceIds: string[] };
+  result: WorkshopView & { recipeId: string; output: AssetView; instanceIds: string[] };
 };
 
 /** Made at the cottage hearth (food, remedies, oils): the workshop view plus what the batch made. */
 export type HearthCraftResponse = Snapshot & {
-  result: WorkshopView & { recipeId: string; output: Asset };
+  result: WorkshopView & { recipeId: string; output: AssetView };
 };
 
 /** A recipe page copied at the writing desk: the workshop view plus the copies. */

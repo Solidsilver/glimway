@@ -118,7 +118,8 @@ export declare const PurseSchema: GenMessage<Purse, {validType: PurseValid}>;
 
 /**
  * POST /api/purse/top-up. The token is used for this one request and never
- * stored, logged or returned.
+ * stored, logged or returned. Keyed by its own purse_topups row, never
+ * through keyedOp.
  *
  * @generated from message glimway.v1.PurseTopUpRequest
  */
@@ -208,11 +209,28 @@ export declare type PurseLine = Message<"glimway.v1.PurseLine"> & {
   otherName: string;
 
   /**
-   * A letter's id, so "waiting" can become "collected" or "came back".
+   * A letter's id, so the line can say which one it was.
    *
    * @generated from field: string mail_id = 7;
    */
   mailId: string;
+
+  /**
+   * That letter's state: waiting | collected | came-back. A collected gold
+   * letter writes only the sender's mail:gold:gold row, so the state can't
+   * be read off the gold lines alone (design 2.7).
+   *
+   * @generated from field: string mail_state = 8;
+   */
+  mailState: string;
+
+  /**
+   * The seller on a market-buy line (their npc name): "Bought timber ×4
+   * from Silas". other_name stays the other player.
+   *
+   * @generated from field: string seller = 9;
+   */
+  seller: string;
 };
 
 export declare type PurseLineValid = PurseLine;

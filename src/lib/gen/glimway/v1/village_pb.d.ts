@@ -667,6 +667,10 @@ export declare type MailActionResult = Message<"glimway.v1.MailActionResult"> & 
   mailId: string;
 
   /**
+   * A gold letter's asset is Asset { kind: "gold", id: "gold", qty: the
+   * amount }, display only (3.3); validAsset still refuses "gold" as
+   * something to take from a pack.
+   *
    * @generated from field: glimway.v1.Asset asset = 2;
    */
   asset?: Asset | undefined;
@@ -713,6 +717,10 @@ export declare type MailRecallResult = Message<"glimway.v1.MailRecallResult"> & 
   mailId: string;
 
   /**
+   * A gold letter's asset is Asset { kind: "gold", id: "gold", qty: the
+   * amount }, display only (3.3); validAsset still refuses "gold" as
+   * something to take from a pack.
+   *
    * @generated from field: glimway.v1.Asset asset = 2;
    */
   asset?: Asset | undefined;

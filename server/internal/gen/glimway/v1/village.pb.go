@@ -1283,8 +1283,11 @@ func (x *MailKeyedRequest) GetWhere() *Where {
 }
 
 type MailActionResult struct {
-	state             protoimpl.MessageState  `protogen:"open.v1"`
-	MailId            string                  `protobuf:"bytes,1,opt,name=mail_id,json=mailId,proto3" json:"mail_id,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	MailId string                 `protobuf:"bytes,1,opt,name=mail_id,json=mailId,proto3" json:"mail_id,omitempty"`
+	// A gold letter's asset is Asset { kind: "gold", id: "gold", qty: the
+	// amount }, display only (3.3); validAsset still refuses "gold" as
+	// something to take from a pack.
 	Asset             *Asset                  `protobuf:"bytes,2,opt,name=asset,proto3" json:"asset,omitempty"`
 	Mail              []*MailView             `protobuf:"bytes,3,rep,name=mail,proto3" json:"mail,omitempty"`
 	NextCursor        *wrapperspb.StringValue `protobuf:"bytes,4,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`
@@ -1369,8 +1372,11 @@ func (x *MailActionResult) GetInventory() *AssetCounts {
 // A recall's answer is its own message: the Envelope's result cases resolve
 // by message type name, so two cases may not share one.
 type MailRecallResult struct {
-	state             protoimpl.MessageState  `protogen:"open.v1"`
-	MailId            string                  `protobuf:"bytes,1,opt,name=mail_id,json=mailId,proto3" json:"mail_id,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	MailId string                 `protobuf:"bytes,1,opt,name=mail_id,json=mailId,proto3" json:"mail_id,omitempty"`
+	// A gold letter's asset is Asset { kind: "gold", id: "gold", qty: the
+	// amount }, display only (3.3); validAsset still refuses "gold" as
+	// something to take from a pack.
 	Asset             *Asset                  `protobuf:"bytes,2,opt,name=asset,proto3" json:"asset,omitempty"`
 	Mail              []*MailView             `protobuf:"bytes,3,rep,name=mail,proto3" json:"mail,omitempty"`
 	NextCursor        *wrapperspb.StringValue `protobuf:"bytes,4,opt,name=next_cursor,json=nextCursor,proto3" json:"next_cursor,omitempty"`

@@ -10,10 +10,12 @@ import "glimway/v1/op.proto";
 // (3.5); the only sources are a top-up and the owner settling one.
 //
 // The top-up carries a Habitica token. It is used for this one request and
-// then dropped: never stored, logged, hashed or returned. That is why it is
-// not a keyed operation (2.2 step 0) — the token must never reach the
-// idempotency cache's payload — and why op_secret_test.go names it as a
-// credential carrier outside the keyed pipeline.
+// then dropped: never stored, logged, hashed or returned. The operation is
+// keyed by its own purse_topups(account_id, op_key) — a repeated key returns
+// the same top-up, a different amount is idempotency-mismatch (2.2) — and
+// never through keyedOp, so the token must never reach the idempotency
+// cache's payload. That is why op_secret_test.go names it as a credential
+// carrier outside the keyed pipeline.
 
 // One top-up: what it asked for, what Habitica's gold was before and after,
 // and where it landed.
@@ -45,7 +47,8 @@ message Purse {
 }
 
 // POST /api/purse/top-up. The token is used for this one request and never
-// stored, logged or returned.
+// stored, logged or returned. Keyed by its own purse_topups row, never
+// through keyedOp.
 message PurseTopUpRequest { OpHeader op = 1; string token = 2; int32 amount = 3; }
 message PurseTopUpResult { PurseTopUp top_up = 1; }
 
@@ -61,8 +64,15 @@ message PurseLine {
   int32 qty = 5;
   // The other player in a shelf trade, letter or give.
   string other_name = 6;
-  // A letter's id, so "waiting" can become "collected" or "came back".
+  // A letter's id, so the line can say which one it was.
   string mail_id = 7;
+  // That letter's state: waiting | collected | came-back. A collected gold
+  // letter writes only the sender's mail:gold:gold row, so the state can't
+  // be read off the gold lines alone (design 2.7).
+  string mail_state = 8;
+  // The seller on a market-buy line (their npc name): "Bought timber ×4
+  // from Silas". other_name stays the other player.
+  string seller = 9;
 }
 
 // GET /api/purse: the purse, the last 50 top-ups and gold lines.
