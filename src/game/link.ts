@@ -975,6 +975,27 @@ export class Link {
       this.emitter(EV.toast, { text: 'Needs a connection. This browser won’t keep offline changes.', kind: 'error' })
       return refused('offline')
     }
+    if (opts.offline) return this.enqueue(kind, path, key, body, opts)
+    // Busy from the moment it's taken, not from its send: the world holds
+    // still until the answer, with no gap while the entry is stored for an
+    // input to slip through (a second connected operation, an M after E).
+    this.setBusy(true)
+    try {
+      return await this.enqueue(kind, path, key, body, opts)
+    } finally {
+      this.setBusy(false)
+    }
+  }
+
+  /** `submit`'s entry, stored and then pumped; a connected one waits for its answer. */
+  private async enqueue(
+    kind: OutboxKind,
+    path: string,
+    key: string,
+    body: Record<string, unknown>,
+    opts: { offline: boolean; barrier?: boolean; fall?: { hp: number; mana: number }; prepare?: (id: number) => void; undo?: () => void }
+  ): Promise<{ outcome: Outcome; entry: OutboxEntry | null }> {
+    const refused = (code: Extract<Outcome, { ok: false }>['code']) => ({ outcome: { ok: false, code } as Outcome, entry: null })
     if (this.fence === null && !(await this.own(false))) return refused('superseded')
     const entry: OutboxEntry = { id: this.nextId++, kind, path, key, body: JSON.stringify(body), contract: CONTRACT_NUMBER, createdAt: this.now(), sent: false, barrier: opts.barrier === true, offline: opts.offline, ...(opts.fall ? { fall: opts.fall } : {}) }
     this.entries.push(entry)
@@ -995,14 +1016,9 @@ export class Link {
       this.pump()
       return { outcome: { ok: true, state: null, result: null }, entry }
     }
-    this.setBusy(true)
-    try {
-      const done = new Promise<Outcome>((r) => this.waiters.set(entry.id, r))
-      this.pump()
-      return { outcome: await done, entry }
-    } finally {
-      this.setBusy(false)
-    }
+    const done = new Promise<Outcome>((r) => this.waiters.set(entry.id, r))
+    this.pump()
+    return { outcome: await done, entry }
   }
 
   private canSend(): boolean {

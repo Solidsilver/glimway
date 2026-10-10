@@ -44,6 +44,9 @@ the game can show the first part as "What's new":
   package runs in 13 s, not 30), and e2e polls what's still settling. CI
   runs `go vet` and `-race` on the api package; dev-tagged tests are named
   `TestDev…`.
+- A connected operation holds the world from the moment it's taken, not
+  from its send: an input in between (an M right after Saddle up, a second
+  operation) no longer slips through.
 - A refused fishing keep closes the line; a water missing from content
   closes its casts. The report pump moved out of `link.ts`; dead exports
   are removed and guarded by a test.
