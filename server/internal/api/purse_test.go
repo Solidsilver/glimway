@@ -61,7 +61,6 @@ type purseLineWire struct {
 // top-ups and the last 50 gold lines.
 type purseReadWire struct {
 	Purse struct {
-		Gold       int             `json:"gold"`
 		TopUpsLeft int             `json:"topUpsLeft"`
 		Working    *purseTopUpWire `json:"working"`
 	} `json:"purse"`
@@ -134,7 +133,8 @@ func (x *rig) purseRead(c *http.Cookie) purseReadWire {
 
 func (x *rig) goldBalance(account string) int {
 	x.t.Helper()
-	return count(x.t, x.db, "SELECT gold FROM balances WHERE account_id=?", account)
+	// The glims top-ups brought (the balance also holds the welcome).
+	return count(x.t, x.db, "SELECT COALESCE(SUM(delta),0) FROM ledger WHERE account_id=? AND currency='glims' AND reason IN ('habitica-topup','purse-settle')", account)
 }
 
 func (x *rig) topUpRow(id string) purseTopUpWire {
@@ -213,7 +213,7 @@ func TestPurseTopUpMovesGold(t *testing.T) {
 	if x.goldBalance(account) != 200 {
 		t.Fatal("purse not credited")
 	}
-	if count(x.t, x.db, "SELECT count(*) FROM ledger WHERE account_id=? AND currency='gold' AND earned_delta=0 AND reason='habitica-topup' AND ref=?", account, row.Id) != 1 {
+	if count(x.t, x.db, "SELECT count(*) FROM ledger WHERE account_id=? AND currency='glims' AND earned_delta=0 AND reason='habitica-topup' AND ref=?", account, row.Id) != 1 {
 		t.Fatal("top-up's ledger row")
 	}
 	var version int
@@ -232,7 +232,7 @@ func TestPurseTopUpMovesGold(t *testing.T) {
 	}
 	// The purse on the next answer (PlayerState.purse), and the log.
 	read := x.purseRead(c)
-	if read.Purse.Gold != 200 || read.Purse.TopUpsLeft != 1 || read.Purse.Working != nil {
+	if x.goldBalance(account) != 200 || read.Purse.TopUpsLeft != 1 || read.Purse.Working != nil {
 		t.Fatalf("purse %+v", read.Purse)
 	}
 	if len(read.TopUps) != 1 || read.TopUps[0].Id != row.Id {
@@ -564,11 +564,11 @@ func TestPurseReadShowsEveryLineKind(t *testing.T) {
 		if letter.returned != "" {
 			returned, reason = "2", "'"+letter.reason+"'"
 		}
-		if _, err := x.db.DB.Exec("INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at,claimed_at,returned_at,return_reason) VALUES('" + letter.id + "','" + world + "','" + letter.from + "','" + letter.to + "','gold','gold',20,'[]','[]'," + strconv.FormatInt(now, 10) + "," + claimed + "," + returned + "," + reason + ")"); err != nil {
+		if _, err := x.db.DB.Exec("INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at,claimed_at,returned_at,return_reason) VALUES('" + letter.id + "','" + world + "','" + letter.from + "','" + letter.to + "','glims','glims',20,'[]','[]'," + strconv.FormatInt(now, 10) + "," + claimed + "," + returned + "," + reason + ")"); err != nil {
 			t.Fatal(err)
 		}
 	}
-	// The gold rows, exactly as lane C writes them.
+	// The glims rows, exactly as lane C writes them.
 	rows := []struct {
 		delta       int
 		reason, ref string
@@ -583,7 +583,7 @@ func TestPurseReadShowsEveryLineKind(t *testing.T) {
 		{-15, "give", bobID},
 	}
 	for i, row := range rows {
-		if _, err := x.db.DB.Exec("INSERT INTO ledger(account_id,currency,delta,earned_delta,reason,ref,created_at) VALUES(?,'gold',?,0,?,?,?)", alice, row.delta, row.reason, row.ref, now-100+int64(i)); err != nil {
+		if _, err := x.db.DB.Exec("INSERT INTO ledger(account_id,currency,delta,earned_delta,reason,ref,created_at) VALUES(?,'glims',?,0,?,?,?)", alice, row.delta, row.reason, row.ref, now-100+int64(i)); err != nil {
 			t.Fatal(err)
 		}
 	}

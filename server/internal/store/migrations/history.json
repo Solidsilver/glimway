@@ -128,5 +128,9 @@
   {
     "name": "032_purse_wardrobe.sql",
     "sha256": "f825679bee5cdbe86e2cb0ab9c6cf1c6bde0b37dd0fe4baed3175d24fe5added"
+  },
+  {
+    "name": "033_glims.sql",
+    "sha256": "c25295ae48dbeba4773c02b8d0a8d2ae2c6351a2b53feaab8657e3d473dff541"
   }
 ]

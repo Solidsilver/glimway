@@ -272,6 +272,8 @@ export enum ErrorCode {
   TIER_UNAVAILABLE = 50,
 
   /**
+   * Deprecated (0.6.1): no longer sent; insufficient-glims replaces it.
+   *
    * @generated from enum value: ERROR_CODE_INSUFFICIENT_EMBERS = 51;
    */
   INSUFFICIENT_EMBERS = 51,
@@ -1129,6 +1131,8 @@ export enum ErrorCode {
   TOP_UP_LIMIT = 221,
 
   /**
+   * Deprecated (0.6.1): no longer sent; insufficient-glims replaces it.
+   *
    * @generated from enum value: ERROR_CODE_INSUFFICIENT_GOLD = 222;
    */
   INSUFFICIENT_GOLD = 222,
@@ -1142,6 +1146,18 @@ export enum ErrorCode {
    * @generated from enum value: ERROR_CODE_GEAR_NOT_OWNED = 224;
    */
   GEAR_NOT_OWNED = 224,
+
+  /**
+   * 0.6.1 Glims (docs/design/silas-yard.md 1.7).
+   *
+   * @generated from enum value: ERROR_CODE_INSUFFICIENT_GLIMS = 225;
+   */
+  INSUFFICIENT_GLIMS = 225,
+
+  /**
+   * @generated from enum value: ERROR_CODE_TOP_UP_CAP = 226;
+   */
+  TOP_UP_CAP = 226,
 }
 
 /**

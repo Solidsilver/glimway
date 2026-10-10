@@ -48,9 +48,9 @@ func TestDevGrantGivesGlimwaysOwnThingsThroughTheStore(t *testing.T) {
 	var out struct {
 		State struct {
 			Version float64 `json:"version"`
-			Embers  struct {
+			Glims   struct {
 				Balance float64 `json:"balance"`
-			} `json:"embers"`
+			} `json:"glims"`
 		} `json:"state"`
 		Result struct {
 			Granted []devGranted `json:"granted"`
@@ -60,7 +60,7 @@ func TestDevGrantGivesGlimwaysOwnThingsThroughTheStore(t *testing.T) {
 		t.Fatal(err)
 	}
 	// The answer carries the new state, at a newer version, like any operation's.
-	if out.State.Embers.Balance < 100 || out.State.Version <= float64(before.Version) {
+	if out.State.Glims.Balance < 100 || out.State.Version <= float64(before.Version) {
 		t.Fatal("state", out.State)
 	}
 	if len(out.Result.Granted) != 5 || out.Result.Granted[3].Kind != "instance" || out.Result.Granted[4].Kind != "decoration" {

@@ -145,6 +145,8 @@ func SettleTopUp(ctx context.Context, tx *sql.Tx, t TopUp, out TopUpOutcome, now
 		// CreditGold moves the version; every other outcome moves it here
 		// (finding 6): `unconfirmed`, `not-moved` and `not-enough` change
 		// the purse on the wire just as much.
+		// G-B: credit amount/2 glims (two gold to a glim) and write the row's
+		// glims (silas-yard.md 1.5); this still credits the amount 1:1.
 		if err = CreditGold(ctx, tx, t.AccountID, t.Amount, reason, t.ID, now); err != nil {
 			return err
 		}
@@ -241,23 +243,21 @@ func CountedTopUps(ctx context.Context, tx *sql.Tx, account string, since int64)
 	return n, err
 }
 
-// PurseFor is the purse on every answer (PlayerState.purse): the gold
-// balance, what is left of today's two top-ups, and the top-up still
+// PurseFor is the purse on every answer (PlayerState.purse): what is left
+// of today's two top-ups, and the top-up still
 // working. The stale settle runs first (2.4), so a dead worker's row reads
 // as settled. dayStart is the UTC midnight of the counting day.
 func PurseFor(ctx context.Context, tx *sql.Tx, account string, now, dayStart int64) (*contract.Purse, error) {
 	if _, err := SettleStaleTopUps(ctx, tx, account, now); err != nil {
 		return nil, err
 	}
-	gold, err := GoldFor(ctx, tx, account)
-	if err != nil {
-		return nil, err
-	}
 	used, err := CountedTopUps(ctx, tx, account, dayStart)
 	if err != nil {
 		return nil, err
 	}
-	out := &contract.Purse{Gold: int32(min(gold, 1<<31-1)), TopUpsLeft: int32(max(0, TopUpsADay-used))}
+	// G-B: fill GlimsLeft, the day's 30-glim cap less today's moved,
+	// checking and unconfirmed top-ups (silas-yard.md 1.5).
+	out := &contract.Purse{TopUpsLeft: int32(max(0, TopUpsADay-used))}
 	working, err := WorkingTopUp(ctx, tx, account)
 	if err != nil {
 		return nil, err
@@ -308,7 +308,7 @@ func PurseTopUps(ctx context.Context, tx *sql.Tx, account string) ([]*contract.P
 }
 
 // PurseRead builds GET /api/purse (2.7): the purse, the last 50 top-ups and
-// the last 50 gold lines, every kind of them — a buy at a seller, a shelf
+// the last 50 log lines, every kind of them — a buy at a seller, a shelf
 // trade, a letter waiting or collected or come back, a gift by hand.
 func PurseRead(ctx context.Context, tx *sql.Tx, account string, now, dayStart int64) (*contract.PurseRead, error) {
 	purse, err := PurseFor(ctx, tx, account, now, dayStart)
@@ -326,9 +326,9 @@ func PurseRead(ctx context.Context, tx *sql.Tx, account string, now, dayStart in
 	return &contract.PurseRead{Purse: purse, TopUps: topUps, Lines: lines}, nil
 }
 
-// PurseLines maps the account's gold ledger rows onto the log (2.1): the
-// last 50, newest first. Gold only ever moves with one of these rows (3.5),
-// so the ledger is the log — Habitica keeps no record of a top-up and this
+// PurseLines maps the account's glim ledger rows onto the log (2.1): the
+// last 50, newest first. Glims only ever move with a ledger row (3.5), so
+// the ledger is the log — Habitica keeps no record of a top-up and this
 // is the only one.
 //
 // The reason is the ledger's own word (PurseLine.reason's vocabulary). The
@@ -337,7 +337,10 @@ func PurseRead(ctx context.Context, tx *sql.Tx, account string, now, dayStart in
 // for a shelf trade (either order), the other account for a give, and the
 // seller's id and good for a market buy (market.go's ref).
 func PurseLines(ctx context.Context, tx *sql.Tx, account string) ([]*contract.PurseLine, error) {
-	rows, err := tx.QueryContext(ctx, "SELECT created_at,delta,reason,ref FROM ledger WHERE account_id=? AND currency='"+itemmove.Gold()+"' ORDER BY created_at DESC,id DESC LIMIT 50", account)
+	// The lines 0.6's gold log read, now in glims, plus the 033 turn-in.
+	// G-B: which glim rows the Glim log shows (silas-yard.md 1.6: every
+	// top-up, spend, sale, letter and give).
+	rows, err := tx.QueryContext(ctx, "SELECT created_at,delta,reason,ref FROM ledger WHERE account_id=? AND currency='"+itemmove.Glims()+"' AND reason IN ('habitica-topup','purse-settle','market-buy','shelf-buy','shelf-sale','mail-send','mail-claim','mail-return','mail-recall','give','gift','currency-merge') ORDER BY created_at DESC,id DESC LIMIT 50", account)
 	if err != nil {
 		return nil, err
 	}
@@ -386,7 +389,7 @@ func PurseLines(ctx context.Context, tx *sql.Tx, account string) ([]*contract.Pu
 }
 
 // mailLine names the letter and its other end, and says where the letter is
-// now: waiting | collected | came-back (PurseLine.mail_state). The gold sits
+// now: waiting | collected | came-back (PurseLine.mail_state). The glims sit
 // in the letter between send and claim or return (3.3), so the state is the
 // mail row's, not the ledger's.
 func mailLine(ctx context.Context, tx *sql.Tx, account, mailID string, line *contract.PurseLine) error {
@@ -412,7 +415,7 @@ func mailLine(ctx context.Context, tx *sql.Tx, account, mailID string, line *con
 	if err != nil {
 		return err
 	}
-	line.MailId, line.OtherName, line.ItemDef, line.Qty = mailID, name, "gold", int32(qty)
+	line.MailId, line.OtherName, line.ItemDef, line.Qty = mailID, name, "glims", int32(qty)
 	switch {
 	case claimed.Valid:
 		line.MailState = "collected"
@@ -599,6 +602,7 @@ func (s *Store) SettleTopUpByOwner(ctx context.Context, id, outcome string, now 
 	if outcome == "moved" {
 		// CreditGold moves the version (finding 6); `not-moved` moves it
 		// here, because the purse changed on the wire all the same.
+		// G-B: amount/2 glims, as SettleTopUp.
 		if err = CreditGold(ctx, tx, t.AccountID, t.Amount, "purse-settle", id, now); err != nil {
 			return err
 		}

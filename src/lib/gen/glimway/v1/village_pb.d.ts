@@ -480,8 +480,8 @@ export declare type MailView = Message<"glimway.v1.MailView"> & {
   toName: string;
 
   /**
-   * A gold letter carries Asset { kind: "gold", id: "gold", qty: the
-   * amount }: display only. validAsset still refuses "gold" as something
+   * A glim letter carries Asset { kind: "glims", id: "glims", qty: the
+   * amount }: display only. validAsset still refuses "glims" as something
    * to take from a pack (3.3).
    *
    * @generated from field: glimway.v1.Asset asset = 7;
@@ -553,7 +553,7 @@ export declare type MailReadResultValid = MailReadResult;
 export declare const MailReadResultSchema: GenMessage<MailReadResult, {validType: MailReadResultValid}>;
 
 /**
- * POST /api/mail (send). A gold letter: `gold` set, `asset` absent — a
+ * POST /api/mail (send). A glim letter: `glims` set, `asset` absent — a
  * letter carries one thing (3.3, question 11). Both, or neither, is
  * invalid-request.
  *
@@ -581,9 +581,9 @@ export declare type MailSendRequest = Message<"glimway.v1.MailSendRequest"> & {
   asset?: Asset | undefined;
 
   /**
-   * @generated from field: int32 gold = 5;
+   * @generated from field: int32 glims = 6;
    */
-  gold: number;
+  glims: number;
 };
 
 export declare type MailSendRequestValid = MailSendRequest;
@@ -667,8 +667,8 @@ export declare type MailActionResult = Message<"glimway.v1.MailActionResult"> & 
   mailId: string;
 
   /**
-   * A gold letter's asset is Asset { kind: "gold", id: "gold", qty: the
-   * amount }, display only (3.3); validAsset still refuses "gold" as
+   * A glim letter's asset is Asset { kind: "glims", id: "glims", qty: the
+   * amount }, display only (3.3); validAsset still refuses "glims" as
    * something to take from a pack.
    *
    * @generated from field: glimway.v1.Asset asset = 2;
@@ -717,8 +717,8 @@ export declare type MailRecallResult = Message<"glimway.v1.MailRecallResult"> & 
   mailId: string;
 
   /**
-   * A gold letter's asset is Asset { kind: "gold", id: "gold", qty: the
-   * amount }, display only (3.3); validAsset still refuses "gold" as
+   * A glim letter's asset is Asset { kind: "glims", id: "glims", qty: the
+   * amount }, display only (3.3); validAsset still refuses "glims" as
    * something to take from a pack.
    *
    * @generated from field: glimway.v1.Asset asset = 2;
@@ -817,7 +817,7 @@ export declare type GateView = Message<"glimway.v1.GateView"> & {
   mine: boolean;
 
   /**
-   * Unclaimed: what the deed costs the caller in embers.
+   * Unclaimed: what the deed costs the caller in glims.
    *
    * @generated from field: google.protobuf.Int32Value price = 8;
    */

@@ -35,7 +35,7 @@ export function S(over: Over = {}): Record<string, any> {
   if (over.area) s.place.area = over.area;
   if (over.x !== undefined) s.place.x = over.x;
   if (over.y !== undefined) s.place.y = over.y;
-  if (over.balance !== undefined) s.embers.balance = over.balance;
+  if (over.balance !== undefined) s.glims.balance = over.balance;
   // A value set version may not pass the state version.
   s.version = Math.max(s.version, s.vitals.vitalsSetVersion, s.place.placeSetVersion);
   return s;
@@ -104,7 +104,7 @@ export function fakeServer() {
 /** Answers. */
 export const play = (state: Record<string, any>, lease = 'L1', generation = 'gen-1'): Answer => ({ body: { state, lease, reportGeneration: generation, reportClient: 'rc' } });
 export const env = (state: Record<string, any>, result: Record<string, unknown>): Answer => ({ body: { state, ...result } });
-export const stepOk = (state: Record<string, any>) => env(state, { questStep: { quest: 'lantern-road', step: state.story.quests['lantern-road'] ?? '', items: [], marks: [], papers: [], embers: 0, embersSpent: 0, taken: [], given: [] } });
+export const stepOk = (state: Record<string, any>) => env(state, { questStep: { quest: 'lantern-road', step: state.story.quests['lantern-road'] ?? '', items: [], marks: [], papers: [], glims: 0, glimsSpent: 0, taken: [], given: [] } });
 export const markOk = (state: Record<string, any>, mark: string) => env(state, { mark: { mark, added: true } });
 export const refuse = (code: string, state?: Record<string, any>, status = 409): Answer => ({ status, body: state ? { error: { code }, state } : { error: { code } } });
 /** A report answered as accepted, with the vitals the server kept. */

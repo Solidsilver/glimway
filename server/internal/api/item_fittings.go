@@ -38,7 +38,7 @@ func repairTool(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contrac
 		if !nearTile(s, m.GetArea(), int(m.GetTx()), int(m.GetTy()), int(m.GetRadiusTiles())) {
 			return fail(409, "too-far-away")
 		}
-		cost, embers = def.GetRepair().GetMender(), int(def.GetRepair().GetMenderEmbers())
+		cost, embers = def.GetRepair().GetMender(), int(def.GetRepair().GetMenderGlims())
 	}
 	if err = checkMaterials(ctx, tx, s.AccountID, cost); err != nil {
 		return err

@@ -42,10 +42,10 @@ type Homestead struct {
 	OutdoorReserved []*HomeRect   `protobuf:"bytes,5,rep,name=outdoor_reserved,json=outdoorReserved,proto3" json:"outdoor_reserved,omitempty"`
 	IndoorReserved  []*HomeRect   `protobuf:"bytes,6,rep,name=indoor_reserved,json=indoorReserved,proto3" json:"indoor_reserved,omitempty"`
 	LanternPosts    *LanternPosts `protobuf:"bytes,7,opt,name=lantern_posts,json=lanternPosts,proto3" json:"lantern_posts,omitempty"`
-	// Deeding: the first deed is free, then it costs embers.
+	// Deeding: the first deed is free, then it costs glims.
 	Deeds *HomesteadDeeds `protobuf:"bytes,8,opt,name=deeds,proto3" json:"deeds,omitempty"`
-	// Clearing one wild tile costs embers.
-	ClearTileEmbers int32 `protobuf:"varint,9,opt,name=clear_tile_embers,json=clearTileEmbers,proto3" json:"clear_tile_embers,omitempty"`
+	// Clearing one wild tile costs glims.
+	ClearTileGlims int32 `protobuf:"varint,9,opt,name=clear_tile_glims,json=clearTileGlims,proto3" json:"clear_tile_glims,omitempty"`
 	// Neglect: how long away turns the land desolate, then loses the deed.
 	Desolation *HomesteadDesolation `protobuf:"bytes,10,opt,name=desolation,proto3" json:"desolation,omitempty"`
 	// A joint deed's confirmation window and invite lifetime.
@@ -146,9 +146,9 @@ func (x *Homestead) GetDeeds() *HomesteadDeeds {
 	return nil
 }
 
-func (x *Homestead) GetClearTileEmbers() int32 {
+func (x *Homestead) GetClearTileGlims() int32 {
 	if x != nil {
-		return x.ClearTileEmbers
+		return x.ClearTileGlims
 	}
 	return 0
 }
@@ -323,7 +323,7 @@ type HomeTier struct {
 	Id          string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
 	Name        string                 `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
 	Purchasable bool                   `protobuf:"varint,4,opt,name=purchasable,proto3" json:"purchasable,omitempty"`
-	Embers      int32                  `protobuf:"varint,5,opt,name=embers,proto3" json:"embers,omitempty"`
+	Glims       int32                  `protobuf:"varint,5,opt,name=glims,proto3" json:"glims,omitempty"`
 	// The Workshop's material bill (the only priced-in-materials tier);
 	// checked against the wilds catalogue in code.
 	Materials     map[string]int32 `protobuf:"bytes,6,rep,name=materials,proto3" json:"materials,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
@@ -389,9 +389,9 @@ func (x *HomeTier) GetPurchasable() bool {
 	return false
 }
 
-func (x *HomeTier) GetEmbers() int32 {
+func (x *HomeTier) GetGlims() int32 {
 	if x != nil {
-		return x.Embers
+		return x.Glims
 	}
 	return 0
 }
@@ -994,7 +994,7 @@ func (x *MaterialBill) GetMaterials() map[string]int32 {
 type HomesteadDeeds struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	FirstFree     bool                   `protobuf:"varint,1,opt,name=first_free,json=firstFree,proto3" json:"first_free,omitempty"`
-	Embers        int32                  `protobuf:"varint,2,opt,name=embers,proto3" json:"embers,omitempty"`
+	Glims         int32                  `protobuf:"varint,2,opt,name=glims,proto3" json:"glims,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1036,9 +1036,9 @@ func (x *HomesteadDeeds) GetFirstFree() bool {
 	return false
 }
 
-func (x *HomesteadDeeds) GetEmbers() int32 {
+func (x *HomesteadDeeds) GetGlims() int32 {
 	if x != nil {
-		return x.Embers
+		return x.Glims
 	}
 	return 0
 }
@@ -1203,7 +1203,7 @@ type HomeItem struct {
 	Footprint []int32                `protobuf:"varint,4,rep,packed,name=footprint,proto3" json:"footprint,omitempty"`
 	Where     []string               `protobuf:"bytes,5,rep,name=where,proto3" json:"where,omitempty"`
 	MinTier   int32                  `protobuf:"varint,6,opt,name=min_tier,json=minTier,proto3" json:"min_tier,omitempty"`
-	Embers    int32                  `protobuf:"varint,7,opt,name=embers,proto3" json:"embers,omitempty"`
+	Glims     int32                  `protobuf:"varint,7,opt,name=glims,proto3" json:"glims,omitempty"`
 	// The purchase bill (at most three lines): Wilds materials or any
 	// carried material in the items catalogue — checked in code.
 	Materials map[string]int32 `protobuf:"bytes,8,rep,name=materials,proto3" json:"materials,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value"`
@@ -1288,9 +1288,9 @@ func (x *HomeItem) GetMinTier() int32 {
 	return 0
 }
 
-func (x *HomeItem) GetEmbers() int32 {
+func (x *HomeItem) GetGlims() int32 {
 	if x != nil {
-		return x.Embers
+		return x.Glims
 	}
 	return 0
 }
@@ -1320,7 +1320,7 @@ var File_glimway_content_v1_homestead_proto protoreflect.FileDescriptor
 
 const file_glimway_content_v1_homestead_proto_rawDesc = "" +
 	"\n" +
-	"\"glimway/content/v1/homestead.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\x8a\n" +
+	"\"glimway/content/v1/homestead.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\x88\n" +
 	"\n" +
 	"\tHomestead\x12>\n" +
 	"\x05tiers\x18\x01 \x03(\v2\x1c.glimway.content.v1.HomeTierB\n" +
@@ -1331,8 +1331,8 @@ const file_glimway_content_v1_homestead_proto_rawDesc = "" +
 	"\x10outdoor_reserved\x18\x05 \x03(\v2\x1c.glimway.content.v1.HomeRectB\b\xbaH\x05\x92\x01\x02\b\x01R\x0foutdoorReserved\x12O\n" +
 	"\x0findoor_reserved\x18\x06 \x03(\v2\x1c.glimway.content.v1.HomeRectB\b\xbaH\x05\x92\x01\x02\b\x01R\x0eindoorReserved\x12M\n" +
 	"\rlantern_posts\x18\a \x01(\v2 .glimway.content.v1.LanternPostsB\x06\xbaH\x03\xc8\x01\x01R\flanternPosts\x12@\n" +
-	"\x05deeds\x18\b \x01(\v2\".glimway.content.v1.HomesteadDeedsB\x06\xbaH\x03\xc8\x01\x01R\x05deeds\x123\n" +
-	"\x11clear_tile_embers\x18\t \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x0fclearTileEmbers\x12O\n" +
+	"\x05deeds\x18\b \x01(\v2\".glimway.content.v1.HomesteadDeedsB\x06\xbaH\x03\xc8\x01\x01R\x05deeds\x121\n" +
+	"\x10clear_tile_glims\x18\t \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x0eclearTileGlims\x12O\n" +
 	"\n" +
 	"desolation\x18\n" +
 	" \x01(\v2'.glimway.content.v1.HomesteadDesolationB\x06\xbaH\x03\xc8\x01\x01R\n" +
@@ -1364,13 +1364,13 @@ const file_glimway_content_v1_homestead_proto_rawDesc = "" +
 	"\x06height\x18\x02 \x01(\x05B\n" +
 	"\xbaH\a\xc8\x01\x01\x1a\x02(\x01H\x01R\x06height\x88\x01\x01B\b\n" +
 	"\x06_widthB\t\n" +
-	"\a_height\"\xa9\x02\n" +
+	"\a_height\"\xa7\x02\n" +
 	"\bHomeTier\x12\x12\n" +
 	"\x04tier\x18\x01 \x01(\x05R\x04tier\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x12\x1b\n" +
 	"\x04name\x18\x03 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12 \n" +
-	"\vpurchasable\x18\x04 \x01(\bR\vpurchasable\x12\x1f\n" +
-	"\x06embers\x18\x05 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x06embers\x12[\n" +
+	"\vpurchasable\x18\x04 \x01(\bR\vpurchasable\x12\x1d\n" +
+	"\x05glims\x18\x05 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x05glims\x12[\n" +
 	"\tmaterials\x18\x06 \x03(\v2+.glimway.content.v1.HomeTier.MaterialsEntryB\x10\xbaH\r\x9a\x01\n" +
 	"*\b\x1a\x06\x18\xc0\x84=(\x01R\tmaterials\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
@@ -1459,11 +1459,11 @@ const file_glimway_content_v1_homestead_proto_rawDesc = "" +
 	"\tmaterials\x18\x01 \x03(\v2/.glimway.content.v1.MaterialBill.MaterialsEntryB\x12\xbaH\x0f\x9a\x01\f\b\x01*\b\x1a\x06\x18\xc0\x84=(\x01R\tmaterials\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"P\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01\"N\n" +
 	"\x0eHomesteadDeeds\x12\x1d\n" +
 	"\n" +
-	"first_free\x18\x01 \x01(\bR\tfirstFree\x12\x1f\n" +
-	"\x06embers\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x06embers\"\x88\x01\n" +
+	"first_free\x18\x01 \x01(\bR\tfirstFree\x12\x1d\n" +
+	"\x05glims\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x05glims\"\x88\x01\n" +
 	"\x13HomesteadDesolation\x127\n" +
 	"\x13desolate_after_days\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x11desolateAfterDays\x128\n" +
 	"\x14deed_lost_after_days\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x11deedLostAfterDays\">\n" +
@@ -1471,15 +1471,15 @@ const file_glimway_content_v1_homestead_proto_rawDesc = "" +
 	"\tmax_units\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\bmaxUnits\"\x7f\n" +
 	"\x12HomesteadJointDeed\x12=\n" +
 	"\x16confirm_window_seconds\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x05R\x14confirmWindowSeconds\x12*\n" +
-	"\finvite_hours\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\vinviteHours\"\x89\a\n" +
+	"\finvite_hours\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\vinviteHours\"\x85\a\n" +
 	"\bHomeItem\x12)\n" +
 	"\x02id\x18\x01 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12<\n" +
 	"\bcategory\x18\x03 \x01(\tB \xbaH\x1dr\x1bR\tfurnitureR\x05decorR\autilityR\bcategory\x12\x1c\n" +
 	"\tfootprint\x18\x04 \x03(\x05R\tfootprint\x12\x14\n" +
 	"\x05where\x18\x05 \x03(\tR\x05where\x12$\n" +
-	"\bmin_tier\x18\x06 \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x04(\x00R\aminTier\x12\x1f\n" +
-	"\x06embers\x18\a \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x06embers\x12]\n" +
+	"\bmin_tier\x18\x06 \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x04(\x00R\aminTier\x12\x1d\n" +
+	"\x05glims\x18\a \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x05glims\x12]\n" +
 	"\tmaterials\x18\b \x03(\v2+.glimway.content.v1.HomeItem.MaterialsEntryB\x12\xbaH\x0f\x9a\x01\f\x10\x03*\b\x1a\x06\x18\xc0\x84=(\x01R\tmaterials\x12\"\n" +
 	"\n" +
 	"craft_only\x18\t \x01(\bH\x00R\tcraftOnly\x88\x01\x01\x12\x1f\n" +
@@ -1487,8 +1487,8 @@ const file_glimway_content_v1_homestead_proto_rawDesc = "" +
 	" \x01(\bH\x01R\bbuilding\x88\x01\x01\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01:\x86\x03\xbaH\x82\x03\x1a\x88\x01\n" +
-	"\x0fhome_item.price\x12Ha home good is priced in embers, in materials, or in both; never neither\x1a+this.embers > 0 || size(this.materials) > 0\x1a\xf4\x01\n" +
+	"\x05value\x18\x02 \x01(\x05R\x05value:\x028\x01:\x84\x03\xbaH\x80\x03\x1a\x86\x01\n" +
+	"\x0fhome_item.price\x12Ga home good is priced in glims, in materials, or in both; never neither\x1a*this.glims > 0 || size(this.materials) > 0\x1a\xf4\x01\n" +
 	"\x0fhome_item.where\x12;where is one or two distinct scenes (indoor, outdoor, gate)\x1a\xa3\x01size(this.where) > 0 && size(this.where) <= 2 && this.where.all(w, w in [\"indoor\", \"outdoor\", \"gate\"]) && (size(this.where) == 1 || this.where[0] != this.where[1])B\r\n" +
 	"\v_craft_onlyB\v\n" +
 	"\t_buildingB*Z(glimway/gen/glimway/content/v1;contentv1b\x06proto3"

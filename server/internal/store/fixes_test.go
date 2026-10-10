@@ -130,7 +130,7 @@ func TestUpgradePreservesOldPendingAndInviteExpiry(t *testing.T) {
 	defer s.Close()
 	var xp float64
 	var embers int
-	if err = s.DB.QueryRow("SELECT reported_xp,embers FROM pending_credits WHERE account_id='alice'").Scan(&xp, &embers); err != nil || xp != 10080 || embers != 337 {
+	if err = s.DB.QueryRow("SELECT reported_xp,glims FROM pending_credits WHERE account_id='alice'").Scan(&xp, &embers); err != nil || xp != 10080 || embers != 337 {
 		t.Fatal("old pending lost on upgrade")
 	}
 	var expires int64

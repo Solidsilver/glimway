@@ -24,7 +24,9 @@ import (
 // DevGrantPath is the route's path.
 const DevGrantPath = "/api/dev/grant"
 
-// Embers is the grant id for embers (not an item).
+// Embers is the grant id for embers (not an item). It credits glims.
+// G-B: the grant id and these names become glims (with the dev panel's,
+// src/ui/dev/grantables.ts).
 const devEmbers = "embers"
 
 // Caps per grant, and per request.

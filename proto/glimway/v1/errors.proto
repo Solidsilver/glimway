@@ -56,6 +56,7 @@ enum ErrorCode {
   ERROR_CODE_LANTERN_NOT_FOUND = 48;
   ERROR_CODE_TIER_REQUIRED = 49;
   ERROR_CODE_TIER_UNAVAILABLE = 50;
+  // Deprecated (0.6.1): no longer sent; insufficient-glims replaces it.
   ERROR_CODE_INSUFFICIENT_EMBERS = 51;
   ERROR_CODE_INSUFFICIENT_MATERIALS = 52;
   ERROR_CODE_ALREADY_PLACED = 53;
@@ -228,7 +229,11 @@ enum ErrorCode {
   // 0.6 The purse and the wardrobe (docs/design/purse-and-wardrobe.md 6.1).
   ERROR_CODE_PURSE_BUSY = 220;
   ERROR_CODE_TOP_UP_LIMIT = 221;
+  // Deprecated (0.6.1): no longer sent; insufficient-glims replaces it.
   ERROR_CODE_INSUFFICIENT_GOLD = 222;
   ERROR_CODE_OWN_STOCK = 223;
   ERROR_CODE_GEAR_NOT_OWNED = 224;
+  // 0.6.1 Glims (docs/design/silas-yard.md 1.7).
+  ERROR_CODE_INSUFFICIENT_GLIMS = 225;
+  ERROR_CODE_TOP_UP_CAP = 226;
 }

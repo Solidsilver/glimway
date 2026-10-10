@@ -36,8 +36,8 @@ type Fields<M> = Omit<M, '$typeName' | '$unknown' | 'op' | 'where'>;
 export type StorageMoveAction = { direction: 'deposit' | 'withdraw'; asset: Asset; chest?: ChestId };
 /** `price`: gold, with `stock` (0 or absent: a free gift); `buy` pays it (purse-and-wardrobe.md 3.2). */
 export type ShelfAction = { action: 'stock' | 'take' | 'buy'; gate: number; slot: number; asset?: Asset; price?: number };
-/** A letter carries one thing: a parcel (`asset`) or gold from the purse (`gold`), never both (3.3). */
-export type MailSendAction = { toId: string; asset: Asset } | { toId: string; gold: number };
+/** A letter carries one thing: a parcel (`asset`) or glims (`glims`), never both (3.3). */
+export type MailSendAction = { toId: string; asset: Asset } | { toId: string; glims: number };
 /** What an item mutation carries: any of the grab-bag request's fields but the header. */
 export type ItemsFields = Partial<Fields<ItemsRequest>>;
 

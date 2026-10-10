@@ -186,11 +186,11 @@ message ItemDef {
 message ItemRepair {
   map<string, int32> bench = 1 [(buf.validate.field).map = {min_pairs: 1, values: {int32: {gte: 1, lte: 1000000}}}];
   // The mender's bill may be absent — or present and empty; the two mean
-  // the same (no materials, embers pay). Its ranges still hold when entries
-  // are there. "Neither mender materials nor embers" is a code rule
+  // the same (no materials, glims pay). Its ranges still hold when entries
+  // are there. "Neither mender materials nor glims" is a code rule
   // (item_def ... repair cost), identical in both loaders.
   map<string, int32> mender = 2 [(buf.validate.field).map.values.int32 = {gte: 1, lte: 1000000}];
-  optional int32 mender_embers = 3 [(buf.validate.field).int32.gte = 0];
+  optional int32 mender_glims = 3 [(buf.validate.field).int32.gte = 0];
 }
 
 // One small, typed help. Which types are allowed depends on where the
@@ -244,34 +244,20 @@ message ItemPickup {
   string found = 9 [(buf.validate.field).string.min_len = 1];
 }
 
-// One thing a seller sells (for embers, for gold, or for both), and what
-// it says. A good is priced in embers, in gold, or in both — the two rules
-// at the top are that, and that a gold price carries its label.
+// One thing a seller sells, for one price in glims (0.6.1: the gold price
+// and its label went; docs/design/silas-yard.md 1.7), and what it says.
 message ItemGood {
-  option (buf.validate.message).cel = {
-    id: "good.price"
-    message: "a good needs a price: embers, gold, or both"
-    expression: "this.embers > 0 || has(this.gold)"
-  };
-  option (buf.validate.message).cel = {
-    id: "good.gold_label"
-    message: "a gold price carries its label, and only a gold price does"
-    expression: "has(this.gold) == has(this.gold_label)"
-  };
+  reserved 7, 8; reserved "gold", "gold_label";
   // The item sold: a carried stack — checked in code.
   string item = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
   int32 qty = 2 [(buf.validate.field).int32 = {gte: 1, lte: 100}];
-  // Embers: 0..1000 (0 = not for embers; it was 1..1000 before gold).
-  int32 embers = 3 [(buf.validate.field).int32 = {gte: 0, lte: 1000}];
-  // The most one player can buy of it a day (0: no cap). Caps count both
-  // currencies together.
+  // Its price in glims: 1..1000.
+  int32 glims = 3 [(buf.validate.field).int32 = {gte: 1, lte: 1000}];
+  // The most one player can buy of it a day (0: no cap).
   optional int32 cap = 4 [(buf.validate.field).int32 = {gte: 0, lte: 1000}];
-  // The ember choice's label ("Buy a lump of tallow · 1 ember").
+  // The choice's label ("Buy a lump of tallow · 1 glim").
   string label = 5 [(buf.validate.field).string = {min_len: 1, max_len: 80}];
   string line = 6 [(buf.validate.field).string = {min_len: 1, max_len: 160}];
-  // A price in gold (0.6, 3.1): 1..100,000. Its choice's label follows.
-  optional int32 gold = 7 [(buf.validate.field).int32 = {gte: 1, lte: 100000}];
-  optional string gold_label = 8 [(buf.validate.field).string = {min_len: 1, max_len: 80}];
 }
 
 // A person or stall in the world who sells goods: a named resident at

@@ -146,7 +146,7 @@ async function syncEmberBalance(page: Page): Promise<number> {
   ])
   expect(response.ok()).toBe(true)
   // An operation envelope: the state is the server's PlayerState.
-  return (await response.json()).state.embers.balance as number
+  return (await response.json()).state.glims.balance as number
 }
 
 /** Read an open conversation (one the world opened on its own) to its end. */

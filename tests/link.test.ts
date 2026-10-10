@@ -81,7 +81,7 @@ test('a gated quest step waits for the world: nothing predicted before its answe
   const answered = S({ version: 2 });
   answered.story.quests = { signpost: 'light-first-lamp', 'set-to-rise': 'hear-hazel' };
   const release = r.server.hold('POST /api/quest/step');
-  r.server.on('POST /api/quest/step', env(answered, { questStep: { quest: 'set-to-rise', step: 'hear-hazel', items: [], marks: [], papers: [], embers: 0, embersSpent: 0, taken: [], given: [] } }));
+  r.server.on('POST /api/quest/step', env(answered, { questStep: { quest: 'set-to-rise', step: 'hear-hazel', items: [], marks: [], papers: [], glims: 0, glimsSpent: 0, taken: [], given: [] } }));
   const done = r.link.questStep('set-to-rise', 'hear-hazel', { server: true });
   await tick();
   assert.equal(r.session.state.quests['set-to-rise'], undefined, 'not shown before the answer');

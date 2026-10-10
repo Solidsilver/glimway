@@ -209,9 +209,9 @@ export declare type QuestStep = Message<"glimway.content.v1.QuestStep"> & {
   papers: string[];
 
   /**
-   * @generated from field: int32 embers = 6;
+   * @generated from field: int32 glims = 6;
    */
-  embers: number;
+  glims: number;
 
   /**
    * @generated from field: string witness = 7;
@@ -296,9 +296,9 @@ export declare type QuestStepValid = Message<"glimway.content.v1.QuestStep"> & {
   papers: string[];
 
   /**
-   * @generated from field: int32 embers = 6;
+   * @generated from field: int32 glims = 6;
    */
-  embers: number;
+  glims: number;
 
   /**
    * @generated from field: string witness = 7;
@@ -484,7 +484,7 @@ export declare const QuestWaitSchema: GenMessage<QuestWait, {validType: QuestWai
 
 /**
  * What a step's gate asks: at least one of someone to meet, a wait, an
- * item or an ember cost. The person is checked in code; a wait on a
+ * item or a glim cost. The person is checked in code; a wait on a
  * quest's first step is refused in code (there is nothing to wait from).
  *
  * @generated from message glimway.content.v1.QuestGate
@@ -506,14 +506,14 @@ export declare type QuestGate = Message<"glimway.content.v1.QuestGate"> & {
   item?: QuestGateItem | undefined;
 
   /**
-   * @generated from field: optional int32 embers = 4;
+   * @generated from field: optional int32 glims = 4;
    */
-  embers?: number | undefined;
+  glims?: number | undefined;
 };
 
 /**
  * What a step's gate asks: at least one of someone to meet, a wait, an
- * item or an ember cost. The person is checked in code; a wait on a
+ * item or a glim cost. The person is checked in code; a wait on a
  * quest's first step is refused in code (there is nothing to wait from).
  *
  * @generated from message glimway.content.v1.QuestGate
@@ -535,9 +535,9 @@ export declare type QuestGateValid = Message<"glimway.content.v1.QuestGate"> & {
   item?: QuestGateItemValid | undefined;
 
   /**
-   * @generated from field: optional int32 embers = 4;
+   * @generated from field: optional int32 glims = 4;
    */
-  embers?: number | undefined;
+  glims?: number | undefined;
 };
 
 /**

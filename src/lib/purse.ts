@@ -69,7 +69,9 @@ export function topUpView(t: PurseTopUp): TopUpView {
 export function purseOf(state: Pick<PlayerState, 'purse'> | null | undefined): PurseView {
   const p = state?.purse;
   if (!p) return { ...EMPTY_PURSE };
-  return { gold: Math.max(0, p.gold), topUpsLeft: Math.max(0, p.topUpsLeft), working: p.working ? topUpView(p.working) : null };
+  // G-C: the purse's gold balance left the wire (glims are the one
+  // balance, silas-yard.md 1.6); the purse UI goes with it.
+  return { gold: 0, topUpsLeft: Math.max(0, p.topUpsLeft), working: p.working ? topUpView(p.working) : null };
 }
 
 /** The gold the sync's own read saw on Habitica (`stats.gp`, floored), or null when it carried none. */
@@ -227,30 +229,20 @@ export interface SellerChoice {
   action: string;
 }
 
-/**
- * A seller's choices (3.1): the ember label, then the gold one, for every
- * good priced that way. A gold choice's action ends in `:gold`.
- */
+/** A seller's choices: one per good, at its one price in glims (silas-yard.md 1.7). */
 export function sellerChoices(seller: Pick<ItemSeller, 'id' | 'goods'>, opts: { reply?: boolean } = {}): SellerChoice[] {
   const out: SellerChoice[] = [];
   for (const g of seller.goods) {
     const reply = opts.reply ? { reply: [g.line] } : {};
-    if (g.embers > 0) out.push({ text: g.label, ...reply, action: `buy:${seller.id}:${g.item}` });
-    if (g.gold !== undefined && g.goldLabel) out.push({ text: g.goldLabel, ...reply, action: `buy:${seller.id}:${g.item}:gold` });
+    out.push({ text: g.label, ...reply, action: `buy:${seller.id}:${g.item}` });
   }
   return out;
 }
 
-/** A buy action's parts: `buy:<seller>:<good>[:gold]` (the prefix already taken off). */
-export function parseBuy(rest: string): { seller: string; good: string; pay: 'embers' | 'gold' } | null {
-  const [seller, good, pay] = rest.split(':');
-  if (!seller || !good) return null;
-  if (pay !== undefined && pay !== 'gold') return null;
-  return { seller, good, pay: pay === 'gold' ? 'gold' : 'embers' };
+/** A buy action's parts: `buy:<seller>:<good>` (the prefix already taken off). */
+export function parseBuy(rest: string): { seller: string; good: string } | null {
+  const [seller, good, more] = rest.split(':');
+  if (!seller || !good || more !== undefined) return null;
+  return { seller, good };
 }
 
-/** A good's gold price (null: not for gold). */
-export function goldPrice(sellerId: string, item: string): number | null {
-  const g = ITEMS.sellers?.find((s) => s.id === sellerId)?.goods.find((x) => x.item === item);
-  return g?.gold ?? null;
-}

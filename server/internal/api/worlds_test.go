@@ -883,7 +883,7 @@ func TestWorldMoveLeavingWarnings(t *testing.T) {
 	x.opRefreshing(hc, &h, "fit", map[string]any{"tool": axe, "instance": sliver}, 200)
 	h.Snapshot = x.p5("POST", "/api/storage", body(h, "rack", map[string]any{"direction": "deposit", "asset": content.Asset{Kind: "instance", Id: "bench-axe", Qty: 1, Instance: axe}}), hc, 200).Snapshot
 	v := x.worldReq("GET", "/api/world", nil, hc, 200)
-	if v.Leaving.WardenTools != 1 || v.Leaving.DeedCost != int(content.HomeRules.GetDeeds().GetEmbers()) || v.Leaving.DeedCost == 0 {
+	if v.Leaving.WardenTools != 1 || v.Leaving.DeedCost != int(content.HomeRules.GetDeeds().GetGlims()) || v.Leaving.DeedCost == 0 {
 		t.Fatal("leaving warnings", v.raw)
 	}
 }

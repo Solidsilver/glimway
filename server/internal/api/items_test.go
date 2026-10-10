@@ -48,11 +48,10 @@ type itemsResponse struct {
 			Seller  string `json:"seller"`
 			ItemDef string `json:"itemDef"`
 			Qty     int    `json:"qty"`
-			Embers  int    `json:"embers"`
-			Gold    int    `json:"gold"`
+			Glims   int    `json:"glims"`
 		} `json:"bought"`
-		// give: the gold handed over (3.4).
-		GoldGiven int `json:"goldGiven"`
+		// give: the glims handed over (3.4).
+		GlimsGiven int `json:"glimsGiven"`
 	} `json:"result"`
 	Error struct {
 		Code string `json:"code"`
@@ -513,7 +512,7 @@ func TestItemsGiveRaces(t *testing.T) {
 				defer wg.Done()
 				<-start
 				r := httptest.NewRequest("POST", "/api/items/give", bytes.NewBufferString(store.JSON(b)))
-				r.Header.Set("X-Glimway-Contract", "6")
+				r.Header.Set("X-Glimway-Contract", "7")
 				r.Header.Set("Content-Type", "application/json")
 				r.AddCookie(c)
 				w := httptest.NewRecorder()

@@ -234,7 +234,7 @@ func CreditXP(mark *float64, p Profile) Credit {
 		return c
 	}
 	c.XP = math.Floor(now - *mark + .5)
-	c.Embers = int(math.Floor(now/float64(int(E.GetXpPerEmber()))) - math.Floor(*mark/float64(int(E.GetXpPerEmber()))))
+	c.Embers = int(math.Floor(now/float64(int(E.GetXpPerGlim()))) - math.Floor(*mark/float64(int(E.GetXpPerGlim()))))
 	c.Mark = &now
 	return c
 }
@@ -256,9 +256,9 @@ func Welcome(s State) (State, int) {
 	if slices.Contains(s.Flags, "embers:welcome") {
 		return s, 0
 	}
-	s.Embers += int(E.GetWelcomeEmbers())
+	s.Embers += int(E.GetWelcomeGlims())
 	s.Flags = AddUnique(s.Flags, "embers:welcome")
-	return s, int(E.GetWelcomeEmbers())
+	return s, int(E.GetWelcomeGlims())
 }
 
 type Save struct {

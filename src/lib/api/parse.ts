@@ -57,7 +57,7 @@ export function parseSnapshot(raw: unknown): Snapshot {
     try {
       const p = decodePlayerState(o.state);
       const importedProfile = profileOf(p);
-      return { state: gameStateOf(p), player: p, rev: p.version, accountId: p.account!.accountId, displayName: p.account!.displayName, habiticaPartyId: p.account!.partyId ?? null, worldId: p.account!.worldId, vitalsSource: importedProfile ? 'imported' : 'demo', pending: p.embers!.pending, verifiedXp: p.embers!.verifiedXp, flagged: p.account!.flagged, ...(importedProfile ? { importedProfile } : {}) };
+      return { state: gameStateOf(p), player: p, rev: p.version, accountId: p.account!.accountId, displayName: p.account!.displayName, habiticaPartyId: p.account!.partyId ?? null, worldId: p.account!.worldId, vitalsSource: importedProfile ? 'imported' : 'demo', pending: p.glims!.pending, verifiedXp: p.glims!.verifiedXp, flagged: p.account!.flagged, ...(importedProfile ? { importedProfile } : {}) };
     } catch { throw new ApiError('bad-response'); }
   }
   let state;

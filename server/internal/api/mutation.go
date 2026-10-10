@@ -59,7 +59,7 @@ func currency(ctx context.Context, tx *sql.Tx, id, currency string, delta int, r
 }
 func debitEmbers(ctx context.Context, tx *sql.Tx, s *store.Snapshot, n int, reason, ref string, now int64) error {
 	if s.State.Embers < n {
-		return fail(409, "insufficient-embers")
+		return fail(409, "insufficient-glims")
 	}
 	earned := max(0, n-(s.State.Embers-s.State.XPEmbers))
 	return store.Credit(ctx, tx, s, -n, -earned, reason, ref, nil, now)

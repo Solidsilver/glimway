@@ -41,7 +41,7 @@ for (const [family, base, vectors, validate] of families) {
 
 test('the shipped tables load through the schemas', () => {
   assert.equal(VITALS.regenCap, 16);
-  assert.equal(CONTRACT_NUMBER, 6);
+  assert.equal(CONTRACT_NUMBER, 7);
   assert.equal(STORY.namespaces.find(n => n.prefix === 'paper:')?.writer, 'server');
   // The reshaped ids read back as the map of maps the client speaks.
   assert.equal(STORY.ids['defeated:']?.['stone-warden'], 'ruin');

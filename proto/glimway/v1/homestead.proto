@@ -45,7 +45,7 @@ message ShelfSlot {
   int32 slot = 1; string kind = 2; string item_def = 3; int32 qty = 4;
   Maker maker = 5; google.protobuf.StringValue instance = 6;
   string stocked_by = 7; double stocked_at = 8;
-  // A price in gold (0.6, 3.2): 0 is a free gift as before.
+  // A price in glims (0.6.1; gold in 0.6, 3.2): 0 is a free gift as before.
   int32 price = 9;
 }
 message ShelfView {
@@ -57,7 +57,7 @@ message ShelfRead { ShelfView shelf = 1; }
 message ShelfRequest {
   OpHeader op = 1; Where where = 2;
   string action = 3; int32 gate = 4; int32 slot = 5; Asset asset = 6;
-  // stock: the price in gold for the slot (0–9,999; 0 stocks a free gift).
+  // stock: the price in glims for the slot (0–9,999; 0 stocks a free gift).
   int32 price = 7;
 }
 message ShelfResult {

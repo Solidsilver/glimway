@@ -255,7 +255,7 @@ func deedPrice(ctx context.Context, tx *sql.Tx, player, world string, gate int) 
 	if content.HomeRules.GetDeeds().GetFirstFree() && deeds == 0 && lost == 0 {
 		return 0, nil
 	}
-	return int(content.HomeRules.GetDeeds().GetEmbers()), nil
+	return int(content.HomeRules.GetDeeds().GetGlims()), nil
 }
 
 func addDeed(ctx context.Context, tx *sql.Tx, player string) error {
@@ -348,7 +348,7 @@ func upgradeHome(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView,
 		return fail(409, "tier-unavailable")
 	}
 	t := tiers[req.Tier.GetValue()]
-	if err := debitEmbers(ctx, tx, s, int(t.GetEmbers()), "homestead-upgrade", t.GetId(), now); err != nil {
+	if err := debitEmbers(ctx, tx, s, int(t.GetGlims()), "homestead-upgrade", t.GetId(), now); err != nil {
 		return err
 	}
 	if err := debitMaterials(ctx, tx, s, t.GetMaterials(), 1, "homestead-upgrade", t.GetId(), now); err != nil {
@@ -402,8 +402,8 @@ func buyItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, req
 		// shortfall in either refuses the buy with the error that currency
 		// owes. A refused buy keeps nothing: the keyed operation rolls its
 		// gameplay savepoint back.
-		if def.GetEmbers() > 0 {
-			if err := debitEmbers(ctx, tx, s, int(def.GetEmbers()), "homestead-buy", def.GetId(), now); err != nil {
+		if def.GetGlims() > 0 {
+			if err := debitEmbers(ctx, tx, s, int(def.GetGlims()), "homestead-buy", def.GetId(), now); err != nil {
 				return "", err
 			}
 		}

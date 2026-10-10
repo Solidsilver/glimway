@@ -735,7 +735,7 @@ export class Link {
     const r = await this.read(() => this.api.run(() => this.ops.purse()))
     if (r.ok && r.value.purse && this.server) {
       const held = this.server.purse
-      if (!held || held.gold !== r.value.purse.gold || held.topUpsLeft !== r.value.purse.topUpsLeft || (!!held.working !== !!r.value.purse.working)) void this.refreshState()
+      if (!held || held.glimsLeft !== r.value.purse.glimsLeft || held.topUpsLeft !== r.value.purse.topUpsLeft || (!!held.working !== !!r.value.purse.working)) void this.refreshState()
     }
     return r
   }
@@ -1220,7 +1220,7 @@ export class Link {
     else this.refresh()
     const stored = await this.dispositionSaved()
     // A step's gift (paid once, by the server): the toast follows its answer.
-    const gift = head.kind === 'quest-step' && (result as { case?: string; value?: { embers?: number } })?.case === 'questStep' ? (result as { value: { embers: number } }).value.embers : 0
+    const gift = head.kind === 'quest-step' && (result as { case?: string; value?: { glims?: number } })?.case === 'questStep' ? (result as { value: { glims: number } }).value.glims : 0
     if (gift > 0) this.emitter(EV.toast, { text: `+${gift} embers — a little warmth from the road.`, icon: 'ember' })
     this.notify(head, { ok: true, state, result })
     return stored

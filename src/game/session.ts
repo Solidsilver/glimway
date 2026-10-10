@@ -286,7 +286,7 @@ export class Session {
     const s = this.state
     const ctx = { area: placeArea(s), flags: s.flags, defeated: s.defeatedEnemies, carrying: (def: string) => this.carrying(def) }
     for (const { quest, step } of autoSteps(s.quests, this.needs, ctx)) this.autoStep(quest, step)
-    for (const { quest, step } of stepsBy('sync', 'embers', s.quests, this.needs)) {
+    for (const { quest, step } of stepsBy('sync', 'glims', s.quests, this.needs)) {
       const base = this.syncBase.get(quest.id)
       if (base === undefined) this.syncBase.set(quest.id, s.xpEmbers)
       else if (s.xpEmbers > base) this.autoStep(quest.id, step.id)

@@ -22,7 +22,7 @@
   const changed = busVersion(bus, EV.homeChanged)
   const action = actionRunner()
   /** Silas's own word for being short of embers. */
-  const refused = (r: { code: string; text: string }) => (r.code === 'insufficient-embers' ? SILAS.dialogue.notEnoughEmbers.lines[0] : r.text)
+  const refused = (r: { code: string; text: string }) => (r.code === 'insufficient-glims' ? SILAS.dialogue.notEnoughEmbers.lines[0] : r.text)
 
   const blurb = (id: string) => BUILDING_BLURBS[id] ?? [...DECORATIONS_EMBER, ...DECORATIONS_MATERIAL].find((d) => d.id === id)?.blurb ?? ''
   const materialName = (id: string) => MATERIALS.find((m) => m.id === id)?.name ?? id
@@ -64,7 +64,7 @@
     if (locked(it)) return `Needs the ${HOMESTEAD_TIERS[it.minTier].name.toLowerCase()}`
     // One stable to a homestead (crafts.md 3.2).
     if (it.id === HOMESTEAD_DATA.stable.item && view.owned(it.id) > 0) return 'Built'
-    if (it.embers > 0 && ui.stats.embers < it.embers) return `Needs ${it.embers} embers`
+    if (it.glims > 0 && ui.stats.embers < it.glims) return `Needs ${it.glims} embers`
     for (const [m, n] of Object.entries(price(it))) if ((view.materials[m] ?? 0) < n) return `Needs ${n} ${materialName(m).toLowerCase()}`
     return null
   }
@@ -84,7 +84,7 @@
 
   /** A price may name embers, materials, or both (the stable): show all of it. */
   const cost = (it: HomeItem) => {
-    const embers = it.embers > 0 ? `${it.embers} embers` : ''
+    const embers = it.glims > 0 ? `${it.glims} embers` : ''
     const materials = Object.entries(price(it)).map(([m, n]) => `${n} ${materialName(m).toLowerCase()}`).join(' · ')
     return [embers, materials].filter(Boolean).join(' · ')
   }
@@ -116,8 +116,8 @@
             <span class="name">{cottage.name}</span>
             <span class="desc">{cottageBlurb} Unlocks the inside and setting things out.</span>
           </span>
-          <button type="button" class="primary small" disabled={action.busy !== null || ui.stats.embers < cottage.embers} onclick={raise}>
-            {action.busy === 'cottage' ? 'Raising…' : `Raise it · ${cottage.embers}`}
+          <button type="button" class="primary small" disabled={action.busy !== null || ui.stats.embers < cottage.glims} onclick={raise}>
+            {action.busy === 'cottage' ? 'Raising…' : `Raise it · ${cottage.glims}`}
           </button>
         </div>
       </section>
@@ -130,7 +130,7 @@
           <span class="txt">
             <span class="name">{workshop.name}</span>
             <span class="desc">{workshopBlurb} Unlocks the storage chest and the crafting bench.</span>
-            <span class="meta">{workshop.embers} embers · {costPhrase(workshop.materials ?? {})}</span>
+            <span class="meta">{workshop.glims} embers · {costPhrase(workshop.materials ?? {})}</span>
           </span>
           <button type="button" class="small" class:primary={!workshopWhy} data-testid="build-workshop" disabled={action.busy !== null || !!workshopWhy} onclick={raise}>
             {action.busy === 'cottage' ? 'Building…' : workshopWhy ?? 'Build it'}

@@ -380,7 +380,7 @@ type ShelfSlot struct {
 	Instance  *wrapperspb.StringValue `protobuf:"bytes,6,opt,name=instance,proto3" json:"instance,omitempty"`
 	StockedBy string                  `protobuf:"bytes,7,opt,name=stocked_by,json=stockedBy,proto3" json:"stocked_by,omitempty"`
 	StockedAt float64                 `protobuf:"fixed64,8,opt,name=stocked_at,json=stockedAt,proto3" json:"stocked_at,omitempty"`
-	// A price in gold (0.6, 3.2): 0 is a free gift as before.
+	// A price in glims (0.6.1; gold in 0.6, 3.2): 0 is a free gift as before.
 	Price         int32 `protobuf:"varint,9,opt,name=price,proto3" json:"price,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -632,7 +632,7 @@ type ShelfRequest struct {
 	Gate   int32                  `protobuf:"varint,4,opt,name=gate,proto3" json:"gate,omitempty"`
 	Slot   int32                  `protobuf:"varint,5,opt,name=slot,proto3" json:"slot,omitempty"`
 	Asset  *Asset                 `protobuf:"bytes,6,opt,name=asset,proto3" json:"asset,omitempty"`
-	// stock: the price in gold for the slot (0–9,999; 0 stocks a free gift).
+	// stock: the price in glims for the slot (0–9,999; 0 stocks a free gift).
 	Price         int32 `protobuf:"varint,7,opt,name=price,proto3" json:"price,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

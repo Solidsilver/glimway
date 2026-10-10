@@ -146,7 +146,7 @@ func TestLibraryRaceFirstDonorWins(t *testing.T) {
 		go func(i int, c *http.Cookie, s response, key string) {
 			defer wg.Done()
 			r := httptest.NewRequest("POST", "/api/library/donate", bytes.NewBufferString(store.JSON(donateBody(s, "will-of-elias-fenn", key))))
-			r.Header.Set("X-Glimway-Contract", "6")
+			r.Header.Set("X-Glimway-Contract", "7")
 			r.Header.Set("Content-Type", "application/json")
 			r.AddCookie(c)
 			w := httptest.NewRecorder()

@@ -235,7 +235,7 @@ func TestWildsConcurrentFirstReadsMakeOneEpoch(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			r := httptest.NewRequest("GET", "/api/wilds/region/outer-1", nil)
-			r.Header.Set("X-Glimway-Contract", "6")
+			r.Header.Set("X-Glimway-Contract", "7")
 			r.AddCookie(cookie)
 			w := httptest.NewRecorder()
 			if i == 0 {
@@ -307,7 +307,7 @@ func TestWildsClaimCyclesProjectionAndRace(t *testing.T) {
 			defer wg.Done()
 			raw, _ := protojson.Marshal(&contract.WildsClaimRequest{Op: op(pair.s.Lease, "race"), Epoch: ep, EntityId: camp.Id, Where: at("inner-1", camp, 0)})
 			r := httptest.NewRequest("POST", "/api/wilds/claim", bytes.NewReader(raw))
-			r.Header.Set("X-Glimway-Contract", "6")
+			r.Header.Set("X-Glimway-Contract", "7")
 			r.Header.Set("Content-Type", "application/json")
 			r.AddCookie(pair.c)
 			w := httptest.NewRecorder()
@@ -332,7 +332,7 @@ func TestWildsClaimCyclesProjectionAndRace(t *testing.T) {
 			t.Fatal(status)
 		}
 	}
-	if wins != 1 || losses != 1 || count(t, x.db, "SELECT count(*) FROM ledger WHERE currency='embers' AND reason='wilds-claim'") != 1 {
+	if wins != 1 || losses != 1 || count(t, x.db, "SELECT count(*) FROM ledger WHERE currency='glims' AND reason='wilds-claim'") != 1 {
 		t.Fatal("claim race", wins, losses)
 	}
 	// Long after: exactly one cycle ahead, projected by the read, not written.
@@ -422,7 +422,7 @@ func TestWildsPersonalClaimsDiscoveryAndReplay(t *testing.T) {
 		t.Fatal("deterministic loot")
 	}
 	replay, _ := x.call("/api/wilds/claim", req, c, 200)
-	if !proto.Equal(replay.GetWildsClaim(), grant.GetWildsClaim()) || count(t, x.db, "SELECT count(*) FROM ledger WHERE currency='embers' AND reason='wilds-claim'") != 1 {
+	if !proto.Equal(replay.GetWildsClaim(), grant.GetWildsClaim()) || count(t, x.db, "SELECT count(*) FROM ledger WHERE currency='glims' AND reason='wilds-claim'") != 1 {
 		t.Fatal("claim replay")
 	}
 	req.EntityId = poi.Id

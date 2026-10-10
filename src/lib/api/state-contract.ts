@@ -5,7 +5,7 @@ import { validateHabiticaProfile } from '../habitica/mapping.ts';
 import { decodeWire } from './wire.ts';
 
 export function validatePlayerState(state: PlayerState): PlayerState {
-  const { account, vitals, place, story, embers } = state;
+  const { account, vitals, place, story, glims: embers } = state;
   if (!account || !vitals || !place || !story || !embers || !account.accountId || !account.worldId) throw new Error('incomplete state');
   if (!['habitica', 'none'].includes(account.profileSource)) throw new Error('unknown profile source');
   for (const n of [state.version, vitals.reportSeq, vitals.vitalsSetVersion, place.placeSetVersion, embers.balance, embers.xpEarned, embers.pending]) {

@@ -33,7 +33,7 @@ func TestHomesteadContent(t *testing.T) {
 			t.Fatal("tier identity")
 		}
 	}
-	if h.GetTiers()[1].GetEmbers() != 15 || len(h.GetItems()) != 32 {
+	if h.GetTiers()[1].GetGlims() != 15 || len(h.GetItems()) != 32 {
 		t.Fatal("starting content")
 	}
 	for _, v := range h.GetItems() {
@@ -44,8 +44,8 @@ func TestHomesteadContent(t *testing.T) {
 		if v.GetId() == h.GetStable().GetItem() {
 			continue
 		}
-		if v.GetEmbers() > 0 && (v.GetEmbers() < 2 || v.GetEmbers() > 6) {
-			t.Fatal("ember price")
+		if v.GetGlims() > 0 && (v.GetGlims() < 2 || v.GetGlims() > 6) {
+			t.Fatal("glim price")
 		}
 		for _, n := range v.GetMaterials() {
 			if n < 4 || n > 10 {
@@ -56,13 +56,13 @@ func TestHomesteadContent(t *testing.T) {
 }
 func TestHomesteadRejectsMalformed(t *testing.T) {
 	for name, mutate := range map[string]func(*Homestead){
-		"grid": func(h *Homestead) { h.Indoor.Width = proto.Int32(0) }, "duplicate": func(h *Homestead) { h.Items[1].Id = h.Items[0].GetId() }, "price": func(h *Homestead) { h.Items[0].Embers = -1 }, "unpriced": func(h *Homestead) { h.Items[0].Embers = 0; h.Items[0].Materials = map[string]int32{} }, "unknown-material": func(h *Homestead) { h.Items[8].Materials = map[string]int32{"gold": 1} }, "zero-material": func(h *Homestead) { h.Items[8].Materials = map[string]int32{"stone": 0} }, "footprint": func(h *Homestead) { h.Items[0].Footprint = []int32{1, 1, 1} }, "location": func(h *Homestead) { h.Items[0].Where = []string{"attic"} }, "tier": func(h *Homestead) { h.Tiers[3].Purchasable = true }, "min-tier": func(h *Homestead) { h.Items[0].MinTier = 5 }, "category": func(h *Homestead) { h.Items[0].Category = "weapon" }, "layout": func(h *Homestead) { h.Commons.FenceX = nil }, "crowded-rows": func(h *Homestead) { h.Commons.GateRows = []int32{4, 5} }, "short-pitch": func(h *Homestead) { h.Commons.RowPitch = 1 }, "no-spares": func(h *Homestead) { h.Commons.SpareGates = 0 }, "reserved": func(h *Homestead) {
+		"grid": func(h *Homestead) { h.Indoor.Width = proto.Int32(0) }, "duplicate": func(h *Homestead) { h.Items[1].Id = h.Items[0].GetId() }, "price": func(h *Homestead) { h.Items[0].Glims = -1 }, "unpriced": func(h *Homestead) { h.Items[0].Glims = 0; h.Items[0].Materials = map[string]int32{} }, "unknown-material": func(h *Homestead) { h.Items[8].Materials = map[string]int32{"gold": 1} }, "zero-material": func(h *Homestead) { h.Items[8].Materials = map[string]int32{"stone": 0} }, "footprint": func(h *Homestead) { h.Items[0].Footprint = []int32{1, 1, 1} }, "location": func(h *Homestead) { h.Items[0].Where = []string{"attic"} }, "tier": func(h *Homestead) { h.Tiers[3].Purchasable = true }, "min-tier": func(h *Homestead) { h.Items[0].MinTier = 5 }, "category": func(h *Homestead) { h.Items[0].Category = "weapon" }, "layout": func(h *Homestead) { h.Commons.FenceX = nil }, "crowded-rows": func(h *Homestead) { h.Commons.GateRows = []int32{4, 5} }, "short-pitch": func(h *Homestead) { h.Commons.RowPitch = 1 }, "no-spares": func(h *Homestead) { h.Commons.SpareGates = 0 }, "reserved": func(h *Homestead) {
 			h.OutdoorReserved = []*HomeRect{{X: proto.Int32(39), Y: proto.Int32(0), W: proto.Int32(2), H: proto.Int32(1)}}
 		},
 		"land-size": func(h *Homestead) { h.Land.Width = 4 }, "generator": func(h *Homestead) { h.Land.Generator = 2 }, "gate": func(h *Homestead) { h.Land.Gate.X = proto.Int32(39) }, "permille": func(h *Homestead) { h.Land.StreamPermille = 1001 },
 		"post-item": func(h *Homestead) { h.LanternPosts.Item = "nope" }, "post-cost": func(h *Homestead) { h.LanternPosts.Costs = nil }, "post-material": func(h *Homestead) { h.LanternPosts.Growth = map[string]int32{"gold": 1} },
 		"stable-item": func(h *Homestead) { h.Stable.Item = "nope" }, "stable-cost": func(h *Homestead) { h.Stable.StallCost = nil }, "stable-growth": func(h *Homestead) { h.Stable.Growth = map[string]int32{"amber": 1} }, "stable-free": func(h *Homestead) { h.Stable.StallCost = map[string]int32{"timber": 0} },
-		"deed": func(h *Homestead) { h.Deeds.Embers = 0 }, "desolation": func(h *Homestead) { h.Desolation.DeedLostAfterDays = h.Desolation.DesolateAfterDays }, "window": func(h *Homestead) { h.JointDeed.ConfirmWindowSeconds = 0 }, "chest": func(h *Homestead) { h.PersonalChest.MaxUnits = 0 },
+		"deed": func(h *Homestead) { h.Deeds.Glims = 0 }, "desolation": func(h *Homestead) { h.Desolation.DeedLostAfterDays = h.Desolation.DesolateAfterDays }, "window": func(h *Homestead) { h.JointDeed.ConfirmWindowSeconds = 0 }, "chest": func(h *Homestead) { h.PersonalChest.MaxUnits = 0 },
 	} {
 		t.Run(name, func(t *testing.T) {
 			h := proto.Clone(HomeRules).(*Homestead)

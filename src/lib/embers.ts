@@ -13,10 +13,10 @@ import { validateSave, type GameState } from './state.ts';
  * Pure logic only: no network, no Phaser, no randomness.
  */
 
-export const XP_PER_EMBER = economy.xpPerEmber;
+export const XP_PER_EMBER = economy.xpPerGlim;
 /** One-off gift on the first Habitica import (flag-guarded, so reconnecting
  *  after a disconnect does not pay it again). */
-export const WELCOME_EMBERS = economy.welcomeEmbers;
+export const WELCOME_EMBERS = economy.welcomeGlims;
 
 export const EMBER_COSTS = economy.costs;
 

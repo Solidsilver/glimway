@@ -22,14 +22,14 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// The shared economy contract (content/economy.json): ember pricing, sync
+// The shared economy contract (content/economy.json): glim pricing, sync
 // credit, invites and the Wilds' rate limits.
 type Economy struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// XP: how much one ember buys, and what a fresh account is given.
-	XpPerEmber    int32 `protobuf:"varint,1,opt,name=xp_per_ember,json=xpPerEmber,proto3" json:"xp_per_ember,omitempty"`
-	WelcomeEmbers int32 `protobuf:"varint,2,opt,name=welcome_embers,json=welcomeEmbers,proto3" json:"welcome_embers,omitempty"`
-	// Ember prices (in embers): resting at home (discounted), resting, a road
+	// XP: how much one glim takes, and what a fresh account is given.
+	XpPerGlim    int32 `protobuf:"varint,1,opt,name=xp_per_glim,json=xpPerGlim,proto3" json:"xp_per_glim,omitempty"`
+	WelcomeGlims int32 `protobuf:"varint,2,opt,name=welcome_glims,json=welcomeGlims,proto3" json:"welcome_glims,omitempty"`
+	// Glim prices: resting at home (discounted), resting, a road
 	// lantern, a chest.
 	Costs *EconomyCosts `protobuf:"bytes,3,opt,name=costs,proto3" json:"costs,omitempty"`
 	// The village road lanterns' ids, in map order.
@@ -86,16 +86,16 @@ func (*Economy) Descriptor() ([]byte, []int) {
 	return file_glimway_content_v1_economy_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *Economy) GetXpPerEmber() int32 {
+func (x *Economy) GetXpPerGlim() int32 {
 	if x != nil {
-		return x.XpPerEmber
+		return x.XpPerGlim
 	}
 	return 0
 }
 
-func (x *Economy) GetWelcomeEmbers() int32 {
+func (x *Economy) GetWelcomeGlims() int32 {
 	if x != nil {
-		return x.WelcomeEmbers
+		return x.WelcomeGlims
 	}
 	return 0
 }
@@ -191,7 +191,7 @@ func (x *Economy) GetWildsLimits() *EconomyWildsLimits {
 	return nil
 }
 
-// Ember prices. Each is at least one; the Economy CEL above discounts
+// Glim prices. Each is at least one; the Economy CEL above discounts
 // homeRest below rest.
 type EconomyCosts struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -387,11 +387,10 @@ var File_glimway_content_v1_economy_proto protoreflect.FileDescriptor
 
 const file_glimway_content_v1_economy_proto_rawDesc = "" +
 	"\n" +
-	" glimway/content/v1/economy.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\x81\t\n" +
-	"\aEconomy\x12)\n" +
-	"\fxp_per_ember\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\n" +
-	"xpPerEmber\x12.\n" +
-	"\x0ewelcome_embers\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\rwelcomeEmbers\x12>\n" +
+	" glimway/content/v1/economy.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\xfd\b\n" +
+	"\aEconomy\x12'\n" +
+	"\vxp_per_glim\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\txpPerGlim\x12,\n" +
+	"\rwelcome_glims\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\fwelcomeGlims\x12>\n" +
 	"\x05costs\x18\x03 \x01(\v2 .glimway.content.v1.EconomyCostsB\x06\xbaH\x03\xc8\x01\x01R\x05costs\x12/\n" +
 	"\rroad_lanterns\x18\x04 \x03(\tB\n" +
 	"\xbaH\a\x92\x01\x04\b\x03\x10\x03R\froadLanterns\x12\"\n" +

@@ -4,7 +4,6 @@ import { create } from '@bufbuild/protobuf';
 import { PurseLineSchema, PurseReadSchema, PurseSchema, PurseTopUpSchema } from '../src/lib/gen/glimway/v1/purse_pb.js';
 import { PlayerStateSchema } from '../src/lib/gen/glimway/v1/state_pb.js';
 import {
-  goldPrice,
   habiticaGoldOf,
   lineText,
   logDate,
@@ -68,19 +67,21 @@ test('every top-up outcome is said in plain words (design 2.1)', () => {
 
 test('a state’s purse, and an empty one before the server sends any', () => {
   assert.deepEqual(purseOf(null), { gold: 0, topUpsLeft: TOP_UPS_PER_DAY, working: null });
-  const s = create(PlayerStateSchema, { purse: create(PurseSchema, { gold: 240, topUpsLeft: 1, working: create(PurseTopUpSchema, { id: 'w', amount: 5, state: 'working', startedAt: 9 }) }) });
+  const s = create(PlayerStateSchema, { purse: create(PurseSchema, { topUpsLeft: 1, working: create(PurseTopUpSchema, { id: 'w', amount: 5, state: 'working', startedAt: 9 }) }) });
   const p = purseOf(s);
-  assert.equal(p.gold, 240);
+  // G-C: the purse's gold balance left the wire (glims, silas-yard.md 1.6).
+  assert.equal(p.gold, 0);
   assert.equal(p.topUpsLeft, 1);
   assert.deepEqual(p.working, { id: 'w', amount: 5, state: 'working', goldBefore: null, goldAfter: null, startedAt: 9, settledAt: null, leftover: false, note: '' });
 });
 
 test('gold shows down at once for a spend and up for a letter collected, never below zero; the top-up is never predicted', () => {
-  const s = create(PlayerStateSchema, { purse: create(PurseSchema, { gold: 20, topUpsLeft: 2 }) });
-  const pending: Prediction[] = [{ kind: 'gold', delta: -6 }, { kind: 'none' }, { kind: 'gold', delta: 10 }];
+  // G-C: these predictions move to glims; the purse starts at 0 now.
+  const s = create(PlayerStateSchema, { purse: create(PurseSchema, { topUpsLeft: 2 }) });
+  const pending: Prediction[] = [{ kind: 'gold', delta: 20 }, { kind: 'gold', delta: -6 }, { kind: 'none' }, { kind: 'gold', delta: 10 }];
   assert.equal(predictPurse(s, pending).gold, 24);
   assert.equal(predictPurse(s, [{ kind: 'gold', delta: -50 }]).gold, 0);
-  assert.equal(predictPurse(s, []).gold, 20);
+  assert.equal(predictPurse(s, []).gold, 0);
   assert.equal(predictPurse(null, [{ kind: 'gold', delta: 5 }]).gold, 5);
 });
 
@@ -132,39 +133,38 @@ test('every ledger reason has its words', () => {
   assert.equal(logDate(Date.UTC(2026, 9, 9, 12) / 1000), '9 Oct');
 });
 
-test('a seller’s talk offers each price as its own choice; Silas sells for gold only', () => {
+test('a seller’s talk offers each good once, at its one price in glims', () => {
   const finn = sellerFor('finns-mill-door')!;
-  assert.deepEqual(sellerChoices(finn).map((c) => c.action), ['buy:finns-mill-door:flour', 'buy:finns-mill-door:flour:gold', 'buy:finns-mill-door:willow-rod', 'buy:finns-mill-door:willow-rod:gold']);
-  assert.equal(sellerChoices(finn)[1]!.text, 'Buy a sack of flour · 2 gold');
-  assert.equal(sellerChoices(sellerFor('hazels-kitchen')!).length, 2);
-  assert.equal(sellerChoices(sellerFor('madder-stall')!).length, 2);
+  assert.deepEqual(sellerChoices(finn).map((c) => c.action), ['buy:finns-mill-door:flour', 'buy:finns-mill-door:willow-rod']);
+  assert.equal(sellerChoices(finn)[0]!.text, 'Buy a sack of flour · 1 glim');
+  assert.equal(sellerChoices(sellerFor('hazels-kitchen')!).length, 1);
+  assert.equal(sellerChoices(sellerFor('madder-stall')!).length, 1);
   const silas = sellerFor('silas-yard')!;
   const yard = sellerChoices(silas, { reply: true });
-  assert.deepEqual(yard.map((c) => c.action), ['buy:silas-yard:timber:gold', 'buy:silas-yard:stone:gold', 'buy:silas-yard:fiber:gold']);
-  assert.deepEqual(yard.map((c) => c.text), ['Buy timber ×4 · 6 gold', 'Buy stone ×4 · 8 gold', 'Buy fiber ×4 · 5 gold']);
+  assert.deepEqual(yard.map((c) => c.action), ['buy:silas-yard:timber', 'buy:silas-yard:stone', 'buy:silas-yard:fiber']);
+  assert.deepEqual(yard.map((c) => c.text), ['Buy timber ×4 · 3 glims', 'Buy stone ×4 · 4 glims', 'Buy fiber ×4 · 3 glims']);
   assert.ok(yard.every((c) => c.reply?.[0]?.startsWith('Offcuts from the yard')));
-  assert.equal(goldPrice('silas-yard', 'stone'), 8);
-  assert.equal(goldPrice('silas-yard', 'nothing'), null);
+  assert.deepEqual(silas.goods.map((g) => [g.glims, g.cap]), [[3, 3], [4, 3], [3, 3]]);
 });
 
-test('a buy action names its currency; anything else isn’t a buy', () => {
-  assert.deepEqual(parseBuy('finns-mill-door:flour'), { seller: 'finns-mill-door', good: 'flour', pay: 'embers' });
-  assert.deepEqual(parseBuy('finns-mill-door:flour:gold'), { seller: 'finns-mill-door', good: 'flour', pay: 'gold' });
-  assert.equal(parseBuy('finns-mill-door:flour:gems'), null);
+test('a buy action is a seller and a good; anything else isn’t a buy', () => {
+  assert.deepEqual(parseBuy('finns-mill-door:flour'), { seller: 'finns-mill-door', good: 'flour' });
+  assert.equal(parseBuy('finns-mill-door:flour:gold'), null);
   assert.equal(parseBuy('finns-mill-door'), null);
 });
 
 test('a gold letter reads as gold', () => {
-  assert.equal(assetPhrase({ kind: 'gold', id: 'gold', qty: 20 }), '20 gold');
-  assert.equal(assetPhrase({ kind: 'gold', id: 'gold', qty: 1240 }), '1,240 gold');
+  // G-C: the words for a glim letter.
+  assert.equal(assetPhrase({ kind: 'glims', id: 'glims', qty: 20 }), '20 gold');
+  assert.equal(assetPhrase({ kind: 'glims', id: 'glims', qty: 1240 }), '1,240 gold');
 });
 
 test('gold refusals have their words in every table that can see them', () => {
-  for (const code of ['purse-busy', 'top-up-limit', 'needs-habitica', 'invalid-quantity', 'login-rate-limited', 'login-user-rate-limited', 'login-busy']) assert.ok(PURSE_ERRORS[code], code);
+  for (const code of ['purse-busy', 'top-up-limit', 'top-up-cap', 'needs-habitica', 'invalid-quantity', 'login-rate-limited', 'login-user-rate-limited', 'login-busy']) assert.ok(PURSE_ERRORS[code], code);
   assert.match(purseErrorText('top-up-limit'), /midnight UTC/);
   assert.match(purseErrorText('something-else'), /Nothing moved/);
-  assert.ok(ITEM_ERRORS['insufficient-gold']);
-  assert.ok(VILLAGE_ERRORS['insufficient-gold']);
+  assert.ok(ITEM_ERRORS['insufficient-glims']);
+  assert.ok(VILLAGE_ERRORS['insufficient-glims']);
   assert.ok(VILLAGE_ERRORS['own-stock']);
   // Owner's answer 9: Glimway's off hand is "at your belt" in the copy.
   assert.doesNotMatch(ITEM_ERRORS['off-hand-closed']!, /off hand/);

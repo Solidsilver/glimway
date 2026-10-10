@@ -483,7 +483,7 @@ func TestTwoConcurrentReportsSpendOneWardCredit(t *testing.T) {
 	report := func(seq, hp float64) *httptest.ResponseRecorder {
 		body, _ := protojson.Marshal(&contract.ReportRequest{Lease: bobPlay.Lease, Client: "tab-a", Generation: bobPlay.ReportGeneration, Seq: seq, Basis: bobPlay.State.Version, Hp: hp, Mana: 50, Place: &contract.Where{Area: "village", X: 400, Y: 300}})
 		r := httptest.NewRequest("POST", "/api/report", bytes.NewReader(body))
-		r.Header.Set("X-Glimway-Contract", "6")
+		r.Header.Set("X-Glimway-Contract", "7")
 		r.Header.Set("Content-Type", "application/json")
 		r.AddCookie(bc)
 		w := httptest.NewRecorder()

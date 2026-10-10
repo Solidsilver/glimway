@@ -415,7 +415,7 @@
             "items",
             5,
             "repair",
-            "menderEmbers"
+            "menderGlims"
           ],
           "remove": true
         }
@@ -1435,14 +1435,14 @@
             {
               "item": "tallow",
               "qty": 1,
-              "embers": 1,
+              "glims": 1,
               "label": "Tallow",
               "line": "Tallow."
             },
             {
               "item": "tallow",
               "qty": 1,
-              "embers": 1,
+              "glims": 1,
               "label": "Tallow",
               "line": "Tallow."
             }
@@ -1465,7 +1465,7 @@
             {
               "item": "tool-rack",
               "qty": 1,
-              "embers": 1,
+              "glims": 1,
               "label": "Rack",
               "line": "A rack."
             }
@@ -1487,7 +1487,7 @@
             {
               "item": "bench-axe",
               "qty": 1,
-              "embers": 1,
+              "glims": 1,
               "label": "Axe",
               "line": "An axe."
             }
@@ -1510,7 +1510,7 @@
             {
               "item": "bench-axe",
               "qty": 2,
-              "embers": 1,
+              "glims": 1,
               "label": "Axes",
               "line": "Two axes."
             }
@@ -1538,93 +1538,6 @@
     {
       "name": "good-free",
       "valid": false,
-      "rule": "good.price",
-      "edits": [
-        {
-          "path": [
-            "sellers",
-            0,
-            "goods",
-            0,
-            "embers"
-          ],
-          "value": 0
-        },
-        {
-          "path": [
-            "sellers",
-            0,
-            "goods",
-            0,
-            "gold"
-          ],
-          "remove": true
-        },
-        {
-          "path": [
-            "sellers",
-            0,
-            "goods",
-            0,
-            "goldLabel"
-          ],
-          "remove": true
-        }
-      ]
-    },
-    {
-      "name": "good-gold-without-label",
-      "valid": false,
-      "rule": "good.gold_label",
-      "edits": [
-        {
-          "path": [
-            "sellers",
-            0,
-            "goods",
-            0,
-            "goldLabel"
-          ],
-          "remove": true
-        }
-      ]
-    },
-    {
-      "name": "good-label-without-gold",
-      "valid": false,
-      "rule": "good.gold_label",
-      "edits": [
-        {
-          "path": [
-            "sellers",
-            0,
-            "goods",
-            0,
-            "gold"
-          ],
-          "remove": true
-        }
-      ]
-    },
-    {
-      "name": "good-gold-only",
-      "valid": true,
-      "edits": [
-        {
-          "path": [
-            "sellers",
-            0,
-            "goods",
-            0,
-            "embers"
-          ],
-          "value": 0
-        }
-      ]
-    },
-    {
-      "name": "good-gold-zero",
-      "valid": false,
       "rule": "int32.gte_lte",
       "edits": [
         {
@@ -1633,9 +1546,26 @@
             0,
             "goods",
             0,
-            "gold"
+            "glims"
           ],
           "value": 0
+        }
+      ]
+    },
+    {
+      "name": "good-gold-price",
+      "valid": false,
+      "rule": "unknown key \"gold\"",
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            0,
+            "goods",
+            0,
+            "gold"
+          ],
+          "value": 2
         }
       ]
     },
@@ -1858,7 +1788,7 @@
       ]
     },
     {
-      "name": "mender-bill-absent-with-embers",
+      "name": "mender-bill-absent-with-glims",
       "valid": true,
       "rule": "",
       "edits": [
@@ -1876,14 +1806,14 @@
             "items",
             5,
             "repair",
-            "menderEmbers"
+            "menderGlims"
           ],
           "value": 1
         }
       ]
     },
     {
-      "name": "mender-bill-empty-with-embers",
+      "name": "mender-bill-empty-with-glims",
       "valid": true,
       "rule": "",
       "edits": [
@@ -1901,14 +1831,14 @@
             "items",
             5,
             "repair",
-            "menderEmbers"
+            "menderGlims"
           ],
           "value": 1
         }
       ]
     },
     {
-      "name": "mender-bill-absent-without-embers",
+      "name": "mender-bill-absent-without-glims",
       "valid": false,
       "rule": "repair cost",
       "edits": [
@@ -1926,14 +1856,14 @@
             "items",
             5,
             "repair",
-            "menderEmbers"
+            "menderGlims"
           ],
           "remove": true
         }
       ]
     },
     {
-      "name": "mender-bill-empty-without-embers",
+      "name": "mender-bill-empty-without-glims",
       "valid": false,
       "rule": "repair cost",
       "edits": [
@@ -1951,14 +1881,14 @@
             "items",
             5,
             "repair",
-            "menderEmbers"
+            "menderGlims"
           ],
           "value": 0
         }
       ]
     },
     {
-      "name": "mender-bill-populated-without-embers",
+      "name": "mender-bill-populated-without-glims",
       "valid": true,
       "rule": "",
       "edits": [
@@ -1979,14 +1909,14 @@
             "items",
             5,
             "repair",
-            "menderEmbers"
+            "menderGlims"
           ],
           "remove": true
         }
       ]
     },
     {
-      "name": "mender-bill-populated-with-embers",
+      "name": "mender-bill-populated-with-glims",
       "valid": true,
       "rule": "",
       "edits": [
@@ -1995,7 +1925,7 @@
             "items",
             5,
             "repair",
-            "menderEmbers"
+            "menderGlims"
           ],
           "value": 1
         }
@@ -2022,7 +1952,7 @@
             "items",
             5,
             "repair",
-            "menderEmbers"
+            "menderGlims"
           ],
           "value": 1
         }

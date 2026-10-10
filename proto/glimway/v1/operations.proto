@@ -22,8 +22,10 @@ message QuestStepRequest { OpHeader op = 1; string quest = 2; string to = 3; Whe
 message ItemQty { string def = 1; double qty = 2; }
 message QuestStepResult {
   string quest = 1; string step = 2; repeated string items = 3; repeated string marks = 4;
-  repeated string papers = 5; double embers = 6;
-  double embers_spent = 7; repeated ItemQty taken = 8; repeated ItemQty given = 9;
+  repeated string papers = 5;
+  reserved 6, 7; reserved "embers", "embers_spent";
+  repeated ItemQty taken = 8; repeated ItemQty given = 9;
+  double glims = 10; double glims_spent = 11;
 }
 message MarkRequest { OpHeader op = 1; string mark = 2; Where where = 3; }
 message MarkResult { string mark = 1; bool added = 2; }

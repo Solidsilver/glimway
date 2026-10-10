@@ -1,6 +1,6 @@
 {
-  "xpPerEmber": 10,
-  "welcomeEmbers": 3,
+  "xpPerGlim": 10,
+  "welcomeGlims": 3,
   "costs": {
     "rest": 2,
     "roadLantern": 3,

@@ -124,9 +124,7 @@ func createPlayer(ctx context.Context, tx *sql.Tx, id string, p rules.Profile, w
 	state.HP = min(p.HP, p.MaxHP)
 	state.Mana = min(p.MP, p.MaxMP)
 
-	// The purse's gold column (032) has its own default: name the columns
-	// here so account creation doesn't spell them all.
-	if _, err := tx.ExecContext(ctx, "INSERT INTO balances(account_id,embers,xp_embers) VALUES(?,0,0)", id); err != nil {
+	if _, err := tx.ExecContext(ctx, "INSERT INTO balances(account_id,glims,xp_glims) VALUES(?,0,0)", id); err != nil {
 		return err
 	}
 	// Account creation writes the class mark too (crafts.md 4.2, review

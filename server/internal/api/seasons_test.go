@@ -353,38 +353,34 @@ func TestSellersHazelFinnAndTheCartingStall(t *testing.T) {
 	}
 	// Embers run out where they run out.
 	poor, ps := x.ready("bob")
-	if r := x.opRefreshing(poor, &ps, "buy", map[string]any{"seller": "hazels-kitchen", "good": "tallow", "progress": bySeller(ps, "hazels-kitchen", x.now.Load())}, 409); r.Error.Code != "insufficient-embers" {
+	if r := x.opRefreshing(poor, &ps, "buy", map[string]any{"seller": "hazels-kitchen", "good": "tallow", "progress": bySeller(ps, "hazels-kitchen", x.now.Load())}, 409); r.Error.Code != "insufficient-glims" {
 		t.Fatal("tallow without embers", r.Error.Code)
 	}
 	x.conserved(s.AccountID)
 	x.conserved(ps.AccountID)
 }
 
-// Silas's bundles are gold-only (design 3.1). This buy path pays in embers —
-// `pay` is lane C's — so a good with no ember price must be refused outright,
-// not handed over for the zero the price carries (review finding 1). Lane C
-// extends this with `pay`.
-func TestSilasYardBundlesAreGoldOnly(t *testing.T) {
+// Silas's bundles cost glims (silas-yard.md 1.6: timber ×4 · 3, stone ×4 ·
+// 4, fiber ×4 · 3, the old gold prices halved and rounded up): each buy
+// hands over four and takes its price from the snapshot's glims.
+func TestSilasYardBundlesCostGlims(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	x.fundEmbers(s.AccountID, 10)
-	before := count(t, x.db, "SELECT embers FROM balances WHERE account_id=?", s.AccountID)
+	before := count(t, x.db, "SELECT glims FROM balances WHERE account_id=?", s.AccountID)
 	buy := func(good string, status int) itemsResponse {
 		return x.opRefreshing(c, &s, "buy", map[string]any{"seller": "silas-yard", "good": good, "progress": bySeller(s, "silas-yard", x.now.Load())}, status)
 	}
-	for _, good := range []string{"timber", "stone", "fiber"} {
-		if r := buy(good, 400); r.Error.Code != "invalid-good" {
-			t.Fatal(good, r.Error.Code)
+	for good, price := range map[string]int{"timber": 3, "stone": 4, "fiber": 3} {
+		if r := buy(good, 200); r.Result.Bought == nil || r.Result.Bought.Glims != price {
+			t.Fatal(good, r.Result.Bought, r.Error.Code)
+		}
+		if count(t, x.db, "SELECT COALESCE(SUM(qty),0) FROM item_stacks WHERE location='pack' AND owner=? AND item_def=?", s.AccountID, good) != 4 {
+			t.Fatal("the bundle", good)
 		}
 	}
-	// Nothing was handed over, nothing was charged, and no day's cap was spent.
-	for _, good := range []string{"timber", "stone", "fiber"} {
-		if count(t, x.db, "SELECT COALESCE(SUM(qty),0) FROM item_stacks WHERE location='pack' AND owner=? AND item_def=?", s.AccountID, good) != 0 {
-			t.Fatal("a refused buy handed over", good)
-		}
-	}
-	if count(t, x.db, "SELECT embers FROM balances WHERE account_id=?", s.AccountID) != before || count(t, x.db, "SELECT count(*) FROM ledger WHERE account_id=? AND reason='market-buy'", s.AccountID) != 0 {
-		t.Fatal("a refused buy was charged")
+	if count(t, x.db, "SELECT glims FROM balances WHERE account_id=?", s.AccountID) != before-10 || count(t, x.db, "SELECT count(*) FROM ledger WHERE account_id=? AND currency='glims' AND reason='market-buy'", s.AccountID) != 3 {
+		t.Fatal("the bundles' prices")
 	}
 	x.conserved(s.AccountID)
 }
@@ -404,7 +400,7 @@ func TestMarketBuyGrantsAToolInstance(t *testing.T) {
 		t.Fatal("the rod is a tool")
 	}
 	r := buy(200)
-	if r.Result.Bought == nil || r.Result.Bought.ItemDef != "willow-rod" || r.Result.Bought.Qty != 1 || r.Result.Bought.Embers != 2 {
+	if r.Result.Bought == nil || r.Result.Bought.ItemDef != "willow-rod" || r.Result.Bought.Qty != 1 || r.Result.Bought.Glims != 2 {
 		t.Fatal("no rod", r.Result.Bought)
 	}
 	if stackQty(r.Result.Items, "willow-rod") != 0 {

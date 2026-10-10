@@ -392,7 +392,7 @@ func TestMaterialPurchaseAndExpansionBackupRestore(t *testing.T) {
 	if count(t, restored, "SELECT sum(delta) FROM ledger WHERE account_id='"+x.account("alice")+"' AND currency='decoration:woven-basket'") != 1 {
 		t.Fatal("instance ledger sum")
 	}
-	if count(t, restored, "SELECT sum(delta) FROM ledger WHERE account_id='"+x.account("alice")+"' AND currency='embers'") != rs.State.Embers {
+	if count(t, restored, "SELECT sum(delta) FROM ledger WHERE account_id='"+x.account("alice")+"' AND currency='glims'") != rs.State.Embers {
 		t.Fatal("ember ledger sum")
 	}
 }

@@ -288,8 +288,8 @@ test('a talk takes the road’s step first, then the tree’s order', () => {
   const both = { ...DONE_OPENING, 'lantern-road': 'lantern-lit', 'your-own-day': 'do-something' };
   assert.deepEqual(stepsBy('talk', 'mara', both, { habitica: true }).map((x) => x.quest.id), ['lantern-road', 'your-own-day']);
   const later = { ...both, 'your-own-day': 'hear-mara' };
-  assert.deepEqual(stepsBy('sync', 'embers', later, { habitica: true }).map((x) => x.step.id), ['do-something']);
-  assert.deepEqual(stepsBy('sync', 'embers', later, { habitica: false }), [], 'needs habitica');
+  assert.deepEqual(stepsBy('sync', 'glims', later, { habitica: true }).map((x) => x.step.id), ['do-something']);
+  assert.deepEqual(stepsBy('sync', 'glims', later, { habitica: false }), [], 'needs habitica');
 });
 
 // ------------------------------------------------------------------ talks

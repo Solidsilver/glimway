@@ -14,8 +14,8 @@ const MATERIAL_ITEMS = new Set(
 
 export type HomeScene = 'indoor' | 'outdoor' | 'gate';
 export type HomeItemCategory = 'furniture' | 'decor' | 'utility';
-interface HomeTier { tier: number; id: string; name: string; purchasable: boolean; embers: number; materials?: Record<string, number> }
-export interface HomeItem { id: string; name: string; category: HomeItemCategory; footprint: [number, number]; where: HomeScene[]; minTier: number; embers: number; materials: Record<string, number>; craftOnly?: boolean; building?: boolean }
+interface HomeTier { tier: number; id: string; name: string; purchasable: boolean; glims: number; materials?: Record<string, number> }
+export interface HomeItem { id: string; name: string; category: HomeItemCategory; footprint: [number, number]; where: HomeScene[]; minTier: number; glims: number; materials: Record<string, number>; craftOnly?: boolean; building?: boolean }
 /** A rectangle in the land's or a room's local grid tiles. */
 export interface HomeRect { x: number; y: number; w: number; h: number }
 export interface HomeGrid { width: number; height: number }
@@ -64,8 +64,8 @@ export interface HomesteadData {
   /** The doorway inside: kept clear so nobody walls themselves in. */
   indoorReserved: HomeRect[];
   lanternPosts: LanternPosts;
-  deeds: { firstFree: boolean; embers: number };
-  clearTileEmbers: number;
+  deeds: { firstFree: boolean; glims: number };
+  clearTileGlims: number;
   desolation: { desolateAfterDays: number; deedLostAfterDays: number };
   jointDeed: { confirmWindowSeconds: number; inviteHours: number };
   personalChest: { maxUnits: number };
@@ -92,7 +92,7 @@ export function validateHomesteadData(value: unknown): HomesteadData {
   // The tier ladder is the designed five; only Cottage and Workshop are
   // bought, and only the Workshop takes a materials bill.
   h.tiers.forEach((t, i) => {
-    if (t.tier !== i || t.id !== `tier-${i}` || !t.name || t.purchasable !== (i === 1 || i === 2) || (i === 1 || i === 2 ? t.embers <= 0 : t.embers !== 0)) bad(`tier ${i}`);
+    if (t.tier !== i || t.id !== `tier-${i}` || !t.name || t.purchasable !== (i === 1 || i === 2) || (i === 1 || i === 2 ? t.glims <= 0 : t.glims !== 0)) bad(`tier ${i}`);
   });
   for (const t of h.tiers) {
     const materials = t.materials ?? {};
@@ -128,13 +128,13 @@ export const HOMESTEAD_DATA = validateHomesteadData(raw);
 
 /**
  * Silas's Yard, in its sections: the buildings (structures on the plot, the
- * content's `building` flag), then the finished pieces (priced in embers) and
+ * content's `building` flag), then the finished pieces (priced in glims) and
  * the pieces from the Wilds (materials only). Workbench-only pieces aren't sold.
  */
 export function shopSections(data: HomesteadData = HOMESTEAD_DATA): { buildings: HomeItem[]; finished: HomeItem[]; wilds: HomeItem[] } {
   const sold = data.items.filter((i) => !i.craftOnly);
   const pieces = sold.filter((i) => !i.building);
-  return { buildings: sold.filter((i) => i.building), finished: pieces.filter((i) => i.embers > 0), wilds: pieces.filter((i) => i.embers === 0) };
+  return { buildings: sold.filter((i) => i.building), finished: pieces.filter((i) => i.glims > 0), wilds: pieces.filter((i) => i.glims === 0) };
 }
 
 // ------------------------------------------------------------ geometry
@@ -337,7 +337,7 @@ export function stallGroundProblem(
   if (stable.x === null || stable.y === null) return 'invalid-placement';
   const [w, h] = stableFootprint(stable.stalls ?? 1, data);
   // A bay-sized stand-in piece, checked by the ordinary placement rules.
-  const bay: HomeItem = { id: '__stable-bay', name: 'Stall', category: 'utility', footprint: [2, h], where: ['outdoor'], minTier: 0, embers: 0, materials: {} };
+  const bay: HomeItem = { id: '__stable-bay', name: 'Stall', category: 'utility', footprint: [2, h], where: ['outdoor'], minTier: 0, glims: 0, materials: {} };
   const withBay = { ...data, items: [...data.items, bay] };
   return checkPlacement(home, { id: '__stable-bay', itemDef: bay.id, scene: null, x: null, y: null, rotation: null }, 'outdoor', stable.x + w, stable.y, 0, withBay, ground);
 }

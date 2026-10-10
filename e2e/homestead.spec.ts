@@ -244,7 +244,7 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
     await expect(page.getByTestId('clear-tile')).toBeVisible()
     await page.getByTestId('clear-tile').click()
     await expect.poll(async () => (await myHome(page)).cleared).toContainEqual([tree.x, tree.y])
-    expect((await serverState(page)).body.state.embers).toBe(before - HOMESTEAD_DATA.clearTileEmbers)
+    expect((await serverState(page)).body.state.embers).toBe(before - HOMESTEAD_DATA.clearTileGlims)
     await waitForArea(page, `home:${free.gate}`)
     expect(ground.tiles[tree.y * L.width + tree.x]).not.toBe(LAND.GRASS)
   } else if (await tray.isVisible()) {
@@ -461,5 +461,5 @@ test('desolation: an empty homestead overgrows, its sign weathers, and in time t
   expect(await homeAt(page, gate)).toBeNull()
   const row = (await lane(page)).gates.find((g) => g.gate === gate)!
   expect(row.homeId).toBeNull()
-  expect(row.price).toBe(HOMESTEAD_DATA.deeds.embers)
+  expect(row.price).toBe(HOMESTEAD_DATA.deeds.glims)
 })

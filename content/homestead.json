@@ -5,21 +5,21 @@
       "id": "tier-0",
       "name": "Campsite",
       "purchasable": false,
-      "embers": 0
+      "glims": 0
     },
     {
       "tier": 1,
       "id": "tier-1",
       "name": "Cottage",
       "purchasable": true,
-      "embers": 15
+      "glims": 15
     },
     {
       "tier": 2,
       "id": "tier-2",
       "name": "Workshop",
       "purchasable": true,
-      "embers": 30,
+      "glims": 30,
       "materials": {
         "timber": 20,
         "stone": 10,
@@ -31,14 +31,14 @@
       "id": "tier-3",
       "name": "Garden",
       "purchasable": false,
-      "embers": 0
+      "glims": 0
     },
     {
       "tier": 4,
       "id": "tier-4",
       "name": "Hall",
       "purchasable": false,
-      "embers": 0
+      "glims": 0
     }
   ],
   "indoor": {
@@ -153,9 +153,9 @@
   },
   "deeds": {
     "firstFree": true,
-    "embers": 10
+    "glims": 10
   },
-  "clearTileEmbers": 1,
+  "clearTileGlims": 1,
   "desolation": {
     "desolateAfterDays": 3,
     "deedLostAfterDays": 14
@@ -176,7 +176,7 @@
         "outdoor"
       ],
       "minTier": 0,
-      "embers": 2,
+      "glims": 2,
       "materials": {}
     },
     {
@@ -186,7 +186,7 @@
         "indoor"
       ],
       "minTier": 1,
-      "embers": 4,
+      "glims": 4,
       "materials": {}
     },
     {
@@ -196,7 +196,7 @@
         "indoor"
       ],
       "minTier": 1,
-      "embers": 3,
+      "glims": 3,
       "materials": {}
     },
     {
@@ -206,7 +206,7 @@
         "indoor"
       ],
       "minTier": 1,
-      "embers": 2,
+      "glims": 2,
       "materials": {}
     },
     {
@@ -217,7 +217,7 @@
         "outdoor"
       ],
       "minTier": 1,
-      "embers": 6,
+      "glims": 6,
       "materials": {}
     },
     {
@@ -228,7 +228,7 @@
         "outdoor"
       ],
       "minTier": 0,
-      "embers": 3,
+      "glims": 3,
       "materials": {}
     },
     {
@@ -238,7 +238,7 @@
         "indoor"
       ],
       "minTier": 1,
-      "embers": 5,
+      "glims": 5,
       "materials": {},
       "craftOnly": true
     },
@@ -250,7 +250,7 @@
         "outdoor"
       ],
       "minTier": 0,
-      "embers": 4,
+      "glims": 4,
       "materials": {}
     },
     {
@@ -260,7 +260,7 @@
         "indoor"
       ],
       "minTier": 1,
-      "embers": 0,
+      "glims": 0,
       "materials": {
         "stone": 8,
         "timber": 4
@@ -273,7 +273,7 @@
         "indoor"
       ],
       "minTier": 1,
-      "embers": 0,
+      "glims": 0,
       "materials": {
         "seasoned-timber": 10,
         "fiber": 6
@@ -287,7 +287,7 @@
         "outdoor"
       ],
       "minTier": 0,
-      "embers": 0,
+      "glims": 0,
       "materials": {
         "fiber": 4
       }
@@ -299,7 +299,7 @@
         "indoor"
       ],
       "minTier": 1,
-      "embers": 0,
+      "glims": 0,
       "materials": {
         "timber": 6
       }
@@ -312,7 +312,7 @@
         "outdoor"
       ],
       "minTier": 1,
-      "embers": 0,
+      "glims": 0,
       "materials": {
         "timber": 6,
         "stone": 4
@@ -325,7 +325,7 @@
         "indoor"
       ],
       "minTier": 1,
-      "embers": 0,
+      "glims": 0,
       "materials": {
         "amber": 4,
         "stone": 4
@@ -338,7 +338,7 @@
         "outdoor"
       ],
       "minTier": 0,
-      "embers": 0,
+      "glims": 0,
       "materials": {
         "timber": 6,
         "stone": 4,
@@ -353,7 +353,7 @@
         "outdoor"
       ],
       "minTier": 2,
-      "embers": 30,
+      "glims": 30,
       "materials": {
         "timber": 16,
         "stone": 8,
@@ -367,7 +367,7 @@
         "gate"
       ],
       "minTier": 1,
-      "embers": 3,
+      "glims": 3,
       "materials": {},
       "craftOnly": true
     },
@@ -378,7 +378,7 @@
         "indoor"
       ],
       "minTier": 1,
-      "embers": 4,
+      "glims": 4,
       "materials": {},
       "craftOnly": true
     },
@@ -389,7 +389,7 @@
         "indoor"
       ],
       "minTier": 1,
-      "embers": 4,
+      "glims": 4,
       "materials": {},
       "craftOnly": true
     },
@@ -401,7 +401,7 @@
         "outdoor"
       ],
       "minTier": 1,
-      "embers": 3,
+      "glims": 3,
       "materials": {},
       "craftOnly": true
     },
@@ -412,7 +412,7 @@
         "indoor"
       ],
       "minTier": 1,
-      "embers": 4,
+      "glims": 4,
       "materials": {},
       "craftOnly": true
     },
@@ -423,7 +423,7 @@
         "outdoor"
       ],
       "minTier": 1,
-      "embers": 3,
+      "glims": 3,
       "materials": {},
       "craftOnly": true
     },
@@ -434,7 +434,7 @@
         "outdoor"
       ],
       "minTier": 1,
-      "embers": 3,
+      "glims": 3,
       "materials": {},
       "craftOnly": true
     },
@@ -445,7 +445,7 @@
         "indoor"
       ],
       "minTier": 1,
-      "embers": 3,
+      "glims": 3,
       "materials": {},
       "craftOnly": true
     },
@@ -456,7 +456,7 @@
         "indoor"
       ],
       "minTier": 1,
-      "embers": 2,
+      "glims": 2,
       "materials": {},
       "craftOnly": true
     },
@@ -467,7 +467,7 @@
         "indoor"
       ],
       "minTier": 1,
-      "embers": 3,
+      "glims": 3,
       "materials": {},
       "craftOnly": true
     },
@@ -478,7 +478,7 @@
         "indoor"
       ],
       "minTier": 1,
-      "embers": 2,
+      "glims": 2,
       "materials": {},
       "craftOnly": true
     },
@@ -490,7 +490,7 @@
         "outdoor"
       ],
       "minTier": 1,
-      "embers": 3,
+      "glims": 3,
       "materials": {},
       "craftOnly": true
     },
@@ -502,7 +502,7 @@
         "outdoor"
       ],
       "minTier": 1,
-      "embers": 3,
+      "glims": 3,
       "materials": {},
       "craftOnly": true
     },
@@ -513,7 +513,7 @@
         "indoor"
       ],
       "minTier": 1,
-      "embers": 4,
+      "glims": 4,
       "materials": {},
       "craftOnly": true
     },
@@ -525,7 +525,7 @@
         "outdoor"
       ],
       "minTier": 1,
-      "embers": 3,
+      "glims": 3,
       "materials": {},
       "craftOnly": true
     },
@@ -537,7 +537,7 @@
         "outdoor"
       ],
       "minTier": 1,
-      "embers": 2,
+      "glims": 2,
       "materials": {},
       "craftOnly": true
     }

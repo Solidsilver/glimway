@@ -17,9 +17,12 @@ message WearResult {
   repeated string worn_out = 4; repeated string returned = 5; string item_def = 6;
   double uses_left = 7; double condition = 8; Instance instance = 9; string maker_id = 10;
 }
-// What a seller just handed over (/api/items/buy), and what it cost — in
-// embers, in gold, or in both.
-message Bought { string seller = 1; string item_def = 2; int32 qty = 3; int32 embers = 4; int32 gold = 5; }
+// What a seller just handed over (/api/items/buy), and what it cost in glims.
+message Bought {
+  string seller = 1; string item_def = 2; int32 qty = 3;
+  reserved 4, 5; reserved "embers", "gold";
+  int32 glims = 6;
+}
 
 // One request message for all fourteen item mutations, mirroring the
 // retired hand-written itemRequest: every op's fields are optional and empty
@@ -41,12 +44,12 @@ message ItemsRequest {
   Asset asset = 11; string pickup = 12; string target = 13; bool unmoored = 14;
   string visit_id = 15; repeated int32 tile = 16; string region = 17;
   string seller = 18; string good = 19;
-  // buy: "" | "embers" | "gold" — which currency pays (0.6; "embers" is
-  // today's behaviour and the empty default).
-  string pay = 20;
-  // give: an amount of gold in place of `asset` (3.4). A request with both
-  // `gold` and `asset`, or with neither, is refused as invalid-request.
-  int32 gold = 21;
+  // pay (buy's currency choice) and gold (give's amount) left in 0.6.1: a
+  // good has one price, in glims.
+  reserved 20, 21; reserved "pay", "gold";
+  // give: an amount of glims in place of `asset` (3.4). A request with both
+  // `glims` and `asset`, or with neither, is refused as invalid-request.
+  int32 glims = 22;
 }
 // The caller's items after the change, and what happened.
 message ItemsResult {
@@ -55,8 +58,9 @@ message ItemsResult {
   repeated Stack gathered = 8; HomePlant plant = 9; HomeLandChange land = 10;
   string returned = 11; google.protobuf.StringValue paper = 12; string heirloom = 13;
   int32 ada_oil_count = 14; Bought bought = 15;
-  // give: the gold handed over (3.4).
-  int32 gold_given = 16;
+  reserved 16; reserved "gold_given";
+  // give: the glims handed over (3.4).
+  int32 glims_given = 17;
 }
 // GET /api/items.
 message ItemsRead { ItemsView items = 1; }
