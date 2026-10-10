@@ -12,6 +12,8 @@ export const wardrobeCopy = {
   nothing: 'Nothing',
   nothingHint: 'Leave this slot bare',
   change: 'Change',
+  /** Over the names of the pieces it puts on: the names say what, so no count. */
+  wholeSet: 'Wear the whole set',
   foot: 'Only how you look here. Your stats come from your battle gear on Habitica, and Habitica stays as it is.',
   check: 'Check for new gear',
   checking: 'Checking…',
@@ -40,11 +42,6 @@ export function checkedLine(checkedAt: number, now: number): string {
     : s < 2 * 86400 ? 'yesterday'
     : `${Math.floor(s / 86400)} days ago`
   return `Gear checked with Habitica ${when}.`
-}
-
-/** Each "Wear the whole set" line: how many pieces it puts on, with the one just picked. */
-export function wholeSetLine(pieces: number): string {
-  return `Wear the whole set (${pieces} pieces)`
 }
 
 /** The wardrobe's refusals: its choice and Check for new gear. Every refusal changes nothing. */

@@ -72,11 +72,28 @@ test('Check for new gear carries the token in that one request, unkeyed, and nev
   assert.equal(sent.body.op, undefined, 'no operation header: not keyed');
   assert.equal(r.link.outbox.length, 0, 'never in the outbox');
   await r.link.flush();
-  const kept = JSON.stringify([...r.store.records.values()]);
-  assert.ok(!kept.includes(TOKEN), 'not in the stored record');
-  assert.ok(!JSON.stringify(r.events).includes(TOKEN), 'not on the bus');
-  for (const [k, v] of Object.entries(r.link)) assert.ok(!(typeof v === 'string' && v.includes(TOKEN)), `not kept on the link (${k})`);
+  assert.ok(!deep([...r.store.records.values()]).includes(TOKEN), 'not in the stored outbox record');
+  assert.ok(!deep(r.events).includes(TOKEN), 'not in any bus payload');
+  assert.ok(!deep(r.link).includes(TOKEN), 'not kept anywhere on the link, however deep');
+  assert.ok(!deep(r.session).includes(TOKEN), 'not kept on the session');
+  assert.ok(deep({ a: [{ b: new Map([['c', TOKEN]]) }] }).includes(TOKEN), 'the sweep itself sees nested values');
 });
+
+/** Every value reachable from `root`, as one string: nested objects, Maps, Sets, cycles and bigints included. */
+function deep(root: unknown): string {
+  const seen = new WeakSet<object>();
+  return JSON.stringify(root, (_k, v: unknown) => {
+    if (typeof v === 'bigint') return v.toString();
+    if (typeof v === 'function') return undefined;
+    if (v && typeof v === 'object') {
+      if (seen.has(v)) return undefined;
+      seen.add(v);
+      if (v instanceof Map) return [...v.entries()];
+      if (v instanceof Set) return [...v.values()];
+    }
+    return v;
+  });
+}
 
 test('a refused check says why and changes nothing', async (t) => {
   const r = await rig(t);

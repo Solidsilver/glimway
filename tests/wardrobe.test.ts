@@ -143,3 +143,11 @@ test('wardrobe copy: the check\'s lines, and every refusal is a code the server 
   assert.match(wardrobeErrorText('gear-not-owned'), /Check for new gear/);
   assert.match(wardrobeErrorText('offline'), /Needs a connection/);
 });
+
+test('the wardrobe icon is in the purse art pass (a test, not the loader)', () => {
+  // WardrobeTab draws <ArtIcon art="wardrobe">; lane D's purse pack emits ui.artIcons from this manifest.
+  // The "the key wardrobe is emitted" half lands once D and E merge together.
+  const manifest = JSON.parse(readFileSync(new URL('../assets/generated/purse-pass/manifest.json', import.meta.url), 'utf8')) as { frames: Record<string, { file?: string }> };
+  assert.ok(manifest.frames.wardrobe, 'the wardrobe frame is delivered');
+  assert.ok(manifest.frames.wardrobe.file, 'with its own frame file');
+});

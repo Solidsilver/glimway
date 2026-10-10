@@ -30,7 +30,7 @@
     withSlot,
     type WardrobeSlot
   } from '../lib/wardrobe'
-  import { checkedLine, foundLine, wardrobeCopy as copy, wardrobeErrorText, wholeSetLine } from '../content/wardrobe'
+  import { checkedLine, foundLine, wardrobeCopy as copy, wardrobeErrorText } from '../content/wardrobe'
   import { busVersion } from './panel-state.svelte'
   import { memoryCredentials } from './habitica-local'
   import { ui } from './store.svelte'
@@ -55,8 +55,9 @@
   let picking = $state<WardrobeSlot | null>(null)
   /** The Change button that opened the picker: focus goes back to it on close. */
   let returnTo = ''
-  /** Credentials are a plain module holder, not reactive: re-read when a check ends or the profile changes. */
-  const connected = $derived((changed.value, checking, memoryCredentials() !== null))
+  /** Credentials are a plain module holder, not reactive: re-read when a check ends, the profile changes, or a click finds them gone. */
+  let credsLooked = $state(0)
+  const connected = $derived((changed.value, checking, credsLooked, memoryCredentials() !== null))
 
   const touch = isTouchFirst()
 
@@ -105,10 +106,15 @@
   }
 
   async function check(): Promise<void> {
-    const creds = memoryCredentials()
-    if (!link || !creds || checking) return
-    checking = true
+    if (!link || checking) return
     message = null
+    // Read at click time: a disconnect in the Menu since the page drew turns the button to Connect first, with the hint under it.
+    const creds = memoryCredentials()
+    if (!creds) {
+      credsLooked++
+      return
+    }
+    checking = true
     try {
       const r = await link.checkGear(creds.apiToken)
       if (!r.ok) {
@@ -153,7 +159,7 @@
     selected={sel}
     first={{ label: copy.asOnHabitica, hint: shows.kind === 'habitica' && shows.shows ? gearName(shows.shows) : 'Nothing there on Habitica now' }}
     also={[{ key: NOTHING, label: copy.nothing, hint: copy.nothingHint }]}
-    emptyText={owned === null ? copy.neverChecked : copy.nothingElse}
+    emptyText={owned === null ? (unread ? copy.unread : copy.neverChecked) : copy.nothingElse}
     testid="wardrobe-picker"
     pickPrefix="wardrobe-pick"
     onPick={(k) => pick(slot, k)}
@@ -165,7 +171,7 @@
     {#snippet above()}
       {#if more > 0}
         <button type="button" class="set" onclick={() => wearSet(set, sel)} data-testid="wardrobe-wear-set">
-          <span>{wholeSetLine(more + 1)}</span>
+          <span>{copy.wholeSet}</span>
           <small>{Object.values(set).map((k) => gearName(k!)).join(', ')}</small>
         </button>
       {/if}
