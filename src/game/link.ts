@@ -695,11 +695,13 @@ export class Link {
    * request and nowhere else: not the outbox (which stores bodies), not a
    * replay, not a log. A lost answer isn't sent again; the purse read says
    * how it came out. The world doesn't hold still: Habitica can be slow.
+   * `sent: false` is an offline answer from before the request went out:
+   * nothing can have started.
    */
-  async topUp(token: string, amount: number): Promise<{ ok: true; topUp: TopUpView } | { ok: false; code: ApiErrorCode | 'offline' | 'superseded' }> {
-    if (this.stopped || !this.session) return { ok: false, code: 'unknown' }
-    if (this.status === 'superseded') return { ok: false, code: 'superseded' }
-    if (this.status !== 'online' || !this.lease) return { ok: false, code: 'offline' }
+  async topUp(token: string, amount: number): Promise<{ ok: true; topUp: TopUpView } | { ok: false; code: ApiErrorCode | 'offline' | 'superseded'; sent?: false }> {
+    if (this.stopped || !this.session) return { ok: false, code: 'unknown', sent: false }
+    if (this.status === 'superseded') return { ok: false, code: 'superseded', sent: false }
+    if (this.status !== 'online' || !this.lease) return { ok: false, code: 'offline', sent: false }
     const req = create(PurseTopUpRequestSchema, { op: create(OpHeaderSchema, { lease: this.lease, key: newKey() }), token, amount })
     try {
       const env = await this.api.run(() => this.ops.purseTopUp(req))

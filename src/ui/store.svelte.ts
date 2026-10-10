@@ -135,6 +135,12 @@ class UiStore {
   /** The end-of-quest card. */
   endingOpen = $state(false)
 
+  /** Another account, or none: the purse shown is this one's (null when signed out). */
+  showPurse(purse: PurseView | null): void {
+    this.purse = purse
+    this.stats = { ...this.stats, gold: purse?.gold ?? 0 }
+  }
+
   toast(payload: ToastPayload): void {
     const kind = payload.kind ?? 'info'
     if (import.meta.env.DEV) {

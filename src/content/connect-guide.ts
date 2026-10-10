@@ -127,7 +127,7 @@ export const whyToken: WhyToken = {
   never: {
     title: 'What it never does',
     items: [
-      'Score your own tasks, change stats, equip or buy anything, cast spells, or touch your party. Gold moves only in a top-up you agreed to.',
+      'Score your own tasks, change stats, equip anything, buy any of your own rewards, cast spells, or touch your party. Gold moves only in a top-up you agreed to.',
       'Keep your token. Glimway’s server sees it at sign-in to prove your account, and in a top-up or a gear check you start, for that one request. It never stores, logs or returns it.'
     ]
   },

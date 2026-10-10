@@ -31,7 +31,7 @@ export const GRANT_MAX: Record<GrantKind, number> = { embers: 100_000, material:
 const GROUP: Record<string, string> = {
   material: 'Material',
   tool: 'Tool',
-  'off-hand': 'Off hand',
+  'off-hand': 'At your belt',
   'carry-gear': 'Carry gear',
   fitting: 'Fitting',
   consumable: 'Consumable',

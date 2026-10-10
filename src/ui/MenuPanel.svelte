@@ -253,7 +253,6 @@
     confirmLabel={accountCopy.logout}
     onConfirm={() => {
       confirmLogout = false
-      purseUi.reset()
       onLogout?.()
     }}
     onCancel={() => (confirmLogout = false)}

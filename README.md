@@ -60,7 +60,7 @@ are shown unmodified, with credit, and are not AI-generated.
 **Glimway reads your Habitica profile, and writes to it only when you top up
 your purse.** The game makes one explicit `GET /user` per connect or **Sync**
 press, from your browser. It never scores your tasks, changes your stats or
-gear, or buys anything on your behalf.
+gear, or buys any of your own rewards; the one write is the top-up below.
 
 The one write: when you press **Top up** in the Menu and agree on the card,
 the Glimway server moves the gold you chose into your purse. It adds a reward

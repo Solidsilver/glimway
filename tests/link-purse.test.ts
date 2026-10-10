@@ -81,14 +81,14 @@ test('a top-up refused before it starts says why, and nothing is kept to send ag
   r.server.on('POST /api/purse/top-up', refuse('top-up-limit'));
   assert.deepEqual(await r.link.topUp('tok', 5), { ok: false, code: 'top-up-limit' });
   r.server.on('POST /api/purse/top-up', 'network');
-  assert.deepEqual(await r.link.topUp('tok', 5), { ok: false, code: 'offline' });
+  assert.deepEqual(await r.link.topUp('tok', 5), { ok: false, code: 'offline' }, 'sent, so it may have started');
   assert.equal(r.server.sent('POST /api/purse/top-up').length, 2, 'a lost answer is never sent again by itself');
   assert.equal(r.link.outbox.length, 0);
 });
 
-test('a top-up needs a connection', async (t) => {
+test('a top-up needs a connection, and says it was never sent', async (t) => {
   const r = await rig(t, { state: withPurse(0) });
-  assert.deepEqual(await r.link.topUp('tok', 5), { ok: false, code: 'offline' });
+  assert.deepEqual(await r.link.topUp('tok', 5), { ok: false, code: 'offline', sent: false });
   assert.equal(r.server.sent('POST /api/purse/top-up').length, 0);
 });
 

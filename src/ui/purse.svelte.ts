@@ -9,17 +9,20 @@
  * The token is read from the tab's memory for the request and handed
  * straight to it; nothing here keeps it.
  */
-import type { Session } from '../game/session'
-import { bus, EV } from '../game/events'
-import { purseCopy } from '../content/purse'
-import { purseErrorText } from '../content/errors'
-import { parseAmount, purseLog, settled, topUpMoved, topUpOutcome, topUpView, TOP_UP_POLL_LIMIT_MS, TOP_UP_POLL_MS, type LogEntry, type TopUpView } from '../lib/purse'
-import { memoryCredentials } from './habitica-local'
+import type { Session } from '../game/session.ts'
+import { bus, EV } from '../game/events.ts'
+import { purseCopy } from '../content/purse.ts'
+import { purseErrorText } from '../content/errors.ts'
+import { parseAmount, purseLog, settled, topUpMoved, topUpOutcome, topUpView, TOP_UP_POLL_LIMIT_MS, TOP_UP_POLL_MS, type LogEntry, type TopUpView } from '../lib/purse.ts'
+import { memoryCredentials } from './habitica-local.ts'
 
 /** What the sync before a top-up found: Habitica's gold (display only), or why it stopped (it says so itself). */
 export type SyncForTopUp = { ok: true; gold: number } | { ok: false }
 
 type Phase = 'idle' | 'syncing' | 'consent' | 'moving' | 'checking'
+
+/** How far apart this device's clock and the server's may be, in seconds (both keep network time). */
+const CLOCK_SKEW_S = 1
 
 class PurseUi {
   phase = $state<Phase>('idle')
@@ -99,11 +102,17 @@ class PurseUi {
       this.follow(session, r.topUp)
       return
     }
+    if (r.code === 'offline' && r.sent === false) {
+      // Never sent: nothing can have started, so say so now.
+      this.phase = 'consent'
+      this.error = purseCopy.notSent
+      return
+    }
     if (r.code === 'offline') {
-      // No answer: it may have started. The purse read says.
+      // Sent, but no answer: it may have started. The purse read says.
       this.phase = 'checking'
       this.following = null
-      this.poll(session, pressedAt, Date.now())
+      this.poll(session, { since: pressedAt, amount }, Date.now())
       return
     }
     this.phase = 'consent'
@@ -114,11 +123,24 @@ class PurseUi {
     if (settled(t)) return this.finish(t)
     this.phase = 'checking'
     this.following = t.id
-    this.poll(session, t.startedAt, Date.now())
+    this.poll(session, { since: t.startedAt, amount: t.amount }, Date.now())
+  }
+
+  /**
+   * After a lost answer, the top-up that is ours: the one still working, or
+   * else a row for the same amount started at or after the press. The press
+   * is this device's clock and the row the server's; both keep network time,
+   * so one second covers the difference. An older row is another tab's, or
+   * an earlier top-up.
+   */
+  private ours(rows: TopUpView[], working: TopUpView | null, press: { since: number; amount: number }): TopUpView | null {
+    const fits = (t: TopUpView) => t.amount === press.amount && t.startedAt >= press.since - CLOCK_SKEW_S
+    if (working && fits(working)) return working
+    return rows.find(fits) ?? null
   }
 
   /** Read the purse every few seconds until the top-up settles (or the worker's limit has long passed). */
-  private poll(session: Session, since: number, began: number): void {
+  private poll(session: Session, press: { since: number; amount: number }, began: number): void {
     this.stopPolling()
     this.pollTimer = setTimeout(async () => {
       this.pollTimer = null
@@ -130,7 +152,7 @@ class PurseUi {
         const working = r.value.purse?.working ? topUpView(r.value.purse.working) : null
         const mine = this.following
           ? (rows.find((t) => t.id === this.following) ?? (working?.id === this.following ? working : null))
-          : ([working, ...rows].find((t) => t && t.startedAt >= since - 5) ?? null)
+          : this.ours(rows, working, press)
         if (mine) {
           this.following = mine.id
           if (settled(mine)) return this.finish(mine)
@@ -140,7 +162,7 @@ class PurseUi {
         }
       }
       if (Date.now() - began > TOP_UP_POLL_LIMIT_MS) return this.give(purseCopy.lost)
-      this.poll(session, since, began)
+      this.poll(session, press, began)
     }, TOP_UP_POLL_MS)
   }
 

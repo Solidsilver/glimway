@@ -56,6 +56,7 @@ export const purseCopy = {
   tokenRefused: 'Habitica didn’t accept your token. Connect again and try once more.',
   leftover: 'If a reward called “Glimway purse” is still in your Habitica Rewards, don’t buy it. It’s removed the next time you top up.',
   lost: 'The world didn’t answer. If gold moved, it shows in your purse log soon.',
+  notSent: 'Needs a connection. Nothing was sent, and no gold moved.',
 
   // ---- the log
   logTitle: 'Purse log',
@@ -79,7 +80,9 @@ export const purseCopy = {
   mailRow: 'Gold from your purse',
   mailSend: (n: number | null) => (n ? `Send ${goldPhrase(n)}` : 'Send gold'),
   mailSent: (name: string, n: number) => `Sent ${goldPhrase(n)} to ${name}. It waits in their mailbox.`,
-  needsConnection: 'Needs a connection.'
+  needsConnection: 'Needs a connection.',
+  /** The goodbye a seller's gold choices end on when his talk had none. */
+  notYet: 'Not yet'
 } as const
 
 /** Gold on the gate shelf (purse-and-wardrobe.md 3.2). */
