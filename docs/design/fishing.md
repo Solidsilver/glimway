@@ -125,7 +125,7 @@ planned changes to today's code, not features already shipped here.
 - Permanent, material-built way-lamps preserve chunks; temporary mage-lit rest
   lamps do not. Read the world's authoritative preservation decision rather
   than inferring it from a glowing sprite. Reaching lake-country fisheries in
-  0.6 does not require 0.7 way-lamps or the mage's later Old ways.
+  0.6 does not require 0.8 way-lamps or the mage's later Old ways.
 - Pottery in 0.6 is taught by Finn through Aldo's kiln project. If a future
   reed margin uses a crafted pot, reuse that kiln and recipe system. The first
   fishing rod, fish recipe and float cannot require lake-country reed or clay,

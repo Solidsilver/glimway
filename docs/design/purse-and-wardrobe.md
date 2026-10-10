@@ -1,5 +1,10 @@
 # 0.6 The purse and the wardrobe
 
+> **Superseded in part (owner, 2026-10-10):** embers and purse gold merge into one currency,
+> **glims**, in 0.6.1 (0.6.0 shipped as this doc describes). A top-up turns Habitica gold into glims at 2:1, at most 30 a day.
+> Where this doc says the purse holds gold, read glims; Habitica's own gold is unchanged. See
+> [silas-yard.md](silas-yard.md) part 1, which lists what each piece here becomes (1.6).
+
 Status: **design, confirmed by the owner**, 2026-10-09. The owner took the defaults for questions
 1–5 and 7–9, kept the consent card's **All** button, and widened question 6: gold also moves in
 letters and hand to hand (3.3, 3.4). The answers and the questions this raised are in section 11.

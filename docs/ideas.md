@@ -21,10 +21,17 @@ worth thinking about; **(later)** means parked on purpose.
     check confirms it.
   - Research is in [habitica-gold.md](habitica-gold.md); the design to build is
     [design/purse-and-wardrobe.md](design/purse-and-wardrobe.md) (0.6).
-- **Gold and embers as two currencies** (agreed): gold buys shop goods and materials and trades
-  between players; embers stay what you earn by doing things in the world.
-- **Player shops** (agreed, 0.6): a price in gold on a gate-shelf slot; gold also moves in letters
+- **Glims, one currency** (agreed 2026-10-10, replaces "Gold and embers as two currencies"):
+  beads of lit amber, earned from Habitica XP as embers were, or turned in from Habitica gold by a
+  top-up (2:1, at most 30 a day); they trade between players. Design:
+  [design/silas-yard.md](design/silas-yard.md) part 1 (0.6.1).
+- **Player shops** (shipped in 0.6, in gold; glims from 0.6.1): a price in glims on a gate-shelf slot; glims also move in letters
   and by hand. A stall on the Commons stays a maybe.
+- **Silas's Yard and Pell** (agreed, 0.7): Silas's cottage becomes a walk-in shop with a tabbed
+  panel; Pell the clerk keeps the deeds in a side room. Design:
+  [design/silas-yard.md](design/silas-yard.md) part 2.
+- **Make and mend more at home** (later, owner 2026-10-10): more bench recipes and more tools
+  mendable at your own bench, at higher homestead tiers.
 - **Habitica wardrobe** (agreed, 0.6): Habitica gear you own shows up in-game as cosmetics. Earning
   it stays in Habitica. Design: [design/purse-and-wardrobe.md](design/purse-and-wardrobe.md).
 - **Pets and mounts as companions** (shipped in 0.5): choose which pet walks with you and three for
