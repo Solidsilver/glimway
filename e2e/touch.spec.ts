@@ -1,6 +1,6 @@
 import { devices } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
-import { frames, player, stepToWarden, talkThrough, waitForLive, warden, warp } from './helpers'
+import { player, steady, stepToWarden, talkThrough, waitForLive, warden, warp } from './helpers'
 import { freshPlayer } from './home-helpers'
 
 test.use({ ...devices['iPhone 13'], browserName: 'chromium' })
@@ -109,11 +109,8 @@ test('phone: the floating stick appears under the thumb and walks the hero', asy
   await f.move(130, vh - 200)
   await expect.poll(async () => (await player(page)).x - start.x).toBeGreaterThan(12)
   await f.up()
-  // Let go: the hero stops.
-  await frames(page, 6)
-  const stopped = (await player(page)).x
-  await frames(page, 10)
-  expect((await player(page)).x).toBe(stopped)
+  // Let go: the hero stops (the same spot for ten frames running).
+  await steady(page, async () => (await player(page)).x, { frames: 10, seconds: 3, message: 'the hero stops' })
 })
 
 test('phone: hold to walk heads for the finger and stops on release', async ({ page }) => {
@@ -128,10 +125,7 @@ test('phone: hold to walk heads for the finger and stops on release', async ({ p
   await f.down(at.x + 110, at.y)
   await expect.poll(async () => (await player(page)).x - start.x).toBeGreaterThan(12)
   await f.up()
-  await frames(page, 6)
-  const stopped = (await player(page)).x
-  await frames(page, 10)
-  expect((await player(page)).x).toBe(stopped)
+  await steady(page, async () => (await player(page)).x, { frames: 10, seconds: 3, message: 'the hero stops' })
   // The walk layer sits under the HUD: its buttons still answer.
   await page.getByRole('button', { name: /^Inventory/ }).tap()
   await expect(page.getByRole('dialog', { name: /Inventory/ })).toBeVisible()

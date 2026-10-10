@@ -15,8 +15,7 @@
 import Phaser from 'phaser'
 import { bus, EV, type AbilityCastPayload } from '../events'
 import { abilityFor } from '../../lib/abilities'
-import { HEAL_FORMULA } from '../../lib/combat-timing'
-import { inCircle, kindleSpot, wardPulseTimes } from '../../lib/combat-moves'
+import { friendPulseHeal, inCircle, kindleSpot, wardPulseTimes } from '../../lib/combat-moves'
 import type { KitMove } from '../../lib/combat'
 import { TILE } from '../../lib/tile'
 import { crArt, hasCrArt } from '../crafts-art'
@@ -36,12 +35,22 @@ export interface MoveFxDeps {
 
 type Fadeable = Phaser.GameObjects.GameObject & { alpha: number; setAlpha(value: number): unknown }
 
+/** Each move's effect on screen is tagged with its move and spot, for playtests (`shown`). */
+const tag = <T extends Phaser.GameObjects.GameObject>(o: T, move: string, x: number, y: number): T => o.setData('move', { move, x: Math.round(x), y: Math.round(y) })
+
 /** Ground effects sit under anyone standing on them: below the lowest depth-by-y inside their footprint. */
 const groundDepth = (y: number, halfH: number) => y - halfH - 2
 
-/** A friend's pulse mends this much: a Mend's base (their stats aren't on this screen), times the pulse share. */
-export function friendPulseHeal(pulseHealFraction: number): number {
-  return Math.round(HEAL_FORMULA.base * pulseHealFraction * 100) / 100
+/**
+ * A heal lands on this screen's hero (a Mend, a Ward-light pulse): their HP
+ * rises, to its max, and the rise floats up from them. Returns the rise.
+ */
+export function healHero(session: Session, fx: Effects, at: { x: number; y: number }, amount: number): number {
+  const before = session.state.hp
+  session.setVitals(before + amount, session.state.mana)
+  const rise = session.state.hp - before
+  if (rise >= 0.5) fx.floatText(at.x, at.y - 24, `+${Math.round(rise)}`, '#b9f0a0', false)
+  return rise
 }
 
 export class MoveFx {
@@ -61,11 +70,11 @@ export class MoveFx {
     if (hasCrArt(this.scene, 'stand-ground-ring-0')) {
       const ring = this.scene.add.sprite(x, y, crArt(this.deps.reducedMotion ? 'stand-ground-ring-3' : 'stand-ground-ring-0')).setDepth(groundDepth(y, 8))
       if (!this.deps.reducedMotion && this.scene.anims.exists(crArt('stand-ring'))) ring.play(crArt('stand-ring'))
-      this.fadeOut(ring, until)
+      this.fadeOut(tag(ring, 'stand', x, y), until)
     } else {
       const g = this.scene.add.graphics().setDepth(groundDepth(y, 8))
       g.lineStyle(2, 0x8a6a44, 0.85).strokeEllipse(x, y, 22, 10)
-      this.fadeOut(g, until)
+      this.fadeOut(tag(g, 'stand', x, y), until)
     }
   }
 
@@ -77,13 +86,13 @@ export class MoveFx {
       // The art is about 3 tiles across; the table's radius sets the size.
       patch.setScale((2 * r) / patch.width)
       if (!this.deps.reducedMotion && this.scene.anims.exists(crArt('kindle-patch'))) patch.play(crArt('kindle-patch'))
-      this.fadeIn(patch)
+      this.fadeIn(tag(patch, 'kindle', x, y))
       this.fadeOut(patch, until)
     } else {
       const g = this.scene.add.graphics().setDepth(groundDepth(y, r))
       g.fillStyle(0xf3e3a0, 0.22).fillEllipse(x, y, r * 2, r * 1.3)
       g.lineStyle(1, 0xf7eec0, 0.6).strokeEllipse(x, y, r * 2, r * 1.3)
-      this.fadeIn(g)
+      this.fadeIn(tag(g, 'kindle', x, y))
       this.fadeOut(g, until)
     }
   }
@@ -100,7 +109,7 @@ export class MoveFx {
       : this.scene.add.graphics().setDepth(groundDepth(y, r))
     if (base instanceof Phaser.GameObjects.Sprite) base.setScale((2 * r) / base.width)
     else base.lineStyle(2, 0xcfe6a0, 0.8).strokeEllipse(x, y, r * 2, r * 1.2)
-    this.fadeIn(base)
+    this.fadeIn(tag(base, 'ward-light', x, y))
     this.fadeOut(base, until)
     for (const t of wardPulseTimes(seconds, pulses)) {
       this.scene.time.delayedCall(t * 1000, () => {
@@ -149,6 +158,7 @@ export class MoveFx {
     }
     for (const layer of copy.list as Phaser.GameObjects.Image[]) layer.setTint(0xa9c4ff)
     copy.setAlpha(0.5)
+    tag(copy, 'echo', x, y)
     this.fadeOut(copy, seconds * 1000)
   }
 
@@ -184,7 +194,8 @@ export class MoveFx {
         return this.echo(p.x, p.y, n?.durationSeconds ?? 3, null)
       case 'ward-light': {
         const r = (n?.radiusTiles ?? 1.25) * TILE
-        const heal = friendPulseHeal(n?.pulseHealFraction ?? 0.4)
+        // The hub's own number for this caster's pulse; a cast without one mends the base share.
+        const heal = friendPulseHeal(p.pulseHeal, n?.pulseHealFraction ?? 0)
         return this.ward(p.x, p.y, r, n?.durationSeconds ?? 5, n?.pulses ?? 3, () => this.mendHere(p.x, p.y, r, heal))
       }
       // A friend's signature: the same small effect yours makes, at their side.
@@ -207,10 +218,15 @@ export class MoveFx {
     const s = this.deps.session
     const hero = this.deps.hero().sprite
     if (heal <= 0 || s.state.hp <= 0 || !inCircle(hero.x, hero.y, cx, cy, r)) return false
-    s.setVitals(s.state.hp + heal, s.state.mana)
-    this.deps.fx.floatText(hero.x, hero.y - 24, `+${Math.round(heal)}`, '#b9f0a0', false)
+    healHero(s, this.deps.fx, hero, heal)
     sfx('calm')
     return true
+  }
+
+  /** Read-only, for playtests: the moves on screen now (anyone's), and where. */
+  shown(): { move: string; x: number; y: number }[] {
+    // `data` is read, not getData(): that would give every object on the screen a data store.
+    return this.scene.children.list.filter((o) => o.active && o.data?.get('move')).map((o) => o.data.get('move') as { move: string; x: number; y: number })
   }
 
   /** Where Kindle's patch lands for the hero now (the presence event names this spot). */

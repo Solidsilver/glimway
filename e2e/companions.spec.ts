@@ -2,7 +2,7 @@ import { expect, test, type Page } from './fixtures'
 import type { Browser, BrowserContext } from '@playwright/test'
 import { allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, pastOpening, reenter, routeHabitica, setHabitica, sql, waitForWorld } from './connected'
 import { claimDeed, earnPlenty, fund, go, homes, landOf, myHome, silasSays, throughGate, type Home } from './home-helpers'
-import { SERVER_ANSWER_MS, waitForArea, waitForLive } from './helpers'
+import { SERVER_ANSWER_MS, frames, waitForArea, waitForLive } from './helpers'
 import { HOMESTEAD_DATA, checkPlacement } from '../src/lib/homestead.ts'
 import { buildableKind, clearable, clearedSet, effectiveKind, homeLights, isLit, type Land } from '../src/lib/homestead-land.ts'
 
@@ -16,7 +16,7 @@ import { buildableKind, clearable, clearedSet, effectiveKind, homeLights, isLit,
  */
 
 type Companions = { pets?: Record<string, number>; mounts?: Record<string, boolean>; currentPet?: string; currentMount?: string }
-type Debug = { follower: { pose: string } | null; mountOut: string; led: { key: string; drawn: boolean } | null; riding: boolean }
+type Debug = { follower: { pose: string } | null; mountOut: string; led: { key: string; drawn: boolean } | null; riding: boolean; walkingHome: { key: string; x: number; y: number; bay: { x: number; y: number } | null; done: boolean } | null }
 type Remote = { id: string; name: string; x: number; y: number; alpha: number; pet: string | null; riding: boolean; led: string | null }
 
 const debug = (page: Page) => page.evaluate(() => (window as unknown as { __fsDebug: () => Debug }).__fsDebug())
@@ -106,8 +106,10 @@ test('the follower you choose walks with you, and is still yours after a reload'
   await expect(page.getByTestId('companions-pick-none')).toHaveClass(/\bon\b/)
   await page.keyboard.press('Escape')
   await closePanel(page)
-  // Give the follower time to have come back, were it going to.
-  await page.waitForTimeout(1_000)
+  // The companions are read (the panel showed the server's choice), so a
+  // follower would be drawn within a few frames: a second of game time, not
+  // of wall time, and still none.
+  await frames(page, 60)
   expect((await debug(page)).follower).toBeNull()
 })
 
@@ -134,9 +136,8 @@ test('a friend\'s pet follows them on your screen, and you can pet it', async ({
   await expect.poll(async () => (await debug(page)).follower, { timeout: SERVER_ANSWER_MS }).not.toBeNull()
   await expect.poll(async () => (await remotes(other)).map((r) => [r.name, r.pet]), { timeout: 15_000 }).toEqual([['Ash', 'Wolf-Base']])
   // Rowan has no pet: nothing follows them on Ash's screen (never a stand-in).
-  await expect.poll(async () => (await remotes(page)).map((r) => r.name), { timeout: 15_000 }).toEqual(['Rowan'])
-  expect((await remotes(page))[0].pet).toBeNull()
-  expect((await remotes(other))[0].led).toBeNull()
+  await expect.poll(async () => (await remotes(page)).map((r) => [r.name, r.pet]), { timeout: 15_000 }).toEqual([['Rowan', null]])
+  await expect.poll(async () => (await remotes(other)).map((r) => [r.name, r.led])).toEqual([['Ash', null]])
 
   // Out in the open (a bench or a resident outranks a pet), Rowan walks up to
   // Ash: the action button says Pet. Only Rowan sees the heart.
@@ -331,8 +332,7 @@ test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, an
   await expect(page.locator('.prompt')).toContainText('Saddle up')
   await waitForLive(page)
   await page.keyboard.press('e')
-  await expect.poll(async () => (await debug(page)).riding, { timeout: SERVER_ANSWER_MS }).toBe(true)
-  expect((await debug(page)).mountOut).toBe('Wolf-Base')
+  await expect.poll(async () => { const d = await debug(page); return [d.riding, d.mountOut] }, { timeout: SERVER_ANSWER_MS }).toEqual([true, 'Wolf-Base'])
   await expect(page.getByRole('button', { name: /Get down/ })).toBeVisible()
   // The bay stands empty while it's out (the owner's playtest): for you, and for the visitor.
   await expect.poll(async () => (await homes(page)).stalled).toEqual([])
@@ -372,9 +372,10 @@ test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, an
   await page.keyboard.press('m')
   await expect(page.getByText(/hoofprints in the square/)).toBeVisible()
 
-  // Go home (H): it walks off, and it's back in its stall.
+  // Go home (H): away from its land it walks off the screen, and it's back in its stall.
   await page.keyboard.press('h')
   await expect.poll(async () => (await debug(page)).mountOut).toBe('')
+  await expect.poll(async () => (await debug(page)).walkingHome).toMatchObject({ key: 'Wolf-Base', bay: null })
   await expect
     .poll(async () => (await (await page.request.get('/api/state', CONTRACT)).json()).state?.companions?.mountOut ?? null, { timeout: SERVER_ANSWER_MS })
     .toBe('')
@@ -385,8 +386,8 @@ test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, an
   await go(page, `home:${gate}`, spot.x + 2, spot.y + 5)
   await expect.poll(async () => (await homes(page)).stalled, { timeout: SERVER_ANSWER_MS }).toEqual(['Wolf-Base'])
 
-  // Go home on your own land (review round 1): the bay stays empty while it
-  // walks off the screen, then it's back in its stall.
+  // Go home on your own land (the owner's request, review F6): it walks back
+  // into its bay, the bay empty until it steps in, then it stands in its stall.
   await go(page, `home:${gate}`, spot.x + 3, spot.y + 3)
   await expect(page.locator('.prompt')).toContainText('Saddle up')
   await waitForLive(page)
@@ -398,6 +399,15 @@ test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, an
   await expect.poll(async () => (await homes(page)).stalled).toEqual([])
   await page.keyboard.press('h')
   await expect.poll(async () => (await debug(page)).mountOut).toBe('')
-  await expect.poll(async () => (await homes(page)).stalled, { timeout: 20_000 }).toEqual(['Wolf-Base'])
+  await expect.poll(async () => (await debug(page)).walkingHome?.bay ?? null, { message: 'walking to its bay, not off the screen' }).not.toBeNull()
+  const bay = (await debug(page)).walkingHome!.bay!
+  // Stall 1's floor, inside the footprint: x within its tiles, its feet above the bottom edge.
+  expect(bay.x).toBeGreaterThan(spot.x * 16)
+  expect(bay.x).toBeLessThan((spot.x + 4) * 16)
+  expect(bay.y).toBeLessThan((spot.y + 3) * 16)
+  // It gets there, and the stable draws it standing in its stall.
+  await expect.poll(async () => (await debug(page)).walkingHome?.done, { timeout: 10_000 }).toBe(true)
+  expect((await debug(page)).walkingHome).toMatchObject({ x: Math.round(bay.x), y: Math.round(bay.y) })
+  await expect.poll(async () => (await homes(page)).stalled, { timeout: 10_000 }).toEqual(['Wolf-Base'])
   await ctx.close()
 })

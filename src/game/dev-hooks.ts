@@ -35,7 +35,7 @@ export interface FsHooks {
   __fsPlayer: () => { x: number; y: number; body: Box; blocked: Record<string, boolean> }
   __fsEnemies: () => Array<{ x: number; y: number; state: string; hp: number; texture: string; body: Box; flipX: boolean; type: string; locked: boolean; tint: string }>
   /** The hero's moves (crafts.md 4): the kit's F and R, cooldowns, and what Stand, Kindle and Echo hold now. */
-  __fsMoves: () => { signature: string | null; move: string | null; castCooldown: number; moveCooldown: number; planted: boolean; patches: Array<{ x: number; y: number; r: number; slow: number }>; decoy: { x: number; y: number } | null }
+  __fsMoves: () => { signature: string | null; move: string | null; wardPulseHeal: number; shown: Array<{ move: string; x: number; y: number }>; castCooldown: number; moveCooldown: number; planted: boolean; patches: Array<{ x: number; y: number; r: number; slow: number }>; decoy: { x: number; y: number } | null }
   /** Dormant, active (and whether it stands open), or settled. */
   __fsWarden: () => WardenView
   /** The map's geometry, so a playtest can check the hero is confined to it. */
@@ -85,6 +85,8 @@ export interface FsHooks {
   __fsDevInsets: (v?: Insets) => Insets
   /** The hero sprite's box on screen (CSS px from the canvas's top left). */
   __fsDevHeroScreen: () => Box & { zoom: number }
+  /** The camera's scroll, zoom and centre as drawn (canvas px). */
+  __fsDevCamera: () => { scrollX: number; scrollY: number; zoom: number; originX: number; originY: number }
   /** A world point on screen (CSS px from the canvas's top left). */
   __fsDevToScreen: (x: number, y: number) => { x: number; y: number }
   /** The world point under the pointer. */

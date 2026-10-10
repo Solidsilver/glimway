@@ -23,15 +23,13 @@ import type Phaser from 'phaser'
 import { isMountLayerKey, loadCompanion, loadPresenceAvatar } from '../avatar-render'
 import { PetFollower } from './pet-follower'
 import { LedMount } from './led-mount'
+import { AVATAR_CANVAS, AVATAR_DISPLAY, HAND } from './avatar'
 import { RemoteFishingLine } from './fishing'
 import { bus, EV, type EmotePayload } from '../events'
 import { emoteSay } from '../../content/presence'
 import { LEAVE_FADE_MS, type Peer, type PresenceFeed } from '../presence'
 import { expose } from '../dev-hooks'
 
-/** Habitica sprite grid (source px) and its on-screen height (as the hero's avatar). */
-const AVATAR_CANVAS = 90
-const AVATAR_DISPLAY = 22
 const FADE_IN_MS = 400
 const BUBBLE_MS = 2600
 
@@ -74,9 +72,6 @@ interface View {
   /** Their rod and float while their pose says fishing (crafts.md 5). */
   line: RemoteFishingLine | null
 }
-
-/** Where a peer's weapon hand is, px from their feet (unmirrored; as the hero's, ./avatar.ts). */
-const HAND = { x: -0.4, y: -5.5 }
 
 const now = () => performance.now()
 

@@ -4,11 +4,10 @@
  */
 import raw from '../../content/gathering.json' with { type: 'json' };
 import { decodeContent } from './content-proto.ts';
-import { GatheringSchema, type GatheringValid, type GatheringTargetValid, type GatheringYieldValid } from './gen/glimway/content/v1/gathering_pb.js';
+import { GatheringSchema, type GatheringValid, type GatheringTargetValid } from './gen/glimway/content/v1/gathering_pb.js';
 import { CALENDAR } from './calendar.ts';
 import { giftPhrase, itemDef, itemName } from './items.ts';
 
-export type GatheringYield = GatheringYieldValid;
 export type GatheringTarget = GatheringTargetValid;
 /** The gathering rules (proto/glimway/content/v1/gathering.proto), with the schema's required fields non-optional. */
 export type GatheringData = GatheringValid;

@@ -8,6 +8,14 @@ import type { HabiticaProfile } from './habitica/types.ts'
 import type { Companions } from './gen/glimway/v1/companions_pb.js'
 import type { StallView } from './api/homestead.ts'
 
+/**
+ * Where the Habitica mount canvas (135 px, body and head) sits on its feet,
+ * in canvas px from the canvas centre: the art's feet are near row 110, its
+ * middle near column 61 (Mount_Body_Wolf-Base and Mount_Head_Wolf-Base).
+ * The mount on the lead and the mount in its bay both stand on it.
+ */
+export const MOUNT_FEET = { x: -6, y: 42.5 }
+
 /** "CottonCandyBlue" → "Cotton Candy Blue"; "BearCub" → "Bear Cub". */
 function words(part: string): string {
   return part.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Za-z])(\d)/g, '$1 $2')
@@ -127,4 +135,21 @@ export function stableNext(
 ): { redraw: boolean; recheckAt: number | null } {
   if (baySig(shown) !== drawn) return { redraw: true, recheckAt: null }
   return { redraw: false, recheckAt: nextHomecoming(stalls, me, homeward, now) }
+}
+
+/** Why M doesn't put you in the saddle (crafts.md 3.1): each is a line the game says. */
+export type RideRefusal = 'noStable' | 'noMounts' | 'inStall' | 'indoors' | 'village'
+
+/**
+ * Whether M (ridden ↔ on the lead) can put you in the saddle now, or why
+ * not. With no mount out it says where riding starts: a stable first, then a
+ * mount to stall, then the stall itself. Getting down is always allowed;
+ * getting up waits outside a room (`in:…`) and outside the village.
+ */
+export function rideRefusal(s: { mountOut: string; riding: boolean; stable: boolean; mounts: number; area: string }): RideRefusal | null {
+  if (!s.mountOut) return !s.stable ? 'noStable' : s.mounts === 0 ? 'noMounts' : 'inStall'
+  if (s.riding) return null
+  if (s.area.startsWith('in:')) return 'indoors'
+  if (s.area === 'village') return 'village'
+  return null
 }

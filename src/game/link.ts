@@ -51,10 +51,11 @@ import { adoptable, fallRecovery, gameStateOf, isClientMark, predictCompanions, 
 import { CompanionsRequestSchema, MountHomeRequestSchema, MountOutRequestSchema, StableExtendRequestSchema, StallRequestSchema, type StableExtendResult, type StallResult } from '../lib/gen/glimway/v1/companions_pb.js'
 import { projectHome } from '../lib/api/homestead.ts'
 import { REPORT_INTERVAL_MS, ReportBook, type CapturedReport, type ReportAck } from '../lib/api/reports.ts'
-import type { HomeAction, HomeActionResponse, HomeOp, HomeView, ItemsOp, CommonsResponse, Snapshot, WildsDefeatResult, WildsRegionResponse } from '../lib/api/types.ts'
+import { ReportPump } from '../lib/api/report-pump.ts'
+import type { HomeAction, HomeActionResponse, HomeOp, HomeView, ItemsOp, CommonsResponse, Snapshot, WildsRegionResponse } from '../lib/api/types.ts'
 import { contributeRequest, deskCopyRequest, hearthCraftRequest, homesteadRequest, itemsRequest, mailKeyedRequest, mailSendRequest, shelfRequest, storageRequest, craftRequest, type ItemsFields, type MailSendAction, type ShelfAction, type StorageMoveAction } from '../lib/api/requests.ts'
 import { EnvelopeSchema, PlayerStateSchema, PlayRequestSchema, type PlayerState } from '../lib/gen/glimway/v1/state_pb.js'
-import { FallRequestSchema, MarkRequestSchema, ProfileReportSchema, QuestStepRequestSchema, ReportRequestSchema, SettleEchoRequestSchema, SpendRequestSchema, TakePaperRequestSchema, WildsClaimRequestSchema, WildsLanternRequestSchema, type ProfileResult, type SettleEchoResult, type WildsClaimResult as WildsClaimProto, type WildsLanternResult as WildsLanternProto } from '../lib/gen/glimway/v1/operations_pb.js'
+import { FallRequestSchema, MarkRequestSchema, ProfileReportSchema, QuestStepRequestSchema, SettleEchoRequestSchema, SpendRequestSchema, TakePaperRequestSchema, WildsClaimRequestSchema, WildsLanternRequestSchema, type ProfileResult, type SettleEchoResult, type WildsClaimResult as WildsClaimProto, type WildsLanternResult as WildsLanternProto } from '../lib/gen/glimway/v1/operations_pb.js'
 import { ContributeRequestSchema, CraftRequestSchema, DeskCopyRequestSchema, HearthCraftRequestSchema, MailKeyedRequestSchema, MailSendRequestSchema, StorageMoveRequestSchema } from '../lib/gen/glimway/v1/village_pb.js'
 import { HomesteadRequestSchema, ShelfRequestSchema } from '../lib/gen/glimway/v1/homestead_pb.js'
 import { ItemsRequestSchema } from '../lib/gen/glimway/v1/items_pb.js'
@@ -72,8 +73,6 @@ import { unlockNotice, type MagicMarks } from '../lib/combat.ts'
 const HEARTBEAT_MS = 30_000
 /** After this long without an answer the chip says "Reaching the world…". */
 const REACHING_MS = 60_000
-/** A barrier asks for a fresh report at most this many times before backing off. */
-const BARRIER_TRIES = 3
 
 /** How a quest step went: null when it landed (or queued), else why not. */
 export type QuestStepOutcome = null | 'not-yet' | 'not-here' | 'short' | 'needs-earned' | 'needs-habitica' | 'offline' | 'superseded' | 'busy' | 'error'
@@ -412,6 +411,8 @@ export class Link {
   /** The newest state adopted. */
   server: PlayerState
   readonly reports: ReportBook
+  /** Sends the reports and finds the barrier (src/lib/api/report-pump.ts). */
+  private readonly reporter: ReportPump
   private entries: OutboxEntry[]
   private nextId: number
   private session: LinkSession | null = null
@@ -485,6 +486,27 @@ export class Link {
     this.lease = record.client === init.clientId ? record.lease : null
     this.reports = new ReportBook(record.client === init.clientId ? record.reports : null)
     if (record.client !== init.clientId || !record.reports) this.reports.reset(this.basis())
+    this.reporter = new ReportPump({
+      reports: this.reports,
+      lease: () => this.lease ?? '',
+      vitalsSet: () => this.server.vitals?.vitalsSetVersion ?? 0,
+      basis: () => this.basis(),
+      noteLive: () => this.noteLive(),
+      saveRecord: () => this.saveRecord(),
+      send: (request, keepalive) => (keepalive ? this.ops.report(request, { keepalive: true }) : this.api.run(() => this.ops.report(request))),
+      answered: () => this.answered(),
+      stalled: (err) => this.stalled(err),
+      stopFor: (err) => this.stopFor(err),
+      adopt: (state, ctx) => this.adopt(state, ctx),
+      adoptRead: (state) => {
+        if (state && this.compare(state) !== 'older') this.adopt(state, { read: true })
+      },
+      followServerPlace: (refused, opts) => this.followServerPlace(refused, opts),
+      want: () => {
+        this.reportWanted = true
+        this.pump()
+      }
+    })
     if (this.channel) this.channel.onmessage = (ev) => this.onChannel(ev.data)
     if (typeof window !== 'undefined') window.addEventListener('online', this.onOnline)
   }
@@ -817,7 +839,7 @@ export class Link {
   async persist(opts: { urgent?: boolean; leaving?: boolean } = {}): Promise<void> {
     if (this.stopped || !this.session) return
     this.noteLive()
-    if ((opts.urgent || opts.leaving) && this.canSend()) this.sendReportNow(opts.leaving === true)
+    if ((opts.urgent || opts.leaving) && this.canSend()) this.reporter.sendNow(opts.leaving === true)
     await this.saveRecord()
   }
 
@@ -1005,7 +1027,7 @@ export class Link {
         if (!this.reportWanted && !this.reports.captured) return
         this.noteLive()
         const forced = this.reportForced
-        if (!(await this.sendReport(forced)).ok) return
+        if (!(await this.reporter.sendReport(forced)).ok) return
         this.reportWanted = false
         if (forced) this.reportForced = false
         // Back from offline play: a report captured before the drop went
@@ -1029,7 +1051,7 @@ export class Link {
     if (head.sent && this.needsRead && (await this.reconcile()) !== 'ok') return false
     let barrier: { client: string; generation: string; seq: number } | null = null
     if (head.barrier) {
-      barrier = await this.flushBarrier()
+      barrier = await this.reporter.barrier()
       if (!barrier) return false
     }
     if (!head.sent) {
@@ -1367,52 +1389,6 @@ export class Link {
     this.reports.castMove(id, n)
   }
 
-  /** Send a report: the captured one, or the next one frozen now. */
-  private async sendReport(force: boolean): Promise<{ ok: boolean; sent?: CapturedReport; ack?: ReportAck | null }> {
-    const c = this.reports.capture(force)
-    if (!c) return { ok: true }
-    if ((await this.saveRecord()) === 'fenced') return { ok: false }
-    try {
-      const env = await this.api.run(() => this.ops.report(this.reportRequest(c)))
-      this.answered()
-      const ack = env.result.case === 'report' ? (env.result.value as ReportAck) : null
-      const retired = ack ? this.reports.ack(ack) : null
-      if (!retired) {
-        // Not the answer to this report: it stays captured and goes again.
-        this.stalled(untrusted())
-        return { ok: false }
-      }
-      this.adopt(env.state, { captured: retired, ack: ack ?? undefined })
-      // The world kept its own place over this one (it moved the hero since):
-      // if the hero still stands where the report said, they go where it says.
-      if (ack?.accepted && !ack.staleBasis && ack.placeIgnored) this.followServerPlace(retired.place, { otherArea: true })
-      await this.saveRecord()
-      return { ok: true, sent: retired, ack }
-    } catch (err) {
-      const code = errorCode(err)
-      if (isSettledRefusal(err) && code === 'invalid-position') {
-        // The world doesn't take this place at all (a room it doesn't know, a
-        // place the content lost): the report goes, and the hero goes where
-        // the world says they are.
-        this.answered()
-        this.reports.drop()
-        if (this.compare(err.state!) !== 'older') this.adopt(err.state, { read: true })
-        this.followServerPlace(c.place)
-        await this.saveRecord()
-        return { ok: true }
-      }
-      if (code === 'superseded' || code === 'playing-elsewhere') {
-        // A retired generation: its captured report never moves to a new one.
-        this.reports.drop()
-      } else if (isOutboxClientBug(err)) {
-        // Its values can't be read: drop it rather than send it forever.
-        this.reports.drop()
-      }
-      this.stopFor(err)
-      return { ok: false }
-    }
-  }
-
   /**
    * The world didn't take the place `refused` names: while the hero still
    * stands there, they're moved to the world's place (the scene follows,
@@ -1428,55 +1404,6 @@ export class Link {
     if (whereOf(s.state).area !== refused.area) return
     this.refresh({ relocate: true })
     this.noteLive()
-  }
-
-  private reportRequest(c: CapturedReport) {
-    return create(ReportRequestSchema, { lease: this.lease ?? '', client: c.client, generation: c.generation, seq: c.seq, basis: c.basis, place: c.place, hp: c.hp, mana: c.mana, casts: c.casts, abilityCasts: c.abilityCasts })
-  }
-
-  /** Page hide: the report goes now with keepalive, unqueued. */
-  private sendReportNow(leaving: boolean): void {
-    // Leaving: the newest report, even past one still in flight (it may be
-    // older than what the screen shows now, and the page won't be here for its answer).
-    const c = leaving ? this.reports.leaving() : this.reports.capture(false)
-    if (!c || !leaving) {
-      this.reportWanted = true
-      this.pump()
-      return
-    }
-    void this.ops.report(this.reportRequest(c), { keepalive: true }).then(
-      (env) => {
-        const ack = env.result.case === 'report' ? (env.result.value as ReportAck) : null
-        const retired = ack ? this.reports.ack(ack) : null
-        if (retired) this.adopt(env.state, { captured: retired, ack: ack ?? undefined })
-      },
-      () => undefined
-    )
-  }
-
-  /**
-   * The report barrier (2.2): a rest, a consumable or a profile reads the
-   * stored vitals, so the server must hold what the screen shows. First the
-   * captured report (immutable) is settled, then the next one, covering the
-   * live state now, is frozen and flushed. Only its accepted acknowledgment
-   * on the current vitals basis is a barrier. Null when it can't be had now:
-   * every waiting caller has heard why.
-   */
-  private async flushBarrier(): Promise<{ client: string; generation: string; seq: number } | null> {
-    if (this.reports.captured && !(await this.sendReport(false)).ok) return null
-    for (let i = 0; i < BARRIER_TRIES; i++) {
-      this.noteLive()
-      const r = await this.sendReport(true)
-      if (!r.ok) return null
-      const ack = r.ack
-      if (!r.sent || !ack) break
-      if (ack.accepted && !ack.staleBasis && ack.basis >= (this.server.vitals?.vitalsSetVersion ?? 0)) return { client: ack.client, generation: ack.generation, seq: ack.seq }
-      // Its basis was older than the server's vitals: report again from the vitals it holds.
-      this.reports.reset(this.basis())
-    }
-    // No fresh acknowledgment to be had: try again later.
-    this.stalled(new ApiError('report-required'))
-    return null
   }
 
   // ------------------------------------------------------------ operations
@@ -1607,7 +1534,7 @@ export class Link {
         if (this.entries.length) return { ok: false, code: 'offline' }
       }
       if (!this.canSend()) return { ok: false, code: 'offline' }
-      const barrier = await this.flushBarrier()
+      const barrier = await this.reporter.barrier()
       if (!barrier) return { ok: false, code: 'offline' }
       const welcomedBefore = s.state.flags.includes(FLAGS.welcome)
       const env = await this.api.run(() => this.ops.profile(create(ProfileReportSchema, { lease: this.lease ?? '', raw, report: barrier })))
@@ -1900,14 +1827,6 @@ export class Link {
   /** Each water's band in an area (GET /api/fishing/waters). Reads never move the version. */
   readWaters(area: string): Promise<HomeRead<WaterView[]>> {
     return this.read(async () => (await this.api.run(() => this.ops.fishingWaters(area))).waters)
-  }
-
-  /**
-   * Retired: a fall now places the fallen-hero lantern (`fall`).
-   * TODO(D): remove `reportDefeat` in src/game/wilds/entities.ts with this.
-   */
-  async wildsDefeat(_req: { epoch: string; x: number; y: number }): Promise<WildsOutcome<WildsDefeatResult>> {
-    return { ok: false, code: 'not-implemented' }
   }
 
   // ------------------------------------------------------------ lease and reconnect

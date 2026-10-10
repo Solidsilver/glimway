@@ -5,7 +5,7 @@
  * fade where the map ends.
  */
 import Phaser from 'phaser'
-import { canvasRatio, canvasZoomFor, playInsets, roomZoomFor } from '../viewport'
+import { canvasRatio, canvasZoomFor, playInsets, roomZoomFor, snapScroll } from '../viewport'
 import type { WorldData } from '../worlds'
 
 export class WorldCamera {
@@ -19,9 +19,43 @@ export class WorldCamera {
     private world: WorldData
   ) {
     this.apply(scene.scale.width, scene.scale.height)
+    this.snapToPixels()
     const onResize = (size: Phaser.Structs.Size) => this.apply(size.width, size.height)
     scene.scale.on('resize', onResize)
     scene.events.once('shutdown', () => scene.scale.off('resize', onResize))
+  }
+
+  /**
+   * The camera's scroll on whole canvas pixels (./viewport.ts snapScroll),
+   * after Phaser's own step (the follow's ease, the bounds) and before it
+   * draws. Phaser's own rounding (`roundPixels`) floors the scroll to whole
+   * *world* px, which at a fractional zoom is the shimmer itself, so it's
+   * held off for that step; its per-sprite rounding at a whole zoom stays.
+   * The follow eases on from its own unsnapped scroll, so the hero still
+   * settles exactly where the framing puts them; a scroll something else set
+   * since (a pan, the lantern beat) is left as it is.
+   */
+  private snapToPixels(): void {
+    const cam = this.scene.cameras.main
+    const step = cam.preRender.bind(cam)
+    let eased: { x: number; y: number } | null = null
+    let shown = { x: Number.NaN, y: Number.NaN }
+    cam.preRender = () => {
+      if (eased && cam.scrollX === shown.x && cam.scrollY === shown.y) {
+        cam.scrollX = eased.x
+        cam.scrollY = eased.y
+      }
+      const round = cam.roundPixels
+      cam.roundPixels = false
+      step()
+      cam.roundPixels = round
+      // What Phaser's step would have decided with its flag on (typed read-only; Phaser sets it the same way).
+      ;(cam as { renderRoundPixels: boolean }).renderRoundPixels = round && Number.isInteger(cam.zoomX) && Number.isInteger(cam.zoomY)
+      eased = { x: cam.scrollX, y: cam.scrollY }
+      cam.scrollX = snapScroll(cam.scrollX, cam.width * cam.originX, cam.zoomX)
+      cam.scrollY = snapScroll(cam.scrollY, cam.height * cam.originY, cam.zoomY)
+      shown = { x: cam.scrollX, y: cam.scrollY }
+    }
   }
 
   /** A room (`in:…`): framed closer, its height filling most of the open screen. */

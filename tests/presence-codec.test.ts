@@ -44,3 +44,14 @@ test('presence codec: an avatar change carries the resolved follower and the mou
   const none = toBinary(PresenceMessageSchema, create(PresenceMessageSchema, { event: { case: 'avatarChange', value: create(PresenceAvatarChangeSchema, { accountId: 'b' }) } }));
   assert.equal(decodePresence(none), null);
 });
+
+test('presence codec: a relayed Ward-light carries the hub\'s pulse; a client never sends one', () => {
+  const ward = decodePresence(wire({ ability: { ability: 'ward-light', x: 1, y: 2, accountId: 'a', pulseHeal: 6.4 } }));
+  assert.deepEqual(ward, { type: 'ability', accountId: 'a', ability: 'ward-light', x: 1, y: 2, pulseHeal: 6.4 });
+  const none = decodePresence(wire({ ability: { ability: 'ward-light', x: 1, y: 2, accountId: 'a' } }));
+  assert.equal('pulseHeal' in (none as object), false);
+  const zero = decodePresence(wire({ ability: { ability: 'ward-light', x: 1, y: 2, accountId: 'a', pulseHeal: 0 } }));
+  assert.equal('pulseHeal' in (zero as object), false, 'zero reads as none: the fallback applies');
+  const sent = decodeTestPresence(encodePresence({ type: 'ability', ability: 'ward-light', x: 1, y: 2 }));
+  assert.equal(sent.pulseHeal, undefined);
+});

@@ -126,6 +126,11 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
     const b = s['hero'].sprite.getBounds()
     return { x: (b.x - cam.worldView.x) * z, y: (b.y - cam.worldView.y) * z, w: b.width * z, h: b.height * z, zoom: z }
   })
+  // The camera as drawn (canvas px): its scroll is snapped so (scroll + origin) × zoom is whole (../viewport.ts snapScroll).
+  on('__fsDevCamera', () => {
+    const cam = s.cameras.main
+    return { scrollX: cam.scrollX, scrollY: cam.scrollY, zoom: cam.zoom, originX: cam.width * cam.originX, originY: cam.height * cam.originY }
+  })
   on('__fsDevToScreen', (x, y) => {
     const cam = s.cameras.main
     const z = cam.zoom / canvasRatio()
@@ -334,6 +339,8 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
       follower: avatar.follower ? { pose: avatar.follower.pose, x: Math.round(avatar.follower.x), y: Math.round(avatar.follower.y) } : null,
       mountOut: avatar.mountOut,
       led: avatar.led ? { key: avatar.led.key, drawn: avatar.led.drawn } : null,
+      /** The last mount Go home sent: where it is (or last was), its bay's floor (null: off the screen), and whether it's gone. */
+      walkingHome: avatar.walkingHome ? { key: avatar.walkingHome.key, x: Math.round(avatar.walkingHome.state.x), y: Math.round(avatar.walkingHome.state.y), bay: avatar.walkingHome.bay, done: avatar.walkingHome.done } : null,
       playerAlpha: hero.sprite.alpha,
       playerVisible: hero.sprite.visible,
       bolts: projectiles ? projectiles.length : -1,

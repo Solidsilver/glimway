@@ -66,6 +66,13 @@ async function seasonOf(page: Page, id: string, mark: string): Promise<void> {
   await page.evaluate((x) => (window as unknown as { __fsDevCalendar: (t: number) => void }).__fsDevCalendar(x), t)
 }
 
+/** Both clocks `seconds` on (the world's and the screen's), so a rule on clock time passes without waiting it out. */
+async function clocksOn(page: Page, seconds: number): Promise<void> {
+  const later = (await moveServerClock(page, 0)) + seconds
+  await moveServerClock(page, later)
+  await page.evaluate((x) => (window as unknown as { __fsDevCalendar: (t: number) => void }).__fsDevCalendar(x), later)
+}
+
 /** Cast from where the hero stands, and wait for the bite. */
 async function castAndWait(page: Page): Promise<void> {
   await expect(page.locator('.prompt')).toBeVisible()
@@ -90,7 +97,7 @@ test.describe('fishing at the mill pond', () => {
     await expect(page.locator('.prompt')).toContainText(BANK_LINE)
 
     await castAndWait(page)
-    expect((await fishing(page))!.pose).toBe('fishing')
+    await expect.poll(async () => (await fishing(page))?.pose).toBe('fishing')
     await waitForLive(page)
     await page.keyboard.press('e') // Reel
     await expect.poll(async () => (await fishing(page))?.landed).toBe('mill-roach')
@@ -98,10 +105,11 @@ test.describe('fishing at the mill pond', () => {
     await expectToast(page, /Kept: mill roach/)
     await reloadPack(page)
     await expect.poll(() => stack(page, 'mill-roach')).toBe(1)
-    expect((await pack(page))!.instances.find((i) => i.id === rod)!.usesLeft).toBe(itemDef('willow-rod')!.uses! - 1)
+    const usesLeft = async () => (await pack(page))?.instances.find((i) => i.id === rod)?.usesLeft
+    await expect.poll(usesLeft).toBe(itemDef('willow-rod')!.uses! - 1)
 
-    // Again (eight seconds after the last start), and back it goes: nothing kept, no wear.
-    await page.waitForTimeout(8_500)
+    // Again (eight seconds after the last start, on the clocks), and back it goes: nothing kept, no wear.
+    await clocksOn(page, 9)
     await castAndWait(page)
     await waitForLive(page)
     await page.keyboard.press('e')
@@ -115,8 +123,8 @@ test.describe('fishing at the mill pond', () => {
     await expect.poll(async () => (await fishing(page))?.last).toBe('released')
     await expect(page.getByRole('button', { name: /let mill roach go|let it go/i })).toHaveCount(0)
     await reloadPack(page)
-    expect(await stack(page, 'mill-roach')).toBe(1)
-    expect((await pack(page))!.instances.find((i) => i.id === rod)!.usesLeft).toBe(itemDef('willow-rod')!.uses! - 1)
+    await expect.poll(() => stack(page, 'mill-roach')).toBe(1)
+    await expect.poll(usesLeft).toBe(itemDef('willow-rod')!.uses! - 1)
   })
 
   test('a reload with a line out puts the float back, and walking off the bank pulls it in', async ({ page }) => {
@@ -158,15 +166,12 @@ test.describe('fishing at the mill pond', () => {
     await expect.poll(async () => (await fishing(page))?.landed).toBe('mill-roach')
     await expect(page.getByRole('button', { name: /^keep/i })).toBeVisible()
     // Eleven minutes on (the hold is ten), on both clocks.
-    const later = (await moveServerClock(page, 0)) + 11 * 60
-    await moveServerClock(page, later)
-    await page.evaluate((x) => (window as unknown as { __fsDevCalendar: (t: number) => void }).__fsDevCalendar(x), later)
-    await expect.poll(async () => (await fishing(page))?.last).toBe('lapsed')
-    expect((await fishing(page))!.landed).toBeNull()
+    await clocksOn(page, 11 * 60)
+    await expect.poll(async () => { const f = await fishing(page); return [f?.last, f?.landed] }).toEqual(['lapsed', null])
     await expect(page.getByRole('button', { name: /^keep/i })).toBeHidden()
     await expectToast(page, /slipped off the hook/)
     await reloadPack(page)
-    expect(await stack(page, 'mill-roach')).toBe(0)
+    await expect.poll(() => stack(page, 'mill-roach')).toBe(0)
   })
 
   test('casting again within eight seconds of the last start is refused in words, and the line comes back in', async ({ page }) => {
@@ -189,8 +194,7 @@ test.describe('fishing at the mill pond', () => {
     await waitForLive(page)
     await page.keyboard.press('e') // Cast again at once
     await expectToast(page, /Give the water a moment/)
-    await expect.poll(async () => (await fishing(page))?.last).toBe('refused:cast-too-soon')
-    expect((await fishing(page))!.line).toBeNull()
+    await expect.poll(async () => { const f = await fishing(page); return [f?.last, f?.line ?? null] }).toEqual(['refused:cast-too-soon', null])
   })
 
   test('in the Quiet the pond is iced; the race above the wheel stays open', async ({ page }) => {
@@ -206,7 +210,7 @@ test.describe('fishing at the mill pond', () => {
     await expect(page.locator('.prompt', { hasText: BANK_LINE })).toHaveCount(0)
     await warp(page, 'village', 32, 19)
     await castAndWait(page)
-    expect((await fishing(page))!.line!.bank).toBe('race')
+    await expect.poll(async () => (await fishing(page))?.line?.bank).toBe('race')
   })
 })
 
@@ -262,5 +266,5 @@ test('A Line in the Race: Finn’s rod, a roach from the race, and Hazel’s car
   await expect.poll(async () => (await quests(page))['a-line-in-the-race'], { timeout: 15_000 }).toBe('show-hazel')
   await reloadPack(page)
   await expect.poll(() => stack(page, 'recipe-card-millers-fry')).toBe(1)
-  expect(await stack(page, 'mill-roach')).toBe(0)
+  await expect.poll(() => stack(page, 'mill-roach')).toBe(0)
 })

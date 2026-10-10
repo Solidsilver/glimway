@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { craftOf, getCombatKit, levelMarkOf, unlockNotice } from '../src/lib/combat.ts';
+import { wardPulseHeal } from '../src/lib/combat-moves.ts';
+import { serializeMagicVectors } from '../scripts/magic-vectors.ts';
 import { ABILITIES } from '../src/lib/abilities.ts';
 import { abilityIconFrame } from '../src/game/crafts-art.ts';
 import { toHabiticaProfile } from '../src/lib/habitica/mapping.ts';
@@ -106,7 +108,7 @@ test('the healer’s Mend is a damaging pulse PLUS a heal; a Ward-light pulse is
   const healer = getCombatKit(hero('healer', 20));
   assert.ok(healer.signatureDamage > 0);
   assert.ok(healer.healAmount > 0);
-  assert.equal(healer.wardPulseHeal, Math.round(healer.healAmount * 0.4 * 100) / 100);
+  assert.equal(healer.wardPulseHeal, wardPulseHeal(healer.healAmount, 0.4), 'the one pulse formula (lib/combat-moves.ts)');
   assert.equal(getCombatKit(hero('healer', 12)).wardPulseHeal, 0, 'no Ward-light yet: no pulse');
   assert.equal(getCombatKit(hero('rogue', 20)).healAmount, 0);
 });
@@ -152,4 +154,14 @@ test('every ability’s icon is in the crafts art pass (crafts.md 4.1: a test, n
     assert.equal(a.icon, `ability-${a.id}`, `${a.id}: the table names its icon by id`);
     assert.ok(manifest.frames[abilityIconFrame(a)], `${a.id}: ${abilityIconFrame(a)} delivered`);
   }
+});
+
+test('the heal vectors the server replays are this build\'s numbers (content/vectors/magic.json)', () => {
+  // server/internal/rules/magic_vectors_test.go replays the same file against
+  // MendHeal, WardPulseHeal and WardHeal: the two sides can't drift (review F4).
+  assert.equal(readFileSync(new URL('../content/vectors/magic.json', import.meta.url), 'utf8'), serializeMagicVectors(), 'Run npm run vectors:magic after intentional rule changes');
+  const v = JSON.parse(serializeMagicVectors()) as { healers: { int: number; mend: number; pulse: number }[] };
+  const at60 = v.healers.find((h) => h.int === 60)!;
+  assert.equal(at60.mend, 16);
+  assert.equal(Math.round(at60.pulse * 100) / 100, 6.4, 'a geared healer\'s pulse is 0.4 of their Mend, not of the base');
 });

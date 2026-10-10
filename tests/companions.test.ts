@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { NO_PET, companionName, followerKey, groupBySpecies, matchesSearch, speciesOf } from '../src/lib/companions.ts';
+import { NO_PET, companionName, followerKey, groupBySpecies, matchesSearch, rideRefusal, speciesOf } from '../src/lib/companions.ts';
 
 test('companions: Habitica keys read as names, potion first', () => {
   assert.equal(companionName('Fox-Golden'), 'Golden Fox');
@@ -37,4 +37,21 @@ test('companions: No pet is its own choice, never Habitica\'s current pet', () =
   assert.equal(NO_PET, 'none');
   assert.equal(followerKey({ selectedPet: 'Wolf-Base' }, { followPet: NO_PET }), null);
   assert.equal(followerKey({ selectedPet: null }, { followPet: NO_PET }), null);
+});
+
+test('riding: M says where riding starts, and the saddle waits outside rooms and the village', () => {
+  const at = (o: Partial<Parameters<typeof rideRefusal>[0]>) => rideRefusal({ mountOut: '', riding: false, stable: false, mounts: 0, area: 'woodland', ...o });
+  // No mount out: a stable first, then a mount to stall, then the stall itself.
+  assert.equal(at({}), 'noStable');
+  assert.equal(at({ mounts: 3 }), 'noStable', 'mounts without a stable still need one');
+  assert.equal(at({ stable: true }), 'noMounts');
+  assert.equal(at({ stable: true, mounts: 2 }), 'inStall');
+  // On the lead: up, except indoors and in the village.
+  assert.equal(at({ mountOut: 'Wolf-Base' }), null);
+  assert.equal(at({ mountOut: 'Wolf-Base', area: 'in:mill' }), 'indoors');
+  assert.equal(at({ mountOut: 'Wolf-Base', area: 'village' }), 'village');
+  assert.equal(at({ mountOut: 'Wolf-Base', area: 'home:3' }), null, 'your own land rides');
+  // Ridden: getting down is always allowed, wherever you are.
+  assert.equal(at({ mountOut: 'Wolf-Base', riding: true, area: 'village' }), null);
+  assert.equal(at({ mountOut: 'Wolf-Base', riding: true, area: 'in:mill' }), null);
 });

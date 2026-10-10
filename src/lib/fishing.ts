@@ -68,15 +68,6 @@ export function watersForArea(area: string): FishWater[] {
   return FISHING.waters.filter((w) => w.area === area);
 }
 
-/**
- * The band a fullness percentage falls in (design 5.3: the first whose
- * atLeastPercent it reaches). A water with no fish has no band — an empty
- * water refuses.
- */
-export function bandAt(fullnessPercent: number): FishBand | undefined {
-  return FISHING.bands.find((b) => fullnessPercent >= b.atLeastPercent);
-}
-
 /** The wait to a bite in a band, in seconds. */
 export function waitSeconds(band: FishBand): number {
   return band.waitSeconds;

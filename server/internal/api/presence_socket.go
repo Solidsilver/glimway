@@ -239,10 +239,6 @@ func (a *Server) presenceReader(p *presencePeer) {
 			encoded, encodeErr = encodePresence(outbound)
 		} else if emote := message.GetEmote(); emote != nil {
 			encoded, encodeErr = encodePresence(&contract.PresenceEmote{Id: emote.Id, AccountId: proto.String(p.identity.ID)})
-		} else if ability := message.GetAbility(); ability != nil {
-			outbound := proto.Clone(ability).(*contract.PresenceAbility)
-			outbound.AccountId = proto.String(p.identity.ID)
-			encoded, encodeErr = encodePresence(outbound)
 		}
 		now := time.Now()
 		h.mu.Lock()
@@ -333,7 +329,10 @@ func (a *Server) presenceReader(p *presencePeer) {
 				h.mu.Unlock()
 				continue
 			}
-			h.broadcastEncoded(p, encoded, encodeErr)
+			// Encoded here, not above: the relay carries the caster's ward
+			// pulse, read from magic that refreshes under h.mu.
+			relayed, relayErr := relayedAbility(p, event.Ability)
+			h.broadcastEncoded(p, relayed, relayErr)
 			h.scheduleWard(p, event.Ability)
 		default:
 			p.stop(websocket.StatusPolicyViolation, "invalid-message")
