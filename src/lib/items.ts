@@ -6,7 +6,7 @@
  * the off hand. No Phaser, no network.
  */
 import { RESIDENTS, residentById, residentAt, type ResidentPlace } from './residents.ts';
-import { knownRoom } from './rooms.ts';
+import { roomFor } from './rooms.ts';
 import itemsRaw from '../../content/items.json' with { type: 'json' };
 import { decodeContent } from './content-proto.ts';
 import { ItemsSchema, type ItemDefValid, type ItemMenderValid, type ItemPickupValid, type ItemSellerValid, type ItemsRulesValid, type PocketEffectValid, type HeldEffectValid, type UseEffectValid } from './gen/glimway/content/v1/items_pb.js';
@@ -113,7 +113,8 @@ export function validateItems(value: unknown): Items {
   for (const s of v.sellers ?? []) {
     if (sellers.has(s.id)) return bad(`duplicate seller ${s.id}`);
     if (typeof s.npc !== 'string' || !s.npc || (s.with ? !residentById(s.with) : !PICKUP_AREAS.includes(s.area as never))) return bad(`seller ${s.id}: place`);
-    if (s.shop && !knownRoom(s.shop)) return bad(`seller ${s.id}: place`);
+    // A shop is an authored room, never a player's cottage (in:home:N).
+    if (s.shop && !roomFor(s.shop)) return bad(`seller ${s.id}: place`);
     if (s.festival !== '' && !festivals.includes(s.festival)) return bad(`seller ${s.id}: festival`);
     sellers.add(s.id);
     const goods = new Set<string>();
@@ -329,17 +330,25 @@ export function menderAt(m: ItemMender, now: number): ResidentPlace | null {
   return m.area !== undefined && m.tx !== undefined && m.ty !== undefined ? { area: m.area, tx: m.tx, ty: m.ty } : null;
 }
 
-/** The mender (Silas, Orrin) whose spot is within reach at `now`, if any. */
+/**
+ * Whether a mender reaches you at `now`: a resident indoors (Silas at his
+ * counter) mends for anyone in the same room, as the honesty tin sells;
+ * otherwise within the radius of their spot. The server checks the same
+ * (nearMender).
+ */
+export function menderReaches(m: ItemMender, area: string, x: number, y: number, now: number, tile = 16): boolean {
+  const at = menderAt(m, now);
+  if (!at || at.area !== area) return false;
+  if (m.with && roomFor(area)) return true;
+  const dx = x - (at.tx * tile + tile / 2);
+  const dy = y - (at.ty * tile + tile / 2);
+  const r = m.radiusTiles * tile;
+  return dx * dx + dy * dy <= r * r;
+}
+
+/** The mender (Silas, Orrin) who reaches you at `now`, if any (`menderReaches`). */
 export function menderNear(area: string, x: number, y: number, now: number, tile = 16): ItemMender | null {
-  for (const m of ITEM_RULES.menders) {
-    const at = menderAt(m, now);
-    if (!at || at.area !== area) continue;
-    const dx = x - (at.tx * tile + tile / 2);
-    const dy = y - (at.ty * tile + tile / 2);
-    const r = m.radiusTiles * tile;
-    if (dx * dx + dy * dy <= r * r) return m;
-  }
-  return null;
+  return ITEM_RULES.menders.find(m => menderReaches(m, area, x, y, now, tile)) ?? null;
 }
 
 /** A seller by id (shared content; the server checks the same rows). */

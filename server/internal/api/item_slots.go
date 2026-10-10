@@ -204,12 +204,33 @@ func offHandItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contra
 }
 
 // nearMender: within a mender's reach, at their fixed spot or, for a mender
-// with a resident (Silas), wherever the resident's cycle has them now.
+// with a resident (Silas), wherever the resident's cycle has them now. A
+// resident indoors (Silas at his counter) mends for anyone in the same room,
+// as the honesty tin sells; outdoors the radius applies (src/lib/items.ts
+// menderNear checks the same).
 func nearMender(s *store.Snapshot, m *content.ItemMender, now int64) bool {
 	if m.GetWith() != "" {
-		return nearResident(s, m.GetWith(), now, int(m.GetRadiusTiles()))
+		return inRoomWith(s, m.GetWith(), now) || nearResident(s, m.GetWith(), now, int(m.GetRadiusTiles()))
 	}
 	return nearTile(s, m.GetArea(), int(m.GetTx()), int(m.GetTy()), int(m.GetRadiusTiles()))
+}
+
+// inRoomWith: the caller is in an authored room the resident's cycle has
+// them in now (with the cycle's grace either side of a change).
+func inRoomWith(s *store.Snapshot, id string, now int64) bool {
+	resident, ok := content.ResidentByID(id)
+	if !ok {
+		return false
+	}
+	if _, room := content.RoomFor(s.State.Area); !room {
+		return false
+	}
+	for _, name := range content.CycleSpotsNear(resident, float64(now), int(content.ResidentRules.GetGraceSeconds())) {
+		if resident.Spots[name].GetArea() == s.State.Area {
+			return true
+		}
+	}
+	return false
 }
 
 func nearResident(s *store.Snapshot, id string, now int64, radius int) bool {

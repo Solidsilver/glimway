@@ -10,7 +10,7 @@
  */
 import type { JournalEntry } from './world.ts';
 import type { QuestStage } from '../lib/state.ts';
-import { ITEM_RULES, menderAt } from '../lib/items.ts';
+import { ITEM_RULES, menderReaches } from '../lib/items.ts';
 
 export type HeirloomId =
   | 'brack-felling-axe'
@@ -246,8 +246,7 @@ function heirloomInReach(id: HeirloomId, c: Pick<HeirloomContext, 'area' | 'x' |
     case 'brack-felling-axe':
     case 'orrins-mason-pick': {
       const m = ITEM_RULES.menders.find((r) => r.npc === HEIRLOOMS[id].giver);
-      const at = m && menderAt(m, c.now);
-      return !!m && !!at && within(c, at.area, at.tx, at.ty, m.radiusTiles);
+      return !!m && menderReaches(m, c.area, c.x, c.y, c.now);
     }
     case 'ada-garden-spade': {
       const r = ITEM_RULES.residents.find((v) => v.id === 'ada');

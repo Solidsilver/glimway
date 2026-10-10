@@ -220,15 +220,15 @@ func TestReturningKeepsakes(t *testing.T) {
 	}
 	x.conserved(x.account("alice"))
 
-	// 3. Hollis's fox -> Silas, wherever his cycle has him: not at his old
-	// spot on the Commons while he's at his counter, then at the counter.
+	// 3. Hollis's fox -> Silas, wherever his cycle has him: not on the
+	// Commons while he's at his counter, then at the counter.
 	x.stack(x.account("alice"), "whittled-fox", "", 1)
 	x.conserved(x.account("alice"))
 	x.residentPhase("silas", "counter")
-	oldSpot := s.State
-	oldSpot.Area = "commons"
-	oldSpot.Position = rules.Position{X: float64(51*16 + 8), Y: float64(21*16 + 8)}
-	if bad := x.opRefreshing(c, &s, "return", map[string]any{"itemDef": "whittled-fox", "target": "silas", "progress": oldSpot}, 409); bad.Error.Code != "too-far-away" {
+	onCommons := s.State
+	onCommons.Area = "commons"
+	onCommons.Position = rules.Position{X: float64(51*16 + 8), Y: float64(21*16 + 8)}
+	if bad := x.opRefreshing(c, &s, "return", map[string]any{"itemDef": "whittled-fox", "target": "silas", "progress": onCommons}, 409); bad.Error.Code != "too-far-away" {
 		t.Fatalf("expected too-far-away on the Commons, got %s", bad.Error.Code)
 	}
 	silasDoc := byResident(s.State, "silas", x.now.Load())

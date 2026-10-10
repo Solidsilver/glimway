@@ -76,7 +76,7 @@ func TestHeirloomBrackFellingAxe(t *testing.T) {
 	yardDoc := conditionMetDoc
 	yardDoc.Area = yard.GetArea()
 	yardDoc.Position = rules.Position{X: float64(yard.GetTx()*16 + 8), Y: float64(yard.GetTy()*16 + 12)}
-	if bad := x.items("POST", "/api/items/heirloom", body(s, "axe-yard-early", map[string]any{"itemDef": "brack-felling-axe", "progress": yardDoc}), c, 409); bad.Error.Code != "too-far-away" {
+	if bad := x.items("POST", "/api/items/heirloom", body(s, "axe-yard-while-indoors", map[string]any{"itemDef": "brack-felling-axe", "progress": yardDoc}), c, 409); bad.Error.Code != "too-far-away" {
 		t.Fatalf("expected too-far-away in the yard, got %s", bad.Error.Code)
 	}
 	// He goes out to the yard: now the counter is empty.

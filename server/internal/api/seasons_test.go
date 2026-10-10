@@ -411,8 +411,8 @@ func TestSilasYardBundlesCostGlims(t *testing.T) {
 
 // The honesty tin (silas-yard.md 2.3): inside the shop the bundles sell
 // whether Silas is at the counter or out in the yard; out on the Commons
-// they sell near him, wherever his cycle has him, and not at his old spot
-// while he's indoors.
+// they sell near him, wherever his cycle has him, and nowhere on the
+// Commons while he's indoors.
 func TestSilasYardSellsFromTheShopAndBesideHim(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
@@ -448,7 +448,7 @@ func TestSilasYardSellsFromTheShopAndBesideHim(t *testing.T) {
 		t.Fatal("bought by the sawhorse while he's indoors")
 	}
 	if buy(at("commons", 51, 21), 409).Error.Code != "too-far-away" {
-		t.Fatal("bought at his old spot")
+		t.Fatal("bought on the Commons while he's indoors")
 	}
 	if buy(at("in:commons:yard:deeds", 2, 6), 409).Error.Code != "too-far-away" {
 		t.Fatal("bought in Pell's office")

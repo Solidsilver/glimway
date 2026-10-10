@@ -2,10 +2,10 @@
  * Homesteads, game side: the Commons lane of gates (who holds each one),
  * the homesteads seen so far (one map each, behind its gate), and every
  * homestead action: claim a deed, buy, place, move, remove, upgrade, clear a
- * tile, share the deed (invite and sign at Silas's table), leave. No Phaser
- * here — the scene layer (src/game/entities/homesteads.ts) draws from it,
- * the UI (Silas's shop, the placement tray) calls it, and both hear about
- * changes on the bus.
+ * tile, share the deed (invite and sign at the deed table in Pell's office),
+ * leave. No Phaser here — the scene layer (src/game/entities/homesteads.ts)
+ * draws from it, the UI (the Yard panel, the deed panel, the placement tray)
+ * calls it, and both hear about changes on the bus.
  *
  * Players who can't reach the server get a walkable Commons and wild land
  * behind every gate, with no homes: building needs a world.
@@ -216,7 +216,7 @@ export class Homesteads {
     const before = JSON.stringify([this.gates, this.gateCount, this.invites, this.myGateValue, this.status])
     this.adoptLane(lane.value)
     this.status = 'ready'
-    // Only a lane that changed is redrawn (Silas re-reads it every conversation).
+    // Only a lane that changed is redrawn (Silas and Pell re-read it every conversation).
     if (JSON.stringify([this.gates, this.gateCount, this.invites, this.myGateValue, this.status]) !== before) this.emit('roster')
     const g = this.myGate
     if (g !== null) await this.fetchHome(g)
@@ -342,7 +342,7 @@ export class Homesteads {
     return this.act({ op: 'upgrade', tier: (this.mine?.tier ?? 0) + 1 })
   }
 
-  /** Buy the deed to a gate's land from Silas. */
+  /** Buy the deed to a gate's land from Pell. */
   async claim(gate: number): Promise<ActResult> {
     const r = await this.act({ op: 'claim', gate })
     if (r.ok) {
@@ -361,7 +361,7 @@ export class Homesteads {
   }
 
   /**
-   * Offer to share your deed with someone at Silas's table, and sign your
+   * Offer to share your deed with someone at Pell's deed table, and sign your
    * side at once. The deed is amended when they sign too (within the window).
    */
   async offerDeed(to: string): Promise<ActResult> {
@@ -396,7 +396,7 @@ export class Homesteads {
       if (this.myGate !== gateBefore || after !== before) {
         this.polling++
         this.emit('joint', this.myGate ?? undefined)
-        bus.emit(EV.toast, { text: 'Silas amends the deed. Both names, in his square hand.', icon: 'lantern' })
+        bus.emit(EV.toast, { text: 'Pell amends the deed. Both names, one entry.', icon: 'lantern' })
         return
       }
       setTimeout(() => void tick(), 2000)

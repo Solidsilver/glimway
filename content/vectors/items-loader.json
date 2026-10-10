@@ -1160,6 +1160,21 @@
       ]
     },
     {
+      "name": "seller-shop-a-cottage",
+      "valid": false,
+      "rule": "seller silas-yard: place",
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            3,
+            "shop"
+          ],
+          "value": "in:home:0"
+        }
+      ]
+    },
+    {
       "name": "seller-shop-outdoors",
       "valid": false,
       "rule": "string.pattern",

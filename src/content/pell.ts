@@ -25,6 +25,8 @@ export interface PellWords {
   firstMeeting: Dialogue;
   /** One line each talk, in turn, before the choices. */
   idleLines: string[];
+  /** Once, instead of the first meeting, for someone already on a deed (no pitch). */
+  firstMeetingHomeowner: string;
 }
 
 export const PELL: PellWords = {
@@ -38,6 +40,8 @@ export const PELL: PellWords = {
       'Every gate on the lane has a page here. Choose one and I’ll enter your name. Properly, in ink, with the date.',
     ],
   },
+  firstMeetingHomeowner:
+    'Pell, under-clerk. The Count House sent me up from Tarrow to keep the Commons plot ledger. Your page is already in it, in Silas’s hand. I’ve inked it over.',
   idleLines: [
     'Plot ledger’s open. Mind the ink.',
     'Iron-gall ink. It goes on grey and turns black overnight. I like to watch a name settle.',
@@ -99,6 +103,8 @@ export const PELL_DEED = {
     `${from} wants your name on their deed, ${lot}. You both sign here at the table, together. Two names, one entry.`,
   signInvite: (from: string) => `Sign ${from}’s deed`,
   signInviteNote: (lot: string) => `${lot} · together, at the table`,
+  /** The sign choice while you're not at the table yet (it's shown, not offered). */
+  standByTable: 'Stand by the table',
   shareAsk: 'A joint deed, then. Same land, same say, two names. Who’s signing with you?',
   shareNobody: 'Both of you sign at the table, together. Bring them in. I’ll keep the page open.',
   /** Your name is down; the other has the confirm window to sign. */
@@ -148,11 +154,12 @@ export function allPellLines(): string[] {
   const p = DEED_PANEL_COPY;
   return [
     ...PELL.firstMeeting.lines,
+    PELL.firstMeetingHomeowner,
     ...PELL.idleLines,
     d.notToday, d.manage, d.guest, d.loading, d.offline, d.pitch,
     d.buy('Lot 3'), d.buyNote(0), d.buyNote(10), d.buyShort(10), d.notEnoughGlims, d.bought('Lot 3', 0), d.bought('Lot 3', 10),
     d.takeBack('Lot 2'), d.takeBackNote, d.takeBackPitch('Lot 2'), d.takenBack('Lot 2'),
-    d.invite('Rowan', 'Lot 5'), d.signInvite('Rowan'), d.signInviteNote('Lot 5'), d.shareAsk, d.shareNobody,
+    d.invite('Rowan', 'Lot 5'), d.signInvite('Rowan'), d.signInviteNote('Lot 5'), d.standByTable, d.shareAsk, d.shareNobody,
     d.signedWaiting(60), d.signedWaiting(30), d.signedTogether,
     d.giveUpTitle, d.giveUpConfirm, ...d.struck(true), ...d.struck(false),
     p.title, p.where('Tansy’s Place', 'Lot 3'), p.onTheDeed('Tansy, Bram'), p.shareHeading, p.atTable, p.offer, p.shareHelp,

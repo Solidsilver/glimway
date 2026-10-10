@@ -253,7 +253,7 @@ func validateItems(v *Items) error {
 		if sellers[s.GetId()] {
 			return fmt.Errorf("invalid items: duplicate seller %s", s.GetId())
 		}
-		if !validSellerPlace(s) || s.GetShop() != "" && !KnownRoom(s.GetShop()) {
+		if !validSellerPlace(s) || s.GetShop() != "" && !authoredRoom(s.GetShop()) {
 			return fmt.Errorf("invalid items: seller %s: place", s.GetId())
 		}
 		if s.GetFestival() != "" && !slices.ContainsFunc(cal.Festivals, func(f *Festival) bool { return f.GetName() == s.GetFestival() }) {
@@ -373,3 +373,7 @@ func StackCurrency(id string) string {
 	}
 	return "item:" + id
 }
+
+// authoredRoom: a room in content/rooms.json; a seller's shop is never a
+// player's cottage (in:home:N).
+func authoredRoom(area string) bool { _, ok := RoomFor(area); return ok }

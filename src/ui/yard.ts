@@ -93,7 +93,8 @@ export function mendList(instances: readonly InstanceView[]): MendRow[] {
 /**
  * Whether Silas is near enough to mend (`here`: your area and feet, in
  * pixels; `now`: the server's Unix seconds): his mender row follows his
- * cycle (`menderAt`). The server checks again.
+ * cycle (`menderAt`), and at his counter he mends for the whole shop
+ * (`menderReaches`). The server checks again.
  */
 export function silasInReach(here: { area: string; x: number; y: number }, now: number): boolean {
   return menderNear(here.area, here.x, here.y, now)?.npc === 'silas'

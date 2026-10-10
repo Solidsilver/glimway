@@ -256,7 +256,9 @@ func TestItemsHeirloomBluntsAndIsMendedAtTheBenchOrByAMender(t *testing.T) {
 	if x.opRefreshing(c, &s, "repair", map[string]any{"instance": brack, "at": "silas"}, 409).Error.Code != "not-needed" {
 		t.Fatal("mended a sharp axe")
 	}
-	// Back at his counter: mended in the shop, and the yard is too far now.
+	// Back at his counter: he mends for anyone in the shop, even on the
+	// mending bench's own tile, five tiles from him; the yard is too far
+	// now, and so is Pell's office through the side door.
 	x.opRefreshing(c, &s, "use", map[string]any{"instance": brack}, 200)
 	yard := byResident(s.State, "silas", x.now.Load())
 	x.residentPhase("silas", "counter")
@@ -264,8 +266,18 @@ func TestItemsHeirloomBluntsAndIsMendedAtTheBenchOrByAMender(t *testing.T) {
 	if x.opRefreshing(c, &s, "repair", map[string]any{"instance": brack, "at": "silas", "progress": yard}, 409).Error.Code != "too-far-away" {
 		t.Fatal("mended by the sawhorse while he's inside")
 	}
-	if findInstance(x.opRefreshing(c, &s, "repair", map[string]any{"instance": brack, "at": "silas", "progress": shop}, 200).Result.Items, brack).Condition != 240 {
-		t.Fatal("mended at the counter")
+	office := s.State
+	office.Area = "in:commons:yard:deeds"
+	office.Position = rules.Position{X: 1*16 + 8, Y: 3*16 + 12}
+	if x.opRefreshing(c, &s, "repair", map[string]any{"instance": brack, "at": "silas", "progress": office}, 409).Error.Code != "too-far-away" {
+		t.Fatal("mended in Pell's office")
+	}
+	room, _ := content.RoomFor(shop.Area)
+	benchSpot := room.GetSpots()["yard-mend"]
+	atBench := shop
+	atBench.Position = rules.Position{X: float64(benchSpot.GetTx()*16 + 8), Y: float64(benchSpot.GetTy()*16 + 12)}
+	if findInstance(x.opRefreshing(c, &s, "repair", map[string]any{"instance": brack, "at": "silas", "progress": atBench}, 200).Result.Items, brack).Condition != 240 {
+		t.Fatal("mended at the mending bench")
 	}
 	// At the bench, with a workshop: the same bill.
 	x.opRefreshing(c, &s, "use", map[string]any{"instance": brack}, 200)

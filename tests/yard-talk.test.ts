@@ -94,6 +94,7 @@ const pell = (over: Partial<PellTalkContext> = {}): PellTalkContext => ({
   reclaimable: [],
   unclaimed: [{ gate: 2, price: 0 }, { gate: 0, price: 0 }],
   pitchHeard: true,
+  atTable: true,
   ...over,
 });
 
@@ -140,11 +141,40 @@ test('Pell: an invite to sign and old deeds to take back come first, and are new
   assert.equal(pellTalk(pell({ invite: { homeId: 'h1', gate: 4, from: 'Bartholomew Quill' } })).choices![0].text, 'Sign Bartholomew Q…’s deed');
 });
 
+test('Pell: the invite is signed only at the deed table; elsewhere it shows, disabled, saying so', () => {
+  const away = pellTalk(pell({ atTable: false, invite: { homeId: 'h1', gate: 4, from: 'Tansy' } }));
+  assert.equal(away.choices![0].text, 'Sign Tansy’s deed');
+  assert.equal(away.choices![0].disabled, true);
+  assert.equal(away.choices![0].action, undefined);
+  assert.equal(away.choices![0].note, PELL_DEED.standByTable);
+  // The deeds for sale don't care where you stand.
+  assert.equal(away.choices![1].action, 'home:claim:2');
+});
+
 test('Pell: on a deed, Manage your deed and Not today; never the deeds for sale', () => {
   const d = pellTalk(pell({ claimed: true, homeRead: true, invite: { homeId: 'h1', gate: 4, from: 'Tansy' }, reclaimable: [1] }));
   assert.deepEqual(texts(d), [PELL_DEED.manage, PELL_DEED.notToday]);
   assert.equal(d.choices![0].action, MANAGE_DEED);
   assert.deepEqual(d.lines, [PELL_IDLE]);
+});
+
+test('Pell: a homeowner’s first talk is a short welcome and an idle line, never the pitch', () => {
+  const d = pellTalk(pell({ first: true, pitchHeard: false, claimed: true, homeRead: true }));
+  assert.deepEqual(d.lines, [PELL.firstMeetingHomeowner, PELL_IDLE]);
+  assert.deepEqual(texts(d), [PELL_DEED.manage, PELL_DEED.notToday]);
+  assert.equal(d.met, true);
+  assert.ok(!d.lines.some((l) => PELL.firstMeeting.lines.includes(l)));
+});
+
+test('Pell: the first meeting waits until the plot book says whether you hold a deed', () => {
+  for (const over of [{ status: 'loading' }, { status: 'offline' }, { claimed: true, homeRead: false }] as const) {
+    const d = pellTalk(pell({ first: true, ...over }));
+    assert.equal(d.met, false, JSON.stringify(over));
+    assert.equal(d.lines[0], PELL_IDLE);
+  }
+  assert.equal(pellTalk(pell({ first: true })).met, true);
+  assert.equal(pellTalk(pell({ first: true, status: 'guest' })).met, true);
+  assert.equal(pellTalk(pell()).met, false);
 });
 
 test('Pell: a guest, a book still loading or out of reach gets the line why, and no choices', () => {

@@ -37,12 +37,15 @@ import type { HomesteadDeps, HomesteadLayer } from './homesteads'
 import { POST, short } from './homestead-art'
 import { openDeedPanel, openYard } from '../yard-open'
 import { PELL, PELL_DEED } from '../../content/pell'
-import { MANAGE_DEED, SEE_THE_YARD, pellTalk, silasTalk } from '../yard-talk'
+import { MANAGE_DEED, SEE_THE_YARD, isYardRoom, pellTalk, silasTalk } from '../yard-talk'
+import { standsAtTable } from '../deed-table'
 import { pinned, setPinned } from '../guide-pin'
 
 /** Story marks (src/game/heard.ts): you've met Pell, and heard Pell's pitch for a first deed. */
 const PELL_MET = 'met'
 const PELL_PITCH = 'pitch'
+/** Silas pointed you at Pell and pinned the claim guide (once). */
+const SILAS_PINNED_PELL = 'pinned-pell'
 
 export class HomesteadTalk {
   private readonly scene: Phaser.Scene
@@ -459,8 +462,12 @@ export class HomesteadTalk {
       fox
     })
     this.say(talk)
-    // No deed yet: the needle points at Pell (the claim guide), unless you've pinned something else.
-    if (talk.pointsAtPell && homes.connected && !pinned.slot) setPinned('guide:claim')
+    // No deed yet: the needle points at Pell (the claim guide), the first
+    // time only, and never over something you've pinned yourself.
+    if (talk.pointsAtPell && homes.connected && !heardStory(s.state.flags, 'silas', SILAS_PINNED_PELL)) {
+      markStory(s, 'silas', SILAS_PINNED_PELL)
+      if (!pinned.slot) setPinned('guide:claim')
+    }
     if (homes.connected && homes.status !== 'ready' && homes.status !== 'loading') void homes.load()
   }
 
@@ -469,7 +476,6 @@ export class HomesteadTalk {
     const s = this.deps.session
     const homes = this.home.homes
     const first = !heardStory(s.state.flags, 'pell', PELL_MET)
-    markStory(s, 'pell', PELL_MET)
     const invite = homes.inviteForMe()
     const talk = pellTalk({
       first,
@@ -481,8 +487,10 @@ export class HomesteadTalk {
       invite: invite ? { homeId: invite.homeId, gate: invite.gate, from: invite.from.name } : null,
       reclaimable: homes.reclaimable().map((g) => g.gate),
       unclaimed: homes.unclaimed().map((g) => ({ gate: g.gate, price: g.price ?? HOMESTEAD_DATA.deeds.glims })),
-      pitchHeard: heardStory(s.state.flags, 'pell', PELL_PITCH)
+      pitchHeard: heardStory(s.state.flags, 'pell', PELL_PITCH),
+      atTable: standsAtTable(s.state.area, this.deps.hero())
     })
+    if (talk.met) markStory(s, 'pell', PELL_MET)
     // The pitch (or the first meeting, which says the same) plays once.
     if (homes.status === 'ready' && !homes.claimed) markStory(s, 'pell', PELL_PITCH)
     this.say(talk)
@@ -565,7 +573,7 @@ export class HomesteadTalk {
       return
     }
     this.say({ speaker: PELL.name, lines: [PELL_DEED.bought(lotName(gate), price)] })
-    bus.emit(EV.toast, { text: `${lotName(gate)} is yours. Follow the marker to your gate.`, icon: 'lantern' })
+    bus.emit(EV.toast, { text: isYardRoom(this.deps.session.state.area) ? `${lotName(gate)} is yours. Your gate is out on the lane: follow the marker.` : `${lotName(gate)} is yours. Follow the marker to your gate.`, icon: 'lantern' })
   }
 
   /** Your signature on someone's deed, at the table in Pell's office. */

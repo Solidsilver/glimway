@@ -179,17 +179,28 @@ export const DEEDS = 'in:commons:yard:deeds'
 export const AT_COUNTER = { tx: 7, ty: 6 }
 /** Beside Pell's desk, and within the deed table's reach: where Pell talks, and where a deed is signed. */
 export const AT_PELL = { tx: 7, ty: 3 }
+/** Right of Pell's desk: Pell talks from here, but the deed table is out of reach. */
+export const BY_DESK = { tx: 8, ty: 2 }
+
+/** Whether Silas is drawn in this scene now (his cycle's phase here; false while he walks or is away). */
+export async function silasPresent(page: Page): Promise<boolean> {
+  return page.evaluate(() => (window as unknown as { __fsNpcs: () => { id: string; present: boolean }[] }).__fsNpcs().find((n) => n.id === 'silas')?.present ?? false)
+}
 
 /**
  * Stand by Silas wherever his hour has him (out by the sawhorse, or behind
- * his counter in the shop) and talk; pick `pick` if given. His talk is the
- * same in both places.
+ * his counter in the shop). Fails when he's in neither place, rather than
+ * talking to whichever Silas answers.
  */
 export async function bySilas(page: Page): Promise<void> {
   const silas = (await homes(page).catch(() => null))?.features?.silas ?? SILAS_AT
   await go(page, 'commons', silas.tx, silas.ty + 1)
-  const out = await expect(page.locator('.prompt')).toContainText('Talk to Silas', { timeout: 3_000 }).then(() => true, () => false)
-  if (!out) await go(page, YARD, AT_COUNTER.tx, AT_COUNTER.ty)
+  const out = await expect.poll(() => silasPresent(page), { timeout: 3_000 }).toBe(true).then(() => true, () => false)
+  if (!out) {
+    await go(page, YARD, AT_COUNTER.tx, AT_COUNTER.ty)
+    await expect.poll(() => silasPresent(page), { timeout: 3_000, message: 'Silas is neither by the sawhorse nor at his counter' }).toBe(true)
+  }
+  await expect(page.locator('.prompt')).toContainText('Talk to Silas')
 }
 
 export async function silasSays(page: Page, pick?: RegExp): Promise<void> {

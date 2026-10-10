@@ -76,7 +76,7 @@ export interface PellGate {
 
 /** What Pell's talk is made from. */
 export interface PellTalkContext {
-  /** The first time you've talked to Pell (their first meeting's lines, with the first deed). */
+  /** The first time you've talked to Pell (their first meeting's lines, with the first deed; a homeowner's short welcome). */
   first: boolean
   /** Pell's idle line this time (the rotation, in turn). */
   idle: string
@@ -96,6 +96,8 @@ export interface PellTalkContext {
   unclaimed: PellGate[]
   /** You've heard Pell's pitch (it plays once). */
   pitchHeard: boolean
+  /** You stand at the deed table (src/game/deed-table.ts standsAtTable): an invite is signed there. */
+  atTable: boolean
 }
 
 /** The longest name on a choice before it's cut short. */
@@ -107,21 +109,28 @@ function cut(s: string, n: number): string {
 
 /**
  * Pell, at the desk: their line (the first meeting once, else an idle
- * line), then deed things only. With no deed: an invite to sign, old deeds
- * to take back (two at most), the deeds on offer (four at most; one you
- * can't afford says what it needs), Not today. On a deed: Manage your deed,
- * Not today. A guest, or a plot book not read yet, gets the line why.
+ * line), then deed things only. With no deed: an invite to sign (offered
+ * only at the table), old deeds to take back (two at most), the deeds on
+ * offer (four at most; one you can't afford says what it needs), Not today.
+ * On a deed: a short welcome the first time and an idle line, then Manage
+ * your deed, Not today. A guest, or a plot book not read yet, gets the line
+ * why (and the first meeting waits until Pell knows whether you hold a
+ * deed). `met`: the first meeting was said this time.
  */
-export function pellTalk(c: PellTalkContext): Dialogue & { needsRead: boolean } {
+export function pellTalk(c: PellTalkContext): Dialogue & { needsRead: boolean; met: boolean } {
   const greet = c.first ? [...PELL.firstMeeting.lines] : [c.idle]
   const bye: DialogueChoice = { text: PELL_DEED.notToday }
-  if (c.status === 'guest') return { speaker: PELL.name, lines: [...greet, PELL_DEED.guest], needsRead: false }
+  if (c.status === 'guest') return { speaker: PELL.name, lines: [...greet, PELL_DEED.guest], needsRead: false, met: c.first }
   if (c.status !== 'ready' || (c.claimed && !c.homeRead)) {
-    return { speaker: PELL.name, lines: [...greet, c.status === 'offline' ? PELL_DEED.offline : PELL_DEED.loading], needsRead: c.status !== 'loading' || c.claimed }
+    return { speaker: PELL.name, lines: [c.idle, c.status === 'offline' ? PELL_DEED.offline : PELL_DEED.loading], needsRead: c.status !== 'loading' || c.claimed, met: false }
   }
-  if (c.claimed) return { speaker: PELL.name, lines: greet, choices: [{ text: PELL_DEED.manage, action: MANAGE_DEED }, bye], needsRead: false }
+  // A homeowner's first talk: a short welcome, no "choose a gate" pitch.
+  if (c.claimed) return { speaker: PELL.name, lines: c.first ? [PELL.firstMeetingHomeowner, c.idle] : greet, choices: [{ text: PELL_DEED.manage, action: MANAGE_DEED }, bye], needsRead: false, met: c.first }
   const choices: DialogueChoice[] = []
-  if (c.invite) choices.push({ text: PELL_DEED.signInvite(cut(c.invite.from, NAME_MAX)), note: PELL_DEED.signInviteNote(lotName(c.invite.gate)), action: `home:sign:${c.invite.homeId}` })
+  if (c.invite) {
+    const text = PELL_DEED.signInvite(cut(c.invite.from, NAME_MAX))
+    choices.push(c.atTable ? { text, note: PELL_DEED.signInviteNote(lotName(c.invite.gate)), action: `home:sign:${c.invite.homeId}` } : { text, note: PELL_DEED.standByTable, disabled: true })
+  }
   for (const gate of c.reclaimable.slice(0, 2)) choices.push({ text: PELL_DEED.takeBack(lotName(gate)), note: PELL_DEED.takeBackNote, action: `home:claim:${gate}` })
   for (const g of c.unclaimed.slice(0, 4)) {
     const text = PELL_DEED.buy(lotName(g.gate))
@@ -130,5 +139,5 @@ export function pellTalk(c: PellTalkContext): Dialogue & { needsRead: boolean } 
   choices.push(bye)
   // An invite or an old page is news every time; the pitch plays once.
   const news = c.invite ? PELL_DEED.invite(c.invite.from, lotName(c.invite.gate)) : c.reclaimable.length ? PELL_DEED.takeBackPitch(lotName(c.reclaimable[0])) : c.pitchHeard || c.first ? null : PELL_DEED.pitch
-  return { speaker: PELL.name, lines: news ? [...greet, news] : greet, choices, needsRead: false }
+  return { speaker: PELL.name, lines: news ? [...greet, news] : greet, choices, needsRead: false, met: c.first }
 }
