@@ -9,13 +9,15 @@
   import { isTouchFirst } from './device'
   import { heroLine } from './hero'
   import CompanionsTab from './CompanionsTab.svelte'
+  import WardrobeTab from './WardrobeTab.svelte'
   import AbilitiesSection from './AbilitiesSection.svelte'
 
   // Keyboard open/close (C / Escape) is owned by App.svelte's global handler.
   // The pack, materials and keepsakes live in the Inventory (I); this panel
   // stays on the hero.
-  // Two pages: the hero, and their companions (a Habitica hero's only: guests
-  // and heroes without a profile have no pets to choose from, crafts.md 2.2).
+  // Three pages: the hero, what they wear, and their companions (the last two
+  // a Habitica hero's only: guests and heroes without a profile have no gear
+  // or pets to choose from, crafts.md 2.2, purse-and-wardrobe.md 5).
   // `initialTab`: the page to open on (the stable's "Choose a mount" opens
   // Companions).
   let {
@@ -26,9 +28,10 @@
     at = null
   }: { session: Session; onClose: () => void; onInventory: () => void; initialTab?: CharacterTab; at?: 'stable' | null } = $props()
 
-  type CharacterTab = 'hero' | 'companions'
+  type CharacterTab = 'hero' | 'wardrobe' | 'companions'
   const TABS: { id: CharacterTab; label: string }[] = [
     { id: 'hero', label: 'Hero' },
+    { id: 'wardrobe', label: 'Wardrobe' },
     { id: 'companions', label: 'Companions' }
   ]
   let tab = $state<CharacterTab>('hero')
@@ -99,6 +102,10 @@
   <div role="tabpanel" id="char-page-companions" aria-labelledby="char-tab-companions">
     <CompanionsTab {session} {at} />
   </div>
+  {:else if page === 'wardrobe'}
+  <div role="tabpanel" id="char-page-wardrobe" aria-labelledby="char-tab-wardrobe">
+    <WardrobeTab {session} />
+  </div>
   {:else}
   <div role="tabpanel" id="char-page-hero" aria-labelledby={showTabs ? 'char-tab-hero' : undefined}>
   <div class="hero">
@@ -130,6 +137,10 @@
     <p class="fine">Mana trickles back as you walk.{profile ? ' Health comes from your Habitica hero — heal there and sync, or spend embers on a warm rest.' : ' Health mends slowly in Hearthwick.'}</p>
   </div>
 
+  <!-- [0.6 lane D] The purse's line goes here, beside the embers (design 2.1):
+       <PurseLine /> from ./PurseLine.svelte (lane D's; it reads the gold from the ui
+       store, and an optional onOpen adds a "Purse ›" link to the Menu). Placed when
+       that component lands on exp/purse. -->
   <h3 class="section-title">Embers</h3>
   <div class="embers">
     <div class="purse">

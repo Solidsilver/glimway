@@ -162,6 +162,8 @@ class RemotePlayersLayer implements RemotePlayers {
         moving: v.moving,
         avatar: v.demo === null,
         pet: v.follower ? v.followerKey : null,
+        // The gear their look draws (0.6: the server sends a wardrobe's look as the costume).
+        gear: v.peer.avatar ? (v.peer.avatar.useCostume ? v.peer.avatar.costume : v.peer.avatar.equipped) : null,
         riding: v.riding,
         led: v.led ? v.led.key : null,
         fishing: v.line !== null,

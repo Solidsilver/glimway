@@ -133,6 +133,8 @@ export type Prediction =
   // Gold (purse-and-wardrobe.md 6.5): a gold buy, shelf buy, letter or give takes it out of the purse,
   // a gold letter collected or recalled puts it in. It changes `PlayerState.purse` (`predictPurse`).
   | { kind: 'gold'; delta: number }
+  // The wardrobe (purse-and-wardrobe.md 6.5): it changes `PlayerState.wardrobe` (`predictWardrobe`).
+  | { kind: 'wardrobe'; chosen: Record<string, string> }
   | { kind: 'none' };
 
 export interface PredictContext {
@@ -176,6 +178,7 @@ export function predict(state: GameState, op: Prediction, ctx: PredictContext): 
     case 'companions':
     case 'mount-home':
     case 'gold':
+    case 'wardrobe':
     case 'none':
       return state;
   }
@@ -213,6 +216,17 @@ export function predictCompanions(server: PlayerState | null, pending: readonly 
     else if (op.kind === 'mount-home') view = { ...view, mountOut: '' };
   }
   return view;
+}
+
+/**
+ * The wardrobe the game shows (purse-and-wardrobe.md 4.4): the server's
+ * resolved choice, replaced whole by each unanswered choice in order (the
+ * operation writes the whole map; a slot left out is As on Habitica).
+ */
+export function predictWardrobe(server: PlayerState | null, pending: readonly Prediction[]): Record<string, string> {
+  let chosen: Record<string, string> = { ...(server?.wardrobe?.chosen ?? {}) };
+  for (const op of pending) if (op.kind === 'wardrobe') chosen = { ...op.chosen };
+  return chosen;
 }
 
 /**

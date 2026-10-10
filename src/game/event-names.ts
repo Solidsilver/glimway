@@ -70,6 +70,8 @@ export const EV = {
   companions: 'game:companions',
   /** Connected play: the purse the game shows changed (src/lib/purse.ts PurseView: gold, top-ups left, a working top-up). */
   purse: 'game:purse',
+  /** Connected play: the wardrobe the game shows changed (an answer, a choice, a rollback). */
+  wardrobe: 'game:wardrobe',
   /** Open the Character panel's Companions page (`at: 'stable'` scrolls to the stable). */
   openCompanions: 'ui:open-companions',
   /** The mount that's out, as the hero has it now: { key, riding, led } (MountPayload); null when none is out. */
@@ -457,6 +459,7 @@ export interface EventMap {
   [EV.witness]: WitnessPayload
   [EV.companions]: void
   [EV.purse]: PurseView
+  [EV.wardrobe]: void
   [EV.openCompanions]: { at?: 'stable' } | undefined
   [EV.mount]: MountPayload | null
   [EV.mutationResolved]: MutationResolvedPayload

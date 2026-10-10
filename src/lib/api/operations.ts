@@ -6,6 +6,7 @@ import { EnvelopeSchema, LoginRequestSchema, PlayRequestSchema, SessionResponseS
 import { WildsRegionResultSchema, HomesteadLandSchema, type WildsChunk, type WildsRegionResult, type HomesteadLand } from '../gen/glimway/v1/wilds_pb.js';
 import { decodeChunk } from './chunks.ts';
 import { CompanionsRequestSchema, MountHomeRequestSchema, MountOutRequestSchema, StableExtendRequestSchema, StallRequestSchema, type CompanionsRequest, type MountHomeRequest, type MountOutRequest, type StableExtendRequest, type StallRequest } from '../gen/glimway/v1/companions_pb.js';
+import { WardrobeCheckRequestSchema, WardrobeReadSchema, WardrobeRequestSchema, type WardrobeCheckRequest, type WardrobeRead, type WardrobeRequest } from '../gen/glimway/v1/wardrobe_pb.js';
 import { FishCastRequestSchema, FishSettleRequestSchema, FishCancelRequestSchema, FishingWatersSchema, type FishCastRequest, type FishSettleRequest, type FishCancelRequest, type FishingWaters } from '../gen/glimway/v1/fishing_pb.js';
 import { PurseReadSchema, PurseTopUpRequestSchema, type PurseRead, type PurseTopUpRequest } from '../gen/glimway/v1/purse_pb.js';
 import { ReportRequestSchema, type ReportRequest, QuestStepRequestSchema, type QuestStepRequest, MarkRequestSchema, type MarkRequest, TakePaperRequestSchema, type TakePaperRequest, SettleEchoRequestSchema, type SettleEchoRequest, FallRequestSchema, type FallRequest, ProfileReportSchema, type ProfileReport, SpendRequestSchema, type SpendRequest, WildsClaimRequestSchema, type WildsClaimRequest, WildsLanternRequestSchema, type WildsLanternRequest } from '../gen/glimway/v1/operations_pb.js';
@@ -51,6 +52,11 @@ export interface OperationsApi {
   purseTopUp(request: PurseTopUpRequest): Promise<Envelope>;
   /** The purse, the last 50 top-ups and gold lines (GET /api/purse). */
   purse(): Promise<PurseRead>;
+  /** The wardrobe (purse-and-wardrobe.md 4, 6.2): the choice (keyed), the picker's read, and Check for new gear. */
+  wardrobe(request: WardrobeRequest): Promise<Envelope>;
+  wardrobeRead(): Promise<WardrobeRead>;
+  /** Carries the Habitica token for this one read: never keyed, never queued, never kept (4.3). */
+  wardrobeCheck(request: WardrobeCheckRequest): Promise<Envelope>;
 }
 function validated<T>(read: () => T): T {
   try { return read(); } catch { throw new ApiError('bad-response', { status: 200 }); }
@@ -123,6 +129,9 @@ export function createOperationsApi(send: Transport): OperationsApi {
       for (const w of out.waters) if (!w.id) throw new Error('invalid water');
       return out;
     }); },
+    async wardrobe(req) { return decodeEnvelope(await send('POST', '/api/wardrobe', toJson(WardrobeRequestSchema, req, { alwaysEmitImplicit: true }))); },
+    async wardrobeRead() { const raw = await send('GET', '/api/wardrobe'); return validated(() => decodeWire(WardrobeReadSchema, raw)); },
+    async wardrobeCheck(req) { return decodeEnvelope(await send('POST', '/api/wardrobe/check', toJson(WardrobeCheckRequestSchema, req, { alwaysEmitImplicit: true }))); },
   };
 }
 export function validatedSession(raw: unknown): SessionResponse {
