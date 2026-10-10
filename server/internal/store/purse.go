@@ -10,13 +10,14 @@ import (
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/itemmove"
 	"google.golang.org/protobuf/types/known/wrapperspb"
+	"strconv"
 	"strings"
 )
 
-// The purse's rows (docs/design/purse-and-wardrobe.md 2): purse_topups is
-// the top-up's own idempotency and its state machine in one table, player_gear
-// is the wardrobe's owned list (4.3), and the purse log reads the ledger's
-// gold rows. Time is worked out, not ticked (crafts.md rule 3): every
+// The purse's rows (docs/design/purse-and-wardrobe.md 2, silas-yard.md 1.5):
+// purse_topups is the top-up's own idempotency and its state machine in one
+// table, player_gear is the wardrobe's owned list (4.3), and the Glim log
+// reads the ledger's glim rows. Time is worked out, not ticked (crafts.md rule 3): every
 // function here takes the caller's now.
 
 // The four working states of a top-up (2.4): a row is working while its
@@ -29,14 +30,25 @@ const (
 	TopUpStaleAfter = 90
 	// Top-ups a UTC day (2.5).
 	TopUpsADay = 2
+	// Glims top-ups may bring a UTC day, across those two (silas-yard.md
+	// 1.5), and the Habitica gold a glim costs.
+	TopUpGlimsADay = 30
+	GoldPerGlim    = 2
 )
+
+// topUpCountedSQL is what counts toward the day (2.5, silas-yard.md 1.5):
+// moved, unconfirmed and any working row (`checking` among them). Not:
+// not-enough, not-moved, and a refused token — a top-up that moved nothing
+// never uses up the day.
+const topUpCountedSQL = "(state IN ('moved','unconfirmed') OR state IN " + topUpWorkingSQL + ")"
 
 // TopUp is one purse_topups row.
 type TopUp struct {
 	ID         string
 	AccountID  string
 	OpKey      string
-	Amount     int
+	Amount     int // Habitica gold, two to a glim
+	Glims      int // the credit, amount/2
 	State      string
 	GoldBefore sql.NullInt64
 	GoldAfter  sql.NullInt64
@@ -52,12 +64,12 @@ func (t TopUp) Working() bool {
 	return t.State == "reserved" || t.State == "created" || t.State == "scoring" || t.State == "checking"
 }
 
-const topUpColumns = "id,account_id,op_key,amount,state,gold_before,gold_after,note,leftover,created_at,settled_at,settled_by"
+const topUpColumns = "id,account_id,op_key,amount,glims,state,gold_before,gold_after,note,leftover,created_at,settled_at,settled_by"
 
 func scanTopUp(row interface{ Scan(...any) error }) (TopUp, error) {
 	var t TopUp
 	var leftover int
-	err := row.Scan(&t.ID, &t.AccountID, &t.OpKey, &t.Amount, &t.State, &t.GoldBefore, &t.GoldAfter, &t.Note, &leftover, &t.CreatedAt, &t.SettledAt, &t.SettledBy)
+	err := row.Scan(&t.ID, &t.AccountID, &t.OpKey, &t.Amount, &t.Glims, &t.State, &t.GoldBefore, &t.GoldAfter, &t.Note, &leftover, &t.CreatedAt, &t.SettledAt, &t.SettledBy)
 	t.Leftover = leftover == 1
 	return t, err
 }
@@ -66,13 +78,14 @@ func scanTopUp(row interface{ Scan(...any) error }) (TopUp, error) {
 // so nothing is credited twice (2.2 step 3: a row settles once).
 var ErrTopUpSettled = errors.New("top-up already settled")
 
-// InsertTopUp reserves the row (2.2 step 1). The row is its own idempotency:
+// InsertTopUp reserves the row (2.2 step 1): amount is the Habitica gold, and
+// the row's glims (the credit) are half of it. The row is its own idempotency:
 // the unique (account_id, op_key) is what a repeated key meets. The reserve
 // is a purse change like any other, so the account's version moves with it
 // (finding 6): the answer carrying `working` must not be a same-version
 // state the client drops as a conflict.
 func InsertTopUp(ctx context.Context, tx *sql.Tx, id, account, opKey string, amount, now int64) error {
-	if _, err := tx.ExecContext(ctx, "INSERT INTO purse_topups(id,account_id,op_key,amount,state,created_at) VALUES(?,?,?,?,?,?)", id, account, opKey, amount, "reserved", now); err != nil {
+	if _, err := tx.ExecContext(ctx, "INSERT INTO purse_topups(id,account_id,op_key,amount,glims,state,created_at) VALUES(?,?,?,?,?,?,?)", id, account, opKey, amount, amount/GoldPerGlim, "reserved", now); err != nil {
 		return err
 	}
 	_, err := BumpAccountVersion(ctx, tx, account)
@@ -121,8 +134,9 @@ func MarkTopUpState(ctx context.Context, tx *sql.Tx, id, state string) error {
 }
 
 // SettleTopUp lands one top-up (2.2 step 3): the row's final state and
-// evidence, and for a move the purse credited — the only write that adds
-// gold besides the owner's settle. The row settles once; a settle that lost
+// evidence, and for a move the row's glims credited (amount/2, never
+// XP-earned) — the only write that brings glims in from Habitica besides the
+// owner's settle. The row settles once; a settle that lost
 // its race credits nothing (ErrTopUpSettled).
 func SettleTopUp(ctx context.Context, tx *sql.Tx, t TopUp, out TopUpOutcome, now int64) error {
 	res, err := tx.ExecContext(ctx, "UPDATE purse_topups SET state=?,gold_before=?,gold_after=?,note=?,leftover=?,settled_at=?,settled_by=? WHERE id=? AND settled_at IS NULL",
@@ -137,17 +151,16 @@ func SettleTopUp(ctx context.Context, tx *sql.Tx, t TopUp, out TopUpOutcome, now
 	if n != 1 {
 		return ErrTopUpSettled
 	}
-	if out.State == "moved" {
+	// A 0.6 row of one gold turned into no glims (033): it moves nothing.
+	if out.State == "moved" && t.Glims > 0 {
 		reason := "habitica-topup"
 		if out.SettledBy == "owner" {
 			reason = "purse-settle"
 		}
-		// CreditGold moves the version; every other outcome moves it here
+		// MoveGlims moves the version; every other outcome moves it here
 		// (finding 6): `unconfirmed`, `not-moved` and `not-enough` change
 		// the purse on the wire just as much.
-		// G-B: credit amount/2 glims (two gold to a glim) and write the row's
-		// glims (silas-yard.md 1.5); this still credits the amount 1:1.
-		if err = CreditGold(ctx, tx, t.AccountID, t.Amount, reason, t.ID, now); err != nil {
+		if err = MoveGlims(ctx, tx, nil, t.AccountID, t.Glims, reason, t.ID, now); err != nil {
 			return err
 		}
 	} else if _, err = BumpAccountVersion(ctx, tx, t.AccountID); err != nil {
@@ -232,32 +245,30 @@ func AccountVersion(ctx context.Context, tx *sql.Tx, account string) (int64, err
 	return v, err
 }
 
-// CountedTopUps is what counts toward today's two (2.5): moved, unconfirmed
-// and any working row. Not: not-enough, not-moved, and a refused token — a
-// top-up that moved nothing never uses up the day. `since` is the UTC
-// midnight the count starts at (the api passes utcDayStart(now), the one
-// day helper).
-func CountedTopUps(ctx context.Context, tx *sql.Tx, account string, since int64) (int, error) {
-	var n int
-	err := tx.QueryRowContext(ctx, "SELECT count(*) FROM purse_topups WHERE account_id=? AND created_at>=? AND (state IN ('moved','unconfirmed') OR state IN "+topUpWorkingSQL+")", account, since).Scan(&n)
-	return n, err
+// CountedTopUps is today's counted top-ups and their glims (topUpCountedSQL),
+// against the day's two and its 30 glims. `since` is the UTC midnight the
+// count starts at (the api passes utcDayStart(now), the one day helper).
+func CountedTopUps(ctx context.Context, tx *sql.Tx, account string, since int64) (n, glims int, err error) {
+	err = tx.QueryRowContext(ctx, "SELECT count(*),COALESCE(SUM(glims),0) FROM purse_topups WHERE account_id=? AND created_at>=? AND "+topUpCountedSQL, account, since).Scan(&n, &glims)
+	return n, glims, err
 }
 
 // PurseFor is the purse on every answer (PlayerState.purse): what is left
-// of today's two top-ups, and the top-up still
-// working. The stale settle runs first (2.4), so a dead worker's row reads
+// of today's two top-ups and of its 30 glims, and the top-up still working. The stale settle runs first (2.4), so a dead worker's row reads
 // as settled. dayStart is the UTC midnight of the counting day.
 func PurseFor(ctx context.Context, tx *sql.Tx, account string, now, dayStart int64) (*contract.Purse, error) {
 	if _, err := SettleStaleTopUps(ctx, tx, account, now); err != nil {
 		return nil, err
 	}
-	used, err := CountedTopUps(ctx, tx, account, dayStart)
+	used, glims, err := CountedTopUps(ctx, tx, account, dayStart)
 	if err != nil {
 		return nil, err
 	}
-	// G-B: fill GlimsLeft, the day's 30-glim cap less today's moved,
-	// checking and unconfirmed top-ups (silas-yard.md 1.5).
-	out := &contract.Purse{TopUpsLeft: int32(max(0, TopUpsADay-used))}
+	out := &contract.Purse{TopUpsLeft: int32(max(0, TopUpsADay-used)), GlimsLeft: int32(max(0, TopUpGlimsADay-glims))}
+	if out.TopUpsLeft == 0 {
+		// No top-up is left today, so no glims are either: Max fills 0.
+		out.GlimsLeft = 0
+	}
 	working, err := WorkingTopUp(ctx, tx, account)
 	if err != nil {
 		return nil, err
@@ -276,7 +287,7 @@ func TopUpProto(t TopUp) *contract.PurseTopUp {
 	if t.Working() {
 		state = "working"
 	}
-	out := &contract.PurseTopUp{Id: t.ID, Amount: int32(t.Amount), State: state, StartedAt: float64(t.CreatedAt), Leftover: t.Leftover, Note: t.Note}
+	out := &contract.PurseTopUp{Id: t.ID, Amount: int32(t.Amount), Glims: int32(t.Glims), State: state, StartedAt: float64(t.CreatedAt), Leftover: t.Leftover, Note: t.Note}
 	if t.GoldBefore.Valid {
 		out.GoldBefore = wrapperspb.Int32(int32(t.GoldBefore.Int64))
 	}
@@ -326,10 +337,15 @@ func PurseRead(ctx context.Context, tx *sql.Tx, account string, now, dayStart in
 	return &contract.PurseRead{Purse: purse, TopUps: topUps, Lines: lines}, nil
 }
 
-// PurseLines maps the account's glim ledger rows onto the log (2.1): the
-// last 50, newest first. Glims only ever move with a ledger row (3.5), so
-// the ledger is the log — Habitica keeps no record of a top-up and this
-// is the only one.
+// PurseLines maps the account's glim ledger rows onto the Glim log (2.1,
+// silas-yard.md 1.6): the last 50, newest first. Glims only ever move with a
+// ledger row (3.5), so the ledger is the log — Habitica keeps no record of a
+// top-up and this is the only one.
+//
+// The log is every top-up, spend, sale, letter and give, and the one
+// currency-merge row of 0.6.1's turn-in (glimLogSQL). Glims earned (an XP
+// sync, the welcome, a quest's reward) and the zero-delta marks (a rebirth,
+// a world move) are not in it: the Hero page's balance tells those.
 //
 // The reason is the ledger's own word (PurseLine.reason's vocabulary). The
 // row's ref carries what names the line, in the shapes lane C writes (see
@@ -337,21 +353,18 @@ func PurseRead(ctx context.Context, tx *sql.Tx, account string, now, dayStart in
 // for a shelf trade (either order), the other account for a give, and the
 // seller's id and good for a market buy (market.go's ref).
 func PurseLines(ctx context.Context, tx *sql.Tx, account string) ([]*contract.PurseLine, error) {
-	// The lines 0.6's gold log read, now in glims, plus the 033 turn-in.
-	// G-B: which glim rows the Glim log shows (silas-yard.md 1.6: every
-	// top-up, spend, sale, letter and give).
-	rows, err := tx.QueryContext(ctx, "SELECT created_at,delta,reason,ref FROM ledger WHERE account_id=? AND currency='"+itemmove.Glims()+"' AND reason IN ('habitica-topup','purse-settle','market-buy','shelf-buy','shelf-sale','mail-send','mail-claim','mail-return','mail-recall','give','gift','currency-merge') ORDER BY created_at DESC,id DESC LIMIT 50", account)
+	rows, err := tx.QueryContext(ctx, "SELECT created_at,delta,reason,ref FROM ledger WHERE account_id=? AND currency='"+itemmove.Glims()+"' AND "+glimLogSQL+" ORDER BY created_at DESC,id DESC LIMIT 50", account)
 	if err != nil {
 		return nil, err
 	}
-	type goldRow struct {
+	type glimRow struct {
 		at          int64
 		delta       int
 		reason, ref string
 	}
-	var held []goldRow
+	var held []glimRow
 	for rows.Next() {
-		var r goldRow
+		var r glimRow
 		if err = rows.Scan(&r.at, &r.delta, &r.reason, &r.ref); err != nil {
 			rows.Close()
 			return nil, err
@@ -376,6 +389,15 @@ func PurseLines(ctx context.Context, tx *sql.Tx, account string) ([]*contract.Pu
 			if err = shelfLine(ctx, tx, r.ref, line); err != nil {
 				return nil, err
 			}
+		case "currency-merge":
+			// 033's turn-in: the ref is "gold:<the 0.6 purse's gold>", and
+			// the line's qty carries that gold.
+			if n, err := strconv.Atoi(strings.TrimPrefix(r.ref, "gold:")); err == nil {
+				line.Qty = int32(n)
+			}
+		case "mend", "homestead-buy":
+			// The ref is the item's def (item_fittings.go, home_deeds.go).
+			line.ItemDef = r.ref
 		case "give", "gift":
 			name, err := displayName(ctx, tx, r.ref)
 			if err != nil {
@@ -387,6 +409,13 @@ func PurseLines(ctx context.Context, tx *sql.Tx, account string) ([]*contract.Pu
 	}
 	return out, nil
 }
+
+// glimLogSQL is which glim rows the Glim log shows: the top-ups and the
+// moves between players by reason, the turn-in, and every spend (a row that
+// takes glims away: a seller's goods, the homestead, a mend, a lantern or a
+// rest, a quest's gate). The currency-merge row shows even at 0: its ref
+// names the gold turned in, and its delta is only 033's rounding drift.
+const glimLogSQL = "(delta<0 OR reason IN ('habitica-topup','purse-settle','shelf-sale','mail-claim','mail-return','mail-recall','gift','currency-merge'))"
 
 // mailLine names the letter and its other end, and says where the letter is
 // now: waiting | collected | came-back (PurseLine.mail_state). The glims sit
@@ -493,13 +522,15 @@ func displayName(ctx context.Context, tx *sql.Tx, account string) (string, error
 
 // ------------------------------------------------- the owner's command line
 
-// PurseTopUpRow is one line of `purse list` (2.6): id, account, amount,
-// state, Habitica's gold before and after, and when.
+// PurseTopUpRow is one line of `purse list` (2.6): id, account, amount (the
+// Habitica gold) and the glims it brings, state, Habitica's gold before and
+// after, and when.
 type PurseTopUpRow struct {
 	ID         string `json:"id"`
 	Account    string `json:"account"`
 	Subject    string `json:"subject,omitempty"`
 	Amount     int    `json:"amount"`
+	Glims      int    `json:"glims"`
 	State      string `json:"state"`
 	GoldBefore *int   `json:"goldBefore,omitempty"`
 	GoldAfter  *int   `json:"goldAfter,omitempty"`
@@ -528,11 +559,11 @@ func (s *Store) PurseTopUpList(ctx context.Context, unconfirmedOnly bool) ([]Pur
 		var t TopUp
 		var leftover int
 		var subject string
-		if err = rows.Scan(&t.ID, &t.AccountID, &t.OpKey, &t.Amount, &t.State, &t.GoldBefore, &t.GoldAfter, &t.Note, &leftover, &t.CreatedAt, &t.SettledAt, &t.SettledBy, &subject); err != nil {
+		if err = rows.Scan(&t.ID, &t.AccountID, &t.OpKey, &t.Amount, &t.Glims, &t.State, &t.GoldBefore, &t.GoldAfter, &t.Note, &leftover, &t.CreatedAt, &t.SettledAt, &t.SettledBy, &subject); err != nil {
 			return nil, err
 		}
 		t.Leftover = leftover == 1
-		row := PurseTopUpRow{ID: t.ID, Account: t.AccountID, Subject: subject, Amount: t.Amount, State: t.State, Note: t.Note, Leftover: t.Leftover, StartedAt: t.CreatedAt}
+		row := PurseTopUpRow{ID: t.ID, Account: t.AccountID, Subject: subject, Amount: t.Amount, Glims: t.Glims, State: t.State, Note: t.Note, Leftover: t.Leftover, StartedAt: t.CreatedAt}
 		if t.GoldBefore.Valid {
 			v := int(t.GoldBefore.Int64)
 			row.GoldBefore = &v
@@ -554,7 +585,7 @@ func (s *Store) PurseTopUpList(ctx context.Context, unconfirmedOnly bool) ([]Pur
 // SettleTopUpByOwner is `purse settle <id> moved|not-moved` (2.6): only an
 // `unconfirmed` row, one the checks could not decide — which is settled
 // already, so this settles it a second time, with the answer the owner got
-// from the player. `moved` credits the purse with the ledger reason
+// from the player. `moved` credits the row's glims with the ledger reason
 // purse-settle; both mark the row settled by the owner. The stored
 // gold_before is the evidence.
 func (s *Store) SettleTopUpByOwner(ctx context.Context, id, outcome string, now int64) error {
@@ -599,11 +630,11 @@ func (s *Store) SettleTopUpByOwner(ctx context.Context, id, outcome string, now 
 	if n != 1 {
 		return fmt.Errorf("top-up %s was settled elsewhere", id)
 	}
-	if outcome == "moved" {
-		// CreditGold moves the version (finding 6); `not-moved` moves it
-		// here, because the purse changed on the wire all the same.
-		// G-B: amount/2 glims, as SettleTopUp.
-		if err = CreditGold(ctx, tx, t.AccountID, t.Amount, "purse-settle", id, now); err != nil {
+	if outcome == "moved" && t.Glims > 0 {
+		// MoveGlims moves the version (finding 6); `not-moved` moves it
+		// here, because the purse changed on the wire all the same. The
+		// credit is the row's glims, amount/2, as SettleTopUp's.
+		if err = MoveGlims(ctx, tx, nil, t.AccountID, t.Glims, "purse-settle", id, now); err != nil {
 			return err
 		}
 	} else if _, err = BumpAccountVersion(ctx, tx, t.AccountID); err != nil {

@@ -136,7 +136,7 @@ func TestPhase5WorkshopCostsGatingCraftingAndRollback(t *testing.T) {
 			t.Fatal("material upgrade cost", m)
 		}
 	}
-	if up.State.Embers != before.State.Embers+200-int(content.HomeRules.GetTiers()[2].GetGlims()) {
+	if up.State.Glims != before.State.Glims+200-int(content.HomeRules.GetTiers()[2].GetGlims()) {
 		t.Fatal("ember upgrade cost")
 	}
 	x.exp("POST", "/api/homestead/upgrade", req, c, 200)

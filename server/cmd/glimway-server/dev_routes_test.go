@@ -16,7 +16,7 @@ import (
 func TestDevRoutesAnswerOnlyThisMachine(t *testing.T) {
 	a := &api.Server{Config: api.Config{Now: func() time.Time { return time.Unix(1234, 0) }}}
 	h := devRoutes(a)(inner)
-	r := httptest.NewRequest(http.MethodPost, api.DevGrantPath, strings.NewReader(`{"grants":[{"id":"embers","qty":1}]}`))
+	r := httptest.NewRequest(http.MethodPost, api.DevGrantPath, strings.NewReader(`{"grants":[{"id":"glims","qty":1}]}`))
 	r.RemoteAddr = "203.0.113.9:5000"
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)

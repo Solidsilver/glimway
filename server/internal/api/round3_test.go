@@ -34,7 +34,7 @@ func TestRound3HighestCreditDetectsHiddenForgery(t *testing.T) {
 			advanceActive(x, c, 10*86400)
 			high := x.expect("POST", "/api/profile", x.profileBody(s, profile("alice", 60, 0, 20), s.State), c, 200)
 			high.Lease = s.Lease
-			if high.State.XPEmbers != 1200 || high.Pending == 0 {
+			if high.State.XPGlims != 1200 || high.Pending == 0 {
 				t.Fatal("review reproduction missing paid/held forgery")
 			}
 			s = high
@@ -57,7 +57,7 @@ func TestRound3HighestCreditDetectsHiddenForgery(t *testing.T) {
 			x.set(profile("alice", 20, 0, 20))
 			c = x.login("alice", "")
 			flagged := x.expect("GET", "/api/state", nil, c, 200)
-			if !flagged.Flagged || flagged.Pending != high.Pending || flagged.State.XPEmbers != high.State.XPEmbers || flagged.Version != before.Version+1 {
+			if !flagged.Flagged || flagged.Pending != high.Pending || flagged.State.XPGlims != high.State.XPGlims || flagged.Version != before.Version+1 {
 				t.Fatal("highest credit did not flag without confiscation")
 			}
 			if count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='checkpoint-flag' AND ref='highest-credit'") != 1 {
@@ -74,7 +74,7 @@ func TestRound3CheckpointCursorExcludesReviewedSameSecondCredit(t *testing.T) {
 	x.set(profile("alice", 30, 0, 20))
 	c = x.login("alice", "")
 	verified := x.expect("GET", "/api/state", nil, c, 200)
-	if verified.Flagged || verified.Pending != 0 || verified.State.XPEmbers < high.State.XPEmbers {
+	if verified.Flagged || verified.Pending != 0 || verified.State.XPGlims < high.State.XPGlims {
 		t.Fatal("verified credit")
 	}
 	// Several later deaths have no new credit; the reviewed peak must not recur.

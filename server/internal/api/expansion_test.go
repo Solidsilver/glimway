@@ -206,8 +206,8 @@ func TestHomesteadTransactionsIdempotencyAndPlacement(t *testing.T) {
 	bc, b := x.member("bob", s.WorldID)
 	x.exp("POST", "/api/homestead/place", body(b, "steal", map[string]any{"itemId": fern, "scene": "outdoor", "x": p0[0], "y": p0[1], "rotation": 0}), bc, 409)
 	update(&s, x.exp("POST", "/api/homestead/upgrade", body(s, "cottage", map[string]any{"tier": 1}), c, 200))
-	if s.State.Embers != 40 || s.State.XPEmbers != 20 {
-		t.Fatal("gifted first upgrade debit", s.State.Embers, s.State.XPEmbers)
+	if s.State.Glims != 40 || s.State.XPGlims != 20 {
+		t.Fatal("gifted first upgrade debit", s.State.Glims, s.State.XPGlims)
 	}
 	x.exp("POST", "/api/homestead/upgrade", body(s, "workshop", map[string]any{"tier": 2}), c, 409)
 	v = x.exp("POST", "/api/homestead/buy", body(s, "chair", map[string]any{"itemDef": "reading-chair"}), c, 200)
@@ -230,10 +230,10 @@ func TestHomesteadTransactionsIdempotencyAndPlacement(t *testing.T) {
 	old.Version--
 	doc := s.State
 	doc.HP = doc.MaxHP
-	doc.Embers = 999
+	doc.Glims = 999
 	merged := x.expect("PUT", "/api/progress", mutation(old, doc), c, 404)
 	merged = x.expect("GET", "/api/state", nil, c, 200)
-	if merged.State.Embers != s.State.Embers || merged.State.HP != s.State.HP {
+	if merged.State.Glims != s.State.Glims || merged.State.HP != s.State.HP {
 		t.Fatal("stale purchase progress")
 	}
 }
@@ -263,7 +263,7 @@ func TestHomeRestAndSafeBoundaries(t *testing.T) {
 	s0 := s
 	x.expect("POST", "/api/spend", spendBody(s, "home-rest", "", "earned", doc), c, 200)
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
-	if s.Version != s0.Version+2 || s.State.HP != s.State.MaxHP || s.State.Embers != 5 || s.State.XPEmbers != 0 {
+	if s.Version != s0.Version+2 || s.State.HP != s.State.MaxHP || s.State.Glims != 5 || s.State.XPGlims != 0 {
 		t.Fatal("home rest")
 	}
 	// Before the cottage (tier 0) the bedroll on the land rests you; once it stands, only inside.
@@ -392,7 +392,7 @@ func TestMaterialPurchaseAndExpansionBackupRestore(t *testing.T) {
 	if count(t, restored, "SELECT sum(delta) FROM ledger WHERE account_id='"+x.account("alice")+"' AND currency='decoration:woven-basket'") != 1 {
 		t.Fatal("instance ledger sum")
 	}
-	if count(t, restored, "SELECT sum(delta) FROM ledger WHERE account_id='"+x.account("alice")+"' AND currency='glims'") != rs.State.Embers {
+	if count(t, restored, "SELECT sum(delta) FROM ledger WHERE account_id='"+x.account("alice")+"' AND currency='glims'") != rs.State.Glims {
 		t.Fatal("ember ledger sum")
 	}
 }
@@ -428,7 +428,7 @@ func TestExpansionLeaseRevisionAndConcurrentPurchase(t *testing.T) {
 	}
 	v := x.exp("POST", "/api/homestead/buy", req, c, 200)
 	update(&s, v)
-	if count(t, x.db, "SELECT count(*) FROM homestead_items") != 1 || s.State.Embers != 28 {
+	if count(t, x.db, "SELECT count(*) FROM homestead_items") != 1 || s.State.Glims != 28 {
 		t.Fatal("concurrent purchase duplicate")
 	}
 	stale := body(s, "stale", map[string]any{"itemDef": "wooden-stool"})

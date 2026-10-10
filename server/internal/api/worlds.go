@@ -53,7 +53,7 @@ type leavingView struct {
 	// WardenTools: warden-set tools resting in the homestead's shared chest,
 	// which stays behind (take them first).
 	WardenTools int `json:"wardenTools"`
-	// DeedCost: embers a deed costs in the next world (the first is free).
+	// DeedCost: glims a deed costs in the next world (the first is free).
 	DeedCost int `json:"deedCost"`
 }
 
@@ -411,7 +411,7 @@ func (a *Server) worldPrompt(w http.ResponseWriter, r *http.Request) error {
 }
 
 // relocate moves the player to target, the move's one shared step. With
-// them go their character, story, embers, pack and personal chest (all keyed
+// them go their character, story, glims, pack and personal chest (all keyed
 // by player, not world). Their homestead membership ends exactly as a
 // "leave" does; furniture, the shared chest, shelf stock, Wilds claims and
 // project contributions stay with the old world. Parcels waiting for them
@@ -469,7 +469,7 @@ func relocate(ctx context.Context, logf fishingLog, tx *sql.Tx, s *store.Snapsho
 		return false, 0, err
 	}
 	for _, id := range incoming {
-		if _, err = store.ReturnMail(ctx, tx, id, "recipient-removed", now, true); err != nil {
+		if _, err = store.ReturnMail(ctx, tx, s, id, "recipient-removed", now); err != nil {
 			return false, 0, err
 		}
 	}

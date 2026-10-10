@@ -38,11 +38,11 @@ func (a *Server) spendOp(w http.ResponseWriter, r *http.Request) error {
 			return nil, fail(409, "wrong-area")
 		}
 		before := s.State
-		after, e := rules.SpendEmbers(before, rules.Spend{Kind: req.Kind, ID: req.Target}, true)
+		after, e := rules.SpendGlims(before, rules.Spend{Kind: req.Kind, ID: req.Target}, true)
 		if e != nil {
 			return nil, fail(409, e.Error())
 		}
-		if e = store.Credit(ctx, tx, s, after.Embers-before.Embers, after.XPEmbers-before.XPEmbers, "spend", req.Kind+":"+req.Target, nil, now); e != nil {
+		if e = store.Credit(ctx, tx, s, after.Glims-before.Glims, after.XPGlims-before.XPGlims, "spend", req.Kind+":"+req.Target, nil, now); e != nil {
 			return nil, e
 		}
 		s.State = after

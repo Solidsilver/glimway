@@ -107,7 +107,7 @@ func TestHistoricalAccountUpgradeThroughAPI(t *testing.T) {
 	legacy := &http.Cookie{Name: CookieName, Value: cookie}
 	held := &http.Cookie{Name: CookieName, Value: heldCookie}
 	s := x.expect("GET", "/api/state", nil, legacy, 200)
-	if s.AccountID != "legacy-owner" || s.State.HP != 32 || s.State.Embers != 9 {
+	if s.AccountID != "legacy-owner" || s.State.HP != 32 || s.State.Glims != 9 {
 		t.Fatal("historical fresh baseline", s)
 	}
 	if w := x.rawHTTP("GET", "/api/mail", nil, legacy); w.Code != 200 || !strings.Contains(w.Body.String(), "old-mail") {
@@ -129,7 +129,7 @@ func TestHistoricalAccountUpgradeThroughAPI(t *testing.T) {
 	play = x.reportState(login, play, 10, 0, map[string]any{"area": "village", "x": 400, "y": 300})
 	request := body(play, "upgrade-complete", map[string]any{"quest": "lantern-road", "to": "complete"})
 	completed := x.expect("POST", "/api/quest/step", request, login, 200)
-	if completed.State.Quest != "complete" || completed.State.Embers != 12 {
+	if completed.State.Quest != "complete" || completed.State.Glims != 12 {
 		t.Fatal("first quest completion", completed)
 	}
 	x.expect("POST", "/api/quest/step", request, login, 200)

@@ -140,7 +140,7 @@ func (l Land) Rows() []string {
 	return out
 }
 
-// Clearable obstacles: Silas clears trees, stumps and boulders for embers.
+// Clearable obstacles: Silas clears trees, stumps and boulders for glims.
 func Clearable(k byte) bool { return k == Tree || k == Stump || k == Boulder }
 
 // Buildable ground (light permitting).

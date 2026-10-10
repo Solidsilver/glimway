@@ -210,12 +210,12 @@ func TestHomes2FormerMemberReclaimsVacantHome(t *testing.T) {
 	}
 	x.now.Add(int64(content.HomeRules.GetDesolation().GetDesolateAfterDays()) * 86400)
 	x.refresh(ac, &a)
-	before := a.State.Embers
+	before := a.State.Glims
 	back := x.claimGate(ac, &a, 0)
 	if back.ID != h.ID || back.Tier != 1 || back.Desolate || back.VacantSince != nil || back.PostsBought != 1 || !back.Member {
 		t.Fatal("reclaimed home", back.ID == h.ID, back.Tier, back.Desolate)
 	}
-	if a.State.Embers != before {
+	if a.State.Glims != before {
 		t.Fatal("reclaiming costs nothing")
 	}
 	// A home with someone still on the deed is not reclaimable: ask them.

@@ -12,10 +12,10 @@ import (
 )
 
 // Dev mode (local playtesting only): POST /api/dev/grant gives the
-// signed-in account Glimway's own things — embers, materials, items,
+// signed-in account Glimway's own things — glims, materials, items,
 // tools, recipe pages, home goods — through the same store paths as real
 // grants, each with its ledger row ("dev-grant"). Nothing from Habitica:
-// only ids in content/items.json and content/homestead.json (and "embers")
+// only ids in content/items.json and content/homestead.json (and "glims")
 // are grantable; anything else is refused. This file is compiled only into
 // `-tags dev` builds, and the route is mounted by the dev build of the
 // server command (server/cmd/glimway-server/dev_routes.go), for callers on
@@ -24,15 +24,13 @@ import (
 // DevGrantPath is the route's path.
 const DevGrantPath = "/api/dev/grant"
 
-// Embers is the grant id for embers (not an item). It credits glims.
-// G-B: the grant id and these names become glims (with the dev panel's,
-// src/ui/dev/grantables.ts).
-const devEmbers = "embers"
+// devGlims is the grant id for glims (not an item).
+const devGlims = "glims"
 
 // Caps per grant, and per request.
 const (
 	devMaxStack    = 9999
-	devMaxEmbers   = 100000
+	devMaxGlims    = 100000
 	devMaxOneByOne = 20 // tools and home goods are made one at a time
 	devMaxGrants   = 64
 )
@@ -51,8 +49,8 @@ type devGranted struct {
 // devGrantKind says what a grant id is and how many may be given at once,
 // or refuses it: only Glimway's own content tables, never anything else.
 func devGrantKind(id string) (kind string, max int, err error) {
-	if id == devEmbers {
-		return "embers", devMaxEmbers, nil
+	if id == devGlims {
+		return "glims", devMaxGlims, nil
 	}
 	if d, ok := content.ItemFor(id); ok {
 		switch content.ItemAssetKind(d) {
@@ -114,8 +112,8 @@ func (a *Server) devGrant(w http.ResponseWriter, r *http.Request) error {
 	out := []devGranted{}
 	for i, g := range req.Grants {
 		switch kinds[i] {
-		case "embers":
-			err = store.Credit(ctx, tx, &s, g.Qty, 0, "dev-grant", devEmbers, nil, now)
+		case "glims":
+			err = store.Credit(ctx, tx, &s, g.Qty, 0, "dev-grant", devGlims, nil, now)
 		case "material", "item":
 			err = itemChange(ctx, tx, &s, g.ID, g.Qty, "dev-grant", g.ID, now)
 		case "instance":

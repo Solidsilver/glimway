@@ -35,7 +35,7 @@ func TestTokenCookieAndBackup(t *testing.T) {
 	// stores and serves whole payloads — never sees either request.
 	x.setGold(1240)
 	x.setOwned(map[string]bool{"weapon_warrior_1": true})
-	topUp := x.rawHTTP("POST", "/api/purse/top-up", map[string]any{"op": map[string]any{"lease": s.Lease, "key": "token-test"}, "token": secret, "amount": 200}, c)
+	topUp := x.rawHTTP("POST", "/api/purse/top-up", map[string]any{"op": map[string]any{"lease": s.Lease, "key": "token-test"}, "token": secret, "amount": 20}, c)
 	if topUp.Code != 200 {
 		t.Fatal("top-up", topUp.Code, topUp.Body.String())
 	}
@@ -53,9 +53,9 @@ func TestTokenCookieAndBackup(t *testing.T) {
 	// token, and a gear check that token is refused on.
 	x.setPurseChecks([]time.Duration{time.Millisecond, 2 * time.Millisecond})
 	x.setScore("error")
-	failing := x.rawHTTP("POST", "/api/purse/top-up", map[string]any{"op": map[string]any{"lease": s.Lease, "key": "token-fails"}, "token": secret, "amount": 50}, c)
+	failing := x.rawHTTP("POST", "/api/purse/top-up", map[string]any{"op": map[string]any{"lease": s.Lease, "key": "token-fails"}, "token": secret, "amount": 10}, c)
 	x.setScore("ok")
-	wrong := x.rawHTTP("POST", "/api/purse/top-up", map[string]any{"op": map[string]any{"lease": s.Lease, "key": "token-wrong"}, "token": "WRONG-TOKEN", "amount": 50}, c)
+	wrong := x.rawHTTP("POST", "/api/purse/top-up", map[string]any{"op": map[string]any{"lease": s.Lease, "key": "token-wrong"}, "token": "WRONG-TOKEN", "amount": 10}, c)
 	refused := x.rawHTTP("POST", "/api/wardrobe/check", map[string]any{"lease": s.Lease, "token": "WRONG-TOKEN"}, c)
 	for _, answer := range []*httptest.ResponseRecorder{failing, wrong, refused} {
 		if bytes.Contains(answer.Body.Bytes(), []byte(secret)) {
@@ -120,7 +120,7 @@ func TestTokenCookieAndBackup(t *testing.T) {
 		if err = db.DB.QueryRow("SELECT version FROM players WHERE account_id='" + x.account("alice") + "'").Scan(&rev); err != nil {
 			t.Fatal(err)
 		}
-		if sum != s.State.Embers || earned != s.State.XPEmbers || rev != s.Version {
+		if sum != s.State.Glims || earned != s.State.XPGlims || rev != s.Version {
 			t.Fatal("ledger or rev differs on restore")
 		}
 		// The top-up came through the backup the same way (3.5: the glims
@@ -132,7 +132,7 @@ func TestTokenCookieAndBackup(t *testing.T) {
 		if err = db.DB.QueryRow("SELECT COALESCE(SUM(delta),0),COALESCE(SUM(CASE WHEN reason='habitica-topup' THEN delta END),0) FROM ledger WHERE account_id='"+x.account("alice")+"' AND currency='glims'").Scan(&rowSum, &topUps); err != nil {
 			t.Fatal(err)
 		}
-		if topUps != 200 || rowSum != balance {
+		if topUps != 10 || rowSum != balance {
 			t.Fatal("glims differ on restore", balance, rowSum, topUps)
 		}
 	}
@@ -254,7 +254,7 @@ func TestSpendGiftedFirstZeroLockAndFailedCarry(t *testing.T) {
 	}
 	after := x.expect("GET", "/api/state", nil, c, 200)
 	// The fixture's barrier report advances acknowledgment; the refused spend pays nothing.
-	if after.State.HP != 0 || after.State.Embers != before.State.Embers {
+	if after.State.HP != 0 || after.State.Glims != before.State.Glims {
 		t.Fatal("refusal changed vitals or funds")
 	}
 	x.fund(s.AccountID, 7, 4)
@@ -265,13 +265,13 @@ func TestSpendGiftedFirstZeroLockAndFailedCarry(t *testing.T) {
 	s = x.reportState(c, s, 10, 0, testWhere(s.State))
 	rest := x.expect("POST", "/api/spend", spendBody(s, "rest", "", "rest", s.State), c, 200)
 	rest.Lease = s.Lease
-	if rest.State.XPEmbers != 4 || rest.State.Embers != 8 {
+	if rest.State.XPGlims != 4 || rest.State.Glims != 8 {
 		t.Fatal("ordinary rest did not use gifted first", rest.State)
 	}
 	rest = x.reportState(c, rest, 0, 0, testWhere(rest.State))
 	recovered := x.expect("POST", "/api/spend", spendBody(rest, "rest", "", "zero-rest", rest.State), c, 200)
 	recovered.Lease = s.Lease
-	if recovered.State.HP != 50 || recovered.State.XPEmbers != 2 || recovered.State.Embers != 6 {
+	if recovered.State.HP != 50 || recovered.State.XPGlims != 2 || recovered.State.Glims != 6 {
 		t.Fatal("zero HP rest provenance", recovered.State)
 	}
 	doc := recovered.State
@@ -286,7 +286,7 @@ func TestPendingCheckpointSettlementAndFlagging(t *testing.T) {
 			p := profile("alice", 20, 0, 20)
 			sync := x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200)
 			total := int(rules.LifetimeXP(p.Level, 0) / 10)
-			if sync.State.XPEmbers != int(rules.E.GetSyncCreditCap()) || sync.Pending != total-int(rules.E.GetSyncCreditCap()) {
+			if sync.State.XPGlims != int(rules.E.GetSyncCreditCap()) || sync.Pending != total-int(rules.E.GetSyncCreditCap()) {
 				t.Fatalf("cap: %s", store.JSON(sync))
 			}
 			if verified {
@@ -300,13 +300,13 @@ func TestPendingCheckpointSettlementAndFlagging(t *testing.T) {
 				t.Fatal("pending settlement/retention")
 			}
 			if verified {
-				if next.State.XPEmbers != total || next.Flagged {
+				if next.State.XPGlims != total || next.Flagged {
 					t.Fatal("verified pending not settled")
 				}
-			} else if !next.Flagged || next.State.XPEmbers != int(rules.E.GetSyncCreditCap()) {
+			} else if !next.Flagged || next.State.XPGlims != int(rules.E.GetSyncCreditCap()) {
 				t.Fatal("unverified pending not retained/flagged")
 			}
-			if next.State.EmberXP != sync.State.EmberXP || next.ImportedProfile.HP != sync.ImportedProfile.HP {
+			if next.State.GlimXP != sync.State.GlimXP || next.ImportedProfile.HP != sync.ImportedProfile.HP {
 				t.Fatal("login consumed gameplay baseline or lowered mark")
 			}
 			if next.Version != sync.Version+1 {
@@ -321,7 +321,7 @@ func TestLargeDeathLossIsAcceptedWithoutCredit(t *testing.T) {
 	c, s := x.ready("alice")
 	lost := profile("alice", 10, 0, 20)
 	after := x.expect("POST", "/api/profile", x.profileBody(s, lost, s.State), c, 200)
-	if after.State.EmberXP != s.State.EmberXP || after.State.XPEmbers != 0 {
+	if after.State.GlimXP != s.State.GlimXP || after.State.XPGlims != 0 {
 		t.Fatal("loss changed mark or paid credit")
 	}
 }
@@ -393,7 +393,7 @@ func TestConcurrentSpendIdempotencyAndDone(t *testing.T) {
 		}
 	}
 	a, b := <-results, <-results
-	if a.Version != b.Version || a.State.Embers != b.State.Embers || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='spend'") != 1 {
+	if a.Version != b.Version || a.State.Glims != b.State.Glims || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='spend'") != 1 {
 		t.Fatal("duplicate purchase paid twice")
 	}
 	a.Lease = s.Lease
@@ -446,7 +446,7 @@ func TestDeathAtEndOfPreviousLevelIsPlausible(t *testing.T) {
 	c, s := x.ready("alice")
 	dead := profile("alice", 19, 0, 0)
 	after := x.expect("POST", "/api/profile", x.profileBody(s, dead, s.State), c, 200)
-	if after.State.HP != 0 || after.State.EmberXP != s.State.EmberXP || after.State.XPEmbers != 0 {
+	if after.State.HP != 0 || after.State.GlimXP != s.State.GlimXP || after.State.XPGlims != 0 {
 		t.Fatal("death changed XP mark or paid credit")
 	}
 }

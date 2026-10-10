@@ -540,7 +540,7 @@ func TestWorldMoveCarriesPackAndChestAndLeavesTheRest(t *testing.T) {
 	if len(personal) == 0 || len(shared) == 0 || placed != 1 {
 		t.Fatal("setup", personal, shared, placed)
 	}
-	embers, quest := h.State.Embers, h.State.Quest
+	embers, quest := h.State.Glims, h.State.Quest
 	bobFiber := stacks("pack", x.account("bob"))
 	x.conserved(x.account("hal"))
 	x.conserved(x.account("bob"))
@@ -551,7 +551,7 @@ func TestWorldMoveCarriesPackAndChestAndLeavesTheRest(t *testing.T) {
 		t.Fatal("move answer", moved.raw)
 	}
 	// Comes with them: character, story, embers, pack and personal chest.
-	if moved.State.Embers != embers || moved.State.Quest != quest || moved.State.Area != "commons" {
+	if moved.State.Glims != embers || moved.State.Quest != quest || moved.State.Area != "commons" {
 		t.Fatal("character changed")
 	}
 	if !reflect.DeepEqual(stacks("pack", x.account("hal")), pack) || instances("pack", x.account("hal")) != packTools || !reflect.DeepEqual(stacks("personal", x.account("hal")), personal) {

@@ -224,6 +224,10 @@ type Snapshot struct {
 	LeaseID     sql.NullString `json:"-"`
 	LeaseClient sql.NullString `json:"-"`
 	LeaseSeen   sql.NullInt64  `json:"-"`
+	// heldGlims and heldXPGlims are the balance as the database holds it
+	// (at Load, or the last Persist): Persist writes the change from them,
+	// never the balance (glims.go).
+	heldGlims, heldXPGlims int
 }
 
 // PackItems: the carried items that join the save's inventory list, every
@@ -253,12 +257,6 @@ func Outcome(ctx context.Context, tx *sql.Tx, id, outcome, reason string, now in
 	}
 	n, err := res.RowsAffected()
 	return n == 1, err
-}
-func Credit(ctx context.Context, tx *sql.Tx, s *Snapshot, n, earned int, reason, ref string, xp *float64, now int64) error {
-	s.State.Embers += n
-	s.State.XPEmbers += earned
-	_, err := tx.ExecContext(ctx, "INSERT INTO ledger(account_id,currency,delta,earned_delta,reason,ref,reported_xp,created_at) VALUES(?,'glims',?,?,?,?,?,?)", s.AccountID, n, earned, reason, ref, xp, now)
-	return err
 }
 
 // Legacy documents may contain loot copied before inventory was normalized.

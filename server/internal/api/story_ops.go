@@ -73,7 +73,7 @@ func (a *Server) questStep(w http.ResponseWriter, r *http.Request) error {
 			}
 			paid := int(step.GetGlims())
 			if req.Quest == "signpost" && step.GetId() == "see-mara" {
-				topup := max(0, 3-s.State.Embers)
+				topup := max(0, 3-s.State.Glims)
 				fresh, e := store.Outcome(ctx, tx, s.AccountID, "quest-gift:signpost:topup", "quest", now)
 				if e != nil {
 					return nil, e

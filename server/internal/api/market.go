@@ -54,7 +54,7 @@ func (a *Server) marketBuy(ctx context.Context, tx *sql.Tx, s *store.Snapshot, r
 		}
 	}
 	// The price leaves play: a seller takes glims out of the game (3.5).
-	if err := debitEmbers(ctx, tx, s, price, "market-buy", ref, now); err != nil {
+	if err := debitGlims(ctx, tx, s, price, "market-buy", ref, now); err != nil {
 		return err
 	}
 	// A seller hands over stacks, or one instance at a time (the willow rod

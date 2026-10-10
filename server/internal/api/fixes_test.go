@@ -44,7 +44,7 @@ func TestPendingSurvivesDeathAndSettlesAtOriginalXP(t *testing.T) {
 	x.set(profile("alice", 29, 0, 20))
 	c = x.login("alice", "")
 	dead := x.expect("GET", "/api/state", nil, c, 200)
-	if dead.Flagged || dead.Pending != held.Pending || dead.State.XPEmbers != held.State.XPEmbers {
+	if dead.Flagged || dead.Pending != held.Pending || dead.State.XPGlims != held.State.XPGlims {
 		t.Fatal("death dropped/flagged earned pending")
 	}
 	if dead.ImportedProfile.Level != 30 {
@@ -53,7 +53,7 @@ func TestPendingSurvivesDeathAndSettlesAtOriginalXP(t *testing.T) {
 	x.set(p)
 	c = x.login("alice", "")
 	confirmed := x.expect("GET", "/api/state", nil, c, 200)
-	if confirmed.Flagged || confirmed.Pending != 0 || confirmed.State.XPEmbers != held.State.XPEmbers+held.Pending {
+	if confirmed.Flagged || confirmed.Pending != 0 || confirmed.State.XPGlims != held.State.XPGlims+held.Pending {
 		t.Fatal("pending not settled at original reported XP")
 	}
 }
@@ -65,19 +65,19 @@ func TestPendingRecordsSettleIndependently(t *testing.T) {
 	first.Lease = s.Lease
 	p = profile("alice", 30, 100, 20)
 	second := x.expect("POST", "/api/profile", x.profileBody(first, p, first.State), c, 200)
-	if second.Pending != first.Pending+10 || second.State.XPEmbers != 200 || count(t, x.db, "SELECT count(*) FROM pending_credits") != 2 {
+	if second.Pending != first.Pending+10 || second.State.XPGlims != 200 || count(t, x.db, "SELECT count(*) FROM pending_credits") != 2 {
 		t.Fatal("pending checkpoints not retained per report")
 	}
 	x.set(profile("alice", 30, 0, 20))
 	c = x.login("alice", "")
 	partial := x.expect("GET", "/api/state", nil, c, 200)
-	if partial.Flagged || partial.Pending != 10 || partial.State.XPEmbers != 200+first.Pending {
+	if partial.Flagged || partial.Pending != 10 || partial.State.XPGlims != 200+first.Pending {
 		t.Fatal("unconfirmed report settled or dropped")
 	}
 	x.set(p)
 	c = x.login("alice", "")
 	last := x.expect("GET", "/api/state", nil, c, 200)
-	if last.Pending != 0 || last.State.XPEmbers != partial.State.XPEmbers+10 {
+	if last.Pending != 0 || last.State.XPGlims != partial.State.XPGlims+10 {
 		t.Fatal("remaining pending did not settle")
 	}
 }
@@ -85,13 +85,13 @@ func TestRepeatedDeathsRebirthAndRegainedXP(t *testing.T) {
 	x := newRig(t)
 	x.set(profile("alice", 20, 100, 20))
 	c, s := x.ready("alice")
-	mark := s.State.EmberXP
+	mark := s.State.GlimXP
 	for _, level := range []float64{19, 18, 17, 1} {
 		p := profile("alice", level, 0, 0)
 		s2 := x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200)
 		s2.Lease = s.Lease
 		s = s2
-		if s.State.EmberXP != mark || s.State.XPEmbers != 0 {
+		if s.State.GlimXP != mark || s.State.XPGlims != 0 {
 			t.Fatal("loss changed high-water credit")
 		}
 	}
@@ -103,7 +103,7 @@ func TestRepeatedDeathsRebirthAndRegainedXP(t *testing.T) {
 	}
 	heal := profile("alice", 1, 10, 20)
 	s = x.expect("POST", "/api/profile", x.profileBody(s, heal, s.State), c, 200)
-	if s.State.HP != 20 || s.State.XPEmbers != 0 || s.State.EmberXP != mark {
+	if s.State.HP != 20 || s.State.XPGlims != 0 || s.State.GlimXP != mark {
 		t.Fatal("rebirth locked healing or repaid XP")
 	}
 }
@@ -128,7 +128,7 @@ func TestRepeatedSyncsCannotBypassUnverifiedCap(t *testing.T) {
 		next := x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200)
 		next.Lease = s.Lease
 		s = next
-		if s.State.XPEmbers != int(rules.E.GetSyncCreditCap()) {
+		if s.State.XPGlims != int(rules.E.GetSyncCreditCap()) {
 			t.Fatal("sync bypassed checkpoint credit ceiling")
 		}
 	}
@@ -138,12 +138,12 @@ func TestRepeatedSyncsCannotBypassUnverifiedCap(t *testing.T) {
 	x.set(profile("alice", 60, 0, 20))
 	c = x.login("alice", "")
 	s = x.expect("POST", "/api/play", map[string]any{"clientId": "verified", "takeOver": true}, c, 200)
-	earned := s.State.XPEmbers
+	earned := s.State.XPGlims
 	if s.Pending != 0 || s.Flagged {
 		t.Fatal("valid checkpoint failed")
 	}
 	next := x.expect("POST", "/api/profile", x.profileBody(s, profile("alice", 70, 0, 20), s.State), c, 200)
-	if next.State.XPEmbers != earned+200 {
+	if next.State.XPGlims != earned+200 {
 		t.Fatal("new checkpoint did not open the next bounded allowance")
 	}
 }
@@ -246,7 +246,7 @@ func TestReplaySpendUnderNewLease(t *testing.T) {
 	next := x.expect("POST", "/api/play", map[string]any{"clientId": "other", "takeOver": true}, c, 200)
 	body["op"].(map[string]any)["lease"] = next.Lease
 	replay := x.expect("POST", "/api/spend", body, c, 200)
-	if replay.Version != next.Version || replay.State.Embers != paid.State.Embers || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='spend'") != 1 {
+	if replay.Version != next.Version || replay.State.Glims != paid.State.Glims || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='spend'") != 1 {
 		t.Fatal("new lease replay must carry current state and the original result")
 	}
 	body["kind"] = "road-lantern"
@@ -442,7 +442,7 @@ func TestPendingLotsSurviveBackupRestore(t *testing.T) {
 	x.set(p)
 	c = x.login("alice", "")
 	after := x.expect("GET", "/api/state", nil, c, 200)
-	if after.Pending != 0 || after.State.XPEmbers != held.State.XPEmbers+held.Pending {
+	if after.Pending != 0 || after.State.XPGlims != held.State.XPGlims+held.Pending {
 		t.Fatal("restored pending failed settlement")
 	}
 }

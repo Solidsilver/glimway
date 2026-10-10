@@ -254,9 +254,9 @@ func TestBloomFlowersDryAfterTheirSeason(t *testing.T) {
 	x.conserved(s.AccountID)
 }
 
-// fundEmbers credits the caller's ledger with a purse of embers (embers
-// are earned in play; tests buy their purse outright).
-func (x *rig) fundEmbers(id string, n int) {
+// fundGlims credits the caller's glims on its snapshot (glims are earned
+// in play; tests buy theirs outright).
+func (x *rig) fundGlims(id string, n int) {
 	x.t.Helper()
 	ctx := context.Background()
 	tx, err := x.db.DB.Begin()
@@ -297,7 +297,7 @@ func bySeller(s response, seller string, now int64) rules.State {
 func TestSellersHazelFinnAndTheCartingStall(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	x.fundEmbers(s.AccountID, 10)
+	x.fundGlims(s.AccountID, 10)
 
 	// Standing by the seller: the rig's own position rides along.
 	buy := func(seller, good string, status int) itemsResponse {
@@ -308,8 +308,8 @@ func TestSellersHazelFinnAndTheCartingStall(t *testing.T) {
 	if r := buy("hazels-kitchen", "tallow", 200); stackQty(r.Result.Items, "tallow") != 1 || r.Result.Bought == nil {
 		t.Fatal("no tallow")
 	}
-	if s.State.Embers != 9 {
-		t.Fatal("tallow embers", s.State.Embers)
+	if s.State.Glims != 9 {
+		t.Fatal("tallow embers", s.State.Glims)
 	}
 	// Finn sells flour at the mill door.
 	if r := buy("finns-mill-door", "flour", 200); stackQty(r.Result.Items, "flour") != 1 {
@@ -366,7 +366,7 @@ func TestSellersHazelFinnAndTheCartingStall(t *testing.T) {
 func TestSilasYardBundlesCostGlims(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	x.fundEmbers(s.AccountID, 10)
+	x.fundGlims(s.AccountID, 10)
 	before := count(t, x.db, "SELECT glims FROM balances WHERE account_id=?", s.AccountID)
 	buy := func(good string, status int) itemsResponse {
 		return x.opRefreshing(c, &s, "buy", map[string]any{"seller": "silas-yard", "good": good, "progress": bySeller(s, "silas-yard", x.now.Load())}, status)
@@ -391,7 +391,7 @@ func TestSilasYardBundlesCostGlims(t *testing.T) {
 func TestMarketBuyGrantsAToolInstance(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	x.fundEmbers(s.AccountID, 10)
+	x.fundGlims(s.AccountID, 10)
 	buy := func(status int) itemsResponse {
 		return x.opRefreshing(c, &s, "buy", map[string]any{"seller": "finns-mill-door", "good": "willow-rod", "progress": bySeller(s, "finns-mill-door", x.now.Load())}, status)
 	}
@@ -415,8 +415,8 @@ func TestMarketBuyGrantsAToolInstance(t *testing.T) {
 	if rod == nil || rod.State != "whole" || rod.Condition != rod.MaxCondition || rod.MaxCondition != content.ItemMaxPoints(def) || rod.UsesLeft != int(def.GetUses()) {
 		t.Fatal("the rod came over worn", rod)
 	}
-	if s.State.Embers != 8 {
-		t.Fatal("rod embers", s.State.Embers)
+	if s.State.Glims != 8 {
+		t.Fatal("rod embers", s.State.Glims)
 	}
 	// A second one comes over the same way, and the purse follows.
 	second := buy(200)
@@ -426,8 +426,8 @@ func TestMarketBuyGrantsAToolInstance(t *testing.T) {
 			n++
 		}
 	}
-	if n != 2 || s.State.Embers != 6 {
-		t.Fatal("second rod", n, s.State.Embers)
+	if n != 2 || s.State.Glims != 6 {
+		t.Fatal("second rod", n, s.State.Glims)
 	}
 	x.conserved(s.AccountID)
 }
