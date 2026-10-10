@@ -1,4 +1,4 @@
-// Package rules is the pure Go port of the guest sync and ember rules.
+// Package rules is the pure Go port of the guest sync and glim rules.
 package rules
 
 import (
@@ -45,6 +45,11 @@ type Position struct {
 	X float64 `json:"x"`
 	Y float64 `json:"y"`
 }
+
+// State's JSON names are the client's GameState names, which
+// content/vectors/backend.json shares with the parity tests: Glims, GlimXP and
+// XPGlims still read `embers`, `emberXp` and `xpEmbers` until the client
+// renames its own (lane G-C) and the vectors are made again.
 type State struct {
 	Version  int      `json:"version"`
 	Area     string   `json:"area"`
@@ -62,10 +67,10 @@ type State struct {
 	Discoveries     []string          `json:"discoveries"`
 	DefeatedEnemies []string          `json:"defeatedEnemies"`
 	PlaySeconds     float64           `json:"playSeconds"`
-	Embers          int               `json:"embers"`
+	Glims           int               `json:"embers"`
 	Flags           []string          `json:"flags"`
-	EmberXP         float64           `json:"emberXp"`
-	XPEmbers        int               `json:"xpEmbers"`
+	GlimXP          float64           `json:"emberXp"`
+	XPGlims         int               `json:"xpEmbers"`
 }
 type Stats struct {
 	Str float64 `json:"str"`
@@ -214,10 +219,11 @@ func LifetimeXP(level, exp float64) float64 {
 	return lifetimeTotals[l] + math.Max(0, exp)
 }
 
+// Credit's JSON names follow State's (backend.json).
 type Credit struct {
-	XP     float64  `json:"xp"`
-	Embers int      `json:"embers"`
-	Mark   *float64 `json:"mark"`
+	XP    float64  `json:"xp"`
+	Glims int      `json:"embers"`
+	Mark  *float64 `json:"mark"`
 }
 
 func CreditXP(mark *float64, p Profile) Credit {
@@ -234,7 +240,7 @@ func CreditXP(mark *float64, p Profile) Credit {
 		return c
 	}
 	c.XP = math.Floor(now - *mark + .5)
-	c.Embers = int(math.Floor(now/float64(int(E.GetXpPerGlim()))) - math.Floor(*mark/float64(int(E.GetXpPerGlim()))))
+	c.Glims = int(math.Floor(now/float64(int(E.GetXpPerGlim()))) - math.Floor(*mark/float64(int(E.GetXpPerGlim()))))
 	c.Mark = &now
 	return c
 }
@@ -252,12 +258,18 @@ func AddUnique(a []string, b ...string) []string {
 	}
 	return out
 }
+
+// WelcomeMark is the welcome's once-only mark. It still says embers on
+// purpose: it is persisted player data (outcomes and story marks), never
+// shown, and renaming it would need a data migration for nothing.
+const WelcomeMark = "embers:welcome"
+
 func Welcome(s State) (State, int) {
-	if slices.Contains(s.Flags, "embers:welcome") {
+	if slices.Contains(s.Flags, WelcomeMark) {
 		return s, 0
 	}
-	s.Embers += int(E.GetWelcomeGlims())
-	s.Flags = AddUnique(s.Flags, "embers:welcome")
+	s.Glims += int(E.GetWelcomeGlims())
+	s.Flags = AddUnique(s.Flags, WelcomeMark)
 	return s, int(E.GetWelcomeGlims())
 }
 
@@ -288,7 +300,7 @@ func Sync(save Save, p Profile, atSafe bool) SyncResult {
 		s.MaxMana = p.MaxMP
 		c := CreditXP(nil, p)
 		if c.Mark != nil {
-			s.EmberXP = math.Max(s.EmberXP, *c.Mark)
+			s.GlimXP = math.Max(s.GlimXP, *c.Mark)
 		}
 		s, _ = Welcome(s)
 		r.Status = "imported"
@@ -318,18 +330,18 @@ func Sync(save Save, p Profile, atSafe bool) SyncResult {
 		}
 	}
 	var mark *float64
-	if s.EmberXP > 0 {
-		mark = &s.EmberXP
+	if s.GlimXP > 0 {
+		mark = &s.GlimXP
 	} else if b != nil && b.Exp != nil {
 		n := LifetimeXP(b.Level, *b.Exp)
 		mark = &n
 	}
 	c := CreditXP(mark, p)
 	if c.Mark != nil {
-		s.EmberXP = math.Max(s.EmberXP, *c.Mark)
+		s.GlimXP = math.Max(s.GlimXP, *c.Mark)
 	}
-	s.Embers += c.Embers
-	s.XPEmbers += c.Embers
+	s.Glims += c.Glims
+	s.XPGlims += c.Glims
 	r.Status = "synced"
 	if b != nil && reflect.DeepEqual(SanitizeProfile(*b), p) && reflect.DeepEqual(s, save.State) {
 		r.Status = "unchanged"
@@ -369,26 +381,26 @@ func CheckSpend(s State, sp Spend, imported bool) Check {
 		c.Reason = "done"
 	case (sp.Kind == "rest" || sp.Kind == "home-rest") && s.HP >= s.MaxHP && s.Mana >= s.MaxMana:
 		c.Reason = "full"
-	case s.Embers < cost:
+	case s.Glims < cost:
 		c.Reason = "short"
-	case (sp.Kind == "rest" || sp.Kind == "home-rest") && imported && s.HP <= 0 && s.XPEmbers < cost:
+	case (sp.Kind == "rest" || sp.Kind == "home-rest") && imported && s.HP <= 0 && s.XPGlims < cost:
 		c.Reason = "needs-earned"
 	default:
 		c.OK = true
 	}
 	return c
 }
-func SpendEmbers(s State, sp Spend, imported bool) (State, error) {
+func SpendGlims(s State, sp Spend, imported bool) (State, error) {
 	c := CheckSpend(s, sp, imported)
 	if !c.OK {
 		return s, errors.New(c.Reason)
 	}
-	earned := max(0, c.Cost-(s.Embers-s.XPEmbers))
+	earned := max(0, c.Cost-(s.Glims-s.XPGlims))
 	if (sp.Kind == "rest" || sp.Kind == "home-rest") && imported && s.HP <= 0 {
 		earned = c.Cost
 	}
-	s.Embers -= c.Cost
-	s.XPEmbers -= earned
+	s.Glims -= c.Cost
+	s.XPGlims -= earned
 	switch sp.Kind {
 	case "rest", "home-rest":
 		s.HP = s.MaxHP
@@ -403,7 +415,7 @@ func SpendEmbers(s State, sp Spend, imported bool) (State, error) {
 }
 
 func EconomyFlag(v string) bool {
-	return v == "embers:welcome" || strings.HasPrefix(v, "lit:") || strings.HasPrefix(v, "opened:")
+	return v == WelcomeMark || strings.HasPrefix(v, "lit:") || strings.HasPrefix(v, "opened:")
 }
 
 // LossReference is separate from the vitals baseline and the paid XP mark.

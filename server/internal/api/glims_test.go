@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"testing"
+	"time"
 
 	"glimway/server/internal/store"
 )
@@ -12,12 +13,10 @@ import (
 // Glims between players (docs/design/purse-and-wardrobe.md 3, silas-yard.md
 // 1.4 rule 3): a price on a shelf, a letter, or hand to hand. These tests
 // start each account at no glims (noGlims) and fund it the way a settled
-// top-up does (fundGold); a seller takes glims out of play. Every transfer
-// writes both sides of the ledger in one transaction (3.5), and
-// goldConserved checks that after each kind.
-//
-// G-B: the conservation test with the XP-earned share (silas-yard.md 1.6);
-// the gold names go with the merge.
+// top-up does (topUpGlims), or from XP (x.fund's earned share); a seller
+// takes glims out of play. Every transfer writes both sides of the ledger in
+// one transaction (3.5), and glimsConserved checks that after each kind,
+// with the XP-earned share (1.4 rule 4, 1.6).
 
 // noGlims empties accounts' glims, rows and all (the welcome's included),
 // so each test counts from zero and the rows still sum to the balance.
@@ -33,8 +32,8 @@ func (x *rig) noGlims(ids ...string) {
 	}
 }
 
-// fundGold credits glims the way a settled top-up does (`habitica-topup`).
-func (x *rig) fundGold(id string, n int) {
+// topUpGlims credits glims the way a settled top-up does (`habitica-topup`).
+func (x *rig) topUpGlims(id string, n int) {
 	x.t.Helper()
 	ctx := context.Background()
 	tx, err := x.db.DB.Begin()
@@ -42,7 +41,7 @@ func (x *rig) fundGold(id string, n int) {
 		x.t.Fatal(err)
 	}
 	defer tx.Rollback()
-	if err = store.CreditGold(ctx, tx, id, n, "habitica-topup", "test-topup", x.now.Load()); err != nil {
+	if err = store.MoveGlims(ctx, tx, nil, id, n, "habitica-topup", "test-topup", x.now.Load()); err != nil {
 		x.t.Fatal(err)
 	}
 	if err = tx.Commit(); err != nil {
@@ -50,24 +49,38 @@ func (x *rig) fundGold(id string, n int) {
 	}
 }
 
-// gold is what one account holds, in glims.
-func (x *rig) gold(id string) int {
+// glims is what one account holds.
+func (x *rig) glims(id string) int {
 	x.t.Helper()
 	return count(x.t, x.db, "SELECT glims FROM balances WHERE account_id=?", id)
 }
 
-// goldConserved is design 3.5, checked whole-database: each account's glims
-// rows sum to its balance; the letter escrow (mail:glims:glims) holds exactly
-// the letters still in flight, per sender; the transfers between players
-// (shelf, letters, gives) and the escrow sum to zero, so nothing is made or
-// lost between players; and a seller only ever takes glims out.
-func (x *rig) goldConserved() {
+// glimsConserved is design 3.5 with the XP-earned share (silas-yard.md 1.4,
+// 1.6), checked whole-database:
+//
+//   - per account: the glims rows sum to the balance, and their earned share
+//     to xp_glims, which never passes the balance;
+//   - the letter escrow (mail:glims:glims) holds exactly the letters still in
+//     flight, per sender;
+//   - by reason: a shelf's buys and sales cancel, gives and gifts cancel, and
+//     the letters' rows cancel with their escrow, so nothing is made or lost
+//     between players;
+//   - the earned share never moves between players: no row that brings
+//     glims from another player is XP-earned (a debit may spend the giver's
+//     earned glims; they arrive as ordinary glims);
+//   - a seller only ever takes glims out.
+func (x *rig) glimsConserved() {
 	x.t.Helper()
 	balances := queryCounts(x.t, x.db, "SELECT account_id,glims FROM balances")
+	earnedBalances := queryCounts(x.t, x.db, "SELECT account_id,xp_glims FROM balances")
 	rowsBy := queryCounts(x.t, x.db, "SELECT account_id,COALESCE(SUM(delta),0) FROM ledger WHERE currency='glims' GROUP BY account_id")
+	earnedBy := queryCounts(x.t, x.db, "SELECT account_id,COALESCE(SUM(earned_delta),0) FROM ledger WHERE currency='glims' GROUP BY account_id")
 	for id, n := range balances {
 		if rowsBy[id] != n {
 			x.t.Fatalf("%s: glims rows sum to %d, the balance is %d", id, rowsBy[id], n)
+		}
+		if earnedBy[id] != earnedBalances[id] || earnedBalances[id] < 0 || earnedBalances[id] > n {
+			x.t.Fatalf("%s: earned rows sum to %d, xp_glims is %d of %d", id, earnedBy[id], earnedBalances[id], n)
 		}
 	}
 	// The escrow holds exactly the letters in flight — and per sender, so
@@ -87,8 +100,17 @@ func (x *rig) goldConserved() {
 			x.t.Fatalf("%s: waiting letters hold %d, escrow rows sum to %d", id, n, escrowBy[id])
 		}
 	}
-	if moved := count(x.t, x.db, "SELECT COALESCE(SUM(delta),0) FROM ledger WHERE currency='glims' AND reason IN ('shelf-buy','shelf-sale','mail-send','mail-claim','mail-return','mail-recall','give','gift')"); moved+escrow != 0 {
-		x.t.Fatalf("transfers between players made %d glims (%d in letters)", moved+escrow, escrow)
+	for kind, reasons := range map[string]string{
+		"shelf":   "'shelf-buy','shelf-sale'",
+		"give":    "'give','gift'",
+		"letters": "'mail-send','mail-claim','mail-return','mail-recall'",
+	} {
+		if made := count(x.t, x.db, "SELECT COALESCE(SUM(delta),0) FROM ledger WHERE currency IN ('glims','mail:glims:glims') AND reason IN ("+reasons+")"); made != 0 {
+			x.t.Fatalf("%s between players made %d glims", kind, made)
+		}
+	}
+	if earned := count(x.t, x.db, "SELECT count(*) FROM ledger WHERE currency='glims' AND delta>0 AND earned_delta!=0 AND reason IN ('shelf-sale','gift','mail-claim','mail-return','mail-recall','habitica-topup','purse-settle')"); earned != 0 {
+		x.t.Fatalf("%d rows passed XP-earned glims between players", earned)
 	}
 	if count(x.t, x.db, "SELECT count(*) FROM ledger WHERE currency='glims' AND reason='market-buy' AND delta>=0") != 0 {
 		x.t.Fatal("a market-buy row added glims")
@@ -140,82 +162,82 @@ func (x *rig) stockShelf(c *http.Cookie, s *response, slot int, def string, pric
 	x.shelfOp(c, s, fields, 200)
 }
 
-// TestGoldConservationAcrossEveryTransfer walks every kind of transfer in
+// TestGlimsConservationAcrossEveryTransfer walks every kind of transfer in
 // design 3.5's table and checks conservation after each: nothing is made or
-// lost between players, and a seller is the only thing that takes gold out.
-func TestGoldConservationAcrossEveryTransfer(t *testing.T) {
+// lost between players, and a seller is the only thing that takes glims out.
+func TestGlimsConservationAcrossEveryTransfer(t *testing.T) {
 	x := newRig(t)
 	ac, a := x.ready("alice")
 	bc, b := x.member("bob", a.WorldID)
 	alice, bob := x.account("alice"), x.account("bob")
 	x.noGlims(alice, bob)
-	x.fundGold(alice, 100)
-	x.fundGold(bob, 20)
-	x.goldConserved()
+	x.topUpGlims(alice, 100)
+	x.topUpGlims(bob, 20)
+	x.glimsConserved()
 
-	// A shelf buy: the buyer's purse pays whoever stocked the slot (3.2).
+	// A shelf buy: the buyer's glims pay whoever stocked the slot (3.2).
 	x.shelfSetup(ac, &a)
 	x.stockShelf(ac, &a, 0, "comfrey-salve", 12)
 	x.shelfOp(bc, &b, map[string]any{"op": "buy", "gate": 0, "slot": 0}, 200)
-	if x.gold(alice) != 112 || x.gold(bob) != 8 {
-		t.Fatal("shelf buy", x.gold(alice), x.gold(bob))
+	if x.glims(alice) != 112 || x.glims(bob) != 8 {
+		t.Fatal("shelf buy", x.glims(alice), x.glims(bob))
 	}
 	if count(t, x.db, "SELECT count(*) FROM ledger WHERE account_id=? AND currency='glims' AND reason='shelf-buy' AND ref=?", bob, alice+":comfrey-salve") != 1 ||
 		count(t, x.db, "SELECT count(*) FROM ledger WHERE account_id=? AND currency='glims' AND reason='shelf-sale' AND ref=?", alice, bob+":comfrey-salve") != 1 {
 		t.Fatal("the shelf rows do not name the other player and the item")
 	}
-	x.goldConserved()
+	x.glimsConserved()
 
-	// A gold letter: out of the purse into the letter, then to the recipient
+	// A glim letter: out of the balance into the letter, then to the recipient
 	// (3.3) — the sender's lines sum to the same total throughout.
 	sent := x.p5("POST", "/api/mail", body(a, "send-claim", map[string]any{"toId": bob, "glims": 20}), ac, 200)
-	if x.gold(alice) != 92 || count(t, x.db, "SELECT count(*) FROM ledger WHERE account_id=? AND currency='mail:glims:glims' AND reason='mail-send' AND ref=?", alice, sent.Result.MailID) != 1 {
-		t.Fatal("the gold did not wait in the letter", x.gold(alice))
+	if x.glims(alice) != 92 || count(t, x.db, "SELECT count(*) FROM ledger WHERE account_id=? AND currency='mail:glims:glims' AND reason='mail-send' AND ref=?", alice, sent.Result.MailID) != 1 {
+		t.Fatal("the glims did not wait in the letter", x.glims(alice))
 	}
-	x.goldConserved()
+	x.glimsConserved()
 	x.p5("POST", "/api/mail/"+sent.Result.MailID+"/claim", body(b, "claim", nil), bc, 200)
-	if x.gold(bob) != 28 || x.gold(alice) != 92 {
-		t.Fatal("the letter was collected", x.gold(alice), x.gold(bob))
+	if x.glims(bob) != 28 || x.glims(alice) != 92 {
+		t.Fatal("the letter was collected", x.glims(alice), x.glims(bob))
 	}
-	x.goldConserved()
+	x.glimsConserved()
 
-	// A letter that comes back: the gold is whole again on the sender's side.
+	// A letter that comes back: the glims is whole again on the sender's side.
 	back := x.p5("POST", "/api/mail", body(a, "send-back", map[string]any{"toId": bob, "glims": 30}), ac, 200)
 	x.p5("POST", "/api/mail/"+back.Result.MailID+"/recall", body(a, "recall", nil), ac, 200)
-	if x.gold(alice) != 92 {
-		t.Fatal("a recalled letter", x.gold(alice))
+	if x.glims(alice) != 92 {
+		t.Fatal("a recalled letter", x.glims(alice))
 	}
-	x.goldConserved()
+	x.glimsConserved()
 
-	// Gold by hand (3.4): both purses in one transaction.
+	// Glims by hand (3.4): both balances in one transaction.
 	x.stand(alice, a.WorldID, "commons", 300, 300)
 	x.stand(bob, a.WorldID, "commons", 330, 310)
 	x.refresh(bc, &b)
 	x.opRefreshing(ac, &a, "give", map[string]any{"toId": bob, "glims": 15}, 200)
-	if x.gold(alice) != 77 || x.gold(bob) != 43 {
-		t.Fatal("the give", x.gold(alice), x.gold(bob))
+	if x.glims(alice) != 77 || x.glims(bob) != 43 {
+		t.Fatal("the give", x.glims(alice), x.glims(bob))
 	}
 	if count(t, x.db, "SELECT count(*) FROM ledger WHERE account_id=? AND currency='glims' AND reason='give' AND ref=?", alice, bob) != 1 ||
 		count(t, x.db, "SELECT count(*) FROM ledger WHERE account_id=? AND currency='glims' AND reason='gift' AND ref=?", bob, alice) != 1 {
 		t.Fatal("the give's rows do not name each other")
 	}
-	x.goldConserved()
+	x.glimsConserved()
 
-	// A seller is the one sink: the gold leaves play and nothing is credited.
+	// A seller is the one sink: the glims leaves play and nothing is credited.
 	x.opRefreshing(ac, &a, "buy", map[string]any{"seller": "silas-yard", "good": "timber", "progress": bySeller(a, "silas-yard", x.now.Load())}, 200)
-	if x.gold(alice) != 74 {
-		t.Fatal("timber from Silas", x.gold(alice))
+	if x.glims(alice) != 74 {
+		t.Fatal("timber from Silas", x.glims(alice))
 	}
-	x.goldConserved()
+	x.glimsConserved()
 	if total := count(t, x.db, "SELECT COALESCE(SUM(glims),0) FROM balances"); total != 120-3 {
-		t.Fatal("gold in play", total)
+		t.Fatal("glims in play", total)
 	}
 }
 
-// TestGoldLettersReturnFourWays: recall, expiry, a world move and access
-// removal all give a gold letter back (3.3) — one path, store.ReturnMail's
-// gold case — and the sender's purse is whole again each time.
-func TestGoldLettersReturnFourWays(t *testing.T) {
+// TestGlimLettersReturnFourWays: recall, expiry, a world move and access
+// removal all give a glim letter back (3.3) — one path, store.ReturnMail's
+// glims case — and the sender's glims are whole again each time.
+func TestGlimLettersReturnFourWays(t *testing.T) {
 	returned := func(t *testing.T, x *rig, account, id string) {
 		t.Helper()
 		if count(t, x.db, "SELECT count(*) FROM mail WHERE id=? AND returned_at IS NOT NULL", id) != 1 {
@@ -224,7 +246,7 @@ func TestGoldLettersReturnFourWays(t *testing.T) {
 		if count(t, x.db, "SELECT COALESCE(SUM(delta),0) FROM ledger WHERE account_id=? AND currency='mail:glims:glims'", account) != 0 {
 			t.Fatal("the escrow was not closed")
 		}
-		x.goldConserved()
+		x.glimsConserved()
 	}
 
 	t.Run("recall", func(t *testing.T) {
@@ -233,14 +255,14 @@ func TestGoldLettersReturnFourWays(t *testing.T) {
 		_, b := x.member("bob", a.WorldID)
 		alice := x.account("alice")
 		x.noGlims(alice)
-		x.fundGold(alice, 40)
+		x.topUpGlims(alice, 40)
 		sent := x.p5("POST", "/api/mail", body(a, "send", map[string]any{"toId": x.account("bob"), "glims": 25}), ac, 200)
-		if x.gold(alice) != 15 {
-			t.Fatal("sent", x.gold(alice))
+		if x.glims(alice) != 15 {
+			t.Fatal("sent", x.glims(alice))
 		}
 		x.p5("POST", "/api/mail/"+sent.Result.MailID+"/recall", body(a, "recall", nil), ac, 200)
-		if x.gold(alice) != 40 {
-			t.Fatal("recalled", x.gold(alice))
+		if x.glims(alice) != 40 {
+			t.Fatal("recalled", x.glims(alice))
 		}
 		_ = b
 		returned(t, x, alice, sent.Result.MailID)
@@ -252,14 +274,14 @@ func TestGoldLettersReturnFourWays(t *testing.T) {
 		_, b := x.member("bob", a.WorldID)
 		alice := x.account("alice")
 		x.noGlims(alice)
-		x.fundGold(alice, 40)
+		x.topUpGlims(alice, 40)
 		sent := x.p5("POST", "/api/mail", body(a, "send", map[string]any{"toId": x.account("bob"), "glims": 25}), ac, 200)
 		if _, err := x.db.DB.Exec("UPDATE mail SET sent_at=? WHERE id=?", x.now.Load()-30*86400, sent.Result.MailID); err != nil {
 			t.Fatal(err)
 		}
 		x.p5("GET", "/api/mail", nil, ac, 200) // the request sweeps what is due
-		if x.gold(alice) != 40 || count(t, x.db, "SELECT count(*) FROM mail WHERE id=? AND return_reason='expired'", sent.Result.MailID) != 1 {
-			t.Fatal("expired", x.gold(alice))
+		if x.glims(alice) != 40 || count(t, x.db, "SELECT count(*) FROM mail WHERE id=? AND return_reason='expired'", sent.Result.MailID) != 1 {
+			t.Fatal("expired", x.glims(alice))
 		}
 		_ = b
 		returned(t, x, alice, sent.Result.MailID)
@@ -271,13 +293,13 @@ func TestGoldLettersReturnFourWays(t *testing.T) {
 		_, b := x.member("bob", a.WorldID)
 		alice := x.account("alice")
 		x.noGlims(alice)
-		x.fundGold(alice, 40)
+		x.topUpGlims(alice, 40)
 		sent := x.p5("POST", "/api/mail", body(a, "send", map[string]any{"toId": x.account("bob"), "glims": 25}), ac, 200)
 		if err := x.db.Allow(context.Background(), "bob", false, x.now.Load()); err != nil {
 			t.Fatal(err)
 		}
-		if x.gold(alice) != 40 {
-			t.Fatal("access removed", x.gold(alice))
+		if x.glims(alice) != 40 {
+			t.Fatal("access removed", x.glims(alice))
 		}
 		_ = b
 		returned(t, x, alice, sent.Result.MailID)
@@ -290,7 +312,7 @@ func TestGoldLettersReturnFourWays(t *testing.T) {
 		pw := o.WorldID
 		olive := x.account("olive")
 		x.noGlims(olive)
-		x.fundGold(olive, 40)
+		x.topUpGlims(olive, 40)
 		// Hal has a world of his own and moves into the party's world to
 		// receive the letter; his move back is a world move (relocate).
 		x.hero("hal", "Hal", "")
@@ -300,22 +322,22 @@ func TestGoldLettersReturnFourWays(t *testing.T) {
 		hc, h := x.again("hal")
 		h.Snapshot = x.worldReq("POST", "/api/world/move", moveBody(h, "in", pw, "village"), hc, 200).Snapshot
 		sent := x.p5("POST", "/api/mail", body(o, "send", map[string]any{"toId": x.account("hal"), "glims": 25}), oc, 200)
-		if x.gold(olive) != 15 {
-			t.Fatal("sent", x.gold(olive))
+		if x.glims(olive) != 15 {
+			t.Fatal("sent", x.glims(olive))
 		}
 		x.now.Add(MoveCooldown)
 		x.worldReq("POST", "/api/world/move", moveBody(h, "out", home, "village"), hc, 200)
-		if x.gold(olive) != 40 || x.worldOf("hal") != home {
-			t.Fatal("moved away", x.gold(olive))
+		if x.glims(olive) != 40 || x.worldOf("hal") != home {
+			t.Fatal("moved away", x.glims(olive))
 		}
 		returned(t, x, olive, sent.Result.MailID)
 	})
 }
 
-// TestGoldGiveMovesBothPursesAndRefusesWhenApart: the same give checks as for
-// items (3.4) — same world, allowed in, together — with both purses in one
+// TestGlimsGiveMovesBothBalancesAndRefusesWhenApart: the same give checks as for
+// items (3.4) — same world, allowed in, together — with both balances in one
 // transaction, the recipient's version moved, and the presence notice.
-func TestGoldGiveMovesBothPursesAndRefusesWhenApart(t *testing.T) {
+func TestGlimsGiveMovesBothBalancesAndRefusesWhenApart(t *testing.T) {
 	x := newRig(t)
 	ac, a := x.ready("alice")
 	bc, b := x.member("bob", a.WorldID)
@@ -323,18 +345,18 @@ func TestGoldGiveMovesBothPursesAndRefusesWhenApart(t *testing.T) {
 	_, _ = oc, o
 	alice, bob := x.account("alice"), x.account("bob")
 	x.noGlims(alice, bob)
-	x.fundGold(alice, 50)
+	x.topUpGlims(alice, 50)
 
 	// Not together: nothing moves.
 	if x.opRefreshing(ac, &a, "give", map[string]any{"toId": bob, "glims": 15}, 409).Error.Code != "not-together" {
 		t.Fatal("gave across the map")
 	}
-	if x.gold(alice) != 50 || x.gold(bob) != 0 {
-		t.Fatal("a refused give moved gold", x.gold(alice), x.gold(bob))
+	if x.glims(alice) != 50 || x.glims(bob) != 0 {
+		t.Fatal("a refused give moved glims", x.glims(alice), x.glims(bob))
 	}
-	x.goldConserved()
+	x.glimsConserved()
 
-	// Together: both purses move in one transaction and the recipient hears
+	// Together: both balances move in one transaction and the recipient hears
 	// it (PresenceGift, kind "glims").
 	x.stand(alice, a.WorldID, "commons", 300, 300)
 	x.stand(bob, a.WorldID, "commons", 330, 310)
@@ -344,8 +366,8 @@ func TestGoldGiveMovesBothPursesAndRefusesWhenApart(t *testing.T) {
 	if gift.Result.GlimsGiven != 15 || gift.Result.Given == nil || gift.Result.Given.Kind != "glims" || gift.Result.Given.Qty != 15 {
 		t.Fatal("the give's answer", gift.Result)
 	}
-	if x.gold(alice) != 35 || x.gold(bob) != 15 {
-		t.Fatal("the give", x.gold(alice), x.gold(bob))
+	if x.glims(alice) != 35 || x.glims(bob) != 15 {
+		t.Fatal("the give", x.glims(alice), x.glims(bob))
 	}
 	x.refresh(bc, &b)
 	if b.Version <= bobRev {
@@ -364,13 +386,13 @@ func TestGoldGiveMovesBothPursesAndRefusesWhenApart(t *testing.T) {
 	default:
 		t.Fatal("the recipient heard nothing")
 	}
-	x.goldConserved()
+	x.glimsConserved()
 
-	// Self-gifts, other worlds, short purses and mixed shapes are refused.
+	// Self-gifts, other worlds, short balances and mixed shapes are refused.
 	x.opRefreshing(ac, &a, "give", map[string]any{"toId": alice, "glims": 1}, 400)
 	x.opRefreshing(ac, &a, "give", map[string]any{"toId": x.account("outsider"), "glims": 1}, 403)
 	if x.opRefreshing(ac, &a, "give", map[string]any{"toId": bob, "glims": 100}, 409).Error.Code != "insufficient-glims" {
-		t.Fatal("gave gold that isn't there")
+		t.Fatal("gave glims that isn't there")
 	}
 	if x.opRefreshing(ac, &a, "give", map[string]any{"toId": bob, "glims": 5, "asset": map[string]any{"kind": "item", "id": "lamp-wick", "qty": 1}}, 400).Error.Code != "invalid-request" {
 		t.Fatal("a give of both")
@@ -378,7 +400,7 @@ func TestGoldGiveMovesBothPursesAndRefusesWhenApart(t *testing.T) {
 	if x.opRefreshing(ac, &a, "give", map[string]any{"toId": bob}, 400).Error.Code != "invalid-request" {
 		t.Fatal("a give of neither")
 	}
-	x.goldConserved()
+	x.glimsConserved()
 }
 
 // TestShelfPricesBuyAndOwnStock (3.2): a price on a slot is paid to whoever
@@ -390,8 +412,8 @@ func TestShelfPricesBuyAndOwnStock(t *testing.T) {
 	bc, b := x.member("bob", a.WorldID)
 	alice, bob := x.account("alice"), x.account("bob")
 	x.noGlims(alice, bob)
-	x.fundGold(alice, 100)
-	x.fundGold(bob, 30)
+	x.topUpGlims(alice, 100)
+	x.topUpGlims(bob, 30)
 	x.shelfSetup(ac, &a)
 
 	// Prices are 0 to 9,999.
@@ -417,24 +439,24 @@ func TestShelfPricesBuyAndOwnStock(t *testing.T) {
 		t.Fatal("bought a free gift")
 	}
 
-	// A traveller buys the priced one: the purse pays the stocker, both rows
+	// A traveller buys the priced one: the buyer's glims pay the stocker, both rows
 	// in one transaction.
 	bought := x.shelfOp(bc, &b, map[string]any{"op": "buy", "gate": 0, "slot": 0}, 200)
 	if bought.Result.Taken == nil || bought.Result.Taken.Id != "comfrey-salve" || bought.Result.Line == "" {
 		t.Fatal("bought", bought.Result)
 	}
-	if x.gold(alice) != 112 || x.gold(bob) != 18 {
-		t.Fatal("the sale", x.gold(alice), x.gold(bob))
+	if x.glims(alice) != 112 || x.glims(bob) != 18 {
+		t.Fatal("the sale", x.glims(alice), x.glims(bob))
 	}
 	if count(t, x.db, "SELECT count(*) FROM ledger WHERE account_id=? AND reason='shelf-buy' AND ref=?", bob, alice+":comfrey-salve") != 1 ||
 		count(t, x.db, "SELECT count(*) FROM ledger WHERE account_id=? AND reason='shelf-sale' AND ref=?", alice, bob+":comfrey-salve") != 1 {
 		t.Fatal("the sale's rows")
 	}
-	x.goldConserved()
+	x.glimsConserved()
 
 	// A bought slot is not a gift: bob's one free take is still his.
 	x.shelfOp(bc, &b, map[string]any{"op": "take", "gate": 0, "slot": 1}, 200)
-	x.goldConserved()
+	x.glimsConserved()
 }
 
 // TestSilasYardBundlesBuyWithGlims (silas-yard.md 1.6): every good has one
@@ -444,7 +466,7 @@ func TestSilasYardBundlesBuyWithGlims(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	x.noGlims(s.AccountID)
-	x.fundGold(s.AccountID, 10)
+	x.topUpGlims(s.AccountID, 10)
 	buy := func(seller, good string, status int) itemsResponse {
 		return x.opRefreshing(c, &s, "buy", map[string]any{"seller": seller, "good": good, "progress": bySeller(s, seller, x.now.Load())}, status)
 	}
@@ -453,19 +475,19 @@ func TestSilasYardBundlesBuyWithGlims(t *testing.T) {
 	if r.Result.Bought == nil || r.Result.Bought.Glims != 1 {
 		t.Fatal("tallow", r.Result.Bought)
 	}
-	if x.gold(s.AccountID) != 9 {
-		t.Fatal("tallow's price", x.gold(s.AccountID))
+	if x.glims(s.AccountID) != 9 {
+		t.Fatal("tallow's price", x.glims(s.AccountID))
 	}
-	x.goldConserved()
+	x.glimsConserved()
 
 	// Silas's bundles: timber ×4 for 3 glims, three a day.
 	if r = buy("silas-yard", "timber", 200); stackQty(r.Result.Items, "timber") != 4 || r.Result.Bought == nil || r.Result.Bought.Glims != 3 {
 		t.Fatal("timber", r.Result)
 	}
-	if x.gold(s.AccountID) != 6 {
-		t.Fatal("the balance", x.gold(s.AccountID))
+	if x.glims(s.AccountID) != 6 {
+		t.Fatal("the balance", x.glims(s.AccountID))
 	}
-	x.goldConserved()
+	x.glimsConserved()
 	buy("silas-yard", "timber", 200)
 	buy("silas-yard", "timber", 200)
 	if buy("silas-yard", "timber", 409).Error.Code != "sold-out" {
@@ -478,20 +500,20 @@ func TestSilasYardBundlesBuyWithGlims(t *testing.T) {
 	if buy("silas-yard", "stone", 409).Error.Code != "insufficient-glims" {
 		t.Fatal("spent glims that aren't there")
 	}
-	x.goldConserved()
+	x.glimsConserved()
 }
 
 // A glim letter carries glims and nothing else (question 11): both, or
 // neither, is invalid-request; an amount is at least 1; and a balance that
 // can't cover it is insufficient-glims (3.3).
-func TestGoldLettersRefuseBadShapes(t *testing.T) {
+func TestGlimLettersRefuseBadShapes(t *testing.T) {
 	x := newRig(t)
 	ac, a := x.ready("alice")
 	_, b := x.member("bob", a.WorldID)
 	alice := x.account("alice")
 	to := x.account("bob")
 	x.noGlims(alice)
-	x.fundGold(alice, 10)
+	x.topUpGlims(alice, 10)
 	if x.p5("POST", "/api/mail", body(a, "both", map[string]any{"toId": to, "glims": 5, "asset": map[string]any{"kind": "item", "id": "lamp-wick", "qty": 1}}), ac, 400).Error.Code != "invalid-request" {
 		t.Fatal("a letter of both")
 	}
@@ -499,16 +521,16 @@ func TestGoldLettersRefuseBadShapes(t *testing.T) {
 		t.Fatal("a letter of neither")
 	}
 	if x.p5("POST", "/api/mail", body(a, "negative", map[string]any{"toId": to, "glims": -5}), ac, 400).Error.Code != "invalid-quantity" {
-		t.Fatal("a letter of negative gold")
+		t.Fatal("a letter of negative glims")
 	}
 	if x.p5("POST", "/api/mail", body(a, "short", map[string]any{"toId": to, "glims": 11}), ac, 409).Error.Code != "insufficient-glims" {
-		t.Fatal("a letter of gold that isn't there")
+		t.Fatal("a letter of glims that isn't there")
 	}
-	if x.gold(alice) != 10 {
-		t.Fatal("a refused letter moved gold", x.gold(alice))
+	if x.glims(alice) != 10 {
+		t.Fatal("a refused letter moved glims", x.glims(alice))
 	}
 	_ = b
-	x.goldConserved()
+	x.glimsConserved()
 }
 
 // TestForgedProfileLeavesThePurseAndGearUntouched (4.3): /api/profile maps a
@@ -524,7 +546,7 @@ func TestForgedProfileLeavesThePurseAndGearUntouched(t *testing.T) {
 	c, s := x.ready("alice")
 	alice := x.account("alice")
 	x.noGlims(alice)
-	x.fundGold(alice, 50)
+	x.topUpGlims(alice, 50)
 	x.ownGear(alice, "head_warrior_1")
 
 	report := func(mutate func(map[string]any)) map[string]any {
@@ -577,8 +599,8 @@ func TestForgedProfileLeavesThePurseAndGearUntouched(t *testing.T) {
 			t.Fatal("a forged report fed glims:", reasons)
 		}
 	}
-	if x.goldBalance(alice) != 50 {
-		t.Fatal("a forged report fed the purse", x.goldBalance(alice))
+	if x.glimsBalance(alice) != 50 {
+		t.Fatal("a forged report fed the purse", x.glimsBalance(alice))
 	}
 	if count(t, x.db, "SELECT count(*) FROM player_gear WHERE account_id=?", alice) != 1 ||
 		count(t, x.db, "SELECT count(*) FROM player_gear WHERE account_id=? AND owned_json=?", alice, store.JSON([]string{"head_warrior_1"})) != 1 {
@@ -588,5 +610,185 @@ func TestForgedProfileLeavesThePurseAndGearUntouched(t *testing.T) {
 	if _, code := x.chooseWardrobe(c, s, "forged", map[string]string{"head": "head_armoire_admiralsBicorne"}, 409); code != "gear-not-owned" {
 		t.Fatal("a forged report owned gear", code)
 	}
-	x.goldConserved()
+	x.glimsConserved()
+}
+
+// TestGlimsEarnedShareNeverMovesBetweenPlayers (silas-yard.md 1.4 rule 4):
+// glims from XP are the only earned ones. A player whose glims are all
+// XP-earned can give them, send them and be paid in them, but they arrive
+// as ordinary glims — so the friend at 0 HP still can't rest on them.
+func TestGlimsEarnedShareNeverMovesBetweenPlayers(t *testing.T) {
+	x := newRig(t)
+	ac, a := x.ready("alice")
+	bc, b := x.member("bob", a.WorldID)
+	alice, bob := x.account("alice"), x.account("bob")
+	x.noGlims(alice, bob)
+	x.fund(alice, 40, 40)
+	x.glimsConserved()
+	earned := func(id string) int {
+		return count(t, x.db, "SELECT xp_glims FROM balances WHERE account_id=?", id)
+	}
+
+	// By hand: alice has nothing but earned glims, so the give spends them;
+	// bob gets ordinary ones.
+	x.stand(alice, a.WorldID, "commons", 300, 300)
+	x.stand(bob, a.WorldID, "commons", 330, 310)
+	x.refresh(bc, &b)
+	x.opRefreshing(ac, &a, "give", map[string]any{"toId": bob, "glims": 15}, 200)
+	if x.glims(alice) != 25 || earned(alice) != 25 || x.glims(bob) != 15 || earned(bob) != 0 {
+		t.Fatal("the give", x.glims(alice), earned(alice), x.glims(bob), earned(bob))
+	}
+	x.glimsConserved()
+
+	// By letter, collected.
+	sent := x.p5("POST", "/api/mail", body(a, "earned-letter", map[string]any{"toId": bob, "glims": 10}), ac, 200)
+	x.p5("POST", "/api/mail/"+sent.Result.MailID+"/claim", body(b, "claim", nil), bc, 200)
+	if x.glims(alice) != 15 || earned(alice) != 15 || x.glims(bob) != 25 || earned(bob) != 0 {
+		t.Fatal("the letter", x.glims(alice), earned(alice), x.glims(bob), earned(bob))
+	}
+	x.glimsConserved()
+
+	// A letter that comes back: the glims come home ordinary too — the
+	// earned share they left as stays spent.
+	back := x.p5("POST", "/api/mail", body(a, "earned-back", map[string]any{"toId": bob, "glims": 5}), ac, 200)
+	x.p5("POST", "/api/mail/"+back.Result.MailID+"/recall", body(a, "recall", nil), ac, 200)
+	if x.glims(alice) != 15 || earned(alice) != 10 {
+		t.Fatal("the recall", x.glims(alice), earned(alice))
+	}
+	x.glimsConserved()
+
+	// By shelf: bob pays alice, and alice's sale is not earned either.
+	x.shelfSetup(ac, &a)
+	x.stockShelf(ac, &a, 0, "comfrey-salve", 6)
+	x.shelfOp(bc, &b, map[string]any{"op": "buy", "gate": 0, "slot": 0}, 200)
+	if x.glims(alice) != 21 || earned(alice) != 10 || x.glims(bob) != 19 || earned(bob) != 0 {
+		t.Fatal("the shelf", x.glims(alice), earned(alice), x.glims(bob), earned(bob))
+	}
+	x.glimsConserved()
+
+	// Bob at 0 HP: 19 glims, none from XP, and the rest is refused.
+	x.refresh(bc, &b)
+	lease := b.Lease
+	b = x.expect("POST", "/api/profile", x.profileBody(b, profile("bob", 1, 0, 20), b.State), bc, 200)
+	b.Lease = lease
+	b = x.reportState(bc, b, 0, 0, testWhere(b.State))
+	if _, _, code, _ := x.request("POST", "/api/spend", spendBody(b, "rest", "", "passed-rest", b.State), bc); code != "needs-earned" {
+		t.Fatal("rested on glims a friend passed over:", code)
+	}
+	x.glimsConserved()
+}
+
+// TestTopUpCapThirtyGlimsADay (silas-yard.md 1.5): at most 30 glims a UTC
+// day from top-ups, across at most two. Reserve refuses `top-up-cap` when
+// today's glims plus this one would pass 30, counting moved and unconfirmed
+// rows; the purse says how many glims are left (Purse.glims_left).
+func TestTopUpCapThirtyGlimsADay(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	x.setGold(1000)
+	if read := x.purseRead(c); read.Purse.GlimsLeft != 30 || read.Purse.TopUpsLeft != 2 {
+		t.Fatalf("a new day %+v", read.Purse)
+	}
+	refused := func(key string, gold int, want string) {
+		t.Helper()
+		status, out := x.topUp(s.Lease, key, gold, secret, c)
+		if status/100 != 4 || out.Error == nil || out.Error.Code != want {
+			t.Fatalf("%d gold: %d %+v, want %s", gold, status, out.Error, want)
+		}
+	}
+	// 31 glims at once is past the cap, and nothing is called upstream.
+	calls := len(x.habiticaCalls())
+	refused("too-many", 62, "top-up-cap")
+	if len(x.habiticaCalls()) != calls {
+		t.Fatal("a capped top-up called Habitica")
+	}
+	// An unconfirmed top-up counts toward the cap as it counts toward the
+	// day (its glims may have moved).
+	x.setScore("timeout-partial")
+	x.setPurseChecks([]time.Duration{time.Millisecond, 2 * time.Millisecond})
+	if row := x.topUpOK(s, "unsure", 40, c); row.State != "unconfirmed" || row.Glims != 20 {
+		t.Fatalf("%+v", row)
+	}
+	if read := x.purseRead(c); read.Purse.GlimsLeft != 10 || read.Purse.TopUpsLeft != 1 {
+		t.Fatalf("after 20 unconfirmed %+v", read.Purse)
+	}
+	x.setScore("ok")
+	refused("eleven", 22, "top-up-cap")
+	if row := x.topUpOK(s, "ten", 20, c); row.State != "moved" || row.Glims != 10 {
+		t.Fatalf("%+v", row)
+	}
+	if read := x.purseRead(c); read.Purse.GlimsLeft != 0 || read.Purse.TopUpsLeft != 0 {
+		t.Fatalf("the day's 30 %+v", read.Purse)
+	}
+	if x.glimsBalance(x.account("alice")) != 10 {
+		t.Fatal("only the moved top-up credits", x.glimsBalance(x.account("alice")))
+	}
+	// A new UTC day starts the cap again.
+	x.now.Store(x.now.Load() + 86400)
+	if read := x.purseRead(c); read.Purse.GlimsLeft != 30 || read.Purse.TopUpsLeft != 2 {
+		t.Fatalf("the next day %+v", read.Purse)
+	}
+	// Two top-ups of 10 leave 10 glims a top-up could bring, but no top-up
+	// to bring them: glims_left is 0 (the Max fills nothing).
+	x.topUpOK(s, "next-1", 20, c)
+	x.topUpOK(s, "next-2", 20, c)
+	if read := x.purseRead(c); read.Purse.GlimsLeft != 0 || read.Purse.TopUpsLeft != 0 {
+		t.Fatalf("two top-ups, no more %+v", read.Purse)
+	}
+}
+
+// TestGlimLogShowsTopUpsSpendsAndTransfers (silas-yard.md 1.6): the Glim
+// log is every top-up, spend, sale, letter and give, plus 0.6.1's one
+// currency-merge row; glims earned from XP, the welcome and quest rewards,
+// and the zero marks are not in it.
+func TestGlimLogShowsTopUpsSpendsAndTransfers(t *testing.T) {
+	x := newRig(t)
+	c, _ := x.ready("alice")
+	alice := x.account("alice")
+	now := x.now.Load()
+	rows := []struct {
+		delta       int
+		reason, ref string
+	}{
+		{6, "currency-merge", "gold:13"},
+		{4, "sync", "xp"},
+		{5, "welcome", "first-sync"},
+		{0, "world-move", "a>b"},
+		{3, "quest", "quest-gift:x"},
+		{10, "habitica-topup", "top-1"},
+		{-2, "spend", "rest:"},
+		{-3, "mend", "bench-axe"},
+		{-8, "homestead-buy", "stool"},
+		{-1, "market-buy", "hazels-kitchen:tallow"},
+	}
+	for i, row := range rows {
+		if _, err := x.db.DB.Exec("INSERT INTO ledger(account_id,currency,delta,earned_delta,reason,ref,created_at) VALUES(?,'glims',?,0,?,?,?)", alice, row.delta, row.reason, row.ref, now+int64(i)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	read := x.purseRead(c)
+	got := map[string]purseLineWire{}
+	for _, line := range read.Lines {
+		got[line.Reason] = line
+	}
+	for _, reason := range []string{"currency-merge", "habitica-topup", "spend", "mend", "homestead-buy", "market-buy"} {
+		if _, ok := got[reason]; !ok {
+			t.Fatalf("the log has no %s line: %+v", reason, read.Lines)
+		}
+	}
+	for _, reason := range []string{"sync", "welcome", "world-move", "quest", "test-funding"} {
+		if _, ok := got[reason]; ok {
+			t.Fatalf("the log shows a %s line", reason)
+		}
+	}
+	if merge := got["currency-merge"]; merge.Delta != 6 || merge.Qty != 13 {
+		t.Fatalf("the turn-in names its gold %+v", merge)
+	}
+	if got["mend"].ItemDef != "bench-axe" || got["homestead-buy"].ItemDef != "stool" {
+		t.Fatalf("spends name their item %+v %+v", got["mend"], got["homestead-buy"])
+	}
+	// Newest first.
+	if read.Lines[0].Reason != "market-buy" {
+		t.Fatalf("order %+v", read.Lines)
+	}
 }

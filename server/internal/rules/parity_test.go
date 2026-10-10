@@ -114,7 +114,7 @@ func TestTypeScriptParity(t *testing.T) {
 	}
 	for _, c := range v.Spend {
 		same(t, "check", rules.CheckSpend(c.State, c.Operation, c.Imported), c.Check)
-		s, err := rules.SpendEmbers(c.State, c.Operation, c.Imported)
+		s, err := rules.SpendGlims(c.State, c.Operation, c.Imported)
 		if c.Check.OK {
 			if err != nil {
 				t.Fatal(err)

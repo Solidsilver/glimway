@@ -190,8 +190,8 @@ INSERT INTO purse_topups(id,account_id,op_key,amount,state,gold_before,gold_afte
 		if err != nil {
 			t.Fatal(err)
 		}
-		if snap.State.Embers != 13 || snap.State.XPEmbers != 4 {
-			t.Fatal("alice loads with", snap.State.Embers, snap.State.XPEmbers)
+		if snap.State.Glims != 13 || snap.State.XPGlims != 4 {
+			t.Fatal("alice loads with", snap.State.Glims, snap.State.XPGlims)
 		}
 	}()
 

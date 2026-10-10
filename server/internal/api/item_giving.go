@@ -14,16 +14,16 @@ import (
 // asset, with the same checks — same world, allowed in, and together (within
 // the give radius, as presence last saw you both).
 func (a *Server) giveItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.ItemsRequest, now int64, out *contract.ItemsResult) (string, error) {
-	gold := int(req.GetGlims())
-	if (req.Asset != nil) == (gold != 0) {
+	glims := int(req.GetGlims())
+	if (req.Asset != nil) == (glims != 0) {
 		return "", fail(400, "invalid-request")
 	}
 	v := assetOf(req.Asset)
 	if req.ToId == s.AccountID || req.ToId == "" {
 		return "", fail(400, "self-gift")
 	}
-	if gold != 0 {
-		if gold < 1 {
+	if glims != 0 {
+		if glims < 1 {
 			return "", fail(400, "invalid-quantity")
 		}
 	} else {
@@ -60,22 +60,22 @@ func (a *Server) giveItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, re
 	if !a.presence.together(s.WorldID, s.AccountID, req.ToId, radius) {
 		return "", fail(409, "not-together")
 	}
-	if gold > 0 {
+	if glims > 0 {
 		// Glims by hand (3.4, 3.5): both balances in one transaction — the
-		// giver's glims out with reason `give` (on the snapshot) and the
-		// recipient's in with `gift` (store.CreditGold, which moves their
+		// giver's glims out with reason `give` and the recipient's in with
+		// `gift`, never XP-earned (store.MoveGlims, which moves their
 		// version, so their next answer carries the new balance even
 		// mid-session; that is safe with today's operations — reports only
 		// refuse a basis past the current version, and every operation is
 		// keyed, not revision-checked). Each row names the other account.
-		if err := debitEmbers(ctx, tx, s, gold, "give", req.ToId, now); err != nil {
+		if err := debitGlims(ctx, tx, s, glims, "give", req.ToId, now); err != nil {
 			return "", err
 		}
-		if err := store.CreditGold(ctx, tx, req.ToId, gold, "gift", s.AccountID, now); err != nil {
+		if err := store.MoveGlims(ctx, tx, s, req.ToId, glims, "gift", s.AccountID, now); err != nil {
 			return "", err
 		}
-		out.Given = assetProto(goldAsset(gold))
-		out.GlimsGiven = int32(gold)
+		out.Given = assetProto(glimsAsset(glims))
+		out.GlimsGiven = int32(glims)
 		return req.ToId, nil
 	}
 	if v.GetKind() == "instance" {
@@ -126,7 +126,7 @@ func (a *Server) giveItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, re
 // for a glims give.
 func givenAsset(req *contract.ItemsRequest) *content.Asset {
 	if req.Asset == nil {
-		return goldAsset(int(req.GetGlims()))
+		return glimsAsset(int(req.GetGlims()))
 	}
 	return assetOf(req.Asset)
 }

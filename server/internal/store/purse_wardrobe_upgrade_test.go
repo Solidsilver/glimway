@@ -294,8 +294,8 @@ INSERT INTO ledger(account_id,currency,delta,earned_delta,reason,ref,created_at)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if snap.AccountID != "owner-subject" || snap.State.Embers != 9 {
-			t.Fatal(snap.AccountID, snap.State.Embers)
+		if snap.AccountID != "owner-subject" || snap.State.Glims != 9 {
+			t.Fatal(snap.AccountID, snap.State.Glims)
 		}
 	}()
 

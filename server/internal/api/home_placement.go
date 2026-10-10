@@ -325,7 +325,7 @@ func clearTile(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, r
 	if !land.Lit(connectedLights(placedItems(h), ""), x, y) {
 		return fail(409, "unlit")
 	}
-	if err := debitEmbers(ctx, tx, s, int(content.HomeRules.GetClearTileGlims()), "homestead-clear", fmt.Sprintf("%s:%d,%d", h.ID, x, y), now); err != nil {
+	if err := debitGlims(ctx, tx, s, int(content.HomeRules.GetClearTileGlims()), "homestead-clear", fmt.Sprintf("%s:%d,%d", h.ID, x, y), now); err != nil {
 		return err
 	}
 	// Cleared ground has no stump: drop a kept one with it.

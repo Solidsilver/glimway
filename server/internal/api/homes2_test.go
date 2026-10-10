@@ -229,10 +229,10 @@ func TestHomes2DeedPrices(t *testing.T) {
 	}
 	x.fund(x.account("alice"), price, 0)
 	x.refresh(ac, &a)
-	before := a.State.Embers
+	before := a.State.Glims
 	x.claimGate(ac, &a, 1)
-	if a.State.Embers != before-price {
-		t.Fatal("deed debit", a.State.Embers, before)
+	if a.State.Glims != before-price {
+		t.Fatal("deed debit", a.State.Glims, before)
 	}
 }
 
@@ -246,19 +246,19 @@ func TestHomes2BuyChargesEmbersAndMaterials(t *testing.T) {
 		t.Fatal("the stable is priced in both currencies", def)
 	}
 	tiers := content.HomeRules.GetTiers()
-	upgradeEmbers := int(tiers[1].GetGlims()) + int(tiers[2].GetGlims())
+	upgradeGlims := int(tiers[1].GetGlims()) + int(tiers[2].GetGlims())
 
 	ac, a := x.ready("alice")
 	a = x.openWorkshop(ac, a)
 	h := x.home(ac)
 	m0 := x.exp("GET", fmt.Sprintf("/api/homestead/gate/%d", h.Gate), nil, ac, 200).Materials
-	e0 := a.State.Embers
+	e0 := a.State.Glims
 	buy := x.homeOpRefreshing(ac, &a, "buy", map[string]any{"itemDef": "stable"}, 200)
 	if buy.Result.ItemID == "" || buy.Result.Home == nil {
 		t.Fatal("no stable")
 	}
-	if a.State.Embers != e0-int(def.GetGlims()) {
-		t.Fatal("stable embers", a.State.Embers, e0)
+	if a.State.Glims != e0-int(def.GetGlims()) {
+		t.Fatal("stable embers", a.State.Glims, e0)
 	}
 	for m, n := range def.GetMaterials() {
 		if int(buy.Result.Materials[m]) != int(m0[m])-int(n) {
@@ -268,7 +268,7 @@ func TestHomes2BuyChargesEmbersAndMaterials(t *testing.T) {
 
 	// Short of the materials: the purse is refused and kept.
 	bc, b := x.ready("bob")
-	x.fund(x.account("bob"), upgradeEmbers+int(def.GetGlims()), 0)
+	x.fund(x.account("bob"), upgradeGlims+int(def.GetGlims()), 0)
 	for m, n := range tiers[2].GetMaterials() {
 		x.stack(x.account("bob"), m, "", int(n))
 	}
@@ -279,13 +279,13 @@ func TestHomes2BuyChargesEmbersAndMaterials(t *testing.T) {
 		t.Fatal("stable without materials", r.Error.Code)
 	}
 	x.refresh(bc, &b)
-	if b.State.Embers != int(def.GetGlims()) {
-		t.Fatal("a refused buy kept the purse", b.State.Embers)
+	if b.State.Glims != int(def.GetGlims()) {
+		t.Fatal("a refused buy kept the purse", b.State.Glims)
 	}
 
 	// Short of the embers: the materials are refused and kept.
 	cc, c := x.ready("carol")
-	x.fund(x.account("carol"), upgradeEmbers, 0)
+	x.fund(x.account("carol"), upgradeGlims, 0)
 	for m, n := range tiers[2].GetMaterials() {
 		x.stack(x.account("carol"), m, "", int(n))
 	}
@@ -449,9 +449,9 @@ func TestHomes2DesolationAndLostDeeds(t *testing.T) {
 	}
 	x.fund(x.account("dora"), price, 0)
 	x.refresh(dc, &d)
-	before := d.State.Embers
+	before := d.State.Glims
 	nh := x.claimGate(dc, &d, gate)
-	if d.State.Embers != before-price || nh.ID == h.ID || len(nh.Items) != 0 || nh.Tier != 0 || count(t, x.db, "SELECT count(*) FROM lost_gates") != 0 {
+	if d.State.Glims != before-price || nh.ID == h.ID || len(nh.Items) != 0 || nh.Tier != 0 || count(t, x.db, "SELECT count(*) FROM lost_gates") != 0 {
 		t.Fatal("resettled land")
 	}
 }
@@ -587,9 +587,9 @@ func TestHomes2LanternLightAndClearing(t *testing.T) {
 		t.Fatal("cleared in the dark")
 	}
 	x.refresh(ac, &a)
-	before := a.State.Embers
+	before := a.State.Glims
 	cleared := x.homeOpRefreshing(ac, &a, "clear", map[string]any{"x": tree[0], "y": tree[1]}, 200)
-	if a.State.Embers != before-int(content.HomeRules.GetClearTileGlims()) || len(cleared.Result.Home.Cleared) != 1 || cleared.Result.Home.Cleared[0] != tree {
+	if a.State.Glims != before-int(content.HomeRules.GetClearTileGlims()) || len(cleared.Result.Home.Cleared) != 1 || cleared.Result.Home.Cleared[0] != tree {
 		t.Fatal("clear tile")
 	}
 	if x.homeOpRefreshing(ac, &a, "clear", map[string]any{"x": tree[0], "y": tree[1]}, 409).Error.Code != "already-cleared" {

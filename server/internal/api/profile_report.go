@@ -112,15 +112,15 @@ func (a *Server) profileReport(w http.ResponseWriter, r *http.Request) error {
 	s.State = r0.Save.State
 	s.ImportedProfile = r0.Save.ImportedProfile
 	s.VitalsSource = r0.Save.VitalsSource
-	credit := s.State.Embers - before.Embers
+	credit := s.State.Glims - before.Glims
 	// The checkpoint allowance grows by full days, never by request count.
 	days := max(int64(0), (now-s.CheckpointAt)/86400)
 	cap := int(rules.E.GetSyncCreditCap()) + int(min(days, int64(int(rules.E.GetSyncCreditMax()))))*int(rules.E.GetSyncCreditDailyGrowth())
 	cap = min(cap, int(rules.E.GetSyncCreditMax()))
-	payable := max(0, int(math.Floor(s.VerifiedXP/float64(int(rules.E.GetXpPerGlim()))))+cap-int(math.Floor(before.EmberXP/float64(int(rules.E.GetXpPerGlim())))))
+	payable := max(0, int(math.Floor(s.VerifiedXP/float64(int(rules.E.GetXpPerGlim()))))+cap-int(math.Floor(before.GlimXP/float64(int(rules.E.GetXpPerGlim())))))
 	paid := min(credit, payable)
-	s.State.Embers = before.Embers
-	s.State.XPEmbers = before.XPEmbers
+	s.State.Glims = before.Glims
+	s.State.XPGlims = before.XPGlims
 	s.Pending += credit - paid
 	if paid > 0 {
 		if err = store.Credit(ctx, tx, &s, paid, paid, "sync", "xp", &reported, now); err != nil {
@@ -135,7 +135,7 @@ func (a *Server) profileReport(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 	}
-	welcomed, err := store.Outcome(ctx, tx, s.AccountID, "embers:welcome", "welcome", now)
+	welcomed, err := store.Outcome(ctx, tx, s.AccountID, rules.WelcomeMark, "welcome", now)
 	if err != nil {
 		return err
 	}
@@ -143,7 +143,7 @@ func (a *Server) profileReport(w http.ResponseWriter, r *http.Request) error {
 		if err = store.Credit(ctx, tx, &s, int(rules.E.GetWelcomeGlims()), 0, "welcome", "first-sync", nil, now); err != nil {
 			return err
 		}
-		s.State.Flags = rules.AddUnique(s.State.Flags, "embers:welcome")
+		s.State.Flags = rules.AddUnique(s.State.Flags, rules.WelcomeMark)
 	}
 
 	s.VitalsWritten = true

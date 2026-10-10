@@ -60,9 +60,9 @@ func testSnapshotJSON(raw []byte) []byte {
 	s.State.DefeatedEnemies = append([]string{}, p.Story.Defeated...)
 	s.State.Inventory = append([]string{}, p.Story.QuestItems...)
 	s.State.PlaySeconds = p.Story.PlaySeconds
-	s.State.Embers = int(p.Glims.Balance)
-	s.State.XPEmbers = int(p.Glims.XpEarned)
-	s.State.EmberXP = p.Glims.XpMark
+	s.State.Glims = int(p.Glims.Balance)
+	s.State.XPGlims = int(p.Glims.XpEarned)
+	s.State.GlimXP = p.Glims.XpMark
 	var projected map[string]json.RawMessage
 	_ = json.Unmarshal([]byte(store.JSON(s)), &projected)
 	for k, v := range projected {

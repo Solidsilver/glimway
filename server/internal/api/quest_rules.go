@@ -147,10 +147,10 @@ func checkQuestGate(ctx context.Context, tx *sql.Tx, s *store.Snapshot, quest st
 		}
 	}
 	if g.GetGlims() > 0 {
-		if s.State.Embers < int(g.GetGlims()) {
+		if s.State.Glims < int(g.GetGlims()) {
 			return fail(409, "short")
 		}
-		if s.State.HP <= 0 && s.ProfileSource == "habitica" && s.State.XPEmbers < int(g.GetGlims()) {
+		if s.State.HP <= 0 && s.ProfileSource == "habitica" && s.State.XPGlims < int(g.GetGlims()) {
 			return fail(409, "needs-earned")
 		}
 	}
@@ -169,7 +169,7 @@ func spendQuestGate(ctx context.Context, tx *sql.Tx, s *store.Snapshot, quest st
 		out.Taken = append(out.Taken, &contract.ItemQty{Def: item.GetDef(), Qty: float64(item.GetQty())})
 	}
 	if g.GetGlims() > 0 {
-		earned := max(0, int(g.GetGlims())-(s.State.Embers-s.State.XPEmbers))
+		earned := max(0, int(g.GetGlims())-(s.State.Glims-s.State.XPGlims))
 		if s.State.HP <= 0 && s.ProfileSource == "habitica" {
 			earned = int(g.GetGlims())
 		}

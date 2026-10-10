@@ -40,7 +40,7 @@ func PlayerState(ctx context.Context, tx *sql.Tx, s Snapshot) (*contract.PlayerS
 		Vitals:  &contract.Vitals{Hp: s.State.HP, Mana: s.State.Mana, MaxHp: s.State.MaxHP, MaxMana: s.State.MaxMana},
 		Place:   &contract.Place{Area: s.State.Area, X: s.State.Position.X, Y: s.State.Position.Y},
 		Story:   &contract.Story{Quests: maps.Clone(s.State.Quests), ReachedAt: map[string]float64{}, GateAt: map[string]float64{}, Marks: slices.Clone(s.State.Flags), Discoveries: slices.Clone(s.State.Discoveries), Defeated: slices.Clone(s.State.DefeatedEnemies), QuestItems: questInventory(s.State.Inventory), PlaySeconds: s.State.PlaySeconds},
-		Glims:   &contract.Glims{Balance: float64(s.State.Embers), XpEarned: float64(s.State.XPEmbers), Pending: float64(s.Pending), XpMark: s.State.EmberXP, VerifiedXp: s.VerifiedXP},
+		Glims:   &contract.Glims{Balance: float64(s.State.Glims), XpEarned: float64(s.State.XPGlims), Pending: float64(s.Pending), XpMark: s.State.GlimXP, VerifiedXp: s.VerifiedXP},
 	}
 	// Marks are the client's story source of truth. Compatibility lists are
 	// projections of those same found/defeated rows. Sort every set so the same

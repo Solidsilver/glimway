@@ -28,7 +28,7 @@ test('the caps are the server’s', () => {
   const cap = (name: string) => Number(/\s(\d+)/.exec(go.slice(go.indexOf(name)))![1]);
   assert.equal(GRANT_MAX.material, cap('devMaxStack'));
   assert.equal(GRANT_MAX.item, cap('devMaxStack'));
-  assert.equal(GRANT_MAX.embers, cap('devMaxEmbers'));
+  assert.equal(GRANT_MAX.embers, cap('devMaxGlims'));
   assert.equal(GRANT_MAX.instance, cap('devMaxOneByOne'));
   assert.equal(GRANT_MAX.decoration, cap('devMaxOneByOne'));
   assert.equal(clampCount({ max: 20 }, 50), 20);

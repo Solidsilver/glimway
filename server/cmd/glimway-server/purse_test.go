@@ -11,7 +11,8 @@ import (
 // TestPurseCommands is the owner's command line (design 2.6): `purse list`
 // says what each top-up did, and `purse settle <id> moved|not-moved` lands
 // the one the checks could not decide — only an `unconfirmed` row, with
-// `moved` crediting the purse and both marking the row settled by the owner.
+// `moved` crediting the row's glims (amount/2) and both marking the row
+// settled by the owner.
 func TestPurseCommands(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "game.sqlite")
 	seed := func() {
@@ -27,8 +28,8 @@ func TestPurseCommands(t *testing.T) {
 		mustExec(t, s.DB, `INSERT OR IGNORE INTO balances(account_id,glims,xp_glims) VALUES('acct',0,0)`)
 		mustExec(t, s.DB, `INSERT OR IGNORE INTO sync_baselines(account_id,profile_json,verified_xp,checkpoint_json,checkpoint_at,updated_at) VALUES('acct','{}',0,'{}',12,12)`)
 		mustExec(t, s.DB, `INSERT OR IGNORE INTO sign_ins(account_id,method,subject,created_at) VALUES('acct','habitica','hero-subject',12)`)
-		mustExec(t, s.DB, `INSERT OR IGNORE INTO purse_topups(id,account_id,op_key,amount,state,created_at,gold_before,note,settled_at,settled_by) VALUES('unconfirmed','acct','k1',300,'unconfirmed',10,1240,'timeout',25,'worker')`)
-		mustExec(t, s.DB, `INSERT OR IGNORE INTO purse_topups(id,account_id,op_key,amount,state,created_at,settled_at,settled_by) VALUES('moved','acct','k2',50,'moved',20,25,'worker')`)
+		mustExec(t, s.DB, `INSERT OR IGNORE INTO purse_topups(id,account_id,op_key,amount,glims,state,created_at,gold_before,note,settled_at,settled_by) VALUES('unconfirmed','acct','k1',40,20,'unconfirmed',10,1240,'timeout',25,'worker')`)
+		mustExec(t, s.DB, `INSERT OR IGNORE INTO purse_topups(id,account_id,op_key,amount,glims,state,created_at,settled_at,settled_by) VALUES('moved','acct','k2',10,5,'moved',20,25,'worker')`)
 	}
 	seed()
 	if err := run([]string{"-db", path, "purse", "list"}); err != nil {
@@ -62,23 +63,24 @@ func TestPurseCommands(t *testing.T) {
 	// whose mark is `settled_by`, while the worker's note (why the owner is
 	// here at all) stays in the row (finding 18).
 	var state, settledBy, note string
-	var gold int
+	var glims int
 	if err = s.DB.QueryRow("SELECT state,settled_by,note FROM purse_topups WHERE id='unconfirmed'").Scan(&state, &settledBy, &note); err != nil {
 		t.Fatal(err)
 	}
 	if state != "not-moved" || settledBy != "owner" || note != "timeout" {
 		t.Fatal(state, settledBy, note)
 	}
-	if err = s.DB.QueryRow("SELECT glims FROM balances WHERE account_id='acct'").Scan(&gold); err != nil || gold != 0 {
-		t.Fatal("a hand settlement of not-moved credited gold", gold)
+	if err = s.DB.QueryRow("SELECT glims FROM balances WHERE account_id='acct'").Scan(&glims); err != nil || glims != 0 {
+		t.Fatal("a hand settlement of not-moved credited glims", glims)
 	}
-	// The other way: `moved` credits the purse with the ledger's word for it.
+	// The other way: `moved` credits the row's glims, 40 gold's 20, with the
+	// ledger's word for it.
 	mustExec(t, s.DB, `UPDATE purse_topups SET state='unconfirmed',settled_at=25,settled_by='worker',note='timeout' WHERE id='unconfirmed'`)
 	if err = run([]string{"-db", path, "purse", "settle", "unconfirmed", "moved"}); err != nil {
 		t.Fatal(err)
 	}
-	if err = s.DB.QueryRow("SELECT glims FROM balances WHERE account_id='acct'").Scan(&gold); err != nil || gold != 300 {
-		t.Fatal("a hand settlement of moved credited", gold)
+	if err = s.DB.QueryRow("SELECT glims FROM balances WHERE account_id='acct'").Scan(&glims); err != nil || glims != 20 {
+		t.Fatal("a hand settlement of moved credited", glims)
 	}
 	var reason, ref string
 	if err = s.DB.QueryRow("SELECT reason,ref FROM ledger WHERE account_id='acct' AND currency='glims'").Scan(&reason, &ref); err != nil {

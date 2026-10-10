@@ -30,7 +30,7 @@ func TestRound2ALossReferenceAndMultipleDeaths(t *testing.T) {
 	s2 := x.expect("POST", "/api/profile", x.profileBody(s, profile("alice", 28, 0, 20), s.State), c, 200)
 	s2.Lease = s.Lease
 	s3 := x.expect("POST", "/api/profile", x.profileBody(s2, profile("alice", 24, 0, 20), s2.State), c, 200)
-	if s3.State.EmberXP != held.State.EmberXP || s3.State.XPEmbers != held.State.XPEmbers || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='xp-loss'") != 1 {
+	if s3.State.GlimXP != held.State.GlimXP || s3.State.XPGlims != held.State.XPGlims || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='xp-loss'") != 1 {
 		t.Fatal("large loss must be accepted and noted without credit")
 	}
 	x.set(profile("alice", 22, 0, 20))
@@ -54,7 +54,7 @@ func TestRound2AFlagRetainsPendingAndExpiresAt90Days(t *testing.T) {
 	}
 	c = x.login("alice", "")
 	expired := x.expect("GET", "/api/state", nil, c, 200)
-	if expired.Pending != 0 || expired.State.XPEmbers != held.State.XPEmbers || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='pending-expired'") != 1 {
+	if expired.Pending != 0 || expired.State.XPGlims != held.State.XPGlims || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='pending-expired'") != 1 {
 		t.Fatal("pending expiry must be audited without changing paid balances")
 	}
 }
@@ -75,8 +75,8 @@ func TestRound2BDailyCeilingAndAbsoluteSession(t *testing.T) {
 			next.Lease = s.Lease
 			s = next
 		}
-		if s.State.XPEmbers != 435 || s.Pending != 0 {
-			t.Fatalf("regular credit stranded: earned=%d pending=%d", s.State.XPEmbers, s.Pending)
+		if s.State.XPGlims != 435 || s.Pending != 0 {
+			t.Fatalf("regular credit stranded: earned=%d pending=%d", s.State.XPGlims, s.Pending)
 		}
 		if x.calls.Load() != 1 {
 			t.Fatal("sync must never send a token upstream")
@@ -266,13 +266,13 @@ func TestRound2BCeilingFullDayBoundariesAndMaximum(t *testing.T) {
 			advanceActive(x, c, tc.age)
 			p := profile("alice", 100, 0, 20)
 			next := x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200)
-			if next.State.XPEmbers != tc.cap || next.Pending != int(rules.LifetimeXP(100, 0)/10)-tc.cap {
+			if next.State.XPGlims != tc.cap || next.Pending != int(rules.LifetimeXP(100, 0)/10)-tc.cap {
 				t.Fatal("time allowance boundary")
 			}
 			next.Lease = s.Lease
 			p = profile("alice", 101, 0, 20)
 			last := x.expect("POST", "/api/profile", x.profileBody(next, p, next.State), c, 200)
-			if last.State.XPEmbers != tc.cap {
+			if last.State.XPGlims != tc.cap {
 				t.Fatal("repeating sync refreshed time allowance")
 			}
 		})

@@ -274,7 +274,7 @@ func (x *rig) rodCondition(rod string) int {
 func TestFishCastReservesAndKeepTakesTheFish(t *testing.T) {
 	x := newRig(t)
 	c, s := x.fisher("alice")
-	x.fundEmbers(s.AccountID, 10)
+	x.fundGlims(s.AccountID, 10)
 	// Finn's rod comes over as one instance (marketBuy, lane A's fix) and
 	// it is what fishes here.
 	buy := x.opRefreshing(c, &s, "buy", map[string]any{"seller": "finns-mill-door", "good": "willow-rod", "progress": bySeller(s, "finns-mill-door", x.now.Load())}, 200)

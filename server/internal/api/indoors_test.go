@@ -182,7 +182,7 @@ func TestQuestGatesAtomicReplayAndTimes(t *testing.T) {
 	x.fund(id, 2, 0)
 	req := body(s, "finish", map[string]any{"quest": "test-bread", "to": "finish", "where": map[string]any{"area": "in:village:bakery", "x": 80, "y": 80}})
 	result := x.expect("POST", "/api/quest/step", req, c, 200)
-	if result.State.Quests["test-bread"] != "finish" || result.State.Quests["test-other"] != "start" || result.State.GateAt["test-bread"] != 7200 || result.State.Embers != 2 {
+	if result.State.Quests["test-bread"] != "finish" || result.State.Quests["test-other"] != "start" || result.State.GateAt["test-bread"] != 7200 || result.State.Glims != 2 {
 		t.Fatal(result)
 	}
 	var envelope contract.Envelope
@@ -284,7 +284,7 @@ func TestQuestPrerequisitesAndHabitica(t *testing.T) {
 	}
 }
 
-func TestQuestKeepInstancesAndEarnedEmbers(t *testing.T) {
+func TestQuestKeepInstancesAndEarnedGlims(t *testing.T) {
 	x := newRig(t)
 	_, s := x.ready("alice")
 	id := s.AccountID
@@ -308,13 +308,13 @@ func TestQuestKeepInstancesAndEarnedEmbers(t *testing.T) {
 	step := plainStep("take")
 	two := int32(2)
 	step.Gate = &content.QuestGate{Item: &content.QuestGateItem{Def: "bench-axe", Qty: 1, Keep: &keep}, Glims: &two}
-	snap.State.Embers = 3
-	snap.State.XPEmbers = 1
+	snap.State.Glims = 3
+	snap.State.XPGlims = 1
 	snap.State.HP = 0
 	if err = checkQuestGate(context.Background(), tx, &snap, "test", step, 100); err == nil || err.(*failure).code != "needs-earned" {
 		t.Fatal(err)
 	}
-	snap.State.XPEmbers = 2
+	snap.State.XPGlims = 2
 	if err = checkQuestGate(context.Background(), tx, &snap, "test", step, 100); err != nil {
 		t.Fatal(err)
 	}
@@ -322,7 +322,7 @@ func TestQuestKeepInstancesAndEarnedEmbers(t *testing.T) {
 	if err = spendQuestGate(context.Background(), tx, &snap, "test", step, 100, out); err != nil {
 		t.Fatal(err)
 	}
-	if snap.State.XPEmbers != 0 || snap.State.Embers != 1 || len(out.Taken) != 0 {
+	if snap.State.XPGlims != 0 || snap.State.Glims != 1 || len(out.Taken) != 0 {
 		t.Fatal(snap.State, out)
 	}
 	var n int
@@ -364,12 +364,12 @@ func TestOpeningTopupOnce(t *testing.T) {
 			x.fund(s.AccountID, balance, 0)
 			req := body(s, "mara", map[string]any{"quest": "signpost", "to": "see-mara"})
 			s.Snapshot = x.expect("POST", "/api/quest/step", req, c, 200).Snapshot
-			if s.State.Embers != balance+5+max(0, 3-balance) {
-				t.Fatal(s.State.Embers)
+			if s.State.Glims != balance+5+max(0, 3-balance) {
+				t.Fatal(s.State.Glims)
 			}
 			x.expect("POST", "/api/quest/step", req, c, 200)
 			reloaded := x.expect("GET", "/api/state", nil, c, 200)
-			if reloaded.State.Embers != s.State.Embers || !questHasMark(&reloaded.Snapshot, "lit:road-1") || !questHasMark(&reloaded.Snapshot, "quest-item:tally-token") {
+			if reloaded.State.Glims != s.State.Glims || !questHasMark(&reloaded.Snapshot, "lit:road-1") || !questHasMark(&reloaded.Snapshot, "quest-item:tally-token") {
 				t.Fatal(reloaded.State)
 			}
 			if count(t, x.db, "SELECT count(*) FROM outcomes WHERE outcome_id='quest-gift:signpost:topup'") != 1 {
