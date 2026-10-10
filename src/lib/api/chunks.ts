@@ -99,9 +99,3 @@ export class FakeChunks implements ChunkSource {
     return clone(WildsChunkSchema, value);
   }
 }
-
-/** Coordinates and radius are in tiles, measured from tile centres. */
-export function decorWithin(chunk: WildsChunk, x: number, y: number, radius: number): number[] {
-  if (radius < 0) return [];
-  return chunk.decor?.tx.flatMap((tx, i) => (tx + 0.5 - x) ** 2 + (chunk.decor!.ty[i]! + 0.5 - y) ** 2 <= radius ** 2 ? [i] : []) ?? [];
-}

@@ -38,8 +38,3 @@ export function createBuildings(scene: Phaser.Scene): boolean {
   scene.textures.remove(BUILDINGS_PACKED_KEY)
   return true
 }
-
-/** Whether a building's art loaded. */
-export function hasBuilding(scene: Phaser.Scene, name: BuildingFrame): boolean {
-  return scene.textures.exists(buildingKey(name))
-}

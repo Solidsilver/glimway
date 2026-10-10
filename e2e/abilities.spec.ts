@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import type { BrowserContext } from '@playwright/test'
 import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, waitForWorld, CONTRACT } from './connected'
-import { frames, hold, stepToWarden, talkThrough, waitForLive, warden, warp } from './helpers'
+import { frames, hold, stepToWarden, talkThrough, waitForLive, waitGame, warden, warp } from './helpers'
 import { freshPlayer } from './home-helpers'
 
 /**
@@ -10,12 +10,13 @@ import { freshPlayer } from './home-helpers'
  * paid for in the next report, and a healer's Ward-light mends a friend.
  */
 
-type Moves = { signature: string | null; move: string | null; castCooldown: number; moveCooldown: number; planted: boolean; patches: { x: number; y: number; r: number; slow: number }[]; decoy: { x: number; y: number } | null }
+type Moves = { signature: string | null; move: string | null; wardPulseHeal: number; shown: { move: string; x: number; y: number }[]; castCooldown: number; moveCooldown: number; planted: boolean; patches: { x: number; y: number; r: number; slow: number }[]; decoy: { x: number; y: number } | null }
 type EnemyView = { x: number; y: number; state: string; hp: number; type: string }
 
 const moves = (page: Page) => page.evaluate(() => (window as unknown as { __fsMoves: () => Moves }).__fsMoves())
 const enemies = (page: Page) => page.evaluate(() => (window as unknown as { __fsEnemies: () => EnemyView[] }).__fsEnemies())
 const meter = (page: Page, name: 'Mana' | 'Health') => async () => Number((await page.getByRole('meter', { name }).first().getAttribute('aria-valuenow')) ?? NaN)
+const hp = (page: Page) => page.evaluate(() => (window as unknown as { __fsVitals: () => { hp: number } }).__fsVitals().hp)
 
 test('a hero without a class fights with what’s in hand: no ✦, the finger-wisp falls to the slash, the Warden settles to the naming', async ({ page }) => {
   test.setTimeout(150_000)
@@ -36,13 +37,13 @@ test('a hero without a class fights with what’s in hand: no ✦, the finger-wi
   // The opening's finger-wisp (4 HP, tile 6,17): face it and swing.
   await warp(page, 'woodland', 9, 17)
   const fingerWisp = async () => (await enemies(page)).some((e) => e.type === 'wisp' && e.hp > 0 && e.hp <= 4)
-  expect(await fingerWisp()).toBe(true)
+  await expect.poll(fingerWisp, { message: 'the finger-wisp is there' }).toBe(true)
   for (let i = 0; i < 60 && (await fingerWisp()); i++) {
     await hold(page, 'a', 60)
     await page.keyboard.press('e')
     await frames(page, 8)
   }
-  expect(await fingerWisp()).toBe(false)
+  await expect.poll(fingerWisp, { message: 'the finger-wisp fell' }).toBe(false)
   await page.screenshot({ path: 'test-results/abilities-classless-wisp.png' })
 
   // The Warden: blows only clink; the naming settles it, through the action button.
@@ -109,30 +110,55 @@ test('a level-20 mage casts Kindle on R: a patch ahead, its own cooldown, and th
   expect(answer.state.vitals.mana).toBeLessThanOrEqual(body.mana + 0.01)
 })
 
-test('a friend’s Ward-light, as the hub relays it, mends the hero inside its circle, and nobody outside', async ({ page }) => {
+test('a friend’s Ward-light, as the hub relays it, mends the hero inside its circle by the hub’s pulse, and nobody outside', async ({ page }) => {
   test.setTimeout(60_000)
   // The default hero comes in at 41 of 50 health.
   await freshPlayer(page, 'Rowan')
   await warp(page, 'village', 16, 18)
   await waitForLive(page)
-  const health = meter(page, 'Health')
   const hero = () => page.evaluate(() => (window as unknown as { __fsPlayer: () => { x: number; y: number } }).__fsPlayer())
-  const relay = (x: number, y: number) =>
-    page.evaluate(([x, y]) => (window as unknown as { __fsEmit: (e: string, p: unknown) => void }).__fsEmit('game:ability-cast', { accountId: 'friend', ability: 'ward-light', x, y }), [x, y])
-  const before = await health()
+  const before = await hp(page)
   expect(before).toBeLessThanOrEqual(43)
 
-  // Far away: drawn, but it mends nobody here.
+  // Two wards in the same frame: one far away (no pulse on the cast: the base share,
+  // 2.4), one at the hero's feet carrying the hub's pulse (a geared healer's 5). Their
+  // pulses land together at 1, 2.5 and 4 s, so the first rise is exactly 5 only if the
+  // far one mended nobody here. (Without the hub's ward credit the next report's answer
+  // takes it back; the two-player test checks it stays.)
   const at = await hero()
-  await relay(at.x + 200, at.y)
-  await page.waitForTimeout(4500)
-  expect(await health()).toBe(before)
-
-  // At the hero's feet: pulses of a Mend's share (2.4 each) at 1, 2.5 and 4 s. (Without the
-  // hub's ward credit the next report's answer takes it back; the two-player test checks it stays.)
-  await relay(at.x, at.y)
-  await expect.poll(health, { timeout: 8_000, intervals: [100] }).toBeGreaterThan(before)
+  await page.evaluate(({ x, y }) => {
+    const emit = (window as unknown as { __fsEmit: (e: string, p: unknown) => void }).__fsEmit
+    emit('game:ability-cast', { accountId: 'far', ability: 'ward-light', x: x + 200, y })
+    emit('game:ability-cast', { accountId: 'friend', ability: 'ward-light', x, y, pulseHeal: 5 })
+  }, at)
+  await expect.poll(async () => (await hp(page)) - before, { timeout: 8_000, intervals: [50] }).not.toBe(0)
+  // One read is enough: the poll returns within 50 ms of the first pulse, the next is 1.5 s away.
+  expect((await hp(page)) - before).toBeCloseTo(5, 5)
   await page.screenshot({ path: 'test-results/abilities-ward-relayed.png' })
+})
+
+test('a friend’s Stand, Kindle and Echo, as the hub relays them, are drawn where they name, and go when they end', async ({ page }) => {
+  test.setTimeout(60_000)
+  await freshPlayer(page, 'Rowan')
+  await warp(page, 'village', 16, 18)
+  await waitForLive(page)
+  const at = await page.evaluate(() => (window as unknown as { __fsPlayer: () => { x: number; y: number } }).__fsPlayer())
+  const casts = [
+    { ability: 'stand', x: Math.round(at.x - 40), y: Math.round(at.y) },
+    { ability: 'kindle', x: Math.round(at.x + 40), y: Math.round(at.y) },
+    { ability: 'echo', x: Math.round(at.x), y: Math.round(at.y + 40) },
+  ]
+  await page.evaluate((casts) => {
+    const emit = (window as unknown as { __fsEmit: (e: string, p: unknown) => void }).__fsEmit
+    for (const c of casts) emit('game:ability-cast', { accountId: 'friend', ...c })
+  }, casts)
+  const shown = async () => (await moves(page)).shown.map((s) => [s.move, s.x, s.y]).sort()
+  await expect.poll(shown).toEqual(casts.map((c) => [c.ability, c.x, c.y]).sort())
+  await page.screenshot({ path: 'test-results/abilities-friend-moves.png' })
+  // Only drawn: none of them changes this hero.
+  await expect.poll(() => moves(page)).toMatchObject({ planted: false, patches: [], decoy: null })
+  // Each fades when its time is up (Stand 1.5 s, Echo 3 s, Kindle 6 s: game time).
+  await waitGame(page, shown, (s) => s.length === 0, { seconds: 10, message: 'the friend’s moves fade' })
 })
 
 test('two players: one Ward-light, and the other’s health rises with its pulses', async ({ page, browser, baseURL }) => {
@@ -161,17 +187,22 @@ test('two players: one Ward-light, and the other’s health rises with its pulse
   await expect.poll(() => remotes(other), { timeout: 15_000 }).toEqual(['Ash'])
   expect(await moves(page)).toMatchObject({ signature: 'mend', move: 'ward-light' })
 
-  const health = meter(other, 'Health')
+  const health = () => hp(other)
   const before = await health()
   expect(before).toBeLessThan(50)
+  // The caster's own pulse: 0.4 of their Mend (crafts.md 4.3), not of the base.
+  const pulse = (await moves(page)).wardPulseHeal
+  expect(pulse).toBeGreaterThan(0)
   await waitForLive(page)
   await page.keyboard.press('r')
   // The hub relays the cast (lane C, crafts.md 4.5); a hub without the relay closes the caster's socket.
   await frames(page, 30)
   const status = await page.evaluate(() => (window as unknown as { __fsPresence?: () => { status: string } }).__fsPresence?.()?.status ?? null)
   expect(status, 'the presence hub must relay `ability` (lane C)').toBe('live')
-  // Three pulses over five seconds, each a share of a Mend.
-  await expect.poll(health, { timeout: 10_000 }).toBeGreaterThan(before)
+  // Three pulses over five seconds, each the caster's own: the hub put it on the cast.
+  await expect.poll(async () => (await health()) - before, { timeout: 10_000, intervals: [50] }).not.toBe(0)
+  // One read is enough: the poll returns within 50 ms of the first pulse, the next is 1.5 s away.
+  expect((await health()) - before).toBeCloseTo(pulse, 5)
   await other.screenshot({ path: 'test-results/abilities-ward-friend.png' })
   const healed = await health()
 

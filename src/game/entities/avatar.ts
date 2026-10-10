@@ -39,14 +39,15 @@ import { ITEM_ART_FALLBACK, itemIcon } from '../items-pass'
 import { PEOPLE_KEY, facingOf, heldFrame, heldOrigin, peopleDensity, type Facing } from '../people'
 import { PetFollower } from './pet-follower'
 import { LedMount } from './led-mount'
-import { followerKey } from '../../lib/companions'
+import { followerKey, rideRefusal } from '../../lib/companions'
 import { hideContextButton, showContextButton } from '../context-buttons'
 import { homesteadsFor } from '../homestead'
 import { HOMESTEAD_DATA } from '../../lib/homestead'
+import type { BayWalk } from '../../lib/stable-layout'
 
-/** Habitica sprite grid (source px) and its on-screen height in the 16px world. */
-const AVATAR_CANVAS = 90
-const AVATAR_DISPLAY = 22
+/** Habitica sprite grid (source px) and its on-screen height in the 16px world (a peer's figure too, ./remote-players.ts). */
+export const AVATAR_CANVAS = 90
+export const AVATAR_DISPLAY = 22
 /**
  * The Habitica figure's fists, on the skin layer: the weapon hand (the
  * figure's right, art-left) canvas px 42–44 across, the off hand (art-right)
@@ -61,8 +62,8 @@ const onFigure = (p: { x: number; y: number }) => ({
   x: (p.x - AVATAR_CANVAS / 2) * (AVATAR_DISPLAY / AVATAR_CANVAS),
   y: -AVATAR_DISPLAY / 2 + (p.y - AVATAR_CANVAS / 2) * (AVATAR_DISPLAY / AVATAR_CANVAS),
 })
-/** Where a held tool is gripped (container px, unmirrored), and an item icon's size there. */
-const HAND = { ...onFigure(HAND_ART), size: 11 }
+/** Where a held tool is gripped (container px from the feet, unmirrored), and an item icon's size there; a peer's lead rope ties on here too. */
+export const HAND = { ...onFigure(HAND_ART), size: 11 }
 const OFF_HAND = onFigure(OFF_HAND_ART)
 
 /**
@@ -101,6 +102,8 @@ export interface AvatarDeps {
   reducedMotion: boolean
   /** The world is playing (no panel, talk or cinematic holds it): keys act. */
   live?: () => boolean
+  /** Where a mount of yours walks into its bay on this land (null: its bay isn't here). */
+  baySpot?: (mount: string) => BayWalk | null
 }
 
 export class AvatarVisual {
@@ -111,6 +114,8 @@ export class AvatarVisual {
   private followerShown = ''
   /** The mount that's out on the lead (./led-mount.ts), drawn while not ridden. */
   led: LedMount | null = null
+  /** The last mount Go home sent off (playtests read where it went). */
+  walkingHome: LedMount | null = null
   /** The mount key on the lead or under you ('' none): `companions.mountOut`. */
   private mountShown = ''
   riding = false
@@ -279,11 +284,16 @@ export class AvatarVisual {
    */
   async toggleRide(): Promise<void> {
     const mountKey = this.mountOut
-    if (!mountKey) {
-      const mine = this.deps.session.link ? homesteadsFor(this.deps.session).mine : null
-      const stable = mine?.items.some((i) => i.itemDef === HOMESTEAD_DATA.stable.item && i.scene === 'outdoor')
-      const mounts = this.deps.session.importedProfile?.mounts.length ?? 0
-      bus.emit(EV.toast, { text: !stable ? RIDE_WORDS.noStable : mounts === 0 ? RIDE_WORDS.noMounts : RIDE_WORDS.inStall })
+    const mine = !mountKey && this.deps.session.link ? homesteadsFor(this.deps.session).mine : null
+    const refusal = rideRefusal({
+      mountOut: mountKey,
+      riding: this.riding,
+      stable: !!mine?.items.some((i) => i.itemDef === HOMESTEAD_DATA.stable.item && i.scene === 'outdoor'),
+      mounts: this.deps.session.importedProfile?.mounts.length ?? 0,
+      area: this.deps.world.areaId
+    })
+    if (refusal) {
+      bus.emit(EV.toast, { text: RIDE_WORDS[refusal] })
       return
     }
     if (this.riding) {
@@ -292,14 +302,6 @@ export class AvatarVisual {
       void this.build()
       bus.emit(EV.toast, { text: RIDE_WORDS.down, kind: 'thought' })
       this.showButtons()
-      return
-    }
-    if (this.indoors) {
-      bus.emit(EV.toast, { text: RIDE_WORDS.indoors })
-      return
-    }
-    if (this.deps.world.areaId === 'village') {
-      bus.emit(EV.toast, { text: RIDE_WORDS.village })
       return
     }
     await this.mountUp(mountKey)
@@ -321,13 +323,17 @@ export class AvatarVisual {
   }
 
   /**
-   * Go home (H, or the button) while you're off it: the mount walks off the
-   * edge of the screen (drawing only) and is back in its stall; the server
+   * Go home (H, or the button) while you're off it: on the land its bay is
+   * on, the mount walks back into its bay; anywhere else it walks off the
+   * edge of the screen (drawing only) and is back in its stall. The server
    * hears it at once (`mount-home`, which queues offline).
    */
   sendHome(): void {
     if (!this.mountOut || this.riding || this.indoors) return
-    this.led?.walkOff()
+    const bay = this.led ? this.deps.baySpot?.(this.led.key) ?? null : null
+    if (bay) this.led!.walkTo(bay)
+    else this.led?.walkOff()
+    this.walkingHome = this.led
     this.led = null
     this.deps.session.link?.mountHome()
     bus.emit(EV.toast, { text: RIDE_WORDS.home, kind: 'thought' })

@@ -2,7 +2,7 @@ import craftingRaw from '../../content/crafting.json' with { type: 'json' };
 import papersRaw from '../../content/papers.json' with { type: 'json' };
 import projectsRaw from '../../content/projects.json' with { type: 'json' };
 import { decodeContent } from './content-proto.ts';
-import { CraftingSchema, type CraftingValid, type RecipeValid, type UtilityItemValid } from './gen/glimway/content/v1/crafting_pb.js';
+import { CraftingSchema, type CraftingValid, type RecipeValid } from './gen/glimway/content/v1/crafting_pb.js';
 import { ProjectsSchema, type ProjectValid, type ProjectsValid } from './gen/glimway/content/v1/projects_pb.js';
 import { HOMESTEAD_DATA } from './homestead.ts';
 import { loadWilds } from './wilds/data.ts';
@@ -11,7 +11,6 @@ import { assetKind, isStackable, itemDef } from './items.ts';
 /** The workshops' recipes (proto/glimway/content/v1/crafting.proto), with the schema's required fields non-optional. */
 export type Crafting = CraftingValid;
 export type Recipe = RecipeValid;
-export type UtilityItem = UtilityItemValid;
 export type Projects = ProjectsValid;
 export type Project = ProjectValid;
 

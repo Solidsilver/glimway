@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { LEAD_BEHIND, LEAD_DROP, LEAD_SLACK, leadStep, ropeSag, type LeadState } from '../src/game/entities/led-mount.ts';
+import { LEAD_BEHIND, LEAD_DROP, LEAD_SLACK, leadStep, pathLength, pathPoint, ropeSag, type LeadState } from '../src/game/entities/led-mount.ts';
 
 const walk = (s: LeadState, hero: { x: number; y: number; faceRight?: boolean; seated?: boolean }, frames: number): LeadState => {
   let st = s;
@@ -35,4 +35,17 @@ test('on the lead: it turns to walk where it goes and catches up when left far b
 test('the rope sags when slack and straightens at a stretch', () => {
   assert.ok(ropeSag(5) > ropeSag(40));
   assert.equal(ropeSag(1000), 1);
+});
+
+test('the walk into the bay: along each leg in turn, then it stands at the end', () => {
+  const path = [{ x: 0, y: 100 }, { x: 30, y: 60 }, { x: 30, y: 47 }];
+  assert.equal(pathLength(path), 50 + 13);
+  assert.deepEqual(pathPoint(path, 0), { x: 0, y: 100, leg: 1 });
+  assert.deepEqual(pathPoint(path, 25), { x: 15, y: 80, leg: 1 });
+  assert.deepEqual(pathPoint(path, 50), { x: 30, y: 60, leg: 1 }, 'at the bay’s front');
+  assert.deepEqual(pathPoint(path, 56.5), { x: 30, y: 53.5, leg: 2 }, 'stepping in');
+  assert.deepEqual(pathPoint(path, 1000), { x: 30, y: 47, leg: 2 }, 'in its stall');
+  // Already at the front: the first leg is empty, the step in still happens.
+  const at = [{ x: 30, y: 60 }, { x: 30, y: 60 }, { x: 30, y: 47 }];
+  assert.deepEqual(pathPoint(at, 6.5), { x: 30, y: 53.5, leg: 2 });
 });

@@ -3,7 +3,8 @@
  * hero, beside the pet, with a rope from the hand to its head drawn in code.
  * It keeps some slack: while the hero stands, sits, fights, chops or fishes
  * it stops where it is, and comes on again when they move off. Enemies
- * ignore it; it has no body. Go home walks it off the edge of the screen.
+ * ignore it; it has no body. Go home walks it off the edge of the screen,
+ * or, on the land its bay is on, back into its bay.
  *
  * Drawn from Habitica's mount art (body and head layers, no rider) at the
  * avatar's scale. The art faces left; walking right flips it. Calm by
@@ -14,6 +15,8 @@ import type Phaser from 'phaser'
 import { loadCompanion } from '../avatar-render.ts'
 import { STEP_MS } from '../hero-motion.ts'
 import { COMPANION_SCALE } from './pet-follower.ts'
+import { MOUNT_FEET } from '../../lib/companions.ts'
+import type { BayWalk } from '../../lib/stable-layout.ts'
 
 /** Behind the hero on the lead, px: past the pet (14), a little lower so the two stand side by side. */
 export const LEAD_BEHIND = 26
@@ -22,22 +25,20 @@ export const LEAD_DROP = 3
 export const LEAD_SLACK = 10
 /** Its walking pace, px/s (the hero walks at 110). */
 export const LEAD_PACE = 120
-/** Walking home off the screen, px/s. */
+/** Walking home off the screen or into its bay, px/s. */
 const HOME_PACE = 60
+/** A walk into the bay takes at most this long (ms): from the far side of the land it steps out a little. */
+const BAY_WALK_MS = 6000
+/** In its bay, it stands a moment longer while the stable redraws it there (ms). */
+const BAY_SETTLE_MS = 500
 
 /**
- * Mounts walking home off the screen: key → when they're gone (Date.now()
- * ms). Until then the bay at home stays empty (./homestead-stable.ts): it's
- * back in its stall once it has walked out of sight.
+ * Mounts walking home: key → when they're gone off the screen or standing in
+ * their bay (Date.now() ms). Until then the bay at home stays empty
+ * (./homestead-stable.ts): it's back in its stall once it gets there.
  */
 export const homeward = new Map<string, number>()
 
-/**
- * Where the Habitica mount canvas (135 px, body and head) sits on its feet,
- * in canvas px from the canvas centre: the art's feet are near row 110, its
- * middle near column 61 (Mount_Body_Wolf-Base and Mount_Head_Wolf-Base).
- */
-const MOUNT_FEET = { x: -6, y: 42.5 }
 /** The head's neck, where the rope ties on (canvas px from the centre, unmirrored). */
 const MOUNT_NECK = { x: -27.5, y: 2.5 }
 
@@ -75,6 +76,27 @@ export function leadStep(s: LeadState, i: LeadInput): LeadState {
   return { x, y, moving: step > 0.01, faceRight: Math.abs(dx) > 0.5 ? dx > 0 : s.faceRight }
 }
 
+/** The length of a walk through `points`, px. */
+export function pathLength(points: readonly { x: number; y: number }[]): number {
+  let d = 0
+  for (let i = 1; i < points.length; i++) d += Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y)
+  return d
+}
+
+/** The point `d` px along a walk through `points` (clamped to its ends), and which leg it's on (1-based; 0 at the start). */
+export function pathPoint(points: readonly { x: number; y: number }[], d: number): { x: number; y: number; leg: number } {
+  let left = Math.max(0, d)
+  for (let i = 1; i < points.length; i++) {
+    const a = points[i - 1]
+    const b = points[i]
+    const len = Math.hypot(b.x - a.x, b.y - a.y)
+    if (left <= len && len > 0) return { x: a.x + ((b.x - a.x) * left) / len, y: a.y + ((b.y - a.y) * left) / len, leg: i }
+    left -= len
+  }
+  const end = points[points.length - 1]
+  return { x: end.x, y: end.y, leg: points.length - 1 }
+}
+
 /** The rope's sag below the straight line, px: slack when close, near taut at a stretch. */
 export function ropeSag(distance: number): number {
   return Math.max(1, 8 - distance / 6)
@@ -89,6 +111,10 @@ export class LedMount {
   private rope: Phaser.GameObjects.Graphics
   private gone = false
   private leaving = false
+  /** The walk into the bay (it moves a counter, not the body). */
+  private walk: Phaser.Tweens.Tween | null = null
+  /** Read-only, for playtests: where Go home is walking it (its bay's floor; null: off the screen, or not going). */
+  bay: { x: number; y: number } | null = null
 
   constructor(scene: Phaser.Scene, key: string, at: { x: number; y: number }, reducedMotion: boolean) {
     this.scene = scene
@@ -110,6 +136,11 @@ export class LedMount {
   /** Read-only, for playtests: drawn (its art loaded) and where. */
   get drawn(): boolean {
     return this.body.length > 0
+  }
+
+  /** Gone from the screen (walked off, or handed to its bay). */
+  get done(): boolean {
+    return this.gone
   }
 
   /** Where the rope ties on, world px. */
@@ -172,9 +203,48 @@ export class LedMount {
     if (!this.reducedMotion) this.scene.tweens.add({ targets: this.body, y: this.body.y - 1, duration: STEP_MS, yoyo: true, repeat: -1 })
   }
 
+  /**
+   * Go home on the land its bay is on: it walks to the bay's front and steps
+   * in, between the bay's back and its half door, then stands there while
+   * the stable draws it in its stall (drawing only; `homeward` holds the bay
+   * open until it arrives).
+   */
+  walkTo(bay: BayWalk): void {
+    if (this.gone || this.leaving) return
+    this.leaving = true
+    this.rope.clear()
+    this.bay = { ...bay.stand }
+    const path = [{ x: this.state.x, y: this.state.y }, bay.front, bay.stand]
+    const length = pathLength(path)
+    const duration = Math.min(BAY_WALK_MS, (length / HOME_PACE) * 1000)
+    homeward.set(this.key, Date.now() + duration)
+    let faceRight = this.state.faceRight
+    const step = { d: 0 }
+    this.walk = this.scene.tweens.add({
+      targets: step,
+      d: length,
+      duration,
+      onUpdate: () => {
+        const p = pathPoint(path, step.d)
+        if (Math.abs(p.x - this.state.x) > 0.25) faceRight = p.x > this.state.x
+        this.state = { x: p.x, y: p.y, faceRight, moving: true }
+        const lift = !this.reducedMotion && Math.floor(this.scene.time.now / STEP_MS) % 2 === 1 ? -1 : 0
+        this.body.setPosition(Math.round(p.x), Math.round(p.y + lift)).setScale(faceRight ? -1 : 1, 1)
+        this.body.setDepth(p.leg >= path.length - 1 ? bay.depth : p.y)
+      },
+      onComplete: () => {
+        // In its stall it faces west, as the stable draws it.
+        this.state = { x: bay.stand.x, y: bay.stand.y, faceRight: false, moving: false }
+        this.body.setPosition(Math.round(bay.stand.x), Math.round(bay.stand.y)).setScale(1, 1).setDepth(bay.depth)
+        this.scene.time.delayedCall(BAY_SETTLE_MS, () => this.destroy())
+      }
+    })
+  }
+
   destroy(): void {
     if (this.gone) return
     this.gone = true
+    this.walk?.remove()
     this.scene.tweens.killTweensOf(this.body)
     this.body.destroy()
     this.rope.destroy()

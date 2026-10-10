@@ -315,11 +315,6 @@ export function designedRule(id: string): PaperRule | undefined {
   return { kind: s.kind, ...FIND_RULES[id] };
 }
 
-/** The hand-authored find source for an id (the generator reads this directly). */
-export function designedSource(id: string): FindSource | undefined {
-  return DESIGN[id]?.source;
-}
-
 /**
  * Papers shelved somewhere other than their kind's section (the library's
  * painted signs, docs/design/indoors.md 3.3): the scholarly pages are field

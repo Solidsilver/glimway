@@ -20,6 +20,7 @@ import { HOMESTEAD_DATA, parseHomeArea } from '../../lib/homestead'
 import { clearable, servedLand } from '../../lib/homestead-land'
 import type { HomeView, StallView } from '../../lib/api/types'
 import { baySig, nextHomecoming, stableNext, stallsShown } from '../../lib/companions'
+import { homeBay, type BayWalk } from '../../lib/stable-layout'
 import { type SeatPose } from '../seats'
 import { bus, EV } from '../events'
 import type { Session } from '../session'
@@ -182,6 +183,11 @@ export class HomesteadLayer {
   /** The homestead this scene shows (null: unclaimed land, or not read yet). */
   here(): HomeView | null {
     return this.gate === null ? null : this.homes.homes.get(this.gate) ?? null
+  }
+
+  /** Where your `mount` walks into its bay on this land, or null when its bay isn't here (Go home, ./avatar.ts). */
+  baySpot(mount: string): BayWalk | null {
+    return this.land ? homeBay(this.here(), this.homes.myId, mount) : null
   }
 
   /**

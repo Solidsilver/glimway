@@ -94,7 +94,10 @@ What guests get from each system in [plan.md](plan.md):
 - **Fishing:** all of it. Rods and fish are Glimway's own.
 - **Homestead, crafting, mail, library, projects, presence:** all of it. Guests gain these by
   becoming accounts.
-- **Gold purse, wardrobe:** none.
+- **Gold purse:** a purse that starts empty and fills only from other players (shelf sales, and
+  letters and gives once guests can receive them); no top-up, since there's no Habitica to move
+  gold from (owner, 2026-10-09; [purse-and-wardrobe.md](purse-and-wardrobe.md) section 5).
+- **Wardrobe:** none. Guests look like Wren.
 
 ## Linking Habitica later
 

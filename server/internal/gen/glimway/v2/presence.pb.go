@@ -592,13 +592,17 @@ func (x *PresenceEmote) GetAccountId() string {
 
 // A combat move cast on screen (design 4.5), so friends see it. The client
 // sends it without account_id; the hub checks the table and the caster's
-// class and level, then relays it with account_id filled.
+// class and level, then relays it with account_id filled. For Ward-light the
+// hub also fills pulse_heal: one pulse of the caster's ward, from the
+// caster's profile (rules.WardPulseHeal), so a friend's screen mends what the
+// world credits. Whatever a client sends there is overwritten.
 type PresenceAbility struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Ability       string                 `protobuf:"bytes,1,opt,name=ability,proto3" json:"ability,omitempty"`
 	X             float64                `protobuf:"fixed64,2,opt,name=x,proto3" json:"x,omitempty"`
 	Y             float64                `protobuf:"fixed64,3,opt,name=y,proto3" json:"y,omitempty"`
 	AccountId     *string                `protobuf:"bytes,4,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
+	PulseHeal     *float64               `protobuf:"fixed64,5,opt,name=pulse_heal,json=pulseHeal,proto3,oneof" json:"pulse_heal,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -659,6 +663,13 @@ func (x *PresenceAbility) GetAccountId() string {
 		return *x.AccountId
 	}
 	return ""
+}
+
+func (x *PresenceAbility) GetPulseHeal() float64 {
+	if x != nil && x.PulseHeal != nil {
+		return *x.PulseHeal
+	}
+	return 0
 }
 
 // The server's own word that one player's avatar changed (the resolved
@@ -1292,14 +1303,17 @@ const file_glimway_v2_presence_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\"\n" +
 	"\n" +
 	"account_id\x18\x02 \x01(\tH\x00R\taccountId\x88\x01\x01B\r\n" +
-	"\v_account_id\"z\n" +
+	"\v_account_id\"\xad\x01\n" +
 	"\x0fPresenceAbility\x12\x18\n" +
 	"\aability\x18\x01 \x01(\tR\aability\x12\f\n" +
 	"\x01x\x18\x02 \x01(\x01R\x01x\x12\f\n" +
 	"\x01y\x18\x03 \x01(\x01R\x01y\x12\"\n" +
 	"\n" +
-	"account_id\x18\x04 \x01(\tH\x00R\taccountId\x88\x01\x01B\r\n" +
-	"\v_account_id\"i\n" +
+	"account_id\x18\x04 \x01(\tH\x00R\taccountId\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"pulse_heal\x18\x05 \x01(\x01H\x01R\tpulseHeal\x88\x01\x01B\r\n" +
+	"\v_account_idB\r\n" +
+	"\v_pulse_heal\"i\n" +
 	"\x14PresenceAvatarChange\x12\x1d\n" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tR\taccountId\x122\n" +

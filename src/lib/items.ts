@@ -8,7 +8,7 @@
 import { RESIDENTS, residentById, residentAt } from './residents.ts';
 import itemsRaw from '../../content/items.json' with { type: 'json' };
 import { decodeContent } from './content-proto.ts';
-import { ItemsSchema, type ItemAffinityValid, type ItemDefValid, type ItemGoodValid, type ItemGradeValid, type ItemMenderValid, type ItemPickupValid, type ItemSellerValid, type ItemsRulesValid, type PocketEffectValid, type HeldEffectValid, type UseEffectValid } from './gen/glimway/content/v1/items_pb.js';
+import { ItemsSchema, type ItemDefValid, type ItemMenderValid, type ItemPickupValid, type ItemSellerValid, type ItemsRulesValid, type PocketEffectValid, type HeldEffectValid, type UseEffectValid } from './gen/glimway/content/v1/items_pb.js';
 import { HOMESTEAD_DATA } from './homestead.ts';
 import { loadWilds } from './wilds/data.ts';
 import { CALENDAR } from './calendar.ts';
@@ -30,7 +30,6 @@ export type WearState = 'whole' | 'worn' | 'blunt' | 'cracked' | 'dull';
 
 /** One small, typed help (use, pocket or held: each carries its own type vocabulary). */
 export type ItemEffect = UseEffectValid | PocketEffectValid | HeldEffectValid;
-export type ItemAffinity = ItemAffinityValid;
 /** One item definition, vocabularies narrowed once, at the loader. */
 export type ItemDef = Omit<ItemDefValid, 'kind' | 'tab' | 'grade' | 'atZero' | 'fitting'> & {
   kind: ItemKind;
@@ -40,12 +39,9 @@ export type ItemDef = Omit<ItemDefValid, 'kind' | 'tab' | 'grade' | 'atZero' | '
   fitting?: FittingKind;
 };
 export type ItemPickup = Omit<ItemPickupValid, 'area'> & { area: (typeof PICKUP_AREAS)[number] };
-/** One thing a seller sells (for embers), and what they say. */
-export type ItemGood = ItemGoodValid;
 /** A person or stall that sells goods: a named resident, or a festival-day stall. */
 export type ItemSeller = Omit<ItemSellerValid, 'area' | 'tx' | 'ty'> & { area: string; tx: number; ty: number };
 export type ItemMender = Omit<ItemMenderValid, 'area'> & { area: (typeof PICKUP_AREAS)[number] };
-export type ItemGrade = ItemGradeValid;
 /** Where the named residents stand (shared with the server's checks; derived, never authored). */
 interface ItemResident { id: string; area: string; tx: number; ty: number }
 export interface ItemRules extends Omit<ItemsRulesValid, 'menders'> { menders: ItemMender[]; residents: ItemResident[] }

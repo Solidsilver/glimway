@@ -14,6 +14,7 @@
 import manifest from '../../assets/generated/crafts-pass/manifest.json' with { type: 'json' }
 import { TILE } from './tile.ts'
 import { HOMESTEAD_DATA, stableFootprint } from './homestead.ts'
+import type { HomeView } from './api/homestead.ts'
 
 /** The footprint is the homestead rules' one (content/homestead.json: 4 × 3, plus 2 × 3 a stall). */
 export { stableFootprint }
@@ -123,4 +124,38 @@ export const STALL_REACH = 24
 export function bayFront(bx: number, by: number, count: number, stall: number): { x: number; y: number } {
   const bay = stableLayout(count).bays.find((b) => b.stall === stall)
   return { x: bx + (bay ? bay.x + bay.w / 2 : 0), y: by + STALL_FRONT_DROP }
+}
+
+/** Where a stalled mount's feet stand: this far above the footprint's bottom edge, inside the bay. */
+export const MOUNT_FLOOR = 7
+/** A stalled mount's depth from the stable's (its footprint's bottom edge): between its bay's back (−0.3) and front (0). */
+export const STALLED_DEPTH = -0.15
+
+/** A stalled mount's feet in its bay, px from (bx, by), the footprint's bottom-left. */
+export function bayStand(bx: number, by: number, count: number, stall: number): { x: number; y: number } {
+  const bay = stableLayout(count).bays.find((b) => b.stall === stall)
+  return { x: bx + (bay ? bay.x + bay.w / 2 : 0), y: by - MOUNT_FLOOR }
+}
+
+/** Where a mount walks home into its bay: the bay's front, then its floor, drawn at `depth` once inside (between the back and the half door). */
+export interface BayWalk {
+  front: { x: number; y: number }
+  stand: { x: number; y: number }
+  depth: number
+}
+
+/**
+ * Your mount's bay on this land (Go home, crafts.md 3.1), or null when its
+ * stall isn't here: the outdoor stable's stall that `me` keeps `mount` in.
+ */
+export function homeBay(home: HomeView | null, me: string | null, mount: string): BayWalk | null {
+  if (!home || !me || !mount) return null
+  const stall = home.stalls.find((s) => s.ownerId === me && s.mount === mount)
+  const it = home.items.find((i) => i.itemDef === HOMESTEAD_DATA.stable.item && i.scene === 'outdoor' && i.x !== null && i.y !== null)
+  if (!stall || !it) return null
+  const count = it.stalls ?? 1
+  if (stall.stall < 1 || stall.stall > clampStalls(count)) return null
+  const bx = it.x! * TILE
+  const by = (it.y! + stableFootprint(count)[1]) * TILE
+  return { front: bayFront(bx, by, count, stall.stall), stand: bayStand(bx, by, count, stall.stall), depth: by + STALLED_DEPTH }
 }

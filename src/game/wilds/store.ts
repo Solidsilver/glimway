@@ -139,10 +139,6 @@ export function setActiveWildsRegion(id: string): void {
   active = id === OUTER_REGION_ID ? OUTER_REGION_ID : WILDS_REGION_ID;
 }
 
-export function activeWildsRegion(): string {
-  return active;
-}
-
 /** Wilds materials for the character panel (`null` until the Wilds load). */
 export function wildsMaterials(): Record<string, number> | null {
   const v = regionState(active).view ?? [...regions.values()].find((r) => r.view)?.view ?? null;

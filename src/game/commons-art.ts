@@ -607,11 +607,6 @@ export function decoKey(itemDef: string, rotation: number): string {
   return rotation === 90 || rotation === 270 ? `deco-${itemDef}-q` : `deco-${itemDef}`
 }
 
-/** Pixels a decoration's art rises above its footprint (anchor bottom-left). */
-export function decoRise(itemDef: string): number {
-  return Math.max(0, DECO[itemDef]?.rise ?? 0)
-}
-
 /** Whether a decoration lies flat on the floor (drawn under everything). */
 export function decoFlat(itemDef: string): boolean {
   return (DECO[itemDef]?.rise ?? 0) < 0

@@ -19,30 +19,15 @@ export const LAND = {
   PATH: 8,
 } as const;
 
-/** One character per kind, for debugging. */
-const LAND_CHARS = '.TSBw~/#=';
-
 /** The served cell names (the LAND vocabulary), by kind value. */
 export const LAND_CELLS = ['grass', 'tree', 'stump', 'boulder', 'water', 'ford', 'slope', 'edge', 'path'] as const;
 
-export type LandConfig = HomesteadData['land'];
 
 export interface Land {
   width: number;
   height: number;
   /** Row-major kinds. */
   tiles: Uint8Array;
-}
-
-/** The land as text rows (one char per tile, see LAND_CHARS). */
-export function landRows(land: Land): string[] {
-  const out: string[] = [];
-  for (let y = 0; y < land.height; y++) {
-    let row = '';
-    for (let x = 0; x < land.width; x++) row += LAND_CHARS[land.tiles[y * land.width + x]];
-    out.push(row);
-  }
-  return out;
 }
 
 export function landAt(land: Land, x: number, y: number): number {

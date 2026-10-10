@@ -13,11 +13,9 @@ import type {
   Snapshot,
   StateResponse,
   WildsClaimResponse,
-  WildsDefeatResponse,
   WildsEntityState,
   WildsEntityView,
   WildsEpoch,
-  WildsLanternResponse,
   WildsLanternView,
   WildsLoot,
   WildsMaterials,
@@ -223,30 +221,6 @@ export function parseWildsClaim(raw: unknown): WildsClaimResponse {
       materials: parseMaterials(r.materials),
       ...(typeof r.wardenSliverFound === 'boolean' ? { wardenSliverFound: r.wardenSliverFound } : {}),
       ...(typeof r.stormDropFound === 'boolean' ? { stormDropFound: r.stormDropFound } : {}),
-    },
-  };
-}
-
-export function parseWildsDefeat(raw: unknown): WildsDefeatResponse {
-  const o = obj(raw);
-  const r = obj(o.result);
-  return {
-    ...parseSnapshot(raw),
-    result: { epoch: str(r.epoch), lanternId: str(r.lanternId), lanterns: arr(r.lanterns).map(parseLantern) },
-  };
-}
-
-export function parseWildsLantern(raw: unknown): WildsLanternResponse {
-  const o = obj(raw);
-  const r = obj(o.result);
-  return {
-    ...parseSnapshot(raw),
-    result: {
-      epoch: str(r.epoch),
-      rewarded: r.rewarded === true,
-      loot: parseLoot(r.loot),
-      materials: parseMaterials(r.materials),
-      lanterns: arr(r.lanterns).map(parseLantern),
     },
   };
 }

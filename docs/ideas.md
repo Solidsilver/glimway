@@ -19,14 +19,16 @@ worth thinking about; **(later)** means parked on purpose.
   - **Limits:** 2 top-ups per UTC day, with no amount cap.
   - **Unknown outcome:** a top-up whose result is unclear is credited automatically once a balance
     check confirms it.
-  - Research is in [habitica-gold.md](habitica-gold.md).
+  - Research is in [habitica-gold.md](habitica-gold.md); the design to build is
+    [design/purse-and-wardrobe.md](design/purse-and-wardrobe.md) (0.6).
 - **Gold and embers as two currencies** (agreed): gold buys shop goods and materials and trades
   between players; embers stay what you earn by doing things in the world.
-- **Player shops** (maybe): players sell to each other for purse gold, perhaps from the gate shelf
-  or a stall on the Commons.
-- **Habitica wardrobe** (agreed): Habitica gear you own shows up in-game as cosmetics. Earning it
-  stays in Habitica. See [habitica-boundary.md](habitica-boundary.md).
-- **Pets and mounts as companions** (maybe): your Habitica pet follows you around the world.
+- **Player shops** (agreed, 0.6): a price in gold on a gate-shelf slot; gold also moves in letters
+  and by hand. A stall on the Commons stays a maybe.
+- **Habitica wardrobe** (agreed, 0.6): Habitica gear you own shows up in-game as cosmetics. Earning
+  it stays in Habitica. Design: [design/purse-and-wardrobe.md](design/purse-and-wardrobe.md).
+- **Pets and mounts as companions** (shipped in 0.5): choose which pet walks with you and three for
+  the yard, and ride from the stable. See [design/crafts.md](design/crafts.md).
 - **Streaks and achievements** (maybe): earn recognition in the world, such as a plaque, a title,
   or a resident who remarks on it.
 - **Party goals tied to Habitica tasks** (maybe): party members' finished tasks add up to something

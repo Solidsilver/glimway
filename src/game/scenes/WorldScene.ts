@@ -273,7 +273,7 @@ export class WorldScene extends Phaser.Scene {
     if (Math.hypot(state.position.x - saved.x, state.position.y - saved.y) > 1) this.session.saveSoon()
     // Arriving in another area, or another Wilds region, reaches the server in a report (design 2.2).
     this.session.link?.arrived()
-    this.avatar = new AvatarVisual(this, { session: this.session, world: this.world, hero: () => this.hero, reducedMotion: this.reducedMotion, live: () => this.worldLive() })
+    this.avatar = new AvatarVisual(this, { session: this.session, world: this.world, hero: () => this.hero, reducedMotion: this.reducedMotion, live: () => this.worldLive(), baySpot: (mount) => this.homesteads?.baySpot(mount) ?? null })
     this.offHand = new OffHandVisual(this, this.session, () => this.hero, () => this.avatar)
     this.npcs = new Npcs(this, this.world)
     this.interactables.setAway((id) => this.npcs.away(id))

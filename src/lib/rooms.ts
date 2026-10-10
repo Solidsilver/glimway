@@ -7,10 +7,7 @@ import {
   type RoomDoorValid,
   type RoomFurnishingValid,
   type RoomLightValid,
-  type RoomOutsideValid,
   type RoomPropValid,
-  type RoomSpotValid,
-  type RoomTileValid,
   type RoomValid,
   type RoomsValid,
 } from './gen/glimway/content/v1/rooms_pb.js';
@@ -27,10 +24,7 @@ export type Room = Omit<RoomValid, 'doors' | 'props' | 'furnishings'> & { doors:
 export type RoomDoor = Omit<RoomDoorValid, 'kind' | 'side'> & { kind: 'door' | 'stair'; side: 'north' | 'south' | 'east' | 'west' };
 export type RoomProp = Omit<RoomPropValid, 'facing'> & { facing?: RoomFacing };
 export type RoomFurnishing = Omit<RoomFurnishingValid, 'facing' | 'offer'> & { facing?: RoomFacing; offer?: 'top' | 'shelves' };
-export type RoomSpot = RoomSpotValid;
 export type RoomLight = RoomLightValid;
-export type RoomOutside = RoomOutsideValid;
-export type RoomTile = RoomTileValid;
 export interface RoomFootprint { char: string; tx: number; ty: number; tw: number; th: number }
 
 const ROOM_ID = /^in:(village|woodland|ruin|commons):([a-z0-9]+(?:-[a-z0-9]+)*)(?::([2-9]|[1-9][0-9]+))?$/;

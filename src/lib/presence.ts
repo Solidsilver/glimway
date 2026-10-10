@@ -50,7 +50,8 @@ export type PresenceServerMessage = Event<'ready'> | Event<'leave'> | Event<'gif
   | (Pick<Event<'join'>, 'type' | 'area'> & { player: PresencePlayer })
   | ({ type: 'pos'; accountId: string } & PresencePosition)
   | (Event<'emote'> & { accountId: string })
-  | (Pick<Event<'ability'>, 'type' | 'ability' | 'x' | 'y'> & { accountId: string })
+  /** `pulseHeal`: a Ward-light's pulse, set by the hub from the caster's profile. */
+  | (Pick<Event<'ability'>, 'type' | 'ability' | 'x' | 'y'> & { accountId: string; pulseHeal?: number })
   /** A player's look changed (their follower, or the mount that's out): crafts.md 2.4, 3.4. */
   | { type: 'avatarChange'; accountId: string; avatar: PresenceAvatar };
 export const PRESENCE_CLOSE = { unauthorized: 4001, superseded: 4002, replaced: 4003, idle: 4004, reloadNeeded: 4005 } as const;

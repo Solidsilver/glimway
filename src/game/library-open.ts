@@ -11,8 +11,3 @@ import type { LibrarySection } from '../content/library'
 export function openLibrary(p: LibraryOpenPayload & { section?: LibrarySection } = {}): void {
   bus.emit(EV.libraryOpen, p)
 }
-
-/** A section's shelves (B's room shelves call this with their sign's section). */
-export function openLibrarySection(section: LibrarySection): void {
-  openLibrary({ focus: 'shelf', section })
-}

@@ -1,6 +1,7 @@
 import { SIGNATURE_COOLDOWN_SECONDS, BASIC_ATTACK_COOLDOWN_SECONDS, HEAL_FORMULA } from './combat-timing.ts';
 import { profileFor } from './profile.ts';
 import { abilitiesForClass, type Ability } from './abilities.ts';
+import { wardPulseHeal } from './combat-moves.ts';
 import { DEMO_CHARACTER } from '../content/world.ts';
 import { toInternalClass } from './habitica/mapping.ts';
 import type { EffectiveStats, HabiticaClass, HabiticaProfile } from './habitica/types.ts';
@@ -23,10 +24,6 @@ function round2(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-/** The signatures, by the table's ids. */
-export type SignatureId = 'cleave' | 'fingersnap' | 'shadowstep' | 'mend';
-/** The level-20 combat moves, by the table's ids. */
-export type MoveId = 'stand' | 'kindle' | 'echo' | 'ward-light';
 
 /** A move as the kit carries it: the table's row, its numbers spelled out (0 where the row has none). */
 export interface KitMove {
@@ -151,7 +148,7 @@ export function getCombatKit(profile: HabiticaProfile | null, magic: MagicMarks 
     critChance: round2(0.05 + diminishing(stats.per, 0.4, 80)),
     basicAttackCooldown: craft ? BASIC_ATTACK_COOLDOWN_SECONDS[craft] : CLASSLESS_BASIC.cooldown,
     healAmount,
-    wardPulseHeal: move?.id === 'ward-light' ? round2(healAmount * move.numbers.pulseHealFraction) : 0,
+    wardPulseHeal: move?.id === 'ward-light' ? wardPulseHeal(healAmount, move.numbers.pulseHealFraction) : 0,
   };
 }
 

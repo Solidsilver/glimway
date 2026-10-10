@@ -161,6 +161,7 @@ Each release is a minor version with its own art round, written as one request.
 | **0.4 Indoors** | Rooms are places, Hazel's kitchen, Finn's mill with its loft, the library, resident cycles; the quest tree with a Quests tab, pinning and the tutorial hook, its gates as server operations | Opus (game and UI), Codex (area checks, quest operations) |
 | **0.4 → 0.5: One schema** (after the 0.4 gate) | Everything the server and the client both type or load moves to protobuf, with JSON on the wire and in `content/`: the ~40 hand-typed endpoints (homestead, items, library, mail, storage, crafting, the hearth and desk, commons, projects, repairs, `world/*`), and the content files with loaders on both sides (rooms, residents, furnishings, quests and the rest). Field rules move into the schema with protovalidate (Go and TS); rules across entries stay in code, once. See "One schema" below. | GLM or MiMo (mechanical), reviewed cross-family |
 | **0.5 Crafts** | Pets steps 1–3 (fixes, friends' pets, Companions, yard pets); magic groundwork (ability table, highest-level mark, classless change); level-20 combat abilities, client-side; the stable and riding; fishing at the mill pond with one recipe | mixed |
+| **0.6 The purse and the wardrobe** | The gold purse: a Top up from Habitica with consent each time (two a UTC day, no amount cap), gold at the sellers and Silas's offcut bundles, gold between players on shelves, in letters and by hand; the Habitica wardrobe: wear any gear you own, chosen per slot, never written back. Design: [purse-and-wardrobe.md](purse-and-wardrobe.md) (owner, 2026-10-09) | MiMo for the server (Sol reviews the top-up), Opus for the game |
 | **Then, as revisions** | The open map (per-chunk epochs on the server generator), lake country, lamps, shared fights, caves and the next lands, in the order below | — |
 | **Standalone (later)** | Glimway without Habitica, with Habitica as one mode: guest accounts steps 3–6 ([guests.md](guests.md)), embers without Habitica, our own look, classes and companions | — |
 
@@ -296,6 +297,8 @@ The owner builds mostly with agents, so the risk isn't size, it's drift. After e
   kitchen, Finn's mill and loft, and the library; smoke and lit windows; quest icons.
 - **0.5 Crafts:** 20 ability icons and effects (Stand, Kindle, Ward-light, Echo); the stable and stall
   bays; a rod, a float and the first fish; a cooked dish.
+- **0.6 The purse and the wardrobe:** a gold coin (Glimway's own, not Habitica's), a purse, a wardrobe
+  icon, a shelf price tag, a gold letter. No Habitica art is made; gear is Habitica's sprites.
 - **Lake country:** lake-country ground, water and props; reed and clay icons; the kiln (cold and lit);
   pottery pieces and glazes; the fen-light; heavable boulders and logs.
 - **Lamps:** way-lamps, dark lamp stones, route stones, the lamp-pair mark.

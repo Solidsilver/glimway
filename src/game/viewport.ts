@@ -96,3 +96,17 @@ export function roomZoomFor(w: number, h: number, room: { widthPx: number; heigh
   const z = Math.min(MAX_SCREEN_SCALE, fitAll, Math.max(fill, zoomFor(cssW, cssH)))
   return Math.max(0.25, Math.floor(z * 4) / 4) * r
 }
+
+/**
+ * A camera scroll on whole canvas pixels (review F2). Phaser draws a world
+ * point at `zoom × (x − scroll − origin)` from a whole-pixel anchor, with
+ * `origin` the camera's centre in canvas px; the scroll is snapped so that
+ * product lands the world's grid on the canvas's pixels. The zoom is
+ * fractional (1.5 or 2.5 canvas px a world px on a 1× screen), so a scroll in
+ * whole *world* px doesn't: each frame of a pan put the map at a different
+ * fraction of a pixel, and the pixel art shimmered.
+ */
+export function snapScroll(scroll: number, origin: number, zoom: number): number {
+  if (!(zoom > 0) || !Number.isFinite(scroll)) return scroll
+  return Math.round((scroll + origin) * zoom) / zoom - origin
+}

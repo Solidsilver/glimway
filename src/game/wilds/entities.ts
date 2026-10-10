@@ -479,17 +479,6 @@ export class WildsEntities {
     }, { sound: 'discover' })
   }
 
-  // ------------------------------------------------------------ defeat
-
-  /**
-   * A fall in the Wilds leaves its lantern through the `fall` operation: the
-   * server places it where `where` says (server-first.md 2.2, "Falls").
-   * Nothing to send from here; kept so the scene's fall path stays one call.
-   */
-  reportDefeat(): Promise<void> | null {
-    return null
-  }
-
   // ------------------------------------------------------------ internals
 
   /** Where the hero stands, as the server reads it: this region, region-wide pixels. */

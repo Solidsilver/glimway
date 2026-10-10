@@ -62,6 +62,8 @@ export default defineConfig({
   workers: WORKERS,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? 'list' : [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
+  // The slowest spec files, named at the end of every run (review F12: keep the wall time in sight).
+  reportSlowTests: { max: 10, threshold: 60_000 },
   globalSetup: './e2e/global-setup.ts',
   use: {
     // 127.0.0.1, not localhost: page.request resolves the host in Node, and
