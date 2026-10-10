@@ -1,0 +1,21 @@
+{
+  "tool": "built-in image generation",
+  "generatedOn": "2026-10-10",
+  "prompts": [
+    {
+      "source": "sheets/glim-64-source.png",
+      "generatedImage": "exec-8a44b2db-80df-4a38-8f75-40a759d70558.png",
+      "prompt": "Use case: stylized-concept\nAsset type: pixel-art game currency icon source image for Glimway\nPrimary request: one isolated glim, a round faceted amber bead with a bright warm core and a small glint. Coin-sized in visual weight; unmistakably a bead, not a coin, not a stamped token, not a diamond-cut gem.\nScene/backdrop: genuinely transparent, no ground or shadow outside the bead\nSubject: one centered, compact round bead with a gently irregular faceted amber shell and luminous warm center; small upper-left glint\nStyle/medium: crisp stepped pixel art, cozy woodland RPG, limited clean pixel clusters; dark warm-brown 1-texel outline at 64×64 final density; upper-left light; rich amber and honey color\nComposition/framing: square source, bead about 80% of frame, full silhouette and margin, intended to normalize to a 64×64 texel canvas with 4-texel gutter\nLighting/mood: bright warm core, restrained upper-left highlight\nConstraints: no text, no extra objects, no blur, antialiasing, painterly texture, soft gradients, checkerboard or watermark"
+    },
+    {
+      "source": "sheets/glim-hud-source.png",
+      "generatedImage": "exec-2cdecaa1-49f8-4d67-b50d-cee11bf1b0a5.png",
+      "prompt": "Use case: stylized-concept\nAsset type: pixel-art HUD currency icon source image for Glimway\nPrimary request: the same Glimway glim motif in a deliberately simplified small-icon rendering: one round faceted amber bead, compact glowing warm core and one tiny upper-left glint, with silhouette and warm-brown outline kept clear at 32×32 texels and still recognizable when displayed at 8×8 game pixels. Coin-sized bead, never a coin, token, or diamond gem.\nScene/backdrop: genuinely transparent\nSubject: one centered round amber bead, fewer larger facets and highlight clusters than a normal icon\nStyle/medium: crisp stepped pixel art, limited pixel clusters, strong dark warm-brown 1-texel outline at final 32×32 density, upper-left light, warm amber palette\nComposition/framing: square, object about 80% of frame, full silhouette and margin, normalize to 32×32 with 4-texel gutter\nLighting/mood: bright warm center, restrained upper-left glint\nConstraints: no text, no extra objects, no blur, antialiasing, painterly texture, soft gradients, checkerboard, watermark, stamped face or coin details"
+    },
+    {
+      "source": "sheets/glims-few-source.png",
+      "generatedImage": "exec-21c31c10-cacd-4716-a092-d4f7f8e1ed93.png",
+      "prompt": "Use case: stylized-concept\nAsset type: pixel-art three-bead currency grouping for Glimway game log, letters and toast\nPrimary request: exactly three amber glims together, each a round faceted bead coin-sized in weight with a bright warm core and a small glint. They are beads, never stamped coins, never diamond-cut gems.\nScene/backdrop: genuinely transparent, no ground, cast shadow or extra items\nSubject: exactly three distinct warm amber beads grouped closely in a gentle triangular cluster, all visible; one bead in front and two slightly behind, no overlap that hides any bead's core\nStyle/medium: crisp stepped pixel art matching cozy woodland RPG inventory art; clean pixel clusters; 1-texel dark warm-brown outlines at final 64×64 texel density; upper-left lighting on all beads; amber, honey gold, warm brown\nComposition/framing: compact centered cluster filling about 84% of square frame; balanced silhouette with transparent gutter; normalize to exact 64×64 canvas\nLighting/mood: bright warm cores and small upper-left glints on each bead\nConstraints: exactly three beads; no text, no extra objects, no blur, antialiasing, painterly texture, soft gradients, checkerboard, watermark, coin stamps or sharp diamond facets"
+    }
+  ]
+}

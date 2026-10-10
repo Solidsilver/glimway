@@ -1,0 +1,73 @@
+{
+  "sources": {
+    "glim-64-source.png": {
+      "file": "sheets/glim-64-source.png",
+      "width": 1254,
+      "height": 1254
+    },
+    "glim-hud-source.png": {
+      "file": "sheets/glim-hud-source.png",
+      "width": 1254,
+      "height": 1254
+    },
+    "glims-few-source.png": {
+      "file": "sheets/glims-few-source.png",
+      "width": 1254,
+      "height": 1254
+    }
+  },
+  "frames": {
+    "glim": {
+      "source": "glim-64-source.png",
+      "rect": {
+        "x": 114,
+        "y": 124,
+        "w": 1025,
+        "h": 1007
+      },
+      "file": "frames/glim.png",
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "glim-hud": {
+      "source": "glim-hud-source.png",
+      "rect": {
+        "x": 131,
+        "y": 145,
+        "w": 993,
+        "h": 944
+      },
+      "file": "frames/glim-hud.png",
+      "canvasSize": {
+        "w": 32,
+        "h": 32
+      }
+    },
+    "glims-few": {
+      "source": "glims-few-source.png",
+      "rect": {
+        "x": 73,
+        "y": 225,
+        "w": 1125,
+        "h": 862
+      },
+      "file": "frames/glims-few.png",
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    }
+  },
+  "groups": {
+    "glims-pass": {
+      "frames": [
+        "glim",
+        "glim-hud",
+        "glims-few"
+      ],
+      "frameSize": "per-frame canvas in manifest"
+    }
+  }
+}
