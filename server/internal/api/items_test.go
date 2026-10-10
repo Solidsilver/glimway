@@ -257,7 +257,7 @@ func TestItemsHeirloomBluntsAndIsMendedAtTheBenchOrByAMender(t *testing.T) {
 		t.Fatal("mended a sharp axe")
 	}
 	// Back at his counter: he mends for anyone in the shop, even on the
-	// mending bench's own tile, five tiles from him; the yard is too far
+	// mending bench's own tile, four tiles from him; the yard is too far
 	// now, and so is Pell's office through the side door.
 	x.opRefreshing(c, &s, "use", map[string]any{"instance": brack}, 200)
 	yard := byResident(s.State, "silas", x.now.Load())

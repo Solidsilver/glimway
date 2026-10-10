@@ -628,12 +628,12 @@
       "parent": "commons",
       "map": [
         "##############",
-        "#==RRR==w==w=#",
-        "#..RRR......M#",
-        "#...........M#",
-        "#............E",
-        "#.....CCC....E",
+        "#RRRw====wMMM#",
+        "#RRR......MMM#",
+        "#.....CCC....#",
         "#............#",
+        "#............E",
+        "#............E",
         "#............#",
         "#......@.....#",
         "######DD######"
@@ -680,8 +680,7 @@
         {
           "art": "yard-mending-bench",
           "char": "M",
-          "solid": true,
-          "facing": "left"
+          "solid": true
         },
         {
           "art": "kit-side-doorway",
@@ -692,42 +691,42 @@
       ],
       "spots": {
         "yard-materials": {
-          "tx": 4,
+          "tx": 2,
           "ty": 3,
           "label": "Look at the timber"
         },
         "yard-mend": {
-          "tx": 11,
+          "tx": 10,
           "ty": 3,
           "label": "Look at the mending bench"
         },
         "yard-furnish": {
           "tx": 2,
-          "ty": 6,
+          "ty": 5,
           "label": "Look at the pieces"
         },
         "yard-counter": {
           "tx": 7,
-          "ty": 6,
+          "ty": 4,
           "label": "Look at the counter"
         }
       },
       "lights": [
         {
-          "tx": 8,
+          "tx": 4,
           "ty": 2,
           "kind": "window",
           "r": 3
         },
         {
-          "tx": 11,
+          "tx": 9,
           "ty": 2,
           "kind": "window",
           "r": 3
         },
         {
           "tx": 7,
-          "ty": 4,
+          "ty": 3,
           "kind": "lamp",
           "r": 4
         }
@@ -737,53 +736,79 @@
       },
       "furnishings": [
         {
-          "piece": "rug-braided",
-          "tx": 1,
-          "ty": 7
-        },
-        {
-          "piece": "wooden-stool",
-          "tx": 1,
-          "ty": 7
-        },
-        {
-          "piece": "iron-lantern",
-          "tx": 2,
-          "ty": 8
-        },
-        {
-          "piece": "woven-basket",
-          "tx": 3,
-          "ty": 7
-        },
-        {
           "piece": "wall-pegs-tools",
-          "tx": 5,
+          "tx": 6,
           "ty": 1
         },
         {
           "piece": "calendar",
-          "tx": 9,
+          "tx": 5,
           "ty": 1
         },
         {
-          "piece": "crate",
-          "tx": 12,
-          "ty": 8
+          "piece": "rug-braided",
+          "tx": 1,
+          "ty": 5
+        },
+        {
+          "piece": "chair-side",
+          "facing": "right",
+          "tx": 1,
+          "ty": 5
+        },
+        {
+          "piece": "small-table",
+          "tx": 2,
+          "ty": 5
+        },
+        {
+          "piece": "candle-holder",
+          "parent": 4
+        },
+        {
+          "piece": "wooden-stool",
+          "tx": 3,
+          "ty": 5
+        },
+        {
+          "piece": "iron-lantern",
+          "tx": 3,
+          "ty": 6
+        },
+        {
+          "piece": "woven-basket",
+          "tx": 1,
+          "ty": 6
         },
         {
           "piece": "barrel",
           "tx": 12,
-          "ty": 7
+          "ty": 8
         },
         {
-          "piece": "sack",
+          "piece": "crate",
           "tx": 11,
           "ty": 8
         },
         {
-          "piece": "candle",
-          "parent": 6
+          "piece": "sack",
+          "tx": 10,
+          "ty": 8
+        },
+        {
+          "piece": "crate",
+          "tx": 1,
+          "ty": 8
+        },
+        {
+          "piece": "potted-fern",
+          "tx": 2,
+          "ty": 8
+        },
+        {
+          "piece": "rug-patchwork",
+          "tx": 5,
+          "ty": 5
         }
       ]
     },
@@ -793,12 +818,12 @@
       "parent": "commons",
       "map": [
         "##########",
-        "#=PPP==w=#",
-        "#.PPP.k..#",
-        "E........#",
-        "E...TTT..#",
-        "#...TTT..#",
-        "#........#",
+        "#PPPw===w#",
+        "#PPP.....L",
+        "E.....k..#",
+        "E....TTT.#",
+        "#....TTT.#",
+        "b........#",
         "##########"
       ],
       "doors": [
@@ -810,7 +835,7 @@
           "to": "in:commons:yard",
           "entry": {
             "tx": 12,
-            "ty": 4
+            "ty": 5
           }
         }
       ],
@@ -835,18 +860,36 @@
           "char": "E",
           "solid": false,
           "facing": "right"
+        },
+        {
+          "art": "library-side-shelves",
+          "char": "L",
+          "solid": true,
+          "facing": "left"
+        },
+        {
+          "art": "library-side-shelf-short",
+          "char": "b",
+          "solid": true,
+          "facing": "right"
         }
       ],
       "spots": {},
       "lights": [
         {
-          "tx": 7,
+          "tx": 4,
           "ty": 2,
           "kind": "window",
           "r": 3
         },
         {
-          "tx": 5,
+          "tx": 8,
+          "ty": 2,
+          "kind": "window",
+          "r": 3
+        },
+        {
+          "tx": 6,
           "ty": 4,
           "kind": "lamp",
           "r": 4
@@ -854,21 +897,21 @@
       ],
       "furnishings": [
         {
+          "piece": "calendar",
+          "tx": 6,
+          "ty": 1
+        },
+        {
           "piece": "chair-side",
           "facing": "right",
-          "tx": 3,
+          "tx": 4,
           "ty": 4
         },
         {
           "piece": "chair-side",
           "facing": "left",
-          "tx": 7,
+          "tx": 8,
           "ty": 4
-        },
-        {
-          "piece": "calendar",
-          "tx": 5,
-          "ty": 1
         },
         {
           "piece": "crate",
@@ -878,6 +921,11 @@
         {
           "piece": "candle",
           "parent": 3
+        },
+        {
+          "piece": "woven-basket",
+          "tx": 1,
+          "ty": 6
         }
       ]
     }
