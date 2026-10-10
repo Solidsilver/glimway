@@ -207,7 +207,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 		}
 		// Left the party whose world they live in: warned now, moved out
 		// once the grace period has passed.
-		if movedOut, err = partyResidence(ctx, tx, &s, p.PartyID, now, fractionalNow(a)); err != nil {
+		if movedOut, err = partyResidence(ctx, a.logf, tx, &s, p.PartyID, now, fractionalNow(a)); err != nil {
 			return err
 		}
 	}

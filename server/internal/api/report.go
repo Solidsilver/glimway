@@ -72,14 +72,16 @@ func (a *Server) report(w http.ResponseWriter, r *http.Request) error {
 	}
 	// The ward credit is reserved under the hub's lock before the budget
 	// reads it (review finding 11), never peeked: two reports in one ward
-	// window spend one credit once. What the landed report's HP did not need
-	// goes back to the pool when the function returns; a report that never
-	// lands gives everything back the same way.
-	var reserveSeq, spent float64
-	reserved := false
+	// window spend one credit once. It settles right after the commit, before
+	// the response is written (review finding 1) — the store's connection is
+	// free again at the commit, and a second report must find a settled pool,
+	// never an open reservation whose leftovers nobody returns. The defer
+	// only covers the error paths, where the report never landed.
+	var reserveSeq float64
+	reserved, settled := false, false
 	defer func() {
-		if reserved {
-			a.settleWardCredit(s.AccountID, reserveSeq, spent)
+		if reserved && !settled {
+			a.settleWardCredit(s.AccountID, reserveSeq, 0)
 		}
 	}()
 	if req.Seq > seq {
@@ -141,7 +143,10 @@ func (a *Server) report(w http.ResponseWriter, r *http.Request) error {
 	if err = tx.Commit(); err != nil {
 		return err
 	}
-	spent = out.AllyHeal
+	// The report landed: spend what its HP took and return the rest now
+	// (review finding 1), before the response is written.
+	settled = true
+	a.settleWardCredit(s.AccountID, reserveSeq, out.AllyHeal)
 	return writeOpResult(w, state, out)
 }
 

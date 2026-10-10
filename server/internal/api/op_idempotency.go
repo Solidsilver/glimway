@@ -8,11 +8,11 @@ import (
 	"fmt"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
-	"strings"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
+	"strings"
 )
 
 type storedResult struct {
@@ -78,6 +78,11 @@ func secretJSONKey(raw []byte) (string, bool) {
 	if json.Unmarshal(raw, &v) != nil {
 		return "", false
 	}
+	return secretJSONKeyNode(v)
+}
+
+// secretJSONKeyNode is secretJSONKey over an already-unmarshalled tree.
+func secretJSONKeyNode(node any) (string, bool) {
 	var walk func(any) (string, bool)
 	walk = func(node any) (string, bool) {
 		switch t := node.(type) {
@@ -99,7 +104,92 @@ func secretJSONKey(raw []byte) (string, bool) {
 		}
 		return "", false
 	}
-	return walk(v)
+	return walk(node)
+}
+
+// dynamicContainer is a Struct, a Value, or a map whose values are Values:
+// the only places a request invents names at run time (review finding 6).
+// Every other name in the marshalled bytes is a field name (secretProtoField
+// covers those) or a map key that is a content id.
+func dynamicContainer(fd protoreflect.FieldDescriptor) bool {
+	dynamic := func(md protoreflect.MessageDescriptor) bool {
+		switch md.FullName() {
+		case "google.protobuf.Struct", "google.protobuf.Value", "google.protobuf.ListValue":
+			return true
+		}
+		return false
+	}
+	if fd.IsMap() {
+		v := fd.MapValue()
+		return v.Kind() == protoreflect.MessageKind && dynamic(v.Message())
+	}
+	return (fd.Kind() == protoreflect.MessageKind || fd.Kind() == protoreflect.GroupKind) && dynamic(fd.Message())
+}
+
+// secretJSONKeyIn walks one message's marshalled bytes against its
+// descriptor (review finding 6): only the dynamic containers — Struct and
+// Value fields, and maps of Values — are scanned as wholes, because they are
+// the only keys invented at run time. A map key elsewhere is a content id
+// (`tally-token` is a quest item), never a field name, and refusing one would
+// answer every player with an error.
+func secretJSONKeyIn(raw []byte, md protoreflect.MessageDescriptor) (string, bool) {
+	var root any
+	if json.Unmarshal(raw, &root) != nil {
+		return "", false
+	}
+	var walkMsg func(any, protoreflect.MessageDescriptor) (string, bool)
+	walkField := func(node any, fd protoreflect.FieldDescriptor) (string, bool) {
+		if list, ok := node.([]any); ok {
+			for _, sub := range list {
+				if name, ok := walkMsg(sub, fd.Message()); ok {
+					return name, true
+				}
+			}
+			return "", false
+		}
+		if fd.IsMap() {
+			obj, ok := node.(map[string]any)
+			if !ok {
+				return "", false
+			}
+			for _, sub := range obj {
+				if name, ok := walkMsg(sub, fd.MapValue().Message()); ok {
+					return name, true
+				}
+			}
+			return "", false
+		}
+		return walkMsg(node, fd.Message())
+	}
+	walkMsg = func(node any, md protoreflect.MessageDescriptor) (string, bool) {
+		obj, ok := node.(map[string]any)
+		if !ok {
+			return "", false
+		}
+		fields := md.Fields()
+		for key, sub := range obj {
+			fd := fields.ByJSONName(key)
+			if fd == nil {
+				fd = fields.ByName(protoreflect.Name(key))
+			}
+			if fd == nil {
+				continue
+			}
+			if dynamicContainer(fd) {
+				if name, ok := secretJSONKeyNode(sub); ok {
+					return name, true
+				}
+				continue
+			}
+			if fd.Kind() == protoreflect.MessageKind || fd.Kind() == protoreflect.GroupKind {
+				if name, ok := walkField(sub, fd); ok {
+					return name, true
+				}
+			}
+		}
+		return "", false
+	}
+	return walkMsg(root, md)
 }
 
 // requestBytes is the only way a keyed request becomes payload bytes: the
@@ -109,15 +199,16 @@ func secretJSONKey(raw []byte) (string, bool) {
 // the WAL.
 func requestBytes(request any) ([]byte, error) {
 	if message, ok := request.(proto.Message); ok {
-		if name, ok := secretProtoField(message.ProtoReflect().Descriptor(), map[protoreflect.FullName]bool{}); ok {
-			return nil, fmt.Errorf("request %s may not carry the secret field %s", message.ProtoReflect().Descriptor().FullName(), name)
+		md := message.ProtoReflect().Descriptor()
+		if name, ok := secretProtoField(md, map[protoreflect.FullName]bool{}); ok {
+			return nil, fmt.Errorf("request %s may not carry the secret field %s", md.FullName(), name)
 		}
 		raw, err := (protojson.MarshalOptions{EmitUnpopulated: true}).Marshal(message)
 		if err != nil {
 			return nil, err
 		}
-		if name, ok := secretJSONKey(raw); ok {
-			return nil, fmt.Errorf("request %s may not carry the secret key %s", message.ProtoReflect().Descriptor().FullName(), name)
+		if name, ok := secretJSONKeyIn(raw, md); ok {
+			return nil, fmt.Errorf("request %s may not carry the secret key %s", md.FullName(), name)
 		}
 		return raw, nil
 	}

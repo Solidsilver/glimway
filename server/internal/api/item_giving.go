@@ -47,7 +47,7 @@ func (a *Server) giveItem(ctx context.Context, tx *sql.Tx, s *store.Snapshot, re
 		return "", fail(403, "recipient-unavailable")
 	}
 	radius := float64(content.ItemsRules.Rules.Give.RadiusTiles * wildsTileSize)
-	if a.presence == nil || !a.presence.together(s.WorldID, s.AccountID, req.ToId, radius) {
+	if !a.presence.together(s.WorldID, s.AccountID, req.ToId, radius) {
 		return "", fail(409, "not-together")
 	}
 	if v.GetKind() == "instance" {

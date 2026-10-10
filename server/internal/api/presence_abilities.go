@@ -5,6 +5,7 @@ import (
 	contract "glimway/server/internal/gen/glimway/v2"
 	"glimway/server/internal/rules"
 	"math"
+	"slices"
 	"time"
 
 	"google.golang.org/protobuf/proto"
@@ -117,7 +118,8 @@ func (c *wardCredit) spend(now time.Time, used float64) {
 	}
 }
 
-// addWardCredit: one pulse on an account. Callers hold h.mu.
+// addWardCredit: one pulse on an account, kept oldest-first so spending and
+// expiry start at the oldest. Callers hold h.mu.
 func (h *presenceHub) addWardCredit(id string, grant wardGrant) {
 	c := h.ward[id]
 	if c == nil {
@@ -126,21 +128,30 @@ func (h *presenceHub) addWardCredit(id string, grant wardGrant) {
 	}
 	c.prune(grant.at)
 	c.grants = append(c.grants, grant)
+	// Returned grants can be older than the pulses that landed meanwhile
+	// (review finding 1): the pool is always sorted by `at`.
+	slices.SortFunc(c.grants, func(a, b wardGrant) int { return a.at.Compare(b.at) })
+}
+
+// wardKey names one open report's reservation (review finding 1): the
+// account and the report's sequence. One report can never see — or discard —
+// another's reservation.
+type wardKey struct {
+	account string
+	seq     float64
 }
 
 // wardReservation is the credit one open report holds out of the pool
-// (review finding 11), keyed by the report's sequence: the same report
-// reserving twice gets its own credit back, and no other report can see it
-// while the first is open.
+// (review finding 11), under one key (review finding 1).
 type wardReservation struct {
-	seq    float64
 	credit *wardCredit
 }
 
 // reserveWardCredit takes every pulse still waiting for this account out of
 // the pool, under h.mu (review finding 11), and holds it for one report. Two
 // reports in the same ward window can then never spend the same pulse: the
-// first reserves it, the second sees none. What the report's HP did not need
+// first reserves it, the second sees none of it, and neither can discard the
+// other's reservation (review finding 1). What the report's HP did not need
 // goes back in settleWardCredit, with each pulse's own expiry untouched.
 func (h *presenceHub) reserveWardCredit(id string, seq float64) float64 {
 	if h == nil {
@@ -148,7 +159,10 @@ func (h *presenceHub) reserveWardCredit(id string, seq float64) float64 {
 	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if r := h.wardReserved[id]; r != nil && r.seq == seq {
+	// Defensive only (review finding 1): a report's second look at its own
+	// reservation finds the same credit, half-spent or not. The report path
+	// never gets here twice — a report with a stored sequence never reserves.
+	if r := h.wardReserved[wardKey{id, seq}]; r != nil {
 		return r.credit.use(h.now())
 	}
 	c := h.ward[id]
@@ -160,7 +174,7 @@ func (h *presenceHub) reserveWardCredit(id string, seq float64) float64 {
 	if len(c.grants) == 0 {
 		return 0
 	}
-	h.wardReserved[id] = &wardReservation{seq: seq, credit: c}
+	h.wardReserved[wardKey{id, seq}] = &wardReservation{credit: c}
 	return c.use(h.now())
 }
 
@@ -173,11 +187,12 @@ func (h *presenceHub) settleWardCredit(id string, seq, used float64) {
 	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	r := h.wardReserved[id]
-	if r == nil || r.seq != seq {
+	key := wardKey{id, seq}
+	r := h.wardReserved[key]
+	if r == nil {
 		return
 	}
-	delete(h.wardReserved, id)
+	delete(h.wardReserved, key)
 	now := h.now()
 	r.credit.spend(now, used)
 	for _, g := range r.credit.grants {
@@ -210,13 +225,33 @@ func cooldownTolerance(cooldown time.Duration) time.Duration {
 }
 
 // presenceCastSlack: how far a cast may stand past its reach from the last
-// stored position (review finding 3). A moving or riding caster's stored
-// position lags the cast: the client sends one at most every 150 ms and
-// flushes none just before `ability`, and the hub drops positions closer
-// together than its own throttle. At the fastest movement on screen (riding,
-// 155 px/s) one gap plus transport jitter is about 55 px — the slack below.
-// It stays inside the trust model: the effect is still only near the caster.
-const presenceCastSlack = 155.0 * (0.150 + 0.200)
+// stored position (review finding 3) — and only for a caster the hub has
+// seen move, because the lag exists only while the hero walks or rides. The
+// client sends a position at most every 150 ms (and the hub throttles them),
+// and flushes none just before `ability`, so at the fastest movement (110
+// px/s on foot, 155 px/s riding) one gap plus transport jitter is 39–55 px.
+// A standing caster's cast is measured exactly: slack, not a teleport. It
+// stays inside the trust model — the effect is still only near the caster.
+const (
+	presenceWalkSpeed   = 110.0
+	presenceRideSpeed   = 155.0
+	presencePositionGap = 0.150
+	presenceCastJitter  = 0.200
+)
+
+// castSlack is the reach slack for one sender's last stored position: full
+// while they are moving or riding, none when they are standing (review
+// finding 3).
+func castSlack(p *presencePeer) float64 {
+	if p.pos == nil || (!p.pos.Moving && p.pos.Pose != "riding") {
+		return 0
+	}
+	speed := presenceWalkSpeed
+	if p.pos.Pose == "riding" {
+		speed = presenceRideSpeed
+	}
+	return speed * (presencePositionGap + presenceCastJitter)
+}
 
 // allowAbility is the hub's PresenceAbility check (4.5): the move is in the
 // table, the sender's craft and level mark allow it, it is cast where the
@@ -244,7 +279,7 @@ func (h *presenceHub) allowAbility(p *presencePeer, now time.Time, event *contra
 	if p.pos == nil {
 		return false
 	}
-	reach := (a.GetNumbers().GetReachTiles()+1)*wildsTileSize + presenceCastSlack
+	reach := (a.GetNumbers().GetReachTiles()+1)*wildsTileSize + castSlack(p)
 	dx, dy := event.GetX()-p.pos.X, event.GetY()-p.pos.Y
 	if dx*dx+dy*dy > reach*reach {
 		return false

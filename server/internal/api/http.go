@@ -21,8 +21,11 @@ func fail(status int, code string) error { return &failure{status, code} }
 // heldRefusal is a refusal whose writes stand (review finding 16). The keyed
 // pipeline's savepoint rolls a refusal's effects back; 5.4's "either way the
 // cast closes" needs one that does not, so a settle whose keep is refused
-// still releases the catch and the line. Only an operation's own apply raises
-// one, and only after writing everything the refusal must keep.
+// still releases the catch and the line. Everything the operation wrote
+// since the savepoint stands with it — the request's `where` placement write
+// included (harmless here: the settle's place is where the hero stands).
+// Only an operation's own apply raises one, and only after writing everything
+// the refusal must keep.
 type heldRefusal struct{ err error }
 
 func (e *heldRefusal) Error() string { return e.err.Error() }

@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -28,8 +29,17 @@ const secret = "RECOGNIZABLE-HABITICA-TOKEN-NEVER-PERSIST-9238"
 // with no festival on it — so the seasonal tests walk the same calendar
 // every run and the madder stall, the Quiet banks and Carting Day are always
 // reached by an explicit jump. Tests that need another season move the clock
-// there themselves.
-const rigStart = 1769731200
+// there themselves. GLIMWAY_RIG_START=<unix seconds> runs the whole suite at
+// another day instead — ready for a nightly job, one date per mark plus each
+// festival (review finding 9).
+var rigStart = func() int64 {
+	if v := os.Getenv("GLIMWAY_RIG_START"); v != "" {
+		if n, err := strconv.ParseInt(v, 10, 64); err == nil {
+			return n
+		}
+	}
+	return 1769731200
+}()
 
 type rig struct {
 	t        *testing.T

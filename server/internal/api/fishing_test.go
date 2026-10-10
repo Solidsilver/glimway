@@ -976,16 +976,21 @@ func TestFisheryStockMath(t *testing.T) {
 		t.Fatal("the mill pond")
 	}
 	x.setStock(s.WorldID, millPondID, 1000, 6, 0)
-	// Ten minutes later the pond is a fish fuller; ten more can't overfill.
+	// Ten minutes later the pond is a fish fuller; ten more can't overfill. A
+	// clock that stepped back counts no recovery twice (review finding 16's
+	// `fisheryAt` guard): the stock's own time only moves forward.
 	for _, tc := range []struct {
 		at, now, want float64
-	}{{1000, 1000, 6}, {1000, 1300, 6.5}, {1000, 6600, 12}, {1000, 1e9, 12}} {
+	}{{1000, 1000, 6}, {1000, 1300, 6.5}, {1000, 6600, 12}, {1000, 1e9, 12}, {1000, 900, 6}} {
 		f, err := fisheryAt(context.Background(), x.db.DB, s.WorldID, w, tc.now)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if f.Stock != tc.want {
 			t.Fatalf("recovery to %v: %v", tc.now, f.Stock)
+		}
+		if f.At != max(tc.at, tc.now) {
+			t.Fatalf("the stock's clock read %v at %v", f.At, tc.now)
 		}
 	}
 	// The band is read before the reservation: a reserved fish counts

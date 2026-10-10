@@ -46,8 +46,21 @@ func (q *wardPulseQueue) after(d time.Duration, f func()) {
 	q.next = append(q.next, f)
 }
 
-// fire runs every pulse scheduled so far, in order.
-func (q *wardPulseQueue) fire() {
+// fire runs every pulse scheduled so far, in order. It waits — a short
+// deadline — for n of them to be queued first: `scheduleWard` queues the
+// pulses after the relay has been handed to the writer, so a test could see
+// the relay before the pulses exist (review finding 10).
+func (q *wardPulseQueue) fire(n int) {
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		q.mu.Lock()
+		queued := len(q.next)
+		q.mu.Unlock()
+		if queued >= n || time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(time.Millisecond)
+	}
 	for {
 		q.mu.Lock()
 		if len(q.next) == 0 {
@@ -77,6 +90,12 @@ func castMessage(id string, x, y float64) map[string]any {
 
 func position(x, y float64) map[string]any {
 	return map[string]any{"type": "pos", "x": x, "y": y, "facing": map[string]any{"x": 0, "y": 1}, "moving": false}
+}
+
+// movingPosition is a position sent while walking (review finding 3): the
+// hub's stored one lags the cast that follows.
+func movingPosition(x, y float64) map[string]any {
+	return map[string]any{"type": "pos", "x": x, "y": y, "facing": map[string]any{"x": 0, "y": 1}, "moving": true}
 }
 
 // playResponse resumes the tab's lease (the same client id keeps it).
@@ -162,7 +181,7 @@ func TestPresenceCastChecks(t *testing.T) {
 	// client's throttle allowed for, and a reconnect never resets cooldowns.
 	now := time.Unix(1_000_000, 0)
 	h := newPresenceHub(presenceTestConfig(), func() time.Time { return now })
-	caster := &presencePeer{identity: presenceIdentity{ID: "a", Magic: presenceMagic{Class: "mage", LevelMark: 30}}, area: "village", pos: &presencePosition{X: 320, Y: 320}}
+	caster := &presencePeer{identity: presenceIdentity{ID: "a", Magic: presenceMagic{Class: "mage", LevelMark: 30}}, area: "village", pos: &presencePosition{X: 320, Y: 320, Moving: true}}
 	cast := func(x, y float64) bool {
 		return h.allowAbility(caster, h.now(), &v2.PresenceAbility{Ability: "kindle", X: x, Y: y})
 	}
@@ -191,8 +210,22 @@ func TestPresenceCastChecks(t *testing.T) {
 	if cast(320+20*16, 320) {
 		t.Fatal("a cast across the room was taken")
 	}
+	// A standing caster gets no slack at all (review finding 3): the same
+	// cast 25 px past the reach is dropped now.
+	caster.pos.Moving = false
+	now = base.Add(20 * time.Second)
+	if cast(320+2*16+25, 320) {
+		t.Fatal("a standing caster cast past their reach")
+	}
+	// Riding counts even standing still: the horse moves first.
+	caster.pos.Pose = "riding"
+	now = base.Add(25 * time.Second)
+	if !cast(320+2*16+25, 320) {
+		t.Fatal("a rider's cast was refused")
+	}
+	caster.pos.Pose = ""
 	// The client's throttle lands inside the tolerance (150 ms–250 ms).
-	now = base.Add(10*time.Second + 4800*time.Millisecond)
+	now = base.Add(25*time.Second + 4800*time.Millisecond)
 	if !cast(320, 320) {
 		t.Fatal("a cast inside the jitter tolerance was refused")
 	}
@@ -276,7 +309,7 @@ func TestPresenceWardCreditHealsAFriend(t *testing.T) {
 	if bob.expectAbility().Ability != "ward-light" || carol.expectAbility().Ability != "ward-light" {
 		t.Fatal("ward relay")
 	}
-	x.pulses.fire()
+	x.pulses.fire(3)
 	healed := x.abilityReport(bc, bobPlay, 1, bobPlay.State.Version, 20+oneWard, 50, 0, nil)
 	if math.Abs(healed.GetReport().AllyHeal-oneWard) > 1e-9 {
 		t.Fatal("ward credit", healed.GetReport().AllyHeal, oneWard, pulse)
@@ -344,9 +377,10 @@ func TestPresenceMovingCastRelaysAndCreditsTheWard(t *testing.T) {
 	bob := wsConnect(t, ts, bc, bs.Lease)
 	bob.join("village")
 	alice.expect("join")
-	// Alice's last sent position is (320, 320); 150 ms later she has walked
-	// 25 px on and casts there without flushing a position first.
-	alice.send(position(320, 320))
+	// Alice's last sent position is (320, 320), sent while walking; 150 ms
+	// later she has walked 25 px on and casts there without flushing a
+	// position first.
+	alice.send(movingPosition(320, 320))
 	bob.expect("pos")
 	bob.send(position(345, 320))
 	alice.expect("pos")
@@ -356,12 +390,47 @@ func TestPresenceMovingCastRelaysAndCreditsTheWard(t *testing.T) {
 	if bob.expectAbility().Ability != "ward-light" {
 		t.Fatal("a cast made while moving was not relayed")
 	}
-	x.pulses.fire()
+	x.pulses.fire(3)
 	bobPlay := x.playResponse(bc)
 	out := x.abilityReport(bc, bobPlay, 1, bobPlay.State.Version, 20+oneWard, 50, 0, nil)
 	if math.Abs(out.GetReport().AllyHeal-oneWard) > 1e-9 {
 		t.Fatal("a moving caster's ward did not credit the friend", out.GetReport().AllyHeal, oneWard)
 	}
+}
+
+// Review finding 1: a second report must never discard an open reservation.
+// Report 1 holds the pool's pulse, a new pulse lands, report 2 reserves that
+// one; both settle having spent nothing, and everything is back — oldest
+// pulse first.
+func TestWardReservationsNeverDiscardEachOther(t *testing.T) {
+	now := time.Unix(1_000_000, 0)
+	h := newPresenceHub(presenceTestConfig(), func() time.Time { return now })
+	grant := func(amount float64) {
+		h.mu.Lock()
+		h.addWardCredit("bob", wardGrant{amount: amount, at: now})
+		h.mu.Unlock()
+	}
+	grant(10)
+	if got := h.reserveWardCredit("bob", 1); got != 10 {
+		t.Fatal("the first reservation", got)
+	}
+	now = now.Add(time.Second)
+	grant(5)
+	if got := h.reserveWardCredit("bob", 2); got != 5 {
+		t.Fatal("the second reservation", got)
+	}
+	h.settleWardCredit("bob", 1, 0)
+	h.settleWardCredit("bob", 2, 0)
+	if got := h.reserveWardCredit("bob", 3); got != 15 {
+		t.Fatal("an open reservation's credit was lost", got)
+	}
+	// The pool is spent oldest-first: what this report did not need leaves
+	// the newest pulse behind.
+	h.settleWardCredit("bob", 3, 10)
+	if got := h.reserveWardCredit("bob", 4); got != 5 {
+		t.Fatal("the pool is not spent oldest-first", got)
+	}
+	h.settleWardCredit("bob", 4, 0)
 }
 
 // Review finding 11: the ward credit is reserved under the hub's lock,
@@ -397,9 +466,10 @@ func TestWardCreditIsSpentOnceAcrossTwoReports(t *testing.T) {
 	}
 }
 
-// The same through the real report (review finding 11): two reports land on
-// one account at once, with one ward credit between them. Whichever spends
-// it, the two together raise the HP by exactly one credit.
+// The same through the real report (review findings 11 and 1): two reports
+// land on one account at once, both needing the one ward credit between them
+// (HP 30 and 40 from 20). One credit is one credit: together they may raise
+// the HP by at most 10, and nothing may spend the same pulse twice.
 func TestTwoConcurrentReportsSpendOneWardCredit(t *testing.T) {
 	x := newRig(t)
 	// The rig's log buffer is not concurrency-safe; the requests below race.
@@ -410,8 +480,8 @@ func TestTwoConcurrentReportsSpendOneWardCredit(t *testing.T) {
 	h.addWardCredit(x.account("bob"), wardGrant{amount: 10, at: x.api.Config.Now()})
 	h.mu.Unlock()
 	bobPlay := x.playResponse(bc)
-	report := func(seq float64) *httptest.ResponseRecorder {
-		body, _ := protojson.Marshal(&contract.ReportRequest{Lease: bobPlay.Lease, Client: "tab-a", Generation: bobPlay.ReportGeneration, Seq: seq, Basis: bobPlay.State.Version, Hp: 30, Mana: 50, Place: &contract.Where{Area: "village", X: 400, Y: 300}})
+	report := func(seq, hp float64) *httptest.ResponseRecorder {
+		body, _ := protojson.Marshal(&contract.ReportRequest{Lease: bobPlay.Lease, Client: "tab-a", Generation: bobPlay.ReportGeneration, Seq: seq, Basis: bobPlay.State.Version, Hp: hp, Mana: 50, Place: &contract.Where{Area: "village", X: 400, Y: 300}})
 		r := httptest.NewRequest("POST", "/api/report", bytes.NewReader(body))
 		r.Header.Set("X-Glimway-Contract", "5")
 		r.Header.Set("Content-Type", "application/json")
@@ -422,10 +492,17 @@ func TestTwoConcurrentReportsSpendOneWardCredit(t *testing.T) {
 	}
 	var wg sync.WaitGroup
 	answers := make([]*httptest.ResponseRecorder, 2)
-	for i := range answers {
-		wg.Add(1)
-		go func(i int) { defer wg.Done(); answers[i] = report(float64(i + 1)) }(i)
+	// The lower sequence lands first — it takes the store's one connection
+	// and the second report queues behind it, in the same ward window — and
+	// both need credit: 30 and 40 from a base of 20, one credit of 10.
+	wg.Add(1)
+	go func() { defer wg.Done(); answers[0] = report(1, 30) }()
+	deadline := time.Now().Add(2 * time.Second)
+	for x.db.DB.Stats().InUse == 0 && time.Now().Before(deadline) {
+		time.Sleep(50 * time.Microsecond)
 	}
+	wg.Add(1)
+	go func() { defer wg.Done(); answers[1] = report(2, 40) }()
 	wg.Wait()
 	total := 0.0
 	for _, w := range answers {
@@ -435,8 +512,15 @@ func TestTwoConcurrentReportsSpendOneWardCredit(t *testing.T) {
 		}
 		total += out.GetReport().GetAllyHeal()
 	}
-	if total != 10 {
-		t.Fatal("two reports did not spend one credit once", total)
+	if total > 10 {
+		t.Fatal("two reports spent more than one credit", total)
+	}
+	var hp float64
+	if err := x.db.DB.QueryRow("SELECT hp FROM player_vitals WHERE account_id=?", x.account("bob")).Scan(&hp); err != nil {
+		t.Fatal(err)
+	}
+	if hp > 30 {
+		t.Fatal("two reports raised the HP past one credit", hp)
 	}
 }
 
@@ -481,7 +565,8 @@ func TestWardCreditSpendsOnlyWhatTheReportNeeded(t *testing.T) {
 	carol.send(castMessage("ward-light", 320, 320))
 	bob.expectAbility()
 	bob.expectAbility()
-	x.pulses.fire()
+	// Two healers, one circle: six pulses.
+	x.pulses.fire(6)
 	bobPlay := x.playResponse(bc)
 
 	// A report that kept its old HP spends nothing: the pulses wait for the
@@ -535,7 +620,7 @@ func TestWardCreditExpiryAndZeroHP(t *testing.T) {
 	basis := setVitals(t, x, "bob", 0, 50)
 	alice.send(castMessage("ward-light", 320, 320))
 	bob.expectAbility()
-	x.pulses.fire()
+	x.pulses.fire(3)
 	bobPlay := x.playResponse(bc)
 	down := x.abilityReport(bc, bobPlay, 1, basis, 10, 50, 0, nil)
 	if down.State.Vitals.Hp != 0 || down.GetReport().AllyHeal != 0 {
@@ -547,7 +632,7 @@ func TestWardCreditExpiryAndZeroHP(t *testing.T) {
 	basis = setVitals(t, x, "bob", 20, 50)
 	alice.send(castMessage("ward-light", 320, 320))
 	bob.expectAbility()
-	x.pulses.fire()
+	x.pulses.fire(3)
 	x.now.Add(61)
 	lapsed := x.abilityReport(bc, bobPlay, 2, basis, 30, 50, 0, nil)
 	if lapsed.GetReport().AllyHeal != 0 || lapsed.State.Vitals.Hp != 20 {

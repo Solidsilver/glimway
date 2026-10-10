@@ -37,7 +37,7 @@ func DecodeAbilities(raw []byte) (*Abilities, error) {
 // the move without it. The counterpart is src/lib/abilities.ts.
 var abilityNumbers = map[string][]string{
 	"kindle":     {"reachTiles"},
-	"ward-light": {"pulses", "pulseHealFraction", "radiusTiles"},
+	"ward-light": {"pulses", "pulseHealFraction", "radiusTiles", "durationSeconds"},
 }
 
 // validateAbilities: the rules that span entries (design 4.1, "rules across

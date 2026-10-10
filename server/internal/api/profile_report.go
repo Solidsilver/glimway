@@ -94,10 +94,8 @@ func (a *Server) profileReport(w http.ResponseWriter, r *http.Request) error {
 	// its craft through the class mark; a classless sync never overwrites it.
 	// `verified_high_level` is left over: sign-ins alone raise the history
 	// the rebirth and forgery checks trust (review finding 7).
-	if p.Class != nil {
-		if c, ok := rules.NormalizeClass(*p.Class); ok {
-			s.ClassMark = c
-		}
+	if c := rules.ClassMarkOf(&p); c != "" {
+		s.ClassMark = c
 	}
 	// An account whose mark never got written (0.4 accounts, and anyone who
 	// never synced a class) remembers the craft from the profile this sync is

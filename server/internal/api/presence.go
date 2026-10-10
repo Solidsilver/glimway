@@ -24,7 +24,7 @@ const (
 func millis(n int) time.Duration { return time.Duration(n) * time.Millisecond }
 
 // poseOf is the movement state this contract names (3.4): "riding",
-// "fishing", or '' for on foot. Anything else a client sends reads as on
+// "fishing", or empty for on foot. Anything else a client sends reads as on
 // foot. One allow-list for the relay and the roster (review finding 17).
 func poseOf(pose string) string {
 	if pose == "riding" || pose == "fishing" {
@@ -95,8 +95,9 @@ type presenceHub struct {
 	abilityReady map[string]map[string]time.Time
 	ward         map[string]*wardCredit
 	// wardReserved is the credit an open report holds out of the pool
-	// (review finding 11), keyed by account and report sequence.
-	wardReserved map[string]*wardReservation
+	// (review finding 11), keyed by account and report sequence (review
+	// finding 1: one report can never discard another's reservation).
+	wardReserved map[wardKey]*wardReservation
 	// clock is the server's (injected) time: the ward credit's expiry and
 	// the cooldowns read it, so tests can move time (review finding 12).
 	clock func() time.Time
@@ -129,7 +130,7 @@ func newPresenceHub(c *content.Presence, now func() time.Time) *presenceHub {
 	// The hub mutates nothing and shares no slice: work on a clone, never
 	// on the shared rules table.
 	config = proto.Clone(config).(*content.Presence)
-	return &presenceHub{peers: map[string]*presencePeer{}, accounts: map[string]*presenceAccount{}, sessions: map[string]int{}, sockets: map[*websocket.Conn]struct{}{}, drained: make(chan struct{}), config: config, abilityReady: map[string]map[string]time.Time{}, ward: map[string]*wardCredit{}, wardReserved: map[string]*wardReservation{}, clock: now, afterFunc: func(d time.Duration, f func()) { time.AfterFunc(d, f) }}
+	return &presenceHub{peers: map[string]*presencePeer{}, accounts: map[string]*presenceAccount{}, sessions: map[string]int{}, sockets: map[*websocket.Conn]struct{}{}, drained: make(chan struct{}), config: config, abilityReady: map[string]map[string]time.Time{}, ward: map[string]*wardCredit{}, wardReserved: map[wardKey]*wardReservation{}, clock: now, afterFunc: func(d time.Duration, f func()) { time.AfterFunc(d, f) }}
 }
 
 // now is the server's clock (config's, or the wall clock for a bare hub).

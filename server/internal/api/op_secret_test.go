@@ -7,6 +7,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // The idempotency cache stores every keyed request body, minus `op`, for
@@ -95,5 +96,17 @@ func TestNoMessageButTheSignInCarriesACredential(t *testing.T) {
 	}
 	if _, err := requestBytes(map[string]any{"nested": map[string]any{"accessToken": secret}}); err == nil {
 		t.Fatal("a nested accessToken passed the cache's guard")
+	}
+	// A map key that is a content id is never a credential (review finding
+	// 6): `tally-token` is a quest item, and no operation may be refused for
+	// carrying it.
+	if _, err := requestBytes(&contract.ContributeRequest{Materials: map[string]int32{"tally-token": 1}}); err != nil {
+		t.Fatal("a content id read as a secret", err)
+	}
+	// But a key invented at run time is the request's own — a Struct/Value
+	// subtree is scanned whole.
+	gear := &contract.HabiticaUserGear{Equipped: map[string]*structpb.Value{"apiToken": structpb.NewStringValue(secret)}}
+	if _, err := requestBytes(gear); err == nil {
+		t.Fatal("a Struct key named apiToken passed the cache's guard")
 	}
 }

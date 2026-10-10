@@ -40,6 +40,7 @@ func retryAfter(v string) time.Duration {
 	}
 	return time.Second
 }
+
 // VerifyLimited is the sign-in's one network call: the login server's shared
 // limiter gates it, including retries.
 func (c *Client) VerifyLimited(ctx context.Context, id, token string, allow func() bool) (rules.Profile, error) {
