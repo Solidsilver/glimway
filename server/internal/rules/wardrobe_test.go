@@ -11,7 +11,7 @@ import (
 // file, lane C's resolve and look, lane E's lookFor): the server's steps must
 // match it exactly, or a friend's screen and the wardrobe tab drift apart.
 type wardrobeVectors struct {
-	Slots  []string `json:"slots"`
+	Slots   []string `json:"slots"`
 	Resolve []struct {
 		Name     string            `json:"name"`
 		Chosen   map[string]string `json:"chosen"`

@@ -256,14 +256,6 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 			return protoResult(result)
 
 		case "take":
-			day := utcDay(now)
-			var alreadyTaken bool
-			if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM gate_shelf_takes WHERE homestead_id=? AND account_id=? AND day=?)", homeID, s.AccountID, day).Scan(&alreadyTaken); err != nil {
-				return nil, err
-			}
-			if alreadyTaken {
-				return nil, fail(409, "already-taken-today")
-			}
 			var slotKind, itemDef, makerID string
 			var slotQty, price int
 			var instanceID sql.NullString
@@ -275,9 +267,19 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 				return nil, err
 			}
 			// A priced slot is a good, not a gift (3.2): it is bought, and a
-			// free Take never costs anything by surprise.
+			// free Take never costs anything by surprise. The check sits above
+			// the daily-take one so a priced slot answers the same way however
+			// many takes the traveller has used.
 			if price > 0 {
 				return nil, fail(409, "invalid-operation")
+			}
+			day := utcDay(now)
+			var alreadyTaken bool
+			if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM gate_shelf_takes WHERE homestead_id=? AND account_id=? AND day=?)", homeID, s.AccountID, day).Scan(&alreadyTaken); err != nil {
+				return nil, err
+			}
+			if alreadyTaken {
+				return nil, fail(409, "already-taken-today")
 			}
 			if _, err = tx.ExecContext(ctx, "INSERT INTO gate_shelf_takes(homestead_id, account_id, day) VALUES(?,?,?)", homeID, s.AccountID, day); err != nil {
 				return nil, err

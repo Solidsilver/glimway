@@ -16,9 +16,9 @@ import (
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 	"net/http"
 	"slices"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // wardrobeReader is *sql.Tx or *sql.DB.
@@ -96,11 +96,17 @@ func wardrobeRows(ctx context.Context, q wardrobeReader, account string) (map[st
 }
 
 // resolvedWardrobe is the choice as it reads right now (4.2): lapsed and
-// uncatalogued keys drop out and the stored rows wait for them.
+// uncatalogued keys drop out and the stored rows wait for them. Nothing
+// chosen answers without touching player_gear — the owned list (about 60 KB
+// for a collector) is read only by the wardrobe's operation and read and by
+// visualAvatar (4.3, "Sizes").
 func resolvedWardrobe(ctx context.Context, q wardrobeReader, account string) (map[string]string, error) {
 	rows, err := wardrobeRows(ctx, q, account)
 	if err != nil {
 		return nil, err
+	}
+	if len(rows) == 0 {
+		return rows, nil
 	}
 	owned, _, err := ownedGear(ctx, q, account)
 	if err != nil {
@@ -173,30 +179,61 @@ func (a *Server) wardrobeMutation(w http.ResponseWriter, r *http.Request) error 
 			return nil, err
 		}
 		chosen := req.GetChosen()
-		for slot, key := range chosen {
+		// Refusals in a fixed order (a map walks in no order, so a request
+		// with two faults must always answer the same way): every slot name
+		// first, then the keys in slot order.
+		for slot := range chosen {
 			if !rules.IsDrawnSlot(slot) {
 				return nil, fail(400, "invalid-slot")
 			}
-			if key == rules.NoGear {
+		}
+		for _, slot := range rules.DrawnSlots {
+			key, sent := chosen[slot]
+			if !sent || key == rules.NoGear {
 				continue
 			}
 			if !wearThisSlot(key, slot, owned) {
 				return nil, fail(409, "gear-not-owned")
 			}
 		}
-		// The whole choice is written at once: a slot left out is back to As
-		// on Habitica, and the rows of the last choice go with it.
+		// The whole choice is written at once: a slot the request leaves out
+		// goes back to As on Habitica — except one whose row is currently
+		// lapsed (4.2). The client only ever sees the resolved choice, so it
+		// cannot send that slot back (and asking for it is refused above):
+		// leaving it out means "I didn't touch it", and the row stays until
+		// the player changes that slot or presses Wear Habitica's look — an
+		// empty choice, which clears every row.
+		stored, err := wardrobeRows(ctx, tx, s.AccountID)
+		if err != nil {
+			return nil, err
+		}
+		write := map[string]string{}
+		if len(chosen) > 0 {
+			lapsed := rules.Resolve(stored, owned, gearCatalogued)
+			for slot, key := range stored {
+				if _, sent := chosen[slot]; !sent {
+					if _, visible := lapsed[slot]; !visible {
+						write[slot] = key
+					}
+				}
+			}
+		}
+		for slot, key := range chosen {
+			if key != "" {
+				write[slot] = key
+			}
+		}
 		if _, err = tx.ExecContext(ctx, "DELETE FROM player_wardrobe WHERE account_id=?", s.AccountID); err != nil {
 			return nil, err
 		}
 		for _, slot := range rules.DrawnSlots {
-			if key := chosen[slot]; key != "" {
+			if key := write[slot]; key != "" {
 				if _, err = tx.ExecContext(ctx, "INSERT INTO player_wardrobe(account_id,slot,gear_key) VALUES(?,?,?)", s.AccountID, slot, key); err != nil {
 					return nil, err
 				}
 			}
 		}
-		resolved := rules.Resolve(chosen, owned, gearCatalogued)
+		resolved := rules.Resolve(write, owned, gearCatalogued)
 		c, err := store.CompanionsFor(ctx, tx, s.AccountID, s.WorldID, s.ProfileSource, p)
 		if err != nil {
 			return nil, err

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"testing"
 
+	"glimway/content"
 	"glimway/server/internal/store"
 )
 
@@ -73,12 +74,81 @@ func (x *rig) goldConserved() {
 			x.t.Fatalf("%s: gold rows sum to %d, purse holds %d", p.id, rows, p.gold)
 		}
 	}
-	// Every waiting gold letter is exactly what the escrow holds: gold in a
-	// letter belongs to neither purse.
-	escrow := count(x.t, x.db, "SELECT COALESCE(SUM(delta),0) FROM ledger WHERE currency='mail:gold:gold'")
-	waiting := count(x.t, x.db, "SELECT COALESCE(SUM(qty),0) FROM mail WHERE kind='gold' AND claimed_at IS NULL AND returned_at IS NULL")
+	// The escrow holds exactly the letters in flight — and per sender, so
+	// closing it on the wrong account fails here even when the global totals
+	// balance (3.3: the sender's lines sum to the same total throughout).
+	escrowBy := map[string]int{}
+	waitingBy := map[string]int{}
+	for _, q := range []struct {
+		sql string
+		to  map[string]int
+	}{
+		{"SELECT account_id,COALESCE(SUM(delta),0) FROM ledger WHERE currency='mail:gold:gold' GROUP BY account_id", escrowBy},
+		{"SELECT from_id,COALESCE(SUM(qty),0) FROM mail WHERE kind='gold' AND claimed_at IS NULL AND returned_at IS NULL GROUP BY from_id", waitingBy},
+	} {
+		rows, err := x.db.DB.Query(q.sql)
+		if err != nil {
+			x.t.Fatal(err)
+		}
+		for rows.Next() {
+			var id string
+			var n int
+			if err = rows.Scan(&id, &n); err != nil {
+				rows.Close()
+				x.t.Fatal(err)
+			}
+			q.to[id] = n
+		}
+		rows.Close()
+		if err = rows.Err(); err != nil {
+			x.t.Fatal(err)
+		}
+	}
+	escrow, waiting := 0, 0
+	for id, n := range escrowBy {
+		escrow += n
+		if waitingBy[id] != n {
+			x.t.Fatalf("%s: escrow rows sum to %d, their waiting letters hold %d", id, n, waitingBy[id])
+		}
+	}
+	for id, n := range waitingBy {
+		waiting += n
+		if escrowBy[id] != n {
+			x.t.Fatalf("%s: waiting letters hold %d, escrow rows sum to %d", id, n, escrowBy[id])
+		}
+	}
 	if escrow != waiting {
 		x.t.Fatalf("escrow holds %d, waiting letters hold %d", escrow, waiting)
+	}
+	// Every gold row's reason is one of PurseLine.reason's eleven words
+	// (proto/glimway/v1/purse.proto; lane B's purse read maps them), and a
+	// market-buy row is the game's one sink: negative, never positive.
+	known := map[string]bool{
+		"habitica-topup": true, "purse-settle": true, "market-buy": true,
+		"shelf-buy": true, "shelf-sale": true, "mail-send": true, "mail-claim": true,
+		"mail-return": true, "mail-recall": true, "give": true, "gift": true,
+	}
+	rows, err = x.db.DB.Query("SELECT DISTINCT reason FROM ledger WHERE currency='gold'")
+	if err != nil {
+		x.t.Fatal(err)
+	}
+	for rows.Next() {
+		var reason string
+		if err = rows.Scan(&reason); err != nil {
+			rows.Close()
+			x.t.Fatal(err)
+		}
+		if !known[reason] {
+			rows.Close()
+			x.t.Fatalf("gold moved with reason %q, which no purse line reads", reason)
+		}
+	}
+	rows.Close()
+	if err = rows.Err(); err != nil {
+		x.t.Fatal(err)
+	}
+	if count(x.t, x.db, "SELECT count(*) FROM ledger WHERE currency='gold' AND reason='market-buy' AND delta>=0") != 0 {
+		x.t.Fatal("a market-buy row added gold")
 	}
 	// Only top-ups and owner settlements put gold in play (3.5); only the
 	// sellers take it out.
@@ -419,20 +489,52 @@ func TestSilasYardBundlesBuyWithGold(t *testing.T) {
 	if buy("silas-yard", "timber", "", 400).Error.Code != "invalid-good" {
 		t.Fatal("an ember buy of a gold-only bundle")
 	}
-	// And so is a gold buy of a good that has no gold price — every good in
-	// content is priced in gold today (lane A), so an unknown good stands in.
-	if buy("hazels-kitchen", "no-such-good", "gold", 400).Error.Code != "invalid-good" {
+	// The gold-price refusal is lane C's own line in marketBuy (a good with
+	// no gold price), so it is tested for real: Hazel's tallow loses its gold
+	// price for the length of this buy.
+	hazel, ok := content.SellerFor("hazels-kitchen")
+	if !ok {
+		t.Fatal("hazels-kitchen")
+	}
+	var tallow *content.ItemGood
+	for _, g := range hazel.GetGoods() {
+		if g.GetItem() == "tallow" {
+			tallow = g
+		}
+	}
+	if tallow == nil || tallow.GetGold() != 2 || tallow.GetEmbers() != 1 {
+		t.Fatal("tallow's prices", tallow)
+	}
+	price := tallow.Gold
+	tallow.Gold = nil
+	t.Cleanup(func() { tallow.Gold = price })
+	if buy("hazels-kitchen", "tallow", "gold", 400).Error.Code != "invalid-good" {
 		t.Fatal("a gold buy of a good with no gold price")
 	}
-	r := buy("silas-yard", "timber", "gold", 200)
-	if stackQty(r.Result.Items, "timber") != 4 || r.Result.Bought == nil || r.Result.Bought.Gold != 6 {
+	if x.gold(s.AccountID) != 20 {
+		t.Fatal("a refused buy touched the purse", x.gold(s.AccountID))
+	}
+	tallow.Gold = price
+
+	// A good priced in both currencies buys for gold: 2 gold, no embers.
+	embers := count(t, x.db, "SELECT embers FROM balances WHERE account_id=?", s.AccountID)
+	r := buy("hazels-kitchen", "tallow", "gold", 200)
+	if r.Result.Bought == nil || r.Result.Bought.Gold != 2 || r.Result.Bought.Embers != 0 {
+		t.Fatal("tallow for gold", r.Result.Bought)
+	}
+	if x.gold(s.AccountID) != 18 || count(t, x.db, "SELECT embers FROM balances WHERE account_id=?", s.AccountID) != embers {
+		t.Fatal("tallow's price", x.gold(s.AccountID))
+	}
+	x.goldConserved()
+
+	// Silas's bundles are gold only, and capped at three a day.
+	if r = buy("silas-yard", "timber", "gold", 200); stackQty(r.Result.Items, "timber") != 4 || r.Result.Bought == nil || r.Result.Bought.Gold != 6 {
 		t.Fatal("timber for gold", r.Result)
 	}
-	if x.gold(s.AccountID) != 14 {
+	if x.gold(s.AccountID) != 12 {
 		t.Fatal("the purse", x.gold(s.AccountID))
 	}
 	x.goldConserved()
-	// The cap counts both currencies together: three bundles a day.
 	buy("silas-yard", "timber", "gold", 200)
 	buy("silas-yard", "timber", "gold", 200)
 	if buy("silas-yard", "timber", "gold", 409).Error.Code != "sold-out" {
