@@ -26,6 +26,9 @@ import (
 //	dave:  gold 0, but rows +3 +3 −6 halve to +2 +2 −3 = 1; merge −1,
 //	       glims 0.
 //	carol: nothing at all, so no merge row.
+//
+// Alice's gate shelf has slots priced 6, 1, 0 and 7 gold: they become 3, 1,
+// 0 (still a free gift) and 4 glims.
 func TestGlims033UpgradeConvertsBalancesLedgerAndLetters(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "upgrade.sqlite")
 	old := newUpgradeFixture(t, path, "032_purse_wardrobe.sql", nil)
@@ -66,7 +69,13 @@ INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers
  ('m-claimed','w','alice','bob','gold','gold',7,'[]','[]',7,8);
 INSERT INTO purse_topups(id,account_id,op_key,amount,state,gold_before,gold_after,created_at,settled_at,settled_by) VALUES
  ('top-a','alice','ka',21,'moved',100,79,2,3,'worker'),
- ('top-x','alice','kx',40,'not-enough',10,10,5,6,'worker');`
+ ('top-x','alice','kx',40,'not-enough',10,10,5,6,'worker');
+INSERT INTO homesteads(id,world_id,gate,tier,posts_bought,claimed_at) VALUES('home','w',2,1,3,15);
+INSERT INTO gate_shelf_slots(homestead_id,slot,kind,item_def,qty,stocked_by,stocked_at,price) VALUES
+ ('home',0,'material','timber',2,'alice',10,6),
+ ('home',1,'material','timber',1,'alice',10,1),
+ ('home',2,'material','stone',1,'alice',10,0),
+ ('home',3,'item','lamp-wick',1,'alice',10,7);`
 	if _, err := old.Exec(seed); err != nil {
 		t.Fatal(err)
 	}
@@ -166,6 +175,11 @@ INSERT INTO purse_topups(id,account_id,op_key,amount,state,gold_before,gold_afte
 	mustQuery(t, db, "SELECT glims FROM purse_topups WHERE id='top-a'", 10)
 	mustQuery(t, db, "SELECT glims FROM purse_topups WHERE id='top-x'", 20)
 	mustQuery(t, db, "SELECT glims FROM pending_credits WHERE account_id='alice'", 4)
+
+	// Shelf prices were gold; they are glims now, halved and rounded up.
+	if got := strings.Join(queryStrings(t, db, "SELECT slot||':'||price FROM gate_shelf_slots WHERE homestead_id='home' ORDER BY slot"), " "); got != "0:3 1:1 2:0 3:4" {
+		t.Fatal("shelf prices", got)
+	}
 
 	// No column, view or trigger is still named for embers, and the gold
 	// column is gone.

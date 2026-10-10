@@ -43,6 +43,10 @@ UPDATE ledger SET currency='mail:glims:glims', delta=CASE WHEN delta>=0 THEN (de
 ALTER TABLE purse_topups ADD COLUMN glims INTEGER NOT NULL DEFAULT 0 CHECK(glims>=0);
 UPDATE purse_topups SET glims=amount/2;
 
+-- A gate shelf slot's price (032, in gold) is in glims now: halved and
+-- rounded up, so 1 stays 1 and a free gift (0) stays free.
+UPDATE gate_shelf_slots SET price=(price+1)/2;
+
 -- The mail rebuild, the way 032 did it: SQLite can't change a CHECK in
 -- place, so a new table from the live definition with 'glims' where 'gold'
 -- was, the rows copied (a gold letter becomes a glim letter, its qty halved
