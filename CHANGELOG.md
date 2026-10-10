@@ -13,6 +13,47 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+### For players
+
+- Silas's cottage on the Commons is now **Silas's Yard**, a shop you walk
+  into under the sign of the fox and the saw.
+- Talking to Silas is short now: his line, **See the Yard**, and Just
+  passing. Brack's felling axe and the fox still come up when they apply.
+- The Yard panel has four tabs: **Build**, **Furnish**, **Materials** and
+  **Mend**. The timber rack, the display corner and the mending bench each
+  open their own tab.
+- Silas keeps hours: about forty minutes at his counter, then twenty out by
+  the sawhorse. While he's out, the counter's tin still sells; mending waits
+  for him.
+- Silas mends for glims now (3 or 4 a tool), and so does Orrin.
+- **Pell**, the under-clerk from the Count House, keeps the deeds in a small
+  office through the Yard's side door. Buy a deed, take back one you gave
+  up, or sign an invite at Pell's deed table.
+- **Manage your deed** (from Pell) shows who's on your deed, lets you offer a
+  place to someone at the table, and is where you give up your place.
+- The guide arrows lead to Pell for deeds and follow Silas to wherever he is.
+
+### Technical
+
+- Content: the rooms `in:commons:yard` and `in:commons:yard:deeds`, with a
+  new `inner` door kind for a side doorway between rooms of one building and
+  named side-room ids. Silas's resident cycle (counter and yard) and Pell's
+  single spot.
+- `commons.silasTable` became `commons.deedTable` `{ area, x, y, radius }`
+  (`HomeDeedTable`, field 7; field 6 and `silas_table` reserved). `atTable`
+  checks Pell's office.
+- Menders can name a resident (`ItemMender.with`); `nearMender` follows the
+  cycle, and Silas mends anywhere in the shop while he's at the counter.
+  Sellers can name a `shop` room (the honesty tin). Mender bills are
+  `menderGlims`.
+- Story marks and papers tied to an area also hold in that area's rooms
+  (`content.RootArea`).
+- The Yard panel (`YardPanel.svelte`, replacing `SilasShop.svelte`), the
+  deed panel (`DeedPanel.svelte`), the talk builders (`src/game/yard-talk.ts`)
+  and the shared deed table module (`src/game/deed-table.ts`).
+- The Yard art pass (`assets/generated/yard-pass/`): the shop and office
+  furniture, the cottage's sign, and Pell.
+
 ## [0.6.1] - 2026-10-10
 
 ### For players
