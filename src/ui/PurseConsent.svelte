@@ -10,8 +10,7 @@
    */
   import type { Session } from '../game/session'
   import { purseCopy } from '../content/purse'
-  import { EMPTY_PURSE, GOLD_PER_GLIM } from '../lib/purse'
-  import { ui } from './store.svelte'
+  import { GOLD_PER_GLIM } from '../lib/purse'
   import { purseUi } from './purse.svelte'
   import Panel from './Panel.svelte'
   import PurseAmount from './PurseAmount.svelte'
@@ -20,7 +19,6 @@
 
   const n = $derived(purseUi.parsed)
   const max = $derived(purseUi.max)
-  const purse = $derived(ui.purse ?? EMPTY_PURSE)
   const working = $derived(purseUi.phase === 'moving' || purseUi.phase === 'checking')
   const typed = $derived(purseUi.amount.trim() !== '')
 </script>
@@ -29,7 +27,7 @@
   <div class="body" data-testid="purse-consent" data-dirty={typed ? 'true' : undefined}>
     <p class="have" data-testid="consent-habitica-gold">{purseCopy.youHave(purseUi.habiticaGold)}</p>
 
-    {#if purse.glimsLeft < 1 || purse.topUpsLeft < 1}
+    {#if purseUi.glimsLeft < 1 || purseUi.topUpsLeft < 1}
       <p class="fine" data-testid="consent-cap">{purseCopy.capReached}</p>
     {:else if purseUi.habiticaGold < GOLD_PER_GLIM}
       <p class="fine">{purseCopy.tooLittleGold(GOLD_PER_GLIM)}</p>
@@ -37,7 +35,7 @@
       <PurseAmount bind:value={purseUi.amount} {max} disabled={working} testid="consent-amount" autofocus />
       {#if typed && n === null && !working}<p class="hint">{purseCopy.amountHint(max)}</p>{/if}
       <p class="rate" data-testid="consent-rate">{purseCopy.rate(n, GOLD_PER_GLIM)}</p>
-      <p class="left" data-testid="consent-left">{purseCopy.glimsLeft(purse.glimsLeft, purse.topUpsLeft)}</p>
+      <p class="left" data-testid="consent-left">{purseCopy.glimsLeft(purseUi.glimsLeft, purseUi.topUpsLeft)}</p>
     {/if}
 
     <p class="terms">{purseCopy.spends}</p>

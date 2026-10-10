@@ -169,7 +169,7 @@
     if (!r?.ok) return
     view = r.value.shelf
     homes.adoptShelfState(gate, view.hasShelf, view.slots.length > 0)
-    bus.emit(EV.toast, { text: r.value.line ?? shelfCopy.bought(itemNameDisplay(slot), slot.price), icon: 'coin' })
+    bus.emit(EV.toast, { text: r.value.line ?? shelfCopy.bought(itemNameDisplay(slot), slot.price), icon: 'glim', art: 'glims-few' })
     bus.emit(EV.villageChanged)
     bus.emit(EV.itemsChanged)
   }

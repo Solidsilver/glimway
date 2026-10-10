@@ -13,7 +13,7 @@ import type { Session } from '../game/session.ts'
 import { bus, EV } from '../game/events.ts'
 import { purseCopy } from '../content/purse.ts'
 import { purseErrorText } from '../content/errors.ts'
-import { GLIMS_PER_DAY, goldFor, maxGlims, parseAmount, purseLog, settled, topUpMoved, topUpOutcome, topUpView, TOP_UP_POLL_LIMIT_MS, TOP_UP_POLL_MS, type LogEntry, type TopUpView } from '../lib/purse.ts'
+import { goldFor, maxGlims, parseAmount, purseLog, settled, topUpMoved, topUpOutcome, topUpView, TOP_UP_POLL_LIMIT_MS, TOP_UP_POLL_MS, type LogEntry, type PurseView, type TopUpView } from '../lib/purse.ts'
 import { memoryCredentials } from './habitica-local.ts'
 
 /** What the sync before a top-up found: Habitica's gold (display only), or why it stopped (it says so itself). */
@@ -28,8 +28,23 @@ class PurseUi {
   phase = $state<Phase>('idle')
   /** The gold the sync just read on Habitica (the consent card's line). */
   habiticaGold = $state(0)
-  /** Glims top-ups can still bring today, as the purse said after the sync that opened the card (the server checks again). */
-  glimsLeft = $state(GLIMS_PER_DAY)
+  /**
+   * Today's top-ups as the game shows them now (the caller's live purse;
+   * null until a world says). Max, the card's "Today you can still get …"
+   * line and its cap check all read through it, so they can't disagree when
+   * a purse read lands while the card is open. The server checks again.
+   */
+  private day: () => PurseView | null = () => null
+
+  /** Glims top-ups can still bring today (0 while no world has said). */
+  get glimsLeft(): number {
+    return Math.max(0, this.day()?.glimsLeft ?? 0)
+  }
+
+  /** Top-ups left today (0 while no world has said). */
+  get topUpsLeft(): number {
+    return Math.max(0, this.day()?.topUpsLeft ?? 0)
+  }
   /** The consent card's field, in glims: empty at first, every time. */
   amount = $state('')
   /** The last outcome, in the card (it's a toast too). */
@@ -59,8 +74,8 @@ class PurseUi {
   }
 
   /** Turn gold into glims: sync first (the sync's own safe places and messages), then the consent card. */
-  /** `glimsLeft` is read after the sync: the sync's answer carries the day's top-ups. */
-  async start(sync: () => Promise<SyncForTopUp>, glimsLeft: () => number): Promise<void> {
+  /** `day` is the live purse (the sync's answer carries the day's top-ups; it is read whenever Max is). */
+  async start(sync: () => Promise<SyncForTopUp>, day: () => PurseView | null): Promise<void> {
     if (this.busy) return
     this.outcome = null
     this.error = ''
@@ -73,7 +88,7 @@ class PurseUi {
     }
     if (!r.ok) return
     this.habiticaGold = r.gold
-    this.glimsLeft = glimsLeft()
+    this.day = day
     this.amount = ''
     this.phase = 'consent'
     this.sheet = 'consent'
@@ -234,6 +249,7 @@ class PurseUi {
     this.logStatus = 'idle'
     this.following = null
     this.lastSession = null
+    this.day = () => null
   }
 }
 

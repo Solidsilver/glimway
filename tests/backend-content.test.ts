@@ -32,3 +32,20 @@ test('shared backend vectors stay compact and below one megabyte', () => {
   assert.ok(Buffer.byteLength(raw) < 1_000_000);
   assert.equal(raw, JSON.stringify(JSON.parse(raw)) + '\n');
 });
+
+test('the spend vectors cover every outcome, not only refusals', () => {
+  // A state key the save drops (an old name) would start every case at 0 glims: all "short".
+  const t = JSON.parse(readFileSync(new URL('../content/vectors/backend.json', import.meta.url), 'utf8')) as {
+    stateDefaults: Record<string, unknown>;
+    spend: { state: Record<string, unknown>; operation: { kind: string }; imported: boolean; check: { ok: boolean; reason?: string }; result?: Record<string, unknown> }[];
+  };
+  const state = (c: (typeof t.spend)[number]) => ({ ...t.stateDefaults, ...((c.state.$state as Record<string, unknown>) ?? c.state) }) as { glims: number; xpGlims: number; hp: number };
+  const ok = t.spend.filter((c) => c.check.ok);
+  assert.ok(t.spend.some((c) => state(c).glims > 0), 'states with glims');
+  assert.ok(t.spend.some((c) => state(c).xpGlims > 0), 'states with XP-earned glims');
+  assert.ok(ok.length > 0 && ok.every((c) => c.result), 'passing cases, each with its result');
+  assert.ok(ok.length < t.spend.length, 'refusals too');
+  for (const reason of ['short', 'done', 'full', 'needs-earned']) assert.ok(t.spend.some((c) => c.check.reason === reason), reason);
+  // A 0-HP imported revive that goes through: paid from XP-earned glims.
+  assert.ok(ok.some((c) => c.imported && state(c).hp === 0 && (c.operation.kind === 'rest' || c.operation.kind === 'home-rest')), 'a revive');
+});

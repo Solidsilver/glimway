@@ -53,8 +53,8 @@ export function vectors() {
   }
   const spend = [];
   const spends: GlimSpend[] = [{ kind: 'rest' }, { kind: 'home-rest' }, { kind: 'road-lantern', id: 'road-1' }, { kind: 'road-lantern', id: 'road-3' }, { kind: 'chest' }];
-  for (const hp of [0, 1, 40]) for (const mana of [0, 20]) for (const embers of [0, 2, 5, 10]) for (const earned of new Set([0, Math.min(2, embers), embers])) for (const imported of [false, true]) for (const done of [false, true]) for (const operation of spends) {
-    const state = validateSave({ ...createNewGame(), hp, mana, embers, xpGlims: earned, flags: done ? ['lit:road-1', 'opened:ashwatch-chest'] : [] });
+  for (const hp of [0, 1, 40]) for (const mana of [0, 20]) for (const glims of [0, 2, 5, 10]) for (const earned of new Set([0, Math.min(2, glims), glims])) for (const imported of [false, true]) for (const done of [false, true]) for (const operation of spends) {
+    const state = validateSave({ ...createNewGame(), hp, mana, glims, xpGlims: earned, flags: done ? ['lit:road-1', 'opened:ashwatch-chest'] : [] });
     const check = checkSpend(state, operation, { imported });
     spend.push({ state, operation, imported, check, ...(check.ok ? { result: spendGlims(state, operation, { imported }) } : {}) });
   }

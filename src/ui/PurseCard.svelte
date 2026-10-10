@@ -10,7 +10,6 @@
   import type { Session } from '../game/session'
   import { ui } from './store.svelte'
   import { purseCopy } from '../content/purse'
-  import { EMPTY_PURSE } from '../lib/purse'
   import { offlineCopy } from '../content/connected'
   import { isConnected } from './habitica-local'
   import { purseUi, type SyncForTopUp } from './purse.svelte'
@@ -19,10 +18,11 @@
 
   let { session, sync }: { session: Session; sync: () => Promise<SyncForTopUp> } = $props()
 
-  const purse = $derived(ui.purse ?? EMPTY_PURSE)
+  /** Null until a world says: no top-up before then. */
+  const purse = $derived(ui.purse)
   const habitica = $derived(ui.vitalsSource === 'imported')
   const offline = $derived(ui.link?.status !== 'online')
-  const canTopUp = $derived(purse.topUpsLeft > 0 && purse.glimsLeft > 0)
+  const canTopUp = $derived(!!purse && purse.topUpsLeft > 0 && purse.glimsLeft > 0)
   /** A top-up from another tab, or one this tab lost track of. */
   const workingElsewhere = $derived(!!ui.purse?.working && !purseUi.busy)
 
@@ -31,7 +31,7 @@
       purseUi.error = purseCopy.connectFirst
       return
     }
-    void purseUi.start(sync, () => (ui.purse ?? EMPTY_PURSE).glimsLeft)
+    void purseUi.start(sync, () => ui.purse)
   }
 </script>
 
@@ -50,7 +50,7 @@
       >{purseUi.phase === 'syncing' ? purseCopy.topUpBusy : purseCopy.topUp}</button>
       <button type="button" class="ghost log" onclick={() => purseUi.openLog(session)} data-testid="purse-log-open">{purseCopy.log}&nbsp;›</button>
     </div>
-    <p class="tiny" data-testid="top-ups-left">{canTopUp ? purseCopy.glimsLeft(purse.glimsLeft, purse.topUpsLeft) : purseCopy.noTopUpsLeft}</p>
+    {#if purse}<p class="tiny" data-testid="top-ups-left">{canTopUp ? purseCopy.glimsLeft(purse.glimsLeft, purse.topUpsLeft) : purseCopy.noTopUpsLeft}</p>{/if}
   {:else}
     <div class="row">
       <button type="button" class="ghost log" onclick={() => purseUi.openLog(session)} data-testid="purse-log-open">{purseCopy.log}&nbsp;›</button>

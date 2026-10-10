@@ -8,6 +8,9 @@ const { bus, EV } = await import('../src/game/events.ts')
 const { purseCopy } = await import('../src/content/purse.ts')
 const { TOP_UP_POLL_MS } = await import('../src/lib/purse.ts')
 
+/** Today's top-ups as the live purse shows them. */
+const day = (glimsLeft: number, topUpsLeft = 2) => ({ glimsLeft, topUpsLeft, working: null })
+
 /** The press happens at 1000 s on this device's clock. */
 const NOW_MS = 1_000_000
 
@@ -62,7 +65,7 @@ async function nextPoll(t: TestContext): Promise<void> {
 
 /** Habitica has 80 gold (40 glims' worth); today's top-ups can still bring 30 unless said. */
 async function toConsent(amount: string, glimsLeft = 30): Promise<void> {
-  await purseUi.start(async () => ({ ok: true, gold: 80 }), () => glimsLeft)
+  await purseUi.start(async () => ({ ok: true, gold: 80 }), () => day(glimsLeft))
   assert.equal(purseUi.phase, 'consent')
   assert.equal(purseUi.amount, '', 'the field starts empty')
   purseUi.amount = amount
@@ -164,7 +167,7 @@ test('Get sends nothing without a whole amount within Max, or without a token', 
   assert.equal(calls.topUp.length, 0, 'more than today’s glims left')
   purseUi.cancel()
   await toConsent('', 30)
-  await purseUi.start(async () => ({ ok: true, gold: 41 }), () => 30)
+  await purseUi.start(async () => ({ ok: true, gold: 41 }), () => day(30))
   assert.equal(purseUi.max, 20, 'Habitica’s gold pays for 20')
   purseUi.amount = '21'
   await purseUi.confirm(session)
@@ -194,7 +197,7 @@ test('Not now and closing the card send nothing and forget the amount', async (t
 
 test('a sync that stops shows no card', async (t) => {
   setup(t)
-  await purseUi.start(async () => ({ ok: false }), () => 30)
+  await purseUi.start(async () => ({ ok: false }), () => day(30))
   assert.equal(purseUi.phase, 'idle')
   assert.equal(purseUi.sheet, null)
 })
@@ -211,14 +214,25 @@ test('signing out stops following a top-up', async (t) => {
   assert.equal(purseUi.phase, 'idle')
 })
 
-test('Max reads the day’s glims left after the sync, not before it', async (t) => {
+test('Max reads the live day: a purse read that lands while the card is open moves it, and no purse means none', async (t) => {
   setup(t)
   // The sync's answer is what says how much of the day is left (another tab topped up meanwhile).
   let left = 30
   await purseUi.start(async () => {
     left = 20
     return { ok: true, gold: 1240 }
-  }, () => left)
+  }, () => day(left))
   assert.equal(purseUi.glimsLeft, 20)
   assert.equal(purseUi.max, 20)
+  // A purse read lands with the card open: Max follows, as the card's line does.
+  left = 12
+  assert.equal(purseUi.max, 12)
+  assert.equal(purseUi.topUpsLeft, 2)
+  purseUi.amount = '13'
+  assert.equal(purseUi.parsed, null)
+  // No world has said yet: nothing to get, never a full 30.
+  purseUi.cancel()
+  await purseUi.start(async () => ({ ok: true, gold: 1240 }), () => null)
+  assert.equal(purseUi.glimsLeft, 0)
+  assert.equal(purseUi.max, 0)
 })
