@@ -47,7 +47,10 @@ import { newKey } from '../lib/api/client.ts'
 import { ApiError, errorCode, isOutboxClientBug, isReloadNeeded, isSettledRefusal, isUnreachable, needsReconciliation, type ApiErrorCode } from '../lib/api/errors.ts'
 import type { OperationsApi } from '../lib/api/operations.ts'
 import { browserLocks, emptyRecord, expired, holdLock, lockName, outboxStore, type HeldLock, type LockLike, type OutboxEntry, type OutboxKind, type OutboxRecord, type OutboxStore } from '../lib/api/outbox.ts'
-import { adoptable, fallRecovery, gameStateOf, isClientMark, predictCompanions, predictedView, profileOf, whereOf, type CompanionsView, type Prediction, type WhereJson } from '../lib/api/predict.ts'
+import { adoptable, fallRecovery, gameStateOf, isClientMark, predictCompanions, predictedView, predictPurse, profileOf, whereOf, type CompanionsView, type Prediction, type WhereJson } from '../lib/api/predict.ts'
+import { PurseTopUpRequestSchema, type PurseRead } from '../lib/gen/glimway/v1/purse_pb.js'
+import { OpHeaderSchema } from '../lib/gen/glimway/v1/op_pb.js'
+import { topUpView, type PurseView, type TopUpView } from '../lib/purse.ts'
 import { CompanionsRequestSchema, MountHomeRequestSchema, MountOutRequestSchema, StableExtendRequestSchema, StallRequestSchema, type StableExtendResult, type StallResult } from '../lib/gen/glimway/v1/companions_pb.js'
 import { projectHome } from '../lib/api/homestead.ts'
 import { REPORT_INTERVAL_MS, ReportBook, type CapturedReport, type ReportAck } from '../lib/api/reports.ts'
@@ -369,6 +372,9 @@ function predictionOf(entry: OutboxEntry): Prediction {
         return { kind: 'companions', followPet: String(b.followPet ?? ''), yardPets: Array.isArray(b.yardPets) ? b.yardPets.map(String) : [] }
       case 'mount-home':
         return { kind: 'mount-home' }
+      case 'mutation':
+        // A gold buy, letter or give (purse-and-wardrobe.md 6.5): the purse change stored with it.
+        return entry.gold ? { kind: 'gold', delta: entry.gold } : { kind: 'none' }
       default:
         return { kind: 'none' }
     }
@@ -612,6 +618,7 @@ export class Link {
     s.applyServer(this.view(), { vitalsSource: profile ? 'imported' : 'demo', importedProfile: profile }, opts)
     this.noteMagic(profile)
     this.noteCompanions()
+    this.notePurse()
   }
 
   /** The level and class marks the screen holds (null until a state carries them). */
@@ -663,6 +670,69 @@ export class Link {
     if (now === this.companionsShown) return
     this.companionsShown = now
     this.emitter(EV.companions)
+  }
+
+  // ------------------------------------------------------------ the purse (purse-and-wardrobe.md 2, 3)
+
+  private purseShown = ''
+
+  /** The purse the game shows: the server's, with unanswered gold operations on top (never the top-up). */
+  get purse(): PurseView {
+    return predictPurse(this.server, this.entries.map(predictionOf))
+  }
+
+  /** Tell the interface when the purse it shows changed (an answer, a gold spend sent, a rollback). */
+  private notePurse(): void {
+    const now = this.purse
+    const json = JSON.stringify(now)
+    if (json === this.purseShown) return
+    this.purseShown = json
+    this.emitter(EV.purse, now)
+  }
+
+  /**
+   * Move gold from Habitica into the purse (2.2). The token goes in this one
+   * request and nowhere else: not the outbox (which stores bodies), not a
+   * replay, not a log. A lost answer isn't sent again; the purse read says
+   * how it came out. The world doesn't hold still: Habitica can be slow.
+   */
+  async topUp(token: string, amount: number): Promise<{ ok: true; topUp: TopUpView } | { ok: false; code: ApiErrorCode | 'offline' | 'superseded' }> {
+    if (this.stopped || !this.session) return { ok: false, code: 'unknown' }
+    if (this.status === 'superseded') return { ok: false, code: 'superseded' }
+    if (this.status !== 'online' || !this.lease) return { ok: false, code: 'offline' }
+    const req = create(PurseTopUpRequestSchema, { op: create(OpHeaderSchema, { lease: this.lease, key: newKey() }), token, amount })
+    try {
+      const env = await this.api.run(() => this.ops.purseTopUp(req))
+      this.answered()
+      if (env.state && this.compare(env.state) === 'newer') this.adopt(env.state)
+      const t = env.result.case === 'purseTopUp' ? env.result.value.topUp : undefined
+      if (!t) return { ok: false, code: 'bad-response' }
+      return { ok: true, topUp: topUpView(t) }
+    } catch (err) {
+      if (isUnreachable(err)) {
+        this.unanswered()
+        return { ok: false, code: 'offline' }
+      }
+      return { ok: false, code: errorCode(err) }
+    } finally {
+      req.token = ''
+    }
+  }
+
+  /** The purse log and its top-ups (GET /api/purse). A newer purse is shown at once. */
+  async purseRead(): Promise<HomeRead<PurseRead>> {
+    const r = await this.read(() => this.api.run(() => this.ops.purse()))
+    if (r.ok && r.value.purse && this.server) {
+      const held = this.server.purse
+      if (!held || held.gold !== r.value.purse.gold || held.topUpsLeft !== r.value.purse.topUpsLeft || (!!held.working !== !!r.value.purse.working)) void this.refreshState()
+    }
+    return r
+  }
+
+  /** Read the state again now (a gold gift arrived: the purse is part of it). */
+  async refreshState(): Promise<void> {
+    if (this.status !== 'online' || this.busy) return
+    if ((await this.reconcile()) === 'ok') this.refresh()
   }
 
   /** The screen's place and vitals, into the next report. */
@@ -960,7 +1030,7 @@ export class Link {
     path: string,
     key: string,
     body: Record<string, unknown>,
-    opts: { offline: boolean; barrier?: boolean; fall?: { hp: number; mana: number }; prepare?: (id: number) => void; undo?: () => void }
+    opts: { offline: boolean; barrier?: boolean; fall?: { hp: number; mana: number }; gold?: number; prepare?: (id: number) => void; undo?: () => void }
   ): Promise<{ outcome: Outcome; entry: OutboxEntry | null }> {
     const refused = (code: Extract<Outcome, { ok: false }>['code']) => ({ outcome: { ok: false, code } as Outcome, entry: null })
     if (this.stopped || !this.session) return refused('unknown')
@@ -993,14 +1063,15 @@ export class Link {
     path: string,
     key: string,
     body: Record<string, unknown>,
-    opts: { offline: boolean; barrier?: boolean; fall?: { hp: number; mana: number }; prepare?: (id: number) => void; undo?: () => void }
+    opts: { offline: boolean; barrier?: boolean; fall?: { hp: number; mana: number }; gold?: number; prepare?: (id: number) => void; undo?: () => void }
   ): Promise<{ outcome: Outcome; entry: OutboxEntry | null }> {
     const refused = (code: Extract<Outcome, { ok: false }>['code']) => ({ outcome: { ok: false, code } as Outcome, entry: null })
     if (this.fence === null && !(await this.own(false))) return refused('superseded')
-    const entry: OutboxEntry = { id: this.nextId++, kind, path, key, body: JSON.stringify(body), contract: CONTRACT_NUMBER, createdAt: this.now(), sent: false, barrier: opts.barrier === true, offline: opts.offline, ...(opts.fall ? { fall: opts.fall } : {}) }
+    const entry: OutboxEntry = { id: this.nextId++, kind, path, key, body: JSON.stringify(body), contract: CONTRACT_NUMBER, createdAt: this.now(), sent: false, barrier: opts.barrier === true, offline: opts.offline, ...(opts.fall ? { fall: opts.fall } : {}), ...(opts.gold ? { gold: opts.gold } : {}) }
     this.entries.push(entry)
     opts.prepare?.(entry.id)
     if (opts.offline && kind !== 'fall') this.refresh({ predicted: true })
+    else if (entry.gold) this.notePurse()
     const saved = await this.saveRecord()
     if (saved !== 'saved' && (this.durable || saved === 'fenced' || !this.canSend())) {
       // Not stored, so never sent and never kept: everything it showed goes.
@@ -1644,7 +1715,7 @@ export class Link {
    * the same key (`pending`); a refusal changes nothing. Consumables carry a
    * report barrier, since they read the stored vitals.
    */
-  async mutate<R extends Snapshot>(op: MutationOp): Promise<MutateResult<R>> {
+  async mutate<R extends Snapshot>(op: MutationOp, opts: { gold?: number } = {}): Promise<MutateResult<R>> {
     const s = this.session
     if (!s || this.stopped) return { ok: false, code: 'unknown' }
     const key = newKey()
@@ -1671,7 +1742,7 @@ export class Link {
         this.announce(earlier, outcome)
       }
     }
-    const { outcome: r } = await this.submit('mutation', path, key, body, { offline: false, barrier: op.kind === 'items' && op.op === 'use' })
+    const { outcome: r } = await this.submit('mutation', path, key, body, { offline: false, barrier: op.kind === 'items' && op.op === 'use', gold: opts.gold })
     if (!r.ok) return { ok: false, code: r.code }
     return { ok: true, res: r.result as R }
   }

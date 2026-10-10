@@ -200,6 +200,7 @@ export const RECIPES = CRAFTING.recipes;
 // ------------------------------------------------------------ names
 
 export function assetName(a: Pick<AssetView, 'kind' | 'id'>): string {
+  if (a.kind === 'gold') return 'Gold';
   if (a.kind === 'decoration') return homeItem(a.id)?.name ?? a.id;
   return itemName(a.id);
 }
@@ -208,6 +209,8 @@ export function assetName(a: Pick<AssetView, 'kind' | 'id'>): string {
 export function assetPhrase(a: AssetView): string {
   const name = assetName(a);
   if (a.kind === 'thanks') return `a thank-you for ${giftPhrase(a.id, 1)} you made`;
+  // A gold letter (purse-and-wardrobe.md 3.3): "20 gold".
+  if (a.kind === 'gold') return `${a.qty.toLocaleString('en-US')} gold`;
   if (a.kind === 'material') return `${a.qty} ${name.toLowerCase()}`;
   if (a.qty === 1) return `${/^[aeiou]/i.test(name) ? 'an' : 'a'} ${name}`;
   return `${a.qty} ${name}${name.endsWith('s') ? '' : 's'}`;

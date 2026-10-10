@@ -13,6 +13,9 @@
   import Icon from './Icon.svelte'
   import Panel from './Panel.svelte'
   import ArtIcon from './ArtIcon.svelte'
+  import { ui } from './store.svelte'
+  import { goldPhrase, shelfCopy } from '../content/purse'
+  import { parseAmount } from '../lib/purse'
 
   let { session, gate = 0, onClose }: { session: Session; gate?: number; onClose: () => void } = $props()
 
@@ -24,6 +27,16 @@
   let loaded = $state<'loading' | 'ready' | string>('loading')
   let view = $state<ShelfView | null>(null)
   let pickingSlot = $state<number | null>(null)
+  /** The stock sheet's price field (gold; empty: a free gift). */
+  let priceText = $state('')
+  const SHELF_PRICE_MAX = 9999
+  const priceTyped = $derived(priceText.trim() !== '')
+  const price = $derived(priceTyped ? parseAmount(priceText, SHELF_PRICE_MAX) : 0)
+  const me = $derived(session.link?.accountId ?? '')
+  /** Text fields must not leak keys to the game (Phaser captures WASD/E/F). */
+  const keepKeys = (e: KeyboardEvent) => {
+    if (e.key !== 'Escape') e.stopPropagation()
+  }
   /** Bumped when the pack or the homestead changes: the sources below are plain store fields. */
   const changed = busVersion(bus, EV.itemsChanged, EV.homeChanged)
   /**
@@ -149,10 +162,25 @@
     bus.emit(EV.itemsChanged)
   }
 
+  /** A priced slot: pay from the purse; the gold goes to whoever stocked it (purse-and-wardrobe.md 3.2). */
+  async function buy(slot: ShelfSlotView): Promise<void> {
+    const i = slot.slot
+    const r = await action.run(`buy-${i}`, () => village.shelfAction({ op: 'buy', gate, slot: i, pay: slot.price }), (done) => done.value.line ?? shelfCopy.bought(itemNameDisplay(slot), slot.price))
+    if (!r?.ok) return
+    view = r.value.shelf
+    homes.adoptShelfState(gate, view.hasShelf, view.slots.length > 0)
+    bus.emit(EV.toast, { text: r.value.line ?? shelfCopy.bought(itemNameDisplay(slot), slot.price), icon: 'coin' })
+    bus.emit(EV.villageChanged)
+    bus.emit(EV.itemsChanged)
+  }
+
   async function stock(slot: number, asset: Asset): Promise<void> {
-    const r = await action.run(`stock-${slot}`, () => village.shelfAction({ op: 'stock', gate, slot, asset }), 'Placed on the shelf for travellers to take.')
+    if (price === null) return
+    const p = price
+    const r = await action.run(`stock-${slot}`, () => village.shelfAction({ op: 'stock', gate, slot, asset, ...(p ? { price: p } : {}) }), p ? shelfCopy.stockedPriced(p) : 'Placed on the shelf for travellers to take.')
     if (!r) return
     pickingSlot = null
+    priceText = ''
     if (!r.ok) return
     view = r.value.shelf
     homes.adoptShelfState(gate, view.hasShelf, view.slots.length > 0)
@@ -178,7 +206,7 @@
   closeLabel="Close the gift shelf"
   {onClose}
 >
-  <p class="lede">Pure gifts for travellers walking past on the Commons lane. Take one into your pack: exactly one gift per traveller each day.</p>
+  <p class="lede">{shelfCopy.lede}</p>
   {#if view?.takenToday}
     <p class="notice"><Icon name="check" size={14} /> You have taken your gift from this shelf today. Walk past again tomorrow.</p>
   {/if}
@@ -195,21 +223,38 @@
             <div class="item-info">
               <span class="thumb"><ArtIcon art={`icon-${slot.itemDef}`} name="sparkle" size={20} /></span>
               <div class="details">
-                <span class="name">{itemNameDisplay(slot)}{slot.qty > 1 ? ` ×${slot.qty}` : ''}</span>
+                <span class="name">{itemNameDisplay(slot)}{slot.qty > 1 ? ` ×${slot.qty}` : ''}{#if slot.price > 0}<span class="price" data-testid={`price-slot-${i}`}> · <ArtIcon art="purse-price-tag" name="coin" size={14} /> {goldPhrase(slot.price)}</span>{/if}</span>
                 {#if slot.maker}
                   <span class="maker"><Icon name="heart" size={12} /> by {slot.maker.name}</span>
                 {/if}
               </div>
             </div>
-            <button
-              type="button"
-              class="small primary"
-              disabled={action.busy !== null || view.takenToday}
-              onclick={() => take(i)}
-              data-testid={`take-slot-${i}`}
-            >
-              {action.busy === `take-${i}` ? 'Taking…' : view.takenToday ? 'Taken today' : 'Take gift'}
-            </button>
+            {#if slot.price > 0}
+              {#if slot.stockedBy === me}
+                <span class="yours">{shelfCopy.yours}</span>
+              {:else}
+                <button
+                  type="button"
+                  class="small primary"
+                  disabled={action.busy !== null || (ui.purse?.gold ?? 0) < slot.price}
+                  title={(ui.purse?.gold ?? 0) < slot.price ? shelfCopy.short(slot.price) : undefined}
+                  onclick={() => buy(slot)}
+                  data-testid={`buy-slot-${i}`}
+                >
+                  {action.busy === `buy-${i}` ? shelfCopy.buying : shelfCopy.buy(slot.price)}
+                </button>
+              {/if}
+            {:else}
+              <button
+                type="button"
+                class="small primary"
+                disabled={action.busy !== null || view.takenToday}
+                onclick={() => take(i)}
+                data-testid={`take-slot-${i}`}
+              >
+                {action.busy === `take-${i}` ? 'Taking…' : view.takenToday ? 'Taken today' : 'Take gift'}
+              </button>
+            {/if}
           {:else}
             <div class="empty-info">
               <span class="empty-lbl">Empty slot</span>
@@ -229,7 +274,12 @@
         </li>
         {#if pickingSlot === i && view.canStock}
           <li class="picker-row">
-            <p class="picker-hint">Choose a gift from your pack to leave on the shelf:</p>
+            <label class="price-field">
+              <span>{shelfCopy.priceLabel}</span>
+              <input type="text" inputmode="numeric" autocomplete="off" bind:value={priceText} placeholder={shelfCopy.pricePlaceholder} onkeydown={keepKeys} data-testid="stock-price" />
+            </label>
+            {#if price === null}<p class="price-bad">{shelfCopy.priceHint(SHELF_PRICE_MAX)}</p>{/if}
+            <p class="picker-hint">{price ? shelfCopy.pickPriced(price) : 'Choose a gift from your pack to leave on the shelf:'}</p>
             {#if stockChoices.length === 0}
               <p class="none">Nothing in your pack that can be gifted.</p>
             {:else}
@@ -239,7 +289,7 @@
                     <button
                       type="button"
                       class="stock-btn"
-                      disabled={action.busy !== null}
+                      disabled={action.busy !== null || price === null}
                       onclick={() => stock(i, c.asset)}
                     >
                       <span class="thumb"><ArtIcon art={`icon-${c.asset.id}`} name="sparkle" size={16} /></span>
@@ -266,6 +316,35 @@
 </Panel>
 
 <style>
+  .price {
+    white-space: nowrap;
+    color: var(--wood);
+  }
+  .yours {
+    font-size: 12px;
+    color: var(--text-faint);
+    font-style: italic;
+  }
+  .price-field {
+    display: grid;
+    gap: 4px;
+    margin: 0 0 6px;
+    font-size: 12.5px;
+    color: var(--text-soft);
+  }
+  .price-field input {
+    min-height: 40px;
+    max-width: 180px;
+    font-size: 16px;
+  }
+  :global(:root.touch) .price-field input {
+    min-height: 44px;
+  }
+  .price-bad {
+    margin: 0 0 6px;
+    font-size: 12px;
+    color: var(--danger);
+  }
   .lede {
     font-size: 13px;
     color: #5a4632;

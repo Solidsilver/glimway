@@ -7,6 +7,7 @@ import { WildsRegionResultSchema, HomesteadLandSchema, type WildsChunk, type Wil
 import { decodeChunk } from './chunks.ts';
 import { CompanionsRequestSchema, MountHomeRequestSchema, MountOutRequestSchema, StableExtendRequestSchema, StallRequestSchema, type CompanionsRequest, type MountHomeRequest, type MountOutRequest, type StableExtendRequest, type StallRequest } from '../gen/glimway/v1/companions_pb.js';
 import { FishCastRequestSchema, FishSettleRequestSchema, FishCancelRequestSchema, FishingWatersSchema, type FishCastRequest, type FishSettleRequest, type FishCancelRequest, type FishingWaters } from '../gen/glimway/v1/fishing_pb.js';
+import { PurseReadSchema, PurseTopUpRequestSchema, type PurseRead, type PurseTopUpRequest } from '../gen/glimway/v1/purse_pb.js';
 import { ReportRequestSchema, type ReportRequest, QuestStepRequestSchema, type QuestStepRequest, MarkRequestSchema, type MarkRequest, TakePaperRequestSchema, type TakePaperRequest, SettleEchoRequestSchema, type SettleEchoRequest, FallRequestSchema, type FallRequest, ProfileReportSchema, type ProfileReport, SpendRequestSchema, type SpendRequest, WildsClaimRequestSchema, type WildsClaimRequest, WildsLanternRequestSchema, type WildsLanternRequest } from '../gen/glimway/v1/operations_pb.js';
 
 export type Transport = (method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown, extra?: { headers?: Record<string, string>; binary?: boolean; keepalive?: boolean }) => Promise<unknown>;
@@ -42,6 +43,14 @@ export interface OperationsApi {
   fishCancel(request: FishCancelRequest): Promise<Envelope>;
   /** Each water's band in an area (design crafts 5.4: the band and nothing else). */
   fishingWaters(area: string): Promise<FishingWaters>;
+  /**
+   * The gold purse (purse-and-wardrobe.md 2.2): a top-up carries the Habitica
+   * token in this one request and nowhere else. It never goes through the
+   * outbox (which stores bodies) or a replay.
+   */
+  purseTopUp(request: PurseTopUpRequest): Promise<Envelope>;
+  /** The purse, the last 50 top-ups and gold lines (GET /api/purse). */
+  purse(): Promise<PurseRead>;
 }
 function validated<T>(read: () => T): T {
   try { return read(); } catch { throw new ApiError('bad-response', { status: 200 }); }
@@ -97,6 +106,18 @@ export function createOperationsApi(send: Transport): OperationsApi {
     async fishCast(req) { return decodeEnvelope(await send('POST', '/api/fishing/cast', toJson(FishCastRequestSchema, req, { alwaysEmitImplicit: true }))); },
     async fishSettle(req) { return decodeEnvelope(await send('POST', '/api/fishing/settle', toJson(FishSettleRequestSchema, req, { alwaysEmitImplicit: true }))); },
     async fishCancel(req) { return decodeEnvelope(await send('POST', '/api/fishing/cancel', toJson(FishCancelRequestSchema, req, { alwaysEmitImplicit: true }))); },
+    async purseTopUp(req) {
+      const out = decodeEnvelope(await send('POST', '/api/purse/top-up', toJson(PurseTopUpRequestSchema, req, { alwaysEmitImplicit: true })));
+      if (out.result.case !== 'purseTopUp' || !out.result.value.topUp) throw new ApiError('bad-response', { status: 200 });
+      return out;
+    },
+    async purse() { const raw = await send('GET', '/api/purse'); return validated(() => {
+      // The read's own message; a mixed { state, result } answer is read the same way.
+      const body = raw && typeof raw === 'object' && 'result' in raw && 'state' in raw ? (raw as { result: unknown }).result : raw;
+      const out = decodeWire(PurseReadSchema, body);
+      if (!out.purse || out.purse.gold < 0 || out.purse.topUpsLeft < 0) throw new Error('invalid purse');
+      return out;
+    }); },
     async fishingWaters(area) { const raw = await send('GET', `/api/fishing/waters?area=${encodeURIComponent(area)}`); return validated(() => {
       const out = decodeWire(FishingWatersSchema, raw);
       for (const w of out.waters) if (!w.id) throw new Error('invalid water');

@@ -26,6 +26,9 @@
   import Panel from './Panel.svelte'
   import ArtIcon from './ArtIcon.svelte'
   import PapersTab from './PapersTab.svelte'
+  import PurseAmount from './PurseAmount.svelte'
+  import { goldPhrase, purseCopy } from '../content/purse'
+  import { parseAmount } from '../lib/purse'
 
   /**
    * Everything you carry, in one place (I or the HUD's bag button). At the
@@ -271,7 +274,7 @@
       e.instance && e.instance.maxCondition > 0 ? wearWords(e.instance) : '',
       e.instance?.wardenSet ? 'warden-set' : '',
       k && k === hand.kind ? inventoryCopy.inHandTag.toLowerCase() : '',
-      e.inHand ? 'in your off hand' : '',
+      e.inHand ? inventoryCopy.atBeltSpoken : '',
       e.pocket ? `in pocket ${e.pocket}` : '',
       !seen.has(e.key) ? inventoryCopy.newBadge.toLowerCase() : ''
     ]
@@ -312,7 +315,7 @@
       void act(`carry:${e.key}`, () => items.offHand(null), `You put ${e.name.toLowerCase()} away.`)
       return
     }
-    void act(`carry:${e.key}`, () => items.offHand(e.instance ? { instance: e.instance.id } : { itemDef: e.id }), `You carry ${giftPhrase(e.id, 1)} in your off hand.`)
+    void act(`carry:${e.key}`, () => items.offHand(e.instance ? { instance: e.instance.id } : { itemDef: e.id }), inventoryCopy.carried(giftPhrase(e.id, 1)))
   }
 
   /** Seeds and saplings go into your own land, at your feet. */
@@ -356,6 +359,31 @@
     if (!feed) return []
     const p = session.state.position
     return feed.nearby(p.x, p.y, ITEM_RULES.give.radiusTiles * 16)
+  }
+
+  // ---- the Purse row (purse-and-wardrobe.md 3.4): gold handed to someone standing near
+  const purseGold = $derived(ui.purse?.gold ?? 0)
+  /** Who the gold goes to (picked from the people nearby), then how much. */
+  let goldTo = $state<{ accountId: string; displayName: string } | null>(null)
+  let goldText = $state('')
+  const goldAmount = $derived(parseAmount(goldText, purseGold))
+
+  function toggleGold(): void {
+    toggleOpen('give:purse')
+    goldTo = null
+    goldText = ''
+  }
+
+  function giveGold(): void {
+    const to = goldTo
+    const n = goldAmount
+    if (!to || n === null) return
+    void act('give:purse', () => items.giveGold(to.accountId, n), purseCopy.gave(to.displayName, n)).then(() => {
+      if (open === null) {
+        goldTo = null
+        goldText = ''
+      }
+    })
   }
 
   function giveIt(e: InventoryEntry, to: { accountId: string; displayName: string }): void {
@@ -460,7 +488,7 @@
       {#if e.section === 'main' && !e.instance && e.qty > 1}<span class="times">×{e.qty}</span>{/if}
       {#if !seen.has(e.key)}<span class="tag new">{inventoryCopy.newBadge}</span>{/if}
       {#if e.pocket}<span class="tag" data-testid="in-pocket">In pocket {e.pocket}</span>{/if}
-      {#if e.inHand}<span class="tag" data-testid="in-hand">In your off hand</span>{/if}
+      {#if e.inHand}<span class="tag" data-testid="in-hand">{inventoryCopy.atBeltTag}</span>{/if}
       {#if k && k === hand.kind}<span class="tag held" data-testid="in-main-hand">{inventoryCopy.inHandTag}</span>{/if}
     </span>
   </div>
@@ -642,6 +670,32 @@
       <button type="button" class="act chest" data-testid="own-chest" onclick={onOwnChest}><Icon name="key" size={12} /> {inventoryCopy.ownChest}</button>
     {/if}
   </section>
+  {#if model && purseGold > 0}
+    <section class="purse-row" data-testid="purse-row" aria-label={purseCopy.title} data-dirty={open === 'give:purse' && goldText ? 'true' : undefined}>
+      <span class="purse-coin"><ArtIcon art="purse-gold" name="coin" size={16} /></span>
+      <b class="purse-gold">{goldPhrase(purseGold)}</b>
+      <button type="button" class="act" data-act="give-gold" aria-expanded={open === 'give:purse'} disabled={action.busy !== null} onclick={toggleGold}>{purseCopy.give}</button>
+      {#if open === 'give:purse'}
+        {@const people = nearby()}
+        <div class="chooser purse-give" data-testid="give-gold-to">
+          {#if !goldTo}
+            {#if people.length === 0}
+              <small>{purseCopy.giveNobody}</small>
+            {:else}
+              <small>{purseCopy.giveTo}</small>
+              {#each people as p (p.accountId)}
+                <button type="button" class="act" data-give-gold-to={p.accountId} onclick={() => (goldTo = p)}>{p.displayName}</button>
+              {/each}
+            {/if}
+          {:else}
+            <small>{purseCopy.giveTo} {goldTo.displayName}</small>
+            <PurseAmount bind:value={goldText} max={purseGold} label="How much gold" testid="give-gold-amount" autofocus />
+            <button type="button" class="act primary" disabled={action.busy !== null || goldAmount === null} onclick={giveGold} data-testid="give-gold">{purseCopy.giveButton(goldAmount)}</button>
+          {/if}
+        </div>
+      {/if}
+    </section>
+  {/if}
   {#if model && model.thanks.length > 0}
     <details class="thanks" data-testid="thanks">
       <summary>{inventoryCopy.thanks} ({model.thanks.length})</summary>
@@ -733,6 +787,36 @@
   }
   .fine {
     margin: 0 0 10px;
+  }
+  /* ---- the Purse row ---- */
+  .purse-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0 0;
+    padding: 6px 10px;
+    border: 2px solid var(--paper-line);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.3);
+  }
+  .purse-coin {
+    display: inline-grid;
+    place-items: center;
+    color: var(--gold-deep);
+  }
+  .purse-gold {
+    font-family: var(--font-display);
+    font-weight: normal;
+    color: var(--wood-dark);
+  }
+  .purse-row > .act {
+    margin-left: auto;
+  }
+  .chooser.purse-give {
+    flex: 1 1 100%;
+    display: grid;
+    gap: 8px;
   }
   small {
     font-size: 12.5px;

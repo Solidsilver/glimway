@@ -13,6 +13,31 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+### For players
+
+- You can move gold from Habitica into a purse here. Find it in the Menu,
+  under your Habitica hero. It spends Habitica gold, and you're asked each
+  time.
+- Purse gold buys goods from Hazel, Finn and the fair stall, and timber,
+  stone and fiber from Silas.
+- Put a price in gold on things you leave on your gate shelf. Friends pay you
+  when they buy them.
+- Send gold to a friend in a letter, or hand it over when you're standing
+  together.
+- Wear any Habitica gear you own. Choose it in the Character panel's new
+  Wardrobe tab. Your stats and your Habitica outfit stay as they are.
+- What you carry in your off hand is now "at your belt".
+
+### Technical
+
+- The purse in the game: the Menu's purse card with Top up (it syncs first,
+  then the consent card; the token rides in that one request, never the
+  outbox), the purse log sheet (`GET /api/purse`), gold in the HUD on desktop,
+  gold choices at the sellers, shelf prices and Buy, gold letters, gold gives
+  and the gold gift toast. Gold buys, letters and gives are predicted from the
+  outbox entry's stored purse change. The purse pass's icons are packed
+  (`purse.webp`).
+
 ## [0.5.2] - 2026-10-09
 
 ### For players

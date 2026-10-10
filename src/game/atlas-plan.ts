@@ -133,6 +133,8 @@ export interface PackedManifest {
   indoors: PackedCanvasPack
   /** The 0.5 crafts pass (assets/generated/crafts-pass/): ability icons and effects, the stable, fishing, HUD icons; 64 texels per world tile. */
   crafts: PackedCanvasPack
+  /** The 0.6 purse pass (assets/generated/purse-pass/): the coin, purse, wardrobe, price tag and gold letter icons; 64 texels per world tile. */
+  purse: PackedCanvasPack
   /** The 16 terrain cells, 4×4, each `cell` texels a side (one 16-px world tile at `density`). */
   terrain: { image: string; size: [number, number]; cell: number; density: number }
   ground: PackedGround

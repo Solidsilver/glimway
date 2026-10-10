@@ -31,9 +31,12 @@ checkpoint rewind.
 **Owner decisions after revision 4** (these override the text below where
 they differ):
 
-- **Syncs stay client-side; the server checks the token only at login.** The
+- **Syncs stay client-side; the server checks the token at login.** The
   browser fetches Habitica and reports the profile; the server makes one
-  read-only `GET /user` per sign-in and never stores the token. Sessions slide
+  read-only `GET /user` per sign-in and never stores the token. (Since 0.6
+  the token also reaches the server in a purse top-up and a wardrobe gear
+  check the player starts, for that one request:
+  `docs/design/purse-and-wardrobe.md` 2.2, 4.3.) Sessions slide
   for seven idle days, at most thirty days from login, so a verified
   checkpoint happens at least monthly.
 - **Game-time calendar: one wick is seven real days.** Twelve wicks make a

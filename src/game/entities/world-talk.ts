@@ -8,6 +8,7 @@
 import { dialogueFor, emberDialogue, type Dialogue, type DialogueChoice } from '../../content/world'
 import { EMBER_COSTS, isLit, ROAD_LANTERNS, type EmberSpend, type RoadLanternId } from '../../lib/embers'
 import { ITEMS } from '../../lib/items'
+import { sellerChoices } from '../../lib/purse'
 import { bus, EV } from '../events'
 import type { Session } from '../session'
 import { tileBottom, tileMid } from '../../lib/tile'
@@ -214,11 +215,12 @@ export class WorldTalk {
     }
     // What a resident sells at their own door (Hazel's kitchen, Finn's
     // mill door): a choice at the end of the talk, when there's a world to
-    // keep the books. Their words for it are the reply.
+    // keep the books. Their words for it are the reply. A good priced in
+    // embers and in gold is two choices (purse-and-wardrobe.md 3.1).
     const seller = (ITEMS.sellers ?? []).find((sl) => sl.npc.toLowerCase() === id && !sl.festival)
     if (seller && session.link) {
-      for (const g of seller.goods) {
-        payload = { ...payload, choices: withChoiceAndNotYet(payload.choices, { text: g.label, reply: [g.line], action: `buy:${seller.id}:${g.item}` }) }
+      for (const c of sellerChoices(seller, { reply: true })) {
+        payload = { ...payload, choices: withChoiceAndNotYet(payload.choices, c) }
       }
     }
 

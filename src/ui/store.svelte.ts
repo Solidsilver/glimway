@@ -1,3 +1,4 @@
+import type { PurseView } from '../lib/purse'
 import type { AbilityPayload, AreaPayload, GoalDirPayload, MagicPayload, GoalLinePayload, LinkPayload, PresencePayload, PromptPayload, QuestPayload, StatsPayload, ToastPayload } from '../game/events'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types'
 import { bus, EV } from '../game/events'
@@ -62,7 +63,9 @@ interface Banner {
  * Written by App.svelte's bus wiring, read by UI components.
  */
 class UiStore {
-  stats = $state<StatsPayload>({ hp: 5, maxHp: 5, mana: 5, maxMana: 5, embers: 0 })
+  stats = $state<StatsPayload>({ hp: 5, maxHp: 5, mana: 5, maxMana: 5, embers: 0, gold: 0 })
+  /** Connected play: the purse (gold, top-ups left today, a top-up still working); null until a world says. */
+  purse = $state<PurseView | null>(null)
   quest = $state<QuestPayload>({ stage: 'new', objective: '' })
   /** The pinned "How do I…?" guide's step, when one leads the goal line (null: the story). */
   goalLine = $state<GoalLinePayload>({ guide: null })

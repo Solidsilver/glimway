@@ -24,6 +24,7 @@
   import { ui } from './ui/store.svelte'
   import { Session } from './game/session'
   import type { GameState } from './lib/state'
+  import type { PurseView } from './lib/purse'
   import { parseRef, questById, questTitle, nextStep, SIGNPOST, trigger } from './lib/quests'
   import { questGoal, roadGoal } from './content/quests/index'
   import { discoveryInfo, areaInfo, displayArea } from './content/world'
@@ -157,6 +158,12 @@
         return
       }
       ui.stats = p
+    }
+    // The purse (purse-and-wardrobe.md 2.1): its card, the HUD's gold and the Hero page read it.
+    const onPurse = (p: PurseView) => {
+      ui.purse = p
+      ui.stats = { ...ui.stats, gold: p.gold }
+      if (pendingStats) pendingStats = { ...pendingStats, gold: p.gold }
     }
     const onQuest = (p: QuestPayload) => {
       // The first snapshot after load is a reading, not a change.
@@ -314,6 +321,7 @@
     }
     return listen({
       [EV.stats]: onStats,
+      [EV.purse]: onPurse,
       [EV.quest]: onQuest,
       [EV.area]: onArea,
       [EV.prompt]: onPrompt,

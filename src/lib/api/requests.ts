@@ -34,8 +34,10 @@ type Fields<M> = Omit<M, '$typeName' | '$unknown' | 'op' | 'where'>;
  * JSON-shaped asset the game already builds.
  */
 export type StorageMoveAction = { direction: 'deposit' | 'withdraw'; asset: Asset; chest?: ChestId };
-export type ShelfAction = { action: 'stock' | 'take'; gate: number; slot: number; asset?: Asset };
-export type MailSendAction = { toId: string; asset: Asset };
+/** `price`: gold, with `stock` (0 or absent: a free gift); `buy` pays it (purse-and-wardrobe.md 3.2). */
+export type ShelfAction = { action: 'stock' | 'take' | 'buy'; gate: number; slot: number; asset?: Asset; price?: number };
+/** A letter carries one thing: a parcel (`asset`) or gold from the purse (`gold`), never both (3.3). */
+export type MailSendAction = { toId: string; asset: Asset } | { toId: string; gold: number };
 /** What an item mutation carries: any of the grab-bag request's fields but the header. */
 export type ItemsFields = Partial<Fields<ItemsRequest>>;
 
@@ -57,7 +59,7 @@ export function homesteadRequest(keyed: Keyed, action: HomeAction): Record<strin
 
 /** A gate-shelf mutation (stock or take). */
 export function shelfRequest(keyed: Keyed, action: ShelfAction): Record<string, unknown> {
-  return wire(ShelfRequestSchema, keyed, { ...action, ...(action.asset ? { asset: action.asset } : {}) });
+  return wire(ShelfRequestSchema, keyed, { ...action, ...(action.asset ? { asset: action.asset } : {}), ...(action.price ? { price: action.price } : {}) });
 }
 
 /** A storage move between the pack and a chest at home. */

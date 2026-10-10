@@ -17,10 +17,16 @@ same UI are appended at the end of this file.
 
 ## Security invariants (non-negotiable)
 
-- **Read-only**: `HabiticaClient` has exactly one method, `fetchProfile()`.
-  Glimway never scores tasks, spends gold, changes stats, equips items,
-  casts spells, or consumes Habitica possessions. Ordinary gameplay causes
-  zero Habitica requests; sync is one explicit `GET /user` per user action.
+- **Read-only in the browser**: `HabiticaClient` has exactly one method,
+  `fetchProfile()`. The browser never scores tasks, spends gold, changes
+  stats, equips items, casts spells, or consumes Habitica possessions.
+  Ordinary gameplay causes zero Habitica requests; sync is one explicit
+  `GET /user` per user action.
+- **The server writes for a top-up, and nowhere else** (0.6, the purse,
+  `docs/design/purse-and-wardrobe.md` 2.2): when the player presses Top up and
+  agrees, it creates a reward, scores it `down` once and deletes it, for the
+  amount the player typed. The token rides in that one request and is never
+  stored, logged or returned.
 - **Token in memory only, unless the player opts in**: `HabiticaCredentials`
   lives in a JS variable for the session. It is never written to GameState,
   IndexedDB saves, save exports, logs, error messages, URLs, or source

@@ -5,6 +5,21 @@
    * match the game's pixel art at any size.
    */
   const ICONS: Record<string, string[]> = {
+    // A purse coin (purse-and-wardrobe.md 9): round, a lamp stamped on its face.
+    coin: [
+      '....####....',
+      '..##++###...',
+      '.#++######-.',
+      '.#+###.##-#.',
+      '#+###...##-#',
+      '#####...###-',
+      '####.....##-',
+      '####.....##-',
+      '.###.....#-.',
+      '.##########.',
+      '..#######-..',
+      '....####....'
+    ],
     heart: [
       '............',
       '.###....###.',

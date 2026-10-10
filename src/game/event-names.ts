@@ -2,6 +2,7 @@ import type { LibrarySection } from '../content/library'
 import type { HomePlantView } from '../lib/api/types'
 import type { BeltKind } from '../lib/belt'
 import type { HabiticaProfile } from '../lib/habitica/types'
+import type { PurseView } from '../lib/purse'
 import type { PresenceStatus } from '../lib/presence-client.ts'
 import type { HeldPayload } from './held'
 import type { ArrangeView, NamePrompt, PlacementCommand, PlacementView } from './homestead'
@@ -67,6 +68,8 @@ export const EV = {
   witness: 'game:witness',
   /** Connected play: the companions view changed (follower, yard pets, the mount that's out). */
   companions: 'game:companions',
+  /** Connected play: the purse the game shows changed (src/lib/purse.ts PurseView: gold, top-ups left, a working top-up). */
+  purse: 'game:purse',
   /** Open the Character panel's Companions page (`at: 'stable'` scrolls to the stable). */
   openCompanions: 'ui:open-companions',
   /** The mount that's out, as the hero has it now: { key, riding, led } (MountPayload); null when none is out. */
@@ -175,6 +178,8 @@ export interface StatsPayload {
   maxMana: number
   /** Ember balance (spent at lanterns and the Ashwatch chest). */
   embers: number
+  /** The purse's gold (purse-and-wardrobe.md 2.1), with unanswered gold spends on top; 0 without a world. */
+  gold: number
 }
 
 export interface QuestPayload {
@@ -451,6 +456,7 @@ export interface EventMap {
   [EV.gift]: GiftPayload
   [EV.witness]: WitnessPayload
   [EV.companions]: void
+  [EV.purse]: PurseView
   [EV.openCompanions]: { at?: 'stable' } | undefined
   [EV.mount]: MountPayload | null
   [EV.mutationResolved]: MutationResolvedPayload

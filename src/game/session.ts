@@ -411,7 +411,8 @@ export class Session {
       maxHp: s.maxHp,
       mana: Math.floor(s.mana),
       maxMana: s.maxMana,
-      embers: s.embers
+      embers: s.embers,
+      gold: this.link?.purse.gold ?? 0
     }
     bus.emit(EV.stats, payload)
   }
