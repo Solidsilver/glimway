@@ -6,7 +6,7 @@
  * homesteads, and Silas, who was meant to drive the seventh cart, builds the houses.
  * Beyond lie the Wilds. They are not cursed; they drift, because the land forgets what it isn't reminded of. The outer Wilds turn
  * on a schedule the Keeper posts a day ahead, and at a turning they give back what they were keeping: objects meant to come home.
- * Embers are warmth, and lamps are kept by naming them.
+ * Glims hold light, and lamps are kept by naming them.
  */
 
 import type { LocationInfo, Dialogue } from './world.ts';
@@ -18,7 +18,7 @@ export interface BuilderNPC {
     firstMeeting: Dialogue;
     offerCampsite: Dialogue;
     sellDecorations: Dialogue;
-    notEnoughEmbers: Dialogue;
+    notEnoughGlims: Dialogue;
     afterUpgrade: Dialogue;
     idleLines: string[];
   };
@@ -108,10 +108,10 @@ export const BUILDER_NPC_DATA: BuilderNPC = {
         'Got a few pieces finished if you want the place looking lived-in. Pegged, not nailed. Iron goes at the Hall price these days.'
       ]
     },
-    notEnoughEmbers: {
+    notEnoughGlims: {
       speaker: 'Silas',
       lines: [
-        'You\'re a bit short on warmth for that one, neighbour. Come back with a few more embers. The wood will wait. Wood\'s good at waiting.'
+        'You\'re a few glims short for that one, neighbour. The wood will wait. Wood\'s good at waiting.'
       ]
     },
     afterUpgrade: {
@@ -148,7 +148,7 @@ export const BUILDING_BLURBS: Record<string, string> = {
   stable: 'Timber walls, a tack room and one bay with a half door. Your mounts stand here between rides, and it grows a stall at a time.'
 };
 
-export const DECORATIONS_EMBER: Decoration[] = [
+export const DECORATIONS_GLIMS: Decoration[] = [
   { id: 'wooden-stool', name: 'Wooden Stool', blurb: 'Three uneven legs, perfectly balanced. Silas swears he meant it.', category: 'furniture', footprint: [1, 1] },
   { id: 'reading-chair', name: 'Reading Chair', blurb: 'Overstuffed, a little frayed, and exactly the right distance from the lamp.', category: 'furniture', footprint: [1, 2] },
   { id: 'braided-rug', name: 'Braided Rug', blurb: 'Thick wool in old Carting colours, smelling faintly of lavender.', category: 'decor', footprint: [2, 2] },

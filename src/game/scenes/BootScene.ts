@@ -12,6 +12,7 @@ import { createBuildings } from '../buildings'
 import { createIndoorsArt } from '../indoors-art'
 import { createCraftsArt } from '../crafts-art'
 import { createPurseArt } from '../purse-art'
+import { createGlimsArt } from '../glims-art'
 import { HOMESTEAD_DATA } from '../../lib/homestead'
 
 /**
@@ -72,8 +73,10 @@ export class BootScene extends Phaser.Scene {
     createIndoorsArt(this)
     // The 0.5 crafts pass: ability icons and effects, the stable, fishing, HUD icons.
     createCraftsArt(this)
-    // The 0.6 purse pass: the coin, the purse, the price tag, the gold letter, the wardrobe.
+    // The 0.6 purse pass: the price tag and the wardrobe (its coin and gold letter are unused since glims).
     createPurseArt(this)
+    // The 0.6.1 glims pass: a glim, its HUD size, a few glims.
+    createGlimsArt(this)
 
     this.scene.start('World')
   }

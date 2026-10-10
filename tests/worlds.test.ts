@@ -121,7 +121,7 @@ for (const area of BUILT) {
     for (const en of w.enemies) assert.ok(reach.has(key(en)), `enemy ${en.id} unreachable`);
     for (const n of w.npcs) assert.ok(touchable(reach, n), `${n.id} cannot be walked up to`);
     for (const d of w.discoverySpots) assert.ok(touchable(reach, d), `${d.id} cannot be walked up to`);
-    for (const e of w.emberSpots) assert.ok(touchable(reach, e), `ember spot ${e.id} cannot be walked up to`);
+    for (const e of w.glimSpots) assert.ok(touchable(reach, e), `glim spot ${e.id} cannot be walked up to`);
     for (const [name, spot] of [['mural', w.mural], ['shrine', w.shrine], ['lantern', w.villageLantern]] as const)
       if (spot) assert.ok(touchable(reach, spot), `${name} cannot be walked up to`);
   });
@@ -160,18 +160,18 @@ test('leaving through an edge brings you in from the opposite edge', () => {
   }
 });
 
-test('every ember spot sits on its prop and the three road lanterns are in Brackenwood', () => {
+test('every glim spot sits on its prop and the three road lanterns are in Brackenwood', () => {
   for (const area of AREAS) {
     const w = worlds[area];
-    for (const e of w.emberSpots) {
+    for (const e of w.glimSpots) {
       const onProp = w.props.some((p) => p.tx === e.tx && p.ty === e.ty);
-      assert.ok(onProp, `${area} ember spot ${e.id} has no prop to stand on`);
+      assert.ok(onProp, `${area} glim spot ${e.id} has no prop to stand on`);
       assert.ok(!w.trees.some((t) => t.tx === e.tx && t.ty === e.ty), `${e.id} shares a tile with a tree`);
     }
   }
-  assert.deepEqual(worlds.woodland.emberSpots.map((e) => e.id), ['road-1', 'road-2', 'road-3']);
-  assert.deepEqual(worlds.village.emberSpots.map((e) => e.id), ['hearth']);
-  assert.deepEqual(worlds.ruin.emberSpots.map((e) => e.id), ['chest']);
+  assert.deepEqual(worlds.woodland.glimSpots.map((e) => e.id), ['road-1', 'road-2', 'road-3']);
+  assert.deepEqual(worlds.village.glimSpots.map((e) => e.id), ['hearth']);
+  assert.deepEqual(worlds.ruin.glimSpots.map((e) => e.id), ['chest']);
 });
 
 test('the journey reads in one direction: village → woodland → ruin', () => {

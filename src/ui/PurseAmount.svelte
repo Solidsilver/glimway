@@ -1,10 +1,10 @@
 <script lang="ts">
   /**
-   * An amount of gold: a whole number from 1 to `max`, and **All**, which
-   * only fills the field (purse-and-wardrobe.md 2.1, owner 2026-10-09). It
-   * never sends anything: the caller's own button does, and its label
-   * follows the number. Shared by the consent card, the mailbox's gold row
-   * and the Inventory's Give.
+   * An amount of glims: a whole number from 1 to `max`, and **Max**, which
+   * only fills the field with `max` (silas-yard.md 1.5; purse-and-wardrobe.md
+   * 2.1, owner 2026-10-09). It never sends anything: the caller's own button
+   * does, and its label follows the number. Shared by the consent card, the
+   * mailbox's glims row and the Inventory's Give.
    */
   import { purseCopy } from '../content/purse'
 
@@ -12,10 +12,11 @@
     value = $bindable(''),
     max,
     label = purseCopy.amountLabel,
+    maxTitle = purseCopy.maxTitle,
     disabled = false,
-    testid = 'gold-amount',
+    testid = 'glims-amount',
     autofocus = false
-  }: { value?: string; max: number; label?: string; disabled?: boolean; testid?: string; autofocus?: boolean } = $props()
+  }: { value?: string; max: number; label?: string; maxTitle?: string; disabled?: boolean; testid?: string; autofocus?: boolean } = $props()
 
   let input: HTMLInputElement | undefined = $state()
 
@@ -24,7 +25,7 @@
     if (e.key !== 'Escape') e.stopPropagation()
   }
 
-  function fillAll(): void {
+  function fillMax(): void {
     value = String(max)
     input?.focus()
   }
@@ -50,7 +51,7 @@
       data-testid={testid}
     />
   </label>
-  <button type="button" class="ghost all" {disabled} title={purseCopy.allTitle} onclick={fillAll} data-testid={`${testid}-all`}>{purseCopy.all}</button>
+  <button type="button" class="ghost max" disabled={disabled || max < 1} title={maxTitle} onclick={fillMax} data-testid={`${testid}-max`}>{purseCopy.max}</button>
 </div>
 
 <style>
@@ -74,7 +75,7 @@
     box-sizing: border-box;
     width: 100%;
   }
-  .all {
+  .max {
     flex: none;
     min-height: 44px;
     text-decoration: underline;

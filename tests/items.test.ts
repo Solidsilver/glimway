@@ -211,7 +211,7 @@ test('every pickup lies on a walkable, reachable tile, clear of exits and other 
     assert.ok(!blocked(w).has(key(t)), `${p.id} at ${key(t)} is not walkable`);
     assert.ok(reachable(w).has(key(t)), `${p.id} at ${key(t)} cannot be reached`);
     assert.ok(!w.exits.some((e) => t.tx >= e.tx - 1 && t.tx <= e.tx + e.tw && t.ty >= e.ty - 1 && t.ty <= e.ty + e.th), `${p.id} sits on an exit`);
-    const others: Tile[] = [...w.npcs, ...w.emberSpots, ...w.discoverySpots, ...allPlacements().filter((q) => q.source.area === p.area).map((q) => q.source)];
+    const others: Tile[] = [...w.npcs, ...w.glimSpots, ...w.discoverySpots, ...allPlacements().filter((q) => q.source.area === p.area).map((q) => q.source)];
     for (const s of [w.mural, w.shrine, w.library, w.well]) if (s) others.push(s);
     for (const q of ITEMS.pickups) if (q !== p && q.area === p.area) others.push(q);
     for (const o of others) assert.ok(Math.hypot(o.tx - t.tx, o.ty - t.ty) >= 3, `${p.id} is crowded by ${key(o)}`);
@@ -304,7 +304,7 @@ test('a fitting goes on a tool with a free slot and no fitting of its kind', () 
 // ------------------------------------------------------------ parsing
 
 const snapshot = {
-  state: { version: 1, area: 'village', position: { x: 1, y: 1 }, quest: 'new', hp: 10, maxHp: 50, mana: 5, maxMana: 30, inventory: [], discoveries: [], defeatedEnemies: [], playSeconds: 0, embers: 0, flags: [], emberXp: 0, xpEmbers: 0 },
+  state: { version: 1, area: 'village', position: { x: 1, y: 1 }, quest: 'new', hp: 10, maxHp: 50, mana: 5, maxMana: 30, inventory: [], discoveries: [], defeatedEnemies: [], playSeconds: 0, glims: 0, flags: [], glimXp: 0, xpGlims: 0 },
   version: 3,
   vitalsSource: 'demo',
   accountId: 'alice',

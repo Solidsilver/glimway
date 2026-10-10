@@ -28,7 +28,7 @@ Numbers in all three docs are first guesses for playtesting, not tuned values.
 5. **Nothing punishes waiting.** No hunger, no refuelling, no expiry. Things age
    rather than vanish (fresh flowers dry; they don't rot away).
 6. **In-world text stays in-world.** Item descriptions never mention real-life
-   tasks, apps or experience points. Embers are the only bridge.
+   tasks, apps or experience points. Glims are the only bridge.
 
 ## Inventory tabs
 
@@ -74,7 +74,7 @@ fitting and a Bite fitting.
 - **Send a parcel** (the other player is offline): tie items to a letter through the
   mailbox.
 - **Gate shelf**: a home good by your gate on the Commons lane. You stock it;
-  anyone walking past may take one. Pure gifts; no embers change hands.
+  anyone walking past may take one. Pure gifts; no glims change hands.
 - **Can't be given:** your door-fox; heirlooms (they were given to *you*). Story
   keepsakes can be **returned to their owner** (below).
 

@@ -4,7 +4,8 @@
   import Panel from '../Panel.svelte'
   import ArtIcon from '../ArtIcon.svelte'
   import Icon from '../Icon.svelte'
-  import { clampCount, everyMaterial, grantables, searchGrantables, type Grantable } from './grantables'
+  import Glim from '../Glim.svelte'
+  import { clampCount, everyMaterial, GLIMS_GRANT_ID, grantables, searchGrantables, type Grantable } from './grantables'
   import { devGrant, type GrantRequest } from './dev-grant'
 
   // Dev mode (local playtesting only): give this account Glimway's own
@@ -24,7 +25,7 @@
     if (e.key !== 'Escape') e.stopPropagation()
   }
 
-  const countOf = (g: Grantable) => clampCount(g, counts[g.id] ?? (g.kind === 'embers' ? 100 : g.kind === 'instance' || g.kind === 'decoration' ? 1 : 10))
+  const countOf = (g: Grantable) => clampCount(g, counts[g.id] ?? (g.kind === 'glims' ? 100 : g.kind === 'instance' || g.kind === 'decoration' ? 1 : 10))
   const said = (granted: GrantRequest[]) =>
     granted.length === 1 ? `Given: ${granted[0].qty} × ${all.find((g) => g.id === granted[0].id)?.name ?? granted[0].id}.` : `Given: ${granted.length} things.`
 
@@ -39,8 +40,8 @@
   {/snippet}
   <p class="lede">Gives this account Glimway’s own things, on a dev server on this machine. Nothing here exists in a real build.</p>
   <div class="quick">
-    <button type="button" class="primary" data-testid="dev-embers" disabled={action.busy !== null} onclick={() => give('quick:embers', [{ id: 'embers', qty: 100 }])}>
-      <Icon name="ember" size={14} /> +100 embers
+    <button type="button" class="primary" data-testid="dev-glims" disabled={action.busy !== null} onclick={() => give('quick:glims', [{ id: GLIMS_GRANT_ID, qty: 100 }])}>
+      <Glim size={14} /> +100 glims
     </button>
     <button type="button" data-testid="dev-materials" disabled={action.busy !== null} onclick={() => give('quick:materials', everyMaterial(99))}>
       <Icon name="stone" size={14} /> A stack of every material

@@ -67,7 +67,7 @@ export interface WorldLeaving {
   incoming: number;
   /** Warden-set tools in your homestead's shared chest (they stay behind). */
   wardenTools: number;
-  /** Embers a deed costs in the next world (0: your first, free). */
+  /** Glims a deed costs in the next world (0: your first, free). */
   deedCost: number;
 }
 

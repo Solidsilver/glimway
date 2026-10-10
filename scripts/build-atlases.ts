@@ -303,6 +303,17 @@ async function main(): Promise<void> {
     return { id, src, s: [0, 0, w, h], w, h, d: [0, 0, w, h], box: true }
   })
 
+  // The 0.6.1 glims pass (a glim, its HUD size and a few glims): interface
+  // icons on exact canvases at 64 texels per world tile, packed whole like the
+  // purse pass (src/game/glims-art.ts).
+  const glims = readJson<{ frames: Record<string, CraftsFrame> }>('assets/generated/glims-pass/manifest.json')
+  const glimsJobs: Job[] = Object.entries(glims.frames).map(([id, f]) => {
+    const src = `assets/generated/glims-pass/${f.file}`
+    read(src)
+    const { w, h } = f.canvasSize
+    return { id, src, s: [0, 0, w, h], w, h, d: [0, 0, w, h], box: true }
+  })
+
   // The terrain tileset: 16 named cells → 4×4, one 16-px world tile each at
   // ART_DENSITY (64 texels at 4×). A cell delivered at that size is copied
   // texel for texel; larger paintings are box-filtered down.
@@ -700,6 +711,9 @@ async function main(): Promise<void> {
   const puPack = pack(purseJobs.map((j) => ({ id: j.id, w: j.w, h: j.h })), 0)
   const purseBaked = await bake(purseJobs, puPack.at, puPack.size, true)
   const purseImage = await encodeRawWebp('purse', Buffer.from(purseBaked.raw!, 'base64'), puPack.size, true)
+  const glPack = pack(glimsJobs.map((j) => ({ id: j.id, w: j.w, h: j.h })), 0)
+  const glimsBaked = await bake(glimsJobs, glPack.at, glPack.size, true)
+  const glimsImage = await encodeRawWebp('glims', Buffer.from(glimsBaked.raw!, 'base64'), glPack.size, true)
   const bPack = pack(buildingJobs.map((j) => ({ id: j.id, w: j.w, h: j.h })), 0)
   const buildingsImage = await bakeDenseWebp('buildings', buildingJobs, bPack.at, bPack.size)
   const tAt = new Map(terrainJobs.map((j, i) => [j.id, [(i % 4) * TILE, Math.floor(i / 4) * TILE] as [number, number]]))
@@ -913,6 +927,7 @@ async function main(): Promise<void> {
     indoors: { image: indoorsImage, size: indoorPack.size, density: 64, frames: rects(indoorsJobs, indoorPack.at) },
     crafts: { image: craftsImage, size: crPack.size, density: 64, frames: rects(craftsJobs, crPack.at) },
     purse: { image: purseImage, size: puPack.size, density: 64, frames: rects(purseJobs, puPack.at) },
+    glims: { image: glimsImage, size: glPack.size, density: 64, frames: rects(glimsJobs, glPack.at) },
     terrain: { image: terrainImage, size: [TILE * 4, TILE * 4], cell: TILE, density: ART_DENSITY },
     ground: { image: groundImage, size: gSize, cell: TILE, density: ART_DENSITY, cols: GROUND_COLS, tiles: Object.fromEntries(GROUND_TILES.map((t, i) => [t, i])), healed: heal },
     people,
@@ -922,7 +937,7 @@ async function main(): Promise<void> {
   }
   writeFileSync(join(OUT, 'atlases.json'), JSON.stringify(manifest, null, 1) + '\n')
   installStaged(PACKED, DIRS)
-  console.log(`packed ${commonsJobs.length} + ${blitJobs.length} commons, ${runtimeJobs.length} runtime, ${itemsJobs.length} items, 16 terrain cells, ${groundJobs.length} ground tiles (${heal ? "healed" : "NOT healed"}), ${peopleJobs.length} people frames, ${buildingJobs.length} buildings, ${craftsJobs.length} crafts, ${purseJobs.length} purse, ${scaled.length} scaled atlases, ${BACKDROPS.length} backdrops → ${PACKED}`)
+  console.log(`packed ${commonsJobs.length} + ${blitJobs.length} commons, ${runtimeJobs.length} runtime, ${itemsJobs.length} items, 16 terrain cells, ${groundJobs.length} ground tiles (${heal ? "healed" : "NOT healed"}), ${peopleJobs.length} people frames, ${buildingJobs.length} buildings, ${craftsJobs.length} crafts, ${purseJobs.length} purse, ${glimsJobs.length} glims, ${scaled.length} scaled atlases, ${BACKDROPS.length} backdrops → ${PACKED}`)
 }
 
 try {

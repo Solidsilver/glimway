@@ -161,7 +161,7 @@ test('every placed paper lies on a walkable, reachable tile off exits and away f
     assert.ok(reachable(w).has(key(t)), `${p.id} at ${key(t)} cannot be reached from the spawn`);
     assert.ok(!w.exits.some((e) => t.tx >= e.tx - 1 && t.tx <= e.tx + e.tw && t.ty >= e.ty - 1 && t.ty <= e.ty + e.th), `${p.id} sits on an exit`);
     // Three tiles from anything else you press E at, so prompts never fight.
-    const others: Tile[] = [...w.npcs, ...w.emberSpots, ...w.discoverySpots];
+    const others: Tile[] = [...w.npcs, ...w.glimSpots, ...w.discoverySpots];
     for (const s of [w.mural, w.shrine, w.library]) if (s) others.push(s);
     for (const q of placements) if (q !== p && q.source.area === p.source.area) others.push(q.source);
     for (const o of others) assert.ok(Math.hypot(o.tx - t.tx, o.ty - t.ty) >= 3, `${p.id} is crowded by ${key(o)}`);

@@ -46,7 +46,7 @@ export const BANK = {
   /** Not now: no mana, can't place it here, out of reach. */
   fizzle: { files: ['ui-refuse.mp3'], gain: 0.4, window: 0.2 },
   notice: { files: ['ui-notice.mp3'], gain: 0.35, window: 0.4, yields: true },
-  ember: { files: ['coins.mp3'], gain: 0.45, jitter: 0.05, window: 0.15 },
+  glim: { files: ['coins.mp3'], gain: 0.45, jitter: 0.05, window: 0.15 },
   discover: { files: ['discover.mp3'], gain: 0.4, window: 0.3 },
   blip: { synth: 'blip', gain: 1, jitter: 0.03 },
   voice: { synth: 'voice', gain: 1, jitter: 0.06, window: 0.055 },

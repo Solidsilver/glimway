@@ -102,7 +102,7 @@ export function validateItems(value: unknown): Items {
     if (p.usesLeft !== undefined && p.usesLeft > 0 && (d.kind !== 'tool' || p.usesLeft > (d.uses ?? 0))) return bad(`pickup ${p.id}: usesLeft`);
     pickups.add(p.id);
   }
-  // Sellers: people and stalls that sell goods for embers (a festival
+  // Sellers: people and stalls that sell goods for glims (a festival
   // seller stands on its day only).
   const festivals = CALENDAR.festivals.map((f) => f.name);
   const sellers = new Set<string>();

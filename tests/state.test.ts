@@ -44,9 +44,9 @@ test('validateSave accepts a well-formed state and strips foreign fields', () =>
     'area',
     'defeatedEnemies',
     'discoveries',
-    'emberXp',
-    'embers',
     'flags',
+    'glimXp',
+    'glims',
     'hp',
     'inventory',
     'mana',
@@ -56,17 +56,17 @@ test('validateSave accepts a well-formed state and strips foreign fields', () =>
     'position',
     'quests',
     'version',
-    'xpEmbers',
+    'xpGlims',
   ]);
   assert.ok(!JSON.stringify(clean).includes('habitica-api-token'));
 });
 
-test('saves from before Embers load with an empty balance and no flags', () => {
-  const { embers: _e, flags: _f, ...legacy } = createNewGame();
+test('saves from before Glims load with an empty balance and no flags', () => {
+  const { glims: _e, flags: _f, ...legacy } = createNewGame();
   const loaded = validateSave(legacy);
-  assert.equal(loaded.embers, 0);
+  assert.equal(loaded.glims, 0);
   assert.deepEqual(loaded.flags, []);
-  assert.throws(() => validateSave({ ...createNewGame(), embers: -1 }), /embers/);
+  assert.throws(() => validateSave({ ...createNewGame(), glims: -1 }), /glims/);
   assert.throws(() => validateSave({ ...createNewGame(), flags: [3] }), /flags/);
 });
 

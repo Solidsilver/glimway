@@ -118,7 +118,7 @@
     },
     {
       "paths": ["src/content/world.ts", "src/game/entities/interactables.ts", "src/game/entities/world-talk.ts", "src/game/dialogue.ts", "src/game/entities/npcs.ts", "src/game/npc-routines.ts", "src/ui/DialoguePanel.svelte", "src/game/area/**", "src/game/worlds.ts"],
-      "specs": ["quest.spec.ts", "embers.spec.ts", "combat.spec.ts", "touches.spec.ts"]
+      "specs": ["quest.spec.ts", "glims.spec.ts", "combat.spec.ts", "touches.spec.ts"]
     },
     {
       "paths": [
@@ -180,8 +180,8 @@
       "specs": ["coop.spec.ts"]
     },
     {
-      "paths": ["server/internal/rules/**", "src/lib/embers.ts", "src/lib/economy.ts"],
-      "specs": ["embers.spec.ts", "connected.spec.ts"]
+      "paths": ["server/internal/rules/**", "src/lib/glims.ts", "src/lib/economy.ts"],
+      "specs": ["glims.spec.ts", "connected.spec.ts"]
     },
     {
       "paths": ["src/game/presence*.ts", "src/lib/presence*.ts", "src/content/presence.ts", "src/game/entities/presence-moments.ts", "src/ui/EmotePicker.svelte", "src/game/entities/remote-players.ts"],
@@ -259,7 +259,7 @@
         "src/game/sfx.ts",
         "src/game/sound*.ts"
       ],
-      "specs": ["polish.spec.ts", "quest.spec.ts", "onboarding-layout.spec.ts", "embers.spec.ts"]
+      "specs": ["polish.spec.ts", "quest.spec.ts", "onboarding-layout.spec.ts", "glims.spec.ts"]
     },
     {
       "paths": ["src/app.css", "src/ui/sheet.ts"],
@@ -313,7 +313,7 @@
     },
     {
       "paths": ["src/ui/Panel.svelte", "src/ui/panel-state.svelte.ts", "src/content/errors.ts"],
-      "specs": ["inventory.spec.ts", "village.spec.ts", "crafting.spec.ts", "gifts.spec.ts", "homestead.spec.ts", "papers.spec.ts", "embers.spec.ts", "items.spec.ts", "wilds.spec.ts"]
+      "specs": ["inventory.spec.ts", "village.spec.ts", "crafting.spec.ts", "gifts.spec.ts", "homestead.spec.ts", "papers.spec.ts", "glims.spec.ts", "items.spec.ts", "wilds.spec.ts"]
     },
     {
       "paths": ["src/ui/NoticeCard.svelte"],
@@ -338,6 +338,10 @@
     {
       "paths": ["src/lib/wardrobe.ts", "src/content/wardrobe.ts", "src/ui/WardrobeTab.svelte", "src/ui/GearTile.svelte", "src/ui/GridPicker.svelte", "src/ui/CompanionsPicker.svelte"],
       "specs": ["wardrobe.spec.ts", "companions.spec.ts"]
+    },
+    {
+      "paths": ["src/lib/purse.ts", "src/content/purse.ts", "src/ui/purse.svelte.ts", "src/ui/Purse*.svelte", "src/ui/Glim.svelte", "src/game/glims-art.ts", "assets/generated/glims-pass/**"],
+      "specs": ["purse.spec.ts", "glims.spec.ts"]
     }
   ]
 }

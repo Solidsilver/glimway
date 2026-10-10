@@ -40,7 +40,7 @@ const HOUR = Date.UTC(2026, 9, 8, 10) / 1000;
 const DONE_OPENING: QuestRecord = { signpost: 'light-first-lamp' };
 
 function gate(over: Partial<GateContext> = {}): GateContext {
-  return { now: HOUR + 10 * 60, area: 'village', embers: 0, carrying: () => 0, gateAt: undefined, online: true, ...over };
+  return { now: HOUR + 10 * 60, area: 'village', glims: 0, carrying: () => 0, gateAt: undefined, online: true, ...over };
 }
 
 function talkCtx(quests: QuestRecord, over: Partial<GateContext> = {}, extra: Partial<QuestTalkContext> = {}): QuestTalkContext {
@@ -49,7 +49,7 @@ function talkCtx(quests: QuestRecord, over: Partial<GateContext> = {}, extra: Pa
 
 // ------------------------------------------------------------------ the tree
 
-test('the tree: kebab-case ids, short goals, small ember grants, items that exist', () => {
+test('the tree: kebab-case ids, short goals, small glim grants, items that exist', () => {
   const kebab = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
   const known = new Set(items.items.map((i: { id: string }) => i.id));
   const ids = new Set<string>();
@@ -66,7 +66,7 @@ test('the tree: kebab-case ids, short goals, small ember grants, items that exis
       assert.ok(!steps.has(s.id), `duplicate step ${q.id}:${s.id}`);
       steps.add(s.id);
       assert.ok(s.goal && s.goal.length <= 40, `${q.id}:${s.id} goal "${s.goal}" (${s.goal?.length})`);
-      assert.ok(s.embers >= 0 && s.embers <= 5, `${q.id}:${s.id} grants ${s.embers} embers`);
+      assert.ok(s.glims >= 0 && s.glims <= 5, `${q.id}:${s.id} grants ${s.glims} glims`);
       for (const g of s.give ?? []) assert.ok(known.has(g.def), `${q.id}:${s.id} gives unknown ${g.def}`);
       if (s.gate?.item) assert.ok(known.has(s.gate.item.def), `${q.id}:${s.id} takes unknown ${s.gate.item.def}`);
       // Spots, areas, `with`, `give` and the `world`/`project` refusal are A's loader's checks (src/lib/story-tables.ts).
@@ -79,13 +79,13 @@ test('the tree: kebab-case ids, short goals, small ember grants, items that exis
 
 test('the lantern road keeps 0.3’s step ids and every grant row (028’s gift outcomes read them)', () => {
   const road = questById('lantern-road')!;
-  const grants = road.steps.map(({ id, at, items, marks, papers, embers, witness }) => ({ id, at, items, marks, papers, embers, witness }));
+  const grants = road.steps.map(({ id, at, items, marks, papers, glims, witness }) => ({ id, at, items, marks, papers, glims, witness }));
   assert.deepEqual(grants, [
-    { id: 'accepted', at: 'village', items: [], marks: [], papers: [], embers: 0, witness: '' },
-    { id: 'clue-found', at: 'ruin', items: ['lantern-route-rubbing'], marks: ['found:old-route-marker'], papers: [], embers: 0, witness: '' },
-    { id: 'guardian-defeated', at: 'ruin', items: ['warden-seal'], marks: ['defeated:stone-warden'], papers: ['eleven-days'], embers: 2, witness: 'warden' },
-    { id: 'lantern-lit', at: 'ruin', items: [], marks: ['found:hilltop-lantern'], papers: ['principia-memoria-excerpt'], embers: 0, witness: 'lantern' },
-    { id: 'complete', at: 'village', items: [], marks: ['found:lantern-road-restored'], papers: [], embers: 3, witness: '' },
+    { id: 'accepted', at: 'village', items: [], marks: [], papers: [], glims: 0, witness: '' },
+    { id: 'clue-found', at: 'ruin', items: ['lantern-route-rubbing'], marks: ['found:old-route-marker'], papers: [], glims: 0, witness: '' },
+    { id: 'guardian-defeated', at: 'ruin', items: ['warden-seal'], marks: ['defeated:stone-warden'], papers: ['eleven-days'], glims: 2, witness: 'warden' },
+    { id: 'lantern-lit', at: 'ruin', items: [], marks: ['found:hilltop-lantern'], papers: ['principia-memoria-excerpt'], glims: 0, witness: 'lantern' },
+    { id: 'complete', at: 'village', items: [], marks: ['found:lantern-road-restored'], papers: [], glims: 3, witness: '' },
   ]);
   assert.deepEqual(road.after, ['signpost']);
 });
@@ -201,11 +201,11 @@ test('reachStep takes only the next step, with its keepsakes, marks and gate tim
   assert.ok(road.inventory.includes('lantern-route-rubbing'));
 });
 
-test('an embers gate spends on the prediction, and a gated step restarts the quest’s clock', () => {
-  const s = { ...createNewGame(), embers: 4, xpEmbers: 4, quests: { ...DONE_OPENING, 'seat-by-the-lamp': 'browse-shelf' } };
+test('an glims gate spends on the prediction, and a gated step restarts the quest’s clock', () => {
+  const s = { ...createNewGame(), glims: 4, xpGlims: 4, quests: { ...DONE_OPENING, 'seat-by-the-lamp': 'browse-shelf' } };
   const lit = reachStep(s, 'seat-by-the-lamp', 'oil-lamp', 500)!;
-  assert.equal(lit.embers, 3);
-  assert.equal(lit.xpEmbers, 3);
+  assert.equal(lit.glims, 3);
+  assert.equal(lit.xpGlims, 3);
   assert.ok(lit.flags.includes('library:lamp'));
   assert.equal(lit.questGateAt?.['seat-by-the-lamp'], 500);
 });
@@ -235,7 +235,7 @@ test('with: you’re where they are near now, with the grace either side of a ch
   assert.ok(checkGate(step, gate({ now: edge, area: 'in:village:bakery' })).ok);
 });
 
-test('gates in the server’s order: with, wait, item, embers, then the connection', () => {
+test('gates in the server’s order: with, wait, item, glims, then the connection', () => {
   const rise = questById('set-to-rise')!;
   const setSponge = rise.steps[2];
   const inKitchen = { area: 'in:village:bakery' };
@@ -251,8 +251,8 @@ test('gates in the server’s order: with, wait, item, embers, then the connecti
   assert.ok(checkGate(rise2, gate({ ...inKitchen, gateAt: undefined })).ok, 'no gate time known: the server decides');
 
   const lamp = questById('seat-by-the-lamp')!.steps[2];
-  assert.deepEqual(checkGate(lamp, gate({ area: 'in:village:library' })), { ok: false, why: 'short-embers', need: 1 });
-  assert.ok(checkGate(lamp, gate({ area: 'in:village:library', embers: 1 })).ok);
+  assert.deepEqual(checkGate(lamp, gate({ area: 'in:village:library' })), { ok: false, why: 'short-glims', need: 1 });
+  assert.ok(checkGate(lamp, gate({ area: 'in:village:library', glims: 1 })).ok);
 });
 
 test('waits in words, and turnings by the calendar', () => {
@@ -390,9 +390,9 @@ test('the sponge bowl shows the wait; room spots take their steps', () => {
 
   const lib = { area: 'in:village:library' };
   const browsed = { ...DONE_OPENING, 'seat-by-the-lamp': 'browse-shelf' };
-  assert.equal(questSpotLabel('reading-lamp', talkCtx(browsed, lib)), 'Oil the reading lamp · 1 ember');
-  assert.equal(questSpotTalk('reading-lamp', talkCtx(browsed, lib))!.choices?.[0].note, 'Needs 1 ember');
-  assert.equal(questSpotTalk('reading-lamp', talkCtx(browsed, { ...lib, embers: 2 }))!.choices?.[0].action, 'quest:seat-by-the-lamp:oil-lamp');
+  assert.equal(questSpotLabel('reading-lamp', talkCtx(browsed, lib)), 'Oil the reading lamp · 1 glim');
+  assert.equal(questSpotTalk('reading-lamp', talkCtx(browsed, lib))!.choices?.[0].note, 'Needs 1 glim');
+  assert.equal(questSpotTalk('reading-lamp', talkCtx(browsed, { ...lib, glims: 2 }))!.choices?.[0].action, 'quest:seat-by-the-lamp:oil-lamp');
   assert.equal(questSpotTalk('reading-lamp', talkCtx({ ...DONE_OPENING, 'seat-by-the-lamp': 'oil-lamp' }, lib))!.speaker, 'Reading Lamp');
   assert.equal(questSpotTalk('library-shelf', talkCtx({}, lib)), null, 'no step: the shelf opens the library');
 });
@@ -482,7 +482,7 @@ test('A Line in the Race: Finn’s rod, a roach from the race, Hazel’s card, o
   assert.deepEqual(q.steps[0].give, [{ def: 'willow-rod', qty: 1 }]);
   assert.deepEqual(q.steps[2].gate?.item, { def: 'mill-roach', qty: 1, keep: false });
   assert.deepEqual(q.steps[2].give, [{ def: 'recipe-card-millers-fry', qty: 1 }]);
-  assert.equal(q.steps[2].embers, 1);
+  assert.equal(q.steps[2].glims, 1);
   assert.equal(q.steps[2].note?.title, 'Miller’s Fry');
 
   // Hidden until Finn starts it; the hoist comes first at his door while it's open.

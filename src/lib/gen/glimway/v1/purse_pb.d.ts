@@ -199,18 +199,25 @@ export declare type PurseLine = Message<"glimway.v1.PurseLine"> & {
   /**
    * habitica-topup | purse-settle | market-buy | shelf-buy | shelf-sale |
    * mail-send | mail-claim | mail-return | mail-recall | give | gift |
-   * currency-merge
+   * currency-merge | spend (a rest, a road lantern, the chest) | quest (a
+   * quest gate's price) | mend | homestead-deed | homestead-upgrade |
+   * homestead-buy | homestead-clear
    *
    * @generated from field: string reason = 3;
    */
   reason: string;
 
   /**
+   * The item on a market-buy, shelf, mend or homestead-buy line.
+   *
    * @generated from field: string item_def = 4;
    */
   itemDef: string;
 
   /**
+   * How many on a market-buy or shelf line; on a currency-merge line, the
+   * 0.6 purse's gold that migration 033 turned in.
+   *
    * @generated from field: int32 qty = 5;
    */
   qty: number;

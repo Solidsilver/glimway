@@ -5,7 +5,7 @@
   import { sfx, voiceBlip } from '../game/sfx'
   import { ui } from './store.svelte'
   import { isTouchFirst } from './device'
-  import Icon from './Icon.svelte'
+  import Glim from './Glim.svelte'
   import { escapeMove } from '../lib/dialogue-escape'
 
   /** Name-tag colors per speaker; objects get a neutral stone tag. */
@@ -292,7 +292,7 @@
                 <span class="label">{c.text}</span>
                 {#if c.note}
                   <span class="note" id={`choice-note-${i}`}>
-                    {#if c.action || c.disabled}<Icon name="ember" size={12} />{/if}{c.note}
+                    {#if c.action || c.disabled}<Glim size={12} />{/if}{c.note}
                   </span>
                 {/if}
               </button>
@@ -435,7 +435,7 @@
     flex: 1;
     min-width: 0;
   }
-  /* The tag on a choice ("4 embers", "Needs 15 embers"): a solid chip in the
+  /* The tag on a choice ("4 glims", "Needs 15 glims"): a solid chip in the
      body face, readable at a glance on a phone (≥ 7:1 on its own ground). */
   .choice .note {
     display: inline-flex;

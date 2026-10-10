@@ -35,7 +35,7 @@ export function landAt(land: Land, x: number, y: number): number {
   return land.tiles[y * land.width + x];
 }
 
-/** Obstacles Silas can clear for embers (trees, stumps, boulders). */
+/** Obstacles Silas can clear for glims (trees, stumps, boulders). */
 export function clearable(kind: number): boolean {
   return kind === LAND.TREE || kind === LAND.STUMP || kind === LAND.BOULDER;
 }

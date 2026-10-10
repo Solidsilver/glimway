@@ -47,10 +47,10 @@ import { newKey } from '../lib/api/client.ts'
 import { ApiError, errorCode, isOutboxClientBug, isReloadNeeded, isSettledRefusal, isUnreachable, needsReconciliation, type ApiErrorCode } from '../lib/api/errors.ts'
 import type { OperationsApi } from '../lib/api/operations.ts'
 import { browserLocks, emptyRecord, expired, holdLock, lockName, outboxStore, type HeldLock, type LockLike, type OutboxEntry, type OutboxKind, type OutboxRecord, type OutboxStore } from '../lib/api/outbox.ts'
-import { adoptable, fallRecovery, gameStateOf, isClientMark, predictCompanions, predictWardrobe, predictedView, predictPurse, profileOf, whereOf, type CompanionsView, type Prediction, type WhereJson } from '../lib/api/predict.ts'
+import { adoptable, fallRecovery, gameStateOf, isClientMark, predictCompanions, predictWardrobe, predictedView, profileOf, whereOf, type CompanionsView, type Prediction, type WhereJson } from '../lib/api/predict.ts'
 import { PurseTopUpRequestSchema, type PurseRead } from '../lib/gen/glimway/v1/purse_pb.js'
 import { OpHeaderSchema } from '../lib/gen/glimway/v1/op_pb.js'
-import { topUpView, type PurseView, type TopUpView } from '../lib/purse.ts'
+import { purseOf, topUpView, type PurseView, type TopUpView } from '../lib/purse.ts'
 import { CompanionsRequestSchema, MountHomeRequestSchema, MountOutRequestSchema, StableExtendRequestSchema, StallRequestSchema, type StableExtendResult, type StallResult } from '../lib/gen/glimway/v1/companions_pb.js'
 import { projectHome } from '../lib/api/homestead.ts'
 import { REPORT_INTERVAL_MS, ReportBook, type CapturedReport, type ReportAck } from '../lib/api/reports.ts'
@@ -68,10 +68,11 @@ import { WardrobeCheckRequestSchema, WardrobeRequestSchema, type WardrobeCheckRe
 import { FishCancelRequestSchema, FishCastRequestSchema, FishSettleRequestSchema, type FishCancelResult, type FishCastResult, type FishSettleResult, type WaterView } from '../lib/gen/glimway/v1/fishing_pb.js'
 import { rawUserFor } from '../lib/habitica/client.ts'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types.ts'
-import { FLAGS, WELCOME_EMBERS, type EmberSpend, type SpendReason } from '../lib/embers.ts'
+import { FLAGS, WELCOME_GLIMS, type GlimSpend, type SpendReason } from '../lib/glims.ts'
 import type { GameState } from '../lib/state.ts'
 import { EV, type Emit, type LinkPayload, type LinkStatus } from './event-names.ts'
 import { serverNow } from './clock.ts'
+import { glimsGift } from '../content/purse.ts'
 import { unlockNotice, type MagicMarks } from '../lib/combat.ts'
 
 const HEARTBEAT_MS = 30_000
@@ -377,8 +378,8 @@ function predictionOf(entry: OutboxEntry): Prediction {
       case 'mount-home':
         return { kind: 'mount-home' }
       case 'mutation':
-        // A gold buy, letter or give (purse-and-wardrobe.md 6.5): the purse change stored with it.
-        return entry.gold ? { kind: 'gold', delta: entry.gold } : { kind: 'none' }
+        // A buy, letter or give in glims (purse-and-wardrobe.md 6.5, in glims): the balance change stored with it.
+        return entry.glims ? { kind: 'glims', delta: entry.glims } : { kind: 'none' }
       case 'wardrobe': {
         const chosen = b.chosen && typeof b.chosen === 'object' && !Array.isArray(b.chosen) ? (b.chosen as Record<string, unknown>) : {}
         return { kind: 'wardrobe', chosen: Object.fromEntries(Object.entries(chosen).map(([k, v]) => [k, String(v)])) }
@@ -685,12 +686,12 @@ export class Link {
 
   private purseShown = ''
 
-  /** The purse the game shows: the server's, with unanswered gold operations on top (never the top-up). */
+  /** Today's top-ups as the server last said (a top-up is never predicted). */
   get purse(): PurseView {
-    return predictPurse(this.server, this.entries.map(predictionOf))
+    return purseOf(this.server)
   }
 
-  /** Tell the interface when the purse it shows changed (an answer, a gold spend sent, a rollback). */
+  /** Tell the interface when today's top-ups changed (an answer, a rollback). */
   private notePurse(): void {
     const now = this.purse
     const json = JSON.stringify(now)
@@ -700,7 +701,8 @@ export class Link {
   }
 
   /**
-   * Move gold from Habitica into the purse (2.2). The token goes in this one
+   * Turn Habitica gold into glims (2.2; silas-yard.md 1.5): `amount` is the
+   * gold, two for each glim. The token goes in this one
    * request and nowhere else: not the outbox (which stores bodies), not a
    * replay, not a log. A lost answer isn't sent again; the purse read says
    * how it came out. The world doesn't hold still: Habitica can be slow.
@@ -730,7 +732,7 @@ export class Link {
     }
   }
 
-  /** The purse log and its top-ups (GET /api/purse). A newer purse is shown at once. */
+  /** The Glim log and its top-ups (GET /api/purse). Newer top-ups are shown at once. */
   async purseRead(): Promise<HomeRead<PurseRead>> {
     const r = await this.read(() => this.api.run(() => this.ops.purse()))
     if (r.ok && r.value.purse && this.server) {
@@ -740,7 +742,7 @@ export class Link {
     return r
   }
 
-  /** Read the state again now (a gold gift arrived: the purse is part of it). */
+  /** Read the state again now (glims arrived by hand: the balance is part of it). */
   async refreshState(): Promise<void> {
     if (this.status !== 'online' || this.busy) return
     if ((await this.reconcile()) === 'ok') this.refresh()
@@ -1058,7 +1060,7 @@ export class Link {
     path: string,
     key: string,
     body: Record<string, unknown>,
-    opts: { offline: boolean; barrier?: boolean; fall?: { hp: number; mana: number }; gold?: number; prepare?: (id: number) => void; undo?: () => void }
+    opts: { offline: boolean; barrier?: boolean; fall?: { hp: number; mana: number }; glims?: number; prepare?: (id: number) => void; undo?: () => void }
   ): Promise<{ outcome: Outcome; entry: OutboxEntry | null }> {
     const refused = (code: Extract<Outcome, { ok: false }>['code']) => ({ outcome: { ok: false, code } as Outcome, entry: null })
     if (this.stopped || !this.session) return refused('unknown')
@@ -1091,15 +1093,15 @@ export class Link {
     path: string,
     key: string,
     body: Record<string, unknown>,
-    opts: { offline: boolean; barrier?: boolean; fall?: { hp: number; mana: number }; gold?: number; prepare?: (id: number) => void; undo?: () => void }
+    opts: { offline: boolean; barrier?: boolean; fall?: { hp: number; mana: number }; glims?: number; prepare?: (id: number) => void; undo?: () => void }
   ): Promise<{ outcome: Outcome; entry: OutboxEntry | null }> {
     const refused = (code: Extract<Outcome, { ok: false }>['code']) => ({ outcome: { ok: false, code } as Outcome, entry: null })
     if (this.fence === null && !(await this.own(false))) return refused('superseded')
-    const entry: OutboxEntry = { id: this.nextId++, kind, path, key, body: JSON.stringify(body), contract: CONTRACT_NUMBER, createdAt: this.now(), sent: false, barrier: opts.barrier === true, offline: opts.offline, ...(opts.fall ? { fall: opts.fall } : {}), ...(opts.gold ? { gold: opts.gold } : {}) }
+    const entry: OutboxEntry = { id: this.nextId++, kind, path, key, body: JSON.stringify(body), contract: CONTRACT_NUMBER, createdAt: this.now(), sent: false, barrier: opts.barrier === true, offline: opts.offline, ...(opts.fall ? { fall: opts.fall } : {}), ...(opts.glims ? { glims: opts.glims } : {}) }
     this.entries.push(entry)
     opts.prepare?.(entry.id)
     if (opts.offline && kind !== 'fall') this.refresh({ predicted: true })
-    else if (entry.gold) this.notePurse()
+    else if (entry.glims) this.refresh({ predicted: true })
     const saved = await this.saveRecord()
     if (saved !== 'saved' && (this.durable || saved === 'fenced' || !this.canSend())) {
       // Not stored, so never sent and never kept: everything it showed goes.
@@ -1221,7 +1223,7 @@ export class Link {
     const stored = await this.dispositionSaved()
     // A step's gift (paid once, by the server): the toast follows its answer.
     const gift = head.kind === 'quest-step' && (result as { case?: string; value?: { glims?: number } })?.case === 'questStep' ? (result as { value: { glims: number } }).value.glims : 0
-    if (gift > 0) this.emitter(EV.toast, { text: `+${gift} embers — a little warmth from the road.`, icon: 'ember' })
+    if (gift > 0) this.emitter(EV.toast, { text: glimsGift(gift), icon: 'glim', art: 'glims-few' })
     this.notify(head, { ok: true, state, result })
     return stored
   }
@@ -1606,7 +1608,7 @@ export class Link {
 
 
   /** Spend through the server. The payoff waits for its answer; rests carry a report barrier. */
-  async spend(spend: EmberSpend): Promise<RemoteSpendResult> {
+  async spend(spend: GlimSpend): Promise<RemoteSpendResult> {
     const s = this.session
     if (!s || this.stopped) return 'error'
     const key = newKey()
@@ -1660,7 +1662,7 @@ export class Link {
       const res = env.result.value
       // `credit` is the XP credit alone; the welcome is paid beside it (its own ledger line).
       const gained = Math.max(0, res.credit)
-      const welcome = !welcomedBefore && s.state.flags.includes(FLAGS.welcome) ? WELCOME_EMBERS : 0
+      const welcome = !welcomedBefore && s.state.flags.includes(FLAGS.welcome) ? WELCOME_GLIMS : 0
       return { ok: true, status: res.status === 'unchanged' ? 'unchanged' : 'synced', gained, welcome, credit: { hp: res.vitalsCredit?.hp ?? 0, mana: res.vitalsCredit?.mana ?? 0 } }
     } catch (err) {
       const code = errorCode(err)
@@ -1743,7 +1745,7 @@ export class Link {
    * the same key (`pending`); a refusal changes nothing. Consumables carry a
    * report barrier, since they read the stored vitals.
    */
-  async mutate<R extends Snapshot>(op: MutationOp, opts: { gold?: number } = {}): Promise<MutateResult<R>> {
+  async mutate<R extends Snapshot>(op: MutationOp, opts: { glims?: number } = {}): Promise<MutateResult<R>> {
     const s = this.session
     if (!s || this.stopped) return { ok: false, code: 'unknown' }
     const key = newKey()
@@ -1770,7 +1772,7 @@ export class Link {
         this.announce(earlier, outcome)
       }
     }
-    const { outcome: r } = await this.submit('mutation', path, key, body, { offline: false, barrier: op.kind === 'items' && op.op === 'use', gold: opts.gold })
+    const { outcome: r } = await this.submit('mutation', path, key, body, { offline: false, barrier: op.kind === 'items' && op.op === 'use', glims: opts.glims })
     if (!r.ok) return { ok: false, code: r.code }
     return { ok: true, res: r.result as R }
   }

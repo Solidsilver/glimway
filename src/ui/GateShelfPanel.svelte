@@ -14,7 +14,7 @@
   import Panel from './Panel.svelte'
   import ArtIcon from './ArtIcon.svelte'
   import { ui } from './store.svelte'
-  import { goldPhrase, shelfCopy } from '../content/purse'
+  import { glimsCount, shelfCopy } from '../content/purse'
   import { parseAmount } from '../lib/purse'
 
   let { session, gate = 0, onClose }: { session: Session; gate?: number; onClose: () => void } = $props()
@@ -27,7 +27,7 @@
   let loaded = $state<'loading' | 'ready' | string>('loading')
   let view = $state<ShelfView | null>(null)
   let pickingSlot = $state<number | null>(null)
-  /** The stock sheet's price field (gold; empty: a free gift). */
+  /** The stock sheet's price field (glims; empty: a free gift). */
   let priceText = $state('')
   const SHELF_PRICE_MAX = 9999
   const priceTyped = $derived(priceText.trim() !== '')
@@ -162,7 +162,7 @@
     bus.emit(EV.itemsChanged)
   }
 
-  /** A priced slot: pay from the purse; the gold goes to whoever stocked it (purse-and-wardrobe.md 3.2). */
+  /** A priced slot: pay in glims; they go to whoever stocked it (purse-and-wardrobe.md 3.2, in glims). */
   async function buy(slot: ShelfSlotView): Promise<void> {
     const i = slot.slot
     const r = await action.run(`buy-${i}`, () => village.shelfAction({ op: 'buy', gate, slot: i, pay: slot.price }), (done) => done.value.line ?? shelfCopy.bought(itemNameDisplay(slot), slot.price))
@@ -223,7 +223,7 @@
             <div class="item-info">
               <span class="thumb"><ArtIcon art={`icon-${slot.itemDef}`} name="sparkle" size={20} /></span>
               <div class="details">
-                <span class="name">{itemNameDisplay(slot)}{slot.qty > 1 ? ` ×${slot.qty}` : ''}{#if slot.price > 0}<span class="price" data-testid={`price-slot-${i}`}> · <ArtIcon art="purse-price-tag" name="coin" size={14} /> {goldPhrase(slot.price)}</span>{/if}</span>
+                <span class="name">{itemNameDisplay(slot)}{slot.qty > 1 ? ` ×${slot.qty}` : ''}{#if slot.price > 0}<span class="price" data-testid={`price-slot-${i}`}> · <ArtIcon art="purse-price-tag" name="glim" size={14} /> {glimsCount(slot.price)}</span>{/if}</span>
                 {#if slot.maker}
                   <span class="maker"><Icon name="heart" size={12} /> by {slot.maker.name}</span>
                 {/if}
@@ -236,8 +236,8 @@
                 <button
                   type="button"
                   class="small primary"
-                  disabled={action.busy !== null || (ui.purse?.gold ?? 0) < slot.price}
-                  title={(ui.purse?.gold ?? 0) < slot.price ? shelfCopy.short(slot.price) : undefined}
+                  disabled={action.busy !== null || ui.stats.glims < slot.price}
+                  title={ui.stats.glims < slot.price ? shelfCopy.short(slot.price) : undefined}
                   onclick={() => buy(slot)}
                   data-testid={`buy-slot-${i}`}
                 >

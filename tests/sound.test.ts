@@ -100,7 +100,7 @@ test('toasts: a bag gain rustles, an error refuses, a notice chimes, a thought i
   assert.deepEqual(backend.cues(), ['pickup', 'fizzle', 'notice'])
 })
 
-test('embers in a toast play the coins once, not a chime as well', async () => {
+test('glims in a toast play the coins once, not a chime as well', async () => {
   // The real emitter: a quest reward credited by the session.
   const w = globalThis as unknown as { window?: unknown }
   const hadWindow = 'window' in w
@@ -112,13 +112,13 @@ test('embers in a toast play the coins once, not a chime as well', async () => {
   const stop = routeSounds(bus, director)
   director.start()
   try {
-    new Session(createNewGame()).addEmbers(3, '+3 embers — a little warmth from the road.')
-    assert.deepEqual(backend.cues(), ['ember'])
+    new Session(createNewGame()).addGlims(3, '+3 glims — a little warmth from the road.')
+    assert.deepEqual(backend.cues(), ['glim'])
     // A caller that also says the cue: still once.
     backend.t += 1
-    sfx('ember')
-    bus.emit(EV.toast, { text: '+2 embers', icon: 'ember' })
-    assert.deepEqual(backend.cues(), ['ember', 'ember'])
+    sfx('glim')
+    bus.emit(EV.toast, { text: '+2 glims', icon: 'glim' })
+    assert.deepEqual(backend.cues(), ['glim', 'glim'])
   } finally {
     stop()
     if (!hadWindow) delete w.window
@@ -127,15 +127,15 @@ test('embers in a toast play the coins once, not a chime as well', async () => {
 
 test('a notice gives way to the sound its toast came with', () => {
   const { bus: b, backend, tick } = rig()
-  sfxOn(b, 'ember')
-  b.emit(EV.toast, { text: '+3 embers' })
-  assert.deepEqual(backend.cues(), ['ember'])
+  sfxOn(b, 'glim')
+  b.emit(EV.toast, { text: '+3 glims' })
+  assert.deepEqual(backend.cues(), ['glim'])
   tick()
   b.emit(EV.toast, { text: 'Later news' })
-  assert.deepEqual(backend.cues(), ['ember', 'notice'])
+  assert.deepEqual(backend.cues(), ['glim', 'notice'])
 })
 
-function sfxOn(b: Bus<EventMap>, cue: 'ember') {
+function sfxOn(b: Bus<EventMap>, cue: 'glim') {
   b.emit(EV.sfx, { cue })
 }
 

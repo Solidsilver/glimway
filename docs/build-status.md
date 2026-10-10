@@ -15,7 +15,7 @@ canon pass, the Commons and the Tangle merged on `expansion`).
 
 | Area | Status |
 |---|---|
-| Guest game | The lantern road quest, three curated areas, combat with telegraphed enemies, the settled warden, embers and spends, local saves with save codes. |
+| Guest game | The lantern road quest, three curated areas, combat with telegraphed enemies, the settled warden, glims (embers before 0.6.1) and spends, local saves with save codes. |
 | Habitica (read-only) | Connect guide with paste/Swap and opt-in Remember; class kits, effective stats, layered avatars, pets and mounts; the approved imported-health policy. |
 | Connected play | Go server with login-only token check, allowlist and invites (readable codes), recorded syncs with plausibility checks and checkpoints, revisions and one play lease, offline play and reconnect, guest-save migration. |
 | Homes | Hearthwick Commons, plots, campsite → cottage → workshop, 14 decorations with placement, storage and crafting, home rest, read-only visits. |

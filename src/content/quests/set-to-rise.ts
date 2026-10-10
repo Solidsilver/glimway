@@ -18,7 +18,7 @@ export const SET_TO_RISE_TALKS: QuestTalks = {
       note: '1 flour',
       reply: ['You stir until your arm aches. Hazel throws a cloth over the bowl and pats it like a dog.', '“Now we leave it be. A couple of hours. Come back and we’ll see what it thinks.”'],
     },
-    short: ['Still no flour? Finn’s at the mill, or out by his door. A sack an ember.', 'Go on. The sponge is waiting, and so am I.'],
+    short: ['Still no flour? Finn’s at the mill, or out by his door. A sack a glim.', 'Go on. The sponge is waiting, and so am I.'],
   },
   'let-it-rise': {
     speaker: 'Hazel',

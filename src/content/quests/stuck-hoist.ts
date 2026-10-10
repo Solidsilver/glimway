@@ -25,7 +25,7 @@ export const STUCK_HOIST_TALKS: QuestTalks = {
       note: '1 tallow',
       reply: ['You warm the tallow in your hands and work it into the axle. The handle gives, then turns. Somewhere below, a sack thumps onto the mill floor.'],
     },
-    short: ['The axle is dry as a bone. You’d want a lump of tallow. Hazel sells it, an ember a lump.'],
+    short: ['The axle is dry as a bone. You’d want a lump of tallow. Hazel sells it, a glim a lump.'],
   },
   'tell-finn': {
     speaker: 'Finn',

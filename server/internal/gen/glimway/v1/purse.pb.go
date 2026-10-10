@@ -329,10 +329,15 @@ type PurseLine struct {
 	Delta int32                  `protobuf:"varint,2,opt,name=delta,proto3" json:"delta,omitempty"`
 	// habitica-topup | purse-settle | market-buy | shelf-buy | shelf-sale |
 	// mail-send | mail-claim | mail-return | mail-recall | give | gift |
-	// currency-merge
-	Reason  string `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	// currency-merge | spend (a rest, a road lantern, the chest) | quest (a
+	// quest gate's price) | mend | homestead-deed | homestead-upgrade |
+	// homestead-buy | homestead-clear
+	Reason string `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	// The item on a market-buy, shelf, mend or homestead-buy line.
 	ItemDef string `protobuf:"bytes,4,opt,name=item_def,json=itemDef,proto3" json:"item_def,omitempty"`
-	Qty     int32  `protobuf:"varint,5,opt,name=qty,proto3" json:"qty,omitempty"`
+	// How many on a market-buy or shelf line; on a currency-merge line, the
+	// 0.6 purse's gold that migration 033 turned in.
+	Qty int32 `protobuf:"varint,5,opt,name=qty,proto3" json:"qty,omitempty"`
 	// The other player in a shelf trade, letter or give.
 	OtherName string `protobuf:"bytes,6,opt,name=other_name,json=otherName,proto3" json:"other_name,omitempty"`
 	// A letter's id, so the line can say which one it was.

@@ -2,18 +2,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { HOMESTEAD_DATA, checkPlacement, gateTile, shopSections, stallCost, validateHomesteadData, type HomeInstance } from '../src/lib/homestead.ts';
 import homesteadVectors from '../content/vectors/homestead-loader.json' with { type: 'json' };
-import { BUILDING_BLURBS, HOMESTEAD_TIERS, DECORATIONS_EMBER, DECORATIONS_MATERIAL } from '../src/content/expansion-writing.ts';
+import { BUILDING_BLURBS, HOMESTEAD_TIERS, DECORATIONS_GLIMS, DECORATIONS_MATERIAL } from '../src/content/expansion-writing.ts';
 import { createNewGame, validateSave } from '../src/lib/state.ts';
-import { checkSpend, spendEmbers } from '../src/lib/embers.ts';
+import { checkSpend, spendGlims } from '../src/lib/glims.ts';
 import { isSafeBoundary } from '../src/lib/habitica/sync.ts';
 
 test('shared homes preserve writing identities, categories and footprints', () => {
   assert.deepEqual(HOMESTEAD_DATA.tiers.map(t => ({ id: t.id, name: t.name })), HOMESTEAD_TIERS.map(t => ({ id: t.id, name: t.name })));
-  for (const group of [DECORATIONS_EMBER, DECORATIONS_MATERIAL]) for (const expected of group) {
+  for (const group of [DECORATIONS_GLIMS, DECORATIONS_MATERIAL]) for (const expected of group) {
     const v = HOMESTEAD_DATA.items.find(i => i.id === expected.id)!;
     assert.ok(v);
     assert.deepEqual([v.name, v.category, v.footprint], [expected.name, expected.category, expected.footprint]);
-    if (group === DECORATIONS_EMBER) assert.ok(v.glims >= 2 && v.glims <= 6);
+    if (group === DECORATIONS_GLIMS) assert.ok(v.glims >= 2 && v.glims <= 6);
     else if (v.id === HOMESTEAD_DATA.lanternPosts.item) { assert.equal(v.glims, 0); assert.deepEqual(v.materials, HOMESTEAD_DATA.lanternPosts.costs[0]!.materials); }
     else { assert.equal(v.glims, 0); assert.ok(Object.keys(v.materials).length <= 2); for (const qty of Object.values(v.materials)) assert.ok(qty >= 4 && qty <= 10); }
   }
@@ -45,7 +45,7 @@ test('typed homestead loader rejects malformed definitions', () => {
     (h: typeof HOMESTEAD_DATA) => { h.lanternPosts.item = 'nope'; },
     (h: typeof HOMESTEAD_DATA) => { h.lanternPosts.costs = []; },
     (h: typeof HOMESTEAD_DATA) => { h.lanternPosts.growth = { gold: 1 }; },
-    (h: typeof HOMESTEAD_DATA) => { h.deeds.embers = 0; },
+    (h: typeof HOMESTEAD_DATA) => { h.deeds.glims = 0; },
     (h: typeof HOMESTEAD_DATA) => { h.desolation.deedLostAfterDays = h.desolation.desolateAfterDays; },
     (h: typeof HOMESTEAD_DATA) => { h.jointDeed.confirmWindowSeconds = 0; },
     (h: typeof HOMESTEAD_DATA) => { h.personalChest.maxUnits = 0; },
@@ -55,7 +55,7 @@ test('typed homestead loader rejects malformed definitions', () => {
 });
 
 test('Commons and homesteads are safe, Wilds is unsafe, and home rest retains earned-only revival', () => {
-  const state = { ...createNewGame(), area: 'commons', hp: 0, embers: 4, xpEmbers: 0 };
+  const state = { ...createNewGame(), area: 'commons', hp: 0, glims: 4, xpGlims: 0 };
   assert.ok(isSafeBoundary(state));
   assert.ok(isSafeBoundary({ ...state, area: 'home:3' }));
   assert.ok(!isSafeBoundary({ ...state, area: 'wilds' }));
@@ -64,8 +64,8 @@ test('Commons and homesteads are safe, Wilds is unsafe, and home rest retains ea
   assert.equal(validateSave({ ...state, area: 'home:12' }).area, 'home:12');
   assert.throws(() => validateSave({ ...state, area: 'home:-1' }));
   assert.equal(checkSpend(state, { kind: 'home-rest' }, { imported: true }).reason, 'needs-earned');
-  const rested = spendEmbers({ ...state, xpEmbers: 1 }, { kind: 'home-rest' }, { imported: true });
-  assert.equal(rested.hp, rested.maxHp); assert.equal(rested.embers, 3); assert.equal(rested.xpEmbers, 0);
+  const rested = spendGlims({ ...state, xpGlims: 1 }, { kind: 'home-rest' }, { imported: true });
+  assert.equal(rested.hp, rested.maxHp); assert.equal(rested.glims, 3); assert.equal(rested.xpGlims, 0);
 });
 
 test('gate tiles are where the Commons map draws them (same table as the Go test)', () => {

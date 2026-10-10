@@ -5,7 +5,7 @@
  * Most handlers are a server write: `withServer` sends where the hero
  * stands along with it (the server measures reach from there), drops the
  * answer if the scene has gone meanwhile, and says a refusal in a toast
- * unless the handler says it another way. Ember spends (rest, the chest, a
+ * unless the handler says it another way. Glim spends (rest, the chest, a
  * road lantern) are the rest: the server's for connected play, the save's
  * for guests, with one table of refusal words (src/content/errors.ts).
  *
@@ -17,7 +17,7 @@ import { echoCampSpeaker, echoForKeepsake } from '../../content/echoes'
 import { foundToast, paperById } from '../../content/papers'
 import { ADA_OIL_REPLIES, HEIRLOOMS, HEIRLOOM_IDS, countAdaOilGifts, type HeirloomId } from '../../content/heirlooms'
 import { spendErrorText } from '../../content/errors'
-import { CHARM_ITEM, ROAD_LANTERNS, type EmberSpend, type RoadLanternId } from '../../lib/embers'
+import { CHARM_ITEM, ROAD_LANTERNS, type GlimSpend, type RoadLanternId } from '../../lib/glims'
 import { yieldLine } from '../../lib/gathering'
 import { sellerFor } from '../../lib/items'
 import { parseBuy } from '../../lib/purse'
@@ -73,7 +73,7 @@ export class WorldActions {
     [
       'buy:',
       (rest) => {
-        // `buy:<seller>:<good>`, or `…:gold` paid from the purse (purse-and-wardrobe.md 3.1).
+        // `buy:<seller>:<good>`, paid in glims (silas-yard.md 1.6).
         const buy = parseBuy(rest)
         if (buy) this.marketBuy(buy.seller, buy.good)
       }
@@ -202,11 +202,11 @@ export class WorldActions {
   }
 
   /**
-   * An ember spend. Connected play: the server decides; the world waits
+   * A glim spend. Connected play: the server decides; the world waits
    * (persistenceInFlight), the payoff plays only after a yes, and nothing
    * changes on a no. Guests spend from the save.
    */
-  private spend(spend: EmberSpend): void {
+  private spend(spend: GlimSpend): void {
     const { session, scene } = this.deps
     const refused = (code: string) => bus.emit(EV.toast, { text: spendErrorText(code), kind: 'error' })
     if (session.link) {
@@ -224,7 +224,7 @@ export class WorldActions {
   }
 
   /** The visible reward for a spend that went through. */
-  private payoff(spend: EmberSpend): void {
+  private payoff(spend: GlimSpend): void {
     const { scene, session, fx } = this.deps
     const hero = this.deps.hero().sprite
     sfx('lantern')
@@ -235,7 +235,7 @@ export class WorldActions {
       fx.floatText(hero.x, hero.y - 24, 'Rested', '#ffd27a', false)
       bus.emit(EV.toast, {
         text: spend.kind === 'home-rest' ? 'Home, and rested. Health and mana restored.' : 'Warm and rested. Health and mana restored.',
-        icon: 'ember'
+        icon: 'glim'
       })
     } else if (spend.kind === 'road-lantern') {
       const lights = this.deps.lightProps()
@@ -248,7 +248,7 @@ export class WorldActions {
       }
       bus.emit(EV.toast, { text: 'The road lantern is lit. Rest in its light to recover.', icon: 'lantern' })
     } else {
-      const spot = this.deps.world.emberSpots.find((e) => e.id === 'chest')
+      const spot = this.deps.world.glimSpots.find((e) => e.id === 'chest')
       if (spot) fx.sparkBurst(tileMid(spot.tx), spot.ty * TILE + 6, 14)
       bus.emit(EV.toast, { text: `Found: ${itemInfo(CHARM_ITEM).name}. Your strikes find the gaps more often.`, icon: 'ember' })
     }
@@ -256,8 +256,8 @@ export class WorldActions {
   }
 }
 
-/** The ember spend an action names (rest, home-rest, chest, light:<road lantern>), if any. */
-function spendFor(action: string): EmberSpend | null {
+/** The glim spend an action names (rest, home-rest, chest, light:<road lantern>), if any. */
+function spendFor(action: string): GlimSpend | null {
   if (action === 'rest') return { kind: 'rest' }
   if (action === 'home-rest') return { kind: 'home-rest' }
   if (action === 'chest') return { kind: 'chest' }

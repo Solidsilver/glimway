@@ -12,7 +12,7 @@ that touches Habitica data, or that adds an item, slot or currency.
 Your look, your class, your gear, your companions, your gold and your record
 of showing up all belong to Habitica, and you earn them there. Glimway
 shows the real ones and never hands out its own. The game fills the gaps:
-work tools, materials, crafted goods, homes, keepsakes and embers, which
+work tools, materials, crafted goods, homes, keepsakes and glims, which
 Habitica doesn't have. Keeping the earning in Habitica keeps the reason to
 open Habitica.
 
@@ -53,9 +53,9 @@ and `server/internal/habitica/client.go`, plus what's planned.
 | Owned gear | `items.gear.owned` | Since 0.6: the wardrobe, cosmetic only. Read by the server only (sign-in, a top-up, "Check for new gear"), never from what a browser reports; see [design/purse-and-wardrobe.md](design/purse-and-wardrobe.md) §4 | OK |
 | Pets and mounts | `items.pets` (value > 0), `items.mounts` (value `true`), `currentPet`, `currentMount` | Since 0.5: the follower (any owned pet chosen in the Companions tab, Habitica's current pet by default), up to three yard pets, mounts stalled in the stable and ridden or led from there; friends' pets and mounts drawn. Nothing is written to Habitica, and `currentMount` no longer decides riding | OK |
 | Level, attributes | `stats.lvl`, `str/int/con/per`, `buffs` | Combat stats | OK |
-| XP | `stats.exp` | Embers: every 10 XP earned becomes 1 ember | OK. Read only, and each XP pays once |
+| XP | `stats.exp` | Glims: every 10 XP earned becomes 1 glim | OK. Read only, and each XP pays once |
 | Health and mana | `stats.hp`, `stats.mp`, `maxHealth` | Imported once, then game-local vitals | OK, with a note below |
-| Gold | `stats.gp` | Since 0.6: the purse. The browser's sync read shows it on the consent card (display only); the server reads it again itself during a top-up, the only read that counts. Moved in with consent on every top-up, never back out; see [design/purse-and-wardrobe.md](design/purse-and-wardrobe.md) §2 and [habitica-gold.md](habitica-gold.md) | OK |
+| Gold | `stats.gp` | Since 0.6.1: turned into glims, two gold for each glim, at most 30 glims a UTC day in up to two top-ups. Habitica gold shows only as words on the consent card (from the browser's sync read, display only); the server reads it again itself during a top-up, the only read that counts. Spent with consent on every top-up, never paid back; see [design/silas-yard.md](design/silas-yard.md) §1.5, [design/purse-and-wardrobe.md](design/purse-and-wardrobe.md) §2 and [habitica-gold.md](habitica-gold.md) | OK |
 | Party | `party._id` | Party worlds and admission | OK |
 | Streaks, achievements | not read | | Planned: in-world recognition (plaques, a stable) |
 | Habitica art | Habitica's sprite host | Avatar layers, cached by the server | OK. Non-commercial and attribution-bound (`ASSETS.md`) |
@@ -64,13 +64,15 @@ Health note. Rests, road lanterns and the hearth refill in-game health and
 mana without touching Habitica, and Habitica damage reaches the game only as
 a genuine external change at sync. That's fine under the rules: the game
 never writes HP back and never lets a rest stand in for a Habitica heal at
-0 HP (that still needs embers earned from XP, or a real heal on Habitica).
+0 HP (that still needs glims earned from XP, or a real heal on Habitica).
+Glims that arrive by top-up, shelf sale, letter or hand are never XP-earned,
+so nobody can pass a 0-HP rest to a friend.
 
 ### From Glimway only
 
 | What | Examples (`content/items.json`) |
 |---|---|
-| Embers | Earned from Habitica XP, spent only in the game |
+| Glims | Earned from Habitica XP (10 XP → 1 glim), the welcome and story, or a top-up of Habitica gold (2 gold → 1 glim, at most 30 a day). Spent only in the game; never turned back into gold. Move between players on shelves, in letters and by hand, and are never made or lost on the way |
 | Tools | Bench axe, pick and spade, stave bucket, watering can, heirlooms, the oak-mark punch |
 | Carried things | Carter's lantern, whistles, turncap jar, salve satchel |
 | Carry gear | Forager's satchel, work apron, carting coat (a second pocket; not drawn on the hero) |
@@ -79,7 +81,6 @@ never writes HP back and never lets a rest stand in for a Habitica heal at
 | Homestead | Cottage, workshop, furniture, home goods, the door-fox carving |
 | Keepsakes | Whittled fox, river-glass bead, tin whistle, the Ember Charm |
 | Papers | Found texts, recipe pages |
-| Purse gold (0.6) | Moved in from Habitica with consent; never back out; moves between players on shelves, in letters and by hand |
 
 ## Where today's game is close to the line
 
@@ -109,7 +110,8 @@ things sit near the line.
    only in the inventory today. If they're ever drawn on the hero, they cover
    Habitica's `armor` and `back` slots. Keep them undrawn, or show them only
    in the inventory.
-4. **The README promised no writes.** Rewritten with the purse (0.6): the
+4. **The README promised no writes.** Rewritten with the purse (0.6), and for
+   glims (0.6.1): the
    README ("How your Habitica token is handled"), `docs/import-contract.md`
    (the browser's `HabiticaClient` stays read-only; the server writes for a
    top-up and nowhere else), the connect guide's "Why does it need my token?"
@@ -149,7 +151,7 @@ Answer each before a brief goes out:
 
 - **Streaks and achievements.** What can recognition be (plaques, titles,
   a line from an NPC) without becoming a reward that pays in game items?
-- **Habitica gold beyond the purse.** Could a later feature buy Habitica
+- **Habitica gold beyond the top-up.** Could a later feature buy Habitica
   gear for the player from inside Glimway? That's a Habitica purchase
   made from the game; the rules say no until the owner says otherwise.
 - **The off-hand placement.** The name is settled (below); drawing the

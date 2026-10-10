@@ -3,11 +3,11 @@
   import { SILAS, homesteadsFor } from '../game/homestead'
   import { bus, EV } from '../game/events'
   import { HOMESTEAD_DATA, shopSections, type HomeItem } from '../lib/homestead'
-  import { BUILDING_BLURBS, DECORATIONS_EMBER, DECORATIONS_MATERIAL, HOMESTEAD_TIERS } from '../content/expansion-writing'
+  import { BUILDING_BLURBS, DECORATIONS_GLIMS, DECORATIONS_MATERIAL, HOMESTEAD_TIERS } from '../content/expansion-writing'
   import { MATERIALS } from '../content/expansion-writing'
   import { actionRunner, busVersion } from './panel-state.svelte'
   import { ui } from './store.svelte'
-  import Icon from './Icon.svelte'
+  import Glim from './Glim.svelte'
   import Panel from './Panel.svelte'
   import ArtIcon from './ArtIcon.svelte'
   import { home } from './home.svelte'
@@ -21,10 +21,10 @@
   const homes = $derived(homesteadsFor(session))
   const changed = busVersion(bus, EV.homeChanged)
   const action = actionRunner()
-  /** Silas's own word for being short of embers. */
-  const refused = (r: { code: string; text: string }) => (r.code === 'insufficient-glims' ? SILAS.dialogue.notEnoughEmbers.lines[0] : r.text)
+  /** Silas's own word for being short of glims. */
+  const refused = (r: { code: string; text: string }) => (r.code === 'insufficient-glims' ? SILAS.dialogue.notEnoughGlims.lines[0] : r.text)
 
-  const blurb = (id: string) => BUILDING_BLURBS[id] ?? [...DECORATIONS_EMBER, ...DECORATIONS_MATERIAL].find((d) => d.id === id)?.blurb ?? ''
+  const blurb = (id: string) => BUILDING_BLURBS[id] ?? [...DECORATIONS_GLIMS, ...DECORATIONS_MATERIAL].find((d) => d.id === id)?.blurb ?? ''
   const materialName = (id: string) => MATERIALS.find((m) => m.id === id)?.name ?? id
   const where = (it: HomeItem) => (it.where.length === 2 ? 'Indoors or out' : it.where[0] === 'indoor' ? 'Indoors' : 'Outdoors')
 
@@ -40,14 +40,14 @@
     }
   })
 
-  const { buildings, finished: emberItems, wilds: materialItems } = shopSections()
+  const { buildings, finished: glimItems, wilds: materialItems } = shopSections()
   const cottage = HOMESTEAD_DATA.tiers[1]
   const cottageBlurb = HOMESTEAD_TIERS[1].blurb
   const workshop = HOMESTEAD_DATA.tiers[2]
   const workshopBlurb = HOMESTEAD_TIERS[2].blurb
   const workshopWhy = $derived.by(() => {
     void changed.value
-    return workshopShort(ui.stats.embers, homes.materials)
+    return workshopShort(ui.stats.glims, homes.materials)
   })
 
   /** What a piece costs right now: a lantern post costs more for each one the home has bought. */
@@ -64,7 +64,7 @@
     if (locked(it)) return `Needs the ${HOMESTEAD_TIERS[it.minTier].name.toLowerCase()}`
     // One stable to a homestead (crafts.md 3.2).
     if (it.id === HOMESTEAD_DATA.stable.item && view.owned(it.id) > 0) return 'Built'
-    if (it.glims > 0 && ui.stats.embers < it.glims) return `Needs ${it.glims} embers`
+    if (it.glims > 0 && ui.stats.glims < it.glims) return `Needs ${it.glims} glims`
     for (const [m, n] of Object.entries(price(it))) if ((view.materials[m] ?? 0) < n) return `Needs ${n} ${materialName(m).toLowerCase()}`
     return null
   }
@@ -82,11 +82,11 @@
     await action.run('cottage', () => homes.upgrade(), () => (homes.mine?.tier === 2 ? 'There. Deep eaves, a heavy bench, and a chest that won’t drink the damp. Go and make something.' : SILAS.dialogue.afterUpgrade.lines[0]), refused)
   }
 
-  /** A price may name embers, materials, or both (the stable): show all of it. */
+  /** A price may name glims, materials, or both (the stable): show all of it. */
   const cost = (it: HomeItem) => {
-    const embers = it.glims > 0 ? `${it.glims} embers` : ''
+    const glims = it.glims > 0 ? `${it.glims} glims` : ''
     const materials = Object.entries(price(it)).map(([m, n]) => `${n} ${materialName(m).toLowerCase()}`).join(' · ')
-    return [embers, materials].filter(Boolean).join(' · ')
+    return [glims, materials].filter(Boolean).join(' · ')
   }
 </script>
 
@@ -101,7 +101,7 @@
     <p class="msg">Talk to Silas about a deed first: pick a gate on the lane, and he’ll draw it up.</p>
   {:else}
     <p class="balance" aria-live="polite">
-      <span><Icon name="ember" size={14} /> {ui.stats.embers} embers</span>
+      <span><Glim size={14} /> {ui.stats.glims} glims</span>
       {#each MATERIALS as m (m.id)}
         {#if (view.materials[m.id] ?? 0) > 0}<span><ArtIcon art={`icon-${m.id}`} size={16} /> {view.materials[m.id]} {m.name.toLowerCase()}</span>{/if}
       {/each}
@@ -116,7 +116,7 @@
             <span class="name">{cottage.name}</span>
             <span class="desc">{cottageBlurb} Unlocks the inside and setting things out.</span>
           </span>
-          <button type="button" class="primary small" disabled={action.busy !== null || ui.stats.embers < cottage.glims} onclick={raise}>
+          <button type="button" class="primary small" disabled={action.busy !== null || ui.stats.glims < cottage.glims} onclick={raise}>
             {action.busy === 'cottage' ? 'Raising…' : `Raise it · ${cottage.glims}`}
           </button>
         </div>
@@ -130,7 +130,7 @@
           <span class="txt">
             <span class="name">{workshop.name}</span>
             <span class="desc">{workshopBlurb} Unlocks the storage chest and the crafting bench.</span>
-            <span class="meta">{workshop.glims} embers · {costPhrase(workshop.materials ?? {})}</span>
+            <span class="meta">{workshop.glims} glims · {costPhrase(workshop.materials ?? {})}</span>
           </span>
           <button type="button" class="small" class:primary={!workshopWhy} data-testid="build-workshop" disabled={action.busy !== null || !!workshopWhy} onclick={raise}>
             {action.busy === 'cottage' ? 'Building…' : workshopWhy ?? 'Build it'}
@@ -164,7 +164,7 @@
       </section>
     {/if}
 
-    {#each [{ title: 'Finished pieces', list: emberItems }, { title: 'From the Wilds', list: materialItems }] as group (group.title)}
+    {#each [{ title: 'Finished pieces', list: glimItems }, { title: 'From the Wilds', list: materialItems }] as group (group.title)}
       <section aria-label={group.title}>
         <h3 class="section-title">{group.title}</h3>
         <ul>

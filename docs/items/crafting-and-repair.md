@@ -76,7 +76,7 @@ The other fittings are **found only** (see the catalogue).
 All of these are **bench-only**: Silas doesn't sell them (nor the door-fox,
 which he carves at deed time, nor Pip's pencil map, which is Pip's gift). The
 deliberate exceptions are the **oak table** and the **reading chair**, which
-Silas still sells to anyone with the embers — fine work for players who
+Silas still sells to anyone with the glims — fine work for players who
 haven't the bench yet. The **carved bed** and the **bookshelf** take seasoned
 timber: the bed's purchase bill and the bookshelf's recipe both do.
 
@@ -169,7 +169,7 @@ Warden-stone is drift-stone that has learned one shape and always walks back to 
 | Where | Cost |
 |---|---|
 | Your bench | timber 2 and wooden peg 1 (axe, pick, spade); fiber 2 (Nan's pole) |
-| Orrin or Silas | A few embers; they do it while you talk |
+| Orrin or Silas | A few glims; they do it while you talk |
 
 Mending restores full wear. Cheap tools can't be mended.
 

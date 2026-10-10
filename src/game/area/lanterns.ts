@@ -4,7 +4,7 @@
  * quest-driven lit/dim visuals.
  */
 import Phaser from 'phaser'
-import { isLit, ROAD_LANTERNS, type RoadLanternId } from '../../lib/embers'
+import { isLit, ROAD_LANTERNS, type RoadLanternId } from '../../lib/glims'
 import type { GameState, QuestStage } from '../../lib/state'
 
 /** Atlas-prop lanterns that can glow when lit: shrine and village lantern. */

@@ -345,13 +345,13 @@ export class Village {
   }
 
   /**
-   * Stock, take from or buy at the gift shelf. A stock may carry a gold
-   * price; a buy pays it from the purse (purse-and-wardrobe.md 3.2), shown
-   * at once as `pay` until the answer.
+   * Stock, take from or buy at the gift shelf. A stock may carry a price in
+   * glims; a buy pays it (purse-and-wardrobe.md 3.2, in glims), shown at once
+   * as `pay` until the answer.
    */
   async shelfAction(req: { op: 'stock' | 'take' | 'buy'; gate: number; slot: number; asset?: Asset; price?: number; pay?: number }): Promise<Result<ShelfActionResponse>> {
     const fields = { action: req.op, gate: req.gate, slot: req.slot, ...(req.asset ? { asset: req.asset } : {}), ...(req.price ? { price: req.price } : {}) }
-    const r = await this.link.mutate<ShelfActionResponse>({ kind: 'shelf', fields }, req.op === 'buy' && req.pay ? { gold: -req.pay } : {})
+    const r = await this.link.mutate<ShelfActionResponse>({ kind: 'shelf', fields }, req.op === 'buy' && req.pay ? { glims: -req.pay } : {})
     if (!r.ok) return fail(r.code)
     if (r.res.inventory) {
       this.inventory = r.res.inventory
@@ -445,31 +445,31 @@ export class Village {
     return { ok: true, value: undefined }
   }
 
-  /** A gold letter (purse-and-wardrobe.md 3.3): the gold leaves the purse now and waits in the letter. */
-  async sendGold(toId: string, gold: number): Promise<Result> {
-    const r = await this.link.mutate<MailActionResponse>({ kind: 'mail-send', fields: { toId, glims: gold } }, { gold: -gold })
+  /** A glim letter (silas-yard.md 1.6): the glims leave now and wait in the letter. */
+  async sendGlims(toId: string, glims: number): Promise<Result> {
+    const r = await this.link.mutate<MailActionResponse>({ kind: 'mail-send', fields: { toId, glims } }, { glims: -glims })
     if (!r.ok) return fail(r.code)
     this.adoptMail(r.res.result)
     return { ok: true, value: undefined }
   }
 
-  /** The gold a letter carries (0: not a gold letter), for the purse shown until the answer. */
-  private goldIn(id: string): number {
+  /** The glims a letter carries (0: not a glim letter), shown on the balance until the answer. */
+  private glimsIn(id: string): number {
     const m = this.mail.find((x) => x.id === id)
     return m?.asset.kind === 'glims' ? m.asset.qty : 0
   }
 
   async claim(id: string): Promise<Result<AssetView | undefined>> {
-    const gold = this.goldIn(id)
-    const r = await this.link.mutate<MailActionResponse>({ kind: 'mail-claim', id }, gold ? { gold } : {})
+    const glims = this.glimsIn(id)
+    const r = await this.link.mutate<MailActionResponse>({ kind: 'mail-claim', id }, glims ? { glims } : {})
     if (!r.ok) return fail(r.code)
     this.adoptMail(r.res.result)
     return { ok: true, value: r.res.result.asset }
   }
 
   async recall(id: string): Promise<Result> {
-    const gold = this.goldIn(id)
-    const r = await this.link.mutate<MailActionResponse>({ kind: 'mail-recall', id }, gold ? { gold } : {})
+    const glims = this.glimsIn(id)
+    const r = await this.link.mutate<MailActionResponse>({ kind: 'mail-recall', id }, glims ? { glims } : {})
     if (!r.ok) return fail(r.code)
     this.adoptMail(r.res.result)
     return { ok: true, value: undefined }

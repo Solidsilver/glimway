@@ -1,10 +1,11 @@
 <script lang="ts">
   import { DEMO_CHARACTER, discoveryInfo } from '../content/world'
   import { inventoryCopy } from '../content/inventory'
-  import { EMBER_COSTS, ROAD_LANTERNS, XP_PER_EMBER, chestOpened, isLit, withCharm } from '../lib/embers'
+  import { GLIM_COSTS, ROAD_LANTERNS, XP_PER_GLIM, chestOpened, isLit, withCharm } from '../lib/glims'
   import type { Session } from '../game/session'
   import { ui } from './store.svelte'
   import Icon from './Icon.svelte'
+  import Glim from './Glim.svelte'
   import Panel from './Panel.svelte'
   import { isTouchFirst } from './device'
   import { heroLine } from './hero'
@@ -134,30 +135,26 @@
       <div class="bar mana"><div class="fill" style={`width:${manaPct}%`}></div></div>
       <span class="num">{ui.stats.mana}/{ui.stats.maxMana}</span>
     </div>
-    <p class="fine">Mana trickles back as you walk.{profile ? ' Health comes from your Habitica hero — heal there and sync, or spend embers on a warm rest.' : ' Health mends slowly in Hearthwick.'}</p>
+    <p class="fine">Mana trickles back as you walk.{profile ? ' Health comes from your Habitica hero — heal there and sync, or spend glims on a warm rest.' : ' Health mends slowly in Hearthwick.'}</p>
   </div>
 
-  <!-- [0.6 lane D] The purse's line goes here, beside the embers (design 2.1):
-       <PurseLine /> from ./PurseLine.svelte (lane D's; it reads the gold from the ui
-       store, and an optional onOpen adds a "Purse ›" link to the Menu). Placed when
-       that component lands on exp/purse. -->
-  <h3 class="section-title">Embers</h3>
-  <div class="embers">
+  <h3 class="section-title">Glims</h3>
+  <div class="glims" data-testid="hero-glims">
     <div class="purse">
-      <span class="ei"><Icon name="ember" size={26} /></span>
-      <span class="count">{ui.stats.embers}</span>
+      <span class="ei"><Glim size={26} /></span>
+      <span class="count">{ui.stats.glims}</span>
       <span class="what">
         {#if profile}
-          Every {XP_PER_EMBER} XP you earn on Habitica becomes an ember when you sync in Hearthwick or the Commons.
+          Every {XP_PER_GLIM} XP you earn on Habitica becomes a glim when you sync in Hearthwick or the Commons.
         {:else}
-          Connect Habitica in the Menu and every {XP_PER_EMBER} XP you earn there becomes an ember.
+          Connect Habitica in the Menu and every {XP_PER_GLIM} XP you earn there becomes a glim.
         {/if}
       </span>
     </div>
     <ul class="spends">
-      <li><b>Warm rest</b><span>Hearthwick lantern · full health &amp; mana</span><em><Icon name="ember" size={11} />{EMBER_COSTS.rest}</em></li>
-      <li class:done={litCount === ROAD_LANTERNS.length}><b>Road lanterns</b><span>Brackenwood · rest spots · {litCount}/{ROAD_LANTERNS.length} lit</span><em><Icon name="ember" size={11} />{EMBER_COSTS.roadLantern} each</em></li>
-      <li class:done={chestDone}><b>Ashwatch chest</b><span>{chestDone ? 'Opened — the charm is in your pack' : 'Something warm inside'}</span><em>{#if chestDone}<Icon name="check" size={11} />{:else}<Icon name="ember" size={11} />{EMBER_COSTS.chest}{/if}</em></li>
+      <li><b>Warm rest</b><span>Hearthwick lantern · full health &amp; mana</span><em><Glim size={11} />{GLIM_COSTS.rest}</em></li>
+      <li class:done={litCount === ROAD_LANTERNS.length}><b>Road lanterns</b><span>Brackenwood · rest spots · {litCount}/{ROAD_LANTERNS.length} lit</span><em><Glim size={11} />{GLIM_COSTS.roadLantern} each</em></li>
+      <li class:done={chestDone}><b>Ashwatch chest</b><span>{chestDone ? 'Opened — the charm is in your pack' : 'Something warm inside'}</span><em>{#if chestDone}<Icon name="check" size={11} />{:else}<Glim size={11} />{GLIM_COSTS.chest}{/if}</em></li>
     </ul>
   </div>
 
@@ -450,7 +447,7 @@
       font-size: 23px;
     }
   }
-  .embers {
+  .glims {
     display: grid;
     gap: 8px;
   }

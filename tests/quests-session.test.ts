@@ -12,11 +12,11 @@ import { createNewGame } from '../src/lib/state.ts';
  * the gate and the grants are the server's.
  */
 test('without a link, a plain step is taken here and a gated one is refused, nothing taken', async () => {
-  const s = new Session({ ...createNewGame(), embers: 4, xpEmbers: 4, area: 'in:village:library', quests: { signpost: 'light-first-lamp', 'seat-by-the-lamp': 'browse-shelf' } });
-  // The lamp's oil is an embers gate: refused, and the embers stay.
+  const s = new Session({ ...createNewGame(), glims: 4, xpGlims: 4, area: 'in:village:library', quests: { signpost: 'light-first-lamp', 'seat-by-the-lamp': 'browse-shelf' } });
+  // The lamp's oil is an glims gate: refused, and the glims stay.
   assert.equal(await s.reachStep('seat-by-the-lamp', 'oil-lamp'), 'needs-connection');
   assert.equal(s.state.quests['seat-by-the-lamp'], 'browse-shelf');
-  assert.equal(s.state.embers, 4);
+  assert.equal(s.state.glims, 4);
   assert.ok(!s.state.flags.includes('library:lamp'));
   // A plain step goes ahead on this device.
   assert.equal(await s.reachStep('signpost', 'meet-orrin'), 'not-next', 'already past it');

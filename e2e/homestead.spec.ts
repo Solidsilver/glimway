@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { serverState, sql, accountOf, CONTRACT, served } from './connected'
 import { dialogueState, untilChoices, waitForArea, player, waitForLive, expectAreaCard, expectToast } from './helpers'
-import { area, earnEmbers, freshPlayer, fund, go, homeAt, homes, hurt, landOf, lane, myHome, place, readOn, shot, silasSays, talk, throughGate, type Home } from './home-helpers'
+import { area, earnGlims, freshPlayer, fund, go, homeAt, homes, hurt, landOf, lane, myHome, place, readOn, shot, silasSays, talk, throughGate, type Home } from './home-helpers'
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts'
 import { LAND, buildableKind, clearable, clearedSet, effectiveKind, homeLights, isLit, type Land } from '../src/lib/homestead-land.ts'
 
@@ -119,7 +119,7 @@ test('the Commons gate: walk in from Hearthwick and back, and through an unclaim
 test('claim and guidance, then expansion: lantern posts, naming, clearing, cottage, rest at home', async ({ page }) => {
   test.setTimeout(240_000)
   const id = await freshPlayer(page)
-  await earnEmbers(page, id)
+  await earnGlims(page, id)
   await go(page, 'commons', 23, 19)
   await expect.poll(async () => (await homes(page)).status).toBe('ready')
   let v = await homes(page)
@@ -132,12 +132,12 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
   const slot = v.slots.find((s) => s.gate === free.gate)!
   await go(page, 'commons', slot.entry.tx, slot.entry.ty + 1)
   await talk(page, new RegExp(`Read the sign · Lot ${free.gate + 1}`))
-  const embers = (await serverState(page)).body.state.embers
+  const glims = (await serverState(page)).body.state.glims
   await silasSays(page, new RegExp(`The deed to Lot ${free.gate + 1}`))
   await expect.poll(async () => (await homes(page)).myGate).toBe(free.gate)
   // Silas answers once the server has the claim: read it (it would hold the screen).
   await readOn(page, /in my square hand/)
-  expect((await serverState(page)).body.state.embers).toBe(embers)
+  expect((await serverState(page)).body.state.glims).toBe(glims)
   await expect.poll(async () => (await serverState(page)).body.state.flags).toContain('paper:deed-of-sale-commons-plot')
 
   // Guidance: the journal and the HUD say where, and a marker leads there.
@@ -226,7 +226,7 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
   await expect(tray.locator('.status')).toContainText('holding up ground')
   await tray.getByRole('button', { name: 'Cancel' }).click()
 
-  // A tree in your light: Silas clears it for an ember, and the map opens up.
+  // A tree in your light: Silas clears it for a glim, and the map opens up.
   home = await myHome(page)
   const tree = (() => {
     try {
@@ -236,7 +236,7 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
     }
   })()
   if (tree) {
-    const before = (await serverState(page)).body.state.embers
+    const before = (await serverState(page)).body.state.glims
     await page.evaluate(([tx, ty]) => {
       const w = window as unknown as { __fsDevTapTile?: (x: number, y: number) => void }
       w.__fsDevTapTile?.(tx, ty)
@@ -244,7 +244,7 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
     await expect(page.getByTestId('clear-tile')).toBeVisible()
     await page.getByTestId('clear-tile').click()
     await expect.poll(async () => (await myHome(page)).cleared).toContainEqual([tree.x, tree.y])
-    expect((await serverState(page)).body.state.embers).toBe(before - HOMESTEAD_DATA.clearTileGlims)
+    expect((await serverState(page)).body.state.glims).toBe(before - HOMESTEAD_DATA.clearTileGlims)
     await waitForArea(page, `home:${free.gate}`)
     expect(ground.tiles[tree.y * L.width + tree.x]).not.toBe(LAND.GRASS)
   } else if (await tray.isVisible()) {
@@ -260,11 +260,11 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
   await expectToast(page, 'Home, and rested')
 
   // Raise the cottage, go inside: the cottage is a place of its own, saved inside.
-  const embers2 = (await serverState(page)).body.state.embers
+  const embers2 = (await serverState(page)).body.state.glims
   await silasSays(page, /Raise a cottage/)
   await readOn(page, /Steady as a route stone/)
   await expect.poll(async () => (await myHome(page)).tier).toBe(1)
-  expect((await serverState(page)).body.state.embers).toBe(embers2 - 15)
+  expect((await serverState(page)).body.state.glims).toBe(embers2 - 15)
   await throughGate(page, free.gate)
   await go(page, `home:${free.gate}`, land.doorstep.tx + 1, land.doorstep.ty + 3)
   await shot(page, 'land-cottage-desktop')
@@ -287,7 +287,7 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
 test('a joint deed: two players sign at Silas’s table together; then one leaves and keeps their pack', async ({ page, browser, baseURL }) => {
   test.setTimeout(180_000)
   const a = await freshPlayer(page, 'Tansy')
-  await earnEmbers(page, a)
+  await earnGlims(page, a)
   const gate = await claimFirstFree(page)
   const created = await page.request.post('/api/invites', { data: {}, ...CONTRACT })
   expect(created.ok()).toBe(true)
@@ -357,7 +357,7 @@ test('a joint deed: two players sign at Silas’s table together; then one leave
 test('visiting: a second player walks through a neighbour’s gate, sees their place and cottage, read-only', async ({ page, browser, baseURL }) => {
   test.setTimeout(180_000)
   const a = await freshPlayer(page, 'Tansy')
-  await earnEmbers(page, a)
+  await earnGlims(page, a)
   const gate = await claimFirstFree(page)
   await silasSays(page, /Raise a cottage/)
   await readOn(page, /Steady as a route stone/)
@@ -412,7 +412,7 @@ test('visiting: a second player walks through a neighbour’s gate, sees their p
 test('desolation: an empty homestead overgrows, its sign weathers, and in time the deed is lost', async ({ page }) => {
   test.setTimeout(180_000)
   const a = await freshPlayer(page, 'Tansy')
-  await earnEmbers(page, a)
+  await earnGlims(page, a)
   const gate = await claimFirstFree(page)
   await silasSays(page, /Raise a cottage/)
   await readOn(page, /Steady as a route stone/)
@@ -430,14 +430,14 @@ test('desolation: an empty homestead overgrows, its sign weathers, and in time t
   await leaveNow()
   expect((await homeAt(page, gate))!.desolate).toBe(false)
   // Changed her mind: Silas gives the deed back, as it stands, for nothing.
-  const embers = (await serverState(page)).body.state.embers
+  const glims = (await serverState(page)).body.state.glims
   await silasSays(page, new RegExp(`Take back Lot ${gate + 1}`))
   await expect.poll(async () => (await lane(page)).mine?.gate).toBe(gate)
   // Silas answers once the server has it back: read it (it would hold the
   // screen, and the next talk would find no prompt).
   await readOn(page, /Your name’s back on/)
   expect((await myHome(page)).tier).toBe(1)
-  expect((await serverState(page)).body.state.embers).toBe(embers)
+  expect((await serverState(page)).body.state.glims).toBe(glims)
   await leaveNow()
 
   // Days pass (the e2e database's clock is moved back instead).

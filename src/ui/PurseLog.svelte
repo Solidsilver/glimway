@@ -1,9 +1,9 @@
 <script lang="ts">
   /**
-   * The purse log (purse-and-wardrobe.md 2.1): the last 50 lines, newest
-   * first. Every top-up with Habitica's gold before and after, every buy,
-   * sale, letter and gift, and who the other player was. Habitica keeps no
-   * record of a top-up; this is the record.
+   * The Glim log (silas-yard.md 1.6; purse-and-wardrobe.md 2.1): the last
+   * 50 lines, newest first. Every top-up with Habitica's gold before and
+   * after, every buy, sale, letter and gift, and who the other player was.
+   * Habitica keeps no record of a top-up; this is the record.
    */
   import { purseCopy } from '../content/purse'
   import { logDate, signed } from '../lib/purse'

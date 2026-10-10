@@ -139,7 +139,7 @@ test('world views parse, with unknown fields dropped and broken fields refused',
 
 test('a move answer carries the snapshot and the new world', () => {
   const snapshot = {
-    state: { version: 1, area: 'commons', position: { x: 1, y: 2 }, quest: 'new', hp: 10, maxHp: 10, mana: 5, maxMana: 5, embers: 3, xpEmbers: 0, emberXp: 0, inventory: [], discoveries: [], defeatedEnemies: [], flags: [], playSeconds: 0 },
+    state: { version: 1, area: 'commons', position: { x: 1, y: 2 }, quest: 'new', hp: 10, maxHp: 10, mana: 5, maxMana: 5, glims: 3, xpGlims: 0, glimXp: 0, inventory: [], discoveries: [], defeatedEnemies: [], flags: [], playSeconds: 0 },
     version: 7,
     vitalsSource: 'demo',
     accountId: 'hal',

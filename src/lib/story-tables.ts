@@ -196,8 +196,7 @@ const gateOut = (g: QuestGateValid | undefined): QuestGate | undefined => {
   if (g.with !== '') out.with = g.with;
   if (g.wait !== undefined) out.wait = g.wait.hours !== undefined ? { hours: g.wait.hours } : { turnings: g.wait.turnings! };
   if (g.item !== undefined) out.item = { ...itemOut(g.item), keep: g.item.keep ?? false };
-  // G-C: the client quest types' ember names become glims.
-  if (g.glims !== undefined) out.embers = g.glims;
+  if (g.glims !== undefined) out.glims = g.glims;
   return out;
 };
 const stepOut = (s: QuestStepValid): QuestStep => ({
@@ -206,7 +205,7 @@ const stepOut = (s: QuestStepValid): QuestStep => ({
   items: s.items,
   marks: s.marks,
   papers: s.papers,
-  embers: s.glims,
+  glims: s.glims,
   witness: s.witness,
   goal: s.goal,
   objective: s.objective,

@@ -13,7 +13,7 @@ import type { JsonValue } from '@bufbuild/protobuf';
  * emits them all (EmitUnpopulated). Unknown future fields stay tolerated.
  */
 
-const state = { version: 1, area: 'village', position: { x: 1, y: 1 }, quest: 'new', hp: 10, maxHp: 50, mana: 5, maxMana: 30, inventory: [], discoveries: [], defeatedEnemies: [], playSeconds: 0, embers: 0, flags: [], emberXp: 0, xpEmbers: 0 };
+const state = { version: 1, area: 'village', position: { x: 1, y: 1 }, quest: 'new', hp: 10, maxHp: 50, mana: 5, maxMana: 30, inventory: [], discoveries: [], defeatedEnemies: [], playSeconds: 0, glims: 0, flags: [], glimXp: 0, xpGlims: 0 };
 const snapshot = { state, version: 3, vitalsSource: 'demo' as const, accountId: 'alice', displayName: 'Alice', habiticaPartyId: null, worldId: 'w', pending: 0, verifiedXp: 0, flagged: false };
 
 const worldRef = { id: 'w1', ownerId: 'o', ownerName: 'Ora', members: 2, ownerHere: true, party: true };

@@ -67,10 +67,10 @@ type State struct {
 	Discoveries     []string          `json:"discoveries"`
 	DefeatedEnemies []string          `json:"defeatedEnemies"`
 	PlaySeconds     float64           `json:"playSeconds"`
-	Glims           int               `json:"embers"`
+	Glims           int               `json:"glims"`
 	Flags           []string          `json:"flags"`
-	GlimXP          float64           `json:"emberXp"`
-	XPGlims         int               `json:"xpEmbers"`
+	GlimXP          float64           `json:"glimXp"`
+	XPGlims         int               `json:"xpGlims"`
 }
 type Stats struct {
 	Str float64 `json:"str"`
@@ -222,7 +222,7 @@ func LifetimeXP(level, exp float64) float64 {
 // Credit's JSON names follow State's (backend.json).
 type Credit struct {
 	XP    float64  `json:"xp"`
-	Glims int      `json:"embers"`
+	Glims int      `json:"glims"`
 	Mark  *float64 `json:"mark"`
 }
 

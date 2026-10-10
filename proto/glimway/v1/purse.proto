@@ -68,9 +68,14 @@ message PurseLine {
   int32 delta = 2;
   // habitica-topup | purse-settle | market-buy | shelf-buy | shelf-sale |
   // mail-send | mail-claim | mail-return | mail-recall | give | gift |
-  // currency-merge
+  // currency-merge | spend (a rest, a road lantern, the chest) | quest (a
+  // quest gate's price) | mend | homestead-deed | homestead-upgrade |
+  // homestead-buy | homestead-clear
   string reason = 3;
+  // The item on a market-buy, shelf, mend or homestead-buy line.
   string item_def = 4;
+  // How many on a market-buy or shelf line; on a currency-merge line, the
+  // 0.6 purse's gold that migration 033 turned in.
   int32 qty = 5;
   // The other player in a shelf trade, letter or give.
   string other_name = 6;

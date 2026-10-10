@@ -121,25 +121,32 @@ export const whyToken: WhyToken = {
   writes: {
     title: 'What it writes, and only when you ask',
     items: [
-      'When you press Top up in the Menu and agree on the card, the world server moves the gold you chose into your purse: it adds a reward called “Glimway purse” to your Habitica Rewards, buys it once, and removes it. Your Habitica gold goes down by that amount. Nothing else on Habitica changes, and nothing ever goes back.'
+      'When you press Turn gold into glims in the Menu and agree on the card, the world server turns the gold you chose into glims, two gold for each glim, at most 30 glims a day: it adds a reward called “Glimway purse” to your Habitica Rewards, buys it once, and removes it. Your Habitica gold goes down by that amount. Nothing else on Habitica changes, and glims never turn back into gold.'
     ]
   },
   never: {
     title: 'What it never does',
     items: [
-      'Score your own tasks, change stats, equip anything, buy any of your own rewards, cast spells, or touch your party. Gold moves only in a top-up you agreed to.',
+      'Score your own tasks, change stats, equip anything, buy any of your own rewards, cast spells, or touch your party. Gold leaves Habitica only in a top-up you agreed to, and turns into glims.',
       'Keep your token. Glimway’s server sees it at sign-in to prove your account, and in a top-up or a gear check you start, for that one request. It never stores, logs or returns it.'
     ]
   },
   honest:
-    'The honest part: Habitica API tokens aren’t read-only. A token can change your account. The game reads, and writes only to move the gold you chose when you top up your purse. Its code is public so you can check, but the token itself has no such limit.',
+    'The honest part: Habitica API tokens aren’t read-only. A token can change your account. The game reads, and writes only to spend the gold you chose when you turn it into glims. Its code is public so you can check, but the token itself has no such limit.',
   where:
     'Where it goes: to Habitica, to read your profile; to your Glimway server at sign-in, to prove your account; and to the server again only in a top-up or a gear check you start, for that one request. The server never stores it, and it is never put in your journey or a log. Only if you tick Remember on this device is it also stored in this browser, apart from your journey.'
 }
 
-/** Ember payoff line (shown under the title choice and in the connected step). */
-export function emberLine(xpPerEmber: number): string {
-  return `From now on, every ${xpPerEmber} XP you earn in Habitica becomes an ember that lights the road.`
+/** Glim payoff line (shown under the title choice and in the connected step). */
+export function glimLine(xpPerGlim: number): string {
+  return `From now on, every ${xpPerGlim} XP you earn in Habitica becomes a glim: a bead of amber that holds a little light.`
+}
+
+/** What a sync's glims say (silas-yard.md 1.2, 1.8): the toast, and Mara's welcome. */
+export const syncGlimsCopy = {
+  gained: (n: number, xp?: number) => `${n === 1 ? '1 glim' : `${n} glims`} caught the light.${xp ? ` That’s the ${xp} XP you earned on Habitica.` : ''}`,
+  welcome: (n: number) => `Mara presses ${n === 1 ? 'a glim' : `${n} glims`} into your hand. “For the lanterns. Earn more out there.”`,
+  holding: (n: number) => `Mara is holding ${n === 1 ? 'a glim' : `${n} glims`} for you to start.`
 }
 
 export const titleChoice = {
@@ -156,5 +163,5 @@ export const unreachableCopy = {
 /** The Menu's About card (purse-and-wardrobe.md 6.6). */
 export const aboutCopy = {
   kept: 'Glimway plays in your browser. Your journey is kept in your world on the Glimway server; your Habitica token never is.',
-  gold: 'Gold moves from Habitica only when you top up your purse.'
+  gold: 'Habitica gold turns into glims only when you ask, two gold for each, at most 30 glims a day. Glims never turn back into gold.'
 }

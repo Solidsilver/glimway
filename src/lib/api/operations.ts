@@ -50,7 +50,7 @@ export interface OperationsApi {
    * outbox (which stores bodies) or a replay.
    */
   purseTopUp(request: PurseTopUpRequest): Promise<Envelope>;
-  /** The purse, the last 50 top-ups and gold lines (GET /api/purse). */
+  /** Today's top-ups, the last 50 top-ups and glim lines (GET /api/purse). */
   purse(): Promise<PurseRead>;
   /** The wardrobe (purse-and-wardrobe.md 4, 6.2): the choice (keyed), the picker's read, and Check for new gear. */
   wardrobe(request: WardrobeRequest): Promise<Envelope>;

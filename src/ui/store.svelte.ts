@@ -63,8 +63,8 @@ interface Banner {
  * Written by App.svelte's bus wiring, read by UI components.
  */
 class UiStore {
-  stats = $state<StatsPayload>({ hp: 5, maxHp: 5, mana: 5, maxMana: 5, embers: 0, gold: 0 })
-  /** Connected play: the purse (gold, top-ups left today, a top-up still working); null until a world says. */
+  stats = $state<StatsPayload>({ hp: 5, maxHp: 5, mana: 5, maxMana: 5, glims: 0 })
+  /** Connected play: today's top-ups (glims and top-ups left, a top-up still working); null until a world says. */
   purse = $state<PurseView | null>(null)
   quest = $state<QuestPayload>({ stage: 'new', objective: '' })
   /** The pinned "How do I…?" guide's step, when one leads the goal line (null: the story). */
@@ -138,7 +138,6 @@ class UiStore {
   /** Another account, or none: the purse shown is this one's (null when signed out). */
   showPurse(purse: PurseView | null): void {
     this.purse = purse
-    this.stats = { ...this.stats, gold: purse?.gold ?? 0 }
   }
 
   toast(payload: ToastPayload): void {
