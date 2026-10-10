@@ -13,6 +13,8 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-10
+
 ### For players
 
 - You can move gold from Habitica into a purse here. Find it in the Menu,
@@ -37,6 +39,22 @@ the game can show the first part as "What's new":
   and the gold gift toast. Gold buys, letters and gives are predicted from the
   outbox entry's stored purse change. The purse pass's icons are packed
   (`purse.webp`).
+- The purse on the server: gold is a second ledger currency
+  (`balances.gold`, `store.CreditGold`/`DebitGold`); a top-up spends
+  Habitica gold through a temporary reward, keyed per account and checked in
+  a detached worker (balance checks at 2, 5, 10, 20 and 35 s, then settled
+  lazily), at most two a day, with `GET /api/purse` for the log. The token is
+  used for that one request: never stored, logged or returned.
+- Gold between players: shelf prices and Buy, gold at sellers, gold letters
+  and gives, with a conservation test per account and by reason.
+- The wardrobe: `player_gear` filled only from the server's own reads of
+  Habitica, `rules.Look`/`Resolve` with shared vectors
+  (`content/vectors/wardrobe.json`), and a changed look that tells friends in
+  the room after its commit.
+- Contract 6: the purse and wardrobe protos, error codes 220-224, and
+  migration 032 (with the mail rebuild).
+- A `dev` branch holds the next release for playtesting; `main` gets only
+  releases, tagged and published automatically once CI passes.
 
 ## [0.5.2] - 2026-10-09
 
@@ -400,7 +418,8 @@ The first public release.
   under its own licence; contributions under the DCO.
 - Unit tests, Go tests and Playwright playtests.
 
-[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.5.2...HEAD
+[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/Solidsilver/glimway/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/Solidsilver/glimway/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/Solidsilver/glimway/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/Solidsilver/glimway/compare/v0.4.0...v0.5.0
