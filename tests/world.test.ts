@@ -27,6 +27,7 @@ const objective = (stage: QuestStage) => {
 const LABELS = questById('lantern-road')!.steps.map((s) => s.goal!);
 import { allResidentJournal, allResidentLines } from '../src/content/residents.ts';
 import { allTalkLines } from '../src/content/talk.ts';
+import { allPellLines } from '../src/content/pell.ts';
 import { allHeirloomJournal, allHeirloomLines } from '../src/content/heirlooms.ts';
 import { allEchoKeepsakeJournal, allEchoKeepsakeLines } from '../src/content/echoes.ts';
 
@@ -209,6 +210,8 @@ test('story dialogue lines fit the box (160 characters) and stay in-world', asyn
   lines.push(...allResidentLines());
   // Greetings and the short talk's choices (src/content/talk.ts).
   lines.push(...allTalkLines());
+  // Pell and the Manage your deed panel (src/content/pell.ts).
+  lines.push(...allPellLines());
   // The heirlooms (Silas, Orrin, Ada, Nan's camp): every line they say.
   lines.push(...allHeirloomLines());
   // The Echo camps' keepsake offers (leaving Bett's candle, Nan's road-nails):

@@ -163,7 +163,7 @@ export const HOME_ERRORS: Table = {
   'not-a-member': 'That’s for the folk on this deed.',
   'already-homesteaded': 'One place on the Commons each. You’d have to give up your deed first.',
   'gate-taken': 'Someone has that deed already.',
-  'not-at-table': 'Silas signs deeds at his table. Stand by it.',
+  'not-at-table': 'Deeds are signed at the table in Pell’s office. Stand by it.',
   'partner-not-at-table': 'Both names go on at once. Your partner needs to be at the table too.',
   'invite-not-found': 'That offer has lapsed. Ask again.',
   'chest-full': 'Your own chest is full.',

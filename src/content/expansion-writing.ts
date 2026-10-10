@@ -131,6 +131,52 @@ export const BUILDER_NPC_DATA: BuilderNPC = {
   }
 };
 
+/**
+ * Silas's Yard (docs/design/silas-yard.md 2.2–2.5): his short talk, the shop
+ * room's spots, and the line over each tab of the Yard panel. His old
+ * cottage and workshop pitches are the Build tab's quotes now; the deeds are
+ * Pell's (./pell.ts).
+ */
+export const SILAS_YARD = {
+  /** His talk's two plain choices: the panel, and the goodbye. */
+  seeTheYard: 'See the Yard',
+  justPassing: 'Just passing',
+  /** After his line, when you have no deed yet; the guide arrow points at Pell. */
+  pellPointer: 'Pell keeps the deeds, through the side door. I only build what\'s written on them.',
+  /** The same pointer before you've a world to buy one in. */
+  pellPointerGuest: 'Pell keeps the deeds, through the side door. They\'re for folk with a world, mind. Sign in to yours from the Menu.',
+  /** The counter while his cycle has him out in the yard; the panel still sells. */
+  tin: 'Silas is out by the sawhorse. A tin on the counter says: LEAVE IT IN THE TIN.',
+  /** The Mend tab while he's out. */
+  mendAway: 'Silas mends when he\'s here.',
+  /** The Mend tab, once you have a workshop. */
+  mendOwnBench: 'Your own bench mends these for materials.',
+  /** The line over each tab, under his portrait. */
+  tabQuotes: {
+    build: {
+      /** A camp: the cottage is next. */
+      camp: 'Your camp\'s holding. Four skids and a slate roof, and you\'d have a door to hang a fox over. Say the word.',
+      /** A cottage: the workshop is next. */
+      cottage: 'Deep eaves, a heavy bench and a chest that doesn\'t drink the damp. Bring me timber, stone and fiber from the Wilds and I\'ll build you a workshop.',
+      /** The house is up as far as he builds it: the stable and the lantern posts. */
+      built: 'The house is up. Now it grows a piece at a time: a stable for your mounts, a post wherever you want more light.'
+    },
+    furnish: 'Got a few pieces finished if you want the place looking lived-in. Pegged, not nailed. Iron goes at the Hall price these days.',
+    materials: 'Boards, stone and tied fiber, cut and dry. Only so much a day. I\'ve one saw and one good knee.',
+    mend: 'Bring it here. Most things that break only want patience and oil. I\'ve plenty of both.'
+  },
+  /** The shop room's spots (rooms.json `spots`): each display opens its tab. */
+  spots: {
+    furnish: 'Look at the pieces',
+    materials: 'Look at the timber',
+    mend: 'Look at the mending bench',
+    /** The counter while Silas is out (the tin line). */
+    counter: 'Look at the counter',
+    toDeeds: 'Go through to Pell\'s office',
+    toShop: 'Back to the shop'
+  }
+} as const;
+
 export const SIGN_FORMAT = "{name}'s Place";
 
 // 2. Homestead tiers
