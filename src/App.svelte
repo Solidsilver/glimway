@@ -19,8 +19,11 @@
     type QuestPayload,
     type StatsPayload,
     type ToastPayload,
-    type WildsPayload
+    type WildsPayload,
+    type YardOpenPayload,
+    type YardTab
   } from './game/events'
+  import { PELL_DEED } from './content/pell'
   import { ui } from './ui/store.svelte'
   import { purseUi } from './ui/purse.svelte'
   import { Session } from './game/session'
@@ -41,7 +44,8 @@
   import NamePrompt from './ui/NamePrompt.svelte'
   import { HOMESTEAD_DATA } from './lib/homestead'
   import { home } from './ui/home.svelte'
-  import SilasShop from './ui/SilasShop.svelte'
+  import YardPanel from './ui/YardPanel.svelte'
+  import DeedPanel from './ui/DeedPanel.svelte'
   import NoticeBoard from './ui/NoticeBoard.svelte'
   import WorkshopPanel from './ui/WorkshopPanel.svelte'
   import HearthPanel from './ui/HearthPanel.svelte'
@@ -95,7 +99,7 @@
   import { setSpotQuests } from './game/room-spots'
 
   type Phase = 'loading' | 'title' | 'playing'
-  type Panel = 'journal' | 'character' | 'inventory' | 'menu' | 'library' | 'shop' | 'dev' | VillagePanel | null
+  type Panel = 'journal' | 'character' | 'inventory' | 'menu' | 'library' | 'shop' | 'deed' | 'dev' | VillagePanel | null
 
   // Dev mode (local playtesting only): the panel exists in Vite dev mode and
   // nowhere else. A production build replaces import.meta.env.DEV with false,
@@ -109,6 +113,8 @@
   let mailTo = $state<string | null>(null)
   /** Shelf panel opened at a Commons gate: which gate. */
   let shelfGate = $state(0)
+  /** Which tab the Yard panel opens on (none: its default). */
+  let yardTab = $state<YardTab | undefined>(undefined)
   /** Which chest the workshop opens on (the inventory's "your own chest" asks for the personal one). */
   let chestPick = $state<'shared' | 'personal'>('shared')
   /** Title flow: the connect card, or the connect guide. */
@@ -271,8 +277,14 @@
       libraryAt = p ? { ...p } : {}
       toggle('library')
     }
-    const onOpenShop = () => {
-      if (panel === null) toggle('shop')
+    // Silas's Yard on a tab (src/game/yard-open.ts), and Pell's Manage your deed.
+    const onOpenShop = (p: YardOpenPayload | void) => {
+      if (panel !== null) return
+      yardTab = p?.tab
+      toggle('shop')
+    }
+    const onOpenDeed = () => {
+      if (panel === null) toggle('deed')
     }
     const onArrange = (v: ArrangeView) => {
       home.arrange = v
@@ -343,6 +355,7 @@
       [EV.wilds]: onWilds,
       [EV.libraryOpen]: onOpenLibrary,
       [EV.homeShop]: onOpenShop,
+      [EV.homeDeed]: onOpenDeed,
       [EV.homeArrange]: onArrange,
       [EV.homePlacement]: onPlacement,
       [EV.homeThumbs]: onThumbs,
@@ -835,7 +848,9 @@
     {:else if panel === 'library'}
       <LibraryPanel {session} onClose={() => toggle('library')} focus={libraryAt.focus} section={libraryAt.section} />
     {:else if panel === 'shop'}
-      <SilasShop {session} onClose={() => toggle('shop')} />
+      <YardPanel {session} tab={yardTab} onClose={() => toggle('shop')} />
+    {:else if panel === 'deed'}
+      <DeedPanel {session} onClose={() => toggle('deed')} />
     {:else if panel === 'board'}
       <NoticeBoard {session} onClose={() => toggle('board')} />
     {:else if panel === 'chest' || panel === 'bench'}
@@ -1029,15 +1044,17 @@
 
   {#if home.leaveAsk}
     <ConfirmDialog
-      title="Give up your place on the deed?"
+      title={PELL_DEED.giveUpTitle}
       body={home.leaveAsk.shared
-        ? `Silas strikes your name from ${home.leaveAsk.place}. You keep your pack and your own chest; everything set out, the lantern posts and the home chest stay with the others.`
-        : `Silas strikes your name from ${home.leaveAsk.place}. You keep your pack and your own chest; everything set out, the lantern posts and the home chest stay with the land. With nobody on the deed it goes wild after ${HOMESTEAD_DATA.desolation.desolateAfterDays} days, and after ${HOMESTEAD_DATA.desolation.deedLostAfterDays} days the deed is lost. Until then Silas will give it back to you, as it stands.`}
-      confirmLabel="Strike my name"
+        ? PELL_DEED.giveUpShared(home.leaveAsk.place)
+        : PELL_DEED.giveUpAlone(home.leaveAsk.place, HOMESTEAD_DATA.desolation.desolateAfterDays, HOMESTEAD_DATA.desolation.deedLostAfterDays)}
+      confirmLabel={PELL_DEED.giveUpConfirm}
       danger
       onConfirm={() => {
+        const ask = home.leaveAsk
         home.leaveAsk = null
-        bus.emit(EV.homeAction, { action: 'home:leave-confirmed' })
+        if (ask?.onConfirm) ask.onConfirm()
+        else bus.emit(EV.homeAction, { action: 'home:leave-confirmed' })
       }}
       onCancel={() => (home.leaveAsk = null)}
     />

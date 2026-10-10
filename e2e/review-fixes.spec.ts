@@ -36,6 +36,7 @@ test('finding 1: a purchase and an upgrade whose answers are lost resolve on rec
   await loseNextAnswer(page, '/api/homestead/buy')
   await silasSays(page, /See what you’ve finished/)
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
+  await shop.getByRole('tab', { name: 'Furnish' }).click()
   await shop.locator('[data-buy="wooden-stool"]').click()
   await expect(shop.locator('.msg.error')).toContainText('may have gone through')
   await shop.getByRole('button', { name: 'Close Silas’s yard' }).click()
@@ -105,6 +106,7 @@ test('findings 4 and 6: materials show on a fresh read; purchases redraw one plo
   expect(loaded.gateDraws).toBeLessThanOrEqual(12)
   await silasSays(page, /See what you’ve finished/)
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
+  await shop.getByRole('tab', { name: 'Furnish' }).click()
   // The basket costs 4 fiber: the read's materials (20) make it buyable straight away.
   await expect(shop.locator('[data-buy="woven-basket"]')).toHaveText('Buy')
   for (const item of ['wooden-stool', 'wooden-stool', 'potted-fern', 'woven-basket']) {
@@ -130,6 +132,7 @@ test('findings 5 and 7: placement ignores keys under a modal; Space presses a fo
   await readOn(page, /Steady as a route stone/)
   await silasSays(page, /See what you’ve finished/)
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
+  await shop.getByRole('tab', { name: 'Furnish' }).click()
   await shop.locator('[data-buy="wooden-stool"]').click()
   await expect(shop.locator('.msg.ok')).toBeVisible()
   await shop.getByRole('button', { name: 'Close Silas’s yard' }).click()
