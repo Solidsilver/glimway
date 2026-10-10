@@ -82,5 +82,15 @@
       ],
       "prompt": "Create one isolated game prop sprite on a fully transparent background: a broad wooden timber storage rack, 3 tiles wide and 2 tiles tall, seen straight-on from the FRONT, matching the front-facing furniture in the attached indoors kit references (especially the library shelf and jar shelf). The rack stands FLAT against the back wall. Show only a very narrow top edge; shelves are horizontal and face the viewer. Do not use a three-quarter view, do not show side panels or perspective depth. Load its shelves with neatly stacked cut boards, a compact stack of stones, and tied bundles of fibre, all clearly visible and separated. Chunky detailed pixel art, warm brown outlines, upper-left light, restrained game-scale detail, transparent pixels around the prop, no ground shadow, no text or extra objects. Compose to fit a 192x192 sprite canvas and 3x2 tile footprint."
     }
+  ],
+  "rounds": [
+    {
+      "round": 3,
+      "prompt": "Owner playtest redraw: straight-on front view for deeds pigeonholes, standing clerk desk, and 2x2 back-wall mending bench; side-wall doorway as a gap in the edge-on dark wall band with the floor continuing through. Match warm pixel palette and upper-left light."
+    },
+    {
+      "round": 4,
+      "review": "Retain the corrected straight-on views and existing canvases. Enrich pigeonholes, clerk desk and mending bench with the library shelf/timber rack warm wood finish, dark warm-brown outline, strong upper-left light, carved details, texture and lived-in props. Map should show a hand-drawn Commons lane, plots and gates. Desk has open ledger, inkwell, quill and worn carved wood. Bench has vice, felling axe, saw, oil can, rags and shavings. Give the doorway posts matching outlined wood."
+    }
   ]
 }

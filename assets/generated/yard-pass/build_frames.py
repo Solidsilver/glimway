@@ -101,7 +101,7 @@ for stale in FRAMES.glob("pell-*.png"):
 
 animations=[{"key":"pell-breathing","frames":["pell-idle-0","pell-idle-1"],"frameRate":1.5,"repeat":-1}]
 
-manifest={"id":"glimway-yard-pass","date":"2026-10-10","tool":"built-in image_gen","density":JOBS["density"],
+manifest={"id":"glimway-yard-pass","date":"2026-10-10","tool":"image_gen + hand-authored round 3 redraws","density":JOBS["density"],
           "sources":sources,"frames":manifest_frames,"animations":animations,
           "notes":["Frames are nearest-neighbour aspect-contained on native transparent canvases.",
                    "Pell is front-facing idle only, on the same 186x283 canvas as the in-game resident sheet.",

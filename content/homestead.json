@@ -86,7 +86,7 @@
     "spareGates": 2,
     "deedTable": {
       "area": "in:commons:yard:deeds",
-      "x": 88,
+      "x": 104,
       "y": 80,
       "radius": 40
     }

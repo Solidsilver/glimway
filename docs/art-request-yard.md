@@ -9,7 +9,7 @@ recreates frame crops and metadata from the source sheets.
 
 - **Density:** 64 texels per 16 px world tile. Use each listed canvas exactly; record its tile
   footprint and the bottom-centre foot point. For placeable art, collision sits at the base.
-- **View and style:** three-quarter top-down RPG view, not isometric; crisp pixel art, 1 px
+- **View and style:** front-facing interior furniture and top-down side-wall details, following the owner playtest round 3 direction; crisp pixel art, 1 px
   dark warm-brown outlines at this density; light from the upper left; warm lived-in woodland
   palette; no blur, antialiasing, or soft gradients. Scale props beside existing Commons furniture
   and people.
@@ -23,8 +23,8 @@ recreates frame crops and metadata from the source sheets.
 |---|---:|---:|---|
 | `yard-counter` | 3×1 | 192×128 | Kit counter dressed with plot book, pencil, row of carved foxes, and a tin. |
 | `yard-timber-rack` | 3×2 | 192×192 | Against the back wall; cut boards, stone stack, and tied fibre bundles. |
-| `yard-mending-bench` | 1×2 | 64×192 | Side-on; a vice, hung felling-axe shape, oil, and rags. |
-| `kit-side-doorway` | 1×2 | 64×128 | Inner doorway in a side wall; match the indoors kit and leave a usable passage. |
+| `yard-mending-bench` | 2×2 | 192×192 | Straight-on, flat against the back wall; a vice, felling axe hung on pegs, oil, and rags. |
+| `kit-side-doorway` | 1×2 | 64×128 | Gap in the edge-on dark side-wall band, floor continuing through, with thin posts seen from above. |
 
 The display corner and dressing reuse home goods and the kit from section 2.3; they need no new art.
 
@@ -32,8 +32,8 @@ The display corner and dressing reuse home goods and the kit from section 2.3; t
 
 | Key | Footprint | Canvas | Notes |
 |---|---:|---:|---|
-| `deeds-pigeonholes` | 3×2 | 192×192 | Rolled deeds in pigeonholes; pin the Commons plot map above, with lane and gates. |
-| `deeds-clerk-desk` | 1×1 | 64×128 | Tall standing desk, inkwell, and ledger. |
+| `deeds-pigeonholes` | 3×2 | 192×192 | Flat against the back wall, seen straight-on; rolled deeds in pigeonholes and the Commons plot map beside or above. |
+| `deeds-clerk-desk` | 1×1 | 64×128 | Tall standing desk seen from the front, with a sloped writing top, inkwell, and ledger. |
 | `deeds-table` | 3×2 | 192×128 | Table set for signing; leave space for the kit chairs placed beside it. |
 
 ## Exterior and resident
@@ -46,3 +46,7 @@ The display corner and dressing reuse home goods and the kit from section 2.3; t
 
 Keep the ambience modest and lived-in. Use the other residents' scale and the portrait sheet's square
 bust framing. Preserve a clear walkable threshold at Silas's front door.
+
+## Playtest corrections (rounds 3–4)
+
+The four listed pieces match the indoors kit’s requested view: straight-on front views for the three furnishings, with upper-left light; the doorway remains a top-down side-wall opening. Round 4 keeps those views and the current canvases, while bringing the furnishings into the counter and timber rack’s rich warm wood style, with dark outlines, carved edges, texture and lived-in detail. The map must show the Commons lane, plots and gates. The mending bench now uses a 2×2 footprint and 192×192 canvas so it can sit against the back wall; the game furnishing lane must be updated to that footprint when these frames are wired in. The side doorway is an opening in the side-wall band viewed from above, not a front-facing door frame; use the same outlined warm wood for its posts.

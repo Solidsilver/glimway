@@ -333,7 +333,7 @@ test('the walk-in Yard: in at the front door, Silas’s short talk, Pell’s fir
   expect((await dialogueState(page)).said.join(' ')).toContain(SILAS_YARD.pellPointer)
   await expect(page.getByTestId('goal-pinned')).toHaveCount(0)
 
-  // The mending bench, five tiles from him, opens Mend, and he mends from
+  // The mending bench, four tiles from him, opens Mend, and he mends from
   // behind the counter: the whole shop is in his reach while he's in.
   await go(page, YARD, 11, 3)
   await expect(page.locator('.prompt')).toContainText(SILAS_YARD.spots.mend)
@@ -346,7 +346,7 @@ test('the walk-in Yard: in at the front door, Silas’s short talk, Pell’s fir
   await yard.getByRole('button', { name: 'Close Silas’s yard' }).click()
 
   // A display opens its own tab.
-  await go(page, YARD, 4, 3)
+  await go(page, YARD, 2, 3)
   await expect(page.locator('.prompt')).toContainText(SILAS_YARD.spots.materials)
   await waitForLive(page)
   await page.keyboard.press('e')
@@ -354,7 +354,7 @@ test('the walk-in Yard: in at the front door, Silas’s short talk, Pell’s fir
   await yard.getByRole('button', { name: 'Close Silas’s yard' }).click()
 
   // Through the side door to Pell's office.
-  await go(page, YARD, 12, 4)
+  await go(page, YARD, 12, 5)
   await page.keyboard.down('ArrowRight')
   await waitForArea(page, DEEDS)
   await page.keyboard.up('ArrowRight')

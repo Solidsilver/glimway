@@ -121,6 +121,35 @@ function drawWalls(scene: Phaser.Scene, world: WorldData, room: RoomScene): void
       near.fillStyle(shade).fillRect(px, py + 2, TILE, 1)
       if ((x + y) % 3 === 0) near.fillStyle(shade).fillRect(px + 7, py + 7, 1, TILE - 9)
     }
+  // An inner doorway in a side wall (silas-yard.md 2.8): the band stops either
+  // side of the opening, its cut ends show the wall's thickness, and the floor
+  // runs through into the next room's shade.
+  const inner = new Set(room.def.doors.filter((d) => d.kind === 'inner').map((d) => d.at))
+  const opening = (x: number, y: number) => (x === 0 || x === W - 1) && y > 0 && y < H - 1 && inner.has(map[y][x])
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      if (!opening(x, y)) continue
+      const px = x * TILE
+      const py = y * TILE
+      const far = x === 0 ? px : px + TILE - 6
+      back.fillStyle(shade, 0.35).fillRect(far, py, 6, TILE)
+      back.fillStyle(shade, 0.35).fillRect(x === 0 ? px : px + TILE - 3, py, 3, TILE)
+      // A post at each end on the room side, seen from above, framing the way through.
+      const postX = x === 0 ? px + TILE - 5 : px
+      if (!opening(x, y - 1)) {
+        // The upper end faces us: its face below the band's top.
+        back.fillStyle(top).fillRect(px, py - 4, TILE, 1)
+        back.fillStyle(timber).fillRect(px, py - 3, TILE, 3)
+        back.fillStyle(shade).fillRect(px, py, TILE, 1)
+        back.fillStyle(shade).fillRect(postX, py - 6, 5, 7)
+        back.fillStyle(top).fillRect(postX + 1, py - 5, 3, 4)
+      }
+      if (!opening(x, y + 1)) {
+        back.fillStyle(top).fillRect(px, py + TILE, TILE, 2)
+        back.fillStyle(shade).fillRect(postX, py + TILE - 1, 5, 6)
+        back.fillStyle(top).fillRect(postX + 1, py + TILE, 3, 3)
+      }
+    }
 }
 
 /** A frame, or the kit's placeholder box when it didn't load. */
@@ -170,9 +199,13 @@ export function buildRoomArt(scene: Phaser.Scene, world: WorldData, deps: RoomAr
   // The signature pieces, each by its catalogue entry (a piece the catalogue doesn't know: a box).
   const pieces: (DrawnPiece | null)[] = []
   const sprites: Phaser.GameObjects.Sprite[] = []
+  const innerDoors = new Set(room.def.doors.filter((d) => d.kind === 'inner').map((d) => d.at))
   for (const f of room.props) {
     const piece = furnishingFor(f.art)
     const drawn = piece ? drawPiece(scene, piece, { tx: f.tx, ty: f.ty, facing: f.facing ?? wallFacing(world, f) }) : null
+    // A side doorway is the wall's own opening, drawn with the walls (drawWalls):
+    // the pass's frame assumes a thinner band than the code draws, so it isn't shown.
+    if (drawn && innerDoors.has(f.char)) drawn.sprite.setVisible(false)
     pieces.push(drawn)
     sprites.push(drawn?.sprite ?? placeProp(scene, f, f.art, tileBottom(f.ty + f.th - 1)))
   }

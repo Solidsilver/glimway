@@ -1,24 +1,12 @@
 {
   "sources": [
     {
-      "key": "yard-props-source",
-      "file": "sheets/yard-props-source.png"
-    },
-    {
-      "key": "yard-vertical-props-source",
-      "file": "sheets/yard-vertical-props-source.png"
-    },
-    {
       "key": "deeds-table-source",
       "file": "sheets/deeds-table-source.png"
     },
     {
       "key": "cottage-silas-source-v2",
       "file": "sheets/cottage-silas-source-v2.png"
-    },
-    {
-      "key": "kit-side-doorway-source-round1",
-      "file": "sheets/kit-side-doorway-source-round1.png"
     },
     {
       "key": "pell-resident-source-round1",
@@ -35,6 +23,22 @@
     {
       "key": "yard-timber-rack-source-round2",
       "file": "sheets/yard-timber-rack-source-round2.png"
+    },
+    {
+      "key": "round4-deeds-pigeonholes",
+      "file": "sheets/round4-deeds-pigeonholes.png"
+    },
+    {
+      "key": "round4-deeds-clerk-desk",
+      "file": "sheets/round4-deeds-clerk-desk.png"
+    },
+    {
+      "key": "round4-yard-mending-bench",
+      "file": "sheets/round4-yard-mending-bench.png"
+    },
+    {
+      "key": "round4-kit-side-doorway",
+      "file": "sheets/round4-kit-side-doorway.png"
     }
   ],
   "frames": {
@@ -101,86 +105,86 @@
       }
     },
     "yard-mending-bench": {
-      "filename": "yard-vertical-props-source",
+      "filename": "round4-yard-mending-bench",
       "frame": {
         "x": 0,
         "y": 0,
-        "w": 512,
-        "h": 1536
+        "w": 768,
+        "h": 768
       },
       "rotated": false,
       "trimmed": true,
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "w": 512,
-        "h": 1536
+        "w": 768,
+        "h": 768
       },
       "sourceSize": {
-        "w": 512,
-        "h": 1536
+        "w": 768,
+        "h": 768
       },
       "canvasSize": {
-        "w": 64,
+        "w": 192,
         "h": 192
       },
       "destinationRect": {
         "x": 4,
-        "y": 0,
-        "w": 56,
-        "h": 176
+        "y": 19,
+        "w": 184,
+        "h": 169
       }
     },
     "kit-side-doorway": {
-      "filename": "kit-side-doorway-source-round1",
+      "filename": "round4-kit-side-doorway",
       "frame": {
         "x": 0,
         "y": 0,
-        "w": 1122,
-        "h": 1402
+        "w": 256,
+        "h": 512
       },
       "rotated": false,
       "trimmed": true,
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "w": 1122,
-        "h": 1402
+        "w": 256,
+        "h": 512
       },
       "sourceSize": {
-        "w": 1122,
-        "h": 1402
+        "w": 256,
+        "h": 512
       },
       "canvasSize": {
         "w": 64,
         "h": 128
       },
       "destinationRect": {
-        "x": 4,
+        "x": 0,
         "y": 0,
-        "w": 56,
-        "h": 124
+        "w": 64,
+        "h": 128
       }
     },
     "deeds-pigeonholes": {
-      "filename": "yard-props-source",
+      "filename": "round4-deeds-pigeonholes",
       "frame": {
         "x": 0,
-        "y": 444,
-        "w": 438,
-        "h": 443
+        "y": 0,
+        "w": 768,
+        "h": 768
       },
       "rotated": false,
       "trimmed": true,
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "w": 438,
-        "h": 443
+        "w": 768,
+        "h": 768
       },
       "sourceSize": {
-        "w": 438,
-        "h": 443
+        "w": 768,
+        "h": 768
       },
       "canvasSize": {
         "w": 192,
@@ -188,40 +192,40 @@
       },
       "destinationRect": {
         "x": 2,
-        "y": 7,
+        "y": 9,
         "w": 188,
-        "h": 177
+        "h": 175
       }
     },
     "deeds-clerk-desk": {
-      "filename": "yard-vertical-props-source",
+      "filename": "round4-deeds-clerk-desk",
       "frame": {
-        "x": 512,
+        "x": 0,
         "y": 0,
-        "w": 512,
-        "h": 1536
+        "w": 256,
+        "h": 512
       },
       "rotated": false,
       "trimmed": true,
       "spriteSourceSize": {
         "x": 0,
         "y": 0,
-        "w": 512,
-        "h": 1536
+        "w": 256,
+        "h": 512
       },
       "sourceSize": {
-        "w": 512,
-        "h": 1536
+        "w": 256,
+        "h": 512
       },
       "canvasSize": {
         "w": 64,
         "h": 128
       },
       "destinationRect": {
-        "x": 9,
-        "y": 0,
-        "w": 45,
-        "h": 124
+        "x": 2,
+        "y": 25,
+        "w": 60,
+        "h": 99
       }
     },
     "deeds-table": {

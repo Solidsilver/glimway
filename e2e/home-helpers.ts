@@ -176,10 +176,10 @@ const SILAS_AT = { tx: 48, ty: 19 }
 export const YARD = 'in:commons:yard'
 export const DEEDS = 'in:commons:yard:deeds'
 /** In front of Silas's counter (the shop): where you talk to him while his hour has him inside. */
-export const AT_COUNTER = { tx: 7, ty: 6 }
-/** Beside Pell's desk, and within the deed table's reach: where Pell talks, and where a deed is signed. */
-export const AT_PELL = { tx: 7, ty: 3 }
-/** Right of Pell's desk: Pell talks from here, but the deed table is out of reach. */
+export const AT_COUNTER = { tx: 7, ty: 4 }
+/** Left of Pell's desk (Pell stands at its right), at the deed table's corner: where Pell talks across the desk, and where a deed is signed. */
+export const AT_PELL = { tx: 5, ty: 3 }
+/** Up behind Pell, by the back wall: Pell talks from here, but the deed table is out of reach. */
 export const BY_DESK = { tx: 8, ty: 2 }
 
 /** Whether Silas is drawn in this scene now (his cycle's phase here; false while he walks or is away). */

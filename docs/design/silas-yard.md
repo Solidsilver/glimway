@@ -301,14 +301,14 @@ sign. Inside, the front room is the shop. Illustrative (authored in `content/roo
 
 ```
 ##############
-#==w==rrr==w=#    r  the timber rack: boards, stone, fibre bundles      (opens Materials)
-#ff...rrr...M#    f  the display corner: a stool, a chair, a rug set out (opens Furnish)
-#ff.........M#    M  the mending bench: vice, a hung axe, oil           (opens Mend; needs Silas)
-#.....CCC...>#    C  the counter, the plot book, a row of carved foxes  (Silas: opens the panel)
-#.....CCC....#    >  the side door to Pell's office
-#xx.........b#    x  fox shelf (dressing)   b  crates and a barrel (dressing)
+#rrrwcpppwMMM#    r  the timber rack, in the corner: boards, stone, fibre (opens Materials)
+#rrr...S..MMM#    M  the mending bench: vice, a hung axe, oil           (opens Mend; needs Silas)
+#.....CCC....#    C  the counter, the plot book, carved foxes; S Silas behind it, his tools
+#............#       on pegs (p) over him, a calendar (c)              (Silas: opens the panel)
+#fff.~~~~....>    f  the display corner: a chair, a side table, a stool, a lantern on a rug
+#fff.~~~~....>       (opens Furnish)   ~  a runner on the customers' side   > the side door
 #............#
-#......@.....#
+#xf....@..sxb#    x  crates   b  a barrel   s  a sack   f  a fern (dressing)
 ######DD######    out to the Commons, below his door
 ```
 
@@ -362,13 +362,14 @@ little fussy, always at the desk (owner). The scrap is in the game, so a player 
 learns where Pell came from.
 
 ```
-########
-#=PPP=w#    P  pigeonholes of rolled deeds; the Commons plot map pinned above
-#.k....#    k  Pell's tall clerk's desk (Pell stands here)
-<..TTT.#    T  the deed table with two chairs: where deeds are signed together
-#..TTT.#    <  back to the shop
-#......#
-########
+##########
+#PPPw=c=w#    P  pigeonholes of rolled deeds, the Commons plot map beside them
+#PPP.....L    k  Pell's tall clerk's desk; Pell stands at its right (@)
+<.....k@.#    T  the deed table, a chair either side facing it: where deeds are signed
+<...hTTTh#    L, l  ledger shelves on the side walls   c  a calendar   < back to the shop
+#....TTT.#
+l........#
+##########
 ```
 
 **Pell's talk:**
@@ -446,8 +447,8 @@ In the indoors round's style (indoors.md 7: 64 texels a tile, light from the upp
 | Silas's cottage, the shop face | as `cottage-silas` | The same cottage with a hanging sign (a fox and a saw, *Silas's Yard*) and the door drawn as usable |
 | The counter | 3 × 1 | Kit counter dressed: the plot book, a pencil, a row of carved foxes, the tin |
 | Timber rack | 3 × 2 | Against the back wall: cut boards, a stone stack, tied fiber |
-| Mending bench | 1 × 2 | Side-on: a vice, a hung felling-axe shape, oil and rags |
-| Side-wall doorway | 1 × 2 | A kit piece the kit lacks: an inner doorway in a side wall |
+| Mending bench | 3 × 2 | Against the back wall, straight-on: a vice, a hung felling-axe shape, oil and rags (first drawn 1 × 2 side-on; redrawn after the owner's playtest) |
+| Side-wall doorway | 1 × 2 | A kit piece the kit lacks: an inner doorway in a side wall. The game draws the opening with the side walls (a gap in the band, its cut ends and posts), so the frame is catalogued but not shown |
 | Pigeonholes and plot map | 3 × 2 | Rolled deeds; the Commons lane drawn with gates |
 | Clerk's desk | 1 × 1 | A tall standing desk, an inkwell, the ledger |
 | Deed table | 3 × 2 | With two chairs (kit chairs) |
