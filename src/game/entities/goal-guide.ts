@@ -30,6 +30,7 @@ import { expose } from '../dev-hooks'
 import type { GoalTarget } from '../guide-pin'
 import type { QuestWhere } from '../../lib/quests'
 import { serverNow } from '../clock'
+import { residentAt } from '../../lib/residents'
 import { ROOMS, roomParent } from '../../lib/rooms'
 import { questPlace, questPointHere } from '../goal-route'
 
@@ -57,9 +58,10 @@ for (const { id } of ROOMS.rooms) {
   ROAD[parent] = [...(ROAD[parent] ?? []), id]
 }
 
-/** Where each "How do I…?" step's place is (src/content/guides.ts GuideWhere). */
+/** Where each "How do I…?" step's place is (src/content/guides.ts GuideWhere); a person's is their hour's (WHERE_PERSON). */
 const WHERE_PLACE: Record<GuideWhere, string> = {
   silas: 'commons',
+  pell: 'in:commons:yard:deeds',
   gate: 'commons',
   door: 'home',
   mailbox: 'home',
@@ -67,6 +69,9 @@ const WHERE_PLACE: Record<GuideWhere, string> = {
   hearth: 'cottage',
   wilds: 'wilds'
 }
+
+/** The steps that happen with a person: the needle follows them by their hour (src/lib/residents.ts). */
+const WHERE_PERSON: Partial<Record<GuideWhere, string>> = { silas: 'silas', pell: 'pell' }
 
 /** Steps from `from` to `to` over the road (Infinity when there's no way). */
 function steps(from: string, to: string): number {
@@ -163,11 +168,12 @@ export class GoalGuide {
     return this.wayToward(place.area)
   }
 
-  /** A pinned guide's step: its point when it's here, else the way toward its place. */
+  /** A pinned guide's step: its point when it's here, else the way toward its place (a person: where their hour has them). */
   private towardGuide(where: GuideWhere): { x: number; y: number; here: boolean } | null {
-    const goal = WHERE_PLACE[where]
+    const person = WHERE_PERSON[where]
+    const goal = (person && residentAt(person, serverNow())?.area) || WHERE_PLACE[where]
     if (this.place() === goal) {
-      const p = this.deps.guidePoint(where)
+      const p = person ? this.deps.npcAt(person) : this.deps.guidePoint(where)
       // In the Wilds (or a point not known yet) there's nothing more exact to point at.
       return p ? { ...p, here: true } : null
     }
@@ -189,6 +195,17 @@ export class GoalGuide {
     }
     let best: { x: number; y: number } | null = null
     let bestSteps = Infinity
+    // A room's front door out here (the Yard's under Silas's sign, the bakery's on the square).
+    const here = String(this.deps.world.areaId)
+    for (const room of ROOMS.rooms) {
+      const door = room.doors.find((d) => d.kind === 'door' && d.to === here && d.outside)
+      if (!door?.outside) continue
+      const n = steps(room.id, goal)
+      if (n < bestSteps) {
+        bestSteps = n
+        best = { x: (door.outside.tx + 0.5) * TILE, y: (door.outside.ty + 0.5) * TILE }
+      }
+    }
     for (const e of this.deps.world.exits) {
       const to = String(e.to)
       const node = /^home:\d+$/.test(to) ? (from === 'cottage' ? 'home' : 'other-home') : to.startsWith('chunk:') ? 'wilds' : to

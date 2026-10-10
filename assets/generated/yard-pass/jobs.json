@@ -1,0 +1,279 @@
+{
+  "density": 64,
+  "sources": {
+    "yard-props-source": "sheets/yard-props-source.png",
+    "cottage-silas-source": "sheets/cottage-silas-source.png",
+    "yard-vertical-props-source": "sheets/yard-vertical-props-source.png",
+    "kit-side-doorway-source": "sheets/kit-side-doorway-source.png",
+    "deeds-table-source": "sheets/deeds-table-source.png",
+    "cottage-silas-source-v2": "sheets/cottage-silas-source-v2.png",
+    "kit-side-doorway-source-round1": "sheets/kit-side-doorway-source-round1.png",
+    "pell-resident-source-round1": "sheets/pell-resident-source-round1.png",
+    "pell-portrait-source-round1": "sheets/pell-portrait-source-round1.png",
+    "yard-counter-source-round2": "sheets/yard-counter-source-round2.png",
+    "yard-timber-rack-source-round2": "sheets/yard-timber-rack-source-round2.png"
+  },
+  "jobs": [
+    {
+      "key": "yard-counter",
+      "id": "yard-counter",
+      "source": "yard-counter-source-round2",
+      "crop": [
+        0,
+        0,
+        1536,
+        1024
+      ],
+      "canvas": [
+        192,
+        128
+      ],
+      "destination": [
+        8,
+        0,
+        176,
+        112
+      ],
+      "footprint": [
+        3,
+        1
+      ],
+      "kind": "prop"
+    },
+    {
+      "key": "yard-timber-rack",
+      "id": "yard-timber-rack",
+      "source": "yard-timber-rack-source-round2",
+      "crop": [
+        0,
+        0,
+        1536,
+        1024
+      ],
+      "canvas": [
+        192,
+        192
+      ],
+      "destination": [
+        4,
+        0,
+        184,
+        180
+      ],
+      "footprint": [
+        3,
+        2
+      ],
+      "kind": "prop"
+    },
+    {
+      "key": "yard-mending-bench",
+      "id": "yard-mending-bench",
+      "source": "yard-vertical-props-source",
+      "crop": [
+        0,
+        0,
+        512,
+        1536
+      ],
+      "canvas": [
+        64,
+        192
+      ],
+      "destination": [
+        2,
+        0,
+        60,
+        176
+      ],
+      "footprint": [
+        1,
+        2
+      ],
+      "kind": "prop"
+    },
+    {
+      "key": "kit-side-doorway",
+      "id": "kit-side-doorway",
+      "source": "kit-side-doorway-source-round1",
+      "crop": [
+        0,
+        0,
+        1122,
+        1402
+      ],
+      "canvas": [
+        64,
+        128
+      ],
+      "destination": [
+        1,
+        0,
+        62,
+        124
+      ],
+      "footprint": [
+        1,
+        2
+      ],
+      "kind": "prop"
+    },
+    {
+      "key": "deeds-pigeonholes",
+      "id": "deeds-pigeonholes",
+      "source": "yard-props-source",
+      "crop": [
+        0,
+        444,
+        438,
+        443
+      ],
+      "canvas": [
+        192,
+        192
+      ],
+      "destination": [
+        2,
+        0,
+        188,
+        184
+      ],
+      "footprint": [
+        3,
+        2
+      ],
+      "kind": "prop"
+    },
+    {
+      "key": "deeds-clerk-desk",
+      "id": "deeds-clerk-desk",
+      "source": "yard-vertical-props-source",
+      "crop": [
+        512,
+        0,
+        512,
+        1536
+      ],
+      "canvas": [
+        64,
+        128
+      ],
+      "destination": [
+        2,
+        0,
+        60,
+        124
+      ],
+      "footprint": [
+        1,
+        1
+      ],
+      "kind": "prop"
+    },
+    {
+      "key": "deeds-table",
+      "id": "deeds-table",
+      "source": "deeds-table-source",
+      "crop": [
+        0,
+        0,
+        1536,
+        1024
+      ],
+      "canvas": [
+        192,
+        128
+      ],
+      "destination": [
+        2,
+        0,
+        188,
+        124
+      ],
+      "footprint": [
+        3,
+        2
+      ],
+      "kind": "prop"
+    },
+    {
+      "key": "cottage-silas",
+      "id": "cottage-silas",
+      "source": "cottage-silas-source-v2",
+      "crop": [
+        0,
+        0,
+        1312,
+        1199
+      ],
+      "canvas": [
+        96,
+        92
+      ],
+      "destination": [
+        12,
+        26,
+        71,
+        66
+      ],
+      "footprint": [
+        6,
+        5.75
+      ],
+      "kind": "building",
+      "stretch": true
+    },
+    {
+      "key": "portrait-pell",
+      "id": "portrait-pell",
+      "source": "pell-portrait-source-round1",
+      "crop": [
+        0,
+        0,
+        1774,
+        887
+      ],
+      "canvas": [
+        64,
+        64
+      ],
+      "destination": [
+        0,
+        0,
+        64,
+        64
+      ],
+      "footprint": [
+        1,
+        1
+      ],
+      "kind": "portrait"
+    }
+  ],
+  "resident": {
+    "source": "pell-resident-source-round1",
+    "grid": {
+      "columns": 2,
+      "rows": 1,
+      "cellWidths": [
+        718,
+        719
+      ],
+      "height": 1095
+    },
+    "canvas": [
+      186,
+      283
+    ],
+    "destination": [
+      0,
+      0,
+      186,
+      283
+    ],
+    "columns": [
+      "idle-0",
+      "idle-1"
+    ]
+  }
+}

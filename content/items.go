@@ -153,6 +153,10 @@ func validateItems(v *Items) error {
 			return fmt.Errorf("invalid items: duplicate mender %s", m.GetNpc())
 		}
 		npcs[m.GetNpc()] = true
+		// A mender with a resident stands wherever that resident's cycle has them.
+		if m.GetWith() != "" && !knownResident(m.GetWith()) {
+			return fmt.Errorf("invalid items: mender %s: place", m.GetNpc())
+		}
 	}
 	defs := map[string]bool{}
 	for _, d := range v.GetItems() {
@@ -249,7 +253,7 @@ func validateItems(v *Items) error {
 		if sellers[s.GetId()] {
 			return fmt.Errorf("invalid items: duplicate seller %s", s.GetId())
 		}
-		if !validSellerPlace(s) {
+		if !validSellerPlace(s) || s.GetShop() != "" && !authoredRoom(s.GetShop()) {
 			return fmt.Errorf("invalid items: seller %s: place", s.GetId())
 		}
 		if s.GetFestival() != "" && !slices.ContainsFunc(cal.Festivals, func(f *Festival) bool { return f.GetName() == s.GetFestival() }) {
@@ -328,11 +332,16 @@ func validSellerPlace(s *ItemSeller) bool {
 	if s.GetWith() == "" {
 		return slices.Contains(PickupAreas, s.GetArea())
 	}
-	residents, err := LoadResidents()
-	if err != nil || s.GetArea() != "" || s.GetTx() != 0 || s.GetTy() != 0 {
+	if s.GetArea() != "" || s.GetTx() != 0 || s.GetTy() != 0 {
 		return false
 	}
-	return slices.ContainsFunc(residents.GetResidents(), func(r *Resident) bool { return r.GetId() == s.GetWith() })
+	return knownResident(s.GetWith())
+}
+
+// knownResident reads the residents file itself (the items rules load first).
+func knownResident(id string) bool {
+	residents, err := LoadResidents()
+	return err == nil && slices.ContainsFunc(residents.GetResidents(), func(r *Resident) bool { return r.GetId() == id })
 }
 
 // SellerFor is a seller by id (shared content; the client prompts at the
@@ -364,3 +373,7 @@ func StackCurrency(id string) string {
 	}
 	return "item:" + id
 }
+
+// authoredRoom: a room in content/rooms.json; a seller's shop is never a
+// player's cottage (in:home:N).
+func authoredRoom(area string) bool { _, ok := RoomFor(area); return ok }

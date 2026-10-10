@@ -222,7 +222,8 @@ func TestItemsHeirloomBluntsAndIsMendedAtTheBenchOrByAMender(t *testing.T) {
 	if x.opRefreshing(c, &s, "use", map[string]any{"instance": brack}, 409).Error.Code != "tool-blunt" {
 		t.Fatal("blunt axe swung")
 	}
-	// No workshop yet: the bench refuses; Silas mends while you talk, if you're by him.
+	// No workshop yet: the bench refuses; Silas mends for glims, wherever his
+	// cycle has him (the counter or the yard), if you're by him.
 	if x.opRefreshing(c, &s, "repair", map[string]any{"instance": brack, "at": "bench"}, 409).Error.Code != "not-a-member" {
 		t.Fatal("homeless bench")
 	}
@@ -232,16 +233,51 @@ func TestItemsHeirloomBluntsAndIsMendedAtTheBenchOrByAMender(t *testing.T) {
 		t.Fatal("mended from afar")
 	}
 	x.opRefreshing(c, &s, "repair", map[string]any{"instance": brack, "at": "nobody"}, 400)
-	m, _ := content.MenderFor("silas")
-	doc := s.State
-	doc.Area = m.GetArea()
-	doc.Position = rules.Position{X: float64(int(m.GetTx())*16 + 8), Y: float64(int(m.GetTy())*16 + 20)}
-	mended := x.opRefreshing(c, &s, "repair", map[string]any{"instance": brack, "at": "silas", "progress": doc}, 200)
-	if axe := findInstance(mended.Result.Items, brack); axe == nil || axe.Condition != 240 || axe.State != "whole" || stackQty(mended.Result.Items, "timber") != 2 || stackQty(mended.Result.Items, "wooden-peg") != 1 {
+	price := int(func() int32 { d, _ := content.ItemFor("brack-felling-axe"); return d.GetRepair().GetMenderGlims() }())
+	// Out in the yard, he's not at his counter: the shop can't mend.
+	x.residentPhase("silas", "yard")
+	counter, _ := content.ResidentByID("silas")
+	shop := s.State
+	shop.Area = counter.GetSpots()["counter"].GetArea()
+	shop.Position = rules.Position{X: float64(counter.GetSpots()["counter"].GetTx()*16 + 8), Y: float64(counter.GetSpots()["counter"].GetTy()*16 + 24)}
+	if x.opRefreshing(c, &s, "repair", map[string]any{"instance": brack, "at": "silas", "progress": shop}, 409).Error.Code != "too-far-away" {
+		t.Fatal("mended at an empty counter")
+	}
+	// Short of glims, by him in the yard.
+	x.fundGlims(x.account("alice"), price-1-x.glims(x.account("alice")))
+	if x.opRefreshing(c, &s, "repair", map[string]any{"instance": brack, "at": "silas", "progress": byResident(s.State, "silas", x.now.Load())}, 409).Error.Code != "insufficient-glims" {
+		t.Fatal("mended on credit")
+	}
+	x.fundGlims(x.account("alice"), 1)
+	mended := x.opRefreshing(c, &s, "repair", map[string]any{"instance": brack, "at": "silas", "progress": byResident(s.State, "silas", x.now.Load())}, 200)
+	if axe := findInstance(mended.Result.Items, brack); axe == nil || axe.Condition != 240 || axe.State != "whole" || stackQty(mended.Result.Items, "timber") != 4 || stackQty(mended.Result.Items, "wooden-peg") != 2 || x.glims(x.account("alice")) != 0 {
 		t.Fatal("mended", axe)
 	}
 	if x.opRefreshing(c, &s, "repair", map[string]any{"instance": brack, "at": "silas"}, 409).Error.Code != "not-needed" {
 		t.Fatal("mended a sharp axe")
+	}
+	// Back at his counter: he mends for anyone in the shop, even on the
+	// mending bench's own tile, five tiles from him; the yard is too far
+	// now, and so is Pell's office through the side door.
+	x.opRefreshing(c, &s, "use", map[string]any{"instance": brack}, 200)
+	yard := byResident(s.State, "silas", x.now.Load())
+	x.residentPhase("silas", "counter")
+	x.fundGlims(x.account("alice"), price)
+	if x.opRefreshing(c, &s, "repair", map[string]any{"instance": brack, "at": "silas", "progress": yard}, 409).Error.Code != "too-far-away" {
+		t.Fatal("mended by the sawhorse while he's inside")
+	}
+	office := s.State
+	office.Area = "in:commons:yard:deeds"
+	office.Position = rules.Position{X: 1*16 + 8, Y: 3*16 + 12}
+	if x.opRefreshing(c, &s, "repair", map[string]any{"instance": brack, "at": "silas", "progress": office}, 409).Error.Code != "too-far-away" {
+		t.Fatal("mended in Pell's office")
+	}
+	room, _ := content.RoomFor(shop.Area)
+	benchSpot := room.GetSpots()["yard-mend"]
+	atBench := shop
+	atBench.Position = rules.Position{X: float64(benchSpot.GetTx()*16 + 8), Y: float64(benchSpot.GetTy()*16 + 12)}
+	if findInstance(x.opRefreshing(c, &s, "repair", map[string]any{"instance": brack, "at": "silas", "progress": atBench}, 200).Result.Items, brack).Condition != 240 {
+		t.Fatal("mended at the mending bench")
 	}
 	// At the bench, with a workshop: the same bill.
 	x.opRefreshing(c, &s, "use", map[string]any{"instance": brack}, 200)

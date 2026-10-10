@@ -294,6 +294,30 @@ func bySeller(s response, seller string, now int64) rules.State {
 	return doc
 }
 
+// byResident is the progress doc standing where a resident's cycle has them at now.
+func byResident(doc rules.State, id string, now int64) rules.State {
+	p, _ := content.ResidentAt(id, float64(now))
+	doc.Area = p.GetArea()
+	doc.Position = rules.Position{X: float64(int(p.GetTx())*16 + 8), Y: float64(int(p.GetTy())*16 + 12)}
+	return doc
+}
+
+// residentPhase moves the rig's clock forward to the next moment a resident
+// stands at spot, clear of the cycle's grace window either side.
+func (x *rig) residentPhase(id, spot string) {
+	x.t.Helper()
+	r, _ := content.ResidentByID(id)
+	grace := float64(content.ResidentRules.GetGraceSeconds())
+	for now := x.now.Load(); now < x.now.Load()+2*3600; now += 60 {
+		p := content.CycleAt(r, float64(now))
+		if p.Spot == spot && float64(now)-p.Since > grace && p.Until-float64(now) > grace {
+			x.now.Store(now)
+			return
+		}
+	}
+	x.t.Fatalf("%s never stands at %s", id, spot)
+}
+
 func TestSellersHazelFinnAndTheCartingStall(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
@@ -381,6 +405,53 @@ func TestSilasYardBundlesCostGlims(t *testing.T) {
 	}
 	if count(t, x.db, "SELECT glims FROM balances WHERE account_id=?", s.AccountID) != before-10 || count(t, x.db, "SELECT count(*) FROM ledger WHERE account_id=? AND currency='glims' AND reason='market-buy'", s.AccountID) != 3 {
 		t.Fatal("the bundles' prices")
+	}
+	x.conserved(s.AccountID)
+}
+
+// The honesty tin (silas-yard.md 2.3): inside the shop the bundles sell
+// whether Silas is at the counter or out in the yard; out on the Commons
+// they sell near him, wherever his cycle has him, and nowhere on the
+// Commons while he's indoors.
+func TestSilasYardSellsFromTheShopAndBesideHim(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	x.fundGlims(s.AccountID, 20)
+	seller, _ := content.SellerFor("silas-yard")
+	silas, _ := content.ResidentByID("silas")
+	at := func(area string, tx, ty int32) rules.State {
+		doc := s.State
+		doc.Area = area
+		doc.Position = rules.Position{X: float64(tx*16 + 8), Y: float64(ty*16 + 12)}
+		return doc
+	}
+	buy := func(doc rules.State, status int) itemsResponse {
+		return x.opRefreshing(c, &s, "buy", map[string]any{"seller": "silas-yard", "good": "timber", "progress": doc}, status)
+	}
+	// A corner of the shop, away from the counter.
+	corner := at(seller.GetShop(), 1, 8)
+	yard := silas.GetSpots()["yard"]
+	x.residentPhase("silas", "yard")
+	if r := buy(corner, 200); r.Result.Bought == nil {
+		t.Fatal("the tin while he's out", r.Error.Code)
+	}
+	if r := buy(at("commons", yard.GetTx(), yard.GetTy()), 200); r.Result.Bought == nil {
+		t.Fatal("by him in the yard", r.Error.Code)
+	}
+	x.residentPhase("silas", "counter")
+	if r := buy(corner, 200); r.Result.Bought == nil {
+		t.Fatal("in the shop while he's in", r.Error.Code)
+	}
+	x.now.Add(86400) // a new day: the cap starts again
+	x.residentPhase("silas", "counter")
+	if buy(at("commons", yard.GetTx(), yard.GetTy()), 409).Error.Code != "too-far-away" {
+		t.Fatal("bought by the sawhorse while he's indoors")
+	}
+	if buy(at("commons", 51, 21), 409).Error.Code != "too-far-away" {
+		t.Fatal("bought on the Commons while he's indoors")
+	}
+	if buy(at("in:commons:yard:deeds", 2, 6), 409).Error.Code != "too-far-away" {
+		t.Fatal("bought in Pell's office")
 	}
 	x.conserved(s.AccountID)
 }

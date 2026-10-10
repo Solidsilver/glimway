@@ -45,6 +45,11 @@ const commons = JSON.parse(readFileSync(join(ROOT, 'assets/generated/commons-pas
 const runtime = JSON.parse(readFileSync(join(ROOT, 'assets/generated/runtime-pass/manifest.json'), 'utf8')) as RuntimeArtManifest
 const items = JSON.parse(readFileSync(join(ROOT, 'assets/generated/items-pass/manifest.json'), 'utf8')) as ItemsPassManifest
 const indoors = JSON.parse(readFileSync(join(ROOT, 'assets/generated/indoors-pass/manifest.json'), 'utf8')) as { sources: { file: string }[]; frames: { key: string; canvasSize: { w: number; h: number } }[] }
+const yard = JSON.parse(readFileSync(join(ROOT, 'assets/generated/yard-pass/manifest.json'), 'utf8')) as { sources: { key: string; file: string }[]; frames: { key: string; source: string; role: string; canvasSize: { w: number; h: number } }[] }
+/** The Yard pass's props, packed with the indoors pass (its cottage, Pell and portrait are Commons-pass frames). */
+const yardProps = yard.frames.filter((f) => f.role === 'prop')
+/** The side doorway's mirror, for a west wall. */
+const yardIndoors = [...yardProps, ...yardProps.filter((f) => f.key === 'kit-side-doorway').map((f) => ({ ...f, key: `${f.key}-right` }))]
 const crafts = JSON.parse(readFileSync(join(ROOT, 'assets/generated/crafts-pass/manifest.json'), 'utf8')) as { frames: Record<string, { file: string; canvasSize: { w: number; h: number } }> }
 const purse = JSON.parse(readFileSync(join(ROOT, 'assets/generated/purse-pass/manifest.json'), 'utf8')) as { frames: Record<string, { file: string; canvasSize: { w: number; h: number } }> }
 const glims = JSON.parse(readFileSync(join(ROOT, 'assets/generated/glims-pass/manifest.json'), 'utf8')) as { frames: Record<string, { file: string; canvasSize: { w: number; h: number } }> }
@@ -96,6 +101,8 @@ test('every input the atlases were baked from is unchanged', () => {
     ...items.sources.map((s) => `assets/generated/items-pass/${s.file}`),
     'assets/generated/indoors-pass/manifest.json',
     ...indoors.sources.map((s) => `assets/generated/indoors-pass/sheets/${s.file}`),
+    'assets/generated/yard-pass/manifest.json',
+    ...new Set(yardProps.map((f) => `assets/generated/yard-pass/${yard.sources.find((s) => s.key === f.source)!.file}`)),
     'assets/generated/crafts-pass/manifest.json',
     ...Object.values(crafts.frames).map((f) => `assets/generated/crafts-pass/${f.file}`),
     'assets/generated/purse-pass/manifest.json',
@@ -202,8 +209,8 @@ test('the indoors pass: every named 64-texel canvas is packed whole', () => {
   const [w, h] = webpSize(join(PACKED, built.indoors.image))
   assert.deepEqual([w, h], built.indoors.size)
   assert.equal(built.indoors.density, 64)
-  assert.deepEqual(Object.keys(built.indoors.frames).sort(), indoors.frames.map((f) => f.key).sort())
-  for (const f of indoors.frames) {
+  assert.deepEqual(Object.keys(built.indoors.frames).sort(), [...indoors.frames, ...yardIndoors].map((f) => f.key).sort())
+  for (const f of [...indoors.frames, ...yardIndoors]) {
     const r = built.indoors.frames[f.key]
     assert.deepEqual([r[2], r[3]], [f.canvasSize.w, f.canvasSize.h], `${f.key} keeps its requested canvas`)
     assert.ok(r[0] + r[2] <= w && r[1] + r[3] <= h, `${f.key} inside the indoors atlas`)

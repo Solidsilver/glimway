@@ -5,7 +5,8 @@
  * game use: grade rules, wear states, icons, effects in words, pockets and
  * the off hand. No Phaser, no network.
  */
-import { RESIDENTS, residentById, residentAt } from './residents.ts';
+import { RESIDENTS, residentById, residentAt, type ResidentPlace } from './residents.ts';
+import { roomFor } from './rooms.ts';
 import itemsRaw from '../../content/items.json' with { type: 'json' };
 import { decodeContent } from './content-proto.ts';
 import { ItemsSchema, type ItemDefValid, type ItemMenderValid, type ItemPickupValid, type ItemSellerValid, type ItemsRulesValid, type PocketEffectValid, type HeldEffectValid, type UseEffectValid } from './gen/glimway/content/v1/items_pb.js';
@@ -41,7 +42,8 @@ export type ItemDef = Omit<ItemDefValid, 'kind' | 'tab' | 'grade' | 'atZero' | '
 export type ItemPickup = Omit<ItemPickupValid, 'area'> & { area: (typeof PICKUP_AREAS)[number] };
 /** A person or stall that sells goods: a named resident, or a festival-day stall. */
 export type ItemSeller = Omit<ItemSellerValid, 'area' | 'tx' | 'ty'> & { area: string; tx: number; ty: number };
-export type ItemMender = Omit<ItemMenderValid, 'area'> & { area: (typeof PICKUP_AREAS)[number] };
+/** A mender: at a fixed spot (area, tx, ty), or `with` a resident, wherever their cycle has them (`menderAt`). */
+export type ItemMender = Omit<ItemMenderValid, 'area'> & { area?: (typeof PICKUP_AREAS)[number] };
 /** Where the named residents stand (shared with the server's checks; derived, never authored). */
 interface ItemResident { id: string; area: string; tx: number; ty: number }
 export interface ItemRules extends Omit<ItemsRulesValid, 'menders'> { menders: ItemMender[]; residents: ItemResident[] }
@@ -60,6 +62,8 @@ export function validateItems(value: unknown): Items {
   for (const m of r.menders) {
     if (npcs.has(m.npc)) return bad(`duplicate mender ${m.npc}`);
     npcs.add(m.npc);
+    // A mender with a resident stands wherever that resident's cycle has them.
+    if (m.with && !residentById(m.with)) return bad(`mender ${m.npc}: place`);
   }
   const defs = new Map<string, ItemDef>();
   for (const d of v.items) {
@@ -109,6 +113,8 @@ export function validateItems(value: unknown): Items {
   for (const s of v.sellers ?? []) {
     if (sellers.has(s.id)) return bad(`duplicate seller ${s.id}`);
     if (typeof s.npc !== 'string' || !s.npc || (s.with ? !residentById(s.with) : !PICKUP_AREAS.includes(s.area as never))) return bad(`seller ${s.id}: place`);
+    // A shop is an authored room, never a player's cottage (in:home:N).
+    if (s.shop && !roomFor(s.shop)) return bad(`seller ${s.id}: place`);
     if (s.festival !== '' && !festivals.includes(s.festival)) return bad(`seller ${s.id}: festival`);
     sellers.add(s.id);
     const goods = new Set<string>();
@@ -126,6 +132,7 @@ export function validateItems(value: unknown): Items {
   }
   // Compatibility for the outdoor builder while lane B switches to cycles.
   // These rows are derived from residents.json, never authored in items.json.
+  // Silas and Pell (0.7) are drawn from their cycles alone.
   const exterior = (id: string) => {
     const res = residentById(id)!;
     return Object.values(res.spots).find(s => !s.area.startsWith('in:')) ?? Object.values(res.spots)[0]!;
@@ -134,8 +141,8 @@ export function validateItems(value: unknown): Items {
     ...v,
     rules: {
       ...r,
-      menders: r.menders.map((m) => ({ ...m, area: m.area as (typeof PICKUP_AREAS)[number] })),
-      residents: RESIDENTS.residents.filter(res => res.id !== 'finn').map(res => ({ id: res.id, area: exterior(res.id).area, tx: exterior(res.id).tx, ty: exterior(res.id).ty })),
+      menders: r.menders.map((m) => (m.with ? m : { ...m, area: m.area as (typeof PICKUP_AREAS)[number] })),
+      residents: RESIDENTS.residents.filter(res => !['finn', 'silas', 'pell'].includes(res.id)).map(res => ({ id: res.id, area: exterior(res.id).area, tx: exterior(res.id).tx, ty: exterior(res.id).ty })),
     },
     sellers: v.sellers?.map(s => s.with ? { ...s, area: exterior(s.with).area, tx: exterior(s.with).tx, ty: exterior(s.with).ty } : s),
   };
@@ -317,16 +324,31 @@ export function pickupById(id: string): ItemPickup | null {
   return ITEMS.pickups.find((p) => p.id === id) ?? null;
 }
 
-/** The mender (Silas, Orrin) whose spot is within reach, if any. */
-export function menderNear(area: string, x: number, y: number, tile = 16): ItemMender | null {
-  for (const m of ITEM_RULES.menders) {
-    if (m.area !== area) continue;
-    const dx = x - (m.tx * tile + tile / 2);
-    const dy = y - (m.ty * tile + tile / 2);
-    const r = m.radiusTiles * tile;
-    if (dx * dx + dy * dy <= r * r) return m;
-  }
-  return null;
+/** Where a mender stands at `now` (Unix seconds): their fixed spot, or their resident's (the server checks the same). */
+export function menderAt(m: ItemMender, now: number): ResidentPlace | null {
+  if (m.with) return residentAt(m.with, now);
+  return m.area !== undefined && m.tx !== undefined && m.ty !== undefined ? { area: m.area, tx: m.tx, ty: m.ty } : null;
+}
+
+/**
+ * Whether a mender reaches you at `now`: a resident indoors (Silas at his
+ * counter) mends for anyone in the same room, as the honesty tin sells;
+ * otherwise within the radius of their spot. The server checks the same
+ * (nearMender).
+ */
+export function menderReaches(m: ItemMender, area: string, x: number, y: number, now: number, tile = 16): boolean {
+  const at = menderAt(m, now);
+  if (!at || at.area !== area) return false;
+  if (m.with && roomFor(area)) return true;
+  const dx = x - (at.tx * tile + tile / 2);
+  const dy = y - (at.ty * tile + tile / 2);
+  const r = m.radiusTiles * tile;
+  return dx * dx + dy * dy <= r * r;
+}
+
+/** The mender (Silas, Orrin) who reaches you at `now`, if any (`menderReaches`). */
+export function menderNear(area: string, x: number, y: number, now: number, tile = 16): ItemMender | null {
+  return ITEM_RULES.menders.find(m => menderReaches(m, area, x, y, now, tile)) ?? null;
 }
 
 /** A seller by id (shared content; the server checks the same rows). */

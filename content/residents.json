@@ -108,6 +108,49 @@
           "minutes": 30
         }
       ]
+    },
+    {
+      "id": "silas",
+      "offsetMinutes": 20,
+      "home": "in:commons:yard",
+      "spots": {
+        "counter": {
+          "area": "in:commons:yard",
+          "tx": 7,
+          "ty": 4
+        },
+        "yard": {
+          "area": "commons",
+          "tx": 48,
+          "ty": 19
+        }
+      },
+      "cycle": [
+        {
+          "spot": "counter",
+          "minutes": 40
+        },
+        {
+          "spot": "yard",
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "id": "pell",
+      "spots": {
+        "desk": {
+          "area": "in:commons:yard:deeds",
+          "tx": 7,
+          "ty": 2
+        }
+      },
+      "cycle": [
+        {
+          "spot": "desk",
+          "minutes": 60
+        }
+      ]
     }
   ]
 }

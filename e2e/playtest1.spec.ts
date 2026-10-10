@@ -5,6 +5,7 @@ import { dialogueState, frames, holdUntil, openTalk, readDialogue, untilChoices,
 import { allow, habiticaURL, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, sql, syncFromMenu, waitForWorld, accountOf, refusal, seedMarks } from './connected'
 import { claimDeed, earnGlims, freshPlayer, homes, intoCottage, toMyLand, go } from './home-helpers'
 import { HEIRLOOM_REFUSALS } from '../src/content/heirlooms.ts'
+import { setHour } from './room-helpers'
 
 /**
  * Fixes from the owner's first real playtest:
@@ -188,13 +189,15 @@ for (const device of ['desktop', 'phone'] as const) {
         const id = await freshPlayer(page, 'AxeTester')
         seedMarks(id, 'echo:hollis')
         await page.evaluate(() => (window as unknown as { __fsDevAddFlag: (f: string) => void }).__fsDevAddFlag('echo:hollis'))
-        await warp(page, 'commons', 51, 22)
+        // Silas out in his yard (his cycle: minute 10 of the hour), by the sawhorse.
+        await setHour(page, { minute: 10, server: true })
+        await warp(page, 'commons', 48, 20)
         await openTalk(page, 'Talk to Silas')
         const choices = await untilChoices(page)
         expect(choices.some((c) => /Take the Brack felling axe/.test(c.text))).toBe(true)
         // The save still holds a spot from before the walk up (the frame loop
         // doesn't note it while a conversation is open): eight tiles off.
-        await page.evaluate(() => (window as unknown as { __fsDevStalePosition: (x: number, y: number) => void }).__fsDevStalePosition(51 * 16 + 8, 30 * 16))
+        await page.evaluate(() => (window as unknown as { __fsDevStalePosition: (x: number, y: number) => void }).__fsDevStalePosition(48 * 16 + 8, 28 * 16))
         const refused: number[] = []
         page.on('response', (r) => {
           if (r.url().endsWith('/api/items/heirloom') && r.status() === 409) refused.push(r.status())
@@ -210,7 +213,8 @@ for (const device of ['desktop', 'phone'] as const) {
         await page.evaluate(() => (window as unknown as { __fsDevAddFlag: (f: string) => void }).__fsDevAddFlag('echo:hollis'))
         // The server says no (as it would to someone it measured too far off).
         await page.route('**/api/items/heirloom', async (route) => route.fulfill(await refusal(page, 'too-far-away')))
-        await warp(page, 'commons', 51, 22)
+        await setHour(page, { minute: 10, server: true })
+        await warp(page, 'commons', 48, 20)
         await openTalk(page, 'Talk to Silas')
         await untilChoices(page)
         await page.locator('.choice', { hasText: /Take the Brack felling axe/ }).click()

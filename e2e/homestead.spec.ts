@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { serverState, sql, accountOf, CONTRACT, served } from './connected'
-import { dialogueState, untilChoices, waitForArea, player, waitForLive, expectAreaCard, expectToast } from './helpers'
-import { area, earnGlims, freshPlayer, fund, go, homeAt, homes, hurt, landOf, lane, myHome, place, readOn, shot, silasSays, talk, throughGate, type Home } from './home-helpers'
+import { waitForArea, player, expectAreaCard, expectToast } from './helpers'
+import { area, earnGlims, freshPlayer, fund, go, homeAt, homes, hurt, landOf, lane, myHome, place, readOn, shot, silasSays, talk, throughGate, type Home, DEED_BOUGHT, yardBuild, pellSays, DEEDS, AT_PELL, manageDeed, giveUpPlace } from './home-helpers'
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts'
 import { LAND, buildableKind, clearable, clearedSet, effectiveKind, homeLights, isLit, type Land } from '../src/lib/homestead-land.ts'
 
@@ -9,8 +9,8 @@ import { LAND, buildableKind, clearable, clearedSet, effectiveKind, homeLights, 
  * Homesteads, second version, against the real Go server
  * (playwright.config.ts starts it with a fresh database): the Commons lane
  * of gates, claiming a deed and being led to your gate, your own land and
- * lantern-light expansion, a joint deed signed at Silas's table by two
- * players at once, leaving, and visiting. Each test signs in as new
+ * lantern-light expansion, a joint deed signed at the deed table in Pell's
+ * office by two players at once, leaving, and visiting. Each test signs in as new
  * Habitica ids; the lane is the world's, so tests read which gates are free.
  *
  * SCREENS=1 also saves review screenshots to .agent/screens/.
@@ -55,30 +55,16 @@ async function carryTo(page: Page, piece: string, x: number, y: number): Promise
   await expect.poll(async () => (await homes(page)).placement?.spot).toEqual({ x, y, rotation: 0 })
 }
 
-/** Talk at the prompt and pick a choice in each conversation that follows, in order. */
-async function converse(page: Page, prompt: RegExp, picks: RegExp[]): Promise<void> {
-  await expect(page.locator('.prompt')).toContainText(prompt)
-  await waitForLive(page)
-  await page.keyboard.press('e')
-  for (const pick of picks) {
-    // The next conversation may still be opening.
-    await expect.poll(async () => (await dialogueState(page)).open).toBe(true)
-    const choices = await untilChoices(page)
-    expect(choices.map((c) => c.text).some((t) => pick.test(t)), `a reply matching ${pick}`).toBe(true)
-    await page.locator('.choice', { hasText: pick }).click()
-    await expect.poll(async () => (await dialogueState(page)).choices).toBeNull()
-  }
-}
-
-/** Claim the first unclaimed gate on the lane from Silas; returns the gate. */
+/** Claim the first unclaimed gate on the lane from Pell; returns the gate. */
 async function claimFirstFree(page: Page): Promise<number> {
   await go(page, 'commons', 23, 19)
   await expect.poll(async () => (await homes(page)).status).toBe('ready')
   const free = (await homes(page)).gates.find((g) => g.homeId === null)!
-  await silasSays(page, new RegExp(`The deed to Lot ${free.gate + 1}`))
+  await pellSays(page, new RegExp(`The deed to Lot ${free.gate + 1}`))
   await expect.poll(async () => (await homes(page)).myGate).toBe(free.gate)
-  // Silas answers once the server has the claim: read it (it would hold the screen).
-  await readOn(page, /in my square hand/)
+  // Pell answers once the server has the claim: read it (it would hold the screen).
+  await readOn(page, DEED_BOUGHT)
+  await go(page, 'commons', 23, 19)
   return free.gate
 }
 
@@ -128,23 +114,24 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
   const free = v.gates.find((g) => g.homeId === null)!
   expect(free.price).toBe(0) // the first deed is on the Compact
 
-  // Read the sign at the gate you like, then buy its deed from Silas.
+  // Read the sign at the gate you like, then buy its deed from Pell (the sign's gate is offered first).
   const slot = v.slots.find((s) => s.gate === free.gate)!
   await go(page, 'commons', slot.entry.tx, slot.entry.ty + 1)
   await talk(page, new RegExp(`Read the sign · Lot ${free.gate + 1}`))
   const glims = (await serverState(page)).body.state.glims
-  await silasSays(page, new RegExp(`The deed to Lot ${free.gate + 1}`))
+  await pellSays(page, new RegExp(`The deed to Lot ${free.gate + 1}`))
   await expect.poll(async () => (await homes(page)).myGate).toBe(free.gate)
-  // Silas answers once the server has the claim: read it (it would hold the screen).
-  await readOn(page, /in my square hand/)
+  // Pell answers once the server has the claim: read it (it would hold the screen).
+  await readOn(page, DEED_BOUGHT)
   expect((await serverState(page)).body.state.glims).toBe(glims)
   await expect.poll(async () => (await serverState(page)).body.state.flags).toContain('paper:deed-of-sale-commons-plot')
 
-  // Guidance: the journal and the HUD say where, and a marker leads there.
+  // Guidance: the journal and the HUD say where, and out on the lane a marker leads there.
   await expect(page.getByTestId('home-goal')).toContainText(`Lot ${free.gate + 1}`)
+  await go(page, 'commons', 53, 19)
+  await expect.poll(async () => (await homes(page)).guide).not.toBeNull()
   v = await homes(page)
-  expect(v.guide).not.toBeNull()
-  expect(v.guide!.arrow).toBe(true) // the gate is off screen from Silas's yard
+  expect(v.guide!.arrow).toBe(true) // the gate is off screen from the Yard's door
   await shot(page, 'claim-guidance-desktop')
   await page.keyboard.press('j')
   await expect(page.getByTestId('journal-home-goal')).toContainText(`Lot ${free.gate + 1}`)
@@ -162,12 +149,15 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
 
   // Buy a stool and two lantern posts; the second post costs more.
   fund(id, { materials: { timber: 40, stone: 30, amber: 6, fiber: 10 } })
-  await silasSays(page, /See what you’ve finished/)
+  await silasSays(page, /See the Yard/)
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
   const first = HOMESTEAD_DATA.lanternPosts.costs[0]!.materials
   await expect(shop.locator('.row', { hasText: 'Lantern Post' })).toContainText(`${first.timber} timber`)
+  // A camp opens on Build (the cottage is next); the stool is on Furnish.
+  await shop.getByRole('tab', { name: 'Furnish' }).click()
   await shop.locator('[data-buy="wooden-stool"]').click()
   await expect(shop.locator('.msg.ok')).toContainText('Wooden Stool is yours')
+  await shop.getByRole('tab', { name: 'Build' }).click()
   await shop.locator('[data-buy="lantern-post"]').click()
   await expect(shop.locator('.msg.ok')).toContainText('Lantern Post is yours')
   const second = HOMESTEAD_DATA.lanternPosts.costs[1]!.materials
@@ -261,8 +251,7 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
 
   // Raise the cottage, go inside: the cottage is a place of its own, saved inside.
   const embers2 = (await serverState(page)).body.state.glims
-  await silasSays(page, /Raise a cottage/)
-  await readOn(page, /Steady as a route stone/)
+  await yardBuild(page, 'cottage')
   await expect.poll(async () => (await myHome(page)).tier).toBe(1)
   expect((await serverState(page)).body.state.glims).toBe(embers2 - 15)
   await throughGate(page, free.gate)
@@ -284,7 +273,7 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
   expect(Math.floor((await player(page)).x / 16)).toBe(land.doorstep.tx)
 })
 
-test('a joint deed: two players sign at Silas’s table together; then one leaves and keeps their pack', async ({ page, browser, baseURL }) => {
+test('a joint deed: two players sign at the deed table in Pell’s office; then one leaves and keeps their pack', async ({ page, browser, baseURL }) => {
   test.setTimeout(180_000)
   const a = await freshPlayer(page, 'Tansy')
   await earnGlims(page, a)
@@ -300,30 +289,31 @@ test('a joint deed: two players sign at Silas’s table together; then one leave
   const b = await freshPlayer(other, 'Bram', code)
   fund(b, { materials: { timber: 10, stone: 6, amber: 2 } })
 
-  // Both at the table (presence: same room, near Silas).
-  const silas = (await homes(page)).features!.silas
-  await go(other, 'commons', silas.tx, silas.ty + 1)
-  await go(page, 'commons', silas.tx, silas.ty + 1)
+  // Both at the deed table in Pell's office (presence: the room, within the table's reach).
+  await go(other, DEEDS, AT_PELL.tx, AT_PELL.ty)
+  await go(page, DEEDS, AT_PELL.tx, AT_PELL.ty)
   const peers = (p: Page) => p.evaluate(() => (window as unknown as { __fsPresence: () => { peers: string[] } }).__fsPresence().peers)
   // Presence names players by their server account ids.
   await expect.poll(() => peers(page), { timeout: 20_000 }).toContain(accountOf(b))
   await expect.poll(() => peers(other), { timeout: 20_000 }).toContain(accountOf(a))
 
-  // Tansy offers the deed to Bram and signs her side.
-  await converse(page, /Talk to Silas/, [/Share the deed/, /Bram/])
-  await readOn(page, /Your name’s down/)
+  // Tansy asks Pell for her deed, offers it to Bram from the panel, and signs her side.
+  const deed = await manageDeed(page)
+  await deed.locator(`[data-offer="${accountOf(b)}"]`).click({ timeout: 15_000 })
+  await expect(deed.getByTestId('deed-message')).toContainText('Your name’s down')
   await expect.poll(async () => (await lane(other)).invites.length).toBe(1)
+  await deed.getByRole('button', { name: 'Close your deed' }).click()
   await shot(other, 'joint-deed-offer-desktop')
 
-  // Bram signs at the table within the window: both names on one deed.
-  await talk(other, /Talk to Silas/, /Sign Tansy’s deed/)
-  await readOn(other, /Both names/)
+  // Bram signs at the table, with Pell, within the window: both names on one deed.
+  await pellSays(other, /Sign Tansy’s deed/)
+  await readOn(other, /Two names, one entry/)
   await expect.poll(async () => (await homes(other)).myGate).toBe(gate)
   await expect.poll(async () => (await myHome(page)).members.map((m) => m.displayName).sort()).toEqual(['Bram', 'Tansy'])
   // Tansy's game, waiting on the signature, hears of it without asking again.
   await expect.poll(async () => (await homes(page)).mine?.members.length ?? 0, { timeout: 15_000 }).toBe(2)
   // Equal members: Bram can build on the land too.
-  await silasSays(other, /See what you’ve finished/)
+  await silasSays(other, /See the Yard/)
   const shop = other.getByRole('dialog', { name: 'Silas’s Yard' })
   await shop.locator('[data-buy="lantern-post"]').click()
   await expect(shop.locator('.msg.ok')).toContainText('Lantern Post is yours')
@@ -334,14 +324,8 @@ test('a joint deed: two players sign at Silas’s table together; then one leave
   await expect(other.getByTestId('arrange')).toBeVisible()
   await shot(other, 'joint-deed-land-desktop')
 
-  // Bram leaves the deed: he keeps his pack (the post he bought), the land stays Tansy's.
-  await silasSays(other, /Give up my place on the deed/)
-  const confirm = other.getByRole('alertdialog', { name: /Give up your place/ })
-  await expect(confirm).toBeVisible()
-  await shot(other, 'leave-confirm-desktop')
-  await confirm.getByRole('button', { name: 'Strike my name' }).click()
-  await readOn(other, /I’ll strike your name/)
-  await expect.poll(async () => (await lane(other)).mine).toBeNull()
+  // Bram gives up his place (Pell, Manage your deed): he keeps his pack (the post he bought), the land stays Tansy's.
+  await giveUpPlace(other, /Pell strikes your name/)
   expect((await myHome(page)).members.map((m) => m.displayName)).toEqual(['Tansy'])
   // Not on a deed any more: no home chest for him (his own chest goes with him);
   // his post is still in his pack (mail can send it).
@@ -359,8 +343,7 @@ test('visiting: a second player walks through a neighbour’s gate, sees their p
   const a = await freshPlayer(page, 'Tansy')
   await earnGlims(page, a)
   const gate = await claimFirstFree(page)
-  await silasSays(page, /Raise a cottage/)
-  await readOn(page, /Steady as a route stone/)
+  await yardBuild(page, 'cottage')
   await expect.poll(async () => (await myHome(page)).tier).toBe(1)
   const created = await page.request.post('/api/invites', { data: {}, ...CONTRACT })
   const code = (await created.json()).code as string
@@ -414,28 +397,20 @@ test('desolation: an empty homestead overgrows, its sign weathers, and in time t
   const a = await freshPlayer(page, 'Tansy')
   await earnGlims(page, a)
   const gate = await claimFirstFree(page)
-  await silasSays(page, /Raise a cottage/)
-  await readOn(page, /Steady as a route stone/)
+  await yardBuild(page, 'cottage')
   await expect.poll(async () => (await myHome(page)).tier).toBe(1)
   // The last name off the deed: the land is empty from now. The confirmation
   // says how long it waits.
-  const leaveNow = async () => {
-    await silasSays(page, /Give up my place on the deed/)
-    const confirm = page.getByRole('alertdialog', { name: /Give up your place/ })
-    await expect(confirm).toContainText(`${HOMESTEAD_DATA.desolation.deedLostAfterDays} days`)
-    await confirm.getByRole('button', { name: 'Strike my name' }).click()
-    await readOn(page, /I’ll strike your name/)
-    await expect.poll(async () => (await lane(page)).mine).toBeNull()
-  }
+  const leaveNow = () => giveUpPlace(page, `${HOMESTEAD_DATA.desolation.deedLostAfterDays} days`)
   await leaveNow()
   expect((await homeAt(page, gate))!.desolate).toBe(false)
-  // Changed her mind: Silas gives the deed back, as it stands, for nothing.
+  // Changed her mind: Pell gives the deed back, as it stands, for nothing.
   const glims = (await serverState(page)).body.state.glims
-  await silasSays(page, new RegExp(`Take back Lot ${gate + 1}`))
+  await pellSays(page, new RegExp(`Take back Lot ${gate + 1}`))
   await expect.poll(async () => (await lane(page)).mine?.gate).toBe(gate)
-  // Silas answers once the server has it back: read it (it would hold the
+  // Pell answers once the server has it back: read it (it would hold the
   // screen, and the next talk would find no prompt).
-  await readOn(page, /Your name’s back on/)
+  await readOn(page, /Written back in/)
   expect((await myHome(page)).tier).toBe(1)
   expect((await serverState(page)).body.state.glims).toBe(glims)
   await leaveNow()

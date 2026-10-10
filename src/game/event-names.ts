@@ -127,8 +127,10 @@ export const EV = {
   // homesteads (src/game/homestead.ts, src/game/entities/homesteads.ts)
   /** The lane or a home changed: { reason, gate? }. */
   homeChanged: 'home:changed',
-  /** The UI should open Silas's shop. */
+  /** Open the Yard panel (src/game/yard-open.ts): YardOpenPayload, or nothing for its default tab. */
   homeShop: 'ui:home-shop',
+  /** Open the Manage your deed panel (src/game/yard-open.ts). */
+  homeDeed: 'ui:home-deed',
   /** Placement-mode state for the tray: PlacementView | null. */
   homePlacement: 'ui:home-placement',
   /** Tray → scene: a placement command (PlacementCommand). */
@@ -147,8 +149,6 @@ export const EV = {
   homeNamePrompt: 'ui:home-name-prompt',
   /** The name given (null: cancelled). */
   homeNamed: 'game:home-named',
-  /** Ask the player to confirm leaving the deed. */
-  homeConfirmLeave: 'ui:home-confirm-leave',
   /** UI → scene: a homestead action decided outside a conversation: { action }. */
   homeAction: 'game:home-action',
 
@@ -212,6 +212,14 @@ export interface GoalLinePayload {
 export interface GoalDirPayload {
   angle: number | null
   here: boolean
+}
+
+/** The Yard panel's tabs (silas-yard.md 2.5). */
+export type YardTab = 'build' | 'furnish' | 'materials' | 'mend'
+
+/** The Yard panel on a tab (a display in the shop opens its own); none: Build while an upgrade is open, else Furnish. */
+export interface YardOpenPayload {
+  tab?: YardTab
 }
 
 /**
@@ -481,7 +489,8 @@ export interface EventMap {
   [EV.villageChanged]: { what?: string } | undefined
   [EV.villageOpen]: VillageOpenPayload
   [EV.homeChanged]: { reason: string; gate?: number }
-  [EV.homeShop]: void
+  [EV.homeShop]: YardOpenPayload | void
+  [EV.homeDeed]: void
   [EV.homePlacement]: PlacementView | null
   [EV.homeCommand]: PlacementCommand
   [EV.homeArrange]: ArrangeView
@@ -491,7 +500,6 @@ export interface EventMap {
   [EV.homeGoal]: { text: string | null }
   [EV.homeNamePrompt]: NamePrompt
   [EV.homeNamed]: { name: string | null }
-  [EV.homeConfirmLeave]: { place: string; shared: boolean }
   [EV.homeAction]: { action: string }
   [EV.paperFound]: PaperFoundPayload
   [EV.papersSync]: PapersSyncPayload

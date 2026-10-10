@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import type { Browser, BrowserContext } from '@playwright/test'
 import { allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, pastOpening, reenter, routeHabitica, setHabitica, sql, waitForWorld } from './connected'
-import { claimDeed, earnPlenty, fund, go, homes, landOf, myHome, silasSays, throughGate, type Home } from './home-helpers'
+import { claimDeed, earnPlenty, fund, go, homes, landOf, myHome, silasSays, throughGate, type Home, bySilas } from './home-helpers'
 import { SERVER_ANSWER_MS, frames, waitForArea, waitForLive } from './helpers'
 import { HOMESTEAD_DATA, checkPlacement } from '../src/lib/homestead.ts'
 import { buildableKind, clearable, clearedSet, effectiveKind, homeLights, isLit, type Land } from '../src/lib/homestead-land.ts'
@@ -242,8 +242,7 @@ test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, an
   const gate = await claimDeed(page)
   // Esc gets you out of a talk (the owner's playtest): Silas's replies have
   // a goodbye, so Esc takes it, and the Menu doesn't open on the same press.
-  const silasAt = (await homes(page)).features?.silas ?? { tx: 0, ty: 0 }
-  await go(page, 'commons', silasAt.tx, silasAt.ty + 1)
+  await bySilas(page)
   await expect(page.locator('.prompt')).toContainText('Talk to Silas')
   await waitForLive(page)
   await page.keyboard.press('e')
@@ -252,16 +251,18 @@ test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, an
   await page.keyboard.press('Escape')
   await expect(talking).toHaveCount(0)
   await expect(page.getByTestId('world-card')).toHaveCount(0)
-  // Silas's Yard: the stable heads its own Buildings section, after the
-  // cottage and before the finished pieces, locked until the Workshop stands.
-  await silasSays(page, /See what you’ve finished/)
+  // Silas's Yard: the stable is on Build, in the Buildings section under the
+  // cottage, locked until the Workshop stands; Furnish doesn't sell it.
+  await silasSays(page, /See the Yard/)
   const yard = page.getByRole('dialog', { name: 'Silas’s Yard' })
+  await expect(yard.getByRole('tab', { name: 'Build' })).toHaveAttribute('aria-selected', 'true')
   const sections = await yard.locator('section').evaluateAll((all) => all.map((el) => el.getAttribute('aria-label')))
+  expect(sections.indexOf('The cottage')).toBeGreaterThanOrEqual(0)
   expect(sections.indexOf('Buildings')).toBeGreaterThan(sections.indexOf('The cottage'))
-  expect(sections.indexOf('Buildings')).toBeLessThan(sections.indexOf('Finished pieces'))
   await expect(yard.getByTestId('shop-locked-stable')).toContainText('workshop')
   await expect(yard.locator('[data-buy="stable"]')).toBeDisabled()
-  await expect(yard.getByRole('region', { name: 'Finished pieces' }).locator('[data-buy="stable"]')).toHaveCount(0)
+  await yard.getByRole('tab', { name: 'Furnish' }).click()
+  await expect(yard.locator('[data-buy="stable"]')).toHaveCount(0)
   await yard.getByRole('button', { name: 'Close Silas’s yard' }).click()
   // Test lever: the Workshop tier (the stable comes after it) without the build-up.
   const mine = await myHome(page)
@@ -270,8 +271,10 @@ test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, an
   fund(id, { materials: { timber: 16 + bill.timber, stone: 8 + bill.stone, fiber: 6 + bill.fiber } })
 
   // Silas sells the stable.
-  await silasSays(page, /See what you’ve finished/)
+  await silasSays(page, /See the Yard/)
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
+  // The workshop stands: it opens on Furnish; the stable is on Build.
+  await shop.getByRole('tab', { name: 'Build' }).click()
   await expect(shop.locator('.row', { hasText: 'Stable' })).toContainText('30 glims')
   await shop.locator('[data-buy="stable"]').click()
   await expect(shop.locator('.msg.ok')).toContainText('is yours')

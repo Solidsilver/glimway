@@ -1,6 +1,6 @@
 import { expect, test } from './fixtures'
 import { settleWarden, talkThrough, waitForWilds, warden, warp, waitForLive } from './helpers'
-import { atMyMailbox, claimDeed, earnPlenty, freshPlayer, fund, homes, intoCottage, myHome, onMyLand, place, readOn, shot as snap, silasSays } from './home-helpers'
+import { atMyMailbox, claimDeed, earnPlenty, freshPlayer, fund, intoCottage, myHome, onMyLand, place, shot as snap, yardBuild, bySilas } from './home-helpers'
 import type { Page } from './fixtures'
 
 /** Screens, then let the scene settle again (the phone resize relays out the game). */
@@ -32,13 +32,11 @@ test.describe('in a world', () => {
       items: { 'lamp-wick': 2, 'oilcloth-wrap': 1, 'wooden-peg': 3, 'whittled-fox': 1, 'tin-whistle': 1, 'beeswax-candle': 1 }
     })
     await claimDeed(page)
-    const v = await homes(page)
-    const s = v.features!.silas
     await onMyLand(page, 3, 2)
     await shot(page, 'art-home-tier0-desktop')
 
-    // Silas, in conversation: the delivered bust.
-    await go(page, 'commons', s.tx, s.ty + 1)
+    // Silas, in conversation: the delivered bust (wherever his hour has him).
+    await bySilas(page)
     await expect(page.locator('.prompt')).toContainText('Talk to Silas')
     await page.keyboard.press('e')
     await expect(page.getByRole('dialog', { name: /Conversation with/ })).toBeVisible()
@@ -54,14 +52,12 @@ test.describe('in a world', () => {
     await expect(dialogue).toBeHidden()
     await go(page, 'commons', 23, 19)
 
-    await silasSays(page, /Raise a cottage/)
-    await readOn(page, /Steady as a route stone/)
+    await yardBuild(page, 'cottage')
     await expect.poll(async () => (await myHome(page, id)).tier).toBe(1)
     await onMyLand(page, 3, 2)
     await shot(page, 'art-home-tier1-desktop')
     await page.waitForTimeout(400)
-    await silasSays(page, /Build on a workshop/)
-    await readOn(page, /There\. Deep eaves/)
+    await yardBuild(page, 'workshop')
     await expect.poll(async () => (await myHome(page, id)).tier).toBe(2)
     await onMyLand(page, 3, 2)
     await shot(page, 'art-home-tier2-desktop')

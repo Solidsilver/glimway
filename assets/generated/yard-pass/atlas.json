@@ -1,0 +1,394 @@
+{
+  "sources": [
+    {
+      "key": "yard-props-source",
+      "file": "sheets/yard-props-source.png"
+    },
+    {
+      "key": "yard-vertical-props-source",
+      "file": "sheets/yard-vertical-props-source.png"
+    },
+    {
+      "key": "deeds-table-source",
+      "file": "sheets/deeds-table-source.png"
+    },
+    {
+      "key": "cottage-silas-source-v2",
+      "file": "sheets/cottage-silas-source-v2.png"
+    },
+    {
+      "key": "kit-side-doorway-source-round1",
+      "file": "sheets/kit-side-doorway-source-round1.png"
+    },
+    {
+      "key": "pell-resident-source-round1",
+      "file": "sheets/pell-resident-source-round1.png"
+    },
+    {
+      "key": "pell-portrait-source-round1",
+      "file": "sheets/pell-portrait-source-round1.png"
+    },
+    {
+      "key": "yard-counter-source-round2",
+      "file": "sheets/yard-counter-source-round2.png"
+    },
+    {
+      "key": "yard-timber-rack-source-round2",
+      "file": "sheets/yard-timber-rack-source-round2.png"
+    }
+  ],
+  "frames": {
+    "yard-counter": {
+      "filename": "yard-counter-source-round2",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 1536,
+        "h": 1024
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 1536,
+        "h": 1024
+      },
+      "sourceSize": {
+        "w": 1536,
+        "h": 1024
+      },
+      "canvasSize": {
+        "w": 192,
+        "h": 128
+      },
+      "destinationRect": {
+        "x": 8,
+        "y": 27,
+        "w": 176,
+        "h": 85
+      }
+    },
+    "yard-timber-rack": {
+      "filename": "yard-timber-rack-source-round2",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 1536,
+        "h": 1024
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 1536,
+        "h": 1024
+      },
+      "sourceSize": {
+        "w": 1536,
+        "h": 1024
+      },
+      "canvasSize": {
+        "w": 192,
+        "h": 192
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 73,
+        "w": 184,
+        "h": 107
+      }
+    },
+    "yard-mending-bench": {
+      "filename": "yard-vertical-props-source",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 1536
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 1536
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 1536
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 192
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 0,
+        "w": 56,
+        "h": 176
+      }
+    },
+    "kit-side-doorway": {
+      "filename": "kit-side-doorway-source-round1",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 1122,
+        "h": 1402
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 1122,
+        "h": 1402
+      },
+      "sourceSize": {
+        "w": 1122,
+        "h": 1402
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 128
+      },
+      "destinationRect": {
+        "x": 4,
+        "y": 0,
+        "w": 56,
+        "h": 124
+      }
+    },
+    "deeds-pigeonholes": {
+      "filename": "yard-props-source",
+      "frame": {
+        "x": 0,
+        "y": 444,
+        "w": 438,
+        "h": 443
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 438,
+        "h": 443
+      },
+      "sourceSize": {
+        "w": 438,
+        "h": 443
+      },
+      "canvasSize": {
+        "w": 192,
+        "h": 192
+      },
+      "destinationRect": {
+        "x": 2,
+        "y": 7,
+        "w": 188,
+        "h": 177
+      }
+    },
+    "deeds-clerk-desk": {
+      "filename": "yard-vertical-props-source",
+      "frame": {
+        "x": 512,
+        "y": 0,
+        "w": 512,
+        "h": 1536
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 1536
+      },
+      "sourceSize": {
+        "w": 512,
+        "h": 1536
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 128
+      },
+      "destinationRect": {
+        "x": 9,
+        "y": 0,
+        "w": 45,
+        "h": 124
+      }
+    },
+    "deeds-table": {
+      "filename": "deeds-table-source",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 1536,
+        "h": 1024
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 1536,
+        "h": 1024
+      },
+      "sourceSize": {
+        "w": 1536,
+        "h": 1024
+      },
+      "canvasSize": {
+        "w": 192,
+        "h": 128
+      },
+      "destinationRect": {
+        "x": 2,
+        "y": 25,
+        "w": 188,
+        "h": 99
+      }
+    },
+    "cottage-silas": {
+      "filename": "cottage-silas-source-v2",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 1312,
+        "h": 1199
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 1312,
+        "h": 1199
+      },
+      "sourceSize": {
+        "w": 1312,
+        "h": 1199
+      },
+      "canvasSize": {
+        "w": 96,
+        "h": 92
+      },
+      "destinationRect": {
+        "x": 12,
+        "y": 26,
+        "w": 71,
+        "h": 66
+      }
+    },
+    "portrait-pell": {
+      "filename": "pell-portrait-source-round1",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 1774,
+        "h": 887
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 1774,
+        "h": 887
+      },
+      "sourceSize": {
+        "w": 1774,
+        "h": 887
+      },
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "destinationRect": {
+        "x": 0,
+        "y": 6,
+        "w": 64,
+        "h": 58
+      }
+    },
+    "pell-idle-0": {
+      "filename": "pell-resident-source-round1",
+      "frame": {
+        "x": 0,
+        "y": 0,
+        "w": 718,
+        "h": 1095
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 718,
+        "h": 1095
+      },
+      "sourceSize": {
+        "w": 718,
+        "h": 1095
+      },
+      "canvasSize": {
+        "w": 186,
+        "h": 283
+      },
+      "destinationRect": {
+        "x": 20,
+        "y": 0,
+        "w": 146,
+        "h": 283
+      }
+    },
+    "pell-idle-1": {
+      "filename": "pell-resident-source-round1",
+      "frame": {
+        "x": 718,
+        "y": 0,
+        "w": 719,
+        "h": 1095
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 719,
+        "h": 1095
+      },
+      "sourceSize": {
+        "w": 719,
+        "h": 1095
+      },
+      "canvasSize": {
+        "w": 186,
+        "h": 283
+      },
+      "destinationRect": {
+        "x": 20,
+        "y": 0,
+        "w": 145,
+        "h": 283
+      }
+    }
+  },
+  "animations": [
+    {
+      "key": "pell-breathing",
+      "frames": [
+        "pell-idle-0",
+        "pell-idle-1"
+      ],
+      "frameRate": 1.5,
+      "repeat": -1
+    }
+  ]
+}

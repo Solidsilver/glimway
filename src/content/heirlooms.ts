@@ -10,7 +10,7 @@
  */
 import type { JournalEntry } from './world.ts';
 import type { QuestStage } from '../lib/state.ts';
-import { ITEM_RULES } from '../lib/items.ts';
+import { ITEM_RULES, menderReaches } from '../lib/items.ts';
 
 export type HeirloomId =
   | 'brack-felling-axe'
@@ -211,6 +211,8 @@ export interface HeirloomContext {
   online: boolean;
   /** A grant for this heirloom is already on its way. */
   inFlight: boolean;
+  /** The server's clock (Unix seconds): Silas stands where his cycle has him. */
+  now: number;
 }
 
 function within(c: Pick<HeirloomContext, 'area' | 'x' | 'y'>, area: string, tx: number, ty: number, r: number, tile = 16): boolean {
@@ -239,12 +241,12 @@ function heirloomConditionMet(id: HeirloomId, c: Pick<HeirloomContext, 'flags' |
 }
 
 /** The server's reach check for each heirloom: the same rows, the same radius. */
-function heirloomInReach(id: HeirloomId, c: Pick<HeirloomContext, 'area' | 'x' | 'y'>): boolean {
+function heirloomInReach(id: HeirloomId, c: Pick<HeirloomContext, 'area' | 'x' | 'y' | 'now'>): boolean {
   switch (id) {
     case 'brack-felling-axe':
     case 'orrins-mason-pick': {
       const m = ITEM_RULES.menders.find((r) => r.npc === HEIRLOOMS[id].giver);
-      return !!m && within(c, m.area, m.tx, m.ty, m.radiusTiles);
+      return !!m && menderReaches(m, c.area, c.x, c.y, c.now);
     }
     case 'ada-garden-spade': {
       const r = ITEM_RULES.residents.find((v) => v.id === 'ada');

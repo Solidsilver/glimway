@@ -15,8 +15,12 @@ import { residentSpotsIn, roomKind, type RoomScene } from './room-kind.ts'
 import { gameNow } from './clock.ts'
 import { rng01 } from '../lib/hash.ts'
 
-/** Quest NPCs, then the residents (src/content/residents.ts), who talk around the quest. */
-export type NpcId = 'mara' | 'pip' | 'orrin' | 'elara' | 'finn' | 'hazel' | 'ada'
+/**
+ * Quest NPCs, then the residents (src/content/residents.ts), who talk around
+ * the quest, then Silas and Pell at the Yard (on the residents' hour, but
+ * their talk is the homestead layer's: ./entities/homestead-talk.ts).
+ */
+export type NpcId = 'mara' | 'pip' | 'orrin' | 'elara' | 'finn' | 'hazel' | 'ada' | 'silas' | 'pell'
 /** Glim spots: the hearth lantern (warm rest), road lanterns, the chest. */
 export type GlimSpotId = 'hearth' | 'road-1' | 'road-2' | 'road-3' | 'chest'
 /**
@@ -58,6 +62,10 @@ export type RoomSpotId =
   | 'reading-table'
   | 'reading-lamp'
   | 'reading-nook'
+  | 'yard-furnish'
+  | 'yard-materials'
+  | 'yard-mend'
+  | 'yard-counter'
 /** wisp: hopping slime/mushroom; beetle: telegraphed straight-line charger. */
 export type EnemyType = 'wisp' | 'beetle' | 'guardian'
 
@@ -92,7 +100,7 @@ export interface ExitDef {
   /** The side you step out of (the chevron, and which way you face arriving). Edge exits infer it. */
   side?: 'north' | 'south' | 'east' | 'west'
   /** A map edge (the default), a room's doorway, or a stair to another floor. */
-  kind?: 'edge' | 'door' | 'stair'
+  kind?: 'edge' | 'door' | 'stair' | 'inner'
 }
 
 /** Supplied atlas props placed in the world at a consistent small-world scale. */

@@ -107,7 +107,10 @@ func TestItemsValidationRejectsMalformedRows(t *testing.T) {
 		"pickup area":          func(v *Items) { v.Pickups[0].Area = "wilds" },
 		"wear":                 func(v *Items) { v.Rules.Wear.HoldPointsPerUse = 9 },
 		"pockets":              func(v *Items) { v.Rules.Pockets.WithCarryGear = 0 },
-		"mender area":          func(v *Items) { v.Rules.Menders[0].Area = "moon" },
+		"mender area":          func(v *Items) { v.Rules.Menders[1].Area = proto.String("moon") },
+		"mender resident":      func(v *Items) { v.Rules.Menders[0].With = proto.String("nobody") },
+		"mender place mix":     func(v *Items) { v.Rules.Menders[0].Area = proto.String("commons") },
+		"seller shop":          func(v *Items) { findSeller(v, "silas-yard").Shop = proto.String("in:commons:nowhere") },
 		"grade missing":        func(v *Items) { delete(v.Rules.Grades, "heirloom") },
 	}
 	for name, mutate := range cases {
@@ -158,6 +161,14 @@ func findPickup(v *Items, id string) *ItemPickup {
 	for _, p := range v.Pickups {
 		if p.GetId() == id {
 			return p
+		}
+	}
+	panic(id)
+}
+func findSeller(v *Items, id string) *ItemSeller {
+	for _, s := range v.Sellers {
+		if s.GetId() == id {
+			return s
 		}
 	}
 	panic(id)

@@ -21,6 +21,7 @@ import {
   type HeirloomContext,
 } from '../src/content/heirlooms.ts';
 import { ITEM_RULES } from '../src/lib/items.ts';
+import { residentById } from '../src/lib/residents.ts';
 
 test('all four heirlooms are defined with canon details', () => {
   assert.equal(HEIRLOOM_IDS.length, 4);
@@ -115,11 +116,14 @@ test('allHeirloomLines and allHeirloomJournal gather all authored text', () => {
 
 const centre = (t: { tx: number; ty: number }) => ({ x: t.tx * 16 + 8, y: t.ty * 16 + 8 });
 const silasRow = ITEM_RULES.menders.find((m) => m.npc === 'silas')!;
+// Silas by the sawhorse: his cycle has him in the yard at minute 10 of the hour, at his counter at minute 40.
+const silasYard = residentById('silas')!.spots.yard!;
+const silasCounter = residentById('silas')!.spots.counter!;
 const orrinRow = ITEM_RULES.menders.find((m) => m.npc === 'orrin')!;
 const adaRow = ITEM_RULES.residents.find((r) => r.id === 'ada')!;
 
 function ctx(over: Partial<HeirloomContext>): HeirloomContext {
-  return { area: 'commons', ...centre(silasRow), flags: [], worldFlags: [], online: true, inFlight: false, ...over };
+  return { area: 'commons', ...centre(silasYard), flags: [], worldFlags: [], online: true, inFlight: false, now: 600, ...over };
 }
 
 test('Silas offers the axe only where and when the server grants it', () => {
@@ -129,11 +133,14 @@ test('Silas offers the axe only where and when the server grants it', () => {
   assert.equal(heirloomReadiness('brack-felling-axe', ctx({})), null);
   assert.equal(heirloomReadiness('brack-felling-axe', ctx({ flags: [...knows, 'heirloom:brack-felling-axe'] })), null);
   // The server's radius (the mender row's radiusTiles), measured from the row's tile centre.
-  const at = centre(silasRow);
+  const at = centre(silasYard);
   const r = silasRow.radiusTiles * 16;
   assert.deepEqual(heirloomReadiness('brack-felling-axe', ctx({ flags: knows, x: at.x + r, y: at.y })), { ok: true });
   assert.deepEqual(heirloomReadiness('brack-felling-axe', ctx({ flags: knows, x: at.x + r + 1, y: at.y })), { ok: false, why: 'too-far' });
   assert.deepEqual(heirloomReadiness('brack-felling-axe', ctx({ flags: knows, area: 'village' })), { ok: false, why: 'too-far' });
+  // He follows his cycle: at minute 40 he's at his counter, not the sawhorse.
+  assert.deepEqual(heirloomReadiness('brack-felling-axe', ctx({ flags: knows, now: 2400 })), { ok: false, why: 'too-far' });
+  assert.deepEqual(heirloomReadiness('brack-felling-axe', ctx({ flags: knows, now: 2400, area: silasCounter.area, ...centre(silasCounter) })), { ok: true });
   assert.deepEqual(heirloomReadiness('brack-felling-axe', ctx({ flags: knows, online: false })), { ok: false, why: 'offline' });
   assert.deepEqual(heirloomReadiness('brack-felling-axe', ctx({ flags: knows, inFlight: true })), { ok: false, why: 'busy' });
 });

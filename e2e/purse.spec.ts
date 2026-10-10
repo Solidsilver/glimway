@@ -3,7 +3,7 @@ import { expect, test, type Page } from './fixtures'
 import { accountOf, allow, CONTRACT, habiticaURL, newUser, openTitleGuide, pasteAndConnect, routeHabitica, setHabitica, sql, TOKEN, waitForWorld } from './connected'
 import { expectToast, openTalk, readDialogue, untilChoices, waitForLive, warp } from './helpers'
 import { residentsOut } from './room-helpers'
-import { atMyMailbox, claimDeed, earnGlims, freshPlayer, fund, go, homes, myHome, place, readOn, shot, silasSays, type HomesView } from './home-helpers'
+import { atMyMailbox, claimDeed, earnGlims, freshPlayer, fund, go, homes, myHome, place, shot, type HomesView, yardBuild } from './home-helpers'
 
 /**
  * Glims' top-up and the Glim log in the game (docs/design/silas-yard.md 1.5,
@@ -309,8 +309,7 @@ test('a priced shelf slot: a friend buys it in glims, and both logs name the oth
   const wren = await freshPlayer(page, 'Wren')
   await earnGlims(page, wren)
   await claimDeed(page)
-  await silasSays(page, /Raise a cottage/)
-  await readOn(page, /Steady as a route stone/)
+  await yardBuild(page, 'cottage')
   await expect.poll(async () => (await myHome(page)).tier).toBe(1)
   const gate = (await myHome(page, wren)).gate
   fund(wren, { items: { 'comfrey-salve': 1 } })

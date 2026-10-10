@@ -220,12 +220,21 @@ func TestReturningKeepsakes(t *testing.T) {
 	}
 	x.conserved(x.account("alice"))
 
-	// 3. Hollis's fox -> Silas (tx: 51, ty: 21 in commons)
+	// 3. Hollis's fox -> Silas, wherever his cycle has him: not on the
+	// Commons while he's at his counter, then at the counter.
 	x.stack(x.account("alice"), "whittled-fox", "", 1)
 	x.conserved(x.account("alice"))
-	silasDoc := s.State
-	silasDoc.Area = "commons"
-	silasDoc.Position = rules.Position{X: float64(51*16 + 8), Y: float64(21*16 + 8)}
+	x.residentPhase("silas", "counter")
+	onCommons := s.State
+	onCommons.Area = "commons"
+	onCommons.Position = rules.Position{X: float64(51*16 + 8), Y: float64(21*16 + 8)}
+	if bad := x.opRefreshing(c, &s, "return", map[string]any{"itemDef": "whittled-fox", "target": "silas", "progress": onCommons}, 409); bad.Error.Code != "too-far-away" {
+		t.Fatalf("expected too-far-away on the Commons, got %s", bad.Error.Code)
+	}
+	silasDoc := byResident(s.State, "silas", x.now.Load())
+	if silasDoc.Area != "in:commons:yard" {
+		t.Fatalf("expected Silas in his shop, got %s", silasDoc.Area)
+	}
 
 	retSilas := x.opRefreshing(c, &s, "return", map[string]any{"itemDef": "whittled-fox", "target": "silas", "progress": silasDoc}, 200)
 	if retSilas.Result.Returned != "whittled-fox" || retSilas.Result.Paper != nil {

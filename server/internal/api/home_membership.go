@@ -38,14 +38,14 @@ ON CONFLICT(homestead_id,to_id) DO UPDATE SET from_id=excluded.from_id,created_a
 	return "invited", err
 }
 
-// atTable: connected to presence in this world, in the Commons, by Silas's table.
+// atTable: connected to presence in this world, in Pell's office, by the deed table.
 func (a *Server) atTable(world, id string) bool {
-	t := content.HomeRules.GetCommons().GetSilasTable()
-	return a.presence != nil && a.presence.near(world, id, "commons", float64(t.GetX()), float64(t.GetY()), float64(t.GetRadius()))
+	t := content.HomeRules.GetCommons().GetDeedTable()
+	return a.presence != nil && a.presence.near(world, id, t.GetArea(), float64(t.GetX()), float64(t.GetY()), float64(t.GetRadius()))
 }
 
 // joint is one partner's signature on a joint deed. Both partners must stand
-// at Silas's table; the second signature, within the confirm window of the
+// at the deed table; the second signature, within the confirm window of the
 // first, amends the deed.
 func (a *Server) joint(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.HomesteadRequest, now int64) (string, error) {
 	var from, world string

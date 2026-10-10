@@ -134,6 +134,24 @@
       "file": "fingersnap-portraits-residents.png",
       "width": 1536,
       "height": 512
+    },
+    {
+      "key": "yard-cottage-silas",
+      "file": "../yard-pass/sheets/cottage-silas-source-v2.png",
+      "width": 1312,
+      "height": 1199
+    },
+    {
+      "key": "yard-pell",
+      "file": "../yard-pass/sheets/pell-resident-source-round1.png",
+      "width": 1437,
+      "height": 1095
+    },
+    {
+      "key": "yard-pell-portrait",
+      "file": "../yard-pass/sheets/pell-portrait-source-round1.png",
+      "width": 1774,
+      "height": 887
     }
   ],
   "frames": [
@@ -378,6 +396,54 @@
       }
     },
     {
+      "key": "pell-idle-0",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "residents",
+      "source": "yard-pell",
+      "sourceRect": {
+        "x": 155,
+        "y": 80,
+        "w": 499,
+        "h": 967
+      },
+      "sheet": "yard",
+      "destinationRect": {
+        "x": 4,
+        "y": 3,
+        "w": 7,
+        "h": 13
+      }
+    },
+    {
+      "key": "pell-idle-1",
+      "width": 16,
+      "height": 16,
+      "origin": [
+        0.5,
+        1
+      ],
+      "scaleGroup": "residents",
+      "source": "yard-pell",
+      "sourceRect": {
+        "x": 785,
+        "y": 80,
+        "w": 496,
+        "h": 967
+      },
+      "sheet": "yard",
+      "destinationRect": {
+        "x": 4,
+        "y": 3,
+        "w": 7,
+        "h": 13
+      }
+    },
+    {
       "key": "cottage",
       "width": 96,
       "height": 92,
@@ -410,14 +476,14 @@
         1
       ],
       "scaleGroup": "cottages",
-      "source": "commons-homes",
+      "source": "yard-cottage-silas",
       "sourceRect": {
-        "x": 735,
-        "y": 68,
-        "w": 555,
-        "h": 514
+        "x": 0,
+        "y": 9,
+        "w": 1311,
+        "h": 1169
       },
-      "sheet": "homes",
+      "sheet": "yard",
       "destinationRect": {
         "x": 12,
         "y": 26,
@@ -4319,6 +4385,30 @@
         "w": 54,
         "h": 64
       }
+    },
+    {
+      "key": "portrait-pell",
+      "width": 64,
+      "height": 64,
+      "origin": [
+        0.5,
+        1
+      ],
+      "role": "portrait",
+      "source": "yard-pell-portrait",
+      "sourceRect": {
+        "x": 417,
+        "y": 21,
+        "w": 937,
+        "h": 851
+      },
+      "sheet": "yard",
+      "destinationRect": {
+        "x": 0,
+        "y": 6,
+        "w": 64,
+        "h": 58
+      }
     }
   ],
   "animations": [
@@ -4363,6 +4453,15 @@
       "frames": [
         "ada-idle-0",
         "ada-idle-1"
+      ],
+      "frameRate": 1.5,
+      "repeat": -1
+    },
+    {
+      "key": "pell-breathing",
+      "frames": [
+        "pell-idle-0",
+        "pell-idle-1"
       ],
       "frameRate": 1.5,
       "repeat": -1
@@ -4435,6 +4534,7 @@
     "finn": "finn-idle-0",
     "hazel": "hazel-idle-0",
     "ada": "ada-idle-0",
+    "pell": "pell-idle-0",
     "paper-folded": "paper-folded-0",
     "paper-scroll": "paper-scroll-0",
     "paper-slate": "paper-slate-0",

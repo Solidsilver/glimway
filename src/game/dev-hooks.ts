@@ -20,7 +20,7 @@ import { onSceneEnd, type SceneEvents } from './scene-end.ts'
 
 type Box = { x: number; y: number; w: number; h: number }
 type Insets = { top: number; right: number; bottom: number; left: number }
-type ExitView = { tx: number; ty: number; tw: number; th: number; to: string; side?: 'north' | 'south' | 'east' | 'west'; kind?: 'edge' | 'door' | 'stair' }
+type ExitView = { tx: number; ty: number; tw: number; th: number; to: string; side?: 'north' | 'south' | 'east' | 'west'; kind?: 'edge' | 'door' | 'stair' | 'inner' }
 
 export interface FsHooks {
   // ---- WorldScene (scenes/world-dev-hooks.ts), read-only

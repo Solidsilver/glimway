@@ -621,6 +621,265 @@
           "ty": 2
         }
       ]
+    },
+    {
+      "id": "in:commons:yard",
+      "name": "Silas's Yard",
+      "parent": "commons",
+      "map": [
+        "##############",
+        "#==RRR==w==w=#",
+        "#..RRR......M#",
+        "#...........M#",
+        "#............E",
+        "#.....CCC....E",
+        "#............#",
+        "#............#",
+        "#......@.....#",
+        "######DD######"
+      ],
+      "doors": [
+        {
+          "id": "front",
+          "kind": "door",
+          "at": "D",
+          "side": "south",
+          "to": "commons",
+          "outside": {
+            "tx": 53,
+            "ty": 17
+          },
+          "entry": {
+            "tx": 53,
+            "ty": 18
+          }
+        },
+        {
+          "id": "office",
+          "kind": "inner",
+          "at": "E",
+          "side": "east",
+          "to": "in:commons:yard:deeds",
+          "entry": {
+            "tx": 1,
+            "ty": 3
+          }
+        }
+      ],
+      "props": [
+        {
+          "art": "yard-timber-rack",
+          "char": "R",
+          "solid": true
+        },
+        {
+          "art": "yard-counter",
+          "char": "C",
+          "solid": true
+        },
+        {
+          "art": "yard-mending-bench",
+          "char": "M",
+          "solid": true,
+          "facing": "left"
+        },
+        {
+          "art": "kit-side-doorway",
+          "char": "E",
+          "solid": false,
+          "facing": "left"
+        }
+      ],
+      "spots": {
+        "yard-materials": {
+          "tx": 4,
+          "ty": 3,
+          "label": "Look at the timber"
+        },
+        "yard-mend": {
+          "tx": 11,
+          "ty": 3,
+          "label": "Look at the mending bench"
+        },
+        "yard-furnish": {
+          "tx": 2,
+          "ty": 6,
+          "label": "Look at the pieces"
+        },
+        "yard-counter": {
+          "tx": 7,
+          "ty": 6,
+          "label": "Look at the counter"
+        }
+      },
+      "lights": [
+        {
+          "tx": 8,
+          "ty": 2,
+          "kind": "window",
+          "r": 3
+        },
+        {
+          "tx": 11,
+          "ty": 2,
+          "kind": "window",
+          "r": 3
+        },
+        {
+          "tx": 7,
+          "ty": 4,
+          "kind": "lamp",
+          "r": 4
+        }
+      ],
+      "outside": {
+        "building": "cottage-silas"
+      },
+      "furnishings": [
+        {
+          "piece": "rug-braided",
+          "tx": 1,
+          "ty": 7
+        },
+        {
+          "piece": "wooden-stool",
+          "tx": 1,
+          "ty": 7
+        },
+        {
+          "piece": "iron-lantern",
+          "tx": 2,
+          "ty": 8
+        },
+        {
+          "piece": "woven-basket",
+          "tx": 3,
+          "ty": 7
+        },
+        {
+          "piece": "wall-pegs-tools",
+          "tx": 5,
+          "ty": 1
+        },
+        {
+          "piece": "calendar",
+          "tx": 9,
+          "ty": 1
+        },
+        {
+          "piece": "crate",
+          "tx": 12,
+          "ty": 8
+        },
+        {
+          "piece": "barrel",
+          "tx": 12,
+          "ty": 7
+        },
+        {
+          "piece": "sack",
+          "tx": 11,
+          "ty": 8
+        },
+        {
+          "piece": "candle",
+          "parent": 6
+        }
+      ]
+    },
+    {
+      "id": "in:commons:yard:deeds",
+      "name": "Pell's office",
+      "parent": "commons",
+      "map": [
+        "##########",
+        "#=PPP==w=#",
+        "#.PPP.k..#",
+        "E........#",
+        "E...TTT..#",
+        "#...TTT..#",
+        "#........#",
+        "##########"
+      ],
+      "doors": [
+        {
+          "id": "shop",
+          "kind": "inner",
+          "at": "E",
+          "side": "west",
+          "to": "in:commons:yard",
+          "entry": {
+            "tx": 12,
+            "ty": 4
+          }
+        }
+      ],
+      "props": [
+        {
+          "art": "deeds-pigeonholes",
+          "char": "P",
+          "solid": true
+        },
+        {
+          "art": "deeds-clerk-desk",
+          "char": "k",
+          "solid": true
+        },
+        {
+          "art": "deeds-table",
+          "char": "T",
+          "solid": true
+        },
+        {
+          "art": "kit-side-doorway",
+          "char": "E",
+          "solid": false,
+          "facing": "right"
+        }
+      ],
+      "spots": {},
+      "lights": [
+        {
+          "tx": 7,
+          "ty": 2,
+          "kind": "window",
+          "r": 3
+        },
+        {
+          "tx": 5,
+          "ty": 4,
+          "kind": "lamp",
+          "r": 4
+        }
+      ],
+      "furnishings": [
+        {
+          "piece": "chair-side",
+          "facing": "right",
+          "tx": 3,
+          "ty": 4
+        },
+        {
+          "piece": "chair-side",
+          "facing": "left",
+          "tx": 7,
+          "ty": 4
+        },
+        {
+          "piece": "calendar",
+          "tx": 5,
+          "ty": 1
+        },
+        {
+          "piece": "crate",
+          "tx": 8,
+          "ty": 6
+        },
+        {
+          "piece": "candle",
+          "parent": 3
+        }
+      ]
     }
   ]
 }

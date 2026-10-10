@@ -26,16 +26,17 @@ func TestHeirloomBrackFellingAxe(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 
-	m, ok := content.MenderFor("silas")
+	// Silas hands it over wherever his cycle has him: at his counter, then
+	// out in the yard by the sawhorse.
+	silas, ok := content.ResidentByID("silas")
 	if !ok {
-		t.Fatal("mender silas not found")
+		t.Fatal("resident silas not found")
 	}
-	silasPos := rules.Position{X: float64(int(m.GetTx())*16 + 8), Y: float64(int(m.GetTy())*16 + 20)}
+	yard := silas.GetSpots()["yard"]
+	x.residentPhase("silas", "counter")
 
-	// 1. Condition unmet: Hollis's name unknown (Alice at Silas)
-	atSilasDoc := s.State
-	atSilasDoc.Area = m.GetArea()
-	atSilasDoc.Position = silasPos
+	// 1. Condition unmet: Hollis's name unknown (Alice at Silas's counter)
+	atSilasDoc := byResident(s.State, "silas", x.now.Load())
 	bad := x.items("POST", "/api/items/heirloom", body(s, "axe-unmet", map[string]any{
 		"itemDef":  "brack-felling-axe",
 		"progress": atSilasDoc,
@@ -71,8 +72,21 @@ func TestHeirloomBrackFellingAxe(t *testing.T) {
 	if badFar.Error.Code != "too-far-away" {
 		t.Fatalf("expected too-far-away, got %s", badFar.Error.Code)
 	}
+	// By the sawhorse while he's at his counter: out of reach.
+	yardDoc := conditionMetDoc
+	yardDoc.Area = yard.GetArea()
+	yardDoc.Position = rules.Position{X: float64(yard.GetTx()*16 + 8), Y: float64(yard.GetTy()*16 + 12)}
+	if bad := x.items("POST", "/api/items/heirloom", body(s, "axe-yard-while-indoors", map[string]any{"itemDef": "brack-felling-axe", "progress": yardDoc}), c, 409); bad.Error.Code != "too-far-away" {
+		t.Fatalf("expected too-far-away in the yard, got %s", bad.Error.Code)
+	}
+	// He goes out to the yard: now the counter is empty.
+	x.residentPhase("silas", "yard")
+	if bad := x.items("POST", "/api/items/heirloom", body(s, "axe-counter-late", map[string]any{"itemDef": "brack-felling-axe", "progress": conditionMetDoc}), c, 409); bad.Error.Code != "too-far-away" {
+		t.Fatalf("expected too-far-away at the empty counter, got %s", bad.Error.Code)
+	}
+	conditionMetDoc = yardDoc
 
-	// 4. Condition met & standing near Silas: grant with key
+	// 4. Condition met & standing near Silas (in the yard): grant with key
 	key := "axe-grant-key-1"
 	res := x.items("POST", "/api/items/heirloom", body(s, key, map[string]any{
 		"itemDef":  "brack-felling-axe",

@@ -8,7 +8,8 @@ import type { GuideContext } from '../lib/guides.ts';
 
 /**
  * Where a step happens:
- * - `silas`: Silas's table on the Commons lane
+ * - `silas`: Silas, at his counter in the Yard or out by his sawhorse
+ * - `pell`: Pell, at the desk in the deed office (through the Yard's side door)
  * - `gate`: your gate on the lane
  * - `door`: your cottage door
  * - `mailbox`: your mailbox, by the cottage
@@ -16,7 +17,7 @@ import type { GuideContext } from '../lib/guides.ts';
  * - `hearth`: the hearth in your cottage
  * - `wilds`: the Tangle, through the Commons arch
  */
-export type GuideWhere = 'silas' | 'gate' | 'door' | 'mailbox' | 'bench' | 'hearth' | 'wilds';
+export type GuideWhere = 'silas' | 'pell' | 'gate' | 'door' | 'mailbox' | 'bench' | 'hearth' | 'wilds';
 
 interface GuideStep {
   text: string;
@@ -51,9 +52,9 @@ export const GUIDES: GuideDef[] = [
   {
     id: 'claim',
     title: 'Claim a plot of your own',
-    blurb: 'Silas keeps the deeds for the land behind the Commons gates.',
+    blurb: 'Pell keeps the deeds for the land behind the Commons gates, in a room at Silas’s Yard.',
     needsWorld: true,
-    steps: [{ text: 'Talk to Silas at his table on the Commons lane, and sign a deed.', done: claimed, where: 'silas' }],
+    steps: [{ text: 'Go through the side door of Silas’s Yard and sign a deed with Pell.', done: claimed, where: 'pell' }],
   },
   {
     id: 'gather',
@@ -75,7 +76,7 @@ export const GUIDES: GuideDef[] = [
     blurb: 'An axe, a pick or a spade, made at your own bench.',
     needsWorld: true,
     steps: [
-      { text: 'Sign a deed with Silas on the Commons lane.', done: claimed, where: 'silas' },
+      { text: 'Sign a deed with Pell at Silas’s Yard.', done: claimed, where: 'pell' },
       { text: 'Ask Silas to raise a cottage on your land.', done: cottage, where: 'silas' },
       {
         text: 'Bring 20 timber, 10 stone and 8 fibre back from the Wilds.',
@@ -102,7 +103,7 @@ export const GUIDES: GuideDef[] = [
     blurb: 'Teas, salves and oils, each with your maker’s mark.',
     needsWorld: true,
     steps: [
-      { text: 'Sign a deed with Silas on the Commons lane.', done: claimed, where: 'silas' },
+      { text: 'Sign a deed with Pell at Silas’s Yard.', done: claimed, where: 'pell' },
       { text: 'Ask Silas to raise a cottage on your land.', done: cottage, where: 'silas' },
       { text: 'At the hearth in your cottage, cook something you have the makings for.', done: (c) => cottage(c) && c.cooked > 0, where: 'hearth' },
     ],
@@ -113,7 +114,7 @@ export const GUIDES: GuideDef[] = [
     blurb: 'Every plot has a mailbox. Pieces and parcels wait there to be collected.',
     needsWorld: true,
     steps: [
-      { text: 'Sign a deed with Silas on the Commons lane.', done: claimed, where: 'silas' },
+      { text: 'Sign a deed with Pell at Silas’s Yard.', done: claimed, where: 'pell' },
       { text: 'At the mailbox by your cottage, choose a neighbour and send.', done: (c) => c.claimed && c.sentMail, where: 'mailbox' },
     ],
   },

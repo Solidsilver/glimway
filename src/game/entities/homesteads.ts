@@ -1,9 +1,11 @@
 /**
- * Homesteads in the scene. Three places:
+ * Homesteads in the scene. Four places:
  *
- *   - The Commons lane: Silas at his yard (deeds, upgrades, the shop, joint
- *     deeds at his table), the hame on the gate, and a signpost at every
- *     homestead gate. After a deed, a marker leads you to your own gate.
+ *   - The Commons lane: Silas out by his sawhorse (part of his hour), the
+ *     hame on the gate, and a signpost at every homestead gate. After a
+ *     deed, a marker leads you to your own gate.
+ *   - Silas's Yard (`in:commons:yard` and Pell's office through its side
+ *     door): Silas at his counter, Pell at the desk (../yard-talk.ts).
  *   - A homestead's land (behind its gate): the camp or cottage on the home
  *     site, the mailbox, every placed piece, lantern posts and the ground
  *     their light holds, desolation; placement mode for members (lit, open
@@ -16,7 +18,7 @@
  * when that data changes.
  */
 import Phaser from 'phaser'
-import { HOMESTEAD_DATA, parseHomeArea } from '../../lib/homestead'
+import { parseHomeArea } from '../../lib/homestead'
 import { clearable, servedLand } from '../../lib/homestead-land'
 import type { HomeView, StallView } from '../../lib/api/types'
 import { baySig, nextHomecoming, stableNext, stallsShown } from '../../lib/companions'
@@ -41,6 +43,7 @@ import { HomesteadTalk } from './homestead-talk'
 import { HomesteadArranging } from './homestead-placement'
 import { HomesteadYard } from './homestead-yard'
 import { homeward } from './led-mount'
+import { isYardRoom } from '../yard-talk'
 
 export interface HomesteadDeps {
   world: WorldData
@@ -77,6 +80,8 @@ export class HomesteadLayer {
   readonly land: LandWorld | null
   /** The homestead this scene stands on (its land, or a cottage on it). */
   readonly gate: number | null
+  /** One of Silas's Yard's rooms (the shop, Pell's office), or null. */
+  readonly yardRoom: string | null
   /** Its yard pets, on the land (./homestead-yard.ts). */
   readonly yard: HomesteadYard | null
 
@@ -90,6 +95,7 @@ export class HomesteadLayer {
     const landGate = deps.room ? null : parseHomeArea(deps.world.areaId)
     this.land = landGate !== null ? (deps.world as LandWorld) : null
     this.gate = deps.room?.gate ?? landGate
+    this.yardRoom = isYardRoom(deps.world.areaId) ? deps.world.areaId : null
     this.art = new HomesteadArt(this)
     this.talk = new HomesteadTalk(this)
     this.arranging = new HomesteadArranging(this)
@@ -164,7 +170,7 @@ export class HomesteadLayer {
       if (p) this.arranging.onPointer({ worldX: p.ox + tileMid(x), worldY: p.oy + tileMid(y) } as Phaser.Input.Pointer)
     }, scene)
     this.redraw()
-    if (this.commons) void this.homes.load()
+    if (this.commons || this.yardRoom) void this.homes.load()
     if (this.gate !== null) void this.loadHere()
     if ((this.commons || this.land) && this.homes.connected) void this.village.loadMail()
     // Whose place this is: said once the homestead behind the gate is known.
@@ -371,7 +377,7 @@ export class HomesteadLayer {
           ? home.desolate
             ? 'Nobody has lit these lamps in a while. The wild is coming back.'
             : 'A neighbour’s place. Look, don’t touch.'
-          : 'Nobody’s land yet. Silas sells the deed, at his yard on the Commons.'
+          : 'Nobody’s land yet. Pell sells the deed, at Silas’s Yard on the Commons.'
     })
   }
 
@@ -388,16 +394,13 @@ export class HomesteadLayer {
 
   /**
    * Where a "How do I…?" step happens, in this scene's world px (null: not
-   * in this scene, or not known yet): Silas's table and your gate on the
-   * lane; your door and mailbox on your land; the bench and hearth inside.
+   * in this scene, or not known yet): your gate on the lane; your door and
+   * mailbox on your land; the bench and hearth inside. (Silas and Pell are
+   * found by their hour: ./goal-guide.ts.)
    */
   guidePoint(where: string): { x: number; y: number } | null {
     const mine = this.homes.myGate
     if (this.commons) {
-      if (where === 'silas') {
-        const t = HOMESTEAD_DATA.commons.silasTable
-        return { x: t.x, y: t.y }
-      }
       if (where === 'gate' && mine !== null) {
         const slot = this.commons.gates.find((g) => g.gate === mine)
         return slot ? tileCenter(slot.tx, slot.ty) : null

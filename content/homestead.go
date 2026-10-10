@@ -23,6 +23,7 @@ type (
 	HomeStartLight  = contentv1.HomeStartLight
 	HomePixelPos    = contentv1.HomePixelPos
 	CommonsLane     = contentv1.CommonsLane
+	HomeDeedTable   = contentv1.HomeDeedTable
 	LanternPosts    = contentv1.LanternPosts
 	MaterialBill    = contentv1.MaterialBill
 	HomeItem        = contentv1.HomeItem
@@ -109,6 +110,12 @@ func validLane(c *CommonsLane) bool {
 	return true
 }
 
+// validDeedTable: the deed table stands inside a room (Pell's office).
+func validDeedTable(t *HomeDeedTable) bool {
+	room, ok := RoomFor(t.GetArea())
+	return ok && int(t.GetX()) < len(room.GetMap()[0])*16 && int(t.GetY()) < len(room.GetMap())*16
+}
+
 // validPosts: the lantern posts' bills name Wilds materials (the ranges
 // are the schema's), and growth never takes a material back.
 func validPosts(p *LanternPosts) bool {
@@ -184,6 +191,9 @@ func validateHomestead(h *Homestead) error {
 	}
 	if !validLane(h.GetCommons()) {
 		return fmt.Errorf("invalid homestead: gate rows")
+	}
+	if !validDeedTable(h.GetCommons().GetDeedTable()) {
+		return fmt.Errorf("invalid homestead: deed table")
 	}
 	if !validPosts(h.GetLanternPosts()) {
 		return fmt.Errorf("invalid homestead: post bills")

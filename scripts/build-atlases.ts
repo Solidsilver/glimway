@@ -152,6 +152,22 @@ function sheet(path: string): SheetRgba {
   return sheets.get(path)!
 }
 
+/** The box around a crop's painted texels (alpha 8 and up), in sheet texels. */
+function paintedBox(img: SheetRgba, crop: Box): [number, number, number, number] {
+  let [x0, y0, x1, y1] = [Infinity, Infinity, -1, -1]
+  for (let y = crop.y; y < crop.y + crop.h; y++) {
+    for (let x = crop.x; x < crop.x + crop.w; x++) {
+      if (img.data[(y * img.w + x) * 4 + 3] < 8) continue
+      x0 = Math.min(x0, x)
+      y0 = Math.min(y0, y)
+      x1 = Math.max(x1, x)
+      y1 = Math.max(y1, y)
+    }
+  }
+  if (x1 < 0) throw new Error(`nothing painted in the crop ${crop.x},${crop.y} ${crop.w}×${crop.h}`)
+  return [x0, y0, x1 + 1 - x0, y1 + 1 - y0]
+}
+
 /** A pack job at ART_DENSITY: a native `w`×`h` world-px canvas, `d` in world px. */
 function dense(id: string, src: string, s: [number, number, number, number], w: number, h: number, d: [number, number, number, number], flipX?: boolean): Job {
   const k = ART_DENSITY
@@ -278,6 +294,25 @@ async function main(): Promise<void> {
     const d: Job['d'] = tiling ? [r.x, r.y, r.w, r.h] : [r.x + Math.floor((r.w - dw) / 2), r.y + r.h - dh, dw, dh]
     return { id: f.key, src, s: [f.sourceRect.x, f.sourceRect.y, sw, sh], w: cw, h: ch, d, box: true }
   })
+  // The 0.7 Yard pass (assets/generated/yard-pass/): the shop's and the deed
+  // office's props join the indoors pack under their own keys, on the pass's
+  // 64-texel canvases. Each crop is trimmed to its painted texels (as the
+  // pass's own build_frames.py trims it) and box-filtered into the
+  // destination rect the pass measured for it. The pass's cottage, Pell and
+  // Pell's portrait are Commons-pass frames: that manifest names their sheets.
+  const yard = readJson<IndoorsManifest>('assets/generated/yard-pass/manifest.json')
+  const yardSrc = new Map(yard.sources.map((s) => [s.key, `assets/generated/yard-pass/${s.file}`]))
+  for (const f of yard.frames.filter((f) => f.role === 'prop')) {
+    const src = yardSrc.get(f.source)
+    if (!src) throw new Error(`yard-pass: ${f.key} has no source sheet ${f.source}`)
+    const r = f.destinationRect
+    const s = paintedBox(sheet(src), f.sourceRect)
+    const { w, h } = f.canvasSize
+    indoorsJobs.push({ id: f.key, src, s, w, h, d: [r.x, r.y, r.w, r.h], box: true })
+    // The side doorway is painted for an east wall (the kit's `left` facing);
+    // its mirror is the west wall's.
+    if (f.key === 'kit-side-doorway') indoorsJobs.push({ id: `${f.key}-right`, src, s, w, h, d: [w - r.x - r.w, r.y, r.w, r.h], flipX: true, box: true })
+  }
 
   // The 0.5 crafts pass (ability icons and effects, the stable, fishing, HUD
   // icons) is delivered as normalized frames, each on its exact canvas at 64

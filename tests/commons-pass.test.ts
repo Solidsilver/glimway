@@ -31,6 +31,7 @@ const EXPECTED_ANIMATIONS: Record<string, { frames: string[]; frameRate: number 
   'finn-breathing': { frames: ['finn-idle-0', 'finn-idle-1'], frameRate: 1.5 },
   'hazel-breathing': { frames: ['hazel-idle-0', 'hazel-idle-1'], frameRate: 1.5 },
   'ada-breathing': { frames: ['ada-idle-0', 'ada-idle-1'], frameRate: 1.5 },
+  'pell-breathing': { frames: ['pell-idle-0', 'pell-idle-1'], frameRate: 1.5 },
   'hearth-fire-animation': { frames: ['hearth-fire-0', 'hearth-fire-1', 'hearth-fire-2', 'hearth-fire-3'], frameRate: 6 },
   'camp-flame-animation': { frames: ['camp-flame-0', 'camp-flame-1', 'camp-flame-2'], frameRate: 6 },
   'campsite-animation': { frames: ['campsite-0', 'campsite-1', 'campsite-2'], frameRate: 5 },
@@ -57,8 +58,9 @@ test('commons-pass exposes its loader and load keys', () => {
   assert.deepEqual(manifest.pendingSheets, [])
 })
 
-test('the manifest’s 22 source sheets are delivered as transparent RGBA PNGs of the stated size', () => {
-  assert.equal(manifest.sources.length, 22)
+test('the manifest’s 25 source sheets are delivered as transparent RGBA PNGs of the stated size', () => {
+  // 22 of its own, and the Yard pass's cottage, Pell and Pell's portrait (../yard-pass/sheets/).
+  assert.equal(manifest.sources.length, 25)
   for (const s of manifest.sources) {
     const h = pngHeader(`${SOURCE_DIR}${s.file}`)
     assert.deepEqual([h.width, h.height], [s.width, s.height], s.file)
@@ -67,7 +69,7 @@ test('the manifest’s 22 source sheets are delivered as transparent RGBA PNGs o
 })
 
 test('every frame has a measured source rect inside its sheet and a destination inside its native canvas', () => {
-  assert.equal(manifest.frames.length, 176)
+  assert.equal(manifest.frames.length, 179)
   assert.equal(frameByKey.size, manifest.frames.length, 'frame keys are unique')
   const sources = new Map(manifest.sources.map((s) => [s.key, s]))
   const rects = new Set<string>()
@@ -86,7 +88,7 @@ test('every frame has a measured source rect inside its sheet and a destination 
 })
 
 test('standing art is foot-anchored at native sizes; portraits, icons and tiles have their slots', () => {
-  for (const id of ['silas', 'elara', 'finn', 'hazel', 'ada']) {
+  for (const id of ['silas', 'elara', 'finn', 'hazel', 'ada', 'pell']) {
     for (const n of [0, 1]) {
       const f = frameByKey.get(`${id}-idle-${n}`)!
       assert.deepEqual([f.width, f.height, ...f.origin], [16, 16, 0.5, 1], `${id}-idle-${n}`)
@@ -119,8 +121,8 @@ test('standing art is foot-anchored at native sizes; portraits, icons and tiles 
   }
 })
 
-test('the 11 looping animations and the aliases name real frames', () => {
-  assert.equal(manifest.animations.length, 11)
+test('the 12 looping animations and the aliases name real frames', () => {
+  assert.equal(manifest.animations.length, 12)
   for (const a of manifest.animations) {
     const want = EXPECTED_ANIMATIONS[a.key]
     assert.ok(want, `unexpected animation ${a.key}`)
@@ -151,6 +153,7 @@ test('every placeholder the scenes draw has a delivered frame of a sane size', (
     Mara: 'portrait-mara',
     Orrin: 'portrait-orrin',
     Pip: 'portrait-pip',
+    Pell: 'portrait-pell',
   })
 })
 

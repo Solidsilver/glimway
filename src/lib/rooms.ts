@@ -21,13 +21,13 @@ import {
 export type RoomFacing = 'front' | 'left' | 'right' | 'diag';
 export type Rooms = Omit<RoomsValid, 'rooms'> & { rooms: Room[] };
 export type Room = Omit<RoomValid, 'doors' | 'props' | 'furnishings'> & { doors: RoomDoor[]; props: RoomProp[]; furnishings: RoomFurnishing[] };
-export type RoomDoor = Omit<RoomDoorValid, 'kind' | 'side'> & { kind: 'door' | 'stair'; side: 'north' | 'south' | 'east' | 'west' };
+export type RoomDoor = Omit<RoomDoorValid, 'kind' | 'side'> & { kind: 'door' | 'stair' | 'inner'; side: 'north' | 'south' | 'east' | 'west' };
 export type RoomProp = Omit<RoomPropValid, 'facing'> & { facing?: RoomFacing };
 export type RoomFurnishing = Omit<RoomFurnishingValid, 'facing' | 'offer'> & { facing?: RoomFacing; offer?: 'top' | 'shelves' };
 export type RoomLight = RoomLightValid;
 export interface RoomFootprint { char: string; tx: number; ty: number; tw: number; th: number }
 
-const ROOM_ID = /^in:(village|woodland|ruin|commons):([a-z0-9]+(?:-[a-z0-9]+)*)(?::([2-9]|[1-9][0-9]+))?$/;
+const ROOM_ID = /^in:(village|woodland|ruin|commons):([a-z0-9]+(?:-[a-z0-9]+)*)(?::([2-9]|[1-9][0-9]+|[a-z]+(?:-[a-z]+)*))?$/;
 const HOME_ROOM_ID = /^in:home:(0|[1-9][0-9]{0,3})$/;
 /** The room vocabulary, checked on the schema; walking the map uses it. */
 const LEGEND: Record<string, string> = { '#': 'wall', '=': 'back-wall', w: 'window', '.': 'planks', ':': 'flagstone', D: 'doorway', '^': 'stairs-up', v: 'stairs-down', '@': 'arrive' };
@@ -39,6 +39,8 @@ export function roomParent(area: string): string {
   const m = ROOM_ID.exec(area);
   return m ? m[3] ? `in:${m[1]}:${m[2]}` : m[1]! : area;
 }
+/** The building a room or one of its floors or side rooms is in. */
+function roomBuilding(area: string): string { const m = ROOM_ID.exec(area); return m ? `in:${m[1]}:${m[2]}` : area; }
 export function rootArea(area: string): string { return HOME_ROOM_ID.test(area) ? area.slice(3) : ROOM_ID.exec(area)?.[1] ?? area; }
 export function roomFor(area: string): Room | null { return ROOMS.rooms.find(r => r.id === area) ?? null; }
 export function knownRoom(area: string): boolean { return HOME_ROOM_ID.test(area) || roomFor(area) !== null; }
@@ -86,13 +88,15 @@ function roomRules(doc: Rooms): void {
       props.add(p.char);
       if (p.solid) solidProps.add(p.char);
     }
+    // An inner doorway's letter stands in the wall: the opening.
+    const inner = new Set(r.doors.filter(d => d.kind === 'inner').map(d => d.at));
     let arrive = 0;
     for (let y = 0; y < r.map.length; y++) {
       const row = r.map[y]!;
       for (let x = 0; x < row.length; x++) {
         const c = row[x]!; if (c === '@') arrive++;
         if (!LEGEND[c] && !props.has(c)) bad(`unclaimed character ${r.id}`);
-        if ((x === 0 || y === 0 || x === row.length - 1 || y === r.map.length - 1) && c !== '#' && c !== 'D' && !solidProps.has(c)) bad(`open boundary ${r.id}`);
+        if ((x === 0 || y === 0 || x === row.length - 1 || y === r.map.length - 1) && c !== '#' && c !== 'D' && !solidProps.has(c) && !inner.has(c)) bad(`open boundary ${r.id}`);
       }
     }
     for (const p of r.props) {
@@ -102,8 +106,9 @@ function roomRules(doc: Rooms): void {
     const chars = new Set<string>(); let front = false;
     for (const d of r.doors) {
       const groups = roomFootprints(r, d.at); if (groups.length !== 1 || !groups[0]!.tw) bad(`door footprint ${r.id}`);
-      if (d.kind === 'door') {
-        front = true; const f = groups[0]!;
+      if (d.kind === 'inner' && (!props.has(d.at) || solidProps.has(d.at))) bad(`inner door ${r.id}`);
+      if (d.kind === 'door' || d.kind === 'inner') {
+        front ||= d.kind === 'door'; const f = groups[0]!;
         if (d.side === 'north' && f.ty !== 0 || d.side === 'south' && f.ty + f.th !== r.map.length || d.side === 'west' && f.tx !== 0 || d.side === 'east' && f.tx + f.tw !== r.map[0]!.length) bad(`door side ${r.id}`);
       }
       chars.add(d.at);
@@ -121,9 +126,10 @@ function roomRules(doc: Rooms): void {
   for (const r of doc.rooms) {
     // A floor shares its outdoor parent's building: floor 1 must exist.
     if (roomParent(r.id) !== r.parent && !seen.has(roomParent(r.id))) bad(`missing floor 1 ${r.id}`);
-    for (const d of r.doors) if (d.kind === 'stair') {
+    // A stair or an inner doorway leads to a room of the same building, onto open floor, and back.
+    for (const d of r.doors) if (d.kind === 'stair' || d.kind === 'inner') {
       const target = seen.get(d.to);
-      if (!target || target.parent !== r.parent || !roomWalkable(target, d.entry.tx, d.entry.ty) || !target.doors.some(back => back.kind === 'stair' && back.to === r.id)) bad(`stair target ${r.id}`);
+      if (!target || roomBuilding(d.to) !== roomBuilding(r.id) || target.parent !== r.parent || !roomWalkable(target, d.entry.tx, d.entry.ty) || !target.doors.some(back => back.kind === d.kind && back.to === r.id)) bad(`${d.kind} target ${r.id}`);
     }
   }
 }

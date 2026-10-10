@@ -11,7 +11,8 @@ import { bus, EV } from './events.ts'
 import type { Session } from './session.ts'
 import { guideById, guideProgress, newlyMet, type GuideContext, type GuideProgress } from '../lib/guides.ts'
 import { deviceKey } from './held.ts'
-import { homesteadsFor } from './homestead.ts'
+import { HOME_FLAGS, homesteadsFor } from './homestead.ts'
+import { isYardRoom } from './yard-talk.ts'
 import { itemsFor } from './items.ts'
 import { villageFor } from './village.ts'
 import { itemDef } from '../lib/items.ts'
@@ -171,6 +172,9 @@ export function goalTarget(session: Session): GoalTarget | null {
     }
     if (guideCache) return guideCache
   }
+  // A deed just bought in Pell's office: until you reach your gate, the home
+  // goal leads out of the Yard's rooms (on the lane, the gate's marker shows).
+  if (isYardRoom(session.state.area) && homesteadsFor(session).myGate !== null && !session.state.flags.includes(HOME_FLAGS.arrived)) return { kind: 'guide', where: 'gate' }
   const id = pinnedOpenQuest(session) ?? roadQuest(session.quests)?.id
   const q = id ? questById(id) : undefined
   const where = q ? nextStep(q, session.quests)?.where : undefined

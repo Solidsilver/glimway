@@ -26,7 +26,7 @@
  * the signs on the gates, Silas, the way to your own gate.
  */
 import { HOMESTEAD_DATA, gateRowCount, gateTile, homeArea } from '../lib/homestead.ts'
-import { ITEM_RULES } from '../lib/items.ts'
+import { residentById } from '../lib/residents.ts'
 import { calendarAt } from '../lib/calendar.ts'
 import { landEntry } from './homeland.ts'
 import { gameNow } from './clock.ts'
@@ -304,14 +304,16 @@ export function buildCommons(gateCount = 0): CommonsWorld {
   fenceV(YARD.x0, YARD.y0 + 1, CROSS.y0 - 1)
   fenceV(YARD.x0, CROSS.y1 + 1, YARD.y1 - 1)
   fenceV(YARD.x1, YARD.y0 + 1, YARD.y1 - 1)
-  // Silas's own cottage: finished, with a fox over the lintel.
+  // Silas's own cottage, the Yard: its sign, and the door into the shop (content/rooms.json `in:commons:yard`).
   fill(50, 14, 55, 17, TERRAIN.dirt, true)
   put('cottage-silas', 52, 17, { x: 53 * TILE, y: 18 * TILE })
   props.push({ frame: 'lantern-post', tx: 56, ty: 17, h: 28, body: [8, 6], light: 'commons' })
   lamps.push({ tx: 56, ty: 17 })
-  // Silas stands where the shared menders data puts him (the server checks
-  // mending and keepsake returns against the same rows).
-  const silasSpot = ITEM_RULES.menders.find((m) => m.npc === 'silas') ?? { tx: 51, ty: 21 }
+  // Silas's spot out in the yard, by the sawhorse: his cycle (content/residents.json)
+  // has him there part of each hour, at his counter inside the rest (the
+  // server checks mending and the fox against the same cycle). He's one of
+  // the area's NPCs, shown only while his hour has him out here.
+  const silasSpot = residentById('silas')?.spots.yard ?? { tx: 48, ty: 19 }
   const silas = { tx: silasSpot.tx, ty: silasSpot.ty }
   const toolbox = { tx: 49, ty: 24 }
   props.push({ frame: 'tool-crate', tx: toolbox.tx, ty: toolbox.ty, h: 14, body: [12, 7] })
@@ -451,7 +453,7 @@ export function buildCommons(gateCount = 0): CommonsWorld {
     trees,
     bushes,
     rocks,
-    npcs: [{ id: 'elara', ...elara }],
+    npcs: [{ id: 'elara', ...elara }, { id: 'silas', ...silas, spot: 'yard' }],
     enemies: [],
     exits,
     props,

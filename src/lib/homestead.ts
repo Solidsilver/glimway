@@ -3,6 +3,7 @@ import itemsRaw from '../../content/items.json' with { type: 'json' };
 import { decodeContent } from './content-proto.ts';
 import { HomesteadSchema } from './gen/glimway/content/v1/homestead_pb.js';
 import { furnishingFor } from './furnishings.ts';
+import { roomFor } from './rooms.ts';
 import { loadWilds } from './wilds/data.ts';
 import { LAND, buildableKind, clearedSet, effectiveKind, homeLights, isLit, servedLand, type Land, type Light } from './homestead-land.ts';
 import { tileAt, tileMid } from './tile.ts';
@@ -40,8 +41,9 @@ export interface HomeLand {
 /**
  * The gates along the Commons lane, in the client's tiles (`tileSize` px).
  * Gate g is in fence column fenceX[g % 2] and row floor(g / 2): the listed
- * rows, then one more every `rowPitch` tiles. Silas's table (px) is where
- * a joint deed is signed: both partners within `radius`.
+ * rows, then one more every `rowPitch` tiles. The deed table (a point in
+ * Pell's office, `area`, in px) is where a joint deed is signed: both
+ * partners within `radius`.
  */
 export interface CommonsLane {
   tileSize: number;
@@ -49,7 +51,7 @@ export interface CommonsLane {
   gateRows: number[];
   rowPitch: number;
   spareGates: number;
-  silasTable: { x: number; y: number; radius: number };
+  deedTable: { area: string; x: number; y: number; radius: number };
 }
 export interface LanternPosts { item: string; radius: number; nameMax: number; costs: { materials: Record<string, number> }[]; growth: Record<string, number> }
 /** The stable's growth rules (design 3.2): one piece, a bay at a time. */
@@ -105,6 +107,9 @@ export function validateHomesteadData(value: unknown): HomesteadData {
   // Gate rows go down the lane two tiles apart.
   const rows = h.commons.gateRows;
   if (rows.some((y, i) => i > 0 && y < rows[i - 1] + 2)) return bad('gate rows');
+  // The deed table stands inside a room (Pell's office).
+  const table = h.commons.deedTable, room = roomFor(table.area);
+  if (!room || table.x >= room.map[0]!.length * 16 || table.y >= room.map.length * 16) return bad('deed table');
   // The lantern posts' bills name Wilds materials; growth never takes one back.
   const billsOK = (m: Record<string, number>, allowEmpty: boolean) => (allowEmpty || Object.keys(m).length > 0) && Object.entries(m).every(([id, n]) => loadWilds().materials.includes(id) && (allowEmpty ? n >= 0 : n >= 1) && n <= 1_000_000);
   if (!h.lanternPosts.costs.every((c) => billsOK(c.materials, false)) || !billsOK(h.lanternPosts.growth, true)) return bad('post bills');

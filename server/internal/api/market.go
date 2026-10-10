@@ -11,7 +11,8 @@ import (
 // ------------------------------------------------------------- the sellers
 
 // marketBuy buys a good from a seller: a named resident (Hazel's kitchen,
-// Finn's mill door) or a stall that stands on its festival day only (the
+// Finn's mill door, Silas's Yard, which also sells from its shop while he's
+// out: the honesty tin) or a stall that stands on its festival day only (the
 // Carting Day market). You stand by them; the glims leave the pack; the
 // server's own calendar decides whether the seller is there at all
 // (docs/items/crafting-and-repair.md, "Seasonal materials"). Capped goods
@@ -31,7 +32,10 @@ func (a *Server) marketBuy(ctx context.Context, tx *sql.Tx, s *store.Snapshot, r
 	if good == nil {
 		return fail(400, "invalid-good")
 	}
-	if seller.GetWith() != "" && !nearResident(s, seller.GetWith(), now, int(seller.GetRadiusTiles())) || seller.GetWith() == "" && !nearTile(s, seller.GetArea(), int(seller.GetTx()), int(seller.GetTy()), int(seller.GetRadiusTiles())) {
+	// In the seller's shop, the goods sell whoever is in (Silas's honesty
+	// tin); otherwise you stand by the seller.
+	inShop := seller.GetShop() != "" && s.State.Area == seller.GetShop()
+	if !inShop && (seller.GetWith() != "" && !nearResident(s, seller.GetWith(), now, int(seller.GetRadiusTiles())) || seller.GetWith() == "" && !nearTile(s, seller.GetArea(), int(seller.GetTx()), int(seller.GetTy()), int(seller.GetRadiusTiles()))) {
 		return fail(409, "too-far-away")
 	}
 	day := content.CalendarAt(content.CalendarRules, now)

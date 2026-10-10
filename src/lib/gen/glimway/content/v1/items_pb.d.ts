@@ -324,7 +324,9 @@ export declare type ItemThanksValid = ItemThanks;
 export declare const ItemThanksSchema: GenMessage<ItemThanks, {validType: ItemThanksValid}>;
 
 /**
- * A mender: who can mend at their side, and where they stand.
+ * A mender: who can mend at their side, and where they stand: a fixed spot
+ * (area, tx, ty), or with a resident, wherever that resident's cycle has
+ * them (with; the resident is checked in code).
  *
  * @generated from message glimway.content.v1.ItemMender
  */
@@ -340,9 +342,9 @@ export declare type ItemMender = Message<"glimway.content.v1.ItemMender"> & {
   name: string;
 
   /**
-   * @generated from field: string area = 3;
+   * @generated from field: optional string area = 3;
    */
-  area: string;
+  area?: string | undefined;
 
   /**
    * @generated from field: optional int32 tx = 4;
@@ -358,44 +360,14 @@ export declare type ItemMender = Message<"glimway.content.v1.ItemMender"> & {
    * @generated from field: int32 radius_tiles = 6;
    */
   radiusTiles: number;
+
+  /**
+   * @generated from field: optional string with = 7;
+   */
+  with?: string | undefined;
 };
 
-/**
- * A mender: who can mend at their side, and where they stand.
- *
- * @generated from message glimway.content.v1.ItemMender
- */
-export declare type ItemMenderValid = Message<"glimway.content.v1.ItemMender"> & {
-  /**
-   * @generated from field: string npc = 1;
-   */
-  npc: string;
-
-  /**
-   * @generated from field: string name = 2;
-   */
-  name: string;
-
-  /**
-   * @generated from field: string area = 3;
-   */
-  area: string;
-
-  /**
-   * @generated from field: optional int32 tx = 4;
-   */
-  tx: number;
-
-  /**
-   * @generated from field: optional int32 ty = 5;
-   */
-  ty: number;
-
-  /**
-   * @generated from field: int32 radius_tiles = 6;
-   */
-  radiusTiles: number;
-};
+export declare type ItemMenderValid = ItemMender;
 
 /**
  * Describes the message glimway.content.v1.ItemMender.
@@ -932,6 +904,14 @@ export declare type ItemSeller = Message<"glimway.content.v1.ItemSeller"> & {
    * @generated from field: repeated glimway.content.v1.ItemGood goods = 9;
    */
   goods: ItemGood[];
+
+  /**
+   * A room where the goods sell whoever is in it (Silas's shop: the honesty
+   * tin); the room is checked in code. Near the seller still sells too.
+   *
+   * @generated from field: optional string shop = 10;
+   */
+  shop?: string | undefined;
 };
 
 export declare type ItemSellerValid = ItemSeller;

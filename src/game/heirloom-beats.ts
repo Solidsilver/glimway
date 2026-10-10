@@ -15,6 +15,7 @@ import type { Session } from './session'
 import { itemsFor } from './items'
 import { HEIRLOOMS, heirloomReadiness, heirloomRefusalFor, heirloomRefusalLine, type HeirloomContext, type HeirloomId } from '../content/heirlooms'
 import { openDialogue } from './dialogue'
+import { serverNow } from './clock'
 
 /** What the server will see for a grant now: the save, with where the hero stands written in. */
 export function heirloomContext(session: Session, id: HeirloomId, worldFlags: readonly string[] = []): HeirloomContext {
@@ -27,7 +28,8 @@ export function heirloomContext(session: Session, id: HeirloomId, worldFlags: re
     flags: s.flags,
     worldFlags,
     online: !!session.link?.online,
-    inFlight: itemsFor(session).isGrantInFlight(id)
+    inFlight: itemsFor(session).isGrantInFlight(id),
+    now: serverNow()
   }
 }
 

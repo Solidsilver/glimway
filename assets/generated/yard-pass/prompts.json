@@ -1,0 +1,86 @@
+{
+  "tool": "built-in image_gen",
+  "style_reference": "docs/art-request-indoors.md; assets/generated/indoors-pass/README.md; assets/generated/playtest1-pass/residents/; assets/generated/commons-pass resident portrait sheets",
+  "generations": [
+    {
+      "id": "yard-props",
+      "source": "sheets/yard-props-source.png",
+      "generation_file": "exec-85cadd7a-393f-402b-b13a-8c85e37b0ca6.png",
+      "prompt": "Transparent 4-column by 2-row production sheet of seven isolated warm woodland pixel-art interiors props: yard-counter with book, pencil, carved foxes and tin; yard-timber-rack with boards, stone and tied fibre; side-on mending bench with vice, felling axe, oil and rags; usable side-wall doorway; pigeonholes with Commons lane map; tall clerk's desk with inkwell and ledger; signing table with chairs excluded. Three-quarter top-down, upper-left light, warm-brown outlines, chunky pixels, 64 texels per tile."
+    },
+    {
+      "id": "cottage-silas",
+      "source": "sheets/cottage-silas-source.png",
+      "generation_file": "exec-89f13510-c601-4dd6-b5b0-3d02ded132e8.png",
+      "prompt": "Redraw Silas's modest cottage as a usable shop, front three-quarter woodland pixel-art facade; hanging sign with a fox and hand saw, usable front door with threshold, compact footprint, transparent background, upper-left light, warm outlines, no text."
+    },
+    {
+      "id": "vertical-props",
+      "source": "sheets/yard-vertical-props-source.png",
+      "generation_file": "exec-987aeeac-4908-4af3-ad42-549018dd933c.png",
+      "prompt": "Two transparent vertical prop sprites: a 1x2 narrow side-on mending station with hung felling axe above vice-equipped bench, oil and rags; a tall standing clerk's desk with ledger and inkwell. Cozy woodland pixel-art, warm outlines and upper-left light."
+    },
+    {
+      "id": "deeds-table",
+      "source": "sheets/deeds-table-source.png",
+      "generation_file": "exec-d85a90c2-682f-4299-bf04-bbaaed54e0cb.png",
+      "prompt": "Transparent wide 3x2 signing table only, broad timber tabletop with open ledger, inkwell, deed papers, quill, and clear left/right chair spaces for separate kit chairs; three-quarter top-down chunky pixel art."
+    },
+    {
+      "id": "cottage-silas-sign-text",
+      "source": "sheets/cottage-silas-source-v2.png",
+      "generation_file": "exec-42b9c691-f339-4db4-8d09-79146d0e92dc.png",
+      "prompt": "Regenerate Silas's cottage shop with the exact readable sign words \"Silas's Yard\" above a fox icon and a hand saw icon; usable slightly ajar door with visible threshold; compact timber-and-plaster woodland pixel-art cottage, transparent background, same modest game footprint."
+    },
+    {
+      "id": "kit-side-doorway-round1",
+      "source": "sheets/kit-side-doorway-source-round1.png",
+      "generation_file": "exec-4fc6af83-882d-41b5-b560-f253a89e46dc.png",
+      "references": [
+        "assets/generated/indoors-pass/sheets/interior-kit.png"
+      ],
+      "prompt": "A 1x2 side-wall doorway seen edge-on at the oblique angle of the indoors kit side-wall pieces, not a front-facing facade; narrow timber/plaster wall thickness, dark walkable gap and threshold, matching palette and outline."
+    },
+    {
+      "id": "pell-idle-round1",
+      "source": "sheets/pell-resident-source-round1.png",
+      "generation_file": "exec-6638a3ef-1152-4ac3-ac78-d1a6fee7fd1a.png",
+      "references": [
+        "assets/generated/commons-pass/fingersnap-residents-v2.png"
+      ],
+      "prompt": "Two front-facing idle frames of the same adult under-clerk Pell in the current resident style, thick dark outline, large friendly head, soft shading, slight and neat beside Silas; brown coat, cream shirt, sleeve guards, blue-black ink mark on a fingertip. Exact 186x283 canvas for each, stable feet, subtle blink/breath only."
+    },
+    {
+      "id": "portrait-pell-round1",
+      "source": "sheets/pell-portrait-source-round1.png",
+      "generation_file": "exec-86a51fc6-bf54-4bac-9a1d-ca6fec153b6b.png",
+      "references": [
+        "assets/generated/commons-pass/fingersnap-portraits-residents.png",
+        "assets/generated/commons-pass/fingersnap-residents-v2.png"
+      ],
+      "prompt": "Pell bust in the exact resident portrait style and crop: warm polished chunky pixel art, thick dark-brown outline, soft upper-left light, head and shoulders, russet clerk coat, cream shirt, sleeve guard, ink-marked fingertip; 64x64 portrait slot."
+    },
+    {
+      "id": "yard-counter-round2",
+      "source": "sheets/yard-counter-source-round2.png",
+      "generation_file": "exec-68d46e2d-28b4-47ac-afa3-ec6262cc64c5.png",
+      "references": [
+        "assets/generated/indoors-pass/sheets/round2-crops/kitchen-worktable-front-default.png",
+        "assets/generated/indoors-pass/sheets/round2-crops/library-shelf-front-full.png",
+        "assets/generated/indoors-pass/sheets/round2-crops/kitchen-jar-shelf-front-default.png"
+      ],
+      "prompt": "Create one isolated game prop sprite on a fully transparent background: a broad 3-tile-wide wooden yard counter seen straight-on from the FRONT, matching the front-facing furniture in the attached indoors kit references (especially the kitchen worktable and library shelf). The counter faces the viewer and sits flat against the back wall. Show only a narrow top plane, just enough to see the objects; do not use a three-quarter view and do not show a side panel. On the top place a clearly readable open plot book, a single pencil, several small carved fox figures, and a small metal tin. The front has a warm timber panel with a neat row of carved fox motifs visible across it. Straight horizontal front edge, symmetrical broad silhouette, chunky detailed pixel art, warm brown outlines, upper-left light, restrained game-scale detail, transparent pixels around the prop, no ground shadow, no text or extra objects. Compose to fit a 192x128 sprite canvas and 3x1 tile footprint."
+    },
+    {
+      "id": "yard-timber-rack-round2",
+      "source": "sheets/yard-timber-rack-source-round2.png",
+      "generation_file": "exec-571e4340-f0f4-4bf5-a12d-298c404569ca.png",
+      "references": [
+        "assets/generated/indoors-pass/sheets/round2-crops/kitchen-worktable-front-default.png",
+        "assets/generated/indoors-pass/sheets/round2-crops/library-shelf-front-full.png",
+        "assets/generated/indoors-pass/sheets/round2-crops/kitchen-jar-shelf-front-default.png"
+      ],
+      "prompt": "Create one isolated game prop sprite on a fully transparent background: a broad wooden timber storage rack, 3 tiles wide and 2 tiles tall, seen straight-on from the FRONT, matching the front-facing furniture in the attached indoors kit references (especially the library shelf and jar shelf). The rack stands FLAT against the back wall. Show only a very narrow top edge; shelves are horizontal and face the viewer. Do not use a three-quarter view, do not show side panels or perspective depth. Load its shelves with neatly stacked cut boards, a compact stack of stones, and tied bundles of fibre, all clearly visible and separated. Chunky detailed pixel art, warm brown outlines, upper-left light, restrained game-scale detail, transparent pixels around the prop, no ground shadow, no text or extra objects. Compose to fit a 192x192 sprite canvas and 3x2 tile footprint."
+    }
+  ]
+}

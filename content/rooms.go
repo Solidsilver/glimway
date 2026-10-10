@@ -27,8 +27,9 @@ type (
 	RoomTile           = contentv1.RoomTile
 )
 
-// Room maps are 16-pixel tiles. Floors share an outdoor parent.
-var roomID = regexp.MustCompile(`^in:(village|woodland|ruin|commons):([a-z0-9]+(?:-[a-z0-9]+)*)(?::([2-9]|[1-9][0-9]+))?$`)
+// Room maps are 16-pixel tiles. Floors (in:village:mill:2) and side rooms
+// (in:commons:yard:deeds) share their building's outdoor parent.
+var roomID = regexp.MustCompile(`^in:(village|woodland|ruin|commons):([a-z0-9]+(?:-[a-z0-9]+)*)(?::([2-9]|[1-9][0-9]+|[a-z]+(?:-[a-z]+)*))?$`)
 var homeRoomID = regexp.MustCompile(`^in:home:(0|[1-9][0-9]{0,3})$`)
 
 // The room vocabulary, checked on the schema; walking the map uses it.
@@ -48,6 +49,14 @@ func RoomParent(area string) string {
 		return "in:" + m[1] + ":" + m[2]
 	}
 	return m[1]
+}
+
+// roomBuilding: the building a room or one of its floors or side rooms is in.
+func roomBuilding(area string) string {
+	if m := roomID.FindStringSubmatch(area); m != nil {
+		return "in:" + m[1] + ":" + m[2]
+	}
+	return area
 }
 func RootArea(area string) string {
 	if homeRoomID.MatchString(area) {
@@ -173,6 +182,13 @@ func validateRooms(doc *Rooms) error {
 			props[p.GetChar()] = true
 			solidProps[p.GetChar()] = p.GetSolid()
 		}
+		// An inner doorway's letter stands in the wall: the opening.
+		inner := map[string]bool{}
+		for _, d := range r.GetDoors() {
+			if d.GetKind() == "inner" {
+				inner[d.GetAt()] = true
+			}
+		}
 		arrive := 0
 		for y, row := range r.GetMap() {
 			for x := range len(row) {
@@ -183,7 +199,7 @@ func validateRooms(doc *Rooms) error {
 				if roomLegend[c] == "" && !props[c] {
 					return bad("unclaimed character " + r.GetId())
 				}
-				if (x == 0 || y == 0 || x == len(row)-1 || y == len(r.GetMap())-1) && c != "#" && c != "D" && !solidProps[c] {
+				if (x == 0 || y == 0 || x == len(row)-1 || y == len(r.GetMap())-1) && c != "#" && c != "D" && !solidProps[c] && !inner[c] {
 					return bad("open boundary " + r.GetId())
 				}
 			}
@@ -207,8 +223,11 @@ func validateRooms(doc *Rooms) error {
 			if len(groups) != 1 || groups[0].TW == 0 {
 				return bad("door footprint " + r.GetId())
 			}
-			if d.GetKind() == "door" {
-				front = true
+			if d.GetKind() == "inner" && (!props[d.GetAt()] || solidProps[d.GetAt()]) {
+				return bad("inner door " + r.GetId())
+			}
+			if d.GetKind() == "door" || d.GetKind() == "inner" {
+				front = front || d.GetKind() == "door"
 				f := groups[0]
 				if d.GetSide() == "north" && f.TY != 0 || d.GetSide() == "south" && f.TY+f.TH != len(r.GetMap()) || d.GetSide() == "west" && f.TX != 0 || d.GetSide() == "east" && f.TX+f.TW != len(r.GetMap()[0]) {
 					return bad("door side " + r.GetId())
@@ -258,10 +277,11 @@ func validateRooms(doc *Rooms) error {
 			}
 		}
 		for _, d := range r.GetDoors() {
-			if d.GetKind() == "stair" {
+			// A stair or an inner doorway leads to a room of the same building, onto open floor, and back.
+			if d.GetKind() == "stair" || d.GetKind() == "inner" {
 				target, ok := seen[d.GetTo()]
-				if !ok || target.GetParent() != r.GetParent() || !roomWalkable(target, int(d.GetEntry().GetTx()), int(d.GetEntry().GetTy())) || !slices.ContainsFunc(target.GetDoors(), func(back *RoomDoor) bool { return back.GetKind() == "stair" && back.GetTo() == r.GetId() }) {
-					return bad("stair target " + r.GetId())
+				if !ok || roomBuilding(d.GetTo()) != roomBuilding(r.GetId()) || target.GetParent() != r.GetParent() || !roomWalkable(target, int(d.GetEntry().GetTx()), int(d.GetEntry().GetTy())) || !slices.ContainsFunc(target.GetDoors(), func(back *RoomDoor) bool { return back.GetKind() == d.GetKind() && back.GetTo() == r.GetId() }) {
+					return bad(d.GetKind() + " target " + r.GetId())
 				}
 			}
 		}

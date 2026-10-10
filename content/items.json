@@ -45,9 +45,7 @@
       {
         "npc": "silas",
         "name": "Silas",
-        "area": "commons",
-        "tx": 51,
-        "ty": 21,
+        "with": "silas",
         "radiusTiles": 4
       },
       {
@@ -140,10 +138,7 @@
           "timber": 2,
           "wooden-peg": 1
         },
-        "mender": {
-          "timber": 2,
-          "wooden-peg": 1
-        }
+        "menderGlims": 4
       },
       "blurb": "Ash haft, iron head forged by Maren Brack, Hollis's sister. Rehafted by Orrin with a trunnel through the eye."
     },
@@ -169,9 +164,7 @@
         "bench": {
           "fiber": 2
         },
-        "mender": {
-          "fiber": 2
-        }
+        "menderGlims": 3
       },
       "blurb": "A long pole with a hook and a wick-trimmer. Sets lamp heads and trims wicks. Carried, it lights the way a little further than a lantern."
     },
@@ -572,10 +565,7 @@
           "timber": 2,
           "wooden-peg": 1
         },
-        "mender": {
-          "timber": 2,
-          "wooden-peg": 1
-        }
+        "menderGlims": 4
       },
       "blurb": "The pick Orrin dressed the north bridge's footings with. \"Drift-stone for foundations, NOT for walls\" is cut into the haft."
     },
@@ -594,10 +584,7 @@
           "timber": 2,
           "wooden-peg": 1
         },
-        "mender": {
-          "timber": 2,
-          "wooden-peg": 1
-        }
+        "menderGlims": 3
       },
       "blurb": "Small, polished by eighty years of hands. Ada dug the twins' first garden with it."
     },
@@ -1266,9 +1253,8 @@
     {
       "id": "silas-yard",
       "npc": "Silas",
-      "area": "commons",
-      "tx": 51,
-      "ty": 21,
+      "with": "silas",
+      "shop": "in:commons:yard",
       "radiusTiles": 4,
       "goods": [
         {
