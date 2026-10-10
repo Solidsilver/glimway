@@ -117,7 +117,7 @@ func (a *Server) profileReport(w http.ResponseWriter, r *http.Request) error {
 	days := max(int64(0), (now-s.CheckpointAt)/86400)
 	cap := int(rules.E.GetSyncCreditCap()) + int(min(days, int64(int(rules.E.GetSyncCreditMax()))))*int(rules.E.GetSyncCreditDailyGrowth())
 	cap = min(cap, int(rules.E.GetSyncCreditMax()))
-	payable := max(0, int(math.Floor(s.VerifiedXP/float64(int(rules.E.GetXpPerEmber()))))+cap-int(math.Floor(before.EmberXP/float64(int(rules.E.GetXpPerEmber())))))
+	payable := max(0, int(math.Floor(s.VerifiedXP/float64(int(rules.E.GetXpPerGlim()))))+cap-int(math.Floor(before.EmberXP/float64(int(rules.E.GetXpPerGlim())))))
 	paid := min(credit, payable)
 	s.State.Embers = before.Embers
 	s.State.XPEmbers = before.XPEmbers
@@ -140,7 +140,7 @@ func (a *Server) profileReport(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if welcomed {
-		if err = store.Credit(ctx, tx, &s, int(rules.E.GetWelcomeEmbers()), 0, "welcome", "first-sync", nil, now); err != nil {
+		if err = store.Credit(ctx, tx, &s, int(rules.E.GetWelcomeGlims()), 0, "welcome", "first-sync", nil, now); err != nil {
 			return err
 		}
 		s.State.Flags = rules.AddUnique(s.State.Flags, "embers:welcome")

@@ -92,7 +92,7 @@ test('the last materials have their people: Hazel’s tallow, Finn’s flour, an
   const tallow = sellerFor('hazels-kitchen');
   assert.ok(tallow, 'Hazel sells tallow');
   assert.equal(tallow?.goods[0]?.item, 'tallow');
-  assert.equal(tallow?.goods[0]?.embers, 1, 'tallow is cheap');
+  assert.equal(tallow?.goods[0]?.glims, 1, 'tallow is cheap');
   const flour = sellerFor('finns-mill-door');
   assert.ok(flour, 'Finn sells flour');
   assert.equal(flour?.goods[0]?.item, 'flour');

@@ -386,10 +386,10 @@ type QuestStepResult struct {
 	Items         []string               `protobuf:"bytes,3,rep,name=items,proto3" json:"items,omitempty"`
 	Marks         []string               `protobuf:"bytes,4,rep,name=marks,proto3" json:"marks,omitempty"`
 	Papers        []string               `protobuf:"bytes,5,rep,name=papers,proto3" json:"papers,omitempty"`
-	Embers        float64                `protobuf:"fixed64,6,opt,name=embers,proto3" json:"embers,omitempty"`
-	EmbersSpent   float64                `protobuf:"fixed64,7,opt,name=embers_spent,json=embersSpent,proto3" json:"embers_spent,omitempty"`
 	Taken         []*ItemQty             `protobuf:"bytes,8,rep,name=taken,proto3" json:"taken,omitempty"`
 	Given         []*ItemQty             `protobuf:"bytes,9,rep,name=given,proto3" json:"given,omitempty"`
+	Glims         float64                `protobuf:"fixed64,10,opt,name=glims,proto3" json:"glims,omitempty"`
+	GlimsSpent    float64                `protobuf:"fixed64,11,opt,name=glims_spent,json=glimsSpent,proto3" json:"glims_spent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -459,20 +459,6 @@ func (x *QuestStepResult) GetPapers() []string {
 	return nil
 }
 
-func (x *QuestStepResult) GetEmbers() float64 {
-	if x != nil {
-		return x.Embers
-	}
-	return 0
-}
-
-func (x *QuestStepResult) GetEmbersSpent() float64 {
-	if x != nil {
-		return x.EmbersSpent
-	}
-	return 0
-}
-
 func (x *QuestStepResult) GetTaken() []*ItemQty {
 	if x != nil {
 		return x.Taken
@@ -485,6 +471,20 @@ func (x *QuestStepResult) GetGiven() []*ItemQty {
 		return x.Given
 	}
 	return nil
+}
+
+func (x *QuestStepResult) GetGlims() float64 {
+	if x != nil {
+		return x.Glims
+	}
+	return 0
+}
+
+func (x *QuestStepResult) GetGlimsSpent() float64 {
+	if x != nil {
+		return x.GlimsSpent
+	}
+	return 0
 }
 
 type MarkRequest struct {
@@ -1828,17 +1828,19 @@ const file_glimway_v1_operations_proto_rawDesc = "" +
 	"\x05where\x18\x04 \x01(\v2\x11.glimway.v1.WhereR\x05where\"-\n" +
 	"\aItemQty\x12\x10\n" +
 	"\x03def\x18\x01 \x01(\tR\x03def\x12\x10\n" +
-	"\x03qty\x18\x02 \x01(\x01R\x03qty\"\x90\x02\n" +
+	"\x03qty\x18\x02 \x01(\x01R\x03qty\"\xae\x02\n" +
 	"\x0fQuestStepResult\x12\x14\n" +
 	"\x05quest\x18\x01 \x01(\tR\x05quest\x12\x12\n" +
 	"\x04step\x18\x02 \x01(\tR\x04step\x12\x14\n" +
 	"\x05items\x18\x03 \x03(\tR\x05items\x12\x14\n" +
 	"\x05marks\x18\x04 \x03(\tR\x05marks\x12\x16\n" +
-	"\x06papers\x18\x05 \x03(\tR\x06papers\x12\x16\n" +
-	"\x06embers\x18\x06 \x01(\x01R\x06embers\x12!\n" +
-	"\fembers_spent\x18\a \x01(\x01R\vembersSpent\x12)\n" +
+	"\x06papers\x18\x05 \x03(\tR\x06papers\x12)\n" +
 	"\x05taken\x18\b \x03(\v2\x13.glimway.v1.ItemQtyR\x05taken\x12)\n" +
-	"\x05given\x18\t \x03(\v2\x13.glimway.v1.ItemQtyR\x05given\"p\n" +
+	"\x05given\x18\t \x03(\v2\x13.glimway.v1.ItemQtyR\x05given\x12\x14\n" +
+	"\x05glims\x18\n" +
+	" \x01(\x01R\x05glims\x12\x1f\n" +
+	"\vglims_spent\x18\v \x01(\x01R\n" +
+	"glimsSpentJ\x04\b\x06\x10\aJ\x04\b\a\x10\bR\x06embersR\fembers_spent\"p\n" +
 	"\vMarkRequest\x12$\n" +
 	"\x02op\x18\x01 \x01(\v2\x14.glimway.v1.OpHeaderR\x02op\x12\x12\n" +
 	"\x04mark\x18\x02 \x01(\tR\x04mark\x12'\n" +

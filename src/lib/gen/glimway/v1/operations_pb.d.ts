@@ -233,16 +233,6 @@ export declare type QuestStepResult = Message<"glimway.v1.QuestStepResult"> & {
   papers: string[];
 
   /**
-   * @generated from field: double embers = 6;
-   */
-  embers: number;
-
-  /**
-   * @generated from field: double embers_spent = 7;
-   */
-  embersSpent: number;
-
-  /**
    * @generated from field: repeated glimway.v1.ItemQty taken = 8;
    */
   taken: ItemQty[];
@@ -251,6 +241,16 @@ export declare type QuestStepResult = Message<"glimway.v1.QuestStepResult"> & {
    * @generated from field: repeated glimway.v1.ItemQty given = 9;
    */
   given: ItemQty[];
+
+  /**
+   * @generated from field: double glims = 10;
+   */
+  glims: number;
+
+  /**
+   * @generated from field: double glims_spent = 11;
+   */
+  glimsSpent: number;
 };
 
 export declare type QuestStepResultValid = QuestStepResult;

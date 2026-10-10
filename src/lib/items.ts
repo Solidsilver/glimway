@@ -80,10 +80,10 @@ export function validateItems(value: unknown): Items {
         const costsOK = (m: Record<string, number>) => Object.keys(m).length > 0 && Object.entries(m).every(([id, n]) => { const def = defs.get(id); return !!def && isStackable(def) && n >= 1 && n <= 1_000_000; });
         const rep = d.repair;
         // An absent mender bill and an empty one mean the same: no
-        // materials. A mender repair then needs embers; a populated one
+        // materials. A mender repair then needs glims; a populated one
         // must still be a valid stack bill.
         const menderMaterials = Object.keys(rep.mender ?? {}).length > 0;
-        if (!costsOK(rep.bench) || (menderMaterials && !costsOK(rep.mender)) || (!menderMaterials && !rep.menderEmbers)) return fail('repair cost');
+        if (!costsOK(rep.bench) || (menderMaterials && !costsOK(rep.mender)) || (!menderMaterials && !rep.menderGlims)) return fail('repair cost');
       }
     }
     if ((d.kind === 'consumable') !== !!d.use?.length) return fail('use');
@@ -118,12 +118,9 @@ export function validateItems(value: unknown): Items {
       // A seller hands over stacks, or one instance (the willow rod, sold by
       // Finn) — always one at a time.
       if (!d || !(isStackable(d) || isInstanced(d)) || (isInstanced(d) && g.qty !== 1)) return bad(`seller ${s.id} good ${g.item}`);
-      // A good is priced in embers, in gold, or in both (ItemGood's
-      // good.price), and a gold price carries its label while nothing else
-      // does (good.gold_label). The schema's CEL holds this too; both
-      // loaders say it in code as well (with Go's message tags).
-      if (!(g.embers > 0 || g.gold !== undefined)) return bad(`seller ${s.id} good ${g.item}: price`);
-      if ((g.gold !== undefined) !== (g.goldLabel !== undefined)) return bad(`seller ${s.id} good ${g.item}: gold label`);
+      // A good has one price, in glims, at least one (ItemGood's range;
+      // both loaders say it in code as well, with Go's message tags).
+      if (!(g.glims >= 1)) return bad(`seller ${s.id} good ${g.item}: price`);
       goods.add(g.item);
     }
   }

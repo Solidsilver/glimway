@@ -79,8 +79,9 @@ export const ITEM_ERRORS: Table = {
   'already-granted': 'You’ve already received that heirloom.',
   'insufficient-items': 'You don’t have that any more.',
   'insufficient-materials': 'You don’t have enough to mend it.',
-  'insufficient-embers': 'You don’t have enough embers.',
-  'insufficient-gold': 'There isn’t that much gold in your purse.',
+  // G-C: the words for glims (insufficient-embers and insufficient-gold
+  // merged into insufficient-glims, silas-yard.md 1.7).
+  'insufficient-glims': 'You don’t have enough glims.',
   'invalid-quantity': 'That isn’t an amount of gold you can hand over.',
   'item-not-available': 'That isn’t in your pack any more.',
   'item-not-found': 'That isn’t in your pack any more.'
@@ -122,7 +123,7 @@ export const VILLAGE_ERRORS: Table = {
   'mail-sender-limit': `You have ${MAIL.maxOutstandingSent} parcels waiting to be collected already. Wait for some to be collected, or recall one.`,
   'mail-recipient-limit': 'Their mailbox is full. They need to collect some parcels first.',
   'mail-rate-limited': 'The post rider needs a moment. Try again in a minute.',
-  'insufficient-gold': 'There isn’t that much gold in your purse.',
+  'insufficient-glims': 'You don’t have enough glims for that.',
   'own-stock': 'You stocked that one yourself, so it isn’t yours to buy.',
   'project-complete': 'That project is finished. Thank you!',
   'project-overfilled': 'That’s more than the project still needs. Give a little less.',
@@ -155,7 +156,7 @@ export const HOME_ERRORS: Table = {
   'post-holds-land': 'That lamp is holding up ground you’ve built on. Move those pieces first.',
   'name-required': 'A lamp needs a name before it holds anything.',
   'not-clearable': 'There’s nothing there for Silas to clear.',
-  'insufficient-embers': 'Not enough embers for that.',
+  'insufficient-glims': 'Not enough glims for that.',
   'insufficient-materials': 'You’re short on materials for that.',
   'already-placed': 'That’s already set out.',
   'shelf-not-empty': 'Take the gifts off your shelf before putting it away.',
@@ -239,6 +240,8 @@ export const PURSE_ERRORS: Table = {
   'needs-habitica': 'Only a Habitica hero can top up a purse from Habitica.',
   'purse-busy': 'A top-up is still on its way. Wait for its outcome, then try again.',
   'top-up-limit': 'That’s both of today’s top-ups. Two more after midnight UTC.',
+  // G-C: the words (silas-yard.md 1.5's cap).
+  'top-up-cap': 'That’s more glims than top-ups can bring today. More after midnight UTC.',
   'invalid-quantity': 'That isn’t an amount of gold that can move. Use a whole number.',
   'login-rate-limited': 'Habitica is busy with sign-ins just now. Nothing moved; try again in a minute.',
   'login-user-rate-limited': 'Habitica is busy with sign-ins just now. Nothing moved; try again in a minute.',

@@ -77,6 +77,7 @@ const (
 	ErrorCode_ERROR_CODE_LANTERN_NOT_FOUND         ErrorCode = 48
 	ErrorCode_ERROR_CODE_TIER_REQUIRED             ErrorCode = 49
 	ErrorCode_ERROR_CODE_TIER_UNAVAILABLE          ErrorCode = 50
+	// Deprecated (0.6.1): no longer sent; insufficient-glims replaces it.
 	ErrorCode_ERROR_CODE_INSUFFICIENT_EMBERS       ErrorCode = 51
 	ErrorCode_ERROR_CODE_INSUFFICIENT_MATERIALS    ErrorCode = 52
 	ErrorCode_ERROR_CODE_ALREADY_PLACED            ErrorCode = 53
@@ -247,11 +248,15 @@ const (
 	ErrorCode_ERROR_CODE_WATER_STILL               ErrorCode = 218
 	ErrorCode_ERROR_CODE_NO_CAST                   ErrorCode = 219
 	// 0.6 The purse and the wardrobe (docs/design/purse-and-wardrobe.md 6.1).
-	ErrorCode_ERROR_CODE_PURSE_BUSY        ErrorCode = 220
-	ErrorCode_ERROR_CODE_TOP_UP_LIMIT      ErrorCode = 221
+	ErrorCode_ERROR_CODE_PURSE_BUSY   ErrorCode = 220
+	ErrorCode_ERROR_CODE_TOP_UP_LIMIT ErrorCode = 221
+	// Deprecated (0.6.1): no longer sent; insufficient-glims replaces it.
 	ErrorCode_ERROR_CODE_INSUFFICIENT_GOLD ErrorCode = 222
 	ErrorCode_ERROR_CODE_OWN_STOCK         ErrorCode = 223
 	ErrorCode_ERROR_CODE_GEAR_NOT_OWNED    ErrorCode = 224
+	// 0.6.1 Glims (docs/design/silas-yard.md 1.7).
+	ErrorCode_ERROR_CODE_INSUFFICIENT_GLIMS ErrorCode = 225
+	ErrorCode_ERROR_CODE_TOP_UP_CAP         ErrorCode = 226
 )
 
 // Enum value maps for ErrorCode.
@@ -482,6 +487,8 @@ var (
 		222: "ERROR_CODE_INSUFFICIENT_GOLD",
 		223: "ERROR_CODE_OWN_STOCK",
 		224: "ERROR_CODE_GEAR_NOT_OWNED",
+		225: "ERROR_CODE_INSUFFICIENT_GLIMS",
+		226: "ERROR_CODE_TOP_UP_CAP",
 	}
 	ErrorCode_value = map[string]int32{
 		"ERROR_CODE_UNSPECIFIED":               0,
@@ -709,6 +716,8 @@ var (
 		"ERROR_CODE_INSUFFICIENT_GOLD":         222,
 		"ERROR_CODE_OWN_STOCK":                 223,
 		"ERROR_CODE_GEAR_NOT_OWNED":            224,
+		"ERROR_CODE_INSUFFICIENT_GLIMS":        225,
+		"ERROR_CODE_TOP_UP_CAP":                226,
 	}
 )
 
@@ -744,7 +753,7 @@ var File_glimway_v1_errors_proto protoreflect.FileDescriptor
 const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\n" +
 	"\x17glimway/v1/errors.proto\x12\n" +
-	"glimway.v1*\xe37\n" +
+	"glimway.v1*\xa38\n" +
 	"\tErrorCode\x12\x1a\n" +
 	"\x16ERROR_CODE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17ERROR_CODE_INVALID_JSON\x10\x01\x12\"\n" +
@@ -971,7 +980,9 @@ const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\x17ERROR_CODE_TOP_UP_LIMIT\x10\xdd\x01\x12!\n" +
 	"\x1cERROR_CODE_INSUFFICIENT_GOLD\x10\xde\x01\x12\x19\n" +
 	"\x14ERROR_CODE_OWN_STOCK\x10\xdf\x01\x12\x1e\n" +
-	"\x19ERROR_CODE_GEAR_NOT_OWNED\x10\xe0\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
+	"\x19ERROR_CODE_GEAR_NOT_OWNED\x10\xe0\x01\x12\"\n" +
+	"\x1dERROR_CODE_INSUFFICIENT_GLIMS\x10\xe1\x01\x12\x1a\n" +
+	"\x15ERROR_CODE_TOP_UP_CAP\x10\xe2\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
 
 var (
 	file_glimway_v1_errors_proto_rawDescOnce sync.Once

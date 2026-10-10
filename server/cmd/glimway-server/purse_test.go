@@ -24,7 +24,7 @@ func TestPurseCommands(t *testing.T) {
 		mustExec(t, s.DB, `INSERT OR IGNORE INTO players(account_id,display_name,world_id,created_at,last_seen_at,version) VALUES('acct','Hero','w',11,12,1)`)
 		mustExec(t, s.DB, `INSERT OR IGNORE INTO player_vitals(account_id,hp,mana,vitals_at,vitals_set_version) VALUES('acct',32,12,1,0)`)
 		mustExec(t, s.DB, `INSERT OR IGNORE INTO player_place(account_id,area,x,y) VALUES('acct','village',2,3)`)
-		mustExec(t, s.DB, `INSERT OR IGNORE INTO balances(account_id,embers,xp_embers) VALUES('acct',0,0)`)
+		mustExec(t, s.DB, `INSERT OR IGNORE INTO balances(account_id,glims,xp_glims) VALUES('acct',0,0)`)
 		mustExec(t, s.DB, `INSERT OR IGNORE INTO sync_baselines(account_id,profile_json,verified_xp,checkpoint_json,checkpoint_at,updated_at) VALUES('acct','{}',0,'{}',12,12)`)
 		mustExec(t, s.DB, `INSERT OR IGNORE INTO sign_ins(account_id,method,subject,created_at) VALUES('acct','habitica','hero-subject',12)`)
 		mustExec(t, s.DB, `INSERT OR IGNORE INTO purse_topups(id,account_id,op_key,amount,state,created_at,gold_before,note,settled_at,settled_by) VALUES('unconfirmed','acct','k1',300,'unconfirmed',10,1240,'timeout',25,'worker')`)
@@ -69,7 +69,7 @@ func TestPurseCommands(t *testing.T) {
 	if state != "not-moved" || settledBy != "owner" || note != "timeout" {
 		t.Fatal(state, settledBy, note)
 	}
-	if err = s.DB.QueryRow("SELECT gold FROM balances WHERE account_id='acct'").Scan(&gold); err != nil || gold != 0 {
+	if err = s.DB.QueryRow("SELECT glims FROM balances WHERE account_id='acct'").Scan(&gold); err != nil || gold != 0 {
 		t.Fatal("a hand settlement of not-moved credited gold", gold)
 	}
 	// The other way: `moved` credits the purse with the ledger's word for it.
@@ -77,11 +77,11 @@ func TestPurseCommands(t *testing.T) {
 	if err = run([]string{"-db", path, "purse", "settle", "unconfirmed", "moved"}); err != nil {
 		t.Fatal(err)
 	}
-	if err = s.DB.QueryRow("SELECT gold FROM balances WHERE account_id='acct'").Scan(&gold); err != nil || gold != 300 {
+	if err = s.DB.QueryRow("SELECT glims FROM balances WHERE account_id='acct'").Scan(&gold); err != nil || gold != 300 {
 		t.Fatal("a hand settlement of moved credited", gold)
 	}
 	var reason, ref string
-	if err = s.DB.QueryRow("SELECT reason,ref FROM ledger WHERE account_id='acct' AND currency='gold'").Scan(&reason, &ref); err != nil {
+	if err = s.DB.QueryRow("SELECT reason,ref FROM ledger WHERE account_id='acct' AND currency='glims'").Scan(&reason, &ref); err != nil {
 		t.Fatal(err)
 	}
 	if reason != "purse-settle" || ref != "unconfirmed" {

@@ -118,6 +118,10 @@ export declare type StoryValid = Story;
 export declare const StorySchema: GenMessage<Story, {validType: StoryValid}>;
 
 /**
+ * Retired in 0.6.1 (glims, docs/design/silas-yard.md 1.7): PlayerState no
+ * longer carries it. Kept only because a message is never deleted from a
+ * wire file; use Glims.
+ *
  * @generated from message glimway.v1.Embers
  */
 export declare type Embers = Message<"glimway.v1.Embers"> & {
@@ -154,6 +158,47 @@ export declare type EmbersValid = Embers;
  * Use `create(EmbersSchema)` to create a new message.
  */
 export declare const EmbersSchema: GenMessage<Embers, {validType: EmbersValid}>;
+
+/**
+ * The glim balance (0.6.1): balance, the XP-earned share of it (a 0-HP rest
+ * pays only from that), the pending sync credit, and the XP marks.
+ *
+ * @generated from message glimway.v1.Glims
+ */
+export declare type Glims = Message<"glimway.v1.Glims"> & {
+  /**
+   * @generated from field: double balance = 1;
+   */
+  balance: number;
+
+  /**
+   * @generated from field: double xp_earned = 2;
+   */
+  xpEarned: number;
+
+  /**
+   * @generated from field: double pending = 3;
+   */
+  pending: number;
+
+  /**
+   * @generated from field: double xp_mark = 4;
+   */
+  xpMark: number;
+
+  /**
+   * @generated from field: double verified_xp = 5;
+   */
+  verifiedXp: number;
+};
+
+export declare type GlimsValid = Glims;
+
+/**
+ * Describes the message glimway.v1.Glims.
+ * Use `create(GlimsSchema)` to create a new message.
+ */
+export declare const GlimsSchema: GenMessage<Glims, {validType: GlimsValid}>;
 
 /**
  * Magic's marks (design 4.2): the highest level a verified login has seen,
@@ -218,11 +263,6 @@ export declare type PlayerState = Message<"glimway.v1.PlayerState"> & {
   story?: Story | undefined;
 
   /**
-   * @generated from field: glimway.v1.Embers embers = 7;
-   */
-  embers?: Embers | undefined;
-
-  /**
    * @generated from field: glimway.v1.Companions companions = 8;
    */
   companions?: Companions | undefined;
@@ -238,7 +278,8 @@ export declare type PlayerState = Message<"glimway.v1.PlayerState"> & {
   fishing?: FishingState | undefined;
 
   /**
-   * The gold purse (0.6) and the wardrobe's resolved choice (4.2).
+   * The top-up's state (0.6, glims since 0.6.1) and the wardrobe's resolved
+   * choice (4.2).
    *
    * @generated from field: glimway.v1.Purse purse = 11;
    */
@@ -248,6 +289,11 @@ export declare type PlayerState = Message<"glimway.v1.PlayerState"> & {
    * @generated from field: glimway.v1.Wardrobe wardrobe = 12;
    */
   wardrobe?: Wardrobe | undefined;
+
+  /**
+   * @generated from field: glimway.v1.Glims glims = 13;
+   */
+  glims?: Glims | undefined;
 };
 
 export declare type PlayerStateValid = PlayerState;

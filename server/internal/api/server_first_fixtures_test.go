@@ -152,7 +152,7 @@ func TestServerFirstWireFixtures(t *testing.T) {
 	questState.Story.ReachedAt = map[string]float64{"set-to-rise": 1791400000}
 	questState.Story.GateAt = map[string]float64{"set-to-rise": 1791400000}
 	questRaw, err := opResultBytes(questState, &contract.QuestStepResult{
-		Quest: "set-to-rise", Step: "let-it-rise", Embers: 2, EmbersSpent: 1,
+		Quest: "set-to-rise", Step: "let-it-rise", Glims: 2, GlimsSpent: 1,
 		Taken: []*contract.ItemQty{{Def: "flour", Qty: 1}}, Given: []*contract.ItemQty{{Def: "keepers-twists", Qty: 2}},
 	})
 	if err != nil {

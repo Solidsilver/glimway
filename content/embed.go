@@ -10,7 +10,7 @@ import (
 //go:embed *.json
 var FS embed.FS
 
-// The shared economy contract (content/economy.json): ember pricing, sync
+// The shared economy contract (content/economy.json): glim pricing, sync
 // credit, invites and the Wilds' rate limits. The schema and its rules live
 // in proto/glimway/content/v1/economy.proto; there are no rules left in code.
 type Economy = contentv1.Economy

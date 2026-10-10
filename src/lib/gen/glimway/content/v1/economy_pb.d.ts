@@ -11,26 +11,26 @@ import type { Message } from "@bufbuild/protobuf";
 export declare const file_glimway_content_v1_economy: GenFile;
 
 /**
- * The shared economy contract (content/economy.json): ember pricing, sync
+ * The shared economy contract (content/economy.json): glim pricing, sync
  * credit, invites and the Wilds' rate limits.
  *
  * @generated from message glimway.content.v1.Economy
  */
 export declare type Economy = Message<"glimway.content.v1.Economy"> & {
   /**
-   * XP: how much one ember buys, and what a fresh account is given.
+   * XP: how much one glim takes, and what a fresh account is given.
    *
-   * @generated from field: int32 xp_per_ember = 1;
+   * @generated from field: int32 xp_per_glim = 1;
    */
-  xpPerEmber: number;
+  xpPerGlim: number;
 
   /**
-   * @generated from field: int32 welcome_embers = 2;
+   * @generated from field: int32 welcome_glims = 2;
    */
-  welcomeEmbers: number;
+  welcomeGlims: number;
 
   /**
-   * Ember prices (in embers): resting at home (discounted), resting, a road
+   * Glim prices: resting at home (discounted), resting, a road
    * lantern, a chest.
    *
    * @generated from field: glimway.content.v1.EconomyCosts costs = 3;
@@ -114,26 +114,26 @@ export declare type Economy = Message<"glimway.content.v1.Economy"> & {
 };
 
 /**
- * The shared economy contract (content/economy.json): ember pricing, sync
+ * The shared economy contract (content/economy.json): glim pricing, sync
  * credit, invites and the Wilds' rate limits.
  *
  * @generated from message glimway.content.v1.Economy
  */
 export declare type EconomyValid = Message<"glimway.content.v1.Economy"> & {
   /**
-   * XP: how much one ember buys, and what a fresh account is given.
+   * XP: how much one glim takes, and what a fresh account is given.
    *
-   * @generated from field: int32 xp_per_ember = 1;
+   * @generated from field: int32 xp_per_glim = 1;
    */
-  xpPerEmber: number;
+  xpPerGlim: number;
 
   /**
-   * @generated from field: int32 welcome_embers = 2;
+   * @generated from field: int32 welcome_glims = 2;
    */
-  welcomeEmbers: number;
+  welcomeGlims: number;
 
   /**
-   * Ember prices (in embers): resting at home (discounted), resting, a road
+   * Glim prices: resting at home (discounted), resting, a road
    * lantern, a chest.
    *
    * @generated from field: glimway.content.v1.EconomyCosts costs = 3;
@@ -223,7 +223,7 @@ export declare type EconomyValid = Message<"glimway.content.v1.Economy"> & {
 export declare const EconomySchema: GenMessage<Economy, {validType: EconomyValid}>;
 
 /**
- * Ember prices. Each is at least one; the Economy CEL above discounts
+ * Glim prices. Each is at least one; the Economy CEL above discounts
  * homeRest below rest.
  *
  * @generated from message glimway.content.v1.EconomyCosts

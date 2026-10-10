@@ -176,7 +176,7 @@ func TestTrustedProxyLastHopAndUntrustedSpoofing(t *testing.T) {
 	x.api = New(x.db, x.api.Habitica, Config{TrustedProxies: []string{"127.0.0.1"}, LoginRate: 2, Now: x.api.Config.Now, Logger: x.api.Config.Logger})
 	attempt := func(remote, xff string) int {
 		r := httptest.NewRequest("POST", "/api/session", strings.NewReader(`{"userId":"alice","token":"`+secret+`"}`))
-		r.Header.Set("X-Glimway-Contract", "6")
+		r.Header.Set("X-Glimway-Contract", "7")
 		r.RemoteAddr = remote
 		r.Header.Set("Content-Type", "application/json")
 		r.Header.Set("X-Forwarded-For", xff)
@@ -436,7 +436,7 @@ func TestPendingLotsSurviveBackupRestore(t *testing.T) {
 	x.api = New(restored, x.api.Habitica, x.api.Config)
 	before := x.expect("GET", "/api/state", nil, c, 200)
 	unchanged(t, held.Snapshot, before.Snapshot)
-	if count(t, restored, "SELECT COALESCE(SUM(embers),0) FROM pending_credits") != held.Pending {
+	if count(t, restored, "SELECT COALESCE(SUM(glims),0) FROM pending_credits") != held.Pending {
 		t.Fatal("pending lots not backed up")
 	}
 	x.set(p)

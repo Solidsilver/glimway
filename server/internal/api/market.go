@@ -12,7 +12,7 @@ import (
 
 // marketBuy buys a good from a seller: a named resident (Hazel's kitchen,
 // Finn's mill door) or a stall that stands on its festival day only (the
-// Carting Day market). You stand by them; the embers leave the pack; the
+// Carting Day market). You stand by them; the glims leave the pack; the
 // server's own calendar decides whether the seller is there at all
 // (docs/items/crafting-and-repair.md, "Seasonal materials"). Capped goods
 // keep their day's count in the ledger (one row a buy, reason market-buy).
@@ -38,25 +38,9 @@ func (a *Server) marketBuy(ctx context.Context, tx *sql.Tx, s *store.Snapshot, r
 	if seller.GetFestival() != "" && (day.Festival == nil || *day.Festival != seller.GetFestival()) {
 		return fail(409, "not-in-season")
 	}
-	// A good is priced in embers, in gold, or in both (design 3.1). `pay`
-	// names the currency: "" and "embers" are today's buy, "gold" takes the
-	// price out of the purse. A good without that price is not for sale that
-	// way — an ember buy of Silas's gold-only bundles, or a gold buy of an
-	// ember-only good, is `invalid-good`.
-	pay := req.GetPay()
-	if pay == "" {
-		pay = "embers"
-	}
-	if pay != "embers" && pay != "gold" {
-		return fail(400, "invalid-request")
-	}
-	price := int(good.GetEmbers())
-	if pay == "gold" {
-		price = int(good.GetGold())
-	}
-	if price == 0 {
-		return fail(400, "invalid-good")
-	}
+	// A good has one price, in glims (silas-yard.md 1.7); the content
+	// loaders keep it at least one.
+	price := int(good.GetGlims())
 	ref := seller.GetId() + ":" + good.GetItem()
 	if good.GetCap() > 0 {
 		dayStart := utcDayStart(now)
@@ -69,14 +53,8 @@ func (a *Server) marketBuy(ctx context.Context, tx *sql.Tx, s *store.Snapshot, r
 			return fail(409, "sold-out")
 		}
 	}
-	if pay == "gold" {
-		// Gold buys goods from the sellers (3.1). The price leaves the purse
-		// and goes out of play: a seller is one of the two things that ever
-		// takes gold out of the game (3.5).
-		if err := store.DebitGold(ctx, tx, s.AccountID, price, "market-buy", ref, now); err != nil {
-			return insufficientGold(err)
-		}
-	} else if err := debitEmbers(ctx, tx, s, price, "market-buy", ref, now); err != nil {
+	// The price leaves play: a seller takes glims out of the game (3.5).
+	if err := debitEmbers(ctx, tx, s, price, "market-buy", ref, now); err != nil {
 		return err
 	}
 	// A seller hands over stacks, or one instance at a time (the willow rod
@@ -94,12 +72,6 @@ func (a *Server) marketBuy(ctx context.Context, tx *sql.Tx, s *store.Snapshot, r
 	} else if err := packPut(ctx, tx, s.AccountID, good.Item, []makerQty{{Maker: "", Qty: int(good.GetQty())}}, "market-buy", ref, now); err != nil {
 		return err
 	}
-	bought := &contract.Bought{Seller: seller.GetId(), ItemDef: good.Item, Qty: int32(int(good.GetQty()))}
-	if pay == "gold" {
-		bought.Gold = int32(price)
-	} else {
-		bought.Embers = int32(price)
-	}
-	out.Bought = bought
+	out.Bought = &contract.Bought{Seller: seller.GetId(), ItemDef: good.Item, Qty: int32(int(good.GetQty())), Glims: int32(price)}
 	return refreshItems(ctx, tx, s)
 }

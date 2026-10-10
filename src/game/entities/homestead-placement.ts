@@ -603,7 +603,7 @@ export class HomesteadArranging {
       canRotate: !!def && canRotate(def),
       busy: p.busy,
       message: p.message,
-      clearing: p.clearing && clearKind !== null ? { ...p.clearing, what: clearKind === LAND.TREE ? 'tree' : clearKind === LAND.STUMP ? 'stump' : 'boulder', cost: HOMESTEAD_DATA.clearTileEmbers } : null,
+      clearing: p.clearing && clearKind !== null ? { ...p.clearing, what: clearKind === LAND.TREE ? 'tree' : clearKind === LAND.STUMP ? 'stump' : 'boulder', cost: HOMESTEAD_DATA.clearTileGlims } : null,
       spot: it && def ? { x: p.x, y: p.y, rotation: p.rotation } : null
     }
     this.placementView = view

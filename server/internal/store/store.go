@@ -257,7 +257,7 @@ func Outcome(ctx context.Context, tx *sql.Tx, id, outcome, reason string, now in
 func Credit(ctx context.Context, tx *sql.Tx, s *Snapshot, n, earned int, reason, ref string, xp *float64, now int64) error {
 	s.State.Embers += n
 	s.State.XPEmbers += earned
-	_, err := tx.ExecContext(ctx, "INSERT INTO ledger(account_id,currency,delta,earned_delta,reason,ref,reported_xp,created_at) VALUES(?,'embers',?,?,?,?,?,?)", s.AccountID, n, earned, reason, ref, xp, now)
+	_, err := tx.ExecContext(ctx, "INSERT INTO ledger(account_id,currency,delta,earned_delta,reason,ref,reported_xp,created_at) VALUES(?,'glims',?,?,?,?,?,?)", s.AccountID, n, earned, reason, ref, xp, now)
 	return err
 }
 

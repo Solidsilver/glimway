@@ -191,10 +191,10 @@ func validateItems(v *Items) error {
 			if d.GetRepair() != nil {
 				rep := d.GetRepair()
 				// An absent mender bill and an empty one mean the same: no
-				// materials. A mender repair then needs embers; a populated
+				// materials. A mender repair then needs glims; a populated
 				// one must still be a valid stack bill.
 				menderMaterials := len(rep.GetMender()) > 0
-				if !validStackCosts(rep.GetBench(), loaded) || (menderMaterials && !validStackCosts(rep.GetMender(), loaded)) || (!menderMaterials && rep.GetMenderEmbers() == 0) {
+				if !validStackCosts(rep.GetBench(), loaded) || (menderMaterials && !validStackCosts(rep.GetMender(), loaded)) || (!menderMaterials && rep.GetMenderGlims() == 0) {
 					return fmt.Errorf("invalid items: item %s: repair cost", d.GetId())
 				}
 			}
@@ -237,7 +237,7 @@ func validateItems(v *Items) error {
 		}
 		pickups[p.GetId()] = true
 	}
-	// Sellers: people and stalls that sell goods for embers. A festival
+	// Sellers: people and stalls that sell goods for glims. A festival
 	// seller stands on its day only; the calendar is loaded, not a global,
 	// so validation never depends on init order.
 	cal, err := LoadCalendar()
@@ -266,15 +266,10 @@ func validateItems(v *Items) error {
 			if !ok || !(ItemStackable(d) || ItemInstanced(d)) || (ItemInstanced(d) && g.GetQty() != 1) {
 				return fmt.Errorf("invalid items: seller %s good %s", s.GetId(), g.GetItem())
 			}
-			// A good is priced in embers, in gold, or in both (ItemGood's
-			// good.price), and a gold price carries its label while an ember
-			// price keeps it (good.gold_label). The schema's CEL holds this
-			// too; both loaders say it in code as well.
-			if !(g.GetEmbers() > 0 || g.Gold != nil) {
+			// A good has one price, in glims, at least one (ItemGood's range;
+			// both loaders say it in code as well).
+			if g.GetGlims() < 1 {
 				return fmt.Errorf("invalid items: seller %s good %s: price", s.GetId(), g.GetItem())
-			}
-			if (g.Gold != nil) != (g.GoldLabel != nil) {
-				return fmt.Errorf("invalid items: seller %s good %s: gold label", s.GetId(), g.GetItem())
 			}
 			goods[g.GetItem()] = true
 		}

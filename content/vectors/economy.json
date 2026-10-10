@@ -6,13 +6,13 @@
       "edits": []
     },
     {
-      "name": "zero-xp-per-ember",
+      "name": "zero-xp-per-glim",
       "valid": false,
       "rule": "int32.gte",
       "edits": [
         {
           "path": [
-            "xpPerEmber"
+            "xpPerGlim"
           ],
           "value": 0
         }
@@ -25,7 +25,7 @@
       "edits": [
         {
           "path": [
-            "welcomeEmbers"
+            "welcomeGlims"
           ],
           "value": -1
         }
@@ -396,7 +396,7 @@
       "edits": [
         {
           "path": [
-            "xp_per_ember"
+            "xp_per_glim"
           ],
           "value": 10
         }
@@ -416,13 +416,13 @@
       ]
     },
     {
-      "name": "numeric-string-welcome-embers",
+      "name": "numeric-string-welcome-glims",
       "valid": false,
       "rule": "non-finite number",
       "edits": [
         {
           "path": [
-            "welcomeEmbers"
+            "welcomeGlims"
           ],
           "value": "5"
         }

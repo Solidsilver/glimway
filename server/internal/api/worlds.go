@@ -321,7 +321,7 @@ func leaving(ctx context.Context, tx *sql.Tx, s store.Snapshot) (leavingView, er
 		return l, err
 	}
 	if !content.HomeRules.GetDeeds().GetFirstFree() || deeds > 0 {
-		l.DeedCost = int(content.HomeRules.GetDeeds().GetEmbers())
+		l.DeedCost = int(content.HomeRules.GetDeeds().GetGlims())
 	}
 	return l, nil
 }

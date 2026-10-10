@@ -79,8 +79,7 @@ export declare type WearResultValid = WearResult;
 export declare const WearResultSchema: GenMessage<WearResult, {validType: WearResultValid}>;
 
 /**
- * What a seller just handed over (/api/items/buy), and what it cost — in
- * embers, in gold, or in both.
+ * What a seller just handed over (/api/items/buy), and what it cost in glims.
  *
  * @generated from message glimway.v1.Bought
  */
@@ -101,14 +100,9 @@ export declare type Bought = Message<"glimway.v1.Bought"> & {
   qty: number;
 
   /**
-   * @generated from field: int32 embers = 4;
+   * @generated from field: int32 glims = 6;
    */
-  embers: number;
-
-  /**
-   * @generated from field: int32 gold = 5;
-   */
-  gold: number;
+  glims: number;
 };
 
 export declare type BoughtValid = Bought;
@@ -233,20 +227,12 @@ export declare type ItemsRequest = Message<"glimway.v1.ItemsRequest"> & {
   good: string;
 
   /**
-   * buy: "" | "embers" | "gold" — which currency pays (0.6; "embers" is
-   * today's behaviour and the empty default).
+   * give: an amount of glims in place of `asset` (3.4). A request with both
+   * `glims` and `asset`, or with neither, is refused as invalid-request.
    *
-   * @generated from field: string pay = 20;
+   * @generated from field: int32 glims = 22;
    */
-  pay: string;
-
-  /**
-   * give: an amount of gold in place of `asset` (3.4). A request with both
-   * `gold` and `asset`, or with neither, is refused as invalid-request.
-   *
-   * @generated from field: int32 gold = 21;
-   */
-  gold: number;
+  glims: number;
 };
 
 export declare type ItemsRequestValid = ItemsRequest;
@@ -339,11 +325,11 @@ export declare type ItemsResult = Message<"glimway.v1.ItemsResult"> & {
   bought?: Bought | undefined;
 
   /**
-   * give: the gold handed over (3.4).
+   * give: the glims handed over (3.4).
    *
-   * @generated from field: int32 gold_given = 16;
+   * @generated from field: int32 glims_given = 17;
    */
-  goldGiven: number;
+  glimsGiven: number;
 };
 
 export declare type ItemsResultValid = ItemsResult;

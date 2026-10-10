@@ -11,7 +11,6 @@ import type { Asset, ItemsActionResponse, ItemsOp, ItemsView } from '../lib/api/
 import type { Refusal, Result } from '../lib/api/errors.ts'
 import { itemErrorText } from '../content/errors.ts'
 import { giftPhrase, ITEM_RULES, menderNear, pickupById, pocketHelps } from '../lib/items.ts'
-import { goldPrice } from '../lib/purse.ts'
 import { purseCopy } from '../content/purse.ts'
 import { TILE } from '../lib/tile.ts'
 import { bus, EV } from './events.ts'
@@ -41,8 +40,8 @@ export class Items {
     })
     bus.on(EV.gift, (g) => {
       if (current?.items !== this) return
-      if (g.kind === 'gold') {
-        // Gold is part of the state, not the pack (purse-and-wardrobe.md 3.4): read the state again.
+      if (g.kind === 'glims') {
+        // Glims are part of the state, not the pack (purse-and-wardrobe.md 3.4): read the state again.
         bus.emit(EV.toast, { text: purseCopy.gaveYou(g.fromName, g.qty), icon: 'coin' })
         void this.session.link?.refreshState()
         return
@@ -150,7 +149,7 @@ export class Items {
   }
   /** Hand gold to someone standing near (purse-and-wardrobe.md 3.4): the same give, with an amount in place of an asset. */
   giveGold(toId: string, gold: number) {
-    return this.run('give', { toId, gold }, -gold)
+    return this.run('give', { toId, glims: gold }, -gold)
   }
   /** Pocket 1 or 2; null empties it. */
   pocket(slot: number, itemDef: string | null) {
@@ -192,9 +191,8 @@ export class Items {
       this.inFlightAdaOil = false
     })
   }
-  /** Buy a good from a seller (Hazel's kitchen, Finn's mill door, the Carting Day stall, Silas's yard), with embers or purse gold. */
-  buy(seller: string, good: string, pay: 'embers' | 'gold' = 'embers') {
-    if (pay === 'gold') return this.run('buy', { seller, good, pay }, -(goldPrice(seller, good) ?? 0))
+  /** Buy a good from a seller (Hazel's kitchen, Finn's mill door, the Carting Day stall, Silas's yard), at its one price in glims. */
+  buy(seller: string, good: string) {
     return this.run('buy', { seller, good })
   }
 

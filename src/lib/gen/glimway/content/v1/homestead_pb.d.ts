@@ -67,18 +67,18 @@ export declare type Homestead = Message<"glimway.content.v1.Homestead"> & {
   lanternPosts?: LanternPosts | undefined;
 
   /**
-   * Deeding: the first deed is free, then it costs embers.
+   * Deeding: the first deed is free, then it costs glims.
    *
    * @generated from field: glimway.content.v1.HomesteadDeeds deeds = 8;
    */
   deeds?: HomesteadDeeds | undefined;
 
   /**
-   * Clearing one wild tile costs embers.
+   * Clearing one wild tile costs glims.
    *
-   * @generated from field: int32 clear_tile_embers = 9;
+   * @generated from field: int32 clear_tile_glims = 9;
    */
-  clearTileEmbers: number;
+  clearTileGlims: number;
 
   /**
    * Neglect: how long away turns the land desolate, then loses the deed.
@@ -173,18 +173,18 @@ export declare type HomesteadValid = Message<"glimway.content.v1.Homestead"> & {
   lanternPosts: LanternPostsValid;
 
   /**
-   * Deeding: the first deed is free, then it costs embers.
+   * Deeding: the first deed is free, then it costs glims.
    *
    * @generated from field: glimway.content.v1.HomesteadDeeds deeds = 8;
    */
   deeds: HomesteadDeedsValid;
 
   /**
-   * Clearing one wild tile costs embers.
+   * Clearing one wild tile costs glims.
    *
-   * @generated from field: int32 clear_tile_embers = 9;
+   * @generated from field: int32 clear_tile_glims = 9;
    */
-  clearTileEmbers: number;
+  clearTileGlims: number;
 
   /**
    * Neglect: how long away turns the land desolate, then loses the deed.
@@ -337,9 +337,9 @@ export declare type HomeTier = Message<"glimway.content.v1.HomeTier"> & {
   purchasable: boolean;
 
   /**
-   * @generated from field: int32 embers = 5;
+   * @generated from field: int32 glims = 5;
    */
-  embers: number;
+  glims: number;
 
   /**
    * The Workshop's material bill (the only priced-in-materials tier);
@@ -866,9 +866,9 @@ export declare type HomesteadDeeds = Message<"glimway.content.v1.HomesteadDeeds"
   firstFree: boolean;
 
   /**
-   * @generated from field: int32 embers = 2;
+   * @generated from field: int32 glims = 2;
    */
-  embers: number;
+  glims: number;
 };
 
 export declare type HomesteadDeedsValid = HomesteadDeeds;
@@ -983,9 +983,9 @@ export declare type HomeItem = Message<"glimway.content.v1.HomeItem"> & {
   minTier: number;
 
   /**
-   * @generated from field: int32 embers = 7;
+   * @generated from field: int32 glims = 7;
    */
-  embers: number;
+  glims: number;
 
   /**
    * The purchase bill (at most three lines): Wilds materials or any

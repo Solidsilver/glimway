@@ -349,11 +349,11 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 			if stockedBy == s.AccountID {
 				return nil, fail(409, "own-stock")
 			}
-			// The buyer's purse pays whoever stocked the slot (3.2): both
+			// The buyer's glims pay whoever stocked the slot (3.2): both
 			// sides in one transaction, each row naming the other player and
 			// the item (3.5). A partner on a joint deed buys the other's stock.
-			if err = store.DebitGold(ctx, tx, s.AccountID, price, "shelf-buy", shelfTradeRef(stockedBy, itemDef), now); err != nil {
-				return nil, insufficientGold(err)
+			if err = debitEmbers(ctx, tx, s, price, "shelf-buy", shelfTradeRef(stockedBy, itemDef), now); err != nil {
+				return nil, err
 			}
 			if err = store.CreditGold(ctx, tx, stockedBy, price, "shelf-sale", shelfTradeRef(s.AccountID, itemDef), now); err != nil {
 				return nil, err

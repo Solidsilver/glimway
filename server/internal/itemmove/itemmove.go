@@ -87,13 +87,12 @@ func LocationCurrency(location, kind, def string) string { return location + ":"
 
 // Typed ledger-currency constructors (0.6 step 0, review finding 10 and
 // prior finding 6): one spelling per currency kind, so no call site writes
-// a currency as a string literal. Embers and gold are the two balances;
+// a currency as a string literal. Glims are the one balance (0.6.1);
 // Stack is a carried stack (materials keep their historical prefix),
 // Decoration a placed piece, Fitted a fitting on a tool. Currency and
 // LocationCurrency stay for the open kinds a caller names — the mail escrow
-// (LocationCurrency("mail", "gold", "gold")) is one.
-func Embers() string               { return "embers" }
-func Gold() string                 { return "gold" }
+// (LocationCurrency("mail", "glims", "glims")) is one.
+func Glims() string                { return "glims" }
 func Stack(def string) string      { return content.StackCurrency(def) }
 func Decoration(def string) string { return Currency("decoration", def) }
 func Fitted(def string) string     { return Currency("fitted", def) }

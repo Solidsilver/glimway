@@ -220,11 +220,11 @@ func TestHomes2DeedPrices(t *testing.T) {
 	x.claimGate(ac, &a, 0)
 	x.homeOpRefreshing(ac, &a, "leave", nil, 200)
 	lane = x.exp("GET", "/api/commons", nil, ac, 200)
-	price := int(content.HomeRules.GetDeeds().GetEmbers())
+	price := int(content.HomeRules.GetDeeds().GetGlims())
 	if lane.Mine != nil || lane.Gates[1].Price == nil || *lane.Gates[1].Price != price {
 		t.Fatal("second deed price")
 	}
-	if x.homeOpRefreshing(ac, &a, "claim", map[string]any{"gate": 1}, 409).Error.Code != "insufficient-embers" {
+	if x.homeOpRefreshing(ac, &a, "claim", map[string]any{"gate": 1}, 409).Error.Code != "insufficient-glims" {
 		t.Fatal("unpaid deed")
 	}
 	x.fund(x.account("alice"), price, 0)
@@ -242,11 +242,11 @@ func TestHomes2DeedPrices(t *testing.T) {
 func TestHomes2BuyChargesEmbersAndMaterials(t *testing.T) {
 	x := newRig(t)
 	def, ok := content.HomeItemFor("stable")
-	if !ok || def.GetEmbers() <= 0 || len(def.GetMaterials()) == 0 {
+	if !ok || def.GetGlims() <= 0 || len(def.GetMaterials()) == 0 {
 		t.Fatal("the stable is priced in both currencies", def)
 	}
 	tiers := content.HomeRules.GetTiers()
-	upgradeEmbers := int(tiers[1].GetEmbers()) + int(tiers[2].GetEmbers())
+	upgradeEmbers := int(tiers[1].GetGlims()) + int(tiers[2].GetGlims())
 
 	ac, a := x.ready("alice")
 	a = x.openWorkshop(ac, a)
@@ -257,7 +257,7 @@ func TestHomes2BuyChargesEmbersAndMaterials(t *testing.T) {
 	if buy.Result.ItemID == "" || buy.Result.Home == nil {
 		t.Fatal("no stable")
 	}
-	if a.State.Embers != e0-int(def.GetEmbers()) {
+	if a.State.Embers != e0-int(def.GetGlims()) {
 		t.Fatal("stable embers", a.State.Embers, e0)
 	}
 	for m, n := range def.GetMaterials() {
@@ -268,7 +268,7 @@ func TestHomes2BuyChargesEmbersAndMaterials(t *testing.T) {
 
 	// Short of the materials: the purse is refused and kept.
 	bc, b := x.ready("bob")
-	x.fund(x.account("bob"), upgradeEmbers+int(def.GetEmbers()), 0)
+	x.fund(x.account("bob"), upgradeEmbers+int(def.GetGlims()), 0)
 	for m, n := range tiers[2].GetMaterials() {
 		x.stack(x.account("bob"), m, "", int(n))
 	}
@@ -279,7 +279,7 @@ func TestHomes2BuyChargesEmbersAndMaterials(t *testing.T) {
 		t.Fatal("stable without materials", r.Error.Code)
 	}
 	x.refresh(bc, &b)
-	if b.State.Embers != int(def.GetEmbers()) {
+	if b.State.Embers != int(def.GetGlims()) {
 		t.Fatal("a refused buy kept the purse", b.State.Embers)
 	}
 
@@ -295,7 +295,7 @@ func TestHomes2BuyChargesEmbersAndMaterials(t *testing.T) {
 	x.claimGate(cc, &c, 0)
 	x.homeOpRefreshing(cc, &c, "upgrade", map[string]any{"tier": 1}, 200)
 	x.homeOpRefreshing(cc, &c, "upgrade", map[string]any{"tier": 2}, 200)
-	if r := x.homeOpRefreshing(cc, &c, "buy", map[string]any{"itemDef": "stable"}, 409); r.Error.Code != "insufficient-embers" {
+	if r := x.homeOpRefreshing(cc, &c, "buy", map[string]any{"itemDef": "stable"}, 409); r.Error.Code != "insufficient-glims" {
 		t.Fatal("stable without embers", r.Error.Code)
 	}
 	x.refresh(cc, &c)
@@ -440,11 +440,11 @@ func TestHomes2DesolationAndLostDeeds(t *testing.T) {
 	}
 	// Dora has never held a deed, but this land's was lost: it costs embers.
 	lane := x.exp("GET", "/api/commons", nil, dc, 200)
-	price := int(content.HomeRules.GetDeeds().GetEmbers())
+	price := int(content.HomeRules.GetDeeds().GetGlims())
 	if *lane.Gates[gate].Price != price || *lane.Gates[gate+1].Price != 0 {
 		t.Fatal("lost deed price")
 	}
-	if x.homeOpRefreshing(dc, &d, "claim", map[string]any{"gate": gate}, 409).Error.Code != "insufficient-embers" {
+	if x.homeOpRefreshing(dc, &d, "claim", map[string]any{"gate": gate}, 409).Error.Code != "insufficient-glims" {
 		t.Fatal("free lost deed")
 	}
 	x.fund(x.account("dora"), price, 0)
@@ -589,7 +589,7 @@ func TestHomes2LanternLightAndClearing(t *testing.T) {
 	x.refresh(ac, &a)
 	before := a.State.Embers
 	cleared := x.homeOpRefreshing(ac, &a, "clear", map[string]any{"x": tree[0], "y": tree[1]}, 200)
-	if a.State.Embers != before-int(content.HomeRules.GetClearTileEmbers()) || len(cleared.Result.Home.Cleared) != 1 || cleared.Result.Home.Cleared[0] != tree {
+	if a.State.Embers != before-int(content.HomeRules.GetClearTileGlims()) || len(cleared.Result.Home.Cleared) != 1 || cleared.Result.Home.Cleared[0] != tree {
 		t.Fatal("clear tile")
 	}
 	if x.homeOpRefreshing(ac, &a, "clear", map[string]any{"x": tree[0], "y": tree[1]}, 409).Error.Code != "already-cleared" {

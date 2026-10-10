@@ -109,7 +109,7 @@ func questTrigger(ctx context.Context, tx *sql.Tx, s *store.Snapshot, quest stri
 		}
 	case t.GetSync() != "":
 		var credited bool
-		err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM ledger WHERE account_id=? AND currency='embers' AND reason='sync' AND delta>0 AND created_at>?)`, s.AccountID, s.State.ReachedAt[quest]).Scan(&credited)
+		err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM ledger WHERE account_id=? AND currency='glims' AND reason='sync' AND delta>0 AND created_at>?)`, s.AccountID, s.State.ReachedAt[quest]).Scan(&credited)
 		if err != nil {
 			return err
 		}
@@ -146,11 +146,11 @@ func checkQuestGate(ctx context.Context, tx *sql.Tx, s *store.Snapshot, quest st
 			return fail(409, "short")
 		}
 	}
-	if g.GetEmbers() > 0 {
-		if s.State.Embers < int(g.GetEmbers()) {
+	if g.GetGlims() > 0 {
+		if s.State.Embers < int(g.GetGlims()) {
 			return fail(409, "short")
 		}
-		if s.State.HP <= 0 && s.ProfileSource == "habitica" && s.State.XPEmbers < int(g.GetEmbers()) {
+		if s.State.HP <= 0 && s.ProfileSource == "habitica" && s.State.XPEmbers < int(g.GetGlims()) {
 			return fail(409, "needs-earned")
 		}
 	}
@@ -168,15 +168,15 @@ func spendQuestGate(ctx context.Context, tx *sql.Tx, s *store.Snapshot, quest st
 		}
 		out.Taken = append(out.Taken, &contract.ItemQty{Def: item.GetDef(), Qty: float64(item.GetQty())})
 	}
-	if g.GetEmbers() > 0 {
-		earned := max(0, int(g.GetEmbers())-(s.State.Embers-s.State.XPEmbers))
+	if g.GetGlims() > 0 {
+		earned := max(0, int(g.GetGlims())-(s.State.Embers-s.State.XPEmbers))
 		if s.State.HP <= 0 && s.ProfileSource == "habitica" {
-			earned = int(g.GetEmbers())
+			earned = int(g.GetGlims())
 		}
-		if err := store.Credit(ctx, tx, s, -int(g.GetEmbers()), -earned, "quest", ref, nil, now); err != nil {
+		if err := store.Credit(ctx, tx, s, -int(g.GetGlims()), -earned, "quest", ref, nil, now); err != nil {
 			return err
 		}
-		out.EmbersSpent = float64(g.GetEmbers())
+		out.GlimsSpent = float64(g.GetGlims())
 	}
 	return nil
 }

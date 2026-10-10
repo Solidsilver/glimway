@@ -73,7 +73,8 @@ export function profileOf(p: PlayerState): HabiticaProfile | null {
  * the rest are flags.
  */
 export function gameStateOf(p: PlayerState): GameState {
-  const { place, vitals, story, embers } = p;
+  // G-C: the game state's ember names become glims.
+  const { place, vitals, story, glims: embers } = p;
   if (!place || !vitals || !story || !embers) throw new Error('incomplete state');
   const flags: string[] = [];
   const discoveries: string[] = [];
@@ -273,6 +274,8 @@ function grown(home: HomeView, stableItem: string, max: number): HomeView['stall
  * collected or recalled, until the answer replaces it. Never below zero:
  * the server refuses a spend the purse can't cover, and the prediction
  * rolls back with it. The top-up is never predicted.
+ * G-C: the purse holds no gold now (glims, silas-yard.md 1.6); a glims
+ * spend's prediction belongs on the glims balance.
  */
 export function predictPurse(server: PlayerState | null, pending: readonly Prediction[]): PurseView {
   const view = purseOf(server);

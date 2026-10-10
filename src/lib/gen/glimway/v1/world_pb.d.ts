@@ -134,7 +134,7 @@ export declare type WorldLeaving = Message<"glimway.v1.WorldLeaving"> & {
   wardenTools: number;
 
   /**
-   * DeedCost: embers a deed costs in the next world (the first is free).
+   * DeedCost: glims a deed costs in the next world (the first is free).
    *
    * @generated from field: int32 deed_cost = 6;
    */

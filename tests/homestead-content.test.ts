@@ -13,9 +13,9 @@ test('shared homes preserve writing identities, categories and footprints', () =
     const v = HOMESTEAD_DATA.items.find(i => i.id === expected.id)!;
     assert.ok(v);
     assert.deepEqual([v.name, v.category, v.footprint], [expected.name, expected.category, expected.footprint]);
-    if (group === DECORATIONS_EMBER) assert.ok(v.embers >= 2 && v.embers <= 6);
-    else if (v.id === HOMESTEAD_DATA.lanternPosts.item) { assert.equal(v.embers, 0); assert.deepEqual(v.materials, HOMESTEAD_DATA.lanternPosts.costs[0]!.materials); }
-    else { assert.equal(v.embers, 0); assert.ok(Object.keys(v.materials).length <= 2); for (const qty of Object.values(v.materials)) assert.ok(qty >= 4 && qty <= 10); }
+    if (group === DECORATIONS_EMBER) assert.ok(v.glims >= 2 && v.glims <= 6);
+    else if (v.id === HOMESTEAD_DATA.lanternPosts.item) { assert.equal(v.glims, 0); assert.deepEqual(v.materials, HOMESTEAD_DATA.lanternPosts.costs[0]!.materials); }
+    else { assert.equal(v.glims, 0); assert.ok(Object.keys(v.materials).length <= 2); for (const qty of Object.values(v.materials)) assert.ok(qty >= 4 && qty <= 10); }
   }
   assert.equal(HOMESTEAD_DATA.items.length, 32);
   assert.deepEqual(HOMESTEAD_DATA.tiers.filter(t => t.purchasable).map(t => t.tier), [1, 2]);
@@ -25,8 +25,8 @@ test('typed homestead loader rejects malformed definitions', () => {
   const mutations = [
     (h: typeof HOMESTEAD_DATA) => { h.indoor.width = 0; },
     (h: typeof HOMESTEAD_DATA) => { h.items[1].id = h.items[0].id; },
-    (h: typeof HOMESTEAD_DATA) => { h.items[0].embers = -1; },
-    (h: typeof HOMESTEAD_DATA) => { h.items[0].embers = 0; h.items[0].materials = {}; },
+    (h: typeof HOMESTEAD_DATA) => { h.items[0].glims = -1; },
+    (h: typeof HOMESTEAD_DATA) => { h.items[0].glims = 0; h.items[0].materials = {}; },
     (h: typeof HOMESTEAD_DATA) => { h.items[8].materials = { gold: 1 }; },
     (h: typeof HOMESTEAD_DATA) => { h.items[8].materials = { stone: 0 }; },
     (h: typeof HOMESTEAD_DATA) => { h.items[0].footprint = [1, 1, 1] as unknown as [number, number]; },

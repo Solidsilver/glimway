@@ -4,10 +4,12 @@ option go_package = "glimway/server/internal/gen/glimway/v1;contract";
 import "google/protobuf/wrappers.proto";
 import "glimway/v1/op.proto";
 
-// The gold purse (docs/design/purse-and-wardrobe.md 2): a gold balance per
-// account, a ledger currency beside embers, and the top-up that fills it
-// from Habitica. Gold never goes back to Habitica and never leaves the game
-// (3.5); the only sources are a top-up and the owner settling one.
+// The top-up (docs/design/purse-and-wardrobe.md 2, changed by
+// docs/design/silas-yard.md 1.5): it turns Habitica gold into glims, two
+// gold to a glim. Habitica gold never comes back and glims never leave the
+// game (3.5); a top-up and the owner settling one are the only ways
+// Habitica gold comes in. The purse is no longer a separate balance (1.6):
+// glims are the one currency (PlayerState.glims).
 //
 // The top-up carries a Habitica token. It is used for this one request and
 // then dropped: never stored, logged, hashed or returned. The operation is
@@ -21,6 +23,7 @@ import "glimway/v1/op.proto";
 // and where it landed.
 message PurseTopUp {
   string id = 1;
+  // The Habitica gold it spends.
   int32 amount = 2;
   // working | moved | not-enough | not-moved | unconfirmed. "working" is the
   // reserved/created/scoring/checking run still in flight (2.4).
@@ -35,30 +38,37 @@ message PurseTopUp {
   bool leftover = 8;
   // A code: habitica-auth, timeout, checked, settled-by-owner.
   string note = 9;
+  // The glims it credits (amount / 2).
+  int32 glims = 10;
 }
 
-// The purse itself, on every PlayerState (2.5 carries what is left today).
+// The top-up's state, on every PlayerState (2.5 carries what is left today).
+// Its gold balance left in 0.6.1: the purse's gold became glims.
 message Purse {
-  int32 gold = 1;
+  reserved 1; reserved "gold";
   // Top-ups left today, UTC.
   int32 top_ups_left = 2;
   // The top-up still working, absent when none is.
   PurseTopUp working = 3;
+  // Glims top-ups can still bring today, UTC (the day's cap less today's
+  // moved, checking and unconfirmed top-ups; 1.5).
+  int32 glims_left = 4;
 }
 
 // POST /api/purse/top-up. The token is used for this one request and never
 // stored, logged or returned. Keyed by its own purse_topups row, never
-// through keyedOp.
+// through keyedOp. The amount is the Habitica gold to spend (two per glim).
 message PurseTopUpRequest { OpHeader op = 1; string token = 2; int32 amount = 3; }
 message PurseTopUpResult { PurseTopUp top_up = 1; }
 
-// One purse log line (2.1): every top-up with Habitica's gold before and
-// after, and every gold spend and sale.
+// One glim log line (2.1): every top-up with Habitica's gold before and
+// after, and every glim spend, sale, letter and give. Delta is in glims.
 message PurseLine {
   double at = 1;
   int32 delta = 2;
   // habitica-topup | purse-settle | market-buy | shelf-buy | shelf-sale |
-  // mail-send | mail-claim | mail-return | mail-recall | give | gift
+  // mail-send | mail-claim | mail-return | mail-recall | give | gift |
+  // currency-merge
   string reason = 3;
   string item_def = 4;
   int32 qty = 5;
@@ -66,14 +76,14 @@ message PurseLine {
   string other_name = 6;
   // A letter's id, so the line can say which one it was.
   string mail_id = 7;
-  // That letter's state: waiting | collected | came-back. A collected gold
-  // letter writes only the sender's mail:gold:gold row, so the state can't
-  // be read off the gold lines alone (design 2.7).
+  // That letter's state: waiting | collected | came-back. A collected glim
+  // letter writes only the sender's mail:glims:glims row, so the state can't
+  // be read off the log lines alone (design 2.7).
   string mail_state = 8;
   // The seller on a market-buy line (their npc name): "Bought timber ×4
   // from Silas". other_name stays the other player.
   string seller = 9;
 }
 
-// GET /api/purse: the purse, the last 50 top-ups and gold lines.
+// GET /api/purse: the purse, the last 50 top-ups and log lines.
 message PurseRead { Purse purse = 1; repeated PurseTopUp top_ups = 2; repeated PurseLine lines = 3; }

@@ -226,7 +226,7 @@ export interface Asset {
  * so every read widens the kind. A request `Asset` still can't be gold —
  * the server's `validAsset` refuses it as something to take from a pack.
  */
-export type AssetView = Omit<Asset, 'kind'> & { kind: Asset['kind'] | 'gold' };
+export type AssetView = Omit<Asset, 'kind'> & { kind: Asset['kind'] | 'glims' };
 
 /** Counts by kind; a missing key means zero. Carried decorations are the pack's (placed ones belong to the homestead). */
 export interface AssetCounts {

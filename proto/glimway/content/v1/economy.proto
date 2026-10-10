@@ -3,7 +3,7 @@ package glimway.content.v1;
 option go_package = "glimway/gen/glimway/content/v1;contentv1";
 import "buf/validate/validate.proto";
 
-// The shared economy contract (content/economy.json): ember pricing, sync
+// The shared economy contract (content/economy.json): glim pricing, sync
 // credit, invites and the Wilds' rate limits.
 message Economy {
   option (buf.validate.message).cel = {
@@ -21,10 +21,10 @@ message Economy {
     message: "lifetimeInvites covers outstandingInvites"
     expression: "this.lifetime_invites >= this.outstanding_invites"
   };
-  // XP: how much one ember buys, and what a fresh account is given.
-  int32 xp_per_ember = 1 [(buf.validate.field).int32.gte = 1];
-  int32 welcome_embers = 2 [(buf.validate.field).int32.gte = 0];
-  // Ember prices (in embers): resting at home (discounted), resting, a road
+  // XP: how much one glim takes, and what a fresh account is given.
+  int32 xp_per_glim = 1 [(buf.validate.field).int32.gte = 1];
+  int32 welcome_glims = 2 [(buf.validate.field).int32.gte = 0];
+  // Glim prices: resting at home (discounted), resting, a road
   // lantern, a chest.
   EconomyCosts costs = 3 [(buf.validate.field).required = true];
   // The village road lanterns' ids, in map order.
@@ -49,7 +49,7 @@ message Economy {
   EconomyWildsLimits wilds_limits = 15 [(buf.validate.field).required = true];
 }
 
-// Ember prices. Each is at least one; the Economy CEL above discounts
+// Glim prices. Each is at least one; the Economy CEL above discounts
 // homeRest below rest.
 message EconomyCosts {
   int32 home_rest = 1 [(buf.validate.field).int32.gte = 1];

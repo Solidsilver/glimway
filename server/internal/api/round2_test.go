@@ -142,7 +142,7 @@ func TestRound2DInviteLifetimeBudgetAndFlagRestriction(t *testing.T) {
 }
 func loginFrom(x *rig, id, remote string) int {
 	r := httptest.NewRequest("POST", "/api/session", strings.NewReader(store.JSON(map[string]any{"userId": id, "token": secret})))
-	r.Header.Set("X-Glimway-Contract", "6")
+	r.Header.Set("X-Glimway-Contract", "7")
 	r.Header.Set("Content-Type", "application/json")
 	r.RemoteAddr = remote
 	w := httptest.NewRecorder()
@@ -329,7 +329,7 @@ func TestRound2HInviteRequiresJSONBody(t *testing.T) {
 	c := x.login("owner", "")
 	x.expect("POST", "/api/invites", nil, c, 400)
 	r := httptest.NewRequest("POST", "/api/invites", strings.NewReader(`{}`))
-	r.Header.Set("X-Glimway-Contract", "6")
+	r.Header.Set("X-Glimway-Contract", "7")
 	r.AddCookie(c)
 	w := httptest.NewRecorder()
 	x.api.ServeHTTP(w, r)

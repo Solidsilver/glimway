@@ -414,7 +414,7 @@ export class Homesteads {
   }
 
   cottagePrice(): number {
-    return HOMESTEAD_DATA.tiers[1].embers
+    return HOMESTEAD_DATA.tiers[1].glims
   }
 
   /** What the deed to this gate costs you (null: not for sale). */

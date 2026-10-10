@@ -5,11 +5,11 @@ import { ECONOMY as e } from '../src/lib/economy.ts';
 import { serializeVectors } from '../scripts/backend-vectors.ts';
 
 test('shared economy has the complete typed shape and valid values', () => {
-  assert.deepEqual(Object.keys(e).filter((k) => k !== '$typeName').sort(), ['xpPerEmber', 'welcomeEmbers', 'costs', 'roadLanterns', 'chestId', 'charmItem', 'syncCreditCap', 'migrationGiftCap', 'checkpointToleranceXp', 'outstandingInvites', 'syncCreditDailyGrowth', 'syncCreditMax', 'pendingCreditDays', 'lifetimeInvites', 'wildsLimits'].sort());
-  for (const n of [e.syncCreditDailyGrowth, e.syncCreditMax, e.pendingCreditDays, e.lifetimeInvites, e.outstandingInvites, e.xpPerEmber, e.welcomeEmbers, e.syncCreditCap, e.migrationGiftCap, e.checkpointToleranceXp, ...Object.values(e.costs).filter((v) => typeof v === 'number')]) {
+  assert.deepEqual(Object.keys(e).filter((k) => k !== '$typeName').sort(), ['xpPerGlim', 'welcomeGlims', 'costs', 'roadLanterns', 'chestId', 'charmItem', 'syncCreditCap', 'migrationGiftCap', 'checkpointToleranceXp', 'outstandingInvites', 'syncCreditDailyGrowth', 'syncCreditMax', 'pendingCreditDays', 'lifetimeInvites', 'wildsLimits'].sort());
+  for (const n of [e.syncCreditDailyGrowth, e.syncCreditMax, e.pendingCreditDays, e.lifetimeInvites, e.outstandingInvites, e.xpPerGlim, e.welcomeGlims, e.syncCreditCap, e.migrationGiftCap, e.checkpointToleranceXp, ...Object.values(e.costs).filter((v) => typeof v === 'number')]) {
     assert.ok(Number.isSafeInteger(n) && n >= 0);
   }
-  assert.ok(e.xpPerEmber > 0 && e.syncCreditCap > 0);
+  assert.ok(e.xpPerGlim > 0 && e.syncCreditCap > 0);
   assert.ok(e.syncCreditMax >= e.syncCreditCap && e.lifetimeInvites >= e.outstandingInvites && e.pendingCreditDays > 0);
   assert.deepEqual(Object.keys(e.costs).filter((k) => k !== '$typeName').sort(), ['chest', 'homeRest', 'rest', 'roadLantern']);
   assert.deepEqual(e.roadLanterns, ['road-1', 'road-2', 'road-3']);

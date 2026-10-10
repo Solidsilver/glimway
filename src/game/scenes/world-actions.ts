@@ -75,7 +75,7 @@ export class WorldActions {
       (rest) => {
         // `buy:<seller>:<good>`, or `…:gold` paid from the purse (purse-and-wardrobe.md 3.1).
         const buy = parseBuy(rest)
-        if (buy) this.marketBuy(buy.seller, buy.good, buy.pay)
+        if (buy) this.marketBuy(buy.seller, buy.good)
       }
     ]
   ]
@@ -160,9 +160,9 @@ export class WorldActions {
   }
 
   /** Buying from a seller (a resident's kitchen door, or the day's market stall). */
-  private marketBuy(seller: string, good: string, pay: 'embers' | 'gold' = 'embers'): void {
+  private marketBuy(seller: string, good: string): void {
     this.withServer(
-      () => itemsFor(this.deps.session).buy(seller, good, pay),
+      () => itemsFor(this.deps.session).buy(seller, good),
       (value) => {
         // The seller's own words for what changed hands.
         const bought = value.bought

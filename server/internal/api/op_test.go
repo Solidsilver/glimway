@@ -17,7 +17,7 @@ import (
 
 func TestContractGate(t *testing.T) {
 	x := newRig(t)
-	for _, header := range []string{"", "3", "5", "7", "05", "+5", "5.0", " 5", "bad"} {
+	for _, header := range []string{"", "3", "5", "6", "8", "07", "+7", "7.0", " 7", "bad"} {
 		for _, route := range []struct{ method, path string }{{"GET", "/api/state"}, {"POST", "/api/session"}, {"POST", "/api/story/mark"}} {
 			r := httptest.NewRequest(route.method, route.path, strings.NewReader(`{"userId":"alice","token":"test"}`))
 			r.Header.Set("X-Glimway-Contract", header)
@@ -38,7 +38,7 @@ func TestContractGate(t *testing.T) {
 			t.Fatal("public route gated", path)
 		}
 	}
-	if content.ContractNumber != 6 {
+	if content.ContractNumber != 7 {
 		t.Fatal("unexpected contract number")
 	}
 }
@@ -105,7 +105,7 @@ func TestKeyedOpCurrentReplayAndAtomicRefusal(t *testing.T) {
 	before := next.Version
 	refused := run(func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		s.State.HP = 1
-		if _, err := tx.ExecContext(ctx, "UPDATE balances SET embers=999 WHERE account_id=?", s.AccountID); err != nil {
+		if _, err := tx.ExecContext(ctx, "UPDATE balances SET glims=999 WHERE account_id=?", s.AccountID); err != nil {
 			return nil, err
 		}
 		return nil, fail(409, "not-next-step")
@@ -114,7 +114,7 @@ func TestKeyedOpCurrentReplayAndAtomicRefusal(t *testing.T) {
 	if err := protojson.Unmarshal(refused.Body.Bytes(), &refusal); err != nil {
 		t.Fatal(err)
 	}
-	if refused.Code != 409 || refusal.Error.Code != "not-next-step" || refusal.State.Version != float64(before) || refusal.State.Embers.Balance == 999 {
+	if refused.Code != 409 || refusal.Error.Code != "not-next-step" || refusal.State.Version != float64(before) || refusal.State.Glims.Balance == 999 {
 		t.Fatal("refusal leaked partial writes", refused.Body.String())
 	}
 	request.Op.Key = "mixed"

@@ -447,7 +447,7 @@ export class Village {
 
   /** A gold letter (purse-and-wardrobe.md 3.3): the gold leaves the purse now and waits in the letter. */
   async sendGold(toId: string, gold: number): Promise<Result> {
-    const r = await this.link.mutate<MailActionResponse>({ kind: 'mail-send', fields: { toId, gold } }, { gold: -gold })
+    const r = await this.link.mutate<MailActionResponse>({ kind: 'mail-send', fields: { toId, glims: gold } }, { gold: -gold })
     if (!r.ok) return fail(r.code)
     this.adoptMail(r.res.result)
     return { ok: true, value: undefined }
@@ -456,7 +456,7 @@ export class Village {
   /** The gold a letter carries (0: not a gold letter), for the purse shown until the answer. */
   private goldIn(id: string): number {
     const m = this.mail.find((x) => x.id === id)
-    return m?.asset.kind === 'gold' ? m.asset.qty : 0
+    return m?.asset.kind === 'glims' ? m.asset.qty : 0
   }
 
   async claim(id: string): Promise<Result<AssetView | undefined>> {

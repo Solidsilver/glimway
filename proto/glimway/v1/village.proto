@@ -67,8 +67,8 @@ message LibraryDonateResult { LibraryEntry entry = 1; }
 message MailView {
   string id = 1; string world_id = 2; string from_id = 3; string to_id = 4;
   string from_name = 5; string to_name = 6;
-  // A gold letter carries Asset { kind: "gold", id: "gold", qty: the
-  // amount }: display only. validAsset still refuses "gold" as something
+  // A glim letter carries Asset { kind: "glims", id: "glims", qty: the
+  // amount }: display only. validAsset still refuses "glims" as something
   // to take from a pack (3.3).
   Asset asset = 7;
   double sent_at = 8;
@@ -82,10 +82,14 @@ message MailReadResult {
   google.protobuf.StringValue next_pending_cursor = 3;
   AssetCounts inventory = 4;
 }
-// POST /api/mail (send). A gold letter: `gold` set, `asset` absent — a
+// POST /api/mail (send). A glim letter: `glims` set, `asset` absent — a
 // letter carries one thing (3.3, question 11). Both, or neither, is
 // invalid-request.
-message MailSendRequest { OpHeader op = 1; Where where = 2; string to_id = 3; Asset asset = 4; int32 gold = 5; }
+message MailSendRequest {
+  OpHeader op = 1; Where where = 2; string to_id = 3; Asset asset = 4;
+  reserved 5; reserved "gold";
+  int32 glims = 6;
+}
 message MailSendResult {
   string mail_id = 1;
   repeated MailView mail = 2;
@@ -97,8 +101,8 @@ message MailSendResult {
 message MailKeyedRequest { OpHeader op = 1; Where where = 2; }
 message MailActionResult {
   string mail_id = 1;
-  // A gold letter's asset is Asset { kind: "gold", id: "gold", qty: the
-  // amount }, display only (3.3); validAsset still refuses "gold" as
+  // A glim letter's asset is Asset { kind: "glims", id: "glims", qty: the
+  // amount }, display only (3.3); validAsset still refuses "glims" as
   // something to take from a pack.
   Asset asset = 2;
   repeated MailView mail = 3;
@@ -110,8 +114,8 @@ message MailActionResult {
 // by message type name, so two cases may not share one.
 message MailRecallResult {
   string mail_id = 1;
-  // A gold letter's asset is Asset { kind: "gold", id: "gold", qty: the
-  // amount }, display only (3.3); validAsset still refuses "gold" as
+  // A glim letter's asset is Asset { kind: "glims", id: "glims", qty: the
+  // amount }, display only (3.3); validAsset still refuses "glims" as
   // something to take from a pack.
   Asset asset = 2;
   repeated MailView mail = 3;
@@ -131,7 +135,7 @@ message GateView {
   int32 tier = 5;
   bool desolate = 6;
   bool mine = 7;
-  // Unclaimed: what the deed costs the caller in embers.
+  // Unclaimed: what the deed costs the caller in glims.
   google.protobuf.Int32Value price = 8;
   // The caller was on this empty home's deed and can take it back, free,
   // until the deed is lost.

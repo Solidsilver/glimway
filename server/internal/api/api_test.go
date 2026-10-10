@@ -114,7 +114,7 @@ func TestTokenCookieAndBackup(t *testing.T) {
 	for _, db := range []*store.Store{x.db, restore} {
 		var sum, earned int
 		var rev int64
-		if err = db.DB.QueryRow("SELECT COALESCE(SUM(delta),0),COALESCE(SUM(earned_delta),0) FROM ledger WHERE account_id='"+x.account("alice")+"' AND currency='embers'").Scan(&sum, &earned); err != nil {
+		if err = db.DB.QueryRow("SELECT COALESCE(SUM(delta),0),COALESCE(SUM(earned_delta),0) FROM ledger WHERE account_id='"+x.account("alice")+"' AND currency='glims'").Scan(&sum, &earned); err != nil {
 			t.Fatal(err)
 		}
 		if err = db.DB.QueryRow("SELECT version FROM players WHERE account_id='" + x.account("alice") + "'").Scan(&rev); err != nil {
@@ -123,17 +123,17 @@ func TestTokenCookieAndBackup(t *testing.T) {
 		if sum != s.State.Embers || earned != s.State.XPEmbers || rev != s.Version {
 			t.Fatal("ledger or rev differs on restore")
 		}
-		// The purse came through the backup the same way (3.5: the gold rows
-		// sum to the balance).
-		var gold, goldSum int
-		if err = db.DB.QueryRow("SELECT gold FROM balances WHERE account_id='" + x.account("alice") + "'").Scan(&gold); err != nil {
+		// The top-up came through the backup the same way (3.5: the glims
+		// rows sum to the balance).
+		var balance, rowSum, topUps int
+		if err = db.DB.QueryRow("SELECT glims FROM balances WHERE account_id='" + x.account("alice") + "'").Scan(&balance); err != nil {
 			t.Fatal(err)
 		}
-		if err = db.DB.QueryRow("SELECT COALESCE(SUM(delta),0) FROM ledger WHERE account_id='" + x.account("alice") + "' AND currency='gold'").Scan(&goldSum); err != nil {
+		if err = db.DB.QueryRow("SELECT COALESCE(SUM(delta),0),COALESCE(SUM(CASE WHEN reason='habitica-topup' THEN delta END),0) FROM ledger WHERE account_id='"+x.account("alice")+"' AND currency='glims'").Scan(&rowSum, &topUps); err != nil {
 			t.Fatal(err)
 		}
-		if gold != 200 || goldSum != gold {
-			t.Fatal("gold differs on restore", gold, goldSum)
+		if topUps != 200 || rowSum != balance {
+			t.Fatal("glims differ on restore", balance, rowSum, topUps)
 		}
 	}
 	// One sign-in proof, four calls for the moving top-up (the gold read,
@@ -337,7 +337,7 @@ func TestHTTPValidationAndScrubbedLogging(t *testing.T) {
 	}
 	for _, raw := range []string{`{`, strings.Repeat("x", 200001), `{} {}`} {
 		r := httptest.NewRequest("POST", "/api/session", strings.NewReader(raw))
-		r.Header.Set("X-Glimway-Contract", "6")
+		r.Header.Set("X-Glimway-Contract", "7")
 		r.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		x.api.ServeHTTP(w, r)
@@ -346,7 +346,7 @@ func TestHTTPValidationAndScrubbedLogging(t *testing.T) {
 		}
 	}
 	r := httptest.NewRequest("POST", "/api/play", strings.NewReader(`{"clientId":"tab"}`))
-	r.Header.Set("X-Glimway-Contract", "6")
+	r.Header.Set("X-Glimway-Contract", "7")
 	r.Header.Set("Content-Type", "application/json")
 	r.Header.Set("Origin", "https://evil.example")
 	r.AddCookie(c)
@@ -411,7 +411,7 @@ func TestLeaseReadHeartbeatAndSevenDayIdempotencyExpiry(t *testing.T) {
 	c, s := x.ready("alice")
 	x.now.Add(110)
 	r := httptest.NewRequest("GET", "/api/state", nil)
-	r.Header.Set("X-Glimway-Contract", "6")
+	r.Header.Set("X-Glimway-Contract", "7")
 	r.AddCookie(c)
 	r.Header.Set("X-Play-Lease", s.Lease)
 	w := httptest.NewRecorder()

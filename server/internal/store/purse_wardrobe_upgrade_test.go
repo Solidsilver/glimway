@@ -13,7 +13,9 @@ import (
 // only: the purse's gold column and tables, the wardrobe and the owned-gear
 // list, shelf prices, and the mail rebuild that lets a letter carry gold.
 // Both tests seed a database the way 0.5 wrote it, then open through
-// production's upgrade path.
+// production's upgrade path — which goes on through 033 (glims), so what
+// they check of gold is read as 033 left it: the gold kind and column are
+// glims now (033's own test, glims_upgrade_test.go, checks the conversion).
 
 // queryStrings reads one column of rows, in order.
 func queryStrings(t *testing.T, db *sql.DB, query string) []string {
@@ -192,6 +194,8 @@ INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers
 	wantSQL = subOne(t, wantSQL,
 		`CHECK(from_id!=to_id)`,
 		"CHECK(from_id!=to_id),\n CHECK(kind <> 'gold' OR (item_def = 'gold' AND instance_ids = '[]' AND makers = '[]'))")
+	// 033 rebuilt the table again with 'glims' where 032 wrote 'gold'.
+	wantSQL = strings.ReplaceAll(wantSQL, "'gold'", "'glims'")
 	if wantSQL != tableSQL(t, upgraded.DB, "mail") {
 		t.Fatalf("the rebuilt mail table is not the 031 one plus the gold rules:\n got %s\nwant %s", tableSQL(t, upgraded.DB, "mail"), wantSQL)
 	}
@@ -210,7 +214,7 @@ INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers
 	// The rebuilt table is the one 0.6 writes to: a gold letter is allowed
 	// (kind 'gold', item_def 'gold', qty the amount, instance_ids and makers
 	// '[]'), and still needs a positive qty.
-	gold := `INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES('m-gold','w','owner-subject','friend-subject','gold','gold',%d,'%s','%s',109)`
+	gold := `INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES('m-gold','w','owner-subject','friend-subject','glims','glims',%d,'%s','%s',109)`
 	if _, err := upgraded.DB.Exec(fmt.Sprintf(gold, 20, "[]", "[]")); err != nil {
 		t.Fatal("gold letter refused", err)
 	}
@@ -224,9 +228,11 @@ INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers
 		`INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES('x','w','owner-subject','friend-subject','thanks','bench-axe',1,'[]','[]',1)`,
 		`INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at,claimed_at,returned_at) VALUES('x','w','owner-subject','friend-subject','material','timber',1,'[]','[]',1,2,3)`,
 		`INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at,returned_at,return_reason) VALUES('x','w','owner-subject','friend-subject','material','timber',1,'[]','[]',1,2,'pawned')`,
-		`INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES('x','w','owner-subject','friend-subject','gold','tallow',5,'[]','[]',1)`,
-		`INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES('x','w','owner-subject','friend-subject','gold','gold',5,'["inst-4"]','[]',1)`,
-		`INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES('x','w','owner-subject','friend-subject','gold','gold',5,'[]','[{"maker":"","qty":5}]',1)`,
+		`INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES('x','w','owner-subject','friend-subject','glims','tallow',5,'[]','[]',1)`,
+		`INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES('x','w','owner-subject','friend-subject','glims','glims',5,'["inst-4"]','[]',1)`,
+		`INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES('x','w','owner-subject','friend-subject','glims','glims',5,'[]','[{"maker":"","qty":5}]',1)`,
+		// 032's gold kind is gone.
+		`INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES('x','w','owner-subject','friend-subject','gold','gold',5,'[]','[]',1)`,
 	} {
 		if _, err := upgraded.DB.Exec(insert); err == nil {
 			t.Fatal("a broken letter was accepted:", insert)
@@ -293,15 +299,19 @@ INSERT INTO ledger(account_id,currency,delta,earned_delta,reason,ref,created_at)
 		}
 	}()
 
-	// The purse is 0, the wardrobe is Habitica's look, no gear has been
-	// checked, no top-up has run, and the shelf slot is still a free gift.
-	mustQuery(t, upgraded.DB, "SELECT count(*) FROM balances WHERE account_id='owner-subject' AND gold=0", 1)
+	// The purse was 0 (033 turned nothing in: the glims are the embers),
+	// the wardrobe is Habitica's look, no gear has been checked, no top-up
+	// has run, and the shelf slot is still a free gift.
+	mustQuery(t, upgraded.DB, "SELECT count(*) FROM balances WHERE account_id='owner-subject' AND glims=9 AND xp_glims=3", 1)
 	mustQuery(t, upgraded.DB, "SELECT count(*) FROM player_wardrobe WHERE account_id='owner-subject'", 0)
 	mustQuery(t, upgraded.DB, "SELECT count(*) FROM player_gear WHERE account_id='owner-subject'", 0)
 	mustQuery(t, upgraded.DB, "SELECT count(*) FROM purse_topups WHERE account_id='owner-subject'", 0)
 	mustQuery(t, upgraded.DB, "SELECT count(*) FROM gate_shelf_slots WHERE homestead_id='home' AND slot=0 AND price=0", 1)
 
-	// The ledger sums are unchanged: schema only, no backfill.
+	// The ledger sums are unchanged: schema only, no backfill (033 renamed
+	// the 'embers' currency to 'glims' and, with no gold, wrote no merge row).
+	sumsBefore["glims"] = sumsBefore["embers"]
+	delete(sumsBefore, "embers")
 	sumsAfter := queryPairs(t, upgraded.DB, "SELECT currency, COALESCE(SUM(delta),0) FROM ledger GROUP BY currency")
 	if len(sumsAfter) != len(sumsBefore) {
 		t.Fatal("ledger rows appeared", sumsAfter)
@@ -345,7 +355,7 @@ INSERT INTO ledger(account_id,currency,delta,earned_delta,reason,ref,created_at)
 		`INSERT INTO purse_topups(id,account_id,op_key,amount,state,created_at,settled_at,settled_by) VALUES('top9','owner-subject','k9',5,'moved',10,20,NULL)`,
 		`INSERT INTO purse_topups(id,account_id,op_key,amount,state,created_at,settled_at,settled_by) VALUES('top10','owner-subject','k10',5,'moved',10,20,'a-friend')`,
 		// the purse stays non-negative, the owned list stays JSON.
-		`UPDATE balances SET gold=-1 WHERE account_id='owner-subject'`,
+		`UPDATE balances SET glims=-1 WHERE account_id='owner-subject'`,
 		`UPDATE player_gear SET owned_json='not json' WHERE account_id='owner-subject'`,
 	} {
 		if _, err := upgraded.DB.Exec(insert); err == nil {

@@ -551,8 +551,8 @@ export declare type ItemRepair = Message<"glimway.content.v1.ItemRepair"> & {
 
   /**
    * The mender's bill may be absent — or present and empty; the two mean
-   * the same (no materials, embers pay). Its ranges still hold when entries
-   * are there. "Neither mender materials nor embers" is a code rule
+   * the same (no materials, glims pay). Its ranges still hold when entries
+   * are there. "Neither mender materials nor glims" is a code rule
    * (item_def ... repair cost), identical in both loaders.
    *
    * @generated from field: map<string, int32> mender = 2;
@@ -560,9 +560,9 @@ export declare type ItemRepair = Message<"glimway.content.v1.ItemRepair"> & {
   mender: { [key: string]: number };
 
   /**
-   * @generated from field: optional int32 mender_embers = 3;
+   * @generated from field: optional int32 mender_glims = 3;
    */
-  menderEmbers?: number | undefined;
+  menderGlims?: number | undefined;
 };
 
 export declare type ItemRepairValid = ItemRepair;
@@ -821,9 +821,8 @@ export declare type ItemPickupValid = Message<"glimway.content.v1.ItemPickup"> &
 export declare const ItemPickupSchema: GenMessage<ItemPickup, {validType: ItemPickupValid}>;
 
 /**
- * One thing a seller sells (for embers, for gold, or for both), and what
- * it says. A good is priced in embers, in gold, or in both — the two rules
- * at the top are that, and that a gold price carries its label.
+ * One thing a seller sells, for one price in glims (0.6.1: the gold price
+ * and its label went; docs/design/silas-yard.md 1.7), and what it says.
  *
  * @generated from message glimway.content.v1.ItemGood
  */
@@ -841,22 +840,21 @@ export declare type ItemGood = Message<"glimway.content.v1.ItemGood"> & {
   qty: number;
 
   /**
-   * Embers: 0..1000 (0 = not for embers; it was 1..1000 before gold).
+   * Its price in glims: 1..1000.
    *
-   * @generated from field: int32 embers = 3;
+   * @generated from field: int32 glims = 3;
    */
-  embers: number;
+  glims: number;
 
   /**
-   * The most one player can buy of it a day (0: no cap). Caps count both
-   * currencies together.
+   * The most one player can buy of it a day (0: no cap).
    *
    * @generated from field: optional int32 cap = 4;
    */
   cap?: number | undefined;
 
   /**
-   * The ember choice's label ("Buy a lump of tallow · 1 ember").
+   * The choice's label ("Buy a lump of tallow · 1 glim").
    *
    * @generated from field: string label = 5;
    */
@@ -866,18 +864,6 @@ export declare type ItemGood = Message<"glimway.content.v1.ItemGood"> & {
    * @generated from field: string line = 6;
    */
   line: string;
-
-  /**
-   * A price in gold (0.6, 3.1): 1..100,000. Its choice's label follows.
-   *
-   * @generated from field: optional int32 gold = 7;
-   */
-  gold?: number | undefined;
-
-  /**
-   * @generated from field: optional string gold_label = 8;
-   */
-  goldLabel?: string | undefined;
 };
 
 export declare type ItemGoodValid = ItemGood;

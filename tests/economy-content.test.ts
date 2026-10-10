@@ -18,7 +18,7 @@ for (const v of vectors.loader) test(`shared economy loader: ${v.name}`, () => {
 });
 
 test('the shipped economy contract holds', () => {
-  assert.equal(ECONOMY.xpPerEmber, 10);
+  assert.equal(ECONOMY.xpPerGlim, 10);
   assert.deepEqual([...ECONOMY.roadLanterns], ['road-1', 'road-2', 'road-3']);
   assert.ok(ECONOMY.costs.homeRest < ECONOMY.costs.rest);
   assert.equal(ECONOMY.wildsLimits.lanternReward.material, 'amber');

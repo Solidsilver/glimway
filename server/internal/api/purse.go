@@ -40,6 +40,11 @@ func (p purseComposition) PlayerState(ctx context.Context, tx *sql.Tx, s store.S
 	}
 	if version != 0 {
 		s.Version = version
+		// A settle credits the column (store.CreditGold); this copy of the
+		// snapshot is only drawn, never persisted, so it takes the balance.
+		if err = store.RefreshGlims(ctx, tx, &s); err != nil {
+			return nil, err
+		}
 	}
 	state, err := p.StateComposition.PlayerState(ctx, tx, s)
 	if err != nil {
@@ -137,6 +142,9 @@ func (a *Server) purseTopUp(w http.ResponseWriter, r *http.Request) error {
 	}
 	if version != 0 {
 		s.Version = version
+		if err = store.RefreshGlims(ctx, tx, &s); err != nil {
+			return err
+		}
 	}
 	working, err := store.WorkingTopUp(ctx, tx, s.AccountID)
 	if err != nil {
@@ -707,6 +715,9 @@ func (a *Server) purseRead(w http.ResponseWriter, r *http.Request) error {
 	}
 	if version != 0 {
 		s.Version = version
+		if err = store.RefreshGlims(r.Context(), tx, &s); err != nil {
+			return err
+		}
 	}
 	read, err := store.PurseRead(r.Context(), tx, s.AccountID, now, utcDayStart(now))
 	if err != nil {

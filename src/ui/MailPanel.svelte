@@ -95,7 +95,7 @@
 
   /** Materials, trinkets and crafted goods have delivered icons (src/ui/ArtIcon.svelte); a gold letter has its own. */
   function icon(a: Pick<AssetView, 'kind' | 'id'>): string | null {
-    if (a.kind === 'gold') return 'purse-gold-letter'
+    if (a.kind === 'glims') return 'purse-gold-letter'
     return a.kind === 'decoration' ? null : `icon-${a.id}`
   }
 </script>

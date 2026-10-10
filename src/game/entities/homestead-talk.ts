@@ -43,7 +43,7 @@ import { POST, SILAS_ID, short } from './homestead-art'
 
 /** "30 embers, 20 timber, 10 stone, 8 fiber" */
 function workshopPrice(): string {
-  return `${WORKSHOP_TIER.embers} embers, ${costPhrase(WORKSHOP_TIER.materials ?? {})}`
+  return `${WORKSHOP_TIER.glims} embers, ${costPhrase(WORKSHOP_TIER.materials ?? {})}`
 }
 
 export class HomesteadTalk {
@@ -504,7 +504,7 @@ export class HomesteadTalk {
       if (invite) choices.push({ text: `Sign ${short(invite.from.name, 14)}’s deed`, note: `${lotName(invite.gate)} · together, at the table`, action: `home:sign:${invite.homeId}` })
       for (const g of this.home.homes.reclaimable().slice(0, 2)) choices.push({ text: `Take back ${lotName(g.gate)}`, note: 'Your old deed, as it stands · free', action: `home:claim:${g.gate}` })
       for (const g of this.home.homes.unclaimed().slice(0, 4)) {
-        const price = g.price ?? HOMESTEAD_DATA.deeds.embers
+        const price = g.price ?? HOMESTEAD_DATA.deeds.glims
         const short = price > s.state.embers
         choices.push(short ? { text: `The deed to ${lotName(g.gate)}`, note: `Needs ${price} embers`, disabled: true } : { text: `The deed to ${lotName(g.gate)}`, note: price === 0 ? 'First deed: on the Compact' : `${price} embers`, action: `home:claim:${g.gate}` })
       }
@@ -646,7 +646,7 @@ export class HomesteadTalk {
             ? ['There. Deep eaves, a heavy bench, and a chest that won’t drink the damp. Clean your tools. Rust is just iron forgetting it is a saw.']
             : [...SILAS.dialogue.afterUpgrade.lines.map((l) => l.replace('Go on in.', 'It’s up on your land, past your gate. Go on in.'))]
         })
-      } else if (r.code === 'insufficient-embers') {
+      } else if (r.code === 'insufficient-glims') {
         this.say({ speaker: SILAS.name, lines: SILAS.dialogue.notEnoughEmbers.lines })
       } else {
         bus.emit(EV.toast, { text: r.text, kind: 'error' })
@@ -670,7 +670,7 @@ export class HomesteadTalk {
     const r = await this.home.homes.claim(gate)
     if (!this.scene.sys.isActive()) return
     if (!r.ok) {
-      this.say({ speaker: SILAS.name, lines: [r.code === 'insufficient-embers' ? SILAS.dialogue.notEnoughEmbers.lines[0] : r.text] })
+      this.say({ speaker: SILAS.name, lines: [r.code === 'insufficient-glims' ? SILAS.dialogue.notEnoughEmbers.lines[0] : r.text] })
       return
     }
     sfx('quest')

@@ -552,7 +552,7 @@
       <span class="chooser" data-testid="mend-at">
         <button type="button" class="act" data-mend="bench" disabled={action.busy !== null} onclick={() => mendIt(e, 'bench', '')}>{inventoryCopy.mendAt(inventoryCopy.mendBench, costLine(d?.repair?.bench))}</button>
         {#if mender}
-          <button type="button" class="act" data-mend={mender.npc} disabled={action.busy !== null} onclick={() => mendIt(e, mender.npc, mender.name)}>{inventoryCopy.mendAt(mender.name, costLine(d?.repair?.mender) + (d?.repair?.menderEmbers ? `, ${d.repair.menderEmbers} embers` : ''))}</button>
+          <button type="button" class="act" data-mend={mender.npc} disabled={action.busy !== null} onclick={() => mendIt(e, mender.npc, mender.name)}>{inventoryCopy.mendAt(mender.name, costLine(d?.repair?.mender) + (d?.repair?.menderGlims ? `, ${d.repair.menderGlims} embers` : ''))}</button>
         {/if}
       </span>
     {:else if open === `fit:${e.key}` && e.instance && model}
