@@ -250,12 +250,8 @@ Codex, in the 0.6 art request's style.
 | **G-E. Art** | 1.9 | `assets/generated/…` | S | Codex |
 
 Order: G-A, then G-B and G-C together (G-C against the generated types), G-D with G-C, G-E any
-time. The full e2e runs once at the merge, and it ships as 0.6.1.
-
-Because 0.6.0 shipped with embers and the gold purse, migration 033 converts balances that exist:
-embers become glims one for one, and purse gold at the top-up rate, two to a glim, rounded up in
-the player's favour. The ledger keeps its old rows as they were. (The orchestrator's default,
-2026-10-10; the owner can change it.)
+time. The full e2e runs once at the merge, and it ships as 0.6.1 (0.6.0 shipped with embers
+and the gold purse; migration 033, 1.7, converts what's there).
 
 ---
 
