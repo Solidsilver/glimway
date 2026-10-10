@@ -412,3 +412,46 @@ Today the game promises it never writes. These go in the same change:
 4. Submit Glimway on Habitica's app-submission form and tell staff about
    the write before it ships? I'd do it, since the tool will start changing
    gold.
+
+## Live check (before the purse reaches a real account)
+
+Design 10.3. Agents never hold a real Habitica token, so the first top-up against habitica.com is
+the owner's, on a **throwaway Habitica account** and a local server — never your own account, and
+never the server others play on. About ten minutes:
+
+1. **Make a throwaway Habitica account.** Note its User ID and API Token (Habitica → Settings →
+   API). Give it a little gold (the daily drop, or one quest).
+2. **Run a local server against habitica.com:**
+
+   ```
+   go run ./server/cmd/glimway-server -listen 127.0.0.1:8090 -db .data/live-check.sqlite -cookie-secure=false
+   ./server/.../glimway-server invite        # an invite code, from the same build
+   ```
+
+   Open `http://127.0.0.1:8090`, sign in with the throwaway account's ID and token and the invite
+   code. The token goes to the server for that one sign-in and is dropped.
+3. **One top-up that moves.** Menu → your Habitica hero → **Top up from Habitica**, a small amount
+   (5 gold is enough). It should answer *"5 gold moved into your purse. Habitica: N → N−5."*,
+   Habitica's own gold should have gone down by exactly 5, and the purse log should show the
+   top-up with Habitica's gold before and after.
+4. **One top-up for more than the balance.** Type more gold than the account has. It should
+   answer *"Habitica says there isn't that much gold there now. Nothing moved."* — and the card
+   should still show two top-ups left today (a top-up that moved nothing never uses up the day).
+5. **Look at the account's Rewards column on habitica.com.** No reward named *Glimway purse* is
+   left behind. If one is (the run was interrupted), press **Top up** once more and it is removed
+   first thing — or remove it by hand. **Do not buy it.**
+6. **Check for new gear.** Character → Wardrobe → **Check for new gear** should list what that
+   account owns on Habitica: the `*_base_0` starters at least, and anything it earned. Nothing
+   else in Glimway changes; Habitica's own outfit is untouched (the wardrobe never writes).
+7. **Look for the token afterwards.** Stop the server and check nothing kept it:
+
+   ```
+   strings .data/live-check.sqlite* | grep -c <the token>    # 0
+   grep -c <the token> .data/live-check.log                  # 0, if a log was kept
+   ```
+
+8. **Delete the throwaway account** (Habitica → Settings → delete) and the
+   `.data/live-check.sqlite` files.
+
+If anything here differs from what the screen says, write down what Habitica actually answered —
+the exact `data.gp` and the reward's shape — and tell the orchestrator before the release.

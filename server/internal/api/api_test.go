@@ -28,6 +28,39 @@ func TestTokenCookieAndBackup(t *testing.T) {
 	s = x.expect("POST", "/api/play", map[string]any{"clientId": "tab-a"}, c, 200)
 	x.expect("POST", "/api/profile", x.profileBody(s, p, away), c, 409)
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
+	// 0.6's two token-carrying requests (design 2.2, 4.3): the top-up and
+	// the wardrobe's gear check use the same token the sign-in used, once,
+	// and drop it. Neither is on keyedOp, so the idempotency cache — which
+	// stores and serves whole payloads — never sees either request.
+	x.setGold(1240)
+	x.setOwned(map[string]bool{"weapon_warrior_1": true})
+	topUp := x.rawHTTP("POST", "/api/purse/top-up", map[string]any{"op": map[string]any{"lease": s.Lease, "key": "token-test"}, "token": secret, "amount": 200}, c)
+	if topUp.Code != 200 {
+		t.Fatal("top-up", topUp.Code, topUp.Body.String())
+	}
+	check := x.rawHTTP("POST", "/api/wardrobe/check", map[string]any{"lease": s.Lease, "token": secret}, c)
+	if check.Code != 200 {
+		t.Fatal("gear check", check.Code, check.Body.String())
+	}
+	for _, answer := range []*httptest.ResponseRecorder{topUp, check} {
+		if bytes.Contains(answer.Body.Bytes(), []byte(secret)) {
+			t.Fatal("token in an answer:", answer.Body.String())
+		}
+	}
+	// The top-up keeps its own key in its own table (2.2 step 0): the
+	// idempotency cache holds no row, no payload and no hash of either.
+	if count(t, x.db, "SELECT count(*) FROM idempotency WHERE op LIKE '/api/purse%' OR op LIKE '/api/wardrobe%'") != 0 {
+		t.Fatal("a token-carrying request entered the idempotency cache")
+	}
+	if count(t, x.db, "SELECT count(*) FROM idempotency WHERE payload_json LIKE ?", "%"+secret+"%") != 0 {
+		t.Fatal("token in payload_json")
+	}
+	result := x.rawHTTP("GET", "/api/operations/result?route=/api/purse/top-up&key=token-test", nil, c)
+	if bytes.Contains(result.Body.Bytes(), []byte(secret)) {
+		t.Fatal("token in /api/operations/result:", result.Body.String())
+	}
+	// The state moved with the purse, so the backup below sees one answer.
+	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	backup := filepath.Join(x.dir, "backup.sqlite")
 	if err := x.db.Backup(context.Background(), backup); err != nil {
 		t.Fatal(err)
@@ -75,9 +108,23 @@ func TestTokenCookieAndBackup(t *testing.T) {
 		if sum != s.State.Embers || earned != s.State.XPEmbers || rev != s.Version {
 			t.Fatal("ledger or rev differs on restore")
 		}
+		// The purse came through the backup the same way (3.5: the gold rows
+		// sum to the balance).
+		var gold, goldSum int
+		if err = db.DB.QueryRow("SELECT gold FROM balances WHERE account_id='" + x.account("alice") + "'").Scan(&gold); err != nil {
+			t.Fatal(err)
+		}
+		if err = db.DB.QueryRow("SELECT COALESCE(SUM(delta),0) FROM ledger WHERE account_id='" + x.account("alice") + "' AND currency='gold'").Scan(&goldSum); err != nil {
+			t.Fatal(err)
+		}
+		if gold != 200 || goldSum != gold {
+			t.Fatal("gold differs on restore", gold, goldSum)
+		}
 	}
-	if x.calls.Load() != 1 {
-		t.Fatal("server called Habitica outside login")
+	// One sign-in proof, four top-up calls (the gold read, the create, the
+	// one score and the delete) and one gear-check read — and nothing else.
+	if x.calls.Load() != 6 {
+		t.Fatal("server called Habitica outside the three token requests:", x.calls.Load())
 	}
 }
 func TestInviteRaceAndWorld(t *testing.T) {

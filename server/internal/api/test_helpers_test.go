@@ -55,6 +55,31 @@ type rig struct {
 	dir      string
 	// pulses is the hub's ward-pulse timer, fired by hand (review finding 12).
 	pulses *wardPulseQueue
+
+	// The fake Habitica's purse side (design 2.2, 4.3): the hero's gold and
+	// owned gear, the rewards a top-up created, and how the score answers.
+	// The switches are the same ones the e2e fake offers (e2e/server/
+	// fake-habitica.ts): 'ok', 'not-enough-gold', 'error' (an unknown
+	// outcome, nothing charged), 'timeout-moved' (the gold goes and the
+	// answer never comes) and 'hang' (the score blocks).
+	habiticaGold   int
+	habiticaOwned  map[string]bool
+	habiticaScore  string
+	habiticaCreate string
+	habiticaDelete string
+	habiticaDown   bool
+	// habiticaDownAfter: "Habitica is down" from the n-th call on (0: never),
+	// for the checks that all fail.
+	habiticaDownAfter int
+	// habiticaHang is how long a 'hang' score blocks.
+	habiticaHang time.Duration
+	rewards      map[string]int
+	scores       int
+	creates      int
+	deletes      map[string]int
+	// callLog is the order of the fake's calls: 'user', 'create', 'score',
+	// 'delete:<alias>' — "leftovers deleted first" is read off it.
+	callLog []string
 }
 
 type response struct {
@@ -104,7 +129,7 @@ func fixtureDatabase(t *testing.T, path string) (*store.Store, error) {
 
 func newRig(t *testing.T) *rig {
 	t.Helper()
-	x := &rig{t: t, accounts: map[string]string{}, profiles: map[string]rules.Profile{}, dir: t.TempDir()}
+	x := &rig{t: t, accounts: map[string]string{}, profiles: map[string]rules.Profile{}, dir: t.TempDir(), habiticaGold: 1000, habiticaOwned: map[string]bool{}, rewards: map[string]int{}, deletes: map[string]int{}}
 	x.now.Store(rigStart)
 	var err error
 	x.db, err = fixtureDatabase(t, filepath.Join(x.dir, "game.sqlite"))
@@ -113,9 +138,94 @@ func newRig(t *testing.T) *rig {
 	}
 	x.upstream = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		x.calls.Add(1)
-		if r.Method != "GET" || r.URL.Path != "/api/v3/user" || r.Header.Get("X-Client") != "test-creator-glimway" {
+		if r.Header.Get("X-Client") != "test-creator-glimway" {
 			t.Error("invalid upstream request")
 		}
+		x.serveHabitica(w, r)
+	}))
+	x.api = New(x.db, habitica.New(x.upstream.URL, "test-creator-glimway"), Config{SecureCookie: true, Logger: log.New(&x.logs, "", 0), Now: func() time.Time { return time.Unix(x.now.Load(), 0) }})
+	t.Cleanup(func() { x.upstream.Close(); x.db.Close() })
+	return x
+}
+
+func (x *rig) set(p rules.Profile) { x.mu.Lock(); defer x.mu.Unlock(); x.profiles[p.ID] = p }
+
+// The fake Habitica's purse side. The switches mirror
+// e2e/server/fake-habitica.ts, which lane D's e2e drives.
+
+func (x *rig) setGold(n int) { x.mu.Lock(); defer x.mu.Unlock(); x.habiticaGold = n }
+
+func (x *rig) setOwned(owned map[string]bool) {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	x.habiticaOwned = owned
+}
+
+func (x *rig) setScore(mode string) { x.mu.Lock(); defer x.mu.Unlock(); x.habiticaScore = mode }
+
+func (x *rig) setCreate(mode string) { x.mu.Lock(); defer x.mu.Unlock(); x.habiticaCreate = mode }
+
+func (x *rig) setDelete(mode string) { x.mu.Lock(); defer x.mu.Unlock(); x.habiticaDelete = mode }
+
+func (x *rig) setDown(down bool) { x.mu.Lock(); defer x.mu.Unlock(); x.habiticaDown = down }
+
+func (x *rig) setDownAfter(n int) { x.mu.Lock(); defer x.mu.Unlock(); x.habiticaDownAfter = n }
+
+func (x *rig) setHang(d time.Duration) { x.mu.Lock(); defer x.mu.Unlock(); x.habiticaHang = d }
+
+// calls lists the fake's calls in order.
+func (x *rig) habiticaCalls() []string {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	return append([]string(nil), x.callLog...)
+}
+
+// rewardLeft says whether a top-up's reward is still in the hero's Habitica
+// Rewards.
+func (x *rig) rewardLeft(alias string) bool {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	_, ok := x.rewards[alias]
+	return ok
+}
+
+func (x *rig) scoreCalls() int { x.mu.Lock(); defer x.mu.Unlock(); return x.scores }
+
+func (x *rig) serveHabitica(w http.ResponseWriter, r *http.Request) {
+	send := func(status int, body any) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(status)
+		_ = json.NewEncoder(w).Encode(body)
+	}
+	x.mu.Lock()
+	down, gold, score := x.habiticaDown, x.habiticaGold, x.habiticaScore
+	create, del := x.habiticaCreate, x.habiticaDelete
+	hang := x.habiticaHang
+	if x.habiticaDownAfter > 0 {
+		x.habiticaDownAfter--
+		if x.habiticaDownAfter == 0 {
+			x.habiticaDown = true
+			down = true
+		}
+	}
+	owned := map[string]bool{}
+	for k, v := range x.habiticaOwned {
+		owned[k] = v
+	}
+	x.mu.Unlock()
+	if r.Header.Get("X-Api-Key") != secret {
+		// A wrong token reads no account, as Habitica would (4.3: a refused
+		// token counts as a failed proof).
+		send(401, map[string]any{"success": false, "error": "NotAuthorized"})
+		return
+	}
+	if down {
+		send(503, map[string]any{"success": false, "error": "ServiceUnavailable"})
+		return
+	}
+	switch {
+	case r.Method == "GET" && r.URL.Path == "/api/v3/user":
+		x.logCall("user")
 		id := r.Header.Get("X-Api-User")
 		x.mu.Lock()
 		p, ok := x.profiles[id]
@@ -123,14 +233,14 @@ func newRig(t *testing.T) *rig {
 		if !ok {
 			p = profile(id, 1, 0, 20)
 		}
-		w.Header().Set("Content-Type", "application/json")
 		class := ""
 		if p.Class != nil {
 			class = *p.Class
 		}
 		// The owned lists travel the same way Habitica's do (crafts.md 2.2):
-		// pets as feed counts, mounts as true.
-		items := map[string]any{"gear": map[string]any{"equipped": map[string]any{"apiToken": secret}}}
+		// pets as feed counts, mounts as true. The purse's own reads ask for
+		// stats.gp and items.gear.owned (2.2 step b, 4.3).
+		items := map[string]any{"gear": map[string]any{"equipped": map[string]any{"apiToken": secret}, "owned": owned}}
 		pets, mounts := map[string]any{}, map[string]any{}
 		for _, key := range p.Pets {
 			pets[key] = 1
@@ -145,14 +255,96 @@ func newRig(t *testing.T) *rig {
 		if p.SelectedMount != nil {
 			items["currentMount"] = *p.SelectedMount
 		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"success": true, "data": map[string]any{"_id": id, "party": map[string]any{"_id": p.PartyID}, "profile": map[string]any{"name": p.Name}, "flags": map[string]any{"classSelected": p.Class != nil}, "stats": map[string]any{"lvl": p.Level, "exp": p.Exp, "hp": p.HP, "mp": p.MP, "str": 0, "int": 0, "con": 0, "per": 0, "class": class}, "apiToken": r.Header.Get("X-Api-Key"), "items": items}})
-	}))
-	x.api = New(x.db, habitica.New(x.upstream.URL, "test-creator-glimway"), Config{SecureCookie: true, Logger: log.New(&x.logs, "", 0), Now: func() time.Time { return time.Unix(x.now.Load(), 0) }})
-	t.Cleanup(func() { x.upstream.Close(); x.db.Close() })
-	return x
+		send(200, map[string]any{"success": true, "data": map[string]any{"_id": id, "party": map[string]any{"_id": p.PartyID}, "profile": map[string]any{"name": p.Name}, "flags": map[string]any{"classSelected": p.Class != nil}, "stats": map[string]any{"lvl": p.Level, "exp": p.Exp, "hp": p.HP, "mp": p.MP, "gp": gold, "str": 0, "int": 0, "con": 0, "per": 0, "class": class}, "apiToken": r.Header.Get("X-Api-Key"), "items": items}})
+	case r.Method == "POST" && r.URL.Path == "/api/v3/tasks/user":
+		x.logCall("create")
+		if create == "error" {
+			send(500, map[string]any{"success": false, "error": "InternalServerError"})
+			return
+		}
+		var task struct {
+			Type, Text, Notes, Alias string
+			Value                    int
+		}
+		if json.NewDecoder(r.Body).Decode(&task) != nil {
+			send(400, map[string]any{"success": false})
+			return
+		}
+		x.mu.Lock()
+		x.rewards[task.Alias] = task.Value
+		x.creates++
+		x.mu.Unlock()
+		send(201, map[string]any{"success": true, "data": map[string]any{"_id": task.Alias, "alias": task.Alias, "type": task.Type, "text": task.Text, "notes": task.Notes, "value": task.Value}})
+	case r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/api/v3/tasks/") && strings.HasSuffix(r.URL.Path, "/score/down"):
+		alias := strings.TrimSuffix(strings.TrimPrefix(r.URL.Path, "/api/v3/tasks/"), "/score/down")
+		x.logCall("score")
+		x.mu.Lock()
+		x.scores++
+		value, exists := x.rewards[alias]
+		x.mu.Unlock()
+		if !exists {
+			send(404, map[string]any{"success": false, "error": "NotFound"})
+			return
+		}
+		charge := func() {
+			x.mu.Lock()
+			x.habiticaGold = max(0, x.habiticaGold-value)
+			x.mu.Unlock()
+		}
+		switch score {
+		case "not-enough-gold":
+			send(401, map[string]any{"success": false, "error": "NotAuthorized", "message": "Not Enough Gold"})
+		case "error":
+			send(500, map[string]any{"success": false, "error": "InternalServerError"})
+		case "hang":
+			if hang == 0 {
+				hang = 300 * time.Millisecond
+			}
+			time.Sleep(hang)
+			send(500, map[string]any{"success": false, "error": "InternalServerError"})
+		case "timeout-partial":
+			// Half the charge went through and the answer didn't: the checks
+			// see gold between gold_before − amount and gold_before (2.3).
+			x.mu.Lock()
+			x.habiticaGold = max(0, x.habiticaGold-value/2)
+			x.mu.Unlock()
+			send(500, map[string]any{"success": false, "error": "InternalServerError"})
+		case "timeout-moved":
+			// The charge happened; the answer never comes (2.3).
+			charge()
+			send(500, map[string]any{"success": false, "error": "InternalServerError"})
+		default:
+			charge()
+			send(200, map[string]any{"success": true, "data": map[string]any{"gp": max(0, gold-value)}})
+		}
+	case r.Method == "DELETE" && strings.HasPrefix(r.URL.Path, "/api/v3/tasks/"):
+		alias := strings.TrimPrefix(r.URL.Path, "/api/v3/tasks/")
+		x.logCall("delete:" + alias)
+		if del == "error" {
+			send(500, map[string]any{"success": false, "error": "InternalServerError"})
+			return
+		}
+		x.mu.Lock()
+		_, exists := x.rewards[alias]
+		delete(x.rewards, alias)
+		x.deletes[alias]++
+		x.mu.Unlock()
+		if !exists {
+			send(404, map[string]any{"success": false, "error": "NotFound"})
+			return
+		}
+		send(200, map[string]any{"success": true, "data": map[string]any{}})
+	default:
+		x.t.Errorf("invalid upstream request: %s %s", r.Method, r.URL.Path)
+		send(404, map[string]any{"success": false})
+	}
 }
 
-func (x *rig) set(p rules.Profile) { x.mu.Lock(); defer x.mu.Unlock(); x.profiles[p.ID] = p }
+func (x *rig) logCall(name string) {
+	x.mu.Lock()
+	defer x.mu.Unlock()
+	x.callLog = append(x.callLog, name)
+}
 
 func (x *rig) request(method, path string, body any, cookie *http.Cookie) (int, response, string, *http.Cookie) {
 	x.t.Helper()

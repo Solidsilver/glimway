@@ -17,7 +17,7 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	// Log fixed route labels only. No bodies, headers, raw paths or query strings.
 	route := "unknown"
-	if slices.Contains([]string{"/api/health", "/ws", "/api/report", "/api/quest/step", "/api/story/mark", "/api/papers/take", "/api/fall", "/api/profile", "/api/wilds/echo", "/api/session", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons", "/api/calendar", "/api/storage", "/api/craft", "/api/hearth/craft", "/api/desk/copy", "/api/homestead/woodpile", "/api/mail", "/api/projects", "/api/library", "/api/library/donate", "/api/items", "/api/world", "/api/world/party", "/api/world/prompt", "/api/world/move", "/api/world/leave", "/api/world/notice", "/api/world/choice", "/api/world/choose", "/api/fishing/cast", "/api/fishing/settle", "/api/fishing/cancel", "/api/fishing/waters", "/api/companions", "/api/stable/stall", "/api/stable/out", "/api/stable/home", "/api/stable/extend"}, r.URL.Path) {
+	if slices.Contains([]string{"/api/health", "/ws", "/api/report", "/api/quest/step", "/api/story/mark", "/api/papers/take", "/api/fall", "/api/profile", "/api/wilds/echo", "/api/session", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons", "/api/calendar", "/api/storage", "/api/craft", "/api/hearth/craft", "/api/desk/copy", "/api/homestead/woodpile", "/api/mail", "/api/projects", "/api/library", "/api/library/donate", "/api/items", "/api/world", "/api/world/party", "/api/world/prompt", "/api/world/move", "/api/world/leave", "/api/world/notice", "/api/world/choice", "/api/world/choose", "/api/fishing/cast", "/api/fishing/settle", "/api/fishing/cancel", "/api/fishing/waters", "/api/companions", "/api/stable/stall", "/api/stable/out", "/api/stable/home", "/api/stable/extend", "/api/purse", "/api/purse/top-up", "/api/wardrobe/check"}, r.URL.Path) {
 		route = r.URL.Path
 	}
 	observed := &statusWriter{ResponseWriter: w, status: 200}
@@ -126,6 +126,12 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = a.worldChoose(w, r)
 	case "POST /api/session":
 		err = a.login(w, r)
+	case "POST /api/purse/top-up":
+		err = a.purseTopUp(w, r)
+	case "GET /api/purse":
+		err = a.purseRead(w, r)
+	case "POST /api/wardrobe/check":
+		err = a.wardrobeCheck(w, r)
 	case "DELETE /api/session":
 		err = a.logout(w, r)
 	case "GET /api/operations/result":

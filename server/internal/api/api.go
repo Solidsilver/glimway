@@ -56,11 +56,20 @@ type Config struct {
 	// Empty reads as "dev"; Build is left out when unknown.
 	Version string
 	Build   string
+	// PurseChecks are the balance checks after a score whose outcome is
+	// unknown (design 2.3: about 2, 5, 10, 20 and 35 seconds after the
+	// failed call). Tunable for tests; the empty slice uses the design's.
+	PurseChecks []time.Duration
+	// PurseAnswerWait is how long a top-up's POST waits for its worker
+	// before answering "working" (design 2.2: 8 seconds).
+	PurseAnswerWait time.Duration
 }
 
 type Server struct {
-	Store       *store.Store
-	Habitica    *habitica.Client
+	Store *store.Store
+	// Habitica is the narrow upstream slice the server calls (habitica.Upstream):
+	// the sign-in proof and the purse's calls. Tests inject a stub.
+	Habitica    habitica.Upstream
 	Config      Config
 	loginSlots  chan struct{}
 	loginLimit  *loginLimiter
@@ -71,15 +80,17 @@ type Server struct {
 	sprites     *spriteProxy
 }
 
-func New(s *store.Store, h *habitica.Client, c Config) *Server {
+func New(s *store.Store, h habitica.Upstream, c Config) *Server {
 	if c.State == nil {
 		c.State = store.DefaultStateComposition{}
 	}
 	if c.Now == nil {
 		c.Now = time.Now
 	}
-	// Every answer carries the account's fishing (design 5.5).
+	// Every answer carries the account's fishing (design 5.5) and its purse
+	// (design 2): the same state composition, one decorator each.
 	c.State = fishingComposition{StateComposition: c.State, now: c.Now, logf: fishingLogf(c.Logger)}
+	c.State = purseComposition{StateComposition: c.State, now: c.Now}
 	if c.Chunks == nil || c.Epochs == nil {
 		stored := store.NewChunks(c.Now)
 		stored.GeneratorVersion = c.WildsGeneratorVersion
@@ -103,7 +114,7 @@ func New(s *store.Store, h *habitica.Client, c Config) *Server {
 	return newServer(s, h, c)
 }
 
-func newServer(s *store.Store, h *habitica.Client, c Config) *Server {
+func newServer(s *store.Store, h habitica.Upstream, c Config) *Server {
 	if c.LoginConcurrency <= 0 {
 		c.LoginConcurrency = 4
 	}
