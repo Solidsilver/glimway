@@ -50,12 +50,12 @@ and `server/internal/habitica/client.go`, plus what's planned.
 | Appearance | `preferences` (size, shirt, skin, hair, background, costume flag) | Hero and presence avatars | OK |
 | Class | `stats.class`, `flags.classSelected` | Combat kit, off-hand affinity | OK. The kits (bolt, cleave, dash, heal) are Glimway's own moves, not copies of Habitica skills |
 | Worn gear | `items.gear.equipped`, `items.gear.costume` | Avatar layers; gear stats feed combat | OK |
-| Owned gear | `items.gear.owned` | Not read | Planned: in-game wardrobe, cosmetic only |
-| Pets and mounts | `items.pets`, `items.mounts`, `currentPet`, `currentMount` | Current pet and mount drawn on the avatar | OK. Planned: companions that follow you |
+| Owned gear | `items.gear.owned` | Not read | **Changing in 0.6:** the wardrobe, cosmetic only, read by the server only (sign-in, a top-up, "Check for new gear"); see [design/purse-and-wardrobe.md](design/purse-and-wardrobe.md) |
+| Pets and mounts | `items.pets` (value > 0), `items.mounts` (value `true`), `currentPet`, `currentMount` | Since 0.5: the follower (any owned pet chosen in the Companions tab, Habitica's current pet by default), up to three yard pets, mounts stalled in the stable and ridden or led from there; friends' pets and mounts drawn. Nothing is written to Habitica, and `currentMount` no longer decides riding | OK |
 | Level, attributes | `stats.lvl`, `str/int/con/per`, `buffs` | Combat stats | OK |
 | XP | `stats.exp` | Embers: every 10 XP earned becomes 1 ember | OK. Read only, and each XP pays once |
 | Health and mana | `stats.hp`, `stats.mp`, `maxHealth` | Imported once, then game-local vitals | OK, with a note below |
-| Gold | `stats.gp` | Fetched inside `stats`, ignored | Planned: the purse, see [habitica-gold.md](habitica-gold.md) |
+| Gold | `stats.gp` | Fetched inside `stats`, ignored | **Changing in 0.6:** the purse, moved in with consent each top-up, read by the server only for the move; see [design/purse-and-wardrobe.md](design/purse-and-wardrobe.md) and [habitica-gold.md](habitica-gold.md) |
 | Party | `party._id` | Party worlds and admission | OK |
 | Streaks, achievements | not read | | Planned: in-world recognition (plaques, a stable) |
 | Habitica art | Habitica's sprite host | Avatar layers, cached by the server | OK. Non-commercial and attribution-bound (`ASSETS.md`) |
@@ -79,7 +79,7 @@ never writes HP back and never lets a rest stand in for a Habitica heal at
 | Homestead | Cottage, workshop, furniture, home goods, the door-fox carving |
 | Keepsakes | Whittled fox, river-glass bead, tin whistle, the Ember Charm |
 | Papers | Found texts, recipe pages |
-| Purse gold (planned) | Moved in from Habitica with consent; never back out |
+| Purse gold (0.6) | Moved in from Habitica with consent; never back out; moves between players on shelves, in letters and by hand |
 
 ## Where today's game is close to the line
 
@@ -145,19 +145,26 @@ Answer each before a brief goes out:
 
 ## Open questions
 
-- **The wardrobe.** Owned but unequipped Habitica gear, shown as cosmetics.
-  Can a player wear a different outfit in Glimway than in Habitica, or
-  does the game always show Habitica's equipped and costume sets? Changing
-  the outfit in Habitica would be a write (`POST /user/equip/...`).
-- **Companions.** Which pet follows: the current pet only, or any owned pet
-  the player picks in-game? Picking in-game without writing to Habitica means
-  the game shows a different pet than Habitica does. Is that allowed?
-- **Mounts.** Riding changes movement. Is a mount cosmetic only, or can it
-  carry the hero faster? Faster riding gives Habitica's mounts an in-game
-  use; that fits the rules, but it shifts game balance.
 - **Streaks and achievements.** What can recognition be (plaques, titles,
   a line from an NPC) without becoming a reward that pays in game items?
 - **Habitica gold beyond the purse.** Could a later feature buy Habitica
   gear for the player from inside Glimway? That's a Habitica purchase
   made from the game; the rules say no until the owner says otherwise.
-- **The off-hand rename.** Owner's pick of name and placement (item 1 above).
+- **The off-hand placement.** The name is settled (below); drawing the
+  carried thing at the belt or hip, away from the shield's hand, is still
+  open (item 1 above).
+
+## Answered
+
+- **Companions** (0.5, [design/crafts.md](design/crafts.md) §2): any owned
+  pet the player picks in-game, without a write to Habitica. The game may
+  show a different pet than Habitica does.
+- **Mounts** (0.5, crafts.md §3): faster, every mount the same speed, and
+  only from a stable.
+- **The wardrobe** (0.6, [design/purse-and-wardrobe.md](design/purse-and-wardrobe.md)
+  §4): a player can wear a different outfit in Glimway, chosen per slot from
+  gear they own, without a write to Habitica. Stats still come from the
+  battle gear.
+- **The off-hand name** (owner, 2026-10-09): Glimway's off hand becomes "at
+  your belt" in the copy, with 0.6; the wardrobe calls Habitica's slot
+  "Shield".

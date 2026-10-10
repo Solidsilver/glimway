@@ -2,8 +2,15 @@
 
 See also [habitica-policy.md](habitica-policy.md): Habitica's rules for third-party tools and our plan for telling them.
 
-Status: research for the owner, 2026-10-07. Nothing here is built. The
-boundary rules this must follow are in [habitica-boundary.md](habitica-boundary.md).
+Status: research for the owner, 2026-10-07. **The design to build is
+[design/purse-and-wardrobe.md](design/purse-and-wardrobe.md) (0.6, confirmed
+2026-10-09).** Where this page and the owner's decisions differ, the decisions
+win: the top-up is a button in the Menu that syncs first (not a row at sign-in);
+an unknown outcome is credited when a balance check confirms it, and only what
+no check can decide is settled by the owner, without blocking further top-ups;
+the next migration is 032, not 026; and every account has a world since 0.3,
+so there are no connected heroes without a purse. The boundary rules this must
+follow are in [habitica-boundary.md](habitica-boundary.md).
 
 The idea: at sign-in, a player can move Habitica gold into an in-game purse,
 with clear consent. Purse gold buys shop goods and materials and pays for
