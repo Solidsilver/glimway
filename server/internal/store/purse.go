@@ -636,7 +636,8 @@ func WritePlayerGear(ctx context.Context, tx *sql.Tx, account string, owned []st
 	if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM player_wardrobe WHERE account_id=?)", account).Scan(&chosen); err != nil || !chosen {
 		return err
 	}
-	return BumpAccountVersion(ctx, tx, account)
+	_, err = BumpAccountVersion(ctx, tx, account)
+	return err
 }
 
 // PlayerGear reads the owned list back, and when the server last read it
