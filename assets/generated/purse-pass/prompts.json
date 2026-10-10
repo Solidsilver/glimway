@@ -1,0 +1,12 @@
+{
+  "generatedOn": "2026-10-09",
+  "tool": "built-in image generation",
+  "sources": [
+    {
+      "file": "sheets/purse-icons.png",
+      "imageId": "01a1238b-a27e-7ba3-8004-ceb23c6121ea",
+      "prompt": "Create a production pixel-art sprite sheet for a cozy woodland RPG. Transparent background, no checkerboard, no labels, no text, no cell borders. Arrange exactly five separate icons in a strict 3-column by 2-row grid on equal-sized invisible cells, centered with generous transparent margins. Each icon has crisp hard-edged stepped pixels, 1 px dark warm-brown outline at the intended 64 texels per 16 px world tile, upper-left light, limited warm palette, no blur, no antialiasing, no gradients, no painterly texture. Top left: one single round brass-gold coin, small clearly visible lamp stamped on its face, worn irregular rim; unmistakably one coin, never a stack, Glimway original. Top middle: drawstring warm-brown leather purse with one gold coin visible at its mouth. Top right: a simple wooden peg rail holding one coat and one hat. Bottom left: small cream paper price tag on a thin string, blank face. Bottom middle: folded cream letter sealed with a gold coin pressed into its wax seal. Bottom right: intentionally empty transparent cell. Keep every icon compact, isolated and unobstructed, straight-on icon view, no extra objects, no shadows outside the silhouette."
+    }
+  ],
+  "normalization": "Fixed 512x512 source-cell crops; threshold alpha to crisp transparency, nearest-neighbour scale into each specified canvas with a 4-texel gutter. Gold coin HUD uses the same Glimway coin source crop on a 32x32 canvas."
+}

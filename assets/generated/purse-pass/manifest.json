@@ -1,0 +1,147 @@
+{
+  "density": {
+    "texelsPerTile": 64,
+    "worldTilePx": 16
+  },
+  "sources": {
+    "purse-icons.png": {
+      "file": "sheets/purse-icons.png",
+      "width": 1536,
+      "height": 1024
+    }
+  },
+  "frames": {
+    "gold-coin": {
+      "source": "purse-icons.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "file": "frames/gold-coin.png",
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": null,
+      "footPoint": {
+        "x": 32,
+        "y": 32
+      },
+      "alpha": true,
+      "gutter": 4,
+      "anchor": "center"
+    },
+    "gold-coin-hud": {
+      "source": "purse-icons.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "file": "frames/gold-coin-hud.png",
+      "canvasSize": {
+        "w": 32,
+        "h": 32
+      },
+      "footprint": null,
+      "footPoint": {
+        "x": 16,
+        "y": 16
+      },
+      "alpha": true,
+      "gutter": 4,
+      "anchor": "center"
+    },
+    "purse": {
+      "source": "purse-icons.png",
+      "sourceRect": {
+        "x": 512,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "file": "frames/purse.png",
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": null,
+      "footPoint": {
+        "x": 32,
+        "y": 32
+      },
+      "alpha": true,
+      "gutter": 4,
+      "anchor": "center"
+    },
+    "wardrobe": {
+      "source": "purse-icons.png",
+      "sourceRect": {
+        "x": 1024,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "file": "frames/wardrobe.png",
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": null,
+      "footPoint": {
+        "x": 32,
+        "y": 32
+      },
+      "alpha": true,
+      "gutter": 4,
+      "anchor": "center"
+    },
+    "price-tag": {
+      "source": "purse-icons.png",
+      "sourceRect": {
+        "x": 0,
+        "y": 512,
+        "w": 512,
+        "h": 512
+      },
+      "file": "frames/price-tag.png",
+      "canvasSize": {
+        "w": 32,
+        "h": 32
+      },
+      "footprint": null,
+      "footPoint": {
+        "x": 16,
+        "y": 16
+      },
+      "alpha": true,
+      "gutter": 4,
+      "anchor": "center"
+    },
+    "gold-letter": {
+      "source": "purse-icons.png",
+      "sourceRect": {
+        "x": 512,
+        "y": 512,
+        "w": 512,
+        "h": 512
+      },
+      "file": "frames/gold-letter.png",
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": null,
+      "footPoint": {
+        "x": 32,
+        "y": 32
+      },
+      "alpha": true,
+      "gutter": 4,
+      "anchor": "center"
+    }
+  }
+}
