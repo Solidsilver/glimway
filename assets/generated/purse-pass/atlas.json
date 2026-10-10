@@ -1,0 +1,108 @@
+{
+  "sources": {
+    "purse-icons.png": {
+      "file": "sheets/purse-icons.png",
+      "width": 1536,
+      "height": 1024
+    }
+  },
+  "frames": {
+    "gold-coin": {
+      "source": "purse-icons.png",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "file": "frames/gold-coin.png",
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "gold-coin-hud": {
+      "source": "purse-icons.png",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "file": "frames/gold-coin-hud.png",
+      "canvasSize": {
+        "w": 32,
+        "h": 32
+      }
+    },
+    "purse": {
+      "source": "purse-icons.png",
+      "rect": {
+        "x": 512,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "file": "frames/purse.png",
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "wardrobe": {
+      "source": "purse-icons.png",
+      "rect": {
+        "x": 1024,
+        "y": 0,
+        "w": 512,
+        "h": 512
+      },
+      "file": "frames/wardrobe.png",
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    },
+    "price-tag": {
+      "source": "purse-icons.png",
+      "rect": {
+        "x": 0,
+        "y": 512,
+        "w": 512,
+        "h": 512
+      },
+      "file": "frames/price-tag.png",
+      "canvasSize": {
+        "w": 32,
+        "h": 32
+      }
+    },
+    "gold-letter": {
+      "source": "purse-icons.png",
+      "rect": {
+        "x": 512,
+        "y": 512,
+        "w": 512,
+        "h": 512
+      },
+      "file": "frames/gold-letter.png",
+      "canvasSize": {
+        "w": 64,
+        "h": 64
+      }
+    }
+  },
+  "groups": {
+    "purse-pass": {
+      "frames": [
+        "gold-coin",
+        "gold-coin-hud",
+        "purse",
+        "wardrobe",
+        "price-tag",
+        "gold-letter"
+      ],
+      "frameSize": "per-frame canvas in manifest"
+    }
+  }
+}
