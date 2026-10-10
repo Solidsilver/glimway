@@ -50,12 +50,12 @@ and `server/internal/habitica/client.go`, plus what's planned.
 | Appearance | `preferences` (size, shirt, skin, hair, background, costume flag) | Hero and presence avatars | OK |
 | Class | `stats.class`, `flags.classSelected` | Combat kit, off-hand affinity | OK. The kits (bolt, cleave, dash, heal) are Glimway's own moves, not copies of Habitica skills |
 | Worn gear | `items.gear.equipped`, `items.gear.costume` | Avatar layers; gear stats feed combat | OK |
-| Owned gear | `items.gear.owned` | Not read | **Changing in 0.6:** the wardrobe, cosmetic only, read by the server only (sign-in, a top-up, "Check for new gear"); see [design/purse-and-wardrobe.md](design/purse-and-wardrobe.md) |
+| Owned gear | `items.gear.owned` | Since 0.6: the wardrobe, cosmetic only. Read by the server only (sign-in, a top-up, "Check for new gear"), never from what a browser reports; see [design/purse-and-wardrobe.md](design/purse-and-wardrobe.md) §4 | OK |
 | Pets and mounts | `items.pets` (value > 0), `items.mounts` (value `true`), `currentPet`, `currentMount` | Since 0.5: the follower (any owned pet chosen in the Companions tab, Habitica's current pet by default), up to three yard pets, mounts stalled in the stable and ridden or led from there; friends' pets and mounts drawn. Nothing is written to Habitica, and `currentMount` no longer decides riding | OK |
 | Level, attributes | `stats.lvl`, `str/int/con/per`, `buffs` | Combat stats | OK |
 | XP | `stats.exp` | Embers: every 10 XP earned becomes 1 ember | OK. Read only, and each XP pays once |
 | Health and mana | `stats.hp`, `stats.mp`, `maxHealth` | Imported once, then game-local vitals | OK, with a note below |
-| Gold | `stats.gp` | Fetched inside `stats`, ignored | **Changing in 0.6:** the purse, moved in with consent each top-up, read by the server only for the move; see [design/purse-and-wardrobe.md](design/purse-and-wardrobe.md) and [habitica-gold.md](habitica-gold.md) |
+| Gold | `stats.gp` | Since 0.6: the purse. The browser's sync read shows it on the consent card (display only); the server reads it again itself during a top-up, the only read that counts. Moved in with consent on every top-up, never back out; see [design/purse-and-wardrobe.md](design/purse-and-wardrobe.md) §2 and [habitica-gold.md](habitica-gold.md) | OK |
 | Party | `party._id` | Party worlds and admission | OK |
 | Streaks, achievements | not read | | Planned: in-world recognition (plaques, a stable) |
 | Habitica art | Habitica's sprite host | Avatar layers, cached by the server | OK. Non-commercial and attribution-bound (`ASSETS.md`) |
@@ -109,11 +109,13 @@ things sit near the line.
    only in the inventory today. If they're ever drawn on the hero, they cover
    Habitica's `armor` and `back` slots. Keep them undrawn, or show them only
    in the inventory.
-4. **The README promises no writes.** README "Your Habitica character
-   (read-only)", `docs/import-contract.md` (`HabiticaClient` has one method),
-   and the connect guide's "The game limits itself to reading"
-   (`src/content/connect-guide.ts`) are all true today. The gold purse breaks
-   them. Rewrite all three in the same change that ships the purse.
+4. **The README promised no writes.** Rewritten with the purse (0.6): the
+   README ("How your Habitica token is handled"), `docs/import-contract.md`
+   (the browser's `HabiticaClient` stays read-only; the server writes for a
+   top-up and nowhere else), the connect guide's "Why does it need my token?"
+   (`src/content/connect-guide.ts`) and the Menu's About card now say exactly
+   what a top-up writes, and that the token reaches the server only at
+   sign-in, in a top-up and in a gear check the player starts.
 
 The fox carvings (door-fox, whittled fox, mirror-wise fox) are objects, not
 pets. Keep them still. When companions arrive they must be the player's real

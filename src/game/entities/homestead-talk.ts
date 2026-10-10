@@ -25,6 +25,8 @@ import { ROOM_BENCH, ROOM_CHEST, ROOM_HEARTH } from '../cottage'
 import { grantPaper } from '../papers'
 import { presence } from '../presence'
 import { itemsFor } from '../items'
+import { sellerFor } from '../../lib/items'
+import { sellerChoices } from '../../lib/purse'
 import { keepsakeAsk } from '../keepsakes'
 import type { VillagePanel } from '../village'
 import { openBoard } from './village-life'
@@ -398,6 +400,15 @@ export class HomesteadTalk {
       if (ask) {
         lines = [...lines, ask.line]
         choices = [...(choices ?? []), ...ask.choices]
+      }
+      // His yard's offcut bundles, for gold only (purse-and-wardrobe.md 3.1), before the goodbye.
+      const yard = this.deps.session.link ? sellerFor('silas-yard') : null
+      if (yard) {
+        const bundles = sellerChoices(yard, { reply: true })
+        const list = choices ?? []
+        const last = list.at(-1)
+        const bye = last && !last.action && !last.disabled && !last.replay ? last : null
+        choices = bye ? [...list.slice(0, -1), ...bundles, bye] : [...list, ...bundles, { text: 'Not yet' }]
       }
     }
     openDialogue({ id: 'home', speaker: d.speaker, lines, choices })

@@ -57,11 +57,17 @@ are shown unmodified, with credit, and are not AI-generated.
 
 ## How your Habitica token is handled
 
-**Glimway is read-only.** It reads your Habitica profile and never writes to
-your Habitica account: no scoring tasks, no spending gold, no changing stats
-or gear. The game makes one explicit `GET /user` per connect or **Sync**
-press, from your browser. (The token itself *can* write to your account;
-the game limits itself to reads, and the code is public so you can check.)
+**Glimway reads your Habitica profile, and writes to it only when you top up
+your purse.** The game makes one explicit `GET /user` per connect or **Sync**
+press, from your browser. It never scores your tasks, changes your stats or
+gear, or buys anything on your behalf.
+
+The one write: when you press **Top up** in the Menu and agree on the card,
+the Glimway server moves the gold you chose into your purse. It adds a reward
+called "Glimway purse" to your Habitica Rewards, buys it once, and removes it,
+so your Habitica gold goes down by that amount. Nothing ever goes back to
+Habitica, and nothing else there changes. (The token itself *can* do more;
+the game limits itself to this, and the code is public so you can check.)
 The `X-Client` header identifies the tool's creator, never you.
 
 **Where your token goes.**
@@ -74,11 +80,15 @@ The `X-Client` header identifies the tool's creator, never you.
   journey.
   Script injected into the site could read them, so leave it off if you'd
   rather paste per visit. **Forget** deletes them, and Disconnect offers to.
-- **Signing in to a world** sends the token to the Glimway server **once, at
-  login**, so the server can make one read-only `GET /user` to prove the account
-  is yours. The server never stores, logs or returns it. Every later sync
-  still goes from your browser to Habitica, and the browser reports the
-  result to the server.
+- **Signing in to a world** sends the token to the Glimway server at login,
+  so the server can make one read-only `GET /user` to prove the account is
+  yours. Every later sync still goes from your browser to Habitica, and the
+  browser reports the result to the server.
+- **Two more requests carry it to the server, and only when you start them:**
+  a **Top up** (the write above, after you agree) and **Check for new gear**
+  in the Wardrobe (one read of the gear you own). Each uses the token for
+  that one request.
+- The server never stores, logs or returns the token, in any of these.
 
 What comes from Habitica and what only from the game:
 [docs/habitica-boundary.md](docs/habitica-boundary.md). Habitica's rules for

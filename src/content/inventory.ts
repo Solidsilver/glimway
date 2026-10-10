@@ -34,7 +34,7 @@ export const inventoryCopy = {
   pick: 'Pick something to see it here.',
   pocketLocked: 'A satchel, apron or coat adds a second pocket.',
   pocketHint: 'Pick a keepsake below and pocket it: it helps while you carry it.',
-  offHandHint: 'Pick a lantern or a whistle below to carry it.',
+  offHandHint: 'Pick a lantern or a whistle below to carry it at your belt.',
   /** A locked slot's card: why it's shut, and what opens it. */
   lockedTag: 'Not open yet',
   /** A hovered card (desktop) shows what the thing is; its actions come with a pick. */
@@ -67,8 +67,12 @@ export const inventoryCopy = {
   pockets: 'Pockets',
   pocket: (n: number) => `Pocket ${n}`,
   pocketEmpty: 'Empty',
-  offHand: 'Off hand',
+  offHand: 'At your belt',
   offHandClosed: 'Opens when you take a class.',
+  /** A card's tag, and a cell's spoken name, for what rides at your belt. */
+  atBeltTag: 'At your belt',
+  atBeltSpoken: 'at your belt',
+  carried: (what: string) => `You carry ${what} at your belt.`,
   offHandEmpty: 'Empty',
   madeBy: (name: string) => `Made by ${name}`,
   usesLeft: (n: number) => (n === 1 ? '1 use left' : `${n} uses left`),

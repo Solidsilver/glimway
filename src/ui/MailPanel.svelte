@@ -13,6 +13,10 @@
   import Icon from './Icon.svelte'
   import Panel from './Panel.svelte'
   import ArtIcon from './ArtIcon.svelte'
+  import PurseAmount from './PurseAmount.svelte'
+  import { ui } from './store.svelte'
+  import { goldPhrase, purseCopy } from '../content/purse'
+  import { parseAmount } from '../lib/purse'
 
   // The mailbox at your place: parcels for you to collect, sending to a
   // neighbour in your world, and what you've sent (recall it while it waits).
@@ -46,6 +50,11 @@
     return { buckets, neighbours, goods, status: village.mailStatus, more: !!village.mailCursor, full: pendingParcels.length >= MAIL.maxOutstandingSent }
   })
   const chosen = $derived(view.goods.find((g) => assetKey(g) === pick) ?? null)
+  /** Gold from your purse (purse-and-wardrobe.md 3.3): the first row once the purse holds some. */
+  const GOLD = 'gold'
+  const purseGold = $derived(ui.purse?.gold ?? 0)
+  let goldText = $state('')
+  const goldAmount = $derived(parseAmount(goldText, purseGold))
 
   const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1)
   const when = (unix: number) => new Date(unix * 1000).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
@@ -56,6 +65,17 @@
 
   async function recall(m: Mail): Promise<void> {
     await action.run(m.id, () => village.recall(m.id), `${cap(assetPhrase(m.asset))} came back to you.`)
+  }
+
+  async function sendGold(): Promise<void> {
+    const n = goldAmount
+    if (n === null || !recipient) return
+    const to = recipient
+    const r = await action.run('send', () => village.sendGold(to, n), () => purseCopy.mailSent(view.neighbours.find((x) => x.id === to)?.name ?? 'them', n))
+    if (r?.ok) {
+      pick = ''
+      goldText = ''
+    }
   }
 
   async function send(): Promise<void> {
@@ -73,8 +93,9 @@
     return a.kind === 'decoration' ? home.thumbs[a.id] ?? null : null
   }
 
-  /** Materials, trinkets and crafted goods have delivered icons (src/ui/ArtIcon.svelte). */
+  /** Materials, trinkets and crafted goods have delivered icons (src/ui/ArtIcon.svelte); a gold letter has its own. */
   function icon(a: Pick<AssetView, 'kind' | 'id'>): string | null {
+    if (a.kind === 'gold') return 'purse-gold-letter'
     return a.kind === 'decoration' ? null : `icon-${a.id}`
   }
 </script>
@@ -164,9 +185,18 @@
           {#each view.neighbours as n (n.id)}<option value={n.id}>{n.name}</option>{/each}
         </select>
       </label>
-      <p class="hint">Materials, things the Wilds gave back, crafted goods and pieces that aren’t set out can be posted. Embers and keepsakes stay with you. Uncollected parcels come back after {MAIL.returnAfterDays} days.</p>
-      {#if view.goods.length === 0}<p class="none">Nothing in your pack to send.</p>{/if}
+      <p class="hint">Materials, things the Wilds gave back, crafted goods and pieces that aren’t set out can be posted, and gold from your purse. Embers and keepsakes stay with you. Uncollected parcels come back after {MAIL.returnAfterDays} days.</p>
+      {#if view.goods.length === 0 && purseGold <= 0}<p class="none">Nothing in your pack to send.</p>{/if}
       <ul class="goods" aria-label="What to send" data-dirty={pick ? 'true' : undefined}>
+        {#if purseGold > 0}
+          <li>
+            <button type="button" class="good gold" class:on={pick === GOLD} aria-pressed={pick === GOLD} data-pick={GOLD} data-testid="mail-gold" onclick={() => ((pick = GOLD), (goldText = ''))}>
+              <span class="thumb"><ArtIcon art="purse-gold" name="coin" size={16} /></span>
+              <span class="nm">{purseCopy.mailRow}</span>
+              <span class="have">{goldPhrase(purseGold)}</span>
+            </button>
+          </li>
+        {/if}
         {#each view.goods as g (assetKey(g))}
           <li>
             <button type="button" class="good" class:on={pick === assetKey(g)} aria-pressed={pick === assetKey(g)} data-pick={assetKey(g)} onclick={() => ((pick = assetKey(g)), (qty = 1))}>
@@ -179,6 +209,13 @@
       </ul>
       {#if view.full}
         <p class="msg error">You have {MAIL.maxOutstandingSent} parcels waiting to be collected. Recall one, or wait for some to be collected.</p>
+      {:else if pick === GOLD && purseGold > 0}
+        <div class="sendrow gold-row">
+          <PurseAmount bind:value={goldText} max={purseGold} label="How much gold" testid="mail-gold-amount" />
+          <button type="button" class="primary" disabled={action.busy !== null || !recipient || goldAmount === null} data-testid="mail-send" onclick={sendGold}>
+            {action.busy === 'send' ? 'Posting…' : purseCopy.mailSend(goldAmount)}
+          </button>
+        </div>
       {:else if chosen}
         <div class="sendrow">
           <label class="field qty">
@@ -352,5 +389,14 @@
   }
   .qty input {
     width: 6em;
+  }
+  /* The gold letter: the amount and All, then Send, all full width on a phone (purse-and-wardrobe.md 8). */
+  .gold-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 360px;
+  }
+  .gold-row button {
+    min-height: 44px;
   }
 </style>

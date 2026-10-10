@@ -4,7 +4,9 @@
   import { isSafeArea, syncProfile, type SyncResult } from '../lib/habitica/sync'
   import { parseFields, parsePaste, swapped, type PasteResult } from '../lib/habitica/paste'
   import { forgetRemembered, saveRemembered } from '../lib/habitica/remembered'
-  import { HabiticaApiError } from '../lib/habitica/client'
+  import { HabiticaApiError, rawUserFor } from '../lib/habitica/client'
+  import { habiticaGoldOf } from '../lib/purse'
+  import type { SyncForTopUp } from './purse.svelte'
   import type { HabiticaProfile } from '../lib/habitica/types'
   import { XP_PER_EMBER } from '../lib/embers'
   import { emberLine, guideCopy, guideTabs, syncCopy, unverifiedNote, whyToken, type GuideTabId } from '../content/connect-guide'
@@ -220,6 +222,22 @@
     flipped = false
   }
 
+  /** The profile the last sync fetched (the top-up's consent card reads Habitica's gold from it). */
+  let lastFetched: HabiticaProfile | null = null
+
+  /**
+   * Top up from Habitica syncs first, exactly as Sync character does, at the
+   * sync's safe places only (purse-and-wardrobe.md 2.1; owner's answer 8).
+   * The gold it read is for the consent card's line only: the server reads
+   * Habitica again itself before anything moves.
+   */
+  export async function syncForTopUp(): Promise<SyncForTopUp> {
+    lastFetched = null
+    const ok = await syncCharacter()
+    if (!ok || !lastFetched) return { ok: false }
+    return { ok: true, gold: habiticaGoldOf(rawUserFor(lastFetched)) ?? 0 }
+  }
+
   /** One explicit GET per press. Returns true when the profile was fetched
    * and the sync handled (applied or already current). */
   async function syncCharacter(signingIn = false): Promise<boolean> {
@@ -247,6 +265,7 @@
     syncBusy = true
     try {
       const profile = await client.fetchProfile()
+      lastFetched = profile
 
       if (!isConnected() || session.currentGeneration !== generation) {
         connection = isConnected() ? 'connected' : 'disconnected'
@@ -671,6 +690,8 @@
       <summary>{whyToken.summary}</summary>
       <h5>{whyToken.reads.title}</h5>
       <ul>{#each whyToken.reads.items as i}<li>{i}</li>{/each}</ul>
+      <h5>{whyToken.writes.title}</h5>
+      <ul>{#each whyToken.writes.items as i}<li>{i}</li>{/each}</ul>
       <h5>{whyToken.never.title}</h5>
       <ul>{#each whyToken.never.items as i}<li>{i}</li>{/each}</ul>
       <p>{whyToken.honest}</p>

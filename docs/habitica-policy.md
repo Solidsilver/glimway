@@ -42,15 +42,15 @@ is a heads-up, not an approval step. Tools don't need permission to use the API.
 | API v3 only | Done. |
 | Rate limit | Done. Sign-in makes a handful of calls, and our own login limits sit well below Habitica's. |
 | Background pacing | Not applicable. Nothing runs without the player. |
-| Stop on failure | Not applicable while read-only. The purse design follows it. |
+| Stop on failure | Done (0.6). A top-up stops at the first refusal: not enough gold, a refused token, a failed create. A charge whose outcome is unknown is never sent again; a balance check decides it ([design/purse-and-wardrobe.md](design/purse-and-wardrobe.md) 2.2, 2.3). |
 | Token openness | Done. The server never stores the token. The opt-in "remember" keeps it only in the player's browser, and the connect guide says so. |
 | Public code | **Ready, not yet pushed.** AGPL-3.0-or-later, with the licences, the README and `CONTRIBUTING.md` in place; publishing is the owner's step (`https://github.com/Solidsilver/glimway`). |
 | Told staff | **Not yet.** Planned once it's polished (below). |
 
-**Using the read-only game on your own account is fine.** Reading your own profile with your own
+**Using the game on your own account is fine.** Reading your own profile with your own
 token is what the API is for. A tool doesn't need to be registered before you or friends use it, and
-the form is a courtesy heads-up. Everything the game does today is reads, at sign-in, well under the
-rate limit, with the right header. Writes are what deserve extra care: they change a player's real
+the form is a courtesy heads-up. Everything the game does on its own is reads, at sign-in, well under
+the rate limit, with the right header; its one write is a purse top-up the player asks for. Writes are what deserve extra care: they change a player's real
 data, and Habitica keeps no gold history. That's why the gold purse gets tested against a throwaway
 account first.
 
@@ -63,11 +63,9 @@ it. See [habitica-gold.md](habitica-gold.md).
 - **"Read-only" copy:** the README, the connect guide and the import contract all promise the game
   is read-only. Change all three in the same release as the purse.
 
-  > **TODO (gold purse):** the read-only promise is still true and still stated. When the purse
-  > ships, rewrite it in the README ("How your Habitica token is handled"), the connect guide
-  > (`src/content/connect-guide.ts`) and
-  > [import-contract.md](import-contract.md) to say exactly what the purse writes, and check the
-  > in-game About card.
+  Done with 0.6: the README ("How your Habitica token is handled"), the connect guide
+  (`src/content/connect-guide.ts`), [import-contract.md](import-contract.md) and the in-game
+  About card say exactly what the purse writes, and when the token reaches the server.
 - **Testing:** test against a throwaway Habitica account before any real one.
 
 ## Plan for telling Habitica

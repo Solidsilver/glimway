@@ -108,6 +108,7 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
   }))
   // The server revision this tab's link is based on, so a playtest can wait for the link to catch up.
   on('__fsLinkRev', () => s['session'].link?.rev ?? null)
+  on('__fsPurse', Object.assign(() => s['session'].link?.purse ?? null, { reread: async () => void (await s['session'].link?.refreshState()) }))
   // Damage through the normal hurt path, so low-health and defeat beats can
   // be checked without a long fight.
   on('__fsDevHurt', (n) => {

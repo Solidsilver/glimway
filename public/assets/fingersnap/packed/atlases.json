@@ -241,6 +241,13 @@
   "assets/generated/playtest1-pass/residents/fingersnap-resident-pip.png": "727717f6a6c10ea43561a6d51eb1c784bb3dcacbedc9d90cdae7144636c59a28",
   "assets/generated/playtest1-pass/residents/fingersnap-resident-silas.png": "4579c07b25e47fb3d1d2159810de91c9d19dd5e29f165ff60dbeaf2203ddde69",
   "assets/generated/playtest1-pass/water/fingersnap-pond-bed-seamless.png": "5bdeca7daaed919cc407f291b307bbbbcdd004cd7f0507cad85eeb42b8e36217",
+  "assets/generated/purse-pass/frames/gold-coin-hud.png": "0c9afa80a6cd7ce1d2fd9331fdb9a44cf3a2c18870010b26ee19e5b6e83e27c5",
+  "assets/generated/purse-pass/frames/gold-coin.png": "dc6c4cb3f405067ca5ed5ef3115b9fd4fe18b36bea62c9acb2d8504a57a65e15",
+  "assets/generated/purse-pass/frames/gold-letter.png": "ead69bdd904451642d7bd9cb7e2a2645d5c94187309397cc1b916af5247a60e3",
+  "assets/generated/purse-pass/frames/price-tag.png": "1d6ad0ca22f994c4fad4b1f849bb2cae9557c8a718e2a97268c031ab4b676630",
+  "assets/generated/purse-pass/frames/purse.png": "66015ab805f71fbedbe0ae2e3bcfd7e304f03c51d8d83aa790a73fc2953bf2bf",
+  "assets/generated/purse-pass/frames/wardrobe.png": "d2fc813ef011cf4ca897d401e5f9444f8bdf48e4992cf7a6611ce58b62dc35d6",
+  "assets/generated/purse-pass/manifest.json": "3c3b9df1696dce31e6d1f41f88c58fbe6601d672941c256ea1873cbd703a79dd",
   "assets/generated/runtime-pass/fingersnap-class-effects.png": "d9f5dea940c4cc74e7d9489036c9ab01017475dc44d302a0149a0a23aaf05ea2",
   "assets/generated/runtime-pass/fingersnap-guardian.png": "8d0c6fc4f5652202cc580356605281fffb11f550c00862bbb2e31ac118a8598f",
   "assets/generated/runtime-pass/fingersnap-npcs.png": "7f19632c18daae28772e4f1ead8c835e9ca1ceae3b26b94cbc6d3edf3647576b",
@@ -260,6 +267,7 @@
   "indoors.webp": "b0156247256e33a0bcfefe2ab27fc4ad8cf687dd675649a37617ae8b356d7255",
   "items.webp": "ecd2b4d308db0615f50126868db6e5acb40718c52e0c098296c25bf323ceb020",
   "people.webp": "bc06b2da02a1d7c07397ed9e239337d946d7639d3d1c381a71aed29860a4f782",
+  "purse.webp": "cffd867b431c323653d66485b7a26c70621f785a544673bb0a75bee57a3a9c78",
   "runtime.webp": "a0e1d4ec27403d5891da88339b7b4161ca29b8a10aef79b2d7b6bc9fc2d70044",
   "terrain.webp": "9043dcf3ec13059d338f359ebe382fa1b1521af27eb99a717ddd2b652317790b"
  },
@@ -4264,6 +4272,52 @@
     992,
     32,
     32
+   ]
+  }
+ },
+ "purse": {
+  "image": "purse.webp",
+  "size": [
+   157,
+   160
+  ],
+  "density": 64,
+  "frames": {
+   "gold-coin": [
+    0,
+    0,
+    64,
+    64
+   ],
+   "gold-coin-hud": [
+    0,
+    128,
+    32,
+    32
+   ],
+   "purse": [
+    0,
+    64,
+    64,
+    64
+   ],
+   "wardrobe": [
+    64,
+    64,
+    64,
+    64
+   ],
+   "price-tag": [
+    32,
+    128,
+    32,
+    32
+   ],
+   "gold-letter": [
+    64,
+    0,
+    64,
+    64
    ]
   }
  },

@@ -72,6 +72,8 @@
   const heldDef = $derived(heldUi.slot?.itemDef ?? null)
   let objectiveOpen = $state(false)
   const showEmbers = $derived(ui.stats.embers > 0 || ui.vitalsSource === 'imported')
+  /** Gold beside embers on desktop once the purse holds some (purse-and-wardrobe.md 2.1; phones: the Hero page and the Menu). */
+  const showGold = $derived(!touch && (ui.stats.gold ?? 0) > 0)
   /** Phones show the numbers on the bars only when asked or when health runs low. */
   let numbersOpen = $state(false)
   const showNumbers = $derived(!touch || numbersOpen || lowHp)
@@ -155,6 +157,11 @@
         <Icon name="ember" size={13} />{ui.stats.embers}
       </span>
     {/key}
+  {/if}
+  {#if showGold}
+    <span class="gold" title="Gold in your purse: moved in from Habitica, for sellers, shelves and friends" aria-label={`${ui.stats.gold} gold`} data-testid="hud-gold">
+      <ArtIcon art="purse-gold-hud" name="coin" size={13} />{ui.stats.gold.toLocaleString('en-US')}
+    </span>
   {/if}
 {/snippet}
 
@@ -522,6 +529,28 @@
   }
   .embers :global(.icon) {
     color: var(--ember-deep);
+  }
+  .gold {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 4px;
+    padding: 1px 8px 1px 6px;
+    font-size: 14px;
+    letter-spacing: 0.02em;
+    color: #4a3410;
+    background: linear-gradient(180deg, #fff1b8, #f2d270);
+    border: 2px solid var(--wood-dark);
+    border-radius: 999px;
+    box-shadow: 0 2px 0 var(--wood-dark);
+    font-family: var(--font-display);
+  }
+  .gold :global(.icon),
+  .gold :global(.art-icon) {
+    color: var(--gold-deep);
+    width: 13px;
+    height: 13px;
   }
   .embers.pulse {
     animation: ember-pop 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.4);

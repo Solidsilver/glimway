@@ -344,9 +344,14 @@ export class Village {
     return { ok: true, value: r.value.shelf }
   }
 
-  /** Stock or take from the gift shelf. */
-  async shelfAction(req: { op: 'stock' | 'take'; gate: number; slot: number; asset?: Asset }): Promise<Result<ShelfActionResponse>> {
-    const r = await this.link.mutate<ShelfActionResponse>({ kind: 'shelf', fields: { action: req.op, gate: req.gate, slot: req.slot, ...(req.asset ? { asset: req.asset } : {}) } })
+  /**
+   * Stock, take from or buy at the gift shelf. A stock may carry a gold
+   * price; a buy pays it from the purse (purse-and-wardrobe.md 3.2), shown
+   * at once as `pay` until the answer.
+   */
+  async shelfAction(req: { op: 'stock' | 'take' | 'buy'; gate: number; slot: number; asset?: Asset; price?: number; pay?: number }): Promise<Result<ShelfActionResponse>> {
+    const fields = { action: req.op, gate: req.gate, slot: req.slot, ...(req.asset ? { asset: req.asset } : {}), ...(req.price ? { price: req.price } : {}) }
+    const r = await this.link.mutate<ShelfActionResponse>({ kind: 'shelf', fields }, req.op === 'buy' && req.pay ? { gold: -req.pay } : {})
     if (!r.ok) return fail(r.code)
     if (r.res.inventory) {
       this.inventory = r.res.inventory
@@ -440,15 +445,31 @@ export class Village {
     return { ok: true, value: undefined }
   }
 
+  /** A gold letter (purse-and-wardrobe.md 3.3): the gold leaves the purse now and waits in the letter. */
+  async sendGold(toId: string, gold: number): Promise<Result> {
+    const r = await this.link.mutate<MailActionResponse>({ kind: 'mail-send', fields: { toId, gold } }, { gold: -gold })
+    if (!r.ok) return fail(r.code)
+    this.adoptMail(r.res.result)
+    return { ok: true, value: undefined }
+  }
+
+  /** The gold a letter carries (0: not a gold letter), for the purse shown until the answer. */
+  private goldIn(id: string): number {
+    const m = this.mail.find((x) => x.id === id)
+    return m?.asset.kind === 'gold' ? m.asset.qty : 0
+  }
+
   async claim(id: string): Promise<Result<AssetView | undefined>> {
-    const r = await this.link.mutate<MailActionResponse>({ kind: 'mail-claim', id })
+    const gold = this.goldIn(id)
+    const r = await this.link.mutate<MailActionResponse>({ kind: 'mail-claim', id }, gold ? { gold } : {})
     if (!r.ok) return fail(r.code)
     this.adoptMail(r.res.result)
     return { ok: true, value: r.res.result.asset }
   }
 
   async recall(id: string): Promise<Result> {
-    const r = await this.link.mutate<MailActionResponse>({ kind: 'mail-recall', id })
+    const gold = this.goldIn(id)
+    const r = await this.link.mutate<MailActionResponse>({ kind: 'mail-recall', id }, gold ? { gold } : {})
     if (!r.ok) return fail(r.code)
     this.adoptMail(r.res.result)
     return { ok: true, value: undefined }

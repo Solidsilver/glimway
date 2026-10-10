@@ -27,6 +27,7 @@ import type { CommonsWorld } from '../commons'
 import { villageFor, type Village } from '../village'
 import { calendarFind } from '../../lib/wilds/stories'
 import { sellerFor } from '../../lib/items'
+import { sellerChoices } from '../../lib/purse'
 import { grantPaper } from '../papers'
 import type { Interactable, Interactables } from './interactables'
 import { expose } from '../dev-hooks'
@@ -98,7 +99,7 @@ export class VillageLayer {
       speaker: stall.npc,
       lines: stall.goods.map((g) => g.line),
       choices: connected
-        ? [...stall.goods.map((g) => ({ text: g.label, action: `buy:${stall.id}:${g.item}` })), { text: 'Not yet' }]
+        ? [...sellerChoices(stall), { text: 'Not yet' }]
         : undefined
     })
   }

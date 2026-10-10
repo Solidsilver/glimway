@@ -20,6 +20,7 @@ import { spendErrorText } from '../../content/errors'
 import { CHARM_ITEM, ROAD_LANTERNS, type EmberSpend, type RoadLanternId } from '../../lib/embers'
 import { yieldLine } from '../../lib/gathering'
 import { sellerFor } from '../../lib/items'
+import { parseBuy } from '../../lib/purse'
 import { echoSettled } from '../../lib/wilds/stories'
 import { TILE, tileMid } from '../../lib/tile'
 import { refreshLanternVisuals, type LightProp } from '../area/lanterns'
@@ -72,8 +73,9 @@ export class WorldActions {
     [
       'buy:',
       (rest) => {
-        const [seller, good] = rest.split(':')
-        if (seller && good) this.marketBuy(seller, good)
+        // `buy:<seller>:<good>`, or `…:gold` paid from the purse (purse-and-wardrobe.md 3.1).
+        const buy = parseBuy(rest)
+        if (buy) this.marketBuy(buy.seller, buy.good, buy.pay)
       }
     ]
   ]
@@ -158,9 +160,9 @@ export class WorldActions {
   }
 
   /** Buying from a seller (a resident's kitchen door, or the day's market stall). */
-  private marketBuy(seller: string, good: string): void {
+  private marketBuy(seller: string, good: string, pay: 'embers' | 'gold' = 'embers'): void {
     this.withServer(
-      () => itemsFor(this.deps.session).buy(seller, good),
+      () => itemsFor(this.deps.session).buy(seller, good, pay),
       (value) => {
         // The seller's own words for what changed hands.
         const bought = value.bought

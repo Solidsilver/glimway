@@ -103,6 +103,7 @@ export const guideCopy = {
 export interface WhyToken {
   summary: string
   reads: { title: string; items: string[] }
+  writes: { title: string; items: string[] }
   never: { title: string; items: string[] }
   honest: string
   where: string
@@ -114,20 +115,26 @@ export const whyToken: WhyToken = {
     title: 'What it reads',
     items: [
       'One request to your Habitica profile, each time you press Sync, and when you connect.',
-      'Your name, class, level, health, mana, experience, stats, equipped gear, pet and mount, and how your avatar looks.'
+      'Your name, class, level, health, mana, experience, gold, stats, equipped gear, pet and mount, and how your avatar looks.'
+    ]
+  },
+  writes: {
+    title: 'What it writes, and only when you ask',
+    items: [
+      'When you press Top up in the Menu and agree on the card, the world server moves the gold you chose into your purse: it adds a reward called “Glimway purse” to your Habitica Rewards, buys it once, and removes it. Your Habitica gold goes down by that amount. Nothing else on Habitica changes, and nothing ever goes back.'
     ]
   },
   never: {
     title: 'What it never does',
     items: [
-      'Score or create tasks, spend gold, change stats, equip or buy anything, cast spells, or touch your party.',
-      'Keep your token. Glimway’s server sees it once, at sign-in, to prove your account — and never stores it.'
+      'Score your own tasks, change stats, equip or buy anything, cast spells, or touch your party. Gold moves only in a top-up you agreed to.',
+      'Keep your token. Glimway’s server sees it at sign-in to prove your account, and in a top-up or a gear check you start, for that one request. It never stores, logs or returns it.'
     ]
   },
   honest:
-    'The honest part: Habitica API tokens aren’t read-only. A token can change your account. The game limits itself to reading, and its code is public so you can check, but the token itself has no such limit.',
+    'The honest part: Habitica API tokens aren’t read-only. A token can change your account. The game reads, and writes only to move the gold you chose when you top up your purse. Its code is public so you can check, but the token itself has no such limit.',
   where:
-    'Where it goes: to Habitica, to read your profile, and once to your Glimway server at sign-in, to prove your account. The server never stores it, and it is never put in your journey or a log. Only if you tick Remember on this device is it also stored in this browser, apart from your journey.'
+    'Where it goes: to Habitica, to read your profile; to your Glimway server at sign-in, to prove your account; and to the server again only in a top-up or a gear check you start, for that one request. The server never stores it, and it is never put in your journey or a log. Only if you tick Remember on this device is it also stored in this browser, apart from your journey.'
 }
 
 /** Ember payoff line (shown under the title choice and in the connected step). */
@@ -144,4 +151,10 @@ export const unreachableCopy = {
   title: 'Can’t reach the world',
   body: 'Glimway plays in your browser, but your journey lives on its world server — and it didn’t answer. Check your connection, then try again.',
   retry: 'Try again'
+}
+
+/** The Menu's About card (purse-and-wardrobe.md 6.6). */
+export const aboutCopy = {
+  kept: 'Glimway plays in your browser. Your journey is kept in your world on the Glimway server; your Habitica token never is.',
+  gold: 'Gold moves from Habitica only when you top up your purse.'
 }

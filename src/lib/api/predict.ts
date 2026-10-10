@@ -17,6 +17,7 @@ import type { HabiticaProfile } from '../habitica/types.ts';
 import { profileFor } from '../profile.ts';
 import { reachStep } from '../quests.ts';
 import { createNewGame, validateSave, type GameState } from '../state.ts';
+import { purseOf, type PurseView } from '../purse.ts';
 
 /** Marks that hold discoveries and curated defeats (design 2.2, `content/story.json`). */
 export const FOUND = 'found:';
@@ -129,6 +130,9 @@ export type Prediction =
   // Companions and the stable (crafts.md 6.2): they change `PlayerState.companions`, not the game state (`predictCompanions`).
   | { kind: 'companions'; followPet: string; yardPets: string[] }
   | { kind: 'mount-home' }
+  // Gold (purse-and-wardrobe.md 6.5): a gold buy, shelf buy, letter or give takes it out of the purse,
+  // a gold letter collected or recalled puts it in. It changes `PlayerState.purse` (`predictPurse`).
+  | { kind: 'gold'; delta: number }
   | { kind: 'none' };
 
 export interface PredictContext {
@@ -171,6 +175,7 @@ export function predict(state: GameState, op: Prediction, ctx: PredictContext): 
       return { ...state, ...fallRecovery(state, ctx.profile), area: 'village', position: { ...VILLAGE_SPAWN }, wildsRegion: undefined };
     case 'companions':
     case 'mount-home':
+    case 'gold':
     case 'none':
       return state;
   }
@@ -244,4 +249,19 @@ function grown(home: HomeView, stableItem: string, max: number): HomeView['stall
   const n = stable?.stalls ?? 1;
   if (!stable || n >= max || home.stalls.some((s) => s.stall === n + 1)) return home.stalls;
   return [...home.stalls, { stall: n + 1, mount: '', ownerId: '', ownerName: '', out: false }];
+}
+
+// ------------------------------------------------------------ the purse
+
+/**
+ * `server.purse` with `pending` applied in order (purse-and-wardrobe.md 6.5):
+ * gold down at once for a buy, a letter or a give, and up for a letter
+ * collected or recalled, until the answer replaces it. Never below zero:
+ * the server refuses a spend the purse can't cover, and the prediction
+ * rolls back with it. The top-up is never predicted.
+ */
+export function predictPurse(server: PlayerState | null, pending: readonly Prediction[]): PurseView {
+  const view = purseOf(server);
+  for (const op of pending) if (op.kind === 'gold') view.gold = Math.max(0, view.gold + op.delta);
+  return view;
 }

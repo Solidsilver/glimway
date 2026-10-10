@@ -67,8 +67,8 @@ export const ITEM_ERRORS: Table = {
   'recipient-unavailable': 'They aren’t in your world just now.',
   'no-such-pocket': 'A satchel, apron or coat gives you a second pocket.',
   'not-a-keepsake': 'Pockets are for keepsakes.',
-  'off-hand-closed': 'Your off hand opens when you take a class.',
-  'not-for-the-off-hand': 'That isn’t something to carry in your off hand.',
+  'off-hand-closed': 'Your belt opens when you take a class.',
+  'not-for-the-off-hand': 'That isn’t something to carry at your belt.',
   'already-picked-up': 'You’ve already picked that up.',
   'invalid-region': 'The woods have shifted under you. Step back a moment.',
   'not-in-season': 'Not now — that belongs to another season. Come back when it turns.',
@@ -80,6 +80,8 @@ export const ITEM_ERRORS: Table = {
   'insufficient-items': 'You don’t have that any more.',
   'insufficient-materials': 'You don’t have enough to mend it.',
   'insufficient-embers': 'You don’t have enough embers.',
+  'insufficient-gold': 'There isn’t that much gold in your purse.',
+  'invalid-quantity': 'That isn’t an amount of gold you can hand over.',
   'item-not-available': 'That isn’t in your pack any more.',
   'item-not-found': 'That isn’t in your pack any more.'
 }
@@ -120,6 +122,8 @@ export const VILLAGE_ERRORS: Table = {
   'mail-sender-limit': `You have ${MAIL.maxOutstandingSent} parcels waiting to be collected already. Wait for some to be collected, or recall one.`,
   'mail-recipient-limit': 'Their mailbox is full. They need to collect some parcels first.',
   'mail-rate-limited': 'The post rider needs a moment. Try again in a minute.',
+  'insufficient-gold': 'There isn’t that much gold in your purse.',
+  'own-stock': 'You stocked that one yourself, so it isn’t yours to buy.',
   'project-complete': 'That project is finished. Thank you!',
   'project-overfilled': 'That’s more than the project still needs. Give a little less.',
   'invalid-contribution': 'That project doesn’t take that material.',
@@ -225,6 +229,25 @@ export const QUEST_ERRORS: Table = {
   'needs-habitica': 'This one needs your Habitica hero. Connect it in the Menu.'
 }
 
+/**
+ * A top-up that didn't start (purse-and-wardrobe.md 2.2): refused before a
+ * row was written, so nothing moved and no top-up was used. Habitica's own
+ * answers (a refused token, a timeout) aren't here: they come back as the
+ * top-up's outcome (src/lib/purse.ts `topUpOutcome`).
+ */
+export const PURSE_ERRORS: Table = {
+  'needs-habitica': 'Only a Habitica hero can top up a purse from Habitica.',
+  'purse-busy': 'A top-up is still on its way. Wait for its outcome, then try again.',
+  'top-up-limit': 'That’s both of today’s top-ups. Two more after midnight UTC.',
+  'invalid-quantity': 'That isn’t an amount of gold that can move. Use a whole number.',
+  'login-rate-limited': 'Habitica is busy with sign-ins just now. Nothing moved; try again in a minute.',
+  'login-user-rate-limited': 'Habitica is busy with sign-ins just now. Nothing moved; try again in a minute.',
+  'login-busy': 'Habitica is busy with sign-ins just now. Nothing moved; try again in a minute.',
+  'habitica-unavailable': 'Habitica didn’t answer. Nothing moved; try again in a little while.',
+  'habitica-rate-limited': 'Habitica asked us to slow down. Nothing moved; try again in a minute.',
+  offline: 'Needs a connection. Nothing moved — try again when you’re back online.'
+}
+
 /** The words for `code` from a domain's table, then the shared transport lines, then `fallback`. */
 export function errorText(table: Table, code: string, fallback = FALLBACK): string {
   return (Object.hasOwn(table, code) ? table[code] : undefined) ?? (Object.hasOwn(TRANSPORT_ERRORS, code) ? TRANSPORT_ERRORS[code] : undefined) ?? fallback
@@ -235,4 +258,5 @@ export const villageErrorText = (code: string): string => errorText(VILLAGE_ERRO
 export const homeErrorText = (code: string): string => errorText(HOME_ERRORS, code, 'Silas didn’t catch that. Nothing changed — try again in a moment.')
 export const spendErrorText = (code: string): string => errorText(SPEND_ERRORS, code, 'The lantern didn’t answer. Nothing was spent — try again in a moment.')
 export const companionErrorText = (code: string): string => errorText(COMPANION_ERRORS, code)
+export const purseErrorText = (code: string): string => errorText(PURSE_ERRORS, code, 'The top-up didn’t start. Nothing moved — try again in a moment.')
 export const questErrorText = (code: string): string => errorText(QUEST_ERRORS, code, 'That story step didn’t take. Nothing was lost.')

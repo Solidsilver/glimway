@@ -9,6 +9,12 @@
   import ConnectGuide from './ConnectGuide.svelte'
   import InvitePanel from './InvitePanel.svelte'
   import WorldCard from './WorldCard.svelte'
+  import PurseCard from './PurseCard.svelte'
+  import PurseConsent from './PurseConsent.svelte'
+  import PurseLog from './PurseLog.svelte'
+  import { purseUi } from './purse.svelte'
+  import { aboutCopy } from '../content/connect-guide'
+  import { onDestroy } from 'svelte'
   import type { HabiticaProfile } from '../lib/habitica/types'
   import type { Snapshot, WorldChoice, WorldRef, WorldView } from '../lib/api/types'
   import { accountCopy, offlineCopy } from '../content/connected'
@@ -51,6 +57,10 @@
   } = $props()
 
   const touch = isTouchFirst()
+  /** The connect guide: Top up syncs through it first (its safe places and messages). */
+  let guide: ConnectGuide | undefined = $state()
+  // A consent card closes with the Menu (nothing sent); a top-up on its way carries on.
+  onDestroy(() => purseUi.closeSheet())
   let confirmLogout = $state(false)
   let logoutBusy = $state(false)
 
@@ -181,7 +191,10 @@
 
   <section class="card">
     <h3 class="section-title"><Icon name="person" size={14} /> Sync your Habitica hero</h3>
-    <ConnectGuide {session} mode="menu" {onSignedIn} />
+    <ConnectGuide bind:this={guide} {session} mode="menu" {onSignedIn} />
+    {#if ui.account && session.link}
+      <PurseCard {session} sync={() => guide?.syncForTopUp() ?? Promise.resolve({ ok: false })} />
+    {/if}
   </section>
 
   {#if ui.account}
@@ -210,7 +223,7 @@
 
   <section class="card">
     <h3 class="section-title"><Icon name="lantern" size={14} /> About</h3>
-    <p class="fine">Glimway plays in your browser. Your journey is kept in your world on the Glimway server; your Habitica token never is.</p>
+    <p class="fine">{aboutCopy.kept} {aboutCopy.gold}</p>
     <p class="tiny" data-testid="credits">
       Avatar, gear and companion art from Habitica (habitica.com), © HabitRPG, Inc., licensed
       <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 3.0</a>;
@@ -227,6 +240,12 @@
   </p>
 </Panel>
 
+{#if purseUi.sheet === 'consent' && session.link}
+  <PurseConsent {session} />
+{:else if purseUi.sheet === 'log'}
+  <PurseLog />
+{/if}
+
 {#if confirmLogout}
   <ConfirmDialog
     title={accountCopy.logoutTitle}
@@ -234,6 +253,7 @@
     confirmLabel={accountCopy.logout}
     onConfirm={() => {
       confirmLogout = false
+      purseUi.reset()
       onLogout?.()
     }}
     onCancel={() => (confirmLogout = false)}
