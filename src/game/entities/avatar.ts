@@ -116,6 +116,10 @@ export class AvatarVisual {
   led: LedMount | null = null
   /** The last mount Go home sent off (playtests read where it went). */
   walkingHome: LedMount | null = null
+  /** The sprite names drawn now (playtests read the wardrobe's look from them). */
+  drawn: string[] = []
+  /** The wardrobe drawn now (its JSON), so a new choice rebuilds the hero. */
+  private wardrobeShown = '{}'
   /** The mount key on the lead or under you ('' none): `companions.mountOut`. */
   private mountShown = ''
   riding = false
@@ -156,6 +160,11 @@ export class AvatarVisual {
     if (!this.mountShown) this.riding = false
     const onCompanions = () => this.onCompanions()
     bus.on(EV.companions, onCompanions)
+    // A new wardrobe choice (or its rollback) redraws the hero.
+    const onWardrobe = () => {
+      if (JSON.stringify(this.deps.session.link?.wardrobe ?? {}) !== this.wardrobeShown) void this.build()
+    }
+    bus.on(EV.wardrobe, onWardrobe)
     // H sends the mount home while you're off it (crafts.md 8); M is the scene's (./world-controls.ts).
     const onKey = (e: KeyboardEvent) => {
       if (e.code !== 'KeyH' || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return
@@ -167,6 +176,7 @@ export class AvatarVisual {
     scene.input.keyboard?.on('keydown', onKey)
     scene.events.once('shutdown', () => {
       bus.off(EV.companions, onCompanions)
+      bus.off(EV.wardrobe, onWardrobe)
       scene.input.keyboard?.off('keydown', onKey)
       hideContextButton('saddle')
       hideContextButton('go-home')
@@ -202,8 +212,12 @@ export class AvatarVisual {
     if (!profile) return
     const token = ++this.buildToken
     // Ridden, the mount that's out is drawn under you (never Habitica's current mount).
-    const loaded = await loadWorldAvatar(this.scene, { ...profile, selectedMount: this.riding ? this.mountOut : null }, this.riding && !!this.mountOut)
+    // The wardrobe's look is drawn as the costume (purse-and-wardrobe.md 4.4).
+    const wardrobe = session.link?.wardrobe ?? null
+    this.wardrobeShown = JSON.stringify(wardrobe ?? {})
+    const loaded = await loadWorldAvatar(this.scene, { ...profile, selectedMount: this.riding ? this.mountOut : null }, this.riding && !!this.mountOut, wardrobe)
     if (token !== this.buildToken) return // a newer rebuild superseded this one
+    this.drawn = loaded.layerKeys.map((k) => k.replace(/^fs-asset-/, ''))
     if (this.container) {
       this.container.destroy()
       this.container = null

@@ -17,8 +17,9 @@
  *   companion is not baked in twice; the pet follows as a separate sprite.
  * - The composed avatar is STATIC (restrained code-driven bob) — no walking
  *   sprites are claimed for it. Costume visuals: the profile's useCostume/
- *   costume fields drive the layers via the shared helper; effective gear
- *   still drives combat.
+ *   costume fields drive the layers via the shared helper, with the
+ *   wardrobe's look on top (`visualProfile`); effective gear still drives
+ *   combat.
  * - If no local layers resolve, rendering falls back to the original demo
  *   hero, clearly labelled.
  *
@@ -48,13 +49,20 @@ import {
 import { spriteCache } from '../lib/habitica/sprite-cache.ts'
 import type { HabiticaProfile } from '../lib/habitica/types.ts'
 import type { PresenceAvatar } from '../lib/presence.ts'
+import { wornProfile, type WardrobeChoice } from '../lib/wardrobe.ts'
 
 export { assetSourceFor }
 
-/** Visual profile for the walking avatar: no baked pet; mount only when riding. */
-function visualProfile(profile: HabiticaProfile, riding: boolean): AvatarProfileFull {
+/**
+ * Visual profile for the walking avatar: no baked pet; mount only when
+ * riding; the wardrobe's look as the costume (purse-and-wardrobe.md 4.4:
+ * `lookFor(profile, wardrobe)`, so the world avatar, the Wardrobe tab's
+ * preview and its tiles share one path). Nothing chosen draws Habitica's
+ * look as it is.
+ */
+export function visualProfile(profile: HabiticaProfile, riding: boolean, wardrobe: WardrobeChoice | null = null): AvatarProfileFull {
   return {
-    ...profile,
+    ...wornProfile(profile, wardrobe),
     selectedPet: undefined,
     selectedMount: riding ? (profile as AvatarProfileFull).selectedMount : undefined
   }
@@ -163,9 +171,9 @@ export function resolveLayers(refs: AssetRef[], source: SpriteSource = (n) => sp
  * Callers render them stacked, origin (0.5, 1), uniform scale.
  * `fallback` is true when no layer texture actually loaded.
  */
-export async function loadWorldAvatar(scene: Phaser.Scene, profile: HabiticaProfile, riding: boolean): Promise<LoadedAvatar> {
+export async function loadWorldAvatar(scene: Phaser.Scene, profile: HabiticaProfile, riding: boolean, wardrobe: WardrobeChoice | null = null): Promise<LoadedAvatar> {
   try {
-    const now = resolveLayers(avatarLayersFor(visualProfile(profile, riding)))
+    const now = resolveLayers(avatarLayersFor(visualProfile(profile, riding, wardrobe)))
     const { refs, unavailable } = now instanceof Promise ? await now : now
     if (refs.length === 0) return { layerKeys: [], fallback: true, unavailable, failedKeys: [] }
     const layerKeys = await queueImages(scene, refs)

@@ -334,6 +334,10 @@
     {
       "paths": ["src/ui/WhatsNew.svelte", "src/ui/whats-new.svelte.ts", "src/ui/whats-new-store.svelte.ts", "src/lib/changelog.ts", "scripts/whats-new.mjs", "src/content/update.ts", "src/ui/MenuPanel.svelte"],
       "specs": ["whats-new.spec.ts"]
+    },
+    {
+      "paths": ["src/lib/wardrobe.ts", "src/content/wardrobe.ts", "src/ui/WardrobeTab.svelte", "src/ui/GearTile.svelte", "src/ui/GridPicker.svelte", "src/ui/CompanionsPicker.svelte"],
+      "specs": ["wardrobe.spec.ts", "companions.spec.ts"]
     }
   ]
 }

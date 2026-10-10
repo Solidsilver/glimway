@@ -129,6 +129,8 @@ export type Prediction =
   // Companions and the stable (crafts.md 6.2): they change `PlayerState.companions`, not the game state (`predictCompanions`).
   | { kind: 'companions'; followPet: string; yardPets: string[] }
   | { kind: 'mount-home' }
+  // The wardrobe (purse-and-wardrobe.md 6.5): it changes `PlayerState.wardrobe` (`predictWardrobe`).
+  | { kind: 'wardrobe'; chosen: Record<string, string> }
   | { kind: 'none' };
 
 export interface PredictContext {
@@ -171,6 +173,7 @@ export function predict(state: GameState, op: Prediction, ctx: PredictContext): 
       return { ...state, ...fallRecovery(state, ctx.profile), area: 'village', position: { ...VILLAGE_SPAWN }, wildsRegion: undefined };
     case 'companions':
     case 'mount-home':
+    case 'wardrobe':
     case 'none':
       return state;
   }
@@ -208,6 +211,17 @@ export function predictCompanions(server: PlayerState | null, pending: readonly 
     else if (op.kind === 'mount-home') view = { ...view, mountOut: '' };
   }
   return view;
+}
+
+/**
+ * The wardrobe the game shows (purse-and-wardrobe.md 4.4): the server's
+ * resolved choice, replaced whole by each unanswered choice in order (the
+ * operation writes the whole map; a slot left out is As on Habitica).
+ */
+export function predictWardrobe(server: PlayerState | null, pending: readonly Prediction[]): Record<string, string> {
+  let chosen: Record<string, string> = { ...(server?.wardrobe?.chosen ?? {}) };
+  for (const op of pending) if (op.kind === 'wardrobe') chosen = { ...op.chosen };
+  return chosen;
 }
 
 /**

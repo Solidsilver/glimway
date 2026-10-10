@@ -47,7 +47,7 @@ import { newKey } from '../lib/api/client.ts'
 import { ApiError, errorCode, isOutboxClientBug, isReloadNeeded, isSettledRefusal, isUnreachable, needsReconciliation, type ApiErrorCode } from '../lib/api/errors.ts'
 import type { OperationsApi } from '../lib/api/operations.ts'
 import { browserLocks, emptyRecord, expired, holdLock, lockName, outboxStore, type HeldLock, type LockLike, type OutboxEntry, type OutboxKind, type OutboxRecord, type OutboxStore } from '../lib/api/outbox.ts'
-import { adoptable, fallRecovery, gameStateOf, isClientMark, predictCompanions, predictedView, profileOf, whereOf, type CompanionsView, type Prediction, type WhereJson } from '../lib/api/predict.ts'
+import { adoptable, fallRecovery, gameStateOf, isClientMark, predictCompanions, predictWardrobe, predictedView, profileOf, whereOf, type CompanionsView, type Prediction, type WhereJson } from '../lib/api/predict.ts'
 import { CompanionsRequestSchema, MountHomeRequestSchema, MountOutRequestSchema, StableExtendRequestSchema, StallRequestSchema, type StableExtendResult, type StallResult } from '../lib/gen/glimway/v1/companions_pb.js'
 import { projectHome } from '../lib/api/homestead.ts'
 import { REPORT_INTERVAL_MS, ReportBook, type CapturedReport, type ReportAck } from '../lib/api/reports.ts'
@@ -61,6 +61,7 @@ import { HomesteadRequestSchema, ShelfRequestSchema } from '../lib/gen/glimway/v
 import { ItemsRequestSchema } from '../lib/gen/glimway/v1/items_pb.js'
 import type { Keyed } from '../lib/api/requests.ts'
 import { HabiticaUserSchema } from '../lib/gen/glimway/v1/profile_pb.js'
+import { WardrobeCheckRequestSchema, WardrobeRequestSchema, type WardrobeCheckResult } from '../lib/gen/glimway/v1/wardrobe_pb.js'
 import { FishCancelRequestSchema, FishCastRequestSchema, FishSettleRequestSchema, type FishCancelResult, type FishCastResult, type FishSettleResult, type WaterView } from '../lib/gen/glimway/v1/fishing_pb.js'
 import { rawUserFor } from '../lib/habitica/client.ts'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types.ts'
@@ -315,7 +316,9 @@ const TYPED: Partial<Record<OutboxKind, { schema: DescMessage; path: string; res
   // Fishing (design crafts 5.4, lane G): online only, the pond is shared.
   'fish-cast': { schema: FishCastRequestSchema, path: '/api/fishing/cast', result: 'fishCast', send: (ops, req) => ops.fishCast(req) },
   'fish-settle': { schema: FishSettleRequestSchema, path: '/api/fishing/settle', result: 'fishSettle', send: (ops, req) => ops.fishSettle(req) },
-  'fish-cancel': { schema: FishCancelRequestSchema, path: '/api/fishing/cancel', result: 'fishCancel', send: (ops, req) => ops.fishCancel(req) }
+  'fish-cancel': { schema: FishCancelRequestSchema, path: '/api/fishing/cancel', result: 'fishCancel', send: (ops, req) => ops.fishCancel(req) },
+  // The wardrobe (purse-and-wardrobe.md 6.2): predicted, and queued offline like companions.
+  wardrobe: { schema: WardrobeRequestSchema, path: '/api/wardrobe', result: 'wardrobe', send: (ops, req) => ops.wardrobe(req) }
 }
 
 /** The same mutation asked again: its route and fields, apart from the header and where the hero stands. */
@@ -338,7 +341,8 @@ const UNDONE: Partial<Record<OutboxKind, string>> = {
   'take-paper': 'That paper wasn’t there for you after all. It’s back where it was.',
   'settle-echo': 'That Echo wasn’t yours to settle just now.',
   fall: 'Your last fall wasn’t recorded.',
-  companions: 'Your choice of companions didn’t take. They’re as they were.'
+  companions: 'Your choice of companions didn’t take. They’re as they were.',
+  wardrobe: 'Your wardrobe change didn’t take. You look as you did.'
 }
 
 /** The outbox for an account on this device, or a fresh one. */
@@ -369,6 +373,10 @@ function predictionOf(entry: OutboxEntry): Prediction {
         return { kind: 'companions', followPet: String(b.followPet ?? ''), yardPets: Array.isArray(b.yardPets) ? b.yardPets.map(String) : [] }
       case 'mount-home':
         return { kind: 'mount-home' }
+      case 'wardrobe': {
+        const chosen = b.chosen && typeof b.chosen === 'object' && !Array.isArray(b.chosen) ? (b.chosen as Record<string, unknown>) : {}
+        return { kind: 'wardrobe', chosen: Object.fromEntries(Object.entries(chosen).map(([k, v]) => [k, String(v)])) }
+      }
       default:
         return { kind: 'none' }
     }
@@ -612,6 +620,7 @@ export class Link {
     s.applyServer(this.view(), { vitalsSource: profile ? 'imported' : 'demo', importedProfile: profile }, opts)
     this.noteMagic(profile)
     this.noteCompanions()
+    this.noteWardrobe()
   }
 
   /** The level and class marks the screen holds (null until a state carries them). */
@@ -663,6 +672,23 @@ export class Link {
     if (now === this.companionsShown) return
     this.companionsShown = now
     this.emitter(EV.companions)
+  }
+
+  // ------------------------------------------------------------ the wardrobe (purse-and-wardrobe.md 4)
+
+  private wardrobeShown = ''
+
+  /** The wardrobe the game shows: the server's resolved choice, with an unanswered one on top. */
+  get wardrobe(): Record<string, string> {
+    return predictWardrobe(this.server, this.entries.map(predictionOf))
+  }
+
+  /** Tell the game when the wardrobe it shows changed (an answer, a choice, a rollback). */
+  private noteWardrobe(): void {
+    const now = JSON.stringify(this.wardrobe)
+    if (now === this.wardrobeShown) return
+    this.wardrobeShown = now
+    this.emitter(EV.wardrobe)
   }
 
   /** The screen's place and vitals, into the next report. */
@@ -1710,6 +1736,42 @@ export class Link {
     const key = newKey()
     const body = toJson(CompanionsRequestSchema, create(CompanionsRequestSchema, { op: { lease: '', key }, followPet, yardPets: [...yardPets] }), { alwaysEmitImplicit: true }) as Record<string, unknown>
     void this.submit('companions', TYPED.companions!.path, key, body, { offline: true })
+  }
+
+  /**
+   * Dress the hero (purse-and-wardrobe.md 4.2): the whole choice, slot → a
+   * gear key or "none"; a slot left out is As on Habitica. Predicted at once
+   * and queued offline, like companions: it can't fail on shared state.
+   */
+  wardrobeChoice(chosen: Readonly<Record<string, string>>): void {
+    if (!this.session || this.stopped) return
+    const key = newKey()
+    const body = toJson(WardrobeRequestSchema, create(WardrobeRequestSchema, { op: { lease: '', key }, chosen: { ...chosen } }), { alwaysEmitImplicit: true }) as Record<string, unknown>
+    void this.submit('wardrobe', TYPED.wardrobe!.path, key, body, { offline: true })
+  }
+
+  /** The picker's read (GET /api/wardrobe): the owned, catalogued keys and when they were checked. Reads never move the version. */
+  readWardrobe(): Promise<HomeRead<{ owned: string[]; checkedAt: number | null }>> {
+    return this.read(async () => {
+      const r = await this.api.run(() => this.ops.wardrobeRead())
+      return { owned: r.owned, checkedAt: r.checkedAt ?? null }
+    })
+  }
+
+  /**
+   * Check for new gear (4.3): the server asks Habitica, once, for what you
+   * own. The token rides this one request and is dropped: it isn't keyed,
+   * queued, stored or kept on this object. Needs a connection.
+   */
+  async checkGear(token: string): Promise<HomeRead<WardrobeCheckResult>> {
+    if (!this.session || this.stopped) return { ok: false, code: 'unknown' }
+    if (!this.canSend()) return { ok: false, code: 'offline' }
+    return this.read(async () => {
+      const env = await this.api.run(() => this.ops.wardrobeCheck(create(WardrobeCheckRequestSchema, { lease: this.lease ?? '', token })))
+      if (env.result.case !== 'wardrobeCheck' || !env.state) throw untrusted()
+      if (this.compare(env.state) === 'newer') this.adopt(env.state)
+      return env.result.value
+    })
   }
 
   /** Send the mount that's out back to its stall (predicted; queues offline). */

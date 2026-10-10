@@ -67,6 +67,8 @@ export const EV = {
   witness: 'game:witness',
   /** Connected play: the companions view changed (follower, yard pets, the mount that's out). */
   companions: 'game:companions',
+  /** Connected play: the wardrobe the game shows changed (an answer, a choice, a rollback). */
+  wardrobe: 'game:wardrobe',
   /** Open the Character panel's Companions page (`at: 'stable'` scrolls to the stable). */
   openCompanions: 'ui:open-companions',
   /** The mount that's out, as the hero has it now: { key, riding, led } (MountPayload); null when none is out. */
@@ -451,6 +453,7 @@ export interface EventMap {
   [EV.gift]: GiftPayload
   [EV.witness]: WitnessPayload
   [EV.companions]: void
+  [EV.wardrobe]: void
   [EV.openCompanions]: { at?: 'stable' } | undefined
   [EV.mount]: MountPayload | null
   [EV.mutationResolved]: MutationResolvedPayload

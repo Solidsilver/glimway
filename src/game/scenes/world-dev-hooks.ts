@@ -334,6 +334,8 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
       /** The directional held frame drawn ('' = none, or the item's icon). */
       holdingFrame: avatar.holdingFrame,
       pet: !!avatar.pet,
+      /** The sprite names the hero is drawn from (0.6: the wardrobe's look shows here). */
+      layers: avatar.drawn,
       riding: avatar.riding,
       /** Crafts (0.5): the follower drawn (its pose), the mount that's out and whether it's on the lead. */
       follower: avatar.follower ? { pose: avatar.follower.pose, x: Math.round(avatar.follower.x), y: Math.round(avatar.follower.y) } : null,
