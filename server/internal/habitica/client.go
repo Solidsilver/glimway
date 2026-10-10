@@ -43,9 +43,18 @@ type Error struct {
 	Code       string
 	Status     int
 	RetryAfter time.Duration
+	// Sent says the request reached Habitica — or may have: a transport
+	// failure is "sent", because we don't know what it did. Only our own
+	// budget refusing a call is "not sent": nothing left the server, so
+	// nothing was charged, and the top-up must not count it as an unknown
+	// outcome (2.2 step d).
+	Sent bool
 }
 
 func (e *Error) Error() string { return e.Code }
+
+// NotSent is the budget's own refusal: the call never went out.
+func (e *Error) NotSent() bool { return !e.Sent }
 
 // Upstream is the narrow slice of Habitica the server calls (design 2.7):
 // the sign-in proof and the purse's four calls, behind an interface so tests
@@ -54,7 +63,7 @@ func (e *Error) Error() string { return e.Code }
 type Upstream interface {
 	VerifyLimited(ctx context.Context, id, token string, allow func() bool) (rules.Profile, []string, error)
 	Gold(ctx context.Context, id, token string, allow func() bool) (Gold, error)
-	OwnedGear(ctx context.Context, id, token string, allow func() bool) ([]string, error)
+	OwnedGear(ctx context.Context, id, token string, allow func() bool) (string, []string, error)
 	CreateReward(ctx context.Context, id, token string, task Reward, allow func() bool) error
 	ScoreDown(ctx context.Context, id, token, alias string, allow func() bool) (int, error)
 	DeleteTask(ctx context.Context, id, token, alias string, allow func() bool) error
@@ -105,7 +114,7 @@ func (c *Client) VerifyLimited(ctx context.Context, id, token string, allow func
 	for attempt := 0; ; attempt++ {
 		req, err := http.NewRequestWithContext(ctx, "GET", u, nil)
 		if err != nil {
-			return zero, nil, &Error{Code: "habitica-unavailable", Status: 502}
+			return zero, nil, &Error{Code: "habitica-unavailable", Status: 502, Sent: true}
 		}
 		req.Header.Set("X-Api-User", id)
 		req.Header.Set("X-Api-Key", token)
@@ -116,19 +125,19 @@ func (c *Client) VerifyLimited(ctx context.Context, id, token string, allow func
 		}
 		res, err := c.HTTP.Do(req)
 		if err != nil {
-			return zero, nil, &Error{Code: "habitica-unavailable", Status: 502}
+			return zero, nil, &Error{Code: "habitica-unavailable", Status: 502, Sent: true}
 		}
 		if res.StatusCode == 429 {
 			delay := retryAfter(res.Header.Get("Retry-After"))
 			res.Body.Close()
 			if attempt == 1 {
-				return zero, nil, &Error{Code: "habitica-rate-limited", Status: 429, RetryAfter: delay}
+				return zero, nil, &Error{Code: "habitica-rate-limited", Status: 429, RetryAfter: delay, Sent: true}
 			}
 			timer := time.NewTimer(delay)
 			select {
 			case <-ctx.Done():
 				timer.Stop()
-				return zero, nil, &Error{Code: "habitica-unavailable", Status: 502}
+				return zero, nil, &Error{Code: "habitica-unavailable", Status: 502, Sent: true}
 			case <-timer.C:
 			}
 			continue
@@ -136,18 +145,18 @@ func (c *Client) VerifyLimited(ctx context.Context, id, token string, allow func
 		if res.StatusCode != 200 {
 			res.Body.Close()
 			if res.StatusCode == 401 || res.StatusCode == 403 {
-				return zero, nil, &Error{Code: "habitica-auth", Status: 401}
+				return zero, nil, &Error{Code: "habitica-auth", Status: 401, Sent: true}
 			}
-			return zero, nil, &Error{Code: "habitica-unavailable", Status: 502}
+			return zero, nil, &Error{Code: "habitica-unavailable", Status: 502, Sent: true}
 		}
 		b, err := io.ReadAll(io.LimitReader(res.Body, 2<<20))
 		res.Body.Close()
 		if err != nil {
-			return zero, nil, &Error{Code: "habitica-invalid-response", Status: 502}
+			return zero, nil, &Error{Code: "habitica-invalid-response", Status: 502, Sent: true}
 		}
 		p, err := Map(b)
 		if err != nil || p.ID != id {
-			return zero, nil, &Error{Code: "habitica-invalid-response", Status: 502}
+			return zero, nil, &Error{Code: "habitica-invalid-response", Status: 502, Sent: true}
 		}
 		return p, ownedGear(b), nil
 	}
@@ -160,19 +169,19 @@ func (c *Client) VerifyLimited(ctx context.Context, id, token string, allow func
 // shape: the token in X-Api-Key for this call alone, the creator tag in
 // X-Client, redirects off, and the caller's timeout.
 
-// call is that shared shape. It returns the response's status and body and
-// a coded error only for a refused budget or a transport failure: every
-// method below reads the status itself, because the same status means
-// different things to different calls (a 401 on a score is "Not Enough
-// Gold" as often as a bad token).
-func (c *Client) call(ctx context.Context, method, path, id, token string, payload []byte, allow func() bool) (int, []byte, *Error) {
+// call is that shared shape. It returns the response's status, body and
+// Retry-After, and a coded error only for a refused budget or a transport
+// failure: every method below reads the status itself, because the same
+// status means different things to different calls (a 401 on a score is
+// "Not Enough Gold" as often as a bad token).
+func (c *Client) call(ctx context.Context, method, path, id, token string, payload []byte, allow func() bool) (int, []byte, time.Duration, *Error) {
 	var body io.Reader
 	if payload != nil {
 		body = bytes.NewReader(payload)
 	}
 	req, err := http.NewRequestWithContext(ctx, method, strings.TrimRight(c.BaseURL, "/")+path, body)
 	if err != nil {
-		return 0, nil, &Error{Code: "habitica-unavailable", Status: 502}
+		return 0, nil, time.Second, &Error{Code: "habitica-unavailable", Status: 502, Sent: true}
 	}
 	req.Header.Set("X-Api-User", id)
 	req.Header.Set("X-Api-Key", token)
@@ -182,51 +191,57 @@ func (c *Client) call(ctx context.Context, method, path, id, token string, paylo
 		req.Header.Set("Content-Type", "application/json")
 	}
 	if allow != nil && !allow() {
-		return 0, nil, &Error{Code: "login-global-rate-limited", Status: 429, RetryAfter: time.Minute}
+		return 0, nil, time.Minute, &Error{Code: "login-global-rate-limited", Status: 429, RetryAfter: time.Minute}
 	}
 	res, err := c.HTTP.Do(req)
 	if err != nil {
-		return 0, nil, &Error{Code: "habitica-unavailable", Status: 502}
+		return 0, nil, time.Second, &Error{Code: "habitica-unavailable", Status: 502, Sent: true}
 	}
 	defer res.Body.Close()
+	retry := retryAfter(res.Header.Get("Retry-After"))
 	b, err := io.ReadAll(io.LimitReader(res.Body, 2<<20))
 	if err != nil {
-		return res.StatusCode, nil, &Error{Code: "habitica-invalid-response", Status: 502}
+		return res.StatusCode, nil, retry, &Error{Code: "habitica-invalid-response", Status: 502, Sent: true}
 	}
-	return res.StatusCode, b, nil
+	return res.StatusCode, b, retry, nil
 }
 
 // readError maps a read's non-200 onto a coded error (401 and 403 are a
-// refused token; 429 carries the wait; anything else is Habitica being
-// down). A read is never retried here: only the sign-in's VerifyLimited
-// retries, and only the score has its own one retry (2.2).
-func readError(status int, body []byte) *Error {
+// refused token; 429 carries the wait it asked for; anything else is
+// Habitica being down). A read is never retried here: only the sign-in's
+// VerifyLimited retries, and only the score has its own one retry (2.2).
+func readError(status int, body []byte, retry time.Duration) *Error {
 	switch {
 	case status == 401 || status == 403:
-		return &Error{Code: "habitica-auth", Status: 401}
+		return &Error{Code: "habitica-auth", Status: 401, Sent: true}
 	case status == 429:
-		return &Error{Code: "habitica-rate-limited", Status: 429, RetryAfter: time.Second}
+		return &Error{Code: "habitica-rate-limited", Status: 429, RetryAfter: retry, Sent: true}
+	case status >= 500:
+		return &Error{Code: "habitica-unavailable", Status: 502, Sent: true}
 	default:
-		return &Error{Code: "habitica-unavailable", Status: 502}
+		// A 4xx Habitica answered: it saw the request and said no. Nothing
+		// was created or charged — the opposite of a timeout, which is what
+		// finding 9's leftover mark turns on.
+		return &Error{Code: "invalid-request", Status: 400, Sent: true}
 	}
 }
 
 // userRead is one GET /api/v3/user for a few fields, returning the data
 // object's raw bytes. The caller reads what it asked for and nothing else.
 func (c *Client) userRead(ctx context.Context, id, token, fields string, allow func() bool) ([]byte, *Error) {
-	status, b, e := c.call(ctx, "GET", "/api/v3/user?userFields="+url.QueryEscape(fields), id, token, nil, allow)
+	status, b, retry, e := c.call(ctx, "GET", "/api/v3/user?userFields="+url.QueryEscape(fields), id, token, nil, allow)
 	if e != nil {
 		return nil, e
 	}
 	if status != 200 {
-		return nil, readError(status, b)
+		return nil, readError(status, b, retry)
 	}
 	var payload struct {
 		Success *bool           `json:"success"`
 		Data    json.RawMessage `json:"data"`
 	}
 	if json.Unmarshal(b, &payload) != nil || payload.Success != nil && !*payload.Success || len(payload.Data) == 0 {
-		return nil, &Error{Code: "habitica-invalid-response", Status: 502}
+		return nil, &Error{Code: "habitica-invalid-response", Status: 502, Sent: true}
 	}
 	return payload.Data, nil
 }
@@ -248,7 +263,7 @@ func (c *Client) Gold(ctx context.Context, id, token string, allow func() bool) 
 		Items json.RawMessage `json:"items"`
 	}
 	if json.Unmarshal(data, &user) != nil {
-		return Gold{}, &Error{Code: "habitica-invalid-response", Status: 502}
+		return Gold{}, &Error{Code: "habitica-invalid-response", Status: 502, Sent: true}
 	}
 	if user.ID == "" {
 		user.ID = user.AltID
@@ -261,19 +276,24 @@ func (c *Client) Gold(ctx context.Context, id, token string, allow func() bool) 
 }
 
 // OwnedGear is "Check for new gear" (4.3): one read of items.gear.owned.
-// The wardrobe's list is never taken from a browser report.
-func (c *Client) OwnedGear(ctx context.Context, id, token string, allow func() bool) ([]string, error) {
+// The wardrobe's list is never taken from a browser report. It answers the
+// user's _id too — the caller refuses one that isn't the account's subject.
+func (c *Client) OwnedGear(ctx context.Context, id, token string, allow func() bool) (string, []string, error) {
 	data, e := c.userRead(ctx, id, token, "items.gear.owned", allow)
 	if e != nil {
-		return nil, e
+		return "", nil, e
 	}
 	var user struct {
-		ID string `json:"_id"`
+		ID    string `json:"_id"`
+		AltID string `json:"id"`
 	}
 	if json.Unmarshal(data, &user) != nil {
-		return nil, &Error{Code: "habitica-invalid-response", Status: 502}
+		return "", nil, &Error{Code: "habitica-invalid-response", Status: 502, Sent: true}
 	}
-	return ownedGear(data), nil
+	if user.ID == "" {
+		user.ID = user.AltID
+	}
+	return user.ID, ownedGear(data), nil
 }
 
 // ownedGear reads items.gear.owned out of a user object — or out of the
@@ -316,14 +336,14 @@ func (c *Client) CreateReward(ctx context.Context, id, token string, task Reward
 	if err != nil {
 		return err
 	}
-	status, b, e := c.call(ctx, "POST", "/api/v3/tasks/user", id, token, payload, allow)
+	status, b, retry, e := c.call(ctx, "POST", "/api/v3/tasks/user", id, token, payload, allow)
 	if e != nil {
 		return e
 	}
 	if status == 201 {
 		return nil
 	}
-	return readError(status, b)
+	return readError(status, b, retry)
 }
 
 // ScoreDown buys that reward once: POST /api/v3/tasks/:alias/score/down.
@@ -332,7 +352,7 @@ func (c *Client) CreateReward(ctx context.Context, id, token string, task Reward
 // one 429 retry) and **never again after an unknown outcome** (2.2 step d).
 // It answers the gold Habitica reports after the charge, floored.
 func (c *Client) ScoreDown(ctx context.Context, id, token, alias string, allow func() bool) (int, error) {
-	status, b, e := c.call(ctx, "POST", "/api/v3/tasks/"+url.PathEscape(alias)+"/score/down", id, token, []byte("{}"), allow)
+	status, b, retry, e := c.call(ctx, "POST", "/api/v3/tasks/"+url.PathEscape(alias)+"/score/down", id, token, []byte("{}"), allow)
 	if e != nil {
 		return 0, e
 	}
@@ -343,7 +363,7 @@ func (c *Client) ScoreDown(ctx context.Context, id, token, alias string, allow f
 			} `json:"data"`
 		}
 		if json.Unmarshal(b, &payload) != nil || payload.Data.GP == nil {
-			return 0, &Error{Code: "habitica-invalid-response", Status: 502}
+			return 0, &Error{Code: "habitica-invalid-response", Status: 502, Sent: true}
 		}
 		return int(math.Floor(*payload.Data.GP)), nil
 	}
@@ -352,17 +372,22 @@ func (c *Client) ScoreDown(ctx context.Context, id, token, alias string, allow f
 		// it was charged. Coded with the wire's word for it (insufficient-
 		// gold), because every code this package returns is a wire code;
 		// the caller settles the row `not-enough` and never puts it there.
-		return 0, &Error{Code: "insufficient-gold", Status: 401}
+		return 0, &Error{Code: "insufficient-gold", Status: 401, Sent: true}
 	}
 	if status == 429 {
-		return 0, &Error{Code: "habitica-rate-limited", Status: 429, RetryAfter: time.Second}
+		// Habitica refused before running it; the caller waits this long
+		// (2.2 step d caps the wait at five seconds) and sends it once more.
+		return 0, &Error{Code: "habitica-rate-limited", Status: 429, RetryAfter: retry, Sent: true}
 	}
-	return 0, readError(status, b)
+	return 0, readError(status, b, retry)
 }
 
 // notEnoughGold reads Habitica's own refusal for a reward the player can't
-// afford — the one 401 that is not a bad token. The message is read and
-// dropped: nothing from a body is ever returned or stored.
+// afford — the one 401 that is not a bad token. Habitica answers it as
+// `error: "NotAuthorized"` with a message in the **user's language**, so the
+// error code is what matches; the English message is kept for whatever else
+// spells it out. The text is read and dropped: nothing from a body is ever
+// returned or stored.
 func notEnoughGold(b []byte) bool {
 	var payload struct {
 		Error   string `json:"error"`
@@ -371,7 +396,10 @@ func notEnoughGold(b []byte) bool {
 	if json.Unmarshal(b, &payload) != nil {
 		return false
 	}
-	text := strings.ToLower(payload.Error + " " + payload.Message)
+	if strings.EqualFold(payload.Error, "NotAuthorized") {
+		return true
+	}
+	text := strings.ToLower(payload.Message)
 	return strings.Contains(text, "not enough gold") || strings.Contains(text, "notenoughgold")
 }
 
@@ -379,14 +407,14 @@ func notEnoughGold(b []byte) bool {
 // whatever the outcome. 404 counts as done — there is nothing left to
 // remove. A failure marks the row leftover, for the next top-up to clear.
 func (c *Client) DeleteTask(ctx context.Context, id, token, alias string, allow func() bool) error {
-	status, b, e := c.call(ctx, "DELETE", "/api/v3/tasks/"+url.PathEscape(alias), id, token, nil, allow)
+	status, b, retry, e := c.call(ctx, "DELETE", "/api/v3/tasks/"+url.PathEscape(alias), id, token, nil, allow)
 	if e != nil {
 		return e
 	}
 	if status == 200 || status == 204 || status == 404 {
 		return nil
 	}
-	return readError(status, b)
+	return readError(status, b, retry)
 }
 
 // The one validated snapshot (content/habitica_gear.go): no second decode.

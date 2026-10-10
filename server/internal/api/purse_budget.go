@@ -72,8 +72,13 @@ func (a *Server) withHabiticaBudget(r *http.Request, userID string, budget *logi
 		return &budgetRefusal{"login-busy", time.Second}
 	}
 	err := fn(habiticaBudget{
-		Allow:       func() bool { return budget.allow("global", a.Config.Now()) },
-		FailedProof: func() { failed.Store(true) },
+		Allow: func() bool { return budget.allow("global", a.Config.Now()) },
+		// A rejected identity proof found after this call has returned — the
+		// top-up's worker can meet one long after the answer — is recorded
+		// straight on the limiter (finding 7): the reservation below is
+		// already released as "not failed" by then. Nothing double-counts:
+		// this is for the failures fn does not return.
+		FailedProof: func() { a.loginProofs.fail(userID, a.Config.Now()) },
 	})
 	// A refusal for a wrong token is a rejected identity proof, as it is at
 	// sign-in. The caller's own wording is kept.

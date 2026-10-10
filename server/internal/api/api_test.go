@@ -13,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 func TestTokenCookieAndBackup(t *testing.T) {
@@ -43,6 +44,20 @@ func TestTokenCookieAndBackup(t *testing.T) {
 		t.Fatal("gear check", check.Code, check.Body.String())
 	}
 	for _, answer := range []*httptest.ResponseRecorder{topUp, check} {
+		if bytes.Contains(answer.Body.Bytes(), []byte(secret)) {
+			t.Fatal("token in an answer:", answer.Body.String())
+		}
+	}
+	// The error and log paths are where a leak would show (finding 15): a
+	// top-up whose score fails and whose checks run, a top-up with a wrong
+	// token, and a gear check that token is refused on.
+	x.setPurseChecks([]time.Duration{time.Millisecond, 2 * time.Millisecond})
+	x.setScore("error")
+	failing := x.rawHTTP("POST", "/api/purse/top-up", map[string]any{"op": map[string]any{"lease": s.Lease, "key": "token-fails"}, "token": secret, "amount": 50}, c)
+	x.setScore("ok")
+	wrong := x.rawHTTP("POST", "/api/purse/top-up", map[string]any{"op": map[string]any{"lease": s.Lease, "key": "token-wrong"}, "token": "WRONG-TOKEN", "amount": 50}, c)
+	refused := x.rawHTTP("POST", "/api/wardrobe/check", map[string]any{"lease": s.Lease, "token": "WRONG-TOKEN"}, c)
+	for _, answer := range []*httptest.ResponseRecorder{failing, wrong, refused} {
 		if bytes.Contains(answer.Body.Bytes(), []byte(secret)) {
 			t.Fatal("token in an answer:", answer.Body.String())
 		}
@@ -121,10 +136,13 @@ func TestTokenCookieAndBackup(t *testing.T) {
 			t.Fatal("gold differs on restore", gold, goldSum)
 		}
 	}
-	// One sign-in proof, four top-up calls (the gold read, the create, the
-	// one score and the delete) and one gear-check read — and nothing else.
-	if x.calls.Load() != 6 {
-		t.Fatal("server called Habitica outside the three token requests:", x.calls.Load())
+	// One sign-in proof, four calls for the moving top-up (the gold read,
+	// the create, the one score and the delete), one gear-check read, six
+	// for the failing one (the read, the create, the score, two checks and
+	// the delete), and one read each for the two refused tokens — and
+	// nothing else.
+	if x.calls.Load() != 14 {
+		t.Fatal("server called Habitica outside the token requests:", x.calls.Load())
 	}
 }
 func TestInviteRaceAndWorld(t *testing.T) {

@@ -144,7 +144,16 @@ func newRig(t *testing.T) *rig {
 		x.serveHabitica(w, r)
 	}))
 	x.api = New(x.db, habitica.New(x.upstream.URL, "test-creator-glimway"), Config{SecureCookie: true, Logger: log.New(&x.logs, "", 0), Now: func() time.Time { return time.Unix(x.now.Load(), 0) }})
-	t.Cleanup(func() { x.upstream.Close(); x.db.Close() })
+	t.Cleanup(func() {
+		// Let the detached top-up workers finish before the database and the
+		// fake upstream go away (finding 11): one still running would reach
+		// a later rig's fake and move its call counts.
+		drained, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		x.api.Close(drained)
+		x.upstream.Close()
+		x.db.Close()
+	})
 	return x
 }
 
@@ -258,8 +267,13 @@ func (x *rig) serveHabitica(w http.ResponseWriter, r *http.Request) {
 		send(200, map[string]any{"success": true, "data": map[string]any{"_id": id, "party": map[string]any{"_id": p.PartyID}, "profile": map[string]any{"name": p.Name}, "flags": map[string]any{"classSelected": p.Class != nil}, "stats": map[string]any{"lvl": p.Level, "exp": p.Exp, "hp": p.HP, "mp": p.MP, "gp": gold, "str": 0, "int": 0, "con": 0, "per": 0, "class": class}, "apiToken": r.Header.Get("X-Api-Key"), "items": items}})
 	case r.Method == "POST" && r.URL.Path == "/api/v3/tasks/user":
 		x.logCall("create")
-		if create == "error" {
+		switch create {
+		case "error":
 			send(500, map[string]any{"success": false, "error": "InternalServerError"})
+			return
+		case "refused":
+			// A definite refusal: Habitica never made the task.
+			send(400, map[string]any{"success": false, "error": "BadRequest"})
 			return
 		}
 		var task struct {
@@ -294,6 +308,20 @@ func (x *rig) serveHabitica(w http.ResponseWriter, r *http.Request) {
 		switch score {
 		case "not-enough-gold":
 			send(401, map[string]any{"success": false, "error": "NotAuthorized", "message": "Not Enough Gold"})
+		case "not-enough-gold-fr":
+			// The same refusal in the user's language (finding 17).
+			send(401, map[string]any{"success": false, "error": "NotAuthorized", "message": "Pas assez d'or"})
+		case "rate-limited":
+			w.Header().Set("Retry-After", "0")
+			send(429, map[string]any{"success": false, "error": "RateLimitExceeded"})
+		case "rate-limited-once":
+			if x.scoreCalls() == 1 {
+				w.Header().Set("Retry-After", "0")
+				send(429, map[string]any{"success": false, "error": "RateLimitExceeded"})
+				return
+			}
+			charge()
+			send(200, map[string]any{"success": true, "data": map[string]any{"gp": max(0, gold-value)}})
 		case "error":
 			send(500, map[string]any{"success": false, "error": "InternalServerError"})
 		case "hang":

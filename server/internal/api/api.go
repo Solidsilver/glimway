@@ -11,6 +11,7 @@ import (
 	"glimway/server/internal/story"
 	"io"
 	"log"
+	"sync"
 	"time"
 )
 
@@ -78,6 +79,13 @@ type Server struct {
 	loginProofs *proofLimiter
 	presence    *presenceHub
 	sprites     *spriteProxy
+	// workers counts the detached top-up workers, so Close can wait for
+	// them (finding 11): a worker about to settle a `moved` row must not
+	// have its database closed under it.
+	workers sync.WaitGroup
+	// topUpMark lets a test fail the worker's state marks (finding 1: a
+	// failed `checking` mark must never stop the checks). Nil in production.
+	topUpMark func(id, state string) error
 }
 
 func New(s *store.Store, h habitica.Upstream, c Config) *Server {
