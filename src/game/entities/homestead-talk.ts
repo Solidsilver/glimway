@@ -24,7 +24,6 @@ import { sfx } from '../sfx'
 import { TILE, tileBottom, tileMid } from '../../lib/tile'
 import { ROOM_BENCH, ROOM_CHEST, ROOM_HEARTH } from '../cottage'
 import { grantPaper } from '../papers'
-import { presence } from '../presence'
 import { itemsFor } from '../items'
 import { sellerFor } from '../../lib/items'
 import { sellerChoices } from '../../lib/purse'
@@ -41,6 +40,8 @@ import { stablePoints } from './homestead-stable'
 import { openDialogue } from '../dialogue'
 import type { HomesteadDeps, HomesteadLayer } from './homesteads'
 import { POST, SILAS_ID, short } from './homestead-art'
+import { openYard } from '../yard-open'
+import { atTable as atDeedTable, shareCandidates, standsAtTable } from '../deed-table'
 
 /** "30 glims, 20 timber, 10 stone, 8 fiber" */
 function workshopPrice(): string {
@@ -417,25 +418,14 @@ export class HomesteadTalk {
     openDialogue({ id: 'home', speaker: d.speaker, lines, choices })
   }
 
-  /** Who stands at Silas's table right now (presence, this world), but you. */
+  /** Who stands at the deed table right now (presence, this world), but you (src/game/deed-table.ts). */
   private atTable(): { id: string; name: string }[] {
-    const feed = presence()
-    if (!feed) return []
-    const t = HOMESTEAD_DATA.commons.deedTable
-    const now = performance.now()
-    const out: { id: string; name: string }[] = []
-    for (const p of feed.peersIn(t.area)) {
-      if (p.leftAt !== null) continue
-      const at = p.track.at(now)
-      if (at && Math.hypot(at.x - t.x, at.y - t.y) <= t.radius) out.push({ id: p.accountId, name: p.displayName || 'A neighbour' })
-    }
-    return out
+    return atDeedTable()
   }
 
   private heroAtTable(): boolean {
-    const t = HOMESTEAD_DATA.commons.deedTable
     const h = this.deps.hero()
-    return Math.hypot(h.x - t.x, h.y - t.y) <= t.radius
+    return standsAtTable(this.deps.world.areaId, h)
   }
 
   /** Silas checks his plot book first (who holds what, who wants a joint deed), then talks. */
@@ -632,7 +622,7 @@ export class HomesteadTalk {
     }
     if (action === 'home:leave-confirmed') return this.leave()
     if (action === 'home:shop') {
-      bus.emit(EV.homeShop)
+      openYard()
       return
     }
     if (action === 'home:upgrade') {
@@ -711,9 +701,7 @@ export class HomesteadTalk {
       this.say({ speaker: SILAS.name, lines: [homeErrorText('not-at-table')] })
       return
     }
-    const here = this.atTable()
-    const members = new Set(this.home.homes.mine?.members.map((m) => m.id) ?? [])
-    const candidates = here.filter((p) => !members.has(p.id)).slice(0, 4)
+    const candidates = shareCandidates(this.atTable(), this.home.homes.mine?.members ?? []).slice(0, 4)
     if (candidates.length === 0) {
       this.say({ speaker: SILAS.name, lines: ['Both names go on together, and both of you sign here at my table. Bring them by. I’ll wait. I’m good at it.'] })
       return

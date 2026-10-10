@@ -10,8 +10,12 @@ class HomeUi {
   thumbs = $state<Record<string, string>>({})
   /** Naming a lantern post (null: not asked). */
   namePrompt = $state<NamePrompt | null>(null)
-  /** Asking before striking your name from the deed. */
-  leaveAsk = $state<{ place: string; shared: boolean } | null>(null)
+  /**
+   * Asking before striking your name from the deed. `onConfirm`: the deed
+   * panel strikes it itself; without one, the talk that asked does
+   * (`home:leave-confirmed`).
+   */
+  leaveAsk = $state<{ place: string; shared: boolean; onConfirm?: () => void } | null>(null)
   /** The homestead goal ("find your gate"), or null. */
   goal = $state<string | null>(null)
 }

@@ -166,8 +166,11 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
   const first = HOMESTEAD_DATA.lanternPosts.costs[0]!.materials
   await expect(shop.locator('.row', { hasText: 'Lantern Post' })).toContainText(`${first.timber} timber`)
+  // A camp opens on Build (the cottage is next); the stool is on Furnish.
+  await shop.getByRole('tab', { name: 'Furnish' }).click()
   await shop.locator('[data-buy="wooden-stool"]').click()
   await expect(shop.locator('.msg.ok')).toContainText('Wooden Stool is yours')
+  await shop.getByRole('tab', { name: 'Build' }).click()
   await shop.locator('[data-buy="lantern-post"]').click()
   await expect(shop.locator('.msg.ok')).toContainText('Lantern Post is yours')
   const second = HOMESTEAD_DATA.lanternPosts.costs[1]!.materials

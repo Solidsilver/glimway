@@ -43,7 +43,11 @@
         "src/lib/mail.ts",
         "src/ui/HomeBar.svelte",
         "src/ui/home.svelte.ts",
-        "src/ui/SilasShop.svelte",
+        "src/ui/YardPanel.svelte",
+        "src/ui/DeedPanel.svelte",
+        "src/ui/yard.ts",
+        "src/game/deed-table.ts",
+        "src/game/yard-open.ts",
         "src/ui/WorkshopPanel.svelte",
         "src/ui/MailPanel.svelte",
         "server/internal/land/**",
@@ -54,7 +58,7 @@
         "server/internal/store/mail.go",
         "server/internal/itemmove/**"
       ],
-      "specs": ["homestead.spec.ts", "village.spec.ts", "review-fixes.spec.ts", "review5-fixes.spec.ts", "art-screens.spec.ts"]
+      "specs": ["homestead.spec.ts", "yard.spec.ts", "village.spec.ts", "review-fixes.spec.ts", "review5-fixes.spec.ts", "companions.spec.ts", "art-screens.spec.ts"]
     },
     {
       "paths": [

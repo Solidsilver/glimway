@@ -45,6 +45,7 @@ test('finding 2: a 200 with a truncated body is replayed with the same key, neve
   const before = (await serverState(page)).body.state.glims
   await silasSays(page, /See what you’ve finished/)
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
+  await shop.getByRole('tab', { name: 'Furnish' }).click()
   const keys: string[] = []
   page.on('request', (r) => {
     if (r.method() === 'POST' && r.url().endsWith('/api/homestead/buy')) keys.push(JSON.parse(r.postData() ?? '{}').op?.key)
@@ -100,6 +101,7 @@ test('finding 4: a lost parcel send of a piece leaves Arrange showing it gone on
   await claim(page)
   await silasSays(page, /See what you’ve finished/)
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
+  await shop.getByRole('tab', { name: 'Furnish' }).click()
   await shop.locator('[data-buy="wooden-stool"]').click()
   await expect(shop.locator('.msg.ok')).toBeVisible()
   await shop.getByRole('button', { name: 'Close Silas’s yard' }).click()

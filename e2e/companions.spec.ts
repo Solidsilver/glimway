@@ -252,16 +252,18 @@ test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, an
   await page.keyboard.press('Escape')
   await expect(talking).toHaveCount(0)
   await expect(page.getByTestId('world-card')).toHaveCount(0)
-  // Silas's Yard: the stable heads its own Buildings section, after the
-  // cottage and before the finished pieces, locked until the Workshop stands.
+  // Silas's Yard: the stable is on Build, in the Buildings section under the
+  // cottage, locked until the Workshop stands; Furnish doesn't sell it.
   await silasSays(page, /See what you’ve finished/)
   const yard = page.getByRole('dialog', { name: 'Silas’s Yard' })
+  await expect(yard.getByRole('tab', { name: 'Build' })).toHaveAttribute('aria-selected', 'true')
   const sections = await yard.locator('section').evaluateAll((all) => all.map((el) => el.getAttribute('aria-label')))
+  expect(sections.indexOf('The cottage')).toBeGreaterThanOrEqual(0)
   expect(sections.indexOf('Buildings')).toBeGreaterThan(sections.indexOf('The cottage'))
-  expect(sections.indexOf('Buildings')).toBeLessThan(sections.indexOf('Finished pieces'))
   await expect(yard.getByTestId('shop-locked-stable')).toContainText('workshop')
   await expect(yard.locator('[data-buy="stable"]')).toBeDisabled()
-  await expect(yard.getByRole('region', { name: 'Finished pieces' }).locator('[data-buy="stable"]')).toHaveCount(0)
+  await yard.getByRole('tab', { name: 'Furnish' }).click()
+  await expect(yard.locator('[data-buy="stable"]')).toHaveCount(0)
   await yard.getByRole('button', { name: 'Close Silas’s yard' }).click()
   // Test lever: the Workshop tier (the stable comes after it) without the build-up.
   const mine = await myHome(page)
@@ -272,6 +274,8 @@ test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, an
   // Silas sells the stable.
   await silasSays(page, /See what you’ve finished/)
   const shop = page.getByRole('dialog', { name: 'Silas’s Yard' })
+  // The workshop stands: it opens on Furnish; the stable is on Build.
+  await shop.getByRole('tab', { name: 'Build' }).click()
   await expect(shop.locator('.row', { hasText: 'Stable' })).toContainText('30 glims')
   await shop.locator('[data-buy="stable"]').click()
   await expect(shop.locator('.msg.ok')).toContainText('is yours')
