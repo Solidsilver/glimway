@@ -31,7 +31,7 @@
       purseUi.error = purseCopy.connectFirst
       return
     }
-    void purseUi.start(sync, purse.glimsLeft)
+    void purseUi.start(sync, () => (ui.purse ?? EMPTY_PURSE).glimsLeft)
   }
 </script>
 

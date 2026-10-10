@@ -62,7 +62,7 @@ async function nextPoll(t: TestContext): Promise<void> {
 
 /** Habitica has 80 gold (40 glims' worth); today's top-ups can still bring 30 unless said. */
 async function toConsent(amount: string, glimsLeft = 30): Promise<void> {
-  await purseUi.start(async () => ({ ok: true, gold: 80 }), glimsLeft)
+  await purseUi.start(async () => ({ ok: true, gold: 80 }), () => glimsLeft)
   assert.equal(purseUi.phase, 'consent')
   assert.equal(purseUi.amount, '', 'the field starts empty')
   purseUi.amount = amount
@@ -164,7 +164,7 @@ test('Get sends nothing without a whole amount within Max, or without a token', 
   assert.equal(calls.topUp.length, 0, 'more than today’s glims left')
   purseUi.cancel()
   await toConsent('', 30)
-  await purseUi.start(async () => ({ ok: true, gold: 41 }), 30)
+  await purseUi.start(async () => ({ ok: true, gold: 41 }), () => 30)
   assert.equal(purseUi.max, 20, 'Habitica’s gold pays for 20')
   purseUi.amount = '21'
   await purseUi.confirm(session)
@@ -194,7 +194,7 @@ test('Not now and closing the card send nothing and forget the amount', async (t
 
 test('a sync that stops shows no card', async (t) => {
   setup(t)
-  await purseUi.start(async () => ({ ok: false }))
+  await purseUi.start(async () => ({ ok: false }), () => 30)
   assert.equal(purseUi.phase, 'idle')
   assert.equal(purseUi.sheet, null)
 })
@@ -209,4 +209,16 @@ test('signing out stops following a top-up', async (t) => {
   await nextPoll(t)
   assert.equal(calls.reads, 0)
   assert.equal(purseUi.phase, 'idle')
+})
+
+test('Max reads the day’s glims left after the sync, not before it', async (t) => {
+  setup(t)
+  // The sync's answer is what says how much of the day is left (another tab topped up meanwhile).
+  let left = 30
+  await purseUi.start(async () => {
+    left = 20
+    return { ok: true, gold: 1240 }
+  }, () => left)
+  assert.equal(purseUi.glimsLeft, 20)
+  assert.equal(purseUi.max, 20)
 })

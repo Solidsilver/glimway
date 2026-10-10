@@ -184,10 +184,11 @@ test('a top-up turns gold into glims, two for one, and the log and the HUD say s
   test.setTimeout(120_000)
   const id = await freshPlayer(page, 'Tansy')
   await habitica(id, { gp: 1240 })
-  const before = glimsOf(id)
-  const earned = xpGlimsOf(id)
   const card = await openConsent(page)
   await expect(card.getByTestId('consent-habitica-gold')).toHaveText('You have 1,240 gold on Habitica.')
+  // Read after the card's sync: it is what credits Mara's welcome glims.
+  const before = glimsOf(id)
+  const earned = xpGlimsOf(id)
   await card.getByTestId('consent-amount').fill('20')
   const request = page.waitForRequest((r) => r.url().includes('/api/purse/top-up'))
   await card.getByTestId('consent-get').click()
@@ -240,8 +241,9 @@ test('a top-up for more than Habitica holds now moves nothing and doesn’t use 
   test.setTimeout(120_000)
   const id = await freshPlayer(page, 'Tansy')
   await habitica(id, { gp: 1240 })
-  const before = glimsOf(id)
   const card = await openConsent(page)
+  // Read after the card's sync: it is what credits Mara's welcome glims.
+  const before = glimsOf(id)
   await card.getByTestId('consent-amount').fill('25')
   // Spent on Habitica meanwhile: the server's own read is the one that counts.
   await habitica(id, { gp: 30 })
@@ -258,8 +260,10 @@ test('a score that times out is checked, and the gold that left Habitica becomes
   test.setTimeout(180_000)
   const id = await freshPlayer(page, 'Tansy')
   await habitica(id, { gp: 500, score: 'timeout-moved' })
-  const before = glimsOf(id)
   const card = await openConsent(page)
+  // Read after the card's sync: it is what credits Mara's welcome glims.
+  await expect(card.getByTestId('consent-habitica-gold')).toHaveText('You have 500 gold on Habitica.')
+  const before = glimsOf(id)
   await card.getByTestId('consent-amount').fill('12')
   await card.getByTestId('consent-get').click()
   // The answer comes back working; the card says so, calmly, and polls.

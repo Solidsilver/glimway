@@ -28,7 +28,7 @@ class PurseUi {
   phase = $state<Phase>('idle')
   /** The gold the sync just read on Habitica (the consent card's line). */
   habiticaGold = $state(0)
-  /** Glims top-ups can still bring today, as the purse said when the card opened (the server checks again). */
+  /** Glims top-ups can still bring today, as the purse said after the sync that opened the card (the server checks again). */
   glimsLeft = $state(GLIMS_PER_DAY)
   /** The consent card's field, in glims: empty at first, every time. */
   amount = $state('')
@@ -59,7 +59,8 @@ class PurseUi {
   }
 
   /** Turn gold into glims: sync first (the sync's own safe places and messages), then the consent card. */
-  async start(sync: () => Promise<SyncForTopUp>, glimsLeft: number): Promise<void> {
+  /** `glimsLeft` is read after the sync: the sync's answer carries the day's top-ups. */
+  async start(sync: () => Promise<SyncForTopUp>, glimsLeft: () => number): Promise<void> {
     if (this.busy) return
     this.outcome = null
     this.error = ''
@@ -72,7 +73,7 @@ class PurseUi {
     }
     if (!r.ok) return
     this.habiticaGold = r.gold
-    this.glimsLeft = glimsLeft
+    this.glimsLeft = glimsLeft()
     this.amount = ''
     this.phase = 'consent'
     this.sheet = 'consent'
