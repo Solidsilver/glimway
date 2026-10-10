@@ -11,7 +11,15 @@
     "pell-resident-source-round1": "sheets/pell-resident-source-round1.png",
     "pell-portrait-source-round1": "sheets/pell-portrait-source-round1.png",
     "yard-counter-source-round2": "sheets/yard-counter-source-round2.png",
-    "yard-timber-rack-source-round2": "sheets/yard-timber-rack-source-round2.png"
+    "yard-timber-rack-source-round2": "sheets/yard-timber-rack-source-round2.png",
+    "round3-deeds-pigeonholes": "sheets/round3-deeds-pigeonholes.png",
+    "round3-deeds-clerk-desk": "sheets/round3-deeds-clerk-desk.png",
+    "round3-yard-mending-bench": "sheets/round3-yard-mending-bench.png",
+    "round3-kit-side-doorway": "sheets/round3-kit-side-doorway.png",
+    "round4-deeds-pigeonholes": "sheets/round4-deeds-pigeonholes.png",
+    "round4-deeds-clerk-desk": "sheets/round4-deeds-clerk-desk.png",
+    "round4-yard-mending-bench": "sheets/round4-yard-mending-bench.png",
+    "round4-kit-side-doorway": "sheets/round4-kit-side-doorway.png"
   },
   "jobs": [
     {
@@ -69,25 +77,25 @@
     {
       "key": "yard-mending-bench",
       "id": "yard-mending-bench",
-      "source": "yard-vertical-props-source",
+      "source": "round4-yard-mending-bench",
       "crop": [
         0,
         0,
-        512,
-        1536
+        768,
+        768
       ],
       "canvas": [
-        64,
+        192,
         192
       ],
       "destination": [
-        2,
-        0,
-        60,
-        176
+        4,
+        4,
+        184,
+        184
       ],
       "footprint": [
-        1,
+        2,
         2
       ],
       "kind": "prop"
@@ -95,22 +103,22 @@
     {
       "key": "kit-side-doorway",
       "id": "kit-side-doorway",
-      "source": "kit-side-doorway-source-round1",
+      "source": "round4-kit-side-doorway",
       "crop": [
         0,
         0,
-        1122,
-        1402
+        256,
+        512
       ],
       "canvas": [
         64,
         128
       ],
       "destination": [
-        1,
         0,
-        62,
-        124
+        0,
+        64,
+        128
       ],
       "footprint": [
         1,
@@ -121,12 +129,12 @@
     {
       "key": "deeds-pigeonholes",
       "id": "deeds-pigeonholes",
-      "source": "yard-props-source",
+      "source": "round4-deeds-pigeonholes",
       "crop": [
         0,
-        444,
-        438,
-        443
+        0,
+        768,
+        768
       ],
       "canvas": [
         192,
@@ -134,9 +142,9 @@
       ],
       "destination": [
         2,
-        0,
+        8,
         188,
-        184
+        176
       ],
       "footprint": [
         3,
@@ -147,12 +155,12 @@
     {
       "key": "deeds-clerk-desk",
       "id": "deeds-clerk-desk",
-      "source": "yard-vertical-props-source",
+      "source": "round4-deeds-clerk-desk",
       "crop": [
-        512,
         0,
-        512,
-        1536
+        0,
+        256,
+        512
       ],
       "canvas": [
         64,
