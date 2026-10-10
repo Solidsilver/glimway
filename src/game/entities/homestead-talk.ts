@@ -27,6 +27,7 @@ import { presence } from '../presence'
 import { itemsFor } from '../items'
 import { sellerFor } from '../../lib/items'
 import { sellerChoices } from '../../lib/purse'
+import { purseCopy } from '../../content/purse'
 import { keepsakeAsk } from '../keepsakes'
 import type { VillagePanel } from '../village'
 import { openBoard } from './village-life'
@@ -391,7 +392,8 @@ export class HomesteadTalk {
     return !!this.deps.room && !!this.home.here()?.member
   }
 
-  private say(d: Dialogue): void {
+  /** `yard`: his yard talk (talkToSilasNow), where his offcut bundles are on offer. */
+  private say(d: Dialogue, opts: { yard?: boolean } = {}): void {
     // Carrying Hollis's fox adds the quiet line (give it back / not yet).
     let lines = d.lines
     let choices = d.choices
@@ -402,13 +404,13 @@ export class HomesteadTalk {
         choices = [...(choices ?? []), ...ask.choices]
       }
       // His yard's offcut bundles, for gold only (purse-and-wardrobe.md 3.1), before the goodbye.
-      const yard = this.deps.session.link ? sellerFor('silas-yard') : null
+      const yard = opts.yard && this.deps.session.link ? sellerFor('silas-yard') : null
       if (yard) {
         const bundles = sellerChoices(yard, { reply: true })
         const list = choices ?? []
         const last = list.at(-1)
         const bye = last && !last.action && !last.disabled && !last.replay ? last : null
-        choices = bye ? [...list.slice(0, -1), ...bundles, bye] : [...list, ...bundles, { text: 'Not yet' }]
+        choices = bye ? [...list.slice(0, -1), ...bundles, bye] : [...list, ...bundles, { text: purseCopy.notYet }]
       }
     }
     openDialogue({ id: 'home', speaker: d.speaker, lines, choices })
@@ -522,7 +524,7 @@ export class HomesteadTalk {
           ...told.lines
         ],
         choices: told.choices
-      })
+      }, { yard: true })
       return
     }
     if (!mine) {
@@ -567,7 +569,7 @@ export class HomesteadTalk {
       speaker: SILAS.name,
       lines: [...greet, ...axeLines, ...told.lines],
       choices: told.choices
-    })
+    }, { yard: true })
   }
 
   /**

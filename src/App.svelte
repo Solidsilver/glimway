@@ -22,6 +22,7 @@
     type WildsPayload
   } from './game/events'
   import { ui } from './ui/store.svelte'
+  import { purseUi } from './ui/purse.svelte'
   import { Session } from './game/session'
   import type { GameState } from './lib/state'
   import type { PurseView } from './lib/purse'
@@ -497,6 +498,8 @@
     ui.vitalsSource = next.vitalsSource
     ui.importedProfile = next.importedProfile
     ui.questKnown = false // a different journey: its first quest reading is not a change
+    // Its purse, never the last account's (its link may have said already).
+    ui.showPurse(next.link?.purse ?? null)
     if (prev && prev !== next) prev.destroy()
     // Presence follows connected play (and its lease).
     startPresence(next.link!)
@@ -516,6 +519,8 @@
 
   function logout(): void {
     confirmLogout = false
+    purseUi.reset()
+    ui.showPurse(null)
     void account.logout()
   }
 
