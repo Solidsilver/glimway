@@ -40,7 +40,7 @@ func TestWorldChoiceHeldUntilChosenThenParty(t *testing.T) {
 	// Olive, let in by the operator, is the first of her party here: she may
 	// open its world, so she is asked (and nothing is made yet).
 	x.hero("olive", "Olive", "p1")
-	if err := x.db.Allow(context.Background(), "olive", true); err != nil {
+	if err := x.db.Allow(context.Background(), "olive", true, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	q, c := x.signInAsked("olive", "p1", "")
@@ -148,7 +148,7 @@ func TestWorldChoiceNotAskedWhenAnInviteNamesAWorld(t *testing.T) {
 	_, a := x.ready("ann")
 	// Ivo is in the party, but Ann's code names her world: it decides.
 	x.hero("ivo", "Ivo", "p1")
-	code, err := x.db.Invite(context.Background(), a.WorldID)
+	code, err := x.db.Invite(context.Background(), a.WorldID, x.now.Load())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,7 +158,7 @@ func TestWorldChoiceNotAskedWhenAnInviteNamesAWorld(t *testing.T) {
 	}
 	// A code that names no world still asks a party member.
 	x.hero("ida", "Ida", "p1")
-	open, err := x.db.Invite(context.Background(), "")
+	open, err := x.db.Invite(context.Background(), "", x.now.Load())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,7 +168,7 @@ func TestWorldChoiceNotAskedWhenAnInviteNamesAWorld(t *testing.T) {
 	}
 	// No party, no question: a world of their own, as before.
 	x.hero("solo", "Solo", "")
-	if err := x.db.Allow(context.Background(), "solo", true); err != nil {
+	if err := x.db.Allow(context.Background(), "solo", true, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	st, v, e, _ = x.request("POST", "/api/session", map[string]any{"userId": "solo", "token": secret}, nil)
@@ -178,7 +178,7 @@ func TestWorldChoiceNotAskedWhenAnInviteNamesAWorld(t *testing.T) {
 	// A party account let in through a party can't open one, and its party
 	// has none: nothing to ask.
 	x.hero("pat", "Pat", "p2")
-	if err := x.db.Allow(context.Background(), "pat", true); err != nil {
+	if err := x.db.Allow(context.Background(), "pat", true, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := x.db.DB.Exec("UPDATE allowlist SET added_by='party' WHERE habitica_id='pat'"); err != nil {
@@ -215,7 +215,7 @@ func TestWorldChoiceAcrossDevicesLogoutAndRemoval(t *testing.T) {
 	}
 	// So does losing access.
 	_, c = x.signInAsked("sam", "p1", "")
-	if err := x.db.Allow(context.Background(), "sam", false); err != nil {
+	if err := x.db.Allow(context.Background(), "sam", false, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	if st, _, e, _ := x.request("POST", "/api/world/choose", map[string]any{"choice": "own"}, c); st != 401 || e != "unauthorized" || x.players("sam") != 0 {
@@ -238,7 +238,7 @@ func TestWorldChoiceAcrossDevicesLogoutAndRemoval(t *testing.T) {
 func TestWorldChoicePartyClosedMeanwhile(t *testing.T) {
 	x := newRig(t)
 	x.hero("olive", "Olive", "p1")
-	if err := x.db.Allow(context.Background(), "olive", true); err != nil {
+	if err := x.db.Allow(context.Background(), "olive", true, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	_, c := x.signInAsked("olive", "p1", "")
@@ -304,7 +304,7 @@ func TestPartyAdmittedMakeNoInvites(t *testing.T) {
 	ac, _ := x.ready("ann")
 	x.expect("POST", "/api/invites", map[string]any{}, ac, 200)
 	// `allowlist add` makes Rue the operator's: then she may.
-	if err := x.db.Allow(context.Background(), "rue", true); err != nil {
+	if err := x.db.Allow(context.Background(), "rue", true, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	x.expect("POST", "/api/invites", map[string]any{}, rc, 200)
@@ -318,11 +318,11 @@ func TestWorldChoiceClosedPartyRefusesPartyAdmitted(t *testing.T) {
 	x.ready("olive")
 	x.hero("rue", "Rue", "p1")
 	_, c := x.signInAsked("rue", "p1", "")
-	parties, err := x.db.Parties(context.Background())
+	parties, err := x.db.Parties(context.Background(), x.now.Load())
 	if err != nil || len(parties) != 1 || parties[0].Held != 1 || parties[0].Admitted != 0 {
 		t.Fatalf("parties %+v %v", parties, err)
 	}
-	if err := x.db.SetPartyOpen(context.Background(), "p1", false); err != nil {
+	if err := x.db.SetPartyOpen(context.Background(), "p1", false, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	if st, _, e, _ := x.request("POST", "/api/world/choose", map[string]any{"choice": "party"}, c); st != 409 || e != "party-closed" || x.players("rue") != 0 {
@@ -335,13 +335,13 @@ func TestWorldChoiceClosedPartyRefusesPartyAdmitted(t *testing.T) {
 	if s := x.expect("GET", "/api/state", nil, c, 200); s.WorldID == x.partyWorldOf("p1") {
 		t.Fatal("in the closed party's world")
 	}
-	if parties, _ = x.db.Parties(context.Background()); parties[0].Held != 0 {
+	if parties, _ = x.db.Parties(context.Background(), x.now.Load()); parties[0].Held != 0 {
 		t.Fatalf("still held %+v", parties)
 	}
 	// An operator-admitted newcomer of the closed party still may join its
 	// world (the closure stops admission through the party, not them).
 	x.hero("ida", "Ida", "p1")
-	if err := x.db.Allow(context.Background(), "ida", true); err != nil {
+	if err := x.db.Allow(context.Background(), "ida", true, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	_, ic := x.signInAsked("ida", "p1", "")

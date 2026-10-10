@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"fmt"
+	"os"
 	"slices"
 	"sort"
 	"strings"
@@ -103,10 +104,12 @@ func TestChunkSizeBudget(t *testing.T) {
 	t.Logf("chunk bytes (WildsChunk): min %d median %d max %d; region compressed max %d", raws[0], raws[len(raws)/2], raws[len(raws)-1], maxRegion)
 }
 
-// TestChunkTimeBudget: 5 ms per chunk at p95 (server-first.md 3.3).
+// TestChunkTimeBudget: 5 ms per chunk at p95 (server-first.md 3.3). Timing
+// is not a unit test (review finding 12): it runs only when asked for, on a
+// quiet machine — never in CI's way and never a flake.
 func TestChunkTimeBudget(t *testing.T) {
-	if testing.Short() || raceEnabled {
-		t.Skip("timing")
+	if os.Getenv("GLIMWAY_PERF") == "" || testing.Short() || raceEnabled {
+		t.Skip("timing: GLIMWAY_PERF=1 runs it")
 	}
 	var took []time.Duration
 	for i := range 30 {

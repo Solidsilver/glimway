@@ -9,10 +9,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-const LanternRoad = "lantern-road"
-
-var LanternRoadSteps = []string{"accepted", "clue-found", "guardian-defeated", "lantern-lit", "complete"}
-
 type PaperRule struct {
 	Kind    string `json:"kind"`
 	Area    string `json:"area,omitempty"`

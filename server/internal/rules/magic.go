@@ -43,6 +43,21 @@ func Craft(p *Profile, classMark string, levelMark float64) string {
 	return ""
 }
 
+// ClassMarkOf is the class mark one intake writes (4.2): the normalized class
+// the verified profile showed, or "" when it showed none. Every writer of
+// `sync_baselines.class_mark` (account creation, sign-in and the profile op)
+// reads the class through this, so a hero's craft survives a classless sync
+// (review finding 2).
+func ClassMarkOf(p *Profile) string {
+	if p == nil || p.Class == nil {
+		return ""
+	}
+	if c, ok := NormalizeClass(*p.Class); ok {
+		return c
+	}
+	return ""
+}
+
 // Unlocked: a move is yours when its class is your craft and its level is at
 // most your level mark (4.2, "What unlocks"). Veterans get everything at
 // once, and a rebirth keeps what the level mark already earned.

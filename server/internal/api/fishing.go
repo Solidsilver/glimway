@@ -4,13 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"glimway/content"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
 	"glimway/server/internal/wilds"
 	"glimway/server/internal/worldchange"
 	"google.golang.org/protobuf/encoding/protojson"
+	"log"
 	"net/http"
 	"slices"
 	"time"
@@ -50,7 +50,9 @@ func fisheryAt(ctx context.Context, q worldchange.Queryer, worldID string, w *co
 		}
 		f.Stock = content.Recovered(f.Stock, 1/w.GetRecoverySeconds(), float64(w.GetCapacity()), f.At, at)
 	}
-	f.At = at
+	// The stock's clock only moves forward (review finding 16): a wall-clock
+	// step back must never count the same recovery twice.
+	f.At = max(f.At, at)
 	return f, nil
 }
 
@@ -135,11 +137,31 @@ func openCast(ctx context.Context, tx *sql.Tx, account, id string) (castRow, err
 	return v, err
 }
 
+// fishingLog is where fishing's incident lines go (review finding 10): the
+// server's own logger — `a.Config.Logger`, never the global one — so a rig
+// can capture and assert them.
+type fishingLog func(format string, args ...any)
+
+// fishingLogf binds the server's logger to the fishing log. A server built
+// with no logger (a few tests) logs nothing rather than panicking.
+func fishingLogf(logger *log.Logger) fishingLog {
+	return func(format string, args ...any) {
+		if logger != nil {
+			logger.Printf(format, args...)
+		}
+	}
+}
+
+// logf is one fishing incident on the server's own log.
+func (a *Server) logf(format string, args ...any) {
+	fishingLogf(a.Config.Logger)(format, args...)
+}
+
 // closeCasts closes every open cast the filter names and gives each reserved
 // fish back to its water: 'lapsed' when the hold ran out (a ready fish waits
 // holdSeconds after the bite, then slips back), 'cancelled' when a world
 // move pulled the line in (5.4).
-func closeCasts(ctx context.Context, tx *sql.Tx, at float64, now int64, to, filter string, args ...any) error {
+func closeCasts(ctx context.Context, logf fishingLog, tx *sql.Tx, at float64, now int64, to, filter string, args ...any) error {
 	rows, err := tx.QueryContext(ctx, "SELECT id,account_id,world_id,water FROM fishing_casts WHERE state='open' AND "+filter, args...)
 	if err != nil {
 		return err
@@ -172,7 +194,11 @@ func closeCasts(ctx context.Context, tx *sql.Tx, at float64, now int64, to, filt
 		}
 		w, ok := content.WaterFor(v.water)
 		if !ok {
-			return fmt.Errorf("fishing: %s is not a water", v.water)
+			// The water is gone from content: the cast closes all the same,
+			// with no stock touched and one log line (review finding 8). A
+			// state read must never fail on fishing.
+			logf("fishing: closing cast %s: %s is not a water", v.id, v.water)
+			continue
 		}
 		if _, err := changeFishery(ctx, tx, v.world, v.account, w, at, now, func(f *contract.FisheryState) {
 			f.Reserved = max(0, f.Reserved-1)
@@ -186,19 +212,66 @@ func closeCasts(ctx context.Context, tx *sql.Tx, at float64, now int64, to, filt
 // lapseCasts is the lazy lapse (5.4): a cast past hold_until is closed and
 // its fish returned by the next operation or read that touches that water or
 // that account. Nothing runs on a timer; the filter and args name the casts.
-func lapseCasts(ctx context.Context, tx *sql.Tx, at float64, now int64, filter string, args ...any) error {
-	return closeCasts(ctx, tx, at, now, "lapsed", "hold_until<=? AND "+filter, append([]any{at}, args...)...)
+func lapseCasts(ctx context.Context, logf fishingLog, tx *sql.Tx, at float64, now int64, filter string, args ...any) error {
+	return closeCasts(ctx, logf, tx, at, now, "lapsed", "hold_until<=? AND "+filter, append([]any{at}, args...)...)
+}
+
+// closeOrphanedCasts closes every open cast whose water is missing from
+// content (a rename, a generated water going away): the cast lapses with no
+// stock touched and one log line (review finding 8). It is what keeps a
+// state read whole — `fishingStateFor` runs on every PlayerState.
+func closeOrphanedCasts(ctx context.Context, logf fishingLog, tx *sql.Tx, now int64, filter string, args ...any) error {
+	rows, err := tx.QueryContext(ctx, "SELECT id,water FROM fishing_casts WHERE state='open' AND "+filter, args...)
+	if err != nil {
+		return err
+	}
+	found := []struct{ id, water string }{}
+	for rows.Next() {
+		var v struct{ id, water string }
+		if err := rows.Scan(&v.id, &v.water); err != nil {
+			rows.Close()
+			return err
+		}
+		found = append(found, v)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
+	rows.Close()
+	for _, v := range found {
+		if _, ok := content.WaterFor(v.water); ok {
+			continue
+		}
+		logf("fishing: closing cast %s: %s is not a water", v.id, v.water)
+		if _, err := tx.ExecContext(ctx, "UPDATE fishing_casts SET state='lapsed',closed_at=? WHERE id=? AND state='open'", now, v.id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// sweepCasts is where every fishing touch starts (5.4): the holds that ran
+// out lapse, and the casts whose water is gone from content close with them
+// (review finding 8) — no stock, no error, so a state read always answers.
+func sweepCasts(ctx context.Context, logf fishingLog, tx *sql.Tx, at float64, now int64, filter string, args ...any) error {
+	if err := closeOrphanedCasts(ctx, logf, tx, now, filter, args...); err != nil {
+		return err
+	}
+	return lapseCasts(ctx, logf, tx, at, now, filter, args...)
 }
 
 // closeOpenCasts is a world move pulling the line in (5.4): every open cast
 // of the account closes as cancelled and its fish goes back.
-func closeOpenCasts(ctx context.Context, tx *sql.Tx, account string, at float64, now int64) error {
-	return closeCasts(ctx, tx, at, now, "cancelled", "account_id=?", account)
+func closeOpenCasts(ctx context.Context, logf fishingLog, tx *sql.Tx, account string, at float64, now int64) error {
+	return closeCasts(ctx, logf, tx, at, now, "cancelled", "account_id=?", account)
 }
 
 // fractionalNow is the operation's sub-second clock: 5.3's cast times are
 // fractional, and the stock's `at` must never move backwards under
-// contention, so it is read inside the operation, after the write lock.
+// contention, so it is read inside the operation — after `BeginTx` has taken
+// the store's one write lock, which is where the serialization happens
+// (review finding 17).
 func fractionalNow(a *Server) float64 { return float64(a.Config.Now().UnixNano()) / 1e9 }
 
 // ------------------------------------------------------------ the rod
@@ -265,7 +338,7 @@ func (a *Server) fishCast(w http.ResponseWriter, r *http.Request) error {
 	}
 	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		at := fractionalNow(a)
-		if err := lapseCasts(ctx, tx, at, now, "account_id=?", s.AccountID); err != nil {
+		if err := sweepCasts(ctx, a.logf, tx, at, now, "account_id=?", s.AccountID); err != nil {
 			return nil, err
 		}
 		if err := fishingRod(ctx, tx, s, req.Rod, now); err != nil {
@@ -278,7 +351,7 @@ func (a *Server) fishCast(w http.ResponseWriter, r *http.Request) error {
 		// The cast touches the water, so a hold of anyone's on it that ran
 		// out lapses first and its fish is back before the band is read
 		// (5.4: "the next operation or read that touches that water").
-		if err := lapseCasts(ctx, tx, at, now, "world_id=? AND water=?", s.WorldID, water.GetId()); err != nil {
+		if err := lapseCasts(ctx, a.logf, tx, at, now, "world_id=? AND water=?", s.WorldID, water.GetId()); err != nil {
 			return nil, err
 		}
 		bank, ok := content.BankFor(water, req.Bank)
@@ -348,6 +421,18 @@ func (a *Server) fishCast(w http.ResponseWriter, r *http.Request) error {
 	})
 }
 
+// releaseCast lets a cast's catch go (5.4): the reservation returns to the
+// water and the cast closes as released.
+func releaseCast(ctx context.Context, tx *sql.Tx, c castRow, w *content.FishWater, who string, at float64, now int64) error {
+	if _, err := changeFishery(ctx, tx, c.World, who, w, at, now, func(f *contract.FisheryState) {
+		f.Reserved = max(0, f.Reserved-1)
+	}); err != nil {
+		return err
+	}
+	_, err := tx.ExecContext(ctx, "UPDATE fishing_casts SET state='released',closed_at=? WHERE id=? AND state='open'", now, c.ID)
+	return err
+}
+
 // fishSettle (POST /api/fishing/settle) keeps the fish or lets it go (5.4).
 // The cast is the caller's and open (else no-cast); now is at least ready_at
 // (else not-yet) and before hold_until — past it the cast has lapsed, and
@@ -359,33 +444,46 @@ func (a *Server) fishSettle(w http.ResponseWriter, r *http.Request) error {
 	}
 	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		at := fractionalNow(a)
-		if err := lapseCasts(ctx, tx, at, now, "account_id=?", s.AccountID); err != nil {
+		if err := lapseCasts(ctx, a.logf, tx, at, now, "account_id=?", s.AccountID); err != nil {
 			return nil, err
 		}
 		c, err := openCast(ctx, tx, s.AccountID, req.Cast)
 		if err != nil {
 			return nil, err
 		}
-		if at < c.ReadyAt {
-			return nil, fail(409, "not-yet")
-		}
 		// The cast's own water and world: the fish goes back where it was
 		// reserved, whatever happens to the account's world later.
 		water, ok := content.WaterFor(c.Water)
 		if !ok {
-			return nil, fmt.Errorf("fishing: %s is not a water", c.Water)
+			// The water is gone from content: close the cast, keep the fish
+			// out of it, touch no stock and log (review finding 8). Nothing is
+			// kept or granted: there is no such fish any more.
+			a.logf("fishing: closing cast %s: %s is not a water", c.ID, c.Water)
+			if _, err := tx.ExecContext(ctx, "UPDATE fishing_casts SET state='released',closed_at=? WHERE id=? AND state='open'", now, c.ID); err != nil {
+				return nil, err
+			}
+			return &contract.FishSettleResult{Cast: c.ID}, nil
 		}
-		if err := lapseCasts(ctx, tx, at, now, "world_id=? AND water=?", c.World, c.Water); err != nil {
+		if at < c.ReadyAt {
+			return nil, fail(409, "not-yet")
+		}
+		if err := lapseCasts(ctx, a.logf, tx, at, now, "world_id=? AND water=?", c.World, c.Water); err != nil {
 			return nil, err
 		}
 		out := &contract.FishSettleResult{Cast: c.ID, Kept: req.Keep}
 		if req.Keep {
 			// One use of the rod per kept fish (5.2). A rod that has left
-			// the pack can't wear one: it is a wrong tool now (5.4).
+			// the pack can't wear one: it is a wrong tool now (5.4) — and
+			// either way the cast closes: the keep is refused with the catch
+			// released in the same operation (review finding 16), so the line
+			// never stays out for holdSeconds.
 			if err := fishingRod(ctx, tx, s, c.Rod, now); err != nil {
 				var f *failure
 				if errors.As(err, &f) && f.code == "item-not-found" {
-					err = fail(409, "wrong-tool")
+					if e := releaseCast(ctx, tx, c, water, s.AccountID, at, now); e != nil {
+						return nil, e
+					}
+					return nil, held(fail(409, "wrong-tool"))
 				}
 				if err != nil {
 					return nil, err
@@ -435,7 +533,7 @@ func (a *Server) fishCancel(w http.ResponseWriter, r *http.Request) error {
 	}
 	return a.keyedOpStay(w, r, req.Op, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		at := fractionalNow(a)
-		if err := lapseCasts(ctx, tx, at, now, "account_id=?", s.AccountID); err != nil {
+		if err := lapseCasts(ctx, a.logf, tx, at, now, "account_id=?", s.AccountID); err != nil {
 			return nil, err
 		}
 		c, err := openCast(ctx, tx, s.AccountID, req.Cast)
@@ -446,9 +544,15 @@ func (a *Server) fishCancel(w http.ResponseWriter, r *http.Request) error {
 		// lapsed before the band is read.
 		water, ok := content.WaterFor(c.Water)
 		if !ok {
-			return nil, fmt.Errorf("fishing: %s is not a water", c.Water)
+			// The water is gone from content (review finding 8): the line
+			// comes in, no stock is touched, and the log says so.
+			a.logf("fishing: closing cast %s: %s is not a water", c.ID, c.Water)
+			if _, err := tx.ExecContext(ctx, "UPDATE fishing_casts SET state='cancelled',closed_at=? WHERE id=? AND state='open'", now, c.ID); err != nil {
+				return nil, err
+			}
+			return &contract.FishCancelResult{Cast: c.ID}, nil
 		}
-		if err := lapseCasts(ctx, tx, at, now, "world_id=? AND water=?", c.World, c.Water); err != nil {
+		if err := lapseCasts(ctx, a.logf, tx, at, now, "world_id=? AND water=?", c.World, c.Water); err != nil {
 			return nil, err
 		}
 		f, err := changeFishery(ctx, tx, c.World, s.AccountID, water, at, now, func(f *contract.FisheryState) {
@@ -485,7 +589,7 @@ func (a *Server) fishingWaters(w http.ResponseWriter, r *http.Request) error {
 		if water.GetArea() != area {
 			continue
 		}
-		if err := lapseCasts(r.Context(), tx, at, now, "world_id=? AND water=?", s.WorldID, water.GetId()); err != nil {
+		if err := lapseCasts(r.Context(), a.logf, tx, at, now, "world_id=? AND water=?", s.WorldID, water.GetId()); err != nil {
 			return err
 		}
 		f, err := fisheryAt(r.Context(), tx, s.WorldID, water, at)
@@ -506,8 +610,8 @@ func (a *Server) fishingWaters(w http.ResponseWriter, r *http.Request) error {
 // too) and the earliest time the next cast may start. The lazy lapse runs
 // first — the state read touches the account (5.4) — so a cast past its hold
 // reads as gone and its fish is back in the water.
-func fishingStateFor(ctx context.Context, tx *sql.Tx, account string, at float64, now int64) (*contract.FishingState, error) {
-	if err := lapseCasts(ctx, tx, at, now, "account_id=?", account); err != nil {
+func fishingStateFor(ctx context.Context, logf fishingLog, tx *sql.Tx, account string, at float64, now int64) (*contract.FishingState, error) {
+	if err := sweepCasts(ctx, logf, tx, at, now, "account_id=?", account); err != nil {
 		return nil, err
 	}
 	out := &contract.FishingState{}
@@ -532,7 +636,8 @@ func fishingStateFor(ctx context.Context, tx *sql.Tx, account string, at float64
 // so a reload or another device shows the same line.
 type fishingComposition struct {
 	store.StateComposition
-	now func() time.Time
+	now  func() time.Time
+	logf fishingLog
 }
 
 func (f fishingComposition) PlayerState(ctx context.Context, tx *sql.Tx, s store.Snapshot) (*contract.PlayerState, error) {
@@ -541,7 +646,7 @@ func (f fishingComposition) PlayerState(ctx context.Context, tx *sql.Tx, s store
 		return state, err
 	}
 	t := f.now()
-	fishing, err := fishingStateFor(ctx, tx, s.AccountID, float64(t.UnixNano())/1e9, t.Unix())
+	fishing, err := fishingStateFor(ctx, f.logf, tx, s.AccountID, float64(t.UnixNano())/1e9, t.Unix())
 	if err != nil {
 		return nil, err
 	}

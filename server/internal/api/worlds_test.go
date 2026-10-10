@@ -154,7 +154,7 @@ func TestPartyWorldBelongsToTheParty(t *testing.T) {
 		t.Fatal("left the party, lost access", st, e)
 	}
 	x.hero("rue", "Rue", "p1")
-	if err := x.db.Allow(context.Background(), "rue", false); err != nil {
+	if err := x.db.Allow(context.Background(), "rue", false, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	if st, e, _ := x.signIn("rue", "p1"); st != 403 || e != "access-denied" {
@@ -175,7 +175,7 @@ func TestPartyWorldBelongsToTheParty(t *testing.T) {
 	if x.worldOf("sage") != h.WorldID {
 		t.Fatal("a code for hal's world didn't win")
 	}
-	cli, err := x.db.Invite(context.Background(), "")
+	cli, err := x.db.Invite(context.Background(), "", x.now.Load())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -234,7 +234,7 @@ func TestPartyAdmissionDoesNotChain(t *testing.T) {
 		t.Fatal("a stranger rode a party-admitted account in", st, e)
 	}
 	// The operator adds Rue: she's theirs now, and her next sign-in opens p2.
-	if err := x.db.Allow(context.Background(), "rue", true); err != nil {
+	if err := x.db.Allow(context.Background(), "rue", true, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	if count(t, x.db, "SELECT count(*) FROM allowlist WHERE habitica_id='rue' AND added_by='cli'") != 1 {
@@ -257,7 +257,7 @@ func TestPartyAdmissionControls(t *testing.T) {
 	x.hero("olive", "Olive", "p1")
 	oc, _ := x.ready("olive")
 	pw := x.partyWorldOf("p1")
-	if err := x.db.SetPartyOpen(ctx, "p1", false); err != nil {
+	if err := x.db.SetPartyOpen(ctx, "p1", false, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	calls := x.calls.Load()
@@ -269,7 +269,7 @@ func TestPartyAdmissionControls(t *testing.T) {
 		t.Fatal("a member of a closed party lost their world")
 	}
 	// Closed before it had a world: none is made, by sign-in or by asking.
-	if err := x.db.SetPartyOpen(ctx, "p2", false); err != nil {
+	if err := x.db.SetPartyOpen(ctx, "p2", false, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	x.hero("bea", "Bea", "p2")
@@ -280,17 +280,17 @@ func TestPartyAdmissionControls(t *testing.T) {
 	if e := x.worldReq("POST", "/api/world/party", map[string]any{}, bc, 409).Error.Code; e != "party-closed" {
 		t.Fatal(e)
 	}
-	parties, err := x.db.Parties(ctx)
+	parties, err := x.db.Parties(ctx, x.now.Load())
 	if err != nil || len(parties) != 2 || parties[0].PartyID != "p1" || parties[0].WorldID == nil || *parties[0].WorldID != pw || parties[0].Members != 1 || parties[0].OpenedBy == nil || *parties[0].OpenedBy != x.account("olive") || parties[0].ClosedAt == nil || parties[1].PartyID != "p2" || parties[1].WorldID != nil {
 		t.Fatal("parties", store.JSON(parties), err)
 	}
-	if err = x.db.SetPartyOpen(ctx, "p1", true); err != nil {
+	if err = x.db.SetPartyOpen(ctx, "p1", true, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	if st, e, _ := x.signIn("rue", "p1"); st != 200 || x.worldOf("rue") != pw {
 		t.Fatal("reopened party", st, e)
 	}
-	if parties, _ = x.db.Parties(ctx); parties[0].ClosedAt != nil || parties[0].Admitted != 1 || parties[0].Members != 2 {
+	if parties, _ = x.db.Parties(ctx, x.now.Load()); parties[0].ClosedAt != nil || parties[0].Admitted != 1 || parties[0].Members != 2 {
 		t.Fatal("parties after reopening", store.JSON(parties))
 	}
 

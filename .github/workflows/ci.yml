@@ -34,9 +34,19 @@ jobs:
       - name: Check protobuf breaking changes against main and the latest release
         run: sh scripts/buf-breaking.sh
       - run: npm run verify
+      # `go test` runs only part of vet: the copylocks check needs this (review
+      # finding 7).
+      - run: go vet ./...
       - run: go test ./...
+      # Presence is concurrent: the race detector over the package that is.
+      # The whole api package, not a targeted subset — it finds more (verify
+      # is about 9 minutes with it here), and verify still ends well before
+      # the full e2e job's 13 minutes.
+      - run: go test -race -count=1 ./server/internal/api
       # The dev build's clock hooks (the e2e server is built with -tags dev).
-      - run: go test -tags dev ./server/cmd/glimway-server ./server/internal/api
+      # Only the dev-tagged tests run here — all of them are named `TestDev…`
+      # so this picks up every one — and the packages' own tests ran above.
+      - run: go test -tags dev -run '^TestDev' ./server/cmd/glimway-server ./server/internal/api
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - name: Build the container for smoke testing
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0

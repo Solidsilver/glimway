@@ -119,7 +119,7 @@ func leave(ctx context.Context, tx *sql.Tx, s *store.Snapshot, h homeView, now i
 	// ...and the mount that is out with them goes home with them (3.3): no
 	// bay holds it from here on, and rejoining never brings it back out
 	// without a fresh Saddle up.
-	if _, err := tx.ExecContext(ctx, "UPDATE player_companions SET mount_out='',mount_home=NULL WHERE account_id=?", s.AccountID); err != nil {
+	if err := store.SendMountHome(ctx, tx, s.AccountID); err != nil {
 		return err
 	}
 	if _, err := tx.ExecContext(ctx, "INSERT INTO homestead_departures VALUES(?,?,?) ON CONFLICT(homestead_id,account_id) DO UPDATE SET left_at=excluded.left_at", h.ID, s.AccountID, now); err != nil {
@@ -151,7 +151,7 @@ func leaverAvatar(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (*presence
 	if err != nil {
 		return nil, err
 	}
-	return companionAvatar(c, *p), nil
+	return visualAvatar(*p, c), nil
 }
 
 // checkHomeRest requires the cottage on a gate named by your deed, or, before

@@ -89,7 +89,7 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 			writeRefusal(w, prior.Status, prior.Refused, state)
 			return nil
 		}
-		result, e := replayResult(prior, request)
+		result, e := replayResult(prior)
 		if e != nil {
 			return e
 		}
@@ -133,8 +133,13 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 		err = a.Config.State.Persist(ctx, tx, &s, now)
 	}
 	if err != nil {
-		if _, e := tx.ExecContext(ctx, "ROLLBACK TO gameplay"); e != nil {
-			return e
+		// A held refusal (review finding 16) keeps the writes its apply made
+		// before raising it — 5.4's "either way the cast closes". Every other
+		// refusal takes back everything since the savepoint.
+		if !isHeld(err) {
+			if _, e := tx.ExecContext(ctx, "ROLLBACK TO gameplay"); e != nil {
+				return e
+			}
 		}
 		s, errLoad := a.Config.State.Load(ctx, tx, s.AccountID)
 		if errLoad != nil {

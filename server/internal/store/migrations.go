@@ -13,6 +13,12 @@ import (
 // older binary to create an existing database. Applied rows still retain names.
 // Freeze recorded SQL/backfills; change behavior through a forward migration.
 //
+// The recorded hashes freeze the SQL and the backfill *sources* (review
+// finding 17), not what they compute: the 026 and 028 backfills call live
+// `rules`, `content` and `profile` code, so a rules change can alter an
+// old-database upgrade while every checksum still passes. The real freeze is
+// the upgrade tests — `TestStory028Upgrade` and the 026 upgrade tests.
+//
 //go:embed migrations/*.sql migrations/history.json migration_003_backfill.go migration_026_backfill.go migration_028_backfill.go
 var migrations embed.FS
 

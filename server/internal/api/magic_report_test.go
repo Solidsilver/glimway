@@ -193,6 +193,81 @@ func TestProfileRaisesMagicMarks(t *testing.T) {
 	}
 }
 
+// Every writer of the class mark (crafts.md 4.2, review finding 2): account
+// creation and sign-in keep it as current as the profile op does, so a
+// hero's craft is never written by one route alone.
+func TestClassMarkIsWrittenAtCreationAndSignIn(t *testing.T) {
+	x := newRig(t)
+	read := func() string {
+		var classMark string
+		if err := x.db.DB.QueryRow("SELECT COALESCE(class_mark,'') FROM sync_baselines WHERE account_id=?", x.account("alice")).Scan(&classMark); err != nil {
+			t.Fatal(err)
+		}
+		return classMark
+	}
+	rogue := "rogue"
+	p := profile("alice", 40, 0, 20)
+	p.Class = &rogue
+	x.set(p)
+	x.ready("alice")
+	if got := read(); got != "rogue" {
+		t.Fatal("account creation wrote no class mark", got)
+	}
+	// A classed sign-in follows the class (the game's own spellings), and a
+	// classless one never overwrites the mark.
+	wizard := "wizard"
+	p = profile("alice", 40, 0, 20)
+	p.Class = &wizard
+	x.set(p)
+	x.login("alice", "")
+	if got := read(); got != "mage" {
+		t.Fatal("sign-in wrote no class mark", got)
+	}
+	x.set(profile("alice", 40, 0, 20))
+	x.login("alice", "")
+	if got := read(); got != "mage" {
+		t.Fatal("a classless sign-in overwrote the class mark", got)
+	}
+}
+
+// The guard for the rebirth gap (review finding 2): a level-40 rogue who
+// never synced in 0.5 takes the Orb of Rebirth and presses Sync. The class
+// mark is still NULL (migration 030 has no backfill, staged here) and the
+// sync is classless — the craft is kept all the same (design 4.2 and
+// question 11.4).
+func TestClasslessSyncKeepsTheCraft(t *testing.T) {
+	x := newRig(t)
+	rogue := "rogue"
+	p := profile("alice", 40, 0, 20)
+	p.Class = &rogue
+	x.set(p)
+	c, _ := x.ready("alice")
+	if _, err := x.db.DB.Exec("UPDATE sync_baselines SET class_mark=NULL WHERE account_id=?", x.account("alice")); err != nil {
+		t.Fatal(err)
+	}
+	// Reborn and classless on Habitica: the next sign-in and sync see no class.
+	x.set(profile("alice", 12, 0, 20))
+	c = x.login("alice", "")
+	s := x.expect("POST", "/api/play", map[string]any{"clientId": "tab-b", "takeOver": true}, c, 200)
+	x.expect("POST", "/api/profile", x.profileBody(s, profile("alice", 12, 0, 20), s.State), c, 200)
+	tx, err := x.db.DB.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	snap, err := store.Load(context.Background(), tx, x.account("alice"))
+	tx.Rollback()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if craft := rules.Craft(snap.ImportedProfile, snap.ClassMark, snap.LevelMark); craft != "rogue" {
+		t.Fatal("a classless sync took the craft away", craft, snap.ClassMark, snap.LevelMark)
+	}
+	state := decodeProtoState(t, x, c)
+	if classMarkOf(state.State.Magic) != "rogue" {
+		t.Fatal("PlayerState.magic lost the class mark", state.State.Magic)
+	}
+}
+
 func TestRebirthIsRecognizedAgainAfterClimbingBySyncs(t *testing.T) {
 	// Review finding 7: a hero reborn, signed in at 1, climbing by syncs
 	// alone and reborn again is still a rebirth. The checks read the sign-in

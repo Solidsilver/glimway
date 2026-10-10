@@ -70,6 +70,20 @@ func (a *Server) report(w http.ResponseWriter, r *http.Request) error {
 	for id := range req.AbilityCasts {
 		out.AbilityCasts[id] = 0
 	}
+	// The ward credit is reserved under the hub's lock before the budget
+	// reads it (review finding 11), never peeked: two reports in one ward
+	// window spend one credit once. It settles right after the commit, before
+	// the response is written (review finding 1) — the store's connection is
+	// free again at the commit, and a second report must find a settled pool,
+	// never an open reservation whose leftovers nobody returns. The defer
+	// only covers the error paths, where the report never landed.
+	var reserveSeq float64
+	reserved, settled := false, false
+	defer func() {
+		if reserved && !settled {
+			a.settleWardCredit(s.AccountID, reserveSeq, 0)
+		}
+	}()
 	if req.Seq > seq {
 		if err = tx.QueryRowContext(ctx, "SELECT place_set_version FROM player_place WHERE account_id=?", s.AccountID).Scan(&placeVersion); err != nil {
 			return err
@@ -85,9 +99,10 @@ func (a *Server) report(w http.ResponseWriter, r *http.Request) error {
 			if abilityReady, err = store.AbilityReady(ctx, tx, s.AccountID); err != nil {
 				return err
 			}
-			// Ward credit is only peeked here: what the HP needed is spent
-			// after the report lands (review findings 3 and 13).
-			budget := boundReport(s, req.Hp, req.Mana, req.Casts, req.AbilityCasts, vitalsAt, ready, abilityReady, at, a.wardCredit(s.AccountID))
+			// The ward credit is reserved for this report (review finding
+			// 11): a second report in the same window sees none of it.
+			reserved, reserveSeq = true, req.Seq
+			budget := boundReport(s, req.Hp, req.Mana, req.Casts, req.AbilityCasts, vitalsAt, ready, abilityReady, at, a.reserveWardCredit(s.AccountID, req.Seq))
 			s.State.HP, s.State.Mana = budget.HP, budget.Mana
 			out.Casts, out.AbilityCasts, out.AllyHeal, ready = budget.Casts, budget.AbilityCasts, budget.AllyHeal, budget.Ready
 			if reportAt.Valid {
@@ -128,9 +143,10 @@ func (a *Server) report(w http.ResponseWriter, r *http.Request) error {
 	if err = tx.Commit(); err != nil {
 		return err
 	}
-	if out.AllyHeal > 0 {
-		a.spendWardCredit(s.AccountID, out.AllyHeal)
-	}
+	// The report landed: spend what its HP took and return the rest now
+	// (review finding 1), before the response is written.
+	settled = true
+	a.settleWardCredit(s.AccountID, reserveSeq, out.AllyHeal)
 	return writeOpResult(w, state, out)
 }
 

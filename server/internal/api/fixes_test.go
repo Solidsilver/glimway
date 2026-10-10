@@ -155,7 +155,7 @@ func TestLoginPrecheckAndPerIPRateLimit(t *testing.T) {
 	if x.calls.Load() != 0 || len(x.api.loginLimit.buckets) != 0 {
 		t.Fatal("ineligible login consumed upstream or bucket")
 	}
-	if err := x.db.Allow(context.Background(), "alice", true); err != nil {
+	if err := x.db.Allow(context.Background(), "alice", true, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	for i := 0; i < 10; i++ {
@@ -170,7 +170,7 @@ func TestLoginPrecheckAndPerIPRateLimit(t *testing.T) {
 }
 func TestTrustedProxyLastHopAndUntrustedSpoofing(t *testing.T) {
 	x := newRig(t)
-	if err := x.db.Allow(context.Background(), "alice", true); err != nil {
+	if err := x.db.Allow(context.Background(), "alice", true, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	x.api = New(x.db, x.api.Habitica, Config{TrustedProxies: []string{"127.0.0.1"}, LoginRate: 2, Now: x.api.Config.Now, Logger: x.api.Config.Logger})
@@ -196,11 +196,11 @@ func TestTrustedProxyLastHopAndUntrustedSpoofing(t *testing.T) {
 }
 func TestGlobalLoginConcurrencyAndTransactionalRecheck(t *testing.T) {
 	x := newRig(t)
-	code, err := x.db.Invite(context.Background(), "")
+	code, err := x.db.Invite(context.Background(), "", x.now.Load())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err = x.db.Allow(context.Background(), "bob", true); err != nil {
+	if err = x.db.Allow(context.Background(), "bob", true, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	entered := make(chan struct{})

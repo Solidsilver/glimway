@@ -31,6 +31,15 @@ func DecodeAbilities(raw []byte) (*Abilities, error) {
 	return doc, validateAbilities(doc)
 }
 
+// abilityNumbers are the numbers each move's behaviour depends on (review
+// finding 15). A missing one loads as zero and silently changes what the
+// server does — Kindle's reach, Ward-light's circle — so the loader refuses
+// the move without it. The counterpart is src/lib/abilities.ts.
+var abilityNumbers = map[string][]string{
+	"kindle":     {"reachTiles"},
+	"ward-light": {"pulses", "pulseHealFraction", "radiusTiles", "durationSeconds"},
+}
+
 // validateAbilities: the rules that span entries (design 4.1, "rules across
 // entries, in code once"), identical in src/lib/abilities.ts.
 func validateAbilities(v *Abilities) error {
@@ -42,6 +51,19 @@ func validateAbilities(v *Abilities) error {
 			return fmt.Errorf("invalid abilities: duplicate id %s", a.GetId())
 		}
 		seen[a.GetId()] = true
+		n := a.GetNumbers()
+		numbers := map[string]float64{
+			"reachTiles":        n.GetReachTiles(),
+			"pulses":            float64(n.GetPulses()),
+			"pulseHealFraction": n.GetPulseHealFraction(),
+			"radiusTiles":       n.GetRadiusTiles(),
+			"durationSeconds":   n.GetDurationSeconds(),
+		}
+		for _, field := range abilityNumbers[a.GetId()] {
+			if numbers[field] <= 0 {
+				return fmt.Errorf("invalid abilities: %s needs %s", a.GetId(), field)
+			}
+		}
 		switch a.GetKind() {
 		case "signature":
 			if a.GetLevel() != 10 {

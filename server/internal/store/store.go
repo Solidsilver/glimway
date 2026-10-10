@@ -121,7 +121,7 @@ func (s *Store) Backup(ctx context.Context, path string) error {
 	}
 	return os.Chmod(path, 0600)
 }
-func (s *Store) Allow(ctx context.Context, id string, add bool) error {
+func (s *Store) Allow(ctx context.Context, id string, add bool, now int64) error {
 	if id == "" || len(id) > 128 {
 		return fmt.Errorf("invalid Habitica subject")
 	}
@@ -130,7 +130,6 @@ func (s *Store) Allow(ctx context.Context, id string, add bool) error {
 		return err
 	}
 	defer tx.Rollback()
-	now := time.Now().Unix()
 	if add {
 		// An account let in through a party becomes the operator's own: it
 		// may then open a party's world (docs/home-server.md).
@@ -170,7 +169,7 @@ func (s *Store) Allow(ctx context.Context, id string, add bool) error {
 	}
 	return tx.Commit()
 }
-func (s *Store) Invite(ctx context.Context, world string) (string, error) {
+func (s *Store) Invite(ctx context.Context, world string, now int64) (string, error) {
 	code, err := InviteCode()
 	if err != nil {
 		return "", err
@@ -187,7 +186,7 @@ func (s *Store) Invite(ctx context.Context, world string) (string, error) {
 			return "", fmt.Errorf("a party's world takes no invite codes")
 		}
 	}
-	_, err = s.DB.ExecContext(ctx, "INSERT INTO invites(code_hash,created_by,world_id,created_at,expires_at) VALUES(?,?,?,?,?)", Hash(code), "cli", w, time.Now().Unix(), time.Now().Add(30*24*time.Hour).Unix())
+	_, err = s.DB.ExecContext(ctx, "INSERT INTO invites(code_hash,created_by,world_id,created_at,expires_at) VALUES(?,?,?,?,?)", Hash(code), "cli", w, now, now+30*86400)
 	return code, err
 }
 

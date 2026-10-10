@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestRound2ACLIFlagClear(t *testing.T) {
@@ -39,7 +40,7 @@ func TestRound2DCLIInviteInspectAndRevoke(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	code, err := s.Invite(t.Context(), "")
+	code, err := s.Invite(t.Context(), "", time.Now().Unix())
 	s.Close()
 	if err != nil {
 		t.Fatal(err)

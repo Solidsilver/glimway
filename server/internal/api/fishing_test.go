@@ -117,6 +117,30 @@ func fishKey(x *rig, what string) string {
 	return fmt.Sprintf("%s-%d-%d", what, x.now.Load(), keySeq())
 }
 
+// fisher signs a fishing test's hero in on a day the pond is open (review
+// finding 4): the north and east banks are `closedIn: ["Quiet"]` (5.1), and
+// no fishing test may depend on the calendar day the suite runs. The clock
+// moves before the sign-in, so no session is aged out by the jump.
+func (x *rig) fisher(id string) (*http.Cookie, response) {
+	x.t.Helper()
+	x.openWater()
+	return x.ready(id)
+}
+
+// openWater walks the rig's clock (never back) to a day when the mill pond's
+// banks are open.
+func (x *rig) openWater() {
+	x.t.Helper()
+	for d := int64(0); d < 12*int64(content.CalendarRules.WickDays); d++ {
+		t := x.now.Load() + d*86400 + 3600
+		if content.CalendarAt(content.CalendarRules, t).Mark != "Quiet" {
+			x.now.Store(t)
+			return
+		}
+	}
+	x.t.Fatal("no open-water day ahead")
+}
+
 // fisheryView is the stock a test asserts on (the row's ProtoJSON).
 type fisheryView struct {
 	Stock, Reserved, At float64
@@ -249,7 +273,7 @@ func (x *rig) rodCondition(rod string) int {
 // on the cast (5.3).
 func TestFishCastReservesAndKeepTakesTheFish(t *testing.T) {
 	x := newRig(t)
-	c, s := x.ready("alice")
+	c, s := x.fisher("alice")
 	x.fundEmbers(s.AccountID, 10)
 	// Finn's rod comes over as one instance (marketBuy, lane A's fix) and
 	// it is what fishes here.
@@ -338,7 +362,7 @@ func TestFishCastReservesAndKeepTakesTheFish(t *testing.T) {
 // doesn't reset the cast spacing (5.3).
 func TestFishCancelAndReleaseGiveTheFishBack(t *testing.T) {
 	x := newRig(t)
-	c, s := x.ready("alice")
+	c, s := x.fisher("alice")
 	rod := x.instance(s.AccountID, "willow-rod", -1, "")
 	at := bankSpot(t, s, "north")
 
@@ -425,7 +449,7 @@ func mustItem(t *testing.T, def string) *content.ItemDef {
 // touches the account or the water (5.3, 5.4).
 func TestFishOneOpenCastAndLazyLapse(t *testing.T) {
 	x := newRig(t)
-	c, s := x.ready("alice")
+	c, s := x.fisher("alice")
 	rod := x.instance(s.AccountID, "willow-rod", -1, "")
 	at := bankSpot(t, s, "race")
 
@@ -474,7 +498,7 @@ func TestFishOneOpenCastAndLazyLapse(t *testing.T) {
 // fish off lines, and an empty water refuses.
 func TestFishBandsStockAndStill(t *testing.T) {
 	x := newRig(t)
-	c, s := x.ready("alice")
+	c, s := x.fisher("alice")
 	rod := x.instance(s.AccountID, "willow-rod", -1, "")
 	at := bankSpot(t, s, "north")
 
@@ -544,7 +568,7 @@ func TestFishBandsStockAndStill(t *testing.T) {
 // a bank is closed in (5.1, 5.4). The race bank is open all year.
 func TestFishBanksReachAndSeason(t *testing.T) {
 	x := newRig(t)
-	c, s := x.ready("alice")
+	c, s := x.fisher("alice")
 	rod := x.instance(s.AccountID, "willow-rod", -1, "")
 	pond, _ := content.WaterFor(millPondID)
 
@@ -586,9 +610,60 @@ func TestFishBanksReachAndSeason(t *testing.T) {
 
 // The rod is checked the way a tool's use is (5.4): one of yours, in the
 // pack, a tool with the fish action, with a use left.
+// A water missing from content (a rename, a generated water going away)
+// closes its casts and never breaks a state read (review finding 8): the
+// cast lapses with no stock touched, and the settle of one still open says
+// its piece and closes it too.
+func TestFishUnknownWaterClosesTheCastAndKeepsStateWhole(t *testing.T) {
+	x := newRig(t)
+	c, s := x.fisher("alice")
+	at := float64(x.now.Load())
+	stage := func(id string, seq int) {
+		x.t.Helper()
+		if _, err := x.db.DB.Exec(`INSERT INTO fishing_casts(id,account_id,world_id,water,bank,rod,species,band,seq,started_at,ready_at,hold_until,state)
+ VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`, id, s.AccountID, s.WorldID, "water:village:gone-pond", "north", "rod:gone", "mill-roach", "healthy", seq, at-700, at-10, at+600, "open"); err != nil {
+			x.t.Fatal(err)
+		}
+	}
+	closed := func(id string) string {
+		x.t.Helper()
+		var state string
+		if err := x.db.DB.QueryRow("SELECT state FROM fishing_casts WHERE id=?", id).Scan(&state); err != nil {
+			x.t.Fatal(err)
+		}
+		return state
+	}
+	// The state read answers, the orphan cast is closed with it, and the
+	// wire shows no line out.
+	stage("cast:orphan-state", 1)
+	w := x.rawHTTP("GET", "/api/state", nil, c)
+	if w.Code != 200 {
+		t.Fatal("a state read failed on a missing water", w.Body.String())
+	}
+	if f := rawFishing(t, w); f.Cast != nil {
+		t.Fatal("the orphan cast still reads as open", f.Cast)
+	}
+	if got := closed("cast:orphan-state"); got == "open" {
+		t.Fatal("the orphan cast is still open")
+	}
+	// A settle of one still open closes it too: nothing is kept, nothing is
+	// granted, no stock moves.
+	stage("cast:orphan-settle", 2)
+	w = x.rawHTTP("POST", "/api/fishing/settle", settleBody(s, "settle-orphan", "cast:orphan-settle", true, bankSpot(t, s, "race")), c)
+	if w.Code != 200 {
+		t.Fatal("settle failed on a missing water", w.Body.String())
+	}
+	if got := closed("cast:orphan-settle"); got == "open" {
+		t.Fatal("the orphan cast survived its settle")
+	}
+	if n := count(t, x.db, "SELECT count(*) FROM item_stacks WHERE item_def='mill-roach' AND owner=?", s.AccountID); n != 0 {
+		t.Fatal("a missing water granted a fish")
+	}
+}
+
 func TestFishRodChecks(t *testing.T) {
 	x := newRig(t)
-	c, s := x.ready("alice")
+	c, s := x.fisher("alice")
 	at := bankSpot(t, s, "north")
 
 	if st, _, e, _ := x.request("POST", "/api/fishing/cast", castBody(s, fishKey(x, "cast"), "north", "", at), c); st != 404 || e != "item-not-found" {
@@ -609,7 +684,7 @@ func TestFishRodChecks(t *testing.T) {
 // can't wear one and is a wrong tool.
 func TestFishSettleRefusals(t *testing.T) {
 	x := newRig(t)
-	c, s := x.ready("alice")
+	c, s := x.fisher("alice")
 	rod := x.instance(s.AccountID, "willow-rod", -1, "")
 	at := bankSpot(t, s, "north")
 
@@ -622,21 +697,20 @@ func TestFishSettleRefusals(t *testing.T) {
 		t.Fatalf("cast: %d %s", w.Code, w.Body.String())
 	}
 	f := decodeHTTP[castResponse](x.t, w).Result.Cast
-	// The rod leaves the pack: keeping can't wear it (wrong-tool), but the
-	// fish may still go back.
+	// The rod leaves the pack: keeping can't wear one, and the settle
+	// releases the catch with its refusal (5.4: "either way the cast closes").
 	if _, err := x.db.DB.Exec(`UPDATE item_instances SET location='storage',owner='home' WHERE id=?`, rod); err != nil {
 		t.Fatal(err)
 	}
 	x.now.Add(10)
+	// Either way the cast closes (5.4): the keep is refused with wrong-tool
+	// and the catch is released in the same operation (review finding 16) —
+	// the line is never left out for holdSeconds to run down.
 	if st, _, e, _ := x.request("POST", "/api/fishing/settle", settleBody(s, fishKey(x, "settle"), f.ID, true, at), c); st != 409 || e != "wrong-tool" {
 		t.Fatal("kept with a rod that left the pack", st, e)
 	}
-	w = x.rawHTTP("POST", "/api/fishing/settle", settleBody(s, fishKey(x, "settle"), f.ID, false, at), c)
-	if w.Code != 200 {
-		t.Fatalf("release: %d %s", w.Code, w.Body.String())
-	}
-	if r := decodeHTTP[settleResponse](x.t, w).Result; r.Kept || r.Wear != nil {
-		t.Fatal("released", r)
+	if st, _, e, _ := x.request("POST", "/api/fishing/settle", settleBody(s, fishKey(x, "settle"), f.ID, false, at), c); st != 409 || e != "no-cast" {
+		t.Fatal("a refused keep left the line out", st, e)
 	}
 
 	// Past its hold the cast has lapsed: the answer is no-cast and the fish
@@ -707,8 +781,8 @@ func TestFishTwoAccountsShareTheWater(t *testing.T) {
 	x := newRig(t)
 	x.hero("alice", "Alice", "p1")
 	x.hero("bob", "Bob", "p1")
-	cA, sA := x.ready("alice")
-	cB, sB := x.ready("bob")
+	cA, sA := x.fisher("alice")
+	cB, sB := x.fisher("bob")
 	if sA.WorldID == "" || sA.WorldID != sB.WorldID {
 		t.Fatal("the two are not at one pond", sA.WorldID, sB.WorldID)
 	}
@@ -762,7 +836,7 @@ func TestFishTwoAccountsShareTheWater(t *testing.T) {
 // one wear of the rod, one fish back.
 func TestFishReplaysAnswerOnce(t *testing.T) {
 	x := newRig(t)
-	c, s := x.ready("alice")
+	c, s := x.fisher("alice")
 	rod := x.instance(s.AccountID, "willow-rod", -1, "")
 	at := bankSpot(t, s, "north")
 
@@ -844,7 +918,7 @@ func TestFishReplaysAnswerOnce(t *testing.T) {
 // plain waters message — no state, no result wrapper.
 func TestFishingWireShapesTheClientReads(t *testing.T) {
 	x := newRig(t)
-	c, s := x.ready("alice")
+	c, s := x.fisher("alice")
 	rod := x.instance(s.AccountID, "willow-rod", -1, "")
 	at := bankSpot(t, s, "north")
 	top := func(w *httptest.ResponseRecorder) map[string]json.RawMessage {
@@ -896,22 +970,27 @@ func TestFishingWireShapesTheClientReads(t *testing.T) {
 // fish off lines (5.3).
 func TestFisheryStockMath(t *testing.T) {
 	x := newRig(t)
-	_, s := x.ready("alice")
+	_, s := x.fisher("alice")
 	w, ok := content.WaterFor(millPondID)
 	if !ok {
 		t.Fatal("the mill pond")
 	}
 	x.setStock(s.WorldID, millPondID, 1000, 6, 0)
-	// Ten minutes later the pond is a fish fuller; ten more can't overfill.
+	// Ten minutes later the pond is a fish fuller; ten more can't overfill. A
+	// clock that stepped back counts no recovery twice (review finding 16's
+	// `fisheryAt` guard): the stock's own time only moves forward.
 	for _, tc := range []struct {
 		at, now, want float64
-	}{{1000, 1000, 6}, {1000, 1300, 6.5}, {1000, 6600, 12}, {1000, 1e9, 12}} {
+	}{{1000, 1000, 6}, {1000, 1300, 6.5}, {1000, 6600, 12}, {1000, 1e9, 12}, {1000, 900, 6}} {
 		f, err := fisheryAt(context.Background(), x.db.DB, s.WorldID, w, tc.now)
 		if err != nil {
 			t.Fatal(err)
 		}
 		if f.Stock != tc.want {
 			t.Fatalf("recovery to %v: %v", tc.now, f.Stock)
+		}
+		if f.At != max(tc.at, tc.now) {
+			t.Fatalf("the stock's clock read %v at %v", f.At, tc.now)
 		}
 	}
 	// The band is read before the reservation: a reserved fish counts

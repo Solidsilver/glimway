@@ -47,7 +47,9 @@ services:
     networks: [glimway]
 
   caddy:
-    image: caddy:2-alpine
+    # Pinned, never the floating major: a rebuild must not pick up a Caddy
+    # nobody has run (review finding 17).
+    image: caddy:2.11.7-alpine
     profiles: [https]
     restart: unless-stopped
     depends_on:

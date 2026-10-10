@@ -206,7 +206,9 @@ func TestSubsecondFallDoesNotCreateCombatBudget(t *testing.T) {
 		t.Fatal(w.Body.String())
 	}
 	if fall.State.Vitals.VitalsAt != float64(clock.UnixNano())/1e9 || fall.State.Vitals.CastReadyAt != fall.State.Vitals.VitalsAt {
-		t.Fatal("rounded refill", fall)
+		// A proto message carries a lock: format it, never copy it (review
+		// finding 7: go vet's copylocks check).
+		t.Fatal("rounded refill", protojson.Format(&fall))
 	}
 	clock = time.Unix(clock.Unix()+1, 0)
 	// 15 recovered mana + only 0.1s regeneration cannot fund an 18-mana cast.

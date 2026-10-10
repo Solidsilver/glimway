@@ -107,7 +107,7 @@ func TestRound2CRemovalCannotBeUndoneByPlayerInvite(t *testing.T) {
 	owner := x.login("owner", "")
 	banned := x.login("banned", "")
 	ownCode := inviteReq(t, x, "POST", "/api/invites", banned, 200)
-	if err := x.db.Allow(context.Background(), "banned", false); err != nil {
+	if err := x.db.Allow(context.Background(), "banned", false, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	if count(t, x.db, "SELECT count(*) FROM invites WHERE code_hash=? AND revoked_at IS NOT NULL", ownCode.ID) != 1 {
@@ -119,7 +119,7 @@ func TestRound2CRemovalCannotBeUndoneByPlayerInvite(t *testing.T) {
 	if x.calls.Load() != calls {
 		t.Fatal("removed account went upstream with player invite")
 	}
-	cli, err := x.db.Invite(context.Background(), "")
+	cli, err := x.db.Invite(context.Background(), "", x.now.Load())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,7 +164,7 @@ func TestRound2EPrecheckIPv6EvictionAndGlobalRate(t *testing.T) {
 	})
 	t.Run("ipv6", func(t *testing.T) {
 		x := newRig(t)
-		if err := x.db.Allow(context.Background(), "alice", true); err != nil {
+		if err := x.db.Allow(context.Background(), "alice", true, x.now.Load()); err != nil {
 			t.Fatal(err)
 		}
 		for i := 0; i < 11; i++ {
@@ -194,7 +194,7 @@ func TestRound2EPrecheckIPv6EvictionAndGlobalRate(t *testing.T) {
 	})
 	t.Run("global", func(t *testing.T) {
 		x := newRig(t)
-		if err := x.db.Allow(context.Background(), "alice", true); err != nil {
+		if err := x.db.Allow(context.Background(), "alice", true, x.now.Load()); err != nil {
 			t.Fatal(err)
 		}
 		for i := 0; i < 61; i++ {
@@ -245,7 +245,7 @@ func TestRound2HUsedInviteMetadataAndUpstreamLogClass(t *testing.T) {
 	t.Run("upstream", func(t *testing.T) {
 		x := newRig(t)
 		x.set(profile("alice", 10001, 0, 20))
-		if err := x.db.Allow(context.Background(), "alice", true); err != nil {
+		if err := x.db.Allow(context.Background(), "alice", true, x.now.Load()); err != nil {
 			t.Fatal(err)
 		}
 		x.expect("POST", "/api/session", map[string]any{"userId": "alice", "token": secret}, nil, 502)
@@ -280,7 +280,7 @@ func TestRound2BCeilingFullDayBoundariesAndMaximum(t *testing.T) {
 }
 func TestRound2ERetrySharesGlobalUpstreamBudget(t *testing.T) {
 	x := newRig(t)
-	if err := x.db.Allow(t.Context(), "alice", true); err != nil {
+	if err := x.db.Allow(t.Context(), "alice", true, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -314,7 +314,7 @@ func TestRound2CRemovalIsRecheckedAfterProof(t *testing.T) {
 		done <- status
 	}()
 	<-entered
-	err := x.db.Allow(t.Context(), "new", false)
+	err := x.db.Allow(t.Context(), "new", false, x.now.Load())
 	close(release)
 	status := <-done
 	if err != nil {

@@ -216,11 +216,6 @@ func visualAvatar(p rules.Profile, c store.Companions) *contract.PresenceAvatar 
 	}
 }
 
-// companionAvatar is the avatar an operation's answer leaves behind.
-func companionAvatar(c store.Companions, p rules.Profile) *presenceAvatarMsg {
-	return visualAvatar(p, c)
-}
-
 // presenceRoom names a presence room: an area in a world.
 type presenceRoom struct{ world, area string }
 

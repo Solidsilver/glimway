@@ -419,15 +419,15 @@ func (a *Server) worldPrompt(w http.ResponseWriter, r *http.Request) error {
 // the new world, unless it is a party's (those take no codes). A warning
 // about having left a party ends with the move. `at` is the operation's
 // sub-second clock: 5.3's fishing times are fractional.
-func relocate(ctx context.Context, tx *sql.Tx, s *store.Snapshot, target worldRef, now int64, at float64) (bool, int, error) {
+func relocate(ctx context.Context, logf fishingLog, tx *sql.Tx, s *store.Snapshot, target worldRef, now int64, at float64) (bool, int, error) {
 	from := s.WorldID
 	// A world move pulls the line in (design 5.4): a hold already past its
 	// hold_until is recorded lapsed first, the rest close as cancelled, and
 	// every fish goes back to the water it was reserved from.
-	if err := lapseCasts(ctx, tx, at, now, "account_id=?", s.AccountID); err != nil {
+	if err := lapseCasts(ctx, logf, tx, at, now, "account_id=?", s.AccountID); err != nil {
 		return false, 0, err
 	}
-	if err := closeOpenCasts(ctx, tx, s.AccountID, at, now); err != nil {
+	if err := closeOpenCasts(ctx, logf, tx, s.AccountID, at, now); err != nil {
 		return false, 0, err
 	}
 	if err := settleHomes(ctx, tx, from, now); err != nil {
@@ -478,7 +478,7 @@ func relocate(ctx context.Context, tx *sql.Tx, s *store.Snapshot, target worldRe
 	}
 	// A world move sends the mount that is out home (docs/design/crafts.md
 	// 3.3): each world's stable holds its own mounts.
-	if _, err = tx.ExecContext(ctx, "UPDATE player_companions SET mount_out='' WHERE account_id=?", s.AccountID); err != nil {
+	if err = store.SendMountHome(ctx, tx, s.AccountID); err != nil {
 		return false, 0, err
 	}
 	// Codes they handed out follow them: a friend joins them, not the world
@@ -550,7 +550,7 @@ func (a *Server) worldMove(w http.ResponseWriter, r *http.Request) error {
 		if before.Outgoing > 0 {
 			return nil, fail(409, "mail-in-flight")
 		}
-		left, returned, err := relocate(ctx, tx, s, target, now, fractionalNow(a))
+		left, returned, err := relocate(ctx, a.logf, tx, s, target, now, fractionalNow(a))
 		if err != nil {
 			return nil, err
 		}
@@ -601,7 +601,7 @@ func (a *Server) worldLeave(w http.ResponseWriter, r *http.Request) error {
 			return nil, err
 		}
 		from := s.WorldID
-		left, returned, err := relocate(ctx, tx, s, target, now, fractionalNow(a))
+		left, returned, err := relocate(ctx, a.logf, tx, s, target, now, fractionalNow(a))
 		if err != nil {
 			return nil, err
 		}
@@ -625,7 +625,7 @@ func (a *Server) worldLeave(w http.ResponseWriter, r *http.Request) error {
 // is moved out to a world of their own (relocate), wherever they stood: off
 // the safe paths they arrive in the village, and parcels they sent stay on
 // the road (their recipients can still take them). Reports a move.
-func partyResidence(ctx context.Context, tx *sql.Tx, s *store.Snapshot, party *string, now int64, at float64) (bool, error) {
+func partyResidence(ctx context.Context, logf fishingLog, tx *sql.Tx, s *store.Snapshot, party *string, now int64, at float64) (bool, error) {
 	here, err := loadWorldRef(ctx, tx, s.WorldID)
 	if err != nil || !here.Party {
 		return false, err
@@ -653,7 +653,7 @@ func partyResidence(ctx context.Context, tx *sql.Tx, s *store.Snapshot, party *s
 		start := rules.NewState()
 		s.State.Area, s.State.Position = start.Area, start.Position
 	}
-	if _, _, err = relocate(ctx, tx, s, target, now, at); err != nil {
+	if _, _, err = relocate(ctx, logf, tx, s, target, now, at); err != nil {
 		return false, err
 	}
 	if _, err = tx.ExecContext(ctx, "UPDATE players SET party_moved_out_at=? WHERE account_id=?", now, s.AccountID); err != nil {

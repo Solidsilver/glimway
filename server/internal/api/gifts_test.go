@@ -694,7 +694,7 @@ func TestThanksNeverReturnOrBumpSenderRevision(t *testing.T) {
 	if _, err := x.db.DB.Exec("INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at)\nVALUES('thanks-old',?,'"+x.account("alice")+"','"+x.account("bob")+"','thanks','comfrey-salve',0,'[]','[]',?)", a.WorldID, x.now.Load()-60*86400); err != nil {
 		t.Fatal(err)
 	}
-	if err := x.db.Allow(context.Background(), "bob", false); err != nil {
+	if err := x.db.Allow(context.Background(), "bob", false, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	n, err := x.db.ReturnDueMail(context.Background(), x.now.Load())

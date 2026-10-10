@@ -68,7 +68,7 @@ func (x *rig) fund(id string, n, earned int) {
 }
 func (x *rig) member(id, world string) (*http.Cookie, response) {
 	x.t.Helper()
-	code, err := x.db.Invite(context.Background(), world)
+	code, err := x.db.Invite(context.Background(), world, x.now.Load())
 	if err != nil {
 		x.t.Fatal(err)
 	}

@@ -144,7 +144,7 @@ func run(args []string) error {
 				if len(cmd) != 3 {
 					return fmt.Errorf("usage: invite revoke HASH")
 				}
-				return s.RevokeInvite(ctx, cmd[2])
+				return s.RevokeInvite(ctx, cmd[2], clock.now().Unix())
 			}
 			if len(cmd) > 2 {
 				return fmt.Errorf("usage: invite [world-id]")
@@ -153,7 +153,7 @@ func run(args []string) error {
 			if len(cmd) == 2 {
 				world = cmd[1]
 			}
-			code, err := s.Invite(ctx, world)
+			code, err := s.Invite(ctx, world, clock.now().Unix())
 			if err != nil {
 				return err
 			}
@@ -185,7 +185,7 @@ func run(args []string) error {
 			if len(cmd) != 1 {
 				return fmt.Errorf("usage: parties")
 			}
-			records, err := s.Parties(ctx)
+			records, err := s.Parties(ctx, clock.now().Unix())
 			if err != nil {
 				return err
 			}
@@ -199,7 +199,7 @@ func run(args []string) error {
 			}
 			switch cmd[1] {
 			case "close", "open":
-				return s.SetPartyOpen(ctx, cmd[2], cmd[1] == "open")
+				return s.SetPartyOpen(ctx, cmd[2], cmd[1] == "open", clock.now().Unix())
 			case "adopt":
 				party, err := s.AdoptWorld(ctx, cmd[2])
 				if err != nil {
@@ -217,7 +217,7 @@ func run(args []string) error {
 			if err != nil {
 				return err
 			}
-			return s.ClearFlag(ctx, account)
+			return s.ClearFlag(ctx, account, clock.now().Unix())
 		case "allowlist":
 			if len(cmd) < 2 {
 				return fmt.Errorf("usage: allowlist add|remove HABITICA-SUBJECT | list")
@@ -227,7 +227,7 @@ func run(args []string) error {
 				if len(cmd) != 3 {
 					return fmt.Errorf("usage: allowlist add|remove ID")
 				}
-				return s.Allow(ctx, cmd[2], cmd[1] == "add")
+				return s.Allow(ctx, cmd[2], cmd[1] == "add", clock.now().Unix())
 			case "list":
 				if len(cmd) != 2 {
 					return fmt.Errorf("usage: allowlist list")

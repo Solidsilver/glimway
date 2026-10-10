@@ -94,10 +94,15 @@ func (a *Server) profileReport(w http.ResponseWriter, r *http.Request) error {
 	// its craft through the class mark; a classless sync never overwrites it.
 	// `verified_high_level` is left over: sign-ins alone raise the history
 	// the rebirth and forgery checks trust (review finding 7).
-	if p.Class != nil {
-		if c, ok := rules.NormalizeClass(*p.Class); ok {
-			s.ClassMark = c
-		}
+	if c := rules.ClassMarkOf(&p); c != "" {
+		s.ClassMark = c
+	}
+	// An account whose mark never got written (0.4 accounts, and anyone who
+	// never synced a class) remembers the craft from the profile this sync is
+	// about to overwrite: a rebirth's classless sync must not take the hero's
+	// magic away (review finding 2). A classless sync keeps the mark as is.
+	if s.ClassMark == "" {
+		s.ClassMark = rules.ClassMarkOf(s.ImportedProfile)
 	}
 	s.LevelMark = math.Max(s.LevelMark, p.Level)
 	if _, err = tx.ExecContext(ctx, "UPDATE sync_baselines SET level_mark=MAX(level_mark,?),class_mark=CASE WHEN ?!='' THEN ? ELSE class_mark END WHERE account_id=?", p.Level, s.ClassMark, s.ClassMark, s.AccountID); err != nil {

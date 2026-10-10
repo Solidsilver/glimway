@@ -21,10 +21,24 @@ import (
 // jumpTo walks the rig's clock forward (never back) to a day of the named
 // mark, wick or festival, and returns the unix it set.
 func (x *rig) jumpTo(kind, want string) int64 {
+	return x.walkTo(kind, want, false)
+}
+
+// jumpToPlain is jumpTo for a day with no festival on it (review finding 4):
+// the madder stall stands on Carting Day itself, so a plain Carting-mark day
+// and the festival are different answers.
+func (x *rig) jumpToPlain(kind, want string) int64 {
+	return x.walkTo(kind, want, true)
+}
+
+func (x *rig) walkTo(kind, want string, plain bool) int64 {
 	x.t.Helper()
 	for d := int64(0); d < 12*int64(content.CalendarRules.WickDays); d++ {
 		t := x.now.Load() + d*86400 + 3600
 		day := content.CalendarAt(content.CalendarRules, t)
+		if plain && day.Festival != nil {
+			continue
+		}
 		switch kind {
 		case "mark":
 			if day.Mark == want {
@@ -54,6 +68,12 @@ func (x *rig) jumpTo(kind, want string) int64 {
 // lives seven days of the rig's clock, and a season is longer.
 func (x *rig) jumpToAs(id, kind, want string) *http.Cookie {
 	x.jumpTo(kind, want)
+	return x.login(id, "")
+}
+
+// jumpToPlainAs is jumpToAs for a day with no festival on it.
+func (x *rig) jumpToPlainAs(id, kind, want string) *http.Cookie {
+	x.jumpToPlain(kind, want)
 	return x.login(id, "")
 }
 
@@ -309,8 +329,9 @@ func TestSellersHazelFinnAndTheCartingStall(t *testing.T) {
 		t.Fatal("no such seller")
 	}
 
-	// The madder stall stands on Carting Day only.
-	c = x.jumpToAs("alice", "mark", "Carting")
+	// The madder stall stands on Carting Day only: a plain Carting-mark day is
+	// not the fair (on Carting Day itself the stall sells, review finding 4).
+	c = x.jumpToPlainAs("alice", "mark", "Carting")
 	if buy("madder-stall", "madder-scraps", 409).Error.Code != "not-in-season" {
 		t.Fatal("the stall stood before the fair")
 	}

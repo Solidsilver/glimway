@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"time"
 )
 
 // Party worlds, for the operator (docs/home-server.md "Party worlds and world
@@ -31,7 +30,7 @@ type PartyRecord struct {
 	ClosedAt *int64 `json:"closedAt"`
 }
 
-func (s *Store) Parties(ctx context.Context) ([]PartyRecord, error) {
+func (s *Store) Parties(ctx context.Context, now int64) ([]PartyRecord, error) {
 	rows, err := s.DB.QueryContext(ctx, `SELECT p.party_id,w.id,(SELECT count(*) FROM players m WHERE m.world_id=w.id),w.opened_by,o.display_name,w.created_at,
  (SELECT count(*) FROM allowlist a JOIN sign_ins i ON i.method='habitica' AND i.subject=a.habitica_id JOIN players x ON x.account_id=i.account_id WHERE a.added_by='party' AND x.habitica_party_id=p.party_id),
  (SELECT count(DISTINCT h.habitica_id) FROM pending_sessions h JOIN allowlist a USING(habitica_id) WHERE a.added_by='party' AND h.habitica_party_id=p.party_id AND h.expires_at>? AND NOT EXISTS(SELECT 1 FROM sign_ins i WHERE i.method='habitica' AND i.subject=h.habitica_id)),c.closed_at
@@ -39,7 +38,7 @@ func (s *Store) Parties(ctx context.Context) ([]PartyRecord, error) {
  LEFT JOIN worlds w ON w.owner_id='' AND w.habitica_party_id=p.party_id
  LEFT JOIN players o ON o.account_id=w.opened_by
  LEFT JOIN party_closures c ON c.party_id=p.party_id
- ORDER BY w.created_at IS NULL,w.created_at,p.party_id`, time.Now().Unix())
+ ORDER BY w.created_at IS NULL,w.created_at,p.party_id`, now)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +56,7 @@ func (s *Store) Parties(ctx context.Context) ([]PartyRecord, error) {
 
 // SetPartyOpen closes a party (no one is admitted through it, and no world
 // is made for it) or opens it again. Its world, and everyone already in, stay.
-func (s *Store) SetPartyOpen(ctx context.Context, party string, open bool) error {
+func (s *Store) SetPartyOpen(ctx context.Context, party string, open bool, now int64) error {
 	if party == "" || len(party) > 128 {
 		return fmt.Errorf("invalid party id")
 	}
@@ -65,7 +64,7 @@ func (s *Store) SetPartyOpen(ctx context.Context, party string, open bool) error
 		_, err := s.DB.ExecContext(ctx, "DELETE FROM party_closures WHERE party_id=?", party)
 		return err
 	}
-	_, err := s.DB.ExecContext(ctx, "INSERT INTO party_closures VALUES(?,?) ON CONFLICT(party_id) DO NOTHING", party, time.Now().Unix())
+	_, err := s.DB.ExecContext(ctx, "INSERT INTO party_closures VALUES(?,?) ON CONFLICT(party_id) DO NOTHING", party, now)
 	return err
 }
 

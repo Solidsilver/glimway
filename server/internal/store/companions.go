@@ -10,6 +10,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/rules"
 	"slices"
 )
@@ -53,6 +54,20 @@ func (c Companions) Follower(p *rules.Profile) string {
 type companionReader interface {
 	QueryRowContext(context.Context, string, ...any) *sql.Row
 	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
+}
+
+// CompanionsProto is the resolved view on the wire (review finding 17: one
+// mapping, not one here and one in the api).
+func CompanionsProto(c Companions) *contract.Companions {
+	return &contract.Companions{FollowPet: c.FollowPet, YardPets: c.YardPets, MountOut: c.MountOut, MountHome: c.MountHome}
+}
+
+// SendMountHome sends the account's mount home (review finding 16): off the
+// road and out of any stall it stood in. One helper, so every path that
+// takes the mount out clears the same two columns the same way.
+func SendMountHome(ctx context.Context, tx *sql.Tx, account string) error {
+	_, err := tx.ExecContext(ctx, "UPDATE player_companions SET mount_out='',mount_home=NULL WHERE account_id=?", account)
+	return err
 }
 
 // CompanionsFor resolves the account's companions as they read right now.
@@ -99,7 +114,14 @@ func CompanionsFor(ctx context.Context, q companionReader, id, world, source str
 			return out, err
 		}
 		rows.Close()
-		for slot := 1; slot <= len(bySlot); slot++ {
+		slots := make([]int, 0, len(bySlot))
+		for slot := range bySlot {
+			slots = append(slots, slot)
+		}
+		// The stored slots in order, never assumed contiguous (review
+		// finding 16): a lapsed spot keeps its slot, so the numbers can gap.
+		slices.Sort(slots)
+		for _, slot := range slots {
 			// A lapsed spot reads empty: its pet drops out of the list and
 			// its stored row keeps the slot (2.2).
 			if key := bySlot[slot]; slices.Contains(p.Pets, key) {

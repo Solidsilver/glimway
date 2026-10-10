@@ -1,5 +1,8 @@
 //go:build dev
 
+// Dev-tagged tests (this file, dev_routes_test.go and dev_grant_test.go) are
+// named `TestDev…`: CI runs `-run '^TestDev'` against the dev build, so a dev
+// test under any other name would build and then be skipped silently.
 package main
 
 import (
@@ -134,7 +137,7 @@ func TestDevBuildWithoutDevClockHasNoRoute(t *testing.T) {
 	}
 }
 
-func TestAPIAnswersFollowMovableClock(t *testing.T) {
+func TestDevAPIAnswersFollowMovableClock(t *testing.T) {
 	c := devSetup(t, "-dev-clock=1000")
 	a := api.New(nil, nil, api.Config{Now: c.now})
 	defer a.ClosePresence()

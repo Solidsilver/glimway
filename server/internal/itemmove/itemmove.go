@@ -52,7 +52,8 @@ func ReturnDecoration(ctx context.Context, tx *sql.Tx, id, owner, def string) er
 
 type DecorationPlace struct{ Location, Player, Home string }
 
-func nullable(s string) any {
+// Nullable is one SQL nullable string argument: "" is NULL.
+func Nullable(s string) any {
 	if s == "" {
 		return nil
 	}
@@ -60,7 +61,7 @@ func nullable(s string) any {
 }
 func MoveDecorations(ctx context.Context, tx *sql.Tx, ids []string, from, to DecorationPlace) error {
 	for _, id := range ids {
-		res, err := tx.ExecContext(ctx, "UPDATE homestead_items SET location=?,account_id=?,homestead_id=? WHERE id=? AND location=? AND account_id IS ? AND homestead_id IS ? AND scene IS NULL", to.Location, nullable(to.Player), nullable(to.Home), id, from.Location, nullable(from.Player), nullable(from.Home))
+		res, err := tx.ExecContext(ctx, "UPDATE homestead_items SET location=?,account_id=?,homestead_id=? WHERE id=? AND location=? AND account_id IS ? AND homestead_id IS ? AND scene IS NULL", to.Location, Nullable(to.Player), Nullable(to.Home), id, from.Location, Nullable(from.Player), Nullable(from.Home))
 		if err != nil {
 			return err
 		}

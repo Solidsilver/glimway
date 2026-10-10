@@ -139,6 +139,10 @@ func startPresence(t *testing.T, x *rig, c *content.Presence) *httptest.Server {
 	cfg := x.api.Config
 	cfg.Presence = c
 	x.api = New(x.db, x.api.Habitica, cfg)
+	// Ward pulses land when the test says so (review finding 12): the hub
+	// schedules them on the rig's queue instead of the wall clock.
+	x.pulses = &wardPulseQueue{}
+	x.api.presence.afterFunc = x.pulses.after
 	ts := httptest.NewServer(x.api)
 	t.Cleanup(func() { x.api.ClosePresence(); ts.Close() })
 	return ts
@@ -656,7 +660,7 @@ func TestPresenceRevocationAndShutdown(t *testing.T) {
 			case "logout":
 				x.expect("DELETE", "/api/session", nil, c, 200)
 			case "allowlist":
-				if err := x.db.Allow(context.Background(), "alice", false); err != nil {
+				if err := x.db.Allow(context.Background(), "alice", false, x.now.Load()); err != nil {
 					t.Fatal(err)
 				}
 			case "session-expiry":

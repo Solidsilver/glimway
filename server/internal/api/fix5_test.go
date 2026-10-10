@@ -50,7 +50,7 @@ func TestFix5MailAutoReturns(t *testing.T) {
 					t.Fatal(err)
 				}
 			} else if reason == "recipient-removed" {
-				if err := x.db.Allow(context.Background(), "bob", false); err != nil {
+				if err := x.db.Allow(context.Background(), "bob", false, x.now.Load()); err != nil {
 					t.Fatal(err)
 				}
 			} else {
@@ -76,7 +76,7 @@ func TestFix5MailRemovedRecipientRejected(t *testing.T) {
 	x.member("bob", s.WorldID)
 	x.seedAssets(x.account("alice"))
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
-	if err := x.db.Allow(context.Background(), "bob", false); err != nil {
+	if err := x.db.Allow(context.Background(), "bob", false, x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
 	rejected := x.p5("POST", "/api/mail", body(s, "removed", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", Id: "timber", Qty: 1}}), c, 403)
@@ -226,7 +226,7 @@ func TestFix5MailItemsAndDecorationsReturnOriginalGoods(t *testing.T) {
 				}
 			}
 			if mode == "removal" {
-				if err := x.db.Allow(context.Background(), "bob", false); err != nil {
+				if err := x.db.Allow(context.Background(), "bob", false, x.now.Load()); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -270,7 +270,7 @@ func TestFix5MailReturnFailuresRollBack(t *testing.T) {
 			if mode == "recall" {
 				x.p5("POST", path, req, c, 500)
 			} else {
-				if err := x.db.Allow(context.Background(), "bob", false); err == nil {
+				if err := x.db.Allow(context.Background(), "bob", false, x.now.Load()); err == nil {
 					t.Fatal("failed removal committed")
 				}
 				if count(t, x.db, "SELECT COUNT(*) FROM allowlist WHERE habitica_id='bob'") != 1 || count(t, x.db, "SELECT COUNT(*) FROM access_removals WHERE habitica_id='bob'") != 0 {
@@ -287,7 +287,7 @@ func TestFix5MailReturnFailuresRollBack(t *testing.T) {
 			if mode == "recall" {
 				x.p5("POST", path, req, c, 200)
 			} else {
-				if err := x.db.Allow(context.Background(), "bob", false); err != nil {
+				if err := x.db.Allow(context.Background(), "bob", false, x.now.Load()); err != nil {
 					t.Fatal(err)
 				}
 			}
