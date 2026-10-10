@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"glimway/server/internal/habitica"
 	"glimway/server/internal/rules"
@@ -396,28 +397,33 @@ func TestPurseTopUpUnknownOutcomes(t *testing.T) {
 	}
 }
 
-// TestPurseTopUpCreateFailureLeavesNoCharge: a create that fails settles
-// `not-moved` — nothing was scored, so nothing was charged — and the reward
-// the create may have left is marked leftover (2.2 step c and e).
+// TestPurseTopUpCreateFailureLeavesNoCharge: a refused create settles
+// `not-moved` — nothing was scored, so nothing was charged — and leaves no
+// mark behind (2.2 step c). An **unknown** create (a timeout, a network
+// error, a 5xx) keeps its leftover mark whatever the delete finds (finding
+// 9): the reward may still land on Habitica's side after the delete looked.
 func TestPurseTopUpCreateFailure(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	x.setGold(500)
-	x.setCreate("error")
+	x.setCreate("refused")
 	row := x.topUpOK(s, "k", 100, c)
-	if row.State != "not-moved" {
-		t.Fatal(row.State)
+	if row.State != "not-moved" || row.Leftover {
+		t.Fatalf("a refused create: %+v", row)
 	}
 	if x.goldBalance(x.account("alice")) != 0 || x.scoreCalls() != 0 {
-		t.Fatal("a failed create charged something")
+		t.Fatal("a refused create charged something")
 	}
-	if row.Leftover {
-		t.Fatal("the delete found nothing and the row still says leftover")
-	}
-	// The same create failing while the delete fails too: the reward may be
-	// there, and the next top-up removes it first thing.
-	x.setDelete("error")
+	// The create timed out on our side and may still be running on
+	// Habitica's: the mark stays even though the delete found nothing.
+	x.setCreate("error")
 	row = x.topUpOK(s, "k2", 100, c)
+	if row.State != "not-moved" || !row.Leftover {
+		t.Fatalf("an unknown create: %+v", row)
+	}
+	// The same create failing while the delete fails too.
+	x.setDelete("error")
+	row = x.topUpOK(s, "k3", 100, c)
 	if row.State != "not-moved" || !row.Leftover {
 		t.Fatalf("%+v", row)
 	}
@@ -445,8 +451,19 @@ func TestPurseTopUpLeftoversDeletedFirst(t *testing.T) {
 		t.Fatal(second.State)
 	}
 	calls := x.habiticaCalls()[len(callsBefore):]
-	if len(calls) == 0 || calls[0] != "delete:"+alias {
-		t.Fatal("the leftover was not deleted first:", calls)
+	// The gold read comes first (finding 7: it proves the token), and the
+	// leftover's delete runs before this top-up's own create.
+	deleted, created := -1, -1
+	for i, call := range calls {
+		if call == "delete:"+alias && deleted < 0 {
+			deleted = i
+		}
+		if call == "create" {
+			created = i
+		}
+	}
+	if deleted < 0 || created < 0 || deleted > created {
+		t.Fatal("the leftover was not deleted before the create:", calls)
 	}
 	if x.rewardLeft(alias) {
 		t.Fatal("the leftover reward was not removed")
@@ -656,6 +673,9 @@ func TestPurseHangsWhileAnotherPlayerReadsState(t *testing.T) {
 	x.setGold(500)
 	x.setScore("hang")
 	x.setHang(2 * time.Second)
+	// Short checks and a short wait: the worker must not outlive the test
+	// (finding 11 — Close drains it, but a test shouldn't need 35 s).
+	x.setPurseChecks([]time.Duration{time.Millisecond, 2 * time.Millisecond})
 	x.api.Config.PurseAnswerWait = 50 * time.Millisecond
 	done := make(chan int, 1)
 	go func() {
@@ -817,8 +837,8 @@ func (s *timedOutAfterScore) Gold(_ context.Context, _ string, _ string, _ func(
 	return habitica.Gold{ID: s.subject, Gold: s.gold, Owned: []string{"weapon_warrior_1"}}, nil
 }
 
-func (s *timedOutAfterScore) OwnedGear(_ context.Context, _ string, _ string, _ func() bool) ([]string, error) {
-	return []string{"weapon_warrior_1"}, nil
+func (s *timedOutAfterScore) OwnedGear(_ context.Context, _ string, _ string, _ func() bool) (string, []string, error) {
+	return s.subject, []string{"weapon_warrior_1"}, nil
 }
 
 func (s *timedOutAfterScore) CreateReward(_ context.Context, _ string, _ string, _ habitica.Reward, _ func() bool) error {
@@ -829,7 +849,7 @@ func (s *timedOutAfterScore) ScoreDown(_ context.Context, _ string, _ string, _ 
 	s.scored++
 	// Habitica ran the charge; the answer never arrived.
 	s.gold -= 250
-	return 0, &habitica.Error{Code: "habitica-unavailable", Status: 502}
+	return 0, &habitica.Error{Code: "habitica-unavailable", Status: 502, Sent: true}
 }
 
 func (s *timedOutAfterScore) DeleteTask(_ context.Context, _ string, _ string, _ string, _ func() bool) error {
@@ -837,3 +857,216 @@ func (s *timedOutAfterScore) DeleteTask(_ context.Context, _ string, _ string, _
 }
 
 var _ habitica.Upstream = (*timedOutAfterScore)(nil)
+
+// TestPurseTopUpScoreRateLimited: one 429 is Habitica refusing before it
+// ran the score — wait the Retry-After it sent and send it once more (2.2
+// step d, finding 5). Two 429s mean nothing was charged, and the checks
+// decide from the balance. The score is never sent a third time.
+func TestPurseTopUpScoreRateLimited(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	x.setGold(1000)
+	x.setScore("rate-limited-once")
+	row := x.topUpOK(s, "k1", 300, c)
+	if row.State != "moved" || x.scoreCalls() != 2 {
+		t.Fatalf("one 429 then moved: %+v after %d scores", row, x.scoreCalls())
+	}
+	x.setScore("rate-limited")
+	x.setPurseChecks([]time.Duration{time.Millisecond, 2 * time.Millisecond})
+	row = x.topUpOK(s, "k2", 300, c)
+	if x.scoreCalls() != 4 {
+		t.Fatal("two 429s sent the score more than twice:", x.scoreCalls())
+	}
+	if row.State != "not-moved" {
+		t.Fatalf("two 429s, and the checks say the balance never moved: %+v", row)
+	}
+}
+
+// TestPurseTopUpScoreRefusedByOurBudget (finding 4): our own budget
+// refusing the score means it was never sent — nothing left the server, so
+// nothing was charged. It is never an unknown outcome and never runs the
+// checks.
+func TestPurseTopUpScoreRefusedByOurBudget(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	x.setGold(500)
+	// Two upstream calls pass — the gold read and the create — and our own
+	// budget refuses the third, the score, before it goes out.
+	x.api.loginGlobal.rate = 2
+	x.setPurseChecks([]time.Duration{time.Millisecond})
+	row := x.topUpOK(s, "k", 100, c)
+	if row.State != "not-moved" || row.Note != "habitica-rate-limited" {
+		t.Fatalf("%+v", row)
+	}
+	if x.scoreCalls() != 0 {
+		t.Fatal("a refused score reached Habitica")
+	}
+	if x.goldBalance(x.account("alice")) != 0 {
+		t.Fatal("a refused score credited gold")
+	}
+}
+
+// TestPurseTopUpGoldReadIdentityMismatch: a read that answered for someone
+// else is a refused token (2.2 step b, finding 8's rule on the gold read).
+func TestPurseTopUpGoldReadIdentityMismatch(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	stub := &timedOutAfterScore{subject: "someone-else", gold: 1000}
+	x.api.Habitica = stub
+	row := x.topUpOK(s, "k", 100, c)
+	if row.State != "not-moved" || row.Note != "habitica-auth" {
+		t.Fatalf("%+v", row)
+	}
+	if stub.scored != 0 {
+		t.Fatal("a mismatched read still got as far as scoring")
+	}
+}
+
+// TestPurseTopUpLastCheckDecides (finding 2): `not-moved` comes only from
+// the final scheduled check's reading. A last check that fails — or never
+// runs — after an earlier reading of gold_before decides nothing: the
+// timed-out score may still have been running on Habitica's side.
+func TestPurseTopUpLastCheckDecides(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	x.setGold(1000)
+	x.setScore("error") // unknown, nothing charged
+	// Calls: the gold read, the create, the score, the first check — then
+	// Habitica goes down and the last check fails.
+	x.setDownAfter(5)
+	x.setPurseChecks([]time.Duration{time.Millisecond, 2 * time.Millisecond})
+	row := x.topUpOK(s, "k", 300, c)
+	if row.State != "unconfirmed" {
+		t.Fatalf("%+v: the last check failed, so nothing is decided", row)
+	}
+}
+
+// TestPurseTopUpCheckingMarkFailure (finding 1): an unknown score is
+// `unconfirmed` from the start of that branch, and a failed `checking` mark
+// is not fatal — the checks run anyway, and settling is what makes the row
+// final.
+func TestPurseTopUpCheckingMarkFailure(t *testing.T) {
+	failMark := func(x *rig) {
+		x.api.topUpMark = func(id, state string) error {
+			if state == "checking" {
+				return errors.New("the checking mark could not be written")
+			}
+			return nil
+		}
+	}
+	x := newRig(t)
+	c, s := x.ready("alice")
+	x.setGold(1000)
+	failMark(x)
+	x.setScore("timeout-moved") // the charge happened; the answer didn't
+	x.setPurseChecks([]time.Duration{time.Millisecond, 2 * time.Millisecond})
+	row := x.topUpOK(s, "k", 300, c)
+	if row.State != "moved" || row.Note != "checked" {
+		t.Fatalf("%+v: the checks ran despite the failed mark", row)
+	}
+	// And an undecided one is never `not-moved`, whatever the marks do.
+	x2 := newRig(t)
+	c2, s2 := x2.ready("alice")
+	x2.setGold(1000)
+	failMark(x2)
+	x2.setScore("error")
+	x2.setDownAfter(4) // every check fails
+	x2.setPurseChecks([]time.Duration{time.Millisecond, 2 * time.Millisecond})
+	if row := x2.topUpOK(s2, "k", 300, c2); row.State != "unconfirmed" {
+		t.Fatalf("%+v", row)
+	}
+}
+
+// TestPurseTopUpScoreRefusedInAnotherLanguage (finding 17): Habitica's
+// "Not Enough Gold" is written in the user's language; after a read and a
+// create with the same token, a 401 on the score is that refusal.
+func TestPurseTopUpScoreRefusedInAnotherLanguage(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	x.setGold(500)
+	x.setScore("not-enough-gold-fr")
+	x.setPurseChecks([]time.Duration{time.Millisecond})
+	row := x.topUpOK(s, "k", 100, c)
+	if row.State != "not-enough" {
+		t.Fatalf("%+v", row)
+	}
+}
+
+// TestPurseTopUpDeletesAtMostTwoLeftovers (finding 10): two, oldest first,
+// so a backlog of failed runs can't eat the worker's time and the user's
+// calls before the reward this top-up is here for.
+func TestPurseTopUpDeletesAtMostTwoLeftovers(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	account := x.account("alice")
+	now := x.now.Load()
+	x.setGold(500)
+	for i, id := range []string{"old-1", "old-2", "old-3"} {
+		if _, err := x.db.DB.Exec("INSERT INTO purse_topups(id,account_id,op_key,amount,state,created_at,leftover,settled_at,settled_by) VALUES(?,?,?,20,'not-moved',?,1,?,'worker')", id, account, "k-"+id, now-1000+int64(i), now-900); err != nil {
+			t.Fatal(err)
+		}
+	}
+	x.topUpOK(s, "k", 100, c)
+	seen := []string{}
+	for _, call := range x.habiticaCalls() {
+		if strings.HasPrefix(call, "delete:glimway-topup-old-") {
+			seen = append(seen, call)
+		}
+	}
+	if strings.Join(seen, ",") != "delete:glimway-topup-old-1,delete:glimway-topup-old-2" {
+		t.Fatal("leftover deletes (want the two oldest):", seen)
+	}
+}
+
+// TestPurseChangesMoveTheVersion (finding 6): the reserve and every settle
+// outcome move the account's version, so a client adopts the answer instead
+// of dropping it as a same-version conflict.
+func TestPurseChangesMoveTheVersion(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	account := x.account("alice")
+	before := x.version(t, account)
+	x.setGold(500)
+	x.setScore("error") // unknown → `unconfirmed`, a settle with no credit
+	x.setPurseChecks([]time.Duration{time.Millisecond, 2 * time.Millisecond})
+	x.topUpOK(s, "k", 100, c)
+	after := x.version(t, account)
+	if after < before+2 {
+		t.Fatalf("version %d → %d: the reserve and the settle should each move it", before, after)
+	}
+	// The lazy settle moves it too, and the answer that triggered it
+	// carries the new one.
+	if _, err := x.db.DB.Exec("INSERT INTO purse_topups(id,account_id,op_key,amount,state,created_at) VALUES('dead',?,'dead',20,'scoring',?)", account, x.now.Load()-91); err != nil {
+		t.Fatal(err)
+	}
+	before = x.version(t, account)
+	read := x.purseRead(c)
+	if read.Purse.Working != nil {
+		t.Fatal("the dead worker's row still reads as working")
+	}
+	if x.version(t, account) <= before {
+		t.Fatal("the lazy settle did not move the version")
+	}
+}
+
+func (x *rig) version(t *testing.T, account string) int64 {
+	t.Helper()
+	var v int64
+	if err := x.db.DB.QueryRow("SELECT version FROM players WHERE account_id=?", account).Scan(&v); err != nil {
+		t.Fatal(err)
+	}
+	return v
+}
+
+// TestWardrobeCheckIdentityMismatch (finding 8): the gear check compares
+// `_id` with the account's subject, like the gold read and sign-in do.
+func TestWardrobeCheckIdentityMismatch(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	stub := &timedOutAfterScore{subject: "someone-else", gold: 1000}
+	x.api.Habitica = stub
+	status, out := x.checkGear(s.Lease, secret, c)
+	if status != 401 || out.Error == nil || out.Error.Code != "habitica-auth" {
+		t.Fatalf("check answered for someone else: %d %v", status, out.Error)
+	}
+}

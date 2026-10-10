@@ -3,6 +3,7 @@ package habitica
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -124,5 +125,113 @@ func TestMapNullablePetAndMountOwnership(t *testing.T) {
 	}
 	if len(p.Mounts) != 1 || p.Mounts[0] != "truthy" {
 		t.Fatal("mount ownership mapping", p.Mounts)
+	}
+}
+
+// TestPurseCallsHitTheirPaths: the purse's four calls and the wardrobe's
+// read hit exactly the paths design 2.2 and 4.3 name, carry the token in
+// one header, read only what they need out of the bodies, and never let a
+// body into a returned value or an error.
+func TestPurseCallsHitTheirPaths(t *testing.T) {
+	var seen, bodies []string
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, _ := io.ReadAll(r.Body)
+		seen = append(seen, r.Method+" "+r.URL.Path)
+		bodies = append(bodies, string(raw))
+		if r.Header.Get("X-Api-Key") != "secret" || r.Header.Get("X-Client") != "tag" {
+			t.Error("missing upstream headers")
+		}
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case r.Method == "GET" && r.URL.Path == "/api/v3/user":
+			_, _ = w.Write([]byte(`{"success":true,"data":{"_id":"alice","stats":{"gp":12.7},"items":{"gear":{"owned":{"weapon_warrior_1":true,"head_lost_1":false,"head_futurePiece":true}}}}}`))
+		case r.Method == "POST" && r.URL.Path == "/api/v3/tasks/user":
+			w.WriteHeader(201)
+			_, _ = w.Write([]byte(`{"success":true,"data":{"_id":"task"}}`))
+		case r.Method == "POST" && strings.HasSuffix(r.URL.Path, "/score/down"):
+			_, _ = w.Write([]byte(`{"success":true,"data":{"gp":1040.2}}`))
+		case r.Method == "DELETE":
+			_, _ = w.Write([]byte(`{"success":true,"data":{}}`))
+		default:
+			t.Error("unexpected upstream request", r.Method, r.URL.Path)
+		}
+	}))
+	defer s.Close()
+	c := New(s.URL, "tag")
+	g, err := c.Gold(context.Background(), "alice", "secret", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Gold is floored; the owned list is the catalogued `true` keys only
+	// (a lost piece and an unknown key drop out, 4.3).
+	if g.ID != "alice" || g.Gold != 12 || strings.Join(g.Owned, ",") != "weapon_warrior_1" {
+		t.Fatalf("gold read: %+v", g)
+	}
+	id, owned, err := c.OwnedGear(context.Background(), "alice", "secret", nil)
+	if err != nil || id != "alice" || strings.Join(owned, ",") != "weapon_warrior_1" {
+		t.Fatalf("gear read: %q %v %v", id, owned, err)
+	}
+	if err = c.CreateReward(context.Background(), "alice", "secret", Reward{Type: "reward", Text: "Glimway purse: 200 gold", Notes: "note", Value: 200, Alias: "glimway-topup-x"}, nil); err != nil {
+		t.Fatal(err)
+	}
+	after, err := c.ScoreDown(context.Background(), "alice", "secret", "glimway-topup-x", nil)
+	if err != nil || after != 1040 {
+		t.Fatal(after, err)
+	}
+	if err = c.DeleteTask(context.Background(), "alice", "secret", "glimway-topup-x", nil); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"GET /api/v3/user",
+		"GET /api/v3/user",
+		"POST /api/v3/tasks/user",
+		"POST /api/v3/tasks/glimway-topup-x/score/down",
+		"DELETE /api/v3/tasks/glimway-topup-x",
+	}
+	if strings.Join(seen, "|") != strings.Join(want, "|") {
+		t.Fatal("paths:", seen)
+	}
+	if !strings.Contains(bodies[2], `"alias":"glimway-topup-x"`) || !strings.Contains(bodies[2], `"value":200`) {
+		t.Fatal("the reward's body:", bodies[2])
+	}
+}
+
+// TestPurseCallRefusalsAreCodedAndScrubbed: the refusals the purse reads and
+// writes map onto coded errors — a 401 that isn't a token is "insufficient-
+// gold", a 429 carries the Retry-After it asked for, a 5xx is unknown, a 4xx
+// is a definite refusal — and no error ever carries a body (finding 17's
+// matchers, finding 5's wait).
+func TestPurseCallRefusalsAreCodedAndScrubbed(t *testing.T) {
+	cases := []struct {
+		status int
+		body   string
+		header [2]string
+		code   string
+		retry  time.Duration
+	}{
+		{401, `{"success":false,"error":"NotAuthorized","message":"Pas assez d'or"}`, [2]string{}, "insufficient-gold", 0},
+		{429, `{"success":false,"error":"RateLimitExceeded"}`, [2]string{"Retry-After", "3"}, "habitica-rate-limited", 3 * time.Second},
+		{500, `secret body`, [2]string{}, "habitica-unavailable", 0},
+		{404, `secret body`, [2]string{}, "invalid-request", 0},
+	}
+	for _, tc := range cases {
+		s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set(tc.header[0], tc.header[1])
+			w.WriteHeader(tc.status)
+			_, _ = w.Write([]byte(tc.body))
+		}))
+		c := New(s.URL, "tag")
+		_, err := c.ScoreDown(context.Background(), "alice", "secret", "glimway-topup-x", nil)
+		s.Close()
+		var e *Error
+		if !errors.As(err, &e) || e.Code != tc.code {
+			t.Fatalf("%d: %v", tc.status, err)
+		}
+		if tc.retry != 0 && e.RetryAfter != tc.retry {
+			t.Fatalf("%d: Retry-After %v, want %v", tc.status, e.RetryAfter, tc.retry)
+		}
+		if err.Error() != tc.code || strings.Contains(err.Error(), "secret") {
+			t.Fatal("body leaked into an error:", err)
+		}
 	}
 }

@@ -67,9 +67,15 @@ func scanTopUp(row interface{ Scan(...any) error }) (TopUp, error) {
 var ErrTopUpSettled = errors.New("top-up already settled")
 
 // InsertTopUp reserves the row (2.2 step 1). The row is its own idempotency:
-// the unique (account_id, op_key) is what a repeated key meets.
+// the unique (account_id, op_key) is what a repeated key meets. The reserve
+// is a purse change like any other, so the account's version moves with it
+// (finding 6): the answer carrying `working` must not be a same-version
+// state the client drops as a conflict.
 func InsertTopUp(ctx context.Context, tx *sql.Tx, id, account, opKey string, amount, now int64) error {
-	_, err := tx.ExecContext(ctx, "INSERT INTO purse_topups(id,account_id,op_key,amount,state,created_at) VALUES(?,?,?,?,?,?)", id, account, opKey, amount, "reserved", now)
+	if _, err := tx.ExecContext(ctx, "INSERT INTO purse_topups(id,account_id,op_key,amount,state,created_at) VALUES(?,?,?,?,?,?)", id, account, opKey, amount, "reserved", now); err != nil {
+		return err
+	}
+	_, err := BumpAccountVersion(ctx, tx, account)
 	return err
 }
 
@@ -136,9 +142,14 @@ func SettleTopUp(ctx context.Context, tx *sql.Tx, t TopUp, out TopUpOutcome, now
 		if out.SettledBy == "owner" {
 			reason = "purse-settle"
 		}
+		// CreditGold moves the version; every other outcome moves it here
+		// (finding 6): `unconfirmed`, `not-moved` and `not-enough` change
+		// the purse on the wire just as much.
 		if err = CreditGold(ctx, tx, t.AccountID, t.Amount, reason, t.ID, now); err != nil {
 			return err
 		}
+	} else if _, err = BumpAccountVersion(ctx, tx, t.AccountID); err != nil {
+		return err
 	}
 	return nil
 }
@@ -173,35 +184,50 @@ func boolInt(b bool) int {
 // settles then as `unconfirmed` if it got as far as scoring or checking,
 // `not-moved` if it stopped at reserved or created, and is marked leftover
 // from `created` on (the reward may exist). It runs when someone looks: the
-// purse read, the next top-up's reserve, PlayerState.
-func SettleStaleTopUps(ctx context.Context, tx *sql.Tx, account string, now int64) error {
+// purse read, the next top-up's reserve, PlayerState. It answers the
+// account's version after the settles (0 when there were none), so a state
+// built straight after carries it (finding 6).
+func SettleStaleTopUps(ctx context.Context, tx *sql.Tx, account string, now int64) (int64, error) {
 	rows, err := tx.QueryContext(ctx, "SELECT "+topUpColumns+" FROM purse_topups WHERE account_id=? AND state IN "+topUpWorkingSQL+" AND created_at<=?", account, now-TopUpStaleAfter)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	var stale []TopUp
 	for rows.Next() {
 		t, err := scanTopUp(rows)
 		if err != nil {
 			rows.Close()
-			return err
+			return 0, err
 		}
 		stale = append(stale, t)
 	}
 	rows.Close()
 	if err = rows.Err(); err != nil {
-		return err
+		return 0, err
 	}
+	var version int64
 	for _, t := range stale {
 		out := TopUpOutcome{State: "not-moved", SettledBy: "look", Leftover: t.State != "reserved"}
 		if t.State == "scoring" || t.State == "checking" {
 			out.State, out.Note = "unconfirmed", "timeout"
 		}
 		if err = SettleTopUp(ctx, tx, t, out, now); err != nil && !errors.Is(err, ErrTopUpSettled) {
-			return err
+			return 0, err
 		}
 	}
-	return nil
+	if len(stale) > 0 {
+		if version, err = AccountVersion(ctx, tx, account); err != nil {
+			return 0, err
+		}
+	}
+	return version, nil
+}
+
+// AccountVersion reads an account's answer version back.
+func AccountVersion(ctx context.Context, tx *sql.Tx, account string) (int64, error) {
+	var v int64
+	err := tx.QueryRowContext(ctx, "SELECT version FROM players WHERE account_id=?", account).Scan(&v)
+	return v, err
 }
 
 // CountedTopUps is what counts toward today's two (2.5): moved, unconfirmed
@@ -220,7 +246,7 @@ func CountedTopUps(ctx context.Context, tx *sql.Tx, account string, since int64)
 // working. The stale settle runs first (2.4), so a dead worker's row reads
 // as settled. dayStart is the UTC midnight of the counting day.
 func PurseFor(ctx context.Context, tx *sql.Tx, account string, now, dayStart int64) (*contract.Purse, error) {
-	if err := SettleStaleTopUps(ctx, tx, account, now); err != nil {
+	if _, err := SettleStaleTopUps(ctx, tx, account, now); err != nil {
 		return nil, err
 	}
 	gold, err := GoldFor(ctx, tx, account)
@@ -231,7 +257,7 @@ func PurseFor(ctx context.Context, tx *sql.Tx, account string, now, dayStart int
 	if err != nil {
 		return nil, err
 	}
-	out := &contract.Purse{Gold: int32(gold), TopUpsLeft: int32(max(0, TopUpsADay-used))}
+	out := &contract.Purse{Gold: int32(min(gold, 1<<31-1)), TopUpsLeft: int32(max(0, TopUpsADay-used))}
 	working, err := WorkingTopUp(ctx, tx, account)
 	if err != nil {
 		return nil, err
@@ -547,7 +573,19 @@ func (s *Store) SettleTopUpByOwner(ctx context.Context, id, outcome string, now 
 	if t.State != "unconfirmed" {
 		return fmt.Errorf("top-up %s is %s, not unconfirmed", id, t.State)
 	}
-	res, err := tx.ExecContext(ctx, "UPDATE purse_topups SET state=?,settled_at=?,settled_by='owner',note='settled-by-owner' WHERE id=? AND state='unconfirmed'", outcome, now, id)
+	// The row is settled already — the checks gave up on it — so the
+	// worker's note and its settle time stay as they are (finding 18): they
+	// are the evidence of why the owner is here. A row with no note is
+	// marked with the vocabulary's settled-by-owner.
+	note := t.Note
+	if note == "" {
+		note = "settled-by-owner"
+	}
+	settledAt := int64(now)
+	if t.SettledAt.Valid {
+		settledAt = t.SettledAt.Int64
+	}
+	res, err := tx.ExecContext(ctx, "UPDATE purse_topups SET state=?,settled_at=?,settled_by='owner',note=? WHERE id=? AND state='unconfirmed'", outcome, settledAt, note, id)
 	if err != nil {
 		return err
 	}
@@ -559,9 +597,13 @@ func (s *Store) SettleTopUpByOwner(ctx context.Context, id, outcome string, now 
 		return fmt.Errorf("top-up %s was settled elsewhere", id)
 	}
 	if outcome == "moved" {
+		// CreditGold moves the version (finding 6); `not-moved` moves it
+		// here, because the purse changed on the wire all the same.
 		if err = CreditGold(ctx, tx, t.AccountID, t.Amount, "purse-settle", id, now); err != nil {
 			return err
 		}
+	} else if _, err = BumpAccountVersion(ctx, tx, t.AccountID); err != nil {
+		return err
 	}
 	return tx.Commit()
 }

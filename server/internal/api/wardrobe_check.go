@@ -61,14 +61,18 @@ func (a *Server) wardrobeCheck(w http.ResponseWriter, r *http.Request) error {
 	result := &contract.WardrobeCheckResult{Owned: []string{}}
 	err = a.withHabitica(r, subject, func(b habiticaBudget) error {
 		call, stop := context.WithTimeout(r.Context(), habiticaCallTime)
-		owned, e := a.Habitica.OwnedGear(call, subject, token, b.Allow)
+		gotID, owned, e := a.Habitica.OwnedGear(call, subject, token, b.Allow)
 		token = ""
 		stop()
 		if e != nil {
-			if habiticaNote(e) == "habitica-auth" {
-				b.FailedProof()
-			}
+			// A wrong token counts as a failed proof through the refusal
+			// this returns (finding 7's split): never twice.
 			return habiticaFailure(e)
+		}
+		// `_id` is the account's subject (6.2's row, finding 8): a read that
+		// answered for someone else is a refused token.
+		if gotID != subject {
+			return fail(401, "habitica-auth")
 		}
 		return a.withTx(r.Context(), func(tx *sql.Tx) error {
 			before, _, err := store.PlayerGear(r.Context(), tx, account)

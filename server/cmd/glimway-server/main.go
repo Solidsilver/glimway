@@ -339,6 +339,10 @@ func run(args []string) error {
 		defer cancel()
 		handler.ClosePresence()
 		_ = server.Shutdown(shutdown)
+		// Then the detached purse workers (finding 11), bounded by the same
+		// shutdown: one about to settle a `moved` row gets its database
+		// closed under it otherwise.
+		handler.Close(shutdown)
 	}()
 	logger.Printf("listening addr=%s version=%s build=%s", *addr, version, cmp.Or(build, "unknown"))
 	err = server.ListenAndServe()

@@ -413,6 +413,27 @@ Today the game promises it never writes. These go in the same change:
    the write before it ships? I'd do it, since the tool will start changing
    gold.
 
+## How long a Habitica request can run (checked 2026-10-10)
+
+Design 2.3 wants the last balance check (35 s after a score whose outcome is unknown) to come
+after any such request has finished. What the public source bounds it by:
+
+- **The API server sets no timeout.** `website/server/server.js` (HabitRPG/habitica `develop`,
+  2026-10-10) is `const server = http.createServer();` and `server.listen(...)` — no
+  `server.setTimeout`, no `requestTimeout`, no `headersTimeout`. So Node's defaults apply: no
+  socket inactivity timeout (off since Node 13) and a 300 s request timeout on Node 18+.
+- **Nothing in the app aborts a running operation.** `website/server/middlewares/index.js` has
+  `logSlowRequests` (`SLOW_REQUEST_THRESHOLD`), which only logs.
+- **The database call is bounded only if configured.** `website/server/libs/mongoose.js` sets
+  `socketTimeoutMS` from `MONGODB_SOCKET_TIMEOUT`, which is not set in the repository; production
+  settings are not public (same gap as §7).
+
+So there is **no confirmed server-side timeout shorter than 35 s** in the source — the real bound
+is whatever reverse proxy habitica.com runs behind and its production settings. The balance
+checks are the mitigation: they keep going up to 35 s and the last one decides (2.3), and the
+check phase has its own time budget so it always runs to the end. The owner's live check below
+asks for the one number the source can't give.
+
 ## Live check (before the purse reaches a real account)
 
 Design 10.3. Agents never hold a real Habitica token, so the first top-up against habitica.com is
@@ -425,7 +446,8 @@ never the server others play on. About ten minutes:
 
    ```
    go run ./server/cmd/glimway-server -listen 127.0.0.1:8090 -db .data/live-check.sqlite -cookie-secure=false
-   ./server/.../glimway-server invite        # an invite code, from the same build
+   # another terminal, the same build:
+   go run ./server/cmd/glimway-server -db .data/live-check.sqlite invite
    ```
 
    Open `http://127.0.0.1:8090`, sign in with the throwaway account's ID and token and the invite
@@ -443,14 +465,18 @@ never the server others play on. About ten minutes:
 6. **Check for new gear.** Character → Wardrobe → **Check for new gear** should list what that
    account owns on Habitica: the `*_base_0` starters at least, and anything it earned. Nothing
    else in Glimway changes; Habitica's own outfit is untouched (the wardrobe never writes).
-7. **Look for the token afterwards.** Stop the server and check nothing kept it:
+7. **Time a top-up.** Watch one top-up that moves: how long does the button take to come back with
+   its answer? Habitica's own request timeout is not in its public source (see above), so note the
+   seconds here — the balance checks end at 35 s after our score call gives up, and if a real
+   score ever takes longer than that to settle, the last check has to move later.
+8. **Look for the token afterwards.** Stop the server and check nothing kept it:
 
    ```
    strings .data/live-check.sqlite* | grep -c <the token>    # 0
    grep -c <the token> .data/live-check.log                  # 0, if a log was kept
    ```
 
-8. **Delete the throwaway account** (Habitica → Settings → delete) and the
+9. **Delete the throwaway account** (Habitica → Settings → delete) and the
    `.data/live-check.sqlite` files.
 
 If anything here differs from what the screen says, write down what Habitica actually answered —

@@ -43,7 +43,8 @@ func CreditGold(ctx context.Context, tx *sql.Tx, account string, n int, reason, 
 	if err := itemmove.RecordCurrency(ctx, tx, account, itemmove.Gold(), n, reason, ref, now); err != nil {
 		return err
 	}
-	return BumpAccountVersion(ctx, tx, account)
+	_, err := BumpAccountVersion(ctx, tx, account)
+	return err
 }
 
 // DebitGold takes n gold out of an account's purse (n > 0), refusing with
@@ -65,7 +66,8 @@ func DebitGold(ctx context.Context, tx *sql.Tx, account string, n int, reason, r
 	if err := itemmove.RecordCurrency(ctx, tx, account, itemmove.Gold(), -n, reason, ref, now); err != nil {
 		return err
 	}
-	return BumpAccountVersion(ctx, tx, account)
+	_, err := BumpAccountVersion(ctx, tx, account)
+	return err
 }
 
 // GoldFor reads one purse.
@@ -77,8 +79,10 @@ func GoldFor(ctx context.Context, tx *sql.Tx, account string) (int, error) {
 
 // BumpAccountVersion moves an account's answer version without a snapshot:
 // gold changes an account that is not the operation's own (a shelf sale, a
-// gift), and its client re-reads state when the version moves.
-func BumpAccountVersion(ctx context.Context, tx *sql.Tx, account string) error {
-	_, err := tx.ExecContext(ctx, "UPDATE players SET version=version+1 WHERE account_id=?", account)
-	return err
+// gift), and its client re-reads state when the version moves. It answers
+// the new version, so a state built right after carries it (finding 6).
+func BumpAccountVersion(ctx context.Context, tx *sql.Tx, account string) (int64, error) {
+	var v int64
+	err := tx.QueryRowContext(ctx, "UPDATE players SET version=version+1 WHERE account_id=? RETURNING version", account).Scan(&v)
+	return v, err
 }

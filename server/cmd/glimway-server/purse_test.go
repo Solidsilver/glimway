@@ -58,13 +58,15 @@ func TestPurseCommands(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer s.Close()
-	// not-moved credits nothing, and the row is settled by the owner.
+	// not-moved credits nothing, and the row is settled by the owner —
+	// whose mark is `settled_by`, while the worker's note (why the owner is
+	// here at all) stays in the row (finding 18).
 	var state, settledBy, note string
 	var gold int
 	if err = s.DB.QueryRow("SELECT state,settled_by,note FROM purse_topups WHERE id='unconfirmed'").Scan(&state, &settledBy, &note); err != nil {
 		t.Fatal(err)
 	}
-	if state != "not-moved" || settledBy != "owner" || note != "settled-by-owner" {
+	if state != "not-moved" || settledBy != "owner" || note != "timeout" {
 		t.Fatal(state, settledBy, note)
 	}
 	if err = s.DB.QueryRow("SELECT gold FROM balances WHERE account_id='acct'").Scan(&gold); err != nil || gold != 0 {
@@ -84,6 +86,14 @@ func TestPurseCommands(t *testing.T) {
 	}
 	if reason != "purse-settle" || ref != "unconfirmed" {
 		t.Fatal(reason, ref)
+	}
+	// A row the worker left without a note says so in the note's own word.
+	mustExec(t, s.DB, `UPDATE purse_topups SET state='unconfirmed',note='',settled_at=25,settled_by='worker' WHERE id='unconfirmed'`)
+	if err = run([]string{"-db", path, "purse", "settle", "unconfirmed", "not-moved"}); err != nil {
+		t.Fatal(err)
+	}
+	if err = s.DB.QueryRow("SELECT note FROM purse_topups WHERE id='unconfirmed'").Scan(&note); err != nil || note != "settled-by-owner" {
+		t.Fatal("empty note", note, err)
 	}
 }
 
