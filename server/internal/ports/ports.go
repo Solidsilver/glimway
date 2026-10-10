@@ -35,7 +35,7 @@ type QuestStep struct {
 	Items   []string `json:"items"`
 	Marks   []string `json:"marks"`
 	Papers  []string `json:"papers"`
-	Glims   int      `json:"embers"`
+	Glims   int      `json:"glims"`
 	Witness string   `json:"witness"`
 }
 
