@@ -116,6 +116,8 @@ export interface ShelfSlotView {
   kind: 'material' | 'item' | 'decoration' | 'instance';
   itemDef: string;
   qty: number;
+  /** A price in gold (0.6, 3.2); 0 is a free gift. */
+  price: number;
   maker?: { id: string; name: string } | null;
   instance?: string | null;
   stockedBy: string;
@@ -296,6 +298,7 @@ function shelfView(v: GeneratedShelfView): ShelfView {
       kind: s.kind as ShelfSlotView['kind'],
       itemDef: s.itemDef,
       qty: int(s.qty),
+      price: int(s.price),
       maker: s.maker ? { id: s.maker.id, name: s.maker.name.slice(0, 64) } : null,
       instance: s.instance ?? null,
       stockedBy: s.stockedBy,

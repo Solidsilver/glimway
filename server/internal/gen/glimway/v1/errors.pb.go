@@ -246,6 +246,12 @@ const (
 	ErrorCode_ERROR_CODE_CAST_TOO_SOON             ErrorCode = 217
 	ErrorCode_ERROR_CODE_WATER_STILL               ErrorCode = 218
 	ErrorCode_ERROR_CODE_NO_CAST                   ErrorCode = 219
+	// 0.6 The purse and the wardrobe (docs/design/purse-and-wardrobe.md 6.1).
+	ErrorCode_ERROR_CODE_PURSE_BUSY        ErrorCode = 220
+	ErrorCode_ERROR_CODE_TOP_UP_LIMIT      ErrorCode = 221
+	ErrorCode_ERROR_CODE_INSUFFICIENT_GOLD ErrorCode = 222
+	ErrorCode_ERROR_CODE_OWN_STOCK         ErrorCode = 223
+	ErrorCode_ERROR_CODE_GEAR_NOT_OWNED    ErrorCode = 224
 )
 
 // Enum value maps for ErrorCode.
@@ -471,6 +477,11 @@ var (
 		217: "ERROR_CODE_CAST_TOO_SOON",
 		218: "ERROR_CODE_WATER_STILL",
 		219: "ERROR_CODE_NO_CAST",
+		220: "ERROR_CODE_PURSE_BUSY",
+		221: "ERROR_CODE_TOP_UP_LIMIT",
+		222: "ERROR_CODE_INSUFFICIENT_GOLD",
+		223: "ERROR_CODE_OWN_STOCK",
+		224: "ERROR_CODE_GEAR_NOT_OWNED",
 	}
 	ErrorCode_value = map[string]int32{
 		"ERROR_CODE_UNSPECIFIED":               0,
@@ -693,6 +704,11 @@ var (
 		"ERROR_CODE_CAST_TOO_SOON":             217,
 		"ERROR_CODE_WATER_STILL":               218,
 		"ERROR_CODE_NO_CAST":                   219,
+		"ERROR_CODE_PURSE_BUSY":                220,
+		"ERROR_CODE_TOP_UP_LIMIT":              221,
+		"ERROR_CODE_INSUFFICIENT_GOLD":         222,
+		"ERROR_CODE_OWN_STOCK":                 223,
+		"ERROR_CODE_GEAR_NOT_OWNED":            224,
 	}
 )
 
@@ -728,7 +744,7 @@ var File_glimway_v1_errors_proto protoreflect.FileDescriptor
 const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\n" +
 	"\x17glimway/v1/errors.proto\x12\n" +
-	"glimway.v1*\xcb6\n" +
+	"glimway.v1*\xe37\n" +
 	"\tErrorCode\x12\x1a\n" +
 	"\x16ERROR_CODE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17ERROR_CODE_INVALID_JSON\x10\x01\x12\"\n" +
@@ -950,7 +966,12 @@ const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\x1aERROR_CODE_ALREADY_CASTING\x10\xd8\x01\x12\x1d\n" +
 	"\x18ERROR_CODE_CAST_TOO_SOON\x10\xd9\x01\x12\x1b\n" +
 	"\x16ERROR_CODE_WATER_STILL\x10\xda\x01\x12\x17\n" +
-	"\x12ERROR_CODE_NO_CAST\x10\xdb\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
+	"\x12ERROR_CODE_NO_CAST\x10\xdb\x01\x12\x1a\n" +
+	"\x15ERROR_CODE_PURSE_BUSY\x10\xdc\x01\x12\x1c\n" +
+	"\x17ERROR_CODE_TOP_UP_LIMIT\x10\xdd\x01\x12!\n" +
+	"\x1cERROR_CODE_INSUFFICIENT_GOLD\x10\xde\x01\x12\x19\n" +
+	"\x14ERROR_CODE_OWN_STOCK\x10\xdf\x01\x12\x1e\n" +
+	"\x19ERROR_CODE_GEAR_NOT_OWNED\x10\xe0\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
 
 var (
 	file_glimway_v1_errors_proto_rawDescOnce sync.Once

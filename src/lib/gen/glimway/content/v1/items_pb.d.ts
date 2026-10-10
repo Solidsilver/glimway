@@ -821,7 +821,9 @@ export declare type ItemPickupValid = Message<"glimway.content.v1.ItemPickup"> &
 export declare const ItemPickupSchema: GenMessage<ItemPickup, {validType: ItemPickupValid}>;
 
 /**
- * One thing a seller sells (for embers), and what it says.
+ * One thing a seller sells (for embers, for gold, or for both), and what
+ * it says. A good is priced in embers, in gold, or in both — the two rules
+ * at the top are that, and that a gold price carries its label.
  *
  * @generated from message glimway.content.v1.ItemGood
  */
@@ -839,18 +841,23 @@ export declare type ItemGood = Message<"glimway.content.v1.ItemGood"> & {
   qty: number;
 
   /**
+   * Embers: 0..1000 (0 = not for embers; it was 1..1000 before gold).
+   *
    * @generated from field: int32 embers = 3;
    */
   embers: number;
 
   /**
-   * The most one player can buy of it a day (0: no cap).
+   * The most one player can buy of it a day (0: no cap). Caps count both
+   * currencies together.
    *
    * @generated from field: optional int32 cap = 4;
    */
   cap?: number | undefined;
 
   /**
+   * The ember choice's label ("Buy a lump of tallow · 1 ember").
+   *
    * @generated from field: string label = 5;
    */
   label: string;
@@ -859,6 +866,18 @@ export declare type ItemGood = Message<"glimway.content.v1.ItemGood"> & {
    * @generated from field: string line = 6;
    */
   line: string;
+
+  /**
+   * A price in gold (0.6, 3.1): 1..100,000. Its choice's label follows.
+   *
+   * @generated from field: optional int32 gold = 7;
+   */
+  gold?: number | undefined;
+
+  /**
+   * @generated from field: optional string gold_label = 8;
+   */
+  goldLabel?: string | undefined;
 };
 
 export declare type ItemGoodValid = ItemGood;

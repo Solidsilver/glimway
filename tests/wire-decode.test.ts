@@ -38,7 +38,7 @@ const shelfView = {
   homeId: 'h1',
   ownerName: 'Ora',
   names: ['Ora'],
-  slots: [{ slot: 0, kind: 'item', itemDef: 'tallow', qty: 1, maker: null, instance: null, stockedBy: 'o', stockedAt: 100 }],
+  slots: [{ slot: 0, kind: 'item', itemDef: 'tallow', qty: 1, price: 0, maker: null, instance: null, stockedBy: 'o', stockedAt: 100 }],
   takenToday: false,
   canStock: true,
   hasShelf: true,
@@ -68,6 +68,7 @@ const itemsResult = {
   paper: null,
   heirloom: '',
   adaOilCount: 0,
+  goldGiven: 0,
   bought: null,
 };
 const workshopView = { home: null, inventory: { materials: {}, items: {}, decorations: {}, instances: [] }, storage: null, personal: { materials: {}, items: {}, decorations: {}, instances: [] }, shared: 'not-a-member' };

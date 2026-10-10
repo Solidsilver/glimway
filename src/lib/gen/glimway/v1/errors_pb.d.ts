@@ -1115,6 +1115,33 @@ export enum ErrorCode {
    * @generated from enum value: ERROR_CODE_NO_CAST = 219;
    */
   NO_CAST = 219,
+
+  /**
+   * 0.6 The purse and the wardrobe (docs/design/purse-and-wardrobe.md 6.1).
+   *
+   * @generated from enum value: ERROR_CODE_PURSE_BUSY = 220;
+   */
+  PURSE_BUSY = 220,
+
+  /**
+   * @generated from enum value: ERROR_CODE_TOP_UP_LIMIT = 221;
+   */
+  TOP_UP_LIMIT = 221,
+
+  /**
+   * @generated from enum value: ERROR_CODE_INSUFFICIENT_GOLD = 222;
+   */
+  INSUFFICIENT_GOLD = 222,
+
+  /**
+   * @generated from enum value: ERROR_CODE_OWN_STOCK = 223;
+   */
+  OWN_STOCK = 223,
+
+  /**
+   * @generated from enum value: ERROR_CODE_GEAR_NOT_OWNED = 224;
+   */
+  GEAR_NOT_OWNED = 224,
 }
 
 /**

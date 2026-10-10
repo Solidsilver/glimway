@@ -249,6 +249,14 @@ export declare type HabiticaGearProvenance = Message<"glimway.content.v1.Habitic
    * @generated from field: string modifications = 11;
    */
   modifications: string;
+
+  /**
+   * When the English names (HabiticaGearItem.text) were retrieved, kept
+   * beside the snapshot's own retrieval date.
+   *
+   * @generated from field: string text_retrieved_at = 12;
+   */
+  textRetrievedAt: string;
 };
 
 export declare type HabiticaGearProvenanceValid = HabiticaGearProvenance;
@@ -408,6 +416,14 @@ export declare type HabiticaGearItem = Message<"glimway.content.v1.HabiticaGearI
    * @generated from field: optional string gear_set = 16;
    */
   gearSet?: string | undefined;
+
+  /**
+   * The English name from Habitica's content (question 3): what the
+   * wardrobe calls the piece, with the key's words as a fallback.
+   *
+   * @generated from field: optional string text = 17;
+   */
+  text?: string | undefined;
 };
 
 export declare type HabiticaGearItemValid = HabiticaGearItem;

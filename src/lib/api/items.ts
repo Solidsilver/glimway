@@ -113,8 +113,10 @@ export interface ItemsActionResponse extends Snapshot {
     land?: { tile: [number, number]; stump: boolean; cleared: boolean };
     heirloom?: string;
     adaOilCount?: number;
-    /** What a seller just handed over (/api/items/buy). */
-    bought?: { seller: string; itemDef: string; qty: number; embers: number };
+    /** give: the gold handed over (0.6, 3.4), when any did. */
+    goldGiven?: number;
+    /** What a seller just handed over (/api/items/buy), and what it cost in either currency. */
+    bought?: { seller: string; itemDef: string; qty: number; embers: number; gold: number };
   };
 }
 
@@ -235,7 +237,8 @@ function result(r: ItemsResult): ItemsActionResponse['result'] {
   if (r.created?.length) out.created = r.created.filter((c): c is string => typeof c === 'string');
   if (r.heirloom) out.heirloom = r.heirloom;
   if (r.adaOilCount) out.adaOilCount = int(r.adaOilCount);
-  if (r.bought) out.bought = { seller: r.bought.seller, itemDef: r.bought.itemDef, qty: int(r.bought.qty), embers: int(r.bought.embers) };
+  if (r.goldGiven) out.goldGiven = int(r.goldGiven);
+  if (r.bought) out.bought = { seller: r.bought.seller, itemDef: r.bought.itemDef, qty: int(r.bought.qty), embers: int(r.bought.embers), gold: int(r.bought.gold) };
   if (r.gathered?.length) out.gathered = r.gathered.map((g) => ({ itemDef: g.itemDef, qty: int(g.qty) }));
   if (r.plant) {
     out.plant = {

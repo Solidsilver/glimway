@@ -510,7 +510,7 @@ func TestItemsGiveRaces(t *testing.T) {
 				defer wg.Done()
 				<-start
 				r := httptest.NewRequest("POST", "/api/items/give", bytes.NewBufferString(store.JSON(b)))
-				r.Header.Set("X-Glimway-Contract", "5")
+				r.Header.Set("X-Glimway-Contract", "6")
 				r.Header.Set("Content-Type", "application/json")
 				r.AddCookie(c)
 				w := httptest.NewRecorder()

@@ -71,8 +71,19 @@ func TestKeyedRequestsNeverCarryASecret(t *testing.T) {
 func TestNoMessageButTheSignInCarriesACredential(t *testing.T) {
 	// Every message of the contract, not just today's keyed routes: a new
 	// request type is under the rule the day it is added. The sign-in's
-	// token is the one credential the contract carries — login is never
-	// keyed, and requestBytes must refuse it outright.
+	// token is the one credential the contract carried — login is never
+	// keyed, and requestBytes must refuse it outright. 0.6 adds two more
+	// credential carriers, both handled outside the keyed pipeline for the
+	// same reason: the purse top-up (PurseTopUpRequest, 2.2 step 0 — its own
+	// key in its own table, never near the idempotency cache) and the
+	// wardrobe's gear check (WardrobeCheckRequest, 4.3 — not keyed at all).
+	// Their tokens are copied off the request and dropped; both routes must
+	// never reach keyedOp, requestBytes or savePayload.
+	credentialCarriers := map[protoreflect.FullName]bool{
+		"glimway.v1.LoginRequest":         true,
+		"glimway.v1.PurseTopUpRequest":    true,
+		"glimway.v1.WardrobeCheckRequest": true,
+	}
 	protoregistry.GlobalFiles.RangeFiles(func(fd protoreflect.FileDescriptor) bool {
 		if string(fd.Package()) != "glimway.v1" {
 			return true
@@ -80,7 +91,7 @@ func TestNoMessageButTheSignInCarriesACredential(t *testing.T) {
 		msgs := fd.Messages()
 		for i := 0; i < msgs.Len(); i++ {
 			m := msgs.Get(i)
-			if name, ok := secretProtoField(m, map[protoreflect.FullName]bool{}); ok && m.FullName() != "glimway.v1.LoginRequest" {
+			if name, ok := secretProtoField(m, map[protoreflect.FullName]bool{}); ok && !credentialCarriers[m.FullName()] {
 				t.Errorf("%s carries the secret field %s", m.FullName(), name)
 			}
 		}

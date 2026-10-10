@@ -1256,17 +1256,25 @@ func (x *ItemPickup) GetFound() string {
 	return ""
 }
 
-// One thing a seller sells (for embers), and what it says.
+// One thing a seller sells (for embers, for gold, or for both), and what
+// it says. A good is priced in embers, in gold, or in both — the two rules
+// at the top are that, and that a gold price carries its label.
 type ItemGood struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The item sold: a carried stack — checked in code.
-	Item   string `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
-	Qty    int32  `protobuf:"varint,2,opt,name=qty,proto3" json:"qty,omitempty"`
-	Embers int32  `protobuf:"varint,3,opt,name=embers,proto3" json:"embers,omitempty"`
-	// The most one player can buy of it a day (0: no cap).
-	Cap           *int32 `protobuf:"varint,4,opt,name=cap,proto3,oneof" json:"cap,omitempty"`
-	Label         string `protobuf:"bytes,5,opt,name=label,proto3" json:"label,omitempty"`
-	Line          string `protobuf:"bytes,6,opt,name=line,proto3" json:"line,omitempty"`
+	Item string `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
+	Qty  int32  `protobuf:"varint,2,opt,name=qty,proto3" json:"qty,omitempty"`
+	// Embers: 0..1000 (0 = not for embers; it was 1..1000 before gold).
+	Embers int32 `protobuf:"varint,3,opt,name=embers,proto3" json:"embers,omitempty"`
+	// The most one player can buy of it a day (0: no cap). Caps count both
+	// currencies together.
+	Cap *int32 `protobuf:"varint,4,opt,name=cap,proto3,oneof" json:"cap,omitempty"`
+	// The ember choice's label ("Buy a lump of tallow · 1 ember").
+	Label string `protobuf:"bytes,5,opt,name=label,proto3" json:"label,omitempty"`
+	Line  string `protobuf:"bytes,6,opt,name=line,proto3" json:"line,omitempty"`
+	// A price in gold (0.6, 3.1): 1..100,000. Its choice's label follows.
+	Gold          *int32  `protobuf:"varint,7,opt,name=gold,proto3,oneof" json:"gold,omitempty"`
+	GoldLabel     *string `protobuf:"bytes,8,opt,name=gold_label,json=goldLabel,proto3,oneof" json:"gold_label,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1339,6 +1347,20 @@ func (x *ItemGood) GetLabel() string {
 func (x *ItemGood) GetLine() string {
 	if x != nil {
 		return x.Line
+	}
+	return ""
+}
+
+func (x *ItemGood) GetGold() int32 {
+	if x != nil && x.Gold != nil {
+		return *x.Gold
+	}
+	return 0
+}
+
+func (x *ItemGood) GetGoldLabel() string {
+	if x != nil && x.GoldLabel != nil {
+		return *x.GoldLabel
 	}
 	return ""
 }
@@ -1632,18 +1654,26 @@ const file_glimway_content_v1_items_proto_rawDesc = "" +
 	"\x03_txB\x05\n" +
 	"\x03_tyB\f\n" +
 	"\n" +
-	"_uses_left\"\xe6\x01\n" +
+	"_uses_left\"\xaf\x04\n" +
 	"\bItemGood\x12-\n" +
 	"\x04item\x18\x01 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x04item\x12\x1b\n" +
 	"\x03qty\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x01R\x03qty\x12\"\n" +
 	"\x06embers\x18\x03 \x01(\x05B\n" +
-	"\xbaH\a\x1a\x05\x18\xe8\a(\x01R\x06embers\x12!\n" +
+	"\xbaH\a\x1a\x05\x18\xe8\a(\x00R\x06embers\x12!\n" +
 	"\x03cap\x18\x04 \x01(\x05B\n" +
 	"\xbaH\a\x1a\x05\x18\xe8\a(\x00H\x00R\x03cap\x88\x01\x01\x12\x1f\n" +
 	"\x05label\x18\x05 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18PR\x05label\x12\x1e\n" +
 	"\x04line\x18\x06 \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\xa0\x01R\x04lineB\x06\n" +
-	"\x04_cap\"\xcc\x05\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xa0\x01R\x04line\x12$\n" +
+	"\x04gold\x18\a \x01(\x05B\v\xbaH\b\x1a\x06\x18\xa0\x8d\x06(\x01H\x01R\x04gold\x88\x01\x01\x12-\n" +
+	"\n" +
+	"gold_label\x18\b \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18PH\x02R\tgoldLabel\x88\x01\x01:\xd9\x01\xbaH\xd5\x01\x1a\\\n" +
+	"\n" +
+	"good.price\x12+a good needs a price: embers, gold, or both\x1a!this.embers > 0 || has(this.gold)\x1au\n" +
+	"\x0fgood.gold_label\x12:a gold price carries its label, and only a gold price does\x1a&has(this.gold) == has(this.gold_label)B\x06\n" +
+	"\x04_capB\a\n" +
+	"\x05_goldB\r\n" +
+	"\v_gold_label\"\xcc\x05\n" +
 	"\n" +
 	"ItemSeller\x125\n" +
 	"\x04with\x18\x01 \x01(\tB\x1c\xbaH\x19r\x172\x15^([a-z0-9-]{1,100})?$H\x00R\x04with\x88\x01\x01\x12)\n" +

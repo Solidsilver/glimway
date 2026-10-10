@@ -174,8 +174,11 @@ type HabiticaGearProvenance struct {
 	Licenses           *HabiticaGearLicenses  `protobuf:"bytes,9,opt,name=licenses,proto3" json:"licenses,omitempty"`
 	Counts             *HabiticaGearCounts    `protobuf:"bytes,10,opt,name=counts,proto3" json:"counts,omitempty"`
 	Modifications      string                 `protobuf:"bytes,11,opt,name=modifications,proto3" json:"modifications,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	// When the English names (HabiticaGearItem.text) were retrieved, kept
+	// beside the snapshot's own retrieval date.
+	TextRetrievedAt string `protobuf:"bytes,12,opt,name=text_retrieved_at,json=textRetrievedAt,proto3" json:"text_retrieved_at,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *HabiticaGearProvenance) Reset() {
@@ -281,6 +284,13 @@ func (x *HabiticaGearProvenance) GetCounts() *HabiticaGearCounts {
 func (x *HabiticaGearProvenance) GetModifications() string {
 	if x != nil {
 		return x.Modifications
+	}
+	return ""
+}
+
+func (x *HabiticaGearProvenance) GetTextRetrievedAt() string {
+	if x != nil {
+		return x.TextRetrievedAt
 	}
 	return ""
 }
@@ -427,8 +437,11 @@ type HabiticaGearItem struct {
 	Mystery      *string `protobuf:"bytes,13,opt,name=mystery,proto3,oneof" json:"mystery,omitempty"`
 	Season       *string `protobuf:"bytes,14,opt,name=season,proto3,oneof" json:"season,omitempty"`
 	// The event window some event gear names.
-	Event         *HabiticaGearEvent `protobuf:"bytes,15,opt,name=event,proto3,oneof" json:"event,omitempty"`
-	GearSet       *string            `protobuf:"bytes,16,opt,name=gear_set,json=gearSet,proto3,oneof" json:"gear_set,omitempty"`
+	Event   *HabiticaGearEvent `protobuf:"bytes,15,opt,name=event,proto3,oneof" json:"event,omitempty"`
+	GearSet *string            `protobuf:"bytes,16,opt,name=gear_set,json=gearSet,proto3,oneof" json:"gear_set,omitempty"`
+	// The English name from Habitica's content (question 3): what the
+	// wardrobe calls the piece, with the key's words as a fallback.
+	Text          *string `protobuf:"bytes,17,opt,name=text,proto3,oneof" json:"text,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -571,6 +584,13 @@ func (x *HabiticaGearItem) GetEvent() *HabiticaGearEvent {
 func (x *HabiticaGearItem) GetGearSet() string {
 	if x != nil && x.GearSet != nil {
 		return *x.GearSet
+	}
+	return ""
+}
+
+func (x *HabiticaGearItem) GetText() string {
+	if x != nil && x.Text != nil {
+		return *x.Text
 	}
 	return ""
 }
@@ -817,7 +837,7 @@ const file_glimway_content_v1_habitica_gear_proto_rawDesc = "" +
 	"\n" +
 	"RulesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xd9\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x85\x04\n" +
 	"\x16HabiticaGearProvenance\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12'\n" +
 	"\x0fsource_endpoint\x18\x02 \x01(\tR\x0esourceEndpoint\x12%\n" +
@@ -831,7 +851,8 @@ const file_glimway_content_v1_habitica_gear_proto_rawDesc = "" +
 	"\blicenses\x18\t \x01(\v2(.glimway.content.v1.HabiticaGearLicensesR\blicenses\x12>\n" +
 	"\x06counts\x18\n" +
 	" \x01(\v2&.glimway.content.v1.HabiticaGearCountsR\x06counts\x12$\n" +
-	"\rmodifications\x18\v \x01(\tR\rmodifications\"E\n" +
+	"\rmodifications\x18\v \x01(\tR\rmodifications\x12*\n" +
+	"\x11text_retrieved_at\x18\f \x01(\tR\x0ftextRetrievedAt\"E\n" +
 	"\x14HabiticaGearLicenses\x12\x1b\n" +
 	"\tgear_data\x18\x01 \x01(\tR\bgearData\x12\x10\n" +
 	"\x03art\x18\x02 \x01(\tR\x03art\"u\n" +
@@ -840,7 +861,7 @@ const file_glimway_content_v1_habitica_gear_proto_rawDesc = "" +
 	"\x04pets\x18\x02 \x01(\x05R\x04pets\x12\x16\n" +
 	"\x06mounts\x18\x03 \x01(\x05R\x06mounts\x12\x1f\n" +
 	"\vgif_sprites\x18\x04 \x01(\x05R\n" +
-	"gifSprites\"\x9f\x04\n" +
+	"gifSprites\"\xc1\x04\n" +
 	"\x10HabiticaGearItem\x12\x12\n" +
 	"\x04type\x18\x01 \x01(\tR\x04type\x12\x14\n" +
 	"\x05klass\x18\x02 \x01(\tR\x05klass\x12(\n" +
@@ -859,7 +880,8 @@ const file_glimway_content_v1_habitica_gear_proto_rawDesc = "" +
 	"\amystery\x18\r \x01(\tH\x03R\amystery\x88\x01\x01\x12\x1b\n" +
 	"\x06season\x18\x0e \x01(\tH\x04R\x06season\x88\x01\x01\x12@\n" +
 	"\x05event\x18\x0f \x01(\v2%.glimway.content.v1.HabiticaGearEventH\x05R\x05event\x88\x01\x01\x12\x1e\n" +
-	"\bgear_set\x18\x10 \x01(\tH\x06R\agearSet\x88\x01\x01B\x10\n" +
+	"\bgear_set\x18\x10 \x01(\tH\x06R\agearSet\x88\x01\x01\x12\x17\n" +
+	"\x04text\x18\x11 \x01(\tH\aR\x04text\x88\x01\x01B\x10\n" +
 	"\x0e_special_classB\r\n" +
 	"\v_two_handedB\a\n" +
 	"\x05_lastB\n" +
@@ -867,7 +889,8 @@ const file_glimway_content_v1_habitica_gear_proto_rawDesc = "" +
 	"\b_mysteryB\t\n" +
 	"\a_seasonB\b\n" +
 	"\x06_eventB\v\n" +
-	"\t_gear_set\";\n" +
+	"\t_gear_setB\a\n" +
+	"\x05_text\";\n" +
 	"\x11HabiticaGearEvent\x12\x14\n" +
 	"\x05start\x18\x01 \x01(\tR\x05start\x12\x10\n" +
 	"\x03end\x18\x02 \x01(\tR\x03end\"\xaf\x01\n" +

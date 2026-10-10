@@ -40,7 +40,7 @@ func (a *Server) marketBuy(ctx context.Context, tx *sql.Tx, s *store.Snapshot, r
 	}
 	ref := seller.GetId() + ":" + good.GetItem()
 	if good.GetCap() > 0 {
-		dayStart := (now / 86400) * 86400
+		dayStart := utcDayStart(now)
 		var n int
 		err := tx.QueryRowContext(ctx, "SELECT count(*) FROM ledger WHERE account_id=? AND currency=? AND reason='market-buy' AND ref=? AND created_at>=?", s.AccountID, content.StackCurrency(good.GetItem()), ref, dayStart).Scan(&n)
 		if err != nil {

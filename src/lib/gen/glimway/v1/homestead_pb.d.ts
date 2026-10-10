@@ -242,6 +242,13 @@ export declare type ShelfSlot = Message<"glimway.v1.ShelfSlot"> & {
    * @generated from field: double stocked_at = 8;
    */
   stockedAt: number;
+
+  /**
+   * A price in gold (0.6, 3.2): 0 is a free gift as before.
+   *
+   * @generated from field: int32 price = 9;
+   */
+  price: number;
 };
 
 export declare type ShelfSlotValid = ShelfSlot;
@@ -324,7 +331,7 @@ export declare type ShelfReadValid = ShelfRead;
 export declare const ShelfReadSchema: GenMessage<ShelfRead, {validType: ShelfReadValid}>;
 
 /**
- * POST /api/homestead/shelf (stock or take).
+ * POST /api/homestead/shelf (stock, take or buy).
  *
  * @generated from message glimway.v1.ShelfRequest
  */
@@ -358,6 +365,13 @@ export declare type ShelfRequest = Message<"glimway.v1.ShelfRequest"> & {
    * @generated from field: glimway.v1.Asset asset = 6;
    */
   asset?: Asset | undefined;
+
+  /**
+   * stock: the price in gold for the slot (0–9,999; 0 stocks a free gift).
+   *
+   * @generated from field: int32 price = 7;
+   */
+  price: number;
 };
 
 export declare type ShelfRequestValid = ShelfRequest;

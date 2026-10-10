@@ -67,6 +67,9 @@ message LibraryDonateResult { LibraryEntry entry = 1; }
 message MailView {
   string id = 1; string world_id = 2; string from_id = 3; string to_id = 4;
   string from_name = 5; string to_name = 6;
+  // A gold letter carries Asset { kind: "gold", id: "gold", qty: the
+  // amount }: display only. validAsset still refuses "gold" as something
+  // to take from a pack (3.3).
   Asset asset = 7;
   double sent_at = 8;
   google.protobuf.DoubleValue claimed_at = 9;
@@ -79,7 +82,10 @@ message MailReadResult {
   google.protobuf.StringValue next_pending_cursor = 3;
   AssetCounts inventory = 4;
 }
-message MailSendRequest { OpHeader op = 1; Where where = 2; string to_id = 3; Asset asset = 4; }
+// POST /api/mail (send). A gold letter: `gold` set, `asset` absent — a
+// letter carries one thing (3.3, question 11). Both, or neither, is
+// invalid-request.
+message MailSendRequest { OpHeader op = 1; Where where = 2; string to_id = 3; Asset asset = 4; int32 gold = 5; }
 message MailSendResult {
   string mail_id = 1;
   repeated MailView mail = 2;

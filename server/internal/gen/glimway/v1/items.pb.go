@@ -139,13 +139,15 @@ func (x *WearResult) GetMakerId() string {
 	return ""
 }
 
-// What a seller just handed over (/api/items/buy).
+// What a seller just handed over (/api/items/buy), and what it cost — in
+// embers, in gold, or in both.
 type Bought struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Seller        string                 `protobuf:"bytes,1,opt,name=seller,proto3" json:"seller,omitempty"`
 	ItemDef       string                 `protobuf:"bytes,2,opt,name=item_def,json=itemDef,proto3" json:"item_def,omitempty"`
 	Qty           int32                  `protobuf:"varint,3,opt,name=qty,proto3" json:"qty,omitempty"`
 	Embers        int32                  `protobuf:"varint,4,opt,name=embers,proto3" json:"embers,omitempty"`
+	Gold          int32                  `protobuf:"varint,5,opt,name=gold,proto3" json:"gold,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -208,6 +210,13 @@ func (x *Bought) GetEmbers() int32 {
 	return 0
 }
 
+func (x *Bought) GetGold() int32 {
+	if x != nil {
+		return x.Gold
+	}
+	return 0
+}
+
 // One request message for all fourteen item mutations, mirroring the
 // retired hand-written itemRequest: every op's fields are optional and empty
 // means unset (the op name comes from the URL path). Deliberate; don't copy
@@ -222,26 +231,32 @@ func (x *Bought) GetEmbers() int32 {
 // untouched by it. Region is retained in the domain body; the authoritative
 // region is where.area.
 type ItemsRequest struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
-	Op            *OpHeader               `protobuf:"bytes,1,opt,name=op,proto3" json:"op,omitempty"`
-	Where         *Where                  `protobuf:"bytes,2,opt,name=where,proto3" json:"where,omitempty"`
-	Instance      string                  `protobuf:"bytes,3,opt,name=instance,proto3" json:"instance,omitempty"`
-	ItemDef       string                  `protobuf:"bytes,4,opt,name=item_def,json=itemDef,proto3" json:"item_def,omitempty"`
-	Maker         *wrapperspb.StringValue `protobuf:"bytes,5,opt,name=maker,proto3" json:"maker,omitempty"`
-	Action        string                  `protobuf:"bytes,6,opt,name=action,proto3" json:"action,omitempty"`
-	At            string                  `protobuf:"bytes,7,opt,name=at,proto3" json:"at,omitempty"`
-	Tool          string                  `protobuf:"bytes,8,opt,name=tool,proto3" json:"tool,omitempty"`
-	Slot          int32                   `protobuf:"varint,9,opt,name=slot,proto3" json:"slot,omitempty"`
-	ToId          string                  `protobuf:"bytes,10,opt,name=to_id,json=toId,proto3" json:"to_id,omitempty"`
-	Asset         *Asset                  `protobuf:"bytes,11,opt,name=asset,proto3" json:"asset,omitempty"`
-	Pickup        string                  `protobuf:"bytes,12,opt,name=pickup,proto3" json:"pickup,omitempty"`
-	Target        string                  `protobuf:"bytes,13,opt,name=target,proto3" json:"target,omitempty"`
-	Unmoored      bool                    `protobuf:"varint,14,opt,name=unmoored,proto3" json:"unmoored,omitempty"`
-	VisitId       string                  `protobuf:"bytes,15,opt,name=visit_id,json=visitId,proto3" json:"visit_id,omitempty"`
-	Tile          []int32                 `protobuf:"varint,16,rep,packed,name=tile,proto3" json:"tile,omitempty"`
-	Region        string                  `protobuf:"bytes,17,opt,name=region,proto3" json:"region,omitempty"`
-	Seller        string                  `protobuf:"bytes,18,opt,name=seller,proto3" json:"seller,omitempty"`
-	Good          string                  `protobuf:"bytes,19,opt,name=good,proto3" json:"good,omitempty"`
+	state    protoimpl.MessageState  `protogen:"open.v1"`
+	Op       *OpHeader               `protobuf:"bytes,1,opt,name=op,proto3" json:"op,omitempty"`
+	Where    *Where                  `protobuf:"bytes,2,opt,name=where,proto3" json:"where,omitempty"`
+	Instance string                  `protobuf:"bytes,3,opt,name=instance,proto3" json:"instance,omitempty"`
+	ItemDef  string                  `protobuf:"bytes,4,opt,name=item_def,json=itemDef,proto3" json:"item_def,omitempty"`
+	Maker    *wrapperspb.StringValue `protobuf:"bytes,5,opt,name=maker,proto3" json:"maker,omitempty"`
+	Action   string                  `protobuf:"bytes,6,opt,name=action,proto3" json:"action,omitempty"`
+	At       string                  `protobuf:"bytes,7,opt,name=at,proto3" json:"at,omitempty"`
+	Tool     string                  `protobuf:"bytes,8,opt,name=tool,proto3" json:"tool,omitempty"`
+	Slot     int32                   `protobuf:"varint,9,opt,name=slot,proto3" json:"slot,omitempty"`
+	ToId     string                  `protobuf:"bytes,10,opt,name=to_id,json=toId,proto3" json:"to_id,omitempty"`
+	Asset    *Asset                  `protobuf:"bytes,11,opt,name=asset,proto3" json:"asset,omitempty"`
+	Pickup   string                  `protobuf:"bytes,12,opt,name=pickup,proto3" json:"pickup,omitempty"`
+	Target   string                  `protobuf:"bytes,13,opt,name=target,proto3" json:"target,omitempty"`
+	Unmoored bool                    `protobuf:"varint,14,opt,name=unmoored,proto3" json:"unmoored,omitempty"`
+	VisitId  string                  `protobuf:"bytes,15,opt,name=visit_id,json=visitId,proto3" json:"visit_id,omitempty"`
+	Tile     []int32                 `protobuf:"varint,16,rep,packed,name=tile,proto3" json:"tile,omitempty"`
+	Region   string                  `protobuf:"bytes,17,opt,name=region,proto3" json:"region,omitempty"`
+	Seller   string                  `protobuf:"bytes,18,opt,name=seller,proto3" json:"seller,omitempty"`
+	Good     string                  `protobuf:"bytes,19,opt,name=good,proto3" json:"good,omitempty"`
+	// buy: "" | "embers" | "gold" — which currency pays (0.6; "embers" is
+	// today's behaviour and the empty default).
+	Pay string `protobuf:"bytes,20,opt,name=pay,proto3" json:"pay,omitempty"`
+	// give: an amount of gold in place of `asset` (3.4). A request with both
+	// `gold` and `asset`, or with neither, is refused as invalid-request.
+	Gold          int32 `protobuf:"varint,21,opt,name=gold,proto3" json:"gold,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -409,24 +424,40 @@ func (x *ItemsRequest) GetGood() string {
 	return ""
 }
 
+func (x *ItemsRequest) GetPay() string {
+	if x != nil {
+		return x.Pay
+	}
+	return ""
+}
+
+func (x *ItemsRequest) GetGold() int32 {
+	if x != nil {
+		return x.Gold
+	}
+	return 0
+}
+
 // The caller's items after the change, and what happened.
 type ItemsResult struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
-	Items         *ItemsView              `protobuf:"bytes,1,opt,name=items,proto3" json:"items,omitempty"`
-	Wear          *WearResult             `protobuf:"bytes,2,opt,name=wear,proto3" json:"wear,omitempty"`
-	Used          string                  `protobuf:"bytes,3,opt,name=used,proto3" json:"used,omitempty"`
-	Pickup        string                  `protobuf:"bytes,4,opt,name=pickup,proto3" json:"pickup,omitempty"`
-	Given         *Asset                  `protobuf:"bytes,5,opt,name=given,proto3" json:"given,omitempty"`
-	Mended        string                  `protobuf:"bytes,6,opt,name=mended,proto3" json:"mended,omitempty"`
-	Created       []string                `protobuf:"bytes,7,rep,name=created,proto3" json:"created,omitempty"`
-	Gathered      []*Stack                `protobuf:"bytes,8,rep,name=gathered,proto3" json:"gathered,omitempty"`
-	Plant         *HomePlant              `protobuf:"bytes,9,opt,name=plant,proto3" json:"plant,omitempty"`
-	Land          *HomeLandChange         `protobuf:"bytes,10,opt,name=land,proto3" json:"land,omitempty"`
-	Returned      string                  `protobuf:"bytes,11,opt,name=returned,proto3" json:"returned,omitempty"`
-	Paper         *wrapperspb.StringValue `protobuf:"bytes,12,opt,name=paper,proto3" json:"paper,omitempty"`
-	Heirloom      string                  `protobuf:"bytes,13,opt,name=heirloom,proto3" json:"heirloom,omitempty"`
-	AdaOilCount   int32                   `protobuf:"varint,14,opt,name=ada_oil_count,json=adaOilCount,proto3" json:"ada_oil_count,omitempty"`
-	Bought        *Bought                 `protobuf:"bytes,15,opt,name=bought,proto3" json:"bought,omitempty"`
+	state       protoimpl.MessageState  `protogen:"open.v1"`
+	Items       *ItemsView              `protobuf:"bytes,1,opt,name=items,proto3" json:"items,omitempty"`
+	Wear        *WearResult             `protobuf:"bytes,2,opt,name=wear,proto3" json:"wear,omitempty"`
+	Used        string                  `protobuf:"bytes,3,opt,name=used,proto3" json:"used,omitempty"`
+	Pickup      string                  `protobuf:"bytes,4,opt,name=pickup,proto3" json:"pickup,omitempty"`
+	Given       *Asset                  `protobuf:"bytes,5,opt,name=given,proto3" json:"given,omitempty"`
+	Mended      string                  `protobuf:"bytes,6,opt,name=mended,proto3" json:"mended,omitempty"`
+	Created     []string                `protobuf:"bytes,7,rep,name=created,proto3" json:"created,omitempty"`
+	Gathered    []*Stack                `protobuf:"bytes,8,rep,name=gathered,proto3" json:"gathered,omitempty"`
+	Plant       *HomePlant              `protobuf:"bytes,9,opt,name=plant,proto3" json:"plant,omitempty"`
+	Land        *HomeLandChange         `protobuf:"bytes,10,opt,name=land,proto3" json:"land,omitempty"`
+	Returned    string                  `protobuf:"bytes,11,opt,name=returned,proto3" json:"returned,omitempty"`
+	Paper       *wrapperspb.StringValue `protobuf:"bytes,12,opt,name=paper,proto3" json:"paper,omitempty"`
+	Heirloom    string                  `protobuf:"bytes,13,opt,name=heirloom,proto3" json:"heirloom,omitempty"`
+	AdaOilCount int32                   `protobuf:"varint,14,opt,name=ada_oil_count,json=adaOilCount,proto3" json:"ada_oil_count,omitempty"`
+	Bought      *Bought                 `protobuf:"bytes,15,opt,name=bought,proto3" json:"bought,omitempty"`
+	// give: the gold handed over (3.4).
+	GoldGiven     int32 `protobuf:"varint,16,opt,name=gold_given,json=goldGiven,proto3" json:"gold_given,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -566,6 +597,13 @@ func (x *ItemsResult) GetBought() *Bought {
 	return nil
 }
 
+func (x *ItemsResult) GetGoldGiven() int32 {
+	if x != nil {
+		return x.GoldGiven
+	}
+	return 0
+}
+
 // GET /api/items.
 type ItemsRead struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -629,12 +667,13 @@ const file_glimway_v1_items_proto_rawDesc = "" +
 	"\tcondition\x18\b \x01(\x01R\tcondition\x120\n" +
 	"\binstance\x18\t \x01(\v2\x14.glimway.v1.InstanceR\binstance\x12\x19\n" +
 	"\bmaker_id\x18\n" +
-	" \x01(\tR\amakerId\"e\n" +
+	" \x01(\tR\amakerId\"y\n" +
 	"\x06Bought\x12\x16\n" +
 	"\x06seller\x18\x01 \x01(\tR\x06seller\x12\x19\n" +
 	"\bitem_def\x18\x02 \x01(\tR\aitemDef\x12\x10\n" +
 	"\x03qty\x18\x03 \x01(\x05R\x03qty\x12\x16\n" +
-	"\x06embers\x18\x04 \x01(\x05R\x06embers\"\x95\x04\n" +
+	"\x06embers\x18\x04 \x01(\x05R\x06embers\x12\x12\n" +
+	"\x04gold\x18\x05 \x01(\x05R\x04gold\"\xbb\x04\n" +
 	"\fItemsRequest\x12$\n" +
 	"\x02op\x18\x01 \x01(\v2\x14.glimway.v1.OpHeaderR\x02op\x12'\n" +
 	"\x05where\x18\x02 \x01(\v2\x11.glimway.v1.WhereR\x05where\x12\x1a\n" +
@@ -655,7 +694,9 @@ const file_glimway_v1_items_proto_rawDesc = "" +
 	"\x04tile\x18\x10 \x03(\x05R\x04tile\x12\x16\n" +
 	"\x06region\x18\x11 \x01(\tR\x06region\x12\x16\n" +
 	"\x06seller\x18\x12 \x01(\tR\x06seller\x12\x12\n" +
-	"\x04good\x18\x13 \x01(\tR\x04good\"\xb5\x04\n" +
+	"\x04good\x18\x13 \x01(\tR\x04good\x12\x10\n" +
+	"\x03pay\x18\x14 \x01(\tR\x03pay\x12\x12\n" +
+	"\x04gold\x18\x15 \x01(\x05R\x04gold\"\xd4\x04\n" +
 	"\vItemsResult\x12+\n" +
 	"\x05items\x18\x01 \x01(\v2\x15.glimway.v1.ItemsViewR\x05items\x12*\n" +
 	"\x04wear\x18\x02 \x01(\v2\x16.glimway.v1.WearResultR\x04wear\x12\x12\n" +
@@ -672,7 +713,9 @@ const file_glimway_v1_items_proto_rawDesc = "" +
 	"\x05paper\x18\f \x01(\v2\x1c.google.protobuf.StringValueR\x05paper\x12\x1a\n" +
 	"\bheirloom\x18\r \x01(\tR\bheirloom\x12\"\n" +
 	"\rada_oil_count\x18\x0e \x01(\x05R\vadaOilCount\x12*\n" +
-	"\x06bought\x18\x0f \x01(\v2\x12.glimway.v1.BoughtR\x06bought\"8\n" +
+	"\x06bought\x18\x0f \x01(\v2\x12.glimway.v1.BoughtR\x06bought\x12\x1d\n" +
+	"\n" +
+	"gold_given\x18\x10 \x01(\x05R\tgoldGiven\"8\n" +
 	"\tItemsRead\x12+\n" +
 	"\x05items\x18\x01 \x01(\v2\x15.glimway.v1.ItemsViewR\x05itemsB1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
 

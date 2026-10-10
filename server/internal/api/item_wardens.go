@@ -8,8 +8,6 @@ import (
 
 // ------------------------------------------------------------ wear
 
-func utcDay(now int64) int64 { return now / 86400 }
-
 // healWardens: warden-set tools heal overnight (the next calendar day / worn_day < utcDay(now))
 // or over ~1 hour (3600s) of real time on a lit tool rack in home storage.
 func healWardens(ctx context.Context, tx *sql.Tx, player string, now int64) error {

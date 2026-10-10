@@ -143,8 +143,8 @@ func TestHistoricalAccountUpgradeThroughAPI(t *testing.T) {
 	x.flushFixtureReport(login, rest["op"].(map[string]any))
 	x.expect("POST", "/api/spend", rest, login, 200)
 	x.expect("POST", "/api/story/mark", body(completed, "upgrade-met", map[string]any{"mark": "met:mara@complete"}), login, 200)
-	if count(t, upgraded, "SELECT SUM(delta) FROM ledger") != 12-int(rules.E.GetCosts().GetRest()) {
-		t.Fatal("ledger not conserved", count(t, upgraded, "SELECT SUM(delta) FROM ledger"))
+	if count(t, upgraded, "SELECT SUM(delta) FROM ledger WHERE currency='embers'") != 12-int(rules.E.GetCosts().GetRest()) {
+		t.Fatal("ledger not conserved", count(t, upgraded, "SELECT SUM(delta) FROM ledger WHERE currency='embers'"))
 	}
 	mutation := x.p5("POST", "/api/mail/old-mail/claim", body(play, "upgrade-claim", map[string]any{}), login, 200)
 	if mutation.Version <= play.Version {

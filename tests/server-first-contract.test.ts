@@ -65,7 +65,7 @@ test('typed operations facade and fake expose session, play and operation contra
   const badAck = structuredClone(envelope) as Record<string, any>; badAck.report.casts = -1; assert.throws(() => decodeEnvelope(badAck), { code: 'bad-response' });
   let headers: Headers | undefined;
   const api = createApiClient({ fetchImpl: (async (_url, init) => { headers = new Headers(init?.headers); return new Response(JSON.stringify({ state: valid, leaseActive: false }), { headers: { 'content-type': 'application/json' } }); }) as typeof fetch });
-  await api.operations.state(); assert.equal(headers!.get('X-Glimway-Contract'), '5');
+  await api.operations.state(); assert.equal(headers!.get('X-Glimway-Contract'), '6');
 });
 function chunk() { return create(wilds.WildsChunkSchema, { epochId: 'epoch', region: 'inner-1', realm: 'hearthwick', look: 'tangle', generatorVersion: 2, size: 24, cx: 1, cy: 0, palette: ['grass'], ground: new Uint8Array(288), solid: new Uint8Array(72), spawn: { tx: 1, ty: 1 }, decor: { kinds: ['tree'], kind: [0], tx: [2], ty: [3], ox: [1], oy: [-2], variant: [0], flags: new Uint8Array(1) }, entities: [{ id: 'node:1:0:0', kind: 'node', tx: 3, ty: 4, material: 'timber' }], exits: [{ tx: 12, ty: 0, tw: 1, th: 1, dir: wilds.Dir.NORTH, to: 'chunk:outer-1:1:1', entry: { tx: 12, ty: 23 } }] }); }
 test('packed chunks validate bodies, decor and legitimate cross-region exits on binary decode', async () => {
@@ -129,7 +129,7 @@ test('outbox error decisions separate gameplay refusals, client bugs and reconci
   for (const code of ['superseded', 'reload-needed', 'unknown'] as const) assert.equal(isSettledRefusal(new ApiError(code, { status: 409, state: decodePlayerState(valid) })), false);
 });
 
-test('every raw client call and remote library call carries contract 5', async () => {
+test('every raw client call and remote library call carries contract 6', async () => {
   const calls: { url: string; init?: RequestInit }[] = [];
   const fetchImpl = (async (url, init) => { calls.push({ url: String(url), init }); return new Response(JSON.stringify({ error: { code: 'internal' } }), { status: 500, headers: { 'content-type': 'application/json' } }); }) as typeof fetch;
   const client = createApiClient({ fetchImpl });
@@ -158,7 +158,7 @@ test('every raw client call and remote library call carries contract 5', async (
   const library = createRemoteLibrary({ fetchImpl });
   await library.load();
   assert.equal(calls.length, Object.keys(client.raw).length + 1);
-  for (const call of calls) assert.equal(new Headers(call.init?.headers).get('X-Glimway-Contract'), '5', call.url);
+  for (const call of calls) assert.equal(new Headers(call.init?.headers).get('X-Glimway-Contract'), '6', call.url);
 });
 
 test('device ownership persists independently of tab clients', () => {
@@ -168,7 +168,7 @@ test('device ownership persists independently of tab clients', () => {
   values.set('glimway-device-id', 'bad:id'); assert.notEqual(claimDeviceId(storage), 'bad:id');
 });
 
-test('contract 5 preserves quest times, gate spends and server item grants', () => {
+test('contract 6 preserves quest times, gate spends and server item grants', () => {
   const fixture = fixtures.find(f => f.name === 'glimway.v1.Envelope' && f.case === 'quest-gates')!;
   const decoded = decodeEnvelope(fixture.json);
   assert.equal(decoded.state!.story!.reachedAt['set-to-rise'],1791400000);

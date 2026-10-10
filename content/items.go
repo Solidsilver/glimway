@@ -266,6 +266,16 @@ func validateItems(v *Items) error {
 			if !ok || !(ItemStackable(d) || ItemInstanced(d)) || (ItemInstanced(d) && g.GetQty() != 1) {
 				return fmt.Errorf("invalid items: seller %s good %s", s.GetId(), g.GetItem())
 			}
+			// A good is priced in embers, in gold, or in both (ItemGood's
+			// good.price), and a gold price carries its label while an ember
+			// price keeps it (good.gold_label). The schema's CEL holds this
+			// too; both loaders say it in code as well.
+			if !(g.GetEmbers() > 0 || g.Gold != nil) {
+				return fmt.Errorf("invalid items: seller %s good %s: price", s.GetId(), g.GetItem())
+			}
+			if (g.Gold != nil) != (g.GoldLabel != nil) {
+				return fmt.Errorf("invalid items: seller %s good %s: gold label", s.GetId(), g.GetItem())
+			}
 			goods[g.GetItem()] = true
 		}
 		sellers[s.GetId()] = true

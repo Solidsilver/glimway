@@ -1538,7 +1538,77 @@
     {
       "name": "good-free",
       "valid": false,
-      "rule": "int32.gte_lte",
+      "rule": "good.price",
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            0,
+            "goods",
+            0,
+            "embers"
+          ],
+          "value": 0
+        },
+        {
+          "path": [
+            "sellers",
+            0,
+            "goods",
+            0,
+            "gold"
+          ],
+          "remove": true
+        },
+        {
+          "path": [
+            "sellers",
+            0,
+            "goods",
+            0,
+            "goldLabel"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "good-gold-without-label",
+      "valid": false,
+      "rule": "good.gold_label",
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            0,
+            "goods",
+            0,
+            "goldLabel"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "good-label-without-gold",
+      "valid": false,
+      "rule": "good.gold_label",
+      "edits": [
+        {
+          "path": [
+            "sellers",
+            0,
+            "goods",
+            0,
+            "gold"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "good-gold-only",
+      "valid": true,
       "edits": [
         {
           "path": [

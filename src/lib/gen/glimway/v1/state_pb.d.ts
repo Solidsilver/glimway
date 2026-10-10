@@ -8,6 +8,8 @@ import type { HabiticaProfile } from "./profile_pb.js";
 import type { Place, Vitals } from "./op_pb.js";
 import type { Companions, CompanionsResult, MountHomeResult, MountOutResult, StableExtendResult, StallResult } from "./companions_pb.js";
 import type { FishCancelResult, FishCastResult, FishingState, FishSettleResult } from "./fishing_pb.js";
+import type { Purse, PurseTopUpResult } from "./purse_pb.js";
+import type { Wardrobe, WardrobeCheckResult, WardrobeResult } from "./wardrobe_pb.js";
 import type { FallResult, MarkResult, ProfileResult, QuestStepResult, ReportResult, SettleEchoResult, SpendResult, TakePaperResult, WildsClaimResult, WildsLanternResult } from "./operations_pb.js";
 import type { ContributeResult, CraftResult, DeskCopyResult, HearthCraftResult, LibraryDonateResult, MailActionResult, MailRecallResult, MailSendResult, MendResult, WorkshopView } from "./village_pb.js";
 import type { WorldChoice, WorldLeaveResult, WorldMoveResult } from "./world_pb.js";
@@ -234,6 +236,18 @@ export declare type PlayerState = Message<"glimway.v1.PlayerState"> & {
    * @generated from field: glimway.v1.FishingState fishing = 10;
    */
   fishing?: FishingState | undefined;
+
+  /**
+   * The gold purse (0.6) and the wardrobe's resolved choice (4.2).
+   *
+   * @generated from field: glimway.v1.Purse purse = 11;
+   */
+  purse?: Purse | undefined;
+
+  /**
+   * @generated from field: glimway.v1.Wardrobe wardrobe = 12;
+   */
+  wardrobe?: Wardrobe | undefined;
 };
 
 export declare type PlayerStateValid = PlayerState;
@@ -479,6 +493,24 @@ export declare type Envelope = Message<"glimway.v1.Envelope"> & {
      */
     value: FishCancelResult;
     case: "fishCancel";
+  } | {
+    /**
+     * @generated from field: glimway.v1.PurseTopUpResult purse_top_up = 40;
+     */
+    value: PurseTopUpResult;
+    case: "purseTopUp";
+  } | {
+    /**
+     * @generated from field: glimway.v1.WardrobeResult wardrobe = 41;
+     */
+    value: WardrobeResult;
+    case: "wardrobe";
+  } | {
+    /**
+     * @generated from field: glimway.v1.WardrobeCheckResult wardrobe_check = 42;
+     */
+    value: WardrobeCheckResult;
+    case: "wardrobeCheck";
   } | { case: undefined; value?: undefined };
 };
 

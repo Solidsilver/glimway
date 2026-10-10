@@ -739,6 +739,17 @@
               "band": "healthy"
             },
             "nextCastAt": 1791400008.25
+          },
+          "purse": {
+            "gold": 240,
+            "topUpsLeft": 2,
+            "working": null
+          },
+          "wardrobe": {
+            "chosen": {
+              "armor": "armor_armoire_admiralsUniform",
+              "shield": "none"
+            }
           }
         },
         "stall": {
@@ -954,6 +965,17 @@
             "band": "healthy"
           },
           "nextCastAt": 1791400008.25
+        },
+        "purse": {
+          "gold": 240,
+          "topUpsLeft": 2,
+          "working": null
+        },
+        "wardrobe": {
+          "chosen": {
+            "armor": "armor_armoire_admiralsUniform",
+            "shield": "none"
+          }
         }
       }
     }

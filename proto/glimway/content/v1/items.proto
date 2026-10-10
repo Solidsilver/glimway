@@ -244,16 +244,34 @@ message ItemPickup {
   string found = 9 [(buf.validate.field).string.min_len = 1];
 }
 
-// One thing a seller sells (for embers), and what it says.
+// One thing a seller sells (for embers, for gold, or for both), and what
+// it says. A good is priced in embers, in gold, or in both — the two rules
+// at the top are that, and that a gold price carries its label.
 message ItemGood {
+  option (buf.validate.message).cel = {
+    id: "good.price"
+    message: "a good needs a price: embers, gold, or both"
+    expression: "this.embers > 0 || has(this.gold)"
+  };
+  option (buf.validate.message).cel = {
+    id: "good.gold_label"
+    message: "a gold price carries its label, and only a gold price does"
+    expression: "has(this.gold) == has(this.gold_label)"
+  };
   // The item sold: a carried stack — checked in code.
   string item = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
   int32 qty = 2 [(buf.validate.field).int32 = {gte: 1, lte: 100}];
-  int32 embers = 3 [(buf.validate.field).int32 = {gte: 1, lte: 1000}];
-  // The most one player can buy of it a day (0: no cap).
+  // Embers: 0..1000 (0 = not for embers; it was 1..1000 before gold).
+  int32 embers = 3 [(buf.validate.field).int32 = {gte: 0, lte: 1000}];
+  // The most one player can buy of it a day (0: no cap). Caps count both
+  // currencies together.
   optional int32 cap = 4 [(buf.validate.field).int32 = {gte: 0, lte: 1000}];
+  // The ember choice's label ("Buy a lump of tallow · 1 ember").
   string label = 5 [(buf.validate.field).string = {min_len: 1, max_len: 80}];
   string line = 6 [(buf.validate.field).string = {min_len: 1, max_len: 160}];
+  // A price in gold (0.6, 3.1): 1..100,000. Its choice's label follows.
+  optional int32 gold = 7 [(buf.validate.field).int32 = {gte: 1, lte: 100000}];
+  optional string gold_label = 8 [(buf.validate.field).string = {min_len: 1, max_len: 80}];
 }
 
 // A person or stall in the world who sells goods: a named resident at

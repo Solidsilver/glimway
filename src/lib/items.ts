@@ -118,6 +118,11 @@ export function validateItems(value: unknown): Items {
       // A seller hands over stacks, or one instance (the willow rod, sold by
       // Finn) — always one at a time.
       if (!d || !(isStackable(d) || isInstanced(d)) || (isInstanced(d) && g.qty !== 1)) return bad(`seller ${s.id} good ${g.item}`);
+      // A good is priced in embers, in gold, or in both (ItemGood's
+      // good.price), and a gold price carries its label while nothing else
+      // does (good.gold_label). The schema's CEL holds this too; both
+      // loaders say it in code as well.
+      if (!(g.embers > 0 || g.gold !== undefined) || (g.gold !== undefined) !== (g.goldLabel !== undefined)) return bad(`seller ${s.id} good ${g.item}: price`);
       goods.add(g.item);
     }
   }
