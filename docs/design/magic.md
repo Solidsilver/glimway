@@ -290,7 +290,7 @@ ring and the desktop HUD (`F`, plus one more key, e.g. `R`) must make room for.
    entity, driven by the obstacle catalogue: Heave, Name a lamp, Mend (tools and
    world), Read the drift. Needs the obstacle props and the server generator placing
    them, so it follows the open map and lake country (plan releases 0.5–0.6); Name a
-   lamp lands with the Keeper's hand and way-lamps (0.7).
+   lamp lands with the Keeper's hand and way-lamps (0.8).
 3. **Level 15 workings:** Pin, Read a route stone, Settle, Walk a blind route.
 4. **Level 20 combat:** Stand, Kindle, Ward-light, Echo, and the second ability
    button (desktop and phone ring). Ward-light's heal on others goes through presence.

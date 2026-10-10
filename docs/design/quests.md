@@ -556,7 +556,7 @@ with server gates, so it proves the operation on something small.
 
 ### Chapter 2: Dorrit's span (fixed coordinates on the open map)
 
-Lands with lamps (0.7). The crossing where the bridge tore is an authored
+Lands with lamps (0.8). The crossing where the bridge tore is an authored
 structure at fixed coordinates in ring one (world.md, "Today's Tangle"). The
 span itself is a shared world change with no expiry: built with materials, so
 it lasts for good.
@@ -622,8 +622,8 @@ Each step ships on its own and leaves the game playable.
 | 4 | **Your own day.** The `sync` trigger, the locked view for guests, the tally token | S | 0.3 |
 | 5 | **Rumours.** "Heard anything?" for residents, alongside interiors | S | 0.3 |
 | 6 | **The quest operation.** `quest_gates`, the mutation, gates `at`, `world`, `wait`, `embers`, `item`; grants `give` and `unlock`; "Needs a connection" and `not-yet` in dialogue. Ship it with Aldo's kiln, its first user | M | 0.6 |
-| 7 | **The Keeper's hand.** With way-lamps | S | 0.7 |
-| 8 | **Chapter 2.** Projects that take embers; the `project` gate and `wait since`; the crossing and span as authored structures; the span as a world change; the Echo past it | L | 0.7 |
+| 7 | **The Keeper's hand.** With way-lamps | S | 0.8 |
+| 8 | **Chapter 2.** Projects that take embers; the `project` gate and `wait since`; the crossing and span as authored structures; the span as a world change; the Echo past it | L | 0.8 |
 
 Steps 1 to 5 need the interactions cleanup the plan puts before 0.3, and
 nothing else. They don't wait for guest accounts or the open map.
@@ -634,7 +634,7 @@ nothing else. They don't wait for guest accounts or the open map.
   Quests page; the signpost standing plumb with the east finger missing; the
   finger in the bracken; icons for the east finger and the tally token.
 - **0.6:** Aldo's mark on the kiln door (the kiln itself is in world.md's list).
-- **0.7:** the crossing with Dorrit's plank half-buried; the span broken and
+- **0.8:** the crossing with Dorrit's plank half-buried; the span broken and
   mended (pegged joints, warden-stone footings); the four-bedroll Echo camp.
 
 ## Open questions
