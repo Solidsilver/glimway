@@ -350,10 +350,25 @@ export async function chunkWhole(page: Page, at: { tx: number; ty: number }, tim
     })
 }
 
-/** The whole window whole: every chunk of the 3×3 around the hero (inside the frontier) attached and built. */
+/**
+ * The whole window whole: every chunk of the 3×3 around the hero (inside the
+ * frontier) attached and built. Centred on the hero's chunk first: a placed
+ * hero is recentred on a later frame, and until then `ready` speaks for the
+ * old window (review 2026-10-11).
+ */
 export async function windowWhole(page: Page, timeout = 20_000): Promise<void> {
   await page
-    .waitForFunction(() => (window as unknown as Hooks).__fsWildsWindow?.()?.ready === true, undefined, { timeout })
+    .waitForFunction(
+      (chunkPx) => {
+        const h = window as unknown as Hooks
+        const w = h.__fsWildsWindow?.()
+        const p = h.__fsPlayer?.()
+        if (!w?.center || !p) return false
+        return w.center.cx === Math.floor(p.x / chunkPx) && w.center.cy === Math.floor(p.y / chunkPx) && w.ready === true
+      },
+      CHUNK * 16,
+      { timeout }
+    )
     .catch(async () => {
       throw new Error(`the window never came whole: ${await diagnose(page)}`)
     })

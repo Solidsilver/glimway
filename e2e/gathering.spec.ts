@@ -108,6 +108,8 @@ async function candidatesNear(page: Page, targets: string[], lit?: boolean): Pro
 /**
  * Stand on a candidate: the hero set down there, and the game electing its
  * piece with the prompt saying `prompt`. False (and why) when it doesn't hold.
+ * Once it does, the prompt on screen must say it too: a fixture chosen and
+ * not shown is a failure, never a reason to try the next one.
  */
 async function standOn(page: Page, c: Candidate, prompt: RegExp, why: string[]): Promise<boolean> {
   const stood = await standFor(page, gatherId(c.spot), [c.hero], why)
@@ -117,6 +119,8 @@ async function standOn(page: Page, c: Candidate, prompt: RegExp, why: string[]):
     why.push(`${gatherId(c.spot)} says “${label}”`)
     return false
   }
+  await expect(page.locator('.prompt'), `the prompt on screen for ${gatherId(c.spot)}`).toBeVisible()
+  await expect(page.locator('.prompt'), `the prompt on screen for ${gatherId(c.spot)}`).toContainText(label)
   return true
 }
 

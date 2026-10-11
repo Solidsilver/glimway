@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import type { BrowserContext } from '@playwright/test'
-import { allow, newUser, openTitleGuide, pasteAndConnect, pinWorld, reenter, routeHabitica, serverState, setHabitica, waitForWorld, CONTRACT } from './connected'
+import { allow, newUser, openTitleGuide, pasteAndConnect, pinWorld, reenter, routeHabitica, serverState, setHabitica, waitForWorld, wickSlack, CONTRACT } from './connected'
 import { diagnose, expectToast, frames, holdUntil, parkCreatures, player, settled, waitForLive, waitForWilds, waitGame, warp, wilds, wildsWindow, windowWhole } from './helpers'
 import { freshPlayer } from './home-helpers'
 
@@ -258,6 +258,8 @@ async function northCorridor(page: Page, edgeTy: number): Promise<{ tx: number; 
 test('the drift at the frontier stops you, and says so the first time', async ({ page }) => {
   test.setTimeout(150_000)
   await freshPlayer(page)
+  // The frontier's land is the wick's: both clocks a day or more from its turning.
+  await wickSlack(page)
   await pinWorld(page, DRIFT_SEED)
   // The north edge of the frontier is cy -8 (three chunks past the Whitequiet).
   const edge = -8 * S

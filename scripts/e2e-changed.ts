@@ -3,7 +3,7 @@
  * changed, by e2e/changed-map.json.
  *
  * Changed files: everything that differs from the merge base with the base
- * branch (E2E_BASE, default `expansion`), plus uncommitted and untracked
+ * branch (E2E_BASE, default `dev`), plus uncommitted and untracked
  * files. Then:
  *   - a changed spec runs itself;
  *   - a changed file under a mapped path runs that rule's specs (and the
@@ -24,7 +24,7 @@ import { existsSync, readFileSync } from 'node:fs'
 type Map = { full: string[]; ignore: string[]; rules: { paths: string[]; specs: string[]; smoke?: boolean }[] }
 
 const map = JSON.parse(readFileSync('e2e/changed-map.json', 'utf8')) as Map
-const base = process.env.E2E_BASE || 'expansion'
+const base = process.env.E2E_BASE || 'dev'
 const args = process.argv.slice(2)
 const listOnly = args.includes('--list')
 const passThrough = args.filter((a) => a !== '--list')

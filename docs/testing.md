@@ -29,7 +29,7 @@ plus a few programs that aren't npm packages:
 | `cd server && go test -race -timeout 30m ./...` | the server with the race detector | server changes, before handing back |
 | `npm run test:smoke` | the `@smoke` playtests (5 tests, a few minutes at most) | while working, often |
 | `npm run test:changed` | the playtests mapped to what this branch changed | at the end of a work session |
-| `npm run test:e2e` | the full Playwright suite | CI on the self-hosted GPU runner, on pushes to `main`, `expansion` and `exp/**`, or manual dispatch ([ci-runner.md](ci-runner.md)) |
+| `npm run test:e2e` | the full Playwright suite | CI on the self-hosted GPU runner, on pushes to `main`, `dev` and `exp/**`, or manual dispatch ([ci-runner.md](ci-runner.md)) |
 | `npm run test:screens` | everything, saving screenshots to `.agent/screens/` (the `*-screens` specs only run with it) | visual reviews |
 
 Under `-race`, `internal/api` alone takes about 7–8 minutes, so on a busy
@@ -50,7 +50,7 @@ While working, run `npm test` (or `npm run verify` when the change warrants
 it). At the end, run `npm run test:changed`. In CI, every push and pull
 request runs `verify`, the Go tests, the Docker smoke test and the smoke tier
 on GitHub's runners. The full suite runs on a self-hosted runner with an
-NVIDIA GPU, for pushes to `main`, `expansion` and `exp/**` and for manual
+NVIDIA GPU, for pushes to `main`, `dev` and `exp/**` and for manual
 dispatch, never for pull requests ([ci-runner.md](ci-runner.md)). Push an
 `exp/` branch to run it before main moves.
 
@@ -75,7 +75,7 @@ test only when nothing in the tier covers its path yet.
 ### Changed
 
 `npm run test:changed` (script: `scripts/e2e-changed.ts`) collects the files
-changed since the merge base with `expansion` (`E2E_BASE=<branch>` for another),
+changed since the merge base with `dev` (`E2E_BASE=<branch>` for another),
 plus uncommitted and untracked files, and maps them through
 [`e2e/changed-map.json`](../e2e/changed-map.json):
 
@@ -177,7 +177,8 @@ it at most 50 ms). A fixed pause is either too short (flaky) or too long
 | working out which prompt wins (reach, rank, the tool in hand) in the spec | the game's own election: `targetAt(page, feet)` (the target those feet would get), `standFor(page, id, spots)` (stand where it is `id`), `expectTarget(page, id)`, and `pressOn(page, id, tile)` (chunk whole, input live, exactly `id` elected, then E) |
 | a stall that just times out | a progress check that fails fast with `diagnose(page)` (hero, body, target and what is in reach, the dev walk's next waypoints, the window's build state, the epoch) |
 | land from a random world for a behaviour check | `pinWorld(page, seed)` (e2e/connected.ts) right after signing in: the Tangle is then the same every run (the wick's land, within a wick); keep varied-seed walks as their own tests, and name the seed/epoch when they fail |
-| a date or season from `Date.now()` | `seasonOf(page, id, mark, { outside })` (both clocks, a day of slack before the next turning), or a server time set away from the boundary (`moveServerClock`) |
+| a fixture on the wick's land (the Whitequiet and beyond) | `wickSlack(page)` before the Wilds are first entered: both clocks a day or more from the turning (the world's moved into the next wick if needed); `calendarOnServer(other)` for each further page. Crossing a turning is its own test (wilds-outer.spec.ts) |
+| a date or season from `Date.now()` | `seasonOf(page, id, mark, { outside })` (both clocks, a day of slack before the mark changes and before the wick's turning), or a server time set away from the boundary (`moveServerClock`) |
 | E-and-sleep dialogue loops | `talkThrough`, `talk`, `readDialogue`, `untilChoices`, `untilLine`, `talkText` |
 | a reply list check | `untilChoices(page)`, then the `.choice` locators |
 | holding a key for N ms | `holdUntil(page, key, check)` |

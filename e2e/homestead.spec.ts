@@ -368,13 +368,14 @@ test('one of a joint deed gives up their place and keeps their pack; the land st
     other.on('pageerror', (e) => errors.push(e.message))
     const b = await freshPlayer(other, 'Bram', code)
     // A joint deed as the signing leaves it (the signing is the test above):
-    // both on lot 1, and a post Bram bought for it in his pack.
+    // both on lot 1, a deed each on record (signing counts one for Bram too:
+    // his next is not a free first), and a post Bram bought for it in his pack.
     const world = (await serverState(page)).body.worldId as string
     const home = `home-joint-${accountOf(a)}`
     const now = Math.floor(Date.now() / 1000)
     sql(`INSERT INTO homesteads(id,world_id,gate,tier,posts_bought,claimed_at) VALUES('${home}','${world}',0,0,1,${now});
 INSERT INTO homestead_members VALUES('${accountOf(a)}','${home}',${now}), ('${accountOf(b)}','${home}',${now + 1});
-INSERT INTO player_deeds VALUES('${accountOf(a)}',1);
+INSERT INTO player_deeds VALUES('${accountOf(a)}',1), ('${accountOf(b)}',1);
 INSERT INTO homestead_items(id,item_def,location,account_id) VALUES('post-${accountOf(b)}','lantern-post','inventory','${accountOf(b)}');`)
     await expect.poll(async () => (await myHome(page)).members.map((m) => m.displayName).sort(), { timeout: SERVER_ANSWER_MS }).toEqual(['Bram', 'Tansy'])
 
@@ -388,6 +389,8 @@ INSERT INTO homestead_items(id,item_def,location,account_id) VALUES('post-${acco
     expect(await served(storage)).toMatchObject({ home: null, storage: null, shared: 'not-a-member' })
     const carried = await served(await other.request.get('/api/mail', CONTRACT))
     expect(carried.inventory.decorations['lantern-post']).toBe(1)
+    // Giving up a place doesn't take back the deed he signed.
+    expect(sql(`SELECT deeds FROM player_deeds WHERE account_id='${accountOf(b)}';`)).toBe('1')
     expect(errors).toEqual([])
   } finally {
     await ctx.close()

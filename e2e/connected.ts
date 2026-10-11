@@ -80,11 +80,22 @@ export async function pinWorld(page: Page, seed: string): Promise<string> {
   return seed
 }
 
+const DAY = 86400
+
+/** The screen's calendar (the dev hook) on the world's clock: what the server reads now. */
+export async function calendarOnServer(page: Page): Promise<number> {
+  const now = await moveServerClock(page, 0)
+  await page.evaluate((x) => (window as unknown as { __fsDevCalendar: (t: number) => void }).__fsDevCalendar(x), now)
+  return now
+}
+
 /**
  * Both clocks (the world's and the screen's) to a safe moment from now on
  * whose calendar mark is `mark` (with `outside`, any other mark): one with a
- * whole day of that same mark still ahead, so no turning lands mid-test, and
- * the calendar the request is checked against is the one set. Returns it.
+ * whole day of that same mark still ahead and a whole day before the wick's
+ * turning (a mark is three wicks, and the outer land turns at each), so no
+ * turning lands mid-test, and the calendar the request is checked against is
+ * the one set. Returns it.
  * The world's clock moves in steps under 30 days, signing in again between
  * them: a session ends 30 days after it began however much it's used (the
  * server's seasons tests' `jumpToAs` does the same), and a mark can be two
@@ -92,17 +103,35 @@ export async function pinWorld(page: Page, seed: string): Promise<string> {
  */
 export async function seasonOf(page: Page, id: string, mark: string, opts: { outside?: boolean } = {}): Promise<number> {
   const { calendarAt } = await import('../src/lib/calendar.ts')
-  const DAY = 86400
   const is = (t: number) => (calendarAt(t).mark === mark) !== !!opts.outside
   let now = await moveServerClock(page, 0)
   let t = now
-  while (!(is(t) && is(t + DAY))) t += 3600
+  while (!(is(t) && is(t + DAY) && calendarAt(t).nextTurning - t >= DAY)) t += 3600
   while (now < t) {
     now = await moveServerClock(page, Math.min(t, now + 25 * DAY))
     if (now < t) await signInAgain(page, id)
   }
-  await page.evaluate((x) => (window as unknown as { __fsDevCalendar: (t: number) => void }).__fsDevCalendar(x), now)
-  return now
+  return calendarOnServer(page)
+}
+
+/**
+ * The wick's land (the Whitequiet and beyond) held still for a test: if the
+ * wick turns within `slack` (a day), the world's clock forward to an hour
+ * into the next one; then the screen's calendar on the world's clock. That
+ * land turns at the wick, so a fixture laid near a turning is gone by the
+ * time a second page reads it (review 2026-10-11). Call it before the Wilds
+ * are first entered (with pinWorld); every other page in the test needs
+ * `calendarOnServer(other)` once it has signed in. Crossing a turning is
+ * its own test (e2e/wilds-outer.spec.ts). Returns the world's now.
+ */
+export async function wickSlack(page: Page, slack = DAY): Promise<number> {
+  const { calendarAt } = await import('../src/lib/calendar.ts')
+  const now = await moveServerClock(page, 0)
+  const d = calendarAt(now)
+  if (d.nextTurning - now < slack) await moveServerClock(page, d.nextTurning + 3600)
+  const at = await calendarOnServer(page)
+  expect(calendarAt(at).nextTurning - at, 'the wick has slack before its turning').toBeGreaterThanOrEqual(slack)
+  return at
 }
 
 /** A fresh Habitica user id per test, so tests never share server state. */

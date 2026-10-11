@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { devices, type BrowserContext } from '@playwright/test'
-import { accountOf, pinWorld, sql, CONTRACT } from './connected'
+import { accountOf, calendarOnServer, pinWorld, sql, wickSlack, CONTRACT } from './connected'
 import { freshPlayer, fund, giveInstance } from './home-helpers'
 import { diagnose, dialogueState, expectTarget, expectToast, parkCreatures, pressOn, readDialogue, steady, targetNow, waitForLive, waitForWilds, warp, wilds, windowWhole } from './helpers'
 
@@ -119,6 +119,8 @@ const SEED = 'e2e-paths'
 test('clear a thicket with a spade, lay stone after the turning-land confirm, see it from a second account, lift it', async ({ page, browser, baseURL }) => {
   test.setTimeout(240_000)
   const id = await freshPlayer(page)
+  // Both clocks a day or more from the turning: the path has to outlast the second account's read.
+  await wickSlack(page)
   await pinWorld(page, SEED)
   giveInstance(id, 'bench-spade', { max: 90 })
   fund(id, { materials: { stone: 40, timber: 10 } })
@@ -189,6 +191,7 @@ test('clear a thicket with a spade, lay stone after the turning-land confirm, se
   const other = await ctx.newPage()
   try {
     await freshPlayer(other, 'Wren', invite.code)
+    await calendarOnServer(other)
     await warp(other, 'wilds', stand.tx, stand.ty)
     await waitForWilds(other)
     await other.evaluate(() => (window as unknown as Hooks).__fsDevParkCreatures())
