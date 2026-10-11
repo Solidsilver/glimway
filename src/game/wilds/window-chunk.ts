@@ -65,6 +65,51 @@ export interface ChunkDeps {
   ground: GroundSource
   /** The workable pieces of a chunk, in world tiles (the calendar decides the seasons' pieces). */
   gather: (t: ChunkTerrain) => GatherSpot[]
+  /** The window's chunks still being built, in attachment order (without one, a chunk builds itself). */
+  builds?: BuildQueue
+}
+
+/** Something built a slice at a time: true once it is whole. */
+export interface Buildable {
+  build(deadline: number): boolean
+}
+
+/**
+ * The attached chunks still being built, in the order they were attached:
+ * the order their pieces were always drawn in, so pieces of equal depth
+ * that overlap across a chunk edge keep which is on top (Phaser's depth
+ * sort is stable: ties stay in display-list order). Every build goes
+ * through here, a slice a frame (`step`) or whole at once (`finish`: a
+ * patch or a relay that can't wait), and finishing a chunk early first
+ * finishes every chunk attached before it.
+ */
+export class BuildQueue<T extends Buildable = Buildable> {
+  private waiting: T[] = []
+
+  add(c: T): void {
+    this.waiting.push(c)
+  }
+
+  /** A chunk dropped before it was whole: never built further. */
+  drop(c: T): void {
+    const i = this.waiting.indexOf(c)
+    if (i >= 0) this.waiting.splice(i, 1)
+  }
+
+  /** Build until the deadline (performance.now(), ms), first attached first. */
+  step(deadline: number): void {
+    while (this.waiting.length) {
+      if (!this.waiting[0]!.build(deadline)) return
+      this.waiting.shift()
+    }
+  }
+
+  /** Make `c` whole now, after every chunk attached before it. */
+  finish(c: T): void {
+    const i = this.waiting.indexOf(c)
+    if (i < 0) return
+    for (const w of this.waiting.splice(0, i + 1)) w.build(Infinity)
+  }
 }
 
 // ------------------------------------------------------------ painting
@@ -135,7 +180,7 @@ interface Run {
   body: Phaser.Physics.Arcade.Image
 }
 
-export class AttachedChunk {
+export class AttachedChunk implements Buildable {
   readonly key: string
   /** What it put on the display list (the art a tile keeps is the tile's: ../area/tile-art.ts). */
   private images: Phaser.GameObjects.GameObject[] = []
@@ -190,6 +235,13 @@ export class AttachedChunk {
         return true
       }),
     ]
+    deps.builds?.add(this)
+  }
+
+  /** Whole now, through the window's queue: every chunk attached before it is finished first. */
+  private finish(): void {
+    if (this.deps.builds) this.deps.builds.finish(this)
+    else this.build(Infinity)
   }
 
   /** Build what is left until `deadline` (performance.now(), ms): true once the chunk is whole. */
@@ -269,7 +321,7 @@ export class AttachedChunk {
    */
   patch(next: ChunkTerrain, beyond: (tx: number, ty: number) => void = () => {}): boolean {
     // Built whole first: an opened tile's piece must be there to fell.
-    this.build(Infinity)
+    this.finish()
     const t = this.terrain
     const was = this.applied
     const o = chunkOrigin(t)
@@ -308,7 +360,7 @@ export class AttachedChunk {
    */
   relay(tx: number, ty: number): boolean {
     // Built whole first: the tile's art drawn now must not be drawn again by the build.
-    this.build(Infinity)
+    this.finish()
     const t = this.terrain
     const o = chunkOrigin(t)
     const lx = tx - o.tx
@@ -324,7 +376,7 @@ export class AttachedChunk {
 
   /** The laid art drawn, by world tile (tests). */
   laidArtKeys(): Map<string, string> {
-    this.build(Infinity)
+    this.finish()
     return new Map([...this.laid].map(([k, img]) => [k, img.texture.key]))
   }
 
@@ -486,6 +538,7 @@ export class AttachedChunk {
   /** The chunk left the window: everything it put in the scene goes (what was never built, never was). */
   destroy(): void {
     const done = perfSpan('detach')
+    this.deps.builds?.drop(this)
     this.todo = []
     perfTime('detach:things', () => this.deps.entities.detach(this.key))
     perfTime('detach:gathering', () => this.deps.gathering()?.removeChunk(this.key))

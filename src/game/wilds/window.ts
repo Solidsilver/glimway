@@ -29,7 +29,7 @@ import { CHUNK_TILES, chunkKey, chunkOfPixel, parseChunkKey } from './coords.ts'
 import { chunkSig, effectiveChunk, forgetGround, groundAt, solidAt } from './ground-view.ts'
 import { chunkGather, chunkLandmarks } from './terrain.ts'
 import { crossed, keepAttached, paintable, planWindow, SLACK_TILES, veilEdges, type WindowPlan } from './window-plan.ts'
-import { AttachedChunk, DriftChunk, groundTexture, paintDriftChunk, type ChunkDeps } from './window-chunk.ts'
+import { AttachedChunk, BuildQueue, DriftChunk, groundTexture, paintDriftChunk, type ChunkDeps } from './window-chunk.ts'
 import { paintAway, paintHere, type PaintJob } from './paint-worker.ts'
 import { groundTable } from './ground-table.ts'
 import { chunkOrigin } from './terrain.ts'
@@ -40,7 +40,7 @@ import { markSeen, markWalked } from './walked.ts'
 import { perfSpan, perfTime, perfWithout } from '../perf.ts'
 import { addAll, destroyAll, looseImage } from '../area/bulk.ts'
 
-export interface WindowDeps extends Omit<ChunkDeps, 'ground' | 'gather'> {
+export interface WindowDeps extends Omit<ChunkDeps, 'ground' | 'gather' | 'builds'> {
   session: Session
   hero: () => { x: number; y: number }
 }
@@ -60,6 +60,8 @@ const BUILD_MS = 4
 export class WildsWindow {
   private plan: WindowPlan | null = null
   private attached = new Map<string, AttachedChunk>()
+  /** The attached chunks still being built, in attachment order (./window-chunk.ts BuildQueue). */
+  private readonly builds = new BuildQueue<AttachedChunk>()
   private drifts = new Map<string, DriftChunk>()
   private paints = new Map<string, PaintedChunk>()
   private far = new Map<string, Phaser.GameObjects.Image[]>()
@@ -119,8 +121,7 @@ export class WildsWindow {
    * across an edge keep which is on top.
    */
   private buildSome(): void {
-    const deadline = performance.now() + BUILD_MS
-    for (const c of this.attached.values()) if (!c.build(deadline)) return
+    this.builds.step(performance.now() + BUILD_MS)
   }
 
   /** Whether a chunk out of the 3×3 is still kept (the hero is less than SLACK_TILES past the edge it left by). */
@@ -359,12 +360,12 @@ export class WildsWindow {
       destroyAll(this.deps.scene, far)
       this.far.delete(key)
     }
-    const c = new AttachedChunk({ ...this.deps, ground: { ground: groundAt, solid: solidAt }, gather: (c) => chunkGather(c, calendarAt(gameNow())) }, t, p.key)
+    const c = new AttachedChunk({ ...this.deps, ground: { ground: groundAt, solid: solidAt }, gather: (c) => chunkGather(c, calendarAt(gameNow())), builds: this.builds }, t, p.key)
     c.sig = p.sig
     this.attached.set(key, c)
     this.attaches++
     // The first window (behind the fade) is built whole at once.
-    if (this.now || perfWithout('spread')) c.build(Infinity)
+    if (this.now || perfWithout('spread')) this.builds.finish(c)
   }
 
   /**

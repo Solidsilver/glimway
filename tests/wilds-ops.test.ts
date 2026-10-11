@@ -23,7 +23,7 @@ const { WildsPaths } = await import('../src/game/wilds/paths.ts');
 const { openRumourFind } = await import('../src/game/wilds/rumour-find.ts');
 const { mapInput, forgetMapRead } = await import('../src/game/wilds/map-data.ts');
 const { pressGate, CLICK_AFTER_DOWN_MS } = await import('../src/ui/press-gate.ts');
-const { AttachedChunk } = await import('../src/game/wilds/window-chunk.ts');
+const { AttachedChunk, BuildQueue } = await import('../src/game/wilds/window-chunk.ts');
 const { TERRAIN } = await import('../src/lib/tile.ts');
 const { loadWilds } = await import('../src/lib/wilds/data.ts');
 const { EV, bus } = await import('../src/game/events.ts');
@@ -345,4 +345,36 @@ test('a plank laid across a chunk edge turns its neighbour in the next chunk to 
   assert.equal(east.patch(next as never, (tx, ty) => chunks.get(`${Math.floor(tx / 24)},${Math.floor(ty / 24)}`)?.relay(tx, ty)), true);
   assert.match(east.laidArtKeys().get('24,5')!, /path-plank-h/);
   assert.match(west.laidArtKeys().get('23,5')!, /path-plank-h/, 'the west chunk’s plank turns to meet it');
+});
+
+test('chunks are built in the order they were attached, and finishing one early finishes the ones before it first', () => {
+  const log: string[] = [];
+  // A chunk built a slice at a time: `slices` steps, one per call while time is left.
+  const chunk = (name: string, slices: number) => ({
+    name,
+    left: slices,
+    build(deadline: number) {
+      while (this.left > 0) {
+        this.left--;
+        log.push(name);
+        if (deadline !== Infinity) return this.left === 0;
+      }
+      return true;
+    },
+  });
+  const q = new BuildQueue();
+  const [a, b, c] = [chunk('a', 3), chunk('b', 2), chunk('c', 2)];
+  q.add(a);
+  q.add(b);
+  q.add(c);
+  q.step(0);
+  assert.deepEqual(log, ['a'], 'a slice of the first attached');
+  // A patch (or a relay) needs b whole now: a finishes first, then b; c waits its turn.
+  q.finish(b);
+  assert.deepEqual(log, ['a', 'a', 'a', 'b', 'b']);
+  q.finish(b);
+  assert.equal(log.length, 5, 'finishing a chunk already whole builds nothing');
+  q.drop(c);
+  q.step(Infinity);
+  assert.equal(log.length, 5, 'a dropped chunk is never built further');
 });
