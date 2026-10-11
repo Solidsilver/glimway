@@ -1,4 +1,4 @@
-# Art request: the 0.8 Lamps pass
+# Art request: the 0.9 Lamps pass
 
 For the image-generation agent. Follow the style of `docs/art-request-playtest1.md` and
 `assets/generated/playtest1-pass/` (the Tangle's outdoor props), and section 3 of
@@ -33,16 +33,18 @@ For the image-generation agent. Follow the style of `docs/art-request-playtest1.
 
 ## Lamps in the Wilds
 
+`lamp-stone-dark` and `frontier-veil-0..3` moved to the open map's request
+(`docs/art-request-open-map.md`), because 0.8 places them. The relit and named stones below must
+match that dark stone.
+
 | Key | Footprint | Canvas | Notes |
 |---|---:|---:|---|
 | `way-lamp-unlit` | 1×1 | 96×192 | A Keeper's way-lamp, front-on: a squat footing of packed stones, an iron-oak post, a bracket and the lamp head (glass panes, iron cap). Dark glass. The old `world-lantern-post-*` (16×32, items pass) gives the shape; this is that post grown up and redrawn at the new density |
 | `way-lamp-lit-0..2` | 1×1 | 96×192 ×3 | The same, lit warm amber; three flame frames for a slow loop. The light sits in the head, not painted on the ground (the game adds its glow) |
-| `lamp-stone-dark` | 1×1 | 64×128 | An old road lamp stone: a cut stone pillar about waist-to-chest high, with a lamp niche near the top and soot on its lip. Weathered, standing, whole. Kin to `world-old-lamp-stone-intact-weathered` |
-| `lamp-stone-relit-0..2` | 1×1 | 64×128 ×3 | The same with a wick burning warm amber in the niche; three flame frames |
-| `lamp-stone-named-0..2` | 1×1 | 64×128 ×3 | The same lit by a mage's naming: paler, cooler gold, a little steadier. Three frames |
+| `lamp-stone-relit-0..2` | 1×1 | 64×128 ×3 | The dark lamp stone with a wick burning warm amber in the niche; three flame frames |
+| `lamp-stone-named-0..2` | 1×1 | 64×128 ×3 | The dark lamp stone lit by a mage's naming: paler, cooler gold, a little steadier. Three frames |
 | `route-stone-dark` | 2×1 | 128×128 | The far route stone: the road lamp stone with a flat cut panel beside it, lines of carved text that read as writing (not real letters), moss in the cuts |
 | `route-stone-relit-0..2` | 2×1 | 128×128 ×3 | The same, its niche lit warm amber; three flame frames |
-| `frontier-veil-0..3` | 3×1 | 192×64 ×4 | The drift filling a 3-tile exit gap at the edge of the light: pale threads across the path, a few turncaps leaning back the way you came. Loops. Colours from the Turning's veil |
 
 ## Items and UI
 

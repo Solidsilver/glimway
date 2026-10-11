@@ -1,13 +1,28 @@
-# Lamps (0.8)
+# Lamps (0.9)
 
 Status: **design, waiting on the owner's answers** (section 0), 2026-10-10. Written after 0.7
 (Silas's Yard) reached `dev` at `b0e57dc`. Docs only; nothing here is built yet.
 
+**Moved to 0.9 (owner, 2026-10-10).** The owner chose to build the open map first, as 0.8
+([open-map.md](open-map.md)). The frontier band in 2.1 is now **provided by the open map**, and
+lane L-B is gone. The rest of this doc stands as written until Lamps are planned again after 0.8.
+What that re-plan must change:
+
+- Coordinates follow the open map (open-map.md 2.1): the Whitequiet is the 3×3 at cx −1..1,
+  cy −5..−3, and the "far route stone at (3,1)" (Q3) becomes a stone on the Lantern Road, which
+  leaves the Whitequiet northward.
+- Holds extend the open map's `frontier.Inside` and `chunkEpoch`; `region_epochs` and its
+  `held_mask` are replaced by the open map's `wild_epochs`; the near read already exists.
+- `lamp-stone-dark` and `frontier-veil` art move to the open map's request.
+- Numbers shift: the open map takes migration 034 and contract 8, so Lamps take the next free
+  ones (035 and 9 if nothing lands between).
+- Chapter 2 comes after Lamps, not as 0.9.
+
 The plan calls Lamps "the spine" ([plan.md](plan.md), "The shape of it", item 3): way-lamps push
 the frontier, the Keeper's hand teaches the naming, the mage's craft is naming, and the Old ways
 link lamps. The plan put Lamps after two revisions that come first: the open map (W1–W2) and lake
-country (W3–W4). **Neither has been built.** The owner moved Lamps up to 0.8 anyway. So this doc
-starts from what the code has today, and says what 0.8 can honestly hold.
+country (W3–W4). **Neither has been built.** The owner first moved Lamps up to 0.8, then chose to
+build the open map first (see the note above), so Lamps are 0.9.
 
 **Rules this design keeps:** [server-first.md](server-first.md) (the server owns state, the client
 predicts and draws), [habitica-boundary.md](../habitica-boundary.md) (the game never grants or
@@ -130,23 +145,23 @@ the table.
 
 | # | Question | Proposed answer | Why |
 |---|---|---|---|
-| 1 | **What is 0.8?** | **Lamps on a frontier band:** the Keeper's hand, way-lamps that hold land and push the frontier, the mage's Name a lamp, and the two ways home. **Out of 0.8:** chapter 2, the Old ways, the clay base and new kinds of land (section 6). *Other choices:* (b) the Keeper's hand and lamps that only hold Whitequiet chunks, with no land beyond (smaller, but the frontier is the point); (c) build the open map as 0.8 and Lamps as 0.9 (right order, but nothing to play for a whole release) | The lamps are the spine. The band is the least map that lets them mean something |
+| 1 | **What is 0.9?** | **Lamps on the open map:** the Keeper's hand, way-lamps that hold land and push the frontier, the mage's Name a lamp, and the two ways home. **Out of 0.9:** chapter 2, the Old ways, the clay base and new kinds of land (section 6). (The owner chose to build the open map first, as 0.8, on 2026-10-10.) | The lamps are the spine. The band is the least map that lets them mean something |
 | 2 | **The frontier band** | The Whitequiet stops being a closed 3×3. Chunks past it are made on demand by **today's generator**, north, east and west (never back toward the Tangle). A chunk keeps its layout for good once a lamp holds it; every other chunk past the Tangle turns with the wick. With no lamps lit, the game plays as today | It reuses the generator, the chunk store and the client's chunk scenes. The open map's noise, rivers and lands come later and replace it |
 | 3 | **The first lamp: where it stands, what it holds** | The far route stone stands **one chunk east of the Whitequiet** at (3,1), on the old road toward Sallow Ford. Relit, it holds the Whitequiet's **east column** for good; the other six chunks keep turning until someone sets lamps there. Later lamps may stand anywhere inside the frontier, the Whitequiet included | East is canon (the Six went east). A stone inside the 3×3 would freeze most of the Whitequiet in one go |
 | 4 | **A way-lamp's cost, with no clay yet** | A **stone footing** stands in for the clay base until lake country. A new lamp *d* chunks out costs timber 6+2*d*, stone 4+*d*, a lamp head, a lamp wick and one hearth oil. **An old dark lamp stone** needs only a wick and the oil. When lake country lands, the footing becomes a fired clay base (a content change) | Same canon parts as the lantern post (crafting-and-repair.md), so it fits what players know |
 | 5 | **Naming** | Built **from parts only**: an ordinal, a relation (past, beside, above, below), a real landmark in the chunk, what's behind and ahead, and a closing line. The short name comes from the same parts. **No free text**, because everyone in the world sees it | Shared text needs moderation; chosen parts don't. They also keep the Keeper's form |
 | 6 | **Name a lamp (mage, level 10, 10 mana)** | It lights **dark lamp stones** as rest spots **until the turning**. It does **not** move the frontier or hold land. It stands in for the hearth oil **when the mage lights the way-lamp themselves**. Fallen-hero lanterns keep their own relight | Decision 10: magic holds until the turning. One clear target keeps it simple |
-| 7 | **"For good inside lamplight", in 0.8** | A held chunk keeps its layout, its camps and nodes and their timers, its sites, and the lamp. Things already tied to the wick still go at the turning, even in a held chunk: fallen-hero lanterns, mage-lit stones, the week's Echo slots. **Chests in a held chunk refill each wick**, per player, as in turning land | The world.md rule, applied to what exists. Without the chest rule, held land would stop paying out |
-| 8 | **The ways home** | A **homing turncap** (a turncap spawn set in 2 amber; crush it to walk back to the Commons' Wilds gate) and a **lamp-ash pouch** (ash you get when you name a lamp, plus 2 fibre; scatter it to step back to that lamp). Each is used up. Neither works in a fight; each needs a 3-second pause. Both recipes are papers Mara gives with the Keeper's hand | The plan's sketch (plan.md, "Ways back without a mage"). With no Old ways in 0.8, these are the way back |
+| 7 | **"For good inside lamplight", in 0.9** | A held chunk keeps its layout, its camps and nodes and their timers, its sites, and the lamp. Things already tied to the wick still go at the turning, even in a held chunk: fallen-hero lanterns, mage-lit stones, the week's Echo slots. **Chests in a held chunk refill each wick**, per player, as in turning land | The world.md rule, applied to what exists. Without the chest rule, held land would stop paying out |
+| 8 | **The ways home** | A **homing turncap** (a turncap spawn set in 2 amber; crush it to walk back to the Commons' Wilds gate) and a **lamp-ash pouch** (ash you get when you name a lamp, plus 2 fibre; scatter it to step back to that lamp). Each is used up. Neither works in a fight; each needs a 3-second pause. Both recipes are papers Mara gives with the Keeper's hand | The plan's sketch (plan.md, "Ways back without a mage"). With no Old ways in 0.9, these are the way back |
 | 9 | **A map** | A **Lamps** tab in the journal: Mara's ledger. It lists the world's lamps (name, who named it, how far out) and shows a simple drawn grid of held land, the frontier and where you are. No new art | The frontier is invisible without it. A grid drawn in the UI is cheap |
-| 10 | **Chapter 2** | Its own small release, **0.9**, straight after Lamps. Its crossing stays in the Tangle, where the plank site already is | It doesn't need lamps, and it adds three gate kinds and glim-taking projects. Together they'd make 0.8 twice 0.7's size |
+| 10 | **Chapter 2** | Its own small release, straight after Lamps. Its crossing stays in the Tangle, where the plank site already is | It doesn't need lamps, and it adds three gate kinds and glim-taking projects. Together they'd make Lamps twice 0.7's size |
 | 11 | **Glims** | Lamps cost **materials only, no glims** | Lamps are the long shared goal for crafting (world.md). Glims stay for rests, mending and the shops |
 
 **Tuning, not decisions** (playtest, change data): the 3-chunk slack and 3×3 hold (agreed
 2026-10-07); the cost curve in Q4; how far apart old lamp stones are; the 10 mana; the turncap's
 and pouch's recipes; how much harder camps get by distance (2.1).
 
-**Habitica boundary:** nothing in 0.8 touches Habitica. Name a lamp *reads* the class and the
+**Habitica boundary:** nothing in 0.9 touches Habitica. Name a lamp *reads* the class and the
 level mark (`rules.Craft`, `rules.Unlocked`, `server/internal/rules/magic.go`), as the level-20
 moves do. Lamps, oil, wicks, turncaps and ash are Glimway items made from Glimway materials.
 
@@ -193,85 +208,20 @@ moves do. Lamps, oil, wicks, turncaps and ash are Glimway items made from Glimwa
 
 ## 2. The build
 
-### 2.1 The frontier band (the prerequisite)
+### 2.1 The frontier (provided by the open map)
 
-**The idea.** Keep `outer-1` and its coordinates; the Whitequiet's entry stays at (1,1). Let the
-region grow past its 3×3, chunk by chunk, and let single chunks be **held** in the epoch they were
-in when a lamp first covered them.
+The open map (0.8, [open-map.md](open-map.md)) builds what this section used to: signed chunk
+coordinates, chunks made on demand, per-chunk epochs, seams, the near read, the frontier at run
+time (`frontier.Inside`), dark lamp stones on the Lantern Road, and tiers by distance. Lamps add
+only the holds:
 
-**The base light.** Before any lamp, the reachable land is the 3×3 plus the far route stone's
-chunk (3,1). Call it the base. It is content (`wilds.json`, the region's `baseLight`), so a test
-world can change it.
-
-**Held chunks.** A chunk is held once any way-lamp's 3×3 covers it. Its epoch is fixed from then
-on: the epoch it was in at that moment. Held chunks are never regenerated and never turn.
-
-**The frontier.** A chunk (cx, cy) is **inside** if:
-
-- it is in the base, or within 3 chunks (Chebyshev) of a held chunk; and
-- `cy ≤ 2`, so the band never runs back toward the Tangle.
-
-Only chunks inside are ever generated or served.
-
-**Per-chunk epochs, the small way:**
-
-- Keep one `region_epochs` row per wick for `outer-1`, as today. Stop pre-generating: `Create`
-  stores the epoch, and chunks are generated **on first read** (`Chunks.Chunk`,
-  `store/chunks.go:169`, generates and stores when the blob is missing and the chunk is inside).
-- A chunk read resolves its epoch: the held epoch if `held_chunks` has the chunk, else the
-  current wick's.
-- `deleteStaleEpochs` (`store/chunks.go:155`) **must keep any epoch a held chunk names**, along
-  with that epoch's `wilds_chunks`, `entity_state` and `personal_claims` rows.
-
-**The generator** (`server/internal/wilds/gen_v2.go`):
-
-- `GenerateChunk` accepts any (cx, cy) for an `outer` region and drops the grid check. The Tangle
-  keeps its grid.
-- **Seams:** generation takes an optional fixed gap for each side. When a neighbour is held in an
-  older epoch, the new chunk copies that neighbour's stored gap on their shared edge. Otherwise
-  `edgeOffset` hashes as today. One rule, no blending art. (world.md's seam band of scree and
-  roots waits for the open map.)
-- **Sites:** `siteSlots` keeps dealing the Echoes, the given-back spot, the cairn, the nest and
-  the reeds over the base 3×3, but **only to base chunks that were unheld when the wick's epoch
-  was made**. The epoch row stores that mask (`held_mask`), so a chunk stays a pure function of
-  its epoch, its key and its edge overrides.
-- **New site kinds:**
-  - `lamp-stone`, a dark road lamp stone. Placed along the old road at (3+2k, 1) for k ≥ 0, plus
-    one in about six other band chunks, hashed.
-  - `route-stone`, the far route stone at (3,1), always at a fixed tile. It is the first
-    `lamp-stone` and also carries the cut.
-- **Distance:** *d* is the Chebyshev distance from the base. Band chunks pick camp mixes and
-  amber chances by *d* through a small `bands` table in `wilds.json` (tuning). This follows how
-  `deepCountry` (`api/wilds.go:865`) already makes the deep Tangle harder.
-
-**Validation and reads:**
-
-- `chunks.Validate` (`chunks/read.go:82`) and `exitLeads` (:51) allow signed cx/cy for `outer-1`
-  and the new site kinds.
-- Exits to chunks outside the frontier are still served, marked `edge: true`.
-- **The near read.** `GET /api/wilds/near/<cx>/<cy>` replaces the region read for `outer-1`. It
-  returns the chunks within one of (cx, cy):
-  - each chunk's epoch id;
-  - whether it is held;
-  - entity states, claims and lanterns for those chunks;
-  - the world's lamps and the frontier, as a compact list of held chunks.
-
-  The Tangle keeps `GET /api/wilds/region/inner-1`. `wildsService.Region` is split so the two
-  share the entity code (`entityRow`, `readEntityRow`, `api/wilds.go:121-144`).
-- **The turning:**
-  - A place check that compares `last_outer_epoch` with the current epoch (`player_place`;
-    `store/composition.go:93`; `Place.outer_epoch`) now asks whether the player's chunk is held.
-    A player in held land is never moved.
-  - A player in unheld land is moved to the nearest lamp's tile, or to the entry if there is no
-    lamp. This uses the server-set place path (`place_set_version`, as `recoverRoom` in
-    `server/internal/store/rooms.go:22` does).
-- **Area checks:** `nearWilds` (`api/wilds.go:363`) and every `where` reader take negative
-  region-wide positions. `floor(position / 16)` already rounds the right way; integer division in
-  Go doesn't. Audit each site.
-
-**What it doesn't do:** no noise fields across chunks, no rivers, no cells or structures, no
-rings, no new land. It is the open map's chunk store and epochs only. The open map replaces the
-generator behind it later and keeps the tables.
+- `held_chunks` (world, cx, cy, epoch): a chunk is held once a way-lamp's 3×3 covers it, in the
+  epoch it was in then. `chunkEpoch` returns the held epoch first.
+- `frontier.Inside` grows from "within 3 of the Tangle or the Whitequiet" to "within 3 of those
+  or of a held chunk".
+- Ended wick epochs are kept while a hold names them (open-map.md 2.3).
+- The turning moves a player in unheld land to open ground as the open map does (its decision
+  10); this doc's "move to the nearest lamp" is dropped.
 
 ### 2.2 Content
 
@@ -461,13 +411,14 @@ All in Opus's voice for the village. Mara is careful, dry and fond.
 
 - **`world.md`:**
   - "Today" (lines 82–91) brought up to date.
-  - A note under "The frontier" that 0.8 builds the band (link here).
+  - A note under "The frontier" that the open map (0.8) builds the frontier and Lamps (0.9)
+    add the holds.
   - The far route stone's place: east, (3,1).
-- **`quests.md`:** the `keepers-hand` block replaced by a link to 2.5. Chapter 2 moves to 0.9 in
+- **`quests.md`:** the `keepers-hand` block replaced by a link to 2.5. Chapter 2 moves to after Lamps in
   the build-order table (row 8).
-- **`magic.md`:** step 2 says Name a lamp lands in 0.8; the Old ways stay later.
+- **`magic.md`:** step 2 says Name a lamp lands in 0.9; the Old ways stay later.
 - **`items/crafting-and-repair.md`:** hearth oil lights way-lamps; posts don't take oil.
-- **`plan.md`:** the 0.8 row (done in this lane).
+- **`plan.md`:** the 0.9 row.
 
 ---
 
@@ -499,23 +450,21 @@ No new resident, portrait or room. Mara's portrait exists. The naming slip reuse
 | Lane | What | Files | Size | Who |
 |---|---|---|---|---|
 | **L-A. Contract and content** (first) | 2.2, the protos in 2.3, migration 034 (schema only), contract 8, loaders both sides, vectors, the `frontier` package (pure functions and tests), the `keepers-hand` quest data and the `questTrigger` site-use check | `proto/**`, generated code, `content/{lamps,wilds,abilities,quests,story,items,crafting,papers,contract}.*`, `content/vectors/lamps.json`, `src/lib/{lamps,frontier}.ts`, `server/internal/frontier/**`, `server/internal/store/migrations/034_lamps.sql` | M | Opus |
-| **L-B. The frontier band, server** | 2.1: on-demand chunks, held epochs, seams, `held_mask` sites, lamp-stone sites, distance bands, the near read, the turning's move to the nearest lamp, stale-epoch cleanup that keeps held epochs, negative positions | `server/internal/wilds/gen_v2.go`, `server/internal/chunks/read.go`, `server/internal/store/chunks.go`, `server/internal/api/wilds.go`, `api/routes.go`, `store/composition.go`, tests | L | Opus (review: Codex Sol if it has quota, else Opus, adversarial) |
+| ~~L-B~~ | Provided by the open map (2.1) | | | |
 | **L-C. Lamps, server** | 2.3 operations: set, relight, tend, the `working` op for Name a lamp, the way-home uses, rests at lamps, presence `lamp`, `worldchange.ListChunk`, the Keeper's hand steps end to end | `server/internal/api/lamps.go` (new), `api/item_use.go`, `api/quest_rules.go`, `api/spend_op.go` (rest target), `server/internal/worldchange`, tests | M | Opus (review cross-family as L-B) |
 | **L-D. Game, UI and words** | 2.4, 2.6, 2.7, 2.8 | `src/game/wilds/**`, `src/game/scenes/world-turning.ts`, `src/game/entities/goal-guide.ts`, `src/content/**`, `src/ui/{LampNaming,LampsTab,JournalPanel,AbilitiesSection}.svelte`, docs | L | Opus |
 | **L-E. Art** | Section 3 | `assets/generated/lamps-pass/` | M | Codex Luna |
 
 - **Order:**
   1. L-A first. It is the contract everyone else builds on.
-  2. L-B and L-C next, in parallel. L-B lands the `store.Holds` reader and the near read's shape
-     early, and L-C builds on them.
-  3. L-D starts after L-A, against the generated types and the vectors, and merges after L-B
-     and L-C.
+  2. L-C next. It also adds `held_chunks` and the holds in `frontier.Inside` (2.1).
+  3. L-D starts after L-A, against the generated types and the vectors, and merges after L-C.
   4. L-E runs from the start. The room-free props don't block code, but nothing merges with
      stand-in art, so L-D's drawing merges when L-E lands.
 - **Splits, if a lane runs long:**
   - L-D can split at the panel boundary into game (2.4) and UI with words (2.6–2.8).
   - L-C's way-home items can move to their own S lane.
-- **Version 0.8.0**, contract 8. CHANGELOG under Unreleased.
+- **Version 0.9.0**, contract 9 (or the next free). CHANGELOG under Unreleased.
 - **After the release:** the review rounds (plan.md, "Stepping back between releases"), and the
   owner's playtest on `dev` with a focused list: the Keeper's hand, first relight, a set lamp,
   the frontier edge, a turning with `POST /api/dev/clock`, Name a lamp, the turncap and the pouch.
@@ -586,7 +535,7 @@ No new resident, portrait or room. Mara's portrait exists. The naming slip reuse
 
 ## 6. Later, on purpose
 
-- **Chapter 2, Dorrit's span** → **0.9** (Q10). It needs `project` and `world` gates, `wait`
+- **Chapter 2, Dorrit's span** → **after Lamps** (Q10). It needs `project` and `world` gates, `wait`
   `since`, projects that take glims (`debitGlims`), the span as a world change with no expiry,
   and the four-bedroll Echo past it. The plank site and Dorrit's paper already ship in the Tangle.
 - **The Old ways** (mage, level 30) → with the open map. They need pairs, travel between chunks,
@@ -602,15 +551,15 @@ No new resident, portrait or room. Mara's portrait exists. The naming slip reuse
 
   The band's tables (`held_chunks`, `way_lamps`) and the near read carry over.
 - **The other level-10 workings** (Heave, Mend, Read the drift) and the obstacle catalogue. They
-  need obstacles that the generator places. The `working` kind and operation from 0.8 are their
+  need obstacles that the generator places. The `working` kind and operation from 0.9 are their
   template.
 - **A healer's Mend on a cracked lamp**, and cracked lamps themselves.
 - **Lamps in caves**, and a lamp inside a cave joining the Old ways.
-- **Two-player naming:** a mage's naming standing in for someone else's oil. In 0.8 the mage
+- **Two-player naming:** a mage's naming standing in for someone else's oil. In 0.9 the mage
   lights it themselves.
 - **Sense the turning** (rogue, level 30), which would mark next wick's land on the Lamps grid.
 - **Hearth oil for homestead posts:** the item text promised it, but posts never took oil. Not
   added; the text is corrected instead.
 - **Making the off-hand `light`, `wisps-keep-off` and `compass` effects real** (the carter's
   lantern, the turncap jar). They are declared in content but not applied. A natural fit with
-  lamps, but not needed for 0.8.
+  lamps, but not needed for 0.9.
