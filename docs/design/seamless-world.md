@@ -13,6 +13,17 @@
 
 S/M/L here mean lane size, not a delivery promise: S roughly 1–3 focused engineering days, M roughly 4–8, L roughly 2–4 weeks, including focused validation and review. Art and owner playtests add elapsed time. A credible complete B/C implementation with seamless plots is roughly **10–20 engineer-weeks**, potentially more if the housing layout or story structure changes. A village/Commons/Wilds version with plots still behind gates is smaller, roughly **5–10 engineer-weeks**, but is an intermediate result, not the whole outdoor world. These are judgement estimates from reading code, not a measured implementation schedule.
 
+## Owner decisions (2026-10-11)
+
+- **Sol's recommended path, in this order:**
+  1. design the location seam beside server fights;
+  2. ship the fights prototype;
+  3. playtest the Commons/Tangle join;
+  4. the plot district (H1), keeping H3 possible;
+  5. after Lamps, trial a Wilds claim.
+- **Plots stay behind gates** through steps 1 and 2.
+- **The village may be rearranged.** The next design step is how a continuous village should be laid out ([continuous-village.md](continuous-village.md)).
+
 ## What exists today
 
 ### Two ways of drawing outdoors
