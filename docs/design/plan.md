@@ -165,8 +165,9 @@ Each release is a minor version with its own art round, written as one request.
 | **0.6.1 Glims** | Embers and the purse's gold become one currency, glims: earned from Habitica XP as embers were, and topped up from Habitica gold at two gold to a glim, at most 30 a UTC day. Design: [silas-yard.md](silas-yard.md) part 1 (owner, 2026-10-10) | MiMo for the server, Opus for the client, Codex for the glim art |
 | **0.7 Silas's Yard** | Silas's cottage becomes a walk-in shop: his talk gets short, a tabbed Yard panel (Build, Furnish, Materials, Mend) does the selling, and Pell the clerk keeps the deeds in a side room. Design: [silas-yard.md](silas-yard.md) part 2 (owner, 2026-10-10) | Opus (game and UI), MiMo (server), Codex (art) |
 | **0.8 The open map** | One open wilderness generated on the server: signed chunk coordinates from the Commons gate, lands from fields (woods and meadow; patch sizes from a distribution), the Wend with fords, the Lantern Road with dark lamp stones, places and routes, per-chunk epochs (the Tangle still, the Beyond turning every wick), seamless walking with no chunk doors, the frontier three chunks past the Tangle and the Whitequiet, tiers by distance, paths players clear and lay, and a Map tab; reasons to go out: Elara's rumour each wick, first finders named on the map, landmarks seen from afar, a glimpse past the drift, and named ways. The Tangle is made again once (clean break). Design: [open-map.md](open-map.md) (owner, 2026-10-10) | Opus (contract, generator, server, client), Codex Luna (art) |
-| **0.9 Lamps** | The Keeper's hand, way-lamps that hold land and push the frontier, the mage's Name a lamp, the homing turncap and lamp-ash pouch, on the open map. Design: [lamps.md](lamps.md), to re-plan after 0.8 | Opus (contract, server, game and UI), Codex Luna (art) |
-| **Then, as revisions** | Chapter 2 (Dorrit's span), lake country, the rest of lamps (the Old ways, the clay base), shared fights, caves and the next lands, in the order below | — |
+| **0.9 Shared fights** | The server runs every camp's enemies (wisps and beetles) in chunk rooms, shared by everyone in the 3×3; your hits judged by the server, favouring the attacker; curated fights stay on the client. One-camp prototype first. Design: [shared-fights.md](shared-fights.md) (owner, 2026-10-11) | Sol (contract, Go sim, claims), Opus (client), MiMo (measuring); no art round |
+| **0.10 Lamps** | The Keeper's hand, way-lamps that hold land and push the frontier, the mage's Name a lamp, the homing turncap and lamp-ash pouch, on the open map. Design: [lamps.md](lamps.md), to re-plan after 0.8 | Opus (contract, server, game and UI), Codex Luna (art) |
+| **Then, as revisions** | Chapter 2 (Dorrit's span), lake country, the rest of lamps (the Old ways, the clay base), caves and the next lands, in the order below | — |
 | **Standalone (later)** | Glimway without Habitica, with Habitica as one mode: guest accounts steps 3–6 ([guests.md](guests.md)), embers without Habitica, our own look, classes and companions | — |
 
 **Server-first (owner, 2026-10-07).** Before more features, move to a proper client/server
@@ -219,7 +220,7 @@ The later revisions keep their earlier order:
 | The open map | Per-chunk epochs on the server generator, regeneration at the turning. **Moved up to 0.8** ([open-map.md](open-map.md)); lakes and height bands stay with lake country and the Tops |
 | Lake country | Fields and water, reed and clay, crossings, pottery and Aldo's kiln, fishing in generated waters, level-10 workings on real obstacles |
 | Lamps | The Keeper's hand, way-lamps and the frontier, the mage's naming, the Old ways, chapter 2 (the broken span). **Moved up:** the first four parts go in 0.9, on the open map; chapter 2 comes after them; the Old ways stay here ([lamps.md](lamps.md)) |
-| Shared fights | The server enemy sim at camps, combat abilities in server rooms |
+| Shared fights | The server enemy sim at camps, combat abilities in server rooms. **Moved up to 0.9** ([shared-fights.md](shared-fights.md)) |
 | On from there | Caves, the next lands, capstones, home water |
 
 **Decided (owner, 2026-10-07): interleave.** The cleanup the features lean on comes first (done
@@ -243,6 +244,9 @@ profile source) land in 0.3 because they're cheap now and painful to retrofit.
   migrations, and the formatter and folders last.
 
 ## Shared fights: staying fast and fair
+
+Designed in full for 0.9 in [shared-fights.md](shared-fights.md) (10 Hz ticks with diff-only
+snapshots, 100–200 ms interpolation, a 250 ms rewind cap). The toolkit below still holds.
 
 Server authority is the standard answer: almost every online action game keeps one source of
 truth on the server and hides latency on the client. The usual toolkit, and what Glimway needs
