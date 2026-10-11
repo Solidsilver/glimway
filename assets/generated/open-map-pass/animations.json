@@ -1,0 +1,33 @@
+[
+  {
+    "key": "ford-h-ripple",
+    "frames": [
+      "ford-h-0",
+      "ford-h-1",
+      "ford-h-2"
+    ],
+    "frameRate": 1.5,
+    "repeat": -1
+  },
+  {
+    "key": "ford-v-ripple",
+    "frames": [
+      "ford-v-0",
+      "ford-v-1",
+      "ford-v-2"
+    ],
+    "frameRate": 1.5,
+    "repeat": -1
+  },
+  {
+    "key": "frontier-veil",
+    "frames": [
+      "frontier-veil-0",
+      "frontier-veil-1",
+      "frontier-veil-2",
+      "frontier-veil-3"
+    ],
+    "frameRate": 2,
+    "repeat": -1
+  }
+]

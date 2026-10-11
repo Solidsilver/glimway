@@ -1,0 +1,1178 @@
+{
+  "version": 1,
+  "density": 4,
+  "worldTileSize": 16,
+  "frameCount": 45,
+  "sources": [
+    {
+      "key": "meadow-props",
+      "file": "source/meadow-props-source.png",
+      "width": 1402,
+      "height": 1122,
+      "mode": "RGBA",
+      "sha256": "a0c50a12b888594c77ae031bea9bb6f17e4a93f365a5a3bfab92828f012bc5d2"
+    },
+    {
+      "key": "ground-tiles-generated",
+      "file": "source/ground-tiles-generated.png",
+      "width": 1287,
+      "height": 1222,
+      "mode": "RGBA",
+      "sha256": "249fa82003dc398647d69acf60cf4263c1c128e2045ef0dcc00b9532aee9f494"
+    },
+    {
+      "key": "fords-generated",
+      "file": "source/fords-generated.png",
+      "width": 2172,
+      "height": 724,
+      "mode": "RGBA",
+      "sha256": "5a2a38d8834ca96b8009d81917537aad20638abd973392ec272908079f316202"
+    },
+    {
+      "key": "frontier-veil-generated",
+      "file": "source/frontier-veil-generated.png",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "sha256": "3ebc1df4c21d5a79951fe5bc3ab51214af0f1bb439c749b8a72f3bd6be12c795"
+    },
+    {
+      "key": "landmarks-generated",
+      "file": "source/landmarks-generated.png",
+      "width": 1536,
+      "height": 1024,
+      "mode": "RGBA",
+      "sha256": "eaca4fa9ffeddc6fdf7517e5e1939a3b54d261b100485425df5e1c589e29d6f5"
+    },
+    {
+      "key": "icon-map-tab",
+      "file": "source/map-icon-source.png",
+      "width": 32,
+      "height": 32,
+      "mode": "RGBA",
+      "sha256": "ef85a16766c390fc1798c4017f438ad9b5f391c155e2195276752d7e01219c5b"
+    },
+    {
+      "key": "landmark-split-oak-generated",
+      "file": "source/landmark-split-oak-generated.png",
+      "width": 1024,
+      "height": 1536,
+      "mode": "RGBA",
+      "sha256": "a0d748edbf897de42c1935ef4584199a7979a13b2b80ecbd86c20fea09bb1b7e"
+    },
+    {
+      "key": "ford-water-round3-generated",
+      "file": "source/ford-water-round3-generated.png",
+      "width": 2172,
+      "height": 724,
+      "mode": "RGB",
+      "sha256": "3c7936b8ea74058946aaa01bc6135c8b46c5c4716e2b8b17c67a2bb5037f15cc"
+    },
+    {
+      "key": "standing-stone-round3-generated",
+      "file": "source/standing-stone-round3-generated.png",
+      "width": 1024,
+      "height": 1536,
+      "mode": "RGBA",
+      "sha256": "20608a5814c9822e428f6cdc2be67f578451057ddc34335851b2c8a7e978d9aa"
+    },
+    {
+      "key": "way-sign-round3-generated",
+      "file": "source/way-sign-round3-generated.png",
+      "width": 1024,
+      "height": 1536,
+      "mode": "RGBA",
+      "sha256": "4898551c1317f6122445f6d955d698939fa67bbf01c9bf7c571fee9eb99896c0"
+    }
+  ],
+  "frames": {
+    "meadow-grass-0": {
+      "file": "frames/meadow-grass-0.png",
+      "source": "meadow-props",
+      "sourceRect": {
+        "x": 12,
+        "y": 0,
+        "w": 271,
+        "h": 287
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "kind": "transparent-prop",
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "meadow-grass-1": {
+      "file": "frames/meadow-grass-1.png",
+      "source": "meadow-props",
+      "sourceRect": {
+        "x": 293,
+        "y": 0,
+        "w": 286,
+        "h": 287
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "kind": "transparent-prop",
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "meadow-grass-2": {
+      "file": "frames/meadow-grass-2.png",
+      "source": "meadow-props",
+      "sourceRect": {
+        "x": 580,
+        "y": 0,
+        "w": 294,
+        "h": 287
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "kind": "transparent-prop",
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "meadow-flowers-0": {
+      "file": "frames/meadow-flowers-0.png",
+      "source": "meadow-props",
+      "sourceRect": {
+        "x": 875,
+        "y": 0,
+        "w": 262,
+        "h": 287
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "kind": "transparent-prop",
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "meadow-flowers-1": {
+      "file": "frames/meadow-flowers-1.png",
+      "source": "meadow-props",
+      "sourceRect": {
+        "x": 1138,
+        "y": 0,
+        "w": 264,
+        "h": 287
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "kind": "transparent-prop",
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "meadow-flowers-2": {
+      "file": "frames/meadow-flowers-2.png",
+      "source": "meadow-props",
+      "sourceRect": {
+        "x": 875,
+        "y": 0,
+        "w": 262,
+        "h": 287
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "kind": "transparent-prop",
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "meadow-outcrop-0": {
+      "file": "frames/meadow-outcrop-0.png",
+      "source": "meadow-props",
+      "sourceRect": {
+        "x": 10,
+        "y": 294,
+        "w": 282,
+        "h": 320
+      },
+      "canvas": {
+        "w": 128,
+        "h": 160
+      },
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "kind": "transparent-prop",
+      "footPoint": {
+        "x": 64,
+        "y": 160
+      }
+    },
+    "meadow-outcrop-1": {
+      "file": "frames/meadow-outcrop-1.png",
+      "source": "meadow-props",
+      "sourceRect": {
+        "x": 298,
+        "y": 294,
+        "w": 316,
+        "h": 320
+      },
+      "canvas": {
+        "w": 128,
+        "h": 160
+      },
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "kind": "transparent-prop",
+      "footPoint": {
+        "x": 64,
+        "y": 160
+      }
+    },
+    "meadow-oak": {
+      "file": "frames/meadow-oak.png",
+      "source": "meadow-props",
+      "sourceRect": {
+        "x": 615,
+        "y": 269,
+        "w": 273,
+        "h": 345
+      },
+      "canvas": {
+        "w": 160,
+        "h": 256
+      },
+      "footprint": {
+        "w": 2,
+        "h": 1
+      },
+      "kind": "transparent-prop",
+      "footPoint": {
+        "x": 80,
+        "y": 256
+      }
+    },
+    "meadow-stone-0": {
+      "file": "frames/meadow-stone-0.png",
+      "source": "meadow-props",
+      "sourceRect": {
+        "x": 889,
+        "y": 360,
+        "w": 242,
+        "h": 254
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "kind": "transparent-prop",
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "meadow-stone-1": {
+      "file": "frames/meadow-stone-1.png",
+      "source": "meadow-props",
+      "sourceRect": {
+        "x": 1132,
+        "y": 360,
+        "w": 270,
+        "h": 254
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "kind": "transparent-prop",
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "bank-stones-0": {
+      "file": "frames/bank-stones-0.png",
+      "source": "meadow-props",
+      "sourceRect": {
+        "x": 8,
+        "y": 625,
+        "w": 311,
+        "h": 242
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "kind": "transparent-prop",
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "bank-stones-1": {
+      "file": "frames/bank-stones-1.png",
+      "source": "meadow-props",
+      "sourceRect": {
+        "x": 320,
+        "y": 625,
+        "w": 331,
+        "h": 242
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "kind": "transparent-prop",
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "bank-stones-2": {
+      "file": "frames/bank-stones-2.png",
+      "source": "meadow-props",
+      "sourceRect": {
+        "x": 652,
+        "y": 625,
+        "w": 355,
+        "h": 242
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "kind": "transparent-prop",
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "landmark-split-oak": {
+      "file": "frames/landmark-split-oak.png",
+      "source": "landmark-split-oak-generated",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 1024,
+        "h": 1536
+      },
+      "canvas": {
+        "w": 192,
+        "h": 320
+      },
+      "footprint": {
+        "w": 2,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 320
+      },
+      "kind": "transparent-prop"
+    },
+    "landmark-standing-stone": {
+      "file": "frames/landmark-standing-stone.png",
+      "source": "standing-stone-round3-generated",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 1024,
+        "h": 1536
+      },
+      "canvas": {
+        "w": 64,
+        "h": 224
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 224
+      },
+      "kind": "transparent-prop"
+    },
+    "rumour-find-closed": {
+      "file": "frames/rumour-find-closed.png",
+      "source": "landmarks-generated",
+      "sourceRect": {
+        "x": 1044,
+        "y": 20,
+        "w": 472,
+        "h": 472
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "kind": "transparent-prop"
+    },
+    "rumour-find-open": {
+      "file": "frames/rumour-find-open.png",
+      "source": "landmarks-generated",
+      "sourceRect": {
+        "x": 20,
+        "y": 532,
+        "w": 472,
+        "h": 472
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "kind": "transparent-prop"
+    },
+    "way-sign": {
+      "file": "frames/way-sign.png",
+      "source": "way-sign-round3-generated",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 1024,
+        "h": 1536
+      },
+      "canvas": {
+        "w": 64,
+        "h": 128
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "kind": "transparent-prop"
+    },
+    "lamp-stone-dark": {
+      "file": "frames/lamp-stone-dark.png",
+      "source": "landmarks-generated",
+      "sourceRect": {
+        "x": 1044,
+        "y": 532,
+        "w": 472,
+        "h": 472
+      },
+      "canvas": {
+        "w": 64,
+        "h": 128
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      },
+      "kind": "transparent-prop"
+    },
+    "path-stone-0": {
+      "file": "frames/path-stone-0.png",
+      "source": "ground-tiles-generated",
+      "sourceRect": {
+        "x": 6,
+        "y": 6,
+        "w": 310,
+        "h": 294
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "kind": "opaque-ground-tile",
+      "seamFamily": "path-stone"
+    },
+    "path-stone-1": {
+      "file": "frames/path-stone-1.png",
+      "source": "ground-tiles-generated",
+      "sourceRect": {
+        "x": 328,
+        "y": 6,
+        "w": 310,
+        "h": 294
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "kind": "opaque-ground-tile",
+      "seamFamily": "path-stone"
+    },
+    "path-stone-2": {
+      "file": "frames/path-stone-2.png",
+      "source": "ground-tiles-generated",
+      "sourceRect": {
+        "x": 650,
+        "y": 6,
+        "w": 309,
+        "h": 294
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "kind": "opaque-ground-tile",
+      "seamFamily": "path-stone"
+    },
+    "path-stone-3": {
+      "file": "frames/path-stone-3.png",
+      "source": "ground-tiles-generated",
+      "sourceRect": {
+        "x": 971,
+        "y": 6,
+        "w": 310,
+        "h": 294
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "kind": "opaque-ground-tile",
+      "seamFamily": "path-stone"
+    },
+    "path-plank-h-0": {
+      "file": "frames/path-plank-h-0.png",
+      "source": "ground-tiles-generated",
+      "sourceRect": {
+        "x": 6,
+        "y": 312,
+        "w": 310,
+        "h": 293
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "kind": "opaque-ground-tile",
+      "seamFamily": "path-plank-h"
+    },
+    "path-plank-h-1": {
+      "file": "frames/path-plank-h-1.png",
+      "source": "ground-tiles-generated",
+      "sourceRect": {
+        "x": 328,
+        "y": 312,
+        "w": 310,
+        "h": 293
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "kind": "opaque-ground-tile",
+      "seamFamily": "path-plank-h"
+    },
+    "path-plank-v-0": {
+      "file": "frames/path-plank-v-0.png",
+      "source": "ground-tiles-generated",
+      "sourceRect": {
+        "x": 650,
+        "y": 312,
+        "w": 309,
+        "h": 293
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "kind": "opaque-ground-tile",
+      "seamFamily": "path-plank-v"
+    },
+    "path-plank-v-1": {
+      "file": "frames/path-plank-v-1.png",
+      "source": "ground-tiles-generated",
+      "sourceRect": {
+        "x": 971,
+        "y": 312,
+        "w": 310,
+        "h": 293
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "kind": "opaque-ground-tile",
+      "seamFamily": "path-plank-v"
+    },
+    "road-paving-0": {
+      "file": "frames/road-paving-0.png",
+      "source": "ground-tiles-generated",
+      "sourceRect": {
+        "x": 6,
+        "y": 617,
+        "w": 310,
+        "h": 293
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "kind": "opaque-ground-tile",
+      "seamFamily": "road-paving"
+    },
+    "road-paving-1": {
+      "file": "frames/road-paving-1.png",
+      "source": "ground-tiles-generated",
+      "sourceRect": {
+        "x": 328,
+        "y": 617,
+        "w": 310,
+        "h": 293
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "kind": "opaque-ground-tile",
+      "seamFamily": "road-paving"
+    },
+    "road-paving-2": {
+      "file": "frames/road-paving-2.png",
+      "source": "ground-tiles-generated",
+      "sourceRect": {
+        "x": 650,
+        "y": 617,
+        "w": 309,
+        "h": 293
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "kind": "opaque-ground-tile",
+      "seamFamily": "road-paving"
+    },
+    "road-paving-3": {
+      "file": "frames/road-paving-3.png",
+      "source": "ground-tiles-generated",
+      "sourceRect": {
+        "x": 971,
+        "y": 617,
+        "w": 310,
+        "h": 293
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "kind": "opaque-ground-tile",
+      "seamFamily": "road-paving"
+    },
+    "road-verge-0": {
+      "file": "frames/road-verge-0.png",
+      "source": "ground-tiles-generated",
+      "sourceRect": {
+        "x": 6,
+        "y": 922,
+        "w": 310,
+        "h": 294
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "kind": "opaque-ground-tile",
+      "seamFamily": "road-verge"
+    },
+    "road-verge-1": {
+      "file": "frames/road-verge-1.png",
+      "source": "ground-tiles-generated",
+      "sourceRect": {
+        "x": 328,
+        "y": 922,
+        "w": 310,
+        "h": 294
+      },
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      },
+      "kind": "opaque-ground-tile",
+      "seamFamily": "road-verge"
+    },
+    "ford-h-0": {
+      "file": "frames/ford-h-0.png",
+      "source": "fords-generated",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 2172,
+        "h": 724
+      },
+      "canvas": {
+        "w": 192,
+        "h": 64
+      },
+      "footprint": {
+        "w": 3,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 64
+      },
+      "kind": "opaque-animated-ground",
+      "ripplePhase": 0
+    },
+    "ford-h-1": {
+      "file": "frames/ford-h-1.png",
+      "source": "fords-generated",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 2172,
+        "h": 724
+      },
+      "canvas": {
+        "w": 192,
+        "h": 64
+      },
+      "footprint": {
+        "w": 3,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 64
+      },
+      "kind": "opaque-animated-ground",
+      "ripplePhase": 1
+    },
+    "ford-h-2": {
+      "file": "frames/ford-h-2.png",
+      "source": "fords-generated",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 2172,
+        "h": 724
+      },
+      "canvas": {
+        "w": 192,
+        "h": 64
+      },
+      "footprint": {
+        "w": 3,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 64
+      },
+      "kind": "opaque-animated-ground",
+      "ripplePhase": 2
+    },
+    "ford-v-0": {
+      "file": "frames/ford-v-0.png",
+      "source": "fords-generated",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 2172,
+        "h": 724
+      },
+      "canvas": {
+        "w": 64,
+        "h": 192
+      },
+      "footprint": {
+        "w": 1,
+        "h": 3
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 192
+      },
+      "kind": "opaque-animated-ground",
+      "ripplePhase": 0
+    },
+    "ford-v-1": {
+      "file": "frames/ford-v-1.png",
+      "source": "fords-generated",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 2172,
+        "h": 724
+      },
+      "canvas": {
+        "w": 64,
+        "h": 192
+      },
+      "footprint": {
+        "w": 1,
+        "h": 3
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 192
+      },
+      "kind": "opaque-animated-ground",
+      "ripplePhase": 1
+    },
+    "ford-v-2": {
+      "file": "frames/ford-v-2.png",
+      "source": "fords-generated",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 2172,
+        "h": 724
+      },
+      "canvas": {
+        "w": 64,
+        "h": 192
+      },
+      "footprint": {
+        "w": 1,
+        "h": 3
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 192
+      },
+      "kind": "opaque-animated-ground",
+      "ripplePhase": 2
+    },
+    "frontier-veil-0": {
+      "file": "frames/frontier-veil-0.png",
+      "source": "frontier-veil-generated",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 768,
+        "h": 256
+      },
+      "canvas": {
+        "w": 192,
+        "h": 64
+      },
+      "footprint": {
+        "w": 3,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 64
+      },
+      "kind": "transparent-boundary-overlay"
+    },
+    "frontier-veil-1": {
+      "file": "frames/frontier-veil-1.png",
+      "source": "frontier-veil-generated",
+      "sourceRect": {
+        "x": 0,
+        "y": 256,
+        "w": 768,
+        "h": 256
+      },
+      "canvas": {
+        "w": 192,
+        "h": 64
+      },
+      "footprint": {
+        "w": 3,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 64
+      },
+      "kind": "transparent-boundary-overlay"
+    },
+    "frontier-veil-2": {
+      "file": "frames/frontier-veil-2.png",
+      "source": "frontier-veil-generated",
+      "sourceRect": {
+        "x": 0,
+        "y": 512,
+        "w": 768,
+        "h": 256
+      },
+      "canvas": {
+        "w": 192,
+        "h": 64
+      },
+      "footprint": {
+        "w": 3,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 64
+      },
+      "kind": "transparent-boundary-overlay"
+    },
+    "frontier-veil-3": {
+      "file": "frames/frontier-veil-3.png",
+      "source": "frontier-veil-generated",
+      "sourceRect": {
+        "x": 0,
+        "y": 768,
+        "w": 768,
+        "h": 256
+      },
+      "canvas": {
+        "w": 192,
+        "h": 64
+      },
+      "footprint": {
+        "w": 3,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 64
+      },
+      "kind": "transparent-boundary-overlay"
+    },
+    "icon-map-tab": {
+      "file": "frames/icon-map-tab.png",
+      "source": "icon-map-tab",
+      "sourceRect": {
+        "x": 0,
+        "y": 0,
+        "w": 32,
+        "h": 32
+      },
+      "canvas": {
+        "w": 32,
+        "h": 32
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 16,
+        "y": 32
+      },
+      "kind": "ui-icon"
+    }
+  },
+  "animations": [
+    {
+      "key": "ford-h-ripple",
+      "frames": [
+        "ford-h-0",
+        "ford-h-1",
+        "ford-h-2"
+      ],
+      "frameRate": 1.5,
+      "repeat": -1
+    },
+    {
+      "key": "ford-v-ripple",
+      "frames": [
+        "ford-v-0",
+        "ford-v-1",
+        "ford-v-2"
+      ],
+      "frameRate": 1.5,
+      "repeat": -1
+    },
+    {
+      "key": "frontier-veil",
+      "frames": [
+        "frontier-veil-0",
+        "frontier-veil-1",
+        "frontier-veil-2",
+        "frontier-veil-3"
+      ],
+      "frameRate": 2,
+      "repeat": -1
+    }
+  ]
+}

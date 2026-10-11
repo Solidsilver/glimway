@@ -1,0 +1,892 @@
+{
+  "frames": {
+    "meadow-grass-0": {
+      "source": "meadow-props",
+      "x": 12,
+      "y": 0,
+      "w": 271,
+      "h": 287,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "meadow-grass-1": {
+      "source": "meadow-props",
+      "x": 293,
+      "y": 0,
+      "w": 286,
+      "h": 287,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "meadow-grass-2": {
+      "source": "meadow-props",
+      "x": 580,
+      "y": 0,
+      "w": 294,
+      "h": 287,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "meadow-flowers-0": {
+      "source": "meadow-props",
+      "x": 875,
+      "y": 0,
+      "w": 262,
+      "h": 287,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "meadow-flowers-1": {
+      "source": "meadow-props",
+      "x": 1138,
+      "y": 0,
+      "w": 264,
+      "h": 287,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "meadow-flowers-2": {
+      "source": "meadow-props",
+      "x": 875,
+      "y": 0,
+      "w": 262,
+      "h": 287,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "meadow-outcrop-0": {
+      "source": "meadow-props",
+      "x": 10,
+      "y": 294,
+      "w": 282,
+      "h": 320,
+      "canvas": {
+        "w": 128,
+        "h": 160
+      },
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 160
+      }
+    },
+    "meadow-outcrop-1": {
+      "source": "meadow-props",
+      "x": 298,
+      "y": 294,
+      "w": 316,
+      "h": 320,
+      "canvas": {
+        "w": 128,
+        "h": 160
+      },
+      "footprint": {
+        "w": 2,
+        "h": 2
+      },
+      "footPoint": {
+        "x": 64,
+        "y": 160
+      }
+    },
+    "meadow-oak": {
+      "source": "meadow-props",
+      "x": 615,
+      "y": 269,
+      "w": 273,
+      "h": 345,
+      "canvas": {
+        "w": 160,
+        "h": 256
+      },
+      "footprint": {
+        "w": 2,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 80,
+        "y": 256
+      }
+    },
+    "meadow-stone-0": {
+      "source": "meadow-props",
+      "x": 889,
+      "y": 360,
+      "w": 242,
+      "h": 254,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "meadow-stone-1": {
+      "source": "meadow-props",
+      "x": 1132,
+      "y": 360,
+      "w": 270,
+      "h": 254,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "bank-stones-0": {
+      "source": "meadow-props",
+      "x": 8,
+      "y": 625,
+      "w": 311,
+      "h": 242,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "bank-stones-1": {
+      "source": "meadow-props",
+      "x": 320,
+      "y": 625,
+      "w": 331,
+      "h": 242,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "bank-stones-2": {
+      "source": "meadow-props",
+      "x": 652,
+      "y": 625,
+      "w": 355,
+      "h": 242,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "landmark-split-oak": {
+      "source": "landmark-split-oak-generated",
+      "x": 0,
+      "y": 0,
+      "w": 1024,
+      "h": 1536,
+      "canvas": {
+        "w": 192,
+        "h": 320
+      },
+      "footprint": {
+        "w": 2,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 320
+      }
+    },
+    "landmark-standing-stone": {
+      "source": "standing-stone-round3-generated",
+      "x": 0,
+      "y": 0,
+      "w": 1024,
+      "h": 1536,
+      "canvas": {
+        "w": 64,
+        "h": 224
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 224
+      }
+    },
+    "rumour-find-closed": {
+      "source": "landmarks-generated",
+      "x": 1044,
+      "y": 20,
+      "w": 472,
+      "h": 472,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "rumour-find-open": {
+      "source": "landmarks-generated",
+      "x": 20,
+      "y": 532,
+      "w": 472,
+      "h": 472,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "way-sign": {
+      "source": "way-sign-round3-generated",
+      "x": 0,
+      "y": 0,
+      "w": 1024,
+      "h": 1536,
+      "canvas": {
+        "w": 64,
+        "h": 128
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "lamp-stone-dark": {
+      "source": "landmarks-generated",
+      "x": 1044,
+      "y": 532,
+      "w": 472,
+      "h": 472,
+      "canvas": {
+        "w": 64,
+        "h": 128
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 128
+      }
+    },
+    "path-stone-0": {
+      "source": "ground-tiles-generated",
+      "x": 6,
+      "y": 6,
+      "w": 310,
+      "h": 294,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "path-stone-1": {
+      "source": "ground-tiles-generated",
+      "x": 328,
+      "y": 6,
+      "w": 310,
+      "h": 294,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "path-stone-2": {
+      "source": "ground-tiles-generated",
+      "x": 650,
+      "y": 6,
+      "w": 309,
+      "h": 294,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "path-stone-3": {
+      "source": "ground-tiles-generated",
+      "x": 971,
+      "y": 6,
+      "w": 310,
+      "h": 294,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "path-plank-h-0": {
+      "source": "ground-tiles-generated",
+      "x": 6,
+      "y": 312,
+      "w": 310,
+      "h": 293,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "path-plank-h-1": {
+      "source": "ground-tiles-generated",
+      "x": 328,
+      "y": 312,
+      "w": 310,
+      "h": 293,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "path-plank-v-0": {
+      "source": "ground-tiles-generated",
+      "x": 650,
+      "y": 312,
+      "w": 309,
+      "h": 293,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "path-plank-v-1": {
+      "source": "ground-tiles-generated",
+      "x": 971,
+      "y": 312,
+      "w": 310,
+      "h": 293,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "road-paving-0": {
+      "source": "ground-tiles-generated",
+      "x": 6,
+      "y": 617,
+      "w": 310,
+      "h": 293,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "road-paving-1": {
+      "source": "ground-tiles-generated",
+      "x": 328,
+      "y": 617,
+      "w": 310,
+      "h": 293,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "road-paving-2": {
+      "source": "ground-tiles-generated",
+      "x": 650,
+      "y": 617,
+      "w": 309,
+      "h": 293,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "road-paving-3": {
+      "source": "ground-tiles-generated",
+      "x": 971,
+      "y": 617,
+      "w": 310,
+      "h": 293,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "road-verge-0": {
+      "source": "ground-tiles-generated",
+      "x": 6,
+      "y": 922,
+      "w": 310,
+      "h": 294,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "road-verge-1": {
+      "source": "ground-tiles-generated",
+      "x": 328,
+      "y": 922,
+      "w": 310,
+      "h": 294,
+      "canvas": {
+        "w": 64,
+        "h": 64
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 64
+      }
+    },
+    "ford-h-0": {
+      "source": "fords-generated",
+      "x": 0,
+      "y": 0,
+      "w": 2172,
+      "h": 724,
+      "canvas": {
+        "w": 192,
+        "h": 64
+      },
+      "footprint": {
+        "w": 3,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 64
+      }
+    },
+    "ford-h-1": {
+      "source": "fords-generated",
+      "x": 0,
+      "y": 0,
+      "w": 2172,
+      "h": 724,
+      "canvas": {
+        "w": 192,
+        "h": 64
+      },
+      "footprint": {
+        "w": 3,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 64
+      }
+    },
+    "ford-h-2": {
+      "source": "fords-generated",
+      "x": 0,
+      "y": 0,
+      "w": 2172,
+      "h": 724,
+      "canvas": {
+        "w": 192,
+        "h": 64
+      },
+      "footprint": {
+        "w": 3,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 64
+      }
+    },
+    "ford-v-0": {
+      "source": "fords-generated",
+      "x": 0,
+      "y": 0,
+      "w": 2172,
+      "h": 724,
+      "canvas": {
+        "w": 64,
+        "h": 192
+      },
+      "footprint": {
+        "w": 1,
+        "h": 3
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 192
+      }
+    },
+    "ford-v-1": {
+      "source": "fords-generated",
+      "x": 0,
+      "y": 0,
+      "w": 2172,
+      "h": 724,
+      "canvas": {
+        "w": 64,
+        "h": 192
+      },
+      "footprint": {
+        "w": 1,
+        "h": 3
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 192
+      }
+    },
+    "ford-v-2": {
+      "source": "fords-generated",
+      "x": 0,
+      "y": 0,
+      "w": 2172,
+      "h": 724,
+      "canvas": {
+        "w": 64,
+        "h": 192
+      },
+      "footprint": {
+        "w": 1,
+        "h": 3
+      },
+      "footPoint": {
+        "x": 32,
+        "y": 192
+      }
+    },
+    "frontier-veil-0": {
+      "source": "frontier-veil-generated",
+      "x": 0,
+      "y": 0,
+      "w": 768,
+      "h": 256,
+      "canvas": {
+        "w": 192,
+        "h": 64
+      },
+      "footprint": {
+        "w": 3,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 64
+      }
+    },
+    "frontier-veil-1": {
+      "source": "frontier-veil-generated",
+      "x": 0,
+      "y": 256,
+      "w": 768,
+      "h": 256,
+      "canvas": {
+        "w": 192,
+        "h": 64
+      },
+      "footprint": {
+        "w": 3,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 64
+      }
+    },
+    "frontier-veil-2": {
+      "source": "frontier-veil-generated",
+      "x": 0,
+      "y": 512,
+      "w": 768,
+      "h": 256,
+      "canvas": {
+        "w": 192,
+        "h": 64
+      },
+      "footprint": {
+        "w": 3,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 64
+      }
+    },
+    "frontier-veil-3": {
+      "source": "frontier-veil-generated",
+      "x": 0,
+      "y": 768,
+      "w": 768,
+      "h": 256,
+      "canvas": {
+        "w": 192,
+        "h": 64
+      },
+      "footprint": {
+        "w": 3,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 96,
+        "y": 64
+      }
+    },
+    "icon-map-tab": {
+      "source": "icon-map-tab",
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32,
+      "canvas": {
+        "w": 32,
+        "h": 32
+      },
+      "footprint": {
+        "w": 1,
+        "h": 1
+      },
+      "footPoint": {
+        "x": 16,
+        "y": 32
+      }
+    }
+  },
+  "animations": [
+    {
+      "key": "ford-h-ripple",
+      "frames": [
+        "ford-h-0",
+        "ford-h-1",
+        "ford-h-2"
+      ],
+      "frameRate": 1.5,
+      "repeat": -1
+    },
+    {
+      "key": "ford-v-ripple",
+      "frames": [
+        "ford-v-0",
+        "ford-v-1",
+        "ford-v-2"
+      ],
+      "frameRate": 1.5,
+      "repeat": -1
+    },
+    {
+      "key": "frontier-veil",
+      "frames": [
+        "frontier-veil-0",
+        "frontier-veil-1",
+        "frontier-veil-2",
+        "frontier-veil-3"
+      ],
+      "frameRate": 2,
+      "repeat": -1
+    }
+  ]
+}
