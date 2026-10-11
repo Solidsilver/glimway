@@ -1,6 +1,6 @@
 /**
  * The world's controls: movement keys, the action keys (E/Space, F to cast,
- * R for the level-20 move, M to ride, Shift to roll) and their touch buttons on the bus, the belt
+ * R for the level-20 move, V to ride, Shift to roll) and their touch buttons on the bus, the belt
  * (number keys and the wheel pick what's in hand), and the mouse on the
  * world. Each acts only while the hero has control (`live`).
  */
@@ -8,6 +8,7 @@ import Phaser from 'phaser'
 import { SWING, kindForKey, noSwingThought, stepKind } from '../../lib/belt'
 import { itemDef } from '../../lib/items'
 import { ui } from '../../ui/store.svelte'
+import { RIDE_KEY } from '../../content/controls'
 import { bus, EV } from '../events'
 import { held, heldNow, setHeld, trackBelt, type HeldPayload } from '../held'
 import { touchVec } from '../input'
@@ -66,23 +67,30 @@ export class WorldControls {
     private deps: WorldControlsDeps
   ) {
     const kb = scene.input.keyboard!
-    kb.addCapture('SPACE,UP,DOWN,LEFT,RIGHT,W,A,S,D,E,F,R,M,SHIFT')
+    // M isn't the world's: it opens the map (App). Riding is V (src/content/controls.ts RIDE_KEY).
+    kb.addCapture(`SPACE,UP,DOWN,LEFT,RIGHT,W,A,S,D,E,F,R,${RIDE_KEY},SHIFT`)
     this.cursors = kb.createCursorKeys()
     this.wasd = kb.addKeys('W,A,S,D') as Record<string, Phaser.Input.Keyboard.Key>
-    this.keys = kb.addKeys('E,SPACE,F,R,M,SHIFT') as Record<string, Phaser.Input.Keyboard.Key>
+    this.keys = kb.addKeys(`E,SPACE,F,R,${RIDE_KEY},SHIFT`) as Record<string, Phaser.Input.Keyboard.Key>
     // Event-driven, not polled: Key.onUp clears _justDown, so polling
     // JustDown once per frame silently drops taps shorter than a frame
     // (common on slower devices). DOWN fires once per press, never on repeat.
     const onAction = () => this.whenLive(() => deps.act())
     const onCast = () => this.whenLive(() => deps.hero().handleCast())
     const onMove = () => this.whenLive(() => deps.hero().handleMove())
-    const onRide = () => this.whenLive(() => void deps.avatar().toggleRide())
+    // A held key's repeats and chords never ride (Phaser's DOWN fires once per press; a chord is someone else's shortcut).
+    const onRide = (_key: Phaser.Input.Keyboard.Key, e?: KeyboardEvent) => {
+      if (e && (e.repeat || e.ctrlKey || e.metaKey || e.altKey)) return
+      const t = e?.target as HTMLElement | null | undefined
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+      this.whenLive(() => void deps.avatar().toggleRide())
+    }
     const onDodge = () => this.whenLive(() => deps.hero().tryDodge(this.vector()))
     this.keys.E.on('down', onAction)
     this.keys.SPACE.on('down', onAction)
     this.keys.F.on('down', onCast)
     this.keys.R.on('down', onMove)
-    this.keys.M.on('down', onRide)
+    this.keys[RIDE_KEY].on('down', onRide)
     this.keys.SHIFT.on('down', onDodge)
     // What's in hand (src/game/held.ts): number keys and the wheel pick from
     // the belt; the mouse uses it where you point.

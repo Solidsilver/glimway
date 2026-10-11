@@ -40,6 +40,7 @@ import { PEOPLE_KEY, facingOf, heldFrame, heldOrigin, peopleDensity, type Facing
 import { PetFollower } from './pet-follower'
 import { LedMount } from './led-mount'
 import { followerKey, rideRefusal } from '../../lib/companions'
+import { RIDE_KEY } from '../../content/controls'
 import { hideContextButton, showContextButton } from '../context-buttons'
 import { homesteadsFor } from '../homestead'
 import { HOMESTEAD_DATA } from '../../lib/homestead'
@@ -165,7 +166,7 @@ export class AvatarVisual {
       if (JSON.stringify(this.deps.session.link?.wardrobe ?? {}) !== this.wardrobeShown) void this.build()
     }
     bus.on(EV.wardrobe, onWardrobe)
-    // H sends the mount home while you're off it (crafts.md 8); M is the scene's (./world-controls.ts).
+    // H sends the mount home while you're off it (crafts.md 8); V (riding) is the scene's (./world-controls.ts).
     const onKey = (e: KeyboardEvent) => {
       if (e.code !== 'KeyH' || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return
       const t = e.target as HTMLElement | null
@@ -291,7 +292,7 @@ export class AvatarVisual {
   }
 
   /**
-   * M (crafts.md 3.1): ridden ↔ on the lead, for the mount that's out of the
+   * V (crafts.md 3.1, RIDE_KEY): ridden ↔ on the lead, for the mount that's out of the
    * stable. With none out, it says where riding starts now. Riding needs
    * both mount layers to load: an uncached mount never becomes an invisible
    * speed boost (it stays on the lead).
@@ -321,7 +322,7 @@ export class AvatarVisual {
     await this.mountUp(mountKey)
   }
 
-  /** Into the saddle on `mountKey` (Saddle up at the stall, or M on the lead). */
+  /** Into the saddle on `mountKey` (Saddle up at the stall, or V on the lead). */
   async mountUp(mountKey: string): Promise<boolean> {
     const mountKeys = await loadCompanion(this.scene, mountKey, 'mount')
     if (!mountKeys || mountKeys.length < 2) {
@@ -385,7 +386,7 @@ export class AvatarVisual {
       label: this.riding ? 'Get down' : 'Ride',
       art: 'hud-saddle',
       icon: 'star',
-      key: 'M',
+      key: RIDE_KEY,
       order: 1,
       ariaLabel: this.riding ? 'Get down from your mount' : 'Ride your mount',
       press: () => void this.toggleRide()

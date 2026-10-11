@@ -11,7 +11,7 @@ import { rumourSentence } from '../src/lib/wilds/rumour.ts'
  * Elara tells this wick's rumour in the library; walking to it, the place is
  * found (first this wick: a small find, and your name on it); the bundle
  * under its landmark opens once; and someone else in the world sees who
- * found it, on the Map tab and when they get there.
+ * found it, on the world map and when they get there.
  * SCREENS=1 saves images to .agent/screens/.
  */
 
@@ -98,10 +98,12 @@ test('Elara tells the rumour; the place is found first and the bundle opens once
     await freshPlayer(other, 'Wren', invite.code)
     await warp(other, 'wilds', 12, -12)
     await waitForWilds(other)
-    await other.keyboard.press('j')
-    await other.getByRole('tab', { name: /Map/ }).click()
+    // The world map (M), its Details open for the list of places.
+    await other.keyboard.press('m')
+    await expect(other.getByTestId('world-map')).toBeVisible()
+    await other.getByTestId('map-details-toggle').click()
     await expect(other.getByTestId('map-places')).toContainText('Found by Tansy', { timeout: 20_000 })
-    await shot(other, '99-map-found-by-desktop')
+    await shot(other, '99-world-map-found-by-desktop')
     await other.keyboard.press('Escape')
     await warp(other, 'wilds', bx, by + 1)
     await waitForWilds(other)

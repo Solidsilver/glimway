@@ -78,7 +78,7 @@ test('labels that would overlap at the size shown are left off, the most useful 
     { kind: 'way' as const, text: "Tansy's way", x: 120, y: 50 },
   ];
   assert.deepEqual(fitLabels(labels, 1).map((l) => l.kind).sort(), ['way', 'you']);
-  assert.deepEqual(fitLabels(labels, 6).map((l) => l.kind).sort(), ['gate', 'place', 'way', 'you'], 'zoomed in, all of them fit');
+  assert.deepEqual(fitLabels(labels, 7).map((l) => l.kind).sort(), ['gate', 'place', 'way', 'you'], 'zoomed in, all of them fit');
 });
 
 test('ways, places, the footprints, the gate and you are marked and labelled', () => {

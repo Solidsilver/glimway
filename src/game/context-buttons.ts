@@ -20,7 +20,7 @@ export interface ContextButton {
   icon?: string
   /** A delivered UI icon by frame key (src/ui/ArtIcon.svelte), e.g. 'hud-saddle'. */
   art?: string
-  /** The keyboard key shown on desktop ('M', 'H'). The key itself is the owning lane's to handle. */
+  /** The keyboard key shown on desktop ('V', 'H'). The key itself is the owning lane's to handle. */
   key?: string
   /** 'big' for a moment that owns the corner (Keep / Let it go); 'small' is the default. */
   size?: 'small' | 'big'

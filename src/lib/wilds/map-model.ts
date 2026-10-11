@@ -1,15 +1,17 @@
 /**
- * The Map tab's picture (docs/design/open-map.md 2.8): a plain drawn grid
- * from chunk data, one pixel a tile. Each walked chunk is drawn in its
- * ground's colours (the road and the Wend are ground too), trees and stone
- * darker, laid paths pale on top; the rest of the frontier is blank
- * parchment, the land past the drift a pale wash of what the glimpse says
- * lies there, and the frontier's edge a dashed line. Named ways, places
- * (with their finders), landmarks you've seen, the footprints' names, the
- * Commons gate and you are marks and labels over it.
+ * The world map's picture (docs/design/world-map.md 4, open-map.md 2.8): a
+ * plain drawn grid from chunk data, one pixel a tile. Each walked chunk is
+ * drawn in its ground's colours (the road and the Wend are ground too),
+ * trees and stone darker, laid paths pale on top; the rest of the frontier
+ * is blank parchment, the land past the drift a pale wash of what the
+ * glimpse says lies there, and the frontier's edge a dashed line. Named
+ * ways, places (with their finders), landmarks you've seen, the footprints'
+ * names, the Commons gate and you are marks and labels over it.
  *
- * Pure: the scene's data in, an RGBA picture and a label list out. No DOM,
- * no Phaser, no network (src/ui/MapTab.svelte draws it).
+ * Pure: the scene's data in, the pieces out (a chunk's raster, its summary,
+ * the marks and labels) and, for small maps and tests, the whole picture.
+ * No DOM, no Phaser, no network: src/ui/map-renderer.ts draws what's in
+ * view from these pieces, and src/ui/WorldMap.svelte holds the view.
  */
 import { TERRAIN } from '../tile.ts';
 import { loadWilds } from './data.ts';
@@ -20,6 +22,11 @@ export interface MapChunk {
   /** TERRAIN ids, [ly][lx], with the player-made changes applied. */
   ground: readonly (readonly number[])[];
   solid: readonly (readonly boolean[])[];
+  /**
+   * Changes when the chunk's picture can: its epoch and its ground changes
+   * (src/game/wilds/map-data.ts). The renderer caches rasters by it.
+   */
+  rev?: string;
 }
 
 export interface MapPlace {
@@ -60,7 +67,7 @@ export type MapLabelKind = 'footprint' | 'place' | 'way' | 'you' | 'gate';
 export interface MapLabel {
   kind: MapLabelKind;
   text: string;
-  /** Picture pixels (one a tile). */
+  /** World tiles (mapMarks), or picture pixels (mapPicture, one a tile). */
   x: number;
   y: number;
   /** A second line (a place's finder). */
@@ -116,6 +123,7 @@ const TERRAIN_COLOUR = new Map<number, RGB>(
 );
 const LAID = new Set(['laid-stone', 'laid-plank'].map((id) => (TERRAIN as Record<string, number>)[loadWilds().grounds.find((g) => g.id === id)!.terrain]!));
 
+const UNKNOWN = hex('#888888');
 const darker = (c: RGB, k: number): RGB => [Math.round(c[0] * k), Math.round(c[1] * k), Math.round(c[2] * k)];
 
 type Rect = { minCx: number; minCy: number; maxCx: number; maxCy: number };
@@ -176,18 +184,169 @@ export function mapFrame(input: MapInput): Rect {
   return { minCx, minCy, maxCx, maxCy };
 }
 
-/** Rough label size in CSS px at the map's 10 px type, for keeping labels apart. */
-function labelBox(l: MapLabel): { w: number; h: number } {
-  const chars = Math.max(l.text.length, l.sub ? l.sub.length + 9 : 0);
-  return { w: chars * 5.6 + 8, h: l.sub ? 26 : 14 };
+
+/** The frame in world tiles (inclusive), for the view (src/lib/wilds/map-view.ts). */
+export function frameTiles(r: Rect): { minTx: number; minTy: number; maxTx: number; maxTy: number } {
+  const S = loadWilds().chunkSize;
+  return { minTx: r.minCx * S, minTy: r.minCy * S, maxTx: (r.maxCx + 1) * S - 1, maxTy: (r.maxCy + 1) * S - 1 };
+}
+
+// ------------------------------------------------------------ painting
+
+/**
+ * One walked chunk at a tile a pixel (chunkSize² RGBA): its ground's
+ * colours, trees and stone darker, laid paths pale. The world map caches
+ * these by chunk and revision (src/ui/map-renderer.ts).
+ */
+export function chunkRaster(c: MapChunk): Uint8ClampedArray {
+  const S = loadWilds().chunkSize;
+  const rgba = new Uint8ClampedArray(S * S * 4);
+  for (let ly = 0; ly < S; ly++)
+    for (let lx = 0; lx < S; lx++) {
+      const t = c.ground[ly]?.[lx];
+      if (t === undefined) continue;
+      const base = TERRAIN_COLOUR.get(t) ?? UNKNOWN;
+      const col = c.solid[ly]?.[lx] && !LAID.has(t) ? darker(base, 0.66) : base;
+      const i = (ly * S + lx) * 4;
+      rgba[i] = col[0];
+      rgba[i + 1] = col[1];
+      rgba[i + 2] = col[2];
+      rgba[i + 3] = 255;
+    }
+  return rgba;
+}
+
+/**
+ * A square raster shrunk by averaging `block`-sided blocks of opaque pixels
+ * (a summary for zoomed-out views). Blank pixels stay blank: a summary never
+ * shows more than the walked land it came from.
+ */
+export function shrinkRaster(rgba: Uint8ClampedArray, size: number, block: number): Uint8ClampedArray {
+  const n = Math.ceil(size / block);
+  const out = new Uint8ClampedArray(n * n * 4);
+  for (let by = 0; by < n; by++)
+    for (let bx = 0; bx < n; bx++) {
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let k = 0;
+      for (let y = by * block; y < Math.min(size, (by + 1) * block); y++)
+        for (let x = bx * block; x < Math.min(size, (bx + 1) * block); x++) {
+          const i = (y * size + x) * 4;
+          if (!rgba[i + 3]) continue;
+          r += rgba[i]!;
+          g += rgba[i + 1]!;
+          b += rgba[i + 2]!;
+          k++;
+        }
+      if (!k) continue;
+      const o = (by * n + bx) * 4;
+      out[o] = Math.round(r / k);
+      out[o + 1] = Math.round(g / k);
+      out[o + 2] = Math.round(b / k);
+      out[o + 3] = 255;
+    }
+  return out;
+}
+
+/** The pale wash past the drift, for one glimpsed chunk: hatched where the Wend runs on. */
+export function glimpseRaster(land: string, river: boolean, cx: number, cy: number): Uint8ClampedArray {
+  const S = loadWilds().chunkSize;
+  const wash = hex(LAND_WASH[land] ?? LAND_WASH.woods!);
+  const rgba = new Uint8ClampedArray(S * S * 4);
+  for (let ly = 0; ly < S; ly++)
+    for (let lx = 0; lx < S; lx++) {
+      // Hatching runs on across chunks: it follows the world tile, not the chunk.
+      const c = river && (cx * S + lx + cy * S + ly) % 5 === 0 ? MAP_COLOURS.river : wash;
+      const i = (ly * S + lx) * 4;
+      rgba[i] = c[0];
+      rgba[i + 1] = c[1];
+      rgba[i + 2] = c[2];
+      rgba[i + 3] = GLIMPSE_ALPHA;
+    }
+  return rgba;
+}
+
+/** How see-through the glimpse's wash is (of 255). */
+export const GLIMPSE_ALPHA = 150;
+
+/** The wash colour for a glimpsed land (the overview's flat fill). */
+export function glimpseColour(land: string): RGB {
+  return hex(LAND_WASH[land] ?? LAND_WASH.woods!);
+}
+
+// ------------------------------------------------------------ marks and labels
+
+export interface MapMarks {
+  /** The named ways' tiles. */
+  wayTiles: { x: number; y: number }[];
+  /** A place's mark: found (the finder's colour) or only seen. */
+  places: { tx: number; ty: number; found: boolean }[];
+  /** Ways, places, the footprints and the gate (not you), at world tiles. */
+  labels: MapLabel[];
+}
+
+/** What sits on the land, apart from you: drawn over the terrain, never baked into it. */
+export function mapMarks(input: MapInput): MapMarks {
+  const w = loadWilds();
+  const S = w.chunkSize;
+  const labels: MapLabel[] = [];
+  const wayTiles: { x: number; y: number }[] = [];
+  // Named ways along their own tiles.
+  for (const way of input.ways) {
+    for (const t of way.path) wayTiles.push({ x: t.x, y: t.y });
+    const mid = way.path[Math.floor(way.path.length / 2)];
+    if (mid) labels.push({ kind: 'way', text: way.name, x: mid.x, y: mid.y });
+  }
+  // Places: a mark for what you've seen or someone found, and the finder's name.
+  const places: MapMarks['places'] = [];
+  for (const p of input.places) {
+    if (!p.seen && !p.foundBy) continue;
+    places.push({ tx: p.tx, ty: p.ty, found: !!p.foundBy });
+    const kind = w.placeKinds.find((k) => k.id === p.kind);
+    const name = kind ? kind.name.charAt(0).toUpperCase() + kind.name.slice(1) : 'A place';
+    labels.push({ kind: 'place', text: name, x: p.tx, y: p.ty, ...(p.foundBy ? { sub: p.foundBy } : {}) });
+  }
+  // The footprints by name, and the Commons gate.
+  for (const fp of w.places) labels.push({ kind: 'footprint', text: fp.name.charAt(0).toUpperCase() + fp.name.slice(1), x: (fp.cx + fp.width / 2) * S, y: (fp.cy + fp.height / 2) * S });
+  const gate = gateTile();
+  if (gate) labels.push({ kind: 'gate', text: input.words.gate, x: gate.tx, y: gate.ty });
+  return { wayTiles, places, labels };
+}
+
+/** The Commons gate's tile on the open map (where the map opens when you're not out there). */
+export function gateTile(): { tx: number; ty: number } | null {
+  const w = loadWilds();
+  const S = w.chunkSize;
+  const gate = w.places.find((p) => p.id === 'tangle')?.openings.find((o) => o.id === 'commons-gate');
+  return gate ? { tx: gate.cx * S + gate.offset + 1, ty: gate.cy * S + S - 1 } : null;
+}
+
+/**
+ * The labels' type, as src/ui/WorldMap.svelte sets it (CSS px): a name line
+ * and a smaller finder line, each at its line height, with a little padding.
+ * Collisions are judged on these boxes.
+ */
+export const LABEL_TYPE = { size: 11, sub: 10, lineHeight: 1.15, charEm: 0.56, padX: 4, padY: 1 } as const;
+
+/** A label's box in CSS px. */
+export function labelBox(l: Pick<MapLabel, 'text' | 'sub'>): { w: number; h: number } {
+  const T = LABEL_TYPE;
+  const main = l.text.length * T.size * T.charEm;
+  // The finder's line reads "Found by <name>".
+  const sub = l.sub ? (l.sub.length + 9) * T.sub * T.charEm : 0;
+  const h = Math.ceil(T.size * T.lineHeight) + (l.sub ? Math.ceil(T.sub * T.lineHeight) : 0) + 2 * T.padY;
+  return { w: Math.max(main, sub) + 2 * T.padX, h };
 }
 
 const LABEL_RANK: Record<MapLabelKind, number> = { you: 0, way: 1, place: 2, footprint: 3, gate: 4 };
 
 /**
- * The labels that fit at `scale` CSS px a map pixel: most important first
- * (you, ways, places, the footprints, the gate), and a label that would
- * overlap one already placed is left off (its mark stays on the map).
+ * The labels that fit at `scale` CSS px a unit of their x and y: most
+ * important first (you, ways, places, the footprints, the gate), and a label
+ * that would overlap one already placed is left off (its mark stays on the
+ * map). Cull to the viewport first, so a label off screen never pushes a
+ * visible one out.
  */
 export function fitLabels(labels: readonly MapLabel[], scale: number): MapLabel[] {
   const placed: { l: MapLabel; x0: number; y0: number; x1: number; y1: number }[] = [];
@@ -200,7 +359,7 @@ export function fitLabels(labels: readonly MapLabel[], scale: number): MapLabel[
       l.kind === 'footprint'
         ? { x0: cx - w / 2, y0: cy - h / 2, x1: cx + w / 2, y1: cy + h / 2 }
         : l.kind === 'you'
-          ? { x0: cx - w / 2, y0: cy + 4, x1: cx + w / 2, y1: cy + 4 + h }
+          ? { x0: cx - w / 2, y0: cy + 8, x1: cx + w / 2, y1: cy + 8 + h }
           : { x0: cx - w / 2, y0: cy - h - 2, x1: cx + w / 2, y1: cy - 2 };
     if (placed.some((p) => box.x0 < p.x1 && box.x1 > p.x0 && box.y0 < p.y1 && box.y1 > p.y0)) continue;
     placed.push({ l, ...box });
@@ -208,10 +367,16 @@ export function fitLabels(labels: readonly MapLabel[], scale: number): MapLabel[
   return labels.filter((l) => placed.some((p) => p.l === l));
 }
 
-/** Draw the map (see the file comment). */
+// ------------------------------------------------------------ the whole picture
+
+/**
+ * The whole frame as one picture, one pixel a tile (see the file comment).
+ * The world map doesn't draw this (src/ui/map-renderer.ts draws only what's
+ * in view); it's the reference the renderer's pieces are tested against, and
+ * fine for a small map.
+ */
 export function mapPicture(input: MapInput): MapPicture {
-  const w = loadWilds();
-  const S = w.chunkSize;
+  const S = loadWilds().chunkSize;
   const b = mapFrame(input);
   const originTx = b.minCx * S;
   const originTy = b.minCy * S;
@@ -226,6 +391,13 @@ export function mapPicture(input: MapInput): MapPicture {
     rgba[i + 2] = c[2];
     rgba[i + 3] = a;
   };
+  const blit = (src: Uint8ClampedArray, cx: number, cy: number) => {
+    for (let ly = 0; ly < S; ly++)
+      for (let lx = 0; lx < S; lx++) {
+        const i = (ly * S + lx) * 4;
+        if (src[i + 3]) put((cx - b.minCx) * S + lx, (cy - b.minCy) * S + ly, [src[i]!, src[i + 1]!, src[i + 2]!], src[i + 3]);
+      }
+  };
   const f = input.frontier;
   const inside = (cx: number, cy: number) => cx >= f.minCx && cx <= f.maxCx && cy >= f.minCy && cy <= f.maxCy;
   // Parchment for the frontier's unwalked land, a faint grid at chunk edges.
@@ -234,27 +406,9 @@ export function mapPicture(input: MapInput): MapPicture {
       for (let ly = 0; ly < S; ly++)
         for (let lx = 0; lx < S; lx++) put((cx - b.minCx) * S + lx, (cy - b.minCy) * S + ly, lx === 0 || ly === 0 ? MAP_COLOURS.grid : MAP_COLOURS.parchment);
   // Past the drift: a pale wash of the land the glimpse names, hatched where the Wend runs on.
-  for (const g of input.glimpse) {
-    if (inside(g.cx, g.cy)) continue;
-    const wash = hex(LAND_WASH[g.land] ?? LAND_WASH.woods!);
-    for (let ly = 0; ly < S; ly++)
-      for (let lx = 0; lx < S; lx++) {
-        const x = (g.cx - b.minCx) * S + lx;
-        const y = (g.cy - b.minCy) * S + ly;
-        put(x, y, g.river && (x + y) % 5 === 0 ? MAP_COLOURS.river : wash, 150);
-      }
-  }
+  for (const g of input.glimpse) if (!inside(g.cx, g.cy)) blit(glimpseRaster(g.land, g.river, g.cx, g.cy), g.cx, g.cy);
   // Walked land, in its own colours.
-  for (const c of input.chunks) {
-    if (!inside(c.cx, c.cy)) continue;
-    for (let ly = 0; ly < S; ly++)
-      for (let lx = 0; lx < S; lx++) {
-        const t = c.ground[ly]?.[lx];
-        if (t === undefined) continue;
-        const base = TERRAIN_COLOUR.get(t) ?? hex('#888888');
-        put((c.cx - b.minCx) * S + lx, (c.cy - b.minCy) * S + ly, c.solid[ly]?.[lx] && !LAID.has(t) ? darker(base, 0.66) : base);
-      }
-  }
+  for (const c of input.chunks) if (inside(c.cx, c.cy)) blit(chunkRaster(c), c.cx, c.cy);
   // The frontier's edge: a dashed line in the drift's colour.
   const x0 = (f.minCx - b.minCx) * S;
   const y0 = (f.minCy - b.minCy) * S;
@@ -271,36 +425,21 @@ export function mapPicture(input: MapInput): MapPicture {
       put(x1, y, MAP_COLOURS.drift);
     }
 
-  const labels: MapLabel[] = [];
-  const px = (tx: number, ty: number) => ({ x: tx - originTx, y: ty - originTy });
-  // Named ways along their own tiles.
-  for (const way of input.ways) {
-    for (const t of way.path) {
-      const p = px(t.x, t.y);
-      put(p.x, p.y, MAP_COLOURS.way);
-    }
-    const mid = way.path[Math.floor(way.path.length / 2)];
-    if (mid) labels.push({ kind: 'way', text: way.name, ...px(mid.x, mid.y) });
+  const marks = mapMarks(input);
+  for (const t of marks.wayTiles) put(t.x - originTx, t.y - originTy, MAP_COLOURS.way);
+  for (const p of marks.places) {
+    const c = p.found ? MAP_COLOURS.found : MAP_COLOURS.landmark;
+    for (const [dx, dy] of PLACE_MARK) put(p.tx - originTx + dx, p.ty - originTy + dy, c);
   }
-  // Places: a mark for what you've seen or someone found, and the finder's name.
-  for (const p of input.places) {
-    if (!p.seen && !p.foundBy) continue;
-    const at = px(p.tx, p.ty);
-    const c = p.foundBy ? MAP_COLOURS.found : MAP_COLOURS.landmark;
-    for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]] as const) put(at.x + dx, at.y + dy, c);
-    const kind = w.placeKinds.find((k) => k.id === p.kind);
-    const name = kind ? kind.name.charAt(0).toUpperCase() + kind.name.slice(1) : 'A place';
-    labels.push({ kind: 'place', text: name, ...at, ...(p.foundBy ? { sub: p.foundBy } : {}) });
-  }
-  // The footprints by name, and the Commons gate.
-  for (const fp of w.places) labels.push({ kind: 'footprint', text: fp.name.charAt(0).toUpperCase() + fp.name.slice(1), ...px((fp.cx + fp.width / 2) * S, (fp.cy + fp.height / 2) * S) });
-  const gate = w.places.find((p) => p.id === 'tangle')?.openings.find((o) => o.id === 'commons-gate');
-  if (gate) labels.push({ kind: 'gate', text: input.words.gate, ...px(gate.cx * S + gate.offset + 1, gate.cy * S + S - 1) });
-  // You.
+  const labels = marks.labels.map((l) => ({ ...l, x: l.x - originTx, y: l.y - originTy }));
+  // You (the world map draws you on your own layer instead).
   if (input.hero) {
-    const at = px(input.hero.tx, input.hero.ty);
+    const at = { x: input.hero.tx - originTx, y: input.hero.ty - originTy };
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) put(at.x + dx, at.y + dy, Math.abs(dx) === 2 || Math.abs(dy) === 2 ? MAP_COLOURS.youRim : MAP_COLOURS.you);
     labels.push({ kind: 'you', text: input.words.you, ...at });
   }
   return { width, height, originTx, originTy, rgba, labels: labels.filter((l) => l.x >= 0 && l.y >= 0 && l.x < width && l.y < height) };
 }
+
+/** A place's mark: a small cross of tiles. */
+export const PLACE_MARK = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]] as const;

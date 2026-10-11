@@ -10,7 +10,7 @@ import { buildableKind, clearable, clearedSet, effectiveKind, homeLights, isLit,
  * Companions and riding in the game (docs/design/crafts.md 2, 3; lane E):
  * the follower you choose holds through a reload, a friend's pet follows
  * them on your screen, and the stable: build it, stall a mount, Saddle up,
- * M down and up, Go home, and the village lead. Real Go server and fake
+ * V down and up (M opens the map instead), Go home, and the village lead. Real Go server and fake
  * Habitica; only bundled companion art is used (Wolf-Base, Wolf-White), so
  * nothing waits on the sprite proxy.
  */
@@ -228,13 +228,13 @@ async function carryTo(page: Page, piece: string, x: number, y: number): Promise
   await expect.poll(async () => (await homes(page)).placement?.spot).toEqual({ x, y, rotation: 0 })
 }
 
-test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, and the village lead', async ({ page, browser, baseURL }) => {
+test('the stable: build it, stall a mount, Saddle up, V down and up, Go home, and the village lead', async ({ page, browser, baseURL }) => {
   test.setTimeout(300_000)
   const id = await heroWith(page, 'Tansy', { pets: { 'Wolf-Base': 1 }, currentPet: 'Wolf-Base', mounts: { 'Wolf-Base': true }, currentMount: 'Wolf-Base' })
   // Riding lives behind the stable now: Habitica's current mount alone doesn't ride.
   await waitForLive(page)
   await waitForLive(page)
-  await page.keyboard.press('m')
+  await page.keyboard.press('v')
   await expect(page.getByText(/somewhere to stand at home first/)).toBeVisible()
   expect((await debug(page)).riding).toBe(false)
 
@@ -341,20 +341,26 @@ test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, an
   await expect.poll(async () => (await homes(page)).stalled).toEqual([])
   await expect.poll(async () => (await homes(visitor)).stalled, { timeout: SERVER_ANSWER_MS }).toEqual([])
 
-  // M: down, on the lead; M again: back up.
+  // V: down, on the lead; V again: back up.
   await waitForLive(page)
-  await page.keyboard.press('m')
+  await page.keyboard.press('v')
   await expect.poll(async () => (await debug(page)).riding).toBe(false)
   await expect.poll(async () => (await debug(page)).led?.key ?? null).toBe('Wolf-Base')
   await expect(page.getByRole('button', { name: /Send your mount home/ })).toBeVisible()
   await waitForLive(page)
-  await page.keyboard.press('m')
+  await page.keyboard.press('v')
   await expect.poll(async () => (await debug(page)).riding).toBe(true)
   await expect.poll(async () => (await debug(page)).led).toBeNull()
+  // M is the world map now (docs/design/world-map.md 1): it opens and closes the map, and the saddle stays as it was.
+  await page.keyboard.press('m')
+  await expect(page.getByTestId('world-map')).toBeVisible()
+  await page.keyboard.press('m')
+  await expect(page.getByTestId('world-map')).toHaveCount(0)
+  expect((await debug(page)).riding).toBe(true)
 
   // Build a stall: the stable grows east.
   await waitForLive(page)
-  await page.keyboard.press('m')
+  await page.keyboard.press('v')
   await expect.poll(async () => (await debug(page)).riding).toBe(false)
   // At the east end, just past the last bay.
   await go(page, `home:${gate}`, spot.x + 4, spot.y + 3)
@@ -365,14 +371,14 @@ test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, an
 
   // The village is a no-ride zone: you lead it through.
   await waitForLive(page)
-  await page.keyboard.press('m')
+  await page.keyboard.press('v')
   await expect.poll(async () => (await debug(page)).riding).toBe(true)
   await go(page, 'village', 16, 19)
   await waitForArea(page, 'village')
   await expect.poll(async () => (await debug(page)).riding).toBe(false)
   await expect.poll(async () => (await debug(page)).led?.key ?? null).toBe('Wolf-Base')
   await waitForLive(page)
-  await page.keyboard.press('m')
+  await page.keyboard.press('v')
   await expect(page.getByText(/hoofprints in the square/)).toBeVisible()
 
   // Go home (H): away from its land it walks off the screen, and it's back in its stall.
@@ -397,7 +403,7 @@ test('the stable: build it, stall a mount, Saddle up, M down and up, Go home, an
   await page.keyboard.press('e')
   await expect.poll(async () => (await debug(page)).riding, { timeout: SERVER_ANSWER_MS }).toBe(true)
   await waitForLive(page)
-  await page.keyboard.press('m')
+  await page.keyboard.press('v')
   await expect.poll(async () => (await debug(page)).led?.key ?? null).toBe('Wolf-Base')
   await expect.poll(async () => (await homes(page)).stalled).toEqual([])
   await page.keyboard.press('h')

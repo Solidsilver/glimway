@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CONTROLS, LET_GO_KEY, TOUCH_CONTROLS } from '../src/content/controls.ts';
+import { CONTROLS, LET_GO_KEY, MAP_KEY, RIDE_KEY, TOUCH_CONTROLS } from '../src/content/controls.ts';
 
 test('the controls list names B (arrange your home) and G (emotes)', () => {
   const row = (key: string) => CONTROLS.find((r) => r.keys.includes(key));
   assert.match(row('B')?.does ?? '', /Arrange your home/);
   assert.match(row('G')?.does ?? '', /Emotes/);
   // The whole keyboard surface is there.
-  for (const key of ['W', 'E', 'Space', 'F', 'R', 'Shift', 'J', 'C', 'I', 'M', 'H', 'Q', 'Esc']) assert.ok(row(key), key);
+  for (const key of ['W', 'E', 'Space', 'F', 'R', 'Shift', 'J', 'C', 'I', 'M', 'V', 'H', 'Q', 'Esc']) assert.ok(row(key), key);
 });
 
 test('Q lets a landed fish go, the key fishing listens for, and touch has its button', () => {
@@ -28,4 +28,20 @@ test('every control has a touch equivalent (riding has the saddle button now)', 
   assert.ok(TOUCH_CONTROLS.some((t) => /speech button/.test(t.control) && /Emotes/.test(t.does)));
   // Touch rows don't talk about keys.
   for (const t of TOUCH_CONTROLS) assert.doesNotMatch(t.does, /arrows work/);
+});
+
+test('M opens the world map and V rides: two rows, one key each, each with its touch way in', () => {
+  assert.equal(MAP_KEY, 'M');
+  assert.equal(RIDE_KEY, 'V');
+  const rows = (key: string) => CONTROLS.filter((r) => r.keys.includes(key));
+  assert.equal(rows('M').length, 1);
+  assert.equal(rows('V').length, 1);
+  assert.match(rows('M')[0]!.does, /World map/);
+  assert.match(rows('M')[0]!.touch ?? '', /Map button, top right/);
+  assert.match(rows('V')[0]!.does, /Ride or get down/);
+  assert.match(rows('V')[0]!.touch ?? '', /saddle button/);
+  // H and Q keep their jobs.
+  assert.match(rows('H')[0]!.does, /Send your mount home/);
+  assert.match(rows(LET_GO_KEY)[0]!.does, /Let a landed fish go/);
+  assert.ok(TOUCH_CONTROLS.some((t) => /Map button/.test(t.control) && /World map/.test(t.does)));
 });

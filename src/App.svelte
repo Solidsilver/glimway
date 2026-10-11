@@ -39,6 +39,7 @@
   import Hud from './ui/Hud.svelte'
   import DialoguePanel from './ui/DialoguePanel.svelte'
   import JournalPanel from './ui/JournalPanel.svelte'
+  import WorldMap from './ui/WorldMap.svelte'
   import LibraryPanel from './ui/LibraryPanel.svelte'
   import { homesteadsFor, type ArrangeView, type NamePrompt as NamePromptView, type PlacementView } from './game/homestead'
   import NamePrompt from './ui/NamePrompt.svelte'
@@ -99,7 +100,7 @@
   import { setSpotQuests } from './game/room-spots'
 
   type Phase = 'loading' | 'title' | 'playing'
-  type Panel = 'journal' | 'character' | 'inventory' | 'menu' | 'library' | 'shop' | 'deed' | 'dev' | VillagePanel | null
+  type Panel = 'journal' | 'map' | 'character' | 'inventory' | 'menu' | 'library' | 'shop' | 'deed' | 'dev' | VillagePanel | null
 
   // Dev mode (local playtesting only): the panel exists in Vite dev mode and
   // nowhere else. A production build replaces import.meta.env.DEV with false,
@@ -109,6 +110,8 @@
 
   let phase = $state<Phase>('loading')
   let panel = $state<Panel>(null)
+  /** The world map's zoom, kept between openings for this player and world (docs/design/world-map.md 3). */
+  let mapScale = $state<number | null>(null)
   /** Mail panel opened at a neighbour's mailbox: who to send to. */
   let mailTo = $state<string | null>(null)
   /** Shelf panel opened at a Commons gate: which gate. */
@@ -502,6 +505,8 @@
     // Its purse, never the last account's (its link may have said already).
     ui.showPurse(next.link?.purse ?? null)
     if (prev && prev !== next) prev.destroy()
+    // Another player or world: the map opens at its own default again.
+    mapScale = null
     // Presence follows connected play (and its lease).
     startPresence(next.link!)
     if (phase === 'playing') {
@@ -613,7 +618,7 @@
     if (home.placement && !panel) return
     // One owner per key: anything handled here is marked, so the world
     // (placement mode included) doesn't act on the same press.
-    if (['KeyJ', 'KeyC', 'KeyI', 'Escape'].includes(e.code)) (e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed = true
+    if (['KeyJ', 'KeyC', 'KeyI', 'KeyM', 'Escape'].includes(e.code)) (e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed = true
     // Dev mode (Vite dev only): ` opens and closes the dev panel.
     if (import.meta.env.DEV && e.code === 'Backquote') {
       ;(e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed = true
@@ -633,7 +638,11 @@
       return
     }
     if (e.code === 'KeyJ') toggle('journal')
-    else if (e.code === 'KeyC') toggle('character')
+    else if (e.code === 'KeyM') {
+      // The world map: one press, no held repeat, no shortcut chord.
+      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return
+      toggle('map')
+    } else if (e.code === 'KeyC') toggle('character')
     else if (e.code === 'KeyI') toggle('inventory')
     else if (e.code === 'Escape') {
       if (ui.emoteOpen && !panel) {
@@ -647,6 +656,22 @@
       }
     }
   }
+
+  /**
+   * The HUD's Map button: what M may open, it may (the same guards: a talk,
+   * a cinematic, the account's screens, a reload, the ending, a naming or a
+   * confirm, and arranging the home all own the screen first).
+   */
+  function openMap(): void {
+    if (phase !== 'playing' || blocked(layers, BLOCKS.appKeys)) return
+    if (home.placement || home.namePrompt || home.leaveAsk) return
+    toggle('map')
+  }
+  // The map over everything: no emote picker or HUD explanation left open under it.
+  $effect(() => {
+    if (panel === 'map') ui.emoteOpen = false
+  })
+  const mapOpen = $derived(panel === 'map')
 
   /** Send an emote through the presence feed (the picker closes after a pick). */
   function sendEmote(id: string): void {
@@ -671,7 +696,7 @@
   /** What the library panel was opened for (a section's shelves, Elara's donations). */
   let libraryAt = $state<LibraryOpenPayload>({})
   /** The journal page to open on (the HUD's pinned guide opens "How do I…?"). */
-  let journalTab = $state<'quests' | 'papers' | 'map' | 'guides'>('quests')
+  let journalTab = $state<'quests' | 'papers' | 'guides'>('quests')
   /** The Character panel's page to open on (the stable opens Companions), reset when it closes. */
   let characterTab = $state<'hero' | 'companions'>('hero')
   let characterAt = $state<'stable' | null>(null)
@@ -782,6 +807,8 @@
   {#if phase === 'playing' && session}
     <Hud
       onJournal={() => toggle('journal')}
+      onMap={openMap}
+      covered={mapOpen}
       onCharacter={() => toggle('character')}
       onInventory={() => toggle('inventory')}
       {inventoryNew}
@@ -804,7 +831,8 @@
       </div>
     {/if}
     <DialoguePanel />
-    {#if !home.placement}<TouchControls />{/if}
+    <!-- Under the full-screen map the touch pad is out of reach, for pointers and assistive tech alike. -->
+    <div class="covered" inert={mapOpen}>{#if !home.placement}<TouchControls />{/if}</div>
     <HomeBar hidden={blocked(layers, BLOCKS.homeBar)} dockBottom={controlsDock} />
     <Banners />
     <Toasts />
@@ -833,7 +861,9 @@
       {@const m = account.moving}
       <WorldMove {session} target={m.target} home={m.home} leave={m.leave ?? false} view={m.view} arriving={m.arriving} onMoved={(res) => account.onMoved(res)} onHere={() => account.onHere()} onCancel={() => (account.moving = null)} />
     {/if}
-    {#if panel === 'journal'}
+    {#if panel === 'map'}
+      <WorldMap {session} scale={mapScale} onScale={(s) => (mapScale = s)} onClose={() => toggle('map')} />
+    {:else if panel === 'journal'}
       <JournalPanel {session} onClose={() => toggle('journal')} initialTab={journalTab} focus={journalFocus} />
     {:else if panel === 'library'}
       <LibraryPanel {session} onClose={() => toggle('library')} focus={libraryAt.focus} section={libraryAt.section} />
@@ -1051,6 +1081,10 @@
 </main>
 
 <style>
+  /* A wrapper that only carries `inert` (the full-screen map covers what's inside). */
+  .covered {
+    display: contents;
+  }
   main {
     position: relative;
     width: 100%;

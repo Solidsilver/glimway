@@ -2,7 +2,8 @@
  * The 0.8 open map pass (assets/generated/open-map-pass/, docs/design/
  * open-map.md 5): meadow props, the landmarks, bank stones, fords, the
  * Lantern Road's paving and verges, laid paths, the dark lamp stone, the
- * frontier veil, the rumour's bundle, the way sign and the Map tab icon.
+ * frontier veil, the rumour's bundle, the way sign and the map icon (the
+ * HUD's world-map button now; it was the Journal's Map tab).
  * The build packs each frame's whole canvas at 64 texels per 16-px tile
  * (scripts/build-atlases.ts → open-map.webp, loaded as `packed-open-map`);
  * at boot each becomes a dense texture `om-art:<frame>` at its world size,
@@ -70,7 +71,7 @@ export const FORD_V = omArt('ford-v-0')
 export const LAMP_STONE_DARK = omArt('lamp-stone-dark')
 export const VEIL = omArt('frontier-veil-0')
 
-/** The interface's icons from the pass (ui.artIcons, src/ui/ArtIcon.svelte), by key: the Map tab's. */
+/** The interface's icons from the pass (ui.artIcons, src/ui/ArtIcon.svelte), by key: the HUD's world-map button (`map-tab`, its old name). */
 export function openMapIconUrls(scene: Phaser.Scene): Record<string, string> {
   const out: Record<string, string> = {}
   for (const [key, frame] of Object.entries({ 'map-tab': 'icon-map-tab' })) {

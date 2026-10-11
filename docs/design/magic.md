@@ -145,6 +145,10 @@ clash with the world design).
 - **The cost:** a world without a level-30 mage has no fast travel. The way back is
   then the frontier rule (never more than a few chunks from light), the turncap jar
   and the carter's map.
+  *(2026-10-11: everyone has the world map built in now, on M ([world-map.md](world-map.md)).
+  The "carter's map" still needs reconciling with that, as a route-reading upgrade or service
+  rather than the map itself; it's an open question in world-map.md 11. "Sense the turning"
+  would be a party-only forecast layer on the same map, world-map.md 6.)*
 
 ## Classless players and guests (owner, 2026-10-07)
 

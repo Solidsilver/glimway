@@ -2,7 +2,7 @@
  * The open map's own words (docs/design/open-map.md 2.9) that aren't in
  * content/wilds.json `words` (the lines the server shares, like a way's
  * name): what clearing, laying and lifting say, the finder's lines, the
- * Map tab's labels, and Elara's talk around this wick's rumour. Short and
+ * world map's words (docs/design/world-map.md), and Elara's talk around this wick's rumour. Short and
  * plain; the currency is glims, and nothing here costs any.
  */
 import { rumourLines, type RumourParts } from '../lib/wilds/rumour.ts';
@@ -67,12 +67,20 @@ export const WAY_SIGN = {
   verb: 'Read',
 } as const;
 
-/** The Map tab (open-map.md 2.8). */
+/** The world map (world-map.md; its land and marks are open-map.md 2.8's). */
 export const MAP_LABELS = {
-  tab: 'Map',
+  heading: 'World map',
   title: 'Walked land',
+  loading: 'Unfolding the map…',
   empty: 'You haven’t walked the Wilds this wick. Go out through the Commons gate.',
   offline: 'The map fills in as you walk. It needs the Wilds read once this session.',
+  guest: 'The map shows the Wilds you walk. It needs a connected world.',
+  offlineNow: 'Offline — showing the land already read.',
+  partial: 'Some land couldn’t be read just now. It’s blank until it can be.',
+  ended: 'The wick has turned. Only the Tangle is shown until the Wilds are read again.',
+  outside: 'You’re outside the Wilds. The map opens at the Commons gate.',
+  noCentre: 'You’re not in the Wilds, so there’s nobody to centre on.',
+  retry: 'Try again',
   you: 'You',
   gate: 'Commons gate',
   frontier: 'The drift',
@@ -87,6 +95,20 @@ export const MAP_LABELS = {
   notFound: 'Not found yet',
   wick: 'Walked this wick. The Beyond turns at the wick; the Tangle stays.',
   legend: 'Legend',
+  keys: 'Arrow keys or WASD move the map (Shift for further), + and − zoom, Home centres on you, End shows it all. M or Escape closes it.',
+  zoomIn: 'Zoom in',
+  zoomOut: 'Zoom out',
+  centre: 'Centre on me',
+  showAll: 'Show all',
+  details: 'Details',
+  close: 'Close the map',
+  centred: 'Centred on you.',
+  atGate: 'At the Commons gate.',
+  shownAll: 'Showing all the land you know.',
+  zoom: 'Zoom {pct}%',
+  legendWalked: 'Walked land',
+  legendBlank: 'Not walked yet',
+  legendBeyond: 'Past the drift',
 } as const;
 
 /**

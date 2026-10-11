@@ -1,6 +1,6 @@
 # Full-screen world map
 
-Status: implementation plan, 2026-10-11, for `exp/world-map`. No source changes in this planning pass.
+Status: built on `exp/world-map`, 2026-10-11 (lanes A–E). Section 12 says where the build differs from this plan.
 
 The playtest problem is simple: the map helps, but its fixed Journal-sized view makes it hard to explore. Give it the whole screen and let the player zoom and drag it.
 
@@ -220,3 +220,38 @@ The questions below were answered above where marked; 4 and 5 stay open for the 
 3. **Desktop minimap:** follow-up or part of this release; visible by default or opt-in? The suggested starting size is 160×160 near the HUD, subject to a layout check.
 4. **Shared fights:** when server combat arrives, should a threat/hit automatically close the map, or should it stay open with combat feedback? Agree with the fights design; this map pass inherits current panel behavior and creates no server pause.
 5. **Magic wording:** should “carter's map” become an upgrade/route-reading service for the built-in map? Its later forecast and route features must not take away everyone's basic map.
+
+## 12. As built (2026-10-11)
+
+Lanes A–E landed together. Where the build differs from the plan above:
+
+- **Overview summaries.** Close in, the renderer draws each walked chunk in view from a cached
+  24×24 raster (LRU, 1024 entries), as planned. It switches to the overview when more than 512
+  chunk slots fit in the viewport, not at a fixed scale. The overview is one image of the whole
+  frame's walked land, at most 1024 px a side: six pixels a chunk (a summary pixel for 4×4 tiles)
+  when the frame is small enough, else a chunk a pixel, else the mean of several chunks a pixel.
+  It's built when the input changes and drawn cropped to the view. That stands in for the
+  per-region summaries and screen-cell aggregation: memory stays bounded (about 4 MiB for the
+  overview at most) and a drag never builds anything. Ways and places are bucketed by 96 tiles,
+  so a pan only looks at the marks near the view.
+- **Your dot and the labels are DOM**, over one terrain canvas, not a second canvas. Labels are
+  culled to the view (with a margin), turned into screen pixels and fitted with
+  `fitLabels(…, 1)`. That's the same thing as passing the scale, because collisions only depend
+  on relative positions.
+- **Loading.** `mapInput()` is now `loadMap()`. It returns the input together with the world/epoch
+  scope and the offline, partial, ended and missing states, so the component can word them.
+  Chunks load eight at a time, a chunk whose terrain and ground changes are unchanged keeps its
+  `MapChunk` (and its raster), and finders' places are cached per world, wick and place. A chunk
+  that fails keeps its last picture from the same world and epochs.
+- **The wheel zooms in whole quarter-octave steps.** Small trackpad deltas add up until they make
+  a step. Ctrl/Cmd-wheel is left to the browser, as planned. On a Mac that also means a trackpad
+  pinch zooms the page, not the map (a playtest question).
+- **Narrow phones held upright:** the HUD's menu row gets its own row, with the goal line under
+  it (`Hud.svelte`, `max-width: 480px` portrait). Short landscape puts the title and icon-only
+  tools on one row, with Details beside the map.
+- **Acceptance.** `e2e/world-map.spec.ts` covers opening and closing, the Journal switch,
+  chords, repeats and typing, the remembered zoom, drag, wheel, keys, a two-pointer pinch with
+  rebase, show all and centre, the live dot without a reload, a pan that survives `EV.wilds`, no
+  world input under the map, and the 360 px portrait and landscape layouts. The offline, guest,
+  ended-wick and other-world cases are unit tests (`tests/wilds-map-data.test.ts`), not browser
+  tests.

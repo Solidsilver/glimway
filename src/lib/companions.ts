@@ -137,11 +137,11 @@ export function stableNext(
   return { redraw: false, recheckAt: nextHomecoming(stalls, me, homeward, now) }
 }
 
-/** Why M doesn't put you in the saddle (crafts.md 3.1): each is a line the game says. */
+/** Why V (riding) doesn't put you in the saddle (crafts.md 3.1): each is a line the game says. */
 export type RideRefusal = 'noStable' | 'noMounts' | 'inStall' | 'indoors' | 'village'
 
 /**
- * Whether M (ridden ↔ on the lead) can put you in the saddle now, or why
+ * Whether V (ridden ↔ on the lead) can put you in the saddle now, or why
  * not. With no mount out it says where riding starts: a stable first, then a
  * mount to stall, then the stall itself. Getting down is always allowed;
  * getting up waits outside a room (`in:…`) and outside the village.

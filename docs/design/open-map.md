@@ -354,6 +354,11 @@ The biggest lane. All of `src/game/wilds/` and parts of the scene code.
 
 ### 2.8 The map tab
 
+> **Superseded (2026-10-11):** the map left the Journal. It's the full-screen world map on M (and
+> the HUD's Map button), with zoom and drag, a bounded renderer and Lamps as a map layer:
+> [world-map.md](world-map.md). The land, discovery and turning rules below still hold; the
+> Journal-tab UI and "0.9's Lamps tab" don't.
+
 - `src/ui/JournalPanel.svelte` gets a fourth tab, **Map** (`MapTab.svelte`); the `Tab` unions in
   `JournalPanel.svelte:14` and `App.svelte:680` grow.
 - Drawn from chunk data, no new art beyond a tab icon: each walked chunk as a 24×24 block of
