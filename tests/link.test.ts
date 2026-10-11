@@ -40,14 +40,15 @@ test('an unrelated answer never heals the combat overlay', async (t) => {
 });
 
 test('a reload after a Wilds claim starts in the Wilds, not offline', async (t) => {
-  const r = await rig(t, { state: S({ area: 'wilds:outer-1', x: 424, y: 744 }) });
-  assert.deepEqual([r.session.state.area, r.session.state.wildsRegion, r.session.state.position], ['wilds', 'outer-1', { x: 424, y: 744 }]);
-  await online(r, S({ area: 'wilds:inner-1', x: 50, y: 60 }));
+  // World pixels, signed (the open map: north of the gate is -y).
+  const r = await rig(t, { state: S({ area: 'wilds', x: 424, y: -744 }) });
+  assert.deepEqual([r.session.state.area, r.session.state.position], ['wilds', { x: 424, y: -744 }]);
+  await online(r, S({ area: 'wilds', x: 50, y: 60 }));
   assert.equal(r.link.status, 'online');
   r.link.mark('seen:a');
-  r.server.on('POST /api/story/mark', markOk(S({ version: 2, area: 'wilds:outer-1', marks: ['seen:a'] }), 'seen:a'));
+  r.server.on('POST /api/story/mark', markOk(S({ version: 2, area: 'wilds', marks: ['seen:a'] }), 'seen:a'));
   await r.link.flush();
-  assert.deepEqual(r.server.sent('POST /api/story/mark')[0]!.body.where, { area: 'wilds:outer-1', x: 424, y: 744 }, 'where names the region back');
+  assert.deepEqual(r.server.sent('POST /api/story/mark')[0]!.body.where, { area: 'wilds', x: 424, y: -744 }, 'where is the Wilds and world pixels');
 });
 
 // ---------------------------------------------------------------- prediction
@@ -705,22 +706,22 @@ test('Wilds operations go through the outbox: the lease, a key and where, and th
   const r = await rig(t);
   const session = { link: r.link } as unknown as Session;
   // No connection, no operation.
-  assert.deepEqual(await claimEntity(session, { epoch: 'e', entityId: 'x', cycle: 0, where: { region: 'inner-1', x: 0, y: 0 } }), { ok: false, code: 'offline' });
+  assert.deepEqual(await claimEntity(session, { epoch: 'e', entityId: 'x', cycle: 0, where: { x: 0, y: 0 } }), { ok: false, code: 'offline' });
   await online(r);
   r.server.on('POST /api/wilds/claim', env(S({ version: 2, balance: 4 }), { wildsClaim: { epoch: 'e', entity: null, loot: null, materials: {}, wardenSliverFound: false, stormDropFound: false, papers: ['failed-grid-of-sector-4'] } }));
-  const claim = await claimEntity(session, { epoch: 'e', entityId: 'poi:1:1:0', cycle: 2, where: { region: 'outer-1', x: 100, y: 200 } });
+  const claim = await claimEntity(session, { epoch: 'e', entityId: 'poi:1:-4:0', cycle: 2, where: { x: 100.4, y: -1200 } });
   assert.ok(claim.ok);
   if (!claim.ok) return;
   assert.deepEqual(claim.result.papers, ['failed-grid-of-sector-4']);
   const sent = r.server.sent('POST /api/wilds/claim')[0]!.body;
   assert.equal(sent.op.lease, 'L1');
   assert.ok(sent.op.key.length > 0);
-  assert.deepEqual(sent.where, { area: 'wilds:outer-1', x: 100, y: 200 });
+  assert.deepEqual(sent.where, { area: 'wilds', x: 100, y: -1200 }, 'world pixels, whole');
   assert.equal(sent.cycle, 2);
   assert.equal(r.link.rev, 2, 'the answer’s state is the world’s now');
   assert.equal(r.session.state.glims, 4);
   r.server.on('POST /api/wilds/echo', refuse('echo-not-here', S({ version: 2, balance: 4 })));
-  const settled = await settleEcho(session, { epoch: 'e', site: 'echo:0', member: 'tam', where: { region: 'outer-1', x: 1, y: 2 } });
+  const settled = await settleEcho(session, { epoch: 'e', site: 'echo:0', member: 'tam', where: { x: 1, y: 2 } });
   assert.deepEqual(settled, { ok: false, code: 'echo-not-here' });
 });
 

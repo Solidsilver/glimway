@@ -137,18 +137,18 @@ export function gatheringToolWord(action: string): string {
  * A visit is one stay in an area: the caps count per area visit (per the
  * Tangle trip, not per chunk) and reset when you leave and come back. The
  * key is what makes a stay the same stay: scene rebuilds keep it, leaving
- * to another area ends it. The outer Wilds are their own area (the
- * Whitequiet), so the region rides along for wilds saves.
+ * to another area ends it. The open map is one area: a walk out through the
+ * Tangle and the Whitequiet into the Beyond is one stay (open-map.md 2.5).
  */
-export function visitKey(area: string, wildsRegion: string | null): string {
-  return area === 'wilds' ? `wilds:${wildsRegion ?? 'tangle'}` : area;
+export function visitKey(area: string): string {
+  return area;
 }
 
 let visit: { key: string; id: string } = { key: '', id: '' };
 
 /** The visit id for the stay we're in now (stable until the area changes). */
-export function visitIdFor(area: string, wildsRegion: string | null): string {
-  const key = visitKey(area, wildsRegion);
+export function visitIdFor(area: string): string {
+  const key = visitKey(area);
   if (visit.key !== key) {
     const uuid = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : null;
     visit = { key, id: uuid ?? `visit-${Math.random().toString(36).slice(2)}${Date.now().toString(36)}` };

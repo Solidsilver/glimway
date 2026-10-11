@@ -82,22 +82,4 @@ export function isDecorKind(k: string): k is DecorKind {
   return Object.hasOwn(DECOR_ART, k);
 }
 
-/** Smooth 2D value noise in 0..1 (one octave, smoothstep-interpolated), for the ground art. */
-export function valueNoise(seed: number): (x: number, y: number) => number {
-  const lattice = (x: number, y: number): number => {
-    let v = (Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(seed, 1442695041)) | 0;
-    v = Math.imul(v ^ (v >>> 13), 1274126177);
-    return ((v ^ (v >>> 16)) >>> 0) / 4294967296;
-  };
-  return (x: number, y: number) => {
-    const x0 = Math.floor(x);
-    const y0 = Math.floor(y);
-    const fx = x - x0;
-    const fy = y - y0;
-    const sx = fx * fx * (3 - 2 * fx);
-    const sy = fy * fy * (3 - 2 * fy);
-    const a = lattice(x0, y0) + (lattice(x0 + 1, y0) - lattice(x0, y0)) * sx;
-    const b = lattice(x0, y0 + 1) + (lattice(x0 + 1, y0 + 1) - lattice(x0, y0 + 1)) * sx;
-    return a + (b - a) * sy;
-  };
-}
+export { valueNoise } from './noise.ts'

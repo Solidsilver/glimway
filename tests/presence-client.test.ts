@@ -10,6 +10,7 @@ import {
   isPresenceArea,
   normalFacing,
   presenceAreaFor,
+  wildsPresenceRoom,
   presenceBackoff,
   type PresenceStatus,
   type SocketLike,
@@ -411,11 +412,15 @@ test('stop closes the socket and cancels everything; a new lease restarts it', (
 });
 
 test('helpers: areas, facing, backoff, close codes', () => {
-  for (const a of ['village', 'woodland', 'ruin', 'commons', 'wilds:inner-1:0:1', 'wilds:outer-1:2:0']) assert.equal(isPresenceArea(a), true, a);
-  for (const a of ['wilds', 'wilds:inner-1:01:1', 'wilds:inner-1:-1:0', 'chunk:inner-1:0:0', 'cottage', '']) assert.equal(isPresenceArea(a), false, a);
-  assert.equal(presenceAreaFor('chunk:inner-1:2:1'), 'wilds:inner-1:2:1');
+  for (const a of ['village', 'woodland', 'ruin', 'commons', 'wilds:0:0', 'wilds:-1:-2', 'wilds:1:0']) assert.equal(isPresenceArea(a), true, a);
+  for (const a of ['wilds', 'wilds:01:1', 'wilds:-0:0', 'wilds:inner-1:0:1', 'chunk:inner-1:0:0', 'cottage', '']) assert.equal(isPresenceArea(a), false, a);
   assert.equal(presenceAreaFor('village'), 'village');
-  assert.equal(presenceAreaFor('wilds'), null);
+  assert.equal(presenceAreaFor('wilds'), null, 'the Wilds need a position');
+  // A cell of 3×3 chunks: the Tangle (cx -1..1, cy -2..0) is cell (0, 0).
+  assert.equal(presenceAreaFor('wilds', { x: 40, y: 360 }), 'wilds:0:0');
+  assert.equal(presenceAreaFor('wilds', { x: -384 * 1 - 1, y: -384 * 2 }), 'wilds:-1:0');
+  assert.equal(presenceAreaFor('wilds', { x: 0, y: -384 * 3 }), 'wilds:0:-1', 'the Whitequiet');
+  assert.equal(wildsPresenceRoom(-0.5, -0.5), 'wilds:0:0');
   assert.deepEqual(normalFacing({ x: 3, y: 4 }), { x: 0.6, y: 0.8 });
   assert.deepEqual(normalFacing({ x: 0, y: 0 }), { x: 0, y: 1 });
   const f = normalFacing({ x: 1, y: 1 });

@@ -19,6 +19,8 @@
  * It never sees credentials beyond the lease, and never logs messages.
  */
 import { knownRoom } from './rooms.ts';
+import { TILE } from './tile.ts';
+import { cellOf, chunkOf } from './wilds/coords.ts';
 import { decodePresence, encodePresence, PRESENCE_PROTOCOL } from './presence-codec.ts';
 import { abilityFor } from './abilities.ts';
 import { PRESENCE, PRESENCE_CLOSE, type PresenceAvatar, type PresenceClientMessage, type PresencePlayer, type PresencePosition, type PresenceServerMessage } from './presence.ts';
@@ -126,24 +128,39 @@ export function closeAction(code: number, reason = ''): 'retry' | 'superseded' |
   return 'retry';
 }
 
-/** Server-accepted presence areas (curated areas and Wilds chunks; rooms are checked against the content). */
-const AREA_RE = /^(village|woodland|ruin|commons|home:(0|[1-9]\d{0,3})|wilds:[a-z0-9-]+:(0|[1-9]\d*):(0|[1-9]\d*))$/;
+/**
+ * Server-accepted presence areas: curated areas, homesteads, and the open
+ * map's rooms `wilds:<cellX>:<cellY>` (signed; rooms are checked against the
+ * content).
+ */
+const AREA_RE = /^(village|woodland|ruin|commons|home:(0|[1-9]\d{0,3})|wilds:(0|-?[1-9]\d*):(0|-?[1-9]\d*))$/;
 
 export function isPresenceArea(area: string): boolean {
   return AREA_RE.test(area) || knownRoom(area);
 }
 
 /**
- * The presence room for a scene's area id: curated areas as they are, and a
- * Wilds chunk (`chunk:<region>:<cx>:<cy>`, the Wilds client's area ids) as the
- * server's `wilds:<region>:<cx>:<cy>`. A room (`in:village:mill`, a cottage's
- * `in:home:<gate>`) is its own presence room, its id unchanged. Anything else
- * has no room (null).
+ * The open map's presence room for a world pixel: its cell of 3×3 chunks
+ * (content `cells`; the Tangle is cell (0, 0)). The socket holds one room a
+ * client, so a room is a cell rather than a chunk and its neighbours
+ * (open-map.md 2.4): you see everyone in the same cell, the room changing
+ * as you cross into the next.
  */
-export function presenceAreaFor(areaId: string): string | null {
-  const chunk = /^chunk:([a-z0-9-]+):(\d+):(\d+)$/.exec(areaId);
-  const area = chunk ? `wilds:${chunk[1]}:${Number(chunk[2])}:${Number(chunk[3])}` : areaId;
-  return isPresenceArea(area) ? area : null;
+export function wildsPresenceRoom(x: number, y: number): string {
+  const { cx, cy } = chunkOf(Math.floor(x / TILE), Math.floor(y / TILE));
+  const cell = cellOf(cx, cy);
+  return `wilds:${cell.x}:${cell.y}`;
+}
+
+/**
+ * The presence room for a scene's area id: curated areas as they are, a
+ * room (`in:village:mill`, a cottage's `in:home:<gate>`) its own id, and the
+ * Wilds the cell the hero stands in (`at`, world pixels). Anything else has
+ * no room (null).
+ */
+export function presenceAreaFor(areaId: string, at?: { x: number; y: number }): string | null {
+  if (areaId === 'wilds') return at ? wildsPresenceRoom(at.x, at.y) : null;
+  return isPresenceArea(areaId) ? areaId : null;
 }
 
 /** A unit facing vector the server accepts (|f|² within 0.01 of 1); else facing down. */

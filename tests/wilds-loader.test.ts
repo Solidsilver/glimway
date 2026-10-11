@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vectors from '../content/vectors/wilds.json' with { type: 'json' };
 import wildsRaw from '../content/wilds.json' with { type: 'json' };
-import { loadWilds, validateWildsData, wildsV2Regions } from '../src/lib/wilds/data.ts';
+import { loadWilds, validateWildsData } from '../src/lib/wilds/data.ts';
 import { DECOR_ART, TANGLE_GROUND, isDecorKind, type DecorKind } from '../src/game/wilds/decor.ts';
 import { TERRAIN } from '../src/lib/tile.ts';
 import { refusalMatchesRule } from './helpers/vector-rule.ts';
@@ -57,11 +57,4 @@ test('the decor union and the art tables follow content', () => {
   assert.equal(TANGLE_GROUND.water, TERRAIN.water_a);
   // Every ground paints with a terrain the ground art knows.
   for (const g of loadWilds().grounds) assert.ok(g.terrain in TERRAIN, g.id);
-});
-
-test('the v2 bridge reads the regions off the footprints', () => {
-  assert.deepEqual(wildsV2Regions(), [
-    { id: 'inner-1', kind: 'inner', gridWidth: 3, gridHeight: 3, entryX: 1, entryY: 1 },
-    { id: 'outer-1', kind: 'outer', gridWidth: 3, gridHeight: 3, entryX: 1, entryY: 1 },
-  ]);
 });

@@ -137,6 +137,8 @@ export interface PackedManifest {
   purse: PackedCanvasPack
   /** The 0.6.1 glims pass (assets/generated/glims-pass/): a glim, its HUD size and a few glims; 64 texels per world tile. */
   glims: PackedCanvasPack
+  /** The 0.8 open map pass (assets/generated/open-map-pass/): meadow props, landmarks, fords, road and laid-path tiles, the lamp stone, the frontier veil; 64 texels per world tile. */
+  openMap: PackedCanvasPack
   /** The 16 terrain cells, 4×4, each `cell` texels a side (one 16-px world tile at `density`). */
   terrain: { image: string; size: [number, number]; cell: number; density: number }
   ground: PackedGround

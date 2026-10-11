@@ -364,10 +364,6 @@ export class Session {
       mana: Math.min(Math.max(opts.vitals?.mana ?? prev.mana, 0), view.maxMana),
       playSeconds: Math.max(prev.playSeconds, view.playSeconds)
     }
-    const region = relocate ? view.wildsRegion : prev.wildsRegion
-    if (region) next.wildsRegion = region
-    else delete next.wildsRegion
-    if (prev.outerSeason) next.outerSeason = prev.outerSeason
     this.state = next
     this.vitalsSource = provenance.vitalsSource
     this.importedProfile = provenance.importedProfile

@@ -55,7 +55,7 @@ import { CompanionsRequestSchema, MountHomeRequestSchema, MountOutRequestSchema,
 import { projectHome } from '../lib/api/homestead.ts'
 import { REPORT_INTERVAL_MS, ReportBook, type CapturedReport, type ReportAck } from '../lib/api/reports.ts'
 import { ReportPump } from '../lib/api/report-pump.ts'
-import type { HomeAction, HomeActionResponse, HomeOp, HomeView, ItemsOp, CommonsResponse, Snapshot, WildsRegionResponse } from '../lib/api/types.ts'
+import type { HomeAction, HomeActionResponse, HomeOp, HomeView, ItemsOp, CommonsResponse, Snapshot } from '../lib/api/types.ts'
 import { contributeRequest, deskCopyRequest, hearthCraftRequest, homesteadRequest, itemsRequest, mailKeyedRequest, mailSendRequest, shelfRequest, storageRequest, craftRequest, type ItemsFields, type MailSendAction, type ShelfAction, type StorageMoveAction } from '../lib/api/requests.ts'
 import { EnvelopeSchema, PlayerStateSchema, PlayRequestSchema, type PlayerState } from '../lib/gen/glimway/v1/state_pb.js'
 import { FallRequestSchema, MarkRequestSchema, ProfileReportSchema, QuestStepRequestSchema, SettleEchoRequestSchema, SpendRequestSchema, TakePaperRequestSchema, WildsClaimRequestSchema, WildsLanternRequestSchema, type ProfileResult, type SettleEchoResult, type WildsClaimResult as WildsClaimProto, type WildsLanternResult as WildsLanternProto } from '../lib/gen/glimway/v1/operations_pb.js'
@@ -538,7 +538,7 @@ export class Link {
     const pendingFall = n.boundary !== null && this.entries.some((e) => e.id === n.boundary && e.kind === 'fall')
     if (n.place && (pendingFall || n.basis >= (this.server.vitals?.vitalsSetVersion ?? 0))) {
       const live = gameStateOf(create(PlayerStateSchema, { ...this.server, place: { ...this.server.place!, area: n.place.area, x: n.place.x, y: n.place.y } }))
-      return { ...view, area: live.area, position: live.position, ...(live.wildsRegion ? { wildsRegion: live.wildsRegion } : {}), hp: Math.min(n.hp, view.maxHp), mana: Math.min(n.mana, view.maxMana) }
+      return { ...view, area: live.area, position: live.position, hp: Math.min(n.hp, view.maxHp), mana: Math.min(n.mana, view.maxMana) }
     }
     return view
   }
@@ -1793,14 +1793,6 @@ export class Link {
   }
 
   // ------------------------------------------------------------ the Wilds
-
-  /** Region read (a GET: no lease). Adopts a newer state, never moves the hero. */
-  async wildsRegion(regionId: string): Promise<WildsRegionResponse> {
-    const res = await this.api.run((raw) => raw.wildsRegion(regionId))
-    this.contact()
-    if (res.player && this.compare(res.player) === 'newer') this.adopt(res.player)
-    return res
-  }
 
   /**
    * Choose who comes along and who lives at home (crafts.md 2.4). Predicted

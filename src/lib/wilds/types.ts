@@ -31,16 +31,3 @@ export type WildsData = Omit<WildsValid, 'entityKinds' | 'grounds' | 'places'> &
   grounds: WildsGround[];
   places: WildsPlace[];
 };
-
-/**
- * Generator v2's 3x3 region, read off a footprint by `wildsV2Regions`
- * (data.ts). The v2 bridge: lanes O-B, O-C and O-D delete it.
- */
-export interface WildsRegion {
-  id: string;
-  kind: 'inner' | 'outer';
-  gridWidth: number;
-  gridHeight: number;
-  entryX: number;
-  entryY: number;
-}

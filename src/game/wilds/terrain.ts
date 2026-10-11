@@ -1,42 +1,32 @@
 /**
- * A served Wilds chunk (server-first.md 3.2), unpacked for drawing and
- * collision: ground and solid grids, decor pieces, exits, story sites and
- * entity bodies, plus the adapter to the game runtime's WorldData shape.
+ * A served Wilds chunk (server-first.md 3.2, open-map.md 2.2), unpacked for
+ * drawing and collision: ground and solid grids, decor pieces, story sites,
+ * entity bodies and the places whose landmark stands here; plus what the
+ * scene builds from it, in world coordinates (scenery sprites and the
+ * workable pieces).
  *
  * Chunks come only from the server (game/wilds/chunks.ts fetches, validates
  * and caches them); nothing here generates terrain.
  */
-import { Dir, SiteKind as SiteKindPb, type WildsChunk } from '../../lib/gen/glimway/v1/wilds_pb.js';
-import type { AreaId } from '../../lib/state.ts';
+import { SiteKind as SiteKindPb, type WildsChunk } from '../../lib/gen/glimway/v1/wilds_pb.js';
 import type { WildsEntityKind } from '../../lib/wilds/types.ts';
 import type { SiteKind, StorySite } from '../../lib/wilds/outer.ts';
-import { TERRAIN, TILE, tileBottom, tileKey, tileMid } from '../../lib/tile.ts';
-import type { GatherSpot, WorldData } from '../worlds.ts';
+import { TERRAIN, tileBottom, tileKey, tileMid } from '../../lib/tile.ts';
+import { loadWilds } from '../../lib/wilds/data.ts';
+import type { GatherSpot, ScenerySpot } from '../worlds.ts';
 import { DECOR_ART, isDecorKind, type DecorKind } from './decor.ts';
 import { tangleFrame } from './tangle-key.ts';
 import { lookAtlasKey } from './wilds-looks.ts';
-
-export type ExitDir = 'north' | 'east' | 'south' | 'west';
+import { LAMP_STONE_DARK, openMapDecor } from './open-map-art.ts';
 
 export interface Tile {
   tx: number;
   ty: number;
 }
 
-/** A chunk exit: `to` is `commons` or `chunk:<region>:<cx>:<cy>`; `entry` is in the destination's tiles. */
-export interface ChunkExit {
-  tx: number;
-  ty: number;
-  tw: number;
-  th: number;
-  to: string;
-  entry: Tile;
-  dir: ExitDir;
-}
-
 export interface DecorSpot {
   kind: DecorKind;
-  /** Anchor tile: the art stands on this tile's bottom edge, centred. */
+  /** Anchor tile (chunk-local): the art stands on this tile's bottom edge, centred. */
   tx: number;
   ty: number;
   /** Pixel nudge from that anchor. */
@@ -50,7 +40,7 @@ export interface DecorSpot {
   overhang: boolean;
 }
 
-/** A generated entity's immutable body (its changing state is in the region read). */
+/** A generated entity's immutable body (its changing state is in the near read). Tiles are chunk-local. */
 export interface EntityBody {
   id: string;
   kind: WildsEntityKind;
@@ -62,29 +52,35 @@ export interface EntityBody {
   poi: string;
 }
 
+/** A cell's place whose landmark stands in this chunk (open-map.md 2.10). Tiles are chunk-local. */
+export interface PlaceMark {
+  id: string;
+  kind: string;
+  tx: number;
+  ty: number;
+}
+
 export interface ChunkTerrain {
   epochId: string;
-  regionId: string;
   cx: number;
   cy: number;
-  width: number;
-  height: number;
-  widthPx: number;
-  heightPx: number;
-  /** Ground ids (TERRAIN), [ty][tx]. */
+  /** Tiles a side. */
+  size: number;
+  /** Ground ids (TERRAIN), [ly][lx]. */
   ground: number[][];
   solid: boolean[][];
   decor: DecorSpot[];
-  exits: ChunkExit[];
-  spawn: Tile;
   sites: StorySite[];
   entities: EntityBody[];
+  places: PlaceMark[];
   /** 'outer': the deep drift's look; `mark` is its season's Mark (null when permanent). */
   look: 'tangle' | 'outer';
   mark: string | null;
+  /** Difficulty tier and main land (content ids). */
+  tier: number;
+  land: string;
 }
 
-const DIRS: Record<number, ExitDir> = { [Dir.NORTH]: 'north', [Dir.EAST]: 'east', [Dir.SOUTH]: 'south', [Dir.WEST]: 'west' };
 const SITE_KINDS: Record<number, SiteKind> = {
   [SiteKindPb.ECHO]: 'echo',
   [SiteKindPb.CAIRN]: 'cairn',
@@ -92,6 +88,8 @@ const SITE_KINDS: Record<number, SiteKind> = {
   [SiteKindPb.PLANK]: 'plank',
   [SiteKindPb.GIVEN]: 'given',
   [SiteKindPb.REEDS]: 'reeds',
+  [SiteKindPb.LAMP_STONE]: 'lamp-stone',
+  [SiteKindPb.RUMOUR]: 'rumour',
 };
 
 /** Unpack a validated chunk (lib/api/chunks.ts decodeChunk). Throws on names this build can't draw. */
@@ -126,31 +124,39 @@ export function terrainOf(chunk: WildsChunk): ChunkTerrain {
   });
   return {
     epochId: chunk.epochId,
-    regionId: chunk.region,
     cx: chunk.cx,
     cy: chunk.cy,
-    width: S,
-    height: S,
-    widthPx: S * TILE,
-    heightPx: S * TILE,
+    size: S,
     ground,
     solid,
     decor,
-    exits: chunk.exits.map((e) => ({ tx: e.tx, ty: e.ty, tw: e.tw, th: e.th, to: e.to, entry: { tx: e.entry!.tx, ty: e.entry!.ty }, dir: DIRS[e.dir]! })),
-    spawn: { tx: chunk.spawn!.tx, ty: chunk.spawn!.ty },
     sites: chunk.sites.map((s) => ({ id: s.id, kind: SITE_KINDS[s.kind]!, cx: chunk.cx, cy: chunk.cy, tx: s.tx, ty: s.ty })),
     entities: chunk.entities.map((e) => ({ id: e.id, kind: e.kind as WildsEntityKind, tx: e.tx, ty: e.ty, enemies: [...e.enemies], material: e.material, tier: e.tier, poi: e.poi })),
+    places: chunk.places.map((p) => ({ id: p.id, kind: p.kind, tx: p.tx, ty: p.ty })),
     look: chunk.look === 'outer' ? 'outer' : 'tangle',
     mark: chunk.mark || null,
+    tier: chunk.tier,
+    land: chunk.land,
   };
 }
 
-// ------------------------------------------------------------ WorldData
+/** The chunk's first world tile (its north-west corner). */
+export function chunkOrigin(chunk: Pick<ChunkTerrain, 'cx' | 'cy' | 'size'>): Tile {
+  return { tx: chunk.cx * chunk.size, ty: chunk.cy * chunk.size };
+}
 
-/** Flat decals (roots, litter, pebbles) sit just above the ground. */
-const DECAL_DEPTH = -5;
+// ------------------------------------------------------------ the scene's pieces
+
+/**
+ * Flat decals (roots, litter, pebbles) sit just above the ground: the open
+ * map's floor is far below any y (world y is negative north of the gate).
+ */
+const DECAL_DEPTH = -10_000_000 + 5;
 /** Tint by how far a piece stands from open ground: the deep woods are darker. */
 const DEPTH_TINT = [undefined, undefined, 0xc4c4cc, 0xa4a4b4] as const;
+
+/** The decor kinds that are some place kind's landmark (seen from a chunk away, open-map.md 2.10). */
+export const LANDMARK_KINDS: ReadonlySet<DecorKind> = new Set(loadWilds().placeKinds.map((k) => k.landmark).filter(isDecorKind));
 
 /**
  * What each kind of woods piece is to work on (docs/items/crafting-and-repair.md,
@@ -183,10 +189,12 @@ const OUTER_TREE = { target: 'tree', label: 'Chop the tree' };
 const TREES: readonly DecorKind[] = ['oak', 'pine', 'birch'];
 
 /**
- * The workable pieces of a chunk: one per tile, the standing piece over the
- * patch at its foot. `day` is the calendar day, for the seasons' pieces.
+ * The workable pieces of a chunk, in world tiles: one per tile, the standing
+ * piece over the patch at its foot. `day` is the calendar day, for the
+ * seasons' pieces.
  */
-function gatherSpots(chunk: ChunkTerrain, atlas: string, day?: { wick: string } | null): GatherSpot[] {
+export function chunkGather(chunk: ChunkTerrain, day?: { wick: string } | null): GatherSpot[] {
+  const atlas = lookAtlasKey(chunk.look, chunk.mark);
   const bloom = day?.wick === 'Bloom';
   const outer = chunk.look === 'outer';
   const of = (d: { kind: DecorKind }) =>
@@ -198,18 +206,19 @@ function gatherSpots(chunk: ChunkTerrain, atlas: string, day?: { wick: string } 
     const had = byTile.get(key);
     if (!had || (DECOR_ART[d.kind].blocking && !DECOR_ART[had.kind].blocking)) byTile.set(key, d);
   }
+  const o = chunkOrigin(chunk);
   return [...byTile.values()].map((d) => {
     const g = of(d)!;
-    return { target: g.target, label: g.label, tx: d.tx, ty: d.ty, art: { key: atlas, frame: tangleFrame(d.kind, d.variant) } };
+    return { target: g.target, label: g.label, tx: o.tx + d.tx, ty: o.ty + d.ty, art: { key: atlas, frame: tangleFrame(d.kind, d.variant) } };
   });
 }
 
-/** Chebyshev distance (capped at 3) from a tile to the nearest walkable one. */
+/** Chebyshev distance (capped at 3) from a tile to the nearest walkable one in the chunk. */
 function woodsDepth(chunk: ChunkTerrain, tx: number, ty: number): number {
   for (let r = 0; r < 3; r++) {
     for (let y = ty - r; y <= ty + r; y++) {
       for (let x = tx - r; x <= tx + r; x++) {
-        if (x < 0 || y < 0 || x >= chunk.width || y >= chunk.height) continue;
+        if (x < 0 || y < 0 || x >= chunk.size || y >= chunk.size) continue;
         if (!chunk.solid[y]![x]) return r;
       }
     }
@@ -217,48 +226,89 @@ function woodsDepth(chunk: ChunkTerrain, tx: number, ty: number): number {
   return 3;
 }
 
-export function toWorldData(chunk: ChunkTerrain, areaId: AreaId, day?: { wick: string } | null): WorldData {
+/**
+ * A chunk's decor as scenery, in world pixels: the woods pieces from the
+ * look's code-drawn atlas, the open map's pieces (meadow, bank stones,
+ * landmarks) from their delivered art (./open-map-art.ts). A piece whose art
+ * didn't load is left out, never stood in for. Every piece stands on its
+ * tile's bottom edge; pieces that overhang a path fade when walked under.
+ */
+export function chunkScenery(chunk: ChunkTerrain, has: (key: string) => boolean): ScenerySpot[] {
   const atlas = lookAtlasKey(chunk.look, chunk.mark);
-  return {
-    areaId,
-    width: chunk.width,
-    height: chunk.height,
-    widthPx: chunk.widthPx,
-    heightPx: chunk.heightPx,
-    ground: chunk.ground,
-    solid: chunk.solid,
-    trees: [],
-    bushes: [],
-    rocks: [],
-    npcs: [],
-    enemies: [],
-    // Exits keep the server's raw targets (`chunk:…`, `commons`); the scene resolves them.
-    exits: chunk.exits.map((e) => ({ tx: e.tx, ty: e.ty, tw: e.tw, th: e.th, to: e.to as AreaId, entry: e.entry })),
-    props: [],
-    discoverySpots: [],
-    // The woods: every decor piece is code-drawn scenery standing on its
-    // tile's bottom edge; pieces that overhang a path fade when walked under.
-    scenery: chunk.decor.map((d) => ({
-      key: atlas,
-      frame: tangleFrame(d.kind, d.variant),
-      x: tileMid(d.tx) + d.ox,
-      y: tileBottom(d.ty) + d.oy,
+  const o = chunkOrigin(chunk);
+  const out: ScenerySpot[] = [];
+  for (const d of chunk.decor) {
+    const tx = o.tx + d.tx;
+    const ty = o.ty + d.ty;
+    const delivered = openMapDecor(d.kind, d.variant);
+    const key = delivered ?? atlas;
+    if (delivered && !has(delivered)) continue;
+    out.push({
+      key,
+      ...(delivered ? {} : { frame: tangleFrame(d.kind, d.variant) }),
+      x: tileMid(tx) + d.ox,
+      y: tileBottom(ty) + d.oy,
       depth: DECOR_ART[d.kind].flat ? DECAL_DEPTH : 'y',
       flipX: d.flip,
       fade: d.overhang,
-      tint: DEPTH_TINT[woodsDepth(chunk, d.tx, d.ty)],
-      tx: d.tx,
-      ty: d.ty,
-    })),
-    gathering: gatherSpots(chunk, atlas, day),
-    storySites: chunk.sites.map((s) => ({ id: s.id, kind: s.kind, tx: s.tx, ty: s.ty })),
-    groundStyle: chunk.look,
-    groundMark: chunk.mark,
-    well: null,
-    mural: null,
-    shrine: null,
-    villageLantern: null,
-    glimSpots: [],
-    spawn: chunk.spawn,
-  };
+      tint: delivered ? undefined : DEPTH_TINT[woodsDepth(chunk, d.tx, d.ty)],
+      tx,
+      ty,
+    });
+  }
+  return out;
+}
+
+/** The chunk's landmark pieces (drawn from a chunk away), as scenery in world pixels. */
+export function chunkLandmarks(chunk: ChunkTerrain, has: (key: string) => boolean): (ScenerySpot & { place: string | null })[] {
+  const o = chunkOrigin(chunk);
+  const out: (ScenerySpot & { place: string | null })[] = [];
+  for (const d of chunk.decor) {
+    if (!LANDMARK_KINDS.has(d.kind)) continue;
+    const key = openMapDecor(d.kind, d.variant);
+    if (!key || !has(key)) continue;
+    const place = chunk.places.find((p) => p.tx === d.tx && p.ty === d.ty)?.id ?? null;
+    out.push({ key, x: tileMid(o.tx + d.tx) + d.ox, y: tileBottom(o.ty + d.ty) + d.oy, depth: 'y', flipX: d.flip, tx: o.tx + d.tx, ty: o.ty + d.ty, place });
+  }
+  // The Lantern Road's dark lamp stones count too (open-map.md 2.10).
+  for (const site of chunk.sites) {
+    if (site.kind !== 'lamp-stone' || !has(LAMP_STONE_DARK)) continue;
+    out.push({ key: LAMP_STONE_DARK, x: tileMid(o.tx + site.tx), y: tileBottom(o.ty + site.ty), depth: 'y', tx: o.tx + site.tx, ty: o.ty + site.ty, place: null });
+  }
+  return out;
+}
+
+
+// ------------------------------------------------------------ world changes
+
+const terrainId = (groundId: string): number => {
+  const t = (TERRAIN as Record<string, number>)[loadWilds().grounds.find((g) => g.id === groundId)?.terrain ?? ''];
+  if (t === undefined) throw new Error(`wilds: ground ${groundId} has no terrain`);
+  return t;
+};
+/** The ground a laid change carries (content `paths.lay`: stone → laid-stone, plank → laid-plank). */
+const LAID = new Map(loadWilds().paths.lay.map((l) => [l.kind, terrainId(l.ground)]));
+
+/**
+ * A chunk with its player-made changes applied (open-map.md section 3, the
+ * client's twin of `wilds.Effective`): a cleared tile is walkable and its
+ * standing piece is gone; a laid tile carries laid stone or plank. Tiles are
+ * chunk-local. The chunk itself is never changed.
+ */
+export function effectiveTerrain(t: ChunkTerrain, changes: readonly { tx: number; ty: number; change: string }[]): ChunkTerrain {
+  if (!changes.length) return t;
+  const ground = t.ground.map((row) => [...row]);
+  const solid = t.solid.map((row) => [...row]);
+  const cleared = new Set<string>();
+  for (const c of changes) {
+    if (c.tx < 0 || c.ty < 0 || c.tx >= t.size || c.ty >= t.size) continue;
+    const laid = LAID.get(c.change);
+    if (c.change === 'cleared' || laid !== undefined) {
+      if (solid[c.ty]![c.tx]) cleared.add(tileKey(c.tx, c.ty));
+      solid[c.ty]![c.tx] = false;
+    }
+    if (laid !== undefined) ground[c.ty]![c.tx] = laid;
+  }
+  const decor = cleared.size ? t.decor.filter((d) => !(DECOR_ART[d.kind].blocking && cleared.has(tileKey(d.tx, d.ty)))) : t.decor;
+  return { ...t, ground, solid, decor };
 }

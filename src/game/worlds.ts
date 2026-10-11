@@ -3,7 +3,7 @@
  * deterministically from code (seeded), and the area-kind registry every
  * area resolves through (those three, the Commons, homestead land by
  * `home:<gate>`, the rooms by `in:…` (./room-kind.ts: the village rooms and
- * the cottages), and the Wilds chunks registered at runtime).
+ * the cottages), and the open map, `wilds` (./wilds/wilds-world.ts)).
  */
 import type { AreaId } from '../lib/state.ts'
 import { repairFor } from '../lib/repairs.ts'
@@ -14,6 +14,7 @@ import { homeLandKind } from './homeland.ts'
 import { residentSpotsIn, roomKind, type RoomScene } from './room-kind.ts'
 import { gameNow } from './clock.ts'
 import { rng01 } from '../lib/hash.ts'
+import { buildWildsWorld } from './wilds/wilds-world.ts'
 
 /**
  * Quest NPCs, then the residents (src/content/residents.ts), who talk around
@@ -218,6 +219,20 @@ export interface WorldData {
    * only where they touch the floor (their base), never their picture.
    */
   bodies?: { x: number; y: number; w: number; h: number }[]
+  /**
+   * The open map (src/game/wilds/wilds-world.ts): no fixed grid. Ground and
+   * solids come per chunk as the window attaches them (src/game/wilds/
+   * window.ts), looked up by world tile; `bounds` (world px, signed) is the
+   * frontier the hero can't pass, `view` how far past it the camera may look.
+   */
+  open?: {
+    bounds: { x: number; y: number; w: number; h: number }
+    view: { x: number; y: number; w: number; h: number }
+    groundAt(tx: number, ty: number): number | null
+    solidAt(tx: number, ty: number): boolean
+    /** Where a hero at (x, y) can stand: there, or the nearest open tile; null if nothing is loaded. */
+    standAt(x: number, y: number): { x: number; y: number } | null
+  }
 }
 
 // ---------------------------------------------------------------- utilities
@@ -808,7 +823,9 @@ const AREA_KINDS: Record<string, AreaKind> = {
   woodland: { build: buildWoodland, foreground: woodlandForeground },
   ruin: { build: buildRuin, foreground: ruinForeground },
   // The lane's length follows the world's gate count (src/game/homestead.ts keeps it).
-  commons: { build: () => buildCommons(commonsGateCount), foreground: commonsForeground }
+  commons: { build: () => buildCommons(commonsGateCount), foreground: commonsForeground },
+  // The open map: one area, its chunks attached as you walk (src/game/wilds/window.ts).
+  wilds: { build: () => buildWildsWorld(), foreground: () => [] }
 }
 
 /** How many gates the Commons lane must show (the roster's count, once known). */
@@ -835,7 +852,7 @@ export function hasAreaKind(id: string): boolean {
   return resolveKind(id) !== null
 }
 
-/** Register an area kind at runtime (an epoch's Wilds chunks: src/game/wilds/areas.ts). */
+/** Register an area kind at runtime. */
 export function registerAreaKind(id: string, kind: AreaKind): void {
   AREA_KINDS[id] = kind
 }

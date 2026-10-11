@@ -323,6 +323,16 @@ export class EnemySystem {
     return this.spawnEnemy(id, type, tx, ty)
   }
 
+  /**
+   * Camps are leashed to their chunk (open-map.md 2.5): when the open map's
+   * window lets a chunk go, its camps' creatures go with it (they come back,
+   * at full health, if the camp is still lived in when the chunk returns).
+   */
+  removeWilds(prefix: string): void {
+    for (const e of this._enemies) if (e.id.startsWith(prefix) && e.sprite.active) e.sprite.destroy()
+    this._enemies = this._enemies.filter((e) => !e.id.startsWith(prefix))
+  }
+
   /** `hp`: a curated spot's own health (the opening's finger-wisp), else the type's. */
   spawnEnemy(id: string, type: EnemyType, tx: number, ty: number, hp?: number): Enemy {
     // Woodland enemies use the delivered slime/mushroom art; the guardian
