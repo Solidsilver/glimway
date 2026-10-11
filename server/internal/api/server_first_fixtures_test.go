@@ -129,6 +129,9 @@ func TestServerFirstWireFixtures(t *testing.T) {
 	}
 	// Exercise production's state projection and mixed writer, not a handcrafted JSON body.
 	x := newRig(t)
+	// No generator: the states carry no rumour (its epoch id is random);
+	// the hand-made "rumour" case pins its shape.
+	x.api.Config.WildsGenerator = nil
 	x.now.Store(1791400000)
 	c, _ := x.ready("fixture-hero")
 	w := x.rawHTTP("GET", "/api/state", nil, c)

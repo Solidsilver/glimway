@@ -16,9 +16,9 @@ import (
 func TestEchoAssignmentRestrictionsAndStability(t *testing.T) {
 	r := Rules{}
 	s := store.Snapshot{State: rules.NewState()}
-	in := ports.EchoInput{Epoch: &contract.WildsEpoch{WorldSeed: "seed", RegionId: "outer-1", Season: "Mudrise"}}
+	in := ports.EchoInput{Epoch: &contract.WildsEpoch{WorldSeed: "seed", Kind: "wick", Season: "Mudrise"}}
 	for i := 0; i < 12; i++ {
-		in.Sites = append(in.Sites, ports.EchoSite{CX: int32(i % 3), Site: &contract.StorySite{Id: string(rune('a' + i)), Kind: contract.SiteKind_SITE_KIND_ECHO}})
+		in.Sites = append(in.Sites, ports.EchoSite{CX: int32(i%3 - 1), Site: &contract.StorySite{Id: string(rune('a' + i)), Kind: contract.SiteKind_SITE_KIND_ECHO}})
 	}
 	check := func(late bool) {
 		out, err := r.Echoes(context.Background(), nil, s, in)
@@ -32,7 +32,7 @@ func TestEchoAssignmentRestrictionsAndStability(t *testing.T) {
 			}
 			used[a.Member] = true
 			for _, site := range in.Sites {
-				if site.Site.Id == a.Site && a.Member == "tam" && site.CX != 2 {
+				if site.Site.Id == a.Site && a.Member == "tam" && site.CX != 1 {
 					t.Fatal("Tam outside east")
 				}
 			}
@@ -73,7 +73,7 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
  CREATE TABLE homesteads(id TEXT,tier INTEGER);
  CREATE TABLE homestead_items(homestead_id TEXT,item_def TEXT,location TEXT);
  CREATE TABLE personal_claims(epoch TEXT,entity_id TEXT,account_id TEXT);
- CREATE TABLE player_place(account_id TEXT,last_outer_epoch TEXT,last_outer_starts_at REAL);
+ CREATE TABLE player_place(account_id TEXT,last_wick_epoch TEXT,last_wick_starts_at REAL);
  INSERT INTO player_place VALUES('a','',NULL);`)
 	if err != nil {
 		t.Fatal(err)
@@ -84,16 +84,17 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 	}
 	defer tx.Rollback()
 	now := int64(1791400000)
-	epoch := &contract.WildsEpoch{Id: "e1", GeneratorVersion: 2, WorldSeed: "seed", RegionId: "outer-1", Season: "Mudrise", StartsAt: float64(now)}
-	es := &chunks.FakeEpochs{Values: map[chunks.EpochKey]*contract.WildsEpoch{{World: "w", Region: "outer-1"}: epoch}}
+	// The Whitequiet: chunks -1..1, -5..-3, on the wick epoch.
+	epoch := &contract.WildsEpoch{Id: "e1", GeneratorVersion: 3, WorldSeed: "seed", Kind: "wick", Season: "Mudrise", StartsAt: float64(now)}
+	es := &chunks.FakeEpochs{Values: map[chunks.EpochKey]*contract.WildsEpoch{{World: "w", Kind: "wick"}: epoch}}
 	source := &chunks.Fake{Chunks: map[chunks.Key]*contract.WildsChunk{}}
-	for cy := 0; cy < 3; cy++ {
-		for cx := 0; cx < 3; cx++ {
+	for cy := -5; cy <= -3; cy++ {
+		for cx := -1; cx <= 1; cx++ {
 			source.Chunks[chunks.Key{World: "w", Epoch: "e1", CX: int32(cx), CY: int32(cy)}] = &contract.WildsChunk{Size: 24, Cx: int32(cx), Cy: int32(cy), Mark: "Mudrise"}
 		}
 	}
 	site := &contract.StorySite{Id: "cairn", Kind: contract.SiteKind_SITE_KIND_CAIRN, Tx: 3, Ty: 4}
-	source.Chunks[chunks.Key{World: "w", Epoch: "e1", CX: 0, CY: 0}].Sites = []*contract.StorySite{site}
+	source.Chunks[chunks.Key{World: "w", Epoch: "e1", CX: -1, CY: -5}].Sites = []*contract.StorySite{site}
 	r := Rules{Chunks: source, Epochs: es, Now: func() time.Time { return time.Unix(now, 0) }}
 	s := store.Snapshot{AccountID: "a", WorldID: "w", State: rules.NewState()}
 	eligible := func(id string, w *contract.Where, want bool) {
@@ -148,7 +149,8 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 			eligible(p.GetId(), &contract.Where{Area: "in:village:bakery"}, false)
 		}
 	}
-	w = &contract.Where{Area: "wilds:outer-1", X: 56, Y: 72}
+	// World pixels: the cairn's tile in chunk (-1, -5).
+	w = &contract.Where{Area: "wilds", X: (-24+3)*16 + 8, Y: (-5*24+4)*16 + 8}
 	eligible("mary-fenns-cairn-slip", w, false)
 	s.State.Flags = []string{"paper:will-of-elias-fenn"}
 	eligible("mary-fenns-cairn-slip", w, true)
@@ -158,7 +160,7 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 	s.State.Quests["lantern-road"] = "complete"
 	var echoSites []ports.EchoSite
 	for i := 0; i < 9; i++ {
-		cx, cy := int32(i%3), int32(i/3)
+		cx, cy := int32(i%3-1), int32(i/3-5)
 		e := &contract.StorySite{Id: string(rune('a' + i)), Kind: contract.SiteKind_SITE_KIND_ECHO, Tx: 8, Ty: 8}
 		m := source.Chunks[chunks.Key{World: "w", Epoch: "e1", CX: cx, CY: cy}]
 		m.Sites = append(m.Sites, e)
@@ -182,7 +184,7 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 					at = e
 				}
 			}
-			where := &contract.Where{Area: "wilds:outer-1", X: float64((int(at.CX)*24+8)*16 + 8), Y: float64((int(at.CY)*24+8)*16 + 8)}
+			where := &contract.Where{Area: "wilds", X: float64((int(at.CX)*24+8)*16 + 8), Y: float64((int(at.CY)*24+8)*16 + 8)}
 			input := ports.PaperInput{Paper: p.GetId(), Epoch: "e1", Site: assigned.Site, Where: where}
 			if due, e := r.Eligible(context.Background(), tx, s, input); e != nil || due {
 				t.Fatal("unsettled Echo paper", due, e)
@@ -200,7 +202,7 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 	s.State.Flags = []string{"paper:will-of-elias-fenn"}
 	// Observing an initial epoch establishes the watermark without a turning.
 	s.State.Quests["lantern-road"] = "complete"
-	w.X = 56
+	w.X = (-24+3)*16 + 8
 	if err = r.Record(context.Background(), tx, &s, w, now); err != nil {
 		t.Fatal(err)
 	}
@@ -219,6 +221,13 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 	eligible("notices-from-the-board", &contract.Where{Area: "commons", X: float64(board.GetTx()*16 + 8), Y: float64(board.GetTy()*16 + 8)}, true)
 	eligible("notices-from-the-board", &contract.Where{Area: "commons", X: 0, Y: 0}, false)
 	before := store.JSON(s.State.Flags)
+	// Standing in the Tangle (the still epoch) records no turning.
+	epoch.Id = "e3"
+	epoch.StartsAt += 5
+	if err = r.Record(context.Background(), tx, &s, &contract.Where{Area: "wilds", X: 8, Y: -8}, now+3); err != nil || store.JSON(s.State.Flags) != before {
+		t.Fatal("the Tangle recorded a turning", err)
+	}
+	epoch.StartsAt -= 5
 	epoch.Id = "old"
 	epoch.StartsAt -= 2
 	r.Record(context.Background(), tx, &s, w, now+2)

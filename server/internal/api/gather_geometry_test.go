@@ -30,7 +30,7 @@ func TestWildsGatherRequiresStoredSpeciesAndReach(t *testing.T) {
 		chunk.Decor.Kinds = []string{"oak"}
 	}
 	req["op"].(map[string]any)["key"] = "far"
-	req["where"] = map[string]any{"area": "wilds:inner-1", "x": 100, "y": 100}
+	req["where"] = map[string]any{"area": "wilds", "x": 100, "y": 100}
 	if got := x.items("POST", "/api/items/gather", req, c, 409).Error.Code; got != "too-far-away" {
 		t.Fatal(got)
 	}

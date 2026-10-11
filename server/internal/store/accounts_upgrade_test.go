@@ -93,7 +93,7 @@ func TestAccounts026NoSessionAndStateBridge027(t *testing.T) {
 			} else if snap.State.Area != "woodland" || !strings.Contains(JSON(snap.State.Flags), "seen:retained") || snap.Version != 8 {
 				t.Fatal("chosen owner data changed", JSON(snap))
 			}
-			for _, q := range []string{"SELECT count(*) FROM region_epochs", "SELECT count(*) FROM entity_state", "SELECT count(*) FROM personal_claims", "SELECT count(*) FROM lanterns", "SELECT count(*) FROM lantern_rewards"} {
+			for _, q := range []string{"SELECT count(*) FROM wild_epochs", "SELECT count(*) FROM entity_state", "SELECT count(*) FROM personal_claims", "SELECT count(*) FROM lanterns", "SELECT count(*) FROM lantern_rewards"} {
 				var n int
 				if err = tx.QueryRow(q).Scan(&n); err != nil || n != 0 {
 					t.Fatal("v1 reset", q, n, err)

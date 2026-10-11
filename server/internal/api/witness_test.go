@@ -132,18 +132,18 @@ func TestWitnessEchoAndOnlyLiveMoments(t *testing.T) {
 	x.hero("bob", "Bob", "p1")
 	bc, b := x.ready("bob")
 	bob := wsConnect(t, ts, bc, b.Lease)
-	bob.join("wilds:inner-1:0:0")
+	bob.join("wilds:0:-1")
 	bob.send(positionMessage(100))
 
 	// No live doer: the after-commit relay records no witness.
-	x.api.presenceWitness(o.WorldID, o.AccountID, o.DisplayName, "wilds:inner-1", "echo:hollis")
+	x.api.presenceWitness(o.WorldID, o.AccountID, o.DisplayName, "wilds", "echo:hollis")
 	bob.none()
 	olive := wsConnect(t, ts, oc, o.Lease)
-	olive.join("wilds:inner-1:0:0")
+	olive.join("wilds:0:-1")
 	bob.expect("join")
 	olive.send(positionMessage(110))
 	bob.expect("pos")
-	x.api.presenceWitness(o.WorldID, o.AccountID, o.DisplayName, "wilds:inner-1", "echo:nan")
+	x.api.presenceWitness(o.WorldID, o.AccountID, o.DisplayName, "wilds", "echo:nan")
 	if m := bob.witness(); m.Beat != "echo:nan" || m.AccountID != o.AccountID {
 		t.Fatal(m)
 	}
@@ -151,9 +151,9 @@ func TestWitnessEchoAndOnlyLiveMoments(t *testing.T) {
 	if recorded.Version != b.Version+1 || len(recorded.State.Flags) != 1 || !strings.HasPrefix(recorded.State.Flags[0], "witness:echo-nan:") {
 		t.Fatal("witness not durably recorded", recorded)
 	}
-	x.api.presenceWitness(o.WorldID, o.AccountID, "Renamed", "wilds:inner-1", "echo:nan")
+	x.api.presenceWitness(o.WorldID, o.AccountID, "Renamed", "wilds", "echo:nan")
 	bob.none()
-	x.api.presenceWitness(o.WorldID, o.AccountID, o.DisplayName, "wilds:outer-1", "echo:tam")
+	x.api.presenceWitness(o.WorldID, o.AccountID, o.DisplayName, "village", "echo:tam")
 	bob.none()
 	if got := x.expect("GET", "/api/state", nil, bc, 200); got.Version != recorded.Version {
 		t.Fatal("repeat bumped witness")
@@ -168,14 +168,14 @@ func TestWitnessEchoAndOnlyLiveMoments(t *testing.T) {
 	if n := count(t, x.db, "SELECT count(*) FROM story_marks WHERE account_id=? AND mark LIKE 'witness:echo-nan:%'", x.account("bob")); n != 5 {
 		t.Fatal("seeded cap", n, b.AccountID, x.account("bob"))
 	}
-	x.stand("sixth", o.WorldID, "wilds:inner-1:0:0", 110, 20)
+	x.stand("sixth", o.WorldID, "wilds:0:-1", 110, 20)
 	defer x.stand("sixth", o.WorldID, "", 0, 0)
 	for i := 0; i < 5; i++ {
 		if _, err := x.db.DB.Exec("INSERT INTO story_marks VALUES(?,?,'server',?)", x.account("olive"), fmt.Sprintf("witness:echo-nan:earlier-%d:Earlier", i), x.now.Load()); err != nil {
 			t.Fatal(err)
 		}
 	}
-	x.api.presenceWitness(o.WorldID, "sixth", "Sixth", "wilds:inner-1", "echo:nan")
+	x.api.presenceWitness(o.WorldID, "sixth", "Sixth", "wilds", "echo:nan")
 	bob.none()
 	if got := x.expect("GET", "/api/state", nil, bc, 200); got.Version != recorded.Version || len(got.State.Flags) != 5 {
 		t.Fatal("witness cap", got)

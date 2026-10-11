@@ -132,5 +132,9 @@
   {
     "name": "033_glims.sql",
     "sha256": "ebd0e090feee61d36467b80b25d5418cae9dc2af7d598186dbab5bb316f61fd9"
+  },
+  {
+    "name": "034_open_map.sql",
+    "sha256": "9c30f3440aaa0926c6d3a3c8e96688b6d570b9f211552f6b94e8a25e550d8cc7"
   }
 ]

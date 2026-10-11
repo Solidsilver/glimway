@@ -312,7 +312,7 @@ func TestHomeRestAndSafeBoundaries(t *testing.T) {
 func TestMaterialPurchaseAndExpansionBackupRestore(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	v := x.wilds(c, "inner-1")
+	v := x.wilds(c, "tangle")
 	// Gather fiber over deterministic node cycles, then buy a real material item.
 	var fiber *contract.WildsEntity
 	for _, e := range v.bodies {
@@ -325,7 +325,7 @@ func TestMaterialPurchaseAndExpansionBackupRestore(t *testing.T) {
 		t.Fatal("missing fiber node")
 	}
 	for cycle := 0; cycle < 2; cycle++ {
-		x.claim(c, s, fmt.Sprintf("fiber%d", cycle), v.Epoch.Id, fiber, cycle, at("inner-1", fiber, 0), 200)
+		x.claim(c, s, fmt.Sprintf("fiber%d", cycle), v.Epoch.Id, fiber, cycle, at(fiber, 0), 200)
 		x.now.Add(int64(content.WildsRules.Timers.NodeRegrowSeconds))
 	}
 	x.refresh(c, &s)
@@ -351,15 +351,15 @@ func TestMaterialPurchaseAndExpansionBackupRestore(t *testing.T) {
 
 	// Populate personal/discovery and lantern/reward state before the backup.
 	for _, entity := range []*contract.WildsEntity{v.kind(t, "chest"), v.kind(t, "poi")} {
-		x.claim(c, s, "backup-"+entity.Kind, v.Epoch.Id, entity, 0, at("inner-1", entity, 0), 200)
+		x.claim(c, s, "backup-"+entity.Kind, v.Epoch.Id, entity, 0, at(entity, 0), 200)
 	}
 	x.refresh(c, &s)
 	bc, b := x.member("bob", s.WorldID)
 	lx, ly := lanternTile(v)
-	fallen := x.fall("alice", v.Epoch, atTile("inner-1", lx, ly))
-	x.call("/api/wilds/lantern", &contract.WildsLanternRequest{Op: op(b.Lease, "backup-relight"), Epoch: v.Epoch.Id, OwnerId: x.account("alice"), LanternId: fallen.ID, Where: atTile("inner-1", lx, ly)}, bc, 200)
+	fallen := x.fall("alice", v.Epoch, atTile(lx, ly))
+	x.call("/api/wilds/lantern", &contract.WildsLanternRequest{Op: op(b.Lease, "backup-relight"), Epoch: v.Epoch.Id, OwnerId: x.account("alice"), LanternId: fallen.ID, Where: atTile(lx, ly)}, bc, 200)
 	currentMaterials := map[string]int{}
-	for id, qty := range x.wilds(c, "inner-1").Materials {
+	for id, qty := range x.wilds(c, "tangle").Materials {
 		currentMaterials[id] = int(qty)
 	}
 	backup := filepath.Join(x.dir, "expansion-backup.sqlite")
@@ -381,7 +381,7 @@ func TestMaterialPurchaseAndExpansionBackupRestore(t *testing.T) {
 	}
 	unchanged(t, s.Snapshot, rs)
 	tx.Rollback()
-	for _, table := range []string{"homesteads", "homestead_members", "player_deeds", "homestead_items", "item_stacks", "region_epochs", "entity_state", "personal_claims", "discoveries", "lanterns", "lantern_rewards", "lantern_creations", "claim_rate", "ledger", "idempotency"} {
+	for _, table := range []string{"homesteads", "homestead_members", "player_deeds", "homestead_items", "item_stacks", "wild_epochs", "entity_state", "personal_claims", "discoveries", "lanterns", "lantern_rewards", "lantern_creations", "claim_rate", "ledger", "idempotency"} {
 		if count(t, x.db, "SELECT count(*) FROM "+table) != count(t, restored, "SELECT count(*) FROM "+table) {
 			t.Fatal("backup", table)
 		}
@@ -443,9 +443,9 @@ func TestExpansionLeaseRevisionAndConcurrentPurchase(t *testing.T) {
 	if replay.Result.ItemID != v.Result.ItemID || replay.Version != next.Version {
 		t.Fatal("new lease replay")
 	}
-	region := x.wilds(c, "inner-1")
+	region := x.wilds(c, "tangle")
 	node := region.kind(t, "node")
 	before := next.Snapshot
-	x.claim(c, s, "old-lease", region.Epoch.Id, node, 0, at("inner-1", node, 0), 409)
+	x.claim(c, s, "old-lease", region.Epoch.Id, node, 0, at(node, 0), 409)
 	unchanged(t, before, x.expect("GET", "/api/state", nil, c, 200).Snapshot)
 }

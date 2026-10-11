@@ -77,15 +77,3 @@ func TestWildsPathsMeetTheItems(t *testing.T) {
 		}
 	}
 }
-
-// The v2 bridge reads generator v2's regions off the footprints.
-func TestWildsV2Bridge(t *testing.T) {
-	want := []struct {
-		id, kind string
-	}{{"inner-1", "inner"}, {"outer-1", "outer"}}
-	for i, r := range WildsV2Regions {
-		if r.GetId() != want[i].id || r.GetKind() != want[i].kind || r.GetGridWidth() != 3 || r.GetGridHeight() != 3 || r.GetEntryX() != 1 || r.GetEntryY() != 1 {
-			t.Fatalf("region %d: %+v", i, r)
-		}
-	}
-}
