@@ -17,6 +17,7 @@ import type { GlimSpotId, WorldData } from '../worlds'
 import { NPC_NAMES } from './npcs'
 import { handoverFor } from '../../content/papers'
 import { isResident, keeperTalk, metAt, residentFullName, residentTalk, type ResidentId } from '../../content/residents'
+import { elaraRumourChoice } from '../../content/open-map'
 import { shortTalk } from '../../content/talk'
 import { greetingFor, heardDay, heardStory, markDay, markStory } from '../heard'
 import { meetResident, residentContext } from '../residents'
@@ -57,6 +58,14 @@ function residentHasNews(session: Session, id: string): boolean {
 }
 
 const isGlimSpot = (id: string): id is GlimSpotId => id === 'hearth' || id === 'chest' || (ROAD_LANTERNS as readonly string[]).includes(id)
+
+/** One more choice before the talk's goodbye ("Not yet" stays last). */
+function withChoice(d: Dialogue, choice: DialogueChoice): Dialogue {
+  const list = [...(d.choices ?? [])]
+  const last = list.at(-1)
+  const bye = last && (last.dismiss || last.text === 'Not yet') ? list.pop() : undefined
+  return { ...d, choices: [...list, choice, ...(bye ? [bye] : [])] }
+}
 
 export class WorldTalk {
   constructor(private deps: WorldTalkDeps) {
@@ -186,7 +195,11 @@ export class WorldTalk {
         const rumour = talk.first ? null : rumourChoice(id, quest)
         if (rumour) payload = { ...payload, choices: [rumour, ...(payload.choices ?? [])] }
         // Elara keeping the library: the shelves, and donating through her (indoors.md 3.3).
-        if (id === 'elara' && placeArea(session.state) === LIBRARY) payload = keeperTalk(payload, talk.first)
+        if (id === 'elara' && placeArea(session.state) === LIBRARY) {
+          payload = keeperTalk(payload, talk.first)
+          // This wick's rumour (open-map.md 2.10): connected play only, the Wilds are the world's.
+          if (session.link) payload = withChoice(payload, elaraRumourChoice(session.link.rumour))
+        }
         // Another quest's start or reminder: after they've said their piece.
         if (step && !takes) payload = afterTheirTalk(payload, step)
       } else payload = isGlimSpot(id)

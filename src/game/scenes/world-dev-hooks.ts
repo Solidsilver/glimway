@@ -26,6 +26,8 @@ import type { ItemPickups } from '../entities/item-pickups'
 import type { RepairsLayer } from '../entities/repairs'
 import type { WorldScene } from './WorldScene'
 import { fnv1a32Bytes } from '../../lib/hash'
+import { knownPlaces, wildsMaterials, wildsView } from '../wilds/store'
+import { pathTileAt } from '../wilds/path-tile'
 
 /** The scene's interaction layers the hooks read (locals of `create()`). */
 export interface WorldHookLayers {
@@ -288,6 +290,21 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
   on('__fsWilds', () => s['wilds']?.debug() ?? null)
   // The open map's window: what's attached, drifted, fetched, and how long each chunk took to paint.
   on('__fsWildsWindow', () => s['window']?.debug() ?? null)
+  on('__fsPaths', () => {
+    const paths = s['paths']
+    if (!paths) return null
+    const view = wildsView()
+    const ways = [...(view?.ways.values() ?? [])].map((w) => ({ id: w.id, name: w.name, a: w.a, b: w.b, by: w.by, signA: w.signA ? { x: w.signA.x, y: w.signA.y } : null, signB: w.signB ? { x: w.signB.x, y: w.signB.y } : null, path: w.path.length }))
+    return { ...paths.debug(), materials: wildsMaterials(), ways }
+  })
+  on('__fsPathTile', (tx: number, ty: number) => pathTileAt(tx, ty))
+  on('__fsMarks', () => {
+    const marks = s['marks']
+    if (!marks) return null
+    const view = wildsView()
+    return { ...marks.debug(), discoveries: [...(view?.discoveries.values() ?? [])].map((d) => ({ id: d.entityId, by: d.discovererId, name: d.displayName })), places: knownPlaces() }
+  })
+  on('__fsRumour', () => s['session'].link?.rumour ?? null)
   // Playtests of the drift rule.
   on('__fsGather', () => {
     const gathering = s['gathering']

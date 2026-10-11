@@ -12,10 +12,11 @@
  *    bridge tore. Each gives its found text back when its moment is due.
  *  - The Lantern Road's dark lamp stones (open-map.md 2.2): something to
  *    look at, for now (lamps relight them in 0.9).
+ *  - This wick's rumoured find (open-map.md 2.10): a bundle tucked under a
+ *    landmark, opened once by each player (a personal claim, like a chest).
  *
  * One layer per attached chunk of the open map (./window.ts attaches and
  * destroys them); site tiles are chunk-local, drawn at their world tiles.
- * The rumour's find is drawn by its own layer (lane O-E).
  *
  * Settling an Echo is the `settle-echo` operation (./remote.ts): predicted
  * here, refused and rolled back if the server's assignment disagrees.
@@ -40,10 +41,12 @@ import type { DialogueChoice } from '../event-names'
 import type { Effects } from '../entities/fx'
 import type { Interactable, Interactables } from '../entities/interactables'
 import { openDialogue } from '../dialogue.ts'
-import { applyEchoSettled, wildsLive, wildsView, type WildsEpoch } from './store.ts'
-import { settleEcho } from './remote.ts'
+import { applyClaim, applyEchoSettled, isClaimed, lootText, refreshNear, wildsEpoch, wildsLive, wildsView, type WildsEpoch } from './store.ts'
+import { claimEntity, settleEcho } from './remote.ts'
 import { CHUNK_TILES } from './coords.ts'
-import { LAMP_STONE_DARK } from './open-map-art.ts'
+import { LAMP_STONE_DARK, omArt } from './open-map-art.ts'
+import { FINDS } from '../../content/open-map.ts'
+import { CLAIM_ERROR, lootArt, lootGain } from './entities.ts'
 import { loadWilds } from '../../lib/wilds/data.ts'
 import { roadStep } from '../../lib/quests.ts'
 
@@ -270,7 +273,7 @@ export class WildsSites {
     outer: boolean
   ) {
     ensureSiteArt(scene)
-    this.sites = sites.filter((s) => s.kind !== 'rumour')
+    this.sites = [...sites]
     scene.events.once('shutdown', () => {
       this.images = []
     })
@@ -333,6 +336,7 @@ export class WildsSites {
     for (const s of this.sites) {
       if (s.kind === 'echo') this.renderEcho(s)
       else if (s.kind === 'lamp-stone') this.renderLampStone(s)
+      else if (s.kind === 'rumour') this.renderRumour(s)
       else this.renderLook(s, c)
     }
   }
@@ -405,6 +409,18 @@ export class WildsSites {
     this.img(LAMP_STONE_DARK, at.x, at.y)
   }
 
+  /** The rumour's bundle, tucked in under its landmark: closed until you open it (open, after). */
+  private renderRumour(s: StorySite): void {
+    const opened = isClaimed(s.id)
+    const art = omArt(opened ? 'rumour-find-open' : 'rumour-find-closed')
+    if (!this.scene.textures.exists(art)) return
+    const at = this.sitePx(s)
+    this.img(art, at.x, at.y + 1)
+    if (opened) return
+    const glint = this.add(this.scene.add.image(at.x, at.y - 14, 'spark').setDepth(at.y + 3).setBlendMode(1))
+    if (!this.deps.reducedMotion) this.scene.tweens.add({ targets: glint, y: at.y - 18, alpha: { from: 0.85, to: 0.35 }, duration: 900, yoyo: true, repeat: -1 })
+  }
+
   private renderLook(s: StorySite, c: StoryContext): void {
     const at = this.sitePx(s)
     const art = s.kind === 'cairn' ? commonsArt(this.scene, 'cairn-white-stones') ?? LOOK_ART.cairn : LOOK_ART[s.kind]
@@ -439,6 +455,10 @@ export class WildsSites {
     const c = this.ctx()
     if (s.kind === 'lamp-stone') {
       return { label: 'Look at the lamp stone', verb: 'Look', claim: () => bus.emit(EV.toast, { text: loadWilds().words.lampStone, icon: 'lantern', kind: 'thought' }) }
+    }
+    if (s.kind === 'rumour') {
+      if (isClaimed(s.id)) return { label: FINDS.bundleLook, verb: 'Look', claim: () => bus.emit(EV.toast, { text: FINDS.bundleEmpty, icon: 'map', kind: 'thought' }) }
+      return { label: FINDS.bundleClosed, verb: FINDS.bundleVerb, claim: () => void this.openRumour(s) }
     }
     if (s.kind === 'echo') {
       const def = this.echoes.get(s.id)
@@ -581,6 +601,46 @@ export class WildsSites {
       void session.link.takePaper(paper, { epoch: this.epoch.id, site: s.id }).then(() => this.render())
     } else grantPaper(session, paper)
     this.render()
+  }
+
+  private opening = false
+
+  /**
+   * Open the rumour's find: a personal claim under this wick's epoch (cycle
+   * 0), so everyone can open it once. Its answer carries the loot; the
+   * state is read again so Elara knows you found it.
+   */
+  private async openRumour(s: StorySite): Promise<void> {
+    const session = this.deps.session
+    if (this.opening || !session.link) return
+    this.opening = true
+    try {
+      const hero = this.deps.hero()
+      await refreshNear(session, this.cx, this.cy)
+      const epoch = wildsEpoch('wick')
+      if (!wildsLive(session) || !epoch.id) {
+        bus.emit(EV.toast, { text: CLAIM_ERROR.offline, kind: 'error' })
+        return
+      }
+      if (isClaimed(s.id)) return
+      const res = await claimEntity(session, { epoch: epoch.id, entityId: s.id, cycle: 0, where: { x: hero.x, y: hero.y } })
+      if (!res.ok) {
+        if (res.code === 'epoch-ended') bus.emit(EV.turning, { reason: 'epoch-ended' })
+        else bus.emit(EV.toast, { text: CLAIM_ERROR[res.code] ?? CLAIM_ERROR.unknown, kind: 'error' })
+        return
+      }
+      const drop = applyClaim(res.result)
+      const at = this.sitePx(s)
+      sfx('discover')
+      this.deps.fx.sparkBurst(at.x, at.y - 8, 14)
+      const loot = lootText(drop)
+      bus.emit(EV.toast, { text: loot ? `${FINDS.bundleOpened} ${loot}.` : FINDS.bundleOpened, icon: 'sparkle', art: lootArt(drop), kind: loot ? 'gain' : 'thought', ...(loot ? { gain: lootGain(drop) } : {}) })
+      this.render()
+      // Elara hears of it: the rumour's `opened` is in the state, read again.
+      void session.link.refreshState()
+    } finally {
+      this.opening = false
+    }
   }
 
   // ------------------------------------------------------------ the white quiet

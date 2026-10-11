@@ -14,6 +14,9 @@ import type { EnemyType } from './worlds'
 import type { WardenView } from './entities/warden'
 import type { WildsEntities } from './wilds/entities'
 import type { WildsWindow } from './wilds/window'
+import type { WildsPaths } from './wilds/paths'
+import type { WildsMarks } from './wilds/marks'
+import type { PathTile } from '../lib/wilds/paths'
 import type { Result } from '../lib/api/errors'
 import type { ItemsView } from '../lib/api/types'
 import type { SyncSafety } from './sync-safety'
@@ -62,6 +65,14 @@ export interface FsHooks {
   /** The Wilds layer (null outside the Wilds). */
   __fsWilds: () => ReturnType<WildsEntities['debug']> | null
   __fsWildsWindow: () => ReturnType<WildsWindow['debug']> | null
+  /** The open map's path work: the clear prompt's tile, the queue, the last outcome, the buttons, and what the store holds. */
+  __fsPaths: () => (ReturnType<WildsPaths['debug']> & { materials: Record<string, number> | null; ways: { id: string; name: string; a: string; b: string; by: string; signA: { x: number; y: number } | null; signB: { x: number; y: number } | null; path: number }[] }) | null
+  /** One world tile as the path rules read it. */
+  __fsPathTile: (tx: number, ty: number) => PathTile | null
+  /** Way signs drawn and places asked about, and the discoveries the store holds. */
+  __fsMarks: () => (ReturnType<WildsMarks['debug']> & { discoveries: { id: string; by: string; name: string }[]; places: { id: string; kind: string; tx: number; ty: number }[] }) | null
+  /** This wick's rumour as the link holds it. */
+  __fsRumour: () => ({ epoch: string; place: string; site: string; landmark: string; compass: string; ring: number; pastRiver: boolean; opened: boolean } | null)
   /** The workable pieces of this area and, at home, the lamps whose light holds the ground. */
   __fsGather: () => {
     area: string

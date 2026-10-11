@@ -183,6 +183,8 @@ export class Turning {
       hero.setVelocity(0, 0)
     }
     this.deps.session.saveSoon()
+    // The next wick's rumour: the state names it (read again, it changed without a version bump).
+    void this.deps.session.link?.refreshState()
     this.scene.tweens.add({ targets: parts, alpha: 0, duration: 400, onComplete: () => parts.forEach((p) => p.destroy()) })
     this.deps.hold(false)
     this.playing = false

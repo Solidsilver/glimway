@@ -129,15 +129,24 @@ export class AttachedChunk {
   private fading: Phaser.GameObjects.Image[] = []
   private runs: Run[] = []
   private artTiles: { tx: number; ty: number }[] = []
-  /** The chunk as attached: its own solid grid (a worked piece opens a tile for this stay). */
-  readonly terrain: ChunkTerrain
+  /** Laid stone and plank art, by world tile (a lay or a lift redraws only its tiles). */
+  private laid = new Map<string, Phaser.GameObjects.Image>()
+  private ground: Phaser.GameObjects.Image
+  /** The chunk as attached: its own grids (a worked piece opens a tile for this stay; a path is patched in). */
+  terrain: ChunkTerrain
+  /** The ground changes it shows (the window's signature; a patch moves it). */
+  sig = ''
+  /** The chunk with its ground changes as last attached or patched (gathering's own openings aren't in it). */
+  private applied: ChunkTerrain
 
   constructor(private deps: ChunkDeps, terrain: ChunkTerrain, groundKey: string) {
     const { scene } = deps
+    this.applied = terrain
     this.terrain = { ...terrain, solid: terrain.solid.map((row) => [...row]) }
     this.key = chunkKey(terrain.cx, terrain.cy)
     const o = chunkOrigin(terrain)
-    this.images.push(scene.add.image(o.tx * TILE, o.ty * TILE, groundKey).setOrigin(0, 0).setDepth(GROUND_DEPTH))
+    this.ground = scene.add.image(o.tx * TILE, o.ty * TILE, groundKey).setOrigin(0, 0).setDepth(GROUND_DEPTH)
+    this.images.push(this.ground)
     this.tileArt()
     this.collide()
     this.scenery()
@@ -147,30 +156,81 @@ export class AttachedChunk {
 
   /** Paving, laid paths and fords' stones: delivered art standing on the painted ground. */
   private tileArt(): void {
-    const { scene, ground } = this.deps
     const t = this.terrain
     const o = chunkOrigin(t)
     const fords: { tx: number; ty: number }[] = []
-    const put = (key: string, tx: number, ty: number) => {
-      if (!scene.textures.exists(key)) return null
-      const img = scene.add.image(tx * TILE, ty * TILE, key).setOrigin(0, 0).setDepth(TILE_ART_DEPTH)
-      this.images.push(img)
-      return img
-    }
-    const pick = (list: readonly string[], tx: number, ty: number) => list[Math.floor(hash01(tx, ty, 41) * list.length)]!
     for (let ly = 0; ly < t.size; ly++)
       for (let lx = 0; lx < t.size; lx++) {
         const tx = o.tx + lx
         const ty = o.ty + ly
         const g = t.ground[ly]![lx]!
         if (g === PAVING) this.paving(tx, ty)
-        else if (g === LAID_STONE) put(pick(PATH_STONE, tx, ty), tx, ty)
-        else if (g === LAID_PLANK) {
-          const across = ground.ground(tx - 1, ty) === LAID_PLANK || ground.ground(tx + 1, ty) === LAID_PLANK
-          put(pick(across ? PATH_PLANK_H : PATH_PLANK_V, tx, ty), tx, ty)
-        } else if (g === FORD) fords.push({ tx, ty })
+        else if (g === LAID_STONE || g === LAID_PLANK) this.laidArt(tx, ty, g)
+        else if (g === FORD) fords.push({ tx, ty })
       }
     this.fordStones(fords)
+  }
+
+  /** One laid tile's art: stone by world hash, plank across or along as its neighbours run. */
+  private laidArt(tx: number, ty: number, g: number): void {
+    const { scene, ground } = this.deps
+    const pick = (list: readonly string[]) => list[Math.floor(hash01(tx, ty, 41) * list.length)]!
+    const across = g === LAID_PLANK && (ground.ground(tx - 1, ty) === LAID_PLANK || ground.ground(tx + 1, ty) === LAID_PLANK)
+    const key = g === LAID_STONE ? pick(PATH_STONE) : pick(across ? PATH_PLANK_H : PATH_PLANK_V)
+    if (!scene.textures.exists(key)) return
+    const img = scene.add.image(tx * TILE, ty * TILE, key).setOrigin(0, 0).setDepth(TILE_ART_DEPTH)
+    this.laid.set(tileKey(tx, ty), img)
+  }
+
+  /**
+   * The chunk's ground changes moved (a clear, a lay or a lift, yours
+   * predicted or anyone's read): patch it in place, so its creatures, sites
+   * and pieces stay as they are. Opened tiles lose their collision and the
+   * piece standing there; laid tiles get their art. False when the change
+   * can't be patched (a tile closed again: a refused clear): the window
+   * then builds the chunk again.
+   */
+  patch(next: ChunkTerrain): boolean {
+    const t = this.terrain
+    const was = this.applied
+    const o = chunkOrigin(t)
+    for (let ly = 0; ly < t.size; ly++) for (let lx = 0; lx < t.size; lx++) if (!was.solid[ly]![lx] && next.solid[ly]![lx]) return false
+    const opened: { tx: number; ty: number }[] = []
+    const relaid = new Set<string>()
+    for (let ly = 0; ly < t.size; ly++)
+      for (let lx = 0; lx < t.size; lx++) {
+        const tx = o.tx + lx
+        const ty = o.ty + ly
+        if (was.solid[ly]![lx] && !next.solid[ly]![lx]) opened.push({ tx, ty })
+        if (was.ground[ly]![lx] !== next.ground[ly]![lx]) for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]] as const) relaid.add(tileKey(tx + dx, ty + dy))
+      }
+    this.applied = next
+    this.terrain = { ...next, solid: t.solid }
+    for (const { tx, ty } of opened) {
+      this.clearSolid(tx, ty)
+      const gone = this.deps.tileArt.fell(tx, ty)
+      if (gone.length) {
+        this.deps.occluders.remove(gone)
+        this.fading = this.fading.filter((img) => !gone.includes(img))
+      }
+    }
+    for (const k of relaid) {
+      const [tx, ty] = k.split(',').map(Number) as [number, number]
+      const lx = tx - o.tx
+      const ly = ty - o.ty
+      if (lx < 0 || ly < 0 || lx >= t.size || ly >= t.size) continue
+      this.laid.get(k)?.destroy()
+      this.laid.delete(k)
+      const g = next.ground[ly]![lx]!
+      if (g === LAID_STONE || g === LAID_PLANK) this.laidArt(tx, ty, g)
+    }
+    if (opened.length) this.deps.gathering()?.addChunk(this.key, this.deps.gather(this.terrain))
+    return true
+  }
+
+  /** A repainted ground image (after a patch) takes the old one's place. */
+  setGround(key: string): void {
+    this.ground.setTexture(key)
   }
 
   /**
@@ -292,6 +352,8 @@ export class AttachedChunk {
     if (this.fading.length) this.deps.occluders.remove(this.fading)
     for (const { tx, ty } of this.artTiles) this.deps.tileArt.fell(tx, ty)
     for (const img of this.images) img.destroy()
+    for (const img of this.laid.values()) img.destroy()
+    this.laid.clear()
     for (const r of this.runs) {
       this.deps.solids.remove(r.body)
       r.body.destroy()

@@ -13,6 +13,7 @@ import type Phaser from 'phaser'
 import { PACKED_MANIFEST_KEY, type PackedManifest } from '../atlas-plan.ts'
 import { explodeFrames, registerAnims } from '../art-pass.ts'
 import { TILE } from '../../lib/tile.ts'
+import { artDataUrl, artSource } from '../density.ts'
 import type { DecorKind } from './decor.ts'
 import animations from '../../../assets/generated/open-map-pass/animations.json' with { type: 'json' }
 
@@ -68,3 +69,18 @@ export const FORD_H = omArt('ford-h-0')
 export const FORD_V = omArt('ford-v-0')
 export const LAMP_STONE_DARK = omArt('lamp-stone-dark')
 export const VEIL = omArt('frontier-veil-0')
+
+/** The interface's icons from the pass (ui.artIcons, src/ui/ArtIcon.svelte), by key: the Map tab's. */
+export function openMapIconUrls(scene: Phaser.Scene): Record<string, string> {
+  const out: Record<string, string> = {}
+  for (const [key, frame] of Object.entries({ 'map-tab': 'icon-map-tab' })) {
+    const src = artSource(scene, omArt(frame))
+    if (!src) continue
+    try {
+      out[key] = artDataUrl(src, src.density)
+    } catch {
+      /* an icon is optional: the tab says its name */
+    }
+  }
+  return out
+}

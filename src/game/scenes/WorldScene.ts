@@ -61,8 +61,12 @@ import { fingerInBracken } from '../../lib/quests'
 import { WILDS_AREA, gateArrival, gateArrivalPosition, isWildsArea, wildsReturnTile } from '../wilds/coords'
 import { prepareWilds } from '../wilds/store'
 import { WildsWindow } from '../wilds/window'
+import { WildsPaths } from '../wilds/paths'
+import { WildsMarks } from '../wilds/marks'
+import { watchRumour } from '../rumour-watch'
 import { loadWilds } from '../../lib/wilds/data'
-import { displayArea } from '../../content/world'
+import { displayArea, setWildsLand } from '../../content/world'
+import { landName } from '../wilds/ground-view'
 import { GoalGuide } from '../entities/goal-guide'
 import { goalTarget } from '../guide-pin'
 import { QUEST_ACTION } from '../../content/quests/index.ts'
@@ -125,6 +129,10 @@ export class WorldScene extends Phaser.Scene {
   private wilds: WildsEntities | null = null
   /** The open map's moving window (null in curated areas): src/game/wilds/window.ts. */
   private window: WildsWindow | null = null
+  /** Clearing, laying and lifting paths on the open map (null in curated areas). */
+  private paths: WildsPaths | null = null
+  /** Way signs, finders' names and first finds on the open map (null in curated areas). */
+  private marks: WildsMarks | null = null
   /** The drift's line is said once a scene build (open-map.md 2.6). */
   private driftSaid = false
   /** Which of the open map's places the HUD names now. */
@@ -218,6 +226,8 @@ export class WorldScene extends Phaser.Scene {
     const open = this.world.open
     this.wilds = null
     this.window = null
+    this.paths = null
+    this.marks = null
     this.driftSaid = false
     this.occluders = []
     this.cinematic = false
@@ -373,6 +383,7 @@ export class WorldScene extends Phaser.Scene {
       lightProps: () => this.lightProps,
       homesteads: () => this.homesteads,
       wilds: () => this.wilds,
+      paths: () => this.paths,
       notePosition: () => this.notePosition(),
       refresh: () => {
         this.refreshMarkers()
@@ -427,6 +438,26 @@ export class WorldScene extends Phaser.Scene {
         },
         reducedMotion: this.reducedMotion,
         hero: () => this.hero.sprite
+      })
+      // The HUD names the land you stand in (the meadow, the Wend) from the loaded chunks.
+      setWildsLand(landName)
+      this.events.once('shutdown', () => setWildsLand(null))
+      this.paths = new WildsPaths(this, {
+        session: this.session,
+        interactables: this.interactables,
+        fx: this.fx,
+        reducedMotion: this.reducedMotion,
+        hero: () => this.hero,
+        notePosition: () => this.notePosition(),
+        live: () => this.worldLive()
+      })
+      this.marks = new WildsMarks(this, {
+        session: this.session,
+        interactables: this.interactables,
+        fx: this.fx,
+        reducedMotion: this.reducedMotion,
+        hero: () => this.hero.sprite,
+        notePosition: () => this.notePosition()
       })
       // The first window is painted behind the fade (the near read and its
       // chunks came in before this build: prepareWilds).
@@ -574,6 +605,9 @@ export class WorldScene extends Phaser.Scene {
       bus.emit(EV.defeat, { phase: 'woke' })
     }
 
+    // This wick's rumour follows the calendar's turning, wherever the hero is.
+    if (this.session.link) watchRumour(this.session)
+
     // The Turning: an ended epoch (a claim refused, or the clock passing the
     // wick's end while we stand here) shifts the outer Wilds under us.
     this.turning = new Turning(this, {
@@ -672,6 +706,8 @@ export class WorldScene extends Phaser.Scene {
     this.projectiles.update(dt)
     this.window?.update(dt)
     this.wilds?.update()
+    this.paths?.update()
+    this.marks?.update()
     this.checkDrift()
     this.turning.update(dt)
     this.updateDiscoveries()

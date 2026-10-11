@@ -26,7 +26,8 @@
  */
 import { MATERIALS, TRINKETS } from '../../content/expansion-writing.ts';
 import type { WildsEntityView, WildsLanternView } from '../../lib/api/types.ts';
-import type { GroundChange, WildsEpoch as WildsEpochPb, WildsLantern, WildsNearResult, WildsWay } from '../../lib/gen/glimway/v1/wilds_pb.js';
+import type { ChunkGroundChanges, GroundChange, WildsEpoch as WildsEpochPb, WildsLantern, WildsNearResult, WildsWay } from '../../lib/gen/glimway/v1/wilds_pb.js';
+import { tileKey } from '../../lib/tile.ts';
 import type { WildsClaimResult } from '../../lib/gen/glimway/v1/operations_pb.js';
 import { epochKindAt } from '../../lib/wilds/coords.ts';
 import { NEAR_RADIUS } from '../../lib/api/near.ts';
@@ -159,9 +160,12 @@ export function wildsStale(session: Session): boolean {
   return view !== null && wildsLive(session) === null;
 }
 
-/** Wilds materials for the character panel (`null` until the Wilds load). */
+/** Wilds materials for the character panel (`null` until the Wilds load), with unanswered lays and lifts on top. */
 export function wildsMaterials(): Record<string, number> | null {
-  return view ? { ...view.materials } : null;
+  if (!view) return null;
+  const out = { ...view.materials };
+  for (const p of pendingMaterials.values()) out[p.id] = (out[p.id] ?? 0) + p.delta;
+  return out;
 }
 
 export function wildsEpoch(kind: WildsEpochKind): WildsEpoch {
@@ -207,6 +211,7 @@ export function resetWilds(opts: { quiet?: boolean } = {}): void {
   view = null;
   fetchedAt.clear();
   inflight = null;
+  forgetPredictions();
   if (!opts.quiet) bus.emit(EV.wilds, { materials: null });
 }
 
@@ -286,6 +291,7 @@ export function applyNear(res: WildsNearResult): boolean {
       version: (view?.version ?? 0) + 1,
     };
     if (turned) fetchedAt.clear();
+    forgetPredictions();
   }
   const v = view;
   v.still = still;
@@ -312,6 +318,7 @@ export function applyNear(res: WildsNearResult): boolean {
     if (inWindow(x!, y!)) v.ground.delete(key);
   }
   for (const g of res.ground) if (g.chunk) v.ground.set(chunkKey(g.chunk.cx, g.chunk.cy), [...(g.changes?.changes ?? [])]);
+  merged.clear();
   for (const g of res.glimpse) if (g.chunk) v.glimpse.set(chunkKey(g.chunk.cx, g.chunk.cy), { land: g.land, river: g.river });
   for (const w of res.ways) v.ways.set(w.id, w);
   v.materials = materialsRecord(res.materials);
@@ -416,7 +423,7 @@ export function applyClaim(result: WildsClaimResult): LootDrop {
   const s = result.entity;
   if (s) {
     view.states.set(s.id, { cycle: s.cycle, state: s.state as WildsEntityView['state'], available_at: s.availableAt, by: s.by ?? null, at: s.at ?? null });
-    if (/^(chest|poi):/.test(s.id)) view.claims.add(s.id);
+    if (/^(chest|poi|rumour):/.test(s.id)) view.claims.add(s.id);
   }
   // The answer carries the post-grant balances: replace the mirror.
   view.materials = materialsRecord(result.materials);
@@ -438,9 +445,91 @@ export function applyEchoSettled(site: string): void {
   bump();
 }
 
-/** A chunk's ground changes as last read (tiles chunk-local). */
+/**
+ * A chunk's ground changes (tiles chunk-local): as last read or answered,
+ * with this player's unanswered clears, lays and lifts on top. The same
+ * array comes back until something changes (the ground view caches by it).
+ */
 export function groundChanges(cx: number, cy: number): readonly GroundChange[] {
-  return view?.ground.get(chunkKey(cx, cy)) ?? [];
+  const key = chunkKey(cx, cy);
+  const server = view?.ground.get(key) ?? NONE;
+  const mine = predicted.get(key);
+  if (!mine?.size) return server;
+  const had = merged.get(key);
+  if (had) return had;
+  const at = new Map(server.map((c) => [tileKey(c.tx, c.ty), c]));
+  for (const [tile, p] of mine) {
+    if (p.change) at.set(tile, p.change);
+    else at.delete(tile);
+  }
+  const out = [...at.values()];
+  merged.set(key, out);
+  return out;
+}
+
+// ------------------------------------------------------------ predicted paths
+
+const NONE: readonly GroundChange[] = [];
+/** Unanswered path operations by chunk, then tile: the change they make (null: the tile's change goes). */
+const predicted = new Map<string, Map<string, { token: number; change: GroundChange | null }>>();
+/** Material debits and refunds of unanswered lays and lifts, by token. */
+const pendingMaterials = new Map<number, { id: string; delta: number }>();
+const merged = new Map<string, GroundChange[]>();
+let tokens = 0;
+
+function forgetPredictions(): void {
+  predicted.clear();
+  pendingMaterials.clear();
+  merged.clear();
+}
+
+/**
+ * Show a path operation before its answer (server-first.md 3): the tile's
+ * change (`null`: lifted away) and, for a lay or a lift, the material it
+ * takes or gives back. Returns the token its answer settles.
+ */
+export function predictGround(cx: number, cy: number, tx: number, ty: number, change: GroundChange | null, material?: { id: string; delta: number }): number {
+  const token = ++tokens;
+  const key = chunkKey(cx, cy);
+  let mine = predicted.get(key);
+  if (!mine) predicted.set(key, (mine = new Map()));
+  mine.set(tileKey(tx, ty), { token, change });
+  if (material) pendingMaterials.set(token, material);
+  merged.delete(key);
+  bump();
+  return token;
+}
+
+/** A prediction's answer came (or it was refused): it stops showing. */
+export function settlePrediction(token: number): void {
+  pendingMaterials.delete(token);
+  for (const [key, mine] of predicted) {
+    for (const [tile, p] of mine) if (p.token === token) mine.delete(tile);
+    if (!mine.size) predicted.delete(key);
+    merged.delete(key);
+  }
+  bump();
+}
+
+/** A path operation's answer: the chunk's changes now, the balances, and the ways it made, broke or moved. */
+export function applyPathAnswer(ground: ChunkGroundChanges | undefined, materials: Record<string, number>, ways: { made?: readonly WildsWay[]; broken?: readonly string[]; rerouted?: readonly WildsWay[] } = {}): void {
+  if (!view) return;
+  if (ground?.chunk) {
+    const key = chunkKey(ground.chunk.cx, ground.chunk.cy);
+    view.ground.set(key, [...(ground.changes?.changes ?? [])]);
+    merged.delete(key);
+  }
+  view.materials = materialsRecord(materials);
+  for (const w of [...(ways.made ?? []), ...(ways.rerouted ?? [])]) view.ways.set(w.id, w);
+  for (const id of ways.broken ?? []) view.ways.delete(id);
+  bump();
+}
+
+/** A discovery answered by the server (yours or the first finder's): the map and the banner name them. */
+export function applyDiscovery(d: { entityId: string; poiId: string; discovererId: string; displayName: string }): void {
+  if (!view) return;
+  view.discoveries.set(d.entityId, { entityId: d.entityId, poiId: d.poiId, discovererId: d.discovererId, displayName: d.displayName });
+  bump();
 }
 
 /** A personal claim seen in a near read (chest/POI ids). */
@@ -462,4 +551,33 @@ export function lootText(drop: LootDrop): string {
   const parts = drop.materials.map((m) => `+${m.qty} ${lootName(m.id)}`);
   if (drop.trinket) parts.push(`the Wilds gave back: ${lootName(drop.trinket)}`);
   return parts.join(', ');
+}
+
+/** A cell place whose landmark is in a loaded chunk, in world tiles (the map, signs and finds name it). */
+export interface PlaceAt {
+  id: string;
+  kind: string;
+  tx: number;
+  ty: number;
+}
+
+/** Every cell place in the frontier's loaded chunks (this wick's land). */
+export function knownPlaces(): PlaceAt[] {
+  const f = view?.frontier;
+  if (!f) return [];
+  const out: PlaceAt[] = [];
+  for (let cy = f.minCy; cy <= f.maxCy; cy++)
+    for (let cx = f.minCx; cx <= f.maxCx; cx++) {
+      const t = chunkTerrain(cx, cy);
+      if (!t) continue;
+      for (const p of t.places) out.push({ id: p.id, kind: p.kind, tx: cx * t.size + p.tx, ty: cy * t.size + p.ty });
+    }
+  return out;
+}
+
+/** Balances an answer carried (a first find's loot): the mirror follows. */
+export function applyBalances(materials: Record<string, number>): void {
+  if (!view) return;
+  view.materials = materialsRecord(materials);
+  bump();
 }

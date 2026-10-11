@@ -13,6 +13,8 @@ const KEEP = 3
 interface Walked {
   walked: string[]
   seen: string[]
+  /** Where each seen landmark stands (world tiles), so the map can mark it without its chunk. */
+  at: Record<string, [number, number]>
 }
 
 const memory = new Map<string, Walked>()
@@ -28,12 +30,16 @@ function storage(): Storage | null {
 function read(wick: string): Walked {
   const had = memory.get(wick)
   if (had) return had
-  let rec: Walked = { walked: [], seen: [] }
+  let rec: Walked = { walked: [], seen: [], at: {} }
   try {
     const raw = storage()?.getItem(PREFIX + wick)
     const parsed = raw ? (JSON.parse(raw) as Partial<Walked>) : null
     if (parsed && Array.isArray(parsed.walked) && Array.isArray(parsed.seen)) {
-      rec = { walked: parsed.walked.filter((x): x is string => typeof x === 'string'), seen: parsed.seen.filter((x): x is string => typeof x === 'string') }
+      const at: Record<string, [number, number]> = {}
+      for (const [k, v] of Object.entries(parsed.at && typeof parsed.at === 'object' ? parsed.at : {})) {
+        if (Array.isArray(v) && v.length === 2 && v.every((n) => Number.isInteger(n))) at[k] = [v[0] as number, v[1] as number]
+      }
+      rec = { walked: parsed.walked.filter((x): x is string => typeof x === 'string'), seen: parsed.seen.filter((x): x is string => typeof x === 'string'), at }
     }
   } catch {
     // A broken record starts over.
@@ -70,11 +76,12 @@ export function markWalked(wick: string, chunk: string): void {
   write(wick, rec)
 }
 
-/** A landmark (its place id) was on your screen this wick. */
-export function markSeen(wick: string, place: string): void {
+/** A landmark (its place id) was on your screen this wick; `at` is its world tile. */
+export function markSeen(wick: string, place: string, at?: { tx: number; ty: number }): void {
   const rec = read(wick)
-  if (rec.seen.includes(place)) return
-  rec.seen.push(place)
+  if (rec.seen.includes(place) && (!at || rec.at[place])) return
+  if (!rec.seen.includes(place)) rec.seen.push(place)
+  if (at) rec.at[place] = [at.tx, at.ty]
   write(wick, rec)
 }
 
@@ -86,6 +93,11 @@ export function walkedChunks(wick: string): readonly string[] {
 /** The landmarks seen this wick (place ids). */
 export function seenLandmarks(wick: string): readonly string[] {
   return read(wick).seen
+}
+
+/** Where the landmarks seen this wick stand (world tiles), by place id. */
+export function seenAt(wick: string): Readonly<Record<string, readonly [number, number]>> {
+  return read(wick).at
 }
 
 /** Test seam: forget what's held in memory. */

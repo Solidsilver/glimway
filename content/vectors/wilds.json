@@ -1577,10 +1577,11 @@
         {
           "path": [
             "words",
-            "standIn",
-            0
+            "standIn"
           ],
-          "value": "everything"
+          "value": [
+            "everything"
+          ]
         }
       ]
     },
