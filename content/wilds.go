@@ -62,6 +62,17 @@ func LoadWilds() (*Wilds, error) {
 	return DecodeWilds(raw)
 }
 
+// WildsPlaceByID is the footprint with the id ("tangle", "whitequiet"),
+// or nil.
+func WildsPlaceByID(id string) *WildsPlace {
+	for _, p := range WildsRules.Places {
+		if p.GetId() == id {
+			return p
+		}
+	}
+	return nil
+}
+
 var WildsRules = func() *Wilds {
 	doc, err := LoadWilds()
 	if err != nil {

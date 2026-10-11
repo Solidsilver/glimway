@@ -450,17 +450,6 @@ func (w *pathWorld) signSpot(x, y int) bool {
 
 var steps = [4][2]int{{0, -1}, {1, 0}, {0, 1}, {-1, 0}} // N E S W
 
-// sign is the first sign spot beside a tile, N E S W.
-func (w *pathWorld) sign(t [2]int, not [2]int, avoid bool) ([2]int, bool) {
-	for _, d := range steps {
-		n := [2]int{t[0] + d[0], t[1] + d[1]}
-		if (!avoid || n != not) && w.signSpot(n[0], n[1]) {
-			return n, true
-		}
-	}
-	return [2]int{}, false
-}
-
 // places are the places whose touch a tile could be on: the cell places of
 // the chunks around it (their landmarks) and the footprints.
 func (w *pathWorld) placesNear(x, y int) []wayPlace {
@@ -535,11 +524,26 @@ func (w *pathWorld) run(x, y int) [][2]int {
 	return out
 }
 
-// path is the shortest run of laid tiles from a tile touching a to one
-// touching b, each end with a sign spot beside it (breadth first, N E S W,
-// from a's tiles in row order, at most paths.wayFloodCap tiles searched).
+// path is the way's path between a and b over the world's laid tiles.
 func (w *pathWorld) path(a, b wayPlace) (path [][2]int, signA, signB [2]int, ok bool) {
-	limit := int(content.WildsRules.GetPaths().GetWayFloodCap())
+	return wayPath(a, b, w.laid, w.signSpot, int(content.WildsRules.GetPaths().GetWayFloodCap()))
+}
+
+// wayPath is the shortest run of laid tiles from a tile touching a to one
+// touching b, each end with a sign spot beside it (breadth first, N E S W,
+// from a's tiles in row order, at most limit tiles searched). A candidate
+// end that can't take its sign is passed over; each candidate's path is
+// built afresh, so a passed-over one never leaks into the next.
+func wayPath(a, b wayPlace, laid, spot func(x, y int) bool, limit int) (path [][2]int, signA, signB [2]int, ok bool) {
+	sign := func(t, not [2]int, avoid bool) ([2]int, bool) {
+		for _, d := range steps {
+			n := [2]int{t[0] + d[0], t[1] + d[1]}
+			if (!avoid || n != not) && spot(n[0], n[1]) {
+				return n, true
+			}
+		}
+		return [2]int{}, false
+	}
 	from := map[[2]int][2]int{}
 	queue := [][2]int{}
 	sources := a.touchTiles()
@@ -547,8 +551,8 @@ func (w *pathWorld) path(a, b wayPlace) (path [][2]int, signA, signB [2]int, ok 
 		return sources[i][1] < sources[j][1] || sources[i][1] == sources[j][1] && sources[i][0] < sources[j][0]
 	})
 	for _, t := range sources {
-		if w.laid(t[0], t[1]) {
-			if _, ok := w.sign(t, t, false); ok {
+		if laid(t[0], t[1]) {
+			if _, ok := sign(t, t, false); ok {
 				from[t] = t
 				queue = append(queue, t)
 			}
@@ -557,22 +561,23 @@ func (w *pathWorld) path(a, b wayPlace) (path [][2]int, signA, signB [2]int, ok 
 	for i := 0; i < len(queue) && i < limit; i++ {
 		t := queue[i]
 		if b.touches(t[0], t[1]) {
+			candidate := [][2]int{}
 			for at := t; ; at = from[at] {
-				path = append(path, at)
+				candidate = append(candidate, at)
 				if from[at] == at {
 					break
 				}
 			}
-			slices.Reverse(path)
-			signA, okA := w.sign(path[0], [2]int{}, false)
-			signB, okB := w.sign(path[len(path)-1], signA, true)
+			slices.Reverse(candidate)
+			sa, okA := sign(candidate[0], [2]int{}, false)
+			sb, okB := sign(candidate[len(candidate)-1], sa, true)
 			if okA && okB {
-				return path, signA, signB, true
+				return candidate, sa, sb, true
 			}
 		}
 		for _, d := range steps {
 			n := [2]int{t[0] + d[0], t[1] + d[1]}
-			if _, seen := from[n]; !seen && w.laid(n[0], n[1]) {
+			if _, seen := from[n]; !seen && laid(n[0], n[1]) {
 				from[n] = t
 				queue = append(queue, n)
 			}

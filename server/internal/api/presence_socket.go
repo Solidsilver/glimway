@@ -9,6 +9,7 @@ import (
 	contract "glimway/server/internal/gen/glimway/v2"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
+	"glimway/server/internal/wilds"
 	"google.golang.org/protobuf/proto"
 	"math"
 	"net/http"
@@ -43,6 +44,14 @@ func wildsRoomChunk(room string) (cx, cy int, ok bool) {
 		return 0, 0, false
 	}
 	return x, y, true
+}
+
+// positionInsideFrontier: a Wilds world-pixel position's chunk is inside
+// the frontier.
+func positionInsideFrontier(world string, x, y float64) bool {
+	tx, ty := wilds.TileOfPixel(x, y)
+	cx, cy := wilds.ChunkOf(tx, ty)
+	return frontier.Inside(world, cx, cy)
 }
 
 // sharedRoom: two rooms see each other. An area's room sees only itself; a
@@ -323,6 +332,14 @@ func (a *Server) presenceReader(p *presencePeer) {
 				p.stop(websocket.StatusPolicyViolation, "invalid-position")
 				h.mu.Unlock()
 				return
+			}
+			// In the Wilds the position must stand inside the frontier, as
+			// every `where` must. It needn't be in the room's own chunk:
+			// crossing a chunk edge, the join waits out its cooldown. One
+			// outside is dropped, neither kept nor relayed.
+			if _, _, inWilds := wildsRoomChunk(p.area); inWilds && !positionInsideFrontier(p.identity.World, x, y) {
+				h.mu.Unlock()
+				continue
 			}
 			if !p.lastPos.IsZero() && now.Sub(p.lastPos) < time.Second/time.Duration(int(h.config.GetPositionHz())) {
 				h.mu.Unlock()

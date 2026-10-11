@@ -57,7 +57,7 @@ func (p *Place) front() (int, int) {
 // PlaceAt is the place of a cell in a wick epoch; false for a footprint
 // cell, a cell wholly south of the frontier's south limit, or a still
 // epoch.
-func PlaceAt(e EpochV3, cellX, cellY int) (Place, bool) {
+func PlaceAt(e Epoch, cellX, cellY int) (Place, bool) {
 	if e.check() != nil {
 		return Place{}, false
 	}

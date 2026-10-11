@@ -322,3 +322,105 @@ func TestChunkCacheEvicts(t *testing.T) {
 		t.Fatal("oldest entry kept")
 	}
 }
+
+// Review 1, finding 1: a chunk made in a transaction that rolls back (a
+// refused operation, a savepoint) is not trusted from the shared cache; the
+// next read makes it again and stores it for good. Two stores with their own
+// caches agree on what is stored.
+func TestChunksRolledBackMakingIsNotCached(t *testing.T) {
+	s := chunkStore(t)
+	ctx := context.Background()
+	g := fakegen.New()
+	c := NewChunks(nil, g)
+	now := time.Now().Unix()
+	var wick *contract.WildsEpoch
+	inTx(t, s, func(tx *sql.Tx) {
+		var err error
+		if wick, err = c.Create(ctx, tx, "world-a", EpochWick, now); err != nil {
+			t.Fatal(err)
+		}
+	})
+	stored := func() int {
+		return countRows(t, s, "SELECT count(*) FROM wilds_chunks WHERE epoch_id=? AND cx=3 AND cy=-4", wick.Id)
+	}
+	// A whole transaction rolled back.
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = c.Chunk(ctx, tx, "world-a", wick.Id, 0, 3, -4); err != nil {
+		t.Fatal(err)
+	}
+	tx.Rollback()
+	// A savepoint rolled back inside a transaction that commits.
+	inTx(t, s, func(tx *sql.Tx) {
+		if _, err := tx.Exec("SAVEPOINT gameplay"); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := c.Chunk(ctx, tx, "world-a", wick.Id, 0, 3, -4); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := tx.Exec("ROLLBACK TO gameplay"); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := c.Chunk(ctx, tx, "world-a", wick.Id, 0, 3, -4); err != nil {
+			t.Fatal(err)
+		}
+	})
+	if n := stored(); n != 1 {
+		t.Fatalf("after the savepoint read: %d rows", n)
+	}
+	made := g.Made()
+	// Another store (another server process) reads the stored blob; its
+	// rolled-back making doesn't unmake anything.
+	other := NewChunks(nil, g)
+	inTx(t, s, func(tx *sql.Tx) {
+		m, err := other.Chunk(ctx, tx, "world-a", wick.Id, 0, 3, -4)
+		if err != nil || m.Cx != 3 || g.Made() != made {
+			t.Fatal("the other store didn't read the stored chunk", err)
+		}
+	})
+	tx, _ = s.DB.BeginTx(ctx, nil)
+	if _, err = other.Chunk(ctx, tx, "world-a", wick.Id, 0, 2, -6); err != nil {
+		t.Fatal(err)
+	}
+	tx.Rollback()
+	inTx(t, s, func(tx *sql.Tx) {
+		if _, err := c.Chunk(ctx, tx, "world-a", wick.Id, 0, 2, -6); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := other.Chunk(ctx, tx, "world-a", wick.Id, 0, 2, -6); err != nil {
+			t.Fatal(err)
+		}
+	})
+	if n := countRows(t, s, "SELECT count(*) FROM wilds_chunks WHERE epoch_id=? AND cx=2 AND cy=-6", wick.Id); n != 1 {
+		t.Fatalf("%d rows after the other store's rollback", n)
+	}
+}
+
+// Review 1, finding 2: reaping an old wick deletes only the Wilds' world
+// changes; another realm's row, or another world's, sharing the epoch id
+// stays.
+func TestStaleEpochsKeepOtherRealmsChanges(t *testing.T) {
+	s := chunkStore(t)
+	ctx := context.Background()
+	c := NewChunks(nil, fakegen.New())
+	if _, err := s.DB.Exec(`INSERT INTO wild_epochs VALUES('old-wick','world-a','wick','seed',3,'t:1:2',1,2);
+INSERT INTO world_changes(world_id,realm,layer,chunk,epoch,entity,kind,state,changed_at) VALUES
+ ('world-a','hearthwick',0,'0:-4','old-wick','ground','ground','{}',1),
+ ('world-a','other-realm',0,'0:0','old-wick','thing','other','{}',1),
+ ('world-b','hearthwick',0,'0:-4','old-wick','ground','ground','{}',1)`); err != nil {
+		t.Fatal(err)
+	}
+	inTx(t, s, func(tx *sql.Tx) {
+		if _, err := c.Create(ctx, tx, "world-a", EpochWick, time.Now().Unix()); err != nil {
+			t.Fatal(err)
+		}
+	})
+	if countRows(t, s, "SELECT count(*) FROM wild_epochs WHERE id='old-wick'") != 0 || countRows(t, s, "SELECT count(*) FROM world_changes WHERE world_id='world-a' AND realm='hearthwick'") != 0 {
+		t.Fatal("the old wick's Wilds rows stayed")
+	}
+	if countRows(t, s, "SELECT count(*) FROM world_changes WHERE realm='other-realm'") != 1 || countRows(t, s, "SELECT count(*) FROM world_changes WHERE world_id='world-b'") != 1 {
+		t.Fatal("another realm's or world's change went")
+	}
+}

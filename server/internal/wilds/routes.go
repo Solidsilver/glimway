@@ -26,7 +26,7 @@ const (
 	routeVerge  = 435    // ... and its verge
 	keptMargin  = 6 * fp // a route keeps this far from a kept footprint
 	gapWidth    = 3
-	gapLo       = edgeMargin
+	gapLo       = 4 // an edge gap keeps clear of the chunk's corners
 )
 
 type route struct {

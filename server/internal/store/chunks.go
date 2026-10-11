@@ -174,12 +174,13 @@ func (c *Chunks) Create(ctx context.Context, tx *sql.Tx, world, kind string, now
 // deleteStaleEpochs: the world's wick epochs that ended before this wick
 // began, and an epoch of the kind and season made by another generator
 // version, go with their chunks, entity state, claims, discoveries,
-// lanterns (all cascading) and world changes. The wick that ended at this
+// lanterns (all cascading) and world changes in the Wilds' realm (another
+// realm's rows are that realm's to keep). The wick that ended at this
 // one's start stays until the next turning, so a late claim on it still
 // hears "epoch-ended" rather than "epoch-not-found".
 func deleteStaleEpochs(ctx context.Context, tx *sql.Tx, world, kind, season string, version int, wickStart int64) error {
 	const stale = "(SELECT id FROM wild_epochs WHERE world_id=? AND (kind=? AND season=? AND generator_version!=? OR kind='wick' AND ends_at<?))"
-	if _, err := tx.ExecContext(ctx, "DELETE FROM world_changes WHERE world_id=? AND epoch IN "+stale, world, world, kind, season, version, wickStart); err != nil {
+	if _, err := tx.ExecContext(ctx, "DELETE FROM world_changes WHERE world_id=? AND realm=? AND epoch IN "+stale, world, content.WildsRules.GetRealm(), world, kind, season, version, wickStart); err != nil {
 		return err
 	}
 	_, err := tx.ExecContext(ctx, "DELETE FROM wild_epochs WHERE id IN "+stale, world, kind, season, version, wickStart)
@@ -193,10 +194,25 @@ func deleteStaleEpochs(ctx context.Context, tx *sql.Tx, world, kind, season stri
 // first reads one blob wins and both answer it. Another world's epoch, an
 // epoch of another generator version and a chunk that can't be made are all
 // sql.ErrNoRows; an ended epoch is chunks.ErrEpochEnded.
+//
+// The memory cache is shared by every transaction, but a chunk made in one
+// may be rolled back with it (a refused operation, a savepoint). So a cache
+// hit counts only when the chunk's row exists in the caller's transaction,
+// read in the same query as the epoch.
 func (c *Chunks) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, layer, cx, cy int32) (*contract.WildsChunk, error) {
-	e, err := scanEpochRow(tx.QueryRowContext(ctx, epochSelect+"WHERE id=? AND world_id=?", epoch, world))
+	var e contract.WildsEpoch
+	var starts int64
+	var ends sql.NullInt64
+	var stored bool
+	err := tx.QueryRowContext(ctx, `SELECT id,world_seed,kind,generator_version,season,starts_at,ends_at,
+ EXISTS(SELECT 1 FROM wilds_chunks WHERE epoch_id=wild_epochs.id AND layer=? AND cx=? AND cy=?)
+ FROM wild_epochs WHERE id=? AND world_id=?`, layer, cx, cy, epoch, world).Scan(&e.Id, &e.WorldSeed, &e.Kind, &e.GeneratorVersion, &e.Season, &starts, &ends, &stored)
 	if err != nil {
 		return nil, err
+	}
+	e.StartsAt = float64(starts)
+	if ends.Valid {
+		e.EndsAt = wrapperspb.Double(float64(ends.Int64))
 	}
 	if int(e.GeneratorVersion) != c.version() {
 		return nil, sql.ErrNoRows
@@ -205,13 +221,19 @@ func (c *Chunks) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, lay
 		return nil, chunks.ErrEpochEnded
 	}
 	key := chunkKey{epoch, layer, cx, cy}
+	if !stored {
+		c.drop(key)
+		m, err := c.make(ctx, tx, world, &e, layer, cx, cy)
+		if err != nil {
+			return nil, err
+		}
+		c.put(key, m)
+		return proto.Clone(m).(*contract.WildsChunk), nil
+	}
 	if m := c.get(key); m != nil {
 		return proto.Clone(m).(*contract.WildsChunk), nil
 	}
 	m, err := c.stored(ctx, tx, key)
-	if errors.Is(err, sql.ErrNoRows) {
-		m, err = c.make(ctx, tx, world, e, layer, cx, cy)
-	}
 	if err != nil {
 		return nil, err
 	}
@@ -310,6 +332,16 @@ func (c *Chunks) get(k chunkKey) *contract.WildsChunk {
 	}
 	c.order.MoveToFront(el)
 	return el.Value.(cached).chunk
+}
+
+// drop forgets a cached chunk whose row isn't there (its making rolled back).
+func (c *Chunks) drop(k chunkKey) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if el, ok := c.byKey[k]; ok {
+		c.order.Remove(el)
+		delete(c.byKey, k)
+	}
 }
 
 func (c *Chunks) put(k chunkKey, m *contract.WildsChunk) {

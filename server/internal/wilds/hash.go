@@ -80,21 +80,3 @@ func (r *Rng) Next() uint32 {
 func (r *Rng) NextInt(n int) int {
 	return int(r.Next() % uint32(n))
 }
-
-// Epoch is a region's frozen generation parameters.
-type Epoch struct {
-	WorldSeed        string `json:"worldSeed"`
-	RegionID         string `json:"regionId"`
-	GeneratorVersion int    `json:"generatorVersion"`
-	Season           string `json:"season"`
-}
-
-// ChunkSeed is hash(worldSeed, regionId, generatorVersion, season, cx, cy).
-func ChunkSeed(e Epoch, cx, cy int) uint32 {
-	return Hash(e.WorldSeed, e.RegionID, e.GeneratorVersion, e.Season, cx, cy)
-}
-
-// LootSeed is hash(worldSeed, regionId, generatorVersion, season, entityId, cycle).
-func LootSeed(e Epoch, entityID string, cycle int) uint32 {
-	return Hash(e.WorldSeed, e.RegionID, e.GeneratorVersion, e.Season, entityID, cycle)
-}

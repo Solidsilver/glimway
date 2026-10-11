@@ -9,8 +9,9 @@ import (
 	"testing"
 )
 
+// validChunk is a small open-map chunk: a Tangle chunk on signed coordinates.
 func validChunk() *contract.WildsChunk {
-	return &contract.WildsChunk{EpochId: "epoch", Region: "inner-1", Realm: "hearthwick", Look: "tangle", Cx: 1, Cy: 0, GeneratorVersion: 2, Size: 24, Palette: []string{"grass"}, Ground: make([]byte, 288), Solid: make([]byte, 72), Spawn: &contract.Tile{Tx: 1, Ty: 1}, Decor: &contract.DecorList{Kinds: []string{"tree"}, Kind: []uint32{0}, Tx: []uint32{2}, Ty: []uint32{3}, Ox: []int32{1}, Oy: []int32{-2}, Variant: []uint32{0}, Flags: []byte{0}}, Entities: []*contract.WildsEntity{{Id: "node:1:0:0", Kind: "node", Tx: 3, Ty: 4, Material: "timber"}}, Exits: []*contract.Exit{{Tx: 12, Ty: 0, Tw: 1, Th: 1, Dir: contract.Dir_DIR_NORTH, To: "chunk:outer-1:1:1", Entry: &contract.Tile{Tx: 12, Ty: 23}}}}
+	return &contract.WildsChunk{EpochId: "epoch", Realm: "hearthwick", Look: "tangle", Cx: 1, Cy: -1, GeneratorVersion: 3, Size: 24, Tier: 1, Land: "woods", Palette: []string{"grass_b"}, Ground: make([]byte, 288), Solid: make([]byte, 72), Decor: &contract.DecorList{Kinds: []string{"oak"}, Kind: []uint32{0}, Tx: []uint32{2}, Ty: []uint32{3}, Ox: []int32{1}, Oy: []int32{-2}, Variant: []uint32{0}, Flags: []byte{0}}, Entities: []*contract.WildsEntity{{Id: "node:1:-1:0", Kind: "node", Tx: 3, Ty: 4, Material: "timber"}}}
 }
 func TestStoredGeometryAndExecutableFakes(t *testing.T) {
 	ctx := context.Background()
@@ -18,20 +19,8 @@ func TestStoredGeometryAndExecutableFakes(t *testing.T) {
 	if err := Validate(c); err != nil {
 		t.Fatal(err)
 	}
-	// The way home: the Tangle's entry chunk, its south edge.
-	c.Cy = 1
-	c.Exits[0].Ty, c.Exits[0].Dir = 23, contract.Dir_DIR_SOUTH
-	c.Exits[0].To = "commons"
-	c.Exits[0].Entry = &contract.Tile{Tx: 23, Ty: 2}
-	if err := Validate(c); err != nil {
-		t.Fatal(err)
-	}
-	c.Exits[0].Entry.Tx = 62
-	if Validate(c) == nil {
-		t.Fatal("invalid destination accepted")
-	}
 	c = validChunk()
-	e, err := Entity(c, "node:1:0:0")
+	e, err := Entity(c, "node:1:-1:0")
 	if err != nil || e.Material != "timber" {
 		t.Fatal(e, err)
 	}
@@ -46,52 +35,52 @@ func TestStoredGeometryAndExecutableFakes(t *testing.T) {
 	if Validate(c) == nil {
 		t.Fatal("bad decor accepted")
 	}
-	key := Key{"world", "epoch", 0, 1, 0}
+	key := Key{"world", "epoch", 0, 1, -1}
 	f := &Fake{Chunks: map[Key]*contract.WildsChunk{key: validChunk()}, Errors: map[Key]error{}}
-	read, err := f.Chunk(ctx, nil, "world", "epoch", 0, 1, 0)
+	read, err := f.Chunk(ctx, nil, "world", "epoch", 0, 1, -1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	read.Entities = nil
-	read, err = f.Chunk(ctx, nil, "world", "epoch", 0, 1, 0)
+	read, err = f.Chunk(ctx, nil, "world", "epoch", 0, 1, -1)
 	if err != nil || len(read.Entities) != 1 {
 		t.Fatal("fake did not isolate reads")
 	}
-	if _, err = f.Chunk(ctx, nil, "other", "epoch", 0, 1, 0); !errors.Is(err, sql.ErrNoRows) {
+	if _, err = f.Chunk(ctx, nil, "other", "epoch", 0, 1, -1); !errors.Is(err, sql.ErrNoRows) {
 		t.Fatal(err)
 	}
 	f.Errors[key] = ErrEpochEnded
-	if _, err = f.Chunk(ctx, nil, "world", "epoch", 0, 1, 0); !errors.Is(err, ErrEpochEnded) {
+	if _, err = f.Chunk(ctx, nil, "world", "epoch", 0, 1, -1); !errors.Is(err, ErrEpochEnded) {
 		t.Fatal(err)
 	}
-	epochs := FakeEpochs{Values: map[EpochKey]*contract.WildsEpoch{{"world", "outer-1"}: {Id: "epoch"}}}
-	if e, err := epochs.Create(ctx, nil, "world", "outer-1", 1); err != nil || e.Id != "epoch" {
+	epochs := FakeEpochs{Values: map[EpochKey]*contract.WildsEpoch{{"world", "wick"}: {Id: "epoch"}}}
+	if e, err := epochs.Create(ctx, nil, "world", "wick", 1); err != nil || e.Id != "epoch" {
 		t.Fatal(e, err)
 	}
-	if _, err := epochs.Create(ctx, nil, "other", "outer-1", 1); !errors.Is(err, ErrUnavailable) {
+	if _, err := epochs.Create(ctx, nil, "other", "wick", 1); !errors.Is(err, ErrUnavailable) {
 		t.Fatal(err)
 	}
 }
 
 func TestCurrentEpochIsReadOnlyAndDecorUsesTileRadius(t *testing.T) {
 	ctx := context.Background()
-	f := FakeEpochs{Values: map[EpochKey]*contract.WildsEpoch{{"world", "outer-1"}: {Id: "epoch", GeneratorVersion: 2, EndsAt: wrapperspb.Double(20)}}}
+	f := FakeEpochs{Values: map[EpochKey]*contract.WildsEpoch{{"world", "wick"}: {Id: "epoch", GeneratorVersion: 2, EndsAt: wrapperspb.Double(20)}}}
 	f.CreateFunc = func(context.Context, *sql.Tx, string, string, int64) (*contract.WildsEpoch, error) {
 		t.Fatal("Current created an epoch")
 		return nil, nil
 	}
-	if _, err := f.Current(ctx, nil, "missing", "outer-1", 10); !errors.Is(err, sql.ErrNoRows) {
+	if _, err := f.Current(ctx, nil, "missing", "wick", 10); !errors.Is(err, sql.ErrNoRows) {
 		t.Fatal(err)
 	}
-	if _, err := f.Current(ctx, nil, "world", "outer-1", 20); !errors.Is(err, ErrEpochEnded) {
+	if _, err := f.Current(ctx, nil, "world", "wick", 20); !errors.Is(err, ErrEpochEnded) {
 		t.Fatal(err)
 	}
-	v, err := f.Current(ctx, nil, "world", "outer-1", 10)
+	v, err := f.Current(ctx, nil, "world", "wick", 10)
 	if err != nil {
 		t.Fatal(err)
 	}
 	v.Id = "changed"
-	v, err = f.Current(ctx, nil, "world", "outer-1", 10)
+	v, err = f.Current(ctx, nil, "world", "wick", 10)
 	if err != nil || v.Id != "epoch" {
 		t.Fatal("mutated stored epoch")
 	}

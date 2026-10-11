@@ -30,7 +30,7 @@ func v3Worlds(n int) [][2]string {
 }
 
 // epochFor is the epoch a chunk of a world is made in.
-func epochFor(seed, season string, cx, cy int) EpochV3 {
+func epochFor(seed, season string, cx, cy int) Epoch {
 	if EpochKindAt(cx, cy) == EpochStill {
 		return StillEpoch(seed)
 	}
@@ -112,7 +112,7 @@ func (m *frontierMap) reach(tx, ty int) []bool {
 // ---------------------------------------------------------------- refusals
 
 func TestV3Refusals(t *testing.T) {
-	if _, err := GenerateV3(EpochV3{"s", EpochWick, 2, wickSeason(1795000000)}, 3, -3, nil); !errors.Is(err, ErrGeneratorUnavailable) {
+	if _, err := GenerateV3(Epoch{"s", EpochWick, 2, wickSeason(1795000000)}, 3, -3, nil); !errors.Is(err, ErrGeneratorUnavailable) {
 		t.Fatalf("v2 epoch: %v", err)
 	}
 	if _, err := GenerateV3(StillEpoch("s"), 3, -3, nil); !errors.Is(err, ErrWrongEpoch) {
@@ -121,7 +121,7 @@ func TestV3Refusals(t *testing.T) {
 	if _, err := GenerateV3(WickEpoch("s", wickSeason(1795000000)), 0, -1, nil); !errors.Is(err, ErrWrongEpoch) {
 		t.Fatalf("a Tangle chunk in a wick epoch: %v", err)
 	}
-	for _, e := range []EpochV3{
+	for _, e := range []Epoch{
 		{"s", "held", 3, "0"}, {"s", EpochStill, 3, "t:1:2"}, {"s", EpochWick, 3, "0"}, {"s", EpochWick, 3, "t:9:3"},
 	} {
 		if _, err := GenerateV3(e, 3, -3, nil); err == nil {
@@ -889,8 +889,8 @@ func TestV3ChunkShape(t *testing.T) {
 		m := buildFrontier(t, seed, season)
 		siteIDs := map[string]bool{}
 		for c, ch := range m.chunks {
-			if ch.Tier != Tier(c[0], c[1]) || ch.GeneratorVersion != GeneratorV3 || ch.RegionID != "" || ch.Exits != nil {
-				t.Fatalf("%s %v: identity %d %d %q", seed, c, ch.Tier, ch.GeneratorVersion, ch.RegionID)
+			if ch.Tier != Tier(c[0], c[1]) || ch.GeneratorVersion != GeneratorV3 {
+				t.Fatalf("%s %v: identity %d %d", seed, c, ch.Tier, ch.GeneratorVersion)
 			}
 			want := "outer"
 			if p := FootprintAt(c[0], c[1]); p != nil {
@@ -972,21 +972,21 @@ func TestV3ChunkShape(t *testing.T) {
 // (the rumour's) applies.
 func TestV3Loot(t *testing.T) {
 	e := WickEpoch("loot", wickSeason(1795000000))
-	a, err := RollTableLootV3(e, "rumour", "rumour:1:-7", 0)
+	a, err := RollTableLoot(e, "rumour", "rumour:1:-7", 0)
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, _ := RollTableLootV3(e, "rumour", "rumour:1:-7", 0)
+	b, _ := RollTableLoot(e, "rumour", "rumour:1:-7", 0)
 	if fmt.Sprint(a) != fmt.Sprint(b) {
 		t.Fatal("rumour loot isn't deterministic")
 	}
 	trinkets, own := 0, 0
 	for i := range 2000 {
-		d, _ := RollTableLootV3(e, "rumour", fmt.Sprint("r", i), 0)
+		d, _ := RollTableLoot(e, "rumour", fmt.Sprint("r", i), 0)
 		if d.Trinket != nil {
 			own++
 		}
-		d2, _ := RollEntityLootV3(e, Entity{ID: fmt.Sprint("c", i), Kind: kindChest, Tier: 3}, 0)
+		d2, _ := RollEntityLoot(e, Entity{ID: fmt.Sprint("c", i), Kind: kindChest, Tier: 3}, 0)
 		if d2.Trinket != nil {
 			trinkets++
 		}
@@ -994,10 +994,10 @@ func TestV3Loot(t *testing.T) {
 	if own < 450 || own > 750 || trinkets > 300 {
 		t.Fatalf("trinkets: rumour %d/2000 (30%%), chest %d/2000 (9%%)", own, trinkets)
 	}
-	if _, err := RollTableLootV3(e, "nope", "x", 0); err == nil {
+	if _, err := RollTableLoot(e, "nope", "x", 0); err == nil {
 		t.Fatal("unknown table accepted")
 	}
-	if _, err := RollTableLootV3(e, "rumour", "x", -1); err == nil {
+	if _, err := RollTableLoot(e, "rumour", "x", -1); err == nil {
 		t.Fatal("negative cycle accepted")
 	}
 }

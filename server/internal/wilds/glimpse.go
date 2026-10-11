@@ -5,7 +5,7 @@ package wilds
 // Glimpse is a chunk's main land (the land at its centre tile, as the made
 // chunk's Land) and whether the Wend's water crosses it, from the lands and
 // river passes only (decision 22). It never makes a chunk.
-func Glimpse(e EpochV3, cx, cy int) (land string, river bool) {
+func Glimpse(e Epoch, cx, cy int) (land string, river bool) {
 	if e.check() != nil {
 		return "", false
 	}

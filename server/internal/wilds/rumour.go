@@ -22,7 +22,7 @@ type RumourPick struct {
 }
 
 // Rumour is a wick epoch's rumour; false for a still epoch (or none).
-func Rumour(e EpochV3) (RumourPick, bool) {
+func Rumour(e Epoch) (RumourPick, bool) {
 	if e.check() != nil || e.Kind != EpochWick {
 		return RumourPick{}, false
 	}

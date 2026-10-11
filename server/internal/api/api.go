@@ -9,6 +9,7 @@ import (
 	"glimway/server/internal/ports"
 	"glimway/server/internal/store"
 	"glimway/server/internal/story"
+	"glimway/server/internal/wildsgen"
 	"io"
 	"log"
 	"sync"
@@ -38,8 +39,9 @@ type Config struct {
 	LoginGlobalRate  int
 	LoginWindow      time.Duration
 	// WildsGenerator makes the open map's chunks on demand, and answers the
-	// glimpse past the frontier and the wick's rumour. Nil: none are made
-	// (generator-unavailable). Stored epochs keep the version they were made by.
+	// glimpse past the frontier and the wick's rumour. Nil is generator v3
+	// (wildsgen.V3); tests pass a stand-in. Stored epochs keep the version
+	// they were made by.
 	WildsGenerator chunks.Generator
 	// Nil uses the shared presence defaults. Intended for embedded-server configuration.
 	Presence *content.Presence
@@ -102,6 +104,9 @@ func New(s *store.Store, h habitica.Upstream, c Config) *Server {
 	c.State = purseComposition{StateComposition: c.State, now: c.Now}
 	// …and the wardrobe's resolved choice (design 4.4).
 	c.State = wardrobeComposition{StateComposition: c.State}
+	if c.WildsGenerator == nil {
+		c.WildsGenerator = wildsgen.V3{}
+	}
 	if c.Chunks == nil || c.Epochs == nil {
 		stored := store.NewChunks(c.Now, c.WildsGenerator)
 		if c.Chunks == nil {

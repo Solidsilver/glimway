@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -18,6 +19,8 @@ import (
 	"glimway/server/internal/chunks/fakegen"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
+	"glimway/server/internal/wilds"
+	"glimway/server/internal/wildsgen"
 
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
@@ -266,6 +269,10 @@ func TestWildsNamedWays(t *testing.T) {
 	if len(way.Path) != 67 || way.Path[0].Y != int32(ay+3) || way.Path[66].Y != int32(by-3) || way.SignA.X != int32(ax) || way.SignA.Y != int32(ay+2) || way.SignB.X != int32(ax+1) || way.SignB.Y != int32(by-3) {
 		t.Fatalf("path %v..%v signs %v %v", way.Path[0], way.Path[len(way.Path)-1], way.SignA, way.SignB)
 	}
+	placeA := wayPlace{id: way.A, x: ax, y: ay, radius: 3}
+	placeB := wayPlace{id: way.B, x: ax, y: by, radius: 3}
+	anyTile := func(int, int) bool { return true }
+	checkWay(t, way, placeA, placeB, anyTile, anyTile, 67)
 	// Laying on doesn't make it again or move its path.
 	if _, code := x.pathOp(bc, b, "lay", "twice", ax, ay+3, ax, ay+3, "stone", 409); code != "already-laid" {
 		t.Fatal(code)
@@ -289,6 +296,7 @@ func TestWildsNamedWays(t *testing.T) {
 	if len(lift.WaysBroken) != 0 || len(lift.WaysRerouted) != 1 || lift.WaysRerouted[0].Name != "Alice's way" || !slices.ContainsFunc(lift.WaysRerouted[0].Path, func(t *contract.WorldTile) bool { return t.X == 83 && t.Y == -60 }) {
 		t.Fatal("reroute", lift)
 	}
+	checkWay(t, lift.WaysRerouted[0], placeA, placeB, anyTile, anyTile, 69)
 	// Lifting a tile off the path changes nothing.
 	if env, _ = x.pathOp(bc, b, "lift", "lift-side", ax+1, ay+20, ax+1, ay+20, "", 200); len(env.GetWildsLift().WaysBroken)+len(env.GetWildsLift().WaysRerouted) != 0 {
 		t.Fatal("an off-path lift touched the way")
@@ -467,7 +475,7 @@ func TestWildsRumour(t *testing.T) {
 		t.Fatal(code)
 	}
 	got, _ := x.claim(c, s, "open", wick.Id, find, 0, tileWhere(tx, ty+1), 200)
-	want, _ := rollTable(wick, "rumour", r.Site, 0)
+	want, _ := wilds.RollTableLoot(generationOf(wick), "rumour", r.Site, 0)
 	if !proto.Equal(got.Loot, lootProto(want)) || got.Entity.Id != r.Site {
 		t.Fatal("rumour loot", got)
 	}
@@ -506,15 +514,37 @@ func TestNearReadBudget(t *testing.T) {
 		t.Skip("set GLIMWAY_PERF=1")
 	}
 	x := newRig(t)
+	x.api.Config.Epochs.(*store.Chunks).Generator = wildsgen.V3{}
+	x.api.Config.WildsGenerator = wildsgen.V3{}
 	c, s := x.ready("alice")
-	x.give(s.AccountID, "stone", 60)
+	var ep *contract.WildsNearResult
 	for cy := -8; cy <= 0; cy += 2 {
 		for cx := -4; cx <= 4; cx += 2 {
-			x.near(c, cx, cy, 200)
+			ep = x.near(c, cx, cy, 200)
 		}
 	}
-	for i := 0; i < 40; i++ {
-		x.pathOp(c, s, "lay", fmt.Sprintf("l%d", i), 3+i%20, -20-i/20, 3+i%20, -20-i/20, "stone", 200)
+	// Forty changes in each of the 81 chunks, more than a busy wick lays.
+	tx, err := x.db.DB.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for cy := -8; cy <= 0; cy++ {
+		for cx := -4; cx <= 4; cx++ {
+			e := ep.Wick
+			if wilds.EpochKindAt(cx, cy) == "still" {
+				e = ep.Still
+			}
+			g := &contract.GroundChanges{}
+			for i := 0; i < 40; i++ {
+				g.Changes = append(g.Changes, &contract.GroundChange{Tx: uint32(i % 24), Ty: uint32(i / 24), Change: "stone", By: s.AccountID, At: float64(x.now.Load())})
+			}
+			if err = putGround(context.Background(), tx, s.WorldID, e, cx, cy, g, s.AccountID, x.now.Load()); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		t.Fatal(err)
 	}
 	var took []time.Duration
 	for i := 0; i < 100; i++ {
@@ -548,4 +578,98 @@ func (x *rig) pathOpLay(c *http.Cookie, s response, tx, ty int) []*contract.Wild
 	x.t.Helper()
 	env, _ := x.pathOp(c, s, "lay", fmt.Sprintf("lay:%d:%d", tx, ty), tx, ty, tx, ty, "stone", 200)
 	return env.GetWildsLay().WaysMade
+}
+
+// Review 1, finding 1: a refused lay that made a chunk rolls the chunk back
+// with it; the next read makes and stores it for good, here and on a second
+// server with its own chunk cache.
+func TestRefusedOperationDoesNotLeaveAPhantomChunk(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	wick := x.near(c, 0, -4, 200).Wick
+	tx, ty := local(3, -4, [2]int{3, 14})
+	if _, code := x.pathOp(c, s, "lay", "broke", tx, ty+1, tx, ty, "stone", 409); code != "insufficient-materials" {
+		t.Fatal(code)
+	}
+	stored := func(cx, cy int) int {
+		return count(t, x.db, "SELECT count(*) FROM wilds_chunks WHERE epoch_id=? AND cx=? AND cy=?", wick.Id, cx, cy)
+	}
+	if stored(3, -4) != 0 {
+		t.Fatal("the refused lay stored its chunk")
+	}
+	x.chunk(c, wick.Id, 0, 3, -4, 200)
+	if stored(3, -4) != 1 {
+		t.Fatal("the read after the refusal served a chunk it didn't store")
+	}
+	other, err := store.Open(filepath.Join(x.dir, "game.sqlite"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer other.Close()
+	cfg := x.api.Config
+	own := store.NewChunks(cfg.Now, x.gen)
+	cfg.Chunks, cfg.Epochs = own, own
+	api2 := New(other, x.api.Habitica, cfg)
+	api2.Config.Lanterns, api2.Config.HomeLand = wildsService{api2}, wildsService{api2}
+	read := func(srv *Server, path string) int {
+		r := httptest.NewRequest("GET", path, nil)
+		r.Header.Set("X-Glimway-Contract", "8")
+		r.AddCookie(c)
+		w := httptest.NewRecorder()
+		srv.ServeHTTP(w, r)
+		return w.Code
+	}
+	// The second server refuses a lay that makes (4,-8), then the first reads it.
+	tx2, ty2 := local(4, -8, [2]int{3, 14})
+	raw, _ := protojson.Marshal(&contract.WildsLayRequest{Op: op(s.Lease, "broke-2"), Where: tileWhere(tx2, ty2+1), X: int32(tx2), Y: int32(ty2), Kind: "stone"})
+	r := httptest.NewRequest("POST", "/api/wilds/lay", bytes.NewReader(raw))
+	r.Header.Set("X-Glimway-Contract", "8")
+	r.Header.Set("Content-Type", "application/json")
+	r.AddCookie(c)
+	w := httptest.NewRecorder()
+	api2.ServeHTTP(w, r)
+	if w.Code != 409 || stored(4, -8) != 0 {
+		t.Fatal("second server's refused lay", w.Code, stored(4, -8))
+	}
+	if read(x.api, fmt.Sprintf("/api/wilds/chunk/%s/0/4/-8", wick.Id)) != 200 || stored(4, -8) != 1 {
+		t.Fatal("first server's read")
+	}
+	if read(api2, fmt.Sprintf("/api/wilds/chunk/%s/0/4/-8", wick.Id)) != 200 || read(api2, fmt.Sprintf("/api/wilds/chunk/%s/0/3/-4", wick.Id)) != 200 || stored(4, -8) != 1 || stored(3, -4) != 1 {
+		t.Fatal("the servers disagree")
+	}
+}
+
+// A node yields its chunk's tier's nodeYieldBonus more of each material
+// (tiers in content/wilds.json; the generator leaves it to the claim).
+func TestNodeYieldBonusByTier(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	for _, ch := range [][2]int{{0, -1}, {3, -4}} {
+		n := x.near(c, ch[0], ch[1], 200)
+		e := n.Still
+		if wilds.EpochKindAt(ch[0], ch[1]) == "wick" {
+			e = n.Wick
+		}
+		m := x.chunk(c, e.Id, 0, ch[0], ch[1], 200)
+		var node *contract.WildsEntity
+		for _, en := range m.Entities {
+			if en.Kind == "node" {
+				node = en
+			}
+		}
+		got, _ := x.claim(c, s, fmt.Sprintf("node%d", ch[0]), e.Id, node, 0, at(node, 0), 200)
+		base, _ := wilds.RollEntityLoot(generationOf(e), wilds.EntityFromProto(node), 0)
+		bonus := int(content.WildsRules.Tiers[m.Tier-1].GetNodeYieldBonus())
+		if len(got.Loot.Materials) != len(base.Materials) {
+			t.Fatal("node loot", got.Loot, base)
+		}
+		for i, mat := range got.Loot.Materials {
+			if int(mat.Qty) != base.Materials[i].Qty+bonus {
+				t.Fatalf("tier %d node: %v, base %v, bonus %d", m.Tier, got.Loot, base, bonus)
+			}
+		}
+		if m.Tier == 3 && bonus != 1 || m.Tier == 1 && bonus != 0 {
+			t.Fatal("tiers", m.Tier, bonus)
+		}
+	}
 }

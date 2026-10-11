@@ -13,7 +13,7 @@ import (
 // same chunk made beside others. A world isn't safe for concurrent use;
 // each GenerateV3 call makes its own.
 type world struct {
-	e    EpochV3
+	e    Epoch
 	wick bool
 
 	landPts map[[2]int]landPoint
@@ -31,7 +31,7 @@ type world struct {
 
 func contentRules() *content.Wilds { return content.WildsRules }
 
-func newWorld(e EpochV3) *world {
+func newWorld(e Epoch) *world {
 	w := &world{
 		e:       e,
 		wick:    e.Kind == EpochWick,

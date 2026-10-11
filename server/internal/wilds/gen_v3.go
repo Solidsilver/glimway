@@ -27,7 +27,7 @@ type Kept struct {
 // (diagonals too) whose EpochKindAt differs from e.Kind; a missing one is
 // read as generator v3 makes it, which is exact while it was made by v3.
 // The frontier is the caller's to check: this makes any chunk.
-func GenerateV3(e EpochV3, cx, cy int, kept []Kept) (Chunk, error) {
+func GenerateV3(e Epoch, cx, cy int, kept []Kept) (Chunk, error) {
 	if err := e.check(); err != nil {
 		return Chunk{}, err
 	}
@@ -59,7 +59,7 @@ func (w *world) chunk(cx, cy int, kept []Kept) (Chunk, error) {
 		gx, gy := gateTile()
 		home = Tile{gx - cx*S, gy - cy*S}
 	}
-	seed := ChunkSeedV3(w.e, cx, cy)
+	seed := ChunkSeed(w.e, cx, cy)
 	tier := Tier(cx, cy)
 	d := newDetail(S, subSeed(seed, "terrain"), base, look == "outer", home)
 
@@ -297,7 +297,7 @@ func weightOf(list []*content.WildsWeight, id string) int {
 // dealSlots deals a footprint's dealt sites over its chunks each epoch, as
 // v2's siteSlots did: an "east" site to the east column, the rest spread to
 // the least-used chunks (a fixed site's chunk counts as used), then chance.
-func dealSlots(e EpochV3, p *content.WildsPlace) []siteSlot {
+func dealSlots(e Epoch, p *content.WildsPlace) []siteSlot {
 	rng := NewRng(e.hash("sites", p.GetId()))
 	x0, y0 := int(p.GetCx()), int(p.GetCy())
 	load := map[Tile]int{}

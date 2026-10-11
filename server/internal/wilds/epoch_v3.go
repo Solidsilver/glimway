@@ -23,9 +23,9 @@ const (
 // ErrWrongEpoch: the chunk isn't made in this kind of epoch (EpochKindAt).
 var ErrWrongEpoch = errors.New("wilds: chunk is not made in this epoch kind")
 
-// EpochV3 is one v3 epoch's frozen generation parameters. Season is "0" for
+// Epoch is one v3 epoch's frozen generation parameters. Season is "0" for
 // the still epoch and "t:<startsAt>:<endsAt>" for a wick epoch.
-type EpochV3 struct {
+type Epoch struct {
 	WorldSeed        string `json:"worldSeed"`
 	Kind             string `json:"kind"`
 	GeneratorVersion int    `json:"generatorVersion"`
@@ -33,33 +33,33 @@ type EpochV3 struct {
 }
 
 // StillEpoch is a world's still epoch.
-func StillEpoch(worldSeed string) EpochV3 {
-	return EpochV3{WorldSeed: worldSeed, Kind: EpochStill, GeneratorVersion: GeneratorV3, Season: "0"}
+func StillEpoch(worldSeed string) Epoch {
+	return Epoch{WorldSeed: worldSeed, Kind: EpochStill, GeneratorVersion: GeneratorV3, Season: "0"}
 }
 
 // WickEpoch is a world's wick epoch for a season "t:<startsAt>:<endsAt>".
-func WickEpoch(worldSeed, season string) EpochV3 {
-	return EpochV3{WorldSeed: worldSeed, Kind: EpochWick, GeneratorVersion: GeneratorV3, Season: season}
+func WickEpoch(worldSeed, season string) Epoch {
+	return Epoch{WorldSeed: worldSeed, Kind: EpochWick, GeneratorVersion: GeneratorV3, Season: season}
 }
 
-// ChunkSeedV3 is hash(worldSeed, kind, generatorVersion, season, cx, cy).
-func ChunkSeedV3(e EpochV3, cx, cy int) uint32 {
+// ChunkSeed is hash(worldSeed, kind, generatorVersion, season, cx, cy).
+func ChunkSeed(e Epoch, cx, cy int) uint32 {
 	return Hash(e.WorldSeed, e.Kind, e.GeneratorVersion, e.Season, cx, cy)
 }
 
-// LootSeedV3 is hash(worldSeed, kind, generatorVersion, season, entityId, cycle).
-func LootSeedV3(e EpochV3, entityID string, cycle int) uint32 {
+// LootSeed is hash(worldSeed, kind, generatorVersion, season, entityId, cycle).
+func LootSeed(e Epoch, entityID string, cycle int) uint32 {
 	return Hash(e.WorldSeed, e.Kind, e.GeneratorVersion, e.Season, entityID, cycle)
 }
 
 // epochHash hashes the epoch with more parts: every epoch-wide choice
 // (lands, river, places, routes, gaps) draws from one of these.
-func (e EpochV3) hash(parts ...any) uint32 {
+func (e Epoch) hash(parts ...any) uint32 {
 	return Hash(append([]any{e.WorldSeed, e.Kind, e.GeneratorVersion, e.Season}, parts...)...)
 }
 
 // check refuses an epoch this code can't make.
-func (e EpochV3) check() error {
+func (e Epoch) check() error {
 	if e.GeneratorVersion != GeneratorV3 {
 		return fmt.Errorf("%w: version %d", ErrGeneratorUnavailable, e.GeneratorVersion)
 	}
@@ -82,18 +82,18 @@ func (e EpochV3) check() error {
 }
 
 // still is the still epoch of the same world.
-func (e EpochV3) still() EpochV3 { return StillEpoch(e.WorldSeed) }
+func (e Epoch) still() Epoch { return StillEpoch(e.WorldSeed) }
 
-// RollEntityLootV3 is RollEntityLoot on a v3 epoch: the entity's table, the
+// RollEntityLoot is RollEntityLoot on a v3 epoch: the entity's table, the
 // file's trinket chance.
-func RollEntityLootV3(e EpochV3, entity Entity, cycle int) (LootDrop, error) {
-	return rollTable(LootTable(entity), LootSeedV3(e, entity.ID, cycle), cycle, false)
+func RollEntityLoot(e Epoch, entity Entity, cycle int) (LootDrop, error) {
+	return rollTable(LootTable(entity), LootSeed(e, entity.ID, cycle), cycle, false)
 }
 
-// RollTableLootV3 rolls a named table (discovery, rumour) for an id. A
+// RollTableLoot rolls a named table (discovery, rumour) for an id. A
 // table's own trinketChancePermille, when set, replaces the file's.
-func RollTableLootV3(e EpochV3, table, id string, cycle int) (LootDrop, error) {
-	return rollTable(table, LootSeedV3(e, id, cycle), cycle, true)
+func RollTableLoot(e Epoch, table, id string, cycle int) (LootDrop, error) {
+	return rollTable(table, LootSeed(e, id, cycle), cycle, true)
 }
 
 func rollTable(name string, seed uint32, cycle int, ownTrinket bool) (LootDrop, error) {

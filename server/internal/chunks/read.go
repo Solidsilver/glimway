@@ -12,19 +12,21 @@ import (
 )
 
 var placeMarkID = regexp.MustCompile(`^place:-?[0-9]{1,6}:-?[0-9]{1,6}$`)
-var lookID = regexp.MustCompile(`^[a-z0-9-]{1,32}$`)
+
+// knownLook: a chunk's look is one of the footprints' (the Beyond wears
+// the Whitequiet's, generator v3).
+func knownLook(look string) bool {
+	return slices.ContainsFunc(content.WildsRules.Places, func(p *content.WildsPlace) bool { return p.GetLook() == look })
+}
 
 // Validate checks immutable geometry, before storage and after binary decode
 // (open-map.md 2.2, 2.5): identity, sizes, the palette and decor against
 // content's vocabularies, sites, entities and place marks. World ownership
 // and lifetime remain the transactional source's responsibility.
 func Validate(c *contract.WildsChunk) error {
-	if c != nil && c.GeneratorVersion == 2 {
-		return validateV2(c)
-	}
 	w := content.WildsRules
 	S := uint32(w.GetChunkSize())
-	if c == nil || c.Size != S || c.EpochId == "" || c.GeneratorVersion < 3 || c.Realm != w.GetRealm() || c.Layer != 0 || !lookID.MatchString(c.Look) || len(c.Mark) > 64 {
+	if c == nil || c.Size != S || c.EpochId == "" || c.GeneratorVersion < 3 || c.Realm != w.GetRealm() || c.Layer != 0 || !knownLook(c.Look) || len(c.Mark) > 64 {
 		return fmt.Errorf("invalid chunk identity")
 	}
 	if c.Region != "" || len(c.Exits) != 0 || c.Spawn != nil {

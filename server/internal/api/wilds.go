@@ -20,6 +20,7 @@ import (
 	"glimway/server/internal/store"
 	"glimway/server/internal/story"
 	"glimway/server/internal/wilds"
+	"glimway/server/internal/wildsgen"
 	"math"
 	"net/http"
 	"strconv"
@@ -33,10 +34,21 @@ import (
 // wildsArea is the `where` area of the open map: one area, world pixels.
 const wildsArea = "wilds"
 
-// generationOf is an epoch's seed for loot rolls. Generator v2's Epoch still
-// names a region; the open map's epochs carry their kind there instead.
-func generationOf(e *contract.WildsEpoch) wilds.Epoch {
-	return wilds.Epoch{WorldSeed: e.WorldSeed, RegionID: e.Kind, GeneratorVersion: int(e.GeneratorVersion), Season: e.Season}
+// generationOf is a stored epoch's generation parameters (loot seeds).
+func generationOf(e *contract.WildsEpoch) wilds.Epoch { return wildsgen.Epoch(e) }
+
+// rollClaimLoot is an entity's loot for a cycle; a node yields its chunk's
+// tier's nodeYieldBonus more of each material it gives (open-map.md 2.1).
+func rollClaimLoot(e *contract.WildsEpoch, entity wilds.Entity, chunkTier uint32, cycle int) (wilds.LootDrop, error) {
+	loot, err := wilds.RollEntityLoot(generationOf(e), entity, cycle)
+	if err != nil || entity.Kind != "node" || chunkTier < 1 || int(chunkTier) > len(content.WildsRules.Tiers) {
+		return loot, err
+	}
+	bonus := int(content.WildsRules.Tiers[chunkTier-1].GetNodeYieldBonus())
+	for i := range loot.Materials {
+		loot.Materials[i].Qty += bonus
+	}
+	return loot, nil
 }
 
 // chunkError maps the chunk ports' errors to refusals.
@@ -428,7 +440,7 @@ func (a *Server) wildsClaim(w http.ResponseWriter, r *http.Request) error {
 			w.Header().Set("Retry-After", "60")
 			return nil, err
 		}
-		loot, err := wilds.RollEntityLoot(generationOf(e), entity, int(cycle))
+		loot, err := rollClaimLoot(e, entity, m.Tier, int(cycle))
 		if err != nil {
 			return nil, err
 		}

@@ -753,3 +753,46 @@ func TestPresenceAuthDeadlineAndHTTPDeadlines(t *testing.T) {
 		}
 	})
 }
+
+// Review 1, finding 4: in a Wilds room a position must stand inside the
+// frontier (east, west, north, and south of the gate's row are all
+// outside); one outside is dropped, neither kept nor relayed. A position in
+// a neighbouring chunk (mid-crossing, the join waiting out its cooldown)
+// still travels.
+func TestPresenceWildsPositionsStayInsideTheFrontier(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	bc, b := x.member("bob", s.WorldID)
+	ts := startPresence(t, x, presenceTestConfig())
+	a := wsConnect(t, ts, c, s.Lease)
+	a.join("wilds:0:-1")
+	bob := wsConnect(t, ts, bc, b.Lease)
+	bob.join("wilds:0:-1")
+	a.expect("join")
+	at := func(px, py float64) map[string]any {
+		return map[string]any{"type": "pos", "x": px, "y": py, "facing": map[string]any{"x": 0, "y": 1}, "moving": true}
+	}
+	const chunk = 24 * 16
+	for name, p := range map[string][2]float64{
+		"east":  {5*chunk + 8, -chunk + 8},
+		"west":  {-4*chunk - 8, -chunk + 8},
+		"north": {8, -8*chunk - 8},
+		"south": {8, chunk + 8},
+	} {
+		a.send(at(p[0], p[1]))
+		select {
+		case e := <-bob.events:
+			t.Fatalf("%s: relayed %s", name, e.Raw)
+		case <-time.After(60 * time.Millisecond):
+		}
+	}
+	// The frontier's own edges, and a neighbouring chunk, travel.
+	for _, p := range [][2]float64{{4*chunk + chunk - 1, -chunk + 8}, {8, chunk - 1}, {chunk + 8, -chunk + 8}} {
+		time.Sleep(time.Second / 7)
+		a.send(at(p[0], p[1]))
+		if pos := bob.expect("pos"); pos.X != p[0] {
+			t.Fatal("an inside position", pos.Raw)
+		}
+	}
+	bob.none()
+}

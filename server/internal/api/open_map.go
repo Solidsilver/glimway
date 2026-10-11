@@ -422,7 +422,7 @@ func (a *Server) wildsDiscover(w http.ResponseWriter, r *http.Request) error {
 		}
 		out := &contract.WildsDiscoverResult{Epoch: e.Id, First: n == 1, Loot: &contract.WildsLoot{}}
 		if out.First {
-			loot, err := rollTable(e, "discovery", place.id, 0)
+			loot, err := wilds.RollTableLoot(generationOf(e), "discovery", place.id, 0)
 			if err != nil {
 				return nil, err
 			}
@@ -532,7 +532,7 @@ func (a *Server) openRumour(ctx context.Context, tx *sql.Tx, s *store.Snapshot, 
 	if err = claimRate(ctx, tx, s.AccountID, now); err != nil {
 		return nil, err
 	}
-	loot, err := rollTable(e, "rumour", req.EntityId, 0)
+	loot, err := wilds.RollTableLoot(generationOf(e), "rumour", req.EntityId, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -544,34 +544,4 @@ func (a *Server) openRumour(ctx context.Context, tx *sql.Tx, s *store.Snapshot, 
 		return nil, err
 	}
 	return &contract.WildsClaimResult{Epoch: e.Id, Entity: entityRow{state: "available"}.view(e.Id, req.EntityId), Loot: lootProto(loot), Materials: balances, Papers: []string{}}, nil
-}
-
-// rollTable rolls a named loot table (discovery, rumour) for an id, as
-// RollEntityLoot rolls an entity's, honouring the table's own trinket
-// chance. Generator v3's wilds.RollTableLootV3 takes this over when it lands.
-func rollTable(e *contract.WildsEpoch, table, id string, cycle int) (wilds.LootDrop, error) {
-	drop := wilds.LootDrop{Materials: []wilds.MaterialQty{}}
-	data := content.WildsRules
-	t, ok := data.LootTables[table]
-	if !ok {
-		return drop, fmt.Errorf("wilds: missing loot table %s", table)
-	}
-	rng := wilds.NewRng(wilds.LootSeed(generationOf(e), id, cycle))
-	for _, entry := range t.GetEntries() {
-		chance := rng.NextInt(1000)
-		lo, hi := int(entry.GetMin()), int(entry.GetMax())
-		qty := lo + rng.NextInt(hi-lo+1)
-		if chance < int(entry.GetChancePermille()) {
-			drop.Materials = append(drop.Materials, wilds.MaterialQty{ID: entry.GetMaterial(), Qty: qty})
-		}
-	}
-	trinket := int(data.GetTrinketChancePermille())
-	if t.TrinketChancePermille != nil {
-		trinket = int(t.GetTrinketChancePermille())
-	}
-	if rng.NextInt(1000) < trinket {
-		v := data.Trinkets[rng.NextInt(len(data.Trinkets))]
-		drop.Trinket = &v
-	}
-	return drop, nil
 }
