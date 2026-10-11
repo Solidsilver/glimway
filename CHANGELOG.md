@@ -13,6 +13,8 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-11
+
 ### For players
 
 - **The open map.** Out through the Commons gate the Wilds now run on
@@ -605,7 +607,8 @@ The first public release.
   under its own licence; contributions under the DCO.
 - Unit tests, Go tests and Playwright playtests.
 
-[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/Solidsilver/glimway/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Solidsilver/glimway/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/Solidsilver/glimway/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/Solidsilver/glimway/compare/v0.5.2...v0.6.0

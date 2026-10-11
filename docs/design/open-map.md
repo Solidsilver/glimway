@@ -1,6 +1,6 @@
 # Design: 0.8 The open map
 
-Status: **agreed with the owner, 2026-10-10**; ready for lanes. Docs only; nothing is built yet.
+Status: **shipped in 0.8.0** (2026-10-11). Agreed with the owner 2026-10-10; what waits is in section 7.
 Follows [world.md](world.md) ("The open map") and replaces the frontier band in
 [lamps.md](lamps.md), which moves to 0.9.
 
@@ -596,3 +596,25 @@ covers pieces the painter can't make well, all straight-on, final art, no placeh
 - **Difficulty past tier 3:** numbers come with lamps.
 - **More place kinds per cell,** story sites past the Whitequiet.
 - **Painting off the main thread** (OffscreenCanvas in a worker), if the phone budget needs it.
+
+### Left from the 0.8 walks (owner, 2026-10-11)
+
+The owner walked 0.8.0-alpha.1 and alpha.2 and shipped 0.8 as it is. These wait for a later
+release:
+
+- **Lamp stone size:** about twice a resident's height now; the art request asked for waist to
+  chest high.
+- **Ford shallows:** the shallow water at a ford's sides reads as plain river.
+- **The Whitequiet's straight edge:** its southern border is a straight line.
+- **Land size:** `landCellChunks` is 7. Judge it again with more land to walk.
+- **Hems and islands:** check how they look.
+- **Gathering per chunk:** gathering re-registers its points for the whole window on every
+  chunk change. It costs about 4 ms on average at 4× CPU throttling and makes the odd frame land
+  just over 50 ms. Register per chunk (the walk-perf lane's report).
+- **The drift's sway (Unmoored)** is kept as it is. But the open map makes "deep in the Tangle"
+  (Manhattan distance 2 from the gate) easy to reach. Options:
+  - start it further out (past the Tangle, or the Whitequiet and beyond);
+  - and/or make it clearer: a toast when it starts, and the HUD chip showing the time left while
+    you rest in lamplight.
+- **A reload can put you about 1 s of walking back** (a stale outbox record), and **a painted
+  ground seam under a laid edge tile isn't repainted** (both from the O-E lane).
