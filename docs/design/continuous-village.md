@@ -12,6 +12,17 @@
 
 The agreed order remains: **design the location seam beside fights → ship the fights prototype → playtest the Commons/Tangle join → H1 plot district → after Lamps, a Wilds claim.** Plots stay behind gates through the first two steps. The village may be rearranged. See [the owner decisions](seamless-world.md#owner-decisions-2026-10-11).
 
+## Owner decisions (2026-10-11)
+
+1. **Layout:** A's compact square, with **some larger roads separating the different parts of town**
+   (a little of C's clear road network, without its busy crossing at the centre).
+2. **The Commons stays its own district.**
+3. **Homes:** the eight-slot district is fine; a walk of about 43 s to the farthest home is acceptable.
+4. **The Tangle road stays open during the tutorial,** with strong guidance east.
+5. to 8. **As recommended:** the west road gets content first (after the Lantern Road story), riding
+   is on foot through the town zone, space is reserved for the guildhouse, workshop and kiln, and
+   the town and its public roads show on the map from arrival.
+
 ## 1. What the village is for
 
 Hearthwick is the place to begin, return, find someone, do a small errand, recover, and meet friends. The square is its social and story centre; the Commons is its departure, building and neighbour centre. Outdoor continuity should make those jobs easier to understand.
