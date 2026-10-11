@@ -69,6 +69,24 @@ never call a running instance "official".
     where, the Wend's course, the places and routes. Only the Lantern Road and the fixed story
     sites stay put.
 
+Then, on the owner's ask for a more fun open map (2026-10-10), all five proposals taken:
+
+19. **A rumour each wick.** When the drift turns, Elara (who rode the drift from the Saltings)
+    hints at one hidden find out there this week: a landmark, a direction from the gate, and
+    whether it lies past the river. One per world per wick; everyone can find it once.
+20. **First to find a place.** The first person in a world to reach a place this wick gets a
+    small find, and their name sits on that place on everyone's map until the turning.
+21. **Landmarks seen from afar.** Every place has one tall piece you can see from the next chunk
+    over, so you steer by sight. Landmarks you've seen go on the map.
+22. **A glimpse past the drift.** At the frontier's edge you see the rough shape of the land
+    beyond, dim through the veil: a meadow's colour, a river's glint. Nothing past it is made.
+23. **Named ways.** A run of laid tiles that joins two places becomes a named way,
+    "<name>'s way", after whoever laid most of it. The map draws it and a small sign stands at
+    each end. It lasts as long as its tiles.
+
+Rewards for all of these are materials and the existing loot tables, never glims (Habitica
+boundary: nothing here touches Habitica).
+
 ## What exists today
 
 The two searches behind this section are summarised here; file:line facts are as of `dev` at
@@ -146,7 +164,16 @@ adds one).
    Outside the Tangle they last until the land turns; the game says so before you lay one.
 9. The journal has a **Map** tab: the chunks you've walked this wick, the Tangle and the
    Whitequiet, the road, the river, laid paths and the edge of the frontier.
-10. At the wick the Beyond turns. If you're out there, the land changes the next time your chunks
+10. In the Commons, Elara has a rumour for this wick: "Something's tucked under a split oak,
+    north-west, past the river. A fair walk." It changes every wick.
+11. Walking out, you see landmarks over the trees before you reach them: a split oak, a standing
+    stone, a lone meadow oak. Reach a place first and it's yours on everyone's map until the
+    turning: "Found by <name>". The first finder gets a small find there.
+12. At the frontier the veil is thin enough to see through: the pale wash of a meadow beyond, a
+    dark line where the river runs on.
+13. Lay stone all the way from one place to another and it becomes a way, with a sign at each
+    end and its name on the map.
+14. At the wick the Beyond turns. If you're out there, the land changes the next time your chunks
     load; if you were standing in something now solid, you step to open ground: "The drift turned
     while you stood in it."
 
@@ -314,10 +341,14 @@ The biggest lane. All of `src/game/wilds/` and parts of the scene code.
   - `frontier`: reach 3, south limit 0.
   - `paths`: clear tools by decor kind, lay costs, walk multipliers.
   - `river`, `road`: widths, lamp-stone spacing.
+  - `placeKinds`: each with its landmark, its land, and a find radius.
+  - `rumour`: phrase tables (landmark names, compass words, distance words, the river clause).
+  - Loot tables `discovery` and `rumour`.
 - **Protos:** `content/v1/wilds.proto` follows; `v1/wilds.proto`'s `WildsChunk` drops `region`,
   `exits` and `spawn`, gains `tier` and `land` (the chunk's main land, for the map);
-  `WildsEpoch.region_id` becomes `kind`; a `WildsNearResult`; `GroundChange` and the two
-  operations in section 3. `op.proto`'s `Place.outer_epoch` becomes `wick_epoch`.
+  `WildsEpoch.region_id` becomes `kind`; a `WildsNearResult` (with `glimpse` and `ways`);
+  `GroundChange`, `WildsWay` and the operations in sections 2.10 and 3 (`wilds-clear`,
+  `wilds-lay`, `wilds-lift`, `wilds-discover`); a `WildsRumour` in the start state. `op.proto`'s `Place.outer_epoch` becomes `wick_epoch`.
 - **Contract number 8.** Ground and decor ids move from Go constants (`woods_v2.go:35`, `:60`) and
   `decor.ts` into content, so new lands are data.
 
@@ -328,6 +359,8 @@ The biggest lane. All of `src/game/wilds/` and parts of the scene code.
 - Drawn from chunk data, no new art beyond a tab icon: each walked chunk as a 24×24 block of
   ground colours from its palette, laid paths on top, the road and river, the footprints' names,
   the frontier's edge, and you.
+- On top: landmarks you've seen (a small mark each), "Found by <name>" on discovered places,
+  named ways along their tiles, and the glimpse past the edge as a pale wash.
 - "Walked this wick" is kept on the device per wick epoch (IndexedDB, beside the chunk cache);
   it's a convenience, not server state. The Tangle is always shown.
 - 0.9's Lamps tab grows from it.
@@ -340,7 +373,55 @@ The biggest lane. All of `src/game/wilds/` and parts of the scene code.
   timber, can't lay on water, and the confirm before laying on turning land: "This land turns in
   N days. A path here goes with it."
 - The meadow and the Wend in the area cards (`src/content/world.ts`), the map tab's labels.
+- Elara's rumour: the phrase tables and her lines around them; what she says when this wick's
+  find has been opened by you.
+- "Found by <name>", the first finder's line, the way's name and its sign text.
 - `world.md` "Today" rewritten (it still says the client generates the Wilds).
+
+### 2.10 Reasons to go out (decisions 19 to 23)
+
+**Places and landmarks (21).** Each place kind in content names its landmark: a tall prop the
+generator puts at the place's centre (the split oak and standing stone in woods, the lone oak
+and outcrop in meadow; the road's lamp stones count too). Landmarks are solid at the base like
+any prop. The client draws landmark sprites (sprite only, no collision) for chunks in the
+fetched outer ring as well as the attached 3×3, so they show over the trees from a chunk away.
+A landmark counts as seen once it's drawn on screen; the seen set is kept on the device per
+wick, beside "walked", and the Map tab shows them.
+
+**First to find (20).** Each place has an id, `place:<cellX>:<cellY>`, and a find radius (3
+tiles of its landmark).
+- A new operation, **`wilds-discover`** `{where, place}`: the server checks you're within the
+  radius (`nearWilds`) and inserts a `discoveries` row for the wick epoch with `INSERT OR IGNORE`,
+  as POI discoveries already do (`api/wilds.go:552`). Only the first insert wins.
+- The first finder rolls the `discovery` loot table (a few materials; content). Later visitors
+  get only the name.
+- The near read already returns discoveries with display names (`api/wilds.go:228`); the Map
+  tab and a small banner at the place show "Found by <name>".
+- The client sends it when you enter the radius; no button.
+
+**A rumour each wick (19).**
+- `wilds.Rumour(worldSeed, wickEpoch)` picks one place in the new cells (never the footprints),
+  hashed. The rumour's find is a site at that place's landmark, `rumour:<cx>:<cy>`, part of the
+  chunk (it's a pure function of the epoch, so it's generated with the chunk).
+- The text is built from parts, so it never names coordinates: the landmark ("a split oak"), a
+  compass word from the gate to the place (eight directions), a distance word by ring ("not
+  far", "a fair walk", "out past the old road's end"), and "past the river" when the Wend lies
+  between the gate and the place. Phrase tables in content, written by the words lane.
+- Elara says it in the library. A new `rumour` field in the state the client reads at start
+  (`store/composition.go`), refreshed at the turning; her talk shows it when it's set.
+- Opening the find is a per-player claim like a chest (`personal_claims`), so everyone can find
+  it once per wick. It rolls the `rumour` loot table: better than `chest:3`, with a higher
+  trinket chance. First to open it also counts as a discovery (20).
+
+**A glimpse past the drift (22).**
+- The near read gains `glimpse`: for each chunk within 2 outside the frontier that borders the
+  5×5 window, its main land and whether the Wend crosses it. The server computes these from the
+  lands and river passes only, at one sample a chunk; it never makes or stores the chunk.
+- The client paints the margin past the frontier from it: the veil over a dim wash of that
+  land's colour, and a dark glinting line where the river runs on. Nothing there is walkable or
+  interactive.
+
+**Named ways (23).** See section 3, "Named ways".
 
 ## 3. The world-changes layer
 
@@ -381,6 +462,24 @@ you use. Both show on everyone's map. Outside lamplight they're for this wick; w
 a stretch of held land with a laid road becomes the first thing a world builds together that
 lasts.
 
+**Named ways** (decision 23).
+- A **way** is a 4-connected run of laid tiles (stone or plank) that touches the find radius of
+  two different places. Places here are the cell places and the two footprints (a way touches
+  the Tangle or the Whitequiet at any of their edge openings).
+- `wilds-lay` checks after each lay: a flood fill over laid tiles from the new tile, across the
+  ground changes of the chunks in the cells involved, capped at 600 tiles. If the run now joins
+  two places that no way joins yet, it stores a `way` row (`worldchange`, kind `way`, entity
+  `way:<placeA>:<placeB>`) with the run's tile count and the name.
+- The name is "<display name>'s way", after whoever laid the most tiles of the run; a tie goes
+  to whoever laid the joining tile. It doesn't change after that while the way stands.
+- `wilds-lift` re-checks: if lifting breaks the run, the way row is deleted.
+- It is stored under the wick epoch, so it goes at the turning with its tiles. In 0.9, a way
+  whose tiles all lie in held land (or the Tangle) is stored under the still or held epoch and
+  lasts.
+- The client draws a small **way sign** at each end and the name along the way on the map.
+- Between neighbouring places a way is roughly 60 to 100 tiles: a goal for a few friends with
+  stone, not a single afternoon's chore.
+
 **Later users, same layer:** footbridges (a `bridge` change on water tiles, lake country), magic's
 heave, brace and pin (kind per working, `ends_at` at the turning), and lamps.md's mage-lit lamp
 stones (already designed as `worldchange` rows with `ends_at`).
@@ -415,6 +514,14 @@ stones (already designed as `worldchange` rows with `ends_at`).
 - Near read: shape, 5×5 window, refusal outside the frontier.
 - World changes: clear and lay rules, tools, debits, lift refunds only your own, changes vanish
   with the epoch and stay in the Tangle.
+- Rumour: one per world per wick, always in a new cell, text never contains digits, "past the
+  river" exactly when the Wend lies between; the find claims once per player.
+- Discover: the first insert wins under two racing requests; the radius is checked; only the
+  first finder rolls loot.
+- Landmarks: every place has its landmark, solid at the base, reachable.
+- Glimpse: computed without storing a chunk; matches the land and river of the chunk made later
+  when the frontier grows (0.9's check, written now).
+- Ways: join, name by most tiles and tie rule, cap, break on lift, gone at the turning.
 - Migration 034 from a 0.7 database: epochs, chunks, positions moved, packs and home chests
   untouched.
 
@@ -429,7 +536,10 @@ name regions today.
   into the new ring without a scene change; cross the Wend at a ford; meet the drift; reload in
   place.
 - New `e2e/paths.spec.ts`: clear with a spade, lay stone, see it on a second account's screen,
-  lift it, the turning-land confirm.
+  lift it, the turning-land confirm; a short way between two test places gets its name and
+  signs.
+- New `e2e/rumour.spec.ts`: Elara's rumour, walk to it, open the find, "Found by" on the map
+  for a second account.
 - Updated: `wilds.spec.ts`, `wilds-outer.spec.ts`, `wilds-screens.spec.ts`, `gathering.spec.ts`,
   `party-worlds.spec.ts`, `art-screens.spec.ts`, and the helpers (`waitForWilds`, `exitTo`,
   `warp`, `WildsDump`) in `e2e/helpers.ts`.
@@ -448,23 +558,26 @@ covers pieces the painter can't make well, all straight-on, final art, no placeh
 - The Lantern Road: paving pieces and a road verge.
 - From lamps' request, moved here because 0.8 uses them: `lamp-stone-dark` and
   `frontier-veil-0..3`.
+- Landmarks: a split oak and a standing stone (woods), alongside the meadow oak and outcrop.
+- The rumour's find (a bundle tucked in roots, closed and opened) and a way sign.
 - The map tab icon.
 
 ## 6. Lanes
 
 | Lane | What | Who | Size | After |
 |---|---|---|---|---|
-| O-A | Contract and content: wilds.json v3, protos, contract 8, ids into content, vectors | Opus | M | first |
-| O-B | The generator v3: cells, lands, the Wend, the road, routes, detail, goldens, budgets | Opus | L | O-A |
-| O-C | The server world: epochs, on-demand store, migration 034, near read, `where`, story footprints, presence, the frontier, the world-changes layer and its operations | Opus | L | O-A (O-B for its fixtures) |
-| O-D | Seamless walking: the Wilds scene window, coordinates, save, ground painting in world pixels, store, presence, the validator, the turning | Opus | L | O-A; against O-B/O-C on `dev` |
-| O-E | Paths and the map: clear, lay and lift UI, walk speed, the Map tab, the drift line, all words | Opus | M | O-C, O-D |
+| O-A | Contract and content: wilds.json v3 (with place kinds, rumour phrases, loot tables), protos, contract 8, ids into content, vectors | Opus | M | first |
+| O-B | The generator v3: cells, lands, the Wend, the road, routes, landmarks, the rumour site, detail, `Glimpse`, goldens, budgets | Opus | L | O-A |
+| O-C | The server world: epochs, on-demand store, migration 034, near read (with glimpse), `where`, story footprints, presence, the frontier, the world-changes layer, its operations and named ways, discover, the rumour state | Opus | L | O-A (O-B for its fixtures) |
+| O-D | Seamless walking: the Wilds scene window, coordinates, save, ground painting in world pixels, landmarks drawn from afar, the glimpse in the margin, store, presence, the validator, the turning | Opus | L | O-A; against O-B/O-C on `dev` |
+| O-E | Paths, the map and the reasons to go out: clear, lay and lift UI, walk speed, the Map tab (seen landmarks, finders, ways), Elara's rumour talk, discover banners, way signs, all words | Opus | M–L | O-C, O-D |
 | O-F | Art | Codex Luna | M | anytime |
 
 - **Order:** O-A, then O-B, O-C and O-D side by side, then O-E. O-F runs alongside from the start.
 - **The alpha** (decision 14): tag `0.8.0-alpha.1` when O-B, O-C and O-D are merged on `dev`, and
   hand the owner a short walking list. O-E and the art land after.
-- **Splits if a lane runs long:** O-C splits world changes out; O-D splits ground painting out.
+- **Splits if a lane runs long:** O-C splits world changes and named ways out; O-D splits ground
+  painting out; O-E splits the rumour and discover pieces into their own S lane.
 - No MiMo build lane. Version 0.8.0.
 
 ## 7. Later, on purpose

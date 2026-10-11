@@ -49,6 +49,19 @@ painter's palette (`src/game/wilds/wilds-looks.ts`) so pieces sit on the painted
 | `meadow-oak` | 2×1 | 160×256 | A lone, broad meadow oak; its crown well above, its trunk solid at the base. Not iron-oak: rounder, lighter |
 | `meadow-stone-0..1` | 1×1 | 64×64 ×2 | A single fallen stone in the grass; solid |
 
+## Landmarks and finds
+
+Landmarks are seen from a chunk away, over the trees, so each reads clearly in silhouette and
+stands well above the woods around it. The meadow oak and outcrop above are landmarks too.
+
+| Key | Footprint | Canvas | Notes |
+|---|---:|---:|---|
+| `landmark-split-oak` | 2×1 | 192×320 | An ancient iron-oak split down the middle by an old strike, both halves still in leaf, a hollow between the roots. Taller than any Tangle tree. Solid at the base |
+| `landmark-standing-stone` | 1×1 | 64×224 | A tall, narrow grey-gold standing stone, leaning a little, lichen and one carved ring near the top. Solid at the base |
+| `rumour-find-closed` | 1×1 | 64×64 | A bundle wrapped in oilcloth and tied with cord, tucked where a traveller would leave it. Sits at a landmark's foot |
+| `rumour-find-open` | 1×1 | 64×64 | The same, cord undone, the cloth fallen open and empty |
+| `way-sign` | 1×1 | 64×128 | A short iron-oak post with a small plank sign at the top, blank (the game writes the name beside it, not on the art) |
+
 ## The Wend
 
 | Key | Footprint | Canvas | Notes |
