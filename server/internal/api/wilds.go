@@ -1,10 +1,11 @@
 package api
 
-// The Wilds from the server (server-first.md 3): a region epoch and its nine
-// chunks are made once, when a region read finds none current, and stored
-// (store/chunks.go). Afterwards everything reads the stored chunks: the chunk
-// route serves them, the region view lists the changing state, and claims,
-// relights and Echo settlements check entities and sites against them.
+// The Wilds from the server (server-first.md 3, open-map.md 2.3, 2.4): a
+// world's still and wick epochs, and their chunks, each made the first time
+// it is read and stored (store/chunks.go). Afterwards everything reads the
+// stored chunks: the chunk route serves them, the near read lists the
+// changing state around a chunk, and claims, relights and Echo settlements
+// check entities and sites against them.
 
 import (
 	"context"
@@ -13,9 +14,11 @@ import (
 	"errors"
 	"glimway/content"
 	"glimway/server/internal/chunks"
+	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/ports"
 	"glimway/server/internal/store"
+	"glimway/server/internal/story"
 	"glimway/server/internal/wilds"
 	"math"
 	"net/http"
@@ -27,20 +30,13 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-func regionDefinition(id string) (*content.WildsRegion, bool) {
-	for _, r := range content.WildsV2Regions {
-		if r.GetId() == id {
-			return r, true
-		}
-	}
-	return nil, false
-}
+// wildsArea is the `where` area of the open map: one area, world pixels.
+const wildsArea = "wilds"
 
-// wildsArea is the `where` area of a region: "wilds:<region>".
-func wildsArea(region string) string { return "wilds:" + region }
-
+// generationOf is an epoch's seed for loot rolls. Generator v2's Epoch still
+// names a region; the open map's epochs carry their kind there instead.
 func generationOf(e *contract.WildsEpoch) wilds.Epoch {
-	return wilds.Epoch{WorldSeed: e.WorldSeed, RegionID: e.RegionId, GeneratorVersion: int(e.GeneratorVersion), Season: e.Season}
+	return wilds.Epoch{WorldSeed: e.WorldSeed, RegionID: e.Kind, GeneratorVersion: int(e.GeneratorVersion), Season: e.Season}
 }
 
 // chunkError maps the chunk ports' errors to refusals.
@@ -57,13 +53,13 @@ func chunkError(err error) error {
 }
 
 // epochFor reads a named epoch for a mutation: the caller's world, the
-// current generator version, not ended.
+// generator version this server makes, not ended.
 func (a *Server) epochFor(ctx context.Context, tx *sql.Tx, s store.Snapshot, id string, now int64) (*contract.WildsEpoch, error) {
 	var world string
 	var starts int64
 	var ends sql.NullInt64
 	e := &contract.WildsEpoch{}
-	err := tx.QueryRowContext(ctx, "SELECT id,world_id,world_seed,region_id,generator_version,season,starts_at,ends_at FROM region_epochs WHERE id=?", id).Scan(&e.Id, &world, &e.WorldSeed, &e.RegionId, &e.GeneratorVersion, &e.Season, &starts, &ends)
+	err := tx.QueryRowContext(ctx, "SELECT id,world_id,world_seed,kind,generator_version,season,starts_at,ends_at FROM wild_epochs WHERE id=?", id).Scan(&e.Id, &world, &e.WorldSeed, &e.Kind, &e.GeneratorVersion, &e.Season, &starts, &ends)
 	if err == sql.ErrNoRows {
 		return nil, fail(404, "epoch-not-found")
 	}
@@ -73,7 +69,7 @@ func (a *Server) epochFor(ctx context.Context, tx *sql.Tx, s store.Snapshot, id 
 	if world != s.WorldID {
 		return nil, fail(403, "world-access-denied")
 	}
-	if int(e.GeneratorVersion) != wilds.GeneratorV2 {
+	if g := a.Config.WildsGenerator; g != nil && int(e.GeneratorVersion) != g.Version() {
 		return nil, fail(503, "generator-unavailable")
 	}
 	e.StartsAt = float64(starts)
@@ -86,23 +82,12 @@ func (a *Server) epochFor(ctx context.Context, tx *sql.Tx, s store.Snapshot, id 
 	return e, nil
 }
 
-// regionChunks reads all of an epoch's stored chunks, row-major.
-func (a *Server) regionChunks(ctx context.Context, tx *sql.Tx, world string, e *contract.WildsEpoch) ([]*contract.WildsChunk, error) {
-	r, ok := regionDefinition(e.RegionId)
-	if !ok {
-		return nil, sql.ErrNoRows
+// epochAt is the current epoch a chunk lies in (made when there is none).
+func (a *Server) epochAt(ctx context.Context, tx *sql.Tx, world string, cx, cy int, now int64) (*contract.WildsEpoch, error) {
+	if a.Config.Epochs == nil {
+		return nil, store.ErrGeneratorUnavailable
 	}
-	out := make([]*contract.WildsChunk, 0, int(r.GetGridWidth())*int(r.GetGridHeight()))
-	for cy := 0; cy < int(r.GetGridHeight()); cy++ {
-		for cx := 0; cx < int(r.GetGridWidth()); cx++ {
-			m, err := a.Config.Chunks.Chunk(ctx, tx, world, e.Id, 0, int32(cx), int32(cy))
-			if err != nil {
-				return nil, err
-			}
-			out = append(out, m)
-		}
-	}
-	return out, nil
+	return chunks.Epoch(ctx, tx, a.Config.Epochs, world, wilds.EpochKindAt(cx, cy), now)
 }
 
 // ---------------------------------------------------------------- entity state
@@ -152,108 +137,10 @@ func (r entityRow) view(epoch, id string) *contract.WildsEntityState {
 	return v
 }
 
-// ---------------------------------------------------------------- region view
-
-// wildsService is D's implementation of the region, lantern and land ports.
-// It reads the server's other ports (chunks, epochs, story) at call time, so
-// a test can swap them.
+// wildsService is D's implementation of the lantern and land ports. It
+// reads the server's other ports (chunks, epochs, story) at call time, so a
+// test can swap them.
 type wildsService struct{ a *Server }
-
-// Region is the changing state of a region's current epoch, creating the
-// epoch (and storing its chunks) when there is none current. That creation
-// is the read's only write.
-func (w wildsService) Region(ctx context.Context, tx *sql.Tx, s store.Snapshot, region string, now int64) (*contract.WildsRegionResult, error) {
-	a := w.a
-	if _, ok := regionDefinition(region); !ok {
-		return nil, sql.ErrNoRows
-	}
-	e, err := a.Config.Epochs.Current(ctx, tx, s.WorldID, region, now)
-	if errors.Is(err, sql.ErrNoRows) || errors.Is(err, chunks.ErrEpochEnded) {
-		e, err = a.Config.Epochs.Create(ctx, tx, s.WorldID, region, now)
-	}
-	if err != nil {
-		return nil, err
-	}
-	all, err := a.regionChunks(ctx, tx, s.WorldID, e)
-	if err != nil {
-		return nil, err
-	}
-	out := &contract.WildsRegionResult{Epoch: e, Materials: map[string]float64{}}
-	rows := map[string]entityRow{}
-	q, err := tx.QueryContext(ctx, "SELECT entity_id,cycle,state,available_at,by_id,at FROM entity_state WHERE epoch=?", e.Id)
-	if err != nil {
-		return nil, err
-	}
-	for q.Next() {
-		var id string
-		var r entityRow
-		if err = q.Scan(&id, &r.cycle, &r.state, &r.availableAt, &r.by, &r.at); err != nil {
-			q.Close()
-			return nil, err
-		}
-		rows[id] = r
-	}
-	if err = closeRows(q); err != nil {
-		return nil, err
-	}
-	var sites []ports.EchoSite
-	for _, m := range all {
-		for _, en := range m.Entities {
-			r, ok := rows[en.Id]
-			if !ok {
-				r = entityRow{state: "available"}
-			}
-			out.Entities = append(out.Entities, r.projected(en.Kind, now).view(e.Id, en.Id))
-		}
-		for _, site := range m.Sites {
-			sites = append(sites, ports.EchoSite{Site: proto.Clone(site).(*contract.StorySite), CX: m.Cx, CY: m.Cy})
-		}
-	}
-	if q, err = tx.QueryContext(ctx, "SELECT entity_id,at FROM personal_claims WHERE epoch=? AND account_id=? ORDER BY entity_id", e.Id, s.AccountID); err != nil {
-		return nil, err
-	}
-	for q.Next() {
-		var c contract.WildsPersonalClaim
-		var at int64
-		if err = q.Scan(&c.EntityId, &at); err != nil {
-			q.Close()
-			return nil, err
-		}
-		c.At = float64(at)
-		out.PersonalClaims = append(out.PersonalClaims, &c)
-	}
-	if err = closeRows(q); err != nil {
-		return nil, err
-	}
-	if q, err = tx.QueryContext(ctx, "SELECT d.entity_id,d.poi_id,d.discoverer_id,p.display_name,d.at FROM discoveries d JOIN players p ON p.account_id=d.discoverer_id WHERE d.epoch=? ORDER BY d.entity_id", e.Id); err != nil {
-		return nil, err
-	}
-	for q.Next() {
-		var d contract.WildsDiscovery
-		var at int64
-		if err = q.Scan(&d.EntityId, &d.PoiId, &d.DiscovererId, &d.DisplayName, &at); err != nil {
-			q.Close()
-			return nil, err
-		}
-		d.At = float64(at)
-		out.Discoveries = append(out.Discoveries, &d)
-	}
-	if err = closeRows(q); err != nil {
-		return nil, err
-	}
-	if out.Lanterns, err = lanterns(ctx, tx, e.Id); err != nil {
-		return nil, err
-	}
-	m, err := materials(ctx, tx, s.AccountID)
-	if err != nil {
-		return nil, err
-	}
-	for id, qty := range m {
-		out.Materials[id] = float64(qty)
-	}
-	out.Echoes, err = a.Config.Story.Echoes(ctx, tx, s, ports.EchoInput{Epoch: proto.Clone(e).(*contract.WildsEpoch), Sites: sites})
-	return out, err
-}
 
 func closeRows(rows *sql.Rows) error {
 	err := rows.Err()
@@ -290,31 +177,10 @@ func lanterns(ctx context.Context, tx *sql.Tx, epoch string) ([]*contract.WildsL
 	return out, closeRows(rows)
 }
 
-// GET /api/wilds/region/<id>
-func (a *Server) regionRead(w http.ResponseWriter, r *http.Request) error {
-	id := strings.TrimPrefix(r.URL.Path, "/api/wilds/region/")
-	tx, s, _, err := a.begin(r)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	view, err := a.Config.Regions.Region(r.Context(), tx, s, id, a.Config.Now().Unix())
-	if errors.Is(err, sql.ErrNoRows) {
-		return fail(404, "region-not-found")
-	}
-	if err != nil {
-		return chunkError(err)
-	}
-	if err = tx.Commit(); err != nil {
-		return err
-	}
-	writeProto(w, 200, view)
-	return nil
-}
-
 // GET /api/wilds/chunk/<epochId>/<layer>/<cx>/<cy>: the stored chunk as
-// binary protobuf. Immutable, so the browser may keep it for good; it is
-// only ever asked for under an epoch a fresh region read named.
+// binary protobuf, made on its first read. Immutable, so the browser may
+// keep it for good; it is only ever asked for under an epoch a fresh near
+// read named.
 func (a *Server) chunkRead(w http.ResponseWriter, r *http.Request) error {
 	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/wilds/chunk/"), "/")
 	if len(parts) != 4 || parts[0] == "" || len(parts[0]) > 128 {
@@ -354,27 +220,35 @@ func (a *Server) chunkRead(w http.ResponseWriter, r *http.Request) error {
 // ---------------------------------------------------------------- reach
 
 // Matches src/game/textures.ts TILE. Entity and site tiles are chunk-local;
-// lanterns and these checks use region tiles; `where` is region pixels.
+// lanterns and these checks use world tiles; `where` is world pixels.
 const wildsTileSize = 16
 const wildsInteractionRadius = 3
 
-// nearWilds: the player stands in the epoch's region within reach of the
-// region tile (x, y).
-func nearWilds(s store.Snapshot, region string, x, y int) error {
-	if s.State.Area != wildsArea(region) {
+// wildsTileOf is the world tile under a world-pixel position (finite: the
+// request boundary checked it).
+func wildsTileOf(x, y float64) (int, int) { return wilds.TileOfPixel(x, y) }
+
+// nearWithin: the player stands in the Wilds, inside the frontier, within r
+// tiles of the world tile (x, y).
+func nearWithin(s store.Snapshot, x, y, r int) error {
+	if s.State.Area != wildsArea {
 		return fail(409, "not-in-wilds")
 	}
-	r, ok := regionDefinition(region)
-	if !ok {
-		return fail(404, "region-not-found")
+	px, py := wildsTileOf(s.State.Position.X, s.State.Position.Y)
+	if !frontier.Inside(s.WorldID, wilds.FloorDiv(px, chunkSize()), wilds.FloorDiv(py, chunkSize())) {
+		return fail(409, "beyond-frontier")
 	}
-	px, py := math.Floor(s.State.Position.X/wildsTileSize), math.Floor(s.State.Position.Y/wildsTileSize)
-	dx, dy := px-float64(x), py-float64(y)
-	if px < 0 || py < 0 || px >= float64(int(r.GetGridWidth())*int(content.WildsRules.GetChunkSize())) || py >= float64(int(r.GetGridHeight())*int(content.WildsRules.GetChunkSize())) || dx*dx+dy*dy > wildsInteractionRadius*wildsInteractionRadius {
+	dx, dy := px-x, py-y
+	if dx*dx+dy*dy > r*r {
 		return fail(409, "too-far-away")
 	}
 	return nil
 }
+
+// nearWilds: within interaction reach of the world tile (x, y).
+func nearWilds(s store.Snapshot, x, y int) error { return nearWithin(s, x, y, wildsInteractionRadius) }
+
+func chunkSize() int { return int(content.WildsRules.GetChunkSize()) }
 
 // ---------------------------------------------------------------- papers
 
@@ -448,21 +322,6 @@ func claimRate(ctx context.Context, tx *sql.Tx, id string, now int64) error {
 	return err
 }
 
-// entityChunk: the chunk an entity id names (`kind:cx:cy:index`), if inside
-// the region's grid.
-func entityChunk(id string, region *content.WildsRegion) (cx, cy int, ok bool) {
-	parts := strings.Split(id, ":")
-	if len(parts) != 4 || len(id) > 128 {
-		return 0, 0, false
-	}
-	cx, e1 := strconv.Atoi(parts[1])
-	cy, e2 := strconv.Atoi(parts[2])
-	if e1 != nil || e2 != nil || cx < 0 || cy < 0 || cx >= int(region.GetGridWidth()) || cy >= int(region.GetGridHeight()) {
-		return 0, 0, false
-	}
-	return cx, cy, true
-}
-
 func lootProto(d wilds.LootDrop) *contract.WildsLoot {
 	out := &contract.WildsLoot{}
 	for _, m := range d.Materials {
@@ -484,7 +343,9 @@ func materialsProto(ctx context.Context, tx *sql.Tx, account string) (map[string
 }
 
 // POST /api/wilds/claim: a camp, node, chest or point of interest of the
-// epoch's stored chunks, at its projected cycle, from within reach.
+// epoch's stored chunks, at its projected cycle, from within reach; or this
+// wick's rumour find (entity id "rumour:<cx>:<cy>", open-map.md 2.10), a
+// personal claim like a chest's.
 func (a *Server) wildsClaim(w http.ResponseWriter, r *http.Request) error {
 	req := &contract.WildsClaimRequest{}
 	if err := decodeOp(w, r, req); err != nil {
@@ -499,9 +360,11 @@ func (a *Server) wildsClaim(w http.ResponseWriter, r *http.Request) error {
 			return nil, fail(400, "invalid-claim")
 		}
 		cycle := int64(req.Cycle)
-		region, _ := regionDefinition(e.RegionId)
-		cx, cy, ok := entityChunk(req.EntityId, region)
-		if !ok {
+		if strings.HasPrefix(req.EntityId, "rumour:") {
+			return a.openRumour(ctx, tx, s, e, req, now)
+		}
+		cx, cy, ok := story.EntityChunk(req.EntityId)
+		if !ok || wilds.EpochKindAt(cx, cy) != e.Kind {
 			return nil, fail(404, "entity-not-found")
 		}
 		m, err := a.Config.Chunks.Chunk(ctx, tx, s.WorldID, e.Id, 0, int32(cx), int32(cy))
@@ -513,8 +376,8 @@ func (a *Server) wildsClaim(w http.ResponseWriter, r *http.Request) error {
 			return nil, fail(404, "entity-not-found")
 		}
 		entity := wilds.EntityFromProto(pe)
-		S := int(content.WildsRules.GetChunkSize())
-		if err = nearWilds(*s, e.RegionId, cx*S+entity.TX, cy*S+entity.TY); err != nil {
+		S := chunkSize()
+		if err = nearWilds(*s, cx*S+entity.TX, cy*S+entity.TY); err != nil {
 			return nil, err
 		}
 		row, err := readEntityRow(ctx, tx, e.Id, entity.ID)
@@ -572,11 +435,11 @@ func (a *Server) wildsClaim(w http.ResponseWriter, r *http.Request) error {
 		if err = grantLoot(ctx, tx, s, loot, "wilds-claim", e.Id+":"+entity.ID, now); err != nil {
 			return nil, err
 		}
-		sliver, err := maybeGrantWardenSliver(ctx, tx, s, e.RegionId, entity, cx, cy, now)
+		sliver, err := maybeGrantWardenSliver(ctx, tx, s, entity, cx, cy, now)
 		if err != nil {
 			return nil, err
 		}
-		storm, err := maybeGrantStormDrop(ctx, tx, s, e.RegionId, entity, cx, cy, now)
+		storm, err := maybeGrantStormDrop(ctx, tx, s, entity, cx, cy, now)
 		if err != nil {
 			return nil, err
 		}
@@ -618,7 +481,7 @@ func (a *Server) wildsRelight(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		if err = nearWilds(*s, e.RegionId, lx, ly); err != nil {
+		if err = nearWilds(*s, lx, ly); err != nil {
 			return nil, err
 		}
 		if lit.Valid {
@@ -679,23 +542,18 @@ func (a *Server) settleEcho(w http.ResponseWriter, r *http.Request) error {
 		if req.Member == "" || !validPayloadID(req.Member) {
 			return nil, fail(409, "echo-not-here")
 		}
-		all, err := a.regionChunks(ctx, tx, s.WorldID, e)
+		sites, err := story.FootprintSites(ctx, tx, a.Config.Chunks, s.WorldID, e, story.EchoFootprint)
 		if err != nil {
 			return nil, chunkError(err)
 		}
-		var sites []ports.EchoSite
 		var here *ports.EchoSite
-		for _, m := range all {
-			for _, site := range m.Sites {
-				es := ports.EchoSite{Site: proto.Clone(site).(*contract.StorySite), CX: m.Cx, CY: m.Cy}
-				sites = append(sites, es)
-				if site.Id == req.Site && site.Kind == contract.SiteKind_SITE_KIND_ECHO {
-					here = &es
-				}
+		for i, site := range sites {
+			if site.Site.Id == req.Site && site.Site.Kind == contract.SiteKind_SITE_KIND_ECHO {
+				here = &sites[i]
 			}
 		}
-		S := int(content.WildsRules.GetChunkSize())
-		if here == nil || nearWilds(*s, e.RegionId, int(here.CX)*S+int(here.Site.Tx), int(here.CY)*S+int(here.Site.Ty)) != nil {
+		S := chunkSize()
+		if here == nil || nearWilds(*s, int(here.CX)*S+int(here.Site.Tx), int(here.CY)*S+int(here.Site.Ty)) != nil {
 			return nil, fail(409, "echo-not-here")
 		}
 		assigned, err := a.Config.Story.Echoes(ctx, tx, *s, ports.EchoInput{Epoch: proto.Clone(e).(*contract.WildsEpoch), Sites: sites})
@@ -742,41 +600,47 @@ func containsString(list []string, v string) bool {
 // ---------------------------------------------------------------- fallen lanterns
 
 // PlaceFallen puts the fallen hero's lantern where they fell, when that's a
-// walkable tile of the epoch's region and today's cap allows (ports.Lanterns).
-// It never creates an epoch and never bumps versions.
+// walkable tile (ground changes applied) of a stored chunk in the epoch and
+// today's cap allows (ports.Lanterns). It never creates an epoch or a chunk
+// and never bumps versions.
 func (w wildsService) PlaceFallen(ctx context.Context, tx *sql.Tx, s *store.Snapshot, epoch *contract.WildsEpoch, where *contract.Where, now int64) (ports.FallLantern, error) {
 	none := func(reason string) (ports.FallLantern, error) {
 		return ports.FallLantern{Lantern: "none", Reason: reason}, nil
 	}
-	if where == nil || !strings.HasPrefix(where.Area, "wilds:") {
+	if where == nil || where.Area != wildsArea {
 		return none("not-wilds")
-	}
-	region, ok := regionDefinition(strings.TrimPrefix(where.Area, "wilds:"))
-	if !ok {
-		return none("invalid-place")
 	}
 	if epoch == nil || epoch.Id == "" {
 		return none("epoch-missing")
 	}
-	if epoch.RegionId != region.GetId() {
+	if !finiteWhere(where) {
 		return none("invalid-place")
 	}
-	S := int(content.WildsRules.GetChunkSize())
-	if !finiteWhere(where) || where.X < 0 || where.Y < 0 {
+	S := chunkSize()
+	tx0, ty0 := wildsTileOf(where.X, where.Y)
+	cx, cy := wilds.FloorDiv(tx0, S), wilds.FloorDiv(ty0, S)
+	if !frontier.Inside(s.WorldID, cx, cy) || wilds.EpochKindAt(cx, cy) != epoch.Kind {
 		return none("invalid-place")
 	}
-	tx0, ty0 := int(where.X/wildsTileSize), int(where.Y/wildsTileSize)
-	if tx0 >= int(region.GetGridWidth())*S || ty0 >= int(region.GetGridHeight())*S {
-		return none("invalid-place")
+	var stored int
+	if err := tx.QueryRowContext(ctx, "SELECT count(*) FROM wilds_chunks WHERE epoch_id=? AND layer=0 AND cx=? AND cy=?", epoch.Id, cx, cy).Scan(&stored); err != nil {
+		return ports.FallLantern{}, err
 	}
-	m, err := w.a.Config.Chunks.Chunk(ctx, tx, s.WorldID, epoch.Id, 0, int32(tx0/S), int32(ty0/S))
+	if stored == 0 {
+		return none("epoch-missing")
+	}
+	m, err := w.a.Config.Chunks.Chunk(ctx, tx, s.WorldID, epoch.Id, 0, int32(cx), int32(cy))
 	if errors.Is(err, sql.ErrNoRows) || errors.Is(err, chunks.ErrEpochEnded) {
 		return none("epoch-missing")
 	}
 	if err != nil {
 		return ports.FallLantern{}, err
 	}
-	if !wilds.Walkable(m, tx0%S, ty0%S) {
+	changes, err := groundChanges(ctx, tx, s.WorldID, epoch, cx, cy, now)
+	if err != nil {
+		return ports.FallLantern{}, err
+	}
+	if !chunks.NewEffective(m, changes).Walkable(tx0-cx*S, ty0-cy*S) {
 		return none("invalid-place")
 	}
 	day := calendarDay(now)
@@ -795,7 +659,7 @@ func (w wildsService) PlaceFallen(ctx context.Context, tx *sql.Tx, s *store.Snap
 	if err != nil {
 		return ports.FallLantern{}, err
 	}
-	_, err = tx.ExecContext(ctx, `INSERT INTO lanterns(id,epoch,world_id,region_id,owner_id,x,y,at) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(world_id,region_id,owner_id) DO UPDATE SET id=excluded.id,epoch=excluded.epoch,x=excluded.x,y=excluded.y,lit_by=NULL,lit_at=NULL,at=excluded.at`, id, epoch.Id, s.WorldID, region.GetId(), s.AccountID, tx0, ty0, now)
+	_, err = tx.ExecContext(ctx, `INSERT INTO lanterns(id,epoch,world_id,owner_id,x,y,at) VALUES(?,?,?,?,?,?,?) ON CONFLICT(world_id,owner_id) DO UPDATE SET id=excluded.id,epoch=excluded.epoch,x=excluded.x,y=excluded.y,lit_by=NULL,lit_at=NULL,at=excluded.at`, id, epoch.Id, s.WorldID, s.AccountID, tx0, ty0, now)
 	if err != nil {
 		return ports.FallLantern{}, err
 	}
@@ -853,24 +717,19 @@ func intAbs(n int) int {
 	return n
 }
 
-// The two Wilds regions (content/wilds.json): the Tangle, permanent, and
-// the outer drift past its crossing (the Whitequiet).
-const (
-	tangleRegion     = "inner-1"
-	whitequietRegion = "outer-1"
-)
-
-// deepCountry: where the rare finds turn up — the Whitequiet, or the
-// Tangle at least DeepTangleManhattanDistance chunks from its entry.
-func deepCountry(regionID string, cx, cy int) bool {
-	if regionID == whitequietRegion {
+// deepCountry: where the rare finds turn up — tier 2 and past (the
+// Whitequiet and the Beyond), or the Tangle at least
+// DeepTangleManhattanDistance chunks from its middle chunk.
+func deepCountry(cx, cy int) bool {
+	if wilds.Tier(cx, cy) >= 2 {
 		return true
 	}
-	entryX, entryY := 1, 1
-	if r, ok := regionDefinition(regionID); ok {
-		entryX, entryY = int(r.GetEntryX()), int(r.GetEntryY())
+	t := wilds.Footprint("tangle")
+	if t == nil || wilds.FootprintAt(cx, cy) != t {
+		return false
 	}
-	return regionID == tangleRegion && intAbs(cx-entryX)+intAbs(cy-entryY) >= int(content.WildsRules.GetDeepTangleManhattanDistance())
+	mx, my := int(t.GetCx()+t.GetWidth()/2), int(t.GetCy()+t.GetHeight()/2)
+	return intAbs(cx-mx)+intAbs(cy-my) >= int(content.WildsRules.GetDeepTangleManhattanDistance())
 }
 
 // weeklyFind rolls one rare find on a deep-country claim: a thin chance (a
@@ -896,8 +755,8 @@ func weeklyFind(ctx context.Context, tx *sql.Tx, player, table, salt string, ent
 	return err == nil, err
 }
 
-func maybeGrantWardenSliver(ctx context.Context, tx *sql.Tx, s *store.Snapshot, regionID string, entity wilds.Entity, cx, cy int, now int64) (bool, error) {
-	if !deepCountry(regionID, cx, cy) {
+func maybeGrantWardenSliver(ctx context.Context, tx *sql.Tx, s *store.Snapshot, entity wilds.Entity, cx, cy int, now int64) (bool, error) {
+	if !deepCountry(cx, cy) {
 		return false, nil
 	}
 	found, err := weeklyFind(ctx, tx, s.AccountID, "warden_finds", "warden-sliver", entity, cx, cy, now)
@@ -923,8 +782,8 @@ func maybeGrantWardenSliver(ctx context.Context, tx *sql.Tx, s *store.Snapshot, 
 // most one a week per player, the finds spaced in storm_finds
 // (docs/items/crafting-and-repair.md, "Warden-stone"; the catalogue,
 // "Storm-grade drop"). The same deep country keeps both finds.
-func maybeGrantStormDrop(ctx context.Context, tx *sql.Tx, s *store.Snapshot, regionID string, entity wilds.Entity, cx, cy int, now int64) (bool, error) {
-	if !deepCountry(regionID, cx, cy) {
+func maybeGrantStormDrop(ctx context.Context, tx *sql.Tx, s *store.Snapshot, entity wilds.Entity, cx, cy int, now int64) (bool, error) {
+	if !deepCountry(cx, cy) {
 		return false, nil
 	}
 	found, err := weeklyFind(ctx, tx, s.AccountID, "storm_finds", "storm-drop", entity, cx, cy, now)

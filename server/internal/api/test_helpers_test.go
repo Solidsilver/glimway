@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"glimway/content"
+	"glimway/server/internal/chunks/fakegen"
 	"glimway/server/internal/habitica"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
@@ -47,6 +48,8 @@ type rig struct {
 	fundings int
 	db       *store.Store
 	api      *Server
+	// gen is the open map's test generator (generator v3 stands in).
+	gen      *fakegen.Generator
 	upstream *httptest.Server
 	accounts map[string]string
 	profiles map[string]rules.Profile
@@ -133,6 +136,7 @@ func newRig(t *testing.T) *rig {
 	t.Helper()
 	x := &rig{t: t, accounts: map[string]string{}, profiles: map[string]rules.Profile{}, dir: t.TempDir(), habiticaGold: 1000, habiticaOwned: map[string]bool{}, rewards: map[string]int{}, deletes: map[string]int{}}
 	x.now.Store(rigStart)
+	x.gen = fakegen.New()
 	var err error
 	x.db, err = fixtureDatabase(t, filepath.Join(x.dir, "game.sqlite"))
 	if err != nil {
@@ -145,7 +149,7 @@ func newRig(t *testing.T) *rig {
 		}
 		x.serveHabitica(w, r)
 	}))
-	x.api = New(x.db, habitica.New(x.upstream.URL, "test-creator-glimway"), Config{SecureCookie: true, Logger: log.New(&x.logs, "", 0), Now: func() time.Time { return time.Unix(x.now.Load(), 0) }})
+	x.api = New(x.db, habitica.New(x.upstream.URL, "test-creator-glimway"), Config{SecureCookie: true, Logger: log.New(&x.logs, "", 0), Now: func() time.Time { return time.Unix(x.now.Load(), 0) }, WildsGenerator: x.gen})
 	t.Cleanup(func() {
 		// Let the detached top-up workers finish before the database and the
 		// fake upstream go away (finding 11): one still running would reach
@@ -637,9 +641,6 @@ func (x *rig) cacheAccounts() {
 
 func testWhere(s rules.State) map[string]any {
 	area := s.Area
-	if area == "wilds" {
-		area = "wilds:inner-1"
-	}
 	return map[string]any{"area": area, "x": s.Position.X, "y": s.Position.Y}
 }
 

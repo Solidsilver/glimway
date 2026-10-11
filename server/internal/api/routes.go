@@ -241,8 +241,6 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			err = a.homeRead(w, r)
 		} else if r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/wilds/chunk/") {
 			err = a.chunkRead(w, r)
-		} else if r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/wilds/region/") {
-			err = a.regionRead(w, r)
 		} else if r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/wilds/near/") {
 			err = a.nearRead(w, r)
 		} else if (r.Method == "GET" || r.Method == "HEAD") && strings.HasPrefix(r.URL.Path, "/api/sprites/") {

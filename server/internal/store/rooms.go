@@ -65,6 +65,6 @@ func recoverRoom(ctx context.Context, tx *sql.Tx, s *Snapshot) error {
 		return err
 	}
 	s.State.Area, s.State.Position = next, position
-	_, err := tx.ExecContext(ctx, "UPDATE player_place SET area=?,x=?,y=?,place_set_version=?,last_outer_epoch='',last_outer_starts_at=NULL WHERE account_id=?", next, position.X, position.Y, s.Version, s.AccountID)
+	_, err := tx.ExecContext(ctx, "UPDATE player_place SET area=?,x=?,y=?,place_set_version=?,last_wick_epoch='',last_wick_starts_at=NULL WHERE account_id=?", next, position.X, position.Y, s.Version, s.AccountID)
 	return err
 }

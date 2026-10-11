@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"glimway/content"
 	"glimway/server/internal/chunks"
+	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/land"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"glimway/server/internal/wilds"
-	"math"
 	"slices"
 	"strings"
 )
@@ -124,49 +124,38 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 	// Where the player is, from this operation's where, and
 	// whether that place has such a piece at all.
 	area := s.State.Area
-	offeredArea := area
-	if strings.HasPrefix(area, "wilds:") {
-		offeredArea = "wilds"
-	}
-	if !content.GatheringOffered(offeredArea, req.Target) {
+	if !content.GatheringOffered(area, req.Target) {
 		return fail(409, "cannot-gather-here")
 	}
-	// The Wilds: the request names its region (the progress area is
-	// "wilds" for both). The Tangle's own trees, and their Amberfall sap,
-	// stand in the Tangle only ("on trees in the Tangle"); the outer
-	// drift's trees are plain trees.
-	if strings.HasPrefix(area, "wilds:") {
-		req.Region = strings.TrimPrefix(area, "wilds:")
-		if _, ok := regionDefinition(req.Region); !ok {
-			return fail(400, "invalid-region")
-		}
-		if req.Target == "tangle-tree" && req.Region != tangleRegion {
-			return fail(409, "cannot-gather-here")
-		}
-	}
-	if strings.HasPrefix(area, "wilds:") {
-		if a.Config.Epochs == nil {
-			return fail(503, "generator-unavailable")
-		}
-		epoch, err := a.Config.Epochs.Current(ctx, tx, s.WorldID, req.Region, now)
-		if err != nil {
-			return chunkError(err)
-		}
+	// The Wilds: the tile is a world tile, in the chunk's current epoch.
+	// The Tangle's own trees, and their Amberfall sap, stand in the Tangle
+	// only ("on trees in the Tangle"); the drift's trees are plain trees.
+	if area == wildsArea {
 		if len(req.Tile) != 2 {
 			return fail(400, "tile-required")
 		}
-		size := int(content.WildsRules.GetChunkSize())
-		cx, cy := int(math.Floor(float64(req.Tile[0])/float64(size))), int(math.Floor(float64(req.Tile[1])/float64(size)))
+		size := chunkSize()
+		tx0, ty0 := int(req.Tile[0]), int(req.Tile[1])
+		cx, cy := wilds.FloorDiv(tx0, size), wilds.FloorDiv(ty0, size)
+		if !frontier.Inside(s.WorldID, cx, cy) {
+			return fail(409, "beyond-frontier")
+		}
+		if req.Target == "tangle-tree" && wilds.FootprintAt(cx, cy) != wilds.Footprint("tangle") {
+			return fail(409, "cannot-gather-here")
+		}
+		if !nearPiece(s, area, tx0, ty0) {
+			return fail(409, "too-far-away")
+		}
+		epoch, err := a.epochAt(ctx, tx, s.WorldID, cx, cy, now)
+		if err != nil {
+			return chunkError(err)
+		}
 		chunk, err := a.Config.Chunks.Chunk(ctx, tx, s.WorldID, epoch.Id, 0, int32(cx), int32(cy))
 		if err != nil {
 			return chunkError(err)
 		}
-		if !nearPiece(s, area, int(req.Tile[0]), int(req.Tile[1])) {
-			return fail(409, "too-far-away")
-		}
 		matched, tree := false, false
-		for _, i := range chunks.DecorAt(chunk, uint32(int(req.Tile[0])-cx*size), uint32(int(req.Tile[1])-cy*size)) {
-			kind := chunk.Decor.Kinds[chunk.Decor.Kind[i]]
+		for _, kind := range chunks.DecorKindsAt(chunk, tx0-cx*size, ty0-cy*size) {
 			if slices.Contains([]string{"oak", "pine", "birch", "iron-oak", "snag"}, kind) {
 				tree = true
 			}

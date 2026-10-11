@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/coder/websocket"
 	"glimway/content"
+	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v2"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
@@ -17,24 +18,47 @@ import (
 	"time"
 )
 
+// validPresenceRoom: an area, or a Wilds chunk's room "wilds:<cx>:<cy>"
+// (signed, inside the frontier; open-map.md 2.4).
 func validPresenceRoom(area string) bool {
 	if validArea(area) {
+		return area != wildsArea
+	}
+	_, _, ok := wildsRoomChunk(area)
+	return ok
+}
+
+// wildsRoomChunk is the chunk a Wilds room names.
+func wildsRoomChunk(room string) (cx, cy int, ok bool) {
+	parts := strings.Split(room, ":")
+	if len(parts) != 3 || parts[0] != wildsArea || len(room) > 64 {
+		return 0, 0, false
+	}
+	x, err := strconv.Atoi(parts[1])
+	if err != nil || strconv.Itoa(x) != parts[1] {
+		return 0, 0, false
+	}
+	y, err := strconv.Atoi(parts[2])
+	if err != nil || strconv.Itoa(y) != parts[2] || !frontier.Inside("", x, y) {
+		return 0, 0, false
+	}
+	return x, y, true
+}
+
+// sharedRoom: two rooms see each other. An area's room sees only itself; a
+// Wilds chunk's room sees its own chunk's and its eight neighbours', so a
+// client joins only the room of the chunk it stands in and still sees
+// everyone in the 3x3 around it (open-map.md 2.4: one room a client).
+func sharedRoom(a, b string) bool {
+	if a == "" || b == "" {
+		return false
+	}
+	if a == b {
 		return true
 	}
-	parts := strings.Split(area, ":")
-	if len(parts) != 4 || parts[0] != "wilds" {
-		return false
-	}
-	r, ok := regionDefinition(parts[1])
-	if !ok {
-		return false
-	}
-	x, err := strconv.Atoi(parts[2])
-	if err != nil || strconv.Itoa(x) != parts[2] {
-		return false
-	}
-	y, err := strconv.Atoi(parts[3])
-	return err == nil && strconv.Itoa(y) == parts[3] && x >= 0 && y >= 0 && x < int(r.GetGridWidth()) && y < int(r.GetGridHeight())
+	ax, ay, ok1 := wildsRoomChunk(a)
+	bx, by, ok2 := wildsRoomChunk(b)
+	return ok1 && ok2 && intAbs(ax-bx) <= 1 && intAbs(ay-by) <= 1
 }
 
 func (a *Server) presenceSocket(w http.ResponseWriter, r *http.Request) error {
@@ -276,8 +300,11 @@ func (a *Server) presenceReader(p *presencePeer) {
 				h.mu.Unlock()
 				return
 			}
-			if p.area != "" {
-				h.broadcast(p, &contract.PresenceLeave{AccountId: p.identity.ID})
+			// Walking from one Wilds chunk into the next, only the peers
+			// that drop out of the 3x3 around the player see them leave.
+			if old := p.area; old != "" {
+				b, err := encodePresence(&contract.PresenceLeave{AccountId: p.identity.ID})
+				h.broadcastWhere(p, b, err, func(q *presencePeer) bool { return sharedRoom(q.area, old) && !sharedRoom(q.area, event.Join.Area) })
 			}
 			p.area = event.Join.Area
 			p.pos = nil

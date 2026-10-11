@@ -24,7 +24,8 @@ var echoMembers = []string{"hollis", "tam", "bett", "dorrit", "joss", "nan"}
 // Ashwatch Ruin; Echo camps in a Wilds chunk.
 func beatRoom(beat, area, room string) bool {
 	if strings.HasPrefix(beat, "echo:") {
-		return strings.HasPrefix(area, "wilds:") && strings.HasPrefix(room, area+":")
+		_, _, ok := wildsRoomChunk(room)
+		return area == wildsArea && ok
 	}
 	return area == "ruin" && room == "ruin"
 }
@@ -58,7 +59,7 @@ func (a *Server) presenceWitness(world, doer, name, area, beat string) {
 	radius := float64(WitnessTiles * wildsTileSize)
 	var witnesses []*presencePeer
 	for _, q := range h.peers {
-		if q == p || q.detached || q.identity.World != world || q.area != p.area || q.pos == nil || q.queue == nil {
+		if q == p || q.detached || q.identity.World != world || !sharedRoom(q.area, p.area) || q.pos == nil || q.queue == nil {
 			continue
 		}
 		dx, dy := q.pos.X-p.pos.X, q.pos.Y-p.pos.Y

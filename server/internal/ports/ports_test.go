@@ -59,16 +59,6 @@ func TestFakesUseCallerTransactionAndCloneViews(t *testing.T) {
 	if err = (FakePlacement{}).Record(ctx, tx, &snap, &contract.Where{Area: "commons", X: 2, Y: 3}, 1); err != nil || snap.State.Area != "commons" {
 		t.Fatal(err)
 	}
-	regions := FakeRegions{Views: map[RegionKey]*contract.WildsRegionResult{{"world", "outer-1", "account"}: {Epoch: &contract.WildsEpoch{Id: "epoch"}}}}
-	v, err := regions.Region(ctx, tx, snap, "outer-1", 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	v.Epoch.Id = "changed"
-	v, err = regions.Region(ctx, tx, snap, "outer-1", 1)
-	if err != nil || v.Epoch.Id != "epoch" {
-		t.Fatal("region fake mutation")
-	}
 	land := FakeLand{Views: map[LandKey]*contract.HomesteadLand{{"world", 0}: {Width: 1, Height: 1, Cells: []string{"grass"}}}}
 	if v, err := land.Land(ctx, tx, "world", 0); err != nil || v.Cells[0] != "grass" {
 		t.Fatal(v, err)

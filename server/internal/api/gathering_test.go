@@ -66,12 +66,12 @@ func gatherIn(s response, area string, tile [2]int, tool, action, target, visit 
 		f["tile"] = tile
 	}
 	if area == "wilds" {
-		f["region"] = tangleRegion
+		f["region"] = "tangle"
 	}
 	return f
 }
 
-// inRegion is a wilds gather's fields in another region ("" sends none).
+// inRegion is a wilds gather's fields in another footprint ("" sends none).
 func inRegion(f map[string]any, region string) map[string]any {
 	if region == "" {
 		delete(f, "region")

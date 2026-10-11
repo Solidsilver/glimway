@@ -10,6 +10,7 @@ import (
 	"glimway/server/internal/ports"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
+	"glimway/server/internal/wilds"
 	"google.golang.org/protobuf/proto"
 	"math"
 	"net/http"
@@ -201,10 +202,11 @@ func (a *Server) fall(w http.ResponseWriter, r *http.Request) error {
 		s.State.Area = "village"
 		s.State.Position = rules.NewState().Position
 		out := &contract.FallResult{Vitals: &contract.Vitals{Hp: s.State.HP, Mana: s.State.Mana, MaxHp: s.State.MaxHP, MaxMana: s.State.MaxMana}, Place: &contract.Place{Area: s.State.Area, X: s.State.Position.X, Y: s.State.Position.Y}, Lantern: "none", Reason: "not-wilds"}
-		if region, ok := strings.CutPrefix(req.Where.Area, "wilds:"); ok {
+		if req.Where.Area == wildsArea {
 			out.Reason = "epoch-missing"
 			if a.Config.Epochs != nil && a.Config.Lanterns != nil {
-				epoch, e := a.Config.Epochs.Current(ctx, tx, s.WorldID, region, now)
+				tx0, ty0 := wildsTileOf(req.Where.X, req.Where.Y)
+				epoch, e := a.Config.Epochs.Current(ctx, tx, s.WorldID, wilds.EpochKindAt(wilds.ChunkOf(tx0, ty0)), now)
 				if e == nil {
 					g, e := a.Config.Lanterns.PlaceFallen(ctx, tx, s, epoch, req.Where, now)
 					if errors.Is(e, chunks.ErrUnavailable) || errors.Is(e, store.ErrGeneratorUnavailable) {

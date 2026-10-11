@@ -61,7 +61,7 @@ type Grant struct {
 // All now parameters are Unix seconds. Where coordinates are pixels.
 // All methods use the caller's tx. Read methods do not write; grant and placement
 // change Snapshot/rows but never bump versions. The outer operation bumps each
-// affected account once. B owns StoryRules and Placement; D owns Region/HomeLand.
+// affected account once. B owns StoryRules and Placement; D owns HomeLand.
 type StoryRules interface {
 	Echoes(ctx context.Context, tx *sql.Tx, snapshot store.Snapshot, input EchoInput) ([]*contract.EchoAssignment, error)
 	Eligible(ctx context.Context, tx *sql.Tx, snapshot store.Snapshot, input PaperInput) (bool, error)
@@ -71,12 +71,6 @@ type Placement interface {
 	Record(ctx context.Context, tx *sql.Tx, snapshot *store.Snapshot, where *contract.Where, now int64) error
 }
 
-// Region creates an absent epoch through EpochComposition, otherwise reads only.
-// sql.ErrNoRows means an unknown region/epoch; chunks.ErrEpochEnded is terminal
-// for that epoch; chunks.ErrUnavailable is transient while D is not installed.
-type RegionSource interface {
-	Region(ctx context.Context, tx *sql.Tx, snapshot store.Snapshot, region string, now int64) (*contract.WildsRegionResult, error)
-}
 type HomeLandSource interface {
 	Land(ctx context.Context, tx *sql.Tx, world string, gate int32) (*contract.HomesteadLand, error)
 }
@@ -120,26 +114,6 @@ func (f FakePlacement) Record(ctx context.Context, tx *sql.Tx, s *store.Snapshot
 		return nil
 	}
 	return f.Put(ctx, tx, s, w, now)
-}
-
-type RegionKey struct{ World, Region, Account string }
-type FakeRegions struct {
-	Views map[RegionKey]*contract.WildsRegionResult
-	Err   error
-}
-
-func (f FakeRegions) Region(ctx context.Context, _ *sql.Tx, s store.Snapshot, id string, _ int64) (*contract.WildsRegionResult, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	if f.Err != nil {
-		return nil, f.Err
-	}
-	v := f.Views[RegionKey{s.WorldID, id, s.AccountID}]
-	if v == nil {
-		return nil, sql.ErrNoRows
-	}
-	return proto.Clone(v).(*contract.WildsRegionResult), nil
 }
 
 type LandKey struct {

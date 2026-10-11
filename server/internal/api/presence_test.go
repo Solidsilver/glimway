@@ -348,11 +348,29 @@ func TestPresenceRoomsAvatarsAndMemoryOnly(t *testing.T) {
 	}
 	a.send(map[string]any{"type": "emote", "id": "nod"})
 	bob.none()
-	if len(a.join("wilds:inner-1:0:0").Players) != 0 {
+	// Wilds rooms are chunks, signed; a chunk's room sees the 3x3 around it.
+	if len(a.join("wilds:0:-1").Players) != 0 {
 		t.Fatal("chunk roster")
 	}
-	if len(bob.join("wilds:inner-1:1:0").Players) != 0 {
+	if len(bob.join("wilds:2:-1").Players) != 0 {
 		t.Fatal("chunk isolation")
+	}
+	a.none()
+	time.Sleep(5 * time.Millisecond)
+	if r := bob.join("wilds:1:-2"); len(r.Players) != 1 || r.Players[0].AccountID != x.account("alice") {
+		t.Fatal("a neighbouring chunk's roster", r.Players)
+	}
+	a.expect("join")
+	// Walking on within the 3x3: no leave, a fresh join. (Each join waits
+	// out the join cooldown.)
+	time.Sleep(5 * time.Millisecond)
+	bob.join("wilds:1:-1")
+	a.expect("join")
+	// Walking out of it: alice sees bob leave.
+	time.Sleep(5 * time.Millisecond)
+	bob.join("wilds:2:-1")
+	if a.expect("leave").AccountID != x.account("bob") {
+		t.Fatal("left the 3x3")
 	}
 	a.none()
 	var afterExpiry, afterSeen int64
@@ -533,9 +551,11 @@ func TestPresenceMessageValidation(t *testing.T) {
 		join    bool
 	}{
 		{"unknown-area", map[string]any{"type": "join", "area": "private-home"}, false},
-		{"unknown-region", map[string]any{"type": "join", "area": "wilds:made-up:0:0"}, false},
-		{"chunk-bounds", map[string]any{"type": "join", "area": "wilds:inner-1:3:0"}, false},
-		{"chunk-canonical", map[string]any{"type": "join", "area": "wilds:inner-1:00:0"}, false},
+		{"region-room", map[string]any{"type": "join", "area": "wilds:inner-1:0:0"}, false},
+		{"bare-wilds", map[string]any{"type": "join", "area": "wilds"}, false},
+		{"beyond-frontier", map[string]any{"type": "join", "area": "wilds:5:0"}, false},
+		{"south-of-the-gate", map[string]any{"type": "join", "area": "wilds:0:1"}, false},
+		{"chunk-canonical", map[string]any{"type": "join", "area": "wilds:00:-1"}, false},
 		{"position-without-room", positionMessage(0), false},
 		{"position-bounds", positionMessage(1e7), true},
 		{"bad-facing", map[string]any{"type": "pos", "x": 0, "y": 0, "moving": false, "facing": map[string]any{"x": 0, "y": 0}}, true},

@@ -177,11 +177,11 @@ func TestAmberfallSapFromTangleTreesOnly(t *testing.T) {
 	// wear or cap), and its plain trees give timber only.
 	x.now.Add(86400)
 	c = x.login("alice", "")
-	if x.opRefreshing(c, &s, "gather", inRegion(gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", "o0"), whitequietRegion), 409).Error.Code != "cannot-gather-here" {
+	if x.opRefreshing(c, &s, "gather", inRegion(gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", "o0"), "whitequiet"), 409).Error.Code != "cannot-gather-here" {
 		t.Fatal("a Tangle tree out in the drift")
 	}
 	for i := 0; i < int(content.GatheringRules.GetCaps().GetDay().GetChop()); i++ {
-		r := x.opRefreshing(c, &s, "gather", inRegion(gatherIn(s, "wilds", here, axe, "chop", "tree", fmt.Sprintf("o%d", i/int(content.GatheringRules.GetCaps().GetVisit().GetChop()))), whitequietRegion), 200)
+		r := x.opRefreshing(c, &s, "gather", inRegion(gatherIn(s, "wilds", here, axe, "chop", "tree", fmt.Sprintf("o%d", i/int(content.GatheringRules.GetCaps().GetVisit().GetChop()))), "whitequiet"), 200)
 		for _, g := range r.Result.Gathered {
 			if g.ItemDef == "amberfall-sap" {
 				t.Fatal("the outer drift's trees gave sap")
@@ -522,9 +522,10 @@ func stormFind(id string) (first, second struct {
 		at := week*7*86400 + 3600
 	weekDone:
 		for kind, chance := range map[string]uint32{"camp": 2, "chest": 5} {
-			for cx := 0; cx < 3; cx++ {
-				for cy := 0; cy < 3; cy++ {
-					if intAbs(cx-1)+intAbs(cy-1) < int(content.WildsRules.GetDeepTangleManhattanDistance()) {
+			// The Tangle's chunks (-1..1, -2..0): its deep ones only.
+			for cx := -1; cx <= 1; cx++ {
+				for cy := -2; cy <= 0; cy++ {
+					if !deepCountry(cx, cy) {
 						continue // not deep enough
 					}
 					for i := 0; i < 60; i++ {
@@ -563,7 +564,7 @@ func TestStormGradeDropIsVeryRareAndSpacedOut(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	found, err := maybeGrantStormDrop(context.Background(), tx, &s.Snapshot, "inner-1", first.entity, first.cx, first.cy, first.at)
+	found, err := maybeGrantStormDrop(context.Background(), tx, &s.Snapshot, first.entity, first.cx, first.cy, first.at)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -579,7 +580,7 @@ func TestStormGradeDropIsVeryRareAndSpacedOut(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	again, err := maybeGrantStormDrop(context.Background(), tx, &s.Snapshot, "inner-1", first.entity, first.cx, first.cy, first.at+3600)
+	again, err := maybeGrantStormDrop(context.Background(), tx, &s.Snapshot, first.entity, first.cx, first.cy, first.at+3600)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -594,7 +595,7 @@ func TestStormGradeDropIsVeryRareAndSpacedOut(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = maybeGrantStormDrop(context.Background(), tx2, &s.Snapshot, "inner-1", second.entity, second.cx, second.cy, second.at); err != nil {
+	if _, err = maybeGrantStormDrop(context.Background(), tx2, &s.Snapshot, second.entity, second.cx, second.cy, second.at); err != nil {
 		t.Fatal(err)
 	}
 	if err = tx2.Commit(); err != nil {
