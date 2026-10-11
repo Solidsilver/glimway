@@ -12,7 +12,7 @@ import { cachedTerrain, forgetChunks, loadChunk, pruneChunks } from '../src/game
 import { applyClaim, chunkEpoch, chunkThings, groundChanges, isClaimed, refreshNear, resetWilds, wildsEpoch, wildsFrontier, wildsLive, wildsStale, wildsView } from '../src/game/wilds/store.ts';
 import { bus, EV } from '../src/game/events.ts';
 import type { Session } from '../src/game/session.ts';
-import { fixtureChunk, fixtureTerrain, openMapChunk } from './wilds-fixture.ts';
+import { chunkAt, fixtureChunk, fixtureTerrain } from './wilds-fixture.ts';
 
 const fixtures = JSON.parse(readFileSync(new URL('../server/internal/api/testdata/server-first.json', import.meta.url), 'utf8')) as { name: string; case: string; json: JsonValue }[];
 /** The near read O-A's contract ships (centre (-2, -4), the 0.8 frontier), as the server writes it. */
@@ -20,8 +20,8 @@ const NEAR = fixtures.find((f) => f.case === 'valid-near')!.json as Record<strin
 const CENTER = { cx: NEAR.center.cx as number, cy: NEAR.center.cy as number };
 
 test('a served chunk unpacks into grids, decor, sites, bodies, its tier and land', () => {
-  const m = fixtureChunk('inner-1');
-  const t = fixtureTerrain('inner-1');
+  const m = fixtureChunk('tangle');
+  const t = fixtureTerrain('tangle');
   assert.equal(t.epochId, m.epochId);
   assert.deepEqual([t.cx, t.cy, t.size, t.tier, t.land], [0, -1, 24, 1, 'woods']);
   assert.equal(t.ground.length, 24);
@@ -40,21 +40,25 @@ test('a served chunk unpacks into grids, decor, sites, bodies, its tier and land
     if (d.overhang) assert.ok(DECOR_ART[d.kind].blocking);
   }
   for (const e of t.entities) assert.equal(t.solid[e.ty]![e.tx], false);
-  const outer = fixtureTerrain('outer-1');
+  const outer = fixtureTerrain('whitequiet-0-4');
   assert.equal(outer.look, 'outer');
   assert.ok(outer.mark, 'the outer look carries its Mark');
-  assert.ok(outer.sites.some((s) => s.kind === 'given'));
+  // The Beyond's fixtures: a dark lamp stone by the road, a ford over the Wend.
+  assert.ok(fixtureTerrain('road').sites.some((s) => s.kind === 'lamp-stone'));
+  const ford = fixtureTerrain('ford');
+  assert.ok(ford.ground.some((row) => row.includes(TERRAIN.water_b)), 'ford shallows');
+  assert.ok(ford.ground.some((row) => row.includes(TERRAIN.water_a)), 'and the river')
   // A place's landmark mark comes with its chunk.
-  const placed = openMapChunk('outer-1');
+  const placed = chunkAt('whitequiet-0-4', 0, -4);
   placed.places = [{ $typeName: 'glimway.v1.WildsPlaceMark', id: 'place:0:-1', kind: 'ruin', tx: 5, ty: 6 }];
   assert.deepEqual(decodeChunk(toBinary(WildsChunkSchema, placed)).places.map((p) => p.id), ['place:0:-1']);
 });
 
 test('decoding refuses a tampered chunk', () => {
-  const m = fixtureChunk('inner-1');
+  const m = fixtureChunk('tangle');
   m.decor!.tx.pop();
   assert.throws(() => decodeChunk(toBinary(WildsChunkSchema, m)));
-  const bad = fixtureChunk('inner-1');
+  const bad = fixtureChunk('tangle');
   bad.ground[0] = 0xff;
   assert.throws(() => decodeChunk(toBinary(WildsChunkSchema, bad)));
 });
@@ -62,7 +66,7 @@ test('decoding refuses a tampered chunk', () => {
 test('the chunk cache fetches each chunk once and forgets old epochs', async () => {
   forgetChunks();
   let calls = 0;
-  const api = { chunk: async () => (calls++, fixtureChunk('inner-1')) };
+  const api = { chunk: async () => (calls++, fixtureChunk('tangle')) };
   const [a, b] = await Promise.all([loadChunk(api, 'fixture-inner', 0, -1), loadChunk(api, 'fixture-inner', 0, -1)]);
   assert.equal(calls, 1, 'one fetch for two callers');
   assert.equal(a, b);
@@ -97,7 +101,7 @@ function serveWindow(ops: FakeOperations, cx: number, cy: number, wick = NEAR.wi
     for (let x = cx - 2; x <= cx + 2; x++) {
       if (x < f.minCx || x > f.maxCx || y < f.minCy || y > f.maxCy) continue;
       const epoch = epochKindAt(x, y) === 'still' ? (NEAR.still.id as string) : wick;
-      const m = openMapChunk(epochKindAt(x, y) === 'still' ? 'inner-1' : 'outer-1', { cx: x, cy: y });
+      const m = chunkAt(epochKindAt(x, y) === 'still' ? 'tangle' : 'whitequiet-0-4', x, y);
       m.epochId = epoch;
       // The fixture's states name node 0 of each chunk.
       Object.assign(m.entities[0]!, { id: `node:${x}:${y}:0`, kind: 'node', material: 'stone', enemies: [], tier: 0, poi: '' });

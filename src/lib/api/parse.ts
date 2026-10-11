@@ -15,11 +15,8 @@ import type {
   WildsClaimResponse,
   WildsEntityState,
   WildsEntityView,
-  WildsEpoch,
-  WildsLanternView,
   WildsLoot,
   WildsMaterials,
-  WildsRegionResponse,
 } from './types.ts';
 
 // The homestead and item routes moved to the generated schema (homestead.ts,
@@ -118,19 +115,6 @@ function parseMaterials(raw: unknown): WildsMaterials {
   return out;
 }
 
-function parseEpoch(raw: unknown): WildsEpoch {
-  const o = obj(raw);
-  return {
-    worldSeed: str(o.worldSeed),
-    regionId: str(o.regionId),
-    generatorVersion: int(o.generatorVersion),
-    season: str(o.season),
-    id: str(o.id),
-    startsAt: int(o.startsAt),
-    endsAt: o.endsAt === null || o.endsAt === undefined ? null : int(o.endsAt),
-  };
-}
-
 const ENTITY_STATES = ['available', 'cleared', 'harvested', 'charted'];
 
 function parseEntity(raw: unknown): WildsEntityView {
@@ -163,47 +147,6 @@ function parseLoot(raw: unknown): WildsLoot {
       return { id: str(e.id), qty: Math.max(0, int(e.qty)) };
     }),
     trinket: nullableStr(o.trinket),
-  };
-}
-
-function parseLantern(raw: unknown): WildsLanternView {
-  const o = obj(raw);
-  return {
-    id: str(o.id),
-    ownerId: str(o.ownerId),
-    displayName: typeof o.displayName === 'string' ? o.displayName : '',
-    x: int(o.x),
-    y: int(o.y),
-    litBy: nullableStr(o.litBy),
-    at: int(o.at),
-    litAt: o.litAt === null || o.litAt === undefined ? null : int(o.litAt),
-  };
-}
-
-const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
-
-export function parseWildsRegion(raw: unknown): WildsRegionResponse {
-  const o = obj(raw);
-  return {
-    ...parseSnapshot(raw),
-    epoch: parseEpoch(o.epoch),
-    entities: arr(o.entities).map(parseEntity),
-    personalClaims: arr(o.personalClaims).map((c) => {
-      const e = obj(c);
-      return { entityId: str(e.entityId), at: int(e.at) };
-    }),
-    discoveries: arr(o.discoveries).map((d) => {
-      const e = obj(d);
-      return {
-        entityId: str(e.entityId),
-        poiId: str(e.poiId),
-        discovererId: str(e.discovererId),
-        displayName: typeof e.displayName === 'string' ? e.displayName : '',
-        at: int(e.at),
-      };
-    }),
-    lanterns: arr(o.lanterns).map(parseLantern),
-    materials: parseMaterials(o.materials),
   };
 }
 

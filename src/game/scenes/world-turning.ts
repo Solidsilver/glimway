@@ -54,10 +54,17 @@ export class Turning {
   private playing = false
   /** The wick a Turning last played for: the clock alone never plays it twice. */
   private playedFor = ''
+  /**
+   * The wick the server last recorded this player's place in, as this scene
+   * build began (null once checked): coming back to land that has turned
+   * since gets its note when the Wilds are first read.
+   */
+  private recorded: string | null
 
   constructor(scene: Phaser.Scene, deps: TurningDeps) {
     this.scene = scene
     this.deps = deps
+    this.recorded = deps.world.open ? deps.session.state.wickEpoch ?? '' : null
     const onClock = () => {
       this.check = 0
     }
@@ -82,6 +89,20 @@ export class Turning {
     return epochKindAt(at.cx, at.cy) === 'wick'
   }
 
+  /**
+   * Back in the Beyond after it turned while you were away: the server
+   * recorded your place in an older wick than the one the Wilds now name.
+   * You stand where you were (or the nearest open tile); the land is new.
+   */
+  private arrivedAfterTurning(): void {
+    if (this.recorded === null) return
+    const wick = wildsEpoch('wick').id
+    if (!wick) return
+    const was = this.recorded
+    this.recorded = null
+    if (was && was !== wick && this.inBeyond()) this.note(false)
+  }
+
   private onTurning(): void {
     this.deps.unmoored.trigger()
     if (this.open) this.play()
@@ -90,6 +111,7 @@ export class Turning {
   /** Once a second on the open map: has the wick ended? */
   update(dt: number): void {
     if (!this.open) return
+    this.arrivedAfterTurning()
     this.check -= dt
     if (this.check > 0) return
     this.check = 1

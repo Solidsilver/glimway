@@ -13,7 +13,7 @@ import { decodeChunk } from '../src/lib/api/chunks.ts';
 import { toBinary } from '@bufbuild/protobuf';
 import { WildsChunkSchema } from '../src/lib/gen/glimway/v1/wilds_pb.js';
 import { frontierDistance } from '../src/game/wilds/window-plan.ts';
-import { openMapChunk } from './wilds-fixture.ts';
+import { chunkAt, fixtureTerrain } from './wilds-fixture.ts';
 
 const S = 24;
 const PX = S * 16;
@@ -23,7 +23,7 @@ const t = (id: string) => (TERRAIN as Record<string, number>)[wildsGround(id).te
 function world(): { chunks: Map<string, ChunkTerrain>; src: GroundSource } {
   const chunks = new Map<string, ChunkTerrain>();
   for (const [cx, cy] of [[0, -4], [1, -4], [0, -3], [1, -3]] as const) {
-    const c = terrainOf(decodeChunk(toBinary(WildsChunkSchema, openMapChunk('outer-1', { cx, cy }))));
+    const c = terrainOf(decodeChunk(toBinary(WildsChunkSchema, chunkAt('whitequiet-0-4', cx, cy))));
     // Meadow, a river with its bank and a ford, paving and a laid path, across the edges.
     for (let y = 0; y < S; y++) {
       c.ground[y]![0] = t('meadow');
@@ -153,3 +153,33 @@ test('the drift fogs into the void, deeper the further past the frontier', () =>
   assert.ok(off(0, drift) < off(0, before) || off(0, before) === 0, 'the edge is fogged a little');
   assert.ok([0, 1, 2, 3].some((i) => off(i, drift) > 6), 'and still shows the land');
 });
+
+test('ground lines up across real neighbouring chunks (the generator’s own Whitequiet 2×2)', () => {
+  const chunks = new Map<string, ChunkTerrain>()
+  for (const name of ['whitequiet-0-5', 'whitequiet-1-5', 'whitequiet-0-4', 'whitequiet-1-4'] as const) {
+    const t = fixtureTerrain(name)
+    chunks.set(`${t.cx},${t.cy}`, t)
+  }
+  const at = (tx: number, ty: number) => chunks.get(`${Math.floor(tx / S)},${Math.floor(ty / S)}`)
+  const src: GroundSource = {
+    ground: (tx, ty) => { const c = at(tx, ty); return c ? c.ground[ty - c.cy * S]![tx - c.cx * S]! : null },
+    solid: (tx, ty) => { const c = at(tx, ty); return !c || c.solid[ty - c.cy * S]![tx - c.cx * S]! },
+  }
+  const G2 = wildsLook('outer', chunks.get('0,-5')!.mark).ground
+  const draw = (x0: number, y0: number, w: number, h: number) => {
+    const out = new Uint8ClampedArray(w * h * 4)
+    paintGround(out, x0, y0, w, h, src, G2, SEED, groundTable())
+    return out
+  }
+  const margin = 24
+  const a = draw(0, -5 * PX, PX + margin, PX + margin)
+  const east = draw(PX, -5 * PX, PX, PX)
+  const south = draw(0, -4 * PX, PX, PX)
+  for (let wy = -5 * PX; wy < -4 * PX + margin; wy++)
+    for (let wx = 0; wx < PX + margin; wx++) {
+      if (wx < PX && wy < -4 * PX) continue
+      if (wx >= PX && wy >= -4 * PX) continue
+      const other = wx >= PX ? [east, PX, -5 * PX] as const : [south, 0, -4 * PX] as const
+      assert.deepEqual(px(a, 0, -5 * PX, PX + margin, wx, wy), px(other[0], other[1], other[2], PX, wx, wy), `world pixel ${wx},${wy}`)
+    }
+})

@@ -3,7 +3,7 @@ import { ApiError } from './errors.ts';
 import { decodeWire } from './wire.ts';
 import { decodePlayerState, validatePlayerState } from './state-contract.ts';
 import { EnvelopeSchema, LoginRequestSchema, PlayRequestSchema, SessionResponseSchema, StateResponseSchema, PlayResponseSchema, WorldChooseRequestSchema, type Envelope, type LoginRequest, type PlayRequest, type SessionResponse, type StateResponse, type PlayResponse } from '../gen/glimway/v1/state_pb.js';
-import { WildsRegionResultSchema, WildsNearResultSchema, HomesteadLandSchema, type WildsChunk, type WildsRegionResult, type WildsNearResult, type HomesteadLand } from '../gen/glimway/v1/wilds_pb.js';
+import { WildsNearResultSchema, HomesteadLandSchema, type WildsChunk, type WildsNearResult, type HomesteadLand } from '../gen/glimway/v1/wilds_pb.js';
 import { decodeChunk } from './chunks.ts';
 import { validateNear } from './near.ts';
 import { CompanionsRequestSchema, MountHomeRequestSchema, MountOutRequestSchema, StableExtendRequestSchema, StallRequestSchema, type CompanionsRequest, type MountHomeRequest, type MountOutRequest, type StableExtendRequest, type StallRequest } from '../gen/glimway/v1/companions_pb.js';
@@ -22,8 +22,7 @@ export interface OperationsApi {
   worldChoose(choice: 'own' | 'party'): Promise<SessionResponse>;
   logout(): Promise<void>;
   chunk(epoch: string, layer: number, cx: number, cy: number): Promise<WildsChunk>;
-  region(region: string): Promise<WildsRegionResult>;
-  /** The open map's near read around a chunk (open-map.md 2.4); the region read's successor. */
+  /** The open map's near read around a chunk (open-map.md 2.4). */
   near(cx: number, cy: number): Promise<WildsNearResult>;
   homeLand(gate: number): Promise<HomesteadLand>;
   report(request: ReportRequest, options?: { keepalive?: boolean }): Promise<Envelope>;
@@ -90,13 +89,6 @@ export function createOperationsApi(send: Transport): OperationsApi {
     async worldChoose(choice) { return validatedSession(await send('POST', '/api/world/choose', toJson(WorldChooseRequestSchema, create(WorldChooseRequestSchema, { choice })))); },
     async logout() { await send('DELETE', '/api/session'); },
     async chunk(epoch, layer, cx, cy) { const raw = await send('GET', `/api/wilds/chunk/${encodeURIComponent(epoch)}/${layer}/${cx}/${cy}`, undefined, { binary: true }); return validated(() => { if (!(raw instanceof Uint8Array)) throw new Error('missing binary chunk'); const chunk = decodeChunk(raw); if (chunk.epochId !== epoch || chunk.layer !== layer || chunk.cx !== cx || chunk.cy !== cy) throw new Error("chunk identity mismatch"); return chunk; }); },
-    async region(region) { const raw = await send('GET', `/api/wilds/region/${encodeURIComponent(region)}`); return validated(() => {
-      const out = decodeWire(WildsRegionResultSchema, raw);
-      if (!out.epoch?.id || !out.epoch.worldSeed || !['inner-1', 'outer-1'].includes(out.epoch.regionId) || out.epoch.generatorVersion !== 2 || out.epoch.regionId !== region) throw new Error('invalid epoch authority');
-      for (const entity of out.entities) if (!entity.id || entity.epoch !== out.epoch.id || !Number.isSafeInteger(entity.cycle) || entity.cycle < 0 || !['available', 'cleared', 'harvested', 'charted'].includes(entity.state)) throw new Error('invalid mutable entity');
-      for (const qty of Object.values(out.materials)) if (!Number.isSafeInteger(qty) || qty < 0) throw new Error('invalid material balance');
-      return out;
-    }); },
     async near(cx, cy) { const raw = await send('GET', `/api/wilds/near/${cx}/${cy}`); return validated(() => validateNear(decodeWire(WildsNearResultSchema, raw), cx, cy)); },
     async homeLand(gate) { const raw = await send('GET', `/api/homestead/land/${gate}`); return validated(() => {
       const out = decodeWire(HomesteadLandSchema, raw);

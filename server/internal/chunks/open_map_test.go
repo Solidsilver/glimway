@@ -52,9 +52,6 @@ func TestOpenMapValidatorRefusals(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, change := range map[string]func(*contract.WildsChunk){
-		"region":     func(c *contract.WildsChunk) { c.Region = "outer-1" },
-		"exits":      func(c *contract.WildsChunk) { c.Exits = []*contract.Exit{{}} },
-		"spawn":      func(c *contract.WildsChunk) { c.Spawn = &contract.Tile{} },
 		"version":    func(c *contract.WildsChunk) { c.GeneratorVersion = 1 },
 		"realm":      func(c *contract.WildsChunk) { c.Realm = "elsewhere" },
 		"layer":      func(c *contract.WildsChunk) { c.Layer = 1 },

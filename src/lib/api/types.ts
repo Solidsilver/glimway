@@ -89,18 +89,6 @@ export type { WorldRef, WorldChoice, WorldLeaver, WorldLeaving, WorldView, World
 
 // ------------------------------------------------------------- the Wilds
 
-/** The frozen epoch a region is generated from (server: `region_epochs`). */
-export interface WildsEpoch {
-  worldSeed: string;
-  regionId: string;
-  generatorVersion: number;
-  season: string;
-  /** Opaque epoch id, sent as `epoch` on every Wilds mutation. */
-  id: string;
-  startsAt: number;
-  endsAt: number | null;
-}
-
 type WildsEntityKind = 'camp' | 'node' | 'chest' | 'poi';
 export type WildsEntityState = 'available' | 'cleared' | 'harvested' | 'charted';
 
@@ -130,7 +118,7 @@ export interface WildsLoot {
   trinket: string | null;
 }
 
-/** A fallen hero's lantern, at region-wide tile coordinates. */
+/** A fallen hero's lantern, at world tile coordinates. */
 export interface WildsLanternView {
   id: string;
   ownerId: string;
@@ -147,16 +135,6 @@ export interface WildsMaterials {
   stone: number;
   fiber: number;
   amber: number;
-}
-
-/** GET /api/wilds/region/:id — everything the client renders from. */
-export interface WildsRegionResponse extends Snapshot {
-  epoch: WildsEpoch;
-  entities: WildsEntityView[];
-  personalClaims: { entityId: string; at: number }[];
-  discoveries: { entityId: string; poiId: string; discovererId: string; displayName: string; at: number }[];
-  lanterns: WildsLanternView[];
-  materials: WildsMaterials;
 }
 
 export interface WildsClaimRequest {
@@ -260,4 +238,4 @@ export type {
 export type { PlayerState } from '../gen/glimway/v1/state_pb.js';
 export type { Where, ReportBarrier, Vitals, Place } from '../gen/glimway/v1/op_pb.js';
 export type { ReportRequest, ReportResult, QuestStepRequest, MarkRequest, MarkResult, TakePaperRequest, SettleEchoRequest, SettleEchoResult, FallRequest, FallResult, ProfileReport, ProfileResult } from '../gen/glimway/v1/operations_pb.js';
-export type { WildsChunk, WildsRegionResult, HomesteadLand } from '../gen/glimway/v1/wilds_pb.js';
+export type { WildsChunk, HomesteadLand } from '../gen/glimway/v1/wilds_pb.js';

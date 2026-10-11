@@ -592,6 +592,12 @@ export class Hero {
     if (entry) {
       px = tileMid(entry.tx)
       py = tileMid(entry.ty)
+      // The open map's land can stand anywhere (a warp, the land turned): never inside it.
+      const stand = this.deps.world.open?.standAt(px, py)
+      if (stand) {
+        px = stand.x
+        py = stand.y
+      }
     } else {
       const saved = state.position
       px = saved.x

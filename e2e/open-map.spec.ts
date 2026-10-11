@@ -1,5 +1,6 @@
 import { expect, test, type Page } from './fixtures'
-import { reenter } from './connected'
+import type { BrowserContext } from '@playwright/test'
+import { allow, newUser, openTitleGuide, pasteAndConnect, reenter, routeHabitica, serverState, setHabitica, waitForWorld, CONTRACT } from './connected'
 import { expectToast, holdUntil, player, settled, waitForWilds, warp, wilds, wildsWindow } from './helpers'
 import { freshPlayer } from './home-helpers'
 
@@ -60,10 +61,30 @@ async function route(page: Page, goal: { minTy?: number; maxTy?: number; minTx?:
   }, [goal, reach] as const)
 }
 
-/** Walk (as if steered) along a route, and wait until the hero gets there. */
-async function walk(page: Page, path: { x: number; y: number }[]): Promise<void> {
-  await page.evaluate((p) => (window as unknown as { __fsDevWalk: (p: { x: number; y: number }[]) => void }).__fsDevWalk(p), path)
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __fsDevWalking: () => boolean }).__fsDevWalking()), { timeout: 60_000 }).toBe(false)
+/**
+ * Walk (as if steered) to the nearest open tile matching `goal`, and wait
+ * until the hero gets there. Creatures are set aside first (a camp's
+ * knockback would push the hero off the route); a walk that stalls is
+ * planned again from where the hero stands.
+ */
+async function walkTo(page: Page, goal: Parameters<typeof route>[1]): Promise<void> {
+  for (let attempt = 0; attempt < 6; attempt++) {
+    await page.evaluate(() => (window as unknown as { __fsDevParkCreatures: () => void }).__fsDevParkCreatures())
+    let path = await route(page, goal)
+    for (let tries = 0; !path && tries < 20; tries++) {
+      await page.waitForTimeout(250)
+      path = await route(page, goal)
+    }
+    expect(path, `a way to ${JSON.stringify(goal)}`).not.toBeNull()
+    if (path!.length <= 1) return
+    await page.evaluate((p) => (window as unknown as { __fsDevWalk: (p: { x: number; y: number }[]) => void }).__fsDevWalk(p), path!)
+    const done = await expect
+      .poll(() => page.evaluate(() => (window as unknown as { __fsDevWalking: () => boolean }).__fsDevWalking()), { timeout: 20_000 })
+      .toBe(false)
+      .then(() => true, () => false)
+    if (done) return
+  }
+  throw new Error(`the walk to ${JSON.stringify(goal)} kept stalling`)
 }
 
 test('walk from the gate through the Tangle into the Whitequiet and on, with no scene change; reload in place', async ({ page }) => {
@@ -87,15 +108,8 @@ test('walk from the gate through the Tangle into the Whitequiet and on, with no 
   // the Whitequiet (0,-3), (0,-4), and out of its far side into the Beyond.
   const frames: { p95: number; p50: number }[] = []
   for (let cy = -1; cy >= -6; cy--) {
-    const target = { maxTy: cy * S + S - 3 }
-    let path = await route(page, target)
-    for (let tries = 0; !path && tries < 20; tries++) {
-      await page.waitForTimeout(250)
-      path = await route(page, target)
-    }
-    expect(path, `a way north into chunk row ${cy}`).not.toBeNull()
     const timing = page.evaluate(() => (window as unknown as { __fsDevFrameTimes: (ms: number) => Promise<{ gap: { p50: number; p95: number } }> }).__fsDevFrameTimes(2500))
-    await walk(page, path!)
+    await walkTo(page, { maxTy: cy * S + S - 3 })
     frames.push((await timing).gap)
     const here = await wilds(page)
     expect(here.chunk.cy, 'the hero walked into the next row').toBe(cy)
@@ -111,11 +125,21 @@ test('walk from the gate through the Tangle into the Whitequiet and on, with no 
   // No long frames crossing the edges (painting is off the walking frame).
   for (const f of frames) expect(f.p95, `frame gaps while crossing: ${JSON.stringify(frames)}`).toBeLessThan(120)
   const paints = (await wildsWindow(page))!.paints.filter((p) => !p.drift)
+  // For the report: frame gaps per row crossed, and how long the chunks took to paint (and where).
+  console.log('open-map walk', JSON.stringify({ frames, paints: paints.map((p) => [p.chunk, p.ms, p.thread]) }))
   expect(paints.some((p) => p.thread === 'worker'), 'chunks painted off the main thread while walking').toBe(true)
   await shot(page, '62-open-map-beyond-desktop')
 
-  // Reload: the place is the server's; Continue puts you back where you stood.
+  // Reload: the place is the server's; Continue puts you back where you stood
+  // (once the report after the walk has reached it).
   const before = await player(page)
+  await expect.poll(async () => {
+    const st = (await serverState(page)).body.state as { area: string; position: { x: number; y: number } }
+    return st.area === 'wilds' && Math.hypot(st.position.x - before.x, st.position.y - before.y) <= 17
+  }, { timeout: 20_000 }).toBe(true)
+  // And this tab's own record has it (a reload starts from the place the page last saved).
+  await page.evaluate(() => (window as unknown as { __fsDevSaveSoon: () => void }).__fsDevSaveSoon())
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __fsDevSaved: () => { pending: boolean } }).__fsDevSaved().pending)).toBe(false)
   await reenter(page, 'wilds')
   await waitForWilds(page)
   const after = await player(page)
@@ -133,9 +157,8 @@ test('the drift at the frontier stops you, and says so the first time', async ({
   expect(w.drift.length, 'past the edge is the drift').toBeGreaterThan(0)
   const frontierTop = -8 * S * TILE
   // Walk to the northmost open tile in reach; if it is on the edge row, push into the drift.
-  const path = await route(page, { maxTy: -8 * S }, 40)
-  if (!path) test.skip(true, 'no open tile on this world’s north edge near the warp')
-  await walk(page, path!)
+  if (!(await route(page, { maxTy: -8 * S }, 40))) test.skip(true, 'no open tile on this world’s north edge near the warp')
+  await walkTo(page, { maxTy: -8 * S })
   await page.keyboard.down('ArrowUp')
   try {
     await expectToast(page, /The drift is thick here\. Not without a lamp\./, { timeout: 8_000 })
@@ -145,4 +168,48 @@ test('the drift at the frontier stops you, and says so the first time', async ({
   expect((await player(page)).y, 'the hero never passes the frontier').toBeGreaterThanOrEqual(frontierTop)
   await shot(page, '63-open-map-drift-desktop')
   await settled(page, { area: 'wilds' })
+})
+
+type Remote = { name: string; x: number; y: number; alpha: number }
+const remotes = (p: Page) => p.evaluate(() => ((window as unknown as { __fsRemote?: () => Remote[] }).__fsRemote?.() ?? []) as Remote[])
+
+test('two players in neighbouring chunks see each other; two chunks apart they don’t', async ({ page, browser, baseURL }) => {
+  test.setTimeout(150_000)
+  const ash = newUser()
+  const rowan = newUser()
+  allow(ash)
+  await setHabitica(ash, { name: 'Ash' })
+  await setHabitica(rowan, { name: 'Rowan' })
+  await routeHabitica(page.context())
+  await openTitleGuide(page)
+  await pasteAndConnect(page, ash)
+  await waitForWorld(page)
+  const invite = await (await page.request.post('/api/invites', { data: {}, ...CONTRACT })).json()
+  const ctx: BrowserContext = await browser.newContext({ baseURL, viewport: { width: 1200, height: 760 } })
+  await routeHabitica(ctx)
+  const other = await ctx.newPage()
+  await openTitleGuide(other)
+  await pasteAndConnect(other, rowan, { invite: invite.code })
+  await waitForWorld(other)
+
+  // Ash by the east edge of the Tangle's middle chunk (0, -1); Rowan just over it in (1, -1).
+  await warp(page, 'wilds', 22, -12)
+  await waitForWilds(page)
+  await warp(other, 'wilds', 25, -12)
+  await waitForWilds(other)
+  expect((await wilds(page)).chunk).toEqual({ cx: 0, cy: -1 })
+  expect((await wilds(other)).chunk).toEqual({ cx: 1, cy: -1 })
+  await expect.poll(async () => (await remotes(page)).map((r) => r.name), { timeout: 20_000 }).toEqual(['Rowan'])
+  await expect.poll(async () => (await remotes(other)).map((r) => r.name), { timeout: 20_000 }).toEqual(['Ash'])
+  const seen = (await remotes(page))[0]!
+  const there = await player(other)
+  expect(Math.hypot(seen.x - there.x, seen.y - there.y), 'drawn where Rowan stands (world pixels)').toBeLessThan(24)
+  await expect.poll(async () => (await remotes(page))[0]?.alpha ?? 0).toBe(1)
+  await shot(page, '64-open-map-two-players-desktop')
+
+  // Rowan goes two chunks further east: out of Ash's 3×3, so they part.
+  await warp(other, 'wilds', 3 * S + 12, -12)
+  await waitForWilds(other)
+  await expect.poll(async () => (await remotes(page)).length, { timeout: 15_000 }).toBe(0)
+  await ctx.close()
 })

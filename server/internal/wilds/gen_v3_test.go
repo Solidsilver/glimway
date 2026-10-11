@@ -927,7 +927,7 @@ func TestV3ChunkShape(t *testing.T) {
 			if err := proto.Unmarshal(b, &pm); err != nil {
 				t.Fatal(err)
 			}
-			if pm.Region != "" || pm.Exits != nil || pm.Spawn != nil || int(pm.Tier) != ch.Tier || pm.Land != ch.Land || len(pm.Places) != len(ch.Places) || pm.GeneratorVersion != 3 {
+			if int(pm.Tier) != ch.Tier || pm.Land != ch.Land || len(pm.Places) != len(ch.Places) || pm.GeneratorVersion != 3 {
 				t.Fatalf("%s %v: proto identity", seed, c)
 			}
 			for i := range ch.Ground {

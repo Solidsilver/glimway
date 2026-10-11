@@ -76,7 +76,7 @@ test('a visit is one stay: the same while you rebuild, new when you leave and re
 });
 
 test('the Tangle offers work: trees and boulders stand on solid ground, patches you can dig', () => {
-  for (const region of ['inner-1', 'outer-1'] as const) {
+  for (const region of ['tangle', 'whitequiet-0-4', 'road'] as const) {
     const t0 = fixtureTerrain(region);
     const o = chunkOrigin(t0);
     const gathering = chunkGather(t0);
@@ -287,7 +287,7 @@ test('wear is told in a line: giving out, going blunt, a fitting wearing away', 
 });
 
 test('each place offers only the pieces the server allows there', () => {
-  for (const region of ['inner-1', 'outer-1'] as const) {
+  for (const region of ['tangle', 'whitequiet-0-4', 'road', 'ford'] as const) {
     for (const s of chunkGather(fixtureTerrain(region))) assert.ok(gatheringOffered('wilds', s.target), `wilds: ${s.target}`);
   }
   for (const s of Object.values(GATHER_OF)) assert.ok(gatheringOffered("wilds", s!.target), `wilds kind: ${s!.target}`);
@@ -326,7 +326,7 @@ test('felling takes all of a tile’s art: a fading canopy goes with the trunk',
 });
 
 test('every workable piece in a Wilds chunk names its tile, the fading (path-side) trees too', () => {
-  for (const region of ['inner-1', 'outer-1'] as const) {
+  for (const region of ['tangle', 'whitequiet-0-4', 'road'] as const) {
     const t = fixtureTerrain(region);
     const scenery = chunkScenery(t, () => true);
     const anchored = (tx: number, ty: number) => scenery.filter((s) => s.tx === tx && s.ty === ty);

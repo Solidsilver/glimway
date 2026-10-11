@@ -32,9 +32,7 @@ test('Go ProtoJSON fixtures decode in TS for every new request and result, inclu
     if (f.name === 'mixed') { assert.deepEqual(Object.keys(f.json as object).sort(), ['result', 'state']); assert.ok(decodeMixed(f.json, r => { assert.equal(typeof r, 'object'); return r; }).state.account); continue; }
     const schema = schemas.get(f.name)!; assert.ok(schema, f.name);
     const decoded = decodeWire(schema, f.json);
-    // Binary chunks validate on decode once they are the open map's (v3; generator v2's
-    // fixture goes when lane O-B's v3 fixtures land).
-    if (f.binaryHex && (decoded as { generatorVersion?: number }).generatorVersion! >= 3) { const c = decodeChunk(Uint8Array.from(Buffer.from(f.binaryHex, 'hex'))); assert.deepEqual(c, decoded); }
+    if (f.binaryHex) { const c = decodeChunk(Uint8Array.from(Buffer.from(f.binaryHex, 'hex'))); assert.deepEqual(c, decoded); }
     // ES omits absent messages; Go EmitUnpopulated writes null. Compare with
     // the generated decoder's normalized presence semantics.
     const normalize = (raw: JsonValue): JsonValue => Array.isArray(raw) ? raw.map(normalize) : raw && typeof raw === 'object' ? Object.fromEntries(Object.entries(raw).filter(([, v]) => v !== null).map(([k, v]) => [k, normalize(v)])) : raw;
@@ -76,11 +74,8 @@ test('packed chunks validate identity, bodies, decor and places on binary decode
   assert.equal(entityIn(c, 'node:1:0:0')!.material, 'timber'); assert.deepEqual(decorAt(c, 2, 3), [0]);
   // Signed coordinates, anywhere: the frontier moves, chunks don't.
   c.cx = -40; c.cy = -9; validateChunk(c);
-  // Generator v2's regions, exits and spawn are refused; so are an old version, an unknown land, a tier past content.
+  // An old version, an unknown land, a tier past content are refused.
   const refused: [string, (x: ReturnType<typeof chunk>) => void][] = [
-    ['region', (x) => { x.region = 'inner-1'; }],
-    ['exit', (x) => { x.exits = [create(wilds.ExitSchema, { tx: 1, ty: 23, tw: 3, th: 1, dir: wilds.Dir.SOUTH, to: 'commons', entry: { tx: 23, ty: 2 } })]; }],
-    ['spawn', (x) => { x.spawn = create(wilds.TileSchema, { tx: 1, ty: 1 }); }],
     ['version', (x) => { x.generatorVersion = 2; }],
     ['land', (x) => { x.land = 'lake'; }],
     ['tier', (x) => { x.tier = 4; }],
@@ -114,9 +109,6 @@ test('realistic Go fixtures pass the facade and mixed domain parser', async () =
   assert.equal((await fake.api.play(create(state.PlayRequestSchema, { clientId: 'client' }))).reportClient, 'client');
   fake.responses.set('/api/state', [get('valid-state')]);
   assert.equal((await fake.api.state()).leaseActive, true);
-  fake.responses.set('/api/wilds/region/outer-1', [get('valid-region')]);
-  const region = await fake.api.region('outer-1');
-  assert.equal(region.echoes[0]!.member, 'tam'); assert.equal(region.entities[0]!.state, 'harvested');
   for (const f of fixtures.filter(f => f.case.startsWith('fall-') || ['claim-loot', 'lantern-loot'].includes(f.case))) assert.ok(decodeEnvelope(f.json).result.case);
   const mixed = decodeMixed(get('keyed-items'), parseItemsResult);
   assert.equal(mixed.result.gathered![0]!.qty, 2); assert.equal(mixed.result.items.stacks[0]!.itemDef, 'timber');
@@ -134,8 +126,6 @@ test('report keepalive and returned geometry identities are enforced', async () 
   const geometry = createOperationsApi(async () => bytes);
   assert.equal((await geometry.chunk('epoch', 0, 1, 0)).cx, 1);
   for (const args of [['wrong-epoch', 0, 1, 0], ['epoch', -1, 1, 0], ['epoch', 0, 0, 0], ['epoch', 0, 1, 1]] as const) await assert.rejects(geometry.chunk(...args), { code: 'bad-response' });
-  const wrongRegion = createOperationsApi(async () => fixtures.find(f => f.case === 'valid-region')!.json);
-  await assert.rejects(wrongRegion.region('inner-1'), { code: 'bad-response' });
 });
 
 test('outbox error decisions separate gameplay refusals, client bugs and reconciliation', () => {

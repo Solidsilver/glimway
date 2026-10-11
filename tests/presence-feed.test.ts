@@ -259,3 +259,27 @@ test('crafts: a peer\'s pose follows their positions, a look change mid-visit is
   assert.equal(pos.at(-1).pose, 'riding');
   r.feed.stop();
 });
+
+test('the open map: a neighbouring chunk’s joins show, and crossing an edge keeps those still in range (open-map.md 2.4)', () => {
+  const r = rig();
+  r.feed.setArea('wilds:0:-1');
+  r.ready();
+  assert.deepEqual(r.sock().sent.filter((m) => m.type === 'join').map((m) => m.area), ['wilds:0:-1']);
+  r.sock().push({ type: 'room', area: 'wilds:0:-1', players: [{ accountId: 'bob', displayName: 'Bob', avatar: null, pos: { x: 200, y: -200, facing: { x: 1, y: 0 }, moving: false } }] });
+  // Cy joins the chunk east of ours: the server shares it, and so do we.
+  r.sock().push({ type: 'join', area: 'wilds:1:-1', player: { accountId: 'cy', displayName: 'Cy', avatar: null, pos: { x: 500, y: -200, facing: { x: 0, y: 1 }, moving: false } } });
+  // A join two chunks away is not ours.
+  r.sock().push({ type: 'join', area: 'wilds:2:-1', player: { accountId: 'dee', displayName: 'Dee', avatar: null, pos: { x: 900, y: -200, facing: { x: 0, y: 1 }, moving: false } } });
+  r.c.advance(RENDER_DELAY_MS + 10);
+  const ids = (area: string) => r.feed.peersIn(area).filter((p) => p.leftAt === null).map((p) => p.accountId).sort();
+  assert.deepEqual(ids('wilds:0:-1'), ['bob', 'cy']);
+  // We walk east into Cy's chunk: Bob and Cy are still in range, nobody is dropped.
+  r.feed.setArea('wilds:1:-1');
+  assert.deepEqual(ids('wilds:1:-1'), ['bob', 'cy']);
+  r.c.advance(600);
+  assert.deepEqual(r.sock().sent.filter((m) => m.type === 'join').map((m) => m.area), ['wilds:0:-1', 'wilds:1:-1'], 'the next join, after the cooldown');
+  // A warp far away starts over.
+  r.feed.setArea('wilds:-4:-8');
+  assert.deepEqual(ids('wilds:-4:-8'), []);
+  r.feed.stop();
+});

@@ -1,58 +1,44 @@
 /**
  * The server's own chunks for client tests: tests/fixtures/wilds-*.bin are
- * written (and checked current) by server/internal/wilds TestClientFixtures.
+ * real generator v3 chunks of one world (seed `client-fixtures`), written
+ * and checked current by server/internal/wilds TestClientFixtures:
  *
- * Until the generator's v3 fixtures land (lane O-B), a v2 fixture is read
- * raw and given the open map's shape: no region, exits or spawn, generator
- * version 3, its world chunk (the Tangle's middle chunk (0, -1), the
- * Whitequiet's (0, -4)), a tier and a land. The woods in it are the
- * generator's own. A fixture already in v3 passes through unchanged.
+ * - `tangle`: chunk (0, -1), the Tangle's middle, in the still epoch;
+ * - `whitequiet-0-5`, `-1-5`, `-0-4`, `-1-4`: a 2x2 block of the Whitequiet
+ *   in the wick epoch (neighbours: the seam tests read across their edges);
+ * - `road`: the first chunk of the Beyond with a dark lamp stone;
+ * - `ford`: the first with a ford over the Wend.
  */
 import { readFileSync } from 'node:fs';
-import { clone, fromBinary, toBinary } from '@bufbuild/protobuf';
+import { clone } from '@bufbuild/protobuf';
 import { decodeChunk } from '../src/lib/api/chunks.ts';
 import { WildsChunkSchema, type WildsChunk } from '../src/lib/gen/glimway/v1/wilds_pb.js';
 import { terrainOf, type ChunkTerrain } from '../src/game/wilds/terrain.ts';
 
-export type FixtureRegion = 'inner-1' | 'outer-1';
+export type FixtureName = 'tangle' | 'whitequiet-0-5' | 'whitequiet-1-5' | 'whitequiet-0-4' | 'whitequiet-1-4' | 'road' | 'ford';
 
-/** Where each fixture stands on the open map. */
-export const FIXTURE_AT: Record<FixtureRegion, { cx: number; cy: number; tier: number }> = {
-  'inner-1': { cx: 0, cy: -1, tier: 1 },
-  'outer-1': { cx: 0, cy: -4, tier: 2 },
-};
-
-function rawBytes(region: FixtureRegion): Uint8Array {
-  return new Uint8Array(readFileSync(new URL(`./fixtures/wilds-${region === 'inner-1' ? 'inner' : 'outer'}-1-1.bin`, import.meta.url)));
+export function fixtureBytes(name: FixtureName): Uint8Array {
+  return new Uint8Array(readFileSync(new URL(`./fixtures/wilds-${name}.bin`, import.meta.url)));
 }
 
-/** A fixture as a v3 chunk (not yet validated). */
-export function openMapChunk(region: FixtureRegion, at: { cx: number; cy: number } = FIXTURE_AT[region]): WildsChunk {
-  const c = clone(WildsChunkSchema, fromBinary(WildsChunkSchema, rawBytes(region)));
-  if (c.generatorVersion < 3) {
-    c.region = '';
-    c.exits = [];
-    c.spawn = undefined;
-    c.generatorVersion = 3;
-    c.tier = FIXTURE_AT[region].tier;
-    c.land = 'woods';
-    c.places = [];
-  }
-  c.cx = at.cx;
-  c.cy = at.cy;
-  // Entity ids name their chunk (`<kind>:<cx>:<cy>:<i>`).
-  c.entities.forEach((e, i) => (e.id = `${e.kind}:${at.cx}:${at.cy}:${i}`));
+/** A fixture, decoded and validated as the client does. */
+export function fixtureChunk(name: FixtureName): WildsChunk {
+  return decodeChunk(fixtureBytes(name));
+}
+
+export function fixtureTerrain(name: FixtureName): ChunkTerrain {
+  return terrainOf(fixtureChunk(name));
+}
+
+/**
+ * A fixture's land served as another chunk (a test world bigger than the
+ * fixtures): the same body under other coordinates, its entity ids naming
+ * the new chunk (`<kind>:<cx>:<cy>:<i>`).
+ */
+export function chunkAt(name: FixtureName, cx: number, cy: number): WildsChunk {
+  const c = clone(WildsChunkSchema, fixtureChunk(name));
+  c.cx = cx;
+  c.cy = cy;
+  c.entities.forEach((e, i) => (e.id = `${e.kind}:${cx}:${cy}:${i}`));
   return c;
-}
-
-export function fixtureBytes(region: FixtureRegion): Uint8Array {
-  return toBinary(WildsChunkSchema, openMapChunk(region));
-}
-
-export function fixtureChunk(region: FixtureRegion): WildsChunk {
-  return decodeChunk(fixtureBytes(region));
-}
-
-export function fixtureTerrain(region: FixtureRegion): ChunkTerrain {
-  return terrainOf(fixtureChunk(region));
 }

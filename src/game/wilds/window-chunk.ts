@@ -13,13 +13,13 @@
  * along the edge you can't cross.
  */
 import type Phaser from 'phaser'
-import { TILE, TERRAIN } from '../../lib/tile.ts'
+import { TILE, TERRAIN, tileKey } from '../../lib/tile.ts'
 import { fnv1a32, hash01 } from '../../lib/hash.ts'
 import { loadWilds } from '../../lib/wilds/data.ts'
 import { solidBox } from '../area/collision.ts'
 import { ensureSceneryArt } from '../area/props.ts'
 import type { Occluder } from '../area/foreground.ts'
-import type { TileArt } from '../area/tile-art.ts'
+import { TILE_DATA, type TileArt } from '../area/tile-art.ts'
 import type { Gathering } from '../entities/gathering.ts'
 import type { GatherSpot } from '../worlds.ts'
 import { CHUNK_PX, CHUNK_TILES, chunkKey } from './coords.ts'
@@ -241,6 +241,7 @@ export class AttachedChunk {
       img.setDepth(typeof s.depth === 'number' ? s.depth : s.y)
       if (s.tint !== undefined) img.setTint(s.tint)
       if (s.tx !== undefined && s.ty !== undefined) {
+        img.setData(TILE_DATA, tileKey(s.tx, s.ty))
         tileArt.keep(s.tx, s.ty, img)
         this.artTiles.push({ tx: s.tx, ty: s.ty })
       } else this.images.push(img)

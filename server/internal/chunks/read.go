@@ -29,9 +29,6 @@ func Validate(c *contract.WildsChunk) error {
 	if c == nil || c.Size != S || c.EpochId == "" || c.GeneratorVersion < 3 || c.Realm != w.GetRealm() || c.Layer != 0 || !knownLook(c.Look) || len(c.Mark) > 64 {
 		return fmt.Errorf("invalid chunk identity")
 	}
-	if c.Region != "" || len(c.Exits) != 0 || c.Spawn != nil {
-		return fmt.Errorf("region geometry on an open-map chunk")
-	}
 	if c.Tier < 1 || int(c.Tier) > len(w.Tiers) || !slices.ContainsFunc(w.Lands, func(l *content.WildsLand) bool { return l.GetId() == c.Land }) {
 		return fmt.Errorf("invalid tier or land")
 	}

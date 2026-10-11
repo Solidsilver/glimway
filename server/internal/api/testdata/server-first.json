@@ -8644,7 +8644,6 @@
     "case": "empty",
     "json": {
       "epochId": "",
-      "region": "",
       "realm": "",
       "layer": 0,
       "cx": 0,
@@ -8654,10 +8653,8 @@
       "palette": [],
       "ground": "",
       "solid": "",
-      "exits": [],
       "decor": null,
       "sites": [],
-      "spawn": null,
       "look": "",
       "mark": "",
       "entities": [],
@@ -8671,7 +8668,6 @@
     "case": "populated",
     "json": {
       "epochId": "fixture",
-      "region": "fixture",
       "realm": "fixture",
       "layer": 1,
       "cx": 1,
@@ -8683,20 +8679,6 @@
       ],
       "ground": "AQI=",
       "solid": "AQI=",
-      "exits": [
-        {
-          "tx": 1,
-          "ty": 1,
-          "tw": 1,
-          "th": 1,
-          "dir": "DIR_NORTH",
-          "to": "fixture",
-          "entry": {
-            "tx": 1,
-            "ty": 1
-          }
-        }
-      ],
       "decor": {
         "kinds": [
           "fixture"
@@ -8729,10 +8711,6 @@
           "ty": 1
         }
       ],
-      "spawn": {
-        "tx": 1,
-        "ty": 1
-      },
       "look": "fixture",
       "mark": "fixture",
       "entities": [
@@ -8766,35 +8744,20 @@
     "case": "valid",
     "json": {
       "epochId": "epoch",
-      "region": "inner-1",
       "realm": "hearthwick",
       "layer": 0,
       "cx": 1,
       "cy": 0,
-      "generatorVersion": 2,
+      "generatorVersion": 3,
       "size": 24,
       "palette": [
-        "grass"
+        "grass_b"
       ],
       "ground": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
       "solid": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-      "exits": [
-        {
-          "tx": 12,
-          "ty": 0,
-          "tw": 1,
-          "th": 1,
-          "dir": "DIR_NORTH",
-          "to": "chunk:outer-1:1:1",
-          "entry": {
-            "tx": 12,
-            "ty": 23
-          }
-        }
-      ],
       "decor": {
         "kinds": [
-          "tree"
+          "oak"
         ],
         "kind": [
           0
@@ -8824,10 +8787,6 @@
           "ty": 5
         }
       ],
-      "spawn": {
-        "tx": 1,
-        "ty": 1
-      },
       "look": "tangle",
       "mark": "",
       "entities": [
@@ -8842,18 +8801,17 @@
           "poi": ""
         }
       ],
-      "tier": 0,
-      "land": "",
+      "tier": 1,
+      "land": "woods",
       "places": []
     },
-    "binaryHex": "0a0565706f63681207696e6e65722d311a0a6865617274687769636b2802380240184a05677261737352a0020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005a480000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006221080c18012001280132116368756e6b3a6f757465722d313a313a313a04080c10176a1b0a04747265651201001a01022201032a01023201033a0100420100720c0a046563686f1001180320057a040801100182010674616e676c6592011e0a0a6e6f64653a313a303a3012046e6f646518032004320674696d626572"
+    "binaryHex": "0a0565706f63681a0a6865617274687769636b2802380340184a0767726173735f6252a0020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005a480000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006a1a0a036f616b1201001a01022201032a01023201033a0100420100720c0a046563686f10011803200582010674616e676c6592011e0a0a6e6f64653a313a303a3012046e6f646518032004320674696d626572980101a20105776f6f6473"
   },
   {
     "name": "glimway.v1.WildsChunk",
     "case": "valid-open-map",
     "json": {
       "epochId": "wick-epoch",
-      "region": "",
       "realm": "hearthwick",
       "layer": 0,
       "cx": -3,
@@ -8865,7 +8823,6 @@
       ],
       "ground": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
       "solid": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-      "exits": [],
       "decor": {
         "kinds": [
           "split-oak"
@@ -8898,7 +8855,6 @@
           "ty": 13
         }
       ],
-      "spawn": null,
       "look": "outer",
       "mark": "",
       "entities": [],
@@ -9257,7 +9213,6 @@
     "json": {
       "id": "",
       "worldSeed": "",
-      "regionId": "",
       "generatorVersion": 0,
       "season": "",
       "startsAt": 0,
@@ -9271,7 +9226,6 @@
     "json": {
       "id": "fixture",
       "worldSeed": "fixture",
-      "regionId": "fixture",
       "generatorVersion": 1,
       "season": "fixture",
       "startsAt": 1,
@@ -9688,7 +9642,6 @@
       "still": {
         "id": "fixture",
         "worldSeed": "fixture",
-        "regionId": "fixture",
         "generatorVersion": 1,
         "season": "fixture",
         "startsAt": 1,
@@ -9698,7 +9651,6 @@
       "wick": {
         "id": "fixture",
         "worldSeed": "fixture",
-        "regionId": "fixture",
         "generatorVersion": 1,
         "season": "fixture",
         "startsAt": 1,
@@ -9837,7 +9789,6 @@
       "still": {
         "id": "still-epoch",
         "worldSeed": "world-seed",
-        "regionId": "",
         "generatorVersion": 3,
         "season": "0",
         "startsAt": 1791300000,
@@ -9847,7 +9798,6 @@
       "wick": {
         "id": "wick-epoch",
         "worldSeed": "world-seed",
-        "regionId": "",
         "generatorVersion": 3,
         "season": "t:1791300000:1791500000",
         "startsAt": 1791300000,
@@ -10514,7 +10464,6 @@
       "epoch": {
         "id": "fixture",
         "worldSeed": "fixture",
-        "regionId": "fixture",
         "generatorVersion": 1,
         "season": "fixture",
         "startsAt": 1,
@@ -10566,57 +10515,6 @@
         {
           "site": "fixture",
           "member": "fixture",
-          "settled": true
-        }
-      ]
-    }
-  },
-  {
-    "name": "glimway.v1.WildsRegionResult",
-    "case": "valid-region",
-    "json": {
-      "epoch": {
-        "id": "epoch",
-        "worldSeed": "world-seed",
-        "regionId": "outer-1",
-        "generatorVersion": 2,
-        "season": "autumn",
-        "startsAt": 1791300000,
-        "endsAt": 1791500000,
-        "kind": ""
-      },
-      "entities": [
-        {
-          "id": "node:1:0:0",
-          "cycle": 2,
-          "state": "harvested",
-          "availableAt": 1791400020,
-          "by": "fixture-account",
-          "at": 1791400000,
-          "epoch": "epoch"
-        }
-      ],
-      "personalClaims": [],
-      "discoveries": [],
-      "lanterns": [
-        {
-          "id": "fallen-lamp",
-          "ownerId": "peer-account",
-          "displayName": "Peer",
-          "x": 400,
-          "y": 300,
-          "litBy": "fixture-account",
-          "at": 1791400000,
-          "litAt": 1791400010
-        }
-      ],
-      "materials": {
-        "timber": 3
-      },
-      "echoes": [
-        {
-          "site": "echo-tam",
-          "member": "tam",
           "settled": true
         }
       ]

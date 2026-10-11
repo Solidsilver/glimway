@@ -40,10 +40,6 @@
  *       t = (t + ((t XOR (t >>> 7)) * (t OR 61))) XOR t   (mod 2^32)
  *       return t XOR (t >>> 14)
  *     nextInt(n): next() % n                              (n > 0)
- *
- * Seeds (see the expansion design):
- *   chunkSeed = hash(worldSeed, regionId, generatorVersion, season, chunkX, chunkY)
- *   lootSeed  = hash(worldSeed, regionId, generatorVersion, season, entityId, cycle)
  */
 
 const FNV_OFFSET = 0x811c9dc5;
@@ -107,23 +103,6 @@ export class Rng {
   nextInt(n: number): number {
     return this.next() % n;
   }
-}
-
-export interface SeedEpoch {
-  worldSeed: string;
-  regionId: string;
-  generatorVersion: number;
-  season: string;
-}
-
-/** Seed for a chunk: hash(worldSeed, regionId, generatorVersion, season, cx, cy). */
-export function chunkSeed(epoch: SeedEpoch, cx: number, cy: number): number {
-  return hash([epoch.worldSeed, epoch.regionId, epoch.generatorVersion, epoch.season, cx, cy]);
-}
-
-/** Seed for one loot roll: hash(worldSeed, regionId, generatorVersion, season, entityId, cycle). */
-export function lootSeed(epoch: SeedEpoch, entityId: string, cycle: number): number {
-  return hash([epoch.worldSeed, epoch.regionId, epoch.generatorVersion, epoch.season, entityId, cycle]);
 }
 
 // ---------------------------------------------------------------- client decor

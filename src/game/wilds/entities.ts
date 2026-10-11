@@ -428,10 +428,13 @@ export class WildsEntities {
 
   private async claimConnected(entity: WildsThing): Promise<void> {
     const session = this.deps.session
+    const before = chunkEpoch(entity.cx, entity.cy)?.id
     // A fresh read advances respawn cycles; the claim needs the current one.
     const ok = await this.refresh()
     const fresh = wildsLive(session)
     const epoch = chunkEpoch(entity.cx, entity.cy)
+    // The read named a new wick: the land turned under the claim (the scene plays it).
+    if (ok && epoch && before && epoch.id !== before) return
     if (!ok || !fresh || !epoch) {
       bus.emit(EV.toast, { text: CLAIM_ERROR.offline, kind: 'error' })
       return

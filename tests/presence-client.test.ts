@@ -11,6 +11,7 @@ import {
   normalFacing,
   presenceAreaFor,
   wildsPresenceRoom,
+  sharedRoom,
   presenceBackoff,
   type PresenceStatus,
   type SocketLike,
@@ -416,11 +417,18 @@ test('helpers: areas, facing, backoff, close codes', () => {
   for (const a of ['wilds', 'wilds:01:1', 'wilds:-0:0', 'wilds:inner-1:0:1', 'chunk:inner-1:0:0', 'cottage', '']) assert.equal(isPresenceArea(a), false, a);
   assert.equal(presenceAreaFor('village'), 'village');
   assert.equal(presenceAreaFor('wilds'), null, 'the Wilds need a position');
-  // A cell of 3×3 chunks: the Tangle (cx -1..1, cy -2..0) is cell (0, 0).
+  // The chunk you stand in (the server shares it with the 3×3 around it).
   assert.equal(presenceAreaFor('wilds', { x: 40, y: 360 }), 'wilds:0:0');
-  assert.equal(presenceAreaFor('wilds', { x: -384 * 1 - 1, y: -384 * 2 }), 'wilds:-1:0');
-  assert.equal(presenceAreaFor('wilds', { x: 0, y: -384 * 3 }), 'wilds:0:-1', 'the Whitequiet');
-  assert.equal(wildsPresenceRoom(-0.5, -0.5), 'wilds:0:0');
+  assert.equal(presenceAreaFor('wilds', { x: -384 - 1, y: -384 * 2 }), 'wilds:-2:-2');
+  assert.equal(presenceAreaFor('wilds', { x: 0, y: -384 * 3 }), 'wilds:0:-3', 'the Whitequiet’s south row');
+  assert.equal(wildsPresenceRoom(-0.5, -0.5), 'wilds:-1:-1');
+  // Neighbouring chunk rooms see each other, as on the server; nothing else is shared.
+  assert.equal(sharedRoom('wilds:0:0', 'wilds:1:-1'), true);
+  assert.equal(sharedRoom('wilds:0:0', 'wilds:2:0'), false);
+  assert.equal(sharedRoom('wilds:-4:-8', 'wilds:-4:-8'), true);
+  assert.equal(sharedRoom('village', 'village'), true);
+  assert.equal(sharedRoom('village', 'commons'), false);
+  assert.equal(sharedRoom('wilds:0:0', null), false);
   assert.deepEqual(normalFacing({ x: 3, y: 4 }), { x: 0.6, y: 0.8 });
   assert.deepEqual(normalFacing({ x: 0, y: 0 }), { x: 0, y: 1 });
   const f = normalFacing({ x: 1, y: 1 });

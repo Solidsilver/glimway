@@ -192,12 +192,14 @@ test.describe('in a world', () => {
 
     // The wick ends under us: the world's clock passes its end, the server
     // refuses the next claim with epoch-ended, and the land turns in place.
-    await moveServerClock(page, Number(dump.season.split(':')[2]) + 1)
+    // Stand at the next claim first (a warp after the clock moves would read
+    // the new wick on the way in and say it turned while you were away).
     const next = dump.entities.find((e) => e.kind !== 'camp' && e.claimable && e.id !== node.id && e.chunk.cx === node.chunk.cx && e.chunk.cy === node.chunk.cy)
       ?? dump.entities.find((e) => e.kind !== 'camp' && e.claimable && e.id !== node.id)!
     await warp(page, 'wilds', worldTileOf(next).tx + 1, worldTileOf(next).ty)
     await waitForWilds(page)
     await expect(page.locator('.prompt')).not.toBeEmpty()
+    await moveServerClock(page, Number(dump.season.split(':')[2]) + 1)
     await page.keyboard.press('e')
     await waitTurning(page, null)
     expect(await page.evaluate(() => (window as unknown as { __fsSafety: () => { areaId: string } }).__fsSafety().areaId)).toBe('wilds')

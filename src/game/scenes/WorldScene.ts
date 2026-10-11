@@ -212,11 +212,10 @@ export class WorldScene extends Phaser.Scene {
   create(): void {
     this.session = this.registry.get('session') as Session
     const state = this.session.state
-    const arrival = arrive(this.session, { entry: this.pendingEntry, turned: this.pendingTurned })
+    const arrival = arrive(this.session, { entry: this.pendingEntry })
     this.pendingEntry = arrival.entry
     this.world = arrival.world
     const open = this.world.open
-    const turnedAway = arrival.turnedAway
     this.wilds = null
     this.window = null
     this.driftSaid = false
@@ -590,7 +589,7 @@ export class WorldScene extends Phaser.Scene {
         this.transitioning = on
       }
     })
-    if (this.pendingTurned || turnedAway) {
+    if (this.pendingTurned) {
       const live = this.pendingTurned
       this.pendingTurned = false
       this.time.delayedCall(600, () => this.turning.note(live))
@@ -738,14 +737,14 @@ export class WorldScene extends Phaser.Scene {
   /** Tell the presence feed where the hero is (it paces the wire itself). */
   private samplePresence(): void {
     const feed = presence()
-    // The open map's room is the cell you stand in: crossing into the next one changes rooms.
+    // The open map's room is the chunk you stand in: crossing an edge joins the next one
+    // (the server shares a chunk's room with its neighbours', so those in range stay drawn).
     if (feed && this.world.open && !this.transitioning) {
       const room = presenceAreaFor(this.world.areaId, { x: this.hero.sprite.x, y: this.hero.sprite.y })
-      if (room !== this.presenceArea) {
+      if (room && room !== this.presenceArea) {
         this.presenceArea = room
         feed.setArea(room)
-        this.remotePlayers.clear()
-        this.remotePlayers = createRemotePlayers(this, feed, room, false, this.reducedMotion)
+        this.remotePlayers.setArea(room)
       }
     }
     if (!feed || !this.presenceArea) return

@@ -10,7 +10,7 @@ import { chunkGather, chunkLandmarks, chunkScenery, effectiveTerrain, LANDMARK_K
 import { OPEN_MAP_DECOR_KINDS, openMapDecor } from '../src/game/wilds/open-map-art.ts';
 import { DECOR_ART } from '../src/game/wilds/decor.ts';
 import { forgetWalked, markSeen, markWalked, seenLandmarks, walkedChunks } from '../src/game/wilds/walked.ts';
-import { fixtureTerrain, openMapChunk } from './wilds-fixture.ts';
+import { chunkAt, fixtureTerrain } from './wilds-fixture.ts';
 import { terrainOf } from '../src/game/wilds/terrain.ts';
 import { decodeChunk } from '../src/lib/api/chunks.ts';
 import { toBinary } from '@bufbuild/protobuf';
@@ -116,7 +116,7 @@ test('walk speed by ground: laid stone and plank 15% faster, a ford half speed',
 });
 
 test('ground changes on top of a chunk: cleared opens a tile and takes its standing piece; laid carries its ground', () => {
-  const t = fixtureTerrain('inner-1');
+  const t = fixtureTerrain('tangle');
   const thicket = t.decor.find((d) => DECOR_ART[d.kind].blocking && t.solid[d.ty]![d.tx])!;
   const open = (() => {
     for (let y = 0; y < 24; y++) for (let x = 0; x < 24; x++) if (!t.solid[y]![x]) return { x, y };
@@ -149,7 +149,7 @@ test('every decor kind is drawn: woods kinds by the code painter, the open map�
 });
 
 test('a chunk’s scenery and pieces stand at world tiles; landmarks are drawn from a chunk away with their place', () => {
-  const m = openMapChunk('outer-1', { cx: -2, cy: -5 });
+  const m = chunkAt('whitequiet-0-4', -2, -5);
   m.decor!.kinds.push('split-oak');
   m.decor!.kind.push(m.decor!.kinds.length - 1);
   m.decor!.tx.push(10);
@@ -175,7 +175,7 @@ test('a chunk’s scenery and pieces stand at world tiles; landmarks are drawn f
 });
 
 test('served entities stand on walkable ground', () => {
-  for (const region of ['inner-1', 'outer-1'] as const) {
+  for (const region of ['tangle', 'whitequiet-0-4', 'road', 'ford'] as const) {
     const t = fixtureTerrain(region);
     for (const e of t.entities) assert.equal(t.solid[e.ty]![e.tx], false, `${e.id}`);
   }

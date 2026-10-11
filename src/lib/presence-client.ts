@@ -20,7 +20,7 @@
  */
 import { knownRoom } from './rooms.ts';
 import { TILE } from './tile.ts';
-import { cellOf, chunkOf } from './wilds/coords.ts';
+import { chunkOf } from './wilds/coords.ts';
 import { decodePresence, encodePresence, PRESENCE_PROTOCOL } from './presence-codec.ts';
 import { abilityFor } from './abilities.ts';
 import { PRESENCE, PRESENCE_CLOSE, type PresenceAvatar, type PresenceClientMessage, type PresencePlayer, type PresencePosition, type PresenceServerMessage } from './presence.ts';
@@ -130,7 +130,7 @@ export function closeAction(code: number, reason = ''): 'retry' | 'superseded' |
 
 /**
  * Server-accepted presence areas: curated areas, homesteads, and the open
- * map's rooms `wilds:<cellX>:<cellY>` (signed; rooms are checked against the
+ * map's chunk rooms `wilds:<cx>:<cy>` (signed; rooms are checked against the
  * content).
  */
 const AREA_RE = /^(village|woodland|ruin|commons|home:(0|[1-9]\d{0,3})|wilds:(0|-?[1-9]\d*):(0|-?[1-9]\d*))$/;
@@ -140,16 +140,34 @@ export function isPresenceArea(area: string): boolean {
 }
 
 /**
- * The open map's presence room for a world pixel: its cell of 3×3 chunks
- * (content `cells`; the Tangle is cell (0, 0)). The socket holds one room a
- * client, so a room is a cell rather than a chunk and its neighbours
- * (open-map.md 2.4): you see everyone in the same cell, the room changing
- * as you cross into the next.
+ * The open map's presence room for a world pixel: the chunk it stands in,
+ * `wilds:<cx>:<cy>`. The socket holds one room a client; the server shares
+ * a chunk's room with its eight neighbours' (`sharedRoom`), so you see
+ * everyone in the 3×3 around you (open-map.md 2.4), and the room changes as
+ * you cross a chunk edge.
  */
 export function wildsPresenceRoom(x: number, y: number): string {
   const { cx, cy } = chunkOf(Math.floor(x / TILE), Math.floor(y / TILE));
-  const cell = cellOf(cx, cy);
-  return `wilds:${cell.x}:${cell.y}`;
+  return `wilds:${cx}:${cy}`;
+}
+
+/** The chunk a Wilds room names, or null. */
+function roomChunk(room: string): { cx: number; cy: number } | null {
+  const m = /^wilds:(0|-?[1-9]\d*):(0|-?[1-9]\d*)$/.exec(room);
+  return m ? { cx: Number(m[1]), cy: Number(m[2]) } : null;
+}
+
+/**
+ * Do two rooms see each other? The same room does; two Wilds chunk rooms do
+ * when their chunks are neighbours (the twin of the server's `sharedRoom`,
+ * server/internal/api/presence_socket.go).
+ */
+export function sharedRoom(a: string | null, b: string | null): boolean {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const p = roomChunk(a);
+  const q = roomChunk(b);
+  return !!p && !!q && Math.abs(p.cx - q.cx) <= 1 && Math.abs(p.cy - q.cy) <= 1;
 }
 
 /**
@@ -438,7 +456,8 @@ export class PresenceClient {
         this.announcePosition();
         break;
       case 'join':
-        if (m.area !== this.sentArea || !m.player || typeof m.player.accountId !== 'string') return;
+        // A neighbouring chunk's room shares ours (the open map): its joins are ours too.
+        if (!sharedRoom(m.area, this.sentArea) || !m.player || typeof m.player.accountId !== 'string') return;
         this.handlers.join?.(m.area, m.player);
         break;
       case 'leave':

@@ -6,8 +6,7 @@ import { loadWilds } from '../wilds/data.ts';
  * The open map's chunk validator (open-map.md 2.5): a chunk's identity
  * (realm, layer, generator version, epoch; signed coordinates, any of
  * them), its sizes and palette, its decor packing, and that every piece,
- * entity, site and place sits inside it. Generator v2's regions, exits and
- * spawn are refused: v3 leaves them empty.
+ * entity, site and place sits inside it.
  */
 export const CHUNK_SIZE = 24;
 const LOOKS = ['tangle', 'outer'];
@@ -16,7 +15,6 @@ export function validateChunk(chunk: WildsChunk): WildsChunk {
   const w = loadWilds();
   const size = chunk.size;
   if (size !== CHUNK_SIZE || size !== w.chunkSize || !chunk.epochId || chunk.generatorVersion !== w.generatorVersion || chunk.realm !== w.realm || chunk.layer !== 0 || !LOOKS.includes(chunk.look) || !Number.isInteger(chunk.cx) || !Number.isInteger(chunk.cy)) throw new Error('invalid chunk identity');
-  if (chunk.region || chunk.exits.length || chunk.spawn) throw new Error('region fields in an open-map chunk');
   if (chunk.tier < 1 || chunk.tier > w.tiers.length || !w.lands.some((l) => l.id === chunk.land)) throw new Error('invalid chunk tier or land');
   if (!chunk.palette.length || chunk.palette.length > 16 || chunk.ground.length !== size * size / 2 || chunk.solid.length !== size * size / 8) throw new Error('invalid cell packing');
   for (const cell of chunk.ground) if ((cell & 15) >= chunk.palette.length || (cell >> 4) >= chunk.palette.length) throw new Error('invalid palette index');
