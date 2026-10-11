@@ -1,59 +1,49 @@
 {
-  "generatorVersion": 2,
+  "generatorVersion": 3,
   "chunkSize": 24,
+  "realm": "hearthwick",
   "deepTangleManhattanDistance": 2,
-  "regions": [
-    {
-      "id": "inner-1",
-      "kind": "inner",
-      "gridWidth": 3,
-      "gridHeight": 3,
-      "entryX": 1,
-      "entryY": 1
-    },
-    {
-      "id": "outer-1",
-      "kind": "outer",
-      "gridWidth": 3,
-      "gridHeight": 3,
-      "entryX": 1,
-      "entryY": 1
-    }
-  ],
+  "tierRingChunks": 3,
   "enemyKinds": [
     "wisp",
     "beetle"
   ],
   "campMixes": [
     {
+      "id": "wisp",
       "enemies": [
         "wisp"
       ]
     },
     {
+      "id": "wisps",
       "enemies": [
         "wisp",
         "wisp"
       ]
     },
     {
+      "id": "beetle",
       "enemies": [
         "beetle"
       ]
     },
     {
+      "id": "wisp-beetle",
       "enemies": [
         "wisp",
         "beetle"
       ]
     },
     {
+      "id": "beetles",
       "enemies": [
         "beetle",
         "beetle"
       ]
     },
     {
+      "id": "wisps-beetle",
       "enemies": [
         "wisp",
         "wisp",
@@ -235,11 +225,1003 @@
           "chancePermille": 500
         }
       ]
+    },
+    "discovery": {
+      "entries": [
+        {
+          "material": "stone",
+          "min": 1,
+          "max": 2,
+          "chancePermille": 600
+        },
+        {
+          "material": "fiber",
+          "min": 1,
+          "max": 2,
+          "chancePermille": 600
+        },
+        {
+          "material": "amber",
+          "min": 1,
+          "max": 1,
+          "chancePermille": 300
+        }
+      ]
+    },
+    "rumour": {
+      "entries": [
+        {
+          "material": "amber",
+          "min": 2,
+          "max": 4,
+          "chancePermille": 1000
+        },
+        {
+          "material": "timber",
+          "min": 2,
+          "max": 5,
+          "chancePermille": 800
+        },
+        {
+          "material": "stone",
+          "min": 2,
+          "max": 4,
+          "chancePermille": 600
+        }
+      ],
+      "trinketChancePermille": 300
     }
   },
   "trinketChancePermille": 90,
   "timers": {
     "campRespawnSeconds": 600,
     "nodeRegrowSeconds": 300
+  },
+  "grounds": [
+    {
+      "id": "woods",
+      "terrain": "grass_b",
+      "rank": 0,
+      "surface": "land"
+    },
+    {
+      "id": "moss",
+      "terrain": "grass_a",
+      "rank": 10,
+      "surface": "land"
+    },
+    {
+      "id": "verge",
+      "terrain": "path_b",
+      "rank": 15,
+      "surface": "land"
+    },
+    {
+      "id": "path",
+      "terrain": "path_a",
+      "rank": 20,
+      "surface": "land"
+    },
+    {
+      "id": "trodden",
+      "terrain": "dirt",
+      "rank": 30,
+      "surface": "land"
+    },
+    {
+      "id": "road",
+      "terrain": "cobble_moss",
+      "rank": 40,
+      "surface": "road"
+    },
+    {
+      "id": "water",
+      "terrain": "water_a",
+      "rank": 50,
+      "surface": "water"
+    },
+    {
+      "id": "meadow",
+      "terrain": "grass_c",
+      "rank": 5,
+      "surface": "land"
+    },
+    {
+      "id": "bank",
+      "terrain": "sand",
+      "rank": 12,
+      "surface": "land"
+    },
+    {
+      "id": "ford",
+      "terrain": "water_b",
+      "rank": 45,
+      "surface": "ford"
+    },
+    {
+      "id": "paving",
+      "terrain": "cobble",
+      "rank": 42,
+      "surface": "road"
+    },
+    {
+      "id": "laid-stone",
+      "terrain": "stone_a",
+      "rank": 60,
+      "surface": "laid"
+    },
+    {
+      "id": "laid-plank",
+      "terrain": "planks",
+      "rank": 60,
+      "surface": "laid"
+    }
+  ],
+  "decor": [
+    {
+      "kind": "oak",
+      "w": 30,
+      "h": 32,
+      "blocking": true,
+      "flat": false
+    },
+    {
+      "kind": "pine",
+      "w": 22,
+      "h": 36,
+      "blocking": true,
+      "flat": false
+    },
+    {
+      "kind": "birch",
+      "w": 22,
+      "h": 32,
+      "blocking": true,
+      "flat": false
+    },
+    {
+      "kind": "iron-oak",
+      "w": 40,
+      "h": 42,
+      "blocking": true,
+      "flat": false
+    },
+    {
+      "kind": "snag",
+      "w": 18,
+      "h": 28,
+      "blocking": true,
+      "flat": false
+    },
+    {
+      "kind": "thicket",
+      "w": 24,
+      "h": 18,
+      "blocking": true,
+      "flat": false
+    },
+    {
+      "kind": "stump",
+      "w": 18,
+      "h": 14,
+      "blocking": true,
+      "flat": false
+    },
+    {
+      "kind": "ring-stump",
+      "w": 22,
+      "h": 14,
+      "blocking": true,
+      "flat": false
+    },
+    {
+      "kind": "log",
+      "w": 32,
+      "h": 13,
+      "blocking": true,
+      "flat": false
+    },
+    {
+      "kind": "boulder",
+      "w": 20,
+      "h": 15,
+      "blocking": true,
+      "flat": false
+    },
+    {
+      "kind": "cairn",
+      "w": 14,
+      "h": 21,
+      "blocking": true,
+      "flat": false
+    },
+    {
+      "kind": "fern",
+      "w": 15,
+      "h": 11,
+      "blocking": false,
+      "flat": false
+    },
+    {
+      "kind": "grass",
+      "w": 11,
+      "h": 9,
+      "blocking": false,
+      "flat": false
+    },
+    {
+      "kind": "flowers",
+      "w": 11,
+      "h": 7,
+      "blocking": false,
+      "flat": false
+    },
+    {
+      "kind": "turncaps",
+      "w": 13,
+      "h": 9,
+      "blocking": false,
+      "flat": false
+    },
+    {
+      "kind": "reeds",
+      "w": 14,
+      "h": 15,
+      "blocking": false,
+      "flat": false
+    },
+    {
+      "kind": "roots",
+      "w": 16,
+      "h": 12,
+      "blocking": false,
+      "flat": true
+    },
+    {
+      "kind": "litter",
+      "w": 14,
+      "h": 9,
+      "blocking": false,
+      "flat": true
+    },
+    {
+      "kind": "pebbles",
+      "w": 11,
+      "h": 7,
+      "blocking": false,
+      "flat": true
+    },
+    {
+      "kind": "meadow-grass",
+      "w": 16,
+      "h": 16,
+      "blocking": false,
+      "flat": false
+    },
+    {
+      "kind": "meadow-flowers",
+      "w": 16,
+      "h": 16,
+      "blocking": false,
+      "flat": false
+    },
+    {
+      "kind": "meadow-outcrop",
+      "w": 32,
+      "h": 40,
+      "blocking": true,
+      "flat": false
+    },
+    {
+      "kind": "meadow-oak",
+      "w": 40,
+      "h": 64,
+      "blocking": true,
+      "flat": false
+    },
+    {
+      "kind": "meadow-stone",
+      "w": 16,
+      "h": 16,
+      "blocking": true,
+      "flat": false
+    },
+    {
+      "kind": "bank-stones",
+      "w": 16,
+      "h": 16,
+      "blocking": false,
+      "flat": true
+    },
+    {
+      "kind": "split-oak",
+      "w": 48,
+      "h": 80,
+      "blocking": true,
+      "flat": false
+    },
+    {
+      "kind": "standing-stone",
+      "w": 16,
+      "h": 56,
+      "blocking": true,
+      "flat": false
+    }
+  ],
+  "places": [
+    {
+      "id": "tangle",
+      "name": "the Tangle",
+      "look": "tangle",
+      "epochKind": "still",
+      "tier": 1,
+      "land": "woods",
+      "cx": -1,
+      "cy": -2,
+      "width": 3,
+      "height": 3,
+      "sites": [
+        {
+          "id": "plank",
+          "kind": "plank",
+          "cx": 0,
+          "cy": -2,
+          "tx": 15,
+          "ty": 4
+        }
+      ],
+      "dealt": [],
+      "openings": [
+        {
+          "id": "commons-gate",
+          "cx": 0,
+          "cy": 0,
+          "edge": "south",
+          "offset": 1,
+          "width": 3
+        },
+        {
+          "id": "crossing",
+          "cx": 0,
+          "cy": -2,
+          "edge": "north",
+          "offset": 11,
+          "width": 3
+        }
+      ]
+    },
+    {
+      "id": "whitequiet",
+      "name": "the Whitequiet",
+      "look": "outer",
+      "epochKind": "wick",
+      "tier": 2,
+      "land": "woods",
+      "cx": -1,
+      "cy": -5,
+      "width": 3,
+      "height": 3,
+      "sites": [
+        {
+          "id": "given",
+          "kind": "given",
+          "cx": 0,
+          "cy": -3,
+          "tx": 6,
+          "ty": 19
+        }
+      ],
+      "dealt": [
+        {
+          "id": "echo:0",
+          "kind": "echo",
+          "column": "east"
+        },
+        {
+          "id": "echo:1",
+          "kind": "echo",
+          "column": "any"
+        },
+        {
+          "id": "echo:2",
+          "kind": "echo",
+          "column": "any"
+        },
+        {
+          "id": "cairn",
+          "kind": "cairn",
+          "column": "any"
+        },
+        {
+          "id": "nest",
+          "kind": "nest",
+          "column": "any"
+        },
+        {
+          "id": "reeds",
+          "kind": "reeds",
+          "column": "any"
+        }
+      ],
+      "openings": [
+        {
+          "id": "crossing",
+          "cx": 0,
+          "cy": -3,
+          "edge": "south",
+          "offset": 11,
+          "width": 3
+        },
+        {
+          "id": "lantern-road",
+          "cx": 0,
+          "cy": -5,
+          "edge": "north",
+          "offset": 10,
+          "width": 3
+        }
+      ]
+    }
+  ],
+  "lands": [
+    {
+      "id": "woods",
+      "name": "the woods",
+      "weight": 3,
+      "lean": {
+        "dx": 0,
+        "dy": -1,
+        "permille": 200
+      },
+      "ground": {
+        "floor": "woods",
+        "open": "moss",
+        "verge": "verge",
+        "path": "path",
+        "trodden": "trodden"
+      },
+      "thicketPermille": 1000,
+      "decor": [
+        {
+          "id": "oak",
+          "weight": 30
+        },
+        {
+          "id": "pine",
+          "weight": 20
+        },
+        {
+          "id": "birch",
+          "weight": 15
+        },
+        {
+          "id": "iron-oak",
+          "weight": 10
+        },
+        {
+          "id": "thicket",
+          "weight": 25
+        },
+        {
+          "id": "stump",
+          "weight": 6
+        },
+        {
+          "id": "log",
+          "weight": 6
+        },
+        {
+          "id": "boulder",
+          "weight": 5
+        },
+        {
+          "id": "fern",
+          "weight": 20
+        },
+        {
+          "id": "grass",
+          "weight": 10
+        },
+        {
+          "id": "flowers",
+          "weight": 6
+        },
+        {
+          "id": "turncaps",
+          "weight": 5
+        },
+        {
+          "id": "roots",
+          "weight": 8
+        },
+        {
+          "id": "litter",
+          "weight": 12
+        },
+        {
+          "id": "pebbles",
+          "weight": 4
+        }
+      ],
+      "materials": [
+        {
+          "id": "timber",
+          "weight": 4
+        },
+        {
+          "id": "stone",
+          "weight": 2
+        },
+        {
+          "id": "fiber",
+          "weight": 2
+        },
+        {
+          "id": "amber",
+          "weight": 1
+        }
+      ],
+      "campMixes": [
+        {
+          "id": "wisp",
+          "weight": 3
+        },
+        {
+          "id": "wisps",
+          "weight": 3
+        },
+        {
+          "id": "beetle",
+          "weight": 2
+        },
+        {
+          "id": "wisp-beetle",
+          "weight": 2
+        },
+        {
+          "id": "beetles",
+          "weight": 1
+        },
+        {
+          "id": "wisps-beetle",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "id": "meadow",
+      "name": "the meadow",
+      "weight": 2,
+      "lean": {
+        "dx": -1,
+        "dy": 0,
+        "permille": 300
+      },
+      "ground": {
+        "floor": "meadow",
+        "open": "meadow",
+        "verge": "meadow",
+        "path": "path",
+        "trodden": "trodden"
+      },
+      "thicketPermille": 80,
+      "decor": [
+        {
+          "id": "meadow-grass",
+          "weight": 40
+        },
+        {
+          "id": "meadow-flowers",
+          "weight": 25
+        },
+        {
+          "id": "meadow-stone",
+          "weight": 6
+        },
+        {
+          "id": "meadow-outcrop",
+          "weight": 3
+        },
+        {
+          "id": "meadow-oak",
+          "weight": 2
+        },
+        {
+          "id": "thicket",
+          "weight": 6
+        },
+        {
+          "id": "pebbles",
+          "weight": 6
+        }
+      ],
+      "materials": [
+        {
+          "id": "fiber",
+          "weight": 5
+        },
+        {
+          "id": "stone",
+          "weight": 3
+        },
+        {
+          "id": "timber",
+          "weight": 1
+        },
+        {
+          "id": "amber",
+          "weight": 1
+        }
+      ],
+      "campMixes": [
+        {
+          "id": "wisp",
+          "weight": 2
+        },
+        {
+          "id": "wisps",
+          "weight": 2
+        },
+        {
+          "id": "beetle",
+          "weight": 3
+        },
+        {
+          "id": "wisp-beetle",
+          "weight": 2
+        },
+        {
+          "id": "beetles",
+          "weight": 2
+        },
+        {
+          "id": "wisps-beetle",
+          "weight": 1
+        }
+      ]
+    }
+  ],
+  "landSizes": {
+    "landCellChunks": 8,
+    "windowCells": 7,
+    "capChunks": 20,
+    "borderNoisePermille": 150,
+    "bands": [
+      {
+        "minChunks": 1,
+        "maxChunks": 1,
+        "weight": 10
+      },
+      {
+        "minChunks": 2,
+        "maxChunks": 3,
+        "weight": 20
+      },
+      {
+        "minChunks": 4,
+        "maxChunks": 6,
+        "weight": 35
+      },
+      {
+        "minChunks": 7,
+        "maxChunks": 9,
+        "weight": 20
+      },
+      {
+        "minChunks": 10,
+        "maxChunks": 12,
+        "weight": 10
+      },
+      {
+        "minChunks": 13,
+        "maxChunks": 20,
+        "weight": 5
+      }
+    ]
+  },
+  "tiers": [
+    {
+      "tier": 1,
+      "chestMin": 1,
+      "chestMax": 2,
+      "campMixes": [
+        {
+          "id": "wisp",
+          "weight": 4
+        },
+        {
+          "id": "wisps",
+          "weight": 3
+        },
+        {
+          "id": "beetle",
+          "weight": 2
+        },
+        {
+          "id": "wisp-beetle",
+          "weight": 1
+        }
+      ],
+      "nodeYieldBonus": 0
+    },
+    {
+      "tier": 2,
+      "chestMin": 1,
+      "chestMax": 3,
+      "campMixes": [
+        {
+          "id": "wisp",
+          "weight": 2
+        },
+        {
+          "id": "wisps",
+          "weight": 2
+        },
+        {
+          "id": "beetle",
+          "weight": 2
+        },
+        {
+          "id": "wisp-beetle",
+          "weight": 2
+        },
+        {
+          "id": "beetles",
+          "weight": 1
+        },
+        {
+          "id": "wisps-beetle",
+          "weight": 1
+        }
+      ],
+      "nodeYieldBonus": 0
+    },
+    {
+      "tier": 3,
+      "chestMin": 2,
+      "chestMax": 3,
+      "campMixes": [
+        {
+          "id": "wisps",
+          "weight": 1
+        },
+        {
+          "id": "wisp-beetle",
+          "weight": 2
+        },
+        {
+          "id": "beetles",
+          "weight": 2
+        },
+        {
+          "id": "wisps-beetle",
+          "weight": 3
+        }
+      ],
+      "nodeYieldBonus": 1
+    }
+  ],
+  "frontier": {
+    "reach": 3,
+    "southLimit": 0
+  },
+  "paths": {
+    "clearTools": [
+      {
+        "decor": "thicket",
+        "action": "dig"
+      },
+      {
+        "decor": "log",
+        "action": "chop"
+      }
+    ],
+    "lay": [
+      {
+        "kind": "stone",
+        "ground": "laid-stone",
+        "material": "stone",
+        "cost": 1
+      },
+      {
+        "kind": "plank",
+        "ground": "laid-plank",
+        "material": "timber",
+        "cost": 1
+      }
+    ],
+    "walk": [
+      {
+        "ground": "laid-stone",
+        "speedPermille": 1150
+      },
+      {
+        "ground": "laid-plank",
+        "speedPermille": 1150
+      },
+      {
+        "ground": "ford",
+        "speedPermille": 500
+      }
+    ],
+    "reachTiles": 2,
+    "maxChanges": 576,
+    "wayFloodCap": 600
+  },
+  "river": {
+    "name": "the Wend",
+    "minWidth": 2,
+    "maxWidth": 4,
+    "fordWidth": 3,
+    "leanChunks": 2,
+    "leanLand": "meadow",
+    "waterGround": "water",
+    "bankGround": "bank",
+    "fordGround": "ford",
+    "enters": [
+      "north",
+      "west"
+    ],
+    "leavesMaxCx": -2
+  },
+  "road": {
+    "name": "the Lantern Road",
+    "width": 3,
+    "lampStoneEvery": 2,
+    "ground": "paving",
+    "vergeGround": "bank",
+    "fromPlace": "whitequiet",
+    "fromOpening": "lantern-road",
+    "northChunks": 2,
+    "bend": "east"
+  },
+  "placeKinds": [
+    {
+      "id": "camp-glade",
+      "name": "a camp glade",
+      "land": "woods",
+      "weight": 3,
+      "landmark": "split-oak",
+      "entities": [
+        "camp"
+      ],
+      "clearingRadius": 4,
+      "findRadius": 3
+    },
+    {
+      "id": "ruin",
+      "name": "a ruin",
+      "land": "woods",
+      "weight": 2,
+      "landmark": "standing-stone",
+      "entities": [
+        "chest",
+        "poi"
+      ],
+      "clearingRadius": 3,
+      "findRadius": 3
+    },
+    {
+      "id": "outcrop",
+      "name": "an outcrop",
+      "land": "meadow",
+      "weight": 3,
+      "landmark": "meadow-outcrop",
+      "entities": [
+        "chest"
+      ],
+      "clearingRadius": 3,
+      "findRadius": 3
+    },
+    {
+      "id": "lone-tree",
+      "name": "a lone-tree rest",
+      "land": "meadow",
+      "weight": 2,
+      "landmark": "meadow-oak",
+      "entities": [
+        "poi"
+      ],
+      "clearingRadius": 3,
+      "findRadius": 3
+    }
+  ],
+  "cells": {
+    "cellChunks": 3,
+    "originCx": -1,
+    "originCy": -2
+  },
+  "words": {
+    "drift": "The drift is thick here. Not without a lamp.",
+    "turned": "The drift turned while you stood in it.",
+    "lampStone": "An old lamp stone, cold and sooted. Mara would know what it was for.",
+    "needTool": "You'd need a {tool} for this.",
+    "needMaterial": "You need {material} to lay this.",
+    "notOnWater": "A path can't go on water.",
+    "turnsIn": "This land turns in {days} days. A path here goes with it.",
+    "foundBy": "Found by {name}",
+    "firstFind": "Nobody has been here this wick. You find {loot}.",
+    "wayName": "{name}'s way",
+    "waySign": "{way}. Between {from} and {to}.",
+    "standIn": [
+      "lampStone",
+      "needMaterial",
+      "notOnWater",
+      "firstFind",
+      "waySign"
+    ]
+  },
+  "rumour": {
+    "standIn": true,
+    "template": "Something's tucked under {landmark}, {compass}{river}. {distance}",
+    "landmarks": [
+      {
+        "decor": "split-oak",
+        "phrase": "a split oak"
+      },
+      {
+        "decor": "standing-stone",
+        "phrase": "a standing stone"
+      },
+      {
+        "decor": "meadow-oak",
+        "phrase": "a lone oak in the grass"
+      },
+      {
+        "decor": "meadow-outcrop",
+        "phrase": "a stone outcrop"
+      }
+    ],
+    "compass": [
+      {
+        "dir": "n",
+        "phrase": "north"
+      },
+      {
+        "dir": "ne",
+        "phrase": "north-east"
+      },
+      {
+        "dir": "e",
+        "phrase": "east"
+      },
+      {
+        "dir": "se",
+        "phrase": "south-east"
+      },
+      {
+        "dir": "s",
+        "phrase": "south"
+      },
+      {
+        "dir": "sw",
+        "phrase": "south-west"
+      },
+      {
+        "dir": "w",
+        "phrase": "west"
+      },
+      {
+        "dir": "nw",
+        "phrase": "north-west"
+      }
+    ],
+    "distance": [
+      {
+        "ring": 1,
+        "phrase": "Not far."
+      },
+      {
+        "ring": 2,
+        "phrase": "A fair walk."
+      },
+      {
+        "ring": 3,
+        "phrase": "Out past the old road's end."
+      }
+    ],
+    "pastRiver": ", past the river",
+    "opened": "You found it, then. There'll be another when the drift turns.",
+    "none": "Nothing's reached me this week. Ask again after the turning."
   }
 }

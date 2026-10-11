@@ -141,6 +141,9 @@ func (x *OpHeader) GetReport() *ReportBarrier {
 	return nil
 }
 
+// In the open map (contract 8) a Wilds place is area "wilds" with x and y in
+// world pixels, signed (open-map.md 2.4); "wilds:<region>" with
+// region-wide pixels is generator v2's, until lanes O-C and O-D move it.
 type Where struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Area          string                 `protobuf:"bytes,1,opt,name=area,proto3" json:"area,omitempty"`
@@ -327,15 +330,16 @@ func (x *Vitals) GetAbilityReadyAt() map[string]float64 {
 	return nil
 }
 
-// outer_epoch: the outer Wilds epoch this player's place was last recorded in
-// (” before any); a place left in an ended epoch is moved to the entrance.
+// wick_epoch: the wick epoch this player's place was last recorded in (” before
+// any); a place left in an ended epoch is moved to the entrance.
+// (outer_epoch, the 3x3 regions' name for it, was 5.)
 type Place struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Area            string                 `protobuf:"bytes,1,opt,name=area,proto3" json:"area,omitempty"`
 	X               float64                `protobuf:"fixed64,2,opt,name=x,proto3" json:"x,omitempty"`
 	Y               float64                `protobuf:"fixed64,3,opt,name=y,proto3" json:"y,omitempty"`
 	PlaceSetVersion float64                `protobuf:"fixed64,4,opt,name=place_set_version,json=placeSetVersion,proto3" json:"place_set_version,omitempty"`
-	OuterEpoch      string                 `protobuf:"bytes,5,opt,name=outer_epoch,json=outerEpoch,proto3" json:"outer_epoch,omitempty"`
+	WickEpoch       string                 `protobuf:"bytes,6,opt,name=wick_epoch,json=wickEpoch,proto3" json:"wick_epoch,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -398,9 +402,9 @@ func (x *Place) GetPlaceSetVersion() float64 {
 	return 0
 }
 
-func (x *Place) GetOuterEpoch() string {
+func (x *Place) GetWickEpoch() string {
 	if x != nil {
-		return x.OuterEpoch
+		return x.WickEpoch
 	}
 	return ""
 }
@@ -441,14 +445,14 @@ const file_glimway_v1_op_proto_rawDesc = "" +
 	"\x10ability_ready_at\x18\v \x03(\v2&.glimway.v1.Vitals.AbilityReadyAtEntryR\x0eabilityReadyAt\x1aA\n" +
 	"\x13AbilityReadyAtEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\x84\x01\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\x95\x01\n" +
 	"\x05Place\x12\x12\n" +
 	"\x04area\x18\x01 \x01(\tR\x04area\x12\f\n" +
 	"\x01x\x18\x02 \x01(\x01R\x01x\x12\f\n" +
 	"\x01y\x18\x03 \x01(\x01R\x01y\x12*\n" +
-	"\x11place_set_version\x18\x04 \x01(\x01R\x0fplaceSetVersion\x12\x1f\n" +
-	"\vouter_epoch\x18\x05 \x01(\tR\n" +
-	"outerEpochB1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
+	"\x11place_set_version\x18\x04 \x01(\x01R\x0fplaceSetVersion\x12\x1d\n" +
+	"\n" +
+	"wick_epoch\x18\x06 \x01(\tR\twickEpochJ\x04\b\x05\x10\x06R\vouter_epochB1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
 
 var (
 	file_glimway_v1_op_proto_rawDescOnce sync.Once

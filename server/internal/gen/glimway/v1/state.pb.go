@@ -433,9 +433,11 @@ type PlayerState struct {
 	Fishing    *FishingState          `protobuf:"bytes,10,opt,name=fishing,proto3" json:"fishing,omitempty"`
 	// The top-up's state (0.6, glims since 0.6.1) and the wardrobe's resolved
 	// choice (4.2).
-	Purse         *Purse    `protobuf:"bytes,11,opt,name=purse,proto3" json:"purse,omitempty"`
-	Wardrobe      *Wardrobe `protobuf:"bytes,12,opt,name=wardrobe,proto3" json:"wardrobe,omitempty"`
-	Glims         *Glims    `protobuf:"bytes,13,opt,name=glims,proto3" json:"glims,omitempty"`
+	Purse    *Purse    `protobuf:"bytes,11,opt,name=purse,proto3" json:"purse,omitempty"`
+	Wardrobe *Wardrobe `protobuf:"bytes,12,opt,name=wardrobe,proto3" json:"wardrobe,omitempty"`
+	Glims    *Glims    `protobuf:"bytes,13,opt,name=glims,proto3" json:"glims,omitempty"`
+	// This wick's rumour (open-map.md 2.10); unset when there is none.
+	Rumour        *WildsRumour `protobuf:"bytes,14,opt,name=rumour,proto3" json:"rumour,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -550,6 +552,13 @@ func (x *PlayerState) GetWardrobe() *Wardrobe {
 func (x *PlayerState) GetGlims() *Glims {
 	if x != nil {
 		return x.Glims
+	}
+	return nil
+}
+
+func (x *PlayerState) GetRumour() *WildsRumour {
+	if x != nil {
+		return x.Rumour
 	}
 	return nil
 }
@@ -689,6 +698,10 @@ type Envelope struct {
 	//	*Envelope_PurseTopUp
 	//	*Envelope_Wardrobe
 	//	*Envelope_WardrobeCheck
+	//	*Envelope_WildsClear
+	//	*Envelope_WildsLay
+	//	*Envelope_WildsLift
+	//	*Envelope_WildsDiscover
 	Result        isEnvelope_Result `protobuf_oneof:"result"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1035,6 +1048,42 @@ func (x *Envelope) GetWardrobeCheck() *WardrobeCheckResult {
 	return nil
 }
 
+func (x *Envelope) GetWildsClear() *WildsClearResult {
+	if x != nil {
+		if x, ok := x.Result.(*Envelope_WildsClear); ok {
+			return x.WildsClear
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetWildsLay() *WildsLayResult {
+	if x != nil {
+		if x, ok := x.Result.(*Envelope_WildsLay); ok {
+			return x.WildsLay
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetWildsLift() *WildsLiftResult {
+	if x != nil {
+		if x, ok := x.Result.(*Envelope_WildsLift); ok {
+			return x.WildsLift
+		}
+	}
+	return nil
+}
+
+func (x *Envelope) GetWildsDiscover() *WildsDiscoverResult {
+	if x != nil {
+		if x, ok := x.Result.(*Envelope_WildsDiscover); ok {
+			return x.WildsDiscover
+		}
+	}
+	return nil
+}
+
 type isEnvelope_Result interface {
 	isEnvelope_Result()
 }
@@ -1171,6 +1220,22 @@ type Envelope_WardrobeCheck struct {
 	WardrobeCheck *WardrobeCheckResult `protobuf:"bytes,42,opt,name=wardrobe_check,json=wardrobeCheck,proto3,oneof"`
 }
 
+type Envelope_WildsClear struct {
+	WildsClear *WildsClearResult `protobuf:"bytes,43,opt,name=wilds_clear,json=wildsClear,proto3,oneof"`
+}
+
+type Envelope_WildsLay struct {
+	WildsLay *WildsLayResult `protobuf:"bytes,44,opt,name=wilds_lay,json=wildsLay,proto3,oneof"`
+}
+
+type Envelope_WildsLift struct {
+	WildsLift *WildsLiftResult `protobuf:"bytes,45,opt,name=wilds_lift,json=wildsLift,proto3,oneof"`
+}
+
+type Envelope_WildsDiscover struct {
+	WildsDiscover *WildsDiscoverResult `protobuf:"bytes,46,opt,name=wilds_discover,json=wildsDiscover,proto3,oneof"`
+}
+
 func (*Envelope_Report) isEnvelope_Result() {}
 
 func (*Envelope_QuestStep) isEnvelope_Result() {}
@@ -1236,6 +1301,14 @@ func (*Envelope_PurseTopUp) isEnvelope_Result() {}
 func (*Envelope_Wardrobe) isEnvelope_Result() {}
 
 func (*Envelope_WardrobeCheck) isEnvelope_Result() {}
+
+func (*Envelope_WildsClear) isEnvelope_Result() {}
+
+func (*Envelope_WildsLay) isEnvelope_Result() {}
+
+func (*Envelope_WildsLift) isEnvelope_Result() {}
+
+func (*Envelope_WildsDiscover) isEnvelope_Result() {}
 
 type LoginRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1608,7 +1681,7 @@ var File_glimway_v1_state_proto protoreflect.FileDescriptor
 const file_glimway_v1_state_proto_rawDesc = "" +
 	"\n" +
 	"\x16glimway/v1/state.proto\x12\n" +
-	"glimway.v1\x1a\x1bglimway/v1/companions.proto\x1a\x18glimway/v1/fishing.proto\x1a\x18glimway/v1/profile.proto\x1a\x1bglimway/v1/operations.proto\x1a\x13glimway/v1/op.proto\x1a\x16glimway/v1/purse.proto\x1a\x19glimway/v1/wardrobe.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x18glimway/v1/village.proto\x1a\x16glimway/v1/world.proto\"\xe0\x01\n" +
+	"glimway.v1\x1a\x1bglimway/v1/companions.proto\x1a\x18glimway/v1/fishing.proto\x1a\x18glimway/v1/profile.proto\x1a\x1bglimway/v1/operations.proto\x1a\x13glimway/v1/op.proto\x1a\x16glimway/v1/purse.proto\x1a\x19glimway/v1/wardrobe.proto\x1a\x1egoogle/protobuf/wrappers.proto\x1a\x18glimway/v1/village.proto\x1a\x16glimway/v1/world.proto\x1a\x16glimway/v1/wilds.proto\"\xe0\x01\n" +
 	"\aAccount\x12\x1d\n" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tR\taccountId\x12!\n" +
@@ -1655,7 +1728,7 @@ const file_glimway_v1_state_proto_rawDesc = "" +
 	"\n" +
 	"level_mark\x18\x01 \x01(\x01R\tlevelMark\x12;\n" +
 	"\n" +
-	"class_mark\x18\x02 \x01(\v2\x1c.google.protobuf.StringValueR\tclassMark\"\xb2\x04\n" +
+	"class_mark\x18\x02 \x01(\v2\x1c.google.protobuf.StringValueR\tclassMark\"\xe3\x04\n" +
 	"\vPlayerState\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\x01R\aversion\x12-\n" +
 	"\aaccount\x18\x02 \x01(\v2\x13.glimway.v1.AccountR\aaccount\x125\n" +
@@ -1671,12 +1744,13 @@ const file_glimway_v1_state_proto_rawDesc = "" +
 	" \x01(\v2\x18.glimway.v1.FishingStateR\afishing\x12'\n" +
 	"\x05purse\x18\v \x01(\v2\x11.glimway.v1.PurseR\x05purse\x120\n" +
 	"\bwardrobe\x18\f \x01(\v2\x14.glimway.v1.WardrobeR\bwardrobe\x12'\n" +
-	"\x05glims\x18\r \x01(\v2\x11.glimway.v1.GlimsR\x05glimsJ\x04\b\a\x10\bR\x06embers\"!\n" +
+	"\x05glims\x18\r \x01(\v2\x11.glimway.v1.GlimsR\x05glims\x12/\n" +
+	"\x06rumour\x18\x0e \x01(\v2\x17.glimway.v1.WildsRumourR\x06rumourJ\x04\b\a\x10\bR\x06embers\"!\n" +
 	"\vErrorDetail\x12\x12\n" +
 	"\x04code\x18\x01 \x01(\tR\x04code\"g\n" +
 	"\aRefusal\x12-\n" +
 	"\x05error\x18\x01 \x01(\v2\x17.glimway.v1.ErrorDetailR\x05error\x12-\n" +
-	"\x05state\x18\x02 \x01(\v2\x17.glimway.v1.PlayerStateR\x05state\"\x95\x10\n" +
+	"\x05state\x18\x02 \x01(\v2\x17.glimway.v1.PlayerStateR\x05state\"\x99\x12\n" +
 	"\bEnvelope\x12-\n" +
 	"\x05state\x18\x01 \x01(\v2\x17.glimway.v1.PlayerStateR\x05state\x122\n" +
 	"\x06report\x18\n" +
@@ -1728,7 +1802,13 @@ const file_glimway_v1_state_proto_rawDesc = "" +
 	"\fpurse_top_up\x18( \x01(\v2\x1c.glimway.v1.PurseTopUpResultH\x00R\n" +
 	"purseTopUp\x128\n" +
 	"\bwardrobe\x18) \x01(\v2\x1a.glimway.v1.WardrobeResultH\x00R\bwardrobe\x12H\n" +
-	"\x0ewardrobe_check\x18* \x01(\v2\x1f.glimway.v1.WardrobeCheckResultH\x00R\rwardrobeCheckB\b\n" +
+	"\x0ewardrobe_check\x18* \x01(\v2\x1f.glimway.v1.WardrobeCheckResultH\x00R\rwardrobeCheck\x12?\n" +
+	"\vwilds_clear\x18+ \x01(\v2\x1c.glimway.v1.WildsClearResultH\x00R\n" +
+	"wildsClear\x129\n" +
+	"\twilds_lay\x18, \x01(\v2\x1a.glimway.v1.WildsLayResultH\x00R\bwildsLay\x12<\n" +
+	"\n" +
+	"wilds_lift\x18- \x01(\v2\x1b.glimway.v1.WildsLiftResultH\x00R\twildsLift\x12H\n" +
+	"\x0ewilds_discover\x18. \x01(\v2\x1f.glimway.v1.WildsDiscoverResultH\x00R\rwildsDiscoverB\b\n" +
 	"\x06result\"k\n" +
 	"\fLoginRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
@@ -1793,40 +1873,45 @@ var file_glimway_v1_state_proto_goTypes = []any{
 	(*FishingState)(nil),           // 23: glimway.v1.FishingState
 	(*Purse)(nil),                  // 24: glimway.v1.Purse
 	(*Wardrobe)(nil),               // 25: glimway.v1.Wardrobe
-	(*ReportResult)(nil),           // 26: glimway.v1.ReportResult
-	(*QuestStepResult)(nil),        // 27: glimway.v1.QuestStepResult
-	(*MarkResult)(nil),             // 28: glimway.v1.MarkResult
-	(*TakePaperResult)(nil),        // 29: glimway.v1.TakePaperResult
-	(*SettleEchoResult)(nil),       // 30: glimway.v1.SettleEchoResult
-	(*FallResult)(nil),             // 31: glimway.v1.FallResult
-	(*ProfileResult)(nil),          // 32: glimway.v1.ProfileResult
-	(*SpendResult)(nil),            // 33: glimway.v1.SpendResult
-	(*WildsClaimResult)(nil),       // 34: glimway.v1.WildsClaimResult
-	(*WildsLanternResult)(nil),     // 35: glimway.v1.WildsLanternResult
-	(*LibraryDonateResult)(nil),    // 36: glimway.v1.LibraryDonateResult
-	(*MailSendResult)(nil),         // 37: glimway.v1.MailSendResult
-	(*MailActionResult)(nil),       // 38: glimway.v1.MailActionResult
-	(*MailRecallResult)(nil),       // 39: glimway.v1.MailRecallResult
-	(*WorkshopView)(nil),           // 40: glimway.v1.WorkshopView
-	(*CraftResult)(nil),            // 41: glimway.v1.CraftResult
-	(*HearthCraftResult)(nil),      // 42: glimway.v1.HearthCraftResult
-	(*DeskCopyResult)(nil),         // 43: glimway.v1.DeskCopyResult
-	(*WorldMoveResult)(nil),        // 44: glimway.v1.WorldMoveResult
-	(*WorldLeaveResult)(nil),       // 45: glimway.v1.WorldLeaveResult
-	(*ContributeResult)(nil),       // 46: glimway.v1.ContributeResult
-	(*MendResult)(nil),             // 47: glimway.v1.MendResult
-	(*CompanionsResult)(nil),       // 48: glimway.v1.CompanionsResult
-	(*StallResult)(nil),            // 49: glimway.v1.StallResult
-	(*MountOutResult)(nil),         // 50: glimway.v1.MountOutResult
-	(*MountHomeResult)(nil),        // 51: glimway.v1.MountHomeResult
-	(*StableExtendResult)(nil),     // 52: glimway.v1.StableExtendResult
-	(*FishCastResult)(nil),         // 53: glimway.v1.FishCastResult
-	(*FishSettleResult)(nil),       // 54: glimway.v1.FishSettleResult
-	(*FishCancelResult)(nil),       // 55: glimway.v1.FishCancelResult
-	(*PurseTopUpResult)(nil),       // 56: glimway.v1.PurseTopUpResult
-	(*WardrobeResult)(nil),         // 57: glimway.v1.WardrobeResult
-	(*WardrobeCheckResult)(nil),    // 58: glimway.v1.WardrobeCheckResult
-	(*WorldChoice)(nil),            // 59: glimway.v1.WorldChoice
+	(*WildsRumour)(nil),            // 26: glimway.v1.WildsRumour
+	(*ReportResult)(nil),           // 27: glimway.v1.ReportResult
+	(*QuestStepResult)(nil),        // 28: glimway.v1.QuestStepResult
+	(*MarkResult)(nil),             // 29: glimway.v1.MarkResult
+	(*TakePaperResult)(nil),        // 30: glimway.v1.TakePaperResult
+	(*SettleEchoResult)(nil),       // 31: glimway.v1.SettleEchoResult
+	(*FallResult)(nil),             // 32: glimway.v1.FallResult
+	(*ProfileResult)(nil),          // 33: glimway.v1.ProfileResult
+	(*SpendResult)(nil),            // 34: glimway.v1.SpendResult
+	(*WildsClaimResult)(nil),       // 35: glimway.v1.WildsClaimResult
+	(*WildsLanternResult)(nil),     // 36: glimway.v1.WildsLanternResult
+	(*LibraryDonateResult)(nil),    // 37: glimway.v1.LibraryDonateResult
+	(*MailSendResult)(nil),         // 38: glimway.v1.MailSendResult
+	(*MailActionResult)(nil),       // 39: glimway.v1.MailActionResult
+	(*MailRecallResult)(nil),       // 40: glimway.v1.MailRecallResult
+	(*WorkshopView)(nil),           // 41: glimway.v1.WorkshopView
+	(*CraftResult)(nil),            // 42: glimway.v1.CraftResult
+	(*HearthCraftResult)(nil),      // 43: glimway.v1.HearthCraftResult
+	(*DeskCopyResult)(nil),         // 44: glimway.v1.DeskCopyResult
+	(*WorldMoveResult)(nil),        // 45: glimway.v1.WorldMoveResult
+	(*WorldLeaveResult)(nil),       // 46: glimway.v1.WorldLeaveResult
+	(*ContributeResult)(nil),       // 47: glimway.v1.ContributeResult
+	(*MendResult)(nil),             // 48: glimway.v1.MendResult
+	(*CompanionsResult)(nil),       // 49: glimway.v1.CompanionsResult
+	(*StallResult)(nil),            // 50: glimway.v1.StallResult
+	(*MountOutResult)(nil),         // 51: glimway.v1.MountOutResult
+	(*MountHomeResult)(nil),        // 52: glimway.v1.MountHomeResult
+	(*StableExtendResult)(nil),     // 53: glimway.v1.StableExtendResult
+	(*FishCastResult)(nil),         // 54: glimway.v1.FishCastResult
+	(*FishSettleResult)(nil),       // 55: glimway.v1.FishSettleResult
+	(*FishCancelResult)(nil),       // 56: glimway.v1.FishCancelResult
+	(*PurseTopUpResult)(nil),       // 57: glimway.v1.PurseTopUpResult
+	(*WardrobeResult)(nil),         // 58: glimway.v1.WardrobeResult
+	(*WardrobeCheckResult)(nil),    // 59: glimway.v1.WardrobeCheckResult
+	(*WildsClearResult)(nil),       // 60: glimway.v1.WildsClearResult
+	(*WildsLayResult)(nil),         // 61: glimway.v1.WildsLayResult
+	(*WildsLiftResult)(nil),        // 62: glimway.v1.WildsLiftResult
+	(*WildsDiscoverResult)(nil),    // 63: glimway.v1.WildsDiscoverResult
+	(*WorldChoice)(nil),            // 64: glimway.v1.WorldChoice
 }
 var file_glimway_v1_state_proto_depIdxs = []int32{
 	18, // 0: glimway.v1.Account.party_id:type_name -> google.protobuf.StringValue
@@ -1845,51 +1930,56 @@ var file_glimway_v1_state_proto_depIdxs = []int32{
 	24, // 13: glimway.v1.PlayerState.purse:type_name -> glimway.v1.Purse
 	25, // 14: glimway.v1.PlayerState.wardrobe:type_name -> glimway.v1.Wardrobe
 	3,  // 15: glimway.v1.PlayerState.glims:type_name -> glimway.v1.Glims
-	6,  // 16: glimway.v1.Refusal.error:type_name -> glimway.v1.ErrorDetail
-	5,  // 17: glimway.v1.Refusal.state:type_name -> glimway.v1.PlayerState
-	5,  // 18: glimway.v1.Envelope.state:type_name -> glimway.v1.PlayerState
-	26, // 19: glimway.v1.Envelope.report:type_name -> glimway.v1.ReportResult
-	27, // 20: glimway.v1.Envelope.quest_step:type_name -> glimway.v1.QuestStepResult
-	28, // 21: glimway.v1.Envelope.mark:type_name -> glimway.v1.MarkResult
-	29, // 22: glimway.v1.Envelope.take_paper:type_name -> glimway.v1.TakePaperResult
-	30, // 23: glimway.v1.Envelope.settle_echo:type_name -> glimway.v1.SettleEchoResult
-	31, // 24: glimway.v1.Envelope.fall:type_name -> glimway.v1.FallResult
-	32, // 25: glimway.v1.Envelope.profile:type_name -> glimway.v1.ProfileResult
-	33, // 26: glimway.v1.Envelope.spend:type_name -> glimway.v1.SpendResult
-	34, // 27: glimway.v1.Envelope.wilds_claim:type_name -> glimway.v1.WildsClaimResult
-	35, // 28: glimway.v1.Envelope.wilds_lantern:type_name -> glimway.v1.WildsLanternResult
-	36, // 29: glimway.v1.Envelope.library_donate:type_name -> glimway.v1.LibraryDonateResult
-	37, // 30: glimway.v1.Envelope.mail_send:type_name -> glimway.v1.MailSendResult
-	38, // 31: glimway.v1.Envelope.mail_claim:type_name -> glimway.v1.MailActionResult
-	39, // 32: glimway.v1.Envelope.mail_recall:type_name -> glimway.v1.MailRecallResult
-	40, // 33: glimway.v1.Envelope.storage_move:type_name -> glimway.v1.WorkshopView
-	41, // 34: glimway.v1.Envelope.craft:type_name -> glimway.v1.CraftResult
-	42, // 35: glimway.v1.Envelope.hearth_craft:type_name -> glimway.v1.HearthCraftResult
-	43, // 36: glimway.v1.Envelope.desk_copy:type_name -> glimway.v1.DeskCopyResult
-	44, // 37: glimway.v1.Envelope.world_move:type_name -> glimway.v1.WorldMoveResult
-	45, // 38: glimway.v1.Envelope.world_leave:type_name -> glimway.v1.WorldLeaveResult
-	46, // 39: glimway.v1.Envelope.contribute:type_name -> glimway.v1.ContributeResult
-	47, // 40: glimway.v1.Envelope.mend:type_name -> glimway.v1.MendResult
-	48, // 41: glimway.v1.Envelope.companions:type_name -> glimway.v1.CompanionsResult
-	49, // 42: glimway.v1.Envelope.stall:type_name -> glimway.v1.StallResult
-	50, // 43: glimway.v1.Envelope.mount_out:type_name -> glimway.v1.MountOutResult
-	51, // 44: glimway.v1.Envelope.mount_home:type_name -> glimway.v1.MountHomeResult
-	52, // 45: glimway.v1.Envelope.stable_extend:type_name -> glimway.v1.StableExtendResult
-	53, // 46: glimway.v1.Envelope.fish_cast:type_name -> glimway.v1.FishCastResult
-	54, // 47: glimway.v1.Envelope.fish_settle:type_name -> glimway.v1.FishSettleResult
-	55, // 48: glimway.v1.Envelope.fish_cancel:type_name -> glimway.v1.FishCancelResult
-	56, // 49: glimway.v1.Envelope.purse_top_up:type_name -> glimway.v1.PurseTopUpResult
-	57, // 50: glimway.v1.Envelope.wardrobe:type_name -> glimway.v1.WardrobeResult
-	58, // 51: glimway.v1.Envelope.wardrobe_check:type_name -> glimway.v1.WardrobeCheckResult
-	5,  // 52: glimway.v1.SessionResponse.state:type_name -> glimway.v1.PlayerState
-	59, // 53: glimway.v1.SessionResponse.world_choice:type_name -> glimway.v1.WorldChoice
-	5,  // 54: glimway.v1.StateResponse.state:type_name -> glimway.v1.PlayerState
-	5,  // 55: glimway.v1.PlayResponse.state:type_name -> glimway.v1.PlayerState
-	56, // [56:56] is the sub-list for method output_type
-	56, // [56:56] is the sub-list for method input_type
-	56, // [56:56] is the sub-list for extension type_name
-	56, // [56:56] is the sub-list for extension extendee
-	0,  // [0:56] is the sub-list for field type_name
+	26, // 16: glimway.v1.PlayerState.rumour:type_name -> glimway.v1.WildsRumour
+	6,  // 17: glimway.v1.Refusal.error:type_name -> glimway.v1.ErrorDetail
+	5,  // 18: glimway.v1.Refusal.state:type_name -> glimway.v1.PlayerState
+	5,  // 19: glimway.v1.Envelope.state:type_name -> glimway.v1.PlayerState
+	27, // 20: glimway.v1.Envelope.report:type_name -> glimway.v1.ReportResult
+	28, // 21: glimway.v1.Envelope.quest_step:type_name -> glimway.v1.QuestStepResult
+	29, // 22: glimway.v1.Envelope.mark:type_name -> glimway.v1.MarkResult
+	30, // 23: glimway.v1.Envelope.take_paper:type_name -> glimway.v1.TakePaperResult
+	31, // 24: glimway.v1.Envelope.settle_echo:type_name -> glimway.v1.SettleEchoResult
+	32, // 25: glimway.v1.Envelope.fall:type_name -> glimway.v1.FallResult
+	33, // 26: glimway.v1.Envelope.profile:type_name -> glimway.v1.ProfileResult
+	34, // 27: glimway.v1.Envelope.spend:type_name -> glimway.v1.SpendResult
+	35, // 28: glimway.v1.Envelope.wilds_claim:type_name -> glimway.v1.WildsClaimResult
+	36, // 29: glimway.v1.Envelope.wilds_lantern:type_name -> glimway.v1.WildsLanternResult
+	37, // 30: glimway.v1.Envelope.library_donate:type_name -> glimway.v1.LibraryDonateResult
+	38, // 31: glimway.v1.Envelope.mail_send:type_name -> glimway.v1.MailSendResult
+	39, // 32: glimway.v1.Envelope.mail_claim:type_name -> glimway.v1.MailActionResult
+	40, // 33: glimway.v1.Envelope.mail_recall:type_name -> glimway.v1.MailRecallResult
+	41, // 34: glimway.v1.Envelope.storage_move:type_name -> glimway.v1.WorkshopView
+	42, // 35: glimway.v1.Envelope.craft:type_name -> glimway.v1.CraftResult
+	43, // 36: glimway.v1.Envelope.hearth_craft:type_name -> glimway.v1.HearthCraftResult
+	44, // 37: glimway.v1.Envelope.desk_copy:type_name -> glimway.v1.DeskCopyResult
+	45, // 38: glimway.v1.Envelope.world_move:type_name -> glimway.v1.WorldMoveResult
+	46, // 39: glimway.v1.Envelope.world_leave:type_name -> glimway.v1.WorldLeaveResult
+	47, // 40: glimway.v1.Envelope.contribute:type_name -> glimway.v1.ContributeResult
+	48, // 41: glimway.v1.Envelope.mend:type_name -> glimway.v1.MendResult
+	49, // 42: glimway.v1.Envelope.companions:type_name -> glimway.v1.CompanionsResult
+	50, // 43: glimway.v1.Envelope.stall:type_name -> glimway.v1.StallResult
+	51, // 44: glimway.v1.Envelope.mount_out:type_name -> glimway.v1.MountOutResult
+	52, // 45: glimway.v1.Envelope.mount_home:type_name -> glimway.v1.MountHomeResult
+	53, // 46: glimway.v1.Envelope.stable_extend:type_name -> glimway.v1.StableExtendResult
+	54, // 47: glimway.v1.Envelope.fish_cast:type_name -> glimway.v1.FishCastResult
+	55, // 48: glimway.v1.Envelope.fish_settle:type_name -> glimway.v1.FishSettleResult
+	56, // 49: glimway.v1.Envelope.fish_cancel:type_name -> glimway.v1.FishCancelResult
+	57, // 50: glimway.v1.Envelope.purse_top_up:type_name -> glimway.v1.PurseTopUpResult
+	58, // 51: glimway.v1.Envelope.wardrobe:type_name -> glimway.v1.WardrobeResult
+	59, // 52: glimway.v1.Envelope.wardrobe_check:type_name -> glimway.v1.WardrobeCheckResult
+	60, // 53: glimway.v1.Envelope.wilds_clear:type_name -> glimway.v1.WildsClearResult
+	61, // 54: glimway.v1.Envelope.wilds_lay:type_name -> glimway.v1.WildsLayResult
+	62, // 55: glimway.v1.Envelope.wilds_lift:type_name -> glimway.v1.WildsLiftResult
+	63, // 56: glimway.v1.Envelope.wilds_discover:type_name -> glimway.v1.WildsDiscoverResult
+	5,  // 57: glimway.v1.SessionResponse.state:type_name -> glimway.v1.PlayerState
+	64, // 58: glimway.v1.SessionResponse.world_choice:type_name -> glimway.v1.WorldChoice
+	5,  // 59: glimway.v1.StateResponse.state:type_name -> glimway.v1.PlayerState
+	5,  // 60: glimway.v1.PlayResponse.state:type_name -> glimway.v1.PlayerState
+	61, // [61:61] is the sub-list for method output_type
+	61, // [61:61] is the sub-list for method input_type
+	61, // [61:61] is the sub-list for extension type_name
+	61, // [61:61] is the sub-list for extension extendee
+	0,  // [0:61] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_state_proto_init() }
@@ -1906,6 +1996,7 @@ func file_glimway_v1_state_proto_init() {
 	file_glimway_v1_wardrobe_proto_init()
 	file_glimway_v1_village_proto_init()
 	file_glimway_v1_world_proto_init()
+	file_glimway_v1_wilds_proto_init()
 	file_glimway_v1_state_proto_msgTypes[8].OneofWrappers = []any{
 		(*Envelope_Report)(nil),
 		(*Envelope_QuestStep)(nil),
@@ -1940,6 +2031,10 @@ func file_glimway_v1_state_proto_init() {
 		(*Envelope_PurseTopUp)(nil),
 		(*Envelope_Wardrobe)(nil),
 		(*Envelope_WardrobeCheck)(nil),
+		(*Envelope_WildsClear)(nil),
+		(*Envelope_WildsLay)(nil),
+		(*Envelope_WildsLift)(nil),
+		(*Envelope_WildsDiscover)(nil),
 	}
 	file_glimway_v1_state_proto_msgTypes[10].OneofWrappers = []any{
 		(*SessionResponse_State)(nil),

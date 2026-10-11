@@ -34,7 +34,7 @@ type Chunks struct {
 	// Now is the clock for epoch lifetimes on chunk reads (the port's read
 	// takes no time). Nil is time.Now.
 	Now func() time.Time
-	// GeneratorVersion for new epochs; zero is content/wilds.json's.
+	// GeneratorVersion for new epochs; zero is the build's generator (version()).
 	GeneratorVersion int
 
 	mu    sync.Mutex
@@ -102,7 +102,7 @@ func (c *Chunks) Create(ctx context.Context, tx *sql.Tx, world, region string, n
 	}
 	season, starts := "0", now
 	var ends *int64
-	if def.Kind == "outer" {
+	if def.GetKind() == "outer" {
 		day := content.CalendarAt(content.CalendarRules, now)
 		season = "t:" + strconv.FormatInt(day.StartsAt, 10) + ":" + strconv.FormatInt(day.NextTurning, 10)
 		starts = day.StartsAt
@@ -196,11 +196,15 @@ func (c *Chunks) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, lay
 	return proto.Clone(m).(*contract.WildsChunk), nil
 }
 
+// version is the generator new epochs use: GeneratorVersion when set, else
+// the generator this build runs. Content says 3 since contract 8 (the open
+// map's data), but generator v3 is lane O-B's: until it lands, the store
+// makes v2 epochs. O-B switches this to content's version.
 func (c *Chunks) version() int {
 	if c.GeneratorVersion != 0 {
 		return c.GeneratorVersion
 	}
-	return int(content.WildsRules.GetGeneratorVersion())
+	return wilds.GeneratorV2
 }
 
 func (c *Chunks) now() int64 {
@@ -243,7 +247,7 @@ func (c *Chunks) put(k chunkKey, m *contract.WildsChunk) {
 }
 
 func regionDef(id string) (*content.WildsRegion, bool) {
-	for _, r := range content.WildsRules.Regions {
+	for _, r := range content.WildsV2Regions {
 		if r.GetId() == id {
 			return r, true
 		}

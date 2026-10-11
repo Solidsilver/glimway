@@ -11,6 +11,7 @@ import "glimway/v1/wardrobe.proto";
 import "google/protobuf/wrappers.proto";
 import "glimway/v1/village.proto";
 import "glimway/v1/world.proto";
+import "glimway/v1/wilds.proto";
 
 message Account {
   string account_id = 1; string display_name = 2; string profile_source = 3;
@@ -45,6 +46,8 @@ message PlayerState {
   // choice (4.2).
   Purse purse = 11; Wardrobe wardrobe = 12;
   Glims glims = 13;
+  // This wick's rumour (open-map.md 2.10); unset when there is none.
+  WildsRumour rumour = 14;
 }
 // A wire error string from ErrorCode's hyphenated vocabulary, never an enum JSON name.
 message ErrorDetail { string code = 1; }
@@ -71,6 +74,9 @@ message Envelope {
     FishCancelResult fish_cancel = 39;
     PurseTopUpResult purse_top_up = 40; WardrobeResult wardrobe = 41;
     WardrobeCheckResult wardrobe_check = 42;
+    WildsClearResult wilds_clear = 43; WildsLayResult wilds_lay = 44;
+    WildsLiftResult wilds_lift = 45;
+    WildsDiscoverResult wilds_discover = 46;
   }
 }
 message LoginRequest { string user_id = 1; string token = 2; string invite = 3; string party = 4; }

@@ -1,6 +1,10 @@
 package wilds
 
-import "slices"
+import (
+	"slices"
+
+	"glimway/content"
+)
 
 // The woods of generator v2: dense iron-oak woods with winding, uneven
 // paths, for both regions (the Whitequiet is the same woods, wilder). The
@@ -30,62 +34,98 @@ import "slices"
 // piece whose art overhangs a walkable tile is flagged so it fades when
 // someone walks beneath it.
 
-// Ground is a ground id; GroundIDs names it (the TERRAIN key in
+// Ground is a ground id: its index in content/wilds.json `grounds`, whose
+// `terrain` is the palette name a chunk carries (the TERRAIN key in
 // src/lib/tile.ts, which the ground art reads).
 type Ground uint8
 
-const (
-	GroundWoods   Ground = iota // under the trees: dark loam, moss and leaf litter
-	GroundMoss                  // walkable moss in clearings and glades
-	GroundVerge                 // walkable verge beside a path's trodden line
-	GroundPath                  // the trodden line of a path
-	GroundTrodden               // bare, trodden earth around camps
-	GroundRoad                  // broken cobbles of the old road
-	GroundWater                 // still water (a backwater of the Wend): solid
+// The grounds generator v2 paints with, looked up by content id.
+var (
+	GroundWoods   = groundID("woods")   // under the trees: dark loam, moss and leaf litter
+	GroundMoss    = groundID("moss")    // walkable moss in clearings and glades
+	GroundVerge   = groundID("verge")   // walkable verge beside a path's trodden line
+	GroundPath    = groundID("path")    // the trodden line of a path
+	GroundTrodden = groundID("trodden") // bare, trodden earth around camps
+	GroundRoad    = groundID("road")    // broken cobbles of the old road
+	GroundWater   = groundID("water")   // still water (a backwater of the Wend): solid
 )
 
 // GroundIDs are the palette names of the ground ids, by value.
-var GroundIDs = [...]string{"grass_b", "grass_a", "path_b", "path_a", "dirt", "cobble_moss", "water_a"}
+var GroundIDs = func() []string {
+	out := []string{}
+	for _, g := range content.WildsRules.Grounds {
+		out = append(out, g.GetTerrain())
+	}
+	return out
+}()
 
 func (g Ground) String() string { return GroundIDs[g] }
 
 // groundRank: a carve only ever raises a tile's ground (moss never paints
 // over a path).
-var groundRank = [...]int{0, 10, 15, 20, 30, 40, 50}
+var groundRank = func() []int {
+	out := []int{}
+	for _, g := range content.WildsRules.Grounds {
+		out = append(out, int(g.GetRank()))
+	}
+	return out
+}()
 
-// DecorKind is a kind of decor piece; DecorKinds names it (src/lib/wilds
-// types.ts DecorKind, which the art reads).
+// groundID is the ground with the content id; a missing one is a broken
+// build, caught at start.
+func groundID(id string) Ground {
+	i := slices.IndexFunc(content.WildsRules.Grounds, func(g *content.WildsGround) bool { return g.GetId() == id })
+	if i < 0 {
+		panic("wilds: no ground " + id)
+	}
+	return Ground(i)
+}
+
+// DecorKind is a kind of decor piece: its index in content/wilds.json
+// `decor` (src/game/wilds/decor.ts reads the same list).
 type DecorKind uint8
 
-const (
-	DecorOak DecorKind = iota
-	DecorPine
-	DecorBirch
-	DecorIronOak
-	DecorSnag
-	DecorThicket
-	DecorStump
-	DecorRingStump
-	DecorLog
-	DecorBoulder
-	DecorCairn
-	DecorFern
-	DecorGrass
-	DecorFlowers
-	DecorTurncaps
-	DecorReeds
-	DecorRoots
-	DecorLitter
-	DecorPebbles
+// The decor kinds generator v2 places, looked up by content kind.
+var (
+	DecorOak       = decorID("oak")
+	DecorPine      = decorID("pine")
+	DecorBirch     = decorID("birch")
+	DecorIronOak   = decorID("iron-oak")
+	DecorSnag      = decorID("snag")
+	DecorThicket   = decorID("thicket")
+	DecorStump     = decorID("stump")
+	DecorRingStump = decorID("ring-stump")
+	DecorLog       = decorID("log")
+	DecorBoulder   = decorID("boulder")
+	DecorCairn     = decorID("cairn")
+	DecorFern      = decorID("fern")
+	DecorGrass     = decorID("grass")
+	DecorFlowers   = decorID("flowers")
+	DecorTurncaps  = decorID("turncaps")
+	DecorReeds     = decorID("reeds")
+	DecorRoots     = decorID("roots")
+	DecorLitter    = decorID("litter")
+	DecorPebbles   = decorID("pebbles")
 )
 
 // DecorKinds are the decor kind names, by value.
-var DecorKinds = [...]string{
-	"oak", "pine", "birch", "iron-oak", "snag", "thicket", "stump", "ring-stump", "log", "boulder",
-	"cairn", "fern", "grass", "flowers", "turncaps", "reeds", "roots", "litter", "pebbles",
-}
+var DecorKinds = func() []string {
+	out := []string{}
+	for _, d := range content.WildsRules.Decor {
+		out = append(out, d.GetKind())
+	}
+	return out
+}()
 
 func (k DecorKind) String() string { return DecorKinds[k] }
+
+func decorID(kind string) DecorKind {
+	i := slices.Index(DecorKinds, kind)
+	if i < 0 {
+		panic("wilds: no decor kind " + kind)
+	}
+	return DecorKind(i)
+}
 
 // DecorArt is a kind's art footprint in px (width centred on the anchor,
 // height above it). Blocking pieces only stand on solid tiles; flat ones are
@@ -96,28 +136,14 @@ type DecorArt struct {
 	Flat     bool
 }
 
-// DecorArts is the footprint of each kind (src/lib/wilds/tangle.ts DECOR_ART).
-var DecorArts = [...]DecorArt{
-	DecorOak:       {30, 32, true, false},
-	DecorPine:      {22, 36, true, false},
-	DecorBirch:     {22, 32, true, false},
-	DecorIronOak:   {40, 42, true, false},
-	DecorSnag:      {18, 28, true, false},
-	DecorThicket:   {24, 18, true, false},
-	DecorStump:     {18, 14, true, false},
-	DecorRingStump: {22, 14, true, false},
-	DecorLog:       {32, 13, true, false},
-	DecorBoulder:   {20, 15, true, false},
-	DecorCairn:     {14, 21, true, false},
-	DecorFern:      {15, 11, false, false},
-	DecorGrass:     {11, 9, false, false},
-	DecorFlowers:   {11, 7, false, false},
-	DecorTurncaps:  {13, 9, false, false},
-	DecorReeds:     {14, 15, false, false},
-	DecorRoots:     {16, 12, false, true},
-	DecorLitter:    {14, 9, false, true},
-	DecorPebbles:   {11, 7, false, true},
-}
+// DecorArts is the footprint of each kind, by value (content `decor`).
+var DecorArts = func() []DecorArt {
+	out := []DecorArt{}
+	for _, d := range content.WildsRules.Decor {
+		out = append(out, DecorArt{int(d.GetW()), int(d.GetH()), d.GetBlocking(), d.GetFlat()})
+	}
+	return out
+}()
 
 // Decor is one piece of dressing. The art stands on its tile's bottom edge,
 // centred, nudged by (OX, OY) px. Variant is 0–7 (the art seeds from it);

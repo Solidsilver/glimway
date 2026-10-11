@@ -65,7 +65,7 @@ test('typed operations facade and fake expose session, play and operation contra
   const badAck = structuredClone(envelope) as Record<string, any>; badAck.report.casts = -1; assert.throws(() => decodeEnvelope(badAck), { code: 'bad-response' });
   let headers: Headers | undefined;
   const api = createApiClient({ fetchImpl: (async (_url, init) => { headers = new Headers(init?.headers); return new Response(JSON.stringify({ state: valid, leaseActive: false }), { headers: { 'content-type': 'application/json' } }); }) as typeof fetch });
-  await api.operations.state(); assert.equal(headers!.get('X-Glimway-Contract'), '7');
+  await api.operations.state(); assert.equal(headers!.get('X-Glimway-Contract'), '8');
 });
 function chunk() { return create(wilds.WildsChunkSchema, { epochId: 'epoch', region: 'inner-1', realm: 'hearthwick', look: 'tangle', generatorVersion: 2, size: 24, cx: 1, cy: 0, palette: ['grass'], ground: new Uint8Array(288), solid: new Uint8Array(72), spawn: { tx: 1, ty: 1 }, decor: { kinds: ['tree'], kind: [0], tx: [2], ty: [3], ox: [1], oy: [-2], variant: [0], flags: new Uint8Array(1) }, entities: [{ id: 'node:1:0:0', kind: 'node', tx: 3, ty: 4, material: 'timber' }], exits: [{ tx: 12, ty: 0, tw: 1, th: 1, dir: wilds.Dir.NORTH, to: 'chunk:outer-1:1:1', entry: { tx: 12, ty: 23 } }] }); }
 test('packed chunks validate bodies, decor and legitimate cross-region exits on binary decode', async () => {
@@ -158,7 +158,7 @@ test('every raw client call and remote library call carries contract 7', async (
   const library = createRemoteLibrary({ fetchImpl });
   await library.load();
   assert.equal(calls.length, Object.keys(client.raw).length + 1);
-  for (const call of calls) assert.equal(new Headers(call.init?.headers).get('X-Glimway-Contract'), '7', call.url);
+  for (const call of calls) assert.equal(new Headers(call.init?.headers).get('X-Glimway-Contract'), '8', call.url);
 });
 
 test('device ownership persists independently of tab clients', () => {
@@ -184,4 +184,22 @@ test('contract 6 preserves quest times, gate spends and server item grants', () 
     assert.throws(() => decodePlayerState(body));
   }
   for (const code of ['not-yet','not-here','needs-habitica','companion-not-owned','no-stable','stall-taken','stalls-in-use','stable-full','already-casting','cast-too-soon','water-still','no-cast']) assert.equal(errorFromResponse(409, { error: { code }, state: valid }).code,code);
+});
+
+test('the open map contract 8 shapes decode through the facade (open-map.md 2.4, 2.10, section 3)', async () => {
+  const get = (name: string, kind: string) => fixtures.find(f => f.name === name && f.case === kind)!.json;
+  const fake = new FakeOperations();
+  fake.responses.set('/api/wilds/near/-2/-4', [get('glimway.v1.WildsNearResult', 'valid-near')]);
+  const near = await fake.api.near(-2, -4);
+  assert.deepEqual([near.still!.kind, near.wick!.kind, near.center!.cx, near.center!.cy, near.radius], ['still', 'wick', -2, -4, 2]);
+  assert.deepEqual(near.frontier!.rect, create(wilds.WildsChunkRectSchema, { minCx: -4, minCy: -8, maxCx: 4, maxCy: 0 }));
+  assert.equal(near.ground[0]!.changes!.changes[1]!.change, 'stone');
+  assert.deepEqual([near.glimpse[0]!.land, near.glimpse[0]!.river, near.ways[0]!.name], ['meadow', true, "Fixture's way"]);
+  // A window answered for another chunk is refused.
+  fake.responses.set('/api/wilds/near/0/0', [get('glimway.v1.WildsNearResult', 'valid-near')]);
+  await assert.rejects(fake.api.near(0, 0), { code: 'bad-response' });
+  const cases: [string, 'wildsClear' | 'wildsLay' | 'wildsLift' | 'wildsDiscover'][] = [['wilds-clear', 'wildsClear'], ['wilds-lay-way', 'wildsLay'], ['wilds-lift', 'wildsLift'], ['discover-first', 'wildsDiscover']];
+  for (const [kind, want] of cases) assert.equal(decodeEnvelope(get('glimway.v1.Envelope', kind)).result.case, want, kind);
+  const chunk = decodeWire(wilds.WildsChunkSchema, get('glimway.v1.WildsChunk', 'valid-open-map'));
+  assert.deepEqual([chunk.cx, chunk.cy, chunk.tier, chunk.land, chunk.places[0]!.id, chunk.sites[0]!.kind], [-3, -7, 3, 'meadow', 'place:-1:-2', wilds.SiteKind.RUMOUR]);
 });

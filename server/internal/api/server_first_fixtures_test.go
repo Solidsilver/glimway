@@ -229,10 +229,35 @@ func TestServerFirstWireFixtures(t *testing.T) {
 	entity := &contract.WildsEntityState{Id: "node:1:0:0", Epoch: "epoch", Cycle: 2, State: "harvested", AvailableAt: 1791400020, By: wrapperspb.String("fixture-account"), At: wrapperspb.Double(1791400000)}
 	lamp := &contract.WildsLantern{Id: "fallen-lamp", OwnerId: "peer-account", DisplayName: "Peer", X: 400, Y: 300, At: 1791400000, LitBy: wrapperspb.String("fixture-account"), LitAt: wrapperspb.Double(1791400010)}
 	add("valid-region", &contract.WildsRegionResult{Epoch: &contract.WildsEpoch{Id: "epoch", WorldSeed: "world-seed", RegionId: "outer-1", GeneratorVersion: 2, Season: "autumn", StartsAt: 1791300000, EndsAt: wrapperspb.Double(1791500000)}, Entities: []*contract.WildsEntityState{entity}, Echoes: []*contract.EchoAssignment{{Site: "echo-tam", Member: "tam", Settled: true}}, Lanterns: []*contract.WildsLantern{lamp}, Materials: map[string]float64{"timber": 3}})
+	// The open map's contract 8 shapes (open-map.md 2.4, 2.10, section 3):
+	// signed keys, both epochs, the ground changes, the glimpse and a way.
+	key := func(cx, cy int32) *contract.WildsChunkKey {
+		return &contract.WildsChunkKey{Realm: "hearthwick", Layer: 0, Cx: cx, Cy: cy}
+	}
+	ground := &contract.ChunkGroundChanges{Chunk: key(-2, -4), Epoch: "wick-epoch", Changes: &contract.GroundChanges{Changes: []*contract.GroundChange{{Tx: 3, Ty: 4, Change: "cleared", By: "fixture-account", At: 1791400000}, {Tx: 4, Ty: 4, Change: "stone", By: "fixture-account", At: 1791400005}}}}
+	way := &contract.WildsWay{Id: "way:place:-1:0:place:0:-2", A: "place:-1:0", B: "place:0:-2", Name: "Fixture's way", By: "fixture-account", Tiles: 72, Epoch: "wick-epoch", At: 1791400100}
+	add("valid-open-map", &contract.WildsChunk{EpochId: "wick-epoch", Realm: "hearthwick", Look: "outer", Cx: -3, Cy: -7, GeneratorVersion: 3, Size: 24, Palette: []string{"grass_c"}, Ground: make([]byte, 288), Solid: make([]byte, 72), Decor: &contract.DecorList{Kinds: []string{"split-oak"}, Kind: []uint32{0}, Tx: []uint32{12}, Ty: []uint32{12}, Ox: []int32{0}, Oy: []int32{0}, Variant: []uint32{0}, Flags: []byte{0}}, Sites: []*contract.StorySite{{Id: "rumour:-3:-7", Kind: contract.SiteKind_SITE_KIND_RUMOUR, Tx: 12, Ty: 13}}, Tier: 3, Land: "meadow", Places: []*contract.WildsPlaceMark{{Id: "place:-1:-2", Kind: "camp-glade", Tx: 12, Ty: 12}}})
+	add("valid-near", &contract.WildsNearResult{
+		Still:    &contract.WildsEpoch{Id: "still-epoch", WorldSeed: "world-seed", Kind: "still", GeneratorVersion: 3, Season: "0", StartsAt: 1791300000},
+		Wick:     &contract.WildsEpoch{Id: "wick-epoch", WorldSeed: "world-seed", Kind: "wick", GeneratorVersion: 3, Season: "t:1791300000:1791500000", StartsAt: 1791300000, EndsAt: wrapperspb.Double(1791500000)},
+		Frontier: &contract.WildsFrontier{Rect: &contract.WildsChunkRect{MinCx: -4, MinCy: -8, MaxCx: 4, MaxCy: 0}},
+		Center:   key(-2, -4), Radius: 2,
+		Entities: []*contract.WildsEntityState{{Id: "node:-2:-4:0", Epoch: "wick-epoch", Cycle: 1, State: "harvested", AvailableAt: 1791400020, By: wrapperspb.String("fixture-account"), At: wrapperspb.Double(1791400000)}}, PersonalClaims: []*contract.WildsPersonalClaim{{EntityId: "chest:-2:-4:0", At: 1791400000}},
+		Discoveries: []*contract.WildsDiscovery{{EntityId: "place:-1:-2", DiscovererId: "fixture-account", DisplayName: "Fixture", At: 1791400000}},
+		Lanterns:    []*contract.WildsLantern{lamp}, Echoes: []*contract.EchoAssignment{{Site: "echo:0", Member: "tam"}},
+		Ground: []*contract.ChunkGroundChanges{ground}, Materials: map[string]float64{"stone": 4},
+		Glimpse: []*contract.WildsGlimpse{{Chunk: key(-5, -4), Land: "meadow", River: true}},
+		Ways:    []*contract.WildsWay{way},
+	})
+	add("rumour", &contract.WildsRumour{Epoch: "wick-epoch", Place: "place:-1:-2", Landmark: "split-oak", Compass: "nw", Ring: 2, PastRiver: true, Site: "rumour:-3:-7"})
 	loot := &contract.WildsLoot{Materials: []*contract.WildsMaterial{{Id: "timber", Qty: 2}}, Trinket: wrapperspb.String("beeswax-candle")}
 	for kind, result := range map[string]proto.Message{
-		"claim-loot":   &contract.WildsClaimResult{Epoch: "epoch", Entity: entity, Loot: loot, Materials: map[string]float64{"timber": 3}, Papers: []string{"failed-grid-of-sector-4"}},
-		"lantern-loot": &contract.WildsLanternResult{Epoch: "epoch", Rewarded: true, Loot: loot, Materials: map[string]float64{"timber": 3}, Lanterns: []*contract.WildsLantern{lamp}},
+		"claim-loot":     &contract.WildsClaimResult{Epoch: "epoch", Entity: entity, Loot: loot, Materials: map[string]float64{"timber": 3}, Papers: []string{"failed-grid-of-sector-4"}},
+		"lantern-loot":   &contract.WildsLanternResult{Epoch: "epoch", Rewarded: true, Loot: loot, Materials: map[string]float64{"timber": 3}, Lanterns: []*contract.WildsLantern{lamp}},
+		"wilds-clear":    &contract.WildsClearResult{Ground: ground, Materials: map[string]float64{"stone": 3}},
+		"wilds-lay-way":  &contract.WildsLayResult{Ground: ground, Materials: map[string]float64{"stone": 3}, WayMade: way},
+		"wilds-lift":     &contract.WildsLiftResult{Ground: ground, Materials: map[string]float64{"stone": 4}, WayBroken: way.Id},
+		"discover-first": &contract.WildsDiscoverResult{Epoch: "wick-epoch", Discovery: &contract.WildsDiscovery{EntityId: "place:-1:-2", DiscovererId: "fixture-account", DisplayName: "Fixture", At: 1791400000}, First: true, Loot: loot, Materials: map[string]float64{"timber": 3}},
 	} {
 		envelope, err := typedEnvelope(state.State, result)
 		if err != nil {

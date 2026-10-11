@@ -64,7 +64,7 @@ export interface GameState {
   /** Client-only: the outer epoch (season) this player was last in. */
   outerSeason?: string;
   /** The server's: the outer epoch (id) this player's place was last recorded in. */
-  outerEpoch?: string;
+  wickEpoch?: string;
 }
 
 export class InvalidSaveError extends Error {
@@ -297,12 +297,12 @@ export function validateSave(data: unknown): GameState {
   const marker = (v: unknown): string | undefined => (typeof v === 'string' && v.length > 0 && v.length <= 64 ? v : undefined);
   const wildsRegion = data.area === 'wilds' ? marker(data.wildsRegion) : undefined;
   const outerSeason = marker(data.outerSeason);
-  const outerEpoch = typeof data.outerEpoch === 'string' && data.outerEpoch.length > 0 && data.outerEpoch.length <= 128 ? data.outerEpoch : undefined;
+  const wickEpoch = typeof data.wickEpoch === 'string' && data.wickEpoch.length > 0 && data.wickEpoch.length <= 128 ? data.wickEpoch : undefined;
 
   return {
     ...(wildsRegion ? { wildsRegion } : {}),
     ...(outerSeason ? { outerSeason } : {}),
-    ...(outerEpoch ? { outerEpoch } : {}),
+    ...(wickEpoch ? { wickEpoch } : {}),
     version: SAVE_VERSION,
     area: data.area as AreaId,
     position: { x, y },

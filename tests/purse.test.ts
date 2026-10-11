@@ -226,7 +226,7 @@ test('top-up and glim refusals have their words in every table that can see them
 });
 
 test('an outbox entry keeps its predicted glims change, and only a mutation may carry one', () => {
-  const base = { id: 1, kind: 'mutation', path: '/api/items/give', key: 'k', body: '{}', contract: 7, createdAt: 1, sent: false, barrier: false, offline: false };
+  const base = { id: 1, kind: 'mutation', path: '/api/items/give', key: 'k', body: '{}', contract: 8, createdAt: 1, sent: false, barrier: false, offline: false };
   const r = normalizeRecord({ ...emptyRecord('a', 'd'), nextId: 4, entries: [{ ...base, glims: -15 }, { ...base, id: 2, kind: 'mark', path: '/api/story/mark', glims: 9 }, { ...base, id: 3, glims: 2.5 }] });
   assert.equal(r!.entries[0]!.glims, -15);
   assert.equal(r!.entries[1]!.glims, undefined);
