@@ -236,4 +236,10 @@ enum ErrorCode {
   // 0.6.1 Glims (docs/design/silas-yard.md 1.7).
   ERROR_CODE_INSUFFICIENT_GLIMS = 225;
   ERROR_CODE_TOP_UP_CAP = 226;
+  // 0.8 The open map: paths players make and the frontier
+  // (docs/design/open-map.md 2.6, section 3).
+  ERROR_CODE_ALREADY_LAID = 227;
+  ERROR_CODE_NOT_YOUR_PATH = 228;
+  ERROR_CODE_CANNOT_LAY_HERE = 229;
+  ERROR_CODE_BEYOND_FRONTIER = 230;
 }

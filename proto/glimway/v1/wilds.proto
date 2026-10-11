@@ -4,7 +4,7 @@ option go_package = "glimway/server/internal/gen/glimway/v1;contract";
 import "google/protobuf/wrappers.proto";
 
 enum Dir { DIR_UNSPECIFIED = 0; DIR_NORTH = 1; DIR_EAST = 2; DIR_SOUTH = 3; DIR_WEST = 4; }
-enum SiteKind { SITE_KIND_UNSPECIFIED = 0; SITE_KIND_ECHO = 1; SITE_KIND_CAIRN = 2; SITE_KIND_NEST = 3; SITE_KIND_PLANK = 4; SITE_KIND_GIVEN = 5; SITE_KIND_REEDS = 6; }
+enum SiteKind { SITE_KIND_UNSPECIFIED = 0; SITE_KIND_ECHO = 1; SITE_KIND_CAIRN = 2; SITE_KIND_NEST = 3; SITE_KIND_PLANK = 4; SITE_KIND_GIVEN = 5; SITE_KIND_REEDS = 6; SITE_KIND_LAMP_STONE = 7; SITE_KIND_RUMOUR = 8; }
 message Tile { uint32 tx = 1; uint32 ty = 2; }
 message Exit { uint32 tx = 1; uint32 ty = 2; uint32 tw = 3; uint32 th = 4; Dir dir = 5; string to = 6; Tile entry = 7; }
 // All piece arrays have equal length; kind indexes kinds. flags holds two bits
@@ -16,22 +16,45 @@ message DecorList {
 message StorySite { string id = 1; SiteKind kind = 2; uint32 tx = 3; uint32 ty = 4; }
 // Ground: two row-major cells per byte, low nibble first. Solid: eight cells
 // per byte, least significant bit first. Tiles are local; offsets are pixels.
+// The key is (world, realm, layer, cx, cy) on signed chunk coordinates
+// (open-map.md 2.1): tile (x, y) in world tiles lies in chunk
+// (floor(x/size), floor(y/size)); north is -y.
 message WildsChunk {
-  string epoch_id = 1; string region = 2; string realm = 3; sint32 layer = 4;
+  // region, exits and spawn belong to generator v2's 3x3 regions. Generator
+  // v3 leaves them empty; lanes O-B and O-D delete them (and reserve the
+  // numbers) when v2 goes.
+  string epoch_id = 1; string region = 2 [deprecated = true]; string realm = 3; sint32 layer = 4;
   sint32 cx = 5; sint32 cy = 6; uint32 generator_version = 7; uint32 size = 8;
-  repeated string palette = 9; bytes ground = 10; bytes solid = 11; repeated Exit exits = 12;
-  DecorList decor = 13; repeated StorySite sites = 14; Tile spawn = 15; string look = 16; string mark = 17;
-  // Bodies live in immutable chunks; the region read carries only state.
+  repeated string palette = 9; bytes ground = 10; bytes solid = 11; repeated Exit exits = 12 [deprecated = true];
+  DecorList decor = 13; repeated StorySite sites = 14; Tile spawn = 15 [deprecated = true]; string look = 16; string mark = 17;
+  // Bodies live in immutable chunks; the near read carries only state.
   repeated WildsEntity entities = 18;
+  // The chunk's tier of difficulty (content tiers, wilds.Tier) and its main
+  // land (a content land id, for the map).
+  uint32 tier = 19; string land = 20;
+  // The cell places whose landmark stands in this chunk (open-map.md 2.10).
+  repeated WildsPlaceMark places = 21;
 }
+// A cell's place (open-map.md 2.2, 2.10): id "place:<cellX>:<cellY>", kind a
+// content place kind, (tx, ty) its landmark's chunk-local tile. A footprint
+// is not a place mark; its places are content.
+message WildsPlaceMark { string id = 1; string kind = 2; uint32 tx = 3; uint32 ty = 4; }
+// A signed chunk key within a world (open-map.md 2.1).
+message WildsChunkKey { string realm = 1; sint32 layer = 2; sint32 cx = 3; sint32 cy = 4; }
+// An inclusive rectangle of chunks.
+message WildsChunkRect { sint32 min_cx = 1; sint32 min_cy = 2; sint32 max_cx = 3; sint32 max_cy = 4; }
 message WildsEntity {
   string id = 1; string kind = 2; uint32 tx = 3; uint32 ty = 4;
   repeated string enemies = 5; string material = 6; uint32 tier = 7; string poi = 8;
 }
-// starts_at and ends_at are Unix seconds.
+// starts_at and ends_at are Unix seconds. kind is "still" (one per world,
+// never ends: the Tangle) or "wick" (one per world per wick: the Beyond).
+// region_id belongs to the 3x3 regions; lane O-C deletes it (and reserves
+// the number) with region_epochs.
 message WildsEpoch {
-  string id = 1; string world_seed = 2; string region_id = 3; uint32 generator_version = 4;
+  string id = 1; string world_seed = 2; string region_id = 3 [deprecated = true]; uint32 generator_version = 4;
   string season = 5; double starts_at = 6; google.protobuf.DoubleValue ends_at = 7;
+  string kind = 8;
 }
 // available_at and at are Unix seconds.
 message WildsEntityState {
@@ -45,11 +68,72 @@ message WildsDiscovery { string entity_id = 1; string poi_id = 2; string discove
 // All time fields are Unix seconds.
 message WildsLantern { string id = 1; string owner_id = 2; string display_name = 3; double x = 4; double y = 5; google.protobuf.StringValue lit_by = 6; double at = 7; google.protobuf.DoubleValue lit_at = 8; }
 message EchoAssignment { string site = 1; string member = 2; bool settled = 3; }
+// The 3x3 region read (GET /api/wilds/region/<id>); the near read replaces
+// it, and lane O-C deletes it.
 message WildsRegionResult {
   WildsEpoch epoch = 1; repeated WildsEntityState entities = 2; repeated WildsPersonalClaim personal_claims = 3;
   repeated WildsDiscovery discoveries = 4; repeated WildsLantern lanterns = 5;
   map<string,double> materials = 6; repeated EchoAssignment echoes = 7;
 }
+// The frontier the server enforces (open-map.md 2.6): in 0.8 a rectangle
+// (contract 8); 0.9's lamps add held chunks beside it.
+message WildsFrontier { WildsChunkRect rect = 1; }
+
+// One player-made change to one tile (section 3). tx and ty are local to
+// the chunk the changes are stored under. change is "cleared", "stone" or
+// "plank"; by is the account that made it; at is Unix seconds.
+message GroundChange { uint32 tx = 1; uint32 ty = 2; string change = 3; string by = 4; double at = 5; }
+// A chunk and epoch's changes: the world_changes row's state (entity
+// "ground", kind "ground"), at most one entry a tile.
+message GroundChanges { repeated GroundChange changes = 1; }
+// One chunk's changes as the near read and the path operations carry them.
+message ChunkGroundChanges { WildsChunkKey chunk = 1; string epoch = 2; GroundChanges changes = 3; }
+
+// A chunk past the frontier, seen dimly through the veil (decision 22): its
+// main land (a content land id) and whether the Wend crosses it. Never a
+// made or stored chunk.
+message WildsGlimpse { WildsChunkKey chunk = 1; string land = 2; bool river = 3; }
+
+// A named way (decision 23): a run of laid tiles joining two places (a
+// place mark id, or a footprint's content id). id is "way:<a>:<b>", a < b;
+// name is the words' wayName filled in; by is the account that laid most of
+// it; tiles is the run's length; at is Unix seconds. The worldchange row
+// (kind "way", entity id) holds this message as its state.
+message WildsWay {
+  string id = 1; string a = 2; string b = 3; string name = 4; string by = 5;
+  uint32 tiles = 6; string epoch = 7; double at = 8;
+}
+
+// GET /api/wilds/near/<cx>/<cy> (open-map.md 2.4): the epochs, the
+// frontier, and for the (2*radius+1)^2 chunks around (cx, cy) every state
+// the chunk bodies don't carry. Entity states, claims, discoveries and
+// lanterns name their epoch (or their entity's chunk, which picks it).
+message WildsNearResult {
+  WildsEpoch still = 1; WildsEpoch wick = 2; WildsFrontier frontier = 3;
+  WildsChunkKey center = 4; uint32 radius = 5;
+  repeated WildsEntityState entities = 6; repeated WildsPersonalClaim personal_claims = 7;
+  repeated WildsDiscovery discoveries = 8; repeated WildsLantern lanterns = 9;
+  // Echo assignments, where the window overlaps the Whitequiet.
+  repeated EchoAssignment echoes = 10;
+  repeated ChunkGroundChanges ground = 11;
+  map<string,double> materials = 12;
+  // The chunks within 2 outside the frontier that border the window.
+  repeated WildsGlimpse glimpse = 13;
+  // Ways with a tile in the window.
+  repeated WildsWay ways = 14;
+}
+
+// This wick's rumour (decision 19), in the state the client reads at start;
+// unset when there is none. The client builds Elara's words from the parts
+// and the content's rumour phrase tables: landmark is the place kind's
+// landmark decor kind, compass one of n ne e se s sw w nw (from the Commons
+// gate), ring the ring past the Whitequiet. site is the find's id
+// ("rumour:<cx>:<cy>"), opened whether this player has opened it.
+message WildsRumour {
+  string epoch = 1; string place = 2; string landmark = 3; string compass = 4;
+  uint32 ring = 5; bool past_river = 6; string site = 7; bool opened = 8;
+}
+
 message WildsMaterial { string id = 1; double qty = 2; }
 message WildsLoot { repeated WildsMaterial materials = 1; google.protobuf.StringValue trinket = 2; }
 // Row-major LAND vocabulary: grass, tree, stump, boulder, water, ford, slope, edge, path.

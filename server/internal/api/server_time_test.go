@@ -35,7 +35,7 @@ func TestServerClockHeaderOnEveryAnswer(t *testing.T) {
 		req := httptest.NewRequest(row.method, row.path, strings.NewReader(row.body))
 		contract := row.contract
 		if contract == "" {
-			contract = "7"
+			contract = "8"
 		}
 		req.Header.Set("X-Glimway-Contract", contract)
 		kind := row.contentType

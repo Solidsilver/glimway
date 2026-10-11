@@ -110,7 +110,7 @@ export function gameStateOf(p: PlayerState): GameState {
     glims: glims.balance,
     xpGlims: glims.xpEarned,
     glimXp: glims.xpMark,
-    ...(place.outerEpoch ? { outerEpoch: place.outerEpoch } : {}),
+    ...(place.wickEpoch ? { wickEpoch: place.wickEpoch } : {}),
   });
 }
 

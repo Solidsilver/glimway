@@ -14,7 +14,7 @@ import type Phaser from 'phaser'
 import { bus, EV } from '../events.ts'
 import { emitResidents } from '../residents.ts'
 import { isSafeArea } from '../../lib/habitica/sync.ts'
-import { loadWilds } from '../../lib/wilds/data.ts'
+import { loadWilds, wildsV2Regions } from '../../lib/wilds/data.ts'
 import { WILDS_REGION_ID, parseChunkArea } from '../wilds/regions.ts'
 import { onSceneEnd } from '../scene-end.ts'
 import type { Session } from '../session.ts'
@@ -75,7 +75,7 @@ export class Unmoored {
     bus.emit(EV.unmoored, { active: this.state.active })
     const chunk = parseChunkArea(deps.world.areaId)
     const wilds = loadWilds()
-    const tangle = wilds.regions.find((region) => region.id === WILDS_REGION_ID)
+    const tangle = wildsV2Regions().find((region) => region.id === WILDS_REGION_ID)
     this.deep = !!(
       chunk &&
       tangle &&

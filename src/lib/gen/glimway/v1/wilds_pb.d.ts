@@ -173,17 +173,25 @@ export declare const StorySiteSchema: GenMessage<StorySite, {validType: StorySit
 /**
  * Ground: two row-major cells per byte, low nibble first. Solid: eight cells
  * per byte, least significant bit first. Tiles are local; offsets are pixels.
+ * The key is (world, realm, layer, cx, cy) on signed chunk coordinates
+ * (open-map.md 2.1): tile (x, y) in world tiles lies in chunk
+ * (floor(x/size), floor(y/size)); north is -y.
  *
  * @generated from message glimway.v1.WildsChunk
  */
 export declare type WildsChunk = Message<"glimway.v1.WildsChunk"> & {
   /**
+   * region, exits and spawn belong to generator v2's 3x3 regions. Generator
+   * v3 leaves them empty; lanes O-B and O-D delete them (and reserve the
+   * numbers) when v2 goes.
+   *
    * @generated from field: string epoch_id = 1;
    */
   epochId: string;
 
   /**
-   * @generated from field: string region = 2;
+   * @generated from field: string region = 2 [deprecated = true];
+   * @deprecated
    */
   region: string;
 
@@ -233,7 +241,8 @@ export declare type WildsChunk = Message<"glimway.v1.WildsChunk"> & {
   solid: Uint8Array;
 
   /**
-   * @generated from field: repeated glimway.v1.Exit exits = 12;
+   * @generated from field: repeated glimway.v1.Exit exits = 12 [deprecated = true];
+   * @deprecated
    */
   exits: Exit[];
 
@@ -248,7 +257,8 @@ export declare type WildsChunk = Message<"glimway.v1.WildsChunk"> & {
   sites: StorySite[];
 
   /**
-   * @generated from field: glimway.v1.Tile spawn = 15;
+   * @generated from field: glimway.v1.Tile spawn = 15 [deprecated = true];
+   * @deprecated
    */
   spawn?: Tile | undefined;
 
@@ -263,11 +273,31 @@ export declare type WildsChunk = Message<"glimway.v1.WildsChunk"> & {
   mark: string;
 
   /**
-   * Bodies live in immutable chunks; the region read carries only state.
+   * Bodies live in immutable chunks; the near read carries only state.
    *
    * @generated from field: repeated glimway.v1.WildsEntity entities = 18;
    */
   entities: WildsEntity[];
+
+  /**
+   * The chunk's tier of difficulty (content tiers, wilds.Tier) and its main
+   * land (a content land id, for the map).
+   *
+   * @generated from field: uint32 tier = 19;
+   */
+  tier: number;
+
+  /**
+   * @generated from field: string land = 20;
+   */
+  land: string;
+
+  /**
+   * The cell places whose landmark stands in this chunk (open-map.md 2.10).
+   *
+   * @generated from field: repeated glimway.v1.WildsPlaceMark places = 21;
+   */
+  places: WildsPlaceMark[];
 };
 
 export declare type WildsChunkValid = WildsChunk;
@@ -277,6 +307,113 @@ export declare type WildsChunkValid = WildsChunk;
  * Use `create(WildsChunkSchema)` to create a new message.
  */
 export declare const WildsChunkSchema: GenMessage<WildsChunk, {validType: WildsChunkValid}>;
+
+/**
+ * A cell's place (open-map.md 2.2, 2.10): id "place:<cellX>:<cellY>", kind a
+ * content place kind, (tx, ty) its landmark's chunk-local tile. A footprint
+ * is not a place mark; its places are content.
+ *
+ * @generated from message glimway.v1.WildsPlaceMark
+ */
+export declare type WildsPlaceMark = Message<"glimway.v1.WildsPlaceMark"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string kind = 2;
+   */
+  kind: string;
+
+  /**
+   * @generated from field: uint32 tx = 3;
+   */
+  tx: number;
+
+  /**
+   * @generated from field: uint32 ty = 4;
+   */
+  ty: number;
+};
+
+export declare type WildsPlaceMarkValid = WildsPlaceMark;
+
+/**
+ * Describes the message glimway.v1.WildsPlaceMark.
+ * Use `create(WildsPlaceMarkSchema)` to create a new message.
+ */
+export declare const WildsPlaceMarkSchema: GenMessage<WildsPlaceMark, {validType: WildsPlaceMarkValid}>;
+
+/**
+ * A signed chunk key within a world (open-map.md 2.1).
+ *
+ * @generated from message glimway.v1.WildsChunkKey
+ */
+export declare type WildsChunkKey = Message<"glimway.v1.WildsChunkKey"> & {
+  /**
+   * @generated from field: string realm = 1;
+   */
+  realm: string;
+
+  /**
+   * @generated from field: sint32 layer = 2;
+   */
+  layer: number;
+
+  /**
+   * @generated from field: sint32 cx = 3;
+   */
+  cx: number;
+
+  /**
+   * @generated from field: sint32 cy = 4;
+   */
+  cy: number;
+};
+
+export declare type WildsChunkKeyValid = WildsChunkKey;
+
+/**
+ * Describes the message glimway.v1.WildsChunkKey.
+ * Use `create(WildsChunkKeySchema)` to create a new message.
+ */
+export declare const WildsChunkKeySchema: GenMessage<WildsChunkKey, {validType: WildsChunkKeyValid}>;
+
+/**
+ * An inclusive rectangle of chunks.
+ *
+ * @generated from message glimway.v1.WildsChunkRect
+ */
+export declare type WildsChunkRect = Message<"glimway.v1.WildsChunkRect"> & {
+  /**
+   * @generated from field: sint32 min_cx = 1;
+   */
+  minCx: number;
+
+  /**
+   * @generated from field: sint32 min_cy = 2;
+   */
+  minCy: number;
+
+  /**
+   * @generated from field: sint32 max_cx = 3;
+   */
+  maxCx: number;
+
+  /**
+   * @generated from field: sint32 max_cy = 4;
+   */
+  maxCy: number;
+};
+
+export declare type WildsChunkRectValid = WildsChunkRect;
+
+/**
+ * Describes the message glimway.v1.WildsChunkRect.
+ * Use `create(WildsChunkRectSchema)` to create a new message.
+ */
+export declare const WildsChunkRectSchema: GenMessage<WildsChunkRect, {validType: WildsChunkRectValid}>;
 
 /**
  * @generated from message glimway.v1.WildsEntity
@@ -332,7 +469,10 @@ export declare type WildsEntityValid = WildsEntity;
 export declare const WildsEntitySchema: GenMessage<WildsEntity, {validType: WildsEntityValid}>;
 
 /**
- * starts_at and ends_at are Unix seconds.
+ * starts_at and ends_at are Unix seconds. kind is "still" (one per world,
+ * never ends: the Tangle) or "wick" (one per world per wick: the Beyond).
+ * region_id belongs to the 3x3 regions; lane O-C deletes it (and reserves
+ * the number) with region_epochs.
  *
  * @generated from message glimway.v1.WildsEpoch
  */
@@ -348,7 +488,8 @@ export declare type WildsEpoch = Message<"glimway.v1.WildsEpoch"> & {
   worldSeed: string;
 
   /**
-   * @generated from field: string region_id = 3;
+   * @generated from field: string region_id = 3 [deprecated = true];
+   * @deprecated
    */
   regionId: string;
 
@@ -371,6 +512,11 @@ export declare type WildsEpoch = Message<"glimway.v1.WildsEpoch"> & {
    * @generated from field: google.protobuf.DoubleValue ends_at = 7;
    */
   endsAt?: number | undefined;
+
+  /**
+   * @generated from field: string kind = 8;
+   */
+  kind: string;
 };
 
 export declare type WildsEpochValid = WildsEpoch;
@@ -580,6 +726,9 @@ export declare type EchoAssignmentValid = EchoAssignment;
 export declare const EchoAssignmentSchema: GenMessage<EchoAssignment, {validType: EchoAssignmentValid}>;
 
 /**
+ * The 3x3 region read (GET /api/wilds/region/<id>); the near read replaces
+ * it, and lane O-C deletes it.
+ *
  * @generated from message glimway.v1.WildsRegionResult
  */
 export declare type WildsRegionResult = Message<"glimway.v1.WildsRegionResult"> & {
@@ -626,6 +775,365 @@ export declare type WildsRegionResultValid = WildsRegionResult;
  * Use `create(WildsRegionResultSchema)` to create a new message.
  */
 export declare const WildsRegionResultSchema: GenMessage<WildsRegionResult, {validType: WildsRegionResultValid}>;
+
+/**
+ * The frontier the server enforces (open-map.md 2.6): in 0.8 a rectangle
+ * (contract 8); 0.9's lamps add held chunks beside it.
+ *
+ * @generated from message glimway.v1.WildsFrontier
+ */
+export declare type WildsFrontier = Message<"glimway.v1.WildsFrontier"> & {
+  /**
+   * @generated from field: glimway.v1.WildsChunkRect rect = 1;
+   */
+  rect?: WildsChunkRect | undefined;
+};
+
+export declare type WildsFrontierValid = WildsFrontier;
+
+/**
+ * Describes the message glimway.v1.WildsFrontier.
+ * Use `create(WildsFrontierSchema)` to create a new message.
+ */
+export declare const WildsFrontierSchema: GenMessage<WildsFrontier, {validType: WildsFrontierValid}>;
+
+/**
+ * One player-made change to one tile (section 3). tx and ty are local to
+ * the chunk the changes are stored under. change is "cleared", "stone" or
+ * "plank"; by is the account that made it; at is Unix seconds.
+ *
+ * @generated from message glimway.v1.GroundChange
+ */
+export declare type GroundChange = Message<"glimway.v1.GroundChange"> & {
+  /**
+   * @generated from field: uint32 tx = 1;
+   */
+  tx: number;
+
+  /**
+   * @generated from field: uint32 ty = 2;
+   */
+  ty: number;
+
+  /**
+   * @generated from field: string change = 3;
+   */
+  change: string;
+
+  /**
+   * @generated from field: string by = 4;
+   */
+  by: string;
+
+  /**
+   * @generated from field: double at = 5;
+   */
+  at: number;
+};
+
+export declare type GroundChangeValid = GroundChange;
+
+/**
+ * Describes the message glimway.v1.GroundChange.
+ * Use `create(GroundChangeSchema)` to create a new message.
+ */
+export declare const GroundChangeSchema: GenMessage<GroundChange, {validType: GroundChangeValid}>;
+
+/**
+ * A chunk and epoch's changes: the world_changes row's state (entity
+ * "ground", kind "ground"), at most one entry a tile.
+ *
+ * @generated from message glimway.v1.GroundChanges
+ */
+export declare type GroundChanges = Message<"glimway.v1.GroundChanges"> & {
+  /**
+   * @generated from field: repeated glimway.v1.GroundChange changes = 1;
+   */
+  changes: GroundChange[];
+};
+
+export declare type GroundChangesValid = GroundChanges;
+
+/**
+ * Describes the message glimway.v1.GroundChanges.
+ * Use `create(GroundChangesSchema)` to create a new message.
+ */
+export declare const GroundChangesSchema: GenMessage<GroundChanges, {validType: GroundChangesValid}>;
+
+/**
+ * One chunk's changes as the near read and the path operations carry them.
+ *
+ * @generated from message glimway.v1.ChunkGroundChanges
+ */
+export declare type ChunkGroundChanges = Message<"glimway.v1.ChunkGroundChanges"> & {
+  /**
+   * @generated from field: glimway.v1.WildsChunkKey chunk = 1;
+   */
+  chunk?: WildsChunkKey | undefined;
+
+  /**
+   * @generated from field: string epoch = 2;
+   */
+  epoch: string;
+
+  /**
+   * @generated from field: glimway.v1.GroundChanges changes = 3;
+   */
+  changes?: GroundChanges | undefined;
+};
+
+export declare type ChunkGroundChangesValid = ChunkGroundChanges;
+
+/**
+ * Describes the message glimway.v1.ChunkGroundChanges.
+ * Use `create(ChunkGroundChangesSchema)` to create a new message.
+ */
+export declare const ChunkGroundChangesSchema: GenMessage<ChunkGroundChanges, {validType: ChunkGroundChangesValid}>;
+
+/**
+ * A chunk past the frontier, seen dimly through the veil (decision 22): its
+ * main land (a content land id) and whether the Wend crosses it. Never a
+ * made or stored chunk.
+ *
+ * @generated from message glimway.v1.WildsGlimpse
+ */
+export declare type WildsGlimpse = Message<"glimway.v1.WildsGlimpse"> & {
+  /**
+   * @generated from field: glimway.v1.WildsChunkKey chunk = 1;
+   */
+  chunk?: WildsChunkKey | undefined;
+
+  /**
+   * @generated from field: string land = 2;
+   */
+  land: string;
+
+  /**
+   * @generated from field: bool river = 3;
+   */
+  river: boolean;
+};
+
+export declare type WildsGlimpseValid = WildsGlimpse;
+
+/**
+ * Describes the message glimway.v1.WildsGlimpse.
+ * Use `create(WildsGlimpseSchema)` to create a new message.
+ */
+export declare const WildsGlimpseSchema: GenMessage<WildsGlimpse, {validType: WildsGlimpseValid}>;
+
+/**
+ * A named way (decision 23): a run of laid tiles joining two places (a
+ * place mark id, or a footprint's content id). id is "way:<a>:<b>", a < b;
+ * name is the words' wayName filled in; by is the account that laid most of
+ * it; tiles is the run's length; at is Unix seconds. The worldchange row
+ * (kind "way", entity id) holds this message as its state.
+ *
+ * @generated from message glimway.v1.WildsWay
+ */
+export declare type WildsWay = Message<"glimway.v1.WildsWay"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string a = 2;
+   */
+  a: string;
+
+  /**
+   * @generated from field: string b = 3;
+   */
+  b: string;
+
+  /**
+   * @generated from field: string name = 4;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string by = 5;
+   */
+  by: string;
+
+  /**
+   * @generated from field: uint32 tiles = 6;
+   */
+  tiles: number;
+
+  /**
+   * @generated from field: string epoch = 7;
+   */
+  epoch: string;
+
+  /**
+   * @generated from field: double at = 8;
+   */
+  at: number;
+};
+
+export declare type WildsWayValid = WildsWay;
+
+/**
+ * Describes the message glimway.v1.WildsWay.
+ * Use `create(WildsWaySchema)` to create a new message.
+ */
+export declare const WildsWaySchema: GenMessage<WildsWay, {validType: WildsWayValid}>;
+
+/**
+ * GET /api/wilds/near/<cx>/<cy> (open-map.md 2.4): the epochs, the
+ * frontier, and for the (2*radius+1)^2 chunks around (cx, cy) every state
+ * the chunk bodies don't carry. Entity states, claims, discoveries and
+ * lanterns name their epoch (or their entity's chunk, which picks it).
+ *
+ * @generated from message glimway.v1.WildsNearResult
+ */
+export declare type WildsNearResult = Message<"glimway.v1.WildsNearResult"> & {
+  /**
+   * @generated from field: glimway.v1.WildsEpoch still = 1;
+   */
+  still?: WildsEpoch | undefined;
+
+  /**
+   * @generated from field: glimway.v1.WildsEpoch wick = 2;
+   */
+  wick?: WildsEpoch | undefined;
+
+  /**
+   * @generated from field: glimway.v1.WildsFrontier frontier = 3;
+   */
+  frontier?: WildsFrontier | undefined;
+
+  /**
+   * @generated from field: glimway.v1.WildsChunkKey center = 4;
+   */
+  center?: WildsChunkKey | undefined;
+
+  /**
+   * @generated from field: uint32 radius = 5;
+   */
+  radius: number;
+
+  /**
+   * @generated from field: repeated glimway.v1.WildsEntityState entities = 6;
+   */
+  entities: WildsEntityState[];
+
+  /**
+   * @generated from field: repeated glimway.v1.WildsPersonalClaim personal_claims = 7;
+   */
+  personalClaims: WildsPersonalClaim[];
+
+  /**
+   * @generated from field: repeated glimway.v1.WildsDiscovery discoveries = 8;
+   */
+  discoveries: WildsDiscovery[];
+
+  /**
+   * @generated from field: repeated glimway.v1.WildsLantern lanterns = 9;
+   */
+  lanterns: WildsLantern[];
+
+  /**
+   * Echo assignments, where the window overlaps the Whitequiet.
+   *
+   * @generated from field: repeated glimway.v1.EchoAssignment echoes = 10;
+   */
+  echoes: EchoAssignment[];
+
+  /**
+   * @generated from field: repeated glimway.v1.ChunkGroundChanges ground = 11;
+   */
+  ground: ChunkGroundChanges[];
+
+  /**
+   * @generated from field: map<string, double> materials = 12;
+   */
+  materials: { [key: string]: number };
+
+  /**
+   * The chunks within 2 outside the frontier that border the window.
+   *
+   * @generated from field: repeated glimway.v1.WildsGlimpse glimpse = 13;
+   */
+  glimpse: WildsGlimpse[];
+
+  /**
+   * Ways with a tile in the window.
+   *
+   * @generated from field: repeated glimway.v1.WildsWay ways = 14;
+   */
+  ways: WildsWay[];
+};
+
+export declare type WildsNearResultValid = WildsNearResult;
+
+/**
+ * Describes the message glimway.v1.WildsNearResult.
+ * Use `create(WildsNearResultSchema)` to create a new message.
+ */
+export declare const WildsNearResultSchema: GenMessage<WildsNearResult, {validType: WildsNearResultValid}>;
+
+/**
+ * This wick's rumour (decision 19), in the state the client reads at start;
+ * unset when there is none. The client builds Elara's words from the parts
+ * and the content's rumour phrase tables: landmark is the place kind's
+ * landmark decor kind, compass one of n ne e se s sw w nw (from the Commons
+ * gate), ring the ring past the Whitequiet. site is the find's id
+ * ("rumour:<cx>:<cy>"), opened whether this player has opened it.
+ *
+ * @generated from message glimway.v1.WildsRumour
+ */
+export declare type WildsRumour = Message<"glimway.v1.WildsRumour"> & {
+  /**
+   * @generated from field: string epoch = 1;
+   */
+  epoch: string;
+
+  /**
+   * @generated from field: string place = 2;
+   */
+  place: string;
+
+  /**
+   * @generated from field: string landmark = 3;
+   */
+  landmark: string;
+
+  /**
+   * @generated from field: string compass = 4;
+   */
+  compass: string;
+
+  /**
+   * @generated from field: uint32 ring = 5;
+   */
+  ring: number;
+
+  /**
+   * @generated from field: bool past_river = 6;
+   */
+  pastRiver: boolean;
+
+  /**
+   * @generated from field: string site = 7;
+   */
+  site: string;
+
+  /**
+   * @generated from field: bool opened = 8;
+   */
+  opened: boolean;
+};
+
+export declare type WildsRumourValid = WildsRumour;
+
+/**
+ * Describes the message glimway.v1.WildsRumour.
+ * Use `create(WildsRumourSchema)` to create a new message.
+ */
+export declare const WildsRumourSchema: GenMessage<WildsRumour, {validType: WildsRumourValid}>;
 
 /**
  * @generated from message glimway.v1.WildsMaterial
@@ -782,6 +1290,16 @@ export enum SiteKind {
    * @generated from enum value: SITE_KIND_REEDS = 6;
    */
   REEDS = 6,
+
+  /**
+   * @generated from enum value: SITE_KIND_LAMP_STONE = 7;
+   */
+  LAMP_STONE = 7,
+
+  /**
+   * @generated from enum value: SITE_KIND_RUMOUR = 8;
+   */
+  RUMOUR = 8,
 }
 
 /**

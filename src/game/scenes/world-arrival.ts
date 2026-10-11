@@ -41,7 +41,7 @@ export function arrive(
     // This session's last outer season, or (first arrival after a load) the
     // epoch the server last recorded this place in.
     const seenSeason = state.outerSeason ? state.outerSeason !== season : false
-    const recorded = !state.outerSeason && !!state.outerEpoch && !!epoch.id && state.outerEpoch !== epoch.id
+    const recorded = !state.outerSeason && !!state.wickEpoch && !!epoch.id && state.wickEpoch !== epoch.id
     if (seenSeason || recorded) {
       turnedAway = !asked.turned
       state.position = wildsArrivalPosition(wildsEpoch())

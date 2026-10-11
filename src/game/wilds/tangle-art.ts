@@ -486,7 +486,10 @@ const drawReeds: Draw = (c, _rnd, w, h, v) => {
   void w
 }
 
-const DRAW: Record<DecorKind, Draw> = {
+// The painted kinds. The 0.8 meadow, Wend and landmark kinds have no
+// painter: they come from the open-map art pass (lane O-F), which lane O-D
+// wires in; no generator places them before then.
+const DRAW: Partial<Record<DecorKind, Draw>> = {
   oak: drawOak,
   pine: drawPine,
   birch: drawBirch,
@@ -553,7 +556,7 @@ export function ensureTangleAtlas(scene: Phaser.Scene, key: string): boolean {
       const c = piece.getContext('2d', { willReadFrequently: true })!
       c.imageSmoothingEnabled = false
       const name = tangleFrame(kind, v)
-      if (!drawDelivered(scene, c, kind, v, w, h, key)) DRAW[kind](c, rng01(fnv1a32(name)), w, h, v)
+      if (!drawDelivered(scene, c, kind, v, w, h, key)) DRAW[kind]!(c, rng01(fnv1a32(name)), w, h, v)
       const x = pad + v * (w + pad)
       ac.drawImage(piece, x, y)
       frames.push([name, x, y, w, h])

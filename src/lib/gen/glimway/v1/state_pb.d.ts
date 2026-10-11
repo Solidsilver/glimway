@@ -10,7 +10,8 @@ import type { Companions, CompanionsResult, MountHomeResult, MountOutResult, Sta
 import type { FishCancelResult, FishCastResult, FishingState, FishSettleResult } from "./fishing_pb.js";
 import type { Purse, PurseTopUpResult } from "./purse_pb.js";
 import type { Wardrobe, WardrobeCheckResult, WardrobeResult } from "./wardrobe_pb.js";
-import type { FallResult, MarkResult, ProfileResult, QuestStepResult, ReportResult, SettleEchoResult, SpendResult, TakePaperResult, WildsClaimResult, WildsLanternResult } from "./operations_pb.js";
+import type { WildsRumour } from "./wilds_pb.js";
+import type { FallResult, MarkResult, ProfileResult, QuestStepResult, ReportResult, SettleEchoResult, SpendResult, TakePaperResult, WildsClaimResult, WildsClearResult, WildsDiscoverResult, WildsLanternResult, WildsLayResult, WildsLiftResult } from "./operations_pb.js";
 import type { ContributeResult, CraftResult, DeskCopyResult, HearthCraftResult, LibraryDonateResult, MailActionResult, MailRecallResult, MailSendResult, MendResult, WorkshopView } from "./village_pb.js";
 import type { WorldChoice, WorldLeaveResult, WorldMoveResult } from "./world_pb.js";
 
@@ -294,6 +295,13 @@ export declare type PlayerState = Message<"glimway.v1.PlayerState"> & {
    * @generated from field: glimway.v1.Glims glims = 13;
    */
   glims?: Glims | undefined;
+
+  /**
+   * This wick's rumour (open-map.md 2.10); unset when there is none.
+   *
+   * @generated from field: glimway.v1.WildsRumour rumour = 14;
+   */
+  rumour?: WildsRumour | undefined;
 };
 
 export declare type PlayerStateValid = PlayerState;
@@ -557,6 +565,30 @@ export declare type Envelope = Message<"glimway.v1.Envelope"> & {
      */
     value: WardrobeCheckResult;
     case: "wardrobeCheck";
+  } | {
+    /**
+     * @generated from field: glimway.v1.WildsClearResult wilds_clear = 43;
+     */
+    value: WildsClearResult;
+    case: "wildsClear";
+  } | {
+    /**
+     * @generated from field: glimway.v1.WildsLayResult wilds_lay = 44;
+     */
+    value: WildsLayResult;
+    case: "wildsLay";
+  } | {
+    /**
+     * @generated from field: glimway.v1.WildsLiftResult wilds_lift = 45;
+     */
+    value: WildsLiftResult;
+    case: "wildsLift";
+  } | {
+    /**
+     * @generated from field: glimway.v1.WildsDiscoverResult wilds_discover = 46;
+     */
+    value: WildsDiscoverResult;
+    case: "wildsDiscover";
   } | { case: undefined; value?: undefined };
 };
 

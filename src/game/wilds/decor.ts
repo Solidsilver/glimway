@@ -1,11 +1,19 @@
 /**
  * The Wilds' drawing vocabulary: the decor kinds the server's generator
- * places (server/internal/wilds/woods_v2.go), their art footprints, and the
- * ground ids a chunk paints with. Chunks name both by string (a chunk's
- * `palette` and `decor.kinds`); these tables are what the art reads them as.
+ * places and the ground ids a chunk paints with. Both lists, and the decor
+ * art footprints, are content (content/wilds.json `decor` and `grounds`),
+ * shared with the generator (server/internal/wilds/woods_v2.go). Chunks name
+ * both by string (a chunk's `palette` and `decor.kinds`); these tables are
+ * what the art reads them as.
  */
 import { TERRAIN } from '../../lib/tile.ts';
+import { loadWilds, wildsGround } from '../../lib/wilds/data.ts';
 
+/**
+ * Every content decor kind, as a type the art can key tables by. The list
+ * is content's; tests/wilds-loader.test.ts pins this union to it, so a kind
+ * added to content must be added here (and drawn) in the same change.
+ */
 export type DecorKind =
   | 'oak'
   | 'pine'
@@ -25,52 +33,50 @@ export type DecorKind =
   | 'reeds'
   | 'roots'
   | 'litter'
-  | 'pebbles';
+  | 'pebbles'
+  | 'meadow-grass'
+  | 'meadow-flowers'
+  | 'meadow-outcrop'
+  | 'meadow-oak'
+  | 'meadow-stone'
+  | 'bank-stones'
+  | 'split-oak'
+  | 'standing-stone';
 
-/** Ground ids the Wilds paint with (the ground art reads them back). */
+const terrainOf = (id: string): number => {
+  const t = (TERRAIN as Record<string, number>)[wildsGround(id).terrain];
+  if (t === undefined) throw new Error(`wilds: ground ${id} has no terrain`);
+  return t;
+};
+
+/** Ground ids the Wilds paint with (the ground art reads them back), from content. */
 export const TANGLE_GROUND = {
   /** Under the trees: dark loam, moss and leaf litter. */
-  woods: TERRAIN.grass_b,
+  woods: terrainOf('woods'),
   /** Walkable moss in clearings and glades. */
-  moss: TERRAIN.grass_a,
+  moss: terrainOf('moss'),
   /** The trodden line of a path. */
-  path: TERRAIN.path_a,
+  path: terrainOf('path'),
   /** Walkable verge beside a path's trodden line (moss, worn at the middle). */
-  verge: TERRAIN.path_b,
+  verge: terrainOf('verge'),
   /** Bare, trodden earth around camps. */
-  trodden: TERRAIN.dirt,
+  trodden: terrainOf('trodden'),
   /** Broken cobbles of the old road. */
-  road: TERRAIN.cobble_moss,
+  road: terrainOf('road'),
   /** Still water (a backwater of the Wend): solid. */
-  water: TERRAIN.water_a,
+  water: terrainOf('water'),
 } as const;
+
+export interface DecorArt { w: number; h: number; blocking: boolean; flat: boolean }
 
 /**
  * Art footprint per decor kind, in px: width centred on the anchor and
  * height above it. `blocking` pieces only ever stand on solid tiles; `flat`
  * ones are ground decals drawn under everything.
  */
-export const DECOR_ART: Record<DecorKind, { w: number; h: number; blocking: boolean; flat: boolean }> = {
-  oak: { w: 30, h: 32, blocking: true, flat: false },
-  pine: { w: 22, h: 36, blocking: true, flat: false },
-  birch: { w: 22, h: 32, blocking: true, flat: false },
-  'iron-oak': { w: 40, h: 42, blocking: true, flat: false },
-  snag: { w: 18, h: 28, blocking: true, flat: false },
-  thicket: { w: 24, h: 18, blocking: true, flat: false },
-  stump: { w: 18, h: 14, blocking: true, flat: false },
-  'ring-stump': { w: 22, h: 14, blocking: true, flat: false },
-  log: { w: 32, h: 13, blocking: true, flat: false },
-  boulder: { w: 20, h: 15, blocking: true, flat: false },
-  cairn: { w: 14, h: 21, blocking: true, flat: false },
-  fern: { w: 15, h: 11, blocking: false, flat: false },
-  grass: { w: 11, h: 9, blocking: false, flat: false },
-  flowers: { w: 11, h: 7, blocking: false, flat: false },
-  turncaps: { w: 13, h: 9, blocking: false, flat: false },
-  reeds: { w: 14, h: 15, blocking: false, flat: false },
-  roots: { w: 16, h: 12, blocking: false, flat: true },
-  litter: { w: 14, h: 9, blocking: false, flat: true },
-  pebbles: { w: 11, h: 7, blocking: false, flat: true },
-};
+export const DECOR_ART = Object.fromEntries(
+  loadWilds().decor.map((d) => [d.kind, { w: d.w, h: d.h, blocking: d.blocking, flat: d.flat }]),
+) as Record<DecorKind, DecorArt>;
 
 export function isDecorKind(k: string): k is DecorKind {
   return Object.hasOwn(DECOR_ART, k);

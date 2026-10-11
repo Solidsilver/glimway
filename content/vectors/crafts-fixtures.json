@@ -1,5 +1,5 @@
 {
-  "comment": "Sample messages for the 0.5 Crafts lanes (docs/design/crafts.md 6.1), in their ProtoJSON spellings \u2014 the shapes lanes B-G send, store and draw. Both languages decode them in tests (tests/crafts-fixtures.test.ts, server/internal/api/crafts_fixtures_test.go). Every field the wire spells is here: unset messages are null, collections are empty, zeros and falses are spelled; only proto3-optional fields (PresenceAbility.accountId) are omitted when unset.",
+  "comment": "Sample messages for the 0.5 Crafts lanes (docs/design/crafts.md 6.1), in their ProtoJSON spellings — the shapes lanes B-G send, store and draw. Both languages decode them in tests (tests/crafts-fixtures.test.ts, server/internal/api/crafts_fixtures_test.go). Every field the wire spells is here: unset messages are null, collections are empty, zeros and falses are spelled; only proto3-optional fields (PresenceAbility.accountId) are omitted when unset.",
   "messages": [
     {
       "name": "companions",
@@ -691,7 +691,7 @@
             "x": 400,
             "y": 300,
             "placeSetVersion": 0,
-            "outerEpoch": ""
+            "wickEpoch": ""
           },
           "story": {
             "quests": {},
@@ -750,7 +750,8 @@
               "armor": "armor_armoire_admiralsUniform",
               "shield": "none"
             }
-          }
+          },
+          "rumour": null
         },
         "stall": {
           "home": {
@@ -917,7 +918,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "story": {
           "quests": {},
@@ -976,7 +977,8 @@
             "armor": "armor_armoire_admiralsUniform",
             "shield": "none"
           }
-        }
+        },
+        "rumour": null
       }
     }
   ]

@@ -67,6 +67,10 @@ export declare type OpHeaderValid = OpHeader;
 export declare const OpHeaderSchema: GenMessage<OpHeader, {validType: OpHeaderValid}>;
 
 /**
+ * In the open map (contract 8) a Wilds place is area "wilds" with x and y in
+ * world pixels, signed (open-map.md 2.4); "wilds:<region>" with
+ * region-wide pixels is generator v2's, until lanes O-C and O-D move it.
+ *
  * @generated from message glimway.v1.Where
  */
 export declare type Where = Message<"glimway.v1.Where"> & {
@@ -168,8 +172,9 @@ export declare type VitalsValid = Vitals;
 export declare const VitalsSchema: GenMessage<Vitals, {validType: VitalsValid}>;
 
 /**
- * outer_epoch: the outer Wilds epoch this player's place was last recorded in
- * ('' before any); a place left in an ended epoch is moved to the entrance.
+ * wick_epoch: the wick epoch this player's place was last recorded in ('' before
+ * any); a place left in an ended epoch is moved to the entrance.
+ * (outer_epoch, the 3x3 regions' name for it, was 5.)
  *
  * @generated from message glimway.v1.Place
  */
@@ -195,9 +200,9 @@ export declare type Place = Message<"glimway.v1.Place"> & {
   placeSetVersion: number;
 
   /**
-   * @generated from field: string outer_epoch = 5;
+   * @generated from field: string wick_epoch = 6;
    */
-  outerEpoch: string;
+  wickEpoch: string;
 };
 
 export declare type PlaceValid = Place;

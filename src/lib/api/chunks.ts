@@ -1,6 +1,6 @@
 import { clone, fromBinary } from '@bufbuild/protobuf';
 import { WildsChunkSchema, Dir, SiteKind, type Exit, type WildsChunk, type WildsEntity } from '../gen/glimway/v1/wilds_pb.js';
-import { loadWilds } from '../wilds/data.ts';
+import { wildsV2Regions } from '../wilds/data.ts';
 
 export const CHUNK_SIZE = 24;
 const destinationSize = (to: string): [number, number] => {
@@ -13,7 +13,7 @@ const CROSSING_CHUNK = { cx: 1, cy: 0 };
 const STEP: Record<number, [number, number]> = { [Dir.NORTH]: [0, -1], [Dir.SOUTH]: [0, 1], [Dir.WEST]: [-1, 0], [Dir.EAST]: [1, 0] };
 
 function entryOf(region: string): { cx: number; cy: number } {
-  const r = loadWilds().regions.find((x) => x.id === region);
+  const r = wildsV2Regions().find((x) => x.id === region);
   if (!r) throw new Error('unknown region');
   return { cx: r.entryX, cy: r.entryY };
 }

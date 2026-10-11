@@ -13,26 +13,30 @@ message Wilds {
     expression: "this.chunk_size % 2 == 0"
   };
   // The generator's rules version; a stored chunk's epoch carries it.
-  int32 generator_version = 1 [(buf.validate.field).int32.const = 2];
+  int32 generator_version = 1 [(buf.validate.field).int32.const = 3];
   // One chunk's side length in tiles; the generators keep margins around it.
   int32 chunk_size = 2 [(buf.validate.field).int32.gte = 16];
-  // How far from the Tangle entry the deep tangle begins.
+  // How far from the Tangle's middle chunk the deep tangle begins (design
+  // 2.4: deepCountry is tier 2 and up, or the Tangle's far chunks).
   int32 deep_tangle_manhattan_distance = 3 [(buf.validate.field).int32.gte = 1];
-  // The two regions (inner Tangle, outer Wilds); ids unique (code rule).
-  repeated WildsRegion regions = 4 [(buf.validate.field).repeated.min_items = 1];
+  // The 3x3 regions went with contract 8: the Tangle and the Whitequiet are
+  // footprints in `places`.
+  reserved 4;
+  reserved "regions";
   // Enemy vocabularies; camp mixes may name only these (code rule).
   repeated string enemy_kinds = 5 [(buf.validate.field).repeated = {
     min_items: 1
     items: {string: {pattern: "^[a-z0-9-]{1,100}$"}}
   }];
-  // Each mix is one camp's enemy roll, non-empty, of known enemy kinds.
+  // Each mix is one camp's enemy roll, non-empty, of known enemy kinds; ids
+  // unique (code rule). Lands and tiers weight them by id.
   repeated WildsCampMix camp_mixes = 6 [(buf.validate.field).repeated.min_items = 1];
   // Gathering materials (the node vocabularies and every loot table's pays).
   repeated string materials = 7 [(buf.validate.field).repeated = {
     min_items: 1
     items: {string: {pattern: "^[a-z0-9-]{1,100}$"}}
   }];
-  // Points of interest the outer Wilds place.
+  // Points of interest the Wilds place.
   repeated string poi_ids = 8 [(buf.validate.field).repeated = {
     min_items: 1
     items: {string: {pattern: "^[a-z0-9-]{1,100}$"}}
@@ -51,28 +55,52 @@ message Wilds {
   optional int32 trinket_chance_permille = 12 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: 0, lte: 1000}];
   // Respawn/regrow waits, seconds.
   WildsTimers timers = 13 [(buf.validate.field).required = true];
-}
 
-// One region: its chunk grid and the chunk the player enters by.
-// Zero is a legal entry coordinate, so entry is explicit presence: a
-// missing key must not read as tile 0.
-message WildsRegion {
-  option (buf.validate.message).cel = {
-    id: "region.entry_in_grid"
-    message: "entry must sit inside the grid"
-    expression: "this.entry_x >= 0 && this.entry_x < this.grid_width && this.entry_y >= 0 && this.entry_y < this.grid_height"
-  };
-  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
-  string kind = 2 [(buf.validate.field).string = {in: ["inner", "outer"]}];
-  int32 grid_width = 3 [(buf.validate.field).int32.gte = 1];
-  int32 grid_height = 4 [(buf.validate.field).int32.gte = 1];
-  optional int32 entry_x = 5 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
-  optional int32 entry_y = 6 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  // ---- version 3: the open map (docs/design/open-map.md 2.1, 2.2, 2.7, 3)
+
+  // The realm every Wilds chunk key carries (design 2.1).
+  string realm = 14 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  // The ground vocabulary, in id order: a ground's index here is its value
+  // in the generator. Ids and terrain keys unique (code rule).
+  repeated WildsGround grounds = 15 [(buf.validate.field).repeated.min_items = 1];
+  // The decor vocabulary and its art footprints, in id order; kinds unique
+  // (code rule).
+  repeated WildsDecorKind decor = 16 [(buf.validate.field).repeated.min_items = 1];
+  // Named footprints with fixed sites (the Tangle, the Whitequiet); ids
+  // unique, footprints apart, references known (code rules).
+  repeated WildsPlace places = 17 [(buf.validate.field).repeated.min_items = 1];
+  // Kinds of land (decision 15): what a patch of land is made of.
+  repeated WildsLand lands = 18 [(buf.validate.field).repeated.min_items = 1];
+  // How big patches of land grow (decision 16).
+  WildsLandSizes land_sizes = 19 [(buf.validate.field).required = true];
+  // Per tier of difficulty, numbered 1..n without gaps (code rule).
+  repeated WildsTier tiers = 20 [(buf.validate.field).repeated.min_items = 1];
+  // The 0.8 bound before lamps (decision 3).
+  WildsFrontier frontier = 21 [(buf.validate.field).required = true];
+  // Paths players make (decisions 5, 7; section 3).
+  WildsPaths paths = 22 [(buf.validate.field).required = true];
+  // The Wend (decision 12).
+  WildsRiver river = 23 [(buf.validate.field).required = true];
+  // The Lantern Road (decision 18: it never turns).
+  WildsRoad road = 24 [(buf.validate.field).required = true];
+  // What a cell's one place can be (design 2.2 pass 1); ids unique (code
+  // rule).
+  repeated WildsPlaceKind place_kinds = 25 [(buf.validate.field).repeated.min_items = 1];
+  // The cell grid places sit on (design 2.2 pass 1).
+  WildsCells cells = 26 [(buf.validate.field).required = true];
+  // Chunks per difficulty ring past the Whitequiet (decision 9).
+  int32 tier_ring_chunks = 27 [(buf.validate.field).int32.gte = 1];
+  // In-world lines (design 2.9).
+  WildsWords words = 28 [(buf.validate.field).required = true];
+  // The parts Elara's rumour is built from (decision 19, design 2.10).
+  WildsRumour rumour = 29 [(buf.validate.field).required = true];
 }
 
 // One camp's enemy roll: the old file carried a bare list of lists, which
 // proto can't express, so each row is a message naming its mix.
 message WildsCampMix {
+  // The mix's id, for lands' and tiers' weights.
+  string id = 2 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
   repeated string enemies = 1 [(buf.validate.field).repeated = {
     min_items: 1
     items: {string: {pattern: "^[a-z0-9-]{1,100}$"}}
@@ -107,13 +135,395 @@ message WildsLootEntry {
   int32 chance_permille = 4 [(buf.validate.field).int32 = {gte: 1, lte: 1000}];
 }
 
-// One table: at least one row (the map's value rule on Wilds).
+// One table: at least one row (the map's value rule on Wilds). A table may
+// set its own trinket chance (the rumour's find is higher); otherwise the
+// file's trinketChancePermille holds.
 message WildsLootTable {
   repeated WildsLootEntry entries = 1 [(buf.validate.field).repeated.min_items = 1];
+  optional int32 trinket_chance_permille = 2 [(buf.validate.field).int32 = {gte: 0, lte: 1000}];
 }
 
 // Seconds the Wilds wait before a camp respawns or a node regrows.
 message WildsTimers {
   int32 camp_respawn_seconds = 1 [(buf.validate.field).int32.gte = 1];
   int32 node_regrow_seconds = 2 [(buf.validate.field).int32.gte = 1];
+}
+
+// ---------------------------------------------------------------- version 3
+
+// A relative weight for a weighted draw: `id` names an entry of the list the
+// field documents (a decor kind, a material, a camp mix, a land).
+message WildsWeight {
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  int32 weight = 2 [(buf.validate.field).int32 = {gte: 1, lte: 10000}];
+}
+
+// One ground. A chunk's palette names its grounds by `terrain` (the
+// TERRAIN key in src/lib/tile.ts the ground art reads); content refers to
+// them by `id`.
+message WildsGround {
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string terrain = 2 [(buf.validate.field).string.pattern = "^[a-z0-9_]{1,100}$"];
+  // A carve only ever raises a tile's ground (moss never paints over a path).
+  optional int32 rank = 3 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  // What players may do on it (section 3): "land" can be laid on, "water"
+  // is never walkable, "ford" is waded, "road" and "laid" are left alone.
+  string surface = 4 [(buf.validate.field).string = {in: ["land", "water", "ford", "road", "laid"]}];
+}
+
+// One decor kind: its art footprint in px (width centred on the anchor,
+// height above it). Blocking pieces stand only on solid tiles; flat ones are
+// ground decals drawn under everything.
+message WildsDecorKind {
+  option (buf.validate.message).cel = {
+    id: "decor.blocking_flat"
+    message: "a decor kind can't be both blocking and flat"
+    expression: "!(this.blocking && this.flat)"
+  };
+  string kind = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  int32 w = 2 [(buf.validate.field).int32 = {gte: 1, lte: 256}];
+  int32 h = 3 [(buf.validate.field).int32 = {gte: 1, lte: 256}];
+  bool blocking = 4;
+  bool flat = 5;
+}
+
+// A named footprint (design 2.1): a rectangle of chunks with its look, its
+// epoch kind, its tier and its fixed sites. The footprint's north-west chunk
+// is (cx, cy); it spans `width` chunks east and `height` south.
+message WildsPlace {
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  // How the words name it ("the Tangle").
+  string name = 2 [(buf.validate.field).string = {min_len: 1, max_len: 60}];
+  // The chunk look the client paints it with.
+  string look = 3 [(buf.validate.field).string = {in: ["tangle", "outer"]}];
+  // "still" never turns (the Tangle); "wick" turns every wick (design 2.3).
+  string epoch_kind = 4 [(buf.validate.field).string = {in: ["still", "wick"]}];
+  int32 tier = 5 [(buf.validate.field).int32.gte = 1];
+  // A land id (code rule): the footprint is always this land.
+  string land = 6 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  optional sint32 cx = 7 [(buf.validate.field).required = true];
+  optional sint32 cy = 8 [(buf.validate.field).required = true];
+  int32 width = 9 [(buf.validate.field).int32 = {gte: 1, lte: 16}];
+  int32 height = 10 [(buf.validate.field).int32 = {gte: 1, lte: 16}];
+  // Sites at fixed coordinates (decision 4); ids unique across all places.
+  repeated WildsFixedSite sites = 11;
+  // Sites dealt over the footprint's chunks each epoch (decision 11).
+  repeated WildsDealtSite dealt = 12;
+  // The fixed ways in and out that routes join (design 2.2 pass 5).
+  repeated WildsOpening openings = 13;
+}
+
+// A site kind is the wire's SiteKind, spelled lower-case with hyphens.
+// A fixed site's tile is chunk-local; its chunk lies in its footprint (code
+// rule).
+message WildsFixedSite {
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9:-]{1,100}$"];
+  string kind = 2 [(buf.validate.field).string = {in: ["echo", "cairn", "nest", "plank", "given", "reeds", "lamp-stone"]}];
+  optional sint32 cx = 3 [(buf.validate.field).required = true];
+  optional sint32 cy = 4 [(buf.validate.field).required = true];
+  optional int32 tx = 5 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  optional int32 ty = 6 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+}
+
+// A site dealt to one of the footprint's chunks each epoch: anywhere, or in
+// its east column (toward Sallow Ford), spread so no chunk gets two while
+// another has none.
+message WildsDealtSite {
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9:-]{1,100}$"];
+  string kind = 2 [(buf.validate.field).string = {in: ["echo", "cairn", "nest", "plank", "given", "reeds"]}];
+  string column = 3 [(buf.validate.field).string = {in: ["any", "east"]}];
+}
+
+// A fixed opening on a footprint's outer edge: `width` tiles starting
+// `offset` tiles along the edge of chunk (cx, cy) (west to east, or north to
+// south). The chunk is on that edge of the footprint (code rule).
+message WildsOpening {
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  optional sint32 cx = 2 [(buf.validate.field).required = true];
+  optional sint32 cy = 3 [(buf.validate.field).required = true];
+  string edge = 4 [(buf.validate.field).string = {in: ["north", "east", "south", "west"]}];
+  optional int32 offset = 5 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  int32 width = 6 [(buf.validate.field).int32.gte = 1];
+}
+
+// The grounds a land paints its roles with (ground ids, code rule).
+message WildsLandGround {
+  // Unopened ground: under the trees, or the meadow's grass.
+  string floor = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  // Clearings and glades.
+  string open = 2 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  // Beside a path's trodden line.
+  string verge = 3 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  // A path's trodden line.
+  string path = 4 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  // Bare earth around camps.
+  string trodden = 5 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+}
+
+// The way a land leans (the canon by direction): a unit step (dx, dy), north
+// is -y, and how strongly, permille of its weight added per land cell that
+// way.
+message WildsLean {
+  option (buf.validate.message).cel = {
+    id: "lean.unit"
+    message: "a lean is one step in one of the eight directions, or none"
+    expression: "this.dx >= -1 && this.dx <= 1 && this.dy >= -1 && this.dy <= 1"
+  };
+  sint32 dx = 1;
+  sint32 dy = 2;
+  int32 permille = 3 [(buf.validate.field).int32 = {gte: 0, lte: 1000}];
+}
+
+// A kind of land (decision 15): data, so a new land is a new entry.
+message WildsLand {
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string name = 2 [(buf.validate.field).string = {min_len: 1, max_len: 60}];
+  // Base draw weight for a land point.
+  int32 weight = 3 [(buf.validate.field).int32 = {gte: 1, lte: 10000}];
+  WildsLean lean = 4 [(buf.validate.field).required = true];
+  WildsLandGround ground = 5 [(buf.validate.field).required = true];
+  // Of the tiles no path, glade or place opens, how many stay solid
+  // (thicket or trunks), permille: the woods 1000, the meadow few.
+  int32 thicket_permille = 6 [(buf.validate.field).int32 = {gte: 0, lte: 1000}];
+  // Decor kinds the dressing draws (decor kinds, code rule).
+  repeated WildsWeight decor = 7 [(buf.validate.field).repeated.min_items = 1];
+  // Node materials (materials, code rule).
+  repeated WildsWeight materials = 8 [(buf.validate.field).repeated.min_items = 1];
+  // Camp mixes (camp mix ids, code rule); a tier's weights multiply these.
+  repeated WildsWeight camp_mixes = 9 [(buf.validate.field).repeated.min_items = 1];
+}
+
+// One band of the patch-size table: a patch is `min_chunks`..`max_chunks`
+// across with this weight.
+message WildsSizeBand {
+  option (buf.validate.message).cel = {
+    id: "size_band.range"
+    message: "maxChunks must be at least minChunks"
+    expression: "this.max_chunks >= this.min_chunks"
+  };
+  int32 min_chunks = 1 [(buf.validate.field).int32.gte = 1];
+  int32 max_chunks = 2 [(buf.validate.field).int32.gte = 1];
+  int32 weight = 3 [(buf.validate.field).int32 = {gte: 1, lte: 10000}];
+}
+
+// How big patches of land grow (decision 16, design 2.2 pass 2).
+message WildsLandSizes {
+  // One land point per land cell of this many chunks square.
+  int32 land_cell_chunks = 1 [(buf.validate.field).int32.gte = 1];
+  // A chunk looks at the window x window land cells around it.
+  int32 window_cells = 2 [(buf.validate.field).int32 = {gte: 1, lte: 15}];
+  // No patch grows past this many chunks across (decision 17's cap); no
+  // band reaches past it (code rule).
+  int32 cap_chunks = 3 [(buf.validate.field).int32.gte = 1];
+  repeated WildsSizeBand bands = 4 [(buf.validate.field).repeated.min_items = 1];
+  // World-coordinate noise on the distance, permille, so borders are soft.
+  int32 border_noise_permille = 5 [(buf.validate.field).int32 = {gte: 0, lte: 1000}];
+}
+
+// One tier of difficulty (decision 9).
+message WildsTier {
+  option (buf.validate.message).cel = {
+    id: "tier.chest_range"
+    message: "chestMax must be at least chestMin"
+    expression: "this.chest_max >= this.chest_min"
+  };
+  int32 tier = 1 [(buf.validate.field).int32.gte = 1];
+  // Chest loot tiers rolled here ("chest:<n>" tables must exist, code rule).
+  int32 chest_min = 2 [(buf.validate.field).int32.gte = 1];
+  int32 chest_max = 3 [(buf.validate.field).int32.gte = 1];
+  // Camp mixes weighted on top of the land's (camp mix ids, code rule).
+  repeated WildsWeight camp_mixes = 4 [(buf.validate.field).repeated.min_items = 1];
+  // Extra units on every node harvest.
+  optional int32 node_yield_bonus = 5 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: 0, lte: 10}];
+}
+
+// The 0.8 frontier (decision 3, design 2.1): chunks within Chebyshev
+// distance `reach` of a footprint, and no further south than `south_limit`.
+// It is enforced at run time, never generated (design 2.2).
+message WildsFrontier {
+  int32 reach = 1 [(buf.validate.field).int32 = {gte: 0, lte: 64}];
+  optional sint32 south_limit = 2 [(buf.validate.field).required = true];
+}
+
+// Which decor a tool clears (by its item action, items.json `actions`).
+message WildsClearTool {
+  string decor = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string action = 2 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+}
+
+// What laying a path costs and paints.
+message WildsLayKind {
+  string kind = 1 [(buf.validate.field).string = {in: ["stone", "plank"]}];
+  // The ground a laid tile carries (a "laid" ground, code rule).
+  string ground = 2 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  // The pack material it debits (a material, code rule), `cost` a tile.
+  string material = 3 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  int32 cost = 4 [(buf.validate.field).int32 = {gte: 1, lte: 100}];
+}
+
+// Walk speed on a ground, permille of the hero's speed.
+message WildsWalkSpeed {
+  string ground = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  int32 speed_permille = 2 [(buf.validate.field).int32 = {gte: 100, lte: 4000}];
+}
+
+// Paths players make (section 3).
+message WildsPaths {
+  repeated WildsClearTool clear_tools = 1 [(buf.validate.field).repeated.min_items = 1];
+  repeated WildsLayKind lay = 2 [(buf.validate.field).repeated.min_items = 1];
+  repeated WildsWalkSpeed walk = 3;
+  // How far from the hero a clear, lay or lift may reach, in tiles.
+  int32 reach_tiles = 4 [(buf.validate.field).int32 = {gte: 1, lte: 8}];
+  // At most this many changes a chunk and epoch (one per tile at most).
+  int32 max_changes = 5 [(buf.validate.field).int32 = {gte: 1, lte: 4096}];
+  // A named way's flood fill over laid tiles stops at this many (decision
+  // 23).
+  int32 way_flood_cap = 6 [(buf.validate.field).int32 = {gte: 1, lte: 10000}];
+}
+
+// The Wend (design 2.2 pass 3).
+message WildsRiver {
+  option (buf.validate.message).cel = {
+    id: "river.width_range"
+    message: "maxWidth must be at least minWidth"
+    expression: "this.max_width >= this.min_width"
+  };
+  string name = 1 [(buf.validate.field).string = {min_len: 1, max_len: 60}];
+  int32 min_width = 2 [(buf.validate.field).int32 = {gte: 1, lte: 12}];
+  int32 max_width = 3 [(buf.validate.field).int32 = {gte: 1, lte: 12}];
+  // A ford's shallows run this many tiles along the route.
+  int32 ford_width = 4 [(buf.validate.field).int32 = {gte: 1, lte: 12}];
+  // Land within this many chunks of the river leans to `lean_land`.
+  int32 lean_chunks = 5 [(buf.validate.field).int32 = {gte: 0, lte: 20}];
+  string lean_land = 6 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  // Grounds (code rule): water, bank and ford.
+  string water_ground = 7 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string bank_ground = 8 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string ford_ground = 9 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  // It enters from one of these frontier sides.
+  repeated string enters = 10 [(buf.validate.field).repeated = {
+    min_items: 1
+    items: {string: {in: ["north", "east", "west"]}}
+  }];
+  // It leaves at the south limit's row, at a chunk no further east than this.
+  optional sint32 leaves_max_cx = 11 [(buf.validate.field).required = true];
+}
+
+// The Lantern Road (design 2.2 pass 4).
+message WildsRoad {
+  string name = 1 [(buf.validate.field).string = {min_len: 1, max_len: 60}];
+  int32 width = 2 [(buf.validate.field).int32 = {gte: 1, lte: 8}];
+  // A dark lamp stone every this many chunks along it.
+  int32 lamp_stone_every = 3 [(buf.validate.field).int32 = {gte: 1, lte: 16}];
+  // Grounds (code rule).
+  string ground = 4 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string verge_ground = 5 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  // Where it starts: a place's opening ("whitequiet" / "lantern-road").
+  string from_place = 6 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string from_opening = 7 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  // It runs north this many chunks, then bends `bend`.
+  int32 north_chunks = 8 [(buf.validate.field).int32 = {gte: 0, lte: 64}];
+  string bend = 9 [(buf.validate.field).string = {in: ["east", "west"]}];
+}
+
+// What a cell's one place can be (design 2.2 pass 1, 2.10): its land, its
+// landmark (a tall decor piece at its centre, seen from a chunk away) and
+// how near you must come to find it.
+message WildsPlaceKind {
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string name = 2 [(buf.validate.field).string = {min_len: 1, max_len: 60}];
+  // The land it sits in (a land id, code rule), and its weight among that
+  // land's place kinds.
+  string land = 3 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  int32 weight = 7 [(buf.validate.field).int32 = {gte: 1, lte: 10000}];
+  // A blocking decor kind (code rule), with a rumour phrase (code rule).
+  string landmark = 4 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  // The entity kinds it always holds (spawn rule kinds).
+  repeated string entities = 5 [(buf.validate.field).repeated = {
+    items: {string: {in: ["camp", "node", "chest", "poi"]}}
+  }];
+  // The open ground around its middle, in tiles.
+  int32 clearing_radius = 6 [(buf.validate.field).int32 = {gte: 1, lte: 10}];
+  // Within this many tiles (Chebyshev) of the landmark you find the place
+  // (decision 20); a way touches it there (decision 23).
+  int32 find_radius = 8 [(buf.validate.field).int32 = {gte: 1, lte: 10}];
+}
+
+// The cell grid: cells of `cell_chunks` square, cell (0, 0) starting at chunk
+// (origin_cx, origin_cy), so the Tangle is cell (0, 0) and the Whitequiet
+// cell (0, -1) (code rule: each footprint is exactly one cell).
+message WildsCells {
+  int32 cell_chunks = 1 [(buf.validate.field).int32 = {gte: 1, lte: 16}];
+  optional sint32 origin_cx = 2 [(buf.validate.field).required = true];
+  optional sint32 origin_cy = 3 [(buf.validate.field).required = true];
+}
+
+// In-world lines (design 2.9). `{tool}`, `{material}` and `{days}` are
+// filled in by the client. `stand_in` lists the keys whose words are
+// stand-ins for lane O-E to replace; the rest are the design's own.
+message WildsWords {
+  // Walking into the frontier's edge (2.6).
+  string drift = 1 [(buf.validate.field).string = {min_len: 1, max_len: 200}];
+  // Moved off ground that turned solid (decision 10).
+  string turned = 2 [(buf.validate.field).string = {min_len: 1, max_len: 200}];
+  // Looking at a dark lamp stone (2.9).
+  string lamp_stone = 3 [(buf.validate.field).string = {min_len: 1, max_len: 300}];
+  // Clearing without the tool.
+  string need_tool = 4 [(buf.validate.field).string = {min_len: 1, max_len: 200}];
+  // Laying without the stone or timber.
+  string need_material = 5 [(buf.validate.field).string = {min_len: 1, max_len: 200}];
+  // Laying on water or a ford.
+  string not_on_water = 6 [(buf.validate.field).string = {min_len: 1, max_len: 200}];
+  // The confirm before laying on turning land.
+  string turns_in = 7 [(buf.validate.field).string = {min_len: 1, max_len: 200}];
+  // On a discovered place, on the map and its banner (decision 20).
+  string found_by = 9 [(buf.validate.field).string = {min_len: 1, max_len: 200}];
+  // The first finder's line.
+  string first_find = 10 [(buf.validate.field).string = {min_len: 1, max_len: 200}];
+  // A named way's name and its sign (decision 23).
+  string way_name = 11 [(buf.validate.field).string = {min_len: 1, max_len: 200}];
+  string way_sign = 12 [(buf.validate.field).string = {min_len: 1, max_len: 200}];
+  repeated string stand_in = 8 [(buf.validate.field).repeated = {
+    items: {string: {in: ["drift", "turned", "lampStone", "needTool", "needMaterial", "notOnWater", "turnsIn", "foundBy", "firstFind", "wayName", "waySign"]}}
+  }];
+}
+
+// One landmark's name in a rumour ("a split oak").
+message WildsRumourLandmark {
+  string decor = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string phrase = 2 [(buf.validate.field).string = {min_len: 1, max_len: 60}];
+}
+
+// A compass word from the Commons gate (eight directions, each once: code
+// rule).
+message WildsRumourCompass {
+  string dir = 1 [(buf.validate.field).string = {in: ["n", "ne", "e", "se", "s", "sw", "w", "nw"]}];
+  string phrase = 2 [(buf.validate.field).string = {min_len: 1, max_len: 60}];
+}
+
+// A distance word for a ring past the Whitequiet (ring 1 is the first
+// tierRingChunks chunks past it); the highest ring listed covers every ring
+// beyond. Rings unique (code rule).
+message WildsRumourDistance {
+  int32 ring = 1 [(buf.validate.field).int32 = {gte: 1, lte: 64}];
+  string phrase = 2 [(buf.validate.field).string = {min_len: 1, max_len: 100}];
+}
+
+// Elara's rumour (decision 19): built from parts, so it never names
+// coordinates. The template fills {landmark}, {compass}, {river} (the
+// river clause, or nothing) and {distance}. No phrase may hold a digit
+// (code rule). Every phrase here is a stand-in while `stand_in` is set:
+// lane O-E writes the final words.
+message WildsRumour {
+  bool stand_in = 1;
+  string template = 2 [(buf.validate.field).string = {min_len: 1, max_len: 300}];
+  repeated WildsRumourLandmark landmarks = 3 [(buf.validate.field).repeated.min_items = 1];
+  repeated WildsRumourCompass compass = 4 [(buf.validate.field).repeated = {min_items: 8, max_items: 8}];
+  repeated WildsRumourDistance distance = 5 [(buf.validate.field).repeated.min_items = 1];
+  // Said when the Wend lies between the gate and the place.
+  string past_river = 6 [(buf.validate.field).string = {min_len: 1, max_len: 100}];
+  // What she says once you've opened this wick's find.
+  string opened = 7 [(buf.validate.field).string = {min_len: 1, max_len: 300}];
+  // What she says when there's no rumour (no new cells yet).
+  string none = 8 [(buf.validate.field).string = {min_len: 1, max_len: 300}];
 }

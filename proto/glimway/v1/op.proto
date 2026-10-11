@@ -4,12 +4,18 @@ option go_package = "glimway/server/internal/gen/glimway/v1;contract";
 
 message ReportBarrier { string client = 1; string generation = 2; double seq = 3; }
 message OpHeader { string lease = 1; string key = 2; ReportBarrier report = 3; }
+// In the open map (contract 8) a Wilds place is area "wilds" with x and y in
+// world pixels, signed (open-map.md 2.4); "wilds:<region>" with
+// region-wide pixels is generator v2's, until lanes O-C and O-D move it.
 message Where { string area = 1; double x = 2; double y = 3; }
 message Vitals { double hp = 1; double mana = 2; double max_hp = 3; double max_mana = 4; double report_seq = 5; string report_client = 6; string report_generation = 7; double vitals_set_version = 8; // Unix seconds. Cast readiness may be fractional.
   double vitals_at = 9; double cast_ready_at = 10;
   // Per-ability cooldown readiness (design 4.4), keyed by combat ability
   // id; the signature's own budget stays on cast_ready_at.
   map<string, double> ability_ready_at = 11; }
-// outer_epoch: the outer Wilds epoch this player's place was last recorded in
-// ('' before any); a place left in an ended epoch is moved to the entrance.
-message Place { string area = 1; double x = 2; double y = 3; double place_set_version = 4; string outer_epoch = 5; }
+// wick_epoch: the wick epoch this player's place was last recorded in ('' before
+// any); a place left in an ended epoch is moved to the entrance.
+// (outer_epoch, the 3x3 regions' name for it, was 5.)
+message Place { string area = 1; double x = 2; double y = 3; double place_set_version = 4;
+  reserved 5; reserved "outer_epoch";
+  string wick_epoch = 6; }

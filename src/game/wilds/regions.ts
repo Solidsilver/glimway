@@ -25,7 +25,7 @@
  */
 import { TILE, tileAt } from '../../lib/tile.ts';
 import { COMMONS_FROM_WILDS } from '../commons.ts';
-import { loadWilds } from '../../lib/wilds/data.ts';
+import { loadWilds, wildsV2Regions } from '../../lib/wilds/data.ts';
 import { INNER_REGION_ID, OUTER_REGION_ID } from '../../lib/wilds/outer.ts';
 import type { WildsRegion } from '../../lib/wilds/types.ts';
 import { cachedTerrain } from './chunks.ts';
@@ -48,8 +48,8 @@ export const CHUNK_TILES = loadWilds().chunkSize;
 export const CHUNK_PX = CHUNK_TILES * TILE;
 
 export const wildsRegion = (id: string = WILDS_REGION_ID): WildsRegion => {
-  const region = loadWilds().regions.find((r) => r.id === id);
-  if (!region) throw new Error(`wilds: region ${id} is not in content/wilds.json`);
+  const region = wildsV2Regions().find((r) => r.id === id);
+  if (!region) throw new Error(`wilds: region ${id} is not a v2 region`);
   return region;
 };
 

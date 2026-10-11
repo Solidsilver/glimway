@@ -48,7 +48,7 @@ func (r Rules) Echoes(ctx context.Context, tx *sql.Tx, s store.Snapshot, in port
 	sites := append([]ports.EchoSite{}, in.Sites...)
 	sort.Slice(sites, func(i, j int) bool { return sites[i].Site.Id < sites[j].Site.Id })
 	east := int32(-1)
-	for _, region := range content.WildsRules.Regions {
+	for _, region := range content.WildsV2Regions {
 		if region.GetId() == in.Epoch.RegionId {
 			east = int32(region.GetGridWidth()) - 1
 		}
@@ -158,7 +158,7 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 		return false, nil
 	}
 	var def *content.WildsRegion
-	for _, reg := range content.WildsRules.Regions {
+	for _, reg := range content.WildsV2Regions {
 		if reg.GetId() == region {
 			def = reg
 		}

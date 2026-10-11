@@ -50,7 +50,7 @@ func abs(v int) int {
 }
 
 func regionFor(data *content.Wilds, regionID string) (*content.WildsRegion, error) {
-	for _, r := range data.Regions {
+	for _, r := range content.WildsV2Regions {
 		if r.GetId() == regionID {
 			return r, nil
 		}

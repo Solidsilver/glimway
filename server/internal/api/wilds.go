@@ -28,7 +28,7 @@ import (
 )
 
 func regionDefinition(id string) (*content.WildsRegion, bool) {
-	for _, r := range content.WildsRules.Regions {
+	for _, r := range content.WildsV2Regions {
 		if r.GetId() == id {
 			return r, true
 		}

@@ -87,6 +87,8 @@ const (
 	SiteKind_SITE_KIND_PLANK       SiteKind = 4
 	SiteKind_SITE_KIND_GIVEN       SiteKind = 5
 	SiteKind_SITE_KIND_REEDS       SiteKind = 6
+	SiteKind_SITE_KIND_LAMP_STONE  SiteKind = 7
+	SiteKind_SITE_KIND_RUMOUR      SiteKind = 8
 )
 
 // Enum value maps for SiteKind.
@@ -99,6 +101,8 @@ var (
 		4: "SITE_KIND_PLANK",
 		5: "SITE_KIND_GIVEN",
 		6: "SITE_KIND_REEDS",
+		7: "SITE_KIND_LAMP_STONE",
+		8: "SITE_KIND_RUMOUR",
 	}
 	SiteKind_value = map[string]int32{
 		"SITE_KIND_UNSPECIFIED": 0,
@@ -108,6 +112,8 @@ var (
 		"SITE_KIND_PLANK":       4,
 		"SITE_KIND_GIVEN":       5,
 		"SITE_KIND_REEDS":       6,
+		"SITE_KIND_LAMP_STONE":  7,
+		"SITE_KIND_RUMOUR":      8,
 	}
 )
 
@@ -454,27 +460,42 @@ func (x *StorySite) GetTy() uint32 {
 
 // Ground: two row-major cells per byte, low nibble first. Solid: eight cells
 // per byte, least significant bit first. Tiles are local; offsets are pixels.
+// The key is (world, realm, layer, cx, cy) on signed chunk coordinates
+// (open-map.md 2.1): tile (x, y) in world tiles lies in chunk
+// (floor(x/size), floor(y/size)); north is -y.
 type WildsChunk struct {
-	state            protoimpl.MessageState `protogen:"open.v1"`
-	EpochId          string                 `protobuf:"bytes,1,opt,name=epoch_id,json=epochId,proto3" json:"epoch_id,omitempty"`
-	Region           string                 `protobuf:"bytes,2,opt,name=region,proto3" json:"region,omitempty"`
-	Realm            string                 `protobuf:"bytes,3,opt,name=realm,proto3" json:"realm,omitempty"`
-	Layer            int32                  `protobuf:"zigzag32,4,opt,name=layer,proto3" json:"layer,omitempty"`
-	Cx               int32                  `protobuf:"zigzag32,5,opt,name=cx,proto3" json:"cx,omitempty"`
-	Cy               int32                  `protobuf:"zigzag32,6,opt,name=cy,proto3" json:"cy,omitempty"`
-	GeneratorVersion uint32                 `protobuf:"varint,7,opt,name=generator_version,json=generatorVersion,proto3" json:"generator_version,omitempty"`
-	Size             uint32                 `protobuf:"varint,8,opt,name=size,proto3" json:"size,omitempty"`
-	Palette          []string               `protobuf:"bytes,9,rep,name=palette,proto3" json:"palette,omitempty"`
-	Ground           []byte                 `protobuf:"bytes,10,opt,name=ground,proto3" json:"ground,omitempty"`
-	Solid            []byte                 `protobuf:"bytes,11,opt,name=solid,proto3" json:"solid,omitempty"`
-	Exits            []*Exit                `protobuf:"bytes,12,rep,name=exits,proto3" json:"exits,omitempty"`
-	Decor            *DecorList             `protobuf:"bytes,13,opt,name=decor,proto3" json:"decor,omitempty"`
-	Sites            []*StorySite           `protobuf:"bytes,14,rep,name=sites,proto3" json:"sites,omitempty"`
-	Spawn            *Tile                  `protobuf:"bytes,15,opt,name=spawn,proto3" json:"spawn,omitempty"`
-	Look             string                 `protobuf:"bytes,16,opt,name=look,proto3" json:"look,omitempty"`
-	Mark             string                 `protobuf:"bytes,17,opt,name=mark,proto3" json:"mark,omitempty"`
-	// Bodies live in immutable chunks; the region read carries only state.
-	Entities      []*WildsEntity `protobuf:"bytes,18,rep,name=entities,proto3" json:"entities,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// region, exits and spawn belong to generator v2's 3x3 regions. Generator
+	// v3 leaves them empty; lanes O-B and O-D delete them (and reserve the
+	// numbers) when v2 goes.
+	EpochId string `protobuf:"bytes,1,opt,name=epoch_id,json=epochId,proto3" json:"epoch_id,omitempty"`
+	// Deprecated: Marked as deprecated in glimway/v1/wilds.proto.
+	Region           string   `protobuf:"bytes,2,opt,name=region,proto3" json:"region,omitempty"`
+	Realm            string   `protobuf:"bytes,3,opt,name=realm,proto3" json:"realm,omitempty"`
+	Layer            int32    `protobuf:"zigzag32,4,opt,name=layer,proto3" json:"layer,omitempty"`
+	Cx               int32    `protobuf:"zigzag32,5,opt,name=cx,proto3" json:"cx,omitempty"`
+	Cy               int32    `protobuf:"zigzag32,6,opt,name=cy,proto3" json:"cy,omitempty"`
+	GeneratorVersion uint32   `protobuf:"varint,7,opt,name=generator_version,json=generatorVersion,proto3" json:"generator_version,omitempty"`
+	Size             uint32   `protobuf:"varint,8,opt,name=size,proto3" json:"size,omitempty"`
+	Palette          []string `protobuf:"bytes,9,rep,name=palette,proto3" json:"palette,omitempty"`
+	Ground           []byte   `protobuf:"bytes,10,opt,name=ground,proto3" json:"ground,omitempty"`
+	Solid            []byte   `protobuf:"bytes,11,opt,name=solid,proto3" json:"solid,omitempty"`
+	// Deprecated: Marked as deprecated in glimway/v1/wilds.proto.
+	Exits []*Exit      `protobuf:"bytes,12,rep,name=exits,proto3" json:"exits,omitempty"`
+	Decor *DecorList   `protobuf:"bytes,13,opt,name=decor,proto3" json:"decor,omitempty"`
+	Sites []*StorySite `protobuf:"bytes,14,rep,name=sites,proto3" json:"sites,omitempty"`
+	// Deprecated: Marked as deprecated in glimway/v1/wilds.proto.
+	Spawn *Tile  `protobuf:"bytes,15,opt,name=spawn,proto3" json:"spawn,omitempty"`
+	Look  string `protobuf:"bytes,16,opt,name=look,proto3" json:"look,omitempty"`
+	Mark  string `protobuf:"bytes,17,opt,name=mark,proto3" json:"mark,omitempty"`
+	// Bodies live in immutable chunks; the near read carries only state.
+	Entities []*WildsEntity `protobuf:"bytes,18,rep,name=entities,proto3" json:"entities,omitempty"`
+	// The chunk's tier of difficulty (content tiers, wilds.Tier) and its main
+	// land (a content land id, for the map).
+	Tier uint32 `protobuf:"varint,19,opt,name=tier,proto3" json:"tier,omitempty"`
+	Land string `protobuf:"bytes,20,opt,name=land,proto3" json:"land,omitempty"`
+	// The cell places whose landmark stands in this chunk (open-map.md 2.10).
+	Places        []*WildsPlaceMark `protobuf:"bytes,21,rep,name=places,proto3" json:"places,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -516,6 +537,7 @@ func (x *WildsChunk) GetEpochId() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in glimway/v1/wilds.proto.
 func (x *WildsChunk) GetRegion() string {
 	if x != nil {
 		return x.Region
@@ -586,6 +608,7 @@ func (x *WildsChunk) GetSolid() []byte {
 	return nil
 }
 
+// Deprecated: Marked as deprecated in glimway/v1/wilds.proto.
 func (x *WildsChunk) GetExits() []*Exit {
 	if x != nil {
 		return x.Exits
@@ -607,6 +630,7 @@ func (x *WildsChunk) GetSites() []*StorySite {
 	return nil
 }
 
+// Deprecated: Marked as deprecated in glimway/v1/wilds.proto.
 func (x *WildsChunk) GetSpawn() *Tile {
 	if x != nil {
 		return x.Spawn
@@ -635,6 +659,236 @@ func (x *WildsChunk) GetEntities() []*WildsEntity {
 	return nil
 }
 
+func (x *WildsChunk) GetTier() uint32 {
+	if x != nil {
+		return x.Tier
+	}
+	return 0
+}
+
+func (x *WildsChunk) GetLand() string {
+	if x != nil {
+		return x.Land
+	}
+	return ""
+}
+
+func (x *WildsChunk) GetPlaces() []*WildsPlaceMark {
+	if x != nil {
+		return x.Places
+	}
+	return nil
+}
+
+// A cell's place (open-map.md 2.2, 2.10): id "place:<cellX>:<cellY>", kind a
+// content place kind, (tx, ty) its landmark's chunk-local tile. A footprint
+// is not a place mark; its places are content.
+type WildsPlaceMark struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Kind          string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
+	Tx            uint32                 `protobuf:"varint,3,opt,name=tx,proto3" json:"tx,omitempty"`
+	Ty            uint32                 `protobuf:"varint,4,opt,name=ty,proto3" json:"ty,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WildsPlaceMark) Reset() {
+	*x = WildsPlaceMark{}
+	mi := &file_glimway_v1_wilds_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WildsPlaceMark) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WildsPlaceMark) ProtoMessage() {}
+
+func (x *WildsPlaceMark) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_wilds_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WildsPlaceMark.ProtoReflect.Descriptor instead.
+func (*WildsPlaceMark) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *WildsPlaceMark) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *WildsPlaceMark) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *WildsPlaceMark) GetTx() uint32 {
+	if x != nil {
+		return x.Tx
+	}
+	return 0
+}
+
+func (x *WildsPlaceMark) GetTy() uint32 {
+	if x != nil {
+		return x.Ty
+	}
+	return 0
+}
+
+// A signed chunk key within a world (open-map.md 2.1).
+type WildsChunkKey struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Realm         string                 `protobuf:"bytes,1,opt,name=realm,proto3" json:"realm,omitempty"`
+	Layer         int32                  `protobuf:"zigzag32,2,opt,name=layer,proto3" json:"layer,omitempty"`
+	Cx            int32                  `protobuf:"zigzag32,3,opt,name=cx,proto3" json:"cx,omitempty"`
+	Cy            int32                  `protobuf:"zigzag32,4,opt,name=cy,proto3" json:"cy,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WildsChunkKey) Reset() {
+	*x = WildsChunkKey{}
+	mi := &file_glimway_v1_wilds_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WildsChunkKey) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WildsChunkKey) ProtoMessage() {}
+
+func (x *WildsChunkKey) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_wilds_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WildsChunkKey.ProtoReflect.Descriptor instead.
+func (*WildsChunkKey) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *WildsChunkKey) GetRealm() string {
+	if x != nil {
+		return x.Realm
+	}
+	return ""
+}
+
+func (x *WildsChunkKey) GetLayer() int32 {
+	if x != nil {
+		return x.Layer
+	}
+	return 0
+}
+
+func (x *WildsChunkKey) GetCx() int32 {
+	if x != nil {
+		return x.Cx
+	}
+	return 0
+}
+
+func (x *WildsChunkKey) GetCy() int32 {
+	if x != nil {
+		return x.Cy
+	}
+	return 0
+}
+
+// An inclusive rectangle of chunks.
+type WildsChunkRect struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MinCx         int32                  `protobuf:"zigzag32,1,opt,name=min_cx,json=minCx,proto3" json:"min_cx,omitempty"`
+	MinCy         int32                  `protobuf:"zigzag32,2,opt,name=min_cy,json=minCy,proto3" json:"min_cy,omitempty"`
+	MaxCx         int32                  `protobuf:"zigzag32,3,opt,name=max_cx,json=maxCx,proto3" json:"max_cx,omitempty"`
+	MaxCy         int32                  `protobuf:"zigzag32,4,opt,name=max_cy,json=maxCy,proto3" json:"max_cy,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WildsChunkRect) Reset() {
+	*x = WildsChunkRect{}
+	mi := &file_glimway_v1_wilds_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WildsChunkRect) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WildsChunkRect) ProtoMessage() {}
+
+func (x *WildsChunkRect) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_wilds_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WildsChunkRect.ProtoReflect.Descriptor instead.
+func (*WildsChunkRect) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *WildsChunkRect) GetMinCx() int32 {
+	if x != nil {
+		return x.MinCx
+	}
+	return 0
+}
+
+func (x *WildsChunkRect) GetMinCy() int32 {
+	if x != nil {
+		return x.MinCy
+	}
+	return 0
+}
+
+func (x *WildsChunkRect) GetMaxCx() int32 {
+	if x != nil {
+		return x.MaxCx
+	}
+	return 0
+}
+
+func (x *WildsChunkRect) GetMaxCy() int32 {
+	if x != nil {
+		return x.MaxCy
+	}
+	return 0
+}
+
 type WildsEntity struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -651,7 +905,7 @@ type WildsEntity struct {
 
 func (x *WildsEntity) Reset() {
 	*x = WildsEntity{}
-	mi := &file_glimway_v1_wilds_proto_msgTypes[5]
+	mi := &file_glimway_v1_wilds_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -663,7 +917,7 @@ func (x *WildsEntity) String() string {
 func (*WildsEntity) ProtoMessage() {}
 
 func (x *WildsEntity) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_wilds_proto_msgTypes[5]
+	mi := &file_glimway_v1_wilds_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -676,7 +930,7 @@ func (x *WildsEntity) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsEntity.ProtoReflect.Descriptor instead.
 func (*WildsEntity) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{5}
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *WildsEntity) GetId() string {
@@ -735,23 +989,28 @@ func (x *WildsEntity) GetPoi() string {
 	return ""
 }
 
-// starts_at and ends_at are Unix seconds.
+// starts_at and ends_at are Unix seconds. kind is "still" (one per world,
+// never ends: the Tangle) or "wick" (one per world per wick: the Beyond).
+// region_id belongs to the 3x3 regions; lane O-C deletes it (and reserves
+// the number) with region_epochs.
 type WildsEpoch struct {
-	state            protoimpl.MessageState  `protogen:"open.v1"`
-	Id               string                  `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	WorldSeed        string                  `protobuf:"bytes,2,opt,name=world_seed,json=worldSeed,proto3" json:"world_seed,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Id        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	WorldSeed string                 `protobuf:"bytes,2,opt,name=world_seed,json=worldSeed,proto3" json:"world_seed,omitempty"`
+	// Deprecated: Marked as deprecated in glimway/v1/wilds.proto.
 	RegionId         string                  `protobuf:"bytes,3,opt,name=region_id,json=regionId,proto3" json:"region_id,omitempty"`
 	GeneratorVersion uint32                  `protobuf:"varint,4,opt,name=generator_version,json=generatorVersion,proto3" json:"generator_version,omitempty"`
 	Season           string                  `protobuf:"bytes,5,opt,name=season,proto3" json:"season,omitempty"`
 	StartsAt         float64                 `protobuf:"fixed64,6,opt,name=starts_at,json=startsAt,proto3" json:"starts_at,omitempty"`
 	EndsAt           *wrapperspb.DoubleValue `protobuf:"bytes,7,opt,name=ends_at,json=endsAt,proto3" json:"ends_at,omitempty"`
+	Kind             string                  `protobuf:"bytes,8,opt,name=kind,proto3" json:"kind,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
 
 func (x *WildsEpoch) Reset() {
 	*x = WildsEpoch{}
-	mi := &file_glimway_v1_wilds_proto_msgTypes[6]
+	mi := &file_glimway_v1_wilds_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -763,7 +1022,7 @@ func (x *WildsEpoch) String() string {
 func (*WildsEpoch) ProtoMessage() {}
 
 func (x *WildsEpoch) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_wilds_proto_msgTypes[6]
+	mi := &file_glimway_v1_wilds_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -776,7 +1035,7 @@ func (x *WildsEpoch) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsEpoch.ProtoReflect.Descriptor instead.
 func (*WildsEpoch) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{6}
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *WildsEpoch) GetId() string {
@@ -793,6 +1052,7 @@ func (x *WildsEpoch) GetWorldSeed() string {
 	return ""
 }
 
+// Deprecated: Marked as deprecated in glimway/v1/wilds.proto.
 func (x *WildsEpoch) GetRegionId() string {
 	if x != nil {
 		return x.RegionId
@@ -828,6 +1088,13 @@ func (x *WildsEpoch) GetEndsAt() *wrapperspb.DoubleValue {
 	return nil
 }
 
+func (x *WildsEpoch) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
 // available_at and at are Unix seconds.
 type WildsEntityState struct {
 	state         protoimpl.MessageState  `protogen:"open.v1"`
@@ -844,7 +1111,7 @@ type WildsEntityState struct {
 
 func (x *WildsEntityState) Reset() {
 	*x = WildsEntityState{}
-	mi := &file_glimway_v1_wilds_proto_msgTypes[7]
+	mi := &file_glimway_v1_wilds_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -856,7 +1123,7 @@ func (x *WildsEntityState) String() string {
 func (*WildsEntityState) ProtoMessage() {}
 
 func (x *WildsEntityState) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_wilds_proto_msgTypes[7]
+	mi := &file_glimway_v1_wilds_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -869,7 +1136,7 @@ func (x *WildsEntityState) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsEntityState.ProtoReflect.Descriptor instead.
 func (*WildsEntityState) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{7}
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *WildsEntityState) GetId() string {
@@ -932,7 +1199,7 @@ type WildsPersonalClaim struct {
 
 func (x *WildsPersonalClaim) Reset() {
 	*x = WildsPersonalClaim{}
-	mi := &file_glimway_v1_wilds_proto_msgTypes[8]
+	mi := &file_glimway_v1_wilds_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -944,7 +1211,7 @@ func (x *WildsPersonalClaim) String() string {
 func (*WildsPersonalClaim) ProtoMessage() {}
 
 func (x *WildsPersonalClaim) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_wilds_proto_msgTypes[8]
+	mi := &file_glimway_v1_wilds_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -957,7 +1224,7 @@ func (x *WildsPersonalClaim) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsPersonalClaim.ProtoReflect.Descriptor instead.
 func (*WildsPersonalClaim) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{8}
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *WildsPersonalClaim) GetEntityId() string {
@@ -988,7 +1255,7 @@ type WildsDiscovery struct {
 
 func (x *WildsDiscovery) Reset() {
 	*x = WildsDiscovery{}
-	mi := &file_glimway_v1_wilds_proto_msgTypes[9]
+	mi := &file_glimway_v1_wilds_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1000,7 +1267,7 @@ func (x *WildsDiscovery) String() string {
 func (*WildsDiscovery) ProtoMessage() {}
 
 func (x *WildsDiscovery) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_wilds_proto_msgTypes[9]
+	mi := &file_glimway_v1_wilds_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1013,7 +1280,7 @@ func (x *WildsDiscovery) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsDiscovery.ProtoReflect.Descriptor instead.
 func (*WildsDiscovery) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{9}
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *WildsDiscovery) GetEntityId() string {
@@ -1068,7 +1335,7 @@ type WildsLantern struct {
 
 func (x *WildsLantern) Reset() {
 	*x = WildsLantern{}
-	mi := &file_glimway_v1_wilds_proto_msgTypes[10]
+	mi := &file_glimway_v1_wilds_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1080,7 +1347,7 @@ func (x *WildsLantern) String() string {
 func (*WildsLantern) ProtoMessage() {}
 
 func (x *WildsLantern) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_wilds_proto_msgTypes[10]
+	mi := &file_glimway_v1_wilds_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1093,7 +1360,7 @@ func (x *WildsLantern) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsLantern.ProtoReflect.Descriptor instead.
 func (*WildsLantern) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{10}
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *WildsLantern) GetId() string {
@@ -1163,7 +1430,7 @@ type EchoAssignment struct {
 
 func (x *EchoAssignment) Reset() {
 	*x = EchoAssignment{}
-	mi := &file_glimway_v1_wilds_proto_msgTypes[11]
+	mi := &file_glimway_v1_wilds_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1175,7 +1442,7 @@ func (x *EchoAssignment) String() string {
 func (*EchoAssignment) ProtoMessage() {}
 
 func (x *EchoAssignment) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_wilds_proto_msgTypes[11]
+	mi := &file_glimway_v1_wilds_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1188,7 +1455,7 @@ func (x *EchoAssignment) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EchoAssignment.ProtoReflect.Descriptor instead.
 func (*EchoAssignment) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{11}
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *EchoAssignment) GetSite() string {
@@ -1212,6 +1479,8 @@ func (x *EchoAssignment) GetSettled() bool {
 	return false
 }
 
+// The 3x3 region read (GET /api/wilds/region/<id>); the near read replaces
+// it, and lane O-C deletes it.
 type WildsRegionResult struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Epoch          *WildsEpoch            `protobuf:"bytes,1,opt,name=epoch,proto3" json:"epoch,omitempty"`
@@ -1227,7 +1496,7 @@ type WildsRegionResult struct {
 
 func (x *WildsRegionResult) Reset() {
 	*x = WildsRegionResult{}
-	mi := &file_glimway_v1_wilds_proto_msgTypes[12]
+	mi := &file_glimway_v1_wilds_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1239,7 +1508,7 @@ func (x *WildsRegionResult) String() string {
 func (*WildsRegionResult) ProtoMessage() {}
 
 func (x *WildsRegionResult) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_wilds_proto_msgTypes[12]
+	mi := &file_glimway_v1_wilds_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1252,7 +1521,7 @@ func (x *WildsRegionResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsRegionResult.ProtoReflect.Descriptor instead.
 func (*WildsRegionResult) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{12}
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *WildsRegionResult) GetEpoch() *WildsEpoch {
@@ -1304,6 +1573,667 @@ func (x *WildsRegionResult) GetEchoes() []*EchoAssignment {
 	return nil
 }
 
+// The frontier the server enforces (open-map.md 2.6): in 0.8 a rectangle
+// (contract 8); 0.9's lamps add held chunks beside it.
+type WildsFrontier struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Rect          *WildsChunkRect        `protobuf:"bytes,1,opt,name=rect,proto3" json:"rect,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WildsFrontier) Reset() {
+	*x = WildsFrontier{}
+	mi := &file_glimway_v1_wilds_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WildsFrontier) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WildsFrontier) ProtoMessage() {}
+
+func (x *WildsFrontier) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_wilds_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WildsFrontier.ProtoReflect.Descriptor instead.
+func (*WildsFrontier) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *WildsFrontier) GetRect() *WildsChunkRect {
+	if x != nil {
+		return x.Rect
+	}
+	return nil
+}
+
+// One player-made change to one tile (section 3). tx and ty are local to
+// the chunk the changes are stored under. change is "cleared", "stone" or
+// "plank"; by is the account that made it; at is Unix seconds.
+type GroundChange struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Tx            uint32                 `protobuf:"varint,1,opt,name=tx,proto3" json:"tx,omitempty"`
+	Ty            uint32                 `protobuf:"varint,2,opt,name=ty,proto3" json:"ty,omitempty"`
+	Change        string                 `protobuf:"bytes,3,opt,name=change,proto3" json:"change,omitempty"`
+	By            string                 `protobuf:"bytes,4,opt,name=by,proto3" json:"by,omitempty"`
+	At            float64                `protobuf:"fixed64,5,opt,name=at,proto3" json:"at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GroundChange) Reset() {
+	*x = GroundChange{}
+	mi := &file_glimway_v1_wilds_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GroundChange) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GroundChange) ProtoMessage() {}
+
+func (x *GroundChange) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_wilds_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GroundChange.ProtoReflect.Descriptor instead.
+func (*GroundChange) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *GroundChange) GetTx() uint32 {
+	if x != nil {
+		return x.Tx
+	}
+	return 0
+}
+
+func (x *GroundChange) GetTy() uint32 {
+	if x != nil {
+		return x.Ty
+	}
+	return 0
+}
+
+func (x *GroundChange) GetChange() string {
+	if x != nil {
+		return x.Change
+	}
+	return ""
+}
+
+func (x *GroundChange) GetBy() string {
+	if x != nil {
+		return x.By
+	}
+	return ""
+}
+
+func (x *GroundChange) GetAt() float64 {
+	if x != nil {
+		return x.At
+	}
+	return 0
+}
+
+// A chunk and epoch's changes: the world_changes row's state (entity
+// "ground", kind "ground"), at most one entry a tile.
+type GroundChanges struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Changes       []*GroundChange        `protobuf:"bytes,1,rep,name=changes,proto3" json:"changes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GroundChanges) Reset() {
+	*x = GroundChanges{}
+	mi := &file_glimway_v1_wilds_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GroundChanges) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GroundChanges) ProtoMessage() {}
+
+func (x *GroundChanges) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_wilds_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GroundChanges.ProtoReflect.Descriptor instead.
+func (*GroundChanges) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *GroundChanges) GetChanges() []*GroundChange {
+	if x != nil {
+		return x.Changes
+	}
+	return nil
+}
+
+// One chunk's changes as the near read and the path operations carry them.
+type ChunkGroundChanges struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Chunk         *WildsChunkKey         `protobuf:"bytes,1,opt,name=chunk,proto3" json:"chunk,omitempty"`
+	Epoch         string                 `protobuf:"bytes,2,opt,name=epoch,proto3" json:"epoch,omitempty"`
+	Changes       *GroundChanges         `protobuf:"bytes,3,opt,name=changes,proto3" json:"changes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ChunkGroundChanges) Reset() {
+	*x = ChunkGroundChanges{}
+	mi := &file_glimway_v1_wilds_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ChunkGroundChanges) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ChunkGroundChanges) ProtoMessage() {}
+
+func (x *ChunkGroundChanges) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_wilds_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ChunkGroundChanges.ProtoReflect.Descriptor instead.
+func (*ChunkGroundChanges) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *ChunkGroundChanges) GetChunk() *WildsChunkKey {
+	if x != nil {
+		return x.Chunk
+	}
+	return nil
+}
+
+func (x *ChunkGroundChanges) GetEpoch() string {
+	if x != nil {
+		return x.Epoch
+	}
+	return ""
+}
+
+func (x *ChunkGroundChanges) GetChanges() *GroundChanges {
+	if x != nil {
+		return x.Changes
+	}
+	return nil
+}
+
+// A chunk past the frontier, seen dimly through the veil (decision 22): its
+// main land (a content land id) and whether the Wend crosses it. Never a
+// made or stored chunk.
+type WildsGlimpse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Chunk         *WildsChunkKey         `protobuf:"bytes,1,opt,name=chunk,proto3" json:"chunk,omitempty"`
+	Land          string                 `protobuf:"bytes,2,opt,name=land,proto3" json:"land,omitempty"`
+	River         bool                   `protobuf:"varint,3,opt,name=river,proto3" json:"river,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WildsGlimpse) Reset() {
+	*x = WildsGlimpse{}
+	mi := &file_glimway_v1_wilds_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WildsGlimpse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WildsGlimpse) ProtoMessage() {}
+
+func (x *WildsGlimpse) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_wilds_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WildsGlimpse.ProtoReflect.Descriptor instead.
+func (*WildsGlimpse) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *WildsGlimpse) GetChunk() *WildsChunkKey {
+	if x != nil {
+		return x.Chunk
+	}
+	return nil
+}
+
+func (x *WildsGlimpse) GetLand() string {
+	if x != nil {
+		return x.Land
+	}
+	return ""
+}
+
+func (x *WildsGlimpse) GetRiver() bool {
+	if x != nil {
+		return x.River
+	}
+	return false
+}
+
+// A named way (decision 23): a run of laid tiles joining two places (a
+// place mark id, or a footprint's content id). id is "way:<a>:<b>", a < b;
+// name is the words' wayName filled in; by is the account that laid most of
+// it; tiles is the run's length; at is Unix seconds. The worldchange row
+// (kind "way", entity id) holds this message as its state.
+type WildsWay struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	A             string                 `protobuf:"bytes,2,opt,name=a,proto3" json:"a,omitempty"`
+	B             string                 `protobuf:"bytes,3,opt,name=b,proto3" json:"b,omitempty"`
+	Name          string                 `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+	By            string                 `protobuf:"bytes,5,opt,name=by,proto3" json:"by,omitempty"`
+	Tiles         uint32                 `protobuf:"varint,6,opt,name=tiles,proto3" json:"tiles,omitempty"`
+	Epoch         string                 `protobuf:"bytes,7,opt,name=epoch,proto3" json:"epoch,omitempty"`
+	At            float64                `protobuf:"fixed64,8,opt,name=at,proto3" json:"at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WildsWay) Reset() {
+	*x = WildsWay{}
+	mi := &file_glimway_v1_wilds_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WildsWay) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WildsWay) ProtoMessage() {}
+
+func (x *WildsWay) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_wilds_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WildsWay.ProtoReflect.Descriptor instead.
+func (*WildsWay) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *WildsWay) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *WildsWay) GetA() string {
+	if x != nil {
+		return x.A
+	}
+	return ""
+}
+
+func (x *WildsWay) GetB() string {
+	if x != nil {
+		return x.B
+	}
+	return ""
+}
+
+func (x *WildsWay) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *WildsWay) GetBy() string {
+	if x != nil {
+		return x.By
+	}
+	return ""
+}
+
+func (x *WildsWay) GetTiles() uint32 {
+	if x != nil {
+		return x.Tiles
+	}
+	return 0
+}
+
+func (x *WildsWay) GetEpoch() string {
+	if x != nil {
+		return x.Epoch
+	}
+	return ""
+}
+
+func (x *WildsWay) GetAt() float64 {
+	if x != nil {
+		return x.At
+	}
+	return 0
+}
+
+// GET /api/wilds/near/<cx>/<cy> (open-map.md 2.4): the epochs, the
+// frontier, and for the (2*radius+1)^2 chunks around (cx, cy) every state
+// the chunk bodies don't carry. Entity states, claims, discoveries and
+// lanterns name their epoch (or their entity's chunk, which picks it).
+type WildsNearResult struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	Still          *WildsEpoch            `protobuf:"bytes,1,opt,name=still,proto3" json:"still,omitempty"`
+	Wick           *WildsEpoch            `protobuf:"bytes,2,opt,name=wick,proto3" json:"wick,omitempty"`
+	Frontier       *WildsFrontier         `protobuf:"bytes,3,opt,name=frontier,proto3" json:"frontier,omitempty"`
+	Center         *WildsChunkKey         `protobuf:"bytes,4,opt,name=center,proto3" json:"center,omitempty"`
+	Radius         uint32                 `protobuf:"varint,5,opt,name=radius,proto3" json:"radius,omitempty"`
+	Entities       []*WildsEntityState    `protobuf:"bytes,6,rep,name=entities,proto3" json:"entities,omitempty"`
+	PersonalClaims []*WildsPersonalClaim  `protobuf:"bytes,7,rep,name=personal_claims,json=personalClaims,proto3" json:"personal_claims,omitempty"`
+	Discoveries    []*WildsDiscovery      `protobuf:"bytes,8,rep,name=discoveries,proto3" json:"discoveries,omitempty"`
+	Lanterns       []*WildsLantern        `protobuf:"bytes,9,rep,name=lanterns,proto3" json:"lanterns,omitempty"`
+	// Echo assignments, where the window overlaps the Whitequiet.
+	Echoes    []*EchoAssignment     `protobuf:"bytes,10,rep,name=echoes,proto3" json:"echoes,omitempty"`
+	Ground    []*ChunkGroundChanges `protobuf:"bytes,11,rep,name=ground,proto3" json:"ground,omitempty"`
+	Materials map[string]float64    `protobuf:"bytes,12,rep,name=materials,proto3" json:"materials,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
+	// The chunks within 2 outside the frontier that border the window.
+	Glimpse []*WildsGlimpse `protobuf:"bytes,13,rep,name=glimpse,proto3" json:"glimpse,omitempty"`
+	// Ways with a tile in the window.
+	Ways          []*WildsWay `protobuf:"bytes,14,rep,name=ways,proto3" json:"ways,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WildsNearResult) Reset() {
+	*x = WildsNearResult{}
+	mi := &file_glimway_v1_wilds_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WildsNearResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WildsNearResult) ProtoMessage() {}
+
+func (x *WildsNearResult) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_wilds_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WildsNearResult.ProtoReflect.Descriptor instead.
+func (*WildsNearResult) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *WildsNearResult) GetStill() *WildsEpoch {
+	if x != nil {
+		return x.Still
+	}
+	return nil
+}
+
+func (x *WildsNearResult) GetWick() *WildsEpoch {
+	if x != nil {
+		return x.Wick
+	}
+	return nil
+}
+
+func (x *WildsNearResult) GetFrontier() *WildsFrontier {
+	if x != nil {
+		return x.Frontier
+	}
+	return nil
+}
+
+func (x *WildsNearResult) GetCenter() *WildsChunkKey {
+	if x != nil {
+		return x.Center
+	}
+	return nil
+}
+
+func (x *WildsNearResult) GetRadius() uint32 {
+	if x != nil {
+		return x.Radius
+	}
+	return 0
+}
+
+func (x *WildsNearResult) GetEntities() []*WildsEntityState {
+	if x != nil {
+		return x.Entities
+	}
+	return nil
+}
+
+func (x *WildsNearResult) GetPersonalClaims() []*WildsPersonalClaim {
+	if x != nil {
+		return x.PersonalClaims
+	}
+	return nil
+}
+
+func (x *WildsNearResult) GetDiscoveries() []*WildsDiscovery {
+	if x != nil {
+		return x.Discoveries
+	}
+	return nil
+}
+
+func (x *WildsNearResult) GetLanterns() []*WildsLantern {
+	if x != nil {
+		return x.Lanterns
+	}
+	return nil
+}
+
+func (x *WildsNearResult) GetEchoes() []*EchoAssignment {
+	if x != nil {
+		return x.Echoes
+	}
+	return nil
+}
+
+func (x *WildsNearResult) GetGround() []*ChunkGroundChanges {
+	if x != nil {
+		return x.Ground
+	}
+	return nil
+}
+
+func (x *WildsNearResult) GetMaterials() map[string]float64 {
+	if x != nil {
+		return x.Materials
+	}
+	return nil
+}
+
+func (x *WildsNearResult) GetGlimpse() []*WildsGlimpse {
+	if x != nil {
+		return x.Glimpse
+	}
+	return nil
+}
+
+func (x *WildsNearResult) GetWays() []*WildsWay {
+	if x != nil {
+		return x.Ways
+	}
+	return nil
+}
+
+// This wick's rumour (decision 19), in the state the client reads at start;
+// unset when there is none. The client builds Elara's words from the parts
+// and the content's rumour phrase tables: landmark is the place kind's
+// landmark decor kind, compass one of n ne e se s sw w nw (from the Commons
+// gate), ring the ring past the Whitequiet. site is the find's id
+// ("rumour:<cx>:<cy>"), opened whether this player has opened it.
+type WildsRumour struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Epoch         string                 `protobuf:"bytes,1,opt,name=epoch,proto3" json:"epoch,omitempty"`
+	Place         string                 `protobuf:"bytes,2,opt,name=place,proto3" json:"place,omitempty"`
+	Landmark      string                 `protobuf:"bytes,3,opt,name=landmark,proto3" json:"landmark,omitempty"`
+	Compass       string                 `protobuf:"bytes,4,opt,name=compass,proto3" json:"compass,omitempty"`
+	Ring          uint32                 `protobuf:"varint,5,opt,name=ring,proto3" json:"ring,omitempty"`
+	PastRiver     bool                   `protobuf:"varint,6,opt,name=past_river,json=pastRiver,proto3" json:"past_river,omitempty"`
+	Site          string                 `protobuf:"bytes,7,opt,name=site,proto3" json:"site,omitempty"`
+	Opened        bool                   `protobuf:"varint,8,opt,name=opened,proto3" json:"opened,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WildsRumour) Reset() {
+	*x = WildsRumour{}
+	mi := &file_glimway_v1_wilds_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WildsRumour) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WildsRumour) ProtoMessage() {}
+
+func (x *WildsRumour) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_wilds_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WildsRumour.ProtoReflect.Descriptor instead.
+func (*WildsRumour) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *WildsRumour) GetEpoch() string {
+	if x != nil {
+		return x.Epoch
+	}
+	return ""
+}
+
+func (x *WildsRumour) GetPlace() string {
+	if x != nil {
+		return x.Place
+	}
+	return ""
+}
+
+func (x *WildsRumour) GetLandmark() string {
+	if x != nil {
+		return x.Landmark
+	}
+	return ""
+}
+
+func (x *WildsRumour) GetCompass() string {
+	if x != nil {
+		return x.Compass
+	}
+	return ""
+}
+
+func (x *WildsRumour) GetRing() uint32 {
+	if x != nil {
+		return x.Ring
+	}
+	return 0
+}
+
+func (x *WildsRumour) GetPastRiver() bool {
+	if x != nil {
+		return x.PastRiver
+	}
+	return false
+}
+
+func (x *WildsRumour) GetSite() string {
+	if x != nil {
+		return x.Site
+	}
+	return ""
+}
+
+func (x *WildsRumour) GetOpened() bool {
+	if x != nil {
+		return x.Opened
+	}
+	return false
+}
+
 type WildsMaterial struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -1314,7 +2244,7 @@ type WildsMaterial struct {
 
 func (x *WildsMaterial) Reset() {
 	*x = WildsMaterial{}
-	mi := &file_glimway_v1_wilds_proto_msgTypes[13]
+	mi := &file_glimway_v1_wilds_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1326,7 +2256,7 @@ func (x *WildsMaterial) String() string {
 func (*WildsMaterial) ProtoMessage() {}
 
 func (x *WildsMaterial) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_wilds_proto_msgTypes[13]
+	mi := &file_glimway_v1_wilds_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1339,7 +2269,7 @@ func (x *WildsMaterial) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsMaterial.ProtoReflect.Descriptor instead.
 func (*WildsMaterial) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{13}
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *WildsMaterial) GetId() string {
@@ -1366,7 +2296,7 @@ type WildsLoot struct {
 
 func (x *WildsLoot) Reset() {
 	*x = WildsLoot{}
-	mi := &file_glimway_v1_wilds_proto_msgTypes[14]
+	mi := &file_glimway_v1_wilds_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1378,7 +2308,7 @@ func (x *WildsLoot) String() string {
 func (*WildsLoot) ProtoMessage() {}
 
 func (x *WildsLoot) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_wilds_proto_msgTypes[14]
+	mi := &file_glimway_v1_wilds_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1391,7 +2321,7 @@ func (x *WildsLoot) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WildsLoot.ProtoReflect.Descriptor instead.
 func (*WildsLoot) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{14}
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *WildsLoot) GetMaterials() []*WildsMaterial {
@@ -1422,7 +2352,7 @@ type HomesteadLand struct {
 
 func (x *HomesteadLand) Reset() {
 	*x = HomesteadLand{}
-	mi := &file_glimway_v1_wilds_proto_msgTypes[15]
+	mi := &file_glimway_v1_wilds_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1434,7 +2364,7 @@ func (x *HomesteadLand) String() string {
 func (*HomesteadLand) ProtoMessage() {}
 
 func (x *HomesteadLand) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_wilds_proto_msgTypes[15]
+	mi := &file_glimway_v1_wilds_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1447,7 +2377,7 @@ func (x *HomesteadLand) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HomesteadLand.ProtoReflect.Descriptor instead.
 func (*HomesteadLand) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{15}
+	return file_glimway_v1_wilds_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *HomesteadLand) GetWidth() uint32 {
@@ -1508,11 +2438,11 @@ const file_glimway_v1_wilds_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12(\n" +
 	"\x04kind\x18\x02 \x01(\x0e2\x14.glimway.v1.SiteKindR\x04kind\x12\x0e\n" +
 	"\x02tx\x18\x03 \x01(\rR\x02tx\x12\x0e\n" +
-	"\x02ty\x18\x04 \x01(\rR\x02ty\"\x9b\x04\n" +
+	"\x02ty\x18\x04 \x01(\rR\x02ty\"\x83\x05\n" +
 	"\n" +
 	"WildsChunk\x12\x19\n" +
-	"\bepoch_id\x18\x01 \x01(\tR\aepochId\x12\x16\n" +
-	"\x06region\x18\x02 \x01(\tR\x06region\x12\x14\n" +
+	"\bepoch_id\x18\x01 \x01(\tR\aepochId\x12\x1a\n" +
+	"\x06region\x18\x02 \x01(\tB\x02\x18\x01R\x06region\x12\x14\n" +
 	"\x05realm\x18\x03 \x01(\tR\x05realm\x12\x14\n" +
 	"\x05layer\x18\x04 \x01(\x11R\x05layer\x12\x0e\n" +
 	"\x02cx\x18\x05 \x01(\x11R\x02cx\x12\x0e\n" +
@@ -1522,14 +2452,32 @@ const file_glimway_v1_wilds_proto_rawDesc = "" +
 	"\apalette\x18\t \x03(\tR\apalette\x12\x16\n" +
 	"\x06ground\x18\n" +
 	" \x01(\fR\x06ground\x12\x14\n" +
-	"\x05solid\x18\v \x01(\fR\x05solid\x12&\n" +
-	"\x05exits\x18\f \x03(\v2\x10.glimway.v1.ExitR\x05exits\x12+\n" +
+	"\x05solid\x18\v \x01(\fR\x05solid\x12*\n" +
+	"\x05exits\x18\f \x03(\v2\x10.glimway.v1.ExitB\x02\x18\x01R\x05exits\x12+\n" +
 	"\x05decor\x18\r \x01(\v2\x15.glimway.v1.DecorListR\x05decor\x12+\n" +
-	"\x05sites\x18\x0e \x03(\v2\x15.glimway.v1.StorySiteR\x05sites\x12&\n" +
-	"\x05spawn\x18\x0f \x01(\v2\x10.glimway.v1.TileR\x05spawn\x12\x12\n" +
+	"\x05sites\x18\x0e \x03(\v2\x15.glimway.v1.StorySiteR\x05sites\x12*\n" +
+	"\x05spawn\x18\x0f \x01(\v2\x10.glimway.v1.TileB\x02\x18\x01R\x05spawn\x12\x12\n" +
 	"\x04look\x18\x10 \x01(\tR\x04look\x12\x12\n" +
 	"\x04mark\x18\x11 \x01(\tR\x04mark\x123\n" +
-	"\bentities\x18\x12 \x03(\v2\x17.glimway.v1.WildsEntityR\bentities\"\xad\x01\n" +
+	"\bentities\x18\x12 \x03(\v2\x17.glimway.v1.WildsEntityR\bentities\x12\x12\n" +
+	"\x04tier\x18\x13 \x01(\rR\x04tier\x12\x12\n" +
+	"\x04land\x18\x14 \x01(\tR\x04land\x122\n" +
+	"\x06places\x18\x15 \x03(\v2\x1a.glimway.v1.WildsPlaceMarkR\x06places\"T\n" +
+	"\x0eWildsPlaceMark\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x0e\n" +
+	"\x02tx\x18\x03 \x01(\rR\x02tx\x12\x0e\n" +
+	"\x02ty\x18\x04 \x01(\rR\x02ty\"[\n" +
+	"\rWildsChunkKey\x12\x14\n" +
+	"\x05realm\x18\x01 \x01(\tR\x05realm\x12\x14\n" +
+	"\x05layer\x18\x02 \x01(\x11R\x05layer\x12\x0e\n" +
+	"\x02cx\x18\x03 \x01(\x11R\x02cx\x12\x0e\n" +
+	"\x02cy\x18\x04 \x01(\x11R\x02cy\"l\n" +
+	"\x0eWildsChunkRect\x12\x15\n" +
+	"\x06min_cx\x18\x01 \x01(\x11R\x05minCx\x12\x15\n" +
+	"\x06min_cy\x18\x02 \x01(\x11R\x05minCy\x12\x15\n" +
+	"\x06max_cx\x18\x03 \x01(\x11R\x05maxCx\x12\x15\n" +
+	"\x06max_cy\x18\x04 \x01(\x11R\x05maxCy\"\xad\x01\n" +
 	"\vWildsEntity\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x0e\n" +
@@ -1538,17 +2486,18 @@ const file_glimway_v1_wilds_proto_rawDesc = "" +
 	"\aenemies\x18\x05 \x03(\tR\aenemies\x12\x1a\n" +
 	"\bmaterial\x18\x06 \x01(\tR\bmaterial\x12\x12\n" +
 	"\x04tier\x18\a \x01(\rR\x04tier\x12\x10\n" +
-	"\x03poi\x18\b \x01(\tR\x03poi\"\xf1\x01\n" +
+	"\x03poi\x18\b \x01(\tR\x03poi\"\x89\x02\n" +
 	"\n" +
 	"WildsEpoch\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
-	"world_seed\x18\x02 \x01(\tR\tworldSeed\x12\x1b\n" +
-	"\tregion_id\x18\x03 \x01(\tR\bregionId\x12+\n" +
+	"world_seed\x18\x02 \x01(\tR\tworldSeed\x12\x1f\n" +
+	"\tregion_id\x18\x03 \x01(\tB\x02\x18\x01R\bregionId\x12+\n" +
 	"\x11generator_version\x18\x04 \x01(\rR\x10generatorVersion\x12\x16\n" +
 	"\x06season\x18\x05 \x01(\tR\x06season\x12\x1b\n" +
 	"\tstarts_at\x18\x06 \x01(\x01R\bstartsAt\x125\n" +
-	"\aends_at\x18\a \x01(\v2\x1c.google.protobuf.DoubleValueR\x06endsAt\"\xe3\x01\n" +
+	"\aends_at\x18\a \x01(\v2\x1c.google.protobuf.DoubleValueR\x06endsAt\x12\x12\n" +
+	"\x04kind\x18\b \x01(\tR\x04kind\"\xe3\x01\n" +
 	"\x10WildsEntityState\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05cycle\x18\x02 \x01(\x01R\x05cycle\x12\x14\n" +
@@ -1589,7 +2538,63 @@ const file_glimway_v1_wilds_proto_rawDesc = "" +
 	"\x06echoes\x18\a \x03(\v2\x1a.glimway.v1.EchoAssignmentR\x06echoes\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"1\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"?\n" +
+	"\rWildsFrontier\x12.\n" +
+	"\x04rect\x18\x01 \x01(\v2\x1a.glimway.v1.WildsChunkRectR\x04rect\"f\n" +
+	"\fGroundChange\x12\x0e\n" +
+	"\x02tx\x18\x01 \x01(\rR\x02tx\x12\x0e\n" +
+	"\x02ty\x18\x02 \x01(\rR\x02ty\x12\x16\n" +
+	"\x06change\x18\x03 \x01(\tR\x06change\x12\x0e\n" +
+	"\x02by\x18\x04 \x01(\tR\x02by\x12\x0e\n" +
+	"\x02at\x18\x05 \x01(\x01R\x02at\"C\n" +
+	"\rGroundChanges\x122\n" +
+	"\achanges\x18\x01 \x03(\v2\x18.glimway.v1.GroundChangeR\achanges\"\x90\x01\n" +
+	"\x12ChunkGroundChanges\x12/\n" +
+	"\x05chunk\x18\x01 \x01(\v2\x19.glimway.v1.WildsChunkKeyR\x05chunk\x12\x14\n" +
+	"\x05epoch\x18\x02 \x01(\tR\x05epoch\x123\n" +
+	"\achanges\x18\x03 \x01(\v2\x19.glimway.v1.GroundChangesR\achanges\"i\n" +
+	"\fWildsGlimpse\x12/\n" +
+	"\x05chunk\x18\x01 \x01(\v2\x19.glimway.v1.WildsChunkKeyR\x05chunk\x12\x12\n" +
+	"\x04land\x18\x02 \x01(\tR\x04land\x12\x14\n" +
+	"\x05river\x18\x03 \x01(\bR\x05river\"\x96\x01\n" +
+	"\bWildsWay\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\f\n" +
+	"\x01a\x18\x02 \x01(\tR\x01a\x12\f\n" +
+	"\x01b\x18\x03 \x01(\tR\x01b\x12\x12\n" +
+	"\x04name\x18\x04 \x01(\tR\x04name\x12\x0e\n" +
+	"\x02by\x18\x05 \x01(\tR\x02by\x12\x14\n" +
+	"\x05tiles\x18\x06 \x01(\rR\x05tiles\x12\x14\n" +
+	"\x05epoch\x18\a \x01(\tR\x05epoch\x12\x0e\n" +
+	"\x02at\x18\b \x01(\x01R\x02at\"\xb6\x06\n" +
+	"\x0fWildsNearResult\x12,\n" +
+	"\x05still\x18\x01 \x01(\v2\x16.glimway.v1.WildsEpochR\x05still\x12*\n" +
+	"\x04wick\x18\x02 \x01(\v2\x16.glimway.v1.WildsEpochR\x04wick\x125\n" +
+	"\bfrontier\x18\x03 \x01(\v2\x19.glimway.v1.WildsFrontierR\bfrontier\x121\n" +
+	"\x06center\x18\x04 \x01(\v2\x19.glimway.v1.WildsChunkKeyR\x06center\x12\x16\n" +
+	"\x06radius\x18\x05 \x01(\rR\x06radius\x128\n" +
+	"\bentities\x18\x06 \x03(\v2\x1c.glimway.v1.WildsEntityStateR\bentities\x12G\n" +
+	"\x0fpersonal_claims\x18\a \x03(\v2\x1e.glimway.v1.WildsPersonalClaimR\x0epersonalClaims\x12<\n" +
+	"\vdiscoveries\x18\b \x03(\v2\x1a.glimway.v1.WildsDiscoveryR\vdiscoveries\x124\n" +
+	"\blanterns\x18\t \x03(\v2\x18.glimway.v1.WildsLanternR\blanterns\x122\n" +
+	"\x06echoes\x18\n" +
+	" \x03(\v2\x1a.glimway.v1.EchoAssignmentR\x06echoes\x126\n" +
+	"\x06ground\x18\v \x03(\v2\x1e.glimway.v1.ChunkGroundChangesR\x06ground\x12H\n" +
+	"\tmaterials\x18\f \x03(\v2*.glimway.v1.WildsNearResult.MaterialsEntryR\tmaterials\x122\n" +
+	"\aglimpse\x18\r \x03(\v2\x18.glimway.v1.WildsGlimpseR\aglimpse\x12(\n" +
+	"\x04ways\x18\x0e \x03(\v2\x14.glimway.v1.WildsWayR\x04ways\x1a<\n" +
+	"\x0eMaterialsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\xce\x01\n" +
+	"\vWildsRumour\x12\x14\n" +
+	"\x05epoch\x18\x01 \x01(\tR\x05epoch\x12\x14\n" +
+	"\x05place\x18\x02 \x01(\tR\x05place\x12\x1a\n" +
+	"\blandmark\x18\x03 \x01(\tR\blandmark\x12\x18\n" +
+	"\acompass\x18\x04 \x01(\tR\acompass\x12\x12\n" +
+	"\x04ring\x18\x05 \x01(\rR\x04ring\x12\x1d\n" +
+	"\n" +
+	"past_river\x18\x06 \x01(\bR\tpastRiver\x12\x12\n" +
+	"\x04site\x18\a \x01(\tR\x04site\x12\x16\n" +
+	"\x06opened\x18\b \x01(\bR\x06opened\"1\n" +
 	"\rWildsMaterial\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x10\n" +
 	"\x03qty\x18\x02 \x01(\x01R\x03qty\"|\n" +
@@ -1606,7 +2611,7 @@ const file_glimway_v1_wilds_proto_rawDesc = "" +
 	"\tDIR_NORTH\x10\x01\x12\f\n" +
 	"\bDIR_EAST\x10\x02\x12\r\n" +
 	"\tDIR_SOUTH\x10\x03\x12\f\n" +
-	"\bDIR_WEST\x10\x04*\xa1\x01\n" +
+	"\bDIR_WEST\x10\x04*\xd1\x01\n" +
 	"\bSiteKind\x12\x19\n" +
 	"\x15SITE_KIND_UNSPECIFIED\x10\x00\x12\x12\n" +
 	"\x0eSITE_KIND_ECHO\x10\x01\x12\x13\n" +
@@ -1614,7 +2619,9 @@ const file_glimway_v1_wilds_proto_rawDesc = "" +
 	"\x0eSITE_KIND_NEST\x10\x03\x12\x13\n" +
 	"\x0fSITE_KIND_PLANK\x10\x04\x12\x13\n" +
 	"\x0fSITE_KIND_GIVEN\x10\x05\x12\x13\n" +
-	"\x0fSITE_KIND_REEDS\x10\x06B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
+	"\x0fSITE_KIND_REEDS\x10\x06\x12\x18\n" +
+	"\x14SITE_KIND_LAMP_STONE\x10\a\x12\x14\n" +
+	"\x10SITE_KIND_RUMOUR\x10\bB1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
 
 var (
 	file_glimway_v1_wilds_proto_rawDescOnce sync.Once
@@ -1629,7 +2636,7 @@ func file_glimway_v1_wilds_proto_rawDescGZIP() []byte {
 }
 
 var file_glimway_v1_wilds_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_glimway_v1_wilds_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_glimway_v1_wilds_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
 var file_glimway_v1_wilds_proto_goTypes = []any{
 	(Dir)(0),                       // 0: glimway.v1.Dir
 	(SiteKind)(0),                  // 1: glimway.v1.SiteKind
@@ -1638,20 +2645,32 @@ var file_glimway_v1_wilds_proto_goTypes = []any{
 	(*DecorList)(nil),              // 4: glimway.v1.DecorList
 	(*StorySite)(nil),              // 5: glimway.v1.StorySite
 	(*WildsChunk)(nil),             // 6: glimway.v1.WildsChunk
-	(*WildsEntity)(nil),            // 7: glimway.v1.WildsEntity
-	(*WildsEpoch)(nil),             // 8: glimway.v1.WildsEpoch
-	(*WildsEntityState)(nil),       // 9: glimway.v1.WildsEntityState
-	(*WildsPersonalClaim)(nil),     // 10: glimway.v1.WildsPersonalClaim
-	(*WildsDiscovery)(nil),         // 11: glimway.v1.WildsDiscovery
-	(*WildsLantern)(nil),           // 12: glimway.v1.WildsLantern
-	(*EchoAssignment)(nil),         // 13: glimway.v1.EchoAssignment
-	(*WildsRegionResult)(nil),      // 14: glimway.v1.WildsRegionResult
-	(*WildsMaterial)(nil),          // 15: glimway.v1.WildsMaterial
-	(*WildsLoot)(nil),              // 16: glimway.v1.WildsLoot
-	(*HomesteadLand)(nil),          // 17: glimway.v1.HomesteadLand
-	nil,                            // 18: glimway.v1.WildsRegionResult.MaterialsEntry
-	(*wrapperspb.DoubleValue)(nil), // 19: google.protobuf.DoubleValue
-	(*wrapperspb.StringValue)(nil), // 20: google.protobuf.StringValue
+	(*WildsPlaceMark)(nil),         // 7: glimway.v1.WildsPlaceMark
+	(*WildsChunkKey)(nil),          // 8: glimway.v1.WildsChunkKey
+	(*WildsChunkRect)(nil),         // 9: glimway.v1.WildsChunkRect
+	(*WildsEntity)(nil),            // 10: glimway.v1.WildsEntity
+	(*WildsEpoch)(nil),             // 11: glimway.v1.WildsEpoch
+	(*WildsEntityState)(nil),       // 12: glimway.v1.WildsEntityState
+	(*WildsPersonalClaim)(nil),     // 13: glimway.v1.WildsPersonalClaim
+	(*WildsDiscovery)(nil),         // 14: glimway.v1.WildsDiscovery
+	(*WildsLantern)(nil),           // 15: glimway.v1.WildsLantern
+	(*EchoAssignment)(nil),         // 16: glimway.v1.EchoAssignment
+	(*WildsRegionResult)(nil),      // 17: glimway.v1.WildsRegionResult
+	(*WildsFrontier)(nil),          // 18: glimway.v1.WildsFrontier
+	(*GroundChange)(nil),           // 19: glimway.v1.GroundChange
+	(*GroundChanges)(nil),          // 20: glimway.v1.GroundChanges
+	(*ChunkGroundChanges)(nil),     // 21: glimway.v1.ChunkGroundChanges
+	(*WildsGlimpse)(nil),           // 22: glimway.v1.WildsGlimpse
+	(*WildsWay)(nil),               // 23: glimway.v1.WildsWay
+	(*WildsNearResult)(nil),        // 24: glimway.v1.WildsNearResult
+	(*WildsRumour)(nil),            // 25: glimway.v1.WildsRumour
+	(*WildsMaterial)(nil),          // 26: glimway.v1.WildsMaterial
+	(*WildsLoot)(nil),              // 27: glimway.v1.WildsLoot
+	(*HomesteadLand)(nil),          // 28: glimway.v1.HomesteadLand
+	nil,                            // 29: glimway.v1.WildsRegionResult.MaterialsEntry
+	nil,                            // 30: glimway.v1.WildsNearResult.MaterialsEntry
+	(*wrapperspb.DoubleValue)(nil), // 31: google.protobuf.DoubleValue
+	(*wrapperspb.StringValue)(nil), // 32: google.protobuf.StringValue
 }
 var file_glimway_v1_wilds_proto_depIdxs = []int32{
 	0,  // 0: glimway.v1.Exit.dir:type_name -> glimway.v1.Dir
@@ -1661,26 +2680,45 @@ var file_glimway_v1_wilds_proto_depIdxs = []int32{
 	4,  // 4: glimway.v1.WildsChunk.decor:type_name -> glimway.v1.DecorList
 	5,  // 5: glimway.v1.WildsChunk.sites:type_name -> glimway.v1.StorySite
 	2,  // 6: glimway.v1.WildsChunk.spawn:type_name -> glimway.v1.Tile
-	7,  // 7: glimway.v1.WildsChunk.entities:type_name -> glimway.v1.WildsEntity
-	19, // 8: glimway.v1.WildsEpoch.ends_at:type_name -> google.protobuf.DoubleValue
-	20, // 9: glimway.v1.WildsEntityState.by:type_name -> google.protobuf.StringValue
-	19, // 10: glimway.v1.WildsEntityState.at:type_name -> google.protobuf.DoubleValue
-	20, // 11: glimway.v1.WildsLantern.lit_by:type_name -> google.protobuf.StringValue
-	19, // 12: glimway.v1.WildsLantern.lit_at:type_name -> google.protobuf.DoubleValue
-	8,  // 13: glimway.v1.WildsRegionResult.epoch:type_name -> glimway.v1.WildsEpoch
-	9,  // 14: glimway.v1.WildsRegionResult.entities:type_name -> glimway.v1.WildsEntityState
-	10, // 15: glimway.v1.WildsRegionResult.personal_claims:type_name -> glimway.v1.WildsPersonalClaim
-	11, // 16: glimway.v1.WildsRegionResult.discoveries:type_name -> glimway.v1.WildsDiscovery
-	12, // 17: glimway.v1.WildsRegionResult.lanterns:type_name -> glimway.v1.WildsLantern
-	18, // 18: glimway.v1.WildsRegionResult.materials:type_name -> glimway.v1.WildsRegionResult.MaterialsEntry
-	13, // 19: glimway.v1.WildsRegionResult.echoes:type_name -> glimway.v1.EchoAssignment
-	15, // 20: glimway.v1.WildsLoot.materials:type_name -> glimway.v1.WildsMaterial
-	20, // 21: glimway.v1.WildsLoot.trinket:type_name -> google.protobuf.StringValue
-	22, // [22:22] is the sub-list for method output_type
-	22, // [22:22] is the sub-list for method input_type
-	22, // [22:22] is the sub-list for extension type_name
-	22, // [22:22] is the sub-list for extension extendee
-	0,  // [0:22] is the sub-list for field type_name
+	10, // 7: glimway.v1.WildsChunk.entities:type_name -> glimway.v1.WildsEntity
+	7,  // 8: glimway.v1.WildsChunk.places:type_name -> glimway.v1.WildsPlaceMark
+	31, // 9: glimway.v1.WildsEpoch.ends_at:type_name -> google.protobuf.DoubleValue
+	32, // 10: glimway.v1.WildsEntityState.by:type_name -> google.protobuf.StringValue
+	31, // 11: glimway.v1.WildsEntityState.at:type_name -> google.protobuf.DoubleValue
+	32, // 12: glimway.v1.WildsLantern.lit_by:type_name -> google.protobuf.StringValue
+	31, // 13: glimway.v1.WildsLantern.lit_at:type_name -> google.protobuf.DoubleValue
+	11, // 14: glimway.v1.WildsRegionResult.epoch:type_name -> glimway.v1.WildsEpoch
+	12, // 15: glimway.v1.WildsRegionResult.entities:type_name -> glimway.v1.WildsEntityState
+	13, // 16: glimway.v1.WildsRegionResult.personal_claims:type_name -> glimway.v1.WildsPersonalClaim
+	14, // 17: glimway.v1.WildsRegionResult.discoveries:type_name -> glimway.v1.WildsDiscovery
+	15, // 18: glimway.v1.WildsRegionResult.lanterns:type_name -> glimway.v1.WildsLantern
+	29, // 19: glimway.v1.WildsRegionResult.materials:type_name -> glimway.v1.WildsRegionResult.MaterialsEntry
+	16, // 20: glimway.v1.WildsRegionResult.echoes:type_name -> glimway.v1.EchoAssignment
+	9,  // 21: glimway.v1.WildsFrontier.rect:type_name -> glimway.v1.WildsChunkRect
+	19, // 22: glimway.v1.GroundChanges.changes:type_name -> glimway.v1.GroundChange
+	8,  // 23: glimway.v1.ChunkGroundChanges.chunk:type_name -> glimway.v1.WildsChunkKey
+	20, // 24: glimway.v1.ChunkGroundChanges.changes:type_name -> glimway.v1.GroundChanges
+	8,  // 25: glimway.v1.WildsGlimpse.chunk:type_name -> glimway.v1.WildsChunkKey
+	11, // 26: glimway.v1.WildsNearResult.still:type_name -> glimway.v1.WildsEpoch
+	11, // 27: glimway.v1.WildsNearResult.wick:type_name -> glimway.v1.WildsEpoch
+	18, // 28: glimway.v1.WildsNearResult.frontier:type_name -> glimway.v1.WildsFrontier
+	8,  // 29: glimway.v1.WildsNearResult.center:type_name -> glimway.v1.WildsChunkKey
+	12, // 30: glimway.v1.WildsNearResult.entities:type_name -> glimway.v1.WildsEntityState
+	13, // 31: glimway.v1.WildsNearResult.personal_claims:type_name -> glimway.v1.WildsPersonalClaim
+	14, // 32: glimway.v1.WildsNearResult.discoveries:type_name -> glimway.v1.WildsDiscovery
+	15, // 33: glimway.v1.WildsNearResult.lanterns:type_name -> glimway.v1.WildsLantern
+	16, // 34: glimway.v1.WildsNearResult.echoes:type_name -> glimway.v1.EchoAssignment
+	21, // 35: glimway.v1.WildsNearResult.ground:type_name -> glimway.v1.ChunkGroundChanges
+	30, // 36: glimway.v1.WildsNearResult.materials:type_name -> glimway.v1.WildsNearResult.MaterialsEntry
+	22, // 37: glimway.v1.WildsNearResult.glimpse:type_name -> glimway.v1.WildsGlimpse
+	23, // 38: glimway.v1.WildsNearResult.ways:type_name -> glimway.v1.WildsWay
+	26, // 39: glimway.v1.WildsLoot.materials:type_name -> glimway.v1.WildsMaterial
+	32, // 40: glimway.v1.WildsLoot.trinket:type_name -> google.protobuf.StringValue
+	41, // [41:41] is the sub-list for method output_type
+	41, // [41:41] is the sub-list for method input_type
+	41, // [41:41] is the sub-list for extension type_name
+	41, // [41:41] is the sub-list for extension extendee
+	0,  // [0:41] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_wilds_proto_init() }
@@ -1694,7 +2732,7 @@ func file_glimway_v1_wilds_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_glimway_v1_wilds_proto_rawDesc), len(file_glimway_v1_wilds_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   17,
+			NumMessages:   29,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

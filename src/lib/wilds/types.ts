@@ -6,39 +6,41 @@
  * schema; these are the narrowed views the loaders export.
  */
 
-import type { WildsRegionValid, WildsEntityKindRuleValid } from '../gen/glimway/content/v1/wilds_pb.js';
+import type {
+  WildsValid,
+  WildsEntityKindRuleValid,
+  WildsGroundValid,
+  WildsPlaceValid,
+} from '../gen/glimway/content/v1/wilds_pb.js';
 
 export type WildsEntityKind = 'camp' | 'node' | 'chest' | 'poi';
+/** What players may do on a ground (open-map.md section 3). */
+export type WildsSurface = 'land' | 'water' | 'ford' | 'road' | 'laid';
+/** A footprint's epoch: the Tangle's never turns, the Beyond's every wick. */
+export type WildsEpochKind = 'still' | 'wick';
 
 // ------------------------------------------------------------- shared data
 
-export type WildsRegion = Omit<WildsRegionValid, 'kind'> & { kind: 'inner' | 'outer' };
 export type WildsEntityKindRule = Omit<WildsEntityKindRuleValid, 'kind'> & { kind: WildsEntityKind };
+export type WildsGround = Omit<WildsGroundValid, 'surface'> & { surface: WildsSurface };
+export type WildsPlace = Omit<WildsPlaceValid, 'look' | 'epochKind'> & { look: 'tangle' | 'outer'; epochKind: WildsEpochKind };
 
-export interface WildsTimers {
-  campRespawnSeconds: number;
-  nodeRegrowSeconds: number;
-}
-
-export interface WildsData {
-  generatorVersion: number;
-  chunkSize: number;
-  deepTangleManhattanDistance: number;
-  regions: WildsRegion[];
-  enemyKinds: string[];
-  campMixes: { enemies: string[] }[];
-  materials: string[];
-  poiIds: string[];
-  trinkets: string[];
+/** The validated file, with the schema's vocabularies narrowed once. */
+export type WildsData = Omit<WildsValid, 'entityKinds' | 'grounds' | 'places'> & {
   entityKinds: WildsEntityKindRule[];
-  lootTables: Record<string, { entries: WildsLootEntry[] }>;
-  trinketChancePermille: number;
-  timers: WildsTimers;
-}
+  grounds: WildsGround[];
+  places: WildsPlace[];
+};
 
-export interface WildsLootEntry {
-  material: string;
-  min: number;
-  max: number;
-  chancePermille: number;
+/**
+ * Generator v2's 3x3 region, read off a footprint by `wildsV2Regions`
+ * (data.ts). The v2 bridge: lanes O-B, O-C and O-D delete it.
+ */
+export interface WildsRegion {
+  id: string;
+  kind: 'inner' | 'outer';
+  gridWidth: number;
+  gridHeight: number;
+  entryX: number;
+  entryY: number;
 }
