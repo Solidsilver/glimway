@@ -101,3 +101,35 @@ test('a second choice on its own key rides with the prompt, and a change to it a
   assert.deepEqual(prompts(() => it.update(hero, 0)), [{ label: 'Mill Roach! Keep it', verb: 'Keep', alt: { key: 'Q', label: 'Let it go' } }]);
   assert.deepEqual(prompts(() => it.update(hero, 0)), [], 'said once');
 });
+
+test('pick answers for any feet what update would choose standing there (playtests read it: __fsTarget)', () => {
+  const it = new Interactables(scene, { reducedMotion: true });
+  it.register('a', [point('touch:near', 110, 100), point('wilds:camp', 140, 100, { rank: 1, reach: 44 })]);
+  for (const at of [hero, { x: 90, y: 100 }, { x: 200, y: 200 }]) {
+    it.update(at, 0);
+    assert.equal(it.pick(at), it.currentTarget);
+  }
+  const seen = it.debugTarget({ x: 90, y: 100 }, false);
+  assert.equal(seen.target?.id, 'touch:near');
+  assert.deepEqual(seen.near.map((p) => [p.id, p.usable]), [['touch:near', true]]);
+});
+
+// The open map's thicket and a fern three rows north (review 2026-10-11, game F4 /
+// server 5): standing on a tile beside the thicket, the fern's dig point
+// (gathering: tileBottom + 8, 36 px reach, rank 0) is 32 px from the hero's
+// feet, and a dig in reach outranks clearing (paths: tileBottom, 56 px, rank -1)
+// however near the thicket is. A spot search that rules ferns out by a square of
+// tiles misses it; e2e/paths.spec.ts asks for the elected target instead.
+test('with the spade in hand, a fern three rows north takes the prompt from the thicket beside you', () => {
+  const it = new Interactables(scene, { reducedMotion: true });
+  const stand = { tx: 10, ty: 10 };
+  const feet = { x: stand.tx * 16 + 8, y: stand.ty * 16 + 8 };
+  const fern = point('gather:10,7', stand.tx * 16 + 8, (stand.ty - 3) * 16 + 16 + 8, { reach: 36, label: 'Dig for seedlings' });
+  const thicket = point('wilds:path-clear', (stand.tx + 1) * 16 + 8, stand.ty * 16 + 16, { reach: 56, rank: -1, label: 'Clear the thicket' });
+  it.register('gathering', [fern]);
+  it.register('paths', [thicket]);
+  assert.equal(Math.hypot(feet.x - fern.x, feet.y - fern.y), 32);
+  assert.equal(it.pick(feet)?.id, 'gather:10,7');
+  // Half a tile further south the fern is out of reach, and the thicket (still in its own) has the prompt.
+  assert.equal(it.pick({ x: feet.x, y: feet.y + 8 })?.id, 'wilds:path-clear');
+});

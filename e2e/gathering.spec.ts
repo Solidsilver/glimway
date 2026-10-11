@@ -1,8 +1,8 @@
 import type { Page } from './fixtures'
 import { expect, test } from './fixtures'
-import { sql, accountOf, refusal } from './connected'
+import { sql, accountOf, moveServerClock, pinWorld, refusal } from './connected'
 import { claimDeed, freshPlayer, fund, giveInstance, homeAt, landOf, shot, toMyLand, type Home } from './home-helpers'
-import { expectToast, frames, player, readDialogue, waitForLive, waitForWilds, warp } from './helpers'
+import { chunkWhole, diagnose, expectToast, parkCreatures, player, pressOn, readDialogue, standFor, targetNow, waitForLive, warp, windowWhole } from './helpers'
 import { HOMESTEAD_DATA, plantable } from '../src/lib/homestead.ts'
 import { gatheringTarget } from '../src/lib/gathering.ts'
 import { homeLights, isLit } from '../src/lib/homestead-land.ts'
@@ -40,64 +40,45 @@ const usesLeft = (page: Page, tool: string) =>
 type Spot = { target: string; tx: number; ty: number; lit?: boolean }
 type Candidate = { spot: Spot; hero: { x: number; y: number } }
 
+/** A gathering piece's interaction point (src/game/entities/gathering.ts). */
+const gatherId = (s: { tx: number; ty: number }) => `gather:${s.tx},${s.ty}`
+
 /**
- * Places where one of `targets` could be worked: walkable, in-bounds tiles
- * beside the spot, off the exits, away from live creatures (a wisp's
- * knockback would move the hero and the prompt — and striking first would
- * make the camps claimable, whose claims eat the press), and — strictly —
- * only where the scene's own nearest-spot rule would prompt this spot: a
- * Wilds claim within its 44 px outranks gathering, and a tie between two
- * pieces goes to the one listed first. The list is loose first, strict when
- * the spot's identity matters.
+ * Places where one of `targets` could be worked: walkable tiles beside the
+ * spot, off the exits, away from live creatures (a wisp's knockback would
+ * move the hero and the prompt), and where the game itself elects that
+ * piece (`__fsTarget` at those feet: rank, reach and the tool in hand, so a
+ * Wilds claim, a nearer piece or a tie is the game's to settle, not a copy
+ * of its rules here). Hold the tool first: a piece answers only to its own.
  */
-async function candidates(page: Page, targets: string[], lit?: boolean, strict = true): Promise<Candidate[]> {
-  return page.evaluate(([targets, lit, strict]) => {
-    const g = (window as unknown as { __fsGather: () => GatherView | null }).__fsGather()
-    const w = (window as unknown as { __fsWorld: () => { exits: { tx: number; ty: number; tw: number; th: number }[] } }).__fsWorld()
-    const wilds = (window as unknown as { __fsWilds?: () => { entities: { chunk: { cx: number; cy: number }; tx: number; ty: number; claimable: boolean }[]; sites: { tx: number; ty: number; cx: number; cy: number }[] } | null }).__fsWilds?.()
-    const spots = g?.spots ?? []
+async function candidates(page: Page, targets: string[], lit?: boolean): Promise<Candidate[]> {
+  return page.evaluate(([targets, lit]) => {
+    type T = { target: { id: string } | null }
+    const w = window as unknown as {
+      __fsGather: () => GatherView | null
+      __fsWorld: () => { exits: { tx: number; ty: number; tw: number; th: number }[] }
+      __fsTileSolid: (x: number, y: number) => boolean
+      __fsEnemies?: () => { x: number; y: number; state: string }[]
+      __fsTarget: (x: number, y: number) => T
+    }
+    const spots = w.__fsGather()?.spots ?? []
+    const exits = w.__fsWorld().exits ?? []
+    const live = (w.__fsEnemies?.() ?? []).filter((e) => e.state !== 'dead')
+    const inExit = (x: number, y: number) => exits.some((e) => x >= e.tx && x < e.tx + e.tw && y >= e.ty && y < e.ty + e.th)
     const out: Candidate[] = []
-    const px = (s: { tx: number; ty: number }) => ({ x: s.tx * 16 + 8, y: (s.ty + 1) * 16 })
-    const creatures = (window as unknown as { __fsEnemies?: () => { x: number; y: number; state: string }[] }).__fsEnemies?.() ?? []
-    const live = creatures.filter((e) => e.state !== 'dead')
-    // The open map's claims and sites, at their world tiles (gathering spots are world tiles too).
-    const claims = [
-      ...(wilds?.entities ?? []).filter((e) => e.claimable).map((e) => ({ tx: e.chunk.cx * 24 + e.tx, ty: e.chunk.cy * 24 + e.ty })),
-      ...(wilds?.sites ?? []).map((st) => ({ tx: st.cx * 24 + st.tx, ty: st.cy * 24 + st.ty }))
-    ]
-    const inExit = (x: number, y: number) => (w.exits ?? []).some((e) => x >= e.tx && x < e.tx + e.tw && y >= e.ty && y < e.ty + e.th)
     for (const s of spots) {
       if (!targets.includes(s.target)) continue
       if (lit !== undefined && s.lit !== lit) continue
-      const at = px(s)
-      const me = spots.indexOf(s)
-      for (const [x, y] of [
-        [s.tx, s.ty + 1],
-        [s.tx, s.ty - 1],
-        [s.tx - 1, s.ty],
-        [s.tx + 1, s.ty]
-      ]) {
-        if ((window as unknown as { __fsTileSolid: (x: number, y: number) => boolean }).__fsTileSolid(x, y) || inExit(x, y)) continue
+      for (const [x, y] of [[s.tx, s.ty + 1], [s.tx, s.ty - 1], [s.tx - 1, s.ty], [s.tx + 1, s.ty]] as const) {
+        if (w.__fsTileSolid(x, y) || inExit(x, y)) continue
         const hero = { x: x * 16 + 8, y: y * 16 + 12 }
         if (live.some((e) => Math.hypot(e.x - hero.x, e.y - hero.y) < 180)) continue
-        if (claims.some((e) => Math.hypot(hero.x - (e.tx * 16 + 8), hero.y - (e.ty + 1) * 16) <= 44)) continue
-        const d = Math.hypot(hero.x - at.x, hero.y - 8 - at.y)
-        if (d > 36) continue
-        if (strict) {
-          // The scene prompts the NEAREST spot; a tie goes to the one listed first.
-          const beaten = spots.some((o) => {
-            if (o === s) return false
-            const b = px(o)
-            const od = Math.hypot(hero.x - b.x, hero.y - 8 - b.y)
-            return od < d || (od === d && spots.indexOf(o) < me)
-          })
-          if (beaten) continue
-        }
+        if (w.__fsTarget(hero.x, hero.y).target?.id !== `gather:${s.tx},${s.ty}`) continue
         out.push({ spot: s, hero })
       }
     }
     return out
-  }, [targets, lit, strict] as const)
+  }, [targets, lit] as const)
 }
 
 /**
@@ -117,113 +98,77 @@ async function hold(page: Page, kind: string): Promise<void> {
   await expect.poll(async () => (await held()).kind, { message: `the ${kind} tool in hand` }).toBe(kind)
 }
 
-/** Set the area's creatures aside (dev hook): frozen, off the map, back on the next build. */
-const parkCreatures = (page: Page) =>
-  page.evaluate(() => (window as unknown as { __fsDevParkCreatures?: () => number }).__fsDevParkCreatures?.() ?? 0)
-
 /** Candidates nearest the hero first: small moves, fewer merges in flight. */
-async function candidatesNear(page: Page, targets: string[], lit?: boolean, strict = true): Promise<Candidate[]> {
-  const cands = await candidates(page, targets, lit, strict)
+async function candidatesNear(page: Page, targets: string[], lit?: boolean): Promise<Candidate[]> {
+  const cands = await candidates(page, targets, lit)
   const at = await player(page)
   return cands.sort((a, b) => Math.hypot(a.hero.x - at.x, a.hero.y - at.y) - Math.hypot(b.hero.x - at.x, b.hero.y - at.y))
 }
 
-/** Set the hero down (its save's position follows) and make sure it took —
- * false when something moved it (a knockback, a stale merge's snap-back):
- * the caller just tries the next candidate. */
-async function settle(page: Page, at: { x: number; y: number }): Promise<boolean> {
-  for (let tries = 0; tries < 2; tries++) {
-    await page.evaluate(([x, y]) => (window as unknown as { __fsDevPlace: (x: number, y: number) => void }).__fsDevPlace(x, y), [at.x, at.y] as const)
-    await frames(page, 4)
-    try {
-      await expect
-        .poll(async () => {
-          const p = await player(page)
-          return Math.hypot(p.x - at.x, p.y - at.y) <= 2
-        }, { timeout: 1_500 })
-        .toBe(true)
-      return true
-    } catch {
-      continue
-    }
-  }
-  return false
-}
-
 /**
- * The game's own prompt is on this spot and says the wanted words (both the
- * hook and the screen: a Wilds claim outranks gathering and reads differently).
+ * Stand on a candidate: the hero set down there, and the game electing its
+ * piece with the prompt saying `prompt`. False (and why) when it doesn't hold.
  */
-async function promptOn(page: Page, spot: { tx: number; ty: number }, prompt: RegExp): Promise<boolean> {
-  for (let w = 0; w < 6; w++) {
-    const g = await gather(page)
-    if (g?.prompt && g.prompt.tx === spot.tx && g.prompt.ty === spot.ty && prompt.test(g.prompt.label)) {
-      const dom = await page.locator('.prompt').textContent().catch(() => null)
-      if (dom !== null && dom.includes(g.prompt.label)) return true
-    }
-    await frames(page, 12)
+async function standOn(page: Page, c: Candidate, prompt: RegExp, why: string[]): Promise<boolean> {
+  const stood = await standFor(page, gatherId(c.spot), [c.hero], why)
+  if (!stood) return false
+  const label = (await targetNow(page)).target?.label ?? ''
+  if (!prompt.test(label)) {
+    why.push(`${gatherId(c.spot)} says “${label}”`)
+    return false
   }
-  return false
+  return true
 }
 
 /**
- * Work the nearest electable piece (or the one at `at`): stand, prompt,
- * press, and hear the answer. Strict first (the spot the game would
- * elect), then loose (any spot the prompt lands on), in case a wandering
- * creature or a merge spoiled the first round.
+ * Work the nearest piece the game elects (or the one at `at`): stand, its
+ * own target, press, and hear the answer. On the open map, `at`'s chunk
+ * must be whole first (its pieces registered).
  */
 async function workOne(page: Page, targets: string[], prompt: RegExp, opts: { lit?: boolean; says?: RegExp; at?: { tx: number; ty: number } } = {}): Promise<Spot & { from: { x: number; y: number } }> {
-  const tried: string[] = []
+  const why: string[] = []
   // The right tool in hand: only what it works answers.
   await hold(page, gatheringTarget(targets[0])?.action ?? 'chop')
   // A quiet chunk: the creatures set aside (a wisp near every tree empties
   // the candidate list, and its knockback moves the hero off the prompt).
   await parkCreatures(page)
-  for (const strict of [true, false]) {
-    // The list can be empty for a moment (a rebuild, a creature on its way
-    // out): look again for a few seconds before giving up on this round.
-    let cands: Candidate[] = []
-    for (let look = 0; look < 6; look++) {
-      cands = (await candidatesNear(page, targets, opts.lit, strict)).filter((c) => !opts.at || (c.spot.tx === opts.at.tx && c.spot.ty === opts.at.ty))
-      if (cands.length) break
-      await parkCreatures(page)
-      await frames(page, 30)
+  const cands = (await candidatesNear(page, targets, opts.lit)).filter((c) => !opts.at || (c.spot.tx === opts.at.tx && c.spot.ty === opts.at.ty))
+  for (const c of cands.slice(0, 8)) {
+    if (!(await standOn(page, c, prompt, why))) continue
+    await pressOn(page, gatherId(c.spot))
+    // A claim's discovery (a POI was the nearest press) opens a reading
+    // panel that holds the screen: read it away before going on.
+    await readDialogue(page).catch(() => null)
+    try {
+      await expectToast(page, opts.says ?? /Found: /, { timeout: 15_000 })
+    } catch (err) {
+      throw new Error(`no answer at ${c.spot.target} ${c.spot.tx},${c.spot.ty}: last=${(await gather(page))?.last}; ${await diagnose(page)}; ${String(err).slice(0, 200)}`)
     }
-    tried.push(`${strict ? 'strict' : 'loose'}:${cands.length}`)
-    for (const c of cands.slice(0, 8)) {
-      if (!(await settle(page, c.hero))) {
-        tried.push('unsettled')
-        continue
-      }
-      if (!(await promptOn(page, c.spot, prompt))) {
-        tried.push(`prompt=${JSON.stringify((await gather(page))?.prompt)}/${await page.locator('.prompt').textContent().catch(() => null)}`)
-        continue
-      }
-      await waitForLive(page)
-      await page.keyboard.press('e')
-      // A claim's discovery (a POI was the nearest press) opens a reading
-      // panel that holds the screen: read it away before going on.
-      await readDialogue(page).catch(() => null)
-      try {
-        await expectToast(page, opts.says ?? /Found: /, { timeout: 15_000 })
-      } catch (err) {
-        throw new Error(`no answer at ${c.spot.target} ${c.spot.tx},${c.spot.ty}: last=${(await gather(page))?.last}, hero=${JSON.stringify(await player(page))} vs ${JSON.stringify(c.hero)}; ${String(err).slice(0, 200)}`)
-      }
-      return { ...c.spot, from: c.hero }
-    }
+    return { ...c.spot, from: c.hero }
   }
-  throw new Error(`nothing to work (${targets.join('/')}): ${tried.join(' ')}`)
+  throw new Error(`nothing to work (${targets.join('/')}${opts.at ? ` at ${opts.at.tx},${opts.at.ty}` : ''}): ${cands.length} candidates; ${why.join(' ')}; ${await diagnose(page)}`)
 }
 
 /** Work the piece at a spot again from where you stood (the felled tree's stump). */
 async function workAgain(page: Page, spot: Spot & { from: { x: number; y: number } }, prompt: RegExp, kind = 'dig'): Promise<void> {
   await hold(page, kind)
   await parkCreatures(page)
-  expect(await settle(page, spot.from), 'back where you stood').toBe(true)
-  expect(await promptOn(page, spot, prompt), `the prompt on ${spot.tx},${spot.ty}`).toBe(true)
-  await waitForLive(page)
-  await page.keyboard.press('e')
+  const why: string[] = []
+  expect(await standOn(page, { spot, hero: spot.from }, prompt, why), `back where you stood, the prompt on ${spot.tx},${spot.ty}: ${why.join(' ')}`).toBe(true)
+  await pressOn(page, gatherId(spot))
   await expectToast(page, /Found: /, { timeout: 15_000 })
+}
+
+/** Set the hero down (its save's position follows) and make sure it took. */
+async function settle(page: Page, at: { x: number; y: number }): Promise<boolean> {
+  await page.evaluate(([x, y]) => (window as unknown as { __fsDevPlace: (x: number, y: number) => void }).__fsDevPlace(x, y), [at.x, at.y] as const)
+  return expect
+    .poll(async () => {
+      const p = await player(page)
+      return Math.hypot(p.x - at.x, p.y - at.y) <= 2
+    }, { timeout: 3_000 })
+    .toBe(true)
+    .then(() => true, () => false)
 }
 
 const stack = (page: Page, def: string) =>
@@ -242,27 +187,37 @@ const spotAt = async (page: Page, s: { tx: number; ty: number }) => (await gathe
 const artAt = (page: Page, s: { tx: number; ty: number }) =>
   page.evaluate(([x, y]) => (window as unknown as { __fsArtAt: (x: number, y: number) => { frame: string; fades: boolean }[] }).__fsArtAt(x, y), [s.tx, s.ty] as const)
 
+/** The gathering specs' world (pinned: the Tangle is still land, the same trees on every run). */
+const GATHER_SEED = 'e2e-gathering'
+
+/** The first UTC noon after `unix` (at most a day on). */
+const nextUtcNoon = (unix: number) => Math.floor(unix / 86400) * 86400 + 43200 + (unix % 86400 >= 43200 ? 86400 : 0)
+
 test('chopping a tree in the Tangle: wear, timber, a stump to dig, and regrowth', async ({ page }) => {
   test.setTimeout(150_000)
   const id = await freshPlayer(page, 'Teo')
   const axe = giveInstance(id, 'bench-axe', { max: 90 })
   const spade = giveInstance(id, 'bench-spade', { max: 90 })
 
+  // The Tangle of a pinned world (still land: the same trees every run).
+  await pinWorld(page, GATHER_SEED)
   await warp(page, 'wilds', 20, 20)
-  await waitForWilds(page)
+  await windowWhole(page)
   // A path-side tree: its canopy is drawn by the foreground pass (it fades
   // when walked under). That canopy used to stay standing over the stump.
+  // The first, nearest the warp, whose standing spot the game gives to its chop.
   await hold(page, 'chop')
   await parkCreatures(page)
   let tree: Spot | null = null
-  for (const c of await candidatesNear(page, ['tangle-tree', 'ash'], undefined, true)) {
+  const why: string[] = []
+  for (const c of await candidatesNear(page, ['tangle-tree', 'ash'])) {
     if (!(await artAt(page, c.spot)).some((a) => a.fades)) continue
-    // Its standing spot must prompt the chop: a sign or a find nearer it takes the press.
-    if (!(await settle(page, c.hero)) || !(await promptOn(page, c.spot, /Chop the (tree|ash)/))) continue
+    if (!(await standOn(page, c, /Chop the (tree|ash)/, why))) continue
     tree = c.spot
     break
   }
-  expect(tree, 'a path-side tree to fell').not.toBeNull()
+  expect(tree, `a path-side tree to fell (seed ${GATHER_SEED}): ${why.join(' ')}; ${await diagnose(page)}`).not.toBeNull()
+  await chunkWhole(page, tree!)
   const standing = await artAt(page, tree!)
 
   // Refused: the whole tree stays, canopy and all, and it can still be chopped.
@@ -291,7 +246,7 @@ test('chopping a tree in the Tangle: wear, timber, a stump to dig, and regrowth'
   // open ground, with nothing drawn on it (its canopy neither).
   const chunk = (await gather(page))!.area
   await warp(page, 'wilds', 20, 20)
-  await waitForWilds(page)
+  await chunkWhole(page, spot)
   expect((await gather(page))!.area).toBe(chunk)
   await expect.poll(async () => spotAt(page, spot)).toBeNull()
   expect((await gather(page))!.left.filter((l) => l.tx === spot.tx && l.ty === spot.ty)).toEqual([])
@@ -300,7 +255,7 @@ test('chopping a tree in the Tangle: wear, timber, a stump to dig, and regrowth'
   // The drift: leave, come back, and the woods have regrown.
   await warp(page, 'commons', 23, 19)
   await warp(page, 'wilds', 20, 20)
-  await waitForWilds(page)
+  await chunkWhole(page, spot)
   await expect.poll(async () => spotAt(page, spot)).toMatch(/^(tangle-tree|ash)$/)
 })
 
@@ -326,12 +281,17 @@ test('past the cap the wood says so in words, and the trees shuffle out of reach
   test.setTimeout(120_000)
   const id = await freshPlayer(page, 'Ash')
   const axe = giveInstance(id, 'bench-axe', { max: 90 })
-  // One tree short of the day's cap (numbers live on the server only).
-  const day = Math.floor(Date.now() / 1000 / 86400)
+  // One tree short of the day's cap (numbers live on the server only). The
+  // cap counts by the server's UTC day: its clock is set to the next noon,
+  // twelve hours from either midnight, and the seeded day is that one's (a
+  // run that crossed midnight before its chops would count on a new day).
+  await pinWorld(page, GATHER_SEED)
+  const noon = await moveServerClock(page, nextUtcNoon(await moveServerClock(page, 0)))
+  const day = Math.floor(noon / 86400)
   sql(`INSERT INTO gathering_caps(account_id,action,day,day_count,area,visit_id,visit_count,updated_at) VALUES('${accountOf(id)}','chop',${day},29,'','',0,0);`)
 
   await warp(page, 'wilds', 20, 20)
-  await waitForWilds(page)
+  await windowWhole(page)
   await workOne(page, ['tangle-tree', 'ash'], /Chop the (tree|ash)/)
   await expect.poll(async () => usesLeft(page, axe)).toBe(29)
   // The next: the soft line, no number, no wear, and no tree answers again.

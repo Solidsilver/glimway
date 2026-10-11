@@ -21,6 +21,7 @@ import type { Result } from '../lib/api/errors'
 import type { ItemsView } from '../lib/api/types'
 import type { SyncSafety } from './sync-safety'
 import type { PerfReport } from './perf.ts'
+import type { InteractableView } from './entities/interactables.ts'
 import { onSceneEnd, type SceneEvents } from './scene-end.ts'
 
 type Box = { x: number; y: number; w: number; h: number }
@@ -52,6 +53,8 @@ export interface FsHooks {
   /** Walk through waypoints (world px) as if steered; whether a walk is still going. */
   __fsDevWalk: (path: { x: number; y: number }[]) => void
   __fsDevWalking: () => boolean
+  /** The waypoints a dev walk has still to reach, the next first (null: not walking). */
+  __fsDevWalkLeft: () => { x: number; y: number }[] | null
   /** How settled this area is: frames drawn since it was built, the fade, whether input is live. */
   __fsFrame: () => { areaId: AreaId; frames: number; loop: number; fading: boolean; transitioning: boolean; cinematic: boolean; live: boolean }
   /** The server revision this tab's link is based on (null for guests). */
@@ -92,6 +95,12 @@ export interface FsHooks {
   } | null
   /** Fishing here (docs/design/crafts.md 5): the line out, a landed fish, each water's band, the last outcome. */
   __fsFishing: () => ReturnType<import('./entities/fishing').Fishing['view']> | null
+  /**
+   * The action button's target (entities/interactables.ts): the one this frame
+   * chose, or with (x, y) the one the hero's feet there would get by the same
+   * rule (rank, reach, the tool in hand); and every point in reach there.
+   */
+  __fsTarget: (x?: number, y?: number) => { target: InteractableView | null; near: (InteractableView & { d: number; usable: boolean })[]; at: { x: number; y: number } }
   /** Whether any collision body covers a tile. */
   __fsSolidAt: (tx: number, ty: number) => boolean
   /**

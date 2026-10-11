@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { CONTRACT, serverState, sql } from './connected'
+import { CONTRACT, pinWorld } from './connected'
 import { waitForWilds, warp, wildsWindow } from './helpers'
 import { freshPlayer } from './home-helpers'
 import { decodeChunk } from '../src/lib/api/chunks.ts'
@@ -28,14 +28,10 @@ async function shot(page: Page, name: string): Promise<void> {
 
 /**
  * One fixed world for the screens, so a change can be seen before and
- * after on the same land: a fresh world's seed is set before its Wilds are
- * first made (its epochs and chunks are made on first entry; any made
- * already are dropped). The Beyond still follows the week's wick.
+ * after on the same land (pinWorld, e2e/connected.ts). The Beyond still
+ * follows the week's wick.
  */
-async function pinWorld(page: Page): Promise<void> {
-  const world = (await serverState(page)).body.worldId as string
-  sql(`DELETE FROM wilds_chunks WHERE epoch_id IN (SELECT id FROM wild_epochs WHERE world_id='${world}'); DELETE FROM wild_epochs WHERE world_id='${world}'; UPDATE worlds SET seed='open-map-screens' WHERE id='${world}';`)
-}
+const pinScreensWorld = (page: Page) => pinWorld(page, 'open-map-screens')
 
 /** Every chunk of the 0.8 frontier, as the server serves them. */
 async function frontierChunks(page: Page): Promise<WildsChunk[]> {
@@ -82,7 +78,7 @@ for (const [device, vp] of [['desktop', { width: 1200, height: 760 }], ['phone',
     test.setTimeout(240_000)
     await page.setViewportSize(vp)
     await freshPlayer(page)
-    await pinWorld(page)
+    await pinScreensWorld(page)
     const chunks = await frontierChunks(page)
     expect(chunks.length).toBe(81)
 
@@ -149,7 +145,7 @@ for (const [device, vp] of [['desktop', { width: 1200, height: 760 }], ['phone',
 test('walking the Lantern Road across chunk edges keeps the frames steady', async ({ page }) => {
   test.setTimeout(180_000)
   await freshPlayer(page)
-  await pinWorld(page)
+  await pinScreensWorld(page)
   const chunks = await frontierChunks(page)
   // The road's paving tiles, in world tiles; walk from its southernmost to the farthest along it.
   const paving = new Set<string>()

@@ -1,8 +1,8 @@
 import { expect, test, type Page } from './fixtures'
 import { devices, type BrowserContext } from '@playwright/test'
-import { accountOf, sql, CONTRACT } from './connected'
+import { accountOf, pinWorld, sql, CONTRACT } from './connected'
 import { freshPlayer, fund, giveInstance } from './home-helpers'
-import { dialogueState, expectToast, readDialogue, waitForLive, waitForWilds, warp, wilds } from './helpers'
+import { diagnose, dialogueState, expectTarget, expectToast, parkCreatures, pressOn, readDialogue, steady, targetNow, waitForLive, waitForWilds, warp, wilds, windowWhole } from './helpers'
 
 /**
  * Paths players make (docs/design/open-map.md section 3, decisions 5, 7 and
@@ -68,73 +68,93 @@ async function landed(page: Page, what: string): Promise<void> {
 }
 
 /**
- * An open land tile in the window with a clearable thicket beside it (no
- * site or entity on either), searched outward from the hero's chunk.
+ * Open land tiles beside a clearable thicket in the window, nearest the hero
+ * first: geometry only (a tile to stand on, with room to step on and off).
+ * Which prompt wins there is the game's to say: see `standByThicket`.
  */
-async function spotByThicket(page: Page): Promise<{ stand: { tx: number; ty: number }; thicket: { tx: number; ty: number } } | null> {
+async function thicketSpots(page: Page): Promise<{ stand: { tx: number; ty: number }; thicket: { tx: number; ty: number } }[]> {
   return page.evaluate(() => {
     const w = window as unknown as Hooks
     const p = w.__fsPlayer()
     const cx = Math.floor(p.x / 16 / 24)
     const cy = Math.floor(p.y / 16 / 24)
     const open = (t: PathTile | null) => !!t && t.surface === 'land' && !t.baseSolid && !t.occupied && !t.change && t.decor.length === 0
+    const out: { stand: { tx: number; ty: number }; thicket: { tx: number; ty: number } }[] = []
     for (let ty = cy * 24 - 20; ty < cy * 24 + 44; ty++)
       for (let tx = cx * 24 - 20; tx < cx * 24 + 44; tx++) {
         const t = w.__fsPathTile(tx, ty)
         if (!t || !t.decor.includes('thicket') || t.surface !== 'land' || t.occupied || t.change) continue
         for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
           const n = w.__fsPathTile(tx + dx!, ty + dy!)
-          // Room to step on and off: the stand tile has a second open neighbour too.
           const more = [[0, 1], [0, -1], [1, 0], [-1, 0]].filter(([ex, ey]) => open(w.__fsPathTile(tx + dx! + ex!, ty + dy! + ey!))).length
-          // Nothing to claim or read nearby (a claim's prompt outranks clearing).
-          let quiet = true
-          // Nor anything the spade digs (a flower patch, a stump: the nearer prompt wins).
-          const dug = ['flowers', 'fern', 'stump', 'ring-stump', 'turncaps', 'log']
-          for (let qy = -4; qy <= 4 && quiet; qy++)
-            for (let qx = -4; qx <= 4 && quiet; qx++) {
-              const q = w.__fsPathTile(tx + dx! + qx, ty + dy! + qy)
-              if (q?.occupied || (Math.abs(qx) <= 2 && Math.abs(qy) <= 2 && q?.decor.some((d) => dug.includes(d)))) quiet = false
-            }
-          if (open(n) && more >= 1 && quiet) return { stand: { tx: tx + dx!, ty: ty + dy! }, thicket: { tx, ty } }
+          if (open(n) && more >= 1) out.push({ stand: { tx: tx + dx!, ty: ty + dy! }, thicket: { tx, ty } })
         }
       }
-    return null
+    const d = (s: { tx: number; ty: number }) => Math.hypot(s.tx * 16 + 8 - p.x, s.ty * 16 + 8 - p.y)
+    return out.sort((a, b) => d(a.stand) - d(b.stand))
   })
 }
+
+/**
+ * Stand beside a thicket where the game itself elects clearing it: the
+ * hero set down on each candidate in turn (the clear prompt follows where
+ * the hero stands), with the spade in hand, until the action button's target
+ * is `wilds:path-clear` on that thicket. A dig in reach (a fern three rows
+ * north, a stump) or a claim outranks clearing, whatever a square of tiles
+ * around the spot says (review 2026-10-11; tests/interactables.test.ts).
+ */
+async function standByThicket(page: Page, why: string[]): Promise<{ stand: { tx: number; ty: number }; thicket: { tx: number; ty: number } } | null> {
+  for (const c of (await thicketSpots(page)).slice(0, 24)) {
+    await page.evaluate(([x, y]) => (window as unknown as { __fsDevPlace: (x: number, y: number) => void }).__fsDevPlace(x, y), [c.stand.tx * 16 + 8, c.stand.ty * 16 + 8] as const)
+    const seen = await steady(page, async () => ({ target: (await targetNow(page)).target?.id ?? null, clearAt: (await paths(page))?.clearAt ?? null }), { frames: 3, seconds: 3, message: 'the prompt settles' })
+    if (seen.target === 'wilds:path-clear' && seen.clearAt?.tx === c.thicket.tx && seen.clearAt?.ty === c.thicket.ty) return c
+    why.push(`${c.stand.tx},${c.stand.ty}→${seen.target ?? 'nothing'}`)
+  }
+  return null
+}
+
+/** The paths specs' worlds: pinned, so a failure names land that can be read again (within the wick). */
+const SEED = 'e2e-paths'
 
 test('clear a thicket with a spade, lay stone after the turning-land confirm, see it from a second account, lift it', async ({ page, browser, baseURL }) => {
   test.setTimeout(240_000)
   const id = await freshPlayer(page)
+  await pinWorld(page, SEED)
   giveInstance(id, 'bench-spade', { max: 90 })
   fund(id, { materials: { stone: 40, timber: 10 } })
 
-  // Out past the Whitequiet: land that turns at the wick.
-  let spot: Awaited<ReturnType<typeof spotByThicket>> = null
+  // Out past the Whitequiet: land that turns at the wick. The spade in hand
+  // while looking: what it digs is what can take the prompt from the thicket.
+  let spot: Awaited<ReturnType<typeof standByThicket>> = null
+  const why: string[] = []
   for (const [cx, cy] of [[2, -4], [-2, -4], [2, -7], [-2, -7], [0, -7], [3, -1], [-3, -1]] as const) {
     await warp(page, 'wilds', cx * S + 12, cy * S + 12)
-    await waitForWilds(page)
-    spot = await spotByThicket(page)
+    await windowWhole(page)
+    await parkCreatures(page)
+    await hold(page, 'dig')
+    why.push(`[${cx},${cy}]`)
+    spot = await standByThicket(page, why)
     if (spot) break
   }
-  expect(spot, 'an open tile beside a thicket, nothing else to work in reach').not.toBeNull()
+  expect(spot, `a tile beside a thicket where clearing is the prompt (seed ${SEED}; ${await diagnose(page)}; tried ${why.join(' ')})`).not.toBeNull()
   const { stand } = spot!
-  await warp(page, 'wilds', stand.tx, stand.ty)
-  await waitForWilds(page)
-  await page.evaluate(() => (window as unknown as Hooks).__fsDevParkCreatures())
   // (Walking in can find a place first, and its find can bring stone or timber: count from here.)
   await expect.poll(async () => (await paths(page))?.materials?.stone ?? 0, { message: 'the pack’s stone, read' }).toBeGreaterThanOrEqual(40)
   const stone = (await paths(page))!.materials!.stone!
   const timber = (await paths(page))!.materials!.timber!
 
   // With the weapon in hand nothing offers to clear; with the spade, the thicket does.
-  expect((await paths(page))!.clearAt).toBeNull()
+  await waitForLive(page)
+  await page.keyboard.press('1')
+  await expect.poll(async () => page.evaluate(() => (window as unknown as Hooks).__fsHeld().kind)).toBe('weapon')
+  await expect.poll(async () => (await paths(page))!.clearAt).toBeNull()
   await hold(page, 'dig')
-  await expect.poll(async () => (await paths(page))!.clearAt).not.toBeNull()
+  await expect.poll(async () => (await paths(page))!.clearAt).toEqual(spot!.thicket)
+  await expectTarget(page, 'wilds:path-clear')
   await expect(page.locator('.prompt')).toContainText('Clear the thicket')
   const cleared = (await paths(page))!.clearAt!
   await shot(page, '90-paths-clear-prompt-desktop')
-  await waitForLive(page)
-  await page.keyboard.press('e')
+  await pressOn(page, 'wilds:path-clear', spot!.thicket)
   await landed(page, 'clear')
   expect((await tileAt(page, cleared.tx, cleared.ty))!.change).toEqual({ change: 'cleared', by: accountOf(id) })
   await expectToast(page, /There’s a way through now|The trunk rolls aside/)

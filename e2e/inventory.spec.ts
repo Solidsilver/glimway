@@ -1,7 +1,8 @@
-import { devices } from '@playwright/test'
+import { devices, type Request } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
 import { reenter, seedStory, sql, accountOf } from './connected'
 import { claimDeed, earnGlims, freshPlayer, fund, myHome, shot } from './home-helpers'
+import { SERVER_ANSWER_MS } from './helpers'
 
 /**
  * The inventory panel (I, or the HUD's bag): tools, supplies, keepsakes,
@@ -14,6 +15,26 @@ async function seedPack(page: Page, id: string, extra: { materials?: Record<stri
   if (extra.materials || extra.items) fund(id, { materials: extra.materials, items: extra.items })
   if (extra.questItems) await seedStory(id, { questItems: extra.questItems })
   await reenter(page)
+}
+
+/** Home and lane reads in flight on a page, from when this is called (`idle` waits for them all to answer). */
+function homeReads(page: Page): { idle: () => Promise<void> } {
+  const reads = new Set<Request>()
+  const isRead = (r: Request) => r.method() === 'GET' && /^\/api\/(homestead\/gate\/\d+|commons)$/.test(new URL(r.url()).pathname)
+  page.on('request', (r) => {
+    if (isRead(r)) reads.add(r)
+  })
+  page.on('requestfinished', (r) => reads.delete(r))
+  page.on('requestfailed', (r) => reads.delete(r))
+  return { idle: () => expect.poll(() => reads.size, { timeout: SERVER_ANSWER_MS, message: 'the home reads in flight have answered' }).toBe(0) }
+}
+
+/** The next read of a home (from here on) whose answer names every one of `ids`: start it before the action that reads. */
+function freshHomeRead(page: Page, ids: string[]): Promise<unknown> {
+  return page.waitForResponse(
+    async (r) => r.request().method() === 'GET' && /^\/api\/homestead\/gate\/\d+$/.test(new URL(r.url()).pathname) && r.ok() && (await r.text().then((t) => ids.every((id) => t.includes(id)), () => false)),
+    { timeout: SERVER_ANSWER_MS }
+  )
 }
 
 const dialog = (page: Page) => page.getByRole('dialog', { name: 'Inventory' })
@@ -168,6 +189,7 @@ test.describe('touch', () => {
 
 test.describe('in a world', () => {
   test('in a world the inventory shows server counts and your home goods, placed and stored', { tag: '@smoke' }, async ({ page }) => {
+    const reads = homeReads(page)
     const id = await freshPlayer(page)
     // Homesteads v2: a home is a deed you claim from Silas.
     await earnGlims(page, id)
@@ -181,9 +203,29 @@ test.describe('in a world', () => {
       `INSERT INTO homestead_items(id,item_def,location,homestead_id,scene,x,y,rotation) VALUES('inv-a','wooden-stool','placed',${home},'outdoor',1,1,0);` +
         `INSERT INTO homestead_items(id,item_def,location,account_id) VALUES('inv-b','wooden-stool','inventory','${accountOf(id)}'),('inv-c','potted-fern','inventory','${accountOf(id)}');`
     )
-
+    // The home reads made before the seed (claiming, the lane) answer with
+    // the home as it was: let them all land, then read it afresh. The SQL
+    // seed publishes nothing, and a load joins one already in flight
+    // (review 2026-10-11, game F4 / server 5). The Home view's own fresh
+    // read (`__fsHomes.fresh()`, lane c08-client) when the game has it;
+    // else a fresh page, where nothing read before the seed survives.
+    await reads.idle()
+    const held = () => page.evaluate(() => ((window as unknown as { __fsHomes: () => { mine: { items: { id: string }[] } | null } }).__fsHomes().mine?.items ?? []).map((i) => i.id).sort())
+    const fresh = await page.evaluate(() => typeof (window as unknown as { __fsHomes?: { fresh?: unknown } }).__fsHomes?.fresh === 'function')
+    let read: Promise<unknown> = Promise.resolve()
+    if (fresh) {
+      await page.evaluate(() => (window as unknown as { __fsHomes: { fresh: () => Promise<unknown> } }).__fsHomes.fresh())
+    } else {
+      const area = await page.evaluate(() => (window as unknown as { __fsSafety: () => { areaId: string } }).__fsSafety().areaId)
+      await reenter(page, area)
+      // Opening the bag reads the home: that read names the three pieces.
+      read = freshHomeRead(page, ['inv-a', 'inv-b', 'inv-c'])
+    }
+    if (fresh) await expect.poll(held, { message: 'the game holds the fresh home' }).toEqual(expect.arrayContaining(['inv-a', 'inv-b', 'inv-c']))
     await page.keyboard.press('i')
     await expect(dialog(page)).toBeVisible()
+    await read
+    await expect.poll(held, { message: 'the game holds the fresh home' }).toEqual(expect.arrayContaining(['inv-a', 'inv-b', 'inv-c']))
     await tab(page, /Supplies/).click()
     const supplies = dialog(page).getByTestId('inv-page-supplies')
     await expect(supplies.getByTestId('material-timber')).toHaveText('12')

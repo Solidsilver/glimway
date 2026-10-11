@@ -193,6 +193,20 @@ test('two players: one Ward-light, and the other’s health rises with its pulse
   // The caster's own pulse: 0.4 of their Mend (crafts.md 4.3), not of the base.
   const pulse = (await moves(page)).wardPulseHeal
   expect(pulse).toBeGreaterThan(0)
+  // The friend's health as each frame leaves it, from before the cast: the
+  // first rise is the first pulse itself (pulses are game time, 1.5 s apart,
+  // and a frame moves the game clock at most 50 ms), not a later read that a
+  // stalled renderer could let a second pulse into.
+  await other.evaluate(() => {
+    const w = window as unknown as { __fsVitals: () => { hp: number }; __e2eHp: number[] }
+    const seen = (w.__e2eHp = [w.__fsVitals().hp])
+    const tick = () => {
+      const hp = w.__fsVitals().hp
+      if (hp !== seen.at(-1)) seen.push(hp)
+      if (seen.length < 4) requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+  })
   await waitForLive(page)
   await page.keyboard.press('r')
   // The hub relays the cast (lane C, crafts.md 4.5); a hub without the relay closes the caster's socket.
@@ -200,9 +214,11 @@ test('two players: one Ward-light, and the other’s health rises with its pulse
   const status = await page.evaluate(() => (window as unknown as { __fsPresence?: () => { status: string } }).__fsPresence?.()?.status ?? null)
   expect(status, 'the presence hub must relay `ability` (lane C)').toBe('live')
   // Three pulses over five seconds, each the caster's own: the hub put it on the cast.
-  await expect.poll(async () => (await health()) - before, { timeout: 10_000, intervals: [50] }).not.toBe(0)
-  // One read is enough: the poll returns within 50 ms of the first pulse, the next is 1.5 s away.
-  expect((await health()) - before).toBeCloseTo(pulse, 5)
+  const rises = () => other.evaluate(() => (window as unknown as { __e2eHp: number[] }).__e2eHp)
+  await expect.poll(async () => (await rises()).length, { timeout: 10_000, message: 'the first pulse lands' }).toBeGreaterThan(1)
+  const [from, first] = await rises()
+  expect(from).toBe(before)
+  expect(first! - from!).toBeCloseTo(pulse, 5)
   await other.screenshot({ path: 'test-results/abilities-ward-friend.png' })
   const healed = await health()
 

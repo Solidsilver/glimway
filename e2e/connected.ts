@@ -66,6 +66,45 @@ export async function moveServerClock(page: Page, unix: number): Promise<number>
   return now
 }
 
+/**
+ * Pin this player's world to a fixed seed (a pinned fixture): set before its
+ * Wilds are first made (epochs and chunks are made on first entry; any made
+ * already are dropped). The still land (the Tangle) is then the same on
+ * every run; the wick's land (the Whitequiet and beyond) also follows the
+ * wick, so it is the same for a seed only within one wick. Returns the seed,
+ * for a failure message to name.
+ */
+export async function pinWorld(page: Page, seed: string): Promise<string> {
+  const world = (await serverState(page)).body.worldId as string
+  sql(`DELETE FROM wilds_chunks WHERE epoch_id IN (SELECT id FROM wild_epochs WHERE world_id='${world}'); DELETE FROM wild_epochs WHERE world_id='${world}'; UPDATE worlds SET seed='${seed.replace(/'/g, "''")}' WHERE id='${world}';`)
+  return seed
+}
+
+/**
+ * Both clocks (the world's and the screen's) to a safe moment from now on
+ * whose calendar mark is `mark` (with `outside`, any other mark): one with a
+ * whole day of that same mark still ahead, so no turning lands mid-test, and
+ * the calendar the request is checked against is the one set. Returns it.
+ * The world's clock moves in steps under 30 days, signing in again between
+ * them: a session ends 30 days after it began however much it's used (the
+ * server's seasons tests' `jumpToAs` does the same), and a mark can be two
+ * months off. Never a fixed date: that would be a date bomb.
+ */
+export async function seasonOf(page: Page, id: string, mark: string, opts: { outside?: boolean } = {}): Promise<number> {
+  const { calendarAt } = await import('../src/lib/calendar.ts')
+  const DAY = 86400
+  const is = (t: number) => (calendarAt(t).mark === mark) !== !!opts.outside
+  let now = await moveServerClock(page, 0)
+  let t = now
+  while (!(is(t) && is(t + DAY))) t += 3600
+  while (now < t) {
+    now = await moveServerClock(page, Math.min(t, now + 25 * DAY))
+    if (now < t) await signInAgain(page, id)
+  }
+  await page.evaluate((x) => (window as unknown as { __fsDevCalendar: (t: number) => void }).__fsDevCalendar(x), now)
+  return now
+}
+
 /** A fresh Habitica user id per test, so tests never share server state. */
 export const newUser = (): string => randomUUID()
 

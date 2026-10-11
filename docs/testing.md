@@ -173,6 +173,11 @@ it at most 50 ms). A fixed pause is either too short (flaky) or too long
 |---|---|
 | `waitForTimeout` after a warp | `warp` / `go` / `waitForArea` (they wait until the area is built, its fade-in done, and a few frames drawn) |
 | a pause before pressing E | `waitForLive(page)` (no dialogue or panel, past the grace after a conversation) or `openTalk(page, prompt)` |
+| `waitForWilds` before using something on the open map | `chunkWhole(page, tile)` (that tile's chunk attached *and built whole*: its pieces and things registered) or `windowWhole(page)` (the whole 3×3); `waitForWilds` only promises the scene settled and the hero's chunk attached |
+| working out which prompt wins (reach, rank, the tool in hand) in the spec | the game's own election: `targetAt(page, feet)` (the target those feet would get), `standFor(page, id, spots)` (stand where it is `id`), `expectTarget(page, id)`, and `pressOn(page, id, tile)` (chunk whole, input live, exactly `id` elected, then E) |
+| a stall that just times out | a progress check that fails fast with `diagnose(page)` (hero, body, target and what is in reach, the dev walk's next waypoints, the window's build state, the epoch) |
+| land from a random world for a behaviour check | `pinWorld(page, seed)` (e2e/connected.ts) right after signing in: the Tangle is then the same every run (the wick's land, within a wick); keep varied-seed walks as their own tests, and name the seed/epoch when they fail |
+| a date or season from `Date.now()` | `seasonOf(page, id, mark, { outside })` (both clocks, a day of slack before the next turning), or a server time set away from the boundary (`moveServerClock`) |
 | E-and-sleep dialogue loops | `talkThrough`, `talk`, `readDialogue`, `untilChoices`, `untilLine`, `talkText` |
 | a reply list check | `untilChoices(page)`, then the `.choice` locators |
 | holding a key for N ms | `holdUntil(page, key, check)` |
@@ -195,7 +200,8 @@ nothing observable exists, and say why in a comment.
 
 **Dev hooks** (read-only, dev builds only) used by these helpers:
 `__fsFrame()` (frames since the area was built, fade, transitioning, whether
-input is live), `__fsDialogue()` (line, typing, replies, and every conversation
+input is live), `__fsTarget(x?, y?)` (the action button's target, now or for
+feet at x, y, and what is in reach), `__fsWildsWindow()` (attached, building, ready), `__fsDialogue()` (line, typing, replies, and every conversation
 opened so far), `__fsToasts()` and `__fsBanners()` (everything shown so far),
 and `__fsDevSaved().pending` (a debounced save still to land). Add a read-only
 hook behind `import.meta.env.DEV` when a test needs to wait for something new;
