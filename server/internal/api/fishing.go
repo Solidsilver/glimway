@@ -269,8 +269,8 @@ func closeOpenCasts(ctx context.Context, logf fishingLog, tx *sql.Tx, account st
 
 // fractionalNow is the operation's sub-second clock: 5.3's cast times are
 // fractional, and the stock's `at` must never move backwards under
-// contention, so the request clock is first sampled after BeginTx takes
-// the store's write lock; maintenance and projection keep that same value.
+// contention, so each transaction's clock is sampled after beginTx holds
+// the store's write lock (txClock); maintenance and projection keep it.
 func fractionalNow(a *Server, ctx context.Context) float64 {
 	return float64(a.requestTime(ctx).UnixNano()) / 1e9
 }

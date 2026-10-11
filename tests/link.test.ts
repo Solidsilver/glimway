@@ -223,7 +223,25 @@ test('entries older than six days, or from another contract, are dropped unsent 
   await r.link.flush();
   assert.deepEqual(r.server.sent('POST /api/story/mark').map((c) => c.body.mark), ['seen:new']);
   assert.ok(toasts(r).some((x) => x.includes('more than six days ago')));
+  assert.ok(toasts(r).includes('The game updated; one action wasn’t kept.'));
   assert.deepEqual(r.session.state.flags, ['seen:new']);
+});
+
+test('an entry dropped by a contract bump says the game updated, not six days offline', async (t) => {
+  const clock = { now: 10 * OUTBOX_LIFETIME_MS };
+  const record = emptyRecord('fixture-account', 'dev');
+  const body = JSON.stringify({ op: { lease: '', key: 'k-c' }, mark: 'seen:contract', where: { area: 'village', x: 1, y: 1 } });
+  record.entries = [{ id: 1, kind: 'mark', path: '/api/story/mark', key: 'k-c', body, contract: CONTRACT_NUMBER - 1, createdAt: clock.now, sent: false, barrier: false, offline: true }];
+  record.nextId = 2;
+  const store = memoryOutboxStore();
+  seed(store, record);
+  const r = await rig(t, { record, clock, store });
+  await online(r);
+  await r.link.flush();
+  await tick();
+  assert.equal(r.server.sent('POST /api/story/mark').length, 0);
+  assert.equal(r.link.outbox.length, 0);
+  assert.deepEqual(toasts(r), ['The game updated; one action wasn’t kept.']);
 });
 
 // A faithful CraftResult (the server emits every field, EmitUnpopulated).

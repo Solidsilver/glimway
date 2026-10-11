@@ -13,6 +13,7 @@ import (
 type statusWriter struct {
 	http.ResponseWriter
 	status      int
+	route       string
 	written     bool
 	unexpected  func(error)
 	beforeWrite func()
@@ -128,6 +129,6 @@ func (a *Server) precheck(ctx context.Context, id, invite, party string) (string
 	err := a.Store.DB.QueryRowContext(ctx, `SELECT CASE
  WHEN EXISTS(SELECT 1 FROM allowlist WHERE habitica_id=?) OR EXISTS(SELECT 1 FROM invites WHERE (created_by='cli' OR NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=?)) AND code_hash=? AND `+inviteUsable+`) THEN 'listed'
  WHEN ? AND ?!='' AND EXISTS(SELECT 1 FROM worlds WHERE owner_id='' AND habitica_party_id=?) AND NOT EXISTS(SELECT 1 FROM party_closures WHERE party_id=?) AND NOT EXISTS(SELECT 1 FROM access_removals WHERE habitica_id=?) THEN 'party'
- ELSE '' END`, id, id, store.Hash(store.NormalizeInvite(invite)), a.requestTime(ctx).Unix(), !a.Config.PartyAdmissionOff, party, party, party, id).Scan(&route)
+ ELSE '' END`, id, id, store.Hash(store.NormalizeInvite(invite)), a.Config.Now().Unix(), !a.Config.PartyAdmissionOff, party, party, party, id).Scan(&route)
 	return route, err
 }

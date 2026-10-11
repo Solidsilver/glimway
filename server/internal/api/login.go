@@ -56,6 +56,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 				}
 				return fail(h.Status, h.Code)
 			}
+			a.logUpstream(w, e)
 			return fail(502, "habitica-unavailable")
 		}
 		return nil
@@ -64,7 +65,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 		return budgetFailure(w, err)
 	}
 	ctx := r.Context()
-	tx, err := a.Store.DB.BeginTx(ctx, nil)
+	tx, err := a.beginTx(ctx)
 	if err != nil {
 		return err
 	}

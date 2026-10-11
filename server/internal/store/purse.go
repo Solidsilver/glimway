@@ -202,8 +202,9 @@ func boolInt(b bool) int {
 // from `created` on (the reward may exist). It runs when someone looks: the
 // purse read, the next top-up's reserve, PlayerState. It answers the
 // account's version after the settles (0 when there were none), so a state
-// built straight after carries it (finding 6).
-func SettleStaleTopUps(ctx context.Context, tx *sql.Tx, account string, now int64, live ...func(string) bool) (int64, error) {
+// built straight after carries it (finding 6). live is required: only a
+// caller with no workers (a store test) passes nil.
+func SettleStaleTopUps(ctx context.Context, tx *sql.Tx, account string, now int64, live func(string) bool) (int64, error) {
 	rows, err := tx.QueryContext(ctx, "SELECT "+topUpColumns+" FROM purse_topups WHERE account_id=? AND state IN "+topUpWorkingSQL+" AND created_at<=?", account, now-TopUpStaleAfter)
 	if err != nil {
 		return 0, err
@@ -215,7 +216,7 @@ func SettleStaleTopUps(ctx context.Context, tx *sql.Tx, account string, now int6
 			rows.Close()
 			return 0, err
 		}
-		if len(live) != 0 && live[0] != nil && live[0](t.ID) {
+		if live != nil && live(t.ID) {
 			continue
 		}
 		stale = append(stale, t)

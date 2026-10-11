@@ -70,7 +70,8 @@ func devGrantKind(id string) (kind string, max int, err error) {
 // answer is the mixed shape every read has — {state, result} — so the
 // client adopts the new state like any other answer.
 func (a *Server) DevGrant(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("X-Glimway-Now", strconv.FormatInt(a.requestTime(r.Context()).Unix(), 10))
+	r, clock := a.withTxClock(r)
+	w = &statusWriter{ResponseWriter: w, status: 200, beforeWrite: func() { w.Header().Set("X-Glimway-Now", strconv.FormatInt(clock().Unix(), 10)) }}
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)

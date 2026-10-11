@@ -177,7 +177,7 @@ func (a *Server) heldSignIn(ctx context.Context, tx *sql.Tx, r *http.Request, no
 // answers world-chosen (read the state next).
 func (a *Server) worldChoiceRead(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
-	tx, err := a.Store.DB.BeginTx(ctx, nil)
+	tx, err := a.beginTx(ctx)
 	if err != nil {
 		return err
 	}
@@ -231,7 +231,7 @@ func (a *Server) worldChoose(w http.ResponseWriter, r *http.Request) error {
 		return fail(400, "invalid-choice")
 	}
 	ctx := r.Context()
-	tx, err := a.Store.DB.BeginTx(ctx, nil)
+	tx, err := a.beginTx(ctx)
 	if err != nil {
 		return err
 	}

@@ -4,21 +4,16 @@ import (
 	"cmp"
 	"context"
 	"glimway/content"
-	"glimway/server/internal/chunks"
 	"net/http"
 	"slices"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
 func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Sample once on first use, normally after BeginTx acquires the write lock.
-	var once sync.Once
-	var now time.Time
-	clock := func() time.Time { once.Do(func() { now = a.Config.Now() }); return now }
-	r = r.WithContext(chunks.WithReadClock(r.Context(), clock))
+	// Each transaction samples once, after beginTx holds the write lock.
+	r, clock := a.withTxClock(r)
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	// Log fixed route labels only. No bodies, headers, raw paths or query strings.
@@ -27,7 +22,7 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if metadata != nil {
 		route = metadata.label
 	}
-	observed := &statusWriter{ResponseWriter: w, status: 200, beforeWrite: func() { w.Header().Set("X-Glimway-Now", strconv.FormatInt(clock().Unix(), 10)) }, unexpected: func(err error) { a.logUnexpected(route, err) }}
+	observed := &statusWriter{ResponseWriter: w, status: 200, route: route, beforeWrite: func() { w.Header().Set("X-Glimway-Now", strconv.FormatInt(clock().Unix(), 10)) }, unexpected: func(err error) { a.logUnexpected(route, err) }}
 	w = observed
 	defer func() {
 		class := "none"

@@ -12,6 +12,8 @@ import (
 
 	"glimway/content"
 	contract "glimway/server/internal/gen/glimway/v1"
+	"glimway/server/internal/habitica"
+	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"glimway/server/internal/store/storetest"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -79,6 +81,80 @@ func TestProjectionUsesOneTimestampAtTurning(t *testing.T) {
 	}
 	if reads != 1 || response.Header().Get("X-Glimway-Now") != strconv.FormatInt(turning-1, 10) {
 		t.Fatalf("clock reads=%d header=%s", reads, response.Header().Get("X-Glimway-Now"))
+	}
+}
+
+// A sign-in's clock is the login transaction's, sampled after the Habitica
+// proof: the limiters and the precheck never seed it (review P3-1).
+func TestSignInClockSampledAfterUpstreamWait(t *testing.T) {
+	x := newRig(t)
+	start := x.now.Load()
+	if err := x.db.Allow(context.Background(), "alice", true, start); err != nil {
+		t.Fatal(err)
+	}
+	x.api.Config.Now = func() time.Time {
+		if x.calls.Load() == 0 {
+			return time.Unix(start, 0)
+		}
+		return time.Unix(start+60, 0)
+	}
+	response := x.rawHTTP("POST", "/api/session", map[string]any{"userId": "alice", "token": secret}, nil)
+	if response.Code != 200 || x.calls.Load() == 0 {
+		t.Fatal(response.Code, x.calls.Load(), response.Body.String())
+	}
+	created := count(t, x.db, "SELECT max(created_at) FROM (SELECT created_at FROM sessions UNION ALL SELECT created_at FROM pending_sessions)")
+	if created != int(start+60) || response.Header().Get("X-Glimway-Now") != strconv.FormatInt(start+60, 10) {
+		t.Fatalf("session created_at=%d header=%s, want %d after the upstream wait", created, response.Header().Get("X-Glimway-Now"), start+60)
+	}
+}
+
+// A refusal's stored committed version is the one its answer carries, after
+// maintenance moved it (review P3-2).
+func TestRefusedOperationStoresTheVersionItAnswers(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	x.staleCast(s.AccountID, s.WorldID, "water:village:gone-pond", "north", float64(x.now.Load()))
+	response := x.rawHTTP("POST", "/api/homestead/buy", body(s, "buy-desk", map[string]any{"itemDef": "writing-desk"}), c)
+	refusal := &contract.Refusal{}
+	if err := protojson.Unmarshal(response.Body.Bytes(), refusal); err != nil || response.Code != 409 || refusal.Error.GetCode() != "not-a-member" {
+		t.Fatal(response.Code, response.Body.String(), err)
+	}
+	if refusal.State.Version <= float64(s.State.Version) {
+		t.Fatalf("maintenance did not move the version: %v -> %v", s.State.Version, refusal.State.Version)
+	}
+	stored := count(t, x.db, "SELECT committed_version FROM idempotency WHERE account_id=? AND key='buy-desk'", s.AccountID)
+	if float64(stored) != refusal.State.Version {
+		t.Fatalf("stored version %d, answered %v", stored, refusal.State.Version)
+	}
+}
+
+// unreachableHabitica fails the sign-in's proof below the HTTP layer, with
+// an error whose text carries the token.
+type unreachableHabitica struct{ habitica.Upstream }
+
+func (unreachableHabitica) VerifyLimited(context.Context, string, string, func() bool) (rules.Profile, []string, error) {
+	return rules.Profile{}, nil, fmt.Errorf("dial habitica with %s: %w", secret, context.DeadlineExceeded)
+}
+
+// An upstream failure logs its type-only diagnostic before it becomes a 502,
+// never the error text or the token (review P3-7).
+func TestUpstreamFailureLogsTypeOnlyDiagnostic(t *testing.T) {
+	x := newRig(t)
+	if err := x.db.Allow(context.Background(), "alice", true, x.now.Load()); err != nil {
+		t.Fatal(err)
+	}
+	x.api.Habitica = unreachableHabitica{x.api.Habitica}
+	x.logs.Reset()
+	response := x.rawHTTP("POST", "/api/session", map[string]any{"userId": "alice", "token": secret}, nil)
+	if response.Code != 502 || !strings.Contains(response.Body.String(), "habitica-unavailable") {
+		t.Fatal(response.Code, response.Body.String())
+	}
+	logs := x.logs.String()
+	if !strings.Contains(logs, "upstream route=/api/session error_type=*fmt.wrapError diagnostic=deadline-exceeded") {
+		t.Fatal("upstream failure left no diagnostic:", logs)
+	}
+	if strings.Contains(logs, secret) || strings.Contains(logs, "dial habitica") {
+		t.Fatal("diagnostic leaked the error text:", logs)
 	}
 }
 

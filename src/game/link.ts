@@ -1487,7 +1487,10 @@ export class Link {
     for (const e of gone) this.notify(e, { ok: false, code: 'offline' })
     this.refresh()
     await this.saveRecord()
-    this.emitter(EV.toast, { text: 'Something you did offline more than six days ago wasn’t kept.', kind: 'error' })
+    // A contract drop is a deploy, not time offline: it says so plainly.
+    const updated = gone.filter((e) => e.contract !== CONTRACT_NUMBER).length
+    if (updated) this.emitter(EV.toast, { text: updated === 1 ? 'The game updated; one action wasn’t kept.' : 'The game updated; some actions weren’t kept.', kind: 'error' })
+    if (updated < gone.length) this.emitter(EV.toast, { text: 'Something you did offline more than six days ago wasn’t kept.', kind: 'error' })
     return ok
   }
 

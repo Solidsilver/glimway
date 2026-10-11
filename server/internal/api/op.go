@@ -160,17 +160,18 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 		if !errors.As(err, &f) || f.status < 400 || f.status >= 500 {
 			return err
 		}
+		// Project first, so the stored refusal carries the version it answers with.
+		state, e := a.maintainAndProjectState(ctx, tx, s, a.requestTime(ctx))
+		if e != nil {
+			return e
+		}
 		if terminalRefusal(f) {
-			if e := saveRefusedOp(ctx, tx, s.AccountID, r.URL.Path, op.Key, hash, f, s.Version, now); e != nil {
+			if e := saveRefusedOp(ctx, tx, s.AccountID, r.URL.Path, op.Key, hash, f, int64(state.Version), now); e != nil {
 				return e
 			}
 			if e := savePayload(tx, s.AccountID, r.URL.Path, op.Key, request); e != nil {
 				return e
 			}
-		}
-		state, e := a.maintainAndProjectState(ctx, tx, s, a.requestTime(ctx))
-		if e != nil {
-			return e
 		}
 		if e = tx.Commit(); e != nil {
 			return e

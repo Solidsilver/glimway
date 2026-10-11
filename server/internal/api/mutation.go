@@ -11,7 +11,7 @@ import (
 )
 
 func (a *Server) begin(r *http.Request) (*sql.Tx, store.Snapshot, string, error) {
-	tx, err := a.Store.DB.BeginTx(r.Context(), nil)
+	tx, err := a.beginTx(r.Context())
 	if err != nil {
 		return nil, store.Snapshot{}, "", err
 	}

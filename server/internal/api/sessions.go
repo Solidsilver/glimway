@@ -54,7 +54,7 @@ func (a *Server) logout(w http.ResponseWriter, r *http.Request) error {
 	var id string
 	if c, err := r.Cookie(CookieName); err == nil {
 		hash := store.Hash(c.Value)
-		tx, err := a.Store.DB.BeginTx(r.Context(), nil)
+		tx, err := a.beginTx(r.Context())
 		if err != nil {
 			return err
 		}

@@ -181,7 +181,7 @@ func (a *Server) purseTopUp(w http.ResponseWriter, r *http.Request) error {
 			return e
 		}
 		// Step 2: the detached worker (2.2).
-		a.startWorker(context.WithoutCancel(r.Context()), top, subject, token, b, done)
+		a.startWorker(context.Background(), top, subject, token, b, done)
 		started = true
 		return nil
 	})
@@ -280,7 +280,7 @@ func (a *Server) refuseOp(w http.ResponseWriter, r *http.Request, tx *sql.Tx, s 
 // withTx runs fn in its own short transaction. The worker's writes between
 // its upstream calls all go through here: no transaction ever spans a call.
 func (a *Server) withTx(ctx context.Context, fn func(*sql.Tx) error) error {
-	tx, err := a.Store.DB.BeginTx(ctx, nil)
+	tx, err := a.beginTx(ctx)
 	if err != nil {
 		return err
 	}
@@ -685,11 +685,12 @@ func habiticaRetryAfter(err error) time.Duration {
 // habiticaFailure maps an upstream error onto the refusal it is on the wire
 // (habitica-auth, habitica-unavailable, habitica-rate-limited,
 // habitica-invalid-response): a status and a code word, never a body.
-func habiticaFailure(err error) error {
+func (a *Server) habiticaFailure(w http.ResponseWriter, err error) error {
 	var h *habitica.Error
 	if errors.As(err, &h) {
 		return fail(h.Status, h.Code)
 	}
+	a.logUpstream(w, err)
 	return fail(502, "habitica-unavailable")
 }
 

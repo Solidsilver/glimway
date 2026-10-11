@@ -7,6 +7,8 @@ import (
 	"glimway/server/internal/chunks"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
+	"net/http"
+	"sync"
 	"time"
 )
 
@@ -15,6 +17,49 @@ func (a *Server) requestTime(ctx context.Context) time.Time {
 		return now
 	}
 	return a.Config.Now()
+}
+
+// txClock is a request's operation clock. It samples on first use and is
+// cleared by every beginTx, so each transaction's time is taken after it
+// holds the store's one write connection, never before an upstream wait.
+type txClock struct {
+	mu  sync.Mutex
+	now func() time.Time
+	at  time.Time
+	set bool
+}
+
+func (c *txClock) read() time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if !c.set {
+		c.at, c.set = c.now(), true
+	}
+	return c.at
+}
+
+type txClockKey struct{}
+
+// withTxClock binds a fresh operation clock to r (ServeHTTP, DevGrant).
+func (a *Server) withTxClock(r *http.Request) (*http.Request, func() time.Time) {
+	c := &txClock{now: a.Config.Now}
+	ctx := context.WithValue(r.Context(), txClockKey{}, c)
+	return r.WithContext(chunks.WithReadClock(ctx, c.read)), c.read
+}
+
+// beginTx opens a transaction and restarts the request's clock: the next
+// requestTime reads after the store's lock is held.
+func (a *Server) beginTx(ctx context.Context) (*sql.Tx, error) {
+	tx, err := a.Store.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	if c, ok := ctx.Value(txClockKey{}).(*txClock); ok {
+		c.mu.Lock()
+		c.set = false
+		c.mu.Unlock()
+	}
+	return tx, nil
 }
 
 // maintainState is an explicit write phase, before loading/projecting a response.
