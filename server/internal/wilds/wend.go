@@ -10,10 +10,8 @@ package wilds
 // maxWidth tiles wide, varying smoothly; a bank runs along both sides.
 //
 // The river is crossed only at fords (decision 12): where a route's centre
-// line runs over water (fordWidth tiles of shallows), and, so that nothing
-// is walled off (decision 17), in every cell it passes that no route
-// fords: a short path across at the river's point nearest the cell's
-// middle.
+// line runs over water, fordWidth tiles of shallows. Every route gets one,
+// and the reach test shows that's enough: nothing is walled off.
 
 const (
 	riverMargin = 10 // tiles the river's centre keeps from the Tangle and the Whitequiet's middle
@@ -136,57 +134,4 @@ func (r *river) crossesChunk(cx, cy int) bool {
 		}
 	}
 	return false
-}
-
-// cellFord is the extra ford of a cell the river passes but no route fords
-// (nil when there's none): a short straight path across the river at its
-// point nearest the cell's middle, kept well inside the cell.
-func (w *world) cellFord(x, y int) *line {
-	if w.river == nil {
-		return nil
-	}
-	key := [2]int{x, y}
-	if l, ok := w.fordsAt[key]; ok {
-		return l
-	}
-	w.fordsAt[key] = nil
-	cb := cellBox(x, y)
-	inner := cb.grow(-12 * fp)
-	r := w.river.line
-	// A route already fords it here?
-	for _, rt := range w.cellLinks(x, y) {
-		for i := 0; i+1 < len(rt.line.pts); i++ {
-			a, b := rt.line.pts[i], rt.line.pts[i+1]
-			for j := 0; j+1 < len(r.pts); j++ {
-				if !r.boxes[j].meets(segBox(a, b)) || !crosses(a, b, r.pts[j], r.pts[j+1]) {
-					continue
-				}
-				if cb.has(crossPoint(a, b, r.pts[j], r.pts[j+1])) {
-					return nil
-				}
-			}
-		}
-	}
-	mx, my := (cb.x0+cb.x1)/2, (cb.y0+cb.y1)/2
-	best, bestD := -1, int64(-1)
-	for i, p := range r.pts {
-		if i == 0 || i == len(r.pts)-1 || !inner.has(p) {
-			continue
-		}
-		dx, dy := int64(p.x-mx), int64(p.y-my)
-		if d := dx*dx + dy*dy; bestD < 0 || d < bestD {
-			best, bestD = i, d
-		}
-	}
-	if best < 0 {
-		return nil
-	}
-	p, a, b := r.pts[best], r.pts[best-1], r.pts[best+1]
-	dx, dy := b.x-a.x, b.y-a.y
-	l := max(isqrt(dx*dx+dy*dy), 1)
-	reach := r.half[best] + 6*fp
-	across := pt{-dy * reach / l, dx * reach / l}
-	f := newLine([]pt{{p.x - across.x, p.y - across.y}, {p.x + across.x, p.y + across.y}}, nil)
-	w.fordsAt[key] = f
-	return f
 }

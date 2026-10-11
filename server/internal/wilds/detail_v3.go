@@ -730,7 +730,8 @@ func (d *detail) addOldRoads() {
 
 // ensureReach joins every open edge tile and every point to the rest of its
 // side of any water, opening the cheapest way through solid interior tiles
-// (never a blocked one, never an edge tile).
+// (never a blocked one, never an edge tile); then joins any other open
+// ground the same way, or shuts it if water cuts it off from everything.
 func (d *detail) ensureReach() {
 	S := d.S
 	var targets []Tile
@@ -781,6 +782,26 @@ func (d *detail) ensureReach() {
 		}
 		return 10
 	}
+	// join opens the cheapest way from t to anything reached, and floods
+	// from t; false when nothing reached lies on its side of the water.
+	join := func(t Tile) bool {
+		line := cheapest(S, t, step, func(x, y int) bool { return reached[d.at(x, y)] })
+		end := line[len(line)-1]
+		if !reached[d.at(end.TX, end.TY)] {
+			return false
+		}
+		for _, p := range line {
+			j := d.at(p.TX, p.TY)
+			if !d.walk[j] {
+				d.walk[j] = true
+				if groundSurface[d.ground[j]] == "land" {
+					d.ground[j] = d.lg(p.TX, p.TY).path
+				}
+			}
+		}
+		flood(t)
+		return true
+	}
 	rooted := false
 	for _, t := range targets {
 		i := d.at(t.TX, t.TY)
@@ -798,26 +819,41 @@ func (d *detail) ensureReach() {
 			rooted = true
 			continue
 		}
-		line := cheapest(S, t, step, func(x, y int) bool { return reached[d.at(x, y)] })
-		end := line[len(line)-1]
-		if !reached[d.at(end.TX, end.TY)] {
+		if !join(t) {
 			// Nothing reached on this side of the water: it starts its own.
 			if !d.walk[i] && d.openable(t.TX, t.TY) {
 				d.walk[i] = true
 			}
 			flood(t)
-			continue
 		}
-		for _, p := range line {
-			j := d.at(p.TX, p.TY)
-			if !d.walk[j] {
-				d.walk[j] = true
-				if groundSurface[d.ground[j]] == "land" {
-					d.ground[j] = d.lg(p.TX, p.TY).path
+	}
+	// Open ground nothing above reached (a fleck of meadow inside woods, a
+	// ragged corner of a clearing): joined to the rest, or, across water
+	// from everything, shut.
+	for y := band; y < S-band; y++ {
+		for x := band; x < S-band; x++ {
+			i := d.at(x, y)
+			if !d.walk[i] || reached[i] {
+				continue
+			}
+			if join(Tile{x, y}) {
+				continue
+			}
+			piece := []Tile{{x, y}}
+			reached[i] = true
+			for k := 0; k < len(piece); k++ {
+				for _, dir := range dirs4 {
+					nx, ny := piece[k].TX+dir[0], piece[k].TY+dir[1]
+					if d.inBounds(nx, ny) && d.walk[d.at(nx, ny)] && !reached[d.at(nx, ny)] {
+						reached[d.at(nx, ny)] = true
+						piece = append(piece, Tile{nx, ny})
+					}
 				}
 			}
+			for _, p := range piece {
+				d.walk[d.at(p.TX, p.TY)] = false
+			}
 		}
-		flood(t)
 	}
 }
 

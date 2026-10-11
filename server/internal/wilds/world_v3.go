@@ -16,36 +16,34 @@ type world struct {
 	e    Epoch
 	wick bool
 
-	landPts map[[2]int]landPoint
-	places  map[[2]int]*Place
-	routes  map[[4]int]*route
-	fordsAt map[[2]int]*line // extra fords per cell (nil: none)
-	gaps    map[gapKey]int   // edge gap offsets (-1: none)
+	landPts   map[[2]int]landPoint // as drawn
+	landFinal map[[2]int]landPoint // islands settled
+	places    map[[2]int]*Place
+	routes    map[[4]int]*route
+	gaps      map[gapKey]int // edge gap offsets (-1: none)
 
 	river *river // nil in a still epoch
 	road  *road
 
-	warpX, warpY, dither, breakX, breakY, thicket noise
-	stillWorld                                    *world
+	warpX, warpY, dither, thicket noise
+	stillWorld                    *world
 }
 
 func contentRules() *content.Wilds { return content.WildsRules }
 
 func newWorld(e Epoch) *world {
 	w := &world{
-		e:       e,
-		wick:    e.Kind == EpochWick,
-		landPts: map[[2]int]landPoint{},
-		places:  map[[2]int]*Place{},
-		routes:  map[[4]int]*route{},
-		fordsAt: map[[2]int]*line{},
-		gaps:    map[gapKey]int{},
-		warpX:   noise{e.hash("warp-x")},
-		warpY:   noise{e.hash("warp-y")},
-		dither:  noise{e.hash("dither")},
-		breakX:  noise{e.hash("break-x")},
-		breakY:  noise{e.hash("break-y")},
-		thicket: noise{e.hash("thicket")},
+		e:         e,
+		wick:      e.Kind == EpochWick,
+		landPts:   map[[2]int]landPoint{},
+		landFinal: map[[2]int]landPoint{},
+		places:    map[[2]int]*Place{},
+		routes:    map[[4]int]*route{},
+		gaps:      map[gapKey]int{},
+		warpX:     noise{e.hash("warp-x")},
+		warpY:     noise{e.hash("warp-y")},
+		dither:    noise{e.hash("dither")},
+		thicket:   noise{e.hash("thicket")},
 	}
 	w.road = newRoad(e.WorldSeed)
 	if w.wick {
