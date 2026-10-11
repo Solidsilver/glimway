@@ -5,7 +5,7 @@ import { loadWilds, wildsGround } from '../src/lib/wilds/data.ts';
 import { insideFrontier } from '../src/lib/wilds/coords.ts';
 import { walkFactor } from '../src/lib/wilds/walk.ts';
 import { CHUNK_PX, chunkKey, chunkOfPixel, gateArrival, gateArrivalPosition, gateTiles, parseChunkKey, worldTile } from '../src/game/wilds/coords.ts';
-import { crossed, frontierDistance, nearestOpen, paintable, planWindow, veilEdges } from '../src/game/wilds/window-plan.ts';
+import { crossed, frontierDistance, keepAttached, nearestOpen, paintable, planWindow, SLACK_TILES, veilEdges } from '../src/game/wilds/window-plan.ts';
 import { chunkGather, chunkLandmarks, chunkScenery, effectiveTerrain, LANDMARK_KINDS } from '../src/game/wilds/terrain.ts';
 import { OPEN_MAP_DECOR_KINDS, openMapDecor } from '../src/game/wilds/open-map-art.ts';
 import { DECOR_ART } from '../src/game/wilds/decor.ts';
@@ -80,6 +80,24 @@ test('crossing a chunk edge recentres the window; walking inside one does not', 
   assert.equal(crossed(null, { cx: 0, cy: 0 }), true);
   assert.equal(crossed({ cx: 0, cy: 0 }, { cx: 0, cy: 0 }), false);
   assert.equal(crossed({ cx: 0, cy: 0 }, { cx: 0, cy: -1 }), true);
+});
+
+test('slack at the edge: a chunk that left the 3×3 stays until the hero is SLACK_TILES past the edge', () => {
+  // The hero walked from chunk (0, 0) east into (1, 0); chunk (-1, 0) left the 3×3.
+  const westOf = (k: number) => keepAttached(-1, 0, 24 + k, 12, SLACK_TILES);
+  assert.equal(westOf(0), true, 'just over the edge: kept');
+  assert.equal(westOf(SLACK_TILES - 1), true, 'still within the slack');
+  assert.equal(westOf(SLACK_TILES), false, 'past it: it goes');
+  // Every chunk of the 3×3 is always kept, wherever in the centre chunk the hero stands.
+  for (const [tx, ty] of [[0, 0], [23, 23], [0, 23], [12, 12]] as const)
+    for (let cy = -1; cy <= 1; cy++) for (let cx = -1; cx <= 1; cx++) assert.equal(keepAttached(cx, cy, tx, ty, 0), true, `${cx},${cy} from ${tx},${ty}`);
+  // Two chunks away is never kept without slack, and the diagonal counts by its nearer side.
+  assert.equal(keepAttached(2, 0, 23, 12, 0), false);
+  assert.equal(keepAttached(-1, -1, 24 + 2, -3, SLACK_TILES), true, 'just past a corner, both ways within the slack');
+  assert.equal(keepAttached(-1, -1, 24 + 2, 24 + SLACK_TILES, SLACK_TILES), false);
+  // Signed tiles: two rows south of the frontier's north row (cy -8), the same.
+  assert.equal(keepAttached(0, -8, 5, -6 * 24 + 3, SLACK_TILES), true);
+  assert.equal(keepAttached(0, -8, 5, -6 * 24 + SLACK_TILES, SLACK_TILES), false);
 });
 
 test('the turning moves you to the nearest open tile, never home', () => {

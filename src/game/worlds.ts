@@ -148,6 +148,12 @@ export interface ScenerySpot {
   /** The anchor tile, when the piece stands for a map tile (gathering removals). */
   tx?: number
   ty?: number
+  /**
+   * A flat decal (under everyone's feet, never fading) on a tile nothing
+   * can fell, open or work: it stands for no tile, so it may be drawn
+   * baked with the chunk's other decals (../wilds/window-chunk.ts).
+   */
+  decal?: boolean
 }
 
 /**

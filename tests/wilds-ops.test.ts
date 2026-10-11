@@ -330,8 +330,9 @@ test('a plank laid across a chunk edge turns its neighbour in the next chunk to 
     const img = { texture: { key }, setOrigin: () => img, setDepth: () => img, setTexture: (k: string) => ((img.texture.key = k), img), destroy() {} };
     return img;
   };
-  const scene = { add: { image: (_x: number, _y: number, key: string) => image(key) }, textures: { exists: () => true } };
-  const deps = { scene, ground: { ground: (x: number, y: number) => world.get(`${x},${y}`) ?? 0, solid: () => false }, entities: { attach() {}, detach() {} }, gathering: () => null, occluders: { add() {}, remove() {} }, tileArt: { fell: () => [], keep() {} }, solids: { add() {}, remove() {} }, reducedMotion: true, gather: () => [] };
+  const children = { list: [] as unknown[], addChildCallback() {}, removeChildCallback() {} };
+  const scene = { add: { image: (_x: number, _y: number, key: string) => image(key) }, make: { image: (c: { key: string }) => image(c.key) }, children, textures: { exists: () => true } };
+  const deps = { scene, ground: { ground: (x: number, y: number) => world.get(`${x},${y}`) ?? 0, solid: () => false }, entities: { attach() {}, detach() {} }, gathering: () => null, occluders: { add() {}, remove() {} }, tileArt: { fell: () => [], take: () => [], keep() {} }, solids: { add() {}, remove() {} }, reducedMotion: true, gather: () => [] };
   const westTerrain = blank(0);
   westTerrain.ground[5]![23] = plank;
   const west = new AttachedChunk(deps as never, westTerrain as never, 'west');

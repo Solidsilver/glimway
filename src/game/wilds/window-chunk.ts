@@ -11,20 +11,31 @@
  * story sites (./entities.ts). A drift chunk is a chunk past the frontier:
  * a dim glimpse of the land beyond, trees in fog, and the frontier veil
  * along the edge you can't cross.
+ *
+ * Attaching is cheap on the frame that does it: the ground image and the
+ * collision go in whole and at once (nobody walks through anything), then
+ * the window builds the rest a few milliseconds a frame (`build`): the tile
+ * art (a new road edge bakes its pieces the first time it shows), the
+ * scenery, the workable pieces, then the things and sites, in the order
+ * they were always drawn in (pieces of equal depth that overlap keep which
+ * is on top). A chunk is attached a chunk ahead of the hero, off screen. Images go onto the display list a batch at a time and
+ * come off in one pass (../area/bulk.ts). Flat decals that stand for no
+ * tile are one blitter a texture, not an image each.
  */
 import type Phaser from 'phaser'
 import { TILE, TERRAIN, tileKey } from '../../lib/tile.ts'
 import { fnv1a32, hash01 } from '../../lib/hash.ts'
 import { loadWilds } from '../../lib/wilds/data.ts'
-import { solidBox } from '../area/collision.ts'
+import { addAll, decalBlitter, decalBob, destroyAll, destroyStatics, enableStatics, looseImage } from '../area/bulk.ts'
+import { staticBox } from '../area/collision.ts'
 import { ensureSceneryArt } from '../area/props.ts'
 import type { Occluder } from '../area/foreground.ts'
 import { TILE_DATA, type TileArt } from '../area/tile-art.ts'
 import type { Gathering } from '../entities/gathering.ts'
-import type { GatherSpot } from '../worlds.ts'
+import type { GatherSpot, ScenerySpot } from '../worlds.ts'
 import { CHUNK_PX, CHUNK_TILES, chunkKey } from './coords.ts'
 import { fogDrift, paintDrift, type GroundSource } from './ground-paint.ts'
-import { chunkOrigin, chunkScenery, type ChunkTerrain } from './terrain.ts'
+import { chunkOrigin, chunkScenery, DECAL_DEPTH, type ChunkTerrain } from './terrain.ts'
 import { paintDriftTrees } from './tangle-art.ts'
 import { lookAtlasKey, wildsLook } from './wilds-looks.ts'
 import type { WildsEntities } from './entities.ts'
@@ -32,6 +43,7 @@ import { FORD_H, FORD_V, PATH_PLANK_H, PATH_PLANK_V, PATH_STONE, ROAD_PAVING, VE
 import { fordLines, fordStone, openSides, softTile } from './soft-tiles.ts'
 import type { FrontierRect, Glimpse } from './store.ts'
 import { frontierDistance } from './window-plan.ts'
+import { perfSpan, perfTime, perfWithout } from '../perf.ts'
 
 /**
  * Ground under everything; the tile art just above it. Everything standing
@@ -125,7 +137,14 @@ interface Run {
 
 export class AttachedChunk {
   readonly key: string
-  private images: Phaser.GameObjects.Image[] = []
+  /** What it put on the display list (the art a tile keeps is the tile's: ../area/tile-art.ts). */
+  private images: Phaser.GameObjects.GameObject[] = []
+  /** Flat decals, one blitter a texture. */
+  private decals = new Map<string, Phaser.GameObjects.Blitter>()
+  /** Images made off the display list while a batch is open (`batch`): added together when it closes. */
+  private fresh: Phaser.GameObjects.GameObject[] | null = null
+  /** What is left to build, in order; each step builds until the deadline and says whether it finished. */
+  private todo: ((deadline: number) => boolean)[] = []
   private fading: Phaser.GameObjects.Image[] = []
   private runs: Run[] = []
   private artTiles: { tx: number; ty: number }[] = []
@@ -139,6 +158,7 @@ export class AttachedChunk {
   /** The chunk with its ground changes as last attached or patched (gathering's own openings aren't in it). */
   private applied: ChunkTerrain
 
+  /** The ground, its tile art and the collision, at once; the rest is left to `build`. */
   constructor(private deps: ChunkDeps, terrain: ChunkTerrain, groundKey: string) {
     const { scene } = deps
     this.applied = terrain
@@ -147,28 +167,85 @@ export class AttachedChunk {
     const o = chunkOrigin(terrain)
     this.ground = scene.add.image(o.tx * TILE, o.ty * TILE, groundKey).setOrigin(0, 0).setDepth(GROUND_DEPTH)
     this.images.push(this.ground)
-    this.tileArt()
-    this.collide()
-    this.scenery()
-    deps.gathering()?.addChunk(this.key, deps.gather(this.terrain))
-    deps.entities.attach(this.terrain)
+    perfTime('attach:collision', () => this.collide())
+    const spots = chunkScenery(this.terrain, (key) => scene.textures.exists(key))
+    let next = 0
+    let row = 0
+    const fords: { tx: number; ty: number }[] = []
+    this.todo = [
+      (deadline) => perfTime('attach:tile-art', () => {
+        row = this.tileArt(row, fords, deadline)
+        return row >= this.terrain.size
+      }),
+      (deadline) => perfTime('attach:scenery', () => {
+        next = this.scenery(spots, next, deadline)
+        return next >= spots.length
+      }),
+      () => perfTime('attach:gathering', () => {
+        deps.gathering()?.addChunk(this.key, deps.gather(this.terrain))
+        return true
+      }),
+      () => perfTime('attach:things', () => {
+        deps.entities.attach(this.terrain)
+        return true
+      }),
+    ]
+  }
+
+  /** Build what is left until `deadline` (performance.now(), ms): true once the chunk is whole. */
+  build(deadline: number): boolean {
+    while (this.todo.length) {
+      if (!this.todo[0]!(deadline)) return false
+      this.todo.shift()
+    }
+    return true
+  }
+
+  /** Everything built: its scenery, pieces, things and sites are all in. */
+  get whole(): boolean {
+    return !this.todo.length
+  }
+
+  /** Run `draw` with images made off the display list, then put them on it together. */
+  private batch(draw: () => void): void {
+    const outer = this.fresh
+    this.fresh = []
+    try {
+      draw()
+    } finally {
+      addAll(this.deps.scene, this.fresh)
+      this.fresh = outer
+    }
+  }
+
+  /** An image: made off the list inside a batch, else added now. */
+  private image(x: number, y: number, key: string, frame?: string): Phaser.GameObjects.Image {
+    if (!this.fresh) return this.deps.scene.add.image(x, y, key, frame)
+    const img = looseImage(this.deps.scene, x, y, key, frame)
+    this.fresh.push(img)
+    return img
   }
 
   /** Paving, laid paths and fords' stones: delivered art standing on the painted ground. */
-  private tileArt(): void {
+  private tileArt(from: number, fords: { tx: number; ty: number }[], deadline: number): number {
     const t = this.terrain
     const o = chunkOrigin(t)
-    const fords: { tx: number; ty: number }[] = []
-    for (let ly = 0; ly < t.size; ly++)
-      for (let lx = 0; lx < t.size; lx++) {
-        const tx = o.tx + lx
-        const ty = o.ty + ly
-        const g = t.ground[ly]![lx]!
-        if (g === PAVING) this.paving(tx, ty)
-        else if (g === LAID_STONE || g === LAID_PLANK) this.laidArt(tx, ty, g)
-        else if (g === FORD) fords.push({ tx, ty })
+    let ly = from
+    this.batch(() => {
+      for (; ly < t.size; ly++) {
+        if (ly > from && now() > deadline) break
+        for (let lx = 0; lx < t.size; lx++) {
+          const tx = o.tx + lx
+          const ty = o.ty + ly
+          const g = t.ground[ly]![lx]!
+          if (g === PAVING) this.paving(tx, ty)
+          else if (g === LAID_STONE || g === LAID_PLANK) this.laidArt(tx, ty, g)
+          else if (g === FORD) fords.push({ tx, ty })
+        }
       }
-    this.fordStones(fords)
+      if (ly >= t.size) this.fordStones(fords)
+    })
+    return ly
   }
 
   /** One laid tile's art: stone by world hash, plank across or along as its neighbours run. */
@@ -178,7 +255,7 @@ export class AttachedChunk {
     const across = g === LAID_PLANK && (ground.ground(tx - 1, ty) === LAID_PLANK || ground.ground(tx + 1, ty) === LAID_PLANK)
     const key = g === LAID_STONE ? pick(PATH_STONE) : pick(across ? PATH_PLANK_H : PATH_PLANK_V)
     if (!scene.textures.exists(key)) return
-    const img = scene.add.image(tx * TILE, ty * TILE, key).setOrigin(0, 0).setDepth(TILE_ART_DEPTH)
+    const img = this.image(tx * TILE, ty * TILE, key).setOrigin(0, 0).setDepth(TILE_ART_DEPTH)
     this.laid.set(tileKey(tx, ty), img)
   }
 
@@ -191,6 +268,8 @@ export class AttachedChunk {
    * then builds the chunk again.
    */
   patch(next: ChunkTerrain, beyond: (tx: number, ty: number) => void = () => {}): boolean {
+    // Built whole first: an opened tile's piece must be there to fell.
+    this.build(Infinity)
     const t = this.terrain
     const was = this.applied
     const o = chunkOrigin(t)
@@ -228,6 +307,8 @@ export class AttachedChunk {
    * follows them). False when the tile isn't in this chunk.
    */
   relay(tx: number, ty: number): boolean {
+    // Built whole first: the tile's art drawn now must not be drawn again by the build.
+    this.build(Infinity)
     const t = this.terrain
     const o = chunkOrigin(t)
     const lx = tx - o.tx
@@ -243,6 +324,7 @@ export class AttachedChunk {
 
   /** The laid art drawn, by world tile (tests). */
   laidArtKeys(): Map<string, string> {
+    this.build(Infinity)
     return new Map([...this.laid].map(([k, img]) => [k, img.texture.key]))
   }
 
@@ -269,7 +351,7 @@ export class AttachedChunk {
       if (!key) continue
       const jx = Math.round((hash01(t.tx, t.ty, 51) - 0.5) * 3)
       const jy = Math.round((hash01(t.tx, t.ty, 53) - 0.5) * 3)
-      const img = scene.add.image(t.tx * TILE + TILE / 2 + jx, t.ty * TILE + TILE / 2 + jy, key).setOrigin(0.5, 0.5).setDepth(TILE_ART_DEPTH)
+      const img = this.image(t.tx * TILE + TILE / 2 + jx, t.ty * TILE + TILE / 2 + jy, key).setOrigin(0.5, 0.5).setDepth(TILE_ART_DEPTH)
       this.images.push(img)
     }
   }
@@ -290,7 +372,7 @@ export class AttachedChunk {
     // Worn pieces are baked once each and shared: an edge piece is only ever
     // mirrored (its open sides already vary it), so few are ever made.
     const key = open || wear ? softTile(scene, frame, open ? orient & 4 : orient, open, wear, Math.floor(h(47) * 2)) : null
-    const img = scene.add.image(tx * TILE + TILE / 2, ty * TILE + TILE / 2, key ?? frame).setOrigin(0.5, 0.5).setDepth(TILE_ART_DEPTH)
+    const img = this.image(tx * TILE + TILE / 2, ty * TILE + TILE / 2, key ?? frame).setOrigin(0.5, 0.5).setDepth(TILE_ART_DEPTH)
     if (!key) {
       img.setAngle((orient & 3) * 90)
       if (orient & 4) img.setFlipX(true)
@@ -298,17 +380,28 @@ export class AttachedChunk {
     this.images.push(img)
   }
 
-  /** Solid tiles, merged into horizontal runs, into the scene's one static group. */
+  /** Solid tiles, merged into horizontal runs, into the scene's one static group (all of a chunk's at once). */
   private collide(): void {
     const t = this.terrain
     const o = chunkOrigin(t)
-    for (let ly = 0; ly < t.size; ly++) this.collideRow(o.ty + ly, o.tx, o.tx + t.size - 1)
+    const runs: Run[] = []
+    for (let ly = 0; ly < t.size; ly++) runs.push(...this.collideRow(o.ty + ly, o.tx, o.tx + t.size - 1))
+    this.solidify(runs)
   }
 
-  private collideRow(ty: number, from: number, to: number): void {
+  /** New runs' bodies into the world and the group, in one go. */
+  private solidify(runs: readonly Run[]): void {
+    if (!runs.length) return
+    enableStatics(this.deps.scene.physics.world as never, this.deps.solids as never, runs.map((r) => r.body) as never)
+    this.runs.push(...runs)
+  }
+
+  /** A row's solid tiles from `from` to `to`, merged into runs (bodies made, not yet in the world). */
+  private collideRow(ty: number, from: number, to: number): Run[] {
     const t = this.terrain
     const o = chunkOrigin(t)
     const row = t.solid[ty - o.ty]!
+    const runs: Run[] = []
     let x = from
     while (x <= to) {
       if (!row[x - o.tx]) {
@@ -317,11 +410,11 @@ export class AttachedChunk {
       }
       let x2 = x
       while (x2 + 1 <= to && row[x2 + 1 - o.tx]) x2++
-      const body = solidBox(this.deps.scene, (x + (x2 - x + 1) / 2) * TILE, ty * TILE + TILE / 2, (x2 - x + 1) * TILE, TILE)
-      this.deps.solids.add(body)
-      this.runs.push({ ty, x0: x, x1: x2, body })
+      const body = staticBox(this.deps.scene, (x + (x2 - x + 1) / 2) * TILE, ty * TILE + TILE / 2, (x2 - x + 1) * TILE, TILE)
+      runs.push({ ty, x0: x, x1: x2, body })
       x = x2 + 1
     }
+    return runs
   }
 
   /** A worked piece leaves open ground (gathering): the tile opens and its run splits. */
@@ -337,49 +430,78 @@ export class AttachedChunk {
     const run = this.runs.splice(i, 1)[0]!
     this.deps.solids.remove(run.body)
     run.body.destroy()
-    if (run.x0 <= tx - 1) this.collideRow(ty, run.x0, tx - 1)
-    if (tx + 1 <= run.x1) this.collideRow(ty, tx + 1, run.x1)
+    this.solidify([...(run.x0 <= tx - 1 ? this.collideRow(ty, run.x0, tx - 1) : []), ...(tx + 1 <= run.x1 ? this.collideRow(ty, tx + 1, run.x1) : [])])
   }
 
-  /** Decor as scenery; pieces standing for a tile are kept by it, so felling takes them. */
-  private scenery(): void {
+  /**
+   * Decor as scenery, from `from` on until the deadline (checked every few
+   * pieces); returns where it stopped. Pieces standing for a tile are kept
+   * by it, so felling takes them; flat decals that stand for none are
+   * blitted.
+   */
+  private scenery(spots: readonly ScenerySpot[], from: number, deadline: number): number {
     const { scene, tileArt } = this.deps
     const fading: Occluder[] = []
-    for (const s of chunkScenery(this.terrain, (key) => scene.textures.exists(key))) {
-      if (!ensureSceneryArt(scene, s.key)) continue
-      const img = scene.add.image(s.x, s.y, s.key, s.frame).setOrigin(s.originX ?? 0.5, 1).setFlipX(s.flipX ?? false)
-      img.setDepth(typeof s.depth === 'number' ? s.depth : s.y)
-      if (s.tint !== undefined) img.setTint(s.tint)
-      if (s.tx !== undefined && s.ty !== undefined) {
-        img.setData(TILE_DATA, tileKey(s.tx, s.ty))
-        tileArt.keep(s.tx, s.ty, img)
-        this.artTiles.push({ tx: s.tx, ty: s.ty })
-      } else this.images.push(img)
-      if (s.fade) {
-        fading.push({ image: img, bounds: img.getBounds(), footY: s.y })
-        this.fading.push(img)
+    let i = from
+    this.batch(() => {
+      for (; i < spots.length; i++) {
+        if ((i - from) % 8 === 7 && now() > deadline) break
+        const s = spots[i]!
+        if (!ensureSceneryArt(scene, s.key)) continue
+        if (s.decal && !perfWithout('bake')) {
+          decalBob(this.decalsOf(s.key), s.frame, s.x, s.y, s.originX ?? 0.5, s.flipX ?? false, s.tint)
+          continue
+        }
+        const img = this.image(s.x, s.y, s.key, s.frame).setOrigin(s.originX ?? 0.5, 1).setFlipX(s.flipX ?? false)
+        img.setDepth(typeof s.depth === 'number' ? s.depth : s.y)
+        if (s.tint !== undefined) img.setTint(s.tint)
+        if (s.tx !== undefined && s.ty !== undefined && !s.decal) {
+          img.setData(TILE_DATA, tileKey(s.tx, s.ty))
+          tileArt.keep(s.tx, s.ty, img)
+          this.artTiles.push({ tx: s.tx, ty: s.ty })
+        } else this.images.push(img)
+        if (s.fade) {
+          fading.push({ image: img, bounds: img.getBounds(), footY: s.y })
+          this.fading.push(img)
+        }
       }
-    }
+    })
     if (fading.length) this.deps.occluders.add(fading)
+    return i
   }
 
-  /** The chunk left the window: everything it put in the scene goes. */
-  destroy(): void {
-    this.deps.entities.detach(this.key)
-    this.deps.gathering()?.removeChunk(this.key)
-    if (this.fading.length) this.deps.occluders.remove(this.fading)
-    for (const { tx, ty } of this.artTiles) this.deps.tileArt.fell(tx, ty)
-    for (const img of this.images) img.destroy()
-    for (const img of this.laid.values()) img.destroy()
-    this.laid.clear()
-    for (const r of this.runs) {
-      this.deps.solids.remove(r.body)
-      r.body.destroy()
+  /** The chunk's decal blitter for a texture (made, and put on the display list, on first use). */
+  private decalsOf(key: string): Phaser.GameObjects.Blitter {
+    let b = this.decals.get(key)
+    if (!b) {
+      b = decalBlitter(this.deps.scene, key, DECAL_DEPTH)
+      this.decals.set(key, b)
+      this.images.push(b)
+      if (this.fresh) this.fresh.push(b)
+      else addAll(this.deps.scene, [b])
     }
+    return b
+  }
+
+  /** The chunk left the window: everything it put in the scene goes (what was never built, never was). */
+  destroy(): void {
+    const done = perfSpan('detach')
+    this.todo = []
+    perfTime('detach:things', () => this.deps.entities.detach(this.key))
+    perfTime('detach:gathering', () => this.deps.gathering()?.removeChunk(this.key))
+    perfTime('detach:occluders', () => this.fading.length && this.deps.occluders.remove(this.fading))
+    perfTime('detach:images', () => {
+      const kept = this.artTiles.flatMap(({ tx, ty }) => this.deps.tileArt.take(tx, ty))
+      destroyAll(this.deps.scene, [...this.images, ...kept, ...this.laid.values()])
+    })
+    this.laid.clear()
+    this.decals.clear()
+    perfTime('detach:collision', () => destroyStatics(this.deps.scene.physics.world as never, this.deps.solids as never, this.runs.map((r) => r.body) as never))
     this.images = []
     this.runs = []
     this.artTiles = []
     this.fading = []
+    done()
   }
 }
 
@@ -388,7 +510,7 @@ export class AttachedChunk {
 export class DriftChunk {
   private images: Phaser.GameObjects.GameObject[] = []
 
-  constructor(scene: Phaser.Scene, readonly cx: number, readonly cy: number, groundKey: string, edges: readonly ('north' | 'south' | 'east' | 'west')[], reducedMotion: boolean) {
+  constructor(private scene: Phaser.Scene, readonly cx: number, readonly cy: number, groundKey: string, edges: readonly ('north' | 'south' | 'east' | 'west')[], reducedMotion: boolean) {
     const x0 = cx * CHUNK_PX
     const y0 = cy * CHUNK_PX
     this.images.push(scene.add.image(x0, y0, groundKey).setOrigin(0, 0).setDepth(GROUND_DEPTH))
@@ -408,7 +530,7 @@ export class DriftChunk {
   }
 
   destroy(): void {
-    for (const o of this.images) o.destroy()
+    destroyAll(this.scene, this.images)
     this.images = []
   }
 }

@@ -227,6 +227,59 @@ nothing in smoke covers. Screenshot-only specs skip themselves without
    the handoff test does.
 6. `npx playwright test --last-failed` re-runs what failed.
 
+## Performance
+
+Walking the open map is the game's heaviest work on the main thread: every
+chunk edge attaches a row of chunks and drops one. Three tools keep it
+measurable. None of them runs in CI.
+
+**`?perf=1`** (src/game/perf.ts) turns on the instruments in any build: a
+small overlay (top right: frame times, long frames, display list, tweens,
+DOM size), User Timing spans named `fs:<stage>` around the window's work
+(`recentre`, `fetch`, `paint-landed`, `attach` and its parts `tile-art`,
+`collision`, `scenery`, `gathering`, `things`, `sites`, `detach`,
+`things:render`), a `long-animation-frame` observer that notes which stages
+ran in each long frame, and a sample of the scene a second. In a dev build
+`__fsPerf()` returns all of it as JSON. `&without=bulk,bake,slack,spread`
+turns parts of the window's work off, to measure what each buys (see
+`perfWithout`).
+
+**The walk** (perf/walk.perf.ts, its own config) signs in a fresh player on
+a pinned world, enters the Wilds with `?perf=1` and walks the same route
+each time: about eight new chunks, back and forth over one edge ten times,
+then two minutes over ground already walked. It runs once at normal speed
+and once with the CPU throttled 4× (CDP), and writes a JSON summary per run
+(long frames by phase, frame-time percentiles, display list and tweens at
+the start and end of the loop, DOM nodes and listeners) to
+`test-results/perf/`. A third test photographs fixed spots for a look check.
+
+```sh
+E2E_PORT=5390 PERF_LABEL=before npx playwright test -c playwright.perf.config.ts
+E2E_PORT=5390 PERF_LABEL=after  npx playwright test -c playwright.perf.config.ts
+node scripts/png-diff.ts test-results/perf/screens/before test-results/perf/screens/after /tmp/diff
+```
+
+`--grep throttled` (or `normal`, `look`) runs one of them; `PERF_TRACE=1`
+records a Chrome trace beside the summary; `PERF_WITHOUT=…` passes
+`without`. Nothing else heavy should run beside it, and Vite reloads the
+page when a source file changes, so don't edit while it walks.
+
+**Recording a trace by hand.** Open the game with `?perf=1`, open DevTools ›
+Performance, tick *Screenshots* off and *JavaScript samples* on, record while
+walking, and save the profile (a `.json.gz`). Then:
+
+```sh
+node --max-old-space-size=8000 scripts/trace-hotspots.mjs Trace.json.gz
+node --max-old-space-size=8000 scripts/trace-hotspots.mjs Trace.json.gz --callers Add
+node --max-old-space-size=8000 scripts/trace-hotspots.mjs Trace.json.gz --share "update phaser.js"
+```
+
+It lists the main thread's long tasks (with the `fs:` stages inside each),
+self and total time per function inside them per thread (`--all`: the
+whole trace), who calls a function (`--callers`, as chains of the game's
+own frames) and a function's share of the main thread over time (`--share`,
+in `--bucket` seconds: a share that climbs is a leak).
+
 ## Quarantined
 
 A test that catches a real product bug which isn't fixed yet is marked

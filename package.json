@@ -17,6 +17,7 @@
     "test:smoke": "playwright test --grep @smoke",
     "test:changed": "node scripts/e2e-changed.ts",
     "test:screens": "SCREENS=1 playwright test",
+    "perf:walk": "playwright test -c playwright.perf.config.ts",
     "verify:all": "npm run verify && npm run test:e2e",
     "server": "go run -tags dev ./server/cmd/glimway-server -cookie-secure=false",
     "vectors": "node scripts/backend-vectors.ts",

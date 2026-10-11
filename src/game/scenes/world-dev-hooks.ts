@@ -290,6 +290,15 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
   on('__fsWilds', () => s['wilds']?.debug() ?? null)
   // The open map's window: what's attached, drifted, fetched, and how long each chunk took to paint.
   on('__fsWildsWindow', () => s['window']?.debug() ?? null)
+  // How much the scene holds: a leak (a tween left running, an image never removed) shows as growth.
+  on('__fsSceneSize', () => {
+    const kinds: Record<string, number> = {}
+    for (const o of s.children.list) {
+      const k = `${o.type}:${(o as { texture?: { key: string } }).texture?.key ?? ''}`
+      kinds[k] = (kinds[k] ?? 0) + 1
+    }
+    return { list: s.children.length, tweens: s.tweens.getTweens().length, statics: s.physics.world.staticBodies.size, kinds }
+  })
   on('__fsPaths', () => {
     const paths = s['paths']
     if (!paths) return null

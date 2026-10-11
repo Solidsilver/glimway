@@ -20,6 +20,7 @@ import type { PathTile } from '../lib/wilds/paths'
 import type { Result } from '../lib/api/errors'
 import type { ItemsView } from '../lib/api/types'
 import type { SyncSafety } from './sync-safety'
+import type { PerfReport } from './perf.ts'
 import { onSceneEnd, type SceneEvents } from './scene-end.ts'
 
 type Box = { x: number; y: number; w: number; h: number }
@@ -65,6 +66,12 @@ export interface FsHooks {
   /** The Wilds layer (null outside the Wilds). */
   __fsWilds: () => ReturnType<WildsEntities['debug']> | null
   __fsWildsWindow: () => ReturnType<WildsWindow['debug']> | null
+  /** The scene's display-list size, running tweens and static bodies, and what is listed (type:texture, counted). */
+  __fsSceneSize: () => { list: number; tweens: number; statics: number; kinds: Record<string, number> }
+  /** The walking-performance instruments (src/game/perf.ts; only with `?perf=1`): everything as JSON, the walk's phase, a fresh start. */
+  __fsPerf: () => PerfReport
+  __fsPerfPhase: (name: string) => void
+  __fsPerfReset: () => void
   /** The open map's path work: the clear prompt's tile, the queue, the last outcome, the buttons, and what the store holds. */
   __fsPaths: () => (ReturnType<WildsPaths['debug']> & { materials: Record<string, number> | null; ways: { id: string; name: string; a: string; b: string; by: string; signA: { x: number; y: number } | null; signB: { x: number; y: number } | null; path: number }[] }) | null
   /** One world tile as the path rules read it. */

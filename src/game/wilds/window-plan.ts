@@ -4,7 +4,7 @@
  * which it paints as drift, when a chunk can be painted, and where a hero
  * standing in something solid steps to. The scene runtime is ./window.ts.
  */
-import { CHUNK_PX, chunkKey } from './coords.ts'
+import { CHUNK_PX, CHUNK_TILES, chunkKey } from './coords.ts'
 import type { FrontierRect } from './store.ts'
 
 export interface WindowPlan {
@@ -103,4 +103,25 @@ export function veilEdges(cx: number, cy: number, inside: (cx: number, cy: numbe
   if (inside(cx + 1, cy)) out.push('east')
   if (inside(cx - 1, cy)) out.push('west')
   return out
+}
+
+/**
+ * Tiles past a chunk edge the hero can walk before the row left behind
+ * goes. Crossing an edge attaches the row ahead at once, but the row that
+ * left the 3×3 stays until the hero is this far into the new chunk, so
+ * stepping back and forth over one edge builds and drops nothing.
+ */
+export const SLACK_TILES = 8
+
+/**
+ * Whether chunk (cx, cy) stays attached with the hero on tile (tx, ty): it
+ * is in the 3×3 around the hero's chunk, or out of it by less than `slack`
+ * tiles (Chebyshev, from the hero to the chunk's nearest tile).
+ */
+export function keepAttached(cx: number, cy: number, tx: number, ty: number, slack: number): boolean {
+  const x0 = cx * CHUNK_TILES
+  const y0 = cy * CHUNK_TILES
+  const dx = Math.max(x0 - tx, tx - (x0 + CHUNK_TILES - 1), 0)
+  const dy = Math.max(y0 - ty, ty - (y0 + CHUNK_TILES - 1), 0)
+  return Math.max(dx, dy) <= CHUNK_TILES + slack
 }
