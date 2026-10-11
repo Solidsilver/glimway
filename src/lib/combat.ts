@@ -152,6 +152,20 @@ export function getCombatKit(profile: HabiticaProfile | null, magic: MagicMarks 
   };
 }
 
+/**
+ * Snapstrike (Shadowstep's signature) strikes where the dash ended: wide
+ * when the dash carried the hero, close when a wall stopped it where it
+ * began. The dash is measured in two dimensions, so an up or down dash
+ * reaches as far as a sideways one. Pure, for the client's strike and the
+ * shared fights' hit judging alike.
+ */
+export const SNAPSTRIKE = { travelledPx: 4, reachPx: 34, blockedReachPx: 22 } as const;
+
+/** The strike's reach (world px) after a dash from `from` to `to`. */
+export function snapstrikeReach(from: { x: number; y: number }, to: { x: number; y: number }): number {
+  return Math.hypot(to.x - from.x, to.y - from.y) > SNAPSTRIKE.travelledPx ? SNAPSTRIKE.reachPx : SNAPSTRIKE.blockedReachPx;
+}
+
 /** The levels a move arrives at: the unlock notice is for the level mark crossing one of them (crafts.md 4.2). */
 const UNLOCK_LEVELS = [10, 20];
 

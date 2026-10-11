@@ -87,11 +87,12 @@
 
   onMount(() => {
     inventory.syncPack(session.state.inventory)
-    // In a world, ask for the item model and your home's pieces. Offline,
-    // what's known shows.
+    // In a world, ask for the item model and your home's pieces, both read
+    // now (a home read already out may predate a change). Offline, what's
+    // known shows.
     if (session.link) {
       void items.load()
-      void homes.load()
+      void homes.fresh()
     }
     // The card sits under the pinned header (side column): measure it.
     const ro = new ResizeObserver(() => {

@@ -18,6 +18,12 @@
  * `stale`; `wildsLive` (what offers and claims read) returns nothing for a
  * stale view or while the link is not online (server-first.md 3.3).
  *
+ * Lifetime and order: a read belongs to the store's generation and the link
+ * it was asked through. A reset, the turning or a world move ends that
+ * generation, and its answer (or failure) is dropped. Overlapping reads and
+ * answers are ordered (see `seq`): a late, older answer never replaces what
+ * a newer read or answer set, nor turns the land back.
+ *
  * The turning: a read that names another wick epoch than the one held means
  * the Beyond turned. The store starts over from that read and the scene
  * plays it (EV.turning); nobody is sent home (decision 10).
@@ -26,7 +32,7 @@
  */
 import { MATERIALS, TRINKETS } from '../../content/expansion-writing.ts';
 import type { WildsEntityView, WildsLanternView } from '../../lib/api/types.ts';
-import type { ChunkGroundChanges, GroundChange, WildsEpoch as WildsEpochPb, WildsLantern, WildsNearResult, WildsWay } from '../../lib/gen/glimway/v1/wilds_pb.js';
+import type { ChunkGroundChanges, GroundChange, WildsEntityState, WildsEpoch as WildsEpochPb, WildsLantern, WildsNearResult, WildsWay } from '../../lib/gen/glimway/v1/wilds_pb.js';
 import { tileKey } from '../../lib/tile.ts';
 import type { WildsClaimResult } from '../../lib/gen/glimway/v1/operations_pb.js';
 import { epochKindAt } from '../../lib/wilds/coords.ts';
@@ -116,7 +122,15 @@ export const NEAR_MAX_AGE_MS = 10_000;
 
 let view: WildsView | null = null;
 const fetchedAt = new Map<string, number>();
-let inflight: { key: string; run: Promise<boolean> } | null = null;
+/** Reads in flight, by owner (generation and link) plus centre: a second caller joins the first. */
+const inflight = new Map<string, Promise<boolean>>();
+/**
+ * The store's lifetime: bumps when the view is forgotten (a world move, the
+ * turning) or starts over. A read remembers it as it is asked, and its answer
+ * (or failure) is dropped once it has moved: no answer revives land the
+ * store let go of.
+ */
+let generation = 0;
 
 // A fall that left a lantern changed the Wilds: the next entry reads again.
 bus.on(EV.fallSettled, ({ lantern }) => {
@@ -209,8 +223,9 @@ export function wickEnded(): boolean {
  */
 export function resetWilds(opts: { quiet?: boolean } = {}): void {
   view = null;
+  generation += 1;
   fetchedAt.clear();
-  inflight = null;
+  inflight.clear();
   forgetPredictions();
   forgetOrder();
   readWanted = false;
@@ -269,13 +284,23 @@ export function nearWindow(cx: number, cy: number, radius = NEAR_RADIUS): { cx: 
  * Merge a near read into the view (exported for tests): the read's window
  * replaces what the view held for those chunks; everything else stays.
  * A read in another wick epoch starts the view over. Returns whether the
- * wick turned (a held wick, then another).
+ * wick turned (a held wick, then another), or null when the answer is older
+ * than what the view holds and was dropped: it names an older wick than
+ * the one held, or another epoch than a read asked after it adopted.
+ *
+ * `since` is the read's order mark (readMark, taken as it was asked). What a
+ * later read or an answer set after it was asked is newer and kept: a chunk a
+ * later read covered, an entity, claim, lantern, Echo, chunk's ground, way,
+ * the balances or the frontier.
  */
-export function applyNear(res: WildsNearResult, since: number = seq): boolean {
+export function applyNear(res: WildsNearResult, since: number = seq): boolean | null {
   const still = epochView(res.still!, 'still');
   const wick = epochView(res.wick!, 'wick');
   const turned = !!view && !!view.wick.id && view.wick.id !== wick.id;
-  if (!view || turned || view.still.id !== still.id) {
+  const restart = !view || turned || view.still.id !== still.id;
+  // A late answer from before the view started over, or naming a wick that ended before the held one, can't turn it back.
+  if (view && restart && (since < startedAt || (view.wick.endsAt !== null && wick.endsAt !== null && wick.endsAt < view.wick.endsAt))) return null;
+  if (restart) {
     view = {
       still,
       wick,
@@ -292,40 +317,71 @@ export function applyNear(res: WildsNearResult, since: number = seq): boolean {
       stale: false,
       version: (view?.version ?? 0) + 1,
     };
-    if (turned) fetchedAt.clear();
+    if (turned) {
+      fetchedAt.clear();
+      // Reads asked in the old wick answer for land that is gone.
+      generation += 1;
+      inflight.clear();
+    }
     forgetPredictions();
     forgetOrder();
+    startedAt = since;
   }
-  const v = view;
+  const v = view!;
   v.still = still;
   v.wick = wick;
+  // Newer than this read: set by a later read or an answer after it was asked.
+  const newer = (at: number | undefined) => (at ?? 0) > since;
   const r = res.frontier!.rect!;
-  v.frontier = { minCx: r.minCx, minCy: r.minCy, maxCx: r.maxCx, maxCy: r.maxCy };
+  if (!newer(frontierSeq)) {
+    v.frontier = { minCx: r.minCx, minCy: r.minCy, maxCx: r.maxCx, maxCy: r.maxCy };
+    frontierSeq = since;
+  }
   const c = res.center!;
   const radius = res.radius;
-  const inWindow = (x: number, y: number) => Math.abs(x - c.cx) <= radius && Math.abs(y - c.cy) <= radius;
-  const ownChunk = (id: string) => {
-    const at = entityChunk(id);
-    return !!at && inWindow(at.cx, at.cy);
-  };
-  for (const id of [...v.states.keys()]) if (ownChunk(id)) v.states.delete(id);
-  for (const s of res.entities) v.states.set(s.id, { cycle: s.cycle, state: s.state as WildsEntityView['state'], available_at: s.availableAt, by: s.by ?? null, at: s.at ?? null });
-  for (const id of [...v.claims]) if (ownChunk(id)) v.claims.delete(id);
-  for (const p of res.personalClaims) v.claims.add(p.entityId);
-  for (const d of res.discoveries) v.discoveries.set(d.entityId, { entityId: d.entityId, poiId: d.poiId, discovererId: d.discovererId, displayName: d.displayName });
-  for (const [id, l] of [...v.lanterns]) if (inWindow(Math.floor(l.x / CHUNK_TILES), Math.floor(l.y / CHUNK_TILES))) v.lanterns.delete(id);
-  for (const l of res.lanterns) v.lanterns.set(l.id, lanternView(l));
-  for (const a of res.echoes) v.echoes.set(a.site, { member: a.member, settled: a.settled });
-  // Ground, ways and balances an answer set after this read was asked are newer than it: kept.
-  const newer = (at: number | undefined) => (at ?? 0) > since;
-  for (const key of [...v.ground.keys()]) {
-    const [x, y] = key.split(',').map(Number);
-    if (inWindow(x!, y!) && !newer(chunkSeq.get(key))) v.ground.delete(key);
+  // The window's chunks this read speaks for: none a later read already covered.
+  const ours = new Set<string>();
+  for (const at of nearWindow(c.cx, c.cy, radius)) {
+    const key = chunkKey(at.cx, at.cy);
+    if (newer(readSeq.get(key))) continue;
+    ours.add(key);
+    readSeq.set(key, since);
   }
+  // Adding what the read names: anywhere no later read spoke for (an id naming no chunk: wherever).
+  const speaks = (key: string) => ours.has(key) || !newer(readSeq.get(key));
+  const idChunk = (id: string) => {
+    const at = entityChunk(id);
+    return at ? chunkKey(at.cx, at.cy) : null;
+  };
+  const ownChunk = (id: string) => {
+    const key = idChunk(id);
+    return key !== null && ours.has(key);
+  };
+  const named = (id: string) => {
+    const key = idChunk(id);
+    if (newer(entitySeq.get(id)) || (key !== null && !speaks(key))) return false;
+    // No chunk to order it by: the id itself carries this read's mark.
+    if (key === null) entitySeq.set(id, since);
+    return true;
+  };
+  const tileChunk = (t: { x: number; y: number }) => chunkKey(Math.floor(t.x / CHUNK_TILES), Math.floor(t.y / CHUNK_TILES));
+  for (const id of [...v.states.keys()]) if (ownChunk(id) && !newer(entitySeq.get(id))) v.states.delete(id);
+  for (const s of res.entities) if (named(s.id)) v.states.set(s.id, stateView(s));
+  for (const id of [...v.claims]) if (ownChunk(id) && !newer(entitySeq.get(id))) v.claims.delete(id);
+  for (const p of res.personalClaims) if (named(p.entityId)) v.claims.add(p.entityId);
+  for (const d of res.discoveries) v.discoveries.set(d.entityId, { entityId: d.entityId, poiId: d.poiId, discovererId: d.discovererId, displayName: d.displayName });
+  for (const [id, l] of [...v.lanterns]) if (ours.has(tileChunk(l)) && !newer(lanternSeq.get(id))) v.lanterns.delete(id);
+  for (const l of res.lanterns) if (speaks(tileChunk(l)) && !newer(lanternSeq.get(l.id))) v.lanterns.set(l.id, lanternView(l));
+  for (const a of res.echoes) {
+    if (newer(echoSeq.get(a.site))) continue;
+    v.echoes.set(a.site, { member: a.member, settled: a.settled });
+    echoSeq.set(a.site, since);
+  }
+  for (const key of [...v.ground.keys()]) if (ours.has(key) && !newer(chunkSeq.get(key))) v.ground.delete(key);
   for (const g of res.ground) {
     if (!g.chunk) continue;
     const key = chunkKey(g.chunk.cx, g.chunk.cy);
-    if (!newer(chunkSeq.get(key))) v.ground.set(key, [...(g.changes?.changes ?? [])]);
+    if (speaks(key) && !newer(chunkSeq.get(key))) v.ground.set(key, [...(g.changes?.changes ?? [])]);
   }
   merged.clear();
   for (const g of res.glimpse) if (g.chunk) v.glimpse.set(chunkKey(g.chunk.cx, g.chunk.cy), { land: g.land, river: g.river });
@@ -333,36 +389,66 @@ export function applyNear(res: WildsNearResult, since: number = seq): boolean {
   const returned = new Set(res.ways.map((w) => w.id));
   for (const [id, w] of [...v.ways]) {
     if (returned.has(id) || newer(waySeq.get(id))) continue;
-    if (w.path.some((t) => inWindow(Math.floor(t.x / CHUNK_TILES), Math.floor(t.y / CHUNK_TILES)))) v.ways.delete(id);
+    if (w.path.some((t) => ours.has(tileChunk(t)))) v.ways.delete(id);
   }
-  for (const w of res.ways) if (!newer(waySeq.get(w.id))) v.ways.set(w.id, w);
-  if (!newer(materialsSeq)) v.materials = materialsRecord(res.materials);
+  for (const w of res.ways) {
+    // A way crossing a chunk a later read spoke for is that read's to name (it may have gone).
+    if (newer(waySeq.get(w.id)) || !w.path.every((t) => speaks(tileChunk(t)))) continue;
+    v.ways.set(w.id, w);
+    waySeq.set(w.id, since);
+  }
+  if (!newer(materialsSeq)) {
+    v.materials = materialsRecord(res.materials);
+    materialsSeq = since;
+  }
   v.stale = false;
   return turned;
+}
+
+function stateView(s: WildsEntityState): EntityStateView {
+  return { cycle: s.cycle, state: s.state as WildsEntityView['state'], available_at: s.availableAt, by: s.by ?? null, at: s.at ?? null };
 }
 
 // ------------------------------------------------------------ order
 
 /**
  * Answers and near reads overwrite the same mirrors, so they are ordered: a
- * read remembers `seq` as it is asked, every applied answer takes the next
- * `seq` for what it set (a chunk's ground, a way, the balances), and a read
- * keeps whatever an answer set after it was asked.
+ * read takes the next `seq` as it is asked, and every applied answer takes
+ * the next for what it set (an entity's state and claim, a lantern, an Echo,
+ * a chunk's ground, a way, the balances). A read marks what it set with its
+ * own mark, and keeps whatever a later read or an answer set after it was
+ * asked: two reads answered backwards leave the later one's view.
  */
 let seq = 0;
+/** The latest read that spoke for each chunk (`cx,cy`). */
+const readSeq = new Map<string, number>();
+const entitySeq = new Map<string, number>();
+const lanternSeq = new Map<string, number>();
+const echoSeq = new Map<string, number>();
 const chunkSeq = new Map<string, number>();
 const waySeq = new Map<string, number>();
 let materialsSeq = 0;
+let frontierSeq = 0;
+/** The mark of the read the view started over from: an older one can't start it over again. */
+let startedAt = 0;
+/** The latest read that succeeded: an older read's failure doesn't make it stale. */
+let goodSeq = 0;
 
 function forgetOrder(): void {
+  readSeq.clear();
+  entitySeq.clear();
+  lanternSeq.clear();
+  echoSeq.clear();
   chunkSeq.clear();
   waySeq.clear();
   materialsSeq = 0;
+  frontierSeq = 0;
+  goodSeq = 0;
 }
 
-/** The order mark a near read takes as it is asked (refreshNear; tests). */
+/** The order mark of what the store holds now: a read asked now takes the next (refreshNear; tests). */
 export function readMark(): number {
-  return seq;
+  return ++seq;
 }
 
 /** A read is wanted: something the store held turned out wrong (a refusal, an answer for land that has turned). */
@@ -430,28 +516,42 @@ export async function loadWildsChunk(session: Session, cx: number, cy: number): 
  * Returns whether the view is usable.
  */
 export async function refreshNear(session: Session, cx: number, cy: number, maxAgeMs = 0): Promise<boolean> {
+  const link = session.link;
+  if (!link) return false;
   const key = chunkKey(cx, cy);
-  if (inflight?.key === key) return inflight.run;
+  // The read's owner: this store's lifetime and the link (the world) it reads through.
+  const gen = generation;
+  const owner = `${gen}|${linkId(link)}|${key}`;
+  const joined = inflight.get(owner);
+  if (joined) return joined;
+  // Still this read's world: no reset, turning or world move since it was asked.
+  const current = () => generation === gen && session.link === link;
   const run = async (): Promise<boolean> => {
-    const link = session.link;
-    if (!link) return false;
     const at = fetchedAt.get(key);
     if (view && !view.stale && at !== undefined && Date.now() - at < maxAgeMs) return true;
+    const since = readMark();
     try {
-      const ops = link.api.operations;
-      const since = seq;
-      const res = await ops.near(cx, cy);
+      const res = await link.api.operations.near(cx, cy);
+      if (!current()) return false;
       const priorWick = view?.wick.id ?? '';
       const turned = applyNear(res, since);
+      // Older than what the view holds: nothing to adopt, and the view is no fresher for it.
+      if (turned === null) return wildsLive(session) !== null;
+      const after = generation;
       fetchedAt.set(key, Date.now());
+      goodSeq = Math.max(goodSeq, since);
       await Promise.all(nearWindow(cx, cy).filter((c) => insideNamedFrontier(c.cx, c.cy)).map((c) => loadWildsChunk(session, c.cx, c.cy).catch(() => null)));
-      if (priorWick !== view!.wick.id) void pruneChunks([view!.still.id, view!.wick.id]);
+      // Forgotten while its chunks loaded: the land it read is gone.
+      if (generation !== after || session.link !== link || !view) return false;
+      if (priorWick !== view.wick.id) void pruneChunks([view.still.id, view.wick.id]);
       bump();
       if (turned) bus.emit(EV.turning, { reason: 'epoch-ended' });
       return true;
     } catch {
-      // The last view stays to look at, marked stale; nothing in it is offered.
-      if (view && !view.stale) {
+      // An old read's failure says nothing about the view held now.
+      if (!current()) return false;
+      // The last view stays to look at, marked stale; nothing in it is offered (a later read that worked says otherwise).
+      if (view && !view.stale && goodSeq < since) {
         view.stale = true;
         bump();
       }
@@ -459,10 +559,19 @@ export async function refreshNear(session: Session, cx: number, cy: number, maxA
     }
   };
   const p = run().finally(() => {
-    if (inflight?.run === p) inflight = null;
+    if (inflight.get(owner) === p) inflight.delete(owner);
   });
-  inflight = { key, run: p };
+  inflight.set(owner, p);
   return p;
+}
+
+/** A stable id per link object (a world move brings another link). */
+const linkIds = new WeakMap<object, number>();
+let links = 0;
+function linkId(link: object): number {
+  let id = linkIds.get(link);
+  if (id === undefined) linkIds.set(link, (id = ++links));
+  return id;
 }
 
 /**
@@ -479,33 +588,63 @@ export async function prepareWilds(session: Session, maxAgeMs = 0): Promise<bool
   return refreshNear(session, cx, cy, maxAgeMs);
 }
 
-/** A server claim answer: entity state, loot, balances. */
+/**
+ * A server claim answer: entity state, loot, balances. The state is kept
+ * (and ordered ahead of any read asked before it) only while the entity's
+ * chunk is still in the epoch the claim was made in; otherwise the land
+ * turned meanwhile, and the Wilds are read again. The balances are the
+ * account's, epoch or not.
+ */
 export function applyClaim(result: WildsClaimResult): LootDrop {
   if (!view) throw new Error('wilds: claim before the Wilds loaded');
+  const at = ++seq;
   const s = result.entity;
   if (s) {
-    view.states.set(s.id, { cycle: s.cycle, state: s.state as WildsEntityView['state'], available_at: s.availableAt, by: s.by ?? null, at: s.at ?? null });
-    if (/^(chest|poi|rumour):/.test(s.id)) view.claims.add(s.id);
+    const chunk = entityChunk(s.id);
+    const current = chunk ? chunkEpoch(chunk.cx, chunk.cy)?.id : view.wick.id;
+    if (current && (s.epoch || result.epoch) === current) {
+      view.states.set(s.id, stateView(s));
+      if (/^(chest|poi|rumour):/.test(s.id)) view.claims.add(s.id);
+      entitySeq.set(s.id, at);
+    } else requestRead();
   }
   // The answer carries the post-grant balances: replace the mirror.
   view.materials = materialsRecord(result.materials);
-  materialsSeq = ++seq;
+  materialsSeq = at;
   bump();
   return { materials: (result.loot?.materials ?? []).map((m) => ({ id: m.id, qty: m.qty })), trinket: result.loot?.trinket ?? null };
 }
 
-export function applyLanterns(lanterns: WildsLantern[]): void {
-  if (!view) return;
-  for (const l of lanterns) view.lanterns.set(l.id, lanternView(l));
+/** A relight's answer: the lanterns it names, in its epoch (each lantern's chunk's); false (and a read wanted) for land that turned. */
+export function applyLanterns(lanterns: WildsLantern[], epoch: string): boolean {
+  if (!view) return false;
+  const at = ++seq;
+  let kept = true;
+  for (const l of lanterns) {
+    if (chunkEpoch(Math.floor(l.x / CHUNK_TILES), Math.floor(l.y / CHUNK_TILES))?.id !== epoch) {
+      kept = false;
+      continue;
+    }
+    view.lanterns.set(l.id, lanternView(l));
+    lanternSeq.set(l.id, at);
+  }
+  if (!kept) requestRead();
   bump();
+  return kept;
 }
 
-/** Record a settled Echo in the view (the answer to settle-echo). */
-export function applyEchoSettled(site: string): void {
+/** Record a settled Echo in the view (the answer to settle-echo), in an epoch the view holds. */
+export function applyEchoSettled(site: string, epoch: string): boolean {
   const a = view?.echoes.get(site);
-  if (!view || !a) return;
+  if (!view || !a) return false;
+  if (epoch !== view.wick.id && epoch !== view.still.id) {
+    requestRead();
+    return false;
+  }
   a.settled = true;
+  echoSeq.set(site, ++seq);
   bump();
+  return true;
 }
 
 /**

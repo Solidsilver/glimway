@@ -175,8 +175,12 @@ it. Each epoch's cave generates its own naming, so it never goes rote.
 
 ### Fighting together
 
-Today every fight is local: two players at the same Tangle camp each fight
-their own copy, and presence only carries `pos` and `emote`. The expansion
+Today every fight is local: two players at the same camp each fight their
+own copy, and no enemy state crosses the wire. Presence relays what the
+others are doing: positions (with a riding or fishing pose), emotes, look
+changes, ability casts (drawn as effects), gifts and witnessing. One relay
+changes play: a friend's Ward-light pulse heals you, by the amount the hub
+sets from the caster's profile (`src/game/entities/moves.ts`). The expansion
 design's sketch for co-op (the first player in a room owns its enemies and
 streams them) was never built.
 
@@ -201,7 +205,9 @@ walls.
   and boss state between visits is worked out lazily from elapsed time, as
   respawn timers are today.
 - **Where:** generated places (the open map and its caves). Curated story fights (the woodland's fixed enemies, the Warden) stay
-  on the client, since they're single-player story beats and guests play them.
+  on the client, since they're single-player story beats. (Local guest play
+  went with server-first, `docs/design/server-first.md`: every player has a
+  server, so this is about the story, not about who can reach one.)
 - **A room is a chunk** (world.md). Camp enemies are leashed and never cross a
   chunk edge. In a cave, each cave chunk is its own room, and the boss chamber
   sits whole inside one chunk.
