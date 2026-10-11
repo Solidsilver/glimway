@@ -17,6 +17,11 @@
  * that link. A mirror that starts after the balance was adopted (the Home
  * side made after the Wilds read, on resuming in the Wilds) is set from it at
  * once, without a new mark; another account's or world's balance never is.
+ *
+ * Each material carries its own mark. Most sources know the whole balance
+ * (`adoptMaterials`: a material it doesn't name is none); a source that knows
+ * only some counts (an items answer's stacks) adopts just those
+ * (`adoptMaterialCounts`), and the rest keep their marks.
  */
 
 let clock = 0
@@ -25,7 +30,7 @@ let clock = 0
 const UNLINKED = {}
 
 type Owner = object | null | undefined
-type Held = { at: number; m: Record<string, number> }
+type Held = { at: Record<string, number>; m: Record<string, number> }
 
 const balances = new WeakMap<object, Held>()
 const mirrors = new Map<'home' | 'wilds', { owner: () => Owner; set: (m: Record<string, number>) => void }>()
@@ -54,16 +59,35 @@ export function mirrorMaterials(side: 'home' | 'wilds', owner: () => Owner, set:
 }
 
 /**
- * Balances read or answered at `at`, through `owner` (the link): adopted by
- * the mirrors reading through it, unless a balance from after `at` is held
- * for it. True when adopted.
+ * The whole balance, read or answered at `at`, through `owner` (the link): a
+ * material it doesn't name is none. Each material is adopted unless a count
+ * from after `at` is held for it, and the mirrors reading through that link
+ * follow. True when any was adopted.
  */
 export function adoptMaterials(m: Record<string, number>, at: number, owner: Owner): boolean {
+  const held = balances.get(key(owner))
+  const ids = new Set([...Object.keys(m), ...Object.keys(held?.m ?? {})])
+  return take(Object.fromEntries([...ids].map((id) => [id, m[id] ?? 0])), at, owner)
+}
+
+/** Some counts only (the materials an items answer's stacks show), at `at`: the others keep theirs. */
+export function adoptMaterialCounts(counts: Record<string, number>, at: number, owner: Owner): boolean {
+  return take(counts, at, owner)
+}
+
+function take(counts: Record<string, number>, at: number, owner: Owner): boolean {
   const k = key(owner)
-  const held = balances.get(k)
-  if (held && at < held.at) return false
-  balances.set(k, { at, m: { ...m } })
-  for (const mirror of mirrors.values()) if (key(mirror.owner()) === k) mirror.set({ ...m })
+  const held = balances.get(k) ?? { at: {}, m: {} }
+  let adopted = false
+  for (const [id, n] of Object.entries(counts)) {
+    if (at < (held.at[id] ?? 0)) continue
+    held.m[id] = n
+    held.at[id] = at
+    adopted = true
+  }
+  if (!adopted) return false
+  balances.set(k, held)
+  for (const mirror of mirrors.values()) if (key(mirror.owner()) === k) mirror.set({ ...held.m })
   return true
 }
 

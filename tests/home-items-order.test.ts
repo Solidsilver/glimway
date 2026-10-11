@@ -19,6 +19,7 @@ import assert from 'node:assert/strict';
 const { Session } = await import('../src/game/session.ts');
 const { homesteadsFor } = await import('../src/game/homestead.ts');
 const { itemsFor } = await import('../src/game/items.ts');
+const { villageFor } = await import('../src/game/village.ts');
 const { createNewGame } = await import('../src/lib/state.ts');
 
 type Call = { name: string; args: unknown[]; answer: (v: unknown) => void };
@@ -49,8 +50,13 @@ function deferredLink() {
   return { link, calls, take };
 }
 
+/** Each test link's session (the Village of a shelf answer is that session's). */
+const sessions = new WeakMap<object, InstanceType<typeof Session>>();
+
 function session(link: unknown) {
-  return new Session({ ...createNewGame(), maxHp: 50, hp: 40, maxMana: 30, mana: 20 }, undefined, link as never);
+  const s = new Session({ ...createNewGame(), maxHp: 50, hp: 40, maxMana: 30, mana: 20 }, undefined, link as never);
+  sessions.set(link as object, s);
+  return s;
 }
 
 const settle = () => new Promise((r) => setTimeout(r, 0));
@@ -192,8 +198,8 @@ test('a lane read asked before an answer keeps the gate row the answer left (tie
   await first;
   const laneRead = homes.fresh();
   // A workshop read or a neighbour's answer: the home is a cottage now, with a stocked shelf.
-  homes.adoptHome({ ...theirs(1), items: [{ id: 'shelf-1', itemDef: 'gate-shelf', location: 'placed', scene: 'gate', x: 0, y: 0, rotation: 0 }] } as never);
-  homes.adoptShelfState(GATE, true, true);
+  homes.adoptHomeAnswer({ ...theirs(1), items: [{ id: 'shelf-1', itemDef: 'gate-shelf', location: 'placed', scene: 'gate', x: 0, y: 0, rotation: 0 }] } as never);
+  await shelfAnswer(link, take, 'stock', true);
   const row = structuredClone(homes.gateInfo(GATE));
   take('commons').answer({ ok: true, value: theirLane(0) });
   await laneRead;
@@ -207,6 +213,15 @@ test('a lane read asked before an answer keeps the gate row the answer left (tie
   await later;
   assert.equal(homes.gateInfo(GATE)!.tier, 0);
 });
+
+/** A stock, take or buy at gate 2's shelf, answered with the shelf as it now stands (through the Village, the one way shelf answers reach the row). */
+async function shelfAnswer(link: unknown, take: (name: string) => Call, op: 'stock' | 'take', stocked: boolean): Promise<void> {
+  const village = villageFor(sessions.get(link as object)!);
+  const done = village.shelfAction({ op, gate: GATE, slot: 0 });
+  take('mutate').answer({ ok: true, res: { shelf: shelfView(stocked), inventory: { materials: {}, items: {}, decorations: {} } } });
+  assert.equal((await done).ok, true);
+}
+const shelfView = (stocked: boolean) => ({ gate: GATE, homeId: 'home-1', ownerName: 'Them', names: ['Them'], slots: stocked ? [{ slot: 0, itemDef: 'apple', qty: 1, price: 0 }] : [], takenToday: false, canStock: false, hasShelf: true });
 
 /** A gate read's answer. */
 const gateAnswer = (h: unknown) => ({ ok: true, value: { gate: GATE, landSeed: 7, home: h, materials: { timber: 10 } } });
@@ -258,7 +273,7 @@ test('taking the last gift from a neighbour’s shelf (their home never fetched)
   take('commons').answer({ ok: true, value: { ...theirLane(), gates: [{ ...theirLane().gates[0]!, shelf: true, shelfStocked: true }] } });
   await first;
   const laneRead = homes.fresh();
-  homes.adoptShelfState(GATE, true, false);
+  await shelfAnswer(link, take, 'take', false);
   take('commons').answer({ ok: true, value: { ...theirLane(), gates: [{ ...theirLane().gates[0]!, shelf: true, shelfStocked: true }] } });
   await laneRead;
   assert.equal(homes.homes.has(GATE), false, 'no home was ever read');
@@ -297,6 +312,124 @@ test('a newer gate read then an older lane: the row’s shelf and names are the 
     take('commons').answer({ ok: true, value: lane1(true) });
     await laneRead;
     assert.deepEqual(gateShown(homes).row, { homeId: 'home-1', tier: 0, names: ['Them'], shelf: false, shelfStocked: false });
+  }
+});
+
+const counts = (stone: number) => ({ materials: { stone }, items: {}, decorations: {} });
+
+test('a storage read answered after an upgrade can’t take the home or its row back to the plot', async () => {
+  const { link, take } = deferredLink();
+  const homes = homesteadsFor(session(link));
+  const village = villageFor(sessions.get(link)!);
+  const first = homes.load();
+  take('commons').answer({ ok: true, value: lane });
+  await settle();
+  take('home').answer({ ok: true, value: { gate: GATE, landSeed: 7, home: home([]), materials: { stone: 8 } } });
+  await first;
+  // The workshop opens (a storage read goes out); the cottage is built before it answers.
+  const storage = village.loadStorage();
+  const upgrade = homes.upgrade();
+  take('action').answer({ ok: true, home: { ...home([]), tier: 1 }, materials: { stone: 3 } });
+  assert.equal((await upgrade).ok, true);
+  take('items').answer({ ok: true, value: { inventory: counts(8), storage: counts(0), personal: counts(0), shared: counts(0), home: home([]) } });
+  assert.equal((await storage).ok, true);
+  assert.deepEqual({ home: homes.mine!.tier, row: homes.gateInfo(GATE)!.tier, stone: homes.materials.stone }, { home: 1, row: 1, stone: 3 }, 'the storage read is as of when it was asked');
+});
+
+test('a cached home a newer lane contradicts (same home, another tier) is read again, not handed back', async () => {
+  const { link, calls, take } = deferredLink();
+  const homes = homesteadsFor(session(link));
+  const first = homes.load();
+  take('commons').answer({ ok: true, value: theirLane(0) });
+  await first;
+  const cached = homes.fetchHome(GATE);
+  take('home').answer(gateAnswer(theirs(0)));
+  await cached;
+  // A gate read goes out; a newer lane says the plot is a cottage now.
+  const gateRead = homes.fetchHome(GATE);
+  const laneRead = homes.fresh();
+  take('commons').answer({ ok: true, value: theirLane(1) });
+  await laneRead;
+  assert.equal(calls.filter((c) => c.name === 'home').length, 2, 'the contradicted cache is read again');
+  // The older read answers the plot: refused, and the cache it would fall back on disagrees with the row.
+  take('home').answer(gateAnswer(theirs(0)));
+  await settle();
+  assert.equal(calls.filter((c) => c.name === 'home').length, 2, 'the gate read asks again (with the lane’s reread)');
+  take('home').answer(gateAnswer(theirs(1)));
+  take('home').answer(gateAnswer(theirs(1)));
+  assert.equal((await gateRead)?.tier, 1, 'the home handed back is the cottage');
+  assert.deepEqual(gateShown(homes), { row: { homeId: 'home-1', tier: 1, names: ['Them'], shelf: false, shelfStocked: false }, home: { id: 'home-1', tier: 1 } });
+});
+
+test('a shelf read answered after a newer lane or gate read can’t put a gift or a shelf back', async () => {
+  const stockedLane = (stocked: boolean) => ({ ...theirLane(), gates: [{ ...theirLane().gates[0]!, shelf: true, shelfStocked: stocked }] });
+  // The lane says the last gift was taken since the shelf read was asked.
+  {
+    const { link, take } = deferredLink();
+    const homes = homesteadsFor(session(link));
+    const village = villageFor(sessions.get(link)!);
+    const first = homes.load();
+    take('commons').answer({ ok: true, value: stockedLane(true) });
+    await first;
+    const shelfRead = village.loadShelf(GATE);
+    const laneRead = homes.fresh();
+    take('commons').answer({ ok: true, value: stockedLane(false) });
+    await laneRead;
+    take('items').answer({ ok: true, value: { shelf: shelfView(true) } });
+    assert.equal((await shelfRead).ok, true);
+    assert.deepEqual([homes.gateInfo(GATE)!.shelf, homes.gateInfo(GATE)!.shelfStocked], [true, false]);
+  }
+  // A gate read says the shelf was taken down since.
+  {
+    const { link, take } = deferredLink();
+    const homes = homesteadsFor(session(link));
+    const village = villageFor(sessions.get(link)!);
+    const first = homes.load();
+    take('commons').answer({ ok: true, value: stockedLane(true) });
+    await first;
+    const shelfRead = village.loadShelf(GATE);
+    const gateRead = homes.fetchHome(GATE);
+    take('home').answer(gateAnswer(theirs()));
+    await gateRead;
+    take('items').answer({ ok: true, value: { shelf: shelfView(true) } });
+    assert.equal((await shelfRead).ok, true);
+    assert.deepEqual([homes.gateInfo(GATE)!.shelf, homes.gateInfo(GATE)!.shelfStocked], [false, false]);
+  }
+});
+
+test('a home never says whether you may take it back: the lane does, whichever answers first', async () => {
+  const formerLane = (members: { id: string; displayName: string }[], reclaim: boolean) => ({ ...lane, gates: [{ ...lane.gates[0]!, members, names: members.map((m) => m.displayName), reclaim }], mine: null });
+  const partnerOnly = [{ id: 'partner', displayName: 'Partner' }];
+  const vacant = { ...home([]), member: false, members: [] };
+  // Your partner leaves the home you left: the gate read (vacant) answers before the lane (vacant, yours to take back).
+  {
+    const { link, take } = deferredLink();
+    const homes = homesteadsFor(session(link));
+    const first = homes.load();
+    take('commons').answer({ ok: true, value: formerLane(partnerOnly, false) });
+    await first;
+    const laneRead = homes.fresh();
+    const gateRead = homes.fetchHome(GATE);
+    take('home').answer(gateAnswer(vacant));
+    await gateRead;
+    take('commons').answer({ ok: true, value: formerLane([], true) });
+    await laneRead;
+    assert.deepEqual(homes.reclaimable().map((g) => g.gate), [GATE], 'Pell offers it back');
+  }
+  // The other way round: an older lane says yours to take back, a newer home says someone lives there.
+  {
+    const { link, take } = deferredLink();
+    const homes = homesteadsFor(session(link));
+    const first = homes.load();
+    take('commons').answer({ ok: true, value: formerLane([], true) });
+    await first;
+    const laneRead = homes.fresh();
+    const gateRead = homes.fetchHome(GATE);
+    take('home').answer(gateAnswer({ ...vacant, members: [{ id: 'them', displayName: 'Them' }] }));
+    await gateRead;
+    take('commons').answer({ ok: true, value: formerLane([], true) });
+    await laneRead;
+    assert.deepEqual(homes.reclaimable(), [], 'an occupied home can’t be taken back');
   }
 });
 

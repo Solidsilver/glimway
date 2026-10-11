@@ -291,7 +291,8 @@ export class Village {
     this.storage = r.value.storage
     this.personal = r.value.personal
     this.shared = r.value.shared
-    this.adoptHome(r.value.home)
+    // A read's home: as of when it was asked.
+    if (r.value.home) homesteadsFor(this.session).adoptHomeRead(r.value.home, mark)
     this.emit('goods')
     return { ok: true, value: undefined }
   }
@@ -304,7 +305,7 @@ export class Village {
     this.storage = r.res.result.storage
     this.personal = r.res.result.personal
     this.shared = r.res.result.shared
-    this.adoptHome(r.res.result.home)
+    this.adoptHomeAnswer(r.res.result.home)
     this.emit('goods')
     return { ok: true, value: undefined }
   }
@@ -316,7 +317,7 @@ export class Village {
     this.storage = r.res.result.storage
     this.personal = r.res.result.personal
     this.shared = r.res.result.shared
-    this.adoptHome(r.res.result.home)
+    this.adoptHomeAnswer(r.res.result.home)
     this.emit('goods')
     return { ok: true, value: r.res.result.output }
   }
@@ -352,11 +353,18 @@ export class Village {
     return { ok: true, value: { woodpile: r.res.result.woodpile, collectedQty: r.res.result.collectedQty } }
   }
 
-  /** Read the gift shelf at a Commons gate. */
+  /** Read the gift shelf at a Commons gate: the lane's shelf art follows, as of when this read was asked. */
   async loadShelf(gate: number): Promise<Result<ShelfView>> {
+    const mark = nextMark()
     const r = await this.link.readWith((raw) => raw.shelf(gate))
     if (!r.ok) return fail(r.code)
+    this.adoptShelf(r.value.shelf, mark)
     return { ok: true, value: r.value.shelf }
+  }
+
+  /** The one way a shelf view reaches the lane's row (homestead.ts adoptShelf): a read's at its asked mark, an answer's at its landing. */
+  private adoptShelf(v: ShelfView, at: number): void {
+    homesteadsFor(this.session).adoptShelf(v.gate, v.hasShelf, v.slots.length > 0, at)
   }
 
   /**
@@ -372,6 +380,7 @@ export class Village {
       this.adoptInventory(r.res.inventory)
       this.emit('goods')
     }
+    this.adoptShelf(r.res.shelf, nextMark())
     return { ok: true, value: r.res }
   }
 
@@ -380,12 +389,13 @@ export class Village {
     this.storage = w.storage
     this.personal = w.personal
     this.shared = w.shared
-    this.adoptHome(w.home)
+    this.adoptHomeAnswer(w.home)
     this.emit('goods')
   }
 
-  private adoptHome(home: import('../lib/api/types').HomeView | null): void {
-    if (home) homesteadsFor(this.session).adoptHome(home)
+  /** An answer's home (storage moves, crafts, workshop answers): as of its landing. */
+  private adoptHomeAnswer(home: import('../lib/api/types').HomeView | null): void {
+    if (home) homesteadsFor(this.session).adoptHomeAnswer(home)
   }
 
   // ------------------------------------------------------------ mail

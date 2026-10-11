@@ -172,3 +172,16 @@ test('another account’s session is never seeded with the balance the last one 
   const homes = homesteadsFor(next.session);
   assert.equal(homes.materials.stone, undefined, 'their own balance comes with their own reads');
 });
+
+test('an answer that shows only some counts (the Yard’s items answer) re-stamps only those', async () => {
+  store.resetWilds({ quiet: true });
+  const { homes, take, link } = homeWorld();
+  store.applyNear(near(4), store.readMark(), link);
+  // A Home read goes out; a timber bundle's answer lands first, showing the pack's timber only.
+  const read = homes.fetchHome(GATE);
+  homes.adoptMaterialCounts({ timber: 5 });
+  take('home').answer({ ok: true, value: { gate: GATE, landSeed: 7, home: null, materials: { stone: 9, timber: 2 } } });
+  await read;
+  assert.deepEqual({ stone: homes.materials.stone, timber: homes.materials.timber }, { stone: 9, timber: 5 }, 'the read’s stone (nothing newer told it), the answer’s timber');
+  assert.equal(store.wildsMaterials()!.stone, 9);
+});

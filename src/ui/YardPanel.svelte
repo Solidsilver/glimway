@@ -152,9 +152,9 @@
   function syncMaterials(ids: string[]): void {
     const stacks = items.view?.stacks
     if (!stacks) return
-    const next = { ...homes.materials }
-    for (const id of ids) if (id in next || MATERIALS.some((m) => m.id === id)) next[id] = stacks.filter((st) => st.itemDef === id).reduce((n, st) => n + st.qty, 0)
-    homes.materials = next
+    const counts: Record<string, number> = {}
+    for (const id of ids) if (id in homes.materials || MATERIALS.some((m) => m.id === id)) counts[id] = stacks.filter((st) => st.itemDef === id).reduce((n, st) => n + st.qty, 0)
+    homes.adoptMaterialCounts(counts)
   }
 
   // ------------------------------------------------------------ Materials

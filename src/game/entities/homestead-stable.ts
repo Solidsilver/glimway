@@ -113,7 +113,7 @@ export interface StableHost {
   here(): HomeView | null
   /** The stalls as this screen shows them (your own mount out while it's out with you or walking home). */
   stallsHere(): StallView[]
-  readonly homes: { readonly myId: string | null; readonly connected: boolean; adoptHome(home: HomeView | null): void; materials: Record<string, number> }
+  readonly homes: { readonly myId: string | null; readonly connected: boolean; adoptHomeAnswer(home: HomeView | null): void; materials: Record<string, number> }
   readonly deps: { session: Session; hero: () => { x: number; y: number } }
   readonly land: unknown
 }
@@ -221,15 +221,15 @@ async function buildStall(host: StableHost, homeId: string, stable: HomeInstance
     bus.emit(EV.toast, { text: companionErrorText('short'), kind: 'error' })
     return
   }
-  host.homes.adoptHome(predictStableExtend(home, HOMESTEAD_DATA.stable.item, HOMESTEAD_DATA.stable.maxStalls))
+  host.homes.adoptHomeAnswer(predictStableExtend(home, HOMESTEAD_DATA.stable.item, HOMESTEAD_DATA.stable.maxStalls))
   const r = await link.stableExtend(homeId)
   if (host.gone) return
   if (!r.ok) {
-    host.homes.adoptHome(home)
+    host.homes.adoptHomeAnswer(home)
     bus.emit(EV.toast, { text: companionErrorText(r.code), kind: 'error' })
     return
   }
-  if (r.result.home) host.homes.adoptHome(r.result.home)
+  if (r.result.home) host.homes.adoptHomeAnswer(r.result.home)
   host.homes.materials = r.result.materials
   bus.emit(EV.toast, { text: 'A new bay on the stable: fresh straw, and a door that shuts.', kind: 'thought' })
 }

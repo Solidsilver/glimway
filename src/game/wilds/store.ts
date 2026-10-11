@@ -151,7 +151,7 @@ mirrorMaterials('wilds', () => viewLink, (m) => {
   if (!adopting) emitMaterials();
 });
 
-/** Balances read or answered at `at`, for both mirrors: false (and nothing set) if a newer balance is held. */
+/** Balances read or answered at `at`, for both mirrors: false (and nothing set) if every count held is newer. */
 function takeMaterials(m: Record<string, number>, at: number): boolean {
   adopting = true;
   try {
@@ -416,8 +416,10 @@ export function applyNear(res: WildsNearResult, since: number = markNow(), link:
     v.ways.set(w.id, w);
     waySeq.set(w.id, since);
   }
-  // The one balance: this read's, unless one from after it was asked is held (a new view starts from that one).
-  if (!takeMaterials(res.materials, since) && restart) v.materials = materialsRecord(heldMaterials(link) ?? res.materials);
+  // The one balance: this read's counts, except any newer than it.
+  takeMaterials(res.materials, since);
+  // A new view starts from the balance held (this read's counts, and any newer ones).
+  if (restart) v.materials = materialsRecord(heldMaterials(link) ?? res.materials);
   v.stale = false;
   return turned;
 }
