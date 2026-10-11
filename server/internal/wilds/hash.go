@@ -1,7 +1,10 @@
-// Package wilds generates the Wilds on the server (generator v2: gen_v2.go,
-// woods_v2.go) and rolls their loot (loot.go). A region epoch's chunks are
-// generated once, at epoch creation, and stored; claims read the stored
-// chunk and never regenerate.
+// Package wilds generates the Wilds on the server and rolls their loot
+// (loot.go). Generator v3 (gen_v3.go and the passes it names: cells.go,
+// lands.go, wend.go, road.go, routes.go, base_v3.go, detail_v3.go) makes
+// the open map one chunk at a time on signed coordinates; generator v2
+// (gen_v2.go, woods_v2.go) makes the old 3×3 regions until the store moves
+// to v3. A chunk is generated once in its epoch and stored; claims read the
+// stored chunk and never regenerate.
 //
 // Integer-only hash and PRNG spec (mirrors src/lib/hash.ts):
 //

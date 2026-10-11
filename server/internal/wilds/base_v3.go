@@ -1,0 +1,423 @@
+package wilds
+
+import (
+	"slices"
+
+	contract "glimway/server/internal/gen/glimway/v1"
+)
+
+// The base: every tile's walkability and ground from the passes above the
+// chunk alone (lands, the Wend, the road, routes, gaps, the footprints'
+// openings, a seam's kept edge), a pure function of the epoch and the
+// world tile. A chunk's two edge tiles each side are exactly its base and
+// detail never edits them, so both neighbours of an edge compute the same
+// four tiles (open-map.md 2.2, "Edges"). Inside them, detail opens
+// clearings and paths and dresses everything.
+//
+// What decides a tile, first match wins:
+//  1. Another epoch's chunk (kept): its own tile. Beside one, within two
+//     tiles of it: a mirror of its edge (the seam, 2.3), open where it's
+//     open, solid where it's solid; water there becomes bank.
+//  2. A footprint's fixed opening (the gate, the crossing, the road's).
+//  3. The Wend's water: a ford within fordWidth/2 of a route, else water.
+//  4. The Lantern Road's paving and verge.
+//  5. A route (or an extra ford's path): its trodden line and verge.
+//  6. The Wend's bank.
+//  7. An edge gap, in the two edge tiles each side.
+//  8. The land's floor: solid where its thicketPermille says (woods: all),
+//     else open. In the edge tiles the floor is decided a whole column
+//     across the edge at a time (the four tiles open or solid together:
+//     open when the land is open on both sides at that row), and each 4×4
+//     block where four chunks meet as one, joined to the columns beside it
+//     when open. So a stray
+//     open tile is never shut in among the edge tiles, where neither chunk
+//     may carve to it.
+
+type baseKind uint8
+
+const (
+	bField baseKind = iota
+	bKept
+	bSeam
+	bOpening
+	bWater
+	bFord
+	bRoad
+	bRoute
+	bBank
+	bGap
+)
+
+type baseTile struct {
+	walk   bool
+	ground Ground
+	land   int8
+	kind   baseKind
+}
+
+// keptReader reads kept chunks' tiles: from the stored chunk when the
+// caller passed it, else as generator v3 makes it (its band is its base).
+type keptReader struct {
+	w      *world // the kept epoch's world
+	stored map[[2]int]*contract.WildsChunk
+	made   map[[2]int][]baseTile
+}
+
+var groundByTerrain = func() map[string]Ground {
+	out := map[string]Ground{}
+	for i, t := range GroundIDs {
+		out[t] = Ground(i)
+	}
+	return out
+}()
+
+func (k *keptReader) tile(tx, ty int) (bool, Ground) {
+	S := chunkSize()
+	c := [2]int{floorDiv(tx, S), floorDiv(ty, S)}
+	lx, ly := tx-c[0]*S, ty-c[1]*S
+	if m := k.stored[c]; m != nil && int(m.Size) == S && len(m.Ground) == S*S/2 && len(m.Solid) == S*S/8 {
+		i := ly*S + lx
+		g := Ground(0)
+		if p := int(m.Ground[i/2] >> (4 * (i % 2)) & 15); p < len(m.Palette) {
+			if v, ok := groundByTerrain[m.Palette[p]]; ok {
+				g = v
+			}
+		}
+		return Walkable(m, lx, ly), g
+	}
+	tiles, ok := k.made[c]
+	if !ok {
+		tiles = k.w.fill(c[0]*S, c[1]*S, c[0]*S+S-1, c[1]*S+S-1, nil)
+		k.made[c] = tiles
+	}
+	t := tiles[ly*S+lx]
+	return t.walk, t.ground
+}
+
+// openingTiles are the footprints' fixed openings: the opening's tiles on
+// its edge and two more inward, in this epoch kind's footprints.
+func openingTiles(kind string) map[[2]int]Ground {
+	out := map[[2]int]Ground{}
+	for _, p := range contentRules().Places {
+		if p.GetEpochKind() != kind {
+			continue
+		}
+		g := landGround[landIndex(p.GetLand())]
+		for _, o := range p.GetOpenings() {
+			dx, dy := sideStep(o.GetEdge())
+			for k := 0; k < int(o.GetWidth()); k++ {
+				ex, ey := edgeTile(int(o.GetCx()), int(o.GetCy()), dx, dy, int(o.GetOffset())+k)
+				gr := g.verge
+				if k == int(o.GetWidth())/2 {
+					gr = g.path
+				}
+				for d := 0; d < 3; d++ {
+					out[[2]int{ex - dx*d, ey - dy*d}] = gr
+				}
+			}
+		}
+	}
+	return out
+}
+
+// fill computes the base of the tiles x0..x1, y0..y1 (inclusive), row-major.
+func (w *world) fill(x0, y0, x1, y1 int, kept *keptReader) []baseTile {
+	S := chunkSize()
+	W := x1 - x0 + 1
+	out := make([]baseTile, W*(y1-y0+1))
+	area := tileBox(x0, y0, x1, y1)
+	if kept == nil {
+		kept = &keptReader{w: w.still(), made: map[[2]int][]baseTile{}}
+	}
+	openings := openingTiles(w.e.Kind)
+	pts := w.landPointsNear(area)
+
+	var riverSegs []int
+	leanR := 0
+	if w.river != nil {
+		leanR = int(contentRules().GetRiver().GetLeanChunks())*S*fp + 8*fp
+		riverSegs = w.river.line.segs(area, leanR)
+	}
+	roadSegs := w.road.line.segs(area, 0)
+	// Routes and extra fords of the cells under the area.
+	var routes []*line
+	cxa, cya := CellOf(floorDiv(x0, S), floorDiv(y0, S))
+	cxb, cyb := CellOf(floorDiv(x1, S), floorDiv(y1, S))
+	for cy := cya; cy <= cyb; cy++ {
+		for cx := cxa; cx <= cxb; cx++ {
+			for _, r := range w.cellLinks(cx, cy) {
+				if !slices.Contains(routes, r.line) && len(r.line.segs(area, 0)) > 0 {
+					routes = append(routes, r.line)
+				}
+			}
+			if f := w.cellFord(cx, cy); f != nil && len(f.segs(area, routeVerge)) > 0 {
+				routes = append(routes, f)
+			}
+		}
+	}
+	routeSegs := make([][]int, len(routes))
+	for i, r := range routes {
+		routeSegs[i] = r.segs(area, routeVerge)
+	}
+	fordHalf := int64(contentRules().GetRiver().GetFordWidth()) * fp / 2
+	samples := map[[2]int]bool{}
+	fieldOpen := func(tx, ty int) bool {
+		if v, ok := samples[[2]int{tx, ty}]; ok {
+			return v
+		}
+		d := int64(-1)
+		if len(riverSegs) > 0 {
+			if dd, _, ok := w.river.line.nearest(tileCentre(tx, ty), riverSegs); ok {
+				d = dd
+			}
+		}
+		v := !w.thicketAt(tx, ty, int(landData(w.landAt(tx, ty, pts, d)).GetThicketPermille()))
+		samples[[2]int{tx, ty}] = v
+		return v
+	}
+
+	for ty := y0; ty <= y1; ty++ {
+		for tx := x0; tx <= x1; tx++ {
+			t := &out[(ty-y0)*W+tx-x0]
+			cx, cy := floorDiv(tx, S), floorDiv(ty, S)
+			if EpochKindAt(cx, cy) != w.e.Kind {
+				if !w.wick {
+					// The kept side can't know a newer epoch's land: left
+					// solid and unknown (only tests look this far).
+					t.kind, t.land = bKept, -1
+					continue
+				}
+				t.walk, t.ground = kept.tile(tx, ty)
+				t.kind = bKept
+				t.land = int8(landIndex(footprintLand(cx, cy)))
+				continue
+			}
+			p := tileCentre(tx, ty)
+			riverD, riverHalf := int64(-1), 0
+			if len(riverSegs) > 0 {
+				if d, h, ok := w.river.line.nearest(p, riverSegs); ok {
+					riverD, riverHalf = d, h
+				}
+			}
+			land := w.landAt(tx, ty, pts, riverD)
+			t.land = int8(land)
+			lg := landGround[land]
+			wet := riverD >= 0 && riverD <= int64(riverHalf)*int64(riverHalf)
+			banked := riverD >= 0 && riverD <= int64(riverHalf+bankWidth)*int64(riverHalf+bankWidth)
+
+			if mx, my, ok := w.seamMirror(tx, ty); ok {
+				walk, g := kept.tile(mx, my)
+				t.walk, t.ground, t.kind = walk, g, bSeam
+				if walk && (wet || banked || groundSurface[g] == "water" || groundSurface[g] == "ford") {
+					t.ground = groundRiverBank
+				}
+				continue
+			}
+			if g, ok := openings[[2]int{tx, ty}]; ok {
+				t.walk, t.ground, t.kind = true, g, bOpening
+				continue
+			}
+			routeD := int64(-1)
+			for i, r := range routes {
+				if d, _, ok := r.nearest(p, routeSegs[i]); ok && (routeD < 0 || d < routeD) {
+					routeD = d
+				}
+			}
+			if wet {
+				if routeD >= 0 && routeD <= fordHalf*fordHalf {
+					t.walk, t.ground, t.kind = true, groundRiverFord, bFord
+				} else {
+					t.walk, t.ground, t.kind = false, groundRiverWater, bWater
+				}
+				continue
+			}
+			if len(roadSegs) > 0 {
+				if d, _, ok := w.road.line.nearest(p, roadSegs); ok {
+					h := int64(w.road.half)
+					if d <= h*h {
+						t.walk, t.ground, t.kind = true, groundPaving, bRoad
+						continue
+					}
+					if d <= (h+fp)*(h+fp) {
+						t.walk, t.ground, t.kind = true, groundRoadVerge, bRoad
+						continue
+					}
+				}
+			}
+			if routeD >= 0 && routeD <= routeVerge*routeVerge {
+				t.walk, t.kind = true, bRoute
+				t.ground = lg.verge
+				if routeD <= routePath*routePath {
+					t.ground = lg.path
+				}
+				continue
+			}
+			if banked {
+				t.walk, t.ground, t.kind = true, groundRiverBank, bBank
+				continue
+			}
+			if g, ok := w.gapAt(tx, ty, lg); ok {
+				t.walk, t.ground, t.kind = true, g, bGap
+				continue
+			}
+			t.kind = bField
+			t.ground = lg.floor
+			if open, inBand := w.bandOpen(tx, ty, fieldOpen); inBand {
+				t.walk = open
+				if open && landData(land).GetThicketPermille() >= 1000 {
+					t.ground = lg.open
+				}
+				continue
+			}
+			t.walk = !w.thicketAt(tx, ty, int(landData(land).GetThicketPermille()))
+		}
+	}
+	return out
+}
+
+// footprintLand is the footprint's land at a chunk, or "".
+func footprintLand(cx, cy int) string {
+	if p := FootprintAt(cx, cy); p != nil {
+		return p.GetLand()
+	}
+	return ""
+}
+
+// thicketAt: is the land's floor solid here? Clumped, so a meadow's
+// thickets stand in small stands rather than single tiles.
+func (w *world) thicketAt(tx, ty, permille int) bool {
+	if permille >= 1000 {
+		return true
+	}
+	if permille <= 0 {
+		return false
+	}
+	v := (w.thicket.at(tx*fp/3, ty*fp/3)*1000>>16 + int(Hash(w.e.WorldSeed, "thicket", tx, ty)%1000)) / 2
+	return v < permille
+}
+
+// bandOpen decides a field tile among a chunk's edge tiles (inBand false
+// elsewhere): a column across an edge is open when the land is open on
+// both sides of the edge at its row; a corner block when it's open in all
+// four chunks round the corner; the columns next to an open corner block
+// open with it.
+func (w *world) bandOpen(tx, ty int, open func(tx, ty int) bool) (bool, bool) {
+	S := chunkSize()
+	cx, cy := floorDiv(tx, S), floorDiv(ty, S)
+	lx, ly := tx-cx*S, ty-cy*S
+	edgeX := lx < band || lx >= S-band
+	edgeY := ly < band || ly >= S-band
+	// The edge line each way (in tiles: the first tile past it).
+	ex := cx * S
+	if lx >= S-band {
+		ex = (cx + 1) * S
+	}
+	ey := cy * S
+	if ly >= S-band {
+		ey = (cy + 1) * S
+	}
+	across := func(x, y int) bool { return open(x-1, y) && open(x, y) } // a vertical edge at x
+	down := func(x, y int) bool { return open(x, y-1) && open(x, y) }   // a horizontal edge at y
+	corner := func(x, y int) bool { return across(x, y-1) && across(x, y) }
+	switch {
+	case edgeX && edgeY:
+		return corner(ex, ey), true
+	case edgeX:
+		switch {
+		case across(ex, ty):
+			return true, true
+		case ly == band:
+			return corner(ex, cy*S), true
+		case ly == S-1-band:
+			return corner(ex, (cy+1)*S), true
+		}
+		return false, true
+	case edgeY:
+		switch {
+		case down(tx, ey):
+			return true, true
+		case lx == band:
+			return corner(cx*S, ey), true
+		case lx == S-1-band:
+			return corner((cx+1)*S, ey), true
+		}
+		return false, true
+	}
+	return false, false
+}
+
+// gapAt: is the tile in an edge gap (its chunk's two edge tiles)?
+func (w *world) gapAt(tx, ty int, lg landGrounds) (Ground, bool) {
+	S := chunkSize()
+	cx, cy := floorDiv(tx, S), floorDiv(ty, S)
+	lx, ly := tx-cx*S, ty-cy*S
+	try := func(k gapKey, along int) (Ground, bool) {
+		o := w.gapOffset(k)
+		if o < 0 || along < o || along >= o+gapWidth {
+			return 0, false
+		}
+		if along == o+gapWidth/2 {
+			return lg.path, true
+		}
+		return lg.verge, true
+	}
+	if lx <= 1 {
+		if g, ok := try(edgeKey(cx, cy, -1, 0), ly); ok {
+			return g, true
+		}
+	}
+	if lx >= S-2 {
+		if g, ok := try(edgeKey(cx, cy, 1, 0), ly); ok {
+			return g, true
+		}
+	}
+	if ly <= 1 {
+		if g, ok := try(edgeKey(cx, cy, 0, -1), lx); ok {
+			return g, true
+		}
+	}
+	if ly >= S-2 {
+		if g, ok := try(edgeKey(cx, cy, 0, 1), lx); ok {
+			return g, true
+		}
+	}
+	return 0, false
+}
+
+// seamOrder: the four sides first, then the corners.
+var seamOrder = [8][2]int{{0, -1}, {1, 0}, {0, 1}, {-1, 0}, {1, -1}, {1, 1}, {-1, 1}, {-1, -1}}
+
+// seamMirror: within two tiles of a chunk of another epoch kind, the kept
+// tile this one mirrors (across the shared edge, or the shared corner).
+func (w *world) seamMirror(tx, ty int) (int, int, bool) {
+	if !w.wick {
+		return 0, 0, false // only the newer side copies
+	}
+	S := chunkSize()
+	cx, cy := floorDiv(tx, S), floorDiv(ty, S)
+	lx, ly := tx-cx*S, ty-cy*S
+	for _, d := range seamOrder {
+		if EpochKindAt(cx+d[0], cy+d[1]) == w.e.Kind {
+			continue
+		}
+		mx, my := tx, ty
+		switch {
+		case d[0] > 0 && lx >= S-2:
+			mx = (cx+1)*S + (S - 1 - lx)
+		case d[0] < 0 && lx <= 1:
+			mx = cx*S - 1 - lx
+		case d[0] != 0:
+			continue
+		}
+		switch {
+		case d[1] > 0 && ly >= S-2:
+			my = (cy+1)*S + (S - 1 - ly)
+		case d[1] < 0 && ly <= 1:
+			my = cy*S - 1 - ly
+		case d[1] != 0:
+			continue
+		}
+		return mx, my, true
+	}
+	return 0, 0, false
+}

@@ -111,8 +111,8 @@ type Site struct {
 	TY   int      `json:"ty"`
 }
 
-// Chunk is one generated chunk. Ground and Solid are row-major,
-// cell i = ty*Size + tx.
+// Chunk is one generated chunk (v2 or v3). Ground and Solid are row-major,
+// cell i = ty*Size + tx. v3 leaves RegionID, Exits and Spawn zero.
 type Chunk struct {
 	RegionID         string   `json:"regionId"`
 	CX               int      `json:"cx"`
@@ -128,6 +128,10 @@ type Chunk struct {
 	Spawn            Tile     `json:"spawn"`
 	Look             string   `json:"look"` // "tangle" | "outer"
 	Mark             string   `json:"mark"` // the season's Mark for the outer look; "" when permanent
+	// Generator v3 only (omitted from v2's JSON, so v2's goldens stand).
+	Tier   int         `json:"tier,omitempty"`   // wilds.Tier
+	Land   string      `json:"land,omitempty"`   // the land at the centre tile (Glimpse's sample)
+	Places []PlaceMark `json:"places,omitempty"` // places whose landmark stands here
 }
 
 // Walkable is true for an in-chunk tile that isn't solid.
