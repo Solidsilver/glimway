@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import type { BrowserContext } from '@playwright/test'
-import { allow, newUser, openTitleGuide, pasteAndConnect, reenter, routeHabitica, serverState, setHabitica, waitForWorld, CONTRACT } from './connected'
-import { expectToast, holdUntil, player, settled, waitForWilds, warp, wilds, wildsWindow } from './helpers'
+import { allow, newUser, openTitleGuide, pasteAndConnect, pinWorld, reenter, routeHabitica, serverState, setHabitica, waitForWorld, wickSlack, CONTRACT } from './connected'
+import { diagnose, expectToast, frames, holdUntil, parkCreatures, player, settled, waitForLive, waitForWilds, waitGame, warp, wilds, wildsWindow, windowWhole } from './helpers'
 import { freshPlayer } from './home-helpers'
 
 /**
@@ -25,11 +25,14 @@ async function shot(page: Page, name: string): Promise<void> {
 /**
  * A walkable route (world px waypoints) from the hero to the nearest open
  * tile matching `goal`, over the tiles the open map knows now (breadth
- * first, 4-way, within `reach` tiles); null when there is none yet.
+ * first, 4-way, within `reach` tiles); null when there is none yet. Body
+ * aware: a tile counts as open only when its map data is open *and* no
+ * collision body touches it (a decor body can stick out past its own tile),
+ * so the hero's body fits wherever the route goes.
  */
 async function route(page: Page, goal: { minTy?: number; maxTy?: number; minTx?: number; maxTx?: number }, reach = 70): Promise<{ x: number; y: number }[] | null> {
   return page.evaluate(([g, reach]) => {
-    const w = window as unknown as { __fsPlayer: () => { x: number; y: number }; __fsTileSolid: (x: number, y: number) => boolean }
+    const w = window as unknown as { __fsPlayer: () => { x: number; y: number }; __fsTileSolid: (x: number, y: number) => boolean; __fsSolidAt: (x: number, y: number) => boolean }
     const p = w.__fsPlayer()
     const sx = Math.floor(p.x / 16)
     const sy = Math.floor(p.y / 16)
@@ -52,7 +55,7 @@ async function route(page: Page, goal: { minTy?: number; maxTy?: number; minTx?:
       for (const [dx, dy] of [[0, -1], [1, 0], [-1, 0], [0, 1]]) {
         const nx = x + dx
         const ny = y + dy
-        if (Math.abs(nx - sx) > reach || Math.abs(ny - sy) > reach || from.has(key(nx, ny)) || w.__fsTileSolid(nx, ny)) continue
+        if (Math.abs(nx - sx) > reach || Math.abs(ny - sy) > reach || from.has(key(nx, ny)) || w.__fsTileSolid(nx, ny) || w.__fsSolidAt(nx, ny)) continue
         from.set(key(nx, ny), key(x, y))
         queue.push([nx, ny])
       }
@@ -61,30 +64,97 @@ async function route(page: Page, goal: { minTy?: number; maxTy?: number; minTx?:
   }, [goal, reach] as const)
 }
 
+/** The hero's tile matches `goal`. */
+const arrived = (p: { x: number; y: number }, g: Parameters<typeof route>[1]) => {
+  const tx = Math.floor(p.x / TILE)
+  const ty = Math.floor(p.y / TILE)
+  return (g.minTy === undefined || ty >= g.minTy) && (g.maxTy === undefined || ty <= g.maxTy) && (g.minTx === undefined || tx >= g.minTx) && (g.maxTx === undefined || tx <= g.maxTx)
+}
+
 /**
- * Walk (as if steered) to the nearest open tile matching `goal`, and wait
- * until the hero gets there. Creatures are set aside first (a camp's
- * knockback would push the hero off the route); a walk that stalls is
- * planned again from where the hero stands.
+ * Walk (as if steered) to the nearest open tile matching `goal`, and check
+ * the hero gets there. Creatures are set aside as the walk goes (chunks
+ * attached on the way bring their own). Progress is checked every second
+ * of game time: a walk that stops moving and reaching waypoints for two of
+ * them has stalled, and is logged (position, body, waypoint, build state)
+ * and planned once more from where the hero stands; a second stall fails.
+ * A walk that ends short of the goal fails too.
  */
 async function walkTo(page: Page, goal: Parameters<typeof route>[1]): Promise<void> {
-  for (let attempt = 0; attempt < 6; attempt++) {
-    await page.evaluate(() => (window as unknown as { __fsDevParkCreatures: () => void }).__fsDevParkCreatures())
+  type Walk = { walking: boolean; left: number; x: number; y: number }
+  const read = (): Promise<Walk> =>
+    page.evaluate(() => {
+      const w = window as unknown as { __fsDevWalking: () => boolean; __fsDevWalkLeft: () => unknown[] | null; __fsPlayer: () => { x: number; y: number } }
+      const p = w.__fsPlayer()
+      return { walking: w.__fsDevWalking(), left: w.__fsDevWalkLeft()?.length ?? 0, x: p.x, y: p.y }
+    })
+  const stalls: string[] = []
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await parkCreatures(page)
     let path = await route(page, goal)
     for (let tries = 0; !path && tries < 20; tries++) {
-      await page.waitForTimeout(250)
+      await frames(page, 10)
       path = await route(page, goal)
     }
-    expect(path, `a way to ${JSON.stringify(goal)}`).not.toBeNull()
-    if (path!.length <= 1) return
-    await page.evaluate((p) => (window as unknown as { __fsDevWalk: (p: { x: number; y: number }[]) => void }).__fsDevWalk(p), path!)
-    const done = await expect
-      .poll(() => page.evaluate(() => (window as unknown as { __fsDevWalking: () => boolean }).__fsDevWalking()), { timeout: 20_000 })
-      .toBe(false)
-      .then(() => true, () => false)
-    if (done) return
+    if (!path) throw new Error(`no way to ${JSON.stringify(goal)}: ${await diagnose(page)}`)
+    if (path.length > 1) {
+      await page.evaluate((p) => (window as unknown as { __fsDevWalk: (p: { x: number; y: number }[]) => void }).__fsDevWalk(p), path)
+      let last = await read()
+      let still = 0
+      while (last.walking && still < 2) {
+        const now = await waitGame(page, read, (v) => !v.walking || v.left < last.left || Math.hypot(v.x - last.x, v.y - last.y) > 4, { seconds: 1 }).catch(() => null)
+        await parkCreatures(page)
+        if (now) {
+          still = 0
+          last = now
+        } else {
+          still += 1
+          last = await read()
+        }
+      }
+      if (last.walking) {
+        stalls.push(await diagnose(page))
+        console.log(`open-map walk stalled toward ${JSON.stringify(goal)}: ${stalls.at(-1)}`)
+        await page.evaluate(() => (window as unknown as { __fsDevWalk: (p: { x: number; y: number }[]) => void }).__fsDevWalk([]))
+        continue
+      }
+    }
+    const at = await player(page)
+    if (arrived(at, goal)) return
+    stalls.push(`ended short at ${Math.round(at.x)},${Math.round(at.y)}: ${await diagnose(page)}`)
   }
-  throw new Error(`the walk to ${JSON.stringify(goal)} kept stalling`)
+  throw new Error(`the walk to ${JSON.stringify(goal)} stalled: ${stalls.join(' | ')}`)
+}
+
+/** Frame gaps from now until `stopFrameGaps`: the time between one frame's callbacks and the next's, every frame the page draws. */
+async function startFrameGaps(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const gaps: number[] = []
+    let last = 0
+    let on = true
+    // performance.now(), not the frame's own timestamp: that one is snapped
+    // to the display's beat and hides how late a frame's work really ran.
+    const tick = () => {
+      if (!on) return
+      const t = performance.now()
+      if (last) gaps.push(t - last)
+      last = t
+      requestAnimationFrame(tick)
+    }
+    requestAnimationFrame(tick)
+    ;(window as unknown as { __e2eGaps: { gaps: number[]; stop: () => void } }).__e2eGaps = { gaps, stop: () => (on = false) }
+  })
+}
+
+/** The gaps since `startFrameGaps`: how many, p50, p95 and the longest (ms), and the wall time sampled. */
+async function stopFrameGaps(page: Page): Promise<{ frames: number; p50: number; p95: number; max: number; ms: number }> {
+  return page.evaluate(() => {
+    const g = (window as unknown as { __e2eGaps: { gaps: number[]; stop: () => void } }).__e2eGaps
+    g.stop()
+    const b = [...g.gaps].sort((x, y) => x - y)
+    const pct = (q: number) => (b.length ? Math.round(b[Math.min(b.length - 1, Math.floor(q * b.length))]! * 10) / 10 : 0)
+    return { frames: b.length, p50: pct(0.5), p95: pct(0.95), max: Math.round((b.at(-1) ?? 0) * 10) / 10, ms: Math.round(g.gaps.reduce((a, x) => a + x, 0)) }
+  })
 }
 
 test('walk from the gate through the Tangle into the Whitequiet and on, with no scene change; reload in place', async ({ page }) => {
@@ -106,11 +176,16 @@ test('walk from the gate through the Tangle into the Whitequiet and on, with no 
 
   // North chunk by chunk: (0,-1), (0,-2) in the Tangle, over the crossing into
   // the Whitequiet (0,-3), (0,-4), and out of its far side into the Beyond.
-  const frames: { p95: number; p50: number }[] = []
+  // This world's seed is its own (varied land; the drift test below is pinned):
+  // a stall logs the epoch, so the same geometry can be read again.
+  // The frames are sampled over each actual crossing and the builds it starts
+  // (until the window around the hero is whole again), not a fixed window before it.
+  const crossings: { p95: number; p50: number; max: number; frames: number; ms: number }[] = []
   for (let cy = -1; cy >= -6; cy--) {
-    const timing = page.evaluate(() => (window as unknown as { __fsDevFrameTimes: (ms: number) => Promise<{ gap: { p50: number; p95: number } }> }).__fsDevFrameTimes(2500))
+    await startFrameGaps(page)
     await walkTo(page, { maxTy: cy * S + S - 3 })
-    frames.push((await timing).gap)
+    await windowWhole(page)
+    crossings.push(await stopFrameGaps(page))
     const here = await wilds(page)
     expect(here.chunk.cy, 'the hero walked into the next row').toBe(cy)
     const w = (await wildsWindow(page))!
@@ -123,10 +198,13 @@ test('walk from the gate through the Tangle into the Whitequiet and on, with no 
     }
   }
   // No long frames crossing the edges (painting is off the walking frame).
-  for (const f of frames) expect(f.p95, `frame gaps while crossing: ${JSON.stringify(frames)}`).toBeLessThan(120)
+  // p95 is the coarse guard; the longest gap of each crossing is recorded
+  // beside it (a single build hitch shows there), not a phone frame budget.
+  test.info().annotations.push({ type: 'frame gaps per row (ms)', description: JSON.stringify(crossings) })
+  for (const f of crossings) expect(f.p95, `frame gaps while crossing: ${JSON.stringify(crossings)}`).toBeLessThan(120)
   const paints = (await wildsWindow(page))!.paints.filter((p) => !p.drift)
   // For the report: frame gaps per row crossed, and how long the chunks took to paint (and where).
-  console.log('open-map walk', JSON.stringify({ frames, paints: paints.map((p) => [p.chunk, p.ms, p.thread]) }))
+  console.log('open-map walk', JSON.stringify({ crossings, maxGap: Math.max(...crossings.map((f) => f.max)), paints: paints.map((p) => [p.chunk, p.ms, p.thread]) }))
   expect(paints.some((p) => p.thread === 'worker'), 'chunks painted off the main thread while walking').toBe(true)
   await shot(page, '62-open-map-beyond-desktop')
 
@@ -147,18 +225,65 @@ test('walk from the gate through the Tangle into the Whitequiet and on, with no 
   expect(Math.abs(after.y - before.y)).toBeLessThanOrEqual(17)
 })
 
+/** The drift test's world (pinned; the edge is wick land, so its corridor is the same within a wick). */
+const DRIFT_SEED = 'e2e-drift'
+/** How many open rows a corridor up to the north edge has. */
+const CORRIDOR = 4
+
+/**
+ * A straight corridor up to the frontier's north edge in the attached
+ * chunks, nearest the hero first: a column whose edge-row tile and the
+ * CORRIDOR - 1 tiles below it are open, with the columns either side open
+ * too (room for the hero's body), by the map's data and by the collision
+ * bodies actually built. Its foot and its top (the edge row), in tiles.
+ */
+async function northCorridor(page: Page, edgeTy: number): Promise<{ tx: number; foot: number; top: number } | null> {
+  return page.evaluate(([edge, rows]) => {
+    const w = window as unknown as { __fsPlayer: () => { x: number; y: number }; __fsTileSolid: (x: number, y: number) => boolean; __fsSolidAt: (x: number, y: number) => boolean; __fsWildsWindow: () => { attached: string[] } }
+    const open = (x: number, y: number) => !w.__fsTileSolid(x, y) && !w.__fsSolidAt(x, y)
+    const hx = Math.floor(w.__fsPlayer().x / 16)
+    const cols = [...new Set(w.__fsWildsWindow().attached.map((k) => Number(k.split(',')[0])))]
+      .flatMap((cx) => Array.from({ length: 24 }, (_, i) => cx * 24 + i))
+      .filter((x) => w.__fsWildsWindow().attached.includes(`${Math.floor(x / 24)},${Math.floor(edge / 24)}`))
+      .sort((a, b) => Math.abs(a - hx) - Math.abs(b - hx))
+    for (const x of cols) {
+      let ok = true
+      for (let y = edge; y < edge + rows && ok; y++) ok = open(x - 1, y) && open(x, y) && open(x + 1, y)
+      if (ok) return { tx: x, foot: edge + rows - 1, top: edge }
+    }
+    return null
+  }, [edgeTy, CORRIDOR] as const)
+}
+
 test('the drift at the frontier stops you, and says so the first time', async ({ page }) => {
   test.setTimeout(150_000)
   await freshPlayer(page)
+  // The frontier's land is the wick's: both clocks a day or more from its turning.
+  await wickSlack(page)
+  await pinWorld(page, DRIFT_SEED)
   // The north edge of the frontier is cy -8 (three chunks past the Whitequiet).
-  await warp(page, 'wilds', 12, -8 * S + 12)
-  await waitForWilds(page)
-  const w = (await wildsWindow(page))!
-  expect(w.drift.length, 'past the edge is the drift').toBeGreaterThan(0)
-  const frontierTop = -8 * S * TILE
-  // Walk to the northmost open tile in reach; if it is on the edge row, push into the drift.
-  if (!(await route(page, { maxTy: -8 * S }, 40))) test.skip(true, 'no open tile on this world’s north edge near the warp')
-  await walkTo(page, { maxTy: -8 * S })
+  const edge = -8 * S
+  const frontierTop = edge * TILE
+  let corridor: Awaited<ReturnType<typeof northCorridor>> = null
+  const tried: string[] = []
+  for (const cx of [0, -3, 3]) {
+    await warp(page, 'wilds', cx * S + 12, edge + 12)
+    await windowWhole(page)
+    const w = (await wildsWindow(page))!
+    expect(w.drift.length, 'past the edge is the drift').toBeGreaterThan(0)
+    corridor = await northCorridor(page, edge)
+    if (corridor) break
+    tried.push(`no corridor around chunk ${cx},-8: ${await diagnose(page)}`)
+  }
+  expect(corridor, `a straight open corridor up to the north edge (seed ${DRIFT_SEED}): ${tried.join(' | ')}`).not.toBeNull()
+
+  // At its foot, then up it to the edge row: the hero has to get there.
+  await page.evaluate(([x, y]) => (window as unknown as { __fsDevPlace: (x: number, y: number) => void }).__fsDevPlace(x, y), [corridor!.tx * TILE + 8, corridor!.foot * TILE + 12] as const)
+  await windowWhole(page)
+  await walkTo(page, { maxTy: corridor!.top, minTx: corridor!.tx, maxTx: corridor!.tx })
+  expect(Math.floor((await player(page)).y / TILE), `on the edge row: ${await diagnose(page)}`).toBe(corridor!.top)
+  // Push into the drift.
+  await waitForLive(page)
   await page.keyboard.down('ArrowUp')
   try {
     await expectToast(page, /The drift is thick here\. Not without a lamp\./, { timeout: 8_000 })

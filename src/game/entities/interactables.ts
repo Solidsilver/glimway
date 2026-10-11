@@ -55,6 +55,15 @@ export interface Interactable {
   activate: () => boolean | void
 }
 
+/** A point as playtests read it (`__fsTarget`). */
+export interface InteractableView {
+  id: string
+  label: string | null
+  x: number
+  y: number
+  rank: number
+}
+
 export const DEFAULT_REACH = 34
 export const DEFAULT_CLICK_REACH = 40
 const DEFAULT_MARKER_OFFSET = 25
@@ -155,19 +164,7 @@ export class Interactables {
    * drive the prompt, the markers and the keycap hint from it.
    */
   update(player: { x: number; y: number }, now: number): void {
-    let best: Interactable | null = null
-    let bestRank = -Infinity
-    let bestDist = Infinity
-    for (const it of this.list) {
-      const d = distance(player, it)
-      if (d >= (it.reach ?? DEFAULT_REACH)) continue
-      const rank = it.rank ?? 0
-      if (rank < bestRank || (rank === bestRank && d >= bestDist)) continue
-      if (!this.usable(it)) continue
-      best = it
-      bestRank = rank
-      bestDist = d
-    }
+    const best = this.pick(player)
     const away = this.awayCheck || this.goneCheck ? this.list.filter((it) => this.awayCheck?.(it.id) || this.goneCheck?.(it.id)).map((it) => it.id).join(',') : ''
     if (best !== this.currentTarget || away !== this.awayNow) {
       this.currentTarget = best
@@ -194,6 +191,38 @@ export class Interactables {
         this.keyHint.setVisible(false)
       }
     }
+  }
+
+  /** The target for the hero's feet at `player`: the highest rank in reach, then the nearest, of the usable points. */
+  pick(player: { x: number; y: number }): Interactable | null {
+    let best: Interactable | null = null
+    let bestRank = -Infinity
+    let bestDist = Infinity
+    for (const it of this.list) {
+      const d = distance(player, it)
+      if (d >= (it.reach ?? DEFAULT_REACH)) continue
+      const rank = it.rank ?? 0
+      if (rank < bestRank || (rank === bestRank && d >= bestDist)) continue
+      if (!this.usable(it)) continue
+      best = it
+      bestRank = rank
+      bestDist = d
+    }
+    return best
+  }
+
+  /**
+   * Read-only, for playtests: the target for feet at `at` (`current`: the one
+   * the last frame chose, standing there), and every point in reach of
+   * them, usable or not.
+   */
+  debugTarget(at: { x: number; y: number }, current: boolean): { target: InteractableView | null; near: (InteractableView & { d: number; usable: boolean })[] } {
+    const view = (it: Interactable): InteractableView => ({ id: it.id, label: read(it.label), x: it.x, y: it.y, rank: it.rank ?? 0 })
+    const target = current ? this.currentTarget : this.pick(at)
+    const near = this.list
+      .filter((it) => distance(at, it) < (it.reach ?? DEFAULT_REACH))
+      .map((it) => ({ ...view(it), d: Math.round(distance(at, it) * 10) / 10, usable: this.usable(it) }))
+    return { target: target ? view(target) : null, near }
   }
 
   /** Use the current target (the action key). False when there is none. */
