@@ -144,6 +144,13 @@ test('a place in the Whitequiet reloads there, and a turned wick leaves you wher
   await warp(page, 'wilds', 12, -5 * S + 21)
   await waitForWilds(page)
   const here = await player(page)
+  // Once the server and this tab's own record hold the place (a reload starts from the record).
+  await expect.poll(async () => {
+    const st = (await serverState(page)).body.state as { area: string; position: { x: number; y: number } }
+    return st.area === 'wilds' && Math.hypot(st.position.x - here.x, st.position.y - here.y) <= 17
+  }, { timeout: 20_000 }).toBe(true)
+  await page.evaluate(() => (window as unknown as { __fsDevSaveSoon: () => void }).__fsDevSaveSoon())
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __fsDevSaved: () => { pending: boolean } }).__fsDevSaved().pending)).toBe(false)
   await reenter(page, 'wilds')
   await waitForWilds(page)
   const back = await player(page)

@@ -149,18 +149,6 @@ const ART: Record<string, { rows: string[]; pal: Record<string, string> }> = {
     ],
     pal: { o: '#3a2a28', F: '#7a9a4a', f: '#a8bf6a' }
   },
-  'wilds-pond': {
-    rows: [
-      '...oooooo....',
-      '.oiIIIIIIio..',
-      'oIIWIIIIIIMo.',
-      'oIIIWIIIIMMo.',
-      'oIIIIIWIIIMo.',
-      '.oiIIIIIIio..',
-      '...oooooo....'
-    ],
-    pal: { o: '#3a2a28', i: '#9cc3d8', I: '#c3dcea', W: '#fffbef', M: '#7fa8c0' }
-  },
   'wilds-cart': {
     rows: [
       '.o..........o.',
@@ -176,7 +164,53 @@ const ART: Record<string, { rows: string[]; pal: Record<string, string> }> = {
   }
 }
 
+/**
+ * The frozen pond (a POI): a little iced-over pool two tiles across, sunk
+ * in a rim of earth and stones, cloudy ice with cracks and a glint, a few
+ * reeds frozen at the edge. Drawn at world size (it lies flat on the ground).
+ */
+function drawPond(): HTMLCanvasElement {
+  const W = 30
+  const H = 16
+  const c = document.createElement('canvas')
+  c.width = W
+  c.height = H
+  const ctx = c.getContext('2d')!
+  const px = (x: number, y: number, col: string) => {
+    ctx.fillStyle = col
+    ctx.fillRect(x, y, 1, 1)
+  }
+  const cx = 14.5
+  const cy = 8
+  const inside = (x: number, y: number, rx: number, ry: number) => ((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2 <= 1
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      if (!inside(x, y, 14.5, 7.6)) continue
+      if (!inside(x, y, 13.2, 6.4)) px(x, y, y < cy ? '#4a3c2e' : '#3a2f25') // the earth rim
+      else if (!inside(x, y, 12, 5.4)) px(x, y, y < cy - 1 ? '#c9dde6' : '#7d9db0') // frost at the edge, shadow below
+      else {
+        // Cloudy ice: lighter to the upper left, a darker heart.
+        const t = (x - cx) / 12 + (y - cy) / 5
+        px(x, y, t < -0.6 ? '#b8d4e2' : t < 0.2 ? '#9cc0d2' : '#83a8bd')
+      }
+    }
+  // Cracks and a glint.
+  for (const [x, y] of [[9, 7], [10, 8], [11, 8], [12, 9], [13, 9], [17, 6], [18, 7], [18, 8], [19, 8]]) px(x!, y!, '#5f8399')
+  for (const [x, y] of [[8, 5], [9, 5], [10, 4], [20, 10]]) px(x!, y!, '#f4f8fa')
+  // Stones on the rim, lit from the upper left.
+  for (const [x, y] of [[2, 6], [26, 5], [6, 13], [23, 12], [15, 14]]) {
+    px(x!, y!, '#a8a292')
+    px(x! + 1, y!, '#8a8476')
+    px(x!, y! + 1, '#6c665c')
+    px(x! + 1, y! + 1, '#4f4a44')
+  }
+  // Reeds frozen at the north-east edge.
+  for (const [x, h] of [[21, 4], [23, 5], [24, 3]]) for (let i = 0; i < h!; i++) px(x!, 3 - i + 1, i === h! - 1 ? '#c4c0a4' : '#7a8a52')
+  return c
+}
+
 function ensureArt(scene: Phaser.Scene): void {
+  if (!scene.textures.exists('wilds-pond')) scene.textures.addCanvas('wilds-pond', drawPond())
   for (const [key, art] of Object.entries(ART)) {
     if (scene.textures.exists(key)) continue
     const w = Math.max(...art.rows.map((r) => r.length))
@@ -210,7 +244,7 @@ const NODE_FRAME: Record<string, { tex: string; frame?: string; h: number }> = {
 const POI_FRAME: Record<string, { tex: string; frame?: string; h: number }> = {
   'old-shrine': { tex: 'fingersnap-props', frame: 'lantern-shrine', h: 26 },
   waystone: { tex: 'fingersnap-props', frame: 'stone-milestone', h: 18 },
-  'frozen-pond': { tex: 'wilds-pond', h: 10 },
+  'frozen-pond': { tex: 'wilds-pond', h: 16 },
   'abandoned-cart': { tex: 'wilds-cart', h: 14 },
   'mossy-arch': { tex: 'fingersnap-foreground', frame: 'stone-arch', h: 30 },
 }

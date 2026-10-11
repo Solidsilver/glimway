@@ -21,9 +21,7 @@ export const OPEN_MAP_PACKED_KEY = 'packed-open-map'
 
 export const omArt = (frame: string): string => `om-art:${frame}`
 
-/** The ford's and the veil's loops (the pass's animations.json), by their keys. */
-export const FORD_H_ANIM = omArt('ford-h-ripple')
-export const FORD_V_ANIM = omArt('ford-v-ripple')
+/** The veil's loop (the pass's animations.json). */
 export const VEIL_ANIM = omArt('frontier-veil')
 
 /** Make the open map's textures and loops, once. False when the pack didn't load. */
@@ -63,7 +61,6 @@ export const OPEN_MAP_DECOR_KINDS = Object.keys(DECOR_FRAMES) as DecorKind[]
 
 /** Ground tile art laid over the painted ground, by the ground it stands for. */
 export const ROAD_PAVING = [0, 1, 2, 3].map((i) => omArt(`road-paving-${i}`))
-export const ROAD_VERGE = [0, 1].map((i) => omArt(`road-verge-${i}`))
 export const PATH_STONE = [0, 1, 2, 3].map((i) => omArt(`path-stone-${i}`))
 export const PATH_PLANK_H = [0, 1].map((i) => omArt(`path-plank-h-${i}`))
 export const PATH_PLANK_V = [0, 1].map((i) => omArt(`path-plank-v-${i}`))

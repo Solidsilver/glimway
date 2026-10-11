@@ -279,7 +279,8 @@ export class WildsSites {
     deps.interactables.register(
       this,
       // Quiet until a fresh near read lands (and while stale), like the claims around them.
-      this.sites.map((s) => wildsPoint(`site:${s.id}`, this.sitePx(s), 20, () => (wildsLive(this.deps.session) ? this.offerAt(s) : null)))
+      // A lamp stone stands tall: its marker floats over the lamp niche, not on it.
+      this.sites.map((s) => wildsPoint(`site:${s.id}`, this.sitePx(s), s.kind === 'lamp-stone' ? 36 : 20, () => (wildsLive(this.deps.session) ? this.offerAt(s) : null)))
     )
   }
 

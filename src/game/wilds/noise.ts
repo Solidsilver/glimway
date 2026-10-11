@@ -71,3 +71,47 @@ export function latticeNoise(seed: number, scale: number, x0: number, y0: number
     return a + (b - a) * sy;
   };
 }
+
+const ROT_A = [Math.cos(0.62), Math.sin(0.62)] as const
+const ROT_B = [Math.cos(1.27), Math.sin(1.27)] as const
+
+/**
+ * A smooth field in 0..1 for the pixels of a patch, for broad things (shade,
+ * sun flecks, the white quiet's drifts): two octaves of value noise on
+ * rotated axes, so a threshold on it makes soft, rounded shapes rather than
+ * squares along a lattice. Worked out on a world grid every `step` px and
+ * read bilinearly: a pure function of the world pixel, so neighbouring
+ * chunks agree.
+ */
+export function smoothField(seed: number, scale: number, x0: number, y0: number, w: number, h: number, step: number): (x: number, y: number) => number {
+  const a = valueNoise(seed)
+  const b = valueNoise(seed ^ 0x5bd1e995)
+  const s2 = scale * 0.53
+  const at = (x: number, y: number) => {
+    const va = a((ROT_A[0] * x + ROT_A[1] * y) / scale, (-ROT_A[1] * x + ROT_A[0] * y) / scale)
+    const vb = b((ROT_B[0] * x + ROT_B[1] * y) / s2, (-ROT_B[1] * x + ROT_B[0] * y) / s2)
+    const v = 0.5 + (va * 0.65 + vb * 0.35 - 0.5) * 1.5
+    return v < 0 ? 0 : v > 1 ? 1 : v
+  }
+  const gx0 = Math.floor(x0 / step)
+  const gy0 = Math.floor(y0 / step)
+  const gw = Math.floor((x0 + w - 1) / step) - gx0 + 2
+  const gh = Math.floor((y0 + h - 1) / step) - gy0 + 2
+  const grid = new Float32Array(gw * gh)
+  for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) grid[j * gw + i] = at((gx0 + i) * step, (gy0 + j) * step)
+  return (x: number, y: number) => {
+    const fx = x / step
+    const fy = y / step
+    const ix = Math.floor(fx)
+    const iy = Math.floor(fy)
+    const tx = fx - ix
+    const ty = fy - iy
+    const k = (iy - gy0) * gw + (ix - gx0)
+    const p = grid[k]!
+    const q = grid[k + 1]!
+    const r = grid[k + gw]!
+    const t = grid[k + gw + 1]!
+    const top = p + (q - p) * tx
+    return top + (r + (t - r) * tx - top) * ty
+  }
+}

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { CONTRACT } from './connected'
+import { CONTRACT, serverState, sql } from './connected'
 import { waitForWilds, warp, wildsWindow } from './helpers'
 import { freshPlayer } from './home-helpers'
 import { decodeChunk } from '../src/lib/api/chunks.ts'
@@ -17,10 +17,24 @@ import type { WildsChunk } from '../src/lib/gen/glimway/v1/wilds_pb.js'
 
 const S = 24
 
+/** SHOTS names a set of screenshots (before/after a change); the default is the open map's own. */
+const SET = process.env.SHOTS ?? 'open-map'
+
 async function shot(page: Page, name: string): Promise<void> {
   if (!process.env.SCREENS) return
   await page.waitForTimeout(600)
-  await page.screenshot({ path: `.agent/screens/${name}.png` })
+  await page.screenshot({ path: `.agent/screens/${name.replace('open-map', SET)}.png` })
+}
+
+/**
+ * One fixed world for the screens, so a change can be seen before and
+ * after on the same land: a fresh world's seed is set before its Wilds are
+ * first made (its epochs and chunks are made on first entry; any made
+ * already are dropped). The Beyond still follows the week's wick.
+ */
+async function pinWorld(page: Page): Promise<void> {
+  const world = (await serverState(page)).body.worldId as string
+  sql(`DELETE FROM wilds_chunks WHERE epoch_id IN (SELECT id FROM wild_epochs WHERE world_id='${world}'); DELETE FROM wild_epochs WHERE world_id='${world}'; UPDATE worlds SET seed='open-map-screens' WHERE id='${world}';`)
 }
 
 /** Every chunk of the 0.8 frontier, as the server serves them. */
@@ -68,6 +82,7 @@ for (const [device, vp] of [['desktop', { width: 1200, height: 760 }], ['phone',
     test.setTimeout(240_000)
     await page.setViewportSize(vp)
     await freshPlayer(page)
+    await pinWorld(page)
     const chunks = await frontierChunks(page)
     expect(chunks.length).toBe(81)
 
@@ -95,8 +110,83 @@ for (const [device, vp] of [['desktop', { width: 1200, height: 760 }], ['phone',
     const mark = placed!.places[0]!
     await visit(page, world(placed!, mark.tx, mark.ty + 3), `76-open-map-landmark-${device}`)
 
+    // A trodden path through meadow, and the Lantern Road's edge into the grass.
+    const trodden = chunks.find((c) => c.land === 'meadow' && tileOf(c, 'dirt'))
+    if (trodden) await visit(page, tileOf(trodden, 'dirt')!, `78-open-map-trodden-${device}`)
+    const paved = chunks.filter((c) => tileOf(c, 'cobble'))
+    const edge = paved.map((c) => tileOf(c, 'sand') ?? tileOf(c, 'cobble')).find(Boolean)
+    if (edge) await visit(page, edge, `79-open-map-road-edge-${device}`)
+
+    // A frozen pond (a point of interest), where this world has one.
+    const pond = chunks.find((c) => c.entities.some((e) => e.kind === 'poi' && e.poi === 'frozen-pond'))
+    if (pond) {
+      const e = pond.entities.find((x) => x.poi === 'frozen-pond')!
+      await visit(page, world(pond, e.tx, e.ty + 2), `69-open-map-pond-${device}`)
+    }
+
     // The drift: the frontier's west edge, half-way up, with the glimpse past it.
     await visit(page, { tx: -4 * S + 2, ty: -4 * S + 12 }, `77-open-map-drift-${device}`)
     expect((await wildsWindow(page))!.drift.length).toBeGreaterThan(0)
   })
 }
+
+test('walking the Lantern Road across chunk edges keeps the frames steady', async ({ page }) => {
+  test.setTimeout(180_000)
+  await freshPlayer(page)
+  await pinWorld(page)
+  const chunks = await frontierChunks(page)
+  // The road's paving tiles, in world tiles; walk from its southernmost to the farthest along it.
+  const paving = new Set<string>()
+  for (const c of chunks) {
+    const k = c.palette.indexOf('cobble')
+    if (k < 0) continue
+    for (let i = 0; i < S * S; i++) if (((c.ground[i >> 1]! >> (4 * (i & 1))) & 15) === k) paving.add(`${c.cx * S + (i % S)},${c.cy * S + Math.floor(i / S)}`)
+  }
+  expect(paving.size).toBeGreaterThan(50)
+  // The road's longest stretch (its paving, joined eight ways), from its south end.
+  const N8 = [[0, -1], [1, 0], [-1, 0], [0, 1], [1, -1], [-1, -1], [1, 1], [-1, 1]]
+  const unseen = new Set(paving)
+  let stretch: [number, number][] = []
+  for (const k of paving) {
+    if (!unseen.has(k)) continue
+    unseen.delete(k)
+    const piece: [number, number][] = []
+    const stack = [k.split(',').map(Number) as [number, number]]
+    while (stack.length) {
+      const [x, y] = stack.pop()!
+      piece.push([x, y])
+      for (const [dx, dy] of N8) if (unseen.delete(`${x + dx!},${y + dy!}`)) stack.push([x + dx!, y + dy!])
+    }
+    if (piece.length > stretch.length) stretch = piece
+  }
+  const start = stretch.sort((a, b) => b[1] - a[1])[0]!
+  // Breadth first along the paving to the farthest tile, then walk it.
+  const from = new Map<string, string | null>([[start.join(','), null]])
+  const queue = [start]
+  let last = start
+  while (queue.length) {
+    const [x, y] = queue.shift()!
+    last = [x, y]
+    // The road steps diagonally where it bends: eight ways.
+    for (const [dx, dy] of [[0, -1], [1, 0], [-1, 0], [0, 1], [1, -1], [-1, -1], [1, 1], [-1, 1]]) {
+      const k = `${x + dx},${y + dy}`
+      if (paving.has(k) && !from.has(k)) {
+        from.set(k, `${x},${y}`)
+        queue.push([x + dx, y + dy])
+      }
+    }
+  }
+  const path: { x: number; y: number }[] = []
+  for (let k: string | null = last.join(','); k; k = from.get(k) ?? null) {
+    const [x, y] = k.split(',').map(Number)
+    path.unshift({ x: x! * 16 + 8, y: y! * 16 + 12 })
+  }
+  await warp(page, 'wilds', start[0], start[1])
+  await waitForWilds(page)
+  await page.evaluate(() => (window as unknown as { __fsDevParkCreatures: () => void }).__fsDevParkCreatures())
+  const timing = page.evaluate(() => (window as unknown as { __fsDevFrameTimes: (ms: number) => Promise<{ gap: { p50: number; p95: number } }> }).__fsDevFrameTimes(6000))
+  await page.evaluate((p) => (window as unknown as { __fsDevWalk: (p: { x: number; y: number }[]) => void }).__fsDevWalk(p), path.slice(0, 120))
+  const gap = (await timing).gap
+  console.log('road walk', JSON.stringify({ tiles: path.length, gap }))
+  expect(gap.p95, 'no long frames on the road').toBeLessThan(120)
+})

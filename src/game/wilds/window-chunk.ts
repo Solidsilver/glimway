@@ -28,7 +28,8 @@ import { chunkOrigin, chunkScenery, type ChunkTerrain } from './terrain.ts'
 import { paintDriftTrees } from './tangle-art.ts'
 import { lookAtlasKey, wildsLook } from './wilds-looks.ts'
 import type { WildsEntities } from './entities.ts'
-import { FORD_H, FORD_H_ANIM, FORD_V, FORD_V_ANIM, PATH_PLANK_H, PATH_PLANK_V, PATH_STONE, ROAD_PAVING, ROAD_VERGE, VEIL, VEIL_ANIM } from './open-map-art.ts'
+import { FORD_H, FORD_V, PATH_PLANK_H, PATH_PLANK_V, PATH_STONE, ROAD_PAVING, VEIL, VEIL_ANIM } from './open-map-art.ts'
+import { fordLines, fordStone, openSides, softTile } from './soft-tiles.ts'
 import type { FrontierRect, Glimpse } from './store.ts'
 import { frontierDistance } from './window-plan.ts'
 
@@ -109,10 +110,10 @@ export function paintDriftChunk(scene: Phaser.Scene, cx: number, cy: number, gli
 
 const T = (id: string): number => (TERRAIN as Record<string, number>)[loadWilds().grounds.find((g) => g.id === id)!.terrain]!
 const PAVING = T('paving')
-const BANK = T('bank')
 const LAID_STONE = T('laid-stone')
 const LAID_PLANK = T('laid-plank')
 const FORD = T('ford')
+const WATER = T('water')
 
 /** A solid run: its tiles (world) and its body. */
 interface Run {
@@ -144,12 +145,12 @@ export class AttachedChunk {
     deps.entities.attach(this.terrain)
   }
 
-  /** Paving, verges, laid paths and fords: delivered tiles standing on the painted ground. */
+  /** Paving, laid paths and fords' stones: delivered art standing on the painted ground. */
   private tileArt(): void {
-    const { scene, ground, reducedMotion } = this.deps
+    const { scene, ground } = this.deps
     const t = this.terrain
     const o = chunkOrigin(t)
-    const covered = new Set<string>()
+    const fords: { tx: number; ty: number }[] = []
     const put = (key: string, tx: number, ty: number) => {
       if (!scene.textures.exists(key)) return null
       const img = scene.add.image(tx * TILE, ty * TILE, key).setOrigin(0, 0).setDepth(TILE_ART_DEPTH)
@@ -162,30 +163,61 @@ export class AttachedChunk {
         const tx = o.tx + lx
         const ty = o.ty + ly
         const g = t.ground[ly]![lx]!
-        if (g === PAVING) put(pick(ROAD_PAVING, tx, ty), tx, ty)
+        if (g === PAVING) this.paving(tx, ty)
         else if (g === LAID_STONE) put(pick(PATH_STONE, tx, ty), tx, ty)
         else if (g === LAID_PLANK) {
           const across = ground.ground(tx - 1, ty) === LAID_PLANK || ground.ground(tx + 1, ty) === LAID_PLANK
           put(pick(across ? PATH_PLANK_H : PATH_PLANK_V, tx, ty), tx, ty)
-        } else if (g === BANK && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => ground.ground(tx + dx!, ty + dy!) === PAVING)) {
-          put(pick(ROAD_VERGE, tx, ty), tx, ty)
-        } else if (g === FORD && !covered.has(`${tx},${ty}`)) {
-          // A ford is 3 tiles of shallows across the river: one stepping-stone piece, rippling slowly.
-          const along = (dx: number, dy: number) => [1, 2].every((k) => lx + dx * k < t.size && ly + dy * k < t.size && t.ground[ly + dy * k]![lx + dx * k] === FORD)
-          const h = along(1, 0)
-          const v = !h && along(0, 1)
-          if (!h && !v) continue
-          for (let k = 0; k < 3; k++) covered.add(h ? `${tx + k},${ty}` : `${tx},${ty + k}`)
-          const img = put(h ? FORD_H : FORD_V, tx, ty)
-          const anim = h ? FORD_H_ANIM : FORD_V_ANIM
-          if (img && !reducedMotion && scene.anims.exists(anim)) {
-            const sprite = scene.add.sprite(img.x, img.y, img.texture.key).setOrigin(0, 0).setDepth(TILE_ART_DEPTH)
-            sprite.play({ key: anim, startFrame: Math.floor(hash01(tx, ty, 43) * 3) })
-            img.destroy()
-            this.images[this.images.length - 1] = sprite
-          }
-        }
+        } else if (g === FORD) fords.push({ tx, ty })
       }
+    this.fordStones(fords)
+  }
+
+  /**
+   * A ford: stepping stones cut from the ford art, one a tile along the
+   * ford's middle line, across the river's whole width, on the painter's
+   * own water (./soft-tiles.ts fordStone and fordLines).
+   */
+  private fordStones(fords: readonly { tx: number; ty: number }[]): void {
+    if (!fords.length) return
+    const { scene, ground } = this.deps
+    const o = chunkOrigin(this.terrain)
+    const S = this.terrain.size
+    const inside = (tx: number, ty: number) => tx >= o.tx && ty >= o.ty && tx < o.tx + S && ty < o.ty + S
+    const isFord = (tx: number, ty: number) => ground.ground(tx, ty) === FORD
+    const wet = (tx: number, ty: number) => isFord(tx, ty) || ground.ground(tx, ty) === WATER
+    for (const t of fordLines(fords, isFord, wet, inside)) {
+      const key = fordStone(scene, t.across ? FORD_H : FORD_V, Math.floor(hash01(t.tx, t.ty, 49) * 3))
+      if (!key) continue
+      const jx = Math.round((hash01(t.tx, t.ty, 51) - 0.5) * 3)
+      const jy = Math.round((hash01(t.tx, t.ty, 53) - 0.5) * 3)
+      const img = scene.add.image(t.tx * TILE + TILE / 2 + jx, t.ty * TILE + TILE / 2 + jy, key).setOrigin(0.5, 0.5).setDepth(TILE_ART_DEPTH)
+      this.images.push(img)
+    }
+  }
+
+  /**
+   * One tile of the Lantern Road: a paving variant by world hash, turned and
+   * mirrored, its edge broken toward the grass (and a few worn through), so
+   * the road reads as one worn band with a loose edge, not a grid.
+   */
+  private paving(tx: number, ty: number): void {
+    const { scene, ground } = this.deps
+    const h = (salt: number) => hash01(tx, ty, salt)
+    const frame = ROAD_PAVING[Math.floor(h(41) * ROAD_PAVING.length)]!
+    if (!scene.textures.exists(frame)) return
+    const orient = Math.floor(h(43) * 8)
+    const open = openSides(tx, ty, (x, y) => ground.ground(x, y) === PAVING)
+    const wear = !open && h(45) < 0.16
+    // Worn pieces are baked once each and shared: an edge piece is only ever
+    // mirrored (its open sides already vary it), so few are ever made.
+    const key = open || wear ? softTile(scene, frame, open ? orient & 4 : orient, open, wear, Math.floor(h(47) * 2)) : null
+    const img = scene.add.image(tx * TILE + TILE / 2, ty * TILE + TILE / 2, key ?? frame).setOrigin(0.5, 0.5).setDepth(TILE_ART_DEPTH)
+    if (!key) {
+      img.setAngle((orient & 3) * 90)
+      if (orient & 4) img.setFlipX(true)
+    }
+    this.images.push(img)
   }
 
   /** Solid tiles, merged into horizontal runs, into the scene's one static group. */
