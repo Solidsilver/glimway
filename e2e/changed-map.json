@@ -12,8 +12,12 @@
     "package.json",
     "package-lock.json"
   ],
-  "ignore": ["**/*.md", "docs/**", ".agent/**", "tests/**", "e2e/changed-map.json", "deploy/**", "content/**", "scripts/*-vectors.ts", "scripts/papers.ts", "scripts/webgl-renderer.ts", "perf/**", "playwright.perf.config.ts", "scripts/trace-hotspots.mjs", "scripts/png-diff.ts"],
+  "ignore": ["**/*.md", "docs/**", ".agent/**", "tests/**", "e2e/changed-map.json", "deploy/**", "scripts/*-vectors.ts", "scripts/papers.ts", "scripts/webgl-renderer.ts", "perf/**", "playwright.perf.config.ts", "scripts/trace-hotspots.mjs", "scripts/png-diff.ts", "content/vectors/**", "content/**/*_test.go"],
   "rules": [
+    {
+      "paths": ["server/internal/api/open_map*.go", "server/internal/chunks/**", "server/internal/store/chunks*.go", "server/internal/wildsgen/**", "server/internal/frontier/**", "server/internal/worldchange/**", "content/wilds*", "content/wilds/**"],
+      "specs": ["open-map.spec.ts", "paths.spec.ts", "rumour.spec.ts"]
+    },
     {
       "paths": ["src/main.ts", "src/game/main.ts", "src/game/scenes/**", "index.html"],
       "specs": ["quest.spec.ts", "combat.spec.ts", "camera.spec.ts", "goal.spec.ts"],
@@ -356,8 +360,16 @@
       "specs": ["wardrobe.spec.ts", "companions.spec.ts"]
     },
     {
-      "paths": ["src/lib/purse.ts", "src/content/purse.ts", "src/ui/purse.svelte.ts", "src/ui/Purse*.svelte", "src/ui/Glim.svelte", "src/game/glims-art.ts", "assets/generated/glims-pass/**"],
+      "paths": ["src/lib/purse.ts", "src/content/purse.ts", "src/ui/purse.svelte.ts", "src/ui/Purse*.svelte", "src/ui/Glim.svelte", "src/game/glims-art.ts", "assets/generated/glims-pass/**", "server/internal/api/purse*.go"],
       "specs": ["purse.spec.ts", "glims.spec.ts"]
+    },
+    {
+      "paths": ["server/internal/api/fishing*.go"],
+      "specs": ["fishing.spec.ts"]
+    },
+    {
+      "paths": ["server/internal/api/presence_abilities*.go"],
+      "specs": ["abilities.spec.ts"]
     }
   ]
 }

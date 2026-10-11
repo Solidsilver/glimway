@@ -9,15 +9,18 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"maps"
 	"slices"
+	"time"
 )
 
 // StateComposition is the handoff to B's normalized state loader and saver.
 // Load and Persist keep the transaction boundary in the op helper. Persist
 // now is Unix seconds. Persist must use BumpVersion once, after applying all of an operation's writes.
+// PlayerState is read-only and receives the same captured time as the operation
+// or read. Callers maintain state and refresh the snapshot before projecting.
 type StateComposition interface {
 	Load(ctx context.Context, tx *sql.Tx, account string) (Snapshot, error)
 	Persist(ctx context.Context, tx *sql.Tx, snapshot *Snapshot, now int64) error
-	PlayerState(ctx context.Context, tx *sql.Tx, snapshot Snapshot) (*contract.PlayerState, error)
+	PlayerState(ctx context.Context, tx *sql.Tx, snapshot Snapshot, now time.Time) (*contract.PlayerState, error)
 }
 
 type DefaultStateComposition struct{}
@@ -28,7 +31,7 @@ func (DefaultStateComposition) Load(ctx context.Context, tx *sql.Tx, id string) 
 func (DefaultStateComposition) Persist(ctx context.Context, tx *sql.Tx, s *Snapshot, now int64) error {
 	return Persist(ctx, tx, s, now)
 }
-func (DefaultStateComposition) PlayerState(ctx context.Context, tx *sql.Tx, s Snapshot) (*contract.PlayerState, error) {
+func (DefaultStateComposition) PlayerState(ctx context.Context, tx *sql.Tx, s Snapshot, now time.Time) (*contract.PlayerState, error) {
 	return PlayerState(ctx, tx, s)
 }
 

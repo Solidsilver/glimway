@@ -1102,3 +1102,92 @@ func TestWardrobeCheckIdentityMismatch(t *testing.T) {
 		t.Fatalf("check answered for someone else: %d %v", status, out.Error)
 	}
 }
+
+type latePurseConfirmation struct {
+	timedOutAfterScore
+	advance        func(int64)
+	checks         int
+	final, release chan struct{}
+}
+
+func (s *latePurseConfirmation) Gold(ctx context.Context, id, token string, allow func() bool) (habitica.Gold, error) {
+	s.checks++
+	if s.checks == 1 {
+		s.advance(45)
+	}
+	if s.checks == 2 {
+		s.advance(25)
+		return habitica.Gold{ID: s.subject, Gold: 1000}, nil
+	}
+	if s.checks == 3 {
+		s.advance(35)
+		close(s.final)
+		select {
+		case <-s.release:
+		case <-ctx.Done():
+			return habitica.Gold{}, ctx.Err()
+		}
+	}
+	return s.timedOutAfterScore.Gold(ctx, id, token, allow)
+}
+func (s *latePurseConfirmation) CreateReward(ctx context.Context, id, token string, reward habitica.Reward, allow func() bool) error {
+	s.advance(10)
+	return s.timedOutAfterScore.CreateReward(ctx, id, token, reward, allow)
+}
+func (s *latePurseConfirmation) ScoreDown(ctx context.Context, id, token, alias string, allow func() bool) (int, error) {
+	s.advance(5)
+	return s.timedOutAfterScore.ScoreDown(ctx, id, token, alias, allow)
+}
+
+// Advance the injected clock to model slow earlier calls and an unknown score
+// at the worker limit, then hold the final check while a state read runs. No
+// wall-clock sleeps are needed to reproduce the old 90-second recovery race.
+func TestPurseLiveReservationSurvivesLateFinalCheck(t *testing.T) {
+	x := newRig(t)
+	c, session := x.ready("alice")
+	bobCookie, bob := x.ready("bob")
+	stub := &latePurseConfirmation{timedOutAfterScore: timedOutAfterScore{subject: "alice", gold: 1000}, advance: func(seconds int64) { x.now.Add(seconds) }, final: make(chan struct{}), release: make(chan struct{})}
+	x.api.Habitica = stub
+	x.setPurseChecks([]time.Duration{time.Millisecond, 2 * time.Millisecond})
+	x.api.Config.PurseAnswerWait = time.Millisecond
+	released := false
+	defer func() {
+		if !released {
+			close(stub.release)
+		}
+	}()
+	row := x.topUpOK(session, "live-late", 40, c)
+	select {
+	case <-stub.final:
+	case <-time.After(time.Second):
+		t.Fatal("final check did not run")
+	}
+	state := x.expect("GET", "/api/state", nil, c, 200)
+	if got := x.topUpRow(row.Id); got.State != "checking" || got.SettledAt != nil {
+		t.Fatalf("state read took live work: %+v", got)
+	}
+	if state.AccountID == "" {
+		t.Fatal("missing state")
+	}
+	if _, err := x.db.DB.Exec("INSERT INTO purse_topups(id,account_id,op_key,amount,state,created_at) VALUES('abandoned',?,'abandoned',2,'checking',?)", bob.AccountID, x.now.Load()-91); err != nil {
+		t.Fatal(err)
+	}
+	x.purseRead(bobCookie)
+	if got := x.topUpRow("abandoned"); got.State != "unconfirmed" {
+		t.Fatalf("abandoned work not recovered: %+v", got)
+	}
+	close(stub.release)
+	released = true
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	x.api.Close(ctx)
+	got := x.topUpRow(row.Id)
+	if got.State != "moved" || got.Note != "checked" {
+		t.Fatalf("final outcome: %+v", got)
+	}
+	x.topUpOK(session, "live-late", 40, c)
+	x.purseRead(c)
+	if x.glimsBalance(session.AccountID) != 20 || count(t, x.db, "SELECT count(*) FROM ledger WHERE account_id=? AND reason='habitica-topup' AND ref=?", session.AccountID, row.Id) != 1 {
+		t.Fatal("credit did not occur exactly once")
+	}
+}

@@ -31,7 +31,7 @@ func (a *Server) createInvite(w http.ResponseWriter, r *http.Request) error {
 	}
 	defer tx.Rollback()
 	ctx := r.Context()
-	now := a.Config.Now().Unix()
+	now := a.requestTime(r.Context()).Unix()
 	var owner sql.NullString
 	if err = tx.QueryRowContext(ctx, "SELECT owner_id FROM worlds WHERE id=?", s.WorldID).Scan(&owner); err != nil && err != sql.ErrNoRows {
 		return err
@@ -84,7 +84,7 @@ func (a *Server) listInvites(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
-	rows, err := tx.QueryContext(r.Context(), "SELECT code_hash,created_at,expires_at,used_by IS NOT NULL FROM invites WHERE created_by=? AND (used_by IS NOT NULL OR (revoked_at IS NULL AND expires_at>?)) ORDER BY created_at,code_hash", s.AccountID, a.Config.Now().Unix())
+	rows, err := tx.QueryContext(r.Context(), "SELECT code_hash,created_at,expires_at,used_by IS NOT NULL FROM invites WHERE created_by=? AND (used_by IS NOT NULL OR (revoked_at IS NULL AND expires_at>?)) ORDER BY created_at,code_hash", s.AccountID, a.requestTime(r.Context()).Unix())
 	if err != nil {
 		return err
 	}
@@ -149,7 +149,7 @@ func (a *Server) revokeInvite(w http.ResponseWriter, r *http.Request) error {
 		return fail(409, "invite-used")
 	}
 	if !revoked.Valid {
-		if _, err = tx.ExecContext(ctx, "UPDATE invites SET revoked_at=? WHERE code_hash=? AND used_by IS NULL", a.Config.Now().Unix(), id); err != nil {
+		if _, err = tx.ExecContext(ctx, "UPDATE invites SET revoked_at=? WHERE code_hash=? AND used_by IS NULL", a.requestTime(r.Context()).Unix(), id); err != nil {
 			return err
 		}
 	}

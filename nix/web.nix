@@ -16,6 +16,7 @@ buildNpmPackage {
       ../scripts/build-version.mjs ../scripts/whats-new.mjs ../src ../public ../content
       # The stable's layout reads the crafts pass's manifest (src/lib/stable-layout.ts).
       ../assets/generated/crafts-pass/manifest.json
+      ../assets/generated/open-map-pass/animations.json
     ];
   };
   nodejs = nodejs_24;

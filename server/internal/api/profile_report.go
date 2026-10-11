@@ -24,7 +24,7 @@ func (a *Server) profileReport(w http.ResponseWriter, r *http.Request) error {
 	}
 	defer tx.Rollback()
 	ctx := r.Context()
-	now := a.Config.Now().Unix()
+	now := a.requestTime(r.Context()).Unix()
 	if err = a.requireLease(ctx, tx, s, req.Lease); err != nil {
 		return err
 	}
@@ -33,7 +33,7 @@ func (a *Server) profileReport(w http.ResponseWriter, r *http.Request) error {
 		if !errors.As(e, &f) {
 			return e
 		}
-		state, err := a.Config.State.PlayerState(ctx, tx, s)
+		state, err := a.maintainAndProjectState(ctx, tx, s, a.requestTime(ctx))
 		if err != nil {
 			return err
 		}
@@ -147,11 +147,11 @@ func (a *Server) profileReport(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	s.VitalsWritten = true
-	s.VitalsAt = float64(a.Config.Now().UnixNano()) / 1e9
+	s.VitalsAt = float64(a.requestTime(r.Context()).UnixNano()) / 1e9
 	if err = a.Config.State.Persist(ctx, tx, &s, now); err != nil {
 		return err
 	}
-	state, err := a.Config.State.PlayerState(ctx, tx, s)
+	state, err := a.maintainAndProjectState(ctx, tx, s, a.requestTime(ctx))
 	if err != nil {
 		return err
 	}
