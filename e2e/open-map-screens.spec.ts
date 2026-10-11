@@ -117,6 +117,22 @@ for (const [device, vp] of [['desktop', { width: 1200, height: 760 }], ['phone',
     const edge = paved.map((c) => tileOf(c, 'sand') ?? tileOf(c, 'cobble')).find(Boolean)
     if (edge) await visit(page, edge, `79-open-map-road-edge-${device}`)
 
+    // Where woods meets meadow across a chunk edge (no box edges along it): an
+    // east-west pair and a north-south pair of chunks of different lands.
+    const byKey = new Map(chunks.map((c) => [`${c.cx},${c.cy}`, c]))
+    const meadowShare = (c: WildsChunk) => {
+      const k = c.palette.indexOf('grass_c')
+      if (k < 0) return 0
+      let n = 0
+      for (let i = 0; i < S * S; i++) if (((c.ground[i >> 1]! >> (4 * (i & 1))) & 15) === k) n++
+      return n / (S * S)
+    }
+    const differ = (a: WildsChunk, b: WildsChunk) => Math.abs(meadowShare(a) - meadowShare(b)) > 0.25
+    const ew = chunks.find((c) => byKey.get(`${c.cx + 1},${c.cy}`) && differ(c, byKey.get(`${c.cx + 1},${c.cy}`)!))
+    if (ew) await visit(page, { tx: (ew.cx + 1) * S, ty: ew.cy * S + S / 2 }, `80-open-map-border-ew-${device}`)
+    const ns = chunks.find((c) => byKey.get(`${c.cx},${c.cy + 1}`) && differ(c, byKey.get(`${c.cx},${c.cy + 1}`)!))
+    if (ns) await visit(page, { tx: ns.cx * S + S / 2, ty: (ns.cy + 1) * S }, `81-open-map-border-ns-${device}`)
+
     // A frozen pond (a point of interest), where this world has one.
     const pond = chunks.find((c) => c.entities.some((e) => e.kind === 'poi' && e.poi === 'frozen-pond'))
     if (pond) {
