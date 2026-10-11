@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+  <head><meta charset="utf-8" /><title>Phaser harness</title></head>
+  <body>
+    <!--
+      A bare Phaser 3.90 game for playtests that drive the game's own
+      modules against real Phaser (e2e/window-order.spec.ts): a 128×128
+      WebGL canvas, arcade physics, a 1×1 'px' and a blank 384×384 'ground'.
+      window.harness carries the scene and the modules.
+    -->
+    <script type="module">
+      import Phaser from 'phaser'
+      import { AttachedChunk, BuildQueue } from '/src/game/wilds/window-chunk.ts'
+      import { TileArt } from '/src/game/area/tile-art.ts'
+      import { TERRAIN } from '/src/lib/tile.ts'
+      new Phaser.Game({
+        type: Phaser.WEBGL,
+        width: 128,
+        height: 128,
+        pixelArt: true,
+        roundPixels: true,
+        audio: { noAudio: true },
+        physics: { default: 'arcade', arcade: { debug: false } },
+        scene: {
+          create() {
+            this.textures.createCanvas('px', 1, 1)
+            this.textures.createCanvas('ground', 384, 384)
+            window.harness = { scene: this, game: this.game, AttachedChunk, BuildQueue, TileArt, TERRAIN }
+          },
+        },
+      })
+    </script>
+  </body>
+</html>

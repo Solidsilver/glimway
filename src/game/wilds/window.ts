@@ -6,12 +6,16 @@
  * collision, scenery, workable pieces, entities, sites) and the ring around
  * that fetched and decoded. Crossing into another chunk recentres the
  * window: a near read for the new chunk (at most every 10 s a chunk), the
- * new ring's bodies fetched, the new row painted and attached, the far row
- * dropped. Painting is one chunk a frame, before the chunk is attached
+ * new ring's bodies fetched, the new row painted and attached; the row left
+ * behind goes once the hero is SLACK_TILES into the new chunk
+ * (./window-plan.ts keepAttached), so stepping back over the edge rebuilds
+ * nothing. Painting is one chunk a frame, before the chunk is attached
  * (a chunk is painted once its neighbours are known, so its image joins
- * theirs). Chunks past the frontier in the 3×3 are the drift. Landmarks of
- * the fetched ring are drawn too, sprite only, so you steer by them from a
- * chunk away; one counts as seen once it is on screen.
+ * theirs). An attached chunk's ground and collision go in at once, the rest
+ * of it a few milliseconds a frame, nearest the hero first. Chunks past the
+ * frontier in the 3×3 are the drift. Landmarks of the fetched ring are
+ * drawn too, sprite only, so you steer by them from a chunk away; one
+ * counts as seen once it is on screen.
  *
  * The window also repaints a chunk whose ground changes moved (someone laid
  * stone), and reloads everything at the turning (./world-turning.ts).
@@ -24,8 +28,8 @@ import type { Session } from '../session.ts'
 import { CHUNK_TILES, chunkKey, chunkOfPixel, parseChunkKey } from './coords.ts'
 import { chunkSig, effectiveChunk, forgetGround, groundAt, solidAt } from './ground-view.ts'
 import { chunkGather, chunkLandmarks } from './terrain.ts'
-import { crossed, paintable, planWindow, veilEdges, type WindowPlan } from './window-plan.ts'
-import { AttachedChunk, DriftChunk, groundTexture, paintDriftChunk, type ChunkDeps } from './window-chunk.ts'
+import { crossed, keepAttached, paintable, planWindow, SLACK_TILES, veilEdges, type WindowPlan } from './window-plan.ts'
+import { AttachedChunk, BuildQueue, DriftChunk, groundTexture, paintDriftChunk, type ChunkDeps } from './window-chunk.ts'
 import { paintAway, paintHere, type PaintJob } from './paint-worker.ts'
 import { groundTable } from './ground-table.ts'
 import { chunkOrigin } from './terrain.ts'
@@ -33,8 +37,10 @@ import { fnv1a32 } from '../../lib/hash.ts'
 import { TILE } from '../../lib/tile.ts'
 import { chunkTerrain, insideNamedFrontier, loadWildsChunk, NEAR_MAX_AGE_MS, refreshNear, wildsEpoch, wildsFrontier, wildsView } from './store.ts'
 import { markSeen, markWalked } from './walked.ts'
+import { perfSpan, perfTime, perfWithout } from '../perf.ts'
+import { addAll, destroyAll, looseImage } from '../area/bulk.ts'
 
-export interface WindowDeps extends Omit<ChunkDeps, 'ground' | 'gather'> {
+export interface WindowDeps extends Omit<ChunkDeps, 'ground' | 'gather' | 'builds'> {
   session: Session
   hero: () => { x: number; y: number }
 }
@@ -48,10 +54,14 @@ interface PaintedChunk {
 
 /** Paint timings (ms), newest last, for the playtest hooks and the budget report. */
 const PAINT_LOG_MAX = 64
+/** How long a frame spends building attached chunks (ms; open-map.md 4's budget is 8 for all the window's work). */
+const BUILD_MS = 4
 
 export class WildsWindow {
   private plan: WindowPlan | null = null
   private attached = new Map<string, AttachedChunk>()
+  /** The attached chunks still being built, in attachment order (./window-chunk.ts BuildQueue). */
+  private readonly builds = new BuildQueue<AttachedChunk>()
   private drifts = new Map<string, DriftChunk>()
   private paints = new Map<string, PaintedChunk>()
   private far = new Map<string, Phaser.GameObjects.Image[]>()
@@ -63,8 +73,13 @@ export class WildsWindow {
   /** Painting on this thread, at once (the first window, behind the scene's fade). */
   private now = false
   private lastVersion = -1
+  /** The hero's tile when the window last looked at what it keeps past the 3×3. */
+  private heroTile = ''
   private seenTimer = 0
   private readonly paintLog: { chunk: string; ms: number; drift: boolean; thread: 'worker' | 'main' }[] = []
+  /** Chunks attached so far, and dropped (playtests: crossing back over an edge builds nothing). */
+  private attaches = 0
+  private drops = 0
   private waiters: (() => void)[] = []
   private gone = false
   /** This window's identity (a playtest sees it never changes while walking: no scene restart). */
@@ -84,16 +99,55 @@ export class WildsWindow {
     // entities say so on screen, and try again).
     if (!wildsFrontier()) return
     if (crossed(this.plan?.center ?? null, at)) this.recentre(at.cx, at.cy)
+    else this.dropBehind()
     const view = wildsView()
     if (view && view.version !== this.lastVersion) {
       this.lastVersion = view.version
       this.refreshChanged()
     }
     this.step()
+    this.buildSome()
     this.seenTimer -= dt
     if (this.seenTimer <= 0) {
       this.seenTimer = 0.5
       this.noteSeen()
+    }
+  }
+
+  /**
+   * Build attached chunks for a few milliseconds (their ground and
+   * collision are in already), in the order they were attached: the order
+   * their pieces were always drawn in, so pieces of equal depth that overlap
+   * across an edge keep which is on top.
+   */
+  private buildSome(): void {
+    this.builds.step(performance.now() + BUILD_MS)
+  }
+
+  /** Whether a chunk out of the 3×3 is still kept (the hero is less than SLACK_TILES past the edge it left by). */
+  private kept(key: string): boolean {
+    if (perfWithout('slack')) return false
+    const hero = this.deps.hero()
+    const { cx, cy } = parseChunkKey(key)
+    return keepAttached(cx, cy, Math.floor(hero.x / TILE), Math.floor(hero.y / TILE), SLACK_TILES)
+  }
+
+  /** The chunks kept past the 3×3 go once the hero is far enough past the edge (checked when the hero's tile changes). */
+  private dropBehind(): void {
+    const plan = this.plan
+    if (!plan) return
+    const hero = this.deps.hero()
+    const tile = `${Math.floor(hero.x / TILE)},${Math.floor(hero.y / TILE)}`
+    if (tile === this.heroTile) return
+    this.heroTile = tile
+    for (const [key, c] of this.attached) if (!plan.attach.includes(key) && !this.kept(key)) {
+      c.destroy()
+      this.attached.delete(key)
+      this.drops++
+    }
+    for (const [key, d] of this.drifts) if (!plan.drift.includes(key) && !this.kept(key)) {
+      d.destroy()
+      this.drifts.delete(key)
     }
   }
 
@@ -120,6 +174,10 @@ export class WildsWindow {
   }
 
   private recentre(cx: number, cy: number): void {
+    perfTime('recentre', () => this.recentreNow(cx, cy))
+  }
+
+  private recentreNow(cx: number, cy: number): void {
     const plan = planWindow(cx, cy, insideNamedFrontier)
     this.plan = plan
     const session = this.deps.session
@@ -128,22 +186,17 @@ export class WildsWindow {
     // The new chunk's near read (reused within 10 s), then the ring's bodies.
     void refreshNear(session, cx, cy, NEAR_MAX_AGE_MS)
     for (const key of plan.fetch) this.load(key)
-    // The far side goes: chunks out of the 3×3, drift out of it, landmarks out of the ring.
-    for (const [key, c] of this.attached) if (!plan.attach.includes(key)) {
-      c.destroy()
-      this.attached.delete(key)
-    }
-    for (const [key, d] of this.drifts) if (!plan.drift.includes(key)) {
-      d.destroy()
-      this.drifts.delete(key)
-    }
+    // The far side goes: chunks out of the 3×3 (once past the slack), drift
+    // out of it, landmarks out of the ring.
+    this.heroTile = ''
+    this.dropBehind()
     const keepFar = new Set(plan.ring)
     for (const [key, imgs] of this.far) if (!keepFar.has(key)) {
-      for (const img of imgs) img.destroy()
+      destroyAll(this.deps.scene, imgs)
       this.far.delete(key)
     }
     // Textures of chunks well out of reach are let go.
-    const keepPaint = new Set([...plan.fetch, ...plan.drift])
+    const keepPaint = new Set([...plan.fetch, ...plan.drift, ...this.attached.keys(), ...this.drifts.keys()])
     for (const [key, p] of this.paints) if (!keepPaint.has(key)) {
       if (this.deps.scene.textures.exists(p.key)) this.deps.scene.textures.remove(p.key)
       this.paints.delete(key)
@@ -154,12 +207,16 @@ export class WildsWindow {
     const { cx, cy } = parseChunkKey(key)
     if (chunkTerrain(cx, cy) || this.loading.has(key) || Date.now() < (this.retryAt.get(key) ?? 0)) return
     this.loading.add(key)
+    const fetched = perfSpan('fetch', true)
     void loadWildsChunk(this.deps.session, cx, cy)
       .then((t) => {
         if (!t) this.retryAt.set(key, Date.now() + 5000)
       })
       .catch(() => this.retryAt.set(key, Date.now() + 5000))
-      .finally(() => this.loading.delete(key))
+      .finally(() => {
+        fetched()
+        this.loading.delete(key)
+      })
   }
 
   /**
@@ -212,16 +269,20 @@ export class WildsWindow {
         p = { key: painted.key, sig }
         this.paints.set(key, p)
       }
-      this.drifts.set(key, new DriftChunk(this.deps.scene, cx, cy, p.key, veilEdges(cx, cy, insideNamedFrontier), this.deps.reducedMotion))
+      this.drifts.set(key, perfTime('drift', () => new DriftChunk(this.deps.scene, cx, cy, p.key, veilEdges(cx, cy, insideNamedFrontier), this.deps.reducedMotion)))
       return true
     }
     for (const key of plan.ring) {
-      if (this.far.has(key)) continue
+      if (this.far.has(key) || this.attached.has(key)) continue
       const { cx, cy } = parseChunkKey(key)
       const t = chunkTerrain(cx, cy)
       if (!t) continue
       const { scene } = this.deps
-      this.far.set(key, chunkLandmarks(t, (k) => scene.textures.exists(k)).map((s) => scene.add.image(s.x, s.y, s.key).setOrigin(0.5, 1).setFlipX(s.flipX ?? false).setDepth(s.y).setData('place', s.place).setData('at', { tx: s.tx, ty: s.ty })))
+      this.far.set(key, perfTime('landmarks', () => {
+        const imgs = chunkLandmarks(t, (k) => scene.textures.exists(k)).map((s) => looseImage(scene, s.x, s.y, s.key).setOrigin(0.5, 1).setFlipX(s.flipX ?? false).setDepth(s.y).setData('place', s.place).setData('at', { tx: s.tx, ty: s.ty }))
+        addAll(scene, imgs)
+        return imgs
+      }))
       return true
     }
     return false
@@ -261,6 +322,10 @@ export class WildsWindow {
 
   /** A painted ground lands: its texture, and the chunk (re)attached on it if it is in the 3×3. */
   private painted(key: string, sig: string, rgba: Uint8ClampedArray, ms: number, thread: 'worker' | 'main'): void {
+    perfTime('paint-landed', () => this.paintedNow(key, sig, rgba, ms, thread))
+  }
+
+  private paintedNow(key: string, sig: string, rgba: Uint8ClampedArray, ms: number, thread: 'worker' | 'main'): void {
     const old = this.paints.get(key)
     const texture = groundTexture(this.deps.scene, `wilds-ground:${key}:${old && old.key.endsWith(':a') ? 'b' : 'a'}`, rgba)
     this.logPaint(key, ms, false, thread)
@@ -282,18 +347,25 @@ export class WildsWindow {
   }
 
   private attach(key: string): void {
+    perfTime('attach', () => this.attachNow(key))
+  }
+
+  private attachNow(key: string): void {
     const { cx, cy } = parseChunkKey(key)
     const t = effectiveChunk(cx, cy)
     const p = this.paints.get(key)
     if (!t || !p) return
     const far = this.far.get(key)
     if (far) {
-      for (const img of far) img.destroy()
+      destroyAll(this.deps.scene, far)
       this.far.delete(key)
     }
-    const c = new AttachedChunk({ ...this.deps, ground: { ground: groundAt, solid: solidAt }, gather: (c) => chunkGather(c, calendarAt(gameNow())) }, t, p.key)
+    const c = new AttachedChunk({ ...this.deps, ground: { ground: groundAt, solid: solidAt }, gather: (c) => chunkGather(c, calendarAt(gameNow())), builds: this.builds }, t, p.key)
     c.sig = p.sig
     this.attached.set(key, c)
+    this.attaches++
+    // The first window (behind the fade) is built whole at once.
+    if (this.now || perfWithout('spread')) this.builds.finish(c)
   }
 
   /**
@@ -361,7 +433,7 @@ export class WildsWindow {
   reload(): void {
     for (const c of this.attached.values()) c.destroy()
     for (const d of this.drifts.values()) d.destroy()
-    for (const imgs of this.far.values()) for (const img of imgs) img.destroy()
+    for (const imgs of this.far.values()) destroyAll(this.deps.scene, imgs)
     for (const p of this.paints.values()) if (this.deps.scene.textures.exists(p.key)) this.deps.scene.textures.remove(p.key)
     this.attached.clear()
     this.drifts.clear()
@@ -374,11 +446,19 @@ export class WildsWindow {
   }
 
   /** Read-only, for playtests: what the window holds and how painting went. */
-  debug(): { id: string; center: { cx: number; cy: number } | null; attached: string[]; drift: string[]; ring: string[]; far: string[]; painted: string[]; paints: { chunk: string; ms: number; drift: boolean; thread: 'worker' | 'main' }[] } {
+  debug(): { id: string; center: { cx: number; cy: number } | null; attached: string[]; building: string[]; ready: boolean; attaches: number; drops: number; outer: string[]; drift: string[]; ring: string[]; far: string[]; painted: string[]; paints: { chunk: string; ms: number; drift: boolean; thread: 'worker' | 'main' }[] } {
+    const building = [...this.attached].filter(([, c]) => !c.whole).map(([k]) => k)
     return {
       id: this.id,
       center: this.plan?.center ?? null,
       attached: [...this.attached.keys()],
+      building,
+      // Every chunk of the 3×3 inside the frontier attached, and built whole.
+      ready: this.isReady() && !building.length,
+      attaches: this.attaches,
+      drops: this.drops,
+      // Attached chunks in the deep drift's look (the Whitequiet and beyond: its motes drift there).
+      outer: [...this.attached].filter(([, c]) => c.terrain.look === 'outer').map(([k]) => k),
       drift: [...this.drifts.keys()],
       ring: this.plan?.ring ?? [],
       far: [...this.far.keys()],

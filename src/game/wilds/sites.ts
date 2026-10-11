@@ -47,6 +47,7 @@ import { openRumourFind } from './rumour-find.ts'
 import { CHUNK_TILES } from './coords.ts'
 import { LAMP_STONE_DARK, omArt } from './open-map-art.ts'
 import { FINDS } from '../../content/open-map.ts'
+import { addAll, destroyAll, looseImage } from '../area/bulk.ts'
 import { CLAIM_ERROR, lootArt, lootGain } from './entities.ts'
 import { loadWilds } from '../../lib/wilds/data.ts'
 import { roadStep } from '../../lib/quests.ts'
@@ -259,6 +260,13 @@ const PHANTOM = 0xb8d0ff
 export class WildsSites {
   private sites: StorySite[]
   private images: Phaser.GameObjects.GameObject[] = []
+  /** Drawn this render, still off the display list: they go on together at its end. */
+  private fresh: Phaser.GameObjects.GameObject[] = []
+  /** The tweens moving them: stopped with them (a destroyed image's endless tween would run on). */
+  private tweens: Phaser.Tweens.Tween[] = []
+  /** The white quiet's motes: drawn once with the chunk, kept through re-renders, gone with it. */
+  private motesDrawn: Phaser.GameObjects.Image[] = []
+  private moteTweens: Phaser.Tweens.Tween[] = []
   private greeted = new Set<string>()
   private echoes = new Map<string, EchoDef>()
   private renderedKey = ''
@@ -277,9 +285,12 @@ export class WildsSites {
     this.sites = [...sites]
     scene.events.once('shutdown', () => {
       this.images = []
+      this.tweens = []
+      this.motesDrawn = []
+      this.moteTweens = []
     })
-    if (outer) this.motes()
     this.render()
+    if (outer) this.motes()
     deps.interactables.register(
       this,
       // Quiet until a fresh near read lands (and while stale), like the claims around them.
@@ -291,12 +302,25 @@ export class WildsSites {
   /** The chunk left the window: everything drawn and offered here goes. */
   destroy(): void {
     this.gone = true
-    for (const o of this.images) {
-      this.scene.tweens.killTweensOf(o)
-      o.destroy()
-    }
-    this.images = []
+    this.clear()
+    for (const t of this.moteTweens) t.stop()
+    destroyAll(this.scene, this.motesDrawn)
+    this.moteTweens = []
+    this.motesDrawn = []
     this.deps.interactables.register(this, [])
+  }
+
+  /** Stop the tweens and destroy everything drawn. */
+  private clear(): void {
+    for (const t of this.tweens) t.stop()
+    destroyAll(this.scene, this.images)
+    this.fresh = []
+    this.tweens = []
+    this.images = []
+  }
+
+  private tween(config: Phaser.Types.Tweens.TweenBuilderConfig): void {
+    this.tweens.push(this.scene.tweens.add(config))
   }
 
   private ctx(): StoryContext {
@@ -316,17 +340,15 @@ export class WildsSites {
     return tileFeet(this.cx * CHUNK_TILES + s.tx, this.cy * CHUNK_TILES + s.ty)
   }
 
+  /** Keep an object made off the display list (it goes on with the rest of the render). */
   private add<T extends Phaser.GameObjects.GameObject>(o: T): T {
     this.images.push(o)
+    this.fresh.push(o)
     return o
   }
 
   private render(): void {
-    for (const o of this.images) {
-      this.scene.tweens.killTweensOf(o)
-      o.destroy()
-    }
-    this.images = []
+    this.clear()
     const c = this.ctx()
     this.renderedKey = `${c.late}|${c.flags.filter((f) => f.startsWith('echo:') || f.startsWith('paper:')).length}`
     // Who waits at each camp is this player's assignment, from the region read.
@@ -341,11 +363,12 @@ export class WildsSites {
       else if (s.kind === 'rumour') this.renderRumour(s)
       else this.renderLook(s, c)
     }
+    addAll(this.scene, this.fresh)
+    this.fresh = []
   }
 
   private img(key: string, x: number, y: number, frame?: string): Phaser.GameObjects.Image {
-    const i = frame ? this.scene.add.image(x, y, key, frame) : this.scene.add.image(x, y, key)
-    return this.add(i.setOrigin(0.5, 1).setDepth(y - 2))
+    return this.add(looseImage(this.scene, x, y, key, frame).setOrigin(0.5, 1).setDepth(y - 2))
   }
 
   private renderEcho(s: StorySite): void {
@@ -372,16 +395,16 @@ export class WildsSites {
     if (lamp) {
       this.img(lamp, at.x + 18, at.y - 4)
       if (settled) {
-        const glow = this.add(this.scene.add.image(at.x + 18, at.y - 14, 'glow').setBlendMode(1).setTint(0xffb054).setScale(0.45).setAlpha(0.75).setDepth(at.y + 2))
-        if (!this.deps.reducedMotion) this.scene.tweens.add({ targets: glow, alpha: { from: 0.7, to: 0.45 }, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+        const glow = this.add(looseImage(this.scene, at.x + 18, at.y - 14, 'glow').setBlendMode(1).setTint(0xffb054).setScale(0.45).setAlpha(0.75).setDepth(at.y + 2))
+        if (!this.deps.reducedMotion) this.tween({ targets: glow, alpha: { from: 0.7, to: 0.45 }, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
       }
     } else if (props.has('lantern-post')) {
       const post = this.img('fingersnap-props', at.x + 16, at.y - 2, 'lantern-post')
       post.setScale(24 / props.get('lantern-post')!.height)
       if (!settled) post.setTint(0x5e5a70)
       else {
-        const glow = this.add(this.scene.add.image(at.x + 16, at.y - 18, 'glow').setBlendMode(1).setTint(0xffb054).setScale(0.45).setAlpha(0.75).setDepth(at.y + 2))
-        if (!this.deps.reducedMotion) this.scene.tweens.add({ targets: glow, alpha: { from: 0.7, to: 0.45 }, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+        const glow = this.add(looseImage(this.scene, at.x + 16, at.y - 18, 'glow').setBlendMode(1).setTint(0xffb054).setScale(0.45).setAlpha(0.75).setDepth(at.y + 2))
+        if (!this.deps.reducedMotion) this.tween({ targets: glow, alpha: { from: 0.7, to: 0.45 }, duration: 1300, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
       }
     }
     if (settled) {
@@ -389,19 +412,19 @@ export class WildsSites {
       return
     }
     // The woods replaying it: pale, and not quite steady, under a cold haze.
-    const haze = this.add(this.scene.add.image(at.x, at.y - 6, 'glow').setBlendMode(1).setTint(0xa8c4ff).setScale(1.1).setAlpha(0.32).setDepth(at.y - 4))
-    if (!this.deps.reducedMotion) this.scene.tweens.add({ targets: haze, alpha: { from: 0.34, to: 0.16 }, scale: { from: 1.05, to: 1.2 }, duration: 2200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+    const haze = this.add(looseImage(this.scene, at.x, at.y - 6, 'glow').setBlendMode(1).setTint(0xa8c4ff).setScale(1.1).setAlpha(0.32).setDepth(at.y - 4))
+    if (!this.deps.reducedMotion) this.tween({ targets: haze, alpha: { from: 0.34, to: 0.16 }, scale: { from: 1.05, to: 1.2 }, duration: 2200, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
     for (const p of parts) p.setTint(PHANTOM)
     faint?.setTint(PHANTOM)
     if (this.deps.reducedMotion) {
       for (const p of parts) p.setAlpha(0.6)
       faint?.setAlpha(0.85)
     } else {
-      this.scene.tweens.add({ targets: parts, alpha: { from: 0.72, to: 0.32 }, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
-      if (faint) this.scene.tweens.add({ targets: faint, alpha: { from: 1, to: 0.6 }, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      this.tween({ targets: parts, alpha: { from: 0.72, to: 0.32 }, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      if (faint) this.tween({ targets: faint, alpha: { from: 1, to: 0.6 }, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
     }
-    const glint = this.add(this.scene.add.image(at.x, at.y - 22, 'spark').setDepth(at.y + 3).setBlendMode(1).setTint(PHANTOM))
-    if (!this.deps.reducedMotion) this.scene.tweens.add({ targets: glint, y: at.y - 26, alpha: { from: 0.85, to: 0.3 }, duration: 1100, yoyo: true, repeat: -1 })
+    const glint = this.add(looseImage(this.scene, at.x, at.y - 22, 'spark').setDepth(at.y + 3).setBlendMode(1).setTint(PHANTOM))
+    if (!this.deps.reducedMotion) this.tween({ targets: glint, y: at.y - 26, alpha: { from: 0.85, to: 0.3 }, duration: 1100, yoyo: true, repeat: -1 })
   }
 
   /** A dark lamp stone by the road (its base is solid in the chunk; the art stands on it). */
@@ -419,8 +442,8 @@ export class WildsSites {
     const at = this.sitePx(s)
     this.img(art, at.x, at.y + 1)
     if (opened) return
-    const glint = this.add(this.scene.add.image(at.x, at.y - 14, 'spark').setDepth(at.y + 3).setBlendMode(1))
-    if (!this.deps.reducedMotion) this.scene.tweens.add({ targets: glint, y: at.y - 18, alpha: { from: 0.85, to: 0.35 }, duration: 900, yoyo: true, repeat: -1 })
+    const glint = this.add(looseImage(this.scene, at.x, at.y - 14, 'spark').setDepth(at.y + 3).setBlendMode(1))
+    if (!this.deps.reducedMotion) this.tween({ targets: glint, y: at.y - 18, alpha: { from: 0.85, to: 0.35 }, duration: 900, yoyo: true, repeat: -1 })
   }
 
   private renderLook(s: StorySite, c: StoryContext): void {
@@ -432,8 +455,8 @@ export class WildsSites {
     // Something is due here: the bundle (or the stone, the nest) glints.
     if (s.kind === 'given' || s.kind === 'reeds') this.img('site-bundle', at.x, at.y)
     const lift = s.kind === 'nest' ? 40 : s.kind === 'cairn' ? 30 : 16
-    const glint = this.add(this.scene.add.image(at.x, at.y - lift, 'spark').setDepth(at.y + 3).setBlendMode(1))
-    if (!this.deps.reducedMotion) this.scene.tweens.add({ targets: glint, y: at.y - lift - 4, alpha: { from: 0.85, to: 0.35 }, duration: 900, yoyo: true, repeat: -1 })
+    const glint = this.add(looseImage(this.scene, at.x, at.y - lift, 'spark').setDepth(at.y + 3).setBlendMode(1))
+    if (!this.deps.reducedMotion) this.tween({ targets: glint, y: at.y - lift - 4, alpha: { from: 0.85, to: 0.35 }, duration: 900, yoyo: true, repeat: -1 })
   }
 
   /** Walking up to an unsettled Echo: what the woods are replaying. */
@@ -650,9 +673,10 @@ export class WildsSites {
     for (let i = 0; i < 26; i++) {
       const x = ox + ((i * 97) % 23) * TILE + 8 + ((i * 13) % 9)
       const y = oy + ((i * 53) % 23) * TILE + 6
-      const m = this.add(this.scene.add.image(x, y, 'site-mote').setDepth(4500).setAlpha(0.35 + (i % 4) * 0.1))
+      const m = looseImage(this.scene, x, y, 'site-mote').setDepth(4500).setAlpha(0.35 + (i % 4) * 0.1)
+      this.motesDrawn.push(m)
       if (this.deps.reducedMotion) continue
-      this.scene.tweens.add({
+      this.moteTweens.push(this.scene.tweens.add({
         targets: m,
         x: Math.min(w - 4, x + 18 + (i % 5) * 6),
         y: y - 10 - (i % 3) * 6,
@@ -662,8 +686,9 @@ export class WildsSites {
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut'
-      })
+      }))
     }
+    addAll(this.scene, this.motesDrawn)
   }
 
   // ------------------------------------------------------------ playtests

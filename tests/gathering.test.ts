@@ -4,6 +4,7 @@ import { GATHERING_DATA, gatherArea, gatheringTarget, isPlantableSeed, gathering
 import { itemDef } from '../src/lib/items.ts';
 import { chunkGather, chunkOrigin, chunkScenery, GATHER_OF } from '../src/game/wilds/terrain.ts';
 import { fixtureTerrain } from './wilds-fixture.ts';
+import { DECOR_ART } from '../src/game/wilds/decor.ts';
 import { buildArea } from '../src/game/worlds.ts';
 import { plantScenery, setLandSource } from '../src/game/homeland.ts';
 import { HOMESTEAD_DATA, checkPlacement, plantable, plantTileNear } from '../src/lib/homestead.ts';
@@ -339,4 +340,33 @@ test('every workable piece in a Wilds chunk names its tile, the fading (path-sid
     // About a third of the trees overhang a path: the ones that were left standing.
     assert.ok(fading > 0, `${region}: the fixture has fading trees to fell`);
   }
+});
+
+test('a flat piece on open ground no work can take is a decal, unless drawing it with the other decals would change what overlaps it', () => {
+  let decals = 0;
+  for (const region of ['tangle', 'whitequiet-0-4', 'road'] as const) {
+    const t = fixtureTerrain(region);
+    const o = chunkOrigin(t);
+    const worked = new Set(chunkGather(t).map((g) => `${g.tx},${g.ty}`));
+    const scenery = chunkScenery(t, () => true);
+    const kind = (s: (typeof scenery)[number]) => t.decor.find((d) => o.tx + d.tx === s.tx && o.ty + d.ty === s.ty && DECOR_ART[d.kind].flat)!.kind;
+    const box = (s: (typeof scenery)[number]) => {
+      const a = DECOR_ART[kind(s)];
+      return { x0: s.x - a.w / 2, x1: s.x + a.w / 2, y0: s.y - a.h, y1: s.y };
+    };
+    const flat = scenery.filter((s) => typeof s.depth === 'number');
+    for (const s of flat.filter((f) => f.decal)) {
+      decals++;
+      assert.ok(!s.fade && !t.solid[s.ty! - o.ty]![s.tx! - o.tx] && !worked.has(`${s.tx},${s.ty}`), `${region} ${s.tx},${s.ty}: a decal is on open ground nothing works, and never fades`);
+      const b = box(s);
+      for (const g of flat) {
+        if (g === s || (g.decal && g.key === s.key)) continue;
+        const c = box(g);
+        assert.ok(!(b.x0 < c.x1 && c.x0 < b.x1 && b.y0 < c.y1 && c.y0 < b.y1), `${region} ${s.tx},${s.ty}: a decal overlaps no flat piece drawn apart from it (${g.tx},${g.ty})`);
+      }
+    }
+    // Pieces standing for a tile something can take are never decals.
+    for (const spot of chunkGather(t)) assert.ok(!scenery.some((s) => s.decal && s.tx === spot.tx && s.ty === spot.ty));
+  }
+  assert.ok(decals > 0, 'the fixtures have decals to bake');
 });

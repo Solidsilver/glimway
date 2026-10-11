@@ -26,6 +26,14 @@ export class TileArt<T extends Destroyable> {
     return this.byTile.get(tileKey(tx, ty)) ?? []
   }
 
+  /** Forget what stands for a tile without destroying it (its owner destroys it, with others in one pass). */
+  take(tx: number, ty: number): T[] {
+    const key = tileKey(tx, ty)
+    const gone = this.byTile.get(key) ?? []
+    this.byTile.delete(key)
+    return gone
+  }
+
   /** Destroy everything standing for a tile; returns what went (the scene drops it from its occluders). */
   fell(tx: number, ty: number): T[] {
     const key = tileKey(tx, ty)

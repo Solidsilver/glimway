@@ -197,6 +197,15 @@ export type WildsWindowView = {
   id: string
   center: { cx: number; cy: number } | null
   attached: string[]
+  /** Attached chunks still being built (their scenery, pieces or things not all in yet). */
+  building: string[]
+  /** Every chunk of the 3×3 inside the frontier attached and built whole. */
+  ready: boolean
+  /** Chunks attached and dropped so far (crossing back over an edge builds nothing). */
+  attaches: number
+  drops: number
+  /** Attached chunks in the deep drift's look (the Whitequiet and beyond). */
+  outer: string[]
   drift: string[]
   ring: string[]
   far: string[]

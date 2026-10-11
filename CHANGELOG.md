@@ -104,6 +104,17 @@ the game can show the first part as "What's new":
   `openMap`): meadow pieces, landmarks, bank stones, fords, road paving,
   laid paths, the dark lamp stone, the frontier veil, the rumour's bundle,
   the way sign and the Map tab's icon.
+- **Walking without stalls.** The Wilds window adds and removes a chunk's
+  images, static bodies and interaction points in one pass
+  (`src/game/area/bulk.ts`), draws things per chunk, blits flat decor, keeps
+  the row behind until you're 8 tiles past an edge, and builds the rest of a
+  chunk in ~4 ms slices (collision first, in attachment order). A tween leak
+  on things and lanterns is fixed. At 4× CPU throttling the worst frame went
+  from ~970 ms to 50 ms.
+- Performance tooling: `?perf=1` (stage timings, long frames, an overlay,
+  `__fsPerf()`), `npm run perf:walk` (a pinned walk, normal and throttled,
+  never in CI) and `scripts/trace-hotspots.mjs` for DevTools traces; see
+  "Performance" in `docs/testing.md`.
 
 ## [0.7.0] - 2026-10-10
 

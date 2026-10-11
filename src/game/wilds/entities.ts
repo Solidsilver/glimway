@@ -8,9 +8,11 @@
  * lanterns (relightable).
  *
  * Everything renders from the store (src/game/wilds/store.ts) — the served
- * chunks' bodies with the near read's cycles and claims — and re-renders
- * when the store's version moves or a chunk comes or goes. Camps are
- * leashed to their chunk: its creatures go when it leaves the window.
+ * chunks' bodies with the near read's cycles and claims — per chunk: a chunk
+ * that comes draws its own things, one that goes takes its own, and when the
+ * store's version moves only the things whose look changed (claimed, spent,
+ * relit) are drawn again. Camps are leashed to their chunk: its creatures go
+ * when it leaves the window.
  * Claims and relights are operations (./remote.ts). Each claimable thing is
  * an interaction point (../entities/interactables.ts) that outranks the
  * people and props around it; the action key claims it.
@@ -63,6 +65,8 @@ import type { Effects } from '../entities/fx'
 import type { EnemySystem } from '../entities/enemies'
 import type { Interactables } from '../entities/interactables'
 import type { EnemyType } from '../worlds'
+import { perfSpan, perfTime } from '../perf.ts'
+import { addAll, destroyAll, looseImage } from '../area/bulk.ts'
 
 /** Server error code → what the player reads. All text is static. */
 export const CLAIM_ERROR: Record<string, string> = {
@@ -91,8 +95,24 @@ export interface WildsDeps {
   hero: () => { x: number; y: number }
 }
 
+/** What one thing or lantern shows: its images and the tweens that move them (stopped with them), and the look they show. */
 interface Rendered {
-  images: Phaser.GameObjects.Image[]
+  look: string
+  images: Phaser.GameObjects.GameObject[]
+  tweens: Phaser.Tweens.Tween[]
+}
+
+/**
+ * Stop drawings' tweens and destroy their images, off the display list in
+ * one pass (a destroyed image's endless tween would run on).
+ */
+function dropRendered(scene: Phaser.Scene, drawings: Iterable<Rendered>): void {
+  const images: Phaser.GameObjects.GameObject[] = []
+  for (const r of drawings) {
+    for (const t of r.tweens) t.stop()
+    images.push(...r.images)
+  }
+  destroyAll(scene, images)
 }
 
 /** Small pixel art for the entities the prop atlas has no frame for. */
@@ -280,7 +300,8 @@ interface Attached {
 export class WildsEntities {
   /** The open map's attached chunks, by `cx,cy`. */
   private attached = new Map<string, Attached>()
-  private rendered = new Map<string, Rendered>()
+  /** What each attached chunk shows, by thing or lantern id. */
+  private drawn = new Map<string, Map<string, Rendered>>()
   private spawnedCamps = new Set<string>()
   private greeted = new Set<string>()
   private claiming = false
@@ -292,7 +313,7 @@ export class WildsEntities {
   constructor(private scene: Phaser.Scene, private deps: WildsDeps) {
     ensureArt(scene)
     scene.events.once('shutdown', () => {
-      this.rendered.clear()
+      this.drawn.clear()
       this.attached.clear()
       this.staleLabel = null
     })
@@ -303,7 +324,7 @@ export class WildsEntities {
     const key = chunkKey(chunk.cx, chunk.cy)
     this.detach(key, false)
     const epoch = chunkEpoch(chunk.cx, chunk.cy) ?? wildsEpoch('wick')
-    const sites = new WildsSites(
+    const sites = perfTime('attach:sites', () => new WildsSites(
       this.scene,
       { session: this.deps.session, fx: this.deps.fx, reducedMotion: this.deps.reducedMotion, interactables: this.deps.interactables, hero: this.deps.hero },
       epoch,
@@ -311,24 +332,27 @@ export class WildsEntities {
       chunk.cy,
       chunk.sites,
       chunk.look === 'outer'
-    )
+    ))
     this.attached.set(key, { cx: chunk.cx, cy: chunk.cy, sites })
-    this.render(wildsView() ? true : null)
+    if (!wildsView()) return this.render(null)
+    this.draw(key, Math.floor(Date.now() / 1000))
+    this.publish(true)
   }
 
   /** A chunk left the window: what it showed goes, and its camps' creatures with it. */
-  detach(key: string, render = true): void {
+  detach(key: string, republish = true): void {
     const a = this.attached.get(key)
     if (!a) return
     this.attached.delete(key)
     a.sites.destroy()
+    this.undraw(key)
     for (const e of chunkThings(a.cx, a.cy)) {
       if (e.kind !== 'camp') continue
       this.deps.enemies.removeWilds(`wilds:${e.id}:`)
       this.spawnedCamps.delete(e.id)
       this.greeted.delete(e.id)
     }
-    if (render) this.render(wildsView() ? true : null)
+    if (republish) this.publish(wildsView() ? true : null)
   }
 
   /** Drop every chunk (the turning reloads the window). */
@@ -591,6 +615,11 @@ export class WildsEntities {
     return [...(wildsView()?.lanterns.values() ?? [])].filter((l) => this.attachedAt(l.x, l.y))
   }
 
+  /** Fallen lanterns in one chunk. */
+  private lanternsIn(cx: number, cy: number): WildsLanternView[] {
+    return [...(wildsView()?.lanterns.values() ?? [])].filter((l) => Math.floor(l.x / CHUNK_TILES) === cx && Math.floor(l.y / CHUNK_TILES) === cy)
+  }
+
   private entityPx(e: WildsThing): { x: number; y: number } {
     return tileFeet(e.cx * CHUNK_TILES + e.tx, e.cy * CHUNK_TILES + e.ty)
   }
@@ -601,18 +630,63 @@ export class WildsEntities {
 
   // ------------------------------------------------------------ rendering
 
+  /** Every attached chunk's drawings brought up to date (null: nothing read yet, nothing shown). */
   private render(read: true | null): void {
-    for (const r of this.rendered.values()) for (const img of r.images) img.destroy()
-    this.rendered.clear()
+    const done = perfSpan('things:render')
     this.publish(read)
-    if (!read) return
-    const nowSec = Math.floor(Date.now() / 1000)
-    for (const e of this.things()) {
-      this.rendered.set(e.id, { images: this.renderEntity(e, nowSec) })
+    if (!read) for (const key of [...this.drawn.keys()]) this.undraw(key)
+    else {
+      const nowSec = Math.floor(Date.now() / 1000)
+      for (const key of this.attached.keys()) this.draw(key, nowSec)
     }
-    for (const l of this.lanterns()) {
-      this.rendered.set(l.id, { images: this.renderLantern(l) })
+    done()
+  }
+
+  /**
+   * One chunk's things and lanterns drawn as they are now: what already
+   * shows its look stays, what changed is drawn again, what went goes.
+   */
+  private draw(key: string, nowSec: number): void {
+    const a = this.attached.get(key)
+    if (!a) return
+    const had = this.drawn.get(key) ?? new Map<string, Rendered>()
+    const next = new Map<string, Rendered>()
+    const fresh: Phaser.GameObjects.GameObject[] = []
+    const keep = (id: string, look: string, make: () => Rendered) => {
+      const r = had.get(id)
+      if (r && r.look === look) {
+        had.delete(id)
+        next.set(id, r)
+        return
+      }
+      const made = make()
+      fresh.push(...made.images)
+      next.set(id, made)
     }
+    for (const e of chunkThings(a.cx, a.cy)) {
+      const look = this.lookOf(e, nowSec)
+      keep(e.id, look, () => this.renderEntity(e, nowSec, look))
+    }
+    for (const l of this.lanternsIn(a.cx, a.cy)) {
+      const look = l.litBy ? 'lit' : 'dark'
+      keep(l.id, look, () => this.renderLantern(l, look))
+    }
+    dropRendered(this.scene, had.values())
+    addAll(this.scene, fresh)
+    this.drawn.set(key, next)
+  }
+
+  /** A chunk's drawings go. */
+  private undraw(key: string): void {
+    dropRendered(this.scene, this.drawn.get(key)?.values() ?? [])
+    this.drawn.delete(key)
+  }
+
+  /** What a thing shows: spent (depleted, or a chest or POI already claimed), and whether its cycle is out. */
+  private lookOf(e: WildsThing, nowSec: number): string {
+    const depleted = (e.kind === 'camp' || e.kind === 'node') && !entityAvailable(e, nowSec)
+    const spent = depleted || ((e.kind === 'chest' || e.kind === 'poi') && isClaimed(e.id))
+    return `${depleted ? 'depleted' : 'available'}|${spent ? 'spent' : 'fresh'}`
   }
 
   /**
@@ -621,6 +695,10 @@ export class WildsEntities {
    * or POI once per epoch) and unlit fallen lanterns.
    */
   private publish(read: true | null): void {
+    perfTime('things:publish', () => this.publishNow(read))
+  }
+
+  private publishNow(read: true | null): void {
     if (!read) return this.deps.interactables.register(this, [])
     const entities = this.things().map((e) =>
       wildsPoint(e.id, this.entityPx(e), 20, () => {
@@ -635,12 +713,13 @@ export class WildsEntities {
     this.deps.interactables.register(this, [...entities, ...lanterns])
   }
 
-  private renderEntity(e: WildsThing, nowSec: number): Phaser.GameObjects.Image[] {
+  private renderEntity(e: WildsThing, nowSec: number, look: string): Rendered {
     const scene = this.scene
     const at = this.entityPx(e)
     const images: Phaser.GameObjects.Image[] = []
+    const tweens: Phaser.Tweens.Tween[] = []
     const add = (tex: string, frame: string | undefined, h: number, dy = 0, dx = 0): void => {
-      const img = frame ? scene.add.image(at.x + dx, at.y + dy, tex, frame) : scene.add.image(at.x + dx, at.y + dy, tex)
+      const img = looseImage(scene, at.x + dx, at.y + dy, tex, frame)
       const f = frame ? scene.textures.get(tex).get(frame)! : scene.textures.get(tex).get()
       img.setOrigin(0.5, 1).setScale(h / f.height).setDepth(at.y + dy - 2)
       images.push(img)
@@ -649,7 +728,7 @@ export class WildsEntities {
     const native = (frame: string, dy = 0, dx = 0): Phaser.GameObjects.Image | null => {
       const key = commonsArt(scene, frame)
       if (!key) return null
-      const img = scene.add.image(at.x + dx, at.y + dy, key).setOrigin(0.5, 1).setDepth(at.y + dy - 2)
+      const img = looseImage(scene, at.x + dx, at.y + dy, key).setOrigin(0.5, 1).setDepth(at.y + dy - 2)
       images.push(img)
       return img
     }
@@ -665,7 +744,7 @@ export class WildsEntities {
         // Someone's camp: a small flame in the ring until it's cleared.
         const flicker = commonsAnim(scene, 'camp-flame-animation')
         if (!depleted && flicker) {
-          const flame = scene.add.sprite(at.x - 14, at.y - 3, 'commons-art:camp-flame-0').setOrigin(0.5, 1).setDepth(at.y - 1)
+          const flame = scene.make.sprite({ x: at.x - 14, y: at.y - 3, key: 'commons-art:camp-flame-0' }, false).setOrigin(0.5, 1).setDepth(at.y - 1)
           if (!this.deps.reducedMotion) flame.play({ key: flicker, startFrame: Math.floor(Math.random() * 3) })
           images.push(flame)
         }
@@ -692,36 +771,37 @@ export class WildsEntities {
       if (!showsSpent) for (const img of images) img.setAlpha(0.45)
     } else if (e.kind !== 'camp') {
       // A small glint over anything claimable, so attention finds it.
-      const glint = scene.add.image(at.x, at.y - 22, 'spark').setDepth(at.y + 3).setBlendMode(1)
+      const glint = looseImage(scene, at.x, at.y - 22, 'spark').setDepth(at.y + 3).setBlendMode(1)
       if (this.deps.reducedMotion) glint.setAlpha(0.7)
-      else scene.tweens.add({ targets: glint, y: at.y - 26, alpha: { from: 0.85, to: 0.35 }, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      else tweens.push(scene.tweens.add({ targets: glint, y: at.y - 26, alpha: { from: 0.85, to: 0.35 }, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' }))
       images.push(glint)
     }
-    return images
+    return { look, images, tweens }
   }
 
-  private renderLantern(l: WildsLanternView): Phaser.GameObjects.Image[] {
+  private renderLantern(l: WildsLanternView, look: string): Rendered {
     const scene = this.scene
     const at = this.lanternPx(l)
     // A fallen hero's lantern (Commons pass), lit or dark; else a road post.
     const delivered = commonsArt(scene, `fallen-hero-lantern-${l.litBy ? 'lit' : 'unlit'}`)
     const post = delivered
-      ? scene.add.image(at.x, at.y, delivered).setOrigin(0.5, 1).setDepth(at.y)
-      : scene.add.image(at.x, at.y, 'fingersnap-props', 'lantern-post')
+      ? looseImage(scene, at.x, at.y, delivered).setOrigin(0.5, 1).setDepth(at.y)
+      : looseImage(scene, at.x, at.y, 'fingersnap-props', 'lantern-post')
         .setOrigin(0.5, 1)
         .setScale(28 / scene.textures.get('fingersnap-props').get('lantern-post')!.height)
         .setDepth(at.y)
     const images = [post]
+    const tweens: Phaser.Tweens.Tween[] = []
     if (l.litBy) {
-      const glow = scene.add.image(at.x, at.y - (delivered ? 10 : 18), 'glow').setBlendMode(1).setTint(0xffb054).setScale(0.5).setAlpha(0.75).setDepth(at.y + 2)
+      const glow = looseImage(scene, at.x, at.y - (delivered ? 10 : 18), 'glow').setBlendMode(1).setTint(0xffb054).setScale(0.5).setAlpha(0.75).setDepth(at.y + 2)
       if (!this.deps.reducedMotion) {
-        scene.tweens.add({ targets: glow, alpha: { from: 0.65, to: 0.4 }, scale: { from: 0.48, to: 0.55 }, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+        tweens.push(scene.tweens.add({ targets: glow, alpha: { from: 0.65, to: 0.4 }, scale: { from: 0.48, to: 0.55 }, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' }))
       }
       images.push(glow)
     } else if (!delivered) {
       post.setAlpha(0.8)
     }
-    return images
+    return { look, images, tweens }
   }
 
   // ------------------------------------------------------------ camps

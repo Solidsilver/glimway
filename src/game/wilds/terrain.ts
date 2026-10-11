@@ -151,7 +151,7 @@ export function chunkOrigin(chunk: Pick<ChunkTerrain, 'cx' | 'cy' | 'size'>): Ti
  * Flat decals (roots, litter, pebbles) sit just above the ground: the open
  * map's floor is far below any y (world y is negative north of the gate).
  */
-const DECAL_DEPTH = -10_000_000 + 5;
+export const DECAL_DEPTH = -10_000_000 + 5;
 /** Tint by how far a piece stands from open ground: the deep woods are darker. */
 const DEPTH_TINT = [undefined, undefined, 0xc4c4cc, 0xa4a4b4] as const;
 
@@ -232,17 +232,21 @@ function woodsDepth(chunk: ChunkTerrain, tx: number, ty: number): number {
  * landmarks) from their delivered art (./open-map-art.ts). A piece whose art
  * didn't load is left out, never stood in for. Every piece stands on its
  * tile's bottom edge; pieces that overhang a path fade when walked under.
+ * A flat piece on open ground no work can take is a `decal`: it stands for
+ * no tile, and the scene draws it baked with the chunk's others.
  */
 export function chunkScenery(chunk: ChunkTerrain, has: (key: string) => boolean): ScenerySpot[] {
   const atlas = lookAtlasKey(chunk.look, chunk.mark);
   const o = chunkOrigin(chunk);
   const out: ScenerySpot[] = [];
+  const kinds: DecorKind[] = [];
   for (const d of chunk.decor) {
     const tx = o.tx + d.tx;
     const ty = o.ty + d.ty;
     const delivered = openMapDecor(d.kind, d.variant);
     const key = delivered ?? atlas;
     if (delivered && !has(delivered)) continue;
+    kinds.push(d.kind);
     out.push({
       key,
       ...(delivered ? {} : { frame: tangleFrame(d.kind, d.variant) }),
@@ -256,7 +260,41 @@ export function chunkScenery(chunk: ChunkTerrain, has: (key: string) => boolean)
       ty,
     });
   }
+  markDecals(chunk, out, kinds);
   return out;
+}
+
+/**
+ * Which flat pieces are decals: on open ground no work can take (no
+ * workable piece on the tile, not solid), never fading, and overlapping no
+ * flat piece they would swap places with when drawn together (another
+ * texture's, or one that stays an image): the scene draws a texture's
+ * decals together, so only pieces whose order among flat pieces can't show
+ * are drawn that way. Footprints are the art's (content `decor` w and h),
+ * a pixel wider each way.
+ */
+function markDecals(chunk: ChunkTerrain, spots: ScenerySpot[], kinds: readonly DecorKind[]): void {
+  const o = chunkOrigin(chunk);
+  const worked = new Set(chunk.decor.filter((d) => GATHER_OF[d.kind]).map((d) => tileKey(d.tx, d.ty)));
+  const flat = spots.flatMap((s, i) => {
+    if (s.depth !== DECAL_DEPTH) return [];
+    const art = DECOR_ART[kinds[i]!];
+    const lx = s.tx! - o.tx;
+    const ly = s.ty! - o.ty;
+    const open = !s.fade && !chunk.solid[ly]![lx] && !worked.has(tileKey(lx, ly));
+    return [{ s, open, x0: s.x - art.w / 2 - 1, x1: s.x + art.w / 2 + 1, y0: s.y - art.h - 1, y1: s.y + 1 }];
+  });
+  type Flat = (typeof flat)[number];
+  const overlap = (a: Flat, b: Flat) => a !== b && a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+  // Settle it: a piece kept as an image can stop a neighbour being a decal.
+  let decals = flat.filter((f) => f.open);
+  for (let changed = true; changed; ) {
+    const set = new Set(decals);
+    const next = decals.filter((f) => !flat.some((g) => overlap(f, g) && (!set.has(g) || g.s.key !== f.s.key)));
+    changed = next.length !== decals.length;
+    decals = next;
+  }
+  for (const f of decals) f.s.decal = true;
 }
 
 /** The chunk's landmark pieces (drawn from a chunk away), as scenery in world pixels. */

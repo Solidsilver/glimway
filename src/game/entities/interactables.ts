@@ -91,9 +91,16 @@ export class Interactables {
     this.deps = deps
   }
 
-  /** Replace an owner's points (and their markers). */
+  /** Replace an owner's points (and their markers). The old ones leave the list in one pass (an owner can have hundreds: a chunk's pieces). */
   register(owner: object, points: readonly Interactable[]): void {
-    for (const it of this.byOwner.get(owner) ?? []) this.drop(it)
+    const old = this.byOwner.get(owner) ?? []
+    if (old.length) {
+      const gone = new Set(old)
+      let kept = 0
+      for (const it of this.list) if (!gone.has(it)) this.list[kept++] = it
+      this.list.length = kept
+      for (const it of old) this.forget(it)
+    }
     this.byOwner.set(owner, points)
     this.list.push(...points)
     if (this.markersBuilt) {
@@ -242,6 +249,11 @@ export class Interactables {
   private drop(it: Interactable): void {
     const i = this.list.indexOf(it)
     if (i >= 0) this.list.splice(i, 1)
+    this.forget(it)
+  }
+
+  /** A point that left the list: its marker goes, and it is no longer the target. */
+  private forget(it: Interactable): void {
     const marker = this.markers.get(it)
     if (marker) {
       this.scene.tweens.killTweensOf(marker)

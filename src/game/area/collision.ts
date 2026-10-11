@@ -30,6 +30,16 @@ export interface Solids {
  * quadratic (around half a second of blocked main thread entering the
  * Commons). Physics doesn't need the display list.
  */
+/**
+ * A solid box with its static body made but not yet in the world: put it
+ * there with others in one go (./bulk.ts enableStatics).
+ */
+export function staticBox(scene: Phaser.Scene, cx: number, cy: number, w: number, h: number): Phaser.Physics.Arcade.Image {
+  const img = new Phaser.Physics.Arcade.Image(scene, cx, cy, 'px').setDisplaySize(w, h).setVisible(false)
+  img.body = new Phaser.Physics.Arcade.StaticBody(scene.physics.world, img)
+  return img
+}
+
 export function solidBox(scene: Phaser.Scene, cx: number, cy: number, w: number, h: number): Phaser.Physics.Arcade.Image {
   const img = new Phaser.Physics.Arcade.Image(scene, cx, cy, 'px').setDisplaySize(w, h).setVisible(false)
   scene.physics.add.existing(img, true)

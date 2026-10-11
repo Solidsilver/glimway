@@ -213,3 +213,136 @@ test('two players in neighbouring chunks see each other; two chunks apart they d
   await expect.poll(async () => (await remotes(page)).length, { timeout: 15_000 }).toBe(0)
   await ctx.close()
 })
+
+type SceneSize = { list: number; tweens: number; statics: number; kinds: Record<string, number> }
+const sceneSize = (p: Page) => p.evaluate(() => (window as unknown as { __fsSceneSize: () => SceneSize }).__fsSceneSize())
+
+/** The nearest open tile to (tx, ty), searched outward (the open map answers by world tile). */
+const openNear = (p: Page, tx: number, ty: number) =>
+  p.evaluate(([x0, y0]) => {
+    const solid = (window as unknown as { __fsTileSolid: (x: number, y: number) => boolean }).__fsTileSolid
+    for (let r = 0; r < 12; r++)
+      for (let dy = -r; dy <= r; dy++)
+        for (let dx = -r; dx <= r; dx++) if (Math.max(Math.abs(dx), Math.abs(dy)) === r && !solid(x0 + dx, y0 + dy)) return { tx: x0 + dx, ty: y0 + dy }
+    return null
+  }, [tx, ty] as const)
+
+/** Stand on a tile, and wait until the window around it is whole (every chunk attached and built). */
+async function standAt(p: Page, at: { tx: number; ty: number }): Promise<void> {
+  await p.evaluate(([x, y]) => (window as unknown as { __fsDevPlace: (x: number, y: number) => void }).__fsDevPlace(x, y), [at.tx * TILE + 8, at.ty * TILE + 12] as const)
+  const chunk = `${Math.floor(at.tx / S)},${Math.floor(at.ty / S)}`
+  await expect.poll(async () => {
+    const w = await wildsWindow(p)
+    return !!w && w.ready && `${w.center?.cx},${w.center?.cy}` === chunk
+  }, { timeout: 20_000 }).toBe(true)
+}
+
+test('chunks walked in and out leave nothing behind: the tweens, the collision bodies and what is drawn come back to the same', async ({ page }) => {
+  test.setTimeout(150_000)
+  await freshPlayer(page)
+  await warp(page, 'wilds', 12, -12)
+  await waitForWilds(page)
+  await page.evaluate(() => (window as unknown as { __fsDevParkCreatures: () => void }).__fsDevParkCreatures())
+  // Two spots three chunks apart: moving between them swaps the whole 3×3
+  // (the far one is known once the hero has stood halfway).
+  const a = (await openNear(page, 12, -12))!
+  await standAt(page, (await openNear(page, 12, -12 - 2 * S))!)
+  const b = (await openNear(page, 12, -12 - 3 * S))!
+  expect(a && b, 'open ground at both spots').toBeTruthy()
+  await standAt(page, b)
+  await standAt(page, a)
+  await page.waitForTimeout(500)
+  const before = await sceneSize(page)
+  expect(before.tweens, 'something glints here (the test needs tweens to watch)').toBeGreaterThan(0)
+  expect(Object.keys(before.kinds).some((k) => k.startsWith('Blitter:')), 'flat decals are drawn by a blitter a chunk').toBe(true)
+  for (let i = 0; i < 4; i++) {
+    await standAt(page, b)
+    await standAt(page, a)
+  }
+  await page.waitForTimeout(500)
+  const after = await sceneSize(page)
+  // What the window draws (images, sprites, blitters), by type and texture; an
+  // animation's frame is the same sprite, and the hero's thought bubbles come and go.
+  const drawn = (z: SceneSize) => {
+    const out: Record<string, number> = {}
+    for (const [k, n] of Object.entries(z.kinds)) {
+      if (!/^(Image|Sprite|Blitter):/.test(k)) continue
+      const key = k.replace(/-\d+$/, '')
+      out[key] = (out[key] ?? 0) + n
+    }
+    return out
+  }
+  expect({ tweens: after.tweens, statics: after.statics, drawn: drawn(after) }, 'after four trips').toEqual({ tweens: before.tweens, statics: before.statics, drawn: drawn(before) })
+})
+
+test('stepping back and forth over a chunk edge builds and drops nothing; the 3×3 around the hero is always whole', async ({ page }) => {
+  test.setTimeout(150_000)
+  await freshPlayer(page)
+  await warp(page, 'wilds', 12, -12)
+  await waitForWilds(page)
+  await page.evaluate(() => (window as unknown as { __fsDevParkCreatures: () => void }).__fsDevParkCreatures())
+  // Two tiles south of the edge between (0, -1) and (0, -2), and two north of it.
+  const south = (await openNear(page, 12, -S + 2))!
+  const north = (await openNear(page, 12, -S - 3))!
+  expect(Math.floor(south.ty / S), 'south of the edge').toBe(-1)
+  expect(Math.floor(north.ty / S), 'north of the edge').toBe(-2)
+  await standAt(page, south)
+  await standAt(page, north)
+  const first = (await wildsWindow(page))!
+  for (let i = 0; i < 5; i++) {
+    await standAt(page, south)
+    await standAt(page, north)
+  }
+  const after = (await wildsWindow(page))!
+  expect({ attaches: after.attaches, drops: after.drops }, 'nothing built or dropped crossing back and forth').toEqual({ attaches: first.attaches, drops: first.drops })
+  expect(after.attached, 'the row behind is kept while the hero is near the edge').toContain('0,0')
+  // Further on, the row behind goes.
+  await standAt(page, (await openNear(page, 12, -2 * S + 4))!)
+  await expect.poll(async () => (await wildsWindow(page))!.attached, { timeout: 5_000 }).not.toContain('0,0')
+})
+
+/** The white quiet's motes the scene holds (26 a chunk in the deep drift's look). */
+const motes = async (p: Page) => (await sceneSize(p)).kinds['Image:site-mote'] ?? 0
+const MOTES = 26
+
+test('the Whitequiet’s motes drift with each outer chunk, stay through its sites redrawing, and go with it', async ({ page }) => {
+  test.setTimeout(150_000)
+  await freshPlayer(page)
+  await warp(page, 'wilds', 12, -3 * S + 12)
+  await waitForWilds(page)
+  await page.evaluate(() => (window as unknown as { __fsDevParkCreatures: () => void }).__fsDevParkCreatures())
+  const here = (await openNear(page, 12, -3 * S + 12))!
+  await standAt(page, here)
+  const outer = (await wildsWindow(page))!.outer
+  expect(outer.length, 'outer chunks around the Whitequiet').toBeGreaterThan(0)
+  expect(await motes(page), `${MOTES} motes a chunk for ${outer.join(' ')}`).toBe(MOTES * outer.length)
+  const before = await sceneSize(page)
+
+  // A paper found redraws every site layer (its key counts paper flags): the motes stay, nothing doubles.
+  await page.evaluate(() => (window as unknown as { __fsDevAddFlag: (f: string) => void }).__fsDevAddFlag('paper:motes-test'))
+  await page.waitForTimeout(500)
+  const after = await sceneSize(page)
+  expect(after.kinds['Image:site-mote'], 'the motes survive the redraw').toBe(MOTES * outer.length)
+  expect(after.tweens, 'and so do their tweens (no more, no fewer)').toBe(before.tweens)
+
+  // Back into the Tangle: the outer chunks go, and their motes and tweens with them.
+  await standAt(page, (await openNear(page, 12, -S - 12))!)
+  await standAt(page, (await openNear(page, 12, 12))!)
+  const left = (await wildsWindow(page))!.outer
+  expect(await motes(page), `only the outer chunks still attached (${left.join(' ') || 'none'}) keep theirs`).toBe(MOTES * left.length)
+  expect((await sceneSize(page)).tweens).toBeLessThan(before.tweens - MOTES * (outer.length - left.length) + 1)
+})
+
+test.describe('with reduced motion', () => {
+  test.use({ reducedMotion: 'reduce' })
+  test('the Whitequiet’s motes stand still', async ({ page }) => {
+    test.setTimeout(120_000)
+    await freshPlayer(page)
+    await warp(page, 'wilds', 12, -3 * S + 12)
+    await waitForWilds(page)
+    await standAt(page, (await openNear(page, 12, -3 * S + 12))!)
+    const outer = (await wildsWindow(page))!.outer
+    expect(await motes(page)).toBe(MOTES * outer.length)
+    expect((await sceneSize(page)).tweens, 'nothing in the Wilds tweens with motion reduced').toBe(0)
+  })
+})

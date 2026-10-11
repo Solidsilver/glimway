@@ -12,7 +12,7 @@
     "package.json",
     "package-lock.json"
   ],
-  "ignore": ["**/*.md", "docs/**", ".agent/**", "tests/**", "e2e/changed-map.json", "deploy/**", "content/**", "scripts/*-vectors.ts", "scripts/papers.ts", "scripts/webgl-renderer.ts"],
+  "ignore": ["**/*.md", "docs/**", ".agent/**", "tests/**", "e2e/changed-map.json", "deploy/**", "content/**", "scripts/*-vectors.ts", "scripts/papers.ts", "scripts/webgl-renderer.ts", "perf/**", "playwright.perf.config.ts", "scripts/trace-hotspots.mjs", "scripts/png-diff.ts"],
   "rules": [
     {
       "paths": ["src/main.ts", "src/game/main.ts", "src/game/scenes/**", "index.html"],
@@ -28,8 +28,8 @@
       "specs": ["unreachable.spec.ts", "version.spec.ts", "onboarding.spec.ts"]
     },
     {
-      "paths": ["src/game/wilds/**", "src/lib/wilds/**", "server/internal/wilds/**", "src/content/echoes.ts", "src/content/expansion-writing.ts", "src/game/expansion.ts"],
-      "specs": ["open-map.spec.ts", "open-map-screens.spec.ts", "wilds.spec.ts", "wilds-outer.spec.ts", "wilds-screens.spec.ts", "echo-keepsakes.spec.ts", "paths.spec.ts", "rumour.spec.ts"]
+      "paths": ["src/game/wilds/**", "src/game/perf.ts", "e2e/harness/**", "src/lib/wilds/**", "server/internal/wilds/**", "src/content/echoes.ts", "src/content/expansion-writing.ts", "src/game/expansion.ts"],
+      "specs": ["open-map.spec.ts", "window-order.spec.ts", "open-map-screens.spec.ts", "wilds.spec.ts", "wilds-outer.spec.ts", "wilds-screens.spec.ts", "echo-keepsakes.spec.ts", "paths.spec.ts", "rumour.spec.ts"]
     },
     {
       "paths": ["src/ui/MapTab.svelte", "src/ui/JournalPanel.svelte", "src/content/open-map.ts", "src/game/rumour-watch.ts", "src/game/entities/world-talk.ts"],

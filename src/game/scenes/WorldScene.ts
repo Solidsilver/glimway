@@ -76,6 +76,7 @@ import { WildsEntities } from '../wilds/entities'
 import { setSyncSafety } from '../sync-safety'
 import { onSceneEnd } from '../scene-end'
 import { exposeWorldHooks } from './world-dev-hooks'
+import { perfWatch } from '../perf'
 import { Unmoored } from '../entities/unmoored'
 import { WorldActions } from './world-actions'
 import { emitPortraits } from '../portraits'
@@ -433,12 +434,16 @@ export class WorldScene extends Phaser.Scene {
         occluders: {
           add: (list) => this.occluders.push(...list),
           remove: (images) => {
-            this.occluders = this.occluders.filter((o) => !images.includes(o.image))
+            const gone = new Set<Phaser.GameObjects.Image>(images)
+            this.occluders = this.occluders.filter((o) => !gone.has(o.image))
           }
         },
         reducedMotion: this.reducedMotion,
         hero: () => this.hero.sprite
       })
+      // ?perf=1 samples the open map's display list and tweens (src/game/perf.ts).
+      perfWatch(this)
+      this.events.once('shutdown', () => perfWatch(null))
       // The HUD names the land you stand in (the meadow, the Wend) from the loaded chunks.
       setWildsLand(landName)
       this.events.once('shutdown', () => setWildsLand(null))
