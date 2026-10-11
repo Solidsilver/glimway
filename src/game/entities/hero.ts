@@ -20,7 +20,6 @@
 import { walkFactor } from '../../lib/wilds/walk'
 import Phaser from 'phaser'
 import { getCombatKit, type CombatKit, type KitMove } from '../../lib/combat'
-import { fightBoltSpawn } from '../../lib/fight-math'
 import { CombatField } from '../../lib/combat-moves'
 import { withCharm } from '../../lib/glims'
 import { passiveRegenAllowed } from '../../lib/habitica/sync'
@@ -30,7 +29,7 @@ import { sfx } from '../sfx'
 import { TILE, tileAt, tileMid } from '../../lib/tile'
 import type { Session } from '../session'
 import type { WorldData } from '../worlds'
-import { KNOCK, cleaveStrike, mendStrike, slashStrike, snapstrike, strikeHits, wardMends, type Strike } from './fight-rules'
+import { KNOCK, boltSpawn, cleaveStrike, mendStrike, slashStrike, snapstrike, strikeCrits, strikeHits, wardMends, type Strike } from './fight-rules'
 import type { EnemySystem } from './enemies'
 import type { Projectiles } from './projectiles'
 import type { AvatarVisual } from './avatar'
@@ -351,7 +350,7 @@ export class Hero {
     // Mage basic is a ranged bolt (the classless starter keeps its melee
     // slash); every other class strikes in melee reach.
     if (kit.class === 'mage' && !tool) {
-      const at = fightBoltSpawn(this.sprite.x, this.sprite.y, dir.x)
+      const at = boltSpawn(this.sprite, dir)
       this.deps.projectiles().spawn(at.x, at.y, dir, kit.meleeDamage)
       return
     }
@@ -371,12 +370,14 @@ export class Hero {
 
   /**
    * A strike lands on the enemies this screen draws: each one in reach is
-   * hit, shoved away from `fromX` (crits rolled here, a crit's sparks with
-   * `sparks`), and its owner decides what the hit did.
+   * hit, shoved away from `fromX` (its one crit roll made here and shared by
+   * all of them, a crit's sparks with `sparks`), and its owner decides what
+   * the hit did.
    */
   private land(strike: Strike, fromX: number, sparks = false): void {
     const enemies = this.deps.enemies()
-    for (const hit of strikeHits(strike, [...enemies.enemies], Math.random)) {
+    const crit = strikeCrits(strike, Math.random())
+    for (const hit of strikeHits(strike, [...enemies.enemies], crit)) {
       if (sparks && hit.crit) this.deps.fx.sparkBurst(hit.enemy.x, hit.enemy.y - 8, 8)
       enemies.damageEnemy(hit.enemy, hit.amount, fromX, hit.crit)
     }
@@ -419,7 +420,7 @@ export class Hero {
     const dir = this.facing.clone().normalize()
     switch (sig.id) {
       case 'fingersnap': {
-        const at = fightBoltSpawn(this.sprite.x, this.sprite.y, dir.x)
+        const at = boltSpawn(this.sprite, dir)
         this.deps.projectiles().spawn(at.x, at.y, dir, kit.signatureDamage)
         break
       }
