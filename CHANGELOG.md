@@ -27,8 +27,6 @@ the game can show the first part as "What's new":
 - **The Lantern Road** runs north from the Whitequiet, old paving with
   **dark lamp stones** beside it. Look at one; Mara might know what they
   were for.
-- The Whitequiet's pale motes drift again (they had gone missing on the
-  open map).
 - Everything past the Tangle **turns every wick**: the land, the river's
   course, the places. When it turns while you're out there, you stay where
   you are and the land changes round you. If you were standing in something
