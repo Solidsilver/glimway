@@ -26,7 +26,7 @@ func TestFightContractSharedVectors(t *testing.T) {
 	if err := json.Unmarshal(raw, &rows); err != nil {
 		t.Fatal(err)
 	}
-	if len(rows) < 20 {
+	if len(rows) < 50 {
 		t.Fatal("insufficient wire vectors")
 	}
 	validator, err := protovalidate.New()
@@ -58,5 +58,29 @@ func TestFightContractSharedVectors(t *testing.T) {
 				t.Fatal("swing exceeds ingress limit")
 			}
 		})
+	}
+}
+
+// A cast's fight part is the caster's own (review P3-2): the relay strips it.
+func TestRelayedAbilityStripsTheFightPart(t *testing.T) {
+	p := &presencePeer{identity: presenceIdentity{ID: "alice"}}
+	cast := &contract.PresenceAbility{Ability: "cleave", X: 10, Y: 20, Fight: &contract.FightCast{
+		SeenTick: 7, SeenOffsetMs: 40, SwingCounter: 3, Facing: &contract.FightFacing{X: 1},
+		Predicted: []*contract.FightTarget{{Room: 1, Enemy: 2}},
+	}}
+	raw, err := relayedAbility(p, cast)
+	if err != nil {
+		t.Fatal(err)
+	}
+	message, err := decodePresence(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := message.GetAbility()
+	if out.Fight != nil || out.GetAccountId() != "alice" || out.GetAbility() != "cleave" || out.GetX() != 10 {
+		t.Fatal("relayed cast", out)
+	}
+	if cast.Fight == nil {
+		t.Fatal("relay changed the caster's message")
 	}
 }

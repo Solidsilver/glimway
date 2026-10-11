@@ -241,6 +241,8 @@ func (FightEventKind) EnumDescriptor() ([]byte, []int) {
 	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{3}
 }
 
+// Swing-level reasons refuse the whole swing or cast (COOLDOWN,
+// STALE_COUNTER); the others refuse one row.
 type FightRefusedReason int32
 
 const (
@@ -249,6 +251,7 @@ const (
 	FightRefusedReason_FIGHT_REFUSED_REASON_OUT_OF_REACH  FightRefusedReason = 2
 	FightRefusedReason_FIGHT_REFUSED_REASON_COOLDOWN      FightRefusedReason = 3
 	FightRefusedReason_FIGHT_REFUSED_REASON_UNKNOWN_ENEMY FightRefusedReason = 4
+	FightRefusedReason_FIGHT_REFUSED_REASON_STALE_COUNTER FightRefusedReason = 5
 )
 
 // Enum value maps for FightRefusedReason.
@@ -259,6 +262,7 @@ var (
 		2: "FIGHT_REFUSED_REASON_OUT_OF_REACH",
 		3: "FIGHT_REFUSED_REASON_COOLDOWN",
 		4: "FIGHT_REFUSED_REASON_UNKNOWN_ENEMY",
+		5: "FIGHT_REFUSED_REASON_STALE_COUNTER",
 	}
 	FightRefusedReason_value = map[string]int32{
 		"FIGHT_REFUSED_REASON_UNSPECIFIED":   0,
@@ -266,6 +270,7 @@ var (
 		"FIGHT_REFUSED_REASON_OUT_OF_REACH":  2,
 		"FIGHT_REFUSED_REASON_COOLDOWN":      3,
 		"FIGHT_REFUSED_REASON_UNKNOWN_ENEMY": 4,
+		"FIGHT_REFUSED_REASON_STALE_COUNTER": 5,
 	}
 )
 
@@ -317,7 +322,7 @@ type PresenceMessage struct {
 	//	*PresenceMessage_FightJoin
 	//	*PresenceMessage_FightDelta
 	//	*PresenceMessage_FightEvent
-	//	*PresenceMessage_FightHit
+	//	*PresenceMessage_FightSwingResult
 	Event         isPresenceMessage_Event `protobuf_oneof:"event"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -504,10 +509,10 @@ func (x *PresenceMessage) GetFightEvent() *FightEvent {
 	return nil
 }
 
-func (x *PresenceMessage) GetFightHit() *FightHit {
+func (x *PresenceMessage) GetFightSwingResult() *FightSwingResult {
 	if x != nil {
-		if x, ok := x.Event.(*PresenceMessage_FightHit); ok {
-			return x.FightHit
+		if x, ok := x.Event.(*PresenceMessage_FightSwingResult); ok {
+			return x.FightSwingResult
 		}
 	}
 	return nil
@@ -581,8 +586,8 @@ type PresenceMessage_FightEvent struct {
 	FightEvent *FightEvent `protobuf:"bytes,16,opt,name=fight_event,json=fightEvent,proto3,oneof"`
 }
 
-type PresenceMessage_FightHit struct {
-	FightHit *FightHit `protobuf:"bytes,17,opt,name=fight_hit,json=fightHit,proto3,oneof"`
+type PresenceMessage_FightSwingResult struct {
+	FightSwingResult *FightSwingResult `protobuf:"bytes,17,opt,name=fight_swing_result,json=fightSwingResult,proto3,oneof"`
 }
 
 func (*PresenceMessage_Auth) isPresenceMessage_Event() {}
@@ -617,7 +622,7 @@ func (*PresenceMessage_FightDelta) isPresenceMessage_Event() {}
 
 func (*PresenceMessage_FightEvent) isPresenceMessage_Event() {}
 
-func (*PresenceMessage_FightHit) isPresenceMessage_Event() {}
+func (*PresenceMessage_FightSwingResult) isPresenceMessage_Event() {}
 
 type PresenceAuth struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -949,6 +954,10 @@ func (x *PresenceEmote) GetAccountId() string {
 // hub also fills pulse_heal: one pulse of the caster's ward, from the
 // caster's profile (rules.WardPulseHeal), so a friend's screen mends what the
 // world credits. Whatever a client sends there is overwritten.
+//
+// Contract 10: fight is what the room needs to judge the cast like a swing
+// (design 1.6). Legacy casts omit it; the relay strips it, since it is the
+// caster's own.
 type PresenceAbility struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Ability       string                 `protobuf:"bytes,1,opt,name=ability,proto3" json:"ability,omitempty"`
@@ -956,7 +965,7 @@ type PresenceAbility struct {
 	Y             float64                `protobuf:"fixed64,3,opt,name=y,proto3" json:"y,omitempty"`
 	AccountId     *string                `protobuf:"bytes,4,opt,name=account_id,json=accountId,proto3,oneof" json:"account_id,omitempty"`
 	PulseHeal     *float64               `protobuf:"fixed64,5,opt,name=pulse_heal,json=pulseHeal,proto3,oneof" json:"pulse_heal,omitempty"`
-	SeenTick      *uint32                `protobuf:"varint,6,opt,name=seen_tick,json=seenTick,proto3,oneof" json:"seen_tick,omitempty"`
+	Fight         *FightCast             `protobuf:"bytes,6,opt,name=fight,proto3,oneof" json:"fight,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1026,11 +1035,11 @@ func (x *PresenceAbility) GetPulseHeal() float64 {
 	return 0
 }
 
-func (x *PresenceAbility) GetSeenTick() uint32 {
-	if x != nil && x.SeenTick != nil {
-		return *x.SeenTick
+func (x *PresenceAbility) GetFight() *FightCast {
+	if x != nil {
+		return x.Fight
 	}
-	return 0
+	return nil
 }
 
 // The server's own word that one player's avatar changed (the resolved
@@ -1624,8 +1633,8 @@ func (x *PresenceAppearance) GetHairFlower() float64 {
 	return 0
 }
 
-// Contract 10. Room identity is physical space, separate from presence's
-// visibility label. Epoch is the generated epoch id (including "still").
+// Room identity is physical space, separate from presence's visibility
+// label. Epoch is the generated epoch id (including "still").
 type FightRoomKey struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	World         string                 `protobuf:"bytes,1,opt,name=world,proto3" json:"world,omitempty"`
@@ -1710,8 +1719,9 @@ func (x *FightRoomKey) GetEpoch() string {
 	return ""
 }
 
-// Unit facing. Unlike optional legacy PresenceFacing, both zero components
-// are meaningful. Squared length allows normal floating-point roundoff.
+// Unit facing, for what a client aims. Unlike optional legacy
+// PresenceFacing, both zero components are meaningful. Squared length
+// allows normal floating-point roundoff.
 type FightFacing struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	X             float64                `protobuf:"fixed64,1,opt,name=x,proto3" json:"x,omitempty"`
@@ -1764,9 +1774,74 @@ func (x *FightFacing) GetY() float64 {
 	return 0
 }
 
-// Client intent only: the server derives targets and damage. Counters are
-// uint32, starting at 0 and wrapping modulo 2^32; one roll per swing/cast,
-// shared by all enemies hit. Tick 0 is valid at wake.
+// One enemy in one room: a room's handle and the enemy's index in it.
+type FightTarget struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Room          uint32                 `protobuf:"varint,1,opt,name=room,proto3" json:"room,omitempty"`
+	Enemy         uint32                 `protobuf:"varint,2,opt,name=enemy,proto3" json:"enemy,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FightTarget) Reset() {
+	*x = FightTarget{}
+	mi := &file_glimway_v2_presence_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FightTarget) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FightTarget) ProtoMessage() {}
+
+func (x *FightTarget) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v2_presence_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FightTarget.ProtoReflect.Descriptor instead.
+func (*FightTarget) Descriptor() ([]byte, []int) {
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *FightTarget) GetRoom() uint32 {
+	if x != nil {
+		return x.Room
+	}
+	return 0
+}
+
+func (x *FightTarget) GetEnemy() uint32 {
+	if x != nil {
+		return x.Enemy
+	}
+	return 0
+}
+
+// The basic attack (design 1.4): client intent plus what the screen
+// predicted. The server judges reach at seen_tick + seen_offset_ms (the
+// instant the screen drew, capped rewind) and answers with exactly one
+// FightSwingResult.
+//
+// swing_counter is one sequence per socket, shared with PresenceAbility
+// casts (FightCast): it starts at 0 and wraps modulo 2^32 (protobuf-es throws on 2^32,
+// so the client wraps with (n + 1) >>> 0). One crit roll per swing or cast,
+// shared by every enemy it hits.
+//
+// tool: a tool was in hand. It changes damage only (the kit's tool fraction)
+// and is always a slash, a mage's included. predicted: the enemies the
+// screen hit, so the server can confirm or refuse each one. A bolt names
+// none, because it lands after it is sent; its result comes when the
+// server's bolt hits or its life ends.
 type FightSwing struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Kind          FightSwingKind         `protobuf:"varint,1,opt,name=kind,proto3,enum=glimway.v2.FightSwingKind" json:"kind,omitempty"`
@@ -1775,13 +1850,16 @@ type FightSwing struct {
 	Facing        *FightFacing           `protobuf:"bytes,4,opt,name=facing,proto3" json:"facing,omitempty"`
 	SwingCounter  uint32                 `protobuf:"varint,5,opt,name=swing_counter,json=swingCounter,proto3" json:"swing_counter,omitempty"`
 	SeenTick      uint32                 `protobuf:"varint,6,opt,name=seen_tick,json=seenTick,proto3" json:"seen_tick,omitempty"`
+	SeenOffsetMs  uint32                 `protobuf:"varint,7,opt,name=seen_offset_ms,json=seenOffsetMs,proto3" json:"seen_offset_ms,omitempty"`
+	Tool          bool                   `protobuf:"varint,8,opt,name=tool,proto3" json:"tool,omitempty"`
+	Predicted     []*FightTarget         `protobuf:"bytes,9,rep,name=predicted,proto3" json:"predicted,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *FightSwing) Reset() {
 	*x = FightSwing{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[19]
+	mi := &file_glimway_v2_presence_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1793,7 +1871,7 @@ func (x *FightSwing) String() string {
 func (*FightSwing) ProtoMessage() {}
 
 func (x *FightSwing) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[19]
+	mi := &file_glimway_v2_presence_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1806,7 +1884,7 @@ func (x *FightSwing) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FightSwing.ProtoReflect.Descriptor instead.
 func (*FightSwing) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{19}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *FightSwing) GetKind() FightSwingKind {
@@ -1851,27 +1929,138 @@ func (x *FightSwing) GetSeenTick() uint32 {
 	return 0
 }
 
-// A changed enemy is a full row, never a patch with ambiguous zero fields.
-// Kind/camp/max_hp make joins and spawn deltas self-contained. Positions
-// are world pixels, rounded by the sim. HP may be fractional after damage.
+func (x *FightSwing) GetSeenOffsetMs() uint32 {
+	if x != nil {
+		return x.SeenOffsetMs
+	}
+	return 0
+}
+
+func (x *FightSwing) GetTool() bool {
+	if x != nil {
+		return x.Tool
+	}
+	return false
+}
+
+func (x *FightSwing) GetPredicted() []*FightTarget {
+	if x != nil {
+		return x.Predicted
+	}
+	return nil
+}
+
+// A cast's part in a fight: the instant the caster drew, the facing it aimed
+// along, a swing_counter from the same sequence as FightSwing (so its crit
+// comes from the same seed), and the enemies the screen hit. The room answers
+// with one FightSwingResult keyed by that counter. A Fingersnap bolt, like a
+// basic one, predicts none.
+type FightCast struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SeenTick      uint32                 `protobuf:"varint,1,opt,name=seen_tick,json=seenTick,proto3" json:"seen_tick,omitempty"`
+	SeenOffsetMs  uint32                 `protobuf:"varint,2,opt,name=seen_offset_ms,json=seenOffsetMs,proto3" json:"seen_offset_ms,omitempty"`
+	Facing        *FightFacing           `protobuf:"bytes,3,opt,name=facing,proto3" json:"facing,omitempty"`
+	SwingCounter  uint32                 `protobuf:"varint,4,opt,name=swing_counter,json=swingCounter,proto3" json:"swing_counter,omitempty"`
+	Predicted     []*FightTarget         `protobuf:"bytes,5,rep,name=predicted,proto3" json:"predicted,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FightCast) Reset() {
+	*x = FightCast{}
+	mi := &file_glimway_v2_presence_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FightCast) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FightCast) ProtoMessage() {}
+
+func (x *FightCast) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v2_presence_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FightCast.ProtoReflect.Descriptor instead.
+func (*FightCast) Descriptor() ([]byte, []int) {
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *FightCast) GetSeenTick() uint32 {
+	if x != nil {
+		return x.SeenTick
+	}
+	return 0
+}
+
+func (x *FightCast) GetSeenOffsetMs() uint32 {
+	if x != nil {
+		return x.SeenOffsetMs
+	}
+	return 0
+}
+
+func (x *FightCast) GetFacing() *FightFacing {
+	if x != nil {
+		return x.Facing
+	}
+	return nil
+}
+
+func (x *FightCast) GetSwingCounter() uint32 {
+	if x != nil {
+		return x.SwingCounter
+	}
+	return 0
+}
+
+func (x *FightCast) GetPredicted() []*FightTarget {
+	if x != nil {
+		return x.Predicted
+	}
+	return nil
+}
+
+// A whole enemy, in a join or as it spawns. Positions are world pixels,
+// rounded by the sim. HP may be fractional after damage. state_tick is the
+// tick the current state began, so a client that joins mid-wind-up still
+// plays the telegraph and the aim lock on time (rules.FightAimLocked and
+// fightAimLocked count from it). Facing is a quantised angle: 256ths of a
+// turn from +x towards +y (screen down), so 64 faces down the screen.
+//
+// id is stable for the enemy's life and unique in its world and epoch: the
+// camp's generated entity id (camp:<cx>:<cy>:<n>, which names its chunk)
+// and the enemy's slot. Claims and logs use it; the wire uses the index.
 type FightEnemy struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	X             int32                  `protobuf:"zigzag32,2,opt,name=x,proto3" json:"x,omitempty"`
-	Y             int32                  `protobuf:"zigzag32,3,opt,name=y,proto3" json:"y,omitempty"`
-	State         FightEnemyState        `protobuf:"varint,4,opt,name=state,proto3,enum=glimway.v2.FightEnemyState" json:"state,omitempty"`
-	Hp            float64                `protobuf:"fixed64,5,opt,name=hp,proto3" json:"hp,omitempty"`
-	Facing        *FightFacing           `protobuf:"bytes,6,opt,name=facing,proto3" json:"facing,omitempty"`
-	Kind          FightEnemyKind         `protobuf:"varint,7,opt,name=kind,proto3,enum=glimway.v2.FightEnemyKind" json:"kind,omitempty"`
-	CampId        string                 `protobuf:"bytes,8,opt,name=camp_id,json=campId,proto3" json:"camp_id,omitempty"`
-	MaxHp         float64                `protobuf:"fixed64,9,opt,name=max_hp,json=maxHp,proto3" json:"max_hp,omitempty"`
+	Enemy         uint32                 `protobuf:"varint,1,opt,name=enemy,proto3" json:"enemy,omitempty"`
+	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	Kind          FightEnemyKind         `protobuf:"varint,3,opt,name=kind,proto3,enum=glimway.v2.FightEnemyKind" json:"kind,omitempty"`
+	CampId        string                 `protobuf:"bytes,4,opt,name=camp_id,json=campId,proto3" json:"camp_id,omitempty"`
+	MaxHp         float64                `protobuf:"fixed64,5,opt,name=max_hp,json=maxHp,proto3" json:"max_hp,omitempty"`
+	X             int32                  `protobuf:"zigzag32,6,opt,name=x,proto3" json:"x,omitempty"`
+	Y             int32                  `protobuf:"zigzag32,7,opt,name=y,proto3" json:"y,omitempty"`
+	State         FightEnemyState        `protobuf:"varint,8,opt,name=state,proto3,enum=glimway.v2.FightEnemyState" json:"state,omitempty"`
+	StateTick     uint32                 `protobuf:"varint,9,opt,name=state_tick,json=stateTick,proto3" json:"state_tick,omitempty"`
+	Hp            float64                `protobuf:"fixed64,10,opt,name=hp,proto3" json:"hp,omitempty"`
+	Facing        uint32                 `protobuf:"varint,11,opt,name=facing,proto3" json:"facing,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *FightEnemy) Reset() {
 	*x = FightEnemy{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[20]
+	mi := &file_glimway_v2_presence_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1883,7 +2072,7 @@ func (x *FightEnemy) String() string {
 func (*FightEnemy) ProtoMessage() {}
 
 func (x *FightEnemy) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[20]
+	mi := &file_glimway_v2_presence_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1896,7 +2085,14 @@ func (x *FightEnemy) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FightEnemy.ProtoReflect.Descriptor instead.
 func (*FightEnemy) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{20}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *FightEnemy) GetEnemy() uint32 {
+	if x != nil {
+		return x.Enemy
+	}
+	return 0
 }
 
 func (x *FightEnemy) GetId() string {
@@ -1904,41 +2100,6 @@ func (x *FightEnemy) GetId() string {
 		return x.Id
 	}
 	return ""
-}
-
-func (x *FightEnemy) GetX() int32 {
-	if x != nil {
-		return x.X
-	}
-	return 0
-}
-
-func (x *FightEnemy) GetY() int32 {
-	if x != nil {
-		return x.Y
-	}
-	return 0
-}
-
-func (x *FightEnemy) GetState() FightEnemyState {
-	if x != nil {
-		return x.State
-	}
-	return FightEnemyState_FIGHT_ENEMY_STATE_UNSPECIFIED
-}
-
-func (x *FightEnemy) GetHp() float64 {
-	if x != nil {
-		return x.Hp
-	}
-	return 0
-}
-
-func (x *FightEnemy) GetFacing() *FightFacing {
-	if x != nil {
-		return x.Facing
-	}
-	return nil
 }
 
 func (x *FightEnemy) GetKind() FightEnemyKind {
@@ -1962,20 +2123,159 @@ func (x *FightEnemy) GetMaxHp() float64 {
 	return 0
 }
 
+func (x *FightEnemy) GetX() int32 {
+	if x != nil {
+		return x.X
+	}
+	return 0
+}
+
+func (x *FightEnemy) GetY() int32 {
+	if x != nil {
+		return x.Y
+	}
+	return 0
+}
+
+func (x *FightEnemy) GetState() FightEnemyState {
+	if x != nil {
+		return x.State
+	}
+	return FightEnemyState_FIGHT_ENEMY_STATE_UNSPECIFIED
+}
+
+func (x *FightEnemy) GetStateTick() uint32 {
+	if x != nil {
+		return x.StateTick
+	}
+	return 0
+}
+
+func (x *FightEnemy) GetHp() float64 {
+	if x != nil {
+		return x.Hp
+	}
+	return 0
+}
+
+func (x *FightEnemy) GetFacing() uint32 {
+	if x != nil {
+		return x.Facing
+	}
+	return 0
+}
+
+// What changed about one enemy since the last delta: an absent field didn't
+// change. A new state always comes with the tick it began.
+type FightEnemyPatch struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Enemy         uint32                 `protobuf:"varint,1,opt,name=enemy,proto3" json:"enemy,omitempty"`
+	X             *int32                 `protobuf:"zigzag32,2,opt,name=x,proto3,oneof" json:"x,omitempty"`
+	Y             *int32                 `protobuf:"zigzag32,3,opt,name=y,proto3,oneof" json:"y,omitempty"`
+	State         *FightEnemyState       `protobuf:"varint,4,opt,name=state,proto3,enum=glimway.v2.FightEnemyState,oneof" json:"state,omitempty"`
+	StateTick     *uint32                `protobuf:"varint,5,opt,name=state_tick,json=stateTick,proto3,oneof" json:"state_tick,omitempty"`
+	Hp            *float64               `protobuf:"fixed64,6,opt,name=hp,proto3,oneof" json:"hp,omitempty"`
+	Facing        *uint32                `protobuf:"varint,7,opt,name=facing,proto3,oneof" json:"facing,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FightEnemyPatch) Reset() {
+	*x = FightEnemyPatch{}
+	mi := &file_glimway_v2_presence_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FightEnemyPatch) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FightEnemyPatch) ProtoMessage() {}
+
+func (x *FightEnemyPatch) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v2_presence_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FightEnemyPatch.ProtoReflect.Descriptor instead.
+func (*FightEnemyPatch) Descriptor() ([]byte, []int) {
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *FightEnemyPatch) GetEnemy() uint32 {
+	if x != nil {
+		return x.Enemy
+	}
+	return 0
+}
+
+func (x *FightEnemyPatch) GetX() int32 {
+	if x != nil && x.X != nil {
+		return *x.X
+	}
+	return 0
+}
+
+func (x *FightEnemyPatch) GetY() int32 {
+	if x != nil && x.Y != nil {
+		return *x.Y
+	}
+	return 0
+}
+
+func (x *FightEnemyPatch) GetState() FightEnemyState {
+	if x != nil && x.State != nil {
+		return *x.State
+	}
+	return FightEnemyState_FIGHT_ENEMY_STATE_UNSPECIFIED
+}
+
+func (x *FightEnemyPatch) GetStateTick() uint32 {
+	if x != nil && x.StateTick != nil {
+		return *x.StateTick
+	}
+	return 0
+}
+
+func (x *FightEnemyPatch) GetHp() float64 {
+	if x != nil && x.Hp != nil {
+		return *x.Hp
+	}
+	return 0
+}
+
+func (x *FightEnemyPatch) GetFacing() uint32 {
+	if x != nil && x.Facing != nil {
+		return *x.Facing
+	}
+	return 0
+}
+
+// Sent when a room enters a client's 3x3 or wakes. Patches build on it, so a
+// client that misses a delta (a dropped frame, a reconnect) needs a new join.
+// crit_seed is this socket's, the same in every room, and never zero.
 type FightJoin struct {
-	state   protoimpl.MessageState `protogen:"open.v1"`
-	RoomKey *FightRoomKey          `protobuf:"bytes,1,opt,name=room_key,json=roomKey,proto3" json:"room_key,omitempty"`
-	Tick    uint32                 `protobuf:"varint,2,opt,name=tick,proto3" json:"tick,omitempty"`
-	Enemies []*FightEnemy          `protobuf:"bytes,3,rep,name=enemies,proto3" json:"enemies,omitempty"`
-	// A player's seed stays stable across visible rooms for this socket.
-	CritSeed      uint32 `protobuf:"fixed32,4,opt,name=crit_seed,json=critSeed,proto3" json:"crit_seed,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RoomKey       *FightRoomKey          `protobuf:"bytes,1,opt,name=room_key,json=roomKey,proto3" json:"room_key,omitempty"`
+	Room          uint32                 `protobuf:"varint,2,opt,name=room,proto3" json:"room,omitempty"`
+	Tick          uint32                 `protobuf:"varint,3,opt,name=tick,proto3" json:"tick,omitempty"`
+	Enemies       []*FightEnemy          `protobuf:"bytes,4,rep,name=enemies,proto3" json:"enemies,omitempty"`
+	CritSeed      uint32                 `protobuf:"fixed32,5,opt,name=crit_seed,json=critSeed,proto3" json:"crit_seed,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *FightJoin) Reset() {
 	*x = FightJoin{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[21]
+	mi := &file_glimway_v2_presence_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1987,7 +2287,7 @@ func (x *FightJoin) String() string {
 func (*FightJoin) ProtoMessage() {}
 
 func (x *FightJoin) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[21]
+	mi := &file_glimway_v2_presence_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2000,7 +2300,7 @@ func (x *FightJoin) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FightJoin.ProtoReflect.Descriptor instead.
 func (*FightJoin) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{21}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *FightJoin) GetRoomKey() *FightRoomKey {
@@ -2008,6 +2308,13 @@ func (x *FightJoin) GetRoomKey() *FightRoomKey {
 		return x.RoomKey
 	}
 	return nil
+}
+
+func (x *FightJoin) GetRoom() uint32 {
+	if x != nil {
+		return x.Room
+	}
+	return 0
 }
 
 func (x *FightJoin) GetTick() uint32 {
@@ -2031,18 +2338,21 @@ func (x *FightJoin) GetCritSeed() uint32 {
 	return 0
 }
 
+// The room's changes at one tick, only when something changed (design 1.7).
 type FightDelta struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	RoomKey       *FightRoomKey          `protobuf:"bytes,1,opt,name=room_key,json=roomKey,proto3" json:"room_key,omitempty"`
+	Room          uint32                 `protobuf:"varint,1,opt,name=room,proto3" json:"room,omitempty"`
 	Tick          uint32                 `protobuf:"varint,2,opt,name=tick,proto3" json:"tick,omitempty"`
-	Enemies       []*FightEnemy          `protobuf:"bytes,3,rep,name=enemies,proto3" json:"enemies,omitempty"`
+	Changed       []*FightEnemyPatch     `protobuf:"bytes,3,rep,name=changed,proto3" json:"changed,omitempty"`
+	Spawned       []*FightEnemy          `protobuf:"bytes,4,rep,name=spawned,proto3" json:"spawned,omitempty"`
+	Removed       []uint32               `protobuf:"varint,5,rep,packed,name=removed,proto3" json:"removed,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *FightDelta) Reset() {
 	*x = FightDelta{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[22]
+	mi := &file_glimway_v2_presence_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2054,7 +2364,7 @@ func (x *FightDelta) String() string {
 func (*FightDelta) ProtoMessage() {}
 
 func (x *FightDelta) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[22]
+	mi := &file_glimway_v2_presence_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2067,14 +2377,14 @@ func (x *FightDelta) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FightDelta.ProtoReflect.Descriptor instead.
 func (*FightDelta) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{22}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{25}
 }
 
-func (x *FightDelta) GetRoomKey() *FightRoomKey {
+func (x *FightDelta) GetRoom() uint32 {
 	if x != nil {
-		return x.RoomKey
+		return x.Room
 	}
-	return nil
+	return 0
 }
 
 func (x *FightDelta) GetTick() uint32 {
@@ -2084,30 +2394,46 @@ func (x *FightDelta) GetTick() uint32 {
 	return 0
 }
 
-func (x *FightDelta) GetEnemies() []*FightEnemy {
+func (x *FightDelta) GetChanged() []*FightEnemyPatch {
 	if x != nil {
-		return x.Enemies
+		return x.Changed
 	}
 	return nil
 }
 
+func (x *FightDelta) GetSpawned() []*FightEnemy {
+	if x != nil {
+		return x.Spawned
+	}
+	return nil
+}
+
+func (x *FightDelta) GetRemoved() []uint32 {
+	if x != nil {
+		return x.Removed
+	}
+	return nil
+}
+
+// A moment to play. tick plus offset_ms is when it began on the world grid,
+// so a late frame still plays a whole telegraph; an aim lock carries the
+// exact lock time. Events are hints for effects: the rows are the truth.
+// target is an account id or an Echo decoy id.
 type FightEvent struct {
-	state   protoimpl.MessageState `protogen:"open.v1"`
-	RoomKey *FightRoomKey          `protobuf:"bytes,1,opt,name=room_key,json=roomKey,proto3" json:"room_key,omitempty"`
-	Tick    uint32                 `protobuf:"varint,2,opt,name=tick,proto3" json:"tick,omitempty"`
-	Kind    FightEventKind         `protobuf:"varint,3,opt,name=kind,proto3,enum=glimway.v2.FightEventKind" json:"kind,omitempty"`
-	// Empty only for room closed; target is an account or Echo decoy id.
-	EnemyId string  `protobuf:"bytes,4,opt,name=enemy_id,json=enemyId,proto3" json:"enemy_id,omitempty"`
-	Target  *string `protobuf:"bytes,5,opt,name=target,proto3,oneof" json:"target,omitempty"`
-	// Unix milliseconds, from the injected server clock (safe integer).
-	ServerStartTime float64 `protobuf:"fixed64,6,opt,name=server_start_time,json=serverStartTime,proto3" json:"server_start_time,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Room          uint32                 `protobuf:"varint,1,opt,name=room,proto3" json:"room,omitempty"`
+	Tick          uint32                 `protobuf:"varint,2,opt,name=tick,proto3" json:"tick,omitempty"`
+	OffsetMs      uint32                 `protobuf:"varint,3,opt,name=offset_ms,json=offsetMs,proto3" json:"offset_ms,omitempty"`
+	Kind          FightEventKind         `protobuf:"varint,4,opt,name=kind,proto3,enum=glimway.v2.FightEventKind" json:"kind,omitempty"`
+	Enemy         *uint32                `protobuf:"varint,5,opt,name=enemy,proto3,oneof" json:"enemy,omitempty"`
+	Target        *string                `protobuf:"bytes,6,opt,name=target,proto3,oneof" json:"target,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *FightEvent) Reset() {
 	*x = FightEvent{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[23]
+	mi := &file_glimway_v2_presence_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2119,7 +2445,7 @@ func (x *FightEvent) String() string {
 func (*FightEvent) ProtoMessage() {}
 
 func (x *FightEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[23]
+	mi := &file_glimway_v2_presence_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2132,19 +2458,26 @@ func (x *FightEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FightEvent.ProtoReflect.Descriptor instead.
 func (*FightEvent) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{23}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{26}
 }
 
-func (x *FightEvent) GetRoomKey() *FightRoomKey {
+func (x *FightEvent) GetRoom() uint32 {
 	if x != nil {
-		return x.RoomKey
+		return x.Room
 	}
-	return nil
+	return 0
 }
 
 func (x *FightEvent) GetTick() uint32 {
 	if x != nil {
 		return x.Tick
+	}
+	return 0
+}
+
+func (x *FightEvent) GetOffsetMs() uint32 {
+	if x != nil {
+		return x.OffsetMs
 	}
 	return 0
 }
@@ -2156,11 +2489,11 @@ func (x *FightEvent) GetKind() FightEventKind {
 	return FightEventKind_FIGHT_EVENT_KIND_UNSPECIFIED
 }
 
-func (x *FightEvent) GetEnemyId() string {
-	if x != nil {
-		return x.EnemyId
+func (x *FightEvent) GetEnemy() uint32 {
+	if x != nil && x.Enemy != nil {
+		return *x.Enemy
 	}
-	return ""
+	return 0
 }
 
 func (x *FightEvent) GetTarget() string {
@@ -2170,40 +2503,33 @@ func (x *FightEvent) GetTarget() string {
 	return ""
 }
 
-func (x *FightEvent) GetServerStartTime() float64 {
-	if x != nil {
-		return x.ServerStartTime
-	}
-	return 0
-}
-
-type FightHit struct {
-	state        protoimpl.MessageState `protogen:"open.v1"`
-	SwingCounter uint32                 `protobuf:"varint,1,opt,name=swing_counter,json=swingCounter,proto3" json:"swing_counter,omitempty"`
-	EnemyId      string                 `protobuf:"bytes,2,opt,name=enemy_id,json=enemyId,proto3" json:"enemy_id,omitempty"`
-	Damage       float64                `protobuf:"fixed64,3,opt,name=damage,proto3" json:"damage,omitempty"`
-	Crit         bool                   `protobuf:"varint,4,opt,name=crit,proto3" json:"crit,omitempty"`
-	// Unspecified means confirmed. Refusals carry zero damage, never crit.
-	RefusedReason FightRefusedReason `protobuf:"varint,5,opt,name=refused_reason,json=refusedReason,proto3,enum=glimway.v2.FightRefusedReason" json:"refused_reason,omitempty"`
+// One enemy's part in a swing's result. Unspecified confirms the hit, with
+// the damage dealt (crit and stun included); a refusal deals nothing.
+type FightHitRow struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Room          uint32                 `protobuf:"varint,1,opt,name=room,proto3" json:"room,omitempty"`
+	Enemy         uint32                 `protobuf:"varint,2,opt,name=enemy,proto3" json:"enemy,omitempty"`
+	Damage        float64                `protobuf:"fixed64,3,opt,name=damage,proto3" json:"damage,omitempty"`
+	RefusedReason FightRefusedReason     `protobuf:"varint,4,opt,name=refused_reason,json=refusedReason,proto3,enum=glimway.v2.FightRefusedReason" json:"refused_reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *FightHit) Reset() {
-	*x = FightHit{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[24]
+func (x *FightHitRow) Reset() {
+	*x = FightHitRow{}
+	mi := &file_glimway_v2_presence_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *FightHit) String() string {
+func (x *FightHitRow) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*FightHit) ProtoMessage() {}
+func (*FightHitRow) ProtoMessage() {}
 
-func (x *FightHit) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[24]
+func (x *FightHitRow) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v2_presence_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2214,44 +2540,111 @@ func (x *FightHit) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use FightHit.ProtoReflect.Descriptor instead.
-func (*FightHit) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{24}
+// Deprecated: Use FightHitRow.ProtoReflect.Descriptor instead.
+func (*FightHitRow) Descriptor() ([]byte, []int) {
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{27}
 }
 
-func (x *FightHit) GetSwingCounter() uint32 {
+func (x *FightHitRow) GetRoom() uint32 {
 	if x != nil {
-		return x.SwingCounter
+		return x.Room
 	}
 	return 0
 }
 
-func (x *FightHit) GetEnemyId() string {
+func (x *FightHitRow) GetEnemy() uint32 {
 	if x != nil {
-		return x.EnemyId
+		return x.Enemy
 	}
-	return ""
+	return 0
 }
 
-func (x *FightHit) GetDamage() float64 {
+func (x *FightHitRow) GetDamage() float64 {
 	if x != nil {
 		return x.Damage
 	}
 	return 0
 }
 
-func (x *FightHit) GetCrit() bool {
+func (x *FightHitRow) GetRefusedReason() FightRefusedReason {
+	if x != nil {
+		return x.RefusedReason
+	}
+	return FightRefusedReason_FIGHT_REFUSED_REASON_UNSPECIFIED
+}
+
+// Exactly one per swing or cast, to the swinger, keyed by its counter, even
+// when it reached several rooms (the hub gathers their rows). There is a row
+// for every enemy the client predicted, confirmed or refused, and for every
+// other enemy the server hit. No rows and no refusal: the swing hit nothing.
+// crit is the swing's roll; a basic bolt never crits (as today), so it is
+// false for one.
+type FightSwingResult struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	SwingCounter  uint32                 `protobuf:"varint,1,opt,name=swing_counter,json=swingCounter,proto3" json:"swing_counter,omitempty"`
+	Crit          bool                   `protobuf:"varint,2,opt,name=crit,proto3" json:"crit,omitempty"`
+	RefusedReason FightRefusedReason     `protobuf:"varint,3,opt,name=refused_reason,json=refusedReason,proto3,enum=glimway.v2.FightRefusedReason" json:"refused_reason,omitempty"`
+	Hits          []*FightHitRow         `protobuf:"bytes,4,rep,name=hits,proto3" json:"hits,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *FightSwingResult) Reset() {
+	*x = FightSwingResult{}
+	mi := &file_glimway_v2_presence_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *FightSwingResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*FightSwingResult) ProtoMessage() {}
+
+func (x *FightSwingResult) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v2_presence_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use FightSwingResult.ProtoReflect.Descriptor instead.
+func (*FightSwingResult) Descriptor() ([]byte, []int) {
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *FightSwingResult) GetSwingCounter() uint32 {
+	if x != nil {
+		return x.SwingCounter
+	}
+	return 0
+}
+
+func (x *FightSwingResult) GetCrit() bool {
 	if x != nil {
 		return x.Crit
 	}
 	return false
 }
 
-func (x *FightHit) GetRefusedReason() FightRefusedReason {
+func (x *FightSwingResult) GetRefusedReason() FightRefusedReason {
 	if x != nil {
 		return x.RefusedReason
 	}
 	return FightRefusedReason_FIGHT_REFUSED_REASON_UNSPECIFIED
+}
+
+func (x *FightSwingResult) GetHits() []*FightHitRow {
+	if x != nil {
+		return x.Hits
+	}
+	return nil
 }
 
 var File_glimway_v2_presence_proto protoreflect.FileDescriptor
@@ -2259,7 +2652,7 @@ var File_glimway_v2_presence_proto protoreflect.FileDescriptor
 const file_glimway_v2_presence_proto_rawDesc = "" +
 	"\n" +
 	"\x19glimway/v2/presence.proto\x12\n" +
-	"glimway.v2\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\"\xbd\a\n" +
+	"glimway.v2\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1egoogle/protobuf/wrappers.proto\"\xd6\a\n" +
 	"\x0fPresenceMessage\x12.\n" +
 	"\x04auth\x18\x01 \x01(\v2\x18.glimway.v2.PresenceAuthH\x00R\x04auth\x12.\n" +
 	"\x04join\x18\x02 \x01(\v2\x18.glimway.v2.PresenceJoinH\x00R\x04join\x120\n" +
@@ -2281,8 +2674,8 @@ const file_glimway_v2_presence_proto_rawDesc = "" +
 	"\vfight_delta\x18\x0f \x01(\v2\x16.glimway.v2.FightDeltaH\x00R\n" +
 	"fightDelta\x129\n" +
 	"\vfight_event\x18\x10 \x01(\v2\x16.glimway.v2.FightEventH\x00R\n" +
-	"fightEvent\x123\n" +
-	"\tfight_hit\x18\x11 \x01(\v2\x14.glimway.v2.FightHitH\x00R\bfightHitB\a\n" +
+	"fightEvent\x12L\n" +
+	"\x12fight_swing_result\x18\x11 \x01(\v2\x1c.glimway.v2.FightSwingResultH\x00R\x10fightSwingResultB\a\n" +
 	"\x05event\"$\n" +
 	"\fPresenceAuth\x12\x14\n" +
 	"\x05lease\x18\x01 \x01(\tR\x05lease\"\x13\n" +
@@ -2303,7 +2696,7 @@ const file_glimway_v2_presence_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\"\n" +
 	"\n" +
 	"account_id\x18\x02 \x01(\tH\x00R\taccountId\x88\x01\x01B\r\n" +
-	"\v_account_id\"\xdd\x01\n" +
+	"\v_account_id\"\xe9\x01\n" +
 	"\x0fPresenceAbility\x12\x18\n" +
 	"\aability\x18\x01 \x01(\tR\aability\x12\f\n" +
 	"\x01x\x18\x02 \x01(\x01R\x01x\x12\f\n" +
@@ -2311,12 +2704,11 @@ const file_glimway_v2_presence_proto_rawDesc = "" +
 	"\n" +
 	"account_id\x18\x04 \x01(\tH\x00R\taccountId\x88\x01\x01\x12\"\n" +
 	"\n" +
-	"pulse_heal\x18\x05 \x01(\x01H\x01R\tpulseHeal\x88\x01\x01\x12 \n" +
-	"\tseen_tick\x18\x06 \x01(\rH\x02R\bseenTick\x88\x01\x01B\r\n" +
+	"pulse_heal\x18\x05 \x01(\x01H\x01R\tpulseHeal\x88\x01\x01\x120\n" +
+	"\x05fight\x18\x06 \x01(\v2\x15.glimway.v2.FightCastH\x02R\x05fight\x88\x01\x01B\r\n" +
 	"\v_account_idB\r\n" +
-	"\v_pulse_healB\f\n" +
-	"\n" +
-	"_seen_tick\"i\n" +
+	"\v_pulse_healB\b\n" +
+	"\x06_fight\"i\n" +
 	"\x14PresenceAvatarChange\x12\x1d\n" +
 	"\n" +
 	"account_id\x18\x01 \x01(\tR\taccountId\x122\n" +
@@ -2400,7 +2792,10 @@ const file_glimway_v2_presence_proto_rawDesc = "" +
 	"\vFightFacing\x12%\n" +
 	"\x01x\x18\x01 \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x00\x00\xf0?)\x00\x00\x00\x00\x00\x00\xf0\xbfR\x01x\x12%\n" +
 	"\x01y\x18\x02 \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x00\x00\xf0?)\x00\x00\x00\x00\x00\x00\xf0\xbfR\x01y:\x93\x01\xbaH\x8f\x01\x1a\x8c\x01\n" +
-	"\ffight.facing\x12\x1cfacing must be a unit vector\x1a^this.x * this.x + this.y * this.y >= 0.999999 && this.x * this.x + this.y * this.y <= 1.000001\"\x91\x02\n" +
+	"\ffight.facing\x12\x1cfacing must be a unit vector\x1a^this.x * this.x + this.y * this.y >= 0.999999 && this.x * this.x + this.y * this.y <= 1.000001\"@\n" +
+	"\vFightTarget\x12\x1b\n" +
+	"\x04room\x18\x01 \x01(\rB\a\xbaH\x04*\x02 \x00R\x04room\x12\x14\n" +
+	"\x05enemy\x18\x02 \x01(\rR\x05enemy\"\xe5\x05\n" +
 	"\n" +
 	"FightSwing\x12:\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x1a.glimway.v2.FightSwingKindB\n" +
@@ -2409,49 +2804,98 @@ const file_glimway_v2_presence_proto_rawDesc = "" +
 	"\x01y\x18\x03 \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\xc0\xff\xff\xff\xdfA)\x00\x00\x00\x00\x00\x00\xe0\xc1R\x01y\x127\n" +
 	"\x06facing\x18\x04 \x01(\v2\x17.glimway.v2.FightFacingB\x06\xbaH\x03\xc8\x01\x01R\x06facing\x12#\n" +
 	"\rswing_counter\x18\x05 \x01(\rR\fswingCounter\x12\x1b\n" +
-	"\tseen_tick\x18\x06 \x01(\rR\bseenTick\"\xb2\x03\n" +
+	"\tseen_tick\x18\x06 \x01(\rR\bseenTick\x12-\n" +
+	"\x0eseen_offset_ms\x18\a \x01(\rB\a\xbaH\x04*\x02\x18cR\fseenOffsetMs\x12\x12\n" +
+	"\x04tool\x18\b \x01(\bR\x04tool\x12?\n" +
+	"\tpredicted\x18\t \x03(\v2\x17.glimway.v2.FightTargetB\b\xbaH\x05\x92\x01\x02\x10\x10R\tpredicted:\xcd\x02\xbaH\xc9\x02\x1aI\n" +
+	"\x10fight.swing_tool\x12\x17a tool swing is a slash\x1a\x1c!this.tool || this.kind == 1\x1a[\n" +
+	"\x10fight.swing_bolt\x12\x1aa bolt predicts no targets\x1a+this.kind != 2 || size(this.predicted) == 0\x1a\x9e\x01\n" +
+	"\x16fight.predicted_unique\x12 predicted targets must be unique\x1abthis.predicted.all(a, size(this.predicted.filter(b, b.room == a.room && b.enemy == a.enemy)) == 1)\"\x9e\x03\n" +
+	"\tFightCast\x12\x1b\n" +
+	"\tseen_tick\x18\x01 \x01(\rR\bseenTick\x12-\n" +
+	"\x0eseen_offset_ms\x18\x02 \x01(\rB\a\xbaH\x04*\x02\x18cR\fseenOffsetMs\x127\n" +
+	"\x06facing\x18\x03 \x01(\v2\x17.glimway.v2.FightFacingB\x06\xbaH\x03\xc8\x01\x01R\x06facing\x12#\n" +
+	"\rswing_counter\x18\x04 \x01(\rR\fswingCounter\x12?\n" +
+	"\tpredicted\x18\x05 \x03(\v2\x17.glimway.v2.FightTargetB\b\xbaH\x05\x92\x01\x02\x10\x10R\tpredicted:\xa5\x01\xbaH\xa1\x01\x1a\x9e\x01\n" +
+	"\x16fight.predicted_unique\x12 predicted targets must be unique\x1abthis.predicted.all(a, size(this.predicted.filter(b, b.room == a.room && b.enemy == a.enemy)) == 1)\"\xd0\x03\n" +
 	"\n" +
-	"FightEnemy\x12\x17\n" +
-	"\x02id\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x02id\x12\f\n" +
-	"\x01x\x18\x02 \x01(\x11R\x01x\x12\f\n" +
-	"\x01y\x18\x03 \x01(\x11R\x01y\x12=\n" +
-	"\x05state\x18\x04 \x01(\x0e2\x1b.glimway.v2.FightEnemyStateB\n" +
-	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x05state\x12'\n" +
-	"\x02hp\x18\x05 \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x80\x84.A)\x00\x00\x00\x00\x00\x00\x00\x00R\x02hp\x127\n" +
-	"\x06facing\x18\x06 \x01(\v2\x17.glimway.v2.FightFacingB\x06\xbaH\x03\xc8\x01\x01R\x06facing\x12:\n" +
-	"\x04kind\x18\a \x01(\x0e2\x1a.glimway.v2.FightEnemyKindB\n" +
+	"FightEnemy\x12\x14\n" +
+	"\x05enemy\x18\x01 \x01(\rR\x05enemy\x12\x17\n" +
+	"\x02id\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x02id\x12:\n" +
+	"\x04kind\x18\x03 \x01(\x0e2\x1a.glimway.v2.FightEnemyKindB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04kind\x12 \n" +
-	"\acamp_id\x18\b \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x06campId\x12.\n" +
-	"\x06max_hp\x18\t \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x80\x84.A!\x00\x00\x00\x00\x00\x00\x00\x00R\x05maxHp:@\xbaH=\x1a;\n" +
-	"\bfight.hp\x12\x17hp cannot exceed max_hp\x1a\x16this.hp <= this.max_hp\"\xab\x01\n" +
+	"\acamp_id\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x06campId\x12.\n" +
+	"\x06max_hp\x18\x05 \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x80\x84.A!\x00\x00\x00\x00\x00\x00\x00\x00R\x05maxHp\x12\f\n" +
+	"\x01x\x18\x06 \x01(\x11R\x01x\x12\f\n" +
+	"\x01y\x18\a \x01(\x11R\x01y\x12=\n" +
+	"\x05state\x18\b \x01(\x0e2\x1b.glimway.v2.FightEnemyStateB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x05state\x12\x1d\n" +
+	"\n" +
+	"state_tick\x18\t \x01(\rR\tstateTick\x12'\n" +
+	"\x02hp\x18\n" +
+	" \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x80\x84.A)\x00\x00\x00\x00\x00\x00\x00\x00R\x02hp\x12 \n" +
+	"\x06facing\x18\v \x01(\rB\b\xbaH\x05*\x03\x18\xff\x01R\x06facing:@\xbaH=\x1a;\n" +
+	"\bfight.hp\x12\x17hp cannot exceed max_hp\x1a\x16this.hp <= this.max_hp\"\xb3\x04\n" +
+	"\x0fFightEnemyPatch\x12\x14\n" +
+	"\x05enemy\x18\x01 \x01(\rR\x05enemy\x12\x11\n" +
+	"\x01x\x18\x02 \x01(\x11H\x00R\x01x\x88\x01\x01\x12\x11\n" +
+	"\x01y\x18\x03 \x01(\x11H\x01R\x01y\x88\x01\x01\x12B\n" +
+	"\x05state\x18\x04 \x01(\x0e2\x1b.glimway.v2.FightEnemyStateB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00H\x02R\x05state\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"state_tick\x18\x05 \x01(\rH\x03R\tstateTick\x88\x01\x01\x12,\n" +
+	"\x02hp\x18\x06 \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x80\x84.A)\x00\x00\x00\x00\x00\x00\x00\x00H\x04R\x02hp\x88\x01\x01\x12%\n" +
+	"\x06facing\x18\a \x01(\rB\b\xbaH\x05*\x03\x18\xff\x01H\x05R\x06facing\x88\x01\x01:\xef\x01\xbaH\xeb\x01\x1ab\n" +
+	"\x11fight.patch_state\x12$state and state_tick change together\x1a'has(this.state) == has(this.state_tick)\x1a\x84\x01\n" +
+	"\x14fight.patch_nonempty\x12\x19a patch changes something\x1aQhas(this.x) || has(this.y) || has(this.state) || has(this.hp) || has(this.facing)B\x04\n" +
+	"\x02_xB\x04\n" +
+	"\x02_yB\b\n" +
+	"\x06_stateB\r\n" +
+	"\v_state_tickB\x05\n" +
+	"\x03_hpB\t\n" +
+	"\a_facing\"\xea\x02\n" +
 	"\tFightJoin\x12;\n" +
-	"\broom_key\x18\x01 \x01(\v2\x18.glimway.v2.FightRoomKeyB\x06\xbaH\x03\xc8\x01\x01R\aroomKey\x12\x12\n" +
-	"\x04tick\x18\x02 \x01(\rR\x04tick\x120\n" +
-	"\aenemies\x18\x03 \x03(\v2\x16.glimway.v2.FightEnemyR\aenemies\x12\x1b\n" +
-	"\tcrit_seed\x18\x04 \x01(\aR\bcritSeed\"\x99\x01\n" +
+	"\broom_key\x18\x01 \x01(\v2\x18.glimway.v2.FightRoomKeyB\x06\xbaH\x03\xc8\x01\x01R\aroomKey\x12\x1b\n" +
+	"\x04room\x18\x02 \x01(\rB\a\xbaH\x04*\x02 \x00R\x04room\x12\x12\n" +
+	"\x04tick\x18\x03 \x01(\rR\x04tick\x120\n" +
+	"\aenemies\x18\x04 \x03(\v2\x16.glimway.v2.FightEnemyR\aenemies\x12'\n" +
+	"\tcrit_seed\x18\x05 \x01(\aB\n" +
+	"\xbaH\aJ\x05=\x00\x00\x00\x00R\bcritSeed:\x93\x01\xbaH\x8f\x01\x1a\x8c\x01\n" +
+	"\x11fight.join_unique\x12*enemy indices and ids are unique in a room\x1aKthis.enemies.map(e, e.enemy).unique() && this.enemies.map(e, e.id).unique()\"\xcf\x02\n" +
 	"\n" +
-	"FightDelta\x12;\n" +
-	"\broom_key\x18\x01 \x01(\v2\x18.glimway.v2.FightRoomKeyB\x06\xbaH\x03\xc8\x01\x01R\aroomKey\x12\x12\n" +
-	"\x04tick\x18\x02 \x01(\rR\x04tick\x12:\n" +
-	"\aenemies\x18\x03 \x03(\v2\x16.glimway.v2.FightEnemyB\b\xbaH\x05\x92\x01\x02\b\x01R\aenemies\"\xc0\x03\n" +
+	"FightDelta\x12\x1b\n" +
+	"\x04room\x18\x01 \x01(\rB\a\xbaH\x04*\x02 \x00R\x04room\x12\x12\n" +
+	"\x04tick\x18\x02 \x01(\rR\x04tick\x125\n" +
+	"\achanged\x18\x03 \x03(\v2\x1b.glimway.v2.FightEnemyPatchR\achanged\x120\n" +
+	"\aspawned\x18\x04 \x03(\v2\x16.glimway.v2.FightEnemyR\aspawned\x12\x18\n" +
+	"\aremoved\x18\x05 \x03(\rR\aremoved:\x8c\x01\xbaH\x88\x01\x1a\x85\x01\n" +
+	"\x14fight.delta_nonempty\x12+a delta changes, spawns or removes an enemy\x1a@size(this.changed) + size(this.spawned) + size(this.removed) > 0\"\x80\x03\n" +
 	"\n" +
-	"FightEvent\x12;\n" +
-	"\broom_key\x18\x01 \x01(\v2\x18.glimway.v2.FightRoomKeyB\x06\xbaH\x03\xc8\x01\x01R\aroomKey\x12\x12\n" +
-	"\x04tick\x18\x02 \x01(\rR\x04tick\x12:\n" +
-	"\x04kind\x18\x03 \x01(\x0e2\x1a.glimway.v2.FightEventKindB\n" +
+	"FightEvent\x12\x1b\n" +
+	"\x04room\x18\x01 \x01(\rB\a\xbaH\x04*\x02 \x00R\x04room\x12\x12\n" +
+	"\x04tick\x18\x02 \x01(\rR\x04tick\x12$\n" +
+	"\toffset_ms\x18\x03 \x01(\rB\a\xbaH\x04*\x02\x18cR\boffsetMs\x12:\n" +
+	"\x04kind\x18\x04 \x01(\x0e2\x1a.glimway.v2.FightEventKindB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04kind\x12\x19\n" +
-	"\benemy_id\x18\x04 \x01(\tR\aenemyId\x12$\n" +
-	"\x06target\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x10\x01H\x00R\x06target\x88\x01\x01\x12C\n" +
-	"\x11server_start_time\x18\x06 \x01(\x01B\x17\xbaH\x14\x12\x12\x19\xff\xff\xff\xff\xff\xff?C)\x00\x00\x00\x00\x00\x00\x00\x00R\x0fserverStartTime:\x93\x01\xbaH\x8f\x01\x1a\x8c\x01\n" +
-	"\x11fight.event_enemy\x127room closed has no enemy; other events require an enemy\x1a>this.kind == 5 ? this.enemy_id == '' : size(this.enemy_id) > 0B\t\n" +
-	"\a_target\"\xfa\x02\n" +
-	"\bFightHit\x12#\n" +
-	"\rswing_counter\x18\x01 \x01(\rR\fswingCounter\x12\"\n" +
-	"\benemy_id\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\aenemyId\x12/\n" +
-	"\x06damage\x18\x03 \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x80\x84.A)\x00\x00\x00\x00\x00\x00\x00\x00R\x06damage\x12\x12\n" +
-	"\x04crit\x18\x04 \x01(\bR\x04crit\x12O\n" +
-	"\x0erefused_reason\x18\x05 \x01(\x0e2\x1e.glimway.v2.FightRefusedReasonB\b\xbaH\x05\x82\x01\x02\x10\x01R\rrefusedReason:\x8e\x01\xbaH\x8a\x01\x1a\x87\x01\n" +
-	"\x14fight.refused_damage\x12/a refused hit deals no damage and is not a crit\x1a>this.refused_reason == 0 || (this.damage == 0.0 && !this.crit)*i\n" +
+	"\x05enemy\x18\x05 \x01(\rH\x00R\x05enemy\x88\x01\x01\x12$\n" +
+	"\x06target\x18\x06 \x01(\tB\a\xbaH\x04r\x02\x10\x01H\x01R\x06target\x88\x01\x01:\x88\x01\xbaH\x84\x01\x1a\x81\x01\n" +
+	"\x11fight.event_enemy\x127room closed has no enemy; other events require an enemy\x1a3this.kind == 5 ? !has(this.enemy) : has(this.enemy)B\b\n" +
+	"\x06_enemyB\t\n" +
+	"\a_target\"\xe2\x03\n" +
+	"\vFightHitRow\x12\x1b\n" +
+	"\x04room\x18\x01 \x01(\rB\a\xbaH\x04*\x02 \x00R\x04room\x12\x14\n" +
+	"\x05enemy\x18\x02 \x01(\rR\x05enemy\x12/\n" +
+	"\x06damage\x18\x03 \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x80\x84.A)\x00\x00\x00\x00\x00\x00\x00\x00R\x06damage\x12O\n" +
+	"\x0erefused_reason\x18\x04 \x01(\x0e2\x1e.glimway.v2.FightRefusedReasonB\b\xbaH\x05\x82\x01\x02\x10\x01R\rrefusedReason:\x9d\x02\xbaH\x99\x02\x1a\x8d\x01\n" +
+	"\x10fight.row_damage\x126a confirmed row deals damage; a refused row deals none\x1aAthis.refused_reason == 0 ? this.damage > 0.0 : this.damage == 0.0\x1a\x86\x01\n" +
+	"\x10fight.row_reason\x12<cooldown and stale counter refuse the whole swing, not a row\x1a4this.refused_reason != 3 && this.refused_reason != 5\"\x81\x04\n" +
+	"\x10FightSwingResult\x12#\n" +
+	"\rswing_counter\x18\x01 \x01(\rR\fswingCounter\x12\x12\n" +
+	"\x04crit\x18\x02 \x01(\bR\x04crit\x12O\n" +
+	"\x0erefused_reason\x18\x03 \x01(\x0e2\x1e.glimway.v2.FightRefusedReasonB\b\xbaH\x05\x82\x01\x02\x10\x01R\rrefusedReason\x125\n" +
+	"\x04hits\x18\x04 \x03(\v2\x17.glimway.v2.FightHitRowB\b\xbaH\x05\x92\x01\x02\x10@R\x04hits:\xab\x02\xbaH\xa7\x02\x1a\xa0\x01\n" +
+	"\x13fight.result_reason\x127a swing is refused only for cooldown or a stale counter\x1aPthis.refused_reason == 0 || this.refused_reason == 3 || this.refused_reason == 5\x1a\x81\x01\n" +
+	"\x14fight.result_refused\x12'a refused swing has no rows and no crit\x1a@this.refused_reason == 0 || (size(this.hits) == 0 && !this.crit)*i\n" +
 	"\x0eFightSwingKind\x12 \n" +
 	"\x1cFIGHT_SWING_KIND_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16FIGHT_SWING_KIND_SLASH\x10\x01\x12\x19\n" +
@@ -2474,13 +2918,14 @@ const file_glimway_v2_presence_proto_rawDesc = "" +
 	"\x19FIGHT_EVENT_KIND_AIM_LOCK\x10\x02\x12\x1a\n" +
 	"\x16FIGHT_EVENT_KIND_DEATH\x10\x03\x12\x1a\n" +
 	"\x16FIGHT_EVENT_KIND_SPAWN\x10\x04\x12 \n" +
-	"\x1cFIGHT_EVENT_KIND_ROOM_CLOSED\x10\x05*\xd3\x01\n" +
+	"\x1cFIGHT_EVENT_KIND_ROOM_CLOSED\x10\x05*\xfb\x01\n" +
 	"\x12FightRefusedReason\x12$\n" +
 	" FIGHT_REFUSED_REASON_UNSPECIFIED\x10\x00\x12%\n" +
 	"!FIGHT_REFUSED_REASON_ALREADY_DEAD\x10\x01\x12%\n" +
 	"!FIGHT_REFUSED_REASON_OUT_OF_REACH\x10\x02\x12!\n" +
 	"\x1dFIGHT_REFUSED_REASON_COOLDOWN\x10\x03\x12&\n" +
-	"\"FIGHT_REFUSED_REASON_UNKNOWN_ENEMY\x10\x04B1Z/glimway/server/internal/gen/glimway/v2;contractb\x06proto3"
+	"\"FIGHT_REFUSED_REASON_UNKNOWN_ENEMY\x10\x04\x12&\n" +
+	"\"FIGHT_REFUSED_REASON_STALE_COUNTER\x10\x05B1Z/glimway/server/internal/gen/glimway/v2;contractb\x06proto3"
 
 var (
 	file_glimway_v2_presence_proto_rawDescOnce sync.Once
@@ -2495,7 +2940,7 @@ func file_glimway_v2_presence_proto_rawDescGZIP() []byte {
 }
 
 var file_glimway_v2_presence_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_glimway_v2_presence_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
+var file_glimway_v2_presence_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
 var file_glimway_v2_presence_proto_goTypes = []any{
 	(FightSwingKind)(0),            // 0: glimway.v2.FightSwingKind
 	(FightEnemyKind)(0),            // 1: glimway.v2.FightEnemyKind
@@ -2521,16 +2966,20 @@ var file_glimway_v2_presence_proto_goTypes = []any{
 	(*PresenceAppearance)(nil),     // 21: glimway.v2.PresenceAppearance
 	(*FightRoomKey)(nil),           // 22: glimway.v2.FightRoomKey
 	(*FightFacing)(nil),            // 23: glimway.v2.FightFacing
-	(*FightSwing)(nil),             // 24: glimway.v2.FightSwing
-	(*FightEnemy)(nil),             // 25: glimway.v2.FightEnemy
-	(*FightJoin)(nil),              // 26: glimway.v2.FightJoin
-	(*FightDelta)(nil),             // 27: glimway.v2.FightDelta
-	(*FightEvent)(nil),             // 28: glimway.v2.FightEvent
-	(*FightHit)(nil),               // 29: glimway.v2.FightHit
-	nil,                            // 30: glimway.v2.PresenceAvatar.EquippedEntry
-	nil,                            // 31: glimway.v2.PresenceAvatar.CostumeEntry
-	(*wrapperspb.StringValue)(nil), // 32: google.protobuf.StringValue
-	(*structpb.Value)(nil),         // 33: google.protobuf.Value
+	(*FightTarget)(nil),            // 24: glimway.v2.FightTarget
+	(*FightSwing)(nil),             // 25: glimway.v2.FightSwing
+	(*FightCast)(nil),              // 26: glimway.v2.FightCast
+	(*FightEnemy)(nil),             // 27: glimway.v2.FightEnemy
+	(*FightEnemyPatch)(nil),        // 28: glimway.v2.FightEnemyPatch
+	(*FightJoin)(nil),              // 29: glimway.v2.FightJoin
+	(*FightDelta)(nil),             // 30: glimway.v2.FightDelta
+	(*FightEvent)(nil),             // 31: glimway.v2.FightEvent
+	(*FightHitRow)(nil),            // 32: glimway.v2.FightHitRow
+	(*FightSwingResult)(nil),       // 33: glimway.v2.FightSwingResult
+	nil,                            // 34: glimway.v2.PresenceAvatar.EquippedEntry
+	nil,                            // 35: glimway.v2.PresenceAvatar.CostumeEntry
+	(*wrapperspb.StringValue)(nil), // 36: google.protobuf.StringValue
+	(*structpb.Value)(nil),         // 37: google.protobuf.Value
 }
 var file_glimway_v2_presence_proto_depIdxs = []int32{
 	6,  // 0: glimway.v2.PresenceMessage.auth:type_name -> glimway.v2.PresenceAuth
@@ -2545,41 +2994,46 @@ var file_glimway_v2_presence_proto_depIdxs = []int32{
 	16, // 9: glimway.v2.PresenceMessage.witness:type_name -> glimway.v2.PresenceWitness
 	13, // 10: glimway.v2.PresenceMessage.ability:type_name -> glimway.v2.PresenceAbility
 	14, // 11: glimway.v2.PresenceMessage.avatar_change:type_name -> glimway.v2.PresenceAvatarChange
-	24, // 12: glimway.v2.PresenceMessage.fight_swing:type_name -> glimway.v2.FightSwing
-	26, // 13: glimway.v2.PresenceMessage.fight_join:type_name -> glimway.v2.FightJoin
-	27, // 14: glimway.v2.PresenceMessage.fight_delta:type_name -> glimway.v2.FightDelta
-	28, // 15: glimway.v2.PresenceMessage.fight_event:type_name -> glimway.v2.FightEvent
-	29, // 16: glimway.v2.PresenceMessage.fight_hit:type_name -> glimway.v2.FightHit
+	25, // 12: glimway.v2.PresenceMessage.fight_swing:type_name -> glimway.v2.FightSwing
+	29, // 13: glimway.v2.PresenceMessage.fight_join:type_name -> glimway.v2.FightJoin
+	30, // 14: glimway.v2.PresenceMessage.fight_delta:type_name -> glimway.v2.FightDelta
+	31, // 15: glimway.v2.PresenceMessage.fight_event:type_name -> glimway.v2.FightEvent
+	33, // 16: glimway.v2.PresenceMessage.fight_swing_result:type_name -> glimway.v2.FightSwingResult
 	19, // 17: glimway.v2.PresenceJoin.player:type_name -> glimway.v2.PresencePlayer
 	19, // 18: glimway.v2.PresenceRoom.players:type_name -> glimway.v2.PresencePlayer
-	20, // 19: glimway.v2.PresenceAvatarChange.avatar:type_name -> glimway.v2.PresenceAvatar
-	17, // 20: glimway.v2.PresencePosition.facing:type_name -> glimway.v2.PresenceFacing
-	20, // 21: glimway.v2.PresencePlayer.avatar:type_name -> glimway.v2.PresenceAvatar
-	18, // 22: glimway.v2.PresencePlayer.pos:type_name -> glimway.v2.PresencePosition
-	21, // 23: glimway.v2.PresenceAvatar.appearance:type_name -> glimway.v2.PresenceAppearance
-	30, // 24: glimway.v2.PresenceAvatar.equipped:type_name -> glimway.v2.PresenceAvatar.EquippedEntry
-	31, // 25: glimway.v2.PresenceAvatar.costume:type_name -> glimway.v2.PresenceAvatar.CostumeEntry
-	32, // 26: glimway.v2.PresenceAvatar.selected_pet:type_name -> google.protobuf.StringValue
-	32, // 27: glimway.v2.PresenceAvatar.selected_mount:type_name -> google.protobuf.StringValue
-	0,  // 28: glimway.v2.FightSwing.kind:type_name -> glimway.v2.FightSwingKind
-	23, // 29: glimway.v2.FightSwing.facing:type_name -> glimway.v2.FightFacing
-	2,  // 30: glimway.v2.FightEnemy.state:type_name -> glimway.v2.FightEnemyState
-	23, // 31: glimway.v2.FightEnemy.facing:type_name -> glimway.v2.FightFacing
-	1,  // 32: glimway.v2.FightEnemy.kind:type_name -> glimway.v2.FightEnemyKind
-	22, // 33: glimway.v2.FightJoin.room_key:type_name -> glimway.v2.FightRoomKey
-	25, // 34: glimway.v2.FightJoin.enemies:type_name -> glimway.v2.FightEnemy
-	22, // 35: glimway.v2.FightDelta.room_key:type_name -> glimway.v2.FightRoomKey
-	25, // 36: glimway.v2.FightDelta.enemies:type_name -> glimway.v2.FightEnemy
-	22, // 37: glimway.v2.FightEvent.room_key:type_name -> glimway.v2.FightRoomKey
-	3,  // 38: glimway.v2.FightEvent.kind:type_name -> glimway.v2.FightEventKind
-	4,  // 39: glimway.v2.FightHit.refused_reason:type_name -> glimway.v2.FightRefusedReason
-	33, // 40: glimway.v2.PresenceAvatar.EquippedEntry.value:type_name -> google.protobuf.Value
-	33, // 41: glimway.v2.PresenceAvatar.CostumeEntry.value:type_name -> google.protobuf.Value
-	42, // [42:42] is the sub-list for method output_type
-	42, // [42:42] is the sub-list for method input_type
-	42, // [42:42] is the sub-list for extension type_name
-	42, // [42:42] is the sub-list for extension extendee
-	0,  // [0:42] is the sub-list for field type_name
+	26, // 19: glimway.v2.PresenceAbility.fight:type_name -> glimway.v2.FightCast
+	20, // 20: glimway.v2.PresenceAvatarChange.avatar:type_name -> glimway.v2.PresenceAvatar
+	17, // 21: glimway.v2.PresencePosition.facing:type_name -> glimway.v2.PresenceFacing
+	20, // 22: glimway.v2.PresencePlayer.avatar:type_name -> glimway.v2.PresenceAvatar
+	18, // 23: glimway.v2.PresencePlayer.pos:type_name -> glimway.v2.PresencePosition
+	21, // 24: glimway.v2.PresenceAvatar.appearance:type_name -> glimway.v2.PresenceAppearance
+	34, // 25: glimway.v2.PresenceAvatar.equipped:type_name -> glimway.v2.PresenceAvatar.EquippedEntry
+	35, // 26: glimway.v2.PresenceAvatar.costume:type_name -> glimway.v2.PresenceAvatar.CostumeEntry
+	36, // 27: glimway.v2.PresenceAvatar.selected_pet:type_name -> google.protobuf.StringValue
+	36, // 28: glimway.v2.PresenceAvatar.selected_mount:type_name -> google.protobuf.StringValue
+	0,  // 29: glimway.v2.FightSwing.kind:type_name -> glimway.v2.FightSwingKind
+	23, // 30: glimway.v2.FightSwing.facing:type_name -> glimway.v2.FightFacing
+	24, // 31: glimway.v2.FightSwing.predicted:type_name -> glimway.v2.FightTarget
+	23, // 32: glimway.v2.FightCast.facing:type_name -> glimway.v2.FightFacing
+	24, // 33: glimway.v2.FightCast.predicted:type_name -> glimway.v2.FightTarget
+	1,  // 34: glimway.v2.FightEnemy.kind:type_name -> glimway.v2.FightEnemyKind
+	2,  // 35: glimway.v2.FightEnemy.state:type_name -> glimway.v2.FightEnemyState
+	2,  // 36: glimway.v2.FightEnemyPatch.state:type_name -> glimway.v2.FightEnemyState
+	22, // 37: glimway.v2.FightJoin.room_key:type_name -> glimway.v2.FightRoomKey
+	27, // 38: glimway.v2.FightJoin.enemies:type_name -> glimway.v2.FightEnemy
+	28, // 39: glimway.v2.FightDelta.changed:type_name -> glimway.v2.FightEnemyPatch
+	27, // 40: glimway.v2.FightDelta.spawned:type_name -> glimway.v2.FightEnemy
+	3,  // 41: glimway.v2.FightEvent.kind:type_name -> glimway.v2.FightEventKind
+	4,  // 42: glimway.v2.FightHitRow.refused_reason:type_name -> glimway.v2.FightRefusedReason
+	4,  // 43: glimway.v2.FightSwingResult.refused_reason:type_name -> glimway.v2.FightRefusedReason
+	32, // 44: glimway.v2.FightSwingResult.hits:type_name -> glimway.v2.FightHitRow
+	37, // 45: glimway.v2.PresenceAvatar.EquippedEntry.value:type_name -> google.protobuf.Value
+	37, // 46: glimway.v2.PresenceAvatar.CostumeEntry.value:type_name -> google.protobuf.Value
+	47, // [47:47] is the sub-list for method output_type
+	47, // [47:47] is the sub-list for method input_type
+	47, // [47:47] is the sub-list for extension type_name
+	47, // [47:47] is the sub-list for extension extendee
+	0,  // [0:47] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v2_presence_proto_init() }
@@ -2604,20 +3058,21 @@ func file_glimway_v2_presence_proto_init() {
 		(*PresenceMessage_FightJoin)(nil),
 		(*PresenceMessage_FightDelta)(nil),
 		(*PresenceMessage_FightEvent)(nil),
-		(*PresenceMessage_FightHit)(nil),
+		(*PresenceMessage_FightSwingResult)(nil),
 	}
 	file_glimway_v2_presence_proto_msgTypes[7].OneofWrappers = []any{}
 	file_glimway_v2_presence_proto_msgTypes[8].OneofWrappers = []any{}
 	file_glimway_v2_presence_proto_msgTypes[12].OneofWrappers = []any{}
 	file_glimway_v2_presence_proto_msgTypes[13].OneofWrappers = []any{}
 	file_glimway_v2_presence_proto_msgTypes[23].OneofWrappers = []any{}
+	file_glimway_v2_presence_proto_msgTypes[26].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_glimway_v2_presence_proto_rawDesc), len(file_glimway_v2_presence_proto_rawDesc)),
 			NumEnums:      5,
-			NumMessages:   27,
+			NumMessages:   31,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

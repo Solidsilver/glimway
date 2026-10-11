@@ -237,23 +237,51 @@ turning without another debit. Rollback requires the matching client/server pair
 ## Contract 10: shared-fight contract and tuning
 
 Presence appends oneof arms 13–17: `FightSwing`, `FightJoin`, `FightDelta`,
-`FightEvent`, `FightHit`. `PresenceAbility` appends optional `seen_tick = 6`;
-explicit zero is a valid first tick, and legacy local casts omit it until
-fight wiring lands. Existing names and numbers remain in place. Buf passes
-against origin/main and v0.8.0 without accepted breaks. The presence
-subprotocol stays `glimway.presence.v2`; HTTP contract 10 makes old clients
-reload and discards older outbox entries, as contract 9 did.
+`FightEvent`, `FightSwingResult`. `PresenceAbility` appends optional
+`fight = 6`, a `FightCast`: the seen tick and offset, unit facing, swing
+counter and predicted targets, so the room judges a cast like a swing.
+Legacy local casts omit it until fight wiring lands, and the relay strips
+it. Existing names and numbers remain in place.
+Buf passes against origin/main and v0.8.0 without accepted breaks. The
+presence subprotocol stays `glimway.presence.v2`; HTTP contract 10 makes old
+clients reload and discards older outbox entries, as contract 9 did. (A
+socket from an old tab stays open until its next HTTP call: harmless, since
+old clients ignore unknown arms.)
 
-Fight rooms carry `(world, realm, layer, cx, cy, epoch)`, independent of the
-presence visibility label. Enemy positions are signed whole world pixels;
-HP and damage remain fractional. Full enemy rows carry kind, camp id and
-maximum HP so join/spawn state can be drawn without another lookup. Facing
-is a unit vector. Ticks and swing counters are uint32 (tick 0 is the first
-room tick); `crit_seed` is fixed32 and stable for a player across their
-visible rooms during a socket session. Event start times are Unix
-milliseconds. An unspecified refusal reason confirms a hit; refusals have
-zero damage and no crit. Refused HP converges through snapshots. No runtime
-sends or handles the new fight messages in this lane.
+**The clock.** Every room ticks on one world grid: `tick = floor(server Unix
+ms / 100)` as a uint32 that wraps, compared wrap-aware (`int32(a - b)`). One
+tick names the same instant in every room, and a room that wakes again never
+reuses a tick. `seen_offset_ms` and `FightEvent.offset_ms` (0–99) place an
+instant between ticks: a swing or cast says what the screen drew, to the
+millisecond; an event says when it began. `FightEnemy.state_tick` (and a
+patch's, with its state) is when the current state began, so a joiner places
+a wind-up already running. Event start times are on the grid, not Unix ms.
+
+**Room handles and indices.** `FightJoin` carries the room key
+`(world, realm, layer, cx, cy, epoch)`, independent of the presence
+visibility label, and a nonzero uint32 room handle the server gives the room
+when it wakes. Deltas, events and hit rows carry only the handle. Enemies are
+uint32 indices in their room; their stable string ids (camp entity id and
+slot, unique per world and epoch) and kind, camp and maximum HP travel only
+in whole rows, in a join or a delta's `spawned`. A delta's `changed` rows are
+patches with proto3 `optional` fields: absent means unchanged. Positions are
+signed whole world pixels; HP and damage stay fractional; facing is a step of
+256ths of a turn from +x towards +y. Patches build on the join, so a client
+that misses a delta needs a fresh join.
+
+**Swings and results.** `FightSwing` carries kind, position, unit facing,
+the swing counter, the seen tick and offset, `tool` (damage only, always a
+slash) and the enemies the screen predicted it hit (up to 16, none for a
+bolt). The counter is one sequence per socket shared with casts, starting at
+0 and wrapping modulo 2^32; `crit_seed` is fixed32, nonzero and stable for a
+socket across its rooms. The server answers each swing or cast with exactly
+one `FightSwingResult`: the counter, the roll's crit, a swing-level refusal
+(cooldown, stale counter) or rows. Each row names room and enemy and either
+confirms with the damage dealt or refuses (already dead, out of reach,
+unknown enemy) with none. There is a row for every predicted enemy and every
+other enemy hit; no rows and no refusal means the swing hit nothing. A bolt's
+result comes when the server's bolt hits or expires. A basic bolt never
+crits, as today.
 
 `content/enemies.json` supplies existing wisp, beetle, guardian and knockback
 values. `content/combat.json` adds class names/stat selection, classless
@@ -265,10 +293,16 @@ existing damage and cooldown behavior.
 
 `content/vectors/fights.json` fixes the numeric contract for kit damage,
 mitigation, healing, crit chance, tool rounding, stunned vulnerability,
-crit rolls, reach boundaries and wind-up/aim-lock edges. Both languages
-check the committed expected values. `fights-wire.json` fixes binary bytes
-and valid/invalid schema cases; `enemies-loader.json` and
-`combat-loader.json` fix loader refusal rules.
+crit rolls, reach boundaries (with fuzz-found cases where a fused
+multiply-add or a different grouping flips the verdict), the bolt spawn, the
+tick grid and wrap, facing steps, and the tick-based wind-up: the aim locks
+at the last tick that leaves at least `lock` seconds and the attack launches
+at the first tick at or after `windup` (wisp 3 and 5, beetle 5 and 8), so a
+10 Hz telegraph never warns less than today's. Both languages check the
+committed expected values. `fights-wire.json` (written by
+`scripts/fights-wire-vectors.ts`) fixes binary bytes and valid/invalid schema
+cases; `enemies-loader.json` and `combat-loader.json` fix loader refusal
+rules.
 
 Crit prediction uses the Murmur3 uint32 finalizer on `seed XOR swing_counter`:
 XOR with the logical right shift by 16; multiply by `0x85ebca6b`; XOR with
@@ -284,6 +318,9 @@ For slash reach, normalize facing before calling the helper. Inputs are
 sprite feet; the slash centre is `(x + facing.x * slashOffsetX,
 y - originYOffset + facing.y * slashOffsetY)`, and the enemy centre is
 `(enemy.x, enemy.y - enemyYOffset)`. Bolt reach uses the bolt's current
-centre. Both compare squared distance strictly below squared radius. Damage
+centre; a bolt spawns at `(x + facing.x * boltSpawnOffsetX, y -
+originYOffset)`. Both compare squared distance strictly below squared
+radius. Go keeps the TS grouping and wraps each product that meets an add in
+`float64()`, so arm64 can't fuse it into a multiply-add that JS never does. Damage
 rounds a tool's base first (at least 1), applies crit, then stunned
 vulnerability; damage itself is not rounded for display.

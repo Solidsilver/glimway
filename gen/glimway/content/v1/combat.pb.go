@@ -386,6 +386,10 @@ func (x *CombatFormula) GetDecimalPlaces() int32 {
 	return 0
 }
 
+// Hit geometry, in pixels from sprite feet. A bolt spawns
+// bolt_spawn_offset_x ahead along the facing's x and origin_y_offset up,
+// with no y offset from facing (as today). A basic bolt never crits, as
+// today: the counter still advances, and its result's crit is false.
 type CombatAttack struct {
 	state               protoimpl.MessageState `protogen:"open.v1"`
 	SlashRadius         float64                `protobuf:"fixed64,1,opt,name=slash_radius,json=slashRadius,proto3" json:"slash_radius,omitempty"`
@@ -398,6 +402,7 @@ type CombatAttack struct {
 	BoltLifetimeSeconds float64                `protobuf:"fixed64,8,opt,name=bolt_lifetime_seconds,json=boltLifetimeSeconds,proto3" json:"bolt_lifetime_seconds,omitempty"`
 	CritMultiplier      float64                `protobuf:"fixed64,9,opt,name=crit_multiplier,json=critMultiplier,proto3" json:"crit_multiplier,omitempty"`
 	ToolDamageFraction  float64                `protobuf:"fixed64,10,opt,name=tool_damage_fraction,json=toolDamageFraction,proto3" json:"tool_damage_fraction,omitempty"`
+	BoltSpawnOffsetX    float64                `protobuf:"fixed64,11,opt,name=bolt_spawn_offset_x,json=boltSpawnOffsetX,proto3" json:"bolt_spawn_offset_x,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -502,6 +507,13 @@ func (x *CombatAttack) GetToolDamageFraction() float64 {
 	return 0
 }
 
+func (x *CombatAttack) GetBoltSpawnOffsetX() float64 {
+	if x != nil {
+		return x.BoltSpawnOffsetX
+	}
+	return 0
+}
+
 var File_glimway_content_v1_combat_proto protoreflect.FileDescriptor
 
 const file_glimway_content_v1_combat_proto_rawDesc = "" +
@@ -544,7 +556,7 @@ const file_glimway_content_v1_combat_proto_rawDesc = "" +
 	"\x04base\x18\x01 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\x04base\x123\n" +
 	"\rmaximum_bonus\x18\x02 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\fmaximumBonus\x12(\n" +
 	"\ahalfway\x18\x03 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\ahalfway\x12.\n" +
-	"\x0edecimal_places\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02\b\x02R\rdecimalPlaces\"\xc3\x04\n" +
+	"\x0edecimal_places\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02\b\x02R\rdecimalPlaces\"\x82\x05\n" +
 	"\fCombatAttack\x121\n" +
 	"\fslash_radius\x18\x01 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\vslashRadius\x124\n" +
 	"\x0eslash_offset_x\x18\x02 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\fslashOffsetX\x124\n" +
@@ -558,7 +570,8 @@ const file_glimway_content_v1_combat_proto_rawDesc = "" +
 	"\x15bolt_lifetime_seconds\x18\b \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x13boltLifetimeSeconds\x127\n" +
 	"\x0fcrit_multiplier\x18\t \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\xf0?R\x0ecritMultiplier\x12I\n" +
 	"\x14tool_damage_fraction\x18\n" +
-	" \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x00\x00\xf0?!\x00\x00\x00\x00\x00\x00\x00\x00R\x12toolDamageFractionB*Z(glimway/gen/glimway/content/v1;contentv1b\x06proto3"
+	" \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x00\x00\xf0?!\x00\x00\x00\x00\x00\x00\x00\x00R\x12toolDamageFraction\x12=\n" +
+	"\x13bolt_spawn_offset_x\x18\v \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x10boltSpawnOffsetXB*Z(glimway/gen/glimway/content/v1;contentv1b\x06proto3"
 
 var (
 	file_glimway_content_v1_combat_proto_rawDescOnce sync.Once

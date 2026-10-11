@@ -16,6 +16,7 @@ import { walkFactor } from '../../lib/wilds/walk'
 import Phaser from 'phaser'
 import { getCombatKit, type CombatKit, type KitMove } from '../../lib/combat'
 import { COMBAT_TUNING } from '../../lib/combat-timing'
+import { fightBoltSpawn } from '../../lib/fight-math'
 import { CombatField } from '../../lib/combat-moves'
 import { withCharm } from '../../lib/glims'
 import { passiveRegenAllowed } from '../../lib/habitica/sync'
@@ -338,7 +339,8 @@ export class Hero {
     // Mage basic is a ranged bolt (the classless starter keeps its melee
     // slash); every other class strikes in melee reach.
     if (kit.class === 'mage' && !tool) {
-      this.deps.projectiles().spawn(this.sprite.x + dir.x * 10, this.sprite.y - 7, dir, kit.meleeDamage)
+      const at = fightBoltSpawn(this.sprite.x, this.sprite.y, dir.x)
+      this.deps.projectiles().spawn(at.x, at.y, dir, kit.meleeDamage)
       return
     }
     const sx = this.sprite.x + dir.x * COMBAT_TUNING.attack.slashOffsetX
@@ -405,7 +407,8 @@ export class Hero {
     const dir = this.facing.clone().normalize()
     switch (sig.id) {
       case 'fingersnap': {
-        this.deps.projectiles().spawn(this.sprite.x + dir.x * 10, this.sprite.y - 7, dir, kit.signatureDamage)
+        const at = fightBoltSpawn(this.sprite.x, this.sprite.y, dir.x)
+        this.deps.projectiles().spawn(at.x, at.y, dir, kit.signatureDamage)
         break
       }
       case 'cleave': {

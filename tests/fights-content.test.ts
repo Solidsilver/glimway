@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getCombatKit } from '../src/lib/combat.ts';
-import { combatFormula, fightCritRoll, fightCrit, fightDamage, fightReach } from '../src/lib/fight-math.ts';
+import {
+  combatFormula, fightCritRoll, fightCrit, fightDamage, fightReach, fightBoltSpawn, fightTickAt, fightTickDiff,
+  fightWindupTicks, fightAimLocked, fightLaunched, fightFacingFromStep, type FightCampKind,
+} from '../src/lib/fight-math.ts';
 import { COMBAT_TUNING, validateCombat } from '../src/lib/combat-timing.ts';
 import { ENEMY_TUNING, KNOCK, validateEnemies } from '../src/lib/enemies.ts';
 import { FIXTURES_BY_KEY, gearLookupFor } from '../src/lib/habitica/fixtures.ts';
@@ -33,11 +36,32 @@ test('shared damage preserves tool rounding, crit and stunned vulnerability', ()
 test('shared reach uses directional slash offsets, bolt centres and open radius boundaries', () => {
   for (const v of vectors.reach) assert.equal(fightReach(v.kind as 'slash' | 'bolt', v.x, v.y, v.facingX, v.facingY, v.enemyX, v.enemyY), v.hit);
 });
-test('enemy tuning and aim-lock/launch edges match shared vectors', () => {
+test('shared bolt spawn, world tick grid and wrap-aware tick difference', () => {
+  for (const v of vectors.boltSpawn) assert.deepEqual(fightBoltSpawn(v.x, v.y, v.facingX), { x: v.spawnX, y: v.spawnY });
+  for (const v of vectors.ticks) assert.deepEqual(fightTickAt(v.unixMs), { tick: v.tick, offsetMs: v.offsetMs });
+  for (const v of vectors.tickDiff) assert.equal(fightTickDiff(v.a, v.b), v.diff);
+});
+test('facing steps read back within half a step of the facing the sim quantised', () => {
+  for (const v of vectors.facing) {
+    const back = fightFacingFromStep(v.step);
+    assert.ok(Math.abs(Math.hypot(back.x, back.y) - 1) < 1e-12);
+    if (v.x === 0 && v.y === 0) continue;
+    const turn = Math.atan2(back.y, back.x) - Math.atan2(v.y, v.x);
+    const off = Math.abs(Math.atan2(Math.sin(turn), Math.cos(turn)));
+    assert.ok(off <= Math.PI / 256 + 1e-12, `step ${v.step}`);
+  }
+});
+test('enemy tuning and tick-based aim-lock/launch edges match shared vectors', () => {
+  for (const v of vectors.windup) {
+    const kind = v.kind as FightCampKind;
+    assert.deepEqual(fightWindupTicks(kind), { lock: v.lockTick, launch: v.launchTick });
+    // Today's telegraph windows survive the 10 Hz grid.
+    assert.ok((v.launchTick - v.lockTick) / 10 >= ENEMY_TUNING[kind].lock);
+    assert.ok(v.launchTick / 10 >= ENEMY_TUNING[kind].windup);
+  }
   for (const v of vectors.timing) {
-    const tuning = ENEMY_TUNING[v.kind as 'wisp' | 'beetle'];
-    assert.equal(tuning.windup - v.elapsed <= tuning.lock, v.locked);
-    assert.equal(v.elapsed >= tuning.windup, v.launched);
+    assert.equal(fightAimLocked(v.kind as FightCampKind, v.elapsedTicks), v.locked, `${v.kind} ${v.elapsedTicks}`);
+    assert.equal(fightLaunched(v.kind as FightCampKind, v.elapsedTicks), v.launched, `${v.kind} ${v.elapsedTicks}`);
   }
   assert.equal(KNOCK.time, enemiesRaw.knock.time);
   for (const kind of ['wisp', 'beetle', 'guardian'] as const) {

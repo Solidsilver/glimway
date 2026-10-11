@@ -34,11 +34,37 @@ func TestFightSharedVectors(t *testing.T) {
 			X, Y, FacingX, FacingY, EnemyX, EnemyY float64
 			Hit                                    bool
 		}
+		Timing []struct {
+			Kind             string
+			ElapsedTicks     uint32
+			Locked, Launched bool
+		}
+		Windup []struct {
+			Kind                 string
+			LockTick, LaunchTick uint32
+		}
+		Ticks []struct {
+			UnixMs         int64
+			Tick, OffsetMs uint32
+		}
+		TickDiff []struct {
+			A, B uint32
+			Diff int32
+		}
+		BoltSpawn []struct {
+			X, Y, FacingX, SpawnX, SpawnY float64
+		}
+		Facing []struct {
+			X, Y float64
+			Step uint32
+		}
 	}
 	if err := json.Unmarshal(raw, &vectors); err != nil {
 		t.Fatal(err)
 	}
-	if len(vectors.Kit) < 20 || len(vectors.Crit) < 60 || len(vectors.Damage) < 30 || len(vectors.Reach) < 100 {
+	if len(vectors.Kit) < 20 || len(vectors.Crit) < 60 || len(vectors.Damage) < 30 || len(vectors.Reach) < 150 ||
+		len(vectors.Timing) < 15 || len(vectors.Windup) != 2 || len(vectors.Ticks) < 10 || len(vectors.TickDiff) < 10 ||
+		len(vectors.BoltSpawn) < 4 || len(vectors.Facing) < 8 {
 		t.Fatal("insufficient vectors")
 	}
 	c := content.CombatRules
@@ -86,6 +112,39 @@ func TestFightSharedVectors(t *testing.T) {
 	for _, v := range vectors.Reach {
 		if FightReach(v.Kind, v.X, v.Y, v.FacingX, v.FacingY, v.EnemyX, v.EnemyY) != v.Hit {
 			t.Fatal("reach", v)
+		}
+	}
+	for _, v := range vectors.Timing {
+		if FightAimLocked(v.Kind, v.ElapsedTicks) != v.Locked || FightLaunched(v.Kind, v.ElapsedTicks) != v.Launched {
+			t.Fatal("timing", v)
+		}
+	}
+	for _, v := range vectors.Windup {
+		if lock, launch, ok := FightWindupTicks(v.Kind); !ok || lock != v.LockTick || launch != v.LaunchTick {
+			t.Fatal("windup", v, lock, launch)
+		}
+	}
+	if _, _, ok := FightWindupTicks("guardian"); ok || FightAimLocked("guardian", 99) {
+		t.Fatal("a guardian has no server wind-up")
+	}
+	for _, v := range vectors.Ticks {
+		if tick, offset := FightTickAt(v.UnixMs); tick != v.Tick || offset != v.OffsetMs {
+			t.Fatal("tick", v, tick, offset)
+		}
+	}
+	for _, v := range vectors.TickDiff {
+		if FightTickDiff(v.A, v.B) != v.Diff {
+			t.Fatal("tick diff", v)
+		}
+	}
+	for _, v := range vectors.BoltSpawn {
+		if x, y := FightBoltSpawn(v.X, v.Y, v.FacingX); x != v.SpawnX || y != v.SpawnY {
+			t.Fatal("bolt spawn", v, x, y)
+		}
+	}
+	for _, v := range vectors.Facing {
+		if FightFacingStep(v.X, v.Y) != v.Step {
+			t.Fatal("facing", v)
 		}
 	}
 }

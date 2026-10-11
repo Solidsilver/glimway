@@ -334,11 +334,14 @@ func wardPulseOf(m presenceMagic, a *content.Ability) float64 {
 
 // relayedAbility is the cast the room hears (4.5): the sender's account_id
 // and, for a Ward-light, the hub's own pulse_heal; whatever the client put
-// there is dropped. Callers hold h.mu (the caster's magic refreshes under it).
+// there is dropped, and so is the cast's fight part (contract 10): the
+// caster's timing, counter and predictions are for the fight room, not for
+// friends. Callers hold h.mu (the caster's magic refreshes under it).
 func relayedAbility(p *presencePeer, event *contract.PresenceAbility) ([]byte, error) {
 	out := proto.Clone(event).(*contract.PresenceAbility)
 	out.AccountId = proto.String(p.identity.ID)
 	out.PulseHeal = nil
+	out.Fight = nil
 	if a, ok := content.AbilityFor(event.GetAbility()); ok {
 		if pulse := wardPulseOf(p.identity.Magic, a); pulse > 0 {
 			out.PulseHeal = proto.Float64(pulse)

@@ -143,6 +143,34 @@
           "value": "5"
         }
       ]
+    },
+    {
+      "name": "negative-bolt-spawn",
+      "valid": false,
+      "rule": "double.gt",
+      "edits": [
+        {
+          "path": [
+            "attack",
+            "boltSpawnOffsetX"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "missing-bolt-spawn",
+      "valid": false,
+      "edits": [
+        {
+          "path": [
+            "attack",
+            "boltSpawnOffsetX"
+          ],
+          "remove": true
+        }
+      ],
+      "rule": "double.gt"
     }
   ]
 }

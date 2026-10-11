@@ -250,6 +250,11 @@ export declare type CombatFormulaValid = CombatFormula;
 export declare const CombatFormulaSchema: GenMessage<CombatFormula, {validType: CombatFormulaValid}>;
 
 /**
+ * Hit geometry, in pixels from sprite feet. A bolt spawns
+ * bolt_spawn_offset_x ahead along the facing's x and origin_y_offset up,
+ * with no y offset from facing (as today). A basic bolt never crits, as
+ * today: the counter still advances, and its result's crit is false.
+ *
  * @generated from message glimway.content.v1.CombatAttack
  */
 export declare type CombatAttack = Message<"glimway.content.v1.CombatAttack"> & {
@@ -302,6 +307,11 @@ export declare type CombatAttack = Message<"glimway.content.v1.CombatAttack"> & 
    * @generated from field: double tool_damage_fraction = 10;
    */
   toolDamageFraction: number;
+
+  /**
+   * @generated from field: double bolt_spawn_offset_x = 11;
+   */
+  boltSpawnOffsetX: number;
 };
 
 export declare type CombatAttackValid = CombatAttack;

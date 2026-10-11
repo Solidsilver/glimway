@@ -5,16 +5,29 @@ import (
 	"math"
 )
 
+// Float twins of src/lib/fight-math.ts. Go may fuse a*b+c into one
+// multiply-add (arm64 does; amd64 with GOAMD64=v1 doesn't), and JS never
+// does, so every product that meets an add or subtract here is wrapped in
+// float64(), which the Go spec says rounds it and blocks the fusion. Keep the
+// TS grouping too: (y - o) + f*s, not y + (f*s - o). The reach vectors hold
+// boundary cases where either slip flips the verdict.
+//
+// Rounding: Go's Floor(x + 0.5) and JS's Math.round agree except at
+// 0.49999999999999994 (Go 1, JS 0), which no formula here can produce;
+// math.Round is not the twin either (it rounds -2.5 to -3, JS to -2).
+
 // CombatFormula is base + diminishing bonus, rounded as on the client.
 // Keep this operation order; the vectors cover saturation and rounding.
 func CombatFormula(stat, base, maximumBonus, halfway float64, decimalPlaces int32) float64 {
 	scale := math.Pow10(int(decimalPlaces))
-	return math.Floor((base+maximumBonus*(stat/(stat+halfway)))*scale+0.5) / scale
+	value := base + float64(maximumBonus*(stat/(stat+halfway)))
+	return math.Floor(float64(value*scale)+0.5) / scale
 }
 
 // FightCritRoll finalizes seed XOR counter with Murmur3's uint32 mixer.
 // Go uint32 overflow matches Math.imul. One roll per swing/cast, shared
-// by all targets; counters start at zero and wrap modulo 2^32.
+// by all targets; counters start at zero and wrap modulo 2^32. Seeds are
+// never zero: with seed 0 a first swing (counter 0) rolls 0 and always crits.
 func FightCritRoll(seed, swingCounter uint32) float64 {
 	word := seed ^ swingCounter
 	word ^= word >> 16
@@ -33,7 +46,7 @@ func FightDamage(base float64, crit bool, stunnedMultiplier float64, tool bool) 
 	a := content.CombatRules.GetAttack()
 	damage := base
 	if tool {
-		damage = math.Max(1, math.Floor(base*a.GetToolDamageFraction()+0.5))
+		damage = math.Max(1, math.Floor(float64(base*a.GetToolDamageFraction())+0.5))
 	}
 	if crit {
 		damage *= a.GetCritMultiplier()
@@ -48,13 +61,81 @@ func FightReach(kind string, x, y, facingX, facingY, enemyX, enemyY float64) boo
 	sx, sy, radius := x, y, a.GetBoltRadius()
 	switch kind {
 	case "slash":
-		sx += facingX * a.GetSlashOffsetX()
-		sy += -a.GetOriginYOffset() + facingY*a.GetSlashOffsetY()
+		sx = x + float64(facingX*a.GetSlashOffsetX())
+		sy = y - a.GetOriginYOffset() + float64(facingY*a.GetSlashOffsetY())
 		radius = a.GetSlashRadius()
 	case "bolt":
 	default:
 		return false
 	}
 	dx, dy := enemyX-sx, enemyY-a.GetEnemyYOffset()-sy
-	return dx*dx+dy*dy < radius*radius
+	return float64(dx*dx)+float64(dy*dy) < radius*radius
+}
+
+// FightBoltSpawn is where a bolt starts from a caster's feet: ahead along
+// the facing's x only, and up to the hero's centre.
+func FightBoltSpawn(x, y, facingX float64) (float64, float64) {
+	a := content.CombatRules.GetAttack()
+	return x + float64(facingX*a.GetBoltSpawnOffsetX()), y - a.GetOriginYOffset()
+}
+
+// FightTickMs is the world tick (design decision 11): every room ticks on
+// the same grid, tick = floor(server Unix ms / 100) modulo 2^32.
+const FightTickMs = 100
+
+// FightTickAt places a server instant (Unix ms, never negative) on the grid:
+// its tick and the milliseconds past it (0-99).
+func FightTickAt(unixMs int64) (tick, offsetMs uint32) {
+	return uint32(unixMs / FightTickMs), uint32(unixMs % FightTickMs)
+}
+
+// FightTickDiff is a - b across the wrap: positive when a is later. It is
+// right while the two are within about 6.8 years of each other.
+func FightTickDiff(a, b uint32) int32 {
+	return int32(a - b)
+}
+
+// FightWindupTicks is when, counted in whole ticks from the start of a
+// wind-up, the aim locks and the attack launches. The sim ticks at 10 Hz,
+// so it rounds both towards the player: the lock comes at the last tick that
+// leaves at least `lock` seconds, and the launch at the first tick at or
+// after `windup`. A telegraph never gives less warning than today's (wisp:
+// lock at 3, launch at 5; beetle: 5 and 8). Kinds are the camp kinds.
+func FightWindupTicks(kind string) (lock, launch uint32, ok bool) {
+	var windup, locked float64
+	switch kind {
+	case "wisp":
+		windup, locked = content.EnemyRules.GetWisp().GetWindup(), content.EnemyRules.GetWisp().GetLock()
+	case "beetle":
+		windup, locked = content.EnemyRules.GetBeetle().GetWindup(), content.EnemyRules.GetBeetle().GetLock()
+	default:
+		return 0, 0, false
+	}
+	windupMs, lockMs := fightWholeMs(windup), fightWholeMs(locked)
+	return uint32((windupMs - lockMs) / FightTickMs), uint32((windupMs + FightTickMs - 1) / FightTickMs), true
+}
+
+// FightAimLocked: elapsedTicks since the wind-up began (FightTickDiff from
+// the state_tick); false for an unknown kind.
+func FightAimLocked(kind string, elapsedTicks uint32) bool {
+	lock, _, ok := FightWindupTicks(kind)
+	return ok && elapsedTicks >= lock
+}
+func FightLaunched(kind string, elapsedTicks uint32) bool {
+	_, launch, ok := FightWindupTicks(kind)
+	return ok && elapsedTicks >= launch
+}
+
+// fightWholeMs: seconds from content as whole milliseconds, so 0.8 - 0.5
+// can't slip to 0.30000000000000004.
+func fightWholeMs(seconds float64) int64 {
+	return int64(math.Floor(float64(seconds*1000) + 0.5))
+}
+
+// FightFacingStep quantises a facing for the wire (FightEnemy.facing): 256ths
+// of a turn from +x towards +y, rounded to the nearest. (0, 0) faces +x.
+// Only the sim quantises; the client reads steps (fightFacingFromStep).
+func FightFacingStep(x, y float64) uint32 {
+	turns := math.Atan2(y, x) / (2 * math.Pi)
+	return uint32(int64(math.Floor(float64(turns*256)+0.5)) & 255)
 }

@@ -56,6 +56,10 @@ message CombatFormula {
   double halfway = 3 [(buf.validate.field).double.gt = 0];
   int32 decimal_places = 4 [(buf.validate.field).int32.const = 2];
 }
+// Hit geometry, in pixels from sprite feet. A bolt spawns
+// bolt_spawn_offset_x ahead along the facing's x and origin_y_offset up,
+// with no y offset from facing (as today). A basic bolt never crits, as
+// today: the counter still advances, and its result's crit is false.
 message CombatAttack {
   double slash_radius = 1 [(buf.validate.field).double.gt = 0];
   double slash_offset_x = 2 [(buf.validate.field).double.gt = 0];
@@ -67,4 +71,5 @@ message CombatAttack {
   double bolt_lifetime_seconds = 8 [(buf.validate.field).double.gt = 0];
   double crit_multiplier = 9 [(buf.validate.field).double.gte = 1];
   double tool_damage_fraction = 10 [(buf.validate.field).double = {gt: 0, lte: 1}];
+  double bolt_spawn_offset_x = 11 [(buf.validate.field).double.gt = 0];
 }

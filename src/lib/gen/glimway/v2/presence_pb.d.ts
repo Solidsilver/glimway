@@ -118,10 +118,10 @@ export declare type PresenceMessage = Message<"glimway.v2.PresenceMessage"> & {
     case: "fightEvent";
   } | {
     /**
-     * @generated from field: glimway.v2.FightHit fight_hit = 17;
+     * @generated from field: glimway.v2.FightSwingResult fight_swing_result = 17;
      */
-    value: FightHit;
-    case: "fightHit";
+    value: FightSwingResult;
+    case: "fightSwingResult";
   } | { case: undefined; value?: undefined };
 };
 
@@ -232,10 +232,10 @@ export declare type PresenceMessageValid = Message<"glimway.v2.PresenceMessage">
     case: "fightEvent";
   } | {
     /**
-     * @generated from field: glimway.v2.FightHit fight_hit = 17;
+     * @generated from field: glimway.v2.FightSwingResult fight_swing_result = 17;
      */
-    value: FightHitValid;
-    case: "fightHit";
+    value: FightSwingResultValid;
+    case: "fightSwingResult";
   } | { case: undefined; value?: undefined };
 };
 
@@ -390,6 +390,10 @@ export declare const PresenceEmoteSchema: GenMessage<PresenceEmote, {validType: 
  * caster's profile (rules.WardPulseHeal), so a friend's screen mends what the
  * world credits. Whatever a client sends there is overwritten.
  *
+ * Contract 10: fight is what the room needs to judge the cast like a swing
+ * (design 1.6). Legacy casts omit it; the relay strips it, since it is the
+ * caster's own.
+ *
  * @generated from message glimway.v2.PresenceAbility
  */
 export declare type PresenceAbility = Message<"glimway.v2.PresenceAbility"> & {
@@ -419,12 +423,56 @@ export declare type PresenceAbility = Message<"glimway.v2.PresenceAbility"> & {
   pulseHeal?: number | undefined;
 
   /**
-   * @generated from field: optional uint32 seen_tick = 6;
+   * @generated from field: optional glimway.v2.FightCast fight = 6;
    */
-  seenTick?: number | undefined;
+  fight?: FightCast | undefined;
 };
 
-export declare type PresenceAbilityValid = PresenceAbility;
+/**
+ * A combat move cast on screen (design 4.5), so friends see it. The client
+ * sends it without account_id; the hub checks the table and the caster's
+ * class and level, then relays it with account_id filled. For Ward-light the
+ * hub also fills pulse_heal: one pulse of the caster's ward, from the
+ * caster's profile (rules.WardPulseHeal), so a friend's screen mends what the
+ * world credits. Whatever a client sends there is overwritten.
+ *
+ * Contract 10: fight is what the room needs to judge the cast like a swing
+ * (design 1.6). Legacy casts omit it; the relay strips it, since it is the
+ * caster's own.
+ *
+ * @generated from message glimway.v2.PresenceAbility
+ */
+export declare type PresenceAbilityValid = Message<"glimway.v2.PresenceAbility"> & {
+  /**
+   * @generated from field: string ability = 1;
+   */
+  ability: string;
+
+  /**
+   * @generated from field: double x = 2;
+   */
+  x: number;
+
+  /**
+   * @generated from field: double y = 3;
+   */
+  y: number;
+
+  /**
+   * @generated from field: optional string account_id = 4;
+   */
+  accountId?: string | undefined;
+
+  /**
+   * @generated from field: optional double pulse_heal = 5;
+   */
+  pulseHeal?: number | undefined;
+
+  /**
+   * @generated from field: optional glimway.v2.FightCast fight = 6;
+   */
+  fight?: FightCastValid | undefined;
+};
 
 /**
  * Describes the message glimway.v2.PresenceAbility.
@@ -733,8 +781,8 @@ export declare type PresenceAppearanceValid = PresenceAppearance;
 export declare const PresenceAppearanceSchema: GenMessage<PresenceAppearance, {validType: PresenceAppearanceValid}>;
 
 /**
- * Contract 10. Room identity is physical space, separate from presence's
- * visibility label. Epoch is the generated epoch id (including "still").
+ * Room identity is physical space, separate from presence's visibility
+ * label. Epoch is the generated epoch id (including "still").
  *
  * @generated from message glimway.v2.FightRoomKey
  */
@@ -779,8 +827,9 @@ export declare type FightRoomKeyValid = FightRoomKey;
 export declare const FightRoomKeySchema: GenMessage<FightRoomKey, {validType: FightRoomKeyValid}>;
 
 /**
- * Unit facing. Unlike optional legacy PresenceFacing, both zero components
- * are meaningful. Squared length allows normal floating-point roundoff.
+ * Unit facing, for what a client aims. Unlike optional legacy
+ * PresenceFacing, both zero components are meaningful. Squared length
+ * allows normal floating-point roundoff.
  *
  * @generated from message glimway.v2.FightFacing
  */
@@ -805,9 +854,46 @@ export declare type FightFacingValid = FightFacing;
 export declare const FightFacingSchema: GenMessage<FightFacing, {validType: FightFacingValid}>;
 
 /**
- * Client intent only: the server derives targets and damage. Counters are
- * uint32, starting at 0 and wrapping modulo 2^32; one roll per swing/cast,
- * shared by all enemies hit. Tick 0 is valid at wake.
+ * One enemy in one room: a room's handle and the enemy's index in it.
+ *
+ * @generated from message glimway.v2.FightTarget
+ */
+export declare type FightTarget = Message<"glimway.v2.FightTarget"> & {
+  /**
+   * @generated from field: uint32 room = 1;
+   */
+  room: number;
+
+  /**
+   * @generated from field: uint32 enemy = 2;
+   */
+  enemy: number;
+};
+
+export declare type FightTargetValid = FightTarget;
+
+/**
+ * Describes the message glimway.v2.FightTarget.
+ * Use `create(FightTargetSchema)` to create a new message.
+ */
+export declare const FightTargetSchema: GenMessage<FightTarget, {validType: FightTargetValid}>;
+
+/**
+ * The basic attack (design 1.4): client intent plus what the screen
+ * predicted. The server judges reach at seen_tick + seen_offset_ms (the
+ * instant the screen drew, capped rewind) and answers with exactly one
+ * FightSwingResult.
+ *
+ * swing_counter is one sequence per socket, shared with PresenceAbility
+ * casts (FightCast): it starts at 0 and wraps modulo 2^32 (protobuf-es throws on 2^32,
+ * so the client wraps with (n + 1) >>> 0). One crit roll per swing or cast,
+ * shared by every enemy it hits.
+ *
+ * tool: a tool was in hand. It changes damage only (the kit's tool fraction)
+ * and is always a slash, a mage's included. predicted: the enemies the
+ * screen hit, so the server can confirm or refuse each one. A bolt names
+ * none, because it lands after it is sent; its result comes when the
+ * server's bolt hits or its life ends.
  *
  * @generated from message glimway.v2.FightSwing
  */
@@ -841,12 +927,39 @@ export declare type FightSwing = Message<"glimway.v2.FightSwing"> & {
    * @generated from field: uint32 seen_tick = 6;
    */
   seenTick: number;
+
+  /**
+   * @generated from field: uint32 seen_offset_ms = 7;
+   */
+  seenOffsetMs: number;
+
+  /**
+   * @generated from field: bool tool = 8;
+   */
+  tool: boolean;
+
+  /**
+   * @generated from field: repeated glimway.v2.FightTarget predicted = 9;
+   */
+  predicted: FightTarget[];
 };
 
 /**
- * Client intent only: the server derives targets and damage. Counters are
- * uint32, starting at 0 and wrapping modulo 2^32; one roll per swing/cast,
- * shared by all enemies hit. Tick 0 is valid at wake.
+ * The basic attack (design 1.4): client intent plus what the screen
+ * predicted. The server judges reach at seen_tick + seen_offset_ms (the
+ * instant the screen drew, capped rewind) and answers with exactly one
+ * FightSwingResult.
+ *
+ * swing_counter is one sequence per socket, shared with PresenceAbility
+ * casts (FightCast): it starts at 0 and wraps modulo 2^32 (protobuf-es throws on 2^32,
+ * so the client wraps with (n + 1) >>> 0). One crit roll per swing or cast,
+ * shared by every enemy it hits.
+ *
+ * tool: a tool was in hand. It changes damage only (the kit's tool fraction)
+ * and is always a slash, a mage's included. predicted: the enemies the
+ * screen hit, so the server can confirm or refuse each one. A bolt names
+ * none, because it lands after it is sent; its result comes when the
+ * server's bolt hits or its life ends.
  *
  * @generated from message glimway.v2.FightSwing
  */
@@ -880,6 +993,21 @@ export declare type FightSwingValid = Message<"glimway.v2.FightSwing"> & {
    * @generated from field: uint32 seen_tick = 6;
    */
   seenTick: number;
+
+  /**
+   * @generated from field: uint32 seen_offset_ms = 7;
+   */
+  seenOffsetMs: number;
+
+  /**
+   * @generated from field: bool tool = 8;
+   */
+  tool: boolean;
+
+  /**
+   * @generated from field: repeated glimway.v2.FightTarget predicted = 9;
+   */
+  predicted: FightTargetValid[];
 };
 
 /**
@@ -889,112 +1017,155 @@ export declare type FightSwingValid = Message<"glimway.v2.FightSwing"> & {
 export declare const FightSwingSchema: GenMessage<FightSwing, {validType: FightSwingValid}>;
 
 /**
- * A changed enemy is a full row, never a patch with ambiguous zero fields.
- * Kind/camp/max_hp make joins and spawn deltas self-contained. Positions
- * are world pixels, rounded by the sim. HP may be fractional after damage.
+ * A cast's part in a fight: the instant the caster drew, the facing it aimed
+ * along, a swing_counter from the same sequence as FightSwing (so its crit
+ * comes from the same seed), and the enemies the screen hit. The room answers
+ * with one FightSwingResult keyed by that counter. A Fingersnap bolt, like a
+ * basic one, predicts none.
+ *
+ * @generated from message glimway.v2.FightCast
+ */
+export declare type FightCast = Message<"glimway.v2.FightCast"> & {
+  /**
+   * @generated from field: uint32 seen_tick = 1;
+   */
+  seenTick: number;
+
+  /**
+   * @generated from field: uint32 seen_offset_ms = 2;
+   */
+  seenOffsetMs: number;
+
+  /**
+   * @generated from field: glimway.v2.FightFacing facing = 3;
+   */
+  facing?: FightFacing | undefined;
+
+  /**
+   * @generated from field: uint32 swing_counter = 4;
+   */
+  swingCounter: number;
+
+  /**
+   * @generated from field: repeated glimway.v2.FightTarget predicted = 5;
+   */
+  predicted: FightTarget[];
+};
+
+/**
+ * A cast's part in a fight: the instant the caster drew, the facing it aimed
+ * along, a swing_counter from the same sequence as FightSwing (so its crit
+ * comes from the same seed), and the enemies the screen hit. The room answers
+ * with one FightSwingResult keyed by that counter. A Fingersnap bolt, like a
+ * basic one, predicts none.
+ *
+ * @generated from message glimway.v2.FightCast
+ */
+export declare type FightCastValid = Message<"glimway.v2.FightCast"> & {
+  /**
+   * @generated from field: uint32 seen_tick = 1;
+   */
+  seenTick: number;
+
+  /**
+   * @generated from field: uint32 seen_offset_ms = 2;
+   */
+  seenOffsetMs: number;
+
+  /**
+   * @generated from field: glimway.v2.FightFacing facing = 3;
+   */
+  facing: FightFacingValid;
+
+  /**
+   * @generated from field: uint32 swing_counter = 4;
+   */
+  swingCounter: number;
+
+  /**
+   * @generated from field: repeated glimway.v2.FightTarget predicted = 5;
+   */
+  predicted: FightTargetValid[];
+};
+
+/**
+ * Describes the message glimway.v2.FightCast.
+ * Use `create(FightCastSchema)` to create a new message.
+ */
+export declare const FightCastSchema: GenMessage<FightCast, {validType: FightCastValid}>;
+
+/**
+ * A whole enemy, in a join or as it spawns. Positions are world pixels,
+ * rounded by the sim. HP may be fractional after damage. state_tick is the
+ * tick the current state began, so a client that joins mid-wind-up still
+ * plays the telegraph and the aim lock on time (rules.FightAimLocked and
+ * fightAimLocked count from it). Facing is a quantised angle: 256ths of a
+ * turn from +x towards +y (screen down), so 64 faces down the screen.
+ *
+ * id is stable for the enemy's life and unique in its world and epoch: the
+ * camp's generated entity id (camp:<cx>:<cy>:<n>, which names its chunk)
+ * and the enemy's slot. Claims and logs use it; the wire uses the index.
  *
  * @generated from message glimway.v2.FightEnemy
  */
 export declare type FightEnemy = Message<"glimway.v2.FightEnemy"> & {
   /**
-   * @generated from field: string id = 1;
+   * @generated from field: uint32 enemy = 1;
+   */
+  enemy: number;
+
+  /**
+   * @generated from field: string id = 2;
    */
   id: string;
 
   /**
-   * @generated from field: sint32 x = 2;
-   */
-  x: number;
-
-  /**
-   * @generated from field: sint32 y = 3;
-   */
-  y: number;
-
-  /**
-   * @generated from field: glimway.v2.FightEnemyState state = 4;
-   */
-  state: FightEnemyState;
-
-  /**
-   * @generated from field: double hp = 5;
-   */
-  hp: number;
-
-  /**
-   * @generated from field: glimway.v2.FightFacing facing = 6;
-   */
-  facing?: FightFacing | undefined;
-
-  /**
-   * @generated from field: glimway.v2.FightEnemyKind kind = 7;
+   * @generated from field: glimway.v2.FightEnemyKind kind = 3;
    */
   kind: FightEnemyKind;
 
   /**
-   * @generated from field: string camp_id = 8;
+   * @generated from field: string camp_id = 4;
    */
   campId: string;
 
   /**
-   * @generated from field: double max_hp = 9;
+   * @generated from field: double max_hp = 5;
    */
   maxHp: number;
-};
-
-/**
- * A changed enemy is a full row, never a patch with ambiguous zero fields.
- * Kind/camp/max_hp make joins and spawn deltas self-contained. Positions
- * are world pixels, rounded by the sim. HP may be fractional after damage.
- *
- * @generated from message glimway.v2.FightEnemy
- */
-export declare type FightEnemyValid = Message<"glimway.v2.FightEnemy"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
 
   /**
-   * @generated from field: sint32 x = 2;
+   * @generated from field: sint32 x = 6;
    */
   x: number;
 
   /**
-   * @generated from field: sint32 y = 3;
+   * @generated from field: sint32 y = 7;
    */
   y: number;
 
   /**
-   * @generated from field: glimway.v2.FightEnemyState state = 4;
+   * @generated from field: glimway.v2.FightEnemyState state = 8;
    */
   state: FightEnemyState;
 
   /**
-   * @generated from field: double hp = 5;
+   * @generated from field: uint32 state_tick = 9;
+   */
+  stateTick: number;
+
+  /**
+   * @generated from field: double hp = 10;
    */
   hp: number;
 
   /**
-   * @generated from field: glimway.v2.FightFacing facing = 6;
+   * @generated from field: uint32 facing = 11;
    */
-  facing: FightFacingValid;
-
-  /**
-   * @generated from field: glimway.v2.FightEnemyKind kind = 7;
-   */
-  kind: FightEnemyKind;
-
-  /**
-   * @generated from field: string camp_id = 8;
-   */
-  campId: string;
-
-  /**
-   * @generated from field: double max_hp = 9;
-   */
-  maxHp: number;
+  facing: number;
 };
+
+export declare type FightEnemyValid = FightEnemy;
 
 /**
  * Describes the message glimway.v2.FightEnemy.
@@ -1003,6 +1174,61 @@ export declare type FightEnemyValid = Message<"glimway.v2.FightEnemy"> & {
 export declare const FightEnemySchema: GenMessage<FightEnemy, {validType: FightEnemyValid}>;
 
 /**
+ * What changed about one enemy since the last delta: an absent field didn't
+ * change. A new state always comes with the tick it began.
+ *
+ * @generated from message glimway.v2.FightEnemyPatch
+ */
+export declare type FightEnemyPatch = Message<"glimway.v2.FightEnemyPatch"> & {
+  /**
+   * @generated from field: uint32 enemy = 1;
+   */
+  enemy: number;
+
+  /**
+   * @generated from field: optional sint32 x = 2;
+   */
+  x?: number | undefined;
+
+  /**
+   * @generated from field: optional sint32 y = 3;
+   */
+  y?: number | undefined;
+
+  /**
+   * @generated from field: optional glimway.v2.FightEnemyState state = 4;
+   */
+  state?: FightEnemyState | undefined;
+
+  /**
+   * @generated from field: optional uint32 state_tick = 5;
+   */
+  stateTick?: number | undefined;
+
+  /**
+   * @generated from field: optional double hp = 6;
+   */
+  hp?: number | undefined;
+
+  /**
+   * @generated from field: optional uint32 facing = 7;
+   */
+  facing?: number | undefined;
+};
+
+export declare type FightEnemyPatchValid = FightEnemyPatch;
+
+/**
+ * Describes the message glimway.v2.FightEnemyPatch.
+ * Use `create(FightEnemyPatchSchema)` to create a new message.
+ */
+export declare const FightEnemyPatchSchema: GenMessage<FightEnemyPatch, {validType: FightEnemyPatchValid}>;
+
+/**
+ * Sent when a room enters a client's 3x3 or wakes. Patches build on it, so a
+ * client that misses a delta (a dropped frame, a reconnect) needs a new join.
+ * crit_seed is this socket's, the same in every room, and never zero.
+ *
  * @generated from message glimway.v2.FightJoin
  */
 export declare type FightJoin = Message<"glimway.v2.FightJoin"> & {
@@ -1012,24 +1238,31 @@ export declare type FightJoin = Message<"glimway.v2.FightJoin"> & {
   roomKey?: FightRoomKey | undefined;
 
   /**
-   * @generated from field: uint32 tick = 2;
+   * @generated from field: uint32 room = 2;
+   */
+  room: number;
+
+  /**
+   * @generated from field: uint32 tick = 3;
    */
   tick: number;
 
   /**
-   * @generated from field: repeated glimway.v2.FightEnemy enemies = 3;
+   * @generated from field: repeated glimway.v2.FightEnemy enemies = 4;
    */
   enemies: FightEnemy[];
 
   /**
-   * A player's seed stays stable across visible rooms for this socket.
-   *
-   * @generated from field: fixed32 crit_seed = 4;
+   * @generated from field: fixed32 crit_seed = 5;
    */
   critSeed: number;
 };
 
 /**
+ * Sent when a room enters a client's 3x3 or wakes. Patches build on it, so a
+ * client that misses a delta (a dropped frame, a reconnect) needs a new join.
+ * crit_seed is this socket's, the same in every room, and never zero.
+ *
  * @generated from message glimway.v2.FightJoin
  */
 export declare type FightJoinValid = Message<"glimway.v2.FightJoin"> & {
@@ -1039,19 +1272,22 @@ export declare type FightJoinValid = Message<"glimway.v2.FightJoin"> & {
   roomKey: FightRoomKeyValid;
 
   /**
-   * @generated from field: uint32 tick = 2;
+   * @generated from field: uint32 room = 2;
+   */
+  room: number;
+
+  /**
+   * @generated from field: uint32 tick = 3;
    */
   tick: number;
 
   /**
-   * @generated from field: repeated glimway.v2.FightEnemy enemies = 3;
+   * @generated from field: repeated glimway.v2.FightEnemy enemies = 4;
    */
   enemies: FightEnemyValid[];
 
   /**
-   * A player's seed stays stable across visible rooms for this socket.
-   *
-   * @generated from field: fixed32 crit_seed = 4;
+   * @generated from field: fixed32 crit_seed = 5;
    */
   critSeed: number;
 };
@@ -1063,13 +1299,15 @@ export declare type FightJoinValid = Message<"glimway.v2.FightJoin"> & {
 export declare const FightJoinSchema: GenMessage<FightJoin, {validType: FightJoinValid}>;
 
 /**
+ * The room's changes at one tick, only when something changed (design 1.7).
+ *
  * @generated from message glimway.v2.FightDelta
  */
 export declare type FightDelta = Message<"glimway.v2.FightDelta"> & {
   /**
-   * @generated from field: glimway.v2.FightRoomKey room_key = 1;
+   * @generated from field: uint32 room = 1;
    */
-  roomKey?: FightRoomKey | undefined;
+  room: number;
 
   /**
    * @generated from field: uint32 tick = 2;
@@ -1077,30 +1315,22 @@ export declare type FightDelta = Message<"glimway.v2.FightDelta"> & {
   tick: number;
 
   /**
-   * @generated from field: repeated glimway.v2.FightEnemy enemies = 3;
+   * @generated from field: repeated glimway.v2.FightEnemyPatch changed = 3;
    */
-  enemies: FightEnemy[];
+  changed: FightEnemyPatch[];
+
+  /**
+   * @generated from field: repeated glimway.v2.FightEnemy spawned = 4;
+   */
+  spawned: FightEnemy[];
+
+  /**
+   * @generated from field: repeated uint32 removed = 5;
+   */
+  removed: number[];
 };
 
-/**
- * @generated from message glimway.v2.FightDelta
- */
-export declare type FightDeltaValid = Message<"glimway.v2.FightDelta"> & {
-  /**
-   * @generated from field: glimway.v2.FightRoomKey room_key = 1;
-   */
-  roomKey: FightRoomKeyValid;
-
-  /**
-   * @generated from field: uint32 tick = 2;
-   */
-  tick: number;
-
-  /**
-   * @generated from field: repeated glimway.v2.FightEnemy enemies = 3;
-   */
-  enemies: FightEnemyValid[];
-};
+export declare type FightDeltaValid = FightDelta;
 
 /**
  * Describes the message glimway.v2.FightDelta.
@@ -1109,13 +1339,18 @@ export declare type FightDeltaValid = Message<"glimway.v2.FightDelta"> & {
 export declare const FightDeltaSchema: GenMessage<FightDelta, {validType: FightDeltaValid}>;
 
 /**
+ * A moment to play. tick plus offset_ms is when it began on the world grid,
+ * so a late frame still plays a whole telegraph; an aim lock carries the
+ * exact lock time. Events are hints for effects: the rows are the truth.
+ * target is an account id or an Echo decoy id.
+ *
  * @generated from message glimway.v2.FightEvent
  */
 export declare type FightEvent = Message<"glimway.v2.FightEvent"> & {
   /**
-   * @generated from field: glimway.v2.FightRoomKey room_key = 1;
+   * @generated from field: uint32 room = 1;
    */
-  roomKey?: FightRoomKey | undefined;
+  room: number;
 
   /**
    * @generated from field: uint32 tick = 2;
@@ -1123,68 +1358,27 @@ export declare type FightEvent = Message<"glimway.v2.FightEvent"> & {
   tick: number;
 
   /**
-   * @generated from field: glimway.v2.FightEventKind kind = 3;
+   * @generated from field: uint32 offset_ms = 3;
+   */
+  offsetMs: number;
+
+  /**
+   * @generated from field: glimway.v2.FightEventKind kind = 4;
    */
   kind: FightEventKind;
 
   /**
-   * Empty only for room closed; target is an account or Echo decoy id.
-   *
-   * @generated from field: string enemy_id = 4;
+   * @generated from field: optional uint32 enemy = 5;
    */
-  enemyId: string;
+  enemy?: number | undefined;
 
   /**
-   * @generated from field: optional string target = 5;
+   * @generated from field: optional string target = 6;
    */
   target?: string | undefined;
-
-  /**
-   * Unix milliseconds, from the injected server clock (safe integer).
-   *
-   * @generated from field: double server_start_time = 6;
-   */
-  serverStartTime: number;
 };
 
-/**
- * @generated from message glimway.v2.FightEvent
- */
-export declare type FightEventValid = Message<"glimway.v2.FightEvent"> & {
-  /**
-   * @generated from field: glimway.v2.FightRoomKey room_key = 1;
-   */
-  roomKey: FightRoomKeyValid;
-
-  /**
-   * @generated from field: uint32 tick = 2;
-   */
-  tick: number;
-
-  /**
-   * @generated from field: glimway.v2.FightEventKind kind = 3;
-   */
-  kind: FightEventKind;
-
-  /**
-   * Empty only for room closed; target is an account or Echo decoy id.
-   *
-   * @generated from field: string enemy_id = 4;
-   */
-  enemyId: string;
-
-  /**
-   * @generated from field: optional string target = 5;
-   */
-  target?: string | undefined;
-
-  /**
-   * Unix milliseconds, from the injected server clock (safe integer).
-   *
-   * @generated from field: double server_start_time = 6;
-   */
-  serverStartTime: number;
-};
+export declare type FightEventValid = FightEvent;
 
 /**
  * Describes the message glimway.v2.FightEvent.
@@ -1193,18 +1387,21 @@ export declare type FightEventValid = Message<"glimway.v2.FightEvent"> & {
 export declare const FightEventSchema: GenMessage<FightEvent, {validType: FightEventValid}>;
 
 /**
- * @generated from message glimway.v2.FightHit
+ * One enemy's part in a swing's result. Unspecified confirms the hit, with
+ * the damage dealt (crit and stun included); a refusal deals nothing.
+ *
+ * @generated from message glimway.v2.FightHitRow
  */
-export declare type FightHit = Message<"glimway.v2.FightHit"> & {
+export declare type FightHitRow = Message<"glimway.v2.FightHitRow"> & {
   /**
-   * @generated from field: uint32 swing_counter = 1;
+   * @generated from field: uint32 room = 1;
    */
-  swingCounter: number;
+  room: number;
 
   /**
-   * @generated from field: string enemy_id = 2;
+   * @generated from field: uint32 enemy = 2;
    */
-  enemyId: string;
+  enemy: number;
 
   /**
    * @generated from field: double damage = 3;
@@ -1212,25 +1409,58 @@ export declare type FightHit = Message<"glimway.v2.FightHit"> & {
   damage: number;
 
   /**
-   * @generated from field: bool crit = 4;
-   */
-  crit: boolean;
-
-  /**
-   * Unspecified means confirmed. Refusals carry zero damage, never crit.
-   *
-   * @generated from field: glimway.v2.FightRefusedReason refused_reason = 5;
+   * @generated from field: glimway.v2.FightRefusedReason refused_reason = 4;
    */
   refusedReason: FightRefusedReason;
 };
 
-export declare type FightHitValid = FightHit;
+export declare type FightHitRowValid = FightHitRow;
 
 /**
- * Describes the message glimway.v2.FightHit.
- * Use `create(FightHitSchema)` to create a new message.
+ * Describes the message glimway.v2.FightHitRow.
+ * Use `create(FightHitRowSchema)` to create a new message.
  */
-export declare const FightHitSchema: GenMessage<FightHit, {validType: FightHitValid}>;
+export declare const FightHitRowSchema: GenMessage<FightHitRow, {validType: FightHitRowValid}>;
+
+/**
+ * Exactly one per swing or cast, to the swinger, keyed by its counter, even
+ * when it reached several rooms (the hub gathers their rows). There is a row
+ * for every enemy the client predicted, confirmed or refused, and for every
+ * other enemy the server hit. No rows and no refusal: the swing hit nothing.
+ * crit is the swing's roll; a basic bolt never crits (as today), so it is
+ * false for one.
+ *
+ * @generated from message glimway.v2.FightSwingResult
+ */
+export declare type FightSwingResult = Message<"glimway.v2.FightSwingResult"> & {
+  /**
+   * @generated from field: uint32 swing_counter = 1;
+   */
+  swingCounter: number;
+
+  /**
+   * @generated from field: bool crit = 2;
+   */
+  crit: boolean;
+
+  /**
+   * @generated from field: glimway.v2.FightRefusedReason refused_reason = 3;
+   */
+  refusedReason: FightRefusedReason;
+
+  /**
+   * @generated from field: repeated glimway.v2.FightHitRow hits = 4;
+   */
+  hits: FightHitRow[];
+};
+
+export declare type FightSwingResultValid = FightSwingResult;
+
+/**
+ * Describes the message glimway.v2.FightSwingResult.
+ * Use `create(FightSwingResultSchema)` to create a new message.
+ */
+export declare const FightSwingResultSchema: GenMessage<FightSwingResult, {validType: FightSwingResultValid}>;
 
 /**
  * @generated from enum glimway.v2.FightSwingKind
@@ -1368,6 +1598,9 @@ export enum FightEventKind {
 export declare const FightEventKindSchema: GenEnum<FightEventKind>;
 
 /**
+ * Swing-level reasons refuse the whole swing or cast (COOLDOWN,
+ * STALE_COUNTER); the others refuse one row.
+ *
  * @generated from enum glimway.v2.FightRefusedReason
  */
 export enum FightRefusedReason {
@@ -1395,6 +1628,11 @@ export enum FightRefusedReason {
    * @generated from enum value: FIGHT_REFUSED_REASON_UNKNOWN_ENEMY = 4;
    */
   UNKNOWN_ENEMY = 4,
+
+  /**
+   * @generated from enum value: FIGHT_REFUSED_REASON_STALE_COUNTER = 5;
+   */
+  STALE_COUNTER = 5,
 }
 
 /**

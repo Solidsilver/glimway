@@ -66,6 +66,7 @@
     "boltSpeed": 240,
     "boltLifetimeSeconds": 1.2,
     "critMultiplier": 2,
-    "toolDamageFraction": 0.5
+    "toolDamageFraction": 0.5,
+    "boltSpawnOffsetX": 10
   }
 }
