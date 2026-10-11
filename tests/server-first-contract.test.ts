@@ -17,6 +17,7 @@ import { decodeWire } from '../src/lib/api/wire.ts';
 import { decodePlayerState } from '../src/lib/api/state-contract.ts';
 import { FakeOperations, createOperationsApi, decodeEnvelope, decodeMixed } from '../src/lib/api/operations.ts';
 import { ApiError, errorFromResponse, isSettledRefusal, isReloadNeeded, isOutboxClientBug, needsReconciliation } from '../src/lib/api/errors.ts';
+import { NEAR_RADIUS } from '../src/lib/api/near.ts';
 import { decodeChunk, validateChunk, FakeChunks, entityIn, decorAt, PortError } from '../src/lib/api/chunks.ts';
 import { profileFor, earnsXP } from '../src/lib/profile.ts';
 import { createApiClient, claimDeviceId } from '../src/lib/api/client.ts';
@@ -202,4 +203,62 @@ test('the open map contract 8 shapes decode through the facade (open-map.md 2.4,
   for (const [kind, want] of cases) assert.equal(decodeEnvelope(get('glimway.v1.Envelope', kind)).result.case, want, kind);
   const chunk = decodeWire(wilds.WildsChunkSchema, get('glimway.v1.WildsChunk', 'valid-open-map'));
   assert.deepEqual([chunk.cx, chunk.cy, chunk.tier, chunk.land, chunk.places[0]!.id, chunk.sites[0]!.kind], [-3, -7, 3, 'meadow', 'place:-1:-2', wilds.SiteKind.RUMOUR]);
+});
+
+test('the near read refuses a window, ground or way that breaks its contract (review round 1)', async () => {
+  const base = fixtures.find(f => f.name === 'glimway.v1.WildsNearResult' && f.case === 'valid-near')!.json as Record<string, any>;
+  const near = async (edit: (j: Record<string, any>) => void, cx = -2, cy = -4) => {
+    const j = structuredClone(base); edit(j);
+    const fake = new FakeOperations(); fake.responses.set(`/api/wilds/near/${cx}/${cy}`, [j]);
+    return fake.api.near(cx, cy);
+  };
+  // The shipped answer passes, and so does a Tangle chunk on the still epoch.
+  assert.equal((await near(() => {})).radius, NEAR_RADIUS);
+  const tangle = (j: Record<string, any>, epoch: string) => j.ground.push({ chunk: { realm: 'hearthwick', layer: 0, cx: 0, cy: -2 }, epoch, changes: { changes: [] } });
+  assert.equal((await near((j) => tangle(j, 'still-epoch'))).ground.length, 2);
+  const g = (j: Record<string, any>) => j.ground[0];
+  const refusals: [string, (j: Record<string, any>) => void][] = [
+    ['tile past the chunk', (j) => { g(j).changes.changes[0].tx = 24; }],
+    ['row past the chunk', (j) => { g(j).changes.changes[0].ty = 24; }],
+    ['two changes on one tile', (j) => { g(j).changes.changes[1].tx = 3; }],
+    ['past the change limit', (j) => { g(j).changes.changes = Array.from({ length: 577 }, (_, i) => ({ tx: i % 24, ty: Math.floor(i / 24) % 24, change: 'stone', by: 'a', at: 1 })); }],
+    ['unknown change', (j) => { g(j).changes.changes[0].change = 'gold'; }],
+    ['ground in another realm', (j) => { g(j).chunk.realm = 'elsewhere'; }],
+    ['ground on another layer', (j) => { g(j).chunk.layer = 1; }],
+    ['ground outside the window', (j) => { g(j).chunk.cx = 1; }],
+    ['ground outside the frontier', (j) => { j.frontier.rect.minCx = -1; }],
+    ['ground on the still epoch outside the Tangle', (j) => { g(j).epoch = 'still-epoch'; }],
+    ['a Tangle chunk on the wick epoch', (j) => tangle(j, 'wick-epoch')],
+    ['the same chunk twice', (j) => { j.ground.push(structuredClone(g(j))); }],
+    ['window in another realm', (j) => { j.center.realm = 'elsewhere'; }],
+    ['window on another layer', (j) => { j.center.layer = 1; }],
+    ['radius not 2', (j) => { j.radius = 0; }],
+    ['frontier bounds out of order', (j) => { j.frontier.rect.minCy = 1; }],
+    ['window outside the frontier', (j) => { j.frontier.rect.maxCx = -3; }],
+    ['one epoch twice', (j) => { j.wick.id = j.still.id; }],
+    ['glimpse inside the frontier', (j) => { j.glimpse[0].chunk.cx = -4; }],
+    ['way path with a gap', (j) => { j.ways[0].path.splice(5, 1); }],
+    ['way sign off its end', (j) => { j.ways[0].signA = { x: 0, y: 0 }; }],
+    ['way sign on its path', (j) => { j.ways[0].signB = structuredClone(j.ways[0].path.at(-2)); }],
+    ['way id not its pair', (j) => { j.ways[0].id = 'way:x:y'; }],
+  ];
+  for (const [name, edit] of refusals) await assert.rejects(near(edit), { code: 'bad-response' }, name);
+});
+
+test('a named way carries its whole path and signs, even outside the window (review round 1)', () => {
+  const get = (name: string, kind: string) => fixtures.find(f => f.name === name && f.case === kind)!.json;
+  const near = decodeWire(wilds.WildsNearResultSchema, get('glimway.v1.WildsNearResult', 'valid-near'));
+  const way = near.ways[0]!;
+  const inWindow = (t: { x: number; y: number }) => Math.abs(Math.floor(t.x / 24) - near.center!.cx) <= 2 && Math.abs(Math.floor(t.y / 24) - near.center!.cy) <= 2;
+  assert.equal(inWindow(way.path[0]!), false, 'starts outside the window');
+  assert.equal(inWindow(way.path.at(-1)!), false, 'ends outside the window');
+  // It enters, leaves and enters again.
+  const runs = way.path.map(inWindow).filter((v, i, a) => i === 0 || v !== a[i - 1]);
+  assert.deepEqual(runs, [false, true, false, true, false]);
+  // Branching: one lay makes two ways, one lift breaks two.
+  const lay = decodeEnvelope(get('glimway.v1.Envelope', 'wilds-lay-branch'));
+  assert.equal(lay.result.case, 'wildsLay');
+  assert.deepEqual(lay.result.case === 'wildsLay' && lay.result.value.waysMade.map((w) => w.id), ['way:place:-1:-2:place:0:-2', 'way:place:0:-2:place:1:-2']);
+  const lift = decodeEnvelope(get('glimway.v1.Envelope', 'wilds-lift-branch'));
+  assert.deepEqual(lift.result.case === 'wildsLift' && lift.result.value.waysBroken, ['way:place:-1:-2:place:0:-2', 'way:place:-1:-2:place:1:-2']);
 });

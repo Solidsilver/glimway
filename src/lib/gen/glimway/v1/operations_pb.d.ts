@@ -929,8 +929,10 @@ export declare const WildsLiftRequestSchema: GenMessage<WildsLiftRequest, {valid
 /**
  * Each answers with the chunk's changes after the operation and the pack's
  * material balances (its own message, so the Envelope's case follows from
- * the type). A lay that joins two places names the way it made; a lift that
- * breaks a way names the way's id.
+ * the type). Ways are keyed by their place pair, so one connected run can
+ * hold several: a lay names every way it made (each pair it newly joins),
+ * and a lift every way it broke (each pair it disconnected) and every way
+ * it rerouted (a pair still joined another way, with its new path).
  *
  * @generated from message glimway.v1.WildsClearResult
  */
@@ -969,9 +971,9 @@ export declare type WildsLayResult = Message<"glimway.v1.WildsLayResult"> & {
   materials: { [key: string]: number };
 
   /**
-   * @generated from field: glimway.v1.WildsWay way_made = 3;
+   * @generated from field: repeated glimway.v1.WildsWay ways_made = 4;
    */
-  wayMade?: WildsWay | undefined;
+  waysMade: WildsWay[];
 };
 
 export declare type WildsLayResultValid = WildsLayResult;
@@ -997,9 +999,14 @@ export declare type WildsLiftResult = Message<"glimway.v1.WildsLiftResult"> & {
   materials: { [key: string]: number };
 
   /**
-   * @generated from field: string way_broken = 3;
+   * @generated from field: repeated string ways_broken = 4;
    */
-  wayBroken: string;
+  waysBroken: string[];
+
+  /**
+   * @generated from field: repeated glimway.v1.WildsWay ways_rerouted = 5;
+   */
+  waysRerouted: WildsWay[];
 };
 
 export declare type WildsLiftResultValid = WildsLiftResult;

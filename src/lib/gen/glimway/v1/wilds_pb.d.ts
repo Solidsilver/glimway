@@ -923,11 +923,51 @@ export declare type WildsGlimpseValid = WildsGlimpse;
 export declare const WildsGlimpseSchema: GenMessage<WildsGlimpse, {validType: WildsGlimpseValid}>;
 
 /**
+ * A world tile, signed (open-map.md 2.1).
+ *
+ * @generated from message glimway.v1.WorldTile
+ */
+export declare type WorldTile = Message<"glimway.v1.WorldTile"> & {
+  /**
+   * @generated from field: sint32 x = 1;
+   */
+  x: number;
+
+  /**
+   * @generated from field: sint32 y = 2;
+   */
+  y: number;
+};
+
+export declare type WorldTileValid = WorldTile;
+
+/**
+ * Describes the message glimway.v1.WorldTile.
+ * Use `create(WorldTileSchema)` to create a new message.
+ */
+export declare const WorldTileSchema: GenMessage<WorldTile, {validType: WorldTileValid}>;
+
+/**
  * A named way (decision 23): a run of laid tiles joining two places (a
  * place mark id, or a footprint's content id). id is "way:<a>:<b>", a < b;
  * name is the words' wayName filled in; by is the account that laid most of
- * it; tiles is the run's length; at is Unix seconds. The worldchange row
- * (kind "way", entity id) holds this message as its state.
+ * it; tiles is the run's laid-tile count when the way was made or last
+ * rerouted; at is Unix seconds. The worldchange row (kind "way", entity id)
+ * holds this message as its state.
+ *
+ * path is the way's own line, in world tiles from a's end to b's: the
+ * shortest run of laid tiles from a tile within a's find radius (at a
+ * footprint, a tile on the opening it touches) to one within b's, each tile
+ * 4-adjacent to the one before. The whole path is carried even where it
+ * leaves the near window, so the client labels and draws the way from it
+ * alone. sign_a and sign_b are the tiles the two signs stand on: walkable,
+ * not laid, not on the path, 4-adjacent to the path's first and last tile.
+ *
+ * Geometry: the path is fixed when the way is made, and a lay never changes
+ * it (a run that grows keeps its ways' paths). A lift of a path tile
+ * reroutes the way along the new shortest run between the same two places,
+ * with new signs, if the pair is still joined; otherwise the way is broken.
+ * The name and by never change while the way stands.
  *
  * @generated from message glimway.v1.WildsWay
  */
@@ -971,6 +1011,21 @@ export declare type WildsWay = Message<"glimway.v1.WildsWay"> & {
    * @generated from field: double at = 8;
    */
   at: number;
+
+  /**
+   * @generated from field: repeated glimway.v1.WorldTile path = 9;
+   */
+  path: WorldTile[];
+
+  /**
+   * @generated from field: glimway.v1.WorldTile sign_a = 10;
+   */
+  signA?: WorldTile | undefined;
+
+  /**
+   * @generated from field: glimway.v1.WorldTile sign_b = 11;
+   */
+  signB?: WorldTile | undefined;
 };
 
 export declare type WildsWayValid = WildsWay;

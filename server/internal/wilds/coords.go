@@ -2,6 +2,7 @@ package wilds
 
 import (
 	"fmt"
+	"math"
 
 	"glimway/content"
 )
@@ -35,9 +36,12 @@ func LocalOf(tx, ty int) (lx, ly int) {
 	return tx - cx*S, ty - cy*S
 }
 
-// TileOfPixel is the world tile under a world pixel.
-func TileOfPixel(px, py int) (tx, ty int) {
-	return FloorDiv(px, tilePx), FloorDiv(py, tilePx)
+// TileOfPixel is the world tile under a world pixel position. Positions are
+// doubles on the wire (Where, saved places), so it floors after dividing:
+// -0.5 is tile -1, never 0 (an int conversion would truncate toward zero).
+// Callers check the position is finite and in range at the request boundary.
+func TileOfPixel(px, py float64) (tx, ty int) {
+	return int(math.Floor(px / tilePx)), int(math.Floor(py / tilePx))
 }
 
 // Footprint is the named footprint with the id ("tangle", "whitequiet"),

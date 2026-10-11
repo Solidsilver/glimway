@@ -13,7 +13,8 @@ type coordVectors struct {
 		Tile, Chunk, Local [2]int
 	}
 	TileOfPixel []struct {
-		Pixel, Tile [2]int
+		Pixel [2]float64
+		Tile  [2]int
 	}
 	Chunks []struct {
 		Chunk     [2]int

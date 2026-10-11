@@ -62,11 +62,21 @@ message WildsLayRequest { OpHeader op = 1; Where where = 2; sint32 x = 3; sint32
 message WildsLiftRequest { OpHeader op = 1; Where where = 2; sint32 x = 3; sint32 y = 4; }
 // Each answers with the chunk's changes after the operation and the pack's
 // material balances (its own message, so the Envelope's case follows from
-// the type). A lay that joins two places names the way it made; a lift that
-// breaks a way names the way's id.
+// the type). Ways are keyed by their place pair, so one connected run can
+// hold several: a lay names every way it made (each pair it newly joins),
+// and a lift every way it broke (each pair it disconnected) and every way
+// it rerouted (a pair still joined another way, with its new path).
 message WildsClearResult { ChunkGroundChanges ground = 1; map<string,double> materials = 2; }
-message WildsLayResult { ChunkGroundChanges ground = 1; map<string,double> materials = 2; WildsWay way_made = 3; }
-message WildsLiftResult { ChunkGroundChanges ground = 1; map<string,double> materials = 2; string way_broken = 3; }
+message WildsLayResult {
+  ChunkGroundChanges ground = 1; map<string,double> materials = 2;
+  reserved 3; reserved "way_made";
+  repeated WildsWay ways_made = 4;
+}
+message WildsLiftResult {
+  ChunkGroundChanges ground = 1; map<string,double> materials = 2;
+  reserved 3; reserved "way_broken";
+  repeated string ways_broken = 4; repeated WildsWay ways_rerouted = 5;
+}
 // POST /api/wilds/discover (open-map.md 2.10): sent when the hero enters a
 // place's find radius. place is a place mark id. The first insert this wick
 // wins: first is true only for that request, which alone rolls the

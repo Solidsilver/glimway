@@ -94,14 +94,33 @@ message ChunkGroundChanges { WildsChunkKey chunk = 1; string epoch = 2; GroundCh
 // made or stored chunk.
 message WildsGlimpse { WildsChunkKey chunk = 1; string land = 2; bool river = 3; }
 
+// A world tile, signed (open-map.md 2.1).
+message WorldTile { sint32 x = 1; sint32 y = 2; }
+
 // A named way (decision 23): a run of laid tiles joining two places (a
 // place mark id, or a footprint's content id). id is "way:<a>:<b>", a < b;
 // name is the words' wayName filled in; by is the account that laid most of
-// it; tiles is the run's length; at is Unix seconds. The worldchange row
-// (kind "way", entity id) holds this message as its state.
+// it; tiles is the run's laid-tile count when the way was made or last
+// rerouted; at is Unix seconds. The worldchange row (kind "way", entity id)
+// holds this message as its state.
+//
+// path is the way's own line, in world tiles from a's end to b's: the
+// shortest run of laid tiles from a tile within a's find radius (at a
+// footprint, a tile on the opening it touches) to one within b's, each tile
+// 4-adjacent to the one before. The whole path is carried even where it
+// leaves the near window, so the client labels and draws the way from it
+// alone. sign_a and sign_b are the tiles the two signs stand on: walkable,
+// not laid, not on the path, 4-adjacent to the path's first and last tile.
+//
+// Geometry: the path is fixed when the way is made, and a lay never changes
+// it (a run that grows keeps its ways' paths). A lift of a path tile
+// reroutes the way along the new shortest run between the same two places,
+// with new signs, if the pair is still joined; otherwise the way is broken.
+// The name and by never change while the way stands.
 message WildsWay {
   string id = 1; string a = 2; string b = 3; string name = 4; string by = 5;
   uint32 tiles = 6; string epoch = 7; double at = 8;
+  repeated WorldTile path = 9; WorldTile sign_a = 10; WorldTile sign_b = 11;
 }
 
 // GET /api/wilds/near/<cx>/<cy> (open-map.md 2.4): the epochs, the
