@@ -277,16 +277,25 @@ func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, cx, cy 
 		}
 	}
 	if g := a.Config.WildsGenerator; g != nil {
+		var at []chunks.ChunkXY
 		for y := cy - NearRadius - glimpseReach; y <= cy+NearRadius+glimpseReach; y++ {
 			for x := cx - NearRadius - glimpseReach; x <= cx+NearRadius+glimpseReach; x++ {
 				if frontier.Inside(s.WorldID, x, y) || y > int(content.WildsRules.GetFrontier().GetSouthLimit()) || max(x0-x, x-x1, y0-y, y-y1) > glimpseReach {
 					continue
 				}
-				v, err := g.Glimpse(proto.Clone(ep.wick).(*contract.WildsEpoch), int32(x), int32(y))
-				if err != nil {
-					return nil, err
-				}
-				out.Glimpse = append(out.Glimpse, &contract.WildsGlimpse{Chunk: chunkKeyProto(x, y), Land: v.Land, River: v.River})
+				at = append(at, chunks.ChunkXY{CX: int32(x), CY: int32(y)})
+			}
+		}
+		if len(at) > 0 {
+			vs, err := g.Glimpses(proto.Clone(ep.wick).(*contract.WildsEpoch), at)
+			if err != nil {
+				return nil, err
+			}
+			if len(vs) != len(at) {
+				return nil, fmt.Errorf("near read: %d glimpses for %d chunks", len(vs), len(at))
+			}
+			for i, v := range vs {
+				out.Glimpse = append(out.Glimpse, &contract.WildsGlimpse{Chunk: chunkKeyProto(int(at[i].CX), int(at[i].CY)), Land: v.Land, River: v.River})
 			}
 		}
 	}

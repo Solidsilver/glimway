@@ -25,13 +25,10 @@ import (
 //  6. The Wend's bank.
 //  7. An edge gap, in the two edge tiles each side.
 //  8. The land's floor: solid where its thicketPermille says (woods: all),
-//     else open. In the edge tiles the floor is decided a whole column
-//     across the edge at a time (the four tiles open or solid together:
-//     open when the land is open on both sides at that row), and each 4×4
-//     block where four chunks meet as one, joined to the columns beside it
-//     when open. So a stray
-//     open tile is never shut in among the edge tiles, where neither chunk
-//     may carve to it.
+//     else open, by the world-coordinate land field, edge tiles included.
+//     Among the edge tiles, open land that would be shut in is shut
+//     (edgeOpen), so neither chunk is left with open ground it may not
+//     carve to.
 //
 // Then the south limit's last two rows are shut, but for the gate and a
 // kept edge: nothing lies south of it.
@@ -123,17 +120,60 @@ func openingTiles(kind string) map[[2]int]Ground {
 	return out
 }
 
-// fill computes the base of the tiles x0..x1, y0..y1 (inclusive), row-major.
+// fill computes the base of the tiles x0..x1, y0..y1 (inclusive), row-major:
+// the raw base over the area and a margin, then the edge rule for open land
+// among the edge tiles, then the south limit shut.
 func (w *world) fill(x0, y0, x1, y1 int, kept *keptReader) []baseTile {
+	S := chunkSize()
+	if kept == nil {
+		kept = &keptReader{w: w.still(), made: map[[2]int][]baseTile{}}
+	}
+	const pad = band + 3 // a corner block's ring, and the ring's own columns
+	rx0, ry0 := x0-pad, y0-pad
+	rW := x1 - x0 + 1 + 2*pad
+	raw := w.fillRaw(rx0, ry0, x1+pad, y1+pad, kept)
+	at := func(tx, ty int) baseTile { return raw[(ty-ry0)*rW+tx-rx0] }
+	W := x1 - x0 + 1
+	out := make([]baseTile, W*(y1-y0+1))
+	corners := map[[2]int][]bool{}
+	for ty := y0; ty <= y1; ty++ {
+		for tx := x0; tx <= x1; tx++ {
+			t := at(tx, ty)
+			if t.kind == bField && inBand(tx, ty) {
+				t.walk = w.edgeOpen(tx, ty, at, corners)
+				if t.walk && landData(max(int(t.land), 0)).GetThicketPermille() >= 1000 {
+					t.ground = landGround[max(int(t.land), 0)].open
+				} else if !t.walk {
+					t.ground = landGround[max(int(t.land), 0)].floor
+				}
+			}
+			out[(ty-y0)*W+tx-x0] = t
+		}
+	}
+	// Nothing lies south of the south limit: the limit's last two rows are
+	// shut (but for the gate and a kept edge), as the frontier is there.
+	south := int(contentRules().GetFrontier().GetSouthLimit())
+	for ty := max(y0, (south+1)*S-band); ty <= min(y1, (south+1)*S-1); ty++ {
+		for tx := x0; tx <= x1; tx++ {
+			t := &out[(ty-y0)*W+tx-x0]
+			if t.kind == bKept || t.kind == bSeam || t.kind == bOpening || t.kind == bWater || !t.walk {
+				continue
+			}
+			t.walk, t.kind = false, bField
+			t.ground = landGround[max(int(t.land), 0)].floor
+		}
+	}
+	return out
+}
+
+// fillRaw is the base of x0..x1, y0..y1 with open land as the land's own
+// field gives it everywhere, edge tiles included.
+func (w *world) fillRaw(x0, y0, x1, y1 int, kept *keptReader) []baseTile {
 	S := chunkSize()
 	W := x1 - x0 + 1
 	out := make([]baseTile, W*(y1-y0+1))
 	area := tileBox(x0, y0, x1, y1)
-	if kept == nil {
-		kept = &keptReader{w: w.still(), made: map[[2]int][]baseTile{}}
-	}
 	openings := openingTiles(w.e.Kind)
-	south := int(contentRules().GetFrontier().GetSouthLimit())
 
 	// Every tile's patch over the area and a margin (a hem looks hemTiles
 	// round, the edge columns a tile further), then each tile's land.
@@ -191,15 +231,6 @@ func (w *world) fill(x0, y0, x1, y1 int, kept *keptReader) []baseTile {
 		routeSegs[i] = r.segs(area, routeVerge)
 	}
 	fordHalf := int64(contentRules().GetRiver().GetFordWidth()) * fp / 2
-	samples := map[[2]int]bool{}
-	fieldOpen := func(tx, ty int) bool {
-		if v, ok := samples[[2]int{tx, ty}]; ok {
-			return v
-		}
-		v := floorDiv(ty, S) <= south && !w.thicketAt(tx, ty, int(landData(landAt(tx, ty)).GetThicketPermille()))
-		samples[[2]int{tx, ty}] = v
-		return v
-	}
 
 	for ty := y0; ty <= y1; ty++ {
 		for tx := x0; tx <= x1; tx++ {
@@ -282,26 +313,7 @@ func (w *world) fill(x0, y0, x1, y1 int, kept *keptReader) []baseTile {
 			}
 			t.kind = bField
 			t.ground = lg.floor
-			if open, inBand := w.bandOpen(tx, ty, fieldOpen); inBand {
-				t.walk = open
-				if open && landData(land).GetThicketPermille() >= 1000 {
-					t.ground = lg.open
-				}
-				continue
-			}
 			t.walk = !w.thicketAt(tx, ty, int(landData(land).GetThicketPermille()))
-		}
-	}
-	// Nothing lies south of the south limit: the limit's last two rows are
-	// shut (but for the gate and a kept edge), as the frontier is there.
-	for ty := max(y0, (south+1)*S-band); ty <= min(y1, (south+1)*S-1); ty++ {
-		for tx := x0; tx <= x1; tx++ {
-			t := &out[(ty-y0)*W+tx-x0]
-			if t.kind == bKept || t.kind == bSeam || t.kind == bOpening || t.kind == bWater || !t.walk {
-				continue
-			}
-			t.walk, t.kind = false, bField
-			t.ground = landGround[max(int(t.land), 0)].floor
 		}
 	}
 	return out
@@ -328,54 +340,138 @@ func (w *world) thicketAt(tx, ty, permille int) bool {
 	return v < permille
 }
 
-// bandOpen decides a field tile among a chunk's edge tiles (inBand false
-// elsewhere): a column across an edge is open when the land is open on
-// both sides of the edge at its row; a corner block when it's open in all
-// four chunks round the corner; the columns next to an open corner block
-// open with it.
-func (w *world) bandOpen(tx, ty int, open func(tx, ty int) bool) (bool, bool) {
+// inBand: is the tile one of its chunk's edge tiles?
+func inBand(tx, ty int) bool {
+	S := chunkSize()
+	lx, ly := tx-floorDiv(tx, S)*S, ty-floorDiv(ty, S)*S
+	return lx < band || ly < band || lx >= S-band || ly >= S-band
+}
+
+// edgeOpen decides open land among the edge tiles from the raw base (at),
+// so a border between lands crosses a chunk edge where the field puts it,
+// ragged as anywhere, and still no open edge tile is shut in where neither
+// chunk may carve:
+//   - one tile in from the edge, the field's own answer: its inner
+//     neighbour is the chunk's to carve;
+//   - on the edge, open only if the tile inside it is open, or the facing
+//     tile across the edge and the one inside that are (a kept chunk across
+//     is never relied on: its side was decided without this one);
+//   - in a 4×4 block where four chunks meet, open land the field gives,
+//     kept where it joins something open round the block (or open ground in
+//     it that isn't field: a route, a gap, a seam), and shut where it
+//     doesn't.
+//
+// Everything it reads is world-coordinate, so both neighbours agree.
+func (w *world) edgeOpen(tx, ty int, at func(tx, ty int) baseTile, corners map[[2]int][]bool) bool {
 	S := chunkSize()
 	cx, cy := floorDiv(tx, S), floorDiv(ty, S)
 	lx, ly := tx-cx*S, ty-cy*S
 	edgeX := lx < band || lx >= S-band
 	edgeY := ly < band || ly >= S-band
-	// The edge line each way (in tiles: the first tile past it).
-	ex := cx * S
-	if lx >= S-band {
-		ex = (cx + 1) * S
+	if edgeX && edgeY {
+		vx, vy := cx*S, cy*S
+		if lx >= S-band {
+			vx += S
+		}
+		if ly >= S-band {
+			vy += S
+		}
+		open, ok := corners[[2]int{vx, vy}]
+		if !ok {
+			open = w.cornerBlock(vx, vy, at)
+			corners[[2]int{vx, vy}] = open
+		}
+		return open[(ty-vy+band)*2*band+tx-vx+band]
 	}
-	ey := cy * S
-	if ly >= S-band {
-		ey = (cy + 1) * S
+	return w.columnOpen(tx, ty, at)
+}
+
+// columnOpen is edgeOpen for an edge tile outside the corner blocks (it
+// reads only its own column across the edge).
+func (w *world) columnOpen(tx, ty int, at func(tx, ty int) baseTile) bool {
+	S := chunkSize()
+	t := at(tx, ty)
+	if t.kind != bField {
+		return t.walk
 	}
-	across := func(x, y int) bool { return open(x-1, y) && open(x, y) } // a vertical edge at x
-	down := func(x, y int) bool { return open(x, y-1) && open(x, y) }   // a horizontal edge at y
-	corner := func(x, y int) bool { return across(x, y-1) && across(x, y) }
+	if !t.walk {
+		return false
+	}
+	cx, cy := floorDiv(tx, S), floorDiv(ty, S)
+	lx, ly := tx-cx*S, ty-cy*S
+	var ox, oy int // outward
 	switch {
-	case edgeX && edgeY:
-		return corner(ex, ey), true
-	case edgeX:
-		switch {
-		case across(ex, ty):
-			return true, true
-		case ly == band:
-			return corner(ex, cy*S), true
-		case ly == S-1-band:
-			return corner(ex, (cy+1)*S), true
-		}
-		return false, true
-	case edgeY:
-		switch {
-		case down(tx, ey):
-			return true, true
-		case lx == band:
-			return corner(cx*S, ey), true
-		case lx == S-1-band:
-			return corner((cx+1)*S, ey), true
-		}
-		return false, true
+	case lx == 0:
+		ox = -1
+	case lx == S-1:
+		ox = 1
+	case ly == 0:
+		oy = -1
+	case ly == S-1:
+		oy = 1
+	default:
+		return true // one in from the edge
 	}
-	return false, false
+	if at(tx-ox, ty-oy).walk {
+		return true
+	}
+	if EpochKindAt(cx+ox, cy+oy) != w.e.Kind {
+		return false
+	}
+	return at(tx+ox, ty+oy).walk && at(tx+2*ox, ty+2*oy).walk
+}
+
+// cornerBlock decides the 4×4 block of edge tiles round the corner where
+// chunks meet at tile (vx, vy) (the first tile east and south of the
+// meeting point): row-major from (vx-band, vy-band), true for open.
+func (w *world) cornerBlock(vx, vy int, at func(tx, ty int) baseTile) []bool {
+	const n = 2 * band
+	open := make([]bool, n*n)
+	cand := make([]bool, n*n)
+	var queue []int
+	for i := range open {
+		t := at(vx-band+i%n, vy-band+i/n)
+		switch {
+		case t.kind != bField && t.walk:
+			open[i] = true
+			queue = append(queue, i)
+		case t.kind == bField && t.walk:
+			cand[i] = true
+		}
+	}
+	// Open edge tiles round the block (all outside the corner blocks).
+	for i := range cand {
+		if !cand[i] || open[i] {
+			continue
+		}
+		x, y := vx-band+i%n, vy-band+i/n
+		for _, d := range dirs4 {
+			nx, ny := x+d[0], y+d[1]
+			if nx >= vx-band && nx < vx+band && ny >= vy-band && ny < vy+band {
+				continue
+			}
+			if w.columnOpen(nx, ny, at) {
+				open[i] = true
+				queue = append(queue, i)
+				break
+			}
+		}
+	}
+	for len(queue) > 0 {
+		i := queue[0]
+		queue = queue[1:]
+		for _, d := range dirs4 {
+			x, y := i%n+d[0], i/n+d[1]
+			if x < 0 || y < 0 || x >= n || y >= n {
+				continue
+			}
+			if j := y*n + x; cand[j] && !open[j] {
+				open[j] = true
+				queue = append(queue, j)
+			}
+		}
+	}
+	return open
 }
 
 // gapAt: is the tile in an edge gap (its chunk's two edge tiles)?
