@@ -35,6 +35,7 @@ export const PATH_REFUSALS: Record<string, string> = {
   'not-in-wilds': 'Paths are for the Wilds.',
   'epoch-ended': 'The drift has turned. The land is new.',
   offline: 'Needs a connection. The land is shared, so the world has to hear it.',
+  pending: 'The world hasn’t answered yet. The rest can wait until it does.',
   busy: 'One thing at a time.',
   unknown: 'That didn’t take. Try again in a moment.',
 };

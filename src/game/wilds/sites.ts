@@ -41,8 +41,9 @@ import type { DialogueChoice } from '../event-names'
 import type { Effects } from '../entities/fx'
 import type { Interactable, Interactables } from '../entities/interactables'
 import { openDialogue } from '../dialogue.ts'
-import { applyClaim, applyEchoSettled, isClaimed, lootText, refreshNear, wildsEpoch, wildsLive, wildsView, type WildsEpoch } from './store.ts'
-import { claimEntity, settleEcho } from './remote.ts'
+import { applyEchoSettled, isClaimed, lootText, wildsLive, wildsView, type WildsEpoch } from './store.ts'
+import { settleEcho } from './remote.ts'
+import { openRumourFind } from './rumour-find.ts'
 import { CHUNK_TILES } from './coords.ts'
 import { LAMP_STONE_DARK, omArt } from './open-map-art.ts'
 import { FINDS } from '../../content/open-map.ts'
@@ -289,6 +290,7 @@ export class WildsSites {
 
   /** The chunk left the window: everything drawn and offered here goes. */
   destroy(): void {
+    this.gone = true
     for (const o of this.images) {
       this.scene.tweens.killTweensOf(o)
       o.destroy()
@@ -604,6 +606,8 @@ export class WildsSites {
   }
 
   private opening = false
+  /** The chunk left the window (an answer can land after). */
+  private gone = false
 
   /**
    * Open the rumour's find: a personal claim under this wick's epoch (cycle
@@ -616,26 +620,19 @@ export class WildsSites {
     this.opening = true
     try {
       const hero = this.deps.hero()
-      await refreshNear(session, this.cx, this.cy)
-      const epoch = wildsEpoch('wick')
-      if (!wildsLive(session) || !epoch.id) {
-        bus.emit(EV.toast, { text: CLAIM_ERROR.offline, kind: 'error' })
+      // The bundle of the wick this layer was drawn in: a turning meanwhile takes it away.
+      const r = await openRumourFind(session, { id: s.id, cx: this.cx, cy: this.cy }, this.epoch.id, { x: hero.x, y: hero.y })
+      if (!r.ok) {
+        if (r.why === 'offline') bus.emit(EV.toast, { text: CLAIM_ERROR.offline, kind: 'error' })
+        else if (r.why === 'refused' && r.code !== 'epoch-ended') bus.emit(EV.toast, { text: CLAIM_ERROR[r.code ?? 'unknown'] ?? CLAIM_ERROR.unknown, kind: 'error' })
         return
       }
-      if (isClaimed(s.id)) return
-      const res = await claimEntity(session, { epoch: epoch.id, entityId: s.id, cycle: 0, where: { x: hero.x, y: hero.y } })
-      if (!res.ok) {
-        if (res.code === 'epoch-ended') bus.emit(EV.turning, { reason: 'epoch-ended' })
-        else bus.emit(EV.toast, { text: CLAIM_ERROR[res.code] ?? CLAIM_ERROR.unknown, kind: 'error' })
-        return
-      }
-      const drop = applyClaim(res.result)
       const at = this.sitePx(s)
       sfx('discover')
       this.deps.fx.sparkBurst(at.x, at.y - 8, 14)
-      const loot = lootText(drop)
-      bus.emit(EV.toast, { text: loot ? `${FINDS.bundleOpened} ${loot}.` : FINDS.bundleOpened, icon: 'sparkle', art: lootArt(drop), kind: loot ? 'gain' : 'thought', ...(loot ? { gain: lootGain(drop) } : {}) })
-      this.render()
+      const loot = lootText(r.drop)
+      bus.emit(EV.toast, { text: loot ? `${FINDS.bundleOpened} ${loot}.` : FINDS.bundleOpened, icon: 'sparkle', art: lootArt(r.drop), kind: loot ? 'gain' : 'thought', ...(loot ? { gain: lootGain(r.drop) } : {}) })
+      if (!this.gone) this.render()
       // Elara hears of it: the rumour's `opened` is in the state, read again.
       void session.link.refreshState()
     } finally {

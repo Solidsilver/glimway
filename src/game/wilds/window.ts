@@ -21,7 +21,7 @@ import { calendarAt } from '../../lib/calendar.ts'
 import { seasonMark } from '../../lib/wilds/outer.ts'
 import { gameNow } from '../clock.ts'
 import type { Session } from '../session.ts'
-import { chunkKey, chunkOfPixel, parseChunkKey } from './coords.ts'
+import { CHUNK_TILES, chunkKey, chunkOfPixel, parseChunkKey } from './coords.ts'
 import { chunkSig, effectiveChunk, forgetGround, groundAt, solidAt } from './ground-view.ts'
 import { chunkGather, chunkLandmarks } from './terrain.ts'
 import { crossed, paintable, planWindow, veilEdges, type WindowPlan } from './window-plan.ts'
@@ -308,7 +308,9 @@ export class WildsWindow {
       if (c.sig === sig) continue
       const t = effectiveChunk(cx, cy)
       const sameEpoch = !!t && t.epochId === c.terrain.epochId
-      if (sameEpoch && c.patch(t)) {
+      // A tile changed on the edge: the chunk across it redraws its own edge tile's art.
+      const beyond = (tx: number, ty: number) => this.attached.get(chunkKey(Math.floor(tx / CHUNK_TILES), Math.floor(ty / CHUNK_TILES)))?.relay(tx, ty)
+      if (sameEpoch && c.patch(t, beyond)) {
         c.sig = sig
         continue
       }

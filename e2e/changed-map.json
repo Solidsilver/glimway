@@ -36,6 +36,10 @@
       "specs": ["paths.spec.ts", "rumour.spec.ts"]
     },
     {
+      "paths": ["src/ui/ContextButtons.svelte", "src/ui/press-gate.ts", "src/game/context-buttons.ts"],
+      "specs": ["touch.spec.ts", "fishing.spec.ts", "companions.spec.ts", "paths.spec.ts"]
+    },
+    {
       "paths": [
         "src/game/entities/homestead*.ts",
         "src/game/homestead.ts",

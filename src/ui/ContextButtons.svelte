@@ -8,12 +8,26 @@
   import Icon from './Icon.svelte'
   import ArtIcon from './ArtIcon.svelte'
   import type { ContextButton } from '../game/context-buttons'
+  import { pressGate } from './press-gate'
 
   let { variant }: { variant: 'bar' | 'touch' } = $props()
+
+  // Touch: the press lands on pointerdown; the click after it is its echo, but a click
+  // with no pointer (Enter, Space, assistive tech) presses too (./press-gate.ts).
+  const gate = pressGate()
 
   function press(e: Event, b: ContextButton): void {
     e.preventDefault()
     b.press()
+  }
+
+  function touchDown(e: Event, b: ContextButton): void {
+    if (gate.down(b.id)) press(e, b)
+  }
+
+  function touchClick(e: Event, b: ContextButton): void {
+    if (gate.click(b.id)) press(e, b)
+    else e.preventDefault()
   }
 </script>
 
@@ -28,8 +42,8 @@
         data-inset={variant === 'touch' ? 'ctx' : undefined}
         aria-label={b.ariaLabel ?? b.label}
         tabindex={variant === 'bar' ? -1 : undefined}
-        onpointerdown={variant === 'touch' ? (e) => press(e, b) : undefined}
-        onclick={variant === 'bar' ? (e) => press(e, b) : undefined}
+        onpointerdown={variant === 'touch' ? (e) => touchDown(e, b) : undefined}
+        onclick={(e) => (variant === 'touch' ? touchClick(e, b) : press(e, b))}
         oncontextmenu={(e) => e.preventDefault()}
       >
         <span class="face">

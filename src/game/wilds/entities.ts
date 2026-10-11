@@ -39,6 +39,7 @@ import {
   discoveryFor,
   entityAvailable,
   isClaimed,
+  takeReadRequest,
   lootName,
   lootText,
   refreshNear,
@@ -368,6 +369,8 @@ export class WildsEntities {
       return
     }
     this.showStale(wildsStale(this.deps.session))
+    // The store found it held something the world doesn't (a refusal, an answer for land that turned): read again.
+    if (takeReadRequest()) void this.refresh()
     if (view.version !== this.lastVersion) {
       this.lastVersion = view.version
       this.render(true)
