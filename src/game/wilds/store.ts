@@ -164,7 +164,7 @@ export function wildsStale(session: Session): boolean {
 export function wildsMaterials(): Record<string, number> | null {
   if (!view) return null;
   const out = { ...view.materials };
-  for (const p of pendingMaterials.values()) out[p.id] = (out[p.id] ?? 0) + p.delta;
+  for (const [token, p] of pendingMaterials) if (!committedInView(token)) out[p.id] = (out[p.id] ?? 0) + p.delta;
   return out;
 }
 
@@ -212,6 +212,8 @@ export function resetWilds(opts: { quiet?: boolean } = {}): void {
   fetchedAt.clear();
   inflight = null;
   forgetPredictions();
+  forgetOrder();
+  readWanted = false;
   if (!opts.quiet) bus.emit(EV.wilds, { materials: null });
 }
 
@@ -269,7 +271,7 @@ export function nearWindow(cx: number, cy: number, radius = NEAR_RADIUS): { cx: 
  * A read in another wick epoch starts the view over. Returns whether the
  * wick turned (a held wick, then another).
  */
-export function applyNear(res: WildsNearResult): boolean {
+export function applyNear(res: WildsNearResult, since: number = seq): boolean {
   const still = epochView(res.still!, 'still');
   const wick = epochView(res.wick!, 'wick');
   const turned = !!view && !!view.wick.id && view.wick.id !== wick.id;
@@ -292,6 +294,7 @@ export function applyNear(res: WildsNearResult): boolean {
     };
     if (turned) fetchedAt.clear();
     forgetPredictions();
+    forgetOrder();
   }
   const v = view;
   v.still = still;
@@ -313,17 +316,75 @@ export function applyNear(res: WildsNearResult): boolean {
   for (const [id, l] of [...v.lanterns]) if (inWindow(Math.floor(l.x / CHUNK_TILES), Math.floor(l.y / CHUNK_TILES))) v.lanterns.delete(id);
   for (const l of res.lanterns) v.lanterns.set(l.id, lanternView(l));
   for (const a of res.echoes) v.echoes.set(a.site, { member: a.member, settled: a.settled });
+  // Ground, ways and balances an answer set after this read was asked are newer than it: kept.
+  const newer = (at: number | undefined) => (at ?? 0) > since;
   for (const key of [...v.ground.keys()]) {
     const [x, y] = key.split(',').map(Number);
-    if (inWindow(x!, y!)) v.ground.delete(key);
+    if (inWindow(x!, y!) && !newer(chunkSeq.get(key))) v.ground.delete(key);
   }
-  for (const g of res.ground) if (g.chunk) v.ground.set(chunkKey(g.chunk.cx, g.chunk.cy), [...(g.changes?.changes ?? [])]);
+  for (const g of res.ground) {
+    if (!g.chunk) continue;
+    const key = chunkKey(g.chunk.cx, g.chunk.cy);
+    if (!newer(chunkSeq.get(key))) v.ground.set(key, [...(g.changes?.changes ?? [])]);
+  }
   merged.clear();
   for (const g of res.glimpse) if (g.chunk) v.glimpse.set(chunkKey(g.chunk.cx, g.chunk.cy), { land: g.land, river: g.river });
-  for (const w of res.ways) v.ways.set(w.id, w);
-  v.materials = materialsRecord(res.materials);
+  // The read names every way whose path crosses its window: one it no longer names is gone (lifted by anyone).
+  const returned = new Set(res.ways.map((w) => w.id));
+  for (const [id, w] of [...v.ways]) {
+    if (returned.has(id) || newer(waySeq.get(id))) continue;
+    if (w.path.some((t) => inWindow(Math.floor(t.x / CHUNK_TILES), Math.floor(t.y / CHUNK_TILES)))) v.ways.delete(id);
+  }
+  for (const w of res.ways) if (!newer(waySeq.get(w.id))) v.ways.set(w.id, w);
+  if (!newer(materialsSeq)) v.materials = materialsRecord(res.materials);
   v.stale = false;
   return turned;
+}
+
+// ------------------------------------------------------------ order
+
+/**
+ * Answers and near reads overwrite the same mirrors, so they are ordered: a
+ * read remembers `seq` as it is asked, every applied answer takes the next
+ * `seq` for what it set (a chunk's ground, a way, the balances), and a read
+ * keeps whatever an answer set after it was asked.
+ */
+let seq = 0;
+const chunkSeq = new Map<string, number>();
+const waySeq = new Map<string, number>();
+let materialsSeq = 0;
+
+function forgetOrder(): void {
+  chunkSeq.clear();
+  waySeq.clear();
+  materialsSeq = 0;
+}
+
+/** The order mark a near read takes as it is asked (refreshNear; tests). */
+export function readMark(): number {
+  return seq;
+}
+
+/** A read is wanted: something the store held turned out wrong (a refusal, an answer for land that has turned). */
+let readWanted = false;
+
+/** Ask for a fresh near read: the scene takes the request (takeReadRequest), and no earlier read counts as recent. */
+export function requestRead(): void {
+  readWanted = true;
+  fetchedAt.clear();
+  if (view) view.version += 1;
+}
+
+/** Is a fresh read wanted (without taking the request)? */
+export function readRequested(): boolean {
+  return readWanted;
+}
+
+/** The scene's turn: true once per request. */
+export function takeReadRequest(): boolean {
+  const was = readWanted;
+  readWanted = false;
+  return was;
 }
 
 /** The entities of a loaded chunk, each with its state. */
@@ -378,9 +439,10 @@ export async function refreshNear(session: Session, cx: number, cy: number, maxA
     if (view && !view.stale && at !== undefined && Date.now() - at < maxAgeMs) return true;
     try {
       const ops = link.api.operations;
+      const since = seq;
       const res = await ops.near(cx, cy);
       const priorWick = view?.wick.id ?? '';
-      const turned = applyNear(res);
+      const turned = applyNear(res, since);
       fetchedAt.set(key, Date.now());
       await Promise.all(nearWindow(cx, cy).filter((c) => insideNamedFrontier(c.cx, c.cy)).map((c) => loadWildsChunk(session, c.cx, c.cy).catch(() => null)));
       if (priorWick !== view!.wick.id) void pruneChunks([view!.still.id, view!.wick.id]);
@@ -427,6 +489,7 @@ export function applyClaim(result: WildsClaimResult): LootDrop {
   }
   // The answer carries the post-grant balances: replace the mirror.
   view.materials = materialsRecord(result.materials);
+  materialsSeq = ++seq;
   bump();
   return { materials: (result.loot?.materials ?? []).map((m) => ({ id: m.id, qty: m.qty })), trinket: result.loot?.trinket ?? null };
 }
@@ -472,6 +535,22 @@ export function groundChanges(cx: number, cy: number): readonly GroundChange[] {
 const NONE: readonly GroundChange[] = [];
 /** Unanswered path operations by chunk, then tile: the change they make (null: the tile's change goes). */
 const predicted = new Map<string, Map<string, { token: number; change: GroundChange | null }>>();
+/** Where each prediction stands (chunk key and tile), by token. */
+const predictedAt = new Map<number, { chunk: string; tile: string; change: GroundChange | null; by: string }>();
+
+/**
+ * Does the server's ground the view holds already show this prediction
+ * (the operation committed, and a read taken since says so)? Then its
+ * material is in the balances that came with it, and isn't counted again.
+ */
+function committedInView(token: number): boolean {
+  const at = predictedAt.get(token);
+  if (!at || !view) return false;
+  const now = (view.ground.get(at.chunk) ?? NONE).find((c) => tileKey(c.tx, c.ty) === at.tile) ?? null;
+  if (at.change) return !!now && now.change === at.change.change && now.by === at.change.by;
+  // A lift: the tile no longer carries the path its lifter laid.
+  return !!at.by && (!now || now.change === 'cleared' || now.by !== at.by);
+}
 /** Material debits and refunds of unanswered lays and lifts, by token. */
 const pendingMaterials = new Map<number, { id: string; delta: number }>();
 const merged = new Map<string, GroundChange[]>();
@@ -479,6 +558,7 @@ let tokens = 0;
 
 function forgetPredictions(): void {
   predicted.clear();
+  predictedAt.clear();
   pendingMaterials.clear();
   merged.clear();
 }
@@ -488,12 +568,13 @@ function forgetPredictions(): void {
  * change (`null`: lifted away) and, for a lay or a lift, the material it
  * takes or gives back. Returns the token its answer settles.
  */
-export function predictGround(cx: number, cy: number, tx: number, ty: number, change: GroundChange | null, material?: { id: string; delta: number }): number {
+export function predictGround(cx: number, cy: number, tx: number, ty: number, change: GroundChange | null, material?: { id: string; delta: number }, by = ''): number {
   const token = ++tokens;
   const key = chunkKey(cx, cy);
   let mine = predicted.get(key);
   if (!mine) predicted.set(key, (mine = new Map()));
   mine.set(tileKey(tx, ty), { token, change });
+  predictedAt.set(token, { chunk: key, tile: tileKey(tx, ty), change, by: change?.by ?? by });
   if (material) pendingMaterials.set(token, material);
   merged.delete(key);
   bump();
@@ -503,6 +584,7 @@ export function predictGround(cx: number, cy: number, tx: number, ty: number, ch
 /** A prediction's answer came (or it was refused): it stops showing. */
 export function settlePrediction(token: number): void {
   pendingMaterials.delete(token);
+  predictedAt.delete(token);
   for (const [key, mine] of predicted) {
     for (const [tile, p] of mine) if (p.token === token) mine.delete(tile);
     if (!mine.size) predicted.delete(key);
@@ -511,25 +593,50 @@ export function settlePrediction(token: number): void {
   bump();
 }
 
-/** A path operation's answer: the chunk's changes now, the balances, and the ways it made, broke or moved. */
-export function applyPathAnswer(ground: ChunkGroundChanges | undefined, materials: Record<string, number>, ways: { made?: readonly WildsWay[]; broken?: readonly string[]; rerouted?: readonly WildsWay[] } = {}): void {
-  if (!view) return;
+/**
+ * A path operation's answer: the chunk's changes now, the balances, and the
+ * ways it made, broke or moved. Ground tagged with another epoch than the
+ * chunk's current one (the land turned meanwhile) and ways of another wick
+ * are not applied; false then, and the caller reads the world again.
+ */
+export function applyPathAnswer(ground: ChunkGroundChanges | undefined, materials: Record<string, number>, ways: { made?: readonly WildsWay[]; broken?: readonly string[]; rerouted?: readonly WildsWay[] } = {}): boolean {
+  if (!view) return false;
+  if (ground?.chunk) {
+    const current = chunkEpoch(ground.chunk.cx, ground.chunk.cy);
+    if (!current || ground.epoch !== current.id) return false;
+  }
+  const wick = view.wick.id;
+  if ([...(ways.made ?? []), ...(ways.rerouted ?? [])].some((w) => w.epoch !== wick)) return false;
+  const at = ++seq;
   if (ground?.chunk) {
     const key = chunkKey(ground.chunk.cx, ground.chunk.cy);
     view.ground.set(key, [...(ground.changes?.changes ?? [])]);
+    chunkSeq.set(key, at);
     merged.delete(key);
   }
   view.materials = materialsRecord(materials);
-  for (const w of [...(ways.made ?? []), ...(ways.rerouted ?? [])]) view.ways.set(w.id, w);
-  for (const id of ways.broken ?? []) view.ways.delete(id);
+  materialsSeq = at;
+  for (const w of [...(ways.made ?? []), ...(ways.rerouted ?? [])]) {
+    view.ways.set(w.id, w);
+    waySeq.set(w.id, at);
+  }
+  for (const id of ways.broken ?? []) {
+    view.ways.delete(id);
+    waySeq.set(id, at);
+  }
   bump();
+  return true;
 }
 
-/** A discovery answered by the server (yours or the first finder's): the map and the banner name them. */
-export function applyDiscovery(d: { entityId: string; poiId: string; discovererId: string; displayName: string }): void {
-  if (!view) return;
+/**
+ * A discovery answered by the server (yours or the first finder's): the map
+ * and the banner name them. Only for the wick held now; false otherwise.
+ */
+export function applyDiscovery(d: { entityId: string; poiId: string; discovererId: string; displayName: string }, epoch: string): boolean {
+  if (!view || epoch !== view.wick.id) return false;
   view.discoveries.set(d.entityId, { entityId: d.entityId, poiId: d.poiId, discovererId: d.discovererId, displayName: d.displayName });
   bump();
+  return true;
 }
 
 /** A personal claim seen in a near read (chest/POI ids). */
@@ -579,5 +686,6 @@ export function knownPlaces(): PlaceAt[] {
 export function applyBalances(materials: Record<string, number>): void {
   if (!view) return;
   view.materials = materialsRecord(materials);
+  materialsSeq = ++seq;
   bump();
 }

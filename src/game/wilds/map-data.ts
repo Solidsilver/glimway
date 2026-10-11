@@ -14,9 +14,9 @@ import { loadWilds } from '../../lib/wilds/data.ts'
 import type { MapChunk, MapInput, MapPlace } from '../../lib/wilds/map-model.ts'
 import type { Session } from '../session.ts'
 import { loadChunk } from './chunks.ts'
-import { chunkKey, isWildsArea, parseChunkKey } from './coords.ts'
+import { chunkKey, chunkOfPixel, isWildsArea, parseChunkKey } from './coords.ts'
 import { effectiveTerrain } from './terrain.ts'
-import { chunkEpoch, groundChanges, insideNamedFrontier, knownPlaces, refreshNear, wildsView } from './store.ts'
+import { chunkEpoch, groundChanges, insideNamedFrontier, knownPlaces, readRequested, refreshNear, wickEnded, wildsView } from './store.ts'
 import { seenAt, seenLandmarks, walkedChunks } from './walked.ts'
 
 /** The chunks the map shows: walked this wick, and the Tangle (it never turns). */
@@ -31,7 +31,7 @@ export function mapChunkKeys(walked: readonly string[]): string[] {
 export async function mapInput(session: Session): Promise<MapInput | null> {
   const link = session.link
   if (!link) return null
-  if (!wildsView() && link.online) await refreshNear(session, 0, 0)
+  await freshen(session)
   const view = wildsView()
   if (!view) return null
   const wick = view.wick.id
@@ -76,6 +76,33 @@ export async function mapInput(session: Session): Promise<MapInput | null> {
     hero,
     words: { you: MAP_LABELS.you, gate: MAP_LABELS.gate },
   }
+}
+
+/** When the Map last read the Wilds itself (ms): at most one read in MAP_READ_EVERY_MS, whatever the tab asks. */
+let mapReadAt = -Infinity
+export const MAP_READ_EVERY_MS = 10_000
+
+/**
+ * The Map draws one wick: before drawing, read the Wilds again when they've
+ * never been read, the view is stale, its wick has ended by the clock, or
+ * the store asked for a read. Around the hero on the open map, else at the
+ * gate. Coalesced: the read's own news (EV.wilds) redraws the tab, which
+ * must not read again.
+ */
+async function freshen(session: Session, now = Date.now()): Promise<void> {
+  const link = session.link
+  const view = wildsView()
+  const due = !view || view.stale || wickEnded() || readRequested()
+  if (!link || !due || !link.online || now - mapReadAt < MAP_READ_EVERY_MS) return
+  mapReadAt = now
+  const st = session.state
+  const at = isWildsArea(st.area) && st.position ? chunkOfPixel(st.position.x, st.position.y) : { cx: 0, cy: 0 }
+  await refreshNear(session, at.cx, at.cy)
+}
+
+/** Test seam: the Map may read again at once. */
+export function forgetMapRead(): void {
+  mapReadAt = -Infinity
 }
 
 /** The chunks of a place's cell (`place:<cellX>:<cellY>`, content `cells`), or none for anything else. */

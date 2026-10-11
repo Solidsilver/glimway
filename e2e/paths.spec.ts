@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import type { BrowserContext } from '@playwright/test'
+import { devices, type BrowserContext } from '@playwright/test'
 import { accountOf, sql, CONTRACT } from './connected'
 import { freshPlayer, fund, giveInstance } from './home-helpers'
 import { dialogueState, expectToast, readDialogue, waitForLive, waitForWilds, warp, wilds } from './helpers'
@@ -230,9 +230,11 @@ test('clear a thicket with a spade, lay stone after the turning-land confirm, se
   await expect.poll(async () => (await paths(page))!.last, { timeout: 15_000 }).toBe('refused:insufficient-materials')
   await expectToast(page, "You're out of timber.")
   expect((await tileAt(page, stand.tx, stand.ty))!.change).toBeNull()
+  // The refusal showed the pack was wrong: a fresh read says what it holds now.
+  await expect.poll(async () => (await paths(page))!.materials!.timber, { timeout: 15_000, message: 'timber read again' }).toBe(0)
 })
 
-test('the joining tile of a run between two places makes a named way, with signs at its ends and its name on the Map tab', async ({ page }) => {
+test('the joining tile of a run between two places makes a named way, with signs at its ends and its name on the Map tab', async ({ page, browser, baseURL }) => {
   test.setTimeout(240_000)
   const id = await freshPlayer(page)
   fund(id, { materials: { stone: 20 } })
@@ -342,6 +344,16 @@ test('the joining tile of a run between two places makes a named way, with signs
   await page.setViewportSize({ width: 1200, height: 760 })
   await page.keyboard.press('Escape')
 
+  // Someone else in the world sees the way, by the gap.
+  const invite = await (await page.request.post('/api/invites', { data: {}, ...CONTRACT })).json()
+  const ctx: BrowserContext = await browser.newContext({ baseURL, viewport: { width: 1200, height: 760 } })
+  const other = await ctx.newPage()
+  await freshPlayer(other, 'Wren', invite.code)
+  const otherWays = async () => ((await paths(other))?.ways ?? []).map((w) => w.id)
+  await warp(other, 'wilds', gap.tx, gap.ty + 1)
+  await waitForWilds(other)
+  await expect.poll(otherWays, { timeout: 15_000 }).toContain(way!.id)
+
   // Lift the joining stone: the run no longer joins the two places, and the way is broken.
   await warp(page, 'wilds', gap.tx, gap.ty)
   await waitForWilds(page)
@@ -351,4 +363,59 @@ test('the joining tile of a run between two places makes a named way, with signs
   await landed(page, 'lift')
   await expectToast(page, "Tansy's way is broken. Close the gap and it joins again.")
   expect((await paths(page))!.ways.some((w) => w.id === way!.id)).toBe(false)
+  // Wren's next read of that land no longer names it: its name, its signs and its line go there too.
+  try {
+    await warp(other, 'wilds', gap.tx + 1, gap.ty + 1)
+    await waitForWilds(other)
+    await expect.poll(otherWays, { timeout: 15_000 }).not.toContain(way!.id)
+    await expect.poll(async () => (await other.evaluate(() => (window as unknown as Hooks).__fsMarks()))?.signs ?? []).not.toContain(way!.id)
+  } finally {
+    await ctx.close()
+  }
+})
+
+test.describe('on a phone', () => {
+  const { defaultBrowserType: _browser, ...phone } = devices['iPhone 13']
+  test.use(phone)
+
+  test('the path buttons press once on a tap, and also on Enter (a click with no pointer)', async ({ page }) => {
+    test.setTimeout(180_000)
+    const id = await freshPlayer(page)
+    giveInstance(id, 'bench-spade', { max: 90 })
+    fund(id, { materials: { stone: 10 } })
+    // The Tangle keeps its paths (no turning-land confirm): an open tile in its middle chunk.
+    await warp(page, 'wilds', 12, -12)
+    await waitForWilds(page)
+    const open = await page.evaluate(() => {
+      const w = window as unknown as Hooks
+      for (let r = 0; r < 12; r++)
+        for (let ty = -12 - r; ty <= -12 + r; ty++)
+          for (let tx = 12 - r; tx <= 12 + r; tx++) {
+            const t = w.__fsPathTile(tx, ty)
+            if (t && t.surface === 'land' && !t.baseSolid && !t.occupied && !t.change && t.decor.length === 0) return { tx, ty }
+          }
+      return null
+    })
+    expect(open).not.toBeNull()
+    await warp(page, 'wilds', open!.tx, open!.ty)
+    await waitForWilds(page)
+    await page.evaluate(() => (window as unknown as Hooks).__fsDevParkCreatures())
+    await hold(page, 'dig')
+    await expect.poll(async () => (await paths(page))?.materials?.stone ?? 0).toBeGreaterThanOrEqual(10)
+    const stone = (await paths(page))!.materials!.stone!
+    const lay = page.locator('[data-ctx="path-lay-stone"]')
+    await expect(lay).toBeVisible()
+    await expect(lay, 'the touch row (it presses on pointerdown)').toHaveAttribute('data-inset', 'ctx')
+    await lay.tap()
+    await landed(page, 'lay')
+    await page.waitForTimeout(600)
+    expect((await paths(page))!.materials!.stone, 'one stone: the tap’s click is not a second press').toBe(stone - 1)
+    const lift = page.locator('[data-ctx="path-lift"]')
+    await expect(lift).toBeVisible()
+    await lift.focus()
+    await page.keyboard.press('Enter')
+    await landed(page, 'lift')
+    expect((await tileAt(page, open!.tx, open!.ty))!.change).toBeNull()
+    await expect.poll(async () => (await paths(page))!.materials!.stone).toBe(stone)
+  })
 })

@@ -17,12 +17,12 @@
  * - A lay that joins two places names a way; a lift that breaks one says so.
  */
 import type Phaser from 'phaser'
-import { PATH_DONE, PATH_LABELS, PATH_REFUSALS, TURNS_CONFIRM, WAY_NEWS } from '../../content/open-map.ts'
+import { PATH_LABELS, PATH_REFUSALS, TURNS_CONFIRM } from '../../content/open-map.ts'
 import { TILE, tileBottom, tileKey, tileMid } from '../../lib/tile.ts'
 import { loadWilds } from '../../lib/wilds/data.ts'
 import { chunkOf, epochKindAt, localOf } from '../../lib/wilds/coords.ts'
-import { checkClear, checkLay, checkLift, inReach, isLaid, layKinds, placeName, refusalText, turnsInText } from '../../lib/wilds/paths.ts'
-import type { GroundChange, WildsWay } from '../../lib/gen/glimway/v1/wilds_pb.js'
+import { checkClear, checkLay, checkLift, inReach, isLaid, layKinds, refusalText, turnsInText } from '../../lib/wilds/paths.ts'
+import type { GroundChange } from '../../lib/gen/glimway/v1/wilds_pb.js'
 import { hideContextButtons, showContextButton } from '../context-buttons.ts'
 import { openDialogue } from '../dialogue.ts'
 import { bus, EV } from '../events.ts'
@@ -33,7 +33,9 @@ import { gameNow } from '../clock.ts'
 import type { Session } from '../session.ts'
 import type { Effects } from '../entities/fx.ts'
 import type { Interactable, Interactables } from '../entities/interactables.ts'
-import { applyPathAnswer, knownPlaces, predictGround, settlePrediction, wildsEpoch, wildsLive, wildsMaterials, wildsView } from './store.ts'
+import { chunkEpoch, predictGround, settlePrediction, wildsEpoch, wildsLive, wildsMaterials, wildsView } from './store.ts'
+import { lastOutcome, noteOutcome, release, settleWildsOp, trackOp, tracked } from './ops.ts'
+import { newKey } from '../../lib/api/client.ts'
 import { pathTileAt } from './path-tile.ts'
 
 export { pathTileAt }
@@ -50,16 +52,22 @@ export interface PathsDeps {
   live: () => boolean
 }
 
-/** A path operation waiting for its turn on the link. */
+/** A path operation waiting for its turn on the link, with the land it was made in. */
 interface Job {
   op: 'clear' | 'lay' | 'lift'
   tx: number
   ty: number
   kind?: string
-  /** What the prediction showed (settled by the answer). */
+  /** What the prediction showed (settled with the operation). */
   token: number
   /** Where the hero stood when it was asked (the server measures reach from there). */
   where: { area: string; x: number; y: number }
+  /** The world, the wick and the chunk's epoch it was made under. */
+  world: string
+  wick: string
+  epoch: string
+  cx: number
+  cy: number
   /** For the words: the tool action, the material, the decor cleared. */
   action?: string
   material?: string
@@ -78,8 +86,6 @@ const typing = () => {
   return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || (el as HTMLElement).isContentEditable)
 }
 
-const fill = (text: string, values: Record<string, string>) => text.replace(/\{(\w+)\}/g, (m, k: string) => values[k] ?? m)
-
 export class WildsPaths {
   private queue: Job[] = []
   private running = false
@@ -88,12 +94,12 @@ export class WildsPaths {
   /** A lay key held down: lay again on each new tile you step on. */
   private holding: { kind: string; last: string } | null = null
   private keys: Phaser.Input.Keyboard.Key[] = []
-  /** The last outcome, as words for the playtest hooks. */
-  private last = '-'
   /** What the prompt and buttons were last worked out from. */
   private readFor = ''
+  private readonly deps: PathsDeps
 
-  constructor(scene: Phaser.Scene, private deps: PathsDeps) {
+  constructor(scene: Phaser.Scene, deps: PathsDeps) {
+    this.deps = deps
     const self = this
     const point: Interactable = {
       id: 'wilds:path-clear',
@@ -234,7 +240,7 @@ export class WildsPaths {
   // ------------------------------------------------------------ the operations
 
   private say(code: string, ctx: { action?: string; material?: string } = {}): void {
-    this.last = `refused:${code}`
+    noteOutcome(`refused:${code}`)
     bus.emit(EV.toast, { text: refusalText(code, { ...ctx, extra: PATH_REFUSALS }), icon: 'map', kind: 'thought' })
   }
 
@@ -258,7 +264,7 @@ export class WildsPaths {
     const token = predictGround(cx, cy, lx, ly, this.change(lx, ly, 'cleared'))
     sfx('dig')
     this.deps.fx.sparkBurst(tileMid(tx), tileBottom(ty) - 6, 6)
-    this.send({ op: 'clear', tx, ty, token, where: this.whereNow(), action: c.action, decor: c.decor, tries: 0 })
+    this.send({ op: 'clear', tx, ty, token, where: this.whereNow(), ...this.land(tx, ty), action: c.action, decor: c.decor, tries: 0 })
   }
 
   /**
@@ -301,7 +307,7 @@ export class WildsPaths {
     const { lx, ly } = localOf(tx, ty)
     const token = predictGround(cx, cy, lx, ly, this.change(lx, ly, kind), { id: material, delta: -cost })
     sfx('plant')
-    this.send({ op: 'lay', tx, ty, kind, token, where: this.whereNow(), material, tries: 0 })
+    this.send({ op: 'lay', tx, ty, kind, token, where: this.whereNow(), ...this.land(tx, ty), material, tries: 0 })
   }
 
   /** Lift your path under the hero's feet: its stone or timber comes back. */
@@ -314,9 +320,9 @@ export class WildsPaths {
     if (!c.ok) return this.say(c.code)
     const { cx, cy } = chunkOf(tx, ty)
     const { lx, ly } = localOf(tx, ty)
-    const token = predictGround(cx, cy, lx, ly, c.after ? this.change(lx, ly, 'cleared') : null, { id: c.material, delta: c.cost })
+    const token = predictGround(cx, cy, lx, ly, c.after ? this.change(lx, ly, 'cleared') : null, { id: c.material, delta: c.cost }, me)
     sfx('dig')
-    this.send({ op: 'lift', tx, ty, token, where: this.whereNow(), material: c.material, tries: 0 })
+    this.send({ op: 'lift', tx, ty, token, where: this.whereNow(), ...this.land(tx, ty), material: c.material, tries: 0 })
   }
 
   /** A dialogue's choice (WorldActions `path:`): the confirm said yes. */
@@ -356,12 +362,36 @@ export class WildsPaths {
 
   // ------------------------------------------------------------ the queue
 
+  /** The land a tile is in now: the world, the wick and its chunk's epoch. */
+  private land(tx: number, ty: number): Pick<Job, 'world' | 'wick' | 'epoch' | 'cx' | 'cy'> {
+    const { cx, cy } = chunkOf(tx, ty)
+    return { world: this.deps.session.link?.worldId ?? '', wick: wildsEpoch('wick').id, epoch: chunkEpoch(cx, cy)?.id ?? '', cx, cy }
+  }
+
+  /** Still the land the store holds? (A job from before the turning is never sent.) */
+  private stillHere(job: Job): boolean {
+    return wildsEpoch('wick').id === job.wick && chunkEpoch(job.cx, job.cy)?.id === job.epoch && (this.deps.session.link?.worldId ?? '') === job.world
+  }
+
   private send(job: Job): void {
     this.queue.push(job)
     void this.run()
   }
 
-  /** One operation at a time on the link; a busy link (a claim in flight) is waited out. */
+  /** Drop what is queued and unsent (its predictions go): the land turned, or the link can't take them now. */
+  private cancelQueued(): void {
+    for (const j of this.queue) settlePrediction(j.token)
+    this.queue = []
+    this.holding = null
+  }
+
+  /**
+   * One operation at a time on the link, each under its own outbox key and
+   * tracked until it settles (./ops.ts): its answer, a refusal or a replay
+   * applies it there. A busy link (a claim in flight) is waited out; an
+   * unanswered one keeps its prediction until the outbox settles it, and
+   * what is queued behind it goes.
+   */
   private async run(): Promise<void> {
     if (this.running) return
     this.running = true
@@ -369,60 +399,41 @@ export class WildsPaths {
       while (this.queue.length) {
         const job = this.queue[0]!
         const link = this.deps.session.link
-        if (!link) {
+        if (!link || !this.stillHere(job)) {
           this.queue.shift()
           settlePrediction(job.token)
           continue
         }
-        const res = await link.wildsPath(job.op, { x: job.tx, y: job.ty, kind: job.kind, where: job.where })
-        if (!res.ok && res.code === 'busy' && job.tries < 20) {
+        const key = newKey()
+        trackOp({ key, kind: job.op, world: job.world, wick: job.wick, epoch: job.epoch, cx: job.cx, cy: job.cy, token: job.token, action: job.action, material: job.material, decor: job.decor, account: link.accountId })
+        const res = await link.wildsPath(job.op, { x: job.tx, y: job.ty, kind: job.kind, where: job.where, key })
+        if (!res.ok && res.code === 'busy' && job.tries < 20 && tracked(key)) {
+          // Never entered the outbox: the same job goes again, under a new key, its prediction kept.
+          release(key)
           job.tries++
           await new Promise((r) => setTimeout(r, 250))
           continue
         }
         this.queue.shift()
-        settlePrediction(job.token)
-        if (!res.ok) {
-          if (res.code === 'epoch-ended') {
-            this.queue.forEach((j) => settlePrediction(j.token))
-            this.queue = []
-            bus.emit(EV.turning, { reason: 'epoch-ended' })
-            return
-          }
-          this.say(res.code, { action: job.action, material: job.material })
-          continue
+        if (res.ok || !tracked(key)) continue
+        if (res.code === 'pending') {
+          // In the outbox, unanswered: it keeps showing until the outbox settles it.
+          if (this.queue.length) this.say('pending')
+          this.cancelQueued()
+          return
         }
-        const r = res.result
-        const made = r.$typeName === 'glimway.v1.WildsLayResult' ? r.waysMade : []
-        const broken = r.$typeName === 'glimway.v1.WildsLiftResult' ? r.waysBroken : []
-        const rerouted = r.$typeName === 'glimway.v1.WildsLiftResult' ? r.waysRerouted : []
-        const before = new Map(wildsView()?.ways ?? [])
-        applyPathAnswer(r.ground, r.materials, { made, broken, rerouted })
-        this.last = `landed:${job.op}`
-        if (job.op === 'clear' && job.decor && PATH_DONE.cleared[job.decor]) bus.emit(EV.toast, { text: PATH_DONE.cleared[job.decor]!, icon: 'map', kind: 'thought' })
-        for (const w of made) this.wayMade(w)
-        for (const id of broken) {
-          const w = before.get(id)
-          if (w) bus.emit(EV.toast, { text: fill(WAY_NEWS.broken, { way: w.name }), icon: 'map', kind: 'thought' })
-        }
-        for (const w of rerouted) bus.emit(EV.toast, { text: fill(WAY_NEWS.rerouted, { way: w.name }), icon: 'map', kind: 'thought' })
+        // Refused before it reached the outbox (offline, a reload due): settled here.
+        settleWildsOp({ kind: `wilds-${job.op}`, key, world: job.world, outcome: { ok: false, code: res.code } })
+        if (res.code === 'offline' || res.code === 'busy') this.cancelQueued()
       }
     } finally {
       this.running = false
     }
   }
 
-  /** A named way: the sign goes up, and it's said once. */
-  private wayMade(w: WildsWay): void {
-    const places = knownPlaces()
-    const name = (id: string) => placeName(id, places.find((p) => p.id === id)?.kind ?? null)
-    bus.emit(EV.toast, { text: fill(WAY_NEWS.made, { way: w.name, from: name(w.a), to: name(w.b) }), icon: 'map', kind: 'gain', gain: { to: 'journal', label: w.name } })
-    sfx('discover')
-  }
-
   // ------------------------------------------------------------ playtests
 
   debug(): { clearAt: { tx: number; ty: number } | null; queued: number; last: string; buttons: string } {
-    return { clearAt: this.clearAt && { tx: this.clearAt.tx, ty: this.clearAt.ty }, queued: this.queue.length, last: this.last, buttons: this.shown }
+    return { clearAt: this.clearAt && { tx: this.clearAt.tx, ty: this.clearAt.ty }, queued: this.queue.length + (this.running ? 1 : 0), last: lastOutcome(), buttons: this.shown }
   }
 }

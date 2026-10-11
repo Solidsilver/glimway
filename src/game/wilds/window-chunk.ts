@@ -190,7 +190,7 @@ export class AttachedChunk {
    * can't be patched (a tile closed again: a refused clear): the window
    * then builds the chunk again.
    */
-  patch(next: ChunkTerrain): boolean {
+  patch(next: ChunkTerrain, beyond: (tx: number, ty: number) => void = () => {}): boolean {
     const t = this.terrain
     const was = this.applied
     const o = chunkOrigin(t)
@@ -216,16 +216,34 @@ export class AttachedChunk {
     }
     for (const k of relaid) {
       const [tx, ty] = k.split(',').map(Number) as [number, number]
-      const lx = tx - o.tx
-      const ly = ty - o.ty
-      if (lx < 0 || ly < 0 || lx >= t.size || ly >= t.size) continue
-      this.laid.get(k)?.destroy()
-      this.laid.delete(k)
-      const g = next.ground[ly]![lx]!
-      if (g === LAID_STONE || g === LAID_PLANK) this.laidArt(tx, ty, g)
+      // A neighbour across the chunk's edge: its own chunk redraws it (a plank turns to meet the new one).
+      if (!this.relay(tx, ty)) beyond(tx, ty)
     }
     if (opened.length) this.deps.gathering()?.addChunk(this.key, this.deps.gather(this.terrain))
     return true
+  }
+
+  /**
+   * Draw a laid tile's art again (its neighbours moved: a plank's direction
+   * follows them). False when the tile isn't in this chunk.
+   */
+  relay(tx: number, ty: number): boolean {
+    const t = this.terrain
+    const o = chunkOrigin(t)
+    const lx = tx - o.tx
+    const ly = ty - o.ty
+    if (lx < 0 || ly < 0 || lx >= t.size || ly >= t.size) return false
+    const k = tileKey(tx, ty)
+    this.laid.get(k)?.destroy()
+    this.laid.delete(k)
+    const g = t.ground[ly]![lx]!
+    if (g === LAID_STONE || g === LAID_PLANK) this.laidArt(tx, ty, g)
+    return true
+  }
+
+  /** The laid art drawn, by world tile (tests). */
+  laidArtKeys(): Map<string, string> {
+    return new Map([...this.laid].map(([k, img]) => [k, img.texture.key]))
   }
 
   /** A repainted ground image (after a patch) takes the old one's place. */

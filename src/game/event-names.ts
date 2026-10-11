@@ -75,6 +75,12 @@ export const EV = {
   wardrobe: 'game:wardrobe',
   /** Connected play: this wick's rumour as the server last said (open-map.md 2.10), or null. */
   rumour: 'game:rumour',
+  /**
+   * Connected play: an open-map path or discover operation left the outbox
+   * for good (answered, refused, or dropped unsent), its own caller waiting
+   * or not (a replay after a lost answer or a reload): WildsSettledPayload.
+   */
+  wildsSettled: 'game:wilds-settled',
   /** Open the Character panel's Companions page (`at: 'stable'` scrolls to the stable). */
   openCompanions: 'ui:open-companions',
   /** The mount that's out, as the hero has it now: { key, riding, led } (MountPayload); null when none is out. */
@@ -470,6 +476,7 @@ export interface EventMap {
   [EV.purse]: PurseView
   [EV.wardrobe]: void
   [EV.rumour]: RumourParts | null
+  [EV.wildsSettled]: WildsSettledPayload
   [EV.openCompanions]: { at?: 'stable' } | undefined
   [EV.mount]: MountPayload | null
   [EV.mutationResolved]: MutationResolvedPayload
@@ -524,3 +531,12 @@ export type EventHandler<P> = [P] extends [void] ? () => void : (payload: P) => 
 
 /** `emit`'s arguments after the name: none for `void`, optional when `P` may be undefined. */
 export type EventArgs<P> = [P] extends [void] ? [] : undefined extends P ? [payload?: P] : [payload: P]
+
+/** An open-map operation settled in the outbox (EV.wildsSettled). `result` is the Envelope's result case value. */
+export interface WildsSettledPayload {
+  kind: 'wilds-clear' | 'wilds-lay' | 'wilds-lift' | 'wilds-discover'
+  key: string
+  /** The world the link holds as it settles. */
+  world: string
+  outcome: { ok: true; result: unknown } | { ok: false; code: string }
+}

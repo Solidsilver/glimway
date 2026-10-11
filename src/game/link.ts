@@ -71,7 +71,7 @@ import { rawUserFor } from '../lib/habitica/client.ts'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types.ts'
 import { FLAGS, WELCOME_GLIMS, type GlimSpend, type SpendReason } from '../lib/glims.ts'
 import type { GameState } from '../lib/state.ts'
-import { EV, type Emit, type LinkPayload, type LinkStatus } from './event-names.ts'
+import { EV, type Emit, type LinkPayload, type LinkStatus, type WildsSettledPayload } from './event-names.ts'
 import { serverNow } from './clock.ts'
 import { glimsGift } from '../content/purse.ts'
 import { unlockNotice, type MagicMarks } from '../lib/combat.ts'
@@ -330,6 +330,9 @@ const TYPED: Partial<Record<OutboxKind, { schema: DescMessage; path: string; res
   // The wardrobe (purse-and-wardrobe.md 6.2): predicted, and queued offline like companions.
   wardrobe: { schema: WardrobeRequestSchema, path: '/api/wardrobe', result: 'wardrobe', send: (ops, req) => ops.wardrobe(req) }
 }
+
+/** The open map's operations, settled in the Wilds store by key (EV.wildsSettled). */
+const WILDS_SETTLED: ReadonlySet<OutboxKind> = new Set(['wilds-clear', 'wilds-lay', 'wilds-lift', 'wilds-discover'])
 
 /** The same mutation asked again: its route and fields, apart from the header and where the hero stands. */
 function sameRequest(entry: OutboxEntry, path: string, body: Record<string, unknown>): boolean {
@@ -1439,6 +1442,12 @@ export class Link {
 
   /** Tell a waiting caller (once), or the features about a replay nobody waited for. */
   private notify(entry: OutboxEntry, outcome: Outcome): void {
+    // The open map's operations settle in the Wilds store by their key, whoever waits
+    // (a replay after a lost answer or a reload included), before their caller hears.
+    if (WILDS_SETTLED.has(entry.kind) && (outcome.ok || (outcome.code !== 'pending' && outcome.code !== 'busy'))) {
+      const result = outcome.ok ? (outcome.result as { value?: unknown } | null)?.value ?? null : null
+      this.emitter(EV.wildsSettled, { kind: entry.kind as WildsSettledPayload['kind'], key: entry.key, world: this.worldId, outcome: outcome.ok ? { ok: true, result } : { ok: false, code: outcome.code } })
+    }
     const waiter = this.waiters.get(entry.id)
     if (waiter) {
       this.waiters.delete(entry.id)
@@ -1960,13 +1969,14 @@ export class Link {
 
   /**
    * Clear, lay or lift a path tile (open-map.md section 3), at world tile
-   * (x, y) from where the hero stands. Needs a connection; the caller
-   * predicts the change and takes the answer's ground and balances.
+   * (x, y) from where the hero stands. Needs a connection. `key` is the
+   * caller's, so it can track the operation: its answer, refusal or replay
+   * settles in the Wilds store through EV.wildsSettled.
    */
-  async wildsPath(op: 'clear' | 'lay' | 'lift', req: { x: number; y: number; kind?: string; where?: WhereJson }): Promise<WildsOutcome<WildsClearResult | WildsLayResult | WildsLiftResult>> {
+  async wildsPath(op: 'clear' | 'lay' | 'lift', req: { x: number; y: number; kind?: string; where?: WhereJson; key?: string }): Promise<WildsOutcome<WildsClearResult | WildsLayResult | WildsLiftResult>> {
     const s = this.session
     if (!s) return { ok: false, code: 'unknown' }
-    const key = newKey()
+    const key = req.key ?? newKey()
     const kind = `wilds-${op}` as const
     const typed = TYPED[kind]!
     const head = { op: { lease: '', key }, where: req.where ?? whereOf(s.state), x: req.x, y: req.y }
@@ -1984,11 +1994,11 @@ export class Link {
   }
 
   /** Tell the server you reached a place (open-map.md 2.10): the first this wick gets a find. */
-  async wildsDiscover(req: { epoch: string; place: string; where?: WhereJson }): Promise<WildsOutcome<WildsDiscoverResult>> {
+  async wildsDiscover(req: { epoch: string; place: string; where?: WhereJson; key?: string }): Promise<WildsOutcome<WildsDiscoverResult>> {
     const s = this.session
     if (!s) return { ok: false, code: 'unknown' }
     if (!req.epoch) return { ok: false, code: 'epoch-not-found' }
-    const key = newKey()
+    const key = req.key ?? newKey()
     const body = toJson(WildsDiscoverRequestSchema, create(WildsDiscoverRequestSchema, { op: { lease: '', key }, epoch: req.epoch, place: req.place, where: req.where ?? whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
     const { outcome: r } = await this.submit('wilds-discover', TYPED['wilds-discover']!.path, key, body, { offline: false })
     if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }

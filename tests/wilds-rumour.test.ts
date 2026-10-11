@@ -47,7 +47,7 @@ test('Elara: the rumour between her lines; her own line once you found it; nothi
   for (const line of [...ELARA_RUMOUR.lead, ELARA_RUMOUR.after, ELARA_RUMOUR.ask]) assert.doesNotMatch(line, /[0-9]/);
 });
 
-test('the outbox keeps the open map’s operations across a reload', () => {
+test('a stored outbox record keeps the open map’s four operation kinds (the replay itself: tests/wilds-ops.test.ts)', () => {
   const entry = (kind: string, path: string) => ({ id: 1, kind, path, key: 'k', body: '{"op":{"lease":"","key":"k"}}', contract: 8, createdAt: 1, sent: true, barrier: false, offline: false });
   for (const [kind, path] of [['wilds-clear', '/api/wilds/clear'], ['wilds-lay', '/api/wilds/lay'], ['wilds-lift', '/api/wilds/lift'], ['wilds-discover', '/api/wilds/discover']]) {
     const rec = normalizeRecord({ account: 'a', device: 'd', nextId: 2, entries: [entry(kind, path)], server: null, reports: null, client: '', lease: null, name: '', worldId: '', loggedOut: false, fence: 1, savedAt: 1 });

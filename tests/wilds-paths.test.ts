@@ -187,7 +187,7 @@ test('a refused prediction takes everything back: the tile and the material', as
   assert.equal(effectiveChunk(-2, -4)!.solid[ly]![lx], true, 'solid again');
   // A lift's prediction drops the tile's change and gives the stone back until the answer.
   const stone = wildsMaterials()!.stone!;
-  const lift = predictGround(-2, -4, 4, 4, null, { id: 'stone', delta: 1 });
+  const lift = predictGround(-2, -4, 4, 4, null, { id: 'stone', delta: 1 }, 'fixture-account');
   assert.equal(pathTileAt(-44, -92)!.change, null);
   assert.equal(wildsMaterials()!.stone, stone + 1);
   settlePrediction(lift);
