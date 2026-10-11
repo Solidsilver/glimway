@@ -13,6 +13,8 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-10
+
 ### For players
 
 - Silas's cottage on the Commons is now **Silas's Yard**, a shop you walk
@@ -500,7 +502,8 @@ The first public release.
   under its own licence; contributions under the DCO.
 - Unit tests, Go tests and Playwright playtests.
 
-[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.6.1...HEAD
+[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/Solidsilver/glimway/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/Solidsilver/glimway/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/Solidsilver/glimway/compare/v0.5.2...v0.6.0
 [0.5.2]: https://github.com/Solidsilver/glimway/compare/v0.5.1...v0.5.2
