@@ -32,6 +32,9 @@ import (
 //     when open. So a stray
 //     open tile is never shut in among the edge tiles, where neither chunk
 //     may carve to it.
+//
+// Then the south limit's last two rows are shut, but for the gate and a
+// kept edge: nothing lies south of it.
 
 type baseKind uint8
 
@@ -130,16 +133,47 @@ func (w *world) fill(x0, y0, x1, y1 int, kept *keptReader) []baseTile {
 		kept = &keptReader{w: w.still(), made: map[[2]int][]baseTile{}}
 	}
 	openings := openingTiles(w.e.Kind)
-	pts := w.landPointsNear(area)
+	south := int(contentRules().GetFrontier().GetSouthLimit())
 
+	// Every tile's patch over the area and a margin (a hem looks hemTiles
+	// round, the edge columns a tile further), then each tile's land.
+	m := hemTiles + 1
+	gx0, gy0, gW := x0-m, y0-m, W+2*m
+	grid := box{x0 - m, y0 - m, x1 + m, y1 + m}
+	gridBox := tileBox(grid.x0, grid.y0, grid.x1, grid.y1)
+	pts := w.landPointsNear(gridBox)
 	var riverSegs []int
-	leanR := 0
 	if w.river != nil {
-		leanR = int(contentRules().GetRiver().GetLeanChunks())*S*fp + 8*fp
-		riverSegs = w.river.line.segs(area, leanR)
+		riverSegs = w.river.line.segs(gridBox, riverLeanReach())
+	}
+	riverAt := func(p pt) (int64, int) {
+		if len(riverSegs) > 0 {
+			if d, h, ok := w.river.line.nearest(p, riverSegs); ok {
+				return d, h
+			}
+		}
+		return -1, 0
+	}
+	type patch struct {
+		o owner
+		l int
+	}
+	patches := make([]patch, gW*(grid.y1-grid.y0+1))
+	for ty := grid.y0; ty <= grid.y1; ty++ {
+		for tx := grid.x0; tx <= grid.x1; tx++ {
+			d, _ := riverAt(tileCentre(tx, ty))
+			o, l := w.patchAt(tx, ty, pts, d)
+			patches[(ty-gy0)*gW+tx-gx0] = patch{o, l}
+		}
+	}
+	landAt := func(tx, ty int) int {
+		return w.landFrom(tx, ty, func(x, y int) (owner, int) {
+			p := patches[(y-gy0)*gW+x-gx0]
+			return p.o, p.l
+		})
 	}
 	roadSegs := w.road.line.segs(area, 0)
-	// Routes and extra fords of the cells under the area.
+	// Routes of the cells under the area.
 	var routes []*line
 	cxa, cya := CellOf(floorDiv(x0, S), floorDiv(y0, S))
 	cxb, cyb := CellOf(floorDiv(x1, S), floorDiv(y1, S))
@@ -149,9 +183,6 @@ func (w *world) fill(x0, y0, x1, y1 int, kept *keptReader) []baseTile {
 				if !slices.Contains(routes, r.line) && len(r.line.segs(area, 0)) > 0 {
 					routes = append(routes, r.line)
 				}
-			}
-			if f := w.cellFord(cx, cy); f != nil && len(f.segs(area, routeVerge)) > 0 {
-				routes = append(routes, f)
 			}
 		}
 	}
@@ -165,13 +196,7 @@ func (w *world) fill(x0, y0, x1, y1 int, kept *keptReader) []baseTile {
 		if v, ok := samples[[2]int{tx, ty}]; ok {
 			return v
 		}
-		d := int64(-1)
-		if len(riverSegs) > 0 {
-			if dd, _, ok := w.river.line.nearest(tileCentre(tx, ty), riverSegs); ok {
-				d = dd
-			}
-		}
-		v := !w.thicketAt(tx, ty, int(landData(w.landAt(tx, ty, pts, d)).GetThicketPermille()))
+		v := floorDiv(ty, S) <= south && !w.thicketAt(tx, ty, int(landData(landAt(tx, ty)).GetThicketPermille()))
 		samples[[2]int{tx, ty}] = v
 		return v
 	}
@@ -193,13 +218,8 @@ func (w *world) fill(x0, y0, x1, y1 int, kept *keptReader) []baseTile {
 				continue
 			}
 			p := tileCentre(tx, ty)
-			riverD, riverHalf := int64(-1), 0
-			if len(riverSegs) > 0 {
-				if d, h, ok := w.river.line.nearest(p, riverSegs); ok {
-					riverD, riverHalf = d, h
-				}
-			}
-			land := w.landAt(tx, ty, pts, riverD)
+			riverD, riverHalf := riverAt(p)
+			land := landAt(tx, ty)
 			t.land = int8(land)
 			lg := landGround[land]
 			wet := riverD >= 0 && riverD <= int64(riverHalf)*int64(riverHalf)
@@ -270,6 +290,18 @@ func (w *world) fill(x0, y0, x1, y1 int, kept *keptReader) []baseTile {
 				continue
 			}
 			t.walk = !w.thicketAt(tx, ty, int(landData(land).GetThicketPermille()))
+		}
+	}
+	// Nothing lies south of the south limit: the limit's last two rows are
+	// shut (but for the gate and a kept edge), as the frontier is there.
+	for ty := max(y0, (south+1)*S-band); ty <= min(y1, (south+1)*S-1); ty++ {
+		for tx := x0; tx <= x1; tx++ {
+			t := &out[(ty-y0)*W+tx-x0]
+			if t.kind == bKept || t.kind == bSeam || t.kind == bOpening || t.kind == bWater || !t.walk {
+				continue
+			}
+			t.walk, t.kind = false, bField
+			t.ground = landGround[max(int(t.land), 0)].floor
 		}
 	}
 	return out

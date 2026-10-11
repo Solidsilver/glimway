@@ -4,48 +4,101 @@ package wilds
 // into land cells of landCellChunks square; each holds one seeded point
 // with a land kind (drawn by content weight, leaning by direction from the
 // gate) and a size in chunks across (drawn from the landSizes bands). A
-// tile belongs to the point with the least distance/size among those within
-// half the cap, measured from the tile's position warped by a little
-// world-coordinate noise, so borders are soft and no patch is wider than
-// the cap. Land within river.leanChunks of the Wend leans to the river's
-// land (decision 17's lean of the Wend and its meadow into the first ring).
+// tile belongs to the point with the least distance/size, measured from the
+// tile's position warped by a little world-coordinate noise so borders curl
+// and fray, among the points close enough that no patch is wider than the
+// cap. Land within river.leanChunks of the Wend leans to the river's land
+// (decision 17's lean of the Wend and its meadow into the first ring).
 //
-// Breaks. With two lands, drawn patches of one kind join into runs far
-// longer than the cap (and no colouring of a map of patches can stop that),
-// so decision 17's "whichever way you walk, the land changes within the
-// cap" needs a rule of its own: thin wavy breaks every breakSpacing chunks
-// each way, where the land turns to the other kind (a ride through woods,
-// a belt of trees across meadow). Any straight walk of the cap's length
-// crosses a break, and crossing one always changes the land around you.
+// Hems (decision 17: "whichever way you walk, the land changes within the
+// cap"). Where two patches of one land meet, a hem of another land runs
+// along their shared border: a ride between two woods, a line of trees
+// between two meadows. A patch is never wider than the cap, and leaving one
+// always crosses a change of land (the next patch's, or a hem), so any
+// straight walk of the cap's length meets one. A hem follows the patches'
+// own borders, so it makes no pattern of its own, and it works for any
+// number of lands (two patches of one land, whichever). Whether a tile is
+// hem is read from the owners of the tiles round it (hemOffsets), so it is
+// the same from any chunk. The footprints count as patches of their own
+// land: woods round the Tangle and the Whitequiet get a hem too.
 //
-// The footprints keep their own land (the Tangle and the Whitequiet are
-// woods) whatever the fields say.
+// Islands. A point of islandChunks or less takes the other land from its
+// biggest neighbour, so very small patches are clearings and copses, not
+// more of the same ringed by a hem.
 
 import "glimway/content"
 
-const (
-	breakSpacingChunks = 11 // 11·√2 plus a break's width stays under the cap of 20
-	breakHalfWidth     = 6  // tiles each side of a break's centre line
-	breakWarp          = 18 // tiles a break's centre line wanders
-)
+// A tile is hem when a tile hemRadii away from it (eight ways, out to its
+// own radius) belongs to another patch of the same land. The radius
+// wanders along a border between the smallest and hemTiles, so a hem
+// narrows and widens but never closes.
+const hemTiles = 6
 
-// landPoint is one land cell's seeded point: its world tile, size in chunks
-// and land (content index).
+var hemRadii = []int{2, 4, hemTiles}
+
+var hemOffsets = func() [][][2]int {
+	var out [][][2]int
+	for _, r := range hemRadii {
+		d := r * 707 / 1000
+		out = append(out, [][2]int{{r, 0}, {d, d}, {0, r}, {-d, d}, {-r, 0}, {-d, -d}, {0, -r}, {d, -d}})
+	}
+	return out
+}()
+
+// islandChunks: a point this small takes the other land from its biggest
+// neighbour's, so a small patch is a clearing in the woods or a copse in the
+// meadow (decision 16's very small patches) rather than more of the same.
+const islandChunks = 3
+
+// landPoint is one land cell's seeded point: its cell, world tile, size in
+// chunks and land (content index).
 type landPoint struct {
-	x, y, size, land int
+	lx, ly, x, y, size, land int
+}
+
+// owner names a patch: a land point by its cell, or a footprint (fp set,
+// lx its index in content places).
+type owner struct {
+	lx, ly int
+	fp     bool
 }
 
 func landCellTiles() int { return int(contentRules().GetLandSizes().GetLandCellChunks()) * chunkSize() }
 
-// landPoint is the point of land cell (lx, ly).
+// landPoint is the point of land cell (lx, ly), its land settled: a small
+// point takes the other land from its biggest neighbour's drawn land (the
+// eight cells round it; ties to the first in row order).
 func (w *world) landPoint(lx, ly int) landPoint {
+	if p, ok := w.landFinal[[2]int{lx, ly}]; ok {
+		return p
+	}
+	p := w.drawnPoint(lx, ly)
+	if p.size <= islandChunks {
+		var big landPoint
+		for dy := -1; dy <= 1; dy++ {
+			for dx := -1; dx <= 1; dx++ {
+				if q := w.drawnPoint(lx+dx, ly+dy); (dx != 0 || dy != 0) && q.size > big.size {
+					big = q
+				}
+			}
+		}
+		if big.size > islandChunks {
+			p.land = hemLand(big.land)
+		}
+	}
+	w.landFinal[[2]int{lx, ly}] = p
+	return p
+}
+
+// drawnPoint is the point of land cell (lx, ly) as drawn.
+func (w *world) drawnPoint(lx, ly int) landPoint {
 	if p, ok := w.landPts[[2]int{lx, ly}]; ok {
 		return p
 	}
 	data := contentRules()
 	L := landCellTiles()
 	rng := NewRng(w.e.hash("land", lx, ly))
-	p := landPoint{x: lx*L + L*rng.Between(150, 850)/1000, y: ly*L + L*rng.Between(150, 850)/1000}
+	p := landPoint{lx: lx, ly: ly, x: lx*L + L*rng.Between(200, 800)/1000, y: ly*L + L*rng.Between(200, 800)/1000}
 	sizes := data.GetLandSizes()
 	var bw []int
 	for _, b := range sizes.GetBands() {
@@ -82,7 +135,7 @@ func (w *world) landPointsNear(b box) []landPoint {
 	half := int(contentRules().GetLandSizes().GetWindowCells()) / 2
 	x0, y0 := floorDiv(b.x0/fp, L), floorDiv(b.y0/fp, L)
 	x1, y1 := floorDiv(b.x1/fp, L), floorDiv(b.y1/fp, L)
-	grown := b.grow(reach + landWarpMax())
+	grown := b.grow(reach + landWarpMax() + hemTiles*fp)
 	var out []landPoint
 	for ly := y0 - half; ly <= y1+half; ly++ {
 		for lx := x0 - half; lx <= x1+half; lx++ {
@@ -95,17 +148,19 @@ func (w *world) landPointsNear(b box) []landPoint {
 	return out
 }
 
-// capReach is half the cap, in fp: no point owns a tile further away.
+// capReach is how far (fp, in warped positions) a point owns tiles: half
+// the cap less the warp each side, so no patch is wider than the cap.
 func capReach() int {
-	return int(contentRules().GetLandSizes().GetCapChunks()) * chunkSize() * fp / 2
+	return int(contentRules().GetLandSizes().GetCapChunks())*chunkSize()*fp/2 - 2*landWarpMax()
 }
 
 // landWarp: how far a tile's position wanders before its land is read, a
-// coarse warp (borders curl) and a fine one (borders fray). In fp.
+// coarse warp (borders curl, up to amp/2 each way) and a fine one (borders
+// fray, up to 3/4 tile). In fp.
 func landWarpAmp() int {
 	return int(contentRules().GetLandSizes().GetBorderNoisePermille()) * chunkSize() * 2 * fp / 1000
 }
-func landWarpMax() int { return landWarpAmp() + 3*fp/2 }
+func landWarpMax() int { return landWarpAmp()/2 + 3*fp/4 + 1 }
 
 func (w *world) warped(tx, ty int) pt {
 	amp := landWarpAmp()
@@ -115,30 +170,64 @@ func (w *world) warped(tx, ty int) pt {
 	return p
 }
 
-// fieldLand is the land the points give a tile (before the river's lean,
-// the breaks and the footprints).
-func (w *world) fieldLand(tx, ty int, pts []landPoint) int {
+// fieldOwner is the point that owns a tile (an index into pts): the least
+// distance/size within reach, or the nearest if none is (which the window
+// and the jitter rule out).
+func (w *world) fieldOwner(tx, ty int, pts []landPoint) int {
 	p := w.warped(tx, ty)
 	reach := int64(capReach())
 	best, bestD, bestS := -1, int64(0), int64(1)
 	near, nearD := 0, int64(-1)
-	for _, q := range pts {
+	for i, q := range pts {
 		c := tileCentre(q.x, q.y)
 		dx, dy := int64(p.x-c.x), int64(p.y-c.y)
 		d := dx*dx + dy*dy
 		if nearD < 0 || d < nearD {
-			near, nearD = q.land, d
+			near, nearD = i, d
 		}
 		if d > reach*reach {
 			continue
 		}
 		s := int64(q.size)
 		if best < 0 || d*bestS*bestS < bestD*s*s {
-			best, bestD, bestS = q.land, d, s
+			best, bestD, bestS = i, d, s
 		}
 	}
 	if best < 0 {
-		return near // nothing within reach (can't happen with the window): the nearest
+		return near
+	}
+	return best
+}
+
+// patchAt is a tile's patch and the land it gives there (the river's pull
+// applied; a footprint's own land in a footprint).
+func (w *world) patchAt(tx, ty int, pts []landPoint, riverD2 int64) (owner, int) {
+	S := chunkSize()
+	cx, cy := floorDiv(tx, S), floorDiv(ty, S)
+	for i, p := range contentRules().Places {
+		if FootprintDistance(p, cx, cy) == 0 {
+			return owner{lx: i, fp: true}, landIndex(p.GetLand())
+		}
+	}
+	q := pts[w.fieldOwner(tx, ty, pts)]
+	l := q.land
+	if riverLeanLand >= 0 && w.riverLean(tx, ty, riverD2) {
+		l = riverLeanLand
+	}
+	return owner{lx: q.lx, ly: q.ly}, l
+}
+
+// hemLand is the land a hem between two patches of land l takes: the
+// heaviest other land.
+func hemLand(l int) int {
+	best := -1
+	for i, d := range contentRules().Lands {
+		if i != l && (best < 0 || d.GetWeight() > contentRules().Lands[best].GetWeight()) {
+			best = i
+		}
+	}
+	if best < 0 {
+		return l
 	}
 	return best
 }
@@ -159,56 +248,60 @@ func (w *world) riverLean(tx, ty int, riverD2 int64) bool {
 
 var riverLeanLand = landIndex(contentRules().GetRiver().GetLeanLand())
 
-// inBreak is true on a break's tiles (vertical breaks XOR horizontal ones,
-// so where two cross the land is the field's again).
-func (w *world) inBreak(tx, ty int) bool {
-	return w.onBreak(tx, ty, w.breakX, "x") != w.onBreak(ty, tx, w.breakY, "y")
-}
-
-// onBreak: is `along` within a break line of its axis at `across`?
-func (w *world) onBreak(along, across int, n noise, axis string) bool {
-	D := breakSpacingChunks * chunkSize()
-	phase := int(w.e.hash("break-phase", axis) % uint32(D))
-	k0 := floorDiv(along-phase, D)
-	for k := k0; k <= k0+1; k++ {
-		c := k*D + phase + (n.at(k*5*fp+37, across*fp/36)-noiseMid)*2*breakWarp>>16
-		if abs(along-c) <= breakHalfWidth {
-			return true
+// landFrom is a tile's land given how to read any tile's patch: a
+// footprint's own land inside it; else its patch's land, or a hem where a
+// tile within its hem radius lies in another patch of the same land.
+func (w *world) landFrom(tx, ty int, patch func(tx, ty int) (owner, int)) int {
+	o, l := patch(tx, ty)
+	if o.fp {
+		return l
+	}
+	reach := w.hemRadius(tx, ty)
+	for k, r := range hemRadii {
+		if r > reach {
+			break
 		}
-	}
-	return false
-}
-
-// landAt is a tile's land (content index), every rule applied. riverD2 is
-// the tile's squared distance to the Wend's centre line (-1: no river).
-func (w *world) landAt(tx, ty int, pts []landPoint, riverD2 int64) int {
-	S := chunkSize()
-	if p := FootprintAt(floorDiv(tx, S), floorDiv(ty, S)); p != nil {
-		return landIndex(p.GetLand())
-	}
-	l := w.fieldLand(tx, ty, pts)
-	if w.riverLean(tx, ty, riverD2) && riverLeanLand >= 0 {
-		l = riverLeanLand
-	}
-	if w.inBreak(tx, ty) {
-		l = (l + 1) % len(contentRules().Lands)
+		for _, d := range hemOffsets[k] {
+			if o2, l2 := patch(tx+d[0], ty+d[1]); o2 != o && l2 == l {
+				return hemLand(l)
+			}
+		}
 	}
 	return l
 }
 
-// landOne is landAt for a lone tile (it finds its own points and river
-// distance).
-func (w *world) landOne(tx, ty int) int {
-	b := tileBox(tx, ty, tx, ty)
-	return w.landAt(tx, ty, w.landPointsNear(b), w.riverD2(tileCentre(tx, ty)))
+// hemRadius is how far a hem reaches at a tile: one of hemRadii, by a
+// noise field a few chunks across.
+func (w *world) hemRadius(tx, ty int) int {
+	v := w.warpY.at(tx*fp/40+33*fp, ty*fp/40)
+	return hemRadii[v*len(hemRadii)>>16]
 }
 
-// riverD2 is a point's squared distance to the Wend's centre line, or -1.
-func (w *world) riverD2(p pt) int64 {
+// landOne is a lone tile's land, every rule applied.
+func (w *world) landOne(tx, ty int) int {
+	pts := w.landPointsNear(tileBox(tx, ty, tx, ty))
+	return w.landFrom(tx, ty, func(x, y int) (owner, int) {
+		return w.patchAt(x, y, pts, w.riverD2Near(tileCentre(x, y)))
+	})
+}
+
+// riverLeanReach is the furthest from the Wend's centre (fp) its pull or
+// its water and bank reach.
+func riverLeanReach() int {
+	return int(contentRules().GetRiver().GetLeanChunks())*chunkSize()*fp + 8*fp
+}
+
+// riverD2Near is a point's squared distance to the Wend's centre line when
+// it is within riverLeanReach, else -1 (as fill reads it).
+func (w *world) riverD2Near(p pt) int64 {
 	if w.river == nil {
 		return -1
 	}
-	d, _, _ := w.river.line.nearest(p, nil)
+	segs := w.river.line.segs(box{p.x, p.y, p.x, p.y}, riverLeanReach())
+	if len(segs) == 0 {
+		return -1
+	}
+	d, _, _ := w.river.line.nearest(p, segs)
 	return d
 }
 

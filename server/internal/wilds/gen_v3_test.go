@@ -3,6 +3,7 @@ package wilds
 import (
 	"errors"
 	"fmt"
+	"math"
 	"math/rand/v2"
 	"regexp"
 	"slices"
@@ -61,14 +62,44 @@ type frontierMap struct {
 }
 
 func buildFrontier(t testing.TB, seed, season string) *frontierMap {
+	return buildFrontierKept(t, seed, season, "")
+}
+
+// buildFrontierKept is buildFrontier with the Tangle stored from another
+// seed's still epoch (keptSeed, when set), passed to every wick chunk
+// beside it as its kept neighbours: every seam then differs from what v3
+// would make itself.
+func buildFrontierKept(t testing.TB, seed, season, keptSeed string) *frontierMap {
 	t.Helper()
 	S := chunkSize()
 	minCx, minCy, maxCx, maxCy := frontierChunks()
 	m := &frontierMap{seed: seed, season: season, x0: minCx * S, y0: minCy * S, W: (maxCx - minCx + 1) * S, H: (maxCy - minCy + 1) * S, chunks: map[[2]int]Chunk{}}
 	m.walk = make([]bool, m.W*m.H)
 	m.ground = make([]Ground, m.W*m.H)
+	stored := map[[2]int]Chunk{}
+	if keptSeed != "" {
+		for _, c := range frontierList() {
+			if EpochKindAt(c[0], c[1]) == EpochStill {
+				stored[c] = mustV3(t, keptSeed, season, c[0], c[1])
+			}
+		}
+	}
 	for _, c := range frontierList() {
-		ch := mustV3(t, seed, season, c[0], c[1])
+		var ch Chunk
+		if k, ok := stored[c]; ok {
+			ch = k
+		} else {
+			var kept []Kept
+			for _, d := range seamOrder {
+				if k, ok := stored[[2]int{c[0] + d[0], c[1] + d[1]}]; ok {
+					kept = append(kept, Kept{c[0] + d[0], c[1] + d[1], ToProto(k, epochID)})
+				}
+			}
+			var err error
+			if ch, err = GenerateV3(epochFor(seed, season, c[0], c[1]), c[0], c[1], kept); err != nil {
+				t.Fatal(err)
+			}
+		}
 		m.chunks[c] = ch
 		for i := range ch.Ground {
 			tx, ty := c[0]*S+i%S, c[1]*S+i/S
@@ -138,34 +169,45 @@ func TestV3Refusals(t *testing.T) {
 
 // ---------------------------------------------------------------- determinism
 
-// TestV3Determinism: a chunk made alone equals the same chunk made in any
-// order, and a new wick turns the Beyond but not the Tangle or the road.
+// TestV3Determinism: one world (with its caches) serving a whole frontier
+// in any order makes every chunk exactly as a fresh world does; a new wick
+// turns the Beyond but not the Tangle; the seed changes the Tangle.
 func TestV3Determinism(t *testing.T) {
-	seed, season := "oak-7", wickSeason(1795000000)
-	list := frontierList()
-	alone := map[[2]int]string{}
-	for _, c := range list {
-		alone[c] = chunkHash(mustV3(t, seed, season, c[0], c[1]))
-	}
-	order := slices.Clone(list)
-	rand.New(rand.NewPCG(7, 9)).Shuffle(len(order), func(i, j int) { order[i], order[j] = order[j], order[i] })
-	for _, c := range order {
-		if h := chunkHash(mustV3(t, seed, season, c[0], c[1])); h != alone[c] {
-			t.Fatalf("chunk %v differs made in another order", c)
+	for _, ws := range v3Worlds(6) {
+		seed, season := ws[0], ws[1]
+		list := frontierList()
+		fresh := map[[2]int]string{}
+		for _, c := range list {
+			fresh[c] = chunkHash(mustV3(t, seed, season, c[0], c[1]))
 		}
-	}
-	other := wickSeason(1795000000 + 86400*15)
-	for _, c := range list {
-		h := chunkHash(mustV3(t, seed, other, c[0], c[1]))
-		if EpochKindAt(c[0], c[1]) == EpochStill {
-			if h != alone[c] {
-				t.Fatalf("the Tangle's chunk %v turned", c)
+		for k := range 3 {
+			shared := map[string]*world{EpochWick: newWorld(WickEpoch(seed, season)), EpochStill: newWorld(StillEpoch(seed))}
+			order := slices.Clone(list)
+			rand.New(rand.NewPCG(uint64(k), 9)).Shuffle(len(order), func(i, j int) { order[i], order[j] = order[j], order[i] })
+			for _, c := range order {
+				ch, err := shared[EpochKindAt(c[0], c[1])].chunk(c[0], c[1], nil)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if chunkHash(ch) != fresh[c] {
+					t.Fatalf("%s: chunk %v differs made by a shared world in order %d", seed, c, k)
+				}
 			}
-		} else if h == alone[c] {
-			t.Fatalf("chunk %v didn't turn at the wick", c)
+		}
+		other := wickSeason(1795000000 + 86400*15)
+		for _, c := range list {
+			h := chunkHash(mustV3(t, seed, other, c[0], c[1]))
+			if EpochKindAt(c[0], c[1]) == EpochStill {
+				if h != fresh[c] {
+					t.Fatalf("the Tangle's chunk %v turned", c)
+				}
+			} else if h == fresh[c] && season != other {
+				t.Fatalf("chunk %v didn't turn at the wick", c)
+			}
 		}
 	}
-	if chunkHash(mustV3(t, "oak-8", season, 0, -1)) == alone[[2]int{0, -1}] {
+	a := mustV3(t, "oak-7", wickSeason(1795000000), 0, -1)
+	if chunkHash(mustV3(t, "oak-8", wickSeason(1795000000), 0, -1)) == chunkHash(a) {
 		t.Fatal("the world seed didn't change the Tangle")
 	}
 }
@@ -223,56 +265,25 @@ func TestV3EdgeAgreement(t *testing.T) {
 
 // ---------------------------------------------------------------- reach
 
-// TestV3Reach: from the Commons gate, every place, every route tile, every
-// open edge tile, entity and walkable site of the frontier is reachable;
-// every route crossing the Wend has a ford there.
+// TestV3Reach: from the Commons gate, every walkable tile of the frontier
+// is reached, but for tiles whose open ground leads only off the frontier;
+// landmarks and lamp stones are solid and stand clear; every route over the
+// Wend has a ford.
 func TestV3Reach(t *testing.T) {
 	S := chunkSize()
-	gx, gy := gateTile()
-	for _, ws := range v3Worlds(25) {
+	for _, ws := range v3Worlds(40) {
 		seed, season := ws[0], ws[1]
 		m := buildFrontier(t, seed, season)
-		seen := m.reach(gx, gy)
-		must := func(what string, tx, ty int) {
-			t.Helper()
-			if !m.in(tx, ty) || !seen[m.i(tx, ty)] {
-				t.Fatalf("%s: %s at %d,%d can't be reached from the gate", seed, what, tx, ty)
-			}
-		}
+		m.mustReachAll(t)
 		for c, ch := range m.chunks {
-			x0, y0 := c[0]*S, c[1]*S
-			for _, e := range ch.Entities {
-				must(e.ID, x0+e.TX, y0+e.TY)
-			}
 			for _, s := range ch.Sites {
-				if s.Kind == SiteLampStone {
-					if ch.Solid[s.TY*S+s.TX] == false {
-						t.Fatalf("%s: lamp stone %s isn't solid", seed, s.ID)
-					}
-					continue
+				if s.Kind == SiteLampStone && !ch.Solid[s.TY*S+s.TX] {
+					t.Fatalf("%s: lamp stone %s isn't solid", seed, s.ID)
 				}
-				must(s.ID, x0+s.TX, y0+s.TY)
 			}
 			for _, p := range ch.Places {
-				if !ch.Solid[p.TY*S+p.TX] {
-					t.Fatalf("%s: landmark of %s isn't solid", seed, p.ID)
-				}
-				must(p.ID+" (its front)", x0+p.TX, y0+p.TY+2)
-			}
-			// Open edge tiles that face an open tile across the edge.
-			for i := range ch.Ground {
-				lx, ly := i%S, i/S
-				if ch.Solid[i] || (lx != 0 && ly != 0 && lx != S-1 && ly != S-1) {
-					continue
-				}
-				tx, ty := x0+lx, y0+ly
-				for _, d := range dirs4 {
-					ox, oy := tx+d[0], ty+d[1]
-					if FloorDiv(ox, S) != c[0] || FloorDiv(oy, S) != c[1] {
-						if m.walkable(ox, oy) {
-							must("edge tile", tx, ty)
-						}
-					}
+				if !ch.Solid[p.TY*S+p.TX] || ch.Solid[(p.TY+2)*S+p.TX] {
+					t.Fatalf("%s: %s's landmark isn't solid or its front is shut (chunk %v)", seed, p.ID, c)
 				}
 			}
 		}
@@ -283,14 +294,11 @@ func TestV3Reach(t *testing.T) {
 				n := max(isqrt((b.x-a.x)*(b.x-a.x)+(b.y-a.y)*(b.y-a.y))/fp, 1)
 				for k := 0; k <= n; k++ {
 					tx, ty := pt{a.x + (b.x-a.x)*k/n, a.y + (b.y-a.y)*k/n}.tile()
-					if !m.in(tx, ty) || !insideReach(FloorDiv(tx, S), FloorDiv(ty, S)) || EpochKindAt(FloorDiv(tx, S), FloorDiv(ty, S)) == EpochStill {
+					if !m.in(tx, ty) || EpochKindAt(FloorDiv(tx, S), FloorDiv(ty, S)) == EpochStill {
 						continue
 					}
 					if g := m.ground[m.i(tx, ty)]; g == groundRiverWater {
 						t.Fatalf("%s: a route runs over water at %d,%d (no ford)", seed, tx, ty)
-					}
-					if m.walk[m.i(tx, ty)] {
-						must("route", tx, ty)
 					}
 				}
 			}
@@ -298,7 +306,48 @@ func TestV3Reach(t *testing.T) {
 	}
 }
 
-// frontierRoutes are the wick world's routes and extra fords in the frontier.
+// mustReachAll floods from the gate and fails on any walkable tile left
+// out, unless its piece of open ground touches the frontier's outer edge
+// (it leads off the frontier, where the drift stops a walker).
+func (m *frontierMap) mustReachAll(t *testing.T) {
+	t.Helper()
+	gx, gy := gateTile()
+	seen := m.reach(gx, gy)
+	for i, open := range m.walk {
+		if !open || seen[i] {
+			continue
+		}
+		// Flood the piece left out.
+		piece := []int{i}
+		seen[i] = true
+		off := false
+		for k := 0; k < len(piece); k++ {
+			j := piece[k]
+			x, y := j%m.W, j/m.W
+			if x == 0 || y == 0 || x == m.W-1 {
+				off = true
+			}
+			for _, d := range dirs4 {
+				nx, ny := x+d[0], y+d[1]
+				if nx < 0 || ny < 0 || nx >= m.W || ny >= m.H {
+					continue
+				}
+				n := ny*m.W + nx
+				if m.walk[n] && !seen[n] {
+					seen[n] = true
+					piece = append(piece, n)
+				}
+			}
+		}
+		if !off {
+			tx, ty := m.x0+i%m.W, m.y0+i/m.W
+			t.Fatalf("%s %s: %d walkable tiles at %d,%d (chunk %d,%d) can't be reached from the gate",
+				m.seed, m.season, len(piece), tx, ty, FloorDiv(tx, chunkSize()), FloorDiv(ty, chunkSize()))
+		}
+	}
+}
+
+// frontierRoutes are the wick world's routes in the frontier.
 func frontierRoutes(w *world) []*line {
 	minCx, minCy, maxCx, maxCy := frontierChunks()
 	x0, y0 := CellOf(minCx, minCy)
@@ -311,9 +360,6 @@ func frontierRoutes(w *world) []*line {
 					out = append(out, r.line)
 				}
 			}
-			if f := w.cellFord(x, y); f != nil {
-				out = append(out, f)
-			}
 		}
 	}
 	return out
@@ -322,87 +368,46 @@ func frontierRoutes(w *world) []*line {
 // ---------------------------------------------------------------- seams
 
 // TestV3Seams: beside the Tangle, a wick chunk's two edge tiles copy the
-// kept chunk's facing two (open where open, solid where solid), with no
-// water there; given a stored kept chunk that differs from what v3 would
-// make, it copies the stored one, and the opening still reaches the rest.
+// kept chunk's facing two (open where open, solid where solid; corners
+// across the corner), with no water there. With the Tangle stored from
+// another seed (so every seam differs from what v3 would make), on every
+// edge and corner of it, the wick side copies the stored edge, and the whole
+// frontier still reaches the gate.
 func TestV3Seams(t *testing.T) {
 	S := chunkSize()
 	tangle := Footprint("tangle")
-	for _, ws := range v3Worlds(8) {
+	for i, ws := range v3Worlds(10) {
 		seed, season := ws[0], ws[1]
-		for _, c := range frontierList() {
-			cx, cy := c[0], c[1]
-			if EpochKindAt(cx, cy) != EpochWick || FootprintDistance(tangle, cx, cy) != 1 {
+		keptSeed := ""
+		if i%2 == 1 {
+			keptSeed = seed + "-other"
+		}
+		m := buildFrontierKept(t, seed, season, keptSeed)
+		w := newWorld(WickEpoch(seed, season))
+		copied := 0
+		for c, ch := range m.chunks {
+			if EpochKindAt(c[0], c[1]) != EpochWick || FootprintDistance(tangle, c[0], c[1]) != 1 {
 				continue
 			}
-			ch := mustV3(t, seed, season, cx, cy)
-			w := newWorld(WickEpoch(seed, season))
 			for i := range ch.Ground {
-				tx, ty := cx*S+i%S, cy*S+i/S
+				tx, ty := c[0]*S+i%S, c[1]*S+i/S
 				mx, my, ok := w.seamMirror(tx, ty)
 				if !ok {
 					continue
 				}
-				kc := mustV3(t, seed, season, FloorDiv(mx, S), FloorDiv(my, S))
-				j := (my-FloorDiv(my, S)*S)*S + mx - FloorDiv(mx, S)*S
-				if ch.Solid[i] != kc.Solid[j] {
-					t.Fatalf("%s: chunk %d,%d tile %d doesn't copy the Tangle's edge", seed, cx, cy, i)
+				if m.walk[m.i(tx, ty)] != m.walk[m.i(mx, my)] {
+					t.Fatalf("%s (kept %q): tile %d,%d doesn't copy the Tangle's %d,%d", seed, keptSeed, tx, ty, mx, my)
 				}
 				if s := groundSurface[ch.Ground[i]]; s == "water" || s == "ford" {
-					t.Fatalf("%s: water on the Tangle's seam in %d,%d", seed, cx, cy)
+					t.Fatalf("%s: water on the Tangle's seam at %d,%d", seed, tx, ty)
 				}
+				copied++
 			}
 		}
-	}
-	// A stored Tangle chunk with a different west edge: (-2,-1) copies it.
-	seed, season := "seam", wickSeason(1795000000)
-	kept := mustV3(t, seed, season, -1, -1)
-	stored := ToProto(kept, epochID)
-	for ly := 0; ly < S; ly++ {
-		for lx := 0; lx < 2; lx++ {
-			i := ly*S + lx
-			open := ly >= 16 && ly <= 18 // a new 3-tile opening, and nothing else
-			if open {
-				stored.Solid[i/8] &^= 1 << (i % 8)
-			} else {
-				stored.Solid[i/8] |= 1 << (i % 8)
-			}
+		if copied < 3*3*S*band {
+			t.Fatalf("%s: only %d seam tiles", seed, copied)
 		}
-	}
-	ch, err := GenerateV3(WickEpoch(seed, season), -2, -1, []Kept{{-1, -1, stored}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	for ly := 0; ly < S; ly++ {
-		for lx := S - 2; lx < S; lx++ {
-			if want := !(ly >= 16 && ly <= 18); ch.Solid[ly*S+lx] != want {
-				t.Fatalf("tile %d,%d of the newer side doesn't copy the stored edge", lx, ly)
-			}
-		}
-	}
-	// The stored opening reaches the chunk's other open edge tiles.
-	seen := map[int]bool{(17)*S + S - 1: true}
-	q := []int{17*S + S - 1}
-	for len(q) > 0 {
-		i := q[0]
-		q = q[1:]
-		for _, d := range dirs4 {
-			x, y := i%S+d[0], i/S+d[1]
-			if x < 0 || y < 0 || x >= S || y >= S || ch.Solid[y*S+x] || seen[y*S+x] {
-				continue
-			}
-			seen[y*S+x] = true
-			q = append(q, y*S+x)
-		}
-	}
-	reached := 0
-	for k := range seen {
-		if x, y := k%S, k/S; x == 0 || y == 0 || y == S-1 {
-			reached++
-		}
-	}
-	if reached == 0 {
-		t.Fatal("the stored opening leads nowhere")
+		m.mustReachAll(t)
 	}
 }
 
@@ -454,19 +459,58 @@ func TestV3Wend(t *testing.T) {
 		if !(north || west) || !south {
 			t.Fatalf("%s: the river doesn't cross the frontier (north %v west %v south %v)", seed, north, west, south)
 		}
-		// Width: across any row, a run of water and ford is 1..maxWidth+2
-		// tiles (rows cut it slantwise, so allow a little).
-		for ty := m.y0; ty < m.y0+m.H; ty++ {
-			run := 0
-			for tx := m.x0; tx <= m.x0+m.W; tx++ {
-				if tx < m.x0+m.W && wet(tx, ty) {
-					run++
-					continue
+		// The line itself: well clear of the Tangle's box, and north of the
+		// Tangle no further east than the Whitequiet's west column.
+		tb := footprintBox(tangle)
+		wqEast := int(wq.GetCx())*S + S // the first tile east of its west column
+		line := w.river.line
+		for i, p := range line.pts {
+			tx, ty := p.tile()
+			if ty < minCy*S-S || ty > (maxCy+1)*S {
+				continue
+			}
+			dx := max(tb.x0-p.x, p.x-tb.x1, 0)
+			dy := max(tb.y0-p.y, p.y-tb.y1, 0)
+			if d := isqrt(dx*dx+dy*dy) / fp; d < riverMargin-2 {
+				t.Fatalf("%s: the Wend's centre comes %d tiles from the Tangle at %d,%d", seed, d, tx, ty)
+			}
+			if (p.x+line.half[i])/fp >= wqEast {
+				t.Fatalf("%s: the Wend's water reaches past the Whitequiet's west column at %d,%d", seed, tx, ty)
+			}
+		}
+		// Width, measured across the water at each point of the line: the
+		// line's own width, and within minWidth..maxWidth.
+		for i := 1; i+1 < len(line.pts); i++ {
+			p := line.pts[i]
+			tx, ty := p.tile()
+			if tx < m.x0+S || ty < m.y0+S || tx >= m.x0+m.W-S || ty >= m.y0+m.H-S || !wet(tx, ty) {
+				continue
+			}
+			// The narrowest chord through the point, over 16 ways (a bend
+			// tilts the true crossing).
+			across := 1 << 30
+			for a := 0; a < 16; a++ {
+				ux, uy := int(1000*math.Cos(float64(a)*math.Pi/16)), int(1000*math.Sin(float64(a)*math.Pi/16))
+				chord := 0
+				for _, sd := range []int{1, -1} {
+					k := 1
+					for ; k < 12*4; k++ {
+						q := pt{p.x + sd*ux*k*fp/4/1000, p.y + sd*uy*k*fp/4/1000}
+						if qx, qy := q.tile(); !wet(qx, qy) {
+							break
+						}
+					}
+					chord += k
 				}
-				if run > 0 && run < int(data.GetMinWidth())-1 {
-					t.Fatalf("%s: a river %d tiles wide at row %d", seed, run, ty)
-				}
-				run = 0
+				across = min(across, chord)
+			}
+			width := across * 100 / 4 // hundredths of a tile
+			lo, hi := 1<<30, 0
+			for k := max(i-2, 0); k <= min(i+2, len(line.pts)-1); k++ {
+				lo, hi = min(lo, line.half[k]*2*100/fp), max(hi, line.half[k]*2*100/fp)
+			}
+			if width < lo-150 || width > hi+200 || width < int(data.GetMinWidth())*100-150 || width > int(data.GetMaxWidth())*100+200 {
+				t.Fatalf("%s: the Wend is %d.%02d tiles wide at %d,%d (its line says %d.%02d to %d.%02d)", seed, width/100, width%100, tx, ty, lo/100, lo%100, hi/100, hi%100)
 			}
 		}
 		_ = maxCx
@@ -505,16 +549,32 @@ func TestV3Road(t *testing.T) {
 		if len(la) == 0 || fmt.Sprint(la) != fmt.Sprint(lb) {
 			t.Fatalf("%s: lamp stones %v then %v", seed, la, lb)
 		}
+		// Spaced along the road's length: one every lampStoneEvery chunks,
+		// never more than 3 chunks of road apart, and in the frontier each
+		// where the road says.
 		r := newRoad(seed)
-		for k, c := range r.order {
-			if !insideReach(c[0], c[1]) {
+		every := int(contentRules().GetRoad().GetLampStoneEvery()) * S * fp
+		if len(r.marks) < roadReachChunks*S*fp/every-2 {
+			t.Fatalf("%s: %d lamp stones along %d chunks of road", seed, len(r.marks), roadReachChunks)
+		}
+		for k := 1; k < len(r.marks); k++ {
+			if gap := r.marks[k].along - r.marks[k-1].along; gap > 3*S*fp {
+				t.Fatalf("%s: %d.%d chunks of road between lamp stones %d and %d", seed, gap/(S*fp), gap*10/(S*fp)%10, k-1, k)
+			}
+		}
+		inside := 0
+		for _, mk := range r.marks {
+			if !insideReach(mk.chunk[0], mk.chunk[1]) {
 				continue
 			}
-			_, has := la[lampStoneID(c[0], c[1])]
-			_, placed := r.lamps[c] // a chunk the road only clips may have no room for one
-			if want := k%int(contentRules().GetRoad().GetLampStoneEvery()) == 0 && placed; has != want {
-				t.Fatalf("%s: chunk %v (%d along the road) lamp stone %v", seed, c, k, has)
+			inside++
+			s, ok := la[lampStoneID(mk.chunk[0], mk.chunk[1])]
+			if !ok || s.TX != mk.tile.TX || s.TY != mk.tile.TY {
+				t.Fatalf("%s: lamp stone in %v missing or moved", seed, mk.chunk)
 			}
+		}
+		if inside != len(la) || inside < 3 {
+			t.Fatalf("%s: %d lamp stones laid in the frontier, %d made", seed, inside, len(la))
 		}
 		// Out of the opening: paving just north of it; then east at the top.
 		var ox, oy int
@@ -566,27 +626,9 @@ func TestV3LandGuarantees(t *testing.T) {
 		step := S / 2
 		for ty := -2 * L * S; ty < 5*L*S; ty += step {
 			for tx := -2 * L * S; tx < 5*L*S; tx += step {
-				b := tileBox(tx, ty, tx, ty)
-				pts := w.landPointsNear(b)
-				p := w.warped(tx, ty)
-				best, bestD, bestS := -1, int64(0), int64(1)
-				for k, q := range pts {
-					c := tileCentre(q.x, q.y)
-					dx, dy := int64(p.x-c.x), int64(p.y-c.y)
-					dd := dx*dx + dy*dy
-					if dd > int64(capReach())*int64(capReach()) {
-						continue
-					}
-					if best < 0 || dd*bestS*bestS < bestD*int64(q.size)*int64(q.size) {
-						best, bestD, bestS = k, dd, int64(q.size)
-					}
-				}
-				if best >= 0 {
-					q := pts[best]
-					lx, ly := FloorDiv(q.x, L*S), FloorDiv(q.y, L*S)
-					if lx >= 0 && lx < 3 && ly >= 0 && ly < 3 {
-						area[[2]int{lx, ly}]++
-					}
+				pts := w.landPointsNear(tileBox(tx, ty, tx, ty))
+				if q := pts[w.fieldOwner(tx, ty, pts)]; q.lx >= 0 && q.lx < 3 && q.ly >= 0 && q.ly < 3 {
+					area[[2]int{q.lx, q.ly}]++
 				}
 			}
 		}
@@ -596,7 +638,7 @@ func TestV3LandGuarantees(t *testing.T) {
 				across = append(across, isqrt(a*100/4))
 			}
 		}
-		// Straight walks: from points across a wide window, 16 ways, the
+		// Straight walks: from points across a wide window, any way, the
 		// land within a chunk either side changes within the cap.
 		walkChanges(t, w, s, capChunks)
 		// The first ring: the Wend and some meadow.
@@ -628,13 +670,15 @@ func TestV3LandGuarantees(t *testing.T) {
 	median := across[n/2]
 	t.Logf("patches: %d, median %d.%d chunks across, %d%% under 2, %d%% over 12, widest %d.%d",
 		n, median/10, median%10, under2*100/n, over12*100/n, across[n-1]/10, across[n-1]%10)
-	if median < 35 || median > 80 {
+	// The design's numbers (decision 16, open-map.md 2.2): a median about 5
+	// chunks across, about 1 in 10 under 2, about 1 in 20 over 12.
+	if median < 40 || median > 60 {
 		t.Errorf("median patch %d/10 chunks across, want about 5", median)
 	}
-	if under2*100/n < 4 || under2*100/n > 20 {
+	if under2*100/n < 5 || under2*100/n > 18 {
 		t.Errorf("%d%% of patches under 2 chunks, want about 10%%", under2*100/n)
 	}
-	if over12*100/n < 1 || over12*100/n > 15 {
+	if over12*100/n < 2 || over12*100/n > 8 {
 		t.Errorf("%d%% of patches over 12 chunks, want about 5%%", over12*100/n)
 	}
 	if across[n-1] > capChunks*10 {
@@ -649,20 +693,17 @@ func walkChanges(t *testing.T, w *world, seed, capChunks int) {
 	t.Helper()
 	S := chunkSize()
 	rng := NewRng(uint32(seed) + 99)
-	const dirs = 16
-	// cos and sin of k·22.5°, ×1000.
-	cs := [dirs][2]int{{1000, 0}, {924, 383}, {707, 707}, {383, 924}, {0, 1000}, {-383, 924}, {-707, 707}, {-924, 383},
-		{-1000, 0}, {-924, -383}, {-707, -707}, {-383, -924}, {0, -1000}, {383, -924}, {707, -707}, {924, -383}}
 	limit := capChunks * S
-	for k := 0; k < 3; k++ {
+	for k := 0; k < 6; k++ {
 		sx, sy := rng.Between(-60*S, 60*S), rng.Between(-60*S, 60*S)
-		d := cs[rng.NextInt(dirs)]
+		a := rng.NextInt(3600) // tenths of a degree
+		dx, dy := int(1000*math.Cos(float64(a)*math.Pi/1800)), int(1000*math.Sin(float64(a)*math.Pi/1800))
 		start := w.landOne(sx, sy)
 		changed := false
-		for along := 0; along <= limit && !changed; along += 4 {
+		for along := 0; along <= limit && !changed; along += 3 {
 			for _, side := range []int{-S, -S / 2, 0, S / 2, S} {
-				x := sx + (d[0]*along-d[1]*side)/1000
-				y := sy + (d[1]*along+d[0]*side)/1000
+				x := sx + (dx*along-dy*side)/1000
+				y := sy + (dy*along+dx*side)/1000
 				if w.landOne(x, y) != start {
 					changed = true
 					break
@@ -670,7 +711,7 @@ func walkChanges(t *testing.T, w *world, seed, capChunks int) {
 			}
 		}
 		if !changed {
-			t.Fatalf("seed %d: from %d,%d heading %v the land stays %s for %d chunks", seed, sx, sy, d, landName(start), capChunks)
+			t.Fatalf("seed %d: from %d,%d heading %d.%d° the land stays %s for %d chunks", seed, sx, sy, a/10, a%10, landName(start), capChunks)
 		}
 	}
 }
@@ -839,40 +880,66 @@ func TestCompass(t *testing.T) {
 
 // ---------------------------------------------------------------- glimpse
 
-// TestV3Glimpse: for the chunks just past the frontier, Glimpse names the
-// land and river the chunk has when it's made later (0.9's check).
+// TestV3Glimpse: for the chunks just past the frontier, Glimpse (and the
+// batch Glimpses) names the land and river the chunk has when it's made
+// later (0.9's check). The land is checked two ways besides Chunk.Land:
+// against the base a fresh world fills for the chunk (another path through
+// the lands pass), and, where the made chunk's centre is plain floor,
+// against the floor's own land.
 func TestV3Glimpse(t *testing.T) {
 	S := chunkSize()
+	floorLand := map[Ground]int{}
+	for i, g := range landGround {
+		floorLand[g.floor] = i
+	}
 	minCx, minCy, maxCx, maxCy := frontierChunks()
 	for _, ws := range v3Worlds(8) {
 		seed, season := ws[0], ws[1]
 		e := WickEpoch(seed, season)
-		rivers := 0
+		var outside [][2]int
 		for cy := minCy - 2; cy <= maxCy; cy++ {
 			for cx := minCx - 2; cx <= maxCx+2; cx++ {
-				if insideReach(cx, cy) {
-					continue
+				if !insideReach(cx, cy) {
+					outside = append(outside, [2]int{cx, cy})
 				}
-				land, river := Glimpse(e, cx, cy)
-				c, err := GenerateV3(e, cx, cy, nil)
-				if err != nil {
-					t.Fatal(err)
-				}
-				wet := false
-				for _, g := range c.Ground {
-					wet = wet || g == groundRiverWater || g == groundRiverFord
-				}
-				if land != c.Land || river != wet {
-					t.Fatalf("%s %d,%d: glimpse %s %v, chunk %s %v", seed, cx, cy, land, river, c.Land, wet)
-				}
-				if river {
-					rivers++
-				}
-				_ = S
 			}
 		}
-		if rivers == 0 {
-			t.Fatalf("%s: the Wend runs on past the frontier nowhere", seed)
+		batch := Glimpses(e, outside)
+		rivers, floors := 0, 0
+		for k, c := range outside {
+			cx, cy := c[0], c[1]
+			land, river := Glimpse(e, cx, cy)
+			if batch[k].Land != land || batch[k].River != river {
+				t.Fatalf("%s %v: Glimpses %+v, Glimpse %s %v", seed, c, batch[k], land, river)
+			}
+			ch, err := GenerateV3(e, cx, cy, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			wet := false
+			for _, g := range ch.Ground {
+				wet = wet || g == groundRiverWater || g == groundRiverFord
+			}
+			if land != ch.Land || river != wet {
+				t.Fatalf("%s %d,%d: glimpse %s %v, chunk %s %v", seed, cx, cy, land, river, ch.Land, wet)
+			}
+			mid := (S/2)*S + S/2
+			base := newWorld(e).fill(cx*S, cy*S, cx*S+S-1, cy*S+S-1, nil)
+			if landName(int(base[mid].land)) != land {
+				t.Fatalf("%s %d,%d: glimpse %s, the base's centre %s", seed, cx, cy, land, landName(int(base[mid].land)))
+			}
+			if l, ok := floorLand[ch.Ground[mid]]; ok {
+				floors++
+				if landName(l) != land {
+					t.Fatalf("%s %d,%d: glimpse %s, the centre's floor is %s's", seed, cx, cy, land, landName(l))
+				}
+			}
+			if river {
+				rivers++
+			}
+		}
+		if rivers == 0 || floors == 0 {
+			t.Fatalf("%s: river glimpses %d, floor checks %d", seed, rivers, floors)
 		}
 	}
 }
@@ -999,5 +1066,31 @@ func TestV3Loot(t *testing.T) {
 	}
 	if _, err := RollTableLoot(e, "rumour", "x", -1); err == nil {
 		t.Fatal("negative cycle accepted")
+	}
+}
+
+// TestV3SouthLimit: nothing lies south of cy 0, so the last two rows of the
+// south limit's chunks are shut but for the Commons gate.
+func TestV3SouthLimit(t *testing.T) {
+	S := chunkSize()
+	south := int(contentRules().GetFrontier().GetSouthLimit())
+	gate := openingTiles(EpochStill)
+	for _, ws := range v3Worlds(20) {
+		m := buildFrontier(t, ws[0], ws[1])
+		open := 0
+		for ty := (south+1)*S - band; ty < (south+1)*S; ty++ {
+			for tx := m.x0; tx < m.x0+m.W; tx++ {
+				if !m.walk[m.i(tx, ty)] {
+					continue
+				}
+				if _, ok := gate[[2]int{tx, ty}]; !ok {
+					t.Fatalf("%s: open ground at %d,%d on the south limit's edge", ws[0], tx, ty)
+				}
+				open++
+			}
+		}
+		if open == 0 {
+			t.Fatalf("%s: the gate is shut", ws[0])
+		}
 	}
 }

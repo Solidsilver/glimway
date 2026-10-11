@@ -123,3 +123,60 @@ func mustV3(t testing.TB, seed, season string, cx, cy int) Chunk {
 	}
 	return c
 }
+
+// TestRenderLandsPNG draws the lands of an 80×80-chunk square (chunks
+// -40..39 by -60..19) a pixel to two tiles: woods dark, meadow light, water
+// blue, the footprints grey; with GLIMWAY_MAP_HEMS set, hems in red.
+//
+//	GLIMWAY_MAP_PNG=<abs path> go test ./internal/wilds -run TestRenderLandsPNG
+func TestRenderLandsPNG(t *testing.T) {
+	out := os.Getenv("GLIMWAY_MAP_PNG")
+	if out == "" {
+		t.Skip("GLIMWAY_MAP_PNG=<file.png> draws the lands")
+	}
+	seed := os.Getenv("GLIMWAY_MAP_SEED")
+	if seed == "" {
+		seed = "map"
+	}
+	season := os.Getenv("GLIMWAY_MAP_SEASON")
+	if season == "" {
+		season = "t:1795000000:1796209600"
+	}
+	hems := os.Getenv("GLIMWAY_MAP_HEMS") != ""
+	w := newWorld(WickEpoch(seed, season))
+	S := chunkSize()
+	const step = 2
+	x0, y0, n := -40*S, -60*S, 80*S
+	img := image.NewRGBA(image.Rect(0, 0, n/step, n/step))
+	colours := map[string]color.RGBA{"woods": {34, 66, 38, 255}, "meadow": {150, 190, 96, 255}}
+	for py := 0; py < n/step; py++ {
+		for px := 0; px < n/step; px++ {
+			tx, ty := x0+px*step, y0+py*step
+			p := tileCentre(tx, ty)
+			pts := w.landPointsNear(tileBox(tx, ty, tx, ty))
+			_, patch := w.patchAt(tx, ty, pts, w.riverD2Near(p))
+			l := w.landOne(tx, ty)
+			col := colours[landName(l)]
+			if hems && l != patch {
+				col = color.RGBA{200, 50, 40, 255}
+			}
+			if d := w.riverD2Near(p); d >= 0 {
+				if _, half, _ := w.river.line.nearest(p, nil); d <= int64(half)*int64(half) {
+					col = color.RGBA{40, 92, 140, 255}
+				}
+			}
+			if FootprintAt(FloorDiv(tx, S), FloorDiv(ty, S)) != nil {
+				col = shade(col, 7)
+			}
+			img.Set(px, py, col)
+		}
+	}
+	f, err := os.Create(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	if err := png.Encode(f, img); err != nil {
+		t.Fatal(err)
+	}
+}
