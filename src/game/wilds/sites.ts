@@ -264,6 +264,9 @@ export class WildsSites {
   private fresh: Phaser.GameObjects.GameObject[] = []
   /** The tweens moving them: stopped with them (a destroyed image's endless tween would run on). */
   private tweens: Phaser.Tweens.Tween[] = []
+  /** The white quiet's motes: drawn once with the chunk, kept through re-renders, gone with it. */
+  private motesDrawn: Phaser.GameObjects.Image[] = []
+  private moteTweens: Phaser.Tweens.Tween[] = []
   private greeted = new Set<string>()
   private echoes = new Map<string, EchoDef>()
   private renderedKey = ''
@@ -283,9 +286,11 @@ export class WildsSites {
     scene.events.once('shutdown', () => {
       this.images = []
       this.tweens = []
+      this.motesDrawn = []
+      this.moteTweens = []
     })
-    if (outer) this.motes()
     this.render()
+    if (outer) this.motes()
     deps.interactables.register(
       this,
       // Quiet until a fresh near read lands (and while stale), like the claims around them.
@@ -298,6 +303,10 @@ export class WildsSites {
   destroy(): void {
     this.gone = true
     this.clear()
+    for (const t of this.moteTweens) t.stop()
+    destroyAll(this.scene, this.motesDrawn)
+    this.moteTweens = []
+    this.motesDrawn = []
     this.deps.interactables.register(this, [])
   }
 
@@ -664,9 +673,10 @@ export class WildsSites {
     for (let i = 0; i < 26; i++) {
       const x = ox + ((i * 97) % 23) * TILE + 8 + ((i * 13) % 9)
       const y = oy + ((i * 53) % 23) * TILE + 6
-      const m = this.add(looseImage(this.scene, x, y, 'site-mote').setDepth(4500).setAlpha(0.35 + (i % 4) * 0.1))
+      const m = looseImage(this.scene, x, y, 'site-mote').setDepth(4500).setAlpha(0.35 + (i % 4) * 0.1)
+      this.motesDrawn.push(m)
       if (this.deps.reducedMotion) continue
-      this.tween({
+      this.moteTweens.push(this.scene.tweens.add({
         targets: m,
         x: Math.min(w - 4, x + 18 + (i % 5) * 6),
         y: y - 10 - (i % 3) * 6,
@@ -676,8 +686,9 @@ export class WildsSites {
         yoyo: true,
         repeat: -1,
         ease: 'Sine.easeInOut'
-      })
+      }))
     }
+    addAll(this.scene, this.motesDrawn)
   }
 
   // ------------------------------------------------------------ playtests

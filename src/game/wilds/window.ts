@@ -446,7 +446,7 @@ export class WildsWindow {
   }
 
   /** Read-only, for playtests: what the window holds and how painting went. */
-  debug(): { id: string; center: { cx: number; cy: number } | null; attached: string[]; building: string[]; ready: boolean; attaches: number; drops: number; drift: string[]; ring: string[]; far: string[]; painted: string[]; paints: { chunk: string; ms: number; drift: boolean; thread: 'worker' | 'main' }[] } {
+  debug(): { id: string; center: { cx: number; cy: number } | null; attached: string[]; building: string[]; ready: boolean; attaches: number; drops: number; outer: string[]; drift: string[]; ring: string[]; far: string[]; painted: string[]; paints: { chunk: string; ms: number; drift: boolean; thread: 'worker' | 'main' }[] } {
     const building = [...this.attached].filter(([, c]) => !c.whole).map(([k]) => k)
     return {
       id: this.id,
@@ -457,6 +457,8 @@ export class WildsWindow {
       ready: this.isReady() && !building.length,
       attaches: this.attaches,
       drops: this.drops,
+      // Attached chunks in the deep drift's look (the Whitequiet and beyond: its motes drift there).
+      outer: [...this.attached].filter(([, c]) => c.terrain.look === 'outer').map(([k]) => k),
       drift: [...this.drifts.keys()],
       ring: this.plan?.ring ?? [],
       far: [...this.far.keys()],

@@ -204,6 +204,8 @@ export type WildsWindowView = {
   /** Chunks attached and dropped so far (crossing back over an edge builds nothing). */
   attaches: number
   drops: number
+  /** Attached chunks in the deep drift's look (the Whitequiet and beyond). */
+  outer: string[]
   drift: string[]
   ring: string[]
   far: string[]

@@ -300,3 +300,49 @@ test('stepping back and forth over a chunk edge builds and drops nothing; the 3�
   await standAt(page, (await openNear(page, 12, -2 * S + 4))!)
   await expect.poll(async () => (await wildsWindow(page))!.attached, { timeout: 5_000 }).not.toContain('0,0')
 })
+
+/** The white quiet's motes the scene holds (26 a chunk in the deep drift's look). */
+const motes = async (p: Page) => (await sceneSize(p)).kinds['Image:site-mote'] ?? 0
+const MOTES = 26
+
+test('the Whitequiet’s motes drift with each outer chunk, stay through its sites redrawing, and go with it', async ({ page }) => {
+  test.setTimeout(150_000)
+  await freshPlayer(page)
+  await warp(page, 'wilds', 12, -3 * S + 12)
+  await waitForWilds(page)
+  await page.evaluate(() => (window as unknown as { __fsDevParkCreatures: () => void }).__fsDevParkCreatures())
+  const here = (await openNear(page, 12, -3 * S + 12))!
+  await standAt(page, here)
+  const outer = (await wildsWindow(page))!.outer
+  expect(outer.length, 'outer chunks around the Whitequiet').toBeGreaterThan(0)
+  expect(await motes(page), `${MOTES} motes a chunk for ${outer.join(' ')}`).toBe(MOTES * outer.length)
+  const before = await sceneSize(page)
+
+  // A paper found redraws every site layer (its key counts paper flags): the motes stay, nothing doubles.
+  await page.evaluate(() => (window as unknown as { __fsDevAddFlag: (f: string) => void }).__fsDevAddFlag('paper:motes-test'))
+  await page.waitForTimeout(500)
+  const after = await sceneSize(page)
+  expect(after.kinds['Image:site-mote'], 'the motes survive the redraw').toBe(MOTES * outer.length)
+  expect(after.tweens, 'and so do their tweens (no more, no fewer)').toBe(before.tweens)
+
+  // Back into the Tangle: the outer chunks go, and their motes and tweens with them.
+  await standAt(page, (await openNear(page, 12, -S - 12))!)
+  await standAt(page, (await openNear(page, 12, 12))!)
+  const left = (await wildsWindow(page))!.outer
+  expect(await motes(page), `only the outer chunks still attached (${left.join(' ') || 'none'}) keep theirs`).toBe(MOTES * left.length)
+  expect((await sceneSize(page)).tweens).toBeLessThan(before.tweens - MOTES * (outer.length - left.length) + 1)
+})
+
+test.describe('with reduced motion', () => {
+  test.use({ reducedMotion: 'reduce' })
+  test('the Whitequiet’s motes stand still', async ({ page }) => {
+    test.setTimeout(120_000)
+    await freshPlayer(page)
+    await warp(page, 'wilds', 12, -3 * S + 12)
+    await waitForWilds(page)
+    await standAt(page, (await openNear(page, 12, -3 * S + 12))!)
+    const outer = (await wildsWindow(page))!.outer
+    expect(await motes(page)).toBe(MOTES * outer.length)
+    expect((await sceneSize(page)).tweens, 'nothing in the Wilds tweens with motion reduced').toBe(0)
+  })
+})
