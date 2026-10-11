@@ -53,19 +53,17 @@ type Candidate = { spot: Spot; hero: { x: number; y: number } }
 async function candidates(page: Page, targets: string[], lit?: boolean, strict = true): Promise<Candidate[]> {
   return page.evaluate(([targets, lit, strict]) => {
     const g = (window as unknown as { __fsGather: () => GatherView | null }).__fsGather()
-    const w = (window as unknown as { __fsWorld: () => { solid: boolean[][]; exits: { tx: number; ty: number; tw: number; th: number }[] } }).__fsWorld()
-    const wilds = (window as unknown as { __fsWilds?: () => { entities: { chunk: { cx: number; cy: number }; tx: number; ty: number; claimable: boolean }[]; sites: { tx: number; ty: number }[]; chunk: { cx: number; cy: number } } | null }).__fsWilds?.()
+    const w = (window as unknown as { __fsWorld: () => { exits: { tx: number; ty: number; tw: number; th: number }[] } }).__fsWorld()
+    const wilds = (window as unknown as { __fsWilds?: () => { entities: { chunk: { cx: number; cy: number }; tx: number; ty: number; claimable: boolean }[]; sites: { tx: number; ty: number; cx: number; cy: number }[] } | null }).__fsWilds?.()
     const spots = g?.spots ?? []
     const out: Candidate[] = []
     const px = (s: { tx: number; ty: number }) => ({ x: s.tx * 16 + 8, y: (s.ty + 1) * 16 })
     const creatures = (window as unknown as { __fsEnemies?: () => { x: number; y: number; state: string }[] }).__fsEnemies?.() ?? []
     const live = creatures.filter((e) => e.state !== 'dead')
-    const here = /^chunk:(.+):(-?\d+):(-?\d+)$/.exec(g?.area ?? '')
-    const cx = here ? Number(here[2]) : -1
-    const cy = here ? Number(here[3]) : -1
+    // The open map's claims and sites, at their world tiles (gathering spots are world tiles too).
     const claims = [
-      ...(wilds?.entities ?? []).filter((e) => e.claimable && e.chunk.cx === cx && e.chunk.cy === cy),
-      ...(wilds?.sites ?? [])
+      ...(wilds?.entities ?? []).filter((e) => e.claimable).map((e) => ({ tx: e.chunk.cx * 24 + e.tx, ty: e.chunk.cy * 24 + e.ty })),
+      ...(wilds?.sites ?? []).map((st) => ({ tx: st.cx * 24 + st.tx, ty: st.cy * 24 + st.ty }))
     ]
     const inExit = (x: number, y: number) => (w.exits ?? []).some((e) => x >= e.tx && x < e.tx + e.tw && y >= e.ty && y < e.ty + e.th)
     for (const s of spots) {
@@ -79,8 +77,7 @@ async function candidates(page: Page, targets: string[], lit?: boolean, strict =
         [s.tx - 1, s.ty],
         [s.tx + 1, s.ty]
       ]) {
-        if (x < 0 || y < 0 || y >= w.solid.length || x >= (w.solid[y]?.length ?? 0)) continue
-        if (w.solid[y][x] || inExit(x, y)) continue
+        if ((window as unknown as { __fsTileSolid: (x: number, y: number) => boolean }).__fsTileSolid(x, y) || inExit(x, y)) continue
         const hero = { x: x * 16 + 8, y: y * 16 + 12 }
         if (live.some((e) => Math.hypot(e.x - hero.x, e.y - hero.y) < 180)) continue
         if (claims.some((e) => Math.hypot(hero.x - (e.tx * 16 + 8), hero.y - (e.ty + 1) * 16) <= 44)) continue

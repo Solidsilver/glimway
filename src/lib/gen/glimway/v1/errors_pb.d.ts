@@ -1158,6 +1158,29 @@ export enum ErrorCode {
    * @generated from enum value: ERROR_CODE_TOP_UP_CAP = 226;
    */
   TOP_UP_CAP = 226,
+
+  /**
+   * 0.8 The open map: paths players make and the frontier
+   * (docs/design/open-map.md 2.6, section 3).
+   *
+   * @generated from enum value: ERROR_CODE_ALREADY_LAID = 227;
+   */
+  ALREADY_LAID = 227,
+
+  /**
+   * @generated from enum value: ERROR_CODE_NOT_YOUR_PATH = 228;
+   */
+  NOT_YOUR_PATH = 228,
+
+  /**
+   * @generated from enum value: ERROR_CODE_CANNOT_LAY_HERE = 229;
+   */
+  CANNOT_LAY_HERE = 229,
+
+  /**
+   * @generated from enum value: ERROR_CODE_BEYOND_FRONTIER = 230;
+   */
+  BEYOND_FRONTIER = 230,
 }
 
 /**

@@ -3,13 +3,14 @@ import { ApiError } from './errors.ts';
 import { decodeWire } from './wire.ts';
 import { decodePlayerState, validatePlayerState } from './state-contract.ts';
 import { EnvelopeSchema, LoginRequestSchema, PlayRequestSchema, SessionResponseSchema, StateResponseSchema, PlayResponseSchema, WorldChooseRequestSchema, type Envelope, type LoginRequest, type PlayRequest, type SessionResponse, type StateResponse, type PlayResponse } from '../gen/glimway/v1/state_pb.js';
-import { WildsRegionResultSchema, HomesteadLandSchema, type WildsChunk, type WildsRegionResult, type HomesteadLand } from '../gen/glimway/v1/wilds_pb.js';
+import { WildsNearResultSchema, HomesteadLandSchema, type WildsChunk, type WildsNearResult, type HomesteadLand } from '../gen/glimway/v1/wilds_pb.js';
 import { decodeChunk } from './chunks.ts';
+import { validateNear } from './near.ts';
 import { CompanionsRequestSchema, MountHomeRequestSchema, MountOutRequestSchema, StableExtendRequestSchema, StallRequestSchema, type CompanionsRequest, type MountHomeRequest, type MountOutRequest, type StableExtendRequest, type StallRequest } from '../gen/glimway/v1/companions_pb.js';
 import { WardrobeCheckRequestSchema, WardrobeReadSchema, WardrobeRequestSchema, type WardrobeCheckRequest, type WardrobeRead, type WardrobeRequest } from '../gen/glimway/v1/wardrobe_pb.js';
 import { FishCastRequestSchema, FishSettleRequestSchema, FishCancelRequestSchema, FishingWatersSchema, type FishCastRequest, type FishSettleRequest, type FishCancelRequest, type FishingWaters } from '../gen/glimway/v1/fishing_pb.js';
 import { PurseReadSchema, PurseTopUpRequestSchema, type PurseRead, type PurseTopUpRequest } from '../gen/glimway/v1/purse_pb.js';
-import { ReportRequestSchema, type ReportRequest, QuestStepRequestSchema, type QuestStepRequest, MarkRequestSchema, type MarkRequest, TakePaperRequestSchema, type TakePaperRequest, SettleEchoRequestSchema, type SettleEchoRequest, FallRequestSchema, type FallRequest, ProfileReportSchema, type ProfileReport, SpendRequestSchema, type SpendRequest, WildsClaimRequestSchema, type WildsClaimRequest, WildsLanternRequestSchema, type WildsLanternRequest } from '../gen/glimway/v1/operations_pb.js';
+import { ReportRequestSchema, type ReportRequest, QuestStepRequestSchema, type QuestStepRequest, MarkRequestSchema, type MarkRequest, TakePaperRequestSchema, type TakePaperRequest, SettleEchoRequestSchema, type SettleEchoRequest, FallRequestSchema, type FallRequest, ProfileReportSchema, type ProfileReport, SpendRequestSchema, type SpendRequest, WildsClaimRequestSchema, type WildsClaimRequest, WildsLanternRequestSchema, type WildsLanternRequest, WildsClearRequestSchema, type WildsClearRequest, WildsLayRequestSchema, type WildsLayRequest, WildsLiftRequestSchema, type WildsLiftRequest, WildsDiscoverRequestSchema, type WildsDiscoverRequest } from '../gen/glimway/v1/operations_pb.js';
 
 export type Transport = (method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown, extra?: { headers?: Record<string, string>; binary?: boolean; keepalive?: boolean }) => Promise<unknown>;
 /** Immediate typed calls; C2 owns sequencing, prediction and durable replay. */
@@ -21,7 +22,8 @@ export interface OperationsApi {
   worldChoose(choice: 'own' | 'party'): Promise<SessionResponse>;
   logout(): Promise<void>;
   chunk(epoch: string, layer: number, cx: number, cy: number): Promise<WildsChunk>;
-  region(region: string): Promise<WildsRegionResult>;
+  /** The open map's near read around a chunk (open-map.md 2.4). */
+  near(cx: number, cy: number): Promise<WildsNearResult>;
   homeLand(gate: number): Promise<HomesteadLand>;
   report(request: ReportRequest, options?: { keepalive?: boolean }): Promise<Envelope>;
   questStep(request: QuestStepRequest): Promise<Envelope>;
@@ -33,6 +35,11 @@ export interface OperationsApi {
   spend(request: SpendRequest): Promise<Envelope>;
   wildsClaim(request: WildsClaimRequest): Promise<Envelope>;
   wildsLantern(request: WildsLanternRequest): Promise<Envelope>;
+  /** Paths players make and first to find (open-map.md section 3, 2.10). */
+  wildsClear(request: WildsClearRequest): Promise<Envelope>;
+  wildsLay(request: WildsLayRequest): Promise<Envelope>;
+  wildsLift(request: WildsLiftRequest): Promise<Envelope>;
+  wildsDiscover(request: WildsDiscoverRequest): Promise<Envelope>;
   /** Companions and the stable (crafts.md 6.2). */
   companions(request: CompanionsRequest): Promise<Envelope>;
   stall(request: StallRequest): Promise<Envelope>;
@@ -82,13 +89,7 @@ export function createOperationsApi(send: Transport): OperationsApi {
     async worldChoose(choice) { return validatedSession(await send('POST', '/api/world/choose', toJson(WorldChooseRequestSchema, create(WorldChooseRequestSchema, { choice })))); },
     async logout() { await send('DELETE', '/api/session'); },
     async chunk(epoch, layer, cx, cy) { const raw = await send('GET', `/api/wilds/chunk/${encodeURIComponent(epoch)}/${layer}/${cx}/${cy}`, undefined, { binary: true }); return validated(() => { if (!(raw instanceof Uint8Array)) throw new Error('missing binary chunk'); const chunk = decodeChunk(raw); if (chunk.epochId !== epoch || chunk.layer !== layer || chunk.cx !== cx || chunk.cy !== cy) throw new Error("chunk identity mismatch"); return chunk; }); },
-    async region(region) { const raw = await send('GET', `/api/wilds/region/${encodeURIComponent(region)}`); return validated(() => {
-      const out = decodeWire(WildsRegionResultSchema, raw);
-      if (!out.epoch?.id || !out.epoch.worldSeed || !['inner-1', 'outer-1'].includes(out.epoch.regionId) || out.epoch.generatorVersion !== 2 || out.epoch.regionId !== region) throw new Error('invalid epoch authority');
-      for (const entity of out.entities) if (!entity.id || entity.epoch !== out.epoch.id || !Number.isSafeInteger(entity.cycle) || entity.cycle < 0 || !['available', 'cleared', 'harvested', 'charted'].includes(entity.state)) throw new Error('invalid mutable entity');
-      for (const qty of Object.values(out.materials)) if (!Number.isSafeInteger(qty) || qty < 0) throw new Error('invalid material balance');
-      return out;
-    }); },
+    async near(cx, cy) { const raw = await send('GET', `/api/wilds/near/${cx}/${cy}`); return validated(() => validateNear(decodeWire(WildsNearResultSchema, raw), cx, cy)); },
     async homeLand(gate) { const raw = await send('GET', `/api/homestead/land/${gate}`); return validated(() => {
       const out = decodeWire(HomesteadLandSchema, raw);
       if (!out.width || !out.height || out.width > 128 || out.height > 128 || out.cells.length !== out.width * out.height || out.generatorVersion !== 2 || out.cells.some(c => !['grass', 'tree', 'stump', 'boulder', 'water', 'ford', 'slope', 'edge', 'path'].includes(c))) throw new Error('invalid home land');
@@ -104,6 +105,10 @@ export function createOperationsApi(send: Transport): OperationsApi {
     async spend(req) { return decodeEnvelope(await send('POST', '/api/spend', toJson(SpendRequestSchema, req, { alwaysEmitImplicit: true }))); },
     async wildsClaim(req) { return decodeEnvelope(await send('POST', '/api/wilds/claim', toJson(WildsClaimRequestSchema, req, { alwaysEmitImplicit: true }))); },
     async wildsLantern(req) { return decodeEnvelope(await send('POST', '/api/wilds/lantern', toJson(WildsLanternRequestSchema, req, { alwaysEmitImplicit: true }))); },
+    async wildsClear(req) { return decodeEnvelope(await send('POST', '/api/wilds/clear', toJson(WildsClearRequestSchema, req, { alwaysEmitImplicit: true }))); },
+    async wildsLay(req) { return decodeEnvelope(await send('POST', '/api/wilds/lay', toJson(WildsLayRequestSchema, req, { alwaysEmitImplicit: true }))); },
+    async wildsLift(req) { return decodeEnvelope(await send('POST', '/api/wilds/lift', toJson(WildsLiftRequestSchema, req, { alwaysEmitImplicit: true }))); },
+    async wildsDiscover(req) { return decodeEnvelope(await send('POST', '/api/wilds/discover', toJson(WildsDiscoverRequestSchema, req, { alwaysEmitImplicit: true }))); },
     async companions(req) { return decodeEnvelope(await send('POST', '/api/companions', toJson(CompanionsRequestSchema, req, { alwaysEmitImplicit: true }))); },
     async stall(req) { return decodeEnvelope(await send('POST', '/api/stable/stall', toJson(StallRequestSchema, req, { alwaysEmitImplicit: true }))); },
     async mountOut(req) { return decodeEnvelope(await send('POST', '/api/stable/out', toJson(MountOutRequestSchema, req, { alwaysEmitImplicit: true }))); },

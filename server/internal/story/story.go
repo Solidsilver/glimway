@@ -8,16 +8,22 @@ import (
 	"fmt"
 	"glimway/content"
 	"glimway/server/internal/chunks"
+	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/ports"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"glimway/server/internal/wilds"
+	"google.golang.org/protobuf/proto"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
+
+// EchoFootprint is the footprint whose dealt sites the Echoes wait at.
+const EchoFootprint = "whitequiet"
 
 type Rules struct {
 	Chunks chunks.ChunkSource
@@ -47,11 +53,11 @@ func (r Rules) Echoes(ctx context.Context, tx *sql.Tx, s store.Snapshot, in port
 	}
 	sites := append([]ports.EchoSite{}, in.Sites...)
 	sort.Slice(sites, func(i, j int) bool { return sites[i].Site.Id < sites[j].Site.Id })
+	// The Echoes wait in the Whitequiet (decision 11): its east column is
+	// the footprint's last.
 	east := int32(-1)
-	for _, region := range content.WildsRules.Regions {
-		if region.GetId() == in.Epoch.RegionId {
-			east = int32(region.GetGridWidth()) - 1
-		}
+	if p := wilds.Footprint(EchoFootprint); p != nil {
+		east = p.GetCx() + p.GetWidth() - 1
 	}
 	used := map[string]bool{}
 	for _, site := range sites {
@@ -67,7 +73,7 @@ func (r Rules) Echoes(ctx context.Context, tx *sql.Tx, s store.Snapshot, in port
 		if len(eligible) == 0 {
 			continue
 		}
-		pick := eligible[uint32(wilds.Hash(in.Epoch.WorldSeed, in.Epoch.RegionId, in.Epoch.Season, "echo", site.Site.Id))%uint32(len(eligible))]
+		pick := eligible[uint32(wilds.Hash(in.Epoch.WorldSeed, EchoFootprint, in.Epoch.Season, "echo", site.Site.Id))%uint32(len(eligible))]
 		used[pick.GetMember()] = true
 		out = append(out, &contract.EchoAssignment{Site: site.Site.Id, Member: pick.GetMember(), Settled: slices.Contains(s.State.Flags, "echo:"+pick.Member)})
 	}
@@ -139,42 +145,42 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 	if q.GetSite() == "" && in.Entity == "" && q.GetMember() == "" {
 		return false, nil
 	}
-	region, ok := strings.CutPrefix(w.Area, "wilds:")
-	if !ok || r.Epochs == nil || r.Chunks == nil {
+	if w.Area != "wilds" || r.Epochs == nil || r.Chunks == nil {
 		return false, nil
 	}
 	now := time.Now()
 	if r.Now != nil {
 		now = r.Now()
 	}
-	epoch, err := r.Epochs.Current(ctx, tx, s.WorldID, region, now.Unix())
-	if errors.Is(err, sql.ErrNoRows) || errors.Is(err, chunks.ErrEpochEnded) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	if epoch.Id != in.Epoch {
-		return false, nil
-	}
-	var def *content.WildsRegion
-	for _, reg := range content.WildsRules.Regions {
-		if reg.GetId() == region {
-			def = reg
+	// The operation names its epoch: it must be one of the world's current
+	// ones (the Tangle's still epoch or this wick's).
+	var epoch *contract.WildsEpoch
+	for _, kind := range []string{"still", "wick"} {
+		e, err := r.Epochs.Current(ctx, tx, s.WorldID, kind, now.Unix())
+		if errors.Is(err, sql.ErrNoRows) || errors.Is(err, chunks.ErrEpochEnded) {
+			continue
+		}
+		if err != nil {
+			return false, err
+		}
+		if e.Id == in.Epoch {
+			epoch = e
 		}
 	}
+	if epoch == nil {
+		return false, nil
+	}
+	S := int(content.WildsRules.GetChunkSize())
+	nearTile := func(cx, cy int32, tx, ty uint32) bool {
+		return near(w, float64((int(cx)*S+int(tx))*16+8), float64((int(cy)*S+int(ty))*16+8))
+	}
 	if p.Source == "echo" {
-		sites := []ports.EchoSite{}
-		for cy := 0; cy < int(def.GetGridHeight()); cy++ {
-			for cx := 0; cx < int(def.GetGridWidth()); cx++ {
-				m, e := r.Chunks.Chunk(ctx, tx, s.WorldID, epoch.Id, 0, int32(cx), int32(cy))
-				if e != nil {
-					return false, e
-				}
-				for _, site := range m.Sites {
-					sites = append(sites, ports.EchoSite{Site: site, CX: m.Cx, CY: m.Cy})
-				}
-			}
+		if epoch.Kind != "wick" {
+			return false, nil
+		}
+		sites, e := FootprintSites(ctx, tx, r.Chunks, s.WorldID, epoch, EchoFootprint)
+		if e != nil {
+			return false, e
 		}
 		assignments, e := r.Echoes(ctx, tx, s, ports.EchoInput{Epoch: epoch, Sites: sites})
 		if e != nil {
@@ -184,46 +190,110 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 			if a.Site == in.Site && a.Member == q.Member && a.Settled {
 				for _, site := range sites {
 					if site.Site.Id == in.Site {
-						return near(w, float64((int(site.CX)*int(content.WildsRules.GetChunkSize())+int(site.Site.Tx))*16+8), float64((int(site.CY)*int(content.WildsRules.GetChunkSize())+int(site.Site.Ty))*16+8)), nil
+						return nearTile(site.CX, site.CY, site.Site.Tx, site.Site.Ty), nil
 					}
 				}
 			}
 		}
 		return false, nil
 	}
-	// Read geometry throughout the region, including sites across a chunk boundary.
-	for cy := 0; cy < int(def.GetGridHeight()); cy++ {
-		for cx := 0; cx < int(def.GetGridWidth()); cx++ {
-			if q.East && cx != int(def.GetGridWidth())-1 {
+	// east: the chunk is in its footprint's east column.
+	east := func(cx, cy int) bool {
+		f := wilds.FootprintAt(cx, cy)
+		return f != nil && cx == int(f.GetCx()+f.GetWidth())-1
+	}
+	if in.Site != "" && q.GetSite() != "" {
+		// Sites are the footprints' (the papers' sites never leave them).
+		for _, f := range content.WildsRules.Places {
+			if f.GetEpochKind() != epoch.Kind {
 				continue
 			}
-			chunk, err := r.Chunks.Chunk(ctx, tx, s.WorldID, in.Epoch, 0, int32(cx), int32(cy))
+			for cy := f.GetCy(); cy < f.GetCy()+f.GetHeight(); cy++ {
+				for cx := f.GetCx(); cx < f.GetCx()+f.GetWidth(); cx++ {
+					if q.East && !east(int(cx), int(cy)) {
+						continue
+					}
+					chunk, err := r.Chunks.Chunk(ctx, tx, s.WorldID, epoch.Id, 0, cx, cy)
+					if err != nil {
+						return false, err
+					}
+					if q.Mark != "" && q.Mark != chunk.Mark {
+						continue
+					}
+					for _, site := range chunk.Sites {
+						kind := strings.ReplaceAll(strings.ToLower(strings.TrimPrefix(site.Kind.String(), "SITE_KIND_")), "_", "-")
+						if site.Id == in.Site && kind == q.Site && nearTile(cx, cy, site.Tx, site.Ty) {
+							return true, nil
+						}
+					}
+				}
+			}
+		}
+		return false, nil
+	}
+	if in.Entity == "" || q.GetPoi() == "" && q.Tier == 0 {
+		return false, nil
+	}
+	cx, cy, ok := EntityChunk(in.Entity)
+	if !ok || wilds.EpochKindAt(cx, cy) != epoch.Kind || q.East && !east(cx, cy) {
+		return false, nil
+	}
+	chunk, err := r.Chunks.Chunk(ctx, tx, s.WorldID, epoch.Id, 0, int32(cx), int32(cy))
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if q.Mark != "" && q.Mark != chunk.Mark {
+		return false, nil
+	}
+	for _, entity := range chunk.Entities {
+		if entity.Id != in.Entity || q.GetPoi() != "" && (entity.Kind != "poi" || entity.Poi != q.GetPoi()) || q.Tier != 0 && (entity.Kind != "chest" || int(entity.Tier) != int(q.GetTier())) {
+			continue
+		}
+		var claimed bool
+		err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM personal_claims WHERE epoch=? AND entity_id=? AND account_id=?)", in.Epoch, in.Entity, s.AccountID).Scan(&claimed)
+		return claimed, err
+	}
+	return false, nil
+}
+
+// EntityChunk is the chunk an entity id names ("<kind>:<cx>:<cy>:<i>",
+// signed), inside the frontier.
+func EntityChunk(id string) (cx, cy int, ok bool) {
+	parts := strings.Split(id, ":")
+	if len(parts) != 4 || len(id) > 128 {
+		return 0, 0, false
+	}
+	x, e1 := strconv.Atoi(parts[1])
+	y, e2 := strconv.Atoi(parts[2])
+	if e1 != nil || e2 != nil || strconv.Itoa(x) != parts[1] || strconv.Itoa(y) != parts[2] || !frontier.Inside("", x, y) {
+		return 0, 0, false
+	}
+	return x, y, true
+}
+
+// FootprintSites reads a footprint's story sites in the epoch, from its
+// stored chunks (row-major).
+func FootprintSites(ctx context.Context, tx *sql.Tx, source chunks.ChunkSource, world string, epoch *contract.WildsEpoch, footprint string) ([]ports.EchoSite, error) {
+	f := wilds.Footprint(footprint)
+	if f == nil || f.GetEpochKind() != epoch.Kind {
+		return nil, nil
+	}
+	out := []ports.EchoSite{}
+	for cy := f.GetCy(); cy < f.GetCy()+f.GetHeight(); cy++ {
+		for cx := f.GetCx(); cx < f.GetCx()+f.GetWidth(); cx++ {
+			m, err := source.Chunk(ctx, tx, world, epoch.Id, 0, cx, cy)
 			if err != nil {
-				return false, err
+				return nil, err
 			}
-			if q.Mark != "" && q.Mark != chunk.Mark {
-				continue
-			}
-			for _, site := range chunk.Sites {
-				kind := strings.ToLower(strings.TrimPrefix(site.Kind.String(), "SITE_KIND_"))
-				if site.Id == in.Site && kind == q.Site && near(w, float64((cx*int(chunk.Size)+int(site.Tx))*16+8), float64((cy*int(chunk.Size)+int(site.Ty))*16+8)) {
-					return true, nil
-				}
-			}
-			for _, entity := range chunk.Entities {
-				if entity.Id != in.Entity || q.GetPoi() != "" && (entity.Kind != "poi" || entity.Poi != q.GetPoi()) || q.Tier != 0 && (entity.Kind != "chest" || int(entity.Tier) != int(q.GetTier())) {
-					continue
-				}
-				if q.GetPoi() == "" && q.Tier == 0 {
-					continue
-				}
-				var claimed bool
-				err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM personal_claims WHERE epoch=? AND entity_id=? AND account_id=?)", in.Epoch, in.Entity, s.AccountID).Scan(&claimed)
-				return claimed, err
+			for _, site := range m.Sites {
+				out = append(out, ports.EchoSite{Site: proto.Clone(site).(*contract.StorySite), CX: m.Cx, CY: m.Cy})
 			}
 		}
 	}
-	return false, nil
+	return out, nil
 }
 func defaultStage(s string) string {
 	if s == "" {
@@ -232,12 +302,18 @@ func defaultStage(s string) string {
 	return s
 }
 
-// Record observes a turning only through player placement, never a region read.
+// Record observes a turning only through player placement, never a read:
+// standing on land that turns at the wick (the Whitequiet and the Beyond)
+// remembers this wick's epoch, and a newer one marks wilds:turned.
 func (r Rules) Record(ctx context.Context, tx *sql.Tx, s *store.Snapshot, w *contract.Where, now int64) error {
-	if w.Area != "wilds:outer-1" || r.Epochs == nil {
+	if w.Area != "wilds" || r.Epochs == nil {
 		return nil
 	}
-	epoch, err := r.Epochs.Current(ctx, tx, s.WorldID, "outer-1", now)
+	tx0, ty0 := wilds.TileOfPixel(w.X, w.Y)
+	if cx, cy := wilds.ChunkOf(tx0, ty0); wilds.EpochKindAt(cx, cy) != "wick" {
+		return nil
+	}
+	epoch, err := r.Epochs.Current(ctx, tx, s.WorldID, "wick", now)
 	if errors.Is(err, sql.ErrNoRows) || errors.Is(err, chunks.ErrEpochEnded) || errors.Is(err, chunks.ErrUnavailable) || errors.Is(err, store.ErrGeneratorUnavailable) {
 		return nil
 	}
@@ -246,7 +322,7 @@ func (r Rules) Record(ctx context.Context, tx *sql.Tx, s *store.Snapshot, w *con
 	}
 	var previous string
 	var starts sql.NullFloat64
-	if err = tx.QueryRowContext(ctx, "SELECT last_outer_epoch,last_outer_starts_at FROM player_place WHERE account_id=?", s.AccountID).Scan(&previous, &starts); err != nil {
+	if err = tx.QueryRowContext(ctx, "SELECT last_wick_epoch,last_wick_starts_at FROM player_place WHERE account_id=?", s.AccountID).Scan(&previous, &starts); err != nil {
 		return err
 	}
 	if previous != "" && starts.Valid && epoch.StartsAt <= starts.Float64 {
@@ -255,13 +331,13 @@ func (r Rules) Record(ctx context.Context, tx *sql.Tx, s *store.Snapshot, w *con
 	if previous != "" && starts.Valid && epoch.StartsAt > starts.Float64 {
 		Mark(s, "wilds:turned")
 		if !RoadLit(*s) {
-			_, err = tx.ExecContext(ctx, "UPDATE player_place SET last_outer_epoch=?,last_outer_starts_at=? WHERE account_id=?", epoch.Id, epoch.StartsAt, s.AccountID)
+			_, err = tx.ExecContext(ctx, "UPDATE player_place SET last_wick_epoch=?,last_wick_starts_at=? WHERE account_id=?", epoch.Id, epoch.StartsAt, s.AccountID)
 			return err
 		}
 		if _, err = r.Grant(ctx, tx, s, "weir-effect-survey-draft", now); err != nil {
 			return err
 		}
 	}
-	_, err = tx.ExecContext(ctx, "UPDATE player_place SET last_outer_epoch=?,last_outer_starts_at=? WHERE account_id=?", epoch.Id, epoch.StartsAt, s.AccountID)
+	_, err = tx.ExecContext(ctx, "UPDATE player_place SET last_wick_epoch=?,last_wick_starts_at=? WHERE account_id=?", epoch.Id, epoch.StartsAt, s.AccountID)
 	return err
 }

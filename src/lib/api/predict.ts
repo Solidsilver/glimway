@@ -35,19 +35,17 @@ export function isClientMark(mark: string): boolean {
 
 const VILLAGE_SPAWN = { x: 400, y: 300 };
 
-/** Wilds places name their region: `wilds:inner-1`, `wilds:outer-1`. */
-const WILDS_PLACE = /^wilds:([A-Za-z0-9_-]{1,64})$/;
-
-/** A server place's area as the game keeps it (`wilds` plus the region marker). */
-export function areaOfPlace(area: string): { area: string; wildsRegion?: string } {
-  const m = WILDS_PLACE.exec(area);
-  if (m) return m[1] === 'inner-1' ? { area: 'wilds' } : { area: 'wilds', wildsRegion: m[1] };
+/**
+ * A server place's area as the game keeps it: the same id. The open map is
+ * one area, `wilds`, its positions world pixels (open-map.md 2.4).
+ */
+export function areaOfPlace(area: string): { area: string } {
   return { area };
 }
 
 /** The `where.area` for the game's place. */
-export function placeArea(state: Pick<GameState, 'area' | 'wildsRegion'>): string {
-  return state.area === 'wilds' ? `wilds:${state.wildsRegion ?? 'inner-1'}` : state.area;
+export function placeArea(state: Pick<GameState, 'area'>): string {
+  return state.area;
 }
 
 /** `Where` as ProtoJSON, rounded to whole pixels. */
@@ -57,7 +55,7 @@ export interface WhereJson {
   y: number;
 }
 
-export function whereOf(state: Pick<GameState, 'area' | 'wildsRegion' | 'position'>): WhereJson {
+export function whereOf(state: Pick<GameState, 'area' | 'position'>): WhereJson {
   return { area: placeArea(state), x: Math.round(state.position.x), y: Math.round(state.position.y) };
 }
 
@@ -85,7 +83,7 @@ export function gameStateOf(p: PlayerState): GameState {
   // When each quest last reached a gated step (or its first): waits count from it.
   const gateAt = story.gateAt;
   // A place this build can't draw never stops the load: the hero wakes at the village spawn.
-  let at: { area: string; wildsRegion?: string; position: { x: number; y: number } } = { ...areaOfPlace(place.area), position: { x: place.x, y: place.y } };
+  let at: { area: string; position: { x: number; y: number } } = { ...areaOfPlace(place.area), position: { x: place.x, y: place.y } };
   try {
     validateSave({ ...createNewGame(), ...at });
   } catch {
@@ -110,7 +108,7 @@ export function gameStateOf(p: PlayerState): GameState {
     glims: glims.balance,
     xpGlims: glims.xpEarned,
     glimXp: glims.xpMark,
-    ...(place.outerEpoch ? { outerEpoch: place.outerEpoch } : {}),
+    ...(place.wickEpoch ? { wickEpoch: place.wickEpoch } : {}),
   });
 }
 
@@ -173,7 +171,7 @@ export function predict(state: GameState, op: Prediction, ctx: PredictContext): 
     case 'settle-echo':
       return { ...state, flags: unique(state.flags, `echo:${op.member}`) };
     case 'fall':
-      return { ...state, ...fallRecovery(state, ctx.profile), area: 'village', position: { ...VILLAGE_SPAWN }, wildsRegion: undefined };
+      return { ...state, ...fallRecovery(state, ctx.profile), area: 'village', position: { ...VILLAGE_SPAWN } };
     case 'glims':
       return predictGlims(state, op.delta);
     case 'companions':
@@ -188,7 +186,6 @@ export function predict(state: GameState, op: Prediction, ctx: PredictContext): 
 export function predictedView(server: PlayerState, pending: readonly Prediction[], ctx: PredictContext): GameState {
   let state = gameStateOf(server);
   for (const op of pending) state = predict(state, op, ctx);
-  if (state.wildsRegion === undefined) delete state.wildsRegion;
   return state;
 }
 

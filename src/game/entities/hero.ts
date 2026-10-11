@@ -12,6 +12,7 @@
  * builds a new Hero). The carried store below keeps them; the scene writes
  * it back on shutdown.
  */
+import { walkFactor } from '../../lib/wilds/walk'
 import Phaser from 'phaser'
 import { getCombatKit, type CombatKit, type KitMove } from '../../lib/combat'
 import { CombatField } from '../../lib/combat-moves'
@@ -238,6 +239,16 @@ export class Hero {
     this.scene.time.delayedCall(400, () => dust.destroy())
   }
 
+  /**
+   * Walking speed by the ground underfoot (open-map.md decisions 7 and 12):
+   * laid stone and plank a little faster, a ford's shallows half speed. Only
+   * the open map has such ground.
+   */
+  private groundSpeed(): number {
+    const open = this.deps.world.open
+    return open ? walkFactor(open.groundAt(tileAt(this.sprite.x), tileAt(this.sprite.y))) : 1
+  }
+
   /** Movement (input is the un-normalized key/joystick vector) + regen. */
   move(dt: number, input: Phaser.Math.Vector2): void {
     let dx = input.x
@@ -266,7 +277,7 @@ export class Hero {
     this.dashTime = Math.max(0, this.dashTime - dt)
     if (this.dashTime <= 0) {
       // Stand: planted, no walking until it ends (pushing still turns you).
-      const speed = this.field.planted ? 0 : this.deps.avatar().riding ? RIDING_SPEED : PLAYER_SPEED
+      const speed = (this.field.planted ? 0 : this.deps.avatar().riding ? RIDING_SPEED : PLAYER_SPEED) * this.groundSpeed()
       this.sprite.setVelocity(dx * speed, dy * speed)
     }
     if (len > 0.1) {
@@ -566,7 +577,9 @@ export class Hero {
       return
     }
     this.sprite.setDepth(this.sprite.y)
-    this.shadow.setVisible(true).setPosition(this.sprite.x, this.sprite.y - 1)
+    // Under the hero and whatever stands in front; on the open map, where y
+    // runs negative, just under the hero rather than at a fixed depth.
+    this.shadow.setVisible(true).setPosition(this.sprite.x, this.sprite.y - 1).setDepth(Math.min(-1, this.sprite.y - 2))
   }
 
   private kit(): CombatKit {
@@ -579,15 +592,32 @@ export class Hero {
     if (entry) {
       px = tileMid(entry.tx)
       py = tileMid(entry.ty)
+      // The open map's land can stand anywhere (a warp, the land turned): never inside it.
+      const stand = this.deps.world.open?.standAt(px, py)
+      if (stand) {
+        px = stand.x
+        py = stand.y
+      }
     } else {
       const saved = state.position
       px = saved.x
       py = saved.y
-      // Fall back to spawn if the saved spot is out of bounds or solid.
+      // Fall back to spawn if the saved spot is out of bounds or solid. On
+      // the open map, to the nearest open tile (the land may have turned).
       const tx = tileAt(px)
       const ty = tileAt(py)
+      const open = this.deps.world.open
+      const stand = open ? open.standAt(px, py) : null
       const inBounds = tx >= 0 && ty >= 0 && tx < this.deps.world.width && ty < this.deps.world.height
-      if (!inBounds || this.deps.world.solid[ty][tx]) {
+      if (open) {
+        if (stand) {
+          px = stand.x
+          py = stand.y
+        } else {
+          px = tileMid(this.deps.world.spawn.tx)
+          py = tileMid(this.deps.world.spawn.ty)
+        }
+      } else if (!inBounds || this.deps.world.solid[ty][tx]) {
         px = tileMid(this.deps.world.spawn.tx)
         py = tileMid(this.deps.world.spawn.ty)
       }
@@ -616,7 +646,7 @@ export class Hero {
     // A footstep on every other walk frame (two per cycle), on the ground underfoot.
     this.sprite.on(Phaser.Animations.Events.ANIMATION_UPDATE, (_a: Phaser.Animations.Animation, frame: Phaser.Animations.AnimationFrame) => {
       if (frame.index % 2 !== 0 || this.dashTime > 0 || body.velocity.lengthSq() < 1) return
-      const terrain = this.deps.world.ground[tileAt(this.sprite.y)]?.[tileAt(this.sprite.x)]
+      const terrain = this.deps.world.open ? this.deps.world.open.groundAt(tileAt(this.sprite.x), tileAt(this.sprite.y)) ?? undefined : this.deps.world.ground[tileAt(this.sprite.y)]?.[tileAt(this.sprite.x)]
       if (terrain !== undefined) bus.emit(EV.footstep, { terrain })
     })
   }

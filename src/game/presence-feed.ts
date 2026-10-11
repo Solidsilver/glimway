@@ -16,7 +16,7 @@
  * or gameplay. No Phaser here: the bus, link, socket and timers are injected,
  * so the feed runs under node --test.
  */
-import { PresenceClient, type PresenceStatus, type SocketLike, type Timers } from '../lib/presence-client.ts'
+import { PresenceClient, sharedRoom, type PresenceStatus, type SocketLike, type Timers } from '../lib/presence-client.ts'
 import { PeerTrack } from '../lib/presence-interp.ts'
 import type { PresenceAvatar, PresencePlayer, PresencePose, PresencePosition } from '../lib/presence.ts'
 import { EV, type AbilityCastPayload, type EmotePayload, type EventMap, type PresencePayload } from './event-names.ts'
@@ -95,11 +95,11 @@ export class PresenceFeed {
         pos: (id, pos) => this.onPos(id, pos),
         emote: (id, emote) => {
           const p = this.peers.get(id)
-          if (p && p.leftAt === null && p.area === this.area) this.bus.emit(EV.emote, { accountId: id, id: emote } satisfies EmotePayload)
+          if (p && p.leftAt === null && sharedRoom(p.area, this.area)) this.bus.emit(EV.emote, { accountId: id, id: emote } satisfies EmotePayload)
         },
         ability: (id, cast) => {
           const p = this.peers.get(id)
-          if (p && p.leftAt === null && p.area === this.area && id !== this.client.self) this.bus.emit(EV.abilityCast, { accountId: id, ...cast } satisfies AbilityCastPayload)
+          if (p && p.leftAt === null && sharedRoom(p.area, this.area) && id !== this.client.self) this.bus.emit(EV.abilityCast, { accountId: id, ...cast } satisfies AbilityCastPayload)
         },
         gift: (g) => this.bus.emit(EV.gift, g),
         avatarChange: (id, avatar) => {
@@ -136,9 +136,10 @@ export class PresenceFeed {
 
   setArea(area: string | null): void {
     if (area !== this.area) {
+      // Everyone we knew was somewhere else now, unless the rooms share (the
+      // open map's neighbouring chunks: the server's next roster settles who left).
+      if (!sharedRoom(this.area, area)) this.peers.clear()
       this.area = area
-      // Everyone we knew was somewhere else now.
-      this.peers.clear()
       this.publish()
     }
     this.client.setArea(area)
@@ -170,7 +171,7 @@ export class PresenceFeed {
     if (!this.area || !this.localPosition) return false
     const t = this.now()
     return Array.from(this.peers.values()).some((p) => {
-      if (p.accountId !== accountId || p.leftAt !== null || p.area !== this.area) return false
+      if (p.accountId !== accountId || p.leftAt !== null || !sharedRoom(p.area, this.area)) return false
       const at = p.track.at(t)
       return !!at && Math.hypot(at.x - this.localPosition!.x, at.y - this.localPosition!.y) <= radius
     })
@@ -185,7 +186,7 @@ export class PresenceFeed {
         this.peers.delete(id)
         continue
       }
-      if (p.area === area) out.push(p)
+      if (sharedRoom(p.area, area)) out.push(p)
     }
     return out
   }
@@ -196,7 +197,7 @@ export class PresenceFeed {
     const t = this.now()
     const out: { accountId: string; displayName: string }[] = []
     for (const p of this.peers.values()) {
-      if (p.leftAt !== null || p.area !== this.area) continue
+      if (p.leftAt !== null || !sharedRoom(p.area, this.area)) continue
       const at = p.track.at(t)
       if (at && Math.hypot(at.x - x, at.y - y) <= radius) out.push({ accountId: p.accountId, displayName: p.displayName })
     }
@@ -260,9 +261,10 @@ export class PresenceFeed {
   private upsert(area: string, player: PresencePlayer): void {
     if (player.accountId === this.client.self) return
     const existing = this.peers.get(player.accountId)
-    const peer: Peer = existing && existing.area === area && existing.leftAt === null
+    const peer: Peer = existing && sharedRoom(existing.area, area) && existing.leftAt === null
       ? existing
       : { accountId: player.accountId, displayName: '', avatar: null, look: 0, area, track: new PeerTrack(), leftAt: null }
+    peer.area = area
     peer.displayName = (player.displayName || 'Traveller').slice(0, 60)
     if (!sameLook(peer.avatar, player.avatar ?? null)) peer.look++
     peer.avatar = player.avatar ?? null
@@ -291,7 +293,7 @@ export class PresenceFeed {
 
   private publish(): void {
     let here = 0
-    for (const p of this.peers.values()) if (p.leftAt === null && p.area === this.area) here++
+    for (const p of this.peers.values()) if (p.leftAt === null && sharedRoom(p.area, this.area)) here++
     this.bus.emit(EV.presence, { status: this.client.status, here } satisfies PresencePayload)
   }
 }

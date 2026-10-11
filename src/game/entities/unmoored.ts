@@ -15,7 +15,8 @@ import { bus, EV } from '../events.ts'
 import { emitResidents } from '../residents.ts'
 import { isSafeArea } from '../../lib/habitica/sync.ts'
 import { loadWilds } from '../../lib/wilds/data.ts'
-import { WILDS_REGION_ID, parseChunkArea } from '../wilds/regions.ts'
+import { footprintAt } from '../../lib/wilds/coords.ts'
+import { chunkOfPixel, gateTiles, CHUNK_TILES } from '../wilds/coords.ts'
 import { onSceneEnd } from '../scene-end.ts'
 import type { Session } from '../session.ts'
 import type { WorldData } from '../worlds.ts'
@@ -55,6 +56,8 @@ export interface UnmooredDeps {
   session: Session
   world: WorldData
   reducedMotion: boolean
+  /** Where the hero stands (the open map: how deep in the Tangle). */
+  hero?: () => { x: number; y: number }
 }
 
 export class Unmoored {
@@ -62,8 +65,8 @@ export class Unmoored {
   private readonly deps: UnmooredDeps
   /** This journey's sway and clocks. */
   private readonly state: UnmooredState
-  /** This area counts as deep in the Tangle (far enough from its entrance). */
-  private readonly deep: boolean
+  /** The Commons gate's chunk: deep in the Tangle is far enough (in chunks) from it. */
+  private readonly gate = { cx: Math.floor(gateTiles().tx / CHUNK_TILES), cy: Math.floor(gateTiles().ty / CHUNK_TILES) }
   private veil: Phaser.GameObjects.Rectangle | null = null
   private edges: Phaser.GameObjects.Rectangle[] = []
 
@@ -73,15 +76,6 @@ export class Unmoored {
     this.state = stateFor(deps.session)
     // The HUD follows this journey's state (a new journey starts steady).
     bus.emit(EV.unmoored, { active: this.state.active })
-    const chunk = parseChunkArea(deps.world.areaId)
-    const wilds = loadWilds()
-    const tangle = wilds.regions.find((region) => region.id === WILDS_REGION_ID)
-    this.deep = !!(
-      chunk &&
-      tangle &&
-      chunk.region === WILDS_REGION_ID &&
-      Math.abs(chunk.cx - tangle.entryX) + Math.abs(chunk.cy - tangle.entryY) >= wilds.deepTangleManhattanDistance
-    )
     const onClear = (p: { instant: boolean }) => this.onRemedy(p)
     bus.on(EV.clearUnmoored, onClear)
     const off = () => {
@@ -131,6 +125,14 @@ export class Unmoored {
       emitResidents(s)
       bus.emit(EV.toast, { text: 'New in your journal: Finding the Anchor', icon: 'scroll', kind: 'gain', gain: { to: 'journal', label: 'Finding the Anchor' } })
     }
+  }
+
+  /** Deep in the Tangle: in its footprint, far enough from the gate's chunk. */
+  private get deep(): boolean {
+    const hero = this.deps.hero?.()
+    if (!this.deps.world.open || !hero) return false
+    const at = chunkOfPixel(hero.x, hero.y)
+    return footprintAt(at.cx, at.cy)?.id === 'tangle' && Math.abs(at.cx - this.gate.cx) + Math.abs(at.cy - this.gate.cy) >= loadWilds().deepTangleManhattanDistance
   }
 
   /** Every frame (panels open or not): the timers, and the sway on screen. */

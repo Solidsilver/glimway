@@ -24,6 +24,7 @@ type Hooks = {
   __fsDevSpeakNaming?: (force?: boolean) => boolean
   __fsWarden?: () => WardenView
   __fsWilds?: () => WildsDump | null
+  __fsWildsWindow?: () => WildsWindowView | null
   __fsFrame?: () => FrameView
   __fsDialogue?: () => DialogueView
   __fsToasts?: () => ToastsView
@@ -149,24 +150,31 @@ export type DialogueView = {
   seen: { speaker: string; text: string }[]
 }
 
-/** Read-only Wilds dump (src/game/wilds/entities.ts, WildsEntities.debug). */
+/** Read-only Wilds dump (src/game/wilds/entities.ts, WildsEntities.debug): the open map's attached chunks. */
 export type WildsDump = {
+  /** The epoch of the chunk the hero stands in (the Tangle's still epoch, else the wick's). */
   epochId: string
-  /** `inner-1` (the Tangle) or `outer-1` (the Whitequiet). */
-  region: string
+  stillEpoch: string
+  wickEpoch: string
+  stale: boolean
+  /** The wick's season, `t:<startsAt>:<endsAt>`. */
   season: string
   endsAt: number | null
-  /** Story sites in this chunk: Echo camps and given-back finds. */
-  sites: Array<{ id: string; kind: string; tx: number; ty: number; echo: string | null; settled: boolean; find: string | null }>
+  /** The attached chunks (the 3×3 around the hero, inside the frontier). */
+  chunks: { cx: number; cy: number }[]
+  /** Story sites in the attached chunks (tiles chunk-local; cx, cy their chunk). */
+  sites: Array<{ id: string; kind: string; tx: number; ty: number; cx: number; cy: number; echo: string | null; settled: boolean; find: string | null }>
+  /** The hero's chunk and world pixels. */
   chunk: { cx: number; cy: number }
   position: { x: number; y: number }
   entities: Array<{
     id: string
     kind: string
     chunk: { cx: number; cy: number }
+    /** Chunk-local tiles. */
     tx: number
     ty: number
-    regionPx: { x: number; y: number }
+    worldPx: { x: number; y: number }
     state: string
     cycle: number
     availableIn: number
@@ -176,10 +184,31 @@ export type WildsDump = {
     poi: string
     enemies: string[]
   }>
+  /** Fallen lanterns; x, y world tiles. */
   lanterns: Array<{ id: string; ownerId: string; own: boolean; lit: boolean; x: number; y: number }>
   materials: Record<string, number>
   claims: string[]
   discoveries: Array<{ entityId: string; poiId: string; by: string }>
+}
+
+/** window.__fsWildsWindow(): the open map's window (src/game/wilds/window.ts). */
+export type WildsWindowView = {
+  /** The window's identity: the same for as long as the scene isn't rebuilt. */
+  id: string
+  center: { cx: number; cy: number } | null
+  attached: string[]
+  drift: string[]
+  ring: string[]
+  far: string[]
+  painted: string[]
+  paints: { chunk: string; ms: number; drift: boolean; thread: 'worker' | 'main' }[]
+}
+
+/** An entity's or a site's world tile (chunk-local tile plus its chunk's origin). */
+export function worldTileOf(e: { tx: number; ty: number; chunk?: { cx: number; cy: number }; cx?: number; cy?: number }): { tx: number; ty: number } {
+  const cx = e.chunk?.cx ?? e.cx ?? 0
+  const cy = e.chunk?.cy ?? e.cy ?? 0
+  return { tx: cx * 24 + e.tx, ty: cy * 24 + e.ty }
 }
 
 /** window.__fsWarden(): the stone warden in the current area. */
@@ -213,13 +242,25 @@ export async function settled(page: Page, match: { area?: string; prefix?: strin
 }
 
 export async function waitForArea(page: Page, area: AreaId): Promise<void> {
-  const wilds = typeof area === 'string' && (area === 'wilds' || area.startsWith('chunk:inner-1'))
-  await settled(page, wilds ? { prefix: 'chunk:inner-1' } : { area: String(area) })
+  if (area === 'wilds') await waitForWilds(page)
+  else await settled(page, { area: String(area) })
 }
 
-/** The Wilds chunk scene that is live now (its chunk area id); `region` narrows it. */
-export async function waitForWilds(page: Page, region = 'inner-1'): Promise<string> {
-  return settled(page, { prefix: `chunk:${region}` })
+/**
+ * The open map is up: the scene settled in `wilds`, the Wilds read, and the
+ * hero's chunk attached by the window. Returns the hero's chunk (`cx,cy`).
+ */
+export async function waitForWilds(page: Page): Promise<string> {
+  await settled(page, { area: 'wilds' })
+  const handle = await page.waitForFunction(() => {
+    const h = window as unknown as Hooks
+    const d = h.__fsWilds?.()
+    const w = h.__fsWildsWindow?.()
+    if (!d || !w || !d.wickEpoch) return null
+    const here = `${d.chunk.cx},${d.chunk.cy}`
+    return w.attached.includes(here) ? here : null
+  })
+  return (await handle.jsonValue()) as string
 }
 
 /** The frame state now (null before the world is up). */
@@ -354,10 +395,16 @@ export async function animationsDone(page: Page): Promise<void> {
 /** The read-only Wilds dump (null outside the Wilds). */
 export async function wilds(page: Page): Promise<WildsDump> {
   const dump = await page.evaluate(() => (window as unknown as Hooks).__fsWilds?.() ?? null)
-  if (!dump) throw new Error('no Wilds dump — the scene is not a Wilds chunk')
+  if (!dump) throw new Error('no Wilds dump — the scene is not the open map')
   return dump
 }
 
+/** The open map's window (null outside the Wilds). */
+export async function wildsWindow(page: Page): Promise<WildsWindowView | null> {
+  return page.evaluate(() => (window as unknown as Hooks).__fsWildsWindow?.() ?? null)
+}
+
+/** Warp to a tile: the open map's (`wilds`) are world tiles, signed; every other area's its own. */
 export async function warp(page: Page, area: AreaId, tx: number, ty: number): Promise<void> {
   // The warp starts the transition at once (a refused warp leaves us here).
   await page.evaluate(([a, x, y]) => (window as unknown as Hooks).__fsDevWarp!(a, x, y), [area, tx, ty] as const)
@@ -372,10 +419,7 @@ export async function world(page: Page) {
   return page.evaluate(() => (window as unknown as Hooks).__fsWorld!())
 }
 
-/**
- * The current area's exit into `to` (Wilds chunks take their exits from the
- * served chunk, so specs ask rather than assume where a gap is).
- */
+/** The current area's exit into `to` (specs ask rather than assume where it is). */
 export async function exitTo(page: Page, to: AreaId): Promise<ExitView> {
   const found = (await world(page)).exits.find((e) => e.to === to)
   if (!found) throw new Error(`no exit to ${to} from ${(await world(page)).areaId}`)

@@ -26,6 +26,8 @@ import type { ItemPickups } from '../entities/item-pickups'
 import type { RepairsLayer } from '../entities/repairs'
 import type { WorldScene } from './WorldScene'
 import { fnv1a32Bytes } from '../../lib/hash'
+import { knownPlaces, wildsMaterials, wildsView } from '../wilds/store'
+import { pathTileAt } from '../wilds/path-tile'
 
 /** The scene's interaction layers the hooks read (locals of `create()`). */
 export interface WorldHookLayers {
@@ -74,6 +76,21 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
     const world = s['world']
     return { areaId: world.areaId, widthPx: world.widthPx, heightPx: world.heightPx, bounds: { x: b.x, y: b.y, w: b.width, h: b.height }, solid: world.solid, exits: world.exits.map((e) => ({ tx: e.tx, ty: e.ty, tw: e.tw, th: e.th, to: String(e.to), side: e.side, kind: e.kind })) }
   })
+  // Is a tile solid in the map's data? (The open map has no grid in __fsWorld: its chunks answer by world tile.)
+  on('__fsTileSolid', (tx: number, ty: number) => {
+    const world = s['world']
+    return world.open ? world.open.solidAt(tx, ty) : world.solid[ty]?.[tx] ?? true
+  })
+  // Walk through waypoints (world px) as if steered: movement, collisions and the window as in play.
+  on('__fsDevWalk', (path: { x: number; y: number }[]) => {
+    s['devWalk'] = path.length ? path.map((p) => ({ x: p.x, y: p.y })) : null
+  })
+  on('__fsDevWalking', () => s['devWalk'] !== null)
+  // The ground under a tile (a TERRAIN id; null where the open map knows nothing).
+  on('__fsGroundAt', (tx: number, ty: number) => {
+    const world = s['world']
+    return world.open ? world.open.groundAt(tx, ty) : world.ground[ty]?.[tx] ?? null
+  })
   on('__fsRoom', () => {
     const world = s['world']
     const art = s['roomArt']
@@ -115,7 +132,8 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
     s['hero'].iframes = 0
     s['hero'].damagePlayer(n, s['hero'].sprite.x - 1)
   })
-  on('__fsDevWarp', (area: AreaId, tx: number, ty: number) => s['transitionTo'](area, { tx, ty }))
+  // The open map's warp goes to a world tile (signed); every other area's to its tile.
+  on('__fsDevWarp', (area: AreaId, tx: number, ty: number) => (area === 'wilds' ? s['warpWilds'](tx, ty) : s['transitionTo'](area, { tx, ty })))
   on('__fsDevInsets', (v) => {
     if (v) setPlayInsets(v)
     return { ...playInsets }
@@ -225,12 +243,12 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
   // Without `force`, the real rules apply.
   on('__fsDevSpeakNaming', (force = false) => s['enemies'].warden.speakNaming(force))
   // A playtest can step up to the warden inside its opening. The save's
-  // position follows, in the save's own convention (the Wilds keep
-  // region-wide pixels), so an upload's merge never snaps the hero back.
+  // position follows (scene pixels, world pixels on the open map), so an
+  // upload's merge never snaps the hero back.
   on('__fsDevPlace', (x, y) => {
     s['hero'].sprite.setPosition(x, y)
     s['hero'].sprite.setVelocity(0, 0)
-    s['session'].state.position = s['wildsEntryNow']() ? s['wildsPosition'](Math.round(x), Math.round(y)) : { x: Math.round(x), y: Math.round(y) }
+    s['session'].state.position = { x: Math.round(x), y: Math.round(y) }
     s['session'].saveSoon()
   })
   // The stale sample an open conversation leaves behind (playtest 1, Silas's axe).
@@ -270,6 +288,23 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
   })
   on('__fsLink', () => s['session'].link?.status ?? null)
   on('__fsWilds', () => s['wilds']?.debug() ?? null)
+  // The open map's window: what's attached, drifted, fetched, and how long each chunk took to paint.
+  on('__fsWildsWindow', () => s['window']?.debug() ?? null)
+  on('__fsPaths', () => {
+    const paths = s['paths']
+    if (!paths) return null
+    const view = wildsView()
+    const ways = [...(view?.ways.values() ?? [])].map((w) => ({ id: w.id, name: w.name, a: w.a, b: w.b, by: w.by, signA: w.signA ? { x: w.signA.x, y: w.signA.y } : null, signB: w.signB ? { x: w.signB.x, y: w.signB.y } : null, path: w.path.length }))
+    return { ...paths.debug(), materials: wildsMaterials(), ways }
+  })
+  on('__fsPathTile', (tx: number, ty: number) => pathTileAt(tx, ty))
+  on('__fsMarks', () => {
+    const marks = s['marks']
+    if (!marks) return null
+    const view = wildsView()
+    return { ...marks.debug(), discoveries: [...(view?.discoveries.values() ?? [])].map((d) => ({ id: d.entityId, by: d.discovererId, name: d.displayName })), places: knownPlaces() }
+  })
+  on('__fsRumour', () => s['session'].link?.rumour ?? null)
   // Playtests of the drift rule.
   on('__fsGather', () => {
     const gathering = s['gathering']

@@ -29,7 +29,15 @@
     },
     {
       "paths": ["src/game/wilds/**", "src/lib/wilds/**", "server/internal/wilds/**", "src/content/echoes.ts", "src/content/expansion-writing.ts", "src/game/expansion.ts"],
-      "specs": ["wilds.spec.ts", "wilds-outer.spec.ts", "wilds-screens.spec.ts", "echo-keepsakes.spec.ts"]
+      "specs": ["open-map.spec.ts", "open-map-screens.spec.ts", "wilds.spec.ts", "wilds-outer.spec.ts", "wilds-screens.spec.ts", "echo-keepsakes.spec.ts", "paths.spec.ts", "rumour.spec.ts"]
+    },
+    {
+      "paths": ["src/ui/MapTab.svelte", "src/ui/JournalPanel.svelte", "src/content/open-map.ts", "src/game/rumour-watch.ts", "src/game/entities/world-talk.ts"],
+      "specs": ["paths.spec.ts", "rumour.spec.ts"]
+    },
+    {
+      "paths": ["src/ui/ContextButtons.svelte", "src/ui/press-gate.ts", "src/game/context-buttons.ts"],
+      "specs": ["touch.spec.ts", "fishing.spec.ts", "companions.spec.ts", "paths.spec.ts"]
     },
     {
       "paths": [

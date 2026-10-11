@@ -39,7 +39,7 @@ func TestFallRecoveryReplayAndMissingGeometry(t *testing.T) {
 	x.api.Config.Epochs = &chunks.FakeEpochs{CurrentFunc: func(context.Context, *sql.Tx, string, string, int64) (*contract.WildsEpoch, error) {
 		return nil, chunks.ErrUnavailable
 	}}
-	req = body(s, "no-geometry", map[string]any{"where": map[string]any{"area": "wilds:outer-1", "x": 300, "y": 300}})
+	req = body(s, "no-geometry", map[string]any{"where": map[string]any{"area": "wilds", "x": 300, "y": -1000}})
 	out = read(req)
 	if out.GetFall().Lantern != "none" || out.GetFall().Reason != "generator-unavailable" || out.State.Place.Area != "village" {
 		t.Fatal(out)

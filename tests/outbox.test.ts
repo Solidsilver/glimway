@@ -115,7 +115,7 @@ test('the game state is the server state: marks are the single source of discove
     state((j) => {
       j.story.marks = ['seen:gate', 'found:old-route-marker', 'defeated:stone-warden', 'paper:eleven-days'];
       j.story.quests = { 'lantern-road': 'clue-found' };
-      j.place = { area: 'wilds:outer-1', x: 10, y: 20, placeSetVersion: 0 };
+      j.place = { area: 'wilds', x: 10, y: -20, placeSetVersion: 0 };
       j.glims = { balance: 9, xpEarned: 4, pending: 0, xpMark: 300, verifiedXp: 0 };
     }),
   );
@@ -124,29 +124,29 @@ test('the game state is the server state: marks are the single source of discove
   assert.deepEqual(s.defeatedEnemies, ['stone-warden']);
   assert.equal(roadStep(s), 'clue-found');
   assert.equal(s.area, 'wilds');
-  assert.equal(s.wildsRegion, 'outer-1');
+  assert.deepEqual(s.position, { x: 10, y: -20 });
   assert.deepEqual([s.glims, s.xpGlims, s.glimXp], [9, 4, 300]);
 });
 
-test('a Wilds place loads: wilds:<region> becomes the Wilds area plus its region marker', () => {
-  const at = (area: string) => gameStateOf(state((j) => (j.place = { area, x: 424, y: 744, placeSetVersion: 0 })));
-  const inner = at('wilds:inner-1');
-  assert.deepEqual([inner.area, inner.wildsRegion, inner.position], ['wilds', undefined, { x: 424, y: 744 }]);
-  const outer = at('wilds:outer-1');
-  assert.deepEqual([outer.area, outer.wildsRegion], ['wilds', 'outer-1']);
+test('a Wilds place loads: the open map is one area, its position world pixels', () => {
+  const at = (area: string, x = 424, y = -744) => gameStateOf(state((j) => (j.place = { area, x, y, placeSetVersion: 0 })));
+  const wilds = at('wilds');
+  assert.deepEqual([wilds.area, wilds.position], ['wilds', { x: 424, y: -744 }]);
+  // A 0.7 region place is gone with the regions (a clean break): the village spawn.
+  assert.equal(at('wilds:outer-1').area, 'village');
   // Through the response parser too (a reload's state read).
-  const snap = parseSnapshot({ state: { ...structuredClone(BASE), place: { area: 'wilds:outer-1', x: 424, y: 744, placeSetVersion: 0, outerEpoch: '' } } });
-  assert.deepEqual([snap.state.area, snap.state.wildsRegion], ['wilds', 'outer-1']);
+  const snap = parseSnapshot({ state: { ...structuredClone(BASE), place: { area: 'wilds', x: -424, y: -744, placeSetVersion: 0, wickEpoch: '' } } });
+  assert.deepEqual([snap.state.area, snap.state.position], ['wilds', { x: -424, y: -744 }]);
   // A place this build can't draw never fails the load.
   const lost = at('somewhere-new');
   assert.deepEqual([lost.area, lost.position], ['village', { x: 400, y: 300 }]);
 });
 
-test('places: Wilds regions in where.area, curated areas as they are', () => {
-  assert.deepEqual(areaOfPlace('wilds:inner-1'), { area: 'wilds' });
+test('places: every area as it is in where.area, the open map as wilds', () => {
+  assert.deepEqual(areaOfPlace('wilds'), { area: 'wilds' });
   assert.deepEqual(areaOfPlace('home:12'), { area: 'home:12' });
-  assert.equal(placeArea({ area: 'wilds' }), 'wilds:inner-1');
-  assert.equal(placeArea({ area: 'wilds', wildsRegion: 'outer-1' }), 'wilds:outer-1');
+  assert.equal(placeArea({ area: 'wilds' }), 'wilds');
+  assert.deepEqual(whereOf({ area: 'wilds', position: { x: -10.6, y: -3.2 } }), { area: 'wilds', x: -11, y: -3 });
   assert.deepEqual(whereOf({ area: 'commons', position: { x: 10.6, y: 3.2 } }), { area: 'commons', x: 11, y: 3 });
 });
 
@@ -187,9 +187,9 @@ test('fall recovery: a quarter of max HP and half of max mana, rounded up, never
   assert.equal(fallen.hp, 13);
 });
 
-test('the outer epoch the server last recorded the place in comes with the state', () => {
-  const s = gameStateOf(state((j) => (j.place = { area: 'wilds:outer-1', x: 424, y: 744, placeSetVersion: 0, outerEpoch: 'e-old' })));
-  assert.equal(s.outerEpoch, 'e-old');
-  const none = gameStateOf(state((j) => (j.place = { area: 'village', x: 400, y: 300, placeSetVersion: 0, outerEpoch: '' })));
-  assert.equal(none.outerEpoch, undefined);
+test('the wick epoch the server last recorded the place in comes with the state', () => {
+  const s = gameStateOf(state((j) => (j.place = { area: 'wilds', x: 424, y: -744, placeSetVersion: 0, wickEpoch: 'e-old' })));
+  assert.equal(s.wickEpoch, 'e-old');
+  const none = gameStateOf(state((j) => (j.place = { area: 'village', x: 400, y: 300, placeSetVersion: 0, wickEpoch: '' })));
+  assert.equal(none.wickEpoch, undefined);
 });

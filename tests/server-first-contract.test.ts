@@ -17,6 +17,7 @@ import { decodeWire } from '../src/lib/api/wire.ts';
 import { decodePlayerState } from '../src/lib/api/state-contract.ts';
 import { FakeOperations, createOperationsApi, decodeEnvelope, decodeMixed } from '../src/lib/api/operations.ts';
 import { ApiError, errorFromResponse, isSettledRefusal, isReloadNeeded, isOutboxClientBug, needsReconciliation } from '../src/lib/api/errors.ts';
+import { NEAR_RADIUS } from '../src/lib/api/near.ts';
 import { decodeChunk, validateChunk, FakeChunks, entityIn, decorAt, PortError } from '../src/lib/api/chunks.ts';
 import { profileFor, earnsXP } from '../src/lib/profile.ts';
 import { createApiClient, claimDeviceId } from '../src/lib/api/client.ts';
@@ -65,16 +66,29 @@ test('typed operations facade and fake expose session, play and operation contra
   const badAck = structuredClone(envelope) as Record<string, any>; badAck.report.casts = -1; assert.throws(() => decodeEnvelope(badAck), { code: 'bad-response' });
   let headers: Headers | undefined;
   const api = createApiClient({ fetchImpl: (async (_url, init) => { headers = new Headers(init?.headers); return new Response(JSON.stringify({ state: valid, leaseActive: false }), { headers: { 'content-type': 'application/json' } }); }) as typeof fetch });
-  await api.operations.state(); assert.equal(headers!.get('X-Glimway-Contract'), '7');
+  await api.operations.state(); assert.equal(headers!.get('X-Glimway-Contract'), '8');
 });
-function chunk() { return create(wilds.WildsChunkSchema, { epochId: 'epoch', region: 'inner-1', realm: 'hearthwick', look: 'tangle', generatorVersion: 2, size: 24, cx: 1, cy: 0, palette: ['grass'], ground: new Uint8Array(288), solid: new Uint8Array(72), spawn: { tx: 1, ty: 1 }, decor: { kinds: ['tree'], kind: [0], tx: [2], ty: [3], ox: [1], oy: [-2], variant: [0], flags: new Uint8Array(1) }, entities: [{ id: 'node:1:0:0', kind: 'node', tx: 3, ty: 4, material: 'timber' }], exits: [{ tx: 12, ty: 0, tw: 1, th: 1, dir: wilds.Dir.NORTH, to: 'chunk:outer-1:1:1', entry: { tx: 12, ty: 23 } }] }); }
-test('packed chunks validate bodies, decor and legitimate cross-region exits on binary decode', async () => {
+function chunk() { return create(wilds.WildsChunkSchema, { epochId: 'epoch', realm: 'hearthwick', look: 'tangle', generatorVersion: 3, size: 24, cx: 1, cy: 0, tier: 1, land: 'woods', palette: ['grass'], ground: new Uint8Array(288), solid: new Uint8Array(72), decor: { kinds: ['tree'], kind: [0], tx: [2], ty: [3], ox: [1], oy: [-2], variant: [0], flags: new Uint8Array(1) }, entities: [{ id: 'node:1:0:0', kind: 'node', tx: 3, ty: 4, material: 'timber' }], places: [{ id: 'place:0:-1', kind: 'ruin', tx: 9, ty: 9 }] }); }
+test('packed chunks validate identity, bodies, decor and places on binary decode (open-map.md 2.5)', async () => {
   const c = chunk(); assert.deepEqual(decodeChunk(toBinary(wilds.WildsChunkSchema, c)), c);
   assert.equal(entityIn(c, 'node:1:0:0')!.material, 'timber'); assert.deepEqual(decorAt(c, 2, 3), [0]);
-  // The way home: the Tangle's entry chunk, its south edge.
-  c.cy = 1; c.exits[0]!.ty = 23; c.exits[0]!.dir = wilds.Dir.SOUTH;
-  c.exits[0]!.to = 'commons'; c.exits[0]!.entry!.tx = 23; c.exits[0]!.entry!.ty = 2; validateChunk(c);
-  c.exits[0]!.to = 'chunk:outer-1:3:0'; assert.throws(() => validateChunk(c));
+  // Signed coordinates, anywhere: the frontier moves, chunks don't.
+  c.cx = -40; c.cy = -9; validateChunk(c);
+  // An old version, an unknown land, a tier past content are refused.
+  const refused: [string, (x: ReturnType<typeof chunk>) => void][] = [
+    ['version', (x) => { x.generatorVersion = 2; }],
+    ['land', (x) => { x.land = 'lake'; }],
+    ['tier', (x) => { x.tier = 4; }],
+    ['no tier', (x) => { x.tier = 0; }],
+    ['place id', (x) => { x.places[0]!.id = 'place:a:b'; }],
+    ['place kind', (x) => { x.places[0]!.kind = 'castle'; }],
+    ['place tile', (x) => { x.places[0]!.tx = 24; }],
+    ['realm', (x) => { x.realm = 'elsewhere'; }],
+    ['look', (x) => { x.look = 'meadow'; }],
+    ['site kind', (x) => { x.sites = [create(wilds.StorySiteSchema, { id: 's', kind: 9, tx: 1, ty: 1 })]; }],
+  ];
+  for (const [name, spoil] of refused) { const x = chunk(); spoil(x); assert.throws(() => validateChunk(x), undefined, name); }
+  const lamp = chunk(); lamp.sites = [create(wilds.StorySiteSchema, { id: 'lamp-stone:1:0', kind: wilds.SiteKind.LAMP_STONE, tx: 4, ty: 5 }), create(wilds.StorySiteSchema, { id: 'rumour:1:0', kind: wilds.SiteKind.RUMOUR, tx: 6, ty: 5 })]; validateChunk(lamp);
   const bad = chunk(); bad.decor!.flags = new Uint8Array(); assert.throws(() => validateChunk(bad));
   const key = { world: 'world', epoch: 'epoch', layer: 0, cx: 1, cy: 0 }; const fake = new FakeChunks(); fake.values.set(FakeChunks.key(key), chunk());
   const read = await fake.chunk(key); read.entities.length = 0; assert.equal((await fake.chunk(key)).entities.length, 1);
@@ -95,9 +109,6 @@ test('realistic Go fixtures pass the facade and mixed domain parser', async () =
   assert.equal((await fake.api.play(create(state.PlayRequestSchema, { clientId: 'client' }))).reportClient, 'client');
   fake.responses.set('/api/state', [get('valid-state')]);
   assert.equal((await fake.api.state()).leaseActive, true);
-  fake.responses.set('/api/wilds/region/outer-1', [get('valid-region')]);
-  const region = await fake.api.region('outer-1');
-  assert.equal(region.echoes[0]!.member, 'tam'); assert.equal(region.entities[0]!.state, 'harvested');
   for (const f of fixtures.filter(f => f.case.startsWith('fall-') || ['claim-loot', 'lantern-loot'].includes(f.case))) assert.ok(decodeEnvelope(f.json).result.case);
   const mixed = decodeMixed(get('keyed-items'), parseItemsResult);
   assert.equal(mixed.result.gathered![0]!.qty, 2); assert.equal(mixed.result.items.stacks[0]!.itemDef, 'timber');
@@ -115,8 +126,6 @@ test('report keepalive and returned geometry identities are enforced', async () 
   const geometry = createOperationsApi(async () => bytes);
   assert.equal((await geometry.chunk('epoch', 0, 1, 0)).cx, 1);
   for (const args of [['wrong-epoch', 0, 1, 0], ['epoch', -1, 1, 0], ['epoch', 0, 0, 0], ['epoch', 0, 1, 1]] as const) await assert.rejects(geometry.chunk(...args), { code: 'bad-response' });
-  const wrongRegion = createOperationsApi(async () => fixtures.find(f => f.case === 'valid-region')!.json);
-  await assert.rejects(wrongRegion.region('inner-1'), { code: 'bad-response' });
 });
 
 test('outbox error decisions separate gameplay refusals, client bugs and reconciliation', () => {
@@ -158,7 +167,7 @@ test('every raw client call and remote library call carries contract 7', async (
   const library = createRemoteLibrary({ fetchImpl });
   await library.load();
   assert.equal(calls.length, Object.keys(client.raw).length + 1);
-  for (const call of calls) assert.equal(new Headers(call.init?.headers).get('X-Glimway-Contract'), '7', call.url);
+  for (const call of calls) assert.equal(new Headers(call.init?.headers).get('X-Glimway-Contract'), '8', call.url);
 });
 
 test('device ownership persists independently of tab clients', () => {
@@ -184,4 +193,80 @@ test('contract 6 preserves quest times, gate spends and server item grants', () 
     assert.throws(() => decodePlayerState(body));
   }
   for (const code of ['not-yet','not-here','needs-habitica','companion-not-owned','no-stable','stall-taken','stalls-in-use','stable-full','already-casting','cast-too-soon','water-still','no-cast']) assert.equal(errorFromResponse(409, { error: { code }, state: valid }).code,code);
+});
+
+test('the open map contract 8 shapes decode through the facade (open-map.md 2.4, 2.10, section 3)', async () => {
+  const get = (name: string, kind: string) => fixtures.find(f => f.name === name && f.case === kind)!.json;
+  const fake = new FakeOperations();
+  fake.responses.set('/api/wilds/near/-2/-4', [get('glimway.v1.WildsNearResult', 'valid-near')]);
+  const near = await fake.api.near(-2, -4);
+  assert.deepEqual([near.still!.kind, near.wick!.kind, near.center!.cx, near.center!.cy, near.radius], ['still', 'wick', -2, -4, 2]);
+  assert.deepEqual(near.frontier!.rect, create(wilds.WildsChunkRectSchema, { minCx: -4, minCy: -8, maxCx: 4, maxCy: 0 }));
+  assert.equal(near.ground[0]!.changes!.changes[1]!.change, 'stone');
+  assert.deepEqual([near.glimpse[0]!.land, near.glimpse[0]!.river, near.ways[0]!.name], ['meadow', true, "Fixture's way"]);
+  // A window answered for another chunk is refused.
+  fake.responses.set('/api/wilds/near/0/0', [get('glimway.v1.WildsNearResult', 'valid-near')]);
+  await assert.rejects(fake.api.near(0, 0), { code: 'bad-response' });
+  const cases: [string, 'wildsClear' | 'wildsLay' | 'wildsLift' | 'wildsDiscover'][] = [['wilds-clear', 'wildsClear'], ['wilds-lay-way', 'wildsLay'], ['wilds-lift', 'wildsLift'], ['discover-first', 'wildsDiscover']];
+  for (const [kind, want] of cases) assert.equal(decodeEnvelope(get('glimway.v1.Envelope', kind)).result.case, want, kind);
+  const chunk = decodeWire(wilds.WildsChunkSchema, get('glimway.v1.WildsChunk', 'valid-open-map'));
+  assert.deepEqual([chunk.cx, chunk.cy, chunk.tier, chunk.land, chunk.places[0]!.id, chunk.sites[0]!.kind], [-3, -7, 3, 'meadow', 'place:-1:-2', wilds.SiteKind.RUMOUR]);
+});
+
+test('the near read refuses a window, ground or way that breaks its contract (review round 1)', async () => {
+  const base = fixtures.find(f => f.name === 'glimway.v1.WildsNearResult' && f.case === 'valid-near')!.json as Record<string, any>;
+  const near = async (edit: (j: Record<string, any>) => void, cx = -2, cy = -4) => {
+    const j = structuredClone(base); edit(j);
+    const fake = new FakeOperations(); fake.responses.set(`/api/wilds/near/${cx}/${cy}`, [j]);
+    return fake.api.near(cx, cy);
+  };
+  // The shipped answer passes, and so does a Tangle chunk on the still epoch.
+  assert.equal((await near(() => {})).radius, NEAR_RADIUS);
+  const tangle = (j: Record<string, any>, epoch: string) => j.ground.push({ chunk: { realm: 'hearthwick', layer: 0, cx: 0, cy: -2 }, epoch, changes: { changes: [] } });
+  assert.equal((await near((j) => tangle(j, 'still-epoch'))).ground.length, 2);
+  const g = (j: Record<string, any>) => j.ground[0];
+  const refusals: [string, (j: Record<string, any>) => void][] = [
+    ['tile past the chunk', (j) => { g(j).changes.changes[0].tx = 24; }],
+    ['row past the chunk', (j) => { g(j).changes.changes[0].ty = 24; }],
+    ['two changes on one tile', (j) => { g(j).changes.changes[1].tx = 3; }],
+    ['past the change limit', (j) => { g(j).changes.changes = Array.from({ length: 577 }, (_, i) => ({ tx: i % 24, ty: Math.floor(i / 24) % 24, change: 'stone', by: 'a', at: 1 })); }],
+    ['unknown change', (j) => { g(j).changes.changes[0].change = 'gold'; }],
+    ['ground in another realm', (j) => { g(j).chunk.realm = 'elsewhere'; }],
+    ['ground on another layer', (j) => { g(j).chunk.layer = 1; }],
+    ['ground outside the window', (j) => { g(j).chunk.cx = 1; }],
+    ['ground outside the frontier', (j) => { j.frontier.rect.minCx = -1; }],
+    ['ground on the still epoch outside the Tangle', (j) => { g(j).epoch = 'still-epoch'; }],
+    ['a Tangle chunk on the wick epoch', (j) => tangle(j, 'wick-epoch')],
+    ['the same chunk twice', (j) => { j.ground.push(structuredClone(g(j))); }],
+    ['window in another realm', (j) => { j.center.realm = 'elsewhere'; }],
+    ['window on another layer', (j) => { j.center.layer = 1; }],
+    ['radius not 2', (j) => { j.radius = 0; }],
+    ['frontier bounds out of order', (j) => { j.frontier.rect.minCy = 1; }],
+    ['window outside the frontier', (j) => { j.frontier.rect.maxCx = -3; }],
+    ['one epoch twice', (j) => { j.wick.id = j.still.id; }],
+    ['glimpse inside the frontier', (j) => { j.glimpse[0].chunk.cx = -4; }],
+    ['way path with a gap', (j) => { j.ways[0].path.splice(5, 1); }],
+    ['way sign off its end', (j) => { j.ways[0].signA = { x: 0, y: 0 }; }],
+    ['way sign on its path', (j) => { j.ways[0].signB = structuredClone(j.ways[0].path.at(-2)); }],
+    ['way id not its pair', (j) => { j.ways[0].id = 'way:x:y'; }],
+  ];
+  for (const [name, edit] of refusals) await assert.rejects(near(edit), { code: 'bad-response' }, name);
+});
+
+test('a named way carries its whole path and signs, even outside the window (review round 1)', () => {
+  const get = (name: string, kind: string) => fixtures.find(f => f.name === name && f.case === kind)!.json;
+  const near = decodeWire(wilds.WildsNearResultSchema, get('glimway.v1.WildsNearResult', 'valid-near'));
+  const way = near.ways[0]!;
+  const inWindow = (t: { x: number; y: number }) => Math.abs(Math.floor(t.x / 24) - near.center!.cx) <= 2 && Math.abs(Math.floor(t.y / 24) - near.center!.cy) <= 2;
+  assert.equal(inWindow(way.path[0]!), false, 'starts outside the window');
+  assert.equal(inWindow(way.path.at(-1)!), false, 'ends outside the window');
+  // It enters, leaves and enters again.
+  const runs = way.path.map(inWindow).filter((v, i, a) => i === 0 || v !== a[i - 1]);
+  assert.deepEqual(runs, [false, true, false, true, false]);
+  // Branching: one lay makes two ways, one lift breaks two.
+  const lay = decodeEnvelope(get('glimway.v1.Envelope', 'wilds-lay-branch'));
+  assert.equal(lay.result.case, 'wildsLay');
+  assert.deepEqual(lay.result.case === 'wildsLay' && lay.result.value.waysMade.map((w) => w.id), ['way:place:-1:-2:place:0:-2', 'way:place:0:-2:place:1:-2']);
+  const lift = decodeEnvelope(get('glimway.v1.Envelope', 'wilds-lift-branch'));
+  assert.deepEqual(lift.result.case === 'wildsLift' && lift.result.value.waysBroken, ['way:place:-1:-2:place:0:-2', 'way:place:-1:-2:place:1:-2']);
 });

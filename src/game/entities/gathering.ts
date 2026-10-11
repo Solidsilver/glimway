@@ -28,7 +28,7 @@ import { ITEM_ART_FALLBACK, itemIcon } from '../items-pass'
 import { homesteadsFor } from '../homestead'
 import { plantScenery } from '../homeland'
 import { lookAtlasKey } from '../wilds/wilds-looks'
-import { CHUNK_TILES, parseChunkArea, regionOfState, WILDS_AREA } from '../wilds/regions'
+import { WILDS_AREA } from '../wilds/coords'
 import { ensureSceneryArt } from '../area/props'
 import { bus, EV } from '../events'
 import { TILE, tileBottom, tileKey, tileMid } from '../../lib/tile'
@@ -71,6 +71,8 @@ const LEAVE = REACH + 10
 const SHUFFLE_RADIUS = 6 * TILE
 
 export class Gathering {
+  /** The open map's pieces by chunk (`cx,cy`): its window adds and drops them as chunks come and go. */
+  private chunkSpots = new Map<string, GatherSpot[]>()
   /** The build of the area that's up now (an answer may outlive the build that asked). */
   private static live: Gathering | null = null
   private spots: GatherSpot[]
@@ -90,7 +92,7 @@ export class Gathering {
     // Every area build is a stay: arriving somewhere else ends the last one,
     // so coming back is a new visit and the woods have regrown.
     const st = deps.session.state
-    this.visit = visitIdFor(st.area, st.wildsRegion ?? null)
+    this.visit = visitIdFor(st.area)
     this.done = visitWork(this.visit)
     // A rebuild within the same stay keeps what this stay has worked.
     for (const spot of [...this.spots]) {
@@ -150,6 +152,37 @@ export class Gathering {
       return point
     })
     this.deps.interactables.register(this, points)
+  }
+
+  /**
+   * The open map (src/game/wilds/window.ts): a chunk's workable pieces, in
+   * world tiles, as it is attached. What this stay already worked shows as
+   * worked; nothing of a kind the server has had enough of is offered.
+   */
+  addChunk(key: string, spots: readonly GatherSpot[]): void {
+    this.removeChunk(key, false)
+    const mine = spots.filter((s) => !this.done.enough.has(gatheringTarget(s.target)?.action ?? 'chop')).map((s) => ({ ...s }))
+    this.chunkSpots.set(key, mine)
+    this.spots.push(...mine)
+    for (const spot of mine) {
+      const was = this.done.worked.get(this.key(spot))
+      if (was) this.change(spot, was)
+    }
+    this.publish()
+  }
+
+  /** The chunk went out of the window: its pieces (and what work drew on them) go. */
+  removeChunk(key: string, publish = true): void {
+    const had = this.chunkSpots.get(key)
+    if (!had) return
+    this.chunkSpots.delete(key)
+    const gone = new Set(had.map((s) => tileKey(s.tx, s.ty)))
+    this.spots = this.spots.filter((s) => !gone.has(tileKey(s.tx, s.ty)))
+    for (const k of gone) {
+      for (const img of this.drawn.get(k) ?? []) img.destroy()
+      this.drawn.delete(k)
+    }
+    if (publish) this.publish()
   }
 
   /** The piece the prompt is on right now. */
@@ -232,12 +265,10 @@ export class Gathering {
       const home = parseHomeArea(session.state.area) !== null
       this.deps.notePosition()
       const wilds = session.state.area === WILDS_AREA
-      const chunk = wilds ? parseChunkArea(this.deps.world.areaId) : null
-      const region = wilds ? (chunk?.region ?? regionOfState(session.state)) : undefined
       // The server checks the piece against its own land or chunk: home tiles
-      // as they are, Wilds tiles region-wide (the chunk's offset added).
-      const tile: [number, number] | undefined = home ? [spot.tx, spot.ty] : chunk ? [chunk.cx * CHUNK_TILES + spot.tx, chunk.cy * CHUNK_TILES + spot.ty] : undefined
-      const r = await itemsFor(session).gather(tool.id, target.action, spot.target, this.visit, { tile, region })
+      // and the open map's world tiles as they are.
+      const tile: [number, number] | undefined = home || wilds ? [spot.tx, spot.ty] : undefined
+      const r = await itemsFor(session).gather(tool.id, target.action, spot.target, this.visit, { tile })
       // The answer can outlive this build of the area (a snap-back rebuilt
       // it mid-request): it goes to whichever build is up now.
       const live = Gathering.live?.deps.world.areaId === this.deps.world.areaId ? Gathering.live : null

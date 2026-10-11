@@ -129,6 +129,9 @@ func TestServerFirstWireFixtures(t *testing.T) {
 	}
 	// Exercise production's state projection and mixed writer, not a handcrafted JSON body.
 	x := newRig(t)
+	// No generator: the states carry no rumour (its epoch id is random);
+	// the hand-made "rumour" case pins its shape.
+	x.api.Config.WildsGenerator = nil
 	x.now.Store(1791400000)
 	c, _ := x.ready("fixture-hero")
 	w := x.rawHTTP("GET", "/api/state", nil, c)
@@ -189,7 +192,7 @@ func TestServerFirstWireFixtures(t *testing.T) {
 		}
 		fixtures = append(fixtures, wireFixture{"mixed", route, raw, ""})
 	}
-	chunk := &contract.WildsChunk{EpochId: "epoch", Region: "inner-1", Realm: "hearthwick", Look: "tangle", Cx: 1, Cy: 0, GeneratorVersion: 2, Size: 24, Palette: []string{"grass"}, Ground: make([]byte, 288), Solid: make([]byte, 72), Spawn: &contract.Tile{Tx: 1, Ty: 1}, Decor: &contract.DecorList{Kinds: []string{"tree"}, Kind: []uint32{0}, Tx: []uint32{2}, Ty: []uint32{3}, Ox: []int32{1}, Oy: []int32{-2}, Variant: []uint32{0}, Flags: []byte{0}}, Entities: []*contract.WildsEntity{{Id: "node:1:0:0", Kind: "node", Tx: 3, Ty: 4, Material: "timber"}}, Sites: []*contract.StorySite{{Id: "echo", Kind: contract.SiteKind_SITE_KIND_ECHO, Tx: 3, Ty: 5}}, Exits: []*contract.Exit{{Tx: 12, Ty: 0, Tw: 1, Th: 1, Dir: contract.Dir_DIR_NORTH, To: "chunk:outer-1:1:1", Entry: &contract.Tile{Tx: 12, Ty: 23}}}}
+	chunk := &contract.WildsChunk{EpochId: "epoch", Realm: "hearthwick", Look: "tangle", Cx: 1, Cy: 0, GeneratorVersion: 3, Size: 24, Tier: 1, Land: "woods", Palette: []string{"grass_b"}, Ground: make([]byte, 288), Solid: make([]byte, 72), Decor: &contract.DecorList{Kinds: []string{"oak"}, Kind: []uint32{0}, Tx: []uint32{2}, Ty: []uint32{3}, Ox: []int32{1}, Oy: []int32{-2}, Variant: []uint32{0}, Flags: []byte{0}}, Entities: []*contract.WildsEntity{{Id: "node:1:0:0", Kind: "node", Tx: 3, Ty: 4, Material: "timber"}}, Sites: []*contract.StorySite{{Id: "echo", Kind: contract.SiteKind_SITE_KIND_ECHO, Tx: 3, Ty: 5}}}
 	chunkJSON, err := (protojson.MarshalOptions{EmitUnpopulated: true}).Marshal(chunk)
 	if err != nil {
 		t.Fatal(err)
@@ -228,11 +231,79 @@ func TestServerFirstWireFixtures(t *testing.T) {
 	}
 	entity := &contract.WildsEntityState{Id: "node:1:0:0", Epoch: "epoch", Cycle: 2, State: "harvested", AvailableAt: 1791400020, By: wrapperspb.String("fixture-account"), At: wrapperspb.Double(1791400000)}
 	lamp := &contract.WildsLantern{Id: "fallen-lamp", OwnerId: "peer-account", DisplayName: "Peer", X: 400, Y: 300, At: 1791400000, LitBy: wrapperspb.String("fixture-account"), LitAt: wrapperspb.Double(1791400010)}
-	add("valid-region", &contract.WildsRegionResult{Epoch: &contract.WildsEpoch{Id: "epoch", WorldSeed: "world-seed", RegionId: "outer-1", GeneratorVersion: 2, Season: "autumn", StartsAt: 1791300000, EndsAt: wrapperspb.Double(1791500000)}, Entities: []*contract.WildsEntityState{entity}, Echoes: []*contract.EchoAssignment{{Site: "echo-tam", Member: "tam", Settled: true}}, Lanterns: []*contract.WildsLantern{lamp}, Materials: map[string]float64{"timber": 3}})
+	// The open map's contract 8 shapes (open-map.md 2.4, 2.10, section 3):
+	// signed keys, both epochs, the ground changes, the glimpse and a way.
+	key := func(cx, cy int32) *contract.WildsChunkKey {
+		return &contract.WildsChunkKey{Realm: "hearthwick", Layer: 0, Cx: cx, Cy: cy}
+	}
+	ground := &contract.ChunkGroundChanges{Chunk: key(-2, -4), Epoch: "wick-epoch", Changes: &contract.GroundChanges{Changes: []*contract.GroundChange{{Tx: 3, Ty: 4, Change: "cleared", By: "fixture-account", At: 1791400000}, {Tx: 4, Ty: 4, Change: "stone", By: "fixture-account", At: 1791400005}}}}
+	// line walks orthogonal segments through the corners, in world tiles,
+	// each tile 4-adjacent to the one before.
+	line := func(corners ...[2]int32) []*contract.WorldTile {
+		out := []*contract.WorldTile{{X: corners[0][0], Y: corners[0][1]}}
+		for _, c := range corners[1:] {
+			for {
+				last := out[len(out)-1]
+				if last.X == c[0] && last.Y == c[1] {
+					break
+				}
+				next := &contract.WorldTile{X: last.X, Y: last.Y}
+				switch {
+				case last.X < c[0]:
+					next.X++
+				case last.X > c[0]:
+					next.X--
+				case last.Y < c[1]:
+					next.Y++
+				default:
+					next.Y--
+				}
+				out = append(out, next)
+			}
+		}
+		return out
+	}
+	newWay := func(a, b, name string, path []*contract.WorldTile, signA, signB [2]int32) *contract.WildsWay {
+		return &contract.WildsWay{Id: "way:" + a + ":" + b, A: a, B: b, Name: name, By: "fixture-account", Tiles: uint32(len(path)), Epoch: "wick-epoch", At: 1791400100, Path: path, SignA: &contract.WorldTile{X: signA[0], Y: signA[1]}, SignB: &contract.WorldTile{X: signB[0], Y: signB[1]}}
+	}
+	// The near window is chunks -4..0 x -6..-2 (world tiles x -96..23, y
+	// -144..-25). This way's ends lie outside it, in chunk (0,-7) (place
+	// 0:-2's landmark at 12,-148) and chunk (2,-4) (place 1:-1's at 52,-84),
+	// and its path leaves the window east (x 24..30) and comes back.
+	way := newWay("place:0:-2", "place:1:-1", "Fixture's way", line([2]int32{12, -145}, [2]int32{12, -110}, [2]int32{30, -110}, [2]int32{30, -100}, [2]int32{20, -100}, [2]int32{20, -84}, [2]int32{49, -84}), [2]int32{11, -145}, [2]int32{49, -83})
+	// Three places, branching (open-map.md section 3, "Named ways"): A
+	// (place -1:-2, landmark -25,-150) and B (place 1:-2, landmark 50,-150)
+	// are already joined along y -150; a stem from (12,-151) north to C
+	// (place 0:-2, landmark 12,-170) is finished by one lay at (12,-167),
+	// which makes A-C and B-C at once. Lifting (-20,-150), on the shared run
+	// beside A, then breaks A-B and A-C; B-C stands.
+	branchAC := newWay("place:-1:-2", "place:0:-2", "Fixture's way", line([2]int32{-22, -150}, [2]int32{12, -150}, [2]int32{12, -167}), [2]int32{-22, -151}, [2]int32{13, -167})
+	branchBC := newWay("place:0:-2", "place:1:-2", "Peer's way", line([2]int32{12, -167}, [2]int32{12, -150}, [2]int32{47, -150}), [2]int32{11, -167}, [2]int32{47, -151})
+	branchBC.By = "peer-account"
+	add("valid-open-map", &contract.WildsChunk{EpochId: "wick-epoch", Realm: "hearthwick", Look: "outer", Cx: -3, Cy: -7, GeneratorVersion: 3, Size: 24, Palette: []string{"grass_c"}, Ground: make([]byte, 288), Solid: make([]byte, 72), Decor: &contract.DecorList{Kinds: []string{"split-oak"}, Kind: []uint32{0}, Tx: []uint32{12}, Ty: []uint32{12}, Ox: []int32{0}, Oy: []int32{0}, Variant: []uint32{0}, Flags: []byte{0}}, Sites: []*contract.StorySite{{Id: "rumour:-3:-7", Kind: contract.SiteKind_SITE_KIND_RUMOUR, Tx: 12, Ty: 13}}, Tier: 3, Land: "meadow", Places: []*contract.WildsPlaceMark{{Id: "place:-1:-2", Kind: "camp-glade", Tx: 12, Ty: 12}}})
+	add("valid-near", &contract.WildsNearResult{
+		Still:    &contract.WildsEpoch{Id: "still-epoch", WorldSeed: "world-seed", Kind: "still", GeneratorVersion: 3, Season: "0", StartsAt: 1791300000},
+		Wick:     &contract.WildsEpoch{Id: "wick-epoch", WorldSeed: "world-seed", Kind: "wick", GeneratorVersion: 3, Season: "t:1791300000:1791500000", StartsAt: 1791300000, EndsAt: wrapperspb.Double(1791500000)},
+		Frontier: &contract.WildsFrontier{Rect: &contract.WildsChunkRect{MinCx: -4, MinCy: -8, MaxCx: 4, MaxCy: 0}},
+		Center:   key(-2, -4), Radius: 2,
+		Entities: []*contract.WildsEntityState{{Id: "node:-2:-4:0", Epoch: "wick-epoch", Cycle: 1, State: "harvested", AvailableAt: 1791400020, By: wrapperspb.String("fixture-account"), At: wrapperspb.Double(1791400000)}}, PersonalClaims: []*contract.WildsPersonalClaim{{EntityId: "chest:-2:-4:0", At: 1791400000}},
+		Discoveries: []*contract.WildsDiscovery{{EntityId: "place:-1:-2", DiscovererId: "fixture-account", DisplayName: "Fixture", At: 1791400000}},
+		Lanterns:    []*contract.WildsLantern{lamp}, Echoes: []*contract.EchoAssignment{{Site: "echo:0", Member: "tam"}},
+		Ground: []*contract.ChunkGroundChanges{ground}, Materials: map[string]float64{"stone": 4},
+		Glimpse: []*contract.WildsGlimpse{{Chunk: key(-5, -4), Land: "meadow", River: true}},
+		Ways:    []*contract.WildsWay{way},
+	})
+	add("rumour", &contract.WildsRumour{Epoch: "wick-epoch", Place: "place:-1:-2", Landmark: "split-oak", Compass: "nw", Ring: 2, PastRiver: true, Site: "rumour:-3:-7"})
 	loot := &contract.WildsLoot{Materials: []*contract.WildsMaterial{{Id: "timber", Qty: 2}}, Trinket: wrapperspb.String("beeswax-candle")}
 	for kind, result := range map[string]proto.Message{
-		"claim-loot":   &contract.WildsClaimResult{Epoch: "epoch", Entity: entity, Loot: loot, Materials: map[string]float64{"timber": 3}, Papers: []string{"failed-grid-of-sector-4"}},
-		"lantern-loot": &contract.WildsLanternResult{Epoch: "epoch", Rewarded: true, Loot: loot, Materials: map[string]float64{"timber": 3}, Lanterns: []*contract.WildsLantern{lamp}},
+		"claim-loot":        &contract.WildsClaimResult{Epoch: "epoch", Entity: entity, Loot: loot, Materials: map[string]float64{"timber": 3}, Papers: []string{"failed-grid-of-sector-4"}},
+		"lantern-loot":      &contract.WildsLanternResult{Epoch: "epoch", Rewarded: true, Loot: loot, Materials: map[string]float64{"timber": 3}, Lanterns: []*contract.WildsLantern{lamp}},
+		"wilds-clear":       &contract.WildsClearResult{Ground: ground, Materials: map[string]float64{"stone": 3}},
+		"wilds-lay-way":     &contract.WildsLayResult{Ground: ground, Materials: map[string]float64{"stone": 3}, WaysMade: []*contract.WildsWay{way}},
+		"wilds-lift":        &contract.WildsLiftResult{Ground: ground, Materials: map[string]float64{"stone": 4}, WaysBroken: []string{way.Id}},
+		"wilds-lay-branch":  &contract.WildsLayResult{Ground: ground, Materials: map[string]float64{"stone": 2}, WaysMade: []*contract.WildsWay{branchAC, branchBC}},
+		"wilds-lift-branch": &contract.WildsLiftResult{Ground: ground, Materials: map[string]float64{"stone": 3}, WaysBroken: []string{"way:place:-1:-2:place:0:-2", "way:place:-1:-2:place:1:-2"}},
+		"discover-first":    &contract.WildsDiscoverResult{Epoch: "wick-epoch", Discovery: &contract.WildsDiscovery{EntityId: "place:-1:-2", DiscovererId: "fixture-account", DisplayName: "Fixture", At: 1791400000}, First: true, Loot: loot, Materials: map[string]float64{"timber": 3}},
 	} {
 		envelope, err := typedEnvelope(state.State, result)
 		if err != nil {

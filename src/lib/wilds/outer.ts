@@ -1,16 +1,14 @@
 /**
- * The outer Wilds and the Turning — pure season rules shared by the client
- * and its tests. The server generates both regions and their story sites
+ * The Beyond and the Turning — pure season rules shared by the client and
+ * its tests. The server generates the land and its story sites
  * (server/internal/wilds); this keeps only what the client reads them by.
  *
- * Epochs: the inner region (the Tangle) is permanent (season "0"). The outer
- * region turns every wick: its season is `t:<startsAt>:<endsAt>` — the
- * wick's UTC boundaries in Unix seconds, exactly what the server writes.
+ * Epochs: the still epoch (the Tangle) is permanent (season "0"). The wick
+ * epoch (everything else) turns every wick: its season is
+ * `t:<startsAt>:<endsAt>` — the wick's UTC boundaries in Unix seconds,
+ * exactly what the server writes.
  */
 import { CALENDAR, calendarAt, type Calendar } from '../calendar.ts';
-
-export const INNER_REGION_ID = 'inner-1';
-export const OUTER_REGION_ID = 'outer-1';
 
 // ------------------------------------------------------------ epochs
 
@@ -57,8 +55,10 @@ export function epochEnded(season: string, unix: number, endsAt?: number | null)
  * - nest: a dead iron-oak with a jackdaw's nest (outer).
  * - reeds: a backwater of the Wend, reeds and still water (outer).
  * - plank: a plank half-buried where the bridge tore (the Tangle crossing).
+ * - lamp-stone: a dark lamp stone by the Lantern Road (relit in 0.9).
+ * - rumour: this wick's rumoured find, at a place's landmark (open-map.md 2.10).
  */
-export type SiteKind = 'echo' | 'given' | 'cairn' | 'nest' | 'reeds' | 'plank';
+export type SiteKind = 'echo' | 'given' | 'cairn' | 'nest' | 'reeds' | 'plank' | 'lamp-stone' | 'rumour';
 
 /** A story site's geometry, served in its chunk. */
 export interface StorySite {

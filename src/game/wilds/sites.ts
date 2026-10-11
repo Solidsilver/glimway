@@ -10,6 +10,13 @@
  *  - Given-back places: the crossing, the Amberwash cairn, a jackdaw's nest
  *    in a dead iron-oak, a reed backwater of the Wend, and a plank where the
  *    bridge tore. Each gives its found text back when its moment is due.
+ *  - The Lantern Road's dark lamp stones (open-map.md 2.2): something to
+ *    look at, for now (lamps relight them in 0.9).
+ *  - This wick's rumoured find (open-map.md 2.10): a bundle tucked under a
+ *    landmark, opened once by each player (a personal claim, like a chest).
+ *
+ * One layer per attached chunk of the open map (./window.ts attaches and
+ * destroys them); site tiles are chunk-local, drawn at their world tiles.
  *
  * Settling an Echo is the `settle-echo` operation (./remote.ts): predicted
  * here, refused and rolled back if the server's assignment disagrees.
@@ -34,9 +41,14 @@ import type { DialogueChoice } from '../event-names'
 import type { Effects } from '../entities/fx'
 import type { Interactable, Interactables } from '../entities/interactables'
 import { openDialogue } from '../dialogue.ts'
-import { applyEchoSettled, wildsLive, wildsView, type WildsEpoch } from './store.ts'
+import { applyEchoSettled, isClaimed, lootText, wildsLive, wildsView, type WildsEpoch } from './store.ts'
 import { settleEcho } from './remote.ts'
-import { toRegionPosition } from './regions.ts'
+import { openRumourFind } from './rumour-find.ts'
+import { CHUNK_TILES } from './coords.ts'
+import { LAMP_STONE_DARK, omArt } from './open-map-art.ts'
+import { FINDS } from '../../content/open-map.ts'
+import { CLAIM_ERROR, lootArt, lootGain } from './entities.ts'
+import { loadWilds } from '../../lib/wilds/data.ts'
 import { roadStep } from '../../lib/quests.ts'
 
 type C = CanvasRenderingContext2D
@@ -255,22 +267,36 @@ export class WildsSites {
     private scene: Phaser.Scene,
     private deps: SitesDeps,
     private epoch: WildsEpoch,
-    cx: number,
-    cy: number,
-    sites: readonly { id: string; kind: string; tx: number; ty: number }[]
+    private cx: number,
+    private cy: number,
+    sites: readonly StorySite[],
+    /** The deep drift's look: pale motes of the white quiet drift through it. */
+    outer: boolean
   ) {
     ensureSiteArt(scene)
-    this.sites = sites.map((s) => ({ ...s, kind: s.kind as SiteKind, cx, cy }))
+    this.sites = [...sites]
     scene.events.once('shutdown', () => {
       this.images = []
     })
-    if (epoch.regionId !== 'inner-1') this.motes()
+    if (outer) this.motes()
     this.render()
     deps.interactables.register(
       this,
-      // Quiet until a fresh region read lands (and while stale), like the claims around them.
-      this.sites.map((s) => wildsPoint(`site:${s.id}`, this.sitePx(s), 20, () => (wildsLive(this.deps.session, this.epoch.regionId) ? this.offerAt(s) : null)))
+      // Quiet until a fresh near read lands (and while stale), like the claims around them.
+      // A lamp stone stands tall: its marker floats over the lamp niche, not on it.
+      this.sites.map((s) => wildsPoint(`site:${s.id}`, this.sitePx(s), s.kind === 'lamp-stone' ? 36 : 20, () => (wildsLive(this.deps.session) ? this.offerAt(s) : null)))
     )
+  }
+
+  /** The chunk left the window: everything drawn and offered here goes. */
+  destroy(): void {
+    this.gone = true
+    for (const o of this.images) {
+      this.scene.tweens.killTweensOf(o)
+      o.destroy()
+    }
+    this.images = []
+    this.deps.interactables.register(this, [])
   }
 
   private ctx(): StoryContext {
@@ -287,7 +313,7 @@ export class WildsSites {
   }
 
   private sitePx(s: StorySite): { x: number; y: number } {
-    return tileFeet(s.tx, s.ty)
+    return tileFeet(this.cx * CHUNK_TILES + s.tx, this.cy * CHUNK_TILES + s.ty)
   }
 
   private add<T extends Phaser.GameObjects.GameObject>(o: T): T {
@@ -305,12 +331,14 @@ export class WildsSites {
     this.renderedKey = `${c.late}|${c.flags.filter((f) => f.startsWith('echo:') || f.startsWith('paper:')).length}`
     // Who waits at each camp is this player's assignment, from the region read.
     this.echoes = new Map()
-    for (const [site, a] of wildsView(this.epoch.regionId)?.echoes ?? []) {
+    for (const [site, a] of wildsView()?.echoes ?? []) {
       const def = ECHOES.find((e) => e.member === a.member)
       if (def) this.echoes.set(site, def)
     }
     for (const s of this.sites) {
       if (s.kind === 'echo') this.renderEcho(s)
+      else if (s.kind === 'lamp-stone') this.renderLampStone(s)
+      else if (s.kind === 'rumour') this.renderRumour(s)
       else this.renderLook(s, c)
     }
   }
@@ -376,6 +404,25 @@ export class WildsSites {
     if (!this.deps.reducedMotion) this.scene.tweens.add({ targets: glint, y: at.y - 26, alpha: { from: 0.85, to: 0.3 }, duration: 1100, yoyo: true, repeat: -1 })
   }
 
+  /** A dark lamp stone by the road (its base is solid in the chunk; the art stands on it). */
+  private renderLampStone(s: StorySite): void {
+    if (!this.scene.textures.exists(LAMP_STONE_DARK)) return
+    const at = this.sitePx(s)
+    this.img(LAMP_STONE_DARK, at.x, at.y)
+  }
+
+  /** The rumour's bundle, tucked in under its landmark: closed until you open it (open, after). */
+  private renderRumour(s: StorySite): void {
+    const opened = isClaimed(s.id)
+    const art = omArt(opened ? 'rumour-find-open' : 'rumour-find-closed')
+    if (!this.scene.textures.exists(art)) return
+    const at = this.sitePx(s)
+    this.img(art, at.x, at.y + 1)
+    if (opened) return
+    const glint = this.add(this.scene.add.image(at.x, at.y - 14, 'spark').setDepth(at.y + 3).setBlendMode(1))
+    if (!this.deps.reducedMotion) this.scene.tweens.add({ targets: glint, y: at.y - 18, alpha: { from: 0.85, to: 0.35 }, duration: 900, yoyo: true, repeat: -1 })
+  }
+
   private renderLook(s: StorySite, c: StoryContext): void {
     const at = this.sitePx(s)
     const art = s.kind === 'cairn' ? commonsArt(this.scene, 'cairn-white-stones') ?? LOOK_ART.cairn : LOOK_ART[s.kind]
@@ -408,6 +455,13 @@ export class WildsSites {
   /** What this site offers now (null: nothing, it keeps quiet). */
   private offerAt(s: StorySite): WildsClaim | null {
     const c = this.ctx()
+    if (s.kind === 'lamp-stone') {
+      return { label: 'Look at the lamp stone', verb: 'Look', claim: () => bus.emit(EV.toast, { text: loadWilds().words.lampStone, icon: 'lantern', kind: 'thought' }) }
+    }
+    if (s.kind === 'rumour') {
+      if (isClaimed(s.id)) return { label: FINDS.bundleLook, verb: 'Look', claim: () => bus.emit(EV.toast, { text: FINDS.bundleEmpty, icon: 'map', kind: 'thought' }) }
+      return { label: FINDS.bundleClosed, verb: FINDS.bundleVerb, claim: () => void this.openRumour(s) }
+    }
     if (s.kind === 'echo') {
       const def = this.echoes.get(s.id)
       if (!def) return null
@@ -465,7 +519,7 @@ export class WildsSites {
     const session = this.deps.session
     if (!session.link) return
     const hero = this.deps.hero()
-    const where = { region: this.epoch.regionId, ...toRegionPosition(s.cx, s.cy, hero.x, hero.y) }
+    const where = { x: hero.x, y: hero.y }
     void settleEcho(session, { epoch: this.epoch.id, site: s.id, member: def.member, where }).then((res) => {
       if (res.ok) {
         applyEchoSettled(s.id)
@@ -481,7 +535,7 @@ export class WildsSites {
 
   /** A settle picked in a camp conversation (the keepsake's offer keeps the lamp open). */
   settleEcho(siteId: string): boolean {
-    if (!wildsLive(this.deps.session, this.epoch.regionId)) return false
+    if (!wildsLive(this.deps.session)) return false
     const s = this.sites.find((x) => x.id === siteId && x.kind === 'echo')
     const def = s ? this.echoes.get(s.id) : undefined
     if (!s || !def) return false
@@ -551,14 +605,51 @@ export class WildsSites {
     this.render()
   }
 
+  private opening = false
+  /** The chunk left the window (an answer can land after). */
+  private gone = false
+
+  /**
+   * Open the rumour's find: a personal claim under this wick's epoch (cycle
+   * 0), so everyone can open it once. Its answer carries the loot; the
+   * state is read again so Elara knows you found it.
+   */
+  private async openRumour(s: StorySite): Promise<void> {
+    const session = this.deps.session
+    if (this.opening || !session.link) return
+    this.opening = true
+    try {
+      const hero = this.deps.hero()
+      // The bundle of the wick this layer was drawn in: a turning meanwhile takes it away.
+      const r = await openRumourFind(session, { id: s.id, cx: this.cx, cy: this.cy }, this.epoch.id, { x: hero.x, y: hero.y })
+      if (!r.ok) {
+        if (r.why === 'offline') bus.emit(EV.toast, { text: CLAIM_ERROR.offline, kind: 'error' })
+        else if (r.why === 'refused' && r.code !== 'epoch-ended') bus.emit(EV.toast, { text: CLAIM_ERROR[r.code ?? 'unknown'] ?? CLAIM_ERROR.unknown, kind: 'error' })
+        return
+      }
+      const at = this.sitePx(s)
+      sfx('discover')
+      this.deps.fx.sparkBurst(at.x, at.y - 8, 14)
+      const loot = lootText(r.drop)
+      bus.emit(EV.toast, { text: loot ? `${FINDS.bundleOpened} ${loot}.` : FINDS.bundleOpened, icon: 'sparkle', art: lootArt(r.drop), kind: loot ? 'gain' : 'thought', ...(loot ? { gain: lootGain(r.drop) } : {}) })
+      if (!this.gone) this.render()
+      // Elara hears of it: the rumour's `opened` is in the state, read again.
+      void session.link.refreshState()
+    } finally {
+      this.opening = false
+    }
+  }
+
   // ------------------------------------------------------------ the white quiet
 
   /** Pale motes drifting through the outer Wilds (still when motion is reduced). */
   private motes(): void {
-    const w = 24 * TILE
+    const ox = this.cx * CHUNK_TILES * TILE
+    const oy = this.cy * CHUNK_TILES * TILE
+    const w = ox + CHUNK_TILES * TILE
     for (let i = 0; i < 26; i++) {
-      const x = ((i * 97) % 23) * TILE + 8 + ((i * 13) % 9)
-      const y = ((i * 53) % 23) * TILE + 6
+      const x = ox + ((i * 97) % 23) * TILE + 8 + ((i * 13) % 9)
+      const y = oy + ((i * 53) % 23) * TILE + 6
       const m = this.add(this.scene.add.image(x, y, 'site-mote').setDepth(4500).setAlpha(0.35 + (i % 4) * 0.1))
       if (this.deps.reducedMotion) continue
       this.scene.tweens.add({

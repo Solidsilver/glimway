@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { GATHERING_DATA, gatherArea, gatheringTarget, isPlantableSeed, gatheringSwings, gatheringVerb, gatheringToolWord, keepsWork, swingPlan, SWING_MS, visitIdFor, visitKey, visitWork, yieldLine, leftBehind, wearLine, gatheringOffered, EMPTY_YIELD_LINE, PLANTS_FULL_LINE } from '../src/lib/gathering.ts';
 import { itemDef } from '../src/lib/items.ts';
-import { toWorldData, GATHER_OF } from '../src/game/wilds/terrain.ts';
+import { chunkGather, chunkOrigin, chunkScenery, GATHER_OF } from '../src/game/wilds/terrain.ts';
 import { fixtureTerrain } from './wilds-fixture.ts';
 import { buildArea } from '../src/game/worlds.ts';
 import { plantScenery, setLandSource } from '../src/game/homeland.ts';
@@ -66,30 +66,35 @@ test('swings per action with and without bite fitting', () => {
 });
 
 test('a visit is one stay: the same while you rebuild, new when you leave and return', () => {
-  assert.equal(visitKey('wilds', null), 'wilds:tangle');
-  assert.equal(visitKey('wilds', 'outer-1'), 'wilds:outer-1');
-  assert.equal(visitKey('home:0', null), 'home:0');
-  const a = visitIdFor('wilds', null);
-  assert.equal(visitIdFor('wilds', null), a, 'a scene rebuild is the same visit');
-  const b = visitIdFor('commons', null);
-  assert.notEqual(visitIdFor('wilds', null), a, 'leaving and coming back is a new visit');
+  assert.equal(visitKey('wilds'), 'wilds', 'the open map is one stay');
+  assert.equal(visitKey('home:0'), 'home:0');
+  const a = visitIdFor('wilds');
+  assert.equal(visitIdFor('wilds'), a, 'a scene rebuild is the same visit');
+  const b = visitIdFor('commons');
+  assert.notEqual(visitIdFor('wilds'), a, 'leaving and coming back is a new visit');
   assert.notEqual(b, a);
 });
 
 test('the Tangle offers work: trees and boulders stand on solid ground, patches you can dig', () => {
-  for (const region of ['inner-1', 'outer-1'] as const) {
-    const w = toWorldData(fixtureTerrain(region), 'wilds');
-    assert.ok((w.gathering?.length ?? 0) > 10, `a served ${region} chunk has workable pieces`);
-    for (const spot of w.gathering ?? []) {
+  for (const region of ['tangle', 'whitequiet-0-4', 'road'] as const) {
+    const t0 = fixtureTerrain(region);
+    const o = chunkOrigin(t0);
+    const gathering = chunkGather(t0);
+    assert.ok(gathering.length > 10, `a served ${region} chunk has workable pieces`);
+    for (const spot of gathering) {
       const t = gatheringTarget(spot.target);
       assert.ok(t, `spot target ${spot.target} is in content/gathering.json`);
       assert.ok(spot.label.length > 0, 'every spot says what it is in words');
-      const solid = w.solid[spot.ty]?.[spot.tx] ?? false;
-      if (t.action === 'dig') assert.ok(w.ground[spot.ty][spot.tx] !== undefined, 'a dig patch sits on the map');
+      // Spots are world tiles: the chunk's own, offset by its origin.
+      const lx = spot.tx - o.tx;
+      const ly = spot.ty - o.ty;
+      assert.ok(lx >= 0 && ly >= 0 && lx < t0.size && ly < t0.size, `${spot.tx},${spot.ty} lies in chunk ${t0.cx},${t0.cy}`);
+      const solid = t0.solid[ly]?.[lx] ?? false;
+      if (t.action === 'dig') assert.ok(t0.ground[ly]![lx] !== undefined, 'a dig patch sits on the map');
       else assert.ok(solid, `a ${spot.target} stands on solid ground at ${spot.tx},${spot.ty}`);
       assert.ok(spot.art, 'a woods piece carries its art (a felled tree leaves its stump)');
     }
-    const tiles = (w.gathering ?? []).map((s) => `${s.tx},${s.ty}`);
+    const tiles = gathering.map((s) => `${s.tx},${s.ty}`);
     assert.equal(new Set(tiles).size, tiles.length, 'one piece of work to a tile');
   }
 });
@@ -240,13 +245,13 @@ test('a planted sapling is drawn as itself, an herb or spawn as a patch of the w
 });
 
 test('a stay remembers its work; a new visit starts fresh', () => {
-  const first = visitIdFor('wilds', null);
+  const first = visitIdFor('wilds');
   const done = visitWork(first);
   done.worked.set('chunk:inner-1:0:0:4,5', 'stump');
   done.enough.add('chop');
-  assert.equal(visitWork(visitIdFor('wilds', null)).worked.get('chunk:inner-1:0:0:4,5'), 'stump', 'a rebuild in the same stay keeps it');
-  visitIdFor('commons', null);
-  const again = visitWork(visitIdFor('wilds', null));
+  assert.equal(visitWork(visitIdFor('wilds')).worked.get('chunk:inner-1:0:0:4,5'), 'stump', 'a rebuild in the same stay keeps it');
+  visitIdFor('commons');
+  const again = visitWork(visitIdFor('wilds'));
   assert.equal(again.worked.size, 0, 'leaving and coming back: the woods have regrown');
   assert.equal(again.enough.size, 0, 'and give again');
 });
@@ -282,8 +287,8 @@ test('wear is told in a line: giving out, going blunt, a fitting wearing away', 
 });
 
 test('each place offers only the pieces the server allows there', () => {
-  for (const region of ['inner-1', 'outer-1'] as const) {
-    for (const s of toWorldData(fixtureTerrain(region), 'wilds').gathering ?? []) assert.ok(gatheringOffered('wilds', s.target), `wilds: ${s.target}`);
+  for (const region of ['tangle', 'whitequiet-0-4', 'road', 'ford'] as const) {
+    for (const s of chunkGather(fixtureTerrain(region))) assert.ok(gatheringOffered('wilds', s.target), `wilds: ${s.target}`);
   }
   for (const s of Object.values(GATHER_OF)) assert.ok(gatheringOffered("wilds", s!.target), `wilds kind: ${s!.target}`);
   for (const s of buildArea('woodland').gathering ?? []) assert.ok(gatheringOffered('woodland', s.target), `woodland: ${s.target}`);
@@ -321,11 +326,12 @@ test('felling takes all of a tile’s art: a fading canopy goes with the trunk',
 });
 
 test('every workable piece in a Wilds chunk names its tile, the fading (path-side) trees too', () => {
-  for (const region of ['inner-1', 'outer-1']) {
-    const world = toWorldData(fixtureTerrain(region), `chunk:${region}:1:1` as never);
-    const anchored = (tx: number, ty: number) => world.scenery!.filter((s) => s.tx === tx && s.ty === ty);
+  for (const region of ['tangle', 'whitequiet-0-4', 'road'] as const) {
+    const t = fixtureTerrain(region);
+    const scenery = chunkScenery(t, () => true);
+    const anchored = (tx: number, ty: number) => scenery.filter((s) => s.tx === tx && s.ty === ty);
     let fading = 0;
-    for (const spot of world.gathering!) {
+    for (const spot of chunkGather(t)) {
       const art = anchored(spot.tx, spot.ty);
       assert.ok(art.length > 0, `${region} ${spot.tx},${spot.ty}: art to remove when felled`);
       if (art.some((s) => s.fade)) fading += 1;

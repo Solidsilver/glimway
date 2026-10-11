@@ -1,7 +1,10 @@
-// Package wilds generates the Wilds on the server (generator v2: gen_v2.go,
-// woods_v2.go) and rolls their loot (loot.go). A region epoch's chunks are
-// generated once, at epoch creation, and stored; claims read the stored
-// chunk and never regenerate.
+// Package wilds generates the Wilds on the server and rolls their loot
+// (loot.go). Generator v3 (gen_v3.go and the passes it names: cells.go,
+// lands.go, wend.go, road.go, routes.go, base_v3.go, detail_v3.go) makes
+// the open map one chunk at a time on signed coordinates; generator v2
+// (gen_v2.go, woods_v2.go) makes the old 3×3 regions until the store moves
+// to v3. A chunk is generated once in its epoch and stored; claims read the
+// stored chunk and never regenerate.
 //
 // Integer-only hash and PRNG spec (mirrors src/lib/hash.ts):
 //
@@ -76,22 +79,4 @@ func (r *Rng) Next() uint32 {
 // NextInt returns an integer in [0, n); n must be > 0.
 func (r *Rng) NextInt(n int) int {
 	return int(r.Next() % uint32(n))
-}
-
-// Epoch is a region's frozen generation parameters.
-type Epoch struct {
-	WorldSeed        string `json:"worldSeed"`
-	RegionID         string `json:"regionId"`
-	GeneratorVersion int    `json:"generatorVersion"`
-	Season           string `json:"season"`
-}
-
-// ChunkSeed is hash(worldSeed, regionId, generatorVersion, season, cx, cy).
-func ChunkSeed(e Epoch, cx, cy int) uint32 {
-	return Hash(e.WorldSeed, e.RegionID, e.GeneratorVersion, e.Season, cx, cy)
-}
-
-// LootSeed is hash(worldSeed, regionId, generatorVersion, season, entityId, cycle).
-func LootSeed(e Epoch, entityID string, cycle int) uint32 {
-	return Hash(e.WorldSeed, e.RegionID, e.GeneratorVersion, e.Season, entityID, cycle)
 }

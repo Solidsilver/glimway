@@ -231,6 +231,53 @@
   "assets/generated/items-pass/fingersnap-world-sprites-2.png": "933c0182123b768b484f0eb92869dbccefdb8f72f547c1656f94d786628d3153",
   "assets/generated/items-pass/fingersnap-world-sprites-3.png": "fd9d8847d1d0bf172b66fc0157febeb9b08c94021ad0ec607514fcb094b53a98",
   "assets/generated/items-pass/manifest.json": "cc4619319034d77c1c563a2aa05969850f9858870c0d7c9a8e62e3ce9e5eb327",
+  "assets/generated/open-map-pass/animations.json": "57529c7108e73c1a5bc0b79c227ea953dffa17887416488fbd03dd6c82d0b9f4",
+  "assets/generated/open-map-pass/frames/bank-stones-0.png": "2127ae3cc30ebe4ca1254f9ce678b889bdce92b53362c9e7c9826e09820bcd6d",
+  "assets/generated/open-map-pass/frames/bank-stones-1.png": "5d6ed4685999b13c642fdb93a9fcb048cc1b50778257d06a07ee2a4cc9738c92",
+  "assets/generated/open-map-pass/frames/bank-stones-2.png": "84a8bfde79fc7cdeef0904792f76a0fd8821a5b7be5dcd20155250f73101f70f",
+  "assets/generated/open-map-pass/frames/ford-h-0.png": "75c35fbce26b6a5fe32a9999482ed0eb98b21d1efc8213a3dfeaa5e80328636b",
+  "assets/generated/open-map-pass/frames/ford-h-1.png": "75c35fbce26b6a5fe32a9999482ed0eb98b21d1efc8213a3dfeaa5e80328636b",
+  "assets/generated/open-map-pass/frames/ford-h-2.png": "75c35fbce26b6a5fe32a9999482ed0eb98b21d1efc8213a3dfeaa5e80328636b",
+  "assets/generated/open-map-pass/frames/ford-v-0.png": "f1471470e4826a329574816e2cd438999c07e468bfd003b7e67830a2b6c64529",
+  "assets/generated/open-map-pass/frames/ford-v-1.png": "f1471470e4826a329574816e2cd438999c07e468bfd003b7e67830a2b6c64529",
+  "assets/generated/open-map-pass/frames/ford-v-2.png": "f1471470e4826a329574816e2cd438999c07e468bfd003b7e67830a2b6c64529",
+  "assets/generated/open-map-pass/frames/frontier-veil-0.png": "52cc5222624162069a06772417a76c4541210604791b001ea9c47b50ffbf5234",
+  "assets/generated/open-map-pass/frames/frontier-veil-1.png": "25ae1e34fff1183343f92bad7f007cf335269dde4c8ee196c055ba7e16368053",
+  "assets/generated/open-map-pass/frames/frontier-veil-2.png": "4515aa453bf32be9ef9154bf7c8d235bc314b6afa5e1f6519e839bc913d5ebdd",
+  "assets/generated/open-map-pass/frames/frontier-veil-3.png": "8cea7279114173b5135c3cb84a6aff37cfd6241404542171781e2f22a2a24809",
+  "assets/generated/open-map-pass/frames/icon-map-tab.png": "ef85a16766c390fc1798c4017f438ad9b5f391c155e2195276752d7e01219c5b",
+  "assets/generated/open-map-pass/frames/lamp-stone-dark.png": "168150357b3610e7212a18280994259b9c03262a57a58aa652c2877cc533e484",
+  "assets/generated/open-map-pass/frames/landmark-split-oak.png": "6c489a9361f9fe050e26636f3a805867c2936ed0012e6dcd818234ae67e2b0de",
+  "assets/generated/open-map-pass/frames/landmark-standing-stone.png": "f2f6c1996eb6c89d3dae2212cafa71240f178c6490bd9d1816c59b1986682a82",
+  "assets/generated/open-map-pass/frames/meadow-flowers-0.png": "a75cb8104f8301c1713368ae1c1692c1667045964926e56d4efd0af9d409e332",
+  "assets/generated/open-map-pass/frames/meadow-flowers-1.png": "2dca2398fe7cfc437f4a16e5a9078c7a05ce542a3bb35fa0d0bae6dc9119d59e",
+  "assets/generated/open-map-pass/frames/meadow-flowers-2.png": "c5ec245aacc67d201eb28950022b10a7a1db25a86b3defa9983825e923242b38",
+  "assets/generated/open-map-pass/frames/meadow-grass-0.png": "ec2b8caacce93c443e7ee364feec59aff4ace97bdd605558862969692032dc85",
+  "assets/generated/open-map-pass/frames/meadow-grass-1.png": "b328f48ddfa086108d4566f3507542a8c711864bc4054d6e60469bf3aae1beb2",
+  "assets/generated/open-map-pass/frames/meadow-grass-2.png": "2082a1683155e45b9a0273916dbd7dc0eb9660ef122f1c20111c4047ea155cc4",
+  "assets/generated/open-map-pass/frames/meadow-oak.png": "0e14c59c95ddcbd2bc29a71972cf59491f0b5c18a3a4d57016ba99d8438ff8b5",
+  "assets/generated/open-map-pass/frames/meadow-outcrop-0.png": "4a3150bcd30701e09a410634ad7e0ca457b68391a44e4d666801f9c4bffc8f2c",
+  "assets/generated/open-map-pass/frames/meadow-outcrop-1.png": "1e083ea4607080562df8a8266d3948ac8536c424f9a37f2a542e8ccf3c074e22",
+  "assets/generated/open-map-pass/frames/meadow-stone-0.png": "264996f9e2e8b3d7040aba30f864c70378458863a4c10fd922f6b4e7d5463b2c",
+  "assets/generated/open-map-pass/frames/meadow-stone-1.png": "4a2006b73c485de84c0ba3ab55b8cfdac791fda2a63d3aa316fa66cf22b579c7",
+  "assets/generated/open-map-pass/frames/path-plank-h-0.png": "5561f9493c0155e5d5e34aabf349810ee5d494725eecab851b7e493e013f77d9",
+  "assets/generated/open-map-pass/frames/path-plank-h-1.png": "1386ba11e0e715815eac798734b93c7df825ecc88e3c21d0bc3ca0e05ef3d5a4",
+  "assets/generated/open-map-pass/frames/path-plank-v-0.png": "65e1cc6ad79a3650550d1aad0b066f7bb87f4f18e8cc538518d20eb760f9965a",
+  "assets/generated/open-map-pass/frames/path-plank-v-1.png": "703357d9a7e94ec9ad06e0eb1dffed002c142ab2812e7bec3f144d7cef3ff83d",
+  "assets/generated/open-map-pass/frames/path-stone-0.png": "0aa663b0a90d0954a49e365834cfc4279396e717e274d339509321f5617b8c83",
+  "assets/generated/open-map-pass/frames/path-stone-1.png": "afe570a1b970486495346307f65ec4cd644c3eec1b2977d7128a950fd9058990",
+  "assets/generated/open-map-pass/frames/path-stone-2.png": "c39c0e8ed85787c3eb26b436be4e0e14fc18cd84e5666effb6292e84986e3d6e",
+  "assets/generated/open-map-pass/frames/path-stone-3.png": "b0fb47508dfa932c7b26896e69bd24176f0bb93770473e8e8684a7177398c774",
+  "assets/generated/open-map-pass/frames/road-paving-0.png": "eff399440f226a3f3dddeaeceb88bab49f2cf877bdba5f21bf8f80e6d2ea3c1b",
+  "assets/generated/open-map-pass/frames/road-paving-1.png": "3765ecf3b4ef0c922d2a608d81b19df964516381e29d6002f92ee3145af4f231",
+  "assets/generated/open-map-pass/frames/road-paving-2.png": "003530b7e8c10fcbce1ab21ca0069b79f8db08a452319fcad735f95c590f25a6",
+  "assets/generated/open-map-pass/frames/road-paving-3.png": "c481002bcffdf209c6e99f357a77f6d75e0a5c07e8087482895e64af9e2174c1",
+  "assets/generated/open-map-pass/frames/road-verge-0.png": "d1b85379cd86c2bbc84a54b6543ceea7ac20521bddda452609ccca399333a697",
+  "assets/generated/open-map-pass/frames/road-verge-1.png": "9dac78646bbdc53392f4ad92f6675558472a4649cb1059002a2cd1bbf8cbc0a5",
+  "assets/generated/open-map-pass/frames/rumour-find-closed.png": "f39492c71c1514b2eec24b37c3c28d754a1c01ba1b2e0240d9c1c1198c2bd0a1",
+  "assets/generated/open-map-pass/frames/rumour-find-open.png": "9e6c61e7cddf6f25b215b899737860906a33fa44a74987a52acc5753b9ac0da1",
+  "assets/generated/open-map-pass/frames/way-sign.png": "83cde3dacf5ad1e41cfbd17ef92456e499ab8a7e8c056f493d2b8ce45ac33472",
+  "assets/generated/open-map-pass/manifest.json": "ce9aa4678684be24dd1df4850af1e7a87b873ccee449c3c44fc0eb2fb9711820",
   "assets/generated/playtest1-pass/{atlas,animations}.json: frames in use": "3ae857132e0b15574345aa1bcac2cfc552a05535690dabed4d2066a3028718e3",
   "assets/generated/playtest1-pass/bridge/fingersnap-brackenwood-bridge.png": "4954285a1b3bc8367b7796767099a8bd56ec8d23038d9bb7baadb5db67ab33ca",
   "assets/generated/playtest1-pass/ground/fingersnap-ground-base.png": "e91ddfb5259364952ef30c49dde945c08792f3f6245611a686c054d34be6c4ec",
@@ -282,6 +329,7 @@
   "ground.webp": "6151b5306345edf22bdea4211e20910d3a83dbe0ede013999a3d65f5a7529d94",
   "indoors.webp": "f8a34227b29a345347126c09304e318a9c2bdb0e6269b3e360c1593e542ab1d2",
   "items.webp": "ecd2b4d308db0615f50126868db6e5acb40718c52e0c098296c25bf323ceb020",
+  "open-map.webp": "6d3750d12794aef4646ea5448d087fed329e77ec1911480088a653d38a13ec7b",
   "people.webp": "bc06b2da02a1d7c07397ed9e239337d946d7639d3d1c381a71aed29860a4f782",
   "purse.webp": "cffd867b431c323653d66485b7a26c70621f785a544673bb0a75bee57a3a9c78",
   "runtime.webp": "a0e1d4ec27403d5891da88339b7b4161ca29b8a10aef79b2d7b6bc9fc2d70044",
@@ -4428,6 +4476,286 @@
     64,
     64,
     64
+   ]
+  }
+ },
+ "openMap": {
+  "image": "open-map.webp",
+  "size": [
+   736,
+   736
+  ],
+  "density": 64,
+  "frames": {
+   "meadow-grass-0": [
+    64,
+    608,
+    64,
+    64
+   ],
+   "meadow-grass-1": [
+    128,
+    608,
+    64,
+    64
+   ],
+   "meadow-grass-2": [
+    192,
+    608,
+    64,
+    64
+   ],
+   "meadow-flowers-0": [
+    576,
+    544,
+    64,
+    64
+   ],
+   "meadow-flowers-1": [
+    640,
+    544,
+    64,
+    64
+   ],
+   "meadow-flowers-2": [
+    0,
+    608,
+    64,
+    64
+   ],
+   "meadow-outcrop-0": [
+    608,
+    0,
+    128,
+    160
+   ],
+   "meadow-outcrop-1": [
+    0,
+    320,
+    128,
+    160
+   ],
+   "meadow-oak": [
+    192,
+    0,
+    160,
+    256
+   ],
+   "meadow-stone-0": [
+    256,
+    608,
+    64,
+    64
+   ],
+   "meadow-stone-1": [
+    320,
+    608,
+    64,
+    64
+   ],
+   "bank-stones-0": [
+    384,
+    544,
+    64,
+    64
+   ],
+   "bank-stones-1": [
+    448,
+    544,
+    64,
+    64
+   ],
+   "bank-stones-2": [
+    512,
+    544,
+    64,
+    64
+   ],
+   "landmark-split-oak": [
+    0,
+    0,
+    192,
+    320
+   ],
+   "landmark-standing-stone": [
+    352,
+    0,
+    64,
+    224
+   ],
+   "rumour-find-closed": [
+    576,
+    672,
+    64,
+    64
+   ],
+   "rumour-find-open": [
+    640,
+    672,
+    64,
+    64
+   ],
+   "way-sign": [
+    192,
+    320,
+    64,
+    128
+   ],
+   "lamp-stone-dark": [
+    128,
+    320,
+    64,
+    128
+   ],
+   "path-stone-0": [
+    640,
+    608,
+    64,
+    64
+   ],
+   "path-stone-1": [
+    0,
+    672,
+    64,
+    64
+   ],
+   "path-stone-2": [
+    64,
+    672,
+    64,
+    64
+   ],
+   "path-stone-3": [
+    128,
+    672,
+    64,
+    64
+   ],
+   "path-plank-h-0": [
+    384,
+    608,
+    64,
+    64
+   ],
+   "path-plank-h-1": [
+    448,
+    608,
+    64,
+    64
+   ],
+   "path-plank-v-0": [
+    512,
+    608,
+    64,
+    64
+   ],
+   "path-plank-v-1": [
+    576,
+    608,
+    64,
+    64
+   ],
+   "road-paving-0": [
+    192,
+    672,
+    64,
+    64
+   ],
+   "road-paving-1": [
+    256,
+    672,
+    64,
+    64
+   ],
+   "road-paving-2": [
+    320,
+    672,
+    64,
+    64
+   ],
+   "road-paving-3": [
+    384,
+    672,
+    64,
+    64
+   ],
+   "road-verge-0": [
+    448,
+    672,
+    64,
+    64
+   ],
+   "road-verge-1": [
+    512,
+    672,
+    64,
+    64
+   ],
+   "ford-h-0": [
+    256,
+    320,
+    192,
+    64
+   ],
+   "ford-h-1": [
+    448,
+    320,
+    192,
+    64
+   ],
+   "ford-h-2": [
+    0,
+    480,
+    192,
+    64
+   ],
+   "ford-v-0": [
+    416,
+    0,
+    64,
+    192
+   ],
+   "ford-v-1": [
+    480,
+    0,
+    64,
+    192
+   ],
+   "ford-v-2": [
+    544,
+    0,
+    64,
+    192
+   ],
+   "frontier-veil-0": [
+    192,
+    480,
+    192,
+    64
+   ],
+   "frontier-veil-1": [
+    384,
+    480,
+    192,
+    64
+   ],
+   "frontier-veil-2": [
+    0,
+    544,
+    192,
+    64
+   ],
+   "frontier-veil-3": [
+    192,
+    544,
+    192,
+    64
+   ],
+   "icon-map-tab": [
+    704,
+    672,
+    32,
+    32
    ]
   }
  },

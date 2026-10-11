@@ -1,11 +1,7 @@
 package wilds
 
 import (
-	"errors"
-	"fmt"
 	"strconv"
-
-	"glimway/content"
 )
 
 // Entity is one generated entity: enemies for camps, material for nodes,
@@ -38,7 +34,6 @@ const (
 	kindChest = "chest"
 	kindPOI   = "poi"
 
-	exitGap       = 3
 	placeAttempts = 64
 )
 
@@ -47,15 +42,6 @@ func abs(v int) int {
 		return -v
 	}
 	return v
-}
-
-func regionFor(data *content.Wilds, regionID string) (*content.WildsRegion, error) {
-	for _, r := range data.Regions {
-		if r.GetId() == regionID {
-			return r, nil
-		}
-	}
-	return nil, fmt.Errorf("wilds: unknown region %s", regionID)
 }
 
 // LootTable is the content/wilds.json loot table an entity rolls on.
@@ -70,35 +56,4 @@ func LootTable(e Entity) string {
 	default:
 		return "poi"
 	}
-}
-
-// RollEntityLoot rolls one claim cycle of an entity read from its stored
-// chunk. Per loot-table entry a chance draw then a quantity draw (both
-// always taken), then the trinket chance draw and, only on a win, the
-// trinket id. The seed is LootSeed(epoch, entity id, cycle).
-func RollEntityLoot(epoch Epoch, entity Entity, cycle int) (LootDrop, error) {
-	drop := LootDrop{Materials: []MaterialQty{}}
-	data := content.WildsRules
-	if cycle < 0 {
-		return drop, errors.New("wilds: cycle must be a non-negative integer")
-	}
-	table, ok := data.LootTables[LootTable(entity)]
-	if !ok {
-		return drop, fmt.Errorf("wilds: missing loot table %s", LootTable(entity))
-	}
-	rng := NewRng(LootSeed(epoch, entity.ID, cycle))
-	for _, entry := range table.GetEntries() {
-		chance := rng.NextInt(1000)
-		min, max := int(entry.GetMin()), int(entry.GetMax())
-		qty := min + rng.NextInt(max-min+1)
-		if chance < int(entry.GetChancePermille()) {
-			drop.Materials = append(drop.Materials, MaterialQty{ID: entry.GetMaterial(), Qty: qty})
-		}
-	}
-	trinketChance := rng.NextInt(1000)
-	if trinketChance < int(data.GetTrinketChancePermille()) {
-		t := data.Trinkets[rng.NextInt(len(data.Trinkets))]
-		drop.Trinket = &t
-	}
-	return drop, nil
 }

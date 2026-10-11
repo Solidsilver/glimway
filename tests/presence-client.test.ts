@@ -10,6 +10,8 @@ import {
   isPresenceArea,
   normalFacing,
   presenceAreaFor,
+  wildsPresenceRoom,
+  sharedRoom,
   presenceBackoff,
   type PresenceStatus,
   type SocketLike,
@@ -411,11 +413,22 @@ test('stop closes the socket and cancels everything; a new lease restarts it', (
 });
 
 test('helpers: areas, facing, backoff, close codes', () => {
-  for (const a of ['village', 'woodland', 'ruin', 'commons', 'wilds:inner-1:0:1', 'wilds:outer-1:2:0']) assert.equal(isPresenceArea(a), true, a);
-  for (const a of ['wilds', 'wilds:inner-1:01:1', 'wilds:inner-1:-1:0', 'chunk:inner-1:0:0', 'cottage', '']) assert.equal(isPresenceArea(a), false, a);
-  assert.equal(presenceAreaFor('chunk:inner-1:2:1'), 'wilds:inner-1:2:1');
+  for (const a of ['village', 'woodland', 'ruin', 'commons', 'wilds:0:0', 'wilds:-1:-2', 'wilds:1:0']) assert.equal(isPresenceArea(a), true, a);
+  for (const a of ['wilds', 'wilds:01:1', 'wilds:-0:0', 'wilds:inner-1:0:1', 'chunk:inner-1:0:0', 'cottage', '']) assert.equal(isPresenceArea(a), false, a);
   assert.equal(presenceAreaFor('village'), 'village');
-  assert.equal(presenceAreaFor('wilds'), null);
+  assert.equal(presenceAreaFor('wilds'), null, 'the Wilds need a position');
+  // The chunk you stand in (the server shares it with the 3×3 around it).
+  assert.equal(presenceAreaFor('wilds', { x: 40, y: 360 }), 'wilds:0:0');
+  assert.equal(presenceAreaFor('wilds', { x: -384 - 1, y: -384 * 2 }), 'wilds:-2:-2');
+  assert.equal(presenceAreaFor('wilds', { x: 0, y: -384 * 3 }), 'wilds:0:-3', 'the Whitequiet’s south row');
+  assert.equal(wildsPresenceRoom(-0.5, -0.5), 'wilds:-1:-1');
+  // Neighbouring chunk rooms see each other, as on the server; nothing else is shared.
+  assert.equal(sharedRoom('wilds:0:0', 'wilds:1:-1'), true);
+  assert.equal(sharedRoom('wilds:0:0', 'wilds:2:0'), false);
+  assert.equal(sharedRoom('wilds:-4:-8', 'wilds:-4:-8'), true);
+  assert.equal(sharedRoom('village', 'village'), true);
+  assert.equal(sharedRoom('village', 'commons'), false);
+  assert.equal(sharedRoom('wilds:0:0', null), false);
   assert.deepEqual(normalFacing({ x: 3, y: 4 }), { x: 0.6, y: 0.8 });
   assert.deepEqual(normalFacing({ x: 0, y: 0 }), { x: 0, y: 1 });
   const f = normalFacing({ x: 1, y: 1 });

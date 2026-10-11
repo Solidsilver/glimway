@@ -13,6 +13,7 @@ import { createIndoorsArt } from '../indoors-art'
 import { createCraftsArt } from '../crafts-art'
 import { createPurseArt } from '../purse-art'
 import { createGlimsArt } from '../glims-art'
+import { createOpenMapArt } from '../wilds/open-map-art'
 import { HOMESTEAD_DATA } from '../../lib/homestead'
 
 /**
@@ -77,6 +78,7 @@ export class BootScene extends Phaser.Scene {
     createPurseArt(this)
     // The 0.6.1 glims pass: a glim, its HUD size, a few glims.
     createGlimsArt(this)
+    createOpenMapArt(this)
 
     this.scene.start('World')
   }

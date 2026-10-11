@@ -50,6 +50,42 @@ message WildsClaimResult {
 }
 message WildsLanternRequest { OpHeader op = 1; string epoch = 2; string owner_id = 3; string lantern_id = 4; Where where = 5; }
 message WildsLanternResult { string epoch = 1; bool rewarded = 2; WildsLoot loot = 3; map<string,double> materials = 4; repeated WildsLantern lanterns = 5; }
+// The path operations (open-map.md section 3), each in one transaction and
+// refused outside the frontier. x and y are a world tile within
+// paths.reachTiles of the hero. kind is "stone" or "plank".
+// POST /api/wilds/clear: open a clearable decor tile with the right tool.
+message WildsClearRequest { OpHeader op = 1; Where where = 2; sint32 x = 3; sint32 y = 4; }
+// POST /api/wilds/lay: lay a path on a walkable land tile, debiting the pack.
+message WildsLayRequest { OpHeader op = 1; Where where = 2; sint32 x = 3; sint32 y = 4; string kind = 5; }
+// POST /api/wilds/lift: lift a path you laid, refunding it in the same
+// transaction.
+message WildsLiftRequest { OpHeader op = 1; Where where = 2; sint32 x = 3; sint32 y = 4; }
+// Each answers with the chunk's changes after the operation and the pack's
+// material balances (its own message, so the Envelope's case follows from
+// the type). Ways are keyed by their place pair, so one connected run can
+// hold several: a lay names every way it made (each pair it newly joins),
+// and a lift every way it broke (each pair it disconnected) and every way
+// it rerouted (a pair still joined another way, with its new path).
+message WildsClearResult { ChunkGroundChanges ground = 1; map<string,double> materials = 2; }
+message WildsLayResult {
+  ChunkGroundChanges ground = 1; map<string,double> materials = 2;
+  reserved 3; reserved "way_made";
+  repeated WildsWay ways_made = 4;
+}
+message WildsLiftResult {
+  ChunkGroundChanges ground = 1; map<string,double> materials = 2;
+  reserved 3; reserved "way_broken";
+  repeated string ways_broken = 4; repeated WildsWay ways_rerouted = 5;
+}
+// POST /api/wilds/discover (open-map.md 2.10): sent when the hero enters a
+// place's find radius. place is a place mark id. The first insert this wick
+// wins: first is true only for that request, which alone rolls the
+// "discovery" loot table (loot empty otherwise).
+message WildsDiscoverRequest { OpHeader op = 1; Where where = 2; string place = 3; string epoch = 4; }
+message WildsDiscoverResult {
+  string epoch = 1; WildsDiscovery discovery = 2; bool first = 3; WildsLoot loot = 4;
+  map<string,double> materials = 5;
+}
 
 // GET /api/operations/result: what a key committed on a route — its payload
 // (the request without the op header) and stored result, for the outbox's

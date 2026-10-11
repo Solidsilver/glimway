@@ -5,7 +5,7 @@
  * IndexedDB (`glimway-chunks`) so a reload doesn't fetch them again.
  *
  * The cache never decides which epoch is current. Chunks are loaded only for
- * the epoch a fresh region read has just named (game/wilds/store.ts), so a
+ * the epochs a fresh near read has just named (game/wilds/store.ts), so a
  * cached chunk can never stand in for an ended epoch. Keys carry the contract
  * and generator version, `<contract>:<generatorVersion>:<epochId>:<cx>:<cy>`;
  * entries of other versions or of epochs no longer current are deleted at
@@ -60,13 +60,6 @@ export function loadChunk(api: Pick<OperationsApi, 'chunk'>, epochId: string, cx
     loading.set(key, pending);
   }
   return pending;
-}
-
-/** Load every chunk of a region's epoch (a 3×3 today), in parallel. */
-export async function loadRegionChunks(api: Pick<OperationsApi, 'chunk'>, epochId: string, grid: { gridWidth: number; gridHeight: number }): Promise<ChunkTerrain[]> {
-  const loads: Promise<ChunkTerrain>[] = [];
-  for (let cy = 0; cy < grid.gridHeight; cy++) for (let cx = 0; cx < grid.gridWidth; cx++) loads.push(loadChunk(api, epochId, cx, cy));
-  return Promise.all(loads);
 }
 
 /** Forget every chunk not of these epochs, here and in IndexedDB (and every other version's). */

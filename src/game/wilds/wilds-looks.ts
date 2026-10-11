@@ -57,6 +57,20 @@ export interface GroundPalette {
   mist: RGB | null
   /** Litter drift density (higher = more fallen leaves). */
   litterAmount: number
+  /** The open map's grounds (open-map.md 2.5): meadow grass, the Wend's banks. Derived from the woods' moss and trodden earth. */
+  meadow: RGB[]
+  bank: RGB[]
+}
+
+type BaseGround = Omit<GroundPalette, 'meadow' | 'bank'>
+
+const mix = (a: RGB, b: RGB, t: number): RGB => [0, 1, 2].map((i) => Math.round(a[i] + (b[i] - a[i]) * t)) as RGB
+
+/** Meadow: the moss lifted toward straw; banks: trodden earth toward pale silt. */
+function withOpenMap(g: BaseGround): GroundPalette {
+  const straw = hex('#b4a862')
+  const silt = hex('#bcae8c')
+  return { ...g, meadow: g.moss.map((c, i) => mix(c, straw, 0.18 + i * 0.03)), bank: g.trodden.map((c) => mix(c, silt, 0.3)) }
 }
 
 export interface WildsLook {
@@ -84,7 +98,7 @@ const TANGLE_DECOR: DecorPalette = {
   reedHead: '#6a4a2a'
 }
 
-const TANGLE_GROUND: GroundPalette = {
+const TANGLE_GROUND: BaseGround = {
   woods: ramp('#141d14', '#1a2618', '#212f1d', '#283822', '#304228'),
   moss: ramp('#2b4626', '#33532b', '#3c6131', '#466f37', '#527d3d', '#5f8a43'),
   path: ramp('#4a3826', '#5a442e', '#6a5236', '#7a5f3e', '#896c46', '#987a50'),
@@ -112,7 +126,7 @@ const OUTER_BASE = {
   mist: hex('#c8d2d6')
 }
 
-const OUTER: Record<string, { decor: DecorPalette; ground: GroundPalette }> = {
+const OUTER: Record<string, { decor: DecorPalette; ground: BaseGround }> = {
   Mudrise: {
     decor: {
       oak: { xd: '#1f3420', dk: '#2e502b', md: '#40703a', lt: '#5e9248', hi: '#88ba5c', gl: '#b4da7c' },
@@ -215,9 +229,9 @@ export function lookAtlasKey(style: 'tangle' | 'outer', mark: string | null | un
 
 /** The look for a style and Mark (an unknown Mark reads as Carting). */
 export function wildsLook(style: 'tangle' | 'outer', mark: string | null | undefined): WildsLook {
-  if (style !== 'outer') return { atlas: lookAtlasKey('tangle', null), decor: TANGLE_DECOR, ground: TANGLE_GROUND }
+  if (style !== 'outer') return { atlas: lookAtlasKey('tangle', null), decor: TANGLE_DECOR, ground: withOpenMap(TANGLE_GROUND) }
   const m = OUTER[mark ?? ''] ? (mark as string) : 'Carting'
-  return { atlas: lookAtlasKey('outer', m), ...OUTER[m] }
+  return { atlas: lookAtlasKey('outer', m), decor: OUTER[m].decor, ground: withOpenMap(OUTER[m].ground) }
 }
 
 /** The look an atlas key names (null when it isn't a Wilds decor atlas). */

@@ -13,6 +13,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 // Key is where a shared entity lives: a curated place (realm = the area id,
@@ -108,4 +109,82 @@ func nullIfEmpty(s string) any {
 		return nil
 	}
 	return s
+}
+
+// Lister is the caller's reader for List.
+type Lister interface {
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+}
+
+// ChunkEpoch names one chunk under one epoch (a generated realm's key).
+type ChunkEpoch struct{ Chunk, Epoch string }
+
+// List reads the rows of one kind for a set of chunks of a realm and layer,
+// each under its own epoch, in one query (the open map's near read,
+// open-map.md 2.4). Rows of other kinds, and rows whose ends_at has passed,
+// are left out as Get leaves them. Order: chunk, then entity.
+func List(ctx context.Context, q Lister, world, realm string, layer int, keys []ChunkEpoch, kind string, now int64) ([]Row, error) {
+	if len(keys) == 0 {
+		return nil, nil
+	}
+	want := map[ChunkEpoch]bool{}
+	seen := map[string]bool{}
+	var chunkArgs, epochArgs []any
+	in := func(list *[]any, v string) {
+		if !seen[v] {
+			seen[v] = true
+			*list = append(*list, v)
+		}
+	}
+	for _, k := range keys {
+		want[k] = true
+		in(&chunkArgs, "c:"+k.Chunk)
+		in(&epochArgs, "e:"+k.Epoch)
+	}
+	marks := func(list []any) string {
+		for i := range list {
+			list[i] = list[i].(string)[2:]
+		}
+		return strings.TrimSuffix(strings.Repeat("?,", len(list)), ",")
+	}
+	chunkMarks, epochMarks := marks(chunkArgs), marks(epochArgs)
+	args := append(append([]any{world, realm, layer}, chunkArgs...), epochArgs...)
+	args = append(args, kind, now)
+	rows, err := q.QueryContext(ctx, `SELECT chunk, epoch, entity, state, changed_at, changed_by, ends_at FROM world_changes
+ WHERE world_id=? AND realm=? AND layer=? AND chunk IN (`+chunkMarks+`) AND epoch IN (`+epochMarks+`)
+ AND kind=? AND (ends_at IS NULL OR ends_at>?)
+ ORDER BY chunk, entity`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Row{}
+	for rows.Next() {
+		var (
+			row       Row
+			changedBy sql.NullString
+			endsAt    sql.NullInt64
+		)
+		if err = rows.Scan(&row.Chunk, &row.Epoch, &row.Entity, &row.State, &row.ChangedAt, &changedBy, &endsAt); err != nil {
+			return nil, err
+		}
+		if !want[ChunkEpoch{row.Chunk, row.Epoch}] {
+			continue
+		}
+		row.WorldID, row.Realm, row.Layer, row.Kind, row.ChangedBy = world, realm, layer, kind, changedBy.String
+		if endsAt.Valid {
+			end := endsAt.Int64
+			row.EndsAt = &end
+		}
+		out = append(out, row)
+	}
+	return out, rows.Err()
+}
+
+// Delete removes one row in the caller's transaction (a change undone).
+func Delete(ctx context.Context, e Execer, key Key) error {
+	_, err := e.ExecContext(ctx, `DELETE FROM world_changes
+ WHERE world_id=? AND realm=? AND layer=? AND chunk=? AND epoch=? AND entity=?`,
+		key.WorldID, key.Realm, key.Layer, key.Chunk, key.Epoch, key.Entity)
+	return err
 }

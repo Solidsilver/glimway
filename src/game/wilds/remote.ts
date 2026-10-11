@@ -1,8 +1,7 @@
 /**
  * The Wilds' keyed operations (server-first.md 2.2): claim, relight and
- * settle-echo. Each sends `where` (the region's area, `wilds:<region>`, and
- * the hero's region-wide pixels); the server checks reach, the epoch and the
- * stored chunk. They go through the link's outbox like every other
+ * settle-echo. Each sends `where` (area `wilds` and the hero's world pixels,
+ * open-map.md 2.4); the server checks reach, the epoch and the stored chunk. They go through the link's outbox like every other
  * operation: one at a time, replayed with their key if an answer is lost,
  * and their answers' state adopted.
  */
@@ -12,15 +11,13 @@ import type { Session } from '../session.ts';
 
 export type Outcome<T> = { ok: true; result: T } | { ok: false; code: ApiErrorCode | 'offline' | 'superseded' | 'busy' | 'pending' };
 
-/** Where the hero stands, as the server reads it. */
+/** Where the hero stands, as the server reads it: world pixels. */
 export interface WildsWhere {
-  region: string;
-  /** Region-wide pixels. */
   x: number;
   y: number;
 }
 
-const whereOf = (w: WildsWhere) => ({ area: `wilds:${w.region}`, x: w.x, y: w.y });
+const whereOf = (w: WildsWhere) => ({ area: 'wilds', x: Math.round(w.x), y: Math.round(w.y) });
 
 export function claimEntity(session: Session, req: { epoch: string; entityId: string; cycle: number; where: WildsWhere }): Promise<Outcome<WildsClaimResult>> {
   const link = session.link;

@@ -1622,6 +1622,559 @@ func (x *WildsLanternResult) GetLanterns() []*WildsLantern {
 	return nil
 }
 
+// The path operations (open-map.md section 3), each in one transaction and
+// refused outside the frontier. x and y are a world tile within
+// paths.reachTiles of the hero. kind is "stone" or "plank".
+// POST /api/wilds/clear: open a clearable decor tile with the right tool.
+type WildsClearRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Op            *OpHeader              `protobuf:"bytes,1,opt,name=op,proto3" json:"op,omitempty"`
+	Where         *Where                 `protobuf:"bytes,2,opt,name=where,proto3" json:"where,omitempty"`
+	X             int32                  `protobuf:"zigzag32,3,opt,name=x,proto3" json:"x,omitempty"`
+	Y             int32                  `protobuf:"zigzag32,4,opt,name=y,proto3" json:"y,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WildsClearRequest) Reset() {
+	*x = WildsClearRequest{}
+	mi := &file_glimway_v1_operations_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WildsClearRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WildsClearRequest) ProtoMessage() {}
+
+func (x *WildsClearRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_operations_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WildsClearRequest.ProtoReflect.Descriptor instead.
+func (*WildsClearRequest) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *WildsClearRequest) GetOp() *OpHeader {
+	if x != nil {
+		return x.Op
+	}
+	return nil
+}
+
+func (x *WildsClearRequest) GetWhere() *Where {
+	if x != nil {
+		return x.Where
+	}
+	return nil
+}
+
+func (x *WildsClearRequest) GetX() int32 {
+	if x != nil {
+		return x.X
+	}
+	return 0
+}
+
+func (x *WildsClearRequest) GetY() int32 {
+	if x != nil {
+		return x.Y
+	}
+	return 0
+}
+
+// POST /api/wilds/lay: lay a path on a walkable land tile, debiting the pack.
+type WildsLayRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Op            *OpHeader              `protobuf:"bytes,1,opt,name=op,proto3" json:"op,omitempty"`
+	Where         *Where                 `protobuf:"bytes,2,opt,name=where,proto3" json:"where,omitempty"`
+	X             int32                  `protobuf:"zigzag32,3,opt,name=x,proto3" json:"x,omitempty"`
+	Y             int32                  `protobuf:"zigzag32,4,opt,name=y,proto3" json:"y,omitempty"`
+	Kind          string                 `protobuf:"bytes,5,opt,name=kind,proto3" json:"kind,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WildsLayRequest) Reset() {
+	*x = WildsLayRequest{}
+	mi := &file_glimway_v1_operations_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WildsLayRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WildsLayRequest) ProtoMessage() {}
+
+func (x *WildsLayRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_operations_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WildsLayRequest.ProtoReflect.Descriptor instead.
+func (*WildsLayRequest) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *WildsLayRequest) GetOp() *OpHeader {
+	if x != nil {
+		return x.Op
+	}
+	return nil
+}
+
+func (x *WildsLayRequest) GetWhere() *Where {
+	if x != nil {
+		return x.Where
+	}
+	return nil
+}
+
+func (x *WildsLayRequest) GetX() int32 {
+	if x != nil {
+		return x.X
+	}
+	return 0
+}
+
+func (x *WildsLayRequest) GetY() int32 {
+	if x != nil {
+		return x.Y
+	}
+	return 0
+}
+
+func (x *WildsLayRequest) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+// POST /api/wilds/lift: lift a path you laid, refunding it in the same
+// transaction.
+type WildsLiftRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Op            *OpHeader              `protobuf:"bytes,1,opt,name=op,proto3" json:"op,omitempty"`
+	Where         *Where                 `protobuf:"bytes,2,opt,name=where,proto3" json:"where,omitempty"`
+	X             int32                  `protobuf:"zigzag32,3,opt,name=x,proto3" json:"x,omitempty"`
+	Y             int32                  `protobuf:"zigzag32,4,opt,name=y,proto3" json:"y,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WildsLiftRequest) Reset() {
+	*x = WildsLiftRequest{}
+	mi := &file_glimway_v1_operations_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WildsLiftRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WildsLiftRequest) ProtoMessage() {}
+
+func (x *WildsLiftRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_operations_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WildsLiftRequest.ProtoReflect.Descriptor instead.
+func (*WildsLiftRequest) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *WildsLiftRequest) GetOp() *OpHeader {
+	if x != nil {
+		return x.Op
+	}
+	return nil
+}
+
+func (x *WildsLiftRequest) GetWhere() *Where {
+	if x != nil {
+		return x.Where
+	}
+	return nil
+}
+
+func (x *WildsLiftRequest) GetX() int32 {
+	if x != nil {
+		return x.X
+	}
+	return 0
+}
+
+func (x *WildsLiftRequest) GetY() int32 {
+	if x != nil {
+		return x.Y
+	}
+	return 0
+}
+
+// Each answers with the chunk's changes after the operation and the pack's
+// material balances (its own message, so the Envelope's case follows from
+// the type). Ways are keyed by their place pair, so one connected run can
+// hold several: a lay names every way it made (each pair it newly joins),
+// and a lift every way it broke (each pair it disconnected) and every way
+// it rerouted (a pair still joined another way, with its new path).
+type WildsClearResult struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Ground        *ChunkGroundChanges    `protobuf:"bytes,1,opt,name=ground,proto3" json:"ground,omitempty"`
+	Materials     map[string]float64     `protobuf:"bytes,2,rep,name=materials,proto3" json:"materials,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WildsClearResult) Reset() {
+	*x = WildsClearResult{}
+	mi := &file_glimway_v1_operations_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WildsClearResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WildsClearResult) ProtoMessage() {}
+
+func (x *WildsClearResult) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_operations_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WildsClearResult.ProtoReflect.Descriptor instead.
+func (*WildsClearResult) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *WildsClearResult) GetGround() *ChunkGroundChanges {
+	if x != nil {
+		return x.Ground
+	}
+	return nil
+}
+
+func (x *WildsClearResult) GetMaterials() map[string]float64 {
+	if x != nil {
+		return x.Materials
+	}
+	return nil
+}
+
+type WildsLayResult struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Ground        *ChunkGroundChanges    `protobuf:"bytes,1,opt,name=ground,proto3" json:"ground,omitempty"`
+	Materials     map[string]float64     `protobuf:"bytes,2,rep,name=materials,proto3" json:"materials,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
+	WaysMade      []*WildsWay            `protobuf:"bytes,4,rep,name=ways_made,json=waysMade,proto3" json:"ways_made,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WildsLayResult) Reset() {
+	*x = WildsLayResult{}
+	mi := &file_glimway_v1_operations_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WildsLayResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WildsLayResult) ProtoMessage() {}
+
+func (x *WildsLayResult) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_operations_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WildsLayResult.ProtoReflect.Descriptor instead.
+func (*WildsLayResult) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *WildsLayResult) GetGround() *ChunkGroundChanges {
+	if x != nil {
+		return x.Ground
+	}
+	return nil
+}
+
+func (x *WildsLayResult) GetMaterials() map[string]float64 {
+	if x != nil {
+		return x.Materials
+	}
+	return nil
+}
+
+func (x *WildsLayResult) GetWaysMade() []*WildsWay {
+	if x != nil {
+		return x.WaysMade
+	}
+	return nil
+}
+
+type WildsLiftResult struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Ground        *ChunkGroundChanges    `protobuf:"bytes,1,opt,name=ground,proto3" json:"ground,omitempty"`
+	Materials     map[string]float64     `protobuf:"bytes,2,rep,name=materials,proto3" json:"materials,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
+	WaysBroken    []string               `protobuf:"bytes,4,rep,name=ways_broken,json=waysBroken,proto3" json:"ways_broken,omitempty"`
+	WaysRerouted  []*WildsWay            `protobuf:"bytes,5,rep,name=ways_rerouted,json=waysRerouted,proto3" json:"ways_rerouted,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WildsLiftResult) Reset() {
+	*x = WildsLiftResult{}
+	mi := &file_glimway_v1_operations_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WildsLiftResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WildsLiftResult) ProtoMessage() {}
+
+func (x *WildsLiftResult) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_operations_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WildsLiftResult.ProtoReflect.Descriptor instead.
+func (*WildsLiftResult) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *WildsLiftResult) GetGround() *ChunkGroundChanges {
+	if x != nil {
+		return x.Ground
+	}
+	return nil
+}
+
+func (x *WildsLiftResult) GetMaterials() map[string]float64 {
+	if x != nil {
+		return x.Materials
+	}
+	return nil
+}
+
+func (x *WildsLiftResult) GetWaysBroken() []string {
+	if x != nil {
+		return x.WaysBroken
+	}
+	return nil
+}
+
+func (x *WildsLiftResult) GetWaysRerouted() []*WildsWay {
+	if x != nil {
+		return x.WaysRerouted
+	}
+	return nil
+}
+
+// POST /api/wilds/discover (open-map.md 2.10): sent when the hero enters a
+// place's find radius. place is a place mark id. The first insert this wick
+// wins: first is true only for that request, which alone rolls the
+// "discovery" loot table (loot empty otherwise).
+type WildsDiscoverRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Op            *OpHeader              `protobuf:"bytes,1,opt,name=op,proto3" json:"op,omitempty"`
+	Where         *Where                 `protobuf:"bytes,2,opt,name=where,proto3" json:"where,omitempty"`
+	Place         string                 `protobuf:"bytes,3,opt,name=place,proto3" json:"place,omitempty"`
+	Epoch         string                 `protobuf:"bytes,4,opt,name=epoch,proto3" json:"epoch,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WildsDiscoverRequest) Reset() {
+	*x = WildsDiscoverRequest{}
+	mi := &file_glimway_v1_operations_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WildsDiscoverRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WildsDiscoverRequest) ProtoMessage() {}
+
+func (x *WildsDiscoverRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_operations_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WildsDiscoverRequest.ProtoReflect.Descriptor instead.
+func (*WildsDiscoverRequest) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *WildsDiscoverRequest) GetOp() *OpHeader {
+	if x != nil {
+		return x.Op
+	}
+	return nil
+}
+
+func (x *WildsDiscoverRequest) GetWhere() *Where {
+	if x != nil {
+		return x.Where
+	}
+	return nil
+}
+
+func (x *WildsDiscoverRequest) GetPlace() string {
+	if x != nil {
+		return x.Place
+	}
+	return ""
+}
+
+func (x *WildsDiscoverRequest) GetEpoch() string {
+	if x != nil {
+		return x.Epoch
+	}
+	return ""
+}
+
+type WildsDiscoverResult struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Epoch         string                 `protobuf:"bytes,1,opt,name=epoch,proto3" json:"epoch,omitempty"`
+	Discovery     *WildsDiscovery        `protobuf:"bytes,2,opt,name=discovery,proto3" json:"discovery,omitempty"`
+	First         bool                   `protobuf:"varint,3,opt,name=first,proto3" json:"first,omitempty"`
+	Loot          *WildsLoot             `protobuf:"bytes,4,opt,name=loot,proto3" json:"loot,omitempty"`
+	Materials     map[string]float64     `protobuf:"bytes,5,rep,name=materials,proto3" json:"materials,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WildsDiscoverResult) Reset() {
+	*x = WildsDiscoverResult{}
+	mi := &file_glimway_v1_operations_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WildsDiscoverResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WildsDiscoverResult) ProtoMessage() {}
+
+func (x *WildsDiscoverResult) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v1_operations_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WildsDiscoverResult.ProtoReflect.Descriptor instead.
+func (*WildsDiscoverResult) Descriptor() ([]byte, []int) {
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *WildsDiscoverResult) GetEpoch() string {
+	if x != nil {
+		return x.Epoch
+	}
+	return ""
+}
+
+func (x *WildsDiscoverResult) GetDiscovery() *WildsDiscovery {
+	if x != nil {
+		return x.Discovery
+	}
+	return nil
+}
+
+func (x *WildsDiscoverResult) GetFirst() bool {
+	if x != nil {
+		return x.First
+	}
+	return false
+}
+
+func (x *WildsDiscoverResult) GetLoot() *WildsLoot {
+	if x != nil {
+		return x.Loot
+	}
+	return nil
+}
+
+func (x *WildsDiscoverResult) GetMaterials() map[string]float64 {
+	if x != nil {
+		return x.Materials
+	}
+	return nil
+}
+
 // GET /api/operations/result: what a key committed on a route — its payload
 // (the request without the op header) and stored result, for the outbox's
 // mismatch resolution. Payload is always a JSON object; Result is any JSON
@@ -1645,7 +2198,7 @@ type CommittedOperation struct {
 
 func (x *CommittedOperation) Reset() {
 	*x = CommittedOperation{}
-	mi := &file_glimway_v1_operations_proto_msgTypes[22]
+	mi := &file_glimway_v1_operations_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1657,7 +2210,7 @@ func (x *CommittedOperation) String() string {
 func (*CommittedOperation) ProtoMessage() {}
 
 func (x *CommittedOperation) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_operations_proto_msgTypes[22]
+	mi := &file_glimway_v1_operations_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1670,7 +2223,7 @@ func (x *CommittedOperation) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommittedOperation.ProtoReflect.Descriptor instead.
 func (*CommittedOperation) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{22}
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *CommittedOperation) GetRoute() string {
@@ -1745,7 +2298,7 @@ type OperationsResult struct {
 
 func (x *OperationsResult) Reset() {
 	*x = OperationsResult{}
-	mi := &file_glimway_v1_operations_proto_msgTypes[23]
+	mi := &file_glimway_v1_operations_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1757,7 +2310,7 @@ func (x *OperationsResult) String() string {
 func (*OperationsResult) ProtoMessage() {}
 
 func (x *OperationsResult) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v1_operations_proto_msgTypes[23]
+	mi := &file_glimway_v1_operations_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1770,7 +2323,7 @@ func (x *OperationsResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OperationsResult.ProtoReflect.Descriptor instead.
 func (*OperationsResult) Descriptor() ([]byte, []int) {
-	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{23}
+	return file_glimway_v1_operations_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *OperationsResult) GetOperation() *CommittedOperation {
@@ -1932,6 +2485,59 @@ const file_glimway_v1_operations_proto_rawDesc = "" +
 	"\blanterns\x18\x05 \x03(\v2\x18.glimway.v1.WildsLanternR\blanterns\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"~\n" +
+	"\x11WildsClearRequest\x12$\n" +
+	"\x02op\x18\x01 \x01(\v2\x14.glimway.v1.OpHeaderR\x02op\x12'\n" +
+	"\x05where\x18\x02 \x01(\v2\x11.glimway.v1.WhereR\x05where\x12\f\n" +
+	"\x01x\x18\x03 \x01(\x11R\x01x\x12\f\n" +
+	"\x01y\x18\x04 \x01(\x11R\x01y\"\x90\x01\n" +
+	"\x0fWildsLayRequest\x12$\n" +
+	"\x02op\x18\x01 \x01(\v2\x14.glimway.v1.OpHeaderR\x02op\x12'\n" +
+	"\x05where\x18\x02 \x01(\v2\x11.glimway.v1.WhereR\x05where\x12\f\n" +
+	"\x01x\x18\x03 \x01(\x11R\x01x\x12\f\n" +
+	"\x01y\x18\x04 \x01(\x11R\x01y\x12\x12\n" +
+	"\x04kind\x18\x05 \x01(\tR\x04kind\"}\n" +
+	"\x10WildsLiftRequest\x12$\n" +
+	"\x02op\x18\x01 \x01(\v2\x14.glimway.v1.OpHeaderR\x02op\x12'\n" +
+	"\x05where\x18\x02 \x01(\v2\x11.glimway.v1.WhereR\x05where\x12\f\n" +
+	"\x01x\x18\x03 \x01(\x11R\x01x\x12\f\n" +
+	"\x01y\x18\x04 \x01(\x11R\x01y\"\xd3\x01\n" +
+	"\x10WildsClearResult\x126\n" +
+	"\x06ground\x18\x01 \x01(\v2\x1e.glimway.v1.ChunkGroundChangesR\x06ground\x12I\n" +
+	"\tmaterials\x18\x02 \x03(\v2+.glimway.v1.WildsClearResult.MaterialsEntryR\tmaterials\x1a<\n" +
+	"\x0eMaterialsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\x92\x02\n" +
+	"\x0eWildsLayResult\x126\n" +
+	"\x06ground\x18\x01 \x01(\v2\x1e.glimway.v1.ChunkGroundChangesR\x06ground\x12G\n" +
+	"\tmaterials\x18\x02 \x03(\v2).glimway.v1.WildsLayResult.MaterialsEntryR\tmaterials\x121\n" +
+	"\tways_made\x18\x04 \x03(\v2\x14.glimway.v1.WildsWayR\bwaysMade\x1a<\n" +
+	"\x0eMaterialsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01J\x04\b\x03\x10\x04R\bway_made\"\xbf\x02\n" +
+	"\x0fWildsLiftResult\x126\n" +
+	"\x06ground\x18\x01 \x01(\v2\x1e.glimway.v1.ChunkGroundChangesR\x06ground\x12H\n" +
+	"\tmaterials\x18\x02 \x03(\v2*.glimway.v1.WildsLiftResult.MaterialsEntryR\tmaterials\x12\x1f\n" +
+	"\vways_broken\x18\x04 \x03(\tR\n" +
+	"waysBroken\x129\n" +
+	"\rways_rerouted\x18\x05 \x03(\v2\x14.glimway.v1.WildsWayR\fwaysRerouted\x1a<\n" +
+	"\x0eMaterialsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01J\x04\b\x03\x10\x04R\n" +
+	"way_broken\"\x91\x01\n" +
+	"\x14WildsDiscoverRequest\x12$\n" +
+	"\x02op\x18\x01 \x01(\v2\x14.glimway.v1.OpHeaderR\x02op\x12'\n" +
+	"\x05where\x18\x02 \x01(\v2\x11.glimway.v1.WhereR\x05where\x12\x14\n" +
+	"\x05place\x18\x03 \x01(\tR\x05place\x12\x14\n" +
+	"\x05epoch\x18\x04 \x01(\tR\x05epoch\"\xb2\x02\n" +
+	"\x13WildsDiscoverResult\x12\x14\n" +
+	"\x05epoch\x18\x01 \x01(\tR\x05epoch\x128\n" +
+	"\tdiscovery\x18\x02 \x01(\v2\x1a.glimway.v1.WildsDiscoveryR\tdiscovery\x12\x14\n" +
+	"\x05first\x18\x03 \x01(\bR\x05first\x12)\n" +
+	"\x04loot\x18\x04 \x01(\v2\x15.glimway.v1.WildsLootR\x04loot\x12L\n" +
+	"\tmaterials\x18\x05 \x03(\v2..glimway.v1.WildsDiscoverResult.MaterialsEntryR\tmaterials\x1a<\n" +
+	"\x0eMaterialsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\xd6\x02\n" +
 	"\x12CommittedOperation\x12\x14\n" +
 	"\x05route\x18\x01 \x01(\tR\x05route\x12\x10\n" +
@@ -1960,7 +2566,7 @@ func file_glimway_v1_operations_proto_rawDescGZIP() []byte {
 	return file_glimway_v1_operations_proto_rawDescData
 }
 
-var file_glimway_v1_operations_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
+var file_glimway_v1_operations_proto_msgTypes = make([]protoimpl.MessageInfo, 40)
 var file_glimway_v1_operations_proto_goTypes = []any{
 	(*ReportRequest)(nil),          // 0: glimway.v1.ReportRequest
 	(*ReportResult)(nil),           // 1: glimway.v1.ReportResult
@@ -1984,67 +2590,101 @@ var file_glimway_v1_operations_proto_goTypes = []any{
 	(*WildsClaimResult)(nil),       // 19: glimway.v1.WildsClaimResult
 	(*WildsLanternRequest)(nil),    // 20: glimway.v1.WildsLanternRequest
 	(*WildsLanternResult)(nil),     // 21: glimway.v1.WildsLanternResult
-	(*CommittedOperation)(nil),     // 22: glimway.v1.CommittedOperation
-	(*OperationsResult)(nil),       // 23: glimway.v1.OperationsResult
-	nil,                            // 24: glimway.v1.ReportRequest.AbilityCastsEntry
-	nil,                            // 25: glimway.v1.ReportResult.AbilityCastsEntry
-	nil,                            // 26: glimway.v1.WildsClaimResult.MaterialsEntry
-	nil,                            // 27: glimway.v1.WildsLanternResult.MaterialsEntry
-	(*Where)(nil),                  // 28: glimway.v1.Where
-	(*OpHeader)(nil),               // 29: glimway.v1.OpHeader
-	(*Vitals)(nil),                 // 30: glimway.v1.Vitals
-	(*Place)(nil),                  // 31: glimway.v1.Place
-	(*HabiticaUser)(nil),           // 32: glimway.v1.HabiticaUser
-	(*ReportBarrier)(nil),          // 33: glimway.v1.ReportBarrier
-	(*WildsEntityState)(nil),       // 34: glimway.v1.WildsEntityState
-	(*WildsLoot)(nil),              // 35: glimway.v1.WildsLoot
-	(*WildsLantern)(nil),           // 36: glimway.v1.WildsLantern
-	(*structpb.Struct)(nil),        // 37: google.protobuf.Struct
-	(*wrapperspb.StringValue)(nil), // 38: google.protobuf.StringValue
-	(*structpb.Value)(nil),         // 39: google.protobuf.Value
+	(*WildsClearRequest)(nil),      // 22: glimway.v1.WildsClearRequest
+	(*WildsLayRequest)(nil),        // 23: glimway.v1.WildsLayRequest
+	(*WildsLiftRequest)(nil),       // 24: glimway.v1.WildsLiftRequest
+	(*WildsClearResult)(nil),       // 25: glimway.v1.WildsClearResult
+	(*WildsLayResult)(nil),         // 26: glimway.v1.WildsLayResult
+	(*WildsLiftResult)(nil),        // 27: glimway.v1.WildsLiftResult
+	(*WildsDiscoverRequest)(nil),   // 28: glimway.v1.WildsDiscoverRequest
+	(*WildsDiscoverResult)(nil),    // 29: glimway.v1.WildsDiscoverResult
+	(*CommittedOperation)(nil),     // 30: glimway.v1.CommittedOperation
+	(*OperationsResult)(nil),       // 31: glimway.v1.OperationsResult
+	nil,                            // 32: glimway.v1.ReportRequest.AbilityCastsEntry
+	nil,                            // 33: glimway.v1.ReportResult.AbilityCastsEntry
+	nil,                            // 34: glimway.v1.WildsClaimResult.MaterialsEntry
+	nil,                            // 35: glimway.v1.WildsLanternResult.MaterialsEntry
+	nil,                            // 36: glimway.v1.WildsClearResult.MaterialsEntry
+	nil,                            // 37: glimway.v1.WildsLayResult.MaterialsEntry
+	nil,                            // 38: glimway.v1.WildsLiftResult.MaterialsEntry
+	nil,                            // 39: glimway.v1.WildsDiscoverResult.MaterialsEntry
+	(*Where)(nil),                  // 40: glimway.v1.Where
+	(*OpHeader)(nil),               // 41: glimway.v1.OpHeader
+	(*Vitals)(nil),                 // 42: glimway.v1.Vitals
+	(*Place)(nil),                  // 43: glimway.v1.Place
+	(*HabiticaUser)(nil),           // 44: glimway.v1.HabiticaUser
+	(*ReportBarrier)(nil),          // 45: glimway.v1.ReportBarrier
+	(*WildsEntityState)(nil),       // 46: glimway.v1.WildsEntityState
+	(*WildsLoot)(nil),              // 47: glimway.v1.WildsLoot
+	(*WildsLantern)(nil),           // 48: glimway.v1.WildsLantern
+	(*ChunkGroundChanges)(nil),     // 49: glimway.v1.ChunkGroundChanges
+	(*WildsWay)(nil),               // 50: glimway.v1.WildsWay
+	(*WildsDiscovery)(nil),         // 51: glimway.v1.WildsDiscovery
+	(*structpb.Struct)(nil),        // 52: google.protobuf.Struct
+	(*wrapperspb.StringValue)(nil), // 53: google.protobuf.StringValue
+	(*structpb.Value)(nil),         // 54: google.protobuf.Value
 }
 var file_glimway_v1_operations_proto_depIdxs = []int32{
-	28, // 0: glimway.v1.ReportRequest.place:type_name -> glimway.v1.Where
-	24, // 1: glimway.v1.ReportRequest.ability_casts:type_name -> glimway.v1.ReportRequest.AbilityCastsEntry
-	25, // 2: glimway.v1.ReportResult.ability_casts:type_name -> glimway.v1.ReportResult.AbilityCastsEntry
-	29, // 3: glimway.v1.QuestStepRequest.op:type_name -> glimway.v1.OpHeader
-	28, // 4: glimway.v1.QuestStepRequest.where:type_name -> glimway.v1.Where
+	40, // 0: glimway.v1.ReportRequest.place:type_name -> glimway.v1.Where
+	32, // 1: glimway.v1.ReportRequest.ability_casts:type_name -> glimway.v1.ReportRequest.AbilityCastsEntry
+	33, // 2: glimway.v1.ReportResult.ability_casts:type_name -> glimway.v1.ReportResult.AbilityCastsEntry
+	41, // 3: glimway.v1.QuestStepRequest.op:type_name -> glimway.v1.OpHeader
+	40, // 4: glimway.v1.QuestStepRequest.where:type_name -> glimway.v1.Where
 	3,  // 5: glimway.v1.QuestStepResult.taken:type_name -> glimway.v1.ItemQty
 	3,  // 6: glimway.v1.QuestStepResult.given:type_name -> glimway.v1.ItemQty
-	29, // 7: glimway.v1.MarkRequest.op:type_name -> glimway.v1.OpHeader
-	28, // 8: glimway.v1.MarkRequest.where:type_name -> glimway.v1.Where
-	29, // 9: glimway.v1.TakePaperRequest.op:type_name -> glimway.v1.OpHeader
-	28, // 10: glimway.v1.TakePaperRequest.where:type_name -> glimway.v1.Where
-	29, // 11: glimway.v1.SettleEchoRequest.op:type_name -> glimway.v1.OpHeader
-	28, // 12: glimway.v1.SettleEchoRequest.where:type_name -> glimway.v1.Where
-	29, // 13: glimway.v1.FallRequest.op:type_name -> glimway.v1.OpHeader
-	28, // 14: glimway.v1.FallRequest.where:type_name -> glimway.v1.Where
-	30, // 15: glimway.v1.FallResult.vitals:type_name -> glimway.v1.Vitals
-	31, // 16: glimway.v1.FallResult.place:type_name -> glimway.v1.Place
-	32, // 17: glimway.v1.ProfileReport.raw:type_name -> glimway.v1.HabiticaUser
-	33, // 18: glimway.v1.ProfileReport.report:type_name -> glimway.v1.ReportBarrier
+	41, // 7: glimway.v1.MarkRequest.op:type_name -> glimway.v1.OpHeader
+	40, // 8: glimway.v1.MarkRequest.where:type_name -> glimway.v1.Where
+	41, // 9: glimway.v1.TakePaperRequest.op:type_name -> glimway.v1.OpHeader
+	40, // 10: glimway.v1.TakePaperRequest.where:type_name -> glimway.v1.Where
+	41, // 11: glimway.v1.SettleEchoRequest.op:type_name -> glimway.v1.OpHeader
+	40, // 12: glimway.v1.SettleEchoRequest.where:type_name -> glimway.v1.Where
+	41, // 13: glimway.v1.FallRequest.op:type_name -> glimway.v1.OpHeader
+	40, // 14: glimway.v1.FallRequest.where:type_name -> glimway.v1.Where
+	42, // 15: glimway.v1.FallResult.vitals:type_name -> glimway.v1.Vitals
+	43, // 16: glimway.v1.FallResult.place:type_name -> glimway.v1.Place
+	44, // 17: glimway.v1.ProfileReport.raw:type_name -> glimway.v1.HabiticaUser
+	45, // 18: glimway.v1.ProfileReport.report:type_name -> glimway.v1.ReportBarrier
 	14, // 19: glimway.v1.ProfileResult.vitals_credit:type_name -> glimway.v1.VitalsCredit
-	29, // 20: glimway.v1.SpendRequest.op:type_name -> glimway.v1.OpHeader
-	28, // 21: glimway.v1.SpendRequest.where:type_name -> glimway.v1.Where
-	29, // 22: glimway.v1.WildsClaimRequest.op:type_name -> glimway.v1.OpHeader
-	28, // 23: glimway.v1.WildsClaimRequest.where:type_name -> glimway.v1.Where
-	34, // 24: glimway.v1.WildsClaimResult.entity:type_name -> glimway.v1.WildsEntityState
-	35, // 25: glimway.v1.WildsClaimResult.loot:type_name -> glimway.v1.WildsLoot
-	26, // 26: glimway.v1.WildsClaimResult.materials:type_name -> glimway.v1.WildsClaimResult.MaterialsEntry
-	29, // 27: glimway.v1.WildsLanternRequest.op:type_name -> glimway.v1.OpHeader
-	28, // 28: glimway.v1.WildsLanternRequest.where:type_name -> glimway.v1.Where
-	35, // 29: glimway.v1.WildsLanternResult.loot:type_name -> glimway.v1.WildsLoot
-	27, // 30: glimway.v1.WildsLanternResult.materials:type_name -> glimway.v1.WildsLanternResult.MaterialsEntry
-	36, // 31: glimway.v1.WildsLanternResult.lanterns:type_name -> glimway.v1.WildsLantern
-	37, // 32: glimway.v1.CommittedOperation.payload:type_name -> google.protobuf.Struct
-	38, // 33: glimway.v1.CommittedOperation.refused:type_name -> google.protobuf.StringValue
-	39, // 34: glimway.v1.CommittedOperation.result:type_name -> google.protobuf.Value
-	22, // 35: glimway.v1.OperationsResult.operation:type_name -> glimway.v1.CommittedOperation
-	36, // [36:36] is the sub-list for method output_type
-	36, // [36:36] is the sub-list for method input_type
-	36, // [36:36] is the sub-list for extension type_name
-	36, // [36:36] is the sub-list for extension extendee
-	0,  // [0:36] is the sub-list for field type_name
+	41, // 20: glimway.v1.SpendRequest.op:type_name -> glimway.v1.OpHeader
+	40, // 21: glimway.v1.SpendRequest.where:type_name -> glimway.v1.Where
+	41, // 22: glimway.v1.WildsClaimRequest.op:type_name -> glimway.v1.OpHeader
+	40, // 23: glimway.v1.WildsClaimRequest.where:type_name -> glimway.v1.Where
+	46, // 24: glimway.v1.WildsClaimResult.entity:type_name -> glimway.v1.WildsEntityState
+	47, // 25: glimway.v1.WildsClaimResult.loot:type_name -> glimway.v1.WildsLoot
+	34, // 26: glimway.v1.WildsClaimResult.materials:type_name -> glimway.v1.WildsClaimResult.MaterialsEntry
+	41, // 27: glimway.v1.WildsLanternRequest.op:type_name -> glimway.v1.OpHeader
+	40, // 28: glimway.v1.WildsLanternRequest.where:type_name -> glimway.v1.Where
+	47, // 29: glimway.v1.WildsLanternResult.loot:type_name -> glimway.v1.WildsLoot
+	35, // 30: glimway.v1.WildsLanternResult.materials:type_name -> glimway.v1.WildsLanternResult.MaterialsEntry
+	48, // 31: glimway.v1.WildsLanternResult.lanterns:type_name -> glimway.v1.WildsLantern
+	41, // 32: glimway.v1.WildsClearRequest.op:type_name -> glimway.v1.OpHeader
+	40, // 33: glimway.v1.WildsClearRequest.where:type_name -> glimway.v1.Where
+	41, // 34: glimway.v1.WildsLayRequest.op:type_name -> glimway.v1.OpHeader
+	40, // 35: glimway.v1.WildsLayRequest.where:type_name -> glimway.v1.Where
+	41, // 36: glimway.v1.WildsLiftRequest.op:type_name -> glimway.v1.OpHeader
+	40, // 37: glimway.v1.WildsLiftRequest.where:type_name -> glimway.v1.Where
+	49, // 38: glimway.v1.WildsClearResult.ground:type_name -> glimway.v1.ChunkGroundChanges
+	36, // 39: glimway.v1.WildsClearResult.materials:type_name -> glimway.v1.WildsClearResult.MaterialsEntry
+	49, // 40: glimway.v1.WildsLayResult.ground:type_name -> glimway.v1.ChunkGroundChanges
+	37, // 41: glimway.v1.WildsLayResult.materials:type_name -> glimway.v1.WildsLayResult.MaterialsEntry
+	50, // 42: glimway.v1.WildsLayResult.ways_made:type_name -> glimway.v1.WildsWay
+	49, // 43: glimway.v1.WildsLiftResult.ground:type_name -> glimway.v1.ChunkGroundChanges
+	38, // 44: glimway.v1.WildsLiftResult.materials:type_name -> glimway.v1.WildsLiftResult.MaterialsEntry
+	50, // 45: glimway.v1.WildsLiftResult.ways_rerouted:type_name -> glimway.v1.WildsWay
+	41, // 46: glimway.v1.WildsDiscoverRequest.op:type_name -> glimway.v1.OpHeader
+	40, // 47: glimway.v1.WildsDiscoverRequest.where:type_name -> glimway.v1.Where
+	51, // 48: glimway.v1.WildsDiscoverResult.discovery:type_name -> glimway.v1.WildsDiscovery
+	47, // 49: glimway.v1.WildsDiscoverResult.loot:type_name -> glimway.v1.WildsLoot
+	39, // 50: glimway.v1.WildsDiscoverResult.materials:type_name -> glimway.v1.WildsDiscoverResult.MaterialsEntry
+	52, // 51: glimway.v1.CommittedOperation.payload:type_name -> google.protobuf.Struct
+	53, // 52: glimway.v1.CommittedOperation.refused:type_name -> google.protobuf.StringValue
+	54, // 53: glimway.v1.CommittedOperation.result:type_name -> google.protobuf.Value
+	30, // 54: glimway.v1.OperationsResult.operation:type_name -> glimway.v1.CommittedOperation
+	55, // [55:55] is the sub-list for method output_type
+	55, // [55:55] is the sub-list for method input_type
+	55, // [55:55] is the sub-list for extension type_name
+	55, // [55:55] is the sub-list for extension extendee
+	0,  // [0:55] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_operations_proto_init() }
@@ -2061,7 +2701,7 @@ func file_glimway_v1_operations_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_glimway_v1_operations_proto_rawDesc), len(file_glimway_v1_operations_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   28,
+			NumMessages:   40,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

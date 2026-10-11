@@ -97,13 +97,15 @@ export class WorldCamera {
       if (size >= open) return [-a / z, size + (a + b) / z]
       return [-a / z - (open - size) / 2, view / z]
     }
-    const [bx, bw] = axis(this.world.widthPx, W, left, right)
-    const [by, bh] = axis(this.world.heightPx, H, top, bottom)
-    cam.setBounds(bx, by, bw, bh)
+    // The open map's bounds are signed world pixels: the frontier and a look into the drift.
+    const view = this.world.open?.view ?? { x: 0, y: 0, w: this.world.widthPx, h: this.world.heightPx }
+    const [bx, bw] = axis(view.w, W, left, right)
+    const [by, bh] = axis(view.h, H, top, bottom)
+    cam.setBounds(view.x + bx, view.y + by, bw, bh)
     this.followOffset = { x: (left - right) / (2 * z), y: (top - bottom) / (2 * z) }
     cam.setFollowOffset(this.followOffset.x, this.followOffset.y)
     // Indoors the room's own vignette and dark surround end it (./area/room-art.ts).
-    this.layEdgeFade(!this.indoors && (left || right || top || bottom) ? 1 : 0)
+    this.layEdgeFade(!this.indoors && !this.world.open && (left || right || top || bottom) ? 1 : 0)
   }
 
   /** Re-frame when the insets, the ratio, the zoom or the size changed (cheap: one string compare a frame). */

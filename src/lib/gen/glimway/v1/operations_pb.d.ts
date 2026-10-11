@@ -6,7 +6,7 @@ import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import type { JsonObject, Message } from "@bufbuild/protobuf";
 import type { OpHeader, Place, ReportBarrier, Vitals, Where } from "./op_pb.js";
 import type { HabiticaUser } from "./profile_pb.js";
-import type { WildsEntityState, WildsLantern, WildsLoot } from "./wilds_pb.js";
+import type { ChunkGroundChanges, WildsDiscovery, WildsEntityState, WildsLantern, WildsLoot, WildsWay } from "./wilds_pb.js";
 import type { Value } from "@bufbuild/protobuf/wkt";
 
 /**
@@ -811,6 +811,287 @@ export declare type WildsLanternResultValid = WildsLanternResult;
  * Use `create(WildsLanternResultSchema)` to create a new message.
  */
 export declare const WildsLanternResultSchema: GenMessage<WildsLanternResult, {validType: WildsLanternResultValid}>;
+
+/**
+ * The path operations (open-map.md section 3), each in one transaction and
+ * refused outside the frontier. x and y are a world tile within
+ * paths.reachTiles of the hero. kind is "stone" or "plank".
+ * POST /api/wilds/clear: open a clearable decor tile with the right tool.
+ *
+ * @generated from message glimway.v1.WildsClearRequest
+ */
+export declare type WildsClearRequest = Message<"glimway.v1.WildsClearRequest"> & {
+  /**
+   * @generated from field: glimway.v1.OpHeader op = 1;
+   */
+  op?: OpHeader | undefined;
+
+  /**
+   * @generated from field: glimway.v1.Where where = 2;
+   */
+  where?: Where | undefined;
+
+  /**
+   * @generated from field: sint32 x = 3;
+   */
+  x: number;
+
+  /**
+   * @generated from field: sint32 y = 4;
+   */
+  y: number;
+};
+
+export declare type WildsClearRequestValid = WildsClearRequest;
+
+/**
+ * Describes the message glimway.v1.WildsClearRequest.
+ * Use `create(WildsClearRequestSchema)` to create a new message.
+ */
+export declare const WildsClearRequestSchema: GenMessage<WildsClearRequest, {validType: WildsClearRequestValid}>;
+
+/**
+ * POST /api/wilds/lay: lay a path on a walkable land tile, debiting the pack.
+ *
+ * @generated from message glimway.v1.WildsLayRequest
+ */
+export declare type WildsLayRequest = Message<"glimway.v1.WildsLayRequest"> & {
+  /**
+   * @generated from field: glimway.v1.OpHeader op = 1;
+   */
+  op?: OpHeader | undefined;
+
+  /**
+   * @generated from field: glimway.v1.Where where = 2;
+   */
+  where?: Where | undefined;
+
+  /**
+   * @generated from field: sint32 x = 3;
+   */
+  x: number;
+
+  /**
+   * @generated from field: sint32 y = 4;
+   */
+  y: number;
+
+  /**
+   * @generated from field: string kind = 5;
+   */
+  kind: string;
+};
+
+export declare type WildsLayRequestValid = WildsLayRequest;
+
+/**
+ * Describes the message glimway.v1.WildsLayRequest.
+ * Use `create(WildsLayRequestSchema)` to create a new message.
+ */
+export declare const WildsLayRequestSchema: GenMessage<WildsLayRequest, {validType: WildsLayRequestValid}>;
+
+/**
+ * POST /api/wilds/lift: lift a path you laid, refunding it in the same
+ * transaction.
+ *
+ * @generated from message glimway.v1.WildsLiftRequest
+ */
+export declare type WildsLiftRequest = Message<"glimway.v1.WildsLiftRequest"> & {
+  /**
+   * @generated from field: glimway.v1.OpHeader op = 1;
+   */
+  op?: OpHeader | undefined;
+
+  /**
+   * @generated from field: glimway.v1.Where where = 2;
+   */
+  where?: Where | undefined;
+
+  /**
+   * @generated from field: sint32 x = 3;
+   */
+  x: number;
+
+  /**
+   * @generated from field: sint32 y = 4;
+   */
+  y: number;
+};
+
+export declare type WildsLiftRequestValid = WildsLiftRequest;
+
+/**
+ * Describes the message glimway.v1.WildsLiftRequest.
+ * Use `create(WildsLiftRequestSchema)` to create a new message.
+ */
+export declare const WildsLiftRequestSchema: GenMessage<WildsLiftRequest, {validType: WildsLiftRequestValid}>;
+
+/**
+ * Each answers with the chunk's changes after the operation and the pack's
+ * material balances (its own message, so the Envelope's case follows from
+ * the type). Ways are keyed by their place pair, so one connected run can
+ * hold several: a lay names every way it made (each pair it newly joins),
+ * and a lift every way it broke (each pair it disconnected) and every way
+ * it rerouted (a pair still joined another way, with its new path).
+ *
+ * @generated from message glimway.v1.WildsClearResult
+ */
+export declare type WildsClearResult = Message<"glimway.v1.WildsClearResult"> & {
+  /**
+   * @generated from field: glimway.v1.ChunkGroundChanges ground = 1;
+   */
+  ground?: ChunkGroundChanges | undefined;
+
+  /**
+   * @generated from field: map<string, double> materials = 2;
+   */
+  materials: { [key: string]: number };
+};
+
+export declare type WildsClearResultValid = WildsClearResult;
+
+/**
+ * Describes the message glimway.v1.WildsClearResult.
+ * Use `create(WildsClearResultSchema)` to create a new message.
+ */
+export declare const WildsClearResultSchema: GenMessage<WildsClearResult, {validType: WildsClearResultValid}>;
+
+/**
+ * @generated from message glimway.v1.WildsLayResult
+ */
+export declare type WildsLayResult = Message<"glimway.v1.WildsLayResult"> & {
+  /**
+   * @generated from field: glimway.v1.ChunkGroundChanges ground = 1;
+   */
+  ground?: ChunkGroundChanges | undefined;
+
+  /**
+   * @generated from field: map<string, double> materials = 2;
+   */
+  materials: { [key: string]: number };
+
+  /**
+   * @generated from field: repeated glimway.v1.WildsWay ways_made = 4;
+   */
+  waysMade: WildsWay[];
+};
+
+export declare type WildsLayResultValid = WildsLayResult;
+
+/**
+ * Describes the message glimway.v1.WildsLayResult.
+ * Use `create(WildsLayResultSchema)` to create a new message.
+ */
+export declare const WildsLayResultSchema: GenMessage<WildsLayResult, {validType: WildsLayResultValid}>;
+
+/**
+ * @generated from message glimway.v1.WildsLiftResult
+ */
+export declare type WildsLiftResult = Message<"glimway.v1.WildsLiftResult"> & {
+  /**
+   * @generated from field: glimway.v1.ChunkGroundChanges ground = 1;
+   */
+  ground?: ChunkGroundChanges | undefined;
+
+  /**
+   * @generated from field: map<string, double> materials = 2;
+   */
+  materials: { [key: string]: number };
+
+  /**
+   * @generated from field: repeated string ways_broken = 4;
+   */
+  waysBroken: string[];
+
+  /**
+   * @generated from field: repeated glimway.v1.WildsWay ways_rerouted = 5;
+   */
+  waysRerouted: WildsWay[];
+};
+
+export declare type WildsLiftResultValid = WildsLiftResult;
+
+/**
+ * Describes the message glimway.v1.WildsLiftResult.
+ * Use `create(WildsLiftResultSchema)` to create a new message.
+ */
+export declare const WildsLiftResultSchema: GenMessage<WildsLiftResult, {validType: WildsLiftResultValid}>;
+
+/**
+ * POST /api/wilds/discover (open-map.md 2.10): sent when the hero enters a
+ * place's find radius. place is a place mark id. The first insert this wick
+ * wins: first is true only for that request, which alone rolls the
+ * "discovery" loot table (loot empty otherwise).
+ *
+ * @generated from message glimway.v1.WildsDiscoverRequest
+ */
+export declare type WildsDiscoverRequest = Message<"glimway.v1.WildsDiscoverRequest"> & {
+  /**
+   * @generated from field: glimway.v1.OpHeader op = 1;
+   */
+  op?: OpHeader | undefined;
+
+  /**
+   * @generated from field: glimway.v1.Where where = 2;
+   */
+  where?: Where | undefined;
+
+  /**
+   * @generated from field: string place = 3;
+   */
+  place: string;
+
+  /**
+   * @generated from field: string epoch = 4;
+   */
+  epoch: string;
+};
+
+export declare type WildsDiscoverRequestValid = WildsDiscoverRequest;
+
+/**
+ * Describes the message glimway.v1.WildsDiscoverRequest.
+ * Use `create(WildsDiscoverRequestSchema)` to create a new message.
+ */
+export declare const WildsDiscoverRequestSchema: GenMessage<WildsDiscoverRequest, {validType: WildsDiscoverRequestValid}>;
+
+/**
+ * @generated from message glimway.v1.WildsDiscoverResult
+ */
+export declare type WildsDiscoverResult = Message<"glimway.v1.WildsDiscoverResult"> & {
+  /**
+   * @generated from field: string epoch = 1;
+   */
+  epoch: string;
+
+  /**
+   * @generated from field: glimway.v1.WildsDiscovery discovery = 2;
+   */
+  discovery?: WildsDiscovery | undefined;
+
+  /**
+   * @generated from field: bool first = 3;
+   */
+  first: boolean;
+
+  /**
+   * @generated from field: glimway.v1.WildsLoot loot = 4;
+   */
+  loot?: WildsLoot | undefined;
+
+  /**
+   * @generated from field: map<string, double> materials = 5;
+   */
+  materials: { [key: string]: number };
+};
+
+export declare type WildsDiscoverResultValid = WildsDiscoverResult;
+
+/**
+ * Describes the message glimway.v1.WildsDiscoverResult.
+ * Use `create(WildsDiscoverResultSchema)` to create a new message.
+ */
+export declare const WildsDiscoverResultSchema: GenMessage<WildsDiscoverResult, {validType: WildsDiscoverResultValid}>;
 
 /**
  * GET /api/operations/result: what a key committed on a route — its payload

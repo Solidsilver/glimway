@@ -375,15 +375,9 @@
   let roomName: string | null = null
   let pendingStats: StatsPayload | null = null
 
-  /**
-   * The place a title card is about: the area, or for the Wilds the region
-   * (a Turning has its own moment).
-   */
+  /** The place a title card is about: the area (the open map is one, `wilds`). */
   function placeKey(areaId: string): string {
-    if (areaId === 'wilds') return `wilds:${session?.state.wildsRegion ?? 'inner-1'}`
-    // Wilds chunks ("chunk:outer-1:3:-2"): one card per region, not per chunk.
-    const chunk = /^chunk:([^:]+):/.exec(areaId)
-    return chunk ? `wilds:${chunk[1]}` : areaId
+    return areaId
   }
 
   /**
@@ -677,7 +671,7 @@
   /** What the library panel was opened for (a section's shelves, Elara's donations). */
   let libraryAt = $state<LibraryOpenPayload>({})
   /** The journal page to open on (the HUD's pinned guide opens "How do I…?"). */
-  let journalTab = $state<'quests' | 'papers' | 'guides'>('quests')
+  let journalTab = $state<'quests' | 'papers' | 'map' | 'guides'>('quests')
   /** The Character panel's page to open on (the stable opens Companions), reset when it closes. */
   let characterTab = $state<'hero' | 'companions'>('hero')
   let characterAt = $state<'stable' | null>(null)

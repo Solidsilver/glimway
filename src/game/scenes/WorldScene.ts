@@ -58,19 +58,15 @@ import { homesteadsFor } from '../homestead'
 import { prepareHomeLand } from '../homeland'
 import { isSafeArea } from '../../lib/habitica/sync'
 import { fingerInBracken } from '../../lib/quests'
-import {
-  OUTER_REGION_ID,
-  WILDS_AREA,
-  fromRegionPosition,
-  inRegion,
-  isWildsArea,
-  parseChunkArea,
-  regionOfState,
-  toRegionPosition,
-  wildsArrivalPosition,
-  wildsReturnTile,
-} from '../wilds/regions'
-import { prepareWilds, setActiveWildsRegion, wildsEpoch } from '../wilds/store'
+import { WILDS_AREA, gateArrival, gateArrivalPosition, isWildsArea, wildsReturnTile } from '../wilds/coords'
+import { prepareWilds } from '../wilds/store'
+import { WildsWindow } from '../wilds/window'
+import { WildsPaths } from '../wilds/paths'
+import { WildsMarks } from '../wilds/marks'
+import { watchRumour } from '../rumour-watch'
+import { loadWilds } from '../../lib/wilds/data'
+import { displayArea, setWildsLand } from '../../content/world'
+import { landName } from '../wilds/ground-view'
 import { GoalGuide } from '../entities/goal-guide'
 import { goalTarget } from '../guide-pin'
 import { QUEST_ACTION } from '../../content/quests/index.ts'
@@ -105,7 +101,7 @@ interface SceneData {
   /** Which way the hero faces arriving (through a door or up a stair: away from where they came in). */
   facing?: { x: number; y: number }
   fromDefeat?: boolean
-  /** Rebuilt by the Turning: the outer Wilds just shifted under the player. */
+  /** Rebuilt after a Turning (kept for the scripted beats; the open map turns in place). */
   turned?: boolean
 }
 
@@ -118,13 +114,9 @@ function trayFocused(): boolean {
 /** Areas where the zero-HP lock still lets you walk (home to rest): the village, the Commons, homesteads. */
 const safeArea = (area: string) => isSafeArea(area)
 
-/**
- * Can the scene go here? Registered areas, plus the Wilds: its chunk kinds
- * register lazily once the region loads (prepareWilds), so `wilds` and
- * `chunk:…` targets count before that.
- */
+/** Can the scene go here? Every registered area (the open map, `wilds`, among them). */
 function canEnter(area: string): boolean {
-  return hasAreaKind(area) || area === WILDS_AREA || parseChunkArea(area) !== null
+  return hasAreaKind(area)
 }
 
 export class WorldScene extends Phaser.Scene {
@@ -133,8 +125,18 @@ export class WorldScene extends Phaser.Scene {
   private fx!: Effects
   private remotePlayers!: RemotePlayers
   private petting!: Petting
-  /** Wilds entities for a generated chunk scene (null in curated areas). */
+  /** Wilds entities for the open map's attached chunks (null in curated areas). */
   private wilds: WildsEntities | null = null
+  /** The open map's moving window (null in curated areas): src/game/wilds/window.ts. */
+  private window: WildsWindow | null = null
+  /** Clearing, laying and lifting paths on the open map (null in curated areas). */
+  private paths: WildsPaths | null = null
+  /** Way signs, finders' names and first finds on the open map (null in curated areas). */
+  private marks: WildsMarks | null = null
+  /** The drift's line is said once a scene build (open-map.md 2.6). */
+  private driftSaid = false
+  /** Which of the open map's places the HUD names now. */
+  private shownPlace = ''
   /** Collisions for terrain tiles and prop footprints (area/collision; a cleared tile opens). */
   private solids!: Solids
   /** Tile-anchored sprites (a felled tree removes its own). */
@@ -169,6 +171,8 @@ export class WorldScene extends Phaser.Scene {
   private positionTimer = 0
   /** Dev: take the position sample every frame (a playtest of the exit race). */
   private devSampleEveryFrame = false
+  /** Dev: waypoints (world px) the hero walks through, as if steered (the open map's walking playtest). */
+  private devWalk: { x: number; y: number }[] | null = null
   /** This area's presence room (null where presence doesn't reach). */
   private presenceArea: string | null = null
   /** The Commons/cottage homestead layer (null elsewhere). */
@@ -216,18 +220,21 @@ export class WorldScene extends Phaser.Scene {
   create(): void {
     this.session = this.registry.get('session') as Session
     const state = this.session.state
-    const arrival = arrive(this.session, { entry: this.pendingEntry, turned: this.pendingTurned })
+    const arrival = arrive(this.session, { entry: this.pendingEntry })
     this.pendingEntry = arrival.entry
     this.world = arrival.world
-    const wildsEntry = arrival.wildsEntry
-    const turnedAway = arrival.turnedAway
+    const open = this.world.open
     this.wilds = null
+    this.window = null
+    this.paths = null
+    this.marks = null
+    this.driftSaid = false
     this.occluders = []
     this.cinematic = false
     this.captureReleased = false
     this.reducedMotion = prefersReducedMotion()
     this.fx = new Effects(this, this.reducedMotion)
-    this.unmoored = new Unmoored(this, { session: this.session, world: this.world, reducedMotion: this.reducedMotion })
+    this.unmoored = new Unmoored(this, { session: this.session, world: this.world, reducedMotion: this.reducedMotion, hero: () => this.hero?.sprite ?? { x: 0, y: 0 } })
 
     // Area construction from WorldData (a new area kind is data + a small
     // builder — see the registry in src/game/worlds.ts).
@@ -262,7 +269,7 @@ export class WorldScene extends Phaser.Scene {
         cinematic: () => this.cinematic,
         onDefeat: () => this.defeatRecovery()
       },
-      wildsEntry ? wildsEntry.tile : this.pendingEntry
+      this.pendingEntry
     )
     if (this.pendingFacing) this.hero.facing.set(this.pendingFacing.x, this.pendingFacing.y)
     // The save names where the hero really stands from the first frame: a
@@ -309,7 +316,7 @@ export class WorldScene extends Phaser.Scene {
       hero: () => this.hero,
       interactables: this.interactables,
       notePosition: () => this.notePosition(),
-      clearSolid: (tx, ty) => clearSolidTile(this, this.world, this.solids, tx, ty),
+      clearSolid: (tx, ty) => (this.window ? this.window.clearSolid(tx, ty) : clearSolidTile(this, this.world, this.solids, tx, ty)),
       spritesAt: (tx, ty) => this.tileArt.at(tx, ty),
       fell: (tx, ty) => {
         const gone = this.tileArt.fell(tx, ty)
@@ -376,6 +383,7 @@ export class WorldScene extends Phaser.Scene {
       lightProps: () => this.lightProps,
       homesteads: () => this.homesteads,
       wilds: () => this.wilds,
+      paths: () => this.paths,
       notePosition: () => this.notePosition(),
       refresh: () => {
         this.refreshMarkers()
@@ -402,31 +410,74 @@ export class WorldScene extends Phaser.Scene {
       this.interactables.invalidatePrompt()
     })
 
-    // The Wilds layer: camps, nodes, chests, POIs and lanterns (null in the
-    // curated areas). The region read refreshes in the background; entities
-    // render from the store and follow its changes.
-    if (wildsEntry) {
-      this.wilds = new WildsEntities(this, {
-        world: this.world,
+    // The open map: camps, nodes, chests, POIs, lanterns and sites in the
+    // attached chunks, and the window that attaches them as the hero walks
+    // (null in the curated areas). Entities render from the store.
+    let windowReady: Promise<void> | null = null
+    if (open) {
+      const wilds = (this.wilds = new WildsEntities(this, {
         session: this.session,
         fx: this.fx,
         enemies: this.enemies,
         reducedMotion: this.reducedMotion,
         interactables: this.interactables,
         hero: () => this.hero.sprite
+      }))
+      this.window = new WildsWindow({
+        scene: this,
+        session: this.session,
+        solids: this.solids.group,
+        tileArt: this.tileArt,
+        gathering: () => this.gathering,
+        entities: wilds,
+        occluders: {
+          add: (list) => this.occluders.push(...list),
+          remove: (images) => {
+            this.occluders = this.occluders.filter((o) => !images.includes(o.image))
+          }
+        },
+        reducedMotion: this.reducedMotion,
+        hero: () => this.hero.sprite
       })
-      void prepareWilds(this.session, 60_000)
+      // The HUD names the land you stand in (the meadow, the Wend) from the loaded chunks.
+      setWildsLand(landName)
+      this.events.once('shutdown', () => setWildsLand(null))
+      this.paths = new WildsPaths(this, {
+        session: this.session,
+        interactables: this.interactables,
+        fx: this.fx,
+        reducedMotion: this.reducedMotion,
+        hero: () => this.hero,
+        notePosition: () => this.notePosition(),
+        live: () => this.worldLive()
+      })
+      this.marks = new WildsMarks(this, {
+        session: this.session,
+        interactables: this.interactables,
+        fx: this.fx,
+        reducedMotion: this.reducedMotion,
+        hero: () => this.hero.sprite,
+        notePosition: () => this.notePosition()
+      })
+      // The first window is painted behind the fade (the near read and its
+      // chunks came in before this build: prepareWilds).
+      this.window.update(0)
+      this.window.settle()
+      windowReady = this.window.ready()
     }
 
     // Arcade's world bounds default to the canvas size, which is larger than
-    // small maps — without this the hero can walk off the map edge.
-    this.physics.world.setBounds(0, 0, this.world.widthPx, this.world.heightPx)
+    // small maps — without this the hero can walk off the map edge. On the
+    // open map they are the frontier (open-map.md 2.6): the drift is solid.
+    if (open) this.physics.world.setBounds(open.bounds.x, open.bounds.y, open.bounds.w, open.bounds.h)
+    else this.physics.world.setBounds(0, 0, this.world.widthPx, this.world.heightPx)
     this.cameras.main.startFollow(this.hero.sprite, true, 0.12, 0.12)
     this.camera = new WorldCamera(this, this.world)
     // A first visit paints the ground's transitions off the main thread
     // (src/game/area/terrain.ts): stay dark until they're in (a second at
     // most), so the area never shows without its edges.
-    if (groundPainting) {
+    const holding = groundPainting ?? windowReady
+    if (holding) {
       const cam = this.cameras.main
       cam.fadeOut(1, 12, 12, 20)
       this.holdingFade = true
@@ -439,7 +490,7 @@ export class WorldScene extends Phaser.Scene {
         // must finish, or the scene never restarts (fadeIn always forces).
         if (!this.transitioning) cam.fadeIn(280, 12, 12, 20)
       }
-      void groundPainting.then(show, show)
+      void holding.then(show, show)
       this.time.delayedCall(1200, show)
     } else this.cameras.main.fadeIn(280, 12, 12, 20)
 
@@ -464,6 +515,7 @@ export class WorldScene extends Phaser.Scene {
     })
 
     this.session.emitArea()
+    this.shownPlace = displayArea(this.session.state)
     this.session.emitStats()
     this.session.emitQuest()
     emitResidents(this.session)
@@ -493,7 +545,7 @@ export class WorldScene extends Phaser.Scene {
     // Remote players (phase 6 presence): join this area's room and draw the
     // others in it. A room (a cottage, the mill) is its own presence room.
     const feed = presence()
-    this.presenceArea = presenceAreaFor(this.world.areaId)
+    this.presenceArea = presenceAreaFor(this.world.areaId, { x: this.hero.sprite.x, y: this.hero.sprite.y })
     feed?.setArea(this.presenceArea)
     this.remotePlayers = createRemotePlayers(this, feed, this.presenceArea, false, this.reducedMotion)
     this.events.once('shutdown', () => this.remotePlayers.clear())
@@ -553,6 +605,9 @@ export class WorldScene extends Phaser.Scene {
       bus.emit(EV.defeat, { phase: 'woke' })
     }
 
+    // This wick's rumour follows the calendar's turning, wherever the hero is.
+    if (this.session.link) watchRumour(this.session)
+
     // The Turning: an ended epoch (a claim refused, or the clock passing the
     // wick's end while we stand here) shifts the outer Wilds under us.
     this.turning = new Turning(this, {
@@ -561,12 +616,14 @@ export class WorldScene extends Phaser.Scene {
       reducedMotion: this.reducedMotion,
       hero: () => this.hero,
       unmoored: this.unmoored,
+      window: () => this.window,
+      wilds: () => this.wilds,
       moving: () => this.transitioning,
-      hold: () => {
-        this.transitioning = true
+      hold: (on) => {
+        this.transitioning = on
       }
     })
-    if (this.pendingTurned || turnedAway) {
+    if (this.pendingTurned) {
       const live = this.pendingTurned
       this.pendingTurned = false
       this.time.delayedCall(600, () => this.turning.note(live))
@@ -643,11 +700,15 @@ export class WorldScene extends Phaser.Scene {
       return
     }
 
-    this.hero.move(dt, this.controls.vector())
+    this.hero.move(dt, this.devWalk ? this.devSteer() : this.controls.vector())
     this.enemies.update(dt)
     this.goalGuide.update(dt, this.hero.sprite, this.worldLive())
     this.projectiles.update(dt)
+    this.window?.update(dt)
     this.wilds?.update()
+    this.paths?.update()
+    this.marks?.update()
+    this.checkDrift()
     this.turning.update(dt)
     this.updateDiscoveries()
     this.checkExits()
@@ -674,7 +735,27 @@ export class WorldScene extends Phaser.Scene {
     if (this.positionTimer > 1 || this.devSampleEveryFrame) {
       this.positionTimer = 0
       this.notePosition()
+      // The open map is one area but three places (the Tangle, the Whitequiet, beyond): the HUD follows.
+      if (this.world.open) {
+        const place = displayArea(this.session.state)
+        if (place !== this.shownPlace) {
+          this.shownPlace = place
+          this.session.emitArea()
+        }
+      }
     }
+  }
+
+  /** Dev: the steering toward the next waypoint (dropping those reached). */
+  private devSteer(): Phaser.Math.Vector2 {
+    const h = this.hero.sprite
+    while (this.devWalk?.length && Math.hypot(this.devWalk[0].x - h.x, this.devWalk[0].y - h.y) < 3) this.devWalk.shift()
+    if (!this.devWalk?.length) {
+      this.devWalk = null
+      return new Phaser.Math.Vector2(0, 0)
+    }
+    const d = new Phaser.Math.Vector2(this.devWalk[0].x - h.x, this.devWalk[0].y - h.y)
+    return d.normalize()
   }
 
   /**
@@ -684,16 +765,24 @@ export class WorldScene extends Phaser.Scene {
    */
   private notePosition(): void {
     if (this.transitioning) return
-    // Wilds: saved progress is region-wide pixels (one convention for
-    // saves, reloads, claims and defeat reports).
-    this.session.state.position = this.wildsEntryNow()
-      ? this.wildsPosition(Math.round(this.hero.sprite.x), Math.round(this.hero.sprite.y))
-      : { x: Math.round(this.hero.sprite.x), y: Math.round(this.hero.sprite.y) }
+    // Positions are the scene's pixels everywhere; on the open map those are
+    // world pixels (one convention for saves, reloads, claims and reports).
+    this.session.state.position = { x: Math.round(this.hero.sprite.x), y: Math.round(this.hero.sprite.y) }
   }
 
   /** Tell the presence feed where the hero is (it paces the wire itself). */
   private samplePresence(): void {
     const feed = presence()
+    // The open map's room is the chunk you stand in: crossing an edge joins the next one
+    // (the server shares a chunk's room with its neighbours', so those in range stay drawn).
+    if (feed && this.world.open && !this.transitioning) {
+      const room = presenceAreaFor(this.world.areaId, { x: this.hero.sprite.x, y: this.hero.sprite.y })
+      if (room && room !== this.presenceArea) {
+        this.presenceArea = room
+        feed.setArea(room)
+        this.remotePlayers.setArea(room)
+      }
+    }
     if (!feed || !this.presenceArea) return
     const body = this.hero.sprite.body as Phaser.Physics.Arcade.Body
     const moving = !this.transitioning && Math.hypot(body.velocity.x, body.velocity.y) > 5
@@ -702,15 +791,27 @@ export class WorldScene extends Phaser.Scene {
     feed.position({ x: this.hero.sprite.x, y: this.hero.sprite.y, facing: this.hero.facing, moving, ...(pose ? { pose } : {}) })
   }
 
-  /** Is the scene playing a Wilds chunk right now (also true mid-transition). */
-  private wildsEntryNow(): boolean {
-    return isWildsArea(this.session.state.area) || parseChunkArea(this.world.areaId) !== null
-  }
-
-  /** Chunk-local scene pixels → the region-wide progress position. */
-  private wildsPosition(x: number, y: number): { x: number; y: number } {
-    const chunk = parseChunkArea(this.world.areaId) ?? { cx: 0, cy: 0 }
-    return toRegionPosition(chunk.cx, chunk.cy, x, y)
+  /**
+   * The drift at the frontier (open-map.md 2.6): pushing against the
+   * frontier's edge, the hero stops (the bounds hold them) and, the first
+   * time, says why. The south edge is the village's, not the drift's.
+   */
+  private checkDrift(): void {
+    const open = this.world.open
+    if (!open || this.driftSaid) return
+    const body = this.hero.sprite.body as Phaser.Physics.Arcade.Body
+    const v = this.controls.vector()
+    const b = open.bounds
+    const x = this.hero.sprite.x
+    const y = this.hero.sprite.y
+    const near = 3
+    const pushing =
+      (v.x < -0.3 && x - b.x <= body.width / 2 + near) ||
+      (v.x > 0.3 && b.x + b.w - x <= body.width / 2 + near) ||
+      (v.y < -0.3 && y - b.y <= body.height + near)
+    if (!pushing) return
+    this.driftSaid = true
+    bus.emit(EV.toast, { text: loadWilds().words.drift, icon: 'map', kind: 'thought' })
   }
 
   /** World input is live only while the hero actually has control. */
@@ -784,23 +885,21 @@ export class WorldScene extends Phaser.Scene {
 
   /**
    * Connected play: the server's area/position won (a stale merge after
-   * another device played). Same area: step there. Another area: rebuild the
-   * scene, which places the hero from the session state. Wilds positions are
-   * region-wide pixels: the chunk they fall in decides.
+   * another device played). Same area: step there (on the open map, only
+   * where the window can stand you; else the scene rebuilds around the new
+   * spot). Another area: rebuild the scene, which places the hero from the
+   * session state.
    */
   private onRelocate(p: RelocatePayload): void {
     if (this.transitioning) return
-    if (isWildsArea(p.area)) {
-      const here = parseChunkArea(this.world.areaId)
-      const r = inRegion(p.x, p.y, regionOfState(this.session.state)) ? fromRegionPosition(p.x, p.y) : null
-      if (here && r && r.cx === here.cx && r.cy === here.cy) {
-        this.hero.sprite.setPosition(r.x, r.y)
+    if (isWildsArea(p.area) && this.world.open) {
+      const at = this.world.open.standAt(p.x, p.y)
+      if (at && Math.hypot(at.x - this.hero.sprite.x, at.y - this.hero.sprite.y) < 24 * TILE) {
+        this.hero.sprite.setPosition(at.x, at.y)
         this.hero.sprite.setVelocity(0, 0)
         return
       }
-      // A different chunk (or a position outside the region): rebuild, and
-      // the wilds entry resolver places the hero (spawn as a fallback).
-      this.moveTo({ position: r ? undefined : wildsArrivalPosition(wildsEpoch()), save: false }, {}, { inDark: () => prepareWilds(this.session, 60_000) })
+      this.moveTo({ save: false }, {}, { inDark: () => prepareWilds(this.session, 60_000) })
       return
     }
     if (p.area === this.world.areaId) {
@@ -875,7 +974,8 @@ export class WorldScene extends Phaser.Scene {
     for (const exit of this.world.exits) {
       if (locked && !safeArea(exit.to)) continue
       if (tx >= exit.tx && tx < exit.tx + exit.tw && ty >= exit.ty && ty < exit.ty + exit.th) {
-        if (!canEnter(exit.to)) {
+        // The open map is the server's: without a connection its gate stays shut.
+        if (!canEnter(exit.to) || (exit.to === WILDS_AREA && !this.session.link)) {
           this.overgrown(exit)
           return
         }
@@ -910,32 +1010,13 @@ export class WorldScene extends Phaser.Scene {
     if (!canEnter(area)) return
     const state = this.session.state
     const leavingWilds = isWildsArea(state.area)
-    const targetChunk = area === WILDS_AREA ? null : parseChunkArea(String(area))
-    if (area === WILDS_AREA || targetChunk) {
-      // Into the Wilds: the saved area stays `wilds` and the position is
-      // region-wide pixels. `wilds` (the Commons' exit, the dev warp)
-      // arrives at the region's entry point; chunk targets use their own
-      // exit's entry tile.
-      const dest = targetChunk ?? parseChunkArea(WILDS_AREA)!
-      // Which region the save is in now (over the crossing, or back).
-      if (dest.region === OUTER_REGION_ID) state.wildsRegion = OUTER_REGION_ID
-      else delete state.wildsRegion
-      setActiveWildsRegion(dest.region)
-      const epoch = wildsEpoch(dest.region)
-      // `wilds` (the Commons' exit, the dev warp) arrives at the region's
-      // entry point, and the scene restarts there.
-      const arrivalTile = targetChunk
-        ? entry
-        : (() => {
-            const r = fromRegionPosition(wildsArrivalPosition(epoch).x, wildsArrivalPosition(epoch).y)
-            return { tx: tileAt(r.x), ty: tileAt(r.y) }
-          })()
-      const position = targetChunk ? toRegionPosition(dest.cx, dest.cy, tileMid(entry.tx), tileMid(entry.ty)) : wildsArrivalPosition(epoch)
-      // The region must be loaded before the chunk builds (shared epoch).
-      this.moveTo({ area: WILDS_AREA, position }, { entry: arrivalTile }, { inDark: () => prepareWilds(this.session, 60_000) })
+    if (area === WILDS_AREA) {
+      // Into the open map through the Commons gate: world pixels, just inside
+      // the gate on chunk (0, 0). The near read and its chunks load while the
+      // screen is dark, so the first window paints behind the fade.
+      this.moveTo({ area: WILDS_AREA, position: gateArrivalPosition() }, { entry: gateArrival() }, { inDark: () => prepareWilds(this.session, 60_000) })
       return
     }
-    if (leavingWilds) delete state.wildsRegion
     if (leavingWilds && area === 'commons') {
       // The agreed handoff: back through the north arch.
       const tile = wildsReturnTile()
@@ -943,6 +1024,12 @@ export class WorldScene extends Phaser.Scene {
     }
     // A homestead's land is the server's: fetched while the screen is dark.
     this.moveTo({ area, position: tileCenter(entry.tx, entry.ty) }, { entry, ...(facing ? { facing } : {}) }, { inDark: () => prepareHomeLand(String(area)) })
+  }
+
+  /** Dev: straight to a world tile of the open map (its chunks load while the screen is dark). */
+  private warpWilds(tx: number, ty: number): void {
+    if (this.transitioning) return
+    this.moveTo({ area: WILDS_AREA, position: tileCenter(tx, ty) }, { entry: { tx, ty } }, { inDark: () => prepareWilds(this.session, 0) })
   }
 
   /**

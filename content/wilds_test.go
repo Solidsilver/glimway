@@ -25,3 +25,55 @@ func TestWildsLoaderVectors(t *testing.T) {
 		})
 	}
 }
+
+// The open map's catalogue (docs/design/open-map.md 2.1, 2.7, 2.10): the
+// shapes the lanes after O-A read.
+func TestWildsOpenMapCatalogue(t *testing.T) {
+	w := WildsRules
+	if w.GetGeneratorVersion() != 3 || w.GetRealm() != "hearthwick" {
+		t.Fatal(w.GetGeneratorVersion(), w.GetRealm())
+	}
+	tangle, quiet := WildsPlaceByID("tangle"), WildsPlaceByID("whitequiet")
+	if tangle.GetCx() != -1 || tangle.GetCy() != -2 || tangle.GetEpochKind() != "still" || tangle.GetTier() != 1 {
+		t.Fatal("the Tangle is the still 3x3 at cx -1..1, cy -2..0, tier 1")
+	}
+	if quiet.GetCx() != -1 || quiet.GetCy() != -5 || quiet.GetEpochKind() != "wick" || quiet.GetTier() != 2 {
+		t.Fatal("the Whitequiet is the wick 3x3 at cx -1..1, cy -5..-3, tier 2")
+	}
+	if f := w.GetFrontier(); f.GetReach() != 3 || f.GetSouthLimit() != 0 {
+		t.Fatal("frontier reach 3, south limit 0")
+	}
+	for _, id := range []string{"discovery", "rumour"} {
+		if _, ok := w.LootTables[id]; !ok {
+			t.Fatal("missing loot table", id)
+		}
+	}
+	if w.LootTables["rumour"].GetTrinketChancePermille() <= w.GetTrinketChancePermille() {
+		t.Fatal("the rumour's find has the higher trinket chance")
+	}
+}
+
+// Clearing names a tool by its action (items.json `actions`), and laying
+// debits a pack material: both must exist in the item catalogue.
+func TestWildsPathsMeetTheItems(t *testing.T) {
+	actions := map[string]bool{}
+	kinds := map[string]string{}
+	for _, d := range ItemsRules.Items {
+		kinds[d.GetId()] = d.GetKind()
+		if d.GetKind() == "tool" {
+			for _, a := range d.GetActions() {
+				actions[a] = true
+			}
+		}
+	}
+	for _, c := range WildsRules.GetPaths().GetClearTools() {
+		if !actions[c.GetAction()] {
+			t.Errorf("no tool can %s (clearing %s)", c.GetAction(), c.GetDecor())
+		}
+	}
+	for _, l := range WildsRules.GetPaths().GetLay() {
+		if kinds[l.GetMaterial()] != "material" {
+			t.Errorf("laying %s debits %s, which is not a material item", l.GetKind(), l.GetMaterial())
+		}
+	}
+}

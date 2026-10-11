@@ -257,6 +257,12 @@ const (
 	// 0.6.1 Glims (docs/design/silas-yard.md 1.7).
 	ErrorCode_ERROR_CODE_INSUFFICIENT_GLIMS ErrorCode = 225
 	ErrorCode_ERROR_CODE_TOP_UP_CAP         ErrorCode = 226
+	// 0.8 The open map: paths players make and the frontier
+	// (docs/design/open-map.md 2.6, section 3).
+	ErrorCode_ERROR_CODE_ALREADY_LAID    ErrorCode = 227
+	ErrorCode_ERROR_CODE_NOT_YOUR_PATH   ErrorCode = 228
+	ErrorCode_ERROR_CODE_CANNOT_LAY_HERE ErrorCode = 229
+	ErrorCode_ERROR_CODE_BEYOND_FRONTIER ErrorCode = 230
 )
 
 // Enum value maps for ErrorCode.
@@ -489,6 +495,10 @@ var (
 		224: "ERROR_CODE_GEAR_NOT_OWNED",
 		225: "ERROR_CODE_INSUFFICIENT_GLIMS",
 		226: "ERROR_CODE_TOP_UP_CAP",
+		227: "ERROR_CODE_ALREADY_LAID",
+		228: "ERROR_CODE_NOT_YOUR_PATH",
+		229: "ERROR_CODE_CANNOT_LAY_HERE",
+		230: "ERROR_CODE_BEYOND_FRONTIER",
 	}
 	ErrorCode_value = map[string]int32{
 		"ERROR_CODE_UNSPECIFIED":               0,
@@ -718,6 +728,10 @@ var (
 		"ERROR_CODE_GEAR_NOT_OWNED":            224,
 		"ERROR_CODE_INSUFFICIENT_GLIMS":        225,
 		"ERROR_CODE_TOP_UP_CAP":                226,
+		"ERROR_CODE_ALREADY_LAID":              227,
+		"ERROR_CODE_NOT_YOUR_PATH":             228,
+		"ERROR_CODE_CANNOT_LAY_HERE":           229,
+		"ERROR_CODE_BEYOND_FRONTIER":           230,
 	}
 )
 
@@ -753,7 +767,7 @@ var File_glimway_v1_errors_proto protoreflect.FileDescriptor
 const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\n" +
 	"\x17glimway/v1/errors.proto\x12\n" +
-	"glimway.v1*\xa38\n" +
+	"glimway.v1*\xa29\n" +
 	"\tErrorCode\x12\x1a\n" +
 	"\x16ERROR_CODE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17ERROR_CODE_INVALID_JSON\x10\x01\x12\"\n" +
@@ -982,7 +996,11 @@ const file_glimway_v1_errors_proto_rawDesc = "" +
 	"\x14ERROR_CODE_OWN_STOCK\x10\xdf\x01\x12\x1e\n" +
 	"\x19ERROR_CODE_GEAR_NOT_OWNED\x10\xe0\x01\x12\"\n" +
 	"\x1dERROR_CODE_INSUFFICIENT_GLIMS\x10\xe1\x01\x12\x1a\n" +
-	"\x15ERROR_CODE_TOP_UP_CAP\x10\xe2\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
+	"\x15ERROR_CODE_TOP_UP_CAP\x10\xe2\x01\x12\x1c\n" +
+	"\x17ERROR_CODE_ALREADY_LAID\x10\xe3\x01\x12\x1d\n" +
+	"\x18ERROR_CODE_NOT_YOUR_PATH\x10\xe4\x01\x12\x1f\n" +
+	"\x1aERROR_CODE_CANNOT_LAY_HERE\x10\xe5\x01\x12\x1f\n" +
+	"\x1aERROR_CODE_BEYOND_FRONTIER\x10\xe6\x01B1Z/glimway/server/internal/gen/glimway/v1;contractb\x06proto3"
 
 var (
 	file_glimway_v1_errors_proto_rawDescOnce sync.Once

@@ -46,7 +46,7 @@ export function wire(p: ReturnType<typeof player>): Record<string, any> {
   const j = toJson(PlayerStateSchema, p, { alwaysEmitImplicit: true }) as Record<string, any>;
   j.account.partyId ??= null;
   for (const k of ['class', 'selectedPet', 'selectedMount', 'partyId']) j.profile[k] ??= null;
-  for (const k of ['companions', 'magic', 'fishing', 'purse', 'wardrobe']) j[k] ??= null;
+  for (const k of ['companions', 'magic', 'fishing', 'purse', 'wardrobe', 'rumour']) j[k] ??= null;
   // The wire spells an unset *nested* message as null too (Go's
   // EmitUnpopulated); toJson leaves the field out and the strict decoder
   // refuses that. Lane D's fishing (and lane C's magic) carry one; the
@@ -135,9 +135,6 @@ export class FakeSession implements LinkSession {
       hp: Math.min(opts.vitals?.hp ?? prev.hp, view.maxHp),
       mana: Math.min(opts.vitals?.mana ?? prev.mana, view.maxMana),
     };
-    const region = opts.relocate ? view.wildsRegion : prev.wildsRegion;
-    if (region) this.state.wildsRegion = region;
-    else delete this.state.wildsRegion;
   }
 }
 

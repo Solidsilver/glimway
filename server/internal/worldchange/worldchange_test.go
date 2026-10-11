@@ -190,3 +190,49 @@ func TestPutInTransaction(t *testing.T) {
 		t.Fatal("a committed write is missing", row, err)
 	}
 }
+
+// List reads one kind for chunks each under its own epoch, in one query:
+// another chunk, another epoch for the chunk, another kind, another world
+// and an expired row are all left out. Delete removes one row.
+func TestListChunksAndDelete(t *testing.T) {
+	s := open(t)
+	ctx := context.Background()
+	end := int64(1500)
+	at := func(world, chunk, epoch, entity, kind string, ends *int64) {
+		t.Helper()
+		key := Key{WorldID: world, Realm: "hearthwick", Chunk: chunk, Epoch: epoch, Entity: entity}
+		if err := Put(ctx, s.DB, Row{Key: key, Kind: kind, State: []byte(`{}`), ChangedBy: "account", EndsAt: ends}, 1000); err != nil {
+			t.Fatal(err)
+		}
+	}
+	at("world", "0:-1", "still", "ground", "ground", nil)
+	at("world", "1:-3", "wick", "ground", "ground", &end)
+	at("world", "1:-3", "still", "ground", "ground", nil) // the chunk under another epoch
+	at("world", "2:-3", "wick", "ground", "ground", &end) // a chunk not asked for
+	at("world", "", "wick", "way:a:b", "way", &end)       // another kind
+	at("other", "0:-1", "still", "ground", "ground", nil) // another world
+	keys := []ChunkEpoch{{"0:-1", "still"}, {"1:-3", "wick"}, {"-4:-8", "wick"}}
+	rows, err := List(ctx, s.DB, "world", "hearthwick", 0, keys, "ground", 1000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 2 || rows[0].Chunk != "0:-1" || rows[0].Epoch != "still" || rows[1].Chunk != "1:-3" || rows[1].Epoch != "wick" || rows[1].EndsAt == nil || rows[0].ChangedBy != "account" {
+		t.Fatalf("listed %+v", rows)
+	}
+	if rows, err = List(ctx, s.DB, "world", "hearthwick", 0, keys, "ground", end); err != nil || len(rows) != 1 {
+		t.Fatal("an expired row listed", rows, err)
+	}
+	if rows, err = List(ctx, s.DB, "world", "hearthwick", 0, nil, "ground", 1000); err != nil || len(rows) != 0 {
+		t.Fatal("no keys", rows, err)
+	}
+	ways, err := List(ctx, s.DB, "world", "hearthwick", 0, []ChunkEpoch{{"", "wick"}}, "way", 1000)
+	if err != nil || len(ways) != 1 || ways[0].Entity != "way:a:b" {
+		t.Fatal("ways", ways, err)
+	}
+	if err = Delete(ctx, s.DB, Key{WorldID: "world", Realm: "hearthwick", Epoch: "wick", Entity: "way:a:b"}); err != nil {
+		t.Fatal(err)
+	}
+	if ways, _ = List(ctx, s.DB, "world", "hearthwick", 0, []ChunkEpoch{{"", "wick"}}, "way", 1000); len(ways) != 0 {
+		t.Fatal("deleted way listed")
+	}
+}

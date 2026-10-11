@@ -81,6 +81,39 @@
     }
   },
   {
+    "name": "glimway.v1.ChunkGroundChanges",
+    "case": "empty",
+    "json": {
+      "chunk": null,
+      "epoch": "",
+      "changes": null
+    }
+  },
+  {
+    "name": "glimway.v1.ChunkGroundChanges",
+    "case": "populated",
+    "json": {
+      "chunk": {
+        "realm": "fixture",
+        "layer": 1,
+        "cx": 1,
+        "cy": 1
+      },
+      "epoch": "fixture",
+      "changes": {
+        "changes": [
+          {
+            "tx": 1,
+            "ty": 1,
+            "change": "fixture",
+            "by": "fixture",
+            "at": 1
+          }
+        ]
+      }
+    }
+  },
+  {
     "name": "glimway.v1.CommittedOperation",
     "case": "empty",
     "json": {
@@ -989,7 +1022,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "story": {
           "quests": {},
@@ -1032,7 +1065,8 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
-        }
+        },
+        "rumour": null
       },
       "wildsClaim": {
         "epoch": "epoch",
@@ -1062,6 +1096,156 @@
         "papers": [
           "failed-grid-of-sector-4"
         ]
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.Envelope",
+    "case": "discover-first",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0,
+          "wickEpoch": ""
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        },
+        "purse": {
+          "topUpsLeft": 2,
+          "working": null,
+          "glimsLeft": 30
+        },
+        "wardrobe": {
+          "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        },
+        "rumour": null
+      },
+      "wildsDiscover": {
+        "epoch": "wick-epoch",
+        "discovery": {
+          "entityId": "place:-1:-2",
+          "poiId": "",
+          "discovererId": "fixture-account",
+          "displayName": "Fixture",
+          "at": 1791400000
+        },
+        "first": true,
+        "loot": {
+          "materials": [
+            {
+              "id": "timber",
+              "qty": 2
+            }
+          ],
+          "trinket": "beeswax-candle"
+        },
+        "materials": {
+          "timber": 3
+        }
       }
     }
   },
@@ -1151,7 +1335,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "story": {
           "quests": {},
@@ -1194,7 +1378,8 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
-        }
+        },
+        "rumour": null
       },
       "fall": {
         "vitals": {
@@ -1215,7 +1400,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "lantern": "placed",
         "reason": "",
@@ -1303,7 +1488,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "story": {
           "quests": {},
@@ -1346,7 +1531,8 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
-        }
+        },
+        "rumour": null
       },
       "fall": {
         "vitals": {
@@ -1367,7 +1553,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "lantern": "none",
         "reason": "daily-cap",
@@ -1455,7 +1641,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "story": {
           "quests": {},
@@ -1498,7 +1684,8 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
-        }
+        },
+        "rumour": null
       },
       "fall": {
         "vitals": {
@@ -1519,7 +1706,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "lantern": "none",
         "reason": "epoch-missing",
@@ -1607,7 +1794,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "story": {
           "quests": {},
@@ -1650,7 +1837,8 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
-        }
+        },
+        "rumour": null
       },
       "fall": {
         "vitals": {
@@ -1671,7 +1859,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "lantern": "none",
         "reason": "invalid-place",
@@ -1759,7 +1947,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "story": {
           "quests": {},
@@ -1802,7 +1990,8 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
-        }
+        },
+        "rumour": null
       },
       "fall": {
         "vitals": {
@@ -1823,7 +2012,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "lantern": "none",
         "reason": "not-wilds",
@@ -1911,7 +2100,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "story": {
           "quests": {},
@@ -1954,7 +2143,8 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
-        }
+        },
+        "rumour": null
       },
       "wildsLantern": {
         "epoch": "epoch",
@@ -2065,7 +2255,7 @@
           "x": 1,
           "y": 1,
           "placeSetVersion": 1,
-          "outerEpoch": "fixture"
+          "wickEpoch": "fixture"
         },
         "story": {
           "quests": {
@@ -2143,6 +2333,16 @@
           "pending": 1,
           "xpMark": 1,
           "verifiedXp": 1
+        },
+        "rumour": {
+          "epoch": "fixture",
+          "place": "fixture",
+          "landmark": "fixture",
+          "compass": "fixture",
+          "ring": 1,
+          "pastRiver": true,
+          "site": "fixture",
+          "opened": true
         }
       },
       "report": {
@@ -2240,7 +2440,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "story": {
           "quests": {
@@ -2289,7 +2489,8 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
-        }
+        },
+        "rumour": null
       },
       "questStep": {
         "quest": "set-to-rise",
@@ -2393,7 +2594,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "story": {
           "quests": {},
@@ -2436,7 +2637,8 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
-        }
+        },
+        "rumour": null
       },
       "report": {
         "seq": 1,
@@ -2531,7 +2733,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "story": {
           "quests": {},
@@ -2574,7 +2776,8 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
-        }
+        },
+        "rumour": null
       },
       "questStep": {
         "quest": "lantern-road",
@@ -2586,6 +2789,1770 @@
         "given": [],
         "glims": 0,
         "glimsSpent": 0
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.Envelope",
+    "case": "wilds-clear",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0,
+          "wickEpoch": ""
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        },
+        "purse": {
+          "topUpsLeft": 2,
+          "working": null,
+          "glimsLeft": 30
+        },
+        "wardrobe": {
+          "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        },
+        "rumour": null
+      },
+      "wildsClear": {
+        "ground": {
+          "chunk": {
+            "realm": "hearthwick",
+            "layer": 0,
+            "cx": -2,
+            "cy": -4
+          },
+          "epoch": "wick-epoch",
+          "changes": {
+            "changes": [
+              {
+                "tx": 3,
+                "ty": 4,
+                "change": "cleared",
+                "by": "fixture-account",
+                "at": 1791400000
+              },
+              {
+                "tx": 4,
+                "ty": 4,
+                "change": "stone",
+                "by": "fixture-account",
+                "at": 1791400005
+              }
+            ]
+          }
+        },
+        "materials": {
+          "stone": 3
+        }
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.Envelope",
+    "case": "wilds-lay-branch",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0,
+          "wickEpoch": ""
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        },
+        "purse": {
+          "topUpsLeft": 2,
+          "working": null,
+          "glimsLeft": 30
+        },
+        "wardrobe": {
+          "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        },
+        "rumour": null
+      },
+      "wildsLay": {
+        "ground": {
+          "chunk": {
+            "realm": "hearthwick",
+            "layer": 0,
+            "cx": -2,
+            "cy": -4
+          },
+          "epoch": "wick-epoch",
+          "changes": {
+            "changes": [
+              {
+                "tx": 3,
+                "ty": 4,
+                "change": "cleared",
+                "by": "fixture-account",
+                "at": 1791400000
+              },
+              {
+                "tx": 4,
+                "ty": 4,
+                "change": "stone",
+                "by": "fixture-account",
+                "at": 1791400005
+              }
+            ]
+          }
+        },
+        "materials": {
+          "stone": 2
+        },
+        "waysMade": [
+          {
+            "id": "way:place:-1:-2:place:0:-2",
+            "a": "place:-1:-2",
+            "b": "place:0:-2",
+            "name": "Fixture's way",
+            "by": "fixture-account",
+            "tiles": 52,
+            "epoch": "wick-epoch",
+            "at": 1791400100,
+            "path": [
+              {
+                "x": -22,
+                "y": -150
+              },
+              {
+                "x": -21,
+                "y": -150
+              },
+              {
+                "x": -20,
+                "y": -150
+              },
+              {
+                "x": -19,
+                "y": -150
+              },
+              {
+                "x": -18,
+                "y": -150
+              },
+              {
+                "x": -17,
+                "y": -150
+              },
+              {
+                "x": -16,
+                "y": -150
+              },
+              {
+                "x": -15,
+                "y": -150
+              },
+              {
+                "x": -14,
+                "y": -150
+              },
+              {
+                "x": -13,
+                "y": -150
+              },
+              {
+                "x": -12,
+                "y": -150
+              },
+              {
+                "x": -11,
+                "y": -150
+              },
+              {
+                "x": -10,
+                "y": -150
+              },
+              {
+                "x": -9,
+                "y": -150
+              },
+              {
+                "x": -8,
+                "y": -150
+              },
+              {
+                "x": -7,
+                "y": -150
+              },
+              {
+                "x": -6,
+                "y": -150
+              },
+              {
+                "x": -5,
+                "y": -150
+              },
+              {
+                "x": -4,
+                "y": -150
+              },
+              {
+                "x": -3,
+                "y": -150
+              },
+              {
+                "x": -2,
+                "y": -150
+              },
+              {
+                "x": -1,
+                "y": -150
+              },
+              {
+                "x": 0,
+                "y": -150
+              },
+              {
+                "x": 1,
+                "y": -150
+              },
+              {
+                "x": 2,
+                "y": -150
+              },
+              {
+                "x": 3,
+                "y": -150
+              },
+              {
+                "x": 4,
+                "y": -150
+              },
+              {
+                "x": 5,
+                "y": -150
+              },
+              {
+                "x": 6,
+                "y": -150
+              },
+              {
+                "x": 7,
+                "y": -150
+              },
+              {
+                "x": 8,
+                "y": -150
+              },
+              {
+                "x": 9,
+                "y": -150
+              },
+              {
+                "x": 10,
+                "y": -150
+              },
+              {
+                "x": 11,
+                "y": -150
+              },
+              {
+                "x": 12,
+                "y": -150
+              },
+              {
+                "x": 12,
+                "y": -151
+              },
+              {
+                "x": 12,
+                "y": -152
+              },
+              {
+                "x": 12,
+                "y": -153
+              },
+              {
+                "x": 12,
+                "y": -154
+              },
+              {
+                "x": 12,
+                "y": -155
+              },
+              {
+                "x": 12,
+                "y": -156
+              },
+              {
+                "x": 12,
+                "y": -157
+              },
+              {
+                "x": 12,
+                "y": -158
+              },
+              {
+                "x": 12,
+                "y": -159
+              },
+              {
+                "x": 12,
+                "y": -160
+              },
+              {
+                "x": 12,
+                "y": -161
+              },
+              {
+                "x": 12,
+                "y": -162
+              },
+              {
+                "x": 12,
+                "y": -163
+              },
+              {
+                "x": 12,
+                "y": -164
+              },
+              {
+                "x": 12,
+                "y": -165
+              },
+              {
+                "x": 12,
+                "y": -166
+              },
+              {
+                "x": 12,
+                "y": -167
+              }
+            ],
+            "signA": {
+              "x": -22,
+              "y": -151
+            },
+            "signB": {
+              "x": 13,
+              "y": -167
+            }
+          },
+          {
+            "id": "way:place:0:-2:place:1:-2",
+            "a": "place:0:-2",
+            "b": "place:1:-2",
+            "name": "Peer's way",
+            "by": "peer-account",
+            "tiles": 53,
+            "epoch": "wick-epoch",
+            "at": 1791400100,
+            "path": [
+              {
+                "x": 12,
+                "y": -167
+              },
+              {
+                "x": 12,
+                "y": -166
+              },
+              {
+                "x": 12,
+                "y": -165
+              },
+              {
+                "x": 12,
+                "y": -164
+              },
+              {
+                "x": 12,
+                "y": -163
+              },
+              {
+                "x": 12,
+                "y": -162
+              },
+              {
+                "x": 12,
+                "y": -161
+              },
+              {
+                "x": 12,
+                "y": -160
+              },
+              {
+                "x": 12,
+                "y": -159
+              },
+              {
+                "x": 12,
+                "y": -158
+              },
+              {
+                "x": 12,
+                "y": -157
+              },
+              {
+                "x": 12,
+                "y": -156
+              },
+              {
+                "x": 12,
+                "y": -155
+              },
+              {
+                "x": 12,
+                "y": -154
+              },
+              {
+                "x": 12,
+                "y": -153
+              },
+              {
+                "x": 12,
+                "y": -152
+              },
+              {
+                "x": 12,
+                "y": -151
+              },
+              {
+                "x": 12,
+                "y": -150
+              },
+              {
+                "x": 13,
+                "y": -150
+              },
+              {
+                "x": 14,
+                "y": -150
+              },
+              {
+                "x": 15,
+                "y": -150
+              },
+              {
+                "x": 16,
+                "y": -150
+              },
+              {
+                "x": 17,
+                "y": -150
+              },
+              {
+                "x": 18,
+                "y": -150
+              },
+              {
+                "x": 19,
+                "y": -150
+              },
+              {
+                "x": 20,
+                "y": -150
+              },
+              {
+                "x": 21,
+                "y": -150
+              },
+              {
+                "x": 22,
+                "y": -150
+              },
+              {
+                "x": 23,
+                "y": -150
+              },
+              {
+                "x": 24,
+                "y": -150
+              },
+              {
+                "x": 25,
+                "y": -150
+              },
+              {
+                "x": 26,
+                "y": -150
+              },
+              {
+                "x": 27,
+                "y": -150
+              },
+              {
+                "x": 28,
+                "y": -150
+              },
+              {
+                "x": 29,
+                "y": -150
+              },
+              {
+                "x": 30,
+                "y": -150
+              },
+              {
+                "x": 31,
+                "y": -150
+              },
+              {
+                "x": 32,
+                "y": -150
+              },
+              {
+                "x": 33,
+                "y": -150
+              },
+              {
+                "x": 34,
+                "y": -150
+              },
+              {
+                "x": 35,
+                "y": -150
+              },
+              {
+                "x": 36,
+                "y": -150
+              },
+              {
+                "x": 37,
+                "y": -150
+              },
+              {
+                "x": 38,
+                "y": -150
+              },
+              {
+                "x": 39,
+                "y": -150
+              },
+              {
+                "x": 40,
+                "y": -150
+              },
+              {
+                "x": 41,
+                "y": -150
+              },
+              {
+                "x": 42,
+                "y": -150
+              },
+              {
+                "x": 43,
+                "y": -150
+              },
+              {
+                "x": 44,
+                "y": -150
+              },
+              {
+                "x": 45,
+                "y": -150
+              },
+              {
+                "x": 46,
+                "y": -150
+              },
+              {
+                "x": 47,
+                "y": -150
+              }
+            ],
+            "signA": {
+              "x": 11,
+              "y": -167
+            },
+            "signB": {
+              "x": 47,
+              "y": -151
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.Envelope",
+    "case": "wilds-lay-way",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0,
+          "wickEpoch": ""
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        },
+        "purse": {
+          "topUpsLeft": 2,
+          "working": null,
+          "glimsLeft": 30
+        },
+        "wardrobe": {
+          "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        },
+        "rumour": null
+      },
+      "wildsLay": {
+        "ground": {
+          "chunk": {
+            "realm": "hearthwick",
+            "layer": 0,
+            "cx": -2,
+            "cy": -4
+          },
+          "epoch": "wick-epoch",
+          "changes": {
+            "changes": [
+              {
+                "tx": 3,
+                "ty": 4,
+                "change": "cleared",
+                "by": "fixture-account",
+                "at": 1791400000
+              },
+              {
+                "tx": 4,
+                "ty": 4,
+                "change": "stone",
+                "by": "fixture-account",
+                "at": 1791400005
+              }
+            ]
+          }
+        },
+        "materials": {
+          "stone": 3
+        },
+        "waysMade": [
+          {
+            "id": "way:place:0:-2:place:1:-1",
+            "a": "place:0:-2",
+            "b": "place:1:-1",
+            "name": "Fixture's way",
+            "by": "fixture-account",
+            "tiles": 119,
+            "epoch": "wick-epoch",
+            "at": 1791400100,
+            "path": [
+              {
+                "x": 12,
+                "y": -145
+              },
+              {
+                "x": 12,
+                "y": -144
+              },
+              {
+                "x": 12,
+                "y": -143
+              },
+              {
+                "x": 12,
+                "y": -142
+              },
+              {
+                "x": 12,
+                "y": -141
+              },
+              {
+                "x": 12,
+                "y": -140
+              },
+              {
+                "x": 12,
+                "y": -139
+              },
+              {
+                "x": 12,
+                "y": -138
+              },
+              {
+                "x": 12,
+                "y": -137
+              },
+              {
+                "x": 12,
+                "y": -136
+              },
+              {
+                "x": 12,
+                "y": -135
+              },
+              {
+                "x": 12,
+                "y": -134
+              },
+              {
+                "x": 12,
+                "y": -133
+              },
+              {
+                "x": 12,
+                "y": -132
+              },
+              {
+                "x": 12,
+                "y": -131
+              },
+              {
+                "x": 12,
+                "y": -130
+              },
+              {
+                "x": 12,
+                "y": -129
+              },
+              {
+                "x": 12,
+                "y": -128
+              },
+              {
+                "x": 12,
+                "y": -127
+              },
+              {
+                "x": 12,
+                "y": -126
+              },
+              {
+                "x": 12,
+                "y": -125
+              },
+              {
+                "x": 12,
+                "y": -124
+              },
+              {
+                "x": 12,
+                "y": -123
+              },
+              {
+                "x": 12,
+                "y": -122
+              },
+              {
+                "x": 12,
+                "y": -121
+              },
+              {
+                "x": 12,
+                "y": -120
+              },
+              {
+                "x": 12,
+                "y": -119
+              },
+              {
+                "x": 12,
+                "y": -118
+              },
+              {
+                "x": 12,
+                "y": -117
+              },
+              {
+                "x": 12,
+                "y": -116
+              },
+              {
+                "x": 12,
+                "y": -115
+              },
+              {
+                "x": 12,
+                "y": -114
+              },
+              {
+                "x": 12,
+                "y": -113
+              },
+              {
+                "x": 12,
+                "y": -112
+              },
+              {
+                "x": 12,
+                "y": -111
+              },
+              {
+                "x": 12,
+                "y": -110
+              },
+              {
+                "x": 13,
+                "y": -110
+              },
+              {
+                "x": 14,
+                "y": -110
+              },
+              {
+                "x": 15,
+                "y": -110
+              },
+              {
+                "x": 16,
+                "y": -110
+              },
+              {
+                "x": 17,
+                "y": -110
+              },
+              {
+                "x": 18,
+                "y": -110
+              },
+              {
+                "x": 19,
+                "y": -110
+              },
+              {
+                "x": 20,
+                "y": -110
+              },
+              {
+                "x": 21,
+                "y": -110
+              },
+              {
+                "x": 22,
+                "y": -110
+              },
+              {
+                "x": 23,
+                "y": -110
+              },
+              {
+                "x": 24,
+                "y": -110
+              },
+              {
+                "x": 25,
+                "y": -110
+              },
+              {
+                "x": 26,
+                "y": -110
+              },
+              {
+                "x": 27,
+                "y": -110
+              },
+              {
+                "x": 28,
+                "y": -110
+              },
+              {
+                "x": 29,
+                "y": -110
+              },
+              {
+                "x": 30,
+                "y": -110
+              },
+              {
+                "x": 30,
+                "y": -109
+              },
+              {
+                "x": 30,
+                "y": -108
+              },
+              {
+                "x": 30,
+                "y": -107
+              },
+              {
+                "x": 30,
+                "y": -106
+              },
+              {
+                "x": 30,
+                "y": -105
+              },
+              {
+                "x": 30,
+                "y": -104
+              },
+              {
+                "x": 30,
+                "y": -103
+              },
+              {
+                "x": 30,
+                "y": -102
+              },
+              {
+                "x": 30,
+                "y": -101
+              },
+              {
+                "x": 30,
+                "y": -100
+              },
+              {
+                "x": 29,
+                "y": -100
+              },
+              {
+                "x": 28,
+                "y": -100
+              },
+              {
+                "x": 27,
+                "y": -100
+              },
+              {
+                "x": 26,
+                "y": -100
+              },
+              {
+                "x": 25,
+                "y": -100
+              },
+              {
+                "x": 24,
+                "y": -100
+              },
+              {
+                "x": 23,
+                "y": -100
+              },
+              {
+                "x": 22,
+                "y": -100
+              },
+              {
+                "x": 21,
+                "y": -100
+              },
+              {
+                "x": 20,
+                "y": -100
+              },
+              {
+                "x": 20,
+                "y": -99
+              },
+              {
+                "x": 20,
+                "y": -98
+              },
+              {
+                "x": 20,
+                "y": -97
+              },
+              {
+                "x": 20,
+                "y": -96
+              },
+              {
+                "x": 20,
+                "y": -95
+              },
+              {
+                "x": 20,
+                "y": -94
+              },
+              {
+                "x": 20,
+                "y": -93
+              },
+              {
+                "x": 20,
+                "y": -92
+              },
+              {
+                "x": 20,
+                "y": -91
+              },
+              {
+                "x": 20,
+                "y": -90
+              },
+              {
+                "x": 20,
+                "y": -89
+              },
+              {
+                "x": 20,
+                "y": -88
+              },
+              {
+                "x": 20,
+                "y": -87
+              },
+              {
+                "x": 20,
+                "y": -86
+              },
+              {
+                "x": 20,
+                "y": -85
+              },
+              {
+                "x": 20,
+                "y": -84
+              },
+              {
+                "x": 21,
+                "y": -84
+              },
+              {
+                "x": 22,
+                "y": -84
+              },
+              {
+                "x": 23,
+                "y": -84
+              },
+              {
+                "x": 24,
+                "y": -84
+              },
+              {
+                "x": 25,
+                "y": -84
+              },
+              {
+                "x": 26,
+                "y": -84
+              },
+              {
+                "x": 27,
+                "y": -84
+              },
+              {
+                "x": 28,
+                "y": -84
+              },
+              {
+                "x": 29,
+                "y": -84
+              },
+              {
+                "x": 30,
+                "y": -84
+              },
+              {
+                "x": 31,
+                "y": -84
+              },
+              {
+                "x": 32,
+                "y": -84
+              },
+              {
+                "x": 33,
+                "y": -84
+              },
+              {
+                "x": 34,
+                "y": -84
+              },
+              {
+                "x": 35,
+                "y": -84
+              },
+              {
+                "x": 36,
+                "y": -84
+              },
+              {
+                "x": 37,
+                "y": -84
+              },
+              {
+                "x": 38,
+                "y": -84
+              },
+              {
+                "x": 39,
+                "y": -84
+              },
+              {
+                "x": 40,
+                "y": -84
+              },
+              {
+                "x": 41,
+                "y": -84
+              },
+              {
+                "x": 42,
+                "y": -84
+              },
+              {
+                "x": 43,
+                "y": -84
+              },
+              {
+                "x": 44,
+                "y": -84
+              },
+              {
+                "x": 45,
+                "y": -84
+              },
+              {
+                "x": 46,
+                "y": -84
+              },
+              {
+                "x": 47,
+                "y": -84
+              },
+              {
+                "x": 48,
+                "y": -84
+              },
+              {
+                "x": 49,
+                "y": -84
+              }
+            ],
+            "signA": {
+              "x": 11,
+              "y": -145
+            },
+            "signB": {
+              "x": 49,
+              "y": -83
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.Envelope",
+    "case": "wilds-lift",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0,
+          "wickEpoch": ""
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        },
+        "purse": {
+          "topUpsLeft": 2,
+          "working": null,
+          "glimsLeft": 30
+        },
+        "wardrobe": {
+          "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        },
+        "rumour": null
+      },
+      "wildsLift": {
+        "ground": {
+          "chunk": {
+            "realm": "hearthwick",
+            "layer": 0,
+            "cx": -2,
+            "cy": -4
+          },
+          "epoch": "wick-epoch",
+          "changes": {
+            "changes": [
+              {
+                "tx": 3,
+                "ty": 4,
+                "change": "cleared",
+                "by": "fixture-account",
+                "at": 1791400000
+              },
+              {
+                "tx": 4,
+                "ty": 4,
+                "change": "stone",
+                "by": "fixture-account",
+                "at": 1791400005
+              }
+            ]
+          }
+        },
+        "materials": {
+          "stone": 4
+        },
+        "waysBroken": [
+          "way:place:0:-2:place:1:-1"
+        ],
+        "waysRerouted": []
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.Envelope",
+    "case": "wilds-lift-branch",
+    "json": {
+      "state": {
+        "version": 1,
+        "account": {
+          "accountId": "fixture-account",
+          "displayName": "Hero",
+          "profileSource": "habitica",
+          "partyId": null,
+          "worldId": "fixture-world",
+          "flagged": false
+        },
+        "profile": {
+          "id": "fixture-hero",
+          "name": "Hero",
+          "class": null,
+          "level": 1,
+          "exp": 0,
+          "hp": 20,
+          "maxHp": 50,
+          "mp": 10,
+          "maxMp": 30,
+          "stats": {
+            "str": 0,
+            "int": 0,
+            "con": 0,
+            "per": 0
+          },
+          "equipped": {
+            "armor": null,
+            "back": null,
+            "body": null,
+            "eyewear": null,
+            "head": null,
+            "headAccessory": null,
+            "shield": null,
+            "weapon": null,
+            "weaponSpecial": null
+          },
+          "pets": [],
+          "mounts": [],
+          "appearance": {
+            "size": "",
+            "shirt": "",
+            "skin": "",
+            "hairColor": "",
+            "hairStyle": 0,
+            "background": "",
+            "hairBangs": 0,
+            "hairMustache": 0,
+            "hairBeard": 0,
+            "hairFlower": 0
+          },
+          "costume": {},
+          "useCostume": false,
+          "selectedPet": null,
+          "selectedMount": null,
+          "partyId": null
+        },
+        "vitals": {
+          "hp": 20,
+          "mana": 10,
+          "maxHp": 50,
+          "maxMana": 30,
+          "reportSeq": 0,
+          "reportClient": "client",
+          "reportGeneration": "generation",
+          "vitalsSetVersion": 0,
+          "vitalsAt": 1,
+          "castReadyAt": 1,
+          "abilityReadyAt": {}
+        },
+        "place": {
+          "area": "village",
+          "x": 400,
+          "y": 300,
+          "placeSetVersion": 0,
+          "wickEpoch": ""
+        },
+        "story": {
+          "quests": {},
+          "marks": [],
+          "discoveries": [],
+          "defeated": [],
+          "questItems": [
+            "field-journal",
+            "hearthwick-map"
+          ],
+          "playSeconds": 0,
+          "reachedAt": {},
+          "gateAt": {}
+        },
+        "companions": {
+          "followPet": "",
+          "yardPets": [],
+          "mountOut": "",
+          "mountHome": ""
+        },
+        "magic": {
+          "levelMark": 1,
+          "classMark": null
+        },
+        "fishing": {
+          "cast": null,
+          "nextCastAt": 0
+        },
+        "purse": {
+          "topUpsLeft": 2,
+          "working": null,
+          "glimsLeft": 30
+        },
+        "wardrobe": {
+          "chosen": {}
+        },
+        "glims": {
+          "balance": 0,
+          "xpEarned": 0,
+          "pending": 0,
+          "xpMark": 0,
+          "verifiedXp": 0
+        },
+        "rumour": null
+      },
+      "wildsLift": {
+        "ground": {
+          "chunk": {
+            "realm": "hearthwick",
+            "layer": 0,
+            "cx": -2,
+            "cy": -4
+          },
+          "epoch": "wick-epoch",
+          "changes": {
+            "changes": [
+              {
+                "tx": 3,
+                "ty": 4,
+                "change": "cleared",
+                "by": "fixture-account",
+                "at": 1791400000
+              },
+              {
+                "tx": 4,
+                "ty": 4,
+                "change": "stone",
+                "by": "fixture-account",
+                "at": 1791400005
+              }
+            ]
+          }
+        },
+        "materials": {
+          "stone": 3
+        },
+        "waysBroken": [
+          "way:place:-1:-2:place:0:-2",
+          "way:place:-1:-2:place:1:-2"
+        ],
+        "waysRerouted": []
       }
     }
   },
@@ -2696,7 +4663,7 @@
         "x": 1,
         "y": 1,
         "placeSetVersion": 1,
-        "outerEpoch": "fixture"
+        "wickEpoch": "fixture"
       },
       "lantern": "fixture",
       "reason": "fixture",
@@ -2765,6 +4732,50 @@
       "pending": 1,
       "xpMark": 1,
       "verifiedXp": 1
+    }
+  },
+  {
+    "name": "glimway.v1.GroundChange",
+    "case": "empty",
+    "json": {
+      "tx": 0,
+      "ty": 0,
+      "change": "",
+      "by": "",
+      "at": 0
+    }
+  },
+  {
+    "name": "glimway.v1.GroundChange",
+    "case": "populated",
+    "json": {
+      "tx": 1,
+      "ty": 1,
+      "change": "fixture",
+      "by": "fixture",
+      "at": 1
+    }
+  },
+  {
+    "name": "glimway.v1.GroundChanges",
+    "case": "empty",
+    "json": {
+      "changes": []
+    }
+  },
+  {
+    "name": "glimway.v1.GroundChanges",
+    "case": "populated",
+    "json": {
+      "changes": [
+        {
+          "tx": 1,
+          "ty": 1,
+          "change": "fixture",
+          "by": "fixture",
+          "at": 1
+        }
+      ]
     }
   },
   {
@@ -4342,7 +6353,7 @@
       "x": 0,
       "y": 0,
       "placeSetVersion": 0,
-      "outerEpoch": ""
+      "wickEpoch": ""
     }
   },
   {
@@ -4353,7 +6364,7 @@
       "x": 1,
       "y": 1,
       "placeSetVersion": 1,
-      "outerEpoch": "fixture"
+      "wickEpoch": "fixture"
     }
   },
   {
@@ -4461,7 +6472,7 @@
           "x": 1,
           "y": 1,
           "placeSetVersion": 1,
-          "outerEpoch": "fixture"
+          "wickEpoch": "fixture"
         },
         "story": {
           "quests": {
@@ -4539,6 +6550,16 @@
           "pending": 1,
           "xpMark": 1,
           "verifiedXp": 1
+        },
+        "rumour": {
+          "epoch": "fixture",
+          "place": "fixture",
+          "landmark": "fixture",
+          "compass": "fixture",
+          "ring": 1,
+          "pastRiver": true,
+          "site": "fixture",
+          "opened": true
         }
       },
       "lease": "fixture",
@@ -4625,7 +6646,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "story": {
           "quests": {},
@@ -4668,7 +6689,8 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
-        }
+        },
+        "rumour": null
       },
       "lease": "lease",
       "reportGeneration": "generation",
@@ -4690,7 +6712,8 @@
       "fishing": null,
       "purse": null,
       "wardrobe": null,
-      "glims": null
+      "glims": null,
+      "rumour": null
     }
   },
   {
@@ -4771,7 +6794,7 @@
         "x": 1,
         "y": 1,
         "placeSetVersion": 1,
-        "outerEpoch": "fixture"
+        "wickEpoch": "fixture"
       },
       "story": {
         "quests": {
@@ -4849,6 +6872,16 @@
         "pending": 1,
         "xpMark": 1,
         "verifiedXp": 1
+      },
+      "rumour": {
+        "epoch": "fixture",
+        "place": "fixture",
+        "landmark": "fixture",
+        "compass": "fixture",
+        "ring": 1,
+        "pastRiver": true,
+        "site": "fixture",
+        "opened": true
       }
     }
   },
@@ -4930,7 +6963,7 @@
         "x": 400,
         "y": 300,
         "placeSetVersion": 0,
-        "outerEpoch": ""
+        "wickEpoch": ""
       },
       "story": {
         "quests": {},
@@ -4973,7 +7006,8 @@
         "pending": 0,
         "xpMark": 0,
         "verifiedXp": 0
-      }
+      },
+      "rumour": null
     }
   },
   {
@@ -5364,7 +7398,7 @@
           "x": 1,
           "y": 1,
           "placeSetVersion": 1,
-          "outerEpoch": "fixture"
+          "wickEpoch": "fixture"
         },
         "story": {
           "quests": {
@@ -5442,6 +7476,16 @@
           "pending": 1,
           "xpMark": 1,
           "verifiedXp": 1
+        },
+        "rumour": {
+          "epoch": "fixture",
+          "place": "fixture",
+          "landmark": "fixture",
+          "compass": "fixture",
+          "ring": 1,
+          "pastRiver": true,
+          "site": "fixture",
+          "opened": true
         }
       }
     }
@@ -5528,7 +7572,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "story": {
           "quests": {},
@@ -5571,7 +7615,8 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
-        }
+        },
+        "rumour": null
       }
     }
   },
@@ -5836,7 +7881,7 @@
           "x": 1,
           "y": 1,
           "placeSetVersion": 1,
-          "outerEpoch": "fixture"
+          "wickEpoch": "fixture"
         },
         "story": {
           "quests": {
@@ -5914,6 +7959,16 @@
           "pending": 1,
           "xpMark": 1,
           "verifiedXp": 1
+        },
+        "rumour": {
+          "epoch": "fixture",
+          "place": "fixture",
+          "landmark": "fixture",
+          "compass": "fixture",
+          "ring": 1,
+          "pastRiver": true,
+          "site": "fixture",
+          "opened": true
         }
       }
     }
@@ -6125,7 +8180,7 @@
           "x": 1,
           "y": 1,
           "placeSetVersion": 1,
-          "outerEpoch": "fixture"
+          "wickEpoch": "fixture"
         },
         "story": {
           "quests": {
@@ -6203,6 +8258,16 @@
           "pending": 1,
           "xpMark": 1,
           "verifiedXp": 1
+        },
+        "rumour": {
+          "epoch": "fixture",
+          "place": "fixture",
+          "landmark": "fixture",
+          "compass": "fixture",
+          "ring": 1,
+          "pastRiver": true,
+          "site": "fixture",
+          "opened": true
         }
       },
       "leaseActive": true
@@ -6287,7 +8352,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "story": {
           "quests": {},
@@ -6330,7 +8395,8 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
-        }
+        },
+        "rumour": null
       },
       "leaseActive": true
     }
@@ -6578,7 +8644,6 @@
     "case": "empty",
     "json": {
       "epochId": "",
-      "region": "",
       "realm": "",
       "layer": 0,
       "cx": 0,
@@ -6588,13 +8653,14 @@
       "palette": [],
       "ground": "",
       "solid": "",
-      "exits": [],
       "decor": null,
       "sites": [],
-      "spawn": null,
       "look": "",
       "mark": "",
-      "entities": []
+      "entities": [],
+      "tier": 0,
+      "land": "",
+      "places": []
     }
   },
   {
@@ -6602,7 +8668,6 @@
     "case": "populated",
     "json": {
       "epochId": "fixture",
-      "region": "fixture",
       "realm": "fixture",
       "layer": 1,
       "cx": 1,
@@ -6614,20 +8679,6 @@
       ],
       "ground": "AQI=",
       "solid": "AQI=",
-      "exits": [
-        {
-          "tx": 1,
-          "ty": 1,
-          "tw": 1,
-          "th": 1,
-          "dir": "DIR_NORTH",
-          "to": "fixture",
-          "entry": {
-            "tx": 1,
-            "ty": 1
-          }
-        }
-      ],
       "decor": {
         "kinds": [
           "fixture"
@@ -6660,10 +8711,6 @@
           "ty": 1
         }
       ],
-      "spawn": {
-        "tx": 1,
-        "ty": 1
-      },
       "look": "fixture",
       "mark": "fixture",
       "entities": [
@@ -6679,6 +8726,16 @@
           "tier": 1,
           "poi": "fixture"
         }
+      ],
+      "tier": 1,
+      "land": "fixture",
+      "places": [
+        {
+          "id": "fixture",
+          "kind": "fixture",
+          "tx": 1,
+          "ty": 1
+        }
       ]
     }
   },
@@ -6687,35 +8744,20 @@
     "case": "valid",
     "json": {
       "epochId": "epoch",
-      "region": "inner-1",
       "realm": "hearthwick",
       "layer": 0,
       "cx": 1,
       "cy": 0,
-      "generatorVersion": 2,
+      "generatorVersion": 3,
       "size": 24,
       "palette": [
-        "grass"
+        "grass_b"
       ],
       "ground": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
       "solid": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-      "exits": [
-        {
-          "tx": 12,
-          "ty": 0,
-          "tw": 1,
-          "th": 1,
-          "dir": "DIR_NORTH",
-          "to": "chunk:outer-1:1:1",
-          "entry": {
-            "tx": 12,
-            "ty": 23
-          }
-        }
-      ],
       "decor": {
         "kinds": [
-          "tree"
+          "oak"
         ],
         "kind": [
           0
@@ -6745,10 +8787,6 @@
           "ty": 5
         }
       ],
-      "spawn": {
-        "tx": 1,
-        "ty": 1
-      },
       "look": "tangle",
       "mark": "",
       "entities": [
@@ -6762,9 +8800,115 @@
           "tier": 0,
           "poi": ""
         }
-      ]
+      ],
+      "tier": 1,
+      "land": "woods",
+      "places": []
     },
-    "binaryHex": "0a0565706f63681207696e6e65722d311a0a6865617274687769636b2802380240184a05677261737352a0020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005a480000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006221080c18012001280132116368756e6b3a6f757465722d313a313a313a04080c10176a1b0a04747265651201001a01022201032a01023201033a0100420100720c0a046563686f1001180320057a040801100182010674616e676c6592011e0a0a6e6f64653a313a303a3012046e6f646518032004320674696d626572"
+    "binaryHex": "0a0565706f63681a0a6865617274687769636b2802380340184a0767726173735f6252a0020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005a480000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006a1a0a036f616b1201001a01022201032a01023201033a0100420100720c0a046563686f10011803200582010674616e676c6592011e0a0a6e6f64653a313a303a3012046e6f646518032004320674696d626572980101a20105776f6f6473"
+  },
+  {
+    "name": "glimway.v1.WildsChunk",
+    "case": "valid-open-map",
+    "json": {
+      "epochId": "wick-epoch",
+      "realm": "hearthwick",
+      "layer": 0,
+      "cx": -3,
+      "cy": -7,
+      "generatorVersion": 3,
+      "size": 24,
+      "palette": [
+        "grass_c"
+      ],
+      "ground": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "solid": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+      "decor": {
+        "kinds": [
+          "split-oak"
+        ],
+        "kind": [
+          0
+        ],
+        "tx": [
+          12
+        ],
+        "ty": [
+          12
+        ],
+        "ox": [
+          0
+        ],
+        "oy": [
+          0
+        ],
+        "variant": [
+          0
+        ],
+        "flags": "AA=="
+      },
+      "sites": [
+        {
+          "id": "rumour:-3:-7",
+          "kind": "SITE_KIND_RUMOUR",
+          "tx": 12,
+          "ty": 13
+        }
+      ],
+      "look": "outer",
+      "mark": "",
+      "entities": [],
+      "tier": 3,
+      "land": "meadow",
+      "places": [
+        {
+          "id": "place:-1:-2",
+          "kind": "camp-glade",
+          "tx": 12,
+          "ty": 12
+        }
+      ]
+    }
+  },
+  {
+    "name": "glimway.v1.WildsChunkKey",
+    "case": "empty",
+    "json": {
+      "realm": "",
+      "layer": 0,
+      "cx": 0,
+      "cy": 0
+    }
+  },
+  {
+    "name": "glimway.v1.WildsChunkKey",
+    "case": "populated",
+    "json": {
+      "realm": "fixture",
+      "layer": 1,
+      "cx": 1,
+      "cy": 1
+    }
+  },
+  {
+    "name": "glimway.v1.WildsChunkRect",
+    "case": "empty",
+    "json": {
+      "minCx": 0,
+      "minCy": 0,
+      "maxCx": 0,
+      "maxCy": 0
+    }
+  },
+  {
+    "name": "glimway.v1.WildsChunkRect",
+    "case": "populated",
+    "json": {
+      "minCx": 1,
+      "minCy": 1,
+      "maxCx": 1,
+      "maxCy": 1
+    }
   },
   {
     "name": "glimway.v1.WildsClaimRequest",
@@ -6844,6 +8988,145 @@
       "papers": [
         "fixture"
       ]
+    }
+  },
+  {
+    "name": "glimway.v1.WildsClearRequest",
+    "case": "empty",
+    "json": {
+      "op": null,
+      "where": null,
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "name": "glimway.v1.WildsClearRequest",
+    "case": "populated",
+    "json": {
+      "op": {
+        "lease": "fixture",
+        "key": "fixture",
+        "report": {
+          "client": "fixture",
+          "generation": "fixture",
+          "seq": 1
+        }
+      },
+      "where": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1
+      },
+      "x": 1,
+      "y": 1
+    }
+  },
+  {
+    "name": "glimway.v1.WildsClearResult",
+    "case": "empty",
+    "json": {
+      "ground": null,
+      "materials": {}
+    }
+  },
+  {
+    "name": "glimway.v1.WildsClearResult",
+    "case": "populated",
+    "json": {
+      "ground": {
+        "chunk": {
+          "realm": "fixture",
+          "layer": 1,
+          "cx": 1,
+          "cy": 1
+        },
+        "epoch": "fixture",
+        "changes": {
+          "changes": [
+            {
+              "tx": 1,
+              "ty": 1,
+              "change": "fixture",
+              "by": "fixture",
+              "at": 1
+            }
+          ]
+        }
+      },
+      "materials": {
+        "fixture": 1
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.WildsDiscoverRequest",
+    "case": "empty",
+    "json": {
+      "op": null,
+      "where": null,
+      "place": "",
+      "epoch": ""
+    }
+  },
+  {
+    "name": "glimway.v1.WildsDiscoverRequest",
+    "case": "populated",
+    "json": {
+      "op": {
+        "lease": "fixture",
+        "key": "fixture",
+        "report": {
+          "client": "fixture",
+          "generation": "fixture",
+          "seq": 1
+        }
+      },
+      "where": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1
+      },
+      "place": "fixture",
+      "epoch": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.WildsDiscoverResult",
+    "case": "empty",
+    "json": {
+      "epoch": "",
+      "discovery": null,
+      "first": false,
+      "loot": null,
+      "materials": {}
+    }
+  },
+  {
+    "name": "glimway.v1.WildsDiscoverResult",
+    "case": "populated",
+    "json": {
+      "epoch": "fixture",
+      "discovery": {
+        "entityId": "fixture",
+        "poiId": "fixture",
+        "discovererId": "fixture",
+        "displayName": "fixture",
+        "at": 1
+      },
+      "first": true,
+      "loot": {
+        "materials": [
+          {
+            "id": "fixture",
+            "qty": 1
+          }
+        ],
+        "trinket": "fixture"
+      },
+      "materials": {
+        "fixture": 1
+      }
     }
   },
   {
@@ -6930,11 +9213,11 @@
     "json": {
       "id": "",
       "worldSeed": "",
-      "regionId": "",
       "generatorVersion": 0,
       "season": "",
       "startsAt": 0,
-      "endsAt": null
+      "endsAt": null,
+      "kind": ""
     }
   },
   {
@@ -6943,11 +9226,53 @@
     "json": {
       "id": "fixture",
       "worldSeed": "fixture",
-      "regionId": "fixture",
       "generatorVersion": 1,
       "season": "fixture",
       "startsAt": 1,
-      "endsAt": 1
+      "endsAt": 1,
+      "kind": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.WildsFrontier",
+    "case": "empty",
+    "json": {
+      "rect": null
+    }
+  },
+  {
+    "name": "glimway.v1.WildsFrontier",
+    "case": "populated",
+    "json": {
+      "rect": {
+        "minCx": 1,
+        "minCy": 1,
+        "maxCx": 1,
+        "maxCy": 1
+      }
+    }
+  },
+  {
+    "name": "glimway.v1.WildsGlimpse",
+    "case": "empty",
+    "json": {
+      "chunk": null,
+      "land": "",
+      "river": false
+    }
+  },
+  {
+    "name": "glimway.v1.WildsGlimpse",
+    "case": "populated",
+    "json": {
+      "chunk": {
+        "realm": "fixture",
+        "layer": 1,
+        "cx": 1,
+        "cy": 1
+      },
+      "land": "fixture",
+      "river": true
     }
   },
   {
@@ -7056,6 +9381,204 @@
     }
   },
   {
+    "name": "glimway.v1.WildsLayRequest",
+    "case": "empty",
+    "json": {
+      "op": null,
+      "where": null,
+      "x": 0,
+      "y": 0,
+      "kind": ""
+    }
+  },
+  {
+    "name": "glimway.v1.WildsLayRequest",
+    "case": "populated",
+    "json": {
+      "op": {
+        "lease": "fixture",
+        "key": "fixture",
+        "report": {
+          "client": "fixture",
+          "generation": "fixture",
+          "seq": 1
+        }
+      },
+      "where": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1
+      },
+      "x": 1,
+      "y": 1,
+      "kind": "fixture"
+    }
+  },
+  {
+    "name": "glimway.v1.WildsLayResult",
+    "case": "empty",
+    "json": {
+      "ground": null,
+      "materials": {},
+      "waysMade": []
+    }
+  },
+  {
+    "name": "glimway.v1.WildsLayResult",
+    "case": "populated",
+    "json": {
+      "ground": {
+        "chunk": {
+          "realm": "fixture",
+          "layer": 1,
+          "cx": 1,
+          "cy": 1
+        },
+        "epoch": "fixture",
+        "changes": {
+          "changes": [
+            {
+              "tx": 1,
+              "ty": 1,
+              "change": "fixture",
+              "by": "fixture",
+              "at": 1
+            }
+          ]
+        }
+      },
+      "materials": {
+        "fixture": 1
+      },
+      "waysMade": [
+        {
+          "id": "fixture",
+          "a": "fixture",
+          "b": "fixture",
+          "name": "fixture",
+          "by": "fixture",
+          "tiles": 1,
+          "epoch": "fixture",
+          "at": 1,
+          "path": [
+            {
+              "x": 1,
+              "y": 1
+            }
+          ],
+          "signA": {
+            "x": 1,
+            "y": 1
+          },
+          "signB": {
+            "x": 1,
+            "y": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "glimway.v1.WildsLiftRequest",
+    "case": "empty",
+    "json": {
+      "op": null,
+      "where": null,
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "name": "glimway.v1.WildsLiftRequest",
+    "case": "populated",
+    "json": {
+      "op": {
+        "lease": "fixture",
+        "key": "fixture",
+        "report": {
+          "client": "fixture",
+          "generation": "fixture",
+          "seq": 1
+        }
+      },
+      "where": {
+        "area": "fixture",
+        "x": 1,
+        "y": 1
+      },
+      "x": 1,
+      "y": 1
+    }
+  },
+  {
+    "name": "glimway.v1.WildsLiftResult",
+    "case": "empty",
+    "json": {
+      "ground": null,
+      "materials": {},
+      "waysBroken": [],
+      "waysRerouted": []
+    }
+  },
+  {
+    "name": "glimway.v1.WildsLiftResult",
+    "case": "populated",
+    "json": {
+      "ground": {
+        "chunk": {
+          "realm": "fixture",
+          "layer": 1,
+          "cx": 1,
+          "cy": 1
+        },
+        "epoch": "fixture",
+        "changes": {
+          "changes": [
+            {
+              "tx": 1,
+              "ty": 1,
+              "change": "fixture",
+              "by": "fixture",
+              "at": 1
+            }
+          ]
+        }
+      },
+      "materials": {
+        "fixture": 1
+      },
+      "waysBroken": [
+        "fixture"
+      ],
+      "waysRerouted": [
+        {
+          "id": "fixture",
+          "a": "fixture",
+          "b": "fixture",
+          "name": "fixture",
+          "by": "fixture",
+          "tiles": 1,
+          "epoch": "fixture",
+          "at": 1,
+          "path": [
+            {
+              "x": 1,
+              "y": 1
+            }
+          ],
+          "signA": {
+            "x": 1,
+            "y": 1
+          },
+          "signB": {
+            "x": 1,
+            "y": 1
+          }
+        }
+      ]
+    }
+  },
+  {
     "name": "glimway.v1.WildsLoot",
     "case": "empty",
     "json": {
@@ -7093,6 +9616,799 @@
     }
   },
   {
+    "name": "glimway.v1.WildsNearResult",
+    "case": "empty",
+    "json": {
+      "still": null,
+      "wick": null,
+      "frontier": null,
+      "center": null,
+      "radius": 0,
+      "entities": [],
+      "personalClaims": [],
+      "discoveries": [],
+      "lanterns": [],
+      "echoes": [],
+      "ground": [],
+      "materials": {},
+      "glimpse": [],
+      "ways": []
+    }
+  },
+  {
+    "name": "glimway.v1.WildsNearResult",
+    "case": "populated",
+    "json": {
+      "still": {
+        "id": "fixture",
+        "worldSeed": "fixture",
+        "generatorVersion": 1,
+        "season": "fixture",
+        "startsAt": 1,
+        "endsAt": 1,
+        "kind": "fixture"
+      },
+      "wick": {
+        "id": "fixture",
+        "worldSeed": "fixture",
+        "generatorVersion": 1,
+        "season": "fixture",
+        "startsAt": 1,
+        "endsAt": 1,
+        "kind": "fixture"
+      },
+      "frontier": {
+        "rect": {
+          "minCx": 1,
+          "minCy": 1,
+          "maxCx": 1,
+          "maxCy": 1
+        }
+      },
+      "center": {
+        "realm": "fixture",
+        "layer": 1,
+        "cx": 1,
+        "cy": 1
+      },
+      "radius": 1,
+      "entities": [
+        {
+          "id": "fixture",
+          "cycle": 1,
+          "state": "fixture",
+          "availableAt": 1,
+          "by": "fixture",
+          "at": 1,
+          "epoch": "fixture"
+        }
+      ],
+      "personalClaims": [
+        {
+          "entityId": "fixture",
+          "at": 1
+        }
+      ],
+      "discoveries": [
+        {
+          "entityId": "fixture",
+          "poiId": "fixture",
+          "discovererId": "fixture",
+          "displayName": "fixture",
+          "at": 1
+        }
+      ],
+      "lanterns": [
+        {
+          "id": "fixture",
+          "ownerId": "fixture",
+          "displayName": "fixture",
+          "x": 1,
+          "y": 1,
+          "litBy": "fixture",
+          "at": 1,
+          "litAt": 1
+        }
+      ],
+      "echoes": [
+        {
+          "site": "fixture",
+          "member": "fixture",
+          "settled": true
+        }
+      ],
+      "ground": [
+        {
+          "chunk": {
+            "realm": "fixture",
+            "layer": 1,
+            "cx": 1,
+            "cy": 1
+          },
+          "epoch": "fixture",
+          "changes": {
+            "changes": [
+              {
+                "tx": 1,
+                "ty": 1,
+                "change": "fixture",
+                "by": "fixture",
+                "at": 1
+              }
+            ]
+          }
+        }
+      ],
+      "materials": {
+        "fixture": 1
+      },
+      "glimpse": [
+        {
+          "chunk": {
+            "realm": "fixture",
+            "layer": 1,
+            "cx": 1,
+            "cy": 1
+          },
+          "land": "fixture",
+          "river": true
+        }
+      ],
+      "ways": [
+        {
+          "id": "fixture",
+          "a": "fixture",
+          "b": "fixture",
+          "name": "fixture",
+          "by": "fixture",
+          "tiles": 1,
+          "epoch": "fixture",
+          "at": 1,
+          "path": [
+            {
+              "x": 1,
+              "y": 1
+            }
+          ],
+          "signA": {
+            "x": 1,
+            "y": 1
+          },
+          "signB": {
+            "x": 1,
+            "y": 1
+          }
+        }
+      ]
+    }
+  },
+  {
+    "name": "glimway.v1.WildsNearResult",
+    "case": "valid-near",
+    "json": {
+      "still": {
+        "id": "still-epoch",
+        "worldSeed": "world-seed",
+        "generatorVersion": 3,
+        "season": "0",
+        "startsAt": 1791300000,
+        "endsAt": null,
+        "kind": "still"
+      },
+      "wick": {
+        "id": "wick-epoch",
+        "worldSeed": "world-seed",
+        "generatorVersion": 3,
+        "season": "t:1791300000:1791500000",
+        "startsAt": 1791300000,
+        "endsAt": 1791500000,
+        "kind": "wick"
+      },
+      "frontier": {
+        "rect": {
+          "minCx": -4,
+          "minCy": -8,
+          "maxCx": 4,
+          "maxCy": 0
+        }
+      },
+      "center": {
+        "realm": "hearthwick",
+        "layer": 0,
+        "cx": -2,
+        "cy": -4
+      },
+      "radius": 2,
+      "entities": [
+        {
+          "id": "node:-2:-4:0",
+          "cycle": 1,
+          "state": "harvested",
+          "availableAt": 1791400020,
+          "by": "fixture-account",
+          "at": 1791400000,
+          "epoch": "wick-epoch"
+        }
+      ],
+      "personalClaims": [
+        {
+          "entityId": "chest:-2:-4:0",
+          "at": 1791400000
+        }
+      ],
+      "discoveries": [
+        {
+          "entityId": "place:-1:-2",
+          "poiId": "",
+          "discovererId": "fixture-account",
+          "displayName": "Fixture",
+          "at": 1791400000
+        }
+      ],
+      "lanterns": [
+        {
+          "id": "fallen-lamp",
+          "ownerId": "peer-account",
+          "displayName": "Peer",
+          "x": 400,
+          "y": 300,
+          "litBy": "fixture-account",
+          "at": 1791400000,
+          "litAt": 1791400010
+        }
+      ],
+      "echoes": [
+        {
+          "site": "echo:0",
+          "member": "tam",
+          "settled": false
+        }
+      ],
+      "ground": [
+        {
+          "chunk": {
+            "realm": "hearthwick",
+            "layer": 0,
+            "cx": -2,
+            "cy": -4
+          },
+          "epoch": "wick-epoch",
+          "changes": {
+            "changes": [
+              {
+                "tx": 3,
+                "ty": 4,
+                "change": "cleared",
+                "by": "fixture-account",
+                "at": 1791400000
+              },
+              {
+                "tx": 4,
+                "ty": 4,
+                "change": "stone",
+                "by": "fixture-account",
+                "at": 1791400005
+              }
+            ]
+          }
+        }
+      ],
+      "materials": {
+        "stone": 4
+      },
+      "glimpse": [
+        {
+          "chunk": {
+            "realm": "hearthwick",
+            "layer": 0,
+            "cx": -5,
+            "cy": -4
+          },
+          "land": "meadow",
+          "river": true
+        }
+      ],
+      "ways": [
+        {
+          "id": "way:place:0:-2:place:1:-1",
+          "a": "place:0:-2",
+          "b": "place:1:-1",
+          "name": "Fixture's way",
+          "by": "fixture-account",
+          "tiles": 119,
+          "epoch": "wick-epoch",
+          "at": 1791400100,
+          "path": [
+            {
+              "x": 12,
+              "y": -145
+            },
+            {
+              "x": 12,
+              "y": -144
+            },
+            {
+              "x": 12,
+              "y": -143
+            },
+            {
+              "x": 12,
+              "y": -142
+            },
+            {
+              "x": 12,
+              "y": -141
+            },
+            {
+              "x": 12,
+              "y": -140
+            },
+            {
+              "x": 12,
+              "y": -139
+            },
+            {
+              "x": 12,
+              "y": -138
+            },
+            {
+              "x": 12,
+              "y": -137
+            },
+            {
+              "x": 12,
+              "y": -136
+            },
+            {
+              "x": 12,
+              "y": -135
+            },
+            {
+              "x": 12,
+              "y": -134
+            },
+            {
+              "x": 12,
+              "y": -133
+            },
+            {
+              "x": 12,
+              "y": -132
+            },
+            {
+              "x": 12,
+              "y": -131
+            },
+            {
+              "x": 12,
+              "y": -130
+            },
+            {
+              "x": 12,
+              "y": -129
+            },
+            {
+              "x": 12,
+              "y": -128
+            },
+            {
+              "x": 12,
+              "y": -127
+            },
+            {
+              "x": 12,
+              "y": -126
+            },
+            {
+              "x": 12,
+              "y": -125
+            },
+            {
+              "x": 12,
+              "y": -124
+            },
+            {
+              "x": 12,
+              "y": -123
+            },
+            {
+              "x": 12,
+              "y": -122
+            },
+            {
+              "x": 12,
+              "y": -121
+            },
+            {
+              "x": 12,
+              "y": -120
+            },
+            {
+              "x": 12,
+              "y": -119
+            },
+            {
+              "x": 12,
+              "y": -118
+            },
+            {
+              "x": 12,
+              "y": -117
+            },
+            {
+              "x": 12,
+              "y": -116
+            },
+            {
+              "x": 12,
+              "y": -115
+            },
+            {
+              "x": 12,
+              "y": -114
+            },
+            {
+              "x": 12,
+              "y": -113
+            },
+            {
+              "x": 12,
+              "y": -112
+            },
+            {
+              "x": 12,
+              "y": -111
+            },
+            {
+              "x": 12,
+              "y": -110
+            },
+            {
+              "x": 13,
+              "y": -110
+            },
+            {
+              "x": 14,
+              "y": -110
+            },
+            {
+              "x": 15,
+              "y": -110
+            },
+            {
+              "x": 16,
+              "y": -110
+            },
+            {
+              "x": 17,
+              "y": -110
+            },
+            {
+              "x": 18,
+              "y": -110
+            },
+            {
+              "x": 19,
+              "y": -110
+            },
+            {
+              "x": 20,
+              "y": -110
+            },
+            {
+              "x": 21,
+              "y": -110
+            },
+            {
+              "x": 22,
+              "y": -110
+            },
+            {
+              "x": 23,
+              "y": -110
+            },
+            {
+              "x": 24,
+              "y": -110
+            },
+            {
+              "x": 25,
+              "y": -110
+            },
+            {
+              "x": 26,
+              "y": -110
+            },
+            {
+              "x": 27,
+              "y": -110
+            },
+            {
+              "x": 28,
+              "y": -110
+            },
+            {
+              "x": 29,
+              "y": -110
+            },
+            {
+              "x": 30,
+              "y": -110
+            },
+            {
+              "x": 30,
+              "y": -109
+            },
+            {
+              "x": 30,
+              "y": -108
+            },
+            {
+              "x": 30,
+              "y": -107
+            },
+            {
+              "x": 30,
+              "y": -106
+            },
+            {
+              "x": 30,
+              "y": -105
+            },
+            {
+              "x": 30,
+              "y": -104
+            },
+            {
+              "x": 30,
+              "y": -103
+            },
+            {
+              "x": 30,
+              "y": -102
+            },
+            {
+              "x": 30,
+              "y": -101
+            },
+            {
+              "x": 30,
+              "y": -100
+            },
+            {
+              "x": 29,
+              "y": -100
+            },
+            {
+              "x": 28,
+              "y": -100
+            },
+            {
+              "x": 27,
+              "y": -100
+            },
+            {
+              "x": 26,
+              "y": -100
+            },
+            {
+              "x": 25,
+              "y": -100
+            },
+            {
+              "x": 24,
+              "y": -100
+            },
+            {
+              "x": 23,
+              "y": -100
+            },
+            {
+              "x": 22,
+              "y": -100
+            },
+            {
+              "x": 21,
+              "y": -100
+            },
+            {
+              "x": 20,
+              "y": -100
+            },
+            {
+              "x": 20,
+              "y": -99
+            },
+            {
+              "x": 20,
+              "y": -98
+            },
+            {
+              "x": 20,
+              "y": -97
+            },
+            {
+              "x": 20,
+              "y": -96
+            },
+            {
+              "x": 20,
+              "y": -95
+            },
+            {
+              "x": 20,
+              "y": -94
+            },
+            {
+              "x": 20,
+              "y": -93
+            },
+            {
+              "x": 20,
+              "y": -92
+            },
+            {
+              "x": 20,
+              "y": -91
+            },
+            {
+              "x": 20,
+              "y": -90
+            },
+            {
+              "x": 20,
+              "y": -89
+            },
+            {
+              "x": 20,
+              "y": -88
+            },
+            {
+              "x": 20,
+              "y": -87
+            },
+            {
+              "x": 20,
+              "y": -86
+            },
+            {
+              "x": 20,
+              "y": -85
+            },
+            {
+              "x": 20,
+              "y": -84
+            },
+            {
+              "x": 21,
+              "y": -84
+            },
+            {
+              "x": 22,
+              "y": -84
+            },
+            {
+              "x": 23,
+              "y": -84
+            },
+            {
+              "x": 24,
+              "y": -84
+            },
+            {
+              "x": 25,
+              "y": -84
+            },
+            {
+              "x": 26,
+              "y": -84
+            },
+            {
+              "x": 27,
+              "y": -84
+            },
+            {
+              "x": 28,
+              "y": -84
+            },
+            {
+              "x": 29,
+              "y": -84
+            },
+            {
+              "x": 30,
+              "y": -84
+            },
+            {
+              "x": 31,
+              "y": -84
+            },
+            {
+              "x": 32,
+              "y": -84
+            },
+            {
+              "x": 33,
+              "y": -84
+            },
+            {
+              "x": 34,
+              "y": -84
+            },
+            {
+              "x": 35,
+              "y": -84
+            },
+            {
+              "x": 36,
+              "y": -84
+            },
+            {
+              "x": 37,
+              "y": -84
+            },
+            {
+              "x": 38,
+              "y": -84
+            },
+            {
+              "x": 39,
+              "y": -84
+            },
+            {
+              "x": 40,
+              "y": -84
+            },
+            {
+              "x": 41,
+              "y": -84
+            },
+            {
+              "x": 42,
+              "y": -84
+            },
+            {
+              "x": 43,
+              "y": -84
+            },
+            {
+              "x": 44,
+              "y": -84
+            },
+            {
+              "x": 45,
+              "y": -84
+            },
+            {
+              "x": 46,
+              "y": -84
+            },
+            {
+              "x": 47,
+              "y": -84
+            },
+            {
+              "x": 48,
+              "y": -84
+            },
+            {
+              "x": 49,
+              "y": -84
+            }
+          ],
+          "signA": {
+            "x": 11,
+            "y": -145
+          },
+          "signB": {
+            "x": 49,
+            "y": -83
+          }
+        }
+      ]
+    }
+  },
+  {
     "name": "glimway.v1.WildsPersonalClaim",
     "case": "empty",
     "json": {
@@ -7106,6 +10422,26 @@
     "json": {
       "entityId": "fixture",
       "at": 1
+    }
+  },
+  {
+    "name": "glimway.v1.WildsPlaceMark",
+    "case": "empty",
+    "json": {
+      "id": "",
+      "kind": "",
+      "tx": 0,
+      "ty": 0
+    }
+  },
+  {
+    "name": "glimway.v1.WildsPlaceMark",
+    "case": "populated",
+    "json": {
+      "id": "fixture",
+      "kind": "fixture",
+      "tx": 1,
+      "ty": 1
     }
   },
   {
@@ -7128,11 +10464,11 @@
       "epoch": {
         "id": "fixture",
         "worldSeed": "fixture",
-        "regionId": "fixture",
         "generatorVersion": 1,
         "season": "fixture",
         "startsAt": 1,
-        "endsAt": 1
+        "endsAt": 1,
+        "kind": "fixture"
       },
       "entities": [
         {
@@ -7185,53 +10521,90 @@
     }
   },
   {
-    "name": "glimway.v1.WildsRegionResult",
-    "case": "valid-region",
+    "name": "glimway.v1.WildsRumour",
+    "case": "empty",
     "json": {
-      "epoch": {
-        "id": "epoch",
-        "worldSeed": "world-seed",
-        "regionId": "outer-1",
-        "generatorVersion": 2,
-        "season": "autumn",
-        "startsAt": 1791300000,
-        "endsAt": 1791500000
-      },
-      "entities": [
+      "epoch": "",
+      "place": "",
+      "landmark": "",
+      "compass": "",
+      "ring": 0,
+      "pastRiver": false,
+      "site": "",
+      "opened": false
+    }
+  },
+  {
+    "name": "glimway.v1.WildsRumour",
+    "case": "populated",
+    "json": {
+      "epoch": "fixture",
+      "place": "fixture",
+      "landmark": "fixture",
+      "compass": "fixture",
+      "ring": 1,
+      "pastRiver": true,
+      "site": "fixture",
+      "opened": true
+    }
+  },
+  {
+    "name": "glimway.v1.WildsRumour",
+    "case": "rumour",
+    "json": {
+      "epoch": "wick-epoch",
+      "place": "place:-1:-2",
+      "landmark": "split-oak",
+      "compass": "nw",
+      "ring": 2,
+      "pastRiver": true,
+      "site": "rumour:-3:-7",
+      "opened": false
+    }
+  },
+  {
+    "name": "glimway.v1.WildsWay",
+    "case": "empty",
+    "json": {
+      "id": "",
+      "a": "",
+      "b": "",
+      "name": "",
+      "by": "",
+      "tiles": 0,
+      "epoch": "",
+      "at": 0,
+      "path": [],
+      "signA": null,
+      "signB": null
+    }
+  },
+  {
+    "name": "glimway.v1.WildsWay",
+    "case": "populated",
+    "json": {
+      "id": "fixture",
+      "a": "fixture",
+      "b": "fixture",
+      "name": "fixture",
+      "by": "fixture",
+      "tiles": 1,
+      "epoch": "fixture",
+      "at": 1,
+      "path": [
         {
-          "id": "node:1:0:0",
-          "cycle": 2,
-          "state": "harvested",
-          "availableAt": 1791400020,
-          "by": "fixture-account",
-          "at": 1791400000,
-          "epoch": "epoch"
+          "x": 1,
+          "y": 1
         }
       ],
-      "personalClaims": [],
-      "discoveries": [],
-      "lanterns": [
-        {
-          "id": "fallen-lamp",
-          "ownerId": "peer-account",
-          "displayName": "Peer",
-          "x": 400,
-          "y": 300,
-          "litBy": "fixture-account",
-          "at": 1791400000,
-          "litAt": 1791400010
-        }
-      ],
-      "materials": {
-        "timber": 3
+      "signA": {
+        "x": 1,
+        "y": 1
       },
-      "echoes": [
-        {
-          "site": "echo-tam",
-          "member": "tam",
-          "settled": true
-        }
-      ]
+      "signB": {
+        "x": 1,
+        "y": 1
+      }
     }
   },
   {
@@ -7795,6 +11168,22 @@
     }
   },
   {
+    "name": "glimway.v1.WorldTile",
+    "case": "empty",
+    "json": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  {
+    "name": "glimway.v1.WorldTile",
+    "case": "populated",
+    "json": {
+      "x": 1,
+      "y": 1
+    }
+  },
+  {
     "name": "glimway.v1.WorldView",
     "case": "empty",
     "json": {
@@ -7944,7 +11333,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "story": {
           "quests": {},
@@ -7987,7 +11376,8 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
-        }
+        },
+        "rumour": null
       },
       "result": {
         "gateCount": 2,
@@ -8103,7 +11493,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "story": {
           "quests": {},
@@ -8146,7 +11536,8 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
-        }
+        },
+        "rumour": null
       },
       "result": {
         "items": {
@@ -8250,7 +11641,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "story": {
           "quests": {},
@@ -8293,7 +11684,8 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
-        }
+        },
+        "rumour": null
       },
       "result": {
         "inventory": {
@@ -8387,7 +11779,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "story": {
           "quests": {},
@@ -8430,7 +11822,8 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
-        }
+        },
+        "rumour": null
       },
       "result": {
         "grantablePapers": [],
@@ -8648,7 +12041,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "story": {
           "quests": {},
@@ -8691,7 +12084,8 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
-        }
+        },
+        "rumour": null
       },
       "result": {
         "home": null,
@@ -8791,7 +12185,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "story": {
           "quests": {},
@@ -8834,7 +12228,8 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
-        }
+        },
+        "rumour": null
       },
       "result": {
         "home": null,
@@ -8922,7 +12317,7 @@
           "x": 400,
           "y": 300,
           "placeSetVersion": 0,
-          "outerEpoch": ""
+          "wickEpoch": ""
         },
         "story": {
           "quests": {},
@@ -8965,7 +12360,8 @@
           "pending": 0,
           "xpMark": 0,
           "verifiedXp": 0
-        }
+        },
+        "rumour": null
       },
       "result": {
         "items": {

@@ -51,14 +51,15 @@ import { adoptable, fallRecovery, gameStateOf, isClientMark, predictCompanions, 
 import { PurseTopUpRequestSchema, type PurseRead } from '../lib/gen/glimway/v1/purse_pb.js'
 import { OpHeaderSchema } from '../lib/gen/glimway/v1/op_pb.js'
 import { purseOf, topUpView, type PurseView, type TopUpView } from '../lib/purse.ts'
+import type { RumourParts } from '../lib/wilds/rumour.ts'
 import { CompanionsRequestSchema, MountHomeRequestSchema, MountOutRequestSchema, StableExtendRequestSchema, StallRequestSchema, type StableExtendResult, type StallResult } from '../lib/gen/glimway/v1/companions_pb.js'
 import { projectHome } from '../lib/api/homestead.ts'
 import { REPORT_INTERVAL_MS, ReportBook, type CapturedReport, type ReportAck } from '../lib/api/reports.ts'
 import { ReportPump } from '../lib/api/report-pump.ts'
-import type { HomeAction, HomeActionResponse, HomeOp, HomeView, ItemsOp, CommonsResponse, Snapshot, WildsRegionResponse } from '../lib/api/types.ts'
+import type { HomeAction, HomeActionResponse, HomeOp, HomeView, ItemsOp, CommonsResponse, Snapshot } from '../lib/api/types.ts'
 import { contributeRequest, deskCopyRequest, hearthCraftRequest, homesteadRequest, itemsRequest, mailKeyedRequest, mailSendRequest, shelfRequest, storageRequest, craftRequest, type ItemsFields, type MailSendAction, type ShelfAction, type StorageMoveAction } from '../lib/api/requests.ts'
 import { EnvelopeSchema, PlayerStateSchema, PlayRequestSchema, type PlayerState } from '../lib/gen/glimway/v1/state_pb.js'
-import { FallRequestSchema, MarkRequestSchema, ProfileReportSchema, QuestStepRequestSchema, SettleEchoRequestSchema, SpendRequestSchema, TakePaperRequestSchema, WildsClaimRequestSchema, WildsLanternRequestSchema, type ProfileResult, type SettleEchoResult, type WildsClaimResult as WildsClaimProto, type WildsLanternResult as WildsLanternProto } from '../lib/gen/glimway/v1/operations_pb.js'
+import { FallRequestSchema, MarkRequestSchema, ProfileReportSchema, QuestStepRequestSchema, SettleEchoRequestSchema, SpendRequestSchema, TakePaperRequestSchema, WildsClaimRequestSchema, WildsLanternRequestSchema, WildsClearRequestSchema, WildsLayRequestSchema, WildsLiftRequestSchema, WildsDiscoverRequestSchema, type ProfileResult, type SettleEchoResult, type WildsClaimResult as WildsClaimProto, type WildsLanternResult as WildsLanternProto, type WildsClearResult, type WildsLayResult, type WildsLiftResult, type WildsDiscoverResult } from '../lib/gen/glimway/v1/operations_pb.js'
 import { ContributeRequestSchema, CraftRequestSchema, DeskCopyRequestSchema, HearthCraftRequestSchema, MailKeyedRequestSchema, MailSendRequestSchema, StorageMoveRequestSchema } from '../lib/gen/glimway/v1/village_pb.js'
 import { HomesteadRequestSchema, ShelfRequestSchema } from '../lib/gen/glimway/v1/homestead_pb.js'
 import { ItemsRequestSchema } from '../lib/gen/glimway/v1/items_pb.js'
@@ -70,7 +71,7 @@ import { rawUserFor } from '../lib/habitica/client.ts'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types.ts'
 import { FLAGS, WELCOME_GLIMS, type GlimSpend, type SpendReason } from '../lib/glims.ts'
 import type { GameState } from '../lib/state.ts'
-import { EV, type Emit, type LinkPayload, type LinkStatus } from './event-names.ts'
+import { EV, type Emit, type LinkPayload, type LinkStatus, type WildsSettledPayload } from './event-names.ts'
 import { serverNow } from './clock.ts'
 import { glimsGift } from '../content/purse.ts'
 import { unlockNotice, type MagicMarks } from '../lib/combat.ts'
@@ -311,6 +312,11 @@ const TYPED: Partial<Record<OutboxKind, { schema: DescMessage; path: string; res
   spend: { schema: SpendRequestSchema, path: '/api/spend', result: 'spend', send: (ops, req) => ops.spend(req) },
   'wilds-claim': { schema: WildsClaimRequestSchema, path: '/api/wilds/claim', result: 'wildsClaim', send: (ops, req) => ops.wildsClaim(req) },
   'wilds-lantern': { schema: WildsLanternRequestSchema, path: '/api/wilds/lantern', result: 'wildsLantern', send: (ops, req) => ops.wildsLantern(req) },
+  // Paths and finds on the open map (open-map.md 2.10, 3): online only, the land is shared.
+  'wilds-clear': { schema: WildsClearRequestSchema, path: '/api/wilds/clear', result: 'wildsClear', send: (ops, req) => ops.wildsClear(req) },
+  'wilds-lay': { schema: WildsLayRequestSchema, path: '/api/wilds/lay', result: 'wildsLay', send: (ops, req) => ops.wildsLay(req) },
+  'wilds-lift': { schema: WildsLiftRequestSchema, path: '/api/wilds/lift', result: 'wildsLift', send: (ops, req) => ops.wildsLift(req) },
+  'wilds-discover': { schema: WildsDiscoverRequestSchema, path: '/api/wilds/discover', result: 'wildsDiscover', send: (ops, req) => ops.wildsDiscover(req) },
   // Companions and the stable (crafts.md 6.2).
   companions: { schema: CompanionsRequestSchema, path: '/api/companions', result: 'companions', send: (ops, req) => ops.companions(req) },
   stall: { schema: StallRequestSchema, path: '/api/stable/stall', result: 'stall', send: (ops, req) => ops.stall(req) },
@@ -324,6 +330,9 @@ const TYPED: Partial<Record<OutboxKind, { schema: DescMessage; path: string; res
   // The wardrobe (purse-and-wardrobe.md 6.2): predicted, and queued offline like companions.
   wardrobe: { schema: WardrobeRequestSchema, path: '/api/wardrobe', result: 'wardrobe', send: (ops, req) => ops.wardrobe(req) }
 }
+
+/** The open map's operations, settled in the Wilds store by key (EV.wildsSettled). */
+const WILDS_SETTLED: ReadonlySet<OutboxKind> = new Set(['wilds-clear', 'wilds-lay', 'wilds-lift', 'wilds-discover'])
 
 /** The same mutation asked again: its route and fields, apart from the header and where the hero stands. */
 function sameRequest(entry: OutboxEntry, path: string, body: Record<string, unknown>): boolean {
@@ -538,7 +547,7 @@ export class Link {
     const pendingFall = n.boundary !== null && this.entries.some((e) => e.id === n.boundary && e.kind === 'fall')
     if (n.place && (pendingFall || n.basis >= (this.server.vitals?.vitalsSetVersion ?? 0))) {
       const live = gameStateOf(create(PlayerStateSchema, { ...this.server, place: { ...this.server.place!, area: n.place.area, x: n.place.x, y: n.place.y } }))
-      return { ...view, area: live.area, position: live.position, ...(live.wildsRegion ? { wildsRegion: live.wildsRegion } : {}), hp: Math.min(n.hp, view.maxHp), mana: Math.min(n.mana, view.maxMana) }
+      return { ...view, area: live.area, position: live.position, hp: Math.min(n.hp, view.maxHp), mana: Math.min(n.mana, view.maxMana) }
     }
     return view
   }
@@ -629,6 +638,7 @@ export class Link {
     this.noteCompanions()
     this.notePurse()
     this.noteWardrobe()
+    this.noteRumour()
   }
 
   /** The level and class marks the screen holds (null until a state carries them). */
@@ -746,6 +756,29 @@ export class Link {
   async refreshState(): Promise<void> {
     if (this.status !== 'online' || this.busy) return
     if ((await this.reconcile()) === 'ok') this.refresh()
+  }
+
+  // ------------------------------------------------------------ the rumour (open-map.md 2.10)
+
+  private rumourShown = ''
+
+  /**
+   * This wick's rumour as the server last said, or null (none this wick, or
+   * not read yet). It can change at the turning without a version bump, so
+   * the turning reads the state again (`refreshState`).
+   */
+  get rumour(): (RumourParts & { epoch: string; place: string; site: string }) | null {
+    const r = this.server.rumour
+    return r ? { epoch: r.epoch, place: r.place, site: r.site, landmark: r.landmark, compass: r.compass, ring: r.ring, pastRiver: r.pastRiver, opened: r.opened } : null
+  }
+
+  /** Tell the game when the rumour changed (a read, the turning, opening its find). */
+  private noteRumour(): void {
+    const now = this.rumour
+    const json = JSON.stringify(now)
+    if (json === this.rumourShown) return
+    this.rumourShown = json
+    this.emitter(EV.rumour, now)
   }
 
   // ------------------------------------------------------------ the wardrobe (purse-and-wardrobe.md 4)
@@ -1409,6 +1442,12 @@ export class Link {
 
   /** Tell a waiting caller (once), or the features about a replay nobody waited for. */
   private notify(entry: OutboxEntry, outcome: Outcome): void {
+    // The open map's operations settle in the Wilds store by their key, whoever waits
+    // (a replay after a lost answer or a reload included), before their caller hears.
+    if (WILDS_SETTLED.has(entry.kind) && (outcome.ok || (outcome.code !== 'pending' && outcome.code !== 'busy'))) {
+      const result = outcome.ok ? (outcome.result as { value?: unknown } | null)?.value ?? null : null
+      this.emitter(EV.wildsSettled, { kind: entry.kind as WildsSettledPayload['kind'], key: entry.key, world: this.worldId, outcome: outcome.ok ? { ok: true, result } : { ok: false, code: outcome.code } })
+    }
     const waiter = this.waiters.get(entry.id)
     if (waiter) {
       this.waiters.delete(entry.id)
@@ -1794,14 +1833,6 @@ export class Link {
 
   // ------------------------------------------------------------ the Wilds
 
-  /** Region read (a GET: no lease). Adopts a newer state, never moves the hero. */
-  async wildsRegion(regionId: string): Promise<WildsRegionResponse> {
-    const res = await this.api.run((raw) => raw.wildsRegion(regionId))
-    this.contact()
-    if (res.player && this.compare(res.player) === 'newer') this.adopt(res.player)
-    return res
-  }
-
   /**
    * Choose who comes along and who lives at home (crafts.md 2.4). Predicted
    * at once and queued offline, like a mark: it can't fail on shared state.
@@ -1933,6 +1964,46 @@ export class Link {
     if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
     const res = r.result as { case?: string; value?: WildsLanternProto }
     if (res?.case !== 'wildsLantern' || !res.value) return { ok: false, code: 'bad-response' }
+    return { ok: true, result: res.value }
+  }
+
+  /**
+   * Clear, lay or lift a path tile (open-map.md section 3), at world tile
+   * (x, y) from where the hero stands. Needs a connection. `key` is the
+   * caller's, so it can track the operation: its answer, refusal or replay
+   * settles in the Wilds store through EV.wildsSettled.
+   */
+  async wildsPath(op: 'clear' | 'lay' | 'lift', req: { x: number; y: number; kind?: string; where?: WhereJson; key?: string }): Promise<WildsOutcome<WildsClearResult | WildsLayResult | WildsLiftResult>> {
+    const s = this.session
+    if (!s) return { ok: false, code: 'unknown' }
+    const key = req.key ?? newKey()
+    const kind = `wilds-${op}` as const
+    const typed = TYPED[kind]!
+    const head = { op: { lease: '', key }, where: req.where ?? whereOf(s.state), x: req.x, y: req.y }
+    const json = op === 'lay'
+      ? toJson(WildsLayRequestSchema, create(WildsLayRequestSchema, { ...head, kind: req.kind ?? '' }), { alwaysEmitImplicit: true })
+      : op === 'lift'
+        ? toJson(WildsLiftRequestSchema, create(WildsLiftRequestSchema, head), { alwaysEmitImplicit: true })
+        : toJson(WildsClearRequestSchema, create(WildsClearRequestSchema, head), { alwaysEmitImplicit: true })
+    const body = json as Record<string, unknown>
+    const { outcome: r } = await this.submit(kind, typed.path, key, body, { offline: false })
+    if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
+    const res = r.result as { case?: string; value?: WildsClearResult | WildsLayResult | WildsLiftResult }
+    if (res?.case !== typed.result || !res.value?.ground) return { ok: false, code: 'bad-response' }
+    return { ok: true, result: res.value }
+  }
+
+  /** Tell the server you reached a place (open-map.md 2.10): the first this wick gets a find. */
+  async wildsDiscover(req: { epoch: string; place: string; where?: WhereJson; key?: string }): Promise<WildsOutcome<WildsDiscoverResult>> {
+    const s = this.session
+    if (!s) return { ok: false, code: 'unknown' }
+    if (!req.epoch) return { ok: false, code: 'epoch-not-found' }
+    const key = req.key ?? newKey()
+    const body = toJson(WildsDiscoverRequestSchema, create(WildsDiscoverRequestSchema, { op: { lease: '', key }, epoch: req.epoch, place: req.place, where: req.where ?? whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
+    const { outcome: r } = await this.submit('wilds-discover', TYPED['wilds-discover']!.path, key, body, { offline: false })
+    if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
+    const res = r.result as { case?: string; value?: WildsDiscoverResult }
+    if (res?.case !== 'wildsDiscover' || !res.value?.discovery) return { ok: false, code: 'bad-response' }
     return { ok: true, result: res.value }
   }
 

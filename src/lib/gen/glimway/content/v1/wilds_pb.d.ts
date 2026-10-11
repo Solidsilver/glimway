@@ -33,18 +33,12 @@ export declare type Wilds = Message<"glimway.content.v1.Wilds"> & {
   chunkSize: number;
 
   /**
-   * How far from the Tangle entry the deep tangle begins.
+   * How far from the Tangle's middle chunk the deep tangle begins (design
+   * 2.4: deepCountry is tier 2 and up, or the Tangle's far chunks).
    *
    * @generated from field: int32 deep_tangle_manhattan_distance = 3;
    */
   deepTangleManhattanDistance: number;
-
-  /**
-   * The two regions (inner Tangle, outer Wilds); ids unique (code rule).
-   *
-   * @generated from field: repeated glimway.content.v1.WildsRegion regions = 4;
-   */
-  regions: WildsRegion[];
 
   /**
    * Enemy vocabularies; camp mixes may name only these (code rule).
@@ -54,7 +48,8 @@ export declare type Wilds = Message<"glimway.content.v1.Wilds"> & {
   enemyKinds: string[];
 
   /**
-   * Each mix is one camp's enemy roll, non-empty, of known enemy kinds.
+   * Each mix is one camp's enemy roll, non-empty, of known enemy kinds; ids
+   * unique (code rule). Lands and tiers weight them by id.
    *
    * @generated from field: repeated glimway.content.v1.WildsCampMix camp_mixes = 6;
    */
@@ -68,7 +63,7 @@ export declare type Wilds = Message<"glimway.content.v1.Wilds"> & {
   materials: string[];
 
   /**
-   * Points of interest the outer Wilds place.
+   * Points of interest the Wilds place.
    *
    * @generated from field: repeated string poi_ids = 8;
    */
@@ -109,6 +104,122 @@ export declare type Wilds = Message<"glimway.content.v1.Wilds"> & {
    * @generated from field: glimway.content.v1.WildsTimers timers = 13;
    */
   timers?: WildsTimers | undefined;
+
+  /**
+   * The realm every Wilds chunk key carries (design 2.1).
+   *
+   * @generated from field: string realm = 14;
+   */
+  realm: string;
+
+  /**
+   * The ground vocabulary, in id order: a ground's index here is its value
+   * in the generator. Ids and terrain keys unique (code rule).
+   *
+   * @generated from field: repeated glimway.content.v1.WildsGround grounds = 15;
+   */
+  grounds: WildsGround[];
+
+  /**
+   * The decor vocabulary and its art footprints, in id order; kinds unique
+   * (code rule).
+   *
+   * @generated from field: repeated glimway.content.v1.WildsDecorKind decor = 16;
+   */
+  decor: WildsDecorKind[];
+
+  /**
+   * Named footprints with fixed sites (the Tangle, the Whitequiet); ids
+   * unique, footprints apart, references known (code rules).
+   *
+   * @generated from field: repeated glimway.content.v1.WildsPlace places = 17;
+   */
+  places: WildsPlace[];
+
+  /**
+   * Kinds of land (decision 15): what a patch of land is made of.
+   *
+   * @generated from field: repeated glimway.content.v1.WildsLand lands = 18;
+   */
+  lands: WildsLand[];
+
+  /**
+   * How big patches of land grow (decision 16).
+   *
+   * @generated from field: glimway.content.v1.WildsLandSizes land_sizes = 19;
+   */
+  landSizes?: WildsLandSizes | undefined;
+
+  /**
+   * Per tier of difficulty, numbered 1..n without gaps (code rule).
+   *
+   * @generated from field: repeated glimway.content.v1.WildsTier tiers = 20;
+   */
+  tiers: WildsTier[];
+
+  /**
+   * The 0.8 bound before lamps (decision 3).
+   *
+   * @generated from field: glimway.content.v1.WildsFrontier frontier = 21;
+   */
+  frontier?: WildsFrontier | undefined;
+
+  /**
+   * Paths players make (decisions 5, 7; section 3).
+   *
+   * @generated from field: glimway.content.v1.WildsPaths paths = 22;
+   */
+  paths?: WildsPaths | undefined;
+
+  /**
+   * The Wend (decision 12).
+   *
+   * @generated from field: glimway.content.v1.WildsRiver river = 23;
+   */
+  river?: WildsRiver | undefined;
+
+  /**
+   * The Lantern Road (decision 18: it never turns).
+   *
+   * @generated from field: glimway.content.v1.WildsRoad road = 24;
+   */
+  road?: WildsRoad | undefined;
+
+  /**
+   * What a cell's one place can be (design 2.2 pass 1); ids unique (code
+   * rule).
+   *
+   * @generated from field: repeated glimway.content.v1.WildsPlaceKind place_kinds = 25;
+   */
+  placeKinds: WildsPlaceKind[];
+
+  /**
+   * The cell grid places sit on (design 2.2 pass 1).
+   *
+   * @generated from field: glimway.content.v1.WildsCells cells = 26;
+   */
+  cells?: WildsCells | undefined;
+
+  /**
+   * Chunks per difficulty ring past the Whitequiet (decision 9).
+   *
+   * @generated from field: int32 tier_ring_chunks = 27;
+   */
+  tierRingChunks: number;
+
+  /**
+   * In-world lines (design 2.9).
+   *
+   * @generated from field: glimway.content.v1.WildsWords words = 28;
+   */
+  words?: WildsWords | undefined;
+
+  /**
+   * The parts Elara's rumour is built from (decision 19, design 2.10).
+   *
+   * @generated from field: glimway.content.v1.WildsRumour rumour = 29;
+   */
+  rumour?: WildsRumour | undefined;
 };
 
 /**
@@ -134,18 +245,12 @@ export declare type WildsValid = Message<"glimway.content.v1.Wilds"> & {
   chunkSize: number;
 
   /**
-   * How far from the Tangle entry the deep tangle begins.
+   * How far from the Tangle's middle chunk the deep tangle begins (design
+   * 2.4: deepCountry is tier 2 and up, or the Tangle's far chunks).
    *
    * @generated from field: int32 deep_tangle_manhattan_distance = 3;
    */
   deepTangleManhattanDistance: number;
-
-  /**
-   * The two regions (inner Tangle, outer Wilds); ids unique (code rule).
-   *
-   * @generated from field: repeated glimway.content.v1.WildsRegion regions = 4;
-   */
-  regions: WildsRegionValid[];
 
   /**
    * Enemy vocabularies; camp mixes may name only these (code rule).
@@ -155,7 +260,8 @@ export declare type WildsValid = Message<"glimway.content.v1.Wilds"> & {
   enemyKinds: string[];
 
   /**
-   * Each mix is one camp's enemy roll, non-empty, of known enemy kinds.
+   * Each mix is one camp's enemy roll, non-empty, of known enemy kinds; ids
+   * unique (code rule). Lands and tiers weight them by id.
    *
    * @generated from field: repeated glimway.content.v1.WildsCampMix camp_mixes = 6;
    */
@@ -169,7 +275,7 @@ export declare type WildsValid = Message<"glimway.content.v1.Wilds"> & {
   materials: string[];
 
   /**
-   * Points of interest the outer Wilds place.
+   * Points of interest the Wilds place.
    *
    * @generated from field: repeated string poi_ids = 8;
    */
@@ -210,6 +316,122 @@ export declare type WildsValid = Message<"glimway.content.v1.Wilds"> & {
    * @generated from field: glimway.content.v1.WildsTimers timers = 13;
    */
   timers: WildsTimersValid;
+
+  /**
+   * The realm every Wilds chunk key carries (design 2.1).
+   *
+   * @generated from field: string realm = 14;
+   */
+  realm: string;
+
+  /**
+   * The ground vocabulary, in id order: a ground's index here is its value
+   * in the generator. Ids and terrain keys unique (code rule).
+   *
+   * @generated from field: repeated glimway.content.v1.WildsGround grounds = 15;
+   */
+  grounds: WildsGroundValid[];
+
+  /**
+   * The decor vocabulary and its art footprints, in id order; kinds unique
+   * (code rule).
+   *
+   * @generated from field: repeated glimway.content.v1.WildsDecorKind decor = 16;
+   */
+  decor: WildsDecorKindValid[];
+
+  /**
+   * Named footprints with fixed sites (the Tangle, the Whitequiet); ids
+   * unique, footprints apart, references known (code rules).
+   *
+   * @generated from field: repeated glimway.content.v1.WildsPlace places = 17;
+   */
+  places: WildsPlaceValid[];
+
+  /**
+   * Kinds of land (decision 15): what a patch of land is made of.
+   *
+   * @generated from field: repeated glimway.content.v1.WildsLand lands = 18;
+   */
+  lands: WildsLandValid[];
+
+  /**
+   * How big patches of land grow (decision 16).
+   *
+   * @generated from field: glimway.content.v1.WildsLandSizes land_sizes = 19;
+   */
+  landSizes: WildsLandSizesValid;
+
+  /**
+   * Per tier of difficulty, numbered 1..n without gaps (code rule).
+   *
+   * @generated from field: repeated glimway.content.v1.WildsTier tiers = 20;
+   */
+  tiers: WildsTierValid[];
+
+  /**
+   * The 0.8 bound before lamps (decision 3).
+   *
+   * @generated from field: glimway.content.v1.WildsFrontier frontier = 21;
+   */
+  frontier: WildsFrontierValid;
+
+  /**
+   * Paths players make (decisions 5, 7; section 3).
+   *
+   * @generated from field: glimway.content.v1.WildsPaths paths = 22;
+   */
+  paths: WildsPathsValid;
+
+  /**
+   * The Wend (decision 12).
+   *
+   * @generated from field: glimway.content.v1.WildsRiver river = 23;
+   */
+  river: WildsRiverValid;
+
+  /**
+   * The Lantern Road (decision 18: it never turns).
+   *
+   * @generated from field: glimway.content.v1.WildsRoad road = 24;
+   */
+  road: WildsRoadValid;
+
+  /**
+   * What a cell's one place can be (design 2.2 pass 1); ids unique (code
+   * rule).
+   *
+   * @generated from field: repeated glimway.content.v1.WildsPlaceKind place_kinds = 25;
+   */
+  placeKinds: WildsPlaceKindValid[];
+
+  /**
+   * The cell grid places sit on (design 2.2 pass 1).
+   *
+   * @generated from field: glimway.content.v1.WildsCells cells = 26;
+   */
+  cells: WildsCellsValid;
+
+  /**
+   * Chunks per difficulty ring past the Whitequiet (decision 9).
+   *
+   * @generated from field: int32 tier_ring_chunks = 27;
+   */
+  tierRingChunks: number;
+
+  /**
+   * In-world lines (design 2.9).
+   *
+   * @generated from field: glimway.content.v1.WildsWords words = 28;
+   */
+  words: WildsWordsValid;
+
+  /**
+   * The parts Elara's rumour is built from (decision 19, design 2.10).
+   *
+   * @generated from field: glimway.content.v1.WildsRumour rumour = 29;
+   */
+  rumour: WildsRumourValid;
 };
 
 /**
@@ -219,96 +441,19 @@ export declare type WildsValid = Message<"glimway.content.v1.Wilds"> & {
 export declare const WildsSchema: GenMessage<Wilds, {validType: WildsValid}>;
 
 /**
- * One region: its chunk grid and the chunk the player enters by.
- * Zero is a legal entry coordinate, so entry is explicit presence: a
- * missing key must not read as tile 0.
- *
- * @generated from message glimway.content.v1.WildsRegion
- */
-export declare type WildsRegion = Message<"glimway.content.v1.WildsRegion"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
-
-  /**
-   * @generated from field: string kind = 2;
-   */
-  kind: string;
-
-  /**
-   * @generated from field: int32 grid_width = 3;
-   */
-  gridWidth: number;
-
-  /**
-   * @generated from field: int32 grid_height = 4;
-   */
-  gridHeight: number;
-
-  /**
-   * @generated from field: optional int32 entry_x = 5;
-   */
-  entryX?: number | undefined;
-
-  /**
-   * @generated from field: optional int32 entry_y = 6;
-   */
-  entryY?: number | undefined;
-};
-
-/**
- * One region: its chunk grid and the chunk the player enters by.
- * Zero is a legal entry coordinate, so entry is explicit presence: a
- * missing key must not read as tile 0.
- *
- * @generated from message glimway.content.v1.WildsRegion
- */
-export declare type WildsRegionValid = Message<"glimway.content.v1.WildsRegion"> & {
-  /**
-   * @generated from field: string id = 1;
-   */
-  id: string;
-
-  /**
-   * @generated from field: string kind = 2;
-   */
-  kind: string;
-
-  /**
-   * @generated from field: int32 grid_width = 3;
-   */
-  gridWidth: number;
-
-  /**
-   * @generated from field: int32 grid_height = 4;
-   */
-  gridHeight: number;
-
-  /**
-   * @generated from field: optional int32 entry_x = 5;
-   */
-  entryX: number;
-
-  /**
-   * @generated from field: optional int32 entry_y = 6;
-   */
-  entryY: number;
-};
-
-/**
- * Describes the message glimway.content.v1.WildsRegion.
- * Use `create(WildsRegionSchema)` to create a new message.
- */
-export declare const WildsRegionSchema: GenMessage<WildsRegion, {validType: WildsRegionValid}>;
-
-/**
  * One camp's enemy roll: the old file carried a bare list of lists, which
  * proto can't express, so each row is a message naming its mix.
  *
  * @generated from message glimway.content.v1.WildsCampMix
  */
 export declare type WildsCampMix = Message<"glimway.content.v1.WildsCampMix"> & {
+  /**
+   * The mix's id, for lands' and tiers' weights.
+   *
+   * @generated from field: string id = 2;
+   */
+  id: string;
+
   /**
    * @generated from field: repeated string enemies = 1;
    */
@@ -416,7 +561,9 @@ export declare type WildsLootEntryValid = WildsLootEntry;
 export declare const WildsLootEntrySchema: GenMessage<WildsLootEntry, {validType: WildsLootEntryValid}>;
 
 /**
- * One table: at least one row (the map's value rule on Wilds).
+ * One table: at least one row (the map's value rule on Wilds). A table may
+ * set its own trinket chance (the rumour's find is higher); otherwise the
+ * file's trinketChancePermille holds.
  *
  * @generated from message glimway.content.v1.WildsLootTable
  */
@@ -425,6 +572,11 @@ export declare type WildsLootTable = Message<"glimway.content.v1.WildsLootTable"
    * @generated from field: repeated glimway.content.v1.WildsLootEntry entries = 1;
    */
   entries: WildsLootEntry[];
+
+  /**
+   * @generated from field: optional int32 trinket_chance_permille = 2;
+   */
+  trinketChancePermille?: number | undefined;
 };
 
 export declare type WildsLootTableValid = WildsLootTable;
@@ -459,4 +611,1670 @@ export declare type WildsTimersValid = WildsTimers;
  * Use `create(WildsTimersSchema)` to create a new message.
  */
 export declare const WildsTimersSchema: GenMessage<WildsTimers, {validType: WildsTimersValid}>;
+
+/**
+ * A relative weight for a weighted draw: `id` names an entry of the list the
+ * field documents (a decor kind, a material, a camp mix, a land).
+ *
+ * @generated from message glimway.content.v1.WildsWeight
+ */
+export declare type WildsWeight = Message<"glimway.content.v1.WildsWeight"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: int32 weight = 2;
+   */
+  weight: number;
+};
+
+export declare type WildsWeightValid = WildsWeight;
+
+/**
+ * Describes the message glimway.content.v1.WildsWeight.
+ * Use `create(WildsWeightSchema)` to create a new message.
+ */
+export declare const WildsWeightSchema: GenMessage<WildsWeight, {validType: WildsWeightValid}>;
+
+/**
+ * One ground. A chunk's palette names its grounds by `terrain` (the
+ * TERRAIN key in src/lib/tile.ts the ground art reads); content refers to
+ * them by `id`.
+ *
+ * @generated from message glimway.content.v1.WildsGround
+ */
+export declare type WildsGround = Message<"glimway.content.v1.WildsGround"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string terrain = 2;
+   */
+  terrain: string;
+
+  /**
+   * A carve only ever raises a tile's ground (moss never paints over a path).
+   *
+   * @generated from field: optional int32 rank = 3;
+   */
+  rank?: number | undefined;
+
+  /**
+   * What players may do on it (section 3): "land" can be laid on, "water"
+   * is never walkable, "ford" is waded, "road" and "laid" are left alone.
+   *
+   * @generated from field: string surface = 4;
+   */
+  surface: string;
+};
+
+/**
+ * One ground. A chunk's palette names its grounds by `terrain` (the
+ * TERRAIN key in src/lib/tile.ts the ground art reads); content refers to
+ * them by `id`.
+ *
+ * @generated from message glimway.content.v1.WildsGround
+ */
+export declare type WildsGroundValid = Message<"glimway.content.v1.WildsGround"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string terrain = 2;
+   */
+  terrain: string;
+
+  /**
+   * A carve only ever raises a tile's ground (moss never paints over a path).
+   *
+   * @generated from field: optional int32 rank = 3;
+   */
+  rank: number;
+
+  /**
+   * What players may do on it (section 3): "land" can be laid on, "water"
+   * is never walkable, "ford" is waded, "road" and "laid" are left alone.
+   *
+   * @generated from field: string surface = 4;
+   */
+  surface: string;
+};
+
+/**
+ * Describes the message glimway.content.v1.WildsGround.
+ * Use `create(WildsGroundSchema)` to create a new message.
+ */
+export declare const WildsGroundSchema: GenMessage<WildsGround, {validType: WildsGroundValid}>;
+
+/**
+ * One decor kind: its art footprint in px (width centred on the anchor,
+ * height above it). Blocking pieces stand only on solid tiles; flat ones are
+ * ground decals drawn under everything.
+ *
+ * @generated from message glimway.content.v1.WildsDecorKind
+ */
+export declare type WildsDecorKind = Message<"glimway.content.v1.WildsDecorKind"> & {
+  /**
+   * @generated from field: string kind = 1;
+   */
+  kind: string;
+
+  /**
+   * @generated from field: int32 w = 2;
+   */
+  w: number;
+
+  /**
+   * @generated from field: int32 h = 3;
+   */
+  h: number;
+
+  /**
+   * @generated from field: bool blocking = 4;
+   */
+  blocking: boolean;
+
+  /**
+   * @generated from field: bool flat = 5;
+   */
+  flat: boolean;
+};
+
+export declare type WildsDecorKindValid = WildsDecorKind;
+
+/**
+ * Describes the message glimway.content.v1.WildsDecorKind.
+ * Use `create(WildsDecorKindSchema)` to create a new message.
+ */
+export declare const WildsDecorKindSchema: GenMessage<WildsDecorKind, {validType: WildsDecorKindValid}>;
+
+/**
+ * A named footprint (design 2.1): a rectangle of chunks with its look, its
+ * epoch kind, its tier and its fixed sites. The footprint's north-west chunk
+ * is (cx, cy); it spans `width` chunks east and `height` south.
+ *
+ * @generated from message glimway.content.v1.WildsPlace
+ */
+export declare type WildsPlace = Message<"glimway.content.v1.WildsPlace"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * How the words name it ("the Tangle").
+   *
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * The chunk look the client paints it with.
+   *
+   * @generated from field: string look = 3;
+   */
+  look: string;
+
+  /**
+   * "still" never turns (the Tangle); "wick" turns every wick (design 2.3).
+   *
+   * @generated from field: string epoch_kind = 4;
+   */
+  epochKind: string;
+
+  /**
+   * @generated from field: int32 tier = 5;
+   */
+  tier: number;
+
+  /**
+   * A land id (code rule): the footprint is always this land.
+   *
+   * @generated from field: string land = 6;
+   */
+  land: string;
+
+  /**
+   * @generated from field: optional sint32 cx = 7;
+   */
+  cx?: number | undefined;
+
+  /**
+   * @generated from field: optional sint32 cy = 8;
+   */
+  cy?: number | undefined;
+
+  /**
+   * @generated from field: int32 width = 9;
+   */
+  width: number;
+
+  /**
+   * @generated from field: int32 height = 10;
+   */
+  height: number;
+
+  /**
+   * Sites at fixed coordinates (decision 4); ids unique across all places.
+   *
+   * @generated from field: repeated glimway.content.v1.WildsFixedSite sites = 11;
+   */
+  sites: WildsFixedSite[];
+
+  /**
+   * Sites dealt over the footprint's chunks each epoch (decision 11).
+   *
+   * @generated from field: repeated glimway.content.v1.WildsDealtSite dealt = 12;
+   */
+  dealt: WildsDealtSite[];
+
+  /**
+   * The fixed ways in and out that routes join (design 2.2 pass 5).
+   *
+   * @generated from field: repeated glimway.content.v1.WildsOpening openings = 13;
+   */
+  openings: WildsOpening[];
+};
+
+/**
+ * A named footprint (design 2.1): a rectangle of chunks with its look, its
+ * epoch kind, its tier and its fixed sites. The footprint's north-west chunk
+ * is (cx, cy); it spans `width` chunks east and `height` south.
+ *
+ * @generated from message glimway.content.v1.WildsPlace
+ */
+export declare type WildsPlaceValid = Message<"glimway.content.v1.WildsPlace"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * How the words name it ("the Tangle").
+   *
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * The chunk look the client paints it with.
+   *
+   * @generated from field: string look = 3;
+   */
+  look: string;
+
+  /**
+   * "still" never turns (the Tangle); "wick" turns every wick (design 2.3).
+   *
+   * @generated from field: string epoch_kind = 4;
+   */
+  epochKind: string;
+
+  /**
+   * @generated from field: int32 tier = 5;
+   */
+  tier: number;
+
+  /**
+   * A land id (code rule): the footprint is always this land.
+   *
+   * @generated from field: string land = 6;
+   */
+  land: string;
+
+  /**
+   * @generated from field: optional sint32 cx = 7;
+   */
+  cx: number;
+
+  /**
+   * @generated from field: optional sint32 cy = 8;
+   */
+  cy: number;
+
+  /**
+   * @generated from field: int32 width = 9;
+   */
+  width: number;
+
+  /**
+   * @generated from field: int32 height = 10;
+   */
+  height: number;
+
+  /**
+   * Sites at fixed coordinates (decision 4); ids unique across all places.
+   *
+   * @generated from field: repeated glimway.content.v1.WildsFixedSite sites = 11;
+   */
+  sites: WildsFixedSiteValid[];
+
+  /**
+   * Sites dealt over the footprint's chunks each epoch (decision 11).
+   *
+   * @generated from field: repeated glimway.content.v1.WildsDealtSite dealt = 12;
+   */
+  dealt: WildsDealtSiteValid[];
+
+  /**
+   * The fixed ways in and out that routes join (design 2.2 pass 5).
+   *
+   * @generated from field: repeated glimway.content.v1.WildsOpening openings = 13;
+   */
+  openings: WildsOpeningValid[];
+};
+
+/**
+ * Describes the message glimway.content.v1.WildsPlace.
+ * Use `create(WildsPlaceSchema)` to create a new message.
+ */
+export declare const WildsPlaceSchema: GenMessage<WildsPlace, {validType: WildsPlaceValid}>;
+
+/**
+ * A site kind is the wire's SiteKind, spelled lower-case with hyphens.
+ * A fixed site's tile is chunk-local; its chunk lies in its footprint (code
+ * rule).
+ *
+ * @generated from message glimway.content.v1.WildsFixedSite
+ */
+export declare type WildsFixedSite = Message<"glimway.content.v1.WildsFixedSite"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string kind = 2;
+   */
+  kind: string;
+
+  /**
+   * @generated from field: optional sint32 cx = 3;
+   */
+  cx?: number | undefined;
+
+  /**
+   * @generated from field: optional sint32 cy = 4;
+   */
+  cy?: number | undefined;
+
+  /**
+   * @generated from field: optional int32 tx = 5;
+   */
+  tx?: number | undefined;
+
+  /**
+   * @generated from field: optional int32 ty = 6;
+   */
+  ty?: number | undefined;
+};
+
+/**
+ * A site kind is the wire's SiteKind, spelled lower-case with hyphens.
+ * A fixed site's tile is chunk-local; its chunk lies in its footprint (code
+ * rule).
+ *
+ * @generated from message glimway.content.v1.WildsFixedSite
+ */
+export declare type WildsFixedSiteValid = Message<"glimway.content.v1.WildsFixedSite"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string kind = 2;
+   */
+  kind: string;
+
+  /**
+   * @generated from field: optional sint32 cx = 3;
+   */
+  cx: number;
+
+  /**
+   * @generated from field: optional sint32 cy = 4;
+   */
+  cy: number;
+
+  /**
+   * @generated from field: optional int32 tx = 5;
+   */
+  tx: number;
+
+  /**
+   * @generated from field: optional int32 ty = 6;
+   */
+  ty: number;
+};
+
+/**
+ * Describes the message glimway.content.v1.WildsFixedSite.
+ * Use `create(WildsFixedSiteSchema)` to create a new message.
+ */
+export declare const WildsFixedSiteSchema: GenMessage<WildsFixedSite, {validType: WildsFixedSiteValid}>;
+
+/**
+ * A site dealt to one of the footprint's chunks each epoch: anywhere, or in
+ * its east column (toward Sallow Ford), spread so no chunk gets two while
+ * another has none.
+ *
+ * @generated from message glimway.content.v1.WildsDealtSite
+ */
+export declare type WildsDealtSite = Message<"glimway.content.v1.WildsDealtSite"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string kind = 2;
+   */
+  kind: string;
+
+  /**
+   * @generated from field: string column = 3;
+   */
+  column: string;
+};
+
+export declare type WildsDealtSiteValid = WildsDealtSite;
+
+/**
+ * Describes the message glimway.content.v1.WildsDealtSite.
+ * Use `create(WildsDealtSiteSchema)` to create a new message.
+ */
+export declare const WildsDealtSiteSchema: GenMessage<WildsDealtSite, {validType: WildsDealtSiteValid}>;
+
+/**
+ * A fixed opening on a footprint's outer edge: `width` tiles starting
+ * `offset` tiles along the edge of chunk (cx, cy) (west to east, or north to
+ * south). The chunk is on that edge of the footprint (code rule).
+ *
+ * @generated from message glimway.content.v1.WildsOpening
+ */
+export declare type WildsOpening = Message<"glimway.content.v1.WildsOpening"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: optional sint32 cx = 2;
+   */
+  cx?: number | undefined;
+
+  /**
+   * @generated from field: optional sint32 cy = 3;
+   */
+  cy?: number | undefined;
+
+  /**
+   * @generated from field: string edge = 4;
+   */
+  edge: string;
+
+  /**
+   * @generated from field: optional int32 offset = 5;
+   */
+  offset?: number | undefined;
+
+  /**
+   * @generated from field: int32 width = 6;
+   */
+  width: number;
+};
+
+/**
+ * A fixed opening on a footprint's outer edge: `width` tiles starting
+ * `offset` tiles along the edge of chunk (cx, cy) (west to east, or north to
+ * south). The chunk is on that edge of the footprint (code rule).
+ *
+ * @generated from message glimway.content.v1.WildsOpening
+ */
+export declare type WildsOpeningValid = Message<"glimway.content.v1.WildsOpening"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: optional sint32 cx = 2;
+   */
+  cx: number;
+
+  /**
+   * @generated from field: optional sint32 cy = 3;
+   */
+  cy: number;
+
+  /**
+   * @generated from field: string edge = 4;
+   */
+  edge: string;
+
+  /**
+   * @generated from field: optional int32 offset = 5;
+   */
+  offset: number;
+
+  /**
+   * @generated from field: int32 width = 6;
+   */
+  width: number;
+};
+
+/**
+ * Describes the message glimway.content.v1.WildsOpening.
+ * Use `create(WildsOpeningSchema)` to create a new message.
+ */
+export declare const WildsOpeningSchema: GenMessage<WildsOpening, {validType: WildsOpeningValid}>;
+
+/**
+ * The grounds a land paints its roles with (ground ids, code rule).
+ *
+ * @generated from message glimway.content.v1.WildsLandGround
+ */
+export declare type WildsLandGround = Message<"glimway.content.v1.WildsLandGround"> & {
+  /**
+   * Unopened ground: under the trees, or the meadow's grass.
+   *
+   * @generated from field: string floor = 1;
+   */
+  floor: string;
+
+  /**
+   * Clearings and glades.
+   *
+   * @generated from field: string open = 2;
+   */
+  open: string;
+
+  /**
+   * Beside a path's trodden line.
+   *
+   * @generated from field: string verge = 3;
+   */
+  verge: string;
+
+  /**
+   * A path's trodden line.
+   *
+   * @generated from field: string path = 4;
+   */
+  path: string;
+
+  /**
+   * Bare earth around camps.
+   *
+   * @generated from field: string trodden = 5;
+   */
+  trodden: string;
+};
+
+export declare type WildsLandGroundValid = WildsLandGround;
+
+/**
+ * Describes the message glimway.content.v1.WildsLandGround.
+ * Use `create(WildsLandGroundSchema)` to create a new message.
+ */
+export declare const WildsLandGroundSchema: GenMessage<WildsLandGround, {validType: WildsLandGroundValid}>;
+
+/**
+ * The way a land leans (the canon by direction): a unit step (dx, dy), north
+ * is -y, and how strongly, permille of its weight added per land cell that
+ * way.
+ *
+ * @generated from message glimway.content.v1.WildsLean
+ */
+export declare type WildsLean = Message<"glimway.content.v1.WildsLean"> & {
+  /**
+   * @generated from field: sint32 dx = 1;
+   */
+  dx: number;
+
+  /**
+   * @generated from field: sint32 dy = 2;
+   */
+  dy: number;
+
+  /**
+   * @generated from field: int32 permille = 3;
+   */
+  permille: number;
+};
+
+export declare type WildsLeanValid = WildsLean;
+
+/**
+ * Describes the message glimway.content.v1.WildsLean.
+ * Use `create(WildsLeanSchema)` to create a new message.
+ */
+export declare const WildsLeanSchema: GenMessage<WildsLean, {validType: WildsLeanValid}>;
+
+/**
+ * A kind of land (decision 15): data, so a new land is a new entry.
+ *
+ * @generated from message glimway.content.v1.WildsLand
+ */
+export declare type WildsLand = Message<"glimway.content.v1.WildsLand"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * Base draw weight for a land point.
+   *
+   * @generated from field: int32 weight = 3;
+   */
+  weight: number;
+
+  /**
+   * @generated from field: glimway.content.v1.WildsLean lean = 4;
+   */
+  lean?: WildsLean | undefined;
+
+  /**
+   * @generated from field: glimway.content.v1.WildsLandGround ground = 5;
+   */
+  ground?: WildsLandGround | undefined;
+
+  /**
+   * Of the tiles no path, glade or place opens, how many stay solid
+   * (thicket or trunks), permille: the woods 1000, the meadow few.
+   *
+   * @generated from field: int32 thicket_permille = 6;
+   */
+  thicketPermille: number;
+
+  /**
+   * Decor kinds the dressing draws (decor kinds, code rule).
+   *
+   * @generated from field: repeated glimway.content.v1.WildsWeight decor = 7;
+   */
+  decor: WildsWeight[];
+
+  /**
+   * Node materials (materials, code rule).
+   *
+   * @generated from field: repeated glimway.content.v1.WildsWeight materials = 8;
+   */
+  materials: WildsWeight[];
+
+  /**
+   * Camp mixes (camp mix ids, code rule); a tier's weights multiply these.
+   *
+   * @generated from field: repeated glimway.content.v1.WildsWeight camp_mixes = 9;
+   */
+  campMixes: WildsWeight[];
+};
+
+/**
+ * A kind of land (decision 15): data, so a new land is a new entry.
+ *
+ * @generated from message glimway.content.v1.WildsLand
+ */
+export declare type WildsLandValid = Message<"glimway.content.v1.WildsLand"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * Base draw weight for a land point.
+   *
+   * @generated from field: int32 weight = 3;
+   */
+  weight: number;
+
+  /**
+   * @generated from field: glimway.content.v1.WildsLean lean = 4;
+   */
+  lean: WildsLeanValid;
+
+  /**
+   * @generated from field: glimway.content.v1.WildsLandGround ground = 5;
+   */
+  ground: WildsLandGroundValid;
+
+  /**
+   * Of the tiles no path, glade or place opens, how many stay solid
+   * (thicket or trunks), permille: the woods 1000, the meadow few.
+   *
+   * @generated from field: int32 thicket_permille = 6;
+   */
+  thicketPermille: number;
+
+  /**
+   * Decor kinds the dressing draws (decor kinds, code rule).
+   *
+   * @generated from field: repeated glimway.content.v1.WildsWeight decor = 7;
+   */
+  decor: WildsWeightValid[];
+
+  /**
+   * Node materials (materials, code rule).
+   *
+   * @generated from field: repeated glimway.content.v1.WildsWeight materials = 8;
+   */
+  materials: WildsWeightValid[];
+
+  /**
+   * Camp mixes (camp mix ids, code rule); a tier's weights multiply these.
+   *
+   * @generated from field: repeated glimway.content.v1.WildsWeight camp_mixes = 9;
+   */
+  campMixes: WildsWeightValid[];
+};
+
+/**
+ * Describes the message glimway.content.v1.WildsLand.
+ * Use `create(WildsLandSchema)` to create a new message.
+ */
+export declare const WildsLandSchema: GenMessage<WildsLand, {validType: WildsLandValid}>;
+
+/**
+ * One band of the patch-size table: a patch is `min_chunks`..`max_chunks`
+ * across with this weight.
+ *
+ * @generated from message glimway.content.v1.WildsSizeBand
+ */
+export declare type WildsSizeBand = Message<"glimway.content.v1.WildsSizeBand"> & {
+  /**
+   * @generated from field: int32 min_chunks = 1;
+   */
+  minChunks: number;
+
+  /**
+   * @generated from field: int32 max_chunks = 2;
+   */
+  maxChunks: number;
+
+  /**
+   * @generated from field: int32 weight = 3;
+   */
+  weight: number;
+};
+
+export declare type WildsSizeBandValid = WildsSizeBand;
+
+/**
+ * Describes the message glimway.content.v1.WildsSizeBand.
+ * Use `create(WildsSizeBandSchema)` to create a new message.
+ */
+export declare const WildsSizeBandSchema: GenMessage<WildsSizeBand, {validType: WildsSizeBandValid}>;
+
+/**
+ * How big patches of land grow (decision 16, design 2.2 pass 2).
+ *
+ * @generated from message glimway.content.v1.WildsLandSizes
+ */
+export declare type WildsLandSizes = Message<"glimway.content.v1.WildsLandSizes"> & {
+  /**
+   * One land point per land cell of this many chunks square.
+   *
+   * @generated from field: int32 land_cell_chunks = 1;
+   */
+  landCellChunks: number;
+
+  /**
+   * A chunk looks at the window x window land cells around it.
+   *
+   * @generated from field: int32 window_cells = 2;
+   */
+  windowCells: number;
+
+  /**
+   * No patch grows past this many chunks across (decision 17's cap); no
+   * band reaches past it (code rule).
+   *
+   * @generated from field: int32 cap_chunks = 3;
+   */
+  capChunks: number;
+
+  /**
+   * @generated from field: repeated glimway.content.v1.WildsSizeBand bands = 4;
+   */
+  bands: WildsSizeBand[];
+
+  /**
+   * World-coordinate noise on the distance, permille, so borders are soft.
+   *
+   * @generated from field: int32 border_noise_permille = 5;
+   */
+  borderNoisePermille: number;
+};
+
+export declare type WildsLandSizesValid = WildsLandSizes;
+
+/**
+ * Describes the message glimway.content.v1.WildsLandSizes.
+ * Use `create(WildsLandSizesSchema)` to create a new message.
+ */
+export declare const WildsLandSizesSchema: GenMessage<WildsLandSizes, {validType: WildsLandSizesValid}>;
+
+/**
+ * One tier of difficulty (decision 9).
+ *
+ * @generated from message glimway.content.v1.WildsTier
+ */
+export declare type WildsTier = Message<"glimway.content.v1.WildsTier"> & {
+  /**
+   * @generated from field: int32 tier = 1;
+   */
+  tier: number;
+
+  /**
+   * Chest loot tiers rolled here ("chest:<n>" tables must exist, code rule).
+   *
+   * @generated from field: int32 chest_min = 2;
+   */
+  chestMin: number;
+
+  /**
+   * @generated from field: int32 chest_max = 3;
+   */
+  chestMax: number;
+
+  /**
+   * Camp mixes weighted on top of the land's (camp mix ids, code rule).
+   *
+   * @generated from field: repeated glimway.content.v1.WildsWeight camp_mixes = 4;
+   */
+  campMixes: WildsWeight[];
+
+  /**
+   * Extra units on every node harvest.
+   *
+   * @generated from field: optional int32 node_yield_bonus = 5;
+   */
+  nodeYieldBonus?: number | undefined;
+};
+
+/**
+ * One tier of difficulty (decision 9).
+ *
+ * @generated from message glimway.content.v1.WildsTier
+ */
+export declare type WildsTierValid = Message<"glimway.content.v1.WildsTier"> & {
+  /**
+   * @generated from field: int32 tier = 1;
+   */
+  tier: number;
+
+  /**
+   * Chest loot tiers rolled here ("chest:<n>" tables must exist, code rule).
+   *
+   * @generated from field: int32 chest_min = 2;
+   */
+  chestMin: number;
+
+  /**
+   * @generated from field: int32 chest_max = 3;
+   */
+  chestMax: number;
+
+  /**
+   * Camp mixes weighted on top of the land's (camp mix ids, code rule).
+   *
+   * @generated from field: repeated glimway.content.v1.WildsWeight camp_mixes = 4;
+   */
+  campMixes: WildsWeightValid[];
+
+  /**
+   * Extra units on every node harvest.
+   *
+   * @generated from field: optional int32 node_yield_bonus = 5;
+   */
+  nodeYieldBonus: number;
+};
+
+/**
+ * Describes the message glimway.content.v1.WildsTier.
+ * Use `create(WildsTierSchema)` to create a new message.
+ */
+export declare const WildsTierSchema: GenMessage<WildsTier, {validType: WildsTierValid}>;
+
+/**
+ * The 0.8 frontier (decision 3, design 2.1): chunks within Chebyshev
+ * distance `reach` of a footprint, and no further south than `south_limit`.
+ * It is enforced at run time, never generated (design 2.2).
+ *
+ * @generated from message glimway.content.v1.WildsFrontier
+ */
+export declare type WildsFrontier = Message<"glimway.content.v1.WildsFrontier"> & {
+  /**
+   * @generated from field: int32 reach = 1;
+   */
+  reach: number;
+
+  /**
+   * @generated from field: optional sint32 south_limit = 2;
+   */
+  southLimit?: number | undefined;
+};
+
+/**
+ * The 0.8 frontier (decision 3, design 2.1): chunks within Chebyshev
+ * distance `reach` of a footprint, and no further south than `south_limit`.
+ * It is enforced at run time, never generated (design 2.2).
+ *
+ * @generated from message glimway.content.v1.WildsFrontier
+ */
+export declare type WildsFrontierValid = Message<"glimway.content.v1.WildsFrontier"> & {
+  /**
+   * @generated from field: int32 reach = 1;
+   */
+  reach: number;
+
+  /**
+   * @generated from field: optional sint32 south_limit = 2;
+   */
+  southLimit: number;
+};
+
+/**
+ * Describes the message glimway.content.v1.WildsFrontier.
+ * Use `create(WildsFrontierSchema)` to create a new message.
+ */
+export declare const WildsFrontierSchema: GenMessage<WildsFrontier, {validType: WildsFrontierValid}>;
+
+/**
+ * Which decor a tool clears (by its item action, items.json `actions`).
+ *
+ * @generated from message glimway.content.v1.WildsClearTool
+ */
+export declare type WildsClearTool = Message<"glimway.content.v1.WildsClearTool"> & {
+  /**
+   * @generated from field: string decor = 1;
+   */
+  decor: string;
+
+  /**
+   * @generated from field: string action = 2;
+   */
+  action: string;
+};
+
+export declare type WildsClearToolValid = WildsClearTool;
+
+/**
+ * Describes the message glimway.content.v1.WildsClearTool.
+ * Use `create(WildsClearToolSchema)` to create a new message.
+ */
+export declare const WildsClearToolSchema: GenMessage<WildsClearTool, {validType: WildsClearToolValid}>;
+
+/**
+ * What laying a path costs and paints.
+ *
+ * @generated from message glimway.content.v1.WildsLayKind
+ */
+export declare type WildsLayKind = Message<"glimway.content.v1.WildsLayKind"> & {
+  /**
+   * @generated from field: string kind = 1;
+   */
+  kind: string;
+
+  /**
+   * The ground a laid tile carries (a "laid" ground, code rule).
+   *
+   * @generated from field: string ground = 2;
+   */
+  ground: string;
+
+  /**
+   * The pack material it debits (a material, code rule), `cost` a tile.
+   *
+   * @generated from field: string material = 3;
+   */
+  material: string;
+
+  /**
+   * @generated from field: int32 cost = 4;
+   */
+  cost: number;
+};
+
+export declare type WildsLayKindValid = WildsLayKind;
+
+/**
+ * Describes the message glimway.content.v1.WildsLayKind.
+ * Use `create(WildsLayKindSchema)` to create a new message.
+ */
+export declare const WildsLayKindSchema: GenMessage<WildsLayKind, {validType: WildsLayKindValid}>;
+
+/**
+ * Walk speed on a ground, permille of the hero's speed.
+ *
+ * @generated from message glimway.content.v1.WildsWalkSpeed
+ */
+export declare type WildsWalkSpeed = Message<"glimway.content.v1.WildsWalkSpeed"> & {
+  /**
+   * @generated from field: string ground = 1;
+   */
+  ground: string;
+
+  /**
+   * @generated from field: int32 speed_permille = 2;
+   */
+  speedPermille: number;
+};
+
+export declare type WildsWalkSpeedValid = WildsWalkSpeed;
+
+/**
+ * Describes the message glimway.content.v1.WildsWalkSpeed.
+ * Use `create(WildsWalkSpeedSchema)` to create a new message.
+ */
+export declare const WildsWalkSpeedSchema: GenMessage<WildsWalkSpeed, {validType: WildsWalkSpeedValid}>;
+
+/**
+ * Paths players make (section 3).
+ *
+ * @generated from message glimway.content.v1.WildsPaths
+ */
+export declare type WildsPaths = Message<"glimway.content.v1.WildsPaths"> & {
+  /**
+   * @generated from field: repeated glimway.content.v1.WildsClearTool clear_tools = 1;
+   */
+  clearTools: WildsClearTool[];
+
+  /**
+   * @generated from field: repeated glimway.content.v1.WildsLayKind lay = 2;
+   */
+  lay: WildsLayKind[];
+
+  /**
+   * @generated from field: repeated glimway.content.v1.WildsWalkSpeed walk = 3;
+   */
+  walk: WildsWalkSpeed[];
+
+  /**
+   * How far from the hero a clear, lay or lift may reach, in tiles.
+   *
+   * @generated from field: int32 reach_tiles = 4;
+   */
+  reachTiles: number;
+
+  /**
+   * At most this many changes a chunk and epoch (one per tile at most).
+   *
+   * @generated from field: int32 max_changes = 5;
+   */
+  maxChanges: number;
+
+  /**
+   * A named way's flood fill over laid tiles stops at this many (decision
+   * 23).
+   *
+   * @generated from field: int32 way_flood_cap = 6;
+   */
+  wayFloodCap: number;
+};
+
+export declare type WildsPathsValid = WildsPaths;
+
+/**
+ * Describes the message glimway.content.v1.WildsPaths.
+ * Use `create(WildsPathsSchema)` to create a new message.
+ */
+export declare const WildsPathsSchema: GenMessage<WildsPaths, {validType: WildsPathsValid}>;
+
+/**
+ * The Wend (design 2.2 pass 3).
+ *
+ * @generated from message glimway.content.v1.WildsRiver
+ */
+export declare type WildsRiver = Message<"glimway.content.v1.WildsRiver"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * @generated from field: int32 min_width = 2;
+   */
+  minWidth: number;
+
+  /**
+   * @generated from field: int32 max_width = 3;
+   */
+  maxWidth: number;
+
+  /**
+   * A ford's shallows run this many tiles along the route.
+   *
+   * @generated from field: int32 ford_width = 4;
+   */
+  fordWidth: number;
+
+  /**
+   * Land within this many chunks of the river leans to `lean_land`.
+   *
+   * @generated from field: int32 lean_chunks = 5;
+   */
+  leanChunks: number;
+
+  /**
+   * @generated from field: string lean_land = 6;
+   */
+  leanLand: string;
+
+  /**
+   * Grounds (code rule): water, bank and ford.
+   *
+   * @generated from field: string water_ground = 7;
+   */
+  waterGround: string;
+
+  /**
+   * @generated from field: string bank_ground = 8;
+   */
+  bankGround: string;
+
+  /**
+   * @generated from field: string ford_ground = 9;
+   */
+  fordGround: string;
+
+  /**
+   * It enters from one of these frontier sides.
+   *
+   * @generated from field: repeated string enters = 10;
+   */
+  enters: string[];
+
+  /**
+   * It leaves at the south limit's row, at a chunk no further east than this.
+   *
+   * @generated from field: optional sint32 leaves_max_cx = 11;
+   */
+  leavesMaxCx?: number | undefined;
+};
+
+/**
+ * The Wend (design 2.2 pass 3).
+ *
+ * @generated from message glimway.content.v1.WildsRiver
+ */
+export declare type WildsRiverValid = Message<"glimway.content.v1.WildsRiver"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * @generated from field: int32 min_width = 2;
+   */
+  minWidth: number;
+
+  /**
+   * @generated from field: int32 max_width = 3;
+   */
+  maxWidth: number;
+
+  /**
+   * A ford's shallows run this many tiles along the route.
+   *
+   * @generated from field: int32 ford_width = 4;
+   */
+  fordWidth: number;
+
+  /**
+   * Land within this many chunks of the river leans to `lean_land`.
+   *
+   * @generated from field: int32 lean_chunks = 5;
+   */
+  leanChunks: number;
+
+  /**
+   * @generated from field: string lean_land = 6;
+   */
+  leanLand: string;
+
+  /**
+   * Grounds (code rule): water, bank and ford.
+   *
+   * @generated from field: string water_ground = 7;
+   */
+  waterGround: string;
+
+  /**
+   * @generated from field: string bank_ground = 8;
+   */
+  bankGround: string;
+
+  /**
+   * @generated from field: string ford_ground = 9;
+   */
+  fordGround: string;
+
+  /**
+   * It enters from one of these frontier sides.
+   *
+   * @generated from field: repeated string enters = 10;
+   */
+  enters: string[];
+
+  /**
+   * It leaves at the south limit's row, at a chunk no further east than this.
+   *
+   * @generated from field: optional sint32 leaves_max_cx = 11;
+   */
+  leavesMaxCx: number;
+};
+
+/**
+ * Describes the message glimway.content.v1.WildsRiver.
+ * Use `create(WildsRiverSchema)` to create a new message.
+ */
+export declare const WildsRiverSchema: GenMessage<WildsRiver, {validType: WildsRiverValid}>;
+
+/**
+ * The Lantern Road (design 2.2 pass 4).
+ *
+ * @generated from message glimway.content.v1.WildsRoad
+ */
+export declare type WildsRoad = Message<"glimway.content.v1.WildsRoad"> & {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name: string;
+
+  /**
+   * @generated from field: int32 width = 2;
+   */
+  width: number;
+
+  /**
+   * A dark lamp stone every this many chunks along it.
+   *
+   * @generated from field: int32 lamp_stone_every = 3;
+   */
+  lampStoneEvery: number;
+
+  /**
+   * Grounds (code rule).
+   *
+   * @generated from field: string ground = 4;
+   */
+  ground: string;
+
+  /**
+   * @generated from field: string verge_ground = 5;
+   */
+  vergeGround: string;
+
+  /**
+   * Where it starts: a place's opening ("whitequiet" / "lantern-road").
+   *
+   * @generated from field: string from_place = 6;
+   */
+  fromPlace: string;
+
+  /**
+   * @generated from field: string from_opening = 7;
+   */
+  fromOpening: string;
+
+  /**
+   * It runs north this many chunks, then bends `bend`.
+   *
+   * @generated from field: int32 north_chunks = 8;
+   */
+  northChunks: number;
+
+  /**
+   * @generated from field: string bend = 9;
+   */
+  bend: string;
+};
+
+export declare type WildsRoadValid = WildsRoad;
+
+/**
+ * Describes the message glimway.content.v1.WildsRoad.
+ * Use `create(WildsRoadSchema)` to create a new message.
+ */
+export declare const WildsRoadSchema: GenMessage<WildsRoad, {validType: WildsRoadValid}>;
+
+/**
+ * What a cell's one place can be (design 2.2 pass 1, 2.10): its land, its
+ * landmark (a tall decor piece at its centre, seen from a chunk away) and
+ * how near you must come to find it.
+ *
+ * @generated from message glimway.content.v1.WildsPlaceKind
+ */
+export declare type WildsPlaceKind = Message<"glimway.content.v1.WildsPlaceKind"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string name = 2;
+   */
+  name: string;
+
+  /**
+   * The land it sits in (a land id, code rule), and its weight among that
+   * land's place kinds.
+   *
+   * @generated from field: string land = 3;
+   */
+  land: string;
+
+  /**
+   * @generated from field: int32 weight = 7;
+   */
+  weight: number;
+
+  /**
+   * A blocking decor kind (code rule), with a rumour phrase (code rule).
+   *
+   * @generated from field: string landmark = 4;
+   */
+  landmark: string;
+
+  /**
+   * The entity kinds it always holds (spawn rule kinds).
+   *
+   * @generated from field: repeated string entities = 5;
+   */
+  entities: string[];
+
+  /**
+   * The open ground around its middle, in tiles.
+   *
+   * @generated from field: int32 clearing_radius = 6;
+   */
+  clearingRadius: number;
+
+  /**
+   * Within this many tiles (Chebyshev) of the landmark you find the place
+   * (decision 20); a way touches it there (decision 23).
+   *
+   * @generated from field: int32 find_radius = 8;
+   */
+  findRadius: number;
+};
+
+export declare type WildsPlaceKindValid = WildsPlaceKind;
+
+/**
+ * Describes the message glimway.content.v1.WildsPlaceKind.
+ * Use `create(WildsPlaceKindSchema)` to create a new message.
+ */
+export declare const WildsPlaceKindSchema: GenMessage<WildsPlaceKind, {validType: WildsPlaceKindValid}>;
+
+/**
+ * The cell grid: cells of `cell_chunks` square, cell (0, 0) starting at chunk
+ * (origin_cx, origin_cy), so the Tangle is cell (0, 0) and the Whitequiet
+ * cell (0, -1) (code rule: each footprint is exactly one cell).
+ *
+ * @generated from message glimway.content.v1.WildsCells
+ */
+export declare type WildsCells = Message<"glimway.content.v1.WildsCells"> & {
+  /**
+   * @generated from field: int32 cell_chunks = 1;
+   */
+  cellChunks: number;
+
+  /**
+   * @generated from field: optional sint32 origin_cx = 2;
+   */
+  originCx?: number | undefined;
+
+  /**
+   * @generated from field: optional sint32 origin_cy = 3;
+   */
+  originCy?: number | undefined;
+};
+
+/**
+ * The cell grid: cells of `cell_chunks` square, cell (0, 0) starting at chunk
+ * (origin_cx, origin_cy), so the Tangle is cell (0, 0) and the Whitequiet
+ * cell (0, -1) (code rule: each footprint is exactly one cell).
+ *
+ * @generated from message glimway.content.v1.WildsCells
+ */
+export declare type WildsCellsValid = Message<"glimway.content.v1.WildsCells"> & {
+  /**
+   * @generated from field: int32 cell_chunks = 1;
+   */
+  cellChunks: number;
+
+  /**
+   * @generated from field: optional sint32 origin_cx = 2;
+   */
+  originCx: number;
+
+  /**
+   * @generated from field: optional sint32 origin_cy = 3;
+   */
+  originCy: number;
+};
+
+/**
+ * Describes the message glimway.content.v1.WildsCells.
+ * Use `create(WildsCellsSchema)` to create a new message.
+ */
+export declare const WildsCellsSchema: GenMessage<WildsCells, {validType: WildsCellsValid}>;
+
+/**
+ * In-world lines (design 2.9). `{tool}`, `{material}` and `{days}` are
+ * filled in by the client. `stand_in` lists the keys whose words are
+ * stand-ins for lane O-E to replace; the rest are the design's own.
+ *
+ * @generated from message glimway.content.v1.WildsWords
+ */
+export declare type WildsWords = Message<"glimway.content.v1.WildsWords"> & {
+  /**
+   * Walking into the frontier's edge (2.6).
+   *
+   * @generated from field: string drift = 1;
+   */
+  drift: string;
+
+  /**
+   * Moved off ground that turned solid (decision 10).
+   *
+   * @generated from field: string turned = 2;
+   */
+  turned: string;
+
+  /**
+   * Looking at a dark lamp stone (2.9).
+   *
+   * @generated from field: string lamp_stone = 3;
+   */
+  lampStone: string;
+
+  /**
+   * Clearing without the tool.
+   *
+   * @generated from field: string need_tool = 4;
+   */
+  needTool: string;
+
+  /**
+   * Laying without the stone or timber.
+   *
+   * @generated from field: string need_material = 5;
+   */
+  needMaterial: string;
+
+  /**
+   * Laying on water or a ford.
+   *
+   * @generated from field: string not_on_water = 6;
+   */
+  notOnWater: string;
+
+  /**
+   * The confirm before laying on turning land.
+   *
+   * @generated from field: string turns_in = 7;
+   */
+  turnsIn: string;
+
+  /**
+   * On a discovered place, on the map and its banner (decision 20).
+   *
+   * @generated from field: string found_by = 9;
+   */
+  foundBy: string;
+
+  /**
+   * The first finder's line.
+   *
+   * @generated from field: string first_find = 10;
+   */
+  firstFind: string;
+
+  /**
+   * A named way's name and its sign (decision 23).
+   *
+   * @generated from field: string way_name = 11;
+   */
+  wayName: string;
+
+  /**
+   * @generated from field: string way_sign = 12;
+   */
+  waySign: string;
+
+  /**
+   * @generated from field: repeated string stand_in = 8;
+   */
+  standIn: string[];
+};
+
+export declare type WildsWordsValid = WildsWords;
+
+/**
+ * Describes the message glimway.content.v1.WildsWords.
+ * Use `create(WildsWordsSchema)` to create a new message.
+ */
+export declare const WildsWordsSchema: GenMessage<WildsWords, {validType: WildsWordsValid}>;
+
+/**
+ * One landmark's name in a rumour ("a split oak").
+ *
+ * @generated from message glimway.content.v1.WildsRumourLandmark
+ */
+export declare type WildsRumourLandmark = Message<"glimway.content.v1.WildsRumourLandmark"> & {
+  /**
+   * @generated from field: string decor = 1;
+   */
+  decor: string;
+
+  /**
+   * @generated from field: string phrase = 2;
+   */
+  phrase: string;
+};
+
+export declare type WildsRumourLandmarkValid = WildsRumourLandmark;
+
+/**
+ * Describes the message glimway.content.v1.WildsRumourLandmark.
+ * Use `create(WildsRumourLandmarkSchema)` to create a new message.
+ */
+export declare const WildsRumourLandmarkSchema: GenMessage<WildsRumourLandmark, {validType: WildsRumourLandmarkValid}>;
+
+/**
+ * A compass word from the Commons gate (eight directions, each once: code
+ * rule).
+ *
+ * @generated from message glimway.content.v1.WildsRumourCompass
+ */
+export declare type WildsRumourCompass = Message<"glimway.content.v1.WildsRumourCompass"> & {
+  /**
+   * @generated from field: string dir = 1;
+   */
+  dir: string;
+
+  /**
+   * @generated from field: string phrase = 2;
+   */
+  phrase: string;
+};
+
+export declare type WildsRumourCompassValid = WildsRumourCompass;
+
+/**
+ * Describes the message glimway.content.v1.WildsRumourCompass.
+ * Use `create(WildsRumourCompassSchema)` to create a new message.
+ */
+export declare const WildsRumourCompassSchema: GenMessage<WildsRumourCompass, {validType: WildsRumourCompassValid}>;
+
+/**
+ * A distance word for a ring past the Whitequiet (ring 1 is the first
+ * tierRingChunks chunks past it); the highest ring listed covers every ring
+ * beyond. Rings unique (code rule).
+ *
+ * @generated from message glimway.content.v1.WildsRumourDistance
+ */
+export declare type WildsRumourDistance = Message<"glimway.content.v1.WildsRumourDistance"> & {
+  /**
+   * @generated from field: int32 ring = 1;
+   */
+  ring: number;
+
+  /**
+   * @generated from field: string phrase = 2;
+   */
+  phrase: string;
+};
+
+export declare type WildsRumourDistanceValid = WildsRumourDistance;
+
+/**
+ * Describes the message glimway.content.v1.WildsRumourDistance.
+ * Use `create(WildsRumourDistanceSchema)` to create a new message.
+ */
+export declare const WildsRumourDistanceSchema: GenMessage<WildsRumourDistance, {validType: WildsRumourDistanceValid}>;
+
+/**
+ * Elara's rumour (decision 19): built from parts, so it never names
+ * coordinates. The template fills {landmark}, {compass}, {river} (the
+ * river clause, or nothing) and {distance}. No phrase may hold a digit
+ * (code rule). Every phrase here is a stand-in while `stand_in` is set:
+ * lane O-E writes the final words.
+ *
+ * @generated from message glimway.content.v1.WildsRumour
+ */
+export declare type WildsRumour = Message<"glimway.content.v1.WildsRumour"> & {
+  /**
+   * @generated from field: bool stand_in = 1;
+   */
+  standIn: boolean;
+
+  /**
+   * @generated from field: string template = 2;
+   */
+  template: string;
+
+  /**
+   * @generated from field: repeated glimway.content.v1.WildsRumourLandmark landmarks = 3;
+   */
+  landmarks: WildsRumourLandmark[];
+
+  /**
+   * @generated from field: repeated glimway.content.v1.WildsRumourCompass compass = 4;
+   */
+  compass: WildsRumourCompass[];
+
+  /**
+   * @generated from field: repeated glimway.content.v1.WildsRumourDistance distance = 5;
+   */
+  distance: WildsRumourDistance[];
+
+  /**
+   * Said when the Wend lies between the gate and the place.
+   *
+   * @generated from field: string past_river = 6;
+   */
+  pastRiver: string;
+
+  /**
+   * What she says once you've opened this wick's find.
+   *
+   * @generated from field: string opened = 7;
+   */
+  opened: string;
+
+  /**
+   * What she says when there's no rumour (no new cells yet).
+   *
+   * @generated from field: string none = 8;
+   */
+  none: string;
+};
+
+export declare type WildsRumourValid = WildsRumour;
+
+/**
+ * Describes the message glimway.content.v1.WildsRumour.
+ * Use `create(WildsRumourSchema)` to create a new message.
+ */
+export declare const WildsRumourSchema: GenMessage<WildsRumour, {validType: WildsRumourValid}>;
 

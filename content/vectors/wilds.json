@@ -6,137 +6,6 @@
       "edits": []
     },
     {
-      "name": "empty-regions",
-      "valid": false,
-      "rule": "repeated.min_items",
-      "edits": [
-        {
-          "path": [
-            "regions"
-          ],
-          "value": []
-        }
-      ]
-    },
-    {
-      "name": "duplicate-region",
-      "valid": false,
-      "rule": "duplicate region",
-      "edits": [
-        {
-          "path": [
-            "regions",
-            1,
-            "id"
-          ],
-          "value": "inner-1"
-        }
-      ]
-    },
-    {
-      "name": "bad-region-id",
-      "valid": false,
-      "rule": "string.pattern",
-      "edits": [
-        {
-          "path": [
-            "regions",
-            0,
-            "id"
-          ],
-          "value": "Inner 1"
-        }
-      ]
-    },
-    {
-      "name": "bad-region-kind",
-      "valid": false,
-      "rule": "string.in",
-      "edits": [
-        {
-          "path": [
-            "regions",
-            0,
-            "kind"
-          ],
-          "value": "middle"
-        }
-      ]
-    },
-    {
-      "name": "zero-grid-width",
-      "valid": false,
-      "rule": "int32.gte",
-      "edits": [
-        {
-          "path": [
-            "regions",
-            0,
-            "gridWidth"
-          ],
-          "value": 0
-        }
-      ]
-    },
-    {
-      "name": "entry-outside-grid",
-      "valid": false,
-      "rule": "region.entry_in_grid",
-      "edits": [
-        {
-          "path": [
-            "regions",
-            0,
-            "entryX"
-          ],
-          "value": 3
-        }
-      ]
-    },
-    {
-      "name": "negative-entry",
-      "valid": false,
-      "rule": "int32.gte",
-      "edits": [
-        {
-          "path": [
-            "regions",
-            0,
-            "entryY"
-          ],
-          "value": -1
-        }
-      ]
-    },
-    {
-      "name": "missing-entry",
-      "valid": false,
-      "rule": "required",
-      "edits": [
-        {
-          "path": [
-            "regions",
-            0,
-            "entryX"
-          ],
-          "remove": true
-        }
-      ]
-    },
-    {
-      "name": "bad-generator-version",
-      "valid": false,
-      "rule": "int32.const",
-      "edits": [
-        {
-          "path": [
-            "generatorVersion"
-          ],
-          "value": 3
-        }
-      ]
-    },
-    {
       "name": "odd-chunk",
       "valid": false,
       "rule": "wilds.chunk_even",
@@ -419,21 +288,6 @@
       "rule": "non-finite number"
     },
     {
-      "name": "entry-as-string",
-      "valid": false,
-      "edits": [
-        {
-          "path": [
-            "regions",
-            0,
-            "entryX"
-          ],
-          "value": "1"
-        }
-      ],
-      "rule": "non-finite number"
-    },
-    {
       "name": "trinket-chance-as-exponent",
       "valid": false,
       "edits": [
@@ -650,20 +504,6 @@
       ]
     },
     {
-      "name": "null-region",
-      "valid": false,
-      "rule": "null content field",
-      "edits": [
-        {
-          "path": [
-            "regions",
-            0
-          ],
-          "value": null
-        }
-      ]
-    },
-    {
       "name": "null-loot-table",
       "valid": false,
       "rule": "null content field",
@@ -687,6 +527,1173 @@
             "chunkSizes"
           ],
           "value": 24
+        }
+      ]
+    },
+    {
+      "name": "bad-generator-version",
+      "valid": false,
+      "rule": "int32.const",
+      "edits": [
+        {
+          "path": [
+            "generatorVersion"
+          ],
+          "value": 2
+        }
+      ]
+    },
+    {
+      "name": "places-as-regions",
+      "valid": false,
+      "rule": "unknown key",
+      "edits": [
+        {
+          "path": [
+            "regions"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "null-place",
+      "valid": false,
+      "rule": "null content field",
+      "edits": [
+        {
+          "path": [
+            "places",
+            0
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "duplicate-camp-mix",
+      "valid": false,
+      "rule": "duplicate camp mix",
+      "edits": [
+        {
+          "path": [
+            "campMixes",
+            1,
+            "id"
+          ],
+          "value": "wisp"
+        }
+      ]
+    },
+    {
+      "name": "bad-camp-mix-id",
+      "valid": false,
+      "rule": "string.pattern",
+      "edits": [
+        {
+          "path": [
+            "campMixes",
+            0,
+            "id"
+          ],
+          "value": "Wisp"
+        }
+      ]
+    },
+    {
+      "name": "empty-grounds",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "grounds"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "duplicate-ground",
+      "valid": false,
+      "rule": "duplicate ground",
+      "edits": [
+        {
+          "path": [
+            "grounds",
+            1,
+            "id"
+          ],
+          "value": "woods"
+        }
+      ]
+    },
+    {
+      "name": "duplicate-terrain",
+      "valid": false,
+      "rule": "duplicate ground terrain",
+      "edits": [
+        {
+          "path": [
+            "grounds",
+            1,
+            "terrain"
+          ],
+          "value": "grass_b"
+        }
+      ]
+    },
+    {
+      "name": "bad-surface",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "grounds",
+            0,
+            "surface"
+          ],
+          "value": "lava"
+        }
+      ]
+    },
+    {
+      "name": "missing-rank",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "grounds",
+            0,
+            "rank"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "duplicate-decor",
+      "valid": false,
+      "rule": "duplicate decor kind",
+      "edits": [
+        {
+          "path": [
+            "decor",
+            1,
+            "kind"
+          ],
+          "value": "oak"
+        }
+      ]
+    },
+    {
+      "name": "blocking-flat-decor",
+      "valid": false,
+      "rule": "decor.blocking_flat",
+      "edits": [
+        {
+          "path": [
+            "decor",
+            0,
+            "flat"
+          ],
+          "value": true
+        }
+      ]
+    },
+    {
+      "name": "zero-decor-width",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "decor",
+            0,
+            "w"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "duplicate-place",
+      "valid": false,
+      "rule": "duplicate place",
+      "edits": [
+        {
+          "path": [
+            "places",
+            1,
+            "id"
+          ],
+          "value": "tangle"
+        }
+      ]
+    },
+    {
+      "name": "bad-place-look",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "places",
+            0,
+            "look"
+          ],
+          "value": "bright"
+        }
+      ]
+    },
+    {
+      "name": "bad-epoch-kind",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "places",
+            0,
+            "epochKind"
+          ],
+          "value": "held"
+        }
+      ]
+    },
+    {
+      "name": "missing-place-cx",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "places",
+            0,
+            "cx"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "place-unknown-land",
+      "valid": false,
+      "rule": "unknown land",
+      "edits": [
+        {
+          "path": [
+            "places",
+            0,
+            "land"
+          ],
+          "value": "swamp"
+        }
+      ]
+    },
+    {
+      "name": "place-unknown-tier",
+      "valid": false,
+      "rule": "unknown tier",
+      "edits": [
+        {
+          "path": [
+            "places",
+            1,
+            "tier"
+          ],
+          "value": 9
+        }
+      ]
+    },
+    {
+      "name": "footprint-off-cell",
+      "valid": false,
+      "rule": "footprint is not one cell",
+      "edits": [
+        {
+          "path": [
+            "places",
+            0,
+            "cx"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "footprints-overlap",
+      "valid": false,
+      "rule": "overlap",
+      "edits": [
+        {
+          "path": [
+            "places",
+            1,
+            "cy"
+          ],
+          "value": -2
+        }
+      ]
+    },
+    {
+      "name": "site-outside-footprint",
+      "valid": false,
+      "rule": "outside the footprint",
+      "edits": [
+        {
+          "path": [
+            "places",
+            0,
+            "sites",
+            0,
+            "cy"
+          ],
+          "value": -3
+        }
+      ]
+    },
+    {
+      "name": "site-tile-off-chunk",
+      "valid": false,
+      "rule": "outside the footprint",
+      "edits": [
+        {
+          "path": [
+            "places",
+            0,
+            "sites",
+            0,
+            "tx"
+          ],
+          "value": 24
+        }
+      ]
+    },
+    {
+      "name": "duplicate-site",
+      "valid": false,
+      "rule": "duplicate site",
+      "edits": [
+        {
+          "path": [
+            "places",
+            1,
+            "sites",
+            0,
+            "id"
+          ],
+          "value": "plank"
+        }
+      ]
+    },
+    {
+      "name": "bad-site-kind",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "places",
+            0,
+            "sites",
+            0,
+            "kind"
+          ],
+          "value": "well"
+        }
+      ]
+    },
+    {
+      "name": "dealt-column",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "places",
+            1,
+            "dealt",
+            0,
+            "column"
+          ],
+          "value": "west"
+        }
+      ]
+    },
+    {
+      "name": "opening-off-edge",
+      "valid": false,
+      "rule": "off the footprint",
+      "edits": [
+        {
+          "path": [
+            "places",
+            0,
+            "openings",
+            0,
+            "edge"
+          ],
+          "value": "north"
+        }
+      ]
+    },
+    {
+      "name": "opening-past-chunk",
+      "valid": false,
+      "rule": "off the footprint",
+      "edits": [
+        {
+          "path": [
+            "places",
+            0,
+            "openings",
+            0,
+            "offset"
+          ],
+          "value": 22
+        }
+      ]
+    },
+    {
+      "name": "duplicate-opening",
+      "valid": false,
+      "rule": "duplicate place tangle opening",
+      "edits": [
+        {
+          "path": [
+            "places",
+            0,
+            "openings",
+            1,
+            "id"
+          ],
+          "value": "commons-gate"
+        }
+      ]
+    },
+    {
+      "name": "empty-lands",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "lands"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "name": "duplicate-land",
+      "valid": false,
+      "rule": "duplicate land",
+      "edits": [
+        {
+          "path": [
+            "lands",
+            1,
+            "id"
+          ],
+          "value": "woods"
+        }
+      ]
+    },
+    {
+      "name": "land-unknown-ground",
+      "valid": false,
+      "rule": "unknown ground",
+      "edits": [
+        {
+          "path": [
+            "lands",
+            0,
+            "ground",
+            "floor"
+          ],
+          "value": "lava"
+        }
+      ]
+    },
+    {
+      "name": "land-water-floor",
+      "valid": false,
+      "rule": "is water, not land",
+      "edits": [
+        {
+          "path": [
+            "lands",
+            0,
+            "ground",
+            "floor"
+          ],
+          "value": "water"
+        }
+      ]
+    },
+    {
+      "name": "land-unknown-decor",
+      "valid": false,
+      "rule": "unknown decor kind",
+      "edits": [
+        {
+          "path": [
+            "lands",
+            0,
+            "decor",
+            0,
+            "id"
+          ],
+          "value": "palm"
+        }
+      ]
+    },
+    {
+      "name": "land-decor-twice",
+      "valid": false,
+      "rule": "weighted twice",
+      "edits": [
+        {
+          "path": [
+            "lands",
+            0,
+            "decor",
+            1,
+            "id"
+          ],
+          "value": "oak"
+        }
+      ]
+    },
+    {
+      "name": "land-unknown-material",
+      "valid": false,
+      "rule": "unknown material",
+      "edits": [
+        {
+          "path": [
+            "lands",
+            0,
+            "materials",
+            0,
+            "id"
+          ],
+          "value": "gold"
+        }
+      ]
+    },
+    {
+      "name": "land-unknown-mix",
+      "valid": false,
+      "rule": "unknown camp mix",
+      "edits": [
+        {
+          "path": [
+            "lands",
+            0,
+            "campMixes",
+            0,
+            "id"
+          ],
+          "value": "dragon"
+        }
+      ]
+    },
+    {
+      "name": "lean-too-far",
+      "valid": false,
+      "rule": "lean.unit",
+      "edits": [
+        {
+          "path": [
+            "lands",
+            0,
+            "lean",
+            "dx"
+          ],
+          "value": 2
+        }
+      ]
+    },
+    {
+      "name": "thicket-1001",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "lands",
+            0,
+            "thicketPermille"
+          ],
+          "value": 1001
+        }
+      ]
+    },
+    {
+      "name": "band-past-cap",
+      "valid": false,
+      "rule": "past the cap",
+      "edits": [
+        {
+          "path": [
+            "landSizes",
+            "bands",
+            5,
+            "maxChunks"
+          ],
+          "value": 21
+        }
+      ]
+    },
+    {
+      "name": "band-range",
+      "valid": false,
+      "rule": "size_band.range",
+      "edits": [
+        {
+          "path": [
+            "landSizes",
+            "bands",
+            1,
+            "maxChunks"
+          ],
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "missing-land-sizes",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "landSizes"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "tier-out-of-order",
+      "valid": false,
+      "rule": "out of order",
+      "edits": [
+        {
+          "path": [
+            "tiers",
+            1,
+            "tier"
+          ],
+          "value": 3
+        }
+      ]
+    },
+    {
+      "name": "tier-chest-range",
+      "valid": false,
+      "rule": "tier.chest_range",
+      "edits": [
+        {
+          "path": [
+            "tiers",
+            0,
+            "chestMax"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "tier-missing-chest-table",
+      "valid": false,
+      "rule": "missing loot table",
+      "edits": [
+        {
+          "path": [
+            "tiers",
+            2,
+            "chestMax"
+          ],
+          "value": 4
+        }
+      ]
+    },
+    {
+      "name": "tier-unknown-mix",
+      "valid": false,
+      "rule": "unknown camp mix",
+      "edits": [
+        {
+          "path": [
+            "tiers",
+            0,
+            "campMixes",
+            0,
+            "id"
+          ],
+          "value": "dragon"
+        }
+      ]
+    },
+    {
+      "name": "missing-south-limit",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "frontier",
+            "southLimit"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "clear-unknown-decor",
+      "valid": false,
+      "rule": "unknown decor kind",
+      "edits": [
+        {
+          "path": [
+            "paths",
+            "clearTools",
+            0,
+            "decor"
+          ],
+          "value": "palm"
+        }
+      ]
+    },
+    {
+      "name": "lay-on-land-ground",
+      "valid": false,
+      "rule": "is land, not laid",
+      "edits": [
+        {
+          "path": [
+            "paths",
+            "lay",
+            0,
+            "ground"
+          ],
+          "value": "moss"
+        }
+      ]
+    },
+    {
+      "name": "lay-unknown-material",
+      "valid": false,
+      "rule": "unknown material",
+      "edits": [
+        {
+          "path": [
+            "paths",
+            "lay",
+            0,
+            "material"
+          ],
+          "value": "gold"
+        }
+      ]
+    },
+    {
+      "name": "lay-bad-kind",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "paths",
+            "lay",
+            0,
+            "kind"
+          ],
+          "value": "gold"
+        }
+      ]
+    },
+    {
+      "name": "duplicate-lay",
+      "valid": false,
+      "rule": "duplicate lay kind",
+      "edits": [
+        {
+          "path": [
+            "paths",
+            "lay",
+            1,
+            "kind"
+          ],
+          "value": "stone"
+        }
+      ]
+    },
+    {
+      "name": "walk-unknown-ground",
+      "valid": false,
+      "rule": "unknown ground",
+      "edits": [
+        {
+          "path": [
+            "paths",
+            "walk",
+            0,
+            "ground"
+          ],
+          "value": "lava"
+        }
+      ]
+    },
+    {
+      "name": "walk-too-slow",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "paths",
+            "walk",
+            0,
+            "speedPermille"
+          ],
+          "value": 50
+        }
+      ]
+    },
+    {
+      "name": "river-width-range",
+      "valid": false,
+      "rule": "river.width_range",
+      "edits": [
+        {
+          "path": [
+            "river",
+            "maxWidth"
+          ],
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "river-land-water",
+      "valid": false,
+      "rule": "is land, not water",
+      "edits": [
+        {
+          "path": [
+            "river",
+            "waterGround"
+          ],
+          "value": "moss"
+        }
+      ]
+    },
+    {
+      "name": "river-unknown-land",
+      "valid": false,
+      "rule": "unknown land",
+      "edits": [
+        {
+          "path": [
+            "river",
+            "leanLand"
+          ],
+          "value": "swamp"
+        }
+      ]
+    },
+    {
+      "name": "river-enters-south",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "river",
+            "enters",
+            0
+          ],
+          "value": "south"
+        }
+      ]
+    },
+    {
+      "name": "road-unknown-opening",
+      "valid": false,
+      "rule": "unknown opening",
+      "edits": [
+        {
+          "path": [
+            "road",
+            "fromOpening"
+          ],
+          "value": "gate"
+        }
+      ]
+    },
+    {
+      "name": "road-on-land",
+      "valid": false,
+      "rule": "is land, not road",
+      "edits": [
+        {
+          "path": [
+            "road",
+            "ground"
+          ],
+          "value": "moss"
+        }
+      ]
+    },
+    {
+      "name": "duplicate-place-kind",
+      "valid": false,
+      "rule": "duplicate place kind",
+      "edits": [
+        {
+          "path": [
+            "placeKinds",
+            1,
+            "id"
+          ],
+          "value": "camp-glade"
+        }
+      ]
+    },
+    {
+      "name": "place-kind-unknown-land",
+      "valid": false,
+      "rule": "unknown land",
+      "edits": [
+        {
+          "path": [
+            "placeKinds",
+            0,
+            "land"
+          ],
+          "value": "swamp"
+        }
+      ]
+    },
+    {
+      "name": "landmark-not-blocking",
+      "valid": false,
+      "rule": "not a blocking decor kind",
+      "edits": [
+        {
+          "path": [
+            "placeKinds",
+            0,
+            "landmark"
+          ],
+          "value": "fern"
+        }
+      ]
+    },
+    {
+      "name": "landmark-without-phrase",
+      "valid": false,
+      "rule": "has no rumour phrase",
+      "edits": [
+        {
+          "path": [
+            "placeKinds",
+            0,
+            "landmark"
+          ],
+          "value": "oak"
+        }
+      ]
+    },
+    {
+      "name": "bad-place-entity",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "placeKinds",
+            0,
+            "entities",
+            0
+          ],
+          "value": "dragon"
+        }
+      ]
+    },
+    {
+      "name": "zero-find-radius",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "placeKinds",
+            0,
+            "findRadius"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "missing-cells-origin",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "cells",
+            "originCx"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "missing-words",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "words"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "bad-stand-in",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "words",
+            "standIn"
+          ],
+          "value": [
+            "everything"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "rumour-seven-compass",
+      "valid": false,
+      "rule": "repeated.min_items",
+      "edits": [
+        {
+          "path": [
+            "rumour",
+            "compass"
+          ],
+          "value": [
+            {
+              "dir": "n",
+              "phrase": "north"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "duplicate-compass",
+      "valid": false,
+      "rule": "duplicate compass dir",
+      "edits": [
+        {
+          "path": [
+            "rumour",
+            "compass",
+            1,
+            "dir"
+          ],
+          "value": "n"
+        }
+      ]
+    },
+    {
+      "name": "duplicate-ring",
+      "valid": false,
+      "rule": "duplicate distance ring",
+      "edits": [
+        {
+          "path": [
+            "rumour",
+            "distance",
+            1,
+            "ring"
+          ],
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "rumour-digit",
+      "valid": false,
+      "rule": "a digit",
+      "edits": [
+        {
+          "path": [
+            "rumour",
+            "distance",
+            0,
+            "phrase"
+          ],
+          "value": "2 chunks out."
+        }
+      ]
+    },
+    {
+      "name": "rumour-unknown-decor",
+      "valid": false,
+      "rule": "unknown decor kind",
+      "edits": [
+        {
+          "path": [
+            "rumour",
+            "landmarks",
+            0,
+            "decor"
+          ],
+          "value": "palm"
+        }
+      ]
+    },
+    {
+      "name": "missing-rumour-table",
+      "valid": false,
+      "rule": "missing loot table",
+      "edits": [
+        {
+          "path": [
+            "lootTables",
+            "rumour"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "table-trinket-1001",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "lootTables",
+            "rumour",
+            "trinketChancePermille"
+          ],
+          "value": 1001
         }
       ]
     }
