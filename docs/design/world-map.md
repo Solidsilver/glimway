@@ -205,9 +205,15 @@ A and B can start independently after agreeing units; C can build against their 
 
 The fights worktree's brief has not been inspected here. Treat the listed shared files as likely overlap, not a guarantee about its lane ownership. Before implementation, exchange the actual touched-file lists and reserve the small WorldScene position-publication insertion. Server-only fights work in `server/**` can proceed alongside A–E; any client input, combat-state or forced-move changes must be integrated deliberately, especially because server combat may continue with the map open.
 
-## 10. Open questions for the owner
+## 10. Owner decisions (2026-10-11)
 
-The full-screen map, M binding and built-in availability are settled. The following choices remain recommendations rather than additional owner decisions:
+- **Riding moves to V.**
+- **The map opens close up on you** (4 px/tile, 100%), and your zoom is remembered between openings.
+- **The desktop minimap comes later**, after the full-screen map ships.
+
+## 11. Still open
+
+The questions below were answered above where marked; 4 and 5 stay open for the fights and magic work:
 
 1. **Mount key:** accept V, or prefer the Z runner-up? This plan uses V unless changed before implementation.
 2. **Opening zoom:** does the proposed local 100% view (4 px/tile), remembered between openings, feel right in playtesting, or should the first opening show all walked land?
