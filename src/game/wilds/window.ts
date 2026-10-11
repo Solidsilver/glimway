@@ -172,8 +172,15 @@ export class WildsWindow {
     if (!plan) return false
     const known = (cx: number, cy: number) => !!chunkTerrain(cx, cy)
     for (const key of plan.attach) {
-      if (this.attached.has(key)) continue
       const { cx, cy } = parseChunkKey(key)
+      const had = this.attached.get(key)
+      if (had) {
+        // Patched in place (./window-chunk.ts patch): its ground is repainted off the frame.
+        const p = this.paints.get(key)
+        if (!p || p.sig === had.sig || this.pending.get(key) === had.sig || !paintable(cx, cy, insideNamedFrontier, known)) continue
+        this.paint(key, had.sig)
+        return true
+      }
       const t = effectiveChunk(cx, cy)
       if (!t) {
         this.load(key)
@@ -214,7 +221,7 @@ export class WildsWindow {
       const t = chunkTerrain(cx, cy)
       if (!t) continue
       const { scene } = this.deps
-      this.far.set(key, chunkLandmarks(t, (k) => scene.textures.exists(k)).map((s) => scene.add.image(s.x, s.y, s.key).setOrigin(0.5, 1).setFlipX(s.flipX ?? false).setDepth(s.y).setData('place', s.place)))
+      this.far.set(key, chunkLandmarks(t, (k) => scene.textures.exists(k)).map((s) => scene.add.image(s.x, s.y, s.key).setOrigin(0.5, 1).setFlipX(s.flipX ?? false).setDepth(s.y).setData('place', s.place).setData('at', { tx: s.tx, ty: s.ty })))
       return true
     }
     return false
@@ -258,14 +265,18 @@ export class WildsWindow {
     const texture = groundTexture(this.deps.scene, `wilds-ground:${key}:${old && old.key.endsWith(':a') ? 'b' : 'a'}`, rgba)
     this.logPaint(key, ms, false, thread)
     this.paints.set(key, { key: texture, sig })
-    // An attached chunk whose ground moved is rebuilt on its new image; a
-    // chunk of the 3×3 waiting for its image is attached now.
+    // A chunk patched in place takes its new image; one whose ground moved
+    // otherwise is rebuilt on it; a chunk of the 3×3 waiting for its image
+    // is attached now.
     const had = this.attached.get(key)
-    if (had) {
-      had.destroy()
-      this.attached.delete(key)
+    if (had && had.sig === sig) had.setGround(texture)
+    else {
+      if (had) {
+        had.destroy()
+        this.attached.delete(key)
+      }
+      if (had || this.plan?.attach.includes(key)) this.attach(key)
     }
-    if (had || this.plan?.attach.includes(key)) this.attach(key)
     if (this.isReady()) this.release()
     if (old && old.key !== texture && this.deps.scene.textures.exists(old.key)) this.deps.scene.textures.remove(old.key)
   }
@@ -280,21 +291,30 @@ export class WildsWindow {
       for (const img of far) img.destroy()
       this.far.delete(key)
     }
-    this.attached.set(key, new AttachedChunk({ ...this.deps, ground: { ground: groundAt, solid: solidAt }, gather: (c) => chunkGather(c, calendarAt(gameNow())) }, t, p.key))
+    const c = new AttachedChunk({ ...this.deps, ground: { ground: groundAt, solid: solidAt }, gather: (c) => chunkGather(c, calendarAt(gameNow())) }, t, p.key)
+    c.sig = p.sig
+    this.attached.set(key, c)
   }
 
-  /** Chunks whose epoch or ground changes moved since they were painted are painted again. */
+  /**
+   * Chunks whose ground changes moved (a path laid, a thicket cleared) are
+   * patched in place and repainted off the frame; a chunk whose epoch moved,
+   * or whose change can't be patched, is built again.
+   */
   private refreshChanged(): void {
-    for (const key of this.attached.keys()) {
-      const { cx, cy } = parseChunkKey(key)
-      const p = this.paints.get(key)
-      if (p && p.sig !== this.sigOf(cx, cy)) this.paints.delete(key)
-    }
     for (const [key, c] of this.attached) {
-      if (!this.paints.has(key)) {
-        c.destroy()
-        this.attached.delete(key)
+      const { cx, cy } = parseChunkKey(key)
+      const sig = this.sigOf(cx, cy)
+      if (c.sig === sig) continue
+      const t = effectiveChunk(cx, cy)
+      const sameEpoch = !!t && t.epochId === c.terrain.epochId
+      if (sameEpoch && c.patch(t)) {
+        c.sig = sig
+        continue
       }
+      this.paints.delete(key)
+      c.destroy()
+      this.attached.delete(key)
     }
   }
 
@@ -317,13 +337,13 @@ export class WildsWindow {
     for (const imgs of this.far.values())
       for (const img of imgs) {
         const place = img.getData('place') as string | null
-        if (place && view.contains(img.x, img.y - img.displayHeight / 2)) markSeen(wick, place)
+        if (place && view.contains(img.x, img.y - img.displayHeight / 2)) markSeen(wick, place, img.getData('at') as { tx: number; ty: number })
       }
     for (const c of this.attached.values())
       for (const p of c.terrain.places) {
         const x = (c.terrain.cx * c.terrain.size + p.tx) * 16 + 8
         const y = (c.terrain.cy * c.terrain.size + p.ty) * 16
-        if (view.contains(x, y)) markSeen(wick, p.id)
+        if (view.contains(x, y)) markSeen(wick, p.id, { tx: c.terrain.cx * c.terrain.size + p.tx, ty: c.terrain.cy * c.terrain.size + p.ty })
       }
   }
 

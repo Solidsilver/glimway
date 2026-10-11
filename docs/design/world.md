@@ -81,14 +81,34 @@ unknown, and named lamps are why any of it can be held.
 
 ## Today
 
-- The Wilds are two 3×3 regions of 24-tile chunks (`content/wilds.json`): the
-  Tangle (`inner-1`, permanent) and the Whitequiet (`outer-1`, turns every wick).
-- Generation is per chunk with no knowledge of neighbours
-  (`src/lib/wilds/gen-v1.ts`, `tangle.ts`, `outer.ts`). Entities and loot are
-  integer code ported to Go (`server/internal/wilds`) and pinned by test vectors;
-  terrain is client-only. Epochs freeze each region's generator version.
-- So nothing can span chunks (a river, a ridge, a lake shore). The open map
-  fixes that.
+As of 0.8 ("The open map", [open-map.md](open-map.md)):
+
+- The Wilds are one world on signed chunk coordinates `(world, realm, layer,
+  cx, cy)`, chunk (0, 0) at the Commons gate, north as −y. The Tangle is a
+  fixed 3×3 footprint (cx −1..1, cy −2..0) that never turns; the Whitequiet is
+  the 3×3 north of it; everything else is the Beyond. The Whitequiet and the
+  Beyond turn every wick.
+- **The server generates every chunk; the client only draws.** Generator v3
+  (`server/internal/wilds`, integer math, pinned by `golden_v3.json`) makes a
+  chunk from the world seed, its epoch and its coordinates: cells with one
+  place each, lands (woods, meadow) from weighted points with soft borders,
+  the Wend with a ford where every route crosses it, the Lantern Road with its
+  dark lamp stones, routes between places, landmarks, and the rumour's site.
+  Neighbours agree at their edges because they read the same world fields.
+- Chunks are made on demand inside the frontier (`frontier.Inside`: within
+  three chunks of the footprints, nothing south of the gate) and stored per
+  epoch: a **still** epoch for the Tangle, a **wick** epoch for the rest.
+  Nothing outside the frontier is made; the client draws the drift there,
+  with a pale glimpse of the land beyond.
+- The client walks one seamless Wilds scene: a moving 3×3 window of chunks,
+  read with `GET /api/wilds/near/<cx>/<cy>` and painted in world pixels.
+- Player-made changes (paths: cleared, stone, plank) and named ways are
+  `world_changes` rows under their chunk's epoch, so they go when the land
+  turns and stay in the Tangle. This is the layer lamps (0.9) build on.
+- Each wick has one rumoured find, and the first to reach a place gets a small
+  find and their name on everyone's map.
+- Not yet: lamps and held land (0.9), height bands and cliffs, lake country,
+  caves.
 
 ## The open map
 

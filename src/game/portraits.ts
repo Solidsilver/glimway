@@ -6,6 +6,7 @@
 import { craftsIconUrls } from './crafts-art'
 import { purseIconUrls } from './purse-art'
 import { glimsIconUrls } from './glims-art'
+import { openMapIconUrls } from './wilds/open-map-art'
 import { indoorsIconUrls } from './indoors-art'
 import type Phaser from 'phaser'
 import { bus, EV } from './events'
@@ -85,5 +86,5 @@ export function emitPortraits(scene: Phaser.Scene): void {
     if (url) out[name] = url
   }
   bus.emit(EV.portraits, out)
-  bus.emit(EV.artIcons, { ...commonsIconUrls(scene), ...itemIconUrls(scene), ...indoorsIconUrls(scene), ...craftsIconUrls(scene), ...purseIconUrls(scene), ...glimsIconUrls(scene) })
+  bus.emit(EV.artIcons, { ...commonsIconUrls(scene), ...itemIconUrls(scene), ...indoorsIconUrls(scene), ...craftsIconUrls(scene), ...purseIconUrls(scene), ...glimsIconUrls(scene), ...openMapIconUrls(scene) })
 }

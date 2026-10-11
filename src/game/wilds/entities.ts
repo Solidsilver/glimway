@@ -64,13 +64,13 @@ import type { Interactables } from '../entities/interactables'
 import type { EnemyType } from '../worlds'
 
 /** Server error code → what the player reads. All text is static. */
-const CLAIM_ERROR: Record<string, string> = {
+export const CLAIM_ERROR: Record<string, string> = {
   'old-cycle': 'Someone got there first — it will come back.',
   'entity-unavailable': 'Someone got there first — it will come back.',
   'already-claimed': 'You have already claimed this one.',
   'too-far-away': 'Too far away — step closer.',
   'not-in-wilds': 'That only works out in the Wilds.',
-  'epoch-ended': 'The Wilds shift. Make your way back to the entrance.',
+  'epoch-ended': 'The drift has turned. The land is new.',
   'claim-rate-limited': 'That is plenty of gathering for one minute. Take a breath.',
   offline: 'Needs a connection. The Wilds keep what you have not claimed.',
   superseded: TRANSPORT_ERRORS.superseded,
@@ -250,14 +250,14 @@ const POI_FRAME: Record<string, { tex: string; frame?: string; h: number }> = {
 }
 
 /** The delivered icon for a loot toast: the find, else the first material. */
-const lootArt = (drop: { materials: { id: string }[]; trinket: string | null }): string | undefined =>
+export const lootArt = (drop: { materials: { id: string }[]; trinket: string | null }): string | undefined =>
   drop.trinket ? `icon-${drop.trinket}` : drop.materials[0] ? `icon-${drop.materials[0].id}` : undefined
 
 /**
  * What a drop put in the bag, for the bag button: the first item, and its
  * count when it's the only one; mixed loot says what it was ("3 Fiber, 1 Amber").
  */
-const lootGain = (drop: { materials: { id: string; qty: number }[]; trinket: string | null }): ToastPayload['gain'] => {
+export const lootGain = (drop: { materials: { id: string; qty: number }[]; trinket: string | null }): ToastPayload['gain'] => {
   const first = drop.trinket ?? drop.materials[0]?.id
   if (!first) return undefined
   const single = drop.materials.length + (drop.trinket ? 1 : 0) === 1

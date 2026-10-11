@@ -1134,26 +1134,20 @@
   "words": {
     "drift": "The drift is thick here. Not without a lamp.",
     "turned": "The drift turned while you stood in it.",
-    "lampStone": "An old lamp stone, cold and sooted. Mara would know what it was for.",
-    "needTool": "You'd need a {tool} for this.",
-    "needMaterial": "You need {material} to lay this.",
-    "notOnWater": "A path can't go on water.",
+    "lampStone": "A lamp stone, cold a long time. Its niche is black with old soot. Mara might know what it was for.",
+    "needTool": "You'd need {tool} for this.",
+    "needMaterial": "You're out of {material}.",
+    "notOnWater": "Not on water. Cross at a ford.",
     "turnsIn": "This land turns in {days} days. A path here goes with it.",
     "foundBy": "Found by {name}",
-    "firstFind": "Nobody has been here this wick. You find {loot}.",
+    "firstFind": "Nobody's been here yet this wick. You find {loot}.",
     "wayName": "{name}'s way",
-    "waySign": "{way}. Between {from} and {to}.",
-    "standIn": [
-      "lampStone",
-      "needMaterial",
-      "notOnWater",
-      "firstFind",
-      "waySign"
-    ]
+    "waySign": "{way}. From {from} to {to}.",
+    "standIn": []
   },
   "rumour": {
-    "standIn": true,
-    "template": "Something's tucked under {landmark}, {compass}{river}. {distance}",
+    "standIn": false,
+    "template": "Something's tucked under {landmark}, {compass} of the gate{river}. {distance}",
     "landmarks": [
       {
         "decor": "split-oak",
@@ -1217,11 +1211,11 @@
       },
       {
         "ring": 3,
-        "phrase": "Out past the old road's end."
+        "phrase": "Out near the edge of the drift."
       }
     ],
     "pastRiver": ", past the river",
     "opened": "You found it, then. There'll be another when the drift turns.",
-    "none": "Nothing's reached me this week. Ask again after the turning."
+    "none": "Nothing's reached me this wick. Ask again after the turning."
   }
 }

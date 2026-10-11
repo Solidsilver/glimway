@@ -3,18 +3,22 @@
   import PapersTab from './PapersTab.svelte'
   import GuidesTab from './GuidesTab.svelte'
   import QuestsTab from './QuestsTab.svelte'
+  import MapTab from './MapTab.svelte'
+  import ArtIcon from './ArtIcon.svelte'
+  import { MAP_LABELS } from '../content/open-map'
   import type { Session } from '../game/session'
   import { papers } from './papers.svelte'
 
   // Mounted only while open (App owns journalOpen + the J/Escape keys).
   // `focus`: a quest to put at the top of the Quests page (the opening's note).
-  let { onClose, session, initialTab = 'quests', focus = null }: { onClose: () => void; session: Session; initialTab?: 'quests' | 'papers' | 'guides'; focus?: string | null } = $props()
+  let { onClose, session, initialTab = 'quests', focus = null }: { onClose: () => void; session: Session; initialTab?: 'quests' | 'papers' | 'map' | 'guides'; focus?: string | null } = $props()
 
-  // Three pages: the quests, the found texts ("Papers"), and "How do I…?".
-  type Tab = 'quests' | 'papers' | 'guides'
-  const TABS: { id: Tab; label: string }[] = [
+  // Four pages: the quests, the found texts ("Papers"), the walked land ("Map"), and "How do I…?".
+  type Tab = 'quests' | 'papers' | 'map' | 'guides'
+  const TABS: { id: Tab; label: string; art?: string }[] = [
     { id: 'quests', label: 'Quests' },
     { id: 'papers', label: 'Papers' },
+    { id: 'map', label: MAP_LABELS.tab, art: 'map-tab' },
     { id: 'guides', label: 'How do I…?' }
   ]
   // Opens on the page asked for; the tabs take over from there.
@@ -48,6 +52,7 @@
           onclick={() => (tab = t.id)}
           onkeydown={onTabKey}
         >
+          {#if t.art}<ArtIcon art={t.art} size={16} />{/if}
           {t.label}
           {#if t.id === 'papers' && papers.unread.length > 0}<span class="newdot" aria-hidden="true"></span><span class="sr">, {papers.unread.length} new</span>{/if}
         </button>
@@ -58,6 +63,10 @@
   {#if tab === 'papers'}
     <div role="tabpanel" id="journal-page-papers" aria-labelledby="journal-tab-papers">
       <PapersTab />
+    </div>
+  {:else if tab === 'map'}
+    <div role="tabpanel" id="journal-page-map" aria-labelledby="journal-tab-map">
+      <MapTab {session} />
     </div>
   {:else if tab === 'guides'}
     <div role="tabpanel" id="journal-page-guides" aria-labelledby="journal-tab-guides">
@@ -78,6 +87,10 @@
   }
   .tabs button {
     position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
     flex: 1;
     min-height: 40px;
     padding: 6px 10px;

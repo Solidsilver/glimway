@@ -3,6 +3,7 @@ import type { HomePlantView } from '../lib/api/types'
 import type { BeltKind } from '../lib/belt'
 import type { HabiticaProfile } from '../lib/habitica/types'
 import type { PurseView } from '../lib/purse'
+import type { RumourParts } from '../lib/wilds/rumour'
 import type { PresenceStatus } from '../lib/presence-client.ts'
 import type { HeldPayload } from './held'
 import type { ArrangeView, NamePrompt, PlacementCommand, PlacementView } from './homestead'
@@ -72,6 +73,8 @@ export const EV = {
   purse: 'game:purse',
   /** Connected play: the wardrobe the game shows changed (an answer, a choice, a rollback). */
   wardrobe: 'game:wardrobe',
+  /** Connected play: this wick's rumour as the server last said (open-map.md 2.10), or null. */
+  rumour: 'game:rumour',
   /** Open the Character panel's Companions page (`at: 'stable'` scrolls to the stable). */
   openCompanions: 'ui:open-companions',
   /** The mount that's out, as the hero has it now: { key, riding, led } (MountPayload); null when none is out. */
@@ -466,6 +469,7 @@ export interface EventMap {
   [EV.companions]: void
   [EV.purse]: PurseView
   [EV.wardrobe]: void
+  [EV.rumour]: RumourParts | null
   [EV.openCompanions]: { at?: 'stable' } | undefined
   [EV.mount]: MountPayload | null
   [EV.mutationResolved]: MutationResolvedPayload

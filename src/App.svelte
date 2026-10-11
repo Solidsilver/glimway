@@ -671,7 +671,7 @@
   /** What the library panel was opened for (a section's shelves, Elara's donations). */
   let libraryAt = $state<LibraryOpenPayload>({})
   /** The journal page to open on (the HUD's pinned guide opens "How do I…?"). */
-  let journalTab = $state<'quests' | 'papers' | 'guides'>('quests')
+  let journalTab = $state<'quests' | 'papers' | 'map' | 'guides'>('quests')
   /** The Character panel's page to open on (the stable opens Companions), reset when it closes. */
   let characterTab = $state<'hero' | 'companions'>('hero')
   let characterAt = $state<'stable' | null>(null)

@@ -38,6 +38,7 @@ import type { Effects } from '../entities/fx'
 import type { Hero } from '../entities/hero'
 import type { HomesteadLayer } from '../entities/homesteads'
 import type { WildsEntities } from '../wilds/entities'
+import type { WildsPaths } from '../wilds/paths'
 
 export interface WorldActionDeps {
   scene: Phaser.Scene
@@ -48,6 +49,8 @@ export interface WorldActionDeps {
   lightProps: () => LightProp[]
   homesteads: () => HomesteadLayer | null
   wilds: () => WildsEntities | null
+  /** The open map's path work (a confirmed lay comes back as `path:lay:…`). */
+  paths: () => WildsPaths | null
   /** Write where the hero stands into the save (it rides along with a write). */
   notePosition: () => void
   /** A paid outcome changes what the markers and the prompt say. */
@@ -69,6 +72,8 @@ export class WorldActions {
     ],
     // A settle picked in an Echo camp conversation (the keep's offer keeps the lamp open).
     ['echo:settle:', (siteId) => void this.deps.wilds()?.settleEcho(siteId)],
+    // The confirm before laying on land that turns (open-map.md 2.9).
+    ['path:', (rest) => this.deps.paths()?.onAction(rest)],
     ['heirloom:grant:', (id) => this.grantHeirloom(id)],
     [
       'buy:',

@@ -13,6 +13,98 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+### For players
+
+- **The open map.** Out through the Commons gate the Wilds now run on
+  without doors: no fades between chunks, just walking. The Tangle comes
+  first, the Whitequiet north of it, and new land all round past them.
+- **The Tangle is new once.** Same iron-oaks, the plank and the papers where
+  they were, but new paths and camps. Its camps, nodes and chests start
+  fresh. Your pack, home chest, story and Echoes are kept.
+- **New land:** woods that thin into **meadow** (open grass, wildflowers,
+  stone outcrops, a lone oak), and **the Wend**, a wide dark river you cross
+  at **fords**, wading slowly.
+- **The Lantern Road** runs north from the Whitequiet, old paving with
+  **dark lamp stones** beside it. Look at one; Mara might know what they
+  were for.
+- Everything past the Tangle **turns every wick**: the land, the river's
+  course, the places. When it turns while you're out there, you stay where
+  you are and the land changes round you. If you were standing in something
+  that's now solid, you step to open ground.
+- **The drift** closes the way three chunks out. You can see a little of
+  the land beyond it, pale through the veil, but you can't walk in.
+- Further out is harder: the camps hit harder and the chests are better.
+- **Make paths.** With a spade in hand, clear a thicket; with an axe, a
+  fallen trunk. Then lay **stone** (one stone a tile) or **plank** (one
+  timber a tile) under your feet: L for stone, P for plank, held down to keep
+  laying as you walk. Paths are a little faster to walk on. Out past the
+  Tangle they go when the land turns, and the game asks before your first
+  one each wick. L on your own path lifts it and gives the stone back.
+- **Named ways.** Lay stone all the way from one place to another and it
+  becomes "<your name>'s way", with a sign at each end.
+- **The Map** is a new page in the journal: the land you've walked this
+  wick, the road and the river, your paths and ways, the places you've seen,
+  who found them, and you.
+- **Landmarks** stand over the trees: a split oak, a standing stone, a lone
+  oak in the grass, an outcrop. You can see them from a chunk away.
+- **First to find.** Reach a place before anyone else in your world this
+  wick and you get a small find, and your name stays on that place on
+  everyone's map until the turning.
+- **A rumour each wick.** Ask Elara in the library what she's heard from
+  the drift. Something is tucked under a landmark out there; everyone can
+  open it once.
+- The place name at the top of the screen says when you're in the meadow or
+  by the Wend.
+- Friends out in the Wilds show up from the next chunk over, not only in
+  the same chunk.
+
+### Technical
+
+- **Contract 8.** `content/wilds.json` v3: footprints (`places`), `lands`,
+  `landSizes`, `tiers`, `frontier`, `paths`, `river`, `road`, `placeKinds`,
+  `cells`, `words` and the `rumour` phrase tables; ground and decor ids moved
+  from Go constants into content. The 3×3 `regions` are gone.
+- **Generator v3** (`server/internal/wilds`): one world on signed chunk
+  coordinates, cells with one place each, lands by weighted points with soft
+  borders, the Wend with a ford on every route, the Lantern Road and its lamp
+  stones, routes between places, landmarks, the rumour's site, and
+  `Glimpse` past the frontier. Integer math, pinned by `golden_v3.json`. v2,
+  its goldens and fixtures are deleted.
+- **The server world:** migration `034_open_map.sql` (a clean break:
+  `wild_epochs` with a `still` and a `wick` kind replace `region_epochs`;
+  Wilds entity state, claims, discoveries and lanterns cleared; saved Wilds
+  positions moved to the Commons arch; `last_outer_epoch` →
+  `last_wick_epoch`). Chunks are made on demand inside
+  `frontier.Inside`; the Tangle's nine come with the still epoch.
+- `GET /api/wilds/near/<cx>/<cy>` replaces the region read: epochs, the
+  frontier, and for the 5×5 window entity states, claims, discoveries,
+  lanterns, Echo assignments, ground changes, the glimpse and named ways.
+  `GET /api/wilds/region/<id>` is gone.
+- **The world-changes layer** for paths: `POST /api/wilds/clear`, `/lay`,
+  `/lift` (ground changes per chunk and epoch in `world_changes`), named
+  ways (`WildsWay` with path and sign tiles) made and broken by lays and
+  lifts; `POST /api/wilds/discover` (first insert wins, rolls `discovery`);
+  the rumour in `PlayerState.rumour`, opened through `POST /api/wilds/claim`
+  with `rumour:<cx>:<cy>`.
+- `where` on the open map is area `wilds` in world pixels. Presence rooms
+  are `wilds:<cx>:<cy>`, shared with the 3×3 around them.
+- **The client:** one Wilds scene with a moving 3×3 window
+  (`src/game/wilds/window.ts`), ground painted in world pixels on a worker,
+  landmarks drawn from a chunk away, the drift and the glimpse at the edge,
+  walk speed by ground (laid ×1.15, ford ×0.5), the turning in place.
+  `regions.ts`, `wildsRegion` and the chunk-scene area ids are gone.
+- Paths on the client (`src/game/wilds/paths.ts`, rules in
+  `src/lib/wilds/paths.ts`): predicted in the store and confirmed by the
+  server through the outbox (`wilds-clear`, `wilds-lay`, `wilds-lift`,
+  `wilds-discover`); a changed chunk is patched in place and repainted off
+  the frame. Way signs and finders' names (`src/game/wilds/marks.ts`), the
+  rumour's bundle in `sites.ts`, Elara's rumour talk, the Map tab
+  (`MapTab.svelte`, `src/lib/wilds/map-model.ts`).
+- The open-map art pass (`assets/generated/open-map-pass/`, packed as
+  `openMap`): meadow pieces, landmarks, bank stones, fords, road paving,
+  laid paths, the dark lamp stone, the frontier veil, the rumour's bundle,
+  the way sign and the Map tab's icon.
+
 ## [0.7.0] - 2026-10-10
 
 ### For players

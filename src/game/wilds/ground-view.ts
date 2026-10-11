@@ -10,7 +10,8 @@ import { CHUNK_TILES, chunkKey } from './coords.ts'
 import { effectiveTerrain, type ChunkTerrain } from './terrain.ts'
 import { chunkTerrain, groundChanges, insideNamedFrontier } from './store.ts'
 import { nearestOpen } from './window-plan.ts'
-import { TILE } from '../../lib/tile.ts'
+import { TERRAIN, TILE } from '../../lib/tile.ts'
+import { loadWilds } from '../../lib/wilds/data.ts'
 
 const cache = new Map<string, { base: ChunkTerrain; changes: readonly GroundChange[]; sig: string; effective: ChunkTerrain }>()
 
@@ -76,4 +77,19 @@ export function standAt(x: number, y: number): { x: number; y: number } | null {
 /** Forget the cache (the turning, a world move). */
 export function forgetGround(): void {
   cache.clear()
+}
+
+const terrainOfGround = (id: string) => (TERRAIN as Record<string, number>)[loadWilds().grounds.find((g) => g.id === id)?.terrain ?? '']
+const WET = new Set([terrainOfGround('water'), terrainOfGround('ford')])
+
+/**
+ * What land a world tile is in, for the HUD's place name: by the Wend
+ * (water within three tiles), the meadow (its chunk's main land), or null
+ * (the woods, or nothing loaded).
+ */
+export function landName(tx: number, ty: number): 'wend' | 'meadow' | null {
+  for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) if (WET.has(groundAt(tx + dx, ty + dy) ?? -1)) return 'wend'
+  const x = split(tx)
+  const y = split(ty)
+  return effectiveChunk(x.c, y.c)?.land === 'meadow' ? 'meadow' : null
 }
