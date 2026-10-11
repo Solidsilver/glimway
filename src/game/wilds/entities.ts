@@ -40,6 +40,7 @@ import {
   chunkThings,
   discoveryFor,
   entityAvailable,
+  entityCycle,
   entityChunk,
   isClaimed,
   takeReadRequest,
@@ -472,7 +473,7 @@ export class WildsEntities {
     if (isClaimed(e.id)) return false
     if (e.kind === 'poi' || e.kind === 'chest') return true
     if (!entityAvailable(e, nowSec)) return false
-    if (e.kind === 'camp') return this.campOutcome.won({ id: e.id, epoch: chunkEpoch(e.cx, e.cy)?.id ?? '', cycle: e.cycle })
+    if (e.kind === 'camp') return this.campOutcome.won({ id: e.id, epoch: chunkEpoch(e.cx, e.cy)?.id ?? '', cycle: entityCycle(e, nowSec) })
     return true
   }
 
@@ -511,7 +512,7 @@ export class WildsEntities {
       }
       return
     }
-    const res = await claimEntity(session, { epoch: epoch.id, entityId: entity.id, cycle: target.cycle, where: this.where() })
+    const res = await claimEntity(session, { epoch: epoch.id, entityId: entity.id, cycle: entityCycle(target, nowSec), where: this.where() })
     if (!res.ok) {
       this.claimError(res.code)
       return
@@ -809,13 +810,18 @@ export class WildsEntities {
 
   // ------------------------------------------------------------ camps
 
-  /** Each attached camp's fight follows the store: its epoch, cycle and whether it is depleted. */
+  /**
+   * Each attached camp's fight follows the store: its epoch, cycle and
+   * whether it is depleted. A camp come round on its timer is in its next
+   * cycle (entityCycle), as the read before its claim will say, so the fight
+   * won before that read still counts.
+   */
   private reconcileCamps(things: readonly WildsThing[]): void {
     const nowSec = Math.floor(Date.now() / 1000)
     const camps: (WildsThing & CampNow)[] = []
     for (const e of things) {
       const epoch = e.kind === 'camp' ? chunkEpoch(e.cx, e.cy)?.id : undefined
-      if (epoch) camps.push({ ...e, epoch, available: entityAvailable(e, nowSec) })
+      if (epoch) camps.push({ ...e, epoch, cycle: entityCycle(e, nowSec), available: entityAvailable(e, nowSec) })
     }
     this.camps.reconcile(camps)
   }

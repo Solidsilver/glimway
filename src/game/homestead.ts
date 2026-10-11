@@ -22,6 +22,7 @@ import { villageFor } from './village.ts'
 import { bus, EV, type MutationResolvedPayload } from './events.ts'
 import { grantPaper } from './papers.ts'
 import type { Session } from './session.ts'
+import { adoptMaterials, nextMark } from './materials-order.ts'
 
 export interface NamePrompt {
   title: string
@@ -122,21 +123,22 @@ export class Homesteads {
     return villageFor(this.session).carriedMaterials()
   }
 
+  /** An answer's balances (the stable's, an items answer's counts): newer than any read asked before. */
   set materials(m: Record<string, number>) {
-    villageFor(this.session).setCarriedMaterials(m)
+    adoptMaterials(m, nextMark())
   }
   private loading: Promise<void> | null = null
   private polling = 0
   /**
-   * Reads and answers are ordered, as the Wilds store's are: a read takes the
-   * next mark as it is asked, an applied answer the next as it lands. A read
-   * keeps whatever was set after it was asked (the lane, a gate's home, the
+   * Reads and answers are ordered, as the Wilds store's are, on the clock
+   * they share (materials-order.ts): a read takes the next mark as it is
+   * asked, an applied answer the next as it lands. A read keeps whatever was
+   * set after it was asked (the lane, a gate's home and its row, the
    * materials), so an earlier read answered late never undoes an action.
    */
-  private order = 0
   private laneSeq = 0
+  /** Per gate: the latest read or answer that said what is behind it (a home, none, or not the one known). */
   private readonly homeSeq = new Map<number, number>()
-  private materialsSeq = 0
 
   private readonly session: Session
 
@@ -232,7 +234,7 @@ export class Homesteads {
 
   private async doLoad(): Promise<void> {
     const link = this.session.link!
-    const mark = ++this.order
+    const mark = nextMark()
     const lane = await link.readCommons()
     if (!lane.ok) {
       // A newer lane is held: this read's failure says nothing about it.
@@ -244,7 +246,7 @@ export class Homesteads {
     const before = JSON.stringify([this.gates, this.gateCount, this.invites, this.myGateValue, this.status])
     if (mark > this.laneSeq) {
       this.laneSeq = mark
-      this.adoptLane(lane.value)
+      this.adoptLane(lane.value, mark)
     }
     this.status = 'ready'
     // Only a lane that changed is redrawn (Silas and Pell re-read it every conversation).
@@ -254,17 +256,33 @@ export class Homesteads {
     this.emitGoal()
   }
 
-  private adoptLane(v: CommonsLaneView): void {
+  /**
+   * The lane as read at `mark`. Each gate's home follows the lane only where
+   * the lane is the newer word: a gate whose home a later read or answer set
+   * keeps that home, and its row (who holds it, tier, shelf) is told from
+   * that home. Where the lane is newer, a gate it names free is known free,
+   * and one held by another home than the known one is unknown, each as of
+   * `mark`, so a gate read asked before the lane can't bring the old home back.
+   */
+  private adoptLane(v: CommonsLaneView, mark: number): void {
     const before = this.myGateValue
-    this.gates = v.gates
+    const prev = new Map(this.gates.map((g) => [g.gate, g]))
+    this.gates = v.gates.map((row) => {
+      const g = row.gate
+      const known = this.homes.get(g)
+      if (mark < (this.homeSeq.get(g) ?? 0)) return known === undefined ? row : rowFromHome(row, known, prev.get(g))
+      if (row.homeId === null) {
+        this.homes.set(g, null)
+        this.homeSeq.set(g, mark)
+      } else if (known === null || (known && known.id !== row.homeId)) {
+        this.homes.delete(g)
+        this.homeSeq.set(g, mark)
+      }
+      return row
+    })
     this.gateCount = v.gateCount
     this.invites = v.invites
     this.myGateValue = v.mine?.gate ?? null
-    for (const g of v.gates) {
-      const known = this.homes.get(g.gate)
-      if (g.homeId === null) this.homes.set(g.gate, null)
-      else if (known === null || (known && known.id !== g.homeId)) this.homes.delete(g.gate)
-    }
     setCommonsGateCount(this.gateCount)
     if (before !== this.myGateValue) this.emitGoal()
   }
@@ -275,7 +293,7 @@ export class Homesteads {
    */
   private adoptRead(v: { gate: number; landSeed?: number; home: HomeView | null; materials: Record<string, number> }, mark: number): void {
     if (v.landSeed !== undefined) this.seeds.set(v.gate, v.landSeed)
-    if (mark > this.materialsSeq) this.adoptMaterials(v.materials, mark)
+    adoptMaterials(v.materials, mark)
     if (mark <= (this.homeSeq.get(v.gate) ?? 0)) return
     const before = this.homes.get(v.gate)
     this.homes.set(v.gate, v.home)
@@ -284,16 +302,10 @@ export class Homesteads {
     if (before === undefined || JSON.stringify(before) !== JSON.stringify(v.home)) this.emit('home', v.gate)
   }
 
-  /** Materials as of `at` (an answer's: the next mark). */
-  private adoptMaterials(m: Record<string, number>, at = ++this.order): void {
-    this.materials = m
-    this.materialsSeq = at
-  }
-
   /** A home the server just sent (an action's answer, a workshop read): newer than any read asked before it. */
   adoptHome(home: HomeView | null): void {
     if (!home) return
-    const at = ++this.order
+    const at = nextMark()
     this.homes.set(home.gate, home)
     this.homeSeq.set(home.gate, at)
     this.seeds.set(home.gate, home.landSeed)
@@ -313,17 +325,13 @@ export class Homesteads {
     this.emit('home', home.gate)
   }
 
-  /** The shared balance moved elsewhere (the Wilds): newer than any read asked before. */
-  followMaterials(m: Record<string, number>): void {
-    this.adoptMaterials(m)
-  }
-
-  /** Refresh lane art after a slot is stocked, emptied, or a shelf is moved. */
+  /** Refresh lane art after a slot is stocked, emptied, or a shelf is moved (an answer: a lane read asked before it keeps this row). */
   adoptShelfState(gate: number, hasShelf: boolean, stocked: boolean): void {
     const row = this.gateInfo(gate)
     if (row) {
       row.shelf = hasShelf
       row.shelfStocked = hasShelf && stocked
+      if (this.homes.get(gate)) this.homeSeq.set(gate, nextMark())
     }
     this.emit('shelf', gate)
   }
@@ -344,7 +352,7 @@ export class Homesteads {
     const res = p.res as HomeActionResponse | undefined
     if (p.outcome === 'landed' && res?.result) {
       this.adoptHome(res.result.home)
-      this.adoptMaterials(res.result.materials)
+      adoptMaterials(res.result.materials, nextMark())
     }
     void this.fresh()
     bus.emit(EV.toast, {
@@ -357,7 +365,7 @@ export class Homesteads {
   async fetchHome(gate: number): Promise<HomeView | null> {
     const link = this.session.link
     if (!link) return null
-    const mark = ++this.order
+    const mark = nextMark()
     const r = await link.readHome(gate)
     if (!r.ok) return this.homes.get(gate) ?? null
     this.adoptRead(r.value, mark)
@@ -375,11 +383,11 @@ export class Homesteads {
       if (r.code === 'gate-taken' || r.code === 'already-homesteaded' || r.code === 'not-a-member' || r.code === 'invite-not-found' || r.code === 'resolved') void this.fresh()
       return { ok: false, code: r.code, text: homeErrorText(r.code) }
     }
-    this.adoptMaterials(r.materials)
+    adoptMaterials(r.materials, nextMark())
     if (r.home) this.adoptHome(r.home)
     if (action.op === 'claim' || action.op === 'leave' || action.op === 'joint' || action.op === 'invite') {
       if (action.op === 'leave') {
-        const at = ++this.order
+        const at = nextMark()
         const g = this.myGateValue
         this.myGateValue = null
         this.laneSeq = at
@@ -509,11 +517,36 @@ export class Homesteads {
 
 let current: { session: Session; homes: Homesteads } | null = null
 
+/**
+ * A lane row whose gate's home a read or answer newer than the lane set:
+ * who holds it and how it stands come from that home (`prev`, the row as
+ * held, carries summaries answers patched in, such as the shelf's).
+ */
+function rowFromHome(row: GateInfo, home: HomeView | null, prev: GateInfo | undefined): GateInfo {
+  if (!home) return { ...row, homeId: null, names: [], members: [], mine: false, tier: 0, desolate: false, reclaim: false, shelf: false, shelfStocked: false }
+  const same = prev?.homeId === home.id
+  const shelf = same && prev.shelf !== undefined ? prev.shelf : home.items.some((item) => item.itemDef === 'gate-shelf' && item.scene === 'gate')
+  return {
+    ...row,
+    homeId: home.id,
+    names: row.homeId === home.id ? row.names : home.members.map((m) => m.displayName),
+    members: home.members,
+    mine: home.member,
+    tier: home.tier,
+    desolate: home.desolate,
+    price: row.homeId === home.id ? row.price : null,
+    shelf,
+    shelfStocked: shelf && (same ? !!prev.shelfStocked : !!row.shelfStocked)
+  }
+}
+
 /** The homestead state for this session (made on first use; it feeds the land maps). */
 export function homesteadsFor(session: Session): Homesteads {
   if (!current || current.session !== session) {
     const homes = new Homesteads(session)
     current = { session, homes }
+    // Its carried counts mirror the one material balance from the start (materials-order.ts).
+    villageFor(session)
     setLandSource({
       worldId: () => session.link?.worldId || '',
       state: (gate) => {
@@ -524,20 +557,6 @@ export function homesteadsFor(session: Session): Homesteads {
     })
   }
   return current.homes
-}
-
-/**
- * The Wilds' claims and the shop share one server-owned balance: when the
- * Wilds side moves it, the shop's mirror follows (the reverse rides
- * EV.homeChanged, which the Wilds store watches).
- */
-export function syncWildsMaterials(materials: Record<string, number> | null): void {
-  current?.homes.followMaterials({ ...(materials ?? {}) })
-}
-
-/** The shop's current material mirror, for the Wilds store to follow. */
-export function currentHomesteadMaterials(): Record<string, number> | null {
-  return current ? { ...current.homes.materials } : null;
 }
 
 // ------------------------------------------------------------ Silas's words

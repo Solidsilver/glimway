@@ -21,7 +21,7 @@
  * Lifetime and order: a read belongs to the store's generation and the link
  * it was asked through. A reset, the turning or a world move ends that
  * generation, and its answer (or failure) is dropped. Overlapping reads and
- * answers are ordered (see `seq`): a late, older answer never replaces what
+ * answers are ordered (see `readMark`): a late, older answer never replaces what
  * a newer read or answer set, nor turns the land back.
  *
  * The turning: a read that names another wick epoch than the one held means
@@ -44,7 +44,7 @@ import type { Session } from '../session.ts';
 import { CHUNK_TILES, chunkKey, chunkOfPixel, isWildsArea } from './coords.ts';
 import { loadChunk, pruneChunks, cachedTerrain } from './chunks.ts';
 import type { ChunkTerrain, EntityBody } from './terrain.ts';
-import { currentHomesteadMaterials, syncWildsMaterials } from '../homestead.ts';
+import { adoptMaterials, heldMaterials, markNow, mirrorMaterials, nextMark } from '../materials-order.ts';
 
 /** An epoch as the server named it in the last near read. */
 export interface WildsEpoch {
@@ -138,20 +138,25 @@ bus.on(EV.fallSettled, ({ lantern }) => {
 });
 
 /**
- * One server-owned material balance everywhere: when the shop (homestead
- * actions) moves it, this store's mirror follows.
+ * One server-owned material balance everywhere (materials-order.ts): this
+ * store's mirror follows every adoption, the Home side's included. One the
+ * store makes itself is published by its own bump.
  */
-let homesteadWatch = false;
-function watchHomesteadMaterials(): void {
-  if (homesteadWatch) return;
-  homesteadWatch = true;
-  bus.on(EV.homeChanged, () => {
-    const m = currentHomesteadMaterials();
-    if (m && view) {
-      view.materials = { ...m };
-      emitMaterials();
-    }
-  });
+let adopting = false;
+mirrorMaterials('wilds', (m) => {
+  if (!view) return;
+  view.materials = materialsRecord(m);
+  if (!adopting) emitMaterials();
+});
+
+/** Balances read or answered at `at`, for both mirrors: false (and nothing set) if a newer balance is held. */
+function takeMaterials(m: Record<string, number>, at: number): boolean {
+  adopting = true;
+  try {
+    return adoptMaterials(materialsRecord(m), at);
+  } finally {
+    adopting = false;
+  }
 }
 
 const unread = (kind: WildsEpochKind): WildsEpoch => ({ id: '', kind, worldSeed: '', generatorVersion: 0, season: '', endsAt: null });
@@ -239,12 +244,11 @@ function materialsRecord(list: Record<string, number>): Record<string, number> {
   return out;
 }
 
+/** Publish the mirror (with unanswered lays and lifts) to the panel: not an adoption, so the Home side isn't told. */
 function emitMaterials(): void {
   const materials = wildsMaterials();
   if (!materials) return;
   bus.emit(EV.wilds, { materials });
-  // One server-owned balance everywhere: the shop's mirror follows.
-  syncWildsMaterials(materials);
 }
 
 function bump(): void {
@@ -257,6 +261,16 @@ export function entityAvailable(e: Pick<WildsEntityView, 'state' | 'available_at
   if (e.state === 'cleared' || e.state === 'harvested') return e.available_at > 0 && nowSec >= e.available_at;
   if (e.state === 'charted') return false;
   return true;
+}
+
+/**
+ * The cycle a camp or node is in now. A depleted one whose timer has passed
+ * is available in its next cycle, exactly one ahead, as the server's read
+ * projects it (server/internal/api/wilds.go, `projected`): a camp come round
+ * on its timer is fought under the cycle the claim's fresh read will name.
+ */
+export function entityCycle(e: Pick<WildsEntityView, 'state' | 'available_at' | 'cycle'>, nowSec: number): number {
+  return (e.state === 'cleared' || e.state === 'harvested') && entityAvailable(e, nowSec) ? e.cycle + 1 : e.cycle;
 }
 
 function lanternView(l: WildsLantern): WildsLanternView {
@@ -293,7 +307,7 @@ export function nearWindow(cx: number, cy: number, radius = NEAR_RADIUS): { cx: 
  * later read covered, an entity, claim, lantern, Echo, chunk's ground, way,
  * the balances or the frontier.
  */
-export function applyNear(res: WildsNearResult, since: number = seq): boolean | null {
+export function applyNear(res: WildsNearResult, since: number = markNow()): boolean | null {
   const still = epochView(res.still!, 'still');
   const wick = epochView(res.wick!, 'wick');
   const turned = !!view && !!view.wick.id && view.wick.id !== wick.id;
@@ -397,10 +411,8 @@ export function applyNear(res: WildsNearResult, since: number = seq): boolean | 
     v.ways.set(w.id, w);
     waySeq.set(w.id, since);
   }
-  if (!newer(materialsSeq)) {
-    v.materials = materialsRecord(res.materials);
-    materialsSeq = since;
-  }
+  // The one balance: this read's, unless one from after it was asked is held (a new view starts from that one).
+  if (!takeMaterials(res.materials, since) && restart) v.materials = materialsRecord(heldMaterials() ?? res.materials);
   v.stale = false;
   return turned;
 }
@@ -412,14 +424,13 @@ function stateView(s: WildsEntityState): EntityStateView {
 // ------------------------------------------------------------ order
 
 /**
- * Answers and near reads overwrite the same mirrors, so they are ordered: a
- * read takes the next `seq` as it is asked, and every applied answer takes
- * the next for what it set (an entity's state and claim, a lantern, an Echo,
+ * Answers and near reads overwrite the same mirrors, so they are ordered on
+ * the clock the Home side shares (materials-order.ts): a read takes the next
+ * mark as it is asked, and every applied answer takes the next for what it set (an entity's state and claim, a lantern, an Echo,
  * a chunk's ground, a way, the balances). A read marks what it set with its
  * own mark, and keeps whatever a later read or an answer set after it was
  * asked: two reads answered backwards leave the later one's view.
  */
-let seq = 0;
 /** The latest read that spoke for each chunk (`cx,cy`). */
 const readSeq = new Map<string, number>();
 const entitySeq = new Map<string, number>();
@@ -427,7 +438,6 @@ const lanternSeq = new Map<string, number>();
 const echoSeq = new Map<string, number>();
 const chunkSeq = new Map<string, number>();
 const waySeq = new Map<string, number>();
-let materialsSeq = 0;
 let frontierSeq = 0;
 /** The mark of the read the view started over from: an older one can't start it over again. */
 let startedAt = 0;
@@ -441,14 +451,13 @@ function forgetOrder(): void {
   echoSeq.clear();
   chunkSeq.clear();
   waySeq.clear();
-  materialsSeq = 0;
   frontierSeq = 0;
   goodSeq = 0;
 }
 
 /** The order mark of what the store holds now: a read asked now takes the next (refreshNear; tests). */
 export function readMark(): number {
-  return ++seq;
+  return nextMark();
 }
 
 /** A read is wanted: something the store held turned out wrong (a refusal, an answer for land that has turned). */
@@ -582,7 +591,6 @@ function linkId(link: object): number {
  */
 export async function prepareWilds(session: Session, maxAgeMs = 0): Promise<boolean> {
   if (!session.link) return false;
-  watchHomesteadMaterials();
   if (!isWildsArea(session.state.area)) return wildsLive(session) !== null;
   const { cx, cy } = chunkOfPixel(session.state.position.x, session.state.position.y);
   return refreshNear(session, cx, cy, maxAgeMs);
@@ -597,7 +605,7 @@ export async function prepareWilds(session: Session, maxAgeMs = 0): Promise<bool
  */
 export function applyClaim(result: WildsClaimResult): LootDrop {
   if (!view) throw new Error('wilds: claim before the Wilds loaded');
-  const at = ++seq;
+  const at = nextMark();
   const s = result.entity;
   if (s) {
     const chunk = entityChunk(s.id);
@@ -608,9 +616,8 @@ export function applyClaim(result: WildsClaimResult): LootDrop {
       entitySeq.set(s.id, at);
     } else requestRead();
   }
-  // The answer carries the post-grant balances: replace the mirror.
-  view.materials = materialsRecord(result.materials);
-  materialsSeq = at;
+  // The answer carries the post-grant balances: both mirrors follow.
+  takeMaterials(result.materials, at);
   bump();
   return { materials: (result.loot?.materials ?? []).map((m) => ({ id: m.id, qty: m.qty })), trinket: result.loot?.trinket ?? null };
 }
@@ -618,7 +625,7 @@ export function applyClaim(result: WildsClaimResult): LootDrop {
 /** A relight's answer: the lanterns it names, in its epoch (each lantern's chunk's); false (and a read wanted) for land that turned. */
 export function applyLanterns(lanterns: WildsLantern[], epoch: string): boolean {
   if (!view) return false;
-  const at = ++seq;
+  const at = nextMark();
   let kept = true;
   for (const l of lanterns) {
     if (chunkEpoch(Math.floor(l.x / CHUNK_TILES), Math.floor(l.y / CHUNK_TILES))?.id !== epoch) {
@@ -642,7 +649,7 @@ export function applyEchoSettled(site: string, epoch: string): boolean {
     return false;
   }
   a.settled = true;
-  echoSeq.set(site, ++seq);
+  echoSeq.set(site, nextMark());
   bump();
   return true;
 }
@@ -746,15 +753,14 @@ export function applyPathAnswer(ground: ChunkGroundChanges | undefined, material
   }
   const wick = view.wick.id;
   if ([...(ways.made ?? []), ...(ways.rerouted ?? [])].some((w) => w.epoch !== wick)) return false;
-  const at = ++seq;
+  const at = nextMark();
   if (ground?.chunk) {
     const key = chunkKey(ground.chunk.cx, ground.chunk.cy);
     view.ground.set(key, [...(ground.changes?.changes ?? [])]);
     chunkSeq.set(key, at);
     merged.delete(key);
   }
-  view.materials = materialsRecord(materials);
-  materialsSeq = at;
+  takeMaterials(materials, at);
   for (const w of [...(ways.made ?? []), ...(ways.rerouted ?? [])]) {
     view.ways.set(w.id, w);
     waySeq.set(w.id, at);
@@ -824,7 +830,6 @@ export function knownPlaces(): PlaceAt[] {
 /** Balances an answer carried (a first find's loot): the mirror follows. */
 export function applyBalances(materials: Record<string, number>): void {
   if (!view) return;
-  view.materials = materialsRecord(materials);
-  materialsSeq = ++seq;
+  takeMaterials(materials, nextMark());
   bump();
 }

@@ -129,6 +129,82 @@ test('the fresh home read is asked anew: it never joins a read from before a cha
   assert.deepEqual(homeShown(homes), shown, 'the stool and the balances stay');
 });
 
+/** The lane with gate 2 free, or held by someone else's home. */
+const freeLane = { ...lane, gates: [{ ...lane.gates[0]!, homeId: null, members: [], price: 40 }], mine: null };
+const theirs = (tier = 0) => ({ ...home([]), member: false, tier, members: [{ id: 'them', displayName: 'Them' }] });
+const theirLane = (tier = 0) => ({ ...lane, gates: [{ ...lane.gates[0]!, members: [{ id: 'them', displayName: 'Them' }], tier, shelf: false }], mine: null });
+
+test('the lane and a gate’s home are ordered against each other: neither undoes the other’s newer word', async () => {
+  // A lane read from before someone claimed gate 2 lands after walking through it read their home.
+  {
+    const { link, take } = deferredLink();
+    const homes = homesteadsFor(session(link));
+    const laneRead = homes.fresh();
+    const gateRead = homes.fetchHome(GATE);
+    take('home').answer({ ok: true, value: { gate: GATE, landSeed: 7, home: theirs(), materials: { timber: 10 } } });
+    await gateRead;
+    take('commons').answer({ ok: true, value: freeLane });
+    await laneRead;
+    assert.equal(homes.homes.get(GATE)?.id, 'home-1', 'the older lane doesn’t clear the home read after it');
+    assert.equal(homes.gateInfo(GATE)?.homeId, 'home-1', 'and the gate’s row says who holds it');
+    assert.deepEqual(homes.unclaimed(), [], 'Pell doesn’t offer it');
+  }
+  // A gate read from before the deed was lost lands after a lane read naming the gate free.
+  {
+    const { link, take } = deferredLink();
+    const homes = homesteadsFor(session(link));
+    const gateRead = homes.fetchHome(GATE);
+    const laneRead = homes.fresh();
+    take('commons').answer({ ok: true, value: freeLane });
+    await laneRead;
+    assert.equal(homes.homes.get(GATE), null);
+    take('home').answer({ ok: true, value: { gate: GATE, landSeed: 7, home: theirs(), materials: { timber: 10 } } });
+    await gateRead;
+    assert.equal(homes.homes.get(GATE), null, 'the older gate read doesn’t bring the home back');
+    assert.equal(homes.gateInfo(GATE)?.homeId, null);
+  }
+  // A lane read whose row names another home than the known one: the old home can’t come back either.
+  {
+    const { link, take } = deferredLink();
+    const homes = homesteadsFor(session(link));
+    const first = homes.fetchHome(GATE);
+    take('home').answer({ ok: true, value: { gate: GATE, landSeed: 7, home: theirs(), materials: { timber: 10 } } });
+    await first;
+    const gateRead = homes.fetchHome(GATE);
+    const laneRead = homes.fresh();
+    take('commons').answer({ ok: true, value: { ...theirLane(), gates: [{ ...theirLane().gates[0]!, homeId: 'home-2' }] } });
+    await laneRead;
+    assert.equal(homes.homes.has(GATE), false, 'another home: not known yet');
+    take('home').answer({ ok: true, value: { gate: GATE, landSeed: 7, home: theirs(), materials: { timber: 10 } } });
+    await gateRead;
+    assert.equal(homes.homes.has(GATE), false, 'the read asked before the lane doesn’t put home-1 back');
+  }
+});
+
+test('a lane read asked before an answer keeps the gate row the answer left (tier, shelf)', async () => {
+  const { link, take } = deferredLink();
+  const homes = homesteadsFor(session(link));
+  const first = homes.load();
+  take('commons').answer({ ok: true, value: theirLane() });
+  await first;
+  const laneRead = homes.fresh();
+  // A workshop read or a neighbour's answer: the home is a cottage now, with a stocked shelf.
+  homes.adoptHome({ ...theirs(1), items: [{ id: 'shelf-1', itemDef: 'gate-shelf', location: 'placed', scene: 'gate', x: 0, y: 0, rotation: 0 }] } as never);
+  homes.adoptShelfState(GATE, true, true);
+  const row = structuredClone(homes.gateInfo(GATE));
+  take('commons').answer({ ok: true, value: theirLane(0) });
+  await laneRead;
+  const now = homes.gateInfo(GATE)!;
+  assert.deepEqual({ tier: now.tier, shelf: now.shelf, shelfStocked: now.shelfStocked, homeId: now.homeId }, { tier: row!.tier, shelf: row!.shelf, shelfStocked: row!.shelfStocked, homeId: row!.homeId });
+  assert.equal(now.tier, 1);
+  assert.equal(now.shelfStocked, true);
+  // A lane read asked after them is the newer word.
+  const later = homes.fresh();
+  take('commons').answer({ ok: true, value: theirLane(0) });
+  await later;
+  assert.equal(homes.gateInfo(GATE)!.tier, 0);
+});
+
 const pack = (stools: number) => ({ stacks: [{ itemDef: 'wooden-stool', qty: stools }], instances: [], pockets: [], offHand: { open: false, itemDef: null }, pickedUp: [] });
 
 test('two pack reads answered backwards leave the later read’s pack', async () => {

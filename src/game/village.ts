@@ -19,6 +19,7 @@ import { clockMoved, gameNow, setGameNow } from './clock.ts'
 import { grantPaper } from './papers.ts'
 import { calendarFind } from '../lib/wilds/stories.ts'
 import { homesteadsFor } from './homestead.ts'
+import { adoptMaterials, mirrorMaterials, nextMark } from './materials-order.ts'
 import type { Session } from './session.ts'
 import { roadStep } from '../lib/quests.ts'
 
@@ -103,7 +104,20 @@ export class Village {
     return this.inventory?.materials ?? {}
   }
 
-  /** Adopt authoritative material balances (any server answer that carries them). */
+  /**
+   * Carried counts read or answered at `at` (an answer's: the next mark).
+   * Their materials are the one balance's (materials-order.ts): both mirrors
+   * take them, unless a balance from after `at` is held, which then stays.
+   */
+  private adoptInventory(inv: AssetCounts, at = nextMark()): void {
+    this.inventory = { ...inv, materials: this.carriedMaterials() }
+    adoptMaterials(inv.materials, at)
+  }
+
+  /**
+   * The Home side's mirror of the one material balance (materials-order.ts
+   * sets it): adopt an answer's balances through `adoptMaterials`, never here.
+   */
   setCarriedMaterials(m: Record<string, number>): void {
     const inv = this.inventory ?? emptyCounts()
     this.inventory = { ...inv, materials: { ...m } }
@@ -262,7 +276,7 @@ export class Village {
     const r = await this.link.mutate<ContributeResponse>({ kind: 'contribute', id: projectId, fields: { materials: given } })
     if (!r.ok) return fail(r.code)
     this.adoptProjects(r.res.result)
-    this.setCarriedMaterials(r.res.result.materials)
+    adoptMaterials(r.res.result.materials, nextMark())
     const completed = before !== 'complete' && r.res.result.projects.find((p) => p.id === projectId)?.stage === 'complete'
     return { ok: true, value: { completed } }
   }
@@ -270,9 +284,10 @@ export class Village {
   // ------------------------------------------------------------ storage & crafting
 
   async loadStorage(): Promise<Result> {
+    const mark = nextMark()
     const r = await this.link.readWith((raw) => raw.storage())
     if (!r.ok) return fail(r.code)
-    this.inventory = r.value.inventory
+    this.adoptInventory(r.value.inventory, mark)
     this.storage = r.value.storage
     this.personal = r.value.personal
     this.shared = r.value.shared
@@ -285,7 +300,7 @@ export class Village {
   async move(direction: 'deposit' | 'withdraw', asset: Asset, chest: ChestId = 'shared'): Promise<Result> {
     const r = await this.link.mutate<StorageMoveResponse>({ kind: 'storage', fields: { direction, asset, chest } })
     if (!r.ok) return fail(r.code)
-    this.inventory = r.res.result.inventory
+    this.adoptInventory(r.res.result.inventory)
     this.storage = r.res.result.storage
     this.personal = r.res.result.personal
     this.shared = r.res.result.shared
@@ -297,7 +312,7 @@ export class Village {
   async craft(recipeId: string, qty: number): Promise<Result<AssetView>> {
     const r = await this.link.mutate<CraftResponse>({ kind: 'craft', fields: { recipeId, qty } })
     if (!r.ok) return fail(r.code)
-    this.inventory = r.res.result.inventory
+    this.adoptInventory(r.res.result.inventory)
     this.storage = r.res.result.storage
     this.personal = r.res.result.personal
     this.shared = r.res.result.shared
@@ -354,14 +369,14 @@ export class Village {
     const r = await this.link.mutate<ShelfActionResponse>({ kind: 'shelf', fields }, req.op === 'buy' && req.pay ? { glims: -req.pay } : {})
     if (!r.ok) return fail(r.code)
     if (r.res.inventory) {
-      this.inventory = r.res.inventory
+      this.adoptInventory(r.res.inventory)
       this.emit('goods')
     }
     return { ok: true, value: r.res }
   }
 
   private adoptWorkshop(w: WorkshopView): void {
-    this.inventory = w.inventory
+    this.adoptInventory(w.inventory)
     this.storage = w.storage
     this.personal = w.personal
     this.shared = w.shared
@@ -377,6 +392,7 @@ export class Village {
 
   async loadMail(): Promise<Result> {
     this.mailStatus = 'loading'
+    const mark = nextMark()
     const r = await this.link.readWith((raw) => raw.mail())
     if (!r.ok) {
       this.mailStatus = 'offline'
@@ -395,7 +411,7 @@ export class Village {
       pending = more.value.nextPendingCursor ?? null
     }
     if (r.value.inventory) {
-      this.inventory = r.value.inventory
+      this.adoptInventory(r.value.inventory, mark)
       this.emit('goods')
     }
     this.mailStatus = 'ready'
@@ -478,7 +494,7 @@ export class Village {
   private adoptMail(res: { mail: Mail[]; inventory: AssetCounts }): void {
     // A mutation returns the first page: merge it, keeping older history.
     this.upsertMail(res.mail)
-    this.inventory = res.inventory
+    this.adoptInventory(res.inventory)
     this.mailStatus = 'ready'
     this.emit('mail')
     this.emit('goods')
@@ -505,6 +521,11 @@ let current: { session: Session; village: Village } | null = null
 
 /** The village state for this session (made on first use). */
 export function villageFor(session: Session): Village {
-  if (!current || current.session !== session) current = { session, village: new Village(session) }
+  if (!current || current.session !== session) {
+    const village = new Village(session)
+    current = { session, village }
+    // One server-owned balance (materials-order.ts): this session's carried counts mirror it.
+    mirrorMaterials('home', (m) => village.setCarriedMaterials(m))
+  }
   return current.village
 }
