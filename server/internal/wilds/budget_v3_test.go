@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 )
@@ -109,7 +111,7 @@ func frontierTimes(t testing.TB, worlds int) (chunks, frontiers []time.Duration)
 // TestChunkTimeBudgetV3: p95 ≤ 5 ms a chunk, a whole frontier (81 chunks)
 // under 0.5 s. Timing runs only when asked for (GLIMWAY_PERF=1), as v2's.
 func TestChunkTimeBudgetV3(t *testing.T) {
-	if os.Getenv("GLIMWAY_PERF") == "" || testing.Short() || raceEnabled {
+	if os.Getenv("GLIMWAY_PERF") != "1" || testing.Short() || raceEnabled {
 		t.Skip("timing: GLIMWAY_PERF=1 runs it")
 	}
 	chunks, frontiers := frontierTimes(t, 20)
@@ -125,11 +127,10 @@ func TestChunkTimeBudgetV3(t *testing.T) {
 	}
 }
 
-// TestChunkTimeHeadroomV3 always runs (not under -race): five times the
-// budget, so a busy machine doesn't flake it but a generator that has grown
-// several times slower fails.
+// TestChunkTimeHeadroomV3 measures five times the budget, only in the
+// opt-in performance job. Ordinary tests assert deterministic invariants.
 func TestChunkTimeHeadroomV3(t *testing.T) {
-	if raceEnabled || testing.Short() {
+	if os.Getenv("GLIMWAY_PERF") != "1" || raceEnabled || testing.Short() {
 		t.Skip("timing")
 	}
 	chunks, frontiers := frontierTimes(t, 3)
@@ -162,6 +163,33 @@ func BenchmarkFrontierV3(b *testing.B) {
 		for _, c := range frontierList() {
 			if _, err := GenerateV3(epochFor("bench", season, c[0], c[1]), c[0], c[1], nil); err != nil {
 				b.Fatal(err)
+			}
+		}
+	}
+}
+
+// Run the timing tests as a subprocess with performance explicitly disabled:
+// ordinary unit runs must skip both wall-clock thresholds.
+func TestGeneratorTimingIsOptIn(t *testing.T) {
+	binary, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, value := range []string{"", "0"} {
+		cmd := exec.Command(binary, "-test.v", "-test.run=^TestChunkTime(Budget|Headroom)V3$")
+		for _, entry := range os.Environ() {
+			if !strings.HasPrefix(entry, "GLIMWAY_PERF=") {
+				cmd.Env = append(cmd.Env, entry)
+			}
+		}
+		cmd.Env = append(cmd.Env, "GLIMWAY_PERF="+value)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("ordinary timing run: %v\n%s", err, output)
+		}
+		for _, name := range []string{"TestChunkTimeBudgetV3", "TestChunkTimeHeadroomV3"} {
+			if !strings.Contains(string(output), "--- SKIP: "+name) {
+				t.Fatalf("%s ran without opt-in:\n%s", name, output)
 			}
 		}
 	}

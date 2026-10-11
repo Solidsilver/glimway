@@ -1632,6 +1632,7 @@ type WildsClearRequest struct {
 	Where         *Where                 `protobuf:"bytes,2,opt,name=where,proto3" json:"where,omitempty"`
 	X             int32                  `protobuf:"zigzag32,3,opt,name=x,proto3" json:"x,omitempty"`
 	Y             int32                  `protobuf:"zigzag32,4,opt,name=y,proto3" json:"y,omitempty"`
+	Epoch         string                 `protobuf:"bytes,5,opt,name=epoch,proto3" json:"epoch,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1694,6 +1695,13 @@ func (x *WildsClearRequest) GetY() int32 {
 	return 0
 }
 
+func (x *WildsClearRequest) GetEpoch() string {
+	if x != nil {
+		return x.Epoch
+	}
+	return ""
+}
+
 // POST /api/wilds/lay: lay a path on a walkable land tile, debiting the pack.
 type WildsLayRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -1702,6 +1710,7 @@ type WildsLayRequest struct {
 	X             int32                  `protobuf:"zigzag32,3,opt,name=x,proto3" json:"x,omitempty"`
 	Y             int32                  `protobuf:"zigzag32,4,opt,name=y,proto3" json:"y,omitempty"`
 	Kind          string                 `protobuf:"bytes,5,opt,name=kind,proto3" json:"kind,omitempty"`
+	Epoch         string                 `protobuf:"bytes,6,opt,name=epoch,proto3" json:"epoch,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1771,6 +1780,13 @@ func (x *WildsLayRequest) GetKind() string {
 	return ""
 }
 
+func (x *WildsLayRequest) GetEpoch() string {
+	if x != nil {
+		return x.Epoch
+	}
+	return ""
+}
+
 // POST /api/wilds/lift: lift a path you laid, refunding it in the same
 // transaction.
 type WildsLiftRequest struct {
@@ -1779,6 +1795,7 @@ type WildsLiftRequest struct {
 	Where         *Where                 `protobuf:"bytes,2,opt,name=where,proto3" json:"where,omitempty"`
 	X             int32                  `protobuf:"zigzag32,3,opt,name=x,proto3" json:"x,omitempty"`
 	Y             int32                  `protobuf:"zigzag32,4,opt,name=y,proto3" json:"y,omitempty"`
+	Epoch         string                 `protobuf:"bytes,5,opt,name=epoch,proto3" json:"epoch,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1839,6 +1856,13 @@ func (x *WildsLiftRequest) GetY() int32 {
 		return x.Y
 	}
 	return 0
+}
+
+func (x *WildsLiftRequest) GetEpoch() string {
+	if x != nil {
+		return x.Epoch
+	}
+	return ""
 }
 
 // Each answers with the chunk's changes after the operation and the pack's
@@ -2485,23 +2509,26 @@ const file_glimway_v1_operations_proto_rawDesc = "" +
 	"\blanterns\x18\x05 \x03(\v2\x18.glimway.v1.WildsLanternR\blanterns\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"~\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\x94\x01\n" +
 	"\x11WildsClearRequest\x12$\n" +
 	"\x02op\x18\x01 \x01(\v2\x14.glimway.v1.OpHeaderR\x02op\x12'\n" +
 	"\x05where\x18\x02 \x01(\v2\x11.glimway.v1.WhereR\x05where\x12\f\n" +
 	"\x01x\x18\x03 \x01(\x11R\x01x\x12\f\n" +
-	"\x01y\x18\x04 \x01(\x11R\x01y\"\x90\x01\n" +
+	"\x01y\x18\x04 \x01(\x11R\x01y\x12\x14\n" +
+	"\x05epoch\x18\x05 \x01(\tR\x05epoch\"\xa6\x01\n" +
 	"\x0fWildsLayRequest\x12$\n" +
 	"\x02op\x18\x01 \x01(\v2\x14.glimway.v1.OpHeaderR\x02op\x12'\n" +
 	"\x05where\x18\x02 \x01(\v2\x11.glimway.v1.WhereR\x05where\x12\f\n" +
 	"\x01x\x18\x03 \x01(\x11R\x01x\x12\f\n" +
 	"\x01y\x18\x04 \x01(\x11R\x01y\x12\x12\n" +
-	"\x04kind\x18\x05 \x01(\tR\x04kind\"}\n" +
+	"\x04kind\x18\x05 \x01(\tR\x04kind\x12\x14\n" +
+	"\x05epoch\x18\x06 \x01(\tR\x05epoch\"\x93\x01\n" +
 	"\x10WildsLiftRequest\x12$\n" +
 	"\x02op\x18\x01 \x01(\v2\x14.glimway.v1.OpHeaderR\x02op\x12'\n" +
 	"\x05where\x18\x02 \x01(\v2\x11.glimway.v1.WhereR\x05where\x12\f\n" +
 	"\x01x\x18\x03 \x01(\x11R\x01x\x12\f\n" +
-	"\x01y\x18\x04 \x01(\x11R\x01y\"\xd3\x01\n" +
+	"\x01y\x18\x04 \x01(\x11R\x01y\x12\x14\n" +
+	"\x05epoch\x18\x05 \x01(\tR\x05epoch\"\xd3\x01\n" +
 	"\x10WildsClearResult\x126\n" +
 	"\x06ground\x18\x01 \x01(\v2\x1e.glimway.v1.ChunkGroundChangesR\x06ground\x12I\n" +
 	"\tmaterials\x18\x02 \x03(\v2+.glimway.v1.WildsClearResult.MaterialsEntryR\tmaterials\x1a<\n" +

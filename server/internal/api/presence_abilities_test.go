@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"glimway/content"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
@@ -483,7 +484,7 @@ func TestTwoConcurrentReportsSpendOneWardCredit(t *testing.T) {
 	report := func(seq, hp float64) *httptest.ResponseRecorder {
 		body, _ := protojson.Marshal(&contract.ReportRequest{Lease: bobPlay.Lease, Client: "tab-a", Generation: bobPlay.ReportGeneration, Seq: seq, Basis: bobPlay.State.Version, Hp: hp, Mana: 50, Place: &contract.Where{Area: "village", X: 400, Y: 300}})
 		r := httptest.NewRequest("POST", "/api/report", bytes.NewReader(body))
-		r.Header.Set("X-Glimway-Contract", "8")
+		r.Header.Set("X-Glimway-Contract", testContract())
 		r.Header.Set("Content-Type", "application/json")
 		r.AddCookie(bc)
 		w := httptest.NewRecorder()
@@ -677,5 +678,40 @@ func TestPresenceIdentityReadsTheLevelMark(t *testing.T) {
 	v, err := x.api.presenceIdentity(context.Background(), store.Hash(c.Value), false)
 	if err != nil || v.Magic.LevelMark != 20 {
 		t.Fatal("the hub read the wrong mark", v.Magic, err)
+	}
+}
+
+func TestWardCreditAcrossChunkEdges(t *testing.T) {
+	for _, crossing := range []bool{false, true} {
+		t.Run(fmt.Sprint("crossing=", crossing), func(t *testing.T) {
+			h := newPresenceHub(nil, func() time.Time { return time.Unix(100, 0) })
+			friend := &presencePeer{identity: presenceIdentity{ID: "friend", World: "world"}, area: "wilds:1:-1", pos: &presencePosition{X: 385, Y: -10}}
+			if crossing {
+				friend.area = "wilds:0:-1"
+				friend.pos.X = 382
+			}
+			h.peers["friend"] = friend
+			h.peers["other-world"] = &presencePeer{identity: presenceIdentity{ID: "other-world", World: "elsewhere"}, area: "wilds:1:-1", pos: &presencePosition{X: 385, Y: -10}}
+			h.peers["far"] = &presencePeer{identity: presenceIdentity{ID: "far", World: "world"}, area: "wilds:1:-1", pos: &presencePosition{X: 470, Y: -10}}
+			h.peers["curated"] = &presencePeer{identity: presenceIdentity{ID: "curated", World: "world"}, area: "village", pos: &presencePosition{X: 385, Y: -10}}
+			h.wardPulse("world", "wilds:0:-1", "caster", 383, -10, 64, 3)
+			if crossing {
+				friend.area = "wilds:1:-1"
+				friend.pos.X = 385
+			}
+			h.wardPulse("world", "wilds:0:-1", "caster", 383, -10, 64, 3)
+			if got := h.reserveWardCredit("friend", 1); got != 6 {
+				t.Fatalf("friend credit = %v, want 6", got)
+			}
+			for _, id := range []string{"other-world", "far", "curated"} {
+				if got := h.reserveWardCredit(id, 1); got != 0 {
+					t.Fatalf("%s credit = %v", id, got)
+				}
+			}
+			h.wardPulse("world", "library", "caster", 385, -10, 64, 3)
+			if got := h.reserveWardCredit("curated", 2); got != 0 {
+				t.Fatalf("curated rooms leaked credit: %v", got)
+			}
+		})
 	}
 }

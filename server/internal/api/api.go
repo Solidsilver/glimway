@@ -86,6 +86,9 @@ type Server struct {
 	// them (finding 11): a worker about to settle a `moved` row must not
 	// have its database closed under it.
 	workers sync.WaitGroup
+	// Live reservations include the interval before the worker starts and all
+	// detached checks/settlement. A restart leaves no live entries.
+	liveTopUps sync.Map
 	// topUpMark lets a test fail the worker's state marks (finding 1: a
 	// failed `checking` mark must never stop the checks). Nil in production.
 	topUpMark func(id, state string) error
@@ -100,8 +103,8 @@ func New(s *store.Store, h habitica.Upstream, c Config) *Server {
 	}
 	// Every answer carries the account's fishing (design 5.5) and its purse
 	// (design 2): the same state composition, one decorator each.
-	c.State = fishingComposition{StateComposition: c.State, now: c.Now, logf: fishingLogf(c.Logger)}
-	c.State = purseComposition{StateComposition: c.State, now: c.Now}
+	c.State = fishingComposition{StateComposition: c.State}
+	c.State = purseComposition{StateComposition: c.State}
 	// …and the wardrobe's resolved choice (design 4.4).
 	c.State = wardrobeComposition{StateComposition: c.State}
 	if c.WildsGenerator == nil {
@@ -129,7 +132,7 @@ func New(s *store.Store, h habitica.Upstream, c Config) *Server {
 	a := newServer(s, h, c)
 	// …and this wick's rumour (open-map.md 2.10), read through the server's
 	// own epochs and generator.
-	a.Config.State = rumourComposition{StateComposition: a.Config.State, a: a, now: c.Now}
+	a.Config.State = rumourComposition{StateComposition: a.Config.State, a: a}
 	return a
 }
 

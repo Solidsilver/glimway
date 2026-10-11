@@ -324,7 +324,7 @@ func TestWildsConcurrentFirstReadsMakeOneEpoch(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			r := httptest.NewRequest("GET", "/api/wilds/near/0/-4", nil)
-			r.Header.Set("X-Glimway-Contract", "8")
+			r.Header.Set("X-Glimway-Contract", testContract())
 			r.AddCookie(cookie)
 			w := httptest.NewRecorder()
 			if i == 0 {
@@ -402,7 +402,7 @@ func TestWildsClaimCyclesProjectionAndRace(t *testing.T) {
 			defer wg.Done()
 			raw, _ := protojson.Marshal(&contract.WildsClaimRequest{Op: op(pair.s.Lease, "race"), Epoch: ep, EntityId: camp.Id, Where: at(camp, 0)})
 			r := httptest.NewRequest("POST", "/api/wilds/claim", bytes.NewReader(raw))
-			r.Header.Set("X-Glimway-Contract", "8")
+			r.Header.Set("X-Glimway-Contract", testContract())
 			r.Header.Set("Content-Type", "application/json")
 			r.AddCookie(pair.c)
 			w := httptest.NewRecorder()

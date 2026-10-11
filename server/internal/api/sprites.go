@@ -189,6 +189,7 @@ func (a *Server) sprite(w http.ResponseWriter, r *http.Request) error {
 		return fail(404, "not-found")
 	}
 	if err != nil {
+		a.logUpstream(w, err)
 		return fail(502, "upstream")
 	}
 	h := w.Header()

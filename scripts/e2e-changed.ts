@@ -93,7 +93,7 @@ for (const file of changed) {
   for (const r of hits) for (const s of r.specs) specs.add(s)
   if (hits.some((r) => r.smoke)) smoke = true
   if (hits.length) reasons.push(`${file} → ${[...new Set(hits.flatMap((r) => r.specs))].join(', ')}${hits.some((r) => r.smoke) ? ' + smoke' : ''}`)
-  else if (/^(src|server|public|assets|e2e)\//.test(file) || file === 'index.html') {
+  else if (/^(src|server|public|assets|e2e|content)\//.test(file) || file === 'index.html') {
     unmapped.push(file)
     smoke = true
   }

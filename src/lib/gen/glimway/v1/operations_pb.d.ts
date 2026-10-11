@@ -840,6 +840,11 @@ export declare type WildsClearRequest = Message<"glimway.v1.WildsClearRequest"> 
    * @generated from field: sint32 y = 4;
    */
   y: number;
+
+  /**
+   * @generated from field: string epoch = 5;
+   */
+  epoch: string;
 };
 
 export declare type WildsClearRequestValid = WildsClearRequest;
@@ -880,6 +885,11 @@ export declare type WildsLayRequest = Message<"glimway.v1.WildsLayRequest"> & {
    * @generated from field: string kind = 5;
    */
   kind: string;
+
+  /**
+   * @generated from field: string epoch = 6;
+   */
+  epoch: string;
 };
 
 export declare type WildsLayRequestValid = WildsLayRequest;
@@ -916,6 +926,11 @@ export declare type WildsLiftRequest = Message<"glimway.v1.WildsLiftRequest"> & 
    * @generated from field: sint32 y = 4;
    */
   y: number;
+
+  /**
+   * @generated from field: string epoch = 5;
+   */
+  epoch: string;
 };
 
 export declare type WildsLiftRequestValid = WildsLiftRequest;

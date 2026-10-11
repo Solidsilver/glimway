@@ -93,7 +93,7 @@ type pathSpot struct {
 
 // spotFor reads the world tile (x, y) for a path operation: inside the
 // frontier, within reach of the player (paths.reachTiles).
-func (a *Server) spotFor(ctx context.Context, tx *sql.Tx, s *store.Snapshot, x, y int32, now int64) (*pathSpot, error) {
+func (a *Server) spotFor(ctx context.Context, tx *sql.Tx, s *store.Snapshot, x, y int32, targetEpoch string, now int64) (*pathSpot, error) {
 	S := chunkSize()
 	p := &pathSpot{x: int(x), y: int(y)}
 	p.cx, p.cy = wilds.FloorDiv(p.x, S), wilds.FloorDiv(p.y, S)
@@ -107,6 +107,11 @@ func (a *Server) spotFor(ctx context.Context, tx *sql.Tx, s *store.Snapshot, x, 
 	var err error
 	if p.epoch, err = a.epochAt(ctx, tx, s.WorldID, p.cx, p.cy, now); err != nil {
 		return nil, chunkError(err)
+	}
+	// The captured target must still be this tile's epoch before reading
+	// its chunk or spending any materials. Keyed replay happens before apply.
+	if targetEpoch != p.epoch.Id {
+		return nil, fail(409, "epoch-ended")
 	}
 	m, err := a.Config.Chunks.Chunk(ctx, tx, s.WorldID, p.epoch.Id, 0, int32(p.cx), int32(p.cy))
 	if err != nil {
@@ -185,7 +190,7 @@ func (a *Server) wildsClear(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		p, err := a.spotFor(ctx, tx, s, req.X, req.Y, now)
+		p, err := a.spotFor(ctx, tx, s, req.X, req.Y, req.Epoch, now)
 		if err != nil {
 			return nil, err
 		}
@@ -232,7 +237,7 @@ func (a *Server) wildsLay(w http.ResponseWriter, r *http.Request) error {
 		if lay == nil {
 			return nil, fail(400, "invalid-request")
 		}
-		p, err := a.spotFor(ctx, tx, s, req.X, req.Y, now)
+		p, err := a.spotFor(ctx, tx, s, req.X, req.Y, req.Epoch, now)
 		if err != nil {
 			return nil, err
 		}
@@ -277,7 +282,7 @@ func (a *Server) wildsLift(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		p, err := a.spotFor(ctx, tx, s, req.X, req.Y, now)
+		p, err := a.spotFor(ctx, tx, s, req.X, req.Y, req.Epoch, now)
 		if err != nil {
 			return nil, err
 		}

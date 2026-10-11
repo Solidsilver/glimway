@@ -117,10 +117,7 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 		case "silas-toolbox":
 			return true, nil
 		case "carting-day":
-			now := time.Now()
-			if r.Now != nil {
-				now = r.Now()
-			}
+			now := r.readTime(ctx)
 			return content.CalendarAt(content.CalendarRules, now.Unix()).Festival != nil && *content.CalendarAt(content.CalendarRules, now.Unix()).Festival == "Carting Day", nil
 		case "plot":
 			query = "SELECT EXISTS(SELECT 1 FROM homestead_members WHERE account_id=?)"
@@ -148,10 +145,7 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 	if w.Area != "wilds" || r.Epochs == nil || r.Chunks == nil {
 		return false, nil
 	}
-	now := time.Now()
-	if r.Now != nil {
-		now = r.Now()
-	}
+	now := r.readTime(ctx)
 	// The operation names its epoch: it must be one of the world's current
 	// ones (the Tangle's still epoch or this wick's).
 	var epoch *contract.WildsEpoch
@@ -340,4 +334,14 @@ func (r Rules) Record(ctx context.Context, tx *sql.Tx, s *store.Snapshot, w *con
 	}
 	_, err = tx.ExecContext(ctx, "UPDATE player_place SET last_wick_epoch=?,last_wick_starts_at=? WHERE account_id=?", epoch.Id, epoch.StartsAt, s.AccountID)
 	return err
+}
+
+func (r Rules) readTime(ctx context.Context) time.Time {
+	if now, ok := chunks.ReadTime(ctx); ok {
+		return now
+	}
+	if r.Now != nil {
+		return r.Now()
+	}
+	return time.Now()
 }

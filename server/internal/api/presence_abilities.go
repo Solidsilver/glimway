@@ -299,8 +299,8 @@ func (h *presenceHub) allowAbility(p *presencePeer, now time.Time, event *contra
 // scheduleWard: a ward-light leaves its pulse checks behind (4.5). Each one
 // credits every room member whose last known position is inside the circle
 // the caster's feet centre, other than the caster — whose own heal comes
-// with their report. The circle never moves, so the room it was cast in is
-// the room it keeps healing.
+// with their report. The circle never moves, so each pulse uses the cast room
+// and the relay visibility, including adjacent Wilds chunks.
 func (h *presenceHub) scheduleWard(p *presencePeer, event *contract.PresenceAbility) {
 	a, ok := content.AbilityFor(event.GetAbility())
 	if !ok {
@@ -354,7 +354,7 @@ func (h *presenceHub) wardPulse(world, area, caster string, cx, cy, radius, puls
 	defer h.mu.Unlock()
 	grant := wardGrant{amount: pulse, at: h.now()}
 	for _, q := range h.peers {
-		if q.identity.ID == caster || q.detached || q.identity.World != world || q.area != area || q.pos == nil {
+		if q.identity.ID == caster || q.detached || q.identity.World != world || !sharedRoom(q.area, area) || q.pos == nil {
 			continue
 		}
 		dx, dy := q.pos.X-cx, q.pos.Y-cy

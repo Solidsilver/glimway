@@ -56,6 +56,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 				}
 				return fail(h.Status, h.Code)
 			}
+			a.logUpstream(w, e)
 			return fail(502, "habitica-unavailable")
 		}
 		return nil
@@ -64,12 +65,12 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 		return budgetFailure(w, err)
 	}
 	ctx := r.Context()
-	tx, err := a.Store.DB.BeginTx(ctx, nil)
+	tx, err := a.beginTx(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-	now := a.Config.Now().Unix()
+	now := a.requestTime(r.Context()).Unix()
 	var allowed int
 	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM allowlist WHERE habitica_id=?", p.ID).Scan(&allowed); err != nil {
 		return err
@@ -201,7 +202,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 		}
 		// Left the party whose world they live in: warned now, moved out
 		// once the grace period has passed.
-		if movedOut, err = partyResidence(ctx, a.logf, tx, &s, p.PartyID, now, fractionalNow(a)); err != nil {
+		if movedOut, err = partyResidence(ctx, a.logf, tx, &s, p.PartyID, now, fractionalNow(a, ctx)); err != nil {
 			return err
 		}
 	}
@@ -222,7 +223,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 		if err = tx.Commit(); err != nil {
 			return err
 		}
-		a.cookie(w, session, expires)
+		a.cookie(w, session, expires, a.requestTime(r.Context()))
 		writeProto(w, 200, &contract.SessionResponse{Answer: &contract.SessionResponse_WorldChoice{WorldChoice: worldChoiceProto(*offer)}})
 		return nil
 	}
@@ -242,7 +243,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	state, err := a.Config.State.PlayerState(ctx, tx, s)
+	state, err := a.maintainAndProjectState(ctx, tx, s, a.requestTime(ctx))
 	if err != nil {
 		return err
 	}
@@ -259,7 +260,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) error {
 	if look != nil {
 		a.avatarChanged(id, look)
 	}
-	a.cookie(w, session, expires)
+	a.cookie(w, session, expires, a.requestTime(r.Context()))
 	writeProto(w, 200, &contract.SessionResponse{Answer: &contract.SessionResponse_State{State: state}})
 	return nil
 }

@@ -237,7 +237,7 @@ func (a *Server) woodpileRead(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
-	now := a.Config.Now().Unix()
+	now := a.requestTime(r.Context()).Unix()
 	if err = settleHomes(r.Context(), tx, s.WorldID, now); err != nil {
 		return err
 	}

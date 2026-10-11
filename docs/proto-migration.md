@@ -222,3 +222,13 @@ have migrated. HTTP remains JSON throughout.
 The protobuf JSON mapping rules are documented in the official
 [ProtoJSON guide](https://protobuf.dev/programming-guides/json/); the existing
 Glimway fixtures remain the authority for this migration's public JSON shapes.
+
+## Contract 9: epoch-bound path operations (0.8 cleanup)
+
+Clear and lift append `epoch = 5`; lay appends `epoch = 6`. No field numbers
+or names move or disappear, so Buf reports no FILE/wire breaks. HTTP contract
+9 requires the job's captured target epoch for all three commands. Old clients
+and contract-8 outbox entries must reload/discard on the contract gate; missing,
+ended or mismatched target epochs cannot mutate land or spend materials. An
+already committed keyed operation still replays its original result after a
+turning without another debit. Rollback requires the matching client/server pair.

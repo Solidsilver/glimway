@@ -249,7 +249,7 @@ func (a *Server) itemsRead(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
-	now := a.Config.Now().Unix()
+	now := a.requestTime(r.Context()).Unix()
 	if err = healWardens(r.Context(), tx, s.AccountID, now); err != nil {
 		return err
 	}

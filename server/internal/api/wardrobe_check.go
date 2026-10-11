@@ -57,7 +57,6 @@ func (a *Server) wardrobeCheck(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	account := s.AccountID
-	now := a.Config.Now().Unix()
 	result := &contract.WardrobeCheckResult{Owned: []string{}}
 	var look *presenceAvatarMsg
 	err = a.withHabitica(r, subject, func(b habiticaBudget) error {
@@ -68,7 +67,7 @@ func (a *Server) wardrobeCheck(w http.ResponseWriter, r *http.Request) error {
 		if e != nil {
 			// A wrong token counts as a failed proof through the refusal
 			// this returns (finding 7's split): never twice.
-			return habiticaFailure(e)
+			return a.habiticaFailure(w, e)
 		}
 		// `_id` is the account's subject (6.2's row, finding 8): a read that
 		// answered for someone else is a refused token.
@@ -76,6 +75,7 @@ func (a *Server) wardrobeCheck(w http.ResponseWriter, r *http.Request) error {
 			return fail(401, "habitica-auth")
 		}
 		return a.withTx(r.Context(), func(tx *sql.Tx) error {
+			now := a.requestTime(r.Context()).Unix()
 			before, _, err := store.PlayerGear(r.Context(), tx, account)
 			if err != nil {
 				return err
@@ -124,7 +124,7 @@ func (a *Server) answerWithState(w http.ResponseWriter, r *http.Request, result 
 		return err
 	}
 	defer tx.Rollback()
-	state, err := a.Config.State.PlayerState(r.Context(), tx, s)
+	state, err := a.maintainAndProjectState(r.Context(), tx, s, a.requestTime(r.Context()))
 	if err != nil {
 		return err
 	}

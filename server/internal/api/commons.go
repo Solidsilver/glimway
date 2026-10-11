@@ -44,7 +44,7 @@ func (a *Server) commons(w http.ResponseWriter, r *http.Request) error {
 	}
 	defer tx.Rollback()
 	ctx := r.Context()
-	now := a.Config.Now().Unix()
+	now := a.requestTime(r.Context()).Unix()
 	if err = settleHomes(ctx, tx, s.WorldID, now); err != nil {
 		return err
 	}
