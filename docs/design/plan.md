@@ -164,7 +164,8 @@ Each release is a minor version with its own art round, written as one request.
 | **0.6 The purse and the wardrobe** | The gold purse: a Top up from Habitica with consent each time (two a UTC day, no amount cap), gold at the sellers and Silas's offcut bundles, gold between players on shelves, in letters and by hand; the Habitica wardrobe: wear any gear you own, chosen per slot, never written back. Design: [purse-and-wardrobe.md](purse-and-wardrobe.md) (owner, 2026-10-09) | MiMo for the server (Sol reviews the top-up), Opus for the game |
 | **0.6.1 Glims** | Embers and the purse's gold become one currency, glims: earned from Habitica XP as embers were, and topped up from Habitica gold at two gold to a glim, at most 30 a UTC day. Design: [silas-yard.md](silas-yard.md) part 1 (owner, 2026-10-10) | MiMo for the server, Opus for the client, Codex for the glim art |
 | **0.7 Silas's Yard** | Silas's cottage becomes a walk-in shop: his talk gets short, a tabbed Yard panel (Build, Furnish, Materials, Mend) does the selling, and Pell the clerk keeps the deeds in a side room. Design: [silas-yard.md](silas-yard.md) part 2 (owner, 2026-10-10) | Opus (game and UI), MiMo (server), Codex (art) |
-| **Then, as revisions** | The open map (per-chunk epochs on the server generator), lake country, lamps, shared fights, caves and the next lands, in the order below | — |
+| **0.8 Lamps** (proposed, waiting on the owner's answers) | The Keeper's hand, way-lamps that hold land and push the frontier, the mage's Name a lamp, the homing turncap and lamp-ash pouch, on a **frontier band**: the Whitequiet grows past its 3×3 with per-chunk holds and today's generator (the open map's smallest piece). Chapter 2 moves to 0.9; the Old ways and the clay base wait for the open map and lake country. Design: [lamps.md](lamps.md) | Opus (contract, server, game and UI), Codex Luna (art) |
+| **Then, as revisions** | The open map (noise, rivers and lands on top of 0.8's band), lake country, the rest of lamps (the Old ways, the clay base), shared fights, caves and the next lands, in the order below | — |
 | **Standalone (later)** | Glimway without Habitica, with Habitica as one mode: guest accounts steps 3–6 ([guests.md](guests.md)), embers without Habitica, our own look, classes and companions | — |
 
 **Server-first (owner, 2026-10-07).** Before more features, move to a proper client/server
@@ -216,7 +217,7 @@ The later revisions keep their earlier order:
 |---|---|
 | The open map | Per-chunk epochs on the server generator, regeneration at the turning |
 | Lake country | Fields and water, reed and clay, crossings, pottery and Aldo's kiln, fishing in generated waters, level-10 workings on real obstacles |
-| Lamps | The Keeper's hand, way-lamps and the frontier, the mage's naming, the Old ways, chapter 2 (the broken span) |
+| Lamps | The Keeper's hand, way-lamps and the frontier, the mage's naming, the Old ways, chapter 2 (the broken span). **Moved up:** the first four parts go in 0.8 on a frontier band; chapter 2 is 0.9; the Old ways stay here ([lamps.md](lamps.md)) |
 | Shared fights | The server enemy sim at camps, combat abilities in server rooms |
 | On from there | Caves, the next lands, capstones, home water |
 
@@ -279,7 +280,7 @@ without a mage always has a way home, while the Old ways stay clearly better:
 First sketch: a **homing turncap** (a turncap set in amber; crush it and the drift walks you back
 to Hearthwick's gate) and a **lamp-ash pouch** (ash from a way-lamp you named; scatter it to step
 back to that lamp). Not usable in a fight, with a short pause before you go. Crafted at the bench;
-recipes are papers. Numbers and names to settle when lamps are built (the Lamps revision).
+recipes are papers. Numbers and names proposed in [lamps.md](lamps.md) (0.8), Q8.
 
 ## Stepping back between releases
 
