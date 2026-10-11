@@ -7,7 +7,7 @@ import (
 // Generator makes the open map's land (generator v3, lane O-B; open-map.md
 // 2.2). Everything it answers is a pure function of the epoch and the
 // coordinates: the store calls Chunk once a chunk and epoch and keeps the
-// blob, and the near read and the rumour call Glimpse and Rumour as often as
+// blob, and the near read and the rumour call Glimpses and Rumour as often as
 // they like, never storing anything.
 type Generator interface {
 	// Version is the generator version new epochs are made with.
@@ -17,10 +17,11 @@ type Generator interface {
 	// chunks beside a wick chunk), whose edges the new chunk copies at the
 	// seam (2.3). It is empty for a chunk with no such neighbour.
 	Chunk(epoch *contract.WildsEpoch, cx, cy int32, kept []Kept) (*contract.WildsChunk, error)
-	// Glimpse is a chunk's main land and whether the Wend crosses it, from
-	// the lands and river passes alone (decision 22), for chunks past the
-	// frontier that are never made.
-	Glimpse(epoch *contract.WildsEpoch, cx, cy int32) (Glimpse, error)
+	// Glimpses are chunks' main lands and whether the Wend crosses each,
+	// from the lands and river passes alone (decision 22), for chunks past
+	// the frontier that are never made: one answer per chunk, in order. A
+	// batch, so the near read's ~16 cost one generator setup, not 16.
+	Glimpses(epoch *contract.WildsEpoch, at []ChunkXY) ([]Glimpse, error)
 	// Rumour is the wick epoch's one hidden find (decision 19): a place in a
 	// new cell, never a footprint. ok is false when the epoch has none.
 	Rumour(epoch *contract.WildsEpoch) (r Rumour, ok bool, err error)
@@ -32,6 +33,9 @@ type Kept struct {
 	CX, CY int
 	Chunk  *contract.WildsChunk
 }
+
+// ChunkXY is a chunk's signed coordinates.
+type ChunkXY struct{ CX, CY int32 }
 
 // Glimpse is what the veil lets through of a chunk past the frontier.
 type Glimpse struct {

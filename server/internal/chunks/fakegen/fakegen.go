@@ -240,10 +240,14 @@ func Cells() [][2]int {
 	return out
 }
 
-// Glimpse: meadow on even chunks, woods on odd; the Wend far west.
-func (g *Generator) Glimpse(e *contract.WildsEpoch, cx, cy int32) (chunks.Glimpse, error) {
+// Glimpses: meadow on even chunks, woods on odd; the Wend far west.
+func (g *Generator) Glimpses(e *contract.WildsEpoch, at []chunks.ChunkXY) ([]chunks.Glimpse, error) {
 	lands := content.WildsRules.Lands
-	return chunks.Glimpse{Land: lands[int((cx+cy)&1)%len(lands)].GetId(), River: cx <= -5}, nil
+	out := make([]chunks.Glimpse, len(at))
+	for i, c := range at {
+		out[i] = chunks.Glimpse{Land: lands[int((c.CX+c.CY)&1)%len(lands)].GetId(), River: c.CX <= -5}
+	}
+	return out, nil
 }
 
 // Rumour: one place cell a wick, hashed from the epoch; past the river when

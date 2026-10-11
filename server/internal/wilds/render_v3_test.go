@@ -1,10 +1,12 @@
 package wilds
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"image/png"
 	"os"
+	"slices"
 	"testing"
 )
 
@@ -179,4 +181,107 @@ func TestRenderLandsPNG(t *testing.T) {
 	if err := png.Encode(f, img); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// TestRenderEdgesPNG draws six 2×2-chunk windows where a woods/meadow
+// border runs along a chunk edge (picked from the land field alone, so the
+// same windows come up whatever the edge rule), 4 px a tile, chunk edges
+// in red.
+//
+//	GLIMWAY_MAP_PNG=<abs path> go test ./internal/wilds -run TestRenderEdgesPNG
+func TestRenderEdgesPNG(t *testing.T) {
+	out := os.Getenv("GLIMWAY_MAP_PNG")
+	if out == "" {
+		t.Skip("GLIMWAY_MAP_PNG=<file.png> draws chunk edges where lands meet")
+	}
+	const px, cols, rows = 4, 3, 2
+	S := chunkSize()
+	ids := map[Ground]string{}
+	for i, g := range contentRules().Grounds {
+		ids[Ground(i)] = g.GetId()
+	}
+	type win struct {
+		seed, season string
+		cx, cy       int // the corner's south-east chunk
+	}
+	// The edges where a land border runs along the chunk edge: along most
+	// of it, the land three tiles one side differs from two tiles the other.
+	type scored struct {
+		win
+		score int
+	}
+	var all []scored
+	for i := range 12 {
+		seed, season := fmt.Sprint("edge-", i), "t:1795000000:1796209600"
+		w := newWorld(WickEpoch(seed, season))
+		for _, c := range frontierList() {
+			for _, vertical := range []bool{true, false} {
+				nx, ny := c[0], c[1]+1
+				if vertical {
+					nx, ny = c[0]+1, c[1]
+				}
+				if !insideReach(nx, ny) || !insideReach(c[0]+1, c[1]+1) || ny > 0 || c[1]+1 > 0 ||
+					FootprintAt(c[0], c[1]) != nil || FootprintAt(nx, ny) != nil || FootprintAt(c[0]+1, c[1]+1) != nil {
+					continue
+				}
+				score := 0
+				for a := 0; a < S; a++ {
+					var l1, l2 int
+					if vertical {
+						X := (c[0] + 1) * S
+						l1, l2 = w.landOne(X-3, c[1]*S+a), w.landOne(X+2, c[1]*S+a)
+					} else {
+						Y := (c[1] + 1) * S
+						l1, l2 = w.landOne(c[0]*S+a, Y-3), w.landOne(c[0]*S+a, Y+2)
+					}
+					if l1 != l2 {
+						score++
+					}
+				}
+				all = append(all, scored{win{seed, season, c[0] + 1, c[1] + 1}, score})
+			}
+		}
+	}
+	slices.SortStableFunc(all, func(a, b scored) int { return b.score - a.score })
+	var wins []win
+	used := map[string]bool{}
+	for _, a := range all {
+		if len(wins) < cols*rows && !used[a.seed] {
+			used[a.seed] = true
+			wins = append(wins, a.win)
+		}
+	}
+	img := image.NewRGBA(image.Rect(0, 0, cols*2*S*px+(cols-1)*px*2, rows*2*S*px+(rows-1)*px*2))
+	for i, wn := range wins {
+		ox, oy := (i%cols)*(2*S*px+2*px), (i/cols)*(2*S*px+2*px)
+		for _, d := range [][2]int{{-1, -1}, {0, -1}, {-1, 0}, {0, 0}} {
+			ch := mustV3(t, wn.seed, wn.season, wn.cx+d[0], wn.cy+d[1])
+			bx, by := ox+(d[0]+1)*S*px, oy+(d[1]+1)*S*px
+			for k, g := range ch.Ground {
+				col := groundColours[ids[g]]
+				if ch.Solid[k] {
+					col = shade(col, 6)
+				}
+				x, y := k%S, k/S
+				for yy := 0; yy < px; yy++ {
+					for xx := 0; xx < px; xx++ {
+						c := col
+						if (x == 0 && xx == 0 && d[0] == 0) || (y == 0 && yy == 0 && d[1] == 0) {
+							c = color.RGBA{220, 40, 40, 255}
+						}
+						img.Set(bx+x*px+xx, by+y*px+yy, c)
+					}
+				}
+			}
+		}
+	}
+	f, err := os.Create(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	if err := png.Encode(f, img); err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("%d windows: %+v", len(wins), wins)
 }

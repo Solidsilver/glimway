@@ -1094,3 +1094,61 @@ func TestV3SouthLimit(t *testing.T) {
 		}
 	}
 }
+
+// TestV3EdgeTilesFollowField: among the edge tiles, open land is where the
+// land field puts it (a border crosses a chunk edge at its natural place),
+// but for the few tiles shut because they'd be shut in; and every tile shut
+// that way really had no way in: neither the tile inside it nor, across the
+// edge, a facing pair of open tiles.
+func TestV3EdgeTilesFollowField(t *testing.T) {
+	S := chunkSize()
+	open, shut := 0, 0
+	for _, ws := range v3Worlds(20) {
+		seed, season := ws[0], ws[1]
+		for _, c := range frontierList() {
+			e := epochFor(seed, season, c[0], c[1])
+			w := newWorld(e)
+			x0, y0 := c[0]*S, c[1]*S
+			const pad = band + 3
+			raw := w.fillRaw(x0-pad, y0-pad, x0+S-1+pad, y0+S-1+pad, &keptReader{w: w.still(), made: map[[2]int][]baseTile{}})
+			rW := S + 2*pad
+			at := func(tx, ty int) baseTile { return raw[(ty-y0+pad)*rW+tx-x0+pad] }
+			final := w.fill(x0, y0, x0+S-1, y0+S-1, nil)
+			for i, f := range final {
+				tx, ty := x0+i%S, y0+i/S
+				r := at(tx, ty)
+				if r.kind != bField || !inBand(tx, ty) || !r.walk || ty >= (int(contentRules().GetFrontier().GetSouthLimit())+1)*S-band {
+					continue
+				}
+				open++
+				if f.walk {
+					continue
+				}
+				shut++
+				lx, ly := i%S, i/S
+				corner := (lx < band || lx >= S-band) && (ly < band || ly >= S-band)
+				if corner || (lx != 0 && ly != 0 && lx != S-1 && ly != S-1) {
+					continue // a corner block's flood, or one in from the edge (never shut)
+				}
+				ox, oy := 0, 0
+				switch {
+				case lx == 0:
+					ox = -1
+				case lx == S-1:
+					ox = 1
+				case ly == 0:
+					oy = -1
+				default:
+					oy = 1
+				}
+				if at(tx-ox, ty-oy).walk || (EpochKindAt(c[0]+ox, c[1]+oy) == e.Kind && at(tx+ox, ty+oy).walk && at(tx+2*ox, ty+2*oy).walk) {
+					t.Fatalf("%s: edge tile %d,%d shut though it had a way in", seed, tx, ty)
+				}
+			}
+		}
+	}
+	t.Logf("edge tiles the field leaves open: %d, shut as shut in: %d (%d.%d%%)", open, shut, shut*100/open, shut*1000/open%10)
+	if shut*100 > open {
+		t.Fatalf("%d of %d open edge tiles shut: the edge rule overrides the field", shut, open)
+	}
+}
