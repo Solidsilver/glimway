@@ -13,6 +13,8 @@ COPY src ./src
 COPY public ./public
 COPY content ./content
 COPY assets/generated/crafts-pass/manifest.json ./assets/generated/crafts-pass/
+# (the open map art reads its animation list)
+COPY assets/generated/open-map-pass/animations.json ./assets/generated/open-map-pass/
 # Fail loudly if the build context still contains Git LFS pointers.
 RUN if grep -rl '^version https://git-lfs.github.com/spec/v1$' public; then \
       echo 'Run git lfs pull before building: runtime art contains LFS pointers.' >&2; exit 1; \

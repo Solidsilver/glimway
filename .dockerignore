@@ -17,6 +17,8 @@ deploy/local
 assets
 # The stable's geometry reads the crafts pass's frame sizes (src/lib/stable-layout.ts).
 !assets/generated/crafts-pass/manifest.json
+# The open map art reads its animation list (src/game/wilds/open-map-art.ts).
+!assets/generated/open-map-pass/animations.json
 docs
 e2e
 tests
