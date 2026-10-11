@@ -473,6 +473,10 @@ lasts.
 - The name is "<display name>'s way", after whoever laid the most tiles of the run; a tie goes
   to whoever laid the joining tile. It doesn't change after that while the way stands.
 - `wilds-lift` re-checks: if lifting breaks the run, the way row is deleted.
+- Ways are keyed by their place pair, so one run can hold several: one lay makes a way for every
+  pair it newly joins, and one lift breaks every pair it disconnects (a pair still joined by
+  another route is rerouted instead). Each way stores its path and sign tiles (`WildsWay.path`,
+  `sign_a`, `sign_b`); a lay never changes an existing way's path.
 - It is stored under the wick epoch, so it goes at the turning with its tiles. In 0.9, a way
   whose tiles all lie in held land (or the Tangle) is stored under the still or held epoch and
   lasts.

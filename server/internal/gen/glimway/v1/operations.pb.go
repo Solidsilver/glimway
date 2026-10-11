@@ -1843,8 +1843,10 @@ func (x *WildsLiftRequest) GetY() int32 {
 
 // Each answers with the chunk's changes after the operation and the pack's
 // material balances (its own message, so the Envelope's case follows from
-// the type). A lay that joins two places names the way it made; a lift that
-// breaks a way names the way's id.
+// the type). Ways are keyed by their place pair, so one connected run can
+// hold several: a lay names every way it made (each pair it newly joins),
+// and a lift every way it broke (each pair it disconnected) and every way
+// it rerouted (a pair still joined another way, with its new path).
 type WildsClearResult struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Ground        *ChunkGroundChanges    `protobuf:"bytes,1,opt,name=ground,proto3" json:"ground,omitempty"`
@@ -1901,7 +1903,7 @@ type WildsLayResult struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Ground        *ChunkGroundChanges    `protobuf:"bytes,1,opt,name=ground,proto3" json:"ground,omitempty"`
 	Materials     map[string]float64     `protobuf:"bytes,2,rep,name=materials,proto3" json:"materials,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
-	WayMade       *WildsWay              `protobuf:"bytes,3,opt,name=way_made,json=wayMade,proto3" json:"way_made,omitempty"`
+	WaysMade      []*WildsWay            `protobuf:"bytes,4,rep,name=ways_made,json=waysMade,proto3" json:"ways_made,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1950,9 +1952,9 @@ func (x *WildsLayResult) GetMaterials() map[string]float64 {
 	return nil
 }
 
-func (x *WildsLayResult) GetWayMade() *WildsWay {
+func (x *WildsLayResult) GetWaysMade() []*WildsWay {
 	if x != nil {
-		return x.WayMade
+		return x.WaysMade
 	}
 	return nil
 }
@@ -1961,7 +1963,8 @@ type WildsLiftResult struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Ground        *ChunkGroundChanges    `protobuf:"bytes,1,opt,name=ground,proto3" json:"ground,omitempty"`
 	Materials     map[string]float64     `protobuf:"bytes,2,rep,name=materials,proto3" json:"materials,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"fixed64,2,opt,name=value"`
-	WayBroken     string                 `protobuf:"bytes,3,opt,name=way_broken,json=wayBroken,proto3" json:"way_broken,omitempty"`
+	WaysBroken    []string               `protobuf:"bytes,4,rep,name=ways_broken,json=waysBroken,proto3" json:"ways_broken,omitempty"`
+	WaysRerouted  []*WildsWay            `protobuf:"bytes,5,rep,name=ways_rerouted,json=waysRerouted,proto3" json:"ways_rerouted,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2010,11 +2013,18 @@ func (x *WildsLiftResult) GetMaterials() map[string]float64 {
 	return nil
 }
 
-func (x *WildsLiftResult) GetWayBroken() string {
+func (x *WildsLiftResult) GetWaysBroken() []string {
 	if x != nil {
-		return x.WayBroken
+		return x.WaysBroken
 	}
-	return ""
+	return nil
+}
+
+func (x *WildsLiftResult) GetWaysRerouted() []*WildsWay {
+	if x != nil {
+		return x.WaysRerouted
+	}
+	return nil
 }
 
 // POST /api/wilds/discover (open-map.md 2.10): sent when the hero enters a
@@ -2497,22 +2507,24 @@ const file_glimway_v1_operations_proto_rawDesc = "" +
 	"\tmaterials\x18\x02 \x03(\v2+.glimway.v1.WildsClearResult.MaterialsEntryR\tmaterials\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\x80\x02\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\x92\x02\n" +
 	"\x0eWildsLayResult\x126\n" +
 	"\x06ground\x18\x01 \x01(\v2\x1e.glimway.v1.ChunkGroundChangesR\x06ground\x12G\n" +
-	"\tmaterials\x18\x02 \x03(\v2).glimway.v1.WildsLayResult.MaterialsEntryR\tmaterials\x12/\n" +
-	"\bway_made\x18\x03 \x01(\v2\x14.glimway.v1.WildsWayR\awayMade\x1a<\n" +
+	"\tmaterials\x18\x02 \x03(\v2).glimway.v1.WildsLayResult.MaterialsEntryR\tmaterials\x121\n" +
+	"\tways_made\x18\x04 \x03(\v2\x14.glimway.v1.WildsWayR\bwaysMade\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\xf0\x01\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01J\x04\b\x03\x10\x04R\bway_made\"\xbf\x02\n" +
 	"\x0fWildsLiftResult\x126\n" +
 	"\x06ground\x18\x01 \x01(\v2\x1e.glimway.v1.ChunkGroundChangesR\x06ground\x12H\n" +
-	"\tmaterials\x18\x02 \x03(\v2*.glimway.v1.WildsLiftResult.MaterialsEntryR\tmaterials\x12\x1d\n" +
-	"\n" +
-	"way_broken\x18\x03 \x01(\tR\twayBroken\x1a<\n" +
+	"\tmaterials\x18\x02 \x03(\v2*.glimway.v1.WildsLiftResult.MaterialsEntryR\tmaterials\x12\x1f\n" +
+	"\vways_broken\x18\x04 \x03(\tR\n" +
+	"waysBroken\x129\n" +
+	"\rways_rerouted\x18\x05 \x03(\v2\x14.glimway.v1.WildsWayR\fwaysRerouted\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"\x91\x01\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01J\x04\b\x03\x10\x04R\n" +
+	"way_broken\"\x91\x01\n" +
 	"\x14WildsDiscoverRequest\x12$\n" +
 	"\x02op\x18\x01 \x01(\v2\x14.glimway.v1.OpHeaderR\x02op\x12'\n" +
 	"\x05where\x18\x02 \x01(\v2\x11.glimway.v1.WhereR\x05where\x12\x14\n" +
@@ -2655,23 +2667,24 @@ var file_glimway_v1_operations_proto_depIdxs = []int32{
 	36, // 39: glimway.v1.WildsClearResult.materials:type_name -> glimway.v1.WildsClearResult.MaterialsEntry
 	49, // 40: glimway.v1.WildsLayResult.ground:type_name -> glimway.v1.ChunkGroundChanges
 	37, // 41: glimway.v1.WildsLayResult.materials:type_name -> glimway.v1.WildsLayResult.MaterialsEntry
-	50, // 42: glimway.v1.WildsLayResult.way_made:type_name -> glimway.v1.WildsWay
+	50, // 42: glimway.v1.WildsLayResult.ways_made:type_name -> glimway.v1.WildsWay
 	49, // 43: glimway.v1.WildsLiftResult.ground:type_name -> glimway.v1.ChunkGroundChanges
 	38, // 44: glimway.v1.WildsLiftResult.materials:type_name -> glimway.v1.WildsLiftResult.MaterialsEntry
-	41, // 45: glimway.v1.WildsDiscoverRequest.op:type_name -> glimway.v1.OpHeader
-	40, // 46: glimway.v1.WildsDiscoverRequest.where:type_name -> glimway.v1.Where
-	51, // 47: glimway.v1.WildsDiscoverResult.discovery:type_name -> glimway.v1.WildsDiscovery
-	47, // 48: glimway.v1.WildsDiscoverResult.loot:type_name -> glimway.v1.WildsLoot
-	39, // 49: glimway.v1.WildsDiscoverResult.materials:type_name -> glimway.v1.WildsDiscoverResult.MaterialsEntry
-	52, // 50: glimway.v1.CommittedOperation.payload:type_name -> google.protobuf.Struct
-	53, // 51: glimway.v1.CommittedOperation.refused:type_name -> google.protobuf.StringValue
-	54, // 52: glimway.v1.CommittedOperation.result:type_name -> google.protobuf.Value
-	30, // 53: glimway.v1.OperationsResult.operation:type_name -> glimway.v1.CommittedOperation
-	54, // [54:54] is the sub-list for method output_type
-	54, // [54:54] is the sub-list for method input_type
-	54, // [54:54] is the sub-list for extension type_name
-	54, // [54:54] is the sub-list for extension extendee
-	0,  // [0:54] is the sub-list for field type_name
+	50, // 45: glimway.v1.WildsLiftResult.ways_rerouted:type_name -> glimway.v1.WildsWay
+	41, // 46: glimway.v1.WildsDiscoverRequest.op:type_name -> glimway.v1.OpHeader
+	40, // 47: glimway.v1.WildsDiscoverRequest.where:type_name -> glimway.v1.Where
+	51, // 48: glimway.v1.WildsDiscoverResult.discovery:type_name -> glimway.v1.WildsDiscovery
+	47, // 49: glimway.v1.WildsDiscoverResult.loot:type_name -> glimway.v1.WildsLoot
+	39, // 50: glimway.v1.WildsDiscoverResult.materials:type_name -> glimway.v1.WildsDiscoverResult.MaterialsEntry
+	52, // 51: glimway.v1.CommittedOperation.payload:type_name -> google.protobuf.Struct
+	53, // 52: glimway.v1.CommittedOperation.refused:type_name -> google.protobuf.StringValue
+	54, // 53: glimway.v1.CommittedOperation.result:type_name -> google.protobuf.Value
+	30, // 54: glimway.v1.OperationsResult.operation:type_name -> glimway.v1.CommittedOperation
+	55, // [55:55] is the sub-list for method output_type
+	55, // [55:55] is the sub-list for method input_type
+	55, // [55:55] is the sub-list for extension type_name
+	55, // [55:55] is the sub-list for extension extendee
+	0,  // [0:55] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_operations_proto_init() }
