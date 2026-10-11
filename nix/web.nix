@@ -19,7 +19,7 @@ buildNpmPackage {
     ];
   };
   nodejs = nodejs_24;
-  npmDepsHash = "sha256-D3QkiN2iTkawG8FcekRfxy2KSpkZrP93BKV0NCb5jo0=";
+  npmDepsHash = "sha256-zyeivlSdCz7N9x5lfjyS4ifmX9v9KnOSX+mOhwBUegE=";
   npmFlags = [ "--no-audit" "--no-fund" ];
   # Never download Playwright browsers or regenerate committed atlases.
   env = {
