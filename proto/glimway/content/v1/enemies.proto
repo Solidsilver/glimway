@@ -1,0 +1,77 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// Existing enemy tuning, in pixels and seconds. Guardian stays client-only.
+message Enemies {
+  EnemyWisp wisp = 1 [(buf.validate.field).required = true];
+  EnemyBeetle beetle = 2 [(buf.validate.field).required = true];
+  EnemyGuardian guardian = 3 [(buf.validate.field).required = true];
+  EnemyKnock knock = 4 [(buf.validate.field).required = true];
+}
+
+message EnemyWisp {
+  option (buf.validate.message).cel = {
+    id: "enemies.lock"
+    message: "aim lock must fit inside windup"
+    expression: "this.lock < this.windup"
+  };
+  double hp = 1 [(buf.validate.field).double.gt = 0];
+  double contact = 2 [(buf.validate.field).double.gt = 0];
+  double reach = 3 [(buf.validate.field).double.gt = 0];
+  double hop_reach = 4 [(buf.validate.field).double.gt = 0];
+  double chase = 5 [(buf.validate.field).double.gt = 0];
+  double aggro = 6 [(buf.validate.field).double.gt = 0];
+  double hop_range = 7 [(buf.validate.field).double.gt = 0];
+  double windup = 8 [(buf.validate.field).double.gt = 0];
+  double lock = 9 [(buf.validate.field).double.gt = 0];
+  double hop_speed = 10 [(buf.validate.field).double.gt = 0];
+  double hop_time = 11 [(buf.validate.field).double.gt = 0];
+  double hop = 12 [(buf.validate.field).double.gt = 0];
+  double recover = 13 [(buf.validate.field).double.gt = 0];
+  double cooldown = 14 [(buf.validate.field).double.gt = 0];
+}
+
+message EnemyBeetle {
+  option (buf.validate.message).cel = {
+    id: "enemies.lock"
+    message: "aim lock must fit inside windup"
+    expression: "this.lock < this.windup"
+  };
+  double hp = 1 [(buf.validate.field).double.gt = 0];
+  double contact = 2 [(buf.validate.field).double.gt = 0];
+  double reach = 3 [(buf.validate.field).double.gt = 0];
+  double charge_reach = 4 [(buf.validate.field).double.gt = 0];
+  double walk = 5 [(buf.validate.field).double.gt = 0];
+  double aggro = 6 [(buf.validate.field).double.gt = 0];
+  double keep_away = 7 [(buf.validate.field).double.gt = 0];
+  double charge_range = 8 [(buf.validate.field).double.gt = 0];
+  double windup = 9 [(buf.validate.field).double.gt = 0];
+  double lock = 10 [(buf.validate.field).double.gt = 0];
+  double charge_speed = 11 [(buf.validate.field).double.gt = 0];
+  double charge_time = 12 [(buf.validate.field).double.gt = 0];
+  double charge = 13 [(buf.validate.field).double.gt = 0];
+  double stun = 14 [(buf.validate.field).double.gt = 0];
+  double recover = 15 [(buf.validate.field).double.gt = 0];
+  double cooldown = 16 [(buf.validate.field).double.gt = 0];
+  double stunned_takes = 17 [(buf.validate.field).double.gt = 0];
+}
+
+message EnemyGuardian {
+  double hp = 1 [(buf.validate.field).double.gt = 0];
+  double contact = 2 [(buf.validate.field).double.gt = 0];
+  double reach = 3 [(buf.validate.field).double.gt = 0];
+  double lunge_reach = 4 [(buf.validate.field).double.gt = 0];
+  double lunge = 5 [(buf.validate.field).double.gt = 0];
+  double lunge_speed = 6 [(buf.validate.field).double.gt = 0];
+  double telegraph = 7 [(buf.validate.field).double.gt = 0];
+  double cooldown = 8 [(buf.validate.field).double.gt = 0];
+}
+
+message EnemyKnock {
+  double small = 1 [(buf.validate.field).double.gt = 0];
+  double guardian = 2 [(buf.validate.field).double.gt = 0];
+  double player = 3 [(buf.validate.field).double.gt = 0];
+  double time = 4 [(buf.validate.field).double.gt = 0];
+}

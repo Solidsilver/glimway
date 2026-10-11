@@ -27,6 +27,7 @@
     "papers": "node scripts/papers.ts",
     "atlases": "node scripts/build-atlases.ts",
     "vectors:items": "node scripts/items-vectors.ts",
+    "vectors:fights-wire": "node scripts/fights-wire-vectors.ts",
     "proto": "sh scripts/proto.sh"
   },
   "dependencies": {

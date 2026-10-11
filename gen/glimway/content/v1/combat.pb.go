@@ -22,17 +22,20 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Shared combat tuning (docs/m3-implementation.md): the signature
-// ability's cooldown (fixed at one second — the contract both runtimes
-// assume), one row per Habitica class and the heal formula. The signature's
-// mana cost moved to the ability table (design 4.1: each class's cast cost
-// is its signature's `mana`).
-// content/combat.json.
+// Shared kit and attack tuning (content/combat.json): cooldowns, class
+// names and damage stats, diminishing-return formulas and hit geometry.
+// Ability mana and effect numbers remain in content/abilities.json.
 type Combat struct {
 	state                    protoimpl.MessageState  `protogen:"open.v1"`
 	SignatureCooldownSeconds float64                 `protobuf:"fixed64,1,opt,name=signature_cooldown_seconds,json=signatureCooldownSeconds,proto3" json:"signature_cooldown_seconds,omitempty"`
 	Classes                  map[string]*CombatClass `protobuf:"bytes,2,rep,name=classes,proto3" json:"classes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Heal                     *CombatHeal             `protobuf:"bytes,3,opt,name=heal,proto3" json:"heal,omitempty"`
+	Classless                *CombatClassless        `protobuf:"bytes,4,opt,name=classless,proto3" json:"classless,omitempty"`
+	Melee                    *CombatFormula          `protobuf:"bytes,5,opt,name=melee,proto3" json:"melee,omitempty"`
+	Signature                *CombatFormula          `protobuf:"bytes,6,opt,name=signature,proto3" json:"signature,omitempty"`
+	Mitigation               *CombatFormula          `protobuf:"bytes,7,opt,name=mitigation,proto3" json:"mitigation,omitempty"`
+	Crit                     *CombatFormula          `protobuf:"bytes,8,opt,name=crit,proto3" json:"crit,omitempty"`
+	Attack                   *CombatAttack           `protobuf:"bytes,9,opt,name=attack,proto3" json:"attack,omitempty"`
 	unknownFields            protoimpl.UnknownFields
 	sizeCache                protoimpl.SizeCache
 }
@@ -88,11 +91,55 @@ func (x *Combat) GetHeal() *CombatHeal {
 	return nil
 }
 
+func (x *Combat) GetClassless() *CombatClassless {
+	if x != nil {
+		return x.Classless
+	}
+	return nil
+}
+
+func (x *Combat) GetMelee() *CombatFormula {
+	if x != nil {
+		return x.Melee
+	}
+	return nil
+}
+
+func (x *Combat) GetSignature() *CombatFormula {
+	if x != nil {
+		return x.Signature
+	}
+	return nil
+}
+
+func (x *Combat) GetMitigation() *CombatFormula {
+	if x != nil {
+		return x.Mitigation
+	}
+	return nil
+}
+
+func (x *Combat) GetCrit() *CombatFormula {
+	if x != nil {
+		return x.Crit
+	}
+	return nil
+}
+
+func (x *Combat) GetAttack() *CombatAttack {
+	if x != nil {
+		return x.Attack
+	}
+	return nil
+}
+
 // One class's numbers; the map key is the class id (warrior, mage, rogue,
 // healer — the combat.classes rule names them).
 type CombatClass struct {
 	state                      protoimpl.MessageState `protogen:"open.v1"`
 	BasicAttackCooldownSeconds float64                `protobuf:"fixed64,1,opt,name=basic_attack_cooldown_seconds,json=basicAttackCooldownSeconds,proto3" json:"basic_attack_cooldown_seconds,omitempty"`
+	BasicName                  string                 `protobuf:"bytes,2,opt,name=basic_name,json=basicName,proto3" json:"basic_name,omitempty"`
+	DamageStat                 string                 `protobuf:"bytes,3,opt,name=damage_stat,json=damageStat,proto3" json:"damage_stat,omitempty"`
 	unknownFields              protoimpl.UnknownFields
 	sizeCache                  protoimpl.SizeCache
 }
@@ -132,6 +179,20 @@ func (x *CombatClass) GetBasicAttackCooldownSeconds() float64 {
 		return x.BasicAttackCooldownSeconds
 	}
 	return 0
+}
+
+func (x *CombatClass) GetBasicName() string {
+	if x != nil {
+		return x.BasicName
+	}
+	return ""
+}
+
+func (x *CombatClass) GetDamageStat() string {
+	if x != nil {
+		return x.DamageStat
+	}
+	return ""
 }
 
 // The heal formula: hyperbolic diminishing returns, 0..maximumBonus,
@@ -204,27 +265,313 @@ func (x *CombatHeal) GetDecimalPlaces() int32 {
 	return 0
 }
 
+type CombatClassless struct {
+	state                      protoimpl.MessageState `protogen:"open.v1"`
+	BasicName                  string                 `protobuf:"bytes,1,opt,name=basic_name,json=basicName,proto3" json:"basic_name,omitempty"`
+	BasicAttackCooldownSeconds float64                `protobuf:"fixed64,2,opt,name=basic_attack_cooldown_seconds,json=basicAttackCooldownSeconds,proto3" json:"basic_attack_cooldown_seconds,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
+}
+
+func (x *CombatClassless) Reset() {
+	*x = CombatClassless{}
+	mi := &file_glimway_content_v1_combat_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CombatClassless) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CombatClassless) ProtoMessage() {}
+
+func (x *CombatClassless) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_content_v1_combat_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CombatClassless.ProtoReflect.Descriptor instead.
+func (*CombatClassless) Descriptor() ([]byte, []int) {
+	return file_glimway_content_v1_combat_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *CombatClassless) GetBasicName() string {
+	if x != nil {
+		return x.BasicName
+	}
+	return ""
+}
+
+func (x *CombatClassless) GetBasicAttackCooldownSeconds() float64 {
+	if x != nil {
+		return x.BasicAttackCooldownSeconds
+	}
+	return 0
+}
+
+// base + maximum_bonus * (stat / (stat + halfway)), rounded afterwards.
+type CombatFormula struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Base          float64                `protobuf:"fixed64,1,opt,name=base,proto3" json:"base,omitempty"`
+	MaximumBonus  float64                `protobuf:"fixed64,2,opt,name=maximum_bonus,json=maximumBonus,proto3" json:"maximum_bonus,omitempty"`
+	Halfway       float64                `protobuf:"fixed64,3,opt,name=halfway,proto3" json:"halfway,omitempty"`
+	DecimalPlaces int32                  `protobuf:"varint,4,opt,name=decimal_places,json=decimalPlaces,proto3" json:"decimal_places,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CombatFormula) Reset() {
+	*x = CombatFormula{}
+	mi := &file_glimway_content_v1_combat_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CombatFormula) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CombatFormula) ProtoMessage() {}
+
+func (x *CombatFormula) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_content_v1_combat_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CombatFormula.ProtoReflect.Descriptor instead.
+func (*CombatFormula) Descriptor() ([]byte, []int) {
+	return file_glimway_content_v1_combat_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *CombatFormula) GetBase() float64 {
+	if x != nil {
+		return x.Base
+	}
+	return 0
+}
+
+func (x *CombatFormula) GetMaximumBonus() float64 {
+	if x != nil {
+		return x.MaximumBonus
+	}
+	return 0
+}
+
+func (x *CombatFormula) GetHalfway() float64 {
+	if x != nil {
+		return x.Halfway
+	}
+	return 0
+}
+
+func (x *CombatFormula) GetDecimalPlaces() int32 {
+	if x != nil {
+		return x.DecimalPlaces
+	}
+	return 0
+}
+
+// Hit geometry, in pixels from sprite feet. A bolt spawns
+// bolt_spawn_offset_x ahead along the facing's x and origin_y_offset up,
+// with no y offset from facing (as today). A basic bolt never crits, as
+// today: the counter still advances, and its result's crit is false.
+type CombatAttack struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	SlashRadius         float64                `protobuf:"fixed64,1,opt,name=slash_radius,json=slashRadius,proto3" json:"slash_radius,omitempty"`
+	SlashOffsetX        float64                `protobuf:"fixed64,2,opt,name=slash_offset_x,json=slashOffsetX,proto3" json:"slash_offset_x,omitempty"`
+	SlashOffsetY        float64                `protobuf:"fixed64,3,opt,name=slash_offset_y,json=slashOffsetY,proto3" json:"slash_offset_y,omitempty"`
+	OriginYOffset       float64                `protobuf:"fixed64,4,opt,name=origin_y_offset,json=originYOffset,proto3" json:"origin_y_offset,omitempty"`
+	EnemyYOffset        float64                `protobuf:"fixed64,5,opt,name=enemy_y_offset,json=enemyYOffset,proto3" json:"enemy_y_offset,omitempty"`
+	BoltRadius          float64                `protobuf:"fixed64,6,opt,name=bolt_radius,json=boltRadius,proto3" json:"bolt_radius,omitempty"`
+	BoltSpeed           float64                `protobuf:"fixed64,7,opt,name=bolt_speed,json=boltSpeed,proto3" json:"bolt_speed,omitempty"`
+	BoltLifetimeSeconds float64                `protobuf:"fixed64,8,opt,name=bolt_lifetime_seconds,json=boltLifetimeSeconds,proto3" json:"bolt_lifetime_seconds,omitempty"`
+	CritMultiplier      float64                `protobuf:"fixed64,9,opt,name=crit_multiplier,json=critMultiplier,proto3" json:"crit_multiplier,omitempty"`
+	ToolDamageFraction  float64                `protobuf:"fixed64,10,opt,name=tool_damage_fraction,json=toolDamageFraction,proto3" json:"tool_damage_fraction,omitempty"`
+	BoltSpawnOffsetX    float64                `protobuf:"fixed64,11,opt,name=bolt_spawn_offset_x,json=boltSpawnOffsetX,proto3" json:"bolt_spawn_offset_x,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *CombatAttack) Reset() {
+	*x = CombatAttack{}
+	mi := &file_glimway_content_v1_combat_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CombatAttack) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CombatAttack) ProtoMessage() {}
+
+func (x *CombatAttack) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_content_v1_combat_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CombatAttack.ProtoReflect.Descriptor instead.
+func (*CombatAttack) Descriptor() ([]byte, []int) {
+	return file_glimway_content_v1_combat_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *CombatAttack) GetSlashRadius() float64 {
+	if x != nil {
+		return x.SlashRadius
+	}
+	return 0
+}
+
+func (x *CombatAttack) GetSlashOffsetX() float64 {
+	if x != nil {
+		return x.SlashOffsetX
+	}
+	return 0
+}
+
+func (x *CombatAttack) GetSlashOffsetY() float64 {
+	if x != nil {
+		return x.SlashOffsetY
+	}
+	return 0
+}
+
+func (x *CombatAttack) GetOriginYOffset() float64 {
+	if x != nil {
+		return x.OriginYOffset
+	}
+	return 0
+}
+
+func (x *CombatAttack) GetEnemyYOffset() float64 {
+	if x != nil {
+		return x.EnemyYOffset
+	}
+	return 0
+}
+
+func (x *CombatAttack) GetBoltRadius() float64 {
+	if x != nil {
+		return x.BoltRadius
+	}
+	return 0
+}
+
+func (x *CombatAttack) GetBoltSpeed() float64 {
+	if x != nil {
+		return x.BoltSpeed
+	}
+	return 0
+}
+
+func (x *CombatAttack) GetBoltLifetimeSeconds() float64 {
+	if x != nil {
+		return x.BoltLifetimeSeconds
+	}
+	return 0
+}
+
+func (x *CombatAttack) GetCritMultiplier() float64 {
+	if x != nil {
+		return x.CritMultiplier
+	}
+	return 0
+}
+
+func (x *CombatAttack) GetToolDamageFraction() float64 {
+	if x != nil {
+		return x.ToolDamageFraction
+	}
+	return 0
+}
+
+func (x *CombatAttack) GetBoltSpawnOffsetX() float64 {
+	if x != nil {
+		return x.BoltSpawnOffsetX
+	}
+	return 0
+}
+
 var File_glimway_content_v1_combat_proto protoreflect.FileDescriptor
 
 const file_glimway_content_v1_combat_proto_rawDesc = "" +
 	"\n" +
-	"\x1fglimway/content/v1/combat.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\xaa\x04\n" +
+	"\x1fglimway/content/v1/combat.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\x83\t\n" +
 	"\x06Combat\x12L\n" +
 	"\x1asignature_cooldown_seconds\x18\x01 \x01(\x01B\x0e\xbaH\v\x12\t\t\x00\x00\x00\x00\x00\x00\xf0?R\x18signatureCooldownSeconds\x12K\n" +
 	"\aclasses\x18\x02 \x03(\v2'.glimway.content.v1.Combat.ClassesEntryB\b\xbaH\x05\x9a\x01\x02\b\x01R\aclasses\x12:\n" +
-	"\x04heal\x18\x03 \x01(\v2\x1e.glimway.content.v1.CombatHealB\x06\xbaH\x03\xc8\x01\x01R\x04heal\x1a[\n" +
+	"\x04heal\x18\x03 \x01(\v2\x1e.glimway.content.v1.CombatHealB\x06\xbaH\x03\xc8\x01\x01R\x04heal\x12I\n" +
+	"\tclassless\x18\x04 \x01(\v2#.glimway.content.v1.CombatClasslessB\x06\xbaH\x03\xc8\x01\x01R\tclassless\x12?\n" +
+	"\x05melee\x18\x05 \x01(\v2!.glimway.content.v1.CombatFormulaB\x06\xbaH\x03\xc8\x01\x01R\x05melee\x12G\n" +
+	"\tsignature\x18\x06 \x01(\v2!.glimway.content.v1.CombatFormulaB\x06\xbaH\x03\xc8\x01\x01R\tsignature\x12I\n" +
+	"\n" +
+	"mitigation\x18\a \x01(\v2!.glimway.content.v1.CombatFormulaB\x06\xbaH\x03\xc8\x01\x01R\n" +
+	"mitigation\x12=\n" +
+	"\x04crit\x18\b \x01(\v2!.glimway.content.v1.CombatFormulaB\x06\xbaH\x03\xc8\x01\x01R\x04crit\x12@\n" +
+	"\x06attack\x18\t \x01(\v2 .glimway.content.v1.CombatAttackB\x06\xbaH\x03\xc8\x01\x01R\x06attack\x1a[\n" +
 	"\fClassesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x125\n" +
-	"\x05value\x18\x02 \x01(\v2\x1f.glimway.content.v1.CombatClassR\x05value:\x028\x01:\xeb\x01\xbaH\xe7\x01\x1a\xe4\x01\n" +
-	"\x0ecombat.classes\x12<the four classes are all present, each with positive numbers\x1a\x93\x01size(this.classes) == 4 && [\"warrior\", \"mage\", \"rogue\", \"healer\"].all(id, id in this.classes && this.classes[id].basic_attack_cooldown_seconds > 0)\"`\n" +
+	"\x05value\x18\x02 \x01(\v2\x1f.glimway.content.v1.CombatClassR\x05value:\x028\x01:\xa3\x03\xbaH\x9f\x03\x1a\xe4\x01\n" +
+	"\x0ecombat.classes\x12<the four classes are all present, each with positive numbers\x1a\x93\x01size(this.classes) == 4 && [\"warrior\", \"mage\", \"rogue\", \"healer\"].all(id, id in this.classes && this.classes[id].basic_attack_cooldown_seconds > 0)\x1a\xb5\x01\n" +
+	"\x10combat.fractions\x123mitigation and crit must remain fractions below one\x1althis.mitigation.base + this.mitigation.maximum_bonus < 1.0 && this.crit.base + this.crit.maximum_bonus < 1.0\"\xc4\x01\n" +
 	"\vCombatClass\x12Q\n" +
-	"\x1dbasic_attack_cooldown_seconds\x18\x01 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x1abasicAttackCooldownSeconds\"\xbf\x01\n" +
+	"\x1dbasic_attack_cooldown_seconds\x18\x01 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x1abasicAttackCooldownSeconds\x12&\n" +
+	"\n" +
+	"basic_name\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\tbasicName\x12:\n" +
+	"\vdamage_stat\x18\x03 \x01(\tB\x19\xbaH\x16r\x14R\x03strR\x03intR\x03conR\x03perR\n" +
+	"damageStat\"\xbf\x01\n" +
 	"\n" +
 	"CombatHeal\x12\"\n" +
 	"\x04base\x18\x01 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x04base\x123\n" +
 	"\rmaximum_bonus\x18\x02 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\fmaximumBonus\x12(\n" +
 	"\ahalfway\x18\x03 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\ahalfway\x12.\n" +
-	"\x0edecimal_places\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02\b\x02R\rdecimalPlacesB*Z(glimway/gen/glimway/content/v1;contentv1b\x06proto3"
+	"\x0edecimal_places\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02\b\x02R\rdecimalPlaces\"\x8c\x01\n" +
+	"\x0fCombatClassless\x12&\n" +
+	"\n" +
+	"basic_name\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\tbasicName\x12Q\n" +
+	"\x1dbasic_attack_cooldown_seconds\x18\x02 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x1abasicAttackCooldownSeconds\"\xc2\x01\n" +
+	"\rCombatFormula\x12\"\n" +
+	"\x04base\x18\x01 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\x04base\x123\n" +
+	"\rmaximum_bonus\x18\x02 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\fmaximumBonus\x12(\n" +
+	"\ahalfway\x18\x03 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\ahalfway\x12.\n" +
+	"\x0edecimal_places\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02\b\x02R\rdecimalPlaces\"\x82\x05\n" +
+	"\fCombatAttack\x121\n" +
+	"\fslash_radius\x18\x01 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\vslashRadius\x124\n" +
+	"\x0eslash_offset_x\x18\x02 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\fslashOffsetX\x124\n" +
+	"\x0eslash_offset_y\x18\x03 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\fslashOffsetY\x126\n" +
+	"\x0forigin_y_offset\x18\x04 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\roriginYOffset\x124\n" +
+	"\x0eenemy_y_offset\x18\x05 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\fenemyYOffset\x12/\n" +
+	"\vbolt_radius\x18\x06 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\n" +
+	"boltRadius\x12-\n" +
+	"\n" +
+	"bolt_speed\x18\a \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\tboltSpeed\x12B\n" +
+	"\x15bolt_lifetime_seconds\x18\b \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x13boltLifetimeSeconds\x127\n" +
+	"\x0fcrit_multiplier\x18\t \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\xf0?R\x0ecritMultiplier\x12I\n" +
+	"\x14tool_damage_fraction\x18\n" +
+	" \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x00\x00\xf0?!\x00\x00\x00\x00\x00\x00\x00\x00R\x12toolDamageFraction\x12=\n" +
+	"\x13bolt_spawn_offset_x\x18\v \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x10boltSpawnOffsetXB*Z(glimway/gen/glimway/content/v1;contentv1b\x06proto3"
 
 var (
 	file_glimway_content_v1_combat_proto_rawDescOnce sync.Once
@@ -238,22 +585,31 @@ func file_glimway_content_v1_combat_proto_rawDescGZIP() []byte {
 	return file_glimway_content_v1_combat_proto_rawDescData
 }
 
-var file_glimway_content_v1_combat_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_glimway_content_v1_combat_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_glimway_content_v1_combat_proto_goTypes = []any{
-	(*Combat)(nil),      // 0: glimway.content.v1.Combat
-	(*CombatClass)(nil), // 1: glimway.content.v1.CombatClass
-	(*CombatHeal)(nil),  // 2: glimway.content.v1.CombatHeal
-	nil,                 // 3: glimway.content.v1.Combat.ClassesEntry
+	(*Combat)(nil),          // 0: glimway.content.v1.Combat
+	(*CombatClass)(nil),     // 1: glimway.content.v1.CombatClass
+	(*CombatHeal)(nil),      // 2: glimway.content.v1.CombatHeal
+	(*CombatClassless)(nil), // 3: glimway.content.v1.CombatClassless
+	(*CombatFormula)(nil),   // 4: glimway.content.v1.CombatFormula
+	(*CombatAttack)(nil),    // 5: glimway.content.v1.CombatAttack
+	nil,                     // 6: glimway.content.v1.Combat.ClassesEntry
 }
 var file_glimway_content_v1_combat_proto_depIdxs = []int32{
-	3, // 0: glimway.content.v1.Combat.classes:type_name -> glimway.content.v1.Combat.ClassesEntry
+	6, // 0: glimway.content.v1.Combat.classes:type_name -> glimway.content.v1.Combat.ClassesEntry
 	2, // 1: glimway.content.v1.Combat.heal:type_name -> glimway.content.v1.CombatHeal
-	1, // 2: glimway.content.v1.Combat.ClassesEntry.value:type_name -> glimway.content.v1.CombatClass
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	3, // 2: glimway.content.v1.Combat.classless:type_name -> glimway.content.v1.CombatClassless
+	4, // 3: glimway.content.v1.Combat.melee:type_name -> glimway.content.v1.CombatFormula
+	4, // 4: glimway.content.v1.Combat.signature:type_name -> glimway.content.v1.CombatFormula
+	4, // 5: glimway.content.v1.Combat.mitigation:type_name -> glimway.content.v1.CombatFormula
+	4, // 6: glimway.content.v1.Combat.crit:type_name -> glimway.content.v1.CombatFormula
+	5, // 7: glimway.content.v1.Combat.attack:type_name -> glimway.content.v1.CombatAttack
+	1, // 8: glimway.content.v1.Combat.ClassesEntry.value:type_name -> glimway.content.v1.CombatClass
+	9, // [9:9] is the sub-list for method output_type
+	9, // [9:9] is the sub-list for method input_type
+	9, // [9:9] is the sub-list for extension type_name
+	9, // [9:9] is the sub-list for extension extendee
+	0, // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_glimway_content_v1_combat_proto_init() }
@@ -267,7 +623,7 @@ func file_glimway_content_v1_combat_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_glimway_content_v1_combat_proto_rawDesc), len(file_glimway_content_v1_combat_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

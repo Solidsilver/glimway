@@ -297,20 +297,22 @@ New presence messages, all protobuf (decision 14):
 
 | Message | Direction | Fields |
 |---|---|---|
-| `FightSwing` | client → server | kind (slash or bolt), x, y, facing, swing counter, seen tick |
-| `PresenceAbility` | both | as today, plus seen tick |
-| `FightJoin` | server → client | room key, tick, full enemy state, your crit seed |
-| `FightDelta` | server → client | room key, tick, changed enemies: id, x, y (whole pixels, sint32), state, hp, facing |
-| `FightEvent` | server → client | room key, tick, kind (wind-up start, aim lock, death, spawn, room closed), enemy id, target, server start time |
-| `FightHit` | server → swinger | swing counter, enemy id, damage, crit, refused reason |
+| `FightSwing` | client → server | kind (slash or bolt), x, y, facing, swing counter, seen tick and offset, tool, predicted targets |
+| `PresenceAbility` | both | as today, plus seen tick and offset, facing, swing counter (shared with swings), predicted targets |
+| `FightJoin` | server → client | room key, room handle, tick, whole enemy rows (index, id, kind, camp, max HP, state and its start tick, ...), your crit seed |
+| `FightDelta` | server → client | room handle, tick, changed enemies as patches: index, x, y (whole pixels, sint32), state and its start tick, hp, facing (a step of 256); spawned rows; removed indices |
+| `FightEvent` | server → client | room handle, start tick and offset, kind (wind-up start, aim lock, death, spawn, room closed), enemy index, target |
+| `FightSwingResult` | server → swinger | swing counter, crit, swing refusal, rows: room, enemy, damage or refused reason |
 
 - **Diff only** (decision 10). A delta carries only enemies that changed; an idle room sends
   nothing. A client gets `FightJoin` when a room enters its 3×3 or wakes.
 - **Size.** About 12 to 15 bytes an enemy; a camp of 5 is under 100 bytes a delta. Swings are
   well under the 1024-byte client limit. Outbound frames go through the existing bounded queue;
   the prototype measures queue depth with 9 awake rooms around one player.
-- **Clock.** Ticks are the time base. The client estimates the server tick from delta arrivals and
-  draws at `tick − delay` (1.8).
+- **Clock.** Ticks are the time base: one world grid for every room, `floor(server ms / 100)`
+  as a wrapping uint32, with a 0–99 ms offset where an instant falls between ticks. The client
+  estimates the server tick from delta arrivals and draws at `tick − delay` (1.8). Wire details
+  are in `docs/proto-migration.md` (contract 10).
 
 ### 1.8 Drawing server enemies
 
@@ -318,7 +320,7 @@ New presence messages, all protobuf (decision 14):
   tick; the delay grows up to 200 ms while arrival gaps are uneven and shrinks back when they
   settle (decision 10). Stamped by server tick, not by receipt (unlike `presence-interp.ts`'s
   player poses), and no synthetic still pose: an enemy holds its last state until the next delta.
-- **Events** play from their server start time, so a late delta never shortens a wind-up.
+- **Events** play from their start tick and offset, so a late delta never shortens a wind-up.
 - **Observation runs while you are paused.** The scene tick splits into world observation and
   presentation (remote players, server enemies, the window) and this player's gated input and
   local play (game F7). A menu stops only the second.

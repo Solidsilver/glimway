@@ -1,6 +1,7 @@
 syntax = "proto3";
 package glimway.v2;
 option go_package = "glimway/server/internal/gen/glimway/v2;contract";
+import "buf/validate/validate.proto";
 import "google/protobuf/struct.proto";
 import "google/protobuf/wrappers.proto";
 
@@ -19,6 +20,11 @@ message PresenceMessage {
     PresenceWitness witness = 10;
     PresenceAbility ability = 11;
     PresenceAvatarChange avatar_change = 12;
+    FightSwing fight_swing = 13;
+    FightJoin fight_join = 14;
+    FightDelta fight_delta = 15;
+    FightEvent fight_event = 16;
+    FightSwingResult fight_swing_result = 17;
   }
 }
 message PresenceAuth { string lease = 1; }
@@ -34,7 +40,18 @@ message PresenceEmote { string id = 1; optional string account_id = 2; }
 // hub also fills pulse_heal: one pulse of the caster's ward, from the
 // caster's profile (rules.WardPulseHeal), so a friend's screen mends what the
 // world credits. Whatever a client sends there is overwritten.
-message PresenceAbility { string ability = 1; double x = 2; double y = 3; optional string account_id = 4; optional double pulse_heal = 5; }
+//
+// Contract 10: fight is what the room needs to judge the cast like a swing
+// (design 1.6). Legacy casts omit it; the relay strips it, since it is the
+// caster's own.
+message PresenceAbility {
+  string ability = 1;
+  double x = 2;
+  double y = 3;
+  optional string account_id = 4;
+  optional double pulse_heal = 5;
+  optional FightCast fight = 6;
+}
 // The server's own word that one player's avatar changed (the resolved
 // follower, the mount that is out): sent after a companions, mount-out or
 // mount-home commit. The server is the only writer of PresenceAvatar's
@@ -79,4 +96,290 @@ message PresenceAppearance {
   double hair_mustache = 8;
   double hair_beard = 9;
   double hair_flower = 10;
+}
+
+// Contract 10: shared fights (docs/design/shared-fights.md 1.7).
+//
+// The clock. Every room shares one world tick grid: tick = floor(server Unix
+// ms / 100) as a uint32 that wraps modulo 2^32, so one number names the same
+// instant in every room, and a room that sleeps and wakes never reuses a
+// tick. Compare ticks wrap-aware (int32(a - b)); the helpers are
+// rules.FightTickAt/FightTickDiff and fightTickAt/fightTickDiff. An *_offset_ms
+// field (0-99) places an instant between two ticks.
+//
+// Room handles. FightJoin names the room by its key and gives it a small
+// handle; deltas, events and hit rows carry only the handle. The server
+// assigns it when the room wakes, never zero, and doesn't reuse it while a
+// client could still hold it; a room that wakes again gets a new handle and a
+// new join. Enemies in a room are uint32 indices, given at spawn and never
+// reused in that room's life; their stable string ids travel only in rows
+// from a join or a spawn.
+
+// Room identity is physical space, separate from presence's visibility
+// label. Epoch is the generated epoch id (including "still").
+message FightRoomKey {
+  string world = 1 [(buf.validate.field).string.min_len = 1];
+  string realm = 2 [(buf.validate.field).string.min_len = 1];
+  sint32 layer = 3;
+  sint32 cx = 4;
+  sint32 cy = 5;
+  string epoch = 6 [(buf.validate.field).string.min_len = 1];
+}
+enum FightSwingKind {
+  FIGHT_SWING_KIND_UNSPECIFIED = 0;
+  FIGHT_SWING_KIND_SLASH = 1;
+  FIGHT_SWING_KIND_BOLT = 2;
+}
+// Unit facing, for what a client aims. Unlike optional legacy
+// PresenceFacing, both zero components are meaningful. Squared length
+// allows normal floating-point roundoff.
+message FightFacing {
+  option (buf.validate.message).cel = {
+    id: "fight.facing"
+    message: "facing must be a unit vector"
+    expression: "this.x * this.x + this.y * this.y >= 0.999999 && this.x * this.x + this.y * this.y <= 1.000001"
+  };
+  double x = 1 [(buf.validate.field).double = {gte: -1, lte: 1}];
+  double y = 2 [(buf.validate.field).double = {gte: -1, lte: 1}];
+}
+// One enemy in one room: a room's handle and the enemy's index in it.
+message FightTarget {
+  uint32 room = 1 [(buf.validate.field).uint32.gt = 0];
+  uint32 enemy = 2;
+}
+// The basic attack (design 1.4): client intent plus what the screen
+// predicted. The server judges reach at seen_tick + seen_offset_ms (the
+// instant the screen drew, capped rewind) and answers with one
+// FightSwingResult.
+//
+// swing_counter is one sequence per socket, shared with casts (FightCast):
+// it starts at 0 and wraps modulo 2^32 (protobuf-es throws on 2^32, so the
+// client wraps with (n + 1) >>> 0). One crit roll per swing or cast, shared
+// by every enemy it hits. The server takes any counter 1 to 1024 ahead of
+// the last one it took, wrap-aware (rules.FightCounterAhead,
+// fightCounterAhead), so a swing it never saw leaves no hole; a repeat, a
+// counter behind the last, or one further ahead is refused STALE_COUNTER.
+//
+// tool: a tool was in hand. It changes damage only (the kit's tool fraction)
+// and is always a slash, a mage's included. predicted: the enemies the
+// screen hit, so the server can confirm or refuse each one. A bolt names
+// none, because it lands after it is sent; its result comes when the
+// server's bolt hits or its life ends.
+message FightSwing {
+  option (buf.validate.message).cel = {
+    id: "fight.swing_tool"
+    message: "a tool swing is a slash"
+    expression: "!this.tool || this.kind == 1"
+  };
+  option (buf.validate.message).cel = {
+    id: "fight.swing_bolt"
+    message: "a bolt predicts no targets"
+    expression: "this.kind != 2 || size(this.predicted) == 0"
+  };
+  option (buf.validate.message).cel = {
+    id: "fight.predicted_unique"
+    message: "predicted targets must be unique"
+    expression: "this.predicted.all(a, size(this.predicted.filter(b, b.room == a.room && b.enemy == a.enemy)) == 1)"
+  };
+  FightSwingKind kind = 1 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  double x = 2 [(buf.validate.field).double = {gte: -2147483648, lte: 2147483647}];
+  double y = 3 [(buf.validate.field).double = {gte: -2147483648, lte: 2147483647}];
+  FightFacing facing = 4 [(buf.validate.field).required = true];
+  uint32 swing_counter = 5;
+  uint32 seen_tick = 6;
+  uint32 seen_offset_ms = 7 [(buf.validate.field).uint32.lte = 99];
+  bool tool = 8;
+  repeated FightTarget predicted = 9 [(buf.validate.field).repeated.max_items = 16];
+}
+// A cast's part in a fight: the instant the caster drew, the facing it aimed
+// along, a swing_counter from the same sequence as FightSwing (so its crit
+// comes from the same seed), and the enemies the screen hit. The room answers
+// with one FightSwingResult keyed by that counter. A Fingersnap bolt, like a
+// basic one, predicts none.
+message FightCast {
+  option (buf.validate.message).cel = {
+    id: "fight.predicted_unique"
+    message: "predicted targets must be unique"
+    expression: "this.predicted.all(a, size(this.predicted.filter(b, b.room == a.room && b.enemy == a.enemy)) == 1)"
+  };
+  uint32 seen_tick = 1;
+  uint32 seen_offset_ms = 2 [(buf.validate.field).uint32.lte = 99];
+  FightFacing facing = 3 [(buf.validate.field).required = true];
+  uint32 swing_counter = 4;
+  repeated FightTarget predicted = 5 [(buf.validate.field).repeated.max_items = 16];
+}
+enum FightEnemyKind {
+  FIGHT_ENEMY_KIND_UNSPECIFIED = 0;
+  FIGHT_ENEMY_KIND_WISP = 1;
+  FIGHT_ENEMY_KIND_BEETLE = 2;
+}
+enum FightEnemyState {
+  FIGHT_ENEMY_STATE_UNSPECIFIED = 0;
+  FIGHT_ENEMY_STATE_CHASE = 1;
+  FIGHT_ENEMY_STATE_TELEGRAPH = 2;
+  FIGHT_ENEMY_STATE_LUNGE = 3;
+  FIGHT_ENEMY_STATE_RECOVER = 4;
+  FIGHT_ENEMY_STATE_STUNNED = 5;
+  FIGHT_ENEMY_STATE_DEAD = 6;
+}
+// A whole enemy, in a join or as it spawns. Positions are world pixels,
+// rounded by the sim. HP may be fractional after damage. state_tick is the
+// tick the current state began, so a client that joins mid-wind-up still
+// plays the telegraph and the aim lock on time (rules.FightAimLocked and
+// fightAimLocked count from it). Facing is a quantised angle: 256ths of a
+// turn from +x towards +y (screen down), so 64 faces down the screen.
+//
+// id is stable for the enemy's life and unique in its world and epoch: the
+// camp's generated entity id (camp:<cx>:<cy>:<n>, which names its chunk)
+// and the enemy's slot. Claims and logs use it; the wire uses the index.
+message FightEnemy {
+  option (buf.validate.message).cel = {
+    id: "fight.hp"
+    message: "hp cannot exceed max_hp"
+    expression: "this.hp <= this.max_hp"
+  };
+  uint32 enemy = 1;
+  string id = 2 [(buf.validate.field).string.min_len = 1];
+  FightEnemyKind kind = 3 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  string camp_id = 4 [(buf.validate.field).string.min_len = 1];
+  double max_hp = 5 [(buf.validate.field).double = {gt: 0, lte: 1000000}];
+  sint32 x = 6;
+  sint32 y = 7;
+  FightEnemyState state = 8 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  uint32 state_tick = 9;
+  double hp = 10 [(buf.validate.field).double = {gte: 0, lte: 1000000}];
+  uint32 facing = 11 [(buf.validate.field).uint32.lte = 255];
+}
+// What changed about one enemy since the last delta: an absent field didn't
+// change. A new state always comes with the tick it began.
+message FightEnemyPatch {
+  option (buf.validate.message).cel = {
+    id: "fight.patch_state"
+    message: "state and state_tick change together"
+    expression: "has(this.state) == has(this.state_tick)"
+  };
+  option (buf.validate.message).cel = {
+    id: "fight.patch_nonempty"
+    message: "a patch changes something"
+    expression: "has(this.x) || has(this.y) || has(this.state) || has(this.hp) || has(this.facing)"
+  };
+  uint32 enemy = 1;
+  optional sint32 x = 2;
+  optional sint32 y = 3;
+  optional FightEnemyState state = 4 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  optional uint32 state_tick = 5;
+  optional double hp = 6 [(buf.validate.field).double = {gte: 0, lte: 1000000}];
+  optional uint32 facing = 7 [(buf.validate.field).uint32.lte = 255];
+}
+// Sent when a room enters a client's 3x3 or wakes. Patches build on it, so a
+// client that misses a delta (a dropped frame, a reconnect) needs a new join.
+// crit_seed is this socket's, the same in every room, and never zero.
+message FightJoin {
+  option (buf.validate.message).cel = {
+    id: "fight.join_unique"
+    message: "enemy indices and ids are unique in a room"
+    expression: "this.enemies.map(e, e.enemy).unique() && this.enemies.map(e, e.id).unique()"
+  };
+  FightRoomKey room_key = 1 [(buf.validate.field).required = true];
+  uint32 room = 2 [(buf.validate.field).uint32.gt = 0];
+  uint32 tick = 3;
+  repeated FightEnemy enemies = 4;
+  fixed32 crit_seed = 5 [(buf.validate.field).fixed32 = {not_in: [0]}];
+}
+// The room's changes at one tick, only when something changed (design 1.7).
+message FightDelta {
+  option (buf.validate.message).cel = {
+    id: "fight.delta_nonempty"
+    message: "a delta changes, spawns or removes an enemy"
+    expression: "size(this.changed) + size(this.spawned) + size(this.removed) > 0"
+  };
+  uint32 room = 1 [(buf.validate.field).uint32.gt = 0];
+  uint32 tick = 2;
+  repeated FightEnemyPatch changed = 3;
+  repeated FightEnemy spawned = 4;
+  repeated uint32 removed = 5;
+}
+enum FightEventKind {
+  FIGHT_EVENT_KIND_UNSPECIFIED = 0;
+  FIGHT_EVENT_KIND_WINDUP_START = 1;
+  FIGHT_EVENT_KIND_AIM_LOCK = 2;
+  FIGHT_EVENT_KIND_DEATH = 3;
+  FIGHT_EVENT_KIND_SPAWN = 4;
+  FIGHT_EVENT_KIND_ROOM_CLOSED = 5;
+}
+// A moment to play. tick plus offset_ms is when it began on the world grid,
+// so a late frame still plays a whole telegraph; an aim lock carries the
+// exact lock time. Events are hints for effects: the rows are the truth.
+// target is an account id or an Echo decoy id.
+message FightEvent {
+  option (buf.validate.message).cel = {
+    id: "fight.event_enemy"
+    message: "room closed has no enemy; other events require an enemy"
+    expression: "this.kind == 5 ? !has(this.enemy) : has(this.enemy)"
+  };
+  uint32 room = 1 [(buf.validate.field).uint32.gt = 0];
+  uint32 tick = 2;
+  uint32 offset_ms = 3 [(buf.validate.field).uint32.lte = 99];
+  FightEventKind kind = 4 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  optional uint32 enemy = 5;
+  optional string target = 6 [(buf.validate.field).string.min_len = 1];
+}
+// Swing-level reasons refuse the whole swing or cast (COOLDOWN,
+// STALE_COUNTER, NOT_ALLOWED); the others refuse one row. NOT_ALLOWED is the
+// hub's answer to a swing or cast it won't take for any other reason: no
+// position yet, a move not unlocked or out of reach, an unknown move, or a
+// frame over the ingress rate that it read anyway.
+enum FightRefusedReason {
+  FIGHT_REFUSED_REASON_UNSPECIFIED = 0;
+  FIGHT_REFUSED_REASON_ALREADY_DEAD = 1;
+  FIGHT_REFUSED_REASON_OUT_OF_REACH = 2;
+  FIGHT_REFUSED_REASON_COOLDOWN = 3;
+  FIGHT_REFUSED_REASON_UNKNOWN_ENEMY = 4;
+  FIGHT_REFUSED_REASON_STALE_COUNTER = 5;
+  FIGHT_REFUSED_REASON_NOT_ALLOWED = 6;
+}
+// One enemy's part in a swing's result. Unspecified confirms the hit, with
+// the damage dealt (crit and stun included); a refusal deals nothing.
+message FightHitRow {
+  option (buf.validate.message).cel = {
+    id: "fight.row_damage"
+    message: "a confirmed row deals damage; a refused row deals none"
+    expression: "this.refused_reason == 0 ? this.damage > 0.0 : this.damage == 0.0"
+  };
+  option (buf.validate.message).cel = {
+    id: "fight.row_reason"
+    message: "cooldown, stale counter and not allowed refuse the whole swing, not a row"
+    expression: "this.refused_reason != 3 && this.refused_reason != 5 && this.refused_reason != 6"
+  };
+  uint32 room = 1 [(buf.validate.field).uint32.gt = 0];
+  uint32 enemy = 2;
+  double damage = 3 [(buf.validate.field).double = {gte: 0, lte: 1000000}];
+  FightRefusedReason refused_reason = 4 [(buf.validate.field).enum.defined_only = true];
+}
+// One per swing or cast, to the swinger, keyed by its counter, even when it
+// reached several rooms (the hub gathers their rows). A swing or cast the hub
+// won't take is refused NOT_ALLOWED, not dropped. Only a frame the hub
+// drops unread (a burst over the ingress rate) or can't answer (a full
+// outbound queue) goes unanswered: the client stops waiting after a timeout,
+// and the counter window lets the next swing through. A legacy cast with no
+// fight part gets no result. There is a row
+// for every enemy the client predicted, confirmed or refused, and for every
+// other enemy the server hit. No rows and no refusal: the swing hit nothing.
+// crit is the swing's roll; a basic bolt never crits (as today), so it is
+// false for one.
+message FightSwingResult {
+  option (buf.validate.message).cel = {
+    id: "fight.result_reason"
+    message: "a swing is refused only for cooldown, a stale counter or not allowed"
+    expression: "this.refused_reason == 0 || this.refused_reason == 3 || this.refused_reason == 5 || this.refused_reason == 6"
+  };
+  option (buf.validate.message).cel = {
+    id: "fight.result_refused"
+    message: "a refused swing has no rows and no crit"
+    expression: "this.refused_reason == 0 || (size(this.hits) == 0 && !this.crit)"
+  };
+  uint32 swing_counter = 1;
+  bool crit = 2;
+  FightRefusedReason refused_reason = 3 [(buf.validate.field).enum.defined_only = true];
+  repeated FightHitRow hits = 4 [(buf.validate.field).repeated.max_items = 64];
 }

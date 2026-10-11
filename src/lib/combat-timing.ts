@@ -5,16 +5,16 @@ import { CombatSchema, type CombatValid } from './gen/glimway/content/v1/combat_
 
 /**
  * Reads combat JSON through the schema (proto/glimway/content/v1/
- * combat.proto): the fixed signature cooldown, the four classes with
- * positive numbers and the heal formula are all on it; nothing is left
- * in code. The signature's mana cost is the ability table's (design 4.1).
+ * combat.proto): cooldowns, class rows, kit formulas and attack geometry
+ * are validated together. Ability mana stays in the ability table.
  */
 export function validateCombat(value: unknown): CombatValid {
-  // The schema requires heal; the Valid type says so.
+  // Required nested tuning is reflected in the generated Valid type.
   return decodeContent(CombatSchema, value, 'combat', []) as unknown as CombatValid;
 }
 
-const data = validateCombat(raw);
+export const COMBAT_TUNING = validateCombat(raw);
+const data = COMBAT_TUNING;
 
 export const SIGNATURE_COOLDOWN_SECONDS = data.signatureCooldownSeconds;
 export const BASIC_ATTACK_COOLDOWN_SECONDS: Record<HabiticaClass, number> = Object.fromEntries(
