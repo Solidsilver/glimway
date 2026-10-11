@@ -176,8 +176,11 @@ test('the lane and a gate’s home are ordered against each other: neither undoe
     await laneRead;
     assert.equal(homes.homes.has(GATE), false, 'another home: not known yet');
     take('home').answer({ ok: true, value: { gate: GATE, landSeed: 7, home: theirs(), materials: { timber: 10 } } });
-    await gateRead;
+    await settle();
     assert.equal(homes.homes.has(GATE), false, 'the read asked before the lane doesn’t put home-1 back');
+    // With no home held, the gate is read again: the answer asked now is the newer word.
+    take('home').answer({ ok: true, value: { gate: GATE, landSeed: 7, home: { ...theirs(), id: 'home-2' }, materials: { timber: 10 } } });
+    assert.equal((await gateRead)?.id, 'home-2');
   }
 });
 
@@ -203,6 +206,98 @@ test('a lane read asked before an answer keeps the gate row the answer left (tie
   take('commons').answer({ ok: true, value: theirLane(0) });
   await later;
   assert.equal(homes.gateInfo(GATE)!.tier, 0);
+});
+
+/** A gate read's answer. */
+const gateAnswer = (h: unknown) => ({ ok: true, value: { gate: GATE, landSeed: 7, home: h, materials: { timber: 10 } } });
+const shelfItem = { id: 'shelf-1', itemDef: 'gate-shelf', location: 'placed', scene: 'gate', x: 0, y: 0, rotation: 0 };
+/** The row and the cached home, as the lane, the land and the scene read them. */
+const gateShown = (homes: ReturnType<typeof homesteadsFor>) => {
+  const row = homes.gateInfo(GATE)!;
+  const h = homes.homes.get(GATE);
+  return { row: { homeId: row.homeId, tier: row.tier, names: row.names, shelf: !!row.shelf, shelfStocked: !!row.shelfStocked }, home: h === undefined ? 'unknown' : h && { id: h.id, tier: h.tier } };
+};
+
+test('a newer lane fences an uncached gate: an older gate read can’t install another home, or an older summary', async () => {
+  // Never fetched: the lane names home-2; the gate read asked before it answers home-1.
+  {
+    const { link, take } = deferredLink();
+    const homes = homesteadsFor(session(link));
+    const gateRead = homes.fetchHome(GATE);
+    const laneRead = homes.fresh();
+    take('commons').answer({ ok: true, value: { ...theirLane(), gates: [{ ...theirLane().gates[0]!, homeId: 'home-2', names: ['Them'] }] } });
+    await laneRead;
+    take('home').answer(gateAnswer(theirs()));
+    await settle();
+    assert.deepEqual(gateShown(homes).home, 'unknown', 'home-1 isn’t installed behind a row naming home-2');
+    take('home').answer(gateAnswer({ ...theirs(), id: 'home-2' }));
+    await gateRead;
+    assert.deepEqual(gateShown(homes), { row: { homeId: 'home-2', tier: 0, names: ['Them'], shelf: false, shelfStocked: false }, home: { id: 'home-2', tier: 0 } });
+  }
+  // The same home, its summary changed: the lane says a cottage, the older read a plot.
+  {
+    const { link, take } = deferredLink();
+    const homes = homesteadsFor(session(link));
+    const gateRead = homes.fetchHome(GATE);
+    const laneRead = homes.fresh();
+    take('commons').answer({ ok: true, value: { ...theirLane(1), gates: [{ ...theirLane(1).gates[0]!, names: ['Them'] }] } });
+    await laneRead;
+    take('home').answer(gateAnswer(theirs(0)));
+    await settle();
+    assert.deepEqual(gateShown(homes).home, 'unknown', 'the tier-0 home is older than the tier-1 row');
+    take('home').answer(gateAnswer(theirs(1)));
+    await gateRead;
+    assert.deepEqual(gateShown(homes), { row: { homeId: 'home-1', tier: 1, names: ['Them'], shelf: false, shelfStocked: false }, home: { id: 'home-1', tier: 1 } });
+  }
+});
+
+test('taking the last gift from a neighbour’s shelf (their home never fetched) outranks an older lane', async () => {
+  const { link, take } = deferredLink();
+  const homes = homesteadsFor(session(link));
+  const first = homes.load();
+  take('commons').answer({ ok: true, value: { ...theirLane(), gates: [{ ...theirLane().gates[0]!, shelf: true, shelfStocked: true }] } });
+  await first;
+  const laneRead = homes.fresh();
+  homes.adoptShelfState(GATE, true, false);
+  take('commons').answer({ ok: true, value: { ...theirLane(), gates: [{ ...theirLane().gates[0]!, shelf: true, shelfStocked: true }] } });
+  await laneRead;
+  assert.equal(homes.homes.has(GATE), false, 'no home was ever read');
+  assert.deepEqual([homes.gateInfo(GATE)!.shelf, homes.gateInfo(GATE)!.shelfStocked], [true, false], 'empty, as the take left it');
+});
+
+test('a newer gate read then an older lane: the row’s shelf and names are the home’s', async () => {
+  const lane1 = (shelf: boolean) => ({ ...theirLane(), gates: [{ ...theirLane().gates[0]!, names: ['Them'], shelf, shelfStocked: shelf }] });
+  const partner = { ...theirs(), members: [{ id: 'them', displayName: 'Them' }, { id: 'partner', displayName: 'Partner' }] };
+  // A shelf placed and a partner signed since the lane read was asked.
+  {
+    const { link, take } = deferredLink();
+    const homes = homesteadsFor(session(link));
+    const first = homes.load();
+    take('commons').answer({ ok: true, value: lane1(false) });
+    await first;
+    const laneRead = homes.fresh();
+    const gateRead = homes.fetchHome(GATE);
+    take('home').answer(gateAnswer({ ...partner, items: [shelfItem] }));
+    await gateRead;
+    take('commons').answer({ ok: true, value: lane1(false) });
+    await laneRead;
+    assert.deepEqual(gateShown(homes).row, { homeId: 'home-1', tier: 0, names: ['Them', 'Partner'], shelf: true, shelfStocked: false });
+  }
+  // The shelf taken down since: no shelf, nothing stocked.
+  {
+    const { link, take } = deferredLink();
+    const homes = homesteadsFor(session(link));
+    const first = homes.load();
+    take('commons').answer({ ok: true, value: lane1(true) });
+    await first;
+    const laneRead = homes.fresh();
+    const gateRead = homes.fetchHome(GATE);
+    take('home').answer(gateAnswer(theirs()));
+    await gateRead;
+    take('commons').answer({ ok: true, value: lane1(true) });
+    await laneRead;
+    assert.deepEqual(gateShown(homes).row, { homeId: 'home-1', tier: 0, names: ['Them'], shelf: false, shelfStocked: false });
+  }
 });
 
 const pack = (stools: number) => ({ stacks: [{ itemDef: 'wooden-stool', qty: stools }], instances: [], pockets: [], offHand: { open: false, itemDef: null }, pickedUp: [] });

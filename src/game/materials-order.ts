@@ -11,13 +11,26 @@
  * is handed. Re-publishing a mirror (a Wilds bump, a prediction, a roster
  * redraw) is not an adoption, so it never looks newer than a read in flight,
  * and the two mirrors can't feed each other marks.
+ *
+ * A balance is its link's (one account, in one world, in one session): each
+ * link has its own, and an adoption reaches only the mirrors reading through
+ * that link. A mirror that starts after the balance was adopted (the Home
+ * side made after the Wilds read, on resuming in the Wilds) is set from it at
+ * once, without a new mark; another account's or world's balance never is.
  */
 
 let clock = 0
-/** The mark of the balance both mirrors hold. */
-let heldAt = 0
-let held: Record<string, number> | null = null
-const mirrors = new Map<'home' | 'wilds', (m: Record<string, number>) => void>()
+
+/** Adoptions with no link (a model without one, a test): their own balance. */
+const UNLINKED = {}
+
+type Owner = object | null | undefined
+type Held = { at: number; m: Record<string, number> }
+
+const balances = new WeakMap<object, Held>()
+const mirrors = new Map<'home' | 'wilds', { owner: () => Owner; set: (m: Record<string, number>) => void }>()
+
+const key = (owner: Owner): object => owner ?? UNLINKED
 
 /** The next order mark (a read asked now, or an answer landing now). */
 export function nextMark(): number {
@@ -29,24 +42,33 @@ export function markNow(): number {
   return clock
 }
 
-/** A mirror follows every adoption (one per side: a new session's replaces the old). */
-export function mirrorMaterials(side: 'home' | 'wilds', set: (m: Record<string, number>) => void): void {
-  mirrors.set(side, set)
+/**
+ * A mirror follows every adoption through the link `owner()` names now (one
+ * per side: a new session's replaces the old), and starts from the balance
+ * that link already holds, if any.
+ */
+export function mirrorMaterials(side: 'home' | 'wilds', owner: () => Owner, set: (m: Record<string, number>) => void): void {
+  mirrors.set(side, { owner, set })
+  const held = balances.get(key(owner()))
+  if (held) set({ ...held.m })
 }
 
 /**
- * Balances read or answered at `at`: adopted by both mirrors, unless a
- * balance from after `at` is held. True when adopted.
+ * Balances read or answered at `at`, through `owner` (the link): adopted by
+ * the mirrors reading through it, unless a balance from after `at` is held
+ * for it. True when adopted.
  */
-export function adoptMaterials(m: Record<string, number>, at: number): boolean {
-  if (at < heldAt) return false
-  heldAt = at
-  held = { ...m }
-  for (const set of mirrors.values()) set({ ...held })
+export function adoptMaterials(m: Record<string, number>, at: number, owner: Owner): boolean {
+  const k = key(owner)
+  const held = balances.get(k)
+  if (held && at < held.at) return false
+  balances.set(k, { at, m: { ...m } })
+  for (const mirror of mirrors.values()) if (key(mirror.owner()) === k) mirror.set({ ...m })
   return true
 }
 
-/** The balance held now (null before any adoption): a new mirror starts from it. */
-export function heldMaterials(): Record<string, number> | null {
-  return held ? { ...held } : null
+/** The balance `owner` holds now (null before any adoption through it): a new view starts from it. */
+export function heldMaterials(owner: Owner): Record<string, number> | null {
+  const held = balances.get(key(owner))
+  return held ? { ...held.m } : null
 }

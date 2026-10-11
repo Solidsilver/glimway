@@ -143,7 +143,9 @@ bus.on(EV.fallSettled, ({ lantern }) => {
  * store makes itself is published by its own bump.
  */
 let adopting = false;
-mirrorMaterials('wilds', (m) => {
+/** The link the view was read through: whose balance its mirror holds (materials-order.ts). */
+let viewLink: object | null = null;
+mirrorMaterials('wilds', () => viewLink, (m) => {
   if (!view) return;
   view.materials = materialsRecord(m);
   if (!adopting) emitMaterials();
@@ -153,7 +155,7 @@ mirrorMaterials('wilds', (m) => {
 function takeMaterials(m: Record<string, number>, at: number): boolean {
   adopting = true;
   try {
-    return adoptMaterials(materialsRecord(m), at);
+    return adoptMaterials(materialsRecord(m), at, viewLink);
   } finally {
     adopting = false;
   }
@@ -228,6 +230,7 @@ export function wickEnded(): boolean {
  */
 export function resetWilds(opts: { quiet?: boolean } = {}): void {
   view = null;
+  viewLink = null;
   generation += 1;
   fetchedAt.clear();
   inflight.clear();
@@ -305,9 +308,10 @@ export function nearWindow(cx: number, cy: number, radius = NEAR_RADIUS): { cx: 
  * `since` is the read's order mark (readMark, taken as it was asked). What a
  * later read or an answer set after it was asked is newer and kept: a chunk a
  * later read covered, an entity, claim, lantern, Echo, chunk's ground, way,
- * the balances or the frontier.
+ * the balances or the frontier. `link`: the link it was read through (whose
+ * material balance it carries; refreshNear passes it).
  */
-export function applyNear(res: WildsNearResult, since: number = markNow()): boolean | null {
+export function applyNear(res: WildsNearResult, since: number = markNow(), link: object | null = viewLink): boolean | null {
   const still = epochView(res.still!, 'still');
   const wick = epochView(res.wick!, 'wick');
   const turned = !!view && !!view.wick.id && view.wick.id !== wick.id;
@@ -342,6 +346,7 @@ export function applyNear(res: WildsNearResult, since: number = markNow()): bool
     startedAt = since;
   }
   const v = view!;
+  viewLink = link;
   v.still = still;
   v.wick = wick;
   // Newer than this read: set by a later read or an answer after it was asked.
@@ -412,7 +417,7 @@ export function applyNear(res: WildsNearResult, since: number = markNow()): bool
     waySeq.set(w.id, since);
   }
   // The one balance: this read's, unless one from after it was asked is held (a new view starts from that one).
-  if (!takeMaterials(res.materials, since) && restart) v.materials = materialsRecord(heldMaterials() ?? res.materials);
+  if (!takeMaterials(res.materials, since) && restart) v.materials = materialsRecord(heldMaterials(link) ?? res.materials);
   v.stale = false;
   return turned;
 }
@@ -543,7 +548,7 @@ export async function refreshNear(session: Session, cx: number, cy: number, maxA
       const res = await link.api.operations.near(cx, cy);
       if (!current()) return false;
       const priorWick = view?.wick.id ?? '';
-      const turned = applyNear(res, since);
+      const turned = applyNear(res, since, link);
       // Older than what the view holds: nothing to adopt, and the view is no fresher for it.
       if (turned === null) return wildsLive(session) !== null;
       const after = generation;

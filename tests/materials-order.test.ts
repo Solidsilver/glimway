@@ -48,7 +48,17 @@ function homeWorld() {
     return calls.splice(i, 1)[0]!;
   };
   const session = new Session({ ...createNewGame(), maxHp: 50, hp: 40, maxMana: 30, mana: 20 }, undefined, link as never);
-  return { homes: homesteadsFor(session), village: villageFor(session), take };
+  return { homes: homesteadsFor(session), village: villageFor(session), take, link };
+}
+
+/** A session whose Home side isn't made yet (resuming in the Wilds: the near read comes first). */
+function laterHome(accountId = 'me') {
+  const calls: Call[] = [];
+  const wait = (name: string) => () => new Promise((answer) => calls.push({ name, answer }));
+  const link = { accountId, worldId: 'world-1', status: 'online', attach: () => {}, takePaper: () => {}, api: { operations: {} }, readCommons: wait('commons'), readHome: wait('home') };
+  const session = new Session({ ...createNewGame(), maxHp: 50, hp: 40, maxMana: 30, mana: 20 }, undefined, link as never);
+  const take = (name: string): Call => calls.splice(calls.findIndex((c) => c.name === name), 1)[0]!;
+  return { link, session, take };
 }
 
 const GATE = 2;
@@ -64,8 +74,8 @@ function bumpWilds(): void {
 
 test('re-publishing the Wilds mirror is no newer word than a Home read in flight', async () => {
   store.resetWilds({ quiet: true });
-  const { homes, take } = homeWorld();
-  store.applyNear(near(4), store.readMark());
+  const { homes, take, link } = homeWorld();
+  store.applyNear(near(4), store.readMark(), link);
   assert.deepEqual(stone(homes), { home: 4, wilds: 4 });
   // A fresh home read goes out; the account gained stone elsewhere meanwhile.
   const read = homes.fetchHome(GATE);
@@ -78,8 +88,8 @@ test('re-publishing the Wilds mirror is no newer word than a Home read in flight
 
 test('a Home action’s balance is newer than a near read asked before it, in both mirrors', async () => {
   store.resetWilds({ quiet: true });
-  const { homes, take } = homeWorld();
-  store.applyNear(near(4), store.readMark());
+  const { homes, take, link } = homeWorld();
+  store.applyNear(near(4), store.readMark(), link);
   // A near read goes out carrying four stone; a buy spends three and is answered first.
   const since = store.readMark();
   const buy = homes.buy('lantern-post');
@@ -87,18 +97,18 @@ test('a Home action’s balance is newer than a near read asked before it, in bo
   assert.equal((await buy).ok, true);
   assert.deepEqual(stone(homes), { home: 1, wilds: 1 });
   // The delayed near read lands, and the Wilds publish (refreshNear bumps after applying).
-  store.applyNear(near(4), since);
+  store.applyNear(near(4), since, link);
   bumpWilds();
   assert.deepEqual(stone(homes), { home: 1, wilds: 1 }, 'the spend stands');
   // A near read asked after the buy is the newer word.
-  store.applyNear(near(2), store.readMark());
+  store.applyNear(near(2), store.readMark(), link);
   assert.deepEqual(stone(homes), { home: 2, wilds: 2 });
 });
 
 test('a Wilds answer is still newer than a Home read asked before it', async () => {
   store.resetWilds({ quiet: true });
-  const { homes, take } = homeWorld();
-  store.applyNear(near(4), store.readMark());
+  const { homes, take, link } = homeWorld();
+  store.applyNear(near(4), store.readMark(), link);
   const read = homes.fetchHome(GATE);
   // A path answer lands with the account's balance after the lay.
   assert.equal(store.applyPathAnswer(undefined, { stone: 3 }), true);
@@ -116,8 +126,8 @@ test('a Wilds answer is still newer than a Home read asked before it', async () 
 
 test('the village’s answers and reads carry the same balance, in the same order', async () => {
   store.resetWilds({ quiet: true });
-  const { homes, village, take } = homeWorld();
-  store.applyNear(near(4), store.readMark());
+  const { homes, village, take, link } = homeWorld();
+  store.applyNear(near(4), store.readMark(), link);
   const counts = (stone: number) => ({ materials: { stone }, items: {}, decorations: {} });
   const workshop = (stone: number) => ({ inventory: counts(stone), storage: counts(0), personal: counts(0), shared: counts(0), home: null });
   // A craft at the bench spends two: the Wilds mirror follows the answer.
@@ -132,4 +142,33 @@ test('the village’s answers and reads carry the same balance, in the same orde
   assert.equal((await read).ok, true);
   assert.deepEqual(stone(homes), { home: 5, wilds: 5 });
   assert.equal(village.inventory!.materials.stone, 5, 'the village’s own counts too');
+});
+
+test('a Home side made after the near read starts from the balance the read held: no deed, no Home read, a bump', async () => {
+  store.resetWilds({ quiet: true });
+  const w = laterHome();
+  store.applyNear(near(9), store.readMark(), w.link);
+  const homes = homesteadsFor(w.session);
+  assert.deepEqual(stone(homes), { home: 9, wilds: 9 }, 'seeded from the held balance');
+  // The lane says no deed: no home read, so nothing else would set it.
+  const lane = homes.fresh();
+  w.take('commons').answer({ ok: true, value: { gates: [], gateCount: 6, mine: null, invites: [] } });
+  await lane;
+  bumpWilds();
+  assert.deepEqual(stone(homes), { home: 9, wilds: 9 });
+  // Seeding took no mark: a Home read asked after it is the newer word.
+  const read = homes.fetchHome(GATE);
+  w.take('home').answer(homeRead(11));
+  await read;
+  assert.deepEqual(stone(homes), { home: 11, wilds: 11 });
+});
+
+test('another account’s session is never seeded with the balance the last one held', () => {
+  store.resetWilds({ quiet: true });
+  const before = laterHome('me');
+  store.applyNear(near(9), store.readMark(), before.link);
+  store.resetWilds({ quiet: true });
+  const next = laterHome('someone-else');
+  const homes = homesteadsFor(next.session);
+  assert.equal(homes.materials.stone, undefined, 'their own balance comes with their own reads');
 });

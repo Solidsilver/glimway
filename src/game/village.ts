@@ -111,7 +111,7 @@ export class Village {
    */
   private adoptInventory(inv: AssetCounts, at = nextMark()): void {
     this.inventory = { ...inv, materials: this.carriedMaterials() }
-    adoptMaterials(inv.materials, at)
+    adoptMaterials(inv.materials, at, this.session.link)
   }
 
   /**
@@ -276,7 +276,7 @@ export class Village {
     const r = await this.link.mutate<ContributeResponse>({ kind: 'contribute', id: projectId, fields: { materials: given } })
     if (!r.ok) return fail(r.code)
     this.adoptProjects(r.res.result)
-    adoptMaterials(r.res.result.materials, nextMark())
+    adoptMaterials(r.res.result.materials, nextMark(), this.session.link)
     const completed = before !== 'complete' && r.res.result.projects.find((p) => p.id === projectId)?.stage === 'complete'
     return { ok: true, value: { completed } }
   }
@@ -525,7 +525,7 @@ export function villageFor(session: Session): Village {
     const village = new Village(session)
     current = { session, village }
     // One server-owned balance (materials-order.ts): this session's carried counts mirror it.
-    mirrorMaterials('home', (m) => village.setCarriedMaterials(m))
+    mirrorMaterials('home', () => session.link, (m) => village.setCarriedMaterials(m))
   }
   return current.village
 }

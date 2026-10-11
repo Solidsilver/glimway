@@ -125,7 +125,7 @@ export class Homesteads {
 
   /** An answer's balances (the stable's, an items answer's counts): newer than any read asked before. */
   set materials(m: Record<string, number>) {
-    adoptMaterials(m, nextMark())
+    adoptMaterials(m, nextMark(), this.session.link)
   }
   private loading: Promise<void> | null = null
   private polling = 0
@@ -137,8 +137,15 @@ export class Homesteads {
    * materials), so an earlier read answered late never undoes an action.
    */
   private laneSeq = 0
-  /** Per gate: the latest read or answer that said what is behind it (a home, none, or not the one known). */
+  /** Per gate: the latest read or answer that set its full home (a home, none, or not the one known). */
   private readonly homeSeq = new Map<number, number>()
+  /**
+   * Per gate, the mark of each group of its lane row (ROW_GROUPS). Every
+   * source writes the groups it knows, at its mark, never over a newer one,
+   * whether or not the full home is cached: a lane read at its asked mark, a
+   * gate's home read, an action's home, a shelf update.
+   */
+  private readonly rowSeq = new Map<number, Partial<Record<RowGroup, number>>>()
 
   private readonly session: Session
 
@@ -257,26 +264,32 @@ export class Homesteads {
   }
 
   /**
-   * The lane as read at `mark`. Each gate's home follows the lane only where
-   * the lane is the newer word: a gate whose home a later read or answer set
-   * keeps that home, and its row (who holds it, tier, shelf) is told from
-   * that home. Where the lane is newer, a gate it names free is known free,
-   * and one held by another home than the known one is unknown, each as of
-   * `mark`, so a gate read asked before the lane can't bring the old home back.
+   * The lane as read at `mark`: each gate's row takes the groups the lane is
+   * the newer word on. Where it is the newer word on who holds a gate, the
+   * cached home follows: a gate it names free is known free, and a home it
+   * doesn't name is dropped, each as of `mark` (a gate read asked before the
+   * lane can't install it again; see `agrees`).
    */
   private adoptLane(v: CommonsLaneView, mark: number): void {
     const before = this.myGateValue
     const prev = new Map(this.gates.map((g) => [g.gate, g]))
-    this.gates = v.gates.map((row) => {
-      const g = row.gate
+    this.gates = v.gates.map((lane) => {
+      const g = lane.gate
       const known = this.homes.get(g)
-      if (mark < (this.homeSeq.get(g) ?? 0)) return known === undefined ? row : rowFromHome(row, known, prev.get(g))
-      if (row.homeId === null) {
-        this.homes.set(g, null)
-        this.homeSeq.set(g, mark)
-      } else if (known === null || (known && known.id !== row.homeId)) {
-        this.homes.delete(g)
-        this.homeSeq.set(g, mark)
+      const held = prev.get(g)
+      const row = { ...(held ?? lane) }
+      // A gate first seen in this lane, whose home a later read set: the row starts from that home.
+      const homeAt = this.homeSeq.get(g) ?? 0
+      if (!held && known !== undefined && homeAt > mark) this.writeRow(row, homeRow(known, row), homeAt)
+      this.writeRow(row, lane, mark)
+      if (this.rowSeq.get(g)?.owner === mark && mark > (this.homeSeq.get(g) ?? 0)) {
+        if (row.homeId === null) {
+          this.homes.set(g, null)
+          this.homeSeq.set(g, mark)
+        } else if (known !== undefined && known?.id !== row.homeId) {
+          this.homes.delete(g)
+          this.homeSeq.set(g, mark)
+        }
       }
       return row
     })
@@ -287,19 +300,53 @@ export class Homesteads {
     if (before !== this.myGateValue) this.emitGoal()
   }
 
+  /** Write the row groups `fields` speaks for, as of `mark`, except those a newer source wrote. */
+  private writeRow(row: GateInfo, fields: Partial<GateInfo>, mark: number): void {
+    const seq = this.rowSeq.get(row.gate) ?? {}
+    for (const group of Object.keys(ROW_GROUPS) as RowGroup[]) {
+      const keys = ROW_GROUPS[group]
+      if (!keys.some((k) => k in fields) || (seq[group] ?? 0) > mark) continue
+      for (const k of keys) if (k in fields) Object.assign(row, { [k]: fields[k] })
+      seq[group] = mark
+    }
+    this.rowSeq.set(row.gate, seq)
+  }
+
+  /**
+   * Does a gate's home, read at `mark`, agree with every group of the gate's
+   * row a later source wrote? A home that doesn't is older than what the row
+   * says (another holder, another tier or members, a shelf since moved), and
+   * isn't installed, cached home or not.
+   */
+  private agrees(gate: number, home: HomeView | null, mark: number): boolean {
+    const row = this.gateInfo(gate)
+    const seq = this.rowSeq.get(gate)
+    if (!row || !seq) return true
+    const told = homeRow(home, row)
+    const newer = (group: RowGroup) => (seq[group] ?? 0) > mark
+    if (newer('owner') && row.homeId !== told.homeId) return false
+    if (newer('summary') && (row.tier !== told.tier || row.desolate !== told.desolate || memberIds(row.members) !== memberIds(told.members ?? []))) return false
+    if (newer('shelf') && !!row.shelf !== told.shelf) return false
+    return true
+  }
+
   /**
    * A gate read asked at `mark`: the home behind it (or none), and always the
-   * caller's own materials, each unless something newer was set since.
+   * caller's own materials, each unless something newer was set since. False
+   * when the home is older than what is held.
    */
-  private adoptRead(v: { gate: number; landSeed?: number; home: HomeView | null; materials: Record<string, number> }, mark: number): void {
+  private adoptRead(v: { gate: number; landSeed?: number; home: HomeView | null; materials: Record<string, number> }, mark: number): boolean {
     if (v.landSeed !== undefined) this.seeds.set(v.gate, v.landSeed)
-    adoptMaterials(v.materials, mark)
-    if (mark <= (this.homeSeq.get(v.gate) ?? 0)) return
-    const before = this.homes.get(v.gate)
+    adoptMaterials(v.materials, mark, this.session.link)
+    if (mark <= (this.homeSeq.get(v.gate) ?? 0) || !this.agrees(v.gate, v.home, mark)) return false
+    const before = JSON.stringify([this.homes.get(v.gate), this.gateInfo(v.gate)])
     this.homes.set(v.gate, v.home)
     this.homeSeq.set(v.gate, mark)
+    const row = this.gateInfo(v.gate)
+    if (row) this.writeRow(row, homeRow(v.home, row), mark)
     this.reconcilePapers()
-    if (before === undefined || JSON.stringify(before) !== JSON.stringify(v.home)) this.emit('home', v.gate)
+    if (JSON.stringify([v.home, row]) !== before) this.emit('home', v.gate)
+    return true
   }
 
   /** A home the server just sent (an action's answer, a workshop read): newer than any read asked before it. */
@@ -315,24 +362,15 @@ export class Homesteads {
       this.laneSeq = at
     }
     const row = this.gateInfo(home.gate)
-    if (row) {
-      row.tier = home.tier
-      row.desolate = home.desolate
-      row.shelf = home.items.some((item) => item.itemDef === 'gate-shelf' && item.scene === 'gate')
-      if (!row.shelf) row.shelfStocked = false
-    }
+    if (row) this.writeRow(row, homeRow(home, row), at)
     this.reconcilePapers()
     this.emit('home', home.gate)
   }
 
-  /** Refresh lane art after a slot is stocked, emptied, or a shelf is moved (an answer: a lane read asked before it keeps this row). */
+  /** Refresh lane art after a slot is stocked, emptied, or a shelf is moved (an answer: newer than a lane read asked before it). */
   adoptShelfState(gate: number, hasShelf: boolean, stocked: boolean): void {
     const row = this.gateInfo(gate)
-    if (row) {
-      row.shelf = hasShelf
-      row.shelfStocked = hasShelf && stocked
-      if (this.homes.get(gate)) this.homeSeq.set(gate, nextMark())
-    }
+    if (row) this.writeRow(row, { shelf: hasShelf, shelfStocked: hasShelf && stocked }, nextMark())
     this.emit('shelf', gate)
   }
 
@@ -352,7 +390,7 @@ export class Homesteads {
     const res = p.res as HomeActionResponse | undefined
     if (p.outcome === 'landed' && res?.result) {
       this.adoptHome(res.result.home)
-      adoptMaterials(res.result.materials, nextMark())
+      adoptMaterials(res.result.materials, nextMark(), this.session.link)
     }
     void this.fresh()
     bus.emit(EV.toast, {
@@ -365,10 +403,13 @@ export class Homesteads {
   async fetchHome(gate: number): Promise<HomeView | null> {
     const link = this.session.link
     if (!link) return null
-    const mark = nextMark()
-    const r = await link.readHome(gate)
-    if (!r.ok) return this.homes.get(gate) ?? null
-    this.adoptRead(r.value, mark)
+    for (let tries = 0; tries < 3; tries++) {
+      const mark = nextMark()
+      const r = await link.readHome(gate)
+      if (!r.ok) break
+      // Older than something told since, with no home held for the gate (a newer lane names another): ask again.
+      if (this.adoptRead(r.value, mark) || this.homes.get(gate) !== undefined) break
+    }
     // The home as held: this read's, or a newer answer's.
     return this.homes.get(gate) ?? null
   }
@@ -383,7 +424,7 @@ export class Homesteads {
       if (r.code === 'gate-taken' || r.code === 'already-homesteaded' || r.code === 'not-a-member' || r.code === 'invite-not-found' || r.code === 'resolved') void this.fresh()
       return { ok: false, code: r.code, text: homeErrorText(r.code) }
     }
-    adoptMaterials(r.materials, nextMark())
+    adoptMaterials(r.materials, nextMark(), this.session.link)
     if (r.home) this.adoptHome(r.home)
     if (action.op === 'claim' || action.op === 'leave' || action.op === 'joint' || action.op === 'invite') {
       if (action.op === 'leave') {
@@ -518,27 +559,43 @@ export class Homesteads {
 let current: { session: Session; homes: Homesteads } | null = null
 
 /**
- * A lane row whose gate's home a read or answer newer than the lane set:
- * who holds it and how it stands come from that home (`prev`, the row as
- * held, carries summaries answers patched in, such as the shelf's).
+ * A gate's lane row in groups, by what tells them: who holds it (and what
+ * the deed costs you), how it stands (tier, desolation, members and their
+ * names), whether a shelf stands at the gate, and whether it is stocked.
+ * A home tells the first three, and the stock only when no shelf stands;
+ * the lane and shelf answers tell theirs.
  */
-function rowFromHome(row: GateInfo, home: HomeView | null, prev: GateInfo | undefined): GateInfo {
-  if (!home) return { ...row, homeId: null, names: [], members: [], mine: false, tier: 0, desolate: false, reclaim: false, shelf: false, shelfStocked: false }
-  const same = prev?.homeId === home.id
-  const shelf = same && prev.shelf !== undefined ? prev.shelf : home.items.some((item) => item.itemDef === 'gate-shelf' && item.scene === 'gate')
+const ROW_GROUPS = {
+  owner: ['homeId', 'price', 'reclaim'],
+  summary: ['tier', 'desolate', 'names', 'members', 'mine'],
+  shelf: ['shelf'],
+  stock: ['shelfStocked']
+} as const satisfies Record<string, readonly (keyof GateInfo)[]>
+
+type RowGroup = keyof typeof ROW_GROUPS
+
+/**
+ * What a gate's home (or none) tells of its row: names from its members, a
+ * shelf from anything standing at the gate (as the lane reads it, commons.go).
+ */
+function homeRow(home: HomeView | null, row: GateInfo): Partial<GateInfo> {
+  if (!home) return { homeId: null, price: row.homeId === null ? row.price : null, reclaim: false, tier: 0, desolate: false, names: [], members: [], mine: false, shelf: false, shelfStocked: false }
+  const shelf = home.items.some((item) => item.scene === 'gate')
   return {
-    ...row,
     homeId: home.id,
-    names: row.homeId === home.id ? row.names : home.members.map((m) => m.displayName),
-    members: home.members,
-    mine: home.member,
+    price: null,
+    reclaim: row.homeId === home.id && row.reclaim,
     tier: home.tier,
     desolate: home.desolate,
-    price: row.homeId === home.id ? row.price : null,
+    names: home.members.map((m) => m.displayName),
+    members: home.members,
+    mine: home.member,
     shelf,
-    shelfStocked: shelf && (same ? !!prev.shelfStocked : !!row.shelfStocked)
+    ...(shelf ? {} : { shelfStocked: false })
   }
 }
+
+const memberIds = (members: readonly { id: string }[]) => members.map((m) => m.id).join(',')
 
 /** The homestead state for this session (made on first use; it feeds the land maps). */
 export function homesteadsFor(session: Session): Homesteads {
