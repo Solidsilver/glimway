@@ -5,7 +5,8 @@
  */
 import Phaser from 'phaser'
 import { sfx } from '../sfx'
-import { ENEMY_TUNING, type Enemy, type EnemyDeps, type EnemySystem } from './enemies'
+import type { Enemy, EnemyDeps, EnemySystem } from './enemies'
+import { ENEMY_TUNING } from './fight-rules'
 import type { CombatField } from '../../lib/combat-moves'
 
 export class Creatures {

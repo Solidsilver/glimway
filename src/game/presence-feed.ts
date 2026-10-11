@@ -12,9 +12,12 @@
  * - The renderer (entities/remote-players.ts) reads `peersIn(area)` each
  *   frame and listens for emotes on the bus.
  *
- * Presence is presentation only: nothing here touches the save, the economy
- * or gameplay. No Phaser here: the bus, link, socket and timers are injected,
- * so the feed runs under node --test.
+ * The feed itself writes nothing: not the save, not the economy. But what
+ * it relays reaches play, through the bus: a friend's Ward-light pulses mend
+ * this hero (entities/moves.ts times them, the hero decides; the hub credits
+ * the server the same heal), a naming spoken nearby rests the warden
+ * (`witness`), and gifts arrive. No Phaser here: the bus, link, socket and
+ * timers are injected, so the feed runs under node --test.
  */
 import { PresenceClient, sharedRoom, type PresenceStatus, type SocketLike, type Timers } from '../lib/presence-client.ts'
 import { PeerTrack } from '../lib/presence-interp.ts'

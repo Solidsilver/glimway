@@ -40,8 +40,8 @@ export class Projectiles {
       boltObj.setData('life', life)
       let hit = false
       for (const enemy of [...this.enemies().enemies]) {
-        const dx = enemy.sprite.x - boltObj.x
-        const dy = enemy.sprite.y - 6 - boltObj.y
+        const dx = enemy.x - boltObj.x
+        const dy = enemy.y - 6 - boltObj.y
         if (dx * dx + dy * dy < 14 * 14) {
           this.enemies().damageEnemy(enemy, boltObj.getData('damage') as number, boltObj.x)
           hit = true

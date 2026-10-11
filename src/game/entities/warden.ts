@@ -14,7 +14,8 @@ import { tileBottom, tileMid } from '../../lib/tile'
 import { wardenToRestore } from '../rollback'
 import type { QuestStage } from '../../lib/state'
 import type { Interactable } from './interactables'
-import { ENEMY_TUNING, KNOCK, type Enemy, type EnemyDeps, type EnemySystem } from './enemies'
+import type { Enemy, EnemyDeps, EnemySystem } from './enemies'
+import { ENEMY_TUNING, KNOCK } from './fight-rules'
 import { WitnessRest } from './witness-rest'
 
 /**
