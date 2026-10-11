@@ -77,6 +77,16 @@ export function fightTickDiff(a: number, b: number): number {
   return (a - b) | 0;
 }
 
+/** How far ahead of the last swing counter the server takes the next one. */
+export const FIGHT_COUNTER_WINDOW = 1024;
+
+/** next is 1 to FIGHT_COUNTER_WINDOW past last, across the wrap; a repeat,
+ * a counter behind last, or one further ahead is stale. */
+export function fightCounterAhead(last: number, next: number): boolean {
+  const ahead = fightTickDiff(next, last);
+  return ahead >= 1 && ahead <= FIGHT_COUNTER_WINDOW;
+}
+
 export type FightCampKind = 'wisp' | 'beetle';
 
 /** When, in whole ticks from the start of a wind-up, the aim locks and the
@@ -89,7 +99,8 @@ export function fightWindupTicks(kind: FightCampKind): { lock: number; launch: n
   const lockMs = wholeMs(t.lock);
   return { lock: Math.floor((windupMs - lockMs) / FIGHT_TICK_MS), launch: Math.ceil(windupMs / FIGHT_TICK_MS) };
 }
-/** elapsedTicks: fightTickDiff(now, the enemy's state_tick). */
+/** elapsedTicks: fightTickDiff(now, the enemy's state_tick); negative is
+ * before the wind-up, so neither locked nor launched. */
 export function fightAimLocked(kind: FightCampKind, elapsedTicks: number): boolean {
   return elapsedTicks >= fightWindupTicks(kind).lock;
 }

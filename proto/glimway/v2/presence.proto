@@ -149,13 +149,16 @@ message FightTarget {
 }
 // The basic attack (design 1.4): client intent plus what the screen
 // predicted. The server judges reach at seen_tick + seen_offset_ms (the
-// instant the screen drew, capped rewind) and answers with exactly one
+// instant the screen drew, capped rewind) and answers with one
 // FightSwingResult.
 //
 // swing_counter is one sequence per socket, shared with casts (FightCast):
 // it starts at 0 and wraps modulo 2^32 (protobuf-es throws on 2^32, so the
 // client wraps with (n + 1) >>> 0). One crit roll per swing or cast, shared
-// by every enemy it hits.
+// by every enemy it hits. The server takes any counter 1 to 1024 ahead of
+// the last one it took, wrap-aware (rules.FightCounterAhead,
+// fightCounterAhead), so a swing it never saw leaves no hole; a repeat, a
+// counter behind the last, or one further ahead is refused STALE_COUNTER.
 //
 // tool: a tool was in hand. It changes damage only (the kit's tool fraction)
 // and is always a slash, a mage's included. predicted: the enemies the
@@ -322,7 +325,10 @@ message FightEvent {
   optional string target = 6 [(buf.validate.field).string.min_len = 1];
 }
 // Swing-level reasons refuse the whole swing or cast (COOLDOWN,
-// STALE_COUNTER); the others refuse one row.
+// STALE_COUNTER, NOT_ALLOWED); the others refuse one row. NOT_ALLOWED is the
+// hub's answer to a swing or cast it won't take for any other reason: no
+// position yet, a move not unlocked or out of reach, an unknown move, or a
+// frame over the ingress rate that it read anyway.
 enum FightRefusedReason {
   FIGHT_REFUSED_REASON_UNSPECIFIED = 0;
   FIGHT_REFUSED_REASON_ALREADY_DEAD = 1;
@@ -330,6 +336,7 @@ enum FightRefusedReason {
   FIGHT_REFUSED_REASON_COOLDOWN = 3;
   FIGHT_REFUSED_REASON_UNKNOWN_ENEMY = 4;
   FIGHT_REFUSED_REASON_STALE_COUNTER = 5;
+  FIGHT_REFUSED_REASON_NOT_ALLOWED = 6;
 }
 // One enemy's part in a swing's result. Unspecified confirms the hit, with
 // the damage dealt (crit and stun included); a refusal deals nothing.
@@ -341,16 +348,21 @@ message FightHitRow {
   };
   option (buf.validate.message).cel = {
     id: "fight.row_reason"
-    message: "cooldown and stale counter refuse the whole swing, not a row"
-    expression: "this.refused_reason != 3 && this.refused_reason != 5"
+    message: "cooldown, stale counter and not allowed refuse the whole swing, not a row"
+    expression: "this.refused_reason != 3 && this.refused_reason != 5 && this.refused_reason != 6"
   };
   uint32 room = 1 [(buf.validate.field).uint32.gt = 0];
   uint32 enemy = 2;
   double damage = 3 [(buf.validate.field).double = {gte: 0, lte: 1000000}];
   FightRefusedReason refused_reason = 4 [(buf.validate.field).enum.defined_only = true];
 }
-// Exactly one per swing or cast, to the swinger, keyed by its counter, even
-// when it reached several rooms (the hub gathers their rows). There is a row
+// One per swing or cast, to the swinger, keyed by its counter, even when it
+// reached several rooms (the hub gathers their rows). A swing or cast the hub
+// won't take is refused NOT_ALLOWED, not dropped. Only a frame the hub
+// drops unread (a burst over the ingress rate) or can't answer (a full
+// outbound queue) goes unanswered: the client stops waiting after a timeout,
+// and the counter window lets the next swing through. A legacy cast with no
+// fight part gets no result. There is a row
 // for every enemy the client predicted, confirmed or refused, and for every
 // other enemy the server hit. No rows and no refusal: the swing hit nothing.
 // crit is the swing's roll; a basic bolt never crits (as today), so it is
@@ -358,8 +370,8 @@ message FightHitRow {
 message FightSwingResult {
   option (buf.validate.message).cel = {
     id: "fight.result_reason"
-    message: "a swing is refused only for cooldown or a stale counter"
-    expression: "this.refused_reason == 0 || this.refused_reason == 3 || this.refused_reason == 5"
+    message: "a swing is refused only for cooldown, a stale counter or not allowed"
+    expression: "this.refused_reason == 0 || this.refused_reason == 3 || this.refused_reason == 5 || this.refused_reason == 6"
   };
   option (buf.validate.message).cel = {
     id: "fight.result_refused"

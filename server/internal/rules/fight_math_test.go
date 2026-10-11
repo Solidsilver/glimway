@@ -36,7 +36,7 @@ func TestFightSharedVectors(t *testing.T) {
 		}
 		Timing []struct {
 			Kind             string
-			ElapsedTicks     uint32
+			ElapsedTicks     int32
 			Locked, Launched bool
 		}
 		Windup []struct {
@@ -54,6 +54,10 @@ func TestFightSharedVectors(t *testing.T) {
 		BoltSpawn []struct {
 			X, Y, FacingX, SpawnX, SpawnY float64
 		}
+		Counter []struct {
+			Last, Next uint32
+			Accepted   bool
+		}
 		Facing []struct {
 			X, Y float64
 			Step uint32
@@ -64,7 +68,7 @@ func TestFightSharedVectors(t *testing.T) {
 	}
 	if len(vectors.Kit) < 20 || len(vectors.Crit) < 60 || len(vectors.Damage) < 30 || len(vectors.Reach) < 150 ||
 		len(vectors.Timing) < 15 || len(vectors.Windup) != 2 || len(vectors.Ticks) < 10 || len(vectors.TickDiff) < 10 ||
-		len(vectors.BoltSpawn) < 4 || len(vectors.Facing) < 8 {
+		len(vectors.BoltSpawn) < 4 || len(vectors.Facing) < 8 || len(vectors.Counter) < 15 {
 		t.Fatal("insufficient vectors")
 	}
 	c := content.CombatRules
@@ -140,6 +144,18 @@ func TestFightSharedVectors(t *testing.T) {
 	for _, v := range vectors.BoltSpawn {
 		if x, y := FightBoltSpawn(v.X, v.Y, v.FacingX); x != v.SpawnX || y != v.SpawnY {
 			t.Fatal("bolt spawn", v, x, y)
+		}
+	}
+	negative := false
+	for _, v := range vectors.Timing {
+		negative = negative || v.ElapsedTicks < 0
+	}
+	if !negative {
+		t.Fatal("no timing row before the wind-up")
+	}
+	for _, v := range vectors.Counter {
+		if FightCounterAhead(v.Last, v.Next) != v.Accepted {
+			t.Fatal("counter", v)
 		}
 	}
 	for _, v := range vectors.Facing {

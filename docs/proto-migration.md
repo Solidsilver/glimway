@@ -274,12 +274,20 @@ the swing counter, the seen tick and offset, `tool` (damage only, always a
 slash) and the enemies the screen predicted it hit (up to 16, none for a
 bolt). The counter is one sequence per socket shared with casts, starting at
 0 and wrapping modulo 2^32; `crit_seed` is fixed32, nonzero and stable for a
-socket across its rooms. The server answers each swing or cast with exactly
-one `FightSwingResult`: the counter, the roll's crit, a swing-level refusal
-(cooldown, stale counter) or rows. Each row names room and enemy and either
+socket across its rooms. The server takes any counter 1 to 1024 ahead of
+the last one it took, wrap-aware (`FightCounterAhead`/`fightCounterAhead`,
+with vectors), so a swing it never saw leaves a gap, not a lockout; a
+repeat, a counter behind the last, or one further ahead is refused stale.
+The server answers each swing or cast with one `FightSwingResult`: the
+counter, the roll's crit, a swing-level refusal (cooldown, stale counter,
+or not allowed: whatever the hub won't take, such as a cast with no
+position yet, out of reach or not unlocked) or rows. Each row names room and enemy and either
 confirms with the damage dealt or refuses (already dead, out of reach,
 unknown enemy) with none. There is a row for every predicted enemy and every
-other enemy hit; no rows and no refusal means the swing hit nothing. A bolt's
+other enemy hit; no rows and no refusal means the swing hit nothing. Only
+a frame the hub drops unread (a burst over the ingress rate) or can't answer
+(a full outbound queue) goes unanswered; the client stops waiting after a
+timeout. A legacy cast with no `fight` part gets no result. A bolt's
 result comes when the server's bolt hits or expires. A basic bolt never
 crits, as today.
 

@@ -881,13 +881,16 @@ export declare const FightTargetSchema: GenMessage<FightTarget, {validType: Figh
 /**
  * The basic attack (design 1.4): client intent plus what the screen
  * predicted. The server judges reach at seen_tick + seen_offset_ms (the
- * instant the screen drew, capped rewind) and answers with exactly one
+ * instant the screen drew, capped rewind) and answers with one
  * FightSwingResult.
  *
- * swing_counter is one sequence per socket, shared with PresenceAbility
- * casts (FightCast): it starts at 0 and wraps modulo 2^32 (protobuf-es throws on 2^32,
- * so the client wraps with (n + 1) >>> 0). One crit roll per swing or cast,
- * shared by every enemy it hits.
+ * swing_counter is one sequence per socket, shared with casts (FightCast):
+ * it starts at 0 and wraps modulo 2^32 (protobuf-es throws on 2^32, so the
+ * client wraps with (n + 1) >>> 0). One crit roll per swing or cast, shared
+ * by every enemy it hits. The server takes any counter 1 to 1024 ahead of
+ * the last one it took, wrap-aware (rules.FightCounterAhead,
+ * fightCounterAhead), so a swing it never saw leaves no hole; a repeat, a
+ * counter behind the last, or one further ahead is refused STALE_COUNTER.
  *
  * tool: a tool was in hand. It changes damage only (the kit's tool fraction)
  * and is always a slash, a mage's included. predicted: the enemies the
@@ -947,13 +950,16 @@ export declare type FightSwing = Message<"glimway.v2.FightSwing"> & {
 /**
  * The basic attack (design 1.4): client intent plus what the screen
  * predicted. The server judges reach at seen_tick + seen_offset_ms (the
- * instant the screen drew, capped rewind) and answers with exactly one
+ * instant the screen drew, capped rewind) and answers with one
  * FightSwingResult.
  *
- * swing_counter is one sequence per socket, shared with PresenceAbility
- * casts (FightCast): it starts at 0 and wraps modulo 2^32 (protobuf-es throws on 2^32,
- * so the client wraps with (n + 1) >>> 0). One crit roll per swing or cast,
- * shared by every enemy it hits.
+ * swing_counter is one sequence per socket, shared with casts (FightCast):
+ * it starts at 0 and wraps modulo 2^32 (protobuf-es throws on 2^32, so the
+ * client wraps with (n + 1) >>> 0). One crit roll per swing or cast, shared
+ * by every enemy it hits. The server takes any counter 1 to 1024 ahead of
+ * the last one it took, wrap-aware (rules.FightCounterAhead,
+ * fightCounterAhead), so a swing it never saw leaves no hole; a repeat, a
+ * counter behind the last, or one further ahead is refused STALE_COUNTER.
  *
  * tool: a tool was in hand. It changes damage only (the kit's tool fraction)
  * and is always a slash, a mage's included. predicted: the enemies the
@@ -1423,8 +1429,13 @@ export declare type FightHitRowValid = FightHitRow;
 export declare const FightHitRowSchema: GenMessage<FightHitRow, {validType: FightHitRowValid}>;
 
 /**
- * Exactly one per swing or cast, to the swinger, keyed by its counter, even
- * when it reached several rooms (the hub gathers their rows). There is a row
+ * One per swing or cast, to the swinger, keyed by its counter, even when it
+ * reached several rooms (the hub gathers their rows). A swing or cast the hub
+ * won't take is refused NOT_ALLOWED, not dropped. Only a frame the hub
+ * drops unread (a burst over the ingress rate) or can't answer (a full
+ * outbound queue) goes unanswered: the client stops waiting after a timeout,
+ * and the counter window lets the next swing through. A legacy cast with no
+ * fight part gets no result. There is a row
  * for every enemy the client predicted, confirmed or refused, and for every
  * other enemy the server hit. No rows and no refusal: the swing hit nothing.
  * crit is the swing's roll; a basic bolt never crits (as today), so it is
@@ -1599,7 +1610,10 @@ export declare const FightEventKindSchema: GenEnum<FightEventKind>;
 
 /**
  * Swing-level reasons refuse the whole swing or cast (COOLDOWN,
- * STALE_COUNTER); the others refuse one row.
+ * STALE_COUNTER, NOT_ALLOWED); the others refuse one row. NOT_ALLOWED is the
+ * hub's answer to a swing or cast it won't take for any other reason: no
+ * position yet, a move not unlocked or out of reach, an unknown move, or a
+ * frame over the ingress rate that it read anyway.
  *
  * @generated from enum glimway.v2.FightRefusedReason
  */
@@ -1633,6 +1647,11 @@ export enum FightRefusedReason {
    * @generated from enum value: FIGHT_REFUSED_REASON_STALE_COUNTER = 5;
    */
   STALE_COUNTER = 5,
+
+  /**
+   * @generated from enum value: FIGHT_REFUSED_REASON_NOT_ALLOWED = 6;
+   */
+  NOT_ALLOWED = 6,
 }
 
 /**

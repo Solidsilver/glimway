@@ -467,6 +467,17 @@
     "binaryHex": "8a010808ffffffff0f1805"
   },
   {
+    "name": "result-not-allowed",
+    "json": {
+      "fightSwingResult": {
+        "swingCounter": 12,
+        "refusedReason": "FIGHT_REFUSED_REASON_NOT_ALLOWED"
+      }
+    },
+    "valid": true,
+    "binaryHex": "8a0104080c1806"
+  },
+  {
     "name": "ability-tick-zero",
     "json": {
       "ability": {
@@ -1229,6 +1240,70 @@
     },
     "valid": false,
     "binaryHex": "8a0108080c220408072003"
+  },
+  {
+    "name": "row-stale-counter",
+    "json": {
+      "fightSwingResult": {
+        "swingCounter": 12,
+        "hits": [
+          {
+            "room": 7,
+            "enemy": 0,
+            "refusedReason": "FIGHT_REFUSED_REASON_STALE_COUNTER"
+          }
+        ]
+      }
+    },
+    "valid": false,
+    "binaryHex": "8a0108080c220408072005"
+  },
+  {
+    "name": "row-not-allowed",
+    "json": {
+      "fightSwingResult": {
+        "swingCounter": 12,
+        "hits": [
+          {
+            "room": 7,
+            "enemy": 0,
+            "refusedReason": "FIGHT_REFUSED_REASON_NOT_ALLOWED"
+          }
+        ]
+      }
+    },
+    "valid": false,
+    "binaryHex": "8a0108080c220408072006"
+  },
+  {
+    "name": "not-allowed-with-rows",
+    "json": {
+      "fightSwingResult": {
+        "swingCounter": 12,
+        "refusedReason": "FIGHT_REFUSED_REASON_NOT_ALLOWED",
+        "hits": [
+          {
+            "room": 7,
+            "enemy": 0,
+            "damage": 3
+          }
+        ]
+      }
+    },
+    "valid": false,
+    "binaryHex": "8a0111080c1806220b0807190000000000000840"
+  },
+  {
+    "name": "not-allowed-crit",
+    "json": {
+      "fightSwingResult": {
+        "swingCounter": 12,
+        "refusedReason": "FIGHT_REFUSED_REASON_NOT_ALLOWED",
+        "crit": true
+      }
+    },
+    "valid": false,
+    "binaryHex": "8a0106080c10011806"
   },
   {
     "name": "refusal-with-damage",

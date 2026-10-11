@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { getCombatKit } from '../src/lib/combat.ts';
 import {
   combatFormula, fightCritRoll, fightCrit, fightDamage, fightReach, fightBoltSpawn, fightTickAt, fightTickDiff,
-  fightWindupTicks, fightAimLocked, fightLaunched, fightFacingFromStep, type FightCampKind,
+  fightWindupTicks, fightAimLocked, fightLaunched, fightFacingFromStep, fightCounterAhead, type FightCampKind,
 } from '../src/lib/fight-math.ts';
 import { COMBAT_TUNING, validateCombat } from '../src/lib/combat-timing.ts';
 import { ENEMY_TUNING, KNOCK, validateEnemies } from '../src/lib/enemies.ts';
@@ -40,6 +40,7 @@ test('shared bolt spawn, world tick grid and wrap-aware tick difference', () => 
   for (const v of vectors.boltSpawn) assert.deepEqual(fightBoltSpawn(v.x, v.y, v.facingX), { x: v.spawnX, y: v.spawnY });
   for (const v of vectors.ticks) assert.deepEqual(fightTickAt(v.unixMs), { tick: v.tick, offsetMs: v.offsetMs });
   for (const v of vectors.tickDiff) assert.equal(fightTickDiff(v.a, v.b), v.diff);
+  for (const v of vectors.counter) assert.equal(fightCounterAhead(v.last, v.next), v.accepted, `${v.last} -> ${v.next}`);
 });
 test('facing steps read back within half a step of the facing the sim quantised', () => {
   for (const v of vectors.facing) {
@@ -59,6 +60,7 @@ test('enemy tuning and tick-based aim-lock/launch edges match shared vectors', (
     assert.ok((v.launchTick - v.lockTick) / 10 >= ENEMY_TUNING[kind].lock);
     assert.ok(v.launchTick / 10 >= ENEMY_TUNING[kind].windup);
   }
+  assert.ok(vectors.timing.some((v) => v.elapsedTicks < 0), 'a row before the wind-up');
   for (const v of vectors.timing) {
     assert.equal(fightAimLocked(v.kind as FightCampKind, v.elapsedTicks), v.locked, `${v.kind} ${v.elapsedTicks}`);
     assert.equal(fightLaunched(v.kind as FightCampKind, v.elapsedTicks), v.launched, `${v.kind} ${v.elapsedTicks}`);

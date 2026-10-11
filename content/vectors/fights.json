@@ -2881,6 +2881,42 @@
   "timing": [
     {
       "kind": "wisp",
+      "elapsedTicks": -1,
+      "locked": false,
+      "launched": false
+    },
+    {
+      "kind": "wisp",
+      "elapsedTicks": -5,
+      "locked": false,
+      "launched": false
+    },
+    {
+      "kind": "wisp",
+      "elapsedTicks": -2147483648,
+      "locked": false,
+      "launched": false
+    },
+    {
+      "kind": "beetle",
+      "elapsedTicks": -1,
+      "locked": false,
+      "launched": false
+    },
+    {
+      "kind": "beetle",
+      "elapsedTicks": -5,
+      "locked": false,
+      "launched": false
+    },
+    {
+      "kind": "beetle",
+      "elapsedTicks": -2147483648,
+      "locked": false,
+      "launched": false
+    },
+    {
+      "kind": "wisp",
       "elapsedTicks": 0,
       "locked": false,
       "launched": false
@@ -3215,6 +3251,98 @@
       "x": 0.999891571247108,
       "y": -0.014725683311458524,
       "step": 255
+    }
+  ],
+  "counter": [
+    {
+      "last": 0,
+      "next": 1,
+      "accepted": true
+    },
+    {
+      "last": 0,
+      "next": 0,
+      "accepted": false
+    },
+    {
+      "last": 5,
+      "next": 4,
+      "accepted": false
+    },
+    {
+      "last": 5,
+      "next": 6,
+      "accepted": true
+    },
+    {
+      "last": 0,
+      "next": 1024,
+      "accepted": true
+    },
+    {
+      "last": 0,
+      "next": 1025,
+      "accepted": false
+    },
+    {
+      "last": 10,
+      "next": 1034,
+      "accepted": true
+    },
+    {
+      "last": 10,
+      "next": 1035,
+      "accepted": false
+    },
+    {
+      "last": 4294967295,
+      "next": 0,
+      "accepted": true
+    },
+    {
+      "last": 4294967295,
+      "next": 1023,
+      "accepted": true
+    },
+    {
+      "last": 4294967295,
+      "next": 1024,
+      "accepted": false
+    },
+    {
+      "last": 0,
+      "next": 4294967295,
+      "accepted": false
+    },
+    {
+      "last": 1,
+      "next": 4294967295,
+      "accepted": false
+    },
+    {
+      "last": 4294967000,
+      "next": 100,
+      "accepted": true
+    },
+    {
+      "last": 4294967000,
+      "next": 4294966999,
+      "accepted": false
+    },
+    {
+      "last": 0,
+      "next": 2147483648,
+      "accepted": false
+    },
+    {
+      "last": 2147483648,
+      "next": 0,
+      "accepted": false
+    },
+    {
+      "last": 7,
+      "next": 519,
+      "accepted": true
     }
   ]
 }

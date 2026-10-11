@@ -242,7 +242,10 @@ func (FightEventKind) EnumDescriptor() ([]byte, []int) {
 }
 
 // Swing-level reasons refuse the whole swing or cast (COOLDOWN,
-// STALE_COUNTER); the others refuse one row.
+// STALE_COUNTER, NOT_ALLOWED); the others refuse one row. NOT_ALLOWED is the
+// hub's answer to a swing or cast it won't take for any other reason: no
+// position yet, a move not unlocked or out of reach, an unknown move, or a
+// frame over the ingress rate that it read anyway.
 type FightRefusedReason int32
 
 const (
@@ -252,6 +255,7 @@ const (
 	FightRefusedReason_FIGHT_REFUSED_REASON_COOLDOWN      FightRefusedReason = 3
 	FightRefusedReason_FIGHT_REFUSED_REASON_UNKNOWN_ENEMY FightRefusedReason = 4
 	FightRefusedReason_FIGHT_REFUSED_REASON_STALE_COUNTER FightRefusedReason = 5
+	FightRefusedReason_FIGHT_REFUSED_REASON_NOT_ALLOWED   FightRefusedReason = 6
 )
 
 // Enum value maps for FightRefusedReason.
@@ -263,6 +267,7 @@ var (
 		3: "FIGHT_REFUSED_REASON_COOLDOWN",
 		4: "FIGHT_REFUSED_REASON_UNKNOWN_ENEMY",
 		5: "FIGHT_REFUSED_REASON_STALE_COUNTER",
+		6: "FIGHT_REFUSED_REASON_NOT_ALLOWED",
 	}
 	FightRefusedReason_value = map[string]int32{
 		"FIGHT_REFUSED_REASON_UNSPECIFIED":   0,
@@ -271,6 +276,7 @@ var (
 		"FIGHT_REFUSED_REASON_COOLDOWN":      3,
 		"FIGHT_REFUSED_REASON_UNKNOWN_ENEMY": 4,
 		"FIGHT_REFUSED_REASON_STALE_COUNTER": 5,
+		"FIGHT_REFUSED_REASON_NOT_ALLOWED":   6,
 	}
 )
 
@@ -1829,13 +1835,16 @@ func (x *FightTarget) GetEnemy() uint32 {
 
 // The basic attack (design 1.4): client intent plus what the screen
 // predicted. The server judges reach at seen_tick + seen_offset_ms (the
-// instant the screen drew, capped rewind) and answers with exactly one
+// instant the screen drew, capped rewind) and answers with one
 // FightSwingResult.
 //
-// swing_counter is one sequence per socket, shared with PresenceAbility
-// casts (FightCast): it starts at 0 and wraps modulo 2^32 (protobuf-es throws on 2^32,
-// so the client wraps with (n + 1) >>> 0). One crit roll per swing or cast,
-// shared by every enemy it hits.
+// swing_counter is one sequence per socket, shared with casts (FightCast):
+// it starts at 0 and wraps modulo 2^32 (protobuf-es throws on 2^32, so the
+// client wraps with (n + 1) >>> 0). One crit roll per swing or cast, shared
+// by every enemy it hits. The server takes any counter 1 to 1024 ahead of
+// the last one it took, wrap-aware (rules.FightCounterAhead,
+// fightCounterAhead), so a swing it never saw leaves no hole; a repeat, a
+// counter behind the last, or one further ahead is refused STALE_COUNTER.
 //
 // tool: a tool was in hand. It changes damage only (the kit's tool fraction)
 // and is always a slash, a mage's included. predicted: the enemies the
@@ -2573,8 +2582,13 @@ func (x *FightHitRow) GetRefusedReason() FightRefusedReason {
 	return FightRefusedReason_FIGHT_REFUSED_REASON_UNSPECIFIED
 }
 
-// Exactly one per swing or cast, to the swinger, keyed by its counter, even
-// when it reached several rooms (the hub gathers their rows). There is a row
+// One per swing or cast, to the swinger, keyed by its counter, even when it
+// reached several rooms (the hub gathers their rows). A swing or cast the hub
+// won't take is refused NOT_ALLOWED, not dropped. Only a frame the hub
+// drops unread (a burst over the ingress rate) or can't answer (a full
+// outbound queue) goes unanswered: the client stops waiting after a timeout,
+// and the counter window lets the next swing through. A legacy cast with no
+// fight part gets no result. There is a row
 // for every enemy the client predicted, confirmed or refused, and for every
 // other enemy the server hit. No rows and no refusal: the swing hit nothing.
 // crit is the swing's roll; a basic bolt never crits (as today), so it is
@@ -2881,20 +2895,20 @@ const file_glimway_v2_presence_proto_rawDesc = "" +
 	"\x06target\x18\x06 \x01(\tB\a\xbaH\x04r\x02\x10\x01H\x01R\x06target\x88\x01\x01:\x88\x01\xbaH\x84\x01\x1a\x81\x01\n" +
 	"\x11fight.event_enemy\x127room closed has no enemy; other events require an enemy\x1a3this.kind == 5 ? !has(this.enemy) : has(this.enemy)B\b\n" +
 	"\x06_enemyB\t\n" +
-	"\a_target\"\xe2\x03\n" +
+	"\a_target\"\x8b\x04\n" +
 	"\vFightHitRow\x12\x1b\n" +
 	"\x04room\x18\x01 \x01(\rB\a\xbaH\x04*\x02 \x00R\x04room\x12\x14\n" +
 	"\x05enemy\x18\x02 \x01(\rR\x05enemy\x12/\n" +
 	"\x06damage\x18\x03 \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x80\x84.A)\x00\x00\x00\x00\x00\x00\x00\x00R\x06damage\x12O\n" +
-	"\x0erefused_reason\x18\x04 \x01(\x0e2\x1e.glimway.v2.FightRefusedReasonB\b\xbaH\x05\x82\x01\x02\x10\x01R\rrefusedReason:\x9d\x02\xbaH\x99\x02\x1a\x8d\x01\n" +
-	"\x10fight.row_damage\x126a confirmed row deals damage; a refused row deals none\x1aAthis.refused_reason == 0 ? this.damage > 0.0 : this.damage == 0.0\x1a\x86\x01\n" +
-	"\x10fight.row_reason\x12<cooldown and stale counter refuse the whole swing, not a row\x1a4this.refused_reason != 3 && this.refused_reason != 5\"\x81\x04\n" +
+	"\x0erefused_reason\x18\x04 \x01(\x0e2\x1e.glimway.v2.FightRefusedReasonB\b\xbaH\x05\x82\x01\x02\x10\x01R\rrefusedReason:\xc6\x02\xbaH\xc2\x02\x1a\x8d\x01\n" +
+	"\x10fight.row_damage\x126a confirmed row deals damage; a refused row deals none\x1aAthis.refused_reason == 0 ? this.damage > 0.0 : this.damage == 0.0\x1a\xaf\x01\n" +
+	"\x10fight.row_reason\x12Icooldown, stale counter and not allowed refuse the whole swing, not a row\x1aPthis.refused_reason != 3 && this.refused_reason != 5 && this.refused_reason != 6\"\xaa\x04\n" +
 	"\x10FightSwingResult\x12#\n" +
 	"\rswing_counter\x18\x01 \x01(\rR\fswingCounter\x12\x12\n" +
 	"\x04crit\x18\x02 \x01(\bR\x04crit\x12O\n" +
 	"\x0erefused_reason\x18\x03 \x01(\x0e2\x1e.glimway.v2.FightRefusedReasonB\b\xbaH\x05\x82\x01\x02\x10\x01R\rrefusedReason\x125\n" +
-	"\x04hits\x18\x04 \x03(\v2\x17.glimway.v2.FightHitRowB\b\xbaH\x05\x92\x01\x02\x10@R\x04hits:\xab\x02\xbaH\xa7\x02\x1a\xa0\x01\n" +
-	"\x13fight.result_reason\x127a swing is refused only for cooldown or a stale counter\x1aPthis.refused_reason == 0 || this.refused_reason == 3 || this.refused_reason == 5\x1a\x81\x01\n" +
+	"\x04hits\x18\x04 \x03(\v2\x17.glimway.v2.FightHitRowB\b\xbaH\x05\x92\x01\x02\x10@R\x04hits:\xd4\x02\xbaH\xd0\x02\x1a\xc9\x01\n" +
+	"\x13fight.result_reason\x12Da swing is refused only for cooldown, a stale counter or not allowed\x1althis.refused_reason == 0 || this.refused_reason == 3 || this.refused_reason == 5 || this.refused_reason == 6\x1a\x81\x01\n" +
 	"\x14fight.result_refused\x12'a refused swing has no rows and no crit\x1a@this.refused_reason == 0 || (size(this.hits) == 0 && !this.crit)*i\n" +
 	"\x0eFightSwingKind\x12 \n" +
 	"\x1cFIGHT_SWING_KIND_UNSPECIFIED\x10\x00\x12\x1a\n" +
@@ -2918,14 +2932,15 @@ const file_glimway_v2_presence_proto_rawDesc = "" +
 	"\x19FIGHT_EVENT_KIND_AIM_LOCK\x10\x02\x12\x1a\n" +
 	"\x16FIGHT_EVENT_KIND_DEATH\x10\x03\x12\x1a\n" +
 	"\x16FIGHT_EVENT_KIND_SPAWN\x10\x04\x12 \n" +
-	"\x1cFIGHT_EVENT_KIND_ROOM_CLOSED\x10\x05*\xfb\x01\n" +
+	"\x1cFIGHT_EVENT_KIND_ROOM_CLOSED\x10\x05*\xa1\x02\n" +
 	"\x12FightRefusedReason\x12$\n" +
 	" FIGHT_REFUSED_REASON_UNSPECIFIED\x10\x00\x12%\n" +
 	"!FIGHT_REFUSED_REASON_ALREADY_DEAD\x10\x01\x12%\n" +
 	"!FIGHT_REFUSED_REASON_OUT_OF_REACH\x10\x02\x12!\n" +
 	"\x1dFIGHT_REFUSED_REASON_COOLDOWN\x10\x03\x12&\n" +
 	"\"FIGHT_REFUSED_REASON_UNKNOWN_ENEMY\x10\x04\x12&\n" +
-	"\"FIGHT_REFUSED_REASON_STALE_COUNTER\x10\x05B1Z/glimway/server/internal/gen/glimway/v2;contractb\x06proto3"
+	"\"FIGHT_REFUSED_REASON_STALE_COUNTER\x10\x05\x12$\n" +
+	" FIGHT_REFUSED_REASON_NOT_ALLOWED\x10\x06B1Z/glimway/server/internal/gen/glimway/v2;contractb\x06proto3"
 
 var (
 	file_glimway_v2_presence_proto_rawDescOnce sync.Once

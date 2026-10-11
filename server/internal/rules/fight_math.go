@@ -95,6 +95,19 @@ func FightTickDiff(a, b uint32) int32 {
 	return int32(a - b)
 }
 
+// FightCounterWindow is how far ahead of the last swing counter the server
+// takes the next one: a swing or cast it never saw (dropped, refused before
+// it counted) leaves a gap, not a lockout.
+const FightCounterWindow = 1024
+
+// FightCounterAhead: next is 1 to FightCounterWindow past last, across the
+// wrap. A repeat, a counter behind last, or one further ahead is stale. The
+// first swing on a socket has no last and is always taken.
+func FightCounterAhead(last, next uint32) bool {
+	ahead := FightTickDiff(next, last)
+	return ahead >= 1 && ahead <= FightCounterWindow
+}
+
 // FightWindupTicks is when, counted in whole ticks from the start of a
 // wind-up, the aim locks and the attack launches. The sim ticks at 10 Hz,
 // so it rounds both towards the player: the lock comes at the last tick that
@@ -116,14 +129,15 @@ func FightWindupTicks(kind string) (lock, launch uint32, ok bool) {
 }
 
 // FightAimLocked: elapsedTicks since the wind-up began (FightTickDiff from
-// the state_tick); false for an unknown kind.
-func FightAimLocked(kind string, elapsedTicks uint32) bool {
+// the state_tick). Negative is before the wind-up (a rewind can ask), so
+// neither locked nor launched; false for an unknown kind.
+func FightAimLocked(kind string, elapsedTicks int32) bool {
 	lock, _, ok := FightWindupTicks(kind)
-	return ok && elapsedTicks >= lock
+	return ok && int64(elapsedTicks) >= int64(lock)
 }
-func FightLaunched(kind string, elapsedTicks uint32) bool {
+func FightLaunched(kind string, elapsedTicks int32) bool {
 	_, launch, ok := FightWindupTicks(kind)
-	return ok && elapsedTicks >= launch
+	return ok && int64(elapsedTicks) >= int64(launch)
 }
 
 // fightWholeMs: seconds from content as whole milliseconds, so 0.8 - 0.5
