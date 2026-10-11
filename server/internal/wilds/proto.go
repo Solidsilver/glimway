@@ -16,6 +16,9 @@ var siteKinds = map[SiteKind]contract.SiteKind{
 	SitePlank: contract.SiteKind_SITE_KIND_PLANK,
 	SiteGiven: contract.SiteKind_SITE_KIND_GIVEN,
 	SiteReeds: contract.SiteKind_SITE_KIND_REEDS,
+
+	SiteLampStone: contract.SiteKind_SITE_KIND_LAMP_STONE,
+	SiteRumour:    contract.SiteKind_SITE_KIND_RUMOUR,
 }
 
 // ProtoSiteKind is the wire value of a site kind.
@@ -23,7 +26,8 @@ func ProtoSiteKind(k SiteKind) contract.SiteKind { return siteKinds[k] }
 
 // ToProto packs a generated chunk as the stored and served WildsChunk:
 // ground as palette nibbles, solid as bits, decor as parallel arrays with
-// two flag bits per piece (flip, overhang), layer 0.
+// two flag bits per piece (flip, overhang), layer 0. A v3 chunk carries its
+// tier, land and places and no region, exits or spawn.
 func ToProto(c Chunk, epochID string) *contract.WildsChunk {
 	out := &contract.WildsChunk{
 		EpochId:          epochID,
@@ -33,9 +37,17 @@ func ToProto(c Chunk, epochID string) *contract.WildsChunk {
 		Cy:               int32(c.CY),
 		GeneratorVersion: uint32(c.GeneratorVersion),
 		Size:             uint32(c.Size),
-		Spawn:            &contract.Tile{Tx: uint32(c.Spawn.TX), Ty: uint32(c.Spawn.TY)},
 		Look:             c.Look,
 		Mark:             c.Mark,
+	}
+	if c.GeneratorVersion == GeneratorV3 {
+		out.Tier = uint32(c.Tier)
+		out.Land = c.Land
+		for _, p := range c.Places {
+			out.Places = append(out.Places, &contract.WildsPlaceMark{Id: p.ID, Kind: p.Kind, Tx: uint32(p.TX), Ty: uint32(p.TY)})
+		}
+	} else {
+		out.Spawn = &contract.Tile{Tx: uint32(c.Spawn.TX), Ty: uint32(c.Spawn.TY)}
 	}
 	var palette []Ground
 	for _, g := range c.Ground {
