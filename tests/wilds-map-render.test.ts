@@ -110,7 +110,7 @@ test('chunks outside the frontier are never drawn; a summary shows only walked l
   const frame = r.frame()!;
   // Far out: the overview.
   const { ctx } = recorder();
-  const view = { ...showAll(VP, frame), scale: 0.5 };
+  const view = { ...showAll(VP, frame), scale: 0.2 };
   assert.equal(r.draw(ctx, view, VP, 1).level, 'overview');
   const o = images.at(-1)!;
   // Six pixels a chunk; only the two walked chunks' pixels are filled.
@@ -250,4 +250,103 @@ test('performance fixture: thousands of sparse chunks, negative and far apart', 
     frames: [drag, over, zoom],
   };
   console.log(`map perf ${JSON.stringify(report)}`);
+});
+
+/**
+ * Every pixel of land the renderer paints, in canvas pixels: chunk rasters,
+ * the overview's opaque pixels, and flat chunk colours. Parchment, the grid,
+ * the frontier and the marks aren't land.
+ */
+function landPainter() {
+  const notLand = new Set([MAP_COLOURS.parchment, MAP_COLOURS.grid, MAP_COLOURS.way, MAP_COLOURS.found, MAP_COLOURS.landmark].map((c) => `rgb(${c[0]},${c[1]},${c[2]})`));
+  const paints: { x: number; y: number; w: number; h: number }[] = [];
+  let fill = '';
+  const ctx = {
+    setTransform() {},
+    clearRect() {},
+    strokeRect() {},
+    setLineDash() {},
+    fillRect(x: number, y: number, w: number, h: number) {
+      if (fill.startsWith('rgb(') && !notLand.has(fill)) paints.push({ x, y, w, h });
+    },
+    drawImage(img: { rgba: Uint8ClampedArray; w: number; h: number }, ...a: number[]) {
+      const [sx, sy, sw, sh, dx, dy, dw, dh] = a.length === 4 ? [0, 0, img.w, img.h, ...a] : a;
+      for (let py = sy!; py < sy! + sh!; py++)
+        for (let px = sx!; px < sx! + sw!; px++) {
+          if (img.rgba[(py * img.w + px) * 4 + 3] !== 255) continue;
+          paints.push({ x: dx! + ((px - sx!) * dw!) / sw!, y: dy! + ((py - sy!) * dh!) / sh!, w: dw! / sw!, h: dh! / sh! });
+        }
+    },
+    set fillStyle(v: string) {
+      fill = v;
+    },
+    get fillStyle() {
+      return fill;
+    },
+    strokeStyle: '',
+    lineWidth: 1,
+    globalAlpha: 1,
+    imageSmoothingEnabled: false,
+  };
+  return { ctx: ctx as never, paints };
+}
+
+/** Assert every land paint lies inside a walked chunk on screen (a pixel's slack for rounding). */
+function onlyWalked(paints: { x: number; y: number; w: number; h: number }[], walked: MapChunk[], v: { cx: number; cy: number; scale: number }, label: string): void {
+  const ox = Math.round(VP.w / 2 - v.scale * v.cx);
+  const oy = Math.round(VP.h / 2 - v.scale * v.cy);
+  const rects = walked.map((c) => ({ x0: Math.round(ox + c.cx * S * v.scale), y0: Math.round(oy + c.cy * S * v.scale), x1: Math.round(ox + (c.cx + 1) * S * v.scale), y1: Math.round(oy + (c.cy + 1) * S * v.scale) }));
+  for (const p of paints) {
+    const ok = rects.some((r) => p.x >= r.x0 - 1 && p.y >= r.y0 - 1 && p.x + p.w <= r.x1 + 1 && p.y + p.h <= r.y1 + 1);
+    assert.ok(ok, `${label}: land painted at ${JSON.stringify(p)}, outside every walked chunk`);
+  }
+}
+
+test('the overview never paints unwalked chunks as land: a sparse map wider than 1024 chunks, at middle zooms', () => {
+  const frontier = { minCx: -4, minCy: -8, maxCx: 2100, maxCy: 0 };
+  const walked = [chunk(1, -1, TERRAIN.grass_c, 'a'), chunk(2049, -1, TERRAIN.grass_c, 'b')];
+  const r = new MapRenderer(make);
+  r.setInput(input({ frontier, chunks: walked }), 'w:wide');
+  const frame = r.frame()!;
+  assert.ok(frame.maxTx - frame.minTx + 1 > 1024 * S, 'the frame is wider than 1024 chunks');
+  const levels = new Set<string>();
+  for (const scale of [0.04, 0.1, 0.2, 0.24, 0.25, 0.5, 1, 2, 4]) {
+    const v = centreOn(S + 12, -12, scale, VP, frame);
+    const { ctx, paints } = landPainter();
+    levels.add(r.draw(ctx, { ...v, scale }, VP, 1).level);
+    assert.ok(paints.length > 0, `land drawn at ${scale}`);
+    onlyWalked(paints, walked, { ...v, scale }, `scale ${scale}`);
+  }
+  assert.ok(levels.has('detail') && levels.has('chunks'), [...levels].join());
+});
+
+test('a dense checkerboard of walked chunks in a wide frame: each drawn at its own size, its unwalked neighbours never filled', () => {
+  const frontier = { minCx: -4, minCy: -60, maxCx: 2100, maxCy: 0 };
+  const walked: MapChunk[] = [];
+  for (let cy = -40; cy < 0; cy++) for (let cx = 0; cx < 60; cx++) if ((cx + cy) % 2 === 0) walked.push(chunk(cx, cy, TERRAIN.grass_b, `${cx},${cy}`));
+  walked.push(chunk(2049, -1, TERRAIN.grass_c, 'far'));
+  const r = new MapRenderer(make);
+  r.setInput(input({ frontier, chunks: walked }), 'w:dense');
+  const frame = r.frame()!;
+  const levels = new Set<string>();
+  for (const scale of [0.05, 0.2, 0.5, 1]) {
+    const v = { cx: 30 * S, cy: -20 * S, scale };
+    const { ctx, paints } = landPainter();
+    levels.add(r.draw(ctx, v, VP, 1).level);
+    onlyWalked(paints, walked, v, `scale ${scale}`);
+  }
+  assert.ok(levels.has('chunks'), [...levels].join());
+  void frame;
+});
+
+test('the renderer culls label boxes to the viewport before fitting, yours included', () => {
+  const r = new MapRenderer(make);
+  r.setInput(input({ places: [{ id: 'a', kind: 'camp-glade', tx: 10, ty: -40, seen: true, foundBy: null }] }), 'w:a');
+  const small = { w: 100, h: 100 };
+  // You just off the left edge, the place just on screen beside where your label would be.
+  const v = { cx: 10.5 + (50 - 20) / 4, cy: -40.5 + (50 - 37) / 4, scale: 4 };
+  const at = (sx: number, sy: number) => ({ x: v.cx + (sx - 50) / 4, y: v.cy + (sy - 50) / 4 });
+  const shown = r.labels(v, small, { ...at(-30, 10), text: 'You' });
+  assert.ok(shown.some((l) => l.kind === 'place'), JSON.stringify(shown));
+  assert.equal(shown.some((l) => l.kind === 'you'), false);
 });

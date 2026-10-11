@@ -22,7 +22,10 @@ type MapState = {
   loads: number
   draws: number
   cached: number
-  result: { scope: string; missing: string | null; offline: boolean; partial: boolean; ended: boolean } | null
+  result: { scope: string; missing: string | null; offline: boolean; partial: boolean; ended: boolean; endsAt: number | null } | null
+  online: boolean
+  notes: string[]
+  chunks: number
 }
 type Hooks = {
   __fsWorldMap?: () => MapState
@@ -30,6 +33,7 @@ type Hooks = {
   __fsDevPlace: (x: number, y: number) => void
   __fsEmit: (event: string, ...args: unknown[]) => void
   __fsDevParkCreatures: () => number
+  __fsDevWarp: (area: string, tx: number, ty: number) => void
 }
 
 async function shot(page: Page, name: string): Promise<void> {
@@ -42,6 +46,23 @@ const mapState = (page: Page) => page.evaluate(() => (window as unknown as Hooks
 const view = async (page: Page) => (await mapState(page))!.view!
 const theMap = (page: Page) => page.getByTestId('world-map')
 const near = (a: number, b: number, eps = 0.01) => Math.abs(a - b) < eps
+
+/**
+ * Where an opening centred on you lands (docs/design/world-map.md 3): on
+ * you, unless the walked land is narrower than the screen on an axis, where
+ * it sits in the land's middle; and never past the first or last tile's centre.
+ */
+function openingCentre(s: MapState): { cx: number; cy: number } {
+  const f = s.frame!
+  const scale = s.view!.scale
+  const axis = (at: number, lo: number, hi: number, px: number) => ((hi - lo + 1) * scale <= px ? (lo + hi + 1) / 2 : Math.min(hi + 0.5, Math.max(lo + 0.5, at)))
+  return { cx: axis(s.hero!.x, f.minTx, f.maxTx, s.vp.w), cy: axis(s.hero!.y, f.minTy, f.maxTy, s.vp.h) }
+}
+const centredOnYou = (s: MapState) => {
+  const want = openingCentre(s)
+  expect(Math.abs(s.view!.cx - want.cx), `cx ${s.view!.cx} for ${want.cx}`).toBeLessThan(0.01)
+  expect(Math.abs(s.view!.cy - want.cy), `cy ${s.view!.cy} for ${want.cy}`).toBeLessThan(0.01)
+}
 
 /** Wait for the map to have drawn its first view. */
 async function mapReady(page: Page): Promise<MapState> {
@@ -92,6 +113,45 @@ test('M and the Map button open it full screen; M and Escape close it once; J go
   await expect(tabs).toHaveText(['Quests', 'Papers', 'How do I…?'])
   await page.keyboard.press('Escape')
 
+  // A held Escape closes the map, and its repeats don't then open the Menu.
+  await page.keyboard.press('m')
+  await expect(theMap(page)).toBeVisible()
+  await page.keyboard.down('Escape')
+  // The key held: its repeats, as the browser sends them.
+  await page.evaluate(() => {
+    for (let i = 0; i < 3; i++) document.body.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape', repeat: true, bubbles: true }))
+  })
+  await page.keyboard.up('Escape')
+  await expect(theMap(page)).toHaveCount(0)
+  await page.waitForTimeout(150)
+  await expect(page.locator('#menu-title')).toHaveCount(0)
+
+  // Naming a post owns the screen: M from its button opens nothing (nor does the HUD's Map button).
+  await page.evaluate(() => (window as unknown as Hooks).__fsEmit('ui:home-name-prompt', { title: 'Name this post', body: 'A name for the post.', placeholder: 'A name', max: 24 }))
+  const notYet = page.getByRole('button', { name: 'Not yet' })
+  await expect(notYet).toBeVisible()
+  await notYet.focus()
+  await page.keyboard.press('m')
+  await page.evaluate(() => (document.querySelector('[data-testid="map-button"]') as HTMLButtonElement).click())
+  await page.waitForTimeout(150)
+  await expect(theMap(page)).toHaveCount(0)
+  await notYet.click()
+  // …and so does the "give up your place?" confirm.
+  await page.evaluate(async () => {
+    const path = '/src/ui/home.svelte.ts'
+    const { home } = await import(/* @vite-ignore */ path)
+    home.leaveAsk = { place: 'Lot 1', shared: false, onConfirm: () => {} }
+  })
+  const neverMind = page.getByRole('button', { name: 'Never mind' })
+  await expect(neverMind).toBeVisible()
+  await neverMind.focus()
+  await page.keyboard.press('m')
+  await page.evaluate(() => (document.querySelector('[data-testid="map-button"]') as HTMLButtonElement).click())
+  await page.waitForTimeout(150)
+  await expect(theMap(page)).toHaveCount(0)
+  await neverMind.click()
+  await expect(neverMind).toHaveCount(0)
+
   // A chord, a held key's repeat and typing never open it.
   await page.keyboard.press('Control+m')
   await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'KeyM', key: 'm', repeat: true, bubbles: true })))
@@ -121,8 +181,8 @@ test('out in the Wilds: close up on you, zoom kept between openings, drag, wheel
   await expect(page.getByTestId('map-you')).toBeVisible()
   await expect(page.locator('[data-label="you"]')).toBeVisible()
   expect(s.view!.scale).toBe(4)
-  expect(Math.abs(s.view!.cx - s.hero!.x)).toBeLessThan(1)
-  expect(Math.abs(s.view!.cy - s.hero!.y)).toBeLessThan(1)
+  // On you, as far as the clamp allows (a small walked area sits in the middle on that axis).
+  centredOnYou(s)
 
   // Two steps in, then close and open again: the zoom is kept, the view centred on you again.
   await page.getByTestId('map-zoom-in').click()
@@ -134,7 +194,7 @@ test('out in the Wilds: close up on you, zoom kept between openings, drag, wheel
   await page.keyboard.press('m')
   s = await mapReady(page)
   expect(s.view!.scale).toBe(kept)
-  expect(Math.abs(s.view!.cy - s.hero!.y)).toBeLessThan(1)
+  centredOnYou(s)
   await shot(page, 'world-map-wilds-desktop')
 
   // Drag: the sheet follows the mouse (north–south here; the walked land is narrower than the screen east–west, so it stays in the middle that way).
@@ -181,6 +241,19 @@ test('out in the Wilds: close up on you, zoom kept between openings, drag, wheel
   expect(near(after.scale / before.scale, 2 ** 0.25, 1e-6)).toBe(true)
   const stillUnder = after.cy + (pointer.y - vbox.y - s.vp.h / 2) / after.scale
   expect(Math.abs(stillUnder - under)).toBeLessThan(0.05)
+
+  // A trackpad pinch (a Ctrl/⌘ wheel) over the map zooms it smoothly about the pointer, and the page's own zoom is held off.
+  before = await view(page)
+  const pinchFrom = before.cy + (pointer.y - vbox.y - s.vp.h / 2) / before.scale
+  const allowed = await page.evaluate(({ x, y }) => document.querySelector('[data-testid="map-viewport"]')!.dispatchEvent(new WheelEvent('wheel', { deltaY: -5, ctrlKey: true, clientX: x, clientY: y, bubbles: true, cancelable: true })), pointer)
+  expect(allowed, 'the browser doesn’t zoom the page').toBe(false)
+  after = await view(page)
+  expect(near(after.scale / before.scale, Math.exp(0.05), 1e-6), `a smooth step, not the wheel's: ${after.scale / before.scale}`).toBe(true)
+  expect(Math.abs(after.cy + (pointer.y - vbox.y - s.vp.h / 2) / after.scale - pinchFrom)).toBeLessThan(0.05)
+  // Anywhere else (the title here) the browser keeps it.
+  const elsewhere = await page.evaluate(() => document.getElementById('world-map-title')!.dispatchEvent(new WheelEvent('wheel', { deltaY: -5, ctrlKey: true, bubbles: true, cancelable: true })))
+  expect(elsewhere).toBe(true)
+  expect((await view(page)).scale).toBe(after.scale)
 
   // Keys on the focused map: arrows pan 48 px (Shift: 144), + and − zoom, End shows all, Home centres on you.
   await page.getByTestId('map-viewport').focus()
@@ -248,6 +321,76 @@ test('out in the Wilds: close up on you, zoom kept between openings, drag, wheel
   await expect(theMap(page)).toHaveCount(0)
   await expect(page.locator('[data-inset="hud"]')).not.toHaveAttribute('inert', '')
   expect(await page.evaluate(() => document.activeElement === document.body || document.activeElement === null)).toBe(true)
+
+  // Opened just as you leave the Wilds: from its first frame it shows you outside, never the Wilds' last spot.
+  await page.evaluate(() => (window as unknown as Hooks).__fsDevWarp('village', 16, 14))
+  await page.keyboard.press('m')
+  const seen = await page.evaluate(
+    () =>
+      new Promise<{ frames: number; withYou: number }>((resolve) => {
+        const began = performance.now()
+        let frames = 0
+        let withYou = 0
+        const tick = () => {
+          const m = (window as unknown as Hooks).__fsWorldMap?.()
+          if (m) {
+            frames++
+            if (m.hero) withYou++
+          }
+          if (frames >= 40 || performance.now() - began > 4000) resolve({ frames, withYou })
+          else requestAnimationFrame(tick)
+        }
+        requestAnimationFrame(tick)
+      })
+  )
+  expect(seen.frames, 'the map opened during the move').toBeGreaterThan(0)
+  expect(seen.withYou, 'no dot outside the Wilds').toBe(0)
+  await expect.poll(async () => (await mapState(page))?.outside).toBe(true)
+  await page.keyboard.press('Escape')
+})
+
+test('an open map follows the connection, and expires its wick on time (the game clock) with no read, then comes back with one', async ({ page, context }) => {
+  test.setTimeout(150_000)
+  await freshPlayer(page)
+  await warp(page, 'wilds', 12, -60)
+  await waitForWilds(page)
+  await waitForLive(page)
+  await page.keyboard.press('m')
+  let s = await mapReady(page)
+  expect(s.notes.join(' ')).not.toMatch(/Offline/)
+  const walked = s.chunks
+  expect(walked, 'the Tangle and the Whitequiet you stand in').toBeGreaterThan(9)
+
+  // The connection drops: the note follows, the map stays open.
+  await context.setOffline(true)
+  await expect.poll(async () => (await mapState(page))!.notes.join(' '), { timeout: 30_000 }).toMatch(/Offline/)
+
+  // The game clock passes the wick's end, and no read can come: only the Tangle, and it says so.
+  const clockPath = '/src/game/clock.ts'
+  const endsAt = s.result!.endsAt!
+  await page.evaluate(
+    async ([path, at]) => {
+      const clock = await import(/* @vite-ignore */ path)
+      clock.setGameNow(at)
+    },
+    [clockPath, endsAt + 1] as const
+  )
+  await expect.poll(async () => (await mapState(page))!.result?.ended, { timeout: 5_000 }).toBe(true)
+  s = (await mapState(page))!
+  expect(s.notes.join(' ')).toMatch(/The wick has turned/)
+  expect(s.notes.join(' ')).not.toMatch(/haven’t walked/)
+  expect(s.chunks, 'the Beyond is gone, the Tangle stays').toBe(9)
+  await shot(page, 'world-map-ended-desktop')
+
+  // The clock back to now and back online: the map reads the Wilds again (the wick runs on) and the land comes back.
+  await page.evaluate(async (path) => (await import(/* @vite-ignore */ path)).setGameNow(null), clockPath)
+  await context.setOffline(false)
+  await expect
+    .poll(async () => {
+      const m = (await mapState(page))!
+      return m.online && m.result?.ended === false && !/Offline/.test(m.notes.join(' ')) && m.chunks
+    }, { timeout: 40_000 })
+    .toBe(walked)
 })
 
 // A phone's touch and pixel ratio (the project's own browser), on a 360 px screen.

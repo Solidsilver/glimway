@@ -51,8 +51,12 @@ export type MapCtx = Pick<
 
 /** Chunk rasters kept at most (24×24 RGBA each: about 2.25 MiB of pixels in all). */
 export const MAP_RASTER_CACHE = 1024
-/** Draw chunk by chunk only while this many chunk slots fit in the viewport; past it, the overview. */
+/** Hatch the glimpse's river (a raster a chunk) only while this many chunk slots fit in the viewport. */
 export const DETAIL_SLOTS = 512
+/** Draw walked chunks from their own rasters while at most this many are in view (half the cache, so it never thrashes). */
+export const DETAIL_CHUNKS = 512
+/** …and while a chunk is at least this many device pixels across (smaller, its raster is only noise). */
+const DETAIL_MIN_PX = 6
 /** The overview's longest side, in pixels (at most 4 MiB of pixels). */
 export const OVERVIEW_MAX_PX = 1024
 /** The overview's pixels a chunk when the frame is small enough (one summary pixel for 4×4 tiles). */
@@ -66,7 +70,7 @@ export function backingSize(vp: MapViewport, dpr: number): { w: number; h: numbe
   return { w: Math.max(1, Math.round(vp.w * r)), h: Math.max(1, Math.round(vp.h * r)), r }
 }
 
-const css = (c: readonly number[], a = 1) => (a >= 1 ? `rgb(${c[0]},${c[1]},${c[2]})` : `rgba(${c[0]},${c[1]},${c[2]},${a})`)
+const css = (c: ArrayLike<number>, a = 1) => (a >= 1 ? `rgb(${c[0]},${c[1]},${c[2]})` : `rgba(${c[0]},${c[1]},${c[2]},${a})`)
 
 /** A chunk's revision when map-data didn't name one: a hash of its ground. */
 function hashChunk(c: MapChunk): string {
@@ -87,7 +91,14 @@ interface Overview {
 }
 
 export interface MapDrawStats {
-  level: 'detail' | 'overview' | 'none'
+  /**
+   * How the walked land was drawn: each chunk's raster (`detail`), the
+   * overview image (`overview`, only where its pixel covers at most one chunk
+   * or less than a device pixel), or each chunk in its mean colour (`chunks`,
+   * where the overview's pixel would cover several chunks and show on
+   * screen: it would paint land nobody walked).
+   */
+  level: 'detail' | 'overview' | 'chunks' | 'none'
   /** Chunk rasters drawn this frame. */
   chunks: number
 }
@@ -110,6 +121,8 @@ export class MapRenderer {
   private wayBuckets = new Map<string, { x: number; y: number }[]>()
   private placeBuckets = new Map<string, MapMarks['places']>()
   private frameChunks = { minCx: 0, minCy: 0, maxCx: 0, maxCy: 0 }
+  /** What the overview was built from (the frame and every chunk's revision): unchanged land keeps it. */
+  private overviewSig = ''
 
   /** Work done, for tests and the performance check. */
   readonly stats = { rasters: 0, images: 0, overviews: 0, summaries: 0 }
@@ -164,7 +177,19 @@ export class MapRenderer {
     for (const t of this.marks.wayTiles) bucket(this.wayBuckets, t.x, t.y, t)
     for (const p of this.marks.places) bucket(this.placeBuckets, p.tx, p.ty, p)
     this.frameChunks = mapFrame(input)
-    this.overviewDirty = true
+    // The overview is rebuilt only when the land it shows changed (not on every read's news).
+    let h = 0
+    for (const [key, c] of this.byKey) {
+      let x = 2166136261
+      for (const ch of key + c.rev) x = Math.imul(x ^ ch.charCodeAt(0), 16777619)
+      h = (h + (x >>> 0)) >>> 0
+    }
+    const fr = this.frameChunks
+    const sig = `${fr.minCx},${fr.minCy},${fr.maxCx},${fr.maxCy}|${this.byKey.size}|${h}|${scope}`
+    if (sig !== this.overviewSig) {
+      this.overviewSig = sig
+      this.overviewDirty = true
+    }
   }
 
   /** The displayed frame in tiles (the view's clamp; all known land, wherever the view is). */
@@ -197,7 +222,7 @@ export class MapRenderer {
     const f = input.frontier
     const chunkCss = S * view.scale
     const slots = (Math.ceil(vp.w / chunkCss) + 1) * (Math.ceil(vp.h / chunkCss) + 1)
-    const detail = slots <= DETAIL_SLOTS
+    const hatch = slots <= DETAIL_SLOTS
     ctx.imageSmoothingEnabled = false
 
     // Past the drift: the glimpse's wash (hatched for the Wend, close in).
@@ -208,7 +233,7 @@ export class MapRenderer {
       const y0 = Y(g.cy * S)
       const w = X((g.cx + 1) * S) - x0
       const h = Y((g.cy + 1) * S) - y0
-      if (detail && g.river) {
+      if (hatch && g.river) {
         ctx.drawImage(this.glimpse(g.land, g.cx, g.cy), x0, y0, w, h)
       } else {
         ctx.fillStyle = css(glimpseColour(g.land), GLIMPSE_ALPHA / 255)
@@ -232,33 +257,47 @@ export class MapRenderer {
       }
     }
 
-    // Walked land.
+    // Walked land, at a resolution chosen from how big it lands on screen.
     let drawn = 0
-    if (detail) {
-      for (let cy = fy0; cy <= fy1; cy++)
-        for (let cx = fx0; cx <= fx1; cx++) {
-          const c = this.byKey.get(`${cx},${cy}`)
-          if (!c) continue
-          const x0 = X(cx * S)
-          const y0 = Y(cy * S)
-          ctx.drawImage(this.raster(c), x0, y0, X((cx + 1) * S) - x0, Y((cy + 1) * S) - y0)
+    let level: MapDrawStats['level'] = 'none'
+    if (fx0 <= fx1 && fy0 <= fy1) {
+      const walked = this.walkedIn(fx0, fy0, fx1, fy1)
+      const chunkPx = S * k
+      const o = walked.length > DETAIL_CHUNKS || chunkPx < DETAIL_MIN_PX ? this.overviewImage() : null
+      if (!o) {
+        // Few enough in view, big enough to read: each chunk's own raster.
+        level = 'detail'
+        for (const c of walked) {
+          const x0 = X(c.cx * S)
+          const y0 = Y(c.cy * S)
+          ctx.drawImage(this.raster(c), x0, y0, X((c.cx + 1) * S) - x0, Y((c.cy + 1) * S) - y0)
           drawn++
         }
-    } else if (fx0 <= fx1 && fy0 <= fy1) {
-      const o = this.overviewImage()
-      if (o) {
-        // Only the part in view; smoothed when its pixels are smaller than the screen's (several chunks to a pixel).
+      } else if (o.chunksPerPx <= 1 || chunkPx * o.chunksPerPx <= 1) {
+        // The overview, where each of its pixels is one chunk's (or a few tiles'), or smaller than a device pixel.
+        level = 'overview'
         const per = o.chunksPerPx
         const sx = Math.max(0, Math.floor((fx0 - o.minCx) / per))
         const sy = Math.max(0, Math.floor((fy0 - o.minCy) / per))
         const ex = Math.min(o.w, Math.ceil((fx1 + 1 - o.minCx) / per))
         const ey = Math.min(o.h, Math.ceil((fy1 + 1 - o.minCy) / per))
         if (ex > sx && ey > sy) {
-          ctx.imageSmoothingEnabled = S * k * per < 1
+          ctx.imageSmoothingEnabled = chunkPx * per < 1
           const dx = X((o.minCx + sx * per) * S)
           const dy = Y((o.minCy + sy * per) * S)
           ctx.drawImage(o.img, sx, sy, ex - sx, ey - sy, dx, dy, X((o.minCx + ex * per) * S) - dx, Y((o.minCy + ey * per) * S) - dy)
           ctx.imageSmoothingEnabled = false
+        }
+      } else {
+        // The overview's pixel would cover several chunks and show: each walked chunk in its own mean colour instead.
+        level = 'chunks'
+        for (const c of walked) {
+          const m = this.summary(c).mean
+          ctx.fillStyle = css(m)
+          const x0 = X(c.cx * S)
+          const y0 = Y(c.cy * S)
+          ctx.fillRect(x0, y0, Math.max(1, X((c.cx + 1) * S) - x0), Math.max(1, Y((c.cy + 1) * S) - y0))
+          drawn++
         }
       }
     }
@@ -294,7 +333,7 @@ export class MapRenderer {
       const cy = oy + (p.ty + 0.5) * k
       for (const [dx, dy] of PLACE_MARK) ctx.fillRect(Math.round(cx + (dx - 0.5) * u), Math.round(cy + (dy - 0.5) * u), Math.ceil(u), Math.ceil(u))
     })
-    return { level: detail ? 'detail' : 'overview', chunks: drawn }
+    return { level, chunks: drawn }
   }
 
   /**
@@ -310,7 +349,23 @@ export class MapRenderer {
       out.push({ ...l, ...toScreen(view, vp, l.x + 0.5, l.y + 0.5) })
     }
     if (you) out.push({ kind: 'you', text: you.text, ...toScreen(view, vp, you.x, you.y) })
-    return fitLabels(out, 1)
+    // Boxes wholly off screen (yours too) are dropped before fitting: they can't push out one that shows.
+    return fitLabels(out, 1, vp)
+  }
+
+  /** The walked chunks in a chunk rectangle: looked up cell by cell, or, for a wide view, from the chunks there are. */
+  private walkedIn(x0: number, y0: number, x1: number, y1: number): (MapChunk & { rev: string })[] {
+    const out: (MapChunk & { rev: string })[] = []
+    if ((x1 - x0 + 1) * (y1 - y0 + 1) <= this.byKey.size) {
+      for (let cy = y0; cy <= y1; cy++)
+        for (let cx = x0; cx <= x1; cx++) {
+          const c = this.byKey.get(`${cx},${cy}`)
+          if (c) out.push(c)
+        }
+      return out
+    }
+    for (const c of this.byKey.values()) if (c.cx >= x0 && c.cx <= x1 && c.cy >= y0 && c.cy <= y1) out.push(c)
+    return out
   }
 
   private raster(c: MapChunk & { rev: string }): CanvasImageSource {
@@ -386,25 +441,27 @@ export class MapRenderer {
       }
     } else {
       // A chunk a pixel, or the mean of several chunks a pixel: only walked chunks count.
-      const sum = new Float64Array(w * h * 4)
+      // Sums in 32 bits and counts in 16 (a pixel holds at most a few hundred chunks): 14 bytes a pixel, not 32.
+      const sum = new Uint32Array(w * h * 3)
+      const count = new Uint16Array(w * h)
       for (const c of this.byKey.values()) {
         const x = Math.floor((c.cx - fr.minCx) / per)
         const y = Math.floor((c.cy - fr.minCy) / per)
         if (x < 0 || y < 0 || x >= w || y >= h) continue
         const m = this.summary(c).mean
-        const i = (y * w + x) * 4
-        sum[i] += m[0]!
-        sum[i + 1] += m[1]!
-        sum[i + 2] += m[2]!
-        sum[i + 3] += 1
+        const p = y * w + x
+        sum[p * 3] += m[0]!
+        sum[p * 3 + 1] += m[1]!
+        sum[p * 3 + 2] += m[2]!
+        count[p] += 1
       }
-      for (let i = 0; i < w * h * 4; i += 4) {
-        const n = sum[i + 3]!
+      for (let p = 0; p < w * h; p++) {
+        const n = count[p]!
         if (!n) continue
-        rgba[i] = sum[i]! / n
-        rgba[i + 1] = sum[i + 1]! / n
-        rgba[i + 2] = sum[i + 2]! / n
-        rgba[i + 3] = 255
+        rgba[p * 4] = sum[p * 3]! / n
+        rgba[p * 4 + 1] = sum[p * 3 + 1]! / n
+        rgba[p * 4 + 2] = sum[p * 3 + 2]! / n
+        rgba[p * 4 + 3] = 255
       }
     }
     this.stats.overviews++

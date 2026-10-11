@@ -1124,6 +1124,8 @@ export class WorldScene extends Phaser.Scene {
     opts: { fadeMs?: number | null; inDark?: () => unknown } = {}
   ): void {
     this.transitioning = true
+    // Where this scene's hero stood is no longer where you are: the map falls back to the save until the next scene says.
+    clearMapPosition(this)
     const state = this.session.state
     if (to.area !== undefined) state.area = to.area
     if (to.position) state.position = to.position

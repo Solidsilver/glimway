@@ -5,8 +5,8 @@
  * up too) by the WorldScene that's running, and cleared when it shuts down.
  *
  * Read-only for everything else: no network, no save. The map samples it
- * while it's open and falls back to the saved position before a scene
- * publishes.
+ * while it's open (heroPosition) and falls back to the saved position before
+ * a scene publishes, and while a move is under way (moveTo clears it).
  */
 
 export interface MapPosition {
@@ -36,7 +36,14 @@ export function clearMapPosition(by: object): void {
   current = null
 }
 
-/** Where the hero is now, or null while no scene is running. */
-export function mapPosition(): Readonly<MapPosition> | null {
-  return current
+/**
+ * Where you are for the map: the scene's sample when it belongs to the
+ * session's own area and world, else the save's position (before a scene
+ * has said, or while a move is under way and the save already names the
+ * next area).
+ */
+export function heroPosition(state: { area: string; position?: { x: number; y: number } | null }, world: string): Readonly<MapPosition> | null {
+  const live = current
+  if (live && live.area === state.area && live.world === world) return live
+  return state.position ? { area: state.area, world, x: state.position.x, y: state.position.y } : null
 }

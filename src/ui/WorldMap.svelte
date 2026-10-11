@@ -3,7 +3,8 @@
   import { bus, EV } from '../game/events'
   import { loadMap, type MapLoad } from '../game/wilds/map-data'
   import { isWildsArea } from '../game/wilds/coords'
-  import { mapPosition } from '../game/map-position'
+  import { heroPosition } from '../game/map-position'
+  import { gameNow } from '../game/clock'
   import { gateTile, MAP_COLOURS } from '../lib/wilds/map-model'
   import {
     MAP_DEFAULT_SCALE,
@@ -11,6 +12,8 @@
     MAP_PAN_PX,
     WheelZoom,
     centreOn,
+    pinchWheelScale,
+    zoomAbout,
     clampView,
     panBy,
     pinchView,
@@ -64,12 +67,10 @@
   // ---------------------------------------------------------------- where you are
 
   type Pos = { area: string; world: string; x: number; y: number }
-  /** The scene's live position, else the save's (before a scene has said). */
+  /** The scene's live position when it's the session's own area and world, else the save's (src/game/map-position.ts). */
   function samplePosition(): Pos | null {
-    const live = mapPosition()
-    if (live) return live
-    const st = session.state
-    return st.position ? { area: String(st.area), world: session.link?.worldId ?? '', x: st.position.x, y: st.position.y } : null
+    const p = heroPosition({ area: String(session.state.area), position: session.state.position }, session.link?.worldId ?? '')
+    return p ? { ...p } : null
   }
   let pos = $state<Pos | null>(samplePosition())
   $effect(() => {
@@ -91,18 +92,42 @@
   let alive = true
   let inFlight = false
   let again = false
+  /** Loads by the order they began: one that began earlier never replaces a later one's picture. */
+  let started = 0
+  let shown = 0
+  let expiring = false
 
-  async function load(): Promise<void> {
-    if (inFlight) {
-      again = true
-      return
+  /**
+   * Load the map's land. One read at a time, with one more after it when
+   * news came meanwhile. `read: false` (the wick running out) skips the
+   * network, so it runs at once, beside a load already waiting on a read.
+   */
+  async function load(opts: { read?: boolean } = {}): Promise<void> {
+    const quick = opts.read === false
+    if (!quick) {
+      if (inFlight) {
+        again = true
+        return
+      }
+      inFlight = true
     }
-    inFlight = true
     const gen = generation
+    const n = ++started
     try {
       loads++
-      const got = await loadMap(session)
-      if (!alive || gen !== generation) return
+      const got = await loadMap(session, opts)
+      if (!alive || gen !== generation || n < shown) return
+      // Another world or wick came while it loaded: none of it is current, and the newer one loads next.
+      if (got.superseded) {
+        again = true
+        return
+      }
+      // Begun before the wick ran out: it can't speak for after.
+      if (!got.ended && got.endsAt !== null && gameNow() >= got.endsAt) {
+        void expire()
+        return
+      }
+      shown = n
       result = got
       if (got.input) {
         renderer.setInput(got.input, got.scope)
@@ -112,13 +137,25 @@
       // Keep the last picture; say so.
       if (alive) status = MAP_LABELS.partial
     } finally {
-      inFlight = false
-      if (alive) loading = false
-      if (alive && again) {
+      if (!quick) inFlight = false
+      if (alive && !quick) loading = false
+      if (alive && again && !inFlight) {
         again = false
         void load()
       }
     }
+  }
+
+  /** The wick has run out (game clock): only the Tangle at once, whatever the network; then a read for the new wick. */
+  async function expire(): Promise<void> {
+    if (expiring) return
+    expiring = true
+    try {
+      await load({ read: false })
+    } finally {
+      expiring = false
+    }
+    if (alive) void load()
   }
 
   $effect(() => {
@@ -135,20 +172,27 @@
       }, 500)
     }
     bus.on(EV.wilds, soon)
+    // The wick's end, on the game clock, checked each second while open.
+    const clock = setInterval(() => {
+      const r = result
+      if (r?.input && !r.ended && r.endsAt !== null && gameNow() >= r.endsAt) void expire()
+    }, 1000)
     return () => {
       alive = false
       generation++
       bus.off(EV.wilds, soon)
+      clearInterval(clock)
       if (queued) clearTimeout(queued)
     }
   })
 
-  // Back online with something missing (the Wilds unread, a partial or ended map): try again.
-  let wasOnline = ui.link?.status === 'online'
+  // The connection, as it is now: the note follows it, and either way it changes the map loads again.
+  const online = $derived(ui.link?.status === 'online')
+  let wasOnline: boolean | null = null
   $effect(() => {
-    const online = ui.link?.status === 'online'
-    if (online && !wasOnline && result && (result.missing || result.partial || result.ended || result.offline)) void load()
-    wasOnline = online
+    const now = online
+    if (wasOnline !== null && now !== wasOnline) void load()
+    wasOnline = now
   })
 
   // ---------------------------------------------------------------- the view
@@ -319,15 +363,20 @@
     if (pointers.size === 0 && view) view = snapView(view, vp, dpr)
   }
 
-  // The wheel: non-passive, so it can keep the page from scrolling; Ctrl/Cmd-wheel is the browser's own zoom.
+  // The wheel: non-passive, so it can keep the page from scrolling or zooming. Over the map, a trackpad
+  // pinch (a Ctrl/⌘ wheel) zooms the map smoothly about the pointer; anywhere else it stays the browser's.
   const wheel = new WheelZoom()
   $effect(() => {
     const el = viewportEl
     if (!el) return
     const onWheel = (e: WheelEvent) => {
-      if (e.ctrlKey || e.metaKey) return
       e.preventDefault()
       if (!view || !frame) return
+      if (e.ctrlKey || e.metaKey) {
+        const at = local(e)
+        view = zoomAbout(view, vp, frame, pinchWheelScale(view.scale, e.deltaY, e.deltaMode, vp.h), at.x, at.y)
+        return
+      }
       const steps = wheel.steps(e.deltaY, e.deltaMode, vp.h, performance.now())
       if (!steps) return
       const at = local(e)
@@ -374,10 +423,11 @@
     const out: string[] = []
     if (!result?.input) return out
     if (result.ended) out.push(MAP_LABELS.ended)
-    else if (result.offline) out.push(MAP_LABELS.offlineNow)
+    else if (session.link && !online) out.push(MAP_LABELS.offlineNow)
     if (result.partial) out.push(MAP_LABELS.partial)
     if (outside) out.push(MAP_LABELS.outside)
-    else if (input && input.chunks.length <= 9) out.push(MAP_LABELS.empty)
+    // (After the wick's end only the Tangle shows: that isn't "you haven't walked".)
+    else if (input && input.chunks.length <= 9 && !result.ended) out.push(MAP_LABELS.empty)
     return out
   })
   const summary = $derived(
@@ -389,7 +439,7 @@
   $effect(() => {
     if (!import.meta.env.DEV) return
     const w = window as unknown as Record<string, unknown>
-    w.__fsWorldMap = () => ({ view: view ? { ...view } : null, vp: { ...vp }, frame, hero, outside, loads, draws, cached: renderer.cached, stats: { ...renderer.stats }, result: result ? { scope: result.scope, missing: result.missing, offline: result.offline, partial: result.partial, ended: result.ended } : null })
+    w.__fsWorldMap = () => ({ view: view ? { ...view } : null, vp: { ...vp }, frame, hero, outside, loads, draws, cached: renderer.cached, stats: { ...renderer.stats }, result: result ? { scope: result.scope, missing: result.missing, offline: result.offline, partial: result.partial, ended: result.ended, endsAt: result.endsAt } : null, online, notes: [...notes], chunks: result?.input?.chunks.length ?? 0 })
     return () => delete w.__fsWorldMap
   })
 </script>
@@ -436,15 +486,15 @@
       <div class="empty">
         <p>{result.missing === 'guest' ? MAP_LABELS.guest : MAP_LABELS.offline}</p>
         {#if result.missing === 'unread'}
-          <button type="button" onclick={() => void load()} disabled={ui.link?.status !== 'online'} data-testid="map-retry">{MAP_LABELS.retry}</button>
+          <button type="button" onclick={() => void load()} disabled={!online} data-testid="map-retry">{MAP_LABELS.retry}</button>
         {/if}
       </div>
     {/if}
     {#if notes.length}
       <div class="notes" data-testid="map-notes">
         {#each notes as n (n)}<p>{n}</p>{/each}
-        {#if result?.ended && result.offline}
-          <button type="button" class="tiny" onclick={() => void load()} disabled={ui.link?.status !== 'online'}>{MAP_LABELS.retry}</button>
+        {#if result?.ended}
+          <button type="button" class="tiny" onclick={() => void load()} disabled={!online} data-testid="map-notes-retry">{MAP_LABELS.retry}</button>
         {/if}
       </div>
     {/if}

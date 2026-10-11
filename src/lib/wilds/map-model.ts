@@ -345,26 +345,29 @@ const LABEL_RANK: Record<MapLabelKind, number> = { you: 0, way: 1, place: 2, foo
  * The labels that fit at `scale` CSS px a unit of their x and y: most
  * important first (you, ways, places, the footprints, the gate), and a label
  * that would overlap one already placed is left off (its mark stays on the
- * map). Cull to the viewport first, so a label off screen never pushes a
- * visible one out.
+ * map). With `bounds` (the viewport, in the same CSS px), a label whose box
+ * is wholly outside it is dropped before fitting, so one nobody can see never
+ * pushes out one they can.
  */
-export function fitLabels(labels: readonly MapLabel[], scale: number): MapLabel[] {
+export function fitLabels(labels: readonly MapLabel[], scale: number, bounds?: { w: number; h: number }): MapLabel[] {
   const placed: { l: MapLabel; x0: number; y0: number; x1: number; y1: number }[] = [];
   for (const l of [...labels].sort((a, b) => LABEL_RANK[a.kind] - LABEL_RANK[b.kind])) {
-    const { w, h } = labelBox(l);
-    const cx = l.x * scale;
-    const cy = l.y * scale;
-    // Most labels sit just above their mark; a footprint's is centred on it, and yours sits below your dot.
-    const box =
-      l.kind === 'footprint'
-        ? { x0: cx - w / 2, y0: cy - h / 2, x1: cx + w / 2, y1: cy + h / 2 }
-        : l.kind === 'you'
-          ? { x0: cx - w / 2, y0: cy + 8, x1: cx + w / 2, y1: cy + 8 + h }
-          : { x0: cx - w / 2, y0: cy - h - 2, x1: cx + w / 2, y1: cy - 2 };
+    const box = labelRect(l, scale);
+    if (bounds && (box.x1 <= 0 || box.y1 <= 0 || box.x0 >= bounds.w || box.y0 >= bounds.h)) continue;
     if (placed.some((p) => box.x0 < p.x1 && box.x1 > p.x0 && box.y0 < p.y1 && box.y1 > p.y0)) continue;
     placed.push({ l, ...box });
   }
   return labels.filter((l) => placed.some((p) => p.l === l));
+}
+
+/** Where a label's box sits (CSS px): most just above their mark, a footprint's centred on it, yours below your dot. */
+function labelRect(l: MapLabel, scale: number): { x0: number; y0: number; x1: number; y1: number } {
+  const { w, h } = labelBox(l);
+  const cx = l.x * scale;
+  const cy = l.y * scale;
+  if (l.kind === 'footprint') return { x0: cx - w / 2, y0: cy - h / 2, x1: cx + w / 2, y1: cy + h / 2 };
+  if (l.kind === 'you') return { x0: cx - w / 2, y0: cy + 8, x1: cx + w / 2, y1: cy + 8 + h };
+  return { x0: cx - w / 2, y0: cy - h - 2, x1: cx + w / 2, y1: cy - 2 };
 }
 
 // ------------------------------------------------------------ the whole picture

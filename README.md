@@ -294,7 +294,7 @@ hyphens don't matter.
 | Pick a dialogue reply | 1–9, or arrows + Enter | Tap the reply |
 | Ride / get down (a mount out from your stable, outdoors) | V | Saddle button |
 | Send your mount home | H | Go home button |
-| World map (zoom and drag the Wilds you've walked) | M; on the map, arrows/WASD pan, + and − zoom, Home centres on you, End shows all | Map button, then drag and pinch |
+| World map (zoom and drag the Wilds you've walked) | M; on the map, drag, wheel or trackpad pinch, arrows/WASD pan, + and − zoom, Home centres on you, End shows all | Map button, then drag and pinch |
 | Journal / Character / Inventory / Menu | J / C / I / Esc | HUD buttons (book, person, bag, menu) |
 | Arrange your home | B, then arrows, R, E, X, Esc | Arrange button and tray |
 | Emotes (in a world) | G, then 1–5 | Speech button |

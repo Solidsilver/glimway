@@ -202,3 +202,18 @@ export class WheelZoom {
     return n;
   }
 }
+
+/** How strongly a trackpad pinch's wheel deltas zoom (per CSS px of delta). */
+export const PINCH_WHEEL_RATE = 0.01;
+
+/**
+ * A trackpad pinch, which browsers send as a wheel event with Ctrl (or ⌘)
+ * held: the scale it asks for, continuous (not the wheel's steps), spreading
+ * the fingers (a negative delta) to zoom in. One event moves the scale by at
+ * most half or double; the view's own range clamps it after.
+ */
+export function pinchWheelScale(scale: number, deltaY: number, deltaMode: number, pagePx: number): number {
+  const px = deltaMode === 1 ? deltaY * LINE_PX : deltaMode === 2 ? deltaY * pagePx : deltaY;
+  const factor = Math.min(2, Math.max(0.5, Math.exp(-px * PINCH_WHEEL_RATE)));
+  return scale * factor;
+}

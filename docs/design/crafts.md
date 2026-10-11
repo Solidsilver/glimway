@@ -843,7 +843,8 @@ until a stable, and ledger sums are unchanged.
 Under `[Unreleased] → ### For players` in `CHANGELOG.md`, in this order:
 
 - Riding has moved home. Build a stable after the Workshop, stall a mount, and set out from there:
-  M to ride or get down, and it follows you on a lead through the village.
+  V to ride or get down (M at the time; the world map took M, [world-map.md](world-map.md) 1), and it
+  follows you on a lead through the village.
 - Choose which of your pets walks with you, and up to three to live at home, in the Character
   panel's new Companions tab. Friends' pets follow them now too, and you can pet any of them.
 - At level 20 each class learns a second move: Stand, Kindle, Ward-light or Echo. It's on R, and

@@ -70,7 +70,7 @@ function walk(n: number): void {
 test('a guest or an unread session gets the shell and a reason, not a map', async () => {
   store.resetWilds({ quiet: true });
   forgetMapData();
-  assert.deepEqual(await loadMap({ state: { area: 'village' }, link: null } as never), { input: null, scope: '', missing: 'guest', offline: true, partial: false, ended: false });
+  assert.deepEqual(await loadMap({ state: { area: 'village' }, link: null } as never), { input: null, scope: '', missing: 'guest', offline: true, partial: false, ended: false, endsAt: null });
   const { api } = chunkApi();
   const got = await loadMap(session(api, { online: false }));
   assert.equal(got.missing, 'unread', 'offline and never read: it needs the Wilds read once');
@@ -167,4 +167,87 @@ test('another world or another wick is another map: nothing carried over', async
   const c2 = await loadMap(session(fail.api, { world: 'world-b' }));
   assert.ok(c2.scope.endsWith('|wick-2'));
   assert.equal(c2.input!.chunks.length, 0);
+});
+
+/** A chunk API whose answers wait until `release()`. */
+function heldApi() {
+  let open!: () => void;
+  const gate = new Promise<void>((r) => (open = r));
+  const c = { asked: 0 };
+  const api = {
+    near: async () => {
+      throw new Error('offline');
+    },
+    chunk: async (epoch: string, _l: number, cx: number, cy: number) => {
+      c.asked++;
+      await gate;
+      const m = chunkAt('whitequiet-0-5', cx, cy);
+      m.epochId = epoch;
+      return m;
+    },
+  };
+  return { api, c, release: () => open() };
+}
+
+/** Name new epochs in the store without forgetting the map's caches (what a real switch or turning does). */
+function storeNames(edit: (j: Record<string, any>) => void): void {
+  store.resetWilds({ quiet: true });
+  const j = structuredClone(NEAR);
+  edit(j);
+  store.applyNear(fromJson(WildsNearResultSchema, j as JsonValue));
+  store.takeReadRequest();
+  store.wildsView()!.wick.endsAt = Math.floor(Date.now() / 1000) + 3600;
+}
+
+const tick = () => new Promise((r) => setTimeout(r, 5));
+
+test('a load overtaken by another world never writes into, nor reads from, the new world’s snapshot', async () => {
+  start();
+  walk(9);
+  const held = heldApi();
+  const a = loadMap(session(held.api, { world: 'world-a' }));
+  await tick();
+  assert.ok(held.c.asked > 0, 'world A’s chunks are on their way');
+  // Another world, with its own epochs; its chunks won't load at all.
+  storeNames((j) => {
+    j.still.id = 'still-B';
+    j.wick.id = 'wick-B';
+  });
+  for (let i = 0; i < 9; i++) markWalked('wick-B', `${-4 + i},-8`);
+  const fail = chunkApi({ fail: () => true });
+  const b1 = await loadMap(session(fail.api, { world: 'world-b' }));
+  assert.equal(b1.input!.chunks.length, 0);
+  // World A's chunks arrive late.
+  held.release();
+  const late = await a;
+  forgetChunks();
+  const b2 = await loadMap(session(fail.api, { world: 'world-b' }));
+  assert.equal(b2.input!.chunks.length, 0, 'nothing of world A’s in world B’s snapshot');
+  assert.equal(b2.partial, true);
+  assert.equal(late.superseded, true, 'A’s load says it was overtaken');
+  assert.equal(late.input, null, 'and shows nothing');
+});
+
+test('a turning during a load (the map closed and opened again on the new wick) mixes no epochs and leaks nothing', async () => {
+  start();
+  walk(9);
+  const held = heldApi();
+  const old = loadMap(session(held.api));
+  await tick();
+  // The Beyond turns while the map is closed; it's opened again on the new wick and loads.
+  storeNames((j) => (j.wick.id = 'wick-2'));
+  for (let i = 0; i < 4; i++) markWalked('wick-2', `${-4 + i},-8`);
+  const good = chunkApi();
+  const fresh = await loadMap(session(good.api));
+  assert.ok(fresh.scope.endsWith('|wick-2'));
+  const n = fresh.input!.chunks.length;
+  for (const ch of fresh.input!.chunks) assert.doesNotMatch(ch.rev!, new RegExp(WICK), 'no chunk of the old wick');
+  held.release();
+  const stale = await old;
+  assert.equal(stale.superseded, true);
+  // The new wick's snapshot holds only its own: a failing load gives back the same chunks, no more.
+  forgetChunks();
+  const again = await loadMap(session(chunkApi({ fail: () => true }).api));
+  assert.equal(again.input!.chunks.length, n);
+  for (const ch of again.input!.chunks) assert.doesNotMatch(ch.rev!, new RegExp(WICK));
 });

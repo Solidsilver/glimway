@@ -257,7 +257,7 @@ test('clear a thicket with a spade, lay stone after the turning-land confirm, se
   await expect.poll(async () => (await paths(page))!.materials!.timber, { timeout: 15_000, message: 'timber read again' }).toBe(0)
 })
 
-test('the joining tile of a run between two places makes a named way, with signs at its ends and its name on the Map tab', async ({ page, browser, baseURL }) => {
+test('the joining tile of a run between two places makes a named way, with signs at its ends and its name on the world map', async ({ page, browser, baseURL }) => {
   test.setTimeout(240_000)
   const id = await freshPlayer(page)
   fund(id, { materials: { stone: 20 } })

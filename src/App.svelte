@@ -619,6 +619,8 @@
     // One owner per key: anything handled here is marked, so the world
     // (placement mode included) doesn't act on the same press.
     if (['KeyJ', 'KeyC', 'KeyI', 'KeyM', 'Escape'].includes(e.code)) (e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed = true
+    // A held Escape closes one thing: its repeats don't go on to open the Menu behind it.
+    if (e.code === 'Escape' && e.repeat) return
     // Dev mode (Vite dev only): ` opens and closes the dev panel.
     if (import.meta.env.DEV && e.code === 'Backquote') {
       ;(e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed = true
@@ -641,6 +643,7 @@
     else if (e.code === 'KeyM') {
       // The world map: one press, no held repeat, no shortcut chord.
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return
+      if (panel !== 'map' && !mapAllowed()) return
       toggle('map')
     } else if (e.code === 'KeyC') toggle('character')
     else if (e.code === 'KeyI') toggle('inventory')
@@ -663,9 +666,13 @@
    * confirm, and arranging the home all own the screen first).
    */
   function openMap(): void {
-    if (phase !== 'playing' || blocked(layers, BLOCKS.appKeys)) return
-    if (home.placement || home.namePrompt || home.leaveAsk) return
+    if (!mapAllowed()) return
     toggle('map')
+  }
+  /** May the map open now? One answer for M and the HUD's button. */
+  function mapAllowed(): boolean {
+    if (phase !== 'playing' || blocked(layers, BLOCKS.appKeys)) return false
+    return !home.placement && !home.namePrompt && !home.leaveAsk
   }
   // The map over everything: no emote picker or HUD explanation left open under it.
   $effect(() => {

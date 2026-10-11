@@ -225,15 +225,16 @@ The questions below were answered above where marked; 4 and 5 stay open for the 
 
 Lanes A–E landed together. Where the build differs from the plan above:
 
-- **Overview summaries.** Close in, the renderer draws each walked chunk in view from a cached
-  24×24 raster (LRU, 1024 entries), as planned. It switches to the overview when more than 512
-  chunk slots fit in the viewport, not at a fixed scale. The overview is one image of the whole
-  frame's walked land, at most 1024 px a side: six pixels a chunk (a summary pixel for 4×4 tiles)
-  when the frame is small enough, else a chunk a pixel, else the mean of several chunks a pixel.
-  It's built when the input changes and drawn cropped to the view. That stands in for the
-  per-region summaries and screen-cell aggregation: memory stays bounded (about 4 MiB for the
-  overview at most) and a drag never builds anything. Ways and places are bucketed by 96 tiles,
-  so a pan only looks at the marks near the view.
+- **Overview summaries.** The walked land's resolution is picked from its size on screen
+  (round 1). Each walked chunk in view is drawn from its own cached 24×24 raster (LRU, 1024
+  entries) while at most 512 are in view and a chunk is at least 6 device pixels across, however
+  wide the frame. Past that, one overview image of the frame's walked land, at most 1024 px a
+  side (six pixels a chunk when the frame is small enough, else a chunk a pixel, else the mean of
+  several chunks a pixel), but only where one of its pixels covers at most one chunk or less than
+  a device pixel. Otherwise each walked chunk is filled with its own mean colour, so an aggregate
+  pixel is never enlarged into land nobody walked. The overview is rebuilt only when the frame or
+  a chunk's revision changed, never per drag. Ways and places are bucketed by 96 tiles, so a pan
+  only looks at the marks near the view.
 - **Your dot and the labels are DOM**, over one terrain canvas, not a second canvas. Labels are
   culled to the view (with a margin), turned into screen pixels and fitted with
   `fitLabels(…, 1)`. That's the same thing as passing the scale, because collisions only depend
@@ -244,14 +245,17 @@ Lanes A–E landed together. Where the build differs from the plan above:
   `MapChunk` (and its raster), and finders' places are cached per world, wick and place. A chunk
   that fails keeps its last picture from the same world and epochs.
 - **The wheel zooms in whole quarter-octave steps.** Small trackpad deltas add up until they make
-  a step. Ctrl/Cmd-wheel is left to the browser, as planned. On a Mac that also means a trackpad
-  pinch zooms the page, not the map (a playtest question).
+  a step. **A trackpad pinch** (a Ctrl/⌘ wheel) over the map zooms the map continuously about
+  the pointer, apart from the wheel's steps (owner, 2026-10-11, amending 3). Anywhere outside
+  the map's viewport it stays the browser's page zoom. Safari's own gesture events aren't handled.
 - **Narrow phones held upright:** the HUD's menu row gets its own row, with the goal line under
   it (`Hud.svelte`, `max-width: 480px` portrait). Short landscape puts the title and icon-only
   tools on one row, with Details beside the map.
 - **Acceptance.** `e2e/world-map.spec.ts` covers opening and closing, the Journal switch,
   chords, repeats and typing, the remembered zoom, drag, wheel, keys, a two-pointer pinch with
   rebase, show all and centre, the live dot without a reload, a pan that survives `EV.wilds`, no
-  world input under the map, and the 360 px portrait and landscape layouts. The offline, guest,
-  ended-wick and other-world cases are unit tests (`tests/wilds-map-data.test.ts`), not browser
-  tests.
+  world input under the map, and the 360 px portrait and landscape layouts. Round 1 adds a held
+  Escape, M from a naming or leave confirm, opening during a move out of the Wilds, a trackpad
+  pinch, and an open map following the connection and expiring its wick on the game clock. Loads
+  overtaken by another world or a turning, and the guest case, are unit tests
+  (`tests/wilds-map-data.test.ts`).

@@ -11,6 +11,7 @@ import {
   fitScale,
   panBy,
   pinchView,
+  pinchWheelScale,
   resizeView,
   scaleRange,
   showAll,
@@ -173,4 +174,24 @@ test('the wheel: a notch is a step, small trackpad deltas add up, line deltas co
   // A pause forgets a half-made step.
   w.steps(-60, 0, 800, 6000);
   assert.equal(w.steps(-60, 0, 800, 7000), 0);
+});
+
+test('a trackpad pinch (Ctrl/⌘ wheel) zooms continuously, in when the fingers spread, at most double or half an event', () => {
+  // Small deltas, small changes: no quarter-octave step.
+  const a = pinchWheelScale(4, -3, 0, 800);
+  assert.ok(a > 4 && a < 4 * 2 ** 0.25, `${a}`);
+  const b = pinchWheelScale(4, 3, 0, 800);
+  assert.ok(b < 4 && b > 4 / 2 ** 0.25, `${b}`);
+  // In and back out again lands where it began.
+  close(pinchWheelScale(pinchWheelScale(4, -7, 0, 800), 7, 0, 800), 4);
+  // A big flick is bounded.
+  assert.equal(pinchWheelScale(4, -10_000, 0, 800), 8);
+  assert.equal(pinchWheelScale(4, 10_000, 0, 800), 2);
+  // About the pointer, through the same anchored zoom as the wheel.
+  const v = { cx: -200, cy: -150, scale: 4 };
+  const under = toWorld(v, VP, 300, 650);
+  const z = zoomAbout(v, VP, FRAME, pinchWheelScale(v.scale, -5, 0, 800), 300, 650);
+  const now = toScreen(z, VP, under.x, under.y);
+  close(now.x, 300, 1e-6);
+  close(now.y, 650, 1e-6);
 });
