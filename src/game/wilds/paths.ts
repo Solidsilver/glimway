@@ -406,7 +406,7 @@ export class WildsPaths {
         }
         const key = newKey()
         trackOp({ key, kind: job.op, world: job.world, wick: job.wick, epoch: job.epoch, cx: job.cx, cy: job.cy, token: job.token, action: job.action, material: job.material, decor: job.decor, account: link.accountId })
-        const res = await link.wildsPath(job.op, { x: job.tx, y: job.ty, kind: job.kind, where: job.where, key })
+        const res = await link.wildsPath(job.op, { epoch: job.epoch, x: job.tx, y: job.ty, kind: job.kind, where: job.where, key })
         if (!res.ok && res.code === 'busy' && job.tries < 20 && tracked(key)) {
           // Never entered the outbox: the same job goes again, under a new key, its prediction kept.
           release(key)

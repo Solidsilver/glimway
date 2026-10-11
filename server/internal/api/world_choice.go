@@ -182,7 +182,7 @@ func (a *Server) worldChoiceRead(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
-	now := a.Config.Now().Unix()
+	now := a.requestTime(r.Context()).Unix()
 	p, hash, err := a.heldSignIn(ctx, tx, r, now)
 	if err != nil {
 		return err
@@ -215,7 +215,7 @@ func (a *Server) worldChoiceRead(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	c, _ := r.Cookie(CookieName)
-	a.cookie(w, c.Value, time.Unix(expires, 0))
+	a.cookie(w, c.Value, time.Unix(expires, 0), a.requestTime(r.Context()))
 	writeProto(w, 200, &contract.SessionResponse{Answer: &contract.SessionResponse_WorldChoice{WorldChoice: worldChoiceProto(v)}})
 	return nil
 }
@@ -236,7 +236,7 @@ func (a *Server) worldChoose(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
-	now := a.Config.Now().Unix()
+	now := a.requestTime(r.Context()).Unix()
 	held, _, err := a.heldSignIn(ctx, tx, r, now)
 	if err != nil {
 		return err
@@ -245,7 +245,7 @@ func (a *Server) worldChoose(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	state, err := a.Config.State.PlayerState(ctx, tx, s)
+	state, err := a.maintainAndProjectState(ctx, tx, s, a.requestTime(ctx))
 	if err != nil {
 		return err
 	}

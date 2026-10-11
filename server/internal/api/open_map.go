@@ -108,7 +108,7 @@ func (a *Server) nearRead(w http.ResponseWriter, r *http.Request) error {
 	if !frontier.Inside(s.WorldID, cx, cy) {
 		return fail(409, "beyond-frontier")
 	}
-	view, err := a.near(r.Context(), tx, s, cx, cy, a.Config.Now().Unix())
+	view, err := a.near(r.Context(), tx, s, cx, cy, a.requestTime(r.Context()).Unix())
 	if err != nil {
 		return chunkError(err)
 	}
@@ -463,7 +463,7 @@ func (a *Server) rumour(ctx context.Context, tx *sql.Tx, s store.Snapshot, now i
 	if g == nil || a.Config.Epochs == nil || s.WorldID == "" {
 		return nil, nil
 	}
-	wick, err := chunks.Epoch(ctx, tx, a.Config.Epochs, s.WorldID, store.EpochWick, now)
+	wick, err := a.Config.Epochs.Current(ctx, tx, s.WorldID, store.EpochWick, now)
 	if errors.Is(err, store.ErrGeneratorUnavailable) || errors.Is(err, chunks.ErrUnavailable) || errors.Is(err, chunks.ErrEpochEnded) || errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
@@ -487,16 +487,15 @@ func (a *Server) rumour(ctx context.Context, tx *sql.Tx, s store.Snapshot, now i
 // so a turning brings the next wick's.
 type rumourComposition struct {
 	store.StateComposition
-	a   *Server
-	now func() time.Time
+	a *Server
 }
 
-func (c rumourComposition) PlayerState(ctx context.Context, tx *sql.Tx, s store.Snapshot) (*contract.PlayerState, error) {
-	state, err := c.StateComposition.PlayerState(ctx, tx, s)
+func (c rumourComposition) PlayerState(ctx context.Context, tx *sql.Tx, s store.Snapshot, now time.Time) (*contract.PlayerState, error) {
+	state, err := c.StateComposition.PlayerState(ctx, tx, s, now)
 	if err != nil || s.AccountID == "" {
 		return state, err
 	}
-	state.Rumour, err = c.a.rumour(ctx, tx, s, c.now().Unix())
+	state.Rumour, err = c.a.rumour(ctx, tx, s, now.Unix())
 	return state, err
 }
 

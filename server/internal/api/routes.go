@@ -4,51 +4,31 @@ import (
 	"cmp"
 	"context"
 	"glimway/content"
+	"glimway/server/internal/chunks"
 	"net/http"
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("X-Glimway-Now", strconv.FormatInt(a.Config.Now().Unix(), 10))
+	// Sample once on first use, normally after BeginTx acquires the write lock.
+	var once sync.Once
+	var now time.Time
+	clock := func() time.Time { once.Do(func() { now = a.Config.Now() }); return now }
+	r = r.WithContext(chunks.WithReadClock(r.Context(), clock))
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	// Log fixed route labels only. No bodies, headers, raw paths or query strings.
+	metadata := routeFor(r.Method, r.URL.Path)
 	route := "unknown"
-	if slices.Contains([]string{"/api/health", "/ws", "/api/report", "/api/quest/step", "/api/story/mark", "/api/papers/take", "/api/fall", "/api/profile", "/api/wilds/echo", "/api/session", "/api/play", "/api/state", "/api/progress", "/api/sync", "/api/spend", "/api/invites", "/api/commons", "/api/calendar", "/api/storage", "/api/craft", "/api/hearth/craft", "/api/desk/copy", "/api/homestead/woodpile", "/api/mail", "/api/projects", "/api/library", "/api/library/donate", "/api/items", "/api/world", "/api/world/party", "/api/world/prompt", "/api/world/move", "/api/world/leave", "/api/world/notice", "/api/world/choice", "/api/world/choose", "/api/fishing/cast", "/api/fishing/settle", "/api/fishing/cancel", "/api/fishing/waters", "/api/companions", "/api/stable/stall", "/api/stable/out", "/api/stable/home", "/api/stable/extend", "/api/purse", "/api/purse/top-up", "/api/wardrobe/check", "/api/wardrobe"}, r.URL.Path) {
-		route = r.URL.Path
+	if metadata != nil {
+		route = metadata.label
 	}
-	observed := &statusWriter{ResponseWriter: w, status: 200}
+	observed := &statusWriter{ResponseWriter: w, status: 200, beforeWrite: func() { w.Header().Set("X-Glimway-Now", strconv.FormatInt(clock().Unix(), 10)) }, unexpected: func(err error) { a.logUnexpected(route, err) }}
 	w = observed
-	if strings.HasPrefix(r.URL.Path, "/api/invites/") {
-		route = "/api/invites/:id"
-	}
-	if strings.HasPrefix(r.URL.Path, "/api/homestead/") {
-		route = "/api/homestead/:action"
-	}
-	if strings.HasPrefix(r.URL.Path, "/api/stable/") {
-		route = "/api/stable/:action"
-	}
-	if strings.HasPrefix(r.URL.Path, "/api/mail/") {
-		route = "/api/mail/:id/claim"
-	}
-	if strings.HasPrefix(r.URL.Path, "/api/projects/") {
-		route = "/api/projects/:id/contribute"
-	}
-	if strings.HasPrefix(r.URL.Path, "/api/wilds/") {
-		route = "/api/wilds/:action"
-	}
-	if strings.HasPrefix(r.URL.Path, "/api/items/") {
-		route = "/api/items/:action"
-	}
-	if strings.HasPrefix(r.URL.Path, "/api/repairs/") {
-		route = "/api/repairs/:id/mend"
-	}
-	if strings.HasPrefix(r.URL.Path, "/api/sprites/") {
-		route = "/api/sprites/:name"
-	}
 	defer func() {
 		class := "none"
 		if observed.status == 502 {
@@ -75,180 +55,12 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	var err error
-	switch r.Method + " " + r.URL.Path {
-	case "GET /api/health", "HEAD /api/health":
-		ctx, cancel := context.WithTimeout(r.Context(), time.Second)
-		defer cancel()
-		if a.Store.DB.PingContext(ctx) != nil {
-			err = fail(503, "internal")
-		} else if r.Method == "HEAD" {
-			w.WriteHeader(http.StatusOK)
-		} else {
-			health := map[string]string{"status": "ok", "version": cmp.Or(a.Config.Version, "dev")}
-			if a.Config.Build != "" {
-				health["build"] = a.Config.Build
-			}
-			write(w, 200, health)
-		}
-	case "POST /api/report":
-		err = a.report(w, r)
-	case "POST /api/quest/step":
-		err = a.questStep(w, r)
-	case "POST /api/story/mark":
-		err = a.mark(w, r)
-	case "POST /api/papers/take":
-		err = a.takePaper(w, r)
-	case "POST /api/fall":
-		err = a.fall(w, r)
-	case "POST /api/profile":
-		err = a.profileReport(w, r)
-	case "GET /ws":
-		err = a.presenceSocket(w, r)
-	case "POST /api/invites":
-		err = a.createInvite(w, r)
-	case "GET /api/invites":
-		err = a.listInvites(w, r)
-	case "GET /api/world":
-		err = a.worldRead(w, r)
-	case "POST /api/world/party":
-		err = a.worldParty(w, r)
-	case "POST /api/world/prompt":
-		err = a.worldPrompt(w, r)
-	case "POST /api/world/move":
-		err = a.worldMove(w, r)
-	case "POST /api/world/leave":
-		err = a.worldLeave(w, r)
-	case "POST /api/world/notice":
-		err = a.worldNotice(w, r)
-	case "GET /api/world/choice":
-		err = a.worldChoiceRead(w, r)
-	case "POST /api/world/choose":
-		err = a.worldChoose(w, r)
-	case "POST /api/session":
-		err = a.login(w, r)
-	case "POST /api/purse/top-up":
-		err = a.purseTopUp(w, r)
-	case "GET /api/purse":
-		err = a.purseRead(w, r)
-	case "POST /api/wardrobe/check":
-		err = a.wardrobeCheck(w, r)
-	case "DELETE /api/session":
-		err = a.logout(w, r)
-	case "GET /api/operations/result":
-		err = a.operationResult(w, r)
-	case "GET /api/state":
-		err = a.state(w, r)
-	case "POST /api/play":
-		err = a.play(w, r)
-	case "GET /api/commons":
-		err = a.commons(w, r)
-	case "GET /api/calendar":
-		writeProto(w, 200, calendarResponse(content.CalendarAt(content.CalendarRules, a.Config.Now().Unix())))
-	case "GET /api/storage":
-		err = a.storageRead(w, r)
-	case "POST /api/storage":
-		err = a.storageMutation(w, r)
-	case "POST /api/craft":
-		err = a.craft(w, r)
-	case "POST /api/hearth/craft":
-		err = a.hearthCraft(w, r)
-	case "POST /api/desk/copy":
-		err = a.deskCopy(w, r)
-	case "GET /api/homestead/woodpile":
-		err = a.woodpileRead(w, r)
-	case "POST /api/homestead/woodpile":
-		err = a.woodpileMutation(w, r)
-	case "GET /api/homestead/shelf":
-		err = a.shelfRead(w, r)
-	case "POST /api/homestead/shelf":
-		err = a.shelfMutation(w, r)
-	case "GET /api/mail":
-		err = a.mailRead(w, r)
-	case "POST /api/mail":
-		err = a.mailSend(w, r)
-	case "GET /api/projects":
-		err = a.projectsRead(w, r)
-	case "GET /api/library":
-		err = a.libraryRead(w, r)
-	case "POST /api/library/donate":
-		err = a.libraryDonate(w, r)
-	case "POST /api/wilds/claim":
-		err = a.wildsClaim(w, r)
-	case "POST /api/wilds/lantern":
-		err = a.wildsRelight(w, r)
-	case "POST /api/wilds/clear":
-		err = a.wildsClear(w, r)
-	case "POST /api/wilds/lay":
-		err = a.wildsLay(w, r)
-	case "POST /api/wilds/lift":
-		err = a.wildsLift(w, r)
-	case "POST /api/wilds/discover":
-		err = a.wildsDiscover(w, r)
-	case "POST /api/wilds/echo":
-		err = a.settleEcho(w, r)
-	case "POST /api/homestead/buy", "POST /api/homestead/place", "POST /api/homestead/remove", "POST /api/homestead/move", "POST /api/homestead/upgrade",
-		"POST /api/homestead/claim", "POST /api/homestead/clear", "POST /api/homestead/invite", "POST /api/homestead/joint", "POST /api/homestead/leave":
-		err = a.homeMutation(w, r)
-	case "POST /api/spend":
-		err = a.spendOp(w, r)
-	case "GET /api/items":
-		err = a.itemsRead(w, r)
-	case "POST /api/items/use", "POST /api/items/repair", "POST /api/items/fit", "POST /api/items/unfit", "POST /api/items/give",
-		"POST /api/items/pocket", "POST /api/items/offhand", "POST /api/items/pickup", "POST /api/items/return",
-		"POST /api/items/heirloom", "POST /api/items/ada-oil", "POST /api/items/gather", "POST /api/items/plant",
-		"POST /api/items/buy":
-		err = a.itemsMutation(w, r)
-	case "GET /api/repairs":
-		err = a.repairsRead(w, r)
-	case "POST /api/fishing/cast":
-		err = a.fishCast(w, r)
-	case "POST /api/fishing/settle":
-		err = a.fishSettle(w, r)
-	case "POST /api/fishing/cancel":
-		err = a.fishCancel(w, r)
-	case "GET /api/fishing/waters":
-		err = a.fishingWaters(w, r)
-	case "POST /api/companions":
-		err = a.companions(w, r)
-	case "GET /api/wardrobe":
-		err = a.wardrobeRead(w, r)
-	case "POST /api/wardrobe":
-		err = a.wardrobeMutation(w, r)
-	case "POST /api/stable/stall":
-		err = a.stableStall(w, r)
-	case "POST /api/stable/out":
-		err = a.mountOut(w, r)
-	case "POST /api/stable/home":
-		err = a.mountHome(w, r)
-	case "POST /api/stable/extend":
-		err = a.stableExtend(w, r)
-	default:
-		if r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/api/mail/") {
-			if strings.HasSuffix(r.URL.Path, "/recall") {
-				err = a.mailRecall(w, r)
-			} else {
-				err = a.mailClaim(w, r)
-			}
-		} else if r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/api/projects/") {
-			err = a.projectContribute(w, r)
-		} else if r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/api/repairs/") && strings.HasSuffix(r.URL.Path, "/mend") {
-			err = a.repairMend(w, r)
-		} else if r.Method == "DELETE" && strings.HasPrefix(r.URL.Path, "/api/invites/") {
-			err = a.revokeInvite(w, r)
-		} else if r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/homestead/land/") {
-			err = a.landRead(w, r)
-		} else if r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/homestead/") {
-			err = a.homeRead(w, r)
-		} else if r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/wilds/chunk/") {
-			err = a.chunkRead(w, r)
-		} else if r.Method == "GET" && strings.HasPrefix(r.URL.Path, "/api/wilds/near/") {
-			err = a.nearRead(w, r)
-		} else if (r.Method == "GET" || r.Method == "HEAD") && strings.HasPrefix(r.URL.Path, "/api/sprites/") {
-			err = a.sprite(w, r)
-		} else {
-			err = fail(404, "not-found")
-		}
+	if metadata != nil {
+		err = metadata.handler(a, w, r)
+	} else {
+		err = fail(404, "not-found")
 	}
+
 	if err != nil {
 		problem(w, err)
 	}
@@ -259,4 +71,147 @@ func safeMethod(m string) string {
 		return m
 	}
 	return "other"
+}
+
+type routeMetadata struct {
+	method, path, suffix, label string
+	prefix                      bool
+	handler                     func(*Server, http.ResponseWriter, *http.Request) error
+}
+
+var routes = []routeMetadata{
+	{method: "GET", path: "/api/health", label: "/api/health", handler: (*Server).health},
+	{method: "HEAD", path: "/api/health", label: "/api/health", handler: (*Server).health},
+	{method: "POST", path: "/api/report", label: "/api/report", handler: (*Server).report},
+	{method: "POST", path: "/api/quest/step", label: "/api/quest/step", handler: (*Server).questStep},
+	{method: "POST", path: "/api/story/mark", label: "/api/story/mark", handler: (*Server).mark},
+	{method: "POST", path: "/api/papers/take", label: "/api/papers/take", handler: (*Server).takePaper},
+	{method: "POST", path: "/api/fall", label: "/api/fall", handler: (*Server).fall},
+	{method: "POST", path: "/api/profile", label: "/api/profile", handler: (*Server).profileReport},
+	{method: "GET", path: "/ws", label: "/ws", handler: (*Server).presenceSocket},
+	{method: "POST", path: "/api/invites", label: "/api/invites", handler: (*Server).createInvite},
+	{method: "GET", path: "/api/invites", label: "/api/invites", handler: (*Server).listInvites},
+	{method: "GET", path: "/api/world", label: "/api/world", handler: (*Server).worldRead},
+	{method: "POST", path: "/api/world/party", label: "/api/world/party", handler: (*Server).worldParty},
+	{method: "POST", path: "/api/world/prompt", label: "/api/world/prompt", handler: (*Server).worldPrompt},
+	{method: "POST", path: "/api/world/move", label: "/api/world/move", handler: (*Server).worldMove},
+	{method: "POST", path: "/api/world/leave", label: "/api/world/leave", handler: (*Server).worldLeave},
+	{method: "POST", path: "/api/world/notice", label: "/api/world/notice", handler: (*Server).worldNotice},
+	{method: "GET", path: "/api/world/choice", label: "/api/world/choice", handler: (*Server).worldChoiceRead},
+	{method: "POST", path: "/api/world/choose", label: "/api/world/choose", handler: (*Server).worldChoose},
+	{method: "POST", path: "/api/session", label: "/api/session", handler: (*Server).login},
+	{method: "POST", path: "/api/purse/top-up", label: "/api/purse/top-up", handler: (*Server).purseTopUp},
+	{method: "GET", path: "/api/purse", label: "/api/purse", handler: (*Server).purseRead},
+	{method: "POST", path: "/api/wardrobe/check", label: "/api/wardrobe/check", handler: (*Server).wardrobeCheck},
+	{method: "DELETE", path: "/api/session", label: "/api/session", handler: (*Server).logout},
+	{method: "GET", path: "/api/operations/result", label: "/api/operations/result", handler: (*Server).operationResult},
+	{method: "GET", path: "/api/state", label: "/api/state", handler: (*Server).state},
+	{method: "POST", path: "/api/play", label: "/api/play", handler: (*Server).play},
+	{method: "GET", path: "/api/commons", label: "/api/commons", handler: (*Server).commons},
+	{method: "GET", path: "/api/calendar", label: "/api/calendar", handler: (*Server).calendar},
+	{method: "GET", path: "/api/storage", label: "/api/storage", handler: (*Server).storageRead},
+	{method: "POST", path: "/api/storage", label: "/api/storage", handler: (*Server).storageMutation},
+	{method: "POST", path: "/api/craft", label: "/api/craft", handler: (*Server).craft},
+	{method: "POST", path: "/api/hearth/craft", label: "/api/hearth/craft", handler: (*Server).hearthCraft},
+	{method: "POST", path: "/api/desk/copy", label: "/api/desk/copy", handler: (*Server).deskCopy},
+	{method: "GET", path: "/api/homestead/woodpile", label: "/api/homestead/woodpile", handler: (*Server).woodpileRead},
+	{method: "POST", path: "/api/homestead/woodpile", label: "/api/homestead/woodpile", handler: (*Server).woodpileMutation},
+	{method: "GET", path: "/api/homestead/shelf", label: "/api/homestead/shelf", handler: (*Server).shelfRead},
+	{method: "POST", path: "/api/homestead/shelf", label: "/api/homestead/shelf", handler: (*Server).shelfMutation},
+	{method: "GET", path: "/api/mail", label: "/api/mail", handler: (*Server).mailRead},
+	{method: "POST", path: "/api/mail", label: "/api/mail", handler: (*Server).mailSend},
+	{method: "GET", path: "/api/projects", label: "/api/projects", handler: (*Server).projectsRead},
+	{method: "GET", path: "/api/library", label: "/api/library", handler: (*Server).libraryRead},
+	{method: "POST", path: "/api/library/donate", label: "/api/library/donate", handler: (*Server).libraryDonate},
+	{method: "POST", path: "/api/wilds/claim", label: "/api/wilds/claim", handler: (*Server).wildsClaim},
+	{method: "POST", path: "/api/wilds/lantern", label: "/api/wilds/lantern", handler: (*Server).wildsRelight},
+	{method: "POST", path: "/api/wilds/clear", label: "/api/wilds/clear", handler: (*Server).wildsClear},
+	{method: "POST", path: "/api/wilds/lay", label: "/api/wilds/lay", handler: (*Server).wildsLay},
+	{method: "POST", path: "/api/wilds/lift", label: "/api/wilds/lift", handler: (*Server).wildsLift},
+	{method: "POST", path: "/api/wilds/discover", label: "/api/wilds/discover", handler: (*Server).wildsDiscover},
+	{method: "POST", path: "/api/wilds/echo", label: "/api/wilds/echo", handler: (*Server).settleEcho},
+	{method: "POST", path: "/api/homestead/buy", label: "/api/homestead/buy", handler: (*Server).homeMutation},
+	{method: "POST", path: "/api/homestead/place", label: "/api/homestead/place", handler: (*Server).homeMutation},
+	{method: "POST", path: "/api/homestead/remove", label: "/api/homestead/remove", handler: (*Server).homeMutation},
+	{method: "POST", path: "/api/homestead/move", label: "/api/homestead/move", handler: (*Server).homeMutation},
+	{method: "POST", path: "/api/homestead/upgrade", label: "/api/homestead/upgrade", handler: (*Server).homeMutation},
+	{method: "POST", path: "/api/homestead/claim", label: "/api/homestead/claim", handler: (*Server).homeMutation},
+	{method: "POST", path: "/api/homestead/clear", label: "/api/homestead/clear", handler: (*Server).homeMutation},
+	{method: "POST", path: "/api/homestead/invite", label: "/api/homestead/invite", handler: (*Server).homeMutation},
+	{method: "POST", path: "/api/homestead/joint", label: "/api/homestead/joint", handler: (*Server).homeMutation},
+	{method: "POST", path: "/api/homestead/leave", label: "/api/homestead/leave", handler: (*Server).homeMutation},
+	{method: "POST", path: "/api/spend", label: "/api/spend", handler: (*Server).spendOp},
+	{method: "GET", path: "/api/items", label: "/api/items", handler: (*Server).itemsRead},
+	{method: "POST", path: "/api/items/use", label: "/api/items/use", handler: (*Server).itemsMutation},
+	{method: "POST", path: "/api/items/repair", label: "/api/items/repair", handler: (*Server).itemsMutation},
+	{method: "POST", path: "/api/items/fit", label: "/api/items/fit", handler: (*Server).itemsMutation},
+	{method: "POST", path: "/api/items/unfit", label: "/api/items/unfit", handler: (*Server).itemsMutation},
+	{method: "POST", path: "/api/items/give", label: "/api/items/give", handler: (*Server).itemsMutation},
+	{method: "POST", path: "/api/items/pocket", label: "/api/items/pocket", handler: (*Server).itemsMutation},
+	{method: "POST", path: "/api/items/offhand", label: "/api/items/offhand", handler: (*Server).itemsMutation},
+	{method: "POST", path: "/api/items/pickup", label: "/api/items/pickup", handler: (*Server).itemsMutation},
+	{method: "POST", path: "/api/items/return", label: "/api/items/return", handler: (*Server).itemsMutation},
+	{method: "POST", path: "/api/items/heirloom", label: "/api/items/heirloom", handler: (*Server).itemsMutation},
+	{method: "POST", path: "/api/items/ada-oil", label: "/api/items/ada-oil", handler: (*Server).itemsMutation},
+	{method: "POST", path: "/api/items/gather", label: "/api/items/gather", handler: (*Server).itemsMutation},
+	{method: "POST", path: "/api/items/plant", label: "/api/items/plant", handler: (*Server).itemsMutation},
+	{method: "POST", path: "/api/items/buy", label: "/api/items/buy", handler: (*Server).itemsMutation},
+	{method: "GET", path: "/api/repairs", label: "/api/repairs", handler: (*Server).repairsRead},
+	{method: "POST", path: "/api/fishing/cast", label: "/api/fishing/cast", handler: (*Server).fishCast},
+	{method: "POST", path: "/api/fishing/settle", label: "/api/fishing/settle", handler: (*Server).fishSettle},
+	{method: "POST", path: "/api/fishing/cancel", label: "/api/fishing/cancel", handler: (*Server).fishCancel},
+	{method: "GET", path: "/api/fishing/waters", label: "/api/fishing/waters", handler: (*Server).fishingWaters},
+	{method: "POST", path: "/api/companions", label: "/api/companions", handler: (*Server).companions},
+	{method: "GET", path: "/api/wardrobe", label: "/api/wardrobe", handler: (*Server).wardrobeRead},
+	{method: "POST", path: "/api/wardrobe", label: "/api/wardrobe", handler: (*Server).wardrobeMutation},
+	{method: "POST", path: "/api/stable/stall", label: "/api/stable/stall", handler: (*Server).stableStall},
+	{method: "POST", path: "/api/stable/out", label: "/api/stable/out", handler: (*Server).mountOut},
+	{method: "POST", path: "/api/stable/home", label: "/api/stable/home", handler: (*Server).mountHome},
+	{method: "POST", path: "/api/stable/extend", label: "/api/stable/extend", handler: (*Server).stableExtend},
+	{method: "POST", path: "/api/mail/", suffix: "/recall", prefix: true, label: "/api/mail/:id/recall", handler: (*Server).mailRecall},
+	{method: "POST", path: "/api/mail/", prefix: true, label: "/api/mail/:id/claim", handler: (*Server).mailClaim},
+	{method: "POST", path: "/api/projects/", prefix: true, label: "/api/projects/:id/contribute", handler: (*Server).projectContribute},
+	{method: "POST", path: "/api/repairs/", suffix: "/mend", prefix: true, label: "/api/repairs/:id/mend", handler: (*Server).repairMend},
+	{method: "DELETE", path: "/api/invites/", prefix: true, label: "/api/invites/:id", handler: (*Server).revokeInvite},
+	{method: "GET", path: "/api/homestead/land/", prefix: true, label: "/api/homestead/land/:gate", handler: (*Server).landRead},
+	{method: "GET", path: "/api/homestead/", prefix: true, label: "/api/homestead/:gate", handler: (*Server).homeRead},
+	{method: "GET", path: "/api/wilds/chunk/", prefix: true, label: "/api/wilds/chunk/:epoch/:layer/:cx/:cy", handler: (*Server).chunkRead},
+	{method: "GET", path: "/api/wilds/near/", prefix: true, label: "/api/wilds/near/:cx/:cy", handler: (*Server).nearRead},
+	{method: "GET", path: "/api/sprites/", prefix: true, label: "/api/sprites/:name", handler: (*Server).sprite},
+	{method: "HEAD", path: "/api/sprites/", prefix: true, label: "/api/sprites/:name", handler: (*Server).sprite},
+}
+
+func routeFor(method, path string) *routeMetadata {
+	for i := range routes {
+		route := &routes[i]
+		if method != route.method {
+			continue
+		}
+		if (!route.prefix && path == route.path) || (route.prefix && strings.HasPrefix(path, route.path) && strings.HasSuffix(path, route.suffix)) {
+			return route
+		}
+	}
+	return nil
+}
+func (a *Server) health(w http.ResponseWriter, r *http.Request) error {
+	ctx, cancel := context.WithTimeout(r.Context(), time.Second)
+	defer cancel()
+	if err := a.Store.DB.PingContext(ctx); err != nil {
+		a.logUnexpected("/api/health", err)
+		return fail(503, "internal")
+	}
+	if r.Method == "HEAD" {
+		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+	result := map[string]string{"status": "ok", "version": cmp.Or(a.Config.Version, "dev")}
+	if a.Config.Build != "" {
+		result["build"] = a.Config.Build
+	}
+	write(w, 200, result)
+	return nil
+}
+func (a *Server) calendar(w http.ResponseWriter, r *http.Request) error {
+	writeProto(w, 200, calendarResponse(content.CalendarAt(content.CalendarRules, a.requestTime(r.Context()).Unix())))
+	return nil
 }

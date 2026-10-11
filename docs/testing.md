@@ -42,7 +42,7 @@ the unit tests fail when the committed output has drifted from its inputs:
 | Command | Writes |
 |---|---|
 | `npm run vectors` | economy and sync parity vectors (`content/vectors/`) |
-| `npm run vectors:wilds`, `vectors:homestead`, `vectors:calendar`, `vectors:items` | the other parity vectors the Go tests read |
+| `npm run vectors:homestead`, `npm run vectors:calendar`, `npm run vectors:items`, `npm run vectors:magic` | the other parity vectors the Go tests read |
 | `npm run papers` | `src/content/papers-text.ts` and `content/papers.json` from `docs/lore/texts` |
 | `npm run atlases` | the packed art in `public/assets/fingersnap/packed/` (needs `cwebp`/`dwebp`) |
 
@@ -298,3 +298,5 @@ for everyone else. Remove the `fixme` with the fix.
   exit check and the once-a-second position sample can run in the same frame,
   storing the Commons spot as a Tangle position in chunk (0,0) (about one
   crossing in 60 at 60 fps). The return trip is still tested.
+
+Generator wall-clock thresholds are opt-in: `GLIMWAY_PERF=1 go test -count=1 -v ./server/internal/wilds -run '^TestChunkTime(Budget|Headroom)V3$'`. CI runs them in the manual-dispatch measured job. Ordinary tests retain size, connectivity and golden invariants.

@@ -25,8 +25,8 @@ import (
 // four and names the settled states only.
 const (
 	topUpWorkingSQL = "('reserved','created','scoring','checking')"
-	// How long a working row may be assumed to have a live worker (the
-	// worker's own limit is 60 seconds; 2.4).
+	// Recovery grace for an abandoned reservation. Live reservations are
+	// explicitly excluded through settlement, including final balance checks.
 	TopUpStaleAfter = 90
 	// Top-ups a UTC day (2.5).
 	TopUpsADay = 2
@@ -195,14 +195,15 @@ func boolInt(b bool) int {
 }
 
 // SettleStaleTopUps is 2.4's lazy settle: a working row older than 90
-// seconds has no live worker behind it (the worker's own limit is 60). It
+// seconds is recoverable only when it has no live reservation. The caller
+// supplies its process-local registry; a restarted server has none. It
 // settles then as `unconfirmed` if it got as far as scoring or checking,
 // `not-moved` if it stopped at reserved or created, and is marked leftover
 // from `created` on (the reward may exist). It runs when someone looks: the
 // purse read, the next top-up's reserve, PlayerState. It answers the
 // account's version after the settles (0 when there were none), so a state
 // built straight after carries it (finding 6).
-func SettleStaleTopUps(ctx context.Context, tx *sql.Tx, account string, now int64) (int64, error) {
+func SettleStaleTopUps(ctx context.Context, tx *sql.Tx, account string, now int64, live ...func(string) bool) (int64, error) {
 	rows, err := tx.QueryContext(ctx, "SELECT "+topUpColumns+" FROM purse_topups WHERE account_id=? AND state IN "+topUpWorkingSQL+" AND created_at<=?", account, now-TopUpStaleAfter)
 	if err != nil {
 		return 0, err
@@ -213,6 +214,9 @@ func SettleStaleTopUps(ctx context.Context, tx *sql.Tx, account string, now int6
 		if err != nil {
 			rows.Close()
 			return 0, err
+		}
+		if len(live) != 0 && live[0] != nil && live[0](t.ID) {
+			continue
 		}
 		stale = append(stale, t)
 	}
@@ -254,12 +258,9 @@ func CountedTopUps(ctx context.Context, tx *sql.Tx, account string, since int64)
 }
 
 // PurseFor is the purse on every answer (PlayerState.purse): what is left
-// of today's two top-ups and of its 30 glims, and the top-up still working. The stale settle runs first (2.4), so a dead worker's row reads
-// as settled. dayStart is the UTC midnight of the counting day.
+// of today's two top-ups and of its 30 glims, and the top-up still working.
+// Pure projection: callers run recovery first. dayStart is UTC midnight.
 func PurseFor(ctx context.Context, tx *sql.Tx, account string, now, dayStart int64) (*contract.Purse, error) {
-	if _, err := SettleStaleTopUps(ctx, tx, account, now); err != nil {
-		return nil, err
-	}
 	used, glims, err := CountedTopUps(ctx, tx, account, dayStart)
 	if err != nil {
 		return nil, err

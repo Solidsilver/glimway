@@ -57,7 +57,7 @@ func (a *Server) wardrobeCheck(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	account := s.AccountID
-	now := a.Config.Now().Unix()
+	now := a.requestTime(r.Context()).Unix()
 	result := &contract.WardrobeCheckResult{Owned: []string{}}
 	var look *presenceAvatarMsg
 	err = a.withHabitica(r, subject, func(b habiticaBudget) error {
@@ -124,7 +124,7 @@ func (a *Server) answerWithState(w http.ResponseWriter, r *http.Request, result 
 		return err
 	}
 	defer tx.Rollback()
-	state, err := a.Config.State.PlayerState(r.Context(), tx, s)
+	state, err := a.maintainAndProjectState(r.Context(), tx, s, a.requestTime(r.Context()))
 	if err != nil {
 		return err
 	}

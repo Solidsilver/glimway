@@ -42,6 +42,9 @@ func isHeld(err error) bool {
 func problem(w http.ResponseWriter, err error) {
 	var f *failure
 	if !errors.As(err, &f) {
+		if observed, ok := w.(*statusWriter); ok && observed.unexpected != nil {
+			observed.unexpected(err)
+		}
 		f = &failure{500, "internal"}
 	}
 	write(w, f.status, map[string]any{"error": map[string]string{"code": errorCodeWire(errorCodeProto(f.code))}})

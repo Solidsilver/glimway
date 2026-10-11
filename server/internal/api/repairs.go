@@ -328,7 +328,7 @@ func (a *Server) repairsRead(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
-	now := a.Config.Now().Unix()
+	now := a.requestTime(r.Context()).Unix()
 	v, err := readRepairs(r.Context(), tx, s, now)
 	if err != nil {
 		return err

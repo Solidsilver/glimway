@@ -54,12 +54,12 @@ message WildsLanternResult { string epoch = 1; bool rewarded = 2; WildsLoot loot
 // refused outside the frontier. x and y are a world tile within
 // paths.reachTiles of the hero. kind is "stone" or "plank".
 // POST /api/wilds/clear: open a clearable decor tile with the right tool.
-message WildsClearRequest { OpHeader op = 1; Where where = 2; sint32 x = 3; sint32 y = 4; }
+message WildsClearRequest { OpHeader op = 1; Where where = 2; sint32 x = 3; sint32 y = 4; string epoch = 5; }
 // POST /api/wilds/lay: lay a path on a walkable land tile, debiting the pack.
-message WildsLayRequest { OpHeader op = 1; Where where = 2; sint32 x = 3; sint32 y = 4; string kind = 5; }
+message WildsLayRequest { OpHeader op = 1; Where where = 2; sint32 x = 3; sint32 y = 4; string kind = 5; string epoch = 6; }
 // POST /api/wilds/lift: lift a path you laid, refunding it in the same
 // transaction.
-message WildsLiftRequest { OpHeader op = 1; Where where = 2; sint32 x = 3; sint32 y = 4; }
+message WildsLiftRequest { OpHeader op = 1; Where where = 2; sint32 x = 3; sint32 y = 4; string epoch = 5; }
 // Each answers with the chunk's changes after the operation and the pack's
 // material balances (its own message, so the Envelope's case follows from
 // the type). Ways are keyed by their place pair, so one connected run can

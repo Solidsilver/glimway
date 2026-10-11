@@ -8,8 +8,8 @@ import (
 	"time"
 )
 
-func (a *Server) cookie(w http.ResponseWriter, value string, expires time.Time) {
-	maxAge := int(expires.Unix() - a.Config.Now().Unix())
+func (a *Server) cookie(w http.ResponseWriter, value string, expires, now time.Time) {
+	maxAge := int(expires.Unix() - now.Unix())
 	if value == "" {
 		maxAge = -1
 	}
@@ -25,7 +25,7 @@ func (a *Server) auth(ctx context.Context, tx *sql.Tx, r *http.Request) (string,
 	}
 	hash := store.Hash(c.Value)
 	var id string
-	now := a.Config.Now().Unix()
+	now := a.requestTime(r.Context()).Unix()
 	err = tx.QueryRowContext(ctx, "SELECT s.account_id FROM sessions s JOIN sign_ins i ON i.account_id=s.account_id AND i.method='habitica' JOIN allowlist l ON l.habitica_id=i.subject WHERE s.id_hash=? AND s.expires_at>? AND s.created_at>?", hash, now, now-int64(SessionTTL.Seconds())).Scan(&id)
 	if err == sql.ErrNoRows {
 		// Signed in, but the world isn't chosen yet: everything waits for
@@ -79,7 +79,7 @@ func (a *Server) logout(w http.ResponseWriter, r *http.Request) error {
 	if id != "" {
 		a.presenceChanged(id)
 	}
-	a.cookie(w, "", time.Unix(1, 0))
+	a.cookie(w, "", time.Unix(1, 0), a.requestTime(r.Context()))
 	write(w, 200, map[string]bool{"ok": true})
 	return nil
 }

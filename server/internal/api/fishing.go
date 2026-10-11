@@ -269,10 +269,11 @@ func closeOpenCasts(ctx context.Context, logf fishingLog, tx *sql.Tx, account st
 
 // fractionalNow is the operation's sub-second clock: 5.3's cast times are
 // fractional, and the stock's `at` must never move backwards under
-// contention, so it is read inside the operation — after `BeginTx` has taken
-// the store's one write lock, which is where the serialization happens
-// (review finding 17).
-func fractionalNow(a *Server) float64 { return float64(a.Config.Now().UnixNano()) / 1e9 }
+// contention, so the request clock is first sampled after BeginTx takes
+// the store's write lock; maintenance and projection keep that same value.
+func fractionalNow(a *Server, ctx context.Context) float64 {
+	return float64(a.requestTime(ctx).UnixNano()) / 1e9
+}
 
 // ------------------------------------------------------------ the rod
 
@@ -337,7 +338,7 @@ func (a *Server) fishCast(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		at := fractionalNow(a)
+		at := fractionalNow(a, ctx)
 		if err := sweepCasts(ctx, a.logf, tx, at, now, "account_id=?", s.AccountID); err != nil {
 			return nil, err
 		}
@@ -443,7 +444,7 @@ func (a *Server) fishSettle(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		at := fractionalNow(a)
+		at := fractionalNow(a, ctx)
 		if err := lapseCasts(ctx, a.logf, tx, at, now, "account_id=?", s.AccountID); err != nil {
 			return nil, err
 		}
@@ -532,7 +533,7 @@ func (a *Server) fishCancel(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return a.keyedOpStay(w, r, req.Op, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		at := fractionalNow(a)
+		at := fractionalNow(a, ctx)
 		if err := lapseCasts(ctx, a.logf, tx, at, now, "account_id=?", s.AccountID); err != nil {
 			return nil, err
 		}
@@ -582,8 +583,8 @@ func (a *Server) fishingWaters(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
-	at := float64(a.Config.Now().UnixNano()) / 1e9
-	now := a.Config.Now().Unix()
+	at := float64(a.requestTime(r.Context()).UnixNano()) / 1e9
+	now := a.requestTime(r.Context()).Unix()
 	out := &contract.FishingWaters{Waters: []*contract.WaterView{}}
 	for _, water := range content.FishingRules.GetWaters() {
 		if water.GetArea() != area {
@@ -607,13 +608,9 @@ func (a *Server) fishingWaters(w http.ResponseWriter, r *http.Request) error {
 
 // fishingStateFor is the account's fishing state: the open cast (a reload at
 // the bank puts the float back, and a cast out on another device shows here
-// too) and the earliest time the next cast may start. The lazy lapse runs
-// first — the state read touches the account (5.4) — so a cast past its hold
-// reads as gone and its fish is back in the water.
-func fishingStateFor(ctx context.Context, logf fishingLog, tx *sql.Tx, account string, at float64, now int64) (*contract.FishingState, error) {
-	if err := sweepCasts(ctx, logf, tx, at, now, "account_id=?", account); err != nil {
-		return nil, err
-	}
+// too) and the earliest time the next cast may start. This projection only
+// reads: the caller explicitly lapses casts first during maintenance.
+func fishingStateFor(ctx context.Context, tx *sql.Tx, account string) (*contract.FishingState, error) {
 	out := &contract.FishingState{}
 	c, err := scanCast(tx.QueryRowContext(ctx, "SELECT "+castColumns+" FROM fishing_casts WHERE account_id=? AND state='open'", account))
 	if err == nil {
@@ -636,17 +633,14 @@ func fishingStateFor(ctx context.Context, logf fishingLog, tx *sql.Tx, account s
 // so a reload or another device shows the same line.
 type fishingComposition struct {
 	store.StateComposition
-	now  func() time.Time
-	logf fishingLog
 }
 
-func (f fishingComposition) PlayerState(ctx context.Context, tx *sql.Tx, s store.Snapshot) (*contract.PlayerState, error) {
-	state, err := f.StateComposition.PlayerState(ctx, tx, s)
+func (f fishingComposition) PlayerState(ctx context.Context, tx *sql.Tx, s store.Snapshot, now time.Time) (*contract.PlayerState, error) {
+	state, err := f.StateComposition.PlayerState(ctx, tx, s, now)
 	if err != nil || s.AccountID == "" {
 		return state, err
 	}
-	t := f.now()
-	fishing, err := fishingStateFor(ctx, f.logf, tx, s.AccountID, float64(t.UnixNano())/1e9, t.Unix())
+	fishing, err := fishingStateFor(ctx, tx, s.AccountID)
 	if err != nil {
 		return nil, err
 	}

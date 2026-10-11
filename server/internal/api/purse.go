@@ -23,31 +23,18 @@ import (
 // a browser report.
 type purseComposition struct {
 	store.StateComposition
-	now func() time.Time
 }
 
-func (p purseComposition) PlayerState(ctx context.Context, tx *sql.Tx, s store.Snapshot) (*contract.PlayerState, error) {
+func (p purseComposition) PlayerState(ctx context.Context, tx *sql.Tx, s store.Snapshot, now time.Time) (*contract.PlayerState, error) {
 	if s.AccountID == "" {
-		return p.StateComposition.PlayerState(ctx, tx, s)
+		return p.StateComposition.PlayerState(ctx, tx, s, now)
 	}
-	now := p.now().Unix()
-	// The lazy settle runs first (2.4, finding 6): it moves the account's
-	// version, and the answer must carry the new one — a same-version state
-	// with different contents is a conflict the client drops.
-	version, err := store.SettleStaleTopUps(ctx, tx, s.AccountID, now)
+	at := now.Unix()
+	state, err := p.StateComposition.PlayerState(ctx, tx, s, now)
 	if err != nil {
 		return nil, err
 	}
-	if version != 0 {
-		// A lazy settle never credits (it lands `unconfirmed` or
-		// `not-moved`), so the snapshot's glims stand.
-		s.Version = version
-	}
-	state, err := p.StateComposition.PlayerState(ctx, tx, s)
-	if err != nil {
-		return nil, err
-	}
-	purse, err := store.PurseFor(ctx, tx, s.AccountID, now, utcDayStart(now))
+	purse, err := store.PurseFor(ctx, tx, s.AccountID, at, utcDayStart(at))
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +96,7 @@ func (a *Server) purseTopUp(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
-	ctx, now := r.Context(), a.Config.Now().Unix()
+	ctx, now := r.Context(), a.requestTime(r.Context()).Unix()
 	if err = a.requireLease(ctx, tx, s, req.Op.Lease); err != nil {
 		return a.refuseOp(w, r, tx, s, err)
 	}
@@ -129,11 +116,11 @@ func (a *Server) purseTopUp(w http.ResponseWriter, r *http.Request) error {
 		}
 		return a.writeTopUp(w, r, tx, s, prior)
 	}
-	// A working row older than 90 seconds has no live worker behind it
-	// (2.4): settle it here the way the purse read does, so a dead worker's
+	// Recover an old reservation only if it has no live worker (2.4),
+	// including the detached final checks and settlement, so abandoned work's
 	// row never answers the next top-up `purse-busy`. Its version moves
 	// with it, and this answer carries the new one (finding 6).
-	version, err := store.SettleStaleTopUps(ctx, tx, s.AccountID, now)
+	version, err := store.SettleStaleTopUps(ctx, tx, s.AccountID, now, a.topUpLive)
 	if err != nil {
 		return err
 	}
@@ -180,6 +167,13 @@ func (a *Server) purseTopUp(w http.ResponseWriter, r *http.Request) error {
 	// on; the wait below is outside the slot (finding 14), so a slow
 	// Habitica never holds a sign-in's concurrency slot for the answer.
 	err = a.withHabitica(r, subject, func(b habiticaBudget) error {
+		a.liveTopUps.Store(id, struct{}{})
+		started := false
+		defer func() {
+			if !started {
+				a.liveTopUps.Delete(id)
+			}
+		}()
 		if e := store.InsertTopUp(ctx, tx, id, s.AccountID, req.Op.Key, int64(amount), now); e != nil {
 			return e
 		}
@@ -188,6 +182,7 @@ func (a *Server) purseTopUp(w http.ResponseWriter, r *http.Request) error {
 		}
 		// Step 2: the detached worker (2.2).
 		a.startWorker(context.WithoutCancel(r.Context()), top, subject, token, b, done)
+		started = true
 		return nil
 	})
 	if err != nil {
@@ -213,9 +208,11 @@ func (a *Server) purseTopUp(w http.ResponseWriter, r *http.Request) error {
 // startWorker runs one detached top-up worker, tracked so Close can wait
 // for it (finding 11).
 func (a *Server) startWorker(ctx context.Context, t store.TopUp, subject, token string, b habiticaBudget, done chan struct{}) {
+	a.liveTopUps.Store(t.ID, struct{}{})
 	a.workers.Add(1)
 	go func() {
 		defer a.workers.Done()
+		defer a.liveTopUps.Delete(t.ID)
 		a.runTopUp(ctx, t, subject, token, b, done)
 	}()
 }
@@ -252,7 +249,7 @@ func (a *Server) answerTopUp(w http.ResponseWriter, r *http.Request, id string) 
 }
 
 func (a *Server) writeTopUp(w http.ResponseWriter, r *http.Request, tx *sql.Tx, s store.Snapshot, t store.TopUp) error {
-	state, err := a.Config.State.PlayerState(r.Context(), tx, s)
+	state, err := a.maintainAndProjectState(r.Context(), tx, s, a.requestTime(r.Context()))
 	if err != nil {
 		return err
 	}
@@ -269,7 +266,7 @@ func (a *Server) refuseOp(w http.ResponseWriter, r *http.Request, tx *sql.Tx, s 
 	if !errors.As(err, &f) {
 		return err
 	}
-	state, e := a.Config.State.PlayerState(r.Context(), tx, s)
+	state, e := a.maintainAndProjectState(r.Context(), tx, s, a.requestTime(r.Context()))
 	if e != nil {
 		return e
 	}
@@ -462,8 +459,8 @@ func (a *Server) checkAfterUnknown(ctx context.Context, t store.TopUp, subject, 
 	checks := a.topUpChecks()
 	// The checks get their own guaranteed time budget (finding 3): a slow
 	// run of deletes and calls before them must not cut off the last check,
-	// which is the one that decides `not-moved`. Still well under the 90 s
-	// at which a look settles the row.
+	// which is the one that decides `not-moved`. The live reservation stays
+	// protected until these checks and final settlement have finished.
 	deadline := base.Add(checks[len(checks)-1] + habiticaCallTime)
 	if d, ok := ctx.Deadline(); ok && d.After(deadline) {
 		deadline = d
@@ -706,10 +703,10 @@ func (a *Server) purseRead(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
-	now := a.Config.Now().Unix()
+	now := a.requestTime(r.Context()).Unix()
 	// The lazy settle first (2.4), so this answer carries the version it
 	// moved (finding 6); the read below settles nothing new.
-	version, err := store.SettleStaleTopUps(r.Context(), tx, s.AccountID, now)
+	version, err := store.SettleStaleTopUps(r.Context(), tx, s.AccountID, now, a.topUpLive)
 	if err != nil {
 		return err
 	}
@@ -722,3 +719,5 @@ func (a *Server) purseRead(w http.ResponseWriter, r *http.Request) error {
 	}
 	return a.finishRead(w, r, tx, s, read)
 }
+
+func (a *Server) topUpLive(id string) bool { _, live := a.liveTopUps.Load(id); return live }

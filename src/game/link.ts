@@ -1973,13 +1973,13 @@ export class Link {
    * caller's, so it can track the operation: its answer, refusal or replay
    * settles in the Wilds store through EV.wildsSettled.
    */
-  async wildsPath(op: 'clear' | 'lay' | 'lift', req: { x: number; y: number; kind?: string; where?: WhereJson; key?: string }): Promise<WildsOutcome<WildsClearResult | WildsLayResult | WildsLiftResult>> {
+  async wildsPath(op: 'clear' | 'lay' | 'lift', req: { epoch: string; x: number; y: number; kind?: string; where?: WhereJson; key?: string }): Promise<WildsOutcome<WildsClearResult | WildsLayResult | WildsLiftResult>> {
     const s = this.session
     if (!s) return { ok: false, code: 'unknown' }
     const key = req.key ?? newKey()
     const kind = `wilds-${op}` as const
     const typed = TYPED[kind]!
-    const head = { op: { lease: '', key }, where: req.where ?? whereOf(s.state), x: req.x, y: req.y }
+    const head = { op: { lease: '', key }, where: req.where ?? whereOf(s.state), x: req.x, y: req.y, epoch: req.epoch }
     const json = op === 'lay'
       ? toJson(WildsLayRequestSchema, create(WildsLayRequestSchema, { ...head, kind: req.kind ?? '' }), { alwaysEmitImplicit: true })
       : op === 'lift'

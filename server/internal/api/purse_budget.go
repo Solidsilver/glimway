@@ -56,10 +56,10 @@ func (a *Server) withHabitica(r *http.Request, userID string, fn func(habiticaBu
 }
 
 func (a *Server) withHabiticaBudget(r *http.Request, userID string, budget *loginLimiter, fn func(habiticaBudget) error) error {
-	if !a.loginLimit.allow(a.clientIP(r), a.Config.Now()) {
+	if !a.loginLimit.allow(a.clientIP(r), a.requestTime(r.Context())) {
 		return &budgetRefusal{"login-rate-limited", a.Config.LoginWindow}
 	}
-	finishProof, retry, ok := a.loginProofs.begin(userID, a.Config.Now())
+	finishProof, retry, ok := a.loginProofs.begin(userID, a.requestTime(r.Context()))
 	if !ok {
 		return &budgetRefusal{"login-user-rate-limited", retry}
 	}
