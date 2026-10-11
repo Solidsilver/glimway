@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import type { BrowserContext } from '@playwright/test'
-import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, waitForWorld } from './connected'
-import { holdUntil, warp, waitForWilds, wilds, worldTileOf, type WildsDump, frames, untilLine, expectToast, expectLine } from './helpers'
+import { allow, newUser, openTitleGuide, pasteAndConnect, pinWorld, reenter, routeHabitica, sql, waitForWorld } from './connected'
+import { chunkWhole, diagnose, holdUntil, parkCreatures, pressOn, standFor, warp, waitForWilds, wilds, windowWhole, worldTileOf, type WildsDump, frames, untilLine, expectToast, expectLine, SERVER_ANSWER_MS } from './helpers'
 
 /**
  * The Tangle on the open map: the Commons gate both ways, claims against the
@@ -11,30 +11,49 @@ import { holdUntil, warp, waitForWilds, wilds, worldTileOf, type WildsDump, fram
 
 const TILE = 16
 
+/** The feet spots on the open tiles around a world tile (tile centres), the eight neighbours, then two out. */
+async function spotsAround(page: Page, at: { tx: number; ty: number }): Promise<{ x: number; y: number }[]> {
+  return page.evaluate(([x0, y0]) => {
+    const solid = (window as unknown as { __fsTileSolid: (x: number, y: number) => boolean }).__fsTileSolid
+    const out: { x: number; y: number }[] = []
+    for (const r of [1, 2])
+      for (let dy = -r; dy <= r; dy++)
+        for (let dx = -r; dx <= r; dx++) if (Math.max(Math.abs(dx), Math.abs(dy)) === r && !solid(x0 + dx, y0 + dy)) out.push({ x: (x0 + dx) * 16 + 8, y: (y0 + dy) * 16 + 8 })
+    return out
+  }, [at.tx, at.ty] as const)
+}
+
+/** Set the hero down on open ground beside a world tile (no scene change), and wait for the window around it to be whole. */
+async function goBeside(page: Page, at: { tx: number; ty: number }): Promise<void> {
+  const spot = (await spotsAround(page, at))[0]
+  if (!spot) throw new Error(`no open ground beside ${at.tx},${at.ty}: ${await diagnose(page)}`)
+  await page.evaluate(([x, y]) => (window as unknown as { __fsDevPlace: (x: number, y: number) => void }).__fsDevPlace(x, y), [spot.x, spot.y] as const)
+  await windowWhole(page)
+}
+
 /**
- * Warp next to an entity (its surroundings are kept clear by the generator).
- * The tile beside it is chosen so the TARGET is the nearest claimable thing
- * — a second entity one tile over must not win the prompt.
+ * Go to an entity and stand where the game elects exactly its claim: beside
+ * it, its chunk whole, the creatures set aside, then a standing spot whose
+ * target is `wilds:<id>` (src/game/wilds/sites.ts wildsPoint), by the game's
+ * own rule (not a guess at which neighbour is nearer).
  */
-async function warpToEntity(page: Page, dump: WildsDump, pick: (d: WildsDump) => WildsDump['entities'][number] | undefined): Promise<WildsDump['entities'][number]> {
-  const target = pick(dump)
-  if (!target) throw new Error('no such entity in the attached chunks')
+async function standAtEntity(page: Page, target: WildsDump['entities'][number] | undefined, what = 'the entity'): Promise<WildsDump['entities'][number]> {
+  if (!target) throw new Error(`no ${what} in the attached chunks: ${await diagnose(page)}`)
   const at = worldTileOf(target)
-  const others = dump.entities.filter((e) => e.id !== target.id && e.claimable).map(worldTileOf)
-  const candidates = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]
-  const score = ([ox, oy]: number[]) => Math.min(...others.map((e) => Math.hypot(e.tx - at.tx - ox, e.ty - at.ty - oy)), 99)
-  const [ox, oy] = candidates.sort((a, b) => score(b) - score(a))[0]
-  await warp(page, 'wilds', at.tx + ox, at.ty + oy)
-  const after = await wilds(page)
-  const found = after.entities.find((e) => e.id === target.id)
-  if (!found) throw new Error(`entity ${target.id} vanished after the warp`)
+  await goBeside(page, at)
+  await chunkWhole(page, at)
+  await parkCreatures(page)
+  const why: string[] = []
+  const stood = await standFor(page, `wilds:${target.id}`, await spotsAround(page, at), why)
+  if (!stood) throw new Error(`no spot elects ${what} ${target.id} at ${at.tx},${at.ty}: ${why.join(' ')}`)
+  const found = (await wilds(page)).entities.find((e) => e.id === target.id)
+  if (!found) throw new Error(`entity ${target.id} vanished after the move: ${await diagnose(page)}`)
   return found
 }
 
-/** Press E at a prompt, then wait for a toast carrying the text. */
-async function act(page: Page, prompt: RegExp, toast: RegExp): Promise<void> {
-  await expect(page.locator('.prompt')).toContainText(prompt)
-  await page.keyboard.press('e')
+/** Press E on exactly this entity's claim (its chunk whole, input live), then wait for a toast carrying the text. */
+async function act(page: Page, entity: WildsDump['entities'][number], toast: RegExp): Promise<void> {
+  await pressOn(page, `wilds:${entity.id}`, worldTileOf(entity))
   await expectToast(page, toast)
 }
 
@@ -49,8 +68,6 @@ async function connectedWorld(page: Page, context: BrowserContext): Promise<void
   await pasteAndConnect(page, id)
   await waitForWorld(page)
 }
-
-const park = (page: Page) => page.evaluate(() => (window as unknown as { __fsDevParkCreatures?: () => void }).__fsDevParkCreatures?.())
 
 // The exit check and the once-a-second position sample can run in the same
 // frame; the sample used to store the Commons spot as a Wilds position
@@ -73,7 +90,7 @@ test('connected: the Tangle leads back to the Commons arch', async ({ page, cont
   await connectedWorld(page, context)
   await warp(page, 'wilds', 2, 22)
   await waitForWilds(page)
-  await park(page)
+  await parkCreatures(page)
   expect((await wilds(page)).chunk).toEqual({ cx: 0, cy: 0 })
   // South through the gate (world tiles 1–3 on row 23): the Commons, at the north arch.
   const backInCommons = () =>
@@ -99,8 +116,7 @@ test('connected: harvest, clear a camp, chest, POI, reload in place, the fallen 
   // Harvest a node: loot lands, the balance shows, the node is depleted.
   dump = await wilds(page)
   const node = dump.entities.find((e) => e.kind === 'node')
-  await warpToEntity(page, dump, () => node)
-  await act(page, /chop|cut|gather|pry/i, /harvested/i)
+  await act(page, await standAtEntity(page, node, 'node'), /harvested/i)
   let after = await wilds(page)
   expect(materialSum(after.materials)).toBeGreaterThan(0)
   const nodeAfter = after.entities.find((e) => e.id === node!.id)!
@@ -119,18 +135,12 @@ test('connected: harvest, clear a camp, chest, POI, reload in place, the fallen 
   dump = await wilds(page)
   const camp = dump.entities.find((e) => e.kind === 'camp')
   if (!camp) throw new Error('no camp generated in the reached chunks')
-  await warpToEntity(page, dump, () => camp)
+  await goBeside(page, worldTileOf(camp))
   // The camp's mix spawns around it; strike everything down.
   await page.evaluate(() => (window as unknown as { __fsDevStrike: (n: number) => void }).__fsDevStrike(999))
   await expect.poll(async () => (await wilds(page)).entities.find((e) => e.id === camp.id)!.claimable).toBe(true)
   // Stand where the camp (not a neighbouring node) owns the prompt.
-  const around = await wilds(page)
-  const spot = [[1, 0], [-1, 0], [0, 1], [0, -1]]
-    .map(([ox, oy]) => [ox, oy, Math.min(...around.entities.filter((e) => e.claimable && e.id !== camp.id && e.chunk.cx === camp.chunk.cx && e.chunk.cy === camp.chunk.cy).map((e) => Math.hypot(e.tx - camp.tx - ox, e.ty - camp.ty - oy)), 99)])
-    .sort((a, b) => (b[2] as number) - (a[2] as number))[0]
-  const campAt = worldTileOf(camp)
-  await page.evaluate(([x, y]) => (window as unknown as { __fsDevPlace: (x: number, y: number) => void }).__fsDevPlace(x, y), [(campAt.tx + (spot[0] as number)) * TILE + 8, (campAt.ty + (spot[1] as number)) * TILE + 8])
-  await act(page, /Claim the camp/i, /camp is yours/i)
+  await act(page, await standAtEntity(page, camp, 'camp'), /camp is yours/i)
   after = await wilds(page)
   expect(after.entities.find((e) => e.id === camp.id)!.state).toBe('cleared')
 
@@ -138,8 +148,7 @@ test('connected: harvest, clear a camp, chest, POI, reload in place, the fallen 
   dump = await wilds(page)
   const chest = dump.entities.find((e) => e.kind === 'chest')
   if (chest) {
-    await warpToEntity(page, dump, () => chest)
-    await act(page, /Open the chest/i, /lid groans|amber dust|oilcloth/i)
+    await act(page, await standAtEntity(page, chest, 'chest'), /lid groans|amber dust|oilcloth/i)
     after = await wilds(page)
     expect(after.claims).toContain(chest.id)
     // Gone for good: no chest prompt the second time (a gathering spot
@@ -152,9 +161,9 @@ test('connected: harvest, clear a camp, chest, POI, reload in place, the fallen 
   dump = await wilds(page)
   const poi = dump.entities.find((e) => e.kind === 'poi')
   if (poi) {
-    await warpToEntity(page, dump, () => poi)
+    await standAtEntity(page, poi, 'POI')
     await expect(page.locator('.prompt')).toContainText(/Study the /i)
-    await page.keyboard.press('e')
+    await pressOn(page, `wilds:${poi.id}`, worldTileOf(poi))
     const dialogue = page.getByRole('dialog', { name: /Conversation with/ })
     await expect(dialogue).toBeVisible()
     // The text reads one line at a time: step to the "Charted by" line.
@@ -168,9 +177,10 @@ test('connected: harvest, clear a camp, chest, POI, reload in place, the fallen 
   dump = await wilds(page)
   const beforeChunk = dump.chunk
   const beforePosition = dump.position
-  await page.reload()
-  await page.getByTestId('continue-world').click()
-  await waitForWorld(page, 'wilds')
+  // The hero was set down without a scene change: this tab saves the spot, then the world has it.
+  await page.evaluate(() => (window as unknown as { __fsDevSaveSoon: () => void }).__fsDevSaveSoon())
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __fsDevSaved: () => { pending: boolean } }).__fsDevSaved().pending)).toBe(false)
+  await reenter(page, 'wilds')
   await waitForWilds(page)
   const reloaded = await wilds(page)
   expect(reloaded.chunk).toEqual(beforeChunk)
@@ -190,28 +200,32 @@ test('connected: harvest, clear a camp, chest, POI, reload in place, the fallen 
   expect(lantern.y).toBe(Math.floor(hurtAt.y / 16))
 })
 
+/** The claims spec's world (pinned: the Tangle is still land, the same on every run). */
+const CLAIM_SEED = 'e2e-claims'
+
 test('connected: server persistence keeps the claim across a second visit', { tag: '@smoke' }, async ({ page, context }) => {
-  const id = newUser()
-  allow(id)
-  await routeHabitica(context)
-  await openTitleGuide(page)
-  await pasteAndConnect(page, id)
-  await waitForWorld(page)
+  await connectedWorld(page, context)
+  await pinWorld(page, CLAIM_SEED)
   await warp(page, 'wilds', 12, -12)
-  await waitForWilds(page)
-  const dump = await wilds(page)
-  const node = dump.entities.find((e) => e.kind === 'node')
-  await warpToEntity(page, dump, () => node)
-  await act(page, /chop|cut|gather|pry/i, /harvested/i)
-  const before = await wilds(page)
+  await windowWhole(page)
+  // A fixed node: the pinned Tangle's middle chunk (0, -1), its first node by id.
+  const node = (await wilds(page)).entities
+    .filter((e) => e.kind === 'node' && e.claimable && e.chunk.cx === 0 && e.chunk.cy === -1)
+    .sort((a, b) => (a.id < b.id ? -1 : 1))[0]
+  expect(node, `a node in the Tangle's middle chunk (seed ${CLAIM_SEED}): ${await diagnose(page)}`).toBeDefined()
+  await act(page, await standAtEntity(page, node, 'node'), /harvested/i)
+
+  // That node, committed: the client's view and the server's own row, before the reload.
+  const epoch = (await wilds(page)).stillEpoch
+  const committed = () => sql(`SELECT state FROM entity_state WHERE epoch='${epoch}' AND entity_id='${node!.id}';`)
+  const stateOf = async () => (await wilds(page)).entities.find((e) => e.id === node!.id)?.state ?? 'not attached'
+  await expect.poll(stateOf, { message: `${node!.id} harvested here` }).toBe('harvested')
+  await expect.poll(committed, { timeout: SERVER_ANSWER_MS, message: `${node!.id} harvested on the server` }).toBe('harvested')
 
   // Reload and come back: the node is still depleted on the server's clock.
-  await page.reload()
-  await page.getByTestId('continue-world').click()
-  await waitForWorld(page, 'wilds' as never)
-  await warp(page, 'wilds', worldTileOf(node!).tx + 1, worldTileOf(node!).ty)
+  await reenter(page, 'wilds')
   await waitForWilds(page)
-  const after = await wilds(page)
-  expect(after.entities.find((e) => e.id === node!.id)!.state).toBe('harvested')
-  expect(after.claims.length).toBe(before.claims.length)
+  await chunkWhole(page, worldTileOf(node!))
+  await expect.poll(stateOf, { timeout: SERVER_ANSWER_MS, message: `${node!.id} still harvested after the reload` }).toBe('harvested')
+  expect(committed()).toBe('harvested')
 })

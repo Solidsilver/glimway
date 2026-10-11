@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { serverState, sql, accountOf, CONTRACT, served } from './connected'
-import { waitForArea, player, expectAreaCard, expectToast } from './helpers'
+import { waitForArea, waitForLive, player, expectAreaCard, expectToast, SERVER_ANSWER_MS } from './helpers'
 import { area, earnGlims, freshPlayer, fund, go, homeAt, homes, hurt, landOf, lane, myHome, place, readOn, shot, silasSays, talk, throughGate, type Home, DEED_BOUGHT, yardBuild, pellSays, DEEDS, AT_PELL, manageDeed, giveUpPlace } from './home-helpers'
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts'
 import { LAND, buildableKind, clearable, clearedSet, effectiveKind, homeLights, isLit, type Land } from '../src/lib/homestead-land.ts'
@@ -273,7 +273,31 @@ test('claim and guidance, then expansion: lantern posts, naming, clearing, cotta
   expect(Math.floor((await player(page)).x / 16)).toBe(land.doorstep.tx)
 })
 
-test('a joint deed: two players sign at the deed table in Pell’s office; then one leaves and keeps their pack', async ({ page, browser, baseURL }) => {
+/**
+ * The partner as this page sees them: drawn at the deed table, from a
+ * position the server relayed (presence), not just their name in the room's
+ * roster. The deed needs both near the table on the server's side; a roster
+ * sent on joining says nothing of where they stand (review 2026-10-11,
+ * server 5: a join's first position can be held back by the last room's
+ * throttle, and this wait is where that shows).
+ */
+async function seenAtTable(page: Page, accountId: string): Promise<void> {
+  const t = HOMESTEAD_DATA.commons.deedTable
+  const seen = () =>
+    page.evaluate((id) => ((window as unknown as { __fsRemote?: () => { id: string; x: number; y: number }[] }).__fsRemote?.() ?? []).find((p) => p.id === id) ?? null, accountId)
+  await expect
+    .poll(async () => {
+      const p = await seen()
+      return !!p && Math.hypot(p.x - t.x, p.y - t.y) <= t.radius
+    }, { timeout: SERVER_ANSWER_MS, message: `${accountId} drawn at the deed table (${t.x},${t.y} r${t.radius})` })
+    .toBe(true)
+    .catch(async (e: unknown) => {
+      const peers = await page.evaluate(() => (window as unknown as { __fsPresence: () => unknown }).__fsPresence())
+      throw new Error(`${String(e).slice(0, 300)}\nlast drawn: ${JSON.stringify(await seen())}; presence: ${JSON.stringify(peers)}`)
+    })
+}
+
+test('a joint deed: two players sign at the deed table in Pell’s office', async ({ page, browser, baseURL }) => {
   test.setTimeout(180_000)
   const a = await freshPlayer(page, 'Tansy')
   await earnGlims(page, a)
@@ -283,59 +307,94 @@ test('a joint deed: two players sign at the deed table in Pell’s office; then 
   const code = (await created.json()).code as string
 
   const ctx = await browser.newContext({ baseURL })
-  const other = await ctx.newPage()
-  const errors: string[] = []
-  other.on('pageerror', (e) => errors.push(e.message))
-  const b = await freshPlayer(other, 'Bram', code)
-  fund(b, { materials: { timber: 10, stone: 6, amber: 2 } })
+  try {
+    const other = await ctx.newPage()
+    const errors: string[] = []
+    other.on('pageerror', (e) => errors.push(e.message))
+    const b = await freshPlayer(other, 'Bram', code)
+    fund(b, { materials: { timber: 10, stone: 6, amber: 2 } })
 
-  // Both at the deed table in Pell's office (presence: the room, within the table's reach).
-  await go(other, DEEDS, AT_PELL.tx, AT_PELL.ty)
-  await go(page, DEEDS, AT_PELL.tx, AT_PELL.ty)
-  const peers = (p: Page) => p.evaluate(() => (window as unknown as { __fsPresence: () => { peers: string[] } }).__fsPresence().peers)
-  // Presence names players by their server account ids.
-  await expect.poll(() => peers(page), { timeout: 20_000 }).toContain(accountOf(b))
-  await expect.poll(() => peers(other), { timeout: 20_000 }).toContain(accountOf(a))
+    // Both at the deed table in Pell's office (presence: the room, within the
+    // table's reach), each drawn there on the other's screen, input live on both.
+    await go(other, DEEDS, AT_PELL.tx, AT_PELL.ty)
+    await go(page, DEEDS, AT_PELL.tx, AT_PELL.ty)
+    await seenAtTable(page, accountOf(b))
+    await seenAtTable(other, accountOf(a))
+    await waitForLive(page)
+    await waitForLive(other)
 
-  // Tansy asks Pell for her deed, offers it to Bram from the panel, and signs her side.
-  const deed = await manageDeed(page)
-  await deed.locator(`[data-offer="${accountOf(b)}"]`).click({ timeout: 15_000 })
-  await expect(deed.getByTestId('deed-message')).toContainText('Your name’s down')
-  await expect.poll(async () => (await lane(other)).invites.length).toBe(1)
-  await deed.getByRole('button', { name: 'Close your deed' }).click()
-  await shot(other, 'joint-deed-offer-desktop')
+    // Tansy asks Pell for her deed, offers it to Bram from the panel, and signs her side.
+    const deed = await manageDeed(page)
+    await deed.locator(`[data-offer="${accountOf(b)}"]`).click({ timeout: SERVER_ANSWER_MS })
+    await expect(deed.getByTestId('deed-message')).toContainText('Your name’s down', { timeout: SERVER_ANSWER_MS })
+    await expect.poll(async () => (await lane(other)).invites.length, { timeout: SERVER_ANSWER_MS, message: 'Bram has the offer' }).toBe(1)
+    await deed.getByRole('button', { name: 'Close your deed' }).click()
+    await shot(other, 'joint-deed-offer-desktop')
 
-  // Bram signs at the table, with Pell, within the window: both names on one deed.
-  await pellSays(other, /Sign Tansy’s deed/)
-  await readOn(other, /Two names, one entry/)
-  await expect.poll(async () => (await homes(other)).myGate).toBe(gate)
-  await expect.poll(async () => (await myHome(page)).members.map((m) => m.displayName).sort()).toEqual(['Bram', 'Tansy'])
-  // Tansy's game, waiting on the signature, hears of it without asking again.
-  await expect.poll(async () => (await homes(page)).mine?.members.length ?? 0, { timeout: 15_000 }).toBe(2)
-  // Equal members: Bram can build on the land too.
-  await silasSays(other, /See the Yard/)
-  const shop = other.getByRole('dialog', { name: 'Silas’s Yard' })
-  await shop.locator('[data-buy="lantern-post"]').click()
-  await expect(shop.locator('.msg.ok')).toContainText('Lantern Post is yours')
-  await shop.getByRole('button', { name: 'Close Silas’s yard' }).click()
-  expect((await myHome(page)).postsBought).toBe(1)
-  await throughGate(other, gate)
-  await expectAreaCard(other, 'Your land')
-  await expect(other.getByTestId('arrange')).toBeVisible()
-  await shot(other, 'joint-deed-land-desktop')
+    // Bram signs at the table, with Pell, within the window: both names on one deed.
+    await pellSays(other, /Sign Tansy’s deed/)
+    await readOn(other, /Two names, one entry/)
+    await expect.poll(async () => (await homes(other)).myGate, { timeout: SERVER_ANSWER_MS, message: 'Bram’s game adopts the deed' }).toBe(gate)
+    await expect.poll(async () => (await myHome(page)).members.map((m) => m.displayName).sort(), { timeout: SERVER_ANSWER_MS }).toEqual(['Bram', 'Tansy'])
+    // Tansy's game, waiting on the signature, hears of it without asking again.
+    await expect.poll(async () => (await homes(page)).mine?.members.length ?? 0, { timeout: SERVER_ANSWER_MS }).toBe(2)
+    // Equal members: Bram can build on the land too.
+    await silasSays(other, /See the Yard/)
+    const shop = other.getByRole('dialog', { name: 'Silas’s Yard' })
+    await shop.locator('[data-buy="lantern-post"]').click()
+    await expect(shop.locator('.msg.ok')).toContainText('Lantern Post is yours', { timeout: SERVER_ANSWER_MS })
+    await shop.getByRole('button', { name: 'Close Silas’s yard' }).click()
+    expect((await myHome(page)).postsBought).toBe(1)
+    await throughGate(other, gate)
+    await expectAreaCard(other, 'Your land')
+    await expect(other.getByTestId('arrange')).toBeVisible()
+    await shot(other, 'joint-deed-land-desktop')
+    expect(errors).toEqual([])
+  } finally {
+    await ctx.close()
+  }
+})
 
-  // Bram gives up his place (Pell, Manage your deed): he keeps his pack (the post he bought), the land stays Tansy's.
-  await giveUpPlace(other, /Pell strikes your name/)
-  expect((await myHome(page)).members.map((m) => m.displayName)).toEqual(['Tansy'])
-  // Not on a deed any more: no home chest for him (his own chest goes with him);
-  // his post is still in his pack (mail can send it).
-  const storage = await other.request.get('/api/storage', CONTRACT)
-  expect(storage.status()).toBe(200)
-  expect(await served(storage)).toMatchObject({ home: null, storage: null, shared: 'not-a-member' })
-  const carried = await served(await other.request.get('/api/mail', CONTRACT))
-  expect(carried.inventory.decorations['lantern-post']).toBe(1)
-  expect(errors).toEqual([])
-  await ctx.close()
+test('one of a joint deed gives up their place and keeps their pack; the land stays the other’s', async ({ page, browser, baseURL }) => {
+  test.setTimeout(120_000)
+  const a = await freshPlayer(page, 'Tansy')
+  const created = await page.request.post('/api/invites', { data: {}, ...CONTRACT })
+  expect(created.ok()).toBe(true)
+  const code = (await created.json()).code as string
+  const ctx = await browser.newContext({ baseURL })
+  try {
+    const other = await ctx.newPage()
+    const errors: string[] = []
+    other.on('pageerror', (e) => errors.push(e.message))
+    const b = await freshPlayer(other, 'Bram', code)
+    // A joint deed as the signing leaves it (the signing is the test above):
+    // both on lot 1, a deed each on record (signing counts one for Bram too:
+    // his next is not a free first), and a post Bram bought for it in his pack.
+    const world = (await serverState(page)).body.worldId as string
+    const home = `home-joint-${accountOf(a)}`
+    const now = Math.floor(Date.now() / 1000)
+    sql(`INSERT INTO homesteads(id,world_id,gate,tier,posts_bought,claimed_at) VALUES('${home}','${world}',0,0,1,${now});
+INSERT INTO homestead_members VALUES('${accountOf(a)}','${home}',${now}), ('${accountOf(b)}','${home}',${now + 1});
+INSERT INTO player_deeds VALUES('${accountOf(a)}',1), ('${accountOf(b)}',1);
+INSERT INTO homestead_items(id,item_def,location,account_id) VALUES('post-${accountOf(b)}','lantern-post','inventory','${accountOf(b)}');`)
+    await expect.poll(async () => (await myHome(page)).members.map((m) => m.displayName).sort(), { timeout: SERVER_ANSWER_MS }).toEqual(['Bram', 'Tansy'])
+
+    // Bram gives up his place (Pell, Manage your deed): he keeps his pack (the post), the land stays Tansy's.
+    await giveUpPlace(other, /Pell strikes your name/)
+    expect((await myHome(page)).members.map((m) => m.displayName)).toEqual(['Tansy'])
+    // Not on a deed any more: no home chest for him (his own chest goes with him);
+    // his post is still in his pack (mail can send it).
+    const storage = await other.request.get('/api/storage', CONTRACT)
+    expect(storage.status()).toBe(200)
+    expect(await served(storage)).toMatchObject({ home: null, storage: null, shared: 'not-a-member' })
+    const carried = await served(await other.request.get('/api/mail', CONTRACT))
+    expect(carried.inventory.decorations['lantern-post']).toBe(1)
+    // Giving up a place doesn't take back the deed he signed.
+    expect(sql(`SELECT deeds FROM player_deeds WHERE account_id='${accountOf(b)}';`)).toBe('1')
+    expect(errors).toEqual([])
+  } finally {
+    await ctx.close()
+  }
 })
 
 test('visiting: a second player walks through a neighbour’s gate, sees their place and cottage, read-only', async ({ page, browser, baseURL }) => {
