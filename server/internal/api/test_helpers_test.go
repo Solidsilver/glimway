@@ -582,7 +582,7 @@ func (x *rig) rawHTTP(method, path string, body any, cookie *http.Cookie) *httpt
 		}
 	}
 	r := httptest.NewRequest(method, path, bytes.NewReader(b))
-	r.Header.Set("X-Glimway-Contract", "8")
+	r.Header.Set("X-Glimway-Contract", testContract())
 	r.Header.Set("Content-Type", "application/json")
 	if cookie != nil {
 		r.AddCookie(cookie)
@@ -674,3 +674,5 @@ func decodeDomainHTTP[T any](x *rig, w *httptest.ResponseRecorder) T {
 	}
 	return out
 }
+
+func testContract() string { return strconv.Itoa(content.ContractNumber) }

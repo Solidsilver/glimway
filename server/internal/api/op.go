@@ -23,7 +23,7 @@ func (a *Server) requireLease(ctx context.Context, tx *sql.Tx, s store.Snapshot,
 	if lease == "" || !s.LeaseID.Valid || lease != s.LeaseID.String {
 		return fail(409, "superseded")
 	}
-	_, err := tx.ExecContext(ctx, "UPDATE players SET lease_seen_at=? WHERE account_id=?", a.Config.Now().Unix(), s.AccountID)
+	_, err := tx.ExecContext(ctx, "UPDATE players SET lease_seen_at=? WHERE account_id=?", a.requestTime(ctx).Unix(), s.AccountID)
 	return err
 }
 
@@ -52,7 +52,7 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 		return err
 	}
 	defer tx.Rollback()
-	clock := a.Config.Now()
+	clock := a.requestTime(r.Context())
 	ctx, now := r.Context(), clock.Unix()
 	if op == nil {
 		return fail(400, "invalid-json")
@@ -65,7 +65,7 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 		if !errors.As(err, &f) || f.status < 400 || f.status >= 500 {
 			return err
 		}
-		state, e := a.Config.State.PlayerState(ctx, tx, s)
+		state, e := a.maintainAndProjectState(ctx, tx, s, a.requestTime(ctx))
 		if e != nil {
 			return e
 		}
@@ -80,7 +80,7 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 		return refuse(err)
 	}
 	if prior != nil {
-		state, e := a.Config.State.PlayerState(ctx, tx, s)
+		state, e := a.maintainAndProjectState(ctx, tx, s, a.requestTime(ctx))
 		if e != nil {
 			return e
 		}
@@ -160,17 +160,18 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 		if !errors.As(err, &f) || f.status < 400 || f.status >= 500 {
 			return err
 		}
+		// Project first, so the stored refusal carries the version it answers with.
+		state, e := a.maintainAndProjectState(ctx, tx, s, a.requestTime(ctx))
+		if e != nil {
+			return e
+		}
 		if terminalRefusal(f) {
-			if e := saveRefusedOp(ctx, tx, s.AccountID, r.URL.Path, op.Key, hash, f, s.Version, now); e != nil {
+			if e := saveRefusedOp(ctx, tx, s.AccountID, r.URL.Path, op.Key, hash, f, int64(state.Version), now); e != nil {
 				return e
 			}
 			if e := savePayload(tx, s.AccountID, r.URL.Path, op.Key, request); e != nil {
 				return e
 			}
-		}
-		state, e := a.Config.State.PlayerState(ctx, tx, s)
-		if e != nil {
-			return e
 		}
 		if e = tx.Commit(); e != nil {
 			return e
@@ -178,14 +179,14 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 		writeRefusal(w, f.status, f.code, state)
 		return nil
 	}
-	state, err := a.Config.State.PlayerState(ctx, tx, s)
+	state, err := a.maintainAndProjectState(ctx, tx, s, a.requestTime(ctx))
 	if err != nil {
 		return err
 	}
 	if finalize != nil {
 		finalize(state, result)
 	}
-	if err = saveOpIdem(ctx, tx, s.AccountID, r.URL.Path, op.Key, hash, result, s.Version, now); err != nil {
+	if err = saveOpIdem(ctx, tx, s.AccountID, r.URL.Path, op.Key, hash, result, int64(state.Version), now); err != nil {
 		return err
 	}
 	if err = savePayload(tx, s.AccountID, r.URL.Path, op.Key, request); err != nil {

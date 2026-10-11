@@ -17,11 +17,11 @@ func (a *Server) state(w http.ResponseWriter, r *http.Request) error {
 	l := r.Header.Get("X-Play-Lease")
 	active := l != "" && s.LeaseID.Valid && l == s.LeaseID.String
 	if active {
-		if _, err = tx.ExecContext(r.Context(), "UPDATE players SET lease_seen_at=? WHERE account_id=?", a.Config.Now().Unix(), s.AccountID); err != nil {
+		if _, err = tx.ExecContext(r.Context(), "UPDATE players SET lease_seen_at=? WHERE account_id=?", a.requestTime(r.Context()).Unix(), s.AccountID); err != nil {
 			return err
 		}
 	}
-	state, err := a.Config.State.PlayerState(r.Context(), tx, s)
+	state, err := a.maintainAndProjectState(r.Context(), tx, s, a.requestTime(r.Context()))
 	if err != nil {
 		return err
 	}
@@ -42,7 +42,7 @@ func (a *Server) play(w http.ResponseWriter, r *http.Request) error {
 	}
 	defer tx.Rollback()
 	client := hash + ":" + req.ClientId
-	now := a.Config.Now().Unix()
+	now := a.requestTime(r.Context()).Unix()
 	lease := s.LeaseID.String
 	if s.LeaseID.Valid && s.LeaseClient.String != client && now-s.LeaseSeen.Int64 < 120 && !req.TakeOver {
 		return fail(409, "playing-elsewhere")
@@ -103,7 +103,7 @@ func (a *Server) play(w http.ResponseWriter, r *http.Request) error {
 	if err = store.BumpVersion(r.Context(), tx, &s); err != nil {
 		return err
 	}
-	state, err := a.Config.State.PlayerState(r.Context(), tx, s)
+	state, err := a.maintainAndProjectState(r.Context(), tx, s, a.requestTime(r.Context()))
 	if err != nil {
 		return err
 	}

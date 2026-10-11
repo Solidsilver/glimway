@@ -1487,7 +1487,10 @@ export class Link {
     for (const e of gone) this.notify(e, { ok: false, code: 'offline' })
     this.refresh()
     await this.saveRecord()
-    this.emitter(EV.toast, { text: 'Something you did offline more than six days ago wasn’t kept.', kind: 'error' })
+    // A contract drop is a deploy, not time offline: it says so plainly.
+    const updated = gone.filter((e) => e.contract !== CONTRACT_NUMBER).length
+    if (updated) this.emitter(EV.toast, { text: updated === 1 ? 'The game updated; one action wasn’t kept.' : 'The game updated; some actions weren’t kept.', kind: 'error' })
+    if (updated < gone.length) this.emitter(EV.toast, { text: 'Something you did offline more than six days ago wasn’t kept.', kind: 'error' })
     return ok
   }
 
@@ -1973,13 +1976,13 @@ export class Link {
    * caller's, so it can track the operation: its answer, refusal or replay
    * settles in the Wilds store through EV.wildsSettled.
    */
-  async wildsPath(op: 'clear' | 'lay' | 'lift', req: { x: number; y: number; kind?: string; where?: WhereJson; key?: string }): Promise<WildsOutcome<WildsClearResult | WildsLayResult | WildsLiftResult>> {
+  async wildsPath(op: 'clear' | 'lay' | 'lift', req: { epoch: string; x: number; y: number; kind?: string; where?: WhereJson; key?: string }): Promise<WildsOutcome<WildsClearResult | WildsLayResult | WildsLiftResult>> {
     const s = this.session
     if (!s) return { ok: false, code: 'unknown' }
     const key = req.key ?? newKey()
     const kind = `wilds-${op}` as const
     const typed = TYPED[kind]!
-    const head = { op: { lease: '', key }, where: req.where ?? whereOf(s.state), x: req.x, y: req.y }
+    const head = { op: { lease: '', key }, where: req.where ?? whereOf(s.state), x: req.x, y: req.y, epoch: req.epoch }
     const json = op === 'lay'
       ? toJson(WildsLayRequestSchema, create(WildsLayRequestSchema, { ...head, kind: req.kind ?? '' }), { alwaysEmitImplicit: true })
       : op === 'lift'

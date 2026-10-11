@@ -115,7 +115,7 @@ func (a *Server) projectsRead(w http.ResponseWriter, r *http.Request) error {
 	}
 	defer tx.Rollback()
 	for _, def := range content.ProjectRules.Projects {
-		if err = completeProject(r.Context(), tx, s.WorldID, def, a.Config.Now().Unix()); err != nil {
+		if err = completeProject(r.Context(), tx, s.WorldID, def, a.requestTime(r.Context()).Unix()); err != nil {
 			return err
 		}
 	}

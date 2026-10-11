@@ -35,7 +35,7 @@ func deedHere(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (string, bool,
 
 // companions chooses the follower and the yard (6.2, `POST /api/companions`):
 // profile source habitica, a deed in this world, each key owned (the
-// follower may also be '' or store.NoFollower), at most
+// follower may also be ” or store.NoFollower), at most
 // three yard pets and no repeats. It writes the rows and the room hears an
 // avatar change.
 func (a *Server) companions(w http.ResponseWriter, r *http.Request) error {

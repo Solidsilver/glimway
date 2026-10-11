@@ -19,6 +19,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"net/http"
 	"slices"
+	"time"
 )
 
 // wardrobeReader is *sql.Tx or *sql.DB.
@@ -130,8 +131,8 @@ func wardrobeProto(chosen map[string]string) *contract.Wardrobe {
 // Habitica to dress from (section 5).
 type wardrobeComposition struct{ store.StateComposition }
 
-func (w wardrobeComposition) PlayerState(ctx context.Context, tx *sql.Tx, s store.Snapshot) (*contract.PlayerState, error) {
-	state, err := w.StateComposition.PlayerState(ctx, tx, s)
+func (w wardrobeComposition) PlayerState(ctx context.Context, tx *sql.Tx, s store.Snapshot, now time.Time) (*contract.PlayerState, error) {
+	state, err := w.StateComposition.PlayerState(ctx, tx, s, now)
 	if err != nil {
 		return nil, err
 	}

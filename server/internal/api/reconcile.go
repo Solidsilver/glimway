@@ -71,7 +71,7 @@ func (a *Server) operationResult(w http.ResponseWriter, r *http.Request) error {
 	defer tx.Rollback()
 	var resultJSON, payload, hash string
 	var version int64
-	err = tx.QueryRowContext(r.Context(), "SELECT result_json,payload_json,request_hash,committed_version FROM idempotency WHERE account_id=? AND op=? AND key=? AND created_at>?", s.AccountID, route, key, a.Config.Now().Unix()-7*86400).Scan(&resultJSON, &payload, &hash, &version)
+	err = tx.QueryRowContext(r.Context(), "SELECT result_json,payload_json,request_hash,committed_version FROM idempotency WHERE account_id=? AND op=? AND key=? AND created_at>?", s.AccountID, route, key, a.requestTime(r.Context()).Unix()-7*86400).Scan(&resultJSON, &payload, &hash, &version)
 	var operation *contract.CommittedOperation
 	if err != nil && err != sql.ErrNoRows {
 		return err
@@ -81,7 +81,7 @@ func (a *Server) operationResult(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 	}
-	state, err := a.Config.State.PlayerState(r.Context(), tx, s)
+	state, err := a.maintainAndProjectState(r.Context(), tx, s, a.requestTime(r.Context()))
 	if err != nil {
 		return err
 	}

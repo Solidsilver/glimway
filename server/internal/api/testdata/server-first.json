@@ -8997,7 +8997,8 @@
       "op": null,
       "where": null,
       "x": 0,
-      "y": 0
+      "y": 0,
+      "epoch": ""
     }
   },
   {
@@ -9019,7 +9020,8 @@
         "y": 1
       },
       "x": 1,
-      "y": 1
+      "y": 1,
+      "epoch": "fixture"
     }
   },
   {
@@ -9388,7 +9390,8 @@
       "where": null,
       "x": 0,
       "y": 0,
-      "kind": ""
+      "kind": "",
+      "epoch": ""
     }
   },
   {
@@ -9411,7 +9414,8 @@
       },
       "x": 1,
       "y": 1,
-      "kind": "fixture"
+      "kind": "fixture",
+      "epoch": "fixture"
     }
   },
   {
@@ -9485,7 +9489,8 @@
       "op": null,
       "where": null,
       "x": 0,
-      "y": 0
+      "y": 0,
+      "epoch": ""
     }
   },
   {
@@ -9507,7 +9512,8 @@
         "y": 1
       },
       "x": 1,
-      "y": 1
+      "y": 1,
+      "epoch": "fixture"
     }
   },
   {

@@ -217,7 +217,7 @@ func (c *Chunks) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, lay
 	if int(e.GeneratorVersion) != c.version() {
 		return nil, sql.ErrNoRows
 	}
-	if e.EndsAt != nil && e.EndsAt.Value <= float64(c.now()) {
+	if e.EndsAt != nil && e.EndsAt.Value <= float64(c.readNow(ctx)) {
 		return nil, chunks.ErrEpochEnded
 	}
 	key := chunkKey{epoch, layer, cx, cy}
@@ -273,7 +273,7 @@ func (c *Chunks) make(ctx context.Context, tx *sql.Tx, world string, e *contract
 				}
 				if still == nil {
 					var err error
-					if still, err = chunks.Epoch(ctx, tx, c, world, EpochStill, c.now()); err != nil {
+					if still, err = chunks.Epoch(ctx, tx, c, world, EpochStill, c.readNow(ctx)); err != nil {
 						return nil, fmt.Errorf("kept side of %d,%d: %w", x, y, err)
 					}
 				}
@@ -299,7 +299,7 @@ func (c *Chunks) make(ctx context.Context, tx *sql.Tx, world string, e *contract
 	if err != nil {
 		return nil, err
 	}
-	if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO wilds_chunks(epoch_id,layer,cx,cy,generator_version,blob,created_at) VALUES(?,?,?,?,?,?,?)", e.Id, layer, cx, cy, e.GeneratorVersion, blob, c.now()); err != nil {
+	if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO wilds_chunks(epoch_id,layer,cx,cy,generator_version,blob,created_at) VALUES(?,?,?,?,?,?,?)", e.Id, layer, cx, cy, e.GeneratorVersion, blob, c.readNow(ctx)); err != nil {
 		return nil, err
 	}
 	return c.stored(ctx, tx, chunkKey{e.Id, layer, cx, cy})
@@ -360,4 +360,11 @@ func (c *Chunks) put(k chunkKey, m *contract.WildsChunk) {
 		delete(c.byKey, last.Value.(cached).key)
 		c.order.Remove(last)
 	}
+}
+
+func (c *Chunks) readNow(ctx context.Context) int64 {
+	if now, ok := chunks.ReadTime(ctx); ok {
+		return now.Unix()
+	}
+	return c.now()
 }

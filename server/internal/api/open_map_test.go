@@ -38,18 +38,36 @@ func tileWhere(tx, ty int) *contract.Where { return atTile(tx, ty) }
 func local(cx, cy int, t [2]int) (int, int) { return cx*24 + t[0], cy*24 + t[1] }
 
 // pathOp posts a clear, lay or lift standing on (sx, sy) at the tile (tx, ty).
-func (x *rig) pathOp(c *http.Cookie, s response, op string, key string, sx, sy, tx, ty int, kind string, status int) (*contract.Envelope, string) {
+func (x *rig) pathOp(c *http.Cookie, s response, op string, key string, sx, sy, tx, ty int, kind string, status int, epochs ...string) (*contract.Envelope, string) {
 	x.t.Helper()
 	where := tileWhere(sx, sy)
 	h := opHeader(s.Lease, key)
+	epoch := "outside"
+	if len(epochs) > 0 {
+		epoch = epochs[0]
+	} else if wildsWhereInside(tileWhere(tx, ty)) {
+		dbtx, err := x.db.DB.BeginTx(context.Background(), nil)
+		if err != nil {
+			x.t.Fatal(err)
+		}
+		defer dbtx.Rollback()
+		e, err := x.api.epochAt(context.Background(), dbtx, s.WorldID, wilds.FloorDiv(tx, 24), wilds.FloorDiv(ty, 24), x.now.Load())
+		if err != nil {
+			x.t.Fatal(err)
+		}
+		epoch = e.Id
+		if err = dbtx.Commit(); err != nil {
+			x.t.Fatal(err)
+		}
+	}
 	var req proto.Message
 	switch op {
 	case "clear":
-		req = &contract.WildsClearRequest{Op: h, Where: where, X: int32(tx), Y: int32(ty)}
+		req = &contract.WildsClearRequest{Op: h, Where: where, Epoch: epoch, X: int32(tx), Y: int32(ty)}
 	case "lay":
-		req = &contract.WildsLayRequest{Op: h, Where: where, X: int32(tx), Y: int32(ty), Kind: kind}
+		req = &contract.WildsLayRequest{Op: h, Where: where, Epoch: epoch, X: int32(tx), Y: int32(ty), Kind: kind}
 	case "lift":
-		req = &contract.WildsLiftRequest{Op: h, Where: where, X: int32(tx), Y: int32(ty)}
+		req = &contract.WildsLiftRequest{Op: h, Where: where, Epoch: epoch, X: int32(tx), Y: int32(ty)}
 	}
 	return x.call("/api/wilds/"+op, req, c, status)
 }
@@ -377,7 +395,7 @@ func TestWildsDiscover(t *testing.T) {
 			defer wg.Done()
 			raw, _ := protojson.Marshal(&contract.WildsDiscoverRequest{Op: op(pair.s.Lease, "race"), Where: tileWhere(85, -11), Place: "place:1:0", Epoch: wick.Id})
 			r := httptest.NewRequest("POST", "/api/wilds/discover", bytes.NewReader(raw))
-			r.Header.Set("X-Glimway-Contract", "8")
+			r.Header.Set("X-Glimway-Contract", testContract())
 			r.Header.Set("Content-Type", "application/json")
 			r.AddCookie(pair.c)
 			w := httptest.NewRecorder()
@@ -613,7 +631,7 @@ func TestRefusedOperationDoesNotLeaveAPhantomChunk(t *testing.T) {
 	api2.Config.Lanterns, api2.Config.HomeLand = wildsService{api2}, wildsService{api2}
 	read := func(srv *Server, path string) int {
 		r := httptest.NewRequest("GET", path, nil)
-		r.Header.Set("X-Glimway-Contract", "8")
+		r.Header.Set("X-Glimway-Contract", testContract())
 		r.AddCookie(c)
 		w := httptest.NewRecorder()
 		srv.ServeHTTP(w, r)
@@ -621,9 +639,9 @@ func TestRefusedOperationDoesNotLeaveAPhantomChunk(t *testing.T) {
 	}
 	// The second server refuses a lay that makes (4,-8), then the first reads it.
 	tx2, ty2 := local(4, -8, [2]int{3, 14})
-	raw, _ := protojson.Marshal(&contract.WildsLayRequest{Op: op(s.Lease, "broke-2"), Where: tileWhere(tx2, ty2+1), X: int32(tx2), Y: int32(ty2), Kind: "stone"})
+	raw, _ := protojson.Marshal(&contract.WildsLayRequest{Op: op(s.Lease, "broke-2"), Where: tileWhere(tx2, ty2+1), X: int32(tx2), Y: int32(ty2), Kind: "stone", Epoch: wick.Id})
 	r := httptest.NewRequest("POST", "/api/wilds/lay", bytes.NewReader(raw))
-	r.Header.Set("X-Glimway-Contract", "8")
+	r.Header.Set("X-Glimway-Contract", testContract())
 	r.Header.Set("Content-Type", "application/json")
 	r.AddCookie(c)
 	w := httptest.NewRecorder()
@@ -672,4 +690,53 @@ func TestNodeYieldBonusByTier(t *testing.T) {
 			t.Fatal("tiers", m.Tier, bonus)
 		}
 	}
+}
+
+func TestPathOperationsCapturedEpoch(t *testing.T) {
+	parent := t
+	x := newRig(t)
+	c, s := x.ready("alice")
+	x.give(s.AccountID, "stone", 4)
+	x.instance(s.AccountID, "bench-spade", -1, "")
+	before := x.near(c, 2, -4, 200)
+	old := before.Wick.Id
+	tx, ty := local(2, -4, [2]int{3, 14})
+	original, _ := x.pathOp(c, s, "lay", "committed-before-turn", tx, ty+1, tx, ty, "stone", 200, old)
+	balance := count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner=? AND item_def='stone'", s.AccountID)
+	x.now.Store(content.CalendarAt(content.CalendarRules, x.now.Load()).NextTurning + 1)
+	thx, thy := local(2, -4, fakegen.Thicket)
+	for _, op := range []string{"clear", "lay", "lift"} {
+		t.Run(op, func(t *testing.T) {
+			x.t = t
+			defer func() { x.t = parent }()
+			px, py := tx, ty
+			if op == "clear" {
+				px, py = thx, thy
+			}
+			_, code := x.pathOp(c, s, op, "late-"+op, px, py+1, px, py, "stone", 409, old)
+			if code != "epoch-ended" {
+				t.Fatalf("late %s: %s", op, code)
+			}
+			if got := count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner=? AND item_def='stone'", s.AccountID); got != balance {
+				t.Fatalf("%s spent on refusal: %d != %d", op, got, balance)
+			}
+		})
+	}
+	replay, _ := x.pathOp(c, s, "lay", "committed-before-turn", tx, ty+1, tx, ty, "stone", 200, old)
+	if !proto.Equal(original.GetWildsLay(), replay.GetWildsLay()) {
+		t.Fatal("old committed operation did not replay its original result")
+	}
+	if got := count(t, x.db, "SELECT qty FROM item_stacks WHERE location='pack' AND owner=? AND item_def='stone'", s.AccountID); got != balance {
+		t.Fatal("replay spent twice")
+	}
+	current := x.near(c, 2, -4, 200)
+	x.pathOp(c, s, "lay", "new-epoch", tx, ty+1, tx, ty, "stone", 200, current.Wick.Id)
+	for _, epoch := range []string{current.Still.Id, ""} {
+		_, code := x.pathOp(c, s, "lay", "mismatch-"+epoch, tx+1, ty+1, tx+1, ty, "stone", 409, epoch)
+		if code != "epoch-ended" {
+			t.Fatalf("mismatched epoch: %s", code)
+		}
+	}
+
+	x.pathOp(c, s, "lift", "current-lift", tx, ty+1, tx, ty, "", 200, current.Wick.Id)
 }

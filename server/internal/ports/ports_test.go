@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
+	"glimway/server/internal/store/storetest"
 	"path/filepath"
 	"testing"
 )
@@ -64,7 +65,7 @@ func TestFakesUseCallerTransactionAndCloneViews(t *testing.T) {
 		t.Fatal(v, err)
 	}
 	loaded := false
-	state := store.FakeState{LoadFunc: func(_ context.Context, got *sql.Tx, id string) (store.Snapshot, error) {
+	state := storetest.FakeState{LoadFunc: func(_ context.Context, got *sql.Tx, id string) (store.Snapshot, error) {
 		if got != tx || id != "account" {
 			t.Fatal("state boundary")
 		}

@@ -12,12 +12,18 @@ import (
 
 type statusWriter struct {
 	http.ResponseWriter
-	status  int
-	written bool
+	status      int
+	route       string
+	written     bool
+	unexpected  func(error)
+	beforeWrite func()
 }
 
 func (w *statusWriter) WriteHeader(status int) {
 	if !w.written {
+		if w.beforeWrite != nil {
+			w.beforeWrite()
+		}
 		w.status = status
 		w.written = true
 		w.ResponseWriter.WriteHeader(status)

@@ -11,7 +11,7 @@ import (
 )
 
 func (a *Server) begin(r *http.Request) (*sql.Tx, store.Snapshot, string, error) {
-	tx, err := a.Store.DB.BeginTx(r.Context(), nil)
+	tx, err := a.beginTx(r.Context())
 	if err != nil {
 		return nil, store.Snapshot{}, "", err
 	}
@@ -20,7 +20,7 @@ func (a *Server) begin(r *http.Request) (*sql.Tx, store.Snapshot, string, error)
 		tx.Rollback()
 		return nil, store.Snapshot{}, "", err
 	}
-	if _, err = store.ReturnDueMailTx(r.Context(), tx, a.Config.Now().Unix(), id); err != nil {
+	if _, err = store.ReturnDueMailTx(r.Context(), tx, a.requestTime(r.Context()).Unix(), id); err != nil {
 		tx.Rollback()
 		return nil, store.Snapshot{}, "", err
 	}
@@ -28,6 +28,18 @@ func (a *Server) begin(r *http.Request) (*sql.Tx, store.Snapshot, string, error)
 	if err != nil {
 		tx.Rollback()
 		return nil, s, "", err
+	}
+	version, err := store.SettleStaleTopUps(r.Context(), tx, id, a.requestTime(r.Context()).Unix(), a.topUpLive)
+	if err != nil {
+		tx.Rollback()
+		return nil, s, "", err
+	}
+	if version != 0 {
+		s, err = a.Config.State.Load(r.Context(), tx, id)
+		if err != nil {
+			tx.Rollback()
+			return nil, s, "", err
+		}
 	}
 	return tx, s, hash, nil
 }
@@ -48,7 +60,7 @@ func (a *Server) finish(w http.ResponseWriter, r *http.Request, tx *sql.Tx, v an
 		notify()
 	}
 	if cookie != nil {
-		a.cookie(w, cookie.Value, time.Unix(expiry, 0))
+		a.cookie(w, cookie.Value, time.Unix(expiry, 0), a.requestTime(r.Context()))
 	}
 	write(w, 200, v)
 	return nil
@@ -61,7 +73,7 @@ func currency(ctx context.Context, tx *sql.Tx, id, currency string, delta int, r
 // Domain reads carry the same current PlayerState as keyed answers; their
 // independent home, storage and social data lives under result.
 func (a *Server) finishRead(w http.ResponseWriter, r *http.Request, tx *sql.Tx, s store.Snapshot, result any) error {
-	state, err := a.Config.State.PlayerState(r.Context(), tx, s)
+	state, err := a.maintainAndProjectState(r.Context(), tx, s, a.requestTime(r.Context()))
 	if err != nil {
 		return err
 	}

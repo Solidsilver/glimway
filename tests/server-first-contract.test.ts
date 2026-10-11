@@ -17,6 +17,7 @@ import { decodeWire } from '../src/lib/api/wire.ts';
 import { decodePlayerState } from '../src/lib/api/state-contract.ts';
 import { FakeOperations, createOperationsApi, decodeEnvelope, decodeMixed } from '../src/lib/api/operations.ts';
 import { ApiError, errorFromResponse, isSettledRefusal, isReloadNeeded, isOutboxClientBug, needsReconciliation } from '../src/lib/api/errors.ts';
+import { CONTRACT_NUMBER } from '../src/lib/contract.ts';
 import { NEAR_RADIUS } from '../src/lib/api/near.ts';
 import { decodeChunk, validateChunk, FakeChunks, entityIn, decorAt, PortError } from '../src/lib/api/chunks.ts';
 import { profileFor, earnsXP } from '../src/lib/profile.ts';
@@ -66,7 +67,7 @@ test('typed operations facade and fake expose session, play and operation contra
   const badAck = structuredClone(envelope) as Record<string, any>; badAck.report.casts = -1; assert.throws(() => decodeEnvelope(badAck), { code: 'bad-response' });
   let headers: Headers | undefined;
   const api = createApiClient({ fetchImpl: (async (_url, init) => { headers = new Headers(init?.headers); return new Response(JSON.stringify({ state: valid, leaseActive: false }), { headers: { 'content-type': 'application/json' } }); }) as typeof fetch });
-  await api.operations.state(); assert.equal(headers!.get('X-Glimway-Contract'), '8');
+  await api.operations.state(); assert.equal(headers!.get('X-Glimway-Contract'), String(CONTRACT_NUMBER));
 });
 function chunk() { return create(wilds.WildsChunkSchema, { epochId: 'epoch', realm: 'hearthwick', look: 'tangle', generatorVersion: 3, size: 24, cx: 1, cy: 0, tier: 1, land: 'woods', palette: ['grass'], ground: new Uint8Array(288), solid: new Uint8Array(72), decor: { kinds: ['tree'], kind: [0], tx: [2], ty: [3], ox: [1], oy: [-2], variant: [0], flags: new Uint8Array(1) }, entities: [{ id: 'node:1:0:0', kind: 'node', tx: 3, ty: 4, material: 'timber' }], places: [{ id: 'place:0:-1', kind: 'ruin', tx: 9, ty: 9 }] }); }
 test('packed chunks validate identity, bodies, decor and places on binary decode (open-map.md 2.5)', async () => {
@@ -138,7 +139,7 @@ test('outbox error decisions separate gameplay refusals, client bugs and reconci
   for (const code of ['superseded', 'reload-needed', 'unknown'] as const) assert.equal(isSettledRefusal(new ApiError(code, { status: 409, state: decodePlayerState(valid) })), false);
 });
 
-test('every raw client call and remote library call carries contract 7', async () => {
+test('every raw client call and remote library call carries the current contract', async () => {
   const calls: { url: string; init?: RequestInit }[] = [];
   const fetchImpl = (async (url, init) => { calls.push({ url: String(url), init }); return new Response(JSON.stringify({ error: { code: 'internal' } }), { status: 500, headers: { 'content-type': 'application/json' } }); }) as typeof fetch;
   const client = createApiClient({ fetchImpl });
@@ -167,7 +168,7 @@ test('every raw client call and remote library call carries contract 7', async (
   const library = createRemoteLibrary({ fetchImpl });
   await library.load();
   assert.equal(calls.length, Object.keys(client.raw).length + 1);
-  for (const call of calls) assert.equal(new Headers(call.init?.headers).get('X-Glimway-Contract'), '8', call.url);
+  for (const call of calls) assert.equal(new Headers(call.init?.headers).get('X-Glimway-Contract'), String(CONTRACT_NUMBER), call.url);
 });
 
 test('device ownership persists independently of tab clients', () => {

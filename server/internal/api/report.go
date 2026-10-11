@@ -34,13 +34,13 @@ func (a *Server) report(w http.ResponseWriter, r *http.Request) error {
 	}
 	defer tx.Rollback()
 	ctx := r.Context()
-	now := a.Config.Now()
+	now := a.requestTime(r.Context())
 	at := float64(now.UnixNano()) / 1e9
 	if err = a.requireLease(ctx, tx, s, req.Lease); err != nil {
 		return err
 	}
 	refuse := func(code string) error {
-		state, e := a.Config.State.PlayerState(ctx, tx, s)
+		state, e := a.maintainAndProjectState(ctx, tx, s, a.requestTime(ctx))
 		if e != nil {
 			return e
 		}
@@ -136,7 +136,7 @@ func (a *Server) report(w http.ResponseWriter, r *http.Request) error {
 			return err
 		}
 	}
-	state, err := a.Config.State.PlayerState(ctx, tx, s)
+	state, err := a.maintainAndProjectState(ctx, tx, s, a.requestTime(ctx))
 	if err != nil {
 		return err
 	}

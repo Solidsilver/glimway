@@ -332,7 +332,7 @@ func (a *Server) worldRead(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
-	v, err := a.loadWorldView(r.Context(), tx, s, a.Config.Now().Unix())
+	v, err := a.loadWorldView(r.Context(), tx, s, a.requestTime(r.Context()).Unix())
 	if err != nil {
 		return err
 	}
@@ -354,7 +354,7 @@ func (a *Server) worldParty(w http.ResponseWriter, r *http.Request) error {
 	}
 	defer tx.Rollback()
 	ctx := r.Context()
-	now := a.Config.Now().Unix()
+	now := a.requestTime(r.Context()).Unix()
 	subject, err := store.HabiticaSubject(ctx, tx, s.AccountID)
 	if err != nil {
 		return err
@@ -399,7 +399,7 @@ func (a *Server) worldPrompt(w http.ResponseWriter, r *http.Request) error {
 	if exists == 0 {
 		return fail(404, "world-not-found")
 	}
-	now := a.Config.Now().Unix()
+	now := a.requestTime(r.Context()).Unix()
 	if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO party_prompts VALUES(?,?,?)", s.AccountID, req.WorldId, now); err != nil {
 		return err
 	}
@@ -550,7 +550,7 @@ func (a *Server) worldMove(w http.ResponseWriter, r *http.Request) error {
 		if before.Outgoing > 0 {
 			return nil, fail(409, "mail-in-flight")
 		}
-		left, returned, err := relocate(ctx, a.logf, tx, s, target, now, fractionalNow(a))
+		left, returned, err := relocate(ctx, a.logf, tx, s, target, now, fractionalNow(a, ctx))
 		if err != nil {
 			return nil, err
 		}
@@ -601,7 +601,7 @@ func (a *Server) worldLeave(w http.ResponseWriter, r *http.Request) error {
 			return nil, err
 		}
 		from := s.WorldID
-		left, returned, err := relocate(ctx, a.logf, tx, s, target, now, fractionalNow(a))
+		left, returned, err := relocate(ctx, a.logf, tx, s, target, now, fractionalNow(a, ctx))
 		if err != nil {
 			return nil, err
 		}
@@ -680,7 +680,7 @@ func (a *Server) worldNotice(w http.ResponseWriter, r *http.Request) error {
 	if _, err = tx.ExecContext(ctx, "UPDATE players SET party_moved_out_at=NULL WHERE account_id=?", s.AccountID); err != nil {
 		return err
 	}
-	v, err := a.loadWorldView(ctx, tx, s, a.Config.Now().Unix())
+	v, err := a.loadWorldView(ctx, tx, s, a.requestTime(r.Context()).Unix())
 	if err != nil {
 		return err
 	}

@@ -62,7 +62,7 @@ test('a lay whose answer is lost keeps showing; its replay (same key) settles it
   r.server.on('POST /api/wilds/lay', 'network');
   const token = store.predictGround(-2, -4, 5, 5, change55, { id: 'stone', delta: -1 });
   ops.trackOp({ key: 'lay-1', kind: 'lay', world: r.link.worldId, wick: WICK, epoch: WICK, cx: -2, cy: -4, token, material: 'stone' });
-  const answer = await r.link.wildsPath('lay', { x: -43, y: -91, kind: 'stone', where: { area: 'wilds', x: -680, y: -1448 }, key: 'lay-1' });
+  const answer = await r.link.wildsPath('lay', { epoch: WICK, x: -43, y: -91, kind: 'stone', where: { area: 'wilds', x: -680, y: -1448 }, key: 'lay-1' });
   assert.deepEqual(answer, { ok: false, code: 'pending' });
   assert.deepEqual(settled(r), [], 'pending is no outcome');
   assert.ok(ops.tracked('lay-1'));
@@ -80,6 +80,8 @@ test('a lay whose answer is lost keeps showing; its replay (same key) settles it
   assert.equal(r.link.outbox.length, 0);
   const sent = r.server.sent('POST /api/wilds/lay');
   assert.equal(sent.length, 2);
+  assert.equal(sent[0]!.body.epoch, WICK, 'the captured epoch is sent');
+  assert.equal(sent[1]!.body.epoch, WICK, 'retry keeps the captured epoch');
   assert.equal(sent[0]!.body.op.key, sent[1]!.body.op.key, 'one key, so the server does it once');
   const events = settled(r);
   assert.equal(events.length, 1);
