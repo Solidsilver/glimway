@@ -1,0 +1,414 @@
+[
+  {
+    "name": "slash-zero",
+    "json": {
+      "fightSwing": {
+        "kind": "FIGHT_SWING_KIND_SLASH",
+        "x": 0,
+        "y": 0,
+        "facing": {
+          "x": 0,
+          "y": -1
+        },
+        "swingCounter": 0,
+        "seenTick": 0
+      }
+    },
+    "valid": true,
+    "binaryHex": "6a0d0801220911000000000000f0bf"
+  },
+  {
+    "name": "bolt-max-counter",
+    "json": {
+      "fightSwing": {
+        "kind": "FIGHT_SWING_KIND_BOLT",
+        "x": -400,
+        "y": 128,
+        "facing": {
+          "x": 0.6,
+          "y": 0.8
+        },
+        "swingCounter": 4294967295,
+        "seenTick": 123
+      }
+    },
+    "valid": true,
+    "binaryHex": "6a3008021100000000000079c0190000000000006040221209333333333333e33f119a9999999999e93f28ffffffff0f307b"
+  },
+  {
+    "name": "join",
+    "json": {
+      "fightJoin": {
+        "roomKey": {
+          "world": "world-1",
+          "realm": "wilds",
+          "layer": 0,
+          "cx": -2,
+          "cy": 3,
+          "epoch": "still"
+        },
+        "tick": 0,
+        "enemies": [
+          {
+            "id": "wilds:camp:0",
+            "x": -400,
+            "y": 128,
+            "state": "FIGHT_ENEMY_STATE_CHASE",
+            "hp": 10,
+            "facing": {
+              "x": 1,
+              "y": 0
+            },
+            "kind": "FIGHT_ENEMY_KIND_WISP",
+            "campId": "camp",
+            "maxHp": 10
+          }
+        ],
+        "critSeed": 4294967295
+      }
+    },
+    "valid": true,
+    "binaryHex": "725f0a1b0a07776f726c642d31120577696c64732003280632057374696c6c1a3b0a0c77696c64733a63616d703a30109f061880022001290000000000002440320909000000000000f03f3801420463616d7049000000000000244025ffffffff"
+  },
+  {
+    "name": "empty-join",
+    "json": {
+      "fightJoin": {
+        "roomKey": {
+          "world": "world-1",
+          "realm": "wilds",
+          "layer": 0,
+          "cx": -2,
+          "cy": 3,
+          "epoch": "still"
+        },
+        "tick": 0,
+        "enemies": [],
+        "critSeed": 0
+      }
+    },
+    "valid": true,
+    "binaryHex": "721d0a1b0a07776f726c642d31120577696c64732003280632057374696c6c"
+  },
+  {
+    "name": "delta",
+    "json": {
+      "fightDelta": {
+        "roomKey": {
+          "world": "world-1",
+          "realm": "wilds",
+          "layer": 0,
+          "cx": -2,
+          "cy": 3,
+          "epoch": "still"
+        },
+        "tick": 2,
+        "enemies": [
+          {
+            "id": "wilds:camp:0",
+            "x": -400,
+            "y": 128,
+            "state": "FIGHT_ENEMY_STATE_STUNNED",
+            "hp": 5.5,
+            "facing": {
+              "x": 1,
+              "y": 0
+            },
+            "kind": "FIGHT_ENEMY_KIND_WISP",
+            "campId": "camp",
+            "maxHp": 10
+          }
+        ]
+      }
+    },
+    "valid": true,
+    "binaryHex": "7a5c0a1b0a07776f726c642d31120577696c64732003280632057374696c6c10021a3b0a0c77696c64733a63616d703a30109f061880022005290000000000001640320909000000000000f03f3801420463616d70490000000000002440"
+  },
+  {
+    "name": "event-windup_start",
+    "json": {
+      "fightEvent": {
+        "roomKey": {
+          "world": "world-1",
+          "realm": "wilds",
+          "layer": 0,
+          "cx": -2,
+          "cy": 3,
+          "epoch": "still"
+        },
+        "tick": 3,
+        "kind": "FIGHT_EVENT_KIND_WINDUP_START",
+        "enemyId": "wilds:camp:0",
+        "serverStartTime": 1791700000123,
+        "target": "account-1"
+      }
+    },
+    "valid": true,
+    "binaryHex": "8201430a1b0a07776f726c642d31120577696c64732003280632057374696c6c10031801220c77696c64733a63616d703a302a096163636f756e742d313100b0d7459a127a42"
+  },
+  {
+    "name": "event-aim_lock",
+    "json": {
+      "fightEvent": {
+        "roomKey": {
+          "world": "world-1",
+          "realm": "wilds",
+          "layer": 0,
+          "cx": -2,
+          "cy": 3,
+          "epoch": "still"
+        },
+        "tick": 3,
+        "kind": "FIGHT_EVENT_KIND_AIM_LOCK",
+        "enemyId": "wilds:camp:0",
+        "serverStartTime": 1791700000123,
+        "target": "account-1"
+      }
+    },
+    "valid": true,
+    "binaryHex": "8201430a1b0a07776f726c642d31120577696c64732003280632057374696c6c10031802220c77696c64733a63616d703a302a096163636f756e742d313100b0d7459a127a42"
+  },
+  {
+    "name": "event-death",
+    "json": {
+      "fightEvent": {
+        "roomKey": {
+          "world": "world-1",
+          "realm": "wilds",
+          "layer": 0,
+          "cx": -2,
+          "cy": 3,
+          "epoch": "still"
+        },
+        "tick": 3,
+        "kind": "FIGHT_EVENT_KIND_DEATH",
+        "enemyId": "wilds:camp:0",
+        "serverStartTime": 1791700000123
+      }
+    },
+    "valid": true,
+    "binaryHex": "8201380a1b0a07776f726c642d31120577696c64732003280632057374696c6c10031803220c77696c64733a63616d703a303100b0d7459a127a42"
+  },
+  {
+    "name": "event-spawn",
+    "json": {
+      "fightEvent": {
+        "roomKey": {
+          "world": "world-1",
+          "realm": "wilds",
+          "layer": 0,
+          "cx": -2,
+          "cy": 3,
+          "epoch": "still"
+        },
+        "tick": 3,
+        "kind": "FIGHT_EVENT_KIND_SPAWN",
+        "enemyId": "wilds:camp:0",
+        "serverStartTime": 1791700000123
+      }
+    },
+    "valid": true,
+    "binaryHex": "8201380a1b0a07776f726c642d31120577696c64732003280632057374696c6c10031804220c77696c64733a63616d703a303100b0d7459a127a42"
+  },
+  {
+    "name": "event-room_closed",
+    "json": {
+      "fightEvent": {
+        "roomKey": {
+          "world": "world-1",
+          "realm": "wilds",
+          "layer": 0,
+          "cx": -2,
+          "cy": 3,
+          "epoch": "still"
+        },
+        "tick": 3,
+        "kind": "FIGHT_EVENT_KIND_ROOM_CLOSED",
+        "enemyId": "",
+        "serverStartTime": 1791700000123
+      }
+    },
+    "valid": true,
+    "binaryHex": "82012a0a1b0a07776f726c642d31120577696c64732003280632057374696c6c100318053100b0d7459a127a42"
+  },
+  {
+    "name": "hit",
+    "json": {
+      "fightHit": {
+        "swingCounter": 4294967295,
+        "enemyId": "wilds:camp:0",
+        "damage": 8.43,
+        "crit": true
+      }
+    },
+    "valid": true,
+    "binaryHex": "8a011f08ffffffff0f120c77696c64733a63616d703a30195c8fc2f528dc20402001"
+  },
+  {
+    "name": "refused",
+    "json": {
+      "fightHit": {
+        "swingCounter": 2,
+        "enemyId": "wilds:camp:0",
+        "damage": 0,
+        "crit": false,
+        "refusedReason": "FIGHT_REFUSED_REASON_OUT_OF_REACH"
+      }
+    },
+    "valid": true,
+    "binaryHex": "8a01120802120c77696c64733a63616d703a302802"
+  },
+  {
+    "name": "ability-tick-zero",
+    "json": {
+      "ability": {
+        "ability": "kindle",
+        "x": 0,
+        "y": 0,
+        "seenTick": 0
+      }
+    },
+    "valid": true,
+    "binaryHex": "5a0a0a066b696e646c653000"
+  },
+  {
+    "name": "ability-no-tick",
+    "json": {
+      "ability": {
+        "ability": "kindle",
+        "x": 0,
+        "y": 0
+      }
+    },
+    "valid": true,
+    "binaryHex": "5a080a066b696e646c65"
+  },
+  {
+    "name": "missing-facing",
+    "json": {
+      "fightSwing": {
+        "kind": "FIGHT_SWING_KIND_SLASH"
+      }
+    },
+    "valid": false,
+    "binaryHex": "6a020801"
+  },
+  {
+    "name": "zero-facing",
+    "json": {
+      "fightSwing": {
+        "kind": "FIGHT_SWING_KIND_SLASH",
+        "facing": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    "valid": false,
+    "binaryHex": "6a0408012200"
+  },
+  {
+    "name": "unknown-swing",
+    "json": {
+      "fightSwing": {
+        "kind": 99,
+        "facing": {
+          "x": 1,
+          "y": 0
+        }
+      }
+    },
+    "valid": false,
+    "binaryHex": "6a0d0863220909000000000000f03f"
+  },
+  {
+    "name": "missing-room",
+    "json": {
+      "fightJoin": {
+        "tick": 0
+      }
+    },
+    "valid": false,
+    "binaryHex": "7200"
+  },
+  {
+    "name": "empty-delta",
+    "json": {
+      "fightDelta": {
+        "roomKey": {
+          "world": "world-1",
+          "realm": "wilds",
+          "layer": 0,
+          "cx": -2,
+          "cy": 3,
+          "epoch": "still"
+        }
+      }
+    },
+    "valid": false,
+    "binaryHex": "7a1d0a1b0a07776f726c642d31120577696c64732003280632057374696c6c"
+  },
+  {
+    "name": "hp-too-high",
+    "json": {
+      "fightDelta": {
+        "roomKey": {
+          "world": "world-1",
+          "realm": "wilds",
+          "layer": 0,
+          "cx": -2,
+          "cy": 3,
+          "epoch": "still"
+        },
+        "enemies": [
+          {
+            "id": "wilds:camp:0",
+            "x": -400,
+            "y": 128,
+            "state": "FIGHT_ENEMY_STATE_CHASE",
+            "hp": 11,
+            "facing": {
+              "x": 1,
+              "y": 0
+            },
+            "kind": "FIGHT_ENEMY_KIND_WISP",
+            "campId": "camp",
+            "maxHp": 10
+          }
+        ]
+      }
+    },
+    "valid": false,
+    "binaryHex": "7a5a0a1b0a07776f726c642d31120577696c64732003280632057374696c6c1a3b0a0c77696c64733a63616d703a30109f061880022001290000000000002640320909000000000000f03f3801420463616d70490000000000002440"
+  },
+  {
+    "name": "event-no-enemy",
+    "json": {
+      "fightEvent": {
+        "roomKey": {
+          "world": "world-1",
+          "realm": "wilds",
+          "layer": 0,
+          "cx": -2,
+          "cy": 3,
+          "epoch": "still"
+        },
+        "kind": "FIGHT_EVENT_KIND_DEATH"
+      }
+    },
+    "valid": false,
+    "binaryHex": "82011f0a1b0a07776f726c642d31120577696c64732003280632057374696c6c1803"
+  },
+  {
+    "name": "refusal-with-damage",
+    "json": {
+      "fightHit": {
+        "enemyId": "enemy",
+        "damage": 5,
+        "refusedReason": "FIGHT_REFUSED_REASON_COOLDOWN"
+      }
+    },
+    "valid": false,
+    "binaryHex": "8a01121205656e656d791900000000000014402803"
+  }
+]

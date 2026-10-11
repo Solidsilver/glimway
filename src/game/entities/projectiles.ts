@@ -2,6 +2,7 @@
  * Projectiles: the mage bolt group (basic and signature share it), its
  * in-flight flicker animation, and the per-frame hit/expiry sweep.
  */
+import { COMBAT_TUNING } from '../../lib/combat-timing'
 import type Phaser from 'phaser'
 import type { Effects } from './fx'
 import type { EnemySystem } from './enemies'
@@ -29,9 +30,9 @@ export class Projectiles {
     bolt.setDepth(y + 1)
     if (animated) bolt.play('effect-magic-bolt')
     if (dir.x !== 0 || dir.y !== 0) bolt.setRotation(Math.atan2(dir.y, dir.x))
-    bolt.setVelocity(dir.x * 240, dir.y * 240)
+    bolt.setVelocity(dir.x * COMBAT_TUNING.attack.boltSpeed, dir.y * COMBAT_TUNING.attack.boltSpeed)
     bolt.setData('damage', damage)
-    bolt.setData('life', 1.2)
+    bolt.setData('life', COMBAT_TUNING.attack.boltLifetimeSeconds)
   }
 
   update(dt: number): void {
@@ -41,8 +42,8 @@ export class Projectiles {
       let hit = false
       for (const enemy of [...this.enemies().enemies]) {
         const dx = enemy.sprite.x - boltObj.x
-        const dy = enemy.sprite.y - 6 - boltObj.y
-        if (dx * dx + dy * dy < 14 * 14) {
+        const dy = enemy.sprite.y - COMBAT_TUNING.attack.enemyYOffset - boltObj.y
+        if (dx * dx + dy * dy < COMBAT_TUNING.attack.boltRadius ** 2) {
           this.enemies().damageEnemy(enemy, boltObj.getData('damage') as number, boltObj.x)
           hit = true
           break

@@ -1,10 +1,71 @@
 {
   "signatureCooldownSeconds": 1,
   "classes": {
-    "warrior": { "basicAttackCooldownSeconds": 1.2 },
-    "mage": { "basicAttackCooldownSeconds": 0.6 },
-    "rogue": { "basicAttackCooldownSeconds": 1.5 },
-    "healer": { "basicAttackCooldownSeconds": 2.5 }
+    "warrior": {
+      "basicAttackCooldownSeconds": 1.2,
+      "basicName": "Slash",
+      "damageStat": "str"
+    },
+    "mage": {
+      "basicAttackCooldownSeconds": 0.6,
+      "basicName": "Bolt",
+      "damageStat": "int"
+    },
+    "rogue": {
+      "basicAttackCooldownSeconds": 1.5,
+      "basicName": "Stab",
+      "damageStat": "per"
+    },
+    "healer": {
+      "basicAttackCooldownSeconds": 2.5,
+      "basicName": "Tap",
+      "damageStat": "int"
+    }
   },
-  "heal": { "base": 6, "maximumBonus": 20, "halfway": 60, "decimalPlaces": 2 }
+  "heal": {
+    "base": 6,
+    "maximumBonus": 20,
+    "halfway": 60,
+    "decimalPlaces": 2
+  },
+  "classless": {
+    "basicName": "Slash",
+    "basicAttackCooldownSeconds": 0.6
+  },
+  "melee": {
+    "base": 5,
+    "maximumBonus": 24,
+    "halfway": 60,
+    "decimalPlaces": 2
+  },
+  "signature": {
+    "base": 8,
+    "maximumBonus": 30,
+    "halfway": 70,
+    "decimalPlaces": 2
+  },
+  "mitigation": {
+    "base": 0,
+    "maximumBonus": 0.45,
+    "halfway": 90,
+    "decimalPlaces": 2
+  },
+  "crit": {
+    "base": 0.05,
+    "maximumBonus": 0.4,
+    "halfway": 80,
+    "decimalPlaces": 2
+  },
+  "attack": {
+    "slashRadius": 26,
+    "slashOffsetX": 14,
+    "slashOffsetY": 12,
+    "originYOffset": 7,
+    "enemyYOffset": 6,
+    "boltRadius": 14,
+    "boltSpeed": 240,
+    "boltLifetimeSeconds": 1.2,
+    "critMultiplier": 2,
+    "toolDamageFraction": 0.5
+  }
 }

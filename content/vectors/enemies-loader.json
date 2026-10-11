@@ -1,0 +1,132 @@
+{
+  "loader": [
+    {
+      "name": "shipped",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "missing-wisp",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "wisp"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "null-beetle",
+      "valid": false,
+      "rule": "null content field",
+      "edits": [
+        {
+          "path": [
+            "beetle"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "zero-hp",
+      "valid": false,
+      "rule": "double.gt",
+      "edits": [
+        {
+          "path": [
+            "wisp",
+            "hp"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "lock-too-long",
+      "valid": false,
+      "rule": "enemies.lock",
+      "edits": [
+        {
+          "path": [
+            "beetle",
+            "lock"
+          ],
+          "value": 0.9
+        }
+      ]
+    },
+    {
+      "name": "lock-equal",
+      "valid": false,
+      "rule": "enemies.lock",
+      "edits": [
+        {
+          "path": [
+            "wisp",
+            "lock"
+          ],
+          "value": 0.5
+        }
+      ]
+    },
+    {
+      "name": "negative-knock",
+      "valid": false,
+      "rule": "double.gt",
+      "edits": [
+        {
+          "path": [
+            "knock",
+            "small"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "unknown",
+      "valid": false,
+      "rule": "unknown key",
+      "edits": [
+        {
+          "path": [
+            "knock",
+            "oops"
+          ],
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "numeric-string",
+      "valid": false,
+      "rule": "non-finite number",
+      "edits": [
+        {
+          "path": [
+            "wisp",
+            "chase"
+          ],
+          "value": "38"
+        }
+      ]
+    },
+    {
+      "name": "missing-guardian",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "guardian"
+          ],
+          "remove": true
+        }
+      ]
+    }
+  ]
+}

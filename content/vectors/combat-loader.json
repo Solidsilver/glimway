@@ -1,0 +1,148 @@
+{
+  "loader": [
+    {
+      "name": "shipped",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "missing-attack",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "attack"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "zero-halfway",
+      "valid": false,
+      "rule": "double.gt",
+      "edits": [
+        {
+          "path": [
+            "melee",
+            "halfway"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "bad-precision",
+      "valid": false,
+      "rule": "int32.const",
+      "edits": [
+        {
+          "path": [
+            "signature",
+            "decimalPlaces"
+          ],
+          "value": 3
+        }
+      ]
+    },
+    {
+      "name": "unknown-stat",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "classes",
+            "mage",
+            "damageStat"
+          ],
+          "value": "luck"
+        }
+      ]
+    },
+    {
+      "name": "missing-class",
+      "valid": false,
+      "rule": "combat.classes",
+      "edits": [
+        {
+          "path": [
+            "classes",
+            "rogue"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "crit-over-one",
+      "valid": false,
+      "rule": "combat.fractions",
+      "edits": [
+        {
+          "path": [
+            "crit",
+            "maximumBonus"
+          ],
+          "value": 1
+        }
+      ]
+    },
+    {
+      "name": "zero-radius",
+      "valid": false,
+      "rule": "double.gt",
+      "edits": [
+        {
+          "path": [
+            "attack",
+            "slashRadius"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "null-classless",
+      "valid": false,
+      "rule": "null content field",
+      "edits": [
+        {
+          "path": [
+            "classless"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "bad-tool",
+      "valid": false,
+      "rule": "double.gt_lte",
+      "edits": [
+        {
+          "path": [
+            "attack",
+            "toolDamageFraction"
+          ],
+          "value": 1.1
+        }
+      ]
+    },
+    {
+      "name": "numeric-string",
+      "valid": false,
+      "rule": "non-finite number",
+      "edits": [
+        {
+          "path": [
+            "melee",
+            "base"
+          ],
+          "value": "5"
+        }
+      ]
+    }
+  ]
+}

@@ -3,12 +3,9 @@ package glimway.content.v1;
 option go_package = "glimway/gen/glimway/content/v1;contentv1";
 import "buf/validate/validate.proto";
 
-// Shared combat tuning (docs/m3-implementation.md): the signature
-// ability's cooldown (fixed at one second — the contract both runtimes
-// assume), one row per Habitica class and the heal formula. The signature's
-// mana cost moved to the ability table (design 4.1: each class's cast cost
-// is its signature's `mana`).
-// content/combat.json.
+// Shared kit and attack tuning (content/combat.json): cooldowns, class
+// names and damage stats, diminishing-return formulas and hit geometry.
+// Ability mana and effect numbers remain in content/abilities.json.
 message Combat {
   option (buf.validate.message).cel = {
     id: "combat.classes"
@@ -18,12 +15,25 @@ message Combat {
   double signature_cooldown_seconds = 1 [(buf.validate.field).double.const = 1.0];
   map<string, CombatClass> classes = 2 [(buf.validate.field).map.min_pairs = 1];
   CombatHeal heal = 3 [(buf.validate.field).required = true];
+  CombatClassless classless = 4 [(buf.validate.field).required = true];
+  CombatFormula melee = 5 [(buf.validate.field).required = true];
+  CombatFormula signature = 6 [(buf.validate.field).required = true];
+  CombatFormula mitigation = 7 [(buf.validate.field).required = true];
+  CombatFormula crit = 8 [(buf.validate.field).required = true];
+  CombatAttack attack = 9 [(buf.validate.field).required = true];
+  option (buf.validate.message).cel = {
+    id: "combat.fractions"
+    message: "mitigation and crit must remain fractions below one"
+    expression: "this.mitigation.base + this.mitigation.maximum_bonus < 1.0 && this.crit.base + this.crit.maximum_bonus < 1.0"
+  };
 }
 
 // One class's numbers; the map key is the class id (warrior, mage, rogue,
 // healer — the combat.classes rule names them).
 message CombatClass {
   double basic_attack_cooldown_seconds = 1 [(buf.validate.field).double.gt = 0];
+  string basic_name = 2 [(buf.validate.field).string.min_len = 1];
+  string damage_stat = 3 [(buf.validate.field).string = {in: ["str", "int", "con", "per"]}];
 }
 
 // The heal formula: hyperbolic diminishing returns, 0..maximumBonus,
@@ -33,4 +43,28 @@ message CombatHeal {
   double maximum_bonus = 2 [(buf.validate.field).double.gt = 0];
   double halfway = 3 [(buf.validate.field).double.gt = 0];
   int32 decimal_places = 4 [(buf.validate.field).int32.const = 2];
+}
+
+message CombatClassless {
+  string basic_name = 1 [(buf.validate.field).string.min_len = 1];
+  double basic_attack_cooldown_seconds = 2 [(buf.validate.field).double.gt = 0];
+}
+// base + maximum_bonus * (stat / (stat + halfway)), rounded afterwards.
+message CombatFormula {
+  double base = 1 [(buf.validate.field).double.gte = 0];
+  double maximum_bonus = 2 [(buf.validate.field).double.gt = 0];
+  double halfway = 3 [(buf.validate.field).double.gt = 0];
+  int32 decimal_places = 4 [(buf.validate.field).int32.const = 2];
+}
+message CombatAttack {
+  double slash_radius = 1 [(buf.validate.field).double.gt = 0];
+  double slash_offset_x = 2 [(buf.validate.field).double.gt = 0];
+  double slash_offset_y = 3 [(buf.validate.field).double.gt = 0];
+  double origin_y_offset = 4 [(buf.validate.field).double.gte = 0];
+  double enemy_y_offset = 5 [(buf.validate.field).double.gte = 0];
+  double bolt_radius = 6 [(buf.validate.field).double.gt = 0];
+  double bolt_speed = 7 [(buf.validate.field).double.gt = 0];
+  double bolt_lifetime_seconds = 8 [(buf.validate.field).double.gt = 0];
+  double crit_multiplier = 9 [(buf.validate.field).double.gte = 1];
+  double tool_damage_fraction = 10 [(buf.validate.field).double = {gt: 0, lte: 1}];
 }

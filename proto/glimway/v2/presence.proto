@@ -1,6 +1,7 @@
 syntax = "proto3";
 package glimway.v2;
 option go_package = "glimway/server/internal/gen/glimway/v2;contract";
+import "buf/validate/validate.proto";
 import "google/protobuf/struct.proto";
 import "google/protobuf/wrappers.proto";
 
@@ -19,6 +20,11 @@ message PresenceMessage {
     PresenceWitness witness = 10;
     PresenceAbility ability = 11;
     PresenceAvatarChange avatar_change = 12;
+    FightSwing fight_swing = 13;
+    FightJoin fight_join = 14;
+    FightDelta fight_delta = 15;
+    FightEvent fight_event = 16;
+    FightHit fight_hit = 17;
   }
 }
 message PresenceAuth { string lease = 1; }
@@ -34,7 +40,7 @@ message PresenceEmote { string id = 1; optional string account_id = 2; }
 // hub also fills pulse_heal: one pulse of the caster's ward, from the
 // caster's profile (rules.WardPulseHeal), so a friend's screen mends what the
 // world credits. Whatever a client sends there is overwritten.
-message PresenceAbility { string ability = 1; double x = 2; double y = 3; optional string account_id = 4; optional double pulse_heal = 5; }
+message PresenceAbility { string ability = 1; double x = 2; double y = 3; optional string account_id = 4; optional double pulse_heal = 5; optional uint32 seen_tick = 6; }
 // The server's own word that one player's avatar changed (the resolved
 // follower, the mount that is out): sent after a companions, mount-out or
 // mount-home commit. The server is the only writer of PresenceAvatar's
@@ -79,4 +85,130 @@ message PresenceAppearance {
   double hair_mustache = 8;
   double hair_beard = 9;
   double hair_flower = 10;
+}
+
+// Contract 10. Room identity is physical space, separate from presence's
+// visibility label. Epoch is the generated epoch id (including "still").
+message FightRoomKey {
+  string world = 1 [(buf.validate.field).string.min_len = 1];
+  string realm = 2 [(buf.validate.field).string.min_len = 1];
+  sint32 layer = 3;
+  sint32 cx = 4;
+  sint32 cy = 5;
+  string epoch = 6 [(buf.validate.field).string.min_len = 1];
+}
+enum FightSwingKind {
+  FIGHT_SWING_KIND_UNSPECIFIED = 0;
+  FIGHT_SWING_KIND_SLASH = 1;
+  FIGHT_SWING_KIND_BOLT = 2;
+}
+// Unit facing. Unlike optional legacy PresenceFacing, both zero components
+// are meaningful. Squared length allows normal floating-point roundoff.
+message FightFacing {
+  option (buf.validate.message).cel = {
+    id: "fight.facing"
+    message: "facing must be a unit vector"
+    expression: "this.x * this.x + this.y * this.y >= 0.999999 && this.x * this.x + this.y * this.y <= 1.000001"
+  };
+  double x = 1 [(buf.validate.field).double = {gte: -1, lte: 1}];
+  double y = 2 [(buf.validate.field).double = {gte: -1, lte: 1}];
+}
+// Client intent only: the server derives targets and damage. Counters are
+// uint32, starting at 0 and wrapping modulo 2^32; one roll per swing/cast,
+// shared by all enemies hit. Tick 0 is valid at wake.
+message FightSwing {
+  FightSwingKind kind = 1 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  double x = 2 [(buf.validate.field).double = {gte: -2147483648, lte: 2147483647}];
+  double y = 3 [(buf.validate.field).double = {gte: -2147483648, lte: 2147483647}];
+  FightFacing facing = 4 [(buf.validate.field).required = true];
+  uint32 swing_counter = 5;
+  uint32 seen_tick = 6;
+}
+enum FightEnemyKind {
+  FIGHT_ENEMY_KIND_UNSPECIFIED = 0;
+  FIGHT_ENEMY_KIND_WISP = 1;
+  FIGHT_ENEMY_KIND_BEETLE = 2;
+}
+enum FightEnemyState {
+  FIGHT_ENEMY_STATE_UNSPECIFIED = 0;
+  FIGHT_ENEMY_STATE_CHASE = 1;
+  FIGHT_ENEMY_STATE_TELEGRAPH = 2;
+  FIGHT_ENEMY_STATE_LUNGE = 3;
+  FIGHT_ENEMY_STATE_RECOVER = 4;
+  FIGHT_ENEMY_STATE_STUNNED = 5;
+  FIGHT_ENEMY_STATE_DEAD = 6;
+}
+// A changed enemy is a full row, never a patch with ambiguous zero fields.
+// Kind/camp/max_hp make joins and spawn deltas self-contained. Positions
+// are world pixels, rounded by the sim. HP may be fractional after damage.
+message FightEnemy {
+  string id = 1 [(buf.validate.field).string.min_len = 1];
+  sint32 x = 2;
+  sint32 y = 3;
+  FightEnemyState state = 4 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  double hp = 5 [(buf.validate.field).double = {gte: 0, lte: 1000000}];
+  FightFacing facing = 6 [(buf.validate.field).required = true];
+  FightEnemyKind kind = 7 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  string camp_id = 8 [(buf.validate.field).string.min_len = 1];
+  double max_hp = 9 [(buf.validate.field).double = {gt: 0, lte: 1000000}];
+  option (buf.validate.message).cel = {
+    id: "fight.hp"
+    message: "hp cannot exceed max_hp"
+    expression: "this.hp <= this.max_hp"
+  };
+}
+message FightJoin {
+  FightRoomKey room_key = 1 [(buf.validate.field).required = true];
+  uint32 tick = 2;
+  repeated FightEnemy enemies = 3;
+  // A player's seed stays stable across visible rooms for this socket.
+  fixed32 crit_seed = 4;
+}
+message FightDelta {
+  FightRoomKey room_key = 1 [(buf.validate.field).required = true];
+  uint32 tick = 2;
+  repeated FightEnemy enemies = 3 [(buf.validate.field).repeated.min_items = 1];
+}
+enum FightEventKind {
+  FIGHT_EVENT_KIND_UNSPECIFIED = 0;
+  FIGHT_EVENT_KIND_WINDUP_START = 1;
+  FIGHT_EVENT_KIND_AIM_LOCK = 2;
+  FIGHT_EVENT_KIND_DEATH = 3;
+  FIGHT_EVENT_KIND_SPAWN = 4;
+  FIGHT_EVENT_KIND_ROOM_CLOSED = 5;
+}
+message FightEvent {
+  FightRoomKey room_key = 1 [(buf.validate.field).required = true];
+  uint32 tick = 2;
+  FightEventKind kind = 3 [(buf.validate.field).enum = {defined_only: true, not_in: [0]}];
+  // Empty only for room closed; target is an account or Echo decoy id.
+  string enemy_id = 4;
+  optional string target = 5 [(buf.validate.field).string.min_len = 1];
+  // Unix milliseconds, from the injected server clock (safe integer).
+  double server_start_time = 6 [(buf.validate.field).double = {gte: 0, lte: 9007199254740991}];
+  option (buf.validate.message).cel = {
+    id: "fight.event_enemy"
+    message: "room closed has no enemy; other events require an enemy"
+    expression: "this.kind == 5 ? this.enemy_id == '' : size(this.enemy_id) > 0"
+  };
+}
+enum FightRefusedReason {
+  FIGHT_REFUSED_REASON_UNSPECIFIED = 0;
+  FIGHT_REFUSED_REASON_ALREADY_DEAD = 1;
+  FIGHT_REFUSED_REASON_OUT_OF_REACH = 2;
+  FIGHT_REFUSED_REASON_COOLDOWN = 3;
+  FIGHT_REFUSED_REASON_UNKNOWN_ENEMY = 4;
+}
+message FightHit {
+  uint32 swing_counter = 1;
+  string enemy_id = 2 [(buf.validate.field).string.min_len = 1];
+  double damage = 3 [(buf.validate.field).double = {gte: 0, lte: 1000000}];
+  bool crit = 4;
+  // Unspecified means confirmed. Refusals carry zero damage, never crit.
+  FightRefusedReason refused_reason = 5 [(buf.validate.field).enum.defined_only = true];
+  option (buf.validate.message).cel = {
+    id: "fight.refused_damage"
+    message: "a refused hit deals no damage and is not a crit"
+    expression: "this.refused_reason == 0 || (this.damage == 0.0 && !this.crit)"
+  };
 }

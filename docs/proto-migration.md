@@ -232,3 +232,58 @@ and contract-8 outbox entries must reload/discard on the contract gate; missing,
 ended or mismatched target epochs cannot mutate land or spend materials. An
 already committed keyed operation still replays its original result after a
 turning without another debit. Rollback requires the matching client/server pair.
+
+
+## Contract 10: shared-fight contract and tuning
+
+Presence appends oneof arms 13–17: `FightSwing`, `FightJoin`, `FightDelta`,
+`FightEvent`, `FightHit`. `PresenceAbility` appends optional `seen_tick = 6`;
+explicit zero is a valid first tick, and legacy local casts omit it until
+fight wiring lands. Existing names and numbers remain in place. Buf passes
+against origin/main and v0.8.0 without accepted breaks. The presence
+subprotocol stays `glimway.presence.v2`; HTTP contract 10 makes old clients
+reload and discards older outbox entries, as contract 9 did.
+
+Fight rooms carry `(world, realm, layer, cx, cy, epoch)`, independent of the
+presence visibility label. Enemy positions are signed whole world pixels;
+HP and damage remain fractional. Full enemy rows carry kind, camp id and
+maximum HP so join/spawn state can be drawn without another lookup. Facing
+is a unit vector. Ticks and swing counters are uint32 (tick 0 is the first
+room tick); `crit_seed` is fixed32 and stable for a player across their
+visible rooms during a socket session. Event start times are Unix
+milliseconds. An unspecified refusal reason confirms a hit; refusals have
+zero damage and no crit. Refused HP converges through snapshots. No runtime
+sends or handles the new fight messages in this lane.
+
+`content/enemies.json` supplies existing wisp, beetle, guardian and knockback
+values. `content/combat.json` adds class names/stat selection, classless
+cadence, kit formulas, slash offsets/radii, bolt tuning and damage
+multipliers. Both generated content schemas have protovalidate constraints;
+Go's `LoadEnemies`/`LoadCombat` and TS's `validateEnemies`/`validateCombat`
+read the same files. Guardian encounters stay local. The client keeps its
+existing damage and cooldown behavior.
+
+`content/vectors/fights.json` fixes the numeric contract for kit damage,
+mitigation, healing, crit chance, tool rounding, stunned vulnerability,
+crit rolls, reach boundaries and wind-up/aim-lock edges. Both languages
+check the committed expected values. `fights-wire.json` fixes binary bytes
+and valid/invalid schema cases; `enemies-loader.json` and
+`combat-loader.json` fix loader refusal rules.
+
+Crit prediction uses the Murmur3 uint32 finalizer on `seed XOR swing_counter`:
+XOR with the logical right shift by 16; multiply by `0x85ebca6b`; XOR with
+the logical right shift by 13; multiply by `0xc2b2ae35`; XOR with the logical
+right shift by 16. Every multiplication wraps modulo 2^32. Divide the
+unsigned result by 2^32 and compare strictly `< critChance`. Counters start
+at 0 and wrap; one roll is shared by all targets of a swing/cast. The Go
+helpers in `server/internal/rules/fight_math.go` and TS helpers in
+`src/lib/fight-math.ts` implement this contract. The sim and prediction lanes
+must use those helpers rather than their own RNG or rounding.
+
+For slash reach, normalize facing before calling the helper. Inputs are
+sprite feet; the slash centre is `(x + facing.x * slashOffsetX,
+y - originYOffset + facing.y * slashOffsetY)`, and the enemy centre is
+`(enemy.x, enemy.y - enemyYOffset)`. Bolt reach uses the bolt's current
+centre. Both compare squared distance strictly below squared radius. Damage
+rounds a tool's base first (at least 1), applies crit, then stunned
+vulnerability; damage itself is not rounded for display.

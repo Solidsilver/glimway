@@ -1,0 +1,63 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { getCombatKit } from '../src/lib/combat.ts';
+import { combatFormula, fightCritRoll, fightCrit, fightDamage, fightReach } from '../src/lib/fight-math.ts';
+import { COMBAT_TUNING, validateCombat } from '../src/lib/combat-timing.ts';
+import { ENEMY_TUNING, KNOCK, validateEnemies } from '../src/lib/enemies.ts';
+import { FIXTURES_BY_KEY, gearLookupFor } from '../src/lib/habitica/fixtures.ts';
+import { toHabiticaProfile } from '../src/lib/habitica/mapping.ts';
+import type { HabiticaClass } from '../src/lib/habitica/types.ts';
+import vectors from '../content/vectors/fights.json' with { type: 'json' };
+import combatRaw from '../content/combat.json' with { type: 'json' };
+import enemiesRaw from '../content/enemies.json' with { type: 'json' };
+import combatLoader from '../content/vectors/combat-loader.json' with { type: 'json' };
+import enemiesLoader from '../content/vectors/enemies-loader.json' with { type: 'json' };
+import { refusalMatchesRule } from './helpers/vector-rule.ts';
+
+const fixture = FIXTURES_BY_KEY.lowLevel;
+const profile = toHabiticaProfile(fixture.user, gearLookupFor(fixture.gearStats));
+for (const v of vectors.kit) test(`fight kit: ${v.name}`, () => {
+  const kit = getCombatKit({ ...profile, class: v.craft as HabiticaClass | null, level: v.level, stats: v.stats });
+  for (const key of Object.keys(v.expected) as (keyof typeof v.expected)[]) assert.equal(kit[key], v.expected[key], key);
+  assert.equal(kit.meleeDamage, combatFormula(v.stats.str, COMBAT_TUNING.melee));
+});
+test('shared crit rolls and strict chance boundaries', () => {
+  for (const v of vectors.crit) {
+    assert.equal(fightCritRoll(v.seed, v.swingCounter), v.roll);
+    assert.equal(fightCrit(v.seed, v.swingCounter, v.chance), v.crit);
+  }
+});
+test('shared damage preserves tool rounding, crit and stunned vulnerability', () => {
+  for (const v of vectors.damage) assert.equal(fightDamage(v.base, v.crit, v.stunnedMultiplier, v.tool), v.damage);
+});
+test('shared reach uses directional slash offsets, bolt centres and open radius boundaries', () => {
+  for (const v of vectors.reach) assert.equal(fightReach(v.kind as 'slash' | 'bolt', v.x, v.y, v.facingX, v.facingY, v.enemyX, v.enemyY), v.hit);
+});
+test('enemy tuning and aim-lock/launch edges match shared vectors', () => {
+  for (const v of vectors.timing) {
+    const tuning = ENEMY_TUNING[v.kind as 'wisp' | 'beetle'];
+    assert.equal(tuning.windup - v.elapsed <= tuning.lock, v.locked);
+    assert.equal(v.elapsed >= tuning.windup, v.launched);
+  }
+  assert.equal(KNOCK.time, enemiesRaw.knock.time);
+  for (const kind of ['wisp', 'beetle', 'guardian'] as const) {
+    const { $typeName, ...numbers } = ENEMY_TUNING[kind];
+    assert.deepEqual(numbers, enemiesRaw[kind]);
+  }
+});
+for (const [family, raw, fixtures, validate] of [
+  ['combat', combatRaw, combatLoader, validateCombat],
+  ['enemies', enemiesRaw, enemiesLoader, validateEnemies],
+] as const) {
+  for (const v of fixtures.loader) test(`shared ${family} loader: ${v.name}`, () => {
+    const value: any = structuredClone(raw);
+    for (const edit of v.edits) {
+      let target = value;
+      for (const key of edit.path.slice(0, -1)) target = target[key];
+      const e = edit as { path: string[]; remove?: boolean; value?: unknown };
+      if (e.remove) delete target[e.path.at(-1)!]; else target[e.path.at(-1)!] = e.value;
+    }
+    if (v.valid) assert.doesNotThrow(() => validate(value));
+    else assert.throws(() => validate(value), (e: Error) => refusalMatchesRule(e, (v as {rule?: string}).rule ?? ''));
+  });
+}

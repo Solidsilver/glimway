@@ -1,0 +1,2433 @@
+{
+  "kit": [
+    {
+      "name": "classless-0",
+      "craft": null,
+      "level": 0,
+      "stats": {
+        "str": 0,
+        "int": 0,
+        "con": 0,
+        "per": 0
+      },
+      "expected": {
+        "meleeDamage": 5.0,
+        "signatureDamage": 0,
+        "mitigation": 0.0,
+        "critChance": 0.05,
+        "healAmount": 0,
+        "basicAttackCooldown": 0.6
+      }
+    },
+    {
+      "name": "classless-9",
+      "craft": null,
+      "level": 9,
+      "stats": {
+        "str": 10,
+        "int": 20,
+        "con": 15,
+        "per": 10
+      },
+      "expected": {
+        "meleeDamage": 8.43,
+        "signatureDamage": 0,
+        "mitigation": 0.06,
+        "critChance": 0.09,
+        "healAmount": 0,
+        "basicAttackCooldown": 0.6
+      }
+    },
+    {
+      "name": "classless-10",
+      "craft": null,
+      "level": 10,
+      "stats": {
+        "str": 60,
+        "int": 70,
+        "con": 90,
+        "per": 80
+      },
+      "expected": {
+        "meleeDamage": 17.0,
+        "signatureDamage": 0,
+        "mitigation": 0.23,
+        "critChance": 0.25,
+        "healAmount": 0,
+        "basicAttackCooldown": 0.6
+      }
+    },
+    {
+      "name": "classless-20",
+      "craft": null,
+      "level": 20,
+      "stats": {
+        "str": 123.45,
+        "int": 67.89,
+        "con": 99.5,
+        "per": 32.7
+      },
+      "expected": {
+        "meleeDamage": 21.15,
+        "signatureDamage": 0,
+        "mitigation": 0.24,
+        "critChance": 0.17,
+        "healAmount": 0,
+        "basicAttackCooldown": 0.6
+      }
+    },
+    {
+      "name": "classless-100",
+      "craft": null,
+      "level": 100,
+      "stats": {
+        "str": 1000000000.0,
+        "int": 1000000000.0,
+        "con": 1000000000.0,
+        "per": 1000000000.0
+      },
+      "expected": {
+        "meleeDamage": 29.0,
+        "signatureDamage": 0,
+        "mitigation": 0.45,
+        "critChance": 0.45,
+        "healAmount": 0,
+        "basicAttackCooldown": 0.6
+      }
+    },
+    {
+      "name": "warrior-0",
+      "craft": "warrior",
+      "level": 0,
+      "stats": {
+        "str": 0,
+        "int": 0,
+        "con": 0,
+        "per": 0
+      },
+      "expected": {
+        "meleeDamage": 5.0,
+        "signatureDamage": 0,
+        "mitigation": 0.0,
+        "critChance": 0.05,
+        "healAmount": 0,
+        "basicAttackCooldown": 1.2
+      }
+    },
+    {
+      "name": "warrior-9",
+      "craft": "warrior",
+      "level": 9,
+      "stats": {
+        "str": 10,
+        "int": 20,
+        "con": 15,
+        "per": 10
+      },
+      "expected": {
+        "meleeDamage": 8.43,
+        "signatureDamage": 0,
+        "mitigation": 0.06,
+        "critChance": 0.09,
+        "healAmount": 0,
+        "basicAttackCooldown": 1.2
+      }
+    },
+    {
+      "name": "warrior-10",
+      "craft": "warrior",
+      "level": 10,
+      "stats": {
+        "str": 60,
+        "int": 70,
+        "con": 90,
+        "per": 80
+      },
+      "expected": {
+        "meleeDamage": 17.0,
+        "signatureDamage": 21.85,
+        "mitigation": 0.23,
+        "critChance": 0.25,
+        "healAmount": 0,
+        "basicAttackCooldown": 1.2
+      }
+    },
+    {
+      "name": "warrior-20",
+      "craft": "warrior",
+      "level": 20,
+      "stats": {
+        "str": 123.45,
+        "int": 67.89,
+        "con": 99.5,
+        "per": 32.7
+      },
+      "expected": {
+        "meleeDamage": 21.15,
+        "signatureDamage": 27.14,
+        "mitigation": 0.24,
+        "critChance": 0.17,
+        "healAmount": 0,
+        "basicAttackCooldown": 1.2
+      }
+    },
+    {
+      "name": "warrior-100",
+      "craft": "warrior",
+      "level": 100,
+      "stats": {
+        "str": 1000000000.0,
+        "int": 1000000000.0,
+        "con": 1000000000.0,
+        "per": 1000000000.0
+      },
+      "expected": {
+        "meleeDamage": 29.0,
+        "signatureDamage": 38.0,
+        "mitigation": 0.45,
+        "critChance": 0.45,
+        "healAmount": 0,
+        "basicAttackCooldown": 1.2
+      }
+    },
+    {
+      "name": "mage-0",
+      "craft": "mage",
+      "level": 0,
+      "stats": {
+        "str": 0,
+        "int": 0,
+        "con": 0,
+        "per": 0
+      },
+      "expected": {
+        "meleeDamage": 5.0,
+        "signatureDamage": 0,
+        "mitigation": 0.0,
+        "critChance": 0.05,
+        "healAmount": 0,
+        "basicAttackCooldown": 0.6
+      }
+    },
+    {
+      "name": "mage-9",
+      "craft": "mage",
+      "level": 9,
+      "stats": {
+        "str": 10,
+        "int": 20,
+        "con": 15,
+        "per": 10
+      },
+      "expected": {
+        "meleeDamage": 8.43,
+        "signatureDamage": 0,
+        "mitigation": 0.06,
+        "critChance": 0.09,
+        "healAmount": 0,
+        "basicAttackCooldown": 0.6
+      }
+    },
+    {
+      "name": "mage-10",
+      "craft": "mage",
+      "level": 10,
+      "stats": {
+        "str": 60,
+        "int": 70,
+        "con": 90,
+        "per": 80
+      },
+      "expected": {
+        "meleeDamage": 17.0,
+        "signatureDamage": 23.0,
+        "mitigation": 0.23,
+        "critChance": 0.25,
+        "healAmount": 0,
+        "basicAttackCooldown": 0.6
+      }
+    },
+    {
+      "name": "mage-20",
+      "craft": "mage",
+      "level": 20,
+      "stats": {
+        "str": 123.45,
+        "int": 67.89,
+        "con": 99.5,
+        "per": 32.7
+      },
+      "expected": {
+        "meleeDamage": 21.15,
+        "signatureDamage": 22.77,
+        "mitigation": 0.24,
+        "critChance": 0.17,
+        "healAmount": 0,
+        "basicAttackCooldown": 0.6
+      }
+    },
+    {
+      "name": "mage-100",
+      "craft": "mage",
+      "level": 100,
+      "stats": {
+        "str": 1000000000.0,
+        "int": 1000000000.0,
+        "con": 1000000000.0,
+        "per": 1000000000.0
+      },
+      "expected": {
+        "meleeDamage": 29.0,
+        "signatureDamage": 38.0,
+        "mitigation": 0.45,
+        "critChance": 0.45,
+        "healAmount": 0,
+        "basicAttackCooldown": 0.6
+      }
+    },
+    {
+      "name": "rogue-0",
+      "craft": "rogue",
+      "level": 0,
+      "stats": {
+        "str": 0,
+        "int": 0,
+        "con": 0,
+        "per": 0
+      },
+      "expected": {
+        "meleeDamage": 5.0,
+        "signatureDamage": 0,
+        "mitigation": 0.0,
+        "critChance": 0.05,
+        "healAmount": 0,
+        "basicAttackCooldown": 1.5
+      }
+    },
+    {
+      "name": "rogue-9",
+      "craft": "rogue",
+      "level": 9,
+      "stats": {
+        "str": 10,
+        "int": 20,
+        "con": 15,
+        "per": 10
+      },
+      "expected": {
+        "meleeDamage": 8.43,
+        "signatureDamage": 0,
+        "mitigation": 0.06,
+        "critChance": 0.09,
+        "healAmount": 0,
+        "basicAttackCooldown": 1.5
+      }
+    },
+    {
+      "name": "rogue-10",
+      "craft": "rogue",
+      "level": 10,
+      "stats": {
+        "str": 60,
+        "int": 70,
+        "con": 90,
+        "per": 80
+      },
+      "expected": {
+        "meleeDamage": 17.0,
+        "signatureDamage": 24.0,
+        "mitigation": 0.23,
+        "critChance": 0.25,
+        "healAmount": 0,
+        "basicAttackCooldown": 1.5
+      }
+    },
+    {
+      "name": "rogue-20",
+      "craft": "rogue",
+      "level": 20,
+      "stats": {
+        "str": 123.45,
+        "int": 67.89,
+        "con": 99.5,
+        "per": 32.7
+      },
+      "expected": {
+        "meleeDamage": 21.15,
+        "signatureDamage": 17.55,
+        "mitigation": 0.24,
+        "critChance": 0.17,
+        "healAmount": 0,
+        "basicAttackCooldown": 1.5
+      }
+    },
+    {
+      "name": "rogue-100",
+      "craft": "rogue",
+      "level": 100,
+      "stats": {
+        "str": 1000000000.0,
+        "int": 1000000000.0,
+        "con": 1000000000.0,
+        "per": 1000000000.0
+      },
+      "expected": {
+        "meleeDamage": 29.0,
+        "signatureDamage": 38.0,
+        "mitigation": 0.45,
+        "critChance": 0.45,
+        "healAmount": 0,
+        "basicAttackCooldown": 1.5
+      }
+    },
+    {
+      "name": "healer-0",
+      "craft": "healer",
+      "level": 0,
+      "stats": {
+        "str": 0,
+        "int": 0,
+        "con": 0,
+        "per": 0
+      },
+      "expected": {
+        "meleeDamage": 5.0,
+        "signatureDamage": 0,
+        "mitigation": 0.0,
+        "critChance": 0.05,
+        "healAmount": 0,
+        "basicAttackCooldown": 2.5
+      }
+    },
+    {
+      "name": "healer-9",
+      "craft": "healer",
+      "level": 9,
+      "stats": {
+        "str": 10,
+        "int": 20,
+        "con": 15,
+        "per": 10
+      },
+      "expected": {
+        "meleeDamage": 8.43,
+        "signatureDamage": 0,
+        "mitigation": 0.06,
+        "critChance": 0.09,
+        "healAmount": 0,
+        "basicAttackCooldown": 2.5
+      }
+    },
+    {
+      "name": "healer-10",
+      "craft": "healer",
+      "level": 10,
+      "stats": {
+        "str": 60,
+        "int": 70,
+        "con": 90,
+        "per": 80
+      },
+      "expected": {
+        "meleeDamage": 17.0,
+        "signatureDamage": 23.0,
+        "mitigation": 0.23,
+        "critChance": 0.25,
+        "healAmount": 16.77,
+        "basicAttackCooldown": 2.5
+      }
+    },
+    {
+      "name": "healer-20",
+      "craft": "healer",
+      "level": 20,
+      "stats": {
+        "str": 123.45,
+        "int": 67.89,
+        "con": 99.5,
+        "per": 32.7
+      },
+      "expected": {
+        "meleeDamage": 21.15,
+        "signatureDamage": 22.77,
+        "mitigation": 0.24,
+        "critChance": 0.17,
+        "healAmount": 16.62,
+        "basicAttackCooldown": 2.5
+      }
+    },
+    {
+      "name": "healer-100",
+      "craft": "healer",
+      "level": 100,
+      "stats": {
+        "str": 1000000000.0,
+        "int": 1000000000.0,
+        "con": 1000000000.0,
+        "per": 1000000000.0
+      },
+      "expected": {
+        "meleeDamage": 29.0,
+        "signatureDamage": 38.0,
+        "mitigation": 0.45,
+        "critChance": 0.45,
+        "healAmount": 26.0,
+        "basicAttackCooldown": 2.5
+      }
+    }
+  ],
+  "crit": [
+    {
+      "seed": 0,
+      "swingCounter": 0,
+      "chance": 0,
+      "roll": 0.0,
+      "crit": false
+    },
+    {
+      "seed": 0,
+      "swingCounter": 0,
+      "chance": 0.05,
+      "roll": 0.0,
+      "crit": true
+    },
+    {
+      "seed": 0,
+      "swingCounter": 0,
+      "chance": 0.45,
+      "roll": 0.0,
+      "crit": true
+    },
+    {
+      "seed": 0,
+      "swingCounter": 0,
+      "chance": 1,
+      "roll": 0.0,
+      "crit": true
+    },
+    {
+      "seed": 0,
+      "swingCounter": 0,
+      "chance": 0.0,
+      "roll": 0.0,
+      "crit": false
+    },
+    {
+      "seed": 0,
+      "swingCounter": 0,
+      "chance": 2.3283064365386963e-10,
+      "roll": 0.0,
+      "crit": true
+    },
+    {
+      "seed": 0,
+      "swingCounter": 1,
+      "chance": 0,
+      "roll": 0.3175988623406738,
+      "crit": false
+    },
+    {
+      "seed": 0,
+      "swingCounter": 1,
+      "chance": 0.05,
+      "roll": 0.3175988623406738,
+      "crit": false
+    },
+    {
+      "seed": 0,
+      "swingCounter": 1,
+      "chance": 0.45,
+      "roll": 0.3175988623406738,
+      "crit": true
+    },
+    {
+      "seed": 0,
+      "swingCounter": 1,
+      "chance": 1,
+      "roll": 0.3175988623406738,
+      "crit": true
+    },
+    {
+      "seed": 0,
+      "swingCounter": 1,
+      "chance": 0.3175988623406738,
+      "roll": 0.3175988623406738,
+      "crit": false
+    },
+    {
+      "seed": 0,
+      "swingCounter": 1,
+      "chance": 0.31759886257350445,
+      "roll": 0.3175988623406738,
+      "crit": true
+    },
+    {
+      "seed": 1,
+      "swingCounter": 0,
+      "chance": 0,
+      "roll": 0.3175988623406738,
+      "crit": false
+    },
+    {
+      "seed": 1,
+      "swingCounter": 0,
+      "chance": 0.05,
+      "roll": 0.3175988623406738,
+      "crit": false
+    },
+    {
+      "seed": 1,
+      "swingCounter": 0,
+      "chance": 0.45,
+      "roll": 0.3175988623406738,
+      "crit": true
+    },
+    {
+      "seed": 1,
+      "swingCounter": 0,
+      "chance": 1,
+      "roll": 0.3175988623406738,
+      "crit": true
+    },
+    {
+      "seed": 1,
+      "swingCounter": 0,
+      "chance": 0.3175988623406738,
+      "roll": 0.3175988623406738,
+      "crit": false
+    },
+    {
+      "seed": 1,
+      "swingCounter": 0,
+      "chance": 0.31759886257350445,
+      "roll": 0.3175988623406738,
+      "crit": true
+    },
+    {
+      "seed": 1,
+      "swingCounter": 1,
+      "chance": 0,
+      "roll": 0.0,
+      "crit": false
+    },
+    {
+      "seed": 1,
+      "swingCounter": 1,
+      "chance": 0.05,
+      "roll": 0.0,
+      "crit": true
+    },
+    {
+      "seed": 1,
+      "swingCounter": 1,
+      "chance": 0.45,
+      "roll": 0.0,
+      "crit": true
+    },
+    {
+      "seed": 1,
+      "swingCounter": 1,
+      "chance": 1,
+      "roll": 0.0,
+      "crit": true
+    },
+    {
+      "seed": 1,
+      "swingCounter": 1,
+      "chance": 0.0,
+      "roll": 0.0,
+      "crit": false
+    },
+    {
+      "seed": 1,
+      "swingCounter": 1,
+      "chance": 2.3283064365386963e-10,
+      "roll": 0.0,
+      "crit": true
+    },
+    {
+      "seed": 3735928559,
+      "swingCounter": 0,
+      "chance": 0,
+      "roll": 0.054287353763356805,
+      "crit": false
+    },
+    {
+      "seed": 3735928559,
+      "swingCounter": 0,
+      "chance": 0.05,
+      "roll": 0.054287353763356805,
+      "crit": false
+    },
+    {
+      "seed": 3735928559,
+      "swingCounter": 0,
+      "chance": 0.45,
+      "roll": 0.054287353763356805,
+      "crit": true
+    },
+    {
+      "seed": 3735928559,
+      "swingCounter": 0,
+      "chance": 1,
+      "roll": 0.054287353763356805,
+      "crit": true
+    },
+    {
+      "seed": 3735928559,
+      "swingCounter": 0,
+      "chance": 0.054287353763356805,
+      "roll": 0.054287353763356805,
+      "crit": false
+    },
+    {
+      "seed": 3735928559,
+      "swingCounter": 0,
+      "chance": 0.05428735399618745,
+      "roll": 0.054287353763356805,
+      "crit": true
+    },
+    {
+      "seed": 3735928559,
+      "swingCounter": 1,
+      "chance": 0,
+      "roll": 0.8649068975355476,
+      "crit": false
+    },
+    {
+      "seed": 3735928559,
+      "swingCounter": 1,
+      "chance": 0.05,
+      "roll": 0.8649068975355476,
+      "crit": false
+    },
+    {
+      "seed": 3735928559,
+      "swingCounter": 1,
+      "chance": 0.45,
+      "roll": 0.8649068975355476,
+      "crit": false
+    },
+    {
+      "seed": 3735928559,
+      "swingCounter": 1,
+      "chance": 1,
+      "roll": 0.8649068975355476,
+      "crit": true
+    },
+    {
+      "seed": 3735928559,
+      "swingCounter": 1,
+      "chance": 0.8649068975355476,
+      "roll": 0.8649068975355476,
+      "crit": false
+    },
+    {
+      "seed": 3735928559,
+      "swingCounter": 1,
+      "chance": 0.8649068977683783,
+      "roll": 0.8649068975355476,
+      "crit": true
+    },
+    {
+      "seed": 3735928559,
+      "swingCounter": 2,
+      "chance": 0,
+      "roll": 0.380768972216174,
+      "crit": false
+    },
+    {
+      "seed": 3735928559,
+      "swingCounter": 2,
+      "chance": 0.05,
+      "roll": 0.380768972216174,
+      "crit": false
+    },
+    {
+      "seed": 3735928559,
+      "swingCounter": 2,
+      "chance": 0.45,
+      "roll": 0.380768972216174,
+      "crit": true
+    },
+    {
+      "seed": 3735928559,
+      "swingCounter": 2,
+      "chance": 1,
+      "roll": 0.380768972216174,
+      "crit": true
+    },
+    {
+      "seed": 3735928559,
+      "swingCounter": 2,
+      "chance": 0.380768972216174,
+      "roll": 0.380768972216174,
+      "crit": false
+    },
+    {
+      "seed": 3735928559,
+      "swingCounter": 2,
+      "chance": 0.38076897244900465,
+      "roll": 0.380768972216174,
+      "crit": true
+    },
+    {
+      "seed": 4294967295,
+      "swingCounter": 4294967295,
+      "chance": 0,
+      "roll": 0.0,
+      "crit": false
+    },
+    {
+      "seed": 4294967295,
+      "swingCounter": 4294967295,
+      "chance": 0.05,
+      "roll": 0.0,
+      "crit": true
+    },
+    {
+      "seed": 4294967295,
+      "swingCounter": 4294967295,
+      "chance": 0.45,
+      "roll": 0.0,
+      "crit": true
+    },
+    {
+      "seed": 4294967295,
+      "swingCounter": 4294967295,
+      "chance": 1,
+      "roll": 0.0,
+      "crit": true
+    },
+    {
+      "seed": 4294967295,
+      "swingCounter": 4294967295,
+      "chance": 0.0,
+      "roll": 0.0,
+      "crit": false
+    },
+    {
+      "seed": 4294967295,
+      "swingCounter": 4294967295,
+      "chance": 2.3283064365386963e-10,
+      "roll": 0.0,
+      "crit": true
+    },
+    {
+      "seed": 4294967295,
+      "swingCounter": 0,
+      "chance": 0,
+      "roll": 0.5075902475509793,
+      "crit": false
+    },
+    {
+      "seed": 4294967295,
+      "swingCounter": 0,
+      "chance": 0.05,
+      "roll": 0.5075902475509793,
+      "crit": false
+    },
+    {
+      "seed": 4294967295,
+      "swingCounter": 0,
+      "chance": 0.45,
+      "roll": 0.5075902475509793,
+      "crit": false
+    },
+    {
+      "seed": 4294967295,
+      "swingCounter": 0,
+      "chance": 1,
+      "roll": 0.5075902475509793,
+      "crit": true
+    },
+    {
+      "seed": 4294967295,
+      "swingCounter": 0,
+      "chance": 0.5075902475509793,
+      "roll": 0.5075902475509793,
+      "crit": false
+    },
+    {
+      "seed": 4294967295,
+      "swingCounter": 0,
+      "chance": 0.5075902477838099,
+      "roll": 0.5075902475509793,
+      "crit": true
+    },
+    {
+      "seed": 2147483648,
+      "swingCounter": 2147483647,
+      "chance": 0,
+      "roll": 0.5075902475509793,
+      "crit": false
+    },
+    {
+      "seed": 2147483648,
+      "swingCounter": 2147483647,
+      "chance": 0.05,
+      "roll": 0.5075902475509793,
+      "crit": false
+    },
+    {
+      "seed": 2147483648,
+      "swingCounter": 2147483647,
+      "chance": 0.45,
+      "roll": 0.5075902475509793,
+      "crit": false
+    },
+    {
+      "seed": 2147483648,
+      "swingCounter": 2147483647,
+      "chance": 1,
+      "roll": 0.5075902475509793,
+      "crit": true
+    },
+    {
+      "seed": 2147483648,
+      "swingCounter": 2147483647,
+      "chance": 0.5075902475509793,
+      "roll": 0.5075902475509793,
+      "crit": false
+    },
+    {
+      "seed": 2147483648,
+      "swingCounter": 2147483647,
+      "chance": 0.5075902477838099,
+      "roll": 0.5075902475509793,
+      "crit": true
+    },
+    {
+      "seed": 42,
+      "swingCounter": 123456789,
+      "chance": 0,
+      "roll": 0.5929231313057244,
+      "crit": false
+    },
+    {
+      "seed": 42,
+      "swingCounter": 123456789,
+      "chance": 0.05,
+      "roll": 0.5929231313057244,
+      "crit": false
+    },
+    {
+      "seed": 42,
+      "swingCounter": 123456789,
+      "chance": 0.45,
+      "roll": 0.5929231313057244,
+      "crit": false
+    },
+    {
+      "seed": 42,
+      "swingCounter": 123456789,
+      "chance": 1,
+      "roll": 0.5929231313057244,
+      "crit": true
+    },
+    {
+      "seed": 42,
+      "swingCounter": 123456789,
+      "chance": 0.5929231313057244,
+      "roll": 0.5929231313057244,
+      "crit": false
+    },
+    {
+      "seed": 42,
+      "swingCounter": 123456789,
+      "chance": 0.592923131538555,
+      "roll": 0.5929231313057244,
+      "crit": true
+    }
+  ],
+  "damage": [
+    {
+      "base": 5,
+      "crit": false,
+      "tool": false,
+      "stunnedMultiplier": 1,
+      "damage": 5
+    },
+    {
+      "base": 5,
+      "crit": false,
+      "tool": false,
+      "stunnedMultiplier": 1.5,
+      "damage": 7.5
+    },
+    {
+      "base": 5,
+      "crit": false,
+      "tool": true,
+      "stunnedMultiplier": 1,
+      "damage": 3
+    },
+    {
+      "base": 5,
+      "crit": false,
+      "tool": true,
+      "stunnedMultiplier": 1.5,
+      "damage": 4.5
+    },
+    {
+      "base": 5,
+      "crit": true,
+      "tool": false,
+      "stunnedMultiplier": 1,
+      "damage": 10
+    },
+    {
+      "base": 5,
+      "crit": true,
+      "tool": false,
+      "stunnedMultiplier": 1.5,
+      "damage": 15.0
+    },
+    {
+      "base": 5,
+      "crit": true,
+      "tool": true,
+      "stunnedMultiplier": 1,
+      "damage": 6
+    },
+    {
+      "base": 5,
+      "crit": true,
+      "tool": true,
+      "stunnedMultiplier": 1.5,
+      "damage": 9.0
+    },
+    {
+      "base": 8.43,
+      "crit": false,
+      "tool": false,
+      "stunnedMultiplier": 1,
+      "damage": 8.43
+    },
+    {
+      "base": 8.43,
+      "crit": false,
+      "tool": false,
+      "stunnedMultiplier": 1.5,
+      "damage": 12.645
+    },
+    {
+      "base": 8.43,
+      "crit": false,
+      "tool": true,
+      "stunnedMultiplier": 1,
+      "damage": 4
+    },
+    {
+      "base": 8.43,
+      "crit": false,
+      "tool": true,
+      "stunnedMultiplier": 1.5,
+      "damage": 6.0
+    },
+    {
+      "base": 8.43,
+      "crit": true,
+      "tool": false,
+      "stunnedMultiplier": 1,
+      "damage": 16.86
+    },
+    {
+      "base": 8.43,
+      "crit": true,
+      "tool": false,
+      "stunnedMultiplier": 1.5,
+      "damage": 25.29
+    },
+    {
+      "base": 8.43,
+      "crit": true,
+      "tool": true,
+      "stunnedMultiplier": 1,
+      "damage": 8
+    },
+    {
+      "base": 8.43,
+      "crit": true,
+      "tool": true,
+      "stunnedMultiplier": 1.5,
+      "damage": 12.0
+    },
+    {
+      "base": 17,
+      "crit": false,
+      "tool": false,
+      "stunnedMultiplier": 1,
+      "damage": 17
+    },
+    {
+      "base": 17,
+      "crit": false,
+      "tool": false,
+      "stunnedMultiplier": 1.5,
+      "damage": 25.5
+    },
+    {
+      "base": 17,
+      "crit": false,
+      "tool": true,
+      "stunnedMultiplier": 1,
+      "damage": 9
+    },
+    {
+      "base": 17,
+      "crit": false,
+      "tool": true,
+      "stunnedMultiplier": 1.5,
+      "damage": 13.5
+    },
+    {
+      "base": 17,
+      "crit": true,
+      "tool": false,
+      "stunnedMultiplier": 1,
+      "damage": 34
+    },
+    {
+      "base": 17,
+      "crit": true,
+      "tool": false,
+      "stunnedMultiplier": 1.5,
+      "damage": 51.0
+    },
+    {
+      "base": 17,
+      "crit": true,
+      "tool": true,
+      "stunnedMultiplier": 1,
+      "damage": 18
+    },
+    {
+      "base": 17,
+      "crit": true,
+      "tool": true,
+      "stunnedMultiplier": 1.5,
+      "damage": 27.0
+    },
+    {
+      "base": 0.5,
+      "crit": false,
+      "tool": false,
+      "stunnedMultiplier": 1,
+      "damage": 0.5
+    },
+    {
+      "base": 0.5,
+      "crit": false,
+      "tool": false,
+      "stunnedMultiplier": 1.5,
+      "damage": 0.75
+    },
+    {
+      "base": 0.5,
+      "crit": false,
+      "tool": true,
+      "stunnedMultiplier": 1,
+      "damage": 1
+    },
+    {
+      "base": 0.5,
+      "crit": false,
+      "tool": true,
+      "stunnedMultiplier": 1.5,
+      "damage": 1.5
+    },
+    {
+      "base": 0.5,
+      "crit": true,
+      "tool": false,
+      "stunnedMultiplier": 1,
+      "damage": 1.0
+    },
+    {
+      "base": 0.5,
+      "crit": true,
+      "tool": false,
+      "stunnedMultiplier": 1.5,
+      "damage": 1.5
+    },
+    {
+      "base": 0.5,
+      "crit": true,
+      "tool": true,
+      "stunnedMultiplier": 1,
+      "damage": 2
+    },
+    {
+      "base": 0.5,
+      "crit": true,
+      "tool": true,
+      "stunnedMultiplier": 1.5,
+      "damage": 3.0
+    }
+  ],
+  "reach": [
+    {
+      "kind": "slash",
+      "x": 0,
+      "y": 0,
+      "facingX": 1,
+      "facingY": 0,
+      "enemyX": 14,
+      "enemyY": -1,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": 0,
+      "y": 0,
+      "facingX": 1,
+      "facingY": 0,
+      "enemyX": 39.998999999999995,
+      "enemyY": -1,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": 0,
+      "y": 0,
+      "facingX": 1,
+      "facingY": 0,
+      "enemyX": 40,
+      "enemyY": -1,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": 0,
+      "y": 0,
+      "facingX": 1,
+      "facingY": 0,
+      "enemyX": 40.001000000000005,
+      "enemyY": -1,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": -384,
+      "y": -768,
+      "facingX": 1,
+      "facingY": 0,
+      "enemyX": -370,
+      "enemyY": -769,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": -384,
+      "y": -768,
+      "facingX": 1,
+      "facingY": 0,
+      "enemyX": -344.001,
+      "enemyY": -769,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": -384,
+      "y": -768,
+      "facingX": 1,
+      "facingY": 0,
+      "enemyX": -344,
+      "enemyY": -769,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": -384,
+      "y": -768,
+      "facingX": 1,
+      "facingY": 0,
+      "enemyX": -343.999,
+      "enemyY": -769,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 1,
+      "facingY": 0,
+      "enemyX": 137.25,
+      "enemyY": 233.5,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 1,
+      "facingY": 0,
+      "enemyX": 163.249,
+      "enemyY": 233.5,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 1,
+      "facingY": 0,
+      "enemyX": 163.25,
+      "enemyY": 233.5,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 1,
+      "facingY": 0,
+      "enemyX": 163.251,
+      "enemyY": 233.5,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": 0,
+      "y": 0,
+      "facingX": -1,
+      "facingY": 0,
+      "enemyX": -14,
+      "enemyY": -1,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": 0,
+      "y": 0,
+      "facingX": -1,
+      "facingY": 0,
+      "enemyX": 11.998999999999999,
+      "enemyY": -1,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": 0,
+      "y": 0,
+      "facingX": -1,
+      "facingY": 0,
+      "enemyX": 12,
+      "enemyY": -1,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": 0,
+      "y": 0,
+      "facingX": -1,
+      "facingY": 0,
+      "enemyX": 12.001000000000001,
+      "enemyY": -1,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": -384,
+      "y": -768,
+      "facingX": -1,
+      "facingY": 0,
+      "enemyX": -398,
+      "enemyY": -769,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": -384,
+      "y": -768,
+      "facingX": -1,
+      "facingY": 0,
+      "enemyX": -372.001,
+      "enemyY": -769,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": -384,
+      "y": -768,
+      "facingX": -1,
+      "facingY": 0,
+      "enemyX": -372,
+      "enemyY": -769,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": -384,
+      "y": -768,
+      "facingX": -1,
+      "facingY": 0,
+      "enemyX": -371.999,
+      "enemyY": -769,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": -1,
+      "facingY": 0,
+      "enemyX": 109.25,
+      "enemyY": 233.5,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": -1,
+      "facingY": 0,
+      "enemyX": 135.249,
+      "enemyY": 233.5,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": -1,
+      "facingY": 0,
+      "enemyX": 135.25,
+      "enemyY": 233.5,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": -1,
+      "facingY": 0,
+      "enemyX": 135.251,
+      "enemyY": 233.5,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": 0,
+      "y": 0,
+      "facingX": 0,
+      "facingY": 1,
+      "enemyX": 0,
+      "enemyY": 11,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": 0,
+      "y": 0,
+      "facingX": 0,
+      "facingY": 1,
+      "enemyX": 25.999,
+      "enemyY": 11,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": 0,
+      "y": 0,
+      "facingX": 0,
+      "facingY": 1,
+      "enemyX": 26,
+      "enemyY": 11,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": 0,
+      "y": 0,
+      "facingX": 0,
+      "facingY": 1,
+      "enemyX": 26.001,
+      "enemyY": 11,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": -384,
+      "y": -768,
+      "facingX": 0,
+      "facingY": 1,
+      "enemyX": -384,
+      "enemyY": -757,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": -384,
+      "y": -768,
+      "facingX": 0,
+      "facingY": 1,
+      "enemyX": -358.001,
+      "enemyY": -757,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": -384,
+      "y": -768,
+      "facingX": 0,
+      "facingY": 1,
+      "enemyX": -358,
+      "enemyY": -757,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": -384,
+      "y": -768,
+      "facingX": 0,
+      "facingY": 1,
+      "enemyX": -357.999,
+      "enemyY": -757,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 0,
+      "facingY": 1,
+      "enemyX": 123.25,
+      "enemyY": 245.5,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 0,
+      "facingY": 1,
+      "enemyX": 149.249,
+      "enemyY": 245.5,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 0,
+      "facingY": 1,
+      "enemyX": 149.25,
+      "enemyY": 245.5,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 0,
+      "facingY": 1,
+      "enemyX": 149.251,
+      "enemyY": 245.5,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": 0,
+      "y": 0,
+      "facingX": 0,
+      "facingY": -1,
+      "enemyX": 0,
+      "enemyY": -13,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": 0,
+      "y": 0,
+      "facingX": 0,
+      "facingY": -1,
+      "enemyX": 25.999,
+      "enemyY": -13,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": 0,
+      "y": 0,
+      "facingX": 0,
+      "facingY": -1,
+      "enemyX": 26,
+      "enemyY": -13,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": 0,
+      "y": 0,
+      "facingX": 0,
+      "facingY": -1,
+      "enemyX": 26.001,
+      "enemyY": -13,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": -384,
+      "y": -768,
+      "facingX": 0,
+      "facingY": -1,
+      "enemyX": -384,
+      "enemyY": -781,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": -384,
+      "y": -768,
+      "facingX": 0,
+      "facingY": -1,
+      "enemyX": -358.001,
+      "enemyY": -781,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": -384,
+      "y": -768,
+      "facingX": 0,
+      "facingY": -1,
+      "enemyX": -358,
+      "enemyY": -781,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": -384,
+      "y": -768,
+      "facingX": 0,
+      "facingY": -1,
+      "enemyX": -357.999,
+      "enemyY": -781,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 0,
+      "facingY": -1,
+      "enemyX": 123.25,
+      "enemyY": 221.5,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 0,
+      "facingY": -1,
+      "enemyX": 149.249,
+      "enemyY": 221.5,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 0,
+      "facingY": -1,
+      "enemyX": 149.25,
+      "enemyY": 221.5,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 0,
+      "facingY": -1,
+      "enemyX": 149.251,
+      "enemyY": 221.5,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": 0,
+      "y": 0,
+      "facingX": 0.6,
+      "facingY": 0.8,
+      "enemyX": 8.4,
+      "enemyY": 8.600000000000001,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": 0,
+      "y": 0,
+      "facingX": 0.6,
+      "facingY": 0.8,
+      "enemyX": 34.399,
+      "enemyY": 8.600000000000001,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": 0,
+      "y": 0,
+      "facingX": 0.6,
+      "facingY": 0.8,
+      "enemyX": 34.4,
+      "enemyY": 8.600000000000001,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": 0,
+      "y": 0,
+      "facingX": 0.6,
+      "facingY": 0.8,
+      "enemyX": 34.401,
+      "enemyY": 8.600000000000001,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": -384,
+      "y": -768,
+      "facingX": 0.6,
+      "facingY": 0.8,
+      "enemyX": -375.6,
+      "enemyY": -759.4,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": -384,
+      "y": -768,
+      "facingX": 0.6,
+      "facingY": 0.8,
+      "enemyX": -349.601,
+      "enemyY": -759.4,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": -384,
+      "y": -768,
+      "facingX": 0.6,
+      "facingY": 0.8,
+      "enemyX": -349.6,
+      "enemyY": -759.4,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": -384,
+      "y": -768,
+      "facingX": 0.6,
+      "facingY": 0.8,
+      "enemyX": -349.59900000000005,
+      "enemyY": -759.4,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 0.6,
+      "facingY": 0.8,
+      "enemyX": 131.65,
+      "enemyY": 243.1,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 0.6,
+      "facingY": 0.8,
+      "enemyX": 157.649,
+      "enemyY": 243.1,
+      "hit": true
+    },
+    {
+      "kind": "slash",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 0.6,
+      "facingY": 0.8,
+      "enemyX": 157.65,
+      "enemyY": 243.1,
+      "hit": false
+    },
+    {
+      "kind": "slash",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 0.6,
+      "facingY": 0.8,
+      "enemyX": 157.651,
+      "enemyY": 243.1,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": 0,
+      "y": 0,
+      "facingX": 1,
+      "facingY": 0,
+      "enemyX": 0,
+      "enemyY": 6,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": 0,
+      "y": 0,
+      "facingX": 1,
+      "facingY": 0,
+      "enemyX": 13.999,
+      "enemyY": 6,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": 0,
+      "y": 0,
+      "facingX": 1,
+      "facingY": 0,
+      "enemyX": 14,
+      "enemyY": 6,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": 0,
+      "y": 0,
+      "facingX": 1,
+      "facingY": 0,
+      "enemyX": 14.001,
+      "enemyY": 6,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": -384,
+      "y": -768,
+      "facingX": 1,
+      "facingY": 0,
+      "enemyX": -384,
+      "enemyY": -762,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": -384,
+      "y": -768,
+      "facingX": 1,
+      "facingY": 0,
+      "enemyX": -370.001,
+      "enemyY": -762,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": -384,
+      "y": -768,
+      "facingX": 1,
+      "facingY": 0,
+      "enemyX": -370,
+      "enemyY": -762,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": -384,
+      "y": -768,
+      "facingX": 1,
+      "facingY": 0,
+      "enemyX": -369.999,
+      "enemyY": -762,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 1,
+      "facingY": 0,
+      "enemyX": 123.25,
+      "enemyY": 240.5,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 1,
+      "facingY": 0,
+      "enemyX": 137.249,
+      "enemyY": 240.5,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 1,
+      "facingY": 0,
+      "enemyX": 137.25,
+      "enemyY": 240.5,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 1,
+      "facingY": 0,
+      "enemyX": 137.251,
+      "enemyY": 240.5,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": 0,
+      "y": 0,
+      "facingX": -1,
+      "facingY": 0,
+      "enemyX": 0,
+      "enemyY": 6,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": 0,
+      "y": 0,
+      "facingX": -1,
+      "facingY": 0,
+      "enemyX": 13.999,
+      "enemyY": 6,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": 0,
+      "y": 0,
+      "facingX": -1,
+      "facingY": 0,
+      "enemyX": 14,
+      "enemyY": 6,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": 0,
+      "y": 0,
+      "facingX": -1,
+      "facingY": 0,
+      "enemyX": 14.001,
+      "enemyY": 6,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": -384,
+      "y": -768,
+      "facingX": -1,
+      "facingY": 0,
+      "enemyX": -384,
+      "enemyY": -762,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": -384,
+      "y": -768,
+      "facingX": -1,
+      "facingY": 0,
+      "enemyX": -370.001,
+      "enemyY": -762,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": -384,
+      "y": -768,
+      "facingX": -1,
+      "facingY": 0,
+      "enemyX": -370,
+      "enemyY": -762,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": -384,
+      "y": -768,
+      "facingX": -1,
+      "facingY": 0,
+      "enemyX": -369.999,
+      "enemyY": -762,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": -1,
+      "facingY": 0,
+      "enemyX": 123.25,
+      "enemyY": 240.5,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": -1,
+      "facingY": 0,
+      "enemyX": 137.249,
+      "enemyY": 240.5,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": -1,
+      "facingY": 0,
+      "enemyX": 137.25,
+      "enemyY": 240.5,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": -1,
+      "facingY": 0,
+      "enemyX": 137.251,
+      "enemyY": 240.5,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": 0,
+      "y": 0,
+      "facingX": 0,
+      "facingY": 1,
+      "enemyX": 0,
+      "enemyY": 6,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": 0,
+      "y": 0,
+      "facingX": 0,
+      "facingY": 1,
+      "enemyX": 13.999,
+      "enemyY": 6,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": 0,
+      "y": 0,
+      "facingX": 0,
+      "facingY": 1,
+      "enemyX": 14,
+      "enemyY": 6,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": 0,
+      "y": 0,
+      "facingX": 0,
+      "facingY": 1,
+      "enemyX": 14.001,
+      "enemyY": 6,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": -384,
+      "y": -768,
+      "facingX": 0,
+      "facingY": 1,
+      "enemyX": -384,
+      "enemyY": -762,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": -384,
+      "y": -768,
+      "facingX": 0,
+      "facingY": 1,
+      "enemyX": -370.001,
+      "enemyY": -762,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": -384,
+      "y": -768,
+      "facingX": 0,
+      "facingY": 1,
+      "enemyX": -370,
+      "enemyY": -762,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": -384,
+      "y": -768,
+      "facingX": 0,
+      "facingY": 1,
+      "enemyX": -369.999,
+      "enemyY": -762,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 0,
+      "facingY": 1,
+      "enemyX": 123.25,
+      "enemyY": 240.5,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 0,
+      "facingY": 1,
+      "enemyX": 137.249,
+      "enemyY": 240.5,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 0,
+      "facingY": 1,
+      "enemyX": 137.25,
+      "enemyY": 240.5,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 0,
+      "facingY": 1,
+      "enemyX": 137.251,
+      "enemyY": 240.5,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": 0,
+      "y": 0,
+      "facingX": 0,
+      "facingY": -1,
+      "enemyX": 0,
+      "enemyY": 6,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": 0,
+      "y": 0,
+      "facingX": 0,
+      "facingY": -1,
+      "enemyX": 13.999,
+      "enemyY": 6,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": 0,
+      "y": 0,
+      "facingX": 0,
+      "facingY": -1,
+      "enemyX": 14,
+      "enemyY": 6,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": 0,
+      "y": 0,
+      "facingX": 0,
+      "facingY": -1,
+      "enemyX": 14.001,
+      "enemyY": 6,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": -384,
+      "y": -768,
+      "facingX": 0,
+      "facingY": -1,
+      "enemyX": -384,
+      "enemyY": -762,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": -384,
+      "y": -768,
+      "facingX": 0,
+      "facingY": -1,
+      "enemyX": -370.001,
+      "enemyY": -762,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": -384,
+      "y": -768,
+      "facingX": 0,
+      "facingY": -1,
+      "enemyX": -370,
+      "enemyY": -762,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": -384,
+      "y": -768,
+      "facingX": 0,
+      "facingY": -1,
+      "enemyX": -369.999,
+      "enemyY": -762,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 0,
+      "facingY": -1,
+      "enemyX": 123.25,
+      "enemyY": 240.5,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 0,
+      "facingY": -1,
+      "enemyX": 137.249,
+      "enemyY": 240.5,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 0,
+      "facingY": -1,
+      "enemyX": 137.25,
+      "enemyY": 240.5,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 0,
+      "facingY": -1,
+      "enemyX": 137.251,
+      "enemyY": 240.5,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": 0,
+      "y": 0,
+      "facingX": 0.6,
+      "facingY": 0.8,
+      "enemyX": 0,
+      "enemyY": 6,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": 0,
+      "y": 0,
+      "facingX": 0.6,
+      "facingY": 0.8,
+      "enemyX": 13.999,
+      "enemyY": 6,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": 0,
+      "y": 0,
+      "facingX": 0.6,
+      "facingY": 0.8,
+      "enemyX": 14,
+      "enemyY": 6,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": 0,
+      "y": 0,
+      "facingX": 0.6,
+      "facingY": 0.8,
+      "enemyX": 14.001,
+      "enemyY": 6,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": -384,
+      "y": -768,
+      "facingX": 0.6,
+      "facingY": 0.8,
+      "enemyX": -384,
+      "enemyY": -762,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": -384,
+      "y": -768,
+      "facingX": 0.6,
+      "facingY": 0.8,
+      "enemyX": -370.001,
+      "enemyY": -762,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": -384,
+      "y": -768,
+      "facingX": 0.6,
+      "facingY": 0.8,
+      "enemyX": -370,
+      "enemyY": -762,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": -384,
+      "y": -768,
+      "facingX": 0.6,
+      "facingY": 0.8,
+      "enemyX": -369.999,
+      "enemyY": -762,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 0.6,
+      "facingY": 0.8,
+      "enemyX": 123.25,
+      "enemyY": 240.5,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 0.6,
+      "facingY": 0.8,
+      "enemyX": 137.249,
+      "enemyY": 240.5,
+      "hit": true
+    },
+    {
+      "kind": "bolt",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 0.6,
+      "facingY": 0.8,
+      "enemyX": 137.25,
+      "enemyY": 240.5,
+      "hit": false
+    },
+    {
+      "kind": "bolt",
+      "x": 123.25,
+      "y": 234.5,
+      "facingX": 0.6,
+      "facingY": 0.8,
+      "enemyX": 137.251,
+      "enemyY": 240.5,
+      "hit": false
+    }
+  ],
+  "timing": [
+    {
+      "kind": "wisp",
+      "elapsed": 0,
+      "locked": false,
+      "launched": false
+    },
+    {
+      "kind": "wisp",
+      "elapsed": 0.31999900000000003,
+      "locked": false,
+      "launched": false
+    },
+    {
+      "kind": "wisp",
+      "elapsed": 0.32,
+      "locked": true,
+      "launched": false
+    },
+    {
+      "kind": "wisp",
+      "elapsed": 0.499999,
+      "locked": true,
+      "launched": false
+    },
+    {
+      "kind": "wisp",
+      "elapsed": 0.5,
+      "locked": true,
+      "launched": true
+    },
+    {
+      "kind": "beetle",
+      "elapsed": 0,
+      "locked": false,
+      "launched": false
+    },
+    {
+      "kind": "beetle",
+      "elapsed": 0.499999,
+      "locked": false,
+      "launched": false
+    },
+    {
+      "kind": "beetle",
+      "elapsed": 0.5,
+      "locked": false,
+      "launched": false
+    },
+    {
+      "kind": "beetle",
+      "elapsed": 0.799999,
+      "locked": true,
+      "launched": false
+    },
+    {
+      "kind": "beetle",
+      "elapsed": 0.8,
+      "locked": true,
+      "launched": true
+    }
+  ]
+}

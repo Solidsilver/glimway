@@ -2,7 +2,7 @@
 // @generated from file glimway/v2/presence.proto (package glimway.v2, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import type { Message } from "@bufbuild/protobuf";
 import type { Value } from "@bufbuild/protobuf/wkt";
 
@@ -92,10 +92,152 @@ export declare type PresenceMessage = Message<"glimway.v2.PresenceMessage"> & {
      */
     value: PresenceAvatarChange;
     case: "avatarChange";
+  } | {
+    /**
+     * @generated from field: glimway.v2.FightSwing fight_swing = 13;
+     */
+    value: FightSwing;
+    case: "fightSwing";
+  } | {
+    /**
+     * @generated from field: glimway.v2.FightJoin fight_join = 14;
+     */
+    value: FightJoin;
+    case: "fightJoin";
+  } | {
+    /**
+     * @generated from field: glimway.v2.FightDelta fight_delta = 15;
+     */
+    value: FightDelta;
+    case: "fightDelta";
+  } | {
+    /**
+     * @generated from field: glimway.v2.FightEvent fight_event = 16;
+     */
+    value: FightEvent;
+    case: "fightEvent";
+  } | {
+    /**
+     * @generated from field: glimway.v2.FightHit fight_hit = 17;
+     */
+    value: FightHit;
+    case: "fightHit";
   } | { case: undefined; value?: undefined };
 };
 
-export declare type PresenceMessageValid = PresenceMessage;
+/**
+ * One event per frame. The websocket subprotocol versions the binary envelope.
+ *
+ * @generated from message glimway.v2.PresenceMessage
+ */
+export declare type PresenceMessageValid = Message<"glimway.v2.PresenceMessage"> & {
+  /**
+   * @generated from oneof glimway.v2.PresenceMessage.event
+   */
+  event: {
+    /**
+     * @generated from field: glimway.v2.PresenceAuth auth = 1;
+     */
+    value: PresenceAuthValid;
+    case: "auth";
+  } | {
+    /**
+     * @generated from field: glimway.v2.PresenceJoin join = 2;
+     */
+    value: PresenceJoinValid;
+    case: "join";
+  } | {
+    /**
+     * @generated from field: glimway.v2.PresencePosition pos = 3;
+     */
+    value: PresencePositionValid;
+    case: "pos";
+  } | {
+    /**
+     * @generated from field: glimway.v2.PresenceEmote emote = 4;
+     */
+    value: PresenceEmoteValid;
+    case: "emote";
+  } | {
+    /**
+     * @generated from field: glimway.v2.PresenceHeartbeat heartbeat = 5;
+     */
+    value: PresenceHeartbeatValid;
+    case: "heartbeat";
+  } | {
+    /**
+     * @generated from field: glimway.v2.PresenceReady ready = 6;
+     */
+    value: PresenceReadyValid;
+    case: "ready";
+  } | {
+    /**
+     * @generated from field: glimway.v2.PresenceRoom room = 7;
+     */
+    value: PresenceRoomValid;
+    case: "room";
+  } | {
+    /**
+     * @generated from field: glimway.v2.PresenceLeave leave = 8;
+     */
+    value: PresenceLeaveValid;
+    case: "leave";
+  } | {
+    /**
+     * @generated from field: glimway.v2.PresenceGift gift = 9;
+     */
+    value: PresenceGiftValid;
+    case: "gift";
+  } | {
+    /**
+     * @generated from field: glimway.v2.PresenceWitness witness = 10;
+     */
+    value: PresenceWitnessValid;
+    case: "witness";
+  } | {
+    /**
+     * @generated from field: glimway.v2.PresenceAbility ability = 11;
+     */
+    value: PresenceAbilityValid;
+    case: "ability";
+  } | {
+    /**
+     * @generated from field: glimway.v2.PresenceAvatarChange avatar_change = 12;
+     */
+    value: PresenceAvatarChangeValid;
+    case: "avatarChange";
+  } | {
+    /**
+     * @generated from field: glimway.v2.FightSwing fight_swing = 13;
+     */
+    value: FightSwingValid;
+    case: "fightSwing";
+  } | {
+    /**
+     * @generated from field: glimway.v2.FightJoin fight_join = 14;
+     */
+    value: FightJoinValid;
+    case: "fightJoin";
+  } | {
+    /**
+     * @generated from field: glimway.v2.FightDelta fight_delta = 15;
+     */
+    value: FightDeltaValid;
+    case: "fightDelta";
+  } | {
+    /**
+     * @generated from field: glimway.v2.FightEvent fight_event = 16;
+     */
+    value: FightEventValid;
+    case: "fightEvent";
+  } | {
+    /**
+     * @generated from field: glimway.v2.FightHit fight_hit = 17;
+     */
+    value: FightHitValid;
+    case: "fightHit";
+  } | { case: undefined; value?: undefined };
+};
 
 /**
  * Describes the message glimway.v2.PresenceMessage.
@@ -275,6 +417,11 @@ export declare type PresenceAbility = Message<"glimway.v2.PresenceAbility"> & {
    * @generated from field: optional double pulse_heal = 5;
    */
   pulseHeal?: number | undefined;
+
+  /**
+   * @generated from field: optional uint32 seen_tick = 6;
+   */
+  seenTick?: number | undefined;
 };
 
 export declare type PresenceAbilityValid = PresenceAbility;
@@ -584,4 +731,674 @@ export declare type PresenceAppearanceValid = PresenceAppearance;
  * Use `create(PresenceAppearanceSchema)` to create a new message.
  */
 export declare const PresenceAppearanceSchema: GenMessage<PresenceAppearance, {validType: PresenceAppearanceValid}>;
+
+/**
+ * Contract 10. Room identity is physical space, separate from presence's
+ * visibility label. Epoch is the generated epoch id (including "still").
+ *
+ * @generated from message glimway.v2.FightRoomKey
+ */
+export declare type FightRoomKey = Message<"glimway.v2.FightRoomKey"> & {
+  /**
+   * @generated from field: string world = 1;
+   */
+  world: string;
+
+  /**
+   * @generated from field: string realm = 2;
+   */
+  realm: string;
+
+  /**
+   * @generated from field: sint32 layer = 3;
+   */
+  layer: number;
+
+  /**
+   * @generated from field: sint32 cx = 4;
+   */
+  cx: number;
+
+  /**
+   * @generated from field: sint32 cy = 5;
+   */
+  cy: number;
+
+  /**
+   * @generated from field: string epoch = 6;
+   */
+  epoch: string;
+};
+
+export declare type FightRoomKeyValid = FightRoomKey;
+
+/**
+ * Describes the message glimway.v2.FightRoomKey.
+ * Use `create(FightRoomKeySchema)` to create a new message.
+ */
+export declare const FightRoomKeySchema: GenMessage<FightRoomKey, {validType: FightRoomKeyValid}>;
+
+/**
+ * Unit facing. Unlike optional legacy PresenceFacing, both zero components
+ * are meaningful. Squared length allows normal floating-point roundoff.
+ *
+ * @generated from message glimway.v2.FightFacing
+ */
+export declare type FightFacing = Message<"glimway.v2.FightFacing"> & {
+  /**
+   * @generated from field: double x = 1;
+   */
+  x: number;
+
+  /**
+   * @generated from field: double y = 2;
+   */
+  y: number;
+};
+
+export declare type FightFacingValid = FightFacing;
+
+/**
+ * Describes the message glimway.v2.FightFacing.
+ * Use `create(FightFacingSchema)` to create a new message.
+ */
+export declare const FightFacingSchema: GenMessage<FightFacing, {validType: FightFacingValid}>;
+
+/**
+ * Client intent only: the server derives targets and damage. Counters are
+ * uint32, starting at 0 and wrapping modulo 2^32; one roll per swing/cast,
+ * shared by all enemies hit. Tick 0 is valid at wake.
+ *
+ * @generated from message glimway.v2.FightSwing
+ */
+export declare type FightSwing = Message<"glimway.v2.FightSwing"> & {
+  /**
+   * @generated from field: glimway.v2.FightSwingKind kind = 1;
+   */
+  kind: FightSwingKind;
+
+  /**
+   * @generated from field: double x = 2;
+   */
+  x: number;
+
+  /**
+   * @generated from field: double y = 3;
+   */
+  y: number;
+
+  /**
+   * @generated from field: glimway.v2.FightFacing facing = 4;
+   */
+  facing?: FightFacing | undefined;
+
+  /**
+   * @generated from field: uint32 swing_counter = 5;
+   */
+  swingCounter: number;
+
+  /**
+   * @generated from field: uint32 seen_tick = 6;
+   */
+  seenTick: number;
+};
+
+/**
+ * Client intent only: the server derives targets and damage. Counters are
+ * uint32, starting at 0 and wrapping modulo 2^32; one roll per swing/cast,
+ * shared by all enemies hit. Tick 0 is valid at wake.
+ *
+ * @generated from message glimway.v2.FightSwing
+ */
+export declare type FightSwingValid = Message<"glimway.v2.FightSwing"> & {
+  /**
+   * @generated from field: glimway.v2.FightSwingKind kind = 1;
+   */
+  kind: FightSwingKind;
+
+  /**
+   * @generated from field: double x = 2;
+   */
+  x: number;
+
+  /**
+   * @generated from field: double y = 3;
+   */
+  y: number;
+
+  /**
+   * @generated from field: glimway.v2.FightFacing facing = 4;
+   */
+  facing: FightFacingValid;
+
+  /**
+   * @generated from field: uint32 swing_counter = 5;
+   */
+  swingCounter: number;
+
+  /**
+   * @generated from field: uint32 seen_tick = 6;
+   */
+  seenTick: number;
+};
+
+/**
+ * Describes the message glimway.v2.FightSwing.
+ * Use `create(FightSwingSchema)` to create a new message.
+ */
+export declare const FightSwingSchema: GenMessage<FightSwing, {validType: FightSwingValid}>;
+
+/**
+ * A changed enemy is a full row, never a patch with ambiguous zero fields.
+ * Kind/camp/max_hp make joins and spawn deltas self-contained. Positions
+ * are world pixels, rounded by the sim. HP may be fractional after damage.
+ *
+ * @generated from message glimway.v2.FightEnemy
+ */
+export declare type FightEnemy = Message<"glimway.v2.FightEnemy"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: sint32 x = 2;
+   */
+  x: number;
+
+  /**
+   * @generated from field: sint32 y = 3;
+   */
+  y: number;
+
+  /**
+   * @generated from field: glimway.v2.FightEnemyState state = 4;
+   */
+  state: FightEnemyState;
+
+  /**
+   * @generated from field: double hp = 5;
+   */
+  hp: number;
+
+  /**
+   * @generated from field: glimway.v2.FightFacing facing = 6;
+   */
+  facing?: FightFacing | undefined;
+
+  /**
+   * @generated from field: glimway.v2.FightEnemyKind kind = 7;
+   */
+  kind: FightEnemyKind;
+
+  /**
+   * @generated from field: string camp_id = 8;
+   */
+  campId: string;
+
+  /**
+   * @generated from field: double max_hp = 9;
+   */
+  maxHp: number;
+};
+
+/**
+ * A changed enemy is a full row, never a patch with ambiguous zero fields.
+ * Kind/camp/max_hp make joins and spawn deltas self-contained. Positions
+ * are world pixels, rounded by the sim. HP may be fractional after damage.
+ *
+ * @generated from message glimway.v2.FightEnemy
+ */
+export declare type FightEnemyValid = Message<"glimway.v2.FightEnemy"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: sint32 x = 2;
+   */
+  x: number;
+
+  /**
+   * @generated from field: sint32 y = 3;
+   */
+  y: number;
+
+  /**
+   * @generated from field: glimway.v2.FightEnemyState state = 4;
+   */
+  state: FightEnemyState;
+
+  /**
+   * @generated from field: double hp = 5;
+   */
+  hp: number;
+
+  /**
+   * @generated from field: glimway.v2.FightFacing facing = 6;
+   */
+  facing: FightFacingValid;
+
+  /**
+   * @generated from field: glimway.v2.FightEnemyKind kind = 7;
+   */
+  kind: FightEnemyKind;
+
+  /**
+   * @generated from field: string camp_id = 8;
+   */
+  campId: string;
+
+  /**
+   * @generated from field: double max_hp = 9;
+   */
+  maxHp: number;
+};
+
+/**
+ * Describes the message glimway.v2.FightEnemy.
+ * Use `create(FightEnemySchema)` to create a new message.
+ */
+export declare const FightEnemySchema: GenMessage<FightEnemy, {validType: FightEnemyValid}>;
+
+/**
+ * @generated from message glimway.v2.FightJoin
+ */
+export declare type FightJoin = Message<"glimway.v2.FightJoin"> & {
+  /**
+   * @generated from field: glimway.v2.FightRoomKey room_key = 1;
+   */
+  roomKey?: FightRoomKey | undefined;
+
+  /**
+   * @generated from field: uint32 tick = 2;
+   */
+  tick: number;
+
+  /**
+   * @generated from field: repeated glimway.v2.FightEnemy enemies = 3;
+   */
+  enemies: FightEnemy[];
+
+  /**
+   * A player's seed stays stable across visible rooms for this socket.
+   *
+   * @generated from field: fixed32 crit_seed = 4;
+   */
+  critSeed: number;
+};
+
+/**
+ * @generated from message glimway.v2.FightJoin
+ */
+export declare type FightJoinValid = Message<"glimway.v2.FightJoin"> & {
+  /**
+   * @generated from field: glimway.v2.FightRoomKey room_key = 1;
+   */
+  roomKey: FightRoomKeyValid;
+
+  /**
+   * @generated from field: uint32 tick = 2;
+   */
+  tick: number;
+
+  /**
+   * @generated from field: repeated glimway.v2.FightEnemy enemies = 3;
+   */
+  enemies: FightEnemyValid[];
+
+  /**
+   * A player's seed stays stable across visible rooms for this socket.
+   *
+   * @generated from field: fixed32 crit_seed = 4;
+   */
+  critSeed: number;
+};
+
+/**
+ * Describes the message glimway.v2.FightJoin.
+ * Use `create(FightJoinSchema)` to create a new message.
+ */
+export declare const FightJoinSchema: GenMessage<FightJoin, {validType: FightJoinValid}>;
+
+/**
+ * @generated from message glimway.v2.FightDelta
+ */
+export declare type FightDelta = Message<"glimway.v2.FightDelta"> & {
+  /**
+   * @generated from field: glimway.v2.FightRoomKey room_key = 1;
+   */
+  roomKey?: FightRoomKey | undefined;
+
+  /**
+   * @generated from field: uint32 tick = 2;
+   */
+  tick: number;
+
+  /**
+   * @generated from field: repeated glimway.v2.FightEnemy enemies = 3;
+   */
+  enemies: FightEnemy[];
+};
+
+/**
+ * @generated from message glimway.v2.FightDelta
+ */
+export declare type FightDeltaValid = Message<"glimway.v2.FightDelta"> & {
+  /**
+   * @generated from field: glimway.v2.FightRoomKey room_key = 1;
+   */
+  roomKey: FightRoomKeyValid;
+
+  /**
+   * @generated from field: uint32 tick = 2;
+   */
+  tick: number;
+
+  /**
+   * @generated from field: repeated glimway.v2.FightEnemy enemies = 3;
+   */
+  enemies: FightEnemyValid[];
+};
+
+/**
+ * Describes the message glimway.v2.FightDelta.
+ * Use `create(FightDeltaSchema)` to create a new message.
+ */
+export declare const FightDeltaSchema: GenMessage<FightDelta, {validType: FightDeltaValid}>;
+
+/**
+ * @generated from message glimway.v2.FightEvent
+ */
+export declare type FightEvent = Message<"glimway.v2.FightEvent"> & {
+  /**
+   * @generated from field: glimway.v2.FightRoomKey room_key = 1;
+   */
+  roomKey?: FightRoomKey | undefined;
+
+  /**
+   * @generated from field: uint32 tick = 2;
+   */
+  tick: number;
+
+  /**
+   * @generated from field: glimway.v2.FightEventKind kind = 3;
+   */
+  kind: FightEventKind;
+
+  /**
+   * Empty only for room closed; target is an account or Echo decoy id.
+   *
+   * @generated from field: string enemy_id = 4;
+   */
+  enemyId: string;
+
+  /**
+   * @generated from field: optional string target = 5;
+   */
+  target?: string | undefined;
+
+  /**
+   * Unix milliseconds, from the injected server clock (safe integer).
+   *
+   * @generated from field: double server_start_time = 6;
+   */
+  serverStartTime: number;
+};
+
+/**
+ * @generated from message glimway.v2.FightEvent
+ */
+export declare type FightEventValid = Message<"glimway.v2.FightEvent"> & {
+  /**
+   * @generated from field: glimway.v2.FightRoomKey room_key = 1;
+   */
+  roomKey: FightRoomKeyValid;
+
+  /**
+   * @generated from field: uint32 tick = 2;
+   */
+  tick: number;
+
+  /**
+   * @generated from field: glimway.v2.FightEventKind kind = 3;
+   */
+  kind: FightEventKind;
+
+  /**
+   * Empty only for room closed; target is an account or Echo decoy id.
+   *
+   * @generated from field: string enemy_id = 4;
+   */
+  enemyId: string;
+
+  /**
+   * @generated from field: optional string target = 5;
+   */
+  target?: string | undefined;
+
+  /**
+   * Unix milliseconds, from the injected server clock (safe integer).
+   *
+   * @generated from field: double server_start_time = 6;
+   */
+  serverStartTime: number;
+};
+
+/**
+ * Describes the message glimway.v2.FightEvent.
+ * Use `create(FightEventSchema)` to create a new message.
+ */
+export declare const FightEventSchema: GenMessage<FightEvent, {validType: FightEventValid}>;
+
+/**
+ * @generated from message glimway.v2.FightHit
+ */
+export declare type FightHit = Message<"glimway.v2.FightHit"> & {
+  /**
+   * @generated from field: uint32 swing_counter = 1;
+   */
+  swingCounter: number;
+
+  /**
+   * @generated from field: string enemy_id = 2;
+   */
+  enemyId: string;
+
+  /**
+   * @generated from field: double damage = 3;
+   */
+  damage: number;
+
+  /**
+   * @generated from field: bool crit = 4;
+   */
+  crit: boolean;
+
+  /**
+   * Unspecified means confirmed. Refusals carry zero damage, never crit.
+   *
+   * @generated from field: glimway.v2.FightRefusedReason refused_reason = 5;
+   */
+  refusedReason: FightRefusedReason;
+};
+
+export declare type FightHitValid = FightHit;
+
+/**
+ * Describes the message glimway.v2.FightHit.
+ * Use `create(FightHitSchema)` to create a new message.
+ */
+export declare const FightHitSchema: GenMessage<FightHit, {validType: FightHitValid}>;
+
+/**
+ * @generated from enum glimway.v2.FightSwingKind
+ */
+export enum FightSwingKind {
+  /**
+   * @generated from enum value: FIGHT_SWING_KIND_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: FIGHT_SWING_KIND_SLASH = 1;
+   */
+  SLASH = 1,
+
+  /**
+   * @generated from enum value: FIGHT_SWING_KIND_BOLT = 2;
+   */
+  BOLT = 2,
+}
+
+/**
+ * Describes the enum glimway.v2.FightSwingKind.
+ */
+export declare const FightSwingKindSchema: GenEnum<FightSwingKind>;
+
+/**
+ * @generated from enum glimway.v2.FightEnemyKind
+ */
+export enum FightEnemyKind {
+  /**
+   * @generated from enum value: FIGHT_ENEMY_KIND_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: FIGHT_ENEMY_KIND_WISP = 1;
+   */
+  WISP = 1,
+
+  /**
+   * @generated from enum value: FIGHT_ENEMY_KIND_BEETLE = 2;
+   */
+  BEETLE = 2,
+}
+
+/**
+ * Describes the enum glimway.v2.FightEnemyKind.
+ */
+export declare const FightEnemyKindSchema: GenEnum<FightEnemyKind>;
+
+/**
+ * @generated from enum glimway.v2.FightEnemyState
+ */
+export enum FightEnemyState {
+  /**
+   * @generated from enum value: FIGHT_ENEMY_STATE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: FIGHT_ENEMY_STATE_CHASE = 1;
+   */
+  CHASE = 1,
+
+  /**
+   * @generated from enum value: FIGHT_ENEMY_STATE_TELEGRAPH = 2;
+   */
+  TELEGRAPH = 2,
+
+  /**
+   * @generated from enum value: FIGHT_ENEMY_STATE_LUNGE = 3;
+   */
+  LUNGE = 3,
+
+  /**
+   * @generated from enum value: FIGHT_ENEMY_STATE_RECOVER = 4;
+   */
+  RECOVER = 4,
+
+  /**
+   * @generated from enum value: FIGHT_ENEMY_STATE_STUNNED = 5;
+   */
+  STUNNED = 5,
+
+  /**
+   * @generated from enum value: FIGHT_ENEMY_STATE_DEAD = 6;
+   */
+  DEAD = 6,
+}
+
+/**
+ * Describes the enum glimway.v2.FightEnemyState.
+ */
+export declare const FightEnemyStateSchema: GenEnum<FightEnemyState>;
+
+/**
+ * @generated from enum glimway.v2.FightEventKind
+ */
+export enum FightEventKind {
+  /**
+   * @generated from enum value: FIGHT_EVENT_KIND_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: FIGHT_EVENT_KIND_WINDUP_START = 1;
+   */
+  WINDUP_START = 1,
+
+  /**
+   * @generated from enum value: FIGHT_EVENT_KIND_AIM_LOCK = 2;
+   */
+  AIM_LOCK = 2,
+
+  /**
+   * @generated from enum value: FIGHT_EVENT_KIND_DEATH = 3;
+   */
+  DEATH = 3,
+
+  /**
+   * @generated from enum value: FIGHT_EVENT_KIND_SPAWN = 4;
+   */
+  SPAWN = 4,
+
+  /**
+   * @generated from enum value: FIGHT_EVENT_KIND_ROOM_CLOSED = 5;
+   */
+  ROOM_CLOSED = 5,
+}
+
+/**
+ * Describes the enum glimway.v2.FightEventKind.
+ */
+export declare const FightEventKindSchema: GenEnum<FightEventKind>;
+
+/**
+ * @generated from enum glimway.v2.FightRefusedReason
+ */
+export enum FightRefusedReason {
+  /**
+   * @generated from enum value: FIGHT_REFUSED_REASON_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: FIGHT_REFUSED_REASON_ALREADY_DEAD = 1;
+   */
+  ALREADY_DEAD = 1,
+
+  /**
+   * @generated from enum value: FIGHT_REFUSED_REASON_OUT_OF_REACH = 2;
+   */
+  OUT_OF_REACH = 2,
+
+  /**
+   * @generated from enum value: FIGHT_REFUSED_REASON_COOLDOWN = 3;
+   */
+  COOLDOWN = 3,
+
+  /**
+   * @generated from enum value: FIGHT_REFUSED_REASON_UNKNOWN_ENEMY = 4;
+   */
+  UNKNOWN_ENEMY = 4,
+}
+
+/**
+ * Describes the enum glimway.v2.FightRefusedReason.
+ */
+export declare const FightRefusedReasonSchema: GenEnum<FightRefusedReason>;
 
