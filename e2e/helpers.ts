@@ -272,6 +272,169 @@ export async function waitForWilds(page: Page): Promise<string> {
   return (await handle.jsonValue()) as string
 }
 
+/**
+ * Readiness, named (review 2026-10-11, game F4). Three separate states a
+ * test waits for before it acts, each meaning one thing:
+ *
+ * - **scene settled** — `settled(page)` / `waitForArea` / `waitForWilds`: the
+ *   area's scene is built, its fade done, frames drawn (on the open map, the
+ *   hero's chunk attached too);
+ * - **target chunk whole** — `chunkWhole(page, tile)`: the open map's chunk
+ *   holding that tile is attached *and built whole* (its scenery, gathering
+ *   pieces and things registered: no unfinished build). Attaching starts a
+ *   sliced build, so a settled scene can still be missing the target's
+ *   interaction points; `windowWhole(page)` is the whole 3×3;
+ * - **input live** — `waitForLive(page)`: no dialogue or panel, not mid-transition.
+ *
+ * And the target itself is the game's, never a copy of its rules:
+ * `targetAt(page, feet)` asks the scene which point the hero's feet there
+ * would get (rank, reach, the tool in hand), `expectTarget` waits for the
+ * elected one, `standFor` finds a standing spot that elects it, and
+ * `pressOn` presses E on it once all three states hold.
+ */
+
+/** window.__fsTarget(): a point the action button can be used on (src/game/entities/interactables.ts). */
+export type TargetView = { id: string; label: string | null; x: number; y: number; rank: number }
+/** The target for some feet, and every point in reach of them (usable or not). */
+export type TargetRead = { target: TargetView | null; near: (TargetView & { d: number; usable: boolean })[]; at: { x: number; y: number } }
+type TargetHook = { __fsTarget?: (x?: number, y?: number) => TargetRead }
+
+/** The open map's chunk size, in tiles. */
+const CHUNK = 24
+
+/** The open map chunk key (`cx,cy`) of a world tile. */
+export function chunkKeyOf(at: { tx: number; ty: number }): string {
+  return `${Math.floor(at.tx / CHUNK)},${Math.floor(at.ty / CHUNK)}`
+}
+
+/**
+ * What a stalled step needs said: the hero (position, body, what blocks it),
+ * the target and what is in reach, the dev walk's next waypoints, the
+ * window's build state and the Wilds epoch (to replay the geometry).
+ */
+export async function diagnose(page: Page): Promise<string> {
+  const d = await page.evaluate(() => {
+    const w = window as unknown as Hooks & TargetHook & { __fsDevWalkLeft?: () => { x: number; y: number }[] | null; __fsEnemies?: () => { x: number; y: number; state: string }[] }
+    const p = (w.__fsPlayer as unknown as (() => { x: number; y: number; body?: unknown; blocked?: unknown }) | undefined)?.() ?? null
+    const win = w.__fsWildsWindow?.() ?? null
+    const wilds = w.__fsWilds?.() ?? null
+    const t = w.__fsTarget?.() ?? null
+    return {
+      area: w.__fsFrame?.()?.areaId ?? null,
+      live: w.__fsFrame?.()?.live ?? null,
+      hero: p,
+      target: t?.target?.id ?? null,
+      near: t?.near.map((n) => `${n.id}@${n.d}${n.usable ? '' : '(unusable)'}`) ?? [],
+      walk: w.__fsDevWalkLeft?.()?.slice(0, 3) ?? null,
+      creatures: (w.__fsEnemies?.() ?? []).filter((e) => e.state !== 'dead').length,
+      window: win ? { center: win.center, ready: win.ready, building: win.building, attached: win.attached.length } : null,
+      epoch: wilds ? { id: wilds.epochId, season: wilds.season, chunk: wilds.chunk } : null
+    }
+  }).catch((e: unknown) => ({ error: String(e) }))
+  return JSON.stringify(d)
+}
+
+/**
+ * Target chunk whole: the open map chunk holding world tile `at` is attached
+ * and built whole (no unfinished build there). Fails naming the window's state.
+ */
+export async function chunkWhole(page: Page, at: { tx: number; ty: number }, timeout = 20_000): Promise<void> {
+  const key = chunkKeyOf(at)
+  await page
+    .waitForFunction((k) => {
+      const w = (window as unknown as Hooks).__fsWildsWindow?.()
+      return !!w && w.attached.includes(k) && !w.building.includes(k)
+    }, key, { timeout })
+    .catch(async () => {
+      throw new Error(`chunk ${key} never attached and built whole: ${await diagnose(page)}`)
+    })
+}
+
+/**
+ * The whole window whole: every chunk of the 3×3 around the hero (inside the
+ * frontier) attached and built. Centred on the hero's chunk first: a placed
+ * hero is recentred on a later frame, and until then `ready` speaks for the
+ * old window (review 2026-10-11).
+ */
+export async function windowWhole(page: Page, timeout = 20_000): Promise<void> {
+  await page
+    .waitForFunction(
+      (chunkPx) => {
+        const h = window as unknown as Hooks
+        const w = h.__fsWildsWindow?.()
+        const p = h.__fsPlayer?.()
+        if (!w?.center || !p) return false
+        return w.center.cx === Math.floor(p.x / chunkPx) && w.center.cy === Math.floor(p.y / chunkPx) && w.ready === true
+      },
+      CHUNK * 16,
+      { timeout }
+    )
+    .catch(async () => {
+      throw new Error(`the window never came whole: ${await diagnose(page)}`)
+    })
+}
+
+/** The action button's target now (as this frame chose it), and what is in reach of the hero. */
+export async function targetNow(page: Page): Promise<TargetRead> {
+  return page.evaluate(() => (window as unknown as TargetHook).__fsTarget!())
+}
+
+/** The target the hero's feet at `at` (world px) would get, by the game's own rule: rank, reach, the tool in hand. */
+export async function targetAt(page: Page, at: { x: number; y: number }): Promise<TargetRead> {
+  return page.evaluate(([x, y]) => (window as unknown as TargetHook).__fsTarget!(x, y), [at.x, at.y] as const)
+}
+
+/**
+ * The game has elected exactly `id` as the target (within `seconds` of game
+ * time). Fails naming what it elected instead, what was in reach, and where
+ * the hero stood.
+ */
+export async function expectTarget(page: Page, id: string, seconds = 3): Promise<TargetView> {
+  try {
+    const t = await waitGame(page, () => targetNow(page), (v) => v.target?.id === id, { seconds, message: `the target is ${id}` })
+    return t.target!
+  } catch (e) {
+    throw new Error(`${String(e).slice(0, 300)}\n${await diagnose(page)}`)
+  }
+}
+
+/**
+ * Stand where the game elects `id`: the first of `spots` (feet, world px)
+ * whose target is it, by `targetAt`; the hero is set down there and the
+ * election seen to hold. Null (with `why` filled) when none of them works.
+ */
+export async function standFor(page: Page, id: string, spots: { x: number; y: number }[], why: string[] = []): Promise<{ x: number; y: number } | null> {
+  for (const at of spots) {
+    const read = await targetAt(page, at)
+    if (read.target?.id !== id) {
+      why.push(`${at.x},${at.y}→${read.target?.id ?? 'nothing'}`)
+      continue
+    }
+    await page.evaluate(([x, y]) => (window as unknown as { __fsDevPlace: (x: number, y: number) => void }).__fsDevPlace(x, y), [at.x, at.y] as const)
+    const ok = await waitGame(page, async () => ({ p: await player(page), t: await targetNow(page) }), (v) => Math.hypot(v.p.x - at.x, v.p.y - at.y) <= 2 && v.t.target?.id === id, { seconds: 1 })
+      .then(() => true, () => false)
+    if (ok) return at
+    why.push(`${at.x},${at.y}: placed, but ${await diagnose(page)}`)
+  }
+  return null
+}
+
+/**
+ * Press E on exactly `id`: its chunk whole (on the open map, with `tile`),
+ * world input live, and `id` elected; then the press.
+ */
+export async function pressOn(page: Page, id: string, tile?: { tx: number; ty: number }): Promise<void> {
+  if (tile) await chunkWhole(page, tile)
+  await waitForLive(page)
+  await expectTarget(page, id)
+  await page.keyboard.press('e')
+}
+
+/** Set the area's creatures aside (frozen, off the map). Creatures of chunks attached later come back: park again after a move. */
+export async function parkCreatures(page: Page): Promise<void> {
+  await page.evaluate(() => (window as unknown as { __fsDevParkCreatures?: () => void }).__fsDevParkCreatures?.())
+}
+
 /** The frame state now (null before the world is up). */
 async function frame(page: Page): Promise<FrameView | null> {
   return page.evaluate(() => (window as unknown as Hooks).__fsFrame?.() ?? null)

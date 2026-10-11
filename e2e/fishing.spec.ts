@@ -1,9 +1,8 @@
 import { expect, test, type Page } from './fixtures'
-import { CONTRACT, moveServerClock, reenter, signInAgain } from './connected'
+import { CONTRACT, moveServerClock, reenter, seasonOf } from './connected'
 import { residentsOut } from './room-helpers'
 import { freshPlayer, fund, giveInstance } from './home-helpers'
 import { expectToast, openTalk, readDialogue, untilChoices, waitForLive, waitGame, warp } from './helpers'
-import { CALENDAR, calendarAt } from '../src/lib/calendar.ts'
 import { itemDef } from '../src/lib/items.ts'
 
 /**
@@ -48,24 +47,6 @@ async function holdRod(page: Page): Promise<void> {
   await expect.poll(async () => (await held()).kind).toBe('fish')
 }
 
-/**
- * Both clocks to the first day from now whose mark is `mark`. The world's
- * clock moves in steps under 30 days, signing in again between them: a
- * session ends 30 days after it began however much it's used (the server's
- * seasons tests' `jumpToAs` does the same), and a mark can be two months off.
- */
-async function seasonOf(page: Page, id: string, mark: string): Promise<void> {
-  const DAY = 86400
-  let now = await moveServerClock(page, 0)
-  let t = now
-  while (calendarAt(t, CALENDAR).mark !== mark) t += DAY
-  while (now < t) {
-    now = await moveServerClock(page, Math.min(t, now + 25 * DAY))
-    if (now < t) await signInAgain(page, id)
-  }
-  await page.evaluate((x) => (window as unknown as { __fsDevCalendar: (t: number) => void }).__fsDevCalendar(x), t)
-}
-
 /** Both clocks `seconds` on (the world's and the screen's), so a rule on clock time passes without waiting it out. */
 async function clocksOn(page: Page, seconds: number): Promise<void> {
   const later = (await moveServerClock(page, 0)) + seconds
@@ -73,13 +54,22 @@ async function clocksOn(page: Page, seconds: number): Promise<void> {
   await page.evaluate((x) => (window as unknown as { __fsDevCalendar: (t: number) => void }).__fsDevCalendar(x), later)
 }
 
-/** Cast from where the hero stands, and wait for the bite. */
-async function castAndWait(page: Page): Promise<void> {
+/** Healthy water's wait for a bite, and the clocks' grace on each side of it (src/lib/fishing.ts). */
+const BITE_SECONDS = 10 + 2
+
+/**
+ * Cast from where the hero stands, and wait for the bite. Once the server
+ * has accepted the cast, both clocks move on past healthy water's wait, so
+ * the bite comes at once (review 2026-10-11: no waiting the real seconds
+ * out); `realTime` waits them out instead (the one real-time check).
+ */
+async function castAndWait(page: Page, opts: { realTime?: boolean } = {}): Promise<void> {
   await expect(page.locator('.prompt')).toBeVisible()
   await waitForLive(page)
   await page.keyboard.press('e')
   await expect.poll(async () => (await fishing(page))?.line?.predicted, { message: 'the server’s cast' }).toBe(false)
   await expect(page.locator('.prompt')).toContainText('Pull the line in')
+  if (!opts.realTime) await clocksOn(page, BITE_SECONDS)
   // Healthy water bites in ten seconds.
   await waitGame(page, () => fishing(page), (v) => v?.line?.phase === 'ready', { seconds: 20, message: 'the float dips' })
   await expect(page.locator('.prompt')).toContainText('Something’s on your line')
@@ -96,7 +86,8 @@ test.describe('fishing at the mill pond', () => {
     await holdRod(page)
     await expect(page.locator('.prompt')).toContainText(BANK_LINE)
 
-    await castAndWait(page)
+    // This first bite on real time (the one integration check of the wait itself).
+    await castAndWait(page, { realTime: true })
     await expect.poll(async () => (await fishing(page))?.pose).toBe('fishing')
     await waitForLive(page)
     await page.keyboard.press('e') // Reel
@@ -144,6 +135,7 @@ test.describe('fishing at the mill pond', () => {
     // A reload lands on the title: Continue back into the world.
     await reenter(page)
     await expect.poll(async () => (await fishing(page))?.line?.id, { timeout: 30_000 }).toBe(cast)
+    await clocksOn(page, BITE_SECONDS)
     await waitGame(page, () => fishing(page), (v) => v?.line?.phase === 'ready', { seconds: 20 })
     await expect(page.locator('.prompt')).toContainText('Something’s on your line')
 

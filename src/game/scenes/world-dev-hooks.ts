@@ -86,6 +86,13 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
     s['devWalk'] = path.length ? path.map((p) => ({ x: p.x, y: p.y })) : null
   })
   on('__fsDevWalking', () => s['devWalk'] !== null)
+  on('__fsDevWalkLeft', () => s['devWalk']?.map((p) => ({ x: p.x, y: p.y })) ?? null)
+  // The target as the action button sees it, now or for feet at (x, y).
+  on('__fsTarget', (x?: number, y?: number) => {
+    const hero = s['hero'].sprite
+    const at = x === undefined || y === undefined ? { x: hero.x, y: hero.y } : { x, y }
+    return { ...s['interactables'].debugTarget(at, x === undefined || y === undefined), at }
+  })
   // The ground under a tile (a TERRAIN id; null where the open map knows nothing).
   on('__fsGroundAt', (tx: number, ty: number) => {
     const world = s['world']
