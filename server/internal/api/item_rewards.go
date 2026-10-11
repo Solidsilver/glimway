@@ -10,7 +10,6 @@ import (
 	"glimway/server/internal/store"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"slices"
-	"strings"
 )
 
 func (a *Server) returnKeepsake(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *contract.ItemsRequest, now int64, out *contract.ItemsResult) error {
@@ -52,7 +51,7 @@ func (a *Server) returnKeepsake(ctx context.Context, tx *sql.Tx, s *store.Snapsh
 			return fail(409, "too-far-away")
 		}
 	case "bett", "nan":
-		if !strings.HasPrefix(s.State.Area, "wilds:") {
+		if s.State.Area != wildsArea {
 			return fail(409, "too-far-away")
 		}
 	default:
@@ -120,7 +119,7 @@ func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapsho
 			return fail(409, "too-far-away")
 		}
 	case "nans-lamplighter-pole":
-		if !strings.HasPrefix(s.State.Area, "wilds:") {
+		if s.State.Area != wildsArea {
 			return fail(409, "too-far-away")
 		}
 	default:

@@ -8,7 +8,7 @@
 import raw from '../../../content/wilds.json' with { type: 'json' };
 import { decodeContent } from '../content-proto.ts';
 import { WildsSchema } from '../gen/glimway/content/v1/wilds_pb.js';
-import type { WildsData, WildsEntityKind, WildsGround, WildsRegion } from './types.ts';
+import type { WildsData, WildsEntityKind, WildsGround } from './types.ts';
 
 /** Every loot table a spawn rule of the kind rolls on. */
 function lootTableIds(kind: WildsEntityKind, materials: string[]): string[] {
@@ -202,21 +202,4 @@ export function wildsGround(id: string): WildsGround {
   const g = loadWilds().grounds.find((x) => x.id === id);
   if (!g) throw new Error(`wilds: no ground ${id}`);
   return g;
-}
-
-/**
- * The v2 bridge (lane O-A, 0.8): generator v2 still plays in two 3x3
- * regions, which contract 8 took out of wilds.json. Each is read off its
- * footprint, the Tangle as "inner-1" and the Whitequiet as "outer-1", with
- * the entry in the middle chunk as before (content/wilds_v2.go is the
- * server's twin). Lanes O-B, O-C and O-D delete it with generator v2.
- */
-export function wildsV2Regions(): WildsRegion[] {
-  const w = loadWilds();
-  const of = (id: string, place: string, kind: 'inner' | 'outer'): WildsRegion => {
-    const p = w.places.find((x) => x.id === place);
-    if (!p) throw new Error(`wilds: no place ${place}`);
-    return { id, kind, gridWidth: p.width, gridHeight: p.height, entryX: Math.floor(p.width / 2), entryY: Math.floor(p.height / 2) };
-  };
-  return [of('inner-1', 'tangle', 'inner'), of('outer-1', 'whitequiet', 'outer')];
 }

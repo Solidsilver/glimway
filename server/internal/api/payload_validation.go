@@ -57,11 +57,7 @@ func validArea(area string) bool {
 	if slices.Contains([]string{"village", "woodland", "ruin", "commons"}, area) || rules.HomeGate(area) >= 0 || content.KnownRoom(area) {
 		return true
 	}
-	if !strings.HasPrefix(area, "wilds:") {
-		return false
-	}
-	_, ok := regionDefinition(strings.TrimPrefix(area, "wilds:"))
-	return ok
+	return area == wildsArea
 }
 
 // Witness flags compose bounded ids and a human display name, rather than one

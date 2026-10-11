@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"glimway/content"
 	"glimway/server/internal/chunks"
+	"glimway/server/internal/chunks/fakegen"
+	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/land"
 	"glimway/server/internal/ports"
@@ -26,11 +28,19 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// wildsView is a region read with the bodies of its stored chunks.
+// wildsView is a footprint's part of a near read (its epoch, entity
+// states, claims and lanterns) with the bodies of its stored chunks.
 type wildsView struct {
-	*contract.WildsRegionResult
-	chunks []*contract.WildsChunk
-	bodies []*contract.WildsEntity
+	near           *contract.WildsNearResult
+	Epoch          *contract.WildsEpoch
+	Entities       []*contract.WildsEntityState
+	PersonalClaims []*contract.WildsPersonalClaim
+	Discoveries    []*contract.WildsDiscovery
+	Lanterns       []*contract.WildsLantern
+	Echoes         []*contract.EchoAssignment
+	Materials      map[string]float64
+	chunks         []*contract.WildsChunk
+	bodies         []*contract.WildsEntity
 }
 
 func (v wildsView) kind(t *testing.T, kind string) *contract.WildsEntity {
@@ -53,29 +63,53 @@ func (v wildsView) state(id string) *contract.WildsEntityState {
 	return nil
 }
 
-// fixtureSeed: every tested entity kind is present in this world seed.
-const fixtureSeed = "phase34-tests"
-
-// wilds reads a region (creating its epoch on first read) and its chunks.
-func (x *rig) wilds(c *http.Cookie, region string) wildsView {
+// near is GET /api/wilds/near/<cx>/<cy>.
+func (x *rig) near(c *http.Cookie, cx, cy, status int) *contract.WildsNearResult {
 	x.t.Helper()
-	if _, err := x.db.DB.Exec("UPDATE worlds SET seed=? WHERE id NOT IN (SELECT world_id FROM region_epochs)", fixtureSeed); err != nil {
+	w := x.rawHTTP("GET", fmt.Sprintf("/api/wilds/near/%d/%d", cx, cy), nil, c)
+	if w.Code != status {
+		x.t.Fatalf("near read %d,%d: %d %s", cx, cy, w.Code, w.Body.String())
+	}
+	if status != 200 {
+		return nil
+	}
+	v := &contract.WildsNearResult{}
+	if err := protojson.Unmarshal(w.Body.Bytes(), v); err != nil {
 		x.t.Fatal(err)
 	}
-	w := x.rawHTTP("GET", "/api/wilds/region/"+region, nil, c)
-	if w.Code != 200 {
-		x.t.Fatalf("region read: %d %s", w.Code, w.Body.String())
+	return v
+}
+
+// wilds reads a footprint ("tangle", "whitequiet") through a near read at
+// its middle chunk (making the epochs on first read), and its chunks.
+func (x *rig) wilds(c *http.Cookie, footprint string) wildsView {
+	x.t.Helper()
+	f := wilds.Footprint(footprint)
+	mx, my := int(f.GetCx()+f.GetWidth()/2), int(f.GetCy()+f.GetHeight()/2)
+	n := x.near(c, mx, my, 200)
+	v := wildsView{near: n, Epoch: n.Still, Discoveries: n.Discoveries, Lanterns: n.Lanterns, Echoes: n.Echoes, Materials: n.Materials}
+	if f.GetEpochKind() == "wick" {
+		v.Epoch = n.Wick
 	}
-	v := wildsView{WildsRegionResult: &contract.WildsRegionResult{}}
-	if err := protojson.Unmarshal(w.Body.Bytes(), v.WildsRegionResult); err != nil {
-		x.t.Fatal(err)
-	}
-	def, _ := regionDefinition(region)
-	for cy := 0; cy < int(def.GetGridHeight()); cy++ {
-		for cx := 0; cx < int(def.GetGridWidth()); cx++ {
-			m := x.chunk(c, v.Epoch.Id, 0, cx, cy, 200)
+	ids := map[string]bool{}
+	for cy := f.GetCy(); cy < f.GetCy()+f.GetHeight(); cy++ {
+		for cx := f.GetCx(); cx < f.GetCx()+f.GetWidth(); cx++ {
+			m := x.chunk(c, v.Epoch.Id, 0, int(cx), int(cy), 200)
 			v.chunks = append(v.chunks, m)
 			v.bodies = append(v.bodies, m.Entities...)
+			for _, e := range m.Entities {
+				ids[e.Id] = true
+			}
+		}
+	}
+	for _, e := range n.Entities {
+		if ids[e.Id] {
+			v.Entities = append(v.Entities, e)
+		}
+	}
+	for _, p := range n.PersonalClaims {
+		if ids[p.EntityId] {
+			v.PersonalClaims = append(v.PersonalClaims, p)
 		}
 	}
 	return v
@@ -97,17 +131,23 @@ func (x *rig) chunk(c *http.Cookie, epoch string, layer, cx, cy, status int) *co
 	return m
 }
 
-// at is the region-pixel `where` on an entity's tile, dx tiles east.
-func at(region string, e *contract.WildsEntity, dx int) *contract.Where {
+// entityChunk is the chunk an entity id names.
+func entityChunkOf(e *contract.WildsEntity) (int, int) {
 	var cx, cy int
 	fmt.Sscanf(e.Id, e.Kind+":%d:%d:", &cx, &cy)
-	S := int(content.WildsRules.GetChunkSize())
-	return &contract.Where{Area: wildsArea(region), X: float64((cx*S + int(e.Tx) + dx) * 16), Y: float64((cy*S + int(e.Ty)) * 16)}
+	return cx, cy
 }
 
-// atTile is the region-pixel `where` at a region tile's centre.
-func atTile(region string, tx, ty int) *contract.Where {
-	return &contract.Where{Area: wildsArea(region), X: float64(tx*16 + 8), Y: float64(ty*16 + 8)}
+// at is the world-pixel `where` on an entity's tile, dx tiles east.
+func at(e *contract.WildsEntity, dx int) *contract.Where {
+	cx, cy := entityChunkOf(e)
+	S := int(content.WildsRules.GetChunkSize())
+	return &contract.Where{Area: wildsArea, X: float64((cx*S + int(e.Tx) + dx) * 16), Y: float64((cy*S + int(e.Ty)) * 16)}
+}
+
+// atTile is the world-pixel `where` at a world tile's centre.
+func atTile(tx, ty int) *contract.Where {
+	return &contract.Where{Area: wildsArea, X: float64(tx*16 + 8), Y: float64(ty*16 + 8)}
 }
 
 func op(lease, key string) *contract.OpHeader { return &contract.OpHeader{Lease: lease, Key: key} }
@@ -164,57 +204,106 @@ func (x *rig) fall(subject string, epoch *contract.WildsEpoch, where *contract.W
 	return out
 }
 
-// lanternTile is a walkable region tile beside an entity (entities stand in
+// lanternTile is a walkable world tile (an entity's: entities stand in
 // clearings), where fallen lanterns go in these tests.
 func lanternTile(v wildsView) (int, int) {
 	e := v.bodies[0]
-	var cx, cy int
-	fmt.Sscanf(e.Id, e.Kind+":%d:%d:", &cx, &cy)
+	cx, cy := entityChunkOf(e)
 	return cx*24 + int(e.Tx), cy*24 + int(e.Ty)
 }
 
-func TestWildsRegionCreatesEpochAndStoresChunks(t *testing.T) {
+// The near read (open-map.md 2.4) makes the world's two epochs on first
+// read (the still one with the Tangle's nine chunks) and the window's
+// chunks on demand, and answers every entity in the window, fresh.
+func TestWildsNearMakesEpochsAndChunks(t *testing.T) {
 	x := newRig(t)
 	c, _ := x.ready("alice")
-	v := x.wilds(c, "inner-1")
-	if v.Epoch.GeneratorVersion != 2 || v.Epoch.Season != "0" || v.Epoch.EndsAt != nil {
-		t.Fatalf("epoch %+v", v.Epoch)
+	v := x.wilds(c, "tangle")
+	if v.Epoch.Kind != "still" || v.Epoch.GeneratorVersion != 3 || v.Epoch.Season != "0" || v.Epoch.EndsAt != nil {
+		t.Fatalf("still epoch %+v", v.Epoch)
 	}
-	if count(t, x.db, "SELECT count(*) FROM wilds_chunks WHERE epoch_id=?", v.Epoch.Id) != 9 {
-		t.Fatal("nine chunks not stored at creation")
+	n := v.near
+	day := content.CalendarAt(content.CalendarRules, x.now.Load())
+	if n.Wick.Kind != "wick" || n.Wick.Season != fmt.Sprintf("t:%d:%d", day.StartsAt, day.NextTurning) || n.Wick.EndsAt == nil || int64(n.Wick.EndsAt.Value) != day.NextTurning {
+		t.Fatalf("wick epoch %+v", n.Wick)
 	}
-	if len(v.Entities) != len(v.bodies) || len(v.Entities) == 0 {
-		t.Fatal("entity states don't match the chunks' bodies")
+	if n.Center.Cx != 0 || n.Center.Cy != -1 || n.Center.Realm != "hearthwick" || n.Center.Layer != 0 || n.Radius != 2 {
+		t.Fatalf("window %+v %d", n.Center, n.Radius)
 	}
-	for _, e := range v.Entities {
-		if e.Cycle != 0 || e.State != "available" || e.Epoch != v.Epoch.Id {
+	if r := n.Frontier.Rect; r.MinCx != -4 || r.MinCy != -8 || r.MaxCx != 4 || r.MaxCy != 0 {
+		t.Fatalf("frontier %+v", r)
+	}
+	// The window around (0,-1) is chunks -2..2 by -3..0 inside the frontier:
+	// the Tangle's nine (made with the still epoch) and eleven wick chunks.
+	// It touches the Whitequiet, whose Echoes are dealt over all nine of its
+	// chunks, so its other six are made too.
+	if a, b := count(t, x.db, "SELECT count(*) FROM wilds_chunks WHERE epoch_id=?", n.Still.Id), count(t, x.db, "SELECT count(*) FROM wilds_chunks WHERE epoch_id=?", n.Wick.Id); a != 9 || b != 11+6 {
+		t.Fatal("window chunks not made on read", a, b)
+	}
+	if len(n.Entities) != 4*20 || len(v.Entities) != len(v.bodies) {
+		t.Fatal("entity states don't match the chunks' bodies", len(n.Entities))
+	}
+	for _, e := range n.Entities {
+		if e.Cycle != 0 || e.State != "available" || (e.Epoch != n.Still.Id && e.Epoch != n.Wick.Id) {
 			t.Fatalf("fresh entity %+v", e)
 		}
 	}
 	for i, m := range v.chunks {
-		if chunks.Validate(m) != nil || m.EpochId != v.Epoch.Id || int(m.Cx) != i%3 || int(m.Cy) != i/3 {
+		if chunks.Validate(m) != nil || m.EpochId != v.Epoch.Id || int(m.Cx) != i%3-1 || int(m.Cy) != i/3-2 {
 			t.Fatalf("chunk %d", i)
 		}
 	}
-	// The stored chunks are the generator's, packed.
-	g, _ := wilds.GenerateChunk(generationOf(v.Epoch), 1, 1)
-	if !proto.Equal(wilds.ToProto(g, v.Epoch.Id), v.chunks[4]) {
+	// The stored chunks are the generator's.
+	g, _ := x.gen.Chunk(v.Epoch, 0, -1, nil)
+	if !proto.Equal(g, v.chunks[4]) {
 		t.Fatal("served chunk differs from the generator's")
 	}
-	// The same world reads the same epoch; the read writes nothing more.
-	before := count(t, x.db, "SELECT (SELECT count(*) FROM region_epochs)+(SELECT count(*) FROM wilds_chunks)+(SELECT count(*) FROM entity_state)+(SELECT sum(version) FROM players)")
-	again := x.wilds(c, "inner-1")
-	if again.Epoch.Id != v.Epoch.Id || before != count(t, x.db, "SELECT (SELECT count(*) FROM region_epochs)+(SELECT count(*) FROM wilds_chunks)+(SELECT count(*) FROM entity_state)+(SELECT sum(version) FROM players)") {
+	// The same world reads the same epochs; a second read writes nothing.
+	sum := "SELECT (SELECT count(*) FROM wild_epochs)+(SELECT count(*) FROM wilds_chunks)+(SELECT count(*) FROM entity_state)+(SELECT sum(version) FROM players)"
+	before := count(t, x.db, sum)
+	again := x.near(c, 0, -1, 200)
+	if again.Still.Id != n.Still.Id || again.Wick.Id != n.Wick.Id || before != count(t, x.db, sum) {
 		t.Fatal("a second read wrote")
 	}
-	outer := x.wilds(c, "outer-1")
-	day := content.CalendarAt(content.CalendarRules, x.now.Load())
-	if outer.Epoch.Season != fmt.Sprintf("t:%d:%d", day.StartsAt, day.NextTurning) || outer.Epoch.EndsAt == nil || int64(outer.Epoch.EndsAt.Value) != day.NextTurning {
-		t.Fatalf("outer epoch %+v", outer.Epoch)
+	// Outside the frontier: refused, and nothing is made.
+	for _, at := range [][2]int{{5, 0}, {0, 1}, {-5, -4}, {0, -9}} {
+		x.near(c, at[0], at[1], 409)
 	}
-	x.rawHTTP("GET", "/api/wilds/region/not-a-region", nil, c)
-	if w := x.rawHTTP("GET", "/api/wilds/region/not-a-region", nil, c); w.Code != 404 {
-		t.Fatal("unknown region", w.Code)
+	for _, path := range []string{"0", "0/-1/2", "x/1", "01/1", "0/-01", ""} {
+		if w := x.rawHTTP("GET", "/api/wilds/near/"+path, nil, c); w.Code != 404 {
+			t.Fatal(path, w.Code)
+		}
+	}
+	if before != count(t, x.db, sum) {
+		t.Fatal("a refused read wrote")
+	}
+	if w := x.rawHTTP("GET", "/api/wilds/region/inner-1", nil, c); w.Code != 404 {
+		t.Fatal("the region read is gone", w.Code)
+	}
+	// The corner of the frontier: a window cut by its edges, with the
+	// glimpse past them (within two chunks, never south of the village edge).
+	corner := x.near(c, -4, -8, 200)
+	if len(corner.Entities) != 9*4 {
+		t.Fatal("corner window", len(corner.Entities))
+	}
+	glimpsed := map[[2]int32]bool{}
+	for _, g := range corner.Glimpse {
+		k := [2]int32{g.Chunk.Cx, g.Chunk.Cy}
+		if glimpsed[k] || frontier.Inside("", int(k[0]), int(k[1])) || k[0] < -6 || k[1] < -10 || k[0] > 0 || k[1] > -4 || g.Land == "" {
+			t.Fatalf("glimpse %+v", g)
+		}
+		glimpsed[k] = true
+	}
+	// Within four of (-4,-8) and two of the frontier: x -6..0, y -10..-4,
+	// less the 5x5 of it inside the frontier.
+	if len(glimpsed) != 49-25 || count(t, x.db, "SELECT count(*) FROM wilds_chunks WHERE cx<-4 OR cy<-8") != 0 {
+		t.Fatal("glimpse made chunks or missed some", len(glimpsed))
+	}
+	south := x.near(c, 4, 0, 200)
+	for _, g := range south.Glimpse {
+		if g.Chunk.Cy > 0 {
+			t.Fatal("glimpse south of the village edge", g)
+		}
 	}
 }
 
@@ -228,13 +317,13 @@ func TestWildsConcurrentFirstReadsMakeOneEpoch(t *testing.T) {
 	}
 	defer other.Close()
 	api2 := New(other, x.api.Habitica, x.api.Config)
-	api2.Config.Regions, api2.Config.Lanterns, api2.Config.HomeLand = wildsService{api2}, wildsService{api2}, wildsService{api2}
+	api2.Config.Lanterns, api2.Config.HomeLand = wildsService{api2}, wildsService{api2}
 	var wg sync.WaitGroup
 	for i, cookie := range []*http.Cookie{c, bc} {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			r := httptest.NewRequest("GET", "/api/wilds/region/outer-1", nil)
+			r := httptest.NewRequest("GET", "/api/wilds/near/0/-4", nil)
 			r.Header.Set("X-Glimway-Contract", "8")
 			r.AddCookie(cookie)
 			w := httptest.NewRecorder()
@@ -249,35 +338,41 @@ func TestWildsConcurrentFirstReadsMakeOneEpoch(t *testing.T) {
 		}()
 	}
 	wg.Wait()
-	if count(t, x.db, "SELECT count(*) FROM region_epochs WHERE region_id='outer-1'") != 1 || count(t, x.db, "SELECT count(*) FROM wilds_chunks") != 9 {
-		t.Fatal("concurrent first reads made two epochs")
+	// The window around (0,-4): -2..2 by -6..-2, all inside, three of them
+	// the Tangle's (made with its other six when the still epoch was).
+	if count(t, x.db, "SELECT count(*) FROM wild_epochs WHERE kind='wick'") != 1 || count(t, x.db, "SELECT count(*) FROM wild_epochs WHERE kind='still'") != 1 || count(t, x.db, "SELECT count(*) FROM wilds_chunks") != 9+(25-3) {
+		t.Fatal("concurrent first reads made two epochs or two blobs", count(t, x.db, "SELECT count(*) FROM wilds_chunks"))
 	}
 }
 
 func TestWildsChunkRoute(t *testing.T) {
 	x := newRig(t)
 	c, _ := x.ready("alice")
-	v := x.wilds(c, "inner-1")
-	w := x.rawHTTP("GET", "/api/wilds/chunk/"+v.Epoch.Id+"/0/1/1", nil, c)
+	v := x.wilds(c, "tangle")
+	w := x.rawHTTP("GET", "/api/wilds/chunk/"+v.Epoch.Id+"/0/1/-1", nil, c)
 	if w.Code != 200 || w.Header().Get("Content-Type") != "application/x-protobuf" || w.Header().Get("Cache-Control") != "private, max-age=31536000, immutable" {
 		t.Fatal(w.Code, w.Header())
 	}
-	for _, path := range []string{"0/3/1", "1/1/1", "0/1", "0/01/1", "0/1/1/2", "0/x/1"} {
+	// A wick chunk nobody has read yet is made by the chunk route too.
+	if m := x.chunk(c, v.near.Wick.Id, 0, 4, -8, 200); m.Cx != 4 || m.Cy != -8 || m.EpochId != v.near.Wick.Id {
+		t.Fatal("on-demand chunk", m.Cx, m.Cy)
+	}
+	for _, path := range []string{"0/2/-1", "0/5/0", "0/0/1", "1/1/-1", "0/1", "0/01/-1", "0/1/-01", "0/1/-1/2", "0/x/1"} {
 		if w := x.rawHTTP("GET", "/api/wilds/chunk/"+v.Epoch.Id+"/"+path, nil, c); w.Code != 404 {
 			t.Fatal(path, w.Code)
 		}
 	}
-	x.chunk(c, "unknown-epoch", 0, 1, 1, 404)
-	if w := x.rawHTTP("GET", "/api/wilds/chunk/"+v.Epoch.Id+"/0/1/1", nil, nil); w.Code != 401 {
+	x.chunk(c, "unknown-epoch", 0, 1, -1, 404)
+	if w := x.rawHTTP("GET", "/api/wilds/chunk/"+v.Epoch.Id+"/0/1/-1", nil, nil); w.Code != 401 {
 		t.Fatal("no session", w.Code)
 	}
 	// Another world's epoch is not found, not forbidden: ids don't leak.
 	oc, _ := x.ready("outsider")
-	x.chunk(oc, v.Epoch.Id, 0, 1, 1, 404)
-	if _, err := x.db.DB.Exec("UPDATE region_epochs SET ends_at=? WHERE id=?", x.now.Load(), v.Epoch.Id); err != nil {
+	x.chunk(oc, v.Epoch.Id, 0, 1, -1, 404)
+	if _, err := x.db.DB.Exec("UPDATE wild_epochs SET ends_at=? WHERE id=?", x.now.Load(), v.Epoch.Id); err != nil {
 		t.Fatal(err)
 	}
-	w = x.rawHTTP("GET", "/api/wilds/chunk/"+v.Epoch.Id+"/0/1/1", nil, c)
+	w = x.rawHTTP("GET", "/api/wilds/chunk/"+v.Epoch.Id+"/0/1/-1", nil, c)
 	if w.Code != 409 || !strings.Contains(w.Body.String(), "epoch-ended") {
 		t.Fatal("ended epoch chunk", w.Code)
 	}
@@ -287,7 +382,7 @@ func TestWildsClaimCyclesProjectionAndRace(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	bc, b := x.member("bob", s.WorldID)
-	v := x.wilds(c, "inner-1")
+	v := x.wilds(c, "tangle")
 	ep := v.Epoch.Id
 	camp := v.kind(t, "camp")
 	other, err := store.Open(filepath.Join(x.dir, "game.sqlite"))
@@ -305,7 +400,7 @@ func TestWildsClaimCyclesProjectionAndRace(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			raw, _ := protojson.Marshal(&contract.WildsClaimRequest{Op: op(pair.s.Lease, "race"), Epoch: ep, EntityId: camp.Id, Where: at("inner-1", camp, 0)})
+			raw, _ := protojson.Marshal(&contract.WildsClaimRequest{Op: op(pair.s.Lease, "race"), Epoch: ep, EntityId: camp.Id, Where: at(camp, 0)})
 			r := httptest.NewRequest("POST", "/api/wilds/claim", bytes.NewReader(raw))
 			r.Header.Set("X-Glimway-Contract", "8")
 			r.Header.Set("Content-Type", "application/json")
@@ -337,42 +432,43 @@ func TestWildsClaimCyclesProjectionAndRace(t *testing.T) {
 	}
 	// Long after: exactly one cycle ahead, projected by the read, not written.
 	x.now.Add(10 * int64(content.WildsRules.Timers.CampRespawnSeconds))
-	next := x.wilds(c, "inner-1")
+	next := x.wilds(c, "tangle")
 	if st := next.state(camp.Id); st.Cycle != 1 || st.State != "available" || st.By != nil {
 		t.Fatalf("projection %+v", st)
 	}
 	if count(t, x.db, "SELECT cycle FROM entity_state WHERE epoch=? AND entity_id=?", ep, camp.Id) != 0 {
 		t.Fatal("the read wrote the projection")
 	}
-	if _, code := x.claim(c, s, "old", ep, camp, 0, at("inner-1", camp, 0), 409); code != "old-cycle" {
+	if _, code := x.claim(c, s, "old", ep, camp, 0, at(camp, 0), 409); code != "old-cycle" {
 		t.Fatal("old cycle", code)
 	}
-	if _, code := x.claim(c, s, "ahead", ep, camp, 2, at("inner-1", camp, 0), 409); code != "old-cycle" {
+	if _, code := x.claim(c, s, "ahead", ep, camp, 2, at(camp, 0), 409); code != "old-cycle" {
 		t.Fatal("cycle ahead", code)
 	}
-	got, _ := x.claim(c, s, "cycle1", ep, camp, 1, at("inner-1", camp, 0), 200)
+	got, _ := x.claim(c, s, "cycle1", ep, camp, 1, at(camp, 0), 200)
 	if got.Entity.Cycle != 1 || got.Entity.State != "cleared" || count(t, x.db, "SELECT cycle FROM entity_state WHERE epoch=? AND entity_id=?", ep, camp.Id) != 1 {
 		t.Fatal("the claim didn't persist the projected cycle")
 	}
 	node := next.kind(t, "node")
-	x.claim(c, s, "node0", ep, node, 0, at("inner-1", node, 0), 200)
+	x.claim(c, s, "node0", ep, node, 0, at(node, 0), 200)
 	x.now.Add(int64(content.WildsRules.Timers.NodeRegrowSeconds))
-	x.claim(c, s, "node1", ep, node, 1, at("inner-1", node, 0), 200)
-	for _, invalid := range []string{"camp:3:0:0", "camp:-1:0:0", "camp:0:0:999", "node:0:0:00", "node:0:0:0junk", "camp:1"} {
+	x.claim(c, s, "node1", ep, node, 1, at(node, 0), 200)
+	for _, invalid := range []string{"camp:5:0:0", "camp:0:1:0", "camp:2:-1:0", "camp:0:-1:999", "node:0:-01:1", "node:0:-1:0junk", "camp:1"} {
 		e := &contract.WildsEntity{Id: invalid, Kind: "camp"}
-		if _, code := x.claim(c, s, invalid, ep, e, 0, at("inner-1", node, 0), 404); code != "entity-not-found" {
+		if _, code := x.claim(c, s, invalid, ep, e, 0, at(node, 0), 404); code != "entity-not-found" {
 			t.Fatal(invalid, code)
 		}
 	}
 	oc, o := x.ready("outsider")
-	x.claim(oc, o, "other-world", ep, camp, 1, at("inner-1", camp, 0), 403)
-	if _, err = x.db.DB.Exec("UPDATE region_epochs SET ends_at=? WHERE id=?", x.now.Load(), ep); err != nil {
+	x.claim(oc, o, "other-world", ep, camp, 1, at(camp, 0), 403)
+	if _, err = x.db.DB.Exec("UPDATE wild_epochs SET ends_at=? WHERE id=?", x.now.Load(), ep); err != nil {
 		t.Fatal(err)
 	}
-	if _, code := x.claim(c, s, "ended", ep, camp, 2, at("inner-1", camp, 0), 409); code != "epoch-ended" {
+	if _, code := x.claim(c, s, "ended", ep, camp, 2, at(camp, 0), 409); code != "epoch-ended" {
 		t.Fatal("ended epoch", code)
 	}
-	if w := x.rawHTTP("GET", "/api/wilds/region/inner-1", nil, c); w.Code != 409 || !strings.Contains(w.Body.String(), "epoch-ended") {
+	// The still epoch never ends by itself; one ended by hand is not reopened.
+	if w := x.rawHTTP("GET", "/api/wilds/near/0/-1", nil, c); w.Code != 409 || !strings.Contains(w.Body.String(), "epoch-ended") {
 		t.Fatal("ended read reopened", w.Code)
 	}
 }
@@ -380,30 +476,35 @@ func TestWildsClaimCyclesProjectionAndRace(t *testing.T) {
 func TestWildsClaimReach(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	v := x.wilds(c, "inner-1")
+	v := x.wilds(c, "tangle")
 	for _, kind := range []string{"node", "camp", "chest", "poi"} {
 		e := v.kind(t, kind)
 		if _, code := x.claim(c, s, kind+"-village", v.Epoch.Id, e, 0, &contract.Where{Area: "village", X: 10, Y: 10}, 409); code != "not-in-wilds" {
 			t.Fatal(kind, code)
 		}
-		wrong := at("inner-1", e, 0)
-		wrong.Area = "wilds:outer-1"
-		if _, code := x.claim(c, s, kind+"-region", v.Epoch.Id, e, 0, wrong, 409); code != "not-in-wilds" {
+		wrong := at(e, 0)
+		wrong.Area = "wilds:inner-1"
+		if _, code := x.claim(c, s, kind+"-region", v.Epoch.Id, e, 0, wrong, 409); code != "invalid-position" {
 			t.Fatal(kind, code)
 		}
-		if _, code := x.claim(c, s, kind+"-far", v.Epoch.Id, e, 0, at("inner-1", e, 4), 409); code != "too-far-away" {
+		beyond := at(e, 0)
+		beyond.X += 24 * 16 * 8
+		if _, code := x.claim(c, s, kind+"-beyond", v.Epoch.Id, e, 0, beyond, 409); code != "beyond-frontier" {
 			t.Fatal(kind, code)
 		}
-		// Chunk-local pixels never stand for region pixels.
-		local := &contract.Where{Area: "wilds:inner-1", X: float64(e.Tx * 16), Y: float64(e.Ty * 16)}
-		if !strings.HasPrefix(e.Id, kind+":0:0:") {
+		if _, code := x.claim(c, s, kind+"-far", v.Epoch.Id, e, 0, at(e, 4), 409); code != "too-far-away" {
+			t.Fatal(kind, code)
+		}
+		// Chunk-local pixels never stand for world pixels.
+		local := &contract.Where{Area: "wilds", X: float64(e.Tx * 16), Y: float64(e.Ty * 16)}
+		if !strings.HasPrefix(e.Id, kind+":0:0:") && !strings.HasPrefix(e.Id, kind+":0:-1:") {
 			x.claim(c, s, kind+"-local", v.Epoch.Id, e, 0, local, 409)
 		}
-		x.claim(c, s, kind+"-near", v.Epoch.Id, e, 0, at("inner-1", e, 2), 200)
+		x.claim(c, s, kind+"-near", v.Epoch.Id, e, 0, at(e, 2), 200)
 	}
 	// A refusal still moved nobody: the last committed place is the claim's.
 	state := x.expect("GET", "/api/state", nil, c, 200)
-	if state.State.Area != "wilds:inner-1" {
+	if state.State.Area != "wilds" {
 		t.Fatal("place", state.State.Area)
 	}
 }
@@ -412,10 +513,10 @@ func TestWildsPersonalClaimsDiscoveryAndReplay(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	bc, b := x.member("bob", s.WorldID)
-	v := x.wilds(c, "inner-1")
+	v := x.wilds(c, "tangle")
 	ep := v.Epoch.Id
 	chest, poi := v.kind(t, "chest"), v.kind(t, "poi")
-	req := &contract.WildsClaimRequest{Op: op(s.Lease, "chest"), Epoch: ep, EntityId: chest.Id, Where: at("inner-1", chest, 0)}
+	req := &contract.WildsClaimRequest{Op: op(s.Lease, "chest"), Epoch: ep, EntityId: chest.Id, Where: at(chest, 0)}
 	grant, _ := x.call("/api/wilds/claim", req, c, 200)
 	loot, err := wilds.RollEntityLoot(generationOf(v.Epoch), wilds.EntityFromProto(chest), 0)
 	if err != nil || !proto.Equal(grant.GetWildsClaim().Loot, lootProto(loot)) {
@@ -429,13 +530,13 @@ func TestWildsPersonalClaimsDiscoveryAndReplay(t *testing.T) {
 	if _, code := x.call("/api/wilds/claim", req, c, 409); code != "idempotency-mismatch" {
 		t.Fatal("key mismatch", code)
 	}
-	x.claim(bc, b, "chest", ep, chest, 0, at("inner-1", chest, 0), 200)
-	if _, code := x.claim(c, s, "chest-again", ep, chest, 0, at("inner-1", chest, 0), 409); code != "already-claimed" {
+	x.claim(bc, b, "chest", ep, chest, 0, at(chest, 0), 200)
+	if _, code := x.claim(c, s, "chest-again", ep, chest, 0, at(chest, 0), 409); code != "already-claimed" {
 		t.Fatal(code)
 	}
-	x.claim(c, s, "poi", ep, poi, 0, at("inner-1", poi, 0), 200)
-	x.claim(bc, b, "poi", ep, poi, 0, at("inner-1", poi, 0), 200)
-	v = x.wilds(c, "inner-1")
+	x.claim(c, s, "poi", ep, poi, 0, at(poi, 0), 200)
+	x.claim(bc, b, "poi", ep, poi, 0, at(poi, 0), 200)
+	v = x.wilds(c, "tangle")
 	if len(v.PersonalClaims) != 2 || len(v.Discoveries) != 1 || v.Discoveries[0].DiscovererId != x.account("alice") || v.Discoveries[0].DisplayName != "Hero" {
 		t.Fatal("discovery ownership")
 	}
@@ -450,7 +551,7 @@ func TestWildsPersonalClaimsDiscoveryAndReplay(t *testing.T) {
 func TestWildsClaimRateIsDurableAtomicAndReplayExempt(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	v := x.wilds(c, "inner-1")
+	v := x.wilds(c, "tangle")
 	limit := int(content.Rules.GetWildsLimits().GetClaimsPerMinute())
 	if len(v.bodies) <= limit {
 		t.Fatal("insufficient entities for limit")
@@ -458,19 +559,19 @@ func TestWildsClaimRateIsDurableAtomicAndReplayExempt(t *testing.T) {
 	var last *contract.WildsClaimRequest
 	for i := 0; i < limit; i++ {
 		e := v.bodies[i]
-		last = &contract.WildsClaimRequest{Op: op(s.Lease, fmt.Sprintf("claim%d", i)), Epoch: v.Epoch.Id, EntityId: e.Id, Where: at("inner-1", e, 0)}
+		last = &contract.WildsClaimRequest{Op: op(s.Lease, fmt.Sprintf("claim%d", i)), Epoch: v.Epoch.Id, EntityId: e.Id, Where: at(e, 0)}
 		x.call("/api/wilds/claim", last, c, 200)
 	}
 	x.call("/api/wilds/claim", last, c, 200)
 	e := v.bodies[limit]
-	if _, code := x.claim(c, s, "limited", v.Epoch.Id, e, 0, at("inner-1", e, 0), 429); code != "claim-rate-limited" {
+	if _, code := x.claim(c, s, "limited", v.Epoch.Id, e, 0, at(e, 0), 429); code != "claim-rate-limited" {
 		t.Fatal("rate limiter", code)
 	}
 	if count(t, x.db, "SELECT qty FROM claim_rate WHERE account_id=?", x.account("alice")) != limit || count(t, x.db, "SELECT count(*) FROM idempotency WHERE key='limited'") != 0 {
 		t.Fatal("rate rejection committed")
 	}
 	x.now.Add(60)
-	x.claim(c, s, "limited", v.Epoch.Id, e, 0, at("inner-1", e, 0), 200)
+	x.claim(c, s, "limited", v.Epoch.Id, e, 0, at(e, 0), 200)
 	if count(t, x.db, "SELECT qty FROM claim_rate WHERE account_id=?", x.account("alice")) != 1 {
 		t.Fatal("window reset")
 	}
@@ -479,12 +580,12 @@ func TestWildsClaimRateIsDurableAtomicAndReplayExempt(t *testing.T) {
 func TestWildsPOIUpdateFailureRollsBack(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	v := x.wilds(c, "inner-1")
+	v := x.wilds(c, "tangle")
 	e := v.kind(t, "poi")
 	if _, err := x.db.DB.Exec("CREATE TRIGGER fail_chart BEFORE INSERT ON entity_state WHEN NEW.state='charted' BEGIN SELECT RAISE(FAIL,'chart failed'); END"); err != nil {
 		t.Fatal(err)
 	}
-	x.claim(c, s, "poi", v.Epoch.Id, e, 0, at("inner-1", e, 0), 500)
+	x.claim(c, s, "poi", v.Epoch.Id, e, 0, at(e, 0), 500)
 	for _, table := range []string{"personal_claims", "discoveries", "claim_rate", "entity_state"} {
 		if count(t, x.db, "SELECT count(*) FROM "+table) != 0 {
 			t.Fatal("failed claim committed", table)
@@ -494,15 +595,15 @@ func TestWildsPOIUpdateFailureRollsBack(t *testing.T) {
 		t.Fatal("failed claim granted loot")
 	}
 	x.db.DB.Exec("DROP TRIGGER fail_chart")
-	x.claim(c, s, "poi", v.Epoch.Id, e, 0, at("inner-1", e, 0), 200)
+	x.claim(c, s, "poi", v.Epoch.Id, e, 0, at(e, 0), 200)
 }
 
 func TestWildsFallenLanterns(t *testing.T) {
 	x := newRig(t)
 	c, _ := x.ready("alice")
-	v := x.wilds(c, "inner-1")
+	v := x.wilds(c, "tangle")
 	tx, ty := lanternTile(v)
-	here := atTile("inner-1", tx, ty)
+	here := atTile(tx, ty)
 	for _, tc := range []struct {
 		name   string
 		epoch  *contract.WildsEpoch
@@ -511,10 +612,10 @@ func TestWildsFallenLanterns(t *testing.T) {
 	}{
 		{"curated", v.Epoch, &contract.Where{Area: "village", X: 100, Y: 100}, "not-wilds"},
 		{"no epoch", nil, here, "epoch-missing"},
-		{"other region", v.Epoch, atTile("outer-1", tx, ty), "invalid-place"},
-		{"outside the grid", v.Epoch, atTile("inner-1", 72, 10), "invalid-place"},
-		{"negative", v.Epoch, &contract.Where{Area: "wilds:inner-1", X: -3, Y: 10}, "invalid-place"},
-		{"wall", v.Epoch, atTile("inner-1", 0, 0), "invalid-place"},
+		{"wick land on the still epoch", v.Epoch, atTile(2*24+1, -24+1), "invalid-place"},
+		{"outside the frontier", v.Epoch, atTile(5*24, -10), "invalid-place"},
+		{"a chunk never made", v.near.Wick, atTile(4*24+1, -8*24+1), "epoch-missing"},
+		{"wall", v.Epoch, atTile(fakegen.Thicket[0], -24+fakegen.Thicket[1]), "invalid-place"},
 	} {
 		if got := x.fall("alice", tc.epoch, tc.where); got.Lantern != "none" || got.Reason != tc.reason || got.ID != "" {
 			t.Fatalf("%s: %+v", tc.name, got)
@@ -528,7 +629,7 @@ func TestWildsFallenLanterns(t *testing.T) {
 	if got := x.fall("alice", v.Epoch, here); got.Reason != "daily-cap" {
 		t.Fatal("cap", got)
 	}
-	read := x.wilds(c, "inner-1")
+	read := x.wilds(c, "tangle")
 	if len(read.Lanterns) != 1 || read.Lanterns[0].Id != second.ID || int(read.Lanterns[0].X) != tx || int(read.Lanterns[0].Y) != ty {
 		t.Fatal("lantern view", read.Lanterns)
 	}
@@ -538,7 +639,7 @@ func TestWildsFallenLanterns(t *testing.T) {
 		t.Fatal("cap reset", got)
 	}
 	// An ended epoch takes no lantern.
-	if _, err := x.db.DB.Exec("UPDATE region_epochs SET ends_at=? WHERE id=?", x.now.Load(), v.Epoch.Id); err != nil {
+	if _, err := x.db.DB.Exec("UPDATE wild_epochs SET ends_at=? WHERE id=?", x.now.Load(), v.Epoch.Id); err != nil {
 		t.Fatal(err)
 	}
 	if got := x.fall("alice", v.Epoch, here); got.Reason != "epoch-missing" {
@@ -550,10 +651,10 @@ func TestWildsRelight(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	bc, b := x.member("bob", s.WorldID)
-	v := x.wilds(c, "inner-1")
+	v := x.wilds(c, "tangle")
 	ep := v.Epoch.Id
 	tx, ty := lanternTile(v)
-	here := atTile("inner-1", tx, ty)
+	here := atTile(tx, ty)
 	relight := func(cookie *http.Cookie, r response, key, owner, id string, where *contract.Where, status int) (*contract.WildsLanternResult, string) {
 		env, code := x.call("/api/wilds/lantern", &contract.WildsLanternRequest{Op: op(r.Lease, key), Epoch: ep, OwnerId: x.account(owner), LanternId: id, Where: where}, cookie, status)
 		return env.GetWildsLantern(), code
@@ -564,7 +665,7 @@ func TestWildsRelight(t *testing.T) {
 	if _, code := relight(bc, b, "village", "alice", second.ID, &contract.Where{Area: "village", X: 1, Y: 1}, 409); code != "not-in-wilds" {
 		t.Fatal(code)
 	}
-	if _, code := relight(bc, b, "far", "alice", second.ID, atTile("inner-1", tx+4, ty), 409); code != "too-far-away" {
+	if _, code := relight(bc, b, "far", "alice", second.ID, atTile(tx+4, ty), 409); code != "too-far-away" {
 		t.Fatal(code)
 	}
 	own, _ := relight(c, s, "own", "alice", second.ID, here, 200)
@@ -636,7 +737,7 @@ func TestWildsEchoesAndSettle(t *testing.T) {
 	var seen ports.EchoInput
 	x.api.Config.Story = fakeEcho(t, "tam", &seen)
 	c, s := x.ready("alice")
-	v := x.wilds(c, "outer-1")
+	v := x.wilds(c, "whitequiet")
 	if len(seen.Sites) != 7 || seen.Epoch.GetId() != v.Epoch.Id {
 		t.Fatalf("echo rule input: %d sites", len(seen.Sites))
 	}
@@ -648,9 +749,9 @@ func TestWildsEchoesAndSettle(t *testing.T) {
 		}
 	}
 	if len(v.Echoes) != 1 || v.Echoes[0].Site != site.Site.Id || v.Echoes[0].Member != "tam" || v.Echoes[0].Settled {
-		t.Fatal("region echoes", v.Echoes)
+		t.Fatal("Whitequiet echoes", v.Echoes)
 	}
-	where := atTile("outer-1", int(site.CX)*24+int(site.Site.Tx), int(site.CY)*24+int(site.Site.Ty))
+	where := atTile(int(site.CX)*24+int(site.Site.Tx), int(site.CY)*24+int(site.Site.Ty))
 	settle := func(key, member string, w *contract.Where, status int) (*contract.SettleEchoResult, string) {
 		env, code := x.call("/api/wilds/echo", &contract.SettleEchoRequest{Op: op(s.Lease, key), Epoch: v.Epoch.Id, Site: site.Site.Id, Member: member, Where: w}, c, status)
 		return env.GetSettleEcho(), code
@@ -658,7 +759,7 @@ func TestWildsEchoesAndSettle(t *testing.T) {
 	if _, code := settle("wrong-member", "the-twins", where, 409); code != "echo-not-here" {
 		t.Fatal(code)
 	}
-	far := atTile("outer-1", int(site.CX)*24+int(site.Site.Tx)+5, int(site.CY)*24+int(site.Site.Ty))
+	far := atTile(int(site.CX)*24+int(site.Site.Tx)+5, int(site.CY)*24+int(site.Site.Ty))
 	if _, code := settle("far", "tam", far, 409); code != "echo-not-here" {
 		t.Fatal(code)
 	}
@@ -677,7 +778,7 @@ func TestWildsEchoesAndSettle(t *testing.T) {
 	if _, code := settle("again", "tam", where, 409); code != "echo-not-here" {
 		t.Fatal("settled twice", code)
 	}
-	if v = x.wilds(c, "outer-1"); !v.Echoes[0].Settled {
+	if v = x.wilds(c, "whitequiet"); !v.Echoes[0].Settled {
 		t.Fatal("settled echo shown unsettled")
 	}
 }
@@ -687,14 +788,14 @@ func TestWildsClaimGrantsPapersThroughTheRules(t *testing.T) {
 	var seen ports.EchoInput
 	x.api.Config.Story = fakeEcho(t, "tam", &seen)
 	c, s := x.ready("alice")
-	v := x.wilds(c, "inner-1")
+	v := x.wilds(c, "tangle")
 	poi := v.kind(t, "poi")
-	got, _ := x.claim(c, s, "poi", v.Epoch.Id, poi, 0, at("inner-1", poi, 0), 200)
+	got, _ := x.claim(c, s, "poi", v.Epoch.Id, poi, 0, at(poi, 0), 200)
 	if !slices.Equal(got.Papers, []string{"failed-grid-of-sector-4"}) {
 		t.Fatal(got.Papers)
 	}
 	node := v.kind(t, "node")
-	if got, _ = x.claim(c, s, "node", v.Epoch.Id, node, 0, at("inner-1", node, 0), 200); len(got.Papers) != 0 {
+	if got, _ = x.claim(c, s, "node", v.Epoch.Id, node, 0, at(node, 0), 200); len(got.Papers) != 0 {
 		t.Fatal("a second grant of the same paper", got.Papers)
 	}
 }
@@ -716,7 +817,7 @@ func TestWildsCalendarRetuningDoesNotReuseEndedEpoch(t *testing.T) {
 			}
 			x.now.Store(epoch.Unix() + firstDay*86400)
 			c, _ := x.ready("alice")
-			old := x.wilds(c, "outer-1")
+			old := x.wilds(c, "whitequiet")
 			if change == "epoch" {
 				content.CalendarRules.Epoch = epoch.Add(70 * 24 * time.Hour).Format(time.RFC3339)
 			} else {
@@ -724,14 +825,17 @@ func TestWildsCalendarRetuningDoesNotReuseEndedEpoch(t *testing.T) {
 			}
 			x.now.Store(epoch.Unix() + nextDay*86400)
 			c, s := x.again("alice")
-			current := x.wilds(c, "outer-1")
+			current := x.wilds(c, "whitequiet")
 			day := content.CalendarAt(content.CalendarRules, x.now.Load())
 			if current.Epoch.Id == old.Epoch.Id || int64(current.Epoch.StartsAt) != day.StartsAt || int64(current.Epoch.EndsAt.GetValue()) != day.NextTurning {
 				t.Fatal("retuned calendar reused old interval", current.Epoch)
 			}
+			// Refused either way: ended, or gone when it ended before this
+			// wick began.
 			node := old.kind(t, "node")
-			if _, code := x.claim(c, s, "ended", old.Epoch.Id, node, 0, at("outer-1", node, 0), 409); code != "epoch-ended" {
-				t.Fatal("old epoch reopened", code)
+			raw, _ := protojson.Marshal(&contract.WildsClaimRequest{Op: op(s.Lease, "ended"), Epoch: old.Epoch.Id, EntityId: node.Id, Where: at(node, 0)})
+			if w := x.rawHTTP("POST", "/api/wilds/claim", json.RawMessage(raw), c); w.Code != 409 && w.Code != 404 || !strings.Contains(w.Body.String(), "epoch-ended") && !strings.Contains(w.Body.String(), "epoch-not-found") {
+				t.Fatal("old epoch reopened", w.Code, w.Body.String())
 			}
 		})
 	}
@@ -740,36 +844,37 @@ func TestWildsCalendarRetuningDoesNotReuseEndedEpoch(t *testing.T) {
 func TestWildsOuterTurning(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	inner := x.wilds(c, "inner-1")
-	outer := x.wilds(c, "outer-1")
+	inner := x.wilds(c, "tangle")
+	outer := x.wilds(c, "whitequiet")
 	day := content.CalendarAt(content.CalendarRules, x.now.Load())
 	node := outer.kind(t, "node")
-	x.claim(c, s, "outer-node", outer.Epoch.Id, node, 0, at("outer-1", node, 0), 200)
+	x.claim(c, s, "outer-node", outer.Epoch.Id, node, 0, at(node, 0), 200)
 	x.now.Store(day.NextTurning - 86400)
-	if x.wilds(c, "outer-1").Epoch.Id != outer.Epoch.Id {
+	if x.wilds(c, "whitequiet").Epoch.Id != outer.Epoch.Id {
 		t.Fatal("early Turning")
 	}
 	x.now.Store(day.NextTurning)
 	c, s = x.again("alice")
-	if _, code := x.claim(c, s, "ended", outer.Epoch.Id, node, 1, at("outer-1", node, 0), 409); code != "epoch-ended" {
+	if _, code := x.claim(c, s, "ended", outer.Epoch.Id, node, 1, at(node, 0), 409); code != "epoch-ended" {
 		t.Fatal("old epoch accepted", code)
 	}
-	next := x.wilds(c, "outer-1")
+	next := x.wilds(c, "whitequiet")
 	if next.Epoch.Id == outer.Epoch.Id || next.Epoch.Season == outer.Epoch.Season || next.Epoch.EndsAt == nil {
 		t.Fatal("no new epoch")
 	}
-	if x.wilds(c, "inner-1").Epoch.Id != inner.Epoch.Id {
+	if x.wilds(c, "tangle").Epoch.Id != inner.Epoch.Id {
 		t.Fatal("inner turned")
 	}
-	if count(t, x.db, "SELECT count(*) FROM region_epochs WHERE region_id='outer-1'") != 2 {
-		t.Fatal("outer epoch count")
+	// The wick that just ended stays until the next turning.
+	if count(t, x.db, "SELECT count(*) FROM wild_epochs WHERE kind='wick'") != 2 {
+		t.Fatal("wick epoch count")
 	}
 	// A build without this generator makes no new epoch, and stored ones
 	// of another version are never served.
 	x.now.Store(int64(next.Epoch.EndsAt.GetValue()) + 10)
 	c, _ = x.again("alice")
-	x.api.Config.Epochs.(*store.Chunks).GeneratorVersion = 3
-	if w := x.rawHTTP("GET", "/api/wilds/region/outer-1", nil, c); w.Code != 503 || !strings.Contains(w.Body.String(), "generator-unavailable") {
+	x.api.Config.Epochs.(*store.Chunks).Generator = nil
+	if w := x.rawHTTP("GET", "/api/wilds/near/0/-4", nil, c); w.Code != 503 || !strings.Contains(w.Body.String(), "generator-unavailable") {
 		t.Fatal(w.Code, w.Body.String())
 	}
 }
@@ -777,12 +882,11 @@ func TestWildsOuterTurning(t *testing.T) {
 func TestWardenSliverClaimGrantCapReplayAndLedger(t *testing.T) {
 	x := newRig(t)
 	seedCookie, seed := x.ready("probe")
-	v := x.wilds(seedCookie, "inner-1")
+	v := x.wilds(seedCookie, "tangle")
 	deep := []*contract.WildsEntity{}
 	for _, entity := range v.bodies {
-		var cx, cy int
-		fmt.Sscanf(entity.Id, entity.Kind+":%d:%d:", &cx, &cy)
-		if (entity.Kind == "node" || entity.Kind == "chest") && deepCountry("inner-1", cx, cy) {
+		cx, cy := entityChunkOf(entity)
+		if (entity.Kind == "node" || entity.Kind == "chest") && deepCountry(cx, cy) {
 			deep = append(deep, entity)
 		}
 	}
@@ -812,7 +916,7 @@ func TestWardenSliverClaimGrantCapReplayAndLedger(t *testing.T) {
 	}
 	x.now.Store(int64(week)*7*86400 + 3600)
 	c, s := x.again(player)
-	v = x.wilds(c, "inner-1")
+	v = x.wilds(c, "tangle")
 	var second *contract.WildsEntity
 	for _, e := range deep {
 		if e.Id != first.Id {
@@ -820,7 +924,7 @@ func TestWardenSliverClaimGrantCapReplayAndLedger(t *testing.T) {
 			break
 		}
 	}
-	req := &contract.WildsClaimRequest{Op: op(s.Lease, "rare-find"), Epoch: v.Epoch.Id, EntityId: first.Id, Where: at("inner-1", first, 0)}
+	req := &contract.WildsClaimRequest{Op: op(s.Lease, "rare-find"), Epoch: v.Epoch.Id, EntityId: first.Id, Where: at(first, 0)}
 	grant, _ := x.call("/api/wilds/claim", req, c, 200)
 	if !grant.GetWildsClaim().WardenSliverFound {
 		t.Fatal("expected claim response to report the warden sliver")
@@ -829,7 +933,7 @@ func TestWardenSliverClaimGrantCapReplayAndLedger(t *testing.T) {
 	if !proto.Equal(replay.GetWildsClaim(), grant.GetWildsClaim()) {
 		t.Fatal("claim replay changed the response")
 	}
-	blocked, _ := x.claim(c, s, "weekly-cap", v.Epoch.Id, second, 0, at("inner-1", second, 0), 200)
+	blocked, _ := x.claim(c, s, "weekly-cap", v.Epoch.Id, second, 0, at(second, 0), 200)
 	if blocked.WardenSliverFound || count(t, x.db, "SELECT count(*) FROM warden_finds WHERE account_id=?", account) != 1 {
 		t.Fatal("weekly cap granted a second sliver")
 	}
@@ -864,5 +968,18 @@ func TestHomesteadLandServed(t *testing.T) {
 	}
 	if w := x.rawHTTP("GET", "/api/homestead/land/0", nil, nil); w.Code != 401 {
 		t.Fatal("no session", w.Code)
+	}
+}
+
+// Deep country (rare finds): tier 2 and past, or the Tangle's far corners
+// from its middle chunk.
+func TestDeepCountryByTier(t *testing.T) {
+	for _, c := range []struct {
+		cx, cy int
+		deep   bool
+	}{{0, -1, false}, {0, 0, false}, {1, -1, false}, {-1, 0, true}, {1, -2, true}, {0, -4, true}, {3, -7, true}, {-4, 0, true}} {
+		if deepCountry(c.cx, c.cy) != c.deep {
+			t.Errorf("%d,%d", c.cx, c.cy)
+		}
 	}
 }

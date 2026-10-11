@@ -68,14 +68,27 @@ test('typed operations facade and fake expose session, play and operation contra
   const api = createApiClient({ fetchImpl: (async (_url, init) => { headers = new Headers(init?.headers); return new Response(JSON.stringify({ state: valid, leaseActive: false }), { headers: { 'content-type': 'application/json' } }); }) as typeof fetch });
   await api.operations.state(); assert.equal(headers!.get('X-Glimway-Contract'), '8');
 });
-function chunk() { return create(wilds.WildsChunkSchema, { epochId: 'epoch', region: 'inner-1', realm: 'hearthwick', look: 'tangle', generatorVersion: 2, size: 24, cx: 1, cy: 0, palette: ['grass'], ground: new Uint8Array(288), solid: new Uint8Array(72), spawn: { tx: 1, ty: 1 }, decor: { kinds: ['tree'], kind: [0], tx: [2], ty: [3], ox: [1], oy: [-2], variant: [0], flags: new Uint8Array(1) }, entities: [{ id: 'node:1:0:0', kind: 'node', tx: 3, ty: 4, material: 'timber' }], exits: [{ tx: 12, ty: 0, tw: 1, th: 1, dir: wilds.Dir.NORTH, to: 'chunk:outer-1:1:1', entry: { tx: 12, ty: 23 } }] }); }
-test('packed chunks validate bodies, decor and legitimate cross-region exits on binary decode', async () => {
+function chunk() { return create(wilds.WildsChunkSchema, { epochId: 'epoch', realm: 'hearthwick', look: 'tangle', generatorVersion: 3, size: 24, cx: 1, cy: 0, tier: 1, land: 'woods', palette: ['grass'], ground: new Uint8Array(288), solid: new Uint8Array(72), decor: { kinds: ['tree'], kind: [0], tx: [2], ty: [3], ox: [1], oy: [-2], variant: [0], flags: new Uint8Array(1) }, entities: [{ id: 'node:1:0:0', kind: 'node', tx: 3, ty: 4, material: 'timber' }], places: [{ id: 'place:0:-1', kind: 'ruin', tx: 9, ty: 9 }] }); }
+test('packed chunks validate identity, bodies, decor and places on binary decode (open-map.md 2.5)', async () => {
   const c = chunk(); assert.deepEqual(decodeChunk(toBinary(wilds.WildsChunkSchema, c)), c);
   assert.equal(entityIn(c, 'node:1:0:0')!.material, 'timber'); assert.deepEqual(decorAt(c, 2, 3), [0]);
-  // The way home: the Tangle's entry chunk, its south edge.
-  c.cy = 1; c.exits[0]!.ty = 23; c.exits[0]!.dir = wilds.Dir.SOUTH;
-  c.exits[0]!.to = 'commons'; c.exits[0]!.entry!.tx = 23; c.exits[0]!.entry!.ty = 2; validateChunk(c);
-  c.exits[0]!.to = 'chunk:outer-1:3:0'; assert.throws(() => validateChunk(c));
+  // Signed coordinates, anywhere: the frontier moves, chunks don't.
+  c.cx = -40; c.cy = -9; validateChunk(c);
+  // An old version, an unknown land, a tier past content are refused.
+  const refused: [string, (x: ReturnType<typeof chunk>) => void][] = [
+    ['version', (x) => { x.generatorVersion = 2; }],
+    ['land', (x) => { x.land = 'lake'; }],
+    ['tier', (x) => { x.tier = 4; }],
+    ['no tier', (x) => { x.tier = 0; }],
+    ['place id', (x) => { x.places[0]!.id = 'place:a:b'; }],
+    ['place kind', (x) => { x.places[0]!.kind = 'castle'; }],
+    ['place tile', (x) => { x.places[0]!.tx = 24; }],
+    ['realm', (x) => { x.realm = 'elsewhere'; }],
+    ['look', (x) => { x.look = 'meadow'; }],
+    ['site kind', (x) => { x.sites = [create(wilds.StorySiteSchema, { id: 's', kind: 9, tx: 1, ty: 1 })]; }],
+  ];
+  for (const [name, spoil] of refused) { const x = chunk(); spoil(x); assert.throws(() => validateChunk(x), undefined, name); }
+  const lamp = chunk(); lamp.sites = [create(wilds.StorySiteSchema, { id: 'lamp-stone:1:0', kind: wilds.SiteKind.LAMP_STONE, tx: 4, ty: 5 }), create(wilds.StorySiteSchema, { id: 'rumour:1:0', kind: wilds.SiteKind.RUMOUR, tx: 6, ty: 5 })]; validateChunk(lamp);
   const bad = chunk(); bad.decor!.flags = new Uint8Array(); assert.throws(() => validateChunk(bad));
   const key = { world: 'world', epoch: 'epoch', layer: 0, cx: 1, cy: 0 }; const fake = new FakeChunks(); fake.values.set(FakeChunks.key(key), chunk());
   const read = await fake.chunk(key); read.entities.length = 0; assert.equal((await fake.chunk(key)).entities.length, 1);
@@ -96,9 +109,6 @@ test('realistic Go fixtures pass the facade and mixed domain parser', async () =
   assert.equal((await fake.api.play(create(state.PlayRequestSchema, { clientId: 'client' }))).reportClient, 'client');
   fake.responses.set('/api/state', [get('valid-state')]);
   assert.equal((await fake.api.state()).leaseActive, true);
-  fake.responses.set('/api/wilds/region/outer-1', [get('valid-region')]);
-  const region = await fake.api.region('outer-1');
-  assert.equal(region.echoes[0]!.member, 'tam'); assert.equal(region.entities[0]!.state, 'harvested');
   for (const f of fixtures.filter(f => f.case.startsWith('fall-') || ['claim-loot', 'lantern-loot'].includes(f.case))) assert.ok(decodeEnvelope(f.json).result.case);
   const mixed = decodeMixed(get('keyed-items'), parseItemsResult);
   assert.equal(mixed.result.gathered![0]!.qty, 2); assert.equal(mixed.result.items.stacks[0]!.itemDef, 'timber');
@@ -116,8 +126,6 @@ test('report keepalive and returned geometry identities are enforced', async () 
   const geometry = createOperationsApi(async () => bytes);
   assert.equal((await geometry.chunk('epoch', 0, 1, 0)).cx, 1);
   for (const args of [['wrong-epoch', 0, 1, 0], ['epoch', -1, 1, 0], ['epoch', 0, 0, 0], ['epoch', 0, 1, 1]] as const) await assert.rejects(geometry.chunk(...args), { code: 'bad-response' });
-  const wrongRegion = createOperationsApi(async () => fixtures.find(f => f.case === 'valid-region')!.json);
-  await assert.rejects(wrongRegion.region('inner-1'), { code: 'bad-response' });
 });
 
 test('outbox error decisions separate gameplay refusals, client bugs and reconciliation', () => {

@@ -2,6 +2,7 @@ import type { AreaId, GameState, QuestStage } from '../lib/state.ts';
 import { LANTERN_ROAD, QUESTS, reachedIndex, type QuestRecord } from '../lib/quests.ts';
 import { SIGNPOST_BETWEEN } from './quests/signpost.ts';
 import { roomFor } from '../lib/rooms.ts';
+import { chunkOf, footprintAt } from '../lib/wilds/coords.ts';
 import { GLIM_COSTS, XP_PER_GLIM, checkSpend, chestOpened, isLit, type RoadLanternId } from '../lib/glims.ts';
 import { HEARTHWICK_COMMONS, WILDS_INNER } from './expansion-writing.ts';
 import { WILDS_OUTER, echoKeepsakeJournalEntries } from './echoes.ts';
@@ -162,12 +163,25 @@ export const locations: Record<AreaId, LocationInfo> = {
  * title or a banner.
  */
 /**
- * The area id to name a save's place by: the outer Wilds (a `wilds` save past
- * the crossing) read as their own region, everything else as saved.
+ * The area id to name a save's place by: as saved, except on the open map,
+ * which is one area but three places by where you stand: the Tangle
+ * (`wilds`), the Whitequiet (`wilds:whitequiet`) and the land beyond
+ * (`wilds:beyond`).
  */
-export function displayArea(state: { area: AreaId; wildsRegion?: string }): AreaId {
-  return state.area === 'wilds' && state.wildsRegion === 'outer-1' ? 'chunk:outer-1' : state.area;
+export function displayArea(state: { area: AreaId; position?: { x: number; y: number } }): AreaId {
+  if (state.area !== 'wilds' || !state.position) return state.area;
+  const { cx, cy } = chunkOf(Math.floor(state.position.x / 16), Math.floor(state.position.y / 16));
+  const place = footprintAt(cx, cy)?.id;
+  return place === 'tangle' ? 'wilds' : place === 'whitequiet' ? 'wilds:whitequiet' : 'wilds:beyond';
 }
+
+/** The land past the Whitequiet (a stand-in card until the words lane writes it). */
+const WILDS_BEYOND: LocationInfo = {
+  name: 'The Wilds',
+  eyebrow: 'Past the Whitequiet',
+  tagline: 'New land, every wick.',
+  description: 'Woods and meadow past the old drift, as far as the drift lets you go. It turns at every wick.',
+};
 
 /**
  * The rooms' cards (docs/design/indoors.md 3): the name is the room's own
@@ -224,7 +238,8 @@ export function areaInfo(areaId: AreaId): LocationInfo {
   if (areaId === 'cottage' || /^in:home:\d+$/.test(areaId)) return { name: 'Cottage', eyebrow: 'Behind the Commons gates', tagline: 'Four skids, a slate roof, a fox over the door.', description: 'One room on iron-oak skids, pegged not nailed.' };
   const lot = /^home:(\d+)$/.exec(areaId);
   if (lot) return { name: `Lot ${Number(lot[1]) + 1}`, eyebrow: 'Behind the Commons gates', tagline: 'Wild land, held by lamplight.', description: 'Land past a Commons gate: trees, stumps and stones, and whatever the deed-holders have built where their lamps reach.' };
-  if (areaId.startsWith('chunk:outer-')) return WILDS_OUTER.location;
+  if (areaId === 'wilds:whitequiet' || areaId.startsWith('chunk:outer-')) return WILDS_OUTER.location;
+  if (areaId === 'wilds:beyond') return WILDS_BEYOND;
   if (areaId === 'wilds' || areaId.startsWith('chunk:')) return WILDS_INNER.location;
   return { name: titleCase(areaId), eyebrow: 'Somewhere new', tagline: '', description: '' };
 }

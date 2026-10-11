@@ -181,19 +181,9 @@ export declare const StorySiteSchema: GenMessage<StorySite, {validType: StorySit
  */
 export declare type WildsChunk = Message<"glimway.v1.WildsChunk"> & {
   /**
-   * region, exits and spawn belong to generator v2's 3x3 regions. Generator
-   * v3 leaves them empty; lanes O-B and O-D delete them (and reserve the
-   * numbers) when v2 goes.
-   *
    * @generated from field: string epoch_id = 1;
    */
   epochId: string;
-
-  /**
-   * @generated from field: string region = 2 [deprecated = true];
-   * @deprecated
-   */
-  region: string;
 
   /**
    * @generated from field: string realm = 3;
@@ -241,12 +231,6 @@ export declare type WildsChunk = Message<"glimway.v1.WildsChunk"> & {
   solid: Uint8Array;
 
   /**
-   * @generated from field: repeated glimway.v1.Exit exits = 12 [deprecated = true];
-   * @deprecated
-   */
-  exits: Exit[];
-
-  /**
    * @generated from field: glimway.v1.DecorList decor = 13;
    */
   decor?: DecorList | undefined;
@@ -255,12 +239,6 @@ export declare type WildsChunk = Message<"glimway.v1.WildsChunk"> & {
    * @generated from field: repeated glimway.v1.StorySite sites = 14;
    */
   sites: StorySite[];
-
-  /**
-   * @generated from field: glimway.v1.Tile spawn = 15 [deprecated = true];
-   * @deprecated
-   */
-  spawn?: Tile | undefined;
 
   /**
    * @generated from field: string look = 16;
@@ -471,8 +449,7 @@ export declare const WildsEntitySchema: GenMessage<WildsEntity, {validType: Wild
 /**
  * starts_at and ends_at are Unix seconds. kind is "still" (one per world,
  * never ends: the Tangle) or "wick" (one per world per wick: the Beyond).
- * region_id belongs to the 3x3 regions; lane O-C deletes it (and reserves
- * the number) with region_epochs.
+ * region_id was the 3x3 regions' (gone with region_epochs).
  *
  * @generated from message glimway.v1.WildsEpoch
  */
@@ -486,12 +463,6 @@ export declare type WildsEpoch = Message<"glimway.v1.WildsEpoch"> & {
    * @generated from field: string world_seed = 2;
    */
   worldSeed: string;
-
-  /**
-   * @generated from field: string region_id = 3 [deprecated = true];
-   * @deprecated
-   */
-  regionId: string;
 
   /**
    * @generated from field: uint32 generator_version = 4;
@@ -726,10 +697,13 @@ export declare type EchoAssignmentValid = EchoAssignment;
 export declare const EchoAssignmentSchema: GenMessage<EchoAssignment, {validType: EchoAssignmentValid}>;
 
 /**
- * The 3x3 region read (GET /api/wilds/region/<id>); the near read replaces
- * it, and lane O-C deletes it.
+ * The 3x3 region read (GET /api/wilds/region/<id>) is gone: the near read
+ * replaced it in contract 8, and nothing reads or writes this message. It
+ * stays whole because buf's FILE rule refuses deleting it (or the map entry
+ * message its materials field makes) until a release ships without it.
  *
  * @generated from message glimway.v1.WildsRegionResult
+ * @deprecated
  */
 export declare type WildsRegionResult = Message<"glimway.v1.WildsRegionResult"> & {
   /**
@@ -773,6 +747,7 @@ export declare type WildsRegionResultValid = WildsRegionResult;
 /**
  * Describes the message glimway.v1.WildsRegionResult.
  * Use `create(WildsRegionResultSchema)` to create a new message.
+ * @deprecated
  */
 export declare const WildsRegionResultSchema: GenMessage<WildsRegionResult, {validType: WildsRegionResultValid}>;
 
@@ -1273,6 +1248,10 @@ export declare type HomesteadLandValid = HomesteadLand;
 export declare const HomesteadLandSchema: GenMessage<HomesteadLand, {validType: HomesteadLandValid}>;
 
 /**
+ * Dir, Tile and Exit belonged to generator v2's chunk exits. Nothing uses them
+ * since contract 8; they stay defined because buf's FILE rule refuses a
+ * deleted message until a release ships without it.
+ *
  * @generated from enum glimway.v1.Dir
  */
 export enum Dir {

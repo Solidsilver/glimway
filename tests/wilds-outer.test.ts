@@ -4,7 +4,6 @@ import { epochEnded, outerSeasonAt, seasonBounds, seasonMark } from '../src/lib/
 import { CALENDAR_PAPERS, SITE_PAPERS, TURNED_FLAG, UNBUILT_PAPERS, calendarFind, siteFind } from '../src/lib/wilds/stories.ts';
 import { ECHOES } from '../src/content/echoes.ts';
 import { PAPERS } from '../src/content/papers.ts';
-import { WILDS_PAPER_PLACEMENTS } from '../src/game/wilds/placements.ts';
 import { PAPERS as COMMONS_PAPERS } from '../src/game/homestead.ts';
 import { calendarAt } from '../src/lib/calendar.ts';
 import { createNewGame, validateSave } from '../src/lib/state.ts';
@@ -73,7 +72,8 @@ test('site finds and calendar finds follow their gates', () => {
 
 test('every findable paper has a way into the game (or is reported as needing a system)', () => {
   const hooked = new Set<string>();
-  for (const p of WILDS_PAPER_PLACEMENTS) hooked.add(p.paperId);
+  // The finds that ride a claim (a POI charted, a tier-3 chest opened): the server grants them with it.
+  for (const id of ['failed-grid-of-sector-4', 'joss-penhallow-field-notes-pencil-map', 'the-blind-routes-smugglers-ledger']) hooked.add(id);
   for (const r of Object.values(SITE_PAPERS)) hooked.add(r!.paper);
   for (const r of Object.values(CALENDAR_PAPERS)) hooked.add(r.paper);
   for (const e of ECHOES) if (e.paper) hooked.add(e.paper);
@@ -93,14 +93,12 @@ test('every findable paper has a way into the game (or is reported as needing a 
 
 // ---------------------------------------------------------------- save markers
 
-test('the outer-region save markers are client-only and stay with their position', () => {
-  const s = { ...createNewGame(), area: 'wilds' as const, position: { x: 424, y: 744 }, wildsRegion: 'outer-1', outerSeason: outerSeasonAt(NOW) };
+test('a Wilds save is the area and world pixels, nothing else (the region markers went with the regions)', () => {
+  const s = { ...createNewGame(), area: 'wilds' as const, position: { x: -424, y: -744 }, wildsRegion: 'outer-1', outerSeason: outerSeasonAt(NOW) };
   const v = validateSave(s);
-  assert.equal(v.wildsRegion, 'outer-1');
-  assert.equal(v.outerSeason, outerSeasonAt(NOW));
-  // Out of the Wilds the region marker means nothing and is dropped.
-  assert.equal(validateSave({ ...s, area: 'village' }).wildsRegion, undefined);
-  assert.equal('wildsRegion' in validateSave(createNewGame()), false);
+  assert.deepEqual([v.area, v.position], ['wilds', { x: -424, y: -744 }]);
+  assert.equal('wildsRegion' in v, false);
+  assert.equal('outerSeason' in v, false);
 });
 
 test('days in a wick are calendar days', () => {

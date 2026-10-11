@@ -1,51 +1,62 @@
 /**
- * The Wilds region store: the client's picture of the Tangle and the outer
- * Wilds, shared by the chunk scenes and the character panel.
+ * The Wilds store: the client's picture of the open map, keyed by chunk
+ * (docs/design/open-map.md 2.4, 2.5), shared by the scene and the panels.
  *
- * Two regions, one active: the region the current scene plays in. Reads and
- * claims go to the active region unless a region is named.
+ * The server owns everything (server-first.md 3). `refreshNear` reads
+ * GET /api/wilds/near/<cx>/<cy>: the still and wick epochs, the frontier,
+ * and for the 5×5 chunks around (cx, cy) every entity's cycle and state,
+ * personal claims, discoveries, fallen lanterns, Echo assignments, ground
+ * changes, the glimpse past the frontier, named ways and material balances.
+ * Each read replaces what the store held for the chunks in its window and
+ * keeps the rest, then loads the window's chunk bodies (terrain, decor,
+ * sites, entity bodies; game/wilds/chunks.ts) in their epochs. A read is
+ * made on entering a chunk (at most every 10 s per chunk) and before every
+ * claim (a claim must name the entity's current cycle).
  *
- * The server owns everything (server-first.md 3). `refreshWilds` reads
- * GET /api/wilds/region/<id> (the epoch, every entity's cycle and state,
- * personal claims, discoveries, lanterns, material balances and this
- * player's Echo assignments), then loads that epoch's chunks (terrain, decor,
- * sites and the entities' bodies; game/wilds/chunks.ts). The view merges each
- * entity's body with its state. A depleted camp or node whose timer has run
- * shows its next cycle in the read; a claim must name that cycle, so a claim
- * is always preceded by a fresh read. The outer epoch carries its `endsAt`;
- * past it the region has turned.
+ * Freshness: a view is fresh once a near read and its chunks have loaded.
+ * When a later read fails, the last view stays to look at but is marked
+ * `stale`; `wildsLive` (what offers and claims read) returns nothing for a
+ * stale view or while the link is not online (server-first.md 3.3).
  *
- * Freshness: a view is fresh once a region read and all its chunks have
- * loaded. When a later refresh fails, the last view stays to look at but is
- * marked `stale`; `wildsLive` (what offers and claims read) returns nothing
- * for a stale view or while the link is not online, so nothing can be claimed,
- * settled or relit until a fresh read lands (server-first.md 3.3).
+ * The turning: a read that names another wick epoch than the one held means
+ * the Beyond turned. The store starts over from that read and the scene
+ * plays it (EV.turning); nobody is sent home (decision 10).
  *
  * There is no local play: without a server the Wilds don't open.
  */
 import { MATERIALS, TRINKETS } from '../../content/expansion-writing.ts';
 import type { WildsEntityView, WildsLanternView } from '../../lib/api/types.ts';
-import type { WildsLantern } from '../../lib/gen/glimway/v1/wilds_pb.js';
+import type { GroundChange, WildsEpoch as WildsEpochPb, WildsLantern, WildsNearResult, WildsWay } from '../../lib/gen/glimway/v1/wilds_pb.js';
 import type { WildsClaimResult } from '../../lib/gen/glimway/v1/operations_pb.js';
+import { epochKindAt } from '../../lib/wilds/coords.ts';
+import { NEAR_RADIUS } from '../../lib/api/near.ts';
+import type { WildsEpochKind } from '../../lib/wilds/types.ts';
 import { EV, bus } from '../events.ts';
 import { gameNow } from '../clock.ts';
 import type { Session } from '../session.ts';
-import { OUTER_REGION_ID, WILDS_REGION_ID, isWildsArea, regionOfState, wildsRegion } from './regions.ts';
-import { registerWildsAreas } from './areas.ts';
-import { loadRegionChunks, pruneChunks } from './chunks.ts';
-import type { EntityBody } from './terrain.ts';
+import { CHUNK_TILES, chunkKey, chunkOfPixel, isWildsArea } from './coords.ts';
+import { loadChunk, pruneChunks, cachedTerrain } from './chunks.ts';
+import type { ChunkTerrain, EntityBody } from './terrain.ts';
 import { currentHomesteadMaterials, syncWildsMaterials } from '../homestead.ts';
 
-/** A region's epoch as the server named it in the last read. */
+/** An epoch as the server named it in the last near read. */
 export interface WildsEpoch {
-  /** '' until the region has been read. */
+  /** '' until the Wilds have been read. */
   id: string;
+  kind: WildsEpochKind;
   worldSeed: string;
-  regionId: string;
   generatorVersion: number;
   season: string;
-  /** Unix seconds the epoch ends (the outer Wilds); null when permanent. */
+  /** Unix seconds the epoch ends (the wick); null for the still epoch. */
   endsAt: number | null;
+}
+
+/** The frontier the server enforces, as an inclusive chunk rectangle (0.8; 0.9 adds held chunks). */
+export interface FrontierRect {
+  minCx: number;
+  minCy: number;
+  maxCx: number;
+  maxCy: number;
 }
 
 export interface LootDrop {
@@ -53,6 +64,63 @@ export interface LootDrop {
   /** Glim-free trinket id, or null. */
   trinket: string | null;
 }
+
+export interface WildsDiscovery {
+  entityId: string;
+  poiId: string;
+  discovererId: string;
+  displayName: string;
+}
+
+/** An entity's body (from its chunk) with its state (from the near read); `cx, cy` its chunk. */
+export type WildsThing = WildsEntityView & { cx: number; cy: number };
+
+/** A chunk past the frontier, seen through the veil (decision 22). */
+export interface Glimpse {
+  land: string;
+  river: boolean;
+}
+
+type EntityStateView = Pick<WildsEntityView, 'cycle' | 'state' | 'available_at' | 'by' | 'at'>;
+
+export interface WildsView {
+  still: WildsEpoch;
+  wick: WildsEpoch;
+  frontier: FrontierRect;
+  /** Entity states by id (bodies are in the chunks). */
+  states: Map<string, EntityStateView>;
+  /** Entity ids this player personally claimed (chests, POIs). */
+  claims: Set<string>;
+  discoveries: Map<string, WildsDiscovery>;
+  /** Fallen lanterns; `x, y` are world tiles. */
+  lanterns: Map<string, WildsLanternView>;
+  materials: Record<string, number>;
+  /** This player's Echo assignments: site id → member, and whether it is settled. */
+  echoes: Map<string, { member: string; settled: boolean }>;
+  /** Player-made ground changes per chunk (`cx,cy`), tiles chunk-local (section 3). */
+  ground: Map<string, GroundChange[]>;
+  /** The glimpse past the frontier, per chunk (`cx,cy`). */
+  glimpse: Map<string, Glimpse>;
+  /** Named ways by id (their geometry is the server's: `path`, `signA`, `signB`). */
+  ways: Map<string, WildsWay>;
+  /** The last refresh failed: this is the Wilds as last seen, shown but not interactive. */
+  stale: boolean;
+  /** Bumps on every change; the scene re-renders when it moves. */
+  version: number;
+}
+
+export { NEAR_RADIUS };
+/** A chunk's near read is reused for this long when you walk back into it. */
+export const NEAR_MAX_AGE_MS = 10_000;
+
+let view: WildsView | null = null;
+const fetchedAt = new Map<string, number>();
+let inflight: { key: string; run: Promise<boolean> } | null = null;
+
+// A fall that left a lantern changed the Wilds: the next entry reads again.
+bus.on(EV.fallSettled, ({ lantern }) => {
+  if (lantern === 'placed') fetchedAt.clear();
+});
 
 /**
  * One server-owned material balance everywhere: when the shop (homestead
@@ -64,138 +132,82 @@ function watchHomesteadMaterials(): void {
   homesteadWatch = true;
   bus.on(EV.homeChanged, () => {
     const m = currentHomesteadMaterials();
-    if (m && anyView()) {
-      setMaterials(m);
+    if (m && view) {
+      view.materials = { ...m };
       emitMaterials();
     }
   });
 }
 
-/** Register the chunk area kinds for an epoch right now (scene safety). */
-export function ensureWildsAreaKinds(epoch: WildsEpoch): void {
-  if (epoch.id) registerWildsAreas(epoch);
-}
+const unread = (kind: WildsEpochKind): WildsEpoch => ({ id: '', kind, worldSeed: '', generatorVersion: 0, season: '', endsAt: null });
 
-export interface WildsDiscovery {
-  entityId: string;
-  poiId: string;
-  discovererId: string;
-  displayName: string;
-}
-
-export interface WildsView {
-  /** The server epoch id mutations name. */
-  epochId: string;
-  entities: WildsEntityView[];
-  /** Entity ids this player personally claimed (chests, POIs). */
-  claims: string[];
-  discoveries: WildsDiscovery[];
-  lanterns: WildsLanternView[];
-  materials: Record<string, number>;
-  /** This player's Echo assignments: site id → member, and whether it is settled. */
-  echoes: Map<string, { member: string; settled: boolean }>;
-  /** The last refresh failed: this is the Wilds as last seen, shown but not interactive. */
-  stale: boolean;
-  /** Bumps on every change; scenes re-render when it moves. */
-  version: number;
-}
-
-interface RegionState {
-  epoch: WildsEpoch;
-  view: WildsView | null;
-  inflight: Promise<boolean> | null;
-  fetchedAt: number;
-}
-
-const regions = new Map<string, RegionState>();
-let active: string = WILDS_REGION_ID;
-
-// A fall that left a lantern changed the region: the next entry reads it
-// again instead of reusing a recent read (prepareWilds' maxAge).
-bus.on(EV.fallSettled, ({ lantern }) => {
-  if (lantern !== 'placed') return;
-  for (const r of regions.values()) r.fetchedAt = 0;
-});
-
-function unread(regionId: string): WildsEpoch {
-  return { id: '', worldSeed: '', regionId, generatorVersion: 0, season: '', endsAt: null };
-}
-
-function regionState(id: string): RegionState {
-  let r = regions.get(id);
-  if (!r) {
-    r = { epoch: unread(id), view: null, inflight: null, fetchedAt: 0 };
-    regions.set(id, r);
-  }
-  return r;
-}
-
-function anyView(): boolean {
-  return [...regions.values()].some((r) => r.view);
-}
-
-/** The region the current scene plays in (reads and claims default to it). */
-export function setActiveWildsRegion(id: string): void {
-  active = id === OUTER_REGION_ID ? OUTER_REGION_ID : WILDS_REGION_ID;
-}
-
-/** Wilds materials for the character panel (`null` until the Wilds load). */
-export function wildsMaterials(): Record<string, number> | null {
-  const v = regionState(active).view ?? [...regions.values()].find((r) => r.view)?.view ?? null;
-  return v ? { ...v.materials } : null;
-}
-
-export function wildsView(region: string = active): WildsView | null {
-  return regionState(region).view;
+/** The view as last read (stale or not), or null before the first read. */
+export function wildsView(): WildsView | null {
+  return view;
 }
 
 /**
  * The view, only while it is fresh and the link is online: what interaction
  * offers, claims, relights and Echo settling read. Null otherwise.
  */
-export function wildsLive(session: Session, region: string = active): WildsView | null {
-  const v = regionState(region).view;
-  return v && !v.stale && session.link?.status === 'online' ? v : null;
+export function wildsLive(session: Session): WildsView | null {
+  return view && !view.stale && session.link?.status === 'online' ? view : null;
 }
 
-/** Is the region shown as last seen (a stale view, or no connection)? */
-export function wildsStale(session: Session, region: string = active): boolean {
-  const v = regionState(region).view;
-  return v !== null && wildsLive(session, region) === null;
+/** Is the Wilds shown as last seen (a stale view, or no connection)? */
+export function wildsStale(session: Session): boolean {
+  return view !== null && wildsLive(session) === null;
 }
 
-export function wildsEpoch(region: string = active): WildsEpoch {
-  return regionState(region).epoch;
+/** Wilds materials for the character panel (`null` until the Wilds load). */
+export function wildsMaterials(): Record<string, number> | null {
+  return view ? { ...view.materials } : null;
 }
 
-/** When the region's epoch ends (Unix seconds), or null for the permanent Tangle. */
-export function wildsEpochEndsAt(region: string = active): number | null {
-  return regionState(region).epoch.endsAt;
+export function wildsEpoch(kind: WildsEpochKind): WildsEpoch {
+  return view ? view[kind] : unread(kind);
+}
+
+/** The epoch a chunk is made in (the Tangle's still one, else the wick's), or null before a read. */
+export function chunkEpoch(cx: number, cy: number): WildsEpoch | null {
+  const e = wildsEpoch(epochKindAt(cx, cy));
+  return e.id ? e : null;
+}
+
+/** The frontier as last read, or null. */
+export function wildsFrontier(): FrontierRect | null {
+  return view?.frontier ?? null;
+}
+
+/** Inside the frontier the server named (the client treats everything else as solid). */
+export function insideNamedFrontier(cx: number, cy: number): boolean {
+  const f = view?.frontier;
+  return !!f && cx >= f.minCx && cx <= f.maxCx && cy >= f.minCy && cy <= f.maxCy;
+}
+
+/** When the wick ends (Unix seconds), or null before a read. */
+export function wickEndsAt(): number | null {
+  return view?.wick.endsAt ?? null;
 }
 
 /**
- * Has the outer Wilds' epoch this store holds ended? The server's `endsAt`
- * against the real clock (the server is what refuses an ended epoch).
+ * Has the wick this store holds ended? The server's `endsAt` against the
+ * game's clock (the server is what refuses an ended epoch).
  */
-export function outerTurned(_session: Session): boolean {
-  const r = regions.get(OUTER_REGION_ID);
-  if (!r?.view || r.epoch.endsAt === null) return false;
-  // The game's clock (the dev/playtest clock when it has been moved).
-  return gameNow() >= r.epoch.endsAt;
-}
-
-/** Forget a region's state (the Turning): the next read names the new epoch. */
-export function resetWildsRegion(id: string): void {
-  regions.delete(id);
+export function wickEnded(): boolean {
+  const end = view?.wick.endsAt;
+  return end !== null && end !== undefined && gameNow() >= end;
 }
 
 /**
- * Forget every region (a world move): the next read fetches the new world's
- * epochs, and no view of the old world's Wilds is reused.
+ * Forget the Wilds (a world move, or the turning): the next read starts
+ * over, and no view of the old world's or the old wick's land is reused.
  */
-export function resetWilds(): void {
-  regions.clear();
-  bus.emit(EV.wilds, { materials: null });
+export function resetWilds(opts: { quiet?: boolean } = {}): void {
+  view = null;
+  fetchedAt.clear();
+  inflight = null;
+  if (!opts.quiet) bus.emit(EV.wilds, { materials: null });
 }
 
 function materialsRecord(list: Record<string, number>): Record<string, number> {
@@ -203,11 +215,6 @@ function materialsRecord(list: Record<string, number>): Record<string, number> {
   for (const m of MATERIALS) out[m.id] = 0;
   for (const [id, qty] of Object.entries(list)) out[id] = (out[id] ?? 0) + Number(qty);
   return out;
-}
-
-/** One balance across both regions' views. */
-function setMaterials(m: Record<string, number>): void {
-  for (const r of regions.values()) if (r.view) r.view.materials = { ...m };
 }
 
 function emitMaterials(): void {
@@ -218,13 +225,13 @@ function emitMaterials(): void {
   syncWildsMaterials(materials);
 }
 
-function bump(view: WildsView | null): void {
+function bump(): void {
   if (view) view.version += 1;
   emitMaterials();
 }
 
 /** Available now? (A depleted camp or node shows its timer until the next read projects its cycle.) */
-export function entityAvailable(e: WildsEntityView, nowSec: number): boolean {
+export function entityAvailable(e: Pick<WildsEntityView, 'state' | 'available_at'>, nowSec: number): boolean {
   if (e.state === 'cleared' || e.state === 'harvested') return e.available_at > 0 && nowSec >= e.available_at;
   if (e.state === 'charted') return false;
   return true;
@@ -234,138 +241,215 @@ function lanternView(l: WildsLantern): WildsLanternView {
   return { id: l.id, ownerId: l.ownerId, displayName: l.displayName, x: l.x, y: l.y, litBy: l.litBy ?? null, at: l.at, litAt: l.litAt ?? null };
 }
 
-type StateLike = { id: string; cycle: number; state: string; availableAt: number; by?: string; at?: number };
+function epochView(e: WildsEpochPb, kind: WildsEpochKind): WildsEpoch {
+  return { id: e.id, kind, worldSeed: e.worldSeed, generatorVersion: e.generatorVersion, season: e.season, endsAt: e.endsAt ?? null };
+}
 
-function entityView(body: EntityBody, s: StateLike | undefined): WildsEntityView {
+/** The chunk an entity id names (`<kind>:<cx>:<cy>:<i>`), or null. */
+export function entityChunk(id: string): { cx: number; cy: number } | null {
+  const m = /^[a-z-]+:(-?\d+):(-?\d+):\d+$/.exec(id);
+  return m ? { cx: Number(m[1]), cy: Number(m[2]) } : null;
+}
+
+/** The window of chunks a read around (cx, cy) covers. */
+export function nearWindow(cx: number, cy: number, radius = NEAR_RADIUS): { cx: number; cy: number }[] {
+  const out: { cx: number; cy: number }[] = [];
+  for (let y = cy - radius; y <= cy + radius; y++) for (let x = cx - radius; x <= cx + radius; x++) out.push({ cx: x, cy: y });
+  return out;
+}
+
+/**
+ * Merge a near read into the view (exported for tests): the read's window
+ * replaces what the view held for those chunks; everything else stays.
+ * A read in another wick epoch starts the view over. Returns whether the
+ * wick turned (a held wick, then another).
+ */
+export function applyNear(res: WildsNearResult): boolean {
+  const still = epochView(res.still!, 'still');
+  const wick = epochView(res.wick!, 'wick');
+  const turned = !!view && !!view.wick.id && view.wick.id !== wick.id;
+  if (!view || turned || view.still.id !== still.id) {
+    view = {
+      still,
+      wick,
+      frontier: { minCx: 0, minCy: 0, maxCx: -1, maxCy: -1 },
+      states: new Map(),
+      claims: new Set(),
+      discoveries: new Map(),
+      lanterns: new Map(),
+      materials: {},
+      echoes: new Map(),
+      ground: new Map(),
+      glimpse: new Map(),
+      ways: new Map(),
+      stale: false,
+      version: (view?.version ?? 0) + 1,
+    };
+    if (turned) fetchedAt.clear();
+  }
+  const v = view;
+  v.still = still;
+  v.wick = wick;
+  const r = res.frontier!.rect!;
+  v.frontier = { minCx: r.minCx, minCy: r.minCy, maxCx: r.maxCx, maxCy: r.maxCy };
+  const c = res.center!;
+  const radius = res.radius;
+  const inWindow = (x: number, y: number) => Math.abs(x - c.cx) <= radius && Math.abs(y - c.cy) <= radius;
+  const ownChunk = (id: string) => {
+    const at = entityChunk(id);
+    return !!at && inWindow(at.cx, at.cy);
+  };
+  for (const id of [...v.states.keys()]) if (ownChunk(id)) v.states.delete(id);
+  for (const s of res.entities) v.states.set(s.id, { cycle: s.cycle, state: s.state as WildsEntityView['state'], available_at: s.availableAt, by: s.by ?? null, at: s.at ?? null });
+  for (const id of [...v.claims]) if (ownChunk(id)) v.claims.delete(id);
+  for (const p of res.personalClaims) v.claims.add(p.entityId);
+  for (const d of res.discoveries) v.discoveries.set(d.entityId, { entityId: d.entityId, poiId: d.poiId, discovererId: d.discovererId, displayName: d.displayName });
+  for (const [id, l] of [...v.lanterns]) if (inWindow(Math.floor(l.x / CHUNK_TILES), Math.floor(l.y / CHUNK_TILES))) v.lanterns.delete(id);
+  for (const l of res.lanterns) v.lanterns.set(l.id, lanternView(l));
+  for (const a of res.echoes) v.echoes.set(a.site, { member: a.member, settled: a.settled });
+  for (const key of [...v.ground.keys()]) {
+    const [x, y] = key.split(',').map(Number);
+    if (inWindow(x!, y!)) v.ground.delete(key);
+  }
+  for (const g of res.ground) if (g.chunk) v.ground.set(chunkKey(g.chunk.cx, g.chunk.cy), [...(g.changes?.changes ?? [])]);
+  for (const g of res.glimpse) if (g.chunk) v.glimpse.set(chunkKey(g.chunk.cx, g.chunk.cy), { land: g.land, river: g.river });
+  for (const w of res.ways) v.ways.set(w.id, w);
+  v.materials = materialsRecord(res.materials);
+  v.stale = false;
+  return turned;
+}
+
+/** The entities of a loaded chunk, each with its state. */
+export function chunkThings(cx: number, cy: number): WildsThing[] {
+  const epoch = chunkEpoch(cx, cy);
+  const t = epoch ? cachedTerrain(epoch.id, cx, cy) : null;
+  if (!t) return [];
+  return t.entities.map((b) => thingOf(b, cx, cy));
+}
+
+function thingOf(body: EntityBody, cx: number, cy: number): WildsThing {
+  const s = view?.states.get(body.id);
   return {
     ...body,
     enemies: [...body.enemies],
+    cx,
+    cy,
     cycle: s?.cycle ?? 0,
-    state: (s?.state ?? 'available') as WildsEntityView['state'],
-    available_at: s?.availableAt ?? 0,
+    state: s?.state ?? 'available',
+    available_at: s?.available_at ?? 0,
     by: s?.by ?? null,
     at: s?.at ?? null,
   };
 }
 
+/** A loaded chunk's terrain in its current epoch, or null. */
+export function chunkTerrain(cx: number, cy: number): ChunkTerrain | null {
+  const epoch = chunkEpoch(cx, cy);
+  return epoch ? cachedTerrain(epoch.id, cx, cy) : null;
+}
+
+/** Load a chunk's body in its current epoch (null outside the frontier or before a read). */
+export async function loadWildsChunk(session: Session, cx: number, cy: number): Promise<ChunkTerrain | null> {
+  const link = session.link;
+  const epoch = chunkEpoch(cx, cy);
+  if (!link || !epoch || !insideNamedFrontier(cx, cy)) return null;
+  return loadChunk(link.api.operations, epoch.id, cx, cy);
+}
+
 /**
- * Load/refresh a region (default: the active one): the region read, then its
- * epoch's chunks. Never moves the hero. Returns whether the region is usable.
+ * Read the Wilds around chunk (cx, cy) and load the window's chunks. A
+ * chunk read less than `maxAgeMs` ago is reused. Never moves the hero.
+ * Returns whether the view is usable.
  */
-export async function refreshWilds(session: Session, maxAgeMs = 0, region: string = active): Promise<boolean> {
-  const r = regionState(region);
-  if (r.inflight) return r.inflight;
+export async function refreshNear(session: Session, cx: number, cy: number, maxAgeMs = 0): Promise<boolean> {
+  const key = chunkKey(cx, cy);
+  if (inflight?.key === key) return inflight.run;
   const run = async (): Promise<boolean> => {
     const link = session.link;
     if (!link) return false;
-    if (r.view && !r.view.stale && Date.now() - r.fetchedAt < maxAgeMs) return true;
+    const at = fetchedAt.get(key);
+    if (view && !view.stale && at !== undefined && Date.now() - at < maxAgeMs) return true;
     try {
       const ops = link.api.operations;
-      const res = await ops.region(region);
-      const e = res.epoch!;
-      const terrains = await loadRegionChunks(ops, e.id, wildsRegion(region));
-      const live = regionState(region);
-      const changed = live.epoch.id !== e.id;
-      // The outer region came back in another epoch than the one held: its
-      // wick ended (the server's clock is past it, whatever this page's
-      // says), so the Wilds turn under the player (the scene plays it).
-      const turned = changed && !!live.epoch.id && region === OUTER_REGION_ID;
-      live.epoch = { id: e.id, worldSeed: e.worldSeed, regionId: e.regionId, generatorVersion: e.generatorVersion, season: e.season, endsAt: e.endsAt ?? null };
-      registerWildsAreas(live.epoch);
-      const states = new Map(res.entities.map((s) => [s.id, s]));
-      const prior = live.view;
-      live.view = {
-        epochId: e.id,
-        entities: terrains.flatMap((t) => t.entities.map((b) => entityView(b, states.get(b.id)))),
-        claims: res.personalClaims.map((c) => c.entityId),
-        discoveries: res.discoveries.map((d) => ({ entityId: d.entityId, poiId: d.poiId, discovererId: d.discovererId, displayName: d.displayName })),
-        lanterns: res.lanterns.map(lanternView),
-        materials: materialsRecord(res.materials),
-        echoes: new Map(res.echoes.map((a) => [a.site, { member: a.member, settled: a.settled }])),
-        stale: false,
-        version: (prior?.version ?? 0) + 1,
-      };
-      setMaterials(live.view.materials);
-      live.fetchedAt = Date.now();
-      if (changed) void pruneChunks([...regions.values()].map((x) => x.epoch.id).filter(Boolean));
-      bump(live.view);
+      const res = await ops.near(cx, cy);
+      const priorWick = view?.wick.id ?? '';
+      const turned = applyNear(res);
+      fetchedAt.set(key, Date.now());
+      await Promise.all(nearWindow(cx, cy).filter((c) => insideNamedFrontier(c.cx, c.cy)).map((c) => loadWildsChunk(session, c.cx, c.cy).catch(() => null)));
+      if (priorWick !== view!.wick.id) void pruneChunks([view!.still.id, view!.wick.id]);
+      bump();
       if (turned) bus.emit(EV.turning, { reason: 'epoch-ended' });
       return true;
     } catch {
       // The last view stays to look at, marked stale; nothing in it is offered.
-      const v = regionState(region).view;
-      if (v && !v.stale) {
-        v.stale = true;
-        bump(v);
+      if (view && !view.stale) {
+        view.stale = true;
+        bump();
       }
       return false;
     }
   };
-  r.inflight = run().finally(() => {
-    const live = regions.get(region);
-    if (live) live.inflight = null;
+  const p = run().finally(() => {
+    if (inflight?.run === p) inflight = null;
   });
-  return r.inflight;
+  inflight = { key, run: p };
+  return p;
 }
 
 /**
- * Everything a session needs before it can play in the Wilds: the region its
- * save is in becomes active, and its epoch and chunks load. Await this before
- * building a Wilds chunk scene. True only for a fresh view. `maxAgeMs` lets chunk re-entries use a recent
- * read instead of refetching every walk.
+ * Everything a session needs before it can play in the Wilds: a near read
+ * around the saved position and its chunks. Await this before building the
+ * Wilds scene. True only for a fresh view. `maxAgeMs` lets a re-entry use a
+ * recent read.
  */
 export async function prepareWilds(session: Session, maxAgeMs = 0): Promise<boolean> {
-  const region = regionOfState(session.state);
-  if (isWildsArea(session.state.area)) setActiveWildsRegion(region);
   if (!session.link) return false;
   watchHomesteadMaterials();
-  if (isWildsArea(session.state.area)) return refreshWilds(session, maxAgeMs, region);
-  return wildsLive(session, region) !== null;
+  if (!isWildsArea(session.state.area)) return wildsLive(session) !== null;
+  const { cx, cy } = chunkOfPixel(session.state.position.x, session.state.position.y);
+  return refreshNear(session, cx, cy, maxAgeMs);
 }
 
 /** A server claim answer: entity state, loot, balances. */
 export function applyClaim(result: WildsClaimResult): LootDrop {
-  const view = regionState(active).view;
-  if (!view) throw new Error('wilds: claim before the region loaded');
+  if (!view) throw new Error('wilds: claim before the Wilds loaded');
   const s = result.entity;
-  const e = s ? view.entities.find((x) => x.id === s.id) : undefined;
-  if (e && s) {
-    e.cycle = s.cycle;
-    e.state = s.state as WildsEntityView['state'];
-    e.available_at = s.availableAt;
-    e.by = s.by ?? null;
-    e.at = s.at ?? null;
-    if ((e.kind === 'chest' || e.kind === 'poi') && !view.claims.includes(e.id)) view.claims.push(e.id);
+  if (s) {
+    view.states.set(s.id, { cycle: s.cycle, state: s.state as WildsEntityView['state'], available_at: s.availableAt, by: s.by ?? null, at: s.at ?? null });
+    if (/^(chest|poi):/.test(s.id)) view.claims.add(s.id);
   }
   // The answer carries the post-grant balances: replace the mirror.
-  setMaterials(materialsRecord(result.materials));
-  bump(view);
+  view.materials = materialsRecord(result.materials);
+  bump();
   return { materials: (result.loot?.materials ?? []).map((m) => ({ id: m.id, qty: m.qty })), trinket: result.loot?.trinket ?? null };
 }
 
 export function applyLanterns(lanterns: WildsLantern[]): void {
-  const view = regionState(active).view;
   if (!view) return;
-  view.lanterns = lanterns.map(lanternView);
-  bump(view);
+  for (const l of lanterns) view.lanterns.set(l.id, lanternView(l));
+  bump();
 }
 
 /** Record a settled Echo in the view (the answer to settle-echo). */
 export function applyEchoSettled(site: string): void {
-  const view = regionState(active).view;
   const a = view?.echoes.get(site);
   if (!view || !a) return;
   a.settled = true;
-  bump(view);
+  bump();
 }
 
-/** A personal claim seen in a region read (chest/POI ids). */
+/** A chunk's ground changes as last read (tiles chunk-local). */
+export function groundChanges(cx: number, cy: number): readonly GroundChange[] {
+  return view?.ground.get(chunkKey(cx, cy)) ?? [];
+}
+
+/** A personal claim seen in a near read (chest/POI ids). */
 export function isClaimed(entityId: string): boolean {
-  return regionState(active).view?.claims.includes(entityId) ?? false;
+  return view?.claims.has(entityId) ?? false;
 }
 
 export function discoveryFor(entityId: string): WildsDiscovery | null {
-  return regionState(active).view?.discoveries.find((d) => d.entityId === entityId) ?? null;
+  return view?.discoveries.get(entityId) ?? null;
 }
 
 /** Display name of a material or trinket (for toasts). */

@@ -23,12 +23,17 @@ func TestHashGolden(t *testing.T) {
 	if Hash("oak-7", "inner-1", 1, "spring", -1, -2) != 2607182495 {
 		t.Fatal("hash negative ints")
 	}
-	e := Epoch{WorldSeed: "oak-7", RegionID: "inner-1", GeneratorVersion: 1, Season: "spring"}
-	if ChunkSeed(e, 1, 1) != 3659775552 {
+	// The seeds fold their parts the same way (v2's region id in the place
+	// v3's epoch kind now takes).
+	if Hash("oak-7", "inner-1", 1, "spring", 1, 1) != 3659775552 {
 		t.Fatal("chunk seed")
 	}
-	if LootSeed(e, "camp:1:1:0", 3) != 2481498229 {
+	if Hash("oak-7", "inner-1", 1, "spring", "camp:1:1:0", 3) != 2481498229 {
 		t.Fatal("loot seed")
+	}
+	e := Epoch{WorldSeed: "oak-7", Kind: "inner-1", GeneratorVersion: 1, Season: "spring"}
+	if ChunkSeed(e, 1, 1) != 3659775552 || LootSeed(e, "camp:1:1:0", 3) != 2481498229 {
+		t.Fatal("v3 seeds")
 	}
 	r := NewRng(0)
 	if a, b, c := r.Next(), r.Next(), r.Next(); a != 1144304738 || b != 1416247 || c != 958946056 {

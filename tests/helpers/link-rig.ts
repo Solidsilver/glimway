@@ -135,9 +135,6 @@ export class FakeSession implements LinkSession {
       hp: Math.min(opts.vitals?.hp ?? prev.hp, view.maxHp),
       mana: Math.min(opts.vitals?.mana ?? prev.mana, view.maxMana),
     };
-    const region = opts.relocate ? view.wildsRegion : prev.wildsRegion;
-    if (region) this.state.wildsRegion = region;
-    else delete this.state.wildsRegion;
   }
 }
 

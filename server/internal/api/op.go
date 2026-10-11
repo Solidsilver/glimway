@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"glimway/content"
+	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
+	"glimway/server/internal/wilds"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -109,6 +111,8 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 		where = nil
 	} else if where == nil || !validArea(where.Area) || !finiteWhere(where) {
 		return refuse(fail(409, "invalid-position"))
+	} else if !wildsWhereInside(where) {
+		return refuse(fail(409, "beyond-frontier"))
 	}
 	if _, err = tx.ExecContext(ctx, "SAVEPOINT gameplay"); err != nil {
 		return err
@@ -213,6 +217,18 @@ func finiteWhere(where *contract.Where) bool {
 		return where.X >= 0 && where.Y >= 0 && where.X < float64((int(content.HomeRules.GetIndoor().GetWidth())+2)*16) && where.Y < float64((int(content.HomeRules.GetIndoor().GetHeight())+4)*16)
 	}
 	return true
+}
+
+// wildsWhereInside: a Wilds `where` (world pixels, finite) stands in a chunk
+// inside the frontier (open-map.md 2.6); any other area is not the
+// frontier's business.
+func wildsWhereInside(where *contract.Where) bool {
+	if where.Area != wildsArea {
+		return true
+	}
+	tx, ty := wilds.TileOfPixel(where.X, where.Y)
+	cx, cy := wilds.ChunkOf(tx, ty)
+	return frontier.Inside("", cx, cy)
 }
 
 // All typed operation results must appear exactly once in Envelope.result.

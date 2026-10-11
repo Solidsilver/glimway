@@ -1,0 +1,287 @@
+package wilds
+
+import (
+	"fmt"
+	"image"
+	"image/color"
+	"image/png"
+	"os"
+	"slices"
+	"testing"
+)
+
+// The frontier as a picture: every chunk of the 0.8 frontier for one wick,
+// drawn tile by tile in ground colours (solid tiles darker), with landmarks,
+// lamp stones, sites and entities marked and faint chunk lines. Not a test
+// of anything; run it to look at the map:
+//
+//	GLIMWAY_MAP_PNG=../../../.agent/frontier.png go test ./internal/wilds -run TestRenderFrontierPNG
+//
+// GLIMWAY_MAP_SEED picks the world seed (default "map"), GLIMWAY_MAP_SEASON
+// the wick season.
+
+var groundColours = map[string]color.RGBA{
+	"woods": {38, 74, 42, 255}, "moss": {86, 128, 62, 255}, "verge": {150, 134, 90, 255},
+	"path": {176, 150, 100, 255}, "trodden": {128, 98, 62, 255}, "road": {120, 120, 112, 255},
+	"water": {40, 92, 140, 255}, "meadow": {146, 186, 92, 255}, "bank": {204, 186, 138, 255},
+	"ford": {96, 150, 186, 255}, "paving": {160, 160, 160, 255}, "laid-stone": {180, 180, 190, 255},
+	"laid-plank": {160, 120, 80, 255},
+}
+
+func TestRenderFrontierPNG(t *testing.T) {
+	out := os.Getenv("GLIMWAY_MAP_PNG")
+	if out == "" {
+		t.Skip("GLIMWAY_MAP_PNG=<file.png> draws the frontier")
+	}
+	seed := os.Getenv("GLIMWAY_MAP_SEED")
+	if seed == "" {
+		seed = "map"
+	}
+	season := os.Getenv("GLIMWAY_MAP_SEASON")
+	if season == "" {
+		season = "t:1795000000:1796209600"
+	}
+	img := renderFrontier(t, seed, season)
+	f, err := os.Create(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	if err := png.Encode(f, img); err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("wrote %s", out)
+}
+
+func renderFrontier(t testing.TB, seed, season string) *image.RGBA {
+	const px = 3
+	S := chunkSize()
+	minCx, minCy, maxCx, maxCy := frontierChunks()
+	W, H := (maxCx-minCx+1)*S*px, (maxCy-minCy+1)*S*px
+	img := image.NewRGBA(image.Rect(0, 0, W, H))
+	ids := map[Ground]string{}
+	for i, g := range contentRules().Grounds {
+		ids[Ground(i)] = g.GetId()
+	}
+	dot := func(x, y int, c color.RGBA) {
+		for dy := 0; dy < px; dy++ {
+			for dx := 0; dx < px; dx++ {
+				img.Set(x*px+dx, y*px+dy, c)
+			}
+		}
+	}
+	for cy := minCy; cy <= maxCy; cy++ {
+		for cx := minCx; cx <= maxCx; cx++ {
+			c := mustV3(t, seed, season, cx, cy)
+			ox, oy := (cx-minCx)*S, (cy-minCy)*S
+			for i, g := range c.Ground {
+				col := groundColours[ids[g]]
+				if c.Solid[i] {
+					col = shade(col, 6)
+				}
+				x, y := i%S, i/S
+				if x == 0 || y == 0 {
+					col = shade(col, 9)
+				}
+				dot(ox+x, oy+y, col)
+			}
+			for _, e := range c.Entities {
+				dot(ox+e.TX, oy+e.TY, color.RGBA{240, 240, 240, 255})
+			}
+			for _, s := range c.Sites {
+				col := color.RGBA{220, 60, 220, 255}
+				switch s.Kind {
+				case SiteLampStone:
+					col = color.RGBA{250, 220, 40, 255}
+				case SiteRumour:
+					col = color.RGBA{250, 120, 20, 255}
+				}
+				dot(ox+s.TX, oy+s.TY, col)
+			}
+			for _, p := range c.Places {
+				dot(ox+p.TX, oy+p.TY, color.RGBA{230, 30, 30, 255})
+			}
+		}
+	}
+	return img
+}
+
+// shade is a colour at tenths of its brightness.
+func shade(c color.RGBA, tenths int) color.RGBA {
+	f := func(v uint8) uint8 { return uint8(int(v) * tenths / 10) }
+	return color.RGBA{f(c.R), f(c.G), f(c.B), 255}
+}
+
+// mustV3 makes one chunk of a world, in the epoch its coordinates take.
+func mustV3(t testing.TB, seed, season string, cx, cy int) Chunk {
+	t.Helper()
+	e := WickEpoch(seed, season)
+	if EpochKindAt(cx, cy) == EpochStill {
+		e = StillEpoch(seed)
+	}
+	c, err := GenerateV3(e, cx, cy, nil)
+	if err != nil {
+		t.Fatalf("%s %d,%d: %v", seed, cx, cy, err)
+	}
+	return c
+}
+
+// TestRenderLandsPNG draws the lands of an 80×80-chunk square (chunks
+// -40..39 by -60..19) a pixel to two tiles: woods dark, meadow light, water
+// blue, the footprints grey; with GLIMWAY_MAP_HEMS set, hems in red.
+//
+//	GLIMWAY_MAP_PNG=<abs path> go test ./internal/wilds -run TestRenderLandsPNG
+func TestRenderLandsPNG(t *testing.T) {
+	out := os.Getenv("GLIMWAY_MAP_PNG")
+	if out == "" {
+		t.Skip("GLIMWAY_MAP_PNG=<file.png> draws the lands")
+	}
+	seed := os.Getenv("GLIMWAY_MAP_SEED")
+	if seed == "" {
+		seed = "map"
+	}
+	season := os.Getenv("GLIMWAY_MAP_SEASON")
+	if season == "" {
+		season = "t:1795000000:1796209600"
+	}
+	hems := os.Getenv("GLIMWAY_MAP_HEMS") != ""
+	w := newWorld(WickEpoch(seed, season))
+	S := chunkSize()
+	const step = 2
+	x0, y0, n := -40*S, -60*S, 80*S
+	img := image.NewRGBA(image.Rect(0, 0, n/step, n/step))
+	colours := map[string]color.RGBA{"woods": {34, 66, 38, 255}, "meadow": {150, 190, 96, 255}}
+	for py := 0; py < n/step; py++ {
+		for px := 0; px < n/step; px++ {
+			tx, ty := x0+px*step, y0+py*step
+			p := tileCentre(tx, ty)
+			pts := w.landPointsNear(tileBox(tx, ty, tx, ty))
+			_, patch := w.patchAt(tx, ty, pts, w.riverD2Near(p))
+			l := w.landOne(tx, ty)
+			col := colours[landName(l)]
+			if hems && l != patch {
+				col = color.RGBA{200, 50, 40, 255}
+			}
+			if d := w.riverD2Near(p); d >= 0 {
+				if _, half, _ := w.river.line.nearest(p, nil); d <= int64(half)*int64(half) {
+					col = color.RGBA{40, 92, 140, 255}
+				}
+			}
+			if FootprintAt(FloorDiv(tx, S), FloorDiv(ty, S)) != nil {
+				col = shade(col, 7)
+			}
+			img.Set(px, py, col)
+		}
+	}
+	f, err := os.Create(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	if err := png.Encode(f, img); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestRenderEdgesPNG draws six 2×2-chunk windows where a woods/meadow
+// border runs along a chunk edge (picked from the land field alone, so the
+// same windows come up whatever the edge rule), 4 px a tile, chunk edges
+// in red.
+//
+//	GLIMWAY_MAP_PNG=<abs path> go test ./internal/wilds -run TestRenderEdgesPNG
+func TestRenderEdgesPNG(t *testing.T) {
+	out := os.Getenv("GLIMWAY_MAP_PNG")
+	if out == "" {
+		t.Skip("GLIMWAY_MAP_PNG=<file.png> draws chunk edges where lands meet")
+	}
+	const px, cols, rows = 4, 3, 2
+	S := chunkSize()
+	ids := map[Ground]string{}
+	for i, g := range contentRules().Grounds {
+		ids[Ground(i)] = g.GetId()
+	}
+	type win struct {
+		seed, season string
+		cx, cy       int // the corner's south-east chunk
+	}
+	// The edges where a land border runs along the chunk edge: along most
+	// of it, the land three tiles one side differs from two tiles the other.
+	type scored struct {
+		win
+		score int
+	}
+	var all []scored
+	for i := range 12 {
+		seed, season := fmt.Sprint("edge-", i), "t:1795000000:1796209600"
+		w := newWorld(WickEpoch(seed, season))
+		for _, c := range frontierList() {
+			for _, vertical := range []bool{true, false} {
+				nx, ny := c[0], c[1]+1
+				if vertical {
+					nx, ny = c[0]+1, c[1]
+				}
+				if !insideReach(nx, ny) || !insideReach(c[0]+1, c[1]+1) || ny > 0 || c[1]+1 > 0 ||
+					FootprintAt(c[0], c[1]) != nil || FootprintAt(nx, ny) != nil || FootprintAt(c[0]+1, c[1]+1) != nil {
+					continue
+				}
+				score := 0
+				for a := 0; a < S; a++ {
+					var l1, l2 int
+					if vertical {
+						X := (c[0] + 1) * S
+						l1, l2 = w.landOne(X-3, c[1]*S+a), w.landOne(X+2, c[1]*S+a)
+					} else {
+						Y := (c[1] + 1) * S
+						l1, l2 = w.landOne(c[0]*S+a, Y-3), w.landOne(c[0]*S+a, Y+2)
+					}
+					if l1 != l2 {
+						score++
+					}
+				}
+				all = append(all, scored{win{seed, season, c[0] + 1, c[1] + 1}, score})
+			}
+		}
+	}
+	slices.SortStableFunc(all, func(a, b scored) int { return b.score - a.score })
+	var wins []win
+	used := map[string]bool{}
+	for _, a := range all {
+		if len(wins) < cols*rows && !used[a.seed] {
+			used[a.seed] = true
+			wins = append(wins, a.win)
+		}
+	}
+	img := image.NewRGBA(image.Rect(0, 0, cols*2*S*px+(cols-1)*px*2, rows*2*S*px+(rows-1)*px*2))
+	for i, wn := range wins {
+		ox, oy := (i%cols)*(2*S*px+2*px), (i/cols)*(2*S*px+2*px)
+		for _, d := range [][2]int{{-1, -1}, {0, -1}, {-1, 0}, {0, 0}} {
+			ch := mustV3(t, wn.seed, wn.season, wn.cx+d[0], wn.cy+d[1])
+			bx, by := ox+(d[0]+1)*S*px, oy+(d[1]+1)*S*px
+			for k, g := range ch.Ground {
+				col := groundColours[ids[g]]
+				if ch.Solid[k] {
+					col = shade(col, 6)
+				}
+				x, y := k%S, k/S
+				for yy := 0; yy < px; yy++ {
+					for xx := 0; xx < px; xx++ {
+						c := col
+						if (x == 0 && xx == 0 && d[0] == 0) || (y == 0 && yy == 0 && d[1] == 0) {
+							c = color.RGBA{220, 40, 40, 255}
+						}
+						img.Set(bx+x*px+xx, by+y*px+yy, c)
+					}
+				}
+			}
+		}
+	}
+	f, err := os.Create(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	if err := png.Encode(f, img); err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("%d windows: %+v", len(wins), wins)
+}

@@ -486,9 +486,9 @@ const drawReeds: Draw = (c, _rnd, w, h, v) => {
   void w
 }
 
-// The painted kinds. The 0.8 meadow, Wend and landmark kinds have no
-// painter: they come from the open-map art pass (lane O-F), which lane O-D
-// wires in; no generator places them before then.
+// The painted kinds. The 0.8 meadow, bank-stone and landmark kinds are the
+// open map pass's delivered art (./open-map-art.ts), drawn as their own
+// textures, not into this atlas.
 const DRAW: Partial<Record<DecorKind, Draw>> = {
   oak: drawOak,
   pine: drawPine,
@@ -841,4 +841,46 @@ function fogMargin(ctx: C, cw: number, chh: number, W: number, H: number): void 
     }
   }
   ctx.putImageData(img, 0, 0)
+}
+
+/**
+ * The drift past the frontier (open-map.md 2.6, 2.10): trees standing in
+ * the fog, painted straight into a drift chunk's canvas, whose world pixels
+ * start at (x0, y0). Each world tile decides its own tree from a hash, so
+ * neighbouring drift chunks paint the same trees across their shared edge.
+ * `wooded(tx, ty)` says whether a tile past the frontier stands in woods.
+ */
+export function paintDriftTrees(scene: Phaser.Scene, ctx: C, x0: number, y0: number, w: number, h: number, atlasKey: string, seed: number, wooded: (tx: number, ty: number) => boolean): void {
+  if (!ensureTangleAtlas(scene, atlasKey)) return
+  const spots: { kind: DecorKind; x: number; y: number; v: number; flip: boolean }[] = []
+  const t0x = Math.floor(x0 / TILE) - 3
+  const t0y = Math.floor(y0 / TILE) - 1
+  const t1x = Math.floor((x0 + w) / TILE) + 3
+  const t1y = Math.floor((y0 + h) / TILE) + 4
+  for (let ty = t0y; ty <= t1y; ty++) {
+    for (let tx = t0x; tx <= t1x; tx++) {
+      if (!wooded(tx, ty) || hash01(tx, ty, seed ^ 0x51ed) < 0.35) continue
+      const r = (k: number) => hash01(tx, ty, (seed ^ 0x2545f491) + k)
+      spots.push({
+        kind: MARGIN_KINDS[Math.floor(r(1) * MARGIN_KINDS.length)],
+        x: tileMid(tx) + Math.round((r(2) - 0.5) * 8),
+        y: tileBottom(ty) - Math.round(r(3) * 4),
+        v: Math.floor(r(4) * TANGLE_VARIANTS),
+        flip: r(5) < 0.5
+      })
+    }
+  }
+  spots.sort((a, b) => a.y - b.y || a.x - b.x)
+  const src = scene.textures.get(atlasKey).getSourceImage() as CanvasImageSource
+  for (const s of spots) {
+    const f = scene.textures.getFrame(atlasKey, tangleFrame(s.kind, s.v))
+    const dx = Math.round(s.x - x0 - f.cutWidth / 2)
+    const dy = Math.round(s.y - y0 - f.cutHeight)
+    if (s.flip) {
+      ctx.save()
+      ctx.scale(-1, 1)
+      ctx.drawImage(src, f.cutX, f.cutY, f.cutWidth, f.cutHeight, -dx - f.cutWidth, dy, f.cutWidth, f.cutHeight)
+      ctx.restore()
+    } else ctx.drawImage(src, f.cutX, f.cutY, f.cutWidth, f.cutHeight, dx, dy, f.cutWidth, f.cutHeight)
+  }
 }

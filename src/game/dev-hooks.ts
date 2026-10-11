@@ -13,6 +13,7 @@ import type { GroundView } from './area/terrain'
 import type { EnemyType } from './worlds'
 import type { WardenView } from './entities/warden'
 import type { WildsEntities } from './wilds/entities'
+import type { WildsWindow } from './wilds/window'
 import type { Result } from '../lib/api/errors'
 import type { ItemsView } from '../lib/api/types'
 import type { SyncSafety } from './sync-safety'
@@ -40,6 +41,13 @@ export interface FsHooks {
   __fsWarden: () => WardenView
   /** The map's geometry, so a playtest can check the hero is confined to it. */
   __fsWorld: () => { areaId: AreaId; widthPx: number; heightPx: number; bounds: Box; solid: boolean[][]; exits: ExitView[] }
+  /** Whether the map's data has a tile solid (the open map's by world tile; off a curated map, solid). */
+  __fsTileSolid: (tx: number, ty: number) => boolean
+  /** The ground under a tile (a TERRAIN id), or null. */
+  __fsGroundAt: (tx: number, ty: number) => number | null
+  /** Walk through waypoints (world px) as if steered; whether a walk is still going. */
+  __fsDevWalk: (path: { x: number; y: number }[]) => void
+  __fsDevWalking: () => boolean
   /** How settled this area is: frames drawn since it was built, the fade, whether input is live. */
   __fsFrame: () => { areaId: AreaId; frames: number; loop: number; fading: boolean; transitioning: boolean; cinematic: boolean; live: boolean }
   /** The server revision this tab's link is based on (null for guests). */
@@ -53,6 +61,7 @@ export interface FsHooks {
   __fsLink: () => string | null
   /** The Wilds layer (null outside the Wilds). */
   __fsWilds: () => ReturnType<WildsEntities['debug']> | null
+  __fsWildsWindow: () => ReturnType<WildsWindow['debug']> | null
   /** The workable pieces of this area and, at home, the lamps whose light holds the ground. */
   __fsGather: () => {
     area: string

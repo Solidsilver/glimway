@@ -129,6 +129,9 @@ func TestServerFirstWireFixtures(t *testing.T) {
 	}
 	// Exercise production's state projection and mixed writer, not a handcrafted JSON body.
 	x := newRig(t)
+	// No generator: the states carry no rumour (its epoch id is random);
+	// the hand-made "rumour" case pins its shape.
+	x.api.Config.WildsGenerator = nil
 	x.now.Store(1791400000)
 	c, _ := x.ready("fixture-hero")
 	w := x.rawHTTP("GET", "/api/state", nil, c)
@@ -189,7 +192,7 @@ func TestServerFirstWireFixtures(t *testing.T) {
 		}
 		fixtures = append(fixtures, wireFixture{"mixed", route, raw, ""})
 	}
-	chunk := &contract.WildsChunk{EpochId: "epoch", Region: "inner-1", Realm: "hearthwick", Look: "tangle", Cx: 1, Cy: 0, GeneratorVersion: 2, Size: 24, Palette: []string{"grass"}, Ground: make([]byte, 288), Solid: make([]byte, 72), Spawn: &contract.Tile{Tx: 1, Ty: 1}, Decor: &contract.DecorList{Kinds: []string{"tree"}, Kind: []uint32{0}, Tx: []uint32{2}, Ty: []uint32{3}, Ox: []int32{1}, Oy: []int32{-2}, Variant: []uint32{0}, Flags: []byte{0}}, Entities: []*contract.WildsEntity{{Id: "node:1:0:0", Kind: "node", Tx: 3, Ty: 4, Material: "timber"}}, Sites: []*contract.StorySite{{Id: "echo", Kind: contract.SiteKind_SITE_KIND_ECHO, Tx: 3, Ty: 5}}, Exits: []*contract.Exit{{Tx: 12, Ty: 0, Tw: 1, Th: 1, Dir: contract.Dir_DIR_NORTH, To: "chunk:outer-1:1:1", Entry: &contract.Tile{Tx: 12, Ty: 23}}}}
+	chunk := &contract.WildsChunk{EpochId: "epoch", Realm: "hearthwick", Look: "tangle", Cx: 1, Cy: 0, GeneratorVersion: 3, Size: 24, Tier: 1, Land: "woods", Palette: []string{"grass_b"}, Ground: make([]byte, 288), Solid: make([]byte, 72), Decor: &contract.DecorList{Kinds: []string{"oak"}, Kind: []uint32{0}, Tx: []uint32{2}, Ty: []uint32{3}, Ox: []int32{1}, Oy: []int32{-2}, Variant: []uint32{0}, Flags: []byte{0}}, Entities: []*contract.WildsEntity{{Id: "node:1:0:0", Kind: "node", Tx: 3, Ty: 4, Material: "timber"}}, Sites: []*contract.StorySite{{Id: "echo", Kind: contract.SiteKind_SITE_KIND_ECHO, Tx: 3, Ty: 5}}}
 	chunkJSON, err := (protojson.MarshalOptions{EmitUnpopulated: true}).Marshal(chunk)
 	if err != nil {
 		t.Fatal(err)
@@ -228,7 +231,6 @@ func TestServerFirstWireFixtures(t *testing.T) {
 	}
 	entity := &contract.WildsEntityState{Id: "node:1:0:0", Epoch: "epoch", Cycle: 2, State: "harvested", AvailableAt: 1791400020, By: wrapperspb.String("fixture-account"), At: wrapperspb.Double(1791400000)}
 	lamp := &contract.WildsLantern{Id: "fallen-lamp", OwnerId: "peer-account", DisplayName: "Peer", X: 400, Y: 300, At: 1791400000, LitBy: wrapperspb.String("fixture-account"), LitAt: wrapperspb.Double(1791400010)}
-	add("valid-region", &contract.WildsRegionResult{Epoch: &contract.WildsEpoch{Id: "epoch", WorldSeed: "world-seed", RegionId: "outer-1", GeneratorVersion: 2, Season: "autumn", StartsAt: 1791300000, EndsAt: wrapperspb.Double(1791500000)}, Entities: []*contract.WildsEntityState{entity}, Echoes: []*contract.EchoAssignment{{Site: "echo-tam", Member: "tam", Settled: true}}, Lanterns: []*contract.WildsLantern{lamp}, Materials: map[string]float64{"timber": 3}})
 	// The open map's contract 8 shapes (open-map.md 2.4, 2.10, section 3):
 	// signed keys, both epochs, the ground changes, the glimpse and a way.
 	key := func(cx, cy int32) *contract.WildsChunkKey {

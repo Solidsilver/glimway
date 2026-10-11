@@ -1,21 +1,23 @@
 /**
- * Wilds entities — the generated things inside one chunk scene: camps (their
+ * Wilds entities — the generated things in the open map's attached chunks
+ * (./window.ts attaches and detaches them as the hero walks): camps (their
  * enemies spawn from the camp's mix; when all are down the camp is
  * claimable), resource nodes (harvest prompt with the material's verb),
  * personal chests, points of interest (discovery text; "Charted by {name}"
  * for the world's first discoverer), and other members' fallen-hero
  * lanterns (relightable).
  *
- * Everything renders from the region store (src/game/wilds/store.ts) — the
- * served chunks' bodies with the server's cycles and claims — and re-renders
- * when the store's version moves. Claims and relights are operations
- * (./remote.ts). Each claimable thing is
+ * Everything renders from the store (src/game/wilds/store.ts) — the served
+ * chunks' bodies with the near read's cycles and claims — and re-renders
+ * when the store's version moves or a chunk comes or goes. Camps are
+ * leashed to their chunk: its creatures go when it leaves the window.
+ * Claims and relights are operations (./remote.ts). Each claimable thing is
  * an interaction point (../entities/interactables.ts) that outranks the
  * people and props around it; the action key claims it.
  *
  * Papers: two POIs and the tier-3 chests carry found texts (papers.ts
  * sources `wilds-poi` / `wilds-chest`). The server grants them with the
- * claim; WILDS_PAPER_PLACEMENTS predicts which.
+ * claim.
  */
 import type Phaser from 'phaser'
 import { TRANSPORT_ERRORS } from '../../content/errors'
@@ -27,36 +29,39 @@ import {
   POIS,
 } from '../../content/expansion-writing.ts'
 import type { WildsEntityView, WildsLanternView } from '../../lib/api/types.ts'
-import { CHUNK_TILES, parseChunkArea, toRegionPosition, wildsRegion } from './regions.ts'
+import { CHUNK_TILES, chunkKey, chunkOfPixel } from './coords.ts'
 import { claimEntity, relightLantern, type WildsWhere } from './remote.ts'
 import {
   applyClaim,
   applyLanterns,
+  chunkEpoch,
+  chunkThings,
   discoveryFor,
   entityAvailable,
   isClaimed,
   lootName,
   lootText,
-  refreshWilds,
+  refreshNear,
+  wickEndsAt,
   wildsEpoch,
-  wildsEpochEndsAt,
   wildsLive,
   wildsStale,
   wildsView,
-  type WildsView,
+  type WildsThing,
 } from './store.ts'
+import type { ChunkTerrain } from './terrain.ts'
 import { WildsSites, wildsPoint, type WildsClaim } from './sites.ts'
 import { grantPaper } from '../papers'
 import { bus, EV, type ToastPayload } from '../events'
 import { sfx } from '../sfx'
 import { emitResidents } from '../residents'
 import { commonsAnim, commonsArt } from '../commons-pass'
-import { TILE, tileFeet, tileMid } from '../../lib/tile'
+import { TILE, tileFeet } from '../../lib/tile'
 import type { Session } from '../session'
 import type { Effects } from '../entities/fx'
 import type { EnemySystem } from '../entities/enemies'
 import type { Interactables } from '../entities/interactables'
-import type { EnemyType, WorldData } from '../worlds'
+import type { EnemyType } from '../worlds'
 
 /** Server error code → what the player reads. All text is static. */
 const CLAIM_ERROR: Record<string, string> = {
@@ -74,16 +79,9 @@ const CLAIM_ERROR: Record<string, string> = {
   unknown: 'The Wilds didn’t answer. Nothing was taken — try again in a moment.',
 }
 
-/**
- * Deterministic paper placements live in ./placements.ts (with the reasoning);
- * claimed POIs and tier-3 chests carry their find.
- */
-import { wildsPaperFor } from './placements.ts'
 import { openDialogue } from '../dialogue.ts'
-import { roadStep } from '../../lib/quests.ts'
 
 export interface WildsDeps {
-  world: WorldData
   session: Session
   fx: Effects
   enemies: EnemySystem
@@ -151,18 +149,6 @@ const ART: Record<string, { rows: string[]; pal: Record<string, string> }> = {
     ],
     pal: { o: '#3a2a28', F: '#7a9a4a', f: '#a8bf6a' }
   },
-  'wilds-pond': {
-    rows: [
-      '...oooooo....',
-      '.oiIIIIIIio..',
-      'oIIWIIIIIIMo.',
-      'oIIIWIIIIMMo.',
-      'oIIIIIWIIIMo.',
-      '.oiIIIIIIio..',
-      '...oooooo....'
-    ],
-    pal: { o: '#3a2a28', i: '#9cc3d8', I: '#c3dcea', W: '#fffbef', M: '#7fa8c0' }
-  },
   'wilds-cart': {
     rows: [
       '.o..........o.',
@@ -178,7 +164,53 @@ const ART: Record<string, { rows: string[]; pal: Record<string, string> }> = {
   }
 }
 
+/**
+ * The frozen pond (a POI): a little iced-over pool two tiles across, sunk
+ * in a rim of earth and stones, cloudy ice with cracks and a glint, a few
+ * reeds frozen at the edge. Drawn at world size (it lies flat on the ground).
+ */
+function drawPond(): HTMLCanvasElement {
+  const W = 30
+  const H = 16
+  const c = document.createElement('canvas')
+  c.width = W
+  c.height = H
+  const ctx = c.getContext('2d')!
+  const px = (x: number, y: number, col: string) => {
+    ctx.fillStyle = col
+    ctx.fillRect(x, y, 1, 1)
+  }
+  const cx = 14.5
+  const cy = 8
+  const inside = (x: number, y: number, rx: number, ry: number) => ((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2 <= 1
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      if (!inside(x, y, 14.5, 7.6)) continue
+      if (!inside(x, y, 13.2, 6.4)) px(x, y, y < cy ? '#4a3c2e' : '#3a2f25') // the earth rim
+      else if (!inside(x, y, 12, 5.4)) px(x, y, y < cy - 1 ? '#c9dde6' : '#7d9db0') // frost at the edge, shadow below
+      else {
+        // Cloudy ice: lighter to the upper left, a darker heart.
+        const t = (x - cx) / 12 + (y - cy) / 5
+        px(x, y, t < -0.6 ? '#b8d4e2' : t < 0.2 ? '#9cc0d2' : '#83a8bd')
+      }
+    }
+  // Cracks and a glint.
+  for (const [x, y] of [[9, 7], [10, 8], [11, 8], [12, 9], [13, 9], [17, 6], [18, 7], [18, 8], [19, 8]]) px(x!, y!, '#5f8399')
+  for (const [x, y] of [[8, 5], [9, 5], [10, 4], [20, 10]]) px(x!, y!, '#f4f8fa')
+  // Stones on the rim, lit from the upper left.
+  for (const [x, y] of [[2, 6], [26, 5], [6, 13], [23, 12], [15, 14]]) {
+    px(x!, y!, '#a8a292')
+    px(x! + 1, y!, '#8a8476')
+    px(x!, y! + 1, '#6c665c')
+    px(x! + 1, y! + 1, '#4f4a44')
+  }
+  // Reeds frozen at the north-east edge.
+  for (const [x, h] of [[21, 4], [23, 5], [24, 3]]) for (let i = 0; i < h!; i++) px(x!, 3 - i + 1, i === h! - 1 ? '#c4c0a4' : '#7a8a52')
+  return c
+}
+
 function ensureArt(scene: Phaser.Scene): void {
+  if (!scene.textures.exists('wilds-pond')) scene.textures.addCanvas('wilds-pond', drawPond())
   for (const [key, art] of Object.entries(ART)) {
     if (scene.textures.exists(key)) continue
     const w = Math.max(...art.rows.map((r) => r.length))
@@ -212,7 +244,7 @@ const NODE_FRAME: Record<string, { tex: string; frame?: string; h: number }> = {
 const POI_FRAME: Record<string, { tex: string; frame?: string; h: number }> = {
   'old-shrine': { tex: 'fingersnap-props', frame: 'lantern-shrine', h: 26 },
   waystone: { tex: 'fingersnap-props', frame: 'stone-milestone', h: 18 },
-  'frozen-pond': { tex: 'wilds-pond', h: 10 },
+  'frozen-pond': { tex: 'wilds-pond', h: 16 },
   'abandoned-cart': { tex: 'wilds-cart', h: 14 },
   'mossy-arch': { tex: 'fingersnap-foreground', frame: 'stone-arch', h: 30 },
 }
@@ -237,10 +269,16 @@ const lootGain = (drop: { materials: { id: string; qty: number }[]; trinket: str
 const poiName = (id: string): string => POIS.find((p) => p.id === id)?.name ?? id
 const materialOf = (id: string) => MATERIALS.find((m) => m.id === id)
 
+/** An attached chunk: where it is, and its story sites. */
+interface Attached {
+  cx: number
+  cy: number
+  sites: WildsSites
+}
+
 export class WildsEntities {
-  private chunk: { region: string; cx: number; cy: number }
-  /** Story sites in this chunk: Echo camps and given-back finds. */
-  private sites: WildsSites
+  /** The open map's attached chunks, by `cx,cy`. */
+  private attached = new Map<string, Attached>()
   private rendered = new Map<string, Rendered>()
   private spawnedCamps = new Set<string>()
   private greeted = new Set<string>()
@@ -251,21 +289,51 @@ export class WildsEntities {
   private staleRetryAt = 0
 
   constructor(private scene: Phaser.Scene, private deps: WildsDeps) {
-    this.chunk = parseChunkArea(deps.world.areaId) ?? { region: 'inner-1', cx: 0, cy: 0 }
     ensureArt(scene)
-    this.sites = new WildsSites(
-      scene,
-      { session: deps.session, fx: deps.fx, reducedMotion: deps.reducedMotion, interactables: deps.interactables, hero: deps.hero },
-      wildsEpoch(this.chunk.region),
-      this.chunk.cx,
-      this.chunk.cy,
-      deps.world.storySites ?? []
-    )
     scene.events.once('shutdown', () => {
       this.rendered.clear()
+      this.attached.clear()
       this.staleLabel = null
     })
-    this.render(wildsView())
+  }
+
+  /** A chunk joined the window: its sites, entities and lanterns show. */
+  attach(chunk: ChunkTerrain): void {
+    const key = chunkKey(chunk.cx, chunk.cy)
+    this.detach(key, false)
+    const epoch = chunkEpoch(chunk.cx, chunk.cy) ?? wildsEpoch('wick')
+    const sites = new WildsSites(
+      this.scene,
+      { session: this.deps.session, fx: this.deps.fx, reducedMotion: this.deps.reducedMotion, interactables: this.deps.interactables, hero: this.deps.hero },
+      epoch,
+      chunk.cx,
+      chunk.cy,
+      chunk.sites,
+      chunk.look === 'outer'
+    )
+    this.attached.set(key, { cx: chunk.cx, cy: chunk.cy, sites })
+    this.render(wildsView() ? true : null)
+  }
+
+  /** A chunk left the window: what it showed goes, and its camps' creatures with it. */
+  detach(key: string, render = true): void {
+    const a = this.attached.get(key)
+    if (!a) return
+    this.attached.delete(key)
+    a.sites.destroy()
+    for (const e of chunkThings(a.cx, a.cy)) {
+      if (e.kind !== 'camp') continue
+      this.deps.enemies.removeWilds(`wilds:${e.id}:`)
+      this.spawnedCamps.delete(e.id)
+      this.greeted.delete(e.id)
+    }
+    if (render) this.render(wildsView() ? true : null)
+  }
+
+  /** Drop every chunk (the turning reloads the window). */
+  detachAll(): void {
+    for (const key of [...this.attached.keys()]) this.detach(key, false)
+    this.render(null)
   }
 
   /** While stale: say so on screen, and try a fresh read now and then. */
@@ -283,7 +351,7 @@ export class WildsEntities {
     const session = this.deps.session
     if (stale && session.link?.status === 'online' && Date.now() >= this.staleRetryAt) {
       this.staleRetryAt = Date.now() + 10_000
-      void refreshWilds(session, 0, this.chunk.region)
+      void this.refresh()
     }
   }
 
@@ -291,20 +359,44 @@ export class WildsEntities {
 
   update(): void {
     const view = wildsView()
-    if (!view) return
-    this.showStale(wildsStale(this.deps.session, this.chunk.region))
+    if (!view) {
+      // Never read yet (the server didn't answer on the way in): try again now and then.
+      if (this.deps.session.link?.status === 'online' && Date.now() >= this.staleRetryAt) {
+        this.staleRetryAt = Date.now() + 10_000
+        void this.refresh()
+      }
+      return
+    }
+    this.showStale(wildsStale(this.deps.session))
     if (view.version !== this.lastVersion) {
       this.lastVersion = view.version
-      this.render(view)
+      this.render(true)
     }
-    this.spawnCampEnemies(view)
-    this.greetCamps(view)
-    this.sites.update()
+    const things = this.things()
+    this.spawnCampEnemies(things)
+    this.greetCamps(things)
+    for (const a of this.attached.values()) a.sites.update()
   }
 
   /** A settle picked in an Echo camp conversation (the keep's offer keeps the lamp open). */
   settleEcho(siteId: string): boolean {
-    return this.sites.settleEcho(siteId)
+    return [...this.attached.values()].some((a) => a.sites.settleEcho(siteId))
+  }
+
+  /** A fresh near read around the hero's chunk (claims name the current cycle). */
+  private refresh(): Promise<boolean> {
+    const hero = this.deps.hero()
+    const { cx, cy } = chunkOfPixel(hero.x, hero.y)
+    return refreshNear(this.deps.session, cx, cy)
+  }
+
+  /** Every entity of the attached chunks, with its state. */
+  private things(): WildsThing[] {
+    return [...this.attached.values()].flatMap((a) => chunkThings(a.cx, a.cy))
+  }
+
+  private attachedAt(tx: number, ty: number): boolean {
+    return this.attached.has(chunkKey(Math.floor(tx / CHUNK_TILES), Math.floor(ty / CHUNK_TILES)))
   }
 
   // ------------------------------------------------------------ claims
@@ -339,7 +431,7 @@ export class WildsEntities {
    * (camps additionally only once their enemies are down), chests and POIs
    * once per player per epoch.
    */
-  private claimable(e: WildsEntityView, _view: WildsView, nowSec: number): boolean {
+  private claimable(e: WildsEntityView, nowSec: number): boolean {
     if (isClaimed(e.id)) return false
     if (e.kind === 'poi' || e.kind === 'chest') return true
     if (!entityAvailable(e, nowSec)) return false
@@ -357,9 +449,8 @@ export class WildsEntities {
   private async claim(entityId: string): Promise<void> {
     if (this.claiming) return
     const session = this.deps.session
-    const view = wildsView()
-    const entity = view?.entities.find((e) => e.id === entityId)
-    if (!view || !entity) return
+    const entity = this.things().find((e) => e.id === entityId)
+    if (!entity) return
     if (!session.link) return
     this.claiming = true
     try {
@@ -369,24 +460,28 @@ export class WildsEntities {
     }
   }
 
-  private async claimConnected(entity: WildsEntityView): Promise<void> {
+  private async claimConnected(entity: WildsThing): Promise<void> {
     const session = this.deps.session
+    const before = chunkEpoch(entity.cx, entity.cy)?.id
     // A fresh read advances respawn cycles; the claim needs the current one.
-    const ok = await refreshWilds(session)
+    const ok = await this.refresh()
     const fresh = wildsLive(session)
-    if (!ok || !fresh) {
+    const epoch = chunkEpoch(entity.cx, entity.cy)
+    // The read named a new wick: the land turned under the claim (the scene plays it).
+    if (ok && epoch && before && epoch.id !== before) return
+    if (!ok || !fresh || !epoch) {
       bus.emit(EV.toast, { text: CLAIM_ERROR.offline, kind: 'error' })
       return
     }
-    const target = fresh.entities.find((e) => e.id === entity.id)
+    const target = chunkThings(entity.cx, entity.cy).find((e) => e.id === entity.id)
     const nowSec = Math.floor(Date.now() / 1000)
-    if (!target || !this.claimable(target, fresh, nowSec)) {
+    if (!target || !this.claimable(target, nowSec)) {
       if (target && (target.kind === 'camp' || target.kind === 'node') && !entityAvailable(target, nowSec)) {
         bus.emit(EV.toast, { text: CLAIM_ERROR['entity-unavailable'], kind: 'error' })
       }
       return
     }
-    const res = await claimEntity(session, { epoch: fresh.epochId, entityId: entity.id, cycle: target.cycle, where: this.where() })
+    const res = await claimEntity(session, { epoch: epoch.id, entityId: entity.id, cycle: target.cycle, where: this.where() })
     if (!res.ok) {
       this.claimError(res.code)
       return
@@ -406,11 +501,11 @@ export class WildsEntities {
       bus.emit(EV.toast, { text: 'A drop of amber with a bright core — storm-grade, kept for the old ways. The deep woods let it go.', icon: 'sparkle', art: 'icon-storm-grade-drop' })
     }
     // Personal claims and discoveries lists, complete.
-    void refreshWilds(session, 0)
+    void this.refresh()
   }
 
   private claimError(code: string): void {
-    // The epoch ended under us: the outer Wilds have turned (the scene plays it).
+    // The epoch ended under us: the Beyond has turned (the scene plays it).
     if (code === 'epoch-ended') {
       bus.emit(EV.turning, { reason: 'epoch-ended' })
       return
@@ -423,7 +518,10 @@ export class WildsEntities {
     const session = this.deps.session
     const view = wildsLive(session)
     if (!session.link || !view) return
-    const res = await relightLantern(session, { epoch: view.epochId, ownerId: l.ownerId, lanternId: l.id, where: this.where() })
+    const { cx, cy } = { cx: Math.floor(l.x / CHUNK_TILES), cy: Math.floor(l.y / CHUNK_TILES) }
+    const epoch = chunkEpoch(cx, cy)
+    if (!epoch) return
+    const res = await relightLantern(session, { epoch: epoch.id, ownerId: l.ownerId, lanternId: l.id, where: this.where() })
     if (!res.ok) {
       this.claimError(res.code)
       return
@@ -442,7 +540,7 @@ export class WildsEntities {
   }
 
   /** The visible payoff of a claim: chest flavor, loot, papers (the server's, and the predicted find). */
-  private lootFeedback(entity: WildsEntityView, drop: { materials: { id: string; qty: number }[]; trinket: string | null }, papers: readonly string[]): void {
+  private lootFeedback(entity: WildsThing, drop: { materials: { id: string; qty: number }[]; trinket: string | null }, papers: readonly string[]): void {
     const at = this.entityPx(entity)
     if (drop.materials.length > 0 || drop.trinket) this.deps.fx.sparkBurst(at.x, at.y - 8, 12)
     const loot = lootText(drop)
@@ -455,11 +553,9 @@ export class WildsEntities {
     const kind: ToastPayload['kind'] = loot ? 'gain' : entity.kind === 'chest' ? 'thought' : 'info'
     if (text.trim()) bus.emit(EV.toast, { text, icon: 'sparkle', art: lootArt(drop), kind, ...(loot ? { gain: lootGain(drop) } : {}) })
 
-    // Found texts ride their personal claim (see ./placements.ts). Connected,
-    // the claim's answer names the ones the server granted (already in the
-    // adopted state); a take of the client's own guess would be refused.
-    const paperId = this.deps.session.link ? null : wildsPaperFor(entity, this.chunk.cx, wildsRegion(this.chunk.region).gridWidth, roadStep(this.deps.session.state) === 'complete')
-    for (const paper of new Set([...papers, ...(paperId ? [paperId] : [])])) {
+    // Found texts ride their personal claim: the claim's answer names the
+    // ones the server granted (already in the adopted state).
+    for (const paper of new Set(papers)) {
       if (!this.deps.session.state.flags.includes(`paper:${paper}`)) grantPaper(this.deps.session, paper)
     }
 
@@ -481,52 +577,37 @@ export class WildsEntities {
 
   // ------------------------------------------------------------ internals
 
-  /** Where the hero stands, as the server reads it: this region, region-wide pixels. */
+  /** Where the hero stands, as the server reads it: world pixels. */
   private where(): WildsWhere {
-    return { region: this.chunk.region, ...this.regionPosition() }
-  }
-
-  private regionPosition(): { x: number; y: number } {
     const hero = this.deps.hero()
-    return toRegionPosition(this.chunk.cx, this.chunk.cy, hero.x, hero.y)
+    return { x: hero.x, y: hero.y }
   }
 
-  private chunkEntities(view: WildsView): WildsEntityView[] {
-    return view.entities.filter((e) => this.ownEntity(e))
+  /** Fallen lanterns in the attached chunks (their x, y are world tiles). */
+  private lanterns(): WildsLanternView[] {
+    return [...(wildsView()?.lanterns.values() ?? [])].filter((l) => this.attachedAt(l.x, l.y))
   }
 
-  private ownEntity(e: WildsEntityView): boolean {
-    const parts = e.id.split(':')
-    if (parts.length !== 4) return false
-    return Number(parts[1]) === this.chunk.cx && Number(parts[2]) === this.chunk.cy
-  }
-
-  private chunkLanterns(view: WildsView): WildsLanternView[] {
-    return view.lanterns.filter((l) => Math.floor(l.x / CHUNK_TILES) === this.chunk.cx && Math.floor(l.y / CHUNK_TILES) === this.chunk.cy)
-  }
-
-  private entityPx(e: WildsEntityView): { x: number; y: number } {
-    return tileFeet(e.tx, e.ty)
+  private entityPx(e: WildsThing): { x: number; y: number } {
+    return tileFeet(e.cx * CHUNK_TILES + e.tx, e.cy * CHUNK_TILES + e.ty)
   }
 
   private lanternPx(l: WildsLanternView): { x: number; y: number } {
-    const lx = (l.x - this.chunk.cx * CHUNK_TILES) * TILE + 8
-    const ly = (l.y - this.chunk.cy * CHUNK_TILES) * TILE + TILE
-    return { x: lx, y: ly }
+    return { x: l.x * TILE + 8, y: l.y * TILE + TILE }
   }
 
   // ------------------------------------------------------------ rendering
 
-  private render(view: WildsView | null): void {
+  private render(read: true | null): void {
     for (const r of this.rendered.values()) for (const img of r.images) img.destroy()
     this.rendered.clear()
-    this.publish(view)
-    if (!view) return
+    this.publish(read)
+    if (!read) return
     const nowSec = Math.floor(Date.now() / 1000)
-    for (const e of this.chunkEntities(view)) {
+    for (const e of this.things()) {
       this.rendered.set(e.id, { images: this.renderEntity(e, nowSec) })
     }
-    for (const l of this.chunkLanterns(view)) {
+    for (const l of this.lanterns()) {
       this.rendered.set(l.id, { images: this.renderLantern(l) })
     }
   }
@@ -536,22 +617,22 @@ export class WildsEntities {
    * node or camp in its cycle, a camp once its creatures are down, a chest
    * or POI once per epoch) and unlit fallen lanterns.
    */
-  private publish(view: WildsView | null): void {
-    if (!view) return this.deps.interactables.register(this, [])
-    const entities = this.chunkEntities(view).map((e) =>
+  private publish(read: true | null): void {
+    if (!read) return this.deps.interactables.register(this, [])
+    const entities = this.things().map((e) =>
       wildsPoint(e.id, this.entityPx(e), 20, () => {
         // Nothing is offered from a stale view, or without a connection.
         const now = wildsLive(this.deps.session)
-        return now && this.claimable(e, now, Math.floor(Date.now() / 1000)) ? this.offerFor(e) : null
+        return now && this.claimable(e, Math.floor(Date.now() / 1000)) ? this.offerFor(e) : null
       })
     )
-    const lanterns = this.chunkLanterns(view)
+    const lanterns = this.lanterns()
       .filter((l) => !l.litBy)
       .map((l) => wildsPoint(l.id, this.lanternPx(l), 32, () => (wildsLive(this.deps.session) ? this.relightOffer(l) : null)))
     this.deps.interactables.register(this, [...entities, ...lanterns])
   }
 
-  private renderEntity(e: WildsEntityView, nowSec: number): Phaser.GameObjects.Image[] {
+  private renderEntity(e: WildsThing, nowSec: number): Phaser.GameObjects.Image[] {
     const scene = this.scene
     const at = this.entityPx(e)
     const images: Phaser.GameObjects.Image[] = []
@@ -643,9 +724,9 @@ export class WildsEntities {
   // ------------------------------------------------------------ camps
 
   /** Spawn an available camp's enemies from its generated mix (once per camp). */
-  private spawnCampEnemies(view: WildsView): void {
+  private spawnCampEnemies(things: readonly WildsThing[]): void {
     const nowSec = Math.floor(Date.now() / 1000)
-    for (const e of this.chunkEntities(view)) {
+    for (const e of things) {
       if (e.kind !== 'camp') continue
       if (this.spawnedCamps.has(e.id) || !entityAvailable(e, nowSec)) continue
       this.spawnedCamps.add(e.id)
@@ -656,15 +737,15 @@ export class WildsEntities {
       ]
       e.enemies.slice(0, 3).forEach((type, i) => {
         const [ox, oy] = offsets[i % offsets.length]
-        this.deps.enemies.spawnWilds(`wilds:${e.id}:${i}`, type as EnemyType, e.tx + ox, e.ty + oy)
+        this.deps.enemies.spawnWilds(`wilds:${e.id}:${i}`, type as EnemyType, e.cx * CHUNK_TILES + e.tx + ox, e.cy * CHUNK_TILES + e.ty + oy)
       })
     }
   }
 
   /** A walk-in line the first time the hero nears a lived-in camp. */
-  private greetCamps(view: WildsView): void {
+  private greetCamps(things: readonly WildsThing[]): void {
     const nowSec = Math.floor(Date.now() / 1000)
-    for (const e of this.chunkEntities(view)) {
+    for (const e of things) {
       if (e.kind !== 'camp' || this.greeted.has(e.id) || !entityAvailable(e, nowSec)) continue
       const at = this.entityPx(e)
       const hero = this.deps.hero()
@@ -679,11 +760,13 @@ export class WildsEntities {
   /** Read-only dump for playtests: what the Wilds look like right now. */
   debug(): {
     epochId: string
+    stillEpoch: string
+    wickEpoch: string
     stale: boolean
-    region: string
     season: string
     endsAt: number | null
-    sites: ReturnType<WildsSites['debug']>
+    chunks: { cx: number; cy: number }[]
+    sites: (ReturnType<WildsSites['debug']>[number] & { cx: number; cy: number })[]
     chunk: { cx: number; cy: number }
     position: { x: number; y: number }
     entities: Array<{
@@ -692,7 +775,7 @@ export class WildsEntities {
       chunk: { cx: number; cy: number }
       tx: number
       ty: number
-      regionPx: { x: number; y: number }
+      worldPx: { x: number; y: number }
       state: string
       cycle: number
       availableIn: number
@@ -710,36 +793,36 @@ export class WildsEntities {
     const view = wildsView()
     if (!view) return null
     const nowSec = Math.floor(Date.now() / 1000)
-    const p = this.regionPosition()
+    const hero = this.deps.hero()
+    const here = chunkOfPixel(hero.x, hero.y)
     return {
-      epochId: view.epochId,
-      stale: wildsStale(this.deps.session, this.chunk.region),
-      region: this.chunk.region,
-      season: wildsEpoch(this.chunk.region).season,
-      endsAt: wildsEpochEndsAt(this.chunk.region),
-      sites: this.sites.debug(),
-      chunk: { cx: this.chunk.cx, cy: this.chunk.cy },
-      position: p,
-      entities: view.entities.map((e) => {
-        const parts = e.id.split(':')
-        return {
-          id: e.id,
-          kind: e.kind,
-          chunk: { cx: Number(parts[1]), cy: Number(parts[2]) },
-          tx: e.tx,
-          ty: e.ty,
-          regionPx: toRegionPosition(Number(parts[1]), Number(parts[2]), tileMid(e.tx), tileMid(e.ty)),
-          state: e.state,
-          cycle: e.cycle,
-          availableIn: Math.max(0, e.available_at - nowSec),
-          claimable: this.claimable(e, view, nowSec),
-          material: e.material,
-          tier: e.tier,
-          poi: e.poi,
-          enemies: e.enemies
-        }
-      }),
-      lanterns: view.lanterns.map((l) => ({
+      epochId: chunkEpoch(here.cx, here.cy)?.id ?? '',
+      stillEpoch: view.still.id,
+      wickEpoch: view.wick.id,
+      stale: wildsStale(this.deps.session),
+      season: view.wick.season,
+      endsAt: wickEndsAt(),
+      chunks: [...this.attached.values()].map((a) => ({ cx: a.cx, cy: a.cy })),
+      sites: [...this.attached.values()].flatMap((a) => a.sites.debug().map((s) => ({ ...s, cx: a.cx, cy: a.cy }))),
+      chunk: chunkOfPixel(hero.x, hero.y),
+      position: { x: Math.round(hero.x), y: Math.round(hero.y) },
+      entities: this.things().map((e) => ({
+        id: e.id,
+        kind: e.kind,
+        chunk: { cx: e.cx, cy: e.cy },
+        tx: e.tx,
+        ty: e.ty,
+        worldPx: { x: (e.cx * CHUNK_TILES + e.tx) * TILE + TILE / 2, y: (e.cy * CHUNK_TILES + e.ty) * TILE + TILE / 2 },
+        state: e.state,
+        cycle: e.cycle,
+        availableIn: Math.max(0, e.available_at - nowSec),
+        claimable: this.claimable(e, nowSec),
+        material: e.material,
+        tier: e.tier,
+        poi: e.poi,
+        enemies: e.enemies
+      })),
+      lanterns: [...view.lanterns.values()].map((l) => ({
         id: l.id,
         ownerId: l.ownerId,
         own: this.deps.session.link ? l.ownerId === this.deps.session.link.accountId : false,
@@ -749,7 +832,7 @@ export class WildsEntities {
       })),
       materials: { ...view.materials },
       claims: [...view.claims],
-      discoveries: view.discoveries.map((d) => ({ entityId: d.entityId, poiId: d.poiId, by: d.displayName }))
+      discoveries: [...view.discoveries.values()].map((d) => ({ entityId: d.entityId, poiId: d.poiId, by: d.displayName }))
     }
   }
 }

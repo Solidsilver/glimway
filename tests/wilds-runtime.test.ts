@@ -1,132 +1,214 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import {
-  CHUNK_PX,
-  CHUNK_TILES,
-  WILDS_AREA,
-  chunkAreaId,
-  fromRegionPosition,
-  inRegion,
-  isWildsArea,
-  parseChunkArea,
-  regionTile,
-  toRegionPosition,
-  wildsArrivalPosition,
-  wildsSceneEntry,
-} from '../src/game/wilds/regions.ts';
-import { loadChunk } from '../src/game/wilds/chunks.ts';
-import type { WildsEpoch } from '../src/game/wilds/store.ts';
-import { wildsPaperFor, WILDS_PAPER_PLACEMENTS } from '../src/game/wilds/placements.ts';
+import { TERRAIN } from '../src/lib/tile.ts';
+import { loadWilds, wildsGround } from '../src/lib/wilds/data.ts';
+import { insideFrontier } from '../src/lib/wilds/coords.ts';
+import { walkFactor } from '../src/lib/wilds/walk.ts';
+import { CHUNK_PX, chunkKey, chunkOfPixel, gateArrival, gateArrivalPosition, gateTiles, parseChunkKey, worldTile } from '../src/game/wilds/coords.ts';
+import { crossed, frontierDistance, nearestOpen, paintable, planWindow, veilEdges } from '../src/game/wilds/window-plan.ts';
+import { chunkGather, chunkLandmarks, chunkScenery, effectiveTerrain, LANDMARK_KINDS } from '../src/game/wilds/terrain.ts';
+import { OPEN_MAP_DECOR_KINDS, openMapDecor } from '../src/game/wilds/open-map-art.ts';
+import { DECOR_ART } from '../src/game/wilds/decor.ts';
+import { forgetWalked, markSeen, markWalked, seenLandmarks, walkedChunks } from '../src/game/wilds/walked.ts';
+import { chunkAt, fixtureTerrain } from './wilds-fixture.ts';
+import { terrainOf } from '../src/game/wilds/terrain.ts';
 import { decodeChunk } from '../src/lib/api/chunks.ts';
-import { PAPERS } from '../src/content/papers.ts';
-import { loadWilds } from '../src/lib/wilds/data.ts';
+import { toBinary } from '@bufbuild/protobuf';
+import { WildsChunkSchema } from '../src/lib/gen/glimway/v1/wilds_pb.js';
 
-/**
- * The Wilds position convention: Wilds positions are REGION-WIDE pixels
- * (chunk offset × chunk tiles × 16px); scenes play in chunk-local pixels.
- * One conversion place, exercised here — saves, reloads and operations'
- * `where` all go through it. The chunk is the server's (tests/fixtures,
- * written by server/internal/wilds TestClientFixtures).
- */
+// ---------------------------------------------------------------- coordinates
 
-const epoch: WildsEpoch = { id: 'fixture-inner', worldSeed: 'fixture', regionId: 'inner-1', generatorVersion: 2, season: '0', endsAt: null };
-const fixture = decodeChunk(new Uint8Array(readFileSync(new URL('./fixtures/wilds-inner-1-1.bin', import.meta.url))));
-const entry = await loadChunk({ chunk: async () => fixture }, epoch.id, 1, 1);
-
-test('wilds area ids: wilds resolves to the entry chunk, chunks round-trip', () => {
-  assert.deepEqual(parseChunkArea(WILDS_AREA), { region: 'inner-1', cx: 1, cy: 1 });
-  assert.deepEqual(parseChunkArea('chunk:inner-1:0:2'), { region: 'inner-1', cx: 0, cy: 2 });
-  // The outer Wilds: their own chunk ids, same grid rules.
-  assert.deepEqual(parseChunkArea('chunk:outer-1:2:0'), { region: 'outer-1', cx: 2, cy: 0 });
-  assert.equal(parseChunkArea('chunk:outer-1:3:0'), null);
-  assert.equal(chunkAreaId(1, 1, 'outer-1'), 'chunk:outer-1:1:1');
-  assert.equal(isWildsArea('chunk:outer-1:1:1'), true);
-  assert.equal(parseChunkArea('chunk:other:0:0'), null);
-  assert.equal(parseChunkArea('chunk:inner-1:3:0'), null); // outside the 3×3 grid
-  assert.equal(parseChunkArea('village'), null);
-  assert.equal(chunkAreaId(0, 2), 'chunk:inner-1:0:2');
-  assert.equal(isWildsArea(WILDS_AREA), true);
-  assert.equal(isWildsArea(chunkAreaId(2, 2)), true);
-  assert.equal(isWildsArea('village'), false);
-  assert.equal(isWildsArea('commons'), false);
+test('world pixels: signed, floor-divided into chunks of 384 px', () => {
+  assert.equal(CHUNK_PX, 384);
+  assert.deepEqual(chunkOfPixel(0, 0), { cx: 0, cy: 0 });
+  assert.deepEqual(chunkOfPixel(383.9, 383.9), { cx: 0, cy: 0 });
+  assert.deepEqual(chunkOfPixel(-0.5, -0.5), { cx: -1, cy: -1 });
+  assert.deepEqual(chunkOfPixel(-384, -385), { cx: -1, cy: -2 });
+  assert.deepEqual(worldTile(-1, -2, 3, 4), { tx: -21, ty: -44 });
+  assert.equal(chunkKey(-3, 7), '-3,7');
+  assert.deepEqual(parseChunkKey(chunkKey(-3, -7)), { cx: -3, cy: -7 });
 });
 
-test('chunk-local pixels ↔ region-wide pixels', () => {
-  // Chunk (1,1) starts at 1 × 24 tiles × 16 px = 384 on each axis.
-  assert.deepEqual(toRegionPosition(1, 1, 40, 360), { x: 424, y: 744 });
-  assert.deepEqual(fromRegionPosition(424, 744), { cx: 1, cy: 1, x: 40, y: 360 });
-  const round = fromRegionPosition(toRegionPosition(0, 2, 8, 8).x, toRegionPosition(0, 2, 8, 8).y);
-  assert.deepEqual(round, { cx: 0, cy: 2, x: 8, y: 8 });
-  assert.equal(CHUNK_PX, CHUNK_TILES * 16);
+test('the Commons gate: three tiles on chunk (0, 0)’s south edge, and you arrive one in from its middle', () => {
+  assert.deepEqual(gateTiles(), { tx: 1, ty: 23, tw: 3, th: 1 });
+  assert.deepEqual(gateArrival(), { tx: 2, ty: 22 });
+  assert.deepEqual(gateArrivalPosition(), { x: 40, y: 360 });
+  assert.deepEqual(chunkOfPixel(gateArrivalPosition().x, gateArrivalPosition().y), { cx: 0, cy: 0 });
 });
 
-test('region tiles: pixels (160,160) are tile (10,10)', () => {
-  assert.deepEqual(regionTile(160, 160), { x: 10, y: 10 });
-  const p = toRegionPosition(1, 0, 40, 40);
-  assert.deepEqual(regionTile(p.x, p.y), { x: 1 * CHUNK_TILES + 2, y: 0 * CHUNK_TILES + 2 });
+// ---------------------------------------------------------------- the window
+
+const inside = (cx: number, cy: number) => insideFrontier(cx, cy);
+
+test('the window: the 3×3 attached, the 5×5 fetched, the ring for landmarks', () => {
+  const p = planWindow(0, -4, inside);
+  assert.equal(p.attach.length, 9);
+  assert.equal(p.fetch.length, 25);
+  assert.equal(p.ring.length, 16);
+  assert.deepEqual(p.drift, []);
+  assert.ok(p.attach.includes('0,-4') && p.attach.includes('-1,-5') && p.attach.includes('1,-3'));
+  assert.ok(!p.attach.includes('2,-4') && p.ring.includes('2,-4'));
+  for (const k of p.attach) assert.ok(p.fetch.includes(k));
 });
 
-test('the arrival is the served entry chunk’s spawn, inside the region and walkable', () => {
-  const arrival = wildsArrivalPosition(epoch);
-  assert.equal(inRegion(arrival.x, arrival.y), true);
-  const at = wildsSceneEntry({ area: WILDS_AREA, position: arrival }, epoch)!;
-  assert.equal(at.areaId, chunkAreaId(1, 1));
-  assert.deepEqual(at.tile, entry.spawn);
-  assert.equal(entry.solid[at.tile.ty]![at.tile.tx], false);
-  // Before the region's chunks load, the generator's fixed spot by the way home.
-  const unread: WildsEpoch = { ...epoch, id: '' };
-  assert.deepEqual(wildsArrivalPosition(unread), toRegionPosition(1, 1, 2 * 16 + 8, 22 * 16 + 8));
-  assert.deepEqual(wildsArrivalPosition(unread), arrival, 'the served spawn is that spot');
+test('at the frontier the window’s far side is the drift: never fetched, never attached', () => {
+  // The north-west corner of the 0.8 frontier (cx -4..4, cy -8..0).
+  const corner = planWindow(-4, -8, inside);
+  assert.equal(corner.attach.length, 4);
+  assert.equal(corner.drift.length, 5);
+  assert.equal(corner.fetch.length, 9);
+  assert.ok(corner.drift.includes('-5,-9') && corner.drift.includes('-3,-9') && corner.drift.includes('-5,-7'));
+  // The gate's chunk: the village lies south (cy 1 is outside the frontier).
+  const gate = planWindow(0, 0, inside);
+  assert.deepEqual(gate.drift.sort(), ['-1,1', '0,1', '1,1']);
+  assert.equal(gate.attach.length, 6);
 });
 
-test('wildsSceneEntry: a saved position keeps its tile when open, else the chunk’s spawn', () => {
-  const open = entry.ground.flatMap((row, ty) => row.map((_, tx) => ({ tx, ty }))).find((t) => t.tx > 4 && t.ty > 4 && !entry.solid[t.ty]![t.tx])!;
-  const here = wildsSceneEntry({ area: WILDS_AREA, position: toRegionPosition(1, 1, open.tx * 16 + 4, open.ty * 16 + 12) }, epoch)!;
-  assert.deepEqual(here.tile, open);
-  const wall = toRegionPosition(1, 1, 4, 4); // the chunk's corner is woods
-  assert.equal(entry.solid[0]![0], true);
-  assert.deepEqual(wildsSceneEntry({ area: WILDS_AREA, position: wall }, epoch)!.tile, entry.spawn);
-  // A chunk not loaded yet: the tile stands as saved (the scene loads first).
-  const far = wildsSceneEntry({ area: WILDS_AREA, position: toRegionPosition(2, 0, 100, 60) }, epoch)!;
-  assert.equal(far.areaId, chunkAreaId(2, 0));
-  assert.deepEqual(far.tile, { tx: 6, ty: 3 });
+test('a chunk is painted once every neighbour inside the frontier is known', () => {
+  const known = new Set(['0,-4', '1,-4', '-1,-4', '0,-5', '0,-3', '1,-5', '-1,-5', '1,-3'])
+  const has = (cx: number, cy: number) => known.has(chunkKey(cx, cy));
+  assert.equal(paintable(0, -4, inside, has), false, 'one neighbour missing');
+  known.add('-1,-3');
+  assert.equal(paintable(0, -4, inside, has), true);
+  // Past the frontier counts as known (it reads as the drift).
+  const edge = new Set(['-4,-8', '-3,-8', '-4,-7', '-3,-7']);
+  assert.equal(paintable(-4, -8, inside, (cx, cy) => edge.has(chunkKey(cx, cy))), true);
+  assert.equal(paintable(5, 5, inside, () => false), false, 'not known itself');
 });
 
-test('wildsSceneEntry: positions outside the region arrive at the entry; null outside the Wilds', () => {
-  const at = wildsSceneEntry({ area: WILDS_AREA, position: { x: 40, y: 36000 } }, epoch)!;
-  assert.equal(at.areaId, chunkAreaId(1, 1));
-  assert.deepEqual(at.tile, entry.spawn);
-  assert.equal(inRegion(40000, 0), false);
-  assert.equal(wildsSceneEntry({ area: 'village', position: { x: 400, y: 300 } }, epoch), null);
+test('crossing a chunk edge recentres the window; walking inside one does not', () => {
+  assert.equal(crossed(null, { cx: 0, cy: 0 }), true);
+  assert.equal(crossed({ cx: 0, cy: 0 }, { cx: 0, cy: 0 }), false);
+  assert.equal(crossed({ cx: 0, cy: 0 }, { cx: 0, cy: -1 }), true);
+});
+
+test('the turning moves you to the nearest open tile, never home', () => {
+  const open = new Set(['5,5', '9,9', '6,3']);
+  const isOpen = (x: number, y: number) => open.has(`${x},${y}`);
+  assert.deepEqual(nearestOpen(5, 5, isOpen), { tx: 5, ty: 5 }, 'already open: stay');
+  open.delete('5,5');
+  assert.deepEqual(nearestOpen(5, 5, isOpen), { tx: 6, ty: 3 }, 'the nearest one, by distance');
+  assert.equal(nearestOpen(5, 5, () => false, 4), null, 'nothing within reach');
+  // Signed tiles are no different.
+  assert.deepEqual(nearestOpen(-30, -100, (x, y) => x === -31 && y === -100), { tx: -31, ty: -100 });
+});
+
+test('the drift: distance past the frontier, and which edges carry the veil', () => {
+  const f = { minCx: -4, minCy: -8, maxCx: 4, maxCy: 0 };
+  assert.equal(frontierDistance(f, 0, 0), 0);
+  assert.equal(frontierDistance(f, -4 * 384 - 10, 0), 10);
+  assert.equal(frontierDistance(f, 0, -8 * 384 - 50), 50);
+  assert.deepEqual(veilEdges(0, -9, inside), ['south'], 'north of the frontier: the veil on its south edge');
+  assert.deepEqual(veilEdges(5, -4, inside), ['west']);
+  assert.deepEqual(veilEdges(5, -9, inside), [], 'a corner sees no inside chunk across an edge');
+});
+
+// ---------------------------------------------------------------- walking
+
+test('walk speed by ground: laid stone and plank 15% faster, a ford half speed', () => {
+  const t = (id: string) => (TERRAIN as Record<string, number>)[wildsGround(id).terrain]!;
+  assert.equal(walkFactor(t('laid-stone')), 1.15);
+  assert.equal(walkFactor(t('laid-plank')), 1.15);
+  assert.equal(walkFactor(t('ford')), 0.5);
+  assert.equal(walkFactor(t('moss')), 1);
+  assert.equal(walkFactor(t('paving')), 1);
+  assert.equal(walkFactor(null), 1, 'nothing known: as usual');
+});
+
+test('ground changes on top of a chunk: cleared opens a tile and takes its standing piece; laid carries its ground', () => {
+  const t = fixtureTerrain('tangle');
+  const thicket = t.decor.find((d) => DECOR_ART[d.kind].blocking && t.solid[d.ty]![d.tx])!;
+  const open = (() => {
+    for (let y = 0; y < 24; y++) for (let x = 0; x < 24; x++) if (!t.solid[y]![x]) return { x, y };
+    throw new Error('no open tile');
+  })();
+  const e = effectiveTerrain(t, [
+    { tx: thicket.tx, ty: thicket.ty, change: 'cleared' },
+    { tx: open.x, ty: open.y, change: 'stone' },
+    { tx: 99, ty: 0, change: 'plank' },
+  ]);
+  assert.equal(e.solid[thicket.ty]![thicket.tx], false);
+  assert.ok(!e.decor.some((d) => d.tx === thicket.tx && d.ty === thicket.ty && DECOR_ART[d.kind].blocking), 'the piece is gone');
+  assert.equal(e.ground[open.y]![open.x], (TERRAIN as Record<string, number>)[wildsGround('laid-stone').terrain]);
+  assert.equal(t.solid[thicket.ty]![thicket.tx], true, 'the chunk itself is never changed');
+  assert.equal(effectiveTerrain(t, []), t, 'no changes: the chunk as served');
+});
+
+// ---------------------------------------------------------------- what is drawn
+
+test('every decor kind is drawn: woods kinds by the code painter, the open map’s by its delivered art', () => {
+  for (const d of loadWilds().decor) {
+    const art = openMapDecor(d.kind as never, 0);
+    if (OPEN_MAP_DECOR_KINDS.includes(d.kind as never)) assert.match(art ?? '', /^om-art:/, d.kind);
+    else assert.equal(art, null, `${d.kind} is code-drawn`);
+  }
+  for (const k of LANDMARK_KINDS) assert.ok(OPEN_MAP_DECOR_KINDS.includes(k), `landmark ${k} has art`);
+  assert.deepEqual([...LANDMARK_KINDS].sort(), ['meadow-oak', 'meadow-outcrop', 'split-oak', 'standing-stone']);
+  assert.equal(openMapDecor('meadow-grass', 4), 'om-art:meadow-grass-1');
+  assert.equal(openMapDecor('split-oak', 3), 'om-art:landmark-split-oak');
+});
+
+test('a chunk’s scenery and pieces stand at world tiles; landmarks are drawn from a chunk away with their place', () => {
+  const m = chunkAt('whitequiet-0-4', -2, -5);
+  m.decor!.kinds.push('split-oak');
+  m.decor!.kind.push(m.decor!.kinds.length - 1);
+  m.decor!.tx.push(10);
+  m.decor!.ty.push(11);
+  m.decor!.ox.push(0);
+  m.decor!.oy.push(0);
+  m.decor!.variant.push(0);
+  if (m.decor!.flags.length < Math.ceil(m.decor!.kind.length / 4)) m.decor!.flags = Uint8Array.from([...m.decor!.flags, 0]);
+  m.places = [{ $typeName: 'glimway.v1.WildsPlaceMark', id: 'place:-1:-1', kind: 'camp-glade', tx: 10, ty: 11 }];
+  const t = terrainOf(decodeChunk(toBinary(WildsChunkSchema, m)));
+  const scenery = chunkScenery(t, () => true);
+  assert.equal(scenery.length, t.decor.length);
+  for (const s of scenery) assert.ok(s.tx! >= -48 && s.tx! < -24 && s.ty! >= -120 && s.ty! < -96, `${s.tx},${s.ty} in chunk (-2,-5)`);
+  const oak = scenery.find((s) => s.key === 'om-art:landmark-split-oak')!;
+  assert.deepEqual([oak.x, oak.y], [(-48 + 10) * 16 + 8, (-120 + 11 + 1) * 16]);
+  assert.equal(chunkScenery(t, (k) => !k.startsWith('om-art:')).length, t.decor.length - 1, 'missing art is left out, never stood in for');
+  assert.deepEqual(chunkLandmarks(t, () => true).map((l) => l.place), ['place:-1:-1']);
+  // A dark lamp stone by the road is a landmark too.
+  m.sites.push({ $typeName: 'glimway.v1.StorySite', id: 'lamp-stone:-2:-5', kind: 7, tx: 3, ty: 4 });
+  const road = terrainOf(decodeChunk(toBinary(WildsChunkSchema, m)));
+  assert.ok(chunkLandmarks(road, () => true).some((l) => l.key === 'om-art:lamp-stone-dark' && l.tx === -48 + 3));
+  for (const g of chunkGather(t)) assert.ok(g.tx >= -48 && g.tx < -24);
 });
 
 test('served entities stand on walkable ground', () => {
-  assert.ok(entry.entities.length > 0);
-  for (const e of entry.entities) assert.equal(entry.solid[e.ty]![e.tx], false, `${e.id} on solid ground`);
-});
-
-test('wilds paper placements: every id is a real wilds paper, hooks match', () => {
-  const data = loadWilds();
-  for (const p of WILDS_PAPER_PLACEMENTS) {
-    const paper = PAPERS.find((x) => x.id === p.paperId);
-    assert.ok(paper, `${p.paperId} exists in papers.ts`);
-    if (p.poi !== undefined) {
-      assert.equal(paper.source.kind, 'wilds-poi', `${p.paperId} is a wilds-poi source`);
-      assert.ok(data.poiIds.includes(p.poi), `${p.poi} is a generated POI id`);
-    }
-    if (p.chestTier !== undefined) {
-      assert.equal(paper.source.kind, 'wilds-chest', `${p.paperId} is a wilds-chest source`);
-      assert.ok(p.chestTier >= 1 && p.chestTier <= 3, 'chest tiers the generator rolls');
-    }
+  for (const region of ['tangle', 'whitequiet-0-4', 'road', 'ford'] as const) {
+    const t = fixtureTerrain(region);
+    for (const e of t.entities) assert.equal(t.solid[e.ty]![e.tx], false, `${e.id}`);
   }
 });
 
-test('wilds paper placements: the east-only find only pays in the east column', () => {
-  const east = wildsPaperFor({ kind: 'poi', poi: 'mossy-arch', tier: 0 }, 2, 3);
-  assert.equal(east, 'joss-penhallow-field-notes-pencil-map');
-  assert.equal(wildsPaperFor({ kind: 'poi', poi: 'mossy-arch', tier: 0 }, 1, 3), null);
-  assert.equal(wildsPaperFor({ kind: 'poi', poi: 'old-shrine', tier: 0 }, 0, 3), 'failed-grid-of-sector-4');
-  assert.equal(wildsPaperFor({ kind: 'chest', poi: '', tier: 3 }, 0, 3), 'the-blind-routes-smugglers-ledger');
-  assert.equal(wildsPaperFor({ kind: 'chest', poi: '', tier: 2 }, 2, 3), null);
+// ---------------------------------------------------------------- walked and seen
+
+test('walked chunks and seen landmarks are kept per wick on the device', () => {
+  forgetWalked();
+  markWalked('wick-a', '0,-1');
+  markWalked('wick-a', '0,-1');
+  markWalked('wick-a', '1,-1');
+  markSeen('wick-a', 'place:0:-2');
+  assert.deepEqual(walkedChunks('wick-a'), ['0,-1', '1,-1']);
+  assert.deepEqual(seenLandmarks('wick-a'), ['place:0:-2']);
+  assert.deepEqual(walkedChunks('wick-b'), [], 'a new wick starts empty');
+});
+
+test('the frontier is cx -4..4, cy -8..0 (the client’s twin of frontier.Inside)', () => {
+  let n = 0;
+  for (let cy = -10; cy <= 2; cy++) for (let cx = -6; cx <= 6; cx++) if (inside(cx, cy)) n++;
+  assert.equal(n, 81);
+});
+
+test('the open map is one area but three places on the HUD: the Tangle, the Whitequiet, beyond', async () => {
+  const { displayArea, areaInfo } = await import('../src/content/world.ts');
+  const at = (tx: number, ty: number) => displayArea({ area: 'wilds', position: { x: tx * 16 + 8, y: ty * 16 + 8 } });
+  assert.equal(at(2, 22), 'wilds');
+  assert.equal(at(12, -60), 'wilds:whitequiet');
+  assert.equal(at(12, -150), 'wilds:beyond');
+  assert.equal(at(-60, -12), 'wilds:beyond');
+  assert.equal(displayArea({ area: 'commons', position: { x: 0, y: 0 } }), 'commons');
+  assert.equal(areaInfo('wilds').name, 'The Tangle');
+  assert.equal(areaInfo('wilds:whitequiet').name, 'The Whitequiet');
+  assert.ok(areaInfo('wilds:beyond').name.length > 0);
 });

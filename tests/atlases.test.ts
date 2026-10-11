@@ -53,6 +53,7 @@ const yardIndoors = [...yardProps, ...yardProps.filter((f) => f.key === 'kit-sid
 const crafts = JSON.parse(readFileSync(join(ROOT, 'assets/generated/crafts-pass/manifest.json'), 'utf8')) as { frames: Record<string, { file: string; canvasSize: { w: number; h: number } }> }
 const purse = JSON.parse(readFileSync(join(ROOT, 'assets/generated/purse-pass/manifest.json'), 'utf8')) as { frames: Record<string, { file: string; canvasSize: { w: number; h: number } }> }
 const glims = JSON.parse(readFileSync(join(ROOT, 'assets/generated/glims-pass/manifest.json'), 'utf8')) as { frames: Record<string, { file: string; canvasSize: { w: number; h: number } }> }
+const openMap = JSON.parse(readFileSync(join(ROOT, 'assets/generated/open-map-pass/manifest.json'), 'utf8')) as { frames: Record<string, { file: string; canvas: { w: number; h: number } }> }
 
 type P1 = { frames: Record<string, { source: string }>; sources: Record<string, { file: string }> }
 const p1 = JSON.parse(readFileSync(join(ROOT, PLAYTEST1_DIR, 'atlas.json'), 'utf8')) as P1
@@ -109,6 +110,9 @@ test('every input the atlases were baked from is unchanged', () => {
     ...Object.values(purse.frames).map((f) => `assets/generated/purse-pass/${f.file}`),
     'assets/generated/glims-pass/manifest.json',
     ...Object.values(glims.frames).map((f) => `assets/generated/glims-pass/${f.file}`),
+    'assets/generated/open-map-pass/manifest.json',
+    'assets/generated/open-map-pass/animations.json',
+    ...Object.values(openMap.frames).map((f) => `assets/generated/open-map-pass/${f.file}`),
     'assets/generated/expansion/manifest.json',
     'assets/generated/expansion/fingersnap-terrain.png',
     'assets/generated/expansion/fingersnap-terrain.atlas.json',
@@ -254,6 +258,21 @@ test('the glims pass: a glim, its HUD size and a few glims, each packed whole', 
   }
 })
 
+
+test('the open map pass: every frame packed whole at 64 texels a tile, the ford and veil loops complete', () => {
+  const [w, h] = webpSize(join(PACKED, built.openMap.image))
+  assert.deepEqual([w, h], built.openMap.size)
+  assert.equal(built.openMap.density, 64)
+  assert.deepEqual(Object.keys(built.openMap.frames).sort(), Object.keys(openMap.frames).sort())
+  assert.equal(Object.keys(built.openMap.frames).length, 45)
+  for (const [key, f] of Object.entries(openMap.frames)) {
+    const r = built.openMap.frames[key]
+    assert.deepEqual([r[2], r[3]], [f.canvas.w, f.canvas.h], `${key} keeps its canvas`)
+    assert.ok(r[0] + r[2] <= w && r[1] + r[3] <= h, `${key} inside the open map atlas`)
+  }
+  const anims = JSON.parse(readFileSync(join(ROOT, 'assets/generated/open-map-pass/animations.json'), 'utf8')) as { key: string; frames: string[] }[]
+  for (const a of anims) for (const f of a.frames) assert.ok(built.openMap.frames[f], `${a.key}: ${f}`)
+})
 test('the playtest-1 people: every resident and held frame, trimmed to 4-texel steps inside its canvas', () => {
   const [w, h] = webpSize(join(PACKED, built.people.image))
   assert.deepEqual([w, h], built.people.size)
@@ -315,6 +334,7 @@ test('public/assets/fingersnap ships its licence, manifests and packed art only 
     `packed/${built.crafts.image}`,
     `packed/${built.purse.image}`,
     `packed/${built.glims.image}`,
+    `packed/${built.openMap.image}`,
     `packed/${built.terrain.image}`,
     `packed/${built.ground.image}`,
     `packed/${built.people.image}`,

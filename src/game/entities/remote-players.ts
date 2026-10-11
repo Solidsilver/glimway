@@ -38,6 +38,8 @@ export interface RemotePlayers {
   update(dt: number): void
   /** Drop every remote sprite (area change, scene shutdown). */
   clear(): void
+  /** The open map's room moved to a neighbouring chunk: keep drawing those still in range. */
+  setArea(area: string): void
   /** Friends' pets drawn here, for Pet (crafts.md 2.1). */
   pets(): { id: string; x: number; y: number; hop: () => void }[]
 }
@@ -45,6 +47,7 @@ export interface RemotePlayers {
 class NoopRemotePlayers implements RemotePlayers {
   update(_dt: number): void {}
   clear(): void {}
+  setArea(_area: string): void {}
   pets(): { id: string; x: number; y: number; hop: () => void }[] {
     return []
   }
@@ -147,7 +150,7 @@ class RemotePlayersLayer implements RemotePlayers {
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly feed: PresenceFeed,
-    private readonly area: string,
+    private area: string,
     /** Calm companions: no hops for friends' pets and mounts. */
     private readonly reducedMotion: boolean
   ) {
@@ -173,6 +176,10 @@ class RemotePlayersLayer implements RemotePlayers {
       })),
       scene
     )
+  }
+
+  setArea(area: string): void {
+    this.area = area
   }
 
   update(dt: number): void {

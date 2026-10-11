@@ -6,7 +6,7 @@ import (
 	contract "glimway/server/internal/gen/glimway/v1"
 )
 
-// Realm is the realm every region lies in today (the open map adds more).
+// Realm is the realm every chunk lies in today (later releases add more).
 const Realm = "hearthwick"
 
 var siteKinds = map[SiteKind]contract.SiteKind{
@@ -16,6 +16,9 @@ var siteKinds = map[SiteKind]contract.SiteKind{
 	SitePlank: contract.SiteKind_SITE_KIND_PLANK,
 	SiteGiven: contract.SiteKind_SITE_KIND_GIVEN,
 	SiteReeds: contract.SiteKind_SITE_KIND_REEDS,
+
+	SiteLampStone: contract.SiteKind_SITE_KIND_LAMP_STONE,
+	SiteRumour:    contract.SiteKind_SITE_KIND_RUMOUR,
 }
 
 // ProtoSiteKind is the wire value of a site kind.
@@ -23,19 +26,24 @@ func ProtoSiteKind(k SiteKind) contract.SiteKind { return siteKinds[k] }
 
 // ToProto packs a generated chunk as the stored and served WildsChunk:
 // ground as palette nibbles, solid as bits, decor as parallel arrays with
-// two flag bits per piece (flip, overhang), layer 0.
+// two flag bits per piece (flip, overhang), layer 0. A v3 chunk carries its
+// tier, land and places (region, exits and spawn are deprecated and left
+// empty).
 func ToProto(c Chunk, epochID string) *contract.WildsChunk {
 	out := &contract.WildsChunk{
 		EpochId:          epochID,
-		Region:           c.RegionID,
 		Realm:            Realm,
 		Cx:               int32(c.CX),
 		Cy:               int32(c.CY),
 		GeneratorVersion: uint32(c.GeneratorVersion),
 		Size:             uint32(c.Size),
-		Spawn:            &contract.Tile{Tx: uint32(c.Spawn.TX), Ty: uint32(c.Spawn.TY)},
 		Look:             c.Look,
 		Mark:             c.Mark,
+	}
+	out.Tier = uint32(c.Tier)
+	out.Land = c.Land
+	for _, p := range c.Places {
+		out.Places = append(out.Places, &contract.WildsPlaceMark{Id: p.ID, Kind: p.Kind, Tx: uint32(p.TX), Ty: uint32(p.TY)})
 	}
 	var palette []Ground
 	for _, g := range c.Ground {
@@ -58,13 +66,6 @@ func ToProto(c Chunk, epochID string) *contract.WildsChunk {
 		if s {
 			out.Solid[i/8] |= 1 << (i % 8)
 		}
-	}
-	for _, e := range c.Exits {
-		out.Exits = append(out.Exits, &contract.Exit{
-			Tx: uint32(e.TX), Ty: uint32(e.TY), Tw: uint32(e.TW), Th: uint32(e.TH),
-			Dir: contract.Dir(e.Dir + 1), To: e.To,
-			Entry: &contract.Tile{Tx: uint32(e.Entry.TX), Ty: uint32(e.Entry.TY)},
-		})
 	}
 	d := &contract.DecorList{Flags: make([]byte, (len(c.Decor)+3)/4)}
 	kinds := map[DecorKind]uint32{}

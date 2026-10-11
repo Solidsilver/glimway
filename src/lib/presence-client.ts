@@ -19,6 +19,8 @@
  * It never sees credentials beyond the lease, and never logs messages.
  */
 import { knownRoom } from './rooms.ts';
+import { TILE } from './tile.ts';
+import { chunkOf } from './wilds/coords.ts';
 import { decodePresence, encodePresence, PRESENCE_PROTOCOL } from './presence-codec.ts';
 import { abilityFor } from './abilities.ts';
 import { PRESENCE, PRESENCE_CLOSE, type PresenceAvatar, type PresenceClientMessage, type PresencePlayer, type PresencePosition, type PresenceServerMessage } from './presence.ts';
@@ -126,24 +128,57 @@ export function closeAction(code: number, reason = ''): 'retry' | 'superseded' |
   return 'retry';
 }
 
-/** Server-accepted presence areas (curated areas and Wilds chunks; rooms are checked against the content). */
-const AREA_RE = /^(village|woodland|ruin|commons|home:(0|[1-9]\d{0,3})|wilds:[a-z0-9-]+:(0|[1-9]\d*):(0|[1-9]\d*))$/;
+/**
+ * Server-accepted presence areas: curated areas, homesteads, and the open
+ * map's chunk rooms `wilds:<cx>:<cy>` (signed; rooms are checked against the
+ * content).
+ */
+const AREA_RE = /^(village|woodland|ruin|commons|home:(0|[1-9]\d{0,3})|wilds:(0|-?[1-9]\d*):(0|-?[1-9]\d*))$/;
 
 export function isPresenceArea(area: string): boolean {
   return AREA_RE.test(area) || knownRoom(area);
 }
 
 /**
- * The presence room for a scene's area id: curated areas as they are, and a
- * Wilds chunk (`chunk:<region>:<cx>:<cy>`, the Wilds client's area ids) as the
- * server's `wilds:<region>:<cx>:<cy>`. A room (`in:village:mill`, a cottage's
- * `in:home:<gate>`) is its own presence room, its id unchanged. Anything else
- * has no room (null).
+ * The open map's presence room for a world pixel: the chunk it stands in,
+ * `wilds:<cx>:<cy>`. The socket holds one room a client; the server shares
+ * a chunk's room with its eight neighbours' (`sharedRoom`), so you see
+ * everyone in the 3×3 around you (open-map.md 2.4), and the room changes as
+ * you cross a chunk edge.
  */
-export function presenceAreaFor(areaId: string): string | null {
-  const chunk = /^chunk:([a-z0-9-]+):(\d+):(\d+)$/.exec(areaId);
-  const area = chunk ? `wilds:${chunk[1]}:${Number(chunk[2])}:${Number(chunk[3])}` : areaId;
-  return isPresenceArea(area) ? area : null;
+export function wildsPresenceRoom(x: number, y: number): string {
+  const { cx, cy } = chunkOf(Math.floor(x / TILE), Math.floor(y / TILE));
+  return `wilds:${cx}:${cy}`;
+}
+
+/** The chunk a Wilds room names, or null. */
+function roomChunk(room: string): { cx: number; cy: number } | null {
+  const m = /^wilds:(0|-?[1-9]\d*):(0|-?[1-9]\d*)$/.exec(room);
+  return m ? { cx: Number(m[1]), cy: Number(m[2]) } : null;
+}
+
+/**
+ * Do two rooms see each other? The same room does; two Wilds chunk rooms do
+ * when their chunks are neighbours (the twin of the server's `sharedRoom`,
+ * server/internal/api/presence_socket.go).
+ */
+export function sharedRoom(a: string | null, b: string | null): boolean {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const p = roomChunk(a);
+  const q = roomChunk(b);
+  return !!p && !!q && Math.abs(p.cx - q.cx) <= 1 && Math.abs(p.cy - q.cy) <= 1;
+}
+
+/**
+ * The presence room for a scene's area id: curated areas as they are, a
+ * room (`in:village:mill`, a cottage's `in:home:<gate>`) its own id, and the
+ * Wilds the cell the hero stands in (`at`, world pixels). Anything else has
+ * no room (null).
+ */
+export function presenceAreaFor(areaId: string, at?: { x: number; y: number }): string | null {
+  if (areaId === 'wilds') return at ? wildsPresenceRoom(at.x, at.y) : null;
+  return isPresenceArea(areaId) ? areaId : null;
 }
 
 /** A unit facing vector the server accepts (|f|² within 0.01 of 1); else facing down. */
@@ -421,7 +456,8 @@ export class PresenceClient {
         this.announcePosition();
         break;
       case 'join':
-        if (m.area !== this.sentArea || !m.player || typeof m.player.accountId !== 'string') return;
+        // A neighbouring chunk's room shares ours (the open map): its joins are ours too.
+        if (!sharedRoom(m.area, this.sentArea) || !m.player || typeof m.player.accountId !== 'string') return;
         this.handlers.join?.(m.area, m.player);
         break;
       case 'leave':

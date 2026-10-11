@@ -224,8 +224,13 @@ func (h *presenceHub) broadcast(sender *presencePeer, v proto.Message) {
 }
 
 func (h *presenceHub) broadcastEncoded(sender *presencePeer, b []byte, err error) {
+	h.broadcastWhere(sender, b, err, func(p *presencePeer) bool { return sharedRoom(p.area, sender.area) })
+}
+
+// broadcastWhere sends to the sender's world's peers the filter picks.
+func (h *presenceHub) broadcastWhere(sender *presencePeer, b []byte, err error, pick func(*presencePeer) bool) {
 	for _, p := range h.peers {
-		if p != sender && p.identity.World == sender.identity.World && p.area == sender.area && p.area != "" {
+		if p != sender && p.identity.World == sender.identity.World && pick(p) {
 			if err != nil {
 				p.stop(websocket.StatusInternalError, "internal")
 				continue
@@ -343,7 +348,7 @@ func (p *presencePeer) player() *contract.PresencePlayer {
 func (h *presenceHub) room(p *presencePeer) {
 	players := []*contract.PresencePlayer{}
 	for _, other := range h.peers {
-		if other != p && other.area == p.area && other.identity.World == p.identity.World {
+		if other != p && sharedRoom(other.area, p.area) && other.identity.World == p.identity.World {
 			players = append(players, other.player())
 		}
 	}

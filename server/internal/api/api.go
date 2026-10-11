@@ -9,6 +9,7 @@ import (
 	"glimway/server/internal/ports"
 	"glimway/server/internal/store"
 	"glimway/server/internal/story"
+	"glimway/server/internal/wildsgen"
 	"io"
 	"log"
 	"sync"
@@ -25,7 +26,6 @@ type Config struct {
 	Lanterns         ports.Lanterns
 	Story            ports.StoryRules
 	Placement        ports.Placement
-	Regions          ports.RegionSource
 	HomeLand         ports.HomeLandSource
 	State            store.StateComposition
 	Chunks           chunks.ChunkSource
@@ -38,8 +38,11 @@ type Config struct {
 	LoginRate        int
 	LoginGlobalRate  int
 	LoginWindow      time.Duration
-	// Zero uses the shared content default; stored epochs always retain their version.
-	WildsGeneratorVersion int
+	// WildsGenerator makes the open map's chunks on demand, and answers the
+	// glimpse past the frontier and the wick's rumour. Nil is generator v3
+	// (wildsgen.V3); tests pass a stand-in. Stored epochs keep the version
+	// they were made by.
+	WildsGenerator chunks.Generator
 	// Nil uses the shared presence defaults. Intended for embedded-server configuration.
 	Presence *content.Presence
 	// PartyAdmissionOff: no one signs in through a party, and no party's
@@ -101,9 +104,11 @@ func New(s *store.Store, h habitica.Upstream, c Config) *Server {
 	c.State = purseComposition{StateComposition: c.State, now: c.Now}
 	// …and the wardrobe's resolved choice (design 4.4).
 	c.State = wardrobeComposition{StateComposition: c.State}
+	if c.WildsGenerator == nil {
+		c.WildsGenerator = wildsgen.V3{}
+	}
 	if c.Chunks == nil || c.Epochs == nil {
-		stored := store.NewChunks(c.Now)
-		stored.GeneratorVersion = c.WildsGeneratorVersion
+		stored := store.NewChunks(c.Now, c.WildsGenerator)
 		if c.Chunks == nil {
 			c.Chunks = stored
 		}
@@ -121,7 +126,11 @@ func New(s *store.Store, h habitica.Upstream, c Config) *Server {
 	if c.Placement == nil {
 		c.Placement = sr
 	}
-	return newServer(s, h, c)
+	a := newServer(s, h, c)
+	// …and this wick's rumour (open-map.md 2.10), read through the server's
+	// own epochs and generator.
+	a.Config.State = rumourComposition{StateComposition: a.Config.State, a: a, now: c.Now}
+	return a
 }
 
 func newServer(s *store.Store, h habitica.Upstream, c Config) *Server {
@@ -142,9 +151,6 @@ func newServer(s *store.Store, h habitica.Upstream, c Config) *Server {
 	}
 	a := &Server{sprites: newSpriteProxy(c.SpriteCacheDir, c.SpriteBaseURL, c.Now), presence: newPresenceHub(c.Presence, c.Now), loginProofs: &proofLimiter{buckets: map[string]*proofBucket{}}, loginGlobal: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginGlobalRate, window: time.Minute}, loginParty: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginPartyRate, window: time.Minute}, Store: s, Habitica: h, Config: c, loginSlots: make(chan struct{}, c.LoginConcurrency), loginLimit: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginRate, window: c.LoginWindow}}
 	// D's region, lantern and land sources read the other ports at call time.
-	if a.Config.Regions == nil {
-		a.Config.Regions = wildsService{a}
-	}
 	if a.Config.Lanterns == nil {
 		a.Config.Lanterns = wildsService{a}
 	}

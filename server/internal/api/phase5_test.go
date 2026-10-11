@@ -484,7 +484,9 @@ func TestPhase5BackupRestore(t *testing.T) {
 	b.Snapshot = claimed.Snapshot
 	complete := x.p5("POST", "/api/projects/north-bridge/contribute", body(s, "project", map[string]any{"materials": map[string]int{"timber": 200, "stone": 80}}), c, 200)
 	s.Snapshot = complete.Snapshot
-	x.exp("GET", "/api/wilds/region/outer-1", nil, c, 200)
+	if w := x.rawHTTP("GET", "/api/wilds/near/0/-4", nil, c); w.Code != 200 {
+		t.Fatal("near read", w.Code)
+	}
 	backup := filepath.Join(x.dir, "phase5-backup.sqlite")
 	if err := x.db.Backup(context.Background(), backup); err != nil {
 		t.Fatal(err)
@@ -494,7 +496,7 @@ func TestPhase5BackupRestore(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer restored.Close()
-	for _, table := range []string{"item_stacks", "homestead_items", "mail", "projects", "project_materials", "contributions", "project_papers", "region_epochs", "ledger", "idempotency"} {
+	for _, table := range []string{"item_stacks", "homestead_items", "mail", "projects", "project_materials", "contributions", "project_papers", "wild_epochs", "ledger", "idempotency"} {
 		if count(t, x.db, "SELECT count(*) FROM "+table) != count(t, restored, "SELECT count(*) FROM "+table) {
 			t.Fatal("backup", table)
 		}

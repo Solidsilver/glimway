@@ -29,7 +29,7 @@
     },
     {
       "paths": ["src/game/wilds/**", "src/lib/wilds/**", "server/internal/wilds/**", "src/content/echoes.ts", "src/content/expansion-writing.ts", "src/game/expansion.ts"],
-      "specs": ["wilds.spec.ts", "wilds-outer.spec.ts", "wilds-screens.spec.ts", "echo-keepsakes.spec.ts"]
+      "specs": ["open-map.spec.ts", "open-map-screens.spec.ts", "wilds.spec.ts", "wilds-outer.spec.ts", "wilds-screens.spec.ts", "echo-keepsakes.spec.ts"]
     },
     {
       "paths": [

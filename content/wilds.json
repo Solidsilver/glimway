@@ -882,7 +882,7 @@
     }
   ],
   "landSizes": {
-    "landCellChunks": 8,
+    "landCellChunks": 7,
     "windowCells": 7,
     "capChunks": 20,
     "borderNoisePermille": 150,

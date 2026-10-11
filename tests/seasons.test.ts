@@ -4,7 +4,7 @@ import { GATHERING_DATA, gatherArea, gatheringOffered, gatheringTarget, inSeason
 import { itemDef, sellerFor, ITEMS } from '../src/lib/items.ts';
 import { CRAFTING } from '../src/lib/workshop.ts';
 import { CALENDAR, calendarAt } from '../src/lib/calendar.ts';
-import { toWorldData } from '../src/game/wilds/terrain.ts';
+import { chunkGather } from '../src/game/wilds/terrain.ts';
 import { fixtureTerrain } from './wilds-fixture.ts';
 import { modelEntries } from '../src/lib/inventory.ts';
 
@@ -134,11 +134,11 @@ test('the seasons’ words are cozy, in-world, and fit the box', () => {
 
 // The Wilds' gather pieces by the calendar day (src/game/wilds/terrain.ts),
 // on a served chunk of each region.
-const tangle = 'inner-1';
-const outer = 'outer-1';
+const tangle = 'tangle';
+const outer = 'whitequiet-0-4';
 function targets(region: typeof tangle | typeof outer, day: { wick: string } | null): Map<string, number> {
   const n = new Map<string, number>();
-  for (const g of toWorldData(fixtureTerrain(region), 'wilds', day).gathering ?? []) n.set(g.target, (n.get(g.target) ?? 0) + 1);
+  for (const g of chunkGather(fixtureTerrain(region), day)) n.set(g.target, (n.get(g.target) ?? 0) + 1);
   return n;
 }
 

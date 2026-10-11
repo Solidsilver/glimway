@@ -32,7 +32,6 @@ import {
   parsePlay,
   parseSnapshot,
   parseState,
-  parseWildsRegion,
 } from './parse.ts';
 import { parseStorage, parseStorageMove, parseCraft, parseHearthCraft, parseDeskCopy, parseMail, parseMailSend, parseMailClaim, parseMailRecall, parseCommons, parseProjects, parseContribute, parseRepairs, parseMend, parseLibraryDonate } from './village.ts';
 import { parseWorld, parseWorldChoice, parseWorldMove, parseWorldLeave } from './world.ts';
@@ -68,7 +67,6 @@ import type {
   PlayResponse,
   Snapshot,
   StateResponse,
-  WildsRegionResponse,
   WorldChoice,
   WorldMoveResponse,
   WorldView,
@@ -117,7 +115,6 @@ export interface RawApi {
   worldChoice(): Promise<WorldChoice>;
   /** Answer it, once: the party's world, or one of your own. The same sign-in carries on. */
   worldChoose(choice: 'party' | 'own'): Promise<Snapshot>;
-  wildsRegion(regionId: string): Promise<WildsRegionResponse>;
 
   /** The homestead behind a Commons gate (null home: unclaimed land; read-only for visitors). */
   home(gate: number): Promise<HomeResponse>;
@@ -317,9 +314,6 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     async worldChoose(choice) {
       return parseSnapshot(await request('POST', '/api/world/choose', { choice }));
     },
-    async wildsRegion(regionId) {
-      return parseWildsRegion(await request('GET', `/api/wilds/region/${encodeURIComponent(regionId)}`));
-    },
     async home(gate) {
       return parseHome(mixedRead(await request('GET', `/api/homestead/gate/${Math.floor(gate)}`)));
     },
@@ -424,7 +418,6 @@ export function createApiClient(options: ApiClientOptions = {}): ApiClient {
     worldNotice: () => run((r) => r.worldNotice()),
     worldChoice: () => run((r) => r.worldChoice()),
     worldChoose: (choice) => run((r) => r.worldChoose(choice)),
-    wildsRegion: (regionId) => run((r) => r.wildsRegion(regionId)),
     home: (id) => run((r) => r.home(id)),
     commons: () => run((r) => r.commons()),
     shelf: (gate: number) => run((r) => r.shelf(gate)),

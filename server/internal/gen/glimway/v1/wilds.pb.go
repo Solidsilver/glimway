@@ -22,6 +22,9 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Dir, Tile and Exit belonged to generator v2's chunk exits. Nothing uses them
+// since contract 8; they stay defined because buf's FILE rule refuses a
+// deleted message until a release ships without it.
 type Dir int32
 
 const (
@@ -464,30 +467,21 @@ func (x *StorySite) GetTy() uint32 {
 // (open-map.md 2.1): tile (x, y) in world tiles lies in chunk
 // (floor(x/size), floor(y/size)); north is -y.
 type WildsChunk struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// region, exits and spawn belong to generator v2's 3x3 regions. Generator
-	// v3 leaves them empty; lanes O-B and O-D delete them (and reserve the
-	// numbers) when v2 goes.
-	EpochId string `protobuf:"bytes,1,opt,name=epoch_id,json=epochId,proto3" json:"epoch_id,omitempty"`
-	// Deprecated: Marked as deprecated in glimway/v1/wilds.proto.
-	Region           string   `protobuf:"bytes,2,opt,name=region,proto3" json:"region,omitempty"`
-	Realm            string   `protobuf:"bytes,3,opt,name=realm,proto3" json:"realm,omitempty"`
-	Layer            int32    `protobuf:"zigzag32,4,opt,name=layer,proto3" json:"layer,omitempty"`
-	Cx               int32    `protobuf:"zigzag32,5,opt,name=cx,proto3" json:"cx,omitempty"`
-	Cy               int32    `protobuf:"zigzag32,6,opt,name=cy,proto3" json:"cy,omitempty"`
-	GeneratorVersion uint32   `protobuf:"varint,7,opt,name=generator_version,json=generatorVersion,proto3" json:"generator_version,omitempty"`
-	Size             uint32   `protobuf:"varint,8,opt,name=size,proto3" json:"size,omitempty"`
-	Palette          []string `protobuf:"bytes,9,rep,name=palette,proto3" json:"palette,omitempty"`
-	Ground           []byte   `protobuf:"bytes,10,opt,name=ground,proto3" json:"ground,omitempty"`
-	Solid            []byte   `protobuf:"bytes,11,opt,name=solid,proto3" json:"solid,omitempty"`
-	// Deprecated: Marked as deprecated in glimway/v1/wilds.proto.
-	Exits []*Exit      `protobuf:"bytes,12,rep,name=exits,proto3" json:"exits,omitempty"`
-	Decor *DecorList   `protobuf:"bytes,13,opt,name=decor,proto3" json:"decor,omitempty"`
-	Sites []*StorySite `protobuf:"bytes,14,rep,name=sites,proto3" json:"sites,omitempty"`
-	// Deprecated: Marked as deprecated in glimway/v1/wilds.proto.
-	Spawn *Tile  `protobuf:"bytes,15,opt,name=spawn,proto3" json:"spawn,omitempty"`
-	Look  string `protobuf:"bytes,16,opt,name=look,proto3" json:"look,omitempty"`
-	Mark  string `protobuf:"bytes,17,opt,name=mark,proto3" json:"mark,omitempty"`
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	EpochId          string                 `protobuf:"bytes,1,opt,name=epoch_id,json=epochId,proto3" json:"epoch_id,omitempty"`
+	Realm            string                 `protobuf:"bytes,3,opt,name=realm,proto3" json:"realm,omitempty"`
+	Layer            int32                  `protobuf:"zigzag32,4,opt,name=layer,proto3" json:"layer,omitempty"`
+	Cx               int32                  `protobuf:"zigzag32,5,opt,name=cx,proto3" json:"cx,omitempty"`
+	Cy               int32                  `protobuf:"zigzag32,6,opt,name=cy,proto3" json:"cy,omitempty"`
+	GeneratorVersion uint32                 `protobuf:"varint,7,opt,name=generator_version,json=generatorVersion,proto3" json:"generator_version,omitempty"`
+	Size             uint32                 `protobuf:"varint,8,opt,name=size,proto3" json:"size,omitempty"`
+	Palette          []string               `protobuf:"bytes,9,rep,name=palette,proto3" json:"palette,omitempty"`
+	Ground           []byte                 `protobuf:"bytes,10,opt,name=ground,proto3" json:"ground,omitempty"`
+	Solid            []byte                 `protobuf:"bytes,11,opt,name=solid,proto3" json:"solid,omitempty"`
+	Decor            *DecorList             `protobuf:"bytes,13,opt,name=decor,proto3" json:"decor,omitempty"`
+	Sites            []*StorySite           `protobuf:"bytes,14,rep,name=sites,proto3" json:"sites,omitempty"`
+	Look             string                 `protobuf:"bytes,16,opt,name=look,proto3" json:"look,omitempty"`
+	Mark             string                 `protobuf:"bytes,17,opt,name=mark,proto3" json:"mark,omitempty"`
 	// Bodies live in immutable chunks; the near read carries only state.
 	Entities []*WildsEntity `protobuf:"bytes,18,rep,name=entities,proto3" json:"entities,omitempty"`
 	// The chunk's tier of difficulty (content tiers, wilds.Tier) and its main
@@ -533,14 +527,6 @@ func (*WildsChunk) Descriptor() ([]byte, []int) {
 func (x *WildsChunk) GetEpochId() string {
 	if x != nil {
 		return x.EpochId
-	}
-	return ""
-}
-
-// Deprecated: Marked as deprecated in glimway/v1/wilds.proto.
-func (x *WildsChunk) GetRegion() string {
-	if x != nil {
-		return x.Region
 	}
 	return ""
 }
@@ -608,14 +594,6 @@ func (x *WildsChunk) GetSolid() []byte {
 	return nil
 }
 
-// Deprecated: Marked as deprecated in glimway/v1/wilds.proto.
-func (x *WildsChunk) GetExits() []*Exit {
-	if x != nil {
-		return x.Exits
-	}
-	return nil
-}
-
 func (x *WildsChunk) GetDecor() *DecorList {
 	if x != nil {
 		return x.Decor
@@ -626,14 +604,6 @@ func (x *WildsChunk) GetDecor() *DecorList {
 func (x *WildsChunk) GetSites() []*StorySite {
 	if x != nil {
 		return x.Sites
-	}
-	return nil
-}
-
-// Deprecated: Marked as deprecated in glimway/v1/wilds.proto.
-func (x *WildsChunk) GetSpawn() *Tile {
-	if x != nil {
-		return x.Spawn
 	}
 	return nil
 }
@@ -991,14 +961,11 @@ func (x *WildsEntity) GetPoi() string {
 
 // starts_at and ends_at are Unix seconds. kind is "still" (one per world,
 // never ends: the Tangle) or "wick" (one per world per wick: the Beyond).
-// region_id belongs to the 3x3 regions; lane O-C deletes it (and reserves
-// the number) with region_epochs.
+// region_id was the 3x3 regions' (gone with region_epochs).
 type WildsEpoch struct {
-	state     protoimpl.MessageState `protogen:"open.v1"`
-	Id        string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	WorldSeed string                 `protobuf:"bytes,2,opt,name=world_seed,json=worldSeed,proto3" json:"world_seed,omitempty"`
-	// Deprecated: Marked as deprecated in glimway/v1/wilds.proto.
-	RegionId         string                  `protobuf:"bytes,3,opt,name=region_id,json=regionId,proto3" json:"region_id,omitempty"`
+	state            protoimpl.MessageState  `protogen:"open.v1"`
+	Id               string                  `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	WorldSeed        string                  `protobuf:"bytes,2,opt,name=world_seed,json=worldSeed,proto3" json:"world_seed,omitempty"`
 	GeneratorVersion uint32                  `protobuf:"varint,4,opt,name=generator_version,json=generatorVersion,proto3" json:"generator_version,omitempty"`
 	Season           string                  `protobuf:"bytes,5,opt,name=season,proto3" json:"season,omitempty"`
 	StartsAt         float64                 `protobuf:"fixed64,6,opt,name=starts_at,json=startsAt,proto3" json:"starts_at,omitempty"`
@@ -1048,14 +1015,6 @@ func (x *WildsEpoch) GetId() string {
 func (x *WildsEpoch) GetWorldSeed() string {
 	if x != nil {
 		return x.WorldSeed
-	}
-	return ""
-}
-
-// Deprecated: Marked as deprecated in glimway/v1/wilds.proto.
-func (x *WildsEpoch) GetRegionId() string {
-	if x != nil {
-		return x.RegionId
 	}
 	return ""
 }
@@ -1479,8 +1438,12 @@ func (x *EchoAssignment) GetSettled() bool {
 	return false
 }
 
-// The 3x3 region read (GET /api/wilds/region/<id>); the near read replaces
-// it, and lane O-C deletes it.
+// The 3x3 region read (GET /api/wilds/region/<id>) is gone: the near read
+// replaced it in contract 8, and nothing reads or writes this message. It
+// stays whole because buf's FILE rule refuses deleting it (or the map entry
+// message its materials field makes) until a release ships without it.
+//
+// Deprecated: Marked as deprecated in glimway/v1/wilds.proto.
 type WildsRegionResult struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	Epoch          *WildsEpoch            `protobuf:"bytes,1,opt,name=epoch,proto3" json:"epoch,omitempty"`
@@ -2530,11 +2493,10 @@ const file_glimway_v1_wilds_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12(\n" +
 	"\x04kind\x18\x02 \x01(\x0e2\x14.glimway.v1.SiteKindR\x04kind\x12\x0e\n" +
 	"\x02tx\x18\x03 \x01(\rR\x02tx\x12\x0e\n" +
-	"\x02ty\x18\x04 \x01(\rR\x02ty\"\x83\x05\n" +
+	"\x02ty\x18\x04 \x01(\rR\x02ty\"\xb7\x04\n" +
 	"\n" +
 	"WildsChunk\x12\x19\n" +
-	"\bepoch_id\x18\x01 \x01(\tR\aepochId\x12\x1a\n" +
-	"\x06region\x18\x02 \x01(\tB\x02\x18\x01R\x06region\x12\x14\n" +
+	"\bepoch_id\x18\x01 \x01(\tR\aepochId\x12\x14\n" +
 	"\x05realm\x18\x03 \x01(\tR\x05realm\x12\x14\n" +
 	"\x05layer\x18\x04 \x01(\x11R\x05layer\x12\x0e\n" +
 	"\x02cx\x18\x05 \x01(\x11R\x02cx\x12\x0e\n" +
@@ -2544,17 +2506,15 @@ const file_glimway_v1_wilds_proto_rawDesc = "" +
 	"\apalette\x18\t \x03(\tR\apalette\x12\x16\n" +
 	"\x06ground\x18\n" +
 	" \x01(\fR\x06ground\x12\x14\n" +
-	"\x05solid\x18\v \x01(\fR\x05solid\x12*\n" +
-	"\x05exits\x18\f \x03(\v2\x10.glimway.v1.ExitB\x02\x18\x01R\x05exits\x12+\n" +
+	"\x05solid\x18\v \x01(\fR\x05solid\x12+\n" +
 	"\x05decor\x18\r \x01(\v2\x15.glimway.v1.DecorListR\x05decor\x12+\n" +
-	"\x05sites\x18\x0e \x03(\v2\x15.glimway.v1.StorySiteR\x05sites\x12*\n" +
-	"\x05spawn\x18\x0f \x01(\v2\x10.glimway.v1.TileB\x02\x18\x01R\x05spawn\x12\x12\n" +
+	"\x05sites\x18\x0e \x03(\v2\x15.glimway.v1.StorySiteR\x05sites\x12\x12\n" +
 	"\x04look\x18\x10 \x01(\tR\x04look\x12\x12\n" +
 	"\x04mark\x18\x11 \x01(\tR\x04mark\x123\n" +
 	"\bentities\x18\x12 \x03(\v2\x17.glimway.v1.WildsEntityR\bentities\x12\x12\n" +
 	"\x04tier\x18\x13 \x01(\rR\x04tier\x12\x12\n" +
 	"\x04land\x18\x14 \x01(\tR\x04land\x122\n" +
-	"\x06places\x18\x15 \x03(\v2\x1a.glimway.v1.WildsPlaceMarkR\x06places\"T\n" +
+	"\x06places\x18\x15 \x03(\v2\x1a.glimway.v1.WildsPlaceMarkR\x06placesJ\x04\b\x02\x10\x03J\x04\b\f\x10\rJ\x04\b\x0f\x10\x10R\x06regionR\x05exitsR\x05spawn\"T\n" +
 	"\x0eWildsPlaceMark\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x0e\n" +
@@ -2578,18 +2538,17 @@ const file_glimway_v1_wilds_proto_rawDesc = "" +
 	"\aenemies\x18\x05 \x03(\tR\aenemies\x12\x1a\n" +
 	"\bmaterial\x18\x06 \x01(\tR\bmaterial\x12\x12\n" +
 	"\x04tier\x18\a \x01(\rR\x04tier\x12\x10\n" +
-	"\x03poi\x18\b \x01(\tR\x03poi\"\x89\x02\n" +
+	"\x03poi\x18\b \x01(\tR\x03poi\"\xf9\x01\n" +
 	"\n" +
 	"WildsEpoch\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
-	"world_seed\x18\x02 \x01(\tR\tworldSeed\x12\x1f\n" +
-	"\tregion_id\x18\x03 \x01(\tB\x02\x18\x01R\bregionId\x12+\n" +
+	"world_seed\x18\x02 \x01(\tR\tworldSeed\x12+\n" +
 	"\x11generator_version\x18\x04 \x01(\rR\x10generatorVersion\x12\x16\n" +
 	"\x06season\x18\x05 \x01(\tR\x06season\x12\x1b\n" +
 	"\tstarts_at\x18\x06 \x01(\x01R\bstartsAt\x125\n" +
 	"\aends_at\x18\a \x01(\v2\x1c.google.protobuf.DoubleValueR\x06endsAt\x12\x12\n" +
-	"\x04kind\x18\b \x01(\tR\x04kind\"\xe3\x01\n" +
+	"\x04kind\x18\b \x01(\tR\x04kindJ\x04\b\x03\x10\x04R\tregion_id\"\xe3\x01\n" +
 	"\x10WildsEntityState\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05cycle\x18\x02 \x01(\x01R\x05cycle\x12\x14\n" +
@@ -2619,7 +2578,7 @@ const file_glimway_v1_wilds_proto_rawDesc = "" +
 	"\x0eEchoAssignment\x12\x12\n" +
 	"\x04site\x18\x01 \x01(\tR\x04site\x12\x16\n" +
 	"\x06member\x18\x02 \x01(\tR\x06member\x12\x18\n" +
-	"\asettled\x18\x03 \x01(\bR\asettled\"\xf6\x03\n" +
+	"\asettled\x18\x03 \x01(\bR\asettled\"\xfa\x03\n" +
 	"\x11WildsRegionResult\x12,\n" +
 	"\x05epoch\x18\x01 \x01(\v2\x16.glimway.v1.WildsEpochR\x05epoch\x128\n" +
 	"\bentities\x18\x02 \x03(\v2\x1c.glimway.v1.WildsEntityStateR\bentities\x12G\n" +
@@ -2630,7 +2589,7 @@ const file_glimway_v1_wilds_proto_rawDesc = "" +
 	"\x06echoes\x18\a \x03(\v2\x1a.glimway.v1.EchoAssignmentR\x06echoes\x1a<\n" +
 	"\x0eMaterialsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01\"?\n" +
+	"\x05value\x18\x02 \x01(\x01R\x05value:\x028\x01:\x02\x18\x01\"?\n" +
 	"\rWildsFrontier\x12.\n" +
 	"\x04rect\x18\x01 \x01(\v2\x1a.glimway.v1.WildsChunkRectR\x04rect\"f\n" +
 	"\fGroundChange\x12\x0e\n" +
@@ -2776,52 +2735,50 @@ var file_glimway_v1_wilds_proto_depIdxs = []int32{
 	0,  // 0: glimway.v1.Exit.dir:type_name -> glimway.v1.Dir
 	2,  // 1: glimway.v1.Exit.entry:type_name -> glimway.v1.Tile
 	1,  // 2: glimway.v1.StorySite.kind:type_name -> glimway.v1.SiteKind
-	3,  // 3: glimway.v1.WildsChunk.exits:type_name -> glimway.v1.Exit
-	4,  // 4: glimway.v1.WildsChunk.decor:type_name -> glimway.v1.DecorList
-	5,  // 5: glimway.v1.WildsChunk.sites:type_name -> glimway.v1.StorySite
-	2,  // 6: glimway.v1.WildsChunk.spawn:type_name -> glimway.v1.Tile
-	10, // 7: glimway.v1.WildsChunk.entities:type_name -> glimway.v1.WildsEntity
-	7,  // 8: glimway.v1.WildsChunk.places:type_name -> glimway.v1.WildsPlaceMark
-	32, // 9: glimway.v1.WildsEpoch.ends_at:type_name -> google.protobuf.DoubleValue
-	33, // 10: glimway.v1.WildsEntityState.by:type_name -> google.protobuf.StringValue
-	32, // 11: glimway.v1.WildsEntityState.at:type_name -> google.protobuf.DoubleValue
-	33, // 12: glimway.v1.WildsLantern.lit_by:type_name -> google.protobuf.StringValue
-	32, // 13: glimway.v1.WildsLantern.lit_at:type_name -> google.protobuf.DoubleValue
-	11, // 14: glimway.v1.WildsRegionResult.epoch:type_name -> glimway.v1.WildsEpoch
-	12, // 15: glimway.v1.WildsRegionResult.entities:type_name -> glimway.v1.WildsEntityState
-	13, // 16: glimway.v1.WildsRegionResult.personal_claims:type_name -> glimway.v1.WildsPersonalClaim
-	14, // 17: glimway.v1.WildsRegionResult.discoveries:type_name -> glimway.v1.WildsDiscovery
-	15, // 18: glimway.v1.WildsRegionResult.lanterns:type_name -> glimway.v1.WildsLantern
-	30, // 19: glimway.v1.WildsRegionResult.materials:type_name -> glimway.v1.WildsRegionResult.MaterialsEntry
-	16, // 20: glimway.v1.WildsRegionResult.echoes:type_name -> glimway.v1.EchoAssignment
-	9,  // 21: glimway.v1.WildsFrontier.rect:type_name -> glimway.v1.WildsChunkRect
-	19, // 22: glimway.v1.GroundChanges.changes:type_name -> glimway.v1.GroundChange
-	8,  // 23: glimway.v1.ChunkGroundChanges.chunk:type_name -> glimway.v1.WildsChunkKey
-	20, // 24: glimway.v1.ChunkGroundChanges.changes:type_name -> glimway.v1.GroundChanges
-	8,  // 25: glimway.v1.WildsGlimpse.chunk:type_name -> glimway.v1.WildsChunkKey
-	23, // 26: glimway.v1.WildsWay.path:type_name -> glimway.v1.WorldTile
-	23, // 27: glimway.v1.WildsWay.sign_a:type_name -> glimway.v1.WorldTile
-	23, // 28: glimway.v1.WildsWay.sign_b:type_name -> glimway.v1.WorldTile
-	11, // 29: glimway.v1.WildsNearResult.still:type_name -> glimway.v1.WildsEpoch
-	11, // 30: glimway.v1.WildsNearResult.wick:type_name -> glimway.v1.WildsEpoch
-	18, // 31: glimway.v1.WildsNearResult.frontier:type_name -> glimway.v1.WildsFrontier
-	8,  // 32: glimway.v1.WildsNearResult.center:type_name -> glimway.v1.WildsChunkKey
-	12, // 33: glimway.v1.WildsNearResult.entities:type_name -> glimway.v1.WildsEntityState
-	13, // 34: glimway.v1.WildsNearResult.personal_claims:type_name -> glimway.v1.WildsPersonalClaim
-	14, // 35: glimway.v1.WildsNearResult.discoveries:type_name -> glimway.v1.WildsDiscovery
-	15, // 36: glimway.v1.WildsNearResult.lanterns:type_name -> glimway.v1.WildsLantern
-	16, // 37: glimway.v1.WildsNearResult.echoes:type_name -> glimway.v1.EchoAssignment
-	21, // 38: glimway.v1.WildsNearResult.ground:type_name -> glimway.v1.ChunkGroundChanges
-	31, // 39: glimway.v1.WildsNearResult.materials:type_name -> glimway.v1.WildsNearResult.MaterialsEntry
-	22, // 40: glimway.v1.WildsNearResult.glimpse:type_name -> glimway.v1.WildsGlimpse
-	24, // 41: glimway.v1.WildsNearResult.ways:type_name -> glimway.v1.WildsWay
-	27, // 42: glimway.v1.WildsLoot.materials:type_name -> glimway.v1.WildsMaterial
-	33, // 43: glimway.v1.WildsLoot.trinket:type_name -> google.protobuf.StringValue
-	44, // [44:44] is the sub-list for method output_type
-	44, // [44:44] is the sub-list for method input_type
-	44, // [44:44] is the sub-list for extension type_name
-	44, // [44:44] is the sub-list for extension extendee
-	0,  // [0:44] is the sub-list for field type_name
+	4,  // 3: glimway.v1.WildsChunk.decor:type_name -> glimway.v1.DecorList
+	5,  // 4: glimway.v1.WildsChunk.sites:type_name -> glimway.v1.StorySite
+	10, // 5: glimway.v1.WildsChunk.entities:type_name -> glimway.v1.WildsEntity
+	7,  // 6: glimway.v1.WildsChunk.places:type_name -> glimway.v1.WildsPlaceMark
+	32, // 7: glimway.v1.WildsEpoch.ends_at:type_name -> google.protobuf.DoubleValue
+	33, // 8: glimway.v1.WildsEntityState.by:type_name -> google.protobuf.StringValue
+	32, // 9: glimway.v1.WildsEntityState.at:type_name -> google.protobuf.DoubleValue
+	33, // 10: glimway.v1.WildsLantern.lit_by:type_name -> google.protobuf.StringValue
+	32, // 11: glimway.v1.WildsLantern.lit_at:type_name -> google.protobuf.DoubleValue
+	11, // 12: glimway.v1.WildsRegionResult.epoch:type_name -> glimway.v1.WildsEpoch
+	12, // 13: glimway.v1.WildsRegionResult.entities:type_name -> glimway.v1.WildsEntityState
+	13, // 14: glimway.v1.WildsRegionResult.personal_claims:type_name -> glimway.v1.WildsPersonalClaim
+	14, // 15: glimway.v1.WildsRegionResult.discoveries:type_name -> glimway.v1.WildsDiscovery
+	15, // 16: glimway.v1.WildsRegionResult.lanterns:type_name -> glimway.v1.WildsLantern
+	30, // 17: glimway.v1.WildsRegionResult.materials:type_name -> glimway.v1.WildsRegionResult.MaterialsEntry
+	16, // 18: glimway.v1.WildsRegionResult.echoes:type_name -> glimway.v1.EchoAssignment
+	9,  // 19: glimway.v1.WildsFrontier.rect:type_name -> glimway.v1.WildsChunkRect
+	19, // 20: glimway.v1.GroundChanges.changes:type_name -> glimway.v1.GroundChange
+	8,  // 21: glimway.v1.ChunkGroundChanges.chunk:type_name -> glimway.v1.WildsChunkKey
+	20, // 22: glimway.v1.ChunkGroundChanges.changes:type_name -> glimway.v1.GroundChanges
+	8,  // 23: glimway.v1.WildsGlimpse.chunk:type_name -> glimway.v1.WildsChunkKey
+	23, // 24: glimway.v1.WildsWay.path:type_name -> glimway.v1.WorldTile
+	23, // 25: glimway.v1.WildsWay.sign_a:type_name -> glimway.v1.WorldTile
+	23, // 26: glimway.v1.WildsWay.sign_b:type_name -> glimway.v1.WorldTile
+	11, // 27: glimway.v1.WildsNearResult.still:type_name -> glimway.v1.WildsEpoch
+	11, // 28: glimway.v1.WildsNearResult.wick:type_name -> glimway.v1.WildsEpoch
+	18, // 29: glimway.v1.WildsNearResult.frontier:type_name -> glimway.v1.WildsFrontier
+	8,  // 30: glimway.v1.WildsNearResult.center:type_name -> glimway.v1.WildsChunkKey
+	12, // 31: glimway.v1.WildsNearResult.entities:type_name -> glimway.v1.WildsEntityState
+	13, // 32: glimway.v1.WildsNearResult.personal_claims:type_name -> glimway.v1.WildsPersonalClaim
+	14, // 33: glimway.v1.WildsNearResult.discoveries:type_name -> glimway.v1.WildsDiscovery
+	15, // 34: glimway.v1.WildsNearResult.lanterns:type_name -> glimway.v1.WildsLantern
+	16, // 35: glimway.v1.WildsNearResult.echoes:type_name -> glimway.v1.EchoAssignment
+	21, // 36: glimway.v1.WildsNearResult.ground:type_name -> glimway.v1.ChunkGroundChanges
+	31, // 37: glimway.v1.WildsNearResult.materials:type_name -> glimway.v1.WildsNearResult.MaterialsEntry
+	22, // 38: glimway.v1.WildsNearResult.glimpse:type_name -> glimway.v1.WildsGlimpse
+	24, // 39: glimway.v1.WildsNearResult.ways:type_name -> glimway.v1.WildsWay
+	27, // 40: glimway.v1.WildsLoot.materials:type_name -> glimway.v1.WildsMaterial
+	33, // 41: glimway.v1.WildsLoot.trinket:type_name -> google.protobuf.StringValue
+	42, // [42:42] is the sub-list for method output_type
+	42, // [42:42] is the sub-list for method input_type
+	42, // [42:42] is the sub-list for extension type_name
+	42, // [42:42] is the sub-list for extension extendee
+	0,  // [0:42] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_wilds_proto_init() }
