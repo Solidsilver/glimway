@@ -1,8 +1,8 @@
 # A continuous Hearthwick
 
-2026-10-11. Place design for the owner, based on this worktree (`c1789ed`). Proposals below are for comparison, not new owner decisions. No source changes or playtests in this pass.
+2026-10-11. Place design for the owner, based on this worktree (`c1789ed`). The original proposals remain for comparison; “A, as chosen” records the owner’s revision. No additional owner decisions are implied. No source changes or playtests in this pass.
 
-**Recommendation: A, a compact square with the Commons immediately north.** Keep the Tangle where it is. Give the opening a clear east road, reserve a real housing district west, and let a later west road reach changing country. Hearthwick should feel like people keeping one small place together beside land that will not stay put.
+**Chosen: A, a compact square with the Commons immediately north and wider roads between districts.** Keep the Tangle where it is. Give the opening a clear east road, reserve a real housing district west, and let a later west road reach changing country. Hearthwick should feel like people keeping one small place together beside land that will not stay put.
 
 | Layout | Centre and first impression | Roads out, eventually | Homes and growth | Main trade-off |
 | --- | --- | --- | --- | --- |
@@ -64,6 +64,103 @@ Sources: [worlds builder](../../src/game/worlds.ts), [Commons builder](../../src
 Generated frontier land exists beside the Tangle, but **nothing is generated south of chunk row 0 today**. Every pictured village, field, plot reserve and story wood at y≥1 is proposed fixed authored ground. A future road beyond those reservations needs an explicit frontier/route change; a line in a sketch does not open generated land. Keep the existing Wilds coordinates, discoveries and paths.
 
 Sketches show the dominant use of each chunk; buildings and paths can cross their lines. Blank cells are outside this proposal. `T` = Tangle; `C` = Commons; `Y` = Yard/office; `S` = square; `G` = green; `X` = crossroads; `H` = existing house frontage; `B` = bakery; `L` = library; `A` = Ada; `M` = mill/pond; `F` = field/orchard/verge; `W` = Brackenwood reserve; `R` = Ashwatch reserve; `P` = future housing reserve, not one home per chunk. `v` marks the real Wilds opening. Roads within/between cells are described below.
+
+### A, as chosen
+
+The owner's compact square stays **18×14 usable tiles**, with no through road across it. Give its home frontage, the Commons, the working side, the bread/book side and the western housing entrance distinct edges using **six-tile roads**. This is A's geography with room for a cart and two neighbours to pass outside the square, rather than C's central crossing. The original A, B and C below remain the comparison record; this subsection and section 7 govern the chosen blockout.
+
+**Tile-scale centre:** one character is **one world tile**; north is up. Every row is labelled with world y. The brackets are drawing borders, not tiles. The 57 columns inside them run from **x=-12 at the left to x=44 at the right**. The drawing crops the western housing approach and the eastern story road; their continuations are specified below. Roof letters indicate reserved footprints, not new mandatory buildings. Blank tiles are verges or clear ground, not unavailable land.
+
+```text
+   x=-12                                                x=44
+   N ^
+24 [             ggg                                         ]
+25 [            ||||                                         ]
+26 [            ||||    e                                    ]
+27 [            ||||                                         ]
+28 [            ||||||                                       ]
+29 [            ||||||                                       ]
+30 [CCCCCCCCCCCC||||||CCCCCCCCCCCCCCC                        ]
+31 [CCCCCCCCCCCC||||||CCCCCCCCCCCCCCC                        ]
+32 [CCCCCCCCCCCC||||||CCCCCCCCCCCCCCC                        ]
+33 [CCCCCCCCCCCC||||||CCCCCCCCCCCCCCC                        ]
+34 [CCCCCCCCCCCC||||||CCCCCCCCCCCCCCC                        ]
+35 [CCCCCCCCCCCC||||||CCCCCCCCCCCCCCC                        ]
+36 [CCCCCCCCCCCC||||||CCCCCCCCCCCCCCC                        ]
+37 [CCCCCCCCCCCC||||||CCCCCCCCCCCCCCC                        ]
+38 [CCCCCCCCCCCC||||||CCCCCCCCCCCCCCC                        ]
+39 [CCCCCCCCCCCC||||||CCCCCCCCCCCCCCC                        ]
+40 [CCCCCCCCCCCC||||||CCCCCCCCCCCCCCC|||||| YYYYYYYYYYYY     ]
+41 [CCCCCCCCCCCC||||||CCCCCCCCCCCCCCC|||||| YYYYYYYYYYYY     ]
+42 [CCCCCCCCCCCC||||||CCCCCCCCCCCCCCC||||||::YYYYYYYYYYY     ]
+43 [CCCCCCCCCCCC||||||CCCCCCCCCCCCCCC|||||| YYYYYYYYYYYY     ]
+44 [CCCCCCCCCCCC||||||CCCCCCCCCCCCCCC|||||| YYYYYYYYYYYY     ]
+45 [CCCCCCCCCCCC||||||CCCCCCCCCCCCCCC|||||| YYYYYYYYYYYY     ]
+46 [CCCCCCCCCCCC||||||CCCCCCCCCCCCCCC|||||| YYYYYYYYYYYY     ]
+47 [CCCCCCCCCCCC||||||CCCCCCCCCCCCCCC|||||| YYYYYYYYYYYY     ]
+48 [CCCCCCCCCCCC||||||CCCCCCCCCCCCCCC|||||| YYYYYYYYYYYY     ]
+49 [CCCCCCCCCCCC||||||CCCCCCCCCCCCCCC||||||                  ]
+50 [      ++++++=====================++++++                  ]
+51 [      ++++++=====================++++++                  ]
+52 [      ++++++=====================++++++                  ]
+53 [      ++++++=====================++++++                  ]
+54 [      ++++++=====================++++++                  ]
+55 [      ++++++=====================++++++                  ]
+56 [      ||||||         :::         ||||||                  ]
+57 [      ||||||   hhhhhh:::rrrrrrr  |||||| AAAAAAAAAAA      ]
+58 [      ||||||   hhhhhh:::rrrrrrr  |||||| AAAAAAAAAAA      ]
+59 [BBBBBB||||||   hhhhhh:::rrrrrrr  |||||| AAAAAAAAAAA      ]
+60 [BBBBBB||||||   hhhhhh:::rrrrrrr  |||||| AAAAAAAAAAA      ]
+61 [BBBBBB||||||   hhhhhh:::rrrrrrr  |||||| AAAAAAAAAAA      ]
+62 [BBBBBB||||||         :::         |||||| AAAAAAAAAAA      ]
+63 [BBBBBB|||||| ssssssssssssssssss  |||||| AAAAAAAAAAA      ]
+64 [BBBBBB|||||| ssssssssssssssssss  |||||| AAAAAAAAAAA      ]
+65 [BBBBB:|||||| ssssssssssssssssss  |||||| AAAAAAAAAAA      ]
+66 [BBBBBB|||||| ssssssssssssssssqs::||||||                  ]
+67 [BBBBBB|||||| ssssssssssssssssss  ||||||==================]
+68 [      |||||| ssssssssssssssssss  ||||||==================]
+69 [      |||||| ssssssssssssssssss  ||||||==================]
+70 [      ||||||:sssssssssossssssss  ||||||==================]
+71 [      |||||| ssssssssssssssssss  ||||||==================]
+72 [======|||||| ssssssssssssssssss  ||||||==================]
+73 [======|||||| ssssssssssssssssss  ||||||                  ]
+74 [======|||||| ssssssssssssssssss  ||||||                  ]
+75 [======|||||| ssssssssssssssssss  ||||||                  ]
+76 [======|||||| ssssssssssssssssss  ||||||             ~~~~~]
+77 [======||||||                     ||||||             ~~~~~]
+78 [      ||||||                     ||||||             ~~~~~]
+79 [LLLLLL||||||                     ||||||             ~~~~~]
+80 [LLLLLL||||||    ppppppppppppp    ||||||             ~~~~~]
+81 [LLLLLL||||||    ppppppppppppp    ||||||  mmmmmmmmm  ~~~~~]
+82 [LLLLL:||||||    ppppppppppppp    ||||||  mmmmmmmmm  ~~~~~]
+83 [LLLLLL||||||    ppppppppppppp    ||||||  mmmmmmmmm  ~~~~~]
+84 [LLLLLL||||||    ppppppppppppp    ||||||  mmmmmmmmm  ~~~~~]
+85 [LLLLLL          ppppppppppppp    ||||||::mmmmmmmmm  ~~~~~]
+86 [LLLLLL          ppppppppppppp    ||||||  mmmmmmmmm  ~~~~~]
+87 [                                 ||||||  mmmmmmmmm  ~~~~~]
+88 [                                 ||||||             ~~~~~]
+```
+
+`g` = real Tangle mouth; `e` = Elara's pack/cold fire; `C` = Commons ground; `Y` = Yard/Pell; `B` = bakery; `L` = library; `h` = middle-house frontage; `r` = later workshop/guildhouse frontage reserve; `A` = Ada's house; `s` = quiet square; `o` = well/lamp/Mara group anchor; `q` = Orrin/crooked post; `p` = Pip's fenced garden; `m` = mill; `~` = pond bank reserve. `=` and `|` are horizontal and vertical road tiles, `+` their junctions, and `:` short walking doorways/approaches. Each six-tile strip includes six clear traversable tiles; verges, props and festival stalls sit outside it.
+
+**Exact edges and roads:** coordinates are inclusive. The square is x=1..18, y=63..76, with its homes immediately north, y=57..61. A three-tile walking gap at x=9..11 connects its north lip to Hame Way. Its west and east walking openings reach Hearth Lane and Mill Way; neither road continues through the square. Mara's ledger, the well, lamp and Hazel's bench keep their small conversation group; Orrin stays at (17,66), facing the eastern opening. Pip's garden below the square has its own rail and walking entrance.
+
+| Road | Width, surface and course | Where it leads; what lines it |
+| --- | --- | --- |
+| **Hame Way** | Six cobbled tiles, x=-6..26, y=50..55 | Separates the Commons north from the square's homes south. Connects Hearth Lane to Mill Way/Yard; hame posts, the Commons board and low oaks on its north edge, middle-house windows and reserved workshop/guildhouse frontage south. The market apron stays within Commons, clear of this road. |
+| **Hearth Lane** | Six cobbled tiles, x=-6..-1, y=50..84 | Runs along the square's west edge, separating its homes and garden from the bakery/library side. Bread baskets, Hazel's warm door and the book gable face its western verge; bench and garden rail face it across the road. North to Hame Way, west to the home district, south to the library/garden end; no southern wilderness exit. |
+| **Mill Way** | Six cart-worn tiles, x=21..26, y=40..88 | Separates square/home ground west from the working side east: Yard/Pell north, Ada above the east road, Finn's mill/pond south. Timber stacks, a sawhorse, Ada's window and the wheel mark successive approaches. Short clear paths reach the Yard door and mill door. Ends at the maintained race/quay; keep the usable fishing bank and kiln space behind Finn, not a fourth outward road. |
+| **Lantern Road** | Six cobbled tiles in town, x=27..47, y=67..72, centreline y=70; roughens into the authored woods east | Leaves Mill Way beside Orrin's east-facing post, with Ada's lit window north and pond verge south. Safety posts at x=47 lead to Brackenwood's entry near (50,70), finger-wisp near (55,70), then the existing lamps, bridge and Ashwatch breach. Preserve the bounded story route and reveal order; town decoration stops before its first story lamp. |
+| **West Road** | Six cart-worn tiles, x=-48..-7, y=72..77, centreline y=75 | Branches from Hearth Lane between bakery and library to the H1 entrance at x=-48. Orchard rails, a home-direction sign and vacant meadow line it. Tapers into the eight-tile first housing cross-lane, y=72..79, farther west. Leads through public housing lanes to a closed outer field gate; the later west destination opens first, after Lantern Road and its own content/frontier work. |
+| **Tangle Lane** | Real three-tile mouth x=1..3 at y=24; four-tile approach x=0..3, y=25..27, then six-tile Commons apron/lane x=0..5, y=28..49 | Goes north from Hame Way through the Commons to the unchanged Wilds opening. Elara's pack/cold fire lies east near (8,26); second well, board, benches and the carters' apron distinguish this district from the square. Current plot gates/signs/shelves stay on its sheltered side lane until H1 supplies real entrances. |
+
+**Frame and reservations:** retain Tangle chunks x=-1..1, y=-2..0 and the stored gate at local x=1..3, y=23; the first authored tile below it is world y=24. None of these roads moves that mouth or implies generated ground south of chunk row 0. Keep Brackenwood/Ashwatch in the eastern fixed reserves described in section 7 and H1 in chunks x=-6..-2, y=1..9, with the same eight 48×48 envelopes and public lanes from section 3. Preserve all building/quest/home identities and paid, repaired or found states. The future guildhouse/workshop fronts and kiln remain reservations; the real Wilds frame, safety edges and Turning rules in section 4 still apply.
+
+**Arrival and guidance:** spawn at (4,70), on the square's west lip after Hearth Lane, facing the lamp and Orrin; a walking approach to the post is about seventeen tiles. Bread is behind/left, the leaning post ahead/right. The opening sequence in section 6 is unchanged, with the HUD pin and strongest eastward cue at Orrin. Tangle Lane remains physically open during the tutorial. The north and west junction signs sit outside the square, so its first view does not present four equal departures. Show town and its named public roads on the map from arrival, retaining discovery rules for papers and the Wilds.
+
+**Mounts and pace:** width gives carts and led mounts room; it does not grant town riding. Lead mounts on Hame Way, Hearth Lane, Mill Way and the town portions of Lantern Road and West Road, plus square, doors, garden and pond paths. Ride on the Commons side of Hame Way (Tangle Lane from y=49 north), housing public lanes beyond x=-48, and adventure roads beyond the visible safety boundaries. Put dismount/lead posts at those town-zone edges, distinct from safety posts: Commons and housing are safe even where riding is allowed. Section 7 recalculates the walks and these mixed walking/riding journeys.
+
+**On a phone:** the wider strips make district edges readable, while lamps, baskets, timber and the book gable mark the next turn every **8–12 tiles** along each approach. Break a long straight verge with a low sign, bank bend or lamp within that interval; keep those props out of the six clear road tiles and below the door sightline. Each junction reveals one district landmark before the next turn, and the square still groups its conversations within six to eight tiles rather than asking a phone to frame the whole centre.
 
 ### A. Square and Commons — recommended
 
@@ -147,7 +244,7 @@ chunk x  -6  -5  -4  -3  -2  -1   0   1   2   3   4   5   6
 
 ## 3. Real room for H1
 
-Use the same reserve in all three sketches so the alternatives compare village shape, not home capacity. **Eight is a provisional layout, not a cap or an owner decision.** Count existing homes before making it binding; reserve more branches if necessary. Joint members share one home. No existing deed is displaced by these sketches.
+Use the same reserve in all three sketches so the alternatives compare village shape, not home capacity. **Eight slots are accepted for this initial layout, not a cap on existing homes.** Count existing homes before making it binding; reserve more branches if necessary. Joint members share one home. No existing deed is displaced by these sketches.
 
 Reserve chunks **x=-6..-2, y=1..9**: 120×216 tiles. Within it, arrange two columns of four **48×48 envelopes**, with **eight public tiles between envelopes**. Two columns use 104 tiles; four rows use 216. Each envelope contains today's 40×30 home with margins; the envelope need not align with chunk lines. This retains the earlier spacing proposal instead of packing eight homes into eight chunks.
 
@@ -155,7 +252,7 @@ For a concrete A packing, envelope north-west tiles are x=-136 and -80; y=24,80,
 
 Keep cottage/site footprints, clearings, furniture, plants and stable positions in home-local space. Signs/shelves move to each entrance at H1; until then the Commons gates keep those jobs. Do not populate empty reserved slots with compulsory houses: show orchard, meadow or rough common ground and open a branch as people settle. Public lanes remain usable through desolation and vacancy, and never become someone else's garden. A lapsed district lot can stay a reusable fixed lot; the separate vacancy rule for future Wilds claims still needs its own decision.
 
-This layout is deliberately rural at its far end: the closest gate is about twelve seconds from the square on foot; the eighth is about forty-three. Start with the near row. If the owner wants every home within fifteen seconds, choose fewer initial lots or a wider, shallower district, rather than squeezing 40×30 plots down to decorative doors.
+This layout is deliberately rural at its far end: the closest gate is about thirteen seconds from the square on foot; the eighth is about forty-three. Start with the near row. If the owner wants every home within fifteen seconds, choose fewer initial lots or a wider, shallower district, rather than squeezing 40×30 plots down to decorative doors.
 
 H3 stays possible because a home keeps its identity when its location changes. Later remote settlement is a move of that home, not a second free property. Reserve no remote claims in this village drawing. After Lamps, prove native land and its public approach survive a turning before offering moves, including joint-member approval and incompatible placements.
 
@@ -205,28 +302,30 @@ Do not route several roads directly into the ruin or around the bridge/Warden se
 
 Current hero speed is **110 world px/s**, or **6.875 tiles/s**; riding is **155 px/s**, or **9.6875 tiles/s**. A tile is 16 px. One 24-tile chunk takes about **3.5 seconds on foot / 2.5 ridden** on unobstructed ordinary ground. These are calculations from [hero motion](../../src/game/entities/hero.ts) and [tile units](../../src/lib/tile.ts), not measured playtest times. Laid paths give a 15% boost in Wilds; fords halve speed. Do not assume a speed boost on village paving.
 
-For A, these proposed world-tile anchors make its proportions testable: square lamp/meeting point near (10,70); Orrin near (17,66); bakery doorstep (-8,65); library doorstep (-8,78); Yard doorstep (32,42); mill doorstep (33,83). Bring the rest of each small interaction group with its anchor, rather than stretching its props across a chunk.
+For **A, as chosen**, use these world-tile anchors with the tile sketch in section 2: spawn (4,70); square lamp/meeting point (10,70); Orrin (17,66); bakery doorstep (-8,65); library doorstep (-8,82); Yard doorstep (32,42); mill doorstep (33,85). The library and mill move a few tiles to face their wider road approaches. Bring each small interaction group with its anchor, preserving open door steps and routine paths.
 
 Reserve Brackenwood in x=2..4, y=2..3; a translation of its current terrain from origin (48,55) puts entry near (50,70) and east exit near (103,77). Reserve Ashwatch in x=5..6, y=2..3; origin (120,64) aligns its breach at (120,77). A short authored track crosses the spare eastern woodland margin between them. This is a concrete fit, not a requirement to retain every tree. Neither rectangle overlaps Tangle or housing.
 
-| A route | Proposed routed distance | Foot time | Riding comparison where allowed |
+For distance checks, route west errands through Hearth Lane's centreline x=-4, working-side errands through Mill Way's x=23, north through (10,53) → (2,53) → (2,24), and housing through (-4,75) onto the first public cross-lane. The near east-column gate is around (-56,57); the far south-west gate is around (-112,225). The far route follows the housing spine near x=-84 to the lower public frontage near y=229, then turns west to its gate: about 285 tiles plus seven tiles of entrance/apron bends. These walking approaches stay within the reserved envelopes' margins and public gaps, clear of private interiors.
+
+| A, as chosen: route | Proposed routed distance | Foot time | With a mount, where riding is allowed |
 | --- | --- | --- | --- |
-| First spawn → Orrin | 12–18 tiles | 2–3 s | Lead on foot |
-| Square → bakery / library | 23 / 26 tiles | 3–4 s | Lead on foot |
-| Square → mill | 36 tiles | 5 s | Lead on foot |
-| Bakery → mill | 59 tiles | 9 s | Lead on foot |
-| Square → Yard | About 50 tiles with lane bends | 7 s | About 6 s, including the walking town section |
-| Square → Tangle mouth | About 54 tiles | 8 s | About 6 s, including the walking town section |
-| Orrin → finger-wisp | About 41 tiles | 6 s | About 5 s, including the walking town section |
-| Square → Ashwatch breach | About 135–145 tiles along the winding route | 20–21 s | About 15–16 s, including the walking town section |
-| Square → nearest H1 gate | About 80 tiles | 12 s | About 9–10 s, including the walking town section |
-| Square → farthest of eight H1 gates | About 292 tiles via public lanes | 43 s | About 31 s, including the walking town section |
+| First spawn → Orrin | About 17 tiles on the square's walking path | About 3 s | Lead on foot |
+| Square → bakery / library | 23 / 30 tiles via Hearth Lane | 3–4 / 4–5 s | Lead on foot |
+| Square → mill | 38 tiles via Mill Way | About 6 s | Lead on foot |
+| Bakery → mill | 61 tiles via the square's walking path and Mill Way | About 9 s | Lead on foot |
+| Square → Yard | 50 tiles via Mill Way | About 7 s | Lead on foot; Yard approach is in town |
+| Square → Tangle mouth | 54 tiles via Hame Way and Commons | About 8 s | About 7 s: 29 walking + 25 ridden tiles |
+| Orrin → finger-wisp | About 42 tiles via Mill Way/Lantern Road | About 6 s | About 6 s: 34 walking + 8 ridden tiles; tutorial stays on foot |
+| Square → Ashwatch breach | About 135–145 tiles along the winding story route | 20–21 s | About 16–17 s: 37 walking + 98–108 ridden tiles |
+| Square → nearest H1 gate | About 89 tiles via West Road and first cross-lane | About 13 s | About 12 s: 63 walking + 26 ridden tiles |
+| Square → farthest of eight H1 gates | About 292 tiles via the public spine/lower frontage | About 43 s | About 33 s: 63 walking + 229 ridden tiles |
 
-Allow additional time for looking, collision detours, conversations, fights and doors. These are route budgets for the proposed drawing. In B, target square-equivalent errands at 40–70 tiles; C can match A's core distances but needs protected conversation pockets. Actual path lengths must be checked when blocking out the chosen layout.
+Times divide the walking/ridden lengths by the speeds above, rounded for planning; there is no town paving bonus. Allow additional time for looking, collision detours, conversations, fights and doors. These are route budgets for the chosen drawing, not playtest results. In the retained B proposal, target square-equivalent errands at 40–70 tiles; C can match A's core distances but needs protected conversation pockets. Check actual lengths when blocking out the chosen layout.
 
-**Mounts:** today's entire `village` dismounts players; Commons/Wilds allow riding and rooms do not. Preserve that feel as a named, visible town zone covering the square, shops, garden and pond paths. Lead mounts through it; allow riding on Commons and housing public lanes. Mark the zone entrances with paving/low posts. The table's ridden journeys include a walking town segment, provisionally 25–35 tiles; they are not blanket ridden times or a proposal to lift Orrin's rule. Wider village paths must still fit a led mount and a friend.
+**Mounts:** today's entire `village` dismounts players; Commons/Wilds allow riding and rooms do not. Preserve the owner's on-foot town zone across **all five broad town roads**: Hame Way, Hearth Lane, Mill Way, Lantern Road through x=47, and West Road through x=-48, as well as the square, shops, garden and pond paths. Allow riding on Tangle Lane/the Commons north of Hame Way (from y=49), housing public approaches west of the x=-48 lead posts, and outdoor adventure routes beyond town. Mark the transitions with low posts/paving, without implying that a riding boundary is also a safety boundary. The table uses each route's actual walking segment; road width alone never lifts Orrin's rule.
 
-**Density:** a busy centre within roughly 32×24 tiles, three to four clear tiles on ordinary streets, six at busy door/board aprons. Keep roofs compact, windows varied, gardens irregular. Chunk reserves include verges and future frontage; filling every tile with shops would turn this into a town. Put optional papers in reachable quiet corners, not behind a new uncuttable border.
+**Density:** the compact 18×14 square remains the conversation centre; the broader district roads sit outside it. Keep **six clear tiles** on the named roads, three to four on short walking approaches, and six at busy door/board aprons. The spread of district frontages is deliberate; keep roofs compact, windows varied and gardens irregular rather than filling the new verges with shops. Chunk reserves include future frontage. Put optional papers in reachable quiet corners, not behind a new uncuttable border.
 
 **Phones:** [the current viewport](../../src/game/viewport.ts) shows about twelve tiles across a typical phone's short side before HUD/control insets. The whole square cannot be one screen. Instead make recognisable groups within six to eight tiles: well/lamp/Mara; post/Orrin/east lane; bakery/basket/bench; mill/wheel/race. A direction needs a next visible cue every eight to twelve tiles, not a single skyline roof forty tiles away. Signs and interaction areas must stay clear of canopies and the thumbs.
 
@@ -263,19 +362,10 @@ Keep existing village and home exits as transitions for this slice; retain hame,
 
 The owner playtest should answer four place questions: does leaving feel like walking out of a settlement; is the safe side obvious before crossing; is the return to Elara/Yard/home signs obvious without the map; and does the short north lane feel useful rather than empty? Then check two friends seeing/interacting across it, reload/door returns, phone movement/camera and a turning beside fixed ground. Those are future acceptance walks, not runs performed for this design. The existing seam exploration owns the engineering checks.
 
-If this succeeds, select the village layout and block out its square/streets before H1 fixes lot positions. The village and story road can be extended in complete slices around the agreed steps; do not make a full village rebuild an extra prerequisite to the fights prototype or first crossing. Reserve likely town/story/housing ground before Lamps can hold conflicting land. New outward roads open only when their content and frontier are ready.
+If this succeeds, block out A, as chosen, and its square/streets before H1 fixes lot positions. The village and story road can be extended in complete slices around the agreed steps; do not make a full village rebuild an extra prerequisite to the fights prototype or first crossing. Reserve likely town/story/housing ground before Lamps can hold conflicting land. New outward roads open only when their content and frontier are ready.
 
-## 10. Recommendation and owner questions
+## 10. Chosen direction and remaining work
 
-**Choose A for the blockout and use the existing Commons alignment for the first join.** A keeps the familiar close errand loop, makes the north arch a useful departure place, retains the eastward opening and gives housing room without widening the square into a plaza. Preserve the Tangle and all story/home identities. Keep the Commons name and its carters' character; move gates only when H1 supplies actual entrances. Start with nearby lots, and judge the eight-slot district by its farthest walk before treating it as final.
+**Block out A, as chosen, and use the existing Commons alignment for the first join.** The owner has settled the compact square, distinct Commons, eight-slot initial housing layout and roughly forty-three-second farthest walk, open tutorial Tangle route, west-first later destination, on-foot town zone, future building reservations and map visibility from arrival. The original A/B/C sketches remain the decision record; they do not reopen those choices.
 
-The owner decisions already made—rearrangement allowed, plots gated initially, fights before the join, H1 before remote claims after Lamps—stand. The remaining questions are:
-
-1. **Which feel: A's close square, B's long green or C's busy crossroads?** Recommend A, preserving the bakery/library/pond/signpost character rather than exact old coordinates.
-2. **Keep Commons as a distinct departure/work district?** Recommend yes in A, with its own well, hame and market apron.
-3. **How many homes, and how far should the last one be?** Is an eight-slot rural branch with a roughly forty-three-second foot walk acceptable, or should it be wider/shallower or start with fewer lots? Existing homes must all fit.
-4. **Keep the present Tangle road open during the tutorial?** Recommend open with strong eastward guidance. A hard new tutorial restriction would need a separate decision about friends with different progress.
-5. **Which new outward road should earn its content first?** Recommend A's west road after the Lantern Road story and frontier work; leave south as gardens/mill growth for now. Its destination still needs choosing.
-6. **Retain leading mounts through the town zone?** Recommend yes, with riding on Commons/housing approaches and clear zone entrances.
-7. **Reserve guildhouse/workshop/kiln space without building them now?** Recommend yes. Is any one of their exteriors essential to Hearthwick's first continuous version?
-8. **Show permanent town/public roads on the map from arrival?** Recommend yes, retaining paper secrets and unexplored-Wilds rules; reconcile the outside-Wilds marker behavior with the map branch when continuity lands.
+Preserve the Tangle and all story/home identities, keep the Commons' carters' character, and move plot gates only when H1 supplies actual entrances. Fights still precede the join, H1 precedes remote claims after Lamps, and the first crossing does not require a village rebuild. Implementation must check existing home counts, walk the wider-road blockout on a phone and verify the route budgets. The west destination still needs its own content choice and frontier work before its outer gate opens; workshop/guildhouse/kiln content remains a later pass.
