@@ -1,0 +1,77 @@
+{
+  "date": "2026-10-10",
+  "project": "Fingersnap",
+  "generator": "Codex built-in image generation plus deterministic pixel-art builder",
+  "sharedStyle": "Tangle-inspired woodland fantasy pixel art; 64 texels per 16 px world tile; clean warm-brown outlines; upper-left light; crisp pixel clusters; straight-on three-quarter props; no isometric angle.",
+  "sheets": [
+    {
+      "key": "meadow-props",
+      "source": "source/meadow-props-source.png",
+      "prompt": "Create an isolated transparent 5-column by 4-row source atlas of polished pixel-art fantasy props, no labels or dividers: three tall meadow grass clumps; two low muted wildflower patches; two grey-gold lichen outcrops; a broad round light-green meadow oak with trunk; two fallen stones; three groups of wet riverbank stones; one old weathered dark lamp-stone pillar with a soot-dark niche; and four pale drifting frontier-veil variations with fine threads and a few leaning turncaps. Crisp warm-brown outlines, upper-left light, resident-style straight-on three-quarter top-down prop view, no in-between or isometric angle, no blur or antialiasing, no ground/background, no text, no watermark. Colors fit the Tangle ground palette while meadow greens are warmer and lighter."
+    },
+    {
+      "key": "ground-tiles",
+      "source": "source/ground-tiles-generated.png",
+      "prompt": "Generate an opaque 4x4 atlas of flat top-down seamless pixel-art tiles: row 1 has four variants of warm grey-gold hand-set stones with irregular joints and brown soil; row 2 has two crosswise iron-oak plank variants and two lengthwise variants, with grain, knots, dark nails and uneven ends; row 3 has four distinct larger pale worn Lantern Road stones with moss in joints; row 4 has two broken paving verges sinking into meadow grass, with the last two cells empty. Crisp 1px warm-brown outlines, upper-left light, Tangle palette, no blur, no labels, no dividers."
+    },
+    {
+      "key": "ford-h-0..2 and ford-v-0..2",
+      "source": "source/fords-generated.png",
+      "prompt": "Generate a flat top-down 3:1 shallow river crossing with exactly three large flat grey-gold stepping stones in one row, one centered in each equal tile-width section, each nearly a tile wide. Dark slow grey-green water, pale highlights, warm outline, subtle ripples. No other stones or pebbles anywhere."
+    },
+    {
+      "key": "frontier-veil-0..3",
+      "source": "source/frontier-veil-generated.png",
+      "prompt": "Generate four transparent, vertically stacked 3:1 strips of pale drift: mostly transparent low mist/root-silk threads across the ground, a few small turncaps leaning back. Organic and quiet, not a fence, no taut wires, dashes, rigid posts, banners or cloth. Preserve matching left/right edges; animate the threads subtly."
+    },
+    {
+      "key": "lamp-stone-dark and 2.10 landmark/find props",
+      "source": "source/landmarks-generated.png",
+      "prompt": "A transparent 3x2 source atlas: ancient split iron-oak landmark with hollow roots, tall ring-carved lichen standing stone, closed oilcloth bundle, the same bundle open and empty, blank short way-sign on an iron-oak post, and a whole weathered cut-stone lamp pillar with dark unlit niche and soot. Front-facing in the residents' three-quarter view, crisp pixel art and warm outlines, no text."
+    },
+    {
+      "key": "landmark-split-oak",
+      "source": "source/landmark-split-oak-generated.png",
+      "prompt": "A full-height ancient iron-oak tree landmark as a narrow upright silhouette: the trunk split vertically by an old lightning strike, both halves alive and leafy, a dark hollow between the roots. Taller than ordinary trees; full crown, split trunk and roots clearly visible. Straight-on resident three-quarter view, crisp pixel art, emerald/teal foliage, russet iron-oak bark, warm outline, upper-left light, transparent background, no neighbors, no text, no cropping."
+    },
+    {
+      "key": "icon-map-tab",
+      "source": "source/map-icon-source.png",
+      "method": "Retained from round 1 as a crisp 32x32 folded-map icon with a path mark, in the weight of the game's tab icons."
+    },
+    {
+      "key": "ford-water-round3-generated",
+      "source": "source/ford-water-round3-generated.png",
+      "prompt": "Create a wide 3:1 horizontal top-down pixel-art shallow forest ford water texture, full-bleed opaque dark grey-green teal water with subtle fine flowing ripples and restrained highlights. Absolutely no stones, rocks, pebbles, shoreline, land, objects, text, or repeated grid."
+    },
+    {
+      "key": "ford-crossing-stones-round3",
+      "source": "source/fords-generated.png",
+      "prompt": "Create exactly three large broad flat stepping stones in one horizontal row, one centered in each of three equal tile-width sections. Each almost fills its tile width. Muted warm grey stone tops with wet dark sides and modest moss, top-down crisp pixel art. No other stones."
+    },
+    {
+      "key": "standing-stone-round3-generated",
+      "source": "source/standing-stone-round3-generated.png",
+      "prompt": "Single isolated tall narrow ancient standing stone, full height, slightly leaning with a solid base, muted grey-brown carved stone, lichen and one carved ring near the top. Transparent background. No foliage, grass, extra rocks, debris, text, or shadows."
+    },
+    {
+      "key": "way-sign-round3-generated",
+      "source": "source/way-sign-round3-generated.png",
+      "prompt": "Single isolated straight-on upright wooden way-sign with a sturdy post and one blank readable horizontal plank sign board near its top. Muted weathered brown timber, crisp pixel-art silhouette, transparent background. No plants, fragments, stones, text, or cast shadow."
+    }
+  ],
+  "derivedVariants": [
+    "meadow-flowers-2 is a mirrored, muted recolor derived from the first flower source cut because the original prop atlas returned only two flower patches."
+  ],
+  "round2BuildNotes": [
+    "Generated tile-family interiors are retained while shared one-pixel edge profiles are normalized by build_pass.py for exact cross-variant joins.",
+    "Ford animation frames use the generated ford sheet; a one- and two-texel offset of its water texture is composited under a fixed stone mask so the stones remain still.",
+    "The generated landmark atlas includes the requested lamp, standing stone, parcel states, and sign. The split oak has a separate generated portrait source so its entire tall silhouette fits its requested canvas.",
+    "frontier-veil frames are cropped from the generated mostly transparent veil sheet; the old round-1 veil concepts in meadow-props-source.png are unused.",
+    "The icon-map-tab remains the code-drawn round-1 frame."
+  ],
+  "round3BuildNotes": [
+    "The new standing-stone and way-sign sources are cropped to their alpha bounds and fit to tall silhouettes that occupy 202/224 and 104/128 vertical texels respectively.",
+    "The ford uses a separate generated rippled-water texture and three large stepping stones. The builder masks away all other source stones, keeps the three crossing stones stationary, and shifts the water by one or two texels for animation."
+  ]
+}
