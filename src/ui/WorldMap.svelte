@@ -2,12 +2,11 @@
   import type { Session } from '../game/session'
   import { bus, EV } from '../game/events'
   import { loadMap, type MapLoad } from '../game/wilds/map-data'
-  import { isWildsArea } from '../game/wilds/coords'
+  import { CHUNK_TILES, isWildsArea } from '../game/wilds/coords'
   import { heroPosition } from '../game/map-position'
   import { gameNow } from '../game/clock'
   import { gateTile, MAP_COLOURS } from '../lib/wilds/map-model'
   import {
-    MAP_DEFAULT_SCALE,
     MAP_PAN_FAR_PX,
     MAP_PAN_PX,
     WheelZoom,
@@ -15,6 +14,7 @@
     pinchWheelScale,
     zoomAbout,
     clampView,
+    openingScale,
     panBy,
     pinchView,
     showAll,
@@ -209,6 +209,9 @@
     return g ? { x: g.tx + 0.5, y: g.ty + 0.5 } : { x: 0, y: 0 }
   }
 
+  /** The scale this viewport opens at (two chunks on its shorter side): the zoom readout's 100%. */
+  const openScale = $derived(openingScale(vp, CHUNK_TILES))
+
   // First the opening view, then the clamp whenever the frame or the viewport changes (the centre stays in world tiles).
   $effect(() => {
     const f = frame
@@ -216,7 +219,7 @@
     const v = view
     if (!v) {
       const at = home()
-      view = centreOn(at.x, at.y, scale ?? MAP_DEFAULT_SCALE, vp, f)
+      view = centreOn(at.x, at.y, scale ?? openScale, vp, f)
       return
     }
     const c = clampView(v, vp, f)
@@ -281,7 +284,7 @@
   function zoom(steps: number): void {
     if (!view || !frame) return
     view = zoomSteps(view, vp, frame, steps)
-    say(MAP_LABELS.zoom.replace('{pct}', String(zoomPercent(view.scale))))
+    say(MAP_LABELS.zoom.replace('{pct}', String(zoomPercent(view.scale, openScale))))
   }
   function centreOnMe(): void {
     if (!view || !frame || !hero) return
@@ -502,7 +505,7 @@
 
   <div class="tools" role="group" aria-label="Map controls">
     <button type="button" onclick={() => zoom(1)} aria-label={MAP_LABELS.zoomIn} title={MAP_LABELS.zoomIn} data-testid="map-zoom-in">+</button>
-    <span class="pct" aria-hidden="true">{view ? zoomPercent(view.scale) : 100}%</span>
+    <span class="pct" aria-hidden="true">{view ? zoomPercent(view.scale, openScale) : 100}%</span>
     <button type="button" onclick={() => zoom(-1)} aria-label={MAP_LABELS.zoomOut} title={MAP_LABELS.zoomOut} data-testid="map-zoom-out">−</button>
     <button type="button" class="word" onclick={centreOnMe} disabled={!hero} title={hero ? MAP_LABELS.centre : MAP_LABELS.noCentre} aria-describedby={hero ? undefined : 'world-map-nocentre'} data-testid="map-centre">
       <Icon name="pin" size={16} /><span>{MAP_LABELS.centre}</span>

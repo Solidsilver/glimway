@@ -31,10 +31,14 @@ export interface MapView {
   scale: number;
 }
 
-/** The closest the map goes (CSS px a tile). */
-export const MAP_MAX_SCALE = 16;
-/** The opening scale, shown as 100% (owner's decision: open close up on you). */
-export const MAP_DEFAULT_SCALE = 4;
+/** The closest the map goes (CSS px a tile): a little past "two chunks on the shorter side" on a big screen. */
+export const MAP_MAX_SCALE = 32;
+/**
+ * The floor the opening scale goes to (CSS px a tile), and the fallback when
+ * a scale is missing or not finite. Not "the opening scale" any more: that is
+ * openingScale below (the readout's 100%), which opens closer on a big window.
+ */
+export const MAP_FLOOR_SCALE = 4;
 /** The furthest out a big map may go before "fit" takes over (CSS px a tile). */
 export const MAP_MIN_SCALE = 0.5;
 /** One zoom step (buttons, keys, a wheel notch): four steps double or halve. */
@@ -44,6 +48,22 @@ export const MAP_FIT_MARGIN = 32;
 /** A key press pans this far (CSS px); Shift pans further. */
 export const MAP_PAN_PX = 48;
 export const MAP_PAN_FAR_PX = 144;
+
+/**
+ * The scale at which the viewport's shorter side shows about two chunks
+ * (`chunkTiles` tiles a chunk): the map's opening scale, and the zoom
+ * readout's 100% (owner's decision: open close up, "like just a couple
+ * chunks", not the whole walked land). Clamped to
+ * [MAP_FLOOR_SCALE, MAP_MAX_SCALE]: a tiny window never opens as a blur, and
+ * a huge one still opens on a couple of chunks with room to zoom past.
+ *
+ * map-view.ts is pure, so the chunk size is a parameter; the callers pass
+ * `loadWilds().chunkSize` (24 in content/wilds.json).
+ */
+export function openingScale(vp: MapViewport, chunkTiles: number): number {
+  const tiles = Math.max(1, 2 * chunkTiles);
+  return Math.min(MAP_MAX_SCALE, Math.max(MAP_FLOOR_SCALE, Math.max(1, Math.min(vp.w, vp.h)) / tiles));
+}
 
 /** The frame's size in tiles. */
 const span = (f: TileRect) => ({ w: f.maxTx - f.minTx + 1, h: f.maxTy - f.minTy + 1 });
@@ -56,14 +76,14 @@ export function fitScale(vp: MapViewport, frame: TileRect): number {
   return Math.min(MAP_MAX_SCALE, uw / Math.max(1, w), uh / Math.max(1, h));
 }
 
-/** The scales allowed: out to `min(0.5, fit)`, in to 16. */
+/** The scales allowed: out to `min(0.5, fit)`, in to MAP_MAX_SCALE (32). */
 export function scaleRange(vp: MapViewport, frame: TileRect): { min: number; max: number } {
   return { min: Math.min(MAP_MIN_SCALE, fitScale(vp, frame)), max: MAP_MAX_SCALE };
 }
 
 export function clampScale(scale: number, vp: MapViewport, frame: TileRect): number {
   const r = scaleRange(vp, frame);
-  if (!Number.isFinite(scale)) return MAP_DEFAULT_SCALE;
+  if (!Number.isFinite(scale)) return MAP_FLOOR_SCALE;
   return Math.min(r.max, Math.max(r.min, scale));
 }
 
@@ -173,9 +193,9 @@ export function resizeView(view: MapView, vp: MapViewport, frame: TileRect): Map
   return clampView(view, vp, frame);
 }
 
-/** The scale as the zoom readout shows it: 4 px a tile is 100%. */
-export function zoomPercent(scale: number): number {
-  return Math.round((scale / MAP_DEFAULT_SCALE) * 100);
+/** The scale as the zoom readout shows it: the viewport's opening scale (openingScale) is 100%. */
+export function zoomPercent(scale: number, opening: number): number {
+  return Math.round((scale / opening) * 100);
 }
 
 /** CSS px for one wheel step; line and page deltas are turned into pixels first. */

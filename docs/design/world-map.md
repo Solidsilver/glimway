@@ -90,7 +90,7 @@ A cold offline session with no Wilds metadata cannot reconstruct the map merely 
 
 **Store the view as a centre in world-tile coordinates and a scale in CSS pixels per tile.** A map pixel is currently one tile; world game pixels are 16 per tile. Keep those units explicit in a new pure `src/lib/wilds/map-view.ts`, independent of DOM and Phaser.
 
-For viewport width/height `W,H` and displayed frame width/height `Fw,Fh` in tiles, define `fit = min((W-32)/Fw, (H-32)/Fh)`. Clamp usable dimensions to positive values. Scale ranges from `min(0.5, fit)` to **16 CSS px/tile**, with fit itself capped at 16. This allows a large walked area to fit without limiting normal zoom to a tiny picture. Default opening scale is **4 px/tile**, shown as 100%; clamp it to the allowed range. Buttons and keyboard use quarter-octave steps, multiplying/dividing by `2^(1/4)` (four steps double/halve the scale).
+For viewport width/height `W,H` and displayed frame width/height `Fw,Fh` in tiles, define `fit = min((W-32)/Fw, (H-32)/Fh)`. Clamp usable dimensions to positive values. Scale ranges from `min(0.5, fit)` to **32 CSS px/tile**, with fit itself capped at 32. This allows a large walked area to fit without limiting normal zoom to a tiny picture. The opening scale shows **about two chunks on the viewport's shorter side** (`openingScale`), clamped to 4–32 px/tile, and is shown as 100% (owner playtest, 2026-10-11: the first build opened at 4 px/tile, which looked too far out). Buttons and keyboard use quarter-octave steps, multiplying/dividing by `2^(1/4)` (four steps double/halve the scale).
 
 - **Wheel:** zoom about the pointer. Normalize wheel delta modes and accumulate trackpad deltas so tiny events do not each make a full step. Wheel up zooms in. Handle it only inside the viewport, prevent its scrolling there with a non-passive listener, and coalesce paints to animation frames. Native Ctrl/Meta-wheel browser zoom remains available.
 - **Drag:** left mouse button or one finger moves the sheet with the pointer. Use pointer capture, a small movement threshold and explicit pointer-cancel/lost-capture cleanup. Buttons and the details list do not start a map drag. No inertia in this release.
@@ -208,7 +208,7 @@ The fights worktree's brief has not been inspected here. Treat the listed shared
 ## 10. Owner decisions (2026-10-11)
 
 - **Riding moves to V.**
-- **The map opens close up on you** (4 px/tile, 100%), and your zoom is remembered between openings.
+- **The map opens close up on you** (about two chunks on the shorter side, shown as 100%), and your zoom is remembered between openings.
 - **The desktop minimap comes later**, after the full-screen map ships.
 
 ## 11. Still open
@@ -216,7 +216,7 @@ The fights worktree's brief has not been inspected here. Treat the listed shared
 The questions below were answered above where marked; 4 and 5 stay open for the fights and magic work:
 
 1. **Mount key:** accept V, or prefer the Z runner-up? This plan uses V unless changed before implementation.
-2. **Opening zoom:** does the proposed local 100% view (4 px/tile), remembered between openings, feel right in playtesting, or should the first opening show all walked land?
+2. **Opening zoom:** settled in playtesting (2026-10-11): about two chunks on the shorter side, closer than the first build's 4 px/tile.
 3. **Desktop minimap:** follow-up or part of this release; visible by default or opt-in? The suggested starting size is 160×160 near the HUD, subject to a layout check.
 4. **Shared fights:** when server combat arrives, should a threat/hit automatically close the map, or should it stay open with combat feedback? Agree with the fights design; this map pass inherits current panel behavior and creates no server pause.
 5. **Magic wording:** should “carter's map” become an upgrade/route-reading service for the built-in map? Its later forecast and route features must not take away everyone's basic map.
