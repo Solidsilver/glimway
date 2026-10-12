@@ -79,6 +79,45 @@ func TestWispWindupLockHopAndInterruptedHop(t *testing.T) {
 		t.Fatal("hop survived the hit")
 	}
 }
+func TestWispRetargetsNearestPlayerBetweenAttacks(t *testing.T) {
+	r := testRoom(1)
+	e := r.enemies[0]
+	a := player(160, 112)
+	b := player(180, 112)
+	b.ID, b.Observer = "bob", "socket-b"
+	r.Cover(a, origin)
+	r.Cover(b, origin)
+	if got := r.target(e); got == nil || got.ID != "alice" {
+		t.Fatal("did not acquire nearest player", got)
+	}
+	b.X = 125
+	r.Cover(b, origin.Add(time.Second))
+	if got := r.target(e); got == nil || got.ID != "bob" {
+		t.Fatal("closer player did not take attention", got)
+	}
+	a.X = 121
+	r.Cover(a, origin.Add(2*time.Second))
+	for _, state := range []wire.FightEnemyState{wire.FightEnemyState_FIGHT_ENEMY_STATE_TELEGRAPH, wire.FightEnemyState_FIGHT_ENEMY_STATE_LUNGE} {
+		e.row.State = state
+		if got := r.target(e); got == nil || got.ID != "bob" {
+			t.Fatal("attack changed target during its tell or hop", state, got)
+		}
+	}
+	e.row.State = wire.FightEnemyState_FIGHT_ENEMY_STATE_RECOVER
+	if got := r.target(e); got == nil || got.ID != "alice" {
+		t.Fatal("did not reconsider nearest player after hop", got)
+	}
+	a.Down = true
+	r.Cover(a, origin.Add(3*time.Second))
+	if got := r.target(e); got == nil || got.ID != "bob" {
+		t.Fatal("down player kept attention", got)
+	}
+	r.Leave(b.Observer, origin.Add(4*time.Second))
+	if got := r.target(e); got != nil {
+		t.Fatal("departed player kept attention", got)
+	}
+}
+
 func TestRoomDiffsIdleDeathWitnessAndLateJoin(t *testing.T) {
 	r := testRoom(1)
 	p := player(105, 112)

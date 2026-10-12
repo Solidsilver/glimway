@@ -237,8 +237,11 @@ Alone it's the same fight, with three wisps.
 - **Movement.** Circle against tile collision in Go, on the room's loaded geometry. Enemies are
   leashed to their camp and never leave their chunk (decision 3).
 - **Targets.** The nearest player inside aggro range, using each player's capped position
-  (decision 12). An Echo decoy is a target too. An enemy keeps its target until the target leaves
-  its leash, falls or goes; then it picks again or walks home.
+  (decision 12). An Echo decoy is a target too. Wisps reconsider the nearest eligible player
+  between attacks. They keep their target during a wind-up and lunge, so the tell stays readable.
+  A current target can still be chased beyond aggro range until it leaves the camp leash, falls
+  or goes; then the wisp picks again or walks home. Closest-player targeting between attacks
+  replaces the prototype's persistent focus (owner playtest, 2026-10-12).
 - **Camp size.** Fixed at the first aggro: the base mix (up to 3), plus one per extra player within
   160 px of the camp's centre at that moment, up to 5 (decision 6). Extra enemies rise at the camp
   with the existing spawn fade. Enemy HP doesn't scale.

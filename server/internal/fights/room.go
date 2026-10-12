@@ -234,12 +234,20 @@ func (r *Room) playerLeashed(e *enemy, p *Player) bool {
 	return p != nil && !p.Down && math.Hypot(p.X-e.homeX, p.Y-e.homeY) < CampLeash
 }
 func (r *Room) target(e *enemy) *Player {
-	if p := r.players[e.target]; r.playerLeashed(e, p) {
-		return p
-	}
-	e.target = ""
 	var closest *Player
 	distance := content.EnemyRules.GetWisp().GetAggro()
+	if p := r.players[e.target]; r.playerLeashed(e, p) {
+		// Commit a wind-up and hop to one player so its tell stays readable.
+		if e.row.State == wire.FightEnemyState_FIGHT_ENEMY_STATE_TELEGRAPH || e.row.State == wire.FightEnemyState_FIGHT_ENEMY_STATE_LUNGE {
+			return p
+		}
+		// Keep chasing beyond acquisition range, but let a nearer player in
+		// aggro range take attention before the next attack.
+		closest = p
+		distance = math.Min(distance, math.Hypot(p.X-e.x, p.Y-e.y))
+	} else {
+		e.target = ""
+	}
 	// Stable iteration makes equal-distance targets and replays deterministic.
 	ids := make([]string, 0, len(r.players))
 	for id := range r.players {
