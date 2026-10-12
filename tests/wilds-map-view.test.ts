@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  MAP_DEFAULT_SCALE,
+  MAP_FLOOR_SCALE,
   MAP_MAX_SCALE,
   MAP_ZOOM_STEP,
   WheelZoom,
@@ -9,6 +9,7 @@ import {
   clampScale,
   clampView,
   fitScale,
+  openingScale,
   panBy,
   pinchView,
   pinchWheelScale,
@@ -25,8 +26,11 @@ import {
   zoomSteps,
   type TileRect,
 } from '../src/lib/wilds/map-view.ts';
+import { loadWilds } from '../src/lib/wilds/data.ts';
 
 const VP = { w: 1200, h: 800 };
+/** The wilds' chunk size in tiles (24 in content/wilds.json); openingScale takes it as a parameter. */
+const CHUNK = loadWilds().chunkSize;
 /** A wide frame west and north of the origin (negative tiles throughout). */
 const FRAME: TileRect = { minTx: -480, minTy: -360, maxTx: 71, maxTy: 23 };
 const close = (a: number, b: number, eps = 1e-9) => assert.ok(Math.abs(a - b) < eps, `${a} ≈ ${b}`);
@@ -45,7 +49,7 @@ test('screen and world round trip at negative coordinates', () => {
   assert.deepEqual(t, { x: 602, y: 402 });
 });
 
-test('the zoom limits: out to min(0.5, fit), in to 16, and four steps double', () => {
+test('the zoom limits: out to min(0.5, fit), in to 32, and four steps double', () => {
   const fit = fitScale(VP, FRAME);
   close(fit, Math.min((1200 - 32) / 552, (800 - 32) / 384));
   assert.deepEqual(scaleRange(VP, FRAME), { min: 0.5, max: MAP_MAX_SCALE });
@@ -53,19 +57,38 @@ test('the zoom limits: out to min(0.5, fit), in to 16, and four steps double', (
   const huge = { minTx: -20000, minTy: -20000, maxTx: 20000, maxTy: 20000 };
   assert.ok(scaleRange(VP, huge).min < 0.05);
   close(scaleRange(VP, huge).min, fitScale(VP, huge));
-  // A tiny frame: fit is capped at 16, and you can still go out to 0.5.
+  // A tiny frame: fit is capped at MAP_MAX_SCALE, and you can still go out to 0.5.
   const tiny = { minTx: 0, minTy: 0, maxTx: 3, maxTy: 3 };
-  assert.equal(fitScale(VP, tiny), 16);
+  assert.equal(fitScale(VP, tiny), MAP_MAX_SCALE);
   assert.equal(scaleRange(VP, tiny).min, 0.5);
-  assert.equal(clampScale(100, VP, FRAME), 16);
+  assert.equal(clampScale(100, VP, FRAME), MAP_MAX_SCALE);
   assert.equal(clampScale(0.01, VP, FRAME), 0.5);
   // Four steps in from 100% is 200%; four out is 50%.
-  const v = { cx: -100, cy: -100, scale: MAP_DEFAULT_SCALE };
+  const v = { cx: -100, cy: -100, scale: MAP_FLOOR_SCALE };
   close(zoomSteps(v, VP, FRAME, 4).scale, 8);
   close(zoomSteps(v, VP, FRAME, -4).scale, 2);
   close(zoomSteps(v, VP, FRAME, 1).scale, 4 * MAP_ZOOM_STEP);
-  assert.equal(zoomPercent(4), 100);
-  assert.equal(zoomPercent(8), 200);
+  assert.equal(zoomPercent(4, 4), 100);
+  assert.equal(zoomPercent(8, 4), 200);
+});
+
+test('the opening scale: two chunks on the viewport’s shorter side, clamped', () => {
+  // Desktop 1700×920: the 920 px side shows two chunks (48 tiles) at 19.2 px a tile.
+  close(openingScale({ w: 1700, h: 920 }, CHUNK), 920 / (2 * CHUNK));
+  // A phone, 390×700 portrait: the 390 px side, 8.1 px a tile.
+  close(openingScale({ w: 390, h: 700 }, CHUNK), 390 / (2 * CHUNK));
+  // Huge 2560×1400: the 1400 px side is 29.2 px a tile for two chunks — just under MAP_MAX_SCALE,
+  // which is where the clamp starts (past a 1536 px shorter side: 2560×1600 clamps to MAP_MAX_SCALE).
+  close(openingScale({ w: 2560, h: 1400 }, CHUNK), 1400 / (2 * CHUNK));
+  assert.equal(openingScale({ w: 2560, h: 1600 }, CHUNK), MAP_MAX_SCALE);
+  // The floor: a tiny window never opens as a blur.
+  assert.equal(openingScale({ w: 480, h: 160 }, CHUNK), MAP_FLOOR_SCALE);
+  // The readout is 100% at the opening scale of the current viewport, 200% one octave in.
+  for (const vp of [{ w: 1700, h: 920 }, { w: 390, h: 700 }, { w: 2560, h: 1400 }]) {
+    const opening = openingScale(vp, CHUNK);
+    assert.equal(zoomPercent(opening, opening), 100);
+    assert.equal(zoomPercent(2 * opening, opening), 200);
+  }
 });
 
 test('the wheel and the buttons zoom about a point that stays put', () => {
@@ -91,9 +114,9 @@ test('a pinch keeps the world under its midpoint, follows it as it moves, and sc
   const now = toScreen(v, VP, under.x, under.y);
   close(now.x, 640, 1e-6);
   close(now.y, 400, 1e-6);
-  // Past the limit the scale stops at 16 (no jump when the fingers part further).
-  const far = pinchView(start, { x: 0, y: 400 }, { x: 1200, y: 400 }, VP, FRAME);
-  assert.equal(far.scale, 16);
+  // Past the limit the scale stops at MAP_MAX_SCALE (no jump when the fingers part further).
+  const far = pinchView(start, { x: -1000, y: 400 }, { x: 2200, y: 400 }, VP, FRAME);
+  assert.equal(far.scale, MAP_MAX_SCALE);
 });
 
 test('the centre is kept between the frame’s first and last tile centres', () => {

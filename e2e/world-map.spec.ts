@@ -2,6 +2,8 @@ import { devices } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
 import { dialogueState, player, waitForLive, waitForWilds, warp } from './helpers'
 import { freshPlayer } from './home-helpers'
+import { loadWilds } from '../src/lib/wilds/data.ts'
+import { MAP_MAX_SCALE, openingScale } from '../src/lib/wilds/map-view.ts'
 
 /**
  * The world map (docs/design/world-map.md): M or the HUD's Map button opens
@@ -46,6 +48,8 @@ const mapState = (page: Page) => page.evaluate(() => (window as unknown as Hooks
 const view = async (page: Page) => (await mapState(page))!.view!
 const theMap = (page: Page) => page.getByTestId('world-map')
 const near = (a: number, b: number, eps = 0.01) => Math.abs(a - b) < eps
+/** The wilds' chunk size in tiles; the map opens on two chunks of them on the viewport's shorter side. */
+const CHUNK = loadWilds().chunkSize
 
 /**
  * Where an opening centred on you lands (docs/design/world-map.md 3): on
@@ -89,7 +93,7 @@ test('M and the Map button open it full screen; M and Escape close it once; J go
   await expect(page.getByTestId('map-you')).toHaveCount(0)
   await expect(page.getByTestId('map-notes')).toContainText('outside the Wilds')
   await expect(page.getByTestId('map-centre')).toBeDisabled()
-  expect(first.view!.scale).toBe(4)
+  expect(first.view!.scale).toBe(openingScale(first.vp, CHUNK))
   await shot(page, 'world-map-village-desktop')
 
   // Escape closes it, and only it (no Menu); focus goes back to nothing, so Space is the world's again.
@@ -180,7 +184,7 @@ test('out in the Wilds: close up on you, zoom kept between openings, drag, wheel
   expect(s.outside).toBe(false)
   await expect(page.getByTestId('map-you')).toBeVisible()
   await expect(page.locator('[data-label="you"]')).toBeVisible()
-  expect(s.view!.scale).toBe(4)
+  expect(s.view!.scale).toBe(openingScale(s.vp, CHUNK))
   // On you, as far as the clamp allows (a small walked area sits in the middle on that axis).
   centredOnYou(s)
 
@@ -188,7 +192,7 @@ test('out in the Wilds: close up on you, zoom kept between openings, drag, wheel
   await page.getByTestId('map-zoom-in').click()
   await page.getByTestId('map-zoom-in').click()
   const kept = (await view(page)).scale
-  expect(near(kept, 4 * 2 ** 0.5)).toBe(true)
+  expect(near(kept, openingScale(s.vp, CHUNK) * 2 ** 0.5)).toBe(true)
   await page.keyboard.press('m')
   await expect(theMap(page)).toHaveCount(0)
   await page.keyboard.press('m')
@@ -197,7 +201,8 @@ test('out in the Wilds: close up on you, zoom kept between openings, drag, wheel
   centredOnYou(s)
   await shot(page, 'world-map-wilds-desktop')
 
-  // Drag: the sheet follows the mouse (north–south here; the walked land is narrower than the screen east–west, so it stays in the middle that way).
+  // Drag: the sheet follows the mouse, north–south and east–west alike (the opening now shows a
+  // couple of chunks across, so the walked land is wider than the screen and the middle is not pinned).
   const vbox = (await page.getByTestId('map-viewport').boundingBox())!
   const mid = { x: vbox.x + vbox.width / 2, y: vbox.y + vbox.height / 2 }
   let before = await view(page)
@@ -208,7 +213,7 @@ test('out in the Wilds: close up on you, zoom kept between openings, drag, wheel
   await page.mouse.up()
   let after = await view(page)
   expect(Math.abs(after.cy - (before.cy - 80 / before.scale))).toBeLessThan(0.6)
-  expect(after.cx).toBe(before.cx)
+  expect(Math.abs(after.cx - (before.cx - 60 / before.scale))).toBeLessThan(0.6)
 
   // The Wilds change (a read's news): the map loads again and the pan stays where it was.
   const loads = (await mapState(page))!.loads
@@ -294,7 +299,7 @@ test('out in the Wilds: close up on you, zoom kept between openings, drag, wheel
     ev('pointerup', 1, x - 100)
   }, mid)
   after = await view(page)
-  expect(near(after.scale, Math.min(16, before.scale * 2), 1e-6)).toBe(true)
+  expect(near(after.scale, Math.min(MAP_MAX_SCALE, before.scale * 2), 1e-6)).toBe(true)
 
   // Nothing under the map acts: no walking, no belt change, no ride, no path dialogue.
   const stand = await player(page)
