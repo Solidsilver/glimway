@@ -1,5 +1,5 @@
 import { create, fromBinary, toBinary, type Message } from '@bufbuild/protobuf';
-import { PresenceMessageSchema, PresenceAuthSchema, PresenceJoinSchema, PresencePositionSchema, PresenceEmoteSchema, PresenceHeartbeatSchema, PresenceAbilitySchema, type PresenceAvatar as WireAvatar, type PresencePlayer as WirePlayer, type PresencePosition as WirePosition } from './gen/glimway/v2/presence_pb.js';
+import { FightSwingSchema, PresenceMessageSchema, PresenceAuthSchema, PresenceJoinSchema, PresencePositionSchema, PresenceEmoteSchema, PresenceHeartbeatSchema, PresenceAbilitySchema, type PresenceAvatar as WireAvatar, type PresencePlayer as WirePlayer, type PresencePosition as WirePosition } from './gen/glimway/v2/presence_pb.js';
 import { PRESENCE_POSES, type PresenceAvatar, type PresenceClientMessage, type PresencePlayer, type PresencePose, type PresencePosition, type PresenceServerMessage } from './presence.ts';
 
 export const PRESENCE_PROTOCOL = 'glimway.presence.v2';
@@ -8,12 +8,13 @@ export function encodePresence(message: PresenceClientMessage): Uint8Array {
   // create() builds generated messages directly; presence never passes through JSON.
   const envelope = create(PresenceMessageSchema);
   switch (message.type) {
+    case 'fightSwing': envelope.event = { case: 'fightSwing', value: create(FightSwingSchema, message) }; break;
     case 'auth': envelope.event = { case: 'auth', value: create(PresenceAuthSchema, { lease: message.lease }) }; break;
     case 'join': envelope.event = { case: 'join', value: create(PresenceJoinSchema, { area: message.area }) }; break;
     case 'pos': envelope.event = { case: 'pos', value: create(PresencePositionSchema, { x: message.x, y: message.y, facing: message.facing, moving: message.moving, ...(poseOf(message.pose) ? { pose: message.pose } : {}) }) }; break;
     case 'emote': envelope.event = { case: 'emote', value: create(PresenceEmoteSchema, { id: message.id }) }; break;
     case 'heartbeat': envelope.event = { case: 'heartbeat', value: create(PresenceHeartbeatSchema) }; break;
-    case 'ability': envelope.event = { case: 'ability', value: create(PresenceAbilitySchema, { ability: message.ability, x: message.x, y: message.y }) }; break;
+    case 'ability': envelope.event = { case: 'ability', value: create(PresenceAbilitySchema, { ability: message.ability, x: message.x, y: message.y, fight: message.fight }) }; break;
   }
   return toBinary(PresenceMessageSchema, envelope);
 }
@@ -46,6 +47,13 @@ export function decodePresence(data: unknown): PresenceServerMessage | null {
   if (!(data instanceof ArrayBuffer || data instanceof Uint8Array)) return null;
   const { event } = fromBinary(PresenceMessageSchema, data instanceof Uint8Array ? data : new Uint8Array(data));
   switch (event.case) {
+    case 'fightJoin':
+      return event.value.room > 0 && event.value.critSeed > 0 && event.value.roomKey ? { type: 'fightJoin', ...fields(event.value) } : null;
+    case 'fightDelta':
+      return event.value.room > 0 && (event.value.changed.length + event.value.spawned.length + event.value.removed.length > 0) ? { type: 'fightDelta', ...fields(event.value) } : null;
+    case 'fightEvent':
+      return event.value.room > 0 && event.value.kind >= 1 && event.value.kind <= 5 ? { type: 'fightEvent', ...fields(event.value) } : null;
+    case 'fightSwingResult':
     case 'ready': case 'leave': case 'gift': return { type: event.case, ...fields(event.value) } as PresenceServerMessage;
     case 'witness': return event.value.name ? { type: 'witness', ...fields(event.value) } : null;
     case 'room': return { type: 'room', area: event.value.area, players: event.value.players.map(player) };

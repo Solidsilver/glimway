@@ -20,6 +20,9 @@
  * stays there (the quest event is still 'defeat-guardian', for saves).
  */
 import Phaser from 'phaser'
+import { ServerEnemies } from './server-enemies'
+import { FIGHT_OPTIONS } from '../../lib/fight-options'
+import type { FightTargetRef } from '../../lib/presence'
 import type { GameState } from '../../lib/state'
 import { sfx } from '../sfx'
 import type { Session } from '../session'
@@ -37,6 +40,7 @@ import { ENEMY_TUNING, KNOCK, contactThreat, hitOutcome, knockFrom, knockInterru
 /** An enemy on this screen: its state, the sprite that draws it (a local enemy's body too), and its owner's working. */
 export interface Enemy extends EnemyState {
   sprite: Phaser.Physics.Arcade.Sprite
+  fight?: FightTargetRef
   /** Who runs it and decides its hits. */
   owner: EnemyOwner
   hp: number
@@ -94,6 +98,8 @@ export interface EnemyOwner {
   observe(enemy: Enemy, dt: number): void
   /** A frame of this player's play: its behaviour. */
   act(enemy: Enemy, dt: number, sight: EnemySight): void
+  /** Stand contact: the owner decides a stagger, or predicts only its pose. */
+  stopped(enemy: Enemy, seconds: number): void
   /** A hit seen to land here, its feedback already shown: shove it and decide what it did. */
   struck(enemy: Enemy, hit: { amount: number; crit: boolean }, fromX: number): void
 }
@@ -122,7 +128,9 @@ export class EnemySystem {
   readonly warden: WardenEncounter
   readonly creatures: Creatures
   /** This screen as an owner: every enemy today (see EnemyOwner). */
+  private server: ServerEnemies | null = null
   private readonly local: EnemyOwner = {
+    stopped: (enemy, seconds) => this.stagger(enemy, seconds),
     // Held play holds a local enemy still: its behaviour is all in act.
     observe: () => {},
     act: (enemy, dt, sight) => this.actLocally(enemy, dt, sight),
@@ -155,6 +163,7 @@ export class EnemySystem {
       else this.warden.placeRestingWarden(roadStep(state) === 'new' || roadStep(state) === 'accepted' ? 'dormant' : 'settled')
     }
     this.hpBars = scene.add.graphics().setDepth(5000)
+    if (world.areaId === 'wilds' && FIGHT_OPTIONS.enabled) this.server = new ServerEnemies(this)
   }
 
   get enemies(): Enemy[] {
@@ -219,7 +228,8 @@ export class EnemySystem {
 
   /** Every frame, play held or not: each enemy as its owner shows it (nothing moves for a local one). */
   observe(dt: number): void {
-    for (const enemy of this._enemies) if (!enemy.dead && !enemy.parked) enemy.owner.observe(enemy, dt)
+    this.server?.observe()
+    for (const enemy of [...this._enemies]) if (!enemy.dead && !enemy.parked) enemy.owner.observe(enemy, dt)
   }
 
   /**
@@ -261,7 +271,7 @@ export class EnemySystem {
     const stand = hero.field?.stand
     const threat = contactThreat(enemy, { reach: WARDEN.sweepReach, damage: WARDEN.sweep })
     const touched = touchOutcome(enemy, threat, dist, !!stand)
-    if (touched === 'stagger') this.stagger(enemy, stand!.stagger)
+    if (touched === 'stagger') enemy.owner.stopped(enemy, stand!.stagger)
     else if (touched === 'hurt') hero.damagePlayer(threat.damage, fromX, enemy.y)
   }
 
@@ -349,14 +359,22 @@ export class EnemySystem {
     return this.spawnEnemy(id, type, tx, ty)
   }
 
+  /** Replace the prototype's local copies when a server join advertises it. */
+  removeLocalCamp(camp: string): void {
+    for (const enemy of [...this._enemies]) if (!enemy.fight && enemy.id.startsWith(`wilds:${camp}:`)) {
+      if (enemy.sprite.active) enemy.sprite.destroy()
+      this.forget(enemy)
+    }
+  }
+
   /**
    * Camps are leashed to their chunk (open-map.md 2.5): when the open map's
    * window lets a chunk go, its camps' creatures go with it (they come back,
    * at full health, if the camp is still lived in when the chunk returns).
    */
   removeWilds(prefix: string): void {
-    for (const e of this._enemies) if (e.id.startsWith(prefix) && e.sprite.active) e.sprite.destroy()
-    this._enemies = this._enemies.filter((e) => !e.id.startsWith(prefix))
+    for (const e of this._enemies) if (!e.fight && e.id.startsWith(prefix) && e.sprite.active) e.sprite.destroy()
+    this._enemies = this._enemies.filter((e) => !!e.fight || !e.id.startsWith(prefix))
   }
 
   /** `hp`: a curated spot's own health (the opening's finger-wisp), else the type's. */

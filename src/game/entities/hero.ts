@@ -7,7 +7,9 @@
  *
  * A blow is first what the hero means (a Strike: ./fight-rules.ts), shown at
  * once (the swing, its sound); a beat later it lands on the enemies this
- * screen draws (`land`), and each enemy's owner decides what it did
+ * screen draws (`land`), and each enemy's owner decides what it did.
+ * Server basics select and predict at the press (`pressServerSwing`), stamped
+ * with that frame's observed instant; delayed landing visits local enemies only
  * (./enemies.ts damageEnemy). The imported layered avatar and
  * its mount/pet are owned by AvatarVisual; the hero renders through
  * `deps.avatar()` (the container is the visible body when present).
@@ -35,6 +37,7 @@ import type { Projectiles } from './projectiles'
 import type { AvatarVisual } from './avatar'
 import type { Effects } from './fx'
 import { MoveFx } from './moves'
+import { pressServerSwing, sendServerBolt } from './fight-strike'
 import { presence } from '../presence'
 import { expose } from '../dev-hooks'
 import { SEAT_CUT, SEATED_MANA_BONUS, manaRegenRate, type SeatPose } from '../seats'
@@ -351,10 +354,14 @@ export class Hero {
     // slash); every other class strikes in melee reach.
     if (kit.class === 'mage' && !tool) {
       const at = boltSpawn(this.sprite, dir)
-      this.deps.projectiles().spawn(at.x, at.y, dir, kit.meleeDamage)
+      this.deps.projectiles().spawn(at.x, at.y, dir, kit.meleeDamage, sendServerBolt(this.sprite, dir, presence()))
       return
     }
     const strike = slashStrike(this.sprite, dir, kit, tool)
+    for (const hit of pressServerSwing(strike, this.deps.enemies().enemies, presence())) {
+      if (hit.crit) this.deps.fx.sparkBurst(hit.enemy.x, hit.enemy.y - 8, 8)
+      this.deps.enemies().damageEnemy(hit.enemy, hit.amount, this.sprite.x, hit.crit)
+    }
     // The aliased slash is a directional crescent (native art faces right):
     // rotate it to the facing like the other FX, instead of the old
     // flip/45-degree heuristic that turned cardinal attacks into diagonals.
@@ -377,7 +384,7 @@ export class Hero {
   private land(strike: Strike, fromX: number, sparks = false): void {
     const enemies = this.deps.enemies()
     const crit = strikeCrits(strike, Math.random())
-    for (const hit of strikeHits(strike, [...enemies.enemies], crit)) {
+    for (const hit of strikeHits(strike, enemies.enemies.filter(enemy => !enemy.fight), crit)) {
       if (sparks && hit.crit) this.deps.fx.sparkBurst(hit.enemy.x, hit.enemy.y - 8, 8)
       enemies.damageEnemy(hit.enemy, hit.amount, fromX, hit.crit)
     }

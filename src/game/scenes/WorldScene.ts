@@ -79,6 +79,7 @@ import { setSyncSafety } from '../sync-safety'
 import { onSceneEnd } from '../scene-end'
 import { exposeWorldHooks } from './world-dev-hooks'
 import { playHold, runFrame, type WorldFrame } from './world-frame'
+import { FIGHT_OPTIONS } from '../../lib/fight-options'
 import { perfWatch } from '../perf'
 import { Unmoored } from '../entities/unmoored'
 import { WorldActions } from './world-actions'
@@ -720,6 +721,11 @@ export class WorldScene extends Phaser.Scene {
     if (elara?.present && elara.seated && !elara.path) elara.sprite.setVisible(false)
     this.samplePresence()
     this.petting.update()
+    if (FIGHT_OPTIONS.enabled) {
+      this.window?.update(dt)
+      this.wilds?.update()
+      this.turning.update(dt)
+    }
     this.enemies.observe(dt)
   }
 
@@ -744,12 +750,14 @@ export class WorldScene extends Phaser.Scene {
     this.enemies.update(dt)
     this.goalGuide.update(dt, this.hero.sprite, this.worldLive())
     this.projectiles.update(dt)
-    this.window?.update(dt)
-    this.wilds?.update()
+    if (!FIGHT_OPTIONS.enabled) {
+      this.window?.update(dt)
+      this.wilds?.update()
+    }
     this.paths?.update()
     this.marks?.update()
     this.checkDrift()
-    this.turning.update(dt)
+    if (!FIGHT_OPTIONS.enabled) this.turning.update(dt)
     this.updateDiscoveries()
     this.checkExits()
     maybeNudgePip(this.session, this.world, this.hero.sprite) // P1 onboarding: Pip's one-off gate line

@@ -110,3 +110,18 @@ test('a new wick reusing a camp id is another camp', () => {
   assert.equal(fights.won(camp(1, true, 'wick-2')), false);
   assert.equal(fights.won(camp(1)), false, 'the old wick’s win is gone with it');
 });
+
+test('server camp prompt retains a win through unknown socket/room state, but never across a new cycle or epoch', async () => {
+  const { ServerCampOutcome } = await import('../src/game/wilds/camp-fights.ts')
+  let state: boolean | undefined = undefined
+  const outcome = new ServerCampOutcome(() => state)
+  const camp = { id: 'camp:0:0:0', epoch: 'still', cycle: 1 }
+  assert.equal(outcome.won(camp), false)
+  state = true; assert.equal(outcome.won(camp), true)
+  state = undefined; assert.equal(outcome.won(camp), true, 'socket down does not withdraw the confirmed prompt')
+  assert.equal(outcome.won({ ...camp, cycle: 2 }), false)
+  state = true; outcome.won(camp)
+  state = undefined; assert.equal(outcome.won({ ...camp, epoch: 'next' }), false)
+  state = true; outcome.won(camp)
+  state = false; assert.equal(outcome.won(camp), false, 'a confirmed live camp overrides a cached win')
+})

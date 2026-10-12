@@ -23,7 +23,7 @@ import { TILE } from './tile.ts';
 import { chunkOf } from './wilds/coords.ts';
 import { decodePresence, encodePresence, PRESENCE_PROTOCOL } from './presence-codec.ts';
 import { abilityFor } from './abilities.ts';
-import { PRESENCE, PRESENCE_CLOSE, type PresenceAvatar, type PresenceClientMessage, type PresencePlayer, type PresencePosition, type PresenceServerMessage } from './presence.ts';
+import { PRESENCE, PRESENCE_CLOSE, type FightSwingIntent, type FightCastIntent, type PresenceAvatar, type PresenceClientMessage, type PresencePlayer, type PresencePosition, type PresenceServerMessage } from './presence.ts';
 
 /** The WebSocket surface the client uses (the browser's WebSocket fits). */
 export interface SocketLike {
@@ -63,6 +63,8 @@ export type PresenceStatus =
   | 'reload-needed';
 
 export interface PresenceHandlers {
+  unsentFight?(counter: number): void;
+  fight?(message: Extract<PresenceServerMessage, { type: 'fightJoin' | 'fightDelta' | 'fightEvent' | 'fightSwingResult' }>): void;
   status?(status: PresenceStatus, closeCode?: number): void;
   ready?(accountId: string): void;
   room?(area: string, players: PresencePlayer[]): void;
@@ -99,6 +101,8 @@ export interface PresenceClientOptions {
   timers?: Timers;
   /** Jitter source for backoff (tests pin it). */
   random?: () => number;
+  /** Added one-way transport latency, preserving WebSocket order. */
+  latency?: { lag: number; jitter: number };
 }
 
 /** Wait before reconnect attempt `n` (1-based): 1 s doubling to 30 s, ±20% jitter. */
@@ -237,6 +241,9 @@ export class PresenceClient {
   private readonly random: () => number;
   private readonly handlers: PresenceHandlers;
   private readonly opts: PresenceClientOptions;
+  private latencyTimers = new Set<unknown>();
+  private incomingDue = 0;
+  private outgoingDue = 0;
 
   constructor(opts: PresenceClientOptions) {
     this.opts = opts;
@@ -347,14 +354,19 @@ export class PresenceClient {
    * it doesn't allow; this keeps the same one so nothing is sent to be
    * dropped. Returns false when it wasn't sent.
    */
-  ability(id: string, x: number, y: number): boolean {
+  ability(id: string, x: number, y: number, fight?: FightCastIntent): boolean {
     const a = abilityFor(id);
     if (!a || !this.ready || !this.sentArea || !Number.isFinite(x) || !Number.isFinite(y)) return false;
     const now = this.timers.now();
     if (now - (this.lastAbilityAt.get(id) ?? -Infinity) < a.cooldownSeconds * 1000) return false;
     this.lastAbilityAt.set(id, now);
-    this.send({ type: 'ability', ability: id, x, y });
+    this.send({ type: 'ability', ability: id, x, y, ...(fight ? { fight } : {}) });
     return true;
+  }
+
+  swing(swing: FightSwingIntent): boolean {
+    if (!this.ready || !sharedRoom(this.sentArea, this.area)) return false;
+    return this.send({ type: 'fightSwing', ...swing, facing: normalFacing(swing.facing) });
   }
 
   /** Milliseconds until another emote is accepted (0 = now). */
@@ -388,7 +400,7 @@ export class PresenceClient {
     };
     socket.onmessage = (ev) => {
       if (this.socket !== socket) return;
-      this.onMessage(ev.data);
+      this.withLatency('incoming', () => { if (this.socket === socket) this.onMessage(ev.data); });
     };
     socket.onerror = () => {
       /* onclose follows with the code */
@@ -437,6 +449,9 @@ export class PresenceClient {
     }
     if (!m || typeof m !== 'object') return;
     switch (m.type) {
+      case 'fightJoin': case 'fightDelta': case 'fightEvent': case 'fightSwingResult':
+        if (this.ready && sharedRoom(this.sentArea, this.area)) this.handlers.fight?.(m);
+        break;
       case 'ready':
         this.ready = true;
         // Failures are forgiven only after a stable stretch, not on `ready`:
@@ -563,19 +578,27 @@ export class PresenceClient {
     }, Math.max(1_000, due));
   }
 
-  private send(m: PresenceClientMessage): void {
-    if (!this.ready) return;
-    this.raw(m);
+  private send(m: PresenceClientMessage): boolean {
+    return this.ready && this.raw(m);
   }
 
-  private raw(m: PresenceClientMessage): void {
+  private raw(m: PresenceClientMessage): boolean {
     const s = this.socket;
-    if (!s || s.readyState !== OPEN) return;
+    if (!s || s.readyState !== OPEN) return false;
     try {
-      s.send(encodePresence(m));
-      this.lastSentAt = this.timers.now();
+      const frame = encodePresence(m);
+      let sent = false;
+      const unsent = () => { if (m.type === 'fightSwing' && this.socket === s) this.handlers.unsentFight?.(m.swingCounter); };
+      this.withLatency('outgoing', () => {
+        if (this.socket !== s || s.readyState !== OPEN) { unsent(); return; }
+        try { s.send(frame); sent = true; } catch { unsent(); /* onclose follows */ }
+      });
+      const queued = !!this.opts.latency && !!(this.opts.latency.lag || this.opts.latency.jitter);
+      if (sent || queued) this.lastSentAt = this.timers.now();
+      return sent || queued;
     } catch {
       /* onclose will follow */
+      return false;
     }
   }
 
@@ -588,7 +611,21 @@ export class PresenceClient {
     }, STABLE_MS);
   }
 
+  private withLatency(direction: 'incoming' | 'outgoing', fn: () => void): void {
+    const knobs = this.opts.latency;
+    if (!knobs || (!knobs.lag && !knobs.jitter)) { fn(); return; }
+    const now = this.timers.now();
+    const key = direction === 'incoming' ? 'incomingDue' : 'outgoingDue';
+    const due = Math.max(this[key], now + Math.max(0, knobs.lag + (2 * this.random() - 1) * knobs.jitter));
+    this[key] = due;
+    const timer = this.timers.set(() => { this.latencyTimers.delete(timer); fn(); }, due - now);
+    this.latencyTimers.add(timer);
+  }
+
   private clearTimers(): void {
+    for (const timer of this.latencyTimers) this.timers.clear(timer);
+    this.latencyTimers.clear();
+    this.incomingDue = this.outgoingDue = 0;
     for (const t of [this.retryTimer, this.joinTimer, this.posTimer, this.stopTimer, this.heartbeatTimer, this.stableTimer]) if (t !== null) this.timers.clear(t);
     this.retryTimer = this.joinTimer = this.posTimer = this.stopTimer = this.heartbeatTimer = this.stableTimer = null;
   }

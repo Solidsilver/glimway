@@ -44,8 +44,13 @@ export const PRESENCE_POSES = ['riding', 'fishing'] as const;
 export type PresencePose = (typeof PRESENCE_POSES)[number];
 export type PresenceClientMessage = Event<'auth'> | Pick<Event<'join'>, 'type' | 'area'>
   | ({ type: 'pos' } & PresencePosition) | Pick<Event<'emote'>, 'type' | 'id'> | Event<'heartbeat'>
-  | Pick<Event<'ability'>, 'type' | 'ability' | 'x' | 'y'>;
-export type PresenceServerMessage = Event<'ready'> | Event<'leave'> | Event<'gift'> | Event<'witness'>
+  | (Pick<Event<'ability'>, 'type' | 'ability' | 'x' | 'y'> & { fight?: FightCastIntent })
+  | ({ type: 'fightSwing' } & FightSwingIntent);
+export interface FightTargetRef { room: number; enemy: number }
+export interface FightCastIntent { seenTick: number; seenOffsetMs: number; facing: { x: number; y: number }; swingCounter: number; predicted: FightTargetRef[] }
+export interface FightSwingIntent extends FightCastIntent { kind: 1 | 2; x: number; y: number; tool: boolean }
+export type PresenceServerMessage = Event<'fightJoin'> | Event<'fightDelta'> | Event<'fightEvent'> | Event<'fightSwingResult'>
+  | Event<'ready'> | Event<'leave'> | Event<'gift'> | Event<'witness'>
   | (Pick<Event<'room'>, 'type' | 'area'> & { players: PresencePlayer[] })
   | (Pick<Event<'join'>, 'type' | 'area'> & { player: PresencePlayer })
   | ({ type: 'pos'; accountId: string } & PresencePosition)

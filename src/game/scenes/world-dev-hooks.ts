@@ -59,6 +59,9 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
       return {
         x: e.sprite.x,
         y: e.sprite.y,
+        id: e.id,
+        fight: e.fight ?? null,
+        bodyEnabled: b.enable,
         state: e.state,
         hp: e.hp,
         texture: e.sprite.texture.key,

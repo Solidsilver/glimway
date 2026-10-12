@@ -20,6 +20,9 @@
  * timers are injected, so the feed runs under node --test.
  */
 import { PresenceClient, sharedRoom, type PresenceStatus, type SocketLike, type Timers } from '../lib/presence-client.ts'
+import { FightInterp } from '../lib/fight-interp.ts'
+import { FIGHT_OPTIONS } from '../lib/fight-options.ts'
+import type { FightSwingIntent } from '../lib/presence.ts'
 import { PeerTrack } from '../lib/presence-interp.ts'
 import type { PresenceAvatar, PresencePlayer, PresencePose, PresencePosition } from '../lib/presence.ts'
 import { EV, type AbilityCastPayload, type EmotePayload, type EventMap, type PresencePayload } from './event-names.ts'
@@ -65,10 +68,15 @@ export interface FeedDeps {
   cancel?: (handle: unknown) => void
   /** Clock for interpolation samples (ms). */
   now?: () => number
+  fights?: boolean
+  latency?: { lag: number; jitter: number }
 }
 
 export class PresenceFeed {
   readonly client: PresenceClient
+  readonly fights: FightInterp
+  readonly serverFights: boolean
+  private swingCounter = 0
   private peers = new Map<string, Peer>()
   private area: string | null = null
   private poll: unknown = null
@@ -84,13 +92,27 @@ export class PresenceFeed {
     this.link = deps.link
     this.bus = deps.bus
     this.now = deps.now ?? (() => (typeof performance !== 'undefined' ? performance.now() : Date.now()))
+    this.serverFights = deps.fights ?? FIGHT_OPTIONS.enabled
+    this.fights = new FightInterp(this.now)
     const every = deps.every ?? ((fn: () => void, ms: number) => setInterval(fn, ms))
     this.cancel = deps.cancel ?? ((h) => clearInterval(h as ReturnType<typeof setInterval>))
     this.client = new PresenceClient({
       url: deps.url,
       makeSocket: deps.makeSocket,
       timers: deps.timers,
+      latency: deps.latency ?? { lag: FIGHT_OPTIONS.lag, jitter: FIGHT_OPTIONS.jitter },
       handlers: {
+        unsentFight: counter => this.fights.unsent(counter),
+        ready: () => { this.fights.clear(); this.swingCounter = 0 },
+        fight: (m) => {
+          if (!this.serverFights) return
+          if (m.type === 'fightJoin') {
+            if (m.roomKey && sharedRoom(`wilds:${m.roomKey.cx}:${m.roomKey.cy}`, this.area)) this.fights.join(m)
+          }
+          else if (m.type === 'fightDelta') this.fights.delta(m)
+          else if (m.type === 'fightEvent') this.fights.event(m)
+          else this.fights.result(m)
+        },
         status: (s) => this.onStatus(s),
         room: (area, players) => this.onRoom(area, players),
         join: (area, player) => this.upsert(area, player),
@@ -142,6 +164,7 @@ export class PresenceFeed {
       // Everyone we knew was somewhere else now, unless the rooms share (the
       // open map's neighbouring chunks: the server's next roster settles who left).
       if (!sharedRoom(this.area, area)) this.peers.clear()
+      for (const [handle, room] of this.fights.rooms) if (!sharedRoom(`wilds:${room.key.cx}:${room.key.cy}`, area)) this.fights.drop(handle)
       this.area = area
       this.publish()
     }
@@ -163,6 +186,16 @@ export class PresenceFeed {
   /** A move was cast here: the room sees it (crafts.md 4.5). */
   ability(id: string, x: number, y: number): boolean {
     return this.client.ability(id, x, y)
+  }
+
+  /** Allocate from one socket sequence, including casts. */
+  nextSwing(): number { const counter = this.swingCounter; this.swingCounter = (counter + 1) >>> 0; return counter }
+
+  swing(swing: FightSwingIntent): boolean {
+    if (!this.serverFights) return false
+    const sent = this.client.swing(swing)
+    if (sent) this.fights.sent(swing.swingCounter, swing.predicted)
+    return sent
   }
 
   get live(): boolean {
@@ -216,6 +249,7 @@ export class PresenceFeed {
     this.poll = null
     this.client.stop()
     this.peers.clear()
+    this.fights.clear()
     this.publish()
   }
 
@@ -224,10 +258,11 @@ export class PresenceFeed {
   }
 
   /** Read-only state for playtests. */
-  debugState(): { status: PresenceStatus; area: string | null; peers: string[] } {
+  debugState(): { status: PresenceStatus; area: string | null; peers: string[]; fights: ReturnType<FightInterp['measures']> } {
     return {
       status: this.client.status,
       area: this.area,
+      fights: this.fights.measures(),
       peers: [...this.peers.values()].filter((p) => p.leftAt === null).map((p) => p.accountId)
     }
   }
@@ -237,6 +272,7 @@ export class PresenceFeed {
   private onStatus(status: PresenceStatus): void {
     // A dead socket can't vouch for anyone (a retrying one keeps them until
     // the reconnect roster says otherwise).
+    if (status !== 'live') this.fights.clear()
     if (status !== 'live' && status !== 'retrying') this.peers.clear()
     // The server says the lease or session is gone: let the link confirm it
     // now (its GET shows the takeover / sign-out screens) instead of waiting.
