@@ -355,6 +355,11 @@ test('the joining tile of a run between two places makes a named way, with signs
   await shot(page, '94-paths-way-sign-desktop')
 
   // The world map (M): the walked land, the way along its tiles, its name on the map and in Details.
+  // The label is at the way's midpoint; the close-up map opens on the hero.
+  // An endpoint can be too far away for the label to be in the viewport.
+  await warp(page, 'wilds', gap.tx, gap.ty)
+  await waitForWilds(page)
+  await parkCreatures(page)
   await page.keyboard.press('m')
   await expect(page.getByTestId('map-canvas')).toBeVisible()
   await expect(page.locator('[data-label="you"]')).toBeVisible()

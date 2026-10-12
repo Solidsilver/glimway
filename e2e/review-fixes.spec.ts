@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { linkRev, linkStatus, serverState } from './connected'
+import { calendarOnServer, linkRev, linkStatus, moveServerClock, serverState } from './connected'
 import { frames, expectToast } from './helpers'
 import { claimDeed, earnGlims, freshPlayer, fund, go, homes, myHome, onMyLand, seeTheYard, silasSays, yardBuild } from './home-helpers'
 
@@ -30,6 +30,12 @@ async function loseNextAnswer(page: Page, path: string): Promise<void> {
 test('finding 1: a purchase and an upgrade whose answers are lost resolve on reconnect, never charged twice', async ({ page }) => {
   test.setTimeout(150_000)
   const id = await freshPlayer(page)
+  // Silas is in the yard at minute ten, safely before his minute-twenty
+  // move indoors. The reconnect test must not straddle his hourly move.
+  const now = await moveServerClock(page, 0)
+  const yardTime = Math.floor(now / 3600) * 3600 + 600
+  await moveServerClock(page, yardTime > now ? yardTime : yardTime + 3600)
+  await calendarOnServer(page)
   await earnGlims(page, id)
   await claim(page)
   const before = (await serverState(page)).body.state.glims
