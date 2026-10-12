@@ -1,4 +1,5 @@
-import { SIGNATURE_COOLDOWN_SECONDS, BASIC_ATTACK_COOLDOWN_SECONDS, HEAL_FORMULA } from './combat-timing.ts';
+import { SIGNATURE_COOLDOWN_SECONDS, BASIC_ATTACK_COOLDOWN_SECONDS, HEAL_FORMULA, COMBAT_TUNING } from './combat-timing.ts';
+import { combatFormula } from './fight-math.ts';
 import { profileFor } from './profile.ts';
 import { abilitiesForClass, type Ability } from './abilities.ts';
 import { wardPulseHeal } from './combat-moves.ts';
@@ -14,16 +15,6 @@ import type { EffectiveStats, HabiticaClass, HabiticaProfile } from './habitica/
  * craft's moves at or below their level mark. Extreme imported stats are
  * bounded with diminishing returns so one absurd account cannot dominate.
  */
-
-/** Hyperbolic diminishing returns: 0..max, half-saturated at `halfway`. */
-function diminishing(bonus: number, max: number, halfway: number): number {
-  return max * (bonus / (bonus + halfway));
-}
-
-function round2(value: number): number {
-  return Math.round(value * 100) / 100;
-}
-
 
 /** A move as the kit carries it: the table's row, its numbers spelled out (0 where the row has none). */
 export interface KitMove {
@@ -63,11 +54,6 @@ export interface CombatKit {
   /** One Ward-light pulse: `pulseHealFraction` of a Mend (0 without the move). */
   wardPulseHeal: number;
 }
-
-const BASIC_NAMES: Record<HabiticaClass, string> = { warrior: 'Slash', mage: 'Bolt', rogue: 'Stab', healer: 'Tap' };
-const DAMAGE_STAT: Record<HabiticaClass, keyof EffectiveStats> = { warrior: 'str', mage: 'int', rogue: 'per', healer: 'int' };
-/** What's in hand: a plain slash at the old starter's cadence (crafts.md 4.2). */
-const CLASSLESS_BASIC = { name: 'Slash', cooldown: 0.6 };
 
 /** The server's level and class marks (`PlayerState.magic`, crafts.md 4.2). */
 export interface MagicMarks {
@@ -133,20 +119,20 @@ export function getCombatKit(profile: HabiticaProfile | null, magic: MagicMarks 
   const signature = moves.find((m) => m.kind === 'signature' && has(m)) ?? null;
   const move = moves.find((m) => m.kind === 'combat' && has(m)) ?? null;
   const healAmount = signature?.id === 'mend'
-    ? round2(HEAL_FORMULA.base + diminishing(stats.int, HEAL_FORMULA.maximumBonus, HEAL_FORMULA.halfway))
+    ? combatFormula(stats.int, HEAL_FORMULA)
     : 0;
   return {
     class: craft,
     name: profile ? profile.name : DEMO_CHARACTER.name,
-    basicName: craft ? BASIC_NAMES[craft] : CLASSLESS_BASIC.name,
+    basicName: craft ? COMBAT_TUNING.classes[craft].basicName : COMBAT_TUNING.classless.basicName,
     signature,
     move,
     ahead: moves.filter((m) => !has(m)),
-    meleeDamage: round2(5 + diminishing(stats.str, 24, 60)),
-    signatureDamage: signature && craft ? round2(8 + diminishing(stats[DAMAGE_STAT[craft]], 30, 70)) : 0,
-    mitigation: round2(diminishing(stats.con, 0.45, 90)),
-    critChance: round2(0.05 + diminishing(stats.per, 0.4, 80)),
-    basicAttackCooldown: craft ? BASIC_ATTACK_COOLDOWN_SECONDS[craft] : CLASSLESS_BASIC.cooldown,
+    meleeDamage: combatFormula(stats.str, COMBAT_TUNING.melee),
+    signatureDamage: signature && craft ? combatFormula(stats[COMBAT_TUNING.classes[craft].damageStat as keyof EffectiveStats], COMBAT_TUNING.signature) : 0,
+    mitigation: combatFormula(stats.con, COMBAT_TUNING.mitigation),
+    critChance: combatFormula(stats.per, COMBAT_TUNING.crit),
+    basicAttackCooldown: craft ? BASIC_ATTACK_COOLDOWN_SECONDS[craft] : COMBAT_TUNING.classless.basicAttackCooldownSeconds,
     healAmount,
     wardPulseHeal: move?.id === 'ward-light' ? wardPulseHeal(healAmount, move.numbers.pulseHealFraction) : 0,
   };

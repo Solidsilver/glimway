@@ -11,12 +11,9 @@ import type { Message } from "@bufbuild/protobuf";
 export declare const file_glimway_content_v1_combat: GenFile;
 
 /**
- * Shared combat tuning (docs/m3-implementation.md): the signature
- * ability's cooldown (fixed at one second — the contract both runtimes
- * assume), one row per Habitica class and the heal formula. The signature's
- * mana cost moved to the ability table (design 4.1: each class's cast cost
- * is its signature's `mana`).
- * content/combat.json.
+ * Shared kit and attack tuning (content/combat.json): cooldowns, class
+ * names and damage stats, diminishing-return formulas and hit geometry.
+ * Ability mana and effect numbers remain in content/abilities.json.
  *
  * @generated from message glimway.content.v1.Combat
  */
@@ -35,15 +32,42 @@ export declare type Combat = Message<"glimway.content.v1.Combat"> & {
    * @generated from field: glimway.content.v1.CombatHeal heal = 3;
    */
   heal?: CombatHeal | undefined;
+
+  /**
+   * @generated from field: glimway.content.v1.CombatClassless classless = 4;
+   */
+  classless?: CombatClassless | undefined;
+
+  /**
+   * @generated from field: glimway.content.v1.CombatFormula melee = 5;
+   */
+  melee?: CombatFormula | undefined;
+
+  /**
+   * @generated from field: glimway.content.v1.CombatFormula signature = 6;
+   */
+  signature?: CombatFormula | undefined;
+
+  /**
+   * @generated from field: glimway.content.v1.CombatFormula mitigation = 7;
+   */
+  mitigation?: CombatFormula | undefined;
+
+  /**
+   * @generated from field: glimway.content.v1.CombatFormula crit = 8;
+   */
+  crit?: CombatFormula | undefined;
+
+  /**
+   * @generated from field: glimway.content.v1.CombatAttack attack = 9;
+   */
+  attack?: CombatAttack | undefined;
 };
 
 /**
- * Shared combat tuning (docs/m3-implementation.md): the signature
- * ability's cooldown (fixed at one second — the contract both runtimes
- * assume), one row per Habitica class and the heal formula. The signature's
- * mana cost moved to the ability table (design 4.1: each class's cast cost
- * is its signature's `mana`).
- * content/combat.json.
+ * Shared kit and attack tuning (content/combat.json): cooldowns, class
+ * names and damage stats, diminishing-return formulas and hit geometry.
+ * Ability mana and effect numbers remain in content/abilities.json.
  *
  * @generated from message glimway.content.v1.Combat
  */
@@ -62,6 +86,36 @@ export declare type CombatValid = Message<"glimway.content.v1.Combat"> & {
    * @generated from field: glimway.content.v1.CombatHeal heal = 3;
    */
   heal: CombatHealValid;
+
+  /**
+   * @generated from field: glimway.content.v1.CombatClassless classless = 4;
+   */
+  classless: CombatClasslessValid;
+
+  /**
+   * @generated from field: glimway.content.v1.CombatFormula melee = 5;
+   */
+  melee: CombatFormulaValid;
+
+  /**
+   * @generated from field: glimway.content.v1.CombatFormula signature = 6;
+   */
+  signature: CombatFormulaValid;
+
+  /**
+   * @generated from field: glimway.content.v1.CombatFormula mitigation = 7;
+   */
+  mitigation: CombatFormulaValid;
+
+  /**
+   * @generated from field: glimway.content.v1.CombatFormula crit = 8;
+   */
+  crit: CombatFormulaValid;
+
+  /**
+   * @generated from field: glimway.content.v1.CombatAttack attack = 9;
+   */
+  attack: CombatAttackValid;
 };
 
 /**
@@ -81,6 +135,16 @@ export declare type CombatClass = Message<"glimway.content.v1.CombatClass"> & {
    * @generated from field: double basic_attack_cooldown_seconds = 1;
    */
   basicAttackCooldownSeconds: number;
+
+  /**
+   * @generated from field: string basic_name = 2;
+   */
+  basicName: string;
+
+  /**
+   * @generated from field: string damage_stat = 3;
+   */
+  damageStat: string;
 };
 
 export declare type CombatClassValid = CombatClass;
@@ -126,4 +190,135 @@ export declare type CombatHealValid = CombatHeal;
  * Use `create(CombatHealSchema)` to create a new message.
  */
 export declare const CombatHealSchema: GenMessage<CombatHeal, {validType: CombatHealValid}>;
+
+/**
+ * @generated from message glimway.content.v1.CombatClassless
+ */
+export declare type CombatClassless = Message<"glimway.content.v1.CombatClassless"> & {
+  /**
+   * @generated from field: string basic_name = 1;
+   */
+  basicName: string;
+
+  /**
+   * @generated from field: double basic_attack_cooldown_seconds = 2;
+   */
+  basicAttackCooldownSeconds: number;
+};
+
+export declare type CombatClasslessValid = CombatClassless;
+
+/**
+ * Describes the message glimway.content.v1.CombatClassless.
+ * Use `create(CombatClasslessSchema)` to create a new message.
+ */
+export declare const CombatClasslessSchema: GenMessage<CombatClassless, {validType: CombatClasslessValid}>;
+
+/**
+ * base + maximum_bonus * (stat / (stat + halfway)), rounded afterwards.
+ *
+ * @generated from message glimway.content.v1.CombatFormula
+ */
+export declare type CombatFormula = Message<"glimway.content.v1.CombatFormula"> & {
+  /**
+   * @generated from field: double base = 1;
+   */
+  base: number;
+
+  /**
+   * @generated from field: double maximum_bonus = 2;
+   */
+  maximumBonus: number;
+
+  /**
+   * @generated from field: double halfway = 3;
+   */
+  halfway: number;
+
+  /**
+   * @generated from field: int32 decimal_places = 4;
+   */
+  decimalPlaces: number;
+};
+
+export declare type CombatFormulaValid = CombatFormula;
+
+/**
+ * Describes the message glimway.content.v1.CombatFormula.
+ * Use `create(CombatFormulaSchema)` to create a new message.
+ */
+export declare const CombatFormulaSchema: GenMessage<CombatFormula, {validType: CombatFormulaValid}>;
+
+/**
+ * Hit geometry, in pixels from sprite feet. A bolt spawns
+ * bolt_spawn_offset_x ahead along the facing's x and origin_y_offset up,
+ * with no y offset from facing (as today). A basic bolt never crits, as
+ * today: the counter still advances, and its result's crit is false.
+ *
+ * @generated from message glimway.content.v1.CombatAttack
+ */
+export declare type CombatAttack = Message<"glimway.content.v1.CombatAttack"> & {
+  /**
+   * @generated from field: double slash_radius = 1;
+   */
+  slashRadius: number;
+
+  /**
+   * @generated from field: double slash_offset_x = 2;
+   */
+  slashOffsetX: number;
+
+  /**
+   * @generated from field: double slash_offset_y = 3;
+   */
+  slashOffsetY: number;
+
+  /**
+   * @generated from field: double origin_y_offset = 4;
+   */
+  originYOffset: number;
+
+  /**
+   * @generated from field: double enemy_y_offset = 5;
+   */
+  enemyYOffset: number;
+
+  /**
+   * @generated from field: double bolt_radius = 6;
+   */
+  boltRadius: number;
+
+  /**
+   * @generated from field: double bolt_speed = 7;
+   */
+  boltSpeed: number;
+
+  /**
+   * @generated from field: double bolt_lifetime_seconds = 8;
+   */
+  boltLifetimeSeconds: number;
+
+  /**
+   * @generated from field: double crit_multiplier = 9;
+   */
+  critMultiplier: number;
+
+  /**
+   * @generated from field: double tool_damage_fraction = 10;
+   */
+  toolDamageFraction: number;
+
+  /**
+   * @generated from field: double bolt_spawn_offset_x = 11;
+   */
+  boltSpawnOffsetX: number;
+};
+
+export declare type CombatAttackValid = CombatAttack;
+
+/**
+ * Describes the message glimway.content.v1.CombatAttack.
+ * Use `create(CombatAttackSchema)` to create a new message.
+ */
+export declare const CombatAttackSchema: GenMessage<CombatAttack, {validType: CombatAttackValid}>;
 

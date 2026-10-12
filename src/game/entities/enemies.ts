@@ -68,17 +68,8 @@ export interface Enemy {
  * a "!" and a rising tone) so it can be read and dodged; bumping into an
  * enemy that isn't attacking only stings.
  */
-export const ENEMY_TUNING = {
-  // lock: seconds before launch when the aim freezes (with a white flash) —
-  // the moment to step aside. reach: how near a bump stings (an attack's own
-  // reach, hopReach/chargeReach/lungeReach, is a little longer).
-  wisp: { hp: 10, contact: 1, reach: 12, hopReach: 14, chase: 38, aggro: 90, hopRange: 46, windup: 0.5, lock: 0.18, hopSpeed: 175, hopTime: 0.24, hop: 2, recover: 0.65, cooldown: 1.4 },
-  beetle: { hp: 18, contact: 1, reach: 12, chargeReach: 15, walk: 30, aggro: 130, keepAway: 64, chargeRange: 120, windup: 0.8, lock: 0.3, chargeSpeed: 220, chargeTime: 0.85, charge: 3, stun: 1.4, recover: 0.5, cooldown: 2.1, stunnedTakes: 1.5 },
-  guardian: { hp: 44, contact: 1, reach: 12, lungeReach: 18, lunge: 3, lungeSpeed: 250, telegraph: 0.65, cooldown: 3.2 }
-} as const
-
-/** Knockback impulses (px/s) applied over KNOCK.time through physics. */
-export const KNOCK = { small: 170, guardian: 60, player: 150, time: 0.13 }
+export { ENEMY_TUNING, KNOCK } from '../../lib/enemies.ts'
+import { ENEMY_TUNING, KNOCK } from '../../lib/enemies.ts'
 
 /** What the enemy AI needs from the hero (implemented by Hero). */
 export interface HeroView {

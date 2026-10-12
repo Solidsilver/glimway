@@ -12,8 +12,8 @@ type (
 
 // DecodeCombat reads combat JSON into the generated types, refusing nulls
 // and unknown keys, then runs the schema's rules. There are no rules left
-// in code: the cooldown, the four classes and the heal formula are all on
-// the schema (combat.classes, and the field rules).
+// in code: cooldowns, class rows, kit formulas and attack geometry are all
+// constrained by the schema (combat.classes, combat.fractions and fields).
 func DecodeCombat(raw []byte) (*Combat, error) {
 	doc := &Combat{}
 	if err := decodeContentProto(raw, "combat", doc); err != nil {

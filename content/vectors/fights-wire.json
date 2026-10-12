@@ -1,0 +1,1424 @@
+[
+  {
+    "name": "slash-zero",
+    "json": {
+      "fightSwing": {
+        "kind": "FIGHT_SWING_KIND_SLASH",
+        "x": 0,
+        "y": 0,
+        "facing": {
+          "x": 0,
+          "y": -1
+        },
+        "swingCounter": 0,
+        "seenTick": 0
+      }
+    },
+    "valid": true,
+    "binaryHex": "6a0d0801220911000000000000f0bf"
+  },
+  {
+    "name": "slash-predicted",
+    "json": {
+      "fightSwing": {
+        "kind": "FIGHT_SWING_KIND_SLASH",
+        "x": -600.5,
+        "y": 1300.25,
+        "facing": {
+          "x": 0,
+          "y": 1
+        },
+        "swingCounter": 12,
+        "seenTick": 737762816,
+        "seenOffsetMs": 40,
+        "predicted": [
+          {
+            "room": 7,
+            "enemy": 0
+          },
+          {
+            "room": 8,
+            "enemy": 0
+          }
+        ]
+      }
+    },
+    "valid": true,
+    "binaryHex": "6a310801110000000000c482c0190000000000519440220911000000000000f03f280c3080bce5df0238284a0208074a020808"
+  },
+  {
+    "name": "slash-tool",
+    "json": {
+      "fightSwing": {
+        "kind": "FIGHT_SWING_KIND_SLASH",
+        "x": -600.5,
+        "y": 1300.25,
+        "facing": {
+          "x": 0,
+          "y": 1
+        },
+        "swingCounter": 12,
+        "seenTick": 737762816,
+        "seenOffsetMs": 40,
+        "tool": true,
+        "predicted": [
+          {
+            "room": 7,
+            "enemy": 1
+          }
+        ]
+      }
+    },
+    "valid": true,
+    "binaryHex": "6a310801110000000000c482c0190000000000519440220911000000000000f03f280c3080bce5df02382840014a0408071001"
+  },
+  {
+    "name": "bolt-max-counter",
+    "json": {
+      "fightSwing": {
+        "kind": "FIGHT_SWING_KIND_BOLT",
+        "x": -400,
+        "y": 128,
+        "facing": {
+          "x": 0.6,
+          "y": 0.8
+        },
+        "swingCounter": 4294967295,
+        "seenTick": 4294967295,
+        "seenOffsetMs": 99
+      }
+    },
+    "valid": true,
+    "binaryHex": "6a3608021100000000000079c0190000000000006040221209333333333333e33f119a9999999999e93f28ffffffff0f30ffffffff0f3863"
+  },
+  {
+    "name": "join",
+    "json": {
+      "fightJoin": {
+        "roomKey": {
+          "world": "world-1",
+          "realm": "wilds",
+          "layer": 0,
+          "cx": -2,
+          "cy": 3,
+          "epoch": "still"
+        },
+        "room": 7,
+        "tick": 737762816,
+        "enemies": [
+          {
+            "enemy": 0,
+            "id": "camp:-2:3:0/0",
+            "kind": "FIGHT_ENEMY_KIND_WISP",
+            "campId": "camp:-2:3:0",
+            "maxHp": 10,
+            "x": -600,
+            "y": 1290,
+            "state": "FIGHT_ENEMY_STATE_CHASE",
+            "stateTick": 737762776,
+            "hp": 10,
+            "facing": 64
+          },
+          {
+            "enemy": 1,
+            "id": "camp:-2:3:0/1",
+            "kind": "FIGHT_ENEMY_KIND_WISP",
+            "campId": "camp:-2:3:0",
+            "maxHp": 10,
+            "x": -620,
+            "y": 1310,
+            "state": "FIGHT_ENEMY_STATE_CHASE",
+            "stateTick": 737762776,
+            "hp": 10,
+            "facing": 64
+          }
+        ],
+        "critSeed": 2654435769
+      }
+    },
+    "valid": true,
+    "binaryHex": "72b0010a1b0a07776f726c642d31120577696c64732003280632057374696c6c10071880bce5df022240120d63616d703a2d323a333a302f301801220b63616d703a2d323a333a3029000000000000244030af09389414400148d8bbe5df02510000000000002440584022420801120d63616d703a2d323a333a302f311801220b63616d703a2d323a333a3029000000000000244030d70938bc14400148d8bbe5df0251000000000000244058402db979379e"
+  },
+  {
+    "name": "empty-join",
+    "json": {
+      "fightJoin": {
+        "roomKey": {
+          "world": "world-1",
+          "realm": "wilds",
+          "layer": 0,
+          "cx": -2,
+          "cy": 3,
+          "epoch": "still"
+        },
+        "room": 7,
+        "tick": 737762816,
+        "enemies": [],
+        "critSeed": 2654435769
+      }
+    },
+    "valid": true,
+    "binaryHex": "722a0a1b0a07776f726c642d31120577696c64732003280632057374696c6c10071880bce5df022db979379e"
+  },
+  {
+    "name": "delta-five-moving",
+    "json": {
+      "fightDelta": {
+        "room": 7,
+        "tick": 737762816,
+        "changed": [
+          {
+            "enemy": 0,
+            "x": -600,
+            "y": 1290,
+            "facing": 32
+          },
+          {
+            "enemy": 1,
+            "x": -599,
+            "y": 1289,
+            "facing": 33
+          },
+          {
+            "enemy": 2,
+            "x": -598,
+            "y": 1288,
+            "facing": 34
+          },
+          {
+            "enemy": 3,
+            "x": -597,
+            "y": 1287,
+            "facing": 35
+          },
+          {
+            "enemy": 4,
+            "x": -596,
+            "y": 1286,
+            "facing": 36
+          }
+        ]
+      }
+    },
+    "valid": true,
+    "binaryHex": "7a4208071080bce5df021a0810af0918941438201a0a080110ad0918921438211a0a080210ab0918901438221a0a080310a909188e1438231a0a080410a709188c143824"
+  },
+  {
+    "name": "delta-one-moving",
+    "json": {
+      "fightDelta": {
+        "room": 7,
+        "tick": 737762816,
+        "changed": [
+          {
+            "enemy": 0,
+            "x": -599,
+            "y": 1289,
+            "facing": 33
+          }
+        ]
+      }
+    },
+    "valid": true,
+    "binaryHex": "7a1208071080bce5df021a0810ad091892143821"
+  },
+  {
+    "name": "delta-state",
+    "json": {
+      "fightDelta": {
+        "room": 7,
+        "tick": 737762816,
+        "changed": [
+          {
+            "enemy": 1,
+            "state": "FIGHT_ENEMY_STATE_TELEGRAPH",
+            "stateTick": 737762816
+          }
+        ]
+      }
+    },
+    "valid": true,
+    "binaryHex": "7a1408071080bce5df021a0a080120022880bce5df02"
+  },
+  {
+    "name": "delta-hit",
+    "json": {
+      "fightDelta": {
+        "room": 7,
+        "tick": 737762816,
+        "changed": [
+          {
+            "enemy": 0,
+            "hp": 5.5,
+            "x": -590
+          }
+        ]
+      }
+    },
+    "valid": true,
+    "binaryHex": "7a1608071080bce5df021a0c109b09310000000000001640"
+  },
+  {
+    "name": "delta-spawn",
+    "json": {
+      "fightDelta": {
+        "room": 7,
+        "tick": 737762816,
+        "spawned": [
+          {
+            "enemy": 3,
+            "id": "camp:-2:3:0/3",
+            "kind": "FIGHT_ENEMY_KIND_WISP",
+            "campId": "camp:-2:3:0",
+            "maxHp": 10,
+            "x": -580,
+            "y": 1300,
+            "state": "FIGHT_ENEMY_STATE_CHASE",
+            "stateTick": 737762816,
+            "hp": 10,
+            "facing": 64
+          }
+        ]
+      }
+    },
+    "valid": true,
+    "binaryHex": "7a4c08071080bce5df0222420803120d63616d703a2d323a333a302f331801220b63616d703a2d323a333a3029000000000000244030870938a81440014880bce5df025100000000000024405840"
+  },
+  {
+    "name": "delta-removed",
+    "json": {
+      "fightDelta": {
+        "room": 7,
+        "tick": 737762816,
+        "removed": [
+          0,
+          1,
+          2
+        ]
+      }
+    },
+    "valid": true,
+    "binaryHex": "7a0d08071080bce5df022a03000102"
+  },
+  {
+    "name": "delta-zero-index",
+    "json": {
+      "fightDelta": {
+        "room": 7,
+        "tick": 737762816,
+        "changed": [
+          {
+            "enemy": 0,
+            "x": 0
+          }
+        ]
+      }
+    },
+    "valid": true,
+    "binaryHex": "7a0c08071080bce5df021a021000"
+  },
+  {
+    "name": "event-windup_start",
+    "json": {
+      "fightEvent": {
+        "room": 7,
+        "tick": 737762816,
+        "kind": "FIGHT_EVENT_KIND_WINDUP_START",
+        "enemy": 1,
+        "target": "account-1"
+      }
+    },
+    "valid": true,
+    "binaryHex": "82011708071080bce5df022001280132096163636f756e742d31"
+  },
+  {
+    "name": "event-aim_lock",
+    "json": {
+      "fightEvent": {
+        "room": 7,
+        "tick": 737762819,
+        "offsetMs": 20,
+        "kind": "FIGHT_EVENT_KIND_AIM_LOCK",
+        "enemy": 1,
+        "target": "echo:account-1"
+      }
+    },
+    "valid": true,
+    "binaryHex": "82011e08071083bce5df02181420022801320e6563686f3a6163636f756e742d31"
+  },
+  {
+    "name": "event-death",
+    "json": {
+      "fightEvent": {
+        "room": 7,
+        "tick": 737762816,
+        "kind": "FIGHT_EVENT_KIND_DEATH",
+        "enemy": 0
+      }
+    },
+    "valid": true,
+    "binaryHex": "82010c08071080bce5df0220032800"
+  },
+  {
+    "name": "event-spawn",
+    "json": {
+      "fightEvent": {
+        "room": 7,
+        "tick": 737762816,
+        "kind": "FIGHT_EVENT_KIND_SPAWN",
+        "enemy": 3
+      }
+    },
+    "valid": true,
+    "binaryHex": "82010c08071080bce5df0220042803"
+  },
+  {
+    "name": "event-room_closed",
+    "json": {
+      "fightEvent": {
+        "room": 7,
+        "tick": 737762816,
+        "kind": "FIGHT_EVENT_KIND_ROOM_CLOSED"
+      }
+    },
+    "valid": true,
+    "binaryHex": "82010a08071080bce5df022005"
+  },
+  {
+    "name": "result-hits",
+    "json": {
+      "fightSwingResult": {
+        "swingCounter": 12,
+        "crit": true,
+        "hits": [
+          {
+            "room": 7,
+            "enemy": 0,
+            "damage": 22
+          },
+          {
+            "room": 7,
+            "enemy": 1,
+            "refusedReason": "FIGHT_REFUSED_REASON_OUT_OF_REACH"
+          },
+          {
+            "room": 8,
+            "enemy": 2,
+            "damage": 16.5
+          }
+        ]
+      }
+    },
+    "valid": true,
+    "binaryHex": "8a0128080c1001220b08071900000000000036402206080710012002220d08081002190000000000803040"
+  },
+  {
+    "name": "result-unknown-and-dead",
+    "json": {
+      "fightSwingResult": {
+        "swingCounter": 12,
+        "hits": [
+          {
+            "room": 9,
+            "enemy": 0,
+            "refusedReason": "FIGHT_REFUSED_REASON_UNKNOWN_ENEMY"
+          },
+          {
+            "room": 7,
+            "enemy": 1,
+            "refusedReason": "FIGHT_REFUSED_REASON_ALREADY_DEAD"
+          }
+        ]
+      }
+    },
+    "valid": true,
+    "binaryHex": "8a0110080c2204080920042206080710012001"
+  },
+  {
+    "name": "result-no-hits",
+    "json": {
+      "fightSwingResult": {
+        "swingCounter": 12
+      }
+    },
+    "valid": true,
+    "binaryHex": "8a0102080c"
+  },
+  {
+    "name": "result-cooldown",
+    "json": {
+      "fightSwingResult": {
+        "swingCounter": 12,
+        "refusedReason": "FIGHT_REFUSED_REASON_COOLDOWN"
+      }
+    },
+    "valid": true,
+    "binaryHex": "8a0104080c1803"
+  },
+  {
+    "name": "result-stale-counter",
+    "json": {
+      "fightSwingResult": {
+        "swingCounter": 4294967295,
+        "refusedReason": "FIGHT_REFUSED_REASON_STALE_COUNTER"
+      }
+    },
+    "valid": true,
+    "binaryHex": "8a010808ffffffff0f1805"
+  },
+  {
+    "name": "result-not-allowed",
+    "json": {
+      "fightSwingResult": {
+        "swingCounter": 12,
+        "refusedReason": "FIGHT_REFUSED_REASON_NOT_ALLOWED"
+      }
+    },
+    "valid": true,
+    "binaryHex": "8a0104080c1806"
+  },
+  {
+    "name": "ability-tick-zero",
+    "json": {
+      "ability": {
+        "ability": "cleave",
+        "x": -600,
+        "y": 1300,
+        "fight": {
+          "seenTick": 0,
+          "seenOffsetMs": 0,
+          "swingCounter": 0,
+          "facing": {
+            "x": 1,
+            "y": 0
+          },
+          "predicted": [
+            {
+              "room": 7,
+              "enemy": 0
+            }
+          ]
+        }
+      }
+    },
+    "valid": true,
+    "binaryHex": "5a2b0a06636c65617665110000000000c082c0190000000000509440320f1a0909000000000000f03f2a020807"
+  },
+  {
+    "name": "ability-fingersnap",
+    "json": {
+      "ability": {
+        "ability": "fingersnap",
+        "x": -600,
+        "y": 1300,
+        "fight": {
+          "seenTick": 737762816,
+          "seenOffsetMs": 99,
+          "swingCounter": 4294967295,
+          "facing": {
+            "x": -0.6,
+            "y": 0.8
+          }
+        }
+      }
+    },
+    "valid": true,
+    "binaryHex": "5a420a0a66696e676572736e6170110000000000c082c019000000000050944032220880bce5df0210631a1209333333333333e3bf119a9999999999e93f20ffffffff0f"
+  },
+  {
+    "name": "ability-legacy",
+    "json": {
+      "ability": {
+        "ability": "cleave",
+        "x": -600,
+        "y": 1300
+      }
+    },
+    "valid": true,
+    "binaryHex": "5a1a0a06636c65617665110000000000c082c0190000000000509440"
+  },
+  {
+    "name": "missing-facing",
+    "json": {
+      "fightSwing": {
+        "kind": "FIGHT_SWING_KIND_SLASH",
+        "x": 0,
+        "y": 0
+      }
+    },
+    "valid": false,
+    "binaryHex": "6a020801"
+  },
+  {
+    "name": "zero-facing",
+    "json": {
+      "fightSwing": {
+        "kind": "FIGHT_SWING_KIND_SLASH",
+        "x": -600.5,
+        "y": 1300.25,
+        "facing": {
+          "x": 0,
+          "y": 0
+        },
+        "swingCounter": 12,
+        "seenTick": 737762816,
+        "seenOffsetMs": 40
+      }
+    },
+    "valid": false,
+    "binaryHex": "6a200801110000000000c482c01900000000005194402200280c3080bce5df023828"
+  },
+  {
+    "name": "unknown-swing",
+    "json": {
+      "fightSwing": {
+        "kind": "FIGHT_SWING_KIND_UNSPECIFIED",
+        "x": -600.5,
+        "y": 1300.25,
+        "facing": {
+          "x": 0,
+          "y": 1
+        },
+        "swingCounter": 12,
+        "seenTick": 737762816,
+        "seenOffsetMs": 40
+      }
+    },
+    "valid": false,
+    "binaryHex": "6a27110000000000c482c0190000000000519440220911000000000000f03f280c3080bce5df023828"
+  },
+  {
+    "name": "swing-offset-100",
+    "json": {
+      "fightSwing": {
+        "kind": "FIGHT_SWING_KIND_SLASH",
+        "x": -600.5,
+        "y": 1300.25,
+        "facing": {
+          "x": 0,
+          "y": 1
+        },
+        "swingCounter": 12,
+        "seenTick": 737762816,
+        "seenOffsetMs": 100
+      }
+    },
+    "valid": false,
+    "binaryHex": "6a290801110000000000c482c0190000000000519440220911000000000000f03f280c3080bce5df023864"
+  },
+  {
+    "name": "tool-bolt",
+    "json": {
+      "fightSwing": {
+        "kind": "FIGHT_SWING_KIND_BOLT",
+        "x": -600.5,
+        "y": 1300.25,
+        "facing": {
+          "x": 0,
+          "y": 1
+        },
+        "swingCounter": 12,
+        "seenTick": 737762816,
+        "seenOffsetMs": 40,
+        "tool": true
+      }
+    },
+    "valid": false,
+    "binaryHex": "6a2b0802110000000000c482c0190000000000519440220911000000000000f03f280c3080bce5df0238284001"
+  },
+  {
+    "name": "bolt-predicted",
+    "json": {
+      "fightSwing": {
+        "kind": "FIGHT_SWING_KIND_BOLT",
+        "x": -600.5,
+        "y": 1300.25,
+        "facing": {
+          "x": 0,
+          "y": 1
+        },
+        "swingCounter": 12,
+        "seenTick": 737762816,
+        "seenOffsetMs": 40,
+        "predicted": [
+          {
+            "room": 7,
+            "enemy": 0
+          }
+        ]
+      }
+    },
+    "valid": false,
+    "binaryHex": "6a2d0802110000000000c482c0190000000000519440220911000000000000f03f280c3080bce5df0238284a020807"
+  },
+  {
+    "name": "predicted-duplicate",
+    "json": {
+      "fightSwing": {
+        "kind": "FIGHT_SWING_KIND_SLASH",
+        "x": -600.5,
+        "y": 1300.25,
+        "facing": {
+          "x": 0,
+          "y": 1
+        },
+        "swingCounter": 12,
+        "seenTick": 737762816,
+        "seenOffsetMs": 40,
+        "predicted": [
+          {
+            "room": 7,
+            "enemy": 0
+          },
+          {
+            "room": 7,
+            "enemy": 0
+          }
+        ]
+      }
+    },
+    "valid": false,
+    "binaryHex": "6a310801110000000000c482c0190000000000519440220911000000000000f03f280c3080bce5df0238284a0208074a020807"
+  },
+  {
+    "name": "predicted-room-zero",
+    "json": {
+      "fightSwing": {
+        "kind": "FIGHT_SWING_KIND_SLASH",
+        "x": -600.5,
+        "y": 1300.25,
+        "facing": {
+          "x": 0,
+          "y": 1
+        },
+        "swingCounter": 12,
+        "seenTick": 737762816,
+        "seenOffsetMs": 40,
+        "predicted": [
+          {
+            "room": 0,
+            "enemy": 0
+          }
+        ]
+      }
+    },
+    "valid": false,
+    "binaryHex": "6a2b0801110000000000c482c0190000000000519440220911000000000000f03f280c3080bce5df0238284a00"
+  },
+  {
+    "name": "predicted-too-many",
+    "json": {
+      "fightSwing": {
+        "kind": "FIGHT_SWING_KIND_SLASH",
+        "x": -600.5,
+        "y": 1300.25,
+        "facing": {
+          "x": 0,
+          "y": 1
+        },
+        "swingCounter": 12,
+        "seenTick": 737762816,
+        "seenOffsetMs": 40,
+        "predicted": [
+          {
+            "room": 7,
+            "enemy": 0
+          },
+          {
+            "room": 7,
+            "enemy": 1
+          },
+          {
+            "room": 7,
+            "enemy": 2
+          },
+          {
+            "room": 7,
+            "enemy": 3
+          },
+          {
+            "room": 7,
+            "enemy": 4
+          },
+          {
+            "room": 7,
+            "enemy": 5
+          },
+          {
+            "room": 7,
+            "enemy": 6
+          },
+          {
+            "room": 7,
+            "enemy": 7
+          },
+          {
+            "room": 7,
+            "enemy": 8
+          },
+          {
+            "room": 7,
+            "enemy": 9
+          },
+          {
+            "room": 7,
+            "enemy": 10
+          },
+          {
+            "room": 7,
+            "enemy": 11
+          },
+          {
+            "room": 7,
+            "enemy": 12
+          },
+          {
+            "room": 7,
+            "enemy": 13
+          },
+          {
+            "room": 7,
+            "enemy": 14
+          },
+          {
+            "room": 7,
+            "enemy": 15
+          },
+          {
+            "room": 7,
+            "enemy": 16
+          }
+        ]
+      }
+    },
+    "valid": false,
+    "binaryHex": "6a8d010801110000000000c482c0190000000000519440220911000000000000f03f280c3080bce5df0238284a0208074a04080710014a04080710024a04080710034a04080710044a04080710054a04080710064a04080710074a04080710084a04080710094a040807100a4a040807100b4a040807100c4a040807100d4a040807100e4a040807100f4a0408071010"
+  },
+  {
+    "name": "missing-room",
+    "json": {
+      "fightJoin": {
+        "room": 7,
+        "tick": 0,
+        "critSeed": 1
+      }
+    },
+    "valid": false,
+    "binaryHex": "720710072d01000000"
+  },
+  {
+    "name": "join-room-zero",
+    "json": {
+      "fightJoin": {
+        "roomKey": {
+          "world": "world-1",
+          "realm": "wilds",
+          "layer": 0,
+          "cx": -2,
+          "cy": 3,
+          "epoch": "still"
+        },
+        "room": 0,
+        "tick": 737762816,
+        "enemies": [
+          {
+            "enemy": 0,
+            "id": "camp:-2:3:0/0",
+            "kind": "FIGHT_ENEMY_KIND_WISP",
+            "campId": "camp:-2:3:0",
+            "maxHp": 10,
+            "x": -600,
+            "y": 1290,
+            "state": "FIGHT_ENEMY_STATE_CHASE",
+            "stateTick": 737762776,
+            "hp": 10,
+            "facing": 64
+          },
+          {
+            "enemy": 1,
+            "id": "camp:-2:3:0/1",
+            "kind": "FIGHT_ENEMY_KIND_WISP",
+            "campId": "camp:-2:3:0",
+            "maxHp": 10,
+            "x": -620,
+            "y": 1310,
+            "state": "FIGHT_ENEMY_STATE_CHASE",
+            "stateTick": 737762776,
+            "hp": 10,
+            "facing": 64
+          }
+        ],
+        "critSeed": 2654435769
+      }
+    },
+    "valid": false,
+    "binaryHex": "72ae010a1b0a07776f726c642d31120577696c64732003280632057374696c6c1880bce5df022240120d63616d703a2d323a333a302f301801220b63616d703a2d323a333a3029000000000000244030af09389414400148d8bbe5df02510000000000002440584022420801120d63616d703a2d323a333a302f311801220b63616d703a2d323a333a3029000000000000244030d70938bc14400148d8bbe5df0251000000000000244058402db979379e"
+  },
+  {
+    "name": "join-seed-zero",
+    "json": {
+      "fightJoin": {
+        "roomKey": {
+          "world": "world-1",
+          "realm": "wilds",
+          "layer": 0,
+          "cx": -2,
+          "cy": 3,
+          "epoch": "still"
+        },
+        "room": 7,
+        "tick": 737762816,
+        "enemies": [
+          {
+            "enemy": 0,
+            "id": "camp:-2:3:0/0",
+            "kind": "FIGHT_ENEMY_KIND_WISP",
+            "campId": "camp:-2:3:0",
+            "maxHp": 10,
+            "x": -600,
+            "y": 1290,
+            "state": "FIGHT_ENEMY_STATE_CHASE",
+            "stateTick": 737762776,
+            "hp": 10,
+            "facing": 64
+          },
+          {
+            "enemy": 1,
+            "id": "camp:-2:3:0/1",
+            "kind": "FIGHT_ENEMY_KIND_WISP",
+            "campId": "camp:-2:3:0",
+            "maxHp": 10,
+            "x": -620,
+            "y": 1310,
+            "state": "FIGHT_ENEMY_STATE_CHASE",
+            "stateTick": 737762776,
+            "hp": 10,
+            "facing": 64
+          }
+        ],
+        "critSeed": 0
+      }
+    },
+    "valid": false,
+    "binaryHex": "72ab010a1b0a07776f726c642d31120577696c64732003280632057374696c6c10071880bce5df022240120d63616d703a2d323a333a302f301801220b63616d703a2d323a333a3029000000000000244030af09389414400148d8bbe5df02510000000000002440584022420801120d63616d703a2d323a333a302f311801220b63616d703a2d323a333a3029000000000000244030d70938bc14400148d8bbe5df025100000000000024405840"
+  },
+  {
+    "name": "join-duplicate-index",
+    "json": {
+      "fightJoin": {
+        "roomKey": {
+          "world": "world-1",
+          "realm": "wilds",
+          "layer": 0,
+          "cx": -2,
+          "cy": 3,
+          "epoch": "still"
+        },
+        "room": 7,
+        "tick": 737762816,
+        "enemies": [
+          {
+            "enemy": 0,
+            "id": "camp:-2:3:0/0",
+            "kind": "FIGHT_ENEMY_KIND_WISP",
+            "campId": "camp:-2:3:0",
+            "maxHp": 10,
+            "x": -600,
+            "y": 1290,
+            "state": "FIGHT_ENEMY_STATE_CHASE",
+            "stateTick": 737762776,
+            "hp": 10,
+            "facing": 64
+          },
+          {
+            "enemy": 0,
+            "id": "camp:-2:3:0/1",
+            "kind": "FIGHT_ENEMY_KIND_WISP",
+            "campId": "camp:-2:3:0",
+            "maxHp": 10,
+            "x": -620,
+            "y": 1310,
+            "state": "FIGHT_ENEMY_STATE_CHASE",
+            "stateTick": 737762776,
+            "hp": 10,
+            "facing": 64
+          }
+        ],
+        "critSeed": 2654435769
+      }
+    },
+    "valid": false,
+    "binaryHex": "72ae010a1b0a07776f726c642d31120577696c64732003280632057374696c6c10071880bce5df022240120d63616d703a2d323a333a302f301801220b63616d703a2d323a333a3029000000000000244030af09389414400148d8bbe5df0251000000000000244058402240120d63616d703a2d323a333a302f311801220b63616d703a2d323a333a3029000000000000244030d70938bc14400148d8bbe5df0251000000000000244058402db979379e"
+  },
+  {
+    "name": "join-duplicate-id",
+    "json": {
+      "fightJoin": {
+        "roomKey": {
+          "world": "world-1",
+          "realm": "wilds",
+          "layer": 0,
+          "cx": -2,
+          "cy": 3,
+          "epoch": "still"
+        },
+        "room": 7,
+        "tick": 737762816,
+        "enemies": [
+          {
+            "enemy": 0,
+            "id": "camp:-2:3:0/0",
+            "kind": "FIGHT_ENEMY_KIND_WISP",
+            "campId": "camp:-2:3:0",
+            "maxHp": 10,
+            "x": -600,
+            "y": 1290,
+            "state": "FIGHT_ENEMY_STATE_CHASE",
+            "stateTick": 737762776,
+            "hp": 10,
+            "facing": 64
+          },
+          {
+            "enemy": 1,
+            "id": "camp:-2:3:0/0",
+            "kind": "FIGHT_ENEMY_KIND_WISP",
+            "campId": "camp:-2:3:0",
+            "maxHp": 10,
+            "x": -620,
+            "y": 1310,
+            "state": "FIGHT_ENEMY_STATE_CHASE",
+            "stateTick": 737762776,
+            "hp": 10,
+            "facing": 64
+          }
+        ],
+        "critSeed": 2654435769
+      }
+    },
+    "valid": false,
+    "binaryHex": "72b0010a1b0a07776f726c642d31120577696c64732003280632057374696c6c10071880bce5df022240120d63616d703a2d323a333a302f301801220b63616d703a2d323a333a3029000000000000244030af09389414400148d8bbe5df02510000000000002440584022420801120d63616d703a2d323a333a302f301801220b63616d703a2d323a333a3029000000000000244030d70938bc14400148d8bbe5df0251000000000000244058402db979379e"
+  },
+  {
+    "name": "hp-too-high",
+    "json": {
+      "fightJoin": {
+        "roomKey": {
+          "world": "world-1",
+          "realm": "wilds",
+          "layer": 0,
+          "cx": -2,
+          "cy": 3,
+          "epoch": "still"
+        },
+        "room": 7,
+        "tick": 737762816,
+        "enemies": [
+          {
+            "enemy": 0,
+            "id": "camp:-2:3:0/0",
+            "kind": "FIGHT_ENEMY_KIND_WISP",
+            "campId": "camp:-2:3:0",
+            "maxHp": 10,
+            "x": -600,
+            "y": 1290,
+            "state": "FIGHT_ENEMY_STATE_CHASE",
+            "stateTick": 737762776,
+            "hp": 11,
+            "facing": 64
+          }
+        ],
+        "critSeed": 2654435769
+      }
+    },
+    "valid": false,
+    "binaryHex": "726c0a1b0a07776f726c642d31120577696c64732003280632057374696c6c10071880bce5df022240120d63616d703a2d323a333a302f301801220b63616d703a2d323a333a3029000000000000244030af09389414400148d8bbe5df0251000000000000264058402db979379e"
+  },
+  {
+    "name": "facing-256",
+    "json": {
+      "fightJoin": {
+        "roomKey": {
+          "world": "world-1",
+          "realm": "wilds",
+          "layer": 0,
+          "cx": -2,
+          "cy": 3,
+          "epoch": "still"
+        },
+        "room": 7,
+        "tick": 737762816,
+        "enemies": [
+          {
+            "enemy": 0,
+            "id": "camp:-2:3:0/0",
+            "kind": "FIGHT_ENEMY_KIND_WISP",
+            "campId": "camp:-2:3:0",
+            "maxHp": 10,
+            "x": -600,
+            "y": 1290,
+            "state": "FIGHT_ENEMY_STATE_CHASE",
+            "stateTick": 737762776,
+            "hp": 10,
+            "facing": 256
+          }
+        ],
+        "critSeed": 2654435769
+      }
+    },
+    "valid": false,
+    "binaryHex": "726d0a1b0a07776f726c642d31120577696c64732003280632057374696c6c10071880bce5df022241120d63616d703a2d323a333a302f301801220b63616d703a2d323a333a3029000000000000244030af09389414400148d8bbe5df025100000000000024405880022db979379e"
+  },
+  {
+    "name": "empty-delta",
+    "json": {
+      "fightDelta": {
+        "room": 7,
+        "tick": 737762816
+      }
+    },
+    "valid": false,
+    "binaryHex": "7a0808071080bce5df02"
+  },
+  {
+    "name": "delta-room-zero",
+    "json": {
+      "fightDelta": {
+        "room": 0,
+        "tick": 737762816,
+        "removed": [
+          1
+        ]
+      }
+    },
+    "valid": false,
+    "binaryHex": "7a091080bce5df022a0101"
+  },
+  {
+    "name": "patch-empty",
+    "json": {
+      "fightDelta": {
+        "room": 7,
+        "tick": 737762816,
+        "changed": [
+          {
+            "enemy": 1
+          }
+        ]
+      }
+    },
+    "valid": false,
+    "binaryHex": "7a0c08071080bce5df021a020801"
+  },
+  {
+    "name": "patch-state-without-tick",
+    "json": {
+      "fightDelta": {
+        "room": 7,
+        "tick": 737762816,
+        "changed": [
+          {
+            "enemy": 1,
+            "state": "FIGHT_ENEMY_STATE_LUNGE"
+          }
+        ]
+      }
+    },
+    "valid": false,
+    "binaryHex": "7a0e08071080bce5df021a0408012003"
+  },
+  {
+    "name": "patch-tick-without-state",
+    "json": {
+      "fightDelta": {
+        "room": 7,
+        "tick": 737762816,
+        "changed": [
+          {
+            "enemy": 1,
+            "stateTick": 737762816,
+            "x": 1
+          }
+        ]
+      }
+    },
+    "valid": false,
+    "binaryHex": "7a1408071080bce5df021a0a080110022880bce5df02"
+  },
+  {
+    "name": "event-no-enemy",
+    "json": {
+      "fightEvent": {
+        "room": 7,
+        "tick": 737762816,
+        "kind": "FIGHT_EVENT_KIND_DEATH"
+      }
+    },
+    "valid": false,
+    "binaryHex": "82010a08071080bce5df022003"
+  },
+  {
+    "name": "room-closed-with-enemy",
+    "json": {
+      "fightEvent": {
+        "room": 7,
+        "tick": 737762816,
+        "kind": "FIGHT_EVENT_KIND_ROOM_CLOSED",
+        "enemy": 0
+      }
+    },
+    "valid": false,
+    "binaryHex": "82010c08071080bce5df0220052800"
+  },
+  {
+    "name": "event-offset-100",
+    "json": {
+      "fightEvent": {
+        "room": 7,
+        "tick": 737762816,
+        "kind": "FIGHT_EVENT_KIND_AIM_LOCK",
+        "enemy": 1,
+        "offsetMs": 100
+      }
+    },
+    "valid": false,
+    "binaryHex": "82010e08071080bce5df02186420022801"
+  },
+  {
+    "name": "refused-swing-with-rows",
+    "json": {
+      "fightSwingResult": {
+        "swingCounter": 12,
+        "refusedReason": "FIGHT_REFUSED_REASON_COOLDOWN",
+        "hits": [
+          {
+            "room": 7,
+            "enemy": 0,
+            "refusedReason": "FIGHT_REFUSED_REASON_OUT_OF_REACH"
+          }
+        ]
+      }
+    },
+    "valid": false,
+    "binaryHex": "8a010a080c1803220408072002"
+  },
+  {
+    "name": "refused-swing-crit",
+    "json": {
+      "fightSwingResult": {
+        "swingCounter": 12,
+        "refusedReason": "FIGHT_REFUSED_REASON_COOLDOWN",
+        "crit": true
+      }
+    },
+    "valid": false,
+    "binaryHex": "8a0106080c10011803"
+  },
+  {
+    "name": "swing-refused-out-of-reach",
+    "json": {
+      "fightSwingResult": {
+        "swingCounter": 12,
+        "refusedReason": "FIGHT_REFUSED_REASON_OUT_OF_REACH"
+      }
+    },
+    "valid": false,
+    "binaryHex": "8a0104080c1802"
+  },
+  {
+    "name": "row-cooldown",
+    "json": {
+      "fightSwingResult": {
+        "swingCounter": 12,
+        "hits": [
+          {
+            "room": 7,
+            "enemy": 0,
+            "refusedReason": "FIGHT_REFUSED_REASON_COOLDOWN"
+          }
+        ]
+      }
+    },
+    "valid": false,
+    "binaryHex": "8a0108080c220408072003"
+  },
+  {
+    "name": "row-stale-counter",
+    "json": {
+      "fightSwingResult": {
+        "swingCounter": 12,
+        "hits": [
+          {
+            "room": 7,
+            "enemy": 0,
+            "refusedReason": "FIGHT_REFUSED_REASON_STALE_COUNTER"
+          }
+        ]
+      }
+    },
+    "valid": false,
+    "binaryHex": "8a0108080c220408072005"
+  },
+  {
+    "name": "row-not-allowed",
+    "json": {
+      "fightSwingResult": {
+        "swingCounter": 12,
+        "hits": [
+          {
+            "room": 7,
+            "enemy": 0,
+            "refusedReason": "FIGHT_REFUSED_REASON_NOT_ALLOWED"
+          }
+        ]
+      }
+    },
+    "valid": false,
+    "binaryHex": "8a0108080c220408072006"
+  },
+  {
+    "name": "not-allowed-with-rows",
+    "json": {
+      "fightSwingResult": {
+        "swingCounter": 12,
+        "refusedReason": "FIGHT_REFUSED_REASON_NOT_ALLOWED",
+        "hits": [
+          {
+            "room": 7,
+            "enemy": 0,
+            "damage": 3
+          }
+        ]
+      }
+    },
+    "valid": false,
+    "binaryHex": "8a0111080c1806220b0807190000000000000840"
+  },
+  {
+    "name": "not-allowed-crit",
+    "json": {
+      "fightSwingResult": {
+        "swingCounter": 12,
+        "refusedReason": "FIGHT_REFUSED_REASON_NOT_ALLOWED",
+        "crit": true
+      }
+    },
+    "valid": false,
+    "binaryHex": "8a0106080c10011806"
+  },
+  {
+    "name": "refusal-with-damage",
+    "json": {
+      "fightSwingResult": {
+        "swingCounter": 12,
+        "hits": [
+          {
+            "room": 7,
+            "enemy": 0,
+            "damage": 3,
+            "refusedReason": "FIGHT_REFUSED_REASON_ALREADY_DEAD"
+          }
+        ]
+      }
+    },
+    "valid": false,
+    "binaryHex": "8a0111080c220d08071900000000000008402001"
+  },
+  {
+    "name": "confirmed-without-damage",
+    "json": {
+      "fightSwingResult": {
+        "swingCounter": 12,
+        "hits": [
+          {
+            "room": 7,
+            "enemy": 0
+          }
+        ]
+      }
+    },
+    "valid": false,
+    "binaryHex": "8a0106080c22020807"
+  },
+  {
+    "name": "ability-missing-facing",
+    "json": {
+      "ability": {
+        "ability": "cleave",
+        "x": -600,
+        "y": 1300,
+        "fight": {
+          "seenTick": 737762816
+        }
+      }
+    },
+    "valid": false,
+    "binaryHex": "5a220a06636c65617665110000000000c082c019000000000050944032060880bce5df02"
+  },
+  {
+    "name": "ability-zero-facing",
+    "json": {
+      "ability": {
+        "ability": "cleave",
+        "x": -600,
+        "y": 1300,
+        "fight": {
+          "seenTick": 737762816,
+          "facing": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      }
+    },
+    "valid": false,
+    "binaryHex": "5a240a06636c65617665110000000000c082c019000000000050944032080880bce5df021a00"
+  },
+  {
+    "name": "ability-offset-100",
+    "json": {
+      "ability": {
+        "ability": "cleave",
+        "x": -600,
+        "y": 1300,
+        "fight": {
+          "seenTick": 737762816,
+          "seenOffsetMs": 100,
+          "facing": {
+            "x": 1,
+            "y": 0
+          }
+        }
+      }
+    },
+    "valid": false,
+    "binaryHex": "5a2f0a06636c65617665110000000000c082c019000000000050944032130880bce5df0210641a0909000000000000f03f"
+  },
+  {
+    "name": "ability-predicted-duplicate",
+    "json": {
+      "ability": {
+        "ability": "cleave",
+        "x": -600,
+        "y": 1300,
+        "fight": {
+          "facing": {
+            "x": 1,
+            "y": 0
+          },
+          "predicted": [
+            {
+              "room": 7,
+              "enemy": 0
+            },
+            {
+              "room": 7,
+              "enemy": 0
+            }
+          ]
+        }
+      }
+    },
+    "valid": false,
+    "binaryHex": "5a2f0a06636c65617665110000000000c082c019000000000050944032131a0909000000000000f03f2a0208072a020807"
+  }
+]

@@ -15,6 +15,8 @@
 import { walkFactor } from '../../lib/wilds/walk'
 import Phaser from 'phaser'
 import { getCombatKit, snapstrikeReach, type CombatKit, type KitMove } from '../../lib/combat'
+import { COMBAT_TUNING } from '../../lib/combat-timing'
+import { fightBoltSpawn } from '../../lib/fight-math'
 import { CombatField } from '../../lib/combat-moves'
 import { withCharm } from '../../lib/glims'
 import { passiveRegenAllowed } from '../../lib/habitica/sync'
@@ -37,9 +39,9 @@ import { SEAT_CUT, SEATED_MANA_BONUS, manaRegenRate, type SeatPose } from '../se
 const PLAYER_SPEED = 110
 /** Ridden, outdoors (crafts.md 3.1: every mount the same). */
 export const RIDING_SPEED = 155
-const ATTACK_RANGE = 26
+const ATTACK_RANGE = COMBAT_TUNING.attack.slashRadius
 /** A tool swung at a creature does this share of the weapon's damage. */
-const TOOL_DAMAGE = 0.5
+const TOOL_DAMAGE = COMBAT_TUNING.attack.toolDamageFraction
 const CONTACT_IFRAMES = 1.1
 
 /** Dodge roll: a short burst with invulnerability, on its own cooldown. */
@@ -337,11 +339,12 @@ export class Hero {
     // Mage basic is a ranged bolt (the classless starter keeps its melee
     // slash); every other class strikes in melee reach.
     if (kit.class === 'mage' && !tool) {
-      this.deps.projectiles().spawn(this.sprite.x + dir.x * 10, this.sprite.y - 7, dir, kit.meleeDamage)
+      const at = fightBoltSpawn(this.sprite.x, this.sprite.y, dir.x)
+      this.deps.projectiles().spawn(at.x, at.y, dir, kit.meleeDamage)
       return
     }
-    const sx = this.sprite.x + dir.x * 14
-    const sy = this.sprite.y - 7 + dir.y * 12
+    const sx = this.sprite.x + dir.x * COMBAT_TUNING.attack.slashOffsetX
+    const sy = this.sprite.y - COMBAT_TUNING.attack.originYOffset + dir.y * COMBAT_TUNING.attack.slashOffsetY
     // The aliased slash is a directional crescent (native art faces right):
     // rotate it to the facing like the other FX, instead of the old
     // flip/45-degree heuristic that turned cardinal attacks into diagonals.
@@ -355,11 +358,11 @@ export class Hero {
     this.scene.time.delayedCall(60, () => {
       for (const enemy of [...this.deps.enemies().enemies]) {
         const dx = enemy.sprite.x - sx
-        const dy = enemy.sprite.y - 6 - sy
+        const dy = enemy.sprite.y - COMBAT_TUNING.attack.enemyYOffset - sy
         if (dx * dx + dy * dy < ATTACK_RANGE * ATTACK_RANGE) {
           const crit = Math.random() < kit.critChance
           const base = tool ? Math.max(1, Math.round(kit.meleeDamage * TOOL_DAMAGE)) : kit.meleeDamage
-          const dmg = crit ? base * 2 : base
+          const dmg = crit ? base * COMBAT_TUNING.attack.critMultiplier : base
           if (crit) this.deps.fx.sparkBurst(enemy.sprite.x, enemy.sprite.y - 8, 8)
           this.deps.enemies().damageEnemy(enemy, dmg, this.sprite.x, crit)
         }
@@ -404,7 +407,8 @@ export class Hero {
     const dir = this.facing.clone().normalize()
     switch (sig.id) {
       case 'fingersnap': {
-        this.deps.projectiles().spawn(this.sprite.x + dir.x * 10, this.sprite.y - 7, dir, kit.signatureDamage)
+        const at = fightBoltSpawn(this.sprite.x, this.sprite.y, dir.x)
+        this.deps.projectiles().spawn(at.x, at.y, dir, kit.signatureDamage)
         break
       }
       case 'cleave': {
