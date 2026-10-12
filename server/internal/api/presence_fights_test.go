@@ -63,7 +63,7 @@ func addUnitFightRoom(t *testing.T, a *Server, p *presencePeer, handle uint32, c
 	sim := fights.NewRoom(key, handle, g, []fights.Camp{{ID: "camp", Kinds: []string{"wisp"}, X: x, Y: 112}}, 1, a.presence.now(), 0)
 	// No wall-clock tick in a unit socket test; inputs are FIFO commands.
 	room.actor = fights.Start(sim, fights.ActorConfig{Now: a.presence.now, Ticks: make(chan time.Time), Emit: func(out fights.Output) { a.fightOutput(room, out) }, Closed: func() { a.fightClosed(room) }})
-	p.fightRooms[handle] = room
+	a.presence.viewFightRoom(p, room)
 	a.presence.fightRooms[key] = room
 	room.actor.Submit(fights.Command{Player: &fights.Player{ID: p.identity.ID, Observer: p.fightToken, Seed: p.critSeed, X: p.pos.X, Y: p.pos.Y}})
 	t.Cleanup(func() { room.actor.Stop(); <-room.actor.Done() })

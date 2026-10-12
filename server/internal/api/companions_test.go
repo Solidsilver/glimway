@@ -239,7 +239,7 @@ func (x *rig) peerAt(id, world, room string) *presencePeer {
 	defer h.mu.Unlock()
 	p := &presencePeer{identity: presenceIdentity{ID: id, World: world}, account: &presenceAccount{}, ctx: context.Background(), cancel: func() {}, queue: make(chan []byte, 8)}
 	p.area = room
-	h.peers[id] = p
+	h.admit(p)
 	return p
 }
 

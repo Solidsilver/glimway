@@ -65,7 +65,7 @@ func TestDevFightFallClearsThroughTheCoveredRoom(t *testing.T) {
 	q := &presencePeer{identity: identity, account: &presenceAccount{}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 256), area: p.area, pos: &presencePosition{X: 600, Y: 208}}
 	h := x.api.presence
 	h.mu.Lock()
-	h.peers[q.identity.ID] = q
+	h.admit(q)
 	h.mu.Unlock()
 	x.api.syncFightPresence(q)
 	queuedFightFrame(t, q)

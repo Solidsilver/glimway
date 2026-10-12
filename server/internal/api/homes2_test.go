@@ -24,7 +24,7 @@ func (x *rig) stand(id, world, room string, px, py float64) {
 	}
 	// A socket's peer carries its queue and cancellation (avatar changes and
 	// presence broadcasts enqueue on it).
-	h.peers[id] = &presencePeer{identity: presenceIdentity{ID: id, World: world}, account: &presenceAccount{}, ctx: context.Background(), cancel: func() {}, queue: make(chan []byte, 8), area: room, pos: &presencePosition{X: px, Y: py}}
+	h.admit(&presencePeer{identity: presenceIdentity{ID: id, World: world}, account: &presenceAccount{}, ctx: context.Background(), cancel: func() {}, queue: make(chan []byte, 8), area: room, pos: &presencePosition{X: px, Y: py}})
 }
 func (x *rig) atTable(id, world string) {
 	t := content.HomeRules.GetCommons().GetDeedTable()

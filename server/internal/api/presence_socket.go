@@ -204,7 +204,7 @@ func (a *Server) presenceSocket(w http.ResponseWriter, r *http.Request) error {
 			h.remove(old)
 		}
 	}
-	h.peers[identity.ID] = p
+	h.admit(p)
 	h.send(p, &contract.PresenceReady{AccountId: identity.ID})
 	if p.area != "" {
 		h.room(p)
@@ -305,8 +305,8 @@ func (a *Server) presenceReader(p *presencePeer) {
 				continue
 			}
 			n := 0
-			for _, other := range h.peers {
-				if other != p && other.identity.World == p.identity.World && other.area == event.Join.Area {
+			for _, other := range h.worlds[p.identity.World] {
+				if other != p && other.area == event.Join.Area {
 					n++
 				}
 			}
@@ -433,9 +433,7 @@ func (a *Server) presenceWriter(p *presencePeer) {
 			_ = p.conn.Close(p.closeCode, p.closeReason)
 			return
 		case b := <-p.queue:
-			h.mu.Lock()
-			p.queuedBytes -= len(b)
-			h.mu.Unlock()
+			p.queuedBytes.Add(-int64(len(b)))
 			// Cancelling coder/websocket Write closes the transport. Let a bounded
 			// in-flight write finish so takeover can send its explicit close code.
 			ctx, cancel := context.WithTimeout(context.Background(), millis(int(h.config.GetWriteTimeoutMs())))

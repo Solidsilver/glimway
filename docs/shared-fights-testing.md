@@ -65,6 +65,33 @@ per-core measurement; set it to compare additional cores. The bots run in the
 same process and share those cores; they send and decode raw protobuf frames
 only, but `cpuBusyPercent` (the Go runtime's estimate) includes them, so it
 overstates the server's own share. Results print as a `FIGHT_LOAD` JSON line.
+
+Slowdown shows as lateness before it shows as failure, so the line also
+carries two client-side measures from the measured run: `deltaLag*Ms` (how
+old the active room's deltas are when a bot receives them, from the tick the
+server stamped on the rig's clock; a healthy run sits well under one 100 ms
+tick) and `resultLatency*Ms` (a swing's round trip to its `FightSwingResult`),
+each as p50, p95 and max with a sample count. A falling
+`meanBotBytesPerSecond` at the same workload means output is backing up.
+
+Past the configured socket cap (`maxConnections` in `content/presence.json`,
+bounded at 512 by the proto schema), `FIGHT_LOAD_MAX_CONNECTIONS=<n>` lifts
+the running hub's cap for this scenario only, and with it the groups limit
+to `n / FIGHT_LOAD_PLAYERS`; the committed caps and bounds are untouched.
+`FIGHT_LOAD_CPUPROFILE=<path>` writes a CPU profile of the measured run
+alone (no account creation or warm-up; it conflicts with go test's own
+`-cpuprofile`). The bots' share of it is the `TestFightBotLoad` closures:
+
+```sh
+go tool pprof -top -focus='TestFightBotLoad' server/internal/api/api.test cpu.prof | sed -n 4p
+```
+
+reports that share; the rest, less the runtime's own GC and scheduler
+samples, is the server's. For lock contention run the scenario with
+`-mutexprofile` and `-mutexprofilefraction=1` (and `-blockprofile`); those
+cover setup too, but the measured run dominates them. One sweep of this
+(2026-10-12, M1 Max) and its findings are in the fights-scale report; the
+numbers worth keeping are summarised in `docs/scaling.md`.
 Setup is excluded from the run interval; total metric counters include startup
 work. The run fails if any socket fails, any bot never receives a fight join,
 or no swing result comes back. This fixture measures server capacity, not

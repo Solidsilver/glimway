@@ -70,7 +70,7 @@ func blockedFightRoom(t *testing.T, a *Server, p *presencePeer, handle uint32, c
 		}
 		a.fightOutput(room, out)
 	}})
-	p.fightRooms[handle] = room
+	a.presence.viewFightRoom(p, room)
 	a.presence.fightRooms[key] = room
 	a.presence.fightObserver(p)
 	room.actor.Submit(fights.Command{Player: &fights.Player{ID: p.identity.ID, Observer: p.fightToken, Seed: p.critSeed, X: p.pos.X, Y: p.pos.Y}})
