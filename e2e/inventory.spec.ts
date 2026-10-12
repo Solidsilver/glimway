@@ -29,14 +29,6 @@ function homeReads(page: Page): { idle: () => Promise<void> } {
   return { idle: () => expect.poll(() => reads.size, { timeout: SERVER_ANSWER_MS, message: 'the home reads in flight have answered' }).toBe(0) }
 }
 
-/** The next read of a home (from here on) whose answer names every one of `ids`: start it before the action that reads. */
-function freshHomeRead(page: Page, ids: string[]): Promise<unknown> {
-  return page.waitForResponse(
-    async (r) => r.request().method() === 'GET' && /^\/api\/homestead\/gate\/\d+$/.test(new URL(r.url()).pathname) && r.ok() && (await r.text().then((t) => ids.every((id) => t.includes(id)), () => false)),
-    { timeout: SERVER_ANSWER_MS }
-  )
-}
-
 const dialog = (page: Page) => page.getByRole('dialog', { name: 'Inventory' })
 const tab = (page: Page, name: RegExp) => dialog(page).getByRole('tab', { name })
 
@@ -206,25 +198,14 @@ test.describe('in a world', () => {
     // The home reads made before the seed (claiming, the lane) answer with
     // the home as it was: let them all land, then read it afresh. The SQL
     // seed publishes nothing, and a load joins one already in flight
-    // (review 2026-10-11, game F4 / server 5). The Home view's own fresh
-    // read (`__fsHomes.fresh()`, lane c08-client) when the game has it;
-    // else a fresh page, where nothing read before the seed survives.
+    // (review 2026-10-11, game F4 / server 5): the Home view's own fresh
+    // read (`__fsHomes.fresh()`), asked now and never joined to one before.
     await reads.idle()
     const held = () => page.evaluate(() => ((window as unknown as { __fsHomes: () => { mine: { items: { id: string }[] } | null } }).__fsHomes().mine?.items ?? []).map((i) => i.id).sort())
-    const fresh = await page.evaluate(() => typeof (window as unknown as { __fsHomes?: { fresh?: unknown } }).__fsHomes?.fresh === 'function')
-    let read: Promise<unknown> = Promise.resolve()
-    if (fresh) {
-      await page.evaluate(() => (window as unknown as { __fsHomes: { fresh: () => Promise<unknown> } }).__fsHomes.fresh())
-    } else {
-      const area = await page.evaluate(() => (window as unknown as { __fsSafety: () => { areaId: string } }).__fsSafety().areaId)
-      await reenter(page, area)
-      // Opening the bag reads the home: that read names the three pieces.
-      read = freshHomeRead(page, ['inv-a', 'inv-b', 'inv-c'])
-    }
-    if (fresh) await expect.poll(held, { message: 'the game holds the fresh home' }).toEqual(expect.arrayContaining(['inv-a', 'inv-b', 'inv-c']))
+    await page.evaluate(() => (window as unknown as { __fsHomes: { fresh: () => Promise<unknown> } }).__fsHomes.fresh())
+    await expect.poll(held, { message: 'the game holds the fresh home' }).toEqual(expect.arrayContaining(['inv-a', 'inv-b', 'inv-c']))
     await page.keyboard.press('i')
     await expect(dialog(page)).toBeVisible()
-    await read
     await expect.poll(held, { message: 'the game holds the fresh home' }).toEqual(expect.arrayContaining(['inv-a', 'inv-b', 'inv-c']))
     await tab(page, /Supplies/).click()
     const supplies = dialog(page).getByTestId('inv-page-supplies')

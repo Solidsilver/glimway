@@ -55,7 +55,6 @@
     if (mine !== readSeq) return
     if (r.ok) {
       view = r.value
-      homes.adoptShelfState(gate, view.hasShelf, view.slots.length > 0)
       loaded = 'ready'
     } else {
       if (loaded === 'loading') loaded = r.code
@@ -156,7 +155,6 @@
     const r = await action.run(`take-${slot}`, () => village.shelfAction({ op: 'take', gate, slot }), (done) => done.value.line ?? 'You took a gift from the shelf.')
     if (!r?.ok) return
     view = r.value.shelf
-    homes.adoptShelfState(gate, view.hasShelf, view.slots.length > 0)
     bus.emit(EV.toast, { text: r.value.line ?? 'You took a gift from the shelf.', icon: 'gift' })
     bus.emit(EV.villageChanged)
     bus.emit(EV.itemsChanged)
@@ -168,7 +166,6 @@
     const r = await action.run(`buy-${i}`, () => village.shelfAction({ op: 'buy', gate, slot: i, pay: slot.price }), (done) => done.value.line ?? shelfCopy.bought(itemNameDisplay(slot), slot.price))
     if (!r?.ok) return
     view = r.value.shelf
-    homes.adoptShelfState(gate, view.hasShelf, view.slots.length > 0)
     bus.emit(EV.toast, { text: r.value.line ?? shelfCopy.bought(itemNameDisplay(slot), slot.price), icon: 'glim', art: 'glims-few' })
     bus.emit(EV.villageChanged)
     bus.emit(EV.itemsChanged)
@@ -183,7 +180,6 @@
     priceText = ''
     if (!r.ok) return
     view = r.value.shelf
-    homes.adoptShelfState(gate, view.hasShelf, view.slots.length > 0)
     bus.emit(EV.villageChanged)
     bus.emit(EV.itemsChanged)
   }

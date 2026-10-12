@@ -545,7 +545,7 @@ export class WildsSites {
     const where = { x: hero.x, y: hero.y }
     void settleEcho(session, { epoch: this.epoch.id, site: s.id, member: def.member, where }).then((res) => {
       if (res.ok) {
-        applyEchoSettled(s.id)
+        applyEchoSettled(s.id, res.result.epoch)
         if (res.result.paper && !session.state.flags.includes(paperFlag(res.result.paper))) grantPaper(session, res.result.paper)
         return
       }

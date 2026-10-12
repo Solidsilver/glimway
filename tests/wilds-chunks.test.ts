@@ -1,15 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { toBinary, type JsonValue } from '@bufbuild/protobuf';
+import { fromJson, toBinary, type JsonValue } from '@bufbuild/protobuf';
 import { decodeChunk } from '../src/lib/api/chunks.ts';
 import { FakeOperations } from '../src/lib/api/operations.ts';
-import { WildsChunkSchema } from '../src/lib/gen/glimway/v1/wilds_pb.js';
+import { WildsChunkSchema, WildsNearResultSchema } from '../src/lib/gen/glimway/v1/wilds_pb.js';
 import { TERRAIN } from '../src/lib/tile.ts';
 import { epochKindAt } from '../src/lib/wilds/coords.ts';
 import { DECOR_ART } from '../src/game/wilds/decor.ts';
 import { cachedTerrain, forgetChunks, loadChunk, pruneChunks } from '../src/game/wilds/chunks.ts';
-import { applyClaim, chunkEpoch, chunkThings, groundChanges, isClaimed, refreshNear, resetWilds, wildsEpoch, wildsFrontier, wildsLive, wildsStale, wildsView } from '../src/game/wilds/store.ts';
+import { applyClaim, applyEchoSettled, applyLanterns, applyNear, chunkEpoch, chunkThings, groundChanges, isClaimed, readMark, refreshNear, resetWilds, takeReadRequest, wildsEpoch, wildsFrontier, wildsLive, wildsStale, wildsView } from '../src/game/wilds/store.ts';
 import { bus, EV } from '../src/game/events.ts';
 import type { Session } from '../src/game/session.ts';
 import { chunkAt, fixtureChunk, fixtureTerrain } from './wilds-fixture.ts';
@@ -233,4 +233,253 @@ test('a read in another wick is the turning: the view starts over and the scene 
   } finally {
     bus.off(EV.turning, on);
   }
+});
+
+// ------------------------------------------------------------ late reads (step-back review F1, F3)
+
+const nearPath = (cx: number, cy: number) => `/api/wilds/near/${cx}/${cy}`;
+
+/** A session whose near reads wait until the test answers them (`go`), in any order; `fail` loses one. */
+function deferredSession(ops: FakeOperations): { session: Session; waiting: { cx: number; cy: number; go: () => void; fail: () => void }[] } {
+  const session = fakeSession(ops);
+  const waiting: { cx: number; cy: number; go: () => void; fail: () => void }[] = [];
+  const real = ops.api;
+  const operations = {
+    ...real,
+    near: (cx: number, cy: number) =>
+      new Promise<Awaited<ReturnType<typeof real.near>>>((resolve, reject) => {
+        waiting.push({ cx, cy, go: () => resolve(real.near(cx, cy)), fail: () => reject(new Error('lost')) });
+      }),
+  };
+  (session.link as unknown as { api: unknown }).api = { operations };
+  return { session, waiting };
+}
+
+/** Let pending answers and their chunk loads run. */
+const settle = () => new Promise((r) => setTimeout(r, 0));
+
+/** Everything a player sees of the Wilds' state, for whole-view comparisons. */
+function visible() {
+  const v = wildsView();
+  if (!v) return null;
+  return {
+    still: v.still.id,
+    wick: v.wick.id,
+    stale: v.stale,
+    states: Object.fromEntries([...v.states].sort()),
+    claims: [...v.claims].sort(),
+    lanterns: Object.fromEntries([...v.lanterns].map(([id, l]) => [id, l.litBy])),
+    echoes: Object.fromEntries(v.echoes),
+    materials: Object.fromEntries(Object.entries(v.materials).filter(([, q]) => q !== 0)),
+    ground: Object.fromEntries([...v.ground].map(([k, g]) => [k, g.map((c) => c.change)])),
+    ways: [...v.ways.keys()].sort(),
+  };
+}
+
+test('a read asked before a reset is dropped: the old world’s answer never revives or changes the new one', async () => {
+  forgetChunks();
+  resetWilds();
+  const ops = new FakeOperations();
+  const old = deferredSession(ops);
+  serveWindow(ops, CENTER.cx, CENTER.cy);
+  ops.responses.set(nearPath(CENTER.cx, CENTER.cy), [nearAt(CENTER.cx, CENTER.cy), nearAt(CENTER.cx, CENTER.cy)]);
+  let turned = 0;
+  const on = () => turned++;
+  bus.on(EV.turning, on);
+  try {
+    // Leave the world while a read is out: its answer finds nothing to fill.
+    const first = refreshNear(old.session, CENTER.cx, CENTER.cy);
+    resetWilds();
+    old.waiting[0]!.go();
+    assert.equal(await first, false);
+    assert.equal(wildsView(), null, 'the cleared view stays cleared');
+
+    // Again, with another world entered and read before the old answer lands.
+    const late = refreshNear(old.session, CENTER.cx, CENTER.cy);
+    resetWilds();
+    const ops2 = new FakeOperations();
+    const next = fakeSession(ops2);
+    ops2.responses.set(nearPath(CENTER.cx, CENTER.cy), [nearAt(CENTER.cx, CENTER.cy, (j) => {
+      j.entities = [];
+      j.personalClaims = [];
+      j.materials = { stone: 77 };
+    })]);
+    serveWindow(ops2, CENTER.cx, CENTER.cy);
+    assert.equal(await refreshNear(next, CENTER.cx, CENTER.cy), true);
+    const before = visible();
+    const version = wildsView()!.version;
+    old.waiting[1]!.go();
+    assert.equal(await late, false);
+    assert.deepEqual(visible(), before, 'the new world’s view is untouched');
+    assert.equal(wildsView()!.version, version, 'not even a re-render');
+    assert.equal(wildsView()!.materials.stone, 77);
+    assert.equal(chunkThings(-2, -4).find((e) => e.id === 'node:-2:-4:0')!.state, 'available');
+    assert.equal(turned, 0, 'no turning from a dropped answer');
+  } finally {
+    bus.off(EV.turning, on);
+  }
+});
+
+test('an old read’s failure after a reset doesn’t mark the new view stale', async () => {
+  forgetChunks();
+  resetWilds();
+  const ops = new FakeOperations();
+  const old = deferredSession(ops);
+  const late = refreshNear(old.session, CENTER.cx, CENTER.cy);
+  resetWilds();
+  const ops2 = new FakeOperations();
+  const next = fakeSession(ops2);
+  ops2.responses.set(nearPath(CENTER.cx, CENTER.cy), [nearAt(CENTER.cx, CENTER.cy)]);
+  serveWindow(ops2, CENTER.cx, CENTER.cy);
+  assert.equal(await refreshNear(next, CENTER.cx, CENTER.cy), true);
+  const version = wildsView()!.version;
+  old.waiting[0]!.fail();
+  assert.equal(await late, false);
+  assert.equal(wildsView()!.stale, false);
+  assert.equal(wildsView()!.version, version);
+  assert.ok(wildsLive(next), 'still offered');
+});
+
+test('two overlapping reads answered backwards leave the later read’s view, and the earlier one’s own chunks', async () => {
+  forgetChunks();
+  resetWilds();
+  const ops = new FakeOperations();
+  const { session, waiting } = deferredSession(ops);
+  serveWindow(ops, CENTER.cx, CENTER.cy);
+  serveWindow(ops, CENTER.cx + 1, CENTER.cy);
+  // The earlier read, around (-2, -4): the fixture's, plus a harvested node in column -4, which only it covers.
+  ops.responses.set(nearPath(CENTER.cx, CENTER.cy), [nearAt(CENTER.cx, CENTER.cy, (j) => {
+    j.entities = [...j.entities, { ...j.entities[0], id: 'node:-4:-4:0' }];
+  })]);
+  // The later read, around (-1, -4): the node and chest are back, the ground and the way gone, the Echo settled.
+  ops.responses.set(nearPath(CENTER.cx + 1, CENTER.cy), [nearAt(CENTER.cx + 1, CENTER.cy, (j) => {
+    j.entities = [];
+    j.personalClaims = [];
+    j.ground = [];
+    j.ways = [];
+    j.materials = { stone: 8 };
+    j.echoes = [{ site: 'echo:0', member: 'tam', settled: true }];
+  })]);
+  const earlier = refreshNear(session, CENTER.cx, CENTER.cy);
+  const later = refreshNear(session, CENTER.cx + 1, CENTER.cy);
+  waiting[1]!.go();
+  assert.equal(await later, true);
+  const after = visible()!;
+  waiting[0]!.go();
+  assert.equal(await earlier, true);
+  const v = visible()!;
+  assert.deepEqual(v, {
+    ...after,
+    // Only the column the later read didn't cover takes the earlier read's state.
+    states: { 'node:-4:-4:0': { cycle: 1, state: 'harvested', available_at: 1791400020, by: 'fixture-account', at: 1791400000 } },
+  });
+  assert.equal(v.materials.stone, 8);
+  assert.deepEqual(v.claims, []);
+  assert.deepEqual(v.ground, {});
+  assert.deepEqual(v.ways, []);
+  assert.deepEqual(v.echoes['echo:0'], { member: 'tam', settled: true });
+  assert.equal(chunkThings(-2, -4).find((e) => e.id === 'node:-2:-4:0')!.state, 'available');
+});
+
+test('an old wick’s answer after the new wick can’t turn the land back', async () => {
+  forgetChunks();
+  resetWilds();
+  const ops = new FakeOperations();
+  const { session, waiting } = deferredSession(ops);
+  serveWindow(ops, CENTER.cx, CENTER.cy);
+  ops.responses.set(nearPath(CENTER.cx, CENTER.cy), [nearAt(CENTER.cx, CENTER.cy)]);
+  const first = refreshNear(session, CENTER.cx, CENTER.cy);
+  waiting[0]!.go();
+  assert.equal(await first, true);
+  const nextWick = (j: Record<string, any>) => {
+    j.wick = { ...j.wick, id: 'wick-epoch-2', startsAt: j.wick.endsAt, endsAt: j.wick.endsAt + 604800, season: `t:${j.wick.endsAt}:${j.wick.endsAt + 604800}` };
+    j.entities = [];
+    j.personalClaims = [];
+    j.ground = [];
+    j.ways = [];
+    j.materials = { stone: 2 };
+  };
+  serveWindow(ops, CENTER.cx + 1, CENTER.cy, 'wick-epoch-2');
+  serveWindow(ops, CENTER.cx, CENTER.cy, 'wick-epoch-2');
+  ops.responses.set(nearPath(CENTER.cx, CENTER.cy), [nearAt(CENTER.cx, CENTER.cy)]);
+  ops.responses.set(nearPath(CENTER.cx + 1, CENTER.cy), [nearAt(CENTER.cx + 1, CENTER.cy, nextWick)]);
+  let turned = 0;
+  const on = () => turned++;
+  bus.on(EV.turning, on);
+  try {
+    const old = refreshNear(session, CENTER.cx, CENTER.cy);
+    const fresh = refreshNear(session, CENTER.cx + 1, CENTER.cy);
+    waiting[2]!.go();
+    assert.equal(await fresh, true);
+    assert.equal(turned, 1);
+    const after = visible();
+    waiting[1]!.go();
+    assert.equal(await old, false, 'the old wick’s answer is dropped');
+    await settle();
+    assert.equal(turned, 1, 'no second turning');
+    assert.equal(wildsEpoch('wick').id, 'wick-epoch-2');
+    assert.deepEqual(visible(), after);
+    assert.equal(chunkEpoch(-2, -4)!.id, 'wick-epoch-2');
+    // A read asked after the turning that still names the ended wick (a lagging server) is dropped too.
+    const lagging = JSON.parse(JSON.stringify(nearAt(CENTER.cx, CENTER.cy)));
+    assert.equal(applyNear(fromJson(WildsNearResultSchema, lagging), readMark()), null);
+    assert.deepEqual(visible(), after);
+  } finally {
+    bus.off(EV.turning, on);
+  }
+});
+
+test('answers outrank an earlier near read: claims, relights and settled Echoes stay, whole', async () => {
+  forgetChunks();
+  resetWilds();
+  const ops = new FakeOperations();
+  const session = fakeSession(ops);
+  ops.responses.set(nearPath(CENTER.cx, CENTER.cy), [nearAt(CENTER.cx, CENTER.cy)]);
+  serveWindow(ops, CENTER.cx, CENTER.cy);
+  assert.equal(await refreshNear(session, CENTER.cx, CENTER.cy), true);
+  assert.equal(chunkThings(-3, -4).find((e) => e.id === 'node:-3:-4:0')!.state, 'available');
+  // A read is asked; before its answer lands, a harvest, a relight and a settle are answered.
+  const since = readMark();
+  const snapshot = fromJson(WildsNearResultSchema, nearAt(CENTER.cx, CENTER.cy));
+  const wick = NEAR.wick.id as string;
+  applyClaim({ $typeName: 'glimway.v1.WildsClaimResult', epoch: wick, entity: { $typeName: 'glimway.v1.WildsEntityState', id: 'node:-3:-4:0', cycle: 0, state: 'harvested', availableAt: 1791400900, by: 'me', at: 1791400100, epoch: wick }, loot: undefined, materials: { stone: 9 }, wardenSliverFound: false, stormDropFound: false, papers: [] });
+  assert.equal(applyLanterns([{ $typeName: 'glimway.v1.WildsLantern', id: 'fallen-lamp', ownerId: 'peer-account', displayName: 'Peer', x: 400, y: 300, litBy: 'me', at: 1791400000, litAt: 1791400200 }], wick), true);
+  assert.equal(applyEchoSettled('echo:0', wick), true);
+  const answered = visible()!;
+  assert.equal(answered.materials.stone, 9);
+  // The earlier read lands.
+  applyNear(snapshot, since);
+  assert.deepEqual(visible(), answered, 'nothing the answers set moved back');
+  const node = chunkThings(-3, -4).find((e) => e.id === 'node:-3:-4:0')!;
+  assert.deepEqual([node.state, node.cycle], ['harvested', 0]);
+  assert.equal(wildsView()!.lanterns.get('fallen-lamp')!.litBy, 'me');
+  assert.deepEqual(wildsView()!.echoes.get('echo:0'), { member: 'tam', settled: true });
+  // A read asked after the answers is the newer word: it is adopted, whole.
+  applyNear(fromJson(WildsNearResultSchema, nearAt(CENTER.cx, CENTER.cy, (j) => (j.materials = { stone: 10 }))), readMark());
+  assert.equal(wildsView()!.materials.stone, 10);
+  assert.equal(chunkThings(-3, -4).find((e) => e.id === 'node:-3:-4:0')!.state, 'available');
+  assert.equal(wildsView()!.lanterns.get('fallen-lamp')!.litBy, 'fixture-account');
+  assert.deepEqual(wildsView()!.echoes.get('echo:0'), { member: 'tam', settled: false });
+});
+
+test('an answer for land that turned since is not applied to the new land', async () => {
+  forgetChunks();
+  resetWilds();
+  const ops = new FakeOperations();
+  const session = fakeSession(ops);
+  ops.responses.set(nearPath(CENTER.cx, CENTER.cy), [nearAt(CENTER.cx, CENTER.cy)]);
+  serveWindow(ops, CENTER.cx, CENTER.cy);
+  assert.equal(await refreshNear(session, CENTER.cx, CENTER.cy), true);
+  takeReadRequest();
+  const before = visible()!;
+  const old = 'wick-epoch-0';
+  const drop = applyClaim({ $typeName: 'glimway.v1.WildsClaimResult', epoch: old, entity: { $typeName: 'glimway.v1.WildsEntityState', id: 'node:-3:-4:0', cycle: 4, state: 'harvested', availableAt: 1, by: 'me', at: 1, epoch: old }, loot: { $typeName: 'glimway.v1.WildsLoot', materials: [{ $typeName: 'glimway.v1.WildsMaterial', id: 'stone', qty: 2 }] } as never, materials: { stone: 6 }, wardenSliverFound: false, stormDropFound: false, papers: [] });
+  assert.deepEqual(drop.materials, [{ id: 'stone', qty: 2 }], 'the loot is still told');
+  assert.deepEqual(visible()!.states, before.states, 'the old land’s state isn’t the new land’s');
+  assert.equal(wildsView()!.materials.stone, 6, 'the balances are the account’s');
+  assert.equal(applyLanterns([{ $typeName: 'glimway.v1.WildsLantern', id: 'fallen-lamp', ownerId: 'peer-account', displayName: 'Peer', x: 400, y: 300, litBy: 'me', at: 1, litAt: 2 }], old), false);
+  assert.equal(wildsView()!.lanterns.get('fallen-lamp')!.litBy, 'fixture-account');
+  assert.equal(applyEchoSettled('echo:0', old), false);
+  assert.equal(wildsView()!.echoes.get('echo:0')!.settled, false);
+  assert.equal(takeReadRequest(), true, 'the Wilds are read again');
 });

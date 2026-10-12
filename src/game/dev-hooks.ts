@@ -204,7 +204,8 @@ export interface FsHooks {
   __fsPresence: () => unknown
   /** What's in hand, and the belt as carried (held.ts). */
   __fsHeld: () => unknown
-  __fsHomes: () => unknown
+  /** The homesteads as held; `fresh()` reads the lane and your home again (asked now, never joining an earlier read). */
+  __fsHomes: (() => unknown) & { fresh: () => Promise<void> }
   /** A tap on a land or room grid tile while arranging. */
   __fsDevTapTile: (x: number, y: number) => void
   __fsMill: () => unknown

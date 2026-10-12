@@ -14,7 +14,7 @@
  */
 import { walkFactor } from '../../lib/wilds/walk'
 import Phaser from 'phaser'
-import { getCombatKit, type CombatKit, type KitMove } from '../../lib/combat'
+import { getCombatKit, snapstrikeReach, type CombatKit, type KitMove } from '../../lib/combat'
 import { CombatField } from '../../lib/combat-moves'
 import { withCharm } from '../../lib/glims'
 import { passiveRegenAllowed } from '../../lib/habitica/sync'
@@ -434,12 +434,12 @@ export class Hero {
         // Snapstrike: physics-driven dash (colliders apply — never through
         // walls), striking everything along the path at the end. The dash
         // window (dashTime) keeps ordinary movement from cancelling velocity.
-        const start = this.sprite.x
+        const start = { x: this.sprite.x, y: this.sprite.y }
         this.dashTime = 0.15
         this.sprite.setVelocity(dir.x * 430, dir.y * 430)
         this.scene.time.delayedCall(150, () => {
           this.sprite.setVelocity(0, 0)
-          const travelled = Math.abs(this.sprite.x - start) > 4
+          const reach = snapstrikeReach(start, this.sprite)
           const sx = this.sprite.x + dir.x * 10
           const sy = this.sprite.y - 6
           // Delivered dash-trail animation at the emission point, oriented
@@ -452,7 +452,6 @@ export class Hero {
             for (const enemy of [...this.deps.enemies().enemies]) {
               const dx = enemy.sprite.x - this.sprite.x
               const dy = enemy.sprite.y - 6 - (this.sprite.y - 6)
-              const reach = travelled ? 34 : 22
               if (dx * dx + dy * dy < reach * reach) {
                 const crit = Math.random() < kit.critChance * 2
                 this.deps.enemies().damageEnemy(enemy, crit ? kit.signatureDamage * 2 : kit.signatureDamage, this.sprite.x - dir.x * 10, crit)

@@ -68,14 +68,33 @@ export function paintHere(job: PaintJob, src: GroundSource): PaintResult {
   return { rgba, ms: performance.now() - t, thread: 'main' }
 }
 
-/** Paint off the main thread when a worker is up (else here); the tiles are read now. */
+/**
+ * Paint off the main thread when a worker is up (else here); the tiles are
+ * read now. The promise settles once: the worker's paint, or this thread's
+ * from the same tiles if the worker fails or the job can't be posted (a
+ * reply after that is dropped).
+ */
 export function paintAway(job: PaintJob, src: GroundSource): Promise<PaintResult> {
+  // Kept for a fallback: posting transfers a copy, which detaches it here.
   const tiles = packGround(src, job.x0, job.y0, job.w, job.h)
   const w = start()
   if (!w) return Promise.resolve(paintHere(job, unpackGround(tiles)))
   return new Promise((resolve) => {
     const id = nextId++
-    waiting.set(id, { resolve, fallback: () => resolve(paintHere(job, unpackGround(tiles))) })
-    w.postMessage({ id, ...job, tiles }, [tiles.ground.buffer, tiles.solid.buffer])
+    let done = false
+    const settle = (r: () => PaintResult) => {
+      if (done) return
+      done = true
+      waiting.delete(id)
+      resolve(r())
+    }
+    const entry = { resolve: (r: PaintResult) => settle(() => r), fallback: () => settle(() => paintHere(job, unpackGround(tiles))) }
+    waiting.set(id, entry)
+    const sent = { ...tiles, ground: tiles.ground.slice(), solid: tiles.solid.slice() }
+    try {
+      w.postMessage({ id, ...job, tiles: sent }, [sent.ground.buffer, sent.solid.buffer])
+    } catch {
+      entry.fallback()
+    }
   })
 }

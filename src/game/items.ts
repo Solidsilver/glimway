@@ -27,6 +27,14 @@ export class Items {
   status: ItemsStatus
   private inFlightGrants = new Set<string>()
   private inFlightAdaOil = false
+  /**
+   * Reads and answers are ordered: a read takes the next mark as it is asked,
+   * an adopted answer the next as it lands, and a read asked before the view
+   * held now was set is older than it and dropped (two reads answered
+   * backwards, or a read answered after an action's).
+   */
+  private order = 0
+  private viewSeq = 0
 
   private readonly session: Session
 
@@ -52,22 +60,34 @@ export class Items {
     })
   }
 
-  /** Read what's carried from the server. */
+  /**
+   * Read what's carried from the server. This is the fresh read after a
+   * change: it is always asked now (it never joins a read in flight), and
+   * once it resolves the view is this read's or a newer answer's.
+   */
   async load(): Promise<Result> {
     const link = this.session.link!
+    const mark = ++this.order
     this.status = 'loading'
     const r = await link.readWith((raw) => raw.items())
+    // A newer view landed while this read was out: it stands.
+    if (mark < this.viewSeq) {
+      if (this.status === 'loading') this.status = 'ready'
+      return r.ok ? { ok: true, value: undefined } : fail(r.code)
+    }
     if (!r.ok) {
       this.status = 'offline'
       this.emit('status')
       return fail(r.code)
     }
-    this.adopt(r.value.items)
+    this.adopt(r.value.items, 'items', mark)
     return { ok: true, value: undefined }
   }
 
-  private adopt(v: ItemsView, what = 'items'): void {
+  /** `at`: the read's mark (an answer takes the next). */
+  private adopt(v: ItemsView, what = 'items', at = ++this.order): void {
     this.view = v
+    this.viewSeq = at
     this.status = 'ready'
     this.emit(what)
   }
