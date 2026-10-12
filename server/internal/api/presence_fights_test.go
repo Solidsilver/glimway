@@ -274,6 +274,15 @@ func TestFightSocketWakeSharedJoinResultsLeaveAndReconnect(t *testing.T) {
 	if fresh.Room != join.Room || fresh.CritSeed == join.CritSeed || fresh.Enemies[0].Hp != join.Enemies[0].Hp-result.Hits[0].Damage {
 		t.Fatal("reconnect lost authority", fresh)
 	}
+	// Its own join for the area it inherited (a reload inside the leave
+	// grace names its area only after the registration's join went out)
+	// announces the covered room again, on the same handle and seed.
+	replacement.join("wilds:0:0")
+	again := socketFight(t, replacement, "fightJoin").GetFightJoin()
+	if again.Room != join.Room || again.CritSeed != fresh.CritSeed || len(again.Enemies) != 1 {
+		t.Fatal("a join for the held area did not announce the room again", again)
+	}
+	time.Sleep(5 * time.Millisecond) // past the test config's join cooldown
 	a.closeStatus(presenceReplaced)
 	replacement.send(map[string]any{"type": "join", "area": "village"})
 	closed := socketFight(t, replacement, "fightEvent").GetFightEvent()

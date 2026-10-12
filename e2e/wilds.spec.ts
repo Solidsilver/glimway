@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import type { BrowserContext } from '@playwright/test'
 import { allow, newUser, openTitleGuide, pasteAndConnect, pinWorld, reenter, routeHabitica, sql, waitForWorld } from './connected'
-import { chunkWhole, diagnose, fallCamp, holdUntil, parkCreatures, pressOn, standFor, warp, waitForWilds, wilds, windowWhole, worldTileOf, type WildsDump, frames, untilLine, expectToast, expectLine, SERVER_ANSWER_MS } from './helpers'
+import { chunkWhole, diagnose, fallCamp, holdUntil, parkCreatures, pressOn, spotsAround, standFor, warp, waitForWilds, wilds, windowWhole, worldTileOf, type WildsDump, frames, untilLine, expectToast, expectLine, SERVER_ANSWER_MS } from './helpers'
 
 /**
  * The Tangle on the open map: the Commons gate both ways, claims against the
@@ -12,17 +12,6 @@ import { chunkWhole, diagnose, fallCamp, holdUntil, parkCreatures, pressOn, stan
 const TILE = 16
 
 /** The feet spots on the open tiles around a world tile (tile centres), the eight neighbours, then two out. */
-async function spotsAround(page: Page, at: { tx: number; ty: number }): Promise<{ x: number; y: number }[]> {
-  return page.evaluate(([x0, y0]) => {
-    const solid = (window as unknown as { __fsTileSolid: (x: number, y: number) => boolean }).__fsTileSolid
-    const out: { x: number; y: number }[] = []
-    for (const r of [1, 2])
-      for (let dy = -r; dy <= r; dy++)
-        for (let dx = -r; dx <= r; dx++) if (Math.max(Math.abs(dx), Math.abs(dy)) === r && !solid(x0 + dx, y0 + dy)) out.push({ x: (x0 + dx) * 16 + 8, y: (y0 + dy) * 16 + 8 })
-    return out
-  }, [at.tx, at.ty] as const)
-}
-
 /** Set the hero down on open ground beside a world tile (no scene change), and wait for the window around it to be whole. */
 async function goBeside(page: Page, at: { tx: number; ty: number }): Promise<void> {
   const spot = (await spotsAround(page, at))[0]

@@ -299,8 +299,17 @@ func (a *Server) presenceReader(p *presencePeer) {
 				continue
 			}
 			p.lastJoin = now
+			// The socket's first join: the rooms it covers already (inherited
+			// at registration from a socket in its leave grace) were announced
+			// before the client named its area, so they are announced again.
+			// A later join (a chunk crossing) keeps its rooms as they are.
+			first := !p.clientJoined
+			p.clientJoined = true
 			if p.area == event.Join.Area {
 				h.room(p)
+				if first {
+					h.rejoinFights(p)
+				}
 				h.mu.Unlock()
 				continue
 			}
@@ -329,6 +338,9 @@ func (a *Server) presenceReader(p *presencePeer) {
 			}
 			p.area = event.Join.Area
 			h.retainFightCoverage(p)
+			if first {
+				h.rejoinFights(p)
+			}
 			h.room(p)
 			h.broadcast(p, &contract.PresenceJoin{Area: p.area, Player: p.player()})
 		case *contract.PresenceMessage_Pos:

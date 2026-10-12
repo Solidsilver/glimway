@@ -2,7 +2,7 @@
 import { expect, test, type Page } from './fixtures'
 import { CONTRACT, pinWorld, reenter } from './connected'
 import { freshPlayer } from './home-helpers'
-import { expectToast, frames, pressOn, waitForLive, waitForWilds, warp, wilds, worldTileOf } from './helpers'
+import { expectToast, frames, parkCreatures, pressOn, spotsAround, standFor, waitForLive, waitForWilds, warp, wilds, worldTileOf } from './helpers'
 
 type Enemy = { id: string; x: number; y: number; hp: number; state: string; fight: { room: number; enemy: number } | null }
 const enemies = (page: Page, camp: string) => page.evaluate(id =>
@@ -89,7 +89,14 @@ test('two players share wind-ups, menus, reconnect, confirmed deaths and persona
       await expect.poll(async () => (await wilds(p)).entities.find(e => e.id === camp.id)?.claimable, { timeout: 10_000 }).toBe(true)
     }
     // Both witnessed the fight, and settlement stays personal and once-only.
+    // The swings left each hero wherever the last wisp fell, which can be
+    // past the claim's reach: the creatures set aside, stand where the game
+    // elects the camp's claim (wilds.spec.ts does the same), then press it.
     for (const p of [page, other]) {
+      await parkCreatures(p)
+      const why: string[] = []
+      const stood = await standFor(p, `wilds:${camp.id}`, await spotsAround(p, tile), why)
+      if (!stood) throw new Error(`no spot elects the camp's claim at ${tile.tx},${tile.ty}: ${why.join(' ')}`)
       await pressOn(p, `wilds:${camp.id}`, tile)
       await expectToast(p, /The camp is yours to rest at/)
       await expect.poll(async () => (await wilds(p)).claims.includes(camp.id)).toBe(true)

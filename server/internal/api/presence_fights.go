@@ -363,20 +363,46 @@ func (a *Server) fightFell(f fights.Fall) {
 	}
 }
 
+// fightPlayer is this socket's player as a room covers it; callers hold h.mu
+// and p.pos is set.
+func (h *presenceHub) fightPlayer(p *presencePeer) *fights.Player {
+	return &fights.Player{ID: p.identity.ID, Observer: h.fightObserver(p), Seed: p.critSeed, X: p.pos.X, Y: p.pos.Y, Down: p.identity.Magic.Down, Kit: p.identity.Magic.Kit}
+}
+
 // coverFightRoom reports one covered room's player; callers hold h.mu.
 func (h *presenceHub) coverFightRoom(p *presencePeer, room *presenceFightRoom) {
-	token := h.fightObserver(p)
 	if p.fightRooms == nil {
 		p.fightRooms = map[uint32]*presenceFightRoom{}
 	}
 	join := p.fightRooms[room.handle] == nil
 	p.fightRooms[room.handle] = room
-	player := &fights.Player{ID: p.identity.ID, Observer: token, Seed: p.critSeed, X: p.pos.X, Y: p.pos.Y, Down: p.identity.Magic.Down, Kit: p.identity.Magic.Kit}
-	if !room.actor.Submit(fights.Command{Player: player, Join: join}) && join {
+	if !room.actor.Submit(fights.Command{Player: h.fightPlayer(p), Join: join}) && join {
 		// Closing rooms and full queues are transient. Do not subscribe before
 		// a cover is admitted; the next position report retries with a full join.
 		delete(p.fightRooms, room.handle)
 		delete(p.fightJoined, room.handle)
+	}
+}
+
+// rejoinFights announces every room this socket covers to its client again:
+// each publishes its baseline (a FightJoin) to this observer. For a socket's
+// first client Join (presenceReader): a socket opened inside the leave grace
+// inherits the old one's area and cover (presenceSocket), so its rooms join
+// at registration, before the client has named its area, and the client
+// takes fight frames only for the area it has announced (presence-client.ts).
+// A page reloaded in the Wilds would otherwise draw no server enemies until
+// a room woke anew. A client that kept its area across the reconnect gets a
+// second join, a refresh. Callers hold h.mu.
+func (h *presenceHub) rejoinFights(p *presencePeer) {
+	if p.pos == nil {
+		return
+	}
+	for _, room := range sortedFightRooms(p) {
+		// A refused join (closing room, full queue) leaves the room, so the
+		// next position report covers it again with a fresh full join.
+		if !room.actor.Submit(fights.Command{Player: h.fightPlayer(p), Join: true}) {
+			h.leaveFightRoom(p, room.handle, true)
+		}
 	}
 }
 
