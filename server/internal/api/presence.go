@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -53,13 +54,15 @@ type presenceIdentity struct {
 }
 
 type presencePeer struct {
-	identity    presenceIdentity
-	account     *presenceAccount
-	conn        *websocket.Conn
-	ctx         context.Context
-	cancel      context.CancelFunc
-	queue       chan []byte
-	queuedBytes int
+	identity presenceIdentity
+	account  *presenceAccount
+	conn     *websocket.Conn
+	ctx      context.Context
+	cancel   context.CancelFunc
+	queue    chan []byte
+	// queuedBytes is the queue's outstanding payload: enqueue adds under
+	// h.mu, the writer subtracts without it (one atomic a frame, no lock).
+	queuedBytes atomic.Int64
 	stopOnce    sync.Once
 	closeCode   websocket.StatusCode
 	closeReason string
@@ -90,8 +93,12 @@ func (p *presencePeer) stop(code websocket.StatusCode, reason string) {
 }
 
 type presenceHub struct {
-	mu        sync.Mutex
-	peers     map[string]*presencePeer
+	mu    sync.Mutex
+	peers map[string]*presencePeer
+	// worlds indexes peers by world, then id: a room's fan-out and roster
+	// walk one world's peers, not every peer of the hub. Kept by admit,
+	// unindex and moveWorld, under h.mu, in step with peers.
+	worlds    map[string]map[string]*presencePeer
 	accounts  map[string]*presenceAccount
 	sessions  map[string]int
 	sockets   map[*websocket.Conn]struct{}
@@ -147,7 +154,7 @@ func newPresenceHub(c *content.Presence, now func() time.Time) *presenceHub {
 	// The hub mutates nothing and shares no slice: work on a clone, never
 	// on the shared rules table.
 	config = proto.Clone(config).(*content.Presence)
-	return &presenceHub{fightLocations: map[fightLocation]fightLocationEpoch{}, fightFailedWakes: map[fights.Key]bool{}, fightRooms: map[fights.Key]*presenceFightRoom{}, peers: map[string]*presencePeer{}, accounts: map[string]*presenceAccount{}, sessions: map[string]int{}, sockets: map[*websocket.Conn]struct{}{}, drained: make(chan struct{}), config: config, abilityReady: map[string]map[string]time.Time{}, ward: map[string]*wardCredit{}, wardReserved: map[wardKey]*wardReservation{}, clock: now, afterFunc: func(d time.Duration, f func()) { time.AfterFunc(d, f) }}
+	return &presenceHub{fightLocations: map[fightLocation]fightLocationEpoch{}, fightFailedWakes: map[fights.Key]bool{}, fightRooms: map[fights.Key]*presenceFightRoom{}, peers: map[string]*presencePeer{}, worlds: map[string]map[string]*presencePeer{}, accounts: map[string]*presenceAccount{}, sessions: map[string]int{}, sockets: map[*websocket.Conn]struct{}{}, drained: make(chan struct{}), config: config, abilityReady: map[string]map[string]time.Time{}, ward: map[string]*wardCredit{}, wardReserved: map[wardKey]*wardReservation{}, clock: now, afterFunc: func(d time.Duration, f func()) { time.AfterFunc(d, f) }}
 }
 
 // now is the server's clock (config's, or the wall clock for a bare hub).
@@ -205,6 +212,43 @@ func (h *presenceHub) release(reservation presenceReservation) {
 	}
 }
 
+// admit registers p as its account's peer, replacing any peer of that id
+// (and that peer's index entry, whichever world it was in); callers hold
+// h.mu.
+func (h *presenceHub) admit(p *presencePeer) {
+	if old := h.peers[p.identity.ID]; old != nil && old != p {
+		h.unindex(old)
+	}
+	h.peers[p.identity.ID] = p
+	world := h.worlds[p.identity.World]
+	if world == nil {
+		world = map[string]*presencePeer{}
+		h.worlds[p.identity.World] = world
+	}
+	world[p.identity.ID] = p
+}
+
+// forget drops p from the hub's registry and index without the leave
+// bookkeeping of remove; a fixture's exit. Callers hold h.mu.
+func (h *presenceHub) forget(p *presencePeer) {
+	if h.peers[p.identity.ID] == p {
+		delete(h.peers, p.identity.ID)
+	}
+	h.unindex(p)
+}
+
+// unindex drops p from its world's index, if it is still the one there.
+func (h *presenceHub) unindex(p *presencePeer) {
+	world := h.worlds[p.identity.World]
+	if world[p.identity.ID] != p {
+		return
+	}
+	delete(world, p.identity.ID)
+	if len(world) == 0 {
+		delete(h.worlds, p.identity.World)
+	}
+}
+
 func (h *presenceHub) send(p *presencePeer, v proto.Message) {
 	if p.detached || p.ctx.Err() != nil {
 		return
@@ -223,13 +267,13 @@ func (h *presenceHub) enqueue(p *presencePeer, b []byte) {
 	if p.detached || p.ctx.Err() != nil {
 		return
 	}
-	if len(b) > 131072 || p.queuedBytes+len(b) > 262144 {
+	if len(b) > 131072 || p.queuedBytes.Load()+int64(len(b)) > 262144 {
 		p.stop(websocket.StatusTryAgainLater, "slow-consumer")
 		return
 	}
 	select {
 	case p.queue <- b:
-		p.queuedBytes += len(b)
+		p.queuedBytes.Add(int64(len(b)))
 	default:
 		p.stop(websocket.StatusTryAgainLater, "slow-consumer")
 	}
@@ -246,8 +290,8 @@ func (h *presenceHub) broadcastEncoded(sender *presencePeer, b []byte, err error
 
 // broadcastWhere sends to the sender's world's peers the filter picks.
 func (h *presenceHub) broadcastWhere(sender *presencePeer, b []byte, err error, pick func(*presencePeer) bool) {
-	for _, p := range h.peers {
-		if p != sender && p.identity.World == sender.identity.World && pick(p) {
+	for _, p := range h.worlds[sender.identity.World] {
+		if p != sender && pick(p) {
 			if err != nil {
 				p.stop(websocket.StatusInternalError, "internal")
 				continue
@@ -265,6 +309,7 @@ func (h *presenceHub) remove(p *presencePeer) {
 		p.grace.Stop()
 	}
 	h.leaveFights(p, false)
+	h.unindex(p)
 	delete(h.peers, p.identity.ID)
 	if p.area != "" {
 		h.broadcast(p, &contract.PresenceLeave{AccountId: p.identity.ID})
@@ -343,14 +388,16 @@ func (h *presenceHub) moveWorld(p *presencePeer, world string) {
 		h.broadcast(p, &contract.PresenceLeave{AccountId: p.identity.ID})
 	}
 	h.leaveFights(p, true)
+	h.unindex(p)
 	p.identity.World = world
+	h.admit(p)
 	p.pos = nil
 	if p.area == "" {
 		return
 	}
 	n := 0
-	for _, other := range h.peers {
-		if other != p && other.identity.World == world && other.area == p.area {
+	for _, other := range h.worlds[world] {
+		if other != p && other.area == p.area {
 			n++
 		}
 	}
@@ -383,8 +430,8 @@ func (p *presencePeer) player() *contract.PresencePlayer {
 
 func (h *presenceHub) room(p *presencePeer) {
 	players := []*contract.PresencePlayer{}
-	for _, other := range h.peers {
-		if other != p && sharedRoom(other.area, p.area) && other.identity.World == p.identity.World {
+	for _, other := range h.worlds[p.identity.World] {
+		if other != p && sharedRoom(other.area, p.area) {
 			players = append(players, other.player())
 		}
 	}

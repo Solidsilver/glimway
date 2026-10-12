@@ -13,6 +13,8 @@ import (
 	"os"
 	"runtime"
 	"runtime/metrics"
+	"runtime/pprof"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,6 +25,7 @@ import (
 	"glimway/server/internal/chunks"
 	chunkwire "glimway/server/internal/gen/glimway/v1"
 	wire "glimway/server/internal/gen/glimway/v2"
+	"glimway/server/internal/rules"
 
 	"github.com/coder/websocket"
 	"google.golang.org/protobuf/proto"
@@ -57,7 +60,15 @@ func TestFightBotLoad(t *testing.T) {
 	groups := integer("FIGHT_LOAD_GROUPS", 3)
 	duration := time.Duration(integer("FIGHT_LOAD_SECONDS", 20)) * time.Second
 	perCamp := integer("FIGHT_LOAD_PLAYERS", 3)
-	if groups > 100 || perCamp > 5 || duration > 10*time.Minute {
+	// FIGHT_LOAD_MAX_CONNECTIONS lifts the hub's socket cap for this run
+	// only (content/presence.json and the proto bound stay as they are):
+	// past the cap, the groups limit is that many sockets.
+	maxConnections := integer("FIGHT_LOAD_MAX_CONNECTIONS", 0)
+	maxGroups := 100
+	if maxConnections > 0 {
+		maxGroups = max(maxGroups, maxConnections/perCamp)
+	}
+	if groups > maxGroups || perCamp > 5 || duration > 10*time.Minute {
 		t.Fatal("load parameters exceed tool limits")
 	}
 	x := newRig(t)
@@ -66,8 +77,13 @@ func TestFightBotLoad(t *testing.T) {
 	// limits are not what this measures.
 	x.api.Config.LoginRate, x.api.Config.LoginGlobalRate, x.api.Config.LoginPartyRate = 1<<20, 1<<20, 1<<20
 	began := time.Now()
-	x.api.Config.Now = func() time.Time { return time.Unix(rigStart, 0).Add(time.Since(began)) }
+	clock := func() time.Time { return time.Unix(rigStart, 0).Add(time.Since(began)) }
+	x.api.Config.Now = clock
 	x.api.Config.Chunks = fightLoadChunks{x.api.Config.Chunks}
+	// Slowdown shows as lateness before it shows as failure: each bot keeps
+	// how old the active room's deltas are on arrival (the server stamps
+	// the tick it stepped, on the rig's clock) and how long its swings
+	// wait for their result. Both are measured-run samples only.
 	type bot struct {
 		conn                          *websocket.Conn
 		slot                          int
@@ -75,7 +91,11 @@ func TestFightBotLoad(t *testing.T) {
 		tick                          atomic.Uint32
 		warm                          atomic.Bool  // has the active room's join
 		campRows                      atomic.Int32 // most rows the active room showed at once
+		lags, latencies               []float64    // ms; reader-owned until done
+		swung                         sync.Mutex
+		sent                          map[uint32]time.Time
 	}
+	var measuring atomic.Bool
 	// Design 1.3: the base mix is three; each extra account within 160 px at
 	// first aggro adds one, up to five.
 	expectedCamp := int32(min(5, 3+perCamp-1))
@@ -83,6 +103,16 @@ func TestFightBotLoad(t *testing.T) {
 	cfg := presenceTestConfig()
 	cfg.RevalidateMs = 60000
 	ts := startPresence(t, x, cfg)
+	if maxConnections > 0 {
+		// The hub validates and clones its config, so the lift goes on the
+		// hub's own copy, after the proto bound was checked. Past the cap
+		// the cold start (every chunk woken serially behind h.fightLoad and
+		// the one SQLite connection, while every reader waits) outlasts the
+		// 60 s idle timeout, so the scenario lifts that too; it is the
+		// harness's start-up, not steady state.
+		x.api.presence.config.MaxConnections = int32(maxConnections)
+		x.api.presence.config.IdleTimeoutMs = int32((10 * time.Minute).Milliseconds())
+	}
 	area := fmt.Sprintf("wilds:%d:%d", fightLoadCX, fightLoadCY)
 	// Rooms are keyed by world: one world per group gives every group the same
 	// physical workload and independent rooms, however many groups run.
@@ -98,7 +128,7 @@ func TestFightBotLoad(t *testing.T) {
 			} else if _, err := x.db.DB.Exec("UPDATE players SET world_id=? WHERE account_id=?", world, x.account(id)); err != nil {
 				t.Fatal(err)
 			}
-			bots = append(bots, &bot{conn: dialFightBot(t, ts, cookie, state.Lease, area), slot: p})
+			bots = append(bots, &bot{conn: dialFightBot(t, ts, cookie, state.Lease, area), slot: p, sent: map[uint32]time.Time{}})
 		}
 	}
 	// live ends the bots' writing; measure starts the measured run.
@@ -109,9 +139,16 @@ func TestFightBotLoad(t *testing.T) {
 	measure := make(chan struct{})
 	var done sync.WaitGroup
 	var failed atomic.Uint64
-	fail := func() {
+	// The first failure's error says what closed the socket (the server's
+	// close code and reason travel in it).
+	var firstFailure atomic.Pointer[string]
+	fail := func(err error) {
 		if live.Err() == nil {
 			failed.Add(1)
+			if err != nil {
+				text := err.Error()
+				firstFailure.CompareAndSwap(nil, &text)
+			}
 		}
 	}
 	campX, campY := float64(fightLoadCX*384+200), float64(fightLoadCY*384+208)
@@ -133,12 +170,12 @@ func TestFightBotLoad(t *testing.T) {
 			for {
 				_, data, err := b.conn.Read(read)
 				if err != nil {
-					fail()
+					fail(err)
 					return
 				}
 				m, err := decodePresence(data)
 				if err != nil {
-					fail()
+					fail(err)
 					return
 				}
 				switch e := m.Event.(type) {
@@ -157,6 +194,10 @@ func TestFightBotLoad(t *testing.T) {
 				case *wire.PresenceMessage_FightDelta:
 					b.tick.Store(e.FightDelta.Tick)
 					if active != 0 && e.FightDelta.Room == active {
+						if measuring.Load() {
+							nowTick, offset := rules.FightTickAt(clock().UnixMilli())
+							b.lags = append(b.lags, float64(rules.FightTickDiff(nowTick, e.FightDelta.Tick))*rules.FightTickMs+float64(offset))
+						}
 						for _, row := range e.FightDelta.Spawned {
 							rows[row.Enemy] = true
 						}
@@ -167,6 +208,13 @@ func TestFightBotLoad(t *testing.T) {
 					}
 				case *wire.PresenceMessage_FightSwingResult:
 					b.results.Add(1)
+					b.swung.Lock()
+					at, ok := b.sent[e.FightSwingResult.SwingCounter]
+					delete(b.sent, e.FightSwingResult.SwingCounter)
+					b.swung.Unlock()
+					if ok {
+						b.latencies = append(b.latencies, float64(time.Since(at).Microseconds())/1000)
+					}
 				case *wire.PresenceMessage_FightEvent:
 				default:
 					continue
@@ -188,7 +236,7 @@ func TestFightBotLoad(t *testing.T) {
 			}
 			radius := fightLoadWarmRadius
 			measuring := false
-			var n, counter uint32
+			var n, walked, counter uint32
 			send := func(m proto.Message) bool {
 				data, err := encodePresence(m)
 				if err == nil {
@@ -197,7 +245,7 @@ func TestFightBotLoad(t *testing.T) {
 					cancel()
 				}
 				if err != nil {
-					fail()
+					fail(err)
 				}
 				return err == nil
 			}
@@ -213,11 +261,18 @@ func TestFightBotLoad(t *testing.T) {
 						default:
 						}
 					}
+					// Cold start: one report wakes the 3x3; until the join
+					// arrives, further reports only queue behind the serialized
+					// wake. One a second keeps the socket alive without a backlog.
+					n++
+					if !b.warm.Load() && n%10 != 1 {
+						continue
+					}
 					theta := angle
 					if measuring {
 						// Walk in (within the 40 px/tick movement cap), then orbit.
-						n++
-						theta += float64(n) * .06
+						walked++
+						theta += float64(walked) * .06
 						radius = max(fightLoadOrbitRadius, radius-20)
 					}
 					px, py := campX+radius*math.Cos(theta), campY+radius*math.Sin(theta)
@@ -225,10 +280,13 @@ func TestFightBotLoad(t *testing.T) {
 					if !send(&wire.PresencePosition{X: &px, Y: &py, Facing: &wire.PresenceFacing{X: &fx, Y: &fy}, Moving: &moving}) {
 						return
 					}
-					if measuring && n%10 == 0 && b.tick.Load() != 0 {
+					if measuring && walked%10 == 0 && b.tick.Load() != 0 {
 						// Outward swings exercise real dispatch/results without intentionally
 						// clearing the camp, keeping the movement workload alive.
 						counter++
+						b.swung.Lock()
+						b.sent[counter] = time.Now()
+						b.swung.Unlock()
 						if !send(&wire.FightSwing{Kind: wire.FightSwingKind_FIGHT_SWING_KIND_SLASH, X: px, Y: py, Facing: &wire.FightFacing{X: fx, Y: fy}, SwingCounter: counter, SeenTick: b.tick.Load()}) {
 							return
 						}
@@ -240,7 +298,9 @@ func TestFightBotLoad(t *testing.T) {
 	}
 	// Wake is serialized per sync, so the first observer can be joined well
 	// before the last. Nobody approaches until every bot has the active room.
-	warmBy := time.Now().Add(30 * time.Second)
+	// Every chunk is cold and wakes serially (one load at a time, behind
+	// the one SQLite connection): about 20 ms a group on an M1 Max.
+	warmBy := time.Now().Add(30*time.Second + time.Duration(groups)*25*time.Millisecond)
 	for poll := time.NewTicker(20 * time.Millisecond); ; <-poll.C {
 		cold := 0
 		for _, b := range bots {
@@ -253,15 +313,35 @@ func TestFightBotLoad(t *testing.T) {
 			break
 		}
 		if time.Now().After(warmBy) {
-			t.Fatalf("%d of %d bots never joined their active room while warming (socket failures %d)", cold, len(bots), failed.Load())
+			first := ""
+			if text := firstFailure.Load(); text != nil {
+				first = *text
+			}
+			t.Fatalf("%d of %d bots never joined their active room while warming (socket failures %d; first: %q)", cold, len(bots), failed.Load(), first)
 		}
 	}
 	time.Sleep(500 * time.Millisecond) // a few more covered positions per observer
 	cpuBefore := fightLoadCPU()
+	// FIGHT_LOAD_CPUPROFILE profiles the measured run only: no account
+	// creation or warm-up. It conflicts with go test's own -cpuprofile.
+	if path := os.Getenv("FIGHT_LOAD_CPUPROFILE"); path != "" {
+		f, err := os.Create(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := pprof.StartCPUProfile(f); err != nil {
+			t.Fatal(err)
+		}
+		defer f.Close()
+		defer pprof.StopCPUProfile()
+	}
+	measuring.Store(true)
 	close(measure)
 	time.Sleep(duration)
 	// Snapshot while every socket is still connected, then stop the bots.
 	cpu := fightLoadCPU().sub(cpuBefore)
+	pprof.StopCPUProfile()
+	heap, goroutines := fightLoadMemory()
 	measured := x.api.FightMeasurements()
 	var bytes, results, swings, maxBytes uint64
 	joinless, wrongCamp := 0, 0
@@ -284,6 +364,13 @@ func TestFightBotLoad(t *testing.T) {
 	stopLive()
 	stopRead()
 	done.Wait()
+	var lags, latencies []float64
+	for _, b := range bots {
+		lags = append(lags, b.lags...)
+		latencies = append(latencies, b.latencies...)
+	}
+	lagP50, lagP95, lagMax := fightLoadPercentiles(lags)
+	latencyP50, latencyP95, latencyMax := fightLoadPercentiles(latencies)
 	report := struct {
 		FightMeasurement
 		Cores                 int     `json:"cores"`
@@ -303,7 +390,19 @@ func TestFightBotLoad(t *testing.T) {
 		SwingResults          uint64  `json:"swingResults"`
 		BotsWithoutFightJoin  int     `json:"botsWithoutFightJoin"`
 		SocketFailures        uint64  `json:"socketFailures"`
-	}{measured, runtime.GOMAXPROCS(0), groups, len(bots), duration.Seconds(), float64(measured.AwakeRooms) / float64(runtime.GOMAXPROCS(0)), cpu.busyPercent(), float64(bytes) / duration.Seconds(), float64(bytes) / float64(len(bots)) / duration.Seconds(), float64(maxBytes) / duration.Seconds(), expectedCamp, campMin, campMax, wrongCamp, swings, results, joinless, failed.Load()}
+		FirstSocketFailure    string  `json:"firstSocketFailure,omitempty"`
+		DeltaLagSamples       int     `json:"deltaLagSamples"`
+		DeltaLagP50Ms         float64 `json:"deltaLagP50Ms"`
+		DeltaLagP95Ms         float64 `json:"deltaLagP95Ms"`
+		DeltaLagMaxMs         float64 `json:"deltaLagMaxMs"`
+		ResultLatencySamples  int     `json:"resultLatencySamples"`
+		ResultLatencyP50Ms    float64 `json:"resultLatencyP50Ms"`
+		ResultLatencyP95Ms    float64 `json:"resultLatencyP95Ms"`
+		ResultLatencyMaxMs    float64 `json:"resultLatencyMaxMs"`
+		HeapInUseBytes        uint64  `json:"heapInUseBytes"`
+		HeapBytesPerBot       float64 `json:"heapBytesPerBot"`
+		Goroutines            int     `json:"goroutines"`
+	}{measured, runtime.GOMAXPROCS(0), groups, len(bots), duration.Seconds(), float64(measured.AwakeRooms) / float64(runtime.GOMAXPROCS(0)), cpu.busyPercent(), float64(bytes) / duration.Seconds(), float64(bytes) / float64(len(bots)) / duration.Seconds(), float64(maxBytes) / duration.Seconds(), expectedCamp, campMin, campMax, wrongCamp, swings, results, joinless, failed.Load(), firstFailureText(firstFailure.Load()), len(lags), lagP50, lagP95, lagMax, len(latencies), latencyP50, latencyP95, latencyMax, heap, float64(heap) / float64(len(bots)), goroutines}
 	data, _ := json.Marshal(report)
 	fmt.Printf("FIGHT_LOAD %s\n", data)
 	if report.SocketFailures != 0 || report.BotsWithoutFightJoin != 0 || report.AwakeRooms == 0 || report.Ticks == 0 || report.SwingResults == 0 {
@@ -312,6 +411,24 @@ func TestFightBotLoad(t *testing.T) {
 	if report.BotsWrongCampSize != 0 {
 		t.Fatalf("active camps did not scale to %d for every observer", expectedCamp)
 	}
+}
+
+func firstFailureText(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
+// fightLoadPercentiles: p50, p95 and max of the samples (zero when none).
+func fightLoadPercentiles(samples []float64) (p50, p95, maxed float64) {
+	if len(samples) == 0 {
+		return 0, 0, 0
+	}
+	sorted := slices.Clone(samples)
+	slices.Sort(sorted)
+	at := func(p int) float64 { return sorted[(p*len(sorted)+99)/100-1] }
+	return at(50), at(95), sorted[len(sorted)-1]
 }
 
 // dialFightBot authenticates and joins on the test goroutine. Nothing else
@@ -358,6 +475,16 @@ func fightLoadCPU() fightLoadCPUSample {
 	metrics.Read(s)
 	return fightLoadCPUSample{s[0].Value.Float64(), s[1].Value.Float64()}
 }
+
+// fightLoadMemory: live heap after a collection (bots' buffers included)
+// and the goroutine count, at the end of the measured run.
+func fightLoadMemory() (uint64, int) {
+	runtime.GC()
+	s := []metrics.Sample{{Name: "/memory/classes/heap/objects:bytes"}}
+	metrics.Read(s)
+	return s[0].Value.Uint64(), runtime.NumGoroutine()
+}
+
 func (a fightLoadCPUSample) sub(b fightLoadCPUSample) fightLoadCPUSample {
 	return fightLoadCPUSample{a.total - b.total, a.idle - b.idle}
 }

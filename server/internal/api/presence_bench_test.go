@@ -20,7 +20,7 @@ func BenchmarkPresenceBroadcast(b *testing.B) {
 		for i := range peers {
 			p := &presencePeer{identity: presenceIdentity{ID: strconv.Itoa(i), World: "world"}, area: "village", ctx: ctx, cancel: cancel, queue: make(chan []byte, 1)}
 			peers[i] = p
-			h.peers[p.identity.ID] = p
+			h.admit(p)
 		}
 		message := &contract.PresencePosition{AccountId: proto.String("5abfd539-22eb-457f-8e2a-9fb3d66731f1"), X: proto.Float64(432.125), Y: proto.Float64(768.5), Facing: &contract.PresenceFacing{X: proto.Float64(0), Y: proto.Float64(1)}, Moving: proto.Bool(false)}
 		b.ReportAllocs()
@@ -30,7 +30,7 @@ func BenchmarkPresenceBroadcast(b *testing.B) {
 			h.broadcast(peers[0], message)
 			for _, p := range peers[1:] {
 				<-p.queue
-				p.queuedBytes = 0
+				p.queuedBytes.Store(0)
 			}
 			h.mu.Unlock()
 		}

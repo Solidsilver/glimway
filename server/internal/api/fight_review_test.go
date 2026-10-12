@@ -35,7 +35,7 @@ func TestLegacyClearedCampWakesDownUntilItsTimer(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	S := int(content.WildsRules.GetChunkSize())
 	p := &presencePeer{identity: identity, account: &presenceAccount{}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 256), area: fmt.Sprintf("wilds:%d:%d", cx, cy), pos: &presencePosition{X: float64((cx*S+int(camp.Tx))*16 + 8), Y: float64((cy*S + int(camp.Ty)) * 16)}, fightRooms: map[uint32]*presenceFightRoom{}}
-	x.api.presence.peers[p.identity.ID] = p
+	x.api.presence.admit(p)
 	t.Cleanup(x.api.ClosePresence)
 	x.api.syncFightPresence(p)
 	var join *wire.FightJoin
@@ -137,7 +137,7 @@ func addTickedFightRoom(t *testing.T, a *Server, p *presencePeer, handle uint32,
 		}
 		a.fightOutput(tr.room, out)
 	}, Closed: func() { a.fightClosed(tr.room) }})
-	p.fightRooms[handle] = tr.room
+	a.presence.viewFightRoom(p, tr.room)
 	a.presence.fightRooms[key] = tr.room
 	tr.room.actor.Submit(fights.Command{Player: &fights.Player{ID: p.identity.ID, Observer: p.fightToken, Seed: p.critSeed, X: p.pos.X, Y: p.pos.Y}})
 	t.Cleanup(func() { tr.room.actor.Stop(); <-tr.room.actor.Done() })

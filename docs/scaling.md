@@ -32,6 +32,26 @@ favours simple, correct behaviour over throughput.
 - **Disk speed matters more than CPU,** because of `synchronous=FULL`. NVMe is great,
   SATA SSD is fine, an SD card or spinning disk would be noticeably slow.
 
+## Measured: shared camp fights (2026-10-12, M1 Max)
+
+`scripts/fight-load.sh` with `FIGHT_LOAD_MAX_CONNECTIONS` lifted the 128 cap in the
+test only (see `docs/shared-fights-testing.md`). Three players per camp, nine awake
+rooms per group, bots in the same process (about a third of the measured CPU).
+
+- **The sim is not the bottleneck:** `Room.Step` is under 1% of CPU at 6,300 awake rooms.
+- **One core is bound by socket syscalls:** one `write` per outgoing frame costs about
+  40% of the core at 2,100 players, reads another 12%. Deltas start arriving more than
+  a tick late (p95 over 100 ms) between 500 and 1,000 players; 2,100 saturates the core.
+- **Four cores were bound by the hub mutex**, not CPU: at 2,100 players the process used
+  2.5 cores yet kicked most sockets as slow consumers, because readers held `h.mu` while
+  scanning every peer per position, every room output scanned every peer, and every
+  position report serialized on the fight-load lock. After the fixes in that lane
+  (per-world peer index, per-room viewer sets, lock-free writer accounting, wake-only
+  load lock, actor submits off the lock) 2,100 players run clean on four cores with
+  deltas p95 under 70 ms, and 3,000 players still deliver every swing.
+- **Next real step is frame coalescing** (several queued frames in one socket write),
+  which needs a wire change; after that, per-world sharding.
+
 ## Multithreaded machines
 
 HTTP handling, JSON work and WebSocket goroutines spread across cores. The single

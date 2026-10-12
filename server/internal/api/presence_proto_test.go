@@ -207,7 +207,7 @@ func TestPresenceEncodedQueueLimits(t *testing.T) {
 		m := &contract.PresenceReady{AccountId: "alice"}
 		h.send(p, m)
 		b := <-p.queue
-		if p.queuedBytes != len(b) {
+		if p.queuedBytes.Load() != int64(len(b)) {
 			t.Fatal("queue byte accounting")
 		}
 		p.queue <- b

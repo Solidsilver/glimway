@@ -45,7 +45,7 @@ func adapterFightFixture(t *testing.T) (*rig, *presencePeer, *http.Cookie, respo
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	p := &presencePeer{identity: identity, account: &presenceAccount{}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 256), area: "wilds:0:0", pos: &presencePosition{X: 185, Y: 208}, fightRooms: map[uint32]*presenceFightRoom{}}
-	x.api.presence.peers[p.identity.ID] = p
+	x.api.presence.admit(p)
 	t.Cleanup(x.api.ClosePresence)
 	return x, p, cookie, state
 }
@@ -70,7 +70,7 @@ func blockedFightRoom(t *testing.T, a *Server, p *presencePeer, handle uint32, c
 		}
 		a.fightOutput(room, out)
 	}})
-	p.fightRooms[handle] = room
+	a.presence.viewFightRoom(p, room)
 	a.presence.fightRooms[key] = room
 	a.presence.fightObserver(p)
 	room.actor.Submit(fights.Command{Player: &fights.Player{ID: p.identity.ID, Observer: p.fightToken, Seed: p.critSeed, X: p.pos.X, Y: p.pos.Y}})
@@ -343,7 +343,7 @@ func TestFightCamplessWakeCachedPerEpochAndWorld(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			q := &presencePeer{identity: identity, ctx: ctx, cancel: cancel, queue: make(chan []byte, 32), area: p.area, pos: &presencePosition{X: 185, Y: 208}}
 			x.api.presence.mu.Lock()
-			x.api.presence.peers[q.identity.ID] = q
+			x.api.presence.admit(q)
 			x.api.presence.mu.Unlock()
 			for range 3 {
 				x.api.syncFightPresence(q)
@@ -379,7 +379,7 @@ func TestFightReportCommitRefreshesDownAndRetargets(t *testing.T) {
 	q := &presencePeer{identity: identity, account: &presenceAccount{}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 256), area: p.area, pos: &presencePosition{X: 220, Y: 208}}
 	h := x.api.presence
 	h.mu.Lock()
-	h.peers[q.identity.ID] = q
+	h.admit(q)
 	h.mu.Unlock()
 	x.api.syncFightPresence(q)
 	queuedFightFrame(t, q)
