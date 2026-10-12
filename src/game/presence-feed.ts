@@ -12,12 +12,12 @@
  * - The renderer (entities/remote-players.ts) reads `peersIn(area)` each
  *   frame and listens for emotes on the bus.
  *
- * Presence is the live-session channel, apart from the durable one: nothing
- * here touches the save or the economy. It is mostly what others see
- * (positions, poses, looks, emotes, casts drawn as effects), with one
- * gameplay effect: a friend's relayed Ward-light pulse heals this hero
- * (MoveFx, entities/moves.ts, applies it). No Phaser here: the bus, link,
- * socket and timers are injected, so the feed runs under node --test.
+ * The feed itself writes nothing: not the save, not the economy. But what
+ * it relays reaches play, through the bus: a friend's Ward-light pulses mend
+ * this hero (entities/moves.ts times them, the hero decides; the hub credits
+ * the server the same heal), a naming spoken nearby rests the warden
+ * (`witness`), and gifts arrive. No Phaser here: the bus, link, socket and
+ * timers are injected, so the feed runs under node --test.
  */
 import { PresenceClient, sharedRoom, type PresenceStatus, type SocketLike, type Timers } from '../lib/presence-client.ts'
 import { PeerTrack } from '../lib/presence-interp.ts'

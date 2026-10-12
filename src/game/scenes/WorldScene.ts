@@ -77,6 +77,7 @@ import { WildsEntities } from '../wilds/entities'
 import { setSyncSafety } from '../sync-safety'
 import { onSceneEnd } from '../scene-end'
 import { exposeWorldHooks } from './world-dev-hooks'
+import { playHold, runFrame, type WorldFrame } from './world-frame'
 import { perfWatch } from '../perf'
 import { Unmoored } from '../entities/unmoored'
 import { WorldActions } from './world-actions'
@@ -580,7 +581,7 @@ export class WorldScene extends Phaser.Scene {
       },
       enemyAt: (id) => {
         const e = this.enemies.enemies.find((x) => x.id === id && !x.dead)
-        return e ? { x: e.sprite.x, y: e.sprite.y - 8 } : null
+        return e ? { x: e.x, y: e.y - 8 } : null
       },
       lootAt: (enemy) => (enemy === 'finger-wisp' && this.finger ? { x: this.finger.x, y: this.finger.y - 3 } : null),
       marked: (id) => this.interactables.list.some((x) => x.id === id && x.marker?.() === 'quest'),
@@ -600,7 +601,7 @@ export class WorldScene extends Phaser.Scene {
         areaId: this.world.areaId,
         transitioning: this.transitioning,
         dialogueOpen: uiState.dialogueOpen,
-        enemiesNear: this.enemies.enemies.some((e) => Math.hypot(e.sprite.x - px, e.sprite.y - py) < 200)
+        enemiesNear: this.enemies.enemies.some((e) => Math.hypot(e.x - px, e.y - py) < 200)
       }
     })
     onSceneEnd(this, dropSafety)
@@ -658,7 +659,26 @@ export class WorldScene extends Phaser.Scene {
       this.time.paused = this.reloadHeld
     }
     if (this.reloadHeld) return
-    const dt = Math.min(delta / 1000, 0.05)
+    runFrame(this.frame, time, Math.min(delta / 1000, 0.05))
+  }
+
+  /** The frame's halves (./world-frame.ts): observation always, then play or holding still. */
+  private readonly frame: WorldFrame = {
+    observe: (time, dt) => this.observe(time, dt),
+    hold: () =>
+      playHold({
+        ui: uiBlocked(),
+        transitioning: this.transitioning,
+        cinematic: this.cinematic,
+        persisting: this.session.persistenceInFlight,
+        placing: !!this.homesteads?.placing
+      }),
+    still: (time, dt) => this.holdStill(time, dt),
+    play: (time, dt) => this.play(time, dt)
+  }
+
+  /** Every frame, play held or not: the framing, the clocks, and the world others share. */
+  private observe(time: number, dt: number): void {
     this.camera.keepFramed()
     // The hero's spot on the canvas in CSS px, every frame (panels and
     // transitions too): "hold to walk" steers by it, and title cards keep clear of it.
@@ -681,11 +701,6 @@ export class WorldScene extends Phaser.Scene {
     if (!this.transitioning) publishMapPosition(this, this.world.areaId, this.session.link?.worldId ?? '', this.hero.sprite.x, this.hero.sprite.y)
 
     this.unmoored.update(time, dt)
-
-    // While a sync persistence owns the save file the world freezes its
-    // resource/combat mutations: the committed snapshot must never revert a
-    // mid-flight enemy hit, regen tick, or position write. The panel closes
-    // normally; this gate only covers the brief disk write.
     this.homesteads?.update(dt)
     // Others keep walking while a panel or dialogue holds the screen.
     this.remotePlayers.update(dt)
@@ -697,18 +712,26 @@ export class WorldScene extends Phaser.Scene {
     if (elara?.present && elara.seated && !elara.path) elara.sprite.setVisible(false)
     this.samplePresence()
     this.petting.update()
-    if (uiBlocked() || this.transitioning || this.cinematic || this.session.persistenceInFlight || this.homesteads?.placing) {
-      this.hero.halt()
-      // Still breathing while a conversation or panel holds the screen.
-      this.avatar.update(time)
-      this.interactables.hideKeyHint()
-      this.goalGuide.update(dt, this.hero.sprite, false)
-      this.gathering?.updateHint(dt, this.hero.sprite, false, false)
-      this.enemies.updateEnemyBars()
-      this.updateOccluders(dt)
-      return
-    }
+    this.enemies.observe(dt)
+  }
 
+  /**
+   * Play held (a panel, a conversation, a transition, a cinematic, a sync's
+   * write, placing a piece): the hero stands still, the screen stays alive.
+   */
+  private holdStill(time: number, dt: number): void {
+    this.hero.halt()
+    // Still breathing while a conversation or panel holds the screen.
+    this.avatar.update(time)
+    this.interactables.hideKeyHint()
+    this.goalGuide.update(dt, this.hero.sprite, false)
+    this.gathering?.updateHint(dt, this.hero.sprite, false, false)
+    this.enemies.updateEnemyBars()
+    this.updateOccluders(dt)
+  }
+
+  /** This player's play: input, the local fights, bolts, the open map's window, exits. */
+  private play(time: number, dt: number): void {
     this.hero.move(dt, this.devWalk ? this.devSteer() : this.controls.vector())
     this.enemies.update(dt)
     this.goalGuide.update(dt, this.hero.sprite, this.worldLive())
@@ -730,7 +753,7 @@ export class WorldScene extends Phaser.Scene {
     // The wrong tool in hand by something workable: a faint hint after a moment.
     const hx = this.hero.sprite.x
     const hy = this.hero.sprite.y
-    const creatureNear = this.enemies.enemies.some((e) => !e.dead && Math.hypot(e.sprite.x - hx, e.sprite.y - hy) < 200)
+    const creatureNear = this.enemies.enemies.some((e) => !e.dead && Math.hypot(e.x - hx, e.y - hy) < 200)
     this.gathering?.updateHint(dt, this.hero.sprite, creatureNear, true)
     this.enemies.updateEnemyBars()
     this.updateOccluders(dt)
@@ -923,7 +946,7 @@ export class WorldScene extends Phaser.Scene {
   private updateOccluders(dt: number): void {
     if (this.occluders.length === 0) return
     const things: { x: number; y: number }[] = [{ x: this.hero.sprite.x, y: this.hero.sprite.y }]
-    for (const e of this.enemies.enemies) things.push({ x: e.sprite.x, y: e.sprite.y })
+    for (const e of this.enemies.enemies) things.push({ x: e.x, y: e.y })
     updateAreaOccluders(this.occluders, dt, things)
   }
 

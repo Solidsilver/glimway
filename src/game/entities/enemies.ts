@@ -5,6 +5,13 @@
  * isn't attacking only stings. Includes knockback, poses, and the floating
  * HP bars.
  *
+ * Every enemy has an owner (EnemyOwner, below): who runs its behaviour and
+ * decides what a hit did. This screen owns all of them today, on Phaser
+ * bodies. The rest of the game reads an enemy as its state (./fight-rules.ts
+ * EnemyState: `x`, `y`, `hp`, `dead`), never its sprite, so an enemy the
+ * server runs (docs/design/shared-fights.md 1.8) reads the same. A hit's
+ * feedback shows at once whoever owns it (damageEnemy).
+ *
  * The warden is not fought down. It is a lamp in a stone coat, homesick for
  * one pose: blows only clink off it. After each lunge it stops to find its
  * feet, and a hero within reach can speak the naming to its heart-lamp —
@@ -24,21 +31,22 @@ import { WARDEN, WardenEncounter } from './warden'
 import { curatedToRestore } from '../rollback'
 import { Creatures } from './creatures'
 import { roadStep } from '../../lib/quests'
-import { STAND_MARGIN, type CombatField } from '../../lib/combat-moves'
+import type { CombatField } from '../../lib/combat-moves'
+import { ENEMY_TUNING, KNOCK, contactThreat, hitOutcome, knockFrom, knockInterrupts, touchOutcome, type EnemyPhase, type EnemyState } from './fight-rules'
 
-export interface Enemy {
-  id: string
-  type: EnemyType
+/** An enemy on this screen: its state, the sprite that draws it (a local enemy's body too), and its owner's working. */
+export interface Enemy extends EnemyState {
   sprite: Phaser.Physics.Arcade.Sprite
+  /** Who runs it and decides its hits. */
+  owner: EnemyOwner
   hp: number
-  maxHp: number
   homeX: number
   homeY: number
   dirX: number
   dirY: number
   wanderTimer: number
   attackTimer: number
-  state: 'chase' | 'telegraph' | 'lunge' | 'sweep' | 'recover' | 'stunned'
+  state: EnemyPhase
   stateTimer: number
   lungeX: number
   lungeY: number
@@ -63,13 +71,32 @@ export interface Enemy {
   speakings: number
 }
 
+/** Where the hero stands and what the creatures aim at, measured for one enemy this frame. */
+export interface EnemySight {
+  /** From the enemy's middle to the hero's, and to what it aims at (an Echo's copy, else the hero). */
+  dist: number
+  aimDist: number
+  px: number
+  py: number
+  aim: { x: number; y: number }
+  field: CombatField | undefined
+}
+
 /**
- * Cozy-demo combat tuning: every real attack is telegraphed (a windup pose,
- * a "!" and a rising tone) so it can be read and dodged; bumping into an
- * enemy that isn't attacking only stings.
+ * Who owns an enemy's fight (shared-fights.md 1.3, 1.4; game F7). This
+ * screen owns the curated fights (the woodland's, the Warden) and every camp
+ * until the server runs them: behaviour on Phaser bodies, hits decided at
+ * once. A server camp's owner draws the room's snapshots and waits for the
+ * server's word on a hit; death plays on its event.
  */
-export { ENEMY_TUNING, KNOCK } from '../../lib/enemies.ts'
-import { ENEMY_TUNING, KNOCK } from '../../lib/enemies.ts'
+export interface EnemyOwner {
+  /** Every frame, even while this player's play is held (a menu open): what the world shows of it. */
+  observe(enemy: Enemy, dt: number): void
+  /** A frame of this player's play: its behaviour. */
+  act(enemy: Enemy, dt: number, sight: EnemySight): void
+  /** A hit seen to land here, its feedback already shown: shove it and decide what it did. */
+  struck(enemy: Enemy, hit: { amount: number; crit: boolean }, fromX: number): void
+}
 
 /** What the enemy AI needs from the hero (implemented by Hero). */
 export interface HeroView {
@@ -94,6 +121,17 @@ export class EnemySystem {
   /** The ruin's warden (./warden.ts) and the creatures' behaviour (./creatures.ts). */
   readonly warden: WardenEncounter
   readonly creatures: Creatures
+  /** This screen as an owner: every enemy today (see EnemyOwner). */
+  private readonly local: EnemyOwner = {
+    // Held play holds a local enemy still: its behaviour is all in act.
+    observe: () => {},
+    act: (enemy, dt, sight) => this.actLocally(enemy, dt, sight),
+    struck: (enemy, hit, fromX) => {
+      this.knockEnemy(enemy, fromX)
+      enemy.hp -= hit.amount
+      if (enemy.hp <= 0) this.killEnemy(enemy)
+    }
+  }
   private _enemies: Enemy[] = []
   private hpBars!: Phaser.GameObjects.Graphics
 
@@ -157,31 +195,37 @@ export class EnemySystem {
     return n
   }
 
+  /**
+   * A hit landed on this screen (a swing, a bolt, a signature). Its feedback
+   * shows at once, whoever owns the enemy: the number, the sound, the
+   * hit-stop and the flash. Its owner shoves it and decides what it did. A
+   * blow on the warden only clinks.
+   */
   damageEnemy(enemy: Enemy, amount: number, fromX: number, crit = false): void {
-    if (enemy.type === 'guardian') {
+    const hit = hitOutcome(enemy, amount, crit)
+    if (!hit) {
       this.warden.clinkWarden(enemy, fromX)
       return
     }
-    // A dazed beetle (charged into something) is wide open.
-    if (enemy.type === 'beetle' && enemy.state === 'stunned') {
-      amount *= ENEMY_TUNING.beetle.stunnedTakes
-      crit = true
-    }
-    enemy.hp -= amount
-    this.deps.fx.floatText(enemy.sprite.x, enemy.sprite.y - 16, crit ? `${Math.round(amount)}!` : `${Math.round(amount)}`, crit ? '#ffd24a' : '#fffbef', crit)
-    sfx(crit ? 'crit' : 'hit')
-    this.deps.fx.hitStop(crit ? 70 : 45)
+    this.deps.fx.floatText(enemy.x, enemy.y - 16, hit.crit ? `${Math.round(hit.amount)}!` : `${Math.round(hit.amount)}`, hit.crit ? '#ffd24a' : '#fffbef', hit.crit)
+    sfx(hit.crit ? 'crit' : 'hit')
+    this.deps.fx.hitStop(hit.crit ? 70 : 45)
     enemy.sprite.setTint(0xffe0d0)
     this.scene.time.delayedCall(90, () => {
       if (!enemy.dead && enemy.sprite.active) enemy.sprite.clearTint()
     })
-    this.knockEnemy(enemy, fromX)
-    if (enemy.hp <= 0) this.killEnemy(enemy)
+    enemy.owner.struck(enemy, hit, fromX)
+  }
+
+  /** Every frame, play held or not: each enemy as its owner shows it (nothing moves for a local one). */
+  observe(dt: number): void {
+    for (const enemy of this._enemies) if (!enemy.dead && !enemy.parked) enemy.owner.observe(enemy, dt)
   }
 
   /**
-   * Per-frame AI + contact damage. The level-20 moves (the hero's `field`)
-   * bend it for the creatures, never the Warden: an Echo's copy is what they
+   * A frame of this player's play: each enemy's behaviour (its owner's), then
+   * touching it, judged here. The level-20 moves (the hero's `field`) bend
+   * it for the creatures, never the Warden: an Echo's copy is what they
    * chase and aim at, a Kindle patch slows them, and a lunge that would
    * reach a planted hero (Stand) stops short and staggers.
    */
@@ -195,63 +239,54 @@ export class EnemySystem {
     const aim = field?.decoy ? { x: field.decoy.x, y: field.decoy.y - 8 } : { x: px, y: py }
     for (const enemy of [...this.enemies]) {
       if (enemy.dead || enemy.parked) continue
-      const ex = enemy.sprite.x
-      const ey = enemy.sprite.y - 6
+      const ex = enemy.x
+      const ey = enemy.y - 6
       const dist = Math.hypot(px - ex, py - ey)
       const aimDist = Math.hypot(aim.x - ex, aim.y - ey)
-      const body = enemy.sprite.body as Phaser.Physics.Arcade.Body
       if (enemy.type === 'guardian' && this.warden.witnessResting()) {
         // Resting for someone else's naming: no AI, no contact, until it remembers its pose.
-        body.setVelocity(0, 0)
+        ;(enemy.sprite.body as Phaser.Physics.Arcade.Body).setVelocity(0, 0)
         enemy.sprite.setDepth(enemy.sprite.y)
         continue
       }
-      if (enemy.knockTimer > 0) {
-        // Shoved: physics owns the body for a beat, the AI waits.
-        enemy.knockTimer -= dt
-        body.setVelocity(enemy.knockX, enemy.knockY)
-        // A shove through a Kindle patch is slowed like any other movement.
-        this.creatures.slowIn(enemy, field)
-        enemy.stateTimer -= dt
-        if (enemy.knockTimer <= 0) {
-          body.setVelocity(0, 0)
-          if (enemy.type !== 'guardian' && enemy.state !== 'telegraph' && enemy.state !== 'stunned') this.setEnemyPose(enemy, 'idle')
-        }
-      } else if (enemy.type === 'wisp') {
-        this.creatures.updateHopper(enemy, dt, aimDist, aim.x, aim.y)
-        this.creatures.slowIn(enemy, field)
-      } else if (enemy.type === 'beetle') {
-        this.creatures.updateBeetle(enemy, dt, aimDist, aim.x, aim.y)
-        this.creatures.slowIn(enemy, field)
-      } else {
-        this.warden.updateGuardian(enemy, dt, dist, px, py)
-      }
-      // Contact damage: attacks hit hard; a bump only stings.
-      let reach: number = ENEMY_TUNING[enemy.type].reach
-      let dmg: number = ENEMY_TUNING[enemy.type].contact
-      if (enemy.type === 'guardian' && enemy.state === 'lunge') {
-        reach = ENEMY_TUNING.guardian.lungeReach
-        dmg = ENEMY_TUNING.guardian.lunge
-      } else if (enemy.type === 'guardian' && enemy.state === 'sweep') {
-        reach = WARDEN.sweepReach
-        dmg = WARDEN.sweep
-      } else if (enemy.type === 'guardian' && enemy.state === 'recover') {
-        dmg = 0 // standing still to find its feet: walking up to it is safe
-      } else if (enemy.type === 'wisp' && enemy.state === 'lunge') {
-        reach = ENEMY_TUNING.wisp.hopReach
-        dmg = ENEMY_TUNING.wisp.hop
-      } else if (enemy.type === 'beetle' && enemy.state === 'lunge') {
-        reach = ENEMY_TUNING.beetle.chargeReach
-        dmg = ENEMY_TUNING.beetle.charge
-      } else if (enemy.type === 'beetle' && enemy.state === 'stunned') {
-        dmg = 0
-      }
-      if (dmg > 0 && field?.stand && enemy.type !== 'guardian' && enemy.state === 'lunge' && dist < reach + STAND_MARGIN) {
-        // Stand: the lunge stops short of the planted hero and staggers.
-        this.stagger(enemy, field.stand.stagger)
-      } else if (dmg > 0 && dist < reach) hero.damagePlayer(dmg, ex, enemy.sprite.y)
+      enemy.owner.act(enemy, dt, { dist, aimDist, px, py, aim, field })
+      this.touch(enemy, hero, dist, ex)
       enemy.sprite.setDepth(enemy.sprite.y)
       if (enemy.type === 'guardian') this.warden.updateHeart(enemy)
+    }
+  }
+
+  /** Touching an enemy, judged on this screen (./fight-rules.ts touchOutcome): a planted hero staggers a lunge, else it hurts. */
+  private touch(enemy: Enemy, hero: HeroView, dist: number, fromX: number): void {
+    const stand = hero.field?.stand
+    const threat = contactThreat(enemy, { reach: WARDEN.sweepReach, damage: WARDEN.sweep })
+    const touched = touchOutcome(enemy, threat, dist, !!stand)
+    if (touched === 'stagger') this.stagger(enemy, stand!.stagger)
+    else if (touched === 'hurt') hero.damagePlayer(threat.damage, fromX, enemy.y)
+  }
+
+  /** A local enemy's frame of play: a shove in progress, else its kind's behaviour on its body. */
+  private actLocally(enemy: Enemy, dt: number, { dist, aimDist, px, py, aim, field }: EnemySight): void {
+    const body = enemy.sprite.body as Phaser.Physics.Arcade.Body
+    if (enemy.knockTimer > 0) {
+      // Shoved: physics owns the body for a beat, the AI waits.
+      enemy.knockTimer -= dt
+      body.setVelocity(enemy.knockX, enemy.knockY)
+      // A shove through a Kindle patch is slowed like any other movement.
+      this.creatures.slowIn(enemy, field)
+      enemy.stateTimer -= dt
+      if (enemy.knockTimer <= 0) {
+        body.setVelocity(0, 0)
+        if (enemy.type !== 'guardian' && enemy.state !== 'telegraph' && enemy.state !== 'stunned') this.setEnemyPose(enemy, 'idle')
+      }
+    } else if (enemy.type === 'wisp') {
+      this.creatures.updateHopper(enemy, dt, aimDist, aim.x, aim.y)
+      this.creatures.slowIn(enemy, field)
+    } else if (enemy.type === 'beetle') {
+      this.creatures.updateBeetle(enemy, dt, aimDist, aim.x, aim.y)
+      this.creatures.slowIn(enemy, field)
+    } else {
+      this.warden.updateGuardian(enemy, dt, dist, px, py)
     }
   }
 
@@ -358,6 +393,14 @@ export class EnemySystem {
       id,
       type,
       sprite,
+      owner: this.local,
+      // A local enemy stands where its body does.
+      get x() {
+        return sprite.x
+      },
+      get y() {
+        return sprite.y
+      },
       hp: hp ?? ENEMY_TUNING[type].hp,
       maxHp: hp ?? ENEMY_TUNING[type].hp,
       homeX: tileMid(tx),
@@ -390,12 +433,22 @@ export class EnemySystem {
     return enemy
   }
 
+  /** Down, decided here: a curated enemy is recorded defeated, then its death plays. */
   private killEnemy(enemy: Enemy): void {
     enemy.dead = true
-    sfx('calm')
     // Wilds camp enemies belong to their camp's respawn cycle, not to the
     // permanent defeated list (wilds:*, see src/game/wilds/entities.ts).
     if (!enemy.id.startsWith('wilds:')) this.deps.session.recordDefeat(enemy.id)
+    this.showDeath(enemy)
+  }
+
+  /**
+   * A death on screen, once it's decided (a server enemy's on the room's
+   * death event, so nothing dies and comes back): a calm note, a burst of
+   * sparks, the body dissolving, and the enemy off the list.
+   */
+  showDeath(enemy: Enemy): void {
+    sfx('calm')
     // Spark burst
     const bx = enemy.sprite.x
     const by = enemy.sprite.y - 6
@@ -429,17 +482,13 @@ export class EnemySystem {
    * heavy to stop, and the warden only rocks back between lunges.
    */
   knockEnemy(enemy: Enemy, fromX: number): void {
-    if (enemy.type === 'beetle' && enemy.state === 'lunge') return
-    if (enemy.type === 'guardian' && enemy.state === 'lunge') return
     const hero = this.deps.hero()
-    const dir = new Phaser.Math.Vector2(enemy.sprite.x - fromX, (enemy.sprite.y - hero.sprite.y) * 0.5)
-    if (dir.lengthSq() < 0.01) dir.set(hero.facing.x, hero.facing.y)
-    dir.normalize()
-    const speed = enemy.type === 'guardian' ? KNOCK.guardian : KNOCK.small
-    enemy.knockX = dir.x * speed
-    enemy.knockY = dir.y * speed
+    const shove = knockFrom(enemy, fromX, { y: hero.sprite.y, facing: hero.facing })
+    if (!shove) return
+    enemy.knockX = shove.x
+    enemy.knockY = shove.y
     enemy.knockTimer = KNOCK.time
-    if (enemy.type === 'wisp' && (enemy.state === 'telegraph' || enemy.state === 'lunge')) {
+    if (knockInterrupts(enemy)) {
       // Interrupted: the windup is lost, so a quick hit is a real answer.
       enemy.state = 'recover'
       enemy.stateTimer = ENEMY_TUNING.wisp.recover

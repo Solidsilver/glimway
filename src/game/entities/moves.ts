@@ -5,32 +5,30 @@
  * from the presence relay. Calm on purpose: slow loops, low to the ground,
  * no screen shake; reduced motion holds still frames.
  *
- * A friend's Ward-light is the one cast that changes this screen: its
- * pulses mend the local hero standing inside the circle, at the same
- * moments the friend's screen pulses (the hub credits the server the same
- * heal, 4.5). Everything else a friend casts is only drawn.
- *
- * Purely cosmetic otherwise: the rules live in src/lib/combat-moves.ts.
+ * Drawing only: the rules live in src/lib/combat-moves.ts and the hero.
+ * A Ward-light's pulses are timed here, yours or a friend's, and each one
+ * is handed to the hero (`mend`), who decides whether it mends them: a
+ * friend's pulse mends at the same moments the friend's screen pulses (the
+ * hub credits the server the same heal, 4.5).
  */
 import Phaser from 'phaser'
 import { bus, EV, type AbilityCastPayload } from '../events'
 import { abilityFor } from '../../lib/abilities'
-import { friendPulseHeal, inCircle, kindleSpot, wardPulseTimes } from '../../lib/combat-moves'
+import { friendPulseHeal, kindleSpot, wardPulseTimes } from '../../lib/combat-moves'
 import type { KitMove } from '../../lib/combat'
 import { TILE } from '../../lib/tile'
 import { crArt, hasCrArt } from '../crafts-art'
-import { sfx } from '../sfx'
-import type { Session } from '../session'
 import type { Effects } from './fx'
 
 export interface MoveFxDeps {
-  session: Session
   fx: Effects
   reducedMotion: boolean
   /** The hero's feet (world px) and facing, now. */
   hero: () => { sprite: Phaser.GameObjects.Sprite; facing: { x: number; y: number } }
   /** The hero's visible body: the layered avatar container, when there is one. */
   body: () => Phaser.GameObjects.Container | null
+  /** A friend's Ward-light pulse at (cx, cy), `r` round: the hero decides whether it mends them. */
+  mend: (cx: number, cy: number, r: number, heal: number) => void
 }
 
 type Fadeable = Phaser.GameObjects.GameObject & { alpha: number; setAlpha(value: number): unknown }
@@ -40,18 +38,6 @@ const tag = <T extends Phaser.GameObjects.GameObject>(o: T, move: string, x: num
 
 /** Ground effects sit under anyone standing on them: below the lowest depth-by-y inside their footprint. */
 const groundDepth = (y: number, halfH: number) => y - halfH - 2
-
-/**
- * A heal lands on this screen's hero (a Mend, a Ward-light pulse): their HP
- * rises, to its max, and the rise floats up from them. Returns the rise.
- */
-export function healHero(session: Session, fx: Effects, at: { x: number; y: number }, amount: number): number {
-  const before = session.state.hp
-  session.setVitals(before + amount, session.state.mana)
-  const rise = session.state.hp - before
-  if (rise >= 0.5) fx.floatText(at.x, at.y - 24, `+${Math.round(rise)}`, '#b9f0a0', false)
-  return rise
-}
 
 export class MoveFx {
   private readonly onCast = (p: AbilityCastPayload) => this.remote(p)
@@ -196,7 +182,7 @@ export class MoveFx {
         const r = (n?.radiusTiles ?? 1.25) * TILE
         // The hub's own number for this caster's pulse; a cast without one mends the base share.
         const heal = friendPulseHeal(p.pulseHeal, n?.pulseHealFraction ?? 0)
-        return this.ward(p.x, p.y, r, n?.durationSeconds ?? 5, n?.pulses ?? 3, () => this.mendHere(p.x, p.y, r, heal))
+        return this.ward(p.x, p.y, r, n?.durationSeconds ?? 5, n?.pulses ?? 3, () => this.deps.mend(p.x, p.y, r, heal))
       }
       // A friend's signature: the same small effect yours makes, at their side.
       case 'fingersnap':
@@ -211,16 +197,6 @@ export class MoveFx {
         if (!this.deps.fx.playEffect('effect-healing-pulse', 'healing-pulse-0', p.x, p.y - 8, p.y + 2)) this.deps.fx.sparkBurst(p.x, p.y - 8, 5)
         return
     }
-  }
-
-  /** A pulse at (cx, cy): the local hero inside it, and not resting at 0 HP, is mended. */
-  mendHere(cx: number, cy: number, r: number, heal: number): boolean {
-    const s = this.deps.session
-    const hero = this.deps.hero().sprite
-    if (heal <= 0 || s.state.hp <= 0 || !inCircle(hero.x, hero.y, cx, cy, r)) return false
-    healHero(s, this.deps.fx, hero, heal)
-    sfx('calm')
-    return true
   }
 
   /** Read-only, for playtests: the moves on screen now (anyone's), and where. */

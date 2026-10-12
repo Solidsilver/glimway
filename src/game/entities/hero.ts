@@ -3,7 +3,12 @@
  * attacks and class kits (melee slash, mage bolt; the signatures Cleave,
  * Fingersnap, Shadowstep and Mend on F; the level-20 moves Stand, Kindle,
  * Ward-light and Echo on R — docs/design/crafts.md 4), i-frame damage and
- * knockback. The imported layered avatar and
+ * knockback.
+ *
+ * A blow is first what the hero means (a Strike: ./fight-rules.ts), shown at
+ * once (the swing, its sound); a beat later it lands on the enemies this
+ * screen draws (`land`), and each enemy's owner decides what it did
+ * (./enemies.ts damageEnemy). The imported layered avatar and
  * its mount/pet are owned by AvatarVisual; the hero renders through
  * `deps.avatar()` (the container is the visible body when present).
  *
@@ -14,9 +19,7 @@
  */
 import { walkFactor } from '../../lib/wilds/walk'
 import Phaser from 'phaser'
-import { getCombatKit, snapstrikeReach, type CombatKit, type KitMove } from '../../lib/combat'
-import { COMBAT_TUNING } from '../../lib/combat-timing'
-import { fightBoltSpawn } from '../../lib/fight-math'
+import { getCombatKit, SNAPSTRIKE, snapstrikeReach, type CombatKit, type KitMove } from '../../lib/combat'
 import { CombatField } from '../../lib/combat-moves'
 import { withCharm } from '../../lib/glims'
 import { passiveRegenAllowed } from '../../lib/habitica/sync'
@@ -26,12 +29,12 @@ import { sfx } from '../sfx'
 import { TILE, tileAt, tileMid } from '../../lib/tile'
 import type { Session } from '../session'
 import type { WorldData } from '../worlds'
-import { KNOCK } from './enemies'
+import { KNOCK, boltSpawn, cleaveStrike, mendStrike, slashStrike, snapstrike, strikeCrits, strikeHits, wardMends, type Strike } from './fight-rules'
 import type { EnemySystem } from './enemies'
 import type { Projectiles } from './projectiles'
 import type { AvatarVisual } from './avatar'
 import type { Effects } from './fx'
-import { MoveFx, healHero } from './moves'
+import { MoveFx } from './moves'
 import { presence } from '../presence'
 import { expose } from '../dev-hooks'
 import { SEAT_CUT, SEATED_MANA_BONUS, manaRegenRate, type SeatPose } from '../seats'
@@ -39,9 +42,6 @@ import { SEAT_CUT, SEATED_MANA_BONUS, manaRegenRate, type SeatPose } from '../se
 const PLAYER_SPEED = 110
 /** Ridden, outdoors (crafts.md 3.1: every mount the same). */
 export const RIDING_SPEED = 155
-const ATTACK_RANGE = COMBAT_TUNING.attack.slashRadius
-/** A tool swung at a creature does this share of the weapon's damage. */
-const TOOL_DAMAGE = COMBAT_TUNING.attack.toolDamageFraction
 const CONTACT_IFRAMES = 1.1
 
 /** Dodge roll: a short burst with invulnerability, on its own cooldown. */
@@ -68,6 +68,17 @@ export interface HeroDeps {
   cinematic: () => boolean
   /** Defeat beat: collapse, fade, wake at the village well. */
   onDefeat: () => void
+}
+
+/**
+ * A heal lands on this screen's hero (a Mend, a Ward-light pulse): their HP
+ * rises, to its max, and the rise floats up from them.
+ */
+function healHero(session: Session, fx: Effects, at: { x: number; y: number }, amount: number): void {
+  const before = session.state.hp
+  session.setVitals(before + amount, session.state.mana)
+  const rise = session.state.hp - before
+  if (rise >= 0.5) fx.floatText(at.x, at.y - 24, `+${Math.round(rise)}`, '#b9f0a0', false)
 }
 
 export class Hero {
@@ -114,11 +125,11 @@ export class Hero {
     this.dodgeCooldown = 0 // create() reset this every restart
     this.build(deps.session.state, entry)
     this.moves = new MoveFx(scene, {
-      session: deps.session,
       fx: deps.fx,
       reducedMotion: deps.reducedMotion,
       hero: () => this,
-      body: () => deps.avatar().container
+      body: () => deps.avatar().container,
+      mend: (cx, cy, r, heal) => this.mendAt(cx, cy, r, heal)
     })
     expose('__fsMoves', () => {
       const kit = this.kit()
@@ -339,35 +350,37 @@ export class Hero {
     // Mage basic is a ranged bolt (the classless starter keeps its melee
     // slash); every other class strikes in melee reach.
     if (kit.class === 'mage' && !tool) {
-      const at = fightBoltSpawn(this.sprite.x, this.sprite.y, dir.x)
+      const at = boltSpawn(this.sprite, dir)
       this.deps.projectiles().spawn(at.x, at.y, dir, kit.meleeDamage)
       return
     }
-    const sx = this.sprite.x + dir.x * COMBAT_TUNING.attack.slashOffsetX
-    const sy = this.sprite.y - COMBAT_TUNING.attack.originYOffset + dir.y * COMBAT_TUNING.attack.slashOffsetY
+    const strike = slashStrike(this.sprite, dir, kit, tool)
     // The aliased slash is a directional crescent (native art faces right):
     // rotate it to the facing like the other FX, instead of the old
     // flip/45-degree heuristic that turned cardinal attacks into diagonals.
     sfx('swing')
-    const slash = this.scene.add.image(sx, sy, 'slash')
+    const slash = this.scene.add.image(strike.x, strike.y, 'slash')
       .setDepth(this.sprite.y + 2)
       .setRotation(Math.atan2(dir.y, dir.x))
     // A tool's swing: a shorter, duller arc than the blade's.
     if (tool) slash.setScale(0.75).setTint(0xd8c79c)
     this.scene.tweens.add({ targets: slash, alpha: 0, duration: 150, onComplete: () => slash.destroy() })
-    this.scene.time.delayedCall(60, () => {
-      for (const enemy of [...this.deps.enemies().enemies]) {
-        const dx = enemy.sprite.x - sx
-        const dy = enemy.sprite.y - COMBAT_TUNING.attack.enemyYOffset - sy
-        if (dx * dx + dy * dy < ATTACK_RANGE * ATTACK_RANGE) {
-          const crit = Math.random() < kit.critChance
-          const base = tool ? Math.max(1, Math.round(kit.meleeDamage * TOOL_DAMAGE)) : kit.meleeDamage
-          const dmg = crit ? base * COMBAT_TUNING.attack.critMultiplier : base
-          if (crit) this.deps.fx.sparkBurst(enemy.sprite.x, enemy.sprite.y - 8, 8)
-          this.deps.enemies().damageEnemy(enemy, dmg, this.sprite.x, crit)
-        }
-      }
-    })
+    this.scene.time.delayedCall(60, () => this.land(strike, this.sprite.x, true))
+  }
+
+  /**
+   * A strike lands on the enemies this screen draws: each one in reach is
+   * hit, shoved away from `fromX` (its one crit roll made here and shared by
+   * all of them, a crit's sparks with `sparks`), and its owner decides what
+   * the hit did.
+   */
+  private land(strike: Strike, fromX: number, sparks = false): void {
+    const enemies = this.deps.enemies()
+    const crit = strikeCrits(strike, Math.random())
+    for (const hit of strikeHits(strike, [...enemies.enemies], crit)) {
+      if (sparks && hit.crit) this.deps.fx.sparkBurst(hit.enemy.x, hit.enemy.y - 8, 8)
+      enemies.damageEnemy(hit.enemy, hit.amount, fromX, hit.crit)
+    }
   }
 
   /** Whether a move may start now (the same gate for F and R). */
@@ -407,7 +420,7 @@ export class Hero {
     const dir = this.facing.clone().normalize()
     switch (sig.id) {
       case 'fingersnap': {
-        const at = fightBoltSpawn(this.sprite.x, this.sprite.y, dir.x)
+        const at = boltSpawn(this.sprite, dir)
         this.deps.projectiles().spawn(at.x, at.y, dir, kit.signatureDamage)
         break
       }
@@ -416,22 +429,13 @@ export class Hero {
         // pack README the delivered cleave canvas is centered on the
         // ATTACKER (visual only); the hit check keeps its own attacker-front
         // cast point, reach, and timing — unchanged.
-        const cx = this.sprite.x + dir.x * 22
-        const cy = this.sprite.y - 6 + dir.y * 18
+        const strike = cleaveStrike(this.sprite, dir, kit.signatureDamage)
         if (!this.deps.fx.playEffect('effect-cleave', 'cleave-0', this.sprite.x, this.sprite.y - 8, this.sprite.y + 2, Math.atan2(dir.y, dir.x))) {
-          const sweep = this.scene.add.image(cx, cy, 'slash').setScale(2.2).setDepth(this.sprite.y + 2)
+          const sweep = this.scene.add.image(strike.x, strike.y, 'slash').setScale(2.2).setDepth(this.sprite.y + 2)
           this.scene.tweens.add({ targets: sweep, alpha: 0, scale: 3, duration: 220, onComplete: () => sweep.destroy() })
         }
         this.scene.cameras.main.shake(90, 0.004)
-        this.scene.time.delayedCall(50, () => {
-          for (const enemy of [...this.deps.enemies().enemies]) {
-            const dx = enemy.sprite.x - cx
-            const dy = enemy.sprite.y - 6 - cy
-            if (dx * dx + dy * dy < 40 * 40) {
-              this.deps.enemies().damageEnemy(enemy, kit.signatureDamage, this.sprite.x)
-            }
-          }
-        })
+        this.scene.time.delayedCall(50, () => this.land(strike, this.sprite.x))
         break
       }
       case 'shadowstep': {
@@ -443,7 +447,7 @@ export class Hero {
         this.sprite.setVelocity(dir.x * 430, dir.y * 430)
         this.scene.time.delayedCall(150, () => {
           this.sprite.setVelocity(0, 0)
-          const reach = snapstrikeReach(start, this.sprite)
+          const travelled = snapstrikeReach(start, this.sprite) === SNAPSTRIKE.reachPx
           const sx = this.sprite.x + dir.x * 10
           const sy = this.sprite.y - 6
           // Delivered dash-trail animation at the emission point, oriented
@@ -452,16 +456,7 @@ export class Hero {
             const trail = this.scene.add.image(sx, sy, 'slash').setAlpha(0.7).setDepth(this.sprite.y + 2)
             this.scene.tweens.add({ targets: trail, alpha: 0, duration: 140, onComplete: () => trail.destroy() })
           }
-          this.scene.time.delayedCall(30, () => {
-            for (const enemy of [...this.deps.enemies().enemies]) {
-              const dx = enemy.sprite.x - this.sprite.x
-              const dy = enemy.sprite.y - 6 - (this.sprite.y - 6)
-              if (dx * dx + dy * dy < reach * reach) {
-                const crit = Math.random() < kit.critChance * 2
-                this.deps.enemies().damageEnemy(enemy, crit ? kit.signatureDamage * 2 : kit.signatureDamage, this.sprite.x - dir.x * 10, crit)
-              }
-            }
-          })
+          this.scene.time.delayedCall(30, () => this.land(snapstrike(this.sprite, travelled, kit.signatureDamage, kit.critChance), this.sprite.x - dir.x * 10))
         })
         break
       }
@@ -476,13 +471,7 @@ export class Hero {
             .setDepth(this.sprite.y + 2)
           this.scene.tweens.add({ targets: pulse, scale: 1.6, alpha: 0, duration: 320, onComplete: () => pulse.destroy() })
         }
-        for (const enemy of [...this.deps.enemies().enemies]) {
-          const dx = enemy.sprite.x - this.sprite.x
-          const dy = enemy.sprite.y - 6 - (this.sprite.y - 8)
-          if (dx * dx + dy * dy < 70 * 70) {
-            this.deps.enemies().damageEnemy(enemy, kit.signatureDamage, this.sprite.x)
-          }
-        }
+        this.land(mendStrike(this.sprite, kit.signatureDamage), this.sprite.x)
         if (kit.healAmount > 0) {
           this.deps.fx.sparkBurst(this.sprite.x, this.sprite.y - 12, 6)
           healHero(this.deps.session, this.deps.fx, this.sprite, kit.healAmount)
@@ -524,7 +513,7 @@ export class Hero {
       case 'ward-light': {
         // A still circle at your feet; each pulse mends you while you stand in it.
         const r = n.radiusTiles * TILE
-        this.moves.local(m, feet, () => this.moves.mendHere(feet.x, feet.y, r, kit.wardPulseHeal))
+        this.moves.local(m, feet, () => this.mendAt(feet.x, feet.y, r, kit.wardPulseHeal))
         break
       }
       case 'echo':
@@ -534,6 +523,17 @@ export class Hero {
         break
     }
     presence()?.ability(m.id, at.x, at.y)
+  }
+
+  /**
+   * A Ward-light pulse at (cx, cy), this hero's or a friend's (the relay):
+   * standing inside it, and not resting at 0 HP, the hero is mended.
+   */
+  private mendAt(cx: number, cy: number, r: number, heal: number): void {
+    const s = this.deps.session
+    if (!wardMends(this.sprite, s.state.hp, { x: cx, y: cy, r, heal })) return
+    healHero(s, this.deps.fx, this.sprite, heal)
+    sfx('calm')
   }
 
   damagePlayer(amount: number, fromX: number, fromY: number = this.sprite.y): void {

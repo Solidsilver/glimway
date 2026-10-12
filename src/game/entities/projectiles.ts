@@ -6,6 +6,7 @@ import { COMBAT_TUNING } from '../../lib/combat-timing'
 import type Phaser from 'phaser'
 import type { Effects } from './fx'
 import type { EnemySystem } from './enemies'
+import { boltReaches } from './fight-rules'
 
 export class Projectiles {
   private group: Phaser.Physics.Arcade.Group
@@ -41,9 +42,7 @@ export class Projectiles {
       boltObj.setData('life', life)
       let hit = false
       for (const enemy of [...this.enemies().enemies]) {
-        const dx = enemy.sprite.x - boltObj.x
-        const dy = enemy.sprite.y - COMBAT_TUNING.attack.enemyYOffset - boltObj.y
-        if (dx * dx + dy * dy < COMBAT_TUNING.attack.boltRadius ** 2) {
+        if (boltReaches(boltObj, enemy)) {
           this.enemies().damageEnemy(enemy, boltObj.getData('damage') as number, boltObj.x)
           hit = true
           break
