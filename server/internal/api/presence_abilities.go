@@ -23,6 +23,8 @@ type presenceMagic struct {
 	Class     string
 	LevelMark float64
 	Heal      float64
+	Kit       rules.CombatKit
+	Down      bool
 }
 
 // presenceMagicFor: the craft and the level mark allow the moves (the mark
@@ -30,10 +32,10 @@ type presenceMagic struct {
 // (no Habitica hero) has no craft and casts nothing.
 func presenceMagicFor(p *rules.Profile, classMark string, levelMark float64) presenceMagic {
 	if p == nil {
-		return presenceMagic{}
+		return presenceMagic{Kit: rules.CombatKitFor(nil, classMark, levelMark)}
 	}
 	mark := rules.LevelMark(p, levelMark)
-	m := presenceMagic{Class: rules.Craft(p, classMark, mark), LevelMark: mark}
+	m := presenceMagic{Class: rules.Craft(p, classMark, mark), LevelMark: mark, Kit: rules.CombatKitFor(p, classMark, mark)}
 	if m.Class == "healer" {
 		m.Heal = rules.MendHeal(p)
 	}

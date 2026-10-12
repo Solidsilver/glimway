@@ -188,6 +188,7 @@ func (a *Server) presenceSocket(w http.ResponseWriter, r *http.Request) error {
 	peerCtx, peerCancel := context.WithCancel(context.Background())
 	p := &presencePeer{identity: identity, account: reservation.account, conn: conn, ctx: peerCtx, cancel: peerCancel, queue: make(chan []byte, int(h.config.GetQueueMessages())), lastActivity: time.Now()}
 	if old := h.peers[identity.ID]; old != nil {
+		h.leaveFights(old, false)
 		if old.identity.Lease == identity.Lease && old.identity.World == identity.World {
 			if old.grace != nil {
 				old.grace.Stop()
@@ -210,6 +211,7 @@ func (a *Server) presenceSocket(w http.ResponseWriter, r *http.Request) error {
 		h.broadcast(p, &contract.PresenceJoin{Area: p.area, Player: p.player()})
 	}
 	h.mu.Unlock()
+	a.syncFightPresence(p)
 	done := make(chan struct{})
 	go func() { defer close(done); a.presenceWriter(p) }()
 	authDone := make(chan struct{})
@@ -250,6 +252,10 @@ func (a *Server) presenceReader(p *presencePeer) {
 		message, err := decodePresence(b)
 		if err != nil {
 			p.stop(websocket.StatusPolicyViolation, "invalid-message")
+			return
+		}
+		if err := validateFightInput(message); err != nil {
+			p.stop(websocket.StatusPolicyViolation, "invalid-fight")
 			return
 		}
 		// Client messages cannot carry server identity or roster fields.
@@ -315,8 +321,14 @@ func (a *Server) presenceReader(p *presencePeer) {
 				b, err := encodePresence(&contract.PresenceLeave{AccountId: p.identity.ID})
 				h.broadcastWhere(p, b, err, func(q *presencePeer) bool { return sharedRoom(q.area, old) && !sharedRoom(q.area, event.Join.Area) })
 			}
+			_, _, wasWilds := wildsRoomChunk(p.area)
+			_, _, isWilds := wildsRoomChunk(event.Join.Area)
+			if !wasWilds || !isWilds {
+				h.leaveFights(p, true)
+				p.pos = nil
+			}
 			p.area = event.Join.Area
-			p.pos = nil
+			h.retainFightCoverage(p)
 			h.room(p)
 			h.broadcast(p, &contract.PresenceJoin{Area: p.area, Player: p.player()})
 		case *contract.PresenceMessage_Pos:
@@ -361,7 +373,16 @@ func (a *Server) presenceReader(p *presencePeer) {
 			}
 			p.lastEmote = now
 			h.broadcastEncoded(p, encoded, encodeErr)
+		case *contract.PresenceMessage_FightSwing:
+			h.handleFightSwing(p, event.FightSwing)
 		case *contract.PresenceMessage_Ability:
+			if cast := event.Ability.Fight; cast != nil {
+				if h.takeFightCounter(p, cast.SwingCounter) {
+					h.refuseFight(p, cast.SwingCounter, contract.FightRefusedReason_FIGHT_REFUSED_REASON_NOT_ALLOWED)
+				}
+				h.mu.Unlock()
+				continue
+			}
 			// A cast on screen, a signature or a level-20 move (4.5): relayed
 			// to the room when the table knows the move, the sender's craft
 			// and level mark allow it and its own cooldown has passed.
@@ -381,6 +402,9 @@ func (a *Server) presenceReader(p *presencePeer) {
 			return
 		}
 		h.mu.Unlock()
+		if message.GetPos() != nil || message.GetJoin() != nil {
+			a.syncFightPresence(p)
+		}
 	}
 }
 
