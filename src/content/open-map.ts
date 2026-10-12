@@ -126,6 +126,8 @@ export const ELARA_RUMOUR = {
   ],
   /** After the rumour. */
   after: 'It won’t keep past the turning. Nothing out there does.',
+  /** The wick has turned and this wick's word hasn't reached her yet (the state not read again since). */
+  turned: 'The drift’s only just turned. Whatever I’d heard is under new land now. Ask me again in a little while.',
 } as const;
 
 /** Area cards for the open map's new land (src/content/world.ts). */
@@ -163,7 +165,9 @@ export const WAY_NEWS = {
  * line once you've found it, or that nothing has reached her. `rumour` is
  * the server's (`PlayerState.rumour`), null when there is none.
  */
-export function elaraRumourChoice(rumour: (RumourParts & { epoch: string }) | null): { text: string; reply: string[] } {
+export function elaraRumourChoice(rumour: (RumourParts & { epoch: string }) | null | 'turned'): { text: string; reply: string[] } {
+  // Never a place from the last wick: until this wick's is read, she says it has turned.
+  if (rumour === 'turned') return { text: ELARA_RUMOUR.ask, reply: [ELARA_RUMOUR.turned] };
   const said = rumourLines(rumour);
   if (!rumour || said.found) return { text: ELARA_RUMOUR.ask, reply: [said.text] };
   // Her way in changes with the wick, and holds still within one.

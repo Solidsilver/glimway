@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { moveServerClock, reenter, seedStory, serverState } from './connected'
+import { moveServerClock, reenter, seedStory, serverState, wickSlack } from './connected'
 import { player, warp, waitForWilds, wilds, worldTileOf, type WildsDump, waitForLive, readDialogue, toastAfter, expectToast } from './helpers'
 import { freshPlayer } from './home-helpers'
 import { ECHOES } from '../src/content/echoes.ts'
@@ -139,6 +139,9 @@ test('in the Whitequiet, an Echo settled, the land turns in place and gives a te
 test('a place in the Whitequiet reloads there, and a turned wick leaves you where you were', async ({ page }) => {
   test.setTimeout(90_000)
   await freshPlayer(page)
+  // A day of this wick ahead (moved past a turning if one is near): a real turning during the
+  // reload below would move you to the nearest open tile of the new land. The test turns the wick itself, later.
+  await wickSlack(page)
   await whitequiet(page)
   // The place is the server's now: reload, and Continue puts you back there.
   await warp(page, 'wilds', 12, -5 * S + 21)
