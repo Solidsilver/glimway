@@ -137,8 +137,8 @@ export class HomesteadLayer {
       this.yard?.destroy()
       this.arranging.emitArrange({ available: false, scene: null, tier: 0 })
     })
-    // Read-only view of homesteads for playtests.
-    expose('__fsHomes', () => ({
+    // Read-only view of homesteads for playtests; `fresh()` awaits a fresh read of the lane and your home.
+    expose('__fsHomes', Object.assign(() => ({
       status: this.homes.status,
       claimed: this.homes.claimed,
       myGate: this.homes.myGate,
@@ -163,7 +163,7 @@ export class HomesteadLayer {
         tweens: this.scene.tweens.getTweens().length,
         deadTweens: this.scene.tweens.getTweens().filter((t) => t.targets.some((o) => !(o as Phaser.GameObjects.GameObject).active)).length
       }
-    }), scene)
+    }), { fresh: () => this.homes.fresh() }), scene)
     // Playtests: a tap on a land/room grid tile while arranging (as a pointer would).
     expose('__fsDevTapTile', (x, y) => {
       const p = this.arranging.placement

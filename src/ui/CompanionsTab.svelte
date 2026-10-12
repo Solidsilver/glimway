@@ -85,15 +85,15 @@
     const before = home
     busy = true
     message = null
-    homes.adoptHome(predictStall(home, stall, key, { id: me ?? '', name: link.name || 'You' }))
+    homes.adoptHomeAnswer(predictStall(home, stall, key, { id: me ?? '', name: link.name || 'You' }))
     try {
       const r = await link.stall(home.id, stall, key)
       if (!r.ok) {
-        homes.adoptHome(before)
+        homes.adoptHomeAnswer(before)
         message = { text: companionErrorText(r.code), kind: 'error' }
         return
       }
-      if (r.result) homes.adoptHome(r.result)
+      if (r.result) homes.adoptHomeAnswer(r.result)
       message = { text: key ? `${companionName(key)} is in stall ${stall}.` : `Stall ${stall} stands empty.`, kind: 'ok' }
     } finally {
       busy = false

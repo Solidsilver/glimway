@@ -183,3 +183,122 @@ test('ground lines up across real neighbouring chunks (the generator’s own Whi
       assert.deepEqual(px(a, 0, -5 * PX, PX + margin, wx, wy), px(other[0], other[1], other[2], PX, wx, wy), `world pixel ${wx},${wy}`)
     }
 })
+
+// ------------------------------------------------------------ the painter thread's fallback (step-back review F2)
+
+type Posted = { id: number; x0: number; y0: number; w: number; h: number; look: 'tangle' | 'outer'; mark: string | null; seed: number; table: ReturnType<typeof groundTable>; tiles: ReturnType<typeof packGround> };
+
+/** A Worker as the browser's: postMessage really transfers (the sender's buffers detach). */
+class FakeWorker {
+  static made: FakeWorker[] = [];
+  static failToStart = false;
+  static failToPost = false;
+  readonly posted: Posted[] = [];
+  private readonly on: Record<string, ((e: unknown) => void)[]> = { message: [], error: [] };
+  terminated = false;
+  constructor() {
+    if (FakeWorker.failToStart) throw new Error('no workers here');
+    FakeWorker.made.push(this);
+  }
+  addEventListener(type: string, fn: (e: unknown) => void): void {
+    this.on[type]!.push(fn);
+  }
+  postMessage(msg: Posted, transfer: Transferable[]): void {
+    if (FakeWorker.failToPost) throw new Error('DataCloneError');
+    this.posted.push(structuredClone(msg, { transfer }));
+  }
+  terminate(): void {
+    this.terminated = true;
+  }
+  fail(): void {
+    for (const f of this.on.error!) f(new Error('worker died'));
+  }
+  /** Paint job `i` as ./ground-worker.ts does, from what it was sent, and reply. */
+  reply(i: number): void {
+    const m = this.posted[i]!;
+    const rgba = new Uint8ClampedArray(m.w * m.h * 4);
+    paintGround(rgba, m.x0, m.y0, m.w, m.h, unpackGround(m.tiles), wildsLook(m.look, m.mark).ground, m.seed, m.table);
+    for (const f of this.on.message!) f({ data: { id: m.id, rgba, ms: 1 } });
+  }
+}
+
+let painters = 0;
+/** A fresh painter module (its worker and broken flag are module state), over the fake Worker. */
+async function painter(opts: { start?: boolean; post?: boolean } = {}) {
+  FakeWorker.made = [];
+  FakeWorker.failToStart = opts.start === false;
+  FakeWorker.failToPost = opts.post === false;
+  (globalThis as unknown as { Worker: unknown }).Worker = FakeWorker;
+  const mod = (await import(`../src/game/wilds/paint-worker.ts?case=${++painters}`)) as typeof import('../src/game/wilds/paint-worker.ts');
+  return mod;
+}
+
+/** A 32×32 patch over the river's edge, bank and meadow (2×2 tiles of real ground). */
+function riverJob() {
+  const { src } = world();
+  const job = { x0: (S - 2) * 16, y0: -4 * PX + 32, w: 32, h: 32, look: 'outer' as const, mark: null, seed: SEED, table: groundTable() };
+  return { src, job };
+}
+
+test('the painter thread’s fallback: settled once each, the normal painter’s pixels', async (tc) => {
+  try {
+    await tc.test('the worker paints, from a copy of the tiles', async () => {
+      const { paintAway, paintHere } = await painter();
+      const { src, job } = riverJob();
+      const p = paintAway(job, src);
+      const w = FakeWorker.made[0]!;
+      assert.ok(w.posted[0]!.tiles.ground.byteLength > 0, 'the worker got the tiles');
+      w.reply(0);
+      const r = await p;
+      assert.equal(r.thread, 'worker');
+      assert.deepEqual(r.rgba, paintHere(job, src).rgba);
+    });
+    await tc.test('a worker that can’t start: painted here', async () => {
+      const { paintAway, paintHere } = await painter({ start: false });
+      const { src, job } = riverJob();
+      const r = await paintAway(job, src);
+      assert.equal(r.thread, 'main');
+      assert.deepEqual(r.rgba, paintHere(job, src).rgba);
+    });
+    await tc.test('a worker that fails after the tiles went over: painted here from the kept tiles, and a late reply is dropped', async () => {
+      const { paintAway, paintHere } = await painter();
+      const { src, job } = riverJob();
+      const settled: string[] = [];
+      const a = paintAway(job, src).then((r) => (settled.push('a'), r));
+      const b = paintAway({ ...job, x0: job.x0 - 32 }, src).then((r) => (settled.push('b'), r));
+      const w = FakeWorker.made[0]!;
+      assert.equal(w.posted.length, 2);
+      w.fail();
+      const [ra, rb] = await Promise.all([a, b]);
+      assert.equal(w.terminated, true);
+      assert.deepEqual([ra.thread, rb.thread], ['main', 'main']);
+      const here = paintHere(job, src).rgba;
+      assert.deepEqual(ra.rgba, here, 'the same pixels as the normal painter');
+      assert.deepEqual(rb.rgba, paintHere({ ...job, x0: job.x0 - 32 }, src).rgba);
+      // Not the land unknown: a detached copy would paint deep woods.
+      assert.notDeepEqual(here, paintHere(job, { ground: () => null, solid: () => true }).rgba);
+      // The dead worker's reply, had it come: nothing waits for it.
+      w.reply(0);
+      await new Promise((r) => setTimeout(r, 0));
+      assert.deepEqual(settled.sort(), ['a', 'b'], 'each settled once');
+      // The page paints here from now on.
+      assert.equal((await paintAway(job, src)).thread, 'main');
+      assert.equal(FakeWorker.made.length, 1);
+    });
+    await tc.test('a job that can’t be posted: painted here, and the worker still paints the next', async () => {
+      const { paintAway, paintHere } = await painter({ post: false });
+      const { src, job } = riverJob();
+      const r = await paintAway(job, src);
+      assert.equal(r.thread, 'main');
+      assert.deepEqual(r.rgba, paintHere(job, src).rgba);
+      FakeWorker.failToPost = false;
+      const next = paintAway(job, src);
+      FakeWorker.made[0]!.reply(0);
+      const n = await next;
+      assert.equal(n.thread, 'worker');
+      assert.deepEqual(n.rgba, r.rgba);
+    });
+  } finally {
+    delete (globalThis as unknown as { Worker?: unknown }).Worker;
+  }
+});

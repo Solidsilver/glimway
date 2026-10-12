@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { craftOf, getCombatKit, levelMarkOf, unlockNotice } from '../src/lib/combat.ts';
+import { craftOf, getCombatKit, levelMarkOf, snapstrikeReach, SNAPSTRIKE, unlockNotice } from '../src/lib/combat.ts';
 import { wardPulseHeal } from '../src/lib/combat-moves.ts';
 import { serializeMagicVectors } from '../scripts/magic-vectors.ts';
 import { ABILITIES } from '../src/lib/abilities.ts';
@@ -164,4 +164,25 @@ test('the heal vectors the server replays are this build\'s numbers (content/vec
   const at60 = v.healers.find((h) => h.int === 60)!;
   assert.equal(at60.mend, 16);
   assert.equal(Math.round(at60.pulse * 100) / 100, 6.4, 'a geared healer\'s pulse is 0.4 of their Mend, not of the base');
+});
+
+test('Snapstrike reaches as far after an up or down dash as after a sideways one; a blocked dash strikes close', () => {
+  const at = { x: 200, y: 300 };
+  const dash = 64;
+  const reach = {
+    east: snapstrikeReach(at, { x: at.x + dash, y: at.y }),
+    west: snapstrikeReach(at, { x: at.x - dash, y: at.y }),
+    north: snapstrikeReach(at, { x: at.x, y: at.y - dash }),
+    south: snapstrikeReach(at, { x: at.x, y: at.y + dash }),
+    diagonal: snapstrikeReach(at, { x: at.x + dash * Math.SQRT1_2, y: at.y + dash * Math.SQRT1_2 }),
+    // A wall in the way: the dash moved a pixel or two.
+    blocked: snapstrikeReach(at, { x: at.x, y: at.y - 2 }),
+  };
+  assert.deepEqual(reach, { east: 34, west: 34, north: 34, south: 34, diagonal: 34, blocked: 22 });
+  assert.equal(SNAPSTRIKE.reachPx, 34);
+  // An enemy 28 px from where the dash ended: struck after a dash north, untouched after a blocked one.
+  const struck = (r: number) => 28 < r;
+  assert.equal(struck(reach.north), true);
+  assert.equal(struck(reach.blocked), false);
+  assert.equal(struck(reach.north), struck(reach.east), 'the same strike either way');
 });
