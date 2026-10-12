@@ -21,6 +21,7 @@ message Combat {
   CombatFormula mitigation = 7 [(buf.validate.field).required = true];
   CombatFormula crit = 8 [(buf.validate.field).required = true];
   CombatAttack attack = 9 [(buf.validate.field).required = true];
+  CombatSignatures signatures = 10 [(buf.validate.field).required = true];
   option (buf.validate.message).cel = {
     id: "combat.fractions"
     message: "mitigation and crit must remain fractions below one"
@@ -72,4 +73,53 @@ message CombatAttack {
   double crit_multiplier = 9 [(buf.validate.field).double.gte = 1];
   double tool_damage_fraction = 10 [(buf.validate.field).double = {gt: 0, lte: 1}];
   double bolt_spawn_offset_x = 11 [(buf.validate.field).double.gt = 0];
+}
+
+// The signatures' blows (shared-fights.md 1.5): what the hero draws and
+// predicts, and what the server's sim judges, from one set of numbers. Each
+// strike is a circle of `reach` px, judged to an enemy's middle
+// (attack.enemy_y_offset above its feet), strictly inside.
+message CombatSignatures {
+  CombatBlow cleave = 1 [(buf.validate.field).required = true];
+  CombatShadowstep shadowstep = 2 [(buf.validate.field).required = true];
+  CombatPulse mend = 3 [(buf.validate.field).required = true];
+}
+
+// A blow centred ahead_x/ahead_y along the unit facing and `up` above the
+// caster's feet, landing land_seconds after the press.
+message CombatBlow {
+  double reach = 1 [(buf.validate.field).double.gt = 0];
+  double ahead_x = 2 [(buf.validate.field).double.gte = 0];
+  double ahead_y = 3 [(buf.validate.field).double.gte = 0];
+  double up = 4 [(buf.validate.field).double.gte = 0];
+  double land_seconds = 5 [(buf.validate.field).double.gte = 0];
+}
+
+// A pulse centred `up` above the caster's feet, landing land_seconds after
+// the press.
+message CombatPulse {
+  double reach = 1 [(buf.validate.field).double.gt = 0];
+  double up = 2 [(buf.validate.field).double.gte = 0];
+  double land_seconds = 3 [(buf.validate.field).double.gte = 0];
+}
+
+// Shadowstep's Snapstrike: a dash of dash_speed px/s for dash_seconds along
+// the facing (walls stop it), then a strike `up` above where it ended,
+// land_seconds after the dash: `reach` wide when the dash carried the hero
+// more than `travelled` px, still_reach when a wall stopped it. Its shove
+// comes from knock_back px behind the end, along the facing's x.
+message CombatShadowstep {
+  option (buf.validate.message).cel = {
+    id: "combat.shadowstep_reach"
+    message: "a stopped dash never reaches further than a full one"
+    expression: "this.still_reach <= this.reach"
+  };
+  double reach = 1 [(buf.validate.field).double.gt = 0];
+  double still_reach = 2 [(buf.validate.field).double.gt = 0];
+  double up = 3 [(buf.validate.field).double.gte = 0];
+  double travelled = 4 [(buf.validate.field).double.gte = 0];
+  double dash_speed = 5 [(buf.validate.field).double.gt = 0];
+  double dash_seconds = 6 [(buf.validate.field).double.gt = 0];
+  double land_seconds = 7 [(buf.validate.field).double.gte = 0];
+  double knock_back = 8 [(buf.validate.field).double.gte = 0];
 }

@@ -538,6 +538,15 @@ export declare type WildsEntityState = Message<"glimway.v1.WildsEntityState"> & 
    * @generated from field: string epoch = 7;
    */
   epoch: string;
+
+  /**
+   * A generated camp only, for the reader (shared-fights.md 1.9): this
+   * cycle fell, the server stored the reader among its witnesses, and they
+   * have not claimed it. The claim's own proof; false for every other kind.
+   *
+   * @generated from field: bool camp_claimable = 8;
+   */
+  campClaimable: boolean;
 };
 
 export declare type WildsEntityStateValid = WildsEntityState;

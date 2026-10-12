@@ -363,6 +363,11 @@ func (a *Server) wildsClaim(w http.ResponseWriter, r *http.Request) error {
 	if err := decodeOp(w, r, req); err != nil {
 		return err
 	}
+	// A camp that fell a moment ago may still be in the fall writer's queue:
+	// wait for it, bounded, before the claim's transaction reads the store.
+	if a.falls != nil && strings.HasPrefix(req.EntityId, "camp:") && safeCounter(req.Cycle) {
+		a.falls.await(r.Context(), req.Epoch, req.EntityId, int64(req.Cycle), fallClaimWait)
+	}
 	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		e, err := a.epochFor(ctx, tx, *s, req.Epoch, now)
 		if err != nil {
@@ -402,15 +407,22 @@ func (a *Server) wildsClaim(w http.ResponseWriter, r *http.Request) error {
 		}
 		by := sql.NullString{String: s.AccountID, Valid: true}
 		at := sql.NullInt64{Int64: now, Valid: true}
+		ref := e.Id + ":" + entity.ID
 		switch entity.Kind {
-		case "camp", "node":
+		case "camp":
+			// The completion seam: eligible to finish, then settled once.
+			if err = campEligible(ctx, tx, store.FallKey{World: s.WorldID, Realm: m.Realm, Layer: m.Layer, CX: m.Cx, CY: m.Cy, Epoch: e.Id, Entity: entity.ID, Cycle: cycle}, s.AccountID); err != nil {
+				return nil, err
+			}
+			if err = store.InsertCampClaim(ctx, tx, e.Id, entity.ID, cycle, s.AccountID, now); err != nil {
+				return nil, err
+			}
+			ref += ":" + strconv.FormatInt(cycle, 10)
+		case "node":
 			if row.state != "available" {
 				return nil, fail(409, "entity-unavailable")
 			}
-			row.state, row.availableAt = "cleared", now+int64(content.WildsRules.Timers.CampRespawnSeconds)
-			if entity.Kind == "node" {
-				row.state, row.availableAt = "harvested", now+int64(content.WildsRules.Timers.NodeRegrowSeconds)
-			}
+			row.state, row.availableAt = "harvested", now+int64(content.WildsRules.Timers.NodeRegrowSeconds)
 			row.by, row.at = by, at
 		default:
 			var n int
@@ -433,8 +445,11 @@ func (a *Server) wildsClaim(w http.ResponseWriter, r *http.Request) error {
 				}
 			}
 		}
-		if err = writeEntityRow(ctx, tx, e.Id, entity.ID, row); err != nil {
-			return nil, err
+		// A camp's row is its fall's (fall_writer.go); a claim never moves it.
+		if entity.Kind != "camp" {
+			if err = writeEntityRow(ctx, tx, e.Id, entity.ID, row); err != nil {
+				return nil, err
+			}
 		}
 		if err = claimRate(ctx, tx, s.AccountID, now); err != nil {
 			w.Header().Set("Retry-After", "60")
@@ -444,7 +459,7 @@ func (a *Server) wildsClaim(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return nil, err
 		}
-		if err = grantLoot(ctx, tx, s, loot, "wilds-claim", e.Id+":"+entity.ID, now); err != nil {
+		if err = grantLoot(ctx, tx, s, loot, "wilds-claim", ref, now); err != nil {
 			return nil, err
 		}
 		sliver, err := maybeGrantWardenSliver(ctx, tx, s, entity, cx, cy, now)
@@ -465,6 +480,82 @@ func (a *Server) wildsClaim(w http.ResponseWriter, r *http.Request) error {
 		}
 		return &contract.WildsClaimResult{Epoch: e.Id, Entity: row.view(e.Id, entity.ID), Loot: lootProto(loot), Materials: balances, WardenSliverFound: sliver, StormDropFound: storm, Papers: papers}, nil
 	})
+}
+
+// campEligible: may this account finish this camp's cycle (shared-fights.md
+// 1.9)? The cycle must have a stored fall, the account must be among its
+// witnesses (no damage needed), and must not have claimed it yet. The
+// camp's availability is never read as proof that it fell.
+func campEligible(ctx context.Context, tx *sql.Tx, k store.FallKey, account string) error {
+	fall, ok, err := store.ReadFall(ctx, tx, k)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return fail(409, "not-defeated")
+	}
+	if !fall.Witnessed(account) {
+		return fail(409, "condition-unmet")
+	}
+	claimed, err := store.CampClaimed(ctx, tx, k.Epoch, k.Entity, k.Cycle, account)
+	if err != nil {
+		return err
+	}
+	if claimed {
+		return fail(409, "already-claimed")
+	}
+	return nil
+}
+
+// campStanding is a reader's camps across the near read's two epochs: the
+// fallen cycles they witnessed, and the cycles they claimed (Unix seconds).
+type campStanding struct {
+	witnessed map[fallID]bool
+	claimed   map[fallID]int64
+}
+
+func readCampStanding(ctx context.Context, tx *sql.Tx, account string, epochs ...any) (campStanding, error) {
+	out := campStanding{witnessed: map[fallID]bool{}, claimed: map[fallID]int64{}}
+	marks := strings.TrimSuffix(strings.Repeat("?,", len(epochs)), ",")
+	args := append([]any{account}, epochs...)
+	rows, err := tx.QueryContext(ctx, "SELECT epoch,entity_id,cycle FROM fight_fall_witnesses WHERE account_id=? AND epoch IN ("+marks+")", args...)
+	if err != nil {
+		return out, err
+	}
+	for rows.Next() {
+		var id fallID
+		if err = rows.Scan(&id.epoch, &id.entity, &id.cycle); err != nil {
+			rows.Close()
+			return out, err
+		}
+		out.witnessed[id] = true
+	}
+	if err = closeRows(rows); err != nil {
+		return out, err
+	}
+	if rows, err = tx.QueryContext(ctx, "SELECT epoch,entity_id,cycle,at FROM camp_claims WHERE account_id=? AND epoch IN ("+marks+")", args...); err != nil {
+		return out, err
+	}
+	for rows.Next() {
+		var id fallID
+		var at int64
+		if err = rows.Scan(&id.epoch, &id.entity, &id.cycle, &at); err != nil {
+			rows.Close()
+			return out, err
+		}
+		out.claimed[id] = at
+	}
+	return out, closeRows(rows)
+}
+
+// claimable: the reader may claim this camp's projected cycle. Cleared in
+// its cycle means that cycle fell (the fall wrote the row); the reader must
+// be among the stored witnesses and not have claimed it. A row a 0.8 claim
+// cleared has no witnesses, so it is never claimable.
+func (c campStanding) claimable(v *contract.WildsEntityState) bool {
+	id := fallID{v.Epoch, v.Id, int64(v.Cycle)}
+	_, claimed := c.claimed[id]
+	return v.State == "cleared" && c.witnessed[id] && !claimed
 }
 
 // ---------------------------------------------------------------- relight

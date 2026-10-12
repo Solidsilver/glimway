@@ -410,6 +410,21 @@ whether the 250 ms rewind cap refuses too many phone hits; whether wind-ups need
 outbound queue depth; whether WebSocket over TCP stutters on mobile data. WebTransport waits unless
 the last of these fails.
 
+### Prototype playtest outcome (2026-10-12)
+
+The owner approved proceeding to full implementation after solo, two-machine Wi-Fi,
+and two-account tests. Baseline snapshot gap p95 was about 103 ms, interpolation 100 ms;
+Wi-Fi attacks confirmed in about 9 ms (four confirmations, three predicted rows,
+no refusals or timeouts). With injected lag/jitter 300/100 ms, gap p95 was 239 ms and
+interpolation about 164 ms; the owner could dodge reliably with occasional slight lag.
+Both accounts saw matching enemy movement and health. Switching targets when the focused
+player departed worked; the owner requested nearest-player targeting between attacks,
+which was implemented and playtested successfully.
+
+These results authorize F-E/F-F/F-G. They do not establish phone/mobile-data performance,
+the room tick budget, or comprehensive shared-death/reconnect/claim coverage. The full
+implementation adds measurements and a real two-client CI regression for those paths.
+
 ## 3. Tests and budgets
 
 **Go** (`server/internal/fights`):

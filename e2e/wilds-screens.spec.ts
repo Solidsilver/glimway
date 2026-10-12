@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, waitForWorld } from './connected'
-import { warp, waitForWilds, wilds, worldTileOf, type WildsDump, readDialogue, settled, expectToast } from './helpers'
+import { fallCamp, warp, waitForWilds, wilds, worldTileOf, type WildsDump, readDialogue, settled, expectToast } from './helpers'
 
 /**
  * The open map on screen: the Tangle by the gate, the Whitequiet, a camp, a
@@ -71,7 +71,8 @@ for (const [device, vp] of sizes) {
     const camp = pickOne(await wilds(page), 'camp')
     await warpTo(camp)
     await shot(page, `22-wilds-camp-${device}`)
-    await page.evaluate(() => (window as unknown as { __fsDevStrike: (n: number) => void }).__fsDevStrike(999))
+    // Its room's fight, finished on the dev server; the near read then names it claimable.
+    await fallCamp(page, camp.id)
     // Stand where the camp (not a neighbouring node) owns the prompt.
     expect((await wilds(page)).chunk).toEqual(camp.chunk)
     const spot = await approach(camp)

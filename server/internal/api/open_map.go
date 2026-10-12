@@ -190,13 +190,29 @@ func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, cx, cy 
 	if err = closeRows(q); err != nil {
 		return nil, err
 	}
+	// A camp's current cycle, as its reader stands to it (shared-fights.md
+	// 1.9): whether they witnessed that cycle's fall, and whether they have
+	// claimed it. A viewer who comes back after the room slept reads this.
+	camps, err := readCampStanding(ctx, tx, s.AccountID, ep.still.Id, ep.wick.Id)
+	if err != nil {
+		return nil, err
+	}
+	var campClaims []*contract.WildsPersonalClaim
 	for _, id := range order {
 		at := entities[id]
 		r, ok := rows[id]
 		if !ok {
 			r = entityRow{state: "available"}
 		}
-		out.Entities = append(out.Entities, r.projected(at.kind, now).view(at.epoch, id))
+		r = r.projected(at.kind, now)
+		v := r.view(at.epoch, id)
+		if at.kind == "camp" {
+			v.CampClaimable = camps.claimable(v)
+			if claimedAt, ok := camps.claimed[fallID{at.epoch, id, r.cycle}]; ok {
+				campClaims = append(campClaims, &contract.WildsPersonalClaim{EntityId: id, At: float64(claimedAt)})
+			}
+		}
+		out.Entities = append(out.Entities, v)
 	}
 	if q, err = tx.QueryContext(ctx, "SELECT entity_id,at FROM personal_claims WHERE account_id=? AND epoch IN (?,?) ORDER BY entity_id", s.AccountID, ep.still.Id, ep.wick.Id); err != nil {
 		return nil, err
@@ -216,6 +232,8 @@ func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, cx, cy 
 	if err = closeRows(q); err != nil {
 		return nil, err
 	}
+	out.PersonalClaims = append(out.PersonalClaims, campClaims...)
+	slices.SortStableFunc(out.PersonalClaims, func(a, b *contract.WildsPersonalClaim) int { return strings.Compare(a.EntityId, b.EntityId) })
 	// Every discovery of the two epochs: the Map tab names every place's
 	// finder, not only the window's (a world has a handful a wick).
 	if out.Discoveries, err = discoveries(ctx, tx, ep.still.Id, ep.wick.Id); err != nil {

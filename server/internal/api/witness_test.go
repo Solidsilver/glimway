@@ -126,6 +126,8 @@ func TestWitnessRelayedFromTheBeatToThoseNearby(t *testing.T) {
 
 func TestWitnessEchoAndOnlyLiveMoments(t *testing.T) {
 	x := newRig(t)
+	// Every Wilds camp is a server fight now; this test watches moments only.
+	x.api.Config.Chunks = camplessChunks{x.api.Config.Chunks}
 	ts := startPresence(t, x, presenceTestConfig())
 	x.hero("olive", "Olive", "p1")
 	oc, o := x.ready("olive")

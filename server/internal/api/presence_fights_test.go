@@ -60,7 +60,7 @@ func addUnitFightRoom(t *testing.T, a *Server, p *presencePeer, handle uint32, c
 	}
 	key := fights.Key{World: "world", Realm: "hearthwick", Epoch: "epoch", CX: int32(cx)}
 	room := &presenceFightRoom{key: key, handle: handle, geometry: g}
-	sim := fights.NewRoom(key, handle, g, []fights.Camp{{ID: "camp", Count: 1, X: x, Y: 112}}, 1, a.presence.now(), 0)
+	sim := fights.NewRoom(key, handle, g, []fights.Camp{{ID: "camp", Kinds: []string{"wisp"}, X: x, Y: 112}}, 1, a.presence.now(), 0)
 	// No wall-clock tick in a unit socket test; inputs are FIFO commands.
 	room.actor = fights.Start(sim, fights.ActorConfig{Now: a.presence.now, Ticks: make(chan time.Time), Emit: func(out fights.Output) { a.fightOutput(room, out) }, Closed: func() { a.fightClosed(room) }})
 	p.fightRooms[handle] = room
@@ -144,27 +144,35 @@ func TestFightIngressValidation(t *testing.T) {
 		t.Fatal("malformed cast accepted")
 	}
 }
-func TestFightPrototypeConfig(t *testing.T) {
-	for _, id := range []string{"camp:0:0:0", "camp:-1:-1:1"} {
-		if _, _, err := FightPrototypeChunk(id); err != nil {
-			t.Fatal(id, err)
-		}
-	}
-	for _, id := range []string{"wilds:0:0", "camp:00:0:0", "camp:0:0:-1", "camp:0:-8:0", "camp:100:0:0"} {
-		if _, _, err := FightPrototypeChunk(id); err == nil {
-			t.Fatal("bad config accepted", id)
-		}
-	}
-}
 
 type fightChunkCounter struct {
 	chunks.ChunkSource
 	calls atomic.Int64
 }
 
+// Chunk keeps only camp:0:0:0, so a test follows one room, and counts that
+// camp chunk's loads.
 func (c *fightChunkCounter) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, layer, cx, cy int32) (*chunkwire.WildsChunk, error) {
-	c.calls.Add(1)
-	return c.ChunkSource.Chunk(ctx, tx, world, epoch, layer, cx, cy)
+	chunk, err := c.ChunkSource.Chunk(ctx, tx, world, epoch, layer, cx, cy)
+	if err != nil {
+		return nil, err
+	}
+	if cx == 0 && cy == 0 {
+		c.calls.Add(1)
+		return chunk, nil
+	}
+	chunk = proto.Clone(chunk).(*chunkwire.WildsChunk)
+	chunk.Entities = withoutCamps(chunk.Entities)
+	return chunk, nil
+}
+func withoutCamps(entities []*chunkwire.WildsEntity) []*chunkwire.WildsEntity {
+	kept := []*chunkwire.WildsEntity{}
+	for _, e := range entities {
+		if e.Kind != "camp" {
+			kept = append(kept, e)
+		}
+	}
+	return kept
 }
 func socketFight(t *testing.T, w *wsClient, want string) *wire.PresenceMessage {
 	t.Helper()
@@ -215,7 +223,6 @@ func TestFightSocketWakeSharedJoinResultsLeaveAndReconnect(t *testing.T) {
 	if _, err := x.db.DB.Exec("UPDATE players SET world_id=? WHERE account_id=?", world, x.account("bob")); err != nil {
 		t.Fatal(err)
 	}
-	x.api.Config.FightPrototypeCamp = "camp:0:0:0"
 	tracker := &fightChunkCounter{ChunkSource: x.api.Config.Chunks}
 	x.api.Config.Chunks = tracker
 	cfg := presenceTestConfig()
@@ -267,6 +274,15 @@ func TestFightSocketWakeSharedJoinResultsLeaveAndReconnect(t *testing.T) {
 	if fresh.Room != join.Room || fresh.CritSeed == join.CritSeed || fresh.Enemies[0].Hp != join.Enemies[0].Hp-result.Hits[0].Damage {
 		t.Fatal("reconnect lost authority", fresh)
 	}
+	// Its own join for the area it inherited (a reload inside the leave
+	// grace names its area only after the registration's join went out)
+	// announces the covered room again, on the same handle and seed.
+	replacement.join("wilds:0:0")
+	again := socketFight(t, replacement, "fightJoin").GetFightJoin()
+	if again.Room != join.Room || again.CritSeed != fresh.CritSeed || len(again.Enemies) != 1 {
+		t.Fatal("a join for the held area did not announce the room again", again)
+	}
+	time.Sleep(5 * time.Millisecond) // past the test config's join cooldown
 	a.closeStatus(presenceReplaced)
 	replacement.send(map[string]any{"type": "join", "area": "village"})
 	closed := socketFight(t, replacement, "fightEvent").GetFightEvent()
@@ -274,10 +290,10 @@ func TestFightSocketWakeSharedJoinResultsLeaveAndReconnect(t *testing.T) {
 		t.Fatal(closed)
 	}
 	socketFight(t, replacement, "room")
-	// A valid cast with a fight part is explicitly refused during this prototype.
+	// A cast allowAbility refuses (no position outside the Wilds) is answered NOT_ALLOWED.
 	writeFight(t, replacement, &wire.PresenceAbility{Ability: "cleave", Fight: &wire.FightCast{Facing: &wire.FightFacing{X: 1}, SwingCounter: 1}})
 	if socketFight(t, replacement, "fightSwingResult").GetFightSwingResult().RefusedReason != wire.FightRefusedReason_FIGHT_REFUSED_REASON_NOT_ALLOWED {
-		t.Fatal("prototype cast disappeared")
+		t.Fatal("refused cast disappeared")
 	}
 }
 func TestFightSocketRejectsInvalidWireBeforeHandling(t *testing.T) {

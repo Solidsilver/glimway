@@ -143,9 +143,14 @@ export function getCombatKit(profile: HabiticaProfile | null, magic: MagicMarks 
  * when the dash carried the hero, close when a wall stopped it where it
  * began. The dash is measured in two dimensions, so an up or down dash
  * reaches as far as a sideways one. Pure, for the client's strike and the
- * shared fights' hit judging alike.
+ * shared fights' hit judging alike. The numbers are content (combat.json
+ * signatures.shadowstep), shared with the server's sim.
  */
-export const SNAPSTRIKE = { travelledPx: 4, reachPx: 34, blockedReachPx: 22 } as const;
+export const SNAPSTRIKE = {
+  travelledPx: COMBAT_TUNING.signatures.shadowstep.travelled,
+  reachPx: COMBAT_TUNING.signatures.shadowstep.reach,
+  blockedReachPx: COMBAT_TUNING.signatures.shadowstep.stillReach,
+} as const;
 
 /** The strike's reach (world px) after a dash from `from` to `to`. */
 export function snapstrikeReach(from: { x: number; y: number }, to: { x: number; y: number }): number {

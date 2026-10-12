@@ -1,10 +1,10 @@
 /**
  * WorldScene's frame in two halves (docs/design/shared-fights.md 1.8, game
  * step-back F7). Observation always runs: the world others share, drawn
- * (friends walking, enemies their owners show, the presence sample), and the
- * clocks that never stop. This player's play (input, local enemies, bolts,
- * the open map's window) is held while something else owns the screen, and
- * the hero stands still instead. Pure, so node tests drive it.
+ * (friends walking, enemies their owners show, the open map's window and its
+ * camps, the presence sample), and the clocks that never stop. This player's
+ * play (input, local enemies, bolts) is held while something else owns the
+ * screen, and the hero stands still instead. Pure, so node tests drive it.
  */
 
 /** Why this player's play is held this frame. */

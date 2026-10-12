@@ -352,7 +352,9 @@ export class PresenceClient {
    * Tell the room about a move just cast (crafts.md 4.5), at the hero's
    * feet (world px). The hub keeps its own per-move cooldown and drops what
    * it doesn't allow; this keeps the same one so nothing is sent to be
-   * dropped. Returns false when it wasn't sent.
+   * dropped. `fight` (contract 10 FightCast) puts it on the swing counter
+   * for the server's rooms; a fight part that can't be delivered is reported
+   * unsent like a swing. Returns false when it wasn't sent.
    */
   ability(id: string, x: number, y: number, fight?: FightCastIntent): boolean {
     const a = abilityFor(id);
@@ -360,8 +362,7 @@ export class PresenceClient {
     const now = this.timers.now();
     if (now - (this.lastAbilityAt.get(id) ?? -Infinity) < a.cooldownSeconds * 1000) return false;
     this.lastAbilityAt.set(id, now);
-    this.send({ type: 'ability', ability: id, x, y, ...(fight ? { fight } : {}) });
-    return true;
+    return this.send({ type: 'ability', ability: id, x, y, ...(fight ? { fight: { ...fight, facing: normalFacing(fight.facing) } } : {}) });
   }
 
   swing(swing: FightSwingIntent): boolean {
@@ -588,7 +589,8 @@ export class PresenceClient {
     try {
       const frame = encodePresence(m);
       let sent = false;
-      const unsent = () => { if (m.type === 'fightSwing' && this.socket === s) this.handlers.unsentFight?.(m.swingCounter); };
+      const counter = m.type === 'fightSwing' ? m.swingCounter : m.type === 'ability' ? m.fight?.swingCounter : undefined;
+      const unsent = () => { if (counter !== undefined && this.socket === s) this.handlers.unsentFight?.(counter); };
       this.withLatency('outgoing', () => {
         if (this.socket !== s || s.readyState !== OPEN) { unsent(); return; }
         try { s.send(frame); sent = true; } catch { unsent(); /* onclose follows */ }

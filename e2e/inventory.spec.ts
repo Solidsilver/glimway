@@ -181,6 +181,12 @@ test.describe('touch', () => {
 
 test.describe('in a world', () => {
   test('in a world the inventory shows server counts and your home goods, placed and stored', { tag: '@smoke' }, async ({ page }) => {
+    // The smoke tier's longest test, on GitHub's software-rendered runner:
+    // 52 s, 66 s and 90 s on dev's last three runs, then past the 120 s
+    // limit on exp/fights-full with every smoke test slower by the same
+    // measure (CI run 38309211790). The ceiling is the runner's, not the
+    // test's; the GPU runner does it in 16 s.
+    if (process.env.CI) test.setTimeout(240_000)
     const reads = homeReads(page)
     const id = await freshPlayer(page)
     // Homesteads v2: a home is a deed you claim from Silas.

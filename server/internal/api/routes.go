@@ -12,6 +12,7 @@ import (
 )
 
 func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	began := time.Now()
 	// Each transaction samples once, after beginTx holds the write lock.
 	r, clock := a.withTxClock(r)
 	w.Header().Set("Cache-Control", "no-store")
@@ -22,7 +23,12 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if metadata != nil {
 		route = metadata.label
 	}
-	observed := &statusWriter{ResponseWriter: w, status: 200, route: route, beforeWrite: func() { w.Header().Set("X-Glimway-Now", strconv.FormatInt(clock().Unix(), 10)) }, unexpected: func(err error) { a.logUnexpected(route, err) }}
+	observed := &statusWriter{ResponseWriter: w, status: 200, route: route, beforeWrite: func() {
+		w.Header().Set("X-Glimway-Now", strconv.FormatInt(clock().Unix(), 10))
+		if route == "/api/wilds/near/:cx/:cy" || route == "/api/wilds/claim" {
+			w.Header().Set("Server-Timing", "app;dur="+strconv.FormatFloat(float64(time.Since(began))/float64(time.Millisecond), 'f', 3, 64))
+		}
+	}, unexpected: func(err error) { a.logUnexpected(route, err) }}
 	w = observed
 	defer func() {
 		class := "none"

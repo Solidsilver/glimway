@@ -3,6 +3,8 @@
 package api
 
 import (
+	"context"
+	"errors"
 	"glimway/content"
 	"glimway/server/internal/chunks"
 	"glimway/server/internal/habitica"
@@ -23,6 +25,9 @@ const SessionTTL = 30 * 24 * time.Hour
 const SessionIdleTTL = 7 * 24 * time.Hour
 
 type Config struct {
+	// FightMetrics keeps the fight rooms' tick and byte samples (nil: New
+	// makes one).
+	FightMetrics     *FightMetrics
 	Lanterns         ports.Lanterns
 	Story            ports.StoryRules
 	Placement        ports.Placement
@@ -45,8 +50,6 @@ type Config struct {
 	WildsGenerator chunks.Generator
 	// Nil uses the shared presence defaults. Intended for embedded-server configuration.
 	Presence *content.Presence
-	// FightPrototypeCamp selects one wisp-only Tangle camp; empty disables it.
-	FightPrototypeCamp string
 	// PartyAdmissionOff: no one signs in through a party, and no party's
 	// world is made (-party-admission=false). Party worlds already made stay.
 	PartyAdmissionOff bool
@@ -94,9 +97,15 @@ type Server struct {
 	// topUpMark lets a test fail the worker's state marks (finding 1: a
 	// failed `checking` mark must never stop the checks). Nil in production.
 	topUpMark func(id, state string) error
+	// falls is the one durable fall writer (fall_writer.go): camp falls
+	// leave the fight rooms through it, never from a tick.
+	falls *fallWriter
 }
 
 func New(s *store.Store, h habitica.Upstream, c Config) *Server {
+	if c.FightMetrics == nil {
+		c.FightMetrics = NewFightMetrics()
+	}
 	if c.State == nil {
 		c.State = store.DefaultStateComposition{}
 	}
@@ -124,12 +133,7 @@ func New(s *store.Store, h habitica.Upstream, c Config) *Server {
 	if c.Logger == nil {
 		c.Logger = log.New(io.Discard, "", 0)
 	}
-	if c.FightPrototypeCamp != "" {
-		if _, _, err := FightPrototypeChunk(c.FightPrototypeCamp); err != nil {
-			c.Logger.Printf("fight prototype disabled: invalid camp identity")
-			c.FightPrototypeCamp = ""
-		}
-	}
+
 	sr := story.Rules{Chunks: c.Chunks, Epochs: c.Epochs, Now: c.Now}
 	if c.Story == nil {
 		c.Story = sr
@@ -161,6 +165,16 @@ func newServer(s *store.Store, h habitica.Upstream, c Config) *Server {
 		c.LoginPartyRate = max(1, c.LoginGlobalRate/4)
 	}
 	a := &Server{sprites: newSpriteProxy(c.SpriteCacheDir, c.SpriteBaseURL, c.Now), presence: newPresenceHub(c.Presence, c.Now), loginProofs: &proofLimiter{buckets: map[string]*proofBucket{}}, loginGlobal: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginGlobalRate, window: time.Minute}, loginParty: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginPartyRate, window: time.Minute}, Store: s, Habitica: h, Config: c, loginSlots: make(chan struct{}, c.LoginConcurrency), loginLimit: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginRate, window: c.LoginWindow}}
+	a.falls = newFallWriter(func(ctx context.Context, f store.FallRecord) (bool, error) {
+		if a.Store == nil {
+			return false, errors.New("no store")
+		}
+		return a.Store.InsertFall(ctx, f)
+	}, func(format string, v ...any) {
+		if a.Config.Logger != nil {
+			a.Config.Logger.Printf(format, v...)
+		}
+	})
 	// D's region, lantern and land sources read the other ports at call time.
 	if a.Config.Lanterns == nil {
 		a.Config.Lanterns = wildsService{a}

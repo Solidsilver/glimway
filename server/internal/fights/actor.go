@@ -14,13 +14,31 @@ type Output struct {
 	Message  proto.Message
 }
 type Command struct {
-	Player     *Player
-	Leave      string
-	Join       bool
-	Attack     *Attack
-	Result     chan<- []*wire.FightHitRow
+	Player *Player
+	Leave  string
+	Join   bool
+	Attack *Attack
+	Cast   *Cast
+	Result chan<- []*wire.FightHitRow
+	// Clear is a dev fixture's camp id (Room.Clear); Cleared gets its answer.
+	Clear   string
+	Cleared chan<- Cleared
+	// Settle: a bolt's flight decided; answer the copies it settled.
+	Settle     bool
 	membership *actorMembership
 }
+
+// flight is the bolt flight a command carries, if any.
+func (c Command) flight() *Flight {
+	if c.Attack != nil {
+		return c.Attack.Flight
+	}
+	if c.Cast != nil {
+		return c.Cast.Flight
+	}
+	return nil
+}
+
 type Actor struct {
 	input     chan Command
 	stop      chan struct{}
@@ -74,6 +92,8 @@ func (a *Actor) Submit(c Command) bool {
 		c.membership = member
 	} else if c.Attack != nil {
 		c.membership = a.members[c.Attack.Player]
+	} else if c.Cast != nil {
+		c.membership = a.members[c.Cast.Player]
 	}
 	select {
 	case a.input <- c:
@@ -122,6 +142,16 @@ func (a *Actor) run(r *Room, c ActorConfig) {
 			c.Closed()
 		}
 	}()
+	// A blow between ticks puts a camp down at once; its fall leaves with
+	// the next frame. A room that closes first (stop, its epoch's end, or
+	// sleep) still hands it over, so no fall is lost with the room.
+	defer func() {
+		for _, fall := range r.takeFalls() {
+			if c.Fall != nil {
+				c.Fall(fall)
+			}
+		}
+	}()
 	pending := map[uint64]chan<- []*wire.FightHitRow{}
 	answer := func(ch chan<- []*wire.FightHitRow, rows []*wire.FightHitRow) {
 		if ch != nil {
@@ -129,6 +159,20 @@ func (a *Actor) run(r *Room, c ActorConfig) {
 			case ch <- rows:
 			default:
 			}
+		}
+	}
+	// drop answers a command this room will not judge; a bolt's copy leaves
+	// its flight, so the other rooms never wait on it.
+	drop := func(cmd Command) {
+		answer(cmd.Result, nil)
+		if f := cmd.flight(); f != nil {
+			f.Withdraw(r.Handle)
+		}
+	}
+	settled := func(results []BoltResult) {
+		for _, result := range results {
+			answer(pending[result.ID], result.Hits)
+			delete(pending, result.ID)
 		}
 	}
 	defer func() {
@@ -146,8 +190,9 @@ func (a *Actor) run(r *Room, c ActorConfig) {
 		}
 		a.mu.Unlock()
 		for _, cmd := range queued {
-			answer(cmd.Result, nil)
+			drop(cmd)
 		}
+		r.AbandonBolts()
 		for _, ch := range pending {
 			answer(ch, nil)
 		}
@@ -197,13 +242,13 @@ func (a *Actor) run(r *Room, c ActorConfig) {
 			if r.EndsAt > 0 && now.UnixMilli() >= r.EndsAt {
 				r.event(nil, wire.FightEventKind_FIGHT_EVENT_KIND_ROOM_CLOSED, now.UnixMilli())
 				events()
-				answer(cmd.Result, nil)
+				drop(cmd)
 				return
 			}
 			a.mu.Lock()
 			if a.closed {
 				a.mu.Unlock()
-				answer(cmd.Result, nil)
+				drop(cmd)
 				r.event(nil, wire.FightEventKind_FIGHT_EVENT_KIND_ROOM_CLOSED, now.UnixMilli())
 				events()
 				return
@@ -211,7 +256,7 @@ func (a *Actor) run(r *Room, c ActorConfig) {
 			withdrawn := cmd.membership != nil && cmd.membership.withdrawn
 			if withdrawn {
 				a.mu.Unlock()
-				answer(cmd.Result, nil)
+				drop(cmd)
 				continue
 			}
 			fresh := false
@@ -230,12 +275,44 @@ func (a *Actor) run(r *Room, c ActorConfig) {
 					if r.StartBolt(*cmd.Attack, now) {
 						pending[cmd.Attack.ID] = cmd.Result
 					} else {
-						answer(cmd.Result, nil)
+						drop(cmd)
 					}
 				} else {
 					answer(cmd.Result, r.Slash(*cmd.Attack, now))
 				}
 				events()
+			}
+			if cmd.Cast != nil {
+				rows, later := r.Cast(*cmd.Cast, now)
+				if later {
+					pending[cmd.Cast.ID] = cmd.Result
+				} else {
+					answer(cmd.Result, rows)
+					if cmd.Cast.Flight != nil {
+						cmd.Cast.Flight.Withdraw(r.Handle)
+					}
+				}
+				events()
+			}
+			if cmd.Settle {
+				settled(r.SettleBolts(now))
+				events()
+			}
+			if cmd.Clear != "" {
+				cleared := r.Clear(cmd.Clear, now)
+				events()
+				// The fall goes to the writer now, not at the next tick.
+				for _, fall := range r.takeFalls() {
+					if c.Fall != nil {
+						c.Fall(fall)
+					}
+				}
+				if cmd.Cleared != nil {
+					select {
+					case cmd.Cleared <- cleared:
+					default:
+					}
+				}
 			}
 		case <-ticks:
 			applyLeaves()
@@ -252,10 +329,7 @@ func (a *Actor) run(r *Room, c ActorConfig) {
 			if frame.Delta != nil {
 				emit("", frame.Delta)
 			}
-			for _, result := range frame.Bolts {
-				answer(pending[result.ID], result.Hits)
-				delete(pending, result.ID)
-			}
+			settled(frame.Bolts)
 			for _, fall := range frame.Falls {
 				if c.Fall != nil {
 					c.Fall(fall)

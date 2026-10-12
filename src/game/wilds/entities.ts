@@ -1,8 +1,10 @@
 /**
  * Wilds entities — the generated things in the open map's attached chunks
  * (./window.ts attaches and detaches them as the hero walks): camps (their
- * enemies spawn from the camp's mix; when all are down the camp is
- * claimable), resource nodes (harvest prompt with the material's verb),
+ * enemies are the server room's, drawn by ../entities/server-enemies.ts; once
+ * the server stores its fall with this account as a witness, the near read
+ * names it claimable for that epoch and cycle, ./camp-fights.ts), resource
+ * nodes (harvest prompt with the material's verb),
  * personal chests, points of interest (discovery text; "Charted by {name}"
  * for the world's first discoverer), and other members' fallen-hero
  * lanterns (relightable).
@@ -11,8 +13,7 @@
  * chunks' bodies with the near read's cycles and claims — per chunk: a chunk
  * that comes draws its own things, one that goes takes its own, and when the
  * store's version moves only the things whose look changed (claimed, spent,
- * relit) are drawn again. Camps are leashed to their chunk: its creatures go
- * when it leaves the window.
+ * relit) are drawn again.
  * Claims and relights are operations (./remote.ts). Each claimable thing is
  * an interaction point (../entities/interactables.ts) that outranks the
  * people and props around it; the action key claims it.
@@ -22,8 +23,6 @@
  * claim.
  */
 import type Phaser from 'phaser'
-import { FIGHT_OPTIONS } from '../../lib/fight-options'
-import { serverCamp } from '../entities/server-enemies'
 import { presence } from '../presence'
 import { TRANSPORT_ERRORS } from '../../content/errors'
 import {
@@ -39,6 +38,7 @@ import { claimEntity, relightLantern, type WildsWhere } from './remote.ts'
 import {
   applyClaim,
   applyLanterns,
+  campClaimable,
   chunkEpoch,
   chunkThings,
   discoveryFor,
@@ -46,6 +46,7 @@ import {
   entityCycle,
   entityChunk,
   isClaimed,
+  requestRead,
   takeReadRequest,
   lootName,
   lootText,
@@ -69,9 +70,8 @@ import type { Session } from '../session'
 import type { Effects } from '../entities/fx'
 import type { EnemySystem } from '../entities/enemies'
 import type { Interactables } from '../entities/interactables'
-import type { EnemyType } from '../worlds'
 import { perfSpan, perfTime } from '../perf.ts'
-import { ServerCampOutcome, CampFights, type CampNow, type CampOutcome } from './camp-fights.ts'
+import { ServerCampOutcome, type CampNow } from './camp-fights.ts'
 import { addAll, destroyAll, looseImage } from '../area/bulk.ts'
 
 /** Server error code → what the player reads. All text is static. */
@@ -79,6 +79,9 @@ export const CLAIM_ERROR: Record<string, string> = {
   'old-cycle': 'Someone got there first — it will come back.',
   'entity-unavailable': 'Someone got there first — it will come back.',
   'already-claimed': 'You have already claimed this one.',
+  // A camp's fall (shared-fights.md 1.9): none stored for this cycle yet, or not one you were near for.
+  'not-defeated': 'The camp still stands — its fight isn’t over.',
+  'condition-unmet': 'You weren’t near for that fight. The next one is yours to join.',
   'too-far-away': 'Too far away — step closer.',
   'not-in-wilds': 'That only works out in the Wilds.',
   'epoch-ended': 'The drift has turned. The land is new.',
@@ -308,24 +311,15 @@ export class WildsEntities {
   private attached = new Map<string, Attached>()
   /** What each attached chunk shows, by thing or lantern id. */
   private drawn = new Map<string, Map<string, Rendered>>()
-  /** Generated camps' fights, by epoch, entity and cycle (./camp-fights.ts), apart from drawing them. */
-  private camps = new CampFights<WildsThing & CampNow>({
-    spawn: (camp) => this.spawnCamp(camp),
-    remove: (id) => this.deps.enemies.removeWilds(`wilds:${id}:`),
-    alive: (id) => this.deps.enemies.enemies.some((e) => !e.dead && e.id.startsWith(`wilds:${id}:`))
-  })
-  /** Where a camp claim's eligibility comes from: this client's own fight, until fights are shared. */
-  private serverCamps = new Set<string>()
-  private isServerCamp(id: string): boolean {
-    if (!FIGHT_OPTIONS.enabled) return false
-    if (serverCamp(id)) this.serverCamps.add(id)
-    return this.serverCamps.has(id)
-  }
-  private serverOutcome = new ServerCampOutcome(camp => {
+  /**
+   * Every generated camp's claim prompt, by epoch, entity and cycle: the near
+   * read's word for that exact cycle, hurried by its server room's completion
+   * (./camp-fights.ts). An absent room or a down socket keeps the last word.
+   */
+  private campOutcome = new ServerCampOutcome(camp => {
     const feed = presence()
     return feed?.live ? feed.fights.campWon(camp.id, camp.epoch) : undefined
-  })
-  private campOutcome: CampOutcome = { won: (camp) => this.isServerCamp(camp.id) ? this.serverOutcome.won(camp) : this.camps.won(camp) }
+  }, requestRead)
   private greeted = new Set<string>()
   private claiming = false
   private lastVersion = -1
@@ -370,11 +364,10 @@ export class WildsEntities {
     a.sites.destroy()
     this.undraw(key)
     // By id, not by the store's things: after a reset (the turning) the store no longer lists them.
-    for (const id of this.camps.ids()) {
+    // A camp's fight is its room's: nothing of it goes with the chunk.
+    for (const id of [...this.greeted]) {
       const at = entityChunk(id)
-      if (at?.cx !== a.cx || at.cy !== a.cy) continue
-      this.camps.undraw(id)
-      this.greeted.delete(id)
+      if (at?.cx === a.cx && at.cy === a.cy) this.greeted.delete(id)
     }
     if (republish) this.publish(wildsView() ? true : null)
   }
@@ -424,7 +417,7 @@ export class WildsEntities {
       this.render(true)
     }
     const things = this.things()
-    this.reconcileCamps(things)
+    this.watchCamps(things)
     this.greetCamps(things)
     for (const a of this.attached.values()) a.sites.update()
   }
@@ -478,16 +471,25 @@ export class WildsEntities {
   }
 
   /**
-   * Claimable right now: nodes and camps while their cycle is available
-   * (camps additionally only once their enemies are down), chests and POIs
-   * once per player per epoch.
+   * Claimable right now: nodes while their cycle is available, camps while
+   * the near read names this cycle's fall claimable for this account (the
+   * camp shows cleared from its fall until its next cycle; once per account
+   * per cycle), chests and POIs once per player per epoch.
    */
   private claimable(e: WildsThing, nowSec: number): boolean {
     if (isClaimed(e.id)) return false
     if (e.kind === 'poi' || e.kind === 'chest') return true
-    if (!entityAvailable(e, nowSec)) return false
-    if (e.kind === 'camp') return this.campOutcome.won({ id: e.id, epoch: chunkEpoch(e.cx, e.cy)?.id ?? '', cycle: entityCycle(e, nowSec) })
-    return true
+    if (e.kind === 'camp') {
+      const camp = this.campNow(e, nowSec)
+      return !!camp && this.campOutcome.won(camp)
+    }
+    return entityAvailable(e, nowSec)
+  }
+
+  /** A camp as its claim names it: epoch, entity and projected cycle (null: its chunk's epoch isn't known). */
+  private campNow(e: WildsThing, nowSec: number): CampNow | null {
+    const epoch = chunkEpoch(e.cx, e.cy)?.id
+    return epoch ? { id: e.id, epoch, cycle: entityCycle(e, nowSec), claimable: campClaimable(e, nowSec) } : null
   }
 
   private async claim(entityId: string): Promise<void> {
@@ -520,16 +522,21 @@ export class WildsEntities {
     const target = chunkThings(entity.cx, entity.cy).find((e) => e.id === entity.id)
     const nowSec = Math.floor(Date.now() / 1000)
     if (!target || !this.claimable(target, nowSec)) {
-      if (target && (target.kind === 'camp' || target.kind === 'node') && !entityAvailable(target, nowSec)) {
+      if (target && target.kind === 'node' && !entityAvailable(target, nowSec)) {
         bus.emit(EV.toast, { text: CLAIM_ERROR['entity-unavailable'], kind: 'error' })
       }
       return
     }
+    const camp = target.kind === 'camp' ? this.campNow(target, nowSec) : null
     const res = await claimEntity(session, { epoch: epoch.id, entityId: entity.id, cycle: entityCycle(target, nowSec), where: this.where() })
     if (!res.ok) {
+      // Not this account's to claim again this cycle (claimed, or not a witness of its fall).
+      // `not-defeated` (no fall stored yet) stays open: the next press is a new operation, a fresh key.
+      if (camp && (res.code === 'already-claimed' || res.code === 'condition-unmet')) this.campOutcome.claimed(camp)
       this.claimError(res.code)
       return
     }
+    if (camp) this.campOutcome.claimed(camp)
     const drop = applyClaim(res.result)
     this.lootFeedback(target, drop, res.result.papers)
     if (res.result.wardenSliverFound) {
@@ -823,34 +830,13 @@ export class WildsEntities {
 
   // ------------------------------------------------------------ camps
 
-  /**
-   * Each attached camp's fight follows the store: its epoch, cycle and
-   * whether it is depleted. A camp come round on its timer is in its next
-   * cycle (entityCycle), as the read before its claim will say, so the fight
-   * won before that read still counts.
-   */
-  private reconcileCamps(things: readonly WildsThing[]): void {
+  /** Every frame: a camp its room shows won asks the near read for the server's word (./camp-fights.ts). */
+  private watchCamps(things: readonly WildsThing[]): void {
     const nowSec = Math.floor(Date.now() / 1000)
-    const camps: (WildsThing & CampNow)[] = []
     for (const e of things) {
-      const epoch = e.kind === 'camp' ? chunkEpoch(e.cx, e.cy)?.id : undefined
-      if (epoch) camps.push({ ...e, epoch, cycle: entityCycle(e, nowSec), available: entityAvailable(e, nowSec) })
+      const camp = e.kind === 'camp' ? this.campNow(e, nowSec) : null
+      if (camp) this.campOutcome.won(camp)
     }
-    this.camps.reconcile(camps)
-  }
-
-  /** Set a camp's enemies out from its generated mix. */
-  private spawnCamp(e: WildsThing): void {
-    if (this.isServerCamp(e.id)) return
-    const offsets = [
-      [0, 0],
-      [1, 0],
-      [0, 1]
-    ]
-    e.enemies.slice(0, 3).forEach((type, i) => {
-      const [ox, oy] = offsets[i % offsets.length]
-      this.deps.enemies.spawnWilds(`wilds:${e.id}:${i}`, type as EnemyType, e.cx * CHUNK_TILES + e.tx + ox, e.cy * CHUNK_TILES + e.ty + oy)
-    })
   }
 
   /** A walk-in line the first time the hero nears a lived-in camp. */

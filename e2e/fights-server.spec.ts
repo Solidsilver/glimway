@@ -18,6 +18,12 @@ test('server wisp observes menus and close/resync; press predicts but death wait
   await page.routeWebSocket('**/ws', ws => {
     socket = ws
     const upstream = ws.connectToServer()
+    // All real camps now use server fights. Keep this controlled rendering
+    // test's baseline isolated from their joins/deltas/events/results.
+    upstream.onMessage(data => {
+      const message = fromBinary(PresenceMessageSchema, Buffer.from(data))
+      if (!message.event.case?.startsWith('fight')) ws.send(data)
+    })
     ws.onMessage(data => {
       const message = fromBinary(PresenceMessageSchema, Buffer.from(data))
       if (message.event.case === 'fightSwing') {
@@ -26,7 +32,7 @@ test('server wisp observes menus and close/resync; press predicts but death wait
       } else upstream.send(data)
     })
   })
-  await page.goto('/?fights=server&perf=1')
+  await page.goto('/?perf=1')
   await page.getByRole('button', { name: /^Continue/ }).click()
   await waitForLive(page)
   await go(page, 'wilds', 5, 5)

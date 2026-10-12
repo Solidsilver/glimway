@@ -62,6 +62,11 @@ export declare type Combat = Message<"glimway.content.v1.Combat"> & {
    * @generated from field: glimway.content.v1.CombatAttack attack = 9;
    */
   attack?: CombatAttack | undefined;
+
+  /**
+   * @generated from field: glimway.content.v1.CombatSignatures signatures = 10;
+   */
+  signatures?: CombatSignatures | undefined;
 };
 
 /**
@@ -116,6 +121,11 @@ export declare type CombatValid = Message<"glimway.content.v1.Combat"> & {
    * @generated from field: glimway.content.v1.CombatAttack attack = 9;
    */
   attack: CombatAttackValid;
+
+  /**
+   * @generated from field: glimway.content.v1.CombatSignatures signatures = 10;
+   */
+  signatures: CombatSignaturesValid;
 };
 
 /**
@@ -321,4 +331,191 @@ export declare type CombatAttackValid = CombatAttack;
  * Use `create(CombatAttackSchema)` to create a new message.
  */
 export declare const CombatAttackSchema: GenMessage<CombatAttack, {validType: CombatAttackValid}>;
+
+/**
+ * The signatures' blows (shared-fights.md 1.5): what the hero draws and
+ * predicts, and what the server's sim judges, from one set of numbers. Each
+ * strike is a circle of `reach` px, judged to an enemy's middle
+ * (attack.enemy_y_offset above its feet), strictly inside.
+ *
+ * @generated from message glimway.content.v1.CombatSignatures
+ */
+export declare type CombatSignatures = Message<"glimway.content.v1.CombatSignatures"> & {
+  /**
+   * @generated from field: glimway.content.v1.CombatBlow cleave = 1;
+   */
+  cleave?: CombatBlow | undefined;
+
+  /**
+   * @generated from field: glimway.content.v1.CombatShadowstep shadowstep = 2;
+   */
+  shadowstep?: CombatShadowstep | undefined;
+
+  /**
+   * @generated from field: glimway.content.v1.CombatPulse mend = 3;
+   */
+  mend?: CombatPulse | undefined;
+};
+
+/**
+ * The signatures' blows (shared-fights.md 1.5): what the hero draws and
+ * predicts, and what the server's sim judges, from one set of numbers. Each
+ * strike is a circle of `reach` px, judged to an enemy's middle
+ * (attack.enemy_y_offset above its feet), strictly inside.
+ *
+ * @generated from message glimway.content.v1.CombatSignatures
+ */
+export declare type CombatSignaturesValid = Message<"glimway.content.v1.CombatSignatures"> & {
+  /**
+   * @generated from field: glimway.content.v1.CombatBlow cleave = 1;
+   */
+  cleave: CombatBlowValid;
+
+  /**
+   * @generated from field: glimway.content.v1.CombatShadowstep shadowstep = 2;
+   */
+  shadowstep: CombatShadowstepValid;
+
+  /**
+   * @generated from field: glimway.content.v1.CombatPulse mend = 3;
+   */
+  mend: CombatPulseValid;
+};
+
+/**
+ * Describes the message glimway.content.v1.CombatSignatures.
+ * Use `create(CombatSignaturesSchema)` to create a new message.
+ */
+export declare const CombatSignaturesSchema: GenMessage<CombatSignatures, {validType: CombatSignaturesValid}>;
+
+/**
+ * A blow centred ahead_x/ahead_y along the unit facing and `up` above the
+ * caster's feet, landing land_seconds after the press.
+ *
+ * @generated from message glimway.content.v1.CombatBlow
+ */
+export declare type CombatBlow = Message<"glimway.content.v1.CombatBlow"> & {
+  /**
+   * @generated from field: double reach = 1;
+   */
+  reach: number;
+
+  /**
+   * @generated from field: double ahead_x = 2;
+   */
+  aheadX: number;
+
+  /**
+   * @generated from field: double ahead_y = 3;
+   */
+  aheadY: number;
+
+  /**
+   * @generated from field: double up = 4;
+   */
+  up: number;
+
+  /**
+   * @generated from field: double land_seconds = 5;
+   */
+  landSeconds: number;
+};
+
+export declare type CombatBlowValid = CombatBlow;
+
+/**
+ * Describes the message glimway.content.v1.CombatBlow.
+ * Use `create(CombatBlowSchema)` to create a new message.
+ */
+export declare const CombatBlowSchema: GenMessage<CombatBlow, {validType: CombatBlowValid}>;
+
+/**
+ * A pulse centred `up` above the caster's feet, landing land_seconds after
+ * the press.
+ *
+ * @generated from message glimway.content.v1.CombatPulse
+ */
+export declare type CombatPulse = Message<"glimway.content.v1.CombatPulse"> & {
+  /**
+   * @generated from field: double reach = 1;
+   */
+  reach: number;
+
+  /**
+   * @generated from field: double up = 2;
+   */
+  up: number;
+
+  /**
+   * @generated from field: double land_seconds = 3;
+   */
+  landSeconds: number;
+};
+
+export declare type CombatPulseValid = CombatPulse;
+
+/**
+ * Describes the message glimway.content.v1.CombatPulse.
+ * Use `create(CombatPulseSchema)` to create a new message.
+ */
+export declare const CombatPulseSchema: GenMessage<CombatPulse, {validType: CombatPulseValid}>;
+
+/**
+ * Shadowstep's Snapstrike: a dash of dash_speed px/s for dash_seconds along
+ * the facing (walls stop it), then a strike `up` above where it ended,
+ * land_seconds after the dash: `reach` wide when the dash carried the hero
+ * more than `travelled` px, still_reach when a wall stopped it. Its shove
+ * comes from knock_back px behind the end, along the facing's x.
+ *
+ * @generated from message glimway.content.v1.CombatShadowstep
+ */
+export declare type CombatShadowstep = Message<"glimway.content.v1.CombatShadowstep"> & {
+  /**
+   * @generated from field: double reach = 1;
+   */
+  reach: number;
+
+  /**
+   * @generated from field: double still_reach = 2;
+   */
+  stillReach: number;
+
+  /**
+   * @generated from field: double up = 3;
+   */
+  up: number;
+
+  /**
+   * @generated from field: double travelled = 4;
+   */
+  travelled: number;
+
+  /**
+   * @generated from field: double dash_speed = 5;
+   */
+  dashSpeed: number;
+
+  /**
+   * @generated from field: double dash_seconds = 6;
+   */
+  dashSeconds: number;
+
+  /**
+   * @generated from field: double land_seconds = 7;
+   */
+  landSeconds: number;
+
+  /**
+   * @generated from field: double knock_back = 8;
+   */
+  knockBack: number;
+};
+
+export declare type CombatShadowstepValid = CombatShadowstep;
+
+/**
+ * Describes the message glimway.content.v1.CombatShadowstep.
+ * Use `create(CombatShadowstepSchema)` to create a new message.
+ */
+export declare const CombatShadowstepSchema: GenMessage<CombatShadowstep, {validType: CombatShadowstepValid}>;
 

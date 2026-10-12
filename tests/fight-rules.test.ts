@@ -11,6 +11,7 @@ import {
   knockFrom,
   knockInterrupts,
   mendStrike,
+  shadowstepEnd,
   slashStrike,
   snapstrike,
   strikeCrits,
@@ -21,6 +22,7 @@ import {
   type EnemyState,
   type Strike
 } from '../src/game/entities/fight-rules.ts';
+import { snapstrikeReach } from '../src/lib/combat.ts';
 import { STAND_MARGIN } from '../src/lib/combat-moves.ts';
 import { COMBAT_TUNING } from '../src/lib/combat-timing.ts';
 import { ENEMY_TUNING as CONTENT_ENEMIES, KNOCK as CONTENT_KNOCK } from '../src/lib/enemies.ts';
@@ -210,6 +212,21 @@ test('the shared vectors drive the game’s path: a slash’s and a bolt’s rea
   }
   for (const v of vectors.boltSpawn) assert.deepEqual(boltSpawn({ x: v.x, y: v.y }, { x: v.facingX, y: 0 }), { x: v.spawnX, y: v.spawnY });
   assert.equal(COMBAT_TUNING.attack.enemyYOffset, 6, 'the signatures measure to the same middle');
+});
+
+test('the signature vectors drive the game’s path: Cleave, Mend and Snapstrike reach as the server’s sim judges, and Shadowstep’s dash ends where it predicts', () => {
+  for (const v of vectors.signatures) {
+    const feet = { x: v.x, y: v.y };
+    const s = v.kind === 'cleave' ? cleaveStrike(feet, { x: v.facingX, y: v.facingY }, 5)
+      : v.kind === 'mend' ? mendStrike(feet, 5)
+        : snapstrike(feet, v.travelled, 5, 0);
+    assert.equal(strikeHits(s, [enemy('wisp', v.enemyX, v.enemyY)], false).length === 1, v.hit, JSON.stringify(v));
+  }
+  for (const v of vectors.dash) {
+    const end = shadowstepEnd({ x: v.x, y: v.y }, { x: v.facingX, y: v.facingY });
+    assert.deepEqual(end, { x: v.endX, y: v.endY }, JSON.stringify(v));
+    assert.equal(snapstrikeReach({ x: v.x, y: v.y }, end) === COMBAT_TUNING.signatures.shadowstep.reach, v.travelled, JSON.stringify(v));
+  }
 });
 
 test('what a hit does: the warden only clinks; a dazed beetle takes 1.5× and shows as a crit; the rest as dealt', () => {

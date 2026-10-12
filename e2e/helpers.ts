@@ -3,7 +3,8 @@ import { expect, type Page } from '@playwright/test'
 /**
  * Playtest helpers. Movement and interaction go through real keyboard input;
  * the dev hooks are only used to skip long walks (__fsDevWarp), long fights
- * (__fsDevStrike) and the warden encounter (__fsDevSpeakNaming), and the
+ * (__fsDevStrike for curated ones, __fsDevFightFall for a generated camp's
+ * server room) and the warden encounter (__fsDevSpeakNaming), and the
  * read-only hooks for assertions and for waiting.
  *
  * Wait on game state, never on the clock: under parallel workers a frame
@@ -21,6 +22,7 @@ type Hooks = {
   __fsSafety?: () => { areaId: AreaId; transitioning: boolean }
   __fsDevWarp?: (area: AreaId, tx: number, ty: number) => void
   __fsDevStrike?: (n: number, type?: string) => void
+  __fsDevFightFall?: (entity: string) => Promise<{ ok: true } | { ok: false; status: number; code: string }>
   __fsDevSpeakNaming?: (force?: boolean) => boolean
   __fsWarden?: () => WardenView
   __fsWilds?: () => WildsDump | null
@@ -399,6 +401,21 @@ export async function expectTarget(page: Page, id: string, seconds = 3): Promise
 }
 
 /**
+ * Open ground around a world tile, as standing spots (feet, world px): the
+ * tiles one and two out from it that are not solid, nearest ring first.
+ */
+export async function spotsAround(page: Page, at: { tx: number; ty: number }): Promise<{ x: number; y: number }[]> {
+  return page.evaluate(([x0, y0]) => {
+    const solid = (window as unknown as { __fsTileSolid: (x: number, y: number) => boolean }).__fsTileSolid
+    const out: { x: number; y: number }[] = []
+    for (const r of [1, 2])
+      for (let dy = -r; dy <= r; dy++)
+        for (let dx = -r; dx <= r; dx++) if (Math.max(Math.abs(dx), Math.abs(dy)) === r && !solid(x0 + dx, y0 + dy)) out.push({ x: (x0 + dx) * 16 + 8, y: (y0 + dy) * 16 + 8 })
+    return out
+  }, [at.tx, at.ty] as const)
+}
+
+/**
  * Stand where the game elects `id`: the first of `spots` (feet, world px)
  * whose target is it, by `targetAt`; the hero is set down there and the
  * election seen to hold. Null (with `why` filled) when none of them works.
@@ -598,7 +615,33 @@ export async function exitTo(page: Page, to: AreaId): Promise<ExitView> {
   return found
 }
 
-/** Dev strike on every enemy, or only those of one type ('wisp' | 'beetle' | 'guardian'). */
+/**
+ * Finish a generated camp's fight for this page's account and wait for the
+ * server's word that it may claim it. The camp's own room clears it on a
+ * `-tags dev` server (__fsDevFightFall, /api/dev/fight-fall): deaths and a
+ * stored fall with this account as a witness; then the near read names the
+ * camp claimable (campClaimable). The room must be awake and covered by this
+ * page's socket, so a `not-here` is asked again until it is. Only a fixture
+ * for specs about claims and screens: the shared-fights gate
+ * (fights-shared.spec.ts) fights with real swings. Curated fights keep
+ * strikeAll.
+ */
+export async function fallCamp(page: Page, campId: string): Promise<void> {
+  const until = Date.now() + SERVER_ANSWER_MS
+  let last = ''
+  for (;;) {
+    const res = await page.evaluate((id) => (window as unknown as Hooks).__fsDevFightFall!(id), campId)
+    if (res.ok) break
+    last = `${res.status} ${res.code}`
+    if (res.code !== 'not-here' || Date.now() > until) throw new Error(`the dev fight-fall of ${campId} was refused: ${last}`)
+    await page.waitForTimeout(250)
+  }
+  await expect
+    .poll(async () => (await wilds(page)).entities.find((e) => e.id === campId)?.claimable, { message: `${campId} claimable from the near read`, timeout: SERVER_ANSWER_MS })
+    .toBe(true)
+}
+
+/** Dev strike on every enemy, or only those of one type ('wisp' | 'beetle' | 'guardian'). Local (curated) enemies only: a server camp's room decides its own. */
 export async function strikeAll(page: Page, n: number, type?: string): Promise<void> {
   await page.evaluate(([d, t]) => (window as unknown as Hooks).__fsDevStrike!(d as number, t as string | undefined), [n, type] as const)
 }

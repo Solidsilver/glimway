@@ -8,9 +8,10 @@ import type { FightTargetRef } from './presence.ts'
 
 type Payload<T> = Omit<T, '$typeName' | '$unknown'>
 type Sample = { ms: number; row: FightEnemy }
-type Track = { samples: Sample[]; knock?: { x: number; y: number; at: number }; windup?: { tick: number; ms: number; lockMs?: number }; removedAt?: number }
+type Track = { life: number; samples: Sample[]; knock?: { x: number; y: number; at: number }; windup?: { tick: number; ms: number; lockMs?: number }; removedAt?: number }
 type Room = { closedUntil?: number; key: FightRoomKey; tick: number; received: number; incarnation: number; tracks: Map<number, Track>; camps: Map<string, Map<number, boolean>> }
-export interface FightDraw { incarnation: number; room: number; row: FightEnemy; x: number; y: number; elapsedMs: number; telegraphMs?: number; telegraphTick?: number; aimLocked?: boolean }
+/** `life`: one enemy's life on this screen. A resync keeps it; a new row (a spawn, a cycle's respawn) gets a new one. */
+export interface FightDraw { incarnation: number; life: number; room: number; row: FightEnemy; x: number; y: number; elapsedMs: number; telegraphMs?: number; telegraphTick?: number; aimLocked?: boolean }
 export interface FightMeasures {
   snapshotGapP95: number; snapshotSamples: number; interpolationDelay: number
   hitConfirmationP95: number; confirmations: number; predictedRows: number
@@ -26,6 +27,7 @@ export class FightInterp {
   readonly rooms = new Map<number, Room>()
   seed = 0
   private incarnation = 0
+  private lives = 0
   private anchor: { tick: number; ms: number } | null = null
   private clockOffset = Infinity
   private delay = 100
@@ -64,7 +66,9 @@ export class FightInterp {
     this.seed = join.critSeed
     const ms = this.clock(join.tick)
     const now = this.now()
-    const resync = [...this.rooms.entries()].find(([, room]) => sameRoomKey(room.key, join.roomKey!) && room.closedUntil !== undefined && now < room.closedUntil)
+    // The same physical room and epoch, live or inside its close grace: a refresh (a new view
+    // handle only rewrites wire references). Nothing resets on a chunk crossing.
+    const resync = [...this.rooms.entries()].find(([, room]) => sameRoomKey(room.key, join.roomKey!) && (room.closedUntil === undefined || now < room.closedUntil))
     if (resync) {
       const [oldHandle, room] = resync
       // Full joins refresh truth; matching enemy ids retain interpolation and
@@ -73,7 +77,9 @@ export class FightInterp {
       const tracks = new Map<number, Track>()
       const deaths: number[] = []
       for (const row of join.enemies) {
-        const old = [...room.tracks.values()].find(track => track.samples.at(-1)!.row.id === row.id)
+        const found = [...room.tracks.values()].find(track => track.samples.at(-1)!.row.id === row.id)
+        // A dead row that stands again is a new life (a respawn reusing its id), never a resurrection.
+        const old = found && !(found.samples.at(-1)!.row.state === 6 && row.state !== 6) ? found : undefined
         if (old) {
           if (row.state === 6 && old.samples.at(-1)!.row.state !== 6) deaths.push(row.enemy)
           old.samples = old.samples.filter(sample => sample.ms <= ms).map(sample => ({ ...sample, row: { ...sample.row, enemy: row.enemy } }))
@@ -81,10 +87,11 @@ export class FightInterp {
           if (old.samples.length > 24) old.samples.splice(0, old.samples.length - 24)
           delete old.removedAt
           tracks.set(row.enemy, old)
-        } else tracks.set(row.enemy, { samples: [{ ms, row: { ...row } }] })
+        } else tracks.set(row.enemy, this.track(ms, row))
       }
       // Removed rows leave when the refresh reaches the drawing clock.
-      for (const [index, track] of room.tracks) if (!tracks.has(index) && !join.enemies.some(row => row.id === track.samples.at(-1)!.row.id)) { track.removedAt = ms; tracks.set(index, track) }
+      const kept = new Set(tracks.values())
+      for (const [index, track] of room.tracks) if (!kept.has(track)) { track.removedAt ??= ms; tracks.set(tracks.has(index) ? -1 - track.life : index, track) }
       this.drop(oldHandle)
       room.tracks = tracks; room.tick = join.tick; room.received = now
       room.camps = new Map(); delete room.closedUntil
@@ -99,7 +106,7 @@ export class FightInterp {
       const k = room.key, n = join.roomKey
       if (handle === join.room || (k.world === n.world && k.realm === n.realm && k.layer === n.layer && k.cx === n.cx && k.cy === n.cy)) this.drop(handle)
     }
-    this.rooms.set(join.room, { key: join.roomKey, incarnation: ++this.incarnation, tick: join.tick, received: now, camps: new Map(), tracks: new Map(join.enemies.map(row => [row.enemy, { samples: [{ ms, row: { ...row } }] }])) })
+    this.rooms.set(join.room, { key: join.roomKey, incarnation: ++this.incarnation, tick: join.tick, received: now, camps: new Map(), tracks: new Map(join.enemies.map(row => [row.enemy, this.track(ms, row)])) })
     for (const row of join.enemies) this.campRow(this.rooms.get(join.room)!, row)
   }
 
@@ -126,8 +133,18 @@ export class FightInterp {
       track.samples.push({ ms, row })
       if (track.samples.length > 24) track.samples.shift()
     }
-    for (const row of delta.spawned) { room.tracks.set(row.enemy, { samples: [{ ms, row: { ...row } }] }); this.campRow(room, row) }
-    for (const index of delta.removed) { const track = room.tracks.get(index); if (track) track.removedAt = ms }
+    for (const index of delta.removed) {
+      const track = room.tracks.get(index)
+      if (!track) continue
+      // Rows are the truth: a removed row stops counting for its camp at once, and leaves the screen at its stamp.
+      track.removedAt = ms
+      room.camps.get(track.samples.at(-1)!.row.campId)?.delete(index)
+    }
+    for (const row of delta.spawned) {
+      const old = room.tracks.get(row.enemy)
+      if (old) room.tracks.set(-1 - old.life, { ...old, removedAt: old.removedAt ?? ms })
+      room.tracks.set(row.enemy, this.track(ms, row)); this.campRow(room, row)
+    }
   }
 
   event(event: Payload<FightEvent>): void {
@@ -189,16 +206,19 @@ export class FightInterp {
       const blend = knock ? Math.max(0, 1 - (this.now() - knock.at) / 150) : 0
       const windup = track.windup
       const telegraphMs = windup && fightTickDiff(a.row.stateTick, windup.tick) <= 0 && a.row.state !== 6 ? Math.max(0, this.frameMs - windup.ms) : undefined
-      out.push({ incarnation: room.incarnation, telegraphMs, telegraphTick: telegraphMs === undefined ? undefined : windup?.tick, aimLocked: !!windup?.lockMs && this.frameMs >= windup.lockMs, room: handle, row: a.row, x: a.row.x + (b.row.x - a.row.x) * share + (knock?.x ?? 0) * blend, y: a.row.y + (b.row.y - a.row.y) * share + (knock?.y ?? 0) * blend, elapsedMs: Math.max(0, this.frameMs - this.stamp(a.row.stateTick)) })
+      out.push({ incarnation: room.incarnation, life: track.life, telegraphMs, telegraphTick: telegraphMs === undefined ? undefined : windup?.tick, aimLocked: !!windup?.lockMs && this.frameMs >= windup.lockMs, room: handle, row: a.row, x: a.row.x + (b.row.x - a.row.x) * share + (knock?.x ?? 0) * blend, y: a.row.y + (b.row.y - a.row.y) * share + (knock?.y ?? 0) * blend, elapsedMs: Math.max(0, this.frameMs - this.stamp(a.row.stateTick)) })
     }
     return out
   }
+
+  private track(ms: number, row: FightEnemy): Track { return { life: ++this.lives, samples: [{ ms, row: { ...row } }] } }
 
   private campRow(room: Room, row: FightEnemy): void {
     let camp = room.camps.get(row.campId)
     if (!camp) room.camps.set(row.campId, camp = new Map())
     camp.set(row.enemy, row.state === 6)
   }
+  /** True: every row the camp has in a room of this epoch is confirmed dead; false: one stands; undefined: no room shows it. */
   campWon(id: string, epoch: string): boolean | undefined {
     for (const room of this.rooms.values()) {
       const camp = room.camps.get(id)

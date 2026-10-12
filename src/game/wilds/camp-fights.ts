@@ -1,125 +1,82 @@
 /**
- * Generated camps' fights, as this client plays them until fights are
- * shared (step-back review F6). A camp's fight belongs to its epoch, entity
- * and cycle, not to whether its chunk is drawn: a depletion (anyone's claim)
- * ends it and clears its creatures, the next cycle (or a depleted camp come
- * round again) starts a new one, and another epoch's camp under the same id
- * is another camp. Drawing is separate: a chunk leaving the window takes the
- * creatures away, and coming back sets an unfinished fight up again; a won
- * fight stays won for its cycle.
+ * A generated camp's claim prompt on this client (shared-fights.md 1.9; step-back
+ * review F6). Every camp is fought in its server room. The server's word is the
+ * near read's `camp_claimable` for the camp's exact cycle (a stored fall that
+ * lists this account, not yet claimed): that alone makes a camp claimable. The
+ * room only hurries the word along and hides a prompt it contradicts:
  *
- * Claim eligibility reads the outcome through `CampOutcome`; shared fights
- * replace this local source with the server's. Curated story fights don't
- * come through here. No Phaser: the host spawns and removes the creatures.
+ * - Rows all confirmed dead (the last death, or a join with only corpses) while
+ *   the store has no word for this cycle: ask for a fresh near read, a few
+ *   times, spaced (the fall is written off the tick). Dead rows never grant a
+ *   claim, so an older cycle's corpses can't make the next cycle claimable.
+ * - Rows that stand (a respawn) hide the prompt at once.
+ * - No room, or no socket: the store's last word for this cycle stands.
+ * - A new epoch or cycle starts over; a claim settled (or refused as already
+ *   claimed, or condition-unmet: not a witness) ends this cycle's prompt for this account until
+ *   the next read says otherwise for a new cycle.
+ *
+ * No Phaser: the host reads the feed and asks the store for a read.
  */
 
 /** A camp as the store holds it now. */
 export interface CampNow {
   id: string
   epoch: string
+  /** The projected cycle (entityCycle): what the claim names. */
   cycle: number
-  /** Available now (not depleted). */
-  available: boolean
+  /** The near read's word for exactly this cycle (store.ts campClaimable). */
+  claimable: boolean
 }
 
-/** Where a camp fight's outcome comes from (claimable only once it is won). */
-export interface CampOutcome {
-  won(camp: Pick<CampNow, 'id' | 'epoch' | 'cycle'>): boolean
-}
+/** Fresh reads asked after one completion, and how far apart. */
+export const CAMP_READ_TRIES = 4
+export const CAMP_READ_EVERY_MS = 1_500
 
-export interface CampHost<T extends CampNow> {
-  /** Set the camp's creatures out (a new fight, or one drawn again). */
-  spawn(camp: T): void
-  /** Take the camp's creatures away (alive or dead). */
-  remove(id: string): void
-  /** Any of the camp's creatures still standing? */
-  alive(id: string): boolean
-}
+type Known = { epoch: string; cycle: number; complete: boolean; tries: number; askedAt: number; claimed: boolean }
 
-type Fight = { epoch: string; cycle: number; phase: 'fighting' | 'won' | 'depleted'; drawn: boolean }
+export class ServerCampOutcome {
+  private readonly known = new Map<string, Known>()
+  private readonly read: (camp: Pick<CampNow, 'id' | 'epoch'>) => boolean | undefined
+  private readonly ask: () => void
+  private readonly now: () => number
 
-export class CampFights<T extends CampNow = CampNow> implements CampOutcome {
-  private readonly fights = new Map<string, Fight>()
-  private readonly host: CampHost<T>
-
-  constructor(host: CampHost<T>) {
-    this.host = host
+  /** `read`: the room's answer (true all dead, false one stands, undefined unknown); `ask`: request a near read. */
+  constructor(read: (camp: Pick<CampNow, 'id' | 'epoch'>) => boolean | undefined, ask: () => void = () => {}, now: () => number = () => Date.now()) {
+    this.read = read
+    this.ask = ask
+    this.now = now
   }
 
-  /** Bring each attached camp's fight in line with the store (every frame; cheap when nothing moved). */
-  reconcile(camps: readonly T[]): void {
-    for (const c of camps) {
-      let f = this.fights.get(c.id)
-      if (f && f.epoch !== c.epoch) {
-        // Another epoch's camp under the same id: a different camp.
-        if (f.drawn) this.host.remove(c.id)
-        f = undefined
-      }
-      if (!f) {
-        f = { epoch: c.epoch, cycle: c.cycle, phase: 'depleted', drawn: false }
-        this.fights.set(c.id, f)
-      }
-      this.settle(c.id, f)
-      if (!c.available) {
-        // Depleted (by anyone): the fight is over, its creatures go.
-        if (f.drawn) this.host.remove(c.id)
-        f.phase = 'depleted'
-        f.drawn = false
-        f.cycle = c.cycle
-        continue
-      }
-      if (f.phase === 'depleted' || f.cycle !== c.cycle) {
-        // A new cycle, or a depleted camp come round again: a new fight.
-        if (f.drawn) this.host.remove(c.id)
-        f.phase = 'fighting'
-        f.cycle = c.cycle
-        f.drawn = false
-      }
-      if (f.phase === 'fighting' && !f.drawn) {
-        this.host.spawn(c)
-        f.drawn = true
+  private at(camp: Pick<CampNow, 'id' | 'epoch' | 'cycle'>): Known {
+    let k = this.known.get(camp.id)
+    if (!k || k.epoch !== camp.epoch || k.cycle !== camp.cycle) {
+      k = { epoch: camp.epoch, cycle: camp.cycle, complete: false, tries: 0, askedAt: -Infinity, claimed: false }
+      this.known.set(camp.id, k)
+    }
+    return k
+  }
+
+  won(camp: CampNow): boolean {
+    const k = this.at(camp)
+    const answer = this.read(camp)
+    if (answer === false) {
+      k.complete = false
+      return false
+    }
+    if (answer === true) {
+      // A completion seen here: a new one earns a fresh round of reads.
+      if (!k.complete) { k.complete = true; k.tries = 0 }
+      if (!camp.claimable && !k.claimed && k.tries < CAMP_READ_TRIES && this.now() - k.askedAt >= CAMP_READ_EVERY_MS) {
+        k.tries++
+        k.askedAt = this.now()
+        this.ask()
       }
     }
+    return camp.claimable && !k.claimed
   }
 
-  /** The camps with a fight on record (drawn or not). */
-  ids(): string[] {
-    return [...this.fights.keys()]
-  }
-
-  /** A camp's chunk left the window: its creatures go; the fight's outcome stays. */
-  undraw(id: string): void {
-    const f = this.fights.get(id)
-    if (!f) return
-    this.settle(id, f)
-    if (f.drawn) this.host.remove(id)
-    f.drawn = false
-  }
-
-  won(camp: Pick<CampNow, 'id' | 'epoch' | 'cycle'>): boolean {
-    const f = this.fights.get(camp.id)
-    if (!f || f.epoch !== camp.epoch || f.cycle !== camp.cycle) return false
-    this.settle(camp.id, f)
-    return f.phase === 'won'
-  }
-
-  /** A drawn fight whose creatures are all down is won. */
-  private settle(id: string, f: Fight): void {
-    if (f.phase === 'fighting' && f.drawn && !this.host.alive(id)) f.phase = 'won'
-  }
-}
-
-/** A missing fight view/socket is unknown. Keep the last confirmed prompt for
- * this camp's epoch/cycle; a new cycle or an authoritative live row clears it. */
-export class ServerCampOutcome implements CampOutcome {
-  private readonly known = new Map<string, { epoch: string; cycle: number; won: boolean }>()
-  private readonly read: (camp: Pick<CampNow, 'id' | 'epoch' | 'cycle'>) => boolean | undefined
-  constructor(read: (camp: Pick<CampNow, 'id' | 'epoch' | 'cycle'>) => boolean | undefined) { this.read = read }
-  won(camp: Pick<CampNow, 'id' | 'epoch' | 'cycle'>): boolean {
-    let previous = this.known.get(camp.id)
-    if (previous && (previous.epoch !== camp.epoch || previous.cycle !== camp.cycle)) { this.known.delete(camp.id); previous = undefined }
-    const answer = this.read(camp)
-    if (answer !== undefined) { this.known.set(camp.id, { epoch: camp.epoch, cycle: camp.cycle, won: answer }); return answer }
-    return previous?.won ?? false
+  /** This account settled (or can't settle) this camp's cycle. */
+  claimed(camp: Pick<CampNow, 'id' | 'epoch' | 'cycle'>): void {
+    this.at(camp).claimed = true
   }
 }

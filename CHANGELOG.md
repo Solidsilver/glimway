@@ -15,6 +15,15 @@ the game can show the first part as "What's new":
 
 ### For players
 
+- **Fight together.** Wisps and beetles at Wilds camps now share their movement,
+  health, wind-ups and deaths. Friends nearby when a fight begins bring extra
+  enemies, up to five. Everyone who watched the fight can claim their own reward.
+- **Your workings are shared too.** Cleave, Fingersnap, Shadowstep, Mend,
+  Kindle, Stand and Echo affect the same camp enemies for everyone; Ward-light
+  keeps mending nearby friends.
+- **Empty hands.** Press 0 or choose the hands at your belt to put your weapon
+  away. On phones, the camera keeps you clear of the belt buttons.
+
 - **The world map.** Press **M** (or the new Map button at the top right) for
   a full-screen map of the Wilds you've walked this wick. Drag it, zoom it
   with the wheel, a pinch or + and −, and it opens close up on you. The
@@ -23,6 +32,19 @@ the game can show the first part as "What's new":
 - **Riding is on V now** (M opens the map). The saddle button works as before.
 
 ### Technical
+
+- Generated camp combat runs in per-chunk server rooms, delivered to each
+  player's surrounding window, with prediction, interpolation and a 250 ms
+  rewind cap. Every camp uses this path by default; curated story fights remain
+  personal. Prototype camp-selection flags are removed.
+- Migration 035 stores camp falls, witnesses and per-cycle claims. Fallen camps
+  survive sleeping rooms and server restarts; claims require server completion
+  and a recorded witness. Live fights reset after 30 seconds without observers.
+- Signature tuning is shared content with Go/TypeScript vectors. Room lifecycle,
+  beetles, abilities, camp scaling, completion and client lifetimes have regression
+  coverage. Profiling and fight metrics use an optional loopback admin listener;
+  near reads and claims expose request timings. An isolated socket load tool,
+  phone performance scenario and real two-client CI gate measure shared fights.
 
 - `src/ui/WorldMap.svelte` is an App panel (`'map'`), drawn by a bounded
   renderer (`src/ui/map-renderer.ts`: a viewport-sized canvas, cached chunk

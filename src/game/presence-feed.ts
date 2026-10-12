@@ -22,7 +22,7 @@
 import { PresenceClient, sharedRoom, type PresenceStatus, type SocketLike, type Timers } from '../lib/presence-client.ts'
 import { FightInterp } from '../lib/fight-interp.ts'
 import { FIGHT_OPTIONS } from '../lib/fight-options.ts'
-import type { FightSwingIntent } from '../lib/presence.ts'
+import type { FightCastIntent, FightSwingIntent } from '../lib/presence.ts'
 import { PeerTrack } from '../lib/presence-interp.ts'
 import type { PresenceAvatar, PresencePlayer, PresencePose, PresencePosition } from '../lib/presence.ts'
 import { EV, type AbilityCastPayload, type EmotePayload, type EventMap, type PresencePayload } from './event-names.ts'
@@ -68,14 +68,13 @@ export interface FeedDeps {
   cancel?: (handle: unknown) => void
   /** Clock for interpolation samples (ms). */
   now?: () => number
-  fights?: boolean
   latency?: { lag: number; jitter: number }
 }
 
 export class PresenceFeed {
   readonly client: PresenceClient
+  /** Every generated camp's server enemies, as this socket observes them (no flag, no local fallback). */
   readonly fights: FightInterp
-  readonly serverFights: boolean
   private swingCounter = 0
   private peers = new Map<string, Peer>()
   private area: string | null = null
@@ -92,7 +91,6 @@ export class PresenceFeed {
     this.link = deps.link
     this.bus = deps.bus
     this.now = deps.now ?? (() => (typeof performance !== 'undefined' ? performance.now() : Date.now()))
-    this.serverFights = deps.fights ?? FIGHT_OPTIONS.enabled
     this.fights = new FightInterp(this.now)
     const every = deps.every ?? ((fn: () => void, ms: number) => setInterval(fn, ms))
     this.cancel = deps.cancel ?? ((h) => clearInterval(h as ReturnType<typeof setInterval>))
@@ -105,7 +103,6 @@ export class PresenceFeed {
         unsentFight: counter => this.fights.unsent(counter),
         ready: () => { this.fights.clear(); this.swingCounter = 0 },
         fight: (m) => {
-          if (!this.serverFights) return
           if (m.type === 'fightJoin') {
             if (m.roomKey && sharedRoom(`wilds:${m.roomKey.cx}:${m.roomKey.cy}`, this.area)) this.fights.join(m)
           }
@@ -183,16 +180,21 @@ export class PresenceFeed {
     return sent
   }
 
-  /** A move was cast here: the room sees it (crafts.md 4.5). */
-  ability(id: string, x: number, y: number): boolean {
-    return this.client.ability(id, x, y)
+  /**
+   * A move was cast here: the room sees it (crafts.md 4.5). With a fight part
+   * (contract 10 FightCast) the socket's allowAbility owns its cost and the
+   * rooms apply it; one result answers its counter.
+   */
+  ability(id: string, x: number, y: number, fight?: FightCastIntent): boolean {
+    const sent = this.client.ability(id, x, y, fight)
+    if (sent && fight) this.fights.sent(fight.swingCounter, fight.predicted)
+    return sent
   }
 
   /** Allocate from one socket sequence, including casts. */
   nextSwing(): number { const counter = this.swingCounter; this.swingCounter = (counter + 1) >>> 0; return counter }
 
   swing(swing: FightSwingIntent): boolean {
-    if (!this.serverFights) return false
     const sent = this.client.swing(swing)
     if (sent) this.fights.sent(swing.swingCounter, swing.predicted)
     return sent

@@ -21,7 +21,6 @@
  */
 import Phaser from 'phaser'
 import { ServerEnemies } from './server-enemies'
-import { FIGHT_OPTIONS } from '../../lib/fight-options'
 import type { FightTargetRef } from '../../lib/presence'
 import type { GameState } from '../../lib/state'
 import { sfx } from '../sfx'
@@ -88,10 +87,10 @@ export interface EnemySight {
 
 /**
  * Who owns an enemy's fight (shared-fights.md 1.3, 1.4; game F7). This
- * screen owns the curated fights (the woodland's, the Warden) and every camp
- * until the server runs them: behaviour on Phaser bodies, hits decided at
- * once. A server camp's owner draws the room's snapshots and waits for the
- * server's word on a hit; death plays on its event.
+ * screen owns the curated fights (the woodland's, the Warden): behaviour on
+ * Phaser bodies, hits decided at once. Every generated camp is the server's
+ * (./server-enemies.ts): its owner draws the room's snapshots and waits for
+ * the server's word on a hit; death plays on its event. No camp has a local path.
  */
 export interface EnemyOwner {
   /** Every frame, even while this player's play is held (a menu open): what the world shows of it. */
@@ -127,8 +126,10 @@ export class EnemySystem {
   /** The ruin's warden (./warden.ts) and the creatures' behaviour (./creatures.ts). */
   readonly warden: WardenEncounter
   readonly creatures: Creatures
-  /** This screen as an owner: every enemy today (see EnemyOwner). */
+  /** The Wilds' generated camps, drawn from their server rooms (see EnemyOwner). */
   private server: ServerEnemies | null = null
+  /** Dev only: every creature set aside, server ones as they arrive too (parkAll). */
+  parkedAll = false
   private readonly local: EnemyOwner = {
     stopped: (enemy, seconds) => this.stagger(enemy, seconds),
     // Held play holds a local enemy still: its behaviour is all in act.
@@ -163,7 +164,7 @@ export class EnemySystem {
       else this.warden.placeRestingWarden(roadStep(state) === 'new' || roadStep(state) === 'accepted' ? 'dormant' : 'settled')
     }
     this.hpBars = scene.add.graphics().setDepth(5000)
-    if (world.areaId === 'wilds' && FIGHT_OPTIONS.enabled) this.server = new ServerEnemies(this)
+    if (world.areaId === 'wilds') this.server = new ServerEnemies(this)
   }
 
   get enemies(): Enemy[] {
@@ -190,9 +191,12 @@ export class EnemySystem {
    * Dev only: set every live creature aside, off the map and frozen, so a
    * playtest can work a chunk without a wisp wandering into the hero. Not
    * a defeat: nothing is claimed, and the next build of the area brings
-   * them back.
+   * them back. Server camps' enemies, now and as their rows arrive, are
+   * parked on this screen only (./server-enemies.ts): drawn and touched off
+   * the map while their room goes on; their camps stay standing, unfallen.
    */
   parkAll(): number {
+    this.parkedAll = true
     let n = 0
     for (const e of this._enemies) {
       if (e.dead || e.parked || e.type === 'guardian') continue
@@ -351,30 +355,12 @@ export class EnemySystem {
   }
 
   /**
-   * A Wilds camp enemy, spawned by the region's entity layer (not WorldData).
-   * Their deaths are the camp's own lifecycle — never recorded in
-   * defeatedEnemies (camps respawn on their cycle, unlike curated enemies).
+   * A server camp's enemy, drawn by ./server-enemies.ts from its room's rows.
+   * Its death is the room's, never recorded in defeatedEnemies (camps come
+   * back each cycle, unlike curated enemies).
    */
   spawnWilds(id: string, type: EnemyType, tx: number, ty: number): Enemy {
     return this.spawnEnemy(id, type, tx, ty)
-  }
-
-  /** Replace the prototype's local copies when a server join advertises it. */
-  removeLocalCamp(camp: string): void {
-    for (const enemy of [...this._enemies]) if (!enemy.fight && enemy.id.startsWith(`wilds:${camp}:`)) {
-      if (enemy.sprite.active) enemy.sprite.destroy()
-      this.forget(enemy)
-    }
-  }
-
-  /**
-   * Camps are leashed to their chunk (open-map.md 2.5): when the open map's
-   * window lets a chunk go, its camps' creatures go with it (they come back,
-   * at full health, if the camp is still lived in when the chunk returns).
-   */
-  removeWilds(prefix: string): void {
-    for (const e of this._enemies) if (!e.fight && e.id.startsWith(prefix) && e.sprite.active) e.sprite.destroy()
-    this._enemies = this._enemies.filter((e) => !!e.fight || !e.id.startsWith(prefix))
   }
 
   /** `hp`: a curated spot's own health (the opening's finger-wisp), else the type's. */
