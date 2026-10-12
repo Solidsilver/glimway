@@ -58,8 +58,9 @@ export function watchPlayInsets(touch: boolean, onDocks: (docks: Docks) => void)
       return el && el.offsetHeight > 0 ? el.getBoundingClientRect() : null
     }
     // The cluster: the action button and the roll/cast column. The belt's
-    // small buttons arc above it as an overlay: the docks keep clear of
-    // them, the camera only in landscape (where the hero walks beside them).
+    // small buttons arc above it and are real visible HUD (the belt always
+    // has the weapon and the hands), so the camera keeps the hero clear of
+    // them too, in either orientation.
     const union = (rs: (DOMRect | null)[]) => {
       const r = rs.filter((x): x is DOMRect => !!x)
       return r.length ? { top: Math.min(...r.map((x) => x.top)), left: Math.min(...r.map((x) => x.left)) } : null
@@ -72,7 +73,7 @@ export function watchPlayInsets(touch: boolean, onDocks: (docks: Docks) => void)
       const left = Math.min(cluster?.left ?? vw, ring?.left ?? vw)
       setPlayInsets({ top: hudBottom, right: cluster ? vw - left : 0, bottom: 0, left: pad ? pad.right : 0 })
     } else {
-      const tops = [cluster?.top, pad?.top].filter((t): t is number => t !== undefined)
+      const tops = [cluster?.top, pad?.top, ring?.top].filter((t): t is number => t !== undefined)
       setPlayInsets({ top: hudBottom, right: 0, bottom: tops.length ? vh - Math.min(...tops) : 0, left: 0 })
     }
     const controls = cluster ? Math.round(vh - Math.min(cluster.top, ring?.top ?? vh) + 10) : undefined
