@@ -280,6 +280,8 @@ func (a *Server) presenceReader(p *presencePeer) {
 			encoded, encodeErr = encodePresence(&contract.PresenceEmote{Id: emote.Id, AccountId: proto.String(p.identity.ID)})
 		}
 		now := time.Now()
+		// rejoin: covers a first join announces again, submitted off h.mu.
+		var rejoin []fightCover
 		h.mu.Lock()
 		if h.peers[p.identity.ID] != p || p.ctx.Err() != nil {
 			h.mu.Unlock()
@@ -299,9 +301,19 @@ func (a *Server) presenceReader(p *presencePeer) {
 				continue
 			}
 			p.lastJoin = now
+			// The socket's first join: the rooms it covers already (inherited
+			// at registration from a socket in its leave grace) were announced
+			// before the client named its area, so they are announced again.
+			// A later join (a chunk crossing) keeps its rooms as they are.
+			first := !p.clientJoined
+			p.clientJoined = true
 			if p.area == event.Join.Area {
 				h.room(p)
+				if first {
+					rejoin = h.rejoinFights(p)
+				}
 				h.mu.Unlock()
+				h.submitFightCovers(p, rejoin)
 				continue
 			}
 			n := 0
@@ -329,6 +341,9 @@ func (a *Server) presenceReader(p *presencePeer) {
 			}
 			p.area = event.Join.Area
 			h.retainFightCoverage(p)
+			if first {
+				rejoin = h.rejoinFights(p)
+			}
 			h.room(p)
 			h.broadcast(p, &contract.PresenceJoin{Area: p.area, Player: p.player()})
 		case *contract.PresenceMessage_Pos:
@@ -409,6 +424,7 @@ func (a *Server) presenceReader(p *presencePeer) {
 			return
 		}
 		h.mu.Unlock()
+		h.submitFightCovers(p, rejoin)
 		if message.GetPos() != nil || message.GetJoin() != nil {
 			a.syncFightPresence(p)
 		}

@@ -401,6 +401,21 @@ export async function expectTarget(page: Page, id: string, seconds = 3): Promise
 }
 
 /**
+ * Open ground around a world tile, as standing spots (feet, world px): the
+ * tiles one and two out from it that are not solid, nearest ring first.
+ */
+export async function spotsAround(page: Page, at: { tx: number; ty: number }): Promise<{ x: number; y: number }[]> {
+  return page.evaluate(([x0, y0]) => {
+    const solid = (window as unknown as { __fsTileSolid: (x: number, y: number) => boolean }).__fsTileSolid
+    const out: { x: number; y: number }[] = []
+    for (const r of [1, 2])
+      for (let dy = -r; dy <= r; dy++)
+        for (let dx = -r; dx <= r; dx++) if (Math.max(Math.abs(dx), Math.abs(dy)) === r && !solid(x0 + dx, y0 + dy)) out.push({ x: (x0 + dx) * 16 + 8, y: (y0 + dy) * 16 + 8 })
+    return out
+  }, [at.tx, at.ty] as const)
+}
+
+/**
  * Stand where the game elects `id`: the first of `spots` (feet, world px)
  * whose target is it, by `targetAt`; the hero is set down there and the
  * election seen to hold. Null (with `why` filled) when none of them works.

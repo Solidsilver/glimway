@@ -74,13 +74,16 @@ type presencePeer struct {
 	authFailures                 int
 	authCheck, authApplied       uint64
 	detached                     bool
-	grace                        *time.Timer
-	fightToken                   string
-	critSeed, lastCounter        uint32
-	hasCounter                   bool
-	lastSwing                    time.Time
-	fightRooms                   map[uint32]*presenceFightRoom
-	fightJoined                  map[uint32]bool
+	// clientJoined: this socket's client has named an area (its first Join).
+	// Rooms covered before that were announced before it could take them.
+	clientJoined          bool
+	grace                 *time.Timer
+	fightToken            string
+	critSeed, lastCounter uint32
+	hasCounter            bool
+	lastSwing             time.Time
+	fightRooms            map[uint32]*presenceFightRoom
+	fightJoined           map[uint32]bool
 }
 
 // stop never does network I/O while holding the hub lock. The writer sends the

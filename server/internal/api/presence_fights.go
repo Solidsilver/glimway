@@ -266,27 +266,7 @@ func (a *Server) syncFightRooms(p *presencePeer, wake bool) bool {
 		covers = append(covers, h.coverFightRoom(p, room))
 	}
 	h.mu.Unlock()
-	// The actors take their covers off h.mu: a full queue or a woken actor
-	// goroutine never holds up the hub.
-	var refused []fightCover
-	for _, c := range covers {
-		if !c.room.actor.Submit(c.cmd) && c.cmd.Join {
-			refused = append(refused, c)
-		}
-	}
-	if len(refused) == 0 {
-		return true
-	}
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	for _, c := range refused {
-		// Closing rooms and full queues are transient. Do not subscribe before
-		// a cover is admitted; the next position report retries with a full
-		// join. A join that landed meanwhile (another report's cover) stays.
-		if p.fightRooms[c.room.handle] == c.room && !p.fightJoined[c.room.handle] {
-			h.unviewFightRoom(p, c.room)
-		}
-	}
+	h.submitFightCovers(p, covers)
 	return true
 }
 
@@ -431,20 +411,80 @@ func (a *Server) fightFell(f fights.Fall) {
 }
 
 // fightCover is one room's cover of a player, built under h.mu and
-// submitted to the room's actor after it.
+// submitted to the room's actor after it (submitFightCovers).
 type fightCover struct {
 	room *presenceFightRoom
 	cmd  fights.Command
+	// rejoin: the socket covered the room already (rejoinFights); a
+	// refused rejoin leaves the room, so the next position report covers
+	// it anew with a full join, and the actor never keeps a ghost member.
+	rejoin bool
+}
+
+// fightPlayer is this socket's player as a room covers it; callers hold h.mu
+// and p.pos is set.
+func (h *presenceHub) fightPlayer(p *presencePeer) *fights.Player {
+	return &fights.Player{ID: p.identity.ID, Observer: h.fightObserver(p), Seed: p.critSeed, X: p.pos.X, Y: p.pos.Y, Down: p.identity.Magic.Down, Kit: p.identity.Magic.Kit}
 }
 
 // coverFightRoom records that p covers room and prepares the room's cover
 // of them; callers hold h.mu and submit the cover after releasing it.
 func (h *presenceHub) coverFightRoom(p *presencePeer, room *presenceFightRoom) fightCover {
-	token := h.fightObserver(p)
 	join := p.fightRooms[room.handle] == nil
 	h.viewFightRoom(p, room)
-	player := &fights.Player{ID: p.identity.ID, Observer: token, Seed: p.critSeed, X: p.pos.X, Y: p.pos.Y, Down: p.identity.Magic.Down, Kit: p.identity.Magic.Kit}
-	return fightCover{room: room, cmd: fights.Command{Player: player, Join: join}}
+	return fightCover{room: room, cmd: fights.Command{Player: h.fightPlayer(p), Join: join}}
+}
+
+// submitFightCovers hands covers built under h.mu to their actors without
+// it: a full queue or a woken actor goroutine never holds up the hub.
+// Closing rooms and full queues are transient: a refused first join is
+// un-viewed, never subscribed before its cover is admitted, and the next
+// position report retries with a full join; a join that landed meanwhile
+// (another report's cover) stays. A refused rejoin leaves the room.
+func (h *presenceHub) submitFightCovers(p *presencePeer, covers []fightCover) {
+	var refused []fightCover
+	for _, c := range covers {
+		if !c.room.actor.Submit(c.cmd) && c.cmd.Join {
+			refused = append(refused, c)
+		}
+	}
+	if len(refused) == 0 {
+		return
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	for _, c := range refused {
+		if p.fightRooms[c.room.handle] != c.room {
+			continue
+		}
+		if c.rejoin {
+			h.leaveFightRoom(p, c.room.handle, true)
+		} else if !p.fightJoined[c.room.handle] {
+			h.unviewFightRoom(p, c.room)
+		}
+	}
+}
+
+// rejoinFights announces every room this socket covers to its client again:
+// each publishes its baseline (a FightJoin) to this observer. For a socket's
+// first client Join (presenceReader): a socket opened inside the leave grace
+// inherits the old one's area and cover (presenceSocket), so its rooms join
+// at registration, before the client has named its area, and the client
+// takes fight frames only for the area it has announced (presence-client.ts).
+// A page reloaded in the Wilds would otherwise draw no server enemies until
+// a room woke anew. A client that kept its area across the reconnect gets a
+// second join, a refresh. Callers hold h.mu and hand the covers to
+// submitFightCovers after releasing it; a refused one leaves its room, so
+// the next position report covers it again with a fresh full join.
+func (h *presenceHub) rejoinFights(p *presencePeer) []fightCover {
+	if p.pos == nil {
+		return nil
+	}
+	covers := make([]fightCover, 0, len(p.fightRooms))
+	for _, room := range sortedFightRooms(p) {
+		covers = append(covers, fightCover{room: room, cmd: fights.Command{Player: h.fightPlayer(p), Join: true}, rejoin: true})
+	}
+	return covers
 }
 
 var fightValidator = sync.OnceValue(func() protovalidate.Validator {

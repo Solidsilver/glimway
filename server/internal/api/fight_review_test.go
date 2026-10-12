@@ -144,6 +144,23 @@ func addTickedFightRoom(t *testing.T, a *Server, p *presencePeer, handle uint32,
 	return tr
 }
 
+// settle waits until the room's actor has handled every command submitted so
+// far. Its select may take a ready tick before a queued command, so a test
+// that ticks right after a swing would otherwise race the swing (seen under
+// -race in CI). An unknown Clear is a no-op that answers in input order.
+func (tr tickedFightRoom) settle(t *testing.T) {
+	t.Helper()
+	done := make(chan fights.Cleared, 1)
+	if !tr.room.actor.Submit(fights.Command{Clear: "settle", Cleared: done}) {
+		t.Fatal("the room refused the barrier")
+	}
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("the room never reached the barrier")
+	}
+}
+
 // hurt is the enemy rows a room's deltas so far took damage on.
 func (tr tickedFightRoom) hurt() int {
 	n := 0
@@ -191,6 +208,8 @@ func TestBoltLandsOnceAcrossAdjacentRooms(t *testing.T) {
 					h.handleFightCast(p, castFor("fingersnap", -60, 112, 1, 5, predicted...))
 				}
 				h.mu.Unlock()
+				west.settle(t)
+				east.settle(t)
 				order := []tickedFightRoom{west, east}
 				if !westFirst {
 					order = []tickedFightRoom{east, west}
