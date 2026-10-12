@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/coder/websocket"
 	"glimway/content"
+	"glimway/server/internal/fights"
 	contract "glimway/server/internal/gen/glimway/v2"
 	"glimway/server/internal/rules"
 	"google.golang.org/protobuf/proto"
@@ -71,6 +72,12 @@ type presencePeer struct {
 	authCheck, authApplied       uint64
 	detached                     bool
 	grace                        *time.Timer
+	fightToken                   string
+	critSeed, lastCounter        uint32
+	hasCounter                   bool
+	lastSwing                    time.Time
+	fightRooms                   map[uint32]*presenceFightRoom
+	fightJoined                  map[uint32]bool
 }
 
 // stop never does network I/O while holding the hub lock. The writer sends the
@@ -104,7 +111,14 @@ type presenceHub struct {
 	// afterFunc schedules a ward's pulses. Production hands them to
 	// time.AfterFunc; the tests fire them by hand, so no ward test sleeps in
 	// real time (review finding 12).
-	afterFunc func(time.Duration, func())
+	afterFunc                func(time.Duration, func())
+	fightLoad                sync.Mutex // lifecycle loading, never held by a tick
+	fightRooms               map[fights.Key]*presenceFightRoom
+	fightHandle              uint32
+	fightLocations           map[fightLocation]fightLocationEpoch
+	fightFailedWakes         map[fights.Key]bool
+	fightSocket, fightAttack uint64
+	fightGathers             sync.WaitGroup
 }
 
 // Account generations live only while physical reservations exist. A socket
@@ -130,7 +144,7 @@ func newPresenceHub(c *content.Presence, now func() time.Time) *presenceHub {
 	// The hub mutates nothing and shares no slice: work on a clone, never
 	// on the shared rules table.
 	config = proto.Clone(config).(*content.Presence)
-	return &presenceHub{peers: map[string]*presencePeer{}, accounts: map[string]*presenceAccount{}, sessions: map[string]int{}, sockets: map[*websocket.Conn]struct{}{}, drained: make(chan struct{}), config: config, abilityReady: map[string]map[string]time.Time{}, ward: map[string]*wardCredit{}, wardReserved: map[wardKey]*wardReservation{}, clock: now, afterFunc: func(d time.Duration, f func()) { time.AfterFunc(d, f) }}
+	return &presenceHub{fightLocations: map[fightLocation]fightLocationEpoch{}, fightFailedWakes: map[fights.Key]bool{}, fightRooms: map[fights.Key]*presenceFightRoom{}, peers: map[string]*presencePeer{}, accounts: map[string]*presenceAccount{}, sessions: map[string]int{}, sockets: map[*websocket.Conn]struct{}{}, drained: make(chan struct{}), config: config, abilityReady: map[string]map[string]time.Time{}, ward: map[string]*wardCredit{}, wardReserved: map[wardKey]*wardReservation{}, clock: now, afterFunc: func(d time.Duration, f func()) { time.AfterFunc(d, f) }}
 }
 
 // now is the server's clock (config's, or the wall clock for a bare hub).
@@ -247,6 +261,7 @@ func (h *presenceHub) remove(p *presencePeer) {
 	if p.grace != nil {
 		p.grace.Stop()
 	}
+	h.leaveFights(p, false)
 	delete(h.peers, p.identity.ID)
 	if p.area != "" {
 		h.broadcast(p, &contract.PresenceLeave{AccountId: p.identity.ID})
@@ -259,6 +274,7 @@ func (h *presenceHub) detach(p *presencePeer) {
 	if h.peers[p.identity.ID] != p {
 		return
 	}
+	h.leaveFights(p, false)
 	p.detached = true
 	if h.closing {
 		h.remove(p)
@@ -276,6 +292,10 @@ func (a *Server) ClosePresence() {
 		p.stop(websocket.StatusGoingAway, "server-shutdown")
 		h.remove(p)
 	}
+	actors := make([]*fights.Actor, 0, len(h.fightRooms))
+	for _, room := range h.fightRooms {
+		actors = append(actors, room.actor)
+	}
 	sockets := make([]*websocket.Conn, 0, len(h.sockets))
 	for conn := range h.sockets {
 		sockets = append(sockets, conn)
@@ -284,6 +304,13 @@ func (a *Server) ClosePresence() {
 		h.drainOnce.Do(func() { close(h.drained) })
 	}
 	h.mu.Unlock()
+	for _, actor := range actors {
+		actor.Stop()
+	}
+	for _, actor := range actors {
+		<-actor.Done()
+	}
+	h.fightGathers.Wait()
 	// HTTP Shutdown does not wait for hijacked connections, including sockets
 	// still waiting for auth. Close them concurrently and bound the drain.
 	if first {
@@ -307,6 +334,7 @@ func (h *presenceHub) moveWorld(p *presencePeer, world string) {
 	if p.area != "" {
 		h.broadcast(p, &contract.PresenceLeave{AccountId: p.identity.ID})
 	}
+	h.leaveFights(p, true)
 	p.identity.World = world
 	p.pos = nil
 	if p.area == "" {

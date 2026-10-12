@@ -23,10 +23,10 @@ func (a *Server) presenceIdentity(ctx context.Context, session string, withAvata
 	v.Session = session
 	var source string
 	var lease sql.NullString
-	var levelMark float64
+	var levelMark, hp float64
 	var classMark string
 	now := a.Config.Now().Unix()
-	err := a.Store.DB.QueryRowContext(ctx, `SELECT p.account_id,p.world_id,p.display_name,p.profile_source,p.lease_id,x.level_mark,COALESCE(x.class_mark,'') FROM sessions s JOIN sign_ins i ON i.account_id=s.account_id AND i.method='habitica' JOIN allowlist l ON l.habitica_id=i.subject JOIN players p ON p.account_id=s.account_id JOIN sync_baselines x ON x.account_id=p.account_id WHERE s.id_hash=? AND s.expires_at>? AND s.created_at>?`, session, now, now-int64(SessionTTL.Seconds())).Scan(&v.ID, &v.World, &v.Name, &source, &lease, &levelMark, &classMark)
+	err := a.Store.DB.QueryRowContext(ctx, `SELECT p.account_id,p.world_id,p.display_name,p.profile_source,p.lease_id,x.level_mark,COALESCE(x.class_mark,''),v.hp FROM sessions s JOIN sign_ins i ON i.account_id=s.account_id AND i.method='habitica' JOIN allowlist l ON l.habitica_id=i.subject JOIN players p ON p.account_id=s.account_id JOIN sync_baselines x ON x.account_id=p.account_id JOIN player_vitals v ON v.account_id=p.account_id WHERE s.id_hash=? AND s.expires_at>? AND s.created_at>?`, session, now, now-int64(SessionTTL.Seconds())).Scan(&v.ID, &v.World, &v.Name, &source, &lease, &levelMark, &classMark, &hp)
 	if err == sql.ErrNoRows {
 		return v, fail(401, "unauthorized")
 	}
@@ -44,8 +44,9 @@ func (a *Server) presenceIdentity(ctx context.Context, session string, withAvata
 	if err != nil {
 		return v, err
 	}
+	v.Magic = presenceMagicFor(p, classMark, levelMark)
+	v.Magic.Down = hp <= 0
 	if p != nil {
-		v.Magic = presenceMagicFor(p, classMark, levelMark)
 		if withAvatar {
 			// The avatar carries the resolved companions, not the profile's
 			// own picks (2.4), and the wardrobe's resolved look (4.4).
@@ -110,7 +111,7 @@ func (a *Server) checkPresence(parent context.Context, p *presencePeer) {
 	code, reason, world, magic, err := a.revalidatePresence(ctx, p, known)
 	cancel()
 	h.mu.Lock()
-	defer h.mu.Unlock()
+	defer func() { h.mu.Unlock(); a.syncFightPresence(p) }()
 	// A newer play/logout or registration invalidates this query's result.
 	if h.peers[p.identity.ID] != p || p.account.generation != generation || check < p.authApplied {
 		return

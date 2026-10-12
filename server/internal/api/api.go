@@ -45,6 +45,8 @@ type Config struct {
 	WildsGenerator chunks.Generator
 	// Nil uses the shared presence defaults. Intended for embedded-server configuration.
 	Presence *content.Presence
+	// FightPrototypeCamp selects one wisp-only Tangle camp; empty disables it.
+	FightPrototypeCamp string
 	// PartyAdmissionOff: no one signs in through a party, and no party's
 	// world is made (-party-admission=false). Party worlds already made stay.
 	PartyAdmissionOff bool
@@ -121,6 +123,12 @@ func New(s *store.Store, h habitica.Upstream, c Config) *Server {
 	}
 	if c.Logger == nil {
 		c.Logger = log.New(io.Discard, "", 0)
+	}
+	if c.FightPrototypeCamp != "" {
+		if _, _, err := FightPrototypeChunk(c.FightPrototypeCamp); err != nil {
+			c.Logger.Printf("fight prototype disabled: invalid camp identity")
+			c.FightPrototypeCamp = ""
+		}
 	}
 	sr := story.Rules{Chunks: c.Chunks, Epochs: c.Epochs, Now: c.Now}
 	if c.Story == nil {
