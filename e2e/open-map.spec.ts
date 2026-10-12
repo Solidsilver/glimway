@@ -342,15 +342,20 @@ test('two players in neighbouring chunks see each other; two chunks apart they d
 type SceneSize = { list: number; tweens: number; statics: number; kinds: Record<string, number> }
 const sceneSize = (p: Page) => p.evaluate(() => (window as unknown as { __fsSceneSize: () => SceneSize }).__fsSceneSize())
 
-/** The nearest open tile to (tx, ty), searched outward (the open map answers by world tile). */
-const openNear = (p: Page, tx: number, ty: number) =>
-  p.evaluate(([x0, y0]) => {
+/** The nearest open tile to (tx, ty), searched outward within any supplied bounds. */
+const openNear = (p: Page, tx: number, ty: number, bounds: Parameters<typeof route>[1] = {}) =>
+  p.evaluate(([x0, y0, b]) => {
     const solid = (window as unknown as { __fsTileSolid: (x: number, y: number) => boolean }).__fsTileSolid
     for (let r = 0; r < 12; r++)
       for (let dy = -r; dy <= r; dy++)
-        for (let dx = -r; dx <= r; dx++) if (Math.max(Math.abs(dx), Math.abs(dy)) === r && !solid(x0 + dx, y0 + dy)) return { tx: x0 + dx, ty: y0 + dy }
+        for (let dx = -r; dx <= r; dx++) {
+          const x = x0 + dx
+          const y = y0 + dy
+          if (b.minTx !== undefined && x < b.minTx || b.maxTx !== undefined && x > b.maxTx || b.minTy !== undefined && y < b.minTy || b.maxTy !== undefined && y > b.maxTy) continue
+          if (Math.max(Math.abs(dx), Math.abs(dy)) === r && !solid(x, y)) return { tx: x, ty: y }
+        }
     return null
-  }, [tx, ty] as const)
+  }, [tx, ty, bounds] as const)
 
 /** Stand on a tile, and wait until the window around it is whole (every chunk attached and built). */
 async function standAt(p: Page, at: { tx: number; ty: number }): Promise<void> {
@@ -406,17 +411,20 @@ test('stepping back and forth over a chunk edge builds and drops nothing; the 3Ã
   await warp(page, 'wilds', 12, -12)
   await waitForWilds(page)
   await page.evaluate(() => (window as unknown as { __fsDevParkCreatures: () => void }).__fsDevParkCreatures())
-  // Two tiles south of the edge between (0, -1) and (0, -2), and two north of it.
-  const south = (await openNear(page, 12, -S + 2))!
-  const north = (await openNear(page, 12, -S - 3))!
-  expect(Math.floor(south.ty / S), 'south of the edge').toBe(-1)
-  expect(Math.floor(north.ty / S), 'north of the edge').toBe(-2)
-  await standAt(page, south)
-  await standAt(page, north)
+  // Stay on the intended side and within the window's eight-tile retention
+  // slack: a search through solid ground must not cross the edge itself.
+  const south = await openNear(page, 12, -S + 2, { minTx: 0, maxTx: S - 1, minTy: -S, maxTy: -S + 7 })
+  const north = await openNear(page, 12, -S - 3, { minTx: 0, maxTx: S - 1, minTy: -S - 8, maxTy: -S - 1 })
+  expect(south, 'open land just south of the edge').not.toBeNull()
+  expect(north, 'open land just north of the edge').not.toBeNull()
+  expect(Math.floor(south!.ty / S), 'south of the edge').toBe(-1)
+  expect(Math.floor(north!.ty / S), 'north of the edge').toBe(-2)
+  await standAt(page, south!)
+  await standAt(page, north!)
   const first = (await wildsWindow(page))!
   for (let i = 0; i < 5; i++) {
-    await standAt(page, south)
-    await standAt(page, north)
+    await standAt(page, south!)
+    await standAt(page, north!)
   }
   const after = (await wildsWindow(page))!
   expect({ attaches: after.attaches, drops: after.drops }, 'nothing built or dropped crossing back and forth').toEqual({ attaches: first.attaches, drops: first.drops })
