@@ -1,7 +1,7 @@
 /**
  * What this device has walked and seen in the open map, per wick
  * (docs/design/open-map.md 2.8, 2.10): the chunks you've been in and the
- * landmarks you've had on screen. It is a convenience for the Map tab, not
+ * landmarks you've had on screen. It is a convenience for the world map, not
  * server state: kept in localStorage under the wick epoch's id, the last
  * few wicks only, and empty (never failing) where storage is blocked.
  */

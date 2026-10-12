@@ -110,7 +110,7 @@ the connect UI is part of the normal Character panel.
 - Walking layer stack EXCLUDES pet/mount (`visualProfile` clone); a selected
   pet follows as a separate sprite at the avatar scale, and a petless sync
   clears the old follower (no duplicates).
-- **Mount riding** (M key, outdoors only; the village auto-dismounts) is
+- **Mount riding** (V key since the world map took M; outdoors only; the village auto-dismounts) is
   granted ONLY when both mount layers (body + head) actually load — an
   uncached mount is refused with a clear toast and never becomes an invisible
   speed boost. Dismount and fallback (zero layers load) restore the visible

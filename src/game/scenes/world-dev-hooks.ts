@@ -320,7 +320,11 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
     const view = wildsView()
     return { ...marks.debug(), discoveries: [...(view?.discoveries.values() ?? [])].map((d) => ({ id: d.entityId, by: d.discovererId, name: d.displayName })), places: knownPlaces() }
   })
-  on('__fsRumour', () => s['session'].link?.rumour ?? null)
+  on('__fsRumour', () => {
+    const link = s['session'].link
+    // `current`: read since the last turning (Link.rumourStale), so it's this wick's.
+    return link?.rumour ? { ...link.rumour, current: !link.rumourStale } : null
+  })
   // Playtests of the drift rule.
   on('__fsGather', () => {
     const gathering = s['gathering']

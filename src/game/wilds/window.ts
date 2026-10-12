@@ -403,7 +403,7 @@ export class WildsWindow {
     if (this.paintLog.length > PAINT_LOG_MAX) this.paintLog.shift()
   }
 
-  /** Landmarks on screen count as seen (kept on the device per wick, for the Map tab). */
+  /** Landmarks on screen count as seen (kept on the device per wick, for the world map). */
   private noteSeen(): void {
     const wick = wildsEpoch('wick').id
     if (!wick) return

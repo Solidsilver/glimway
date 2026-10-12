@@ -151,7 +151,7 @@ async function syncGlimBalance(page: Page): Promise<number> {
 }
 
 /** Read an open conversation (one the world opened on its own) to its end. */
-export async function readOn(page: Page, says: RegExp): Promise<void> {
+export async function readOn(page: Page, says: RegExp, opts: { timeout?: number } = {}): Promise<void> {
   const dialogue = page.getByRole('dialog', { name: /Conversation with/ })
   // The talk loop may already have read it (it follows the answer closely):
   // wait until a conversation saying it has opened since the last talk(),
@@ -161,7 +161,7 @@ export async function readOn(page: Page, says: RegExp): Promise<void> {
     .poll(async () => {
       const d = await dialogueState(page)
       return d.seen.some((x, i) => d.opened - d.seen.length + i >= from && says.test(x.text))
-    }, { message: `a conversation saying ${says}` })
+    }, { message: `a conversation saying ${says}`, ...(opts.timeout ? { timeout: opts.timeout } : {}) })
     .toBe(true)
   if (!(await dialogueState(page)).open) return
   // The open one is it (its whole text: the typewriter may still be going).

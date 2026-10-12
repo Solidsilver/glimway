@@ -22,6 +22,7 @@ import { lanternRestRate, refreshLanternVisuals, type LightProp } from '../area/
 import { bus, EV, listen, type DialogueClosedPayload, type RelocatePayload } from '../events'
 import { prefersReducedMotion } from '../sfx'
 import { heroScreen, uiBlocked, uiState } from '../input'
+import { clearMapPosition, publishMapPosition } from '../map-position'
 import { canvasRatio } from '../viewport'
 import { TILE, tileAt, tileCenter, tileMid } from '../../lib/tile'
 import type { Session } from '../session'
@@ -511,6 +512,7 @@ export class WorldScene extends Phaser.Scene {
       act: () => this.handleAction()
     })
     this.events.once('shutdown', () => {
+      clearMapPosition(this)
       // A restart mid-beat must never leave the HUD hidden and input blocked.
       if (this.cinematic) {
         this.cinematic = false
@@ -675,6 +677,8 @@ export class WorldScene extends Phaser.Scene {
     }
     this.hero.tick(dt)
     this.session.tickPlaySeconds(dt)
+    // Where you stand, for the world map: every frame, panels up too (src/game/map-position.ts).
+    if (!this.transitioning) publishMapPosition(this, this.world.areaId, this.session.link?.worldId ?? '', this.hero.sprite.x, this.hero.sprite.y)
 
     this.unmoored.update(time, dt)
 
@@ -1120,6 +1124,8 @@ export class WorldScene extends Phaser.Scene {
     opts: { fadeMs?: number | null; inDark?: () => unknown } = {}
   ): void {
     this.transitioning = true
+    // Where this scene's hero stood is no longer where you are: the map falls back to the save until the next scene says.
+    clearMapPosition(this)
     const state = this.session.state
     if (to.area !== undefined) state.area = to.area
     if (to.position) state.position = to.position

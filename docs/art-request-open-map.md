@@ -93,7 +93,7 @@ Moved here from the lamps request (`docs/art-request-lamps.md`), because 0.8 pla
 
 | Key | Canvas | Notes |
 |---|---:|---|
-| `icon-map-tab` | 32×32 | A tiny folded map with a path drawn on it, for the journal's Map tab; same frame and weight as the other tab icons |
+| `icon-map-tab` | 32×32 | A tiny folded map with a path drawn on it, for the journal's Map tab (now the HUD's world-map button, [world-map.md](design/world-map.md); same asset, no atlas change); same frame and weight as the other tab icons |
 
 Reused, no new art: the Tangle's woods pieces (`playtest1-pass`), the Whitequiet's birch and pine,
 nodes, camps and chests, and the `glow` image.

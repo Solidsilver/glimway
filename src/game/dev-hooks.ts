@@ -82,7 +82,7 @@ export interface FsHooks {
   /** Way signs drawn and places asked about, and the discoveries the store holds. */
   __fsMarks: () => (ReturnType<WildsMarks['debug']> & { discoveries: { id: string; by: string; name: string }[]; places: { id: string; kind: string; tx: number; ty: number }[] }) | null
   /** This wick's rumour as the link holds it. */
-  __fsRumour: () => ({ epoch: string; place: string; site: string; landmark: string; compass: string; ring: number; pastRiver: boolean; opened: boolean } | null)
+  __fsRumour: () => ({ epoch: string; place: string; site: string; landmark: string; compass: string; ring: number; pastRiver: boolean; opened: boolean; current: boolean } | null)
   /** The workable pieces of this area and, at home, the lamps whose light holds the ground. */
   __fsGather: () => {
     area: string

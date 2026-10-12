@@ -189,7 +189,7 @@ The follower's motion lives in `src/game/entities/avatar.ts` (`buildPetFollower`
 
 ### 3.1 What the player sees
 
-**Riding needs a stable.** Pressing M with no mount out says: *"Your mount needs somewhere to stand
+**Riding needs a stable.** Pressing V (M until the world map took it, [world-map.md](world-map.md) 1) with no mount out says: *"Your mount needs somewhere to stand
 at home first. A stable, maybe."* The "What's new" card says riding moved (6.6).
 
 **Building it.** After the Workshop (tier 2), the homestead's build list offers **the stable**
@@ -209,8 +209,8 @@ out with you. From then on:
 | State | What it means | How you get there |
 |---|---|---|
 | **In its stall** | Stands at home; visitors see it | The default, or after it's sent home |
-| **Ridden** | You're on it, faster outdoors (155 against 110 on foot, as today) | Saddle up at the stall, or M while it's on the lead |
-| **On the lead** | Walks behind you, beside your pet, a rope from your hand to its head | M while riding |
+| **Ridden** | You're on it, faster outdoors (155 against 110 on foot, as today) | Saddle up at the stall, or V while it's on the lead |
+| **On the lead** | Walks behind you, beside your pet, a rope from your hand to its head | V while riding |
 | **Going home** | Walks off the edge of the screen, then it's back in its stall | **Go home** (H, or the button) while you're off it |
 
 - **The village** stays a no-ride zone: at the gate you get down and lead it through, as the gate
@@ -843,7 +843,8 @@ until a stable, and ledger sums are unchanged.
 Under `[Unreleased] → ### For players` in `CHANGELOG.md`, in this order:
 
 - Riding has moved home. Build a stable after the Workshop, stall a mount, and set out from there:
-  M to ride or get down, and it follows you on a lead through the village.
+  V to ride or get down (M at the time; the world map took M, [world-map.md](world-map.md) 1), and it
+  follows you on a lead through the village.
 - Choose which of your pets walks with you, and up to three to live at home, in the Character
   panel's new Companions tab. Friends' pets follow them now too, and you can pet any of them.
 - At level 20 each class learns a second move: Stand, Kindle, Ward-light or Echo. It's on R, and

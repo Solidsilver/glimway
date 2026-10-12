@@ -21,7 +21,7 @@ const { forgetChunks, loadChunk } = await import('../src/game/wilds/chunks.ts');
 const { pathTileAt } = await import('../src/game/wilds/path-tile.ts');
 const { WildsPaths } = await import('../src/game/wilds/paths.ts');
 const { openRumourFind } = await import('../src/game/wilds/rumour-find.ts');
-const { mapInput, forgetMapRead } = await import('../src/game/wilds/map-data.ts');
+const { loadMap, forgetMapRead } = await import('../src/game/wilds/map-data.ts');
 const { pressGate, CLICK_AFTER_DOWN_MS } = await import('../src/ui/press-gate.ts');
 const { AttachedChunk, BuildQueue } = await import('../src/game/wilds/window-chunk.ts');
 const { TERRAIN } = await import('../src/lib/tile.ts');
@@ -282,13 +282,13 @@ test('the Map reads an ended or stale wick again before drawing, once in a while
     },
   };
   const session = { state: { area: 'village' }, link: { online: true, status: 'online', api: { operations: api } } };
-  const first = await mapInput(session as never);
-  assert.ok(first);
+  const first = await loadMap(session as never);
+  assert.ok(first.input);
   assert.equal(reads, 1, 'the village visit’s Map reads the current wick');
   assert.equal(store.wildsEpoch('wick').id, 'next-wick');
   store.wildsView()!.stale = true;
-  await mapInput(session as never);
-  assert.equal(reads, 1, 'the tab redrawing on the read’s own news doesn’t read again at once');
+  await loadMap(session as never);
+  assert.equal(reads, 1, 'the map redrawing on the read’s own news doesn’t read again at once');
 });
 
 // ------------------------------------------------------------ 7. a way someone else broke

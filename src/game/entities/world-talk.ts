@@ -198,7 +198,7 @@ export class WorldTalk {
         if (id === 'elara' && placeArea(session.state) === LIBRARY) {
           payload = keeperTalk(payload, talk.first)
           // This wick's rumour (open-map.md 2.10): connected play only, the Wilds are the world's.
-          if (session.link) payload = withChoice(payload, elaraRumourChoice(session.link.rumour))
+          if (session.link) payload = withChoice(payload, elaraRumourChoice(session.link.rumourStale ? 'turned' : session.link.rumour))
         }
         // Another quest's start or reminder: after they've said their piece.
         if (step && !takes) payload = afterTheirTalk(payload, step)

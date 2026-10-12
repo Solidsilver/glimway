@@ -13,6 +13,25 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+### For players
+
+- **The world map.** Press **M** (or the new Map button at the top right) for
+  a full-screen map of the Wilds you've walked this wick. Drag it, zoom it
+  with the wheel, a pinch or + and −, and it opens close up on you. The
+  Journal is back to Quests, Papers and How do I…?, and the ways and places
+  lists are in the map's Details.
+- **Riding is on V now** (M opens the map). The saddle button works as before.
+
+### Technical
+
+- `src/ui/WorldMap.svelte` is an App panel (`'map'`), drawn by a bounded
+  renderer (`src/ui/map-renderer.ts`: a viewport-sized canvas, cached chunk
+  rasters, an overview for far-out views) through pure view maths
+  (`src/lib/wilds/map-view.ts`). `loadMap()` replaces `mapInput()`: it loads
+  eight chunks at a time and keeps the last picture of a chunk that fails. A
+  read-only live position (`src/game/map-position.ts`) is published by the
+  running WorldScene. Design: docs/design/world-map.md.
+
 ## [0.8.0] - 2026-10-11
 
 ### For players

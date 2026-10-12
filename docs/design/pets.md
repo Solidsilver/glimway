@@ -33,7 +33,7 @@ Topic from [ideas.md](../ideas.md) ("A pet overhaul"). Check every rule here aga
   the hero with a soft follow (`src/game/entities/avatar.ts`, `buildPetFollower`). It
   doesn't animate, react, sit or notice anything. No current pet on Habitica means no
   pet here.
-- **The mount.** M rides your Habitica current mount outdoors: 155 speed against 110 on
+- **The mount.** M rides your Habitica current mount outdoors (*then*; riding is behind the stable since 0.8 and on V since the world map took M, [world-map.md](world-map.md) 1): 155 speed against 110 on
   foot (about 1.4×) and a slightly faster dodge. The village is a no-ride zone, and you
   dismount on entering it. Riding is only allowed when both mount layers load.
 - **Other players.** Presence sends each hero's current pet and mount, but other
@@ -90,11 +90,11 @@ You don't summon a mount. You fetch it from its stall at home and set out with i
 | State | What it means | How you get there |
 |---|---|---|
 | **In its stall** | Stands at home; visitors see it | Default; or after it's sent home |
-| **Ridden** | You're on it, faster outdoors | Saddle up at the stall, or press M while it's on the lead |
-| **On the lead** | Walks behind you, beside your pet | Press M to get down and keep it with you |
+| **Ridden** | You're on it, faster outdoors | Saddle up at the stall, or press V while it's on the lead |
+| **On the lead** | Walks behind you, beside your pet | Press V to get down and keep it with you |
 | **Going home** | Walks off the edge of the screen, then it's back in its stall | "Go home" when you're off it |
 
-- **Getting down:** M gets you down with the mount on the lead, ready to ride again. "Go
+- **Getting down:** V (M before the world map, [world-map.md](world-map.md) 1) gets you down with the mount on the lead, ready to ride again. "Go
   home" is a separate button (on phones, in the action bar while a mount is out).
 - **The village** stays a no-ride zone: you lead your mount through it, as the gate toast
   already says.

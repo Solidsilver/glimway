@@ -51,7 +51,7 @@ import { adoptable, fallRecovery, gameStateOf, isClientMark, predictCompanions, 
 import { PurseTopUpRequestSchema, type PurseRead } from '../lib/gen/glimway/v1/purse_pb.js'
 import { OpHeaderSchema } from '../lib/gen/glimway/v1/op_pb.js'
 import { purseOf, topUpView, type PurseView, type TopUpView } from '../lib/purse.ts'
-import type { RumourParts } from '../lib/wilds/rumour.ts'
+import { rumourOfThisWick, type RumourParts } from '../lib/wilds/rumour.ts'
 import { CompanionsRequestSchema, MountHomeRequestSchema, MountOutRequestSchema, StableExtendRequestSchema, StallRequestSchema, type StableExtendResult, type StallResult } from '../lib/gen/glimway/v1/companions_pb.js'
 import { projectHome } from '../lib/api/homestead.ts'
 import { REPORT_INTERVAL_MS, ReportBook, type CapturedReport, type ReportAck } from '../lib/api/reports.ts'
@@ -503,6 +503,8 @@ export class Link {
     const record = init.record && init.record.account === init.accountId && init.record.device === init.device ? init.record : emptyRecord(init.accountId, init.device)
     const stored = record.server ? safeState(record.server) : null
     this.server = stored && stored.version > init.state.version ? stored : init.state
+    // Online, the state came with sign-in, read now; offline it's last session's (its rumour may be an ended wick's).
+    if (init.status === 'online') this.rumourReadAt = this.serverClock()
     // Read-only until this tab owns the record (`own` loads it again under the lock).
     this.entries = [...record.entries]
     this.nextId = record.nextId
@@ -761,6 +763,18 @@ export class Link {
   // ------------------------------------------------------------ the rumour (open-map.md 2.10)
 
   private rumourShown = ''
+  /** When (the world's clock) the state with the rumour was last read from the server; null: not on this page. */
+  private rumourReadAt: number | null = null
+
+  /**
+   * The turning has come since the rumour was read: the rumour held is the
+   * last wick's (or none was read yet), and a read is due. Elara doesn't
+   * name a place from it (src/game/entities/world-talk.ts), and the rumour
+   * watch keeps asking for the read until it lands (src/game/rumour-watch.ts).
+   */
+  get rumourStale(): boolean {
+    return !rumourOfThisWick(this.rumourReadAt, this.serverClock())
+  }
 
   /**
    * This wick's rumour as the server last said, or null (none this wick, or
@@ -836,6 +850,7 @@ export class Link {
     if (how === 'older' || (how === 'conflict' && !ctx.read)) return false
     const prev = this.server
     this.server = next
+    this.rumourReadAt = this.serverClock()
     if (next.account?.worldId) this.worldId = next.account.worldId
     if (next.account?.displayName) this.name = next.account.displayName
     const s = this.session

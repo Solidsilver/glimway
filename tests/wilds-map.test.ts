@@ -78,7 +78,7 @@ test('labels that would overlap at the size shown are left off, the most useful 
     { kind: 'way' as const, text: "Tansy's way", x: 120, y: 50 },
   ];
   assert.deepEqual(fitLabels(labels, 1).map((l) => l.kind).sort(), ['way', 'you']);
-  assert.deepEqual(fitLabels(labels, 6).map((l) => l.kind).sort(), ['gate', 'place', 'way', 'you'], 'zoomed in, all of them fit');
+  assert.deepEqual(fitLabels(labels, 7).map((l) => l.kind).sort(), ['gate', 'place', 'way', 'you'], 'zoomed in, all of them fit');
 });
 
 test('ways, places, the footprints, the gate and you are marked and labelled', () => {
@@ -143,4 +143,16 @@ test('the HUD names the meadow and the Wend past the Whitequiet, from the land t
     setWildsLand(null);
   }
   assert.equal(at(70, -100), 'wilds:beyond', 'with nothing loaded, the woods');
+});
+
+test('a label wholly off screen (yours too) never pushes out one that shows', () => {
+  const you = { kind: 'you' as const, text: 'You', x: -30, y: 10 };
+  const place = { kind: 'place' as const, text: 'Visible place', x: 20, y: 37 };
+  // Without the viewport, your label wins the overlap left of the screen.
+  assert.deepEqual(fitLabels([you, place], 1).map((l) => l.kind), ['you']);
+  // With it, yours is culled first and the place, partly on screen, shows.
+  assert.deepEqual(fitLabels([you, place], 1, { w: 100, h: 100 }).map((l) => l.kind), ['place']);
+  // A label partly on screen still counts.
+  const edge = { kind: 'way' as const, text: 'A way on the edge', x: 2, y: 60 };
+  assert.deepEqual(fitLabels([edge], 1, { w: 100, h: 100 }).map((l) => l.kind), ['way']);
 });

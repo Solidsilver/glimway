@@ -116,6 +116,12 @@ quests.
 **No map panel.** The journal has three tabs (`src/ui/JournalPanel.svelte`: Quests, Papers,
 How do I…?).
 
+> **Migration note (2026-10-11):** that's no longer the baseline. 0.8 had a Journal Map tab, and
+> it has since moved out to the full-screen **world map** on M (`src/ui/WorldMap.svelte`,
+> [world-map.md](world-map.md)); the Journal is back to these three tabs. The lamps pass builds
+> on that map: see the notes in decision 10, 2.6, 2.7, the art list and the e2e list below. No
+> lamp feature is built by the map work.
+
 **Next free migration: 034** (`server/internal/store/migrations/`, last `033_glims.sql`).
 **Contract: 7** (`content/contract.json`).
 
@@ -203,6 +209,9 @@ moves do. Lamps, oil, wicks, turncaps and ash are Glimway items made from Glimwa
    **lamp-ash pouch** to step back out to the lamp you named. Neither works mid-fight.
 10. **The ledger tab.** The journal's **Lamps** tab lists every lamp in the world, and shows a
     small grid: held land warm, turning land grey, the frontier's edge, and you.
+    *Migration note ([world-map.md](world-map.md) 6):* the ledger lives on the world map now, not in a Journal tab: a
+    **Lamps** layer control and a ledger in the map's Details, held land shaded warm on the map's
+    own terrain (no second grid). Same ledger contents; selecting a lamp centres its mark.
 
 ---
 
@@ -365,6 +374,11 @@ connection, like `fish-cast`):
   `lamp-set` and `lamp-relight`. (`NamePrompt.svelte` stays for homestead posts.)
 - **Set a way-lamp confirm:** `ConfirmDialog.svelte` with the cost list (have / need), the hold
   line and the distance.
+- *Migration note ([world-map.md](world-map.md) 6): replace this bullet with a Lamps layer and ledger on the world map
+  (`src/ui/WorldMap.svelte` Details, marks drawn through `src/ui/map-renderer.ts` and the same
+  view transform; on phones the ledger is the Details sheet with the map behind). The contents
+  below carry over; the separate SVG grid and the Journal tab don't. Naming and confirm UI stay in
+  their own flow; viewing the map grants no lamp capability.*
 - **Journal → Lamps tab** (`src/ui/JournalPanel.svelte`'s `Tab` gains `lamps`; new
   `src/ui/LampsTab.svelte`):
   - Lamps, newest first: short name, the naming sentence, who named it, *d* chunks out, and a
@@ -404,7 +418,8 @@ All in Opus's voice for the village. Mara is careful, dry and fond.
   - the turncap, ash and pouch descriptions;
   - the two recipe pages;
   - the hearth oil's corrected text;
-  - the Lamps tab's empty state ("No lamps yet past the Whitequiet.");
+  - the Lamps tab's empty state ("No lamps yet past the Whitequiet."), now the world map's
+    Lamps ledger's empty state ([world-map.md](world-map.md) 6);
   - the guide.
 
 ### 2.8 What changes in other docs (lane L-D, with the words)
@@ -438,7 +453,7 @@ the 0.7 look fixes, where angled props had to be redrawn).
 | Lamp ash | item icon | 64×64 | one | A pinch of grey ash with one warm fleck |
 | Lamp-ash pouch | item icon | 64×64 | one | A small drawstring pouch, ash-grey cloth |
 | Homing turncap | item icon | 64×64 | one | A turncap set in a bead of amber, stem pointing |
-| Lamps tab icon | UI icon | 32×32 | one | A tiny way-lamp, for the journal tab |
+| Lamps tab icon | UI icon | 32×32 | one | A tiny way-lamp, for the journal tab (*migration note:* for the world map's Lamps layer control instead, [world-map.md](world-map.md) 6) |
 
 No new resident, portrait or room. Mara's portrait exists. The naming slip reuses
 `item-naming-slip`. Name a lamp's icon exists (`crafts-pass`).
@@ -517,7 +532,8 @@ No new resident, portrait or room. Mara's portrait exists. The naming slip reuse
 
 - **`e2e/lamps.spec.ts`** (new): the Keeper's hand from Mara to the relit stone; the frontier
   opening (a chunk past the old edge now loads); setting a way-lamp with `POST /api/dev/grant`
-  materials; the naming panel; the Lamps tab lists it.
+  materials; the naming panel; the Lamps tab lists it (*migration note:* the world map's Lamps
+  ledger, opened with M and Details, `e2e/world-map.spec.ts` helpers; [world-map.md](world-map.md) 6).
 - **`e2e/frontier.spec.ts`** (new):
   - The edge turns you round.
   - After `POST /api/dev/clock` past the turning, a held chunk's layout is unchanged and an
@@ -529,7 +545,7 @@ No new resident, portrait or room. Mara's portrait exists. The naming slip reuse
   (you're at the lamp).
 - **`e2e/wilds-outer.spec.ts`:** still passes with no lamps (the base plays as today).
 - **Screens:** `wilds-screens.spec.ts` gets the way-lamp lit, a dark stone, the veil, and the
-  Lamps tab on desktop and phone.
+  Lamps tab on desktop and phone (*migration note:* the world map's Lamps layer and ledger; [world-map.md](world-map.md) 6).
 
 ---
 

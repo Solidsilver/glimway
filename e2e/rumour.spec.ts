@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import type { BrowserContext } from '@playwright/test'
-import { CONTRACT } from './connected'
+import { CONTRACT, calendarOnServer, wickSlack } from './connected'
 import { freshPlayer } from './home-helpers'
 import { dialogueState, expectToast, openTalk, untilChoices, untilLine, waitForLive, waitForWilds, warp, wilds } from './helpers'
 import { goIn, setHour } from './room-helpers'
@@ -11,13 +11,13 @@ import { rumourSentence } from '../src/lib/wilds/rumour.ts'
  * Elara tells this wick's rumour in the library; walking to it, the place is
  * found (first this wick: a small find, and your name on it); the bundle
  * under its landmark opens once; and someone else in the world sees who
- * found it, on the Map tab and when they get there.
+ * found it, on the world map and when they get there.
  * SCREENS=1 saves images to .agent/screens/.
  */
 
 const S = 24
 
-type Rumour = { epoch: string; place: string; site: string; landmark: string; compass: string; ring: number; pastRiver: boolean; opened: boolean }
+type Rumour = { epoch: string; place: string; site: string; landmark: string; compass: string; ring: number; pastRiver: boolean; opened: boolean; current: boolean }
 type Hooks = {
   __fsRumour: () => Rumour | null
   __fsMarks: () => { signs: string[]; asked: string[]; discoveries: { id: string; by: string; name: string }[]; places: { id: string; kind: string; tx: number; ty: number }[] } | null
@@ -37,10 +37,21 @@ const marks = (page: Page) => page.evaluate(() => (window as unknown as Hooks)._
 test('Elara tells the rumour; the place is found first and the bundle opens once; another player sees who found it', async ({ page, browser, baseURL }) => {
   test.setTimeout(300_000)
   await freshPlayer(page)
+  // One wick for the whole test: a day of it ahead (moved past a turning if one is near), so setting
+  // the hour (up to an hour on) never crosses one, and the find and the second player share it.
+  await wickSlack(page)
   await setHour(page, { minute: 20, server: true })
 
-  // This wick's rumour is in the state from the start.
-  await expect.poll(() => rumour(page), { message: 'a rumour this wick' }).not.toBeNull()
+  // This wick's rumour, as the server names it now. Moving the clocks re-reads the state (src/game/rumour-watch.ts):
+  // wait until the game holds the same one, read since the last turning, before checking what Elara says.
+  const told = (await (await page.request.get('/api/state', CONTRACT)).json()).state?.rumour as { epoch: string } | undefined
+  expect(told, 'a rumour this wick').toBeTruthy()
+  await expect
+    .poll(async () => {
+      const now = await rumour(page)
+      return now?.current === true && now.epoch === told!.epoch
+    }, { timeout: 15_000, message: 'the game holds this wick’s rumour' })
+    .toBe(true)
   const r = (await rumour(page))!
   expect(r.opened).toBe(false)
   expect(r.site).toMatch(/^rumour:-?\d+:-?\d+$/)
@@ -96,12 +107,16 @@ test('Elara tells the rumour; the place is found first and the bundle opens once
   const other = await ctx.newPage()
   try {
     await freshPlayer(other, 'Wren', invite.code)
+    // Wren's screen on the world's clock (wickSlack's other pages).
+    await calendarOnServer(other)
     await warp(other, 'wilds', 12, -12)
     await waitForWilds(other)
-    await other.keyboard.press('j')
-    await other.getByRole('tab', { name: /Map/ }).click()
+    // The world map (M), its Details open for the list of places.
+    await other.keyboard.press('m')
+    await expect(other.getByTestId('world-map')).toBeVisible()
+    await other.getByTestId('map-details-toggle').click()
     await expect(other.getByTestId('map-places')).toContainText('Found by Tansy', { timeout: 20_000 })
-    await shot(other, '99-map-found-by-desktop')
+    await shot(other, '99-world-map-found-by-desktop')
     await other.keyboard.press('Escape')
     await warp(other, 'wilds', bx, by + 1)
     await waitForWilds(other)

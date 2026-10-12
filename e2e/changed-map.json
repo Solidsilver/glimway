@@ -36,8 +36,16 @@
       "specs": ["open-map.spec.ts", "window-order.spec.ts", "open-map-screens.spec.ts", "wilds.spec.ts", "wilds-outer.spec.ts", "wilds-screens.spec.ts", "echo-keepsakes.spec.ts", "paths.spec.ts", "rumour.spec.ts"]
     },
     {
-      "paths": ["src/ui/MapTab.svelte", "src/ui/JournalPanel.svelte", "src/content/open-map.ts", "src/game/rumour-watch.ts", "src/game/entities/world-talk.ts"],
-      "specs": ["paths.spec.ts", "rumour.spec.ts"]
+      "paths": ["src/ui/WorldMap.svelte", "src/ui/map-renderer.ts", "src/lib/wilds/map-view.ts", "src/lib/wilds/map-model.ts", "src/game/wilds/map-data.ts", "src/game/map-position.ts", "src/content/open-map.ts"],
+      "specs": ["world-map.spec.ts", "paths.spec.ts", "rumour.spec.ts"]
+    },
+    {
+      "paths": ["src/ui/JournalPanel.svelte", "src/game/rumour-watch.ts", "src/game/entities/world-talk.ts"],
+      "specs": ["paths.spec.ts", "rumour.spec.ts", "papers.spec.ts", "papers-screens.spec.ts"]
+    },
+    {
+      "paths": ["src/App.svelte", "src/ui/Hud.svelte", "src/content/controls.ts", "src/game/scenes/world-controls.ts", "src/game/entities/avatar.ts", "src/lib/companions.ts", "src/game/scenes/WorldScene.ts"],
+      "specs": ["world-map.spec.ts", "companions.spec.ts", "touch.spec.ts"]
     },
     {
       "paths": ["src/ui/ContextButtons.svelte", "src/ui/press-gate.ts", "src/game/context-buttons.ts"],

@@ -7,7 +7,19 @@
  *
  * No Phaser, no network.
  */
+import { calendarAt } from '../calendar.ts';
 import { loadWilds } from './data.ts';
+
+/**
+ * Is a rumour read from the server at `readAt` (Unix seconds, the world's
+ * clock) still this wick's at `now`? Each wick has its own rumour, and the
+ * turning changes it with no version bump; one read before the turning is
+ * the last wick's, whatever it names. Null: not read on this page yet.
+ */
+export function rumourOfThisWick(readAt: number | null, now: number): boolean {
+  // The world's clock can be fractional (serverNow); the calendar wants whole seconds.
+  return readAt !== null && calendarAt(Math.floor(readAt)).startsAt === calendarAt(Math.floor(now)).startsAt;
+}
 
 /** The rumour's parts, as the server sends them (`PlayerState.rumour`). */
 export interface RumourParts {

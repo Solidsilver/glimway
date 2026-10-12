@@ -9,7 +9,7 @@ import { diagnose, dialogueState, expectTarget, expectToast, parkCreatures, pres
  * 23), against the worker's own Go server: clear a thicket with a spade, lay
  * stone after the turning-land confirm, see it from a second account in the
  * same world, lift it; and lay the joining tile of a run between two places
- * so it becomes a named way, with its signs and its name on the Map tab.
+ * so it becomes a named way, with its signs and its name on the world map.
  * SCREENS=1 saves images to .agent/screens/.
  */
 
@@ -257,7 +257,7 @@ test('clear a thicket with a spade, lay stone after the turning-land confirm, se
   await expect.poll(async () => (await paths(page))!.materials!.timber, { timeout: 15_000, message: 'timber read again' }).toBe(0)
 })
 
-test('the joining tile of a run between two places makes a named way, with signs at its ends and its name on the Map tab', async ({ page, browser, baseURL }) => {
+test('the joining tile of a run between two places makes a named way, with signs at its ends and its name on the world map', async ({ page, browser, baseURL }) => {
   test.setTimeout(240_000)
   const id = await freshPlayer(page)
   fund(id, { materials: { stone: 20 } })
@@ -354,18 +354,20 @@ test('the joining tile of a run between two places makes a named way, with signs
   await expect.poll(async () => (await page.evaluate(() => (window as unknown as Hooks).__fsMarks()))?.signs ?? []).toContain(way!.id)
   await shot(page, '94-paths-way-sign-desktop')
 
-  // The Map tab: the walked land, the way along its tiles, its name in the list.
-  await page.keyboard.press('j')
-  await page.getByRole('tab', { name: /Map/ }).click()
+  // The world map (M): the walked land, the way along its tiles, its name on the map and in Details.
+  await page.keyboard.press('m')
   await expect(page.getByTestId('map-canvas')).toBeVisible()
-  await expect(page.getByTestId('map-ways')).toContainText("Tansy's way")
   await expect(page.locator('[data-label="you"]')).toBeVisible()
-  await shot(page, '95-map-tab-way-desktop')
+  await expect(page.locator('[data-label="way"]')).toContainText("Tansy's way")
+  await page.getByTestId('map-details-toggle').click()
+  await expect(page.getByTestId('map-ways')).toContainText("Tansy's way")
+  await shot(page, '95-world-map-way-desktop')
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(page.getByTestId('map-canvas')).toBeVisible()
-  await shot(page, '95-map-tab-way-phone')
+  await shot(page, '95-world-map-way-phone')
   await page.setViewportSize({ width: 1200, height: 760 })
   await page.keyboard.press('Escape')
+  await expect(page.getByTestId('world-map')).toHaveCount(0)
 
   // Someone else in the world sees the way, by the gap.
   const invite = await (await page.request.post('/api/invites', { data: {}, ...CONTRACT })).json()

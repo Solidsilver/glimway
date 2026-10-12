@@ -333,7 +333,9 @@ test('a joint deed: two players sign at the deed table in Pell’s office', asyn
 
     // Bram signs at the table, with Pell, within the window: both names on one deed.
     await pellSays(other, /Sign Tansy’s deed/)
-    await readOn(other, /Two names, one entry/)
+    // Pell's offer itself says "Two names, one entry": wait for the line after the signature, which comes
+    // with the server's answer (on a slow runner, well after talk() has read the offer).
+    await readOn(other, /Two names, one entry, blotted/, { timeout: SERVER_ANSWER_MS })
     await expect.poll(async () => (await homes(other)).myGate, { timeout: SERVER_ANSWER_MS, message: 'Bram’s game adopts the deed' }).toBe(gate)
     await expect.poll(async () => (await myHome(page)).members.map((m) => m.displayName).sort(), { timeout: SERVER_ANSWER_MS }).toEqual(['Bram', 'Tansy'])
     // Tansy's game, waiting on the signature, hears of it without asking again.

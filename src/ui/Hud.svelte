@@ -21,6 +21,8 @@
 
   let {
     onJournal,
+    onMap,
+    covered = false,
     onCharacter,
     onInventory,
     inventoryNew = 0,
@@ -31,6 +33,10 @@
     promptAlt = null
   }: {
     onJournal: () => void
+    /** Open the world map (M). */
+    onMap?: () => void
+    /** The full-screen map is over the HUD: nothing here is a pointer or Tab target, and nothing stays explained. */
+    covered?: boolean
     onCharacter: () => void
     onInventory: () => void
     /** Items this device hasn't seen yet (the bag's dot). */
@@ -55,8 +61,8 @@
   })
 
   /**
-   * Phones get a slim strip (bars, place, one line of goal) and three
-   * buttons; Character lives in the bag there. Desktop keeps the card.
+   * Phones get a slim strip (bars, place, one line of goal) and the menu
+   * buttons without Character (it lives in the bag there). Desktop keeps the card.
    */
   const touch = isTouchFirst()
   const showBars = $derived(ui.stats.maxHp > 0)
@@ -132,6 +138,13 @@
     }
     if (openChip === 'unmoored') return ui.unmoored ? unmooredWhy : null
     return chips.find((c) => c.id === openChip)?.why ?? null
+  })
+
+  // Covered by the map: close what was open for a moment (a chip's sentence, the goal's full line).
+  $effect(() => {
+    if (!covered) return
+    openChip = null
+    objectiveOpen = false
   })
 
   const gainOf = (to: Gain['to']): Gain | null => [...ui.gains].reverse().find((g) => g.to === to) ?? null
@@ -271,6 +284,12 @@
       {#if !touch}<span class="kbd">J</span>{/if}
       {@render gainTag(journalGain)}
     </button>
+    {#if onMap}
+      <button type="button" class="hb" onclick={onMap} aria-label="World map (M)" title="World map" data-testid="map-button">
+        <ArtIcon art="map-tab" name="map" size={20} />
+        {#if !touch}<span class="kbd">M</span>{/if}
+      </button>
+    {/if}
     {#if !touch}
       <button type="button" class="hb" onclick={onCharacter} aria-label="Character (C)" title="Character">
         <Icon name="person" size={20} />
@@ -297,7 +316,7 @@
 {/snippet}
 
 <!-- data-inset: App measures the HUD's children for the camera (src/ui/play-insets.ts). -->
-<div class="hud" class:slim={touch} class:hidden={ui.cinematic} aria-hidden={ui.cinematic} data-inset="hud">
+<div class="hud" class:slim={touch} class:hidden={ui.cinematic} aria-hidden={ui.cinematic} inert={covered} data-inset="hud">
   {#if touch}
     <div class="strip panel">
       {@render bars()}
@@ -880,7 +899,7 @@
     100% { opacity: 0; transform: translateY(-4px); }
   }
 
-  /* ---- phone: a strip of vitals and place, a line of goal, three buttons ---- */
+  /* ---- phone: a strip of vitals and place, a line of goal, the menu buttons ---- */
   .hud.slim {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -997,6 +1016,22 @@
   }
   .slim .why {
     top: calc(100% + 6px);
+  }
+  /*
+   * A narrow phone held upright: the menu row (up to five buttons, 244 px)
+   * gets the HUD's width to itself, and the goal line goes under it rather
+   * than being squeezed beside it.
+   */
+  @media (max-width: 480px) and (orientation: portrait) {
+    .slim .buttons {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      justify-self: end;
+    }
+    .goalbar {
+      grid-column: 1 / -1;
+      grid-row: 3;
+    }
   }
   /* Phone landscape: everything on one row along the top. */
   @media (orientation: landscape) {
