@@ -108,3 +108,18 @@ export class CampFights<T extends CampNow = CampNow> implements CampOutcome {
     if (f.phase === 'fighting' && f.drawn && !this.host.alive(id)) f.phase = 'won'
   }
 }
+
+/** A missing fight view/socket is unknown. Keep the last confirmed prompt for
+ * this camp's epoch/cycle; a new cycle or an authoritative live row clears it. */
+export class ServerCampOutcome implements CampOutcome {
+  private readonly known = new Map<string, { epoch: string; cycle: number; won: boolean }>()
+  private readonly read: (camp: Pick<CampNow, 'id' | 'epoch' | 'cycle'>) => boolean | undefined
+  constructor(read: (camp: Pick<CampNow, 'id' | 'epoch' | 'cycle'>) => boolean | undefined) { this.read = read }
+  won(camp: Pick<CampNow, 'id' | 'epoch' | 'cycle'>): boolean {
+    let previous = this.known.get(camp.id)
+    if (previous && (previous.epoch !== camp.epoch || previous.cycle !== camp.cycle)) { this.known.delete(camp.id); previous = undefined }
+    const answer = this.read(camp)
+    if (answer !== undefined) { this.known.set(camp.id, { epoch: camp.epoch, cycle: camp.cycle, won: answer }); return answer }
+    return previous?.won ?? false
+  }
+}

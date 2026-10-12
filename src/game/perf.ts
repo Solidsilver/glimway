@@ -18,6 +18,7 @@
  * `__fsPerf` (dev builds) returns all of it as JSON; scripts/perf-walk.ts
  * (the walk) reads it.
  */
+import type { FightInterp, FightMeasures } from '../lib/fight-interp.ts'
 import { expose } from './dev-hooks.ts'
 
 const ON = typeof location !== 'undefined' && new URLSearchParams(location.search).get('perf') === '1'
@@ -82,6 +83,7 @@ export interface PhaseFrames {
 
 export interface PerfReport {
   on: boolean
+  fights: FightMeasures | null
   phase: string
   observer: 'long-animation-frame' | 'longtask' | 'none'
   phases: Record<string, PhaseFrames>
@@ -104,6 +106,7 @@ interface Scene {
 }
 
 class Instruments {
+  fights: FightMeasures | null = null
   phase = 'start'
   observer: PerfReport['observer'] = 'none'
   private spans: Span[] = []
@@ -222,7 +225,8 @@ class Instruments {
       `perf · ${this.phase}\n` +
       `frame p50 ${pct(recent, 0.5)} worst ${round(Math.max(0, ...recent))} ms\n` +
       `long ${this.long.length}${last ? ` · last ${last.ms} ms` : ''}\n` +
-      `list ${sample?.list ?? '-'} · tweens ${sample?.tweens ?? '-'} · dom ${sample?.dom ?? '-'}`
+      `list ${sample?.list ?? '-'} · tweens ${sample?.tweens ?? '-'} · dom ${sample?.dom ?? '-'}` +
+      (this.fights ? `\nfights · gap p95 ${round(this.fights.snapshotGapP95)} · delay ${round(this.fights.interpolationDelay)} ms\nhit p95 ${round(this.fights.hitConfirmationP95)} ms · refused ${round(this.fights.refusedPercent)}%\npending ${this.fights.pending} · timeout ${this.fights.timeouts} · swing refused ${this.fights.swingRefusals}` : '')
   }
 
   report(): PerfReport {
@@ -243,7 +247,7 @@ class Instruments {
     const stages: PerfReport['stages'] = {}
     for (const [name, s] of this.stages) stages[name] = { n: s.n, ms: round(s.ms), max: round(s.max) }
     const domAdded = Object.fromEntries([...this.domAdded].sort((a, b) => b[1] - a[1]).slice(0, 20))
-    return { on: true, phase: this.phase, observer: this.observer, phases, histogram, long: [...this.long], stages, samples: [...this.samples], domAdded }
+    return { fights: this.fights, on: true, phase: this.phase, observer: this.observer, phases, histogram, long: [...this.long], stages, samples: [...this.samples], domAdded }
   }
 
   reset(): void {
@@ -311,3 +315,6 @@ export function perfTime<T>(name: string, fn: () => T): T {
 export function perfWatch(scene: Scene | null): void {
   instruments?.watch(scene)
 }
+
+/** Latest prototype measurements, included in the overlay and __fsPerf. */
+export function perfFights(source: Pick<FightInterp, 'measures'>): void { if (instruments) instruments.fights = source.measures() }

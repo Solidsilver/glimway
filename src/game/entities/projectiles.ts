@@ -25,13 +25,14 @@ export class Projectiles {
    * flicker loop while in flight, rotated to the travel direction, destroyed
    * on hit/expiry by update. Falls back to the static aliased `bolt`.
    */
-  spawn(x: number, y: number, dir: Phaser.Math.Vector2, damage: number): void {
+  spawn(x: number, y: number, dir: Phaser.Math.Vector2, damage: number, serverShot = false): void {
     const animated = this.fx.effectReady('magic-bolt-0', 'effect-magic-bolt')
     const bolt = this.group.create(x, y, animated ? 'magic-bolt-0' : 'bolt') as Phaser.Physics.Arcade.Sprite
     bolt.setDepth(y + 1)
     if (animated) bolt.play('effect-magic-bolt')
     if (dir.x !== 0 || dir.y !== 0) bolt.setRotation(Math.atan2(dir.y, dir.x))
     bolt.setVelocity(dir.x * COMBAT_TUNING.attack.boltSpeed, dir.y * COMBAT_TUNING.attack.boltSpeed)
+    bolt.setData('serverShot', serverShot)
     bolt.setData('damage', damage)
     bolt.setData('life', COMBAT_TUNING.attack.boltLifetimeSeconds)
   }
@@ -42,6 +43,7 @@ export class Projectiles {
       boltObj.setData('life', life)
       let hit = false
       for (const enemy of [...this.enemies().enemies]) {
+        if (enemy.fight && !boltObj.getData('serverShot')) continue
         if (boltReaches(boltObj, enemy)) {
           this.enemies().damageEnemy(enemy, boltObj.getData('damage') as number, boltObj.x)
           hit = true

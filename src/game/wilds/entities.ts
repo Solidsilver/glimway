@@ -22,6 +22,9 @@
  * claim.
  */
 import type Phaser from 'phaser'
+import { FIGHT_OPTIONS } from '../../lib/fight-options'
+import { serverCamp } from '../entities/server-enemies'
+import { presence } from '../presence'
 import { TRANSPORT_ERRORS } from '../../content/errors'
 import {
   CAMP_WALK_IN_LINES,
@@ -68,7 +71,7 @@ import type { EnemySystem } from '../entities/enemies'
 import type { Interactables } from '../entities/interactables'
 import type { EnemyType } from '../worlds'
 import { perfSpan, perfTime } from '../perf.ts'
-import { CampFights, type CampNow, type CampOutcome } from './camp-fights.ts'
+import { ServerCampOutcome, CampFights, type CampNow, type CampOutcome } from './camp-fights.ts'
 import { addAll, destroyAll, looseImage } from '../area/bulk.ts'
 
 /** Server error code → what the player reads. All text is static. */
@@ -312,7 +315,17 @@ export class WildsEntities {
     alive: (id) => this.deps.enemies.enemies.some((e) => !e.dead && e.id.startsWith(`wilds:${id}:`))
   })
   /** Where a camp claim's eligibility comes from: this client's own fight, until fights are shared. */
-  private campOutcome: CampOutcome = this.camps
+  private serverCamps = new Set<string>()
+  private isServerCamp(id: string): boolean {
+    if (!FIGHT_OPTIONS.enabled) return false
+    if (serverCamp(id)) this.serverCamps.add(id)
+    return this.serverCamps.has(id)
+  }
+  private serverOutcome = new ServerCampOutcome(camp => {
+    const feed = presence()
+    return feed?.live ? feed.fights.campWon(camp.id, camp.epoch) : undefined
+  })
+  private campOutcome: CampOutcome = { won: (camp) => this.isServerCamp(camp.id) ? this.serverOutcome.won(camp) : this.camps.won(camp) }
   private greeted = new Set<string>()
   private claiming = false
   private lastVersion = -1
@@ -828,6 +841,7 @@ export class WildsEntities {
 
   /** Set a camp's enemies out from its generated mix. */
   private spawnCamp(e: WildsThing): void {
+    if (this.isServerCamp(e.id)) return
     const offsets = [
       [0, 0],
       [1, 0],
