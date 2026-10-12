@@ -88,7 +88,7 @@ export interface Glimpse {
   river: boolean;
 }
 
-type EntityStateView = Pick<WildsEntityView, 'cycle' | 'state' | 'available_at' | 'by' | 'at'>;
+type EntityStateView = Pick<WildsEntityView, 'cycle' | 'state' | 'available_at' | 'by' | 'at' | 'camp_claimable'>;
 
 export interface WildsView {
   still: WildsEpoch;
@@ -276,6 +276,16 @@ export function entityCycle(e: Pick<WildsEntityView, 'state' | 'available_at' | 
   return (e.state === 'cleared' || e.state === 'harvested') && entityAvailable(e, nowSec) ? e.cycle + 1 : e.cycle;
 }
 
+/**
+ * Whether this reader may claim a camp now, by the server's word for its
+ * exact cycle (`camp_claimable`: that cycle fell with them as a witness and
+ * they haven't claimed it). A camp come round on its timer is in its next
+ * cycle, and the word was for the last one: not claimable.
+ */
+export function campClaimable(e: Pick<WildsEntityView, 'kind' | 'state' | 'available_at' | 'cycle' | 'camp_claimable'>, nowSec: number): boolean {
+  return e.kind === 'camp' && e.camp_claimable && entityCycle(e, nowSec) === e.cycle;
+}
+
 function lanternView(l: WildsLantern): WildsLanternView {
   return { id: l.id, ownerId: l.ownerId, displayName: l.displayName, x: l.x, y: l.y, litBy: l.litBy ?? null, at: l.at, litAt: l.litAt ?? null };
 }
@@ -425,7 +435,7 @@ export function applyNear(res: WildsNearResult, since: number = markNow(), link:
 }
 
 function stateView(s: WildsEntityState): EntityStateView {
-  return { cycle: s.cycle, state: s.state as WildsEntityView['state'], available_at: s.availableAt, by: s.by ?? null, at: s.at ?? null };
+  return { cycle: s.cycle, state: s.state as WildsEntityView['state'], available_at: s.availableAt, by: s.by ?? null, at: s.at ?? null, camp_claimable: s.campClaimable };
 }
 
 // ------------------------------------------------------------ order
@@ -509,6 +519,7 @@ function thingOf(body: EntityBody, cx: number, cy: number): WildsThing {
     available_at: s?.available_at ?? 0,
     by: s?.by ?? null,
     at: s?.at ?? null,
+    camp_claimable: s?.camp_claimable ?? false,
   };
 }
 

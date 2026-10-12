@@ -376,18 +376,21 @@ func (a *Server) presenceReader(p *presencePeer) {
 		case *contract.PresenceMessage_FightSwing:
 			h.handleFightSwing(p, event.FightSwing)
 		case *contract.PresenceMessage_Ability:
-			if cast := event.Ability.Fight; cast != nil {
-				if h.takeFightCounter(p, cast.SwingCounter) {
-					h.refuseFight(p, cast.SwingCounter, contract.FightRefusedReason_FIGHT_REFUSED_REASON_NOT_ALLOWED)
-				}
+			// A cast's fight part takes the counter it shares with swings first.
+			cast := event.Ability.Fight
+			if cast != nil && !h.takeFightCounter(p, cast.SwingCounter) {
 				h.mu.Unlock()
 				continue
 			}
 			// A cast on screen, a signature or a level-20 move (4.5): relayed
 			// to the room when the table knows the move, the sender's craft
 			// and level mark allow it and its own cooldown has passed.
-			// Anything else is dropped, like an emote over its cooldown.
+			// allowAbility is the one owner of those costs; a fight cast it
+			// refuses is answered NOT_ALLOWED, anything else is dropped.
 			if !h.allowAbility(p, h.now(), event.Ability) {
+				if cast != nil {
+					h.refuseFight(p, cast.SwingCounter, contract.FightRefusedReason_FIGHT_REFUSED_REASON_NOT_ALLOWED)
+				}
 				h.mu.Unlock()
 				continue
 			}
@@ -396,6 +399,10 @@ func (a *Server) presenceReader(p *presencePeer) {
 			relayed, relayErr := relayedAbility(p, event.Ability)
 			h.broadcastEncoded(p, relayed, relayErr)
 			h.scheduleWard(p, event.Ability)
+			// The sim applies only the effect on the rooms' enemies.
+			if cast != nil {
+				h.handleFightCast(p, event.Ability)
+			}
 		default:
 			p.stop(websocket.StatusPolicyViolation, "invalid-message")
 			h.mu.Unlock()

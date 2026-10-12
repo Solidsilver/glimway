@@ -26,6 +26,13 @@ func TestDevRoutesAnswerOnlyThisMachine(t *testing.T) {
 	if got := w.Header().Get("X-Glimway-Now"); got != "1234" {
 		t.Fatal("clock missing on nonlocal refusal", got)
 	}
+	r = httptest.NewRequest(http.MethodPost, api.DevFightFallPath, strings.NewReader(`{"entity":"camp:0:0:0"}`))
+	r.RemoteAddr = "203.0.113.9:5000"
+	w = httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if w.Code != http.StatusNotFound {
+		t.Fatal("a caller elsewhere reached the fight-fall route:", w.Code)
+	}
 	r = httptest.NewRequest(http.MethodPost, "/api/state", nil)
 	r.RemoteAddr = "127.0.0.1:5000"
 	w = httptest.NewRecorder()

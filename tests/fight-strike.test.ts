@@ -3,9 +3,10 @@ import assert from 'node:assert/strict'
 import { create } from '@bufbuild/protobuf'
 import { FightJoinSchema } from '../src/lib/gen/glimway/v2/presence_pb.js'
 import { FightInterp } from '../src/lib/fight-interp.ts'
-import { pressServerSwing, sendServerBolt } from '../src/game/entities/fight-strike.ts'
-import { slashStrike, strikeHits, type EnemyState } from '../src/game/entities/fight-rules.ts'
-import type { FightSwingIntent } from '../src/lib/presence.ts'
+import { pressServerCast, pressServerSwing, sendServerBolt } from '../src/game/entities/fight-strike.ts'
+import { SIGNATURES, cleaveStrike, hitOutcome, mendStrike, shadowstepEnd, slashStrike, snapstrike, strikeHits, type EnemyState } from '../src/game/entities/fight-rules.ts'
+import { fightCrit } from '../src/lib/fight-math.ts'
+import type { FightCastIntent, FightSwingIntent } from '../src/lib/presence.ts'
 
 for (const direction of ['enter', 'leave'] as const) test(`press-time target ${direction}s reach before60ms feedback: sent instant and prediction agree`, () => {
   let clock = 1000, counter = 0
@@ -13,7 +14,7 @@ for (const direction of ['enter', 'leave'] as const) test(`press-time target ${d
   fights.join(create(FightJoinSchema, { room: 1, tick: 100, critSeed: 123, roomKey: { world: 'w', realm: 'wilds', epoch: 'still' } }))
   clock += 100; fights.observe()
   const sent: FightSwingIntent[] = []
-  const feed = { fights, serverFights: true, nextSwing: () => counter++, swing: (intent: FightSwingIntent) => { sent.push(intent); return true } }
+  const feed = { fights, nextSwing: () => counter++, swing: (intent: FightSwingIntent) => { sent.push(intent); return true } }
   const enemy: EnemyState & { x: number; fight: { room: number; enemy: number } } = { id: 'wisp', type: 'wisp', x: direction === 'enter' ? 143 : 131.6, y: 99, hp: 28, maxHp: 28, state: 'lunge', dead: false, fight: { room: 1, enemy: 0 } }
   const strike = slashStrike({ x: 100, y: 100 }, { x: 1, y: 0 }, { meleeDamage: 5, critChance: .2 }, false)
   const predicted = pressServerSwing(strike, [enemy], feed)
@@ -32,7 +33,7 @@ test('mixed owners: only server targets in message; tool damage and one crit mat
   fights.join(create(FightJoinSchema, { room: 1, tick: 100, critSeed: 123, roomKey: { world: 'w', realm: 'wilds', epoch: 'still' } }))
   clock += 150; fights.observe()
   const sent: FightSwingIntent[] = []
-  const feed = { fights, serverFights: true, nextSwing: () => counter++, swing: (intent: FightSwingIntent) => { sent.push(intent); return true } }
+  const feed = { fights, nextSwing: () => counter++, swing: (intent: FightSwingIntent) => { sent.push(intent); return true } }
   const enemy = { id: 'wisp', type: 'wisp' as const, x: 114, y: 99, hp: 28, maxHp: 28, state: 'chase' as const, dead: false }
   const strike = slashStrike({ x: 100, y: 100 }, { x: 1, y: 0 }, { meleeDamage: 5, critChance: 1 }, true)
   const hits = pressServerSwing(strike, [enemy, { ...enemy, fight: { room: 1, enemy: 0 } }], feed)
@@ -48,7 +49,7 @@ test('curated/local play sends no fight intent after the last visible server roo
   const fights = new FightInterp(() => clock)
   fights.join(create(FightJoinSchema, { room: 1, tick: 100, critSeed: 123, roomKey: { world: 'w', realm: 'wilds', epoch: 'still' } }))
   clock += 100; fights.observe(); fights.drop(1)
-  const feed = { fights, serverFights: true, nextSwing: () => { assert.fail('no counter for a local fight') }, swing: () => { assert.fail('no message for a local fight') } }
+  const feed = { fights, nextSwing: () => { assert.fail('no counter for a local fight') }, swing: () => { assert.fail('no message for a local fight') } }
   const strike = slashStrike({ x: 100, y: 100 }, { x: 1, y: 0 }, { meleeDamage: 5, critChance: .2 }, false)
   assert.deepEqual(pressServerSwing(strike, [], feed), [])
   assert.equal(sendServerBolt({ x: 100, y: 100 }, { x: 1, y: 0 }, feed), false)
@@ -60,7 +61,7 @@ test('zero and non-unit facing normalize for both prediction and wire; zero bolt
   fights.join(create(FightJoinSchema, { room: 1, tick: 100, critSeed: 123, roomKey: { world: 'w', realm: 'wilds', epoch: 'still' } }))
   clock += 100; fights.observe()
   const sent: FightSwingIntent[] = []
-  const feed = { fights, serverFights: true, nextSwing: () => sent.length, swing: (s: FightSwingIntent) => { sent.push(s); return true } }
+  const feed = { fights, nextSwing: () => sent.length, swing: (s: FightSwingIntent) => { sent.push(s); return true } }
   const enemy = { id: 'wisp', type: 'wisp' as const, x: 100, y: 115, hp: 28, maxHp: 28, state: 'chase' as const, dead: false, fight: { room: 1, enemy: 0 } }
   for (const facing of [{ x: 0, y: 0 }, { x: 0, y: 2 }]) {
     const strike = slashStrike({ x: 100, y: 100 }, facing, { meleeDamage: 5, critChance: 0 }, false)
@@ -69,4 +70,68 @@ test('zero and non-unit facing normalize for both prediction and wire; zero bolt
   }
   sendServerBolt({ x: 100, y: 100 }, { x: 0, y: 0 }, feed)
   assert.deepEqual(sent.at(-1)!.facing, { x: 0, y: 1 })
+})
+
+function castRig(joined = true) {
+  let clock = 1000, counter = 0
+  const fights = new FightInterp(() => clock)
+  if (joined) fights.join(create(FightJoinSchema, { room: 1, tick: 100, critSeed: 123, roomKey: { world: 'w', realm: 'wilds', epoch: 'still' } }))
+  clock += 100; fights.observe()
+  const casts: { id: string; x: number; y: number; fight?: FightCastIntent }[] = []
+  let accept = true
+  const feed = { fights, nextSwing: () => counter++, ability: (id: string, x: number, y: number, fight?: FightCastIntent) => { casts.push({ id, x, y, fight }); return accept } }
+  const enemy = (x: number, fight: boolean, extra: Partial<EnemyState> = {}) => ({ id: `e${x}`, type: 'wisp', x, y: 100, hp: 28, maxHp: 28, state: 'chase', dead: false, ...(fight ? { fight: { room: 1, enemy: x } } : {}), ...extra }) as EnemyState & { fight?: { room: number; enemy: number } }
+  return { fights, feed, casts, enemy, refuse: () => { accept = false }, get counter() { return counter } }
+}
+
+test('cleave and mend: press-time rows on server enemies only, one counter shared with swings, never a crit', () => {
+  const r = castRig()
+  const server = r.enemy(130, true), local = r.enemy(131, false), far = r.enemy(300, true)
+  const cleave = pressServerCast('cleave', { x: 100, y: 100 }, { x: 1, y: 0 }, cleaveStrike({ x: 100, y: 100 }, { x: 1, y: 0 }, 12), [server, local, far], r.feed)
+  assert.deepEqual(cleave.hits.map(h => h.enemy), [server], 'local enemies keep their landing-time path')
+  assert.equal(cleave.hits[0]!.crit, false); assert.equal(cleave.hits[0]!.amount, 12)
+  assert.deepEqual(r.casts[0]!.fight!.predicted, [{ room: 1, enemy: 130 }])
+  assert.equal(r.casts[0]!.fight!.swingCounter, 0)
+  assert.deepEqual([r.casts[0]!.fight!.seenTick, r.casts[0]!.fight!.seenOffsetMs], [100, 0])
+  const mend = pressServerCast('mend', { x: 100, y: 100 }, { x: 0, y: 1 }, mendStrike({ x: 100, y: 100 }, 7), [server, far], r.feed)
+  assert.equal(r.casts[1]!.fight!.swingCounter, 1, 'the next number on the shared sequence')
+  assert.deepEqual(mend.hits.map(h => h.enemy), [server])
+})
+
+test('shadowstep predicts rows at its projected end (the shared dash numbers), with twice the seeded crit chance', () => {
+  const r = castRig()
+  // As hero.ts presses it: the end on open ground from content's dash speed and window.
+  const end = shadowstepEnd({ x: 100, y: 100 }, { x: 1, y: 0 })
+  assert.equal(end.x, 100 + SIGNATURES.shadowstep.dashSpeed * SIGNATURES.shadowstep.dashSeconds)
+  const atStart = r.enemy(100, true), atEnd = r.enemy(end.x, true)
+  const strike = snapstrike(end, true, 10, 0.3)
+  assert.equal(strike.critChance, 0.6)
+  const cast = pressServerCast('shadowstep', { x: 100, y: 100 }, { x: 1, y: 0 }, strike, [atStart, atEnd], r.feed)
+  assert.deepEqual(cast.hits.map(h => h.enemy), [atEnd])
+  assert.equal(cast.hits[0]!.crit, fightCrit(123, 0, 0.6))
+})
+
+test('a stunned server beetle takes 1.5× and shows as a crit on the predicted number', () => {
+  const beetle = { id: 'b', type: 'beetle', x: 0, y: 0, hp: 40, maxHp: 40, state: 'stunned', dead: false } as const
+  assert.deepEqual(hitOutcome(beetle, 10, false), { amount: 15, crit: true })
+})
+
+test('moves and fingersnap carry a fight part with no rows; no observed room sends a plain relay and no counter', () => {
+  const r = castRig()
+  for (const id of ['kindle', 'stand', 'echo', 'ward-light', 'fingersnap']) {
+    const cast = pressServerCast(id, { x: 5, y: 6 }, { x: 0, y: 0 }, null, [r.enemy(5, true)], r.feed)
+    assert.deepEqual([cast.sent, cast.fight, cast.hits.length], [true, true, 0], id)
+  }
+  assert.deepEqual(r.casts.map(c => c.fight!.predicted.length), [0, 0, 0, 0, 0])
+  assert.deepEqual(r.casts[0]!.fight!.facing, { x: 0, y: 1 }, 'zero facing faces down')
+  const none = castRig(false)
+  const cast = pressServerCast('stand', { x: 5, y: 6 }, { x: 0, y: 1 }, null, [], none.feed)
+  assert.deepEqual([cast.sent, cast.fight], [true, false])
+  assert.equal(none.casts[0]!.fight, undefined); assert.equal(none.counter, 0)
+})
+
+test('a cast the socket did not send predicts nothing on server enemies', () => {
+  const r = castRig(); r.refuse()
+  const cast = pressServerCast('cleave', { x: 100, y: 100 }, { x: 1, y: 0 }, cleaveStrike({ x: 100, y: 100 }, { x: 1, y: 0 }, 12), [r.enemy(130, true)], r.feed)
+  assert.deepEqual([cast.sent, cast.fight, cast.hits.length], [false, false, 0])
 })

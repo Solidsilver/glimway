@@ -171,6 +171,78 @@
         }
       ],
       "rule": "double.gt"
+    },
+    {
+      "name": "missing-signatures",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "signatures"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "missing-shadowstep",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "signatures",
+            "shadowstep"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "zero-dash",
+      "valid": false,
+      "rule": "double.gt",
+      "edits": [
+        {
+          "path": [
+            "signatures",
+            "shadowstep",
+            "dashSpeed"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "stopped-dash-reaches-further",
+      "valid": false,
+      "rule": "combat.shadowstep_reach",
+      "edits": [
+        {
+          "path": [
+            "signatures",
+            "shadowstep",
+            "stillReach"
+          ],
+          "value": 35
+        }
+      ]
+    },
+    {
+      "name": "negative-land",
+      "valid": false,
+      "rule": "double.gte",
+      "edits": [
+        {
+          "path": [
+            "signatures",
+            "cleave",
+            "landSeconds"
+          ],
+          "value": -0.05
+        }
+      ]
     }
   ]
 }

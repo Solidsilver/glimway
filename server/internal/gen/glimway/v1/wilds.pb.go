@@ -1056,14 +1056,18 @@ func (x *WildsEpoch) GetKind() string {
 
 // available_at and at are Unix seconds.
 type WildsEntityState struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
-	Id            string                  `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Cycle         float64                 `protobuf:"fixed64,2,opt,name=cycle,proto3" json:"cycle,omitempty"`
-	State         string                  `protobuf:"bytes,3,opt,name=state,proto3" json:"state,omitempty"`
-	AvailableAt   float64                 `protobuf:"fixed64,4,opt,name=available_at,json=availableAt,proto3" json:"available_at,omitempty"`
-	By            *wrapperspb.StringValue `protobuf:"bytes,5,opt,name=by,proto3" json:"by,omitempty"`
-	At            *wrapperspb.DoubleValue `protobuf:"bytes,6,opt,name=at,proto3" json:"at,omitempty"`
-	Epoch         string                  `protobuf:"bytes,7,opt,name=epoch,proto3" json:"epoch,omitempty"`
+	state       protoimpl.MessageState  `protogen:"open.v1"`
+	Id          string                  `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Cycle       float64                 `protobuf:"fixed64,2,opt,name=cycle,proto3" json:"cycle,omitempty"`
+	State       string                  `protobuf:"bytes,3,opt,name=state,proto3" json:"state,omitempty"`
+	AvailableAt float64                 `protobuf:"fixed64,4,opt,name=available_at,json=availableAt,proto3" json:"available_at,omitempty"`
+	By          *wrapperspb.StringValue `protobuf:"bytes,5,opt,name=by,proto3" json:"by,omitempty"`
+	At          *wrapperspb.DoubleValue `protobuf:"bytes,6,opt,name=at,proto3" json:"at,omitempty"`
+	Epoch       string                  `protobuf:"bytes,7,opt,name=epoch,proto3" json:"epoch,omitempty"`
+	// A generated camp only, for the reader (shared-fights.md 1.9): this
+	// cycle fell, the server stored the reader among its witnesses, and they
+	// have not claimed it. The claim's own proof; false for every other kind.
+	CampClaimable bool `protobuf:"varint,8,opt,name=camp_claimable,json=campClaimable,proto3" json:"camp_claimable,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1145,6 +1149,13 @@ func (x *WildsEntityState) GetEpoch() string {
 		return x.Epoch
 	}
 	return ""
+}
+
+func (x *WildsEntityState) GetCampClaimable() bool {
+	if x != nil {
+		return x.CampClaimable
+	}
+	return false
 }
 
 // All time fields are Unix seconds.
@@ -2548,7 +2559,7 @@ const file_glimway_v1_wilds_proto_rawDesc = "" +
 	"\x06season\x18\x05 \x01(\tR\x06season\x12\x1b\n" +
 	"\tstarts_at\x18\x06 \x01(\x01R\bstartsAt\x125\n" +
 	"\aends_at\x18\a \x01(\v2\x1c.google.protobuf.DoubleValueR\x06endsAt\x12\x12\n" +
-	"\x04kind\x18\b \x01(\tR\x04kindJ\x04\b\x03\x10\x04R\tregion_id\"\xe3\x01\n" +
+	"\x04kind\x18\b \x01(\tR\x04kindJ\x04\b\x03\x10\x04R\tregion_id\"\x8a\x02\n" +
 	"\x10WildsEntityState\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05cycle\x18\x02 \x01(\x01R\x05cycle\x12\x14\n" +
@@ -2556,7 +2567,8 @@ const file_glimway_v1_wilds_proto_rawDesc = "" +
 	"\favailable_at\x18\x04 \x01(\x01R\vavailableAt\x12,\n" +
 	"\x02by\x18\x05 \x01(\v2\x1c.google.protobuf.StringValueR\x02by\x12,\n" +
 	"\x02at\x18\x06 \x01(\v2\x1c.google.protobuf.DoubleValueR\x02at\x12\x14\n" +
-	"\x05epoch\x18\a \x01(\tR\x05epoch\"A\n" +
+	"\x05epoch\x18\a \x01(\tR\x05epoch\x12%\n" +
+	"\x0ecamp_claimable\x18\b \x01(\bR\rcampClaimable\"A\n" +
 	"\x12WildsPersonalClaim\x12\x1b\n" +
 	"\tentity_id\x18\x01 \x01(\tR\bentityId\x12\x0e\n" +
 	"\x02at\x18\x02 \x01(\x01R\x02at\"\x9c\x01\n" +

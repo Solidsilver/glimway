@@ -26,7 +26,9 @@ import type { ItemPickups } from '../entities/item-pickups'
 import type { RepairsLayer } from '../entities/repairs'
 import type { WorldScene } from './WorldScene'
 import { fnv1a32Bytes } from '../../lib/hash'
-import { knownPlaces, wildsMaterials, wildsView } from '../wilds/store'
+import { knownPlaces, requestRead, wildsMaterials, wildsView } from '../wilds/store'
+import { devFightFall } from '../wilds/dev-fight-fall'
+import { presence } from '../presence'
 import { pathTileAt } from '../wilds/path-tile'
 
 /** The scene's interaction layers the hooks read (locals of `create()`). */
@@ -250,6 +252,11 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
   on('__fsDevStrike', (n: number, type?: EnemyType) => {
     for (const e of [...s['enemies'].enemies]) if (!e.dead && (!type || e.type === type)) s['enemies'].damageEnemy(e, n, s['hero'].sprite.x)
   })
+  // A generated camp's fight finished by the dev server (its room's enemies die, the fall is stored with this account as a witness).
+  on('__fsDevFightFall', (entity: string) => devFightFall(entity, {
+    read: requestRead,
+    joined: (cx, cy) => [...(presence()?.fights.rooms.values() ?? [])].some((room) => room.key.cx === cx && room.key.cy === cy)
+  }))
   // Without `force`, the real rules apply.
   on('__fsDevSpeakNaming', (force = false) => s['enemies'].warden.speakNaming(force))
   // A playtest can step up to the warden inside its opening. The save's

@@ -135,6 +135,7 @@ function parseEntity(raw: unknown): WildsEntityView {
     available_at: int(o.available_at),
     by: nullableStr(o.by),
     at: o.at === null || o.at === undefined ? null : int(o.at),
+    camp_claimable: o.camp_claimable === true || o.campClaimable === true,
   };
 }
 

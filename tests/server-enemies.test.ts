@@ -3,7 +3,7 @@ import './helpers/scene-modules.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { create } from '@bufbuild/protobuf'
-import { FightJoinSchema, FightEventSchema } from '../src/lib/gen/glimway/v2/presence_pb.js'
+import { FightJoinSchema, FightEventSchema, FightDeltaSchema } from '../src/lib/gen/glimway/v2/presence_pb.js'
 import { FightInterp, FIGHT_RESYNC_GRACE } from '../src/lib/fight-interp.ts'
 import { pressServerSwing } from '../src/game/entities/fight-strike.ts'
 import { slashStrike } from '../src/game/entities/fight-rules.ts'
@@ -13,22 +13,21 @@ const { perfFights } = await import('../src/game/perf.ts')
 function rig() {
   let now = 1000, available = true, spawned = 0, destroyed = 0, tells = 0
   const fights = new FightInterp(() => now)
-  const sprites: any[] = [], enemies: any[] = [], replaced: string[] = []
+  const sprites: any[] = [], enemies: any[] = [], poses: string[] = [], floats: string[] = []
   const sprite = () => {
     const s: any = { active: true, body: { enable: true }, x: 100, y: 100, destroy() { assert.equal(this.active, true, 'no repeated destruction'); this.active = false; destroyed++ } }
-    for (const name of ['setPosition', 'setDepth', 'setFlipX', 'setTintFill', 'clearTint', 'setTint', 'setAlpha']) s[name] = (...args: number[]) => { if (name === 'setPosition') [s.x, s.y] = args; return s }
+    for (const name of ['setPosition', 'setDepth', 'setFlipX', 'setTintFill', 'clearTint', 'setTint', 'setAlpha', 'setVisible']) s[name] = (...args: number[]) => { if (name === 'setPosition') [s.x, s.y] = args; return s }
     sprites.push(s); return s
   }
-  const system: any = { scene: { time: { get now() { return now }, delayedCall() {} }, tweens: { add() {} } }, deps: { hero: () => ({ sprite: { x: 80, y: 100 }, facing: { x: 1, y: 0 } }) },
-    removeLocalCamp: (id: string) => replaced.push(id),
+  const system: any = { parkedAll: false, scene: { time: { get now() { return now }, delayedCall() {} }, tweens: { add() {} } }, deps: { hero: () => ({ sprite: { x: 80, y: 100 }, facing: { x: 1, y: 0 } }), fx: { floatText: (_x: number, _y: number, t: string) => floats.push(t) } },
     spawnWilds(id: string, type: string) { spawned++; const enemy = { id, type, sprite: sprite(), x: 100, y: 100, maxHp: 28, hp: 28, state: 'chase', dead: false }; enemies.push(enemy); return enemy },
     forget(enemy: object) { const index = enemies.indexOf(enemy); if (index >= 0) enemies.splice(index, 1) },
-    setEnemyPose() {}, telegraph() { tells++ }, showDeath(enemy: object) { this.forget(enemy) } }
-  const feed = { fights, serverFights: true }
+    setEnemyPose(enemy: any, pose: string) { poses.push(`${enemy.type}:${pose}`) }, telegraph() { tells++ }, showDeath(enemy: object) { this.forget(enemy) } }
+  const feed = { fights }
   const owner = new ServerEnemies(system, () => available ? feed : null)
   const join = create(FightJoinSchema, { room: 1, tick: 100, critSeed: 123, roomKey: { world: 'w', realm: 'wilds', epoch: 'still', cx: 0, cy: 0 }, enemies: [{ enemy: 0, id: 'wilds:camp:0:0:0:0', campId: 'camp:0:0:0', kind: 1, x: 100, y: 100, state: 2, stateTick: 100, hp: 28, maxHp: 28 }] })
   const advance = (ms: number) => { now += ms; owner.observe() }
-  return { fights, feed, owner, join, advance, sprites, enemies, replaced, get spawned() { return spawned }, get destroyed() { return destroyed }, get tells() { return tells }, disconnect() { fights.clear(); available = false; owner.observe() }, reconnect() { available = true; fights.join(join); advance(100) } }
+  return { fights, feed, owner, join, advance, sprites, enemies, poses, floats, system, now: () => now, get spawned() { return spawned }, get destroyed() { return destroyed }, get tells() { return tells }, disconnect() { fights.clear(); available = false; owner.observe() }, reconnect() { available = true; fights.join(join); advance(100) } }
 }
 test('renderer retains sprites, telegraph and swing prediction across close/resync without spawning twice', () => {
   const r = rig(); r.fights.join(r.join); r.advance(100)
@@ -66,10 +65,9 @@ test('same-key resync with another view handle updates wire reference without re
   assert.equal(r.enemies[0], enemy); assert.deepEqual(enemy.fight, { room: 2, enemy: 0 })
   assert.equal(r.spawned, 1); assert.equal(r.destroyed, 0)
 })
-test('a fresh all-corpse join removes advertised local copies without rendering corpses', () => {
+test('a fallen camp’s corpse-only join renders nothing and reads as completed rows', () => {
   const r = rig()
   r.fights.join(create(FightJoinSchema, { ...r.join, enemies: [{ ...r.join.enemies[0]!, state: 6, hp: 0 }] })); r.advance(100)
-  assert.deepEqual(r.replaced, ['camp:0:0:0'])
   assert.equal(r.spawned, 0); assert.equal(r.fights.campWon('camp:0:0:0', 'still'), true)
 })
 test('disabled perf instrumentation never computes or sorts fight measurements', () => {
@@ -84,4 +82,58 @@ test('a resync confirms a death missed during the view gap on the existing sprit
   r.owner.observe(); assert.equal(r.enemies[0], original)
   r.advance(100); assert.equal(original.dead, true); assert.equal(r.enemies.length, 0)
   assert.equal(r.spawned, 1); assert.equal(r.destroyed, 0)
+})
+
+test('a cycle respawn in the same room draws a new sprite; the death event reaches the newest life', () => {
+  const r = rig(); r.fights.join(r.join); r.advance(100)
+  const first = r.enemies[0]
+  r.fights.delta(create(FightDeltaSchema, { room: 1, tick: 101, changed: [{ enemy: 0, hp: 0, state: 6, stateTick: 101 }] }))
+  r.fights.event(create(FightEventSchema, { room: 1, tick: 101, enemy: 0, kind: 3 })); r.advance(300)
+  assert.equal(first.dead, true)
+  r.fights.delta(create(FightDeltaSchema, { room: 1, tick: 105, removed: [0], spawned: [{ ...r.join.enemies[0]!, enemy: 1, id: 'wilds:camp:0:0:0:1', state: 1, stateTick: 105 }] }))
+  r.fights.event(create(FightEventSchema, { room: 1, tick: 105, enemy: 1, kind: 4 })); r.advance(300)
+  assert.equal(r.spawned, 2, 'a new life, a new sprite')
+  const second = r.enemies.find(e => e !== first)!
+  assert.equal(second.dead, false); assert.deepEqual(second.fight, { room: 1, enemy: 1 })
+  r.fights.event(create(FightEventSchema, { room: 1, tick: 106, enemy: 1, kind: 3 })); r.advance(200)
+  assert.equal(second.dead, true, 'confirmed by the room')
+})
+
+test('server enemies die only on the room’s word: a predicted lethal hit leaves HP and life to the snapshots', () => {
+  const r = rig(); r.fights.join(r.join); r.advance(100)
+  const enemy = r.enemies[0]
+  r.owner.owner.struck(enemy, { amount: 999, crit: true }, 80)
+  r.advance(100)
+  assert.equal(enemy.dead, false); assert.equal(enemy.hp, 28)
+})
+
+test('beetles keep their art and poses: kind 2 spawns a beetle; lunge squashes, stunned hurts; Stand predicts its daze', () => {
+  const r = rig()
+  r.fights.join(create(FightJoinSchema, { ...r.join, enemies: [{ ...r.join.enemies[0]!, kind: 2, state: 3, stateTick: 100, maxHp: 40, hp: 40 }] })); r.advance(100)
+  const beetle = r.enemies[0]
+  assert.equal(beetle.type, 'beetle'); assert.equal(beetle.maxHp, 40)
+  assert.equal(r.poses.at(-1), 'beetle:squash')
+  r.fights.delta(create(FightDeltaSchema, { room: 1, tick: 101, changed: [{ enemy: 0, state: 5, stateTick: 101 }] })); r.advance(100)
+  assert.equal(beetle.state, 'stunned'); assert.equal(r.poses.at(-1), 'beetle:hurt')
+  r.fights.delta(create(FightDeltaSchema, { room: 1, tick: 102, changed: [{ enemy: 0, state: 3, stateTick: 102 }] })); r.advance(100)
+  r.owner.owner.stopped(beetle, 0.8); r.advance(16)
+  assert.equal(r.poses.at(-1), 'beetle:hurt'); assert.deepEqual(r.floats, ['Staggered'])
+  assert.equal(beetle.state, 'lunge', 'the room decides the stagger')
+})
+
+test('parked server enemies (dev only): off the map for targets and contact, room still updating, death silent, camp unfallen', () => {
+  const r = rig(); r.system.parkedAll = true
+  r.fights.join(r.join); r.advance(100)
+  const enemy = r.enemies[0]
+  assert.equal(enemy.parked, true)
+  assert.deepEqual([enemy.x, enemy.y, enemy.sprite.x, enemy.sprite.y], [-2000, -2000, -2000, -2000], 'off the map for every reader')
+  const tells = r.tells
+  r.fights.delta(create(FightDeltaSchema, { room: 1, tick: 101, changed: [{ enemy: 0, hp: 20, state: 2, stateTick: 101 }] }))
+  r.fights.event(create(FightEventSchema, { room: 1, tick: 101, enemy: 0, kind: 1 })); r.advance(200)
+  assert.equal(enemy.hp, 20, 'the room’s state still arrives'); assert.equal(r.tells, tells, 'no telegraph plays')
+  const hits = pressServerSwing(slashStrike({ x: 100, y: 100 }, { x: 1, y: 0 }, { meleeDamage: 5, critChance: 0 }, false), r.enemies, { ...r.feed, nextSwing: () => 0, swing: () => true })
+  assert.equal(hits.length, 0, 'out of reach where it is parked')
+  assert.equal(r.fights.campWon('camp:0:0:0', 'still'), false, 'parking is not a fall')
+  r.fights.event(create(FightEventSchema, { room: 1, tick: 102, enemy: 0, kind: 3 })); r.advance(200)
+  assert.equal(enemy.dead, true); assert.equal(r.enemies.length, 0); assert.equal(enemy.sprite.active, false)
 })

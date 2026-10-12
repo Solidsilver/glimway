@@ -150,7 +150,7 @@ func (a *Server) report(w http.ResponseWriter, r *http.Request) error {
 	// Re-read committed vitals, rather than allowing a fallen target to linger
 	// until the socket's periodic auth refresh. Stale/replayed reports do not
 	// apply vitals and do not invalidate in-flight presence authentication.
-	if out.Accepted && a.Config.FightPrototypeCamp != "" {
+	if out.Accepted && a.inFightRoom(s.AccountID) {
 		a.presenceChanged(s.AccountID)
 	}
 	return writeOpResult(w, state, out)

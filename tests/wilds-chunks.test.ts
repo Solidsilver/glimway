@@ -371,7 +371,7 @@ test('two overlapping reads answered backwards leave the later read’s view, an
   assert.deepEqual(v, {
     ...after,
     // Only the column the later read didn't cover takes the earlier read's state.
-    states: { 'node:-4:-4:0': { cycle: 1, state: 'harvested', available_at: 1791400020, by: 'fixture-account', at: 1791400000 } },
+    states: { 'node:-4:-4:0': { cycle: 1, state: 'harvested', available_at: 1791400020, by: 'fixture-account', at: 1791400000, camp_claimable: false } },
   });
   assert.equal(v.materials.stone, 8);
   assert.deepEqual(v.claims, []);

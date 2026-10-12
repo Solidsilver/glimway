@@ -385,26 +385,36 @@ func TestWildsClaimCyclesProjectionAndRace(t *testing.T) {
 	v := x.wilds(c, "tangle")
 	ep := v.Epoch.Id
 	camp := v.kind(t, "camp")
+	alice, bob := x.account("alice"), x.account("bob")
+	// A standing camp has nothing to claim: no fall, no completion.
+	if _, code := x.claim(c, s, "standing", ep, camp, 0, at(camp, 0), 409); code != "not-defeated" {
+		t.Fatal("claim without a fall", code)
+	}
+	fellAt := x.now.Load()
+	x.campFell(s.WorldID, ep, camp, 0, alice, bob)
+	// The fall, not a claim, clears the camp and starts its timer.
+	if st := x.wilds(c, "tangle").state(camp.Id); st.Cycle != 0 || st.State != "cleared" || st.AvailableAt != float64(fellAt+int64(content.WildsRules.Timers.CampRespawnSeconds)) || st.By != nil || !st.CampClaimable {
+		t.Fatalf("fallen camp %+v", st)
+	}
 	other, err := store.Open(filepath.Join(x.dir, "game.sqlite"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer other.Close()
 	api2 := New(other, x.api.Habitica, x.api.Config)
+	// Alice claims twice at once, under two keys, through two servers: one
+	// settles, the other is refused. A witness claims a fallen cycle once.
 	var wg sync.WaitGroup
 	statuses := make(chan int, 2)
-	for i, pair := range []struct {
-		c *http.Cookie
-		s response
-	}{{c, s}, {bc, b}} {
+	for i, key := range []string{"race-a", "race-b"} {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			raw, _ := protojson.Marshal(&contract.WildsClaimRequest{Op: op(pair.s.Lease, "race"), Epoch: ep, EntityId: camp.Id, Where: at(camp, 0)})
+			raw, _ := protojson.Marshal(&contract.WildsClaimRequest{Op: op(s.Lease, key), Epoch: ep, EntityId: camp.Id, Where: at(camp, 0)})
 			r := httptest.NewRequest("POST", "/api/wilds/claim", bytes.NewReader(raw))
 			r.Header.Set("X-Glimway-Contract", testContract())
 			r.Header.Set("Content-Type", "application/json")
-			r.AddCookie(pair.c)
+			r.AddCookie(c)
 			w := httptest.NewRecorder()
 			if i == 0 {
 				x.api.ServeHTTP(w, r)
@@ -430,11 +440,30 @@ func TestWildsClaimCyclesProjectionAndRace(t *testing.T) {
 	if wins != 1 || losses != 1 || count(t, x.db, "SELECT count(*) FROM ledger WHERE currency='glims' AND reason='wilds-claim'") != 1 {
 		t.Fatal("claim race", wins, losses)
 	}
+	if _, code := x.claim(c, s, "again", ep, camp, 0, at(camp, 0), 409); code != "already-claimed" {
+		t.Fatal("second claim", code)
+	}
+	// Bob witnessed it too: his claim is his own, during the cooldown, and
+	// moves neither the camp's row nor its timer.
+	if !x.wilds(bc, "tangle").state(camp.Id).CampClaimable || x.wilds(c, "tangle").state(camp.Id).CampClaimable {
+		t.Fatal("claimable: bob unclaimed, alice claimed")
+	}
+	got, _ := x.claim(bc, b, "bob", ep, camp, 0, at(camp, 0), 200)
+	if got.Entity.Cycle != 0 || got.Entity.State != "cleared" || got.Entity.By != nil || got.Entity.CampClaimable || count(t, x.db, "SELECT available_at FROM entity_state WHERE epoch=? AND entity_id=?", ep, camp.Id) != int(fellAt)+int(content.WildsRules.Timers.CampRespawnSeconds) {
+		t.Fatalf("witness claim %+v", got.Entity)
+	}
+	// The near read names the cycle's claim for its reader only.
+	if v := x.wilds(c, "tangle"); len(v.PersonalClaims) != 1 || v.PersonalClaims[0].EntityId != camp.Id {
+		t.Fatal("camp claim in the near read", v.PersonalClaims)
+	}
 	// Long after: exactly one cycle ahead, projected by the read, not written.
 	x.now.Add(10 * int64(content.WildsRules.Timers.CampRespawnSeconds))
 	next := x.wilds(c, "tangle")
-	if st := next.state(camp.Id); st.Cycle != 1 || st.State != "available" || st.By != nil {
+	if st := next.state(camp.Id); st.Cycle != 1 || st.State != "available" || st.By != nil || st.CampClaimable {
 		t.Fatalf("projection %+v", st)
+	}
+	if len(next.PersonalClaims) != 0 {
+		t.Fatal("an old cycle's claim shown for the new cycle", next.PersonalClaims)
 	}
 	if count(t, x.db, "SELECT cycle FROM entity_state WHERE epoch=? AND entity_id=?", ep, camp.Id) != 0 {
 		t.Fatal("the read wrote the projection")
@@ -445,9 +474,23 @@ func TestWildsClaimCyclesProjectionAndRace(t *testing.T) {
 	if _, code := x.claim(c, s, "ahead", ep, camp, 2, at(camp, 0), 409); code != "old-cycle" {
 		t.Fatal("cycle ahead", code)
 	}
-	got, _ := x.claim(c, s, "cycle1", ep, camp, 1, at(camp, 0), 200)
+	// The new cycle's camp stands: the old cycle's fall grants nothing.
+	if _, code := x.claim(c, s, "cycle1-early", ep, camp, 1, at(camp, 0), 409); code != "not-defeated" {
+		t.Fatal("old fall granted the new cycle", code)
+	}
+	x.campFell(s.WorldID, ep, camp, 1, alice)
+	if !x.wilds(c, "tangle").state(camp.Id).CampClaimable || x.wilds(bc, "tangle").state(camp.Id).CampClaimable {
+		t.Fatal("claimable: alice witnessed cycle 1, bob did not")
+	}
+	if _, code := x.claim(bc, b, "cycle1", ep, camp, 1, at(camp, 0), 409); code != "condition-unmet" {
+		t.Fatal("non-witness", code)
+	}
+	got, _ = x.claim(c, s, "cycle1", ep, camp, 1, at(camp, 0), 200)
 	if got.Entity.Cycle != 1 || got.Entity.State != "cleared" || count(t, x.db, "SELECT cycle FROM entity_state WHERE epoch=? AND entity_id=?", ep, camp.Id) != 1 {
-		t.Fatal("the claim didn't persist the projected cycle")
+		t.Fatal("the fall didn't persist the projected cycle")
+	}
+	if count(t, x.db, "SELECT count(*) FROM ledger WHERE currency='glims' AND reason='wilds-claim' AND ref=?", ep+":"+camp.Id+":1") != 1 {
+		t.Fatal("cycle ledger ref")
 	}
 	node := next.kind(t, "node")
 	x.claim(c, s, "node0", ep, node, 0, at(node, 0), 200)
@@ -477,6 +520,7 @@ func TestWildsClaimReach(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	v := x.wilds(c, "tangle")
+	x.campFell(s.WorldID, v.Epoch.Id, v.kind(t, "camp"), 0, x.account("alice"))
 	for _, kind := range []string{"node", "camp", "chest", "poi"} {
 		e := v.kind(t, kind)
 		if _, code := x.claim(c, s, kind+"-village", v.Epoch.Id, e, 0, &contract.Where{Area: "village", X: 10, Y: 10}, 409); code != "not-in-wilds" {
@@ -555,6 +599,12 @@ func TestWildsClaimRateIsDurableAtomicAndReplayExempt(t *testing.T) {
 	limit := int(content.Rules.GetWildsLimits().GetClaimsPerMinute())
 	if len(v.bodies) <= limit {
 		t.Fatal("insufficient entities for limit")
+	}
+	// Every camp among them fell this cycle with alice there.
+	for _, e := range v.bodies[:limit+1] {
+		if e.Kind == "camp" {
+			x.campFell(s.WorldID, v.Epoch.Id, e, 0, x.account("alice"))
+		}
 	}
 	var last *contract.WildsClaimRequest
 	for i := 0; i < limit; i++ {

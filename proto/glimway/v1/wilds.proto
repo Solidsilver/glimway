@@ -64,6 +64,10 @@ message WildsEpoch {
 message WildsEntityState {
   string id = 1; double cycle = 2; string state = 3; double available_at = 4;
   google.protobuf.StringValue by = 5; google.protobuf.DoubleValue at = 6; string epoch = 7;
+  // A generated camp only, for the reader (shared-fights.md 1.9): this
+  // cycle fell, the server stored the reader among its witnesses, and they
+  // have not claimed it. The claim's own proof; false for every other kind.
+  bool camp_claimable = 8;
 }
 // All time fields are Unix seconds.
 message WildsPersonalClaim { string entity_id = 1; double at = 2; }

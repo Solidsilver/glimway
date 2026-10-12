@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import type { BrowserContext } from '@playwright/test'
 import { allow, newUser, openTitleGuide, pasteAndConnect, pinWorld, reenter, routeHabitica, sql, waitForWorld } from './connected'
-import { chunkWhole, diagnose, holdUntil, parkCreatures, pressOn, standFor, warp, waitForWilds, wilds, windowWhole, worldTileOf, type WildsDump, frames, untilLine, expectToast, expectLine, SERVER_ANSWER_MS } from './helpers'
+import { chunkWhole, diagnose, fallCamp, holdUntil, parkCreatures, pressOn, standFor, warp, waitForWilds, wilds, windowWhole, worldTileOf, type WildsDump, frames, untilLine, expectToast, expectLine, SERVER_ANSWER_MS } from './helpers'
 
 /**
  * The Tangle on the open map: the Commons gate both ways, claims against the
@@ -136,9 +136,8 @@ test('connected: harvest, clear a camp, chest, POI, reload in place, the fallen 
   const camp = dump.entities.find((e) => e.kind === 'camp')
   if (!camp) throw new Error('no camp generated in the reached chunks')
   await goBeside(page, worldTileOf(camp))
-  // The camp's mix spawns around it; strike everything down.
-  await page.evaluate(() => (window as unknown as { __fsDevStrike: (n: number) => void }).__fsDevStrike(999))
-  await expect.poll(async () => (await wilds(page)).entities.find((e) => e.id === camp.id)!.claimable).toBe(true)
+  // The camp's room fights it (a server camp); its fall, with this account as a witness, makes it claimable.
+  await fallCamp(page, camp.id)
   // Stand where the camp (not a neighbouring node) owns the prompt.
   await act(page, await standAtEntity(page, camp, 'camp'), /camp is yours/i)
   after = await wilds(page)

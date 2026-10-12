@@ -311,6 +311,11 @@ func (a *Server) ClosePresence() {
 		<-actor.Done()
 	}
 	h.fightGathers.Wait()
+	// Every room has stopped, so no fall can arrive after this: write the
+	// queued ones before the store goes (bounded; a fall left is logged).
+	falls, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	_ = a.CloseFalls(falls)
+	cancel()
 	// HTTP Shutdown does not wait for hijacked connections, including sockets
 	// still waiting for auth. Close them concurrently and bound the drain.
 	if first {

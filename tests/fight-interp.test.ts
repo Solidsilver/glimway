@@ -89,7 +89,7 @@ test('seeded crits, row and swing refusals, duplicate results and pending timeou
   assert.equal(r.interp.measures().timeouts, 1)
   assert.equal(r.interp.measures().pending, 0)
 })
-test('spawn/remove, room rejoin and close discard buffers; camp deaths retain completion', () => {
+test('spawn/remove, room rejoin and close discard buffers; a removed corpse is absent, never a win', () => {
   const r = rig(); r.advance(100)
   r.interp.event(create(FightEventSchema, { room: 1, enemy: 0, tick: 100, kind: 3 }))
   r.interp.observe()
@@ -98,17 +98,17 @@ test('spawn/remove, room rejoin and close discard buffers; camp deaths retain co
   r.interp.delta(create(FightDeltaSchema, { room: 1, tick: 102, removed: [0] }))
   r.advance(200)
   assert.equal(r.interp.draw().length, 0)
-  assert.equal(r.interp.campWon('camp:0:0:0', 'still'), true)
+  assert.equal(r.interp.campWon('camp:0:0:0', 'still'), undefined, 'no rows: unknown')
   r.interp.join(r.join)
   assert.equal(r.interp.campWon('camp:0:0:0', 'still'), false)
   r.interp.event(create(FightEventSchema, { room: 1, tick: 100, kind: 5 }))
   r.interp.observe(); assert.equal(r.interp.rooms.size, 1)
   r.advance(FIGHT_RESYNC_GRACE); assert.equal(r.interp.rooms.size, 0)
 })
-test('flags reserve one camp and clamp latency knobs', () => {
-  assert.deepEqual(fightOptions('?fights=server&fightsCamp=camp:1:0:0&lag=150&jitter=50'), { enabled: true, camp: 'camp:1:0:0', lag: 150, jitter: 50 })
+test('no ownership flag survives; latency knobs clamp', () => {
+  assert.deepEqual(fightOptions('?fights=server&fightsCamp=camp:1:0:0&lag=150&jitter=50'), { lag: 150, jitter: 50 })
   assert.equal(fightOptions('?lag=-5&jitter=Infinity').jitter, 5000)
-  assert.equal(fightOptions('').enabled, false)
+  assert.deepEqual(fightOptions(''), { lag: 0, jitter: 0 })
 })
 
 test('aim-lock hints preserve sub-tick windup origin; new state ends the event pose', () => {
@@ -122,13 +122,14 @@ test('aim-lock hints preserve sub-tick windup origin; new state ends the event p
   assert.equal(r.interp.draw()[0]!.telegraphMs, undefined)
   assert.equal(r.interp.draw()[0]!.row.state, 3)
 })
-test('same-handle rejoin resets prediction and increments the renderer incarnation', () => {
+test('a same-key rejoin of a live room refreshes it: same incarnation and life, prediction kept', () => {
   const r = rig(); r.advance(100)
-  const old = r.interp.draw()[0]!.incarnation
+  const { incarnation, life } = r.interp.draw()[0]!
   r.interp.knock({ room: 1, enemy: 0 }, 25, 0)
-  r.interp.join(r.join); r.interp.observe()
-  assert.equal(r.interp.draw()[0]!.x, 100)
-  assert.notEqual(r.interp.draw()[0]!.incarnation, old)
+  r.interp.join(create(FightJoinSchema, { ...r.join, tick: 101, enemies: [{ ...r.join.enemies[0]!, hp: 20 }] })); r.interp.observe()
+  assert.deepEqual([r.interp.draw()[0]!.incarnation, r.interp.draw()[0]!.life], [incarnation, life])
+  assert.ok(r.interp.draw()[0]!.x > 100, 'the predicted knock still blends')
+  r.advance(100); assert.equal(r.interp.draw()[0]!.row.hp, 20)
 })
 test('a removal is held until the drawn instant, preserving its scheduled death effect', () => {
   const r = rig(); r.advance(100)
@@ -137,7 +138,7 @@ test('a removal is held until the drawn instant, preserving its scheduled death 
   assert.equal(r.interp.draw().length, 1)
   r.advance(100)
   assert.equal(r.interp.draw().length, 0)
-  assert.equal(r.interp.campWon('camp:0:0:0', 'still'), true)
+  assert.equal(r.interp.campWon('camp:0:0:0', 'still'), undefined)
 })
 
 test('join and spawn wait for their server stamp so targets match the reported instant', () => {
@@ -189,4 +190,44 @@ test('grace expired or a changed epoch is a new incarnation, while a new handle 
   assert.equal(r.interp.draw().length, 0)
   r.interp.join(create(FightJoinSchema, { ...r.join, room: 3, roomKey: { ...r.join.roomKey!, epoch: 'next' } }))
   assert.notEqual(r.interp.draw()[0]!.incarnation, changed)
+})
+
+test('camp scaling and a cycle respawn: spawned rows count at once, removed corpses leave, each row is a new life', () => {
+  const r = rig(); r.advance(100)
+  const first = r.interp.draw()[0]!.life
+  // First aggro freezes the camp at two: an extra rises.
+  r.interp.delta(create(FightDeltaSchema, { room: 1, tick: 101, spawned: [{ ...r.join.enemies[0]!, enemy: 1, id: 'camp:0:0:0:1' }] }))
+  r.interp.event(create(FightEventSchema, { room: 1, enemy: 0, tick: 101, kind: 3 })); r.delta(101, [{ enemy: 0, hp: 0, state: 6, stateTick: 101 }])
+  assert.equal(r.interp.campWon('camp:0:0:0', 'still'), false, 'the extra still stands')
+  r.interp.delta(create(FightDeltaSchema, { room: 1, tick: 102, changed: [{ enemy: 1, hp: 0, state: 6, stateTick: 102 }] }))
+  assert.equal(r.interp.campWon('camp:0:0:0', 'still'), true)
+  r.advance(200)
+  // The next cycle, in the same room: corpses removed, fresh rows with new ids and indices.
+  r.interp.delta(create(FightDeltaSchema, { room: 1, tick: 104, removed: [0, 1], spawned: [{ ...r.join.enemies[0]!, enemy: 2, id: 'camp:0:0:0:2', stateTick: 104 }] }))
+  assert.equal(r.interp.campWon('camp:0:0:0', 'still'), false, 'old corpses never complete the new cycle')
+  r.advance(300)
+  const drawn = r.interp.draw()
+  assert.deepEqual(drawn.map(d => d.row.id), ['camp:0:0:0:2'])
+  assert.notEqual(drawn[0]!.life, first)
+})
+
+test('a refresh whose row stands where a corpse was is a new life, never a resurrection', () => {
+  const r = rig(); r.advance(100)
+  r.delta(101, [{ enemy: 0, hp: 0, state: 6, stateTick: 101 }]); r.advance(100)
+  const dead = r.interp.draw()[0]!
+  assert.equal(dead.row.state, 6)
+  r.interp.join(create(FightJoinSchema, { ...r.join, room: 2, tick: 103 })); r.advance(100)
+  const drawn = r.interp.draw()
+  assert.equal(drawn.length, 1, 'the corpse leaves at the refresh stamp')
+  assert.equal(drawn[0]!.row.state, 1)
+  assert.notEqual(drawn[0]!.life, dead.life)
+  assert.equal(drawn[0]!.incarnation, dead.incarnation, 'the room itself is the same')
+})
+
+test('chunk crossings never reset a room still in the 3×3: the same incarnation, samples and seed', () => {
+  const r = rig(); r.advance(100)
+  const before = r.interp.draw()[0]!
+  r.interp.join(create(FightJoinSchema, { ...r.join, room: 7, tick: 101 })); r.advance(100)
+  assert.equal(r.interp.seed, 123)
+  assert.deepEqual([r.interp.draw()[0]!.incarnation, r.interp.draw()[0]!.life, r.interp.draw()[0]!.room], [before.incarnation, before.life, 7])
 })

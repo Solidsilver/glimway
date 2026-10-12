@@ -13,6 +13,7 @@ import type { GroundView } from './area/terrain'
 import type { EnemyType } from './worlds'
 import type { WardenView } from './entities/warden'
 import type { WildsEntities } from './wilds/entities'
+import type { DevFightFall } from './wilds/dev-fight-fall'
 import type { WildsWindow } from './wilds/window'
 import type { WildsPaths } from './wilds/paths'
 import type { WildsMarks } from './wilds/marks'
@@ -143,7 +144,10 @@ export interface FsHooks {
   __fsDevDodge: (dx: number, dy: number) => void
   __fsDevAttack: () => void
   __fsDevParkCreatures: () => void
+  /** Local (curated) enemies take `n`; a server camp's enemies only show it (their room decides). */
   __fsDevStrike: (n: number, type?: EnemyType) => void
+  /** Finish a generated camp's fight for this account (a `-tags dev` server's /api/dev/fight-fall), then read the Wilds again. */
+  __fsDevFightFall: (entity: string) => Promise<DevFightFall>
   /** Speak the naming to the warden; `force` skips the opening and reach rules. */
   __fsDevSpeakNaming: (force?: boolean) => boolean
   /** Set the hero down at a spot in this area (no scene restart); the save follows. */

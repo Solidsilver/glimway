@@ -28,39 +28,16 @@ test('server Stand prediction changes a temporary pose window, not authoritative
   const owner = new ServerEnemies({ scene: { time: { now: 1000 } } } as any)
   const enemy = { state: 'lunge', stateTimer: .2, lungeX: 190, hp: 28, type: 'wisp' } as any
   const entry = { enemy, draw: { row: { stateTick: 10 } }, stopTick: -1, stoppedUntil: 0 }
-  ;(owner as any).drawn.set('1:0', entry)
+  ;(owner as any).drawn.set(1, entry)
   owner.owner.stopped(enemy, 2)
   assert.equal(entry.stoppedUntil, 3000)
   assert.deepEqual(enemy, { state: 'lunge', stateTimer: .2, lungeX: 190, hp: 28, type: 'wisp' })
   owner.owner.stopped(enemy, 2)
   assert.equal(entry.stoppedUntil, 3000)
 })
-test('local camp detach never removes server-owned enemies in the same list', () => {
-  const system = Object.create(EnemySystem.prototype)
-  let destroyed = 0
-  system._enemies = [{ id: 'wilds:camp:0:0:0:0', fight: { room: 1, enemy: 0 }, sprite: { active: true, destroy() { assert.fail('server lifecycle belongs to its owner') } } }, { id: 'wilds:camp:0:0:0:1', sprite: { active: true, destroy() { destroyed++ } } }]
-  system.removeWilds('wilds:camp:0:0:0:')
-  assert.equal(destroyed, 1); assert.equal(system.enemies.length, 1)
-  assert.equal(system.enemies[0].fight.room, 1)
-})
-
-test('removeLocalCamp deletes only matching local copies, keeping server and unrelated local enemies', () => {
-  const system = Object.create(EnemySystem.prototype)
-  let destroyed = 0
-  const enemy = (id: string, fight?: object) => ({ id, fight, sprite: { active: true, destroy() { this.active = false; destroyed++ } } })
-  const replacement = enemy('wilds:camp:0:0:0:0')
-  const server = enemy('wilds:camp:0:0:0:1', { room: 1, enemy: 1 })
-  const other = enemy('wilds:camp:0:0:01:0')
-  system._enemies = [replacement, server, other]
-  system.removeLocalCamp('camp:0:0:0')
-  assert.equal(destroyed, 1); assert.deepEqual(system.enemies, [server, other])
-  system.removeLocalCamp('camp:0:0:0'); assert.equal(destroyed, 1)
-})
-test('flag off: real local owner update and Hero.land keep contact, damage, knockback and interruption', async () => {
+test('curated fights: the real local owner update and Hero.land keep contact, damage, knockback and interruption', async () => {
   const { Hero } = await import('../src/game/entities/hero.ts')
-  const { FIGHT_OPTIONS } = await import('../src/lib/fight-options.ts')
   const { slashStrike, ENEMY_TUNING, KNOCK } = await import('../src/game/entities/fight-rules.ts')
-  assert.equal(FIGHT_OPTIONS.enabled, false)
   const hurts: number[] = [], velocities: number[][] = [], numbers: string[] = []
   const scene: any = { events: { on() {}, once() {}, off() {} }, time: { now: 0, delayedCall() {} }, add: { graphics: () => ({ setDepth() { return this } }) } }
   const heroView = { sprite: { x: 100, y: 100 }, facing: { x: 1, y: 0 }, damagePlayer(n: number) { hurts.push(n) } }
@@ -79,4 +56,24 @@ test('flag off: real local owner update and Hero.land keep contact, damage, knoc
   assert.equal(enemy.state, 'recover'); assert.equal(enemy.stateTimer, ENEMY_TUNING.wisp.recover)
   assert.equal(enemy.knockX, KNOCK.small); assert.equal(enemy.knockTimer, KNOCK.time)
   assert.equal(system.server, null)
+})
+
+test('the Wilds always draw their camps from the server: no flag, and no local camp path left', () => {
+  const scene: any = { events: { on() {}, once() {}, off() {} }, time: { now: 0, delayedCall() {} }, add: { graphics: () => ({ setDepth() { return this } }) } }
+  const wilds: any = new EnemySystem(scene, { world: { areaId: 'wilds', enemies: [] }, hero: () => ({}), fx: {} } as any, {} as any)
+  assert.notEqual(wilds.server, null)
+  assert.equal(typeof wilds.removeWilds, 'undefined'); assert.equal(typeof wilds.removeLocalCamp, 'undefined')
+  const woodland: any = new EnemySystem(scene, { world: { areaId: 'woodland', enemies: [] }, hero: () => ({}), fx: {} } as any, {} as any)
+  assert.equal(woodland.server, null, 'curated areas keep only the local owner')
+})
+
+test('a late-landing signature shows its press-time server rows only, never on an enemy the room has since killed', async () => {
+  const { Hero } = await import('../src/game/entities/hero.ts')
+  const shown: [string, number, boolean][] = []
+  const alive = { id: 'a', dead: false, x: 1, y: 1 }, killed = { id: 'k', dead: true, x: 1, y: 1 }, gone = { id: 'g', dead: false, x: 1, y: 1 }
+  const enemies = { enemies: [alive, killed], damageEnemy: (e: { id: string }, amount: number, _from: number, crit: boolean) => shown.push([e.id, amount, crit]) }
+  const hero: any = Object.create(Hero.prototype)
+  hero.deps = { enemies: () => enemies, fx: { sparkBurst() {} } }
+  hero.showPredicted([{ enemy: alive, amount: 12, crit: true }, { enemy: killed, amount: 12, crit: false }, { enemy: gone, amount: 12, crit: false }], 0)
+  assert.deepEqual(shown, [['a', 12, true]])
 })

@@ -36,6 +36,7 @@ type Combat struct {
 	Mitigation               *CombatFormula          `protobuf:"bytes,7,opt,name=mitigation,proto3" json:"mitigation,omitempty"`
 	Crit                     *CombatFormula          `protobuf:"bytes,8,opt,name=crit,proto3" json:"crit,omitempty"`
 	Attack                   *CombatAttack           `protobuf:"bytes,9,opt,name=attack,proto3" json:"attack,omitempty"`
+	Signatures               *CombatSignatures       `protobuf:"bytes,10,opt,name=signatures,proto3" json:"signatures,omitempty"`
 	unknownFields            protoimpl.UnknownFields
 	sizeCache                protoimpl.SizeCache
 }
@@ -129,6 +130,13 @@ func (x *Combat) GetCrit() *CombatFormula {
 func (x *Combat) GetAttack() *CombatAttack {
 	if x != nil {
 		return x.Attack
+	}
+	return nil
+}
+
+func (x *Combat) GetSignatures() *CombatSignatures {
+	if x != nil {
+		return x.Signatures
 	}
 	return nil
 }
@@ -514,11 +522,320 @@ func (x *CombatAttack) GetBoltSpawnOffsetX() float64 {
 	return 0
 }
 
+// The signatures' blows (shared-fights.md 1.5): what the hero draws and
+// predicts, and what the server's sim judges, from one set of numbers. Each
+// strike is a circle of `reach` px, judged to an enemy's middle
+// (attack.enemy_y_offset above its feet), strictly inside.
+type CombatSignatures struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Cleave        *CombatBlow            `protobuf:"bytes,1,opt,name=cleave,proto3" json:"cleave,omitempty"`
+	Shadowstep    *CombatShadowstep      `protobuf:"bytes,2,opt,name=shadowstep,proto3" json:"shadowstep,omitempty"`
+	Mend          *CombatPulse           `protobuf:"bytes,3,opt,name=mend,proto3" json:"mend,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CombatSignatures) Reset() {
+	*x = CombatSignatures{}
+	mi := &file_glimway_content_v1_combat_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CombatSignatures) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CombatSignatures) ProtoMessage() {}
+
+func (x *CombatSignatures) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_content_v1_combat_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CombatSignatures.ProtoReflect.Descriptor instead.
+func (*CombatSignatures) Descriptor() ([]byte, []int) {
+	return file_glimway_content_v1_combat_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *CombatSignatures) GetCleave() *CombatBlow {
+	if x != nil {
+		return x.Cleave
+	}
+	return nil
+}
+
+func (x *CombatSignatures) GetShadowstep() *CombatShadowstep {
+	if x != nil {
+		return x.Shadowstep
+	}
+	return nil
+}
+
+func (x *CombatSignatures) GetMend() *CombatPulse {
+	if x != nil {
+		return x.Mend
+	}
+	return nil
+}
+
+// A blow centred ahead_x/ahead_y along the unit facing and `up` above the
+// caster's feet, landing land_seconds after the press.
+type CombatBlow struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Reach         float64                `protobuf:"fixed64,1,opt,name=reach,proto3" json:"reach,omitempty"`
+	AheadX        float64                `protobuf:"fixed64,2,opt,name=ahead_x,json=aheadX,proto3" json:"ahead_x,omitempty"`
+	AheadY        float64                `protobuf:"fixed64,3,opt,name=ahead_y,json=aheadY,proto3" json:"ahead_y,omitempty"`
+	Up            float64                `protobuf:"fixed64,4,opt,name=up,proto3" json:"up,omitempty"`
+	LandSeconds   float64                `protobuf:"fixed64,5,opt,name=land_seconds,json=landSeconds,proto3" json:"land_seconds,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CombatBlow) Reset() {
+	*x = CombatBlow{}
+	mi := &file_glimway_content_v1_combat_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CombatBlow) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CombatBlow) ProtoMessage() {}
+
+func (x *CombatBlow) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_content_v1_combat_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CombatBlow.ProtoReflect.Descriptor instead.
+func (*CombatBlow) Descriptor() ([]byte, []int) {
+	return file_glimway_content_v1_combat_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *CombatBlow) GetReach() float64 {
+	if x != nil {
+		return x.Reach
+	}
+	return 0
+}
+
+func (x *CombatBlow) GetAheadX() float64 {
+	if x != nil {
+		return x.AheadX
+	}
+	return 0
+}
+
+func (x *CombatBlow) GetAheadY() float64 {
+	if x != nil {
+		return x.AheadY
+	}
+	return 0
+}
+
+func (x *CombatBlow) GetUp() float64 {
+	if x != nil {
+		return x.Up
+	}
+	return 0
+}
+
+func (x *CombatBlow) GetLandSeconds() float64 {
+	if x != nil {
+		return x.LandSeconds
+	}
+	return 0
+}
+
+// A pulse centred `up` above the caster's feet, landing land_seconds after
+// the press.
+type CombatPulse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Reach         float64                `protobuf:"fixed64,1,opt,name=reach,proto3" json:"reach,omitempty"`
+	Up            float64                `protobuf:"fixed64,2,opt,name=up,proto3" json:"up,omitempty"`
+	LandSeconds   float64                `protobuf:"fixed64,3,opt,name=land_seconds,json=landSeconds,proto3" json:"land_seconds,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CombatPulse) Reset() {
+	*x = CombatPulse{}
+	mi := &file_glimway_content_v1_combat_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CombatPulse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CombatPulse) ProtoMessage() {}
+
+func (x *CombatPulse) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_content_v1_combat_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CombatPulse.ProtoReflect.Descriptor instead.
+func (*CombatPulse) Descriptor() ([]byte, []int) {
+	return file_glimway_content_v1_combat_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *CombatPulse) GetReach() float64 {
+	if x != nil {
+		return x.Reach
+	}
+	return 0
+}
+
+func (x *CombatPulse) GetUp() float64 {
+	if x != nil {
+		return x.Up
+	}
+	return 0
+}
+
+func (x *CombatPulse) GetLandSeconds() float64 {
+	if x != nil {
+		return x.LandSeconds
+	}
+	return 0
+}
+
+// Shadowstep's Snapstrike: a dash of dash_speed px/s for dash_seconds along
+// the facing (walls stop it), then a strike `up` above where it ended,
+// land_seconds after the dash: `reach` wide when the dash carried the hero
+// more than `travelled` px, still_reach when a wall stopped it. Its shove
+// comes from knock_back px behind the end, along the facing's x.
+type CombatShadowstep struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Reach         float64                `protobuf:"fixed64,1,opt,name=reach,proto3" json:"reach,omitempty"`
+	StillReach    float64                `protobuf:"fixed64,2,opt,name=still_reach,json=stillReach,proto3" json:"still_reach,omitempty"`
+	Up            float64                `protobuf:"fixed64,3,opt,name=up,proto3" json:"up,omitempty"`
+	Travelled     float64                `protobuf:"fixed64,4,opt,name=travelled,proto3" json:"travelled,omitempty"`
+	DashSpeed     float64                `protobuf:"fixed64,5,opt,name=dash_speed,json=dashSpeed,proto3" json:"dash_speed,omitempty"`
+	DashSeconds   float64                `protobuf:"fixed64,6,opt,name=dash_seconds,json=dashSeconds,proto3" json:"dash_seconds,omitempty"`
+	LandSeconds   float64                `protobuf:"fixed64,7,opt,name=land_seconds,json=landSeconds,proto3" json:"land_seconds,omitempty"`
+	KnockBack     float64                `protobuf:"fixed64,8,opt,name=knock_back,json=knockBack,proto3" json:"knock_back,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CombatShadowstep) Reset() {
+	*x = CombatShadowstep{}
+	mi := &file_glimway_content_v1_combat_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CombatShadowstep) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CombatShadowstep) ProtoMessage() {}
+
+func (x *CombatShadowstep) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_content_v1_combat_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CombatShadowstep.ProtoReflect.Descriptor instead.
+func (*CombatShadowstep) Descriptor() ([]byte, []int) {
+	return file_glimway_content_v1_combat_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *CombatShadowstep) GetReach() float64 {
+	if x != nil {
+		return x.Reach
+	}
+	return 0
+}
+
+func (x *CombatShadowstep) GetStillReach() float64 {
+	if x != nil {
+		return x.StillReach
+	}
+	return 0
+}
+
+func (x *CombatShadowstep) GetUp() float64 {
+	if x != nil {
+		return x.Up
+	}
+	return 0
+}
+
+func (x *CombatShadowstep) GetTravelled() float64 {
+	if x != nil {
+		return x.Travelled
+	}
+	return 0
+}
+
+func (x *CombatShadowstep) GetDashSpeed() float64 {
+	if x != nil {
+		return x.DashSpeed
+	}
+	return 0
+}
+
+func (x *CombatShadowstep) GetDashSeconds() float64 {
+	if x != nil {
+		return x.DashSeconds
+	}
+	return 0
+}
+
+func (x *CombatShadowstep) GetLandSeconds() float64 {
+	if x != nil {
+		return x.LandSeconds
+	}
+	return 0
+}
+
+func (x *CombatShadowstep) GetKnockBack() float64 {
+	if x != nil {
+		return x.KnockBack
+	}
+	return 0
+}
+
 var File_glimway_content_v1_combat_proto protoreflect.FileDescriptor
 
 const file_glimway_content_v1_combat_proto_rawDesc = "" +
 	"\n" +
-	"\x1fglimway/content/v1/combat.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\x83\t\n" +
+	"\x1fglimway/content/v1/combat.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\xd1\t\n" +
 	"\x06Combat\x12L\n" +
 	"\x1asignature_cooldown_seconds\x18\x01 \x01(\x01B\x0e\xbaH\v\x12\t\t\x00\x00\x00\x00\x00\x00\xf0?R\x18signatureCooldownSeconds\x12K\n" +
 	"\aclasses\x18\x02 \x03(\v2'.glimway.content.v1.Combat.ClassesEntryB\b\xbaH\x05\x9a\x01\x02\b\x01R\aclasses\x12:\n" +
@@ -530,7 +847,11 @@ const file_glimway_content_v1_combat_proto_rawDesc = "" +
 	"mitigation\x18\a \x01(\v2!.glimway.content.v1.CombatFormulaB\x06\xbaH\x03\xc8\x01\x01R\n" +
 	"mitigation\x12=\n" +
 	"\x04crit\x18\b \x01(\v2!.glimway.content.v1.CombatFormulaB\x06\xbaH\x03\xc8\x01\x01R\x04crit\x12@\n" +
-	"\x06attack\x18\t \x01(\v2 .glimway.content.v1.CombatAttackB\x06\xbaH\x03\xc8\x01\x01R\x06attack\x1a[\n" +
+	"\x06attack\x18\t \x01(\v2 .glimway.content.v1.CombatAttackB\x06\xbaH\x03\xc8\x01\x01R\x06attack\x12L\n" +
+	"\n" +
+	"signatures\x18\n" +
+	" \x01(\v2$.glimway.content.v1.CombatSignaturesB\x06\xbaH\x03\xc8\x01\x01R\n" +
+	"signatures\x1a[\n" +
 	"\fClassesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x125\n" +
 	"\x05value\x18\x02 \x01(\v2\x1f.glimway.content.v1.CombatClassR\x05value:\x028\x01:\xa3\x03\xbaH\x9f\x03\x1a\xe4\x01\n" +
@@ -571,7 +892,37 @@ const file_glimway_content_v1_combat_proto_rawDesc = "" +
 	"\x0fcrit_multiplier\x18\t \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\xf0?R\x0ecritMultiplier\x12I\n" +
 	"\x14tool_damage_fraction\x18\n" +
 	" \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x00\x00\xf0?!\x00\x00\x00\x00\x00\x00\x00\x00R\x12toolDamageFraction\x12=\n" +
-	"\x13bolt_spawn_offset_x\x18\v \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x10boltSpawnOffsetXB*Z(glimway/gen/glimway/content/v1;contentv1b\x06proto3"
+	"\x13bolt_spawn_offset_x\x18\v \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x10boltSpawnOffsetX\"\xdd\x01\n" +
+	"\x10CombatSignatures\x12>\n" +
+	"\x06cleave\x18\x01 \x01(\v2\x1e.glimway.content.v1.CombatBlowB\x06\xbaH\x03\xc8\x01\x01R\x06cleave\x12L\n" +
+	"\n" +
+	"shadowstep\x18\x02 \x01(\v2$.glimway.content.v1.CombatShadowstepB\x06\xbaH\x03\xc8\x01\x01R\n" +
+	"shadowstep\x12;\n" +
+	"\x04mend\x18\x03 \x01(\v2\x1f.glimway.content.v1.CombatPulseB\x06\xbaH\x03\xc8\x01\x01R\x04mend\"\xd7\x01\n" +
+	"\n" +
+	"CombatBlow\x12$\n" +
+	"\x05reach\x18\x01 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x05reach\x12'\n" +
+	"\aahead_x\x18\x02 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\x06aheadX\x12'\n" +
+	"\aahead_y\x18\x03 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\x06aheadY\x12\x1e\n" +
+	"\x02up\x18\x04 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\x02up\x121\n" +
+	"\fland_seconds\x18\x05 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\vlandSeconds\"\x86\x01\n" +
+	"\vCombatPulse\x12$\n" +
+	"\x05reach\x18\x01 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x05reach\x12\x1e\n" +
+	"\x02up\x18\x02 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\x02up\x121\n" +
+	"\fland_seconds\x18\x03 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\vlandSeconds\"\xf1\x03\n" +
+	"\x10CombatShadowstep\x12$\n" +
+	"\x05reach\x18\x01 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x05reach\x12/\n" +
+	"\vstill_reach\x18\x02 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\n" +
+	"stillReach\x12\x1e\n" +
+	"\x02up\x18\x03 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\x02up\x12,\n" +
+	"\ttravelled\x18\x04 \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\ttravelled\x12-\n" +
+	"\n" +
+	"dash_speed\x18\x05 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\tdashSpeed\x121\n" +
+	"\fdash_seconds\x18\x06 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\vdashSeconds\x121\n" +
+	"\fland_seconds\x18\a \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\vlandSeconds\x12-\n" +
+	"\n" +
+	"knock_back\x18\b \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\x00\x00R\tknockBack:t\xbaHq\x1ao\n" +
+	"\x17combat.shadowstep_reach\x124a stopped dash never reaches further than a full one\x1a\x1ethis.still_reach <= this.reachB*Z(glimway/gen/glimway/content/v1;contentv1b\x06proto3"
 
 var (
 	file_glimway_content_v1_combat_proto_rawDescOnce sync.Once
@@ -585,31 +936,39 @@ func file_glimway_content_v1_combat_proto_rawDescGZIP() []byte {
 	return file_glimway_content_v1_combat_proto_rawDescData
 }
 
-var file_glimway_content_v1_combat_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_glimway_content_v1_combat_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_glimway_content_v1_combat_proto_goTypes = []any{
-	(*Combat)(nil),          // 0: glimway.content.v1.Combat
-	(*CombatClass)(nil),     // 1: glimway.content.v1.CombatClass
-	(*CombatHeal)(nil),      // 2: glimway.content.v1.CombatHeal
-	(*CombatClassless)(nil), // 3: glimway.content.v1.CombatClassless
-	(*CombatFormula)(nil),   // 4: glimway.content.v1.CombatFormula
-	(*CombatAttack)(nil),    // 5: glimway.content.v1.CombatAttack
-	nil,                     // 6: glimway.content.v1.Combat.ClassesEntry
+	(*Combat)(nil),           // 0: glimway.content.v1.Combat
+	(*CombatClass)(nil),      // 1: glimway.content.v1.CombatClass
+	(*CombatHeal)(nil),       // 2: glimway.content.v1.CombatHeal
+	(*CombatClassless)(nil),  // 3: glimway.content.v1.CombatClassless
+	(*CombatFormula)(nil),    // 4: glimway.content.v1.CombatFormula
+	(*CombatAttack)(nil),     // 5: glimway.content.v1.CombatAttack
+	(*CombatSignatures)(nil), // 6: glimway.content.v1.CombatSignatures
+	(*CombatBlow)(nil),       // 7: glimway.content.v1.CombatBlow
+	(*CombatPulse)(nil),      // 8: glimway.content.v1.CombatPulse
+	(*CombatShadowstep)(nil), // 9: glimway.content.v1.CombatShadowstep
+	nil,                      // 10: glimway.content.v1.Combat.ClassesEntry
 }
 var file_glimway_content_v1_combat_proto_depIdxs = []int32{
-	6, // 0: glimway.content.v1.Combat.classes:type_name -> glimway.content.v1.Combat.ClassesEntry
-	2, // 1: glimway.content.v1.Combat.heal:type_name -> glimway.content.v1.CombatHeal
-	3, // 2: glimway.content.v1.Combat.classless:type_name -> glimway.content.v1.CombatClassless
-	4, // 3: glimway.content.v1.Combat.melee:type_name -> glimway.content.v1.CombatFormula
-	4, // 4: glimway.content.v1.Combat.signature:type_name -> glimway.content.v1.CombatFormula
-	4, // 5: glimway.content.v1.Combat.mitigation:type_name -> glimway.content.v1.CombatFormula
-	4, // 6: glimway.content.v1.Combat.crit:type_name -> glimway.content.v1.CombatFormula
-	5, // 7: glimway.content.v1.Combat.attack:type_name -> glimway.content.v1.CombatAttack
-	1, // 8: glimway.content.v1.Combat.ClassesEntry.value:type_name -> glimway.content.v1.CombatClass
-	9, // [9:9] is the sub-list for method output_type
-	9, // [9:9] is the sub-list for method input_type
-	9, // [9:9] is the sub-list for extension type_name
-	9, // [9:9] is the sub-list for extension extendee
-	0, // [0:9] is the sub-list for field type_name
+	10, // 0: glimway.content.v1.Combat.classes:type_name -> glimway.content.v1.Combat.ClassesEntry
+	2,  // 1: glimway.content.v1.Combat.heal:type_name -> glimway.content.v1.CombatHeal
+	3,  // 2: glimway.content.v1.Combat.classless:type_name -> glimway.content.v1.CombatClassless
+	4,  // 3: glimway.content.v1.Combat.melee:type_name -> glimway.content.v1.CombatFormula
+	4,  // 4: glimway.content.v1.Combat.signature:type_name -> glimway.content.v1.CombatFormula
+	4,  // 5: glimway.content.v1.Combat.mitigation:type_name -> glimway.content.v1.CombatFormula
+	4,  // 6: glimway.content.v1.Combat.crit:type_name -> glimway.content.v1.CombatFormula
+	5,  // 7: glimway.content.v1.Combat.attack:type_name -> glimway.content.v1.CombatAttack
+	6,  // 8: glimway.content.v1.Combat.signatures:type_name -> glimway.content.v1.CombatSignatures
+	7,  // 9: glimway.content.v1.CombatSignatures.cleave:type_name -> glimway.content.v1.CombatBlow
+	9,  // 10: glimway.content.v1.CombatSignatures.shadowstep:type_name -> glimway.content.v1.CombatShadowstep
+	8,  // 11: glimway.content.v1.CombatSignatures.mend:type_name -> glimway.content.v1.CombatPulse
+	1,  // 12: glimway.content.v1.Combat.ClassesEntry.value:type_name -> glimway.content.v1.CombatClass
+	13, // [13:13] is the sub-list for method output_type
+	13, // [13:13] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_glimway_content_v1_combat_proto_init() }
@@ -623,7 +982,7 @@ func file_glimway_content_v1_combat_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_glimway_content_v1_combat_proto_rawDesc), len(file_glimway_content_v1_combat_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

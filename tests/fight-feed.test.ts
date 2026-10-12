@@ -11,7 +11,7 @@ function rig(latency = { lag: 0, jitter: 0 }) {
   const tasks = new Map<number, { at: number; fn: () => void }>()
   const sent: ReturnType<typeof fromBinary<typeof PresenceMessageSchema>>[] = []
   const socket: SocketLike = { readyState: 1, protocol: PRESENCE_PROTOCOL, onopen: null, onmessage: null, onclose: null, onerror: null, send: data => sent.push(fromBinary(PresenceMessageSchema, data as Uint8Array)), close() {} }
-  const feed = new PresenceFeed({ link: { active: true, status: 'online', lease: 'lease', beat: async () => {} }, bus: { on() {}, off() {}, emit() {} }, url: 'ws://fake', makeSocket: () => socket, fights: true, latency, now: () => now, every: () => 0, cancel() {}, timers: { now: () => now, set: (fn, ms) => { tasks.set(++seq, { at: now + ms, fn }); return seq }, clear: t => { tasks.delete(t as number) } } })
+  const feed = new PresenceFeed({ link: { active: true, status: 'online', lease: 'lease', beat: async () => {} }, bus: { on() {}, off() {}, emit() {} }, url: 'ws://fake', makeSocket: () => socket, latency, now: () => now, every: () => 0, cancel() {}, timers: { now: () => now, set: (fn, ms) => { tasks.set(++seq, { at: now + ms, fn }); return seq }, clear: t => { tasks.delete(t as number) } } })
   const advance = (ms: number) => {
     const end = now + ms
     for (;;) {
@@ -117,18 +117,45 @@ test('a queued lagged swing that cannot be delivered is withdrawn rather than ti
   r.feed.stop()
 })
 
-test('cleared camp stays offerable when a real feed disconnects, then live rows can revoke it', async () => {
+test('through a real feed: dead rows only ask for a read; a disconnect keeps the store’s word; a reconnect’s standing rows hide it', async () => {
   const { ServerCampOutcome } = await import('../src/game/wilds/camp-fights.ts')
   const r = rig(); r.push({ case: 'fightJoin', value: join }); r.advance(100); r.feed.fights.observe()
-  const outcome = new ServerCampOutcome(camp => r.feed.live ? r.feed.fights.campWon(camp.id, camp.epoch) : undefined)
-  const camp = { id: 'camp:0:0:0', epoch: 'still', cycle: 1 }
+  let asks = 0
+  const outcome = new ServerCampOutcome(camp => r.feed.live ? r.feed.fights.campWon(camp.id, camp.epoch) : undefined, () => asks++, () => 0)
+  const camp = { id: 'camp:0:0:0', epoch: 'still', cycle: 1, claimable: false }
   assert.equal(outcome.won(camp), false)
   r.push({ case: 'fightEvent', value: { room: 1, tick: 100, enemy: 0, kind: 3 } }); r.feed.fights.observe()
-  assert.equal(outcome.won(camp), true)
+  assert.equal(outcome.won(camp), false, 'the room’s death is not the server’s word')
+  assert.equal(asks, 1, 'it asks for a near read')
+  assert.equal(outcome.won({ ...camp, claimable: true }), true, 'the read names it claimable')
   r.socket.onclose?.({ code: 1006 })
   assert.equal(r.feed.fights.campWon(camp.id, camp.epoch), undefined)
-  assert.equal(outcome.won(camp), true)
+  assert.equal(outcome.won({ ...camp, claimable: true }), true, 'unknown keeps the confirmed word')
   r.advance(1500); r.socket.onopen?.({}); r.push({ case: 'ready', value: { accountId: 'me' } })
-  r.push({ case: 'fightJoin', value: join }); assert.equal(outcome.won(camp), false)
+  r.push({ case: 'fightJoin', value: join }); assert.equal(outcome.won({ ...camp, claimable: true }), false, 'a standing row hides it')
+  r.feed.stop()
+})
+
+test('a cast with a fight part goes on the shared counter as one PresenceAbility, waits for its result, and withdraws if unsent', () => {
+  const r = rig()
+  r.push({ case: 'fightJoin', value: join }); r.advance(100); r.feed.fights.observe()
+  assert.equal(r.feed.nextSwing(), 0)
+  const seen = r.feed.fights.seen()!
+  assert.equal(r.feed.ability('cleave', 100, 100, { seenTick: seen.tick, seenOffsetMs: seen.offsetMs, facing: { x: 2, y: 0 }, swingCounter: r.feed.nextSwing(), predicted: [{ room: 1, enemy: 0 }] }), true)
+  const sent = r.sent.at(-1)!.event
+  assert.equal(sent.case, 'ability')
+  const ability = sent.value as { ability: string; fight?: { swingCounter: number; facing?: { x: number; y: number }; predicted: { room: number; enemy: number }[] } }
+  assert.equal(ability.ability, 'cleave')
+  assert.equal(ability.fight!.swingCounter, 1)
+  assert.deepEqual([ability.fight!.facing!.x, ability.fight!.facing!.y], [1, 0], 'facing normalized on the wire')
+  assert.deepEqual(ability.fight!.predicted.map(t => [t.room, t.enemy]), [[1, 0]])
+  assert.equal(r.feed.fights.measures().pending, 1)
+  r.push({ case: 'fightSwingResult', value: { swingCounter: 1, hits: [{ room: 1, enemy: 0, damage: 9 }] } })
+  assert.equal(r.feed.fights.measures().pending, 0)
+  assert.equal(r.feed.fights.measures().confirmations, 1)
+  // A closing socket: nothing sent, nothing pending.
+  ;(r.socket as { readyState: number }).readyState = 2
+  assert.equal(r.feed.ability('stand', 100, 100, { seenTick: seen.tick, seenOffsetMs: 0, facing: { x: 0, y: 1 }, swingCounter: r.feed.nextSwing(), predicted: [] }), false)
+  assert.equal(r.feed.fights.measures().pending, 0)
   r.feed.stop()
 })

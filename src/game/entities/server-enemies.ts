@@ -1,9 +1,11 @@
-/** Rendering adapter for the prototype. All fight state belongs to the feed;
- * physics bodies are disabled and act never simulates a server enemy. */
+/** Rendering owner for every generated camp's enemies (shared-fights.md 1.8).
+ * All fight state belongs to the feed; physics bodies are disabled and act never
+ * simulates a server enemy. Each enemy life (FightDraw.life) is one sprite: a
+ * resync keeps it, a spawn or a cycle's respawn draws a new one, and a death
+ * plays only on the room's death event. */
 import type { Enemy, EnemyOwner, EnemySystem } from './enemies.ts'
 import type { PresenceFeed } from '../presence-feed.ts'
 import { presence } from '../presence.ts'
-import { FIGHT_OPTIONS } from '../../lib/fight-options.ts'
 import { fightFacingFromStep, fightWindupTicks } from '../../lib/fight-math.ts'
 import { KNOCK, knockFrom } from './fight-rules.ts'
 import type { FightDraw } from '../../lib/fight-interp.ts'
@@ -11,9 +13,16 @@ import type { FightEvent } from '../../lib/gen/glimway/v2/presence_pb.js'
 import { perfFights } from '../perf.ts'
 
 type RenderedEnemy = { enemy: Enemy; draw: FightDraw; tell: number; lock: number; stoppedUntil: number; stopTick: number; hitUntil: number }
+/** Where a parked enemy stands (dev playtests: EnemySystem.parkAll). */
+const PARKED = -2000
 const phases = ['chase', 'chase', 'telegraph', 'lunge', 'recover', 'stunned', 'recover'] as const
+/** Each kind's held pose outside a wind-up, as its local behaviour draws it (./creatures.ts). */
+const POSES = {
+  wisp: { chase: 'idle', lunge: 'idle', recover: 'squash', stunned: 'squash' },
+  beetle: { chase: 'idle', lunge: 'squash', recover: 'idle', stunned: 'hurt' }
+} as const
 export class ServerEnemies {
-  private drawn = new Map<string, RenderedEnemy>()
+  private drawn = new Map<number, RenderedEnemy>()
   private readonly system: EnemySystem
   readonly owner: EnemyOwner = {
     observe: () => {}, act: () => {},
@@ -26,47 +35,46 @@ export class ServerEnemies {
     },
     stopped: (enemy, seconds) => {
       const entry = [...this.drawn.values()].find(e => e.enemy === enemy)
-      // Predicted Stand pose only. Never change phase, timer, lunge or damage.
+      // Predicted Stand pose only (the room staggers it). Never change phase, timer, lunge or damage.
       if (entry && entry.stopTick !== entry.draw.row.stateTick) {
         entry.stopTick = entry.draw.row.stateTick
         entry.stoppedUntil = this.system.scene.time.now + seconds * 1000
+        this.system.deps?.fx?.floatText(enemy.x, enemy.y - 18, 'Staggered', '#e8d8b0', false)
       }
     }
   }
-  private readonly feed: () => Pick<PresenceFeed, 'serverFights' | 'fights'> | null
-  constructor(system: EnemySystem, feed: () => Pick<PresenceFeed, 'serverFights' | 'fights'> | null = presence) { this.system = system; this.feed = feed }
+  private readonly feed: () => Pick<PresenceFeed, 'fights'> | null
+  constructor(system: EnemySystem, feed: () => Pick<PresenceFeed, 'fights'> | null = presence) { this.system = system; this.feed = feed }
 
   observe(): void {
     const feed = this.feed()
-    if (!feed?.serverFights) { this.clear(); return }
+    if (!feed) { this.clear(); return }
     const events = feed.fights.observe()
     // Close/removal has already been applied by the pure observation model.
     const rows = feed.fights.draw()
-    const seen = new Set<string>()
+    const seen = new Set<number>()
     for (const draw of rows) {
-      const row = draw.row, key = `${draw.incarnation}:${row.id}`
+      const row = draw.row, key = draw.life
       seen.add(key)
       let entry = this.drawn.get(key)
-      if (entry && entry.draw.incarnation !== draw.incarnation) {
-        if (entry.enemy.sprite.active) entry.enemy.sprite.destroy()
-        this.system.forget(entry.enemy); this.drawn.delete(key); entry = undefined
-      }
       if (!entry) {
-        this.system.removeLocalCamp(row.campId)
-        if (row.state === 6) continue // corpses in a fresh join have already died
+        if (row.state === 6) continue // corpses (a fresh join, a fallen camp's wake) have already died
         const enemy = this.system.spawnWilds(row.id, row.kind === 2 ? 'beetle' : 'wisp', 0, 0)
         Object.defineProperty(enemy, 'maxHp', { value: row.maxHp })
         enemy.owner = this.owner; enemy.fight = { room: draw.room, enemy: row.enemy }
         ;(enemy.sprite.body as { enable: boolean }).enable = false
+        if (this.system.parkedAll) { enemy.parked = true; enemy.sprite.setVisible(false) }
         entry = { enemy, draw, tell: -1, lock: -1, stoppedUntil: 0, stopTick: -1, hitUntil: 0 }
         const retained = entry
-        Object.defineProperties(enemy, { x: { get: () => retained.draw.x }, y: { get: () => retained.draw.y } })
+        // Parked (dev only): it stands off the map for everything here (targets, contact, bolts), while its room goes on.
+        Object.defineProperties(enemy, { x: { get: () => retained.enemy.parked ? PARKED : retained.draw.x }, y: { get: () => retained.enemy.parked ? PARKED : retained.draw.y } })
         this.drawn.set(key, entry)
       }
       entry.draw = draw
       const enemy = entry.enemy
       enemy.fight = { room: draw.room, enemy: row.enemy }
       if (enemy.dead) continue // leave the confirmed dissolve tween in charge
+      if (enemy.parked) { enemy.hp = row.hp; enemy.state = phases[row.state] ?? 'chase'; enemy.sprite.setPosition(PARKED, PARKED).setVisible(false); continue }
       enemy.hp = row.hp
       enemy.state = phases[row.state] ?? 'chase'
       const dir = fightFacingFromStep(row.facing)
@@ -85,7 +93,7 @@ export class ServerEnemies {
   private pose(entry: RenderedEnemy): void {
     const { enemy, draw } = entry
     if (enemy.dead) return
-    if (this.system.scene.time.now < entry.stoppedUntil) { this.system.setEnemyPose(enemy, 'squash'); return }
+    if (this.system.scene.time.now < entry.stoppedUntil) { this.system.setEnemyPose(enemy, enemy.type === 'beetle' ? 'hurt' : 'squash'); return }
     const duration = fightWindupTicks(enemy.type === 'beetle' ? 'beetle' : 'wisp')
     const elapsed = draw.telegraphMs ?? draw.elapsedMs
     const start = draw.telegraphTick ?? draw.row.stateTick
@@ -101,12 +109,20 @@ export class ServerEnemies {
       }
     } else {
       if (this.system.scene.time.now >= entry.hitUntil) enemy.sprite.clearTint()
-      this.system.setEnemyPose(enemy, enemy.state === 'stunned' ? 'hurt' : enemy.state === 'recover' ? 'squash' : 'idle')
+      const poses = enemy.type === 'beetle' ? POSES.beetle : POSES.wisp
+      this.system.setEnemyPose(enemy, enemy.state === 'sweep' ? 'idle' : poses[enemy.state])
     }
   }
   private event(event: Omit<FightEvent, '$typeName' | '$unknown'>, elapsed: number): void {
-    const entry = [...this.drawn.values()].find(e => e.draw.room === event.room && e.draw.row.enemy === event.enemy)
+    // The newest life at that index: a removed row's corpse may still be leaving.
+    let entry: RenderedEnemy | undefined
+    for (const e of this.drawn.values()) if (e.draw.room === event.room && e.draw.row.enemy === event.enemy && (!entry || e.draw.life > entry.draw.life)) entry = e
     if (!entry) return
+    if (entry.enemy.parked) {
+      // Parked: the room's death still takes it off the list, silently; nothing else plays.
+      if (event.kind === 3 && !entry.enemy.dead) { entry.enemy.dead = true; if (entry.enemy.sprite.active) entry.enemy.sprite.destroy(); this.system.forget(entry.enemy) }
+      return
+    }
     if (event.kind === 3) { this.die(entry); return }
     if (event.kind === 4 && !entry.enemy.dead) {
       const remaining = Math.max(0, 320 - elapsed)
@@ -143,11 +159,4 @@ export class ServerEnemies {
     }
     this.drawn.clear()
   }
-}
-
-/** Reserve the configured camp before the socket join, with no solo fallback.
- * Additional advertised camps are also reserved for alternate server config. */
-export function serverCamp(id: string): boolean {
-  if (!FIGHT_OPTIONS.enabled) return false
-  return id === FIGHT_OPTIONS.camp || [...(presence()?.fights.rooms.values() ?? [])].some(room => [...room.tracks.values()].some(track => track.samples[0]?.row.campId === id))
 }

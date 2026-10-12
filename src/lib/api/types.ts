@@ -111,6 +111,12 @@ export interface WildsEntityView {
   available_at: number;
   by: string | null;
   at: number | null;
+  /**
+   * A generated camp only, for the reader (shared-fights.md 1.9): its
+   * `cycle` fell, the server stored the reader among the witnesses, and they
+   * have not claimed it. False for every other kind.
+   */
+  camp_claimable: boolean;
 }
 
 export interface WildsLoot {

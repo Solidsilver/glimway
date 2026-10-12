@@ -316,5 +316,5 @@ export function perfWatch(scene: Scene | null): void {
   instruments?.watch(scene)
 }
 
-/** Latest prototype measurements, included in the overlay and __fsPerf. */
+/** Latest server fight measurements, included in the overlay and __fsPerf. */
 export function perfFights(source: Pick<FightInterp, 'measures'>): void { if (instruments) instruments.fights = source.measures() }

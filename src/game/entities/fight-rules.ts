@@ -8,7 +8,8 @@
  * `attack`), and a slash's or bolt's reach and a hit's damage are judged by
  * the same helpers the server's sim uses (src/lib/fight-math.ts, with Go
  * twins and shared vectors), so the game's own path is the one the vectors
- * pin. Only the signatures' reaches (BLOW) are still numbers here.
+ * pin. The signatures' blows are content too (SIGNATURES), pinned by
+ * their own shared vectors.
  *
  * An enemy is read here as `EnemyState`: where it stands and how it fares,
  * never its sprite or body. A local enemy's state is its physics body; a
@@ -31,18 +32,15 @@ export { ENEMY_TUNING, KNOCK }
 const ATTACK = COMBAT_TUNING.attack
 
 /**
- * The signatures' blows, not yet in content (fight-math judges only the
- * slash and the bolt): each reach (px), and its centre from the feet: `ahead`
- * along the facing, `up` above the feet. Lane F-E moves these to
- * content/combat.json when abilities go into the sim.
+ * The signatures' blows (content/combat.json `signatures`, shared with the
+ * server's sim and pinned by the signature vectors in
+ * content/vectors/fights.json): each reach (px), its centre from the feet
+ * (`aheadX`/`aheadY` along the facing, `up` above the feet), when it lands
+ * after the press, and Shadowstep's dash (`dashSpeed` px/s for
+ * `dashSeconds`, the strike `landSeconds` after it, shoved from `knockBack`
+ * px behind the end).
  */
-const BLOW = {
-  cleave: { reach: 40, aheadX: 22, aheadY: 18, up: 6 },
-  /** Shadowstep's strike after a real dash, and after a dash a wall stopped. */
-  snapstrike: { reach: 34, up: 6 },
-  snapstrikeStill: { reach: 22, up: 6 },
-  mend: { reach: 70, up: 8 }
-}
+export const SIGNATURES = COMBAT_TUNING.signatures
 
 export type EnemyPhase = 'chase' | 'telegraph' | 'lunge' | 'sweep' | 'recover' | 'stunned'
 
@@ -95,19 +93,25 @@ export function slashStrike(feet: Point, dir: Point, kit: { meleeDamage: number;
 
 /** Cleave: a wide arc further out in front. It never crits. */
 export function cleaveStrike(feet: Point, dir: Point, damage: number): Strike {
-  const b = BLOW.cleave
+  const b = SIGNATURES.cleave
   return { kind: 'cleave', x: feet.x + dir.x * b.aheadX, y: feet.y - b.up + dir.y * b.aheadY, reach: b.reach, damage, critChance: 0 }
 }
 
 /** Shadowstep's strike where the dash ended: wider after a real dash, and twice the crit chance. */
 export function snapstrike(feet: Point, travelled: boolean, damage: number, critChance: number): Strike {
-  const b = travelled ? BLOW.snapstrike : BLOW.snapstrikeStill
-  return { kind: 'snapstrike', x: feet.x, y: feet.y - b.up, reach: b.reach, damage, critChance: critChance * 2 }
+  const b = SIGNATURES.shadowstep
+  return { kind: 'snapstrike', x: feet.x, y: feet.y - b.up, reach: travelled ? b.reach : b.stillReach, damage, critChance: critChance * 2 }
+}
+
+/** Where Shadowstep's dash would end on open ground: the server rows are predicted from here (the server's sim slides it along walls, once for every room). */
+export function shadowstepEnd(feet: Point, dir: Point): Point {
+  const d = SIGNATURES.shadowstep
+  return { x: feet.x + dir.x * d.dashSpeed * d.dashSeconds, y: feet.y + dir.y * d.dashSpeed * d.dashSeconds }
 }
 
 /** Mend's damaging pulse around the hero. It never crits. */
 export function mendStrike(feet: Point, damage: number): Strike {
-  return { kind: 'mend', x: feet.x, y: feet.y - BLOW.mend.up, reach: BLOW.mend.reach, damage, critChance: 0 }
+  return { kind: 'mend', x: feet.x, y: feet.y - SIGNATURES.mend.up, reach: SIGNATURES.mend.reach, damage, critChance: 0 }
 }
 
 /**

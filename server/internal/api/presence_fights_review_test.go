@@ -38,7 +38,7 @@ func queuedFightFrame(t *testing.T, p *presencePeer) *wire.PresenceMessage {
 func adapterFightFixture(t *testing.T) (*rig, *presencePeer, *http.Cookie, response) {
 	x := newRig(t)
 	cookie, state := x.ready("alice")
-	x.api.Config.FightPrototypeCamp = "camp:0:0:0"
+	x.api.Config.Chunks = &fightChunkCounter{ChunkSource: x.api.Config.Chunks}
 	identity, err := x.api.presenceIdentity(context.Background(), store.Hash(cookie.Value), false)
 	if err != nil {
 		t.Fatal(err)
@@ -63,7 +63,7 @@ func blockedFightRoom(t *testing.T, a *Server, p *presencePeer, handle uint32, c
 	entered, release := make(chan struct{}), make(chan struct{})
 	var once sync.Once
 	a.presence.mu.Lock()
-	room.actor = fights.Start(fights.NewRoom(key, handle, g, []fights.Camp{{ID: "camp", Count: 1, X: x, Y: 112}}, 1, a.presence.now(), 0), fights.ActorConfig{Now: a.presence.now, Ticks: make(chan time.Time), Emit: func(out fights.Output) {
+	room.actor = fights.Start(fights.NewRoom(key, handle, g, []fights.Camp{{ID: "camp", Kinds: []string{"wisp"}, X: x, Y: 112}}, 1, a.presence.now(), 0), fights.ActorConfig{Now: a.presence.now, Ticks: make(chan time.Time), Emit: func(out fights.Output) {
 		if _, ok := out.Message.(*wire.FightJoin); ok {
 			close(entered)
 			<-release
@@ -256,9 +256,17 @@ type fightChunkFixture struct {
 	calls  atomic.Int64
 }
 
-func (f *fightChunkFixture) Chunk(_ context.Context, _ *sql.Tx, _, epoch string, _, _, _ int32) (*chunkwire.WildsChunk, error) {
-	f.calls.Add(1)
-	return proto.Clone(f.chunks[epoch]).(*chunkwire.WildsChunk), nil
+// Chunk serves the epoch's chunk at any coordinates; only (0,0) keeps its
+// camp, and calls counts that camp chunk's loads.
+func (f *fightChunkFixture) Chunk(_ context.Context, _ *sql.Tx, _, epoch string, _, cx, cy int32) (*chunkwire.WildsChunk, error) {
+	c := proto.Clone(f.chunks[epoch]).(*chunkwire.WildsChunk)
+	c.Cx, c.Cy = cx, cy
+	if cx == 0 && cy == 0 {
+		f.calls.Add(1)
+	} else {
+		c.Entities = withoutCamps(c.Entities)
+	}
+	return c, nil
 }
 func epochAdapterFixture(t *testing.T, x *rig) (*fightEpochFixture, *fightChunkFixture) {
 	turn := x.now.Load() + 1
@@ -312,24 +320,22 @@ func TestFightHubEpochTurnUsesNewFullKeyAndHandle(t *testing.T) {
 		t.Fatal("stale epoch cache", next, source.calls.Load())
 	}
 }
-func TestFightFailedWakeCachedPerEpochAndWorld(t *testing.T) {
-	for _, failure := range []string{"missing", "empty", "beetle"} {
+func TestFightCamplessWakeCachedPerEpochAndWorld(t *testing.T) {
+	for _, failure := range []string{"missing", "empty"} {
 		t.Run(failure, func(t *testing.T) {
 			x, p, _, _ := adapterFightFixture(t)
 			_, source := epochAdapterFixture(t, x)
 			bad := source.chunks["first"]
 			if failure == "missing" {
 				bad.Entities = bad.Entities[1:]
-			} else if failure == "empty" {
-				bad.Entities[0].Enemies = nil
 			} else {
-				bad.Entities[0].Enemies = []string{"wisp", "beetle"}
+				bad.Entities[0].Enemies = nil
 			}
 			for range 8 {
 				x.api.syncFightPresence(p)
 			}
 			if source.calls.Load() != 1 || len(p.fightRooms) != 0 {
-				t.Fatal("failed wake was retried", source.calls.Load())
+				t.Fatal("campless chunk was reloaded", source.calls.Load())
 			}
 			identity := p.identity
 			identity.ID = "other-account"
@@ -378,8 +384,9 @@ func TestFightReportCommitRefreshesDownAndRetargets(t *testing.T) {
 	x.api.syncFightPresence(q)
 	queuedFightFrame(t, q)
 	x.now.Add(1)
+	// Two accounts at the camp: its first aggro raises one extra wisp first.
 	var windup *wire.FightEvent
-	for windup == nil {
+	for windup == nil || windup.Kind != wire.FightEventKind_FIGHT_EVENT_KIND_WINDUP_START {
 		windup = queuedFightFrame(t, p).GetFightEvent()
 	}
 	if windup.GetTarget() != p.identity.ID {
@@ -452,16 +459,6 @@ func TestFightFirstFrameIsJoin(t *testing.T) {
 		t.Fatal("join did not establish patch baseline")
 	}
 }
-func TestFightInvalidConstructorConfigDisablesPrototype(t *testing.T) {
-	x := newRig(t)
-	cfg := x.api.Config
-	cfg.FightPrototypeCamp = "invalid"
-	a := New(x.db, x.api.Habitica, cfg)
-	defer a.ClosePresence()
-	if a.Config.FightPrototypeCamp != "" {
-		t.Fatal("invalid embedded config enabled prototype")
-	}
-}
 
 type edgeFightChunk struct{ source chunks.ChunkSource }
 
@@ -480,8 +477,7 @@ func (e edgeFightChunk) Chunk(ctx context.Context, tx *sql.Tx, world, epoch stri
 func TestFightWildsChunkCrossingRetainsJoinAndSwingCoverage(t *testing.T) {
 	x := newRig(t)
 	c, state := x.ready("alice")
-	x.api.Config.FightPrototypeCamp = "camp:0:0:0"
-	x.api.Config.Chunks = edgeFightChunk{source: x.api.Config.Chunks}
+	x.api.Config.Chunks = edgeFightChunk{source: &fightChunkCounter{ChunkSource: x.api.Config.Chunks}}
 	cfg := presenceTestConfig()
 	cfg.RevalidateMs = 10000
 	ts := startPresence(t, x, cfg)

@@ -8,9 +8,12 @@
  * A blow is first what the hero means (a Strike: ./fight-rules.ts), shown at
  * once (the swing, its sound); a beat later it lands on the enemies this
  * screen draws (`land`), and each enemy's owner decides what it did.
- * Server basics select and predict at the press (`pressServerSwing`), stamped
- * with that frame's observed instant; delayed landing visits local enemies only
- * (./enemies.ts damageEnemy). The imported layered avatar and
+ * Server basics and every cast select and predict at the press
+ * (`pressServerSwing`, `pressServerCast`), stamped with that frame's observed
+ * instant on the socket's one counter; a late-landing signature shows its
+ * predicted numbers on exactly those server rows when it lands. Delayed landing
+ * visits local enemies only (./enemies.ts damageEnemy); a server enemy dies
+ * only on the room's word. The imported layered avatar and
  * its mount/pet are owned by AvatarVisual; the hero renders through
  * `deps.avatar()` (the container is the visible body when present).
  *
@@ -31,13 +34,13 @@ import { sfx } from '../sfx'
 import { TILE, tileAt, tileMid } from '../../lib/tile'
 import type { Session } from '../session'
 import type { WorldData } from '../worlds'
-import { KNOCK, boltSpawn, cleaveStrike, mendStrike, slashStrike, snapstrike, strikeCrits, strikeHits, wardMends, type Strike } from './fight-rules'
-import type { EnemySystem } from './enemies'
+import { KNOCK, SIGNATURES, boltSpawn, cleaveStrike, mendStrike, shadowstepEnd, slashStrike, snapstrike, strikeCrits, strikeHits, wardMends, type Strike, type StrikeHit } from './fight-rules'
+import type { Enemy, EnemySystem } from './enemies'
 import type { Projectiles } from './projectiles'
 import type { AvatarVisual } from './avatar'
 import type { Effects } from './fx'
 import { MoveFx } from './moves'
-import { pressServerSwing, sendServerBolt } from './fight-strike'
+import { pressServerCast, pressServerSwing, sendServerBolt } from './fight-strike'
 import { presence } from '../presence'
 import { expose } from '../dev-hooks'
 import { SEAT_CUT, SEATED_MANA_BONUS, manaRegenRate, type SeatPose } from '../seats'
@@ -390,6 +393,21 @@ export class Hero {
     }
   }
 
+  /** Predicted hits on server enemies, shown when the blow lands (each still drawn, not yet dead). */
+  private showPredicted(hits: readonly StrikeHit<Enemy>[], fromX: number, sparks = false): void {
+    const enemies = this.deps.enemies()
+    for (const hit of hits) {
+      if (hit.enemy.dead || !enemies.enemies.includes(hit.enemy)) continue
+      if (sparks && hit.crit) this.deps.fx.sparkBurst(hit.enemy.x, hit.enemy.y - 8, 8)
+      enemies.damageEnemy(hit.enemy, hit.amount, fromX, hit.crit)
+    }
+  }
+
+  /** Tell the room (and the server's rooms) about a cast, at the press. */
+  private cast(id: string, at: { x: number; y: number }, strike: Strike | null = null) {
+    return pressServerCast(id, at, this.facing, strike, this.deps.enemies().enemies, presence())
+  }
+
   /** Whether a move may start now (the same gate for F and R). */
   private canCast(): boolean {
     if (uiBlocked() || performance.now() < uiState.blockedUntil || this.deps.transitioning() || this.deps.cinematic()) return false
@@ -422,13 +440,16 @@ export class Hero {
     this.castCooldown = sig.cooldown
     // The server's cast budget counts it (cooldown, mana, a healer's mend).
     this.deps.session.noteCast()
-    // Friends see it too (crafts.md 4.5).
-    presence()?.ability(sig.id, this.sprite.x, this.sprite.y)
     const dir = this.facing.clone().normalize()
+    const feet = { x: this.sprite.x, y: this.sprite.y }
+    // Friends see it too (crafts.md 4.5), and a server room applies it: sent at
+    // the press with the predicted server rows (one counter, one seeded crit).
     switch (sig.id) {
       case 'fingersnap': {
+        // A bolt names no rows: the server flies its own; ours shows the impact.
+        const sent = this.cast(sig.id, feet)
         const at = boltSpawn(this.sprite, dir)
-        this.deps.projectiles().spawn(at.x, at.y, dir, kit.signatureDamage)
+        this.deps.projectiles().spawn(at.x, at.y, dir, kit.signatureDamage, sent.fight)
         break
       }
       case 'cleave': {
@@ -437,12 +458,16 @@ export class Hero {
         // ATTACKER (visual only); the hit check keeps its own attacker-front
         // cast point, reach, and timing — unchanged.
         const strike = cleaveStrike(this.sprite, dir, kit.signatureDamage)
+        const server = this.cast(sig.id, feet, strike).hits
         if (!this.deps.fx.playEffect('effect-cleave', 'cleave-0', this.sprite.x, this.sprite.y - 8, this.sprite.y + 2, Math.atan2(dir.y, dir.x))) {
           const sweep = this.scene.add.image(strike.x, strike.y, 'slash').setScale(2.2).setDepth(this.sprite.y + 2)
           this.scene.tweens.add({ targets: sweep, alpha: 0, scale: 3, duration: 220, onComplete: () => sweep.destroy() })
         }
         this.scene.cameras.main.shake(90, 0.004)
-        this.scene.time.delayedCall(50, () => this.land(strike, this.sprite.x))
+        this.scene.time.delayedCall(SIGNATURES.cleave.landSeconds * 1000, () => {
+          this.showPredicted(server, this.sprite.x)
+          this.land(strike, this.sprite.x)
+        })
         break
       }
       case 'shadowstep': {
@@ -450,9 +475,12 @@ export class Hero {
         // walls), striking everything along the path at the end. The dash
         // window (dashTime) keeps ordinary movement from cancelling velocity.
         const start = { x: this.sprite.x, y: this.sprite.y }
-        this.dashTime = 0.15
-        this.sprite.setVelocity(dir.x * 430, dir.y * 430)
-        this.scene.time.delayedCall(150, () => {
+        const dash = SIGNATURES.shadowstep
+        // Server rows: predicted from where the dash would end on open ground (the server slides it along walls).
+        const server = this.cast(sig.id, feet, snapstrike(shadowstepEnd(start, dir), true, kit.signatureDamage, kit.critChance)).hits
+        this.dashTime = dash.dashSeconds
+        this.sprite.setVelocity(dir.x * dash.dashSpeed, dir.y * dash.dashSpeed)
+        this.scene.time.delayedCall(dash.dashSeconds * 1000, () => {
           this.sprite.setVelocity(0, 0)
           const travelled = snapstrikeReach(start, this.sprite) === SNAPSTRIKE.reachPx
           const sx = this.sprite.x + dir.x * 10
@@ -463,7 +491,11 @@ export class Hero {
             const trail = this.scene.add.image(sx, sy, 'slash').setAlpha(0.7).setDepth(this.sprite.y + 2)
             this.scene.tweens.add({ targets: trail, alpha: 0, duration: 140, onComplete: () => trail.destroy() })
           }
-          this.scene.time.delayedCall(30, () => this.land(snapstrike(this.sprite, travelled, kit.signatureDamage, kit.critChance), this.sprite.x - dir.x * 10))
+          this.scene.time.delayedCall(dash.landSeconds * 1000, () => {
+            const fromX = this.sprite.x - dir.x * dash.knockBack
+            this.showPredicted(server, fromX)
+            this.land(snapstrike(this.sprite, travelled, kit.signatureDamage, kit.critChance), fromX)
+          })
         })
         break
       }
@@ -478,7 +510,9 @@ export class Hero {
             .setDepth(this.sprite.y + 2)
           this.scene.tweens.add({ targets: pulse, scale: 1.6, alpha: 0, duration: 320, onComplete: () => pulse.destroy() })
         }
-        this.land(mendStrike(this.sprite, kit.signatureDamage), this.sprite.x)
+        const strike = mendStrike(this.sprite, kit.signatureDamage)
+        this.showPredicted(this.cast(sig.id, feet, strike).hits, this.sprite.x)
+        this.land(strike, this.sprite.x)
         if (kit.healAmount > 0) {
           this.deps.fx.sparkBurst(this.sprite.x, this.sprite.y - 12, 6)
           healHero(this.deps.session, this.deps.fx, this.sprite, kit.healAmount)
@@ -489,10 +523,10 @@ export class Hero {
   }
 
   /**
-   * The level-20 move (R / the second ✦; crafts.md 4.3), client-side like
-   * the signatures: the server bounds its mana in the report
-   * (`ability_casts`, its own cooldown budget, 4.4). None of them touches
-   * the Warden.
+   * The level-20 move (R / the second ✦; crafts.md 4.3). Its field bends the
+   * local creatures here; on server enemies the room applies it from the cast
+   * (Kindle's slow, Stand's lunge-stop, Echo's decoy), and the socket's
+   * allowAbility alone owns its cost (4.4). None of them touches the Warden.
    */
   handleMove(): void {
     const kit = this.kit()
@@ -529,7 +563,8 @@ export class Hero {
         this.moves.local(m, feet)
         break
     }
-    presence()?.ability(m.id, at.x, at.y)
+    // The room sees it, and a server room applies it (no rows: the effect acts from x, y).
+    this.cast(m.id, at)
   }
 
   /**

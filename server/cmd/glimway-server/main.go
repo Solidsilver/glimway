@@ -69,7 +69,7 @@ func envInt(name string, fallback int) (int, error) {
 func run(args []string) error {
 	f := flag.NewFlagSet("glimway-server", flag.ContinueOnError)
 	startClock := devClock(f)
-	fightCamp := f.String("fight-camp", env("FIGHT_CAMP", ""), "One wisp-only Tangle camp for the shared-fights prototype (camp:<cx>:<cy>:<slot>)")
+	adminAddr := f.String("admin-listen", env("ADMIN_LISTEN", ""), "Optional loopback-only profiling/metrics listener, e.g. 127.0.0.1:8091")
 	staticDir := f.String("static-dir", env("STATIC_DIR", ""), "Optional built web directory (empty disables static serving)")
 	addr := f.String("listen", env("LISTEN", "127.0.0.1:8090"), "HTTP listener")
 	path := f.String("db", env("DB", defaultDB()), "SQLite database path")
@@ -110,11 +110,7 @@ func run(args []string) error {
 	if err = f.Parse(args); err != nil {
 		return err
 	}
-	if *fightCamp != "" {
-		if _, _, err := api.FightPrototypeChunk(*fightCamp); err != nil {
-			return err
-		}
-	}
+
 	clock, err := startClock()
 	if err != nil {
 		return err
@@ -328,8 +324,13 @@ func run(args []string) error {
 		}
 	}
 	logger := log.New(os.Stdout, "glimway ", log.LstdFlags|log.LUTC)
-	handler := api.New(s, habitica.New(*base, *tag), api.Config{FightPrototypeCamp: *fightCamp, Now: clock.now, SecureCookie: *secure, Logger: logger, TrustedProxies: proxies, LoginConcurrency: *concurrency, LoginRate: *rate, LoginGlobalRate: *globalRate, SpriteCacheDir: *spriteDir, SpriteBaseURL: *spriteBase, PartyAdmissionOff: !*partyAdmission, Version: version, Build: build})
+	handler := api.New(s, habitica.New(*base, *tag), api.Config{Now: clock.now, SecureCookie: *secure, Logger: logger, TrustedProxies: proxies, LoginConcurrency: *concurrency, LoginRate: *rate, LoginGlobalRate: *globalRate, SpriteCacheDir: *spriteDir, SpriteBaseURL: *spriteBase, PartyAdmissionOff: !*partyAdmission, Version: version, Build: build})
 	defer handler.ClosePresence()
+	closeAdmin, err := startAdmin(*adminAddr, handler, logger)
+	if err != nil {
+		return err
+	}
+	defer closeAdmin()
 	httpHandler, closeStatic, err := withStatic(clock.mount(devRoutes(handler)(handler)), *staticDir)
 	if err != nil {
 		return err

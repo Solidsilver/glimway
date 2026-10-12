@@ -68,5 +68,29 @@
     "critMultiplier": 2,
     "toolDamageFraction": 0.5,
     "boltSpawnOffsetX": 10
+  },
+  "signatures": {
+    "cleave": {
+      "reach": 40,
+      "aheadX": 22,
+      "aheadY": 18,
+      "up": 6,
+      "landSeconds": 0.05
+    },
+    "shadowstep": {
+      "reach": 34,
+      "stillReach": 22,
+      "up": 6,
+      "travelled": 4,
+      "dashSpeed": 430,
+      "dashSeconds": 0.15,
+      "landSeconds": 0.03,
+      "knockBack": 10
+    },
+    "mend": {
+      "reach": 70,
+      "up": 8,
+      "landSeconds": 0
+    }
   }
 }

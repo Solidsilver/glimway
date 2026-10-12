@@ -27,8 +27,19 @@ func testGeometry() Geometry {
 	}
 	return g
 }
+func wisps(n int) []string {
+	kinds := make([]string, n)
+	for i := range kinds {
+		kinds[i] = "wisp"
+	}
+	return kinds
+}
 func testRoom(count int) *Room {
-	return NewRoom(Key{World: "world", Realm: "hearthwick", Epoch: "epoch"}, 1, testGeometry(), []Camp{{ID: "camp:0:0:0", X: 120, Y: 112, Count: count}}, 42, origin, 0)
+	return NewRoom(Key{World: "world", Realm: "hearthwick", Epoch: "epoch"}, 1, testGeometry(), []Camp{{ID: "camp:0:0:0", X: 120, Y: 112, Kinds: wisps(count)}}, 42, origin, 0)
+}
+func (r *Room) targetNow(e *enemy) *Player {
+	p, _, _ := r.target(e, r.lastMS)
+	return p
 }
 func player(x, y float64) Player {
 	return Player{ID: "alice", Observer: "socket-a", Seed: 123, X: x, Y: y, Kit: rules.CombatKitFor(nil, "", 0)}
@@ -87,33 +98,33 @@ func TestWispRetargetsNearestPlayerBetweenAttacks(t *testing.T) {
 	b.ID, b.Observer = "bob", "socket-b"
 	r.Cover(a, origin)
 	r.Cover(b, origin)
-	if got := r.target(e); got == nil || got.ID != "alice" {
+	if got := r.targetNow(e); got == nil || got.ID != "alice" {
 		t.Fatal("did not acquire nearest player", got)
 	}
 	b.X = 125
 	r.Cover(b, origin.Add(time.Second))
-	if got := r.target(e); got == nil || got.ID != "bob" {
+	if got := r.targetNow(e); got == nil || got.ID != "bob" {
 		t.Fatal("closer player did not take attention", got)
 	}
 	a.X = 121
 	r.Cover(a, origin.Add(2*time.Second))
 	for _, state := range []wire.FightEnemyState{wire.FightEnemyState_FIGHT_ENEMY_STATE_TELEGRAPH, wire.FightEnemyState_FIGHT_ENEMY_STATE_LUNGE} {
 		e.row.State = state
-		if got := r.target(e); got == nil || got.ID != "bob" {
+		if got := r.targetNow(e); got == nil || got.ID != "bob" {
 			t.Fatal("attack changed target during its tell or hop", state, got)
 		}
 	}
 	e.row.State = wire.FightEnemyState_FIGHT_ENEMY_STATE_RECOVER
-	if got := r.target(e); got == nil || got.ID != "alice" {
+	if got := r.targetNow(e); got == nil || got.ID != "alice" {
 		t.Fatal("did not reconsider nearest player after hop", got)
 	}
 	a.Down = true
 	r.Cover(a, origin.Add(3*time.Second))
-	if got := r.target(e); got == nil || got.ID != "bob" {
+	if got := r.targetNow(e); got == nil || got.ID != "bob" {
 		t.Fatal("down player kept attention", got)
 	}
 	r.Leave(b.Observer, origin.Add(4*time.Second))
-	if got := r.target(e); got != nil {
+	if got := r.targetNow(e); got != nil {
 		t.Fatal("departed player kept attention", got)
 	}
 }
@@ -220,7 +231,7 @@ func TestPositionReportsAndAttackShareMovementCap(t *testing.T) {
 	}
 	p.Down = true
 	r.Cover(p, origin.Add(200*time.Millisecond))
-	if r.target(r.enemies[0]) != nil {
+	if r.targetNow(r.enemies[0]) != nil {
 		t.Fatal("fallen player targeted")
 	}
 }
@@ -308,7 +319,7 @@ func TestSleepFreshWakeAndTurning(t *testing.T) {
 	if !frame.Closed || len(frame.Events) != 1 || frame.Events[0].Kind != wire.FightEventKind_FIGHT_EVENT_KIND_ROOM_CLOSED {
 		t.Fatal(frame)
 	}
-	fresh := NewRoom(r.Key, 2, testGeometry(), r.camps, 43, origin.Add(2*SleepAfter), 0)
+	fresh := NewRoom(r.Key, 2, testGeometry(), []Camp{r.camps[0].Camp}, 43, origin.Add(2*SleepAfter), 0)
 	if fresh.enemies[0].row.Hp != content.EnemyRules.GetWisp().GetHp() || fresh.Handle == r.Handle {
 		t.Fatal("wake did not reset live fight/handle")
 	}
@@ -408,7 +419,7 @@ func TestActorInjectedClockJoinAndShutdownResolvesBolt(t *testing.T) {
 	}
 }
 func BenchmarkRoomTick(b *testing.B) {
-	r := NewRoom(Key{World: "world", Realm: "hearthwick", Epoch: "epoch"}, 1, testGeometry(), []Camp{{ID: "camp-a", X: 100, Y: 112, Count: 3}, {ID: "camp-b", X: 180, Y: 112, Count: 2}}, 1, origin, 0)
+	r := NewRoom(Key{World: "world", Realm: "hearthwick", Epoch: "epoch"}, 1, testGeometry(), []Camp{{ID: "camp-a", X: 100, Y: 112, Kinds: wisps(3)}, {ID: "camp-b", X: 180, Y: 112, Kinds: wisps(2)}}, 1, origin, 0)
 	for i := range 3 {
 		p := player(float64(130+i*8), 112)
 		p.ID = fmt.Sprint(i)

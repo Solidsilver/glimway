@@ -1077,7 +1077,8 @@
           "availableAt": 1791400020,
           "by": "fixture-account",
           "at": 1791400000,
-          "epoch": "epoch"
+          "epoch": "epoch",
+          "campClaimable": false
         },
         "loot": {
           "materials": [
@@ -8969,7 +8970,8 @@
         "availableAt": 1,
         "by": "fixture",
         "at": 1,
-        "epoch": "fixture"
+        "epoch": "fixture",
+        "campClaimable": true
       },
       "loot": {
         "materials": [
@@ -9193,7 +9195,8 @@
       "availableAt": 0,
       "by": null,
       "at": null,
-      "epoch": ""
+      "epoch": "",
+      "campClaimable": false
     }
   },
   {
@@ -9206,7 +9209,8 @@
       "availableAt": 1,
       "by": "fixture",
       "at": 1,
-      "epoch": "fixture"
+      "epoch": "fixture",
+      "campClaimable": true
     }
   },
   {
@@ -9686,7 +9690,8 @@
           "availableAt": 1,
           "by": "fixture",
           "at": 1,
-          "epoch": "fixture"
+          "epoch": "fixture",
+          "campClaimable": true
         }
       ],
       "personalClaims": [
@@ -9833,7 +9838,8 @@
           "availableAt": 1791400020,
           "by": "fixture-account",
           "at": 1791400000,
-          "epoch": "wick-epoch"
+          "epoch": "wick-epoch",
+          "campClaimable": false
         }
       ],
       "personalClaims": [
@@ -10484,7 +10490,8 @@
           "availableAt": 1,
           "by": "fixture",
           "at": 1,
-          "epoch": "fixture"
+          "epoch": "fixture",
+          "campClaimable": true
         }
       ],
       "personalClaims": [
