@@ -212,9 +212,13 @@ func (h *presenceHub) release(reservation presenceReservation) {
 	}
 }
 
-// admit registers p as its account's peer, replacing any peer of that id;
-// callers hold h.mu.
+// admit registers p as its account's peer, replacing any peer of that id
+// (and that peer's index entry, whichever world it was in); callers hold
+// h.mu.
 func (h *presenceHub) admit(p *presencePeer) {
+	if old := h.peers[p.identity.ID]; old != nil && old != p {
+		h.unindex(old)
+	}
 	h.peers[p.identity.ID] = p
 	world := h.worlds[p.identity.World]
 	if world == nil {
@@ -222,6 +226,15 @@ func (h *presenceHub) admit(p *presencePeer) {
 		h.worlds[p.identity.World] = world
 	}
 	world[p.identity.ID] = p
+}
+
+// forget drops p from the hub's registry and index without the leave
+// bookkeeping of remove; a fixture's exit. Callers hold h.mu.
+func (h *presenceHub) forget(p *presencePeer) {
+	if h.peers[p.identity.ID] == p {
+		delete(h.peers, p.identity.ID)
+	}
+	h.unindex(p)
 }
 
 // unindex drops p from its world's index, if it is still the one there.

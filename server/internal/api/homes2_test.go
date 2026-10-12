@@ -19,7 +19,9 @@ func (x *rig) stand(id, world, room string, px, py float64) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if room == "" {
-		delete(h.peers, id)
+		if p := h.peers[id]; p != nil {
+			h.forget(p)
+		}
 		return
 	}
 	// A socket's peer carries its queue and cancellation (avatar changes and

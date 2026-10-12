@@ -280,8 +280,6 @@ func (a *Server) presenceReader(p *presencePeer) {
 			encoded, encodeErr = encodePresence(&contract.PresenceEmote{Id: emote.Id, AccountId: proto.String(p.identity.ID)})
 		}
 		now := time.Now()
-		// rejoin: covers a first join announces again, submitted off h.mu.
-		var rejoin []fightCover
 		h.mu.Lock()
 		if h.peers[p.identity.ID] != p || p.ctx.Err() != nil {
 			h.mu.Unlock()
@@ -310,10 +308,9 @@ func (a *Server) presenceReader(p *presencePeer) {
 			if p.area == event.Join.Area {
 				h.room(p)
 				if first {
-					rejoin = h.rejoinFights(p)
+					h.rejoinFights(p)
 				}
 				h.mu.Unlock()
-				h.submitFightCovers(p, rejoin)
 				continue
 			}
 			n := 0
@@ -342,7 +339,7 @@ func (a *Server) presenceReader(p *presencePeer) {
 			p.area = event.Join.Area
 			h.retainFightCoverage(p)
 			if first {
-				rejoin = h.rejoinFights(p)
+				h.rejoinFights(p)
 			}
 			h.room(p)
 			h.broadcast(p, &contract.PresenceJoin{Area: p.area, Player: p.player()})
@@ -424,7 +421,6 @@ func (a *Server) presenceReader(p *presencePeer) {
 			return
 		}
 		h.mu.Unlock()
-		h.submitFightCovers(p, rejoin)
 		if message.GetPos() != nil || message.GetJoin() != nil {
 			a.syncFightPresence(p)
 		}

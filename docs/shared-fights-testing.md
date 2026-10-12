@@ -77,7 +77,15 @@ each as p50, p95 and max with a sample count. A falling
 Past the configured socket cap (`maxConnections` in `content/presence.json`,
 bounded at 512 by the proto schema), `FIGHT_LOAD_MAX_CONNECTIONS=<n>` lifts
 the running hub's cap for this scenario only, and with it the groups limit
-to `n / FIGHT_LOAD_PLAYERS`; the committed caps and bounds are untouched.
+to `n / FIGHT_LOAD_PLAYERS`; the committed caps and bounds are untouched. It
+also lifts the hub's idle timeout to ten minutes for the run: at thousands of
+players the cold start (every chunk woken serially behind the fight-load
+lock and the one SQLite connection, every reader waiting) outlasts the 60 s
+timeout, which is the harness's start-up, not steady state. Until a bot has
+its first join it reports once a second, so no backlog queues behind the
+wake; the warm-up budget grows with the group count. The line also carries
+`heapInUseBytes`, `heapBytesPerBot` (live heap after a collection, the bots'
+own buffers included) and `goroutines` at the end of the measured run.
 `FIGHT_LOAD_CPUPROFILE=<path>` writes a CPU profile of the measured run
 alone (no account creation or warm-up; it conflicts with go test's own
 `-cpuprofile`). The bots' share of it is the `TestFightBotLoad` closures:

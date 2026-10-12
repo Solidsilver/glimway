@@ -194,21 +194,38 @@ func (a *Server) syncFightPresence(p *presencePeer) {
 
 // syncFightRooms covers the peer's 3x3. Without wake it reports false,
 // covering nothing, when a chunk must be loaded first; with wake (under
-// h.fightLoad) it loads those chunks and always finishes.
+// h.fightLoad) it loads those chunks and always finishes. A 3x3 that is
+// all awake is covered under the scan's own lock. Only a wake releases
+// h.mu between scan and cover; the peer may have moved and been
+// reconciled by a newer report meanwhile, so the cover goes ahead only
+// for the position and area the scan saw, and otherwise scans again.
 func (a *Server) syncFightRooms(p *presencePeer, wake bool) bool {
+	for {
+		if covered, done := a.scanFightRooms(p, wake); covered || !done {
+			return done
+		}
+	}
+}
+
+// scanFightRooms is one pass of syncFightRooms: covered when the peer's
+// rooms are covered (or there is nothing to cover), done when the sync
+// may stop (false only without wake, when a chunk must be loaded first).
+// Not covered and done: a wake landed on a stale scan; scan again.
+func (a *Server) scanFightRooms(p *presencePeer, wake bool) (covered, done bool) {
 	h := a.presence
 	h.mu.Lock()
 	if h.peers[p.identity.ID] != p || p.detached || p.ctx.Err() != nil || h.closing {
 		h.mu.Unlock()
-		return true
+		return true, true
 	}
 	h.retainFightCoverage(p)
 	_, _, outdoor := wildsRoomChunk(p.area)
 	if p.pos == nil || !outdoor {
 		h.leaveFights(p, true)
 		h.mu.Unlock()
-		return true
+		return true, true
 	}
+	scanned, scannedArea := p.pos, p.area
 	px, py := wilds.TileOfPixel(p.pos.X, p.pos.Y)
 	pcx, pcy := wilds.ChunkOf(px, py)
 	world := p.identity.World
@@ -244,30 +261,35 @@ func (a *Server) syncFightRooms(p *presencePeer, wake bool) bool {
 			}
 		}
 	}
-	if len(missing) > 0 && !wake {
-		h.mu.Unlock()
-		return false
-	}
-	h.mu.Unlock()
-	if len(missing) > 0 {
-		woken, ok := a.wakeFightRooms(p, world, missing, now)
-		if !ok {
-			return true
+	if len(missing) == 0 {
+		for _, room := range rooms {
+			h.coverFightRoom(p, room)
 		}
-		rooms = append(rooms, woken...)
-	}
-	h.mu.Lock()
-	if h.peers[p.identity.ID] != p || p.ctx.Err() != nil || p.detached || p.identity.World != world || h.closing || p.pos == nil {
 		h.mu.Unlock()
-		return true
+		return true, true
 	}
-	covers := make([]fightCover, 0, len(rooms))
-	for _, room := range rooms {
-		covers = append(covers, h.coverFightRoom(p, room))
+	if !wake {
+		h.mu.Unlock()
+		return false, false
 	}
 	h.mu.Unlock()
-	h.submitFightCovers(p, covers)
-	return true
+	woken, ok := a.wakeFightRooms(p, world, missing, now)
+	if !ok {
+		return true, true
+	}
+	rooms = append(rooms, woken...)
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	if h.peers[p.identity.ID] != p || p.ctx.Err() != nil || p.detached || p.identity.World != world || h.closing || p.pos == nil {
+		return true, true
+	}
+	if p.pos != scanned || p.area != scannedArea {
+		return false, true
+	}
+	for _, room := range rooms {
+		h.coverFightRoom(p, room)
+	}
+	return true, true
 }
 
 // inFightRoom: the account's socket covers a fight room, so a committed fall
@@ -410,58 +432,25 @@ func (a *Server) fightFell(f fights.Fall) {
 	}
 }
 
-// fightCover is one room's cover of a player, built under h.mu and
-// submitted to the room's actor after it (submitFightCovers).
-type fightCover struct {
-	room *presenceFightRoom
-	cmd  fights.Command
-	// rejoin: the socket covered the room already (rejoinFights); a
-	// refused rejoin leaves the room, so the next position report covers
-	// it anew with a full join, and the actor never keeps a ghost member.
-	rejoin bool
-}
-
 // fightPlayer is this socket's player as a room covers it; callers hold h.mu
 // and p.pos is set.
 func (h *presenceHub) fightPlayer(p *presencePeer) *fights.Player {
 	return &fights.Player{ID: p.identity.ID, Observer: h.fightObserver(p), Seed: p.critSeed, X: p.pos.X, Y: p.pos.Y, Down: p.identity.Magic.Down, Kit: p.identity.Magic.Kit}
 }
 
-// coverFightRoom records that p covers room and prepares the room's cover
-// of them; callers hold h.mu and submit the cover after releasing it.
-func (h *presenceHub) coverFightRoom(p *presencePeer, room *presenceFightRoom) fightCover {
+// coverFightRoom reports one covered room's player; callers hold h.mu.
+// Submit never blocks (a bounded queue, refused when full), so the cover
+// goes to the actor under h.mu: admission and withdrawal are ordered by the
+// one lock. A cover is never submitted after the leave that withdrew it, a
+// later cover (a newer position, a fall) is never overtaken by an older
+// one, and a refused first join is un-viewed before anyone can see the
+// view. Closing rooms and full queues are transient: the next position
+// report retries with a full join.
+func (h *presenceHub) coverFightRoom(p *presencePeer, room *presenceFightRoom) {
 	join := p.fightRooms[room.handle] == nil
 	h.viewFightRoom(p, room)
-	return fightCover{room: room, cmd: fights.Command{Player: h.fightPlayer(p), Join: join}}
-}
-
-// submitFightCovers hands covers built under h.mu to their actors without
-// it: a full queue or a woken actor goroutine never holds up the hub.
-// Closing rooms and full queues are transient: a refused first join is
-// un-viewed, never subscribed before its cover is admitted, and the next
-// position report retries with a full join; a join that landed meanwhile
-// (another report's cover) stays. A refused rejoin leaves the room.
-func (h *presenceHub) submitFightCovers(p *presencePeer, covers []fightCover) {
-	var refused []fightCover
-	for _, c := range covers {
-		if !c.room.actor.Submit(c.cmd) && c.cmd.Join {
-			refused = append(refused, c)
-		}
-	}
-	if len(refused) == 0 {
-		return
-	}
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	for _, c := range refused {
-		if p.fightRooms[c.room.handle] != c.room {
-			continue
-		}
-		if c.rejoin {
-			h.leaveFightRoom(p, c.room.handle, true)
-		} else if !p.fightJoined[c.room.handle] {
-			h.unviewFightRoom(p, c.room)
-		}
+	if !room.actor.Submit(fights.Command{Player: h.fightPlayer(p), Join: join}) && join {
+		h.unviewFightRoom(p, room)
 	}
 }
 
@@ -473,18 +462,18 @@ func (h *presenceHub) submitFightCovers(p *presencePeer, covers []fightCover) {
 // takes fight frames only for the area it has announced (presence-client.ts).
 // A page reloaded in the Wilds would otherwise draw no server enemies until
 // a room woke anew. A client that kept its area across the reconnect gets a
-// second join, a refresh. Callers hold h.mu and hand the covers to
-// submitFightCovers after releasing it; a refused one leaves its room, so
-// the next position report covers it again with a fresh full join.
-func (h *presenceHub) rejoinFights(p *presencePeer) []fightCover {
+// second join, a refresh. Callers hold h.mu.
+func (h *presenceHub) rejoinFights(p *presencePeer) {
 	if p.pos == nil {
-		return nil
+		return
 	}
-	covers := make([]fightCover, 0, len(p.fightRooms))
 	for _, room := range sortedFightRooms(p) {
-		covers = append(covers, fightCover{room: room, cmd: fights.Command{Player: h.fightPlayer(p), Join: true}, rejoin: true})
+		// A refused join (closing room, full queue) leaves the room, so the
+		// next position report covers it again with a fresh full join.
+		if !room.actor.Submit(fights.Command{Player: h.fightPlayer(p), Join: true}) {
+			h.leaveFightRoom(p, room.handle, true)
+		}
 	}
-	return covers
 }
 
 var fightValidator = sync.OnceValue(func() protovalidate.Validator {

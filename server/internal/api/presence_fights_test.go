@@ -46,7 +46,7 @@ func unitFightPeer(t *testing.T, h *presenceHub) *presencePeer {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 	p := &presencePeer{identity: presenceIdentity{ID: "alice", World: "world", Magic: presenceMagic{Kit: rules.CombatKitFor(nil, "", 0)}}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 64), area: "wilds:0:0", pos: &presencePosition{X: 0, Y: 112}, fightRooms: map[uint32]*presenceFightRoom{}}
-	h.peers[p.identity.ID] = p
+	h.admit(p)
 	h.fightObserver(p)
 	p.identity.Magic.Kit.CritChance = 0
 	return p
