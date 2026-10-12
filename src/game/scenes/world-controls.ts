@@ -40,7 +40,8 @@ let noSwingSaidAt = -Infinity
 /**
  * The action with nothing prompted, or a click at nothing (src/lib/belt.ts
  * SWING): the weapon strikes, a sturdy tool swings dully, and any other tool
- * does nothing but, now and then, a thought.
+ * does nothing but, now and then, a thought. Empty hands: "Your hands are
+ * empty.", and no swing.
  */
 export function swingHeld(hero: Hero, toward?: { x: number; y: number }): void {
   const slot = heldNow()
@@ -49,7 +50,7 @@ export function swingHeld(hero: Hero, toward?: { x: number; y: number }): void {
   const now = performance.now()
   if (now - noSwingSaidAt < NO_SWING_QUIET_MS) return
   noSwingSaidAt = now
-  bus.emit(EV.toast, { text: noSwingThought(slot.itemDef ? itemDef(slot.itemDef)?.name : null), kind: 'thought' })
+  bus.emit(EV.toast, { text: noSwingThought(slot.itemDef ? itemDef(slot.itemDef)?.name : null, slot.kind), kind: 'thought' })
 }
 
 export class WorldControls {
@@ -141,9 +142,9 @@ export class WorldControls {
     if (this.deps.live()) fn()
   }
 
-  /** Keys 1…9 take the belt's slot in hand (not while the emote picker, a panel or a talk has the keys). */
+  /** Keys 1…9 take the belt's slot in hand, 0 the empty hands (not while the emote picker, a panel or a talk has the keys). */
   private onBeltKey(e: KeyboardEvent): void {
-    const m = /^Digit([1-9])$/.exec(e.code)
+    const m = /^Digit([0-9])$/.exec(e.code)
     // A digit the UI already used (an emote picked from the picker) isn't for the belt.
     if (!m || e.repeat || e.ctrlKey || e.metaKey || e.altKey || (e as KeyboardEvent & { fsConsumed?: boolean }).fsConsumed) return
     const t = e.target as HTMLElement | null

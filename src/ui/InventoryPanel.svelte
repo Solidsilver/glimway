@@ -572,8 +572,8 @@
 {#snippet slotView(name: string)}
   {#if name === 'hand'}
     <div class="card-head">
-      <span class="card-icon"><Icon name="sword" size={24} /></span>
-      <span class="card-name"><b>{inventoryCopy.hand}</b><span class="tag held">{inventoryCopy.handWeapon(kit.basicName)}</span></span>
+      <span class="card-icon"><Icon name={hand.kind === 'hands' ? 'hand' : 'sword'} size={24} /></span>
+      <span class="card-name"><b>{inventoryCopy.hand}</b><span class="tag held">{hand.kind === 'hands' ? KIND_WORDS.hands : inventoryCopy.handWeapon(kit.basicName)}</span></span>
     </div>
     <p class="line">{inventoryCopy.handHint}</p>
   {:else if name.startsWith('pocket') && name !== 'pocket-locked'}
@@ -642,7 +642,7 @@
   <!-- Equipped: the hero, with the hand, the off hand and the pockets around them. -->
   <section class="equipped" data-testid="carry-strip" aria-label={inventoryCopy.equipped}>
     <div class="eq-side">
-      {@render slotButton('hand', inventoryCopy.hand, handEntry, 'hand-slot', 'sword', true, kit.basicName)}
+      {@render slotButton('hand', inventoryCopy.hand, handEntry, 'hand-slot', hand.kind === 'hands' ? 'hand' : 'sword', true, hand.kind === 'hands' ? KIND_WORDS.hands : kit.basicName)}
       {#if model}
         {#if model.offHand.open}
           {@render slotButton('off', inventoryCopy.offHand, offEntry, 'off-hand', 'lantern')}

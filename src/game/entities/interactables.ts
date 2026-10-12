@@ -49,8 +49,14 @@ export interface Interactable {
   clickReach?: number
   /** A higher rank wins over anything of a lower rank in reach, however near (default 0). */
   rank?: number
-  /** Whether it can be used right now (default: always). Checked only in reach. */
+  /** Whether it can be used right now (default: always). Checked in reach, for the prompt and the action key. */
   available?: () => boolean
+  /**
+   * Whether a click or tap on the thing itself uses it (default: the same as
+   * `available`). A pet is petted wherever you click it, even when the prompt
+   * path won't offer it (empty hands only): ./petting.ts, ../lib/pet-gating.ts.
+   */
+  availableDirect?: () => boolean
   /** Use it. True: it's used up, and its point goes. */
   activate: () => boolean | void
 }
@@ -245,7 +251,7 @@ export class Interactables {
         (it) =>
           Math.hypot(at.x - it.x, at.y - (it.y - 8)) <= 14 &&
           distance(hero, it) <= (it.clickReach ?? DEFAULT_CLICK_REACH) &&
-          this.usable(it)
+          this.usableDirect(it)
       ) ?? null
     )
   }
@@ -253,6 +259,11 @@ export class Interactables {
   /** Can it be used now (its own check, and nobody who isn't here). */
   private usable(it: Interactable): boolean {
     return (!it.available || it.available()) && !this.goneCheck?.(it.id)
+  }
+
+  /** Can a click on the thing itself use it now (its own direct check when it has one). */
+  private usableDirect(it: Interactable): boolean {
+    return (it.availableDirect ? it.availableDirect() && !this.goneCheck?.(it.id) : this.usable(it))
   }
 
   /** Hide the keycap hint while the world is frozen (a panel owns input). */

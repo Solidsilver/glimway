@@ -15,7 +15,7 @@
   import { papers } from './papers.svelte'
   import { heldUi } from './held.svelte'
   import { setHeld } from '../game/held'
-  import { KIND_WORDS } from '../lib/belt'
+  import { KIND_WORDS, keyForSlot } from '../lib/belt'
   import ContextButtons from './ContextButtons.svelte'
   import type { PromptAlt } from '../game/events'
 
@@ -382,28 +382,29 @@
     {#if heldUi.belt.length > 1}
       <!-- The belt: what you carry to hand, by number key; click or press to take one. -->
       <div class="belt" role="group" aria-label="Take in hand" data-testid="belt">
-        {#each heldUi.belt as b, i (b.kind)}
+        {#each heldUi.belt as b (b.kind)}
+          {@const key = keyForSlot(heldUi.belt, b.kind)}
           <button
             type="button"
             class="bslot"
             class:on={b.kind === heldUi.kind}
             class:worn={!b.usable}
             aria-pressed={b.kind === heldUi.kind}
-            aria-label={`Hold the ${(b.kind === 'weapon' ? kit.basicName : KIND_WORDS[b.kind]).toLowerCase()} (${i + 1})`}
+            aria-label={`${b.kind === 'hands' ? 'Take empty hands' : `Hold the ${(b.kind === 'weapon' ? kit.basicName : KIND_WORDS[b.kind]).toLowerCase()}`} (${key})`}
             title={b.kind === 'weapon' ? kit.basicName : KIND_WORDS[b.kind]}
             data-kind={b.kind}
             tabindex="-1"
             onclick={() => setHeld(b.kind)}
           >
-            {#if b.itemDef}<ArtIcon art={b.itemDef} name="tools" size={16} />{:else}<Icon name="sword" size={16} />{/if}
-            <span class="kbd">{i + 1}</span>
+            {#if b.itemDef}<ArtIcon art={b.itemDef} name="tools" size={16} />{:else}<Icon name={b.kind === 'hands' ? 'hand' : 'sword'} size={16} />{/if}
+            <span class="kbd">{key}</span>
           </button>
         {/each}
       </div>
     {/if}
     <div class="slot" class:context={!!ui.prompt.label} data-held={heldUi.kind}>
       <div class="face">
-        {#if ui.prompt.label}<Icon name="sparkle" size={22} />{:else if heldDef}<ArtIcon art={heldDef} name="tools" size={32} />{:else}<Icon name="sword" size={22} />{/if}
+        {#if ui.prompt.label}<Icon name="sparkle" size={22} />{:else if heldDef}<ArtIcon art={heldDef} name="tools" size={32} />{:else}<Icon name={heldUi.kind === 'hands' ? 'hand' : 'sword'} size={22} />{/if}
       </div>
       <span class="kbd">E</span>
       <span class="label">{actLabel}</span>

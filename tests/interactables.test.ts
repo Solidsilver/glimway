@@ -92,6 +92,18 @@ test('a click uses each point’s click reach: 40 px by default, the working rea
   assert.equal(it.pointAt(cursor({ x: 200, y: 96 }), { x: 200, y: 137 }), null);
 });
 
+test('a click finds a point the prompt path passes over (a pet is petted whatever is in hand)', () => {
+  const it = new Interactables(scene, { reducedMotion: true });
+  let promptable = false;
+  it.register('pets', [point('touch:pet:mine', 110, 100, { label: 'Pet', available: () => promptable, availableDirect: () => true })]);
+  it.update(hero, 0);
+  assert.equal(it.currentTarget, null, 'the prompt (and the action key) waits for the empty hands');
+  assert.equal(it.pointAt({ x: 110, y: 92 }, hero)?.id, 'touch:pet:mine', 'but a click on the pet itself finds it');
+  promptable = true;
+  it.update(hero, 0);
+  assert.equal(it.currentTarget?.id, 'touch:pet:mine', 'empty hands: the prompt offers it too');
+});
+
 test('a second choice on its own key rides with the prompt, and a change to it alone is news', () => {
   const it = new Interactables(scene, { reducedMotion: true });
   let landed = false;

@@ -4,11 +4,19 @@
  * hops (with reduced motion: no hop, and the heart fades in place).
  * Nothing is earned, nothing is sent: only you see it.
  *
+ * The prompt and the action key offer the pet only with empty hands (the
+ * owner's playtest: petting must never get in the way of a fight; the rules
+ * are in ../lib/pet-gating.ts). A click or a tap on the pet itself pets it
+ * whatever is in hand — the two paths take their own availability on each
+ * point (./interactables.ts `available` / `availableDirect`).
+ *
  * The pets move, so their points read live positions; the list is rebuilt
  * only when the set of pets here changes.
  */
 import type Phaser from 'phaser'
 import { crArt } from '../crafts-art'
+import type { BeltKind } from '../../lib/belt'
+import { petOnPrompt, petOnTap } from '../../lib/pet-gating'
 import type { Interactable, Interactables } from './interactables'
 
 export interface PetPoint {
@@ -32,7 +40,9 @@ export class Petting {
     private readonly scene: Phaser.Scene,
     private readonly interactables: Interactables,
     private readonly reducedMotion: boolean,
-    private readonly sources: () => PetPoint[]
+    private readonly sources: () => PetPoint[],
+    /** What's in hand now (src/game/held.ts): the prompt only takes the empty hands. */
+    private readonly held: () => BeltKind
   ) {
     scene.events.once('shutdown', () => interactables.register(this, []))
   }
@@ -62,7 +72,8 @@ export class Petting {
           verb: 'Pet',
           reach: PET_REACH,
           rank: PET_RANK,
-          available: () => self.points.has(p.id),
+          available: () => self.points.has(p.id) && petOnPrompt(self.held()),
+          availableDirect: () => self.points.has(p.id) && petOnTap(self.held()),
           activate: () => {
             const live = self.points.get(p.id)
             if (!live) return
