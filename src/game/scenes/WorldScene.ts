@@ -28,6 +28,7 @@ import { TILE, tileAt, tileCenter, tileMid } from '../../lib/tile'
 import type { Session } from '../session'
 import { hasAreaKind, type WorldData } from '../worlds'
 import { maybeNudgePip } from '../nudges' // P1 onboarding
+import { heldNow } from '../held'
 import { AvatarVisual } from '../entities/avatar'
 import { Petting } from '../entities/petting'
 import { Hero } from '../entities/hero'
@@ -558,11 +559,18 @@ export class WorldScene extends Phaser.Scene {
     this.remotePlayers = createRemotePlayers(this, feed, this.presenceArea, false, this.reducedMotion)
     this.events.once('shutdown', () => this.remotePlayers.clear())
     // Pet a pet (crafts.md 2.1): your follower, friends' and the yard's.
-    this.petting = new Petting(this, this.interactables, this.reducedMotion, () => [
-      ...(this.avatar.follower ? [{ id: 'mine', x: this.avatar.follower.x, y: this.avatar.follower.y, hop: () => this.avatar.follower?.hop() }] : []),
-      ...this.remotePlayers.pets(),
-      ...(this.homesteads?.yard?.petPoints() ?? [])
-    ])
+    this.petting = new Petting(
+      this,
+      this.interactables,
+      this.reducedMotion,
+      () => [
+        ...(this.avatar.follower ? [{ id: 'mine', x: this.avatar.follower.x, y: this.avatar.follower.y, hop: () => this.avatar.follower?.hop() }] : []),
+        ...this.remotePlayers.pets(),
+        ...(this.homesteads?.yard?.petPoints() ?? [])
+      ],
+      // The prompt offers the pet only with empty hands (src/lib/pet-gating.ts).
+      () => heldNow().kind
+    )
     presenceMoments(this, { session: this.session, world: this.world, enemies: this.enemies, hero: () => this.hero.sprite })
     this.goalGuide = new GoalGuide(this, {
       world: this.world,

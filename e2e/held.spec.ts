@@ -4,10 +4,11 @@ import { expectToast, frames, waitForLive, warp } from './helpers'
 
 /**
  * Held items (src/game/held.ts, src/lib/belt.ts): the belt is the weapon and
- * one slot per tool kind carried; number keys take one in hand; only what
- * the held tool works gets a prompt (the wrong one shows a faint hint after
- * a moment, never an E); the mouse works the piece under the cursor; on a
- * phone the small buttons around the action button switch.
+ * one slot per tool kind carried, and the empty hands last (key 0); number
+ * keys take one in hand; only what the held tool works gets a prompt (the
+ * wrong one shows a faint hint after a moment, never an E); the mouse works
+ * the piece under the cursor; on a phone the small buttons around the action
+ * button switch.
  */
 
 type Held = { kind: string; belt: string[] }
@@ -23,7 +24,7 @@ async function withTools(page: Page): Promise<void> {
   giveInstance(id, 'bench-pick', { max: 90 })
   giveInstance(id, 'bench-spade', { max: 90 })
   await page.evaluate(() => (window as unknown as { __fsItems: { load: () => Promise<unknown> } }).__fsItems.load())
-  await expect.poll(async () => (await heldNow(page)).belt).toEqual(['weapon', 'chop', 'break', 'dig'])
+  await expect.poll(async () => (await heldNow(page)).belt).toEqual(['weapon', 'chop', 'break', 'dig', 'hands'])
 }
 
 /** Stand on open ground just below a tree in Brackenwood (the woods' trees), nothing else in reach. */
@@ -59,6 +60,12 @@ test('keys take the belt in hand; only the held tool’s pieces prompt, the wron
   await withTools(page)
   const tree = await besideTree(page)
   expect((await heldNow(page)).kind).toBe('weapon')
+
+  // 0 takes the empty hands, 1 the weapon again (the hands never shift a tool's key).
+  await page.keyboard.press('0')
+  await expect.poll(async () => (await heldNow(page)).kind).toBe('hands')
+  await page.keyboard.press('1')
+  await expect.poll(async () => (await heldNow(page)).kind).toBe('weapon')
 
   // The blade out: the tree keeps quiet, and after a moment a faint axe hints over it.
   await frames(page, 20)
@@ -102,14 +109,19 @@ test('phone: the small buttons by the action button take a tool in hand', async 
   await besideTree(page)
   const act = page.locator('.controls .act')
   await expect(act).toHaveAttribute('data-held', 'weapon')
-  // The weapon is in hand, so the ring holds the three tools.
+  // The weapon is in hand, so the ring holds the three tools and the empty hands.
   const ring = page.locator('.controls .belt button')
-  await expect(ring).toHaveCount(3)
+  await expect(ring).toHaveCount(4)
   await page.locator('.controls .belt button[data-kind="chop"]').tap()
   await expect.poll(async () => (await heldNow(page)).kind).toBe('chop')
   await expect(act).toHaveAttribute('data-held', 'chop')
   await expect(act.locator('.cap')).toHaveText('Chop')
   // Now the weapon waits in the ring.
   await expect(page.locator('.controls .belt button[data-kind="weapon"]')).toHaveCount(1)
+  // The hands are on the ring too: a tap takes them, and the big button says so.
+  await page.locator('.controls .belt button[data-kind="hands"]').tap()
+  await expect.poll(async () => (await heldNow(page)).kind).toBe('hands')
+  await expect(act).toHaveAttribute('data-held', 'hands')
+  await expect(act.locator('.cap')).toHaveText(/hands/i)
   await context.close()
 })

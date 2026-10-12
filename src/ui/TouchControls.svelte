@@ -337,13 +337,13 @@
                 class="bslot"
                 data-inset="ring"
                 class:worn={!b.usable}
-                aria-label={`Hold the ${b.kind === 'weapon' ? kit.basicName.toLowerCase() : KIND_WORDS[b.kind].toLowerCase()}`}
+                aria-label={b.kind === 'hands' ? 'Take empty hands' : `Hold the ${b.kind === 'weapon' ? kit.basicName.toLowerCase() : KIND_WORDS[b.kind].toLowerCase()}`}
                 data-kind={b.kind}
                 style={`transform: translate(${at[0]}px, ${at[1]}px)`}
                 onpointerdown={(e) => pickHeld(e, b.kind)}
                 oncontextmenu={(e) => e.preventDefault()}
               >
-                {#if b.itemDef}<ArtIcon art={b.itemDef} name="tools" size={16} />{:else}<Icon name="sword" size={18} />{/if}
+                {#if b.itemDef}<ArtIcon art={b.itemDef} name="tools" size={16} />{:else}<Icon name={b.kind === 'hands' ? 'hand' : 'sword'} size={18} />{/if}
               </button>
             {/each}
           </div>
@@ -361,7 +361,7 @@
           oncontextmenu={(e) => e.preventDefault()}
           aria-label={ui.dialogueOpen ? 'Continue' : talkMode ? ui.prompt.label : handWord}
         >
-          {#if ui.dialogueOpen}<Icon name="check" size={28} />{:else if talkMode}<Icon name="sparkle" size={28} />{:else if heldDef}<ArtIcon art={heldDef} name="tools" size={32} />{:else}<Icon name="sword" size={28} />{/if}
+          {#if ui.dialogueOpen}<Icon name="check" size={28} />{:else if talkMode}<Icon name="sparkle" size={28} />{:else if heldDef}<ArtIcon art={heldDef} name="tools" size={32} />{:else}<Icon name={heldUi.kind === 'hands' ? 'hand' : 'sword'} size={28} />{/if}
           <span class="cap">{ui.dialogueOpen ? 'Next' : talkMode ? (ui.prompt.verb ?? 'Talk') : handWord}</span>
         </button>
       </div>

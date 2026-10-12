@@ -131,15 +131,16 @@ export class AvatarVisual {
   private lowers: Phaser.GameObjects.Image[] = []
   private mountLayers: Phaser.GameObjects.Image[] = []
   /**
-   * The weapon's layers (both crops): put away while a tool is in hand, and
-   * the tool drawn at the weapon hand instead (src/game/held.ts). The demo
-   * stand-in has its blade drawn into the frames; it waits for the art pass
-   * (docs/art-request-playtest1.md, hand items).
+   * The weapon's layers (both crops): put away while a tool is in hand or
+   * the hands are empty, and the tool drawn at the weapon hand instead
+   * (src/game/held.ts). The demo stand-in has its blade drawn into the
+   * frames; it waits for the art pass (docs/art-request-playtest1.md, hand
+   * items).
    */
   private weaponLayers: Phaser.GameObjects.Image[] = []
   private handTool: Phaser.GameObjects.Image | null = null
-  /** The held item drawn now ('' = none built yet). */
-  private handShown = ''
+  /** The held thing drawn now: '' the weapon, null the empty hands, else the tool's item def. */
+  private handShown: string | null = ''
   /** The facing the held art was last set for. */
   private handFacing: string | null = null
   /** The way the hero faces, as last drawn. */
@@ -497,7 +498,9 @@ export class AvatarVisual {
 
   /**
    * What's in hand, on the hero: the Habitica weapon while the weapon is
-   * held; otherwise the tool's held art (../people.ts) facing with the hero,
+   * held; nothing at all with the empty hands (lane exp/empty-hands: the
+   * blade is put away too); otherwise the tool's held art (../people.ts)
+   * facing with the hero,
    * gripped at the weapon hand — behind the body walking away — or its item
    * icon when it has no held art. Tucked away seated. Every held frame is
    * baked leaning out from the hand, art-left (HELD_LEAN in
@@ -506,10 +509,10 @@ export class AvatarVisual {
    */
   private drawHand(seated: boolean, facing: Facing): void {
     const slot = heldNow()
-    const want = slot.kind === 'weapon' || !slot.itemDef ? '' : slot.itemDef
+    const want = slot.kind === 'hands' ? null : slot.kind === 'weapon' || !slot.itemDef ? '' : slot.itemDef
     if (want !== this.handShown) {
       this.handShown = want
-      for (const w of this.weaponLayers) w.setVisible(!want)
+      for (const w of this.weaponLayers) w.setVisible(want === '')
       this.handTool?.destroy()
       this.handTool = null
       this.handFacing = null
@@ -538,7 +541,7 @@ export class AvatarVisual {
     if (!tool) return
     if (tool.texture.key === PEOPLE_KEY && this.handFacing !== facing) {
       this.handFacing = facing
-      const frame = heldFrame(this.scene, want, facing)
+      const frame = want ? heldFrame(this.scene, want, facing) : null
       if (frame) {
         tool.setFrame(frame)
         const [ox, oy] = heldOrigin(this.scene, frame)
@@ -569,8 +572,9 @@ export class AvatarVisual {
     return this.handTool?.visible && this.handTool.texture.key === PEOPLE_KEY ? String(this.handTool.frame.name) : ''
   }
 
-  /** Read-only, for playtests: what the hero is drawn holding ('' = the weapon). */
+  /** Read-only, for playtests: what the hero is drawn holding ('' = the weapon, 'hands' = empty hands). */
   get holding(): string {
+    if (this.handShown === null) return 'hands'
     return this.handTool?.visible ? this.handShown : ''
   }
 

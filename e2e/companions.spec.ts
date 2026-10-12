@@ -140,11 +140,20 @@ test('a friend\'s pet follows them on your screen, and you can pet it', async ({
   await expect.poll(async () => (await remotes(other)).map((r) => [r.name, r.led])).toEqual([['Ash', null]])
 
   // Out in the open (a bench or a resident outranks a pet), Rowan walks up to
-  // Ash: the action button says Pet. Only Rowan sees the heart.
+  // Ash. A new hero holds the weapon, and a pet never gets in its way: the
+  // prompt keeps quiet until the 0 key takes the empty hands, and then the
+  // action button says Pet. Only Rowan sees the heart.
   await go(page, 'woodland', 15, 20)
   await go(other, 'woodland', 15, 20)
   await expect.poll(async () => (await remotes(other)).map((r) => [r.name, r.pet]), { timeout: 15_000 }).toEqual([['Ash', 'Wolf-Base']])
   await other.bringToFront()
+  const prompt = () => other.evaluate(() => document.querySelector('.prompt')?.textContent ?? '')
+  await other.keyboard.press('0')
+  await expect(other.locator('.prompt')).toContainText('Pet', { timeout: 15_000 })
+  // The weapon back in hand (key 1): the prompt stops offering the pet.
+  await other.keyboard.press('1')
+  await expect.poll(prompt).not.toMatch(/Pet/)
+  await other.keyboard.press('0')
   await expect(other.locator('.prompt')).toContainText('Pet', { timeout: 15_000 })
 
   // Ash chooses No pet (a deed opens the choice): on Rowan's screen nothing
