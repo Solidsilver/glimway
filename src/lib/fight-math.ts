@@ -117,3 +117,27 @@ export function fightFacingFromStep(step: number): { x: number; y: number } {
   const angle = ((step & 255) / 256) * 2 * Math.PI;
   return { x: Math.cos(angle), y: Math.sin(angle) };
 }
+
+/** Three equal skitter-dashes: left, right, then straight along locked aim.
+ * Cumulative local offset allows callers to split a step at the dash corners. */
+export function fightScuttleOffset(seconds: number): { x: number; y: number } {
+  const t = ENEMY_TUNING.beetle;
+  const leg = t.chargeTime / 3;
+  const a = t.scuttleAngle * Math.PI / 180;
+  const first = Math.max(0, Math.min(leg, seconds));
+  const second = Math.max(0, Math.min(leg, seconds - leg));
+  const third = Math.max(0, Math.min(leg, seconds - 2 * leg));
+  return { x: t.chargeSpeed * ((first + second) * Math.cos(a) + third), y: t.chargeSpeed * (first - second) * Math.sin(a) };
+}
+
+export const CAMP_LEASH = 160;
+export const CAMP_RETURN_MARGIN = 8;
+/** Fraction of a movement segment before it first exits the home circle. */
+export function fightLeashFraction(x: number, y: number, dx: number, dy: number): number {
+  if (Math.hypot(x + dx, y + dy) <= CAMP_LEASH) return 1;
+  const a = dx * dx + dy * dy;
+  if (!a || Math.hypot(x, y) > CAMP_LEASH) return 0;
+  const b = x * dx + y * dy;
+  const c = x * x + y * y - CAMP_LEASH * CAMP_LEASH;
+  return Math.max(0, Math.min(1, (-b + Math.sqrt(Math.max(0, b * b - a * c))) / a));
+}

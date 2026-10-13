@@ -1,6 +1,6 @@
 /**
- * Enemies: wisps (telegraphed hops), beetles (telegraphed straight-line
- * charges that end dazed against walls), and the stone warden (quest-driven
+ * Enemies: wisps (telegraphed hops), beetles (telegraphed zig-zag
+ * scuttles that end dazed against walls), and the stone warden (quest-driven
  * encounter). Every real attack is telegraphed; bumping into an enemy that
  * isn't attacking only stings. Includes knockback, poses, and the floating
  * HP bars.
@@ -20,6 +20,7 @@
  * stays there (the quest event is still 'defeat-guardian', for saves).
  */
 import Phaser from 'phaser'
+import { CAMP_LEASH, CAMP_RETURN_MARGIN, fightLeashFraction } from '../../lib/fight-math'
 import { ServerEnemies } from './server-enemies'
 import type { FightTargetRef } from '../../lib/presence'
 import type { GameState } from '../../lib/state'
@@ -46,6 +47,7 @@ export interface Enemy extends EnemyState {
   hp: number
   homeX: number
   homeY: number
+  returning?: boolean
   dirX: number
   dirY: number
   wanderTimer: number
@@ -294,6 +296,8 @@ export class EnemySystem {
         body.setVelocity(0, 0)
         if (enemy.type !== 'guardian' && enemy.state !== 'telegraph' && enemy.state !== 'stunned') this.setEnemyPose(enemy, 'idle')
       }
+    } else if (enemy.type !== 'guardian' && this.walkLeashedHome(enemy, dt, aim)) {
+      this.creatures.slowIn(enemy, field)
     } else if (enemy.type === 'wisp') {
       this.creatures.updateHopper(enemy, dt, aimDist, aim.x, aim.y)
       this.creatures.slowIn(enemy, field)
@@ -303,6 +307,39 @@ export class EnemySystem {
     } else {
       this.warden.updateGuardian(enemy, dt, dist, px, py)
     }
+    if (enemy.type !== 'guardian' && enemy.state === 'lunge' && enemy.knockTimer <= 0) {
+      const fraction = fightLeashFraction(enemy.x - enemy.homeX, enemy.y - enemy.homeY, body.velocity.x * dt, body.velocity.y * dt)
+      if (fraction < 1) {
+        // Move this final segment through physics, then stop on the next frame.
+        body.velocity.scale(fraction)
+        enemy.state = 'recover'
+        enemy.stateTimer = ENEMY_TUNING[enemy.type].recover
+        enemy.sprite.setAngle(0)
+        this.setEnemyPose(enemy, enemy.type === 'wisp' ? 'squash' : 'idle')
+      }
+    }
+  }
+
+  private walkLeashedHome(enemy: Enemy, dt: number, aim: { x: number; y: number }): boolean {
+    const dx = enemy.homeX - enemy.x, dy = enemy.homeY - enemy.y
+    const distance = Math.hypot(dx, dy)
+    if (distance > CAMP_LEASH) enemy.returning = true
+    if (enemy.returning && distance <= CAMP_LEASH - CAMP_RETURN_MARGIN) enemy.returning = false
+    if (!enemy.returning && Math.hypot(aim.x - enemy.homeX, aim.y - enemy.homeY) < CAMP_LEASH) return false
+    enemy.state = 'chase'
+    const speed = enemy.type === 'beetle' ? ENEMY_TUNING.beetle.walk : ENEMY_TUNING.wisp.chase
+    const step = Math.min(speed, distance / dt)
+    enemy.sprite.setVelocity(distance ? dx / distance * step : 0, distance ? dy / distance * step : 0).setAngle(0)
+    this.setEnemyPose(enemy, 'idle')
+    return true
+  }
+
+  /** Existing frames alternate like working legs; angle rocks around the feet.
+   * The server owner calls this from the interpolated state's elapsed time. */
+  scuttlePose(enemy: Enemy, elapsed: number): void {
+    if (this.deps.reducedMotion) { enemy.sprite.setAngle(0); this.setEnemyPose(enemy, 'squash'); return }
+    this.setEnemyPose(enemy, Math.floor(elapsed * 32) % 2 ? 'squash' : 'idle')
+    enemy.sprite.setAngle(Math.sin(elapsed * 70) * 7)
   }
 
   /**

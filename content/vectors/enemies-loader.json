@@ -127,6 +127,34 @@
           "remove": true
         }
       ]
+    },
+    {
+      "name": "negative-scuttle-angle",
+      "valid": false,
+      "rule": "double.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "beetle",
+            "scuttleAngle"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "too-wide-scuttle-angle",
+      "valid": false,
+      "rule": "double.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "beetle",
+            "scuttleAngle"
+          ],
+          "value": 61
+        }
+      ]
     }
   ]
 }

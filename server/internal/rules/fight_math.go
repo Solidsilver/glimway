@@ -153,3 +153,31 @@ func FightFacingStep(x, y float64) uint32 {
 	turns := math.Atan2(y, x) / (2 * math.Pi)
 	return uint32(int64(math.Floor(float64(turns*256)+0.5)) & 255)
 }
+
+// FightScuttleOffset is the cumulative left/right/straight local displacement.
+func FightScuttleOffset(seconds float64) (float64, float64) {
+	t := content.EnemyRules.GetBeetle()
+	leg := t.GetChargeTime() / 3
+	a := t.GetScuttleAngle() * math.Pi / 180
+	first := math.Max(0, math.Min(leg, seconds))
+	second := math.Max(0, math.Min(leg, seconds-leg))
+	third := math.Max(0, math.Min(leg, seconds-2*leg))
+	return t.GetChargeSpeed() * (float64((first+second)*math.Cos(a)) + third), t.GetChargeSpeed() * (first - second) * math.Sin(a)
+}
+
+const CampLeash = 160.0
+const CampReturnMargin = 8.0
+
+// FightLeashFraction clips a segment to its first exit from the home circle.
+func FightLeashFraction(x, y, dx, dy float64) float64 {
+	if math.Hypot(x+dx, y+dy) <= CampLeash {
+		return 1
+	}
+	a := float64(dx*dx) + float64(dy*dy)
+	if a == 0 || math.Hypot(x, y) > CampLeash {
+		return 0
+	}
+	b := float64(x*dx) + float64(y*dy)
+	c := float64(x*x) + float64(y*y) - CampLeash*CampLeash
+	return math.Max(0, math.Min(1, (-b+math.Sqrt(math.Max(0, float64(b*b)-float64(a*c))))/a))
+}

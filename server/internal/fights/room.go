@@ -20,7 +20,7 @@ const RewindMillis = 250
 // Mounted rolls reach 288 px/s. Forty pixels per tick includes that speed
 // and 11.2 px of slack. Multiple reports in one tick share this budget.
 const MovementPerTick = 40.0
-const CampLeash = 160.0
+const CampLeash = rules.CampLeash
 
 // Camp size (design 1.3): the base mix is at most three; at the first aggro
 // each extra account within CampScaleRadius of the camp adds one, up to five.
@@ -97,6 +97,7 @@ type enemy struct {
 	target             string
 	dirX, dirY         float64
 	aimLocked          bool
+	returning          bool
 	readyAt            int64
 	stateMS            int64 // grid ms the current state began
 	holdMS             int64 // how long RECOVER or STUNNED lasts
@@ -425,6 +426,18 @@ func aggroOf(kind string) float64 {
 // lunge stay committed so the tell stays readable; a current target can be
 // chased past aggro range while it stays inside the camp leash.
 func (r *Room) target(e *enemy, ms int64) (*Player, float64, float64) {
+	distanceHome := math.Hypot(e.x-e.homeX, e.y-e.homeY)
+	if distanceHome > CampLeash {
+		e.returning = true
+	}
+	if e.returning {
+		e.target = ""
+		if distanceHome > CampLeash-rules.CampReturnMargin {
+			return nil, 0, 0
+		}
+		e.returning = false
+	}
+
 	var closest *Player
 	distance := aggroOf(e.kind)
 	if p := r.players[e.target]; r.aimLeashed(e, p, ms) {
@@ -528,20 +541,25 @@ func (r *Room) stagger(e *enemy, seconds float64, ms int64) {
 
 // lunge moves an enemy along its locked aim in small steps, so a planted
 // hero and a wall are both met where they are, not a tick later.
-func (r *Room) lunge(e *enemy, dx, dy float64, ms int64) (blocked, staggered bool) {
+func (r *Room) lunge(e *enemy, dx, dy float64, ms int64) (blocked, staggered, leashed bool) {
 	n := max(1, int(math.Ceil(math.Max(math.Abs(dx), math.Abs(dy))/4)))
 	for range n {
+		sx, sy := dx/float64(n), dy/float64(n)
+		fraction := rules.FightLeashFraction(e.x-e.homeX, e.y-e.homeY, sx, sy)
 		var hit bool
-		e.x, e.y, hit = r.Geometry.MoveBlocked(e.x, e.y, dx/float64(n), dy/float64(n))
+		e.x, e.y, hit = r.Geometry.MoveBlocked(e.x, e.y, sx*fraction, sy*fraction)
 		if seconds, ok := r.planted(e, ms); ok {
 			r.stagger(e, seconds, ms)
-			return false, true
+			return false, true, false
 		}
 		if hit {
-			return true, false
+			return true, false, false
+		}
+		if fraction < 1 {
+			return false, false, true
 		}
 	}
-	return false, false
+	return false, false, false
 }
 
 func (r *Room) walkHome(e *enemy, speed, slow float64, ms int64) {
@@ -598,6 +616,10 @@ func (r *Room) step(e *enemy, ms int64) {
 		dt := math.Min(.1, e.knockLeft)
 		e.x, e.y = r.Geometry.Move(e.x, e.y, e.knockX*dt*slow, e.knockY*dt*slow)
 		e.knockLeft = math.Max(0, e.knockLeft-.1)
+		if math.Hypot(e.x-e.homeX, e.y-e.homeY) > CampLeash {
+			e.returning = true
+			e.target = ""
+		}
 		return
 	}
 	p, ax, ay := r.target(e, ms)
@@ -609,9 +631,10 @@ func (r *Room) step(e *enemy, ms int64) {
 	} else {
 		r.stepWisp(e, p, ax, ay, slow, ms)
 	}
-	// The chunk's collision is a hard leash; the home radius also bounds chases.
+	// Collision remains the hard chunk boundary. Chases and shoves outside
+	// the home circle return by walking on the next AI step, never teleport.
 	if math.Hypot(e.x-e.homeX, e.y-e.homeY) > CampLeash {
-		e.x, e.y = e.homeX, e.homeY
+		e.returning = true
 		e.target = ""
 	}
 }
@@ -638,10 +661,11 @@ func (r *Room) stepWisp(e *enemy, p *Player, ax, ay, slow float64, ms int64) {
 		r.telegraph(e, dx, dy, ms)
 	case wire.FightEnemyState_FIGHT_ENEMY_STATE_LUNGE:
 		dt, elapsed := r.lungeStep(e, t.GetHopTime(), ms)
-		if _, staggered := r.lunge(e, e.dirX*t.GetHopSpeed()*dt*slow, e.dirY*t.GetHopSpeed()*dt*slow, ms); staggered {
+		_, staggered, leashed := r.lunge(e, e.dirX*t.GetHopSpeed()*dt*slow, e.dirY*t.GetHopSpeed()*dt*slow, ms)
+		if staggered {
 			return
 		}
-		if elapsed >= t.GetHopTime() {
+		if leashed || elapsed >= t.GetHopTime() {
 			r.hold(e, wire.FightEnemyState_FIGHT_ENEMY_STATE_RECOVER, t.GetRecover(), ms)
 		}
 	case wire.FightEnemyState_FIGHT_ENEMY_STATE_RECOVER:
@@ -652,8 +676,8 @@ func (r *Room) stepWisp(e *enemy, p *Player, ax, ay, slow float64, ms int64) {
 	}
 }
 
-// stepBeetle is creatures.ts updateBeetle: keep a charging distance, paw the
-// ground, charge along the locked aim; a charge into a wall or tree leaves
+// stepBeetle is creatures.ts updateBeetle: keep a scuttling distance, paw the
+// ground, skitter around the locked aim; a scuttle into a wall or tree leaves
 // it dazed (STUNNED, taking stunnedTakes).
 func (r *Room) stepBeetle(e *enemy, p *Player, ax, ay, slow float64, ms int64) {
 	t := content.EnemyRules.GetBeetle()
@@ -679,13 +703,27 @@ func (r *Room) stepBeetle(e *enemy, p *Player, ax, ay, slow float64, ms int64) {
 		r.telegraph(e, dx, dy, ms)
 	case wire.FightEnemyState_FIGHT_ENEMY_STATE_LUNGE:
 		dt, elapsed := r.lungeStep(e, t.GetChargeTime(), ms)
-		crashed, staggered := r.lunge(e, e.dirX*t.GetChargeSpeed()*dt*slow, e.dirY*t.GetChargeSpeed()*dt*slow, ms)
+		// Split at each dash corner; a tick must not cut across the zig-zag.
+		crashed, staggered, leashed := false, false, false
+		end := math.Min(elapsed, t.GetChargeTime())
+		for start := math.Max(0, end-dt); start < end-1e-9; {
+			leg := t.GetChargeTime() / 3
+			next := math.Min(end, (math.Floor((start+1e-9)/leg)+1)*leg)
+			x0, y0 := rules.FightScuttleOffset(start)
+			x1, y1 := rules.FightScuttleOffset(next)
+			dx, dy := (x1-x0)*slow, (y1-y0)*slow
+			crashed, staggered, leashed = r.lunge(e, e.dirX*dx-e.dirY*dy, e.dirY*dx+e.dirX*dy, ms)
+			if crashed || staggered || leashed {
+				break
+			}
+			start = next
+		}
 		if staggered {
 			return
 		}
 		if crashed {
 			r.hold(e, wire.FightEnemyState_FIGHT_ENEMY_STATE_STUNNED, t.GetStun(), ms)
-		} else if elapsed >= t.GetChargeTime() {
+		} else if leashed || elapsed >= t.GetChargeTime() {
 			r.hold(e, wire.FightEnemyState_FIGHT_ENEMY_STATE_RECOVER, t.GetRecover(), ms)
 		}
 	case wire.FightEnemyState_FIGHT_ENEMY_STATE_STUNNED:

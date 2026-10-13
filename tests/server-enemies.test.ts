@@ -9,6 +9,7 @@ import { FightInterp, FIGHT_RESYNC_GRACE } from '../src/lib/fight-interp.ts'
 import { pressServerSwing } from '../src/game/entities/fight-strike.ts'
 import { slashStrike } from '../src/game/entities/fight-rules.ts'
 const { ServerEnemies } = await import('../src/game/entities/server-enemies.ts')
+const { EnemySystem } = await import('../src/game/entities/enemies.ts')
 const { perfFights } = await import('../src/game/perf.ts')
 
 function rig() {
@@ -17,12 +18,13 @@ function rig() {
   const sprites: any[] = [], enemies: any[] = [], poses: string[] = [], floats: string[] = [], colliderRequests: boolean[] = []
   const sprite = () => {
     const s: any = { active: true, body: { enable: true }, x: 100, y: 100, destroy() { assert.equal(this.active, true, 'no repeated destruction'); this.active = false; destroyed++ } }
-    for (const name of ['setPosition', 'setDepth', 'setFlipX', 'setTintFill', 'clearTint', 'setTint', 'setAlpha', 'setVisible']) s[name] = (...args: number[]) => { if (name === 'setPosition') [s.x, s.y] = args; return s }
+    for (const name of ['setPosition', 'setDepth', 'setFlipX', 'setTintFill', 'clearTint', 'setTint', 'setAlpha', 'setVisible', 'setAngle']) s[name] = (...args: number[]) => { if (name === 'setPosition') [s.x, s.y] = args; return s }
     sprites.push(s); return s
   }
   const system: any = { parkedAll: false, scene: { time: { get now() { return now }, delayedCall() {} }, tweens: { add() {} } }, deps: { hero: () => ({ sprite: { x: 80, y: 100 }, facing: { x: 1, y: 0 } }), fx: { floatText: (_x: number, _y: number, t: string) => floats.push(t) } },
     spawnWilds(id: string, type: string, _tx: number, _ty: number, withCollider: boolean) { colliderRequests.push(withCollider); spawned++; const enemy = { id, type, sprite: sprite(), x: 100, y: 100, maxHp: 28, hp: 28, state: 'chase', dead: false }; enemies.push(enemy); return enemy },
     forget(enemy: object) { const index = enemies.indexOf(enemy); if (index >= 0) enemies.splice(index, 1) },
+    scuttlePose: EnemySystem.prototype.scuttlePose,
     setEnemyPose(enemy: any, pose: string) { poses.push(`${enemy.type}:${pose}`) }, telegraph() { tells++ }, showDeath(enemy: object) { this.forget(enemy) } }
   const feed = { fights }
   const owner = new ServerEnemies(system, () => available ? feed : null)
@@ -112,12 +114,12 @@ test('server enemies die only on the room’s word: a predicted lethal hit leave
   assert.equal(enemy.dead, false); assert.equal(enemy.hp, 28)
 })
 
-test('beetles keep their art and poses: kind 2 spawns a beetle; lunge squashes, stunned hurts; Stand predicts its daze', () => {
+test('beetles keep their art and poses: kind 2 spawns a beetle; lunge skitters, stunned hurts; Stand predicts its daze', () => {
   const r = rig()
   r.fights.join(create(FightJoinSchema, { ...r.join, enemies: [{ ...r.join.enemies[0]!, kind: 2, state: 3, stateTick: 100, maxHp: 40, hp: 40 }] })); r.advance(100)
   const beetle = r.enemies[0]
   assert.equal(beetle.type, 'beetle'); assert.equal(beetle.maxHp, 40)
-  assert.equal(r.poses.at(-1), 'beetle:squash')
+  assert.match(r.poses.at(-1)!, /^beetle:(idle|squash)$/)
   r.fights.delta(create(FightDeltaSchema, { room: 1, tick: 101, changed: [{ enemy: 0, state: 5, stateTick: 101 }] })); r.advance(100)
   assert.equal(beetle.state, 'stunned'); assert.equal(r.poses.at(-1), 'beetle:hurt')
   r.fights.delta(create(FightDeltaSchema, { room: 1, tick: 102, changed: [{ enemy: 0, state: 3, stateTick: 102 }] })); r.advance(100)

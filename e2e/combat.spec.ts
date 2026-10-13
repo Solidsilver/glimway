@@ -60,15 +60,15 @@ test('slimes wind up before they hop, and the hop hurts', async ({ page }) => {
   await hurtWithin(page, { below: before }, 3)
 })
 
-test('standing still in a beetle charge hurts', async ({ page }) => {
+test('standing still in a beetle scuttle hurts', async ({ page }) => {
   await faceBeetle(page)
   const start = await hp(page)
   await waitForEnemy(page, (e) => e.type === 'beetle' && e.state === 'lunge', 10_000)
-  // The charge (3, less mitigation) lands — more than a bump's sting.
+  // The scuttle (3, less mitigation) lands — more than a bump's sting.
   await hurtWithin(page, { atMost: start - 2 }, 3)
 })
 
-test('a beetle telegraphs its charge, and a roll sideways slips it', async ({ page }) => {
+test('a beetle telegraphs its scuttle, and a roll sideways slips it', async ({ page }) => {
   await faceBeetle(page)
   const start = await hp(page)
   await waitForEnemy(page, (e) => e.type === 'beetle' && e.state === 'telegraph', 10_000)
@@ -102,7 +102,7 @@ test('a beetle telegraphs its charge, and a roll sideways slips it', async ({ pa
     }
     tick()
   }))
-  // The charge really launched, and finished without connecting.
+  // The scuttle really launched, and finished without connecting.
   await waitForEnemy(page, (e) => e.type === 'beetle' && e.state !== 'telegraph' && e.state !== 'chase', 2000)
   // …and has run its course (any hit would have landed by now).
   await waitForEnemy(page, (e) => e.type === 'beetle' && e.state !== 'lunge')

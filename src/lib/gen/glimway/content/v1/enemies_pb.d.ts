@@ -241,6 +241,13 @@ export declare type EnemyBeetle = Message<"glimway.content.v1.EnemyBeetle"> & {
    * @generated from field: double stunned_takes = 17;
    */
   stunnedTakes: number;
+
+  /**
+   * Degrees either side of locked aim; zero preserves a straight attack.
+   *
+   * @generated from field: double scuttle_angle = 18;
+   */
+  scuttleAngle: number;
 };
 
 export declare type EnemyBeetleValid = EnemyBeetle;
