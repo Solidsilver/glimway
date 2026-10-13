@@ -81,9 +81,16 @@ to `n / FIGHT_LOAD_PLAYERS`; the committed caps and bounds are untouched. It
 also lifts the hub's idle timeout to ten minutes for the run: at thousands of
 players the cold start (every chunk woken serially behind the fight-load
 lock and the one SQLite connection, every reader waiting) outlasts the 60 s
-timeout, which is the harness's start-up, not steady state. Until a bot has
-its first join it reports once a second, so no backlog queues behind the
-wake; the warm-up budget grows with the group count. The line also carries
+timeout, which is the harness's start-up, not steady state. Every bot
+reads its socket from the moment it is dialed (a websocket client that is
+not reading answers no ping, and the hub kicks it as `pong-timeout` 25 s
+after its first ping, long before thousands of accounts exist). Groups start
+reporting a few at a time (eight in flight, released as groups warm): a
+reader waits in its first sync until its 3×3 is awake, and one that waits
+longer than the ping interval plus the pong wait never reads its pong and
+is kicked (`pong-timeout`), so thousands of cold readers at once would fail
+the start, not the run. Until a bot has its first join it reports once a
+second; the warm-up budget grows with the group count. The line also carries
 `heapInUseBytes`, `heapBytesPerBot` (live heap after a collection, the bots'
 own buffers included) and `goroutines` at the end of the measured run.
 `FIGHT_LOAD_CPUPROFILE=<path>` writes a CPU profile of the measured run

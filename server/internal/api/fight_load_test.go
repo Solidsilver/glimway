@@ -86,7 +86,7 @@ func TestFightBotLoad(t *testing.T) {
 	// wait for their result. Both are measured-run samples only.
 	type bot struct {
 		conn                          *websocket.Conn
-		slot                          int
+		slot, group                   int
 		bytes, results, joins, swings atomic.Uint64
 		tick                          atomic.Uint32
 		warm                          atomic.Bool  // has the active room's join
@@ -96,6 +96,15 @@ func TestFightBotLoad(t *testing.T) {
 		sent                          map[uint32]time.Time
 	}
 	var measuring atomic.Bool
+	// Cold start is serial: every chunk wakes one at a time behind
+	// h.fightLoad and the one SQLite connection, and a reader waits in its
+	// sync until its 3x3 is awake. A reader stuck longer than the ping
+	// interval plus the pong wait never reads its pong and is kicked
+	// (pong-timeout), so groups start reporting a few at a time: released
+	// is the first group that may not report yet, raised as groups warm.
+	var released atomic.Int64
+	const groupsInFlight = 8
+	released.Store(groupsInFlight)
 	// Design 1.3: the base mix is three; each extra account within 160 px at
 	// first aggro adds one, up to five.
 	expectedCamp := int32(min(5, 3+perCamp-1))
@@ -114,23 +123,6 @@ func TestFightBotLoad(t *testing.T) {
 		x.api.presence.config.IdleTimeoutMs = int32((10 * time.Minute).Milliseconds())
 	}
 	area := fmt.Sprintf("wilds:%d:%d", fightLoadCX, fightLoadCY)
-	// Rooms are keyed by world: one world per group gives every group the same
-	// physical workload and independent rooms, however many groups run.
-	for g := 0; g < groups; g++ {
-		var world string
-		for p := 0; p < perCamp; p++ {
-			id := fmt.Sprintf("fight-load-%d-%d", g, p)
-			cookie, state := x.ready(id)
-			if p == 0 {
-				if err := x.db.DB.QueryRow("SELECT world_id FROM players WHERE account_id=?", x.account(id)).Scan(&world); err != nil {
-					t.Fatal(err)
-				}
-			} else if _, err := x.db.DB.Exec("UPDATE players SET world_id=? WHERE account_id=?", world, x.account(id)); err != nil {
-				t.Fatal(err)
-			}
-			bots = append(bots, &bot{conn: dialFightBot(t, ts, cookie, state.Lease, area), slot: p, sent: map[uint32]time.Time{}})
-		}
-	}
 	// live ends the bots' writing; measure starts the measured run.
 	live, stopLive := context.WithCancel(context.Background())
 	defer stopLive()
@@ -151,77 +143,98 @@ func TestFightBotLoad(t *testing.T) {
 			}
 		}
 	}
+	// A bot reads from the moment it is dialed: a websocket client that is
+	// not reading answers no ping, and the server kicks it (pong-timeout)
+	// 25 s after its first ping, long before thousands of accounts exist.
+	reader := func(b *bot) {
+		defer done.Done()
+		// The active room is the bots' own chunk; fakegen gives it one camp,
+		// so its row count is that camp's size.
+		var active uint32
+		rows := map[uint32]bool{}
+		note := func() {
+			if n := int32(len(rows)); n > b.campRows.Load() {
+				b.campRows.Store(n)
+			}
+		}
+		for {
+			_, data, err := b.conn.Read(read)
+			if err != nil {
+				fail(err)
+				return
+			}
+			m, err := decodePresence(data)
+			if err != nil {
+				fail(err)
+				return
+			}
+			switch e := m.Event.(type) {
+			case *wire.PresenceMessage_FightJoin:
+				b.joins.Add(1)
+				b.tick.Store(e.FightJoin.Tick)
+				if k := e.FightJoin.RoomKey; k != nil && k.Cx == fightLoadCX && k.Cy == fightLoadCY {
+					active = e.FightJoin.Room
+					clear(rows)
+					for _, row := range e.FightJoin.Enemies {
+						rows[row.Enemy] = true
+					}
+					note()
+					b.warm.Store(true)
+				}
+			case *wire.PresenceMessage_FightDelta:
+				b.tick.Store(e.FightDelta.Tick)
+				if active != 0 && e.FightDelta.Room == active {
+					if measuring.Load() {
+						nowTick, offset := rules.FightTickAt(clock().UnixMilli())
+						b.lags = append(b.lags, float64(rules.FightTickDiff(nowTick, e.FightDelta.Tick))*rules.FightTickMs+float64(offset))
+					}
+					for _, row := range e.FightDelta.Spawned {
+						rows[row.Enemy] = true
+					}
+					for _, enemy := range e.FightDelta.Removed {
+						delete(rows, enemy)
+					}
+					note()
+				}
+			case *wire.PresenceMessage_FightSwingResult:
+				b.results.Add(1)
+				b.swung.Lock()
+				at, ok := b.sent[e.FightSwingResult.SwingCounter]
+				delete(b.sent, e.FightSwingResult.SwingCounter)
+				b.swung.Unlock()
+				if ok {
+					b.latencies = append(b.latencies, float64(time.Since(at).Microseconds())/1000)
+				}
+			case *wire.PresenceMessage_FightEvent:
+			default:
+				continue
+			}
+			b.bytes.Add(uint64(len(data)))
+		}
+	}
+	// Rooms are keyed by world: one world per group gives every group the same
+	// physical workload and independent rooms, however many groups run.
+	for g := 0; g < groups; g++ {
+		var world string
+		for p := 0; p < perCamp; p++ {
+			id := fmt.Sprintf("fight-load-%d-%d", g, p)
+			cookie, state := x.ready(id)
+			if p == 0 {
+				if err := x.db.DB.QueryRow("SELECT world_id FROM players WHERE account_id=?", x.account(id)).Scan(&world); err != nil {
+					t.Fatal(err)
+				}
+			} else if _, err := x.db.DB.Exec("UPDATE players SET world_id=? WHERE account_id=?", world, x.account(id)); err != nil {
+				t.Fatal(err)
+			}
+			b := &bot{conn: dialFightBot(t, ts, cookie, state.Lease, area), slot: p, group: g, sent: map[uint32]time.Time{}}
+			bots = append(bots, b)
+			done.Add(1)
+			go reader(b)
+		}
+	}
 	campX, campY := float64(fightLoadCX*384+200), float64(fightLoadCY*384+208)
 	for _, b := range bots {
-		done.Add(2)
-		// Bots decode only the envelope and count bytes: they share the
-		// measured cores, so they stay as cheap as a client can be.
-		go func(b *bot) {
-			defer done.Done()
-			// The active room is the bots' own chunk; fakegen gives it one camp,
-			// so its row count is that camp's size.
-			var active uint32
-			rows := map[uint32]bool{}
-			note := func() {
-				if n := int32(len(rows)); n > b.campRows.Load() {
-					b.campRows.Store(n)
-				}
-			}
-			for {
-				_, data, err := b.conn.Read(read)
-				if err != nil {
-					fail(err)
-					return
-				}
-				m, err := decodePresence(data)
-				if err != nil {
-					fail(err)
-					return
-				}
-				switch e := m.Event.(type) {
-				case *wire.PresenceMessage_FightJoin:
-					b.joins.Add(1)
-					b.tick.Store(e.FightJoin.Tick)
-					if k := e.FightJoin.RoomKey; k != nil && k.Cx == fightLoadCX && k.Cy == fightLoadCY {
-						active = e.FightJoin.Room
-						clear(rows)
-						for _, row := range e.FightJoin.Enemies {
-							rows[row.Enemy] = true
-						}
-						note()
-						b.warm.Store(true)
-					}
-				case *wire.PresenceMessage_FightDelta:
-					b.tick.Store(e.FightDelta.Tick)
-					if active != 0 && e.FightDelta.Room == active {
-						if measuring.Load() {
-							nowTick, offset := rules.FightTickAt(clock().UnixMilli())
-							b.lags = append(b.lags, float64(rules.FightTickDiff(nowTick, e.FightDelta.Tick))*rules.FightTickMs+float64(offset))
-						}
-						for _, row := range e.FightDelta.Spawned {
-							rows[row.Enemy] = true
-						}
-						for _, enemy := range e.FightDelta.Removed {
-							delete(rows, enemy)
-						}
-						note()
-					}
-				case *wire.PresenceMessage_FightSwingResult:
-					b.results.Add(1)
-					b.swung.Lock()
-					at, ok := b.sent[e.FightSwingResult.SwingCounter]
-					delete(b.sent, e.FightSwingResult.SwingCounter)
-					b.swung.Unlock()
-					if ok {
-						b.latencies = append(b.latencies, float64(time.Since(at).Microseconds())/1000)
-					}
-				case *wire.PresenceMessage_FightEvent:
-				default:
-					continue
-				}
-				b.bytes.Add(uint64(len(data)))
-			}
-		}(b)
+		done.Add(1)
 		go func(b *bot) {
 			defer done.Done()
 			step := time.NewTicker(100 * time.Millisecond)
@@ -248,6 +261,13 @@ func TestFightBotLoad(t *testing.T) {
 					fail(err)
 				}
 				return err == nil
+			}
+			for released.Load() <= int64(b.group) {
+				select {
+				case <-live.Done():
+					return
+				case <-step.C:
+				}
 			}
 			for {
 				select {
@@ -299,20 +319,32 @@ func TestFightBotLoad(t *testing.T) {
 	// Wake is serialized per sync, so the first observer can be joined well
 	// before the last. Nobody approaches until every bot has the active room.
 	// Every chunk is cold and wakes serially (one load at a time, behind
-	// the one SQLite connection): about 20 ms a group on an M1 Max.
-	warmBy := time.Now().Add(30*time.Second + time.Duration(groups)*25*time.Millisecond)
+	// the one SQLite connection, slower the more sockets contend), so the
+	// budget is progress: the warm-up fails once no bot has warmed for 30 s.
+	progress, lastCold := time.Now(), -1
 	for poll := time.NewTicker(20 * time.Millisecond); ; <-poll.C {
-		cold := 0
-		for _, b := range bots {
-			if !b.warm.Load() {
-				cold++
+		cold, warmGroups := 0, 0
+		for g := 0; g < groups; g++ {
+			warm := true
+			for _, b := range bots[g*perCamp : (g+1)*perCamp] {
+				if !b.warm.Load() {
+					cold++
+					warm = false
+				}
+			}
+			if warm && warmGroups == g {
+				warmGroups++
 			}
 		}
+		released.Store(int64(warmGroups + groupsInFlight))
 		if cold == 0 {
 			poll.Stop()
 			break
 		}
-		if time.Now().After(warmBy) {
+		if cold != lastCold {
+			progress, lastCold = time.Now(), cold
+		}
+		if time.Since(progress) > 30*time.Second {
 			first := ""
 			if text := firstFailure.Load(); text != nil {
 				first = *text
