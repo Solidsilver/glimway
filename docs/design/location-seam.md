@@ -41,7 +41,11 @@ Interiors stay transitions and keep their own coordinates (decision from [seamle
 
 **Content** (new; proto `proto/glimway/content/v1/places.proto`, loaders `content/places.go`, `src/lib/places.ts`):
 
-- `content/places.json`: fixed footprints. Each has an id (`commons`), a layout id and revision, an **origin tile** and a **chunk-aligned rect**, zones (tile rects with `place`, `safe`, `ride`, `sync`, `rest`), and its anchors. Generated places keep coming from `content/wilds.json` footprints (Tangle: still; Whitequiet: wick); everything else generated is `beyond`.
+- `content/places.json` (built in S1): `fixed` footprints, the `generated` rules and the `spaces` rules.
+  - Each **fixed** footprint has an id (`commons`), a layout id and revision, an **origin tile** (the world tile of layout tile 0,0), a **chunk-aligned rect** (`cx`, `cy`, `width`, `height`, as Wilds footprints spell it), its own **rules** (`safe`, `ride`, `sync`, `rest`), optional **zones** (layout-tile rects with a `place` id and rules; the first zone holding a tile wins, else the footprint's rules) and its **anchors** (`{id, tx, ty}` in layout tiles; `commons:gate:<g>` is the anchor `gate:<g>`, one per gate of the frozen capacity). Zones and anchors stay inside the footprint; footprints keep apart from each other and from the Wilds footprints and never take a Wilds footprint's or a space's id (loader rules, Go and TS).
+  - **generated** is the one rule set every generated place shares. Generated places keep coming from `content/wilds.json` footprints (Tangle: still; Whitequiet: wick); everything else generated is `beyond`.
+  - **spaces** holds the rules of `village`, `woodland`, `ruin` and every `home:<g>`. A room `in:<…>` takes its root's rules (`content.RootArea`; a fixed place's own rules for `in:commons:…`) with riding off.
+  - `rest` is `none`, `village` (spend `rest`) or `home` (`home-rest`). Road-lantern rest is a light rule, not a place's. Sync needs safe (schema rule).
 - `content/layouts/commons.json`: the layout. Ground as a palette-indexed tile grid, a solid grid, and **objects**. Each object has a stable id, kind (`tree`, `lamp`, `board`, `well`, `gate`, `door`, `exit`, `npc-post`, `repair`, `gather`, `sign`, `shelf`, `prop`), tile, footprint, variant and optional festival tag. It is exported once from today's `buildCommons(capacity)` by a script, then edited as data.
 
 **Go**, new package `server/internal/location` (pure, content only, no store):
@@ -50,7 +54,7 @@ Interiors stay transitions and keep their own coordinates (decision from [seamle
 type Space string                 // "outdoors", "village", "home:3", "in:commons:yard"
 const Outdoors Space = "outdoors"
 
-type Source struct { Kind SourceKind; Layout string; Revision int32; EpochKind string } // Fixed | Generated (| Held later)
+type Source struct { Kind SourceKind; Layout string; Revision int32; EpochKind string } // None (off the grid) | Fixed | Generated (| Held later)
 type Place struct {
     ID                    string // "commons", "tangle", "beyond", or the space id for non-outdoors spaces
     Safe, Ride, Sync      bool
@@ -65,7 +69,9 @@ func Anchor(id string) (Space, float64, float64, bool)
 func Resolve(area string, tx, ty int) (Space, int, int) // area-local content tile → space tile (commons → outdoors + origin)
 ```
 
-**TypeScript** mirror in `src/lib/location.ts`, same names. A shared vector file (`tests/fixtures/location-vectors.json`, read by a Go test and a node test) covers both sides: tiles either side of y=24, the arch mouth, the footprint margins, negative chunks, each Wilds footprint, each anchor, and `Resolve` for every content position with `area: "commons"`.
+`At` on a fixed place's own id as the space (`commons`, until the join) reads layout pixels through the origin, so the answer is the same before and after S5. A space nothing names (including `wilds`, until S3 renames it) allows nothing.
+
+**TypeScript** mirror in `src/lib/location.ts`, same names in camelCase (`at`, `sourceOf`, `onGrid`, `anchor`, `resolve`; `onGrid` takes no world, as `insideFrontier` doesn't), each taking the places as an optional last argument; the loader is `src/lib/places.ts`. A shared vector file (`content/vectors/location.json`, read by `server/internal/location/location_test.go` and `tests/location.test.ts`; loader refusals in `content/vectors/places-loader.json`) covers both sides: tiles either side of y=24, the arch mouth, the footprint margins, negative chunks, each Wilds footprint, each anchor, and `Resolve` for every content position with `area: "commons"`. Both tests walk `content/*.json` and refuse a Commons position with no vector. "Outside solid ground" splits two ways: a **stand** position (pickup, seller, resident spot, door step, anchor) is open ground reached from the village path; a **target** (the hame, the board, the Yard's door tile) is the object itself and borders open ground. The node test checks this against `buildCommons` at the frozen capacity; Go gets the same check from the served layout in S2.
 
 `Resolve` is the step-3 bridge for content that names Commons positions in Commons-local tiles: `items.json` pickups, `repairs.json` (hame), `residents.json` spots (Elara, Silas), `papers.json`, `story.json`, `gathering.json`. Those files stay unchanged in step 3. The town redesign moves them to anchor ids in layout data and deletes `Resolve`.
 
@@ -115,10 +121,10 @@ Two rules keep the seam safe:
 | Commons → village west exit | transition, unchanged | village joins; exit removed | — |
 | `village`, `woodland`, `ruin` | separate spaces | village joins as fixed chunks; story places stay transitions or become fixed outposts | outposts (decision 9) |
 | `home:<g>` and its exit | separate space; its exit returns to anchor `commons:gate:<g>` | lots in the plot area; gate *n* → lot *n* | hearths in the Wilds |
-| `in:commons:yard`, `…:deeds` | rooms; the door's `outside` (`content/rooms.json` ~:647) becomes anchor `commons:yard-door` | anchors move with the layout | — |
+| `in:commons:yard`, `…:deeds` | rooms; the door's return becomes anchor `commons:yard-door`: the doorstep (the door's `entry`, layout 53,18), since `outside` (53,17) is the door tile itself (`content/rooms.json` ~:647) | anchors move with the layout | — |
 | Arrival recovery, removed-room recovery | Commons fallback becomes anchor `commons:arch` (`world-arrival.ts:28`, `store/rooms.go:22`) | town anchor | — |
 
-**Commons capacity.** Two chunk rows hold the four designed gate rows plus one more: rows at y = 9, 13, 28, 33, 38, so **10 gates** (H = 47 ≤ 48). Three chunk rows hold 20. Freeze the layout at whichever fits the live world's homes plus `spareGates`. Count them on the server first (owner decision 1 below). A gate past the frozen capacity is refused at claim, which is today's `home_deeds.go` path with a new limit.
+**Commons capacity.** Two chunk rows hold the four designed gate rows plus one more: rows at y = 9, 13, 28, 33, 38, so **10 gates** (H = 47 ≤ 48). Three chunk rows hold 20. Freeze the layout at whichever fits the live world's homes plus `spareGates`. Count them on the server first (owner decision 1 below). A gate past the frozen capacity is refused at claim, which is today's `home_deeds.go` path with a new limit. S1 ships `places.json` at 2 rows (`height: 2`, anchors `gate:0`–`gate:9`) until decision 1 is answered; 3 rows is `height: 3` and ten more gate anchors.
 
 ## 4. The Commons/Tangle join, concretely
 

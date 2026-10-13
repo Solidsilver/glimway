@@ -1,0 +1,100 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// The places over the outdoor grid and the rules of the spaces beside it
+// (content/places.json; docs/design/location-seam.md 1.2): read by the
+// server's lookup (server/internal/location) and its client twin
+// (src/lib/location.ts). Generated places keep coming from content/wilds.json
+// footprints (the Tangle, the Whitequiet; everything else generated is the
+// Beyond); this file holds the fixed footprints, the rules every generated
+// place shares and the rules of the spaces not yet on the grid.
+message Places {
+  // Authored ground on the grid, served as fixed chunks. Ids unique, apart
+  // from each other and from the Wilds footprints, never a Wilds footprint's
+  // or a space's id (code rules).
+  repeated FixedPlace fixed = 1;
+  // The rules of every generated place (the Tangle, the Whitequiet, the
+  // Beyond).
+  PlaceRules generated = 2 [(buf.validate.field).required = true];
+  // The spaces not on the grid; rooms (`in:<room>`) take their root's rules
+  // and never allow riding.
+  SpaceRules spaces = 3 [(buf.validate.field).required = true];
+}
+
+// What a place allows. Sync needs safe ground (rules.Sync refuses elsewhere).
+// `rest` names the paid rest a place offers: the village's (spend "rest") or
+// a home's ("home-rest"). Road-lantern light is a light rule, not a place's.
+message PlaceRules {
+  option (buf.validate.message).cel = {
+    id: "place_rules.sync_safe"
+    message: "sync needs safe ground"
+    expression: "!this.sync || this.safe"
+  };
+  bool safe = 1;
+  bool ride = 2;
+  bool sync = 3;
+  string rest = 4 [(buf.validate.field).string = {in: ["none", "village", "home"]}];
+}
+
+// The curated spaces not yet on the grid. `home` covers every `home:<g>`.
+message SpaceRules {
+  PlaceRules village = 1 [(buf.validate.field).required = true];
+  PlaceRules woodland = 2 [(buf.validate.field).required = true];
+  PlaceRules ruin = 3 [(buf.validate.field).required = true];
+  PlaceRules home = 4 [(buf.validate.field).required = true];
+}
+
+// A fixed footprint: a layout (its id and revision name the served chunks'
+// pseudo-epoch `fixed:<layout>@<revision>`) laid on the grid with its tile
+// (0, 0) at world tile `origin`. The footprint is the chunk rectangle with
+// north-west chunk (cx, cy), `width` chunks east and `height` south; every
+// chunk in it is fixed. Zones and anchors are in layout tiles (world tile
+// minus origin) and lie inside the footprint (code rules).
+message FixedPlace {
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  // How the words name it ("the Commons").
+  string name = 2 [(buf.validate.field).string = {min_len: 1, max_len: 60}];
+  string layout = 3 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  int32 revision = 4 [(buf.validate.field).int32.gte = 1];
+  PlaceTile origin = 5 [(buf.validate.field).required = true];
+  optional sint32 cx = 6 [(buf.validate.field).required = true];
+  optional sint32 cy = 7 [(buf.validate.field).required = true];
+  int32 width = 8 [(buf.validate.field).int32 = {gte: 1, lte: 16}];
+  int32 height = 9 [(buf.validate.field).int32 = {gte: 1, lte: 16}];
+  // The footprint's rules where no zone says otherwise.
+  PlaceRules rules = 10 [(buf.validate.field).required = true];
+  // Named regions with their own rules; the first zone holding a tile wins.
+  // Ids unique in the place (code rule).
+  repeated PlaceZone zones = 11;
+  // Stable positions doors, arrivals and recovery refer to, as
+  // `<place>:<anchor>` ("commons:arch", "commons:gate:3"). Ids unique in the
+  // place (code rule).
+  repeated PlaceAnchor anchors = 12;
+}
+
+// A world tile.
+message PlaceTile {
+  optional sint32 tx = 1 [(buf.validate.field).required = true];
+  optional sint32 ty = 2 [(buf.validate.field).required = true];
+}
+
+// A rectangle of layout tiles, `w` by `h` from (tx, ty), with its own place
+// id and rules.
+message PlaceZone {
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string place = 2 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  optional sint32 tx = 3 [(buf.validate.field).required = true];
+  optional sint32 ty = 4 [(buf.validate.field).required = true];
+  int32 w = 5 [(buf.validate.field).int32.gte = 1];
+  int32 h = 6 [(buf.validate.field).int32.gte = 1];
+  PlaceRules rules = 7 [(buf.validate.field).required = true];
+}
+
+// An anchor: a layout tile a position resolves to (its centre).
+message PlaceAnchor {
+  string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]+(:[a-z0-9-]+)*$"];
+  optional sint32 tx = 2 [(buf.validate.field).required = true];
+  optional sint32 ty = 3 [(buf.validate.field).required = true];
+}

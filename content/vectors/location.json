@@ -1,0 +1,1435 @@
+{
+  "comment": "The location lookup (docs/design/location-seam.md 1.2), replayed by server/internal/location/location_test.go and tests/location.test.ts. Worked from the design (Commons origin tile -21,24; footprint chunks cx -1..1, cy 1..2; the Tangle gate's opening at x 1..3 on y 23), not from either implementation. Positions are world pixels; tiles are 16 px, chunks 24 tiles. `resolve` rows with a `source` are every content position in Commons tiles (the tests walk content/*.json and refuse one missing here); `stand` rows must be open ground in the Commons, `target` rows (an object you face: the hame, the board, the Yard's door) may be solid but must border open ground.",
+  "at": [
+    {
+      "name": "mouth, Tangle side (tile 2,23)",
+      "space": "outdoors",
+      "x": 40,
+      "y": 383.99,
+      "place": {
+        "id": "tangle",
+        "safe": false,
+        "ride": true,
+        "sync": false,
+        "rest": "none",
+        "source": {
+          "kind": "generated",
+          "layout": "",
+          "revision": 0,
+          "epochKind": "still"
+        }
+      }
+    },
+    {
+      "name": "mouth, Commons side (tile 2,24)",
+      "space": "outdoors",
+      "x": 40,
+      "y": 384,
+      "place": {
+        "id": "commons",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "none",
+        "source": {
+          "kind": "fixed",
+          "layout": "commons",
+          "revision": 1,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "mouth west tile 1,23",
+      "space": "outdoors",
+      "x": 24,
+      "y": 376,
+      "place": {
+        "id": "tangle",
+        "safe": false,
+        "ride": true,
+        "sync": false,
+        "rest": "none",
+        "source": {
+          "kind": "generated",
+          "layout": "",
+          "revision": 0,
+          "epochKind": "still"
+        }
+      }
+    },
+    {
+      "name": "mouth east tile 3,24",
+      "space": "outdoors",
+      "x": 56,
+      "y": 392,
+      "place": {
+        "id": "commons",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "none",
+        "source": {
+          "kind": "fixed",
+          "layout": "commons",
+          "revision": 1,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "lane tile 4,24 (outside the Tangle opening, still fixed)",
+      "space": "outdoors",
+      "x": 72,
+      "y": 392,
+      "place": {
+        "id": "commons",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "none",
+        "source": {
+          "kind": "fixed",
+          "layout": "commons",
+          "revision": 1,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "footprint west margin tile -24,30",
+      "space": "outdoors",
+      "x": -384,
+      "y": 488,
+      "place": {
+        "id": "commons",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "none",
+        "source": {
+          "kind": "fixed",
+          "layout": "commons",
+          "revision": 1,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "west of the footprint tile -25,30",
+      "space": "outdoors",
+      "x": -385,
+      "y": 488,
+      "place": {
+        "id": "beyond",
+        "safe": false,
+        "ride": true,
+        "sync": false,
+        "rest": "none",
+        "source": {
+          "kind": "generated",
+          "layout": "",
+          "revision": 0,
+          "epochKind": "wick"
+        }
+      }
+    },
+    {
+      "name": "footprint east margin tile 47,30",
+      "space": "outdoors",
+      "x": 760,
+      "y": 488,
+      "place": {
+        "id": "commons",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "none",
+        "source": {
+          "kind": "fixed",
+          "layout": "commons",
+          "revision": 1,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "east of the footprint tile 48,30",
+      "space": "outdoors",
+      "x": 776,
+      "y": 488,
+      "place": {
+        "id": "beyond",
+        "safe": false,
+        "ride": true,
+        "sync": false,
+        "rest": "none",
+        "source": {
+          "kind": "generated",
+          "layout": "",
+          "revision": 0,
+          "epochKind": "wick"
+        }
+      }
+    },
+    {
+      "name": "footprint south margin tile 10,71",
+      "space": "outdoors",
+      "x": 168,
+      "y": 1144,
+      "place": {
+        "id": "commons",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "none",
+        "source": {
+          "kind": "fixed",
+          "layout": "commons",
+          "revision": 1,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "south of the footprint tile 10,72",
+      "space": "outdoors",
+      "x": 168,
+      "y": 1160,
+      "place": {
+        "id": "beyond",
+        "safe": false,
+        "ride": true,
+        "sync": false,
+        "rest": "none",
+        "source": {
+          "kind": "generated",
+          "layout": "",
+          "revision": 0,
+          "epochKind": "wick"
+        }
+      }
+    },
+    {
+      "name": "footprint north-west corner tile -24,24",
+      "space": "outdoors",
+      "x": -376,
+      "y": 392,
+      "place": {
+        "id": "commons",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "none",
+        "source": {
+          "kind": "fixed",
+          "layout": "commons",
+          "revision": 1,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "diagonally out of the corner tile -25,23",
+      "space": "outdoors",
+      "x": -392,
+      "y": 376,
+      "place": {
+        "id": "beyond",
+        "safe": false,
+        "ride": true,
+        "sync": false,
+        "rest": "none",
+        "source": {
+          "kind": "generated",
+          "layout": "",
+          "revision": 0,
+          "epochKind": "wick"
+        }
+      }
+    },
+    {
+      "name": "negative pixel to chunk -1,-1",
+      "space": "outdoors",
+      "x": -0.5,
+      "y": -0.25,
+      "place": {
+        "id": "tangle",
+        "safe": false,
+        "ride": true,
+        "sync": false,
+        "rest": "none",
+        "source": {
+          "kind": "generated",
+          "layout": "",
+          "revision": 0,
+          "epochKind": "still"
+        }
+      }
+    },
+    {
+      "name": "the Tangle's north row tile 0,-48",
+      "space": "outdoors",
+      "x": 8,
+      "y": -760,
+      "place": {
+        "id": "tangle",
+        "safe": false,
+        "ride": true,
+        "sync": false,
+        "rest": "none",
+        "source": {
+          "kind": "generated",
+          "layout": "",
+          "revision": 0,
+          "epochKind": "still"
+        }
+      }
+    },
+    {
+      "name": "the Whitequiet tile 0,-100",
+      "space": "outdoors",
+      "x": 8,
+      "y": -1592,
+      "place": {
+        "id": "whitequiet",
+        "safe": false,
+        "ride": true,
+        "sync": false,
+        "rest": "none",
+        "source": {
+          "kind": "generated",
+          "layout": "",
+          "revision": 0,
+          "epochKind": "wick"
+        }
+      }
+    },
+    {
+      "name": "far Beyond tile 500,-500",
+      "space": "outdoors",
+      "x": 8008,
+      "y": -7992,
+      "place": {
+        "id": "beyond",
+        "safe": false,
+        "ride": true,
+        "sync": false,
+        "rest": "none",
+        "source": {
+          "kind": "generated",
+          "layout": "",
+          "revision": 0,
+          "epochKind": "wick"
+        }
+      }
+    },
+    {
+      "name": "the Commons before the join: layout tile 23,2 is world 2,26",
+      "space": "commons",
+      "x": 376,
+      "y": 40,
+      "place": {
+        "id": "commons",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "none",
+        "source": {
+          "kind": "fixed",
+          "layout": "commons",
+          "revision": 1,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "the Commons before the join: layout tile -1,-1 is world -22,23, in the Tangle",
+      "space": "commons",
+      "x": -8,
+      "y": -8,
+      "place": {
+        "id": "tangle",
+        "safe": false,
+        "ride": true,
+        "sync": false,
+        "rest": "none",
+        "source": {
+          "kind": "generated",
+          "layout": "",
+          "revision": 0,
+          "epochKind": "still"
+        }
+      }
+    },
+    {
+      "name": "village",
+      "space": "village",
+      "x": 100,
+      "y": 100,
+      "place": {
+        "id": "village",
+        "safe": true,
+        "ride": false,
+        "sync": true,
+        "rest": "village",
+        "source": {
+          "kind": "none",
+          "layout": "",
+          "revision": 0,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "woodland",
+      "space": "woodland",
+      "x": 100,
+      "y": 100,
+      "place": {
+        "id": "woodland",
+        "safe": false,
+        "ride": true,
+        "sync": false,
+        "rest": "none",
+        "source": {
+          "kind": "none",
+          "layout": "",
+          "revision": 0,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "ruin",
+      "space": "ruin",
+      "x": 100,
+      "y": 100,
+      "place": {
+        "id": "ruin",
+        "safe": false,
+        "ride": true,
+        "sync": false,
+        "rest": "none",
+        "source": {
+          "kind": "none",
+          "layout": "",
+          "revision": 0,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "a home",
+      "space": "home:3",
+      "x": 100,
+      "y": 100,
+      "place": {
+        "id": "home:3",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "home",
+        "source": {
+          "kind": "none",
+          "layout": "",
+          "revision": 0,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "not a canonical home",
+      "space": "home:03",
+      "x": 100,
+      "y": 100,
+      "place": {
+        "id": "home:03",
+        "safe": false,
+        "ride": false,
+        "sync": false,
+        "rest": "none",
+        "source": {
+          "kind": "none",
+          "layout": "",
+          "revision": 0,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "not a canonical home",
+      "space": "home:+1",
+      "x": 100,
+      "y": 100,
+      "place": {
+        "id": "home:+1",
+        "safe": false,
+        "ride": false,
+        "sync": false,
+        "rest": "none",
+        "source": {
+          "kind": "none",
+          "layout": "",
+          "revision": 0,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "not a canonical home",
+      "space": "home:-1",
+      "x": 100,
+      "y": 100,
+      "place": {
+        "id": "home:-1",
+        "safe": false,
+        "ride": false,
+        "sync": false,
+        "rest": "none",
+        "source": {
+          "kind": "none",
+          "layout": "",
+          "revision": 0,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "not a canonical home",
+      "space": "home:10000",
+      "x": 100,
+      "y": 100,
+      "place": {
+        "id": "home:10000",
+        "safe": false,
+        "ride": false,
+        "sync": false,
+        "rest": "none",
+        "source": {
+          "kind": "none",
+          "layout": "",
+          "revision": 0,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "the last canonical home",
+      "space": "home:9999",
+      "x": 100,
+      "y": 100,
+      "place": {
+        "id": "home:9999",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "home",
+        "source": {
+          "kind": "none",
+          "layout": "",
+          "revision": 0,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "a village room",
+      "space": "in:village:bakery",
+      "x": 50,
+      "y": 50,
+      "place": {
+        "id": "in:village:bakery",
+        "safe": true,
+        "ride": false,
+        "sync": true,
+        "rest": "village",
+        "source": {
+          "kind": "none",
+          "layout": "",
+          "revision": 0,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "a Commons room",
+      "space": "in:commons:yard",
+      "x": 50,
+      "y": 50,
+      "place": {
+        "id": "in:commons:yard",
+        "safe": true,
+        "ride": false,
+        "sync": true,
+        "rest": "none",
+        "source": {
+          "kind": "none",
+          "layout": "",
+          "revision": 0,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "a home's room",
+      "space": "in:home:2",
+      "x": 50,
+      "y": 50,
+      "place": {
+        "id": "in:home:2",
+        "safe": true,
+        "ride": false,
+        "sync": true,
+        "rest": "home",
+        "source": {
+          "kind": "none",
+          "layout": "",
+          "revision": 0,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "a ruin room",
+      "space": "in:ruin:vault",
+      "x": 50,
+      "y": 50,
+      "place": {
+        "id": "in:ruin:vault",
+        "safe": false,
+        "ride": false,
+        "sync": false,
+        "rest": "none",
+        "source": {
+          "kind": "none",
+          "layout": "",
+          "revision": 0,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "a room nothing names",
+      "space": "in:attic",
+      "x": 50,
+      "y": 50,
+      "place": {
+        "id": "in:attic",
+        "safe": false,
+        "ride": false,
+        "sync": false,
+        "rest": "none",
+        "source": {
+          "kind": "none",
+          "layout": "",
+          "revision": 0,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "a space nothing names (wilds until the outdoors rename)",
+      "space": "wilds",
+      "x": 0,
+      "y": 0,
+      "place": {
+        "id": "wilds",
+        "safe": false,
+        "ride": false,
+        "sync": false,
+        "rest": "none",
+        "source": {
+          "kind": "none",
+          "layout": "",
+          "revision": 0,
+          "epochKind": ""
+        }
+      }
+    }
+  ],
+  "sourceOf": [
+    {
+      "chunk": [
+        0,
+        0
+      ],
+      "source": {
+        "kind": "generated",
+        "layout": "",
+        "revision": 0,
+        "epochKind": "still"
+      }
+    },
+    {
+      "chunk": [
+        0,
+        1
+      ],
+      "source": {
+        "kind": "fixed",
+        "layout": "commons",
+        "revision": 1,
+        "epochKind": ""
+      }
+    },
+    {
+      "chunk": [
+        -1,
+        1
+      ],
+      "source": {
+        "kind": "fixed",
+        "layout": "commons",
+        "revision": 1,
+        "epochKind": ""
+      }
+    },
+    {
+      "chunk": [
+        -1,
+        2
+      ],
+      "source": {
+        "kind": "fixed",
+        "layout": "commons",
+        "revision": 1,
+        "epochKind": ""
+      }
+    },
+    {
+      "chunk": [
+        1,
+        2
+      ],
+      "source": {
+        "kind": "fixed",
+        "layout": "commons",
+        "revision": 1,
+        "epochKind": ""
+      }
+    },
+    {
+      "chunk": [
+        2,
+        1
+      ],
+      "source": {
+        "kind": "generated",
+        "layout": "",
+        "revision": 0,
+        "epochKind": "wick"
+      }
+    },
+    {
+      "chunk": [
+        0,
+        3
+      ],
+      "source": {
+        "kind": "generated",
+        "layout": "",
+        "revision": 0,
+        "epochKind": "wick"
+      }
+    },
+    {
+      "chunk": [
+        0,
+        -4
+      ],
+      "source": {
+        "kind": "generated",
+        "layout": "",
+        "revision": 0,
+        "epochKind": "wick"
+      }
+    },
+    {
+      "chunk": [
+        -1,
+        -2
+      ],
+      "source": {
+        "kind": "generated",
+        "layout": "",
+        "revision": 0,
+        "epochKind": "still"
+      }
+    },
+    {
+      "chunk": [
+        5,
+        5
+      ],
+      "source": {
+        "kind": "generated",
+        "layout": "",
+        "revision": 0,
+        "epochKind": "wick"
+      }
+    }
+  ],
+  "onGrid": [
+    {
+      "chunk": [
+        0,
+        0
+      ],
+      "onGrid": true
+    },
+    {
+      "chunk": [
+        0,
+        1
+      ],
+      "onGrid": true
+    },
+    {
+      "chunk": [
+        -1,
+        1
+      ],
+      "onGrid": true
+    },
+    {
+      "chunk": [
+        1,
+        2
+      ],
+      "onGrid": true
+    },
+    {
+      "chunk": [
+        -1,
+        2
+      ],
+      "onGrid": true
+    },
+    {
+      "chunk": [
+        2,
+        1
+      ],
+      "onGrid": false
+    },
+    {
+      "chunk": [
+        -2,
+        1
+      ],
+      "onGrid": false
+    },
+    {
+      "chunk": [
+        0,
+        3
+      ],
+      "onGrid": false
+    },
+    {
+      "chunk": [
+        2,
+        2
+      ],
+      "onGrid": false
+    },
+    {
+      "chunk": [
+        -4,
+        0
+      ],
+      "onGrid": true
+    },
+    {
+      "chunk": [
+        -5,
+        0
+      ],
+      "onGrid": false
+    },
+    {
+      "chunk": [
+        4,
+        0
+      ],
+      "onGrid": true
+    },
+    {
+      "chunk": [
+        5,
+        0
+      ],
+      "onGrid": false
+    },
+    {
+      "chunk": [
+        0,
+        -8
+      ],
+      "onGrid": true
+    },
+    {
+      "chunk": [
+        0,
+        -9
+      ],
+      "onGrid": false
+    },
+    {
+      "chunk": [
+        4,
+        -8
+      ],
+      "onGrid": true
+    },
+    {
+      "chunk": [
+        2,
+        0
+      ],
+      "onGrid": true
+    },
+    {
+      "chunk": [
+        -2,
+        0
+      ],
+      "onGrid": true
+    }
+  ],
+  "anchors": [
+    {
+      "id": "commons:arch",
+      "ok": true,
+      "space": "outdoors",
+      "at": [
+        40,
+        424
+      ]
+    },
+    {
+      "id": "commons:west-path",
+      "ok": true,
+      "space": "outdoors",
+      "at": [
+        -296,
+        728
+      ]
+    },
+    {
+      "id": "commons:yard-door",
+      "ok": true,
+      "space": "outdoors",
+      "at": [
+        520,
+        680
+      ]
+    },
+    {
+      "id": "commons:gate:0",
+      "ok": true,
+      "space": "outdoors",
+      "at": [
+        -8,
+        536
+      ]
+    },
+    {
+      "id": "commons:gate:1",
+      "ok": true,
+      "space": "outdoors",
+      "at": [
+        104,
+        536
+      ]
+    },
+    {
+      "id": "commons:gate:2",
+      "ok": true,
+      "space": "outdoors",
+      "at": [
+        -8,
+        600
+      ]
+    },
+    {
+      "id": "commons:gate:3",
+      "ok": true,
+      "space": "outdoors",
+      "at": [
+        104,
+        600
+      ]
+    },
+    {
+      "id": "commons:gate:4",
+      "ok": true,
+      "space": "outdoors",
+      "at": [
+        -8,
+        840
+      ]
+    },
+    {
+      "id": "commons:gate:5",
+      "ok": true,
+      "space": "outdoors",
+      "at": [
+        104,
+        840
+      ]
+    },
+    {
+      "id": "commons:gate:6",
+      "ok": true,
+      "space": "outdoors",
+      "at": [
+        -8,
+        920
+      ]
+    },
+    {
+      "id": "commons:gate:7",
+      "ok": true,
+      "space": "outdoors",
+      "at": [
+        104,
+        920
+      ]
+    },
+    {
+      "id": "commons:gate:8",
+      "ok": true,
+      "space": "outdoors",
+      "at": [
+        -8,
+        1000
+      ]
+    },
+    {
+      "id": "commons:gate:9",
+      "ok": true,
+      "space": "outdoors",
+      "at": [
+        104,
+        1000
+      ]
+    },
+    {
+      "id": "commons:gate:10",
+      "ok": false,
+      "space": "",
+      "at": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "commons:nope",
+      "ok": false,
+      "space": "",
+      "at": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "tangle:arch",
+      "ok": false,
+      "space": "",
+      "at": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "arch",
+      "ok": false,
+      "space": "",
+      "at": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "",
+      "ok": false,
+      "space": "",
+      "at": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "commons:",
+      "ok": false,
+      "space": "",
+      "at": [
+        0,
+        0
+      ]
+    },
+    {
+      "id": "village:west-path",
+      "ok": false,
+      "space": "",
+      "at": [
+        0,
+        0
+      ]
+    }
+  ],
+  "resolve": [
+    {
+      "source": "items.pickups.lane-glove",
+      "kind": "stand",
+      "area": "commons",
+      "tile": [
+        30,
+        22
+      ],
+      "space": "outdoors",
+      "at": [
+        9,
+        46
+      ]
+    },
+    {
+      "source": "items.sellers.madder-stall",
+      "kind": "stand",
+      "area": "commons",
+      "tile": [
+        8,
+        18
+      ],
+      "space": "outdoors",
+      "at": [
+        -13,
+        42
+      ]
+    },
+    {
+      "source": "repairs.repairs.gate-hame.pos",
+      "kind": "target",
+      "area": "commons",
+      "tile": [
+        3,
+        18
+      ],
+      "space": "outdoors",
+      "at": [
+        -18,
+        42
+      ]
+    },
+    {
+      "source": "residents.residents.elara.spots.camp",
+      "kind": "stand",
+      "area": "commons",
+      "tile": [
+        26,
+        5
+      ],
+      "space": "outdoors",
+      "at": [
+        5,
+        29
+      ]
+    },
+    {
+      "source": "residents.residents.silas.spots.yard",
+      "kind": "stand",
+      "area": "commons",
+      "tile": [
+        48,
+        19
+      ],
+      "space": "outdoors",
+      "at": [
+        27,
+        43
+      ]
+    },
+    {
+      "source": "rooms.rooms.in:commons:yard.doors.front.entry",
+      "kind": "stand",
+      "area": "commons",
+      "tile": [
+        53,
+        18
+      ],
+      "space": "outdoors",
+      "at": [
+        32,
+        42
+      ]
+    },
+    {
+      "source": "rooms.rooms.in:commons:yard.doors.front.outside",
+      "kind": "target",
+      "area": "commons",
+      "tile": [
+        53,
+        17
+      ],
+      "space": "outdoors",
+      "at": [
+        32,
+        41
+      ]
+    },
+    {
+      "source": "story.boards.commons",
+      "kind": "target",
+      "area": "commons",
+      "tile": [
+        26,
+        17
+      ],
+      "space": "outdoors",
+      "at": [
+        5,
+        41
+      ]
+    },
+    {
+      "source": "",
+      "kind": "",
+      "area": "commons",
+      "tile": [
+        0,
+        0
+      ],
+      "space": "outdoors",
+      "at": [
+        -21,
+        24
+      ]
+    },
+    {
+      "source": "",
+      "kind": "",
+      "area": "commons",
+      "tile": [
+        61,
+        46
+      ],
+      "space": "outdoors",
+      "at": [
+        40,
+        70
+      ]
+    },
+    {
+      "source": "",
+      "kind": "",
+      "area": "village",
+      "tile": [
+        7,
+        11
+      ],
+      "space": "village",
+      "at": [
+        7,
+        11
+      ]
+    },
+    {
+      "source": "",
+      "kind": "",
+      "area": "in:commons:yard",
+      "tile": [
+        7,
+        2
+      ],
+      "space": "in:commons:yard",
+      "at": [
+        7,
+        2
+      ]
+    },
+    {
+      "source": "",
+      "kind": "",
+      "area": "home:4",
+      "tile": [
+        10,
+        10
+      ],
+      "space": "home:4",
+      "at": [
+        10,
+        10
+      ]
+    }
+  ],
+  "zones": {
+    "comment": "The shipped places with these zones laid over the Commons (layout tiles; the first zone holding a tile wins), then At.",
+    "zones": [
+      {
+        "id": "mouth",
+        "place": "commons-mouth",
+        "tx": 21,
+        "ty": 0,
+        "w": 6,
+        "h": 3,
+        "rules": {
+          "safe": false,
+          "ride": true,
+          "sync": false,
+          "rest": "none"
+        }
+      },
+      {
+        "id": "apron",
+        "place": "commons-apron",
+        "tx": 18,
+        "ty": 0,
+        "w": 12,
+        "h": 6,
+        "rules": {
+          "safe": true,
+          "ride": false,
+          "sync": true,
+          "rest": "none"
+        }
+      }
+    ],
+    "at": [
+      {
+        "name": "world 2,24 is in both zones: the first wins",
+        "space": "outdoors",
+        "x": 40,
+        "y": 392,
+        "place": {
+          "id": "commons-mouth",
+          "safe": false,
+          "ride": true,
+          "sync": false,
+          "rest": "none",
+          "source": {
+            "kind": "fixed",
+            "layout": "commons",
+            "revision": 1,
+            "epochKind": ""
+          }
+        }
+      },
+      {
+        "name": "world -2,24 is only in the apron",
+        "space": "outdoors",
+        "x": -24,
+        "y": 392,
+        "place": {
+          "id": "commons-apron",
+          "safe": true,
+          "ride": false,
+          "sync": true,
+          "rest": "none",
+          "source": {
+            "kind": "fixed",
+            "layout": "commons",
+            "revision": 1,
+            "epochKind": ""
+          }
+        }
+      },
+      {
+        "name": "world 5,26 is the mouth's last tile",
+        "space": "outdoors",
+        "x": 88,
+        "y": 424,
+        "place": {
+          "id": "commons-mouth",
+          "safe": false,
+          "ride": true,
+          "sync": false,
+          "rest": "none",
+          "source": {
+            "kind": "fixed",
+            "layout": "commons",
+            "revision": 1,
+            "epochKind": ""
+          }
+        }
+      },
+      {
+        "name": "world 6,26 is past the mouth, in the apron",
+        "space": "outdoors",
+        "x": 104,
+        "y": 424,
+        "place": {
+          "id": "commons-apron",
+          "safe": true,
+          "ride": false,
+          "sync": true,
+          "rest": "none",
+          "source": {
+            "kind": "fixed",
+            "layout": "commons",
+            "revision": 1,
+            "epochKind": ""
+          }
+        }
+      },
+      {
+        "name": "world 2,30 is past both: the footprint's rules",
+        "space": "outdoors",
+        "x": 40,
+        "y": 488,
+        "place": {
+          "id": "commons",
+          "safe": true,
+          "ride": true,
+          "sync": true,
+          "rest": "none",
+          "source": {
+            "kind": "fixed",
+            "layout": "commons",
+            "revision": 1,
+            "epochKind": ""
+          }
+        }
+      },
+      {
+        "name": "the Commons before the join reads the zones too (layout 23,1)",
+        "space": "commons",
+        "x": 376,
+        "y": 24,
+        "place": {
+          "id": "commons-mouth",
+          "safe": false,
+          "ride": true,
+          "sync": false,
+          "rest": "none",
+          "source": {
+            "kind": "fixed",
+            "layout": "commons",
+            "revision": 1,
+            "epochKind": ""
+          }
+        }
+      },
+      {
+        "name": "a Commons room keeps the footprint's rules",
+        "space": "in:commons:yard",
+        "x": 40,
+        "y": 24,
+        "place": {
+          "id": "in:commons:yard",
+          "safe": true,
+          "ride": false,
+          "sync": true,
+          "rest": "none",
+          "source": {
+            "kind": "none",
+            "layout": "",
+            "revision": 0,
+            "epochKind": ""
+          }
+        }
+      }
+    ]
+  }
+}

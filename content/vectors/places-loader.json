@@ -1,0 +1,575 @@
+{
+  "comment": "content/places.json refusals, replayed by content/places_test.go and tests/location.test.ts: each edits the shipped file and names the rule it refuses for.",
+  "loader": [
+    {
+      "name": "shipped",
+      "valid": true,
+      "edits": []
+    },
+    {
+      "name": "second-place-apart",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "fixed"
+          ],
+          "value": [
+            {
+              "id": "commons",
+              "name": "a place",
+              "layout": "commons",
+              "revision": 1,
+              "origin": {
+                "tx": -24,
+                "ty": 24
+              },
+              "cx": -1,
+              "cy": 1,
+              "width": 3,
+              "height": 2,
+              "rules": {
+                "safe": true,
+                "ride": true,
+                "sync": true,
+                "rest": "none"
+              },
+              "zones": [],
+              "anchors": []
+            },
+            {
+              "id": "orchard",
+              "name": "a place",
+              "layout": "orchard",
+              "revision": 1,
+              "origin": {
+                "tx": 72,
+                "ty": 24
+              },
+              "cx": 3,
+              "cy": 1,
+              "width": 1,
+              "height": 1,
+              "rules": {
+                "safe": true,
+                "ride": true,
+                "sync": true,
+                "rest": "none"
+              },
+              "zones": [],
+              "anchors": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "null-generated",
+      "valid": false,
+      "rule": "null content field",
+      "edits": [
+        {
+          "path": [
+            "generated"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "name": "missing-spaces",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "spaces"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "missing-home",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "spaces",
+            "home"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "unknown-key",
+      "valid": false,
+      "rule": "unknown key",
+      "edits": [
+        {
+          "path": [
+            "generated",
+            "light"
+          ],
+          "value": true
+        }
+      ]
+    },
+    {
+      "name": "sync-off-safe-ground",
+      "valid": false,
+      "rule": "place_rules.sync_safe",
+      "edits": [
+        {
+          "path": [
+            "spaces",
+            "woodland",
+            "sync"
+          ],
+          "value": true
+        }
+      ]
+    },
+    {
+      "name": "unknown-rest",
+      "valid": false,
+      "rule": "string.in",
+      "edits": [
+        {
+          "path": [
+            "generated",
+            "rest"
+          ],
+          "value": "inn"
+        }
+      ]
+    },
+    {
+      "name": "missing-origin",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "origin"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "missing-cy",
+      "valid": false,
+      "rule": "required",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "cy"
+          ],
+          "remove": true
+        }
+      ]
+    },
+    {
+      "name": "zero-width",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "width"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "zero-revision",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "revision"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "bad-layout-id",
+      "valid": false,
+      "rule": "string.pattern",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "layout"
+          ],
+          "value": "The Commons"
+        }
+      ]
+    },
+    {
+      "name": "bad-anchor-id",
+      "valid": false,
+      "rule": "string.pattern",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "anchors",
+            0,
+            "id"
+          ],
+          "value": "Arch"
+        }
+      ]
+    },
+    {
+      "name": "duplicate-place",
+      "valid": false,
+      "rule": "duplicate place commons",
+      "edits": [
+        {
+          "path": [
+            "fixed"
+          ],
+          "value": [
+            {
+              "id": "commons",
+              "name": "a place",
+              "layout": "commons",
+              "revision": 1,
+              "origin": {
+                "tx": -24,
+                "ty": 24
+              },
+              "cx": -1,
+              "cy": 1,
+              "width": 3,
+              "height": 2,
+              "rules": {
+                "safe": true,
+                "ride": true,
+                "sync": true,
+                "rest": "none"
+              },
+              "zones": [],
+              "anchors": []
+            },
+            {
+              "id": "commons",
+              "name": "a place",
+              "layout": "commons",
+              "revision": 1,
+              "origin": {
+                "tx": 120,
+                "ty": 120
+              },
+              "cx": 5,
+              "cy": 5,
+              "width": 1,
+              "height": 1,
+              "rules": {
+                "safe": true,
+                "ride": true,
+                "sync": true,
+                "rest": "none"
+              },
+              "zones": [],
+              "anchors": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "wilds-footprint-id",
+      "valid": false,
+      "rule": "place tangle is reserved",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "id"
+          ],
+          "value": "tangle"
+        }
+      ]
+    },
+    {
+      "name": "space-id",
+      "valid": false,
+      "rule": "place village is reserved",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "id"
+          ],
+          "value": "village"
+        }
+      ]
+    },
+    {
+      "name": "overlaps-the-tangle",
+      "valid": false,
+      "rule": "place commons overlaps tangle",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "cy"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "name": "overlaps-a-fixed-place",
+      "valid": false,
+      "rule": "place orchard overlaps commons",
+      "edits": [
+        {
+          "path": [
+            "fixed"
+          ],
+          "value": [
+            {
+              "id": "commons",
+              "name": "a place",
+              "layout": "commons",
+              "revision": 1,
+              "origin": {
+                "tx": -24,
+                "ty": 24
+              },
+              "cx": -1,
+              "cy": 1,
+              "width": 3,
+              "height": 2,
+              "rules": {
+                "safe": true,
+                "ride": true,
+                "sync": true,
+                "rest": "none"
+              },
+              "zones": [],
+              "anchors": []
+            },
+            {
+              "id": "orchard",
+              "name": "a place",
+              "layout": "orchard",
+              "revision": 1,
+              "origin": {
+                "tx": 24,
+                "ty": 48
+              },
+              "cx": 1,
+              "cy": 2,
+              "width": 1,
+              "height": 1,
+              "rules": {
+                "safe": true,
+                "ride": true,
+                "sync": true,
+                "rest": "none"
+              },
+              "zones": [],
+              "anchors": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "anchor-south-of-the-footprint",
+      "valid": false,
+      "rule": "commons anchor arch: outside the footprint",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "anchors",
+            0,
+            "ty"
+          ],
+          "value": 48
+        }
+      ]
+    },
+    {
+      "name": "anchor-north-of-the-footprint",
+      "valid": false,
+      "rule": "commons anchor arch: outside the footprint",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "anchors",
+            0,
+            "ty"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "anchor-west-of-the-footprint",
+      "valid": false,
+      "rule": "commons anchor arch: outside the footprint",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "anchors",
+            0,
+            "tx"
+          ],
+          "value": -4
+        }
+      ]
+    },
+    {
+      "name": "duplicate-anchor",
+      "valid": false,
+      "rule": "commons: duplicate anchor arch",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "anchors",
+            1,
+            "id"
+          ],
+          "value": "arch"
+        }
+      ]
+    },
+    {
+      "name": "zone-past-the-footprint",
+      "valid": false,
+      "rule": "commons zone lane: outside the footprint",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "zones"
+          ],
+          "value": [
+            {
+              "id": "lane",
+              "place": "lane",
+              "tx": 60,
+              "ty": 40,
+              "w": 10,
+              "h": 8,
+              "rules": {
+                "safe": true,
+                "ride": true,
+                "sync": true,
+                "rest": "none"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "duplicate-zone",
+      "valid": false,
+      "rule": "commons: duplicate zone lane",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "zones"
+          ],
+          "value": [
+            {
+              "id": "lane",
+              "place": "lane",
+              "tx": 0,
+              "ty": 0,
+              "w": 1,
+              "h": 1,
+              "rules": {
+                "safe": true,
+                "ride": true,
+                "sync": true,
+                "rest": "none"
+              }
+            },
+            {
+              "id": "lane",
+              "place": "lane",
+              "tx": 1,
+              "ty": 0,
+              "w": 1,
+              "h": 1,
+              "rules": {
+                "safe": true,
+                "ride": true,
+                "sync": true,
+                "rest": "none"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "empty-zone",
+      "valid": false,
+      "rule": "int32.gte",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "zones"
+          ],
+          "value": [
+            {
+              "id": "lane",
+              "place": "lane",
+              "tx": 0,
+              "ty": 0,
+              "w": 0,
+              "h": 1,
+              "rules": {
+                "safe": true,
+                "ride": true,
+                "sync": true,
+                "rest": "none"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
