@@ -97,6 +97,7 @@
   import { watchPlayInsets, type Docks } from './ui/play-insets'
   import { goalTarget, pinned, pinnedOpenQuest, spotQuests, pinnedProgress, pinnedQuest, recordGuideSteps, setPinned, usePinFor } from './game/guide-pin'
   import { BLOCKS, blocked, layersUp } from './ui/layers'
+  import { confirms } from './ui/confirm.svelte'
   import { setSpotQuests } from './game/room-spots'
 
   type Phase = 'loading' | 'title' | 'playing'
@@ -562,6 +563,7 @@
       gate: account.gate !== null,
       lease: leaseBlock !== null,
       move: account.moving !== null,
+      confirm: confirms.open > 0,
       logout: confirmLogout,
       naming: home.namePrompt !== null,
       'leave-deed': home.leaveAsk !== null,

@@ -12,6 +12,7 @@
   import { KIND_WORDS } from '../lib/belt'
   import { noteFloatingVisit, settings } from './settings.svelte'
   import ContextButtons from './ContextButtons.svelte'
+  import { cooldownSeconds } from './cooldown'
 
   const show = isTouchFirst()
   /** fixed: the corner joystick. floating: it appears under the thumb. hold: walk toward the finger. */
@@ -21,6 +22,13 @@
   const FLOAT_HINT_SESSIONS = 3
   if (show) noteFloatingVisit()
   const floatHint = $derived(mode === 'floating' && settings.value.floatingSessions <= FLOAT_HINT_SESSIONS)
+  let cooldownNow = $state(performance.now())
+  $effect(() => {
+    const active = [ui.roll, ...Object.values(ui.ability)].some((slot) => slot.readyAt > cooldownNow)
+    if (!active) return
+    const timer = window.setInterval(() => (cooldownNow = performance.now()), 250)
+    return () => window.clearInterval(timer)
+  })
 
   // ---- joystick: one pad, analog direction, slide freely between directions
 
@@ -250,7 +258,7 @@
       <span class="glyph" class:shake={st.deniedAt > 0}><ArtIcon art={m.icon} name="sparkle" size={24} /></span>
     {/key}
     {#key st.readyAt}
-      {#if st.readyAt > 0}<span class="sweep" style={`animation-duration:${st.cooldown}s`}></span>{/if}
+      {#if st.readyAt > cooldownNow}<span class="sweep" style={`animation-duration:${st.cooldown}s`}></span><span class="cooldown-time" aria-hidden="true">{cooldownSeconds(st.readyAt, cooldownNow)}s</span>{/if}
     {/key}
     <span class="cost"><Icon name="drop" size={9} />{m.mana}</span>
   </button>
@@ -318,7 +326,7 @@
       >
         <Icon name="roll" size={20} />
         {#key ui.roll.readyAt}
-          {#if ui.roll.readyAt > 0}<span class="sweep" style={`animation-duration:${ui.roll.cooldown}s`}></span>{/if}
+          {#if ui.roll.readyAt > cooldownNow}<span class="sweep" style={`animation-duration:${ui.roll.cooldown}s`}></span><span class="cooldown-time" aria-hidden="true">{cooldownSeconds(ui.roll.readyAt, cooldownNow)}s</span>{/if}
         {/key}
       </button>
       <!-- The ✦ buttons: the level-20 move above the signature; a hero without a craft has neither (crafts.md 4.2, 8). -->
@@ -592,6 +600,22 @@
     border-radius: 50%;
     background: conic-gradient(rgba(20, 14, 24, 0.55) var(--p, 100%), transparent 0);
     animation: sweep linear forwards;
+  }
+  .cooldown-time {
+    display: none;
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    place-content: center;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 800;
+    color: white;
+    text-shadow: 0 1px 3px #000, 0 0 4px #000;
+    pointer-events: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cooldown-time { display: grid; }
   }
   .cost {
     position: absolute;

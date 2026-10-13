@@ -434,7 +434,7 @@
     return out
   })
   const summary = $derived(
-    [MAP_LABELS.wick, ...notes, hero ? 'You’re on the map.' : ''].filter(Boolean).join(' ')
+    [MAP_LABELS.wick, ...notes, hero ? MAP_LABELS.onMap : ''].filter(Boolean).join(' ')
   )
   const css = (c: readonly number[]) => `rgb(${c[0]},${c[1]},${c[2]})`
 
@@ -545,7 +545,7 @@
           {/each}
         </ul>
       {:else}
-        <p class="fine">{MAP_LABELS.seen}: none yet.</p>
+        <p class="fine">{MAP_LABELS.seen}: {MAP_LABELS.noPlaces}</p>
       {/if}
       <h3>{MAP_LABELS.legend}</h3>
       <ul class="legend">
@@ -554,7 +554,7 @@
         <li><span class="swatch" style={`background:#dfe0c2`} aria-hidden="true"></span>{MAP_LABELS.legendBeyond}</li>
         <li><span class="swatch dash" aria-hidden="true"></span>{MAP_LABELS.frontier}</li>
         <li><span class="swatch way" aria-hidden="true"></span>{MAP_LABELS.ways}</li>
-        <li><span class="swatch found" aria-hidden="true"></span>{MAP_LABELS.foundBy.replace(' {name}', '…')}</li>
+        <li><span class="swatch found" aria-hidden="true"></span>{MAP_LABELS.foundByLegend}</li>
         <li><span class="swatch seen" aria-hidden="true"></span>{MAP_LABELS.seen}</li>
         <li><span class="swatch you" aria-hidden="true"></span>{MAP_LABELS.you}</li>
       </ul>
