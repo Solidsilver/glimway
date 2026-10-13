@@ -258,7 +258,7 @@
       <span class="glyph" class:shake={st.deniedAt > 0}><ArtIcon art={m.icon} name="sparkle" size={24} /></span>
     {/key}
     {#key st.readyAt}
-      {#if st.readyAt > 0}<span class="sweep" style={`animation-duration:${st.cooldown}s`}></span><span class="cooldown-time" aria-hidden="true">{cooldownSeconds(st.readyAt, cooldownNow)}s</span>{/if}
+      {#if st.readyAt > cooldownNow}<span class="sweep" style={`animation-duration:${st.cooldown}s`}></span><span class="cooldown-time" aria-hidden="true">{cooldownSeconds(st.readyAt, cooldownNow)}s</span>{/if}
     {/key}
     <span class="cost"><Icon name="drop" size={9} />{m.mana}</span>
   </button>
@@ -326,7 +326,7 @@
       >
         <Icon name="roll" size={20} />
         {#key ui.roll.readyAt}
-          {#if ui.roll.readyAt > 0}<span class="sweep" style={`animation-duration:${ui.roll.cooldown}s`}></span><span class="cooldown-time" aria-hidden="true">{cooldownSeconds(ui.roll.readyAt, cooldownNow)}s</span>{/if}
+          {#if ui.roll.readyAt > cooldownNow}<span class="sweep" style={`animation-duration:${ui.roll.cooldown}s`}></span><span class="cooldown-time" aria-hidden="true">{cooldownSeconds(ui.roll.readyAt, cooldownNow)}s</span>{/if}
         {/key}
       </button>
       <!-- The ✦ buttons: the level-20 move above the signature; a hero without a craft has neither (crafts.md 4.2, 8). -->

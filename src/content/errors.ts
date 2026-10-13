@@ -24,8 +24,8 @@ export const TRANSPORT_ERRORS: Table = {
   busy: 'Hold on — the last one is still on its way.'
 }
 
-/** A lost answer, replayed (items and the village; Silas says it his own way). */
-const REPLAYED: Table = {
+/** A lost answer, replayed (items, the village and the Wilds; Silas says it his own way). */
+export const REPLAYED: Table = {
   resolved: 'Your last request went through after all. Check what you have before trying again.',
   pending: 'No answer yet — it may have gone through. We’ll find out when the connection is back; nothing will be taken twice.'
 }

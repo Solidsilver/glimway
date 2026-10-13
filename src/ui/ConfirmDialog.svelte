@@ -1,6 +1,7 @@
 <script lang="ts">
   import { focusTrap } from './focus'
   import { isConfirmOwnedShortcut } from './confirm-keys'
+  import { ownConfirm } from './confirm.svelte'
 
   /** Styled stand-in for window.confirm — keeps hard choices in the game's voice. */
   let {
@@ -37,7 +38,7 @@
   }
 </script>
 
-<div class="overlay confirm" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-body" tabindex="-1" onkeydown={onKey}>
+<div class="overlay confirm" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-body" tabindex="-1" onkeydown={onKey} use:ownConfirm>
   <div class="panel" use:focusTrap={{ initial: '.cancel' }}>
     <h2 id="confirm-title">{title}</h2>
     <p id="confirm-body">{body}</p>

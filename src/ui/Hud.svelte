@@ -366,7 +366,7 @@
       <div class="face" class:shake={st.deniedAt > 0}><ArtIcon art={m.icon} name="sparkle" size={32} /></div>
     {/key}
     {#key st.readyAt}
-      {#if st.readyAt > 0}
+      {#if st.readyAt > cooldownNow}
         <div class="sweep" style={`animation-duration:${st.cooldown}s`}></div>
         <span class="cooldown-time" aria-hidden="true">{cooldownSeconds(st.readyAt, cooldownNow)}s</span>
       {/if}
@@ -427,7 +427,7 @@
     <div class="slot roll">
       <div class="face"><Icon name="roll" size={20} /></div>
       {#key ui.roll.readyAt}
-        {#if ui.roll.readyAt > 0}
+        {#if ui.roll.readyAt > cooldownNow}
           <div class="sweep" style={`animation-duration:${ui.roll.cooldown}s`}></div>
           <span class="cooldown-time" aria-hidden="true">{cooldownSeconds(ui.roll.readyAt, cooldownNow)}s</span>
         {/if}

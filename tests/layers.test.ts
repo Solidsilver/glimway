@@ -25,7 +25,7 @@ function before(f: LayerFlags) {
 
 test('the layer table blocks exactly what the hand-written lists did, in every combination', () => {
   for (let bits = 0; bits < 1 << LAYERS.length; bits++) {
-    const flags = Object.fromEntries(LAYERS.map((l, i) => [l, (bits & (1 << i)) !== 0])) as LayerFlags
+    const flags = { confirm: false, ...Object.fromEntries(LAYERS.map((l, i) => [l, (bits & (1 << i)) !== 0])) } as LayerFlags
     const up = layersUp(flags)
     const want = before(flags)
     for (const key of Object.keys(BLOCKS) as (keyof typeof BLOCKS)[]) {
@@ -35,7 +35,12 @@ test('the layer table blocks exactly what the hand-written lists did, in every c
 })
 
 test('layers come out top first', () => {
-  const none = Object.fromEntries(LAYERS.map((l) => [l, false])) as LayerFlags
+  const none = { confirm: false, ...Object.fromEntries(LAYERS.map((l) => [l, false])) } as LayerFlags
   assert.deepEqual(layersUp({ ...none, banner: true, panel: true, gate: true }), ['gate', 'panel', 'banner'])
   assert.deepEqual(layersUp(none), [])
+  const nested = layersUp({ ...none, panel: true, confirm: true })
+  assert.deepEqual(nested, ['confirm', 'panel'])
+  assert.equal(blocked(nested, BLOCKS.appKeys), true)
+  assert.equal(blocked(nested, BLOCKS.worldInput), true)
+  assert.equal(blocked(nested, BLOCKS.notices), true)
 })

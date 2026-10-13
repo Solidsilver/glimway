@@ -1,7 +1,10 @@
-import { TRANSPORT_ERRORS } from './errors.ts'
+import { REPLAYED, TRANSPORT_ERRORS } from './errors.ts'
+
+const INVALID_REQUEST = 'That request was not understood. Try again.'
 
 /** Claim and relight refusals have domain meaning; transport failures stay separate. */
 export const WILDS_CLAIM_ERRORS: Readonly<Record<string, string>> = {
+  ...REPLAYED,
   'old-cycle': 'Someone got there first — it will come back.',
   'entity-unavailable': 'Someone got there first — it will come back.',
   'already-claimed': 'You have already claimed this one.',
@@ -16,11 +19,12 @@ export const WILDS_CLAIM_ERRORS: Readonly<Record<string, string>> = {
   'lantern-not-found': 'That lantern is no longer here.',
   'entity-not-found': 'That place is no longer here.',
   'world-access-denied': 'That world is no longer open to you.',
-  'invalid-request': 'That request was not understood. Try again.',
+  'invalid-request': INVALID_REQUEST,
+  'invalid-claim': INVALID_REQUEST,
+  'lantern-id-required': INVALID_REQUEST,
   offline: 'Needs a connection. The Wilds keep what you have not claimed.',
   superseded: TRANSPORT_ERRORS.superseded,
   busy: TRANSPORT_ERRORS.busy,
-  pending: TRANSPORT_ERRORS.pending,
   unknown: 'The Wilds didn’t answer. Nothing was taken — try again in a moment.'
 }
 
