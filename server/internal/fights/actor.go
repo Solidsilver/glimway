@@ -404,6 +404,9 @@ type Scheduler struct {
 	stop    chan struct{}
 	halt    sync.Once
 	wg      sync.WaitGroup
+	// beforeAdopt is a deterministic lifecycle-race test seam. It runs after
+	// worker selection and before publication of the actor.
+	beforeAdopt func()
 }
 
 func NewScheduler(c SchedulerConfig) *Scheduler { return newScheduler(c, false) }
@@ -466,8 +469,11 @@ func (s *Scheduler) Start(r *Room, c ActorConfig) *Actor {
 	}
 	w.load.Add(1)
 	a.w = w
-	s.mu.Unlock()
+	if s.beforeAdopt != nil {
+		s.beforeAdopt()
+	}
 	w.adopt(a)
+	s.mu.Unlock()
 	return a
 }
 
@@ -489,15 +495,26 @@ func (s *Scheduler) addWorker(perRoom bool) *worker {
 	go w.run()
 	return w
 }
-func (s *Scheduler) dropWorker(w *worker) {
+
+// retireIfEmpty uses the same lifecycle lock order as Start (scheduler,
+// then worker). A selected worker with an adoption in progress cannot retire:
+// Start holds s.mu through load reservation and room publication, and the
+// load check protects any reserved adoption if that sequence changes later.
+func (s *Scheduler) retireIfEmpty(w *worker) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if len(w.rooms) != 0 || w.load.Load() != 0 {
+		return false
+	}
 	for i, candidate := range s.workers {
 		if candidate == w {
 			s.workers = append(s.workers[:i], s.workers[i+1:]...)
-			return
+			break
 		}
 	}
+	return true
 }
 func untilGrid(now time.Time) time.Duration {
 	return time.Duration(100-now.UnixMilli()%100) * time.Millisecond
@@ -698,7 +715,9 @@ func (w *worker) run() {
 			w.tick()
 		}
 		if w.perRoom && len(w.snapshot()) == 0 {
-			w.s.dropWorker(w)
+			if !w.s.retireIfEmpty(w) {
+				continue
+			}
 			if w.s.single {
 				w.s.halt.Do(func() { close(w.s.stop) })
 			}

@@ -529,7 +529,12 @@ func (a *Server) pingPeer(p *presencePeer) {
 	if p.ctx.Err() != nil {
 		return
 	}
-	ctx, cancel := context.WithTimeout(p.ctx, millis(int(h.config.GetPongTimeoutMs())))
+	// Cancelling p.ctx must let the writer send its selected close frame. The
+	// websocket package closes the transport when a control-write context is
+	// cancelled, so ping I/O has its own bounded lifetime. Closing the peer's
+	// transport releases a ping waiting for a pong; the stopped-peer check above
+	// prevents starting another one after the close was selected.
+	ctx, cancel := context.WithTimeout(context.Background(), millis(int(h.config.GetPongTimeoutMs())))
 	defer cancel()
 	if err := p.conn.Ping(ctx); err != nil && p.ctx.Err() == nil {
 		p.stop(presenceIdle, "pong-timeout")

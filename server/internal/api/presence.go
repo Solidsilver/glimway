@@ -285,7 +285,7 @@ func (h *presenceHub) enqueue(p *presencePeer, b []byte) {
 	if p.detached || p.ctx.Err() != nil {
 		return
 	}
-	if len(b) > 131072 || p.queuedBytes.Load()+int64(len(b)) > 262144 {
+	if presenceEventSize(b) > presenceMaxFrameBytes || p.queuedBytes.Load()+int64(len(b)) > 262144 {
 		p.stop(websocket.StatusTryAgainLater, "slow-consumer")
 		return
 	}

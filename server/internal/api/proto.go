@@ -64,10 +64,11 @@ func calendarResponse(day content.CalendarDay) *contract.CalendarResponse {
 
 const presenceProtocol = "glimway.presence.v3"
 
-// presenceFrameBytes caps a server frame. A writer stops adding queued
-// events once the next one would take the frame past it; a lone event may
-// exceed it (enqueue caps one at 128 KB), so no frame is larger than 128 KB.
-const presenceFrameBytes = 65536
+// presenceFrameBytes caps batches. A lone event may use the full frame limit.
+const (
+	presenceFrameBytes    = 65536
+	presenceMaxFrameBytes = 131072
+)
 
 // appendPresenceEvent adds one encoded PresenceMessage to a PresenceFrame's
 // bytes (field 1, length-delimited): a frame is assembled by prefixing the

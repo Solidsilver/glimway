@@ -363,3 +363,48 @@ func TestSchedulerStartAfterStop(t *testing.T) {
 	awaitDone(t, b)
 	awaitDone(t, c)
 }
+
+func TestSchedulerStartIsAtomicWithStop(t *testing.T) {
+	s := NewScheduler(SchedulerConfig{Workers: 1, Ticks: make(chan time.Time)})
+	entered, release := make(chan struct{}), make(chan struct{})
+	s.beforeAdopt = func() { close(entered); <-release }
+	started := make(chan *Actor, 1)
+	go func() { started <- s.Start(testRoom(1), ActorConfig{}) }()
+	<-entered
+	stopStarted, stopDone := make(chan struct{}), make(chan struct{})
+	go func() { close(stopStarted); s.Stop(); close(stopDone) }()
+	<-stopStarted
+	stoppedBeforeAdoption := false
+	select {
+	case <-stopDone:
+		stoppedBeforeAdoption = true
+	case <-time.After(25 * time.Millisecond):
+	}
+	close(release)
+	a := <-started
+	<-stopDone
+	if stoppedBeforeAdoption {
+		t.Fatal("Stop returned before the selected worker adopted the actor")
+	}
+	if a.Submit(Command{}) {
+		t.Fatal("actor accepted a command after scheduler Stop")
+	}
+	awaitDone(t, a)
+}
+
+func TestSchedulerPerRoomTickCannotRetireDuringAdoption(t *testing.T) {
+	ticks := make(chan time.Time)
+	s := NewScheduler(SchedulerConfig{Workers: PerRoomWorkers, Ticks: ticks})
+	defer s.Stop()
+	entered, release := make(chan struct{}), make(chan struct{})
+	s.beforeAdopt = func() { close(entered); <-release }
+	started := make(chan *Actor, 1)
+	go func() { started <- s.Start(testRoom(1), ActorConfig{}) }()
+	<-entered
+	ticks <- origin // the scheduler clock receives the tick while Start is paused
+	time.Sleep(25 * time.Millisecond)
+	close(release)
+	a := <-started
+	a.Stop()
+	awaitDone(t, a)
+}
