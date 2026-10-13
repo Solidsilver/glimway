@@ -17,7 +17,7 @@ func TestRound2ALossReferenceAndMultipleDeaths(t *testing.T) {
 	x := newRig(t)
 	x.set(profile("alice", 20, 0, 20))
 	c, s := x.ready("alice")
-	held := x.expect("POST", "/api/profile", x.profileBody(s, profile("alice", 30, 0, 30), s.State), c, 200)
+	held := x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, profile("alice", 30, 0, 30), s.State), c, 200)
 	for _, level := range []float64{29, 28} {
 		x.set(profile("alice", level, 0, 20))
 		c = x.login("alice", "")
@@ -27,9 +27,9 @@ func TestRound2ALossReferenceAndMultipleDeaths(t *testing.T) {
 		}
 	}
 	s = x.expect("POST", "/api/play", map[string]any{"clientId": "new", "takeOver": true}, c, 200)
-	s2 := x.expect("POST", "/api/profile", x.profileBody(s, profile("alice", 28, 0, 20), s.State), c, 200)
+	s2 := x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, profile("alice", 28, 0, 20), s.State), c, 200)
 	s2.Lease = s.Lease
-	s3 := x.expect("POST", "/api/profile", x.profileBody(s2, profile("alice", 24, 0, 20), s2.State), c, 200)
+	s3 := x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s2, profile("alice", 24, 0, 20), s2.State), c, 200)
 	if s3.State.GlimXP != held.State.GlimXP || s3.State.XPGlims != held.State.XPGlims || count(t, x.db, "SELECT count(*) FROM ledger WHERE reason='xp-loss'") != 1 {
 		t.Fatal("large loss must be accepted and noted without credit")
 	}
@@ -43,7 +43,7 @@ func TestRound2AFlagRetainsPendingAndExpiresAt90Days(t *testing.T) {
 	x := newRig(t)
 	x.set(profile("alice", 5, 0, 20))
 	c, s := x.ready("alice")
-	held := x.expect("POST", "/api/profile", x.profileBody(s, profile("alice", 40, 0, 20), s.State), c, 200)
+	held := x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, profile("alice", 40, 0, 20), s.State), c, 200)
 	c = x.login("alice", "")
 	flagged := x.expect("GET", "/api/state", nil, c, 200)
 	if !flagged.Flagged || flagged.Pending != held.Pending {
@@ -71,7 +71,7 @@ func TestRound2BDailyCeilingAndAbsoluteSession(t *testing.T) {
 				xp -= rules.XPToNextLevel(level)
 				level++
 			}
-			next := x.expect("POST", "/api/profile", x.profileBody(s, profile("alice", level, xp, 20), s.State), c, 200)
+			next := x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, profile("alice", level, xp, 20), s.State), c, 200)
 			next.Lease = s.Lease
 			s = next
 		}
@@ -221,7 +221,7 @@ func TestRound2GRebirthRequiresVerifiedHistory(t *testing.T) {
 			x := newRig(t)
 			x.set(profile("alice", level, 0, 20))
 			c, s := x.ready("alice")
-			held := x.expect("POST", "/api/profile", x.profileBody(s, profile("alice", 40, 0, 20), s.State), c, 200)
+			held := x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, profile("alice", 40, 0, 20), s.State), c, 200)
 			x.set(profile("alice", 1, 0, 20))
 			c = x.login("alice", "")
 			now := x.expect("GET", "/api/state", nil, c, 200)
@@ -265,13 +265,13 @@ func TestRound2BCeilingFullDayBoundariesAndMaximum(t *testing.T) {
 			c, s := x.ready("alice")
 			advanceActive(x, c, tc.age)
 			p := profile("alice", 100, 0, 20)
-			next := x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200)
+			next := x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, p, s.State), c, 200)
 			if next.State.XPGlims != tc.cap || next.Pending != int(rules.LifetimeXP(100, 0)/10)-tc.cap {
 				t.Fatal("time allowance boundary")
 			}
 			next.Lease = s.Lease
 			p = profile("alice", 101, 0, 20)
-			last := x.expect("POST", "/api/profile", x.profileBody(next, p, next.State), c, 200)
+			last := x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(next, p, next.State), c, 200)
 			if last.State.XPGlims != tc.cap {
 				t.Fatal("repeating sync refreshed time allowance")
 			}

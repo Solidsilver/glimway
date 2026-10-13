@@ -64,14 +64,6 @@ export function tracked(key: string): boolean {
   return ops.has(key)
 }
 
-/** Drop an operation that never reached the outbox (and its prediction). */
-export function untrack(key: string): void {
-  const op = ops.get(key)
-  if (!op) return
-  ops.delete(key)
-  if (op.token !== null) settlePrediction(op.token)
-}
-
 /** Stop tracking a key that never reached the outbox, keeping its prediction (it is sent again under a new key). */
 export function release(key: string): void {
   ops.delete(key)

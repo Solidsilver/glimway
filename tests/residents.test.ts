@@ -234,7 +234,7 @@ test('the Tolley mill sits on the pond’s edge, clear of the quest, the library
   const wheel = { tx: Math.floor(m.wheel.x / TILE), ty: Math.floor(m.wheel.y / TILE) };
   assert.ok(village.solid[wheel.ty][wheel.tx], 'the wheel blocks its own tile');
   assert.equal(wheel.tx, m.tx + m.tw, 'on the east wall');
-  assert.ok([TERRAIN.water_a, TERRAIN.water_b].includes(village.ground[wheel.ty][wheel.tx + 1]), 'pond water beside the wheel');
+  assert.ok([TERRAIN.water_a, TERRAIN.water_b].some(tile => tile === village.ground[wheel.ty][wheel.tx + 1]), 'pond water beside the wheel');
   assert.ok(village.solid[m.hopper.ty][m.hopper.tx]);
   assert.ok(m.hopper.tx === m.tx - 1 && m.hopper.ty >= m.ty && m.hopper.ty < m.ty + m.th, 'hopper against the west wall');
   // The door opens onto walkable ground, and the garden's gap above still opens onto grass.

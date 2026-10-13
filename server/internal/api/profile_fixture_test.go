@@ -6,9 +6,9 @@ import (
 	"math"
 )
 
-// profileBody prepares an acknowledged safe-boundary fixture for XP/profile tests.
+// profileBodyWithSeededReport seeds SQL report/place rows before building an XP/profile request.
 // Report ordering and budget are exercised separately through real HTTP reports.
-func (x *rig) profileBody(s response, p rules.Profile, doc rules.State) map[string]any {
+func (x *rig) profileBodyWithSeededReport(s response, p rules.Profile, doc rules.State) map[string]any {
 	x.t.Helper()
 	var client, generation string
 	var seq, basis float64

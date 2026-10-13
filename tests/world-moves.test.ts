@@ -2,10 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { MOVE_AREAS, moveBlocks, moveRefusal } from '../src/lib/world-moves.ts';
 import { firstWorldCopy, worldCopy } from '../src/content/world-moves.ts';
-import { parseWorld, parseWorldChoice, parseWorldMove } from '../src/lib/api/parse.ts';
+import { parseWorld, parseWorldChoice, parseWorldMove } from '../src/lib/api/world.ts';
 import { errorFromResponse } from '../src/lib/api/errors.ts';
 import { inviteCopy, signInCopy } from '../src/content/connected.ts';
-import { parseInviteList } from '../src/lib/api/parse.ts';
+import { parseInviteList } from '../src/lib/api/invites.ts';
 
 test('a move starts only from the village or the Commons, online, with nothing pending or on the road, a day after the last', () => {
   assert.deepEqual(MOVE_AREAS, ['village', 'commons']);

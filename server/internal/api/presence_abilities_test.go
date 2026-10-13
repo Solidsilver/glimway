@@ -341,7 +341,7 @@ func TestPresenceWardCreditHealsAFriend(t *testing.T) {
 	warrior := "warrior"
 	turned := profile("alice", 20, 0, 20)
 	turned.Class = &warrior
-	x.expect("POST", "/api/profile", x.profileBody(s, turned, s.State), c, 200)
+	x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, turned, s.State), c, 200)
 	deadline := time.Now().Add(2 * time.Second)
 	for {
 		x.api.presence.mu.Lock()

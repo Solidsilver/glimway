@@ -6,7 +6,7 @@ import { CONTRACT_NUMBER } from '../src/lib/contract.ts';
 import { FIXTURES_BY_KEY } from '../src/lib/habitica/fixtures.ts';
 import { claimEntity, settleEcho } from '../src/game/wilds/remote.ts';
 import type { Session } from '../src/game/session.ts';
-import { ackReport, BASE, env, FakeLocks, fakeServer, markOk, online, play, refuse, rig, S, seed, stepOk, tick, toasts, type Answer } from './helpers/link-rig.ts';
+import { ackReport, env, FakeLocks, fakeServer, markOk, online, play, refuse, rig, S, seed, stepOk, tick, toasts, type Answer } from './helpers/link-rig.ts';
 import { roadStep } from '../src/lib/quests.ts';
 
 /**

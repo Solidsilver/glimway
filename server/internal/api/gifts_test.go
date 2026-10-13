@@ -78,7 +78,7 @@ func (x *rig) getShelf(c *http.Cookie, gate int, status int) shelfViewResponse {
 	w := httptest.NewRecorder()
 	x.api.ServeHTTP(w, req)
 	var v shelfViewResponse
-	if err := json.Unmarshal(testSnapshotJSON(w.Body.Bytes()), &v); err != nil {
+	if err := json.Unmarshal(legacySnapshotJSON(w.Body.Bytes()), &v); err != nil {
 		x.t.Fatal(err)
 	}
 	if w.Code != status {
@@ -101,7 +101,7 @@ func (x *rig) shelfOp(c *http.Cookie, s *response, fields map[string]any, status
 	w := httptest.NewRecorder()
 	x.api.ServeHTTP(w, req)
 	var v shelfActionRes
-	if err := json.Unmarshal(testSnapshotJSON(w.Body.Bytes()), &v); err != nil {
+	if err := json.Unmarshal(legacySnapshotJSON(w.Body.Bytes()), &v); err != nil {
 		x.t.Fatal(err)
 	}
 	if w.Code != status {
@@ -396,7 +396,7 @@ func TestGateShelfTakeReplayIsConserved(t *testing.T) {
 		if w.Code != 200 {
 			t.Fatalf("shelf take attempt %d failed: %d %s", i+1, w.Code, w.Body.String())
 		}
-		if err := json.Unmarshal(testSnapshotJSON(w.Body.Bytes()), dst); err != nil {
+		if err := json.Unmarshal(legacySnapshotJSON(w.Body.Bytes()), dst); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -451,7 +451,7 @@ func TestConcurrentGateShelfTakesSerializeOneAvailableSlot(t *testing.T) {
 			w := httptest.NewRecorder()
 			x.api.ServeHTTP(w, req)
 			var v shelfActionRes
-			_ = json.Unmarshal(testSnapshotJSON(w.Body.Bytes()), &v)
+			_ = json.Unmarshal(legacySnapshotJSON(w.Body.Bytes()), &v)
 			results <- result{status: w.Code, body: v}
 		}(taker.cookie, taker.snapshot)
 	}
@@ -558,7 +558,7 @@ func TestMakerThankYouMail(t *testing.T) {
 	var mailList struct {
 		Mail []mailView `json:"mail"`
 	}
-	if err := json.Unmarshal(testSnapshotJSON(w.Body.Bytes()), &mailList); err != nil {
+	if err := json.Unmarshal(legacySnapshotJSON(w.Body.Bytes()), &mailList); err != nil {
 		t.Fatal(err)
 	}
 
@@ -582,7 +582,7 @@ func TestMakerThankYouMail(t *testing.T) {
 
 	w = httptest.NewRecorder()
 	x.api.ServeHTTP(w, req)
-	json.Unmarshal(testSnapshotJSON(w.Body.Bytes()), &mailList)
+	json.Unmarshal(legacySnapshotJSON(w.Body.Bytes()), &mailList)
 	if len(mailList.Mail) != 1 {
 		t.Fatalf("rate limit failed, expected 1 mail, got %d", len(mailList.Mail))
 	}
@@ -617,7 +617,7 @@ func TestMakerThankYouMail(t *testing.T) {
 	// Since they are together, NO thank-you mail is sent!
 	w = httptest.NewRecorder()
 	x.api.ServeHTTP(w, req)
-	json.Unmarshal(testSnapshotJSON(w.Body.Bytes()), &mailList)
+	json.Unmarshal(legacySnapshotJSON(w.Body.Bytes()), &mailList)
 	pendingCount := 0
 	for _, it := range mailList.Mail {
 		if it.ClaimedAt == nil && it.ReturnedAt == nil {
@@ -654,7 +654,7 @@ func TestToolWearOutThankYouMail(t *testing.T) {
 	var mailList struct {
 		Mail []mailView `json:"mail"`
 	}
-	if err := json.Unmarshal(testSnapshotJSON(w.Body.Bytes()), &mailList); err != nil {
+	if err := json.Unmarshal(legacySnapshotJSON(w.Body.Bytes()), &mailList); err != nil {
 		t.Fatal(err)
 	}
 	if len(mailList.Mail) != 1 {

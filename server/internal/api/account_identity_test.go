@@ -83,10 +83,10 @@ func TestRandomIdentityGivingMakerRevocationAndSyncSubject(t *testing.T) {
 	}
 	x.refresh(c, &s)
 	p := profile("player-subject", 1, 0, 20)
-	x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200)
+	x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, p, s.State), c, 200)
 	x.refresh(c, &s)
 	p.ID = s.AccountID
-	status, _, code, _ := x.request("POST", "/api/profile", x.profileBody(s, p, s.State), c)
+	status, _, code, _ := x.request("POST", "/api/profile", x.profileBodyWithSeededReport(s, p, s.State), c)
 	if status != 409 || code != "account-switch" {
 		t.Fatal("sync compared account with Habitica subject", status, code)
 	}

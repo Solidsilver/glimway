@@ -162,7 +162,7 @@ func TestProfileRaisesMagicMarks(t *testing.T) {
 	wizard := "wizard"
 	p := profile("alice", 20, 0, 20)
 	p.Class = &wizard
-	x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200)
+	x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, p, s.State), c, 200)
 	read := func() (string, float64, float64) {
 		var classMark string
 		var level, verified float64
@@ -183,7 +183,7 @@ func TestProfileRaisesMagicMarks(t *testing.T) {
 	}
 	// A classless sync (a rebirth) keeps the class mark, and the level mark
 	// only ever rises.
-	s = x.expect("POST", "/api/profile", x.profileBody(s, profile("alice", 1, 0, 20), s.State), c, 200)
+	s = x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, profile("alice", 1, 0, 20), s.State), c, 200)
 	if classMark, level, verified := read(); classMark != "mage" || level != 20 || verified != 1 {
 		t.Fatal("classless sync moved the marks", classMark, level, verified)
 	}
@@ -249,7 +249,7 @@ func TestClasslessSyncKeepsTheCraft(t *testing.T) {
 	x.set(profile("alice", 12, 0, 20))
 	c = x.login("alice", "")
 	s := x.expect("POST", "/api/play", map[string]any{"clientId": "tab-b", "takeOver": true}, c, 200)
-	x.expect("POST", "/api/profile", x.profileBody(s, profile("alice", 12, 0, 20), s.State), c, 200)
+	x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, profile("alice", 12, 0, 20), s.State), c, 200)
 	tx, err := x.db.DB.Begin()
 	if err != nil {
 		t.Fatal(err)
@@ -282,7 +282,7 @@ func TestRebirthIsRecognizedAgainAfterClimbingBySyncs(t *testing.T) {
 	s = x.expect("POST", "/api/play", map[string]any{"clientId": "tab-b", "takeOver": true}, c, 200)
 	// Climbing by syncs alone: the level mark follows, the sign-in history
 	// does not.
-	s = x.expect("POST", "/api/profile", x.profileBody(s, profile("alice", 20, 0, 20), s.State), c, 200)
+	s = x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, profile("alice", 20, 0, 20), s.State), c, 200)
 	if _, level, verified := (func() (string, float64, float64) {
 		var classMark string
 		var level, verified float64

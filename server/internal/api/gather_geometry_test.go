@@ -1,7 +1,7 @@
 package api
 
 import (
-	"glimway/server/internal/chunks"
+	"glimway/server/internal/chunks/chunkstest"
 	"testing"
 )
 
@@ -11,7 +11,7 @@ func TestWildsGatherRequiresStoredSpeciesAndReach(t *testing.T) {
 	tool := x.instance(s.AccountID, "bench-axe", -1, "")
 	fields := gatherIn(s, "wilds", [2]int{20, 20}, tool, "chop", "tangle-tree", "visit")
 	x.gatherFixture(s, fields)
-	fake := x.api.Config.Chunks.(*chunks.Fake)
+	fake := x.api.Config.Chunks.(*chunkstest.Fake)
 	for _, chunk := range fake.Chunks {
 		chunk.Decor.Kinds = []string{"iron-oak"}
 	}

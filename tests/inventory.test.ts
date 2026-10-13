@@ -115,8 +115,8 @@ test('the card helpers: cost lines, hand-over assets, wear in words', () => {
   assert.equal(mendLabel('Your bench', { timber: 2, 'wooden-peg': 1 }), 'Your bench (2 timber, 1 wooden peg)');
   assert.equal(mendLabel('Orrin', { timber: 1 }, 2), 'Orrin (1 timber, 2 glims)');
   assert.equal(mendLabel('Silas', undefined), 'Silas');
-  assert.deepEqual(assetOf({ id: 'timber', instance: null, maker: null }), { kind: 'material', id: 'timber', qty: 1, maker: '' });
-  assert.deepEqual(assetOf({ id: 'lamp-wick', instance: null, maker: { id: 'u1', name: 'Wren' } }), { kind: 'item', id: 'lamp-wick', qty: 1, maker: 'u1' });
+  assert.deepEqual(assetOf({ id: 'timber', instance: undefined, maker: null }), { kind: 'material', id: 'timber', qty: 1, maker: '' });
+  assert.deepEqual(assetOf({ id: 'lamp-wick', instance: undefined, maker: { id: 'u1', name: 'Wren' } }), { kind: 'item', id: 'lamp-wick', qty: 1, maker: 'u1' });
   const tool = { id: 'a1', itemDef: 'bench-axe', condition: 20, maxCondition: 30, usesLeft: 20, state: 'worn', wardenSet: false, fittings: [], maker: null } as const;
   assert.deepEqual(assetOf({ id: 'bench-axe', instance: tool as never, maker: null }), { kind: 'instance', id: 'bench-axe', qty: 1, instance: 'a1' });
   assert.equal(wearWords(tool as never), '20 uses left');

@@ -1,3 +1,5 @@
+import { create } from '@bufbuild/protobuf';
+import { ResidentSpotSchema } from '../src/lib/gen/glimway/content/v1/residents_pb.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import roomVectors from '../content/vectors/rooms.json' with { type: 'json' };
@@ -38,7 +40,10 @@ test('prop footprints preserve separate rectangular sack piles', () => {
   assert.equal(ROOMS.rooms.length,6);
 });
 test('shared resident cycle phase and grace vectors', () => {
-  for (const v of clockVectors.cycles) { assert.deepEqual(cycleAt(v.resident,v.now),v.expected); assert.deepEqual(cycleSpotsNear(v.resident,v.now,v.graceSeconds),v.near); }
+  for (const v of clockVectors.cycles) {
+    const resident = validateResidents({ ...residentRaw, residents: [v.resident] }).residents[0]!;
+    assert.deepEqual(cycleAt(resident,v.now),v.expected); assert.deepEqual(cycleSpotsNear(resident,v.now,v.graceSeconds),v.near);
+  }
   assert.deepEqual(residentAt('finn',2700), { area:'in:village:mill:2',tx:7,ty:5 });
   assert.deepEqual(residentAt('elara',0), { area:'commons',tx:26,ty:5 });
   assert.deepEqual(residentAt('elara',600), { area:'in:village:library',tx:9,ty:4,seated:true });
@@ -47,15 +52,17 @@ test('shared resident cycle phase and grace vectors', () => {
 });
 
 test('revised library accepts solid boundary shelves, refuses open ones', () => {
-  const doc = structuredClone(roomRaw);
-  doc.rooms[doc.rooms.findIndex(r => r.id === libraryVectors.room.id)] = libraryVectors.room;
+  const doc = { ...structuredClone(roomRaw), rooms: roomRaw.rooms.map(room => room.id === libraryVectors.room.id ? structuredClone(libraryVectors.room) : structuredClone(room)) };
   assert.doesNotThrow(() => validateRooms(doc));
   const open = structuredClone(doc);
   open.rooms.find(r => r.id === libraryVectors.room.id)!.props[0]!.solid = false;
   assert.throws(() => validateRooms(open));
 });
 for (const v of libraryVectors.seats) test(`shared resident seat: ${v.name}`, () => {
-  assert.equal(residentSpotFits(libraryVectors.room, v.spot), v.valid);
+  const room = validateRooms({ ...roomRaw, rooms: roomRaw.rooms.map(room => room.id === libraryVectors.room.id ? libraryVectors.room : room) }).rooms.find(room => room.id === libraryVectors.room.id)!;
+  const spot = create(ResidentSpotSchema, v.spot);
+  assert.ok(spot.tx !== undefined && spot.ty !== undefined);
+  assert.equal(residentSpotFits(room, { ...spot, tx: spot.tx, ty: spot.ty }), v.valid);
 });
 
 test('shared quest wait boundaries', async () => {
@@ -71,7 +78,7 @@ test('shared resident seller schema', async () => {
   for (const v of vectors) {
     const value = edited(raw, v.edits);
     if (v.valid) assert.doesNotThrow(() => validateItems(value), v.name);
-    else assert.throws(() => validateItems(value), undefined, v.name);
+    else assert.throws(() => validateItems(value), v.name);
   }
   assert.equal(sellerFor('hazels-kitchen', 0)?.area, 'in:village:bakery');
   assert.equal(sellerFor('hazels-kitchen', 3000)?.area, 'village');

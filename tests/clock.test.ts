@@ -10,9 +10,9 @@ import { QUESTS, STORY, VITALS, PAPER_RULES, validatePapers } from '../src/lib/s
 for (const v of vectors.loader) test(`shared calendar loader: ${v.name}`, () => {
   const base = JSON.parse(readFileSync(new URL('../content/clock.json', import.meta.url), 'utf8'));
   const value = structuredClone(base);
-  for (const e of v.edits) { let target = value as any; for (const key of e.path.slice(0, -1)) target = target[key]; if (e.remove) delete target[e.path.at(-1)!]; else target[e.path.at(-1)!] = e.value; }
+  for (const e of v.edits) { let target = value as any; for (const key of e.path.slice(0, -1)) target = target[key]; if ('remove' in e && e.remove) delete target[e.path.at(-1)!]; else target[e.path.at(-1)!] = e.value; }
   if (v.valid) assert.doesNotThrow(() => validateCalendar(value));
-  else assert.throws(() => validateCalendar(value), (e: Error) => refusalMatchesRule(e, v.rule), v.rule);
+  else assert.throws(() => validateCalendar(value), (e: Error) => typeof v.rule === 'string' && v.rule.length > 0 && refusalMatchesRule(e, v.rule), v.rule);
 });
 test('shared clock recovery vectors', () => { for (const v of vectors.recovery) assert.equal(recovered(v.stored,v.rate,v.cap,v.since,v.now),v.expected); assert.equal(nextTurning(0),calendarAt(0).nextTurning); });
 test('shared server story tables validate', () => { assert.equal(QUESTS[0]!.id,'lantern-road'); assert.equal(STORY.namespaces.find(n => n.prefix === 'paper:')?.writer,'server'); assert.equal(VITALS.regenCap,16); });

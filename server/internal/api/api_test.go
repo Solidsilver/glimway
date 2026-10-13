@@ -23,11 +23,11 @@ func TestTokenCookieAndBackup(t *testing.T) {
 		t.Fatal("cookie policy")
 	}
 	p := profile("alice", 2, 5, 30)
-	s = x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200)
+	s = x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, p, s.State), c, 200)
 	away := s.State
 	away.Area = "ruin"
 	s = x.expect("POST", "/api/play", map[string]any{"clientId": "tab-a"}, c, 200)
-	x.expect("POST", "/api/profile", x.profileBody(s, p, away), c, 409)
+	x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, p, away), c, 409)
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	// 0.6's two token-carrying requests (design 2.2, 4.3): the top-up and
 	// the wardrobe's gear check use the same token the sign-in used, once,
@@ -226,7 +226,7 @@ func TestLeaseTakeoverIdleAndExemptions(t *testing.T) {
 	if status != 409 || code != "superseded" {
 		t.Fatal("old lease accepted")
 	}
-	x.expect("POST", "/api/profile", x.profileBody(s, profile("alice", 2, 1, 30), s.State), c, 409)
+	x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, profile("alice", 2, 1, 30), s.State), c, 409)
 	x.expect("POST", "/api/spend", spendBody(s, "rest", "", "x", s.State), c, 409)
 	x.now.Add(120)
 	idle := x.expect("POST", "/api/play", map[string]any{"clientId": "tab-c"}, c, 200)
@@ -245,7 +245,7 @@ func TestSpendGiftedFirstZeroLockAndFailedCarry(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	lease := s.Lease
-	s = x.expect("POST", "/api/profile", x.profileBody(s, profile("alice", 1, 0, 20), s.State), c, 200)
+	s = x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, profile("alice", 1, 0, 20), s.State), c, 200)
 	s.Lease = lease
 	s = x.reportState(c, s, 0, 0, testWhere(s.State))
 	before := x.expect("GET", "/api/state", nil, c, 200)
@@ -284,7 +284,7 @@ func TestPendingCheckpointSettlementAndFlagging(t *testing.T) {
 			x := newRig(t)
 			c, s := x.ready("alice")
 			p := profile("alice", 20, 0, 20)
-			sync := x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200)
+			sync := x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, p, s.State), c, 200)
 			total := int(rules.LifetimeXP(p.Level, 0) / 10)
 			if sync.State.XPGlims != int(rules.E.GetSyncCreditCap()) || sync.Pending != total-int(rules.E.GetSyncCreditCap()) {
 				t.Fatalf("cap: %s", store.JSON(sync))
@@ -320,7 +320,7 @@ func TestLargeDeathLossIsAcceptedWithoutCredit(t *testing.T) {
 	x.set(profile("alice", 20, 0, 20))
 	c, s := x.ready("alice")
 	lost := profile("alice", 10, 0, 20)
-	after := x.expect("POST", "/api/profile", x.profileBody(s, lost, s.State), c, 200)
+	after := x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, lost, s.State), c, 200)
 	if after.State.GlimXP != s.State.GlimXP || after.State.XPGlims != 0 {
 		t.Fatal("loss changed mark or paid credit")
 	}
@@ -368,7 +368,7 @@ func TestConcurrentSpendIdempotencyAndDone(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	p := profile("alice", 4, 90, 30)
-	credited := x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200)
+	credited := x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, p, s.State), c, 200)
 	credited.Lease = s.Lease
 	chestDoc := credited.State
 	chestDoc.Area = "ruin"
@@ -421,7 +421,7 @@ func TestLeaseReadHeartbeatAndSevenDayIdempotencyExpiry(t *testing.T) {
 	}
 	x.now.Add(15)
 	x.expect("POST", "/api/play", map[string]any{"clientId": "tab-b"}, c, 409)
-	s1 := x.expect("POST", "/api/profile", x.profileBody(s, profile("alice", 4, 90, 20), s.State), c, 200)
+	s1 := x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, profile("alice", 4, 90, 20), s.State), c, 200)
 	s1.Lease = s.Lease
 	doc := s1.State
 	doc.HP = 10
@@ -445,7 +445,7 @@ func TestDeathAtEndOfPreviousLevelIsPlausible(t *testing.T) {
 	x.set(p)
 	c, s := x.ready("alice")
 	dead := profile("alice", 19, 0, 0)
-	after := x.expect("POST", "/api/profile", x.profileBody(s, dead, s.State), c, 200)
+	after := x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, dead, s.State), c, 200)
 	if after.State.HP != 0 || after.State.GlimXP != s.State.GlimXP || after.State.XPGlims != 0 {
 		t.Fatal("death changed XP mark or paid credit")
 	}

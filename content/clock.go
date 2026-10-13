@@ -111,7 +111,6 @@ func CalendarAt(c *Calendar, unix int64) CalendarDay {
 func Recovered(stored, rate, cap, since, now float64) float64 {
 	return math.Min(cap, stored+rate*math.Max(0, now-since))
 }
-func NextTurning(c *Calendar, now int64) int64 { return CalendarAt(c, now).NextTurning }
 
 // CycleAt is pure: phase intervals are half-open, with the offset measured
 // from Unix zero. Modulo uses floor so times before the epoch wrap too.

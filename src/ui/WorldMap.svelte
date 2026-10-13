@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { expose } from '../game/dev-hooks'
   import type { Session } from '../game/session'
   import { bus, EV } from '../game/events'
   import { loadMap, type MapLoad } from '../game/wilds/map-data'
@@ -441,9 +442,7 @@
   // Playtests (src/game/dev-hooks.ts): the view, you, and how often it loaded and drew.
   $effect(() => {
     if (!import.meta.env.DEV) return
-    const w = window as unknown as Record<string, unknown>
-    w.__fsWorldMap = () => ({ view: view ? { ...view } : null, vp: { ...vp }, frame, hero, outside, loads, draws, cached: renderer.cached, stats: { ...renderer.stats }, result: result ? { scope: result.scope, missing: result.missing, offline: result.offline, partial: result.partial, ended: result.ended, endsAt: result.endsAt } : null, online, notes: [...notes], chunks: result?.input?.chunks.length ?? 0 })
-    return () => delete w.__fsWorldMap
+    return expose('__fsWorldMap', () => ({ view: view ? { ...view } : null, vp: { ...vp }, frame, hero, outside, loads, draws, cached: renderer.cached, stats: { ...renderer.stats }, result: result ? { scope: result.scope, missing: result.missing, offline: result.offline, partial: result.partial, ended: result.ended, endsAt: result.endsAt } : null, online, notes: [...notes], chunks: result?.input?.chunks.length ?? 0 }))
   })
 </script>
 

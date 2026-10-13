@@ -22,18 +22,6 @@ type (
 	Projects    = contentv1.Projects
 )
 
-func ValidContentID(id string) bool {
-	if len(id) == 0 || len(id) > 100 {
-		return false
-	}
-	for _, c := range id {
-		if !(c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '-') {
-			return false
-		}
-	}
-	return true
-}
-
 // ValidMaterialCosts: a non-empty bill of Wilds materials.
 func ValidMaterialCosts(costs map[string]int32) bool {
 	if len(costs) == 0 {

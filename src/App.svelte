@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { expose } from './game/dev-hooks'
   import { onMount } from 'svelte'
   import type Phaser from 'phaser'
   import {
@@ -776,18 +777,15 @@
     bus.on(EV.guidePin, read)
     bus.on(EV.quest, read)
     // Playtests (src/game/dev-hooks.ts): the quest record, the pin and what the needle follows, read-only.
-    const w = window as unknown as Record<string, unknown>
-    if (import.meta.env.DEV) w.__fsQuests = () => ({ quests: { ...s.quests }, gateAt: { ...s.state.questGateAt }, pin: pinned.slot, goal: goalTarget(s) })
+    const disposeQuests = expose('__fsQuests', () => ({ quests: { ...s.quests }, gateAt: { ...s.state.questGateAt }, pin: pinned.slot, goal: goalTarget(s) }))
     // …and the library panel's way in, as a section's shelves or Elara open it (src/game/library-open.ts).
-    if (import.meta.env.DEV) w.__fsDevLibrary = (p: LibraryOpenPayload) => bus.emit(EV.libraryOpen, p)
+    const disposeLibrary = expose('__fsDevLibrary', (p: LibraryOpenPayload) => { bus.emit(EV.libraryOpen, p) })
     return () => {
       clearInterval(t)
       bus.off(EV.guidePin, read)
       bus.off(EV.quest, read)
-      if (import.meta.env.DEV) {
-        delete w.__fsQuests
-        delete w.__fsDevLibrary
-      }
+      disposeQuests()
+      disposeLibrary()
     }
   })
 

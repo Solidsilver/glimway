@@ -111,6 +111,8 @@ test('area after area, the controllers leave no listeners behind', () => {
     new Turning(sceneWith(events), {
       session,
       world: village,
+      window: () => null,
+      wilds: () => null,
       reducedMotion: true,
       hero: () => null as never,
       unmoored,

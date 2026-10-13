@@ -182,8 +182,6 @@ func (x *rig) setCreate(mode string) { x.mu.Lock(); defer x.mu.Unlock(); x.habit
 
 func (x *rig) setDelete(mode string) { x.mu.Lock(); defer x.mu.Unlock(); x.habiticaDelete = mode }
 
-func (x *rig) setDown(down bool) { x.mu.Lock(); defer x.mu.Unlock(); x.habiticaDown = down }
-
 func (x *rig) setDownAfter(n int) { x.mu.Lock(); defer x.mu.Unlock(); x.habiticaDownAfter = n }
 
 func (x *rig) setHang(d time.Duration) { x.mu.Lock(); defer x.mu.Unlock(); x.habiticaHang = d }
@@ -382,8 +380,8 @@ func (x *rig) logCall(name string) {
 
 func (x *rig) request(method, path string, body any, cookie *http.Cookie) (int, response, string, *http.Cookie) {
 	x.t.Helper()
-	w := x.rawHTTP(method, path, body, cookie)
-	v := decodeDomainHTTP[response](x, w)
+	w := x.legacyScenarioHTTP(method, path, body, cookie)
+	v := decodeLegacyDomainHTTP[response](x, w)
 	// Domain assertions include pack items; PlayerState intentionally does not.
 	if w.Code == 200 && v.AccountID != "" && (path == "/api/state" || path == "/api/play" || path == "/api/session" || path == "/api/world/choose") {
 		tx, err := x.db.DB.Begin()
@@ -555,9 +553,25 @@ func (x *rig) refresh(c *http.Cookie, s *response) {
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
 }
 
-// rawHTTP keeps response bytes available for replay and malformed-input assertions.
-func (x *rig) rawHTTP(method, path string, body any, cookie *http.Cookie) *httptest.ResponseRecorder {
+// legacyScenarioHTTP adapts old progress fixtures and reports before rest/use.
+// Contract, malformed-input, replay and barrier tests must use rawHTTP instead.
+func (x *rig) legacyScenarioHTTP(method, path string, body any, cookie *http.Cookie) *httptest.ResponseRecorder {
 	x.t.Helper()
+	// Copy both maps before enriching a scenario so later replay inputs stay frozen.
+	if fields, ok := body.(map[string]any); ok {
+		copied := make(map[string]any, len(fields))
+		for k, v := range fields {
+			copied[k] = v
+		}
+		if op, ok := fields["op"].(map[string]any); ok {
+			cloned := make(map[string]any, len(op))
+			for k, v := range op {
+				cloned[k] = v
+			}
+			copied["op"] = cloned
+		}
+		body = copied
+	}
 	if fields, ok := body.(map[string]any); ok {
 		if _, ok := fields["op"].(map[string]any); ok {
 			if doc, ok := fields["progress"].(rules.State); ok {
@@ -569,18 +583,37 @@ func (x *rig) rawHTTP(method, path string, body any, cookie *http.Cookie) *httpt
 	if fields, ok := body.(map[string]any); ok && cookie != nil {
 		if op, ok := fields["op"].(map[string]any); ok {
 			if path == "/api/spend" && (fields["kind"] == "rest" || fields["kind"] == "home-rest") || path == "/api/items/use" && fields["instance"] == nil {
-				x.flushFixtureReport(cookie, op)
+				x.reportBeforeVitals(cookie, op)
 			}
 		}
 	}
+	return x.rawHTTP(method, path, body, cookie)
+}
+
+// rawHTTP sends exactly the supplied bytes, or JSON-encodes the supplied body.
+// It neither repairs requests nor sends reports. Its response is the wire response.
+func (x *rig) rawHTTP(method, path string, body any, cookie *http.Cookie) *httptest.ResponseRecorder {
+	x.t.Helper()
 	var b []byte
-	if body != nil {
+	switch v := body.(type) {
+	case nil:
+	case []byte:
+		b = v
+	case json.RawMessage:
+		b = v
+	default:
 		var err error
 		b, err = json.Marshal(body)
 		if err != nil {
 			x.t.Fatal(err)
 		}
 	}
+	w := sendExactHTTP(x.api, method, path, b, cookie)
+	x.cacheAccounts()
+	return w
+}
+
+func sendExactHTTP(handler http.Handler, method, path string, b []byte, cookie *http.Cookie) *httptest.ResponseRecorder {
 	r := httptest.NewRequest(method, path, bytes.NewReader(b))
 	r.Header.Set("X-Glimway-Contract", testContract())
 	r.Header.Set("Content-Type", "application/json")
@@ -588,27 +621,36 @@ func (x *rig) rawHTTP(method, path string, body any, cookie *http.Cookie) *httpt
 		r.AddCookie(cookie)
 	}
 	w := httptest.NewRecorder()
-	x.api.ServeHTTP(w, r)
-	x.cacheAccounts()
+	handler.ServeHTTP(w, r)
 	return w
 }
 
 func decodeHTTP[T any](t *testing.T, w *httptest.ResponseRecorder) T {
 	t.Helper()
 	var v T
-	if err := json.Unmarshal(testSnapshotJSON(w.Body.Bytes()), &v); err != nil {
+	if err := json.Unmarshal(w.Body.Bytes(), &v); err != nil {
 		t.Fatalf("HTTP %d: invalid JSON: %v\n%s", w.Code, err, w.Body.String())
+	}
+	return v
+}
+
+// decodeLegacySnapshotHTTP projects old snapshot/result assertions explicitly.
+func decodeLegacySnapshotHTTP[T any](t *testing.T, w *httptest.ResponseRecorder) T {
+	t.Helper()
+	var v T
+	if err := json.Unmarshal(legacySnapshotJSON(w.Body.Bytes()), &v); err != nil {
+		t.Fatal(err)
 	}
 	return v
 }
 
 func httpResponse[T any](x *rig, method, path string, body any, c *http.Cookie, status int) (T, *httptest.ResponseRecorder) {
 	x.t.Helper()
-	w := x.rawHTTP(method, path, body, c)
+	w := x.legacyScenarioHTTP(method, path, body, c)
 	if w.Code != status {
 		x.t.Fatalf("%s %s got %d %s want %d", method, path, w.Code, w.Body.String(), status)
 	}
-	return decodeDomainHTTP[T](x, w), w
+	return decodeLegacyDomainHTTP[T](x, w), w
 }
 
 // account explicitly resolves a test sign-in subject to its gameplay identity.
@@ -644,9 +686,11 @@ func testWhere(s rules.State) map[string]any {
 	return map[string]any{"area": area, "x": s.Position.X, "y": s.Position.Y}
 }
 
-func decodeDomainHTTP[T any](x *rig, w *httptest.ResponseRecorder) T {
+// decodeLegacyDomainHTTP combines a legacy wire projection with SQL-seeded pack items.
+// It is a scenario assertion adapter, not a wire decoder.
+func decodeLegacyDomainHTTP[T any](x *rig, w *httptest.ResponseRecorder) T {
 	x.t.Helper()
-	raw := testSnapshotJSON(w.Body.Bytes())
+	raw := legacySnapshotJSON(w.Body.Bytes())
 	var fields map[string]json.RawMessage
 	json.Unmarshal(raw, &fields)
 	var snap store.Snapshot

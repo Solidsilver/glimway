@@ -11,7 +11,7 @@ Object.assign(globalThis, {
   document: { documentElement: {}, body: { appendChild: (node: object) => nodes.push(node) }, createElement: () => ({ style: {}, setAttribute() {}, textContent: '' }) },
   requestAnimationFrame() {},
   MutationObserver: class { observe() {} },
-  PerformanceObserver: class { static supportedEntryTypes = [] },
+  PerformanceObserver: class { static supportedEntryTypes: string[] = [] },
   setInterval(fn: () => void, ms: number) { intervals.set(ms, fn); return ms }
 })
 const { perfFights } = await import('../src/game/perf.ts')

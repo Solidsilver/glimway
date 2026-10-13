@@ -29,7 +29,7 @@ function prompts(fn: () => void): PromptPayload[] {
 
 test('the nearest point in reach is the target; out of reach is nothing', () => {
   const it = new Interactables(scene, { reducedMotion: true });
-  it.register('a', [point('touch:near', 110, 100), point('touch:far', 125, 100)]);
+  it.register({ name: 'a' }, [point('touch:near', 110, 100), point('touch:far', 125, 100)]);
   it.update(hero, 0);
   assert.equal(it.currentTarget?.id, 'touch:near');
   it.update({ x: 200, y: 200 }, 0);
@@ -38,8 +38,8 @@ test('the nearest point in reach is the target; out of reach is nothing', () => 
 
 test('a higher rank wins over a nearer point, and each point has its own reach', () => {
   const it = new Interactables(scene, { reducedMotion: true });
-  it.register('people', [point('mara', 104, 100)]);
-  it.register('wilds', [point('wilds:camp', 140, 100, { rank: 1, reach: 44 })]);
+  it.register({ name: 'people' }, [point('mara', 104, 100)]);
+  it.register({ name: 'wilds' }, [point('wilds:camp', 140, 100, { rank: 1, reach: 44 })]);
   it.update(hero, 0);
   assert.equal(it.currentTarget?.id, 'wilds:camp');
   it.update({ x: 90, y: 100 }, 0);
@@ -49,8 +49,8 @@ test('a higher rank wins over a nearer point, and each point has its own reach',
 test('an unavailable point is passed over, and the prompt says what the target offers', () => {
   const it = new Interactables(scene, { reducedMotion: true });
   let open = false;
-  it.register('gather', [point('gather:3,4', 102, 100, { available: () => open, label: () => 'Chop the oak', verb: 'Chop' })]);
-  it.register('touches', [point('touch:bench', 120, 100, { verb: 'Sit' })]);
+  it.register({ name: 'gather' }, [point('gather:3,4', 102, 100, { available: () => open, label: () => 'Chop the oak', verb: 'Chop' })]);
+  it.register({ name: 'touches' }, [point('touch:bench', 120, 100, { verb: 'Sit' })]);
   const first = prompts(() => it.update(hero, 0));
   assert.equal(it.currentTarget?.id, 'touch:bench');
   open = true;
@@ -75,7 +75,7 @@ test('registering again replaces the owner\'s points; a used-up point goes', () 
 
 test('a click finds a usable point under the cursor and in reach', () => {
   const it = new Interactables(scene, { reducedMotion: true });
-  it.register('a', [point('touch:sign', 120, 110), point('touch:shut', 100, 110, { available: () => false })]);
+  it.register({ name: 'a' }, [point('touch:sign', 120, 110), point('touch:shut', 100, 110, { available: () => false })]);
   assert.equal(it.pointAt({ x: 121, y: 101 }, hero)?.id, 'touch:sign');
   assert.equal(it.pointAt({ x: 100, y: 102 }, hero), null);
 });
@@ -83,8 +83,8 @@ test('a click finds a usable point under the cursor and in reach', () => {
 test('a click uses each point’s click reach: 40 px by default, the working reach where the server measures', () => {
   const it = new Interactables(scene, { reducedMotion: true });
   // A Wilds chest at (88, 96), as the review's case: its claim reaches 44 px.
-  it.register('wilds', [point('wilds:chest', 88, 96, { reach: 44, clickReach: 44, rank: 1 })]);
-  it.register('touches', [point('touch:sign', 200, 96)]);
+  it.register({ name: 'wilds' }, [point('wilds:chest', 88, 96, { reach: 44, clickReach: 44, rank: 1 })]);
+  it.register({ name: 'touches' }, [point('touch:sign', 200, 96)]);
   const cursor = (p: { x: number; y: number }) => ({ x: p.x, y: p.y - 8 });
   assert.equal(it.pointAt(cursor({ x: 88, y: 96 }), { x: 88, y: 140 })?.id, 'wilds:chest', '44 px: in reach');
   assert.equal(it.pointAt(cursor({ x: 88, y: 96 }), { x: 88, y: 145 }), null, '49 px: the server would refuse it');
@@ -95,19 +95,20 @@ test('a click uses each point’s click reach: 40 px by default, the working rea
 test('a click finds a point the prompt path passes over (a pet is petted whatever is in hand)', () => {
   const it = new Interactables(scene, { reducedMotion: true });
   let promptable = false;
-  it.register('pets', [point('touch:pet:mine', 110, 100, { label: 'Pet', available: () => promptable, availableDirect: () => true })]);
+  it.register({ name: 'pets' }, [point('touch:pet:mine', 110, 100, { label: 'Pet', available: () => promptable, availableDirect: () => true })]);
   it.update(hero, 0);
   assert.equal(it.currentTarget, null, 'the prompt (and the action key) waits for the empty hands');
   assert.equal(it.pointAt({ x: 110, y: 92 }, hero)?.id, 'touch:pet:mine', 'but a click on the pet itself finds it');
   promptable = true;
   it.update(hero, 0);
-  assert.equal(it.currentTarget?.id, 'touch:pet:mine', 'empty hands: the prompt offers it too');
+  const target = () => it.currentTarget;
+  assert.equal(target()?.id, 'touch:pet:mine', 'empty hands: the prompt offers it too');
 });
 
 test('a second choice on its own key rides with the prompt, and a change to it alone is news', () => {
   const it = new Interactables(scene, { reducedMotion: true });
   let landed = false;
-  it.register('fishing', [point('fish:line', 104, 100, { label: () => (landed ? 'Mill Roach! Keep it' : 'Pull the line in'), verb: () => (landed ? 'Keep' : 'Pull in'), alt: () => (landed ? { key: 'Q', label: 'Let it go' } : null) })]);
+  it.register({ name: 'fishing' }, [point('fish:line', 104, 100, { label: () => (landed ? 'Mill Roach! Keep it' : 'Pull the line in'), verb: () => (landed ? 'Keep' : 'Pull in'), alt: () => (landed ? { key: 'Q', label: 'Let it go' } : null) })]);
   assert.deepEqual(prompts(() => it.update(hero, 0)), [{ label: 'Pull the line in', verb: 'Pull in' }]);
   landed = true;
   assert.deepEqual(prompts(() => it.update(hero, 0)), [{ label: 'Mill Roach! Keep it', verb: 'Keep', alt: { key: 'Q', label: 'Let it go' } }]);
@@ -116,7 +117,7 @@ test('a second choice on its own key rides with the prompt, and a change to it a
 
 test('pick answers for any feet what update would choose standing there (playtests read it: __fsTarget)', () => {
   const it = new Interactables(scene, { reducedMotion: true });
-  it.register('a', [point('touch:near', 110, 100), point('wilds:camp', 140, 100, { rank: 1, reach: 44 })]);
+  it.register({ name: 'a' }, [point('touch:near', 110, 100), point('wilds:camp', 140, 100, { rank: 1, reach: 44 })]);
   for (const at of [hero, { x: 90, y: 100 }, { x: 200, y: 200 }]) {
     it.update(at, 0);
     assert.equal(it.pick(at), it.currentTarget);
@@ -138,8 +139,8 @@ test('with the spade in hand, a fern three rows north takes the prompt from the 
   const feet = { x: stand.tx * 16 + 8, y: stand.ty * 16 + 8 };
   const fern = point('gather:10,7', stand.tx * 16 + 8, (stand.ty - 3) * 16 + 16 + 8, { reach: 36, label: 'Dig for seedlings' });
   const thicket = point('wilds:path-clear', (stand.tx + 1) * 16 + 8, stand.ty * 16 + 16, { reach: 56, rank: -1, label: 'Clear the thicket' });
-  it.register('gathering', [fern]);
-  it.register('paths', [thicket]);
+  it.register({ name: 'gathering' }, [fern]);
+  it.register({ name: 'paths' }, [thicket]);
   assert.equal(Math.hypot(feet.x - fern.x, feet.y - fern.y), 32);
   assert.equal(it.pick(feet)?.id, 'gather:10,7');
   // Half a tile further south the fern is out of reach, and the thicket (still in its own) has the prompt.

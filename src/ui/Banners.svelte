@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { expose } from '../game/dev-hooks'
   import { ui } from './store.svelte'
   import { home } from './home.svelte'
   import { sfx } from '../game/sfx'
@@ -80,12 +81,10 @@
   // Read-only, for playtests (dev builds): the banners shown so far, in
   // order (a card lasts a few seconds of wall time, which a busy test can miss).
   const shownLog: { kind: string; title: string }[] = []
-  if (import.meta.env.DEV) {
-    ;(window as unknown as { __fsBanners?: () => unknown }).__fsBanners = () => ({
+  $effect(() => expose('__fsBanners', () => ({
       current: current && showing === current.id ? { kind: current.kind, title: current.title } : current ? { kind: current.kind, title: current.title, waiting: true } : null,
       shown: [...shownLog]
-    })
-  }
+    })))
 
   /** The banner on screen (an area card waits a moment after arriving, until the camera has settled on the hero). */
   let showing = $state<string | null>(null)

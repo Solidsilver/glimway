@@ -26,7 +26,6 @@ import {
 import { buildArea, type WorldData } from '../src/game/worlds.ts';
 import { AREAS, type AreaId } from '../src/lib/state.ts';
 import { isClientMark } from '../src/lib/api/predict.ts';
-import { createNewGame } from '../src/lib/state.ts';
 
 // ------------------------------------------------------------ content
 

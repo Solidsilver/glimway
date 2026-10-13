@@ -228,7 +228,7 @@ func TestReportRequiredSameKeyCanRetry(t *testing.T) {
 	if f.Error.Code != "report-required" || len(f.State) == 0 || count(t, x.db, "SELECT count(*) FROM idempotency WHERE key='barrier-retry'") != 0 {
 		t.Fatal("retryable barrier consumed the key", w.Body.String())
 	}
-	x.flushFixtureReport(c, req["op"].(map[string]any))
+	x.reportBeforeVitals(c, req["op"].(map[string]any))
 	w = x.rawHTTP("POST", "/api/spend", req, c)
 	if w.Code != 200 || count(t, x.db, "SELECT count(*) FROM idempotency WHERE key='barrier-retry'") != 1 {
 		t.Fatal(w.Body.String())

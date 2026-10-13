@@ -146,7 +146,8 @@ test('Silas offers the axe only where and when the server grants it', () => {
 });
 
 test('Orrin, Ada and Nan\'s camp use the server\'s conditions and reach', () => {
-  const orrin = { area: orrinRow.area, ...centre(orrinRow) };
+  assert.ok(orrinRow.tx !== undefined && orrinRow.ty !== undefined);
+  const orrin = { area: orrinRow.area, ...centre({ tx: orrinRow.tx, ty: orrinRow.ty }) };
   assert.equal(heirloomReadiness('orrins-mason-pick', ctx({ ...orrin })), null, 'the bridge must stand first');
   assert.deepEqual(heirloomReadiness('orrins-mason-pick', ctx({ ...orrin, worldFlags: [NORTH_BRIDGE_DONE] })), { ok: true });
   assert.deepEqual(heirloomReadiness('orrins-mason-pick', ctx({ ...orrin, x: orrin.x, y: orrin.y + orrinRow.radiusTiles * 16 + 2, worldFlags: [NORTH_BRIDGE_DONE] })), { ok: false, why: 'too-far' });

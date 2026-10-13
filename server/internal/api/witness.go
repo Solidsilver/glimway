@@ -15,10 +15,6 @@ import (
 // WitnessTiles: how near (in tiles) a witness stands to the doer.
 const WitnessTiles = 10
 
-// echoMembers: the Six, whose Echoes settle in the Whitequiet
-// (src/content/echoes.ts echoFlag).
-var echoMembers = []string{"hollis", "tam", "bett", "dorrit", "joss", "nan"}
-
 // beatRoom: where a beat happens, as the doer's saved area and their
 // presence room must both say. The Warden and the shrine lantern stand in
 // Ashwatch Ruin; Echo camps in a Wilds chunk.

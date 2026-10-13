@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { EV } from '../src/game/event-names.ts';
-import { env, online, refuse, rig, S, tick } from './helpers/link-rig.ts';
+import { env, online, refuse, rig, S } from './helpers/link-rig.ts';
 
 /** A state with `glims` and the top-up's day (design 2.5: two top-ups a UTC day; silas-yard.md 1.5: 30 glims). */
 function withPurse(glims: number, over: Parameters<typeof S>[0] = {}): Record<string, any> {

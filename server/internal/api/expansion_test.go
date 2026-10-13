@@ -300,11 +300,11 @@ func TestHomeRestAndSafeBoundaries(t *testing.T) {
 	for _, area := range []string{"commons", "home:0", "home:7", "in:village:library", "in:village:mill:2", "in:home:0"} {
 		doc = s.State
 		doc.Area = area
-		s.Snapshot = x.expect("POST", "/api/profile", x.profileBody(s, p, doc), c, 200).Snapshot
+		s.Snapshot = x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, p, doc), c, 200).Snapshot
 	}
 	doc = s.State
 	doc.Area = "wilds"
-	request := x.profileBody(s, p, doc)
+	request := x.profileBodyWithSeededReport(s, p, doc)
 	before := x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	x.expect("POST", "/api/profile", request, c, 409)
 	unchanged(t, before, x.expect("GET", "/api/state", nil, c, 200).Snapshot)

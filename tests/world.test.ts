@@ -334,7 +334,7 @@ test('the warden is settled by a naming: no "rubbing" in anything a player reads
 });
 
 test('the seasons’ materials keep their own company: each in its mark or wick, and none expire', async () => {
-  const { GATHERING_DATA, inSeason, gatheringTarget } = await import('../src/lib/gathering.ts');
+  const { inSeason, gatheringTarget } = await import('../src/lib/gathering.ts');
   const { CALENDAR, calendarAt } = await import('../src/lib/calendar.ts');
   const dayAt = (t: number) => calendarAt(t, CALENDAR);
   const epoch = Date.parse(CALENDAR.epoch) / 1000;

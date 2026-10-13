@@ -63,7 +63,9 @@ test('Commons and homesteads are safe, Wilds is unsafe, and home rest retains ea
   assert.equal(validateSave(state).area, 'commons');
   assert.equal(validateSave({ ...state, area: 'home:12' }).area, 'home:12');
   assert.throws(() => validateSave({ ...state, area: 'home:-1' }));
-  assert.equal(checkSpend(state, { kind: 'home-rest' }, { imported: true }).reason, 'needs-earned');
+  const refused = checkSpend(state, { kind: 'home-rest' }, { imported: true });
+  assert.equal(refused.ok, false);
+  assert.equal(refused.reason, 'needs-earned');
   const rested = spendGlims({ ...state, xpGlims: 1 }, { kind: 'home-rest' }, { imported: true });
   assert.equal(rested.hp, rested.maxHp); assert.equal(rested.glims, 3); assert.equal(rested.xpGlims, 0);
 });

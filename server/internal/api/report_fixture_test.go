@@ -9,8 +9,8 @@ import (
 	"net/http"
 )
 
-// flushFixtureReport models the client flushing combat before a vitals operation.
-func (x *rig) flushFixtureReport(c *http.Cookie, op map[string]any) {
+// reportBeforeVitals explicitly sends the fixture report before rest or consumable use.
+func (x *rig) reportBeforeVitals(c *http.Cookie, op map[string]any) {
 	x.t.Helper()
 	if op["report"] != nil {
 		return

@@ -10,14 +10,6 @@ import (
 	"github.com/coder/websocket"
 )
 
-// Legacy JSON client view, independent of the generated payload.
-type witnessMessage struct {
-	Type      string `json:"type"`
-	Beat      string `json:"beat"`
-	AccountID string `json:"accountId"`
-	Name      string `json:"name"`
-}
-
 type witnessed struct {
 	Type, Beat, AccountID, Name string
 }

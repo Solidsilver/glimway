@@ -14,7 +14,7 @@ function edited(base: unknown, edits: Edit[]): unknown {
 for (const v of vectors.loader) test(`shared economy loader: ${v.name}`, () => {
   const value = edited(economyRaw, v.edits);
   if (v.valid) assert.doesNotThrow(() => validateEconomy(value));
-  else assert.throws(() => validateEconomy(value), (e: Error) => refusalMatchesRule(e, v.rule), v.rule);
+  else assert.throws(() => validateEconomy(value), (e: Error) => typeof v.rule === 'string' && v.rule.length > 0 && refusalMatchesRule(e, v.rule), v.rule);
 });
 
 test('the shipped economy contract holds', () => {
