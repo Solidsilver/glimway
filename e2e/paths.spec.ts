@@ -61,10 +61,16 @@ async function stepTo(page: Page, tx: number, ty: number): Promise<void> {
 
 /** The outcome of the last path operation, once the queue has emptied. */
 async function landed(page: Page, what: string): Promise<void> {
-  await expect.poll(async () => {
-    const p = await paths(page)
-    return p && p.queued === 0 ? p.last : 'waiting'
-  }, { timeout: 15_000, message: `the ${what} landed` }).toBe(`landed:${what}`)
+  try {
+    await expect.poll(async () => {
+      const p = await paths(page)
+      return p && p.queued === 0 ? p.last : 'waiting'
+    }, { timeout: 15_000, message: `the ${what} landed` }).toBe(`landed:${what}`)
+  } catch (error) {
+    const state = await paths(page)
+    const hero = await page.evaluate(() => (window as unknown as Hooks).__fsPlayer())
+    throw new Error(`${what} path queue did not settle: ${JSON.stringify({ queued: state?.queued, last: state?.last, clearAt: state?.clearAt, buttons: state?.buttons, hero })}\n${String(error)}`)
+  }
 }
 
 /**
@@ -360,12 +366,15 @@ test('the joining tile of a run between two places makes a named way, with signs
   await warp(page, 'wilds', gap.tx, gap.ty)
   await waitForWilds(page)
   await parkCreatures(page)
+  await page.setViewportSize({ width: 1200, height: 760 })
   await page.keyboard.press('m')
   await expect(page.getByTestId('map-canvas')).toBeVisible()
   await expect(page.locator('[data-label="you"]')).toBeVisible()
-  await expect(page.locator('[data-label="way"]')).toContainText("Tansy's way")
+  const wayLabel = page.locator('[data-label="way"]').filter({ hasText: "Tansy's way" })
+  await expect(wayLabel).toHaveCount(1)
+  await expect(wayLabel).toBeVisible()
   await page.getByTestId('map-details-toggle').click()
-  await expect(page.getByTestId('map-ways')).toContainText("Tansy's way")
+  await expect(page.getByTestId('map-ways').getByText("Tansy's way", { exact: true })).toBeVisible()
   await shot(page, '95-world-map-way-desktop')
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(page.getByTestId('map-canvas')).toBeVisible()

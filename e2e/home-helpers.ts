@@ -3,6 +3,8 @@ import type { Locator } from '@playwright/test'
 import { accountOf, allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, pastOpening, routeHabitica, setHabitica, sql, syncFromMenu, waitForWorld, served } from './connected'
 import { landFromCells, type Land } from '../src/lib/homestead-land.ts'
 import { dialogueState, frames, readDialogue, settled, waitForArea, waitForLive, expectToast, SERVER_ANSWER_MS } from './helpers'
+import { setHour } from './room-helpers'
+import { residentAt } from '../src/lib/residents.ts'
 
 /**
  * Helpers for the homestead and village-life playtests (real Go server).
@@ -171,7 +173,6 @@ export async function readOn(page: Page, says: RegExp, opts: { timeout?: number 
 }
 
 /** Silas's spot in his yard, by the sawhorse (the Commons map; his cycle's yard spot). */
-const SILAS_AT = { tx: 48, ty: 19 }
 /** The Yard's shop and Pell's office (content/rooms.json). */
 export const YARD = 'in:commons:yard'
 export const DEEDS = 'in:commons:yard:deeds'
@@ -188,18 +189,18 @@ export async function silasPresent(page: Page): Promise<boolean> {
 }
 
 /**
- * Stand by Silas wherever his hour has him (out by the sawhorse, or behind
- * his counter in the shop). Fails when he's in neither place, rather than
- * talking to whichever Silas answers.
+ * Pin Silas's schedule, then stand at his known position. Behavior tests
+ * shouldn't spend separate polling budgets guessing which side of his route
+ * the resident renderer has reached.
  */
 export async function bySilas(page: Page): Promise<void> {
-  const silas = (await homes(page).catch(() => null))?.features?.silas ?? SILAS_AT
-  await go(page, 'commons', silas.tx, silas.ty + 1)
-  const out = await expect.poll(() => silasPresent(page), { timeout: 3_000 }).toBe(true).then(() => true, () => false)
-  if (!out) {
-    await go(page, YARD, AT_COUNTER.tx, AT_COUNTER.ty)
-    await expect.poll(() => silasPresent(page), { timeout: 3_000, message: 'Silas is neither by the sawhorse nor at his counter' }).toBe(true)
-  }
+  const at = residentAt('silas', await setHour(page, { minute: 10, server: true }))
+  if (!at) throw new Error('Silas has no scheduled position at minute 10')
+  await go(page, at.area as Area, at.tx, at.ty + 1)
+  await expect.poll(() => silasPresent(page), {
+    timeout: 5_000,
+    message: `Silas should be present at his minute-10 position (${at.area}, ${at.tx}, ${at.ty}); prompt=${await page.locator('.prompt').textContent().catch(() => '(unavailable)')}`
+  }).toBe(true)
   await expect(page.locator('.prompt')).toContainText('Talk to Silas')
 }
 

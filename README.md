@@ -441,7 +441,7 @@ npm run typecheck:e2e  # tsc --noEmit (the playtests)
 npm run check       # svelte-check
 npm test            # unit tests: node --test tests/*.test.ts
 npm run build       # production bundle in dist/
-npm run verify      # all four of the above
+npm run verify      # all five of the above
 go vet ./... && go test ./...   # the server, shared content and parity vectors
 npm run test:smoke  # the critical-path playtests (a few minutes)
 npm run test:changed  # the playtests for what this branch changed
@@ -452,7 +452,7 @@ npm run verify:all  # verify, then the playtests
 First time running the playtests: `npx playwright install chromium`.
 
 The playtests run in parallel (`E2E_WORKERS`, default half the cores, 2 to
-6). Every test runs against a server: each worker starts its own Go server,
+3 locally). Every test runs against a server: each worker starts its own Go server,
 database and fake habitica.com on free ports at its first test; one Vite dev
 server, with the dev-only playtest levers, is shared, and sends each browser's
 `/api` to its worker's server. A fresh player signs in per test (`freshPlayer`).
@@ -484,6 +484,7 @@ drifts):
 npm run vectors            # economy/sync parity vectors (TypeScript → content/vectors)
 npm run vectors:wilds      # Wilds generator parity vectors
 npm run vectors:calendar   # calendar parity vectors
+npm run vectors:fights-wire # shared presence fight wire vectors
 npm run papers             # docs/lore/texts → src/content/papers-text.ts + content/papers.json
 ```
 

@@ -101,11 +101,16 @@ test('remember → a new visit signs in without a paste → forget', async ({ pa
   await expect(page.getByText('could read it', { exact: false })).toBeVisible()
   await page.getByRole('button', { name: 'Connect' }).click()
   await waitForWorld(page)
+  const savedRecord = await rememberedRecord(page, id)
+  test.info().annotations.push({ type: 'remembered record after connect', description: JSON.stringify(savedRecord) })
+  expect(savedRecord.present && savedRecord.userMatches, 'remembered record committed before reload').toBe(true)
 
   // A new visit whose sign-in ended (a logout, an expired cookie): the
   // remembered details sign in without a paste.
   await page.request.delete('/api/session', CONTRACT)
   await page.reload()
+  const reloadedRecord = await rememberedRecord(page, id)
+  test.info().annotations.push({ type: 'remembered record after reload', description: JSON.stringify(reloadedRecord) })
   await page.getByTestId('connect-hero').click()
   const remembered = page.getByTestId('signin-remembered')
   await expect(remembered).toBeVisible()
@@ -123,7 +128,12 @@ test('remember → a new visit signs in without a paste → forget', async ({ pa
   await expect(page.getByText('Forget your details too?')).toBeVisible()
   await page.getByRole('button', { name: 'Disconnect and forget' }).click()
   await expect(page.getByText('Remembered on this device.')).toBeHidden()
+  const forgottenRecord = await rememberedRecord(page, id)
+  test.info().annotations.push({ type: 'remembered record after forget', description: JSON.stringify(forgottenRecord) })
+  expect(forgottenRecord.present, 'credential record removed before reload').toBe(false)
   await page.reload()
+  const afterForgetReload = await rememberedRecord(page, id)
+  test.info().annotations.push({ type: 'remembered record after forget reload', description: JSON.stringify(afterForgetReload) })
   // The world is still there (the cookie holds); the details are not remembered.
   await expect(page.getByTestId('continue-world')).toBeVisible()
   await page.getByTestId('continue-world').click()
@@ -132,6 +142,35 @@ test('remember → a new visit signs in without a paste → forget', async ({ pa
   await page.keyboard.press('Escape')
   await expect(page.getByText('Remembered on this device.')).toBeHidden()
 })
+
+/** Read only presence metadata from the isolated credentials database; never expose a token in artifacts. */
+async function rememberedRecord(page: Page, expectedUserId: string): Promise<{ present: boolean; userMatches: boolean; tokenLength: number }> {
+  return page.evaluate(async (expected) => {
+    const name = 'fingersnap-credentials'
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(name)
+      request.onsuccess = () => resolve(request.result)
+      request.onerror = () => reject(request.error)
+    })
+    try {
+      if (!db.objectStoreNames.contains('credentials')) return { present: false, userMatches: false, tokenLength: 0 }
+      const tx = db.transaction('credentials', 'readonly')
+      const request = tx.objectStore('credentials').get('habitica')
+      const record = await new Promise<{ userId?: string; apiToken?: string } | undefined>((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result)
+        request.onerror = () => reject(request.error)
+      })
+      await new Promise<void>((resolve, reject) => {
+        tx.oncomplete = () => resolve()
+        tx.onabort = () => reject(tx.error)
+        tx.onerror = () => reject(tx.error)
+      })
+      return { present: !!record, userMatches: record?.userId === expected, tokenLength: record?.apiToken?.length ?? 0 }
+    } finally {
+      db.close()
+    }
+  }, expectedUserId)
+}
 
 test('Forget clears remembered details without disconnecting', async ({ page }) => {
   const id = newUser()

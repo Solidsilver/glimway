@@ -32,7 +32,14 @@ favours simple, correct behaviour over throughput.
 - **Disk speed matters more than CPU,** because of `synchronous=FULL`. NVMe is great,
   SATA SSD is fine, an SD card or spinning disk would be noticeably slow.
 
-## Measured: shared camp fights (2026-10-12, M1 Max)
+## Historical measurement: shared camp fights (2026-10-12, M1 Max)
+
+This is one local measurement snapshot from commit `268c9b42e18f1b7f9bdd7ef82a01cd1ac5c513c6`,
+not a current universal capacity claim. It used `scripts/fight-load.sh` with
+`FIGHT_LOAD_FLUSH_MS=0`, three players per camp, nine awake rooms per
+group, and bots in the same process. Re-run with the same hardware and settings
+before comparing results. The opt-in output and test controls are documented in
+[shared-fights-testing.md](shared-fights-testing.md).
 
 `scripts/fight-load.sh` with `FIGHT_LOAD_MAX_CONNECTIONS` lifted the 128 cap in the
 test only (see `docs/shared-fights-testing.md`). Three players per camp, nine awake
@@ -49,8 +56,11 @@ rooms per group, bots in the same process (about a third of the measured CPU).
   (per-world peer index, per-room viewer sets, lock-free writer accounting, wake-only
   load lock, actor submits off the lock) 2,100 players run clean on four cores with
   deltas p95 under 70 ms, and 3,000 players still deliver every swing.
-- **Next real step is frame coalescing** (several queued frames in one socket write),
-  which needs a wire change; after that, per-world sharding.
+- **Current flush control:** presence output can be batched at 50 or 100 ms;
+  default 0 sends immediately. Set `GLIMWAY_PRESENCE_FLUSH_MS` or
+  `-presence-flush-ms`. This changes queued-send timing and is a playtest/load
+  knob, not a default capacity guarantee. See the server CLI and
+  [shared-fights-testing.md](shared-fights-testing.md).
 
 ## Multithreaded machines
 
@@ -73,7 +83,13 @@ at hundreds of busy sockets.
 Before any of these, measure: a small load test that simulates N players heartbeating,
 uploading progress and walking around with presence.
 
-## Wire format: protobuf or shared schemas (idea, 2026-10-06)
+## Wire format: protobuf or shared schemas (historical idea, 2026-10-06)
+
+Presence v3 now uses generated protobuf messages and a binary codec; this
+section records the earlier proposal, which has shipped. See
+[`server/internal/api/proto.go`](../server/internal/api/proto.go),
+[`proto/glimway/v2/presence.proto`](../proto/glimway/v2/presence.proto), and
+[`src/lib/gen/`](../src/lib/gen/).
 
 The owner asked about protobuf for bandwidth, speed and shared FE/BE types.
 

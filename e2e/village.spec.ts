@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { serverState, CONTRACT, served } from './connected'
+import { serverState, readApiGet, CONTRACT, served } from './connected'
 import { waitForLive, expectToast } from './helpers'
 import { atMyMailbox, claimDeed, earnPlenty, freshPlayer, fund, go, homes, intoCottage, myHome, onMyLand, place, shot, yardBuild } from './home-helpers'
 import { calendarAt } from '../src/lib/calendar'
@@ -62,7 +62,7 @@ test('calendar: the HUD shows today in Hearthwick, and festivals dress the Commo
 test('calendar: connected play reads the server’s calendar', async ({ page }) => {
   await freshPlayer(page)
   await expect.poll(async () => (await village(page)).source).toBe('server')
-  const res = await page.request.get('/api/calendar', CONTRACT)
+  const res = await readApiGet(page, '/api/calendar')
   const cal = await res.json()
   await expect(page.getByTestId('calendar-line')).toContainText(`${cal.wick}-wick`)
   await expect(page.getByTestId('calendar-line')).toContainText(cal.mark)

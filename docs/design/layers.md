@@ -175,11 +175,10 @@ it. Each epoch's cave generates its own naming, so it never goes rote.
 
 ### Fighting together
 
-Today every fight is local: two players at the same Tangle camp each fight
-their own copy. Presence relays positions, emotes, abilities (with Ward-light
-healing), gifts and witnessing, but no enemies. The expansion
-design's sketch for co-op (the first player in a room owns its enemies and
-streams them) was never built.
+Generated camp fights are shared and server-owned. Curated woodland fights
+and the Stone Warden remain local story encounters. The earlier phase notes
+below describe the design choice; the shipped rules and current wire contract
+are in [shared-fights.md](shared-fights.md).
 
 **All enemies are shared** (owner, 2026-10-07): small cave enemies too, not
 only bosses.

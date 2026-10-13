@@ -3,6 +3,7 @@
   "full": [
     "e2e/fixtures.ts",
     "e2e/helpers.ts",
+    "e2e/read-retry.ts",
     "e2e/home-helpers.ts",
     "e2e/connected.ts",
     "e2e/global-setup.ts",
@@ -12,7 +13,7 @@
     "package.json",
     "package-lock.json"
   ],
-  "ignore": ["**/*.md", "docs/**", ".agent/**", "tests/**", "e2e/changed-map.json", "deploy/**", "scripts/*-vectors.ts", "scripts/papers.ts", "scripts/webgl-renderer.ts", "perf/**", "playwright.perf.config.ts", "scripts/trace-hotspots.mjs", "scripts/png-diff.ts", "content/vectors/**", "content/**/*_test.go"],
+  "ignore": ["**/*.md", "docs/**", ".agent/**", "tests/**", "e2e/changed-map.json", "deploy/**", "scripts/*-vectors.ts", "scripts/papers.ts", "scripts/webgl-renderer.ts", "scripts/e2e-artifacts.mjs", "perf/**", "playwright.perf.config.ts", "playwright.first-paint.perf.config.ts", "scripts/trace-hotspots.mjs", "scripts/png-diff.ts", "content/vectors/**", "content/**/*_test.go"],
   "rules": [
     {
       "paths": ["server/internal/api/open_map*.go", "server/internal/chunks/**", "server/internal/store/chunks*.go", "server/internal/wildsgen/**", "server/internal/frontier/**", "server/internal/worldchange/**", "content/wilds*", "content/wilds/**"],
@@ -378,6 +379,28 @@
     {
       "paths": ["server/internal/api/presence_abilities*.go"],
       "specs": ["abilities.spec.ts"]
+    },
+    {
+      "paths": [
+        "server/internal/fights/**",
+        "server/internal/api/presence_fights*.go",
+        "server/internal/api/wilds*.go",
+        "server/internal/api/fall*.go",
+        "src/game/entities/server-enemies.ts",
+        "src/game/wilds/camp-fights.ts",
+        "src/lib/fight-*.ts",
+        "src/lib/combat.ts",
+        "src/lib/combat-moves.ts",
+        "src/lib/presence*.ts",
+        "src/content/enemies.json",
+        "src/content/fights*.ts",
+        "content/enemies.json",
+        "proto/**",
+        "gen/**",
+        "src/lib/gen/**",
+        "server/internal/gen/**"
+      ],
+      "specs": ["fights-server.spec.ts", "fights-shared.spec.ts"]
     }
   ]
 }

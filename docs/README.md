@@ -21,6 +21,7 @@ its architecture. This folder holds two kinds of document:
 | Doc | What it covers |
 |---|---|
 | [testing.md](testing.md) | The test workflow: tiers, prerequisites, generated data, writing and debugging playtests |
+| [shared-fights-testing.md](shared-fights-testing.md) | Shared-fight local playtests, protobuf wire checks and measured server load |
 | [server-behavior.md](server-behavior.md) | Server behavior and migration notes, preserved by implementation phase |
 | [home-server.md](home-server.md) | Self-hosting with the NixOS flake, Docker Compose or manual builds |
 | [releasing.md](releasing.md) | Cutting a release: the changelog, the version bump, the tag that publishes the image |

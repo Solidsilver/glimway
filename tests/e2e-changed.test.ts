@@ -32,3 +32,23 @@ for (const [path, specs] of [
     for (const spec of specs) assert.ok(output.includes(`e2e/${spec}`), `${spec}: ${output}`)
   })
 }
+
+for (const path of [
+  'server/internal/fights/room.go',
+  'server/internal/api/presence_fights.go',
+  'server/internal/api/fall_writer.go',
+  'src/lib/fight-interp.ts',
+  'src/lib/combat.ts',
+  'src/game/entities/server-enemies.ts',
+  'src/game/wilds/camp-fights.ts',
+  'src/lib/gen/glimway/v2/presence_pb.js',
+  'content/enemies.json',
+] as const) {
+  test(`changed selector maps ${path} to the shared-fight specs`, () => {
+    const output = list(path)
+    for (const spec of ['fights-server.spec.ts', 'fights-shared.spec.ts']) {
+      assert.ok(output.includes(`e2e/${spec}`), `${spec}: ${output}`)
+    }
+    assert.doesNotMatch(output, /not in e2e\/changed-map\.json/, output)
+  })
+}
