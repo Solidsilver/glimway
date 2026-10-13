@@ -146,19 +146,35 @@ test('a place in the Whitequiet reloads there, and a turned wick leaves you wher
   // The place is the server's now: reload, and Continue puts you back there.
   await warp(page, 'wilds', 12, -5 * S + 21)
   await waitForWilds(page)
-  const here = await player(page)
-  // Once the server and this tab's own record hold the place (a reload starts from the record).
+  let previous = await player(page)
+  let stableSamples = 0
   await expect.poll(async () => {
-    const st = (await serverState(page)).body.state as { area: string; position: { x: number; y: number } }
-    return st.area === 'wilds' && Math.hypot(st.position.x - here.x, st.position.y - here.y) <= 17
-  }, { timeout: 20_000 }).toBe(true)
+    const current = await player(page)
+    stableSamples = Math.hypot(current.x - previous.x, current.y - previous.y) < 0.5 ? stableSamples + 1 : 0
+    previous = current
+    return stableSamples >= 3
+  }, { timeout: 10_000, intervals: [100], message: 'the hero has settled after entering the Wilds' }).toBe(true)
+  const here = await player(page)
+  // Confirm this settled place, rather than accepting a report from while the
+  // hero was still moving after arrival. The reload below starts from server state.
+  let latestSaved: { area: string; position: { x: number; y: number } } | undefined
+  try {
+    await expect.poll(async () => {
+      const st = (await serverState(page)).body.state as { area: string; position: { x: number; y: number } }
+      latestSaved = st
+      return st.area === 'wilds' && Math.hypot(st.position.x - here.x, st.position.y - here.y) <= 1
+    }, { timeout: 20_000 }).toBe(true)
+  } catch (error) {
+    console.error('saved-position debug', { here, latestSaved })
+    throw error
+  }
   await page.evaluate(() => (window as unknown as { __fsDevSaveSoon: () => void }).__fsDevSaveSoon())
   await expect.poll(() => page.evaluate(() => (window as unknown as { __fsDevSaved: () => { pending: boolean } }).__fsDevSaved().pending)).toBe(false)
   await reenter(page, 'wilds')
   await waitForWilds(page)
   const back = await player(page)
-  expect(Math.abs(back.x - here.x)).toBeLessThanOrEqual(17)
-  expect(Math.abs(back.y - here.y)).toBeLessThanOrEqual(17)
+  expect(Math.abs(back.x - here.x), `reload x: ${JSON.stringify({ here, back, latestSaved })}`).toBeLessThanOrEqual(17)
+  expect(Math.abs(back.y - here.y), `reload y: ${JSON.stringify({ here, back, latestSaved })}`).toBeLessThanOrEqual(17)
 
   // The wick ends while you're away: the world's clock moves past it. You
   // come back where you stood (or the nearest open tile), told it has turned.
