@@ -435,6 +435,8 @@ func (a *Server) presenceWriter(p *presencePeer) {
 	defer idle.Stop()
 	ping := time.NewTicker(millis(int(h.config.GetPingIntervalMs())))
 	defer ping.Stop()
+	// frame is this writer's one buffer: it grows to the frame cap once.
+	frame := make([]byte, 0, 4096)
 	for {
 		if p.ctx.Err() != nil {
 			_ = p.conn.Close(p.closeCode, p.closeReason)
@@ -445,14 +447,23 @@ func (a *Server) presenceWriter(p *presencePeer) {
 			_ = p.conn.Close(p.closeCode, p.closeReason)
 			return
 		case b := <-p.queue:
-			p.queuedBytes.Add(-int64(len(b)))
-			// Cancelling coder/websocket Write closes the transport. Let a bounded
-			// in-flight write finish so takeover can send its explicit close code.
-			ctx, cancel := context.WithTimeout(context.Background(), millis(int(h.config.GetWriteTimeoutMs())))
-			err := p.conn.Write(ctx, websocket.MessageBinary, b)
-			cancel()
-			if err != nil {
-				p.stop(websocket.StatusTryAgainLater, "slow-consumer")
+			// One frame carries whatever is queued when the writer wakes
+			// (never waiting for more), so a writer that is behind sends
+			// batches and one that is not sends each event at once. An
+			// event that would not fit starts the next frame.
+			for b != nil && p.ctx.Err() == nil {
+				var drained int
+				frame, b, drained = fillPresenceFrame(frame, b, p.queue)
+				p.queuedBytes.Add(-int64(drained))
+				// Cancelling coder/websocket Write closes the transport. Let a bounded
+				// in-flight write finish so takeover can send its explicit close code.
+				ctx, cancel := context.WithTimeout(context.Background(), millis(int(h.config.GetWriteTimeoutMs())))
+				err := p.conn.Write(ctx, websocket.MessageBinary, frame)
+				cancel()
+				if err != nil {
+					p.stop(websocket.StatusTryAgainLater, "slow-consumer")
+					break
+				}
 			}
 		case <-ping.C:
 			ctx, cancel := context.WithTimeout(context.Background(), millis(int(h.config.GetPongTimeoutMs())))

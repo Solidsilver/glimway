@@ -5,7 +5,8 @@
  * shared types and limits: `src/lib/presence.ts`.
  *
  * - Auth goes in the first negotiated-format message (never the URL); nothing else is sent
- *   until `ready`.
+ *   until `ready`. The client sends one event per frame; the server's frames carry one
+ *   or more events in order (`decodePresenceFrame`).
  * - `join` on every area change, paced by the server's join cooldown (the
  *   latest wanted area wins).
  * - Positions at most `positionHz` while moving, plus a final stop; the
@@ -21,7 +22,7 @@
 import { knownRoom } from './rooms.ts';
 import { TILE } from './tile.ts';
 import { chunkOf } from './wilds/coords.ts';
-import { decodePresence, encodePresence, PRESENCE_PROTOCOL } from './presence-codec.ts';
+import { decodePresenceFrame, encodePresence, PRESENCE_PROTOCOL } from './presence-codec.ts';
 import { abilityFor } from './abilities.ts';
 import { PRESENCE, PRESENCE_CLOSE, type FightSwingIntent, type FightCastIntent, type PresenceAvatar, type PresenceClientMessage, type PresencePlayer, type PresencePosition, type PresenceServerMessage } from './presence.ts';
 
@@ -401,7 +402,7 @@ export class PresenceClient {
     };
     socket.onmessage = (ev) => {
       if (this.socket !== socket) return;
-      this.withLatency('incoming', () => { if (this.socket === socket) this.onMessage(ev.data); });
+      this.withLatency('incoming', () => { if (this.socket === socket) this.onFrame(ev.data); });
     };
     socket.onerror = () => {
       /* onclose follows with the code */
@@ -439,15 +440,22 @@ export class PresenceClient {
     }, presenceBackoff(this.attempts, this.random));
   }
 
-  private onMessage(data: unknown): void {
-    let m: PresenceServerMessage;
+  /**
+   * One server frame: its events in order, each handled as if it had come
+   * alone (the server batches what is queued when its writer wakes). A frame
+   * that doesn't decode is dropped whole; the socket's order is kept.
+   */
+  private onFrame(data: unknown): void {
+    let events: PresenceServerMessage[];
     try {
-      const decoded = decodePresence(data);
-      if (!decoded) return;
-      m = decoded;
+      events = decodePresenceFrame(data);
     } catch {
       return;
     }
+    for (const m of events) this.onMessage(m);
+  }
+
+  private onMessage(m: PresenceServerMessage): void {
     if (!m || typeof m !== 'object') return;
     switch (m.type) {
       case 'fightJoin': case 'fightDelta': case 'fightEvent': case 'fightSwingResult':

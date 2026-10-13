@@ -163,53 +163,60 @@ func TestFightBotLoad(t *testing.T) {
 				fail(err)
 				return
 			}
-			m, err := decodePresence(data)
+			events, err := splitPresenceFrame(data)
 			if err != nil {
 				fail(err)
 				return
 			}
-			switch e := m.Event.(type) {
-			case *wire.PresenceMessage_FightJoin:
-				b.joins.Add(1)
-				b.tick.Store(e.FightJoin.Tick)
-				if k := e.FightJoin.RoomKey; k != nil && k.Cx == fightLoadCX && k.Cy == fightLoadCY {
-					active = e.FightJoin.Room
-					clear(rows)
-					for _, row := range e.FightJoin.Enemies {
-						rows[row.Enemy] = true
-					}
-					note()
-					b.warm.Store(true)
+			for _, raw := range events {
+				m, err := decodePresence(raw)
+				if err != nil {
+					fail(err)
+					return
 				}
-			case *wire.PresenceMessage_FightDelta:
-				b.tick.Store(e.FightDelta.Tick)
-				if active != 0 && e.FightDelta.Room == active {
-					if measuring.Load() {
-						nowTick, offset := rules.FightTickAt(clock().UnixMilli())
-						b.lags = append(b.lags, float64(rules.FightTickDiff(nowTick, e.FightDelta.Tick))*rules.FightTickMs+float64(offset))
+				switch e := m.Event.(type) {
+				case *wire.PresenceMessage_FightJoin:
+					b.joins.Add(1)
+					b.tick.Store(e.FightJoin.Tick)
+					if k := e.FightJoin.RoomKey; k != nil && k.Cx == fightLoadCX && k.Cy == fightLoadCY {
+						active = e.FightJoin.Room
+						clear(rows)
+						for _, row := range e.FightJoin.Enemies {
+							rows[row.Enemy] = true
+						}
+						note()
+						b.warm.Store(true)
 					}
-					for _, row := range e.FightDelta.Spawned {
-						rows[row.Enemy] = true
+				case *wire.PresenceMessage_FightDelta:
+					b.tick.Store(e.FightDelta.Tick)
+					if active != 0 && e.FightDelta.Room == active {
+						if measuring.Load() {
+							nowTick, offset := rules.FightTickAt(clock().UnixMilli())
+							b.lags = append(b.lags, float64(rules.FightTickDiff(nowTick, e.FightDelta.Tick))*rules.FightTickMs+float64(offset))
+						}
+						for _, row := range e.FightDelta.Spawned {
+							rows[row.Enemy] = true
+						}
+						for _, enemy := range e.FightDelta.Removed {
+							delete(rows, enemy)
+						}
+						note()
 					}
-					for _, enemy := range e.FightDelta.Removed {
-						delete(rows, enemy)
+				case *wire.PresenceMessage_FightSwingResult:
+					b.results.Add(1)
+					b.swung.Lock()
+					at, ok := b.sent[e.FightSwingResult.SwingCounter]
+					delete(b.sent, e.FightSwingResult.SwingCounter)
+					b.swung.Unlock()
+					if ok {
+						b.latencies = append(b.latencies, float64(time.Since(at).Microseconds())/1000)
 					}
-					note()
+				case *wire.PresenceMessage_FightEvent:
+				default:
+					continue
 				}
-			case *wire.PresenceMessage_FightSwingResult:
-				b.results.Add(1)
-				b.swung.Lock()
-				at, ok := b.sent[e.FightSwingResult.SwingCounter]
-				delete(b.sent, e.FightSwingResult.SwingCounter)
-				b.swung.Unlock()
-				if ok {
-					b.latencies = append(b.latencies, float64(time.Since(at).Microseconds())/1000)
-				}
-			case *wire.PresenceMessage_FightEvent:
-			default:
-				continue
+				b.bytes.Add(uint64(len(raw)))
 			}
-			b.bytes.Add(uint64(len(data)))
 		}
 	}
 	// Rooms are keyed by world: one world per group gives every group the same
@@ -475,21 +482,31 @@ func dialFightBot(t *testing.T, ts *httptest.Server, c *http.Cookie, lease, area
 	}
 	conn.SetReadLimit(131072)
 	t.Cleanup(func() { conn.CloseNow() })
+	// exchange sends one message and reads frames until the wanted answer
+	// (a frame may carry other events with it).
 	exchange := func(m proto.Message, want func(*wire.PresenceMessage) bool) {
 		data, err := encodePresence(m)
 		if err == nil {
 			err = conn.Write(ctx, websocket.MessageBinary, data)
 		}
-		if err == nil {
+		for err == nil {
 			_, data, err = conn.Read(ctx)
+			if err != nil {
+				break
+			}
+			var events [][]byte
+			events, err = splitPresenceFrame(data)
+			for _, raw := range events {
+				var got *wire.PresenceMessage
+				if got, err = decodePresence(raw); err != nil {
+					break
+				}
+				if want(got) {
+					return
+				}
+			}
 		}
-		var got *wire.PresenceMessage
-		if err == nil {
-			got, err = decodePresence(data)
-		}
-		if err != nil || !want(got) {
-			t.Fatal("bot handshake", area, err, got)
-		}
+		t.Fatal("bot handshake", area, err)
 	}
 	exchange(&wire.PresenceAuth{Lease: lease}, func(m *wire.PresenceMessage) bool { return m.GetReady() != nil })
 	exchange(&wire.PresenceJoin{Area: area}, func(m *wire.PresenceMessage) bool { return m.GetRoom() != nil })

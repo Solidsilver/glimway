@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { create, fromJson, toBinary, type JsonValue } from '@bufbuild/protobuf';
-import { decodePresence, encodePresence, poseOf } from '../src/lib/presence-codec.ts';
+import { decodePresence, decodePresenceFrame, encodePresence, PRESENCE_PROTOCOL, poseOf } from '../src/lib/presence-codec.ts';
+import { encodeTestFrame } from './presence-wire.ts';
 import { PresenceMessageSchema, PresencePositionSchema, PresenceAvatarChangeSchema } from '../src/lib/gen/glimway/v2/presence_pb.js';
 import { decodeTestPresence } from './presence-wire.ts';
 
@@ -54,4 +55,17 @@ test('presence codec: a relayed Ward-light carries the hub\'s pulse; a client ne
   assert.equal('pulseHeal' in (zero as object), false, 'zero reads as none: the fallback applies');
   const sent = decodeTestPresence(encodePresence({ type: 'ability', ability: 'ward-light', x: 1, y: 2 }));
   assert.equal(sent.pulseHeal, undefined);
+});
+
+test('presence codec: a frame is its events in order; a bad event is skipped, a bad frame throws', () => {
+  assert.equal(PRESENCE_PROTOCOL, 'glimway.presence.v3');
+  const pos = { type: 'pos', accountId: 'bob', x: 10, y: 20, facing: { x: 1, y: 0 }, moving: true };
+  const frame = encodeTestFrame([{ type: 'ready', accountId: 'alice' }, pos, { type: 'leave', accountId: 'bob' }]);
+  assert.deepEqual(decodePresenceFrame(frame).map((m) => m.type), ['ready', 'pos', 'leave']);
+  assert.deepEqual(decodePresenceFrame(frame)[1], pos);
+  // A position without its account (a client-shaped event) fails its checks and is left out.
+  const mixed = encodeTestFrame([{ type: 'pos', x: 1, y: 2, facing: { x: 1, y: 0 }, moving: false }, { type: 'leave', accountId: 'bob' }]);
+  assert.deepEqual(decodePresenceFrame(mixed), [{ type: 'leave', accountId: 'bob' }]);
+  assert.deepEqual(decodePresenceFrame(encodeTestFrame([])), []);
+  assert.throws(() => decodePresenceFrame(Uint8Array.from([0x0a, 0x09, 0x32])));
 });

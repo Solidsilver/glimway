@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/encoding/protowire"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -61,7 +62,69 @@ func calendarResponse(day content.CalendarDay) *contract.CalendarResponse {
 	return out
 }
 
-const presenceProtocol = "glimway.presence.v2"
+const presenceProtocol = "glimway.presence.v3"
+
+// presenceFrameBytes caps a server frame. A writer stops adding queued
+// events once the next one would take the frame past it; a lone event may
+// exceed it (enqueue caps one at 128 KB), so no frame is larger than 128 KB.
+const presenceFrameBytes = 65536
+
+// appendPresenceEvent adds one encoded PresenceMessage to a PresenceFrame's
+// bytes (field 1, length-delimited): a frame is assembled by prefixing the
+// event bytes every recipient's queue shares, never by re-encoding them.
+func appendPresenceEvent(frame, event []byte) []byte {
+	frame = protowire.AppendTag(frame, 1, protowire.BytesType)
+	return protowire.AppendBytes(frame, event)
+}
+
+// presenceEventSize is what appendPresenceEvent adds for an event.
+func presenceEventSize(event []byte) int {
+	return protowire.SizeTag(1) + protowire.SizeBytes(len(event))
+}
+
+// fillPresenceFrame assembles one server frame: first, then whatever the
+// queue already holds (it never waits), while the next event still fits
+// under presenceFrameBytes. An event taken that does not fit comes back as
+// carry, the first of the next frame. drained is the event bytes consumed.
+func fillPresenceFrame(frame, first []byte, queue <-chan []byte) (out, carry []byte, drained int) {
+	frame = appendPresenceEvent(frame[:0], first)
+	drained = len(first)
+	for {
+		select {
+		case b := <-queue:
+			if len(frame)+presenceEventSize(b) > presenceFrameBytes {
+				return frame, b, drained
+			}
+			frame = appendPresenceEvent(frame, b)
+			drained += len(b)
+		default:
+			return frame, nil, drained
+		}
+	}
+}
+
+// splitPresenceFrame returns a server frame's events, each as its own
+// PresenceMessage bytes, in frame order: what a client dispatches.
+func splitPresenceFrame(b []byte) ([][]byte, error) {
+	var events [][]byte
+	for len(b) > 0 {
+		num, typ, n := protowire.ConsumeTag(b)
+		if n < 0 {
+			return nil, protowire.ParseError(n)
+		}
+		b = b[n:]
+		if num != 1 || typ != protowire.BytesType {
+			return nil, fmt.Errorf("presence frame: unexpected field %d", num)
+		}
+		event, n := protowire.ConsumeBytes(b)
+		if n < 0 {
+			return nil, protowire.ParseError(n)
+		}
+		events = append(events, event)
+		b = b[n:]
+	}
+	return events, nil
+}
 
 // The envelope's oneof is the only event catalog. A payload is immutable
 // after construction, and its encoded bytes can be shared by recipient queues.

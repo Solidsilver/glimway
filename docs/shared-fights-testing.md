@@ -63,8 +63,9 @@ Increase groups (up to 100) until room-step p95, `cpuBusyPercent` or socket
 failures show saturation. `GOMAXPROCS=1` is the script default for the
 per-core measurement; set it to compare additional cores. The bots run in the
 same process and share those cores; they send and decode raw protobuf frames
-only, but `cpuBusyPercent` (the Go runtime's estimate) includes them, so it
-overstates the server's own share. Results print as a `FIGHT_LOAD` JSON line.
+only (a server frame carries one or more events, which a bot splits and
+reads in order, as the client does), but `cpuBusyPercent` (the Go runtime's
+estimate) includes them, so it overstates the server's own share. Results print as a `FIGHT_LOAD` JSON line.
 
 Slowdown shows as lateness before it shows as failure, so the line also
 carries two client-side measures from the measured run: `deltaLag*Ms` (how

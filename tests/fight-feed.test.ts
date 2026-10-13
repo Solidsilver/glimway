@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { create, fromBinary, toBinary } from '@bufbuild/protobuf'
-import { PresenceMessageSchema } from '../src/lib/gen/glimway/v2/presence_pb.js'
+import { PresenceMessageSchema, PresenceFrameSchema } from '../src/lib/gen/glimway/v2/presence_pb.js'
 import { PresenceFeed } from '../src/game/presence-feed.ts'
 import { PRESENCE_PROTOCOL } from '../src/lib/presence-codec.ts'
 import type { SocketLike } from '../src/lib/presence-client.ts'
@@ -21,7 +21,8 @@ function rig(latency = { lag: 0, jitter: 0 }) {
     }
     now = end
   }
-  const push = (event: Parameters<typeof create<typeof PresenceMessageSchema>>[1]['event']) => socket.onmessage?.({ data: toBinary(PresenceMessageSchema, create(PresenceMessageSchema, { event })) })
+  // The server's frames (v3) carry one or more events; one here.
+  const push = (event: Parameters<typeof create<typeof PresenceMessageSchema>>[1]['event']) => socket.onmessage?.({ data: toBinary(PresenceFrameSchema, create(PresenceFrameSchema, { events: [create(PresenceMessageSchema, { event })] })) })
   feed.setArea('wilds:0:0'); socket.onopen?.({})
   push({ case: 'ready', value: { accountId: 'me' } }); advance(latency.lag + latency.jitter)
   return { feed, socket, sent, advance, push }

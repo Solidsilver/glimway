@@ -33,6 +33,10 @@ the game can show the first part as "What's new":
 
 ### Technical
 
+- Presence subprotocol `glimway.presence.v3`: every server frame is a
+  `PresenceFrame` carrying the events queued when the socket's writer woke, so a
+  loaded server batches without adding latency (`docs/proto-migration.md`,
+  "Presence v3"). Open tabs on the old protocol are asked to reload.
 - Generated camp combat runs in per-chunk server rooms, delivered to each
   player's surrounding window, with prediction, interpolation and a 250 ms
   rewind cap. Every camp uses this path by default; curated story fights remain
