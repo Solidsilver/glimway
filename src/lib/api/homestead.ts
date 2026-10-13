@@ -1,3 +1,4 @@
+import { int, num, countMap } from './decode-values.ts';
 /**
  * The homestead routes (proto/glimway/v1/homestead.proto): the gate read,
  * the keyed lane mutations, the gate shelf and the woodpile. Responses
@@ -189,21 +190,7 @@ function decoded<T>(read: () => T): T {
   try { return read(); } catch { throw new ApiError('bad-response'); }
 }
 
-const int = (v: number | undefined, min = 0): number => {
-  if (typeof v !== 'number' || !Number.isInteger(v) || v < min) throw new Error('invalid integer');
-  return v;
-};
 
-const num = (v: number | undefined): number => {
-  if (typeof v !== 'number' || !Number.isFinite(v)) throw new Error('invalid number');
-  return v;
-};
-
-const countMap = (v: Record<string, number> | undefined): Record<string, number> => {
-  const out: Record<string, number> = {};
-  if (v) for (const [k, n] of Object.entries(v)) if (Number.isInteger(n) && n >= 0) out[k] = n;
-  return out;
-};
 
 const pair = (c: { x: number; y: number }): [number, number] => [int(c.x), int(c.y)];
 

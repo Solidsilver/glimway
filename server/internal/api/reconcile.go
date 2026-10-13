@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"net/http"
@@ -32,15 +33,8 @@ func committedOperationProto(route, key, payloadJSON, hash, resultJSON string, v
 	}
 	if stored.Type != "" {
 		out.ResultType = stored.Type
-		// Oneof cases resolve by message type name; each case is a distinct
-		// message (TestEnvelopeResultCasesHaveDistinctTypes).
-		fields := (&contract.Envelope{}).ProtoReflect().Descriptor().Oneofs().ByName("result").Fields()
-		for i := 0; i < fields.Len(); i++ {
-			f := fields.Get(i)
-			if string(f.Message().FullName()) == stored.Type {
-				out.ResultCase = f.JSONName()
-				break
-			}
+		if f := envelopeResultFields[protoreflect.FullName(stored.Type)]; f != nil {
+			out.ResultCase = f.JSONName()
 		}
 	}
 	// The result answers with the operation's actual result alone: the
@@ -92,20 +86,8 @@ func (a *Server) operationResult(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func savePayload(tx *sql.Tx, account, route, key string, request any) error {
-	raw, err := requestBytes(request)
-	if err != nil {
-		return err
-	}
-	var fields map[string]json.RawMessage
-	if err = json.Unmarshal(raw, &fields); err != nil {
-		return err
-	}
-	delete(fields, "op")
-	payload, err := json.Marshal(fields)
-	if err != nil {
-		return err
-	}
-	_, err = tx.Exec("UPDATE idempotency SET payload_json=? WHERE account_id=? AND op=? AND key=?", string(payload), account, route, key)
+// savePayload stores the prepared header-free payload without re-encoding the request.
+func savePayload(tx *sql.Tx, account, route, key string, payload json.RawMessage) error {
+	_, err := tx.Exec("UPDATE idempotency SET payload_json=? WHERE account_id=? AND op=? AND key=?", string(payload), account, route, key)
 	return err
 }

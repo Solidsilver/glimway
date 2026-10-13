@@ -197,7 +197,7 @@ func (a *Server) homeMutation(w http.ResponseWriter, r *http.Request) error {
 		if home != nil {
 			result.Home = homeViewProto(*home)
 		}
-		return protoResult(result)
+		return mixedOpResult(result)
 	}, func() {
 		if avatar != nil {
 			a.avatarChanged(account, avatar, room)

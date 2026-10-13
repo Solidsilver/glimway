@@ -40,12 +40,13 @@ func TestClientErrorCodesCoverServer(t *testing.T) {
 	// These forwarded codes have their sources checked below. Fail closed if a
 	// new dynamic emission is introduced without scanning its source.
 	dynamic := map[string]bool{
-		"ownLand:refusal":           true,
-		"worldParty:why":            true,
-		"settleChoice:why":          true,
-		"mailSendLimits:check.code": true,
-		"login:h.Code":              true,
-		"spendOp:e.Error()":         true,
+		"memberHomeWithPiece:refusal": true,
+		"ownLand:refusal":             true,
+		"worldParty:why":              true,
+		"settleChoice:why":            true,
+		"mailSendLimits:check.code":   true,
+		"login:h.Code":                true,
+		"spendOp:e.Error()":           true,
 		// The purse's upstream errors are forwarded as refusals: their codes
 		// are the habitica package's own literals (scanned below) and the
 		// budget's three words (login-rate-limited, login-user-rate-limited,
@@ -91,7 +92,7 @@ func TestClientErrorCodesCoverServer(t *testing.T) {
 								}
 							}
 						}
-						if id.Name == "ownLand" {
+						if id.Name == "ownLand" || id.Name == "memberHomeWithPiece" {
 							check(v.Args[len(v.Args)-1])
 						}
 					case *ast.CompositeLit:

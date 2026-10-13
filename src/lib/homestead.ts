@@ -1,5 +1,5 @@
 import raw from '../../content/homestead.json' with { type: 'json' };
-import itemsRaw from '../../content/items.json' with { type: 'json' };
+import { ITEMS_SHAPE } from './items-shape.ts';
 import { decodeContent } from './content-proto.ts';
 import { HomesteadSchema } from './gen/glimway/content/v1/homestead_pb.js';
 import { furnishingFor } from './furnishings.ts';
@@ -10,7 +10,7 @@ import { tileAt, tileMid } from './tile.ts';
 
 /** Material ids a purchase bill may name: the Wilds materials, plus any material in the items catalogue (seasoned timber). */
 const MATERIAL_ITEMS = new Set(
-  ((itemsRaw as { items: { id: string; kind: string }[] }).items ?? []).filter((i) => i.kind === 'material').map((i) => i.id)
+  ITEMS_SHAPE.items.filter((i) => i.kind === 'material').map((i) => i.id)
 );
 
 export type HomeScene = 'indoor' | 'outdoor' | 'gate';

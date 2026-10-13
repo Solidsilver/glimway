@@ -34,24 +34,7 @@ func newUpgradeFixture(t *testing.T, path, through string, before func(string, *
 	if _, err = db.Exec("PRAGMA foreign_keys=ON; CREATE TABLE schema_migrations(name TEXT PRIMARY KEY, applied_at INTEGER NOT NULL)"); err != nil {
 		t.Fatal(err)
 	}
-	for _, m := range history[:stop+1] {
-		tx, err := db.Begin()
-		if err != nil {
-			t.Fatal(err)
-		}
-		func() {
-			defer tx.Rollback()
-			if before != nil {
-				before(m.Name, tx)
-			}
-			if err = applyMigration(tx, m, 0); err != nil {
-				t.Fatal(err)
-			}
-			if err = tx.Commit(); err != nil {
-				t.Fatal(err)
-			}
-		}()
-	}
+	runFixtureMigrations(t, db, history[:stop+1], before)
 	return db
 }
 
@@ -72,5 +55,49 @@ func markFixtureOrigins(t *testing.T, db *sql.DB) {
 	t.Helper()
 	if _, err := db.Exec("UPDATE players SET save_origin='fresh' WHERE save_origin IS NULL"); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// advanceUpgradeFixture applies a named inclusive range to an already seeded DB.
+func advanceUpgradeFixture(t *testing.T, db *sql.DB, from, through string) {
+	t.Helper()
+	history, err := migrationHistory()
+	if err != nil {
+		t.Fatal(err)
+	}
+	start, stop := -1, -1
+	for i, m := range history {
+		if m.Name == from {
+			start = i
+		}
+		if m.Name == through {
+			stop = i
+		}
+	}
+	if start < 0 || stop < start {
+		t.Fatalf("invalid fixture migration range %s through %s", from, through)
+	}
+	runFixtureMigrations(t, db, history[start:stop+1], nil)
+}
+
+func runFixtureMigrations(t *testing.T, db *sql.DB, history []migrationRecord, before func(string, *sql.Tx)) {
+	t.Helper()
+	for _, m := range history {
+		tx, err := db.Begin()
+		if err != nil {
+			t.Fatal(err)
+		}
+		func() {
+			defer tx.Rollback()
+			if before != nil {
+				before(m.Name, tx)
+			}
+			if err = applyMigration(tx, m, 0); err != nil {
+				t.Fatal(err)
+			}
+			if err = tx.Commit(); err != nil {
+				t.Fatal(err)
+			}
+		}()
 	}
 }

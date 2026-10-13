@@ -1,4 +1,4 @@
-import raw from '../../content/residents.json' with { type: 'json' };
+import { RESIDENTS_SHAPE } from './residents-shape.ts';
 import { ResidentsSchema, type ResidentSpotValid, type ResidentValid, type ResidentsValid } from './gen/glimway/content/v1/residents_pb.js';
 import { knownContentArea, roomFor, roomContainsTile, roomWalkable, type Room } from './rooms.ts';
 import { cycleAt } from './clock.ts';
@@ -41,7 +41,8 @@ export function residentSpotFits(room: Room, spot: ResidentSpot): boolean {
   const char = room.map[spot.ty]![spot.tx]!;
   return room.props.some(p => p.char === char) && [[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy]) => roomWalkable(room, spot.tx + dx!, spot.ty + dy!));
 }
-export const RESIDENTS = validateResidents(raw);
+export const RESIDENTS = RESIDENTS_SHAPE as Residents;
+residentRules(RESIDENTS);
 export function residentById(id: string): Resident | null { return RESIDENTS.residents.find(r => r.id === id) ?? null; }
 /** Where someone stands: a spot's fields, plain (a resolved place, not a message). */
 export interface ResidentPlace { area: string; tx: number; ty: number; seated?: boolean }

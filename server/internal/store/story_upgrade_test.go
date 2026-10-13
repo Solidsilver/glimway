@@ -112,26 +112,8 @@ func TestStory028Upgrade(t *testing.T) {
 func TestStory028BadJSONNamesAccount(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "bad-story.sqlite")
 	db := oldAccount026(t, path, false, true)
-	history, err := migrationHistory()
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, m := range history {
-		if m.Name != "026_accounts.sql" && m.Name != "027_server_state.sql" {
-			continue
-		}
-		tx, e := db.Begin()
-		if e != nil {
-			t.Fatal(e)
-		}
-		if e = applyMigration(tx, m, 0); e != nil {
-			tx.Rollback()
-			t.Fatal(e)
-		}
-		if e = tx.Commit(); e != nil {
-			t.Fatal(e)
-		}
-	}
+	advanceUpgradeFixture(t, db, "026_accounts.sql", "027_server_state.sql")
+	var err error
 	if _, err = db.Exec("UPDATE progress SET doc_json='bad JSON'"); err != nil {
 		t.Fatal(err)
 	}

@@ -1,5 +1,5 @@
 import craftingRaw from '../../content/crafting.json' with { type: 'json' };
-import papersRaw from '../../content/papers.json' with { type: 'json' };
+import { PAPERS_SHAPE } from './papers-shape.ts';
 import projectsRaw from '../../content/projects.json' with { type: 'json' };
 import { decodeContent } from './content-proto.ts';
 import { CraftingSchema, type CraftingValid, type RecipeValid } from './gen/glimway/content/v1/crafting_pb.js';
@@ -88,14 +88,14 @@ export function validateProjects(value: unknown): Projects {
     if (!validMaterialCosts(v.materials)) return bad(`${v.id} materials`);
     ids.add(v.id);
     for (const paper of v.papers) {
-      const row = papersRaw.papers.find(p => p.id === paper);
+      const row = PAPERS_SHAPE.papers.find(p => p.id === paper);
       if (!row || row.source !== 'village-project') return bad(`${v.id} paper ${paper}`);
       if (papers.has(paper)) return bad(`duplicate paper ${paper}`);
       papers.add(paper);
     }
   }
   // Every authored project paper has a completion path.
-  for (const paper of papersRaw.papers) if (paper.source === 'village-project' && !papers.has(paper.id)) return bad(`paper without a project ${paper.id}`);
+  for (const paper of PAPERS_SHAPE.papers) if (paper.source === 'village-project' && !papers.has(paper.id)) return bad(`paper without a project ${paper.id}`);
   return p;
 }
 export const CRAFTING = validateCrafting(craftingRaw);

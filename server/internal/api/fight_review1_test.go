@@ -195,14 +195,14 @@ func TestLegacyNotDefeatedClaimRetriesWithSameKey(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer tx.Rollback()
-			hash, prior, err := opIdem(ctx, tx, account, route, request.Op.Key, request, x.now.Load())
+			prepared, prior, err := opIdem(ctx, tx, account, route, request.Op.Key, request, x.now.Load())
 			if err != nil || prior != nil {
-				t.Fatal(hash, prior, err)
+				t.Fatal(prepared, prior, err)
 			}
-			if err := saveRefusedOp(ctx, tx, account, route, request.Op.Key, hash, &failure{status: 409, code: "not-defeated"}, state.Version, x.now.Load()); err != nil {
+			if err := saveRefusedOp(ctx, tx, account, route, request.Op.Key, prepared.Hash, &failure{status: 409, code: "not-defeated"}, state.Version, x.now.Load()); err != nil {
 				t.Fatal(err)
 			}
-			if err := savePayload(tx, account, route, request.Op.Key, request); err != nil {
+			if err := savePayload(tx, account, route, request.Op.Key, prepared.Payload); err != nil {
 				t.Fatal(err)
 			}
 			if err := tx.Commit(); err != nil {

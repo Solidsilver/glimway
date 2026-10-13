@@ -1,0 +1,86 @@
+[
+  {
+    "name": "oneof-mark-zero-unicode",
+    "kind": "mark",
+    "request": {
+      "op": {
+        "lease": "",
+        "key": "boundary-key"
+      },
+      "mark": "seen:lamp-é",
+      "where": {
+        "area": "village",
+        "x": 0,
+        "y": 0
+      }
+    },
+    "payload": {
+      "mark": "seen:lamp-é",
+      "where": {
+        "area": "village",
+        "x": 0,
+        "y": 0
+      }
+    },
+    "result": {
+      "mark": "seen:lamp-é",
+      "added": false
+    },
+    "envelope": "oneof",
+    "resultCase": "mark",
+    "storedType": "glimway.v1.MarkResult",
+    "hash": "bfaa263241bda46ed6c0d88c7ca79db30aaa11fd0889c8511dd6fdeb8e3f0d2d"
+  },
+  {
+    "name": "mixed-home-empty-null-wrappers",
+    "kind": "home",
+    "request": {
+      "op": {
+        "lease": "",
+        "key": "boundary-key"
+      },
+      "where": {
+        "area": "village",
+        "x": 0,
+        "y": 0
+      },
+      "itemDef": "",
+      "itemId": "",
+      "scene": "",
+      "x": 0,
+      "y": 0,
+      "rotation": 0,
+      "name": "",
+      "to": "",
+      "homeId": ""
+    },
+    "payload": {
+      "where": {
+        "area": "village",
+        "x": 0,
+        "y": 0
+      },
+      "itemDef": "",
+      "itemId": "",
+      "tier": null,
+      "scene": "",
+      "x": 0,
+      "y": 0,
+      "rotation": 0,
+      "name": "",
+      "gate": null,
+      "to": "",
+      "homeId": ""
+    },
+    "result": {
+      "home": null,
+      "materials": {},
+      "itemId": "",
+      "status": ""
+    },
+    "envelope": "mixed",
+    "resultCase": "result",
+    "storedType": "",
+    "hash": "ae04edbe44f55b4f1204871bf1b5b9fa25212a65bee2b1bb1cf66fc341c619a9"
+  }
+]

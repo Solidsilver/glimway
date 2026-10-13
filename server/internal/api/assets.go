@@ -551,21 +551,7 @@ func dryFlowers(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) e
 // workshop is the caller's homestead when it has a workshop (tier 2+):
 // the shared chest and the bench live there.
 func workshop(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (string, error) {
-	home, ok, err := memberOf(ctx, tx, s.AccountID)
-	if err != nil {
-		return "", err
-	}
-	if !ok {
-		return "", fail(409, "not-a-member")
-	}
-	var tier int
-	if err = tx.QueryRowContext(ctx, "SELECT tier FROM homesteads WHERE id=?", home).Scan(&tier); err != nil {
-		return "", err
-	}
-	if tier < 2 {
-		return "", fail(409, "tier-required")
-	}
-	return home, nil
+	return memberHomeAtTier(ctx, tx, s, 2)
 }
 
 // ledgerKind is an asset's chest/mail ledger kind ("storage:<kind>:<id>").

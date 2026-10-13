@@ -70,7 +70,7 @@ import {
   type PackedPeople,
   type PackedRect,
 } from '../src/game/atlas-plan.ts'
-import { cellOf, flattenFamily, healFamily, setCell, type Rgba } from '../src/game/ground-heal.ts'
+import { cellOf, flattenFamily, healFamily, setCell, type Rgba } from './lib/ground-heal.ts'
 import type { CommonsPassManifest } from '../src/game/commons-pass.ts'
 import type { RuntimeArtManifest } from '../src/game/runtime-art.ts'
 import type { ItemsPassManifest } from '../src/game/items-pass.ts'
@@ -770,7 +770,7 @@ async function main(): Promise<void> {
   const tAt = new Map(terrainJobs.map((j, i) => [j.id, [(i % 4) * TILE, Math.floor(i / 4) * TILE] as [number, number]]))
   const terrainImage = await bakeDenseWebp('terrain', terrainJobs, tAt, [TILE * 4, TILE * 4])
 
-  // The playtest-1 ground: baked, then each family healed (src/game/ground-heal.ts)
+  // The playtest-1 ground: baked, then each family healed (scripts/lib/ground-heal.ts)
   // in Node, then encoded from those texels. ATLAS_NO_HEAL=1 skips the
   // healing (a comparison build; never commit one).
   const heal = process.env.ATLAS_NO_HEAL !== '1'

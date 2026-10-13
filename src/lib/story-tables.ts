@@ -1,5 +1,6 @@
-import papersRaw from '../../content/papers.json' with { type: 'json' };
-import itemsRaw from '../../content/items.json' with { type: 'json' };
+import { PAPERS_SHAPE } from './papers-shape.ts';
+import { STORY_SHAPE } from './story-shape.ts';
+import { ITEMS_SHAPE } from './items-shape.ts';
 import questRaw from '../../content/quests.json' with { type: 'json' };
 import storyRaw from '../../content/story.json' with { type: 'json' };
 import vitalsRaw from '../../content/vitals.json' with { type: 'json' };
@@ -46,7 +47,10 @@ export interface Story {
   questItems: string[];
 }
 export function validateStory(value: unknown): Story {
-  const doc = decodeContent(StorySchema, value, 'story', ['namespaces']) as unknown as StoryValid;
+  return storyOf(decodeContent(StorySchema, value, 'story', ['namespaces']) as unknown as StoryValid);
+}
+
+function storyOf(doc: StoryValid): Story {
   storyRules(doc);
   const ids: Record<string, Record<string, string>> = {};
   for (const [prefix, table] of Object.entries(doc.ids)) ids[prefix] = { ...table.areas };
@@ -73,8 +77,8 @@ export function validateStory(value: unknown): Story {
  */
 function questsRules(doc: QuestsValid, story: Story): void {
   const bad = (s: string): never => { throw new Error(`invalid quests: ${s}`); };
-  const defs = new Set(itemsRaw.items.map(d => d.id));
-  const paperIDs = new Set(papersRaw.papers.map(p => p.id));
+  const defs = new Set(ITEMS_SHAPE.items.map(d => d.id));
+  const paperIDs = new Set(PAPERS_SHAPE.papers.map(p => p.id));
   const spots: Record<string, string> = { ...story.spots };
   for (const r of ROOMS.rooms) for (const id of Object.keys(r.spots)) spots[id] = r.id;
   const npc = (id: string) => residentById(id) !== null || (story.npcs[id] ?? '') !== '';
@@ -248,7 +252,10 @@ export function validateQuests(value: unknown): Quest[] {
  * naming the duplicate.
  */
 export function validatePapers(value: unknown): Map<string, PaperRule> {
-  const doc = decodeContent(PapersSchema, value, 'papers', ['papers']) as unknown as PapersValid;
+  return paperRules(decodeContent(PapersSchema, value, 'papers', ['papers']) as unknown as PapersValid);
+}
+
+function paperRules(doc: PapersValid): Map<string, PaperRule> {
   const rules = new Map<string, PaperRule>();
   for (const p of doc.papers) {
     if (rules.has(p.id)) throw new Error(`invalid papers: duplicate id ${p.id}`);
@@ -288,6 +295,6 @@ export function validateVitals(value: unknown): Vitals {
 }
 
 export const QUESTS = validateQuests(questRaw);
-export const STORY = validateStory(storyRaw);
+export const STORY = storyOf(STORY_SHAPE);
 export const VITALS = validateVitals(vitalsRaw);
-export const PAPER_RULES = validatePapers(papersRaw);
+export const PAPER_RULES = paperRules(PAPERS_SHAPE as PapersValid);

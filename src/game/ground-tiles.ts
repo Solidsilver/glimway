@@ -22,7 +22,7 @@ export const pondFrame = (tile: string, f: number) => `${tile}@${f}`
 /**
  * The playtest-1 ground tiles by family, each family's tiles healed against
  * its first: every tile of a family then shares its border texels
- * (./ground-heal.ts). Flowered grass and moss heal against the grass, so the
+ * (../../scripts/lib/ground-heal.ts). Flowered grass and moss heal against the grass, so the
  * accents fade into it at their edges; water's frames are one tile each.
  * `flatten` evens out a family's broad shading first (dirt and sand are
  * painted with light and dark patches that line up into stripes).

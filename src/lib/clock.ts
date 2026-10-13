@@ -1,5 +1,5 @@
 import raw from '../../content/clock.json' with { type: 'json' };
-import residentRaw from '../../content/residents.json' with { type: 'json' };
+import { RESIDENTS_SHAPE } from './residents-shape.ts';
 import type { Resident } from './residents.ts';
 import { TURNING_NOTICE_FORMAT } from '../content/expansion-writing.ts';
 import { decodeContent } from './content-proto.ts';
@@ -55,7 +55,7 @@ export interface CyclePlace { spot: string; since: number; until: number }
 /** Half-open phase intervals from Unix zero; negative times wrap by floor. */
 export function cycleAt(resident: Resident, now: number): CyclePlace {
   if (!Number.isFinite(now)) throw new Error('invalid cycle time');
-  const period = residentRaw.periodMinutes * 60, offset = (resident.offsetMinutes ?? 0) * 60;
+  const period = RESIDENTS_SHAPE.periodMinutes * 60, offset = (resident.offsetMinutes ?? 0) * 60;
   let start = Math.floor((now - offset) / period) * period + offset;
   for (const phase of resident.cycle) {
     const until = start + phase.minutes * 60;
