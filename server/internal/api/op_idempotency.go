@@ -317,7 +317,10 @@ func terminalRefusal(f *failure) bool {
 		return false
 	}
 	switch f.code {
-	case "not-found", "report-required", "idempotency-mismatch", "invalid-position", "invalid-revision", "superseded", "reload-needed", "playing-elsewhere", "access-denied", "world-access-denied", "player-flagged":
+	// A camp claim can spend its bounded wait before the fall is enqueued
+	// (or while the writer is retrying it). Keep this refusal transient so
+	// the same idempotency key can be retried after the durable witness lands.
+	case "not-defeated", "not-found", "report-required", "idempotency-mismatch", "invalid-position", "invalid-revision", "superseded", "reload-needed", "playing-elsewhere", "access-denied", "world-access-denied", "player-flagged":
 		return false
 	}
 	return true

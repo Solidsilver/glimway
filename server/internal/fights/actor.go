@@ -202,6 +202,9 @@ func (a *Actor) drop(cmd Command) {
 	}
 }
 func (a *Actor) settled(results []BoltResult) {
+	// A settled bolt can be the blow that drops a camp. Hand it to the
+	// durable writer before the attack result tells the client it landed.
+	a.falls(a.r.takeFalls())
 	for _, result := range results {
 		answer(a.pending[result.ID], result.Hits)
 		delete(a.pending, result.ID)
@@ -305,7 +308,9 @@ func (a *Actor) apply(w *worker, cmd Command) {
 				a.drop(cmd)
 			}
 		} else {
-			answer(cmd.Result, r.Slash(*cmd.Attack, now))
+			rows := r.Slash(*cmd.Attack, now)
+			a.falls(r.takeFalls())
+			answer(cmd.Result, rows)
 		}
 		w.events(a)
 	}
@@ -314,6 +319,7 @@ func (a *Actor) apply(w *worker, cmd Command) {
 		if later {
 			a.pending[cmd.Cast.ID] = cmd.Result
 		} else {
+			a.falls(r.takeFalls())
 			answer(cmd.Result, rows)
 			if cmd.Cast.Flight != nil {
 				cmd.Cast.Flight.Withdraw(r.Handle)
@@ -347,14 +353,16 @@ func (a *Actor) step(w *worker) {
 	grid := time.UnixMilli(now.UnixMilli() / 100 * 100)
 	frame := a.r.Step(grid)
 	w.ticked(a, time.Since(began))
+	// Step can both complete a camp and produce its completion event. Queue
+	// durable fall writes before exposing either the event or settled hits.
+	a.falls(frame.Falls)
+	a.settled(frame.Bolts)
 	for _, e := range frame.Events {
 		w.emit(a, "", e)
 	}
 	if frame.Delta != nil {
 		w.emit(a, "", frame.Delta)
 	}
-	a.settled(frame.Bolts)
-	a.falls(frame.Falls)
 	if frame.Closed {
 		a.exit(w)
 	}

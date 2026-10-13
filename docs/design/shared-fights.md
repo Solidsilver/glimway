@@ -20,6 +20,10 @@ The agreed model is server-authoritative with prediction:
 - **Your movement:** stays predicted on your screen; the server checks it.
 - **Hurt on you:** stays judged on your screen, with the server bounding it.
 
+Tool classification for damage is client-trusted under the friends-only model: `FightSwing.tool`
+reaches server damage as supplied. A future authority check needs an explicit held-mode in the
+swing intent; pack ownership alone cannot tell which owned item is selected.
+
 The agreed flow: this design, then a one-camp prototype (wisps at one Tangle camp, two players, a
 phone on mobile data, measured on feel), then lanes.
 
