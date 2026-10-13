@@ -442,6 +442,9 @@ func finitePresence(n float64) bool { return !math.IsNaN(n) && !math.IsInf(n, 0)
 // nothing but the queue and the peer's end wakes it.
 func (a *Server) presenceWriter(p *presencePeer) {
 	h := a.presence
+	// Every writer exit sends the final selected close, including cancellation
+	// during a bounded write. Read the reason on exit, after stop selected it.
+	defer func() { _ = p.conn.Close(p.closeCode, p.closeReason) }()
 	if h.flushMs > 0 {
 		a.presenceFlushWriter(p)
 		return
@@ -450,12 +453,10 @@ func (a *Server) presenceWriter(p *presencePeer) {
 	frame := make([]byte, 0, 4096)
 	for {
 		if p.ctx.Err() != nil {
-			_ = p.conn.Close(p.closeCode, p.closeReason)
 			return
 		}
 		select {
 		case <-p.ctx.Done():
-			_ = p.conn.Close(p.closeCode, p.closeReason)
 			return
 		case b := <-p.queue:
 			// One frame carries whatever is queued when the writer wakes
@@ -496,10 +497,8 @@ func (a *Server) presenceFlushWriter(p *presencePeer) {
 				used += len(pending[n])
 				n++
 			}
-			if n == 0 { // enqueue enforces that one event always fits.
-				return false
-			}
 			p.queuedBytes.Add(-int64(used))
+			p.queuedMessages.Add(-int64(n))
 			ctx, cancel := context.WithTimeout(context.Background(), millis(int(h.config.GetWriteTimeoutMs())))
 			h.writeCalls.Add(1)
 			err := p.conn.Write(ctx, websocket.MessageBinary, frame)
@@ -514,12 +513,10 @@ func (a *Server) presenceFlushWriter(p *presencePeer) {
 	}
 	for {
 		if p.ctx.Err() != nil {
-			_ = p.conn.Close(p.closeCode, p.closeReason)
 			return
 		}
 		select {
 		case <-p.ctx.Done():
-			_ = p.conn.Close(p.closeCode, p.closeReason)
 			return
 		case b := <-p.queue:
 			pending = append(pending, b)
