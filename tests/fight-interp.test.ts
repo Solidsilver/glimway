@@ -11,7 +11,7 @@ function rig(tick = 100) {
   const interp = new FightInterp(() => now)
   const join = create(FightJoinSchema, { room: 1, tick, critSeed: 123, roomKey: { world: 'world', realm: 'wilds', layer: 0, cx: 0, cy: 0, epoch: 'still' }, enemies: [{ enemy: 0, id: 'camp:0:0:0:0', campId: 'camp:0:0:0', kind: 1, x: 100, y: 100, hp: 28, maxHp: 28, state: 1, stateTick: tick, facing: 0 }] })
   interp.join(join)
-  return { interp, join, advance: (ms: number) => { now += ms; interp.observe() }, delta: (at: number, changed: object[] = [{ enemy: 0, x: 120 }]) => interp.delta(create(FightDeltaSchema, { room: 1, tick: at, changed })) }
+  return { interp, join, wait: (ms: number) => { now += ms }, advance: (ms: number) => { now += ms; interp.observe() }, delta: (at: number, changed: object[] = [{ enemy: 0, x: 120 }]) => interp.delta(create(FightDeltaSchema, { room: 1, tick: at, changed })) }
 }
 
 test('tick-stamped interpolation patches fields, holds through gaps, ignores stale deltas', () => {
@@ -108,7 +108,7 @@ test('clear resets interpolation and fight metrics for the new socket session', 
   assert.ok(r.interp.measures().snapshotSamples > 0)
   assert.equal(r.interp.measures().confirmations, 1)
   r.interp.clear()
-  assert.deepEqual(r.interp.measures(), { snapshotGapP95: 0, snapshotSamples: 0, interpolationDelay: 100, hitConfirmationP95: 0, confirmations: 0, predictedRows: 0, refusedRows: 0, refusedPercent: 0, swingRefusals: 0, timeouts: 0, pending: 0 })
+  assert.deepEqual(r.interp.measures(), { scope: 'socket-session', snapshotGapP95: 0, snapshotSamples: 0, interpolationDelay: 100, hitConfirmationP95: 0, confirmations: 0, predictedRows: 0, refusedRows: 0, refusedPercent: 0, swingRefusals: 0, timeouts: 0, pending: 0 })
 })
 test('spawn/remove, room rejoin and close discard buffers; a removed corpse is absent, never a win', () => {
   const r = rig(); r.advance(100)
@@ -252,3 +252,41 @@ test('chunk crossings never reset a room still in the 3×3: the same incarnation
   assert.equal(r.interp.seed, 123)
   assert.deepEqual([r.interp.draw()[0]!.incarnation, r.interp.draw()[0]!.life, r.interp.draw()[0]!.room], [before.incarnation, before.life, 7])
 })
+
+
+test('independent arrivals during a slow render frame retain real jitter', () => {
+  const r = rig();
+  r.wait(100); r.delta(101);
+  r.wait(100); r.delta(102);
+  r.wait(150); r.delta(103);
+  assert.equal(r.interp.measures().snapshotSamples, 3);
+  assert.equal(r.interp.measures().snapshotGapP95, 150);
+  assert.equal(r.interp.measures().interpolationDelay, 150);
+});
+
+test('a resync in the same render frame accepts the next arrival gap', () => {
+  const r = rig(); r.wait(100); r.delta(101);
+  r.interp.join(create(FightJoinSchema, { ...r.join, tick: 101 }));
+  r.wait(180); r.delta(102);
+  assert.equal(r.interp.measures().snapshotSamples, 2);
+  assert.equal(r.interp.measures().snapshotGapP95, 180);
+  assert.equal(r.interp.measures().interpolationDelay, 180);
+});
+
+test('high-resolution burst delivery is coalesced without concealing later arrivals', () => {
+  const r = rig(); r.wait(100); r.delta(101);
+  r.wait(.2); r.delta(102);
+  r.wait(.2); r.delta(103);
+  assert.equal(r.interp.measures().snapshotSamples, 1);
+  assert.equal(r.interp.measures().interpolationDelay, 100);
+  r.wait(140); r.delta(104);
+  assert.equal(r.interp.measures().snapshotSamples, 2);
+  assert.equal(r.interp.measures().snapshotGapP95, 140);
+});
+
+test('fight measurements label their socket session scope and survive room churn', () => {
+  const r = rig(); r.wait(150); r.delta(101);
+  assert.equal(r.interp.measures().scope, 'socket-session');
+  r.interp.drop(1);
+  assert.equal(r.interp.measures().snapshotSamples, 1);
+});

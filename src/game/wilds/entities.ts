@@ -46,7 +46,6 @@ import {
   entityCycle,
   entityChunk,
   isClaimed,
-  requestRead,
   takeReadRequest,
   lootName,
   lootText,
@@ -319,7 +318,7 @@ export class WildsEntities {
   private campOutcome = new ServerCampOutcome(camp => {
     const feed = presence()
     return feed?.live ? feed.fights.campWon(camp.id, camp.epoch) : undefined
-  }, requestRead)
+  }, () => this.refresh())
   private greeted = new Set<string>()
   private claiming = false
   private lastVersion = -1
@@ -432,7 +431,7 @@ export class WildsEntities {
   private refresh(): Promise<boolean> {
     const hero = this.deps.hero()
     const { cx, cy } = chunkOfPixel(hero.x, hero.y)
-    return refreshNear(this.deps.session, cx, cy).finally(() => this.campOutcome.readFinished())
+    return refreshNear(this.deps.session, cx, cy)
   }
 
   /** Every entity of the attached chunks, with its state. */

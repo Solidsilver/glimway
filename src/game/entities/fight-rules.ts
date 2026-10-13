@@ -116,8 +116,9 @@ export function mendStrike(feet: Point, damage: number): Strike {
 
 /**
  * Whether a strike crits: one roll in [0, 1) per swing or cast, shared by
- * every enemy it reaches (contract 10). The client and server use the same
- * seeded roll for the swing counter. A blow that can't crit never does.
+ * every enemy it reaches (contract 10). Server-room swings use the same seeded
+ * roll for the swing counter on client and server; local curated fights pass
+ * Math.random(). A blow that can't crit never does.
  */
 export function strikeCrits(strike: Strike, roll: number): boolean {
   return strike.critChance > 0 && roll < strike.critChance
