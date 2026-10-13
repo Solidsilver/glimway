@@ -54,18 +54,23 @@ type presenceIdentity struct {
 }
 
 type presencePeer struct {
-	identity presenceIdentity
-	account  *presenceAccount
-	conn     *websocket.Conn
-	ctx      context.Context
-	cancel   context.CancelFunc
-	queue    chan []byte
+	identity     presenceIdentity
+	account      *presenceAccount
+	conn         *websocket.Conn
+	ctx          context.Context
+	cancel       context.CancelFunc
+	queue        chan []byte
+	flushWake    chan struct{}
+	flushPending atomic.Bool
 	// queuedBytes is the queue's outstanding payload: enqueue adds under
 	// h.mu, the writer subtracts without it (one atomic a frame, no lock).
 	queuedBytes atomic.Int64
-	stopOnce    sync.Once
-	closeCode   websocket.StatusCode
-	closeReason string
+	// In flush mode, queuedMessages includes held events as well as the
+	// channel. Credits return only when events join an in-flight frame.
+	queuedMessages atomic.Int64
+	stopOnce       sync.Once
+	closeCode      websocket.StatusCode
+	closeReason    string
 	// All fields below are protected by the hub mutex.
 	area                         string
 	pos                          *presencePosition
@@ -147,6 +152,8 @@ type presenceHub struct {
 	fightSchedOnce        sync.Once
 	fightWorkers          int
 	fightTicks            <-chan time.Time
+	flushMs               int
+	writeCalls            atomic.Uint64
 }
 
 // Account generations live only while physical reservations exist. A socket
@@ -289,10 +296,23 @@ func (h *presenceHub) enqueue(p *presencePeer, b []byte) {
 		p.stop(websocket.StatusTryAgainLater, "slow-consumer")
 		return
 	}
+	if h.flushMs > 0 {
+		if p.queuedMessages.Load() >= int64(cap(p.queue)) {
+			p.stop(websocket.StatusTryAgainLater, "slow-consumer")
+			return
+		}
+		// Charge before publishing to the writer, which can immediately
+		// include this event in a frame and return its credit.
+		p.queuedMessages.Add(1)
+	}
 	select {
 	case p.queue <- b:
 		p.queuedBytes.Add(int64(len(b)))
+		p.flushPending.Store(true)
 	default:
+		if h.flushMs > 0 {
+			p.queuedMessages.Add(-1)
+		}
 		p.stop(websocket.StatusTryAgainLater, "slow-consumer")
 	}
 }

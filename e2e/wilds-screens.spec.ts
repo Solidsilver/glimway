@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { allow, newUser, openTitleGuide, pasteAndConnect, routeHabitica, waitForWorld } from './connected'
-import { fallCamp, warp, waitForWilds, wilds, worldTileOf, type WildsDump, readDialogue, settled, expectToast } from './helpers'
+import { fallCamp, warp, waitForWilds, wilds, worldTileOf, type WildsDump, readDialogue, settled, expectToast, chunkWhole, spotsAround, standFor, expectTarget, parkCreatures } from './helpers'
 
 /**
  * The open map on screen: the Tangle by the gate, the Whitequiet, a camp, a
@@ -123,13 +123,16 @@ async function fallAndFindLantern(page: Page, device: string): Promise<void> {
   await waitForWilds(page)
   await expect.poll(async () => (await wilds(page)).lanterns.some((l) => l.own && !l.lit)).toBe(true)
   const lantern = (await wilds(page)).lanterns.find((l) => l.own && !l.lit)!
-  // A harvest node right beside it would win the prompt: try each side (world tiles).
-  const sides = [[-1, 0], [1, 0], [0, -1], [0, 1]].map(([ox, oy]) => [lantern.x + ox, lantern.y + oy])
-  for (const [tx, ty] of sides) {
-    await warp(page, 'wilds', tx, ty)
-    await waitForWilds(page)
-    if (/lantern/i.test((await page.locator('.prompt').textContent({ timeout: 2_000 }).catch(() => null)) ?? '')) break
-  }
+  // The chunk must have finished registering its points. Ask the game's
+  // election for a usable spot, including diagonals, rather than racing the
+  // sliced build or assuming one of four cardinal tiles wins over a node.
+  const tile = { tx: lantern.x, ty: lantern.y }
+  await chunkWhole(page, tile)
+  await parkCreatures(page)
+  const why: string[] = []
+  const stood = await standFor(page, `wilds:${lantern.id}`, await spotsAround(page, tile), why)
+  expect(stood, `a spot elects the own fallen lantern: ${why.join(' ')}`).not.toBeNull()
+  await expectTarget(page, `wilds:${lantern.id}`)
   await expect(page.locator('.prompt')).toContainText(/lantern/i)
   await shot(page, `27-wilds-lantern-${device}`)
 }

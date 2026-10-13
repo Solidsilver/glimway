@@ -2,7 +2,7 @@ import type { Locator } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
 import { accountOf, CONTRACT, serverState, sql } from './connected'
 import { AT_COUNTER, AT_PELL, BY_DESK, DEED_BOUGHT, DEEDS, YARD, claimDeed, earnGlims, freshPlayer, fund, giveInstance, go, homes, lane, myHome, readOn, shot, silasPresent, talk } from './home-helpers'
-import { dialogueState, expectAreaCard, expectToast, frames, readDialogue, untilChoices, waitForArea, waitForLive } from './helpers'
+import { dialogueState, expectAreaCard, expectToast, frames, readDialogue, untilChoices, waitForArea, waitForLive, animationsDone } from './helpers'
 import { setHour } from './room-helpers'
 import { SILAS_YARD } from '../src/content/expansion-writing.ts'
 import { DEED_PANEL_COPY, PELL, PELL_DEED } from '../src/content/pell.ts'
@@ -143,6 +143,8 @@ test('the Yard and deed panels on a phone: four chips in one row, a 40 px portra
   const tabs = yard.getByRole('tab')
   await expect(tabs).toHaveCount(4)
   await expect(yard.locator('[data-bundle]')).toHaveCount(3)
+  // Measure the full-sized controls after the opening scale/slide animation.
+  await animationsDone(page)
   const boxes = await tabs.evaluateAll((all) => all.map((el) => el.getBoundingClientRect()).map((r) => ({ top: Math.round(r.top), right: r.right, width: r.width, height: r.height })))
   // One row, inside the screen, each chip wide enough to read and to tap.
   expect(new Set(boxes.map((b) => b.top)).size).toBe(1)
@@ -176,6 +178,7 @@ test('the Yard and deed panels on a phone: four chips in one row, a 40 px portra
   const deed = page.getByRole('dialog', { name: DEED_PANEL_COPY.title })
   await expect(deed.getByTestId('deed-place')).toBeVisible()
   await fitsPhone(deed, '[data-testid="deed-place"], [data-testid="deed-names"], [data-testid="deed-not-at-table"], [data-testid="deed-give-up"]')
+  await animationsDone(page)
   expect((await deed.getByTestId('deed-give-up').boundingBox())!.height).toBeGreaterThanOrEqual(44)
   await shot(page, 'deed-phone')
   await ctx.close()

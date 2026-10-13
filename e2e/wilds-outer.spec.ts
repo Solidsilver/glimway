@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { moveServerClock, reenter, seedStory, serverState, wickSlack } from './connected'
-import { player, warp, waitForWilds, wilds, worldTileOf, type WildsDump, waitForLive, readDialogue, toastAfter, expectToast } from './helpers'
+import { player, warp, waitForWilds, wilds, worldTileOf, type WildsDump, waitForLive, readDialogue, toastAfter, expectToast, parkCreatures, windowWhole } from './helpers'
 import { freshPlayer } from './home-helpers'
 import { ECHOES } from '../src/content/echoes.ts'
 import { SEASON_SHIFT_NOTICE } from '../src/content/expansion-writing.ts'
@@ -146,6 +146,30 @@ test('a place in the Whitequiet reloads there, and a turned wick leaves you wher
   // The place is the server's now: reload, and Continue puts you back there.
   await warp(page, 'wilds', 12, -5 * S + 21)
   await waitForWilds(page)
+  // This checks saved places, not combat. Parking protects setup, but a
+  // reload makes a fresh scene: stand on open ground away from every camp
+  // in the whole surrounding window, so no pre-park knockback races reload.
+  await parkCreatures(page)
+  await windowWhole(page)
+  const camps = (await wilds(page)).entities.filter(e => e.kind === 'camp').map(worldTileOf)
+  const quiet = await page.evaluate(camps => {
+    const solid = (window as unknown as { __fsTileSolid(tx: number, ty: number): boolean }).__fsTileSolid
+    const spots = []
+    // Search the loaded Whitequiet, with a 200 px margin inside the window
+    // so an unseen camp beyond its edge cannot threaten the chosen place.
+    const margin = Math.ceil(200 / 16)
+    for (let ty = -5 * 24; ty < -3 * 24 - margin; ty++) for (let tx = -24 + margin; tx < 2 * 24 - margin; tx++) {
+      if (solid(tx, ty)) continue
+      const gap = Math.min(...camps.map(c => Math.hypot(tx - c.tx, ty - c.ty)))
+      spots.push({ tx, ty, gap })
+    }
+    return spots.sort((a, b) => b.gap - a.gap)[0]
+  }, camps)
+  expect(quiet, 'open ground away from the camps').toBeDefined()
+  expect(quiet.gap, 'the saved place is at least 200 px from every nearby camp').toBeGreaterThanOrEqual(200 / 16)
+  await warp(page, 'wilds', quiet.tx, quiet.ty)
+  await waitForWilds(page)
+  await parkCreatures(page)
   let previous = await player(page)
   let stableSamples = 0
   await expect.poll(async () => {
@@ -172,6 +196,7 @@ test('a place in the Whitequiet reloads there, and a turned wick leaves you wher
   await expect.poll(() => page.evaluate(() => (window as unknown as { __fsDevSaved: () => { pending: boolean } }).__fsDevSaved().pending)).toBe(false)
   await reenter(page, 'wilds')
   await waitForWilds(page)
+  await parkCreatures(page)
   const back = await player(page)
   expect(Math.abs(back.x - here.x), `reload x: ${JSON.stringify({ here, back, latestSaved })}`).toBeLessThanOrEqual(17)
   expect(Math.abs(back.y - here.y), `reload y: ${JSON.stringify({ here, back, latestSaved })}`).toBeLessThanOrEqual(17)
@@ -179,9 +204,17 @@ test('a place in the Whitequiet reloads there, and a turned wick leaves you wher
   // The wick ends while you're away: the world's clock moves past it. You
   // come back where you stood (or the nearest open tile), told it has turned.
   const end = Number((await wilds(page)).season.split(':')[2])
+  const recordedWick = (await serverState(page)).body.state.wickEpoch
+  // Actually leave before the clock moves. Keeping the scene active during
+  // reenter's save barrier can witness/report a live Turning before reload.
+  await page.goto('/')
+  await expect(page.getByTestId('continue-world')).toBeVisible()
   await moveServerClock(page, end + 1)
-  await reenter(page, 'wilds')
+  expect((await serverState(page)).body.state.wickEpoch, 'the saved place still names the wick visited before leaving').toBe(recordedWick)
+  await page.reload()
+  await page.getByTestId('continue-world').click()
   await waitForWilds(page)
+  await parkCreatures(page)
   const again = await player(page)
   expect(Math.hypot(again.x - here.x, again.y - here.y)).toBeLessThan(10 * 16)
   await expectToast(page, /turned since you were last here/)

@@ -186,7 +186,7 @@ func (a *Server) presenceSocket(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}
 	peerCtx, peerCancel := context.WithCancel(context.Background())
-	p := &presencePeer{identity: identity, account: reservation.account, conn: conn, ctx: peerCtx, cancel: peerCancel, queue: make(chan []byte, int(h.config.GetQueueMessages())), lastActivity: time.Now()}
+	p := &presencePeer{identity: identity, account: reservation.account, conn: conn, ctx: peerCtx, cancel: peerCancel, queue: make(chan []byte, int(h.config.GetQueueMessages())), flushWake: make(chan struct{}, 1), lastActivity: time.Now()}
 	if old := h.peers[identity.ID]; old != nil {
 		h.leaveFights(old, false)
 		if old.identity.Lease == identity.Lease && old.identity.World == identity.World {
@@ -442,16 +442,21 @@ func finitePresence(n float64) bool { return !math.IsNaN(n) && !math.IsInf(n, 0)
 // nothing but the queue and the peer's end wakes it.
 func (a *Server) presenceWriter(p *presencePeer) {
 	h := a.presence
+	// Every writer exit sends the final selected close, including cancellation
+	// during a bounded write. Read the reason on exit, after stop selected it.
+	defer func() { _ = p.conn.Close(p.closeCode, p.closeReason) }()
+	if h.flushMs > 0 {
+		a.presenceFlushWriter(p)
+		return
+	}
 	// frame is this writer's one buffer: it grows to the frame cap once.
 	frame := make([]byte, 0, 4096)
 	for {
 		if p.ctx.Err() != nil {
-			_ = p.conn.Close(p.closeCode, p.closeReason)
 			return
 		}
 		select {
 		case <-p.ctx.Done():
-			_ = p.conn.Close(p.closeCode, p.closeReason)
 			return
 		case b := <-p.queue:
 			// One frame carries whatever is queued when the writer wakes
@@ -465,6 +470,7 @@ func (a *Server) presenceWriter(p *presencePeer) {
 				// Cancelling coder/websocket Write closes the transport. Let a bounded
 				// in-flight write finish so takeover can send its explicit close code.
 				ctx, cancel := context.WithTimeout(context.Background(), millis(int(h.config.GetWriteTimeoutMs())))
+				h.writeCalls.Add(1)
 				err := p.conn.Write(ctx, websocket.MessageBinary, frame)
 				cancel()
 				if err != nil {
@@ -476,6 +482,88 @@ func (a *Server) presenceWriter(p *presencePeer) {
 	}
 }
 
+// presenceFlushWriter holds queued events until a shared sweep wake, except
+// Ready (handshake completion) and swing results, which preserve their latency.
+func (a *Server) presenceFlushWriter(p *presencePeer) {
+	h := a.presence
+	var pending [][]byte
+	flush := func() bool {
+		for len(pending) != 0 && p.ctx.Err() == nil {
+			frame := make([]byte, 0, 4096)
+			used := 0
+			n := 0
+			for n < len(pending) && (n == 0 || len(frame)+presenceEventSize(pending[n]) <= presenceFrameBytes) {
+				frame = appendPresenceEvent(frame, pending[n])
+				used += len(pending[n])
+				n++
+			}
+			p.queuedBytes.Add(-int64(used))
+			p.queuedMessages.Add(-int64(n))
+			ctx, cancel := context.WithTimeout(context.Background(), millis(int(h.config.GetWriteTimeoutMs())))
+			h.writeCalls.Add(1)
+			err := p.conn.Write(ctx, websocket.MessageBinary, frame)
+			cancel()
+			pending = pending[n:]
+			if err != nil {
+				p.stop(websocket.StatusTryAgainLater, "slow-consumer")
+				return false
+			}
+		}
+		return p.ctx.Err() == nil
+	}
+	for {
+		if p.ctx.Err() != nil {
+			return
+		}
+		select {
+		case <-p.ctx.Done():
+			return
+		case b := <-p.queue:
+			pending = append(pending, b)
+			if presenceFlushUrgent(b) {
+				for {
+					select {
+					case next := <-p.queue:
+						pending = append(pending, next)
+					default:
+						goto urgentReady
+					}
+				}
+			urgentReady:
+				if !flush() {
+					return
+				}
+			}
+		case <-p.flushWake:
+			for {
+				select {
+				case next := <-p.queue:
+					pending = append(pending, next)
+				default:
+					goto batchReady
+				}
+			}
+		batchReady:
+			if len(pending) > 0 && !flush() {
+				return
+			}
+		}
+	}
+}
+
+func presenceFlushUrgent(b []byte) bool {
+	var m contract.PresenceMessage
+	if proto.Unmarshal(b, &m) != nil {
+		return false
+	}
+	switch m.Event.(type) {
+	case *contract.PresenceMessage_Ready, *contract.PresenceMessage_FightSwingResult:
+		return true
+	default:
+		return false
+	}
+}
+
 // presenceSweep is the hub's one timer for every socket: each pass stops
 // the peers idle past the timeout and starts a ping for each whose last
 // ping is an interval old. It runs from the first registered peer until
@@ -484,6 +572,9 @@ func (a *Server) presenceSweep() {
 	h := a.presence
 	c := h.config
 	period := min(time.Second, millis(int(c.GetIdleTimeoutMs()))/4, millis(int(c.GetPingIntervalMs()))/2)
+	if h.flushMs > 0 {
+		period = min(period, millis(h.flushMs))
+	}
 	ticker := time.NewTicker(max(period, time.Millisecond))
 	defer ticker.Stop()
 	for {
@@ -497,6 +588,12 @@ func (a *Server) presenceSweep() {
 		for _, p := range h.peers {
 			if p.detached || p.ctx.Err() != nil {
 				continue
+			}
+			if h.flushMs > 0 && p.flushPending.Swap(false) {
+				select {
+				case p.flushWake <- struct{}{}:
+				default:
+				}
 			}
 			if now.Sub(p.lastActivity) >= millis(int(c.GetIdleTimeoutMs())) {
 				p.stop(presenceIdle, "idle-timeout")
