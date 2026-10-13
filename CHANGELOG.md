@@ -13,9 +13,14 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-10-13
+
 ### For players
 
-- Beetles paw the ground, then scuttle in quick angled dashes. Camp enemies skid at their home's edge and walk back after a shove, without snapping home.
+- **Beetles scuttle.** After pawing the ground, a beetle now comes at you in
+  quick zig-zag dashes. Roll sideways once it locks on.
+- **No more snapping home.** Camp enemies stop at the edge of their camp and
+  walk back, even after a shove.
 
 ### Technical
 
@@ -674,7 +679,8 @@ The first public release.
   under its own licence; contributions under the DCO.
 - Unit tests, Go tests and Playwright playtests.
 
-[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.9.1...HEAD
+[0.9.1]: https://github.com/Solidsilver/glimway/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/Solidsilver/glimway/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Solidsilver/glimway/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Solidsilver/glimway/compare/v0.6.1...v0.7.0
