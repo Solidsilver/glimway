@@ -1,10 +1,10 @@
+import { designedRule } from '../scripts/lib/paper-rules.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { generate, OUT_FILE, paperCatalog, PAPERS_JSON_FILE, renderPapersJSON } from '../scripts/papers.ts';
 import {
   allPlacements,
-  designedRule,
   beatsDue,
   foundPapers,
   handoverFor,

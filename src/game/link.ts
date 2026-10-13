@@ -1,3 +1,4 @@
+import { queuedOperationRoutes as TYPED } from '../lib/api/operation-routes.ts'
 /**
  * Link — the connected half of a Session (design server-first 2.4). The
  * client holds `server`, the newest `PlayerState` it adopted, and the
@@ -301,35 +302,6 @@ interface ChannelLike {
 type Outcome =
   | { ok: true; state: PlayerState | null; result: unknown }
   | { ok: false; code: ApiErrorCode | 'offline' | 'superseded' | 'busy' | 'pending' | 'resolved' }
-
-/** Typed operations: their request schema, facade call, and the envelope result case their answer must carry. */
-const TYPED: Partial<Record<OutboxKind, { schema: DescMessage; path: string; result: string; send: (ops: OperationsApi, req: never) => Promise<import('../lib/gen/glimway/v1/state_pb.js').Envelope> }>> = {
-  'quest-step': { schema: QuestStepRequestSchema, path: '/api/quest/step', result: 'questStep', send: (ops, req) => ops.questStep(req) },
-  mark: { schema: MarkRequestSchema, path: '/api/story/mark', result: 'mark', send: (ops, req) => ops.mark(req) },
-  'take-paper': { schema: TakePaperRequestSchema, path: '/api/papers/take', result: 'takePaper', send: (ops, req) => ops.takePaper(req) },
-  'settle-echo': { schema: SettleEchoRequestSchema, path: '/api/wilds/echo', result: 'settleEcho', send: (ops, req) => ops.settleEcho(req) },
-  fall: { schema: FallRequestSchema, path: '/api/fall', result: 'fall', send: (ops, req) => ops.fall(req) },
-  spend: { schema: SpendRequestSchema, path: '/api/spend', result: 'spend', send: (ops, req) => ops.spend(req) },
-  'wilds-claim': { schema: WildsClaimRequestSchema, path: '/api/wilds/claim', result: 'wildsClaim', send: (ops, req) => ops.wildsClaim(req) },
-  'wilds-lantern': { schema: WildsLanternRequestSchema, path: '/api/wilds/lantern', result: 'wildsLantern', send: (ops, req) => ops.wildsLantern(req) },
-  // Paths and finds on the open map (open-map.md 2.10, 3): online only, the land is shared.
-  'wilds-clear': { schema: WildsClearRequestSchema, path: '/api/wilds/clear', result: 'wildsClear', send: (ops, req) => ops.wildsClear(req) },
-  'wilds-lay': { schema: WildsLayRequestSchema, path: '/api/wilds/lay', result: 'wildsLay', send: (ops, req) => ops.wildsLay(req) },
-  'wilds-lift': { schema: WildsLiftRequestSchema, path: '/api/wilds/lift', result: 'wildsLift', send: (ops, req) => ops.wildsLift(req) },
-  'wilds-discover': { schema: WildsDiscoverRequestSchema, path: '/api/wilds/discover', result: 'wildsDiscover', send: (ops, req) => ops.wildsDiscover(req) },
-  // Companions and the stable (crafts.md 6.2).
-  companions: { schema: CompanionsRequestSchema, path: '/api/companions', result: 'companions', send: (ops, req) => ops.companions(req) },
-  stall: { schema: StallRequestSchema, path: '/api/stable/stall', result: 'stall', send: (ops, req) => ops.stall(req) },
-  'mount-out': { schema: MountOutRequestSchema, path: '/api/stable/out', result: 'mountOut', send: (ops, req) => ops.mountOut(req) },
-  'mount-home': { schema: MountHomeRequestSchema, path: '/api/stable/home', result: 'mountHome', send: (ops, req) => ops.mountHome(req) },
-  'stable-extend': { schema: StableExtendRequestSchema, path: '/api/stable/extend', result: 'stableExtend', send: (ops, req) => ops.stableExtend(req) },
-  // Fishing (design crafts 5.4, lane G): online only, the pond is shared.
-  'fish-cast': { schema: FishCastRequestSchema, path: '/api/fishing/cast', result: 'fishCast', send: (ops, req) => ops.fishCast(req) },
-  'fish-settle': { schema: FishSettleRequestSchema, path: '/api/fishing/settle', result: 'fishSettle', send: (ops, req) => ops.fishSettle(req) },
-  'fish-cancel': { schema: FishCancelRequestSchema, path: '/api/fishing/cancel', result: 'fishCancel', send: (ops, req) => ops.fishCancel(req) },
-  // The wardrobe (purse-and-wardrobe.md 6.2): predicted, and queued offline like companions.
-  wardrobe: { schema: WardrobeRequestSchema, path: '/api/wardrobe', result: 'wardrobe', send: (ops, req) => ops.wardrobe(req) }
-}
 
 /** The open map's operations, settled in the Wilds store by key (EV.wildsSettled). */
 const WILDS_SETTLED: ReadonlySet<OutboxKind> = new Set(['wilds-clear', 'wilds-lay', 'wilds-lift', 'wilds-discover'])
@@ -1244,13 +1216,7 @@ export class Link {
         trusted = true
       } else {
         const typed = TYPED[head.kind]!
-        let req
-        try {
-          req = fromJson(typed.schema, body as JsonValue, { ignoreUnknownFields: false })
-        } catch {
-          throw new ApiError('invalid-json', { status: 400 })
-        }
-        const env = await this.api.run(() => typed.send(this.ops, req as never))
+        const env = await this.api.run(() => typed.sendFrozen(this.ops, body as JsonValue))
         state = env.state ?? null
         result = env.result
         // An answer for another operation proves nothing about this one.

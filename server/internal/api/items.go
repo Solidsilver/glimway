@@ -84,7 +84,7 @@ func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
 			return nil, err
 		}
 		out.Items = itemsViewProto(items)
-		return protoResult(out)
+		return mixedOpResult(out)
 	}, func() {
 		for _, n := range notify {
 			n()

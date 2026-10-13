@@ -7,7 +7,7 @@
  */
 import { RESIDENTS, residentById, residentAt, type ResidentPlace } from './residents.ts';
 import { roomFor } from './rooms.ts';
-import itemsRaw from '../../content/items.json' with { type: 'json' };
+import { ITEMS_SHAPE } from './items-shape.ts';
 import { decodeContent } from './content-proto.ts';
 import { ItemsSchema, type ItemDefValid, type ItemMenderValid, type ItemPickupValid, type ItemSellerValid, type ItemsRulesValid, type PocketEffectValid, type HeldEffectValid, type UseEffectValid } from './gen/glimway/content/v1/items_pb.js';
 import { HOMESTEAD_DATA } from './homestead.ts';
@@ -53,10 +53,13 @@ const AT_ZERO_FOR_GRADE: Record<string, readonly string[]> = { cheap: ['breaks']
 
 /** Throws on anything content/items.go would refuse. */
 export function validateItems(value: unknown): Items {
+  return itemRules(decodeContent(ItemsSchema, value, 'items', ['items', 'pickups', 'sellers']) as unknown as Items);
+}
+
+function itemRules(v: Items): Items {
   const bad = (why: string): never => {
     throw new Error(`invalid items: ${why}`);
   };
-  const v = decodeContent(ItemsSchema, value, 'items', ['items', 'pickups', 'sellers']) as unknown as Items;
   const r = v.rules;
   const npcs = new Set<string>();
   for (const m of r.menders) {
@@ -148,7 +151,7 @@ export function validateItems(value: unknown): Items {
   };
 }
 
-export const ITEMS: Items = validateItems(itemsRaw);
+export const ITEMS: Items = itemRules(ITEMS_SHAPE as unknown as Items);
 export const ITEM_RULES: ItemRules = ITEMS.rules;
 const BY_ID = new Map(ITEMS.items.map((d) => [d.id, d]));
 

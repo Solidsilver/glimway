@@ -1,3 +1,4 @@
+import { int, num, countMap } from './decode-values.ts';
 /**
  * The item routes (proto/glimway/v1/items.proto): what the caller carries
  * (GET /api/items) and every keyed item mutation. Responses decode through
@@ -124,21 +125,7 @@ function decoded<T>(read: () => T): T {
   try { return read(); } catch { throw new ApiError('bad-response'); }
 }
 
-const int = (v: number | undefined, min = 0): number => {
-  if (typeof v !== 'number' || !Number.isInteger(v) || v < min) throw new Error('invalid integer');
-  return v;
-};
 
-const num = (v: number | undefined): number => {
-  if (typeof v !== 'number' || !Number.isFinite(v)) throw new Error('invalid number');
-  return v;
-};
-
-const countMap = (v: Record<string, number> | undefined): Record<string, number> => {
-  const out: Record<string, number> = {};
-  if (v) for (const [k, n] of Object.entries(v)) if (Number.isInteger(n) && n >= 0) out[k] = n;
-  return out;
-};
 
 const WEAR_STATES = ['whole', 'worn', 'blunt', 'cracked', 'dull'];
 // The request vocabulary (a request Asset can't be glims); reads widen it —

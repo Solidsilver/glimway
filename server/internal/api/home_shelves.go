@@ -253,7 +253,7 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 				return nil, err
 			}
 			result := &contract.ShelfResult{Shelf: shelfViewProto(shelf), Inventory: countsProto(inv)}
-			return protoResult(result)
+			return mixedOpResult(result)
 
 		case "take":
 			var slotKind, itemDef, makerID string
@@ -327,7 +327,7 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 			if shelf.OwnerName == "" {
 				line = fmt.Sprintf("You took %s from Lot %d’s shelf.", giftPhrase(itemDisplayName, 1), int(req.Gate)+1)
 			}
-			return protoResult(&contract.ShelfResult{Shelf: shelfViewProto(shelf), Inventory: countsProto(inv), Taken: assetProto(takenAsset), Line: line})
+			return mixedOpResult(&contract.ShelfResult{Shelf: shelfViewProto(shelf), Inventory: countsProto(inv), Taken: assetProto(takenAsset), Line: line})
 
 		case "buy":
 			// Buying is its own action (3.2): a free Take never costs anything
@@ -399,7 +399,7 @@ func (a *Server) shelfMutation(w http.ResponseWriter, r *http.Request) error {
 			if shelf.OwnerName == "" {
 				line = fmt.Sprintf("You bought %s from Lot %d’s shelf for %s.", giftPhrase(itemDisplayName, 1), int(req.Gate)+1, glimsPhrase(price))
 			}
-			return protoResult(&contract.ShelfResult{Shelf: shelfViewProto(shelf), Inventory: countsProto(inv), Taken: assetProto(boughtAsset), Line: line})
+			return mixedOpResult(&contract.ShelfResult{Shelf: shelfViewProto(shelf), Inventory: countsProto(inv), Taken: assetProto(boughtAsset), Line: line})
 
 		default:
 			return nil, fail(400, "invalid-operation")

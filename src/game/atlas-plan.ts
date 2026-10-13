@@ -72,7 +72,7 @@ export interface PackedCanvasPack {
 /**
  * The playtest-1 ground tiles: one 16-px world tile each, `cell` texels a
  * side at `density`, in a `cols`-wide grid in the order of GROUND_TILES. Their
- * borders are healed at build time (./ground-heal.ts) so every tile of a
+ * borders are healed at build time (../../scripts/lib/ground-heal.ts) so every tile of a
  * family meets every other one without a seam.
  */
 export interface PackedGround {

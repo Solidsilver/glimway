@@ -12,61 +12,19 @@ import (
 // cottageHearth returns the homestead ID if the caller is a member of a
 // homestead with Cottage tier (tier 1+): the doc's hearth rule.
 func cottageHearth(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (string, error) {
-	home, ok, err := memberOf(ctx, tx, s.AccountID)
-	if err != nil {
-		return "", err
-	}
-	if !ok {
-		return "", fail(409, "not-a-member")
-	}
-	var tier int
-	if err = tx.QueryRowContext(ctx, "SELECT tier FROM homesteads WHERE id=?", home).Scan(&tier); err != nil {
-		return "", err
-	}
-	if tier < 1 {
-		return "", fail(409, "tier-required")
-	}
-	return home, nil
+	return memberHomeAtTier(ctx, tx, s, 1)
 }
 
 // writingDeskPlaced checks that the player belongs to a homestead with a
 // placed writing desk.
 func writingDeskPlaced(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (string, error) {
-	home, ok, err := memberOf(ctx, tx, s.AccountID)
-	if err != nil {
-		return "", err
-	}
-	if !ok {
-		return "", fail(409, "not-a-member")
-	}
-	var placed bool
-	if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM homestead_items WHERE homestead_id=? AND item_def='writing-desk' AND location='placed')", home).Scan(&placed); err != nil {
-		return "", err
-	}
-	if !placed {
-		return "", fail(409, "desk-required")
-	}
-	return home, nil
+	return memberHomeWithPiece(ctx, tx, s, "writing-desk", "desk-required")
 }
 
 // woodpilePlaced checks that the player belongs to a homestead with a
 // placed woodpile.
 func woodpilePlaced(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (string, error) {
-	home, ok, err := memberOf(ctx, tx, s.AccountID)
-	if err != nil {
-		return "", err
-	}
-	if !ok {
-		return "", fail(409, "not-a-member")
-	}
-	var placed bool
-	if err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM homestead_items WHERE homestead_id=? AND item_def='woodpile' AND location='placed')", home).Scan(&placed); err != nil {
-		return "", err
-	}
-	if !placed {
-		return "", fail(409, "woodpile-required")
-	}
-	return home, nil
+	return memberHomeWithPiece(ctx, tx, s, "woodpile", "woodpile-required")
 }
 
 // hearthCraft makes consumables, remedies, oils and wax seals at the
@@ -356,6 +314,6 @@ func (a *Server) woodpileMutation(w http.ResponseWriter, r *http.Request) error 
 			result.Storage = countsProto(*wv2.Storage)
 		}
 		result.Personal = countsProto(wv2.Personal)
-		return protoResult(result)
+		return mixedOpResult(result)
 	})
 }

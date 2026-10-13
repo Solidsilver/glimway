@@ -14,26 +14,8 @@ func TestQuestTree029Upgrade(t *testing.T) {
 		t.Run(stage, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "upgrade.sqlite")
 			db := oldAccount026(t, path, false, true)
-			history, err := migrationHistory()
-			if err != nil {
-				t.Fatal(err)
-			}
-			for _, m := range history {
-				if m.Name < "026" || m.Name >= "029" {
-					continue
-				}
-				tx, e := db.Begin()
-				if e != nil {
-					t.Fatal(e)
-				}
-				if e = applyMigration(tx, m, 0); e != nil {
-					tx.Rollback()
-					t.Fatal(e)
-				}
-				if e = tx.Commit(); e != nil {
-					t.Fatal(e)
-				}
-			}
+			advanceUpgradeFixture(t, db, "026_accounts.sql", "028_story_move.sql")
+			var err error
 			if stage != "" {
 				if _, err = db.Exec("INSERT INTO quest_progress VALUES('owner-subject','lantern-road',?)", stage); err != nil {
 					t.Fatal(err)

@@ -10,10 +10,7 @@
  * draws its own (src/ui/Icon.svelte).
  */
 import type Phaser from 'phaser'
-import { PACKED_MANIFEST_KEY, type PackedManifest } from './atlas-plan.ts'
-import { explodeFrames } from './art-pass.ts'
-import { TILE } from '../lib/tile.ts'
-import { artDataUrl, artSource } from './density.ts'
+import { createInterfaceArt, interfaceIconUrls } from './interface-art.ts'
 
 /** Texture key of the packed purse atlas (./packed.ts loads it). */
 export const PURSE_PACKED_KEY = 'packed-purse'
@@ -33,24 +30,10 @@ export const PURSE_ICONS: Readonly<Record<string, string>> = {
 
 /** Make the purse textures, once. False when the pack didn't load. */
 export function createPurseArt(scene: Phaser.Scene): boolean {
-  const packed = (scene.cache.json.get(PACKED_MANIFEST_KEY) as PackedManifest | undefined)?.purse
-  if (!packed) return false
-  const perPx = packed.density / TILE
-  const frames = Object.entries(packed.frames).map(([key, r]) => ({ key, width: r[2] / perPx, height: r[3] / perPx }))
-  return !!explodeFrames(scene, PURSE_PACKED_KEY, { ...packed, density: perPx }, frames, puArt)
+  return createInterfaceArt(scene, 'purse', PURSE_PACKED_KEY, puArt)
 }
 
 /** The pass's interface icons (EV.artIcons), drawn at the art's full density. */
 export function purseIconUrls(scene: Phaser.Scene): Record<string, string> {
-  const out: Record<string, string> = {}
-  for (const [key, frame] of Object.entries(PURSE_ICONS)) {
-    const src = artSource(scene, puArt(frame))
-    if (!src) continue
-    try {
-      out[key] = artDataUrl(src, src.density)
-    } catch {
-      /* an icon is optional: the interface draws its own */
-    }
-  }
-  return out
+  return interfaceIconUrls(scene, PURSE_ICONS, puArt)
 }

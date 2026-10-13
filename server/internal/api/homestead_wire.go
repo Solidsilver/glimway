@@ -7,26 +7,10 @@ package api
 // decodeOp straight into the generated messages.
 
 import (
-	"encoding/json"
 	"glimway/content"
 	contract "glimway/server/internal/gen/glimway/v1"
-	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
-
-// protoResult marshals a typed domain result for the mixed envelope, with
-// the same finite-number validation a typed envelope answer carries.
-func protoResult(message proto.Message) (json.RawMessage, error) {
-	if err := finiteProto(message.ProtoReflect()); err != nil {
-		return nil, err
-	}
-	raw, err := (protojson.MarshalOptions{EmitUnpopulated: true}).Marshal(message)
-	if err != nil {
-		return nil, err
-	}
-	return json.RawMessage(raw), nil
-}
 
 func gridProto(g *content.HomeGrid) *contract.HomeGrid {
 	return &contract.HomeGrid{Width: g.GetWidth(), Height: g.GetHeight()}

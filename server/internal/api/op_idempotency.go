@@ -221,81 +221,51 @@ func requestBytes(request any) ([]byte, error) {
 	}
 	return raw, nil
 }
-func opIdem(ctx context.Context, tx *sql.Tx, id, route, key string, request any, now int64) (string, *storedResult, error) {
+func opIdem(ctx context.Context, tx *sql.Tx, id, route, key string, request any, now int64) (preparedRequest, *storedResult, error) {
 	if key == "" || len(key) > 128 {
-		return "", nil, fail(400, "key-required")
+		return preparedRequest{}, nil, fail(400, "key-required")
 	}
 	// Wilds stump proofs use successful chop payloads for the same visit.
 	// Keep that seven-day visit window in mind when changing this retry retention.
 	if _, err := tx.ExecContext(ctx, "DELETE FROM idempotency WHERE created_at<=?", now-7*86400); err != nil {
-		return "", nil, err
+		return preparedRequest{}, nil, err
 	}
-	raw, err := requestBytes(request)
+	prepared, err := prepareRequest(request)
 	if err != nil {
-		return "", nil, err
+		return preparedRequest{}, nil, err
 	}
-	var payload map[string]json.RawMessage
-	if err = json.Unmarshal(raw, &payload); err != nil {
-		return "", nil, err
-	}
-	delete(payload, "op")
-	// Canonicalize keys throughout the payload; header is deliberately outside
-	// the hash. where and every other field remain part of the identity.
-	var value any
-	canonical, err := json.Marshal(payload)
-	if err != nil {
-		return "", nil, err
-	}
-	if err = json.Unmarshal(canonical, &value); err != nil {
-		return "", nil, err
-	}
-	hash := store.Hash(store.JSON(value))
 	var prior, body string
 	err = tx.QueryRowContext(ctx, "SELECT request_hash,result_json FROM idempotency WHERE account_id=? AND op=? AND key=?", id, route, key).Scan(&prior, &body)
 	if err == sql.ErrNoRows {
-		return hash, nil, nil
+		return prepared, nil, nil
 	}
 	if err != nil {
-		return "", nil, err
+		return preparedRequest{}, nil, err
 	}
-	if hash != prior {
-		return "", nil, fail(409, "idempotency-mismatch")
+	if prepared.Hash != prior {
+		return preparedRequest{}, nil, fail(409, "idempotency-mismatch")
 	}
 	var result storedResult
 	if err = json.Unmarshal([]byte(body), &result); err != nil {
-		return "", nil, err
+		return preparedRequest{}, nil, err
 	}
 	// Older servers stored this bounded-wait refusal as terminal. After
 	// checking the request hash, remove it in this transaction so an exact
 	// retry can reevaluate eligibility and insert its eventual success.
 	if result.Refused == "not-defeated" && result.Status == 409 {
 		if _, err = tx.ExecContext(ctx, "DELETE FROM idempotency WHERE account_id=? AND op=? AND key=?", id, route, key); err != nil {
-			return "", nil, err
+			return preparedRequest{}, nil, err
 		}
-		return hash, nil, nil
+		return prepared, nil, nil
 	}
-	return hash, &result, nil
+	return prepared, &result, nil
 }
 func saveOpIdem(ctx context.Context, tx *sql.Tx, id, route, key, hash string, result any, version, now int64) error {
-	stored := storedResult{}
-	if message, ok := result.(proto.Message); ok {
-		stored.Type = string(message.ProtoReflect().Descriptor().FullName())
-		if err := finiteProto(message.ProtoReflect()); err != nil {
-			return err
-		}
-		raw, err := (protojson.MarshalOptions{EmitUnpopulated: true}).Marshal(message)
-		if err != nil {
-			return err
-		}
-		stored.Value = raw
-	} else {
-		raw, err := json.Marshal(result)
-		if err != nil {
-			return err
-		}
-		stored.Value = raw
+	stored, err := encodeStoredResult(result)
+	if err != nil {
+		return err
 	}
-	_, err := tx.ExecContext(ctx, "INSERT INTO idempotency(account_id,op,key,request_hash,result_json,created_at,committed_version) VALUES(?,?,?,?,?,?,?)", id, route, key, hash, store.JSON(stored), now, version)
+	_, err = tx.ExecContext(ctx, "INSERT INTO idempotency(account_id,op,key,request_hash,result_json,created_at,committed_version) VALUES(?,?,?,?,?,?,?)", id, route, key, hash, store.JSON(stored), now, version)
 	return err
 }
 func replayResult(stored *storedResult) (any, error) {

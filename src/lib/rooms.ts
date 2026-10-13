@@ -1,5 +1,5 @@
 import raw from '../../content/rooms.json' with { type: 'json' };
-import story from '../../content/story.json' with { type: 'json' };
+import { STORY_SHAPE } from './story-shape.ts';
 import { canPlace, furnishingFor, type Furnishing, type PlaceOn } from './furnishings.ts';
 import { decodeContent } from './content-proto.ts';
 import {
@@ -74,7 +74,7 @@ export function roomFootprints(room: Room, char: string): RoomFootprint[] {
 /** The rules that read the map or reach across rooms: prop and door geometry, claimed characters, where a room's spots and pieces stand, stairs, and every reference between rooms. Field rules live on the schema. */
 function roomRules(doc: Rooms): void {
   const bad = (s: string): never => { throw new Error(`invalid rooms: ${s}`); };
-  const seen = new Map<string, Room>(), spots = new Set(Object.keys(story.spots));
+  const seen = new Map<string, Room>(), spots = new Set(Object.keys(STORY_SHAPE.spots));
   for (const r of doc.rooms) {
     // One id per room: the loader's own rule, naming the duplicate (the
     // schema's CEL can't cheaply, and the old loaders named it).

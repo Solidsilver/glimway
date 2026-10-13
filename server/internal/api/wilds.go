@@ -10,7 +10,6 @@ package api
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"glimway/content"
 	"glimway/server/internal/chunks"
@@ -265,25 +264,12 @@ func chunkSize() int { return int(content.WildsRules.GetChunkSize()) }
 // ---------------------------------------------------------------- papers
 
 // wildsPaperSources: the papers whose find the Wilds operations offer to the
-// story rules, by source kind (content/papers.json). The rules (lane B)
+// story rules, by source kind (content/papers.json). The story rules
 // decide; these handlers only ask about the right candidates.
 var wildsPaperSources = func() map[string][]string {
-	var doc struct {
-		Papers []struct {
-			ID     string `json:"id"`
-			Source string `json:"source"`
-		} `json:"papers"`
-	}
-	b, err := content.FS.ReadFile("papers.json")
-	if err == nil {
-		err = json.Unmarshal(b, &doc)
-	}
-	if err != nil {
-		panic(err)
-	}
 	out := map[string][]string{}
-	for _, p := range doc.Papers {
-		out[p.Source] = append(out[p.Source], p.ID)
+	for _, p := range content.PaperCatalog {
+		out[p.GetSource()] = append(out[p.GetSource()], p.GetId())
 	}
 	return out
 }()

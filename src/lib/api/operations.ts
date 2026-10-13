@@ -1,3 +1,4 @@
+import { operationRoutes, operationTransport } from './operation-routes.ts';
 import { create, toJson, type JsonValue } from '@bufbuild/protobuf';
 import { ApiError } from './errors.ts';
 import { decodeWire } from './wire.ts';
@@ -6,11 +7,11 @@ import { EnvelopeSchema, LoginRequestSchema, PlayRequestSchema, SessionResponseS
 import { WildsNearResultSchema, HomesteadLandSchema, type WildsChunk, type WildsNearResult, type HomesteadLand } from '../gen/glimway/v1/wilds_pb.js';
 import { decodeChunk } from './chunks.ts';
 import { validateNear } from './near.ts';
-import { CompanionsRequestSchema, MountHomeRequestSchema, MountOutRequestSchema, StableExtendRequestSchema, StallRequestSchema, type CompanionsRequest, type MountHomeRequest, type MountOutRequest, type StableExtendRequest, type StallRequest } from '../gen/glimway/v1/companions_pb.js';
-import { WardrobeCheckRequestSchema, WardrobeReadSchema, WardrobeRequestSchema, type WardrobeCheckRequest, type WardrobeRead, type WardrobeRequest } from '../gen/glimway/v1/wardrobe_pb.js';
-import { FishCastRequestSchema, FishSettleRequestSchema, FishCancelRequestSchema, FishingWatersSchema, type FishCastRequest, type FishSettleRequest, type FishCancelRequest, type FishingWaters } from '../gen/glimway/v1/fishing_pb.js';
-import { PurseReadSchema, PurseTopUpRequestSchema, type PurseRead, type PurseTopUpRequest } from '../gen/glimway/v1/purse_pb.js';
-import { ReportRequestSchema, type ReportRequest, QuestStepRequestSchema, type QuestStepRequest, MarkRequestSchema, type MarkRequest, TakePaperRequestSchema, type TakePaperRequest, SettleEchoRequestSchema, type SettleEchoRequest, FallRequestSchema, type FallRequest, ProfileReportSchema, type ProfileReport, SpendRequestSchema, type SpendRequest, WildsClaimRequestSchema, type WildsClaimRequest, WildsLanternRequestSchema, type WildsLanternRequest, WildsClearRequestSchema, type WildsClearRequest, WildsLayRequestSchema, type WildsLayRequest, WildsLiftRequestSchema, type WildsLiftRequest, WildsDiscoverRequestSchema, type WildsDiscoverRequest } from '../gen/glimway/v1/operations_pb.js';
+import { type CompanionsRequest, type MountHomeRequest, type MountOutRequest, type StableExtendRequest, type StallRequest } from '../gen/glimway/v1/companions_pb.js';
+import { WardrobeReadSchema, type WardrobeCheckRequest, type WardrobeRead, type WardrobeRequest } from '../gen/glimway/v1/wardrobe_pb.js';
+import { FishingWatersSchema, type FishCastRequest, type FishSettleRequest, type FishCancelRequest, type FishingWaters } from '../gen/glimway/v1/fishing_pb.js';
+import { PurseReadSchema, type PurseRead, type PurseTopUpRequest } from '../gen/glimway/v1/purse_pb.js';
+import { type ReportRequest, type QuestStepRequest, type MarkRequest, type TakePaperRequest, type SettleEchoRequest, type FallRequest, type ProfileReport, type SpendRequest, type WildsClaimRequest, type WildsLanternRequest, type WildsClearRequest, type WildsLayRequest, type WildsLiftRequest, type WildsDiscoverRequest } from '../gen/glimway/v1/operations_pb.js';
 
 export type Transport = (method: 'GET' | 'POST' | 'PUT' | 'DELETE', path: string, body?: unknown, extra?: { headers?: Record<string, string>; binary?: boolean; keepalive?: boolean }) => Promise<unknown>;
 /** Immediate typed calls; C2 owns sequencing, prediction and durable replay. */
@@ -95,30 +96,30 @@ export function createOperationsApi(send: Transport): OperationsApi {
       if (!out.width || !out.height || out.width > 128 || out.height > 128 || out.cells.length !== out.width * out.height || out.generatorVersion !== 2 || out.cells.some(c => !['grass', 'tree', 'stump', 'boulder', 'water', 'ford', 'slope', 'edge', 'path'].includes(c))) throw new Error('invalid home land');
       return out;
     }); },
-    async report(req, options = {}) { return decodeEnvelope(await send('POST', '/api/report', toJson(ReportRequestSchema, req, { alwaysEmitImplicit: true }), { keepalive: options.keepalive })); },
-    async questStep(req) { return decodeEnvelope(await send('POST', '/api/quest/step', toJson(QuestStepRequestSchema, req, { alwaysEmitImplicit: true }))); },
-    async mark(req) { return decodeEnvelope(await send('POST', '/api/story/mark', toJson(MarkRequestSchema, req, { alwaysEmitImplicit: true }))); },
-    async takePaper(req) { return decodeEnvelope(await send('POST', '/api/papers/take', toJson(TakePaperRequestSchema, req, { alwaysEmitImplicit: true }))); },
-    async settleEcho(req) { return decodeEnvelope(await send('POST', '/api/wilds/echo', toJson(SettleEchoRequestSchema, req, { alwaysEmitImplicit: true }))); },
-    async fall(req) { return decodeEnvelope(await send('POST', '/api/fall', toJson(FallRequestSchema, req, { alwaysEmitImplicit: true }))); },
-    async profile(req) { return decodeEnvelope(await send('POST', '/api/profile', toJson(ProfileReportSchema, req, { alwaysEmitImplicit: true }))); },
-    async spend(req) { return decodeEnvelope(await send('POST', '/api/spend', toJson(SpendRequestSchema, req, { alwaysEmitImplicit: true }))); },
-    async wildsClaim(req) { return decodeEnvelope(await send('POST', '/api/wilds/claim', toJson(WildsClaimRequestSchema, req, { alwaysEmitImplicit: true }))); },
-    async wildsLantern(req) { return decodeEnvelope(await send('POST', '/api/wilds/lantern', toJson(WildsLanternRequestSchema, req, { alwaysEmitImplicit: true }))); },
-    async wildsClear(req) { return decodeEnvelope(await send('POST', '/api/wilds/clear', toJson(WildsClearRequestSchema, req, { alwaysEmitImplicit: true }))); },
-    async wildsLay(req) { return decodeEnvelope(await send('POST', '/api/wilds/lay', toJson(WildsLayRequestSchema, req, { alwaysEmitImplicit: true }))); },
-    async wildsLift(req) { return decodeEnvelope(await send('POST', '/api/wilds/lift', toJson(WildsLiftRequestSchema, req, { alwaysEmitImplicit: true }))); },
-    async wildsDiscover(req) { return decodeEnvelope(await send('POST', '/api/wilds/discover', toJson(WildsDiscoverRequestSchema, req, { alwaysEmitImplicit: true }))); },
-    async companions(req) { return decodeEnvelope(await send('POST', '/api/companions', toJson(CompanionsRequestSchema, req, { alwaysEmitImplicit: true }))); },
-    async stall(req) { return decodeEnvelope(await send('POST', '/api/stable/stall', toJson(StallRequestSchema, req, { alwaysEmitImplicit: true }))); },
-    async mountOut(req) { return decodeEnvelope(await send('POST', '/api/stable/out', toJson(MountOutRequestSchema, req, { alwaysEmitImplicit: true }))); },
-    async mountHome(req) { return decodeEnvelope(await send('POST', '/api/stable/home', toJson(MountHomeRequestSchema, req, { alwaysEmitImplicit: true }))); },
-    async stableExtend(req) { return decodeEnvelope(await send('POST', '/api/stable/extend', toJson(StableExtendRequestSchema, req, { alwaysEmitImplicit: true }))); },
-    async fishCast(req) { return decodeEnvelope(await send('POST', '/api/fishing/cast', toJson(FishCastRequestSchema, req, { alwaysEmitImplicit: true }))); },
-    async fishSettle(req) { return decodeEnvelope(await send('POST', '/api/fishing/settle', toJson(FishSettleRequestSchema, req, { alwaysEmitImplicit: true }))); },
-    async fishCancel(req) { return decodeEnvelope(await send('POST', '/api/fishing/cancel', toJson(FishCancelRequestSchema, req, { alwaysEmitImplicit: true }))); },
+    async report(req, options = {}) { return decodeEnvelope(await operationTransport(send, operationRoutes['report'], req, { keepalive: options.keepalive })); },
+    async questStep(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['quest-step'], req)); },
+    async mark(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['mark'], req)); },
+    async takePaper(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['take-paper'], req)); },
+    async settleEcho(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['settle-echo'], req)); },
+    async fall(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['fall'], req)); },
+    async profile(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['profile'], req)); },
+    async spend(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['spend'], req)); },
+    async wildsClaim(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['wilds-claim'], req)); },
+    async wildsLantern(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['wilds-lantern'], req)); },
+    async wildsClear(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['wilds-clear'], req)); },
+    async wildsLay(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['wilds-lay'], req)); },
+    async wildsLift(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['wilds-lift'], req)); },
+    async wildsDiscover(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['wilds-discover'], req)); },
+    async companions(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['companions'], req)); },
+    async stall(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['stall'], req)); },
+    async mountOut(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['mount-out'], req)); },
+    async mountHome(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['mount-home'], req)); },
+    async stableExtend(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['stable-extend'], req)); },
+    async fishCast(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['fish-cast'], req)); },
+    async fishSettle(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['fish-settle'], req)); },
+    async fishCancel(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['fish-cancel'], req)); },
     async purseTopUp(req) {
-      const out = decodeEnvelope(await send('POST', '/api/purse/top-up', toJson(PurseTopUpRequestSchema, req, { alwaysEmitImplicit: true })));
+      const out = decodeEnvelope(await operationTransport(send, operationRoutes['purse-top-up'], req));
       if (out.result.case !== 'purseTopUp' || !out.result.value.topUp) throw new ApiError('bad-response', { status: 200 });
       return out;
     },
@@ -133,9 +134,9 @@ export function createOperationsApi(send: Transport): OperationsApi {
       for (const w of out.waters) if (!w.id) throw new Error('invalid water');
       return out;
     }); },
-    async wardrobe(req) { return decodeEnvelope(await send('POST', '/api/wardrobe', toJson(WardrobeRequestSchema, req, { alwaysEmitImplicit: true }))); },
+    async wardrobe(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['wardrobe'], req)); },
     async wardrobeRead() { return decodeMixed(await send('GET', '/api/wardrobe'), (r) => decodeWire(WardrobeReadSchema, r)).result; },
-    async wardrobeCheck(req) { return decodeEnvelope(await send('POST', '/api/wardrobe/check', toJson(WardrobeCheckRequestSchema, req, { alwaysEmitImplicit: true }))); },
+    async wardrobeCheck(req) { return decodeEnvelope(await operationTransport(send, operationRoutes['wardrobe-check'], req)); },
   };
 }
 export function validatedSession(raw: unknown): SessionResponse {

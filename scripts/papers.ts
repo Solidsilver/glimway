@@ -1,3 +1,4 @@
+import { designedRule } from './lib/paper-rules.ts';
 /**
  * Papers generator: docs/lore/texts/*.md (the owner's found texts) →
  * src/content/papers-text.ts (titles, descriptions, collections, provenance
@@ -12,7 +13,7 @@
  */
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { designedRule, designedSection } from '../src/content/papers.ts';
+import { designedSection } from '../src/content/papers.ts';
 
 export interface PaperMeta {
   label: string;

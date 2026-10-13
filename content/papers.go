@@ -42,13 +42,18 @@ func LoadPapers() ([]*Paper, error) {
 	return DecodePapers(raw)
 }
 
-// PapersByID: the shared paper catalog by id (the find is the story flag
-// `paper:<id>`).
-var PapersByID = func() map[string]*Paper {
+// PaperCatalog retains the validated JSON order for ordered grants and indexes.
+var PaperCatalog = func() []*Paper {
 	ps, err := LoadPapers()
 	if err != nil {
 		panic(err)
 	}
+	return ps
+}()
+
+// PapersByID indexes the same validated catalog; map iteration is not grant order.
+var PapersByID = func() map[string]*Paper {
+	ps := PaperCatalog
 	m := make(map[string]*Paper, len(ps))
 	for _, p := range ps {
 		m[p.GetId()] = p

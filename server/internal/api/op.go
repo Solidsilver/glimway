@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"glimway/content"
 	"glimway/server/internal/frontier"
@@ -11,9 +10,6 @@ import (
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"glimway/server/internal/wilds"
-	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
 	"math"
 	"net/http"
 	"strings"
@@ -75,7 +71,7 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 		writeRefusal(w, f.status, f.code, state)
 		return nil
 	}
-	hash, prior, err := opIdem(ctx, tx, s.AccountID, r.URL.Path, op.Key, request, now)
+	prepared, prior, err := opIdem(ctx, tx, s.AccountID, r.URL.Path, op.Key, request, now)
 	if err != nil {
 		return refuse(err)
 	}
@@ -166,10 +162,10 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 			return e
 		}
 		if terminalRefusal(f) {
-			if e := saveRefusedOp(ctx, tx, s.AccountID, r.URL.Path, op.Key, hash, f, int64(state.Version), now); e != nil {
+			if e := saveRefusedOp(ctx, tx, s.AccountID, r.URL.Path, op.Key, prepared.Hash, f, int64(state.Version), now); e != nil {
 				return e
 			}
-			if e := savePayload(tx, s.AccountID, r.URL.Path, op.Key, request); e != nil {
+			if e := savePayload(tx, s.AccountID, r.URL.Path, op.Key, prepared.Payload); e != nil {
 				return e
 			}
 		}
@@ -186,10 +182,10 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 	if finalize != nil {
 		finalize(state, result)
 	}
-	if err = saveOpIdem(ctx, tx, s.AccountID, r.URL.Path, op.Key, hash, result, int64(state.Version), now); err != nil {
+	if err = saveOpIdem(ctx, tx, s.AccountID, r.URL.Path, op.Key, prepared.Hash, result, int64(state.Version), now); err != nil {
 		return err
 	}
-	if err = savePayload(tx, s.AccountID, r.URL.Path, op.Key, request); err != nil {
+	if err = savePayload(tx, s.AccountID, r.URL.Path, op.Key, prepared.Payload); err != nil {
 		return err
 	}
 	// Validate response before committing; invalid output must not commit a reward.
@@ -230,87 +226,6 @@ func wildsWhereInside(where *contract.Where) bool {
 	tx, ty := wilds.TileOfPixel(where.X, where.Y)
 	cx, cy := wilds.ChunkOf(tx, ty)
 	return frontier.Inside("", cx, cy)
-}
-
-// All typed operation results must appear exactly once in Envelope.result.
-func typedEnvelope(state *contract.PlayerState, result proto.Message) (*contract.Envelope, error) {
-	e := &contract.Envelope{State: state}
-	fields := e.ProtoReflect().Descriptor().Oneofs().ByName("result").Fields()
-	for i := 0; i < fields.Len(); i++ {
-		f := fields.Get(i)
-		if f.Message().FullName() == result.ProtoReflect().Descriptor().FullName() {
-			e.ProtoReflect().Set(f, protoreflect.ValueOfMessage(result.ProtoReflect()))
-			return e, nil
-		}
-	}
-	return nil, errors.New("operation result missing from envelope")
-}
-
-func opResultBytes(state *contract.PlayerState, result any) ([]byte, error) {
-	if message, ok := result.(proto.Message); ok {
-		envelope, err := typedEnvelope(state, message)
-		if err != nil {
-			return nil, err
-		}
-		if err = finiteProto(envelope.ProtoReflect()); err != nil {
-			return nil, err
-		}
-		return (protojson.MarshalOptions{EmitUnpopulated: true}).Marshal(envelope)
-	}
-	return mixedBytes(state, result)
-}
-func writeOpResult(w http.ResponseWriter, state *contract.PlayerState, result any) error {
-	raw, err := opResultBytes(state, result)
-	if err != nil {
-		return err
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
-	_, err = w.Write(append(raw, '\n'))
-	return err
-}
-
-// mixedBytes is the domain-read envelope: the same current PlayerState the
-// keyed answers carry, beside the read's own result — a typed proto message
-// (protojson) or an existing domain's JSON result.
-func mixedBytes(state *contract.PlayerState, result any) ([]byte, error) {
-	if state == nil {
-		return nil, errors.New("missing player state")
-	}
-	if err := finiteProto(state.ProtoReflect()); err != nil {
-		return nil, err
-	}
-	raw, err := (protojson.MarshalOptions{EmitUnpopulated: true}).Marshal(state)
-	if err != nil {
-		return nil, err
-	}
-	if message, ok := result.(proto.Message); ok {
-		if err := finiteProto(message.ProtoReflect()); err != nil {
-			return nil, err
-		}
-		encoded, err := (protojson.MarshalOptions{EmitUnpopulated: true}).Marshal(message)
-		if err != nil {
-			return nil, err
-		}
-		result = json.RawMessage(encoded)
-	}
-	return json.Marshal(struct {
-		State  json.RawMessage `json:"state"`
-		Result any             `json:"result"`
-	}{raw, result})
-}
-func writeMixed(w http.ResponseWriter, status int, state *contract.PlayerState, result any) {
-	raw, err := mixedBytes(state, result)
-	if err != nil {
-		problem(w, err)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(append(raw, '\n'))
-}
-func writeRefusal(w http.ResponseWriter, status int, code string, state *contract.PlayerState) {
-	writeProto(w, status, &contract.Refusal{Error: &contract.ErrorDetail{Code: errorCodeWire(errorCodeProto(code))}, State: state})
 }
 
 func rulesPosition(w *contract.Where) rules.Position { return rules.Position{X: w.X, Y: w.Y} }

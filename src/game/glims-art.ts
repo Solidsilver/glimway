@@ -9,10 +9,7 @@
  * fatal: the interface draws its own bead (src/ui/Icon.svelte `glim`).
  */
 import type Phaser from 'phaser'
-import { PACKED_MANIFEST_KEY, type PackedManifest } from './atlas-plan.ts'
-import { explodeFrames } from './art-pass.ts'
-import { TILE } from '../lib/tile.ts'
-import { artDataUrl, artSource } from './density.ts'
+import { createInterfaceArt, interfaceIconUrls } from './interface-art.ts'
 
 /** Texture key of the packed glims atlas (./packed.ts loads it). */
 export const GLIMS_PACKED_KEY = 'packed-glims'
@@ -28,24 +25,10 @@ export const GLIMS_ICONS: Readonly<Record<string, string>> = {
 
 /** Make the glims textures, once. False when the pack didn't load. */
 export function createGlimsArt(scene: Phaser.Scene): boolean {
-  const packed = (scene.cache.json.get(PACKED_MANIFEST_KEY) as PackedManifest | undefined)?.glims
-  if (!packed) return false
-  const perPx = packed.density / TILE
-  const frames = Object.entries(packed.frames).map(([key, r]) => ({ key, width: r[2] / perPx, height: r[3] / perPx }))
-  return !!explodeFrames(scene, GLIMS_PACKED_KEY, { ...packed, density: perPx }, frames, glArt)
+  return createInterfaceArt(scene, 'glims', GLIMS_PACKED_KEY, glArt)
 }
 
 /** The pass's interface icons (EV.artIcons), drawn at the art's full density. */
 export function glimsIconUrls(scene: Phaser.Scene): Record<string, string> {
-  const out: Record<string, string> = {}
-  for (const [key, frame] of Object.entries(GLIMS_ICONS)) {
-    const src = artSource(scene, glArt(frame))
-    if (!src) continue
-    try {
-      out[key] = artDataUrl(src, src.density)
-    } catch {
-      /* an icon is optional: the interface draws its own */
-    }
-  }
-  return out
+  return interfaceIconUrls(scene, GLIMS_ICONS, glArt)
 }
