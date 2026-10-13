@@ -953,6 +953,8 @@ func (r *Room) Slash(a Attack, now time.Time) []*wire.FightHitRow {
 	return r.judge(s.Predicted, RewindAt(now, s.SeenTick, s.SeenOffsetMs), now.UnixMilli(), func(x, y float64) bool {
 		return rules.FightReach("slash", p.X, p.Y, s.Facing.X, s.Facing.Y, x, y)
 	}, func(e *enemy) *wire.FightHitRow {
+		// Tool damage follows the client-trusted tool flag under the friends
+		// model; a future authority check needs held-mode in the swing intent.
 		return r.hit(e, a.Damage, a.Crit, s.Tool, p.X, p.Y, now.UnixMilli())
 	})
 }

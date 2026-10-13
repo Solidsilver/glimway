@@ -24,7 +24,7 @@
  */
 import type Phaser from 'phaser'
 import { presence } from '../presence'
-import { TRANSPORT_ERRORS } from '../../content/errors'
+import { WILDS_CLAIM_ERRORS } from '../../content/wilds-errors.ts'
 import {
   CAMP_WALK_IN_LINES,
   CHEST_OPEN_FLAVOR,
@@ -46,7 +46,6 @@ import {
   entityCycle,
   entityChunk,
   isClaimed,
-  requestRead,
   takeReadRequest,
   lootName,
   lootText,
@@ -75,23 +74,7 @@ import { ServerCampOutcome, type CampNow } from './camp-fights.ts'
 import { addAll, destroyAll, looseImage } from '../area/bulk.ts'
 
 /** Server error code → what the player reads. All text is static. */
-export const CLAIM_ERROR: Record<string, string> = {
-  'old-cycle': 'Someone got there first — it will come back.',
-  'entity-unavailable': 'Someone got there first — it will come back.',
-  'already-claimed': 'You have already claimed this one.',
-  // A camp's fall (shared-fights.md 1.9): none stored for this cycle yet, or not one you were near for.
-  'not-defeated': 'The camp still stands — its fight isn’t over.',
-  'condition-unmet': 'You weren’t near for that fight. The next one is yours to join.',
-  'too-far-away': 'Too far away — step closer.',
-  'not-in-wilds': 'That only works out in the Wilds.',
-  'epoch-ended': 'The drift has turned. The land is new.',
-  'claim-rate-limited': 'That is plenty of gathering for one minute. Take a breath.',
-  offline: 'Needs a connection. The Wilds keep what you have not claimed.',
-  superseded: TRANSPORT_ERRORS.superseded,
-  busy: TRANSPORT_ERRORS.busy,
-  pending: TRANSPORT_ERRORS.pending,
-  unknown: 'The Wilds didn’t answer. Nothing was taken — try again in a moment.',
-}
+export const CLAIM_ERROR = WILDS_CLAIM_ERRORS
 
 import { openDialogue } from '../dialogue.ts'
 
@@ -319,7 +302,7 @@ export class WildsEntities {
   private campOutcome = new ServerCampOutcome(camp => {
     const feed = presence()
     return feed?.live ? feed.fights.campWon(camp.id, camp.epoch) : undefined
-  }, requestRead)
+  }, () => this.refresh())
   private greeted = new Set<string>()
   private claiming = false
   private lastVersion = -1
@@ -330,6 +313,7 @@ export class WildsEntities {
   constructor(private scene: Phaser.Scene, private deps: WildsDeps) {
     ensureArt(scene)
     scene.events.once('shutdown', () => {
+      this.campOutcome.clear()
       this.drawn.clear()
       this.attached.clear()
       this.staleLabel = null

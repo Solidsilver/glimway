@@ -499,6 +499,9 @@ func lanternSpots(t *testing.T, h homeView) (post, beyond [2]int) {
 func TestHomes2LanternLightAndClearing(t *testing.T) {
 	x := newRig(t)
 	ac, a := x.ready("alice")
+	// Pin the generated land so this test's two lit clearable tiles are a
+	// fixture property rather than an assumption about a random world id.
+	x.pinWorld(&a)
 	x.seedAssets(x.account("alice"))
 	h := x.claimGate(ac, &a, 0)
 	item := content.HomeRules.GetLanternPosts().GetItem()
@@ -620,7 +623,16 @@ func TestHomes2LanternLightAndClearing(t *testing.T) {
 		}
 	}
 	if free == ([2]int{}) {
-		t.Fatal("land fixture: one lit tree")
+		seed := land.Seed(a.WorldID, 0, content.HomeRules.Land)
+		eligible := make([][2]int, 0, 2)
+		for y := 0; y < g.land.Height; y++ {
+			for x := 0; x < g.land.Width; x++ {
+				if p := [2]int{x, y}; p != tree && land.Clearable(g.land.At(x, y)) && land.Lit(start, x, y) {
+					eligible = append(eligible, [2]int{x, y})
+				}
+			}
+		}
+		t.Fatalf("land fixture: need a second lit clearable tile; world=%q seed=%d eligible=%v", a.WorldID, seed, eligible)
 	}
 	x.refresh(ac, &a)
 	before = a.State.Glims

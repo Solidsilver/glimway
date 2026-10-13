@@ -28,7 +28,7 @@ func TestDevFightFallIsWrittenAndClaimedOnlyThroughTheClaimRoute(t *testing.T) {
 		t.Fatal("no camp:0:0:0")
 	}
 	entity := camp[idx]
-	if _, code := x.claim(cookie, state, "before", join.RoomKey.Epoch, entity, 0, at(entity, 0), 409); code != "not-defeated" {
+	if _, code := x.claim(cookie, state, "retry-after-fall", join.RoomKey.Epoch, entity, 0, at(entity, 0), 409); code != "not-defeated" {
 		t.Fatal("claim before the fall", code)
 	}
 	w := x.devFightFall(cookie, `{"entity":"camp:0:0:0"}`)
@@ -53,7 +53,9 @@ func TestDevFightFallIsWrittenAndClaimedOnlyThroughTheClaimRoute(t *testing.T) {
 	if _, code := x.claim(oc, ostate, "outsider", out.Epoch, entity, int(out.Cycle), at(entity, 0), 409); code != "condition-unmet" {
 		t.Fatal("a non-witness claimed", code)
 	}
-	if _, code := x.claim(cookie, state, "witness", out.Epoch, entity, int(out.Cycle), at(entity, 0), 200); code != "" {
+	// The bounded-wait refusal is transient: the exact key can be retried
+	// after the fall is durable and complete the claim.
+	if _, code := x.claim(cookie, state, "retry-after-fall", out.Epoch, entity, int(out.Cycle), at(entity, 0), 200); code != "" {
 		t.Fatal("witness claim", code)
 	}
 	if _, code := x.claim(cookie, state, "again", out.Epoch, entity, int(out.Cycle), at(entity, 0), 409); code != "already-claimed" {

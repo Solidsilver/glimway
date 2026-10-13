@@ -45,9 +45,24 @@ function idbBackend(): RememberedBackend {
     const db = await open()
     try {
       return await new Promise<T>((resolve, reject) => {
-        const req = op(db.transaction(STORE, mode).objectStore(STORE))
-        req.onsuccess = () => resolve(req.result)
-        req.onerror = () => reject(new Error('indexeddb-request-failed'))
+        const tx = db.transaction(STORE, mode)
+        let result!: T
+        let settled = false
+        const fail = (reason: string) => {
+          if (settled) return
+          settled = true
+          reject(new Error(reason))
+        }
+        tx.oncomplete = () => {
+          if (settled) return
+          settled = true
+          resolve(result)
+        }
+        tx.onabort = () => fail('indexeddb-transaction-aborted')
+        tx.onerror = () => fail('indexeddb-transaction-failed')
+        const req = op(tx.objectStore(STORE))
+        req.onsuccess = () => { result = req.result }
+        req.onerror = () => fail('indexeddb-request-failed')
       })
     } finally {
       db.close()

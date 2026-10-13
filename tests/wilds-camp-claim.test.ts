@@ -64,7 +64,7 @@ async function rig() {
   let asks = 0;
   const layer = Object.create(WildsEntities.prototype) as any;
   layer.deps = { session, hero: () => ({ x: -2 * 384 + 80, y: -4 * 384 + 80 }) };
-  layer.campOutcome = new ServerCampOutcome(() => room, () => asks++);
+  layer.campOutcome = new ServerCampOutcome(() => room, async () => { asks++ });
   await loadChunk(session.link.api.operations, WICK, -2, -4);
   const thing = () => store.chunkThings(-2, -4)[0]!;
   return {

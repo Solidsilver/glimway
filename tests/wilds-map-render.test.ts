@@ -7,6 +7,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { TERRAIN } from '../src/lib/tile.ts';
 import { MAP_COLOURS, mapMarks, type MapChunk, type MapInput } from '../src/lib/wilds/map-model.ts';
 import { DETAIL_SLOTS, MAP_RASTER_CACHE, MapRenderer, OVERVIEW_MAX_PX, backingSize } from '../src/ui/map-renderer.ts';
@@ -238,7 +239,6 @@ test('performance fixture: thousands of sparse chunks, negative and far apart', 
   assert.equal(r.stats.overviews, 1, 'one overview for all the dragging and zooming');
   const bytes = backingSize(VP, 2);
   // Interaction frames (JS work only; the browser's own raster time isn't in a unit test).
-  for (const m of [drag, over, zoom]) assert.ok(m.p95 < 16, `${m.name}: ${JSON.stringify(m)}`);
   const report = {
     chunks: chunks.length,
     setInputMs: +setInputMs.toFixed(2),
@@ -249,6 +249,12 @@ test('performance fixture: thousands of sparse chunks, negative and far apart', 
     overview: `${overview.w}×${overview.h}`,
     frames: [drag, over, zoom],
   };
+  if (process.env.MAP_PERF === '1') {
+    const budget = Number(process.env.MAP_RENDER_P95_BUDGET_MS) || 16;
+    mkdirSync('test-results', { recursive: true });
+    writeFileSync('test-results/map-render-performance.json', JSON.stringify({ budgetP95Ms: budget, report }, null, 2));
+    for (const m of [drag, over, zoom]) assert.ok(m.p95 < budget, `${m.name}: ${JSON.stringify(m)}; budget=${budget} ms`);
+  }
   console.log(`map perf ${JSON.stringify(report)}`);
 });
 

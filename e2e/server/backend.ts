@@ -13,7 +13,7 @@
  * .e2e-server/latest points at the newest run.
  */
 import childProcess, { spawn, type ChildProcess } from 'node:child_process'
-import { mkdirSync, openSync, rmSync, writeFileSync } from 'node:fs'
+import { appendFileSync, mkdirSync, openSync, rmSync, writeFileSync } from 'node:fs'
 import { syncBuiltinESMExports } from 'node:module'
 import { createServer, type AddressInfo } from 'node:net'
 import { startFakeHabitica } from './fake-habitica.ts'
@@ -35,11 +35,18 @@ export interface Backend {
   dir: string
 }
 
+/** Worker server lifecycle context for diagnosing a failed test API read. */
+export function backendDiagnostics(): { apiPort: number; pid: number | undefined; exitCode: number | null; signalCode: NodeJS.Signals | null; log: string } | null {
+  if (!running || !serverChild) return null
+  return { apiPort: running.apiPort, pid: serverChild.pid, exitCode: serverChild.exitCode, signalCode: serverChild.signalCode, log: `${running.dir}/server.log` }
+}
+
 /** Stable per worker slot: a restarted worker reuses (and wipes) its slot's directory. */
 const slot = (): number => Number(process.env.TEST_PARALLEL_INDEX ?? 0)
 const workerDir = (): string => `${runDir()}/w${slot()}`
 
 let running: (Backend & { stop: () => Promise<void> }) | null = null
+let serverChild: ChildProcess | null = null
 let starting: Promise<Backend> | null = null
 
 /** This worker's backend, or null before its first test. */
@@ -99,7 +106,14 @@ async function start(): Promise<Backend> {
       ['-listen', `127.0.0.1:${apiPort}`, '-db', db, '-cookie-secure=false', '-habitica-url', habitica, '-login-rate', '10000', '-login-global-rate', '100000', '-login-concurrency', '64', '-dev-clock=now'],
       { stdio: ['ignore', out, out] }
     )
-    const kill = () => child.kill('SIGKILL')
+    serverChild = child
+    let expectedExit = false
+    child.on('exit', (code, signal) => {
+      const line = `e2e Go server lifecycle: worker=${slot()} pid=${child.pid ?? 'unknown'} exit=${code ?? 'null'} signal=${signal ?? 'null'} log=${log}\n`
+      appendFileSync(log, line)
+      if (!expectedExit) console.error(line.trim())
+    })
+    const kill = () => { expectedExit = true; child.kill('SIGKILL') }
     process.on('exit', kill)
     try {
       await waitUp(apiPort, child, log)
@@ -120,6 +134,7 @@ async function start(): Promise<Backend> {
         process.off('exit', kill)
         if (child.exitCode === null) {
           const exited = new Promise((r) => child.once('exit', r))
+          expectedExit = true
           child.kill('SIGTERM')
           await Promise.race([exited, new Promise((r) => setTimeout(r, 5000))])
           if (child.exitCode === null) kill()

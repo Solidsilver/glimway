@@ -17,6 +17,7 @@ import (
 
 	"glimway/content"
 	"glimway/server/internal/chunks/fakegen"
+	"glimway/server/internal/fights"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
 	"glimway/server/internal/wilds"
@@ -113,7 +114,30 @@ func TestWildsClear(t *testing.T) {
 		t.Fatal(code)
 	}
 	ledger := count(t, x.db, "SELECT count(*) FROM ledger")
+	// A successful clear must invalidate the loaded campless/room ground only
+	// after its keyed transaction commits.
+	epochTx, err := x.db.DB.BeginTx(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	epoch, err := x.api.epochAt(context.Background(), epochTx, s.WorldID, cx, cy, x.now.Load())
+	if err != nil {
+		epochTx.Rollback()
+		t.Fatal(err)
+	}
+	epochTx.Rollback()
+	location := fightLocation{world: s.WorldID, realm: content.WildsRules.GetRealm(), cx: int32(cx), cy: int32(cy)}
+	key := fights.Key{World: s.WorldID, Realm: location.realm, Epoch: epoch.Id, CX: int32(cx), CY: int32(cy)}
+	x.api.presence.mu.Lock()
+	x.api.presence.setFightLocationLocked(location, fightLocationEpoch{key: key})
+	x.api.presence.mu.Unlock()
 	env, _ := x.pathOp(c, s, "clear", "thicket", sx, sy, thx, thy, "", 200)
+	x.api.presence.mu.Lock()
+	_, cachedAfterClear := x.api.presence.fightLocations[location]
+	x.api.presence.mu.Unlock()
+	if cachedAfterClear {
+		t.Fatal("successful clear kept old fight ground cached")
+	}
 	got := env.GetWildsClear()
 	if ch := groundAt(got.Ground, fakegen.Thicket[0], fakegen.Thicket[1]); ch == nil || ch.Change != "cleared" || ch.By != s.AccountID || got.Ground.Chunk.Cx != int32(cx) || got.Ground.Chunk.Cy != int32(cy) || got.Ground.Epoch == "" {
 		t.Fatal("cleared", got)

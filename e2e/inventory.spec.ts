@@ -121,16 +121,58 @@ test.describe('the pack', () => {
     await seedPack(page, id, { materials: { timber: 4, amber: 1 }, items: { 'lamp-wick': 1, 'whittled-fox': 1 } })
     await page.keyboard.press('i')
     await expect(dialog(page)).toBeVisible()
-    const inside = () => page.evaluate(() => !!document.activeElement?.closest('[role="dialog"]'))
+    const inFlightApi = new Set<string>()
+    const apiRequests = new Map<object, string>()
+    page.on('request', (request) => {
+      if (!request.url().includes('/api/')) return
+      apiRequests.set(request, request.url())
+      inFlightApi.add(request.url())
+    })
+    const settleRequest = (request: object) => {
+      const url = apiRequests.get(request)
+      if (!url) return
+      apiRequests.delete(request)
+      if (![...apiRequests.values()].includes(url)) inFlightApi.delete(url)
+    }
+    page.on('requestfinished', settleRequest)
+    page.on('requestfailed', settleRequest)
+    await page.evaluate(() => {
+      const trace: string[] = []
+      let lastFocused: Element | null = document.activeElement
+      const describe = (el: Element | null) => el ? `${el.tagName.toLowerCase()}#${el.id}.${String(el.className).replace(/\s+/g, '.')}` : '(none)'
+      document.addEventListener('focusin', (event) => { lastFocused = event.target instanceof Element ? event.target : null }, true)
+      const observer = new MutationObserver((records) => {
+        for (const record of records) for (const node of record.removedNodes) {
+          if (!(node instanceof Element)) continue
+          if (lastFocused && (node === lastFocused || node.contains(lastFocused))) trace.push(`removed focused ${describe(lastFocused)} with ${describe(node)}`)
+        }
+      })
+      observer.observe(document.body, { childList: true, subtree: true })
+      ;(window as unknown as { __inventoryFocusTrace: { rows: string[]; stop: () => void } }).__inventoryFocusTrace = { rows: trace, stop: () => observer.disconnect() }
+    })
+    const focusSnapshot = () => page.evaluate(() => {
+      const active = document.activeElement
+      const dialog = active?.closest('[role="dialog"]')
+      return {
+        active: active ? `${active.tagName.toLowerCase()}#${active.id}.${String(active.className).replace(/\s+/g, '.')}` : '(none)',
+        insideDialog: !!dialog,
+        dialog: dialog?.getAttribute('aria-label') ?? dialog?.getAttribute('aria-labelledby') ?? null,
+        owner: dialog?.closest('[data-panel]')?.getAttribute('data-panel') ?? null,
+        removed: (window as unknown as { __inventoryFocusTrace: { rows: string[] } }).__inventoryFocusTrace.rows.slice(-8)
+      }
+    })
     // Round the whole bag twice, both ways: never out to the HUD or the page.
     for (let i = 0; i < 30; i++) {
       await page.keyboard.press('Tab')
-      expect(await inside(), `Tab ${i + 1} stays in the bag`).toBe(true)
+      const sample = await focusSnapshot()
+      expect(sample.insideDialog, `Tab ${i + 1} stays in the bag; focus=${JSON.stringify(sample)}; in-flight API reads=${JSON.stringify([...inFlightApi])}`).toBe(true)
     }
     for (let i = 0; i < 30; i++) {
       await page.keyboard.press('Shift+Tab')
-      expect(await inside(), `Shift+Tab ${i + 1} stays in the bag`).toBe(true)
+      const sample = await focusSnapshot()
+      expect(sample.insideDialog, `Shift+Tab ${i + 1} stays in the bag; focus=${JSON.stringify(sample)}; in-flight API reads=${JSON.stringify([...inFlightApi])}`).toBe(true)
     }
+    await page.evaluate(() => (window as unknown as { __inventoryFocusTrace: { stop: () => void } }).__inventoryFocusTrace.stop())
     const fox = dialog(page).locator('[data-cell="item:whittled-fox"]')
     await fox.click()
     await expect(dialog(page).locator('[data-item="item:whittled-fox"]')).toBeVisible()

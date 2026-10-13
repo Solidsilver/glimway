@@ -71,7 +71,7 @@ export interface FsHooks {
   __fsWilds: () => ReturnType<WildsEntities['debug']> | null
   __fsWildsWindow: () => ReturnType<WildsWindow['debug']> | null
   /** The scene's display-list size, running tweens and static bodies, and what is listed (type:texture, counted). */
-  __fsSceneSize: () => { list: number; tweens: number; statics: number; kinds: Record<string, number> }
+  __fsSceneSize: () => { list: number; tweens: number; transientTweens: number; statics: number; kinds: Record<string, number> }
   /** The walking-performance instruments (src/game/perf.ts; only with `?perf=1`): everything as JSON, the walk's phase, a fresh start. */
   __fsPerf: () => PerfReport
   __fsPerfPhase: (name: string) => void

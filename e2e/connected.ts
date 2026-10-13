@@ -3,9 +3,10 @@ import { randomUUID } from 'node:crypto'
 import { expect, type APIResponse, type BrowserContext, type Page } from '@playwright/test'
 import contract from '../content/contract.json' with { type: 'json' }
 import story from '../content/story.json' with { type: 'json' }
-import { BIN, moveBackendClock, requireBackend } from './server/backend.ts'
+import { backendDiagnostics, BIN, moveBackendClock, requireBackend } from './server/backend.ts'
 import { FAKE_TOKEN } from './server/fake-habitica.ts'
 import { SERVER_ANSWER_MS } from './helpers'
+import { retryConnectionResetRead } from './read-retry.ts'
 
 /**
  * Helpers for the connected playtests: this worker's own Go server (through
@@ -343,10 +344,23 @@ export async function linkRev(page: Page): Promise<number | null> {
  * projected into the game's own shape by the client's parser).
  */
 export async function serverState(page: Page): Promise<{ status: number; body: any }> {
-  const res = await page.request.get('/api/state', CONTRACT)
+  const res = await readApiGet(page, '/api/state')
   if (!res.ok()) return { status: res.status(), body: await res.json().catch(() => null) }
   const { parseState } = await import('../src/lib/api/parse.ts')
   return { status: res.status(), body: parseState(await res.json()) }
+}
+
+/** Retry one safe test API read only after a connection reset; never mutations. */
+export async function readApiGet(page: Page, path: string): Promise<APIResponse> {
+  let attempt = 0
+  return retryConnectionResetRead(
+    () => page.request.get(path, CONTRACT),
+    (error) => {
+      attempt++
+      const message = error instanceof Error ? error.message : String(error)
+      console.warn(`e2e test API GET reset; retrying once: ${JSON.stringify({ path, attempt, error: message, backend: backendDiagnostics() })}`)
+    }
+  )
 }
 
 /** Open the Menu and press "Sync character" (Habitica details must be in memory). */

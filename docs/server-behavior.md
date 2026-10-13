@@ -470,7 +470,14 @@ recording completion/papers once without changing any player's revision. Existin
 completed projects stay complete when costs rise. The precise new contracts and
 failing-first regressions are in the mail/project regression tests.
 
-### Phase 6 presence WebSockets
+### Phase 6 presence WebSockets (historical JSON wire)
+
+The JSON wire descriptions in this phase record the original implementation.
+Current presence uses generated protobuf envelopes over binary WebSocket frames;
+the schema, encoder and decoder are in [`presence.proto`](../proto/glimway/v2/presence.proto),
+[`proto.go`](../server/internal/api/proto.go), and
+[`presence.ts`](../src/lib/presence.ts). The later phase notes remain useful
+for admission, lifecycle and limits; use those files for current wire details.
 
 The `/ws` route in the [self-hosting guide](home-server.md) needs no extra Caddy upgrade headers: `reverse_proxy`
 handles WebSocket upgrades by default. Preserve the browser Host (including its
@@ -505,8 +512,8 @@ upgrades use 429 `presence-session-limit` / `presence-player-limit` with
 auth promptly. The auth-message deadline remains five seconds. Session/player
 reservation and generation maps are removed when their last socket releases.
 
-A reader-owned token bucket limits aggregate application messages before JSON
-parsing or the hub mutex: 30/s with a burst of 60. Brief excess is dropped;
+A reader-owned token bucket limits aggregate application messages before
+protobuf frame decoding or the hub mutex: 30/s with a burst of 60. Brief excess is dropped;
 sustained excess for five seconds closes 1008 `rate-limited`. These limits are
 above normal eight-Hz positions, joins, emotes, and stationary heartbeats.
 

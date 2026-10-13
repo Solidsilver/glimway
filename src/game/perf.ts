@@ -226,7 +226,7 @@ class Instruments {
       `frame p50 ${pct(recent, 0.5)} worst ${round(Math.max(0, ...recent))} ms\n` +
       `long ${this.long.length}${last ? ` · last ${last.ms} ms` : ''}\n` +
       `list ${sample?.list ?? '-'} · tweens ${sample?.tweens ?? '-'} · dom ${sample?.dom ?? '-'}` +
-      (this.fights ? `\nfights · gap p95 ${round(this.fights.snapshotGapP95)} · delay ${round(this.fights.interpolationDelay)} ms\nhit p95 ${round(this.fights.hitConfirmationP95)} ms · refused ${round(this.fights.refusedPercent)}%\npending ${this.fights.pending} · timeout ${this.fights.timeouts} · swing refused ${this.fights.swingRefusals}` : '')
+      (this.fights ? `\nfights (${this.fights.scope}) · gap p95 ${round(this.fights.snapshotGapP95)} · delay ${round(this.fights.interpolationDelay)} ms\nhit p95 ${round(this.fights.hitConfirmationP95)} ms · refused ${round(this.fights.refusedPercent)}%\npending ${this.fights.pending} · timeout ${this.fights.timeouts} · swing refused ${this.fights.swingRefusals}` : '')
   }
 
   report(): PerfReport {

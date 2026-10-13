@@ -42,7 +42,7 @@ the unit tests fail when the committed output has drifted from its inputs:
 | Command | Writes |
 |---|---|
 | `npm run vectors` | economy and sync parity vectors (`content/vectors/`) |
-| `npm run vectors:homestead`, `npm run vectors:calendar`, `npm run vectors:items`, `npm run vectors:magic` | the other parity vectors the Go tests read |
+| `npm run vectors:homestead`, `npm run vectors:calendar`, `npm run vectors:items`, `npm run vectors:magic`, `npm run vectors:fights-wire` | the other parity vectors the Go tests read |
 | `npm run papers` | `src/content/papers-text.ts` and `content/papers.json` from `docs/lore/texts` |
 | `npm run atlases` | the packed art in `public/assets/fingersnap/packed/` (needs `cwebp`/`dwebp`) |
 
@@ -51,7 +51,12 @@ it). At the end, run `npm run test:changed`. In CI, every push and pull
 request runs `verify`, the Go tests, the Docker smoke test and the smoke tier
 on GitHub's runners. The full suite runs on a self-hosted runner with an
 NVIDIA GPU, for pushes to `main`, `dev` and `exp/**` and for manual
-dispatch, never for pull requests ([ci-runner.md](ci-runner.md)). Push an
+dispatch, never for pull requests ([ci-runner.md](ci-runner.md)). Each E2E
+job uploads a JSON attempt summary; up to three retry traces are retained
+within a 50 MiB cap. The first retry is traced, so it can show a successful
+attempt while the JSON summary preserves the original failure. A separate
+manual browser-performance job measures first paint and sparse-map rendering.
+Push an
 `exp/` branch to run it before main moves.
 
 Unit tests can load rune modules (`*.svelte.ts`, such as
@@ -88,6 +93,11 @@ plus uncommitted and untracked files, and maps them through
   Add a rule when that happens;
 - docs, unit tests and other `ignore` paths run nothing.
 
+The fight selector maps server fight/fall code, presence protobuf output,
+interpolation, the server enemy renderer, camp outcome polling and fight
+content to `fights-server.spec.ts` and `fights-shared.spec.ts`. The two-client
+gate runs in CI; set `E2E_SHARED_FIGHTS=1` to opt in locally.
+
 `npm run test:changed -- --list` prints the plan without running it. Other
 arguments go to Playwright (`-- --workers=2`, `-- -g "deed"`).
 
@@ -122,6 +132,10 @@ busy Mac, run it as `nice -n 10 npm run test:e2e` (or use the same prefix with
   points at the newest run. Two runs in one worktree keep separate files (they
   still need separate `E2E_PORT`s); finished runs' folders are cleared at the
   next start.
+- **Read resets:** the test helper retries a safe `/api/state` or calendar
+  GET once on `ECONNRESET` and logs its path, worker port/pid and server log.
+  Mutations are never retried by this helper. Unexpected Go-server exits are
+  written to that worker's `server.log`.
 - **GPU:** on macOS the browsers render WebGL on the GPU (`--use-angle=metal
   --enable-gpu`). Headless Chromium otherwise uses SwiftShader, software GL on
   the CPU: on a busy machine the game drew about 8 frames a second that way,
@@ -287,23 +301,26 @@ whole trace), who calls a function (`--callers`, as chains of the game's
 own frames) and a function's share of the main thread over time (`--share`,
 in `--bucket` seconds: a share that climbs is a leak).
 
+**The first-paint budget** is separate from correctness CI. It checks that
+worker-painted tiles match the main-thread result in ordinary CI and records
+the longest browser task as an annotation. The manual `browser-performance`
+workflow job uses one GPU worker, checks the 400 ms default budget, and uploads
+the measurement JSON so runs can be compared. Run locally with
+`PERF=1 FIRST_PAINT_LONGTASK_BUDGET_MS=400 E2E_PORT=5470 npx playwright test -c playwright.first-paint.perf.config.ts`.
+
+The sparse-map renderer unit fixture always checks output correctness, cache
+bounds and overview dimensions. Its drag and zoom p95 budget is opt-in with
+`MAP_PERF=1`; the manual browser-performance job records it with the browser
+measurement. Set `MAP_RENDER_P95_BUDGET_MS` to override the 16 ms target.
+
+**Fight load tools:** `sh scripts/fight-load.sh` measures multi-client server
+fight load; `docs/shared-fights-testing.md` records its settings and output.
+The load run is a measurement, not part of the correctness gate.
+
 ## Quarantined
 
-A test that catches a real product bug which isn't fixed yet is marked
-`test.fixme` with the bug written out above it, so the full suite stays green
-for everyone else. Remove the `fixme` with the fix.
-
-- `presence.spec.ts` › "the others see you come to rest exactly where you
-  stopped": the server drops a position that arrives under 1/`positionHz`
-  after the previous one, and the client paces at exactly that interval, so
-  the final stop is sometimes lost (the others see you a few pixels short).
-- `wilds-screens.spec.ts` › "wilds screens: the fallen-hero lantern": a
-  connected fall in the Tangle sends the defeat report and a progress upload
-  together, and about one fall in ten the hero comes to in the Tangle at 0 HP
-  instead of in the village.
-- `wilds.spec.ts` › "connected: the Commons arch leads into the Tangle": the
-  exit check and the once-a-second position sample can run in the same frame,
-  storing the Commons spot as a Tangle position in chunk (0,0) (about one
-  crossing in 60 at 60 fps). The return trip is still tested.
+There are no quarantined Playwright tests at present. Keep real product
+regressions in the gate when possible; if one must be marked `test.fixme`,
+record the current reason and remove the quarantine with the fix.
 
 Generator wall-clock thresholds are opt-in: `GLIMWAY_PERF=1 go test -count=1 -v ./server/internal/wilds -run '^TestChunkTime(Budget|Headroom)V3$'`. CI runs them in the manual-dispatch measured job. Ordinary tests retain size, connectivity and golden invariants.

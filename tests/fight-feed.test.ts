@@ -122,7 +122,7 @@ test('through a real feed: dead rows only ask for a read; a disconnect keeps the
   const { ServerCampOutcome } = await import('../src/game/wilds/camp-fights.ts')
   const r = rig(); r.push({ case: 'fightJoin', value: join }); r.advance(100); r.feed.fights.observe()
   let asks = 0
-  const outcome = new ServerCampOutcome(camp => r.feed.live ? r.feed.fights.campWon(camp.id, camp.epoch) : undefined, () => asks++, () => 0)
+  const outcome = new ServerCampOutcome(camp => r.feed.live ? r.feed.fights.campWon(camp.id, camp.epoch) : undefined, async () => { asks++ }, () => 0)
   const camp = { id: 'camp:0:0:0', epoch: 'still', cycle: 1, claimable: false }
   assert.equal(outcome.won(camp), false)
   r.push({ case: 'fightEvent', value: { room: 1, tick: 100, enemy: 0, kind: 3 } }); r.feed.fights.observe()
