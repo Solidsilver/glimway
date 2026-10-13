@@ -6,8 +6,8 @@
  * room only hurries the word along and hides a prompt it contradicts:
  *
  * - Rows all confirmed dead (the last death, or a join with only corpses) while
- *   the store has no word for this cycle: ask for a fresh near read, a few
- *   times, spaced (the fall is written off the tick). Dead rows never grant a
+ *   the store has no word for this cycle: ask for fresh near reads, spaced
+ *   until recovery ends (the fall is written off the tick). Dead rows never grant a
  *   claim, so an older cycle's corpses can't make the next cycle claimable.
  * - Rows that stand (a respawn) hide the prompt at once.
  * - No room, or no socket: the store's last word for this cycle stands.
@@ -28,20 +28,19 @@ export interface CampNow {
   claimable: boolean
 }
 
-/** Fresh reads asked after one completion, and how far apart. */
-export const CAMP_READ_TRIES = 4
-export const CAMP_READ_EVERY_MS = 1_500
+/** Recovery reads while a completed cycle still lacks its durable claim word. */
+export const CAMP_READ_EVERY_MS = 5_000
 
-type Known = { epoch: string; cycle: number; complete: boolean; tries: number; askedAt: number; claimed: boolean }
+type Known = { epoch: string; cycle: number; complete: boolean; askedAt: number; claimed: boolean; inFlight: object | null }
 
 export class ServerCampOutcome {
   private readonly known = new Map<string, Known>()
   private readonly read: (camp: Pick<CampNow, 'id' | 'epoch'>) => boolean | undefined
-  private readonly ask: () => void
+  private readonly ask: () => Promise<unknown>
   private readonly now: () => number
 
-  /** `read`: the room's answer (true all dead, false one stands, undefined unknown); `ask`: request a near read. */
-  constructor(read: (camp: Pick<CampNow, 'id' | 'epoch'>) => boolean | undefined, ask: () => void = () => {}, now: () => number = () => Date.now()) {
+  /** `read`: the room's answer (true all dead, false one stands, undefined unknown); `ask`: the recovery near read's own promise. */
+  constructor(read: (camp: Pick<CampNow, 'id' | 'epoch'>) => boolean | undefined, ask: () => Promise<unknown> = () => Promise.resolve(), now: () => number = () => Date.now()) {
     this.read = read
     this.ask = ask
     this.now = now
@@ -50,7 +49,7 @@ export class ServerCampOutcome {
   private at(camp: Pick<CampNow, 'id' | 'epoch' | 'cycle'>): Known {
     let k = this.known.get(camp.id)
     if (!k || k.epoch !== camp.epoch || k.cycle !== camp.cycle) {
-      k = { epoch: camp.epoch, cycle: camp.cycle, complete: false, tries: 0, askedAt: -Infinity, claimed: false }
+      k = { epoch: camp.epoch, cycle: camp.cycle, complete: false, askedAt: -Infinity, claimed: false, inFlight: null }
       this.known.set(camp.id, k)
     }
     return k
@@ -60,16 +59,23 @@ export class ServerCampOutcome {
     const k = this.at(camp)
     const answer = this.read(camp)
     if (answer === false) {
+      // Standing rows end this completion; a later fall earns a fresh schedule.
       k.complete = false
+      k.inFlight = null
+      k.askedAt = -Infinity
       return false
     }
     if (answer === true) {
       // A completion seen here: a new one earns a fresh round of reads.
-      if (!k.complete) { k.complete = true; k.tries = 0 }
-      if (!camp.claimable && !k.claimed && k.tries < CAMP_READ_TRIES && this.now() - k.askedAt >= CAMP_READ_EVERY_MS) {
-        k.tries++
+      if (!k.complete) { k.complete = true; k.askedAt = -Infinity }
+      if (!camp.claimable && !k.claimed && !k.inFlight && this.now() - k.askedAt >= CAMP_READ_EVERY_MS) {
         k.askedAt = this.now()
-        this.ask()
+        const attempt = k.inFlight = {}
+        const finished = () => {
+          // Neither another read nor an obsolete cycle/life can release this gate.
+          if (this.known.get(camp.id) === k && k.inFlight === attempt) k.inFlight = null
+        }
+        void this.ask().then(finished, finished)
       }
     }
     return camp.claimable && !k.claimed
@@ -77,6 +83,13 @@ export class ServerCampOutcome {
 
   /** This account settled (or can't settle) this camp's cycle. */
   claimed(camp: Pick<CampNow, 'id' | 'epoch' | 'cycle'>): void {
-    this.at(camp).claimed = true
+    const k = this.at(camp)
+    k.claimed = true
+    k.inFlight = null
+  }
+
+  /** A scene lifetime ended; no scheduled recovery state belongs to its successor. */
+  clear(): void {
+    this.known.clear()
   }
 }

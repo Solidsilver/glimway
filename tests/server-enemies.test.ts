@@ -14,22 +14,26 @@ const { perfFights } = await import('../src/game/perf.ts')
 function rig() {
   let now = 1000, available = true, spawned = 0, destroyed = 0, tells = 0
   const fights = new FightInterp(() => now)
-  const sprites: any[] = [], enemies: any[] = [], poses: string[] = [], floats: string[] = []
+  const sprites: any[] = [], enemies: any[] = [], poses: string[] = [], floats: string[] = [], colliderRequests: boolean[] = []
   const sprite = () => {
     const s: any = { active: true, body: { enable: true }, x: 100, y: 100, destroy() { assert.equal(this.active, true, 'no repeated destruction'); this.active = false; destroyed++ } }
     for (const name of ['setPosition', 'setDepth', 'setFlipX', 'setTintFill', 'clearTint', 'setTint', 'setAlpha', 'setVisible']) s[name] = (...args: number[]) => { if (name === 'setPosition') [s.x, s.y] = args; return s }
     sprites.push(s); return s
   }
   const system: any = { parkedAll: false, scene: { time: { get now() { return now }, delayedCall() {} }, tweens: { add() {} } }, deps: { hero: () => ({ sprite: { x: 80, y: 100 }, facing: { x: 1, y: 0 } }), fx: { floatText: (_x: number, _y: number, t: string) => floats.push(t) } },
-    spawnWilds(id: string, type: string) { spawned++; const enemy = { id, type, sprite: sprite(), x: 100, y: 100, maxHp: 28, hp: 28, state: 'chase', dead: false }; enemies.push(enemy); return enemy },
+    spawnWilds(id: string, type: string, _tx: number, _ty: number, withCollider: boolean) { colliderRequests.push(withCollider); spawned++; const enemy = { id, type, sprite: sprite(), x: 100, y: 100, maxHp: 28, hp: 28, state: 'chase', dead: false }; enemies.push(enemy); return enemy },
     forget(enemy: object) { const index = enemies.indexOf(enemy); if (index >= 0) enemies.splice(index, 1) },
     setEnemyPose(enemy: any, pose: string) { poses.push(`${enemy.type}:${pose}`) }, telegraph() { tells++ }, showDeath(enemy: object) { this.forget(enemy) } }
   const feed = { fights }
   const owner = new ServerEnemies(system, () => available ? feed : null)
   const join = create(FightJoinSchema, { room: 1, tick: 100, critSeed: 123, roomKey: { world: 'w', realm: 'wilds', epoch: 'still', cx: 0, cy: 0 }, enemies: [{ enemy: 0, id: 'wilds:camp:0:0:0:0', campId: 'camp:0:0:0', kind: 1, x: 100, y: 100, state: 2, stateTick: 100, hp: 28, maxHp: 28 }] })
   const advance = (ms: number) => { now += ms; owner.observe() }
-  return { fights, feed, owner, join, advance, sprites, enemies, poses, floats, system, now: () => now, get spawned() { return spawned }, get destroyed() { return destroyed }, get tells() { return tells }, disconnect() { fights.clear(); available = false; owner.observe() }, reconnect() { available = true; fights.join(join); advance(100) } }
+  return { fights, feed, owner, join, advance, sprites, enemies, poses, floats, colliderRequests, system, now: () => now, get spawned() { return spawned }, get destroyed() { return destroyed }, get tells() { return tells }, disconnect() { fights.clear(); available = false; owner.observe() }, reconnect() { available = true; fights.join(join); advance(100) } }
 }
+test('server-owned enemy sprites are created without solid-wall colliders', () => {
+  const r = rig(); r.fights.join(r.join); r.advance(100)
+  assert.deepEqual(r.colliderRequests, [false])
+})
 test('renderer retains sprites, telegraph and swing prediction across close/resync without spawning twice', () => {
   const r = rig(); r.fights.join(r.join); r.advance(100)
   const original = r.enemies[0]

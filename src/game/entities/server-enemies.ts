@@ -59,7 +59,7 @@ export class ServerEnemies {
       let entry = this.drawn.get(key)
       if (!entry) {
         if (row.state === 6) continue // corpses (a fresh join, a fallen camp's wake) have already died
-        const enemy = this.system.spawnWilds(row.id, row.kind === 2 ? 'beetle' : 'wisp', 0, 0)
+        const enemy = this.system.spawnWilds(row.id, row.kind === 2 ? 'beetle' : 'wisp', 0, 0, false)
         Object.defineProperty(enemy, 'maxHp', { value: row.maxHp })
         enemy.owner = this.owner; enemy.fight = { room: draw.room, enemy: row.enemy }
         ;(enemy.sprite.body as { enable: boolean }).enable = false

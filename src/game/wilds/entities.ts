@@ -46,7 +46,6 @@ import {
   entityCycle,
   entityChunk,
   isClaimed,
-  requestRead,
   takeReadRequest,
   lootName,
   lootText,
@@ -319,7 +318,7 @@ export class WildsEntities {
   private campOutcome = new ServerCampOutcome(camp => {
     const feed = presence()
     return feed?.live ? feed.fights.campWon(camp.id, camp.epoch) : undefined
-  }, requestRead)
+  }, () => this.refresh())
   private greeted = new Set<string>()
   private claiming = false
   private lastVersion = -1
@@ -330,6 +329,7 @@ export class WildsEntities {
   constructor(private scene: Phaser.Scene, private deps: WildsDeps) {
     ensureArt(scene)
     scene.events.once('shutdown', () => {
+      this.campOutcome.clear()
       this.drawn.clear()
       this.attached.clear()
       this.staleLabel = null

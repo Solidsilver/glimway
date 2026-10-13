@@ -13,6 +13,8 @@ type Room = { closedUntil?: number; key: FightRoomKey; tick: number; received: n
 /** `life`: one enemy's life on this screen. A resync keeps it; a new row (a spawn, a cycle's respawn) gets a new one. */
 export interface FightDraw { incarnation: number; life: number; room: number; row: FightEnemy; x: number; y: number; elapsedMs: number; telegraphMs?: number; telegraphTick?: number; aimLocked?: boolean }
 export interface FightMeasures {
+  /** Feed-wide for this socket session; clear/seed replacement resets it, room churn does not. */
+  scope: 'socket-session'
   snapshotGapP95: number; snapshotSamples: number; interpolationDelay: number
   hitConfirmationP95: number; confirmations: number; predictedRows: number
   refusedRows: number; refusedPercent: number; swingRefusals: number; timeouts: number; pending: number
@@ -114,8 +116,10 @@ export class FightInterp {
     const room = this.rooms.get(delta.room)
     if (!room || fightTickDiff(delta.tick, room.tick) < 0) return
     const now = this.now(), ms = this.clock(delta.tick)
-    if (fightTickDiff(delta.tick, room.tick) === 1) {
-      const gap = now - room.received
+    const gap = now - room.received
+    // Coalesce back-to-back receipts within 1 ms, including high-resolution
+    // callback clocks. Rendering cadence never suppresses independent arrivals.
+    if (fightTickDiff(delta.tick, room.tick) === 1 && gap > 1) {
       bounded(this.gaps, gap)
       const variation = Math.abs(gap - 100)
       // Rise quickly under jitter, settle slowly over ~5 seconds.
@@ -256,7 +260,7 @@ export class FightInterp {
   }
   measures(): FightMeasures {
     this.expire(this.now())
-    return { snapshotGapP95: percentile(this.gaps), snapshotSamples: this.gaps.length, interpolationDelay: this.delay, hitConfirmationP95: percentile(this.confirmations), confirmations: this.confirmationCount, predictedRows: this.predictedRows, refusedRows: this.refusedRows, refusedPercent: this.predictedRows ? this.refusedRows / this.predictedRows * 100 : 0, swingRefusals: this.swingRefusals, timeouts: this.timeouts, pending: this.pending.size }
+    return { scope: 'socket-session', snapshotGapP95: percentile(this.gaps), snapshotSamples: this.gaps.length, interpolationDelay: this.delay, hitConfirmationP95: percentile(this.confirmations), confirmations: this.confirmationCount, predictedRows: this.predictedRows, refusedRows: this.refusedRows, refusedPercent: this.predictedRows ? this.refusedRows / this.predictedRows * 100 : 0, swingRefusals: this.swingRefusals, timeouts: this.timeouts, pending: this.pending.size }
   }
   drop(handle: number): void {
     this.rooms.delete(handle)
@@ -266,6 +270,8 @@ export class FightInterp {
     this.rooms.clear(); this.pending.clear(); this.events = []; this.eventKeys.clear()
     this.seed = 0; this.anchor = null; this.clockOffset = Infinity; this.lastDraw = -Infinity
     this.delay = 100; this.frameSeen = null; this.adjustedAt = 0
+    this.gaps = []; this.confirmations = []
+    this.predictedRows = 0; this.refusedRows = 0; this.swingRefusals = 0; this.timeouts = 0; this.confirmationCount = 0
   }
 }
 function bounded(list: number[], value: number): void { list.push(value); if (list.length > 512) list.shift() }
