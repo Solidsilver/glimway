@@ -482,3 +482,16 @@ checks are a baseline, not proof that future extractions preserve every contract
 each stage's fixtures and review boundary are its acceptance criteria.
 
 ## Done
+
+## Owner decisions (2026-10-13)
+
+The owner approved all four clean breaks:
+
+- **G — retire guest mode: yes.** Remove the local save/sync paths and the no-Link code. A future
+  guest or non-Habitica mode will be server-side, like the Habitica mode is now, not a local game.
+- **Q — queued-record format: drop old entries.** No reader for the old path-keyed format; the
+  release notes tell players to let the game sync before updating.
+- **N — retire old names and config fallbacks: yes.** Including `FINGERSNAP_*` environment
+  variables; the release notes carry a deploy note for the server's environment.
+- **S — retire obsolete schema/request compatibility: yes**, including the old-upload 404 → 400
+  change.
