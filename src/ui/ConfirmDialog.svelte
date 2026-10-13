@@ -1,5 +1,6 @@
 <script lang="ts">
   import { focusTrap } from './focus'
+  import { isConfirmOwnedShortcut } from './confirm-keys'
 
   /** Styled stand-in for window.confirm — keeps hard choices in the game's voice. */
   let {
@@ -29,6 +30,9 @@
     if (e.key === 'Escape') {
       e.stopPropagation()
       onCancel()
+    } else if (isConfirmOwnedShortcut(e.code)) {
+      e.preventDefault()
+      e.stopPropagation()
     }
   }
 </script>

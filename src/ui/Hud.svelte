@@ -18,6 +18,7 @@
   import { KIND_WORDS, keyForSlot } from '../lib/belt'
   import ContextButtons from './ContextButtons.svelte'
   import type { PromptAlt } from '../game/events'
+  import { cooldownSeconds } from './cooldown'
 
   let {
     onJournal,
@@ -73,6 +74,13 @@
   /** The F and R slots: a hero without a craft has neither (crafts.md 4.2). */
   const sigSlot = $derived(ui.slot(kit.signature?.id))
   const moveSlot = $derived(ui.slot(kit.move?.id))
+  let cooldownNow = $state(performance.now())
+  $effect(() => {
+    const active = [sigSlot, moveSlot, ui.roll].some((slot) => slot.readyAt > cooldownNow)
+    if (!active) return
+    const timer = window.setInterval(() => (cooldownNow = performance.now()), 250)
+    return () => window.clearInterval(timer)
+  })
   const resting = $derived(ui.stats.hp <= 0 && ui.vitalsSource === 'imported')
   /** The E/Space slot says what it will do here: the prompt's verb, else the swing. */
   const actLabel = $derived(ui.prompt.label ? (ui.prompt.verb ?? 'Use') : heldUi.kind === 'weapon' ? kit.basicName : KIND_WORDS[heldUi.kind])
@@ -360,6 +368,7 @@
     {#key st.readyAt}
       {#if st.readyAt > 0}
         <div class="sweep" style={`animation-duration:${st.cooldown}s`}></div>
+        <span class="cooldown-time" aria-hidden="true">{cooldownSeconds(st.readyAt, cooldownNow)}s</span>
       {/if}
     {/key}
     <span class="kbd">{key}</span>
@@ -369,7 +378,7 @@
 {/snippet}
 
 {#if !touch && showBars}
-  <div class="actionbar" class:hidden={ui.cinematic || ui.dialogueOpen}>
+  <div class="actionbar" class:hidden={ui.cinematic || ui.dialogueOpen} inert={covered}>
     {#if prompt}
       <!-- The E slot says what it will do here; tests and players read it as the prompt. -->
       <div class="prompt" role="status">
@@ -420,6 +429,7 @@
       {#key ui.roll.readyAt}
         {#if ui.roll.readyAt > 0}
           <div class="sweep" style={`animation-duration:${ui.roll.cooldown}s`}></div>
+          <span class="cooldown-time" aria-hidden="true">{cooldownSeconds(ui.roll.readyAt, cooldownNow)}s</span>
         {/if}
       {/key}
       <span class="kbd wide">Shift</span>
@@ -1231,6 +1241,22 @@
     background: conic-gradient(rgba(20, 14, 24, 0.55) var(--p, 100%), transparent 0);
     animation: sweep linear forwards;
     pointer-events: none;
+  }
+  .cooldown-time {
+    display: none;
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    place-content: center;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 800;
+    color: white;
+    text-shadow: 0 1px 3px #000, 0 0 4px #000;
+    pointer-events: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cooldown-time { display: grid; }
   }
 
   .vignette {
