@@ -498,9 +498,9 @@ export async function waitGame<T>(
  * Waits until `read` gives the same value for `n` frames in a row (compared
  * as JSON): "it has stopped", without betting on two samples landing after
  * the last coasting frame. Returns that value. `seconds` is game time, as in
- * waitGame.
+ * waitGame. With `ready`, only ready samples count toward stability.
  */
-export async function steady<T>(page: Page, read: () => Promise<T>, opts: { frames: number; seconds: number; message?: string }): Promise<T> {
+export async function steady<T>(page: Page, read: () => Promise<T>, opts: { frames: number; seconds: number; message?: string; ready?: (v: T) => boolean }): Promise<T> {
   let last = ''
   let same = 0
   const out = await waitGame(
@@ -508,7 +508,7 @@ export async function steady<T>(page: Page, read: () => Promise<T>, opts: { fram
     async () => {
       const v = await read()
       const k = JSON.stringify(v)
-      same = k === last ? same + 1 : 0
+      same = k === last && (opts.ready?.(v) ?? true) ? same + 1 : 0
       last = k
       return { v, same }
     },

@@ -315,7 +315,8 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
       const k = `${o.type}:${(o as { texture?: { key: string } }).texture?.key ?? ''}`
       kinds[k] = (kinds[k] ?? 0) + 1
     }
-    return { list: s.children.length, tweens: s.tweens.getTweens().length, statics: s.physics.world.staticBodies.size, kinds }
+    const tweens = s.tweens.getTweens()
+    return { list: s.children.length, tweens: tweens.length, transientTweens: tweens.filter(t => !t.isInfinite).length, statics: s.physics.world.staticBodies.size, kinds }
   })
   on('__fsPaths', () => {
     const paths = s['paths']

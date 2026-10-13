@@ -2,6 +2,7 @@ import { expect, test, type Page } from './fixtures'
 import { devices, type BrowserContext } from '@playwright/test'
 import { accountOf, calendarOnServer, pinWorld, sql, wickSlack, CONTRACT } from './connected'
 import { freshPlayer, fund, giveInstance } from './home-helpers'
+import { loadWilds } from '../src/lib/wilds/data'
 import { diagnose, dialogueState, expectTarget, expectToast, parkCreatures, pressOn, readDialogue, steady, targetNow, waitForLive, waitForWilds, warp, wilds, windowWhole } from './helpers'
 
 /**
@@ -37,6 +38,22 @@ async function shot(page: Page, name: string): Promise<void> {
 
 const paths = (page: Page) => page.evaluate(() => (window as unknown as Hooks).__fsPaths())
 const tileAt = (page: Page, tx: number, ty: number) => page.evaluate(([x, y]) => (window as unknown as Hooks).__fsPathTile(x, y), [tx, ty] as const)
+
+/** The exact tile and its context action must be stable before a single keyboard press. */
+async function pathKeyReady(page: Page, at: { tx: number; ty: number }, action: 'lay' | 'lift'): Promise<void> {
+  await page.bringToFront()
+  const label = action === 'lay' ? 'Lay stone' : 'Lift the stone'
+  const button = action === 'lay' ? 'path-lay-stone:' : 'path-lift:'
+  await expect(page.getByTestId('context-buttons').getByRole('button', { name: label, exact: true })).toBeVisible()
+  await steady(page, () => page.evaluate(() => {
+    const w = window as unknown as Hooks & { __fsFrame: () => { live: boolean } }
+    const hero = w.__fsPlayer()
+    return { live: w.__fsFrame().live, tx: Math.floor(hero.x / 16), ty: Math.floor(hero.y / 16), buttons: w.__fsPaths()?.buttons ?? '' }
+  }), {
+    frames: 3, seconds: 10, message: `the joining stone is ready for the ${action} key`,
+    ready: s => s.live && s.tx === at.tx && s.ty === at.ty && s.buttons.includes(button)
+  })
+}
 
 /** The tool for a kind of work in hand, by its belt key, as a player would. */
 async function hold(page: Page, kind: string): Promise<void> {
@@ -267,30 +284,43 @@ test('the joining tile of a run between two places makes a named way, with signs
   test.setTimeout(240_000)
   const id = await freshPlayer(page)
   fund(id, { materials: { stone: 20 } })
+  const rules = loadWilds()
+  const radii = Object.fromEntries(rules.placeKinds.map(p => [p.id, p.findRadius]))
+  const openings = rules.places.flatMap(p => p.openings.flatMap(o => Array.from({ length: o.width }, (_, i) => ({
+    tx: o.cx * S + (o.edge === 'east' ? S - 1 : o.edge === 'west' ? 0 : o.offset + i),
+    ty: o.cy * S + (o.edge === 'south' ? S - 1 : o.edge === 'north' ? 0 : o.offset + i)
+  }))))
   // Two neighbouring places, both in view: search from the middle of the ring past the Whitequiet.
   let plan: { a: string; b: string; run: { tx: number; ty: number }[] } | null = null
   for (const [cx, cy] of [[0, -6], [2, -4], [-2, -4], [2, -1], [-2, -1], [2, -7], [-2, -7]] as const) {
     await warp(page, 'wilds', cx * S + 12, cy * S + 12)
     await waitForWilds(page)
-    plan = await page.evaluate(() => {
+    plan = await page.evaluate(({ radii, openings }) => {
       const w = window as unknown as Hooks
       const marks = w.__fsMarks()
       if (!marks) return null
-      const placeKinds: Record<string, number> = { 'camp-glade': 3, ruin: 3, outcrop: 3, 'lone-tree': 3 }
       const places = marks.places
       // Land that takes a path, on the wick's land (the Tangle keeps its own epoch).
       const tangle = (x: number, y: number) => Math.floor(x / 24) >= -1 && Math.floor(x / 24) <= 1 && Math.floor(y / 24) >= -2 && Math.floor(y / 24) <= 0
       const tileOk = (t: PathTile | null) => !!t && t.surface === 'land' && (!t.baseSolid || !!t.change) && !t.occupied && !(t.change && t.change.change !== 'cleared')
-      const near = (p: { tx: number; ty: number; kind: string }, x: number, y: number) => Math.max(Math.abs(x - p.tx), Math.abs(y - p.ty)) <= (placeKinds[p.kind] ?? 3)
+      const near = (p: { tx: number; ty: number; kind: string }, x: number, y: number) => Math.max(Math.abs(x - p.tx), Math.abs(y - p.ty)) <= (radii[p.kind] ?? 3)
+      const radius = Math.max(...Object.values(radii))
       const pairs = []
       for (let i = 0; i < places.length; i++) for (let j = i + 1; j < places.length; j++) pairs.push([places[i]!, places[j]!] as const)
       pairs.sort((x, y) => Math.max(Math.abs(x[0].tx - x[1].tx), Math.abs(x[0].ty - x[1].ty)) - Math.max(Math.abs(y[0].tx - y[1].tx), Math.abs(y[0].ty - y[1].ty)))
       for (const [a, b] of pairs.slice(0, 4)) {
+        // This fixture joins one pair. A run beside a third place legitimately
+        // creates another way with the same discoverer's name.
+        const layable = (x: number, y: number) =>
+          // Adjacent unread chunks can hold another landmark within its radius.
+          [-radius, radius].every(dx => [-radius, radius].every(dy => w.__fsPathTile(x + dx, y + dy) !== null)) &&
+          !openings.some(o => o.tx === x && o.ty === y) &&
+          !places.some(p => p.id !== a.id && p.id !== b.id && near(p, x, y)) && tileOk(w.__fsPathTile(x, y))
         // Breadth first from every layable tile inside a's radius to one inside b's.
         const key = (x: number, y: number) => `${x},${y}`
         const from = new Map<string, string | null>()
         const queue: [number, number][] = []
-        for (let y = a.ty - 3; y <= a.ty + 3; y++) for (let x = a.tx - 3; x <= a.tx + 3; x++) if (near(a, x, y) && !tangle(x, y) && tileOk(w.__fsPathTile(x, y))) { from.set(key(x, y), null); queue.push([x, y]) }
+        for (let y = a.ty - 3; y <= a.ty + 3; y++) for (let x = a.tx - 3; x <= a.tx + 3; x++) if (near(a, x, y) && !tangle(x, y) && layable(x, y)) { from.set(key(x, y), null); queue.push([x, y]) }
         while (queue.length) {
           const [x, y] = queue.shift()!
           if (near(b, x, y) && !near(a, x, y)) {
@@ -307,20 +337,22 @@ test('the joining tile of a run between two places makes a named way, with signs
           for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
             const nx = x + dx!
             const ny = y + dy!
-            if (from.has(key(nx, ny)) || Math.abs(nx - a.tx) > 90 || Math.abs(ny - a.ty) > 90 || tangle(nx, ny) || !tileOk(w.__fsPathTile(nx, ny))) continue
+            if (from.has(key(nx, ny)) || Math.abs(nx - a.tx) > 90 || Math.abs(ny - a.ty) > 90 || tangle(nx, ny) || !layable(nx, ny)) continue
             from.set(key(nx, ny), key(x, y))
             queue.push([nx, ny])
           }
         }
       }
       return null
-    })
+    }, { radii, openings })
     if (plan) break
   }
   expect(plan, 'two places joined by open land in view').not.toBeNull()
   const { run } = plan!
   // Everything but one tile in the middle is laid already (as if over a few days), by this player.
   const gap = run[Math.floor(run.length / 2)]!
+  const besideGap = run[Math.floor(run.length / 2) - 1]!
+  test.info().annotations.push({ type: 'named-way fixture', description: JSON.stringify({ a: plan!.a, b: plan!.b, run, gap }) })
   const dump = await wilds(page)
   const account = accountOf(id)
   const world = sql(`SELECT world_id FROM players WHERE account_id='${account}';`)
@@ -340,9 +372,10 @@ test('the joining tile of a run between two places makes a named way, with signs
   await warp(page, 'wilds', gap.tx, gap.ty)
   await waitForWilds(page)
   await page.evaluate(() => (window as unknown as Hooks).__fsDevParkCreatures())
-  await expect.poll(async () => (await tileAt(page, run[0]!.tx, run[0]!.ty))?.change?.change ?? null, { timeout: 15_000 }).toBe('stone')
-  await waitForLive(page)
-  await page.keyboard.press('l')
+  // The endpoint can be outside this near read; the stone beside the gap cannot.
+  await expect.poll(async () => (await tileAt(page, besideGap.tx, besideGap.ty))?.change?.change ?? null, { timeout: 15_000 }).toBe('stone')
+  await pathKeyReady(page, gap, 'lay')
+  await page.keyboard.press('l', { delay: 50 })
   await expect.poll(async () => (await dialogueState(page)).open).toBe(true)
   await readDialogue(page, { pick: /Lay it/ })
   await landed(page, 'lay')
@@ -370,11 +403,17 @@ test('the joining tile of a run between two places makes a named way, with signs
   await page.keyboard.press('m')
   await expect(page.getByTestId('map-canvas')).toBeVisible()
   await expect(page.locator('[data-label="you"]')).toBeVisible()
+  // The server's shortest way can have a different midpoint from the seeded run.
+  // Fit all walked land so the named label is inside the tested viewport.
+  await page.getByTestId('map-show-all').click()
   const wayLabel = page.locator('[data-label="way"]').filter({ hasText: "Tansy's way" })
   await expect(wayLabel).toHaveCount(1)
   await expect(wayLabel).toBeVisible()
   await page.getByTestId('map-details-toggle').click()
-  await expect(page.getByTestId('map-ways').getByText("Tansy's way", { exact: true })).toBeVisible()
+  // The name is a text node in a row that also names both endpoints.
+  const wayEntry = page.getByTestId('map-ways').getByRole('listitem').filter({ hasText: /^Tansy's way · from / })
+  await expect(wayEntry).toHaveCount(1)
+  await expect(wayEntry).toBeVisible()
   await shot(page, '95-world-map-way-desktop')
   await page.setViewportSize({ width: 390, height: 844 })
   await expect(page.getByTestId('map-canvas')).toBeVisible()
@@ -397,8 +436,8 @@ test('the joining tile of a run between two places makes a named way, with signs
   await warp(page, 'wilds', gap.tx, gap.ty)
   await waitForWilds(page)
   await page.evaluate(() => (window as unknown as Hooks).__fsDevParkCreatures())
-  await waitForLive(page)
-  await page.keyboard.press('l')
+  await pathKeyReady(page, gap, 'lift')
+  await page.keyboard.press('l', { delay: 50 })
   await landed(page, 'lift')
   await expectToast(page, "Tansy's way is broken. Close the gap and it joins again.")
   expect((await paths(page))!.ways.some((w) => w.id === way!.id)).toBe(false)

@@ -228,6 +228,8 @@ test('walk from the gate through the Tangle into the Whitequiet and on, with no 
   expect(Math.abs(saved.x - before.x), 'local save x matches the settled hero').toBeLessThanOrEqual(17)
   expect(Math.abs(saved.y - before.y), 'local save y matches the settled hero').toBeLessThanOrEqual(17)
   await reenter(page, 'wilds')
+  // Reload rebuilds the enemy system: keep this walking/save test quiet too.
+  await parkCreatures(page)
   await waitForWilds(page)
   const after = await steady(page, () => player(page), { frames: 4, seconds: 20, message: 'hero position after re-entering the open map' })
   expect(Math.abs(after.x - before.x)).toBeLessThanOrEqual(17)
@@ -348,20 +350,66 @@ test('two players in neighbouring chunks see each other; two chunks apart they d
   await ctx.close()
 })
 
-type SceneSize = { list: number; tweens: number; statics: number; kinds: Record<string, number> }
+type SceneSize = { list: number; tweens: number; transientTweens: number; statics: number; kinds: Record<string, number> }
 const sceneSize = (p: Page) => p.evaluate(() => (window as unknown as { __fsSceneSize: () => SceneSize }).__fsSceneSize())
+
+/** The churn invariant: animation frames are one sprite; thought bubbles come and go. */
+async function sceneResources(p: Page) {
+  const z = await sceneSize(p)
+  const drawn: Record<string, number> = {}
+  for (const [k, n] of Object.entries(z.kinds)) {
+    if (!/^(Image|Sprite|Blitter):/.test(k)) continue
+    const key = k.replace(/-\d+$/, '')
+    drawn[key] = (drawn[key] ?? 0) + n
+  }
+  // steady compares JSON, so changing display-list order must not change the sample.
+  return { tweens: z.tweens, transientTweens: z.transientTweens, statics: z.statics, drawn: Object.fromEntries(Object.entries(drawn).sort(([a], [b]) => a.localeCompare(b))) }
+}
+
+/** Only the motes and their tween lifetime matter to a site redraw. */
+async function moteResources(p: Page) {
+  const z = await sceneSize(p)
+  return { motes: z.kinds['Image:site-mote'] ?? 0, tweens: z.tweens }
+}
+
+/** A stable empty scene can precede the presence join: wait for every camp's sprites. */
+async function campSpritesReady(p: Page): Promise<void> {
+  await expect.poll(() => p.evaluate(() => {
+    const hooks = window as unknown as {
+      __fsWilds: () => { chunk: { cx: number; cy: number }; entities: { id: string; kind: string; state: string; availableIn: number; chunk: { cx: number; cy: number }; enemies: string[] }[] }
+      __fsEnemies: () => { id: string; fight: unknown }[]
+    }
+    // Physics can settle the placed hero into another chunk. Read both sides
+    // in one frame and derive coverage from that current physical position.
+    const w = hooks.__fsWilds()
+    const expected = Object.fromEntries(w.entities
+      .filter(e => e.kind === 'camp' && e.state === 'available' && e.availableIn === 0 && Math.abs(e.chunk.cx - w.chunk.cx) <= 1 && Math.abs(e.chunk.cy - w.chunk.cy) <= 1)
+      .map(e => [e.id, e.enemies.length]))
+    const enemies = hooks.__fsEnemies()
+    const counts: Record<string, number> = {}
+    for (const e of enemies) {
+      if (!e.fight) continue
+      const camp = e.id.replace(/^wilds:/, '').replace(/:\d+$/, '')
+      counts[camp] = (counts[camp] ?? 0) + 1
+    }
+    return {
+      missing: Object.entries(expected).filter(([id, n]) => (counts[id] ?? 0) < n),
+      extra: Object.entries(counts).filter(([id, n]) => n > (expected[id] ?? 0))
+    }
+  }), { timeout: 20_000, message: 'server sprites match the available camps in the current physical 3×3' }).toEqual({ missing: [], extra: [] })
+}
 
 /** The nearest open tile to (tx, ty), searched outward within any supplied bounds. */
 const openNear = (p: Page, tx: number, ty: number, bounds: Parameters<typeof route>[1] = {}) =>
   p.evaluate(([x0, y0, b]) => {
-    const solid = (window as unknown as { __fsTileSolid: (x: number, y: number) => boolean }).__fsTileSolid
+    const hooks = window as unknown as { __fsTileSolid: (x: number, y: number) => boolean; __fsSolidAt: (x: number, y: number) => boolean }
     for (let r = 0; r < 12; r++)
       for (let dy = -r; dy <= r; dy++)
         for (let dx = -r; dx <= r; dx++) {
           const x = x0 + dx
           const y = y0 + dy
           if (b.minTx !== undefined && x < b.minTx || b.maxTx !== undefined && x > b.maxTx || b.minTy !== undefined && y < b.minTy || b.maxTy !== undefined && y > b.maxTy) continue
-          if (Math.max(Math.abs(dx), Math.abs(dy)) === r && !solid(x, y)) return { tx: x, ty: y }
+          if (Math.max(Math.abs(dx), Math.abs(dy)) === r && !hooks.__fsTileSolid(x, y) && !hooks.__fsSolidAt(x, y)) return { tx: x, ty: y }
         }
     return null
   }, [tx, ty, bounds] as const)
@@ -390,26 +438,17 @@ test('chunks walked in and out leave nothing behind: the tweens, the collision b
   expect(a && b, 'open ground at both spots').toBeTruthy()
   await standAt(page, b)
   await standAt(page, a)
-  const before = await steady(page, () => sceneSize(page), { frames: 5, seconds: 20, message: 'open-map scene counts before churn' })
+  await campSpritesReady(page)
+  const before = await steady(page, () => sceneResources(page), { frames: 5, seconds: 20, message: 'open-map scene counts before churn', ready: z => z.transientTweens === 0 })
   expect(before.tweens, 'something glints here (the test needs tweens to watch)').toBeGreaterThan(0)
-  expect(Object.keys(before.kinds).some((k) => k.startsWith('Blitter:')), 'flat decals are drawn by a blitter a chunk').toBe(true)
+  expect(Object.keys(before.drawn).some((k) => k.startsWith('Blitter:')), 'flat decals are drawn by a blitter a chunk').toBe(true)
   for (let i = 0; i < 4; i++) {
     await standAt(page, b)
     await standAt(page, a)
   }
-  const after = await steady(page, () => sceneSize(page), { frames: 5, seconds: 20, message: 'open-map scene counts after churn' })
-  // What the window draws (images, sprites, blitters), by type and texture; an
-  // animation's frame is the same sprite, and the hero's thought bubbles come and go.
-  const drawn = (z: SceneSize) => {
-    const out: Record<string, number> = {}
-    for (const [k, n] of Object.entries(z.kinds)) {
-      if (!/^(Image|Sprite|Blitter):/.test(k)) continue
-      const key = k.replace(/-\d+$/, '')
-      out[key] = (out[key] ?? 0) + n
-    }
-    return out
-  }
-  expect({ tweens: after.tweens, statics: after.statics, drawn: drawn(after) }, 'after four trips').toEqual({ tweens: before.tweens, statics: before.statics, drawn: drawn(before) })
+  await campSpritesReady(page)
+  const after = await steady(page, () => sceneResources(page), { frames: 5, seconds: 20, message: 'open-map scene counts after churn', ready: z => z.transientTweens === 0 })
+  expect(after, 'after four trips').toEqual(before)
 })
 
 test('stepping back and forth over a chunk edge builds and drops nothing; the 3×3 around the hero is always whole', async ({ page }) => {
@@ -456,12 +495,12 @@ test('the Whitequiet’s motes drift with each outer chunk, stay through its sit
   const outer = (await steady(page, () => wildsWindow(page), { frames: 4, seconds: 20, message: 'Whitequiet window around the hero' }))!.outer
   expect(outer.length, 'outer chunks around the Whitequiet').toBeGreaterThan(0)
   expect(await motes(page), `${MOTES} motes a chunk for ${outer.join(' ')}`).toBe(MOTES * outer.length)
-  const before = await steady(page, () => sceneSize(page), { frames: 5, seconds: 20, message: 'Whitequiet scene counts before redraw' })
+  const before = await steady(page, () => moteResources(page), { frames: 5, seconds: 20, message: 'Whitequiet scene counts before redraw' })
 
   // A paper found redraws every site layer (its key counts paper flags): the motes stay, nothing doubles.
   await page.evaluate(() => (window as unknown as { __fsDevAddFlag: (f: string) => void }).__fsDevAddFlag('paper:motes-test'))
-  const after = await steady(page, () => sceneSize(page), { frames: 5, seconds: 20, message: 'Whitequiet scene counts after redraw' })
-  expect(after.kinds['Image:site-mote'], 'the motes survive the redraw').toBe(MOTES * outer.length)
+  const after = await steady(page, () => moteResources(page), { frames: 5, seconds: 20, message: 'Whitequiet scene counts after redraw' })
+  expect(after.motes, 'the motes survive the redraw').toBe(MOTES * outer.length)
   expect(after.tweens, 'and so do their tweens (no more, no fewer)').toBe(before.tweens)
 
   // Back into the Tangle: the outer chunks go, and their motes and tweens with them.
@@ -482,7 +521,7 @@ test.describe('with reduced motion', () => {
     await standAt(page, (await openNear(page, 12, -3 * S + 12))!)
     const outer = (await steady(page, () => wildsWindow(page), { frames: 4, seconds: 20, message: 'reduced-motion Whitequiet window' }))!.outer
     expect(await motes(page)).toBe(MOTES * outer.length)
-    const stableScene = await steady(page, () => sceneSize(page), { frames: 5, seconds: 20, message: 'reduced-motion scene tween count' })
-    expect(stableScene.tweens, 'nothing in the Wilds tweens with motion reduced').toBe(0)
+    const tweens = await steady(page, async () => (await sceneSize(page)).tweens, { frames: 5, seconds: 20, message: 'reduced-motion scene tween count' })
+    expect(tweens, 'nothing in the Wilds tweens with motion reduced').toBe(0)
   })
 })
