@@ -330,6 +330,7 @@ export class WildsEntities {
   constructor(private scene: Phaser.Scene, private deps: WildsDeps) {
     ensureArt(scene)
     scene.events.once('shutdown', () => {
+      this.campOutcome.clear()
       this.drawn.clear()
       this.attached.clear()
       this.staleLabel = null
@@ -431,7 +432,7 @@ export class WildsEntities {
   private refresh(): Promise<boolean> {
     const hero = this.deps.hero()
     const { cx, cy } = chunkOfPixel(hero.x, hero.y)
-    return refreshNear(this.deps.session, cx, cy)
+    return refreshNear(this.deps.session, cx, cy).finally(() => this.campOutcome.readFinished())
   }
 
   /** Every entity of the attached chunks, with its state. */

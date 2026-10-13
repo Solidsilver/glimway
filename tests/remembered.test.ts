@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { installFakeIndexedDB, resetFakeIndexedDB, readRawRecord } from './helpers/fake-indexeddb.ts'
+import { abortNextFakeTransaction, installFakeIndexedDB, resetFakeIndexedDB, readRawRecord } from './helpers/fake-indexeddb.ts'
 import {
   REMEMBER_DB,
   forgetRemembered,
@@ -30,6 +30,19 @@ test('nothing is remembered by default', async () => {
 test('save → load → forget round-trips through IndexedDB', async () => {
   setup()
   assert.equal(await saveRemembered(creds), true)
+  assert.deepEqual(await loadRemembered(), creds)
+  assert.equal(await forgetRemembered(), true)
+  assert.equal(await loadRemembered(), null)
+})
+
+test('write and delete report success only after their IndexedDB transaction commits', async () => {
+  setup()
+  abortNextFakeTransaction()
+  assert.equal(await saveRemembered(creds), false, 'request success followed by abort is not a saved credential')
+  assert.equal(readRawRecord(REMEMBER_DB, 'credentials', 'habitica'), undefined)
+  assert.equal(await saveRemembered(creds), true)
+  abortNextFakeTransaction()
+  assert.equal(await forgetRemembered(), false, 'request success followed by abort is not a completed forget')
   assert.deepEqual(await loadRemembered(), creds)
   assert.equal(await forgetRemembered(), true)
   assert.equal(await loadRemembered(), null)

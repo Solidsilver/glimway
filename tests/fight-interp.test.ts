@@ -41,6 +41,17 @@ test('delay rises under jitter, stays <=200, settles to100 without reversing dra
   }
   assert.equal(r.interp.measures().interpolationDelay, 100)
 })
+test('consecutive deltas in one arrival batch do not turn tick spacing into jitter', () => {
+  const r = rig()
+  r.advance(100)
+  r.delta(101)
+  r.delta(102)
+  assert.equal(r.interp.measures().snapshotSamples, 1)
+  assert.equal(r.interp.measures().interpolationDelay, 100)
+  r.advance(100)
+  r.delta(103)
+  assert.equal(r.interp.measures().snapshotSamples, 2)
+})
 test('tick wrap and same world clock across rooms', () => {
   const r = rig(0xffffffff)
   r.advance(100); r.delta(0); r.advance(50)
@@ -88,6 +99,16 @@ test('seeded crits, row and swing refusals, duplicate results and pending timeou
   r.interp.sent(5, []); r.advance(FIGHT_RESULT_TIMEOUT)
   assert.equal(r.interp.measures().timeouts, 1)
   assert.equal(r.interp.measures().pending, 0)
+})
+test('clear resets interpolation and fight metrics for the new socket session', () => {
+  const r = rig()
+  r.advance(190); r.delta(101)
+  r.interp.sent(1, [{ room: 1, enemy: 0 }]); r.advance(180)
+  r.interp.result(create(FightSwingResultSchema, { swingCounter: 1, hits: [{ room: 1, enemy: 0, refusedReason: 2 }] }))
+  assert.ok(r.interp.measures().snapshotSamples > 0)
+  assert.equal(r.interp.measures().confirmations, 1)
+  r.interp.clear()
+  assert.deepEqual(r.interp.measures(), { snapshotGapP95: 0, snapshotSamples: 0, interpolationDelay: 100, hitConfirmationP95: 0, confirmations: 0, predictedRows: 0, refusedRows: 0, refusedPercent: 0, swingRefusals: 0, timeouts: 0, pending: 0 })
 })
 test('spawn/remove, room rejoin and close discard buffers; a removed corpse is absent, never a win', () => {
   const r = rig(); r.advance(100)

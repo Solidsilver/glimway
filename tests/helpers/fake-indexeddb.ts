@@ -36,6 +36,7 @@ interface FakeDatabase {
 }
 
 const databases = new Map<string, FakeDatabase>();
+let abortNextTransaction = false
 
 function makeOpenRequest(dbName: string, version: number): FakeRequest<unknown> {
   const request = new FakeRequest<unknown>();
@@ -75,15 +76,17 @@ function makeDatabaseHandle(db: FakeDatabase): Record<string, unknown> {
       return makeStoreHandle(db, name);
     },
     transaction(_names: unknown, _mode?: string) {
-      return {
+      const tx: Record<string, unknown> = {
+        commit: [] as (() => void)[],
         objectStore: (name: string) => {
           const store = db.stores.get(name);
           if (!store) {
             throw new Error(`FakeIndexedDB: no object store ${JSON.stringify(name)}`);
           }
-          return makeStoreHandle(db, name);
+          return makeStoreHandle(db, name, tx);
         },
       };
+      return tx
     },
     close() {
       db.closed = true;
@@ -91,7 +94,7 @@ function makeDatabaseHandle(db: FakeDatabase): Record<string, unknown> {
   };
 }
 
-function makeStoreHandle(db: FakeDatabase, name: string): Record<string, unknown> {
+function makeStoreHandle(db: FakeDatabase, name: string, tx?: Record<string, unknown>): Record<string, unknown> {
   const store = db.stores.get(name);
   if (!store) {
     throw new Error(`FakeIndexedDB: no object store ${JSON.stringify(name)}`);
@@ -102,6 +105,7 @@ function makeStoreHandle(db: FakeDatabase, name: string): Record<string, unknown
       queueMicrotask(() => {
         request.result = store.data.has(key) ? store.data.get(key) : undefined;
         fireSuccess(request);
+        finishTransaction(tx)
       });
       return request;
     },
@@ -114,9 +118,10 @@ function makeStoreHandle(db: FakeDatabase, name: string): Record<string, unknown
           if (request.onerror) request.onerror({ target: request });
           return;
         }
-        store.data.set(key, value);
+        ;(tx?.commit as (() => void)[] | undefined)?.push(() => store.data.set(key, value))
         request.result = key;
         fireSuccess(request);
+        finishTransaction(tx)
       });
       return request;
     },
@@ -131,12 +136,23 @@ function makeStoreHandle(db: FakeDatabase, name: string): Record<string, unknown
     delete(key: string) {
       const request = new FakeRequest<unknown>();
       queueMicrotask(() => {
-        store.data.delete(key);
+        ;(tx?.commit as (() => void)[] | undefined)?.push(() => store.data.delete(key))
         fireSuccess(request);
+        finishTransaction(tx)
       });
       return request;
     },
   };
+}
+
+function finishTransaction(tx?: Record<string, unknown>): void {
+  if (!tx) return
+  const event = abortNextTransaction ? 'onabort' : 'oncomplete'
+  abortNextTransaction = false
+  queueMicrotask(() => {
+    if (event === 'oncomplete') for (const commit of tx.commit as (() => void)[]) commit()
+    ;(tx[event] as ((ev: { target: unknown }) => void) | null)?.({ target: tx })
+  })
 }
 
 export function installFakeIndexedDB(): void {
@@ -147,7 +163,11 @@ export function installFakeIndexedDB(): void {
 
 export function resetFakeIndexedDB(): void {
   databases.clear();
+  abortNextTransaction = false
 }
+
+/** Make the next object-store request succeed, then abort its transaction. */
+export function abortNextFakeTransaction(): void { abortNextTransaction = true }
 
 /**
  * Writes a raw record straight into the store, bypassing saveGame validation.

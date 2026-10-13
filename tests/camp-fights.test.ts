@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CAMP_READ_EVERY_MS, CAMP_READ_TRIES, ServerCampOutcome, type CampNow } from '../src/game/wilds/camp-fights.ts';
+import { CAMP_READ_EVERY_MS, ServerCampOutcome, type CampNow } from '../src/game/wilds/camp-fights.ts';
 
 function rig() {
   let now = 0;
@@ -25,16 +25,28 @@ test('only the near read’s word for the exact cycle makes a camp claimable; de
   assert.equal(r.outcome.won(r.camp({ claimable: true })), true, 'the read names this cycle claimable');
 });
 
-test('a completion asks a bounded, spaced number of reads, and a new completion earns a new round', () => {
+test('a completion retries slowly until it is claimable, with only one read in flight', () => {
   const r = rig();
   r.room = true;
-  for (let i = 0; i < 20; i++) { r.outcome.won(r.camp()); r.wait(CAMP_READ_EVERY_MS / 2); }
-  assert.equal(r.asks, CAMP_READ_TRIES, 'never more than the bounded tries');
+  r.outcome.won(r.camp());
+  for (let i = 0; i < 10; i++) { r.outcome.won(r.camp()); r.wait(CAMP_READ_EVERY_MS); }
+  assert.equal(r.asks, 1, 'a slow read is not duplicated while in flight');
+  r.outcome.readFinished();
+  r.outcome.won(r.camp());
+  assert.equal(r.asks, 2, 'a completed read schedules another recovery attempt');
+  r.outcome.readFinished();
+  r.wait(CAMP_READ_EVERY_MS);
+  r.outcome.won(r.camp());
+  assert.equal(r.asks, 3, 'recovery continues without a four-read cutoff');
+  r.outcome.readFinished();
+  r.outcome.won(r.camp({ claimable: true }));
+  r.wait(CAMP_READ_EVERY_MS * 2); r.outcome.won(r.camp({ claimable: true }));
+  assert.equal(r.asks, 3, 'durable eligibility stops recovery');
   r.room = false; r.outcome.won(r.camp());
   r.room = true; r.outcome.won(r.camp());
-  assert.equal(r.asks, CAMP_READ_TRIES + 1, 'the room stood again and fell again');
+  assert.equal(r.asks, 4, 'the room stood again and fell again');
   r.room = undefined; r.wait(CAMP_READ_EVERY_MS * 10); r.outcome.won(r.camp());
-  assert.equal(r.asks, CAMP_READ_TRIES + 1, 'an absent room asks nothing');
+  assert.equal(r.asks, 4, 'an absent room asks nothing');
 });
 
 test('unknown room or socket keeps the store’s word; standing rows hide it; a new cycle or epoch starts over', () => {

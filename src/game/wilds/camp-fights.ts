@@ -28,11 +28,10 @@ export interface CampNow {
   claimable: boolean
 }
 
-/** Fresh reads asked after one completion, and how far apart. */
-export const CAMP_READ_TRIES = 4
-export const CAMP_READ_EVERY_MS = 1_500
+/** Recovery reads while a completed cycle still lacks its durable claim word. */
+export const CAMP_READ_EVERY_MS = 5_000
 
-type Known = { epoch: string; cycle: number; complete: boolean; tries: number; askedAt: number; claimed: boolean }
+type Known = { epoch: string; cycle: number; complete: boolean; askedAt: number; claimed: boolean; inFlight: boolean }
 
 export class ServerCampOutcome {
   private readonly known = new Map<string, Known>()
@@ -50,7 +49,7 @@ export class ServerCampOutcome {
   private at(camp: Pick<CampNow, 'id' | 'epoch' | 'cycle'>): Known {
     let k = this.known.get(camp.id)
     if (!k || k.epoch !== camp.epoch || k.cycle !== camp.cycle) {
-      k = { epoch: camp.epoch, cycle: camp.cycle, complete: false, tries: 0, askedAt: -Infinity, claimed: false }
+      k = { epoch: camp.epoch, cycle: camp.cycle, complete: false, askedAt: -Infinity, claimed: false, inFlight: false }
       this.known.set(camp.id, k)
     }
     return k
@@ -65,18 +64,35 @@ export class ServerCampOutcome {
     }
     if (answer === true) {
       // A completion seen here: a new one earns a fresh round of reads.
-      if (!k.complete) { k.complete = true; k.tries = 0 }
-      if (!camp.claimable && !k.claimed && k.tries < CAMP_READ_TRIES && this.now() - k.askedAt >= CAMP_READ_EVERY_MS) {
-        k.tries++
+      if (!k.complete) { k.complete = true; k.askedAt = -Infinity }
+      if (!camp.claimable && !k.claimed && !k.inFlight && this.now() - k.askedAt >= CAMP_READ_EVERY_MS) {
         k.askedAt = this.now()
+        k.inFlight = true
         this.ask()
       }
+    } else {
+      // A respawn ends recovery for the old completion; the next fall gets a fresh schedule.
+      k.complete = false
+      k.inFlight = false
+      k.askedAt = -Infinity
     }
     return camp.claimable && !k.claimed
   }
 
   /** This account settled (or can't settle) this camp's cycle. */
   claimed(camp: Pick<CampNow, 'id' | 'epoch' | 'cycle'>): void {
-    this.at(camp).claimed = true
+    const k = this.at(camp)
+    k.claimed = true
+    k.inFlight = false
+  }
+
+  /** The near read requested for this completion has finished, successfully or not. */
+  readFinished(): void {
+    for (const known of this.known.values()) known.inFlight = false
+  }
+
+  /** A scene lifetime ended; no scheduled recovery state belongs to its successor. */
+  clear(): void {
+    this.known.clear()
   }
 }

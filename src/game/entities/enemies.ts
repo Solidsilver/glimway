@@ -35,6 +35,7 @@ import { Creatures } from './creatures'
 import { roadStep } from '../../lib/quests'
 import type { CombatField } from '../../lib/combat-moves'
 import { ENEMY_TUNING, KNOCK, contactThreat, hitOutcome, knockFrom, knockInterrupts, touchOutcome, type EnemyPhase, type EnemyState } from './fight-rules'
+import { ownCollider } from './collider-lifetime'
 
 /** An enemy on this screen: its state, the sprite that draws it (a local enemy's body too), and its owner's working. */
 export interface Enemy extends EnemyState {
@@ -359,12 +360,12 @@ export class EnemySystem {
    * Its death is the room's, never recorded in defeatedEnemies (camps come
    * back each cycle, unlike curated enemies).
    */
-  spawnWilds(id: string, type: EnemyType, tx: number, ty: number): Enemy {
-    return this.spawnEnemy(id, type, tx, ty)
+  spawnWilds(id: string, type: EnemyType, tx: number, ty: number, withCollider = true): Enemy {
+    return this.spawnEnemy(id, type, tx, ty, undefined, withCollider)
   }
 
   /** `hp`: a curated spot's own health (the opening's finger-wisp), else the type's. */
-  spawnEnemy(id: string, type: EnemyType, tx: number, ty: number, hp?: number): Enemy {
+  spawnEnemy(id: string, type: EnemyType, tx: number, ty: number, hp?: number, withCollider = true): Enemy {
     // Woodland enemies use the delivered slime/mushroom art; the guardian
     // uses the delivered native 24x24 pose textures when present (procedural
     // placeholder otherwise). Every pose shares the same 24x24 texture size
@@ -431,7 +432,7 @@ export class EnemySystem {
     // Enemies respect walls, trees and water: a charge can end in a tree.
     // They also stay on the map: an exit gap in the treeline is a way out
     // for the hero, never for a beetle mid-charge.
-    this.scene.physics.add.collider(sprite, this.deps.solidGroup)
+    if (withCollider) ownCollider(sprite, this.scene.physics.add.collider(sprite, this.deps.solidGroup))
     ;(sprite.body as Phaser.Physics.Arcade.Body).setCollideWorldBounds(true)
     this.enemies.push(enemy)
     return enemy

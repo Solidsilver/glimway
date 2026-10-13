@@ -9,7 +9,7 @@ import type { FightTargetRef } from './presence.ts'
 type Payload<T> = Omit<T, '$typeName' | '$unknown'>
 type Sample = { ms: number; row: FightEnemy }
 type Track = { life: number; samples: Sample[]; knock?: { x: number; y: number; at: number }; windup?: { tick: number; ms: number; lockMs?: number }; removedAt?: number }
-type Room = { closedUntil?: number; key: FightRoomKey; tick: number; received: number; incarnation: number; tracks: Map<number, Track>; camps: Map<string, Map<number, boolean>> }
+type Room = { closedUntil?: number; key: FightRoomKey; tick: number; received: number; incarnation: number; batchHasDelta: boolean; tracks: Map<number, Track>; camps: Map<string, Map<number, boolean>> }
 /** `life`: one enemy's life on this screen. A resync keeps it; a new row (a spawn, a cycle's respawn) gets a new one. */
 export interface FightDraw { incarnation: number; life: number; room: number; row: FightEnemy; x: number; y: number; elapsedMs: number; telegraphMs?: number; telegraphTick?: number; aimLocked?: boolean }
 export interface FightMeasures {
@@ -106,7 +106,7 @@ export class FightInterp {
       const k = room.key, n = join.roomKey
       if (handle === join.room || (k.world === n.world && k.realm === n.realm && k.layer === n.layer && k.cx === n.cx && k.cy === n.cy)) this.drop(handle)
     }
-    this.rooms.set(join.room, { key: join.roomKey, incarnation: ++this.incarnation, tick: join.tick, received: now, camps: new Map(), tracks: new Map(join.enemies.map(row => [row.enemy, this.track(ms, row)])) })
+    this.rooms.set(join.room, { key: join.roomKey, incarnation: ++this.incarnation, tick: join.tick, received: now, batchHasDelta: false, camps: new Map(), tracks: new Map(join.enemies.map(row => [row.enemy, this.track(ms, row)])) })
     for (const row of join.enemies) this.campRow(this.rooms.get(join.room)!, row)
   }
 
@@ -114,13 +114,14 @@ export class FightInterp {
     const room = this.rooms.get(delta.room)
     if (!room || fightTickDiff(delta.tick, room.tick) < 0) return
     const now = this.now(), ms = this.clock(delta.tick)
-    if (fightTickDiff(delta.tick, room.tick) === 1) {
+    if (fightTickDiff(delta.tick, room.tick) === 1 && !room.batchHasDelta) {
       const gap = now - room.received
       bounded(this.gaps, gap)
       const variation = Math.abs(gap - 100)
       // Rise quickly under jitter, settle slowly over ~5 seconds.
       this.delay = Math.min(200, Math.max(this.delay, 100 + variation))
     }
+    if (fightTickDiff(delta.tick, room.tick) === 1) room.batchHasDelta = true
     room.tick = delta.tick; room.received = now
     for (const patch of delta.changed) {
       const track = room.tracks.get(patch.enemy)
@@ -161,6 +162,8 @@ export class FightInterp {
   /** Once per observation frame, shared by every enemy and attack that frame. */
   observe(): { event: Payload<FightEvent>; elapsedMs: number }[] {
     const now = this.now()
+    // Consecutive deltas delivered between observation frames form one arrival batch.
+    for (const room of this.rooms.values()) room.batchHasDelta = false
     const dt = this.adjustedAt ? Math.max(0, now - this.adjustedAt) : 0
     this.adjustedAt = now
     this.delay = Math.max(100, this.delay - dt * .02)
@@ -266,6 +269,8 @@ export class FightInterp {
     this.rooms.clear(); this.pending.clear(); this.events = []; this.eventKeys.clear()
     this.seed = 0; this.anchor = null; this.clockOffset = Infinity; this.lastDraw = -Infinity
     this.delay = 100; this.frameSeen = null; this.adjustedAt = 0
+    this.gaps = []; this.confirmations = []
+    this.predictedRows = 0; this.refusedRows = 0; this.swingRefusals = 0; this.timeouts = 0; this.confirmationCount = 0
   }
 }
 function bounded(list: number[], value: number): void { list.push(value); if (list.length > 512) list.shift() }
