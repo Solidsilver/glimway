@@ -43,6 +43,24 @@ func (a *Server) RecordFightTick(d time.Duration) {
 	m.max = max(m.max, d)
 }
 
+// RecordFightTicks records one worker's room steps for one tick: one lock
+// for the pass, not one per room.
+func (a *Server) RecordFightTicks(ds []time.Duration) {
+	m := a.Config.FightMetrics
+	if m == nil {
+		return
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, d := range ds {
+		m.samples[m.next] = d
+		m.next = (m.next + 1) % len(m.samples)
+		m.count = min(m.count+1, len(m.samples))
+		m.ticks++
+		m.max = max(m.max, d)
+	}
+}
+
 // RecordFightBytes counts serialized fight bytes admitted to a player's queue.
 func (a *Server) RecordFightBytes(n int) {
 	m := a.Config.FightMetrics

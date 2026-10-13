@@ -73,6 +73,16 @@ func TestFightBotLoad(t *testing.T) {
 	}
 	x := newRig(t)
 	x.api.Config.Logger = log.New(io.Discard, "", 0)
+	fightWorkers := 0
+	// FIGHT_LOAD_WORKERS: the scheduler's workers (0: one per GOMAXPROCS;
+	// -1: one goroutine per room with the shared clock, for option A).
+	if raw := os.Getenv("FIGHT_LOAD_WORKERS"); raw != "" {
+		workers, err := strconv.Atoi(raw)
+		if err != nil || workers < -1 {
+			t.Fatal("invalid FIGHT_LOAD_WORKERS")
+		}
+		fightWorkers = workers
+	}
 	// Every fake account signs in from the one test address; the sign-in
 	// limits are not what this measures.
 	x.api.Config.LoginRate, x.api.Config.LoginGlobalRate, x.api.Config.LoginPartyRate = 1<<20, 1<<20, 1<<20
@@ -88,10 +98,12 @@ func TestFightBotLoad(t *testing.T) {
 		conn                          *websocket.Conn
 		slot, group                   int
 		bytes, results, joins, swings atomic.Uint64
+		frames                        atomic.Uint64
 		tick                          atomic.Uint32
 		warm                          atomic.Bool  // has the active room's join
 		campRows                      atomic.Int32 // most rows the active room showed at once
 		lags, latencies               []float64    // ms; reader-owned until done
+		frameEvents                   []float64    // events per measured server data frame
 		swung                         sync.Mutex
 		sent                          map[uint32]time.Time
 	}
@@ -112,6 +124,9 @@ func TestFightBotLoad(t *testing.T) {
 	cfg := presenceTestConfig()
 	cfg.RevalidateMs = 60000
 	ts := startPresence(t, x, cfg)
+	// startPresence rebuilds the API with the load clock/config, so apply
+	// scheduler mode to the live hub after that construction.
+	x.api.presence.fightWorkers = fightWorkers
 	if maxConnections > 0 {
 		// The hub validates and clones its config, so the lift goes on the
 		// hub's own copy, after the proto bound was checked. Past the cap
@@ -167,6 +182,10 @@ func TestFightBotLoad(t *testing.T) {
 			if err != nil {
 				fail(err)
 				return
+			}
+			if measuring.Load() {
+				b.frames.Add(1)
+				b.frameEvents = append(b.frameEvents, float64(len(events)))
 			}
 			for _, raw := range events {
 				m, err := decodePresence(raw)
@@ -383,11 +402,15 @@ func TestFightBotLoad(t *testing.T) {
 	heap, goroutines := fightLoadMemory()
 	measured := x.api.FightMeasurements()
 	var bytes, results, swings, maxBytes uint64
+	var frames uint64
+	var frameEvents []float64
 	joinless, wrongCamp := 0, 0
 	campMin, campMax := int32(math.MaxInt32), int32(0)
 	for _, b := range bots {
 		n := b.bytes.Load()
 		bytes += n
+		frames += b.frames.Load()
+		frameEvents = append(frameEvents, b.frameEvents...)
 		maxBytes = max(maxBytes, n)
 		results += b.results.Load()
 		swings += b.swings.Load()
@@ -410,15 +433,27 @@ func TestFightBotLoad(t *testing.T) {
 	}
 	lagP50, lagP95, lagMax := fightLoadPercentiles(lags)
 	latencyP50, latencyP95, latencyMax := fightLoadPercentiles(latencies)
+	_, frameEventsP95, _ := fightLoadPercentiles(frameEvents)
+	frameEventsMean := 0.0
+	if len(frameEvents) > 0 {
+		for _, n := range frameEvents {
+			frameEventsMean += n
+		}
+		frameEventsMean /= float64(len(frameEvents))
+	}
 	report := struct {
 		FightMeasurement
 		Cores                 int     `json:"cores"`
+		SchedulerWorkers      int     `json:"schedulerWorkers"`
 		Groups                int     `json:"groups"`
 		Bots                  int     `json:"bots"`
 		RunSeconds            float64 `json:"runSeconds"`
 		AwakeRoomsPerCore     float64 `json:"awakeRoomsPerCore"`
 		CPUBusyPercent        float64 `json:"cpuBusyPercent"`
 		FightBytesPerSecond   float64 `json:"fightBytesPerSecond"`
+		FramesPerSecondPerBot float64 `json:"framesPerSecondPerBot"`
+		EventsPerFrameMean    float64 `json:"eventsPerFrameMean"`
+		EventsPerFrameP95     float64 `json:"eventsPerFrameP95"`
 		MeanBotBytesPerSecond float64 `json:"meanBotBytesPerSecond"`
 		MaxBotBytesPerSecond  float64 `json:"maxBotBytesPerSecond"`
 		ExpectedCampSize      int32   `json:"expectedCampSize"`
@@ -441,7 +476,7 @@ func TestFightBotLoad(t *testing.T) {
 		HeapInUseBytes        uint64  `json:"heapInUseBytes"`
 		HeapBytesPerBot       float64 `json:"heapBytesPerBot"`
 		Goroutines            int     `json:"goroutines"`
-	}{measured, runtime.GOMAXPROCS(0), groups, len(bots), duration.Seconds(), float64(measured.AwakeRooms) / float64(runtime.GOMAXPROCS(0)), cpu.busyPercent(), float64(bytes) / duration.Seconds(), float64(bytes) / float64(len(bots)) / duration.Seconds(), float64(maxBytes) / duration.Seconds(), expectedCamp, campMin, campMax, wrongCamp, swings, results, joinless, failed.Load(), firstFailureText(firstFailure.Load()), len(lags), lagP50, lagP95, lagMax, len(latencies), latencyP50, latencyP95, latencyMax, heap, float64(heap) / float64(len(bots)), goroutines}
+	}{measured, runtime.GOMAXPROCS(0), fightWorkers, groups, len(bots), duration.Seconds(), float64(measured.AwakeRooms) / float64(runtime.GOMAXPROCS(0)), cpu.busyPercent(), float64(bytes) / duration.Seconds(), float64(frames) / duration.Seconds() / float64(len(bots)), frameEventsMean, frameEventsP95, float64(bytes) / float64(len(bots)) / duration.Seconds(), float64(maxBytes) / duration.Seconds(), expectedCamp, campMin, campMax, wrongCamp, swings, results, joinless, failed.Load(), firstFailureText(firstFailure.Load()), len(lags), lagP50, lagP95, lagMax, len(latencies), latencyP50, latencyP95, latencyMax, heap, float64(heap) / float64(len(bots)), goroutines}
 	data, _ := json.Marshal(report)
 	fmt.Printf("FIGHT_LOAD %s\n", data)
 	if report.SocketFailures != 0 || report.BotsWithoutFightJoin != 0 || report.AwakeRooms == 0 || report.Ticks == 0 || report.SwingResults == 0 {
