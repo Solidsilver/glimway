@@ -79,9 +79,13 @@ test('entering the Commons blocks the main thread for no long task', async ({ pa
     console.log(`First-paint measurement: ${commons.ms} ms total; longest long task ${longest(commons.tasks)} ms`)
   }
   test.info().annotations.push({ type: 'longest task (ms)', description: String(longest(commons.tasks)) })
-  if (process.env.PERF) writeFileSync(`.agent/perf-${process.env.PERF_TAG ?? 'now'}-desktop.json`, JSON.stringify({ commons, hashes: { village, commons: commonsHash } }, null, 1))
-  // Generous for a loaded test machine; the report has the quiet numbers.
-  expect(longest(commons.tasks)).toBeLessThan(400)
+  if (process.env.PERF) writeFileSync('test-results/perf-first-paint-desktop.json', JSON.stringify({ commons, hashes: { village, commons: commonsHash } }, null, 1))
+  // This is a measured browser budget, not a correctness gate. The opt-in
+  // browser-performance job sets PERF=1 and records this observation.
+  if (process.env.PERF) {
+    const budget = Number(process.env.FIRST_PAINT_LONGTASK_BUDGET_MS) || 400
+    expect(longest(commons.tasks), `longest long task; measured browser budget is ${budget} ms`).toBeLessThan(budget)
+  }
 })
 
 test.describe('phone, 4× CPU throttle', () => {
@@ -99,6 +103,6 @@ test.describe('phone, 4× CPU throttle', () => {
     const commons = await enter(page, 'commons', 23, 19)
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 })
     const commonsHash = await tilesetHash(page)
-    writeFileSync(`.agent/perf-${process.env.PERF_TAG ?? 'now'}-phone.json`, JSON.stringify({ commons, hashes: { village, commons: commonsHash } }, null, 1))
+    writeFileSync('test-results/perf-first-paint-phone.json', JSON.stringify({ commons, hashes: { village, commons: commonsHash } }, null, 1))
   })
 })

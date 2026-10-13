@@ -61,7 +61,9 @@ export default defineConfig({
   fullyParallel: true,
   workers: WORKERS,
   retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? 'list' : [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
+  reporter: process.env.CI
+    ? [['list'], ['json', { outputFile: 'test-results/e2e-results.json' }]]
+    : [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
   // The slowest spec files, named at the end of every run (review F12: keep the wall time in sight).
   reportSlowTests: { max: 10, threshold: 60_000 },
   globalSetup: './e2e/global-setup.ts',
@@ -75,6 +77,8 @@ export default defineConfig({
     // naming the button instead of hanging until the test's own timeout. A
     // minute leaves room for GitHub's software-rendered smoke runner.
     actionTimeout: 60_000,
+    // The JSON report always captures every attempt. A retry trace can show
+    // the successful retry, not the failing first attempt that triggered it.
     trace: process.env.CI ? 'on-first-retry' : 'retain-on-failure',
     video: 'off',
     screenshot: 'only-on-failure'

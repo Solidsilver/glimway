@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import type { BrowserContext } from '@playwright/test'
 import { allow, newUser, openTitleGuide, pasteAndConnect, pinWorld, reenter, routeHabitica, serverState, setHabitica, waitForWorld, wickSlack, CONTRACT } from './connected'
-import { diagnose, expectToast, frames, holdUntil, parkCreatures, player, settled, waitForLive, waitForWilds, waitGame, warp, wilds, wildsWindow, windowWhole } from './helpers'
+import { diagnose, expectToast, frames, holdUntil, parkCreatures, player, settled, steady, waitForLive, waitForWilds, waitGame, warp, wilds, wildsWindow, windowWhole } from './helpers'
 import { freshPlayer } from './home-helpers'
 
 /**
@@ -210,17 +210,26 @@ test('walk from the gate through the Tangle into the Whitequiet and on, with no 
 
   // Reload: the place is the server's; Continue puts you back where you stood
   // (once the report after the walk has reached it).
-  const before = await player(page)
+  const before = await steady(page, () => player(page), { frames: 4, seconds: 20, message: 'hero position after the open-map walk' })
   await expect.poll(async () => {
     const st = (await serverState(page)).body.state as { area: string; position: { x: number; y: number } }
     return st.area === 'wilds' && Math.hypot(st.position.x - before.x, st.position.y - before.y) <= 17
   }, { timeout: 20_000 }).toBe(true)
   // And this tab's own record has it (a reload starts from the place the page last saved).
   await page.evaluate(() => (window as unknown as { __fsDevSaveSoon: () => void }).__fsDevSaveSoon())
-  await expect.poll(() => page.evaluate(() => (window as unknown as { __fsDevSaved: () => { pending: boolean } }).__fsDevSaved().pending)).toBe(false)
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __fsDevSaved: () => { pending: boolean } }).__fsDevSaved().pending), {
+    message: `local save should settle at ${before.x},${before.y}`
+  }).toBe(false)
+  const saved = await steady(page, () => page.evaluate(() => {
+    const { area, position } = (window as unknown as { __fsDevSaved: () => { area: string; position: { x: number; y: number } } }).__fsDevSaved()
+    return { area, ...position }
+  }), { frames: 3, seconds: 20, message: 'local save position after the walk' })
+  expect(saved.area).toBe('wilds')
+  expect(Math.abs(saved.x - before.x), 'local save x matches the settled hero').toBeLessThanOrEqual(17)
+  expect(Math.abs(saved.y - before.y), 'local save y matches the settled hero').toBeLessThanOrEqual(17)
   await reenter(page, 'wilds')
   await waitForWilds(page)
-  const after = await player(page)
+  const after = await steady(page, () => player(page), { frames: 4, seconds: 20, message: 'hero position after re-entering the open map' })
   expect(Math.abs(after.x - before.x)).toBeLessThanOrEqual(17)
   expect(Math.abs(after.y - before.y)).toBeLessThanOrEqual(17)
 })
@@ -381,16 +390,14 @@ test('chunks walked in and out leave nothing behind: the tweens, the collision b
   expect(a && b, 'open ground at both spots').toBeTruthy()
   await standAt(page, b)
   await standAt(page, a)
-  await page.waitForTimeout(500)
-  const before = await sceneSize(page)
+  const before = await steady(page, () => sceneSize(page), { frames: 5, seconds: 20, message: 'open-map scene counts before churn' })
   expect(before.tweens, 'something glints here (the test needs tweens to watch)').toBeGreaterThan(0)
   expect(Object.keys(before.kinds).some((k) => k.startsWith('Blitter:')), 'flat decals are drawn by a blitter a chunk').toBe(true)
   for (let i = 0; i < 4; i++) {
     await standAt(page, b)
     await standAt(page, a)
   }
-  await page.waitForTimeout(500)
-  const after = await sceneSize(page)
+  const after = await steady(page, () => sceneSize(page), { frames: 5, seconds: 20, message: 'open-map scene counts after churn' })
   // What the window draws (images, sprites, blitters), by type and texture; an
   // animation's frame is the same sprite, and the hero's thought bubbles come and go.
   const drawn = (z: SceneSize) => {
@@ -446,22 +453,21 @@ test('the Whitequiet’s motes drift with each outer chunk, stay through its sit
   await page.evaluate(() => (window as unknown as { __fsDevParkCreatures: () => void }).__fsDevParkCreatures())
   const here = (await openNear(page, 12, -3 * S + 12))!
   await standAt(page, here)
-  const outer = (await wildsWindow(page))!.outer
+  const outer = (await steady(page, () => wildsWindow(page), { frames: 4, seconds: 20, message: 'Whitequiet window around the hero' }))!.outer
   expect(outer.length, 'outer chunks around the Whitequiet').toBeGreaterThan(0)
   expect(await motes(page), `${MOTES} motes a chunk for ${outer.join(' ')}`).toBe(MOTES * outer.length)
-  const before = await sceneSize(page)
+  const before = await steady(page, () => sceneSize(page), { frames: 5, seconds: 20, message: 'Whitequiet scene counts before redraw' })
 
   // A paper found redraws every site layer (its key counts paper flags): the motes stay, nothing doubles.
   await page.evaluate(() => (window as unknown as { __fsDevAddFlag: (f: string) => void }).__fsDevAddFlag('paper:motes-test'))
-  await page.waitForTimeout(500)
-  const after = await sceneSize(page)
+  const after = await steady(page, () => sceneSize(page), { frames: 5, seconds: 20, message: 'Whitequiet scene counts after redraw' })
   expect(after.kinds['Image:site-mote'], 'the motes survive the redraw').toBe(MOTES * outer.length)
   expect(after.tweens, 'and so do their tweens (no more, no fewer)').toBe(before.tweens)
 
   // Back into the Tangle: the outer chunks go, and their motes and tweens with them.
   await standAt(page, (await openNear(page, 12, -S - 12))!)
   await standAt(page, (await openNear(page, 12, 12))!)
-  const left = (await wildsWindow(page))!.outer
+  const left = (await steady(page, () => wildsWindow(page), { frames: 4, seconds: 20, message: 'outer chunks after returning to the Tangle' }))!.outer
   expect(await motes(page), `only the outer chunks still attached (${left.join(' ') || 'none'}) keep theirs`).toBe(MOTES * left.length)
   expect((await sceneSize(page)).tweens).toBeLessThan(before.tweens - MOTES * (outer.length - left.length) + 1)
 })
@@ -474,8 +480,9 @@ test.describe('with reduced motion', () => {
     await warp(page, 'wilds', 12, -3 * S + 12)
     await waitForWilds(page)
     await standAt(page, (await openNear(page, 12, -3 * S + 12))!)
-    const outer = (await wildsWindow(page))!.outer
+    const outer = (await steady(page, () => wildsWindow(page), { frames: 4, seconds: 20, message: 'reduced-motion Whitequiet window' }))!.outer
     expect(await motes(page)).toBe(MOTES * outer.length)
-    expect((await sceneSize(page)).tweens, 'nothing in the Wilds tweens with motion reduced').toBe(0)
+    const stableScene = await steady(page, () => sceneSize(page), { frames: 5, seconds: 20, message: 'reduced-motion scene tween count' })
+    expect(stableScene.tweens, 'nothing in the Wilds tweens with motion reduced').toBe(0)
   })
 })

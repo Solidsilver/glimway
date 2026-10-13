@@ -1,4 +1,4 @@
-/** Real two-account shared-fight gate. CI-only; no intercepted fight packets. */
+/** Real two-account shared-fight gate. CI by default, with explicit local opt-in. */
 import { expect, test, type Page } from './fixtures'
 import { CONTRACT, pinWorld, reenter } from './connected'
 import { freshPlayer } from './home-helpers'
@@ -50,7 +50,7 @@ async function enterCamp(page: Page, tile: { tx: number; ty: number }): Promise<
 }
 
 test('two players share wind-ups, menus, reconnect, confirmed deaths and personal claims', async ({ page, browser, baseURL }) => {
-  test.skip(!process.env.CI, 'real two-client fight gate runs in CI; use the owner playtest locally')
+  test.skip(!process.env.CI && process.env.E2E_SHARED_FIGHTS !== '1', 'set E2E_SHARED_FIGHTS=1 to run the two-client fight gate locally')
   test.setTimeout(240_000)
   await freshPlayer(page, 'Tansy')
   await pinWorld(page, 'e2e-shared-fights')
@@ -107,7 +107,8 @@ test('two players share wind-ups, menus, reconnect, confirmed deaths and persona
     await page.keyboard.press('Escape')
     await reenter(other, 'wilds')
     await expect.poll(async () => (await enemies(other, camp.id)).map(e => e.id).sort()).toEqual((await enemies(page, camp.id)).map(e => e.id).sort())
-    expect(new Set((await enemies(other, camp.id)).map(e => e.id)).size).toBe((await enemies(other, camp.id)).length)
+    const observedIds = (await enemies(other, camp.id)).map(e => e.id)
+    expect(new Set(observedIds).size, `duplicate IDs in one enemy snapshot: ${observedIds.join(', ')}`).toBe(observedIds.length)
     // Real Hero swings, alternating accounts. __fsDevStrike would bypass
     // intent/result processing, so it is deliberately not used in this gate.
     for (let n = 0; n < 30; n++) {
