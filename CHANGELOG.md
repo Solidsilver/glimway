@@ -13,6 +13,8 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-13
+
 ### For players
 
 - **Fight together.** Wisps and beetles at Wilds camps now share their movement,
@@ -30,6 +32,9 @@ the game can show the first part as "What's new":
   Journal is back to Quests, Papers and How do I…?, and the ways and places
   lists are in the map's Details.
 - **Riding is on V now** (M opens the map). The saddle button works as before.
+- **Smoother fights.** A camp you lost can be claimed again once it falls,
+  cooldowns show with reduced motion on, a refused claim no longer looks like a
+  network error, and "remember this device" waits until your sign-in is saved.
 
 ### Technical
 
@@ -57,6 +62,15 @@ the game can show the first part as "What's new":
   eight chunks at a time and keeps the last picture of a chunk that fails. A
   read-only live position (`src/game/map-position.ts`) is published by the
   running WorldScene. Design: docs/design/world-map.md.
+- Fight rooms run on a sharded scheduler with one shared tick, and the hub
+  sweeps idle sockets and pings in one pass (about 3,000 players clean on 4
+  cores in the fights load test). An opt-in presence flush
+  (`-presence-flush-ms` / `GLIMWAY_PRESENCE_FLUSH_MS`, off by default) batches
+  writes per tick at the cost of position latency.
+- Step-back review fixes: stale enemy colliders and fight caches are cleared,
+  nested confirm dialogs keep their shortcuts, test selection and fixtures are
+  honest, timing checks no longer gate passes, and CI keeps evidence from
+  failed attempts. Reviews and the refactor plan are in docs/reviews/.
 
 ## [0.8.0] - 2026-10-11
 
@@ -652,7 +666,8 @@ The first public release.
   under its own licence; contributions under the DCO.
 - Unit tests, Go tests and Playwright playtests.
 
-[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/Solidsilver/glimway/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Solidsilver/glimway/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/Solidsilver/glimway/compare/v0.6.1...v0.7.0
 [0.6.1]: https://github.com/Solidsilver/glimway/compare/v0.6.0...v0.6.1
