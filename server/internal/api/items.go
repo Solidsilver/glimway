@@ -79,7 +79,7 @@ func (a *Server) itemsMutation(w http.ResponseWriter, r *http.Request) error {
 		if err = healWardens(ctx, tx, s.AccountID, now); err != nil {
 			return nil, err
 		}
-		items, err := readItems(ctx, tx, s, now)
+		items, err := maintainAndReadItems(ctx, tx, s, now)
 		if err != nil {
 			return nil, err
 		}

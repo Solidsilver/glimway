@@ -97,8 +97,10 @@ func (a *Server) maintainState(ctx context.Context, tx *sql.Tx, s store.Snapshot
 	return version != 0 || before != after, nil
 }
 
-// maintainAndProjectState refreshes any changed
-// snapshot, then runs the read-only decorators with the same timestamp.
+// maintainAndProjectState owns response-time maintenance on success, refusal,
+// replay and GET. It refreshes a changed snapshot, then runs read-only decorators
+// with the same timestamp. Begin-time top-up settlement must not be substituted
+// for this phase: domain work may have changed eligible rows in the transaction.
 func (a *Server) maintainAndProjectState(ctx context.Context, tx *sql.Tx, s store.Snapshot, now time.Time) (*contract.PlayerState, error) {
 	changed, err := a.maintainState(ctx, tx, s, now)
 	if err != nil {

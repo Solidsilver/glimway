@@ -45,24 +45,31 @@ type repairsView struct {
 	History    []choreHistoryView `json:"history"`
 }
 
-func readRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (repairsView, error) {
-	out := repairsView{
-		Open:       []choreView{},
-		Mended:     []mendedView{},
-		WorldFlags: []string{},
-		History:    []choreHistoryView{},
+// maintainAndReadRepairs runs progression/weather at the same GET/mend boundary.
+func maintainAndReadRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (repairsView, error) {
+	if err := maintainRepairs(ctx, tx, s, now); err != nil {
+		return emptyRepairsView(), err
 	}
+	return projectRepairs(ctx, tx, s)
+}
 
+func emptyRepairsView() repairsView {
+	return repairsView{Open: []choreView{}, Mended: []mendedView{}, WorldFlags: []string{}, History: []choreHistoryView{}}
+}
+
+// maintainRepairs owns scripted progression and paced weather writes. Keeping
+// this phase before assembly preserves creation times and the weather allowance.
+func maintainRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) error {
 	// 1. Ensure scripted progression:
 	// If well-rope not yet recorded in world, add it as open.
 	var wellRecorded int
 	err := tx.QueryRowContext(ctx, "SELECT count(*) FROM village_repairs WHERE world_id=? AND repair_id='well-rope'", s.WorldID).Scan(&wellRecorded)
 	if err != nil {
-		return out, err
+		return err
 	}
 	if wellRecorded == 0 {
 		if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO village_repairs(world_id, repair_id, created_at) VALUES(?, 'well-rope', ?)", s.WorldID, now); err != nil {
-			return out, err
+			return err
 		}
 	}
 
@@ -70,18 +77,18 @@ func readRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (
 	var wellMended sql.NullInt64
 	err = tx.QueryRowContext(ctx, "SELECT mended_at FROM village_repairs WHERE world_id=? AND repair_id='well-rope'", s.WorldID).Scan(&wellMended)
 	if err != nil && err != sql.ErrNoRows {
-		return out, err
+		return err
 	}
 	if wellMended.Valid {
 		// Check fence-rail
 		var fenceRecorded int
 		err = tx.QueryRowContext(ctx, "SELECT count(*) FROM village_repairs WHERE world_id=? AND repair_id='fence-rail'", s.WorldID).Scan(&fenceRecorded)
 		if err != nil {
-			return out, err
+			return err
 		}
 		if fenceRecorded == 0 {
 			if _, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO village_repairs(world_id, repair_id, created_at) VALUES(?, 'fence-rail', ?)", s.WorldID, now); err != nil {
-				return out, err
+				return err
 			}
 		}
 	}
@@ -90,7 +97,7 @@ func readRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (
 	var fenceMended sql.NullInt64
 	err = tx.QueryRowContext(ctx, "SELECT mended_at FROM village_repairs WHERE world_id=? AND repair_id='fence-rail'", s.WorldID).Scan(&fenceMended)
 	if err != nil && err != sql.ErrNoRows {
-		return out, err
+		return err
 	}
 
 	maxOpen := int(content.RepairRules.GetRules().GetMaxOpen())
@@ -110,7 +117,7 @@ func readRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (
 		var currentOpen int
 		err = tx.QueryRowContext(ctx, "SELECT count(*) FROM village_repairs WHERE world_id=? AND mended_at IS NULL", s.WorldID).Scan(&currentOpen)
 		if err != nil {
-			return out, err
+			return err
 		}
 		wick := content.CalendarAt(content.CalendarRules, now).WickNumber
 
@@ -121,7 +128,7 @@ func readRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (
 			_, err = tx.ExecContext(ctx, "INSERT OR IGNORE INTO village_repair_clock(world_id, last_break_wick) VALUES(?, 0)", s.WorldID)
 		}
 		if err != nil {
-			return out, err
+			return err
 		}
 
 		if currentOpen < maxOpen {
@@ -132,7 +139,7 @@ func readRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (
 
 			rows, err := tx.QueryContext(ctx, "SELECT repair_id, mended_at FROM village_repairs WHERE world_id=?", s.WorldID)
 			if err != nil {
-				return out, err
+				return err
 			}
 			isOpen := map[string]bool{}
 			known := map[string]bool{}
@@ -142,7 +149,7 @@ func readRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (
 				var mAt sql.NullInt64
 				if err = rows.Scan(&rid, &mAt); err != nil {
 					rows.Close()
-					return out, err
+					return err
 				}
 				known[rid] = true
 				if mAt.Valid {
@@ -153,7 +160,7 @@ func readRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (
 			}
 			rows.Close()
 			if err = rows.Err(); err != nil {
-				return out, err
+				return err
 			}
 
 			day := content.CalendarAt(content.CalendarRules, now)
@@ -203,11 +210,11 @@ func readRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (
 				}
 				if pick != nil {
 					if err = openBreak(pick); err != nil {
-						return out, err
+						return err
 					}
 					// One breakage per read; the clock paces the rest by wick.
 					if _, err = tx.ExecContext(ctx, "UPDATE village_repair_clock SET last_break_wick=? WHERE world_id=?", wick, s.WorldID); err != nil {
-						return out, err
+						return err
 					}
 				}
 			}
@@ -224,12 +231,18 @@ func readRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot, now int64) (
 					continue
 				}
 				if err = openBreak(def); err != nil {
-					return out, err
+					return err
 				}
 			}
 		}
 	}
 
+	return nil
+}
+
+// projectRepairs assembles open/mended/history rows without progression writes.
+func projectRepairs(ctx context.Context, tx *sql.Tx, s store.Snapshot) (repairsView, error) {
+	out := emptyRepairsView()
 	// 2. Query open repairs
 	openRows, err := tx.QueryContext(ctx, "SELECT repair_id FROM village_repairs WHERE world_id=? AND mended_at IS NULL ORDER BY created_at", s.WorldID)
 	if err != nil {
@@ -329,7 +342,7 @@ func (a *Server) repairsRead(w http.ResponseWriter, r *http.Request) error {
 	}
 	defer tx.Rollback()
 	now := a.requestTime(r.Context()).Unix()
-	v, err := readRepairs(r.Context(), tx, s, now)
+	v, err := maintainAndReadRepairs(r.Context(), tx, s, now)
 	if err != nil {
 		return err
 	}
@@ -428,11 +441,11 @@ func (a *Server) repairMend(w http.ResponseWriter, r *http.Request) error {
 			return nil, err
 		}
 
-		v, err := readRepairs(ctx, tx, *s, now)
+		v, err := maintainAndReadRepairs(ctx, tx, *s, now)
 		if err != nil {
 			return nil, err
 		}
-		items, err := readItems(ctx, tx, s, now)
+		items, err := maintainAndReadItems(ctx, tx, s, now)
 		if err != nil {
 			return nil, err
 		}

@@ -60,3 +60,13 @@ for (const path of [
     assert.doesNotMatch(output, /not in e2e\/changed-map\.json/, output)
   })
 }
+
+for (const path of ['src/lib/api/queued-operation.ts', 'server/internal/api/op.go', 'server/internal/api/http.go', 'server/internal/api/projection.go', 'server/internal/api/mutation.go']) {
+  test(`changed selector maps shared operation/maintenance path ${path} to affected domains`, () => {
+    const output = list(path)
+    for (const spec of ['fishing.spec.ts', 'companions.spec.ts', 'paths.spec.ts', 'repairs.spec.ts', 'items.spec.ts', 'glims.spec.ts']) {
+      assert.ok(output.includes(`e2e/${spec}`), `${spec}: ${output}`)
+    }
+    assert.doesNotMatch(output, /not in e2e\/changed-map\.json/, output)
+  })
+}

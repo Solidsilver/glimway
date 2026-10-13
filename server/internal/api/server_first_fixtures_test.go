@@ -321,7 +321,7 @@ func TestServerFirstWireFixtures(t *testing.T) {
 		if _, err := tx.ExecContext(ctx, "INSERT INTO item_stacks(location,owner,item_def,qty,maker_id) VALUES('pack',?,'timber',2,'')", s.AccountID); err != nil {
 			return nil, err
 		}
-		items, err := readItems(ctx, tx, s, now)
+		items, err := maintainAndReadItems(ctx, tx, s, now)
 		if err != nil {
 			return nil, err
 		}

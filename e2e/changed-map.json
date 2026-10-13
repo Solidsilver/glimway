@@ -16,6 +16,10 @@
   "ignore": ["**/*.md", "docs/**", ".agent/**", "tests/**", "e2e/changed-map.json", "deploy/**", "scripts/*-vectors.ts", "scripts/papers.ts", "scripts/webgl-renderer.ts", "scripts/e2e-artifacts.mjs", "perf/**", "playwright.perf.config.ts", "playwright.first-paint.perf.config.ts", "scripts/trace-hotspots.mjs", "scripts/png-diff.ts", "content/vectors/**", "content/**/*_test.go"],
   "rules": [
     {
+      "paths": ["src/lib/api/queued-operation.ts", "src/game/link.ts", "server/internal/api/maintenance_phases_test.go", "server/internal/api/op.go", "server/internal/api/http.go", "server/internal/api/projection.go", "server/internal/api/mutation.go"],
+      "specs": ["fishing.spec.ts", "companions.spec.ts", "paths.spec.ts", "echo-keepsakes.spec.ts", "repairs.spec.ts", "items.spec.ts", "glims.spec.ts", "connected.spec.ts"]
+    },
+    {
       "paths": ["server/internal/api/open_map*.go", "server/internal/chunks/**", "server/internal/store/chunks*.go", "server/internal/wildsgen/**", "server/internal/frontier/**", "server/internal/worldchange/**", "content/wilds*", "content/wilds/**"],
       "specs": ["open-map.spec.ts", "paths.spec.ts", "rumour.spec.ts"]
     },

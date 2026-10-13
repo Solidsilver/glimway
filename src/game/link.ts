@@ -1,3 +1,4 @@
+import { operationHasPlace, queuedRequest, queuedResult, type OperationFields, type OperationOutcome, type OperationValue, type QueuedOperationKind } from '../lib/api/queued-operation.ts'
 import { queuedOperationRoutes as TYPED } from '../lib/api/operation-routes.ts'
 /**
  * Link — the connected half of a Session (design server-first 2.4). The
@@ -53,21 +54,21 @@ import { PurseTopUpRequestSchema, type PurseRead } from '../lib/gen/glimway/v1/p
 import { OpHeaderSchema } from '../lib/gen/glimway/v1/op_pb.js'
 import { purseOf, topUpView, type PurseView, type TopUpView } from '../lib/purse.ts'
 import { rumourOfThisWick, type RumourParts } from '../lib/wilds/rumour.ts'
-import { CompanionsRequestSchema, MountHomeRequestSchema, MountOutRequestSchema, StableExtendRequestSchema, StallRequestSchema, type StableExtendResult, type StallResult } from '../lib/gen/glimway/v1/companions_pb.js'
+import { CompanionsRequestSchema, MountHomeRequestSchema, MountOutRequestSchema } from '../lib/gen/glimway/v1/companions_pb.js'
 import { projectHome } from '../lib/api/homestead.ts'
 import { REPORT_INTERVAL_MS, ReportBook, type CapturedReport, type ReportAck } from '../lib/api/reports.ts'
 import { ReportPump } from '../lib/api/report-pump.ts'
 import type { HomeAction, HomeActionResponse, HomeOp, HomeView, ItemsOp, CommonsResponse, Snapshot } from '../lib/api/types.ts'
 import { contributeRequest, deskCopyRequest, hearthCraftRequest, homesteadRequest, itemsRequest, mailKeyedRequest, mailSendRequest, shelfRequest, storageRequest, craftRequest, type ItemsFields, type MailSendAction, type ShelfAction, type StorageMoveAction } from '../lib/api/requests.ts'
 import { EnvelopeSchema, PlayerStateSchema, PlayRequestSchema, type PlayerState } from '../lib/gen/glimway/v1/state_pb.js'
-import { FallRequestSchema, MarkRequestSchema, ProfileReportSchema, QuestStepRequestSchema, SettleEchoRequestSchema, SpendRequestSchema, TakePaperRequestSchema, WildsClaimRequestSchema, WildsLanternRequestSchema, WildsClearRequestSchema, WildsLayRequestSchema, WildsLiftRequestSchema, WildsDiscoverRequestSchema, type ProfileResult, type SettleEchoResult, type WildsClaimResult as WildsClaimProto, type WildsLanternResult as WildsLanternProto, type WildsClearResult, type WildsLayResult, type WildsLiftResult, type WildsDiscoverResult } from '../lib/gen/glimway/v1/operations_pb.js'
+import { FallRequestSchema, MarkRequestSchema, ProfileReportSchema, QuestStepRequestSchema, SpendRequestSchema, TakePaperRequestSchema, type ProfileResult, type SettleEchoResult, type WildsClaimResult as WildsClaimProto, type WildsLanternResult as WildsLanternProto, type WildsClearResult, type WildsLayResult, type WildsLiftResult, type WildsDiscoverResult } from '../lib/gen/glimway/v1/operations_pb.js'
 import { ContributeRequestSchema, CraftRequestSchema, DeskCopyRequestSchema, HearthCraftRequestSchema, MailKeyedRequestSchema, MailSendRequestSchema, StorageMoveRequestSchema } from '../lib/gen/glimway/v1/village_pb.js'
 import { HomesteadRequestSchema, ShelfRequestSchema } from '../lib/gen/glimway/v1/homestead_pb.js'
 import { ItemsRequestSchema } from '../lib/gen/glimway/v1/items_pb.js'
 import type { Keyed } from '../lib/api/requests.ts'
 import { HabiticaUserSchema } from '../lib/gen/glimway/v1/profile_pb.js'
 import { WardrobeCheckRequestSchema, WardrobeRequestSchema, type WardrobeCheckResult } from '../lib/gen/glimway/v1/wardrobe_pb.js'
-import { FishCancelRequestSchema, FishCastRequestSchema, FishSettleRequestSchema, type FishCancelResult, type FishCastResult, type FishSettleResult, type WaterView } from '../lib/gen/glimway/v1/fishing_pb.js'
+import { type FishCancelResult, type FishCastResult, type FishSettleResult, type WaterView } from '../lib/gen/glimway/v1/fishing_pb.js'
 import { rawUserFor } from '../lib/habitica/client.ts'
 import type { HabiticaProfile, VitalsSource } from '../lib/habitica/types.ts'
 import { FLAGS, WELCOME_GLIMS, type GlimSpend, type SpendReason } from '../lib/glims.ts'
@@ -1546,6 +1547,20 @@ export class Link {
     this.noteLive()
   }
 
+  /** Shared online typed operation path; exceptions such as fall/profile stay explicit. */
+  private async operation<K extends QueuedOperationKind>(kind: K, fields: OperationFields<K>, opts: { key?: string; where?: WhereJson; valid?: (value: OperationValue<K>) => boolean } = {}): Promise<OperationOutcome<OperationValue<K>>> {
+    const session = this.session
+    if (!session) return { ok: false, code: 'unknown' }
+    const key = opts.key ?? newKey()
+    const where = operationHasPlace(kind) ? opts.where ?? whereOf(session.state) : undefined
+    const request = queuedRequest(kind, fields, key, where)
+    const { outcome } = await this.submit(kind, request.path, request.key, request.body, { offline: false })
+    if (!outcome.ok) return { ok: false, code: outcome.code === 'resolved' ? 'unknown' : outcome.code }
+    const value = queuedResult(kind, outcome.result)
+    if (!value || (opts.valid && !opts.valid(value))) return { ok: false, code: 'bad-response' }
+    return { ok: true, value }
+  }
+
   // ------------------------------------------------------------ operations
 
   /**
@@ -1620,13 +1635,7 @@ export class Link {
   async settleEcho(req: { epoch: string; site: string; member: string; where?: WhereJson }): Promise<WildsOutcome<SettleEchoResult>> {
     const s = this.session
     if (!s) return { ok: false, code: 'unknown' }
-    const key = newKey()
-    const body = toJson(SettleEchoRequestSchema, create(SettleEchoRequestSchema, { op: { lease: '', key }, epoch: req.epoch, site: req.site, member: req.member, where: req.where ?? whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
-    const { outcome: r } = await this.submit('settle-echo', TYPED['settle-echo']!.path, key, body, { offline: false })
-    if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
-    const res = r.result as { case?: string; value?: SettleEchoResult }
-    if (res?.case !== 'settleEcho' || !res.value) return { ok: false, code: 'bad-response' }
-    return { ok: true, result: res.value }
+    return wildsOutcome(await this.operation('settle-echo', { epoch: req.epoch, site: req.site, member: req.member }, { where: req.where }))
   }
 
 
@@ -1876,13 +1885,8 @@ export class Link {
   async stall(homeId: string, stall: number, mount: string): Promise<WildsOutcome<HomeView | null>> {
     const s = this.session
     if (!s) return { ok: false, code: 'unknown' }
-    const key = newKey()
-    const body = toJson(StallRequestSchema, create(StallRequestSchema, { op: { lease: '', key }, where: whereOf(s.state), homeId, stall, mount }), { alwaysEmitImplicit: true }) as Record<string, unknown>
-    const { outcome: r } = await this.submit('stall', TYPED.stall!.path, key, body, { offline: false })
-    if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
-    const res = r.result as { case?: string; value?: StallResult }
-    if (res?.case !== 'stall' || !res.value) return { ok: false, code: 'bad-response' }
-    return homeOf(res.value.home)
+    const result = await this.operation('stall', { homeId, stall, mount })
+    return result.ok ? homeOf(result.value.home) : result
   }
 
   /**
@@ -1912,15 +1916,11 @@ export class Link {
   async stableExtend(homeId: string): Promise<WildsOutcome<{ home: HomeView | null; materials: Record<string, number> }>> {
     const s = this.session
     if (!s) return { ok: false, code: 'unknown' }
-    const key = newKey()
-    const body = toJson(StableExtendRequestSchema, create(StableExtendRequestSchema, { op: { lease: '', key }, where: whereOf(s.state), homeId }), { alwaysEmitImplicit: true }) as Record<string, unknown>
-    const { outcome: r } = await this.submit('stable-extend', TYPED['stable-extend']!.path, key, body, { offline: false })
-    if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
-    const res = r.result as { case?: string; value?: StableExtendResult }
-    if (res?.case !== 'stableExtend' || !res.value) return { ok: false, code: 'bad-response' }
-    const home = homeOf(res.value.home)
+    const result = await this.operation('stable-extend', { homeId })
+    if (!result.ok) return result
+    const home = homeOf(result.value.home)
     if (!home.ok) return home
-    return { ok: true, result: { home: home.result, materials: { ...res.value.materials } } }
+    return { ok: true, result: { home: home.result, materials: { ...result.value.materials } } }
   }
 
   /** Claim a camp/node/chest/POI from where the hero stands. */
@@ -1928,13 +1928,7 @@ export class Link {
     const s = this.session
     if (!s) return { ok: false, code: 'unknown' }
     if (!req.epoch) return { ok: false, code: 'epoch-not-found' }
-    const key = newKey()
-    const body = toJson(WildsClaimRequestSchema, create(WildsClaimRequestSchema, { op: { lease: '', key }, epoch: req.epoch, entityId: req.entityId, cycle: req.cycle, where: req.where ?? whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
-    const { outcome: r } = await this.submit('wilds-claim', TYPED['wilds-claim']!.path, key, body, { offline: false })
-    if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
-    const res = r.result as { case?: string; value?: WildsClaimProto }
-    if (res?.case !== 'wildsClaim' || !res.value) return { ok: false, code: 'bad-response' }
-    return { ok: true, result: res.value }
+    return wildsOutcome(await this.operation('wilds-claim', { epoch: req.epoch, entityId: req.entityId, cycle: req.cycle }, { where: req.where }))
   }
 
   /** Relight a fallen hero's lantern (the exact instance, by id). */
@@ -1942,13 +1936,7 @@ export class Link {
     const s = this.session
     if (!s) return { ok: false, code: 'unknown' }
     if (!req.epoch) return { ok: false, code: 'epoch-not-found' }
-    const key = newKey()
-    const body = toJson(WildsLanternRequestSchema, create(WildsLanternRequestSchema, { op: { lease: '', key }, epoch: req.epoch, ownerId: req.ownerId, lanternId: req.lanternId, where: req.where ?? whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
-    const { outcome: r } = await this.submit('wilds-lantern', TYPED['wilds-lantern']!.path, key, body, { offline: false })
-    if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
-    const res = r.result as { case?: string; value?: WildsLanternProto }
-    if (res?.case !== 'wildsLantern' || !res.value) return { ok: false, code: 'bad-response' }
-    return { ok: true, result: res.value }
+    return wildsOutcome(await this.operation('wilds-lantern', { epoch: req.epoch, ownerId: req.ownerId, lanternId: req.lanternId }, { where: req.where }))
   }
 
   /**
@@ -1960,21 +1948,14 @@ export class Link {
   async wildsPath(op: 'clear' | 'lay' | 'lift', req: { epoch: string; x: number; y: number; kind?: string; where?: WhereJson; key?: string }): Promise<WildsOutcome<WildsClearResult | WildsLayResult | WildsLiftResult>> {
     const s = this.session
     if (!s) return { ok: false, code: 'unknown' }
-    const key = req.key ?? newKey()
-    const kind = `wilds-${op}` as const
-    const typed = TYPED[kind]!
-    const head = { op: { lease: '', key }, where: req.where ?? whereOf(s.state), x: req.x, y: req.y, epoch: req.epoch }
-    const json = op === 'lay'
-      ? toJson(WildsLayRequestSchema, create(WildsLayRequestSchema, { ...head, kind: req.kind ?? '' }), { alwaysEmitImplicit: true })
+    const fields = { epoch: req.epoch, x: req.x, y: req.y }
+    const opts = { key: req.key, where: req.where, valid: (value: WildsClearResult | WildsLayResult | WildsLiftResult) => !!value.ground }
+    const result = op === 'lay'
+      ? await this.operation('wilds-lay', { ...fields, kind: req.kind ?? '' }, opts)
       : op === 'lift'
-        ? toJson(WildsLiftRequestSchema, create(WildsLiftRequestSchema, head), { alwaysEmitImplicit: true })
-        : toJson(WildsClearRequestSchema, create(WildsClearRequestSchema, head), { alwaysEmitImplicit: true })
-    const body = json as Record<string, unknown>
-    const { outcome: r } = await this.submit(kind, typed.path, key, body, { offline: false })
-    if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
-    const res = r.result as { case?: string; value?: WildsClearResult | WildsLayResult | WildsLiftResult }
-    if (res?.case !== typed.result || !res.value?.ground) return { ok: false, code: 'bad-response' }
-    return { ok: true, result: res.value }
+        ? await this.operation('wilds-lift', fields, opts)
+        : await this.operation('wilds-clear', fields, opts)
+    return wildsOutcome<WildsClearResult | WildsLayResult | WildsLiftResult>(result)
   }
 
   /** Tell the server you reached a place (open-map.md 2.10): the first this wick gets a find. */
@@ -1982,13 +1963,7 @@ export class Link {
     const s = this.session
     if (!s) return { ok: false, code: 'unknown' }
     if (!req.epoch) return { ok: false, code: 'epoch-not-found' }
-    const key = req.key ?? newKey()
-    const body = toJson(WildsDiscoverRequestSchema, create(WildsDiscoverRequestSchema, { op: { lease: '', key }, epoch: req.epoch, place: req.place, where: req.where ?? whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
-    const { outcome: r } = await this.submit('wilds-discover', TYPED['wilds-discover']!.path, key, body, { offline: false })
-    if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
-    const res = r.result as { case?: string; value?: WildsDiscoverResult }
-    if (res?.case !== 'wildsDiscover' || !res.value?.discovery) return { ok: false, code: 'bad-response' }
-    return { ok: true, result: res.value }
+    return wildsOutcome(await this.operation('wilds-discover', { epoch: req.epoch, place: req.place }, { key: req.key, where: req.where, valid: value => !!value.discovery }))
   }
 
   // ------------------------------------------------------------ fishing (design crafts 5.4)
@@ -1997,39 +1972,21 @@ export class Link {
   async fishCast(req: { water: string; bank: string; rod: string; where?: WhereJson }): Promise<WildsOutcome<FishCastResult>> {
     const s = this.session
     if (!s) return { ok: false, code: 'unknown' }
-    const key = newKey()
-    const body = toJson(FishCastRequestSchema, create(FishCastRequestSchema, { op: { lease: '', key }, water: req.water, bank: req.bank, rod: req.rod, where: req.where ?? whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
-    const { outcome: r } = await this.submit('fish-cast', TYPED['fish-cast']!.path, key, body, { offline: false })
-    if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
-    const res = r.result as { case?: string; value?: FishCastResult }
-    if (res?.case !== 'fishCast' || !res.value?.cast) return { ok: false, code: 'bad-response' }
-    return { ok: true, result: res.value }
+    return wildsOutcome(await this.operation('fish-cast', { water: req.water, bank: req.bank, rod: req.rod }, { where: req.where, valid: value => !!value.cast }))
   }
 
   /** Keep the fish on the line, or let it go. */
   async fishSettle(req: { cast: string; keep: boolean; where?: WhereJson }): Promise<WildsOutcome<FishSettleResult>> {
     const s = this.session
     if (!s) return { ok: false, code: 'unknown' }
-    const key = newKey()
-    const body = toJson(FishSettleRequestSchema, create(FishSettleRequestSchema, { op: { lease: '', key }, cast: req.cast, keep: req.keep, where: req.where ?? whereOf(s.state) }), { alwaysEmitImplicit: true }) as Record<string, unknown>
-    const { outcome: r } = await this.submit('fish-settle', TYPED['fish-settle']!.path, key, body, { offline: false })
-    if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
-    const res = r.result as { case?: string; value?: FishSettleResult }
-    if (res?.case !== 'fishSettle' || !res.value) return { ok: false, code: 'bad-response' }
-    return { ok: true, result: res.value }
+    return wildsOutcome(await this.operation('fish-settle', { cast: req.cast, keep: req.keep }, { where: req.where }))
   }
 
   /** Pull the line in: the cast closes and its fish goes back. */
   async fishCancel(cast: string): Promise<WildsOutcome<FishCancelResult>> {
     const s = this.session
     if (!s) return { ok: false, code: 'unknown' }
-    const key = newKey()
-    const body = toJson(FishCancelRequestSchema, create(FishCancelRequestSchema, { op: { lease: '', key }, cast }), { alwaysEmitImplicit: true }) as Record<string, unknown>
-    const { outcome: r } = await this.submit('fish-cancel', TYPED['fish-cancel']!.path, key, body, { offline: false })
-    if (!r.ok) return { ok: false, code: r.code === 'resolved' ? 'unknown' : r.code }
-    const res = r.result as { case?: string; value?: FishCancelResult }
-    if (res?.case !== 'fishCancel' || !res.value) return { ok: false, code: 'bad-response' }
-    return { ok: true, result: res.value }
+    return wildsOutcome(await this.operation('fish-cancel', { cast }))
   }
 
   /** Each water's band in an area (GET /api/fishing/waters). Reads never move the version. */
@@ -2379,4 +2336,9 @@ function homeOf(home: import('../lib/gen/glimway/v1/goods_pb.js').HomeView | und
   } catch {
     return { ok: false, code: 'bad-response' }
   }
+}
+
+/** Transitional public adapter: the shared operation path uses value internally. */
+function wildsOutcome<T>(outcome: OperationOutcome<T>): WildsOutcome<T> {
+  return outcome.ok ? { ok: true, result: outcome.value } : outcome
 }
