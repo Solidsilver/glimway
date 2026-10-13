@@ -139,6 +139,7 @@ type itemsView struct {
 // maintainAndReadItems keeps flower drying at its historical read boundary.
 // Mutations call it after their apply/slot/heal work; GETs still maintain here.
 func maintainAndReadItems(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (itemsView, error) {
+	// Fresh bloom flowers dry once the wick has turned (the pack only).
 	if err := dryFlowers(ctx, tx, s, now); err != nil {
 		return emptyItemsView(), err
 	}
