@@ -233,13 +233,29 @@ Alone it's the same fight, with three wisps.
 
 - **Kinds:** `wisp` and `beetle`, from the camp's generated mix (decision 2). Their behaviour moves
   from `creatures.ts` to Go: wisp chase, hop with wind-up and aim lock; beetle walk, keep-away,
-  charge with wind-up and lock, stun on a wall, takes 1.5× while stunned.
+  scuttle with wind-up and lock, stun on a wall, takes 1.5× while stunned.
+  The beetle paws for 0.8 s (aim locks at tick 5), then makes three 0.15 s
+  skitter-dashes at 240 px/s: +30°, −30°, then straight along locked aim.
+  Total path length is 108 px, forward displacement ~98 px, maximum sideways
+  excursion 18 px. Speed, duration and angle live in `content/enemies.json`;
+  damage, cooldown, Stand stagger and Echo aim remain unchanged. LUNGE carries
+  the whole scuttle; existing states/events and snapshot interpolation suffice.
+  Both clients alternate existing idle/squash frames and rock the feet while
+  scuttling; reduced motion holds the squash pose.
 - **Numbers in content.** `ENEMY_TUNING` and `KNOCK` move to `content/enemies.json` (hp, reach,
   aggro, speeds, wind-ups, locks, cooldowns, knockback), typed in proto with protovalidate. The
   client reads the same file for drawing (HP bars, wind-up timing, predicted knockback). Vectors
   check the timing edges (a hop that lands as the lock ends, a charge into a wall).
 - **Movement.** Circle against tile collision in Go, on the room's loaded geometry. Enemies are
   leashed to their camp and never leave their chunk (decision 3).
+  Each enemy's home circle is 160 px. Crossing it while chasing or knocked
+  back drops the target and walks home, with re-targeting suppressed until
+  within 152 px (8 px hysteresis); no teleport. An attack segment crossing
+  the circle clips at its first exit and skids into RECOVER, never STUNNED.
+  Collision still hard-bounds the chunk, and beetle wall/tree crashes still
+  stun and take `stunnedTakes`. Scuttle steps split at dash corners before
+  collision/leash checks. Client camp sprites interpolate those authoritative
+  positions without extrapolation; curated creatures use the same path maths.
 - **Targets.** The nearest player inside aggro range, using each player's capped position
   (decision 12). An Echo decoy is a target too. Wisps reconsider the nearest eligible player
   between attacks. They keep their target during a wind-up and lunge, so the tell stays readable.

@@ -240,24 +240,26 @@ func (x *EnemyWisp) GetCooldown() float64 {
 }
 
 type EnemyBeetle struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Hp            float64                `protobuf:"fixed64,1,opt,name=hp,proto3" json:"hp,omitempty"`
-	Contact       float64                `protobuf:"fixed64,2,opt,name=contact,proto3" json:"contact,omitempty"`
-	Reach         float64                `protobuf:"fixed64,3,opt,name=reach,proto3" json:"reach,omitempty"`
-	ChargeReach   float64                `protobuf:"fixed64,4,opt,name=charge_reach,json=chargeReach,proto3" json:"charge_reach,omitempty"`
-	Walk          float64                `protobuf:"fixed64,5,opt,name=walk,proto3" json:"walk,omitempty"`
-	Aggro         float64                `protobuf:"fixed64,6,opt,name=aggro,proto3" json:"aggro,omitempty"`
-	KeepAway      float64                `protobuf:"fixed64,7,opt,name=keep_away,json=keepAway,proto3" json:"keep_away,omitempty"`
-	ChargeRange   float64                `protobuf:"fixed64,8,opt,name=charge_range,json=chargeRange,proto3" json:"charge_range,omitempty"`
-	Windup        float64                `protobuf:"fixed64,9,opt,name=windup,proto3" json:"windup,omitempty"`
-	Lock          float64                `protobuf:"fixed64,10,opt,name=lock,proto3" json:"lock,omitempty"`
-	ChargeSpeed   float64                `protobuf:"fixed64,11,opt,name=charge_speed,json=chargeSpeed,proto3" json:"charge_speed,omitempty"`
-	ChargeTime    float64                `protobuf:"fixed64,12,opt,name=charge_time,json=chargeTime,proto3" json:"charge_time,omitempty"`
-	Charge        float64                `protobuf:"fixed64,13,opt,name=charge,proto3" json:"charge,omitempty"`
-	Stun          float64                `protobuf:"fixed64,14,opt,name=stun,proto3" json:"stun,omitempty"`
-	Recover       float64                `protobuf:"fixed64,15,opt,name=recover,proto3" json:"recover,omitempty"`
-	Cooldown      float64                `protobuf:"fixed64,16,opt,name=cooldown,proto3" json:"cooldown,omitempty"`
-	StunnedTakes  float64                `protobuf:"fixed64,17,opt,name=stunned_takes,json=stunnedTakes,proto3" json:"stunned_takes,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Hp           float64                `protobuf:"fixed64,1,opt,name=hp,proto3" json:"hp,omitempty"`
+	Contact      float64                `protobuf:"fixed64,2,opt,name=contact,proto3" json:"contact,omitempty"`
+	Reach        float64                `protobuf:"fixed64,3,opt,name=reach,proto3" json:"reach,omitempty"`
+	ChargeReach  float64                `protobuf:"fixed64,4,opt,name=charge_reach,json=chargeReach,proto3" json:"charge_reach,omitempty"`
+	Walk         float64                `protobuf:"fixed64,5,opt,name=walk,proto3" json:"walk,omitempty"`
+	Aggro        float64                `protobuf:"fixed64,6,opt,name=aggro,proto3" json:"aggro,omitempty"`
+	KeepAway     float64                `protobuf:"fixed64,7,opt,name=keep_away,json=keepAway,proto3" json:"keep_away,omitempty"`
+	ChargeRange  float64                `protobuf:"fixed64,8,opt,name=charge_range,json=chargeRange,proto3" json:"charge_range,omitempty"`
+	Windup       float64                `protobuf:"fixed64,9,opt,name=windup,proto3" json:"windup,omitempty"`
+	Lock         float64                `protobuf:"fixed64,10,opt,name=lock,proto3" json:"lock,omitempty"`
+	ChargeSpeed  float64                `protobuf:"fixed64,11,opt,name=charge_speed,json=chargeSpeed,proto3" json:"charge_speed,omitempty"`
+	ChargeTime   float64                `protobuf:"fixed64,12,opt,name=charge_time,json=chargeTime,proto3" json:"charge_time,omitempty"`
+	Charge       float64                `protobuf:"fixed64,13,opt,name=charge,proto3" json:"charge,omitempty"`
+	Stun         float64                `protobuf:"fixed64,14,opt,name=stun,proto3" json:"stun,omitempty"`
+	Recover      float64                `protobuf:"fixed64,15,opt,name=recover,proto3" json:"recover,omitempty"`
+	Cooldown     float64                `protobuf:"fixed64,16,opt,name=cooldown,proto3" json:"cooldown,omitempty"`
+	StunnedTakes float64                `protobuf:"fixed64,17,opt,name=stunned_takes,json=stunnedTakes,proto3" json:"stunned_takes,omitempty"`
+	// Degrees either side of locked aim; zero preserves a straight attack.
+	ScuttleAngle  float64 `protobuf:"fixed64,18,opt,name=scuttle_angle,json=scuttleAngle,proto3" json:"scuttle_angle,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -407,6 +409,13 @@ func (x *EnemyBeetle) GetCooldown() float64 {
 func (x *EnemyBeetle) GetStunnedTakes() float64 {
 	if x != nil {
 		return x.StunnedTakes
+	}
+	return 0
+}
+
+func (x *EnemyBeetle) GetScuttleAngle() float64 {
+	if x != nil {
+		return x.ScuttleAngle
 	}
 	return 0
 }
@@ -605,7 +614,7 @@ const file_glimway_content_v1_enemies_proto_rawDesc = "" +
 	"\x03hop\x18\f \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x03hop\x12(\n" +
 	"\arecover\x18\r \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\arecover\x12*\n" +
 	"\bcooldown\x18\x0e \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\bcooldown:M\xbaHJ\x1aH\n" +
-	"\fenemies.lock\x12\x1faim lock must fit inside windup\x1a\x17this.lock < this.windup\"\xb0\x06\n" +
+	"\fenemies.lock\x12\x1faim lock must fit inside windup\x1a\x17this.lock < this.windup\"\xee\x06\n" +
 	"\vEnemyBeetle\x12\x1e\n" +
 	"\x02hp\x18\x01 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x02hp\x12(\n" +
 	"\acontact\x18\x02 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\acontact\x12$\n" +
@@ -625,7 +634,8 @@ const file_glimway_content_v1_enemies_proto_rawDesc = "" +
 	"\x04stun\x18\x0e \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x04stun\x12(\n" +
 	"\arecover\x18\x0f \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\arecover\x12*\n" +
 	"\bcooldown\x18\x10 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\bcooldown\x123\n" +
-	"\rstunned_takes\x18\x11 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\fstunnedTakes:M\xbaHJ\x1aH\n" +
+	"\rstunned_takes\x18\x11 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\fstunnedTakes\x12<\n" +
+	"\rscuttle_angle\x18\x12 \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x00\x00N@)\x00\x00\x00\x00\x00\x00\x00\x00R\fscuttleAngle:M\xbaHJ\x1aH\n" +
 	"\fenemies.lock\x12\x1faim lock must fit inside windup\x1a\x17this.lock < this.windup\"\xe1\x02\n" +
 	"\rEnemyGuardian\x12\x1e\n" +
 	"\x02hp\x18\x01 \x01(\x01B\x0e\xbaH\v\x12\t!\x00\x00\x00\x00\x00\x00\x00\x00R\x02hp\x12(\n" +

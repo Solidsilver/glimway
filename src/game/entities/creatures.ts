@@ -1,9 +1,10 @@
 /**
  * The creatures' behaviour each frame: wisps hop at you, beetles keep their
- * distance and charge, and both wander home when you're out of sight. Every
+ * distance and scuttle, and both wander home when you're out of sight. Every
  * attack is telegraphed (./enemies.ts setEnemyPose, telegraph).
  */
 import Phaser from 'phaser'
+import { fightScuttleOffset } from '../../lib/fight-math'
 import { sfx } from '../sfx'
 import type { Enemy, EnemyDeps, EnemySystem } from './enemies'
 import { ENEMY_TUNING } from './fight-rules'
@@ -125,7 +126,7 @@ export class Creatures {
   }
 
   /**
-   * Beetles: plod toward you, paw the ground, then charge in a straight line
+   * Beetles: plod toward you, paw the ground, then skitter left, right and forward
    * locked at the end of the windup. A charge that hits a tree or wall leaves
    * the beetle dazed and taking extra damage.
    */
@@ -174,7 +175,12 @@ export class Creatures {
         break
       }
       case 'lunge': {
-        body.setVelocity(enemy.lungeX, enemy.lungeY)
+        const end = Math.max(0, Math.min(t.chargeTime, t.chargeTime - enemy.stateTimer))
+        const start = Math.max(0, Math.min(t.chargeTime, t.chargeTime - enemy.stateTimer - dt))
+        const a = fightScuttleOffset(start), b = fightScuttleOffset(end)
+        const ux = enemy.lungeX / t.chargeSpeed, uy = enemy.lungeY / t.chargeSpeed
+        body.setVelocity((ux * (b.x - a.x) - uy * (b.y - a.y)) / dt, (uy * (b.x - a.x) + ux * (b.y - a.y)) / dt)
+        this.sys.scuttlePose(enemy, end)
         const crashed = body.blocked.left || body.blocked.right || body.blocked.up || body.blocked.down
         if (crashed) {
           enemy.state = 'stunned'
@@ -188,8 +194,10 @@ export class Creatures {
         } else if (enemy.stateTimer <= 0) {
           enemy.state = 'recover'
           enemy.stateTimer = t.recover
-          body.setVelocity(0, 0)
+          // Keep this final fractional dash for the upcoming physics step.
+          // Recovery stops the velocity on the next frame.
           this.sys.setEnemyPose(enemy, 'idle')
+          enemy.sprite.setAngle(0)
         }
         break
       }

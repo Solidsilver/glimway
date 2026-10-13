@@ -13,6 +13,14 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+### For players
+
+- Beetles paw the ground, then scuttle in quick angled dashes. Camp enemies skid at their home's edge and walk back after a shove, without snapping home.
+
+### Technical
+
+- Soft 160 px camp leash with 8 px return hysteresis; attacks clip into recovery, while obstacle crashes still daze beetles. Content-tuned 108 px scuttle shares Go/TS movement vectors and existing fight states/events.
+
 ## [0.9.0] - 2026-10-13
 
 ### For players

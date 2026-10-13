@@ -19,7 +19,7 @@ function rig() {
         const events = new EventEmitter()
         const sprite: any = { x, y, active: true, body: { enable: true, setSize() {}, setOffset() {}, setCollideWorldBounds() {}, setVelocity() {} },
           once: events.once.bind(events), destroy() { if (!this.active) return; this.active = false; events.emit('destroy') } }
-        for (const method of ['setOrigin', 'setScale', 'setDepth', 'setFlipX', 'setTintFill', 'clearTint', 'setTint', 'setAlpha', 'setVisible', 'play']) sprite[method] = () => sprite
+        for (const method of ['setOrigin', 'setScale', 'setDepth', 'setFlipX', 'setTintFill', 'clearTint', 'setTint', 'setAlpha', 'setVisible', 'setAngle', 'play']) sprite[method] = () => sprite
         sprite.setPosition = (x: number, y: number) => { sprite.x = x; sprite.y = y; return sprite }
         sprites.push(sprite); return sprite
       },

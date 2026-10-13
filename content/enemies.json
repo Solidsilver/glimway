@@ -26,13 +26,14 @@
     "chargeRange": 120,
     "windup": 0.8,
     "lock": 0.3,
-    "chargeSpeed": 220,
-    "chargeTime": 0.85,
+    "chargeSpeed": 240,
+    "chargeTime": 0.45,
     "charge": 3,
     "stun": 1.4,
     "recover": 0.5,
     "cooldown": 2.1,
-    "stunnedTakes": 1.5
+    "stunnedTakes": 1.5,
+    "scuttleAngle": 30
   },
   "guardian": {
     "hp": 44,

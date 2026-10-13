@@ -56,6 +56,8 @@ message EnemyBeetle {
   double recover = 15 [(buf.validate.field).double.gt = 0];
   double cooldown = 16 [(buf.validate.field).double.gt = 0];
   double stunned_takes = 17 [(buf.validate.field).double.gt = 0];
+  // Degrees either side of locked aim; zero preserves a straight attack.
+  double scuttle_angle = 18 [(buf.validate.field).double = {gte: 0, lte: 60}];
 }
 
 message EnemyGuardian {

@@ -93,7 +93,7 @@ export class ServerEnemies {
   private pose(entry: RenderedEnemy): void {
     const { enemy, draw } = entry
     if (enemy.dead) return
-    if (this.system.scene.time.now < entry.stoppedUntil) { this.system.setEnemyPose(enemy, enemy.type === 'beetle' ? 'hurt' : 'squash'); return }
+    if (this.system.scene.time.now < entry.stoppedUntil) { enemy.sprite.setAngle(0); this.system.setEnemyPose(enemy, enemy.type === 'beetle' ? 'hurt' : 'squash'); return }
     const duration = fightWindupTicks(enemy.type === 'beetle' ? 'beetle' : 'wisp')
     const elapsed = draw.telegraphMs ?? draw.elapsedMs
     const start = draw.telegraphTick ?? draw.row.stateTick
@@ -110,7 +110,11 @@ export class ServerEnemies {
     } else {
       if (this.system.scene.time.now >= entry.hitUntil) enemy.sprite.clearTint()
       const poses = enemy.type === 'beetle' ? POSES.beetle : POSES.wisp
-      this.system.setEnemyPose(enemy, enemy.state === 'sweep' ? 'idle' : poses[enemy.state])
+      if (enemy.type === 'beetle' && enemy.state === 'lunge') this.system.scuttlePose(enemy, draw.elapsedMs / 1000)
+      else {
+        enemy.sprite.setAngle(0)
+        this.system.setEnemyPose(enemy, enemy.state === 'sweep' ? 'idle' : poses[enemy.state])
+      }
     }
   }
   private event(event: Omit<FightEvent, '$typeName' | '$unknown'>, elapsed: number): void {
