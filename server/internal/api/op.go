@@ -121,10 +121,14 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 			err = a.Config.Placement.Record(ctx, tx, &s, where, now)
 		}
 	}
+	// Apply begins after the savepoint/placement; domain callbacks own their
+	// required pre-apply maintenance and result-specific settlement.
 	var result any
 	if err == nil {
 		result, err = apply(ctx, tx, &s, now)
 	}
+	// Final slot settlement remains after apply (including domain result assembly).
+	// It is not equivalent to moving every domain maintenance phase here.
 	if err == nil {
 		err = settleSlots(ctx, tx, &s)
 	}
@@ -132,7 +136,7 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 		s.VitalsAt = float64(clock.UnixNano()) / 1e9
 		err = a.Config.State.Persist(ctx, tx, &s, now)
 	}
-	if err != nil {
+	if decision := dispositionOf(err); decision != operationSuccess {
 		// A held refusal (review finding 16) keeps the writes its apply made
 		// before raising it — 5.4's "either way the cast closes". Every other
 		// refusal takes back everything since the savepoint.
@@ -142,7 +146,7 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 		// ledger row and lose its balance write (store/glims.go). So no glim
 		// may move before a held refusal; today's one (fishing's) writes
 		// items only.
-		if !isHeld(err) {
+		if decision == rollbackOperation {
 			if _, e := tx.ExecContext(ctx, "ROLLBACK TO gameplay"); e != nil {
 				return e
 			}
@@ -175,6 +179,8 @@ func (a *Server) keyedOpFinalized(w http.ResponseWriter, r *http.Request, op *co
 		writeRefusal(w, f.status, f.code, state)
 		return nil
 	}
+	// Response maintenance/project follows persistence; refusals and replay
+	// invoke the same response phase against their restored/current snapshot.
 	state, err := a.maintainAndProjectState(ctx, tx, s, a.requestTime(ctx))
 	if err != nil {
 		return err

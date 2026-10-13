@@ -10,6 +10,9 @@ import (
 	"time"
 )
 
+// begin prepares authenticated state: due-mail returns, load, stale-top-up
+// settlement and conditional reload. Time is sampled after beginTx acquires the
+// write connection. Response maintenance remains a later, separate phase.
 func (a *Server) begin(r *http.Request) (*sql.Tx, store.Snapshot, string, error) {
 	tx, err := a.beginTx(r.Context())
 	if err != nil {

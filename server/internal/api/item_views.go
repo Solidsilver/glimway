@@ -136,13 +136,23 @@ type itemsView struct {
 	Thanks    []thanksView   `json:"thanks"`
 }
 
-func readItems(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (itemsView, error) {
-	v := itemsView{Stacks: []stackView{}, Pockets: []slotView{}, PickedUp: []string{}, Thanks: []thanksView{}}
-	makers := map[string]*makerView{}
-	// Fresh bloom flowers dry once the wick has turned (the pack only).
+// maintainAndReadItems keeps flower drying at its historical read boundary.
+// Mutations call it after their apply/slot/heal work; GETs still maintain here.
+func maintainAndReadItems(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (itemsView, error) {
 	if err := dryFlowers(ctx, tx, s, now); err != nil {
-		return v, err
+		return emptyItemsView(), err
 	}
+	return projectItems(ctx, tx, s)
+}
+
+func emptyItemsView() itemsView {
+	return itemsView{Stacks: []stackView{}, Pockets: []slotView{}, PickedUp: []string{}, Thanks: []thanksView{}}
+}
+
+// projectItems only assembles the pack view from rows; it never dries flowers.
+func projectItems(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (itemsView, error) {
+	v := emptyItemsView()
+	makers := map[string]*makerView{}
 	rows, err := tx.QueryContext(ctx, "SELECT item_def,maker_id,qty FROM item_stacks WHERE location='pack' AND owner=? ORDER BY item_def,maker_id", s.AccountID)
 	if err != nil {
 		return v, err
@@ -253,7 +263,7 @@ func (a *Server) itemsRead(w http.ResponseWriter, r *http.Request) error {
 	if err = healWardens(r.Context(), tx, s.AccountID, now); err != nil {
 		return err
 	}
-	v, err := readItems(r.Context(), tx, &s, now)
+	v, err := maintainAndReadItems(r.Context(), tx, &s, now)
 	if err != nil {
 		return err
 	}

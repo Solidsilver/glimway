@@ -34,9 +34,26 @@ func (e *heldRefusal) Unwrap() error { return e.err }
 // held marks a refusal as one whose writes stand.
 func held(err error) error { return &heldRefusal{err} }
 
-func isHeld(err error) bool {
+// operationDisposition makes the coordinator's write policy explicit. The
+// held error is a compatibility adapter for the fishing callback, not a generic
+// rollback exemption. Ordinary refusals and unexpected errors both roll back.
+type operationDisposition uint8
+
+const (
+	operationSuccess operationDisposition = iota
+	rollbackOperation
+	retainOperationWrites
+)
+
+func dispositionOf(err error) operationDisposition {
+	if err == nil {
+		return operationSuccess
+	}
 	var h *heldRefusal
-	return errors.As(err, &h)
+	if errors.As(err, &h) {
+		return retainOperationWrites
+	}
+	return rollbackOperation
 }
 
 func problem(w http.ResponseWriter, err error) {
