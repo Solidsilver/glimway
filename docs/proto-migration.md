@@ -234,6 +234,28 @@ already committed keyed operation still replays its original result after a
 turning without another debit. Rollback requires the matching client/server pair.
 
 
+## Presence v3: server frames
+
+The subprotocol moves to `glimway.presence.v3`. Every server → client websocket
+frame is a `PresenceFrame { repeated PresenceMessage events = 1; }`: the events the
+socket's writer found queued when it woke, in queue order. The writer never waits
+for more, so an idle link sees one event per frame (2–3 bytes of framing) and a
+link whose writer is behind sees batches, capped at 64 KB (an event that would not
+fit starts the next frame; a lone event may exceed the cap, so no frame is larger
+than 128 KB, the single-event limit `enqueue` already had). The server assembles a
+frame by prefixing each queued event's bytes with field 1's tag and length, so the
+bytes every recipient's queue shares are never re-encoded (`appendPresenceEvent`,
+`fillPresenceFrame` in `server/internal/api/proto.go`). Clients decode a frame and
+dispatch its events in order, each as if it had come alone
+(`decodePresenceFrame` in `src/lib/presence-codec.ts`); an event a build does not
+know is skipped without losing the others. Client → server stays one
+`PresenceMessage` per frame. Ping, pong and close are websocket control frames,
+unaffected. `testdata/presence-frame.json` holds a lone-event frame and a batch
+as hex for both sides' tests. The change is additive (one new message), so buf
+passes against origin/main and the release tag; the HTTP contract number is
+unchanged, since the socket's own protocol check already reloads an old tab
+(close 4005 `reload-needed`).
+
 ## Contract 10: shared-fight contract and tuning
 
 Presence appends oneof arms 13–17: `FightSwing`, `FightJoin`, `FightDelta`,

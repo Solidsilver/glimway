@@ -2,12 +2,12 @@ import { decodeTestPresence } from './presence-wire.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { fromJson, toBinary, type JsonValue } from '@bufbuild/protobuf';
+import { create, fromBinary, fromJson, toBinary, type JsonValue } from '@bufbuild/protobuf';
 import { parseCreatedInvite, parseInviteList } from '../src/lib/api/invites.ts';
 import { parseCalendar } from '../src/lib/api/calendar.ts';
 import { SERVER_ERROR_CODES, errorFromResponse } from '../src/lib/api/errors.ts';
-import { decodePresence, encodePresence, PRESENCE_PROTOCOL } from '../src/lib/presence-codec.ts';
-import { PresenceMessageSchema } from '../src/lib/gen/glimway/v2/presence_pb.js';
+import { decodePresence, decodePresenceFrame, encodePresence, PRESENCE_PROTOCOL } from '../src/lib/presence-codec.ts';
+import { PresenceFrameSchema, PresenceMessageSchema } from '../src/lib/gen/glimway/v2/presence_pb.js';
 import { PresenceClient, type SocketLike } from '../src/lib/presence-client.ts';
 import type { PresenceClientMessage } from '../src/lib/presence.ts';
 
@@ -61,12 +61,63 @@ class ContractSocket implements SocketLike {
   constructor(protocol: string) { this.protocol = protocol; }
   send(data: string | Uint8Array) { this.sent.push(data); }
   close() { this.readyState = 3; }
-  server(message: Record<string, unknown>) {
-    const { type, ...payload } = message;
-    const data = toBinary(PresenceMessageSchema, fromJson(PresenceMessageSchema, { [String(type)]: payload } as JsonValue)).buffer;
+  /** One server frame carrying these events (v3), as an ArrayBuffer like a browser's. */
+  server(...messages: Record<string, unknown>[]) {
+    const events = messages.map(({ type, ...payload }) => fromJson(PresenceMessageSchema, { [String(type)]: payload } as JsonValue));
+    const data = toBinary(PresenceFrameSchema, create(PresenceFrameSchema, { events })).buffer;
     this.onmessage?.({ data });
   }
 }
+
+test('Go frame fixtures: a lone event and a batch decode to their events in order', () => {
+  const frames = fixture('presence-frame') as { events: Record<string, unknown>[]; binaryHex: string }[];
+  assert.equal(frames.length, 2);
+  for (const { events, binaryHex } of frames) {
+    const bytes = Uint8Array.from(Buffer.from(binaryHex, 'hex'));
+    assert.deepEqual(decodePresenceFrame(bytes), events);
+    assert.deepEqual(decodePresenceFrame(bytes.buffer), events);
+  }
+  assert.equal(frames[0].events.length, 1);
+  assert.equal(frames[1].events.length, 3);
+  // An event this build doesn't know, inside a batch, is skipped without losing the others.
+  const unknown = Uint8Array.from([0x7a, 0]);
+  const readyFixture = (fixture('presence-v2') as { json: { type: string }; binaryHex: string }[]).find(f => f.json.type === 'ready')!;
+  const ready = Uint8Array.from(Buffer.from(readyFixture.binaryHex, 'hex'));
+  const batch = toBinary(PresenceFrameSchema, create(PresenceFrameSchema, { events: [fromBinary(PresenceMessageSchema, unknown), fromBinary(PresenceMessageSchema, ready), fromBinary(PresenceMessageSchema, unknown)] }));
+  assert.deepEqual(decodePresenceFrame(batch), [readyFixture.json]);
+  assert.deepEqual(decodePresenceFrame(new Uint8Array(0)), [], 'an empty frame');
+  assert.deepEqual(decodePresenceFrame('{"type":"ready"}'), [], 'not binary');
+  assert.throws(() => decodePresenceFrame(Uint8Array.from([0x0a, 0x20])), 'a truncated frame');
+});
+
+test('the client dispatches a batched frame in order, each event as if alone', () => {
+  const socket = new ContractSocket(PRESENCE_PROTOCOL);
+  const seen: string[] = [];
+  const client = new PresenceClient({
+    url: 'ws://example/ws',
+    makeSocket: () => socket,
+    handlers: {
+      ready: () => seen.push('ready'),
+      room: (area, players) => seen.push(`room:${area}:${players.length}`),
+      pos: (id) => seen.push(`pos:${id}`),
+      leave: (id) => seen.push(`leave:${id}`),
+      emote: (id, emote) => seen.push(`emote:${id}:${emote}`),
+    },
+  });
+  try {
+    client.setArea('village');
+    client.start('a'.repeat(64));
+    socket.onopen?.({});
+    socket.server({ type: 'ready', accountId: 'alice' });
+    socket.server(
+      { type: 'room', area: 'village', players: [] },
+      { type: 'pos', accountId: 'bob', x: 1, y: 2, facing: { x: 0, y: 1 }, moving: true },
+      { type: 'emote', accountId: 'bob', id: 'wave' },
+      { type: 'leave', accountId: 'bob' },
+    );
+    assert.deepEqual(seen, ['ready', 'room:village:0', 'pos:bob', 'emote:bob:wave', 'leave:bob']);
+  } finally { client.stop(); }
+});
 
 for (const protocol of [PRESENCE_PROTOCOL]) {
   test(`presence client negotiates binary for the entire connection`, () => {

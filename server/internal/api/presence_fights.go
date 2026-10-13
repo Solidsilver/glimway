@@ -127,37 +127,90 @@ func (h *presenceHub) retainFightCoverage(p *presencePeer) {
 		}
 	}
 }
+
+// fightOutput fans one room output out (a room run by its own actor, as
+// the tests build them); the scheduler's workers hand over batches.
 func (a *Server) fightOutput(room *presenceFightRoom, out fights.Output) {
-	b, err := encodePresence(out.Message)
-	_, join := out.Message.(*wire.FightJoin)
-	h := a.presence
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	sent := 0
-	for p := range room.viewers {
-		if p.fightRooms[room.handle] != room || p.detached || out.Observer != "" && out.Observer != p.fightToken {
-			continue
-		}
-		if !join && !p.fightJoined[room.handle] {
-			continue
-		}
-		if err != nil {
-			p.stop(websocket.StatusInternalError, "internal")
-			continue
-		}
-		h.enqueue(p, b)
-		if p.ctx.Err() != nil {
-			continue
-		}
-		sent++
-		if join {
-			if p.fightJoined == nil {
-				p.fightJoined = map[uint32]bool{}
-			}
-			p.fightJoined[room.handle] = true
-		}
+	a.fightOutputs([]fights.Emitted{{Tag: room, Output: out}})
+}
+
+// presenceFlushChunk bounds one hub-lock hold of a worker's flush: readers
+// (position reports) wait behind it, so a large pass is handed over in
+// pieces, each room's outputs still in order.
+const presenceFlushChunk = 64
+
+// fightOutputs fans a worker's pass out: every output encoded once outside
+// the hub lock, then enqueued to its room's viewers under it, in the order
+// the rooms produced them. A FightJoin marks the viewer joined, so deltas
+// follow it and never precede it.
+func (a *Server) fightOutputs(batch []fights.Emitted) {
+	type encoded struct {
+		room *presenceFightRoom
+		out  fights.Output
+		b    []byte
+		err  error
+		join bool
 	}
-	a.RecordFightBytes(sent * len(b))
+	items := make([]encoded, len(batch))
+	for i, e := range batch {
+		b, err := encodePresence(e.Message)
+		_, join := e.Message.(*wire.FightJoin)
+		items[i] = encoded{room: e.Tag.(*presenceFightRoom), out: e.Output, b: b, err: err, join: join}
+	}
+	h := a.presence
+	bytes := 0
+	for len(items) > 0 {
+		chunk := items[:min(presenceFlushChunk, len(items))]
+		items = items[len(chunk):]
+		h.mu.Lock()
+		for _, it := range chunk {
+			room, out := it.room, it.out
+			for p := range room.viewers {
+				if p.fightRooms[room.handle] != room || p.detached || out.Observer != "" && out.Observer != p.fightToken {
+					continue
+				}
+				if !it.join && !p.fightJoined[room.handle] {
+					continue
+				}
+				if it.err != nil {
+					p.stop(websocket.StatusInternalError, "internal")
+					continue
+				}
+				h.enqueue(p, it.b)
+				if p.ctx.Err() != nil {
+					continue
+				}
+				bytes += len(it.b)
+				if it.join {
+					if p.fightJoined == nil {
+						p.fightJoined = map[uint32]bool{}
+					}
+					p.fightJoined[room.handle] = true
+				}
+			}
+		}
+		h.mu.Unlock()
+	}
+	a.RecordFightBytes(bytes)
+}
+
+// fightScheduler is the hub's one scheduler for every woken room, started
+// with the first wake and stopped by ClosePresence. Its workers (one per
+// GOMAXPROCS; fightWorkers overrides, for measurement) share one clock on
+// the hub's grid and flush each pass through fightOutputs.
+func (a *Server) fightScheduler() *fights.Scheduler {
+	h := a.presence
+	h.fightSchedOnce.Do(func() {
+		c := fights.SchedulerConfig{Workers: h.fightWorkers, Now: h.now, Ticks: h.fightTicks}
+		// The per-room configuration is option A: shared ticks with the
+		// original per-room callbacks, which isolates the timer change. The
+		// sharded scheduler batches both callbacks in option B.
+		if h.fightWorkers != fights.PerRoomWorkers {
+			c.Emit, c.Ticked = a.fightOutputs, a.RecordFightTicks
+		}
+		h.fightSched = fights.NewScheduler(c)
+	})
+	return h.fightSched
 }
 func (a *Server) fightClosed(room *presenceFightRoom) {
 	h := a.presence
@@ -370,8 +423,9 @@ func (a *Server) wakeFightRooms(p *presencePeer, world string, missing []fightLo
 		}
 		sim := fights.NewRoom(w.key, room.handle, w.geometry, w.camps, seed.Sum64(), now, w.endsAt)
 		created := room
-		room.actor = fights.Start(sim, fights.ActorConfig{
+		room.actor = a.fightScheduler().Start(sim, fights.ActorConfig{
 			Now:          h.now,
+			Tag:          created,
 			Emit:         func(out fights.Output) { a.fightOutput(created, out) },
 			Closed:       func() { a.fightClosed(created) },
 			Fall:         a.fightFell,

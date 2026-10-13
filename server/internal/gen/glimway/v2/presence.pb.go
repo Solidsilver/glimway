@@ -307,7 +307,9 @@ func (FightRefusedReason) EnumDescriptor() ([]byte, []int) {
 	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{4}
 }
 
-// One event per frame. The websocket subprotocol versions the binary envelope.
+// One event. A client sends one PresenceMessage per websocket frame; the
+// server sends PresenceFrames. The websocket subprotocol versions the binary
+// envelope.
 type PresenceMessage struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Event:
@@ -630,6 +632,54 @@ func (*PresenceMessage_FightEvent) isPresenceMessage_Event() {}
 
 func (*PresenceMessage_FightSwingResult) isPresenceMessage_Event() {}
 
+// One websocket frame from the server: the events it carries, in order. A
+// writer puts whatever is queued when it wakes into one frame (it never waits
+// for more), so a light link sees one event per frame and a loaded one sees
+// batches. Clients dispatch the events in order, as if each had come alone.
+type PresenceFrame struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Events        []*PresenceMessage     `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PresenceFrame) Reset() {
+	*x = PresenceFrame{}
+	mi := &file_glimway_v2_presence_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PresenceFrame) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PresenceFrame) ProtoMessage() {}
+
+func (x *PresenceFrame) ProtoReflect() protoreflect.Message {
+	mi := &file_glimway_v2_presence_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PresenceFrame.ProtoReflect.Descriptor instead.
+func (*PresenceFrame) Descriptor() ([]byte, []int) {
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *PresenceFrame) GetEvents() []*PresenceMessage {
+	if x != nil {
+		return x.Events
+	}
+	return nil
+}
+
 type PresenceAuth struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Lease         string                 `protobuf:"bytes,1,opt,name=lease,proto3" json:"lease,omitempty"`
@@ -639,7 +689,7 @@ type PresenceAuth struct {
 
 func (x *PresenceAuth) Reset() {
 	*x = PresenceAuth{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[1]
+	mi := &file_glimway_v2_presence_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -651,7 +701,7 @@ func (x *PresenceAuth) String() string {
 func (*PresenceAuth) ProtoMessage() {}
 
 func (x *PresenceAuth) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[1]
+	mi := &file_glimway_v2_presence_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -664,7 +714,7 @@ func (x *PresenceAuth) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PresenceAuth.ProtoReflect.Descriptor instead.
 func (*PresenceAuth) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{1}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *PresenceAuth) GetLease() string {
@@ -682,7 +732,7 @@ type PresenceHeartbeat struct {
 
 func (x *PresenceHeartbeat) Reset() {
 	*x = PresenceHeartbeat{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[2]
+	mi := &file_glimway_v2_presence_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -694,7 +744,7 @@ func (x *PresenceHeartbeat) String() string {
 func (*PresenceHeartbeat) ProtoMessage() {}
 
 func (x *PresenceHeartbeat) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[2]
+	mi := &file_glimway_v2_presence_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -707,7 +757,7 @@ func (x *PresenceHeartbeat) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PresenceHeartbeat.ProtoReflect.Descriptor instead.
 func (*PresenceHeartbeat) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{2}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{3}
 }
 
 type PresenceReady struct {
@@ -719,7 +769,7 @@ type PresenceReady struct {
 
 func (x *PresenceReady) Reset() {
 	*x = PresenceReady{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[3]
+	mi := &file_glimway_v2_presence_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -731,7 +781,7 @@ func (x *PresenceReady) String() string {
 func (*PresenceReady) ProtoMessage() {}
 
 func (x *PresenceReady) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[3]
+	mi := &file_glimway_v2_presence_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -744,7 +794,7 @@ func (x *PresenceReady) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PresenceReady.ProtoReflect.Descriptor instead.
 func (*PresenceReady) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{3}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *PresenceReady) GetAccountId() string {
@@ -764,7 +814,7 @@ type PresenceJoin struct {
 
 func (x *PresenceJoin) Reset() {
 	*x = PresenceJoin{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[4]
+	mi := &file_glimway_v2_presence_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -776,7 +826,7 @@ func (x *PresenceJoin) String() string {
 func (*PresenceJoin) ProtoMessage() {}
 
 func (x *PresenceJoin) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[4]
+	mi := &file_glimway_v2_presence_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -789,7 +839,7 @@ func (x *PresenceJoin) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PresenceJoin.ProtoReflect.Descriptor instead.
 func (*PresenceJoin) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{4}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *PresenceJoin) GetArea() string {
@@ -816,7 +866,7 @@ type PresenceRoom struct {
 
 func (x *PresenceRoom) Reset() {
 	*x = PresenceRoom{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[5]
+	mi := &file_glimway_v2_presence_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -828,7 +878,7 @@ func (x *PresenceRoom) String() string {
 func (*PresenceRoom) ProtoMessage() {}
 
 func (x *PresenceRoom) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[5]
+	mi := &file_glimway_v2_presence_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -841,7 +891,7 @@ func (x *PresenceRoom) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PresenceRoom.ProtoReflect.Descriptor instead.
 func (*PresenceRoom) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{5}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *PresenceRoom) GetArea() string {
@@ -867,7 +917,7 @@ type PresenceLeave struct {
 
 func (x *PresenceLeave) Reset() {
 	*x = PresenceLeave{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[6]
+	mi := &file_glimway_v2_presence_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -879,7 +929,7 @@ func (x *PresenceLeave) String() string {
 func (*PresenceLeave) ProtoMessage() {}
 
 func (x *PresenceLeave) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[6]
+	mi := &file_glimway_v2_presence_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -892,7 +942,7 @@ func (x *PresenceLeave) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PresenceLeave.ProtoReflect.Descriptor instead.
 func (*PresenceLeave) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{6}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *PresenceLeave) GetAccountId() string {
@@ -912,7 +962,7 @@ type PresenceEmote struct {
 
 func (x *PresenceEmote) Reset() {
 	*x = PresenceEmote{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[7]
+	mi := &file_glimway_v2_presence_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -924,7 +974,7 @@ func (x *PresenceEmote) String() string {
 func (*PresenceEmote) ProtoMessage() {}
 
 func (x *PresenceEmote) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[7]
+	mi := &file_glimway_v2_presence_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -937,7 +987,7 @@ func (x *PresenceEmote) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PresenceEmote.ProtoReflect.Descriptor instead.
 func (*PresenceEmote) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{7}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *PresenceEmote) GetId() string {
@@ -978,7 +1028,7 @@ type PresenceAbility struct {
 
 func (x *PresenceAbility) Reset() {
 	*x = PresenceAbility{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[8]
+	mi := &file_glimway_v2_presence_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -990,7 +1040,7 @@ func (x *PresenceAbility) String() string {
 func (*PresenceAbility) ProtoMessage() {}
 
 func (x *PresenceAbility) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[8]
+	mi := &file_glimway_v2_presence_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1003,7 +1053,7 @@ func (x *PresenceAbility) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PresenceAbility.ProtoReflect.Descriptor instead.
 func (*PresenceAbility) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{8}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *PresenceAbility) GetAbility() string {
@@ -1062,7 +1112,7 @@ type PresenceAvatarChange struct {
 
 func (x *PresenceAvatarChange) Reset() {
 	*x = PresenceAvatarChange{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[9]
+	mi := &file_glimway_v2_presence_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1074,7 +1124,7 @@ func (x *PresenceAvatarChange) String() string {
 func (*PresenceAvatarChange) ProtoMessage() {}
 
 func (x *PresenceAvatarChange) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[9]
+	mi := &file_glimway_v2_presence_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1087,7 +1137,7 @@ func (x *PresenceAvatarChange) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PresenceAvatarChange.ProtoReflect.Descriptor instead.
 func (*PresenceAvatarChange) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{9}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *PresenceAvatarChange) GetAccountId() string {
@@ -1116,7 +1166,7 @@ type PresenceGift struct {
 
 func (x *PresenceGift) Reset() {
 	*x = PresenceGift{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[10]
+	mi := &file_glimway_v2_presence_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1128,7 +1178,7 @@ func (x *PresenceGift) String() string {
 func (*PresenceGift) ProtoMessage() {}
 
 func (x *PresenceGift) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[10]
+	mi := &file_glimway_v2_presence_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1141,7 +1191,7 @@ func (x *PresenceGift) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PresenceGift.ProtoReflect.Descriptor instead.
 func (*PresenceGift) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{10}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *PresenceGift) GetFromName() string {
@@ -1183,7 +1233,7 @@ type PresenceWitness struct {
 
 func (x *PresenceWitness) Reset() {
 	*x = PresenceWitness{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[11]
+	mi := &file_glimway_v2_presence_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1195,7 +1245,7 @@ func (x *PresenceWitness) String() string {
 func (*PresenceWitness) ProtoMessage() {}
 
 func (x *PresenceWitness) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[11]
+	mi := &file_glimway_v2_presence_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1208,7 +1258,7 @@ func (x *PresenceWitness) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PresenceWitness.ProtoReflect.Descriptor instead.
 func (*PresenceWitness) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{11}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *PresenceWitness) GetBeat() string {
@@ -1243,7 +1293,7 @@ type PresenceFacing struct {
 
 func (x *PresenceFacing) Reset() {
 	*x = PresenceFacing{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[12]
+	mi := &file_glimway_v2_presence_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1255,7 +1305,7 @@ func (x *PresenceFacing) String() string {
 func (*PresenceFacing) ProtoMessage() {}
 
 func (x *PresenceFacing) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[12]
+	mi := &file_glimway_v2_presence_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1268,7 +1318,7 @@ func (x *PresenceFacing) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PresenceFacing.ProtoReflect.Descriptor instead.
 func (*PresenceFacing) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{12}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *PresenceFacing) GetX() float64 {
@@ -1300,7 +1350,7 @@ type PresencePosition struct {
 
 func (x *PresencePosition) Reset() {
 	*x = PresencePosition{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[13]
+	mi := &file_glimway_v2_presence_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1312,7 +1362,7 @@ func (x *PresencePosition) String() string {
 func (*PresencePosition) ProtoMessage() {}
 
 func (x *PresencePosition) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[13]
+	mi := &file_glimway_v2_presence_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1325,7 +1375,7 @@ func (x *PresencePosition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PresencePosition.ProtoReflect.Descriptor instead.
 func (*PresencePosition) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{13}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *PresencePosition) GetX() float64 {
@@ -1382,7 +1432,7 @@ type PresencePlayer struct {
 
 func (x *PresencePlayer) Reset() {
 	*x = PresencePlayer{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[14]
+	mi := &file_glimway_v2_presence_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1394,7 +1444,7 @@ func (x *PresencePlayer) String() string {
 func (*PresencePlayer) ProtoMessage() {}
 
 func (x *PresencePlayer) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[14]
+	mi := &file_glimway_v2_presence_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1407,7 +1457,7 @@ func (x *PresencePlayer) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PresencePlayer.ProtoReflect.Descriptor instead.
 func (*PresencePlayer) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{14}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *PresencePlayer) GetAccountId() string {
@@ -1453,7 +1503,7 @@ type PresenceAvatar struct {
 
 func (x *PresenceAvatar) Reset() {
 	*x = PresenceAvatar{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[15]
+	mi := &file_glimway_v2_presence_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1465,7 +1515,7 @@ func (x *PresenceAvatar) String() string {
 func (*PresenceAvatar) ProtoMessage() {}
 
 func (x *PresenceAvatar) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[15]
+	mi := &file_glimway_v2_presence_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1478,7 +1528,7 @@ func (x *PresenceAvatar) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PresenceAvatar.ProtoReflect.Descriptor instead.
 func (*PresenceAvatar) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{15}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *PresenceAvatar) GetAppearance() *PresenceAppearance {
@@ -1541,7 +1591,7 @@ type PresenceAppearance struct {
 
 func (x *PresenceAppearance) Reset() {
 	*x = PresenceAppearance{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[16]
+	mi := &file_glimway_v2_presence_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1553,7 +1603,7 @@ func (x *PresenceAppearance) String() string {
 func (*PresenceAppearance) ProtoMessage() {}
 
 func (x *PresenceAppearance) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[16]
+	mi := &file_glimway_v2_presence_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1566,7 +1616,7 @@ func (x *PresenceAppearance) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PresenceAppearance.ProtoReflect.Descriptor instead.
 func (*PresenceAppearance) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{16}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *PresenceAppearance) GetSize() string {
@@ -1655,7 +1705,7 @@ type FightRoomKey struct {
 
 func (x *FightRoomKey) Reset() {
 	*x = FightRoomKey{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[17]
+	mi := &file_glimway_v2_presence_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1667,7 +1717,7 @@ func (x *FightRoomKey) String() string {
 func (*FightRoomKey) ProtoMessage() {}
 
 func (x *FightRoomKey) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[17]
+	mi := &file_glimway_v2_presence_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1680,7 +1730,7 @@ func (x *FightRoomKey) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FightRoomKey.ProtoReflect.Descriptor instead.
 func (*FightRoomKey) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{17}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *FightRoomKey) GetWorld() string {
@@ -1738,7 +1788,7 @@ type FightFacing struct {
 
 func (x *FightFacing) Reset() {
 	*x = FightFacing{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[18]
+	mi := &file_glimway_v2_presence_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1750,7 +1800,7 @@ func (x *FightFacing) String() string {
 func (*FightFacing) ProtoMessage() {}
 
 func (x *FightFacing) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[18]
+	mi := &file_glimway_v2_presence_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1763,7 +1813,7 @@ func (x *FightFacing) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FightFacing.ProtoReflect.Descriptor instead.
 func (*FightFacing) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{18}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *FightFacing) GetX() float64 {
@@ -1791,7 +1841,7 @@ type FightTarget struct {
 
 func (x *FightTarget) Reset() {
 	*x = FightTarget{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[19]
+	mi := &file_glimway_v2_presence_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1803,7 +1853,7 @@ func (x *FightTarget) String() string {
 func (*FightTarget) ProtoMessage() {}
 
 func (x *FightTarget) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[19]
+	mi := &file_glimway_v2_presence_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1816,7 +1866,7 @@ func (x *FightTarget) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FightTarget.ProtoReflect.Descriptor instead.
 func (*FightTarget) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{19}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *FightTarget) GetRoom() uint32 {
@@ -1868,7 +1918,7 @@ type FightSwing struct {
 
 func (x *FightSwing) Reset() {
 	*x = FightSwing{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[20]
+	mi := &file_glimway_v2_presence_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1880,7 +1930,7 @@ func (x *FightSwing) String() string {
 func (*FightSwing) ProtoMessage() {}
 
 func (x *FightSwing) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[20]
+	mi := &file_glimway_v2_presence_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1893,7 +1943,7 @@ func (x *FightSwing) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FightSwing.ProtoReflect.Descriptor instead.
 func (*FightSwing) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{20}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *FightSwing) GetKind() FightSwingKind {
@@ -1977,7 +2027,7 @@ type FightCast struct {
 
 func (x *FightCast) Reset() {
 	*x = FightCast{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[21]
+	mi := &file_glimway_v2_presence_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1989,7 +2039,7 @@ func (x *FightCast) String() string {
 func (*FightCast) ProtoMessage() {}
 
 func (x *FightCast) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[21]
+	mi := &file_glimway_v2_presence_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2002,7 +2052,7 @@ func (x *FightCast) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FightCast.ProtoReflect.Descriptor instead.
 func (*FightCast) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{21}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *FightCast) GetSeenTick() uint32 {
@@ -2069,7 +2119,7 @@ type FightEnemy struct {
 
 func (x *FightEnemy) Reset() {
 	*x = FightEnemy{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[22]
+	mi := &file_glimway_v2_presence_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2081,7 +2131,7 @@ func (x *FightEnemy) String() string {
 func (*FightEnemy) ProtoMessage() {}
 
 func (x *FightEnemy) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[22]
+	mi := &file_glimway_v2_presence_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2094,7 +2144,7 @@ func (x *FightEnemy) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FightEnemy.ProtoReflect.Descriptor instead.
 func (*FightEnemy) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{22}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *FightEnemy) GetEnemy() uint32 {
@@ -2191,7 +2241,7 @@ type FightEnemyPatch struct {
 
 func (x *FightEnemyPatch) Reset() {
 	*x = FightEnemyPatch{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[23]
+	mi := &file_glimway_v2_presence_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2203,7 +2253,7 @@ func (x *FightEnemyPatch) String() string {
 func (*FightEnemyPatch) ProtoMessage() {}
 
 func (x *FightEnemyPatch) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[23]
+	mi := &file_glimway_v2_presence_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2216,7 +2266,7 @@ func (x *FightEnemyPatch) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FightEnemyPatch.ProtoReflect.Descriptor instead.
 func (*FightEnemyPatch) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{23}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *FightEnemyPatch) GetEnemy() uint32 {
@@ -2284,7 +2334,7 @@ type FightJoin struct {
 
 func (x *FightJoin) Reset() {
 	*x = FightJoin{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[24]
+	mi := &file_glimway_v2_presence_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2296,7 +2346,7 @@ func (x *FightJoin) String() string {
 func (*FightJoin) ProtoMessage() {}
 
 func (x *FightJoin) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[24]
+	mi := &file_glimway_v2_presence_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2309,7 +2359,7 @@ func (x *FightJoin) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FightJoin.ProtoReflect.Descriptor instead.
 func (*FightJoin) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{24}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *FightJoin) GetRoomKey() *FightRoomKey {
@@ -2361,7 +2411,7 @@ type FightDelta struct {
 
 func (x *FightDelta) Reset() {
 	*x = FightDelta{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[25]
+	mi := &file_glimway_v2_presence_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2373,7 +2423,7 @@ func (x *FightDelta) String() string {
 func (*FightDelta) ProtoMessage() {}
 
 func (x *FightDelta) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[25]
+	mi := &file_glimway_v2_presence_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2386,7 +2436,7 @@ func (x *FightDelta) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FightDelta.ProtoReflect.Descriptor instead.
 func (*FightDelta) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{25}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *FightDelta) GetRoom() uint32 {
@@ -2442,7 +2492,7 @@ type FightEvent struct {
 
 func (x *FightEvent) Reset() {
 	*x = FightEvent{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[26]
+	mi := &file_glimway_v2_presence_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2454,7 +2504,7 @@ func (x *FightEvent) String() string {
 func (*FightEvent) ProtoMessage() {}
 
 func (x *FightEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[26]
+	mi := &file_glimway_v2_presence_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2467,7 +2517,7 @@ func (x *FightEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FightEvent.ProtoReflect.Descriptor instead.
 func (*FightEvent) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{26}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *FightEvent) GetRoom() uint32 {
@@ -2526,7 +2576,7 @@ type FightHitRow struct {
 
 func (x *FightHitRow) Reset() {
 	*x = FightHitRow{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[27]
+	mi := &file_glimway_v2_presence_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2538,7 +2588,7 @@ func (x *FightHitRow) String() string {
 func (*FightHitRow) ProtoMessage() {}
 
 func (x *FightHitRow) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[27]
+	mi := &file_glimway_v2_presence_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2551,7 +2601,7 @@ func (x *FightHitRow) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FightHitRow.ProtoReflect.Descriptor instead.
 func (*FightHitRow) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{27}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *FightHitRow) GetRoom() uint32 {
@@ -2605,7 +2655,7 @@ type FightSwingResult struct {
 
 func (x *FightSwingResult) Reset() {
 	*x = FightSwingResult{}
-	mi := &file_glimway_v2_presence_proto_msgTypes[28]
+	mi := &file_glimway_v2_presence_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2617,7 +2667,7 @@ func (x *FightSwingResult) String() string {
 func (*FightSwingResult) ProtoMessage() {}
 
 func (x *FightSwingResult) ProtoReflect() protoreflect.Message {
-	mi := &file_glimway_v2_presence_proto_msgTypes[28]
+	mi := &file_glimway_v2_presence_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2630,7 +2680,7 @@ func (x *FightSwingResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FightSwingResult.ProtoReflect.Descriptor instead.
 func (*FightSwingResult) Descriptor() ([]byte, []int) {
-	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{28}
+	return file_glimway_v2_presence_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *FightSwingResult) GetSwingCounter() uint32 {
@@ -2690,7 +2740,9 @@ const file_glimway_v2_presence_proto_rawDesc = "" +
 	"\vfight_event\x18\x10 \x01(\v2\x16.glimway.v2.FightEventH\x00R\n" +
 	"fightEvent\x12L\n" +
 	"\x12fight_swing_result\x18\x11 \x01(\v2\x1c.glimway.v2.FightSwingResultH\x00R\x10fightSwingResultB\a\n" +
-	"\x05event\"$\n" +
+	"\x05event\"D\n" +
+	"\rPresenceFrame\x123\n" +
+	"\x06events\x18\x01 \x03(\v2\x1b.glimway.v2.PresenceMessageR\x06events\"$\n" +
 	"\fPresenceAuth\x12\x14\n" +
 	"\x05lease\x18\x01 \x01(\tR\x05lease\"\x13\n" +
 	"\x11PresenceHeartbeat\".\n" +
@@ -2955,7 +3007,7 @@ func file_glimway_v2_presence_proto_rawDescGZIP() []byte {
 }
 
 var file_glimway_v2_presence_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_glimway_v2_presence_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
+var file_glimway_v2_presence_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
 var file_glimway_v2_presence_proto_goTypes = []any{
 	(FightSwingKind)(0),            // 0: glimway.v2.FightSwingKind
 	(FightEnemyKind)(0),            // 1: glimway.v2.FightEnemyKind
@@ -2963,92 +3015,94 @@ var file_glimway_v2_presence_proto_goTypes = []any{
 	(FightEventKind)(0),            // 3: glimway.v2.FightEventKind
 	(FightRefusedReason)(0),        // 4: glimway.v2.FightRefusedReason
 	(*PresenceMessage)(nil),        // 5: glimway.v2.PresenceMessage
-	(*PresenceAuth)(nil),           // 6: glimway.v2.PresenceAuth
-	(*PresenceHeartbeat)(nil),      // 7: glimway.v2.PresenceHeartbeat
-	(*PresenceReady)(nil),          // 8: glimway.v2.PresenceReady
-	(*PresenceJoin)(nil),           // 9: glimway.v2.PresenceJoin
-	(*PresenceRoom)(nil),           // 10: glimway.v2.PresenceRoom
-	(*PresenceLeave)(nil),          // 11: glimway.v2.PresenceLeave
-	(*PresenceEmote)(nil),          // 12: glimway.v2.PresenceEmote
-	(*PresenceAbility)(nil),        // 13: glimway.v2.PresenceAbility
-	(*PresenceAvatarChange)(nil),   // 14: glimway.v2.PresenceAvatarChange
-	(*PresenceGift)(nil),           // 15: glimway.v2.PresenceGift
-	(*PresenceWitness)(nil),        // 16: glimway.v2.PresenceWitness
-	(*PresenceFacing)(nil),         // 17: glimway.v2.PresenceFacing
-	(*PresencePosition)(nil),       // 18: glimway.v2.PresencePosition
-	(*PresencePlayer)(nil),         // 19: glimway.v2.PresencePlayer
-	(*PresenceAvatar)(nil),         // 20: glimway.v2.PresenceAvatar
-	(*PresenceAppearance)(nil),     // 21: glimway.v2.PresenceAppearance
-	(*FightRoomKey)(nil),           // 22: glimway.v2.FightRoomKey
-	(*FightFacing)(nil),            // 23: glimway.v2.FightFacing
-	(*FightTarget)(nil),            // 24: glimway.v2.FightTarget
-	(*FightSwing)(nil),             // 25: glimway.v2.FightSwing
-	(*FightCast)(nil),              // 26: glimway.v2.FightCast
-	(*FightEnemy)(nil),             // 27: glimway.v2.FightEnemy
-	(*FightEnemyPatch)(nil),        // 28: glimway.v2.FightEnemyPatch
-	(*FightJoin)(nil),              // 29: glimway.v2.FightJoin
-	(*FightDelta)(nil),             // 30: glimway.v2.FightDelta
-	(*FightEvent)(nil),             // 31: glimway.v2.FightEvent
-	(*FightHitRow)(nil),            // 32: glimway.v2.FightHitRow
-	(*FightSwingResult)(nil),       // 33: glimway.v2.FightSwingResult
-	nil,                            // 34: glimway.v2.PresenceAvatar.EquippedEntry
-	nil,                            // 35: glimway.v2.PresenceAvatar.CostumeEntry
-	(*wrapperspb.StringValue)(nil), // 36: google.protobuf.StringValue
-	(*structpb.Value)(nil),         // 37: google.protobuf.Value
+	(*PresenceFrame)(nil),          // 6: glimway.v2.PresenceFrame
+	(*PresenceAuth)(nil),           // 7: glimway.v2.PresenceAuth
+	(*PresenceHeartbeat)(nil),      // 8: glimway.v2.PresenceHeartbeat
+	(*PresenceReady)(nil),          // 9: glimway.v2.PresenceReady
+	(*PresenceJoin)(nil),           // 10: glimway.v2.PresenceJoin
+	(*PresenceRoom)(nil),           // 11: glimway.v2.PresenceRoom
+	(*PresenceLeave)(nil),          // 12: glimway.v2.PresenceLeave
+	(*PresenceEmote)(nil),          // 13: glimway.v2.PresenceEmote
+	(*PresenceAbility)(nil),        // 14: glimway.v2.PresenceAbility
+	(*PresenceAvatarChange)(nil),   // 15: glimway.v2.PresenceAvatarChange
+	(*PresenceGift)(nil),           // 16: glimway.v2.PresenceGift
+	(*PresenceWitness)(nil),        // 17: glimway.v2.PresenceWitness
+	(*PresenceFacing)(nil),         // 18: glimway.v2.PresenceFacing
+	(*PresencePosition)(nil),       // 19: glimway.v2.PresencePosition
+	(*PresencePlayer)(nil),         // 20: glimway.v2.PresencePlayer
+	(*PresenceAvatar)(nil),         // 21: glimway.v2.PresenceAvatar
+	(*PresenceAppearance)(nil),     // 22: glimway.v2.PresenceAppearance
+	(*FightRoomKey)(nil),           // 23: glimway.v2.FightRoomKey
+	(*FightFacing)(nil),            // 24: glimway.v2.FightFacing
+	(*FightTarget)(nil),            // 25: glimway.v2.FightTarget
+	(*FightSwing)(nil),             // 26: glimway.v2.FightSwing
+	(*FightCast)(nil),              // 27: glimway.v2.FightCast
+	(*FightEnemy)(nil),             // 28: glimway.v2.FightEnemy
+	(*FightEnemyPatch)(nil),        // 29: glimway.v2.FightEnemyPatch
+	(*FightJoin)(nil),              // 30: glimway.v2.FightJoin
+	(*FightDelta)(nil),             // 31: glimway.v2.FightDelta
+	(*FightEvent)(nil),             // 32: glimway.v2.FightEvent
+	(*FightHitRow)(nil),            // 33: glimway.v2.FightHitRow
+	(*FightSwingResult)(nil),       // 34: glimway.v2.FightSwingResult
+	nil,                            // 35: glimway.v2.PresenceAvatar.EquippedEntry
+	nil,                            // 36: glimway.v2.PresenceAvatar.CostumeEntry
+	(*wrapperspb.StringValue)(nil), // 37: google.protobuf.StringValue
+	(*structpb.Value)(nil),         // 38: google.protobuf.Value
 }
 var file_glimway_v2_presence_proto_depIdxs = []int32{
-	6,  // 0: glimway.v2.PresenceMessage.auth:type_name -> glimway.v2.PresenceAuth
-	9,  // 1: glimway.v2.PresenceMessage.join:type_name -> glimway.v2.PresenceJoin
-	18, // 2: glimway.v2.PresenceMessage.pos:type_name -> glimway.v2.PresencePosition
-	12, // 3: glimway.v2.PresenceMessage.emote:type_name -> glimway.v2.PresenceEmote
-	7,  // 4: glimway.v2.PresenceMessage.heartbeat:type_name -> glimway.v2.PresenceHeartbeat
-	8,  // 5: glimway.v2.PresenceMessage.ready:type_name -> glimway.v2.PresenceReady
-	10, // 6: glimway.v2.PresenceMessage.room:type_name -> glimway.v2.PresenceRoom
-	11, // 7: glimway.v2.PresenceMessage.leave:type_name -> glimway.v2.PresenceLeave
-	15, // 8: glimway.v2.PresenceMessage.gift:type_name -> glimway.v2.PresenceGift
-	16, // 9: glimway.v2.PresenceMessage.witness:type_name -> glimway.v2.PresenceWitness
-	13, // 10: glimway.v2.PresenceMessage.ability:type_name -> glimway.v2.PresenceAbility
-	14, // 11: glimway.v2.PresenceMessage.avatar_change:type_name -> glimway.v2.PresenceAvatarChange
-	25, // 12: glimway.v2.PresenceMessage.fight_swing:type_name -> glimway.v2.FightSwing
-	29, // 13: glimway.v2.PresenceMessage.fight_join:type_name -> glimway.v2.FightJoin
-	30, // 14: glimway.v2.PresenceMessage.fight_delta:type_name -> glimway.v2.FightDelta
-	31, // 15: glimway.v2.PresenceMessage.fight_event:type_name -> glimway.v2.FightEvent
-	33, // 16: glimway.v2.PresenceMessage.fight_swing_result:type_name -> glimway.v2.FightSwingResult
-	19, // 17: glimway.v2.PresenceJoin.player:type_name -> glimway.v2.PresencePlayer
-	19, // 18: glimway.v2.PresenceRoom.players:type_name -> glimway.v2.PresencePlayer
-	26, // 19: glimway.v2.PresenceAbility.fight:type_name -> glimway.v2.FightCast
-	20, // 20: glimway.v2.PresenceAvatarChange.avatar:type_name -> glimway.v2.PresenceAvatar
-	17, // 21: glimway.v2.PresencePosition.facing:type_name -> glimway.v2.PresenceFacing
-	20, // 22: glimway.v2.PresencePlayer.avatar:type_name -> glimway.v2.PresenceAvatar
-	18, // 23: glimway.v2.PresencePlayer.pos:type_name -> glimway.v2.PresencePosition
-	21, // 24: glimway.v2.PresenceAvatar.appearance:type_name -> glimway.v2.PresenceAppearance
-	34, // 25: glimway.v2.PresenceAvatar.equipped:type_name -> glimway.v2.PresenceAvatar.EquippedEntry
-	35, // 26: glimway.v2.PresenceAvatar.costume:type_name -> glimway.v2.PresenceAvatar.CostumeEntry
-	36, // 27: glimway.v2.PresenceAvatar.selected_pet:type_name -> google.protobuf.StringValue
-	36, // 28: glimway.v2.PresenceAvatar.selected_mount:type_name -> google.protobuf.StringValue
-	0,  // 29: glimway.v2.FightSwing.kind:type_name -> glimway.v2.FightSwingKind
-	23, // 30: glimway.v2.FightSwing.facing:type_name -> glimway.v2.FightFacing
-	24, // 31: glimway.v2.FightSwing.predicted:type_name -> glimway.v2.FightTarget
-	23, // 32: glimway.v2.FightCast.facing:type_name -> glimway.v2.FightFacing
-	24, // 33: glimway.v2.FightCast.predicted:type_name -> glimway.v2.FightTarget
-	1,  // 34: glimway.v2.FightEnemy.kind:type_name -> glimway.v2.FightEnemyKind
-	2,  // 35: glimway.v2.FightEnemy.state:type_name -> glimway.v2.FightEnemyState
-	2,  // 36: glimway.v2.FightEnemyPatch.state:type_name -> glimway.v2.FightEnemyState
-	22, // 37: glimway.v2.FightJoin.room_key:type_name -> glimway.v2.FightRoomKey
-	27, // 38: glimway.v2.FightJoin.enemies:type_name -> glimway.v2.FightEnemy
-	28, // 39: glimway.v2.FightDelta.changed:type_name -> glimway.v2.FightEnemyPatch
-	27, // 40: glimway.v2.FightDelta.spawned:type_name -> glimway.v2.FightEnemy
-	3,  // 41: glimway.v2.FightEvent.kind:type_name -> glimway.v2.FightEventKind
-	4,  // 42: glimway.v2.FightHitRow.refused_reason:type_name -> glimway.v2.FightRefusedReason
-	4,  // 43: glimway.v2.FightSwingResult.refused_reason:type_name -> glimway.v2.FightRefusedReason
-	32, // 44: glimway.v2.FightSwingResult.hits:type_name -> glimway.v2.FightHitRow
-	37, // 45: glimway.v2.PresenceAvatar.EquippedEntry.value:type_name -> google.protobuf.Value
-	37, // 46: glimway.v2.PresenceAvatar.CostumeEntry.value:type_name -> google.protobuf.Value
-	47, // [47:47] is the sub-list for method output_type
-	47, // [47:47] is the sub-list for method input_type
-	47, // [47:47] is the sub-list for extension type_name
-	47, // [47:47] is the sub-list for extension extendee
-	0,  // [0:47] is the sub-list for field type_name
+	7,  // 0: glimway.v2.PresenceMessage.auth:type_name -> glimway.v2.PresenceAuth
+	10, // 1: glimway.v2.PresenceMessage.join:type_name -> glimway.v2.PresenceJoin
+	19, // 2: glimway.v2.PresenceMessage.pos:type_name -> glimway.v2.PresencePosition
+	13, // 3: glimway.v2.PresenceMessage.emote:type_name -> glimway.v2.PresenceEmote
+	8,  // 4: glimway.v2.PresenceMessage.heartbeat:type_name -> glimway.v2.PresenceHeartbeat
+	9,  // 5: glimway.v2.PresenceMessage.ready:type_name -> glimway.v2.PresenceReady
+	11, // 6: glimway.v2.PresenceMessage.room:type_name -> glimway.v2.PresenceRoom
+	12, // 7: glimway.v2.PresenceMessage.leave:type_name -> glimway.v2.PresenceLeave
+	16, // 8: glimway.v2.PresenceMessage.gift:type_name -> glimway.v2.PresenceGift
+	17, // 9: glimway.v2.PresenceMessage.witness:type_name -> glimway.v2.PresenceWitness
+	14, // 10: glimway.v2.PresenceMessage.ability:type_name -> glimway.v2.PresenceAbility
+	15, // 11: glimway.v2.PresenceMessage.avatar_change:type_name -> glimway.v2.PresenceAvatarChange
+	26, // 12: glimway.v2.PresenceMessage.fight_swing:type_name -> glimway.v2.FightSwing
+	30, // 13: glimway.v2.PresenceMessage.fight_join:type_name -> glimway.v2.FightJoin
+	31, // 14: glimway.v2.PresenceMessage.fight_delta:type_name -> glimway.v2.FightDelta
+	32, // 15: glimway.v2.PresenceMessage.fight_event:type_name -> glimway.v2.FightEvent
+	34, // 16: glimway.v2.PresenceMessage.fight_swing_result:type_name -> glimway.v2.FightSwingResult
+	5,  // 17: glimway.v2.PresenceFrame.events:type_name -> glimway.v2.PresenceMessage
+	20, // 18: glimway.v2.PresenceJoin.player:type_name -> glimway.v2.PresencePlayer
+	20, // 19: glimway.v2.PresenceRoom.players:type_name -> glimway.v2.PresencePlayer
+	27, // 20: glimway.v2.PresenceAbility.fight:type_name -> glimway.v2.FightCast
+	21, // 21: glimway.v2.PresenceAvatarChange.avatar:type_name -> glimway.v2.PresenceAvatar
+	18, // 22: glimway.v2.PresencePosition.facing:type_name -> glimway.v2.PresenceFacing
+	21, // 23: glimway.v2.PresencePlayer.avatar:type_name -> glimway.v2.PresenceAvatar
+	19, // 24: glimway.v2.PresencePlayer.pos:type_name -> glimway.v2.PresencePosition
+	22, // 25: glimway.v2.PresenceAvatar.appearance:type_name -> glimway.v2.PresenceAppearance
+	35, // 26: glimway.v2.PresenceAvatar.equipped:type_name -> glimway.v2.PresenceAvatar.EquippedEntry
+	36, // 27: glimway.v2.PresenceAvatar.costume:type_name -> glimway.v2.PresenceAvatar.CostumeEntry
+	37, // 28: glimway.v2.PresenceAvatar.selected_pet:type_name -> google.protobuf.StringValue
+	37, // 29: glimway.v2.PresenceAvatar.selected_mount:type_name -> google.protobuf.StringValue
+	0,  // 30: glimway.v2.FightSwing.kind:type_name -> glimway.v2.FightSwingKind
+	24, // 31: glimway.v2.FightSwing.facing:type_name -> glimway.v2.FightFacing
+	25, // 32: glimway.v2.FightSwing.predicted:type_name -> glimway.v2.FightTarget
+	24, // 33: glimway.v2.FightCast.facing:type_name -> glimway.v2.FightFacing
+	25, // 34: glimway.v2.FightCast.predicted:type_name -> glimway.v2.FightTarget
+	1,  // 35: glimway.v2.FightEnemy.kind:type_name -> glimway.v2.FightEnemyKind
+	2,  // 36: glimway.v2.FightEnemy.state:type_name -> glimway.v2.FightEnemyState
+	2,  // 37: glimway.v2.FightEnemyPatch.state:type_name -> glimway.v2.FightEnemyState
+	23, // 38: glimway.v2.FightJoin.room_key:type_name -> glimway.v2.FightRoomKey
+	28, // 39: glimway.v2.FightJoin.enemies:type_name -> glimway.v2.FightEnemy
+	29, // 40: glimway.v2.FightDelta.changed:type_name -> glimway.v2.FightEnemyPatch
+	28, // 41: glimway.v2.FightDelta.spawned:type_name -> glimway.v2.FightEnemy
+	3,  // 42: glimway.v2.FightEvent.kind:type_name -> glimway.v2.FightEventKind
+	4,  // 43: glimway.v2.FightHitRow.refused_reason:type_name -> glimway.v2.FightRefusedReason
+	4,  // 44: glimway.v2.FightSwingResult.refused_reason:type_name -> glimway.v2.FightRefusedReason
+	33, // 45: glimway.v2.FightSwingResult.hits:type_name -> glimway.v2.FightHitRow
+	38, // 46: glimway.v2.PresenceAvatar.EquippedEntry.value:type_name -> google.protobuf.Value
+	38, // 47: glimway.v2.PresenceAvatar.CostumeEntry.value:type_name -> google.protobuf.Value
+	48, // [48:48] is the sub-list for method output_type
+	48, // [48:48] is the sub-list for method input_type
+	48, // [48:48] is the sub-list for extension type_name
+	48, // [48:48] is the sub-list for extension extendee
+	0,  // [0:48] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v2_presence_proto_init() }
@@ -3075,19 +3129,19 @@ func file_glimway_v2_presence_proto_init() {
 		(*PresenceMessage_FightEvent)(nil),
 		(*PresenceMessage_FightSwingResult)(nil),
 	}
-	file_glimway_v2_presence_proto_msgTypes[7].OneofWrappers = []any{}
 	file_glimway_v2_presence_proto_msgTypes[8].OneofWrappers = []any{}
-	file_glimway_v2_presence_proto_msgTypes[12].OneofWrappers = []any{}
+	file_glimway_v2_presence_proto_msgTypes[9].OneofWrappers = []any{}
 	file_glimway_v2_presence_proto_msgTypes[13].OneofWrappers = []any{}
-	file_glimway_v2_presence_proto_msgTypes[23].OneofWrappers = []any{}
-	file_glimway_v2_presence_proto_msgTypes[26].OneofWrappers = []any{}
+	file_glimway_v2_presence_proto_msgTypes[14].OneofWrappers = []any{}
+	file_glimway_v2_presence_proto_msgTypes[24].OneofWrappers = []any{}
+	file_glimway_v2_presence_proto_msgTypes[27].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_glimway_v2_presence_proto_rawDesc), len(file_glimway_v2_presence_proto_rawDesc)),
 			NumEnums:      5,
-			NumMessages:   31,
+			NumMessages:   32,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

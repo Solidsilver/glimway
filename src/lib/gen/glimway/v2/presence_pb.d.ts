@@ -12,7 +12,9 @@ import type { Value } from "@bufbuild/protobuf/wkt";
 export declare const file_glimway_v2_presence: GenFile;
 
 /**
- * One event per frame. The websocket subprotocol versions the binary envelope.
+ * One event. A client sends one PresenceMessage per websocket frame; the
+ * server sends PresenceFrames. The websocket subprotocol versions the binary
+ * envelope.
  *
  * @generated from message glimway.v2.PresenceMessage
  */
@@ -126,7 +128,9 @@ export declare type PresenceMessage = Message<"glimway.v2.PresenceMessage"> & {
 };
 
 /**
- * One event per frame. The websocket subprotocol versions the binary envelope.
+ * One event. A client sends one PresenceMessage per websocket frame; the
+ * server sends PresenceFrames. The websocket subprotocol versions the binary
+ * envelope.
  *
  * @generated from message glimway.v2.PresenceMessage
  */
@@ -244,6 +248,42 @@ export declare type PresenceMessageValid = Message<"glimway.v2.PresenceMessage">
  * Use `create(PresenceMessageSchema)` to create a new message.
  */
 export declare const PresenceMessageSchema: GenMessage<PresenceMessage, {validType: PresenceMessageValid}>;
+
+/**
+ * One websocket frame from the server: the events it carries, in order. A
+ * writer puts whatever is queued when it wakes into one frame (it never waits
+ * for more), so a light link sees one event per frame and a loaded one sees
+ * batches. Clients dispatch the events in order, as if each had come alone.
+ *
+ * @generated from message glimway.v2.PresenceFrame
+ */
+export declare type PresenceFrame = Message<"glimway.v2.PresenceFrame"> & {
+  /**
+   * @generated from field: repeated glimway.v2.PresenceMessage events = 1;
+   */
+  events: PresenceMessage[];
+};
+
+/**
+ * One websocket frame from the server: the events it carries, in order. A
+ * writer puts whatever is queued when it wakes into one frame (it never waits
+ * for more), so a light link sees one event per frame and a loaded one sees
+ * batches. Clients dispatch the events in order, as if each had come alone.
+ *
+ * @generated from message glimway.v2.PresenceFrame
+ */
+export declare type PresenceFrameValid = Message<"glimway.v2.PresenceFrame"> & {
+  /**
+   * @generated from field: repeated glimway.v2.PresenceMessage events = 1;
+   */
+  events: PresenceMessageValid[];
+};
+
+/**
+ * Describes the message glimway.v2.PresenceFrame.
+ * Use `create(PresenceFrameSchema)` to create a new message.
+ */
+export declare const PresenceFrameSchema: GenMessage<PresenceFrame, {validType: PresenceFrameValid}>;
 
 /**
  * @generated from message glimway.v2.PresenceAuth

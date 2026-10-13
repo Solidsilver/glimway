@@ -193,25 +193,34 @@ func readPresence(t *testing.T, conn *websocket.Conn) *wsClient {
 				w.closed <- fmt.Errorf("expected binary response")
 				return
 			}
-			raw := append([]byte(nil), b...)
-			var envelope contract.PresenceMessage
-			if err = proto.Unmarshal(b, &envelope); err != nil {
-				w.closed <- err
-				return
-			}
-			b, err = presenceFixtureJSON(&envelope)
+			// A frame carries one or more events; each is one wsEvent, in
+			// frame order, with its own PresenceMessage bytes as Binary.
+			events, err := splitPresenceFrame(b)
 			if err != nil {
 				w.closed <- err
 				return
 			}
-			var e wsEvent
-			if err = json.Unmarshal(b, &e); err != nil {
-				w.closed <- err
-				return
+			for _, raw := range events {
+				raw = append([]byte(nil), raw...)
+				var envelope contract.PresenceMessage
+				if err = proto.Unmarshal(raw, &envelope); err != nil {
+					w.closed <- err
+					return
+				}
+				flat, err := presenceFixtureJSON(&envelope)
+				if err != nil {
+					w.closed <- err
+					return
+				}
+				var e wsEvent
+				if err = json.Unmarshal(flat, &e); err != nil {
+					w.closed <- err
+					return
+				}
+				e.Raw = string(flat)
+				e.Binary = raw
+				w.events <- e
 			}
-			e.Raw = string(b)
-			e.Binary = raw
-			w.events <- e
 		}
 	}()
 	t.Cleanup(func() { conn.CloseNow() })

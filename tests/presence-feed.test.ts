@@ -1,4 +1,4 @@
-import { encodeTestPresence, decodeTestPresence } from './presence-wire.ts';
+import { encodeTestFrame, decodeTestPresence } from './presence-wire.ts';
 import { PRESENCE_PROTOCOL } from '../src/lib/presence-codec.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -64,7 +64,7 @@ class FakeSocket implements SocketLike {
     this.onopen?.({});
   }
   push(m: object) {
-    this.onmessage?.({ data: encodeTestPresence(m) });
+    this.onmessage?.({ data: encodeTestFrame([m]) });
   }
   drop(code: number, reason = '') {
     this.readyState = 3;

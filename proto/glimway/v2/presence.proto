@@ -5,7 +5,9 @@ import "buf/validate/validate.proto";
 import "google/protobuf/struct.proto";
 import "google/protobuf/wrappers.proto";
 
-// One event per frame. The websocket subprotocol versions the binary envelope.
+// One event. A client sends one PresenceMessage per websocket frame; the
+// server sends PresenceFrames. The websocket subprotocol versions the binary
+// envelope.
 message PresenceMessage {
   oneof event {
     PresenceAuth auth = 1;
@@ -27,6 +29,11 @@ message PresenceMessage {
     FightSwingResult fight_swing_result = 17;
   }
 }
+// One websocket frame from the server: the events it carries, in order. A
+// writer puts whatever is queued when it wakes into one frame (it never waits
+// for more), so a light link sees one event per frame and a loaded one sees
+// batches. Clients dispatch the events in order, as if each had come alone.
+message PresenceFrame { repeated PresenceMessage events = 1; }
 message PresenceAuth { string lease = 1; }
 message PresenceHeartbeat {}
 message PresenceReady { string account_id = 1; }

@@ -1,8 +1,8 @@
 import { create, fromBinary, toBinary, type Message } from '@bufbuild/protobuf';
-import { FightSwingSchema, PresenceMessageSchema, PresenceAuthSchema, PresenceJoinSchema, PresencePositionSchema, PresenceEmoteSchema, PresenceHeartbeatSchema, PresenceAbilitySchema, type PresenceAvatar as WireAvatar, type PresencePlayer as WirePlayer, type PresencePosition as WirePosition } from './gen/glimway/v2/presence_pb.js';
+import { FightSwingSchema, PresenceFrameSchema, PresenceMessageSchema, PresenceAuthSchema, PresenceJoinSchema, PresencePositionSchema, PresenceEmoteSchema, PresenceHeartbeatSchema, PresenceAbilitySchema, type PresenceAvatar as WireAvatar, type PresenceMessage as WireMessage, type PresencePlayer as WirePlayer, type PresencePosition as WirePosition } from './gen/glimway/v2/presence_pb.js';
 import { PRESENCE_POSES, type PresenceAvatar, type PresenceClientMessage, type PresencePlayer, type PresencePose, type PresencePosition, type PresenceServerMessage } from './presence.ts';
 
-export const PRESENCE_PROTOCOL = 'glimway.presence.v2';
+export const PRESENCE_PROTOCOL = 'glimway.presence.v3';
 
 export function encodePresence(message: PresenceClientMessage): Uint8Array {
   // create() builds generated messages directly; presence never passes through JSON.
@@ -43,9 +43,30 @@ function player(p: WirePlayer): PresencePlayer {
   return { accountId: p.accountId, displayName: p.displayName, avatar: avatar(p.avatar), pos: position(p.pos) };
 }
 
+/**
+ * One server frame (v3): the events it carries, in order, each decoded as
+ * if it had come alone. An event this build doesn't know, or one that fails
+ * its checks, is left out without losing the others. Anything that isn't a
+ * binary frame decodes to no events.
+ */
+export function decodePresenceFrame(data: unknown): PresenceServerMessage[] {
+  if (!(data instanceof ArrayBuffer || data instanceof Uint8Array)) return [];
+  const { events } = fromBinary(PresenceFrameSchema, data instanceof Uint8Array ? data : new Uint8Array(data));
+  const out: PresenceServerMessage[] = [];
+  for (const event of events) {
+    const m = decodeEvent(event);
+    if (m) out.push(m);
+  }
+  return out;
+}
+
+/** One event's bytes (a PresenceMessage), as tests and fixtures hold them. */
 export function decodePresence(data: unknown): PresenceServerMessage | null {
   if (!(data instanceof ArrayBuffer || data instanceof Uint8Array)) return null;
-  const { event } = fromBinary(PresenceMessageSchema, data instanceof Uint8Array ? data : new Uint8Array(data));
+  return decodeEvent(fromBinary(PresenceMessageSchema, data instanceof Uint8Array ? data : new Uint8Array(data)));
+}
+
+function decodeEvent({ event }: WireMessage): PresenceServerMessage | null {
   switch (event.case) {
     case 'fightJoin':
       return event.value.room > 0 && event.value.critSeed > 0 && event.value.roomKey ? { type: 'fightJoin', ...fields(event.value) } : null;

@@ -5,11 +5,12 @@ import { freshPlayer, go } from './home-helpers'
 import { waitForLive, player } from './helpers'
 import type { WebSocketRoute } from '@playwright/test'
 import { create, fromBinary, toBinary } from '@bufbuild/protobuf'
-import { PresenceMessageSchema } from '../src/lib/gen/glimway/v2/presence_pb.js'
+import { PresenceFrameSchema, PresenceMessageSchema } from '../src/lib/gen/glimway/v2/presence_pb.js'
 
 const camp = 'camp:0:0:0'
 type Enemy = { id: string; x: number; y: number; state: string; hp: number; fight: { room: number; enemy: number } | null; bodyEnabled: boolean }
 const serverEnemy = async (page: import('@playwright/test').Page) => page.evaluate(() => (window as unknown as { __fsEnemies(): Enemy[] }).__fsEnemies().find(e => e.fight?.room === 41) ?? null)
+const serverFrame = (event: NonNullable<Parameters<typeof create<typeof PresenceMessageSchema>>[1]>['event']) => Buffer.from(toBinary(PresenceFrameSchema, create(PresenceFrameSchema, { events: [create(PresenceMessageSchema, { event })] })))
 
 test('server wisp observes menus and close/resync; press predicts but death waits for server', async ({ page }) => {
   await freshPlayer(page)
@@ -28,7 +29,7 @@ test('server wisp observes menus and close/resync; press predicts but death wait
       const message = fromBinary(PresenceMessageSchema, Buffer.from(data))
       if (message.event.case === 'fightSwing') {
         swings.push(message)
-        ws.send(Buffer.from(toBinary(PresenceMessageSchema, create(PresenceMessageSchema, { event: { case: 'fightSwingResult', value: { swingCounter: message.event.value.swingCounter, hits: [{ room: 41, enemy: 0, damage: 10 }] } } }))))
+        ws.send(serverFrame({ case: 'fightSwingResult', value: { swingCounter: message.event.value.swingCounter, hits: [{ room: 41, enemy: 0, damage: 10 }] } }))
       } else upstream.send(data)
     })
   })
@@ -39,7 +40,7 @@ test('server wisp observes menus and close/resync; press predicts but death wait
   await expect.poll(() => !!socket).toBe(true)
   const hero = await player(page)
   const tick = Math.floor(Date.now() / 100) >>> 0
-  const send = (event: NonNullable<Parameters<typeof create<typeof PresenceMessageSchema>>[1]>['event']) => socket!.send(Buffer.from(toBinary(PresenceMessageSchema, create(PresenceMessageSchema, { event }))))
+  const send = (event: NonNullable<Parameters<typeof create<typeof PresenceMessageSchema>>[1]>['event']) => socket!.send(serverFrame(event))
   send({ case: 'fightJoin', value: { room: 41, tick, critSeed: 123, roomKey: { world: 'fake', realm: 'wilds', layer: 0, cx: 0, cy: 0, epoch: 'still' }, enemies: [{ enemy: 0, id: `${camp}:0`, campId: camp, kind: 1, x: Math.round(hero.x + 14), y: Math.round(hero.y), state: 1, stateTick: tick, hp: 28, maxHp: 28, facing: 0 }] } })
   await expect.poll(() => serverEnemy(page)).not.toBeNull()
   expect((await serverEnemy(page))!.bodyEnabled).toBe(false)

@@ -71,9 +71,13 @@ type presencePeer struct {
 	pos                          *presencePosition
 	lastPos, lastJoin, lastEmote time.Time
 	lastActivity                 time.Time
-	authFailures                 int
-	authCheck, authApplied       uint64
-	detached                     bool
+	// pingAt is when the sweep last started a ping; pinging while one is
+	// in flight (pingPeer clears it).
+	pingAt                 time.Time
+	pinging                bool
+	authFailures           int
+	authCheck, authApplied uint64
+	detached               bool
 	// clientJoined: this socket's client has named an area (its first Join).
 	// Rooms covered before that were announced before it could take them.
 	clientJoined          bool
@@ -129,6 +133,20 @@ type presenceHub struct {
 	fightFailedWakes         map[fights.Key]bool
 	fightSocket, fightAttack uint64
 	fightGathers             sync.WaitGroup
+	// fightSched runs every woken room (fightScheduler), from the first
+	// wake until ClosePresence. fightWorkers (0: GOMAXPROCS) and
+	// fightTicks (nil: the hub's own clock) are set before the first wake,
+	// by the load scenario and tests.
+	// sweepStop ends presenceSweep, started with the first peer.
+	sweepOnce, sweepClose sync.Once
+	sweepStop             chan struct{}
+	sweepDone             chan struct{}
+	sweepStarted          bool // published by sweepOnce before ClosePresence reads it
+	pingWG                sync.WaitGroup
+	fightSched            *fights.Scheduler
+	fightSchedOnce        sync.Once
+	fightWorkers          int
+	fightTicks            <-chan time.Time
 }
 
 // Account generations live only while physical reservations exist. A socket
@@ -154,7 +172,7 @@ func newPresenceHub(c *content.Presence, now func() time.Time) *presenceHub {
 	// The hub mutates nothing and shares no slice: work on a clone, never
 	// on the shared rules table.
 	config = proto.Clone(config).(*content.Presence)
-	return &presenceHub{fightLocations: map[fightLocation]fightLocationEpoch{}, fightFailedWakes: map[fights.Key]bool{}, fightRooms: map[fights.Key]*presenceFightRoom{}, peers: map[string]*presencePeer{}, worlds: map[string]map[string]*presencePeer{}, accounts: map[string]*presenceAccount{}, sessions: map[string]int{}, sockets: map[*websocket.Conn]struct{}{}, drained: make(chan struct{}), config: config, abilityReady: map[string]map[string]time.Time{}, ward: map[string]*wardCredit{}, wardReserved: map[wardKey]*wardReservation{}, clock: now, afterFunc: func(d time.Duration, f func()) { time.AfterFunc(d, f) }}
+	return &presenceHub{sweepStop: make(chan struct{}), sweepDone: make(chan struct{}), fightLocations: map[fightLocation]fightLocationEpoch{}, fightFailedWakes: map[fights.Key]bool{}, fightRooms: map[fights.Key]*presenceFightRoom{}, peers: map[string]*presencePeer{}, worlds: map[string]map[string]*presencePeer{}, accounts: map[string]*presenceAccount{}, sessions: map[string]int{}, sockets: map[*websocket.Conn]struct{}{}, drained: make(chan struct{}), config: config, abilityReady: map[string]map[string]time.Time{}, ward: map[string]*wardCredit{}, wardReserved: map[wardKey]*wardReservation{}, clock: now, afterFunc: func(d time.Duration, f func()) { time.AfterFunc(d, f) }}
 }
 
 // now is the server's clock (config's, or the wall clock for a bare hub).
@@ -267,7 +285,7 @@ func (h *presenceHub) enqueue(p *presencePeer, b []byte) {
 	if p.detached || p.ctx.Err() != nil {
 		return
 	}
-	if len(b) > 131072 || p.queuedBytes.Load()+int64(len(b)) > 262144 {
+	if presenceEventSize(b) > presenceMaxFrameBytes || p.queuedBytes.Load()+int64(len(b)) > 262144 {
 		p.stop(websocket.StatusTryAgainLater, "slow-consumer")
 		return
 	}
@@ -359,6 +377,19 @@ func (a *Server) ClosePresence() {
 		<-actor.Done()
 	}
 	h.fightGathers.Wait()
+	// Every room has exited; the workers and the clock may go. A hub that
+	// never woke a room started none. The sweep goes with them (a hub that
+	// never had a peer started none; the once keeps it from starting now).
+	h.fightSchedOnce.Do(func() {})
+	if h.fightSched != nil {
+		h.fightSched.Stop()
+	}
+	h.sweepOnce.Do(func() {})
+	h.sweepClose.Do(func() { close(h.sweepStop) })
+	if h.sweepStarted {
+		<-h.sweepDone
+	}
+	h.pingWG.Wait()
 	// Every room has stopped, so no fall can arrive after this: write the
 	// queued ones before the store goes (bounded; a fall left is logged).
 	falls, cancel := context.WithTimeout(context.Background(), 5*time.Second)

@@ -205,6 +205,14 @@ func (a *Server) presenceSocket(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 	h.admit(p)
+	p.pingAt = time.Now()
+	h.sweepOnce.Do(func() {
+		h.sweepStarted = true
+		go func() {
+			defer close(h.sweepDone)
+			a.presenceSweep()
+		}()
+	})
 	h.send(p, &contract.PresenceReady{AccountId: identity.ID})
 	if p.area != "" {
 		h.room(p)
@@ -429,12 +437,13 @@ func (a *Server) presenceReader(p *presencePeer) {
 
 func finitePresence(n float64) bool { return !math.IsNaN(n) && !math.IsInf(n, 0) }
 
+// presenceWriter drains the peer's queue into frames. It has no timer of
+// its own: idle checks and pings are the hub sweep's (presenceSweep), so
+// nothing but the queue and the peer's end wakes it.
 func (a *Server) presenceWriter(p *presencePeer) {
 	h := a.presence
-	idle := time.NewTicker(min(millis(int(h.config.GetIdleTimeoutMs()))/4, time.Second))
-	defer idle.Stop()
-	ping := time.NewTicker(millis(int(h.config.GetPingIntervalMs())))
-	defer ping.Stop()
+	// frame is this writer's one buffer: it grows to the frame cap once.
+	frame := make([]byte, 0, 4096)
 	for {
 		if p.ctx.Err() != nil {
 			_ = p.conn.Close(p.closeCode, p.closeReason)
@@ -445,31 +454,90 @@ func (a *Server) presenceWriter(p *presencePeer) {
 			_ = p.conn.Close(p.closeCode, p.closeReason)
 			return
 		case b := <-p.queue:
-			p.queuedBytes.Add(-int64(len(b)))
-			// Cancelling coder/websocket Write closes the transport. Let a bounded
-			// in-flight write finish so takeover can send its explicit close code.
-			ctx, cancel := context.WithTimeout(context.Background(), millis(int(h.config.GetWriteTimeoutMs())))
-			err := p.conn.Write(ctx, websocket.MessageBinary, b)
-			cancel()
-			if err != nil {
-				p.stop(websocket.StatusTryAgainLater, "slow-consumer")
+			// One frame carries whatever is queued when the writer wakes
+			// (never waiting for more), so a writer that is behind sends
+			// batches and one that is not sends each event at once. An
+			// event that would not fit starts the next frame.
+			for b != nil && p.ctx.Err() == nil {
+				var drained int
+				frame, b, drained = fillPresenceFrame(frame, b, p.queue)
+				p.queuedBytes.Add(-int64(drained))
+				// Cancelling coder/websocket Write closes the transport. Let a bounded
+				// in-flight write finish so takeover can send its explicit close code.
+				ctx, cancel := context.WithTimeout(context.Background(), millis(int(h.config.GetWriteTimeoutMs())))
+				err := p.conn.Write(ctx, websocket.MessageBinary, frame)
+				cancel()
+				if err != nil {
+					p.stop(websocket.StatusTryAgainLater, "slow-consumer")
+					break
+				}
 			}
-		case <-ping.C:
-			ctx, cancel := context.WithTimeout(context.Background(), millis(int(h.config.GetPongTimeoutMs())))
-			err := p.conn.Ping(ctx)
-			cancel()
-			if err != nil {
-				p.stop(presenceIdle, "pong-timeout")
-			}
-		case <-idle.C:
-			h.mu.Lock()
-			expired := time.Since(p.lastActivity) >= millis(int(h.config.GetIdleTimeoutMs()))
-			h.mu.Unlock()
-			if expired {
-				p.stop(presenceIdle, "idle-timeout")
-			}
-
 		}
+	}
+}
+
+// presenceSweep is the hub's one timer for every socket: each pass stops
+// the peers idle past the timeout and starts a ping for each whose last
+// ping is an interval old. It runs from the first registered peer until
+// ClosePresence; its period keeps the configured timeouts' resolution.
+func (a *Server) presenceSweep() {
+	h := a.presence
+	c := h.config
+	period := min(time.Second, millis(int(c.GetIdleTimeoutMs()))/4, millis(int(c.GetPingIntervalMs()))/2)
+	ticker := time.NewTicker(max(period, time.Millisecond))
+	defer ticker.Stop()
+	for {
+		select {
+		case <-h.sweepStop:
+			return
+		case <-ticker.C:
+		}
+		now := time.Now()
+		h.mu.Lock()
+		for _, p := range h.peers {
+			if p.detached || p.ctx.Err() != nil {
+				continue
+			}
+			if now.Sub(p.lastActivity) >= millis(int(c.GetIdleTimeoutMs())) {
+				p.stop(presenceIdle, "idle-timeout")
+				continue
+			}
+			if !p.pinging && now.Sub(p.pingAt) >= millis(int(c.GetPingIntervalMs())) {
+				p.pinging, p.pingAt = true, now
+				h.pingWG.Add(1)
+				go func() {
+					defer h.pingWG.Done()
+					a.pingPeer(p)
+				}()
+			}
+		}
+		h.mu.Unlock()
+	}
+}
+
+// pingPeer is one ping's round trip, off the sweep and off the writer
+// (coder/websocket allows Ping beside Write). A pong that does not come
+// in time ends the peer; in-flight is cleared on every path, and a peer
+// that ended meanwhile is never pinged again (the sweep skips it).
+func (a *Server) pingPeer(p *presencePeer) {
+	h := a.presence
+	defer func() {
+		h.mu.Lock()
+		p.pinging = false
+		h.mu.Unlock()
+	}()
+	if p.ctx.Err() != nil {
+		return
+	}
+	// Cancelling p.ctx must let the writer send its selected close frame. The
+	// websocket package closes the transport when a control-write context is
+	// cancelled, so ping I/O has its own bounded lifetime. Closing the peer's
+	// transport releases a ping waiting for a pong; the stopped-peer check above
+	// prevents starting another one after the close was selected.
+	ctx, cancel := context.WithTimeout(context.Background(), millis(int(h.config.GetPongTimeoutMs())))
+	defer cancel()
+	if err := p.conn.Ping(ctx); err != nil && p.ctx.Err() == nil {
+		p.stop(presenceIdle, "pong-timeout")
 	}
 }
 
