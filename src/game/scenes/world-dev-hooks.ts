@@ -67,6 +67,7 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
         state: e.state,
         hp: e.hp,
         texture: e.sprite.texture.key,
+        frame: e.sprite.frame.name,
         body: { x: b.x, y: b.y, w: Math.round(b.width), h: Math.round(b.height) },
         flipX: e.sprite.flipX,
         type: e.type,

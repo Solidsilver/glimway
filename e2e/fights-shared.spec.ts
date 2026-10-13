@@ -4,9 +4,44 @@ import { CONTRACT, pinWorld, reenter } from './connected'
 import { freshPlayer } from './home-helpers'
 import { expectToast, frames, parkCreatures, pressOn, spotsAround, standFor, waitForLive, waitForWilds, warp, wilds, worldTileOf } from './helpers'
 
-type Enemy = { id: string; x: number; y: number; hp: number; state: string; fight: { room: number; enemy: number } | null }
+type Enemy = { id: string; x: number; y: number; hp: number; state: string; frame: string; fight: { room: number; enemy: number } | null }
 const enemies = (page: Page, camp: string) => page.evaluate(id =>
   (window as unknown as { __fsEnemies(): Enemy[] }).__fsEnemies().filter(e => e.id.startsWith(`wilds:${id}:`)), camp)
+
+type WindupBand = { id: string; from: number; to: number }
+type WindupWatch = { bands: WindupBand[]; stop(): void }
+
+/** Record the drawn tell every frame; a one-second poll can miss a whole wind-up. */
+async function watchWindups(page: Page, camp: string): Promise<void> {
+  await page.evaluate(id => {
+    const w = window as unknown as { __fsEnemies(): Enemy[]; __sharedWindups?: WindupWatch }
+    const bands: WindupBand[] = []
+    const active = new Map<string, WindupBand>()
+    let raf = 0
+    const sample = () => {
+      const at = Date.now()
+      const drawn = w.__fsEnemies().filter(e => e.id.startsWith(`wilds:${id}:`) && e.state === 'telegraph' && e.frame.endsWith('-windup'))
+      const seen = new Set(drawn.map(e => e.id))
+      for (const e of drawn) {
+        const band = active.get(e.id)
+        if (band) band.to = at
+        else {
+          const next = { id: e.id, from: at, to: at }
+          active.set(e.id, next)
+          bands.push(next)
+        }
+      }
+      for (const key of active.keys()) if (!seen.has(key)) active.delete(key)
+      raf = requestAnimationFrame(sample)
+    }
+    w.__sharedWindups = { bands, stop: () => cancelAnimationFrame(raf) }
+    raf = requestAnimationFrame(sample)
+  }, camp)
+}
+
+async function windups(page: Page): Promise<WindupBand[]> {
+  return page.evaluate(() => (window as unknown as { __sharedWindups: WindupWatch }).__sharedWindups.bands)
+}
 
 async function enterCamp(page: Page, tile: { tx: number; ty: number }): Promise<void> {
   await warp(page, 'wilds', tile.tx, tile.ty)
@@ -52,13 +87,17 @@ test('two players share wind-ups, menus, reconnect, confirmed deaths and persona
     await expect.poll(async () => (await enemies(other, camp.id)).map(e => e.id).sort()).toEqual((await enemies(page, camp.id)).map(e => e.id).sort())
     const shared = (await enemies(page, camp.id))[0]!
     await expect.poll(async () => (await enemies(other, camp.id)).find(e => e.id === shared.id)?.fight).toEqual(shared.fight)
-    // Watch the same tell on both screens, using a state transition rather
-    // than a fixed sleep or exact receipt-time position comparison.
-    await expect.poll(async () => {
-      const a = await enemies(page, camp.id)
-      const b = await enemies(other, camp.id)
-      return a.some(e => e.state === 'telegraph' && b.some(o => o.id === e.id && o.state === 'telegraph'))
-    }, { timeout: 15_000, message: 'both screens draw the same wisp wind-up' }).toBe(true)
+    // Both screens must actually draw the same enemy's tell at overlapping
+    // wall-clock times, not merely have received a wind-up packet at some point.
+    for (const p of [page, other]) await watchWindups(p, camp.id)
+    try {
+      await expect.poll(async () => {
+        const [a, b] = await Promise.all([windups(page), windups(other)])
+        return a.some(e => b.some(o => o.id === e.id && Math.max(e.from, o.from) < Math.min(e.to, o.to)))
+      }, { timeout: 15_000, message: 'both screens draw the same wisp wind-up' }).toBe(true)
+    } finally {
+      for (const p of [page, other]) await p.evaluate(() => (window as unknown as { __sharedWindups: WindupWatch }).__sharedWindups.stop())
+    }
     await page.getByRole('button', { name: 'Menu (Esc)' }).click()
     const before = await enemies(page, camp.id)
     await expect.poll(async () => (await enemies(page, camp.id)).some(e => {

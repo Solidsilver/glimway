@@ -2,8 +2,9 @@ import './helpers/svelte-runes.ts'
 import './helpers/scene-modules.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { create } from '@bufbuild/protobuf'
-import { FightJoinSchema, FightEventSchema, FightDeltaSchema } from '../src/lib/gen/glimway/v2/presence_pb.js'
+import { create, toBinary } from '@bufbuild/protobuf'
+import { FightJoinSchema, FightEventSchema, FightDeltaSchema, PresenceFrameSchema } from '../src/lib/gen/glimway/v2/presence_pb.js'
+import { decodePresenceFrame } from '../src/lib/presence-codec.ts'
 import { FightInterp, FIGHT_RESYNC_GRACE } from '../src/lib/fight-interp.ts'
 import { pressServerSwing } from '../src/game/entities/fight-strike.ts'
 import { slashStrike } from '../src/game/entities/fight-rules.ts'
@@ -136,4 +137,31 @@ test('parked server enemies (dev only): off the map for targets and contact, roo
   assert.equal(r.fights.campWon('camp:0:0:0', 'still'), false, 'parking is not a fall')
   r.fights.event(create(FightEventSchema, { room: 1, tick: 102, enemy: 0, kind: 3 })); r.advance(200)
   assert.equal(enemy.dead, true); assert.equal(r.enemies.length, 0); assert.equal(enemy.sprite.active, false)
+})
+
+// The websocket may deliver a wind-up and its later lunge together. Every
+// event still reaches the observation model, whose stamped history draws both.
+test('coalesced presence events retain the wind-up before the later lunge is drawn', () => {
+  const r = rig()
+  r.fights.join(create(FightJoinSchema, { ...r.join, enemies: [{ ...r.join.enemies[0]!, state: 1 }] }))
+  r.advance(100)
+  const bytes = toBinary(PresenceFrameSchema, create(PresenceFrameSchema, { events: [
+    { event: { case: 'fightDelta', value: create(FightDeltaSchema, { room: 1, tick: 101, changed: [{ enemy: 0, state: 2, stateTick: 101 }] }) } },
+    { event: { case: 'fightEvent', value: create(FightEventSchema, { room: 1, enemy: 0, tick: 101, kind: 1 }) } },
+    { event: { case: 'fightDelta', value: create(FightDeltaSchema, { room: 1, tick: 106, changed: [{ enemy: 0, state: 3, stateTick: 106 }] }) } }
+  ] }))
+  const events = decodePresenceFrame(bytes)
+  assert.equal(events.length, 3)
+  for (const event of events) {
+    if (event.type === 'fightDelta') r.fights.delta(event)
+    if (event.type === 'fightEvent') r.fights.event(event)
+  }
+  r.owner.observe()
+  assert.equal(r.enemies[0].state, 'telegraph')
+  assert.equal(r.poses.at(-1), 'wisp:windup')
+  assert.equal(r.tells, 1)
+  r.advance(100)
+  assert.equal(r.enemies[0].state, 'lunge')
+  assert.equal(r.poses.at(-1), 'wisp:idle')
+  assert.equal(r.tells, 1, 'the tell is not restarted by the later delta')
 })
