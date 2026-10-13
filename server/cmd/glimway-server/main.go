@@ -94,9 +94,14 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
+	flushDefault, err := strconv.Atoi(env("PRESENCE_FLUSH_MS", "0"))
+	if err != nil || (flushDefault != 0 && flushDefault != 50 && flushDefault != 100) {
+		return fmt.Errorf("invalid GLIMWAY_PRESENCE_FLUSH_MS (want 0, 50, or 100)")
+	}
 	concurrency := f.Int("login-concurrency", concurrencyDefault, "Maximum simultaneous upstream login proofs")
 	rate := f.Int("login-rate", rateDefault, "Login attempts per IP or IPv6 /64 per minute")
 	globalRate := f.Int("login-global-rate", globalRateDefault, "Maximum upstream login calls per minute, including retries")
+	presenceFlush := f.Int("presence-flush-ms", flushDefault, "Presence output flush interval in ms (0, 50, or 100; default 0)")
 	secureDefault, err := strconv.ParseBool(env("COOKIE_SECURE", "true"))
 	if err != nil {
 		return fmt.Errorf("invalid GLIMWAY_COOKIE_SECURE")
@@ -109,6 +114,9 @@ func run(args []string) error {
 	partyAdmission := f.Bool("party-admission", partyDefault, "Let members of a party with a world here sign in without a code, and make party worlds")
 	if err = f.Parse(args); err != nil {
 		return err
+	}
+	if *presenceFlush != 0 && *presenceFlush != 50 && *presenceFlush != 100 {
+		return fmt.Errorf("invalid -presence-flush-ms (want 0, 50, or 100)")
 	}
 
 	clock, err := startClock()
@@ -324,7 +332,7 @@ func run(args []string) error {
 		}
 	}
 	logger := log.New(os.Stdout, "glimway ", log.LstdFlags|log.LUTC)
-	handler := api.New(s, habitica.New(*base, *tag), api.Config{Now: clock.now, SecureCookie: *secure, Logger: logger, TrustedProxies: proxies, LoginConcurrency: *concurrency, LoginRate: *rate, LoginGlobalRate: *globalRate, SpriteCacheDir: *spriteDir, SpriteBaseURL: *spriteBase, PartyAdmissionOff: !*partyAdmission, Version: version, Build: build})
+	handler := api.New(s, habitica.New(*base, *tag), api.Config{Now: clock.now, SecureCookie: *secure, Logger: logger, TrustedProxies: proxies, LoginConcurrency: *concurrency, LoginRate: *rate, LoginGlobalRate: *globalRate, SpriteCacheDir: *spriteDir, SpriteBaseURL: *spriteBase, PartyAdmissionOff: !*partyAdmission, PresenceFlushMs: *presenceFlush, Version: version, Build: build})
 	defer handler.ClosePresence()
 	closeAdmin, err := startAdmin(*adminAddr, handler, logger)
 	if err != nil {

@@ -50,6 +50,8 @@ type Config struct {
 	WildsGenerator chunks.Generator
 	// Nil uses the shared presence defaults. Intended for embedded-server configuration.
 	Presence *content.Presence
+	// PresenceFlushMs batches peer output on the shared presence sweep (0: immediate).
+	PresenceFlushMs int
 	// PartyAdmissionOff: no one signs in through a party, and no party's
 	// world is made (-party-admission=false). Party worlds already made stay.
 	PartyAdmissionOff bool
@@ -164,7 +166,12 @@ func newServer(s *store.Store, h habitica.Upstream, c Config) *Server {
 	if c.LoginPartyRate <= 0 {
 		c.LoginPartyRate = max(1, c.LoginGlobalRate/4)
 	}
-	a := &Server{sprites: newSpriteProxy(c.SpriteCacheDir, c.SpriteBaseURL, c.Now), presence: newPresenceHub(c.Presence, c.Now), loginProofs: &proofLimiter{buckets: map[string]*proofBucket{}}, loginGlobal: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginGlobalRate, window: time.Minute}, loginParty: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginPartyRate, window: time.Minute}, Store: s, Habitica: h, Config: c, loginSlots: make(chan struct{}, c.LoginConcurrency), loginLimit: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginRate, window: c.LoginWindow}}
+	hub := newPresenceHub(c.Presence, c.Now)
+	if c.PresenceFlushMs != 0 && c.PresenceFlushMs != 50 && c.PresenceFlushMs != 100 {
+		panic("PresenceFlushMs must be 0, 50, or 100")
+	}
+	hub.flushMs = c.PresenceFlushMs
+	a := &Server{sprites: newSpriteProxy(c.SpriteCacheDir, c.SpriteBaseURL, c.Now), presence: hub, loginProofs: &proofLimiter{buckets: map[string]*proofBucket{}}, loginGlobal: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginGlobalRate, window: time.Minute}, loginParty: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginPartyRate, window: time.Minute}, Store: s, Habitica: h, Config: c, loginSlots: make(chan struct{}, c.LoginConcurrency), loginLimit: &loginLimiter{buckets: map[string]loginBucket{}, rate: c.LoginRate, window: c.LoginWindow}}
 	a.falls = newFallWriter(func(ctx context.Context, f store.FallRecord) (bool, error) {
 		if a.Store == nil {
 			return false, errors.New("no store")

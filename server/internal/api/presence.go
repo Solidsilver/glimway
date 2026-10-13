@@ -54,12 +54,14 @@ type presenceIdentity struct {
 }
 
 type presencePeer struct {
-	identity presenceIdentity
-	account  *presenceAccount
-	conn     *websocket.Conn
-	ctx      context.Context
-	cancel   context.CancelFunc
-	queue    chan []byte
+	identity     presenceIdentity
+	account      *presenceAccount
+	conn         *websocket.Conn
+	ctx          context.Context
+	cancel       context.CancelFunc
+	queue        chan []byte
+	flushWake    chan struct{}
+	flushPending atomic.Bool
 	// queuedBytes is the queue's outstanding payload: enqueue adds under
 	// h.mu, the writer subtracts without it (one atomic a frame, no lock).
 	queuedBytes atomic.Int64
@@ -147,6 +149,8 @@ type presenceHub struct {
 	fightSchedOnce        sync.Once
 	fightWorkers          int
 	fightTicks            <-chan time.Time
+	flushMs               int
+	writeCalls            atomic.Uint64
 }
 
 // Account generations live only while physical reservations exist. A socket
@@ -292,6 +296,7 @@ func (h *presenceHub) enqueue(p *presencePeer, b []byte) {
 	select {
 	case p.queue <- b:
 		p.queuedBytes.Add(int64(len(b)))
+		p.flushPending.Store(true)
 	default:
 		p.stop(websocket.StatusTryAgainLater, "slow-consumer")
 	}
