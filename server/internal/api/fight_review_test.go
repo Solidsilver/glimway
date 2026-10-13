@@ -113,6 +113,119 @@ func TestShadowstepAcrossAChunkEdgeStrikesAtOneEnd(t *testing.T) {
 	h.fightGathers.Wait()
 }
 
+func TestFightLocationCacheIsBoundedAndGroundCanBeInvalidated(t *testing.T) {
+	h := newPresenceHub(nil, func() time.Time { return time.UnixMilli(100000) })
+	geom := fights.Geometry{Size: 24, Open: make([]bool, 24*24)}
+	for i := range geom.Open {
+		geom.Open[i] = true
+	}
+	first := fightLocation{world: "world-0", realm: "hearthwick", cx: 0}
+	firstKey := fights.Key{World: first.world, Realm: first.realm, Epoch: "epoch-0", CX: first.cx}
+	h.mu.Lock()
+	for n := 0; n < fightLocationCacheLimit+44; n++ {
+		location := fightLocation{world: fmt.Sprintf("world-%d", n), realm: "hearthwick", cx: int32(n)}
+		key := fights.Key{World: location.world, Realm: location.realm, Epoch: fmt.Sprintf("epoch-%d", n), CX: location.cx}
+		h.setFightLocationLocked(location, fightLocationEpoch{key: key, geometry: geom})
+		h.fightFailedWakes[key] = true
+	}
+	if len(h.fightLocations) != fightLocationCacheLimit || len(h.fightLocationOrder) != fightLocationCacheLimit || len(h.fightFailedWakes) > fightLocationCacheLimit {
+		h.mu.Unlock()
+		t.Fatal("fight location caches exceeded their bounds", len(h.fightLocations), len(h.fightLocationOrder), len(h.fightFailedWakes))
+	}
+	if _, ok := h.fightLocations[first]; ok || h.fightFailedWakes[firstKey] {
+		h.mu.Unlock()
+		t.Fatal("eviction retained stale geometry or its negative wake marker")
+	}
+	loc := fightLocation{world: "ground-world", realm: "hearthwick", cx: 4, cy: -2}
+	key := fights.Key{World: loc.world, Realm: loc.realm, Epoch: "active-epoch", CX: loc.cx, CY: loc.cy}
+	other := fightLocation{world: loc.world, realm: loc.realm, cx: 5, cy: -2}
+	h.setFightLocationLocked(loc, fightLocationEpoch{key: key, geometry: geom})
+	h.setFightLocationLocked(other, fightLocationEpoch{key: fights.Key{World: other.world, Realm: other.realm, Epoch: key.Epoch, CX: other.cx, CY: other.cy}, geometry: geom})
+	h.mu.Unlock()
+	h.invalidateFightGround(loc.world, key.Epoch, loc.cx, loc.cy)
+	h.mu.Lock()
+	if _, ok := h.fightLocations[loc]; ok {
+		h.mu.Unlock()
+		t.Fatal("committed ground edit retained cached geometry")
+	}
+	if _, ok := h.fightLocations[other]; !ok {
+		h.mu.Unlock()
+		t.Fatal("ground edit invalidated a neighboring chunk")
+	}
+	roomLocation := fightLocation{world: "sleep-world", realm: "hearthwick", cx: 1, cy: 2}
+	roomKey := fights.Key{World: roomLocation.world, Realm: roomLocation.realm, Epoch: "sleep-epoch", CX: roomLocation.cx, CY: roomLocation.cy}
+	room := &presenceFightRoom{key: roomKey, handle: 7}
+	h.fightLocations[roomLocation] = fightLocationEpoch{key: roomKey, geometry: geom}
+	h.fightLocationOrder[roomLocation] = 1
+	h.fightRooms[roomKey] = room
+	h.mu.Unlock()
+	a := &Server{presence: h}
+	a.fightClosed(room)
+	h.mu.Lock()
+	_, retained := h.fightLocations[roomLocation]
+	_, awake := h.fightRooms[roomKey]
+	h.mu.Unlock()
+	if retained || awake {
+		t.Fatal("closed room kept its wake geometry/cache identity", retained, awake)
+	}
+}
+
+func TestFightGroundKeepsActiveRoomWakeGeometry(t *testing.T) {
+	h := newPresenceHub(nil, func() time.Time { return time.UnixMilli(100000) })
+	active := fights.Geometry{CX: 0, CY: 0, Size: 24, Open: make([]bool, 24*24)}
+	for i := range active.Open {
+		active.Open[i] = true
+	}
+	active.Open[1*24+2] = false // wall at world tile 2,1
+	refreshed := active
+	refreshed.Open = append([]bool(nil), active.Open...)
+	refreshed.Open[1*24+2] = true
+	key := fights.Key{World: "world", Realm: "hearthwick", Epoch: "epoch", CX: 0, CY: 0}
+	room := &presenceFightRoom{key: key, handle: 1, geometry: active}
+	peer := &presencePeer{identity: presenceIdentity{World: key.World}, fightRooms: map[uint32]*presenceFightRoom{room.handle: room}}
+	h.mu.Lock()
+	h.fightRooms[key] = room
+	h.fightLocations[fightLocation{world: key.World, realm: key.Realm, layer: key.Layer, cx: key.CX, cy: key.CY}] = fightLocationEpoch{key: key, geometry: refreshed}
+	ground := h.fightGround(peer, 24, 24)
+	h.mu.Unlock()
+	x, _ := ground.Dash(24, 24, 1, 0)
+	if x > 27 {
+		t.Fatal("refreshed cache geometry replaced the active room's wake-time wall", x)
+	}
+}
+
+func TestFightGroundCamplessClearRefreshesDashGeometry(t *testing.T) {
+	h := newPresenceHub(nil, func() time.Time { return time.UnixMilli(100000) })
+	blocked := fights.Geometry{CX: 0, CY: 0, Size: 24, Open: make([]bool, 24*24)}
+	for i := range blocked.Open {
+		blocked.Open[i] = true
+	}
+	blocked.Open[1*24+2] = false // the cleared tile at world (2,1)
+	cleared := blocked
+	cleared.Open = append([]bool(nil), blocked.Open...)
+	cleared.Open[1*24+2] = true
+	key := fights.Key{World: "world", Realm: "hearthwick", Epoch: "epoch", CX: 0, CY: 0}
+	location := fightLocation{world: key.World, realm: key.Realm, layer: key.Layer, cx: key.CX, cy: key.CY}
+	peer := &presencePeer{identity: presenceIdentity{World: key.World}}
+	h.mu.Lock()
+	h.setFightLocationLocked(location, fightLocationEpoch{key: key, geometry: blocked})
+	old := h.fightGround(peer, 24, 24)
+	h.mu.Unlock()
+	before, _ := old.Dash(24, 24, 1, 0)
+	if before > 27 {
+		t.Fatal("dash crossed the cached blocking tile before it was cleared", before)
+	}
+	h.invalidateFightGround(key.World, key.Epoch, key.CX, key.CY)
+	h.mu.Lock()
+	h.setFightLocationLocked(location, fightLocationEpoch{key: key, geometry: cleared})
+	updated := h.fightGround(peer, 24, 24)
+	h.mu.Unlock()
+	after, _ := updated.Dash(24, 24, 1, 0)
+	if after <= 27 {
+		t.Fatal("dash still hit the obsolete campless wall after refresh", after)
+	}
+}
+
 // tickedFightRoom is a unit room whose grid ticks the test drives, with its
 // deltas kept, on a clock the test moves.
 type tickedFightRoom struct {

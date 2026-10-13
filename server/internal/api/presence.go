@@ -131,10 +131,13 @@ type presenceHub struct {
 	// time.AfterFunc; the tests fire them by hand, so no ward test sleeps in
 	// real time (review finding 12).
 	afterFunc                func(time.Duration, func())
-	fightLoad                sync.Mutex // lifecycle loading, never held by a tick
+	fightLoad                sync.Mutex                        // lifecycle loading, never held by a tick
+	fightGroundLoads         map[fightLocation]fightGroundLoad // h.mu: current wake batch only
 	fightRooms               map[fights.Key]*presenceFightRoom
 	fightHandle              uint32
 	fightLocations           map[fightLocation]fightLocationEpoch
+	fightLocationOrder       map[fightLocation]uint64
+	fightLocationSeq         uint64
 	fightFailedWakes         map[fights.Key]bool
 	fightSocket, fightAttack uint64
 	fightGathers             sync.WaitGroup
@@ -179,7 +182,7 @@ func newPresenceHub(c *content.Presence, now func() time.Time) *presenceHub {
 	// The hub mutates nothing and shares no slice: work on a clone, never
 	// on the shared rules table.
 	config = proto.Clone(config).(*content.Presence)
-	return &presenceHub{sweepStop: make(chan struct{}), sweepDone: make(chan struct{}), fightLocations: map[fightLocation]fightLocationEpoch{}, fightFailedWakes: map[fights.Key]bool{}, fightRooms: map[fights.Key]*presenceFightRoom{}, peers: map[string]*presencePeer{}, worlds: map[string]map[string]*presencePeer{}, accounts: map[string]*presenceAccount{}, sessions: map[string]int{}, sockets: map[*websocket.Conn]struct{}{}, drained: make(chan struct{}), config: config, abilityReady: map[string]map[string]time.Time{}, ward: map[string]*wardCredit{}, wardReserved: map[wardKey]*wardReservation{}, clock: now, afterFunc: func(d time.Duration, f func()) { time.AfterFunc(d, f) }}
+	return &presenceHub{sweepStop: make(chan struct{}), sweepDone: make(chan struct{}), fightLocations: map[fightLocation]fightLocationEpoch{}, fightLocationOrder: map[fightLocation]uint64{}, fightFailedWakes: map[fights.Key]bool{}, fightRooms: map[fights.Key]*presenceFightRoom{}, peers: map[string]*presencePeer{}, worlds: map[string]map[string]*presencePeer{}, accounts: map[string]*presenceAccount{}, sessions: map[string]int{}, sockets: map[*websocket.Conn]struct{}{}, drained: make(chan struct{}), config: config, abilityReady: map[string]map[string]time.Time{}, ward: map[string]*wardCredit{}, wardReserved: map[wardKey]*wardReservation{}, clock: now, afterFunc: func(d time.Duration, f func()) { time.AfterFunc(d, f) }}
 }
 
 // now is the server's clock (config's, or the wall clock for a bare hub).

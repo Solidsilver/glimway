@@ -42,6 +42,16 @@ func TestContractGate(t *testing.T) {
 		t.Fatal("unexpected contract number")
 	}
 }
+
+func TestBoundedFallWaitRefusalCanRetrySameKey(t *testing.T) {
+	if terminalRefusal(&failure{status: 409, code: "not-defeated"}) {
+		t.Fatal("a claim that raced the fall writer would be permanently refused for this key")
+	}
+	if !terminalRefusal(&failure{status: 409, code: "already-claimed"}) {
+		t.Fatal("ordinary terminal claim refusal must remain keyed")
+	}
+}
+
 func TestKeyedOpCurrentReplayAndAtomicRefusal(t *testing.T) {
 	x := newRig(t)
 	cookie, s := x.ready("alice")

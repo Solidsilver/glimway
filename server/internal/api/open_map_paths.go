@@ -189,6 +189,9 @@ func (a *Server) wildsClear(w http.ResponseWriter, r *http.Request) error {
 	if err := decodeOp(w, r, req); err != nil {
 		return err
 	}
+	var changedWorld, changedEpoch string
+	var changedCX, changedCY int32
+	changedGround := false
 	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		p, err := a.spotFor(ctx, tx, s, req.X, req.Y, req.Epoch, now)
 		if err != nil {
@@ -219,8 +222,13 @@ func (a *Server) wildsClear(w http.ResponseWriter, r *http.Request) error {
 		if err = p.put(ctx, tx, s, now); err != nil {
 			return nil, err
 		}
+		changedWorld, changedEpoch, changedCX, changedCY, changedGround = s.WorldID, p.epoch.Id, int32(p.cx), int32(p.cy), true
 		m, err := materialsProto(ctx, tx, s.AccountID)
 		return &contract.WildsClearResult{Ground: p.ground(), Materials: m}, err
+	}, func() {
+		if changedGround {
+			a.presence.invalidateFightGround(changedWorld, changedEpoch, changedCX, changedCY)
+		}
 	})
 }
 
@@ -232,6 +240,9 @@ func (a *Server) wildsLay(w http.ResponseWriter, r *http.Request) error {
 	if err := decodeOp(w, r, req); err != nil {
 		return err
 	}
+	var changedWorld, changedEpoch string
+	var changedCX, changedCY int32
+	changedGround := false
 	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		lay := chunks.LayKind(req.Kind)
 		if lay == nil {
@@ -263,12 +274,17 @@ func (a *Server) wildsLay(w http.ResponseWriter, r *http.Request) error {
 		if err = p.put(ctx, tx, s, now); err != nil {
 			return nil, err
 		}
+		changedWorld, changedEpoch, changedCX, changedCY, changedGround = s.WorldID, p.epoch.Id, int32(p.cx), int32(p.cy), true
 		made, err := a.waysAfterLay(ctx, tx, s, p.x, p.y, now)
 		if err != nil {
 			return nil, err
 		}
 		m, err := materialsProto(ctx, tx, s.AccountID)
 		return &contract.WildsLayResult{Ground: p.ground(), Materials: m, WaysMade: made}, err
+	}, func() {
+		if changedGround {
+			a.presence.invalidateFightGround(changedWorld, changedEpoch, changedCX, changedCY)
+		}
 	})
 }
 
@@ -281,6 +297,9 @@ func (a *Server) wildsLift(w http.ResponseWriter, r *http.Request) error {
 	if err := decodeOp(w, r, req); err != nil {
 		return err
 	}
+	var changedWorld, changedEpoch string
+	var changedCX, changedCY int32
+	changedGround := false
 	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		p, err := a.spotFor(ctx, tx, s, req.X, req.Y, req.Epoch, now)
 		if err != nil {
@@ -303,12 +322,17 @@ func (a *Server) wildsLift(w http.ResponseWriter, r *http.Request) error {
 		if err = p.put(ctx, tx, s, now); err != nil {
 			return nil, err
 		}
+		changedWorld, changedEpoch, changedCX, changedCY, changedGround = s.WorldID, p.epoch.Id, int32(p.cx), int32(p.cy), true
 		broken, rerouted, err := a.waysAfterLift(ctx, tx, s, p.x, p.y, now)
 		if err != nil {
 			return nil, err
 		}
 		m, err := materialsProto(ctx, tx, s.AccountID)
 		return &contract.WildsLiftResult{Ground: p.ground(), Materials: m, WaysBroken: broken, WaysRerouted: rerouted}, err
+	}, func() {
+		if changedGround {
+			a.presence.invalidateFightGround(changedWorld, changedEpoch, changedCX, changedCY)
+		}
 	})
 }
 

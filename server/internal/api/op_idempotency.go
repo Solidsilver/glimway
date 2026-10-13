@@ -265,6 +265,15 @@ func opIdem(ctx context.Context, tx *sql.Tx, id, route, key string, request any,
 	if err = json.Unmarshal([]byte(body), &result); err != nil {
 		return "", nil, err
 	}
+	// Older servers stored this bounded-wait refusal as terminal. After
+	// checking the request hash, remove it in this transaction so an exact
+	// retry can reevaluate eligibility and insert its eventual success.
+	if result.Refused == "not-defeated" && result.Status == 409 {
+		if _, err = tx.ExecContext(ctx, "DELETE FROM idempotency WHERE account_id=? AND op=? AND key=?", id, route, key); err != nil {
+			return "", nil, err
+		}
+		return hash, nil, nil
+	}
 	return hash, &result, nil
 }
 func saveOpIdem(ctx context.Context, tx *sql.Tx, id, route, key, hash string, result any, version, now int64) error {
@@ -317,7 +326,10 @@ func terminalRefusal(f *failure) bool {
 		return false
 	}
 	switch f.code {
-	case "not-found", "report-required", "idempotency-mismatch", "invalid-position", "invalid-revision", "superseded", "reload-needed", "playing-elsewhere", "access-denied", "world-access-denied", "player-flagged":
+	// A camp claim can spend its bounded wait before the fall is enqueued
+	// (or while the writer is retrying it). Keep this refusal transient so
+	// the same idempotency key can be retried after the durable witness lands.
+	case "not-defeated", "not-found", "report-required", "idempotency-mismatch", "invalid-position", "invalid-revision", "superseded", "reload-needed", "playing-elsewhere", "access-denied", "world-access-denied", "player-flagged":
 		return false
 	}
 	return true
