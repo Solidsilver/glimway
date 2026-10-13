@@ -37,12 +37,20 @@ for (const path of [
   'server/internal/fights/room.go',
   'server/internal/api/presence_fights.go',
   'server/internal/api/fall_writer.go',
+  'server/internal/api/proto.go',
+  'server/internal/api/presence_abilities.go',
+  'server/internal/rules/fight_math.go',
+  'server/internal/rules/combat_kit.go',
+  'src/game/entities/fight-strike.ts',
+  'src/game/entities/fight-rules.ts',
   'src/lib/fight-interp.ts',
   'src/lib/combat.ts',
   'src/game/entities/server-enemies.ts',
   'src/game/wilds/camp-fights.ts',
   'src/lib/gen/glimway/v2/presence_pb.js',
   'content/enemies.json',
+  'content/combat.json',
+  'content/abilities.json',
 ] as const) {
   test(`changed selector maps ${path} to the shared-fight specs`, () => {
     const output = list(path)
