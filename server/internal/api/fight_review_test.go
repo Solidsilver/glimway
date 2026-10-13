@@ -170,6 +170,62 @@ func TestFightLocationCacheIsBoundedAndGroundCanBeInvalidated(t *testing.T) {
 	}
 }
 
+func TestFightGroundKeepsActiveRoomWakeGeometry(t *testing.T) {
+	h := newPresenceHub(nil, func() time.Time { return time.UnixMilli(100000) })
+	active := fights.Geometry{CX: 0, CY: 0, Size: 24, Open: make([]bool, 24*24)}
+	for i := range active.Open {
+		active.Open[i] = true
+	}
+	active.Open[1*24+2] = false // wall at world tile 2,1
+	refreshed := active
+	refreshed.Open = append([]bool(nil), active.Open...)
+	refreshed.Open[1*24+2] = true
+	key := fights.Key{World: "world", Realm: "hearthwick", Epoch: "epoch", CX: 0, CY: 0}
+	room := &presenceFightRoom{key: key, handle: 1, geometry: active}
+	peer := &presencePeer{identity: presenceIdentity{World: key.World}, fightRooms: map[uint32]*presenceFightRoom{room.handle: room}}
+	h.mu.Lock()
+	h.fightRooms[key] = room
+	h.fightLocations[fightLocation{world: key.World, realm: key.Realm, layer: key.Layer, cx: key.CX, cy: key.CY}] = fightLocationEpoch{key: key, geometry: refreshed}
+	ground := h.fightGround(peer, 24, 24)
+	h.mu.Unlock()
+	x, _ := ground.Dash(24, 24, 1, 0)
+	if x > 27 {
+		t.Fatal("refreshed cache geometry replaced the active room's wake-time wall", x)
+	}
+}
+
+func TestFightGroundCamplessClearRefreshesDashGeometry(t *testing.T) {
+	h := newPresenceHub(nil, func() time.Time { return time.UnixMilli(100000) })
+	blocked := fights.Geometry{CX: 0, CY: 0, Size: 24, Open: make([]bool, 24*24)}
+	for i := range blocked.Open {
+		blocked.Open[i] = true
+	}
+	blocked.Open[1*24+2] = false // the cleared tile at world (2,1)
+	cleared := blocked
+	cleared.Open = append([]bool(nil), blocked.Open...)
+	cleared.Open[1*24+2] = true
+	key := fights.Key{World: "world", Realm: "hearthwick", Epoch: "epoch", CX: 0, CY: 0}
+	location := fightLocation{world: key.World, realm: key.Realm, layer: key.Layer, cx: key.CX, cy: key.CY}
+	peer := &presencePeer{identity: presenceIdentity{World: key.World}}
+	h.mu.Lock()
+	h.setFightLocationLocked(location, fightLocationEpoch{key: key, geometry: blocked})
+	old := h.fightGround(peer, 24, 24)
+	h.mu.Unlock()
+	before, _ := old.Dash(24, 24, 1, 0)
+	if before > 27 {
+		t.Fatal("dash crossed the cached blocking tile before it was cleared", before)
+	}
+	h.invalidateFightGround(key.World, key.Epoch, key.CX, key.CY)
+	h.mu.Lock()
+	h.setFightLocationLocked(location, fightLocationEpoch{key: key, geometry: cleared})
+	updated := h.fightGround(peer, 24, 24)
+	h.mu.Unlock()
+	after, _ := updated.Dash(24, 24, 1, 0)
+	if after <= 27 {
+		t.Fatal("dash still hit the obsolete campless wall after refresh", after)
+	}
+}
+
 // tickedFightRoom is a unit room whose grid ticks the test drives, with its
 // deltas kept, on a clock the test moves.
 type tickedFightRoom struct {

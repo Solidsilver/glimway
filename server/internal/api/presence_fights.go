@@ -68,6 +68,11 @@ type fightLocationEpoch struct {
 	geometry fights.Geometry
 }
 
+type fightGroundLoad struct {
+	invalidated  bool
+	closedEpochs map[string]bool
+}
+
 // Fight rooms hold their own immutable wake-time geometry while active.
 // The shared location cache is only a bounded lookup/ground cache.
 const fightLocationCacheLimit = 256
@@ -123,6 +128,19 @@ func (h *presenceHub) deleteFightLocationLocked(location fightLocation) {
 func (h *presenceHub) invalidateFightGround(world, epoch string, cx, cy int32) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	h.invalidateFightGroundLocked(world, epoch, cx, cy)
+}
+
+// Callers hold h.mu so invalidation is ordered with wake publication.
+func (h *presenceHub) invalidateFightGroundLocked(world, epoch string, cx, cy int32) {
+	// A pending read may not have resolved its epoch yet. Conservatively
+	// cancel it for this physical chunk even when no cache entry exists.
+	for location, load := range h.fightGroundLoads {
+		if location.world == world && location.cx == cx && location.cy == cy {
+			load.invalidated = true
+			h.fightGroundLoads[location] = load
+		}
+	}
 	for location, resolved := range h.fightLocations {
 		if location.world == world && location.cx == cx && location.cy == cy && resolved.key.Epoch == epoch {
 			h.deleteFightLocationLocked(location)
@@ -284,6 +302,16 @@ func (a *Server) fightClosed(room *presenceFightRoom) {
 	// The room owned its wake-time geometry until this close. A later wake
 	// must reload it from the current ground state instead of reviving this
 	// potentially obsolete copy.
+	location := fightLocation{world: room.key.World, realm: room.key.Realm, layer: room.key.Layer, cx: room.key.CX, cy: room.key.CY}
+	if load, pending := h.fightGroundLoads[location]; pending {
+		// An old epoch's close must not cancel a wake of the new epoch.
+		// Resolve that comparison at publication, after the read completes.
+		if load.closedEpochs == nil {
+			load.closedEpochs = map[string]bool{}
+		}
+		load.closedEpochs[room.key.Epoch] = true
+		h.fightGroundLoads[location] = load
+	}
 	for location, resolved := range h.fightLocations {
 		if resolved.key == room.key {
 			h.deleteFightLocationLocked(location)
@@ -398,9 +426,12 @@ func (a *Server) scanFightRooms(p *presencePeer, wake bool) (covered, done bool)
 		return false, false
 	}
 	h.mu.Unlock()
-	woken, ok := a.wakeFightRooms(p, world, missing, now)
+	woken, ok, retry := a.wakeFightRooms(p, world, missing, now)
 	if !ok {
 		return true, true
+	}
+	if retry {
+		return false, true
 	}
 	rooms = append(rooms, woken...)
 	h.mu.Lock()
@@ -441,15 +472,30 @@ type fightWake struct {
 
 // wakeFightRooms loads every missing chunk of a 3x3 in one transaction, then
 // starts a room for each chunk with a camp. Store work stays here, never in
-// a tick: the fall lookup decides which camps wake already fallen.
-func (a *Server) wakeFightRooms(p *presencePeer, world string, missing []fightLocation, now time.Time) ([]*presenceFightRoom, bool) {
+// a tick: the fall lookup decides which camps wake already fallen. retry
+// asks the caller to rescan when invalidation canceled this batch's read.
+func (a *Server) wakeFightRooms(p *presencePeer, world string, missing []fightLocation, now time.Time) (rooms []*presenceFightRoom, ok, retry bool) {
 	h := a.presence
+	// h.fightLoad serializes wakes. Track only this batch (at most a 3x3),
+	// starting before its database snapshot and ending after publication.
+	// Invalidation and room-close callbacks only need h.mu, never fightLoad.
+	h.mu.Lock()
+	h.fightGroundLoads = make(map[fightLocation]fightGroundLoad, len(missing))
+	for _, location := range missing {
+		h.fightGroundLoads[location] = fightGroundLoad{}
+	}
+	h.mu.Unlock()
+	defer func() {
+		h.mu.Lock()
+		h.fightGroundLoads = nil
+		h.mu.Unlock()
+	}()
 	ctx, cancel := context.WithTimeout(p.ctx, 2*time.Second)
 	defer cancel()
 	tx, err := a.beginTx(ctx)
 	if err != nil {
 		a.logUnexpected("fight-wake", err)
-		return nil, false
+		return nil, false, false
 	}
 	defer tx.Rollback()
 	wakes := make([]fightWake, 0, len(missing))
@@ -457,21 +503,29 @@ func (a *Server) wakeFightRooms(p *presencePeer, world string, missing []fightLo
 		w, err := a.loadFightChunk(ctx, tx, world, location, now)
 		if err != nil {
 			a.logUnexpected("fight-wake", err)
-			return nil, false
+			return nil, false, false
 		}
 		wakes = append(wakes, w)
 	}
 	// Commit newly generated epoch/chunk identity before caching anything.
 	if err = tx.Commit(); err != nil {
 		a.logUnexpected("fight-wake", err)
-		return nil, false
+		return nil, false, false
 	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.closing || h.peers[p.identity.ID] != p || p.identity.World != world || p.ctx.Err() != nil {
-		return nil, false
+		return nil, false, false
 	}
-	rooms := []*presenceFightRoom{}
+	for _, w := range wakes {
+		load := h.fightGroundLoads[w.location]
+		if load.invalidated || load.closedEpochs[w.key.Epoch] {
+			// Publish neither old geometry nor its negative wake marker.
+			// The caller rescans and reloads from a fresh transaction.
+			return nil, true, true
+		}
+	}
+	rooms = []*presenceFightRoom{}
 	for _, w := range wakes {
 		h.setFightLocationLocked(w.location, fightLocationEpoch{key: w.key, endsAt: w.endsAt, geometry: w.geometry})
 		if len(w.camps) == 0 {
@@ -505,7 +559,7 @@ func (a *Server) wakeFightRooms(p *presencePeer, world string, missing []fightLo
 		})
 		rooms = append(rooms, room)
 	}
-	return rooms, true
+	return rooms, true, false
 }
 
 // loadFightChunk reads one chunk's epoch, camps and effective geometry. A

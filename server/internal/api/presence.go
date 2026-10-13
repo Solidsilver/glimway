@@ -131,7 +131,8 @@ type presenceHub struct {
 	// time.AfterFunc; the tests fire them by hand, so no ward test sleeps in
 	// real time (review finding 12).
 	afterFunc                func(time.Duration, func())
-	fightLoad                sync.Mutex // lifecycle loading, never held by a tick
+	fightLoad                sync.Mutex                        // lifecycle loading, never held by a tick
+	fightGroundLoads         map[fightLocation]fightGroundLoad // h.mu: current wake batch only
 	fightRooms               map[fights.Key]*presenceFightRoom
 	fightHandle              uint32
 	fightLocations           map[fightLocation]fightLocationEpoch
