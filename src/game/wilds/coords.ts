@@ -15,11 +15,10 @@
  */
 import { TILE } from '../../lib/tile.ts';
 import { COMMONS_FROM_WILDS } from '../commons.ts';
-import { chunkOf, floorDiv, localOf } from '../../lib/wilds/coords.ts';
+import { floorDiv } from '../../lib/wilds/coords.ts';
 import { loadWilds } from '../../lib/wilds/data.ts';
 import type { AreaId } from '../../lib/state.ts';
 
-export { chunkOf, localOf, floorDiv };
 
 /** The saved area id for anywhere in the Wilds, and the scene's area id there. */
 export const WILDS_AREA: AreaId = 'wilds';

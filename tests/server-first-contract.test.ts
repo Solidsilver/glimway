@@ -1,9 +1,9 @@
-import { parseItemsResult } from '../src/lib/api/parse.ts';
+import { parseItemsResult } from '../src/lib/api/items.ts';
 import { createRemoteLibrary } from '../src/lib/papers/library.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { create, toJson, toBinary, type DescMessage, type JsonValue } from '@bufbuild/protobuf';
+import { create, fromJsonString, toJson, toBinary, type DescMessage, type JsonValue } from '@bufbuild/protobuf';
 import * as op from '../src/lib/gen/glimway/v1/op_pb.js';
 import * as operations from '../src/lib/gen/glimway/v1/operations_pb.js';
 import * as profile from '../src/lib/gen/glimway/v1/profile_pb.js';
@@ -86,9 +86,9 @@ test('packed chunks validate identity, bodies, decor and places on binary decode
     ['place tile', (x) => { x.places[0]!.tx = 24; }],
     ['realm', (x) => { x.realm = 'elsewhere'; }],
     ['look', (x) => { x.look = 'meadow'; }],
-    ['site kind', (x) => { x.sites = [create(wilds.StorySiteSchema, { id: 's', kind: 9, tx: 1, ty: 1 })]; }],
+    ['site kind', (x) => { x.sites = [fromJsonString(wilds.StorySiteSchema, JSON.stringify({ id: 's', kind: 9, tx: 1, ty: 1 }))]; }],
   ];
-  for (const [name, spoil] of refused) { const x = chunk(); spoil(x); assert.throws(() => validateChunk(x), undefined, name); }
+  for (const [name, spoil] of refused) { const x = chunk(); spoil(x); assert.throws(() => validateChunk(x), name); }
   const lamp = chunk(); lamp.sites = [create(wilds.StorySiteSchema, { id: 'lamp-stone:1:0', kind: wilds.SiteKind.LAMP_STONE, tx: 4, ty: 5 }), create(wilds.StorySiteSchema, { id: 'rumour:1:0', kind: wilds.SiteKind.RUMOUR, tx: 6, ty: 5 })]; validateChunk(lamp);
   const bad = chunk(); bad.decor!.flags = new Uint8Array(); assert.throws(() => validateChunk(bad));
   const key = { world: 'world', epoch: 'epoch', layer: 0, cx: 1, cy: 0 }; const fake = new FakeChunks(); fake.values.set(FakeChunks.key(key), chunk());
@@ -126,7 +126,7 @@ test('report keepalive and returned geometry identities are enforced', async () 
   const bytes = toBinary(wilds.WildsChunkSchema, chunk());
   const geometry = createOperationsApi(async () => bytes);
   assert.equal((await geometry.chunk('epoch', 0, 1, 0)).cx, 1);
-  for (const args of [['wrong-epoch', 0, 1, 0], ['epoch', -1, 1, 0], ['epoch', 0, 0, 0], ['epoch', 0, 1, 1]] as const) await assert.rejects(geometry.chunk(...args), { code: 'bad-response' });
+  for (const args of [['wrong-epoch', 0, 1, 0], ['epoch', -1, 1, 0], ['epoch', 0, 0, 0], ['epoch', 0, 1, 1]] as const) await assert.rejects(geometry.chunk(args[0], args[1], args[2], args[3]), { code: 'bad-response' });
 });
 
 test('outbox error decisions separate gameplay refusals, client bugs and reconciliation', () => {

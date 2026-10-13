@@ -1,3 +1,4 @@
+import { Bus, EV, type EventMap } from '../src/game/events.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { effectRoot, flushEffects } from './helpers/svelte-runes.ts'
@@ -35,23 +36,18 @@ test('a throwing action still frees the panel', async () => {
 })
 
 test('the bus counter bumps on its events and stops listening when its owner goes', async () => {
-  const listeners = new Map<string, Set<() => void>>()
-  const bus = {
-    on: (e: string, fn: () => void) => listeners.set(e, (listeners.get(e) ?? new Set()).add(fn)),
-    off: (e: string, fn: () => void) => listeners.get(e)?.delete(fn),
-    emit: (e: string) => listeners.get(e)?.forEach((fn) => fn())
-  }
+  const bus = new Bus<EventMap>()
   let v!: { readonly value: number }
   const stop = await effectRoot(() => {
-    v = busVersion(bus, 'a', 'b')
+    v = busVersion(bus, EV.companions, EV.wardrobe)
   })
   assert.equal(v.value, 0)
-  bus.emit('a')
-  bus.emit('b')
-  bus.emit('c')
+  bus.emit(EV.companions)
+  bus.emit(EV.wardrobe)
+  bus.emit(EV.clock)
   await flushEffects()
   assert.equal(v.value, 2)
   stop()
-  assert.equal(listeners.get('a')?.size, 0)
-  assert.equal(listeners.get('b')?.size, 0)
+  assert.equal(bus.listenerCount(EV.companions), 0)
+  assert.equal(bus.listenerCount(EV.wardrobe), 0)
 })

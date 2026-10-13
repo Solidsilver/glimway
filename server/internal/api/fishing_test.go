@@ -293,7 +293,7 @@ func TestFishCastReservesAndKeepTakesTheFish(t *testing.T) {
 	if w.Code != 200 {
 		t.Fatalf("cast: %d %s", w.Code, w.Body.String())
 	}
-	cast := decodeHTTP[castResponse](x.t, w)
+	cast := decodeLegacySnapshotHTTP[castResponse](x.t, w)
 	f := cast.Result.Cast
 	if f.Water != millPondID || f.Bank != "north" || f.Species != "mill-roach" || f.Band != "healthy" {
 		t.Fatal("cast", f)
@@ -331,7 +331,7 @@ func TestFishCastReservesAndKeepTakesTheFish(t *testing.T) {
 	if w.Code != 200 {
 		t.Fatalf("keep: %d %s", w.Code, w.Body.String())
 	}
-	kept := decodeHTTP[settleResponse](x.t, w)
+	kept := decodeLegacySnapshotHTTP[settleResponse](x.t, w)
 	if !kept.Result.Kept || kept.Result.Item != "mill-roach" || kept.Result.Cast != f.ID {
 		t.Fatal("kept", kept.Result)
 	}
@@ -370,14 +370,14 @@ func TestFishCancelAndReleaseGiveTheFishBack(t *testing.T) {
 	if w.Code != 200 {
 		t.Fatalf("cast: %d %s", w.Code, w.Body.String())
 	}
-	f := decodeHTTP[castResponse](x.t, w).Result.Cast
+	f := decodeLegacySnapshotHTTP[castResponse](x.t, w).Result.Cast
 
 	// The line comes in: the fish goes back to the water.
 	w = x.rawHTTP("POST", "/api/fishing/cancel", cancelBody(s, fishKey(x, "cancel"), f.ID), c)
 	if w.Code != 200 {
 		t.Fatalf("cancel: %d %s", w.Code, w.Body.String())
 	}
-	cancelled := decodeHTTP[cancelResponse](x.t, w)
+	cancelled := decodeLegacySnapshotHTTP[cancelResponse](x.t, w)
 	if cancelled.Result.Cast != f.ID || cancelled.Result.Band != "healthy" {
 		t.Fatal("cancel", cancelled.Result)
 	}
@@ -402,7 +402,7 @@ func TestFishCancelAndReleaseGiveTheFishBack(t *testing.T) {
 	if w.Code != 200 {
 		t.Fatalf("second cast: %d %s", w.Code, w.Body.String())
 	}
-	f2 := decodeHTTP[castResponse](x.t, w).Result.Cast
+	f2 := decodeLegacySnapshotHTTP[castResponse](x.t, w).Result.Cast
 	if f2.ID == f.ID || f2.Species != "mill-roach" {
 		t.Fatal("second cast", f2)
 	}
@@ -411,7 +411,7 @@ func TestFishCancelAndReleaseGiveTheFishBack(t *testing.T) {
 	if w.Code != 200 {
 		t.Fatalf("release: %d %s", w.Code, w.Body.String())
 	}
-	released := decodeHTTP[settleResponse](x.t, w)
+	released := decodeLegacySnapshotHTTP[settleResponse](x.t, w)
 	if released.Result.Kept || released.Result.Item != "" || released.Result.Wear != nil {
 		t.Fatal("released", released.Result)
 	}
@@ -457,7 +457,7 @@ func TestFishOneOpenCastAndLazyLapse(t *testing.T) {
 	if w.Code != 200 {
 		t.Fatalf("cast: %d %s", w.Code, w.Body.String())
 	}
-	f := decodeHTTP[castResponse](x.t, w).Result.Cast
+	f := decodeLegacySnapshotHTTP[castResponse](x.t, w).Result.Cast
 	if st, _, e, _ := x.request("POST", "/api/fishing/cast", castBody(s, fishKey(x, "cast"), "race", rod, at), c); st != 409 || e != "already-casting" {
 		t.Fatal("two lines out", st, e)
 	}
@@ -480,7 +480,7 @@ func TestFishOneOpenCastAndLazyLapse(t *testing.T) {
 	if w.Code != 200 {
 		t.Fatalf("second cast: %d %s", w.Code, w.Body.String())
 	}
-	f2 := decodeHTTP[castResponse](x.t, w).Result.Cast
+	f2 := decodeLegacySnapshotHTTP[castResponse](x.t, w).Result.Cast
 	x.now.Add(10 + 600 + 1)
 	if band := x.waters(c)[millPondID]; band != "healthy" {
 		t.Fatal("the water is not whole again", band)
@@ -513,7 +513,7 @@ func TestFishBandsStockAndStill(t *testing.T) {
 	if w.Code != 200 {
 		t.Fatalf("cast: %d %s", w.Code, w.Body.String())
 	}
-	f := decodeHTTP[castResponse](x.t, w).Result.Cast
+	f := decodeLegacySnapshotHTTP[castResponse](x.t, w).Result.Cast
 	if f.Band != "very-low" || f.ReadyAt != f.StartedAt+60 {
 		t.Fatal("the very low wait", f)
 	}
@@ -539,7 +539,7 @@ func TestFishBandsStockAndStill(t *testing.T) {
 	if w.Code != 200 {
 		t.Fatalf("the last fish: %d %s", w.Code, w.Body.String())
 	}
-	last := decodeHTTP[castResponse](x.t, w).Result.Cast
+	last := decodeLegacySnapshotHTTP[castResponse](x.t, w).Result.Cast
 	if last.Band != "very-low" {
 		t.Fatal("the last fish's band", last.Band)
 	}
@@ -603,7 +603,7 @@ func TestFishBanksReachAndSeason(t *testing.T) {
 	if w.Code != 200 {
 		t.Fatalf("the race bank: %d %s", w.Code, w.Body.String())
 	}
-	if f := decodeHTTP[castResponse](x.t, w).Result.Cast; f.Bank != "race" {
+	if f := decodeLegacySnapshotHTTP[castResponse](x.t, w).Result.Cast; f.Bank != "race" {
 		t.Fatal("cast", f)
 	}
 }
@@ -696,7 +696,7 @@ func TestFishSettleRefusals(t *testing.T) {
 	if w.Code != 200 {
 		t.Fatalf("cast: %d %s", w.Code, w.Body.String())
 	}
-	f := decodeHTTP[castResponse](x.t, w).Result.Cast
+	f := decodeLegacySnapshotHTTP[castResponse](x.t, w).Result.Cast
 	// The rod leaves the pack: keeping can't wear one, and the settle
 	// releases the catch with its refusal (5.4: "either way the cast closes").
 	if _, err := x.db.DB.Exec(`UPDATE item_instances SET location='storage',owner='home' WHERE id=?`, rod); err != nil {
@@ -725,7 +725,7 @@ func TestFishSettleRefusals(t *testing.T) {
 	if w.Code != 200 {
 		t.Fatalf("cast: %d %s", w.Code, w.Body.String())
 	}
-	f2 := decodeHTTP[castResponse](x.t, w).Result.Cast
+	f2 := decodeLegacySnapshotHTTP[castResponse](x.t, w).Result.Cast
 	x.now.Add(10 + 600 + 1)
 	if st, _, e, _ := x.request("POST", "/api/fishing/settle", settleBody(s, fishKey(x, "settle"), f2.ID, true, at), c); st != 409 || e != "no-cast" {
 		t.Fatal("settled a fish that slipped back", st, e)
@@ -753,7 +753,7 @@ func TestFishWorldMoveClosesAnOpenCast(t *testing.T) {
 	if w.Code != 200 {
 		t.Fatalf("cast: %d %s", w.Code, w.Body.String())
 	}
-	f := decodeHTTP[castResponse](x.t, w).Result.Cast
+	f := decodeLegacySnapshotHTTP[castResponse](x.t, w).Result.Cast
 	if stock, _ := x.storedStock(home, millPondID); stock.Reserved != 1 {
 		t.Fatal("stock", stock)
 	}
@@ -795,7 +795,7 @@ func TestFishTwoAccountsShareTheWater(t *testing.T) {
 	if w.Code != 200 {
 		t.Fatalf("alice's cast: %d %s", w.Code, w.Body.String())
 	}
-	fA := decodeHTTP[castResponse](x.t, w).Result.Cast
+	fA := decodeLegacySnapshotHTTP[castResponse](x.t, w).Result.Cast
 	if st, _, e, _ := x.request("POST", "/api/fishing/cast", castBody(sB, fishKey(x, "cast"), "east", rodB, bankSpot(t, sB, "east")), cB); st != 409 || e != "water-still" {
 		t.Fatal("bob took the fish on alice's line", st, e)
 	}
@@ -846,12 +846,12 @@ func TestFishReplaysAnswerOnce(t *testing.T) {
 	if w.Code != 200 {
 		t.Fatalf("cast: %d %s", w.Code, w.Body.String())
 	}
-	f := decodeHTTP[castResponse](x.t, w).Result.Cast
+	f := decodeLegacySnapshotHTTP[castResponse](x.t, w).Result.Cast
 	w = x.rawHTTP("POST", "/api/fishing/cast", castReq, c)
 	if w.Code != 200 {
 		t.Fatalf("cast replay: %d %s", w.Code, w.Body.String())
 	}
-	if again := decodeHTTP[castResponse](x.t, w).Result.Cast; again.ID != f.ID {
+	if again := decodeLegacySnapshotHTTP[castResponse](x.t, w).Result.Cast; again.ID != f.ID {
 		t.Fatal("a replay rolled a new cast", again)
 	}
 	if stock, _ := x.storedStock(s.WorldID, millPondID); stock.Stock != 12 || stock.Reserved != 1 {
@@ -865,12 +865,12 @@ func TestFishReplaysAnswerOnce(t *testing.T) {
 	if w.Code != 200 {
 		t.Fatalf("keep: %d %s", w.Code, w.Body.String())
 	}
-	first := decodeHTTP[settleResponse](x.t, w).Result
+	first := decodeLegacySnapshotHTTP[settleResponse](x.t, w).Result
 	w = x.rawHTTP("POST", "/api/fishing/settle", keepReq, c)
 	if w.Code != 200 {
 		t.Fatalf("keep replay: %d %s", w.Code, w.Body.String())
 	}
-	again := decodeHTTP[settleResponse](x.t, w).Result
+	again := decodeLegacySnapshotHTTP[settleResponse](x.t, w).Result
 	if again.Kept != first.Kept || again.Item != first.Item || again.Wear == nil || again.Wear.UsesLeft != first.Wear.UsesLeft {
 		t.Fatal("a replay answered something else", again)
 	}
@@ -890,19 +890,19 @@ func TestFishReplaysAnswerOnce(t *testing.T) {
 	if w.Code != 200 {
 		t.Fatalf("second cast: %d %s", w.Code, w.Body.String())
 	}
-	f2 := decodeHTTP[castResponse](x.t, w).Result.Cast
+	f2 := decodeLegacySnapshotHTTP[castResponse](x.t, w).Result.Cast
 	before, _ := x.storedStock(s.WorldID, millPondID)
 	cancelReq := cancelBody(s, "replay-cancel", f2.ID)
 	w = x.rawHTTP("POST", "/api/fishing/cancel", cancelReq, c)
 	if w.Code != 200 {
 		t.Fatalf("cancel: %d %s", w.Code, w.Body.String())
 	}
-	firstCancel := decodeHTTP[cancelResponse](x.t, w).Result
+	firstCancel := decodeLegacySnapshotHTTP[cancelResponse](x.t, w).Result
 	w = x.rawHTTP("POST", "/api/fishing/cancel", cancelReq, c)
 	if w.Code != 200 {
 		t.Fatalf("cancel replay: %d %s", w.Code, w.Body.String())
 	}
-	if r := decodeHTTP[cancelResponse](x.t, w).Result; r.Cast != firstCancel.Cast || r.Band != firstCancel.Band {
+	if r := decodeLegacySnapshotHTTP[cancelResponse](x.t, w).Result; r.Cast != firstCancel.Cast || r.Band != firstCancel.Band {
 		t.Fatal("a replay answered something else", r)
 	}
 	after, _ := x.storedStock(s.WorldID, millPondID)
@@ -940,7 +940,7 @@ func TestFishingWireShapesTheClientReads(t *testing.T) {
 	if rawFishing(t, w).Cast == nil {
 		t.Fatal("the state beside a cast carries no line")
 	}
-	f := decodeHTTP[castResponse](x.t, w).Result.Cast
+	f := decodeLegacySnapshotHTTP[castResponse](x.t, w).Result.Cast
 
 	x.now.Add(10)
 	w = x.rawHTTP("POST", "/api/fishing/settle", settleBody(s, fishKey(x, "settle"), f.ID, false, at), c)
@@ -951,7 +951,7 @@ func TestFishingWireShapesTheClientReads(t *testing.T) {
 	if w.Code != 200 {
 		t.Fatalf("cast: %d %s", w.Code, w.Body.String())
 	}
-	f2 := decodeHTTP[castResponse](x.t, w).Result.Cast
+	f2 := decodeLegacySnapshotHTTP[castResponse](x.t, w).Result.Cast
 	w = x.rawHTTP("POST", "/api/fishing/cancel", cancelBody(s, fishKey(x, "cancel"), f2.ID), c)
 	if fields = top(w); fields["fishCancel"] == nil {
 		t.Fatal("the cancel's answer is not the fishCancel case", fields)

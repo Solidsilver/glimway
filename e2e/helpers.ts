@@ -1,3 +1,4 @@
+import type { FsHooks } from '../src/game/dev-hooks.ts'
 import { expect, type Page } from '@playwright/test'
 
 /**
@@ -15,23 +16,7 @@ import { expect, type Page } from '@playwright/test'
 
 type AreaId = 'village' | 'woodland' | 'ruin' | (string & {})
 /** An exit of the current area, in tiles. */
-export type ExitView = { tx: number; ty: number; tw: number; th: number; to: string }
-type Hooks = {
-  __fsPlayer?: () => { x: number; y: number }
-  __fsWorld?: () => { areaId: AreaId; widthPx: number; heightPx: number; bounds: { x: number; y: number; w: number; h: number }; exits: ExitView[] }
-  __fsSafety?: () => { areaId: AreaId; transitioning: boolean }
-  __fsDevWarp?: (area: AreaId, tx: number, ty: number) => void
-  __fsDevStrike?: (n: number, type?: string) => void
-  __fsDevFightFall?: (entity: string) => Promise<{ ok: true } | { ok: false; status: number; code: string }>
-  __fsDevSpeakNaming?: (force?: boolean) => boolean
-  __fsWarden?: () => WardenView
-  __fsWilds?: () => WildsDump | null
-  __fsWildsWindow?: () => WildsWindowView | null
-  __fsFrame?: () => FrameView
-  __fsDialogue?: () => DialogueView
-  __fsToasts?: () => ToastsView
-}
-
+export type ExitView = ReturnType<FsHooks['__fsWorld']>['exits'][number]
 /**
  * How long a test waits for something that follows a server answer (a toast
  * after an operation, a claim showing in the homes view, the link online).
@@ -61,7 +46,7 @@ export async function expectToast(page: Page, text: RegExp | string, opts: { tim
   await expect
     .poll(
       async () => {
-        const t = await page.evaluate(() => (window as unknown as Hooks).__fsToasts?.() ?? { count: 0, seen: [] })
+        const t = await page.evaluate(() => window.__fsToasts?.() ?? { count: 0, seen: [] })
         hit = t.seen.find((x) => x.n > (seen.get(key) ?? 0) && (typeof text === 'string' ? x.text.includes(text) : text.test(x.text)))
         return !!hit
       },
@@ -75,7 +60,7 @@ export async function expectToast(page: Page, text: RegExp | string, opts: { tim
 /** The area title cards shown so far, in order (dev hook; a card lasts ~2.6 s of wall time). */
 async function areaCards(page: Page): Promise<string[]> {
   return page.evaluate(() =>
-    (window as unknown as { __fsBanners: () => { shown: { kind: string; title: string }[] } }).__fsBanners().shown.filter((b) => b.kind === 'area').map((b) => b.title)
+    window.__fsBanners!().shown.filter((b) => b.kind === 'area').map((b) => b.title)
   )
 }
 
@@ -94,11 +79,9 @@ export async function expectAreaCard(page: Page, title: string): Promise<void> {
 }
 
 /** window.__fsToasts(): every toast shown since the page loaded (dev builds). */
-type ToastsView = { count: number; seen: { n: number; text: string; kind: string }[] }
-
 /** How many toasts have been shown so far (a mark for toastAfter). */
 export async function toastCount(page: Page): Promise<number> {
-  return page.evaluate(() => (window as unknown as Hooks).__fsToasts?.().count ?? 0)
+  return page.evaluate(() => window.__fsToasts?.().count ?? 0)
 }
 
 /**
@@ -110,7 +93,7 @@ export async function toastAfter(page: Page, since: number, text?: RegExp | stri
   let found = ''
   await expect
     .poll(async () => {
-      const t = await page.evaluate(() => (window as unknown as Hooks).__fsToasts?.() ?? { count: 0, seen: [] })
+      const t = await page.evaluate(() => window.__fsToasts?.() ?? { count: 0, seen: [] })
       const hit = t.seen.find((x) => x.n > since && (text === undefined || (typeof text === 'string' ? x.text.includes(text) : text.test(x.text))))
       found = hit?.text ?? ''
       return !!hit
@@ -120,100 +103,16 @@ export async function toastAfter(page: Page, since: number, text?: RegExp | stri
 }
 
 /** window.__fsFrame(): how settled the current area is (dev builds). */
-type FrameView = {
-  areaId: AreaId
-  /** Frames drawn since this area's scene was built. */
-  frames: number
-  /** Frames drawn since the game started (survives scene restarts). */
-  loop: number
-  /** The camera fade (in or out) is running. */
-  fading: boolean
-  transitioning: boolean
-  cinematic: boolean
-  /** World input (keys, E) would act right now. */
-  live: boolean
-}
+type FrameView = NonNullable<ReturnType<FsHooks['__fsFrame']>>
 
 /** window.__fsDialogue(): the conversation panel (dev builds). */
-export type DialogueView = {
-  open: boolean
-  speaker: string
-  line: number
-  lines: number
-  /** Every line of this (or the last) conversation, replies included. */
-  said: string[]
-  typing: boolean
-  /** Replies come after the last line's typing ends. */
-  pending: boolean
-  /** The replies on screen now (null when none are offered). */
-  choices: { text: string; disabled: boolean }[] | null
-  /** Conversations opened since the page loaded, and the latest ones' text. */
-  opened: number
-  seen: { speaker: string; text: string }[]
-}
+export type DialogueView = NonNullable<ReturnType<FsHooks['__fsDialogue']>>
 
 /** Read-only Wilds dump (src/game/wilds/entities.ts, WildsEntities.debug): the open map's attached chunks. */
-export type WildsDump = {
-  /** The epoch of the chunk the hero stands in (the Tangle's still epoch, else the wick's). */
-  epochId: string
-  stillEpoch: string
-  wickEpoch: string
-  stale: boolean
-  /** The wick's season, `t:<startsAt>:<endsAt>`. */
-  season: string
-  endsAt: number | null
-  /** The attached chunks (the 3×3 around the hero, inside the frontier). */
-  chunks: { cx: number; cy: number }[]
-  /** Story sites in the attached chunks (tiles chunk-local; cx, cy their chunk). */
-  sites: Array<{ id: string; kind: string; tx: number; ty: number; cx: number; cy: number; echo: string | null; settled: boolean; find: string | null }>
-  /** The hero's chunk and world pixels. */
-  chunk: { cx: number; cy: number }
-  position: { x: number; y: number }
-  entities: Array<{
-    id: string
-    kind: string
-    chunk: { cx: number; cy: number }
-    /** Chunk-local tiles. */
-    tx: number
-    ty: number
-    worldPx: { x: number; y: number }
-    state: string
-    cycle: number
-    availableIn: number
-    claimable: boolean
-    material: string
-    tier: number
-    poi: string
-    enemies: string[]
-  }>
-  /** Fallen lanterns; x, y world tiles. */
-  lanterns: Array<{ id: string; ownerId: string; own: boolean; lit: boolean; x: number; y: number }>
-  materials: Record<string, number>
-  claims: string[]
-  discoveries: Array<{ entityId: string; poiId: string; by: string }>
-}
+export type WildsDump = NonNullable<ReturnType<FsHooks['__fsWilds']>>
 
 /** window.__fsWildsWindow(): the open map's window (src/game/wilds/window.ts). */
-export type WildsWindowView = {
-  /** The window's identity: the same for as long as the scene isn't rebuilt. */
-  id: string
-  center: { cx: number; cy: number } | null
-  attached: string[]
-  /** Attached chunks still being built (their scenery, pieces or things not all in yet). */
-  building: string[]
-  /** Every chunk of the 3×3 inside the frontier attached and built whole. */
-  ready: boolean
-  /** Chunks attached and dropped so far (crossing back over an edge builds nothing). */
-  attaches: number
-  drops: number
-  /** Attached chunks in the deep drift's look (the Whitequiet and beyond). */
-  outer: string[]
-  drift: string[]
-  ring: string[]
-  far: string[]
-  painted: string[]
-  paints: { chunk: string; ms: number; drift: boolean; thread: 'worker' | 'main' }[]
-}
+export type WildsWindowView = NonNullable<ReturnType<FsHooks['__fsWildsWindow']>>
 
 /** An entity's or a site's world tile (chunk-local tile plus its chunk's origin). */
 export function worldTileOf(e: { tx: number; ty: number; chunk?: { cx: number; cy: number }; cx?: number; cy?: number }): { tx: number; ty: number } {
@@ -222,18 +121,8 @@ export function worldTileOf(e: { tx: number; ty: number; chunk?: { cx: number; c
   return { tx: cx * 24 + e.tx, ty: cy * 24 + e.ty }
 }
 
-/** window.__fsWarden(): the stone warden in the current area. */
-export type WardenView = {
-  state: 'absent' | 'dormant' | 'active' | 'settled'
-  x: number
-  y: number
-  texture: string
-  visible: boolean
-  phase: string | null
-  opening: boolean
-  speakings: number
-  needed: number
-}
+/** window.__fsWarden!(): the stone warden in the current area. */
+export type WardenView = NonNullable<ReturnType<FsHooks['__fsWarden']>>
 
 /**
  * The area's scene is built and settled: not mid-transition, its fade-in done
@@ -242,7 +131,7 @@ export type WardenView = {
  */
 export async function settled(page: Page, match: { area?: string; prefix?: string } = {}): Promise<string> {
   const handle = await page.waitForFunction(({ area, prefix }) => {
-    const f = (window as unknown as Hooks).__fsFrame?.()
+    const f = window.__fsFrame?.()
     if (!f || f.transitioning || f.fading || f.frames < 3) return null
     const id = String(f.areaId)
     if (area !== undefined && id !== area) return null
@@ -264,7 +153,7 @@ export async function waitForArea(page: Page, area: AreaId): Promise<void> {
 export async function waitForWilds(page: Page): Promise<string> {
   await settled(page, { area: 'wilds' })
   const handle = await page.waitForFunction(() => {
-    const h = window as unknown as Hooks
+    const h = window
     const d = h.__fsWilds?.()
     const w = h.__fsWildsWindow?.()
     if (!d || !w || !d.wickEpoch) return null
@@ -296,10 +185,8 @@ export async function waitForWilds(page: Page): Promise<string> {
  */
 
 /** window.__fsTarget(): a point the action button can be used on (src/game/entities/interactables.ts). */
-export type TargetView = { id: string; label: string | null; x: number; y: number; rank: number }
-/** The target for some feet, and every point in reach of them (usable or not). */
-export type TargetRead = { target: TargetView | null; near: (TargetView & { d: number; usable: boolean })[]; at: { x: number; y: number } }
-type TargetHook = { __fsTarget?: (x?: number, y?: number) => TargetRead }
+export type TargetRead = ReturnType<FsHooks['__fsTarget']>
+export type TargetView = NonNullable<TargetRead['target']>
 
 /** The open map's chunk size, in tiles. */
 const CHUNK = 24
@@ -316,8 +203,8 @@ export function chunkKeyOf(at: { tx: number; ty: number }): string {
  */
 export async function diagnose(page: Page): Promise<string> {
   const d = await page.evaluate(() => {
-    const w = window as unknown as Hooks & TargetHook & { __fsDevWalkLeft?: () => { x: number; y: number }[] | null; __fsEnemies?: () => { x: number; y: number; state: string }[] }
-    const p = (w.__fsPlayer as unknown as (() => { x: number; y: number; body?: unknown; blocked?: unknown }) | undefined)?.() ?? null
+    const w = window
+    const p = w.__fsPlayer?.() ?? null
     const win = w.__fsWildsWindow?.() ?? null
     const wilds = w.__fsWilds?.() ?? null
     const t = w.__fsTarget?.() ?? null
@@ -344,7 +231,7 @@ export async function chunkWhole(page: Page, at: { tx: number; ty: number }, tim
   const key = chunkKeyOf(at)
   await page
     .waitForFunction((k) => {
-      const w = (window as unknown as Hooks).__fsWildsWindow?.()
+      const w = window.__fsWildsWindow?.()
       return !!w && w.attached.includes(k) && !w.building.includes(k)
     }, key, { timeout })
     .catch(async () => {
@@ -362,7 +249,7 @@ export async function windowWhole(page: Page, timeout = 20_000): Promise<void> {
   await page
     .waitForFunction(
       (chunkPx) => {
-        const h = window as unknown as Hooks
+        const h = window
         const w = h.__fsWildsWindow?.()
         const p = h.__fsPlayer?.()
         if (!w?.center || !p) return false
@@ -378,12 +265,12 @@ export async function windowWhole(page: Page, timeout = 20_000): Promise<void> {
 
 /** The action button's target now (as this frame chose it), and what is in reach of the hero. */
 export async function targetNow(page: Page): Promise<TargetRead> {
-  return page.evaluate(() => (window as unknown as TargetHook).__fsTarget!())
+  return page.evaluate(() => window.__fsTarget!())
 }
 
 /** The target the hero's feet at `at` (world px) would get, by the game's own rule: rank, reach, the tool in hand. */
 export async function targetAt(page: Page, at: { x: number; y: number }): Promise<TargetRead> {
-  return page.evaluate(([x, y]) => (window as unknown as TargetHook).__fsTarget!(x, y), [at.x, at.y] as const)
+  return page.evaluate(([x, y]) => window.__fsTarget!(x, y), [at.x, at.y] as const)
 }
 
 /**
@@ -406,7 +293,7 @@ export async function expectTarget(page: Page, id: string, seconds = 3): Promise
  */
 export async function spotsAround(page: Page, at: { tx: number; ty: number }): Promise<{ x: number; y: number }[]> {
   return page.evaluate(([x0, y0]) => {
-    const solid = (window as unknown as { __fsTileSolid: (x: number, y: number) => boolean }).__fsTileSolid
+    const solid = window.__fsTileSolid!
     const out: { x: number; y: number }[] = []
     for (const r of [1, 2])
       for (let dy = -r; dy <= r; dy++)
@@ -427,7 +314,7 @@ export async function standFor(page: Page, id: string, spots: { x: number; y: nu
       why.push(`${at.x},${at.y}→${read.target?.id ?? 'nothing'}`)
       continue
     }
-    await page.evaluate(([x, y]) => (window as unknown as { __fsDevPlace: (x: number, y: number) => void }).__fsDevPlace(x, y), [at.x, at.y] as const)
+    await page.evaluate(([x, y]) => window.__fsDevPlace!(x, y), [at.x, at.y] as const)
     const ok = await waitGame(page, async () => ({ p: await player(page), t: await targetNow(page) }), (v) => Math.hypot(v.p.x - at.x, v.p.y - at.y) <= 2 && v.t.target?.id === id, { seconds: 1 })
       .then(() => true, () => false)
     if (ok) return at
@@ -449,12 +336,12 @@ export async function pressOn(page: Page, id: string, tile?: { tx: number; ty: n
 
 /** Set the area's creatures aside (frozen, off the map). Creatures of chunks attached later come back: park again after a move. */
 export async function parkCreatures(page: Page): Promise<void> {
-  await page.evaluate(() => (window as unknown as { __fsDevParkCreatures?: () => void }).__fsDevParkCreatures?.())
+  await page.evaluate(() => window.__fsDevParkCreatures?.())
 }
 
 /** The frame state now (null before the world is up). */
 async function frame(page: Page): Promise<FrameView | null> {
-  return page.evaluate(() => (window as unknown as Hooks).__fsFrame?.() ?? null)
+  return page.evaluate(() => window.__fsFrame?.() ?? null)
 }
 
 /**
@@ -462,7 +349,7 @@ async function frame(page: Page): Promise<FrameView | null> {
  * short grace after a conversation closes (an E inside it is ignored).
  */
 export async function waitForLive(page: Page, timeout?: number): Promise<void> {
-  await page.waitForFunction(() => (window as unknown as Hooks).__fsFrame?.()?.live === true, undefined, { timeout })
+  await page.waitForFunction(() => window.__fsFrame?.()?.live === true, undefined, { timeout })
 }
 
 /**
@@ -533,8 +420,7 @@ export async function waitFrames<A, T>(
   const token = Math.random().toString(36).slice(2)
   const handle = await page.waitForFunction(
     ({ src, arg, seconds, token }) => {
-      type Wait = { loop: number; t: number; f: (a: unknown) => unknown }
-      const w = window as unknown as { __fsWaits?: Record<string, Wait>; __fsFrame?: () => { loop: number } }
+      const w = window
       const waits = (w.__fsWaits ??= {})
       const loop = w.__fsFrame?.()?.loop ?? 0
       const st = (waits[token] ??= { loop, t: performance.now(), f: (0, eval)(`(${src})`) as (a: unknown) => unknown })
@@ -583,29 +469,29 @@ export async function animationsDone(page: Page): Promise<void> {
 
 /** The read-only Wilds dump (null outside the Wilds). */
 export async function wilds(page: Page): Promise<WildsDump> {
-  const dump = await page.evaluate(() => (window as unknown as Hooks).__fsWilds?.() ?? null)
+  const dump = await page.evaluate(() => window.__fsWilds?.() ?? null)
   if (!dump) throw new Error('no Wilds dump — the scene is not the open map')
   return dump
 }
 
 /** The open map's window (null outside the Wilds). */
 export async function wildsWindow(page: Page): Promise<WildsWindowView | null> {
-  return page.evaluate(() => (window as unknown as Hooks).__fsWildsWindow?.() ?? null)
+  return page.evaluate(() => window.__fsWildsWindow?.() ?? null)
 }
 
 /** Warp to a tile: the open map's (`wilds`) are world tiles, signed; every other area's its own. */
 export async function warp(page: Page, area: AreaId, tx: number, ty: number): Promise<void> {
   // The warp starts the transition at once (a refused warp leaves us here).
-  await page.evaluate(([a, x, y]) => (window as unknown as Hooks).__fsDevWarp!(a, x, y), [area, tx, ty] as const)
+  await page.evaluate(([a, x, y]) => window.__fsDevWarp!(a, x, y), [area, tx, ty] as const)
   await waitForArea(page, area)
 }
 
 export async function player(page: Page): Promise<{ x: number; y: number }> {
-  return page.evaluate(() => (window as unknown as Hooks).__fsPlayer!())
+  return page.evaluate(() => window.__fsPlayer!())
 }
 
 export async function world(page: Page) {
-  return page.evaluate(() => (window as unknown as Hooks).__fsWorld!())
+  return page.evaluate(() => window.__fsWorld!())
 }
 
 /** The current area's exit into `to` (specs ask rather than assume where it is). */
@@ -630,7 +516,7 @@ export async function fallCamp(page: Page, campId: string): Promise<void> {
   const until = Date.now() + SERVER_ANSWER_MS
   let last = ''
   for (;;) {
-    const res = await page.evaluate((id) => (window as unknown as Hooks).__fsDevFightFall!(id), campId)
+    const res = await page.evaluate((id) => window.__fsDevFightFall!(id), campId)
     if (res.ok) break
     last = `${res.status} ${res.code}`
     if (res.code !== 'not-here' || Date.now() > until) throw new Error(`the dev fight-fall of ${campId} was refused: ${last}`)
@@ -642,12 +528,12 @@ export async function fallCamp(page: Page, campId: string): Promise<void> {
 }
 
 /** Dev strike on every enemy, or only those of one type ('wisp' | 'beetle' | 'guardian'). Local (curated) enemies only: a server camp's room decides its own. */
-export async function strikeAll(page: Page, n: number, type?: string): Promise<void> {
-  await page.evaluate(([d, t]) => (window as unknown as Hooks).__fsDevStrike!(d as number, t as string | undefined), [n, type] as const)
+export async function strikeAll(page: Page, n: number, type?: Parameters<FsHooks['__fsDevStrike']>[1]): Promise<void> {
+  await page.evaluate(([d, t]) => window.__fsDevStrike!(d, t), [n, type] as const)
 }
 
 export async function warden(page: Page): Promise<WardenView> {
-  return page.evaluate(() => (window as unknown as Hooks).__fsWarden!())
+  return page.evaluate(() => window.__fsWarden!())
 }
 
 /**
@@ -658,7 +544,7 @@ export async function settleWarden(page: Page): Promise<void> {
   await expect.poll(async () => (await warden(page)).state).toBe('active')
   const needed = (await warden(page)).needed
   for (let i = 0; i < needed; i++) {
-    await page.evaluate(() => (window as unknown as Hooks).__fsDevSpeakNaming!(true))
+    await page.evaluate(() => window.__fsDevSpeakNaming!(true))
   }
   await expect.poll(async () => (await warden(page)).state).toBe('settled')
 }
@@ -670,21 +556,16 @@ export async function settleWarden(page: Page): Promise<void> {
  */
 export async function stepToWarden(page: Page, dist: number, whenOpen: boolean): Promise<void> {
   await page.evaluate(([d, open]) => new Promise<void>((resolve, reject) => {
-    type W = {
-      __fsWarden: () => { x: number; y: number; opening: boolean; phase: string | null }
-      __fsWorld: () => { solid: boolean[][]; widthPx: number; heightPx: number }
-      __fsDevPlace: (x: number, y: number) => void
-    }
-    const w = window as unknown as W
+    const w = window
     const until = performance.now() + 20_000
     const tick = () => {
-      const g = w.__fsWarden()
+      const g = w.__fsWarden!()
       if (open ? !g.opening : g.phase !== 'chase') {
-        if (performance.now() > until) reject(new Error(`the warden never got there: ${JSON.stringify({ ...g, hero: (window as unknown as { __fsPlayer: () => unknown }).__fsPlayer() })}`))
+        if (performance.now() > until) reject(new Error(`the warden never got there: ${JSON.stringify({ ...g, hero: window.__fsPlayer!() })}`))
         else requestAnimationFrame(tick)
         return
       }
-      const { solid, widthPx, heightPx } = w.__fsWorld()
+      const { solid, widthPx, heightPx } = w.__fsWorld!()
       const walkable = (x: number, y: number) =>
         x > 12 && x < widthPx - 12 && y > 16 && y < heightPx - 4 && !solid[Math.floor(y / 16)]?.[Math.floor(x / 16)]
       const free = (x: number, y: number) => [[-5, -3], [5, -3], [-5, 0], [5, 0]].every(([ox, oy]) => walkable(x + ox, y + oy))
@@ -700,7 +581,7 @@ export async function stepToWarden(page: Page, dist: number, whenOpen: boolean):
         const x = g.x + dx * d
         const y = g.y + dy * d
         if (free(x, y) && clear(x, y)) {
-          w.__fsDevPlace(x, y)
+          w.__fsDevPlace!(x, y)
           resolve()
           return
         }
@@ -755,7 +636,7 @@ export async function expectStage(page: Page, stage: string): Promise<void> {
 }
 
 export async function dialogueState(page: Page): Promise<DialogueView> {
-  return page.evaluate(() => (window as unknown as Hooks).__fsDialogue!())
+  return page.evaluate(() => window.__fsDialogue!())
 }
 
 /**
@@ -794,7 +675,7 @@ export async function readDialogue(page: Page, opts: { pick?: RegExp; picked?: (
     }
     await page
       .waitForFunction((b) => {
-        const d = (window as unknown as Hooks).__fsDialogue!()
+        const d = window.__fsDialogue!()
         return JSON.stringify([d.open, d.line, d.lines, d.typing, !!d.choices]) !== b
       }, before, { timeout: 5000 })
       .catch(() => {}) // a press that didn't land is simply pressed again
@@ -851,7 +732,7 @@ export async function untilLine(page: Page, line: RegExp): Promise<void> {
     await page.keyboard.press('e')
     await page
       .waitForFunction((b) => {
-        const d = (window as unknown as Hooks).__fsDialogue!()
+        const d = window.__fsDialogue!()
         return !d.open || JSON.stringify([d.line, d.typing]) !== b
       }, before, { timeout: 5000 })
       .catch(() => {})
@@ -870,7 +751,7 @@ export async function untilChoices(page: Page): Promise<NonNullable<DialogueView
     else await page.keyboard.press('e')
     await page
       .waitForFunction((b) => {
-        const d = (window as unknown as Hooks).__fsDialogue!()
+        const d = window.__fsDialogue!()
         return !d.open || !!d.choices || JSON.stringify([d.line, d.typing]) !== b
       }, before, { timeout: 5000 })
       .catch(() => {})

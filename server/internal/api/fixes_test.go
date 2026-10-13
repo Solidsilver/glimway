@@ -23,11 +23,11 @@ func TestHighLevelsAndHugeReportBound(t *testing.T) {
 		t.Fatal("high-level login or stat cap")
 	}
 	p := profile("alice", 121, 0, 30)
-	after := x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200)
+	after := x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, p, s.State), c, 200)
 	after.Lease = s.Lease
 	p.Level = 1e12
 	before := x.expect("GET", "/api/state", nil, c, 200)
-	x.expect("POST", "/api/profile", x.profileBody(after, p, after.State), c, 422)
+	x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(after, p, after.State), c, 422)
 	unchanged(t, before.Snapshot, x.expect("GET", "/api/state", nil, c, 200).Snapshot)
 	x.set(profile("alice", 10001, 0, 20))
 	x.expect("POST", "/api/session", map[string]any{"userId": "alice", "token": secret}, nil, 502)
@@ -37,7 +37,7 @@ func TestPendingSurvivesDeathAndSettlesAtOriginalXP(t *testing.T) {
 	x.set(profile("alice", 20, 0, 20))
 	c, s := x.ready("alice")
 	p := profile("alice", 30, 0, 30)
-	held := x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200)
+	held := x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, p, s.State), c, 200)
 	if held.Pending <= 0 {
 		t.Fatal("no pending")
 	}
@@ -61,10 +61,10 @@ func TestPendingRecordsSettleIndependently(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	p := profile("alice", 30, 0, 20)
-	first := x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200)
+	first := x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, p, s.State), c, 200)
 	first.Lease = s.Lease
 	p = profile("alice", 30, 100, 20)
-	second := x.expect("POST", "/api/profile", x.profileBody(first, p, first.State), c, 200)
+	second := x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(first, p, first.State), c, 200)
 	if second.Pending != first.Pending+10 || second.State.XPGlims != 200 || count(t, x.db, "SELECT count(*) FROM pending_credits") != 2 {
 		t.Fatal("pending checkpoints not retained per report")
 	}
@@ -88,7 +88,7 @@ func TestRepeatedDeathsRebirthAndRegainedXP(t *testing.T) {
 	mark := s.State.GlimXP
 	for _, level := range []float64{19, 18, 17, 1} {
 		p := profile("alice", level, 0, 0)
-		s2 := x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200)
+		s2 := x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, p, s.State), c, 200)
 		s2.Lease = s.Lease
 		s = s2
 		if s.State.GlimXP != mark || s.State.XPGlims != 0 {
@@ -102,7 +102,7 @@ func TestRepeatedDeathsRebirthAndRegainedXP(t *testing.T) {
 		t.Fatal("rebirth not audited or incorrectly flagged")
 	}
 	heal := profile("alice", 1, 10, 20)
-	s = x.expect("POST", "/api/profile", x.profileBody(s, heal, s.State), c, 200)
+	s = x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, heal, s.State), c, 200)
 	if s.State.HP != 20 || s.State.XPGlims != 0 || s.State.GlimXP != mark {
 		t.Fatal("rebirth locked healing or repaid XP")
 	}
@@ -112,20 +112,20 @@ func TestMPAboveComputedMaximumClampsAndHPStillRejects(t *testing.T) {
 	c, s := x.ready("alice")
 	p := profile("alice", 2, 10, 20)
 	p.MP = p.MaxMP + 4
-	after := x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200)
+	after := x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, p, s.State), c, 200)
 	if after.State.Mana != p.MaxMP || after.ImportedProfile.MP != p.MaxMP {
 		t.Fatal("reported MP not clamped")
 	}
 	after.Lease = s.Lease
 	p.HP = 51
-	x.expect("POST", "/api/profile", x.profileBody(after, p, after.State), c, 422)
+	x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(after, p, after.State), c, 422)
 }
 func TestRepeatedSyncsCannotBypassUnverifiedCap(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	for _, level := range []float64{30, 40, 50, 60} {
 		p := profile("alice", level, 0, 20)
-		next := x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200)
+		next := x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, p, s.State), c, 200)
 		next.Lease = s.Lease
 		s = next
 		if s.State.XPGlims != int(rules.E.GetSyncCreditCap()) {
@@ -142,7 +142,7 @@ func TestRepeatedSyncsCannotBypassUnverifiedCap(t *testing.T) {
 	if s.Pending != 0 || s.Flagged {
 		t.Fatal("valid checkpoint failed")
 	}
-	next := x.expect("POST", "/api/profile", x.profileBody(s, profile("alice", 70, 0, 20), s.State), c, 200)
+	next := x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, profile("alice", 70, 0, 20), s.State), c, 200)
 	if next.State.XPGlims != earned+200 {
 		t.Fatal("new checkpoint did not open the next bounded allowance")
 	}
@@ -237,7 +237,7 @@ func TestGlobalLoginConcurrencyAndTransactionalRecheck(t *testing.T) {
 func TestReplaySpendUnderNewLease(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	credited := x.expect("POST", "/api/profile", x.profileBody(s, profile("alice", 4, 90, 20), s.State), c, 200)
+	credited := x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, profile("alice", 4, 90, 20), s.State), c, 200)
 	credited.Lease = s.Lease
 	doc := credited.State
 	doc.Area = "ruin"
@@ -423,7 +423,7 @@ func TestPendingLotsSurviveBackupRestore(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	p := profile("alice", 30, 0, 20)
-	held := x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200)
+	held := x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, p, s.State), c, 200)
 	path := filepath.Join(x.dir, "pending-backup.sqlite")
 	if err := x.db.Backup(context.Background(), path); err != nil {
 		t.Fatal(err)

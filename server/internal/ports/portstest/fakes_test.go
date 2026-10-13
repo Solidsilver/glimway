@@ -1,9 +1,10 @@
-package ports
+package portstest
 
 import (
 	"context"
 	"database/sql"
 	contract "glimway/server/internal/gen/glimway/v1"
+	"glimway/server/internal/ports"
 	"glimway/server/internal/store"
 	"glimway/server/internal/store/storetest"
 	"path/filepath"
@@ -24,31 +25,31 @@ func TestFakesUseCallerTransactionAndCloneViews(t *testing.T) {
 	ctx := context.Background()
 	snap := store.Snapshot{AccountID: "account", WorldID: "world"}
 	called := 0
-	story := FakeStory{Assign: func(_ context.Context, got *sql.Tx, snapshot store.Snapshot, in EchoInput) ([]*contract.EchoAssignment, error) {
+	story := FakeStory{Assign: func(_ context.Context, got *sql.Tx, snapshot store.Snapshot, in ports.EchoInput) ([]*contract.EchoAssignment, error) {
 		if got != tx || snapshot.AccountID != "account" {
 			t.Fatal("assignment boundary")
 		}
 		called++
 		return []*contract.EchoAssignment{{Site: "site", Member: "member"}}, nil
-	}, Check: func(_ context.Context, got *sql.Tx, _ store.Snapshot, in PaperInput) (bool, error) {
+	}, Check: func(_ context.Context, got *sql.Tx, _ store.Snapshot, in ports.PaperInput) (bool, error) {
 		if got != tx || in.Site != "site" {
 			t.Fatal("eligibility boundary")
 		}
 		called++
 		return true, nil
-	}, Give: func(_ context.Context, got *sql.Tx, s *store.Snapshot, paper string, _ int64) (Grant, error) {
+	}, Give: func(_ context.Context, got *sql.Tx, s *store.Snapshot, paper string, _ int64) (ports.Grant, error) {
 		if got != tx {
 			t.Fatal("grant boundary")
 		}
 		called++
 		s.State.Inventory = append(s.State.Inventory, paper)
-		return Grant{true, paper}, nil
+		return ports.Grant{Added: true, Paper: paper}, nil
 	}}
-	assignments, err := story.Echoes(ctx, tx, snap, EchoInput{})
+	assignments, err := story.Echoes(ctx, tx, snap, ports.EchoInput{})
 	if err != nil || len(assignments) != 1 {
 		t.Fatal(err)
 	}
-	if yes, err := story.Eligible(ctx, tx, snap, PaperInput{Site: "site"}); err != nil || !yes {
+	if yes, err := story.Eligible(ctx, tx, snap, ports.PaperInput{Site: "site"}); err != nil || !yes {
 		t.Fatal(err)
 	}
 	if grant, err := story.Grant(ctx, tx, &snap, "paper", 1); err != nil || !grant.Added || called != 3 {
@@ -102,14 +103,14 @@ func TestFallLanternPortUsesSnapshotAndCallerTransaction(t *testing.T) {
 	epoch := &contract.WildsEpoch{Id: "epoch"}
 	where := &contract.Where{Area: "wilds:outer-1"}
 	for _, reason := range []string{"not-wilds", "invalid-place", "epoch-missing", "daily-cap", ""} {
-		fake := FakeLanterns{Put: func(_ context.Context, got *sql.Tx, player *store.Snapshot, e *contract.WildsEpoch, w *contract.Where, now int64) (FallLantern, error) {
+		fake := FakeLanterns{Put: func(_ context.Context, got *sql.Tx, player *store.Snapshot, e *contract.WildsEpoch, w *contract.Where, now int64) (ports.FallLantern, error) {
 			if got != tx || player != &snapshot || e != epoch || w != where || now != 10 {
 				t.Fatal("fall composition boundary")
 			}
 			if reason == "" {
-				return FallLantern{Lantern: "placed", ID: "lamp", Epoch: "epoch"}, nil
+				return ports.FallLantern{Lantern: "placed", ID: "lamp", Epoch: "epoch"}, nil
 			}
-			return FallLantern{Lantern: "none", Reason: reason}, nil
+			return ports.FallLantern{Lantern: "none", Reason: reason}, nil
 		}}
 		result, err := fake.PlaceFallen(context.Background(), tx, &snapshot, epoch, where, 10)
 		if err != nil || result.Reason != reason {

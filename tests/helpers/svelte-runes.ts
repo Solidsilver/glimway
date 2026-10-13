@@ -24,10 +24,7 @@ registerHooks({
 
 /** Runs `fn` inside an effect root (so `$effect`s it sets up run); returns the teardown. */
 export async function effectRoot(fn: () => void): Promise<() => void> {
-  const { effect_root, flush } = (await import('svelte/internal/client')) as unknown as {
-    effect_root: (fn: () => void) => () => void
-    flush: () => void
-  }
+  const { effect_root, flush } = await import('svelte/internal/client')
   const stop = effect_root(fn)
   flush()
   return stop
@@ -35,6 +32,6 @@ export async function effectRoot(fn: () => void): Promise<() => void> {
 
 /** Runs pending effects now. */
 export async function flushEffects(): Promise<void> {
-  const { flush } = (await import('svelte/internal/client')) as unknown as { flush: () => void }
+  const { flush } = await import('svelte/internal/client')
   flush()
 }

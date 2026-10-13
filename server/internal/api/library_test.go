@@ -152,7 +152,7 @@ func TestLibraryRaceFirstDonorWins(t *testing.T) {
 			w := httptest.NewRecorder()
 			x.api.ServeHTTP(w, r)
 			var v libraryResponse
-			if err := json.Unmarshal(testSnapshotJSON(w.Body.Bytes()), &v); err != nil {
+			if err := json.Unmarshal(legacySnapshotJSON(w.Body.Bytes()), &v); err != nil {
 				t.Error(err)
 				return
 			}

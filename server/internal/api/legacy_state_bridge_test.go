@@ -9,9 +9,10 @@ import (
 	"strings"
 )
 
+// Legacy adapter pending migration of domain assertions.
 // Domain tests keep their convenient Snapshot assertions while login/play/state
 // use PlayerState on the wire. New contract tests inspect the raw response.
-func testSnapshotJSON(raw []byte) []byte {
+func legacySnapshotJSON(raw []byte) []byte {
 	var fields map[string]json.RawMessage
 	if json.Unmarshal(raw, &fields) != nil {
 		return raw

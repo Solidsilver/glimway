@@ -32,20 +32,20 @@ function edited(base: unknown, edits: Edit[]): unknown {
   return value;
 }
 
-const families: [string, unknown, { loader: { name: string; valid: boolean; rule?: string; edits: Edit[] }[] }[], (v: unknown) => unknown][] = [
-  ['items', itemsRaw, itemsVectors as never, validateItems],
-  ['homestead', homesteadRaw, homesteadVectors as never, validateHomesteadData],
-  ['gathering', gatheringRaw, gatheringVectors as never, validateGathering],
-  ['repairs', repairsRaw, repairsVectors as never, validateRepairs],
-  ['crafting', craftingRaw, craftingVectors as never, validateCrafting],
-  ['projects', projectsRaw, projectsVectors as never, validateProjects],
-  ['abilities', abilitiesRaw, abilitiesVectors as never, validateAbilities],
-  ['fishing', fishingRaw, fishingVectors as never, validateFishing],
+const families: [string, unknown, { loader: { name: string; valid: boolean; rule?: string; edits: Edit[] }[] }, (v: unknown) => unknown][] = [
+  ['items', itemsRaw, itemsVectors, validateItems],
+  ['homestead', homesteadRaw, homesteadVectors, validateHomesteadData],
+  ['gathering', gatheringRaw, gatheringVectors, validateGathering],
+  ['repairs', repairsRaw, repairsVectors, validateRepairs],
+  ['crafting', craftingRaw, craftingVectors, validateCrafting],
+  ['projects', projectsRaw, projectsVectors, validateProjects],
+  ['abilities', abilitiesRaw, abilitiesVectors, validateAbilities],
+  ['fishing', fishingRaw, fishingVectors, validateFishing],
 ];
 for (const [family, raw, vectors, validate] of families) {
   for (const v of vectors.loader) test(`shared ${family} loader: ${v.name}`, () => {
     const value = edited(raw, v.edits);
     if (v.valid) assert.doesNotThrow(() => validate(value));
-    else assert.throws(() => validate(value), (e: Error) => refusalMatchesRule(e, v.rule ?? ''), v.rule);
+    else assert.throws(() => validate(value), (e: Error) => typeof v.rule === 'string' && v.rule.length > 0 && refusalMatchesRule(e, v.rule), v.rule);
   });
 }

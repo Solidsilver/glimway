@@ -63,7 +63,7 @@ test('the float lands on the water in the bank’s facing, the race’s below th
   // From the bank tile nearest the hero.
   assert.deepEqual(floatTile(bankFor(pond, 'north')!, mid(38) + 6, mid(18), isWater), { tx: 38, ty: 21 });
   // Only as far as the water goes; none at all when the first tile out is dry.
-  assert.deepEqual(floatTile(bankFor(pond, 'north')!, mid(35), mid(18), (tx, ty) => ty === 19), { tx: 35, ty: 19 });
+  assert.deepEqual(floatTile(bankFor(pond, 'north')!, mid(35), mid(18), (_tx, ty) => ty === 19), { tx: 35, ty: 19 });
   assert.equal(floatTile(bankFor(pond, 'north')!, mid(35), mid(18), () => false), null);
 });
 

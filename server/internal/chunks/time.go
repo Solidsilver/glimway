@@ -7,10 +7,6 @@ import (
 
 type readTimeKey struct{}
 
-// WithReadTime binds stored chunk lifetime checks to the operation/read clock.
-func WithReadTime(ctx context.Context, now time.Time) context.Context {
-	return context.WithValue(ctx, readTimeKey{}, now)
-}
 func ReadTime(ctx context.Context) (time.Time, bool) {
 	switch clock := ctx.Value(readTimeKey{}).(type) {
 	case time.Time:

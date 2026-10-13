@@ -71,11 +71,6 @@ type Chunk struct {
 	Places           []PlaceMark `json:"places,omitempty"` // places whose landmark stands here
 }
 
-// Walkable is true for an in-chunk tile that isn't solid.
-func (c *Chunk) Walkable(x, y int) bool {
-	return x >= 0 && y >= 0 && x < c.Size && y < c.Size && !c.Solid[y*c.Size+x]
-}
-
 // seasonMark is the Mark an outer season ("t:<startsAt>:<endsAt>") falls
 // in, or "" for the permanent season "0".
 func seasonMark(season string) (string, error) {

@@ -6,8 +6,6 @@ import (
 	"database/sql"
 	"errors"
 	contract "glimway/server/internal/gen/glimway/v1"
-	"google.golang.org/protobuf/proto"
-	"sync"
 )
 
 var ErrUnavailable = errors.New("chunk source unavailable")
@@ -17,43 +15,6 @@ var ErrEpochEnded = errors.New("epoch ended")
 // check world ownership and epoch lifetime; cx/cy are signed for the open map.
 type ChunkSource interface {
 	Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, layer, cx, cy int32) (*contract.WildsChunk, error)
-}
-
-type Unavailable struct{}
-
-func (Unavailable) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, layer, cx, cy int32) (*contract.WildsChunk, error) {
-	return nil, ErrUnavailable
-}
-
-type Key struct {
-	World, Epoch  string
-	Layer, CX, CY int32
-}
-
-// Fake returns copies so a caller cannot change the geometry of a later read.
-type Fake struct {
-	mu     sync.Mutex
-	Chunks map[Key]*contract.WildsChunk
-	Errors map[Key]error
-	Calls  []Key
-}
-
-func (f *Fake) Chunk(ctx context.Context, _ *sql.Tx, world, epoch string, layer, cx, cy int32) (*contract.WildsChunk, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	key := Key{world, epoch, layer, cx, cy}
-	f.Calls = append(f.Calls, key)
-	if err := f.Errors[key]; err != nil {
-		return nil, err
-	}
-	chunk := f.Chunks[key]
-	if chunk == nil {
-		return nil, sql.ErrNoRows
-	}
-	return proto.Clone(chunk).(*contract.WildsChunk), nil
 }
 
 // EpochComposition reads and makes a world's epochs by kind (open-map.md

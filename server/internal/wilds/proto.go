@@ -21,9 +21,6 @@ var siteKinds = map[SiteKind]contract.SiteKind{
 	SiteRumour:    contract.SiteKind_SITE_KIND_RUMOUR,
 }
 
-// ProtoSiteKind is the wire value of a site kind.
-func ProtoSiteKind(k SiteKind) contract.SiteKind { return siteKinds[k] }
-
 // ToProto packs a generated chunk as the stored and served WildsChunk:
 // ground as palette nibbles, solid as bits, decor as parallel arrays with
 // two flag bits per piece (flip, overhang), layer 0. A v3 chunk carries its

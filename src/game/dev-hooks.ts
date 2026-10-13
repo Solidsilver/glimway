@@ -21,6 +21,10 @@ import type { PathTile } from '../lib/wilds/paths'
 import type { Result } from '../lib/api/errors'
 import type { ItemsView } from '../lib/api/types'
 import type { SyncSafety } from './sync-safety'
+import type { GoalTarget } from './guide-pin.ts'
+import type { MapView, TileRect } from '../lib/wilds/map-view.ts'
+import type { MapLoad } from './wilds/map-data.ts'
+import type { LibraryOpenPayload } from './event-names.ts'
 import type { PerfReport } from './perf.ts'
 import type { InteractableView } from './entities/interactables.ts'
 import { onSceneEnd, type SceneEvents } from './scene-end.ts'
@@ -220,35 +224,48 @@ export interface FsHooks {
   __fsDevWorldFlag: (flag: string) => void
 
   // ---- set by src/ui (DEV-gated there)
-  __fsDialogue: () => unknown
-  __fsBanners: () => unknown
-  __fsToasts: () => unknown
+  __fsQuests: () => { quests: Record<string, string>; gateAt: Record<string, number>; pin: string | null; goal: GoalTarget | null }
+  __fsDevLibrary: (payload: LibraryOpenPayload) => void
+  __fsWorldMap: () => {
+    view: MapView | null; vp: { w: number; h: number }; frame: TileRect | null
+    hero: { x: number; y: number } | null; outside: boolean
+    loads: number; draws: number; cached: number
+    stats: { rasters: number; images: number; overviews: number; summaries: number }
+    result: Pick<MapLoad, 'scope' | 'missing' | 'offline' | 'partial' | 'ended' | 'endsAt'> | null
+    online: boolean; notes: string[]; chunks: number
+  }
+  __fsDevVersionCheck: () => Promise<void>
+  __fsDialogue: () => { open: boolean; speaker: string; line: number; lines: number; said: string[]; typing: boolean; pending: boolean; choices: { text: string; disabled: boolean }[] | null; opened: number; seen: { speaker: string; text: string }[] }
+  __fsBanners: () => { current: { kind: string; title: string; waiting?: boolean } | null; shown: { kind: string; title: string }[] }
+  __fsToasts: () => { count: number; seen: { n: number; text: string; kind: string }[] }
 }
 
 /**
- * Put a playtest hook on `window` (dev builds only; a no-op otherwise). With
- * a scene, it is deleted when that scene shuts down or is destroyed, unless a
+ * Put a playtest hook on `window` (dev builds only; a no-op otherwise).
+ * The returned disposer removes only this registration. With a scene, it is deleted when that scene shuts down or is destroyed, unless a
  * newer registration has taken the name meanwhile.
  */
-export function expose<K extends keyof FsHooks>(name: K, fn: FsHooks[K], scene?: { events: SceneEvents }): void {
+export function expose<K extends keyof FsHooks>(name: K, fn: FsHooks[K], scene?: { events: SceneEvents }): () => void {
   // `?.`: Node tests load modules that expose hooks, and have no import.meta.env.
-  if (import.meta.env?.DEV) hook(window as unknown as Partial<FsHooks>, name, fn, scene)
+  if (import.meta.env?.DEV) return hook(window as unknown as Partial<FsHooks>, name, fn, scene)
+  return () => {}
 }
 
 /** Who registered each hook last, per target: the same function can be registered twice. */
 const owners = new WeakMap<object, Map<string, object>>()
 
 /** expose's body, on any target (tests use a plain object). */
-export function hook<K extends keyof FsHooks>(target: Partial<FsHooks>, name: K, fn: FsHooks[K], scene?: { events: SceneEvents }): void {
+export function hook<K extends keyof FsHooks>(target: Partial<FsHooks>, name: K, fn: FsHooks[K], scene?: { events: SceneEvents }): () => void {
   let mine = owners.get(target)
   if (!mine) owners.set(target, (mine = new Map()))
   const token = {}
   mine.set(name, token)
   target[name] = fn
-  if (!scene) return
-  onSceneEnd(scene, () => {
+  const dispose = () => {
     if (mine.get(name) !== token) return
     mine.delete(name)
     delete target[name]
-  })
+  }
+  if (scene) onSceneEnd(scene, dispose)
+  return dispose
 }

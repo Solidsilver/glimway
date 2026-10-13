@@ -688,7 +688,7 @@ func TestForgedProfileLeavesThePurseAndGearUntouched(t *testing.T) {
 
 	report := func(mutate func(map[string]any)) map[string]any {
 		t.Helper()
-		b := x.profileBody(s, profile("alice", 4, 90, 20), s.State)
+		b := x.profileBodyWithSeededReport(s, profile("alice", 4, 90, 20), s.State)
 		var raw map[string]any
 		if err := json.Unmarshal(b["raw"].(json.RawMessage), &raw); err != nil {
 			t.Fatal(err)
@@ -806,7 +806,7 @@ func TestGlimsEarnedShareNeverMovesBetweenPlayers(t *testing.T) {
 	// Bob at 0 HP: 19 glims, none from XP, and the rest is refused.
 	x.refresh(bc, &b)
 	lease := b.Lease
-	b = x.expect("POST", "/api/profile", x.profileBody(b, profile("bob", 1, 0, 20), b.State), bc, 200)
+	b = x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(b, profile("bob", 1, 0, 20), b.State), bc, 200)
 	b.Lease = lease
 	b = x.reportState(bc, b, 0, 0, testWhere(b.State))
 	if _, _, code, _ := x.request("POST", "/api/spend", spendBody(b, "rest", "", "passed-rest", b.State), bc); code != "needs-earned" {

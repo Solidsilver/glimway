@@ -1,3 +1,4 @@
+import { expose } from '../game/dev-hooks'
 import { createUpdateCheck, RUNNING, type UpdateCheck, type VersionInfo } from '../lib/version'
 
 /** Checks while the tab is visible run on this tick (the check spaces them out). */
@@ -66,8 +67,7 @@ export function watchForUpdates(): () => void {
   })
   update.check = check
   if (import.meta.env.DEV) {
-    ;(window as unknown as { __fsDevVersionCheck?: () => Promise<void> }).__fsDevVersionCheck = () => check.checkNow()
-    return () => {}
+    return expose('__fsDevVersionCheck', () => check.checkNow())
   }
   const visible = () => document.visibilityState === 'visible'
   const onVisibility = () => {

@@ -13,6 +13,7 @@ import (
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/land"
 	"glimway/server/internal/ports"
+	"glimway/server/internal/ports/portstest"
 	"glimway/server/internal/store"
 	"glimway/server/internal/wilds"
 	"net/http"
@@ -754,8 +755,8 @@ func TestWildsRelight(t *testing.T) {
 
 // fakeEcho assigns `member` to the first Echo site of the epoch and checks
 // it was given every site with its chunk.
-func fakeEcho(t *testing.T, member string, seen *ports.EchoInput) ports.FakeStory {
-	return ports.FakeStory{
+func fakeEcho(t *testing.T, member string, seen *ports.EchoInput) portstest.FakeStory {
+	return portstest.FakeStory{
 		Assign: func(_ context.Context, tx *sql.Tx, s store.Snapshot, in ports.EchoInput) ([]*contract.EchoAssignment, error) {
 			if tx == nil {
 				t.Error("story rules called outside the transaction")

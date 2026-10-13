@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { expose } from '../game/dev-hooks'
   import { onMount } from 'svelte'
   import { bus, EV, type DialogueChoice, type DialoguePayload } from '../game/events'
   import { uiState } from '../game/input'
@@ -214,6 +215,7 @@
     // which conversations have opened so far (one the world opens on its own
     // may come and go between two checks).
     let offSeen = () => {}
+    let disposeHook = () => {}
     if (import.meta.env.DEV) {
       const seen: { speaker: string; text: string }[] = []
       let opened = 0
@@ -224,7 +226,7 @@
       }
       bus.on(EV.dialogue, onSeen)
       offSeen = () => bus.off(EV.dialogue, onSeen)
-      ;(window as unknown as { __fsDialogue?: () => unknown }).__fsDialogue = () => ({
+      disposeHook = expose('__fsDialogue', () => ({
         open,
         speaker,
         line: idx,
@@ -237,9 +239,10 @@
         choices: showChoices ? (choices ?? []).map((c) => ({ text: c.text, disabled: !!c.disabled })) : null,
         opened,
         seen: [...seen]
-      })
+      }))
     }
     return () => {
+      disposeHook()
       offSeen()
       bus.off(EV.dialogue, onDialogue)
       bus.off(EV.action, onAction)

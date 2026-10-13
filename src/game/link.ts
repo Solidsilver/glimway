@@ -156,7 +156,7 @@ function routeFromPath(path: string): MutationRoute | null {
 }
 
 /** Send one described domain mutation through the raw API. */
-export function dispatchMutation(raw: RawApi, route: MutationRoute, body: Record<string, unknown>): Promise<Snapshot> {
+function dispatchMutation(raw: RawApi, route: MutationRoute, body: Record<string, unknown>): Promise<Snapshot> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const req = body as Envelope & any
   // The schema-built requests go back through their generated messages (a
@@ -2389,7 +2389,7 @@ function safeState(json: JsonValue): PlayerState | null {
 }
 
 /** Retry delays: 2 s doubling to a minute, a little slower while the server is in trouble. */
-export function retryDelay(failures: number, trouble: boolean): number {
+function retryDelay(failures: number, trouble: boolean): number {
   const base = Math.min(60_000, 2_000 * 2 ** Math.max(0, failures - 1))
   return trouble ? Math.min(60_000, base * 1.5) : base
 }

@@ -80,6 +80,8 @@ test('Silas mends only within his mender reach, where he stands now', () => {
   const now = 1_790_000_000;
   // Where he is: his cycle's place once he has one (0.7), else his mender row's spot.
   const at = residentById('silas') ? residentAt('silas', now)! : { area: row.area, tx: row.tx, ty: row.ty };
+  assert.ok(at.area);
+  assert.ok(at.tx !== undefined && at.ty !== undefined);
   const mid = { x: at.tx * TILE + TILE / 2, y: at.ty * TILE + TILE / 2 };
   assert.equal(silasInReach({ area: at.area, ...mid }, now), true);
   assert.equal(silasInReach({ area: at.area, x: mid.x + (row.radiusTiles - 1) * TILE, y: mid.y }, now), true);

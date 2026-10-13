@@ -63,7 +63,7 @@ func (x *rig) companionsInState(c *http.Cookie) companionsWire {
 // server's stored profile.
 func (x *rig) companionSync(s response, p rules.Profile, doc rules.State, c *http.Cookie) {
 	x.t.Helper()
-	body := x.profileBody(s, p, doc)
+	body := x.profileBodyWithSeededReport(s, p, doc)
 	pets, mounts := map[string]any{}, map[string]any{}
 	for _, key := range p.Pets {
 		pets[key] = 1

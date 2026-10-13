@@ -34,11 +34,6 @@ type worldChoiceView struct {
 	PartyAdmitted bool `json:"partyAdmitted"`
 }
 
-// worldChoiceAnswer wraps it, so a client tells it apart from a snapshot.
-type worldChoiceAnswer struct {
-	WorldChoice worldChoiceView `json:"worldChoice"`
-}
-
 type pendingRow struct {
 	HabiticaID, Name, Profile string
 	Party                     sql.NullString

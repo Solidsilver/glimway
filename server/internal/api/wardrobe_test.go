@@ -62,7 +62,7 @@ func (x *rig) wardrobeRead(c *http.Cookie, status int) wardrobeReadView {
 			x.t.Fatalf("GET /api/wardrobe omits %q: %s", field, w.Body.String())
 		}
 	}
-	return decodeDomainHTTP[wardrobeReadView](x, w)
+	return decodeLegacyDomainHTTP[wardrobeReadView](x, w)
 }
 
 // TestWardrobeChoosesOwnedGearAndRefusesTheRest (4.2): each key must be
@@ -293,7 +293,7 @@ func TestALapsedPieceReachesFriendsScreens(t *testing.T) {
 	// Habitica's own look wears the warrior's helm.
 	p := profile("alice", 2, 5, 30)
 	p.Equipped = map[string]*string{"head": strPtr("head_warrior_1")}
-	x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200)
+	x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, p, s.State), c, 200)
 	worn := map[string]bool{"head_armoire_admiralsBicorne": true, "armor_warrior_1": true}
 	x.setOwned(worn)
 	if status, out := x.checkGear(lease, secret, c); status != 200 {

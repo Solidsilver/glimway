@@ -14,7 +14,7 @@ function edited(base: unknown, edits: Edit[]): unknown {
 for (const v of vectors.loader) test(`shared habitica-gear loader: ${v.name}`, () => {
   const value = edited(gearRaw, v.edits);
   if (v.valid) assert.doesNotThrow(() => validateHabiticaGear(value));
-  else assert.throws(() => validateHabiticaGear(value), (e: Error) => refusalMatchesRule(e, v.rule), v.rule);
+  else assert.throws(() => validateHabiticaGear(value), (e: Error) => typeof v.rule === 'string' && v.rule.length > 0 && refusalMatchesRule(e, v.rule), v.rule);
 });
 
 test('the shipped snapshot loads on the client', () => {
@@ -22,6 +22,7 @@ test('the shipped snapshot loads on the client', () => {
   assert.ok(Object.keys(CATALOG.gear).length >= 1800);
   assert.ok(CATALOG.appearances.hair.color.length > 0);
   // The provenance and rules of interpretation survived the reshape.
+  assert.ok(CATALOG.provenance);
   assert.equal(CATALOG.provenance.name, 'habitica-content-snapshot');
   assert.ok(Object.keys(CATALOG.rules).length > 0);
 });

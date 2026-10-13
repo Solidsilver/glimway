@@ -104,7 +104,7 @@ test('hooks: cleared when their scene shuts down or is destroyed (review finding
   for (const event of ['shutdown', 'destroy']) {
     const w: Partial<FsHooks> = {}
     const s = scene()
-    hook(w, '__fsHomes', () => 'homes', s)
+    hook(w, '__fsHomes', Object.assign(() => 'homes', { fresh: async () => {} }), s)
     assert.equal(w.__fsHomes?.(), 'homes')
     s.events.emit(event)
     assert.equal('__fsHomes' in w, false, `${event} removes the hook`)
@@ -176,4 +176,17 @@ test('dialogue hold: once the conversation opens, the hold no longer owns the fl
   hold.settle() // Silas speaks: the dialogue owns the flag now
   hold.release() // the scene ends mid-conversation
   assert.equal(ui.dialogueOpen, true, 'closing is the dialogue’s business')
+})
+
+
+test('UI hook disposers protect replacement owners and remove their own registration', () => {
+  const target: Partial<FsHooks> = {}
+  const shared = () => 1
+  const older = hook(target, '__fsHeld', shared)
+  const newer = hook(target, '__fsHeld', shared)
+  older()
+  assert.equal(target.__fsHeld, shared)
+  newer()
+  newer()
+  assert.equal('__fsHeld' in target, false)
 })

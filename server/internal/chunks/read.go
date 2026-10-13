@@ -1,7 +1,6 @@
 package chunks
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"glimway/content"
@@ -150,44 +149,6 @@ func DecorAt(c *contract.WildsChunk, x, y uint32) []int {
 		}
 	}
 	return out
-}
-
-type EpochKey struct{ World, Kind string }
-type FakeEpochs struct {
-	Values      map[EpochKey]*contract.WildsEpoch
-	CurrentFunc func(context.Context, *sql.Tx, string, string, int64) (*contract.WildsEpoch, error)
-	CreateFunc  func(context.Context, *sql.Tx, string, string, int64) (*contract.WildsEpoch, error)
-}
-
-func (f FakeEpochs) Create(ctx context.Context, tx *sql.Tx, world, kind string, now int64) (*contract.WildsEpoch, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	if f.CreateFunc != nil {
-		return f.CreateFunc(ctx, tx, world, kind, now)
-	}
-	v := f.Values[EpochKey{world, kind}]
-	if v == nil {
-		return nil, ErrUnavailable
-	}
-	return proto.Clone(v).(*contract.WildsEpoch), nil
-}
-
-func (f FakeEpochs) Current(ctx context.Context, tx *sql.Tx, world, kind string, now int64) (*contract.WildsEpoch, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	if f.CurrentFunc != nil {
-		return f.CurrentFunc(ctx, tx, world, kind, now)
-	}
-	v := f.Values[EpochKey{world, kind}]
-	if v == nil {
-		return nil, sql.ErrNoRows
-	}
-	if v.EndsAt != nil && v.EndsAt.Value <= float64(now) {
-		return nil, ErrEpochEnded
-	}
-	return proto.Clone(v).(*contract.WildsEpoch), nil
 }
 
 // DecorWithin returns indices whose tile centres are within radius tiles.

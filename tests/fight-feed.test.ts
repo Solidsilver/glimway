@@ -1,3 +1,4 @@
+import { Bus, type EventMap } from '../src/game/events.ts'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { create, fromBinary, toBinary } from '@bufbuild/protobuf'
@@ -11,7 +12,7 @@ function rig(latency = { lag: 0, jitter: 0 }) {
   const tasks = new Map<number, { at: number; fn: () => void }>()
   const sent: ReturnType<typeof fromBinary<typeof PresenceMessageSchema>>[] = []
   const socket: SocketLike = { readyState: 1, protocol: PRESENCE_PROTOCOL, onopen: null, onmessage: null, onclose: null, onerror: null, send: data => sent.push(fromBinary(PresenceMessageSchema, data as Uint8Array)), close() {} }
-  const feed = new PresenceFeed({ link: { active: true, status: 'online', lease: 'lease', beat: async () => {} }, bus: { on() {}, off() {}, emit() {} }, url: 'ws://fake', makeSocket: () => socket, latency, now: () => now, every: () => 0, cancel() {}, timers: { now: () => now, set: (fn, ms) => { tasks.set(++seq, { at: now + ms, fn }); return seq }, clear: t => { tasks.delete(t as number) } } })
+  const feed = new PresenceFeed({ link: { active: true, status: 'online', lease: 'lease', beat: async () => {} }, bus: new Bus<EventMap>(), url: 'ws://fake', makeSocket: () => socket, latency, now: () => now, every: () => 0, cancel() {}, timers: { now: () => now, set: (fn, ms) => { tasks.set(++seq, { at: now + ms, fn }); return seq }, clear: t => { tasks.delete(t as number) } } })
   const advance = (ms: number) => {
     const end = now + ms
     for (;;) {
@@ -22,7 +23,7 @@ function rig(latency = { lag: 0, jitter: 0 }) {
     now = end
   }
   // The server's frames (v3) carry one or more events; one here.
-  const push = (event: Parameters<typeof create<typeof PresenceMessageSchema>>[1]['event']) => socket.onmessage?.({ data: toBinary(PresenceFrameSchema, create(PresenceFrameSchema, { events: [create(PresenceMessageSchema, { event })] })) })
+  const push = (event: NonNullable<Parameters<typeof create<typeof PresenceMessageSchema>>[1]>['event']) => socket.onmessage?.({ data: toBinary(PresenceFrameSchema, create(PresenceFrameSchema, { events: [create(PresenceMessageSchema, { event })] })) })
   feed.setArea('wilds:0:0'); socket.onopen?.({})
   push({ case: 'ready', value: { accountId: 'me' } }); advance(latency.lag + latency.jitter)
   return { feed, socket, sent, advance, push }

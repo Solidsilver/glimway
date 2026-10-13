@@ -1,3 +1,4 @@
+import { Bus, type EventMap, type EventArgs } from '../src/game/events.ts';
 import { encodeTestFrame, decodeTestPresence } from './presence-wire.ts';
 import { PRESENCE_PROTOCOL } from '../src/lib/presence-codec.ts';
 import test from 'node:test';
@@ -75,16 +76,14 @@ class FakeSocket implements SocketLike {
 function rig() {
   const c = clock();
   const sockets: FakeSocket[] = [];
-  const handlers = new Map<string, Set<Function>>();
   const emitted: Array<{ event: string; payload: any }> = [];
-  const bus = {
-    on: (e: string, fn: Function) => (handlers.get(e) ?? handlers.set(e, new Set()).get(e)!).add(fn),
-    off: (e: string, fn: Function) => handlers.get(e)?.delete(fn),
-    emit: (event: string, payload?: unknown) => {
-      emitted.push({ event, payload });
-      for (const fn of handlers.get(event) ?? []) fn(payload);
-    },
-  };
+  class RecordingBus extends Bus<EventMap> {
+    override emit<K extends keyof EventMap>(event: K, ...args: EventArgs<EventMap[K]>): boolean {
+      emitted.push({ event, payload: args[0] });
+      return super.emit(event, ...args);
+    }
+  }
+  const bus = new RecordingBus();
   const link = { active: true, status: 'online', lease: 'L1', beats: 0, beat: async () => void link.beats++ } as FeedLink & { beats: number; lease: string | null; status: string; active: boolean };
   const feed = new PresenceFeed({
     link,
@@ -105,7 +104,7 @@ function rig() {
     sock().open();
     sock().push({ type: 'ready', accountId: 'me' });
   };
-  return { c, sockets, sock, ready, link, feed, bus, handlers, emitted };
+  return { c, sockets, sock, ready, link, feed, bus, emitted };
 }
 
 test('terminal closes stay closed through link checks while the link stays online (review-6 #1)', () => {
@@ -121,7 +120,7 @@ test('terminal closes stay closed through link checks while the link stays onlin
     r.sock().drop(code, reason);
     // Polls and link events keep coming, with the same lease still held.
     r.c.advance(60_000);
-    r.bus.emit(EV.link, { status: 'online' });
+    r.bus.emit(EV.link, { status: 'online', busy: false, dirty: false, trouble: false, reaching: false, paused: null });
     assert.equal(r.sockets.length, 1, `no reconnect after ${code}`);
     assert.equal(r.feed.client.status, status);
     if (code === 4001 || code === 4002) assert.ok(r.link.beats >= 1, 'the link is asked to confirm');
@@ -205,14 +204,14 @@ test('maker heart range uses the same six tile radius as the server', () => {
 test('stop closes the socket and removes the poll and the bus listener (review-6 #4)', () => {
   const r = rig();
   r.ready();
-  assert.equal(r.handlers.get(EV.link)?.size, 1);
+  assert.equal(r.bus.listenerCount(EV.link), 1);
   const timersBefore = r.c.pending();
   assert.ok(timersBefore > 0);
   r.feed.stop();
   assert.equal(r.sock().closed, true);
-  assert.equal(r.handlers.get(EV.link)?.size, 0, 'bus listener removed');
+  assert.equal(r.bus.listenerCount(EV.link), 0, 'bus listener removed');
   assert.equal(r.c.pending(), 0, 'no poll, retry, heartbeat or stable timers left');
-  r.bus.emit(EV.link, { status: 'online' });
+  r.bus.emit(EV.link, { status: 'online', busy: false, dirty: false, trouble: false, reaching: false, paused: null });
   r.c.advance(120_000);
   assert.equal(r.sockets.length, 1, 'nothing reopens it');
   assert.equal(r.feed.running, false);

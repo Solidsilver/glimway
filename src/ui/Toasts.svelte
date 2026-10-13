@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { expose } from '../game/dev-hooks'
   import { ui } from './store.svelte'
   import { isTouchFirst } from './device'
   import ArtIcon from './ArtIcon.svelte'
@@ -6,9 +7,7 @@
   // Read-only, for playtests (dev builds): every toast handed to the UI so
   // far, in order, whatever its kind (a thought or a gain shows elsewhere),
   // so a test can check one that came and went while it looked away.
-  if (import.meta.env.DEV) {
-    ;(window as unknown as { __fsToasts?: () => unknown }).__fsToasts = () => ({ count: ui.toastCount, seen: [...ui.toastLog] })
-  }
+  $effect(() => expose('__fsToasts', () => ({ count: ui.toastCount, seen: [...ui.toastLog] })))
 
   const touch = isTouchFirst()
   /**

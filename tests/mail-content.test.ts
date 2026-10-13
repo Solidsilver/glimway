@@ -14,7 +14,7 @@ function edited(base: unknown, edits: Edit[]): unknown {
 for (const v of vectors.loader) test(`shared mail loader: ${v.name}`, () => {
   const value = edited(mailRaw, v.edits);
   if (v.valid) assert.doesNotThrow(() => validateMail(value));
-  else assert.throws(() => validateMail(value), (e: Error) => refusalMatchesRule(e, v.rule), v.rule);
+  else assert.throws(() => validateMail(value), (e: Error) => typeof v.rule === 'string' && v.rule.length > 0 && refusalMatchesRule(e, v.rule), v.rule);
 });
 
 test('mail rules share bounded caps, send rates, history and return policy', () => {

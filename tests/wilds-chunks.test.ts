@@ -143,7 +143,7 @@ test('a near read loads its window, each chunk in its epoch, and merges bodies w
   assert.equal(view.ways.size, 1);
   assert.equal(view.lanterns.size, 1);
   // A claim's answer moves the view.
-  applyClaim({ $typeName: 'glimway.v1.WildsClaimResult', epoch: NEAR.wick.id, entity: { $typeName: 'glimway.v1.WildsEntityState', id: fresh.id, cycle: 0, state: 'harvested', availableAt: 500, by: 'me', at: 1, epoch: NEAR.wick.id }, loot: undefined, materials: { fiber: 6 }, wardenSliverFound: false, stormDropFound: false, papers: [] });
+  applyClaim({ $typeName: 'glimway.v1.WildsClaimResult', epoch: NEAR.wick.id, entity: { $typeName: 'glimway.v1.WildsEntityState', campClaimable: false, id: fresh.id, cycle: 0, state: 'harvested', availableAt: 500, by: 'me', at: 1, epoch: NEAR.wick.id }, loot: undefined, materials: { fiber: 6 }, wardenSliverFound: false, stormDropFound: false, papers: [] });
   assert.equal(chunkThings(-2, -4).find((e) => e.id === fresh.id)!.state, 'harvested');
   assert.equal(wildsView()!.materials.fiber, 6);
 
@@ -442,7 +442,7 @@ test('answers outrank an earlier near read: claims, relights and settled Echoes 
   const since = readMark();
   const snapshot = fromJson(WildsNearResultSchema, nearAt(CENTER.cx, CENTER.cy));
   const wick = NEAR.wick.id as string;
-  applyClaim({ $typeName: 'glimway.v1.WildsClaimResult', epoch: wick, entity: { $typeName: 'glimway.v1.WildsEntityState', id: 'node:-3:-4:0', cycle: 0, state: 'harvested', availableAt: 1791400900, by: 'me', at: 1791400100, epoch: wick }, loot: undefined, materials: { stone: 9 }, wardenSliverFound: false, stormDropFound: false, papers: [] });
+  applyClaim({ $typeName: 'glimway.v1.WildsClaimResult', epoch: wick, entity: { $typeName: 'glimway.v1.WildsEntityState', campClaimable: false, id: 'node:-3:-4:0', cycle: 0, state: 'harvested', availableAt: 1791400900, by: 'me', at: 1791400100, epoch: wick }, loot: undefined, materials: { stone: 9 }, wardenSliverFound: false, stormDropFound: false, papers: [] });
   assert.equal(applyLanterns([{ $typeName: 'glimway.v1.WildsLantern', id: 'fallen-lamp', ownerId: 'peer-account', displayName: 'Peer', x: 400, y: 300, litBy: 'me', at: 1791400000, litAt: 1791400200 }], wick), true);
   assert.equal(applyEchoSettled('echo:0', wick), true);
   const answered = visible()!;
@@ -473,7 +473,7 @@ test('an answer for land that turned since is not applied to the new land', asyn
   takeReadRequest();
   const before = visible()!;
   const old = 'wick-epoch-0';
-  const drop = applyClaim({ $typeName: 'glimway.v1.WildsClaimResult', epoch: old, entity: { $typeName: 'glimway.v1.WildsEntityState', id: 'node:-3:-4:0', cycle: 4, state: 'harvested', availableAt: 1, by: 'me', at: 1, epoch: old }, loot: { $typeName: 'glimway.v1.WildsLoot', materials: [{ $typeName: 'glimway.v1.WildsMaterial', id: 'stone', qty: 2 }] } as never, materials: { stone: 6 }, wardenSliverFound: false, stormDropFound: false, papers: [] });
+  const drop = applyClaim({ $typeName: 'glimway.v1.WildsClaimResult', epoch: old, entity: { $typeName: 'glimway.v1.WildsEntityState', campClaimable: false, id: 'node:-3:-4:0', cycle: 4, state: 'harvested', availableAt: 1, by: 'me', at: 1, epoch: old }, loot: { $typeName: 'glimway.v1.WildsLoot', materials: [{ $typeName: 'glimway.v1.WildsMaterial', id: 'stone', qty: 2 }] } as never, materials: { stone: 6 }, wardenSliverFound: false, stormDropFound: false, papers: [] });
   assert.deepEqual(drop.materials, [{ id: 'stone', qty: 2 }], 'the loot is still told');
   assert.deepEqual(visible()!.states, before.states, 'the old land’s state isn’t the new land’s');
   assert.equal(wildsView()!.materials.stone, 6, 'the balances are the account’s');

@@ -1,9 +1,11 @@
-package chunks
+package chunks_test
 
 import (
 	"context"
 	"database/sql"
 	"errors"
+	"glimway/server/internal/chunks"
+	"glimway/server/internal/chunks/chunkstest"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"testing"
@@ -16,11 +18,11 @@ func validChunk() *contract.WildsChunk {
 func TestStoredGeometryAndExecutableFakes(t *testing.T) {
 	ctx := context.Background()
 	c := validChunk()
-	if err := Validate(c); err != nil {
+	if err := chunks.Validate(c); err != nil {
 		t.Fatal(err)
 	}
 	c = validChunk()
-	e, err := Entity(c, "node:1:-1:0")
+	e, err := chunks.Entity(c, "node:1:-1:0")
 	if err != nil || e.Material != "timber" {
 		t.Fatal(e, err)
 	}
@@ -28,15 +30,15 @@ func TestStoredGeometryAndExecutableFakes(t *testing.T) {
 	if c.Entities[0].Material != "timber" {
 		t.Fatal("entity read mutated geometry")
 	}
-	if len(DecorAt(c, 2, 3)) != 1 {
+	if len(chunks.DecorAt(c, 2, 3)) != 1 {
 		t.Fatal("decor read")
 	}
 	c.Decor.Kind[0] = 9
-	if Validate(c) == nil {
+	if chunks.Validate(c) == nil {
 		t.Fatal("bad decor accepted")
 	}
-	key := Key{"world", "epoch", 0, 1, -1}
-	f := &Fake{Chunks: map[Key]*contract.WildsChunk{key: validChunk()}, Errors: map[Key]error{}}
+	key := chunkstest.Key{World: "world", Epoch: "epoch", Layer: 0, CX: 1, CY: -1}
+	f := &chunkstest.Fake{Chunks: map[chunkstest.Key]*contract.WildsChunk{key: validChunk()}, Errors: map[chunkstest.Key]error{}}
 	read, err := f.Chunk(ctx, nil, "world", "epoch", 0, 1, -1)
 	if err != nil {
 		t.Fatal(err)
@@ -49,22 +51,22 @@ func TestStoredGeometryAndExecutableFakes(t *testing.T) {
 	if _, err = f.Chunk(ctx, nil, "other", "epoch", 0, 1, -1); !errors.Is(err, sql.ErrNoRows) {
 		t.Fatal(err)
 	}
-	f.Errors[key] = ErrEpochEnded
-	if _, err = f.Chunk(ctx, nil, "world", "epoch", 0, 1, -1); !errors.Is(err, ErrEpochEnded) {
+	f.Errors[key] = chunks.ErrEpochEnded
+	if _, err = f.Chunk(ctx, nil, "world", "epoch", 0, 1, -1); !errors.Is(err, chunks.ErrEpochEnded) {
 		t.Fatal(err)
 	}
-	epochs := FakeEpochs{Values: map[EpochKey]*contract.WildsEpoch{{"world", "wick"}: {Id: "epoch"}}}
+	epochs := chunkstest.FakeEpochs{Values: map[chunkstest.EpochKey]*contract.WildsEpoch{{World: "world", Kind: "wick"}: {Id: "epoch"}}}
 	if e, err := epochs.Create(ctx, nil, "world", "wick", 1); err != nil || e.Id != "epoch" {
 		t.Fatal(e, err)
 	}
-	if _, err := epochs.Create(ctx, nil, "other", "wick", 1); !errors.Is(err, ErrUnavailable) {
+	if _, err := epochs.Create(ctx, nil, "other", "wick", 1); !errors.Is(err, chunks.ErrUnavailable) {
 		t.Fatal(err)
 	}
 }
 
 func TestCurrentEpochIsReadOnlyAndDecorUsesTileRadius(t *testing.T) {
 	ctx := context.Background()
-	f := FakeEpochs{Values: map[EpochKey]*contract.WildsEpoch{{"world", "wick"}: {Id: "epoch", GeneratorVersion: 2, EndsAt: wrapperspb.Double(20)}}}
+	f := chunkstest.FakeEpochs{Values: map[chunkstest.EpochKey]*contract.WildsEpoch{{World: "world", Kind: "wick"}: {Id: "epoch", GeneratorVersion: 2, EndsAt: wrapperspb.Double(20)}}}
 	f.CreateFunc = func(context.Context, *sql.Tx, string, string, int64) (*contract.WildsEpoch, error) {
 		t.Fatal("Current created an epoch")
 		return nil, nil
@@ -72,7 +74,7 @@ func TestCurrentEpochIsReadOnlyAndDecorUsesTileRadius(t *testing.T) {
 	if _, err := f.Current(ctx, nil, "missing", "wick", 10); !errors.Is(err, sql.ErrNoRows) {
 		t.Fatal(err)
 	}
-	if _, err := f.Current(ctx, nil, "world", "wick", 20); !errors.Is(err, ErrEpochEnded) {
+	if _, err := f.Current(ctx, nil, "world", "wick", 20); !errors.Is(err, chunks.ErrEpochEnded) {
 		t.Fatal(err)
 	}
 	v, err := f.Current(ctx, nil, "world", "wick", 10)
@@ -85,7 +87,7 @@ func TestCurrentEpochIsReadOnlyAndDecorUsesTileRadius(t *testing.T) {
 		t.Fatal("mutated stored epoch")
 	}
 	c := validChunk()
-	if len(DecorWithin(c, 3.5, 3.5, 1)) != 1 || len(DecorWithin(c, 3.5, 3.5, 0.99)) != 0 {
+	if len(chunks.DecorWithin(c, 3.5, 3.5, 1)) != 1 || len(chunks.DecorWithin(c, 3.5, 3.5, 0.99)) != 0 {
 		t.Fatal("decor reach must use tile centres")
 	}
 	for _, field := range []string{"realm", "look", "layer", "node"} {
@@ -100,7 +102,7 @@ func TestCurrentEpochIsReadOnlyAndDecorUsesTileRadius(t *testing.T) {
 		case "node":
 			c.Entities[0].Material = ""
 		}
-		if Validate(c) == nil {
+		if chunks.Validate(c) == nil {
 			t.Fatal("invalid chunk accepted", field)
 		}
 	}

@@ -8,7 +8,7 @@ test('EnemySystem.update routes Stand through both owners in one list; server st
   const system = Object.create(EnemySystem.prototype)
   const body = () => ({ enable: false, setVelocity: () => {} })
   const sprite = () => ({ active: true, body: body(), setDepth: () => {}, clearTint: () => {} })
-  const enemy = () => ({ id: 'test', type: 'wisp', x: 100, y: 100, state: 'lunge', stateTimer: .2, lungeX: 190, lungeY: 0, dead: false, sprite: sprite() })
+  const enemy = () => ({ id: 'test', type: 'wisp', x: 100, y: 100, state: 'lunge', stateTimer: .2, lungeX: 190, lungeY: 0, dead: false, sprite: sprite(), owner: { observe() {}, act() {}, struck() {}, stopped(_e: object, _seconds: number) {} } })
   const server = enemy(), local = enemy()
   let stopped = 0
   server.owner = { observe() {}, act() {}, struck() {}, stopped(e: object, seconds: number) { assert.equal(e, server); assert.equal(seconds, 2); stopped++ } }
@@ -31,7 +31,7 @@ test('server Stand prediction changes a temporary pose window, not authoritative
   ;(owner as any).drawn.set(1, entry)
   owner.owner.stopped(enemy, 2)
   assert.equal(entry.stoppedUntil, 3000)
-  assert.deepEqual(enemy, { state: 'lunge', stateTimer: .2, lungeX: 190, hp: 28, type: 'wisp' })
+  assert.deepEqual({ ...enemy }, { state: 'lunge', stateTimer: .2, lungeX: 190, hp: 28, type: 'wisp' })
   owner.owner.stopped(enemy, 2)
   assert.equal(entry.stoppedUntil, 3000)
 })

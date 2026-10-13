@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"glimway/content"
-	"glimway/server/internal/chunks"
+	"glimway/server/internal/chunks/chunkstest"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/ports"
 	"glimway/server/internal/rules"
@@ -86,15 +86,15 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 	now := int64(1791400000)
 	// The Whitequiet: chunks -1..1, -5..-3, on the wick epoch.
 	epoch := &contract.WildsEpoch{Id: "e1", GeneratorVersion: 3, WorldSeed: "seed", Kind: "wick", Season: "Mudrise", StartsAt: float64(now)}
-	es := &chunks.FakeEpochs{Values: map[chunks.EpochKey]*contract.WildsEpoch{{World: "w", Kind: "wick"}: epoch}}
-	source := &chunks.Fake{Chunks: map[chunks.Key]*contract.WildsChunk{}}
+	es := &chunkstest.FakeEpochs{Values: map[chunkstest.EpochKey]*contract.WildsEpoch{{World: "w", Kind: "wick"}: epoch}}
+	source := &chunkstest.Fake{Chunks: map[chunkstest.Key]*contract.WildsChunk{}}
 	for cy := -5; cy <= -3; cy++ {
 		for cx := -1; cx <= 1; cx++ {
-			source.Chunks[chunks.Key{World: "w", Epoch: "e1", CX: int32(cx), CY: int32(cy)}] = &contract.WildsChunk{Size: 24, Cx: int32(cx), Cy: int32(cy), Mark: "Mudrise"}
+			source.Chunks[chunkstest.Key{World: "w", Epoch: "e1", CX: int32(cx), CY: int32(cy)}] = &contract.WildsChunk{Size: 24, Cx: int32(cx), Cy: int32(cy), Mark: "Mudrise"}
 		}
 	}
 	site := &contract.StorySite{Id: "cairn", Kind: contract.SiteKind_SITE_KIND_CAIRN, Tx: 3, Ty: 4}
-	source.Chunks[chunks.Key{World: "w", Epoch: "e1", CX: -1, CY: -5}].Sites = []*contract.StorySite{site}
+	source.Chunks[chunkstest.Key{World: "w", Epoch: "e1", CX: -1, CY: -5}].Sites = []*contract.StorySite{site}
 	r := Rules{Chunks: source, Epochs: es, Now: func() time.Time { return time.Unix(now, 0) }}
 	s := store.Snapshot{AccountID: "a", WorldID: "w", State: rules.NewState()}
 	eligible := func(id string, w *contract.Where, want bool) {
@@ -162,7 +162,7 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 	for i := 0; i < 9; i++ {
 		cx, cy := int32(i%3-1), int32(i/3-5)
 		e := &contract.StorySite{Id: string(rune('a' + i)), Kind: contract.SiteKind_SITE_KIND_ECHO, Tx: 8, Ty: 8}
-		m := source.Chunks[chunks.Key{World: "w", Epoch: "e1", CX: cx, CY: cy}]
+		m := source.Chunks[chunkstest.Key{World: "w", Epoch: "e1", CX: cx, CY: cy}]
 		m.Sites = append(m.Sites, e)
 		echoSites = append(echoSites, ports.EchoSite{Site: e, CX: cx, CY: cy})
 	}

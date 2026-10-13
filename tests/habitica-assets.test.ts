@@ -68,6 +68,9 @@ function baseProfile(overrides: Partial<AvatarProfileFull> = {}): AvatarProfileF
 const URL_SHAPE = /^(https:\/\/habitica-assets\.s3\.amazonaws\.com\/mobileApp\/images\/|\/assets\/habitica\/)/;
 
 test('catalog provenance and completeness', () => {
+  assert.ok(CATALOG.provenance);
+  assert.ok(CATALOG.provenance.counts);
+  assert.ok(CATALOG.provenance.licenses);
   assert.equal(CATALOG.provenance.name, 'habitica-content-snapshot');
   assert.ok(CATALOG.provenance.sourceRevision.length >= 7);
   assert.equal(CATALOG.provenance.retrievedAt, '2026-10-03');

@@ -33,7 +33,7 @@ test('a ford’s stones: one line down the middle of the crossing, across the ri
   // A river four tiles wide (x 10..13) running north-south; a route crosses
   // east-west, and its ford is three rows deep (y 4..6).
   const ford = (x: number, y: number) => x >= 10 && x <= 13 && y >= 4 && y <= 6;
-  const wet = (x: number, y: number) => x >= 10 && x <= 13;
+  const wet = (x: number, _y: number) => x >= 10 && x <= 13;
   const all = fordLines([{ tx: 10, ty: 4 }], ford, wet, () => true);
   assert.deepEqual(all.map((s) => [s.tx, s.ty, s.across]).sort(), [[10, 5, true], [11, 5, true], [12, 5, true], [13, 5, true]]);
   // A chunk edge between x 11 and 12: each side places its own stones on the same line.

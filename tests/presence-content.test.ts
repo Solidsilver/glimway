@@ -25,7 +25,7 @@ for (const v of vectors.loader) test(`shared presence loader: ${v.name}`, () => 
   const value = structuredClone(presenceRaw) as Record<string, unknown>;
   for (const e of v.edits as Edit[]) { let target = value as any; for (const key of e.path.slice(0, -1)) target = target[key]; if (e.remove) delete target[e.path.at(-1)!]; else target[e.path.at(-1)!] = e.value; }
   if (v.valid) assert.doesNotThrow(() => validatePresence(value));
-  else assert.throws(() => validatePresence(value), (e: Error) => refusalMatchesRule(e, v.rule), v.rule);
+  else assert.throws(() => validatePresence(value), (e: Error) => typeof v.rule === 'string' && v.rule.length > 0 && refusalMatchesRule(e, v.rule), v.rule);
 });
 test('presence loader refuses the empty and the null outright', () => {
   for (const raw of [null, {}, [], { ...presenceRaw, emotes: [null] }]) assert.throws(() => validatePresence(raw));

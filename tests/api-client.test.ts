@@ -6,7 +6,8 @@ import { ApiError, errorFromResponse, isUnreachable, parseRetryAfter, SERVER_ERR
 import { claimClientId, createApiClient, inviteCodeParts, newKey, normalizeInviteCode } from '../src/lib/api/client.ts';
 import { CraftRequestSchema, DeskCopyRequestSchema, HearthCraftRequestSchema } from '../src/lib/gen/glimway/v1/village_pb.js';
 import { createNewGame, type GameState } from '../src/lib/state.ts';
-import { parseItemsAction, parseWildsClaim } from '../src/lib/api/parse.ts';
+import { parseItemsAction } from '../src/lib/api/items.ts';
+import { parseWildsClaim } from '../src/lib/api/parse.ts';
 
 const json = (status: number, body: unknown, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', ...headers } });
@@ -399,7 +400,7 @@ test('hearth, desk and woodpile: endpoints, method, body and parsed shape', asyn
   assert.equal(calls[2].init.method, 'GET');
   assert.equal(wp.woodpile.readyCount, 10);
   assert.ok(wp.woodpile.stacks[0].ready);
-  const act = await api.woodpileAction({ lease: 'L', baseRev: 3, key: 'k3', action: 'stack', qty: 10 });
+  const act = await api.woodpileAction({ op: { lease: 'L', key: 'k3' }, where: { area: 'village', x: 1, y: 1 }, action: 'stack', qty: 10 });
   assert.equal(calls[3].url, '/api/homestead/woodpile');
   assert.equal(calls[3].init.method, 'POST');
   assert.equal(act.result.action, 'stack');

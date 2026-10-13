@@ -19,16 +19,6 @@ import type {
   WildsMaterials,
 } from './types.ts';
 
-// The homestead and item routes moved to the generated schema (homestead.ts,
-// items.ts); their parsers are re-exported here for the one import site.
-export { parseHome, parseHomeAction, parseShelf, parseShelfAction, parseWoodpileRead, parseWoodpileAction } from './homestead.ts';
-export { parseItems, parseItemsAction, parseItemsResult } from './items.ts';
-
-// The worlds (world.ts) and the village domains (village.ts) decode through
-// the generated messages.
-export { parseWorld, parseWorldChoice, parseWorldMove } from './world.ts';
-export { parseStorage, parseStorageMove, parseCraft, parseHearthCraft, parseDeskCopy, parseMail, parseMailSend, parseMailClaim, parseMailRecall, parseCommons, parseProjects, parseContribute, parseRepairs, parseMend } from './village.ts';
-
 type Obj = Record<string, unknown>;
 
 function obj(v: unknown): Obj {
@@ -95,11 +85,7 @@ export function parsePlay(raw: unknown): PlayResponse {
   return { ...parseSnapshot(raw), lease: str(obj(raw).lease) };
 }
 
-export { parseCreatedInvite, parseInviteList } from './invites.ts';
 
-// ------------------------------------------------------------- worlds
-
-/** A held first sign-in's question (`{ worldChoice }`), or null when the answer is something else. */
 // ------------------------------------------------------------- the Wilds
 
 const nullableStr = (v: unknown): string | null => (typeof v === 'string' ? v : null);
@@ -173,5 +159,3 @@ function int(v: unknown, min = 0): number {
   if (typeof v !== 'number' || !Number.isInteger(v) || v < min) throw new ApiError('bad-response');
   return v;
 }
-
-export { parseCalendar } from './calendar.ts';

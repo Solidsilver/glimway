@@ -140,7 +140,7 @@ func TestHistoricalAccountUpgradeThroughAPI(t *testing.T) {
 	completed.Lease = play.Lease
 	completed = x.reportState(login, completed, 10, 0, map[string]any{"area": "village", "x": 400, "y": 300})
 	rest := body(completed, "upgrade-rest", map[string]any{"kind": "rest"})
-	x.flushFixtureReport(login, rest["op"].(map[string]any))
+	x.reportBeforeVitals(login, rest["op"].(map[string]any))
 	x.expect("POST", "/api/spend", rest, login, 200)
 	x.expect("POST", "/api/story/mark", body(completed, "upgrade-met", map[string]any{"mark": "met:mara@complete"}), login, 200)
 	if count(t, upgraded, "SELECT SUM(delta) FROM ledger WHERE currency='glims'") != 12-int(rules.E.GetCosts().GetRest()) {

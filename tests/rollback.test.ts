@@ -79,7 +79,7 @@ test('a site paper online waits for the world’s answer and says whether it was
 
 async function realSession(t: { after: (fn: () => void) => void }) {
   const server = fakeServer();
-  const link = new Link({ api: server.api, clientId: 'tab', accountId: 'fixture-account', device: 'dev', name: 'Hero', state: player(S()), status: 'offline', emit: (e, ...a) => bus.emit(e, ...(a as [never])), store: memoryOutboxStore(), locks: null, channel: null })
+  const link = new Link({ api: server.api, clientId: 'tab', accountId: 'fixture-account', device: 'dev', name: 'Hero', state: player(S()), status: 'offline', emit: bus.emit.bind(bus), store: memoryOutboxStore(), locks: null, channel: null })
   const session = new Session(link.initialState(), {}, link);
   t.after(() => link.stop());
   await link.ready();

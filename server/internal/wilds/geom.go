@@ -144,17 +144,6 @@ func crosses(a, b, c, d pt) bool {
 	return (d1 == 0 && on(c, d, a)) || (d2 == 0 && on(c, d, b)) || (d3 == 0 && on(a, b, c)) || (d4 == 0 && on(a, b, d))
 }
 
-// crossPoint is where ab meets cd (they must cross); the midpoint of the
-// overlap when they're collinear.
-func crossPoint(a, b, c, d pt) pt {
-	den := cross(pt{}, pt{b.x - a.x, b.y - a.y}, pt{d.x - c.x, d.y - c.y})
-	if den == 0 {
-		return pt{(a.x + b.x) / 2, (a.y + b.y) / 2}
-	}
-	num := cross(pt{}, pt{c.x - a.x, c.y - a.y}, pt{d.x - c.x, d.y - c.y})
-	return pt{a.x + int(int64(b.x-a.x)*num/den), a.y + int(int64(b.y-a.y)*num/den)}
-}
-
 // crossCount is how many times segment ab crosses the line.
 func (l *line) crossCount(a, b pt) int {
 	n := 0

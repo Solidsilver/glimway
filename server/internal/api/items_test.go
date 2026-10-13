@@ -663,7 +663,7 @@ func TestItemsOffHandOpensWithAClass(t *testing.T) {
 	x.set(p)
 	x.refresh(c, &s)
 	// The class arrives with the next Habitica sync.
-	s.Snapshot = x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200).Snapshot
+	s.Snapshot = x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, p, s.State), c, 200).Snapshot
 	v := x.opRefreshing(c, &s, "offhand", map[string]any{"instance": lantern}, 200)
 	if !v.Result.Items.OffHand.Open || *v.Result.Items.OffHand.Class != "warrior" || *v.Result.Items.OffHand.Instance != lantern || *v.Result.Items.OffHand.ItemDef != "carters-lantern" {
 		t.Fatal("lantern in hand", v.Result.Items.OffHand)
@@ -684,7 +684,7 @@ func TestItemsOffHandOpensWithAClass(t *testing.T) {
 	p.Class = nil
 	x.set(p)
 	x.refresh(c, &s)
-	s.Snapshot = x.expect("POST", "/api/profile", x.profileBody(s, p, s.State), c, 200).Snapshot
+	s.Snapshot = x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, p, s.State), c, 200).Snapshot
 	if v = x.opRefreshing(c, &s, "pocket", map[string]any{"slot": 1}, 200); v.Result.Items.OffHand.Open || count(t, x.db, "SELECT count(*) FROM item_slots WHERE slot='off-hand'") != 0 {
 		t.Fatal("off hand closed with the class")
 	}
@@ -793,7 +793,7 @@ func TestItemsFoodDoesNotLiftTheZeroHPLock(t *testing.T) {
 	down := profile("alice", 1, 0, 0)
 	x.set(down)
 	x.refresh(c, &s)
-	s.Snapshot = x.expect("POST", "/api/profile", x.profileBody(s, down, s.State), c, 200).Snapshot
+	s.Snapshot = x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, down, s.State), c, 200).Snapshot
 	if s.State.HP != 0 {
 		t.Fatal("the hero should be down", s.State.HP)
 	}

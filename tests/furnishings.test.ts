@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vectors from '../content/vectors/furnishings.json' with { type: 'json' };
 import furnishingRaw from '../content/furnishings.json' with { type: 'json' };
-import { FURNISHINGS, validateFurnishings, furnishingFor, canPlace, type Furnishing, type PlaceOn } from '../src/lib/furnishings.ts';
+import { FURNISHINGS, validateFurnishings, furnishingFor, canPlace, type PlaceOn } from '../src/lib/furnishings.ts';
 import { HOMESTEAD_DATA, validateHomesteadData, homeItem } from '../src/lib/homestead.ts';
 import { refusalMatchesRule } from './helpers/vector-rule.ts';
 
@@ -15,7 +15,7 @@ function edited(base: unknown, edits: Edit[]): unknown {
 for (const v of vectors.loader) test(`shared furnishings loader: ${v.name}`, () => {
   const value = edited(furnishingRaw, v.edits);
   if (v.valid) assert.doesNotThrow(() => validateFurnishings(value));
-  else assert.throws(() => validateFurnishings(value), (e: Error) => refusalMatchesRule(e, v.rule), v.rule);
+  else assert.throws(() => validateFurnishings(value), (e: Error) => typeof v.rule === 'string' && v.rule.length > 0 && refusalMatchesRule(e, v.rule), v.rule);
 });
 
 test('the shipped catalogue keeps every home good and the interior kit', () => {
@@ -30,7 +30,7 @@ test('the shipped catalogue keeps every home good and the interior kit', () => {
 });
 
 for (const v of vectors.placements) test(`shared canPlace: ${v.name}`, () => {
-  const pieces = vectors.pieces as Record<string, Furnishing>;
+  const pieces = Object.fromEntries(validateFurnishings({ pieces: Object.values(vectors.pieces) }).pieces.map(piece => [piece.id, piece]));
   const piece = pieces[v.piece]!;
   const raw = v.onto as { kind: string; host?: string; offer?: 'top' | 'shelves' };
   const onto: PlaceOn = raw.kind === 'surface' ? { kind: 'surface', host: pieces[raw.host!]!, offer: raw.offer! } : { kind: raw.kind as 'floor' | 'wall' | 'rug' };

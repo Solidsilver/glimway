@@ -28,11 +28,11 @@ import {
   wearRuleLine,
   toolDullness,
   toolWorkSpeed,
-  type Items,
 } from '../src/lib/items.ts';
 import { fitTargets, modelEntries, newestFirst } from '../src/lib/inventory.ts';
 import { CRAFTING, validateCrafting } from '../src/lib/workshop.ts';
-import { parseItems, parseItemsAction, parseStorage } from '../src/lib/api/parse.ts';
+import { parseItems, parseItemsAction } from '../src/lib/api/items.ts';
+import { parseStorage } from '../src/lib/api/village.ts';
 import type { InstanceView, ItemsView } from '../src/lib/api/types.ts';
 import { serializeItemVectors } from '../scripts/items-vectors.ts';
 import { buildArea, type WorldData } from '../src/game/worlds.ts';
@@ -76,13 +76,13 @@ test('the Go loader derives the same rules (content/vectors/items.json is curren
 });
 
 test('the validator refuses malformed rows, like content/items.go', () => {
-  const cases: [string, (v: Items) => void][] = [
+  const cases: [string, (v: typeof itemsRaw) => void][] = [
     ['duplicate id', (v) => (v.items[1].id = v.items[0].id)],
     ['unknown kind', (v) => ((v.items[0] as { kind: string }).kind = 'weapon')],
     ['tab mismatch', (v) => (v.items[0].tab = 'supplies')],
     ['cheap tool blunt', (v) => (v.items[0].atZero = 'blunt')],
     ['heirloom without repair', (v) => delete v.items.find((d) => d.id === 'brack-felling-axe')!.repair],
-    ['repair with an instance', (v) => (v.items.find((d) => d.id === 'brack-felling-axe')!.repair!.bench = { 'bench-axe': 1 })],
+    ['repair with an instance', (v) => Object.assign(v.items.find((d) => d.id === 'brack-felling-axe')!.repair!, { bench: { 'bench-axe': 1 } })],
     ['fitting without a kind', (v) => delete v.items.find((d) => d.id === 'loose-road-nail')!.fitting],
     ['unknown use effect', (v) => (v.items.find((d) => d.id === 'oatcakes')!.use = [{ type: 'fly' }])],
     ['pocket help on a tool', (v) => (v.items[0].pocket = [{ type: 'papers-glint' }])],
@@ -93,11 +93,11 @@ test('the validator refuses malformed rows, like content/items.go', () => {
     ['hold that wears faster', (v) => (v.rules.wear.holdPointsPerUse = 9)],
   ];
   for (const [name, mutate] of cases) {
-    const copy = structuredClone(itemsRaw) as unknown as Items;
+    const copy = structuredClone(itemsRaw);
     mutate(copy);
-    assert.throws(() => validateItems(copy), undefined, name);
+    assert.throws(() => validateItems(copy), name);
   }
-  assert.doesNotThrow(() => validateItems(structuredClone(itemsRaw) as unknown as Items));
+  assert.doesNotThrow(() => validateItems(structuredClone(itemsRaw)));
 });
 
 test('recipes make tools as instances and charge any carried stack', () => {
@@ -241,9 +241,9 @@ const inst = (id: string, itemDef: string, extra: Partial<InstanceView> = {}): I
   wardenSet: false,
   fittings: [],
   maker: null,
-  // The wire answer emits every field: the wear wrappers null when unset.
-  dullness: null,
-  speed: null,
+  // Domain views omit unset wear wrappers after decoding wire nulls.
+  dullness: undefined,
+  speed: undefined,
   ...extra,
 });
 
@@ -328,7 +328,8 @@ const snapshot = {
 };
 
 test('item responses parse, and malformed instances are refused', () => {
-  const v = view();
+  const domain = view();
+  const v = { ...domain, instances: domain.instances.map(instance => ({ ...instance, dullness: instance.dullness ?? null, speed: instance.speed ?? null })) };
   const items = parseItems({ ...snapshot, items: v });
   assert.equal(items.items.instances.length, 4);
   assert.equal(items.items.offHand.class, 'warrior');

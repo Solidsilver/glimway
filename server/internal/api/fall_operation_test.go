@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"glimway/server/internal/chunks"
+	"glimway/server/internal/chunks/chunkstest"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"google.golang.org/protobuf/encoding/protojson"
 	"testing"
@@ -36,7 +37,7 @@ func TestFallRecoveryReplayAndMissingGeometry(t *testing.T) {
 	if replay.State.Vitals.Hp != 5 || replay.GetFall().Vitals.Hp != 13 || replay.State.Version != float64(s.Version) {
 		t.Fatal("fall replay healed", replay)
 	}
-	x.api.Config.Epochs = &chunks.FakeEpochs{CurrentFunc: func(context.Context, *sql.Tx, string, string, int64) (*contract.WildsEpoch, error) {
+	x.api.Config.Epochs = &chunkstest.FakeEpochs{CurrentFunc: func(context.Context, *sql.Tx, string, string, int64) (*contract.WildsEpoch, error) {
 		return nil, chunks.ErrUnavailable
 	}}
 	req = body(s, "no-geometry", map[string]any{"where": map[string]any{"area": "wilds", "x": 300, "y": -1000}})

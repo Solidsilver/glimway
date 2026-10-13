@@ -16,7 +16,7 @@ function edited(base: unknown, edits: Edit[]): unknown {
 for (const v of vectors.loader) test(`shared wilds loader: ${v.name}`, () => {
   const value = edited(wildsRaw, v.edits);
   if (v.valid) assert.doesNotThrow(() => validateWildsData(value));
-  else assert.throws(() => validateWildsData(value), (e: Error) => refusalMatchesRule(e, v.rule), v.rule);
+  else assert.throws(() => validateWildsData(value), (e: Error) => typeof v.rule === 'string' && v.rule.length > 0 && refusalMatchesRule(e, v.rule), v.rule);
 });
 
 test('the shipped catalogue loads on the client', () => {
