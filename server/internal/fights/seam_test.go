@@ -103,3 +103,30 @@ func TestBoltReplayStopsBeforeEnemyBeyondSafeTile(t *testing.T) {
 		t.Fatal("bolt flew through safe tile", result, e.row.Hp, hp)
 	}
 }
+
+func TestSafeBystandersWitnessWithoutScalingCamp(t *testing.T) {
+	for _, safe := range []bool{true, false} {
+		g := testGeometry()
+		if safe {
+			g.Safe = outdoorSafe
+		}
+		r := NewRoom(Key{World: "world", Realm: "hearthwick", Epoch: "epoch"}, 1, g, []Camp{{ID: "camp", X: 40, Y: 350, Kinds: wisps(3)}}, 42, origin, 0)
+		fighter := player(40, 375)
+		bystander := player(40, 392)
+		bystander.ID, bystander.Observer = "bystander", "bystander"
+		r.Cover(fighter, origin)
+		r.Cover(bystander, origin)
+		r.Step(at(100))
+		c := r.camps[0]
+		want := 4
+		if safe {
+			want = 3
+		}
+		if !c.started || c.size != want || len(c.members) != want {
+			t.Fatalf("safe=%v: camp size=%d members=%d", safe, c.size, len(c.members))
+		}
+		if !c.witnesses[bystander.ID] {
+			t.Fatal("safe bystander lost claim witness")
+		}
+	}
+}

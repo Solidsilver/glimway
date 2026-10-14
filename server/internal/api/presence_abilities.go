@@ -3,6 +3,7 @@ package api
 import (
 	"glimway/content"
 	contract "glimway/server/internal/gen/glimway/v2"
+	"glimway/server/internal/location"
 	"glimway/server/internal/rules"
 	"math"
 	"slices"
@@ -266,6 +267,11 @@ func (h *presenceHub) allowAbility(p *presencePeer, now time.Time, event *contra
 	}
 	a, ok := content.AbilityFor(event.GetAbility())
 	if !ok || !finitePresence(event.GetX()) || !finitePresence(event.GetY()) || math.Abs(event.GetX()) > 1e6 || math.Abs(event.GetY()) > 1e6 {
+		return false
+	}
+	// Enemy-affecting workings cannot start on safe outdoor ground. Check
+	// before charging the ability cooldown, including casts without Fight.
+	if _, _, outdoor := wildsRoomChunk(p.area); outdoor && event.GetAbility() != "ward-light" && (p.identity.Magic.Down || location.At(location.Outdoors, event.GetX(), event.GetY()).Safe) {
 		return false
 	}
 	m := p.identity.Magic

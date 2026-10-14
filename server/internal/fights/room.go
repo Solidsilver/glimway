@@ -272,7 +272,7 @@ func (r *Room) startCamp(c *camp, ms int64) {
 	accounts := map[string]bool{}
 	for _, p := range r.players {
 		c.witnesses[p.ID] = true
-		if !p.Down && math.Hypot(p.X-c.X, p.Y-c.Y) <= CampScaleRadius {
+		if !p.Down && !r.Geometry.IsSafe(p.X, p.Y) && math.Hypot(p.X-c.X, p.Y-c.Y) <= CampScaleRadius {
 			accounts[p.ID] = true
 		}
 	}

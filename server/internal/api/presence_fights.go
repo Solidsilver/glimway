@@ -730,7 +730,7 @@ func (h *presenceHub) handleFightSwing(p *presencePeer, s *wire.FightSwing) {
 	// Tool classification is client-trusted under the friends-only model.
 	// Enforcing it later needs an explicit held-mode in FightSwing; pack
 	// ownership alone cannot distinguish a selected weapon from a tool.
-	if p.pos == nil || !outdoor || len(p.fightRooms) == 0 || p.identity.Magic.Down || s.Kind == wire.FightSwingKind_FIGHT_SWING_KIND_BOLT && kit.Class != "mage" || s.Kind == wire.FightSwingKind_FIGHT_SWING_KIND_SLASH && kit.Class == "mage" && !s.Tool {
+	if p.pos == nil || !outdoor || len(p.fightRooms) == 0 || p.identity.Magic.Down || location.At(location.Outdoors, s.X, s.Y).Safe || s.Kind == wire.FightSwingKind_FIGHT_SWING_KIND_BOLT && kit.Class != "mage" || s.Kind == wire.FightSwingKind_FIGHT_SWING_KIND_SLASH && kit.Class == "mage" && !s.Tool {
 		h.refuseFight(p, s.SwingCounter, wire.FightRefusedReason_FIGHT_REFUSED_REASON_NOT_ALLOWED)
 		return
 	}
@@ -776,6 +776,10 @@ func (h *presenceHub) handleFightSwing(p *presencePeer, s *wire.FightSwing) {
 // nothing.
 func (h *presenceHub) handleFightCast(p *presencePeer, event *wire.PresenceAbility) {
 	cast := event.Fight
+	if event.GetAbility() != "ward-light" && location.At(location.Outdoors, event.GetX(), event.GetY()).Safe {
+		h.refuseFight(p, cast.SwingCounter, wire.FightRefusedReason_FIGHT_REFUSED_REASON_NOT_ALLOWED)
+		return
+	}
 	ability, ok := content.AbilityFor(event.GetAbility())
 	_, _, outdoor := wildsRoomChunk(p.area)
 	if !ok || p.pos == nil || !outdoor || p.identity.Magic.Down {

@@ -50,7 +50,7 @@ phone on mobile data, measured on feel), then lanes.
 6. **Rewards and camp size.** Anyone whose 3×3 covered the camp's chunk at any point during the
    fight may claim once, if it fell this cycle; dealing damage isn't needed, so a late friend or a
    healer counts. Camp size is fixed when the fight starts (the first enemy aggroed): one extra
-   enemy per extra player, up to 5. Enemy HP doesn't scale. (owner, 2026-10-11)
+   enemy per extra living player on unsafe ground within 160 px, up to 5. Safe bystanders retain coverage and claims but do not scale the camp. Enemy HP doesn't scale. (owner, 2026-10-11)
 7. **Your hits feel immediate.** Swing, flash, sound, knockback and the number show at once; the
    server's word arrives about one round trip later and normally agrees. Crits come from a
    server-given seed and a swing counter, so your screen predicts them exactly. If the server
@@ -263,7 +263,7 @@ Alone it's the same fight, with three wisps.
   or goes; then the wisp picks again or walks home. Closest-player targeting between attacks
   replaces the prototype's persistent focus (owner playtest, 2026-10-12).
 - **Camp size.** Fixed at the first aggro: the base mix (up to 3), plus one per extra player within
-  160 px of the camp's centre at that moment, up to 5 (decision 6). Extra enemies rise at the camp
+  160 px of the camp's centre at that moment, up to 5 (decision 6); downed and safe players do not count, while safe players keep their witness/claim eligibility. Extra enemies rise at the camp
   with the existing spawn fade. Enemy HP doesn't scale.
 - **The fall.** When the last enemy dies the room writes a fall record:
   `(world, realm, layer, chunk, epoch, entity, cycle, fell_at)`, with the witnesses (every
@@ -391,8 +391,11 @@ Lamps"). Its first step is this seam, designed beside the fights. No new lanes: 
 - **Places and safe zones are a lookup at a world position,** not an area name. One function
   answers, for `(world, x, y)`: the place id, the plot if any, whether it is safe, its rest rules
   and its epoch; Go and TypeScript share it with vectors. The sim uses it to keep enemies out of
-  safe ground (a leash edge as well as a chunk edge), and the claim and quest checks use it instead
-  of comparing area strings. 0.9 needs only the Wilds' answer; the lookup is the place the town's
+  safe ground (a leash edge as well as a chunk edge). The hub refuses basic swings (melee, tool
+  and bolt) and enemy-affecting workings from a safe reported origin before cooldowns are charged;
+  the client gates them before prediction, cooldowns or mana. Ward-light remains available. Bolts
+  launched from unsafe ground stop on entering safe tiles. Claim and quest checks use the lookup
+  instead of comparing area strings. 0.9 needs only the Wilds' answer; the lookup is the place the town's
   answers go later.
 - **Stable anchor ids.** Camps are named by their generated entity id, and fall records and claims
   key on it, never on a pixel position. Doors, recovery points and other anchors get the same kind

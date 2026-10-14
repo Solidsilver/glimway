@@ -93,7 +93,7 @@ func TestContentReachAcrossSeparateCommonsAndOutdoorFrames(t *testing.T) {
 	if nearTile(&s, "commons", 53, 18, 1) {
 		t.Fatal("reach widened")
 	}
-	if beatRoom("echo:nan", "outdoors", "outdoors:0:1") || !beatRoom("echo:nan", "outdoors", "outdoors:0:-1") {
+	if beatRoom("echo:nan", "outdoors", "outdoors:0:1", &presencePosition{X: 40, Y: 392}) || !beatRoom("echo:nan", "outdoors", "outdoors:0:-1", &presencePosition{X: 40, Y: -8}) {
 		t.Fatal("echo must stand on generated ground")
 	}
 }

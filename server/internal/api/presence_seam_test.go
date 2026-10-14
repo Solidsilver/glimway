@@ -1,6 +1,7 @@
 package api
 
 import (
+	wire "glimway/server/internal/gen/glimway/v2"
 	"glimway/server/internal/location"
 	"testing"
 )
@@ -88,5 +89,97 @@ func TestFixedPresenceRoomsOnGrid(t *testing.T) {
 	}
 	if !positionInsideFrontier("world", 40, 392) || positionInsideFrontier("world", 40, 1200) {
 		t.Fatal("presence grid ignores fixed footprint")
+	}
+}
+
+func TestSafeOriginsRefuseSwingsWithoutCooldown(t *testing.T) {
+	for _, kind := range []wire.FightSwingKind{wire.FightSwingKind_FIGHT_SWING_KIND_SLASH, wire.FightSwingKind_FIGHT_SWING_KIND_BOLT} {
+		for _, facing := range []*wire.FightFacing{{X: 1}, {X: -1}, {Y: 1}, {Y: -1}} {
+			h := newPresenceHub(nil, nil)
+			a := &Server{presence: h}
+			p := unitFightPeer(t, h)
+			if kind == wire.FightSwingKind_FIGHT_SWING_KIND_BOLT {
+				p.identity.Magic.Kit.Class = "mage"
+			}
+			addUnitFightRoom(t, a, p, 1, 0, 40)
+			// Last position is unsafe: refusal must use the reported origin.
+			s := &wire.FightSwing{Kind: kind, X: 40, Y: 391, Facing: facing, SwingCounter: 1}
+			h.mu.Lock()
+			h.handleFightSwing(p, s)
+			h.mu.Unlock()
+			if got := queuedFightResult(t, p); got.RefusedReason != wire.FightRefusedReason_FIGHT_REFUSED_REASON_NOT_ALLOWED {
+				t.Fatal(got)
+			}
+			if !p.lastSwing.IsZero() || h.fightAttack != 0 {
+				t.Fatal("safe refusal consumed attack cooldown or dispatched")
+			}
+			s.Y, s.SwingCounter = 375, 2
+			h.mu.Lock()
+			h.handleFightSwing(p, s)
+			h.mu.Unlock()
+			if p.lastSwing.IsZero() || h.fightAttack != 1 {
+				t.Fatal("unsafe swing refused after safe swing")
+			}
+			if kind == wire.FightSwingKind_FIGHT_SWING_KIND_SLASH {
+				if got := queuedFightResult(t, p); got.RefusedReason != 0 {
+					t.Fatal(got)
+				}
+			}
+		}
+	}
+}
+
+func TestSafeOriginsRefuseEnemyWorkingsBeforeCooldown(t *testing.T) {
+	for _, tc := range []struct{ id, class string }{{"cleave", "warrior"}, {"stand", "warrior"}, {"fingersnap", "mage"}, {"kindle", "mage"}, {"shadowstep", "rogue"}, {"echo", "rogue"}, {"mend", "healer"}, {"ward-light", "healer"}} {
+		t.Run(tc.id, func(t *testing.T) {
+			h := newPresenceHub(nil, nil)
+			p := unitFightPeer(t, h)
+			p.pos = &presencePosition{X: 40, Y: 375}
+			p.identity.Magic.Class, p.identity.Magic.LevelMark = tc.class, 40
+			e := &wire.PresenceAbility{Ability: tc.id, X: 40, Y: 391}
+			if got := h.allowAbility(p, h.now(), e); got != (tc.id == "ward-light") {
+				t.Fatalf("safe %s allowed=%v", tc.id, got)
+			}
+			if tc.id == "ward-light" {
+				return
+			}
+			e.Fight = &wire.FightCast{SwingCounter: 1}
+			h.handleFightCast(p, e)
+			if got := queuedFightResult(t, p); got.RefusedReason != wire.FightRefusedReason_FIGHT_REFUSED_REASON_NOT_ALLOWED {
+				t.Fatal(got)
+			}
+			if h.fightAttack != 0 {
+				t.Fatal("safe cast dispatched")
+			}
+			if !h.abilityReady[p.identity.ID][tc.id].IsZero() {
+				t.Fatal("safe cast consumed cooldown")
+			}
+			e.Y = 375
+			if !h.allowAbility(p, h.now(), e) {
+				t.Fatal("unsafe cast refused after safe cast")
+			}
+		})
+	}
+}
+
+func TestEchoWitnessGateFollowsFeetWithLaggingRoom(t *testing.T) {
+	x := newRig(t)
+	x.hero("olive", "Olive", "p1")
+	_, o := x.ready("olive")
+	x.hero("bob", "Bob", "p1")
+	_, b := x.ready("bob")
+	x.stand(b.AccountID, o.WorldID, "outdoors:0:1", 40, 392)
+	// Returning south with a stale generated room must not record the beat.
+	x.stand(o.AccountID, o.WorldID, "outdoors:0:0", 40, 392)
+	x.api.presenceWitness(o.WorldID, o.AccountID, o.DisplayName, "outdoors", "echo:hollis")
+	if n := count(t, x.db, "SELECT count(*) FROM story_marks WHERE account_id=? AND mark LIKE 'witness:echo-hollis:%'", b.AccountID); n != 0 {
+		t.Fatal("fixed feet recorded echo", n)
+	}
+	// Crossing north with a stale fixed room must still record it, including
+	// the safe bystander on the Commons side of the seam.
+	x.stand(o.AccountID, o.WorldID, "outdoors:0:1", 40, 372)
+	x.api.presenceWitness(o.WorldID, o.AccountID, o.DisplayName, "outdoors", "echo:hollis")
+	if n := count(t, x.db, "SELECT count(*) FROM story_marks WHERE account_id=? AND mark LIKE 'witness:echo-hollis:%'", b.AccountID); n != 1 {
+		t.Fatal("generated feet lost echo", n)
 	}
 }

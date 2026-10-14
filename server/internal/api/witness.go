@@ -6,6 +6,7 @@ import (
 	contract "glimway/server/internal/gen/glimway/v2"
 	"glimway/server/internal/location"
 	"glimway/server/internal/store"
+	"glimway/server/internal/wilds"
 	"strings"
 	"unicode"
 )
@@ -17,12 +18,16 @@ import (
 const WitnessTiles = 10
 
 // beatRoom: where a beat happens, as the doer's saved area and their
-// presence room must both say. The Warden and the shrine lantern stand in
+// physical chunk must both say. The Warden and the shrine lantern stand in
 // Ashwatch Ruin; Echo camps in a Wilds chunk.
-func beatRoom(beat, area, room string) bool {
+func beatRoom(beat, area, room string, pos *presencePosition) bool {
 	if strings.HasPrefix(beat, "echo:") {
-		cx, cy, ok := wildsRoomChunk(room)
-		return area == outdoorsArea && ok && location.SourceOf(cx, cy).Kind == location.SourceGenerated
+		_, _, outdoor := wildsRoomChunk(room)
+		if pos == nil {
+			return false
+		}
+		cx, cy := wilds.ChunkOf(wilds.TileOfPixel(pos.X, pos.Y))
+		return area == outdoorsArea && outdoor && location.SourceOf(cx, cy).Kind == location.SourceGenerated
 	}
 	return area == "ruin" && room == "ruin"
 }
@@ -49,7 +54,7 @@ func (a *Server) presenceWitness(world, doer, name, area, beat string) {
 	h.mu.Lock()
 
 	p := h.peers[doer]
-	if p == nil || p.detached || p.identity.World != world || p.pos == nil || !beatRoom(beat, area, p.area) {
+	if p == nil || p.detached || p.identity.World != world || p.pos == nil || !beatRoom(beat, area, p.area, p.pos) {
 		h.mu.Unlock()
 		return
 	}
