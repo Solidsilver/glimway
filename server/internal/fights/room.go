@@ -272,7 +272,7 @@ func (r *Room) startCamp(c *camp, ms int64) {
 	accounts := map[string]bool{}
 	for _, p := range r.players {
 		c.witnesses[p.ID] = true
-		if !p.Down && math.Hypot(p.X-c.X, p.Y-c.Y) <= CampScaleRadius {
+		if !p.Down && !r.Geometry.IsSafe(p.X, p.Y) && math.Hypot(p.X-c.X, p.Y-c.Y) <= CampScaleRadius {
 			accounts[p.ID] = true
 		}
 	}
@@ -408,11 +408,11 @@ func (r *Room) aim(p *Player, ms int64) (float64, float64, string) {
 	return p.X, p.Y, p.ID
 }
 func (r *Room) aimLeashed(e *enemy, p *Player, ms int64) bool {
-	if p == nil || p.Down {
+	if p == nil || p.Down || r.Geometry.IsSafe(p.X, p.Y) {
 		return false
 	}
 	x, y, _ := r.aim(p, ms)
-	return math.Hypot(x-e.homeX, y-e.homeY) < CampLeash
+	return !r.Geometry.IsSafe(x, y) && math.Hypot(x-e.homeX, y-e.homeY) < CampLeash
 }
 func aggroOf(kind string) float64 {
 	if kind == kindBeetle {

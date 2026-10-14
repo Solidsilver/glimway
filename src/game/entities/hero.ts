@@ -41,7 +41,7 @@ import type { Projectiles } from './projectiles'
 import type { AvatarVisual } from './avatar'
 import type { Effects } from './fx'
 import { MoveFx } from './moves'
-import { pressServerCast, pressServerSwing, sendServerBolt } from './fight-strike'
+import { canStartFight, pressServerCast, pressServerSwing, sendServerBolt } from './fight-strike'
 import { presence } from '../presence'
 import { expose } from '../dev-hooks'
 import { SEAT_CUT, SEATED_MANA_BONUS, manaRegenRate, type SeatPose } from '../seats'
@@ -343,6 +343,7 @@ export class Hero {
    * (a mouse click).
    */
   tryAttack(opts: { tool?: boolean; toward?: { x: number; y: number } } = {}): void {
+    if (!canStartFight(this.deps.world.areaId, this.sprite)) return
     if (this.seat) return // no fighting from a bench; move to stand up
     const kit = this.kit()
     if (this.attackCooldown > 0 || this.deps.transitioning()) return
@@ -436,7 +437,7 @@ export class Hero {
   handleCast(): void {
     const kit = this.kit()
     const sig = kit.signature
-    if (!sig || !this.canCast()) return
+    if (!sig || !this.canCast() || !canStartFight(this.deps.world.areaId, this.sprite, sig.id)) return
     if (!this.pay(sig, this.castCooldown > 0 || this.attackCooldown > kit.basicAttackCooldown)) return
     this.castCooldown = sig.cooldown
     // The server's cast budget counts it (cooldown, mana, a healer's mend).
@@ -532,13 +533,15 @@ export class Hero {
   handleMove(): void {
     const kit = this.kit()
     const m = kit.move
-    if (!m || !this.canCast()) return
+    if (!m || !this.canCast() || !canStartFight(this.deps.world.areaId, this.sprite, m.id)) return
+    const n = m.numbers
+    const feet = { x: this.sprite.x, y: this.sprite.y }
+    // Kindle reports the patch as its origin; gate that point before paying too.
+    const at = m.id === 'kindle' ? this.moves.kindleAt(m) : feet
+    if (!canStartFight(this.deps.world.areaId, at, m.id)) return
     if (!this.pay(m, this.moveCooldown > 0)) return
     this.moveCooldown = m.cooldown
     this.deps.session.link?.noteAbility(m.id)
-    const n = m.numbers
-    const feet = { x: this.sprite.x, y: this.sprite.y }
-    let at = feet
     switch (m.id) {
       case 'stand':
         // Feet planted: a lunge that reaches you stops short and staggers (./enemies.ts).
@@ -548,7 +551,6 @@ export class Hero {
         break
       case 'kindle':
         // No aiming: `reachTiles` ahead in your facing, the same on every device.
-        at = this.moves.kindleAt(m)
         this.field.kindle(at.x, at.y, n.radiusTiles * TILE, n.slow, n.durationSeconds)
         this.moves.local(m, at)
         break

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { create } from '@bufbuild/protobuf'
 import { FightJoinSchema } from '../src/lib/gen/glimway/v2/presence_pb.js'
 import { FightInterp } from '../src/lib/fight-interp.ts'
-import { pressServerCast, pressServerSwing, sendServerBolt } from '../src/game/entities/fight-strike.ts'
+import { canStartFight, pressServerCast, pressServerSwing, sendServerBolt } from '../src/game/entities/fight-strike.ts'
 import { SIGNATURES, cleaveStrike, hitOutcome, mendStrike, shadowstepEnd, slashStrike, snapstrike, strikeHits, type EnemyState } from '../src/game/entities/fight-rules.ts'
 import { fightCrit } from '../src/lib/fight-math.ts'
 import type { FightCastIntent, FightSwingIntent } from '../src/lib/presence.ts'
@@ -134,4 +134,29 @@ test('a cast the socket did not send predicts nothing on server enemies', () => 
   const r = castRig(); r.refuse()
   const cast = pressServerCast('cleave', { x: 100, y: 100 }, { x: 1, y: 0 }, cleaveStrike({ x: 100, y: 100 }, { x: 1, y: 0 }, 12), [r.enemy(130, true)], r.feed)
   assert.deepEqual([cast.sent, cast.fight, cast.hits.length], [false, false, 0])
+})
+
+
+test('safe origins refuse slash, tool, bolts in every direction and enemy workings before prediction or counters', () => {
+  let clock = 1000
+  const fights = new FightInterp(() => clock)
+  fights.join(create(FightJoinSchema, { room: 1, tick: 100, critSeed: 123, roomKey: { world: 'w', realm: 'wilds', epoch: 'still' } }))
+  clock += 100; fights.observe()
+  const feed = { fights, nextSwing: () => { assert.fail('safe attack consumed counter') }, swing: () => { assert.fail('safe attack sent') }, ability: () => { assert.fail('safe cast sent') } }
+  const feet = { x: 40, y: 391 }
+  const enemy = { id: 'wisp', type: 'wisp' as const, x: 40, y: 360, hp: 28, maxHp: 28, state: 'chase' as const, dead: false, fight: { room: 1, enemy: 0 } }
+  for (const facing of [{ x: 1, y: 0 }, { x: -1, y: 0 }, { x: 0, y: 1 }, { x: 0, y: -1 }]) {
+    for (const tool of [false, true]) assert.deepEqual(pressServerSwing(slashStrike(feet, facing, { meleeDamage: 5, critChance: 0 }, tool), [enemy], feed), [])
+    assert.equal(sendServerBolt(feet, facing, feed), false)
+    for (const id of ['cleave', 'fingersnap', 'shadowstep', 'mend', 'stand', 'kindle', 'echo']) {
+      assert.equal(canStartFight('outdoors', feet, id), false)
+      assert.deepEqual(pressServerCast(id, feet, facing, null, [enemy], feed), { sent: false, fight: false, hits: [] })
+    }
+  }
+  // The Hero uses this gate before setting cooldowns, spending mana or spawning
+  // projectiles. It follows feet through the seam, independent of room labels.
+  assert.equal(canStartFight('outdoors', { x: 40, y: 383 }), true)
+  assert.equal(canStartFight('outdoors', { x: 40, y: 384 }), false)
+  assert.equal(canStartFight('outdoors', feet, 'ward-light'), true)
+  assert.equal(canStartFight('ruin', feet), true)
 })

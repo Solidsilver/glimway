@@ -76,7 +76,14 @@ func BoltSamples(clear func(x, y float64) bool, x, y, fx, fy float64) int {
 
 // BoltSamples over joined chunks: a chunk the ground does not hold stops it.
 func (g Ground) BoltSamples(x, y, fx, fy float64) int {
-	return BoltSamples(func(px, py float64) bool { return canStand(g.open, px, py, .1) }, x, y, fx, fy)
+	return BoltSamples(func(px, py float64) bool {
+		for _, c := range g.chunks {
+			if c.IsSafe(px, py) {
+				return false
+			}
+		}
+		return canStand(g.open, px, py, .1)
+	}, x, y, fx, fy)
 }
 
 func boltPoint(sx, sy, fx, fy float64, k int) (float64, float64) {

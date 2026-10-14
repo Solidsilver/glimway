@@ -20,6 +20,7 @@ import (
 	"glimway/server/internal/fights"
 	"glimway/server/internal/frontier"
 	wire "glimway/server/internal/gen/glimway/v2"
+	"glimway/server/internal/location"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/wilds"
 	"google.golang.org/protobuf/proto"
@@ -386,7 +387,7 @@ func (a *Server) scanFightRooms(p *presencePeer, wake bool) (covered, done bool)
 	for dy := -1; dy <= 1; dy++ {
 		for dx := -1; dx <= 1; dx++ {
 			cx, cy := pcx+dx, pcy+dy
-			if !frontier.Inside(world, cx, cy) {
+			if !frontier.Inside(world, cx, cy) || location.SourceOf(cx, cy).Kind != location.SourceGenerated {
 				continue
 			}
 			location := fightLocation{world: world, realm: content.WildsRules.GetRealm(), layer: 0, cx: int32(cx), cy: int32(cy)}
@@ -566,8 +567,8 @@ func (a *Server) wakeFightRooms(p *presencePeer, world string, missing []fightLo
 // camp's projected entity row gives its current cycle; that cycle wakes down
 // when its fall is recorded, or when a 0.8 claim cleared it (no fall, so
 // nothing to claim again), until the row's timer.
-func (a *Server) loadFightChunk(ctx context.Context, tx *sql.Tx, world string, location fightLocation, now time.Time) (fightWake, error) {
-	cx, cy := int(location.cx), int(location.cy)
+func (a *Server) loadFightChunk(ctx context.Context, tx *sql.Tx, world string, loc fightLocation, now time.Time) (fightWake, error) {
+	cx, cy := int(loc.cx), int(loc.cy)
 	ep, err := a.epochAt(ctx, tx, world, cx, cy, now.Unix())
 	if err != nil {
 		return fightWake{}, err
@@ -576,10 +577,10 @@ func (a *Server) loadFightChunk(ctx context.Context, tx *sql.Tx, world string, l
 	if err != nil {
 		return fightWake{}, err
 	}
-	if chunk.Cx != location.cx || chunk.Cy != location.cy {
+	if chunk.Cx != loc.cx || chunk.Cy != loc.cy {
 		return fightWake{}, fmt.Errorf("fight wake: chunk %d,%d answered for %d,%d", chunk.Cx, chunk.Cy, cx, cy)
 	}
-	w := fightWake{location: location, key: fights.Key{World: world, Realm: chunk.Realm, Epoch: ep.Id, Layer: chunk.Layer, CX: chunk.Cx, CY: chunk.Cy}}
+	w := fightWake{location: loc, key: fights.Key{World: world, Realm: chunk.Realm, Epoch: ep.Id, Layer: chunk.Layer, CX: chunk.Cx, CY: chunk.Cy}}
 	if ep.EndsAt != nil {
 		w.endsAt = int64(ep.EndsAt.Value * 1000)
 	}
@@ -601,6 +602,7 @@ func (a *Server) loadFightChunk(ctx context.Context, tx *sql.Tx, world string, l
 		return fightWake{}, err
 	}
 	w.geometry = fights.GeometryAtWake(chunks.NewEffective(chunk, ground))
+	w.geometry.Safe = func(x, y float64) bool { return location.At(location.Outdoors, x, y).Safe }
 	return w, nil
 }
 
@@ -728,7 +730,7 @@ func (h *presenceHub) handleFightSwing(p *presencePeer, s *wire.FightSwing) {
 	// Tool classification is client-trusted under the friends-only model.
 	// Enforcing it later needs an explicit held-mode in FightSwing; pack
 	// ownership alone cannot distinguish a selected weapon from a tool.
-	if p.pos == nil || !outdoor || len(p.fightRooms) == 0 || p.identity.Magic.Down || s.Kind == wire.FightSwingKind_FIGHT_SWING_KIND_BOLT && kit.Class != "mage" || s.Kind == wire.FightSwingKind_FIGHT_SWING_KIND_SLASH && kit.Class == "mage" && !s.Tool {
+	if p.pos == nil || !outdoor || len(p.fightRooms) == 0 || p.identity.Magic.Down || location.At(location.Outdoors, s.X, s.Y).Safe || s.Kind == wire.FightSwingKind_FIGHT_SWING_KIND_BOLT && kit.Class != "mage" || s.Kind == wire.FightSwingKind_FIGHT_SWING_KIND_SLASH && kit.Class == "mage" && !s.Tool {
 		h.refuseFight(p, s.SwingCounter, wire.FightRefusedReason_FIGHT_REFUSED_REASON_NOT_ALLOWED)
 		return
 	}
@@ -774,6 +776,10 @@ func (h *presenceHub) handleFightSwing(p *presencePeer, s *wire.FightSwing) {
 // nothing.
 func (h *presenceHub) handleFightCast(p *presencePeer, event *wire.PresenceAbility) {
 	cast := event.Fight
+	if event.GetAbility() != "ward-light" && location.At(location.Outdoors, event.GetX(), event.GetY()).Safe {
+		h.refuseFight(p, cast.SwingCounter, wire.FightRefusedReason_FIGHT_REFUSED_REASON_NOT_ALLOWED)
+		return
+	}
 	ability, ok := content.AbilityFor(event.GetAbility())
 	_, _, outdoor := wildsRoomChunk(p.area)
 	if !ok || p.pos == nil || !outdoor || p.identity.Magic.Down {

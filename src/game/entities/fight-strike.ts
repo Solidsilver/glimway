@@ -1,6 +1,7 @@
 /** Server fight intent at the press: a basic swing or a cast is selected, stamped,
  * sent and predicted in one go, on the one counter the socket shares (contract 10).
  * Local enemies (curated fights) keep their animation's delayed landing in Hero. */
+import { at as locationAt } from '../../lib/location.ts'
 import { normalFacing } from '../../lib/presence-client.ts'
 import { strikeHits, type Strike, type EnemyState, type StrikeHit } from './fight-rules.ts'
 import type { FightCastIntent, FightTargetRef, FightSwingIntent } from '../../lib/presence.ts'
@@ -18,6 +19,11 @@ interface CastFeed {
 }
 type Point = { x: number; y: number }
 
+/** Gate before prediction, cooldowns or mana: enemy workings start on unsafe ground. */
+export function canStartFight(area: string, feet: Point, ability?: string): boolean {
+  return area !== 'outdoors' || ability === 'ward-light' || !locationAt('outdoors', feet.x, feet.y).safe
+}
+
 /** Whether this screen observes a server room now (a seed, a room, a drawn instant). */
 function observing(feed: { fights: FightInterp } | null): { tick: number; offsetMs: number } | null {
   const seen = feed?.fights.seen()
@@ -26,7 +32,7 @@ function observing(feed: { fights: FightInterp } | null): { tick: number; offset
 
 export function pressServerSwing<E extends EnemyState & { fight?: FightTargetRef }>(strike: Strike, enemies: readonly E[], feed: SwingFeed | null): StrikeHit<E>[] {
   const seen = observing(feed)
-  if (!feed || !seen || !strike.swing) return []
+  if (!feed || !seen || !strike.swing || !canStartFight('outdoors', strike.swing.feet)) return []
   const counter = feed.nextSwing()
   const crit = feed.fights.crit(counter, strike.critChance)
   const normalized = { ...strike, swing: { ...strike.swing, facing: normalFacing(strike.swing.facing) } }
@@ -39,7 +45,7 @@ export function pressServerSwing<E extends EnemyState & { fight?: FightTargetRef
 /** Bolts predict no target at cast time; their local projectile shows impact. */
 export function sendServerBolt(feet: Point, facing: Point, feed: SwingFeed | null): boolean {
   const seen = observing(feed)
-  if (!feed || !seen) return false
+  if (!feed || !seen || !canStartFight('outdoors', feet)) return false
   return feed.swing({ kind: 2, x: feet.x, y: feet.y, facing: normalFacing(facing), tool: false, swingCounter: feed.nextSwing(), seenTick: seen.tick, seenOffsetMs: seen.offsetMs, predicted: [] })
 }
 
@@ -57,6 +63,7 @@ export function pressServerCast<E extends EnemyState & { fight?: FightTargetRef 
   if (!feed) return { sent: false, fight: false, hits: [] }
   const seen = observing(feed)
   if (!seen) return { sent: feed.ability(id, at.x, at.y), fight: false, hits: [] }
+  if (!canStartFight('outdoors', at, id)) return { sent: false, fight: false, hits: [] }
   const counter = feed.nextSwing()
   const crit = strike ? feed.fights.crit(counter, strike.critChance) : false
   const hits = strike ? strikeHits(strike, enemies.filter(e => !!e.fight), crit).slice(0, 16) : []

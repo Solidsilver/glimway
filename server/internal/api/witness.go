@@ -6,6 +6,7 @@ import (
 	contract "glimway/server/internal/gen/glimway/v2"
 	"glimway/server/internal/location"
 	"glimway/server/internal/store"
+	"glimway/server/internal/wilds"
 	"strings"
 	"unicode"
 )
@@ -17,12 +18,16 @@ import (
 const WitnessTiles = 10
 
 // beatRoom: where a beat happens, as the doer's saved area and their
-// presence room must both say. The Warden and the shrine lantern stand in
+// physical chunk must both say. The Warden and the shrine lantern stand in
 // Ashwatch Ruin; Echo camps in a Wilds chunk.
-func beatRoom(beat, area, room string) bool {
+func beatRoom(beat, area, room string, pos *presencePosition) bool {
 	if strings.HasPrefix(beat, "echo:") {
-		cx, cy, ok := wildsRoomChunk(room)
-		return area == outdoorsArea && ok && location.SourceOf(cx, cy).Kind == location.SourceGenerated
+		_, _, outdoor := wildsRoomChunk(room)
+		if pos == nil {
+			return false
+		}
+		cx, cy := wilds.ChunkOf(wilds.TileOfPixel(pos.X, pos.Y))
+		return area == outdoorsArea && outdoor && location.SourceOf(cx, cy).Kind == location.SourceGenerated
 	}
 	return area == "ruin" && room == "ruin"
 }
@@ -37,7 +42,7 @@ func (a *Server) witnessed(s store.Snapshot, beats []string) func() {
 }
 
 // presenceWitness sends the beat to every player connected in the doer's
-// world and room who last stood within WitnessTiles of where the doer last
+// world and space who last stood within WitnessTiles of where the doer last
 // stood. Nothing when the doer isn't standing in that room right now (an
 // offline journey caught up later is no one's moment to see).
 func (a *Server) presenceWitness(world, doer, name, area, beat string) {
@@ -49,18 +54,14 @@ func (a *Server) presenceWitness(world, doer, name, area, beat string) {
 	h.mu.Lock()
 
 	p := h.peers[doer]
-	if p == nil || p.detached || p.identity.World != world || p.pos == nil || !beatRoom(beat, area, p.area) {
+	if p == nil || p.detached || p.identity.World != world || p.pos == nil || !beatRoom(beat, area, p.area, p.pos) {
 		h.mu.Unlock()
 		return
 	}
 	radius := float64(WitnessTiles * wildsTileSize)
 	var witnesses []*presencePeer
 	for _, q := range h.peers {
-		if q == p || q.detached || q.identity.World != world || !sharedRoom(q.area, p.area) || q.pos == nil || q.queue == nil {
-			continue
-		}
-		dx, dy := q.pos.X-p.pos.X, q.pos.Y-p.pos.Y
-		if dx*dx+dy*dy <= radius*radius {
+		if q != p && q.queue != nil && peersTogether(p, q, world, radius) {
 			witnesses = append(witnesses, q)
 		}
 	}
