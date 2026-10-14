@@ -48,10 +48,7 @@ func (a *Server) commons(w http.ResponseWriter, r *http.Request) error {
 	if err = settleHomes(ctx, tx, s.WorldID, now); err != nil {
 		return err
 	}
-	n, err := gateCount(ctx, tx, s.WorldID)
-	if err != nil {
-		return err
-	}
+	n := gateCount()
 	mineID, _, err := memberOf(ctx, tx, s.AccountID)
 	if err != nil {
 		return err

@@ -287,6 +287,57 @@ function provisionalCommons(): CommonsWorld {
   }
 }
 
+/** Per built map: which tiles join an arrival anchor (row-major, 1 = joined). */
+const joined = new WeakMap<CommonsWorld, Uint8Array>()
+
+function joinedGround(world: CommonsWorld): Uint8Array {
+  const known = joined.get(world)
+  if (known) return known
+  const { width: w, height: h, solid } = world
+  const out = new Uint8Array(w * h)
+  // The arrivals: from Hearthwick, from the Wilds, out of the yard and back off every gate.
+  const queue = PLACE.anchors.map((a) => [a.tx, a.ty] as const).filter(([x, y]) => x >= 0 && y >= 0 && x < w && y < h && !solid[y]![x])
+  for (const [x, y] of queue) out[y * w + x] = 1
+  for (let i = 0; i < queue.length; i++) {
+    const [x, y] = queue[i]!
+    for (const [nx, ny] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]] as const) {
+      if (nx < 0 || ny < 0 || nx >= w || ny >= h || solid[ny]![nx] || out[ny * w + nx]) continue
+      out[ny * w + nx] = 1
+      queue.push([nx, ny])
+    }
+  }
+  joined.set(world, out)
+  return out
+}
+
+/**
+ * Where to stand on the served Commons for a tile: the tile itself when it
+ * joins an arrival anchor (content/places.json) on open ground, else the
+ * nearest tile that does. Open is not enough: meadow stands in until the
+ * chunks come, so a hero can walk into what turns out to be an open pocket
+ * walled in by the woods (and a save can name one). Meadow is all open:
+ * any tile there stands.
+ */
+export function commonsStand(world: CommonsWorld, tx: number, ty: number): { tx: number; ty: number } {
+  if (!world.served) return { tx, ty }
+  const reach = joinedGround(world)
+  const w = world.width
+  if (tx >= 0 && ty >= 0 && tx < w && ty < world.height && reach[ty * w + tx]) return { tx, ty }
+  let best = { ...COMMONS_FROM_VILLAGE }
+  let bestD = Infinity
+  for (let i = 0; i < reach.length; i++) {
+    if (!reach[i]) continue
+    const x = i % w
+    const y = (i - x) / w
+    const d = (x - tx) ** 2 + (y - ty) ** 2
+    if (d < bestD) {
+      bestD = d
+      best = { tx: x, ty: y }
+    }
+  }
+  return best
+}
+
 /** The served chunks, once all are here (this revision's). */
 let served: WorldChunk[] | null = null
 let loading: Promise<void> | null = null

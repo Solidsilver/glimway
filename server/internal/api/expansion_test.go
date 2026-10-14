@@ -10,6 +10,7 @@ import (
 	"glimway/server/internal/store"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -165,23 +166,39 @@ func TestHomesteadClaimAccessAndCommonsRoster(t *testing.T) {
 	}
 }
 
-// A home claimed past the capacity before the freeze keeps its gate on the
-// lane; a new deed there is still refused.
+// The lane is the Commons' frozen capacity, whatever the database holds: a
+// gate past it can't be claimed or reclaimed, and a home sitting there keeps
+// the server from starting (CheckHomesteadGates) rather than lose its gate.
 func TestHomesteadPastTheCommonsCapacity(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	if _, err := x.db.DB.Exec("INSERT INTO homesteads(id,world_id,gate,claimed_at) VALUES('old-home',?,9,0)", s.WorldID); err != nil {
-		t.Fatal(err)
-	}
-	if lane := x.exp("GET", "/api/commons", nil, c, 200); lane.GateCount != 10 || lane.Gates[9].HomeID == nil || *lane.Gates[9].HomeID != "old-home" {
-		t.Fatal("the lane past the capacity", lane.GateCount)
-	}
-	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
-	if v := x.exp("POST", "/api/homestead/claim", body(s, "past", map[string]any{"gate": 8}), c, 404); v.Error.Code != "invalid-gate" {
-		t.Fatal("a new deed past the capacity", v.Error.Code)
+	ctx := context.Background()
+	if err := CheckHomesteadGates(ctx, x.db.DB); err != nil {
+		t.Fatal("a database within the capacity", err)
 	}
 	x.claimGate(c, &s, 7)
+	if err := CheckHomesteadGates(ctx, x.db.DB); err != nil {
+		t.Fatal("a home at the last gate", err)
+	}
+	if _, err := x.db.DB.Exec("INSERT INTO homesteads(id,world_id,gate,claimed_at,vacant_since) VALUES('old-home',?,9,0,0)", s.WorldID); err != nil {
+		t.Fatal(err)
+	}
+	err := CheckHomesteadGates(ctx, x.db.DB)
+	if err == nil || !strings.Contains(err.Error(), "homestead old-home") || !strings.Contains(err.Error(), "gate 9") || !strings.Contains(err.Error(), s.WorldID) {
+		t.Fatal("startup refuses a home past the capacity", err)
+	}
+	if lane := x.exp("GET", "/api/commons", nil, c, 200); lane.GateCount != 8 || len(lane.Gates) != 8 {
+		t.Fatal("the lane is the capacity", lane.GateCount)
+	}
+	bc, b := x.member("bob", s.WorldID)
+	for _, gate := range []int{8, 9} {
+		if v := x.exp("POST", "/api/homestead/claim", body(b, fmt.Sprint("past-", gate), map[string]any{"gate": gate}), bc, 404); v.Error.Code != "invalid-gate" {
+			t.Fatal("a claim past the capacity", gate, v.Error.Code)
+		}
+	}
+	x.exp("GET", "/api/homestead/gate/9", nil, bc, 404)
 }
+
 func TestHomesteadTransactionsIdempotencyAndPlacement(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")

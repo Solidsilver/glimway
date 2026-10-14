@@ -6,7 +6,7 @@ import { decodeChunk, fixedEpoch } from '../src/lib/api/chunks.ts';
 import { WorldChunkSchema, type WorldChunk } from '../src/lib/gen/glimway/v1/wilds_pb.js';
 import { PLACES } from '../src/lib/places.ts';
 import { TERRAIN } from '../src/lib/tile.ts';
-import { COMMONS_EPOCH, COMMONS_FROM_VILLAGE, COMMONS_FROM_WILDS, commonsServed, forgetCommons, prepareCommons, servedCommons } from '../src/game/commons-served.ts';
+import { COMMONS_EPOCH, COMMONS_FROM_VILLAGE, COMMONS_FROM_WILDS, commonsServed, commonsStand, forgetCommons, prepareCommons, servedCommons } from '../src/game/commons-served.ts';
 import { chunkCacheKey, forgetChunks, loadFixedChunk } from '../src/game/wilds/chunks.ts';
 import { buildArea } from '../src/game/worlds.ts';
 import { EV, bus } from '../src/game/events.ts';
@@ -147,4 +147,54 @@ test('the Commons area is meadow until its chunks come, then the served map (and
     forgetCommons();
     forgetChunks();
   }
+});
+
+// Review P1 (S2): meadow stands in before the chunks come, so a hero can walk
+// into what the served map walls in: an open pocket in the woods. Open is not
+// enough; the hero stands only where an arrival anchor's ground reaches.
+test('on the served Commons, a tile the arrivals do not reach stands at the nearest one that they do', () => {
+  const world = servedCommonsFixture({ festival: null, wick: 'Quiet' });
+  const { width: w, height: h, solid } = world;
+  // Flood from every anchor, independently of the adapter.
+  const f = PLACES.fixed.find((f) => f.id === 'commons')!;
+  const reach = new Set<string>();
+  const queue = f.anchors.map((a) => [a.tx, a.ty]).filter(([x, y]) => !solid[y]![x]);
+  for (const [x, y] of queue) reach.add(`${x},${y}`);
+  while (queue.length) {
+    const [x, y] = queue.shift()!;
+    for (const [nx, ny] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]) {
+      if (nx < 0 || ny < 0 || nx >= w || ny >= h || solid[ny]![nx] || reach.has(`${nx},${ny}`)) continue;
+      reach.add(`${nx},${ny}`);
+      queue.push([nx, ny]);
+    }
+  }
+  // The review's pocket: open, walled in on every side.
+  assert.equal(solid[2]![3], false);
+  assert.equal(reach.has('3,2'), false);
+  const pockets: [number, number][] = [];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (!solid[y]![x] && !reach.has(`${x},${y}`)) pockets.push([x, y]);
+  for (const [x, y] of pockets) {
+    const s = commonsStand(world, x, y);
+    assert.ok(reach.has(`${s.tx},${s.ty}`), `${x},${y} stands on reached ground, not ${s.tx},${s.ty}`);
+    // The nearest such tile: none reached is closer.
+    const d = (s.tx - x) ** 2 + (s.ty - y) ** 2;
+    for (const k of reach) {
+      const [rx, ry] = k.split(',').map(Number);
+      assert.ok((rx! - x) ** 2 + (ry! - y) ** 2 >= d, `${x},${y}: ${k} is nearer than ${s.tx},${s.ty}`);
+    }
+  }
+  // Reached ground stands where it is; the arrivals are on it.
+  for (const k of reach) {
+    const [x, y] = k.split(',').map(Number);
+    assert.deepEqual(commonsStand(world, x!, y!), { tx: x, ty: y });
+  }
+  for (const a of [COMMONS_FROM_VILLAGE, COMMONS_FROM_WILDS, ...world.gates.map((g) => g.entry)]) assert.ok(reach.has(`${a.tx},${a.ty}`));
+  // A solid tile or one off the map stands on reached ground too.
+  assert.ok(reach.has(Object.values(commonsStand(world, 0, 0)).join(',')));
+  assert.ok(reach.has(Object.values(commonsStand(world, -5, 100)).join(',')));
+  // The meadow is all open: anywhere on it stands.
+  forgetCommons();
+  const meadow = servedCommons();
+  assert.equal(meadow.served, false);
+  assert.deepEqual(commonsStand(meadow, 3, 2), { tx: 3, ty: 2 });
 });

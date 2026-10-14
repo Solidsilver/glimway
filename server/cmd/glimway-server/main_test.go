@@ -121,3 +121,28 @@ func TestEnvFallsBackToOldName(t *testing.T) {
 		t.Fatalf("an empty GLIMWAY_TRUSTED_PROXIES must trust none, got %q %v", v, ok)
 	}
 }
+
+// A home past the Commons' gates has no gate on the lane: the server refuses
+// to start, naming it, rather than serve a world where it can't be reached.
+func TestServeRefusesAHomePastTheCommons(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "game.sqlite")
+	s, err := store.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.DB.Exec("INSERT INTO worlds(id,owner_id,seed,created_at) VALUES('w1','bob','s',1)"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.DB.Exec("INSERT INTO homesteads(id,world_id,gate,claimed_at) VALUES('old-home','w1',8,0)"); err != nil {
+		t.Fatal(err)
+	}
+	s.Close()
+	// Admin commands still run (a backup before the fix, say).
+	if err = run([]string{"-db", path, "backup", filepath.Join(t.TempDir(), "backup.sqlite")}); err != nil {
+		t.Fatal("backup", err)
+	}
+	err = run([]string{"-db", path, "-listen", "127.0.0.1:0"})
+	if err == nil || !strings.Contains(err.Error(), "homestead old-home (world w1) is at gate 8") {
+		t.Fatal("serving past the capacity", err)
+	}
+}
