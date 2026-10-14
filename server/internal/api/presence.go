@@ -85,8 +85,12 @@ type presencePeer struct {
 	detached               bool
 	// clientJoined: this socket's client has named an area (its first Join).
 	// Rooms covered before that were announced before it could take them.
-	clientJoined          bool
-	grace                 *time.Timer
+	clientJoined bool
+	grace        *time.Timer
+	// pendingJoin: a join that came inside the cooldown, made when it ends
+	// (joinTimer); empty when none waits.
+	pendingJoin           string
+	joinTimer             *time.Timer
 	fightToken            string
 	critSeed, lastCounter uint32
 	hasCounter            bool

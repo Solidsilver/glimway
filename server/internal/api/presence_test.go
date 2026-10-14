@@ -481,6 +481,48 @@ func TestPresenceRateLimitsAndEmotes(t *testing.T) {
 	a.send(map[string]any{"type": "emote", "id": "unknown"})
 	a.closeStatus(websocket.StatusPolicyViolation)
 }
+
+// A join inside the cooldown is made when the cooldown ends, the latest one
+// winning, never dropped. The client paces its joins by its own clock, so a
+// join sent as the cooldown ends can land a moment inside it: dropped, it left
+// a player in the village's room while their screen was in Pell's office, and
+// nobody there saw them (the joint-deed e2e flake on S2+S3).
+func TestPresenceJoinInsideTheCooldownWaitsForItsEnd(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	bc, b := x.member("bob", s.WorldID)
+	cfg := presenceTestConfig()
+	cfg.JoinCooldownMs = 300
+	ts := startPresence(t, x, cfg)
+	a := wsConnect(t, ts, c, s.Lease)
+	a.join("in:commons:yard:deeds")
+	bob := wsConnect(t, ts, bc, b.Lease)
+	bob.join("village")
+	joined := time.Now()
+	// Straight on, inside the cooldown: the Commons, then the deeds room.
+	bob.send(map[string]any{"type": "join", "area": "commons"})
+	bob.send(map[string]any{"type": "join", "area": "in:commons:yard:deeds"})
+	room := bob.expect("room")
+	if room.Area != "in:commons:yard:deeds" || len(room.Players) != 1 || room.Players[0].AccountID != x.account("alice") {
+		t.Fatal("the deferred join's room", room.Raw)
+	}
+	if waited := time.Since(joined); waited < 250*time.Millisecond {
+		t.Fatal("joined inside the cooldown", waited)
+	}
+	if e := a.expect("join"); e.Player.AccountID != x.account("bob") {
+		t.Fatal("alice sees bob arrive", e.Raw)
+	}
+	// Only the latest: no room for the Commons, before or after.
+	bob.none()
+	time.Sleep(350 * time.Millisecond)
+	bob.none()
+	a.none()
+	// After the cooldown a join is made at once, as before.
+	bob.send(map[string]any{"type": "join", "area": "village"})
+	bob.expect("room")
+	a.expect("leave")
+}
+
 func (w *wsClient) expectAny() wsEvent {
 	w.t.Helper()
 	select {

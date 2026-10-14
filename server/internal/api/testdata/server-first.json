@@ -11160,7 +11160,7 @@
     "name": "glimway.v1.WorldChunk",
     "case": "valid-fixed",
     "json": {
-      "epochId": "fixed:commons@1",
+      "epochId": "fixed:commons@2",
       "realm": "hearthwick",
       "layer": 0,
       "cx": 0,
@@ -11187,7 +11187,7 @@
       "land": "",
       "places": [],
       "source": "CHUNK_SOURCE_FIXED",
-      "layoutRevision": 1,
+      "layoutRevision": 2,
       "objects": [
         {
           "id": "tree:32,3",
@@ -15695,7 +15695,7 @@
           "art": null,
           "prop": null,
           "exit": {
-            "to": "wilds",
+            "to": "outdoors",
             "entryTx": 2,
             "entryTy": 22,
             "unlabelled": false

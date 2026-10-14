@@ -302,55 +302,20 @@ func (a *Server) presenceReader(p *presencePeer) {
 				h.mu.Unlock()
 				return
 			}
-			if !p.lastJoin.IsZero() && now.Sub(p.lastJoin) < millis(int(h.config.GetJoinCooldownMs())) {
+			// Inside the cooldown the join waits for its end (the latest
+			// wins), never dropped: the client paces its joins by its own
+			// clock, so one sent as the cooldown ends can arrive a moment
+			// inside it, and a dropped join leaves the player in the last
+			// room while their screen is in the next.
+			if wait := millis(int(h.config.GetJoinCooldownMs())) - now.Sub(p.lastJoin); !p.lastJoin.IsZero() && wait > 0 {
+				a.deferPresenceJoin(p, event.Join.Area, wait)
 				h.mu.Unlock()
 				continue
 			}
-			p.lastJoin = now
-			// The socket's first join: the rooms it covers already (inherited
-			// at registration from a socket in its leave grace) were announced
-			// before the client named its area, so they are announced again.
-			// A later join (a chunk crossing) keeps its rooms as they are.
-			first := !p.clientJoined
-			p.clientJoined = true
-			if p.area == event.Join.Area {
-				h.room(p)
-				if first {
-					h.rejoinFights(p)
-				}
-				h.mu.Unlock()
-				continue
-			}
-			n := 0
-			for _, other := range h.worlds[p.identity.World] {
-				if other != p && other.area == event.Join.Area {
-					n++
-				}
-			}
-			if n >= int(h.config.GetMaxRoomPlayers()) {
-				p.stop(websocket.StatusTryAgainLater, "room-full")
+			if !a.presenceJoin(p, event.Join.Area, now) {
 				h.mu.Unlock()
 				return
 			}
-			// Walking from one Wilds chunk into the next, only the peers
-			// that drop out of the 3x3 around the player see them leave.
-			if old := p.area; old != "" {
-				b, err := encodePresence(&contract.PresenceLeave{AccountId: p.identity.ID})
-				h.broadcastWhere(p, b, err, func(q *presencePeer) bool { return sharedRoom(q.area, old) && !sharedRoom(q.area, event.Join.Area) })
-			}
-			_, _, wasWilds := wildsRoomChunk(p.area)
-			_, _, isWilds := wildsRoomChunk(event.Join.Area)
-			if !wasWilds || !isWilds {
-				h.leaveFights(p, true)
-				p.pos = nil
-			}
-			p.area = event.Join.Area
-			h.retainFightCoverage(p)
-			if first {
-				h.rejoinFights(p)
-			}
-			h.room(p)
-			h.broadcast(p, &contract.PresenceJoin{Area: p.area, Player: p.player()})
 		case *contract.PresenceMessage_Pos:
 			position := event.Pos
 			if p.area == "" || position.X == nil || position.Y == nil || position.Facing == nil || position.Facing.X == nil || position.Facing.Y == nil || position.Moving == nil {
@@ -433,6 +398,82 @@ func (a *Server) presenceReader(p *presencePeer) {
 			a.syncFightPresence(p)
 		}
 	}
+}
+
+// presenceJoin moves p into the room `area` (h.mu held). False: the room is
+// full and p is stopped.
+func (a *Server) presenceJoin(p *presencePeer, area string, now time.Time) bool {
+	h := a.presence
+	p.lastJoin = now
+	p.pendingJoin = ""
+	// The socket's first join: the rooms it covers already (inherited
+	// at registration from a socket in its leave grace) were announced
+	// before the client named its area, so they are announced again.
+	// A later join (a chunk crossing) keeps its rooms as they are.
+	first := !p.clientJoined
+	p.clientJoined = true
+	if p.area == area {
+		h.room(p)
+		if first {
+			h.rejoinFights(p)
+		}
+		return true
+	}
+	n := 0
+	for _, other := range h.worlds[p.identity.World] {
+		if other != p && other.area == area {
+			n++
+		}
+	}
+	if n >= int(h.config.GetMaxRoomPlayers()) {
+		p.stop(websocket.StatusTryAgainLater, "room-full")
+		return false
+	}
+	// Walking from one Wilds chunk into the next, only the peers
+	// that drop out of the 3x3 around the player see them leave.
+	if old := p.area; old != "" {
+		b, err := encodePresence(&contract.PresenceLeave{AccountId: p.identity.ID})
+		h.broadcastWhere(p, b, err, func(q *presencePeer) bool { return sharedRoom(q.area, old) && !sharedRoom(q.area, area) })
+	}
+	_, _, wasWilds := wildsRoomChunk(p.area)
+	_, _, isWilds := wildsRoomChunk(area)
+	if !wasWilds || !isWilds {
+		h.leaveFights(p, true)
+		p.pos = nil
+	}
+	p.area = area
+	h.retainFightCoverage(p)
+	if first {
+		h.rejoinFights(p)
+	}
+	h.room(p)
+	h.broadcast(p, &contract.PresenceJoin{Area: p.area, Player: p.player()})
+	return true
+}
+
+// deferPresenceJoin holds a join that came inside the cooldown and makes it
+// when the cooldown ends (h.mu held). A later one replaces it; a join made
+// meanwhile, or the socket going, cancels it.
+func (a *Server) deferPresenceJoin(p *presencePeer, area string, wait time.Duration) {
+	p.pendingJoin = area
+	if p.joinTimer != nil {
+		return
+	}
+	h := a.presence
+	p.joinTimer = time.AfterFunc(wait, func() {
+		h.mu.Lock()
+		p.joinTimer = nil
+		area := p.pendingJoin
+		if area == "" || h.peers[p.identity.ID] != p || p.ctx.Err() != nil {
+			h.mu.Unlock()
+			return
+		}
+		joined := a.presenceJoin(p, area, time.Now())
+		h.mu.Unlock()
+		if joined {
+			a.syncFightPresence(p)
+		}
+	})
 }
 
 func finitePresence(n float64) bool { return !math.IsNaN(n) && !math.IsInf(n, 0) }

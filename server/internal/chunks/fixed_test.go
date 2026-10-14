@@ -23,6 +23,7 @@ import (
 // places.json), then add the new revision's sum here.
 var fixedGolden = map[string]string{
 	"fixed:commons@1": "31bb7cef34f631043f12fb88bee3a523bf875837c9c6d1add88ea5e7f66daf76",
+	"fixed:commons@2": "01b51ecf0b5618817193a9be2a6689c2f79780b38ca539046b3d419668caf728", // S3: the arch leads outdoors
 }
 
 func commonsPlace(t *testing.T) *content.FixedPlace {
@@ -128,8 +129,8 @@ func TestValidateFixedChunks(t *testing.T) {
 	}
 	for name, edit := range map[string]func(c *contract.WorldChunk){
 		"unknown layout":     func(c *contract.WorldChunk) { c.EpochId = "fixed:village@1" },
-		"another revision":   func(c *contract.WorldChunk) { c.EpochId, c.LayoutRevision = "fixed:commons@2", 2 },
-		"revision mismatch":  func(c *contract.WorldChunk) { c.LayoutRevision = 2 },
+		"another revision":   func(c *contract.WorldChunk) { c.EpochId, c.LayoutRevision = "fixed:commons@1", 1 },
+		"revision mismatch":  func(c *contract.WorldChunk) { c.LayoutRevision = 1 },
 		"outside the place":  func(c *contract.WorldChunk) { c.Cx = 2 },
 		"not a pseudo-epoch": func(c *contract.WorldChunk) { c.EpochId = "still-epoch" },
 		"generator version":  func(c *contract.WorldChunk) { c.GeneratorVersion = 3 },
@@ -146,7 +147,7 @@ func TestValidateFixedChunks(t *testing.T) {
 		"object id twice":   func(c *contract.WorldChunk) { c.Objects[1].Id = c.Objects[0].Id },
 		"object without id": func(c *contract.WorldChunk) { c.Objects[0].Id = "" },
 	} {
-		c := proto.Clone(Fixed(FixedEpoch("commons", 1), 0, 1)).(*contract.WorldChunk)
+		c := proto.Clone(Fixed(FixedEpoch("commons", 2), 0, 1)).(*contract.WorldChunk)
 		edit(c)
 		if Validate(c) == nil {
 			t.Errorf("%s: accepted", name)
@@ -323,7 +324,7 @@ func TestServedCommonsEdgesAndGates(t *testing.T) {
 		}
 	}
 	gates := content.GateCapacity(f)
-	if len(exits) != gates+2 || exits["exit:village"] != "village" || exits["exit:arch"] != "wilds" {
+	if len(exits) != gates+2 || exits["exit:village"] != "village" || exits["exit:arch"] != "outdoors" {
 		t.Fatalf("ways out: %v", exits)
 	}
 	for g := range gates {
