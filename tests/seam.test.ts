@@ -302,6 +302,31 @@ test('the lane’s gate signs, shelves and hame come and go with the chunk that 
   assert.deepEqual(count(), [0, 0]);
 });
 
+test('a stocked gate shelf detaches after Phaser has destroyed the static group', () => {
+  serveFixtureCommons();
+  const scene = new FakeScene();
+  const lane = commonsLane()!;
+  const slot = lane.gates[0]!;
+  const home = {
+    scene,
+    deps: { reducedMotion: false, solidGroup: scene.solids, session: { state: { flags: [] } } },
+    commons: lane,
+    homes: { gateInfo: () => ({ shelf: true, shelfStocked: true, homeId: 'fixture', names: [] }), status: 'guest', myGate: null },
+  };
+  const art = new HomesteadArt(home as never);
+  for (const draw of art.attachChunk(slot.chunk)) draw();
+  assert.ok(scene.solids.members.size > 0, 'the shelf has collision');
+  const bodies = [...scene.solids.members];
+  // Phaser Group.destroy clears membership without destroying its children.
+  scene.solids.members.clear();
+  Object.assign(scene.solids, { children: undefined, remove: () => assert.fail('group is already destroyed') });
+  art.detachChunk(slot.chunk);
+  art.detachChunk(slot.chunk);
+  assert.ok(bodies.every((o) => !o.alive), 'remaining shelf bodies are destroyed once');
+  assert.equal(scene.children.list.filter((o) => o.alive).length, 0);
+  assert.equal(scene.tweens.live.length, 0);
+});
+
 test('fixed ground answers the open map’s lookups; a pocket stands at the nearest ground the arrivals reach', () => {
   forgetFixed();
   assert.equal(fixedSolidAt(2, 26), true, 'solid while the chunks aren’t here');
@@ -580,7 +605,7 @@ test('window teardown drains a row one chunk per frame even while standing still
   const dropped: string[] = [];
   const chunks = (keys: string[]) => new Map(keys.map((key) => [key, { destroy: () => dropped.push(key) }]));
   Object.assign(w, { deps: { hero: () => ({ x: 40, y: 428 }) }, plan: { attach: [], drift: [] }, heroTile: '', drops: 0,
-    attached: chunks(['8,8', '9,8', '10,8']), fixed: chunks(['8,9', '9,9', '10,9']), drifts: new Map() });
+    paints: new Map(), attached: chunks(['8,8', '9,8', '10,8']), fixed: chunks(['8,9', '9,9', '10,9']), drifts: new Map() });
   for (let i = 0; i < 6; i++) {
     w['dropBehind']();
     assert.equal(dropped.length, i + 1, 'one chunk per call on the same tile');
@@ -588,6 +613,24 @@ test('window teardown drains a row one chunk per frame even while standing still
   w['dropBehind']();
   assert.equal(w['drops'], 6);
   assert.equal(w['attached'].size + w['fixed'].size, 0);
+});
+
+test('draining releases generated and drift textures outside the fetched ring on the same tile', () => {
+  const w = Object.create(WildsWindow.prototype) as InstanceType<typeof WildsWindow>;
+  const removed: string[] = [];
+  const chunk = { destroy() {} };
+  Object.assign(w, { deps: { hero: () => ({ x: 40, y: 428 }), scene: { textures: {
+    exists: () => true, remove: (key: string) => removed.push(key),
+  } } }, plan: { attach: [], drift: [], fetch: ['9,8'] }, heroTile: '', drops: 0,
+    attached: new Map([['8,8', chunk], ['9,8', chunk]]), fixed: new Map(), drifts: new Map([['10,8', chunk]]),
+    paints: new Map(['8,8', '9,8', '10,8'].map((key) => [key, { key: `texture:${key}`, sig: '' }])) });
+  w['dropBehind']();
+  assert.deepEqual(removed, ['texture:8,8']);
+  w['dropBehind']();
+  assert.deepEqual(removed, ['texture:8,8'], 'a fetched chunk keeps its cached paint');
+  w['dropBehind']();
+  assert.deepEqual(removed, ['texture:8,8', 'texture:10,8']);
+  assert.deepEqual([...w['paints'].keys()], ['9,8']);
 });
 
 test('fixed exit signs yield between exits when a label uses the slice', (t) => {

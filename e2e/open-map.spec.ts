@@ -483,7 +483,7 @@ test('the Commons’ fixed chunks walked in and out leave nothing behind either'
   expect(before.drawn['Image:fingersnap-foreground'] ?? 0, 'the Commons’ canopies are drawn').toBeGreaterThan(500)
   for (let i = 0; i < 4; i++) {
     await standForChurn(page, b)
-    expect((await wildsWindow(page))!.fixed, 'the Commons detached').toEqual([])
+    await expect.poll(async () => (await wildsWindow(page))!.fixed, { timeout: 5_000, message: 'the Commons detached' }).toEqual([])
     await standForChurn(page, a)
   }
   await campSpritesReady(page)

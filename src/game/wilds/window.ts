@@ -180,6 +180,7 @@ export class WildsWindow {
     for (const [key, c] of this.attached) if (!plan.attach.includes(key) && !this.kept(key)) {
       c.destroy()
       this.attached.delete(key)
+      this.dropPaint(key)
       this.drops++
       // A row can take a long frame to tear down on phones. Drain one
       // chunk per frame, even when the hero has stopped on this tile.
@@ -198,9 +199,18 @@ export class WildsWindow {
     for (const [key, d] of this.drifts) if (!plan.drift.includes(key) && !this.kept(key)) {
       d.destroy()
       this.drifts.delete(key)
+      this.dropPaint(key)
       this.heroTile = ''
       return
     }
+  }
+
+  /** A drained chunk no longer needs its texture unless it is still in the fetched ring. */
+  private dropPaint(key: string): void {
+    const p = this.paints.get(key)
+    if (!p || this.plan?.fetch.includes(key) || this.plan?.drift.includes(key)) return
+    if (this.deps.scene.textures.exists(p.key)) this.deps.scene.textures.remove(p.key)
+    this.paints.delete(key)
   }
 
   /** Resolves once every chunk of the 3×3 inside the frontier is attached (the scene's first frame waits for it). */
