@@ -37,7 +37,7 @@ func (a *Server) witnessed(s store.Snapshot, beats []string) func() {
 }
 
 // presenceWitness sends the beat to every player connected in the doer's
-// world and room who last stood within WitnessTiles of where the doer last
+// world and space who last stood within WitnessTiles of where the doer last
 // stood. Nothing when the doer isn't standing in that room right now (an
 // offline journey caught up later is no one's moment to see).
 func (a *Server) presenceWitness(world, doer, name, area, beat string) {
@@ -56,11 +56,7 @@ func (a *Server) presenceWitness(world, doer, name, area, beat string) {
 	radius := float64(WitnessTiles * wildsTileSize)
 	var witnesses []*presencePeer
 	for _, q := range h.peers {
-		if q == p || q.detached || q.identity.World != world || !sharedRoom(q.area, p.area) || q.pos == nil || q.queue == nil {
-			continue
-		}
-		dx, dy := q.pos.X-p.pos.X, q.pos.Y-p.pos.Y
-		if dx*dx+dy*dy <= radius*radius {
+		if q != p && q.queue != nil && peersTogether(p, q, world, radius) {
 			witnesses = append(witnesses, q)
 		}
 	}

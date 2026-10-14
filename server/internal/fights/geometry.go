@@ -30,8 +30,13 @@ func GeometryAtWake(e chunks.Effective) Geometry {
 	return g
 }
 
+// IsSafe asks the physical place lookup, including beyond this chunk.
+func (g Geometry) IsSafe(x, y float64) bool {
+	return g.Safe != nil && g.Safe(x, y)
+}
+
 func (g Geometry) CanStand(x, y, radius float64) bool {
-	if g.Safe != nil && g.Safe(x, y) {
+	if g.IsSafe(x, y) {
 		return false
 	}
 	return canStand(g.open, x, y, radius)
@@ -148,6 +153,9 @@ func (g Geometry) MoveBlocked(x, y, dx, dy float64) (float64, float64, bool) {
 // A bolt can start in a neighbouring chunk. Only this room's geometry is
 // authoritative here; chunk edges leash creatures, not projectiles.
 func (g Geometry) CanBoltFly(x, y float64) bool {
+	if g.IsSafe(x, y) {
+		return false
+	}
 	size := float64(g.Size * TilePixels)
 	ox, oy := float64(g.CX*g.Size*TilePixels), float64(g.CY*g.Size*TilePixels)
 	if x < ox || y < oy || x >= ox+size || y >= oy+size {

@@ -126,16 +126,20 @@ func TestWitnessEchoAndOnlyLiveMoments(t *testing.T) {
 	x.hero("bob", "Bob", "p1")
 	bc, b := x.ready("bob")
 	bob := wsConnect(t, ts, bc, b.Lease)
-	bob.join("outdoors:0:-1")
-	bob.send(positionMessage(100))
+	bob.join("outdoors:0:1")
+	bp := positionMessage(40)
+	bp["y"] = 392.0
+	bob.send(bp)
 
 	// No live doer: the after-commit relay records no witness.
 	x.api.presenceWitness(o.WorldID, o.AccountID, o.DisplayName, "outdoors", "echo:hollis")
 	bob.none()
 	olive := wsConnect(t, ts, oc, o.Lease)
-	olive.join("outdoors:0:-1")
+	olive.join("outdoors:0:0")
 	bob.expect("join")
-	olive.send(positionMessage(110))
+	op := positionMessage(40)
+	op["y"] = 376.0
+	olive.send(op)
 	bob.expect("pos")
 	x.api.presenceWitness(o.WorldID, o.AccountID, o.DisplayName, "outdoors", "echo:nan")
 	if m := bob.witness(); m.Beat != "echo:nan" || m.AccountID != o.AccountID {

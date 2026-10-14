@@ -408,6 +408,10 @@
       "paths": [
         "server/internal/fights/**",
         "server/internal/api/presence_fights*.go",
+        "server/internal/api/presence_seam_test.go",
+        "server/internal/api/presence_socket.go",
+        "server/internal/api/item_presence.go",
+        "server/internal/api/witness*.go",
         "server/internal/api/wilds*.go",
         "server/internal/api/fall*.go",
         "server/internal/api/proto.go",
