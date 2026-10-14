@@ -1,7 +1,7 @@
 import { expect, test, type Page } from './fixtures'
 import { serverState, sql, accountOf, CONTRACT, served, reenter, seedStory } from './connected'
 import { readFileSync } from 'node:fs'
-import { COMMONS_ORIGIN, commonsTile, inCommons, waitForArea, waitForLive, player, expectAreaCard, expectToast, SERVER_ANSWER_MS } from './helpers'
+import { COMMONS_ORIGIN, commonsTile, inCommons, windowWhole, waitForArea, waitForLive, player, expectAreaCard, expectToast, SERVER_ANSWER_MS } from './helpers'
 import { area, earnGlims, freshPlayer, fund, go, homeAt, homes, hurt, landOf, lane, myHome, place, readOn, shot, silasSays, talk, throughGate, type Home, DEED_BOUGHT, yardBuild, pellSays, DEEDS, AT_PELL, manageDeed, giveUpPlace } from './home-helpers'
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts'
 import { PLACES } from '../src/lib/places.ts'
@@ -147,13 +147,25 @@ test('the Commons: a save in a walled-in pocket of the woods stands on reached g
   expect(pocket, 'the layout has a walled-in pocket').not.toBeNull()
   const [px, py] = pocket!
   const at = commonsTile(px, py)
+  // Seed a server save with no newer local report overlay. A live tab's
+  // cached village position would otherwise win on Continue.
+  await page.reload()
+  await expect(page.getByTestId('continue-world')).toBeVisible()
+  const account = accountOf(id)
+  expect(await page.evaluate(async (account) => {
+    const path = '/src/lib/api/cache.ts'
+    const { clearCache } = await import(path)
+    return clearCache(account)
+  }, account)).toBe(true)
   seedStory(id, { place: { area: 'outdoors', x: at.tx * 16 + 8, y: at.ty * 16 + 8 } })
-  await reenter(page, 'outdoors')
+  await page.reload()
+  await page.getByTestId('continue-world').click()
+  await waitForArea(page, 'outdoors')
+  await windowWhole(page)
   const back = commonsKey(await player(page))
   expect(back).not.toBe(`${px},${py}`)
   expect(reach.has(back), 'a pocket save recovers to reached ground').toBe(true)
   // The save has it (the server's place), not the pocket.
-  const account = accountOf(id)
   await expect
     .poll(() => {
       const [area, x, y] = sql(`SELECT area,x,y FROM player_place WHERE account_id='${account}';`).split('|')

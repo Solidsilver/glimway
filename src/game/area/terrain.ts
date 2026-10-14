@@ -613,7 +613,7 @@ function paintTileset(
 }
 
 /** Dev only: paint this map's tileset again on the main thread and return its texels' hash. */
-export async function devMainThreadTilesetHash(scene: Phaser.Scene, world: WorldData): Promise<string | null> {
+export async function devMainThreadTilesetHash(scene: Phaser.Scene, world: GroundGrid): Promise<string | null> {
   if (!scene.textures.exists(GROUND_PACKED_KEY)) return null
   const k = artDensity(scene)
   const packed = (scene.cache.json.get(PACKED_MANIFEST_KEY) as PackedManifest).ground

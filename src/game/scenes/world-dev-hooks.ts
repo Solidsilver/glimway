@@ -30,6 +30,8 @@ import { knownPlaces, requestRead, wildsMaterials, wildsView } from '../wilds/st
 import { devFightFall } from '../wilds/dev-fight-fall'
 import { presence } from '../presence'
 import { pathTileAt } from '../wilds/path-tile'
+import { footprintAt } from '../wilds/fixed'
+import { chunkOfPixel } from '../wilds/coords'
 
 /** The scene's interaction layers the hooks read (locals of `create()`). */
 export interface WorldHookLayers {
@@ -186,7 +188,13 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
   })
   on('__fsDevAddFlag', (flag) => s['session'].addFlag(flag))
   // e2e/first-paint.spec.ts compares it with the workers' tileset.
-  on('__fsDevGroundMainThreadHash', () => devMainThreadTilesetHash(s, s['world']))
+  on('__fsDevGroundMainThreadHash', () => {
+    const world = s['world']
+    if (!world.open) return devMainThreadTilesetHash(s, world)
+    const { cx, cy } = chunkOfPixel(s['hero'].sprite.x, s['hero'].sprite.y)
+    const fp = footprintAt(cx, cy)
+    return fp ? devMainThreadTilesetHash(s, { areaId: fp.place.id, ground: fp.ground, width: fp.w, height: fp.h, scenery: [] }) : Promise.resolve(null)
+  })
   // e2e/atlases.spec.ts checks the packed atlases give the loaders the pixels they had.
   on('__fsDevTextureHash', (key) => {
     if (!s.textures.exists(key)) return null

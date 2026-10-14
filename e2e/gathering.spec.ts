@@ -256,8 +256,9 @@ test('chopping a tree in the Tangle: wear, timber, a stump to dig, and regrowth'
   expect((await gather(page))!.left.filter((l) => l.tx === spot.tx && l.ty === spot.ty)).toEqual([])
   expect(await artAt(page, spot)).toEqual([])
 
-  // The drift: leave, come back, and the woods have regrown.
-  await warp(page, 'commons', 23, 19)
+  // The drift: leave the outdoor space, come back, and the woods have regrown.
+  // The Commons is part of the same outdoor visit now.
+  await warp(page, 'village', 23, 19)
   await warp(page, 'outdoors', 20, 20)
   await chunkWhole(page, spot)
   await expect.poll(async () => spotAt(page, spot)).toMatch(/^(tangle-tree|ash)$/)

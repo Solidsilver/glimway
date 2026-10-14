@@ -165,6 +165,7 @@ test('walk from the gate through the Tangle into the Whitequiet and on, with no 
   const win = (await wildsWindow(page))!
   await holdUntil(page, 'ArrowUp', () => page.evaluate(() => (window as unknown as { __fsPlayer: () => { y: number } }).__fsPlayer().y < 22 * 16 + 8))
   await waitForWilds(page)
+  await windowWhole(page)
   const start = await wilds(page)
   expect(start.chunk).toEqual({ cx: 0, cy: 0 })
   expect(start.epochId).toBe(start.stillEpoch)

@@ -2,7 +2,7 @@ import { writeFileSync } from 'node:fs'
 import { devices } from '@playwright/test'
 import { expect, test } from './fixtures'
 import type { Page } from './fixtures'
-import { warp } from './helpers'
+import { warp, windowWhole } from './helpers'
 import { freshPlayer } from './home-helpers'
 
 /**
@@ -44,7 +44,11 @@ async function enter(page: Page, area: 'commons' | 'village', tx: number, ty: nu
   await page.evaluate(() => ((window as unknown as { __lt: LongTask[] }).__lt = []))
   const t0 = Date.now()
   await warp(page, area, tx, ty)
-  await page.waitForFunction(() => (window as unknown as { __fsGround?: () => { area?: string; complete?: boolean } | null }).__fsGround?.()?.complete === true, undefined, { timeout: 60_000 })
+  if (area === 'commons') await windowWhole(page)
+  await page.waitForFunction((area) => {
+    const ground = (window as unknown as { __fsGround?: () => { area?: string; complete?: boolean } | null }).__fsGround?.()
+    return ground?.area === area && ground.complete === true
+  }, area, { timeout: 60_000 })
   const ms = Date.now() - t0
   // A moment for anything queued behind it.
   await page.waitForTimeout(500)
@@ -71,9 +75,11 @@ test('entering the Commons blocks the main thread for no long task', async ({ pa
   await logWebGLRenderer(page)
   const village = await tilesetHash(page)
   // The workers' tileset is texel for texel the one painted on the main thread.
+  expect(village).not.toBeNull()
   expect(village).toBe(await mainThreadHash(page))
   const commons = await enter(page, 'commons', 23, 19)
   const commonsHash = await tilesetHash(page)
+  expect(commonsHash).not.toBeNull()
   expect(commonsHash).toBe(await mainThreadHash(page))
   if (process.env.E2E_LOG_RENDERER) {
     console.log(`First-paint measurement: ${commons.ms} ms total; longest long task ${longest(commons.tasks)} ms`)
