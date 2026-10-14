@@ -479,7 +479,7 @@ export async function wildsWindow(page: Page): Promise<WildsWindowView | null> {
   return page.evaluate(() => window.__fsWildsWindow?.() ?? null)
 }
 
-/** Warp to a tile: the open map's (`wilds`) are world tiles, signed; every other area's its own. */
+/** Warp to a tile: the open map's (`outdoors`) are world tiles, signed; every other area's its own. */
 export async function warp(page: Page, area: AreaId, tx: number, ty: number): Promise<void> {
   // The warp starts the transition at once (a refused warp leaves us here).
   await page.evaluate(([a, x, y]) => window.__fsDevWarp!(a, x, y), [area, tx, ty] as const)

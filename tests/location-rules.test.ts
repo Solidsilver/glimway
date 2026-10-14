@@ -12,19 +12,20 @@ import { isPresenceArea } from '../src/lib/presence-client.ts';
 import { hasAreaKind } from '../src/game/worlds.ts';
 
 test('location rules follow the hero across the safety boundary and through separate Commons', () => {
-  for (const [area, x, y, safe, ride, id] of [
-    ['commons', 376, 40, true, true, 'commons'],
-    ['outdoors', 40, 392, true, true, 'commons'],
-    ['outdoors', 40, 376, false, true, 'tangle'],
-    ['village', 400, 300, true, false, 'village'],
-    ['home:0', 40, 40, true, true, 'home:0'],
-    ['in:commons:yard', 40, 40, true, false, 'in:commons:yard'],
+  for (const [area, x, y, safe, ride, id, moveSafe] of [
+    ['commons', 376, 40, true, true, 'commons', true],
+    ['outdoors', 40, 392, true, true, 'commons', true],
+    ['outdoors', 40, 376, false, true, 'tangle', false],
+    ['village', 400, 300, true, false, 'village', true],
+    ['home:0', 40, 40, true, true, 'home:0', false],
+    ['in:home:0', 80, 80, true, false, 'in:home:0', false],
+    ['in:commons:yard', 40, 40, true, false, 'in:commons:yard', true],
   ] as const) {
     const state = { ...createNewGame(), area, position: { x, y } };
     assert.equal(at(area, x, y).id, id);
     assert.equal(isSafeArea(area, state.position), safe);
     assert.equal(isSafeBoundary(state), safe);
-    assert.equal(moveBlocks({ area, position: state.position, outgoing: 0, online: true, pending: false }).includes('area'), !safe);
+    assert.equal(moveBlocks({ area, position: state.position, outgoing: 0, online: true, pending: false }).includes('area'), !moveSafe);
     assert.equal(rideRefusal({ area, position: state.position, mountOut: 'Wolf-Base', riding: false, stable: true, mounts: 1 }) === null, ride);
   }
   assert.equal(displayArea({ area: 'outdoors', position: { x: 40, y: 392 } }), 'commons');

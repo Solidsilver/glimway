@@ -159,7 +159,7 @@ Each moves from comparing area strings to the lookup at the position (`At(space,
 |---|---|---|
 | Safe set, sync boundary | `rules/rules.go:15,36,289`; `lib/habitica/sync.ts:68`, `game/sync-safety.ts` | `At().Sync` / `At().Safe` |
 | Profile report needs safety | `api/profile_report.go:68` | `At().Safe` |
-| World party/prompt/arrival in safe area | `api/worlds.go:519,589,652` | `At().Safe`; arrival reset → anchor |
+| World party/prompt/arrival in safe area | `api/worlds.go:519,589,652` | `At().Safe`; until S5, refuse moves from homes (including rooms) and reset home arrivals to the village spawn; S5: arrival reset → destination anchor |
 | Zero-HP exit lock | `WorldScene.ts:1013,1017` | barrier (§4) |
 | Unmoored: deep-Tangle timer, lamplight clears in safe areas | `entities/unmoored.ts:68,127–153` | unchanged timer; clearing via `At().Safe` |
 | Riding | `lib/companions.ts:141–155`, `entities/avatar.ts:160,406,472` | `At().Ride` (Commons/Tangle unchanged) |

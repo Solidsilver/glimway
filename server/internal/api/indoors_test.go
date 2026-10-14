@@ -62,7 +62,7 @@ func plainStep(id string) *content.QuestStep {
 
 func TestRoomPositionAndPresence(t *testing.T) {
 	for _, area := range []string{"in:village:bakery", "in:village:mill", "in:village:mill:2", "in:village:library", "in:home:0", "in:home:9999"} {
-		if !validArea(area) || !validPresenceRoom(area) || !rules.IsSafeArea(area) {
+		if !validArea(area) || !validPresenceRoom(area) || !rules.IsSafeArea(area, rules.Position{X: 8, Y: 8}) {
 			t.Fatal(area)
 		}
 		if !finiteWhere(&contract.Where{Area: area, X: 8, Y: 8}) {

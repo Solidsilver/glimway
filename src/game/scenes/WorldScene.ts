@@ -116,7 +116,7 @@ function trayFocused(): boolean {
 }
 
 /** Areas where the zero-HP lock still lets you walk (home to rest): the village, the Commons, homesteads. */
-const safeArea = (area: string, x = 0, y = 0) => isSafeArea(area, { x, y })
+const safeArea = (area: string, x: number, y: number) => isSafeArea(area, { x, y })
 
 /** Can the scene go here? Every registered area (the open map, `outdoors`, among them). */
 function canEnter(area: string): boolean {

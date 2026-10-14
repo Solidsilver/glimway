@@ -57,13 +57,8 @@ export class SyncRejectedError extends Error {
   }
 }
 
-/**
- * Safe areas, where syncs (and rests) may happen: Hearthwick village,
- * Hearthwick Commons, and every homestead's land behind its gates (`home:<g>`).
- * Matches the server's `rules.IsSafeArea`. A cottage is part of its
- * homestead (the save keeps saying `home:<g>` inside one).
- */
-export function isSafeArea(area: string, position = { x: 0, y: 0 }): boolean {
+/** Location safety at the supplied position, matching `rules.IsSafeArea`. */
+export function isSafeArea(area: string, position: GameState['position']): boolean {
   return at(area, position.x, position.y).safe;
 }
 

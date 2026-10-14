@@ -31,14 +31,9 @@ func HomeGate(area string) int {
 	return n
 }
 
-// IsSafeArea: where syncs and rests may happen (the village, the Commons
-// and every homestead map).
-func IsSafeArea(area string, position ...Position) bool {
-	p := Position{}
-	if len(position) > 0 {
-		p = position[0]
-	}
-	return location.At(location.Space(area), p.X, p.Y).Safe
+// IsSafeArea reports the location's safety at the supplied position.
+func IsSafeArea(area string, position Position) bool {
+	return location.At(location.Space(area), position.X, position.Y).Safe
 }
 
 var Stages = []string{"new", "accepted", "clue-found", "guardian-defeated", "lantern-lit", "complete"}

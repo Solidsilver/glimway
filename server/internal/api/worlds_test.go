@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"glimway/content"
+	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"net/http"
 	"reflect"
@@ -433,9 +434,15 @@ func TestWorldMoveRefusedWhenUnsafe(t *testing.T) {
 	x.refresh(hc, &h)
 	before := x.worldReq("GET", "/api/state", nil, hc, 200).Snapshot
 
-	// Only from ground the lookup marks safe.
-	for _, area := range []string{"woodland", "outdoors"} {
-		if e := x.worldReq("POST", "/api/world/move", moveBody(h, "unsafe-"+area, o.WorldID, area), hc, 409).Error.Code; e != "not-at-safe-boundary" {
+	// Safe ground outside homes, until S5 arrival anchors land.
+	for _, area := range []string{"woodland", "outdoors", "home:0", "in:home:0"} {
+		req := moveBody(h, "unsafe-"+area, o.WorldID, area)
+		if area == "in:home:0" {
+			doc := h.State
+			doc.Area, doc.Position = area, rules.Position{X: 80, Y: 80}
+			req["progress"] = doc
+		}
+		if e := x.worldReq("POST", "/api/world/move", req, hc, 409).Error.Code; e != "not-at-safe-boundary" {
 			t.Fatal(area, e)
 		}
 	}

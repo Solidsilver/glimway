@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"glimway/content"
+	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"net/http"
 	"net/http/httptest"
@@ -200,6 +201,12 @@ func TestPartyLeaverWarnedAndLeavesNow(t *testing.T) {
 	if e := x.worldReq("POST", "/api/world/leave", body(r, "woods", map[string]any{"progress": doc}), rc, 409).Error.Code; e != "not-at-safe-boundary" {
 		t.Fatal(e)
 	}
+	for _, area := range []string{"home:0", "in:home:0"} {
+		doc.Area, doc.Position = area, rules.Position{X: 80, Y: 80}
+		if e := x.worldReq("POST", "/api/world/leave", body(r, "unsafe-"+area, map[string]any{"progress": doc}), rc, 409).Error.Code; e != "not-at-safe-boundary" {
+			t.Fatal(area, e)
+		}
+	}
 	doc.Area = "village"
 	x.conserved(x.account("rue"))
 	out := x.worldReq("POST", "/api/world/leave", body(r, "leave", map[string]any{"progress": doc}), rc, 200)
@@ -301,5 +308,28 @@ func TestPartyLeaverMovedOutAfterGrace(t *testing.T) {
 	x.login("sage", "")
 	if x.worldOf("sage") != own || count(t, x.db, "SELECT count(*) FROM ledger WHERE account_id='"+x.account("sage")+"' AND reason='world-move'") != 1 {
 		t.Fatal("moved twice")
+	}
+}
+
+func TestPartyResidenceResetsHomeArrivalUntilS5(t *testing.T) {
+	for _, area := range []string{"home:5", "in:home:5"} {
+		t.Run(area, func(t *testing.T) {
+			x := newRig(t)
+			x.hero("olive", "Olive", "p1")
+			_, party := x.ready("olive")
+			x.hero("sage", "Sage", "p1")
+			x.ready("sage")
+			x.hero("sage", "Sage", "")
+			x.login("sage", "")
+			if _, err := x.db.DB.Exec("UPDATE player_place SET area=?, x=80, y=80 WHERE account_id=?", area, x.account("sage")); err != nil {
+				t.Fatal(err)
+			}
+			x.now.Add(PartyGrace)
+			_, after := x.again("sage")
+			start := rules.NewState()
+			if after.WorldID == party.WorldID || after.State.Area != start.Area || after.State.Position != start.Position {
+				t.Fatal("home arrival did not reset to village spawn", after.WorldID, after.State.Area, after.State.Position)
+			}
+		})
 	}
 }

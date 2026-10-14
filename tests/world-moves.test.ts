@@ -8,13 +8,13 @@ import { inviteCopy, signInCopy } from '../src/content/connected.ts';
 import { parseInviteList } from '../src/lib/api/invites.ts';
 
 test('a move starts only from the village or the Commons, online, with nothing pending or on the road, a day after the last', () => {
-  assert.deepEqual(moveBlocks({ area: 'home:0', outgoing: 0, online: true, pending: false }), []);
+  assert.deepEqual(moveBlocks({ area: 'home:0', outgoing: 0, online: true, pending: false }), ['area']);
   assert.deepEqual(moveBlocks({ area: 'commons', outgoing: 0, online: true, pending: false }), []);
   assert.deepEqual(moveBlocks({ area: 'village', outgoing: 0, online: true, pending: false }), []);
-  for (const area of ['cottage', 'woodland', 'outdoors', 'chunk:inner-1:0:0']) {
+  for (const area of ['in:home:0', 'cottage', 'woodland', 'outdoors', 'chunk:inner-1:0:0']) {
     assert.deepEqual(moveBlocks({ area, outgoing: 0, online: true, pending: false }), ['area'], area);
   }
-  assert.deepEqual(moveBlocks({ area: 'home:2', outgoing: 2, online: false, pending: true }), ['offline', 'pending', 'mail']);
+  assert.deepEqual(moveBlocks({ area: 'home:2', outgoing: 2, online: false, pending: true }), ['offline', 'pending', 'area', 'mail']);
   // One move a day: blocked while seconds remain (counted on this device from
   // the server's figure), and always after the server refused for it.
   assert.deepEqual(moveBlocks({ area: 'village', outgoing: 0, online: true, pending: false, opensIn: 1 }), ['cooldown']);
