@@ -7,10 +7,9 @@ import { tileFeet } from '../src/lib/tile.ts'
 import { facingOf } from '../src/game/people.ts'
 import { buildArea } from '../src/game/worlds.ts'
 import { TERRAIN } from '../src/lib/tile.ts'
-import { serveFixtureCommons } from './commons-fixture.ts'
+import { servedCommonsFixture } from './commons-fixture.ts'
 
 // The Commons is the server's: these tests stand on its served chunks.
-serveFixtureCommons()
 
 /** A noisy 64-texel tile: stripes and speckle, different per seed, never seamless. */
 function noiseTile(seed: number, n = 64): Rgba {
@@ -116,7 +115,8 @@ test('ground: the Commons square is flagstones, stray cobbles on the lane are ro
 
 test('ground: neighbouring edge tiles agree on the texels at their shared border', () => {
   for (const area of ['village', 'commons'] as const) {
-    const w = buildArea(area)
+    // The Commons is fixed ground on the open map: its served layout.
+    const w = area === 'commons' ? servedCommonsFixture() : buildArea(area)
     const g = classGrid(w.ground)
     const k = 2
     const m = 3

@@ -55,12 +55,16 @@ test('typed homestead loader rejects malformed definitions', () => {
 });
 
 test('Commons and homesteads are safe, Wilds is unsafe, and home rest retains earned-only revival', () => {
-  const state = { ...createNewGame(), area: 'commons', hp: 0, glims: 4, xpGlims: 0 };
+  // The Commons is outdoors since the join: the arch's spot (anchor commons:arch).
+  const state = { ...createNewGame(), area: 'outdoors', position: { x: 40, y: 424 }, hp: 0, glims: 4, xpGlims: 0 };
   assert.ok(isSafeBoundary(state));
   assert.ok(isSafeBoundary({ ...state, area: 'home:3' }));
-  assert.ok(!isSafeBoundary({ ...state, area: 'outdoors' }));
+  assert.ok(!isSafeBoundary({ ...state, position: { x: 40, y: 360 } }), 'the Tangle, over the mouth');
   assert.ok(!isSafeBoundary({ ...state, area: 'home:03' }));
-  assert.equal(validateSave(state).area, 'commons');
+  assert.equal(validateSave(state).area, 'outdoors');
+  // A save from before the join, in the Commons' own pixels, is read onto the grid at the same spot.
+  assert.deepEqual(validateSave({ ...state, area: 'commons', position: { x: 376, y: 40 } }).position, { x: 40, y: 424 });
+  assert.equal(validateSave({ ...state, area: 'commons', position: { x: 376, y: 40 } }).area, 'outdoors');
   assert.equal(validateSave({ ...state, area: 'home:12' }).area, 'home:12');
   assert.throws(() => validateSave({ ...state, area: 'home:-1' }));
   const refused = checkSpend(state, { kind: 'home-rest' }, { imported: true });

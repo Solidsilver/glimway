@@ -19,16 +19,28 @@
  *
  * The window also repaints a chunk whose ground changes moved (someone laid
  * stone), and reloads everything at the turning (./world-turning.ts).
+ *
+ * Fixed chunks (an authored layout's: the Commons, location-seam.md 4) are
+ * on the grid too: the window attaches them like the rest, from their
+ * footprint's served chunks (./fixed.ts), with their ground laid from the
+ * footprint's painted tileset instead of a per-chunk paint (./fixed-chunk.ts).
+ * Only chunks on neither the frontier nor a footprint are the drift.
  */
 import type Phaser from 'phaser'
+import { refreshLanternVisuals } from '../area/lanterns.ts'
+import { groundTiles, type GroundTiles } from '../area/terrain.ts'
 import { calendarAt } from '../../lib/calendar.ts'
 import { seasonMark } from '../../lib/wilds/outer.ts'
 import { gameNow } from '../clock.ts'
 import type { Session } from '../session.ts'
 import { CHUNK_TILES, chunkKey, chunkOfPixel, parseChunkKey } from './coords.ts'
+import { fixedPlaceOf, footprint, footprintAt, prepareFixed, type FixedFootprint } from './fixed.ts'
+import { FixedChunk, type FixedChunkDeps } from './fixed-chunk.ts'
+import type { ExitDef } from '../worlds.ts'
+import { PLACES, fixedChunks } from '../../lib/places.ts'
 import { chunkSig, effectiveChunk, forgetGround, groundAt, solidAt } from './ground-view.ts'
 import { chunkGather, chunkLandmarks } from './terrain.ts'
-import { crossed, keepAttached, paintable, planWindow, SLACK_TILES, veilEdges, type WindowPlan } from './window-plan.ts'
+import { crossed, frontierDistance, keepAttached, paintable, planWindow, SLACK_TILES, veilEdges, type WindowPlan } from './window-plan.ts'
 import { AttachedChunk, BuildQueue, DriftChunk, groundTexture, paintDriftChunk, type ChunkDeps } from './window-chunk.ts'
 import { paintAway, paintHere, type PaintJob } from './paint-worker.ts'
 import { groundTable } from './ground-table.ts'
@@ -40,9 +52,24 @@ import { markSeen, markWalked } from './walked.ts'
 import { perfSpan, perfTime, perfWithout } from '../perf.ts'
 import { addAll, destroyAll, looseImage } from '../area/bulk.ts'
 
-export interface WindowDeps extends Omit<ChunkDeps, 'ground' | 'gather' | 'builds'> {
+export interface WindowDeps extends Omit<ChunkDeps, 'ground' | 'gather' | 'builds'>, Pick<FixedChunkDeps, 'interactables' | 'enter' | 'hooks'> {
   session: Session
   hero: () => { x: number; y: number }
+}
+
+/** On the grid as the window sees it: inside the frontier the server named, or on a fixed footprint. */
+export function onWindow(cx: number, cy: number): boolean {
+  return insideNamedFrontier(cx, cy) || fixedPlaceOf(cx, cy) !== null
+}
+
+/** Pixels from the grid (the frontier and every fixed footprint): the drift fogs with it. */
+export function gridDistance(f: { minCx: number; minCy: number; maxCx: number; maxCy: number }, wx: number, wy: number): number {
+  let d = frontierDistance(f, wx, wy)
+  for (const p of PLACES.fixed) {
+    const c = fixedChunks(p)
+    d = Math.min(d, frontierDistance({ minCx: c.x0, minCy: c.y0, maxCx: c.x1, maxCy: c.y1 }, wx, wy))
+  }
+  return d
 }
 
 /** A painted chunk texture and what it was painted from. */
@@ -60,8 +87,12 @@ const BUILD_MS = 4
 export class WildsWindow {
   private plan: WindowPlan | null = null
   private attached = new Map<string, AttachedChunk>()
+  /** Attached fixed chunks (./fixed-chunk.ts). */
+  private fixed = new Map<string, FixedChunk>()
+  /** Each footprint's painted ground, laid a chunk at a time (one per footprint and scene). */
+  private fixedGround = new Map<string, GroundTiles>()
   /** The attached chunks still being built, in attachment order (./window-chunk.ts BuildQueue). */
-  private readonly builds = new BuildQueue<AttachedChunk>()
+  private readonly builds = new BuildQueue<AttachedChunk | FixedChunk>()
   private drifts = new Map<string, DriftChunk>()
   private paints = new Map<string, PaintedChunk>()
   private far = new Map<string, Phaser.GameObjects.Image[]>()
@@ -87,6 +118,11 @@ export class WildsWindow {
 
   constructor(private deps: WindowDeps) {
     deps.scene.events.once('shutdown', () => this.destroy())
+    // The fixed footprints' ground (its tilemap and cells) is laid out now, behind the scene's fade, not on a walking frame.
+    for (const p of PLACES.fixed) {
+      const fp = footprint(p.id)
+      if (fp) perfTime('fixed-ground', () => this.groundFor(fp))
+    }
   }
 
   // ------------------------------------------------------------ per frame
@@ -145,6 +181,11 @@ export class WildsWindow {
       this.attached.delete(key)
       this.drops++
     }
+    for (const [key, c] of this.fixed) if (!plan.attach.includes(key) && !this.kept(key)) {
+      c.destroy()
+      this.fixed.delete(key)
+      this.drops++
+    }
     for (const [key, d] of this.drifts) if (!plan.drift.includes(key) && !this.kept(key)) {
       d.destroy()
       this.drifts.delete(key)
@@ -153,12 +194,16 @@ export class WildsWindow {
 
   /** Resolves once every chunk of the 3×3 inside the frontier is attached (the scene's first frame waits for it). */
   ready(): Promise<void> {
-    if (this.isReady()) return Promise.resolve()
-    return new Promise((resolve) => this.waiters.push(resolve))
+    const attached = this.isReady() ? Promise.resolve() : new Promise<void>((resolve) => this.waiters.push(resolve))
+    // A fixed footprint's ground transitions are painted off the thread (a first visit).
+    return attached.then(() => Promise.all([...this.fixedGround.values()].map((g) => g.pending)).then(() => undefined))
   }
 
   private isReady(): boolean {
-    return !!this.plan && this.plan.attach.every((k) => this.attached.has(k) || !chunkTerrain(parseChunkKey(k).cx, parseChunkKey(k).cy))
+    return !!this.plan && this.plan.attach.every((k) => {
+      const { cx, cy } = parseChunkKey(k)
+      return this.attached.has(k) || this.fixed.has(k) || (fixedPlaceOf(cx, cy) ? !footprintAt(cx, cy) : !chunkTerrain(cx, cy))
+    })
   }
 
   /** Paint everything the window needs now, in one go (the first build, behind the scene's fade). */
@@ -178,7 +223,7 @@ export class WildsWindow {
   }
 
   private recentreNow(cx: number, cy: number): void {
-    const plan = planWindow(cx, cy, insideNamedFrontier)
+    const plan = planWindow(cx, cy, onWindow)
     this.plan = plan
     const session = this.deps.session
     const wick = wildsEpoch('wick').id
@@ -205,6 +250,15 @@ export class WildsWindow {
 
   private load(key: string): void {
     const { cx, cy } = parseChunkKey(key)
+    if (fixedPlaceOf(cx, cy)) {
+      if (footprintAt(cx, cy) || this.loading.has(key) || Date.now() < (this.retryAt.get(key) ?? 0)) return
+      this.loading.add(key)
+      void Promise.resolve(prepareFixed(this.deps.session)).finally(() => {
+        if (!footprintAt(cx, cy)) this.retryAt.set(key, Date.now() + 5000)
+        this.loading.delete(key)
+      })
+      return
+    }
     if (chunkTerrain(cx, cy) || this.loading.has(key) || Date.now() < (this.retryAt.get(key) ?? 0)) return
     this.loading.add(key)
     const fetched = perfSpan('fetch', true)
@@ -230,6 +284,16 @@ export class WildsWindow {
     const known = (cx: number, cy: number) => !!chunkTerrain(cx, cy)
     for (const key of plan.attach) {
       const { cx, cy } = parseChunkKey(key)
+      if (fixedPlaceOf(cx, cy)) {
+        if (this.fixed.has(key)) continue
+        const fp = footprintAt(cx, cy)
+        if (!fp) {
+          this.load(key)
+          continue
+        }
+        this.attachFixed(fp, cx, cy)
+        return true
+      }
       const had = this.attached.get(key)
       if (had) {
         // Patched in place (./window-chunk.ts patch): its ground is repainted off the frame.
@@ -264,17 +328,18 @@ export class WildsWindow {
       const sig = `drift|${view.wick.id}|${glimpse?.land ?? ''}|${glimpse?.river ?? ''}`
       let p = this.paints.get(key)
       if (!p || p.sig !== sig) {
-        const painted = paintDriftChunk(this.deps.scene, cx, cy, glimpse, seasonMark(view.wick.season), f, view.wick.worldSeed, `wilds-drift:${key}`)
+        const painted = paintDriftChunk(this.deps.scene, cx, cy, glimpse, seasonMark(view.wick.season), (wx, wy) => gridDistance(f, wx, wy), view.wick.worldSeed, `wilds-drift:${key}`)
         this.logPaint(key, painted.ms, true)
         p = { key: painted.key, sig }
         this.paints.set(key, p)
       }
-      this.drifts.set(key, perfTime('drift', () => new DriftChunk(this.deps.scene, cx, cy, p.key, veilEdges(cx, cy, insideNamedFrontier), this.deps.reducedMotion)))
+      this.drifts.set(key, perfTime('drift', () => new DriftChunk(this.deps.scene, cx, cy, p.key, veilEdges(cx, cy, onWindow), this.deps.reducedMotion)))
       return true
     }
     for (const key of plan.ring) {
       if (this.far.has(key) || this.attached.has(key)) continue
       const { cx, cy } = parseChunkKey(key)
+      if (fixedPlaceOf(cx, cy)) continue
       const t = chunkTerrain(cx, cy)
       if (!t) continue
       const { scene } = this.deps
@@ -368,6 +433,62 @@ export class WildsWindow {
     if (this.now || perfWithout('spread')) this.builds.finish(c)
   }
 
+  /** Attach a fixed chunk: its ground laid from its footprint's painted tileset (painted on first use). */
+  private attachFixed(fp: FixedFootprint, cx: number, cy: number): void {
+    perfTime('attach', () => {
+      const { scene, session } = this.deps
+      const ground = this.groundFor(fp)
+      if (!ground) return
+      const c = new FixedChunk(
+        {
+          scene,
+          solids: this.deps.solids,
+          tileArt: this.deps.tileArt,
+          gathering: this.deps.gathering,
+          occluders: this.deps.occluders,
+          interactables: this.deps.interactables,
+          reducedMotion: this.deps.reducedMotion,
+          enter: this.deps.enter,
+          hooks: this.deps.hooks,
+          ground,
+          day: () => {
+            const cal = calendarAt(gameNow())
+            return { festival: cal.festival, wick: cal.wick }
+          },
+          light: (lamps) => refreshLanternVisuals(scene, lamps, session.questStage, session.state),
+          builds: this.builds
+        },
+        fp,
+        cx,
+        cy
+      )
+      this.fixed.set(c.key, c)
+      this.attaches++
+      if (this.now || perfWithout('spread')) this.builds.finish(c)
+    })
+  }
+
+  /** The fixed chunks attached now. */
+  fixedKeys(): string[] {
+    return [...this.fixed.keys()]
+  }
+
+  /** A footprint's painted ground (painted, or taken from the paint cache, on first use in this scene). */
+  private groundFor(fp: FixedFootprint): GroundTiles | null {
+    const had = this.fixedGround.get(fp.place.id)
+    if (had) return had
+    const g = groundTiles(this.deps.scene, { areaId: fp.place.id, ground: fp.ground, width: fp.w, height: fp.h, scenery: [] }, true)
+    if (g) this.fixedGround.set(fp.place.id, g)
+    return g
+  }
+
+  /** The ways out of the attached fixed chunks, in world tiles (the scene checks them as the hero walks). */
+  exits(): ExitDef[] {
+    const out: ExitDef[] = []
+    for (const c of this.fixed.values()) out.push(...c.exits)
+    return out
+  }
+
   /**
    * Chunks whose ground changes moved (a path laid, a thicket cleared) are
    * patched in place and repainted off the frame; a chunk whose epoch moved,
@@ -432,6 +553,8 @@ export class WildsWindow {
   /** Drop everything and build the window again (the turning: the land changed under you). */
   reload(): void {
     for (const c of this.attached.values()) c.destroy()
+    for (const c of this.fixed.values()) c.destroy()
+    this.fixed.clear()
     for (const d of this.drifts.values()) d.destroy()
     for (const imgs of this.far.values()) destroyAll(this.deps.scene, imgs)
     for (const p of this.paints.values()) if (this.deps.scene.textures.exists(p.key)) this.deps.scene.textures.remove(p.key)
@@ -446,12 +569,13 @@ export class WildsWindow {
   }
 
   /** Read-only, for playtests: what the window holds and how painting went. */
-  debug(): { id: string; center: { cx: number; cy: number } | null; attached: string[]; building: string[]; ready: boolean; attaches: number; drops: number; outer: string[]; drift: string[]; ring: string[]; far: string[]; painted: string[]; paints: { chunk: string; ms: number; drift: boolean; thread: 'worker' | 'main' }[] } {
-    const building = [...this.attached].filter(([, c]) => !c.whole).map(([k]) => k)
+  debug(): { id: string; center: { cx: number; cy: number } | null; attached: string[]; fixed: string[]; building: string[]; ready: boolean; attaches: number; drops: number; outer: string[]; drift: string[]; ring: string[]; far: string[]; painted: string[]; paints: { chunk: string; ms: number; drift: boolean; thread: 'worker' | 'main' }[] } {
+    const building = [...this.attached, ...this.fixed].filter(([, c]) => !c.whole).map(([k]) => k)
     return {
       id: this.id,
       center: this.plan?.center ?? null,
-      attached: [...this.attached.keys()],
+      attached: [...this.attached.keys(), ...this.fixed.keys()],
+      fixed: [...this.fixed.keys()],
       building,
       // Every chunk of the 3×3 inside the frontier attached, and built whole.
       ready: this.isReady() && !building.length,
@@ -470,6 +594,9 @@ export class WildsWindow {
   private destroy(): void {
     this.gone = true
     this.release()
+    for (const g of this.fixedGround.values()) g.map.destroy()
+    this.fixedGround.clear()
+    this.fixed.clear()
     for (const p of this.paints.values()) if (this.deps.scene.textures.exists(p.key)) this.deps.scene.textures.remove(p.key)
     this.attached.clear()
     this.drifts.clear()

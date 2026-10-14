@@ -14,7 +14,6 @@
  * with the server); this adds pixels, the gate, and the scene's area id.
  */
 import { TILE } from '../../lib/tile.ts';
-import { COMMONS_FROM_WILDS } from '../commons-served.ts';
 import { floorDiv } from '../../lib/wilds/coords.ts';
 import { loadWilds } from '../../lib/wilds/data.ts';
 import type { AreaId } from '../../lib/state.ts';
@@ -52,7 +51,8 @@ export function worldTile(cx: number, cy: number, lx: number, ly: number): { tx:
 
 /**
  * The Commons gate (content `places.tangle.openings.commons-gate`): its
- * world tiles on the south edge of chunk (0, 0). Walking onto them goes home.
+ * world tiles on the south edge of chunk (0, 0), the Tangle's mouth onto the
+ * Commons (the Commons' arch lies just south of it, on fixed ground).
  */
 export function gateTiles(): { tx: number; ty: number; tw: number; th: number } {
   const tangle = loadWilds().places.find((p) => p.id === 'tangle');
@@ -60,24 +60,4 @@ export function gateTiles(): { tx: number; ty: number; tw: number; th: number } 
   if (!gate || gate.edge !== 'south') throw new Error('wilds: no Commons gate in content');
   const at = worldTile(gate.cx, gate.cy, gate.offset, CHUNK_TILES - 1);
   return { tx: at.tx, ty: at.ty, tw: gate.width, th: 1 };
-}
-
-/** Where you arrive from the Commons: one tile in from the gate's middle. */
-export function gateArrival(): { tx: number; ty: number } {
-  const g = gateTiles();
-  return { tx: g.tx + Math.floor(g.tw / 2), ty: g.ty - 1 };
-}
-
-/** The arrival tile's centre, in world pixels (what the save holds on the way in). */
-export function gateArrivalPosition(): { x: number; y: number } {
-  const t = gateArrival();
-  return { x: t.tx * TILE + TILE / 2, y: t.ty * TILE + TILE / 2 };
-}
-
-/**
- * The Commons tile a player leaving the Wilds arrives at (just inside the
- * north arch — the agreed handoff with the Commons: its `arch` anchor).
- */
-export function wildsReturnTile(): { tx: number; ty: number } {
-  return { ...COMMONS_FROM_WILDS };
 }

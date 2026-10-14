@@ -216,7 +216,8 @@ function reachable(w: WorldData): Set<string> {
 test('every pickup lies on a walkable, reachable tile, clear of exits and other things to press E at', () => {
   assert.ok(ITEMS.pickups.length >= 3);
   for (const p of ITEMS.pickups) {
-    const w = buildArea(p.area);
+    // The Commons is fixed ground on the open map: its served layout, in Commons tiles (as items.json names them).
+    const w = p.area === 'commons' ? ({ ...servedCommonsFixture(), glimSpots: [], discoverySpots: [], well: null, mural: null, shrine: null } as unknown as WorldData) : buildArea(p.area);
     const t = { tx: p.tx, ty: p.ty };
     assert.ok(!blocked(w).has(key(t)), `${p.id} at ${key(t)} is not walkable`);
     assert.ok(reachable(w).has(key(t)), `${p.id} at ${key(t)} cannot be reached`);

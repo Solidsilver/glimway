@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"glimway/content"
 	contract "glimway/server/internal/gen/glimway/v1"
+	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
@@ -29,9 +30,9 @@ func TestEveryClientMarkNamespaceThroughOperation(t *testing.T) {
 		if !ok {
 			t.Fatal("builder vector missing", ns.Prefix)
 		}
-		area := "village"
+		area, at := "village", rules.Position{X: 400, Y: 300}
 		if ns.Prefix == "home:met-silas" {
-			area = "commons"
+			area, at = outdoorsArea, commonsPx(400, 300)
 		}
 		if ns.Prefix == "home:arrived" {
 			area = "home:42"
@@ -39,7 +40,7 @@ func TestEveryClientMarkNamespaceThroughOperation(t *testing.T) {
 		if ns.Prefix == "found:" || ns.Prefix == "defeated:" {
 			area = "woodland"
 		}
-		w := x.rawHTTP("POST", "/api/story/mark", body(s, ns.Prefix, map[string]any{"mark": mark, "where": map[string]any{"area": area, "x": 400, "y": 300}}), c)
+		w := x.rawHTTP("POST", "/api/story/mark", body(s, ns.Prefix, map[string]any{"mark": mark, "where": map[string]any{"area": area, "x": at.X, "y": at.Y}}), c)
 		var out contract.Envelope
 		if w.Code != 200 || protojson.Unmarshal(w.Body.Bytes(), &out) != nil || !slices.Contains(out.State.Story.Marks, mark) {
 			t.Fatal(ns.Prefix, w.Code, w.Body.String())

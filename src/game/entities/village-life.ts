@@ -23,7 +23,8 @@ import { millHopperLines } from '../../content/residents'
 import type { Session } from '../session'
 import { TERRAIN, TILE, tileBottom, tileMid } from '../../lib/tile'
 import type { WorldData } from '../worlds'
-import type { CommonsWorld } from '../commons-served'
+import { commonsLane } from '../wilds/fixed'
+import { resolve } from '../../lib/location'
 import { villageFor, type Village } from '../village'
 import { calendarFind } from '../../lib/wilds/stories'
 import { sellerFor } from '../../lib/items'
@@ -126,17 +127,18 @@ export class VillageLayer {
       const h = w.mill.hopper
       list.push({ id: 'village:hopper', x: tileMid(h.tx), y: tileBottom(h.ty) + 2, label: 'Look at the hopper', verb: 'Look', markerOffset: 24, activate: () => this.lookAtHopper() })
     }
-    const c = w as CommonsWorld
+    const lane = this.lane()
     const ctx = { flags: this.deps.session.state.flags, late: roadStep(this.deps.session.state) === 'complete', mark: null }
-    if (w.areaId === 'commons' && c.features && this.village.calendar.festival === 'Carting Day' && calendarFind('hame', ctx)) {
-      const h = c.features.hame
+    if (lane && this.village.calendar.festival === 'Carting Day' && calendarFind('hame', ctx)) {
+      const h = lane.features.hame
       list.push({ id: 'village:hame', x: tileMid(h.tx), y: tileBottom(h.ty) + 6, label: 'Read the polishers’ roll', verb: 'Read', marker: notice, markerOffset: 32, activate: () => this.readHameRoll() })
     }
     // The Carting Day market: the madder stall stands between the gate and
     // the square on the day, and not otherwise.
-    if (w.areaId === 'commons' && this.village.calendar.festival === 'Carting Day' && sellerFor('madder-stall')) {
+    if (lane && this.village.calendar.festival === 'Carting Day' && sellerFor('madder-stall')) {
       const stall = sellerFor('madder-stall')!
-      list.push({ id: 'village:stall', x: tileMid(stall.tx), y: tileBottom(stall.ty) + 2, label: stall.goods[0]?.label ?? 'Visit the madder stall', verb: 'Buy', marker: notice, markerOffset: 32, activate: () => this.visitStall() })
+      const at = resolve(stall.area, stall.tx, stall.ty)
+      list.push({ id: 'village:stall', x: tileMid(at.tx), y: tileBottom(at.ty) + 2, label: stall.goods[0]?.label ?? 'Visit the madder stall', verb: 'Buy', marker: notice, markerOffset: 32, activate: () => this.visitStall() })
     }
     // Only when it changed: replacing the list rebuilds its markers.
     const key = list.map((i) => i.id).join(',')
@@ -146,6 +148,11 @@ export class VillageLayer {
   }
 
   private interactionKey: string | null = null
+
+  /** On the open map, the Commons lane (its fixtures in world tiles), once its chunks are here. */
+  private lane(): ReturnType<typeof commonsLane> {
+    return this.deps.world.open ? commonsLane() : null
+  }
 
   /** The Hame-Polishers' List: thirty years of names, stitched inside the gate. */
   private readHameRoll(): void {
@@ -175,7 +182,7 @@ export class VillageLayer {
     if (w.areaId === 'village') this.villageChanges()
     if (w.areaId === 'woodland') this.footbridge(this.village.hasWorldFlag('project:north-bridge:complete'))
     const festival = this.village.calendar.festival
-    if (festival && (w.areaId === 'village' || w.areaId === 'commons')) {
+    if (festival && (w.areaId === 'village' || this.lane())) {
       this.festival(festival)
       this.greet(festival)
     }
@@ -296,27 +303,31 @@ export class VillageLayer {
   private festival(name: string): void {
     const w = this.deps.world
     if (name === 'Carting Day') {
-      if (w.areaId === 'commons') {
-        const c = w as CommonsWorld
+      const lane = this.lane()
+      if (lane) {
         // Stalls along the cross lane between the gate and the square; the
-        // red one is the madder stall, where its seller row stands.
+        // red one is the madder stall, where its seller row stands. (Commons
+        // tiles, on the grid since the join; drawn for the whole scene until
+        // festival dressing is per chunk.)
         const madder = sellerFor('madder-stall')
         const stalls: [string, number, number][] = [['stall-a', madder?.tx ?? 8, madder?.ty ?? 18], ['stall-b', 13, 18], ['stall-c', 10, 24]]
         for (const [key, tx, ty] of stalls) {
-          const x = tileMid(tx)
-          const y = tileBottom(ty)
+          const at = resolve('commons', tx, ty)
+          const x = tileMid(at.tx)
+          const y = tileBottom(at.ty)
           this.add(this.scene.add.image(x, y, key).setOrigin(0.5, 1).setDepth(y))
         }
-        this.add(this.scene.add.image(23.5 * TILE, 17 * TILE - 18, 'bunting-96').setOrigin(0.5, 0).setDepth(5000))
-        if (c.features) {
-          const h = c.features.hame
-          this.glow(tileMid(h.tx), tileBottom(h.ty) - 24, 0.6, 0.9)
-        }
+        const square = resolve('commons', 23, 17)
+        this.add(this.scene.add.image((square.tx + 0.5) * TILE, square.ty * TILE - 18, 'bunting-96').setOrigin(0.5, 0).setDepth(5000))
+        const h = lane.features.hame
+        this.glow(tileMid(h.tx), tileBottom(h.ty) - 24, 0.6, 0.9)
       } else if (w.villageLantern) {
         const l = w.villageLantern
         this.add(this.scene.add.image(l.tx * TILE + 24, l.ty * TILE - 14, 'bunting-64').setOrigin(0.5, 0).setDepth(5000))
       }
     }
+    // The rest of the dressing is the village's (the open map's comes per chunk later).
+    if (w.open) return
     if (name === 'Amberwake' || name === 'Closure Night') {
       // A hearth-grade lamp in every window.
       for (const t of this.tilesOf(TERRAIN.window)) this.windowGlow(tileMid(t.tx), t.ty * TILE + 6)

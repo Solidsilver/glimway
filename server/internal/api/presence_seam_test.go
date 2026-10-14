@@ -61,7 +61,7 @@ func TestTogetherAcrossOutdoorChunkEdges(t *testing.T) {
 	if !h.together("world", "a", "b", 2) {
 		t.Fatal("horizontal chunk proximity")
 	}
-	q.area = "commons"
+	q.area = "village"
 	if h.together("world", "a", "b", 2) {
 		t.Fatal("different coordinate frames together")
 	}

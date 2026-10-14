@@ -142,7 +142,8 @@ export async function settled(page: Page, match: { area?: string; prefix?: strin
 }
 
 export async function waitForArea(page: Page, area: AreaId): Promise<void> {
-  if (area === 'outdoors') await waitForWilds(page)
+  // The Commons is fixed ground on the open map (location-seam.md 3): waiting for it is waiting for the open map.
+  if (area === 'outdoors' || area === 'commons') await waitForWilds(page)
   else await settled(page, { area: String(area) })
 }
 
@@ -479,11 +480,34 @@ export async function wildsWindow(page: Page): Promise<WildsWindowView | null> {
   return page.evaluate(() => window.__fsWildsWindow?.() ?? null)
 }
 
-/** Warp to a tile: the open map's (`outdoors`) are world tiles, signed; every other area's its own. */
+/**
+ * Warp to a tile: the open map's (`outdoors`) are world tiles, signed; every
+ * other area's its own. `commons` takes Commons tiles (as content names
+ * them) and lands on the open map at the same spot (`commonsTile`).
+ */
 export async function warp(page: Page, area: AreaId, tx: number, ty: number): Promise<void> {
   // The warp starts the transition at once (a refused warp leaves us here).
   await page.evaluate(([a, x, y]) => window.__fsDevWarp!(a, x, y), [area, tx, ty] as const)
   await waitForArea(page, area)
+}
+
+/** The Commons' origin on the grid: Commons tile (tx, ty) is world tile (tx - 21, ty + 24) (content/places.json). */
+export const COMMONS_ORIGIN = { tx: -21, ty: 24 } as const
+
+/** A Commons tile (as content names it) as the open map's world tile. */
+export function commonsTile(tx: number, ty: number): { tx: number; ty: number } {
+  return { tx: tx + COMMONS_ORIGIN.tx, ty: ty + COMMONS_ORIGIN.ty }
+}
+
+/** Is the hero on the Commons (the open map, on its footprint: world tiles x -24..47, y 24..71)? */
+export async function inCommons(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const s = window.__fsSafety?.()
+    if (!s || s.areaId !== 'outdoors' || !s.position) return false
+    const tx = Math.floor(s.position.x / 16)
+    const ty = Math.floor(s.position.y / 16)
+    return tx >= -24 && tx < 48 && ty >= 24 && ty < 72
+  })
 }
 
 export async function player(page: Page): Promise<{ x: number; y: number }> {

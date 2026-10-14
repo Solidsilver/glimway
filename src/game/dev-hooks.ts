@@ -57,6 +57,8 @@ export interface FsHooks {
   __fsGroundAt: (tx: number, ty: number) => number | null
   /** Walk through waypoints (world px) as if steered; whether a walk is still going. */
   __fsDevWalk: (path: { x: number; y: number }[]) => void
+  /** Displace the physics body during its next step, returning the feet after postUpdate. */
+  __fsDevShove: (dx: number, dy: number) => Promise<{ x: number; y: number }>
   __fsDevWalking: () => boolean
   /** The waypoints a dev walk has still to reach, the next first (null: not walking). */
   __fsDevWalkLeft: () => { x: number; y: number }[] | null
@@ -75,7 +77,7 @@ export interface FsHooks {
   __fsWilds: () => ReturnType<WildsEntities['debug']> | null
   __fsWildsWindow: () => ReturnType<WildsWindow['debug']> | null
   /** The scene's display-list size, running tweens and static bodies, and what is listed (type:texture, counted). */
-  __fsSceneSize: () => { list: number; tweens: number; transientTweens: number; statics: number; kinds: Record<string, number> }
+  __fsSceneSize: () => { list: number; tweens: number; transientTweens: number; statics: number; textures: number; listeners: number; kinds: Record<string, number> }
   /** The walking-performance instruments (src/game/perf.ts; only with `?perf=1`): everything as JSON, the walk's phase, a fresh start. */
   __fsPerf: () => PerfReport
   __fsPerfPhase: (name: string) => void

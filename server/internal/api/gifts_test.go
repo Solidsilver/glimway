@@ -602,8 +602,8 @@ func TestMakerThankYouMail(t *testing.T) {
 	// Now test presence: Bob and Alice standing together in the same room within 6 tiles
 	// Next day so rate limit is reset
 	x.now.Add(86400)
-	x.stand(x.account("alice"), a.WorldID, "commons", 100, 100)
-	x.stand(x.account("bob"), b.WorldID, "commons", 100, 110) // within 10px, 6 tiles is 96px
+	x.standOnCommons(x.account("alice"), a.WorldID, 100, 100)
+	x.standOnCommons(x.account("bob"), b.WorldID, 100, 110) // within 10px, 6 tiles is 96px
 
 	x.stack(x.account("bob"), "keepers-twists", x.account("alice"), 1)
 	if _, err := x.db.DB.Exec("UPDATE player_vitals SET hp=20 WHERE account_id='" + x.account("bob") + "'"); err != nil {

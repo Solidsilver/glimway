@@ -209,7 +209,7 @@ func TestAvatarChangeReachesTheRoom(t *testing.T) {
 	x.ready("carol")
 	me := x.peerAt(x.account("alice"), a.WorldID, "village")
 	friend := x.peerAt(x.account("bob"), a.WorldID, "village")
-	elsewhere := x.peerAt(x.account("carol"), a.WorldID, "commons")
+	elsewhere := x.peerAt(x.account("carol"), a.WorldID, "outdoors:0:1")
 	avatar := &presenceAvatarMsg{SelectedPet: wrapperspb.String("Fox-Golden")}
 	x.api.avatarChanged(x.account("alice"), avatar)
 	if me.identity.Avatar != avatar || len(me.queue) != 0 {

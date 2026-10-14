@@ -85,7 +85,7 @@ test('a settled member is asked once, then moves into the party’s world', asyn
   await offer.getByRole('button', { name: 'Join them…' }).click()
   const move = other.getByRole('dialog', { name: 'Move to your party’s world?' })
   await expect(move).toBeVisible()
-  await expect(move.getByTestId('move-blocks')).toContainText('Walk to the village or the Commons first.')
+  await expect(move.getByTestId('move-blocks')).toContainText('Walk to the village, the Commons or your home first.')
   await expect(move.getByRole('button', { name: 'Move to your party’s world' })).toBeDisabled()
   await move.getByRole('button', { name: 'Stay here' }).click()
   await expect(move).toHaveCount(0)

@@ -58,7 +58,7 @@ func TestFakesUseCallerTransactionAndCloneViews(t *testing.T) {
 	if snap.Version != 0 {
 		t.Fatal("story fake owns version")
 	}
-	if err = (FakePlacement{}).Record(ctx, tx, &snap, &contract.Where{Area: "commons", X: 2, Y: 3}, 1); err != nil || snap.State.Area != "commons" {
+	if err = (FakePlacement{}).Record(ctx, tx, &snap, &contract.Where{Area: "village", X: 2, Y: 3}, 1); err != nil || snap.State.Area != "village" {
 		t.Fatal(err)
 	}
 	land := FakeLand{Views: map[LandKey]*contract.HomesteadLand{{"world", 0}: {Width: 1, Height: 1, Cells: []string{"grass"}}}}

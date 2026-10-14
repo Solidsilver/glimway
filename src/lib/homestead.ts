@@ -162,11 +162,6 @@ export function gateTile(gate: number, data: HomesteadData = HOMESTEAD_DATA): { 
   return { tx: c.fenceX[gate % 2], ty: row <= last ? c.gateRows[row] : c.gateRows[last] + (row - last) * c.rowPitch, side };
 }
 
-/** Gate rows the Commons map shows for this many gates (at least the designed rows). */
-export function gateRowCount(gates: number, data: HomesteadData = HOMESTEAD_DATA): number {
-  return Math.max(data.commons.gateRows.length, Math.ceil(gates / 2));
-}
-
 /** The area id of gate g's homestead map. */
 export function homeArea(gate: number): string {
   return `home:${gate}`;

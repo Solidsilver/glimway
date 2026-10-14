@@ -7,8 +7,10 @@ import (
 	"glimway/content"
 	"glimway/server/internal/chunks/fakegen"
 	"glimway/server/internal/habitica"
+	"glimway/server/internal/location"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
+	"glimway/server/internal/wilds"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -720,3 +722,41 @@ func decodeLegacyDomainHTTP[T any](x *rig, w *httptest.ResponseRecorder) T {
 }
 
 func testContract() string { return strconv.Itoa(content.ContractNumber) }
+
+// commonsPx is a Commons layout pixel on the outdoors grid: the fixed
+// footprint's origin tile is (-21, 24), so (x-336, y+384).
+func commonsPx(x, y float64) rules.Position {
+	space, tx, ty := location.Resolve("commons", 0, 0)
+	if space != location.Outdoors {
+		panic("the Commons left the outdoors")
+	}
+	return rules.Position{X: x + float64(tx*16), Y: y + float64(ty*16)}
+}
+
+// onCommons is a state standing at a Commons layout pixel.
+func onCommons(s rules.State, x, y float64) rules.State {
+	s.Area, s.Position = outdoorsArea, commonsPx(x, y)
+	return s
+}
+
+// outdoorsRoom is the presence room (the chunk's) of an outdoors position.
+func outdoorsRoom(p rules.Position) string {
+	tx, ty := wilds.TileOfPixel(p.X, p.Y)
+	cx, cy := wilds.ChunkOf(tx, ty)
+	return outdoorsArea + ":" + strconv.Itoa(cx) + ":" + strconv.Itoa(cy)
+}
+
+// standOnCommons is a connected peer at a Commons layout pixel.
+func (x *rig) standOnCommons(id, world string, lx, ly float64) {
+	p := commonsPx(lx, ly)
+	x.stand(id, world, outdoorsRoom(p), p.X, p.Y)
+}
+
+// atContentTile stands a state on an area-local content tile, footDy px
+// down into it: Commons tiles resolve onto the outdoors grid, other areas
+// are their own frame.
+func atContentTile(s rules.State, area string, tx, ty int, footDy float64) rules.State {
+	space, wx, wy := location.Resolve(area, tx, ty)
+	s.Area, s.Position = string(space), rules.Position{X: float64(wx*16 + 8), Y: float64(wy*16) + footDy}
+	return s
+}

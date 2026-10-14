@@ -268,12 +268,16 @@ export async function openTitleGuide(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'I have them' }).click()
 }
 
-/** Wait for connected play: the world is live and the lease is held (`'outdoors'`: the open map). */
+/**
+ * Wait for connected play: the world is live and the lease is held
+ * (`'outdoors'`: the open map; `'commons'`: the same, on the Commons' fixed
+ * ground since the join).
+ */
 export async function waitForWorld(page: Page, area: string = 'village'): Promise<void> {
   await page.waitForFunction((a) => {
     const s = (window as unknown as { __fsSafety?: () => { areaId: string; transitioning: boolean } | null }).__fsSafety?.()
     return !!s && !s.transitioning && s.areaId === a
-  }, area)
+  }, area === 'commons' ? 'outdoors' : area)
   await expect.poll(() => linkStatus(page), { timeout: SERVER_ANSWER_MS }).toBe('online')
 }
 

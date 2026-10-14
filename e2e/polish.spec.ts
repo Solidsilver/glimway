@@ -97,6 +97,7 @@ test.describe('in a world', () => {
     await syncFromMenu(page)
     await expectToast(page, 'glims into your hand')
     await expect.poll(async () => (await serverState(page)).body.state.glims).toBe(3)
-    expect((await serverState(page)).body.state.area).toBe('commons')
+    // The Commons is on the open map's grid since the join.
+    expect((await serverState(page)).body.state.area).toBe('outdoors')
   })
 })

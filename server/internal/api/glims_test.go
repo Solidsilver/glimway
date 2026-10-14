@@ -347,8 +347,8 @@ func TestGlimsConservationAcrossEveryTransfer(t *testing.T) {
 	x.glimsConserved()
 
 	// Glims by hand (3.4): both balances in one transaction.
-	x.stand(alice, a.WorldID, "commons", 300, 300)
-	x.stand(bob, a.WorldID, "commons", 330, 310)
+	x.standOnCommons(alice, a.WorldID, 300, 300)
+	x.standOnCommons(bob, a.WorldID, 330, 310)
 	x.refresh(bc, &b)
 	x.opRefreshing(ac, &a, "give", map[string]any{"toId": bob, "glims": 15}, 200)
 	if x.glims(alice) != 77 || x.glims(bob) != 43 {
@@ -495,8 +495,8 @@ func TestGlimsGiveMovesBothBalancesAndRefusesWhenApart(t *testing.T) {
 
 	// Together: both balances move in one transaction and the recipient hears
 	// it (PresenceGift, kind "glims").
-	x.stand(alice, a.WorldID, "commons", 300, 300)
-	x.stand(bob, a.WorldID, "commons", 330, 310)
+	x.standOnCommons(alice, a.WorldID, 300, 300)
+	x.standOnCommons(bob, a.WorldID, 330, 310)
 	x.refresh(bc, &b)
 	bobRev := b.Version
 	gift := x.opRefreshing(ac, &a, "give", map[string]any{"toId": bob, "glims": 15}, 200)
@@ -768,8 +768,8 @@ func TestGlimsEarnedShareNeverMovesBetweenPlayers(t *testing.T) {
 
 	// By hand: alice has nothing but earned glims, so the give spends them;
 	// bob gets ordinary ones.
-	x.stand(alice, a.WorldID, "commons", 300, 300)
-	x.stand(bob, a.WorldID, "commons", 330, 310)
+	x.standOnCommons(alice, a.WorldID, 300, 300)
+	x.standOnCommons(bob, a.WorldID, 330, 310)
 	x.refresh(bc, &b)
 	x.opRefreshing(ac, &a, "give", map[string]any{"toId": bob, "glims": 15}, 200)
 	if x.glims(alice) != 25 || earned(alice) != 25 || x.glims(bob) != 15 || earned(bob) != 0 {

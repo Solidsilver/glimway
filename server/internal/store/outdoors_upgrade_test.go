@@ -5,14 +5,14 @@ import (
 	"testing"
 )
 
-func TestOutdoors036UpgradePreservesCoordinatesAndRaisesBarrier(t *testing.T) {
+func TestOutdoors036UpgradeMovesPlacesAndRaisesBarrier(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "upgrade.sqlite")
 	old := newUpgradeFixture(t, path, "035_fight_falls.sql", nil)
 	_, err := old.Exec(`INSERT INTO worlds(id,owner_id,seed,created_at) VALUES('w','alice','seed',1);
  INSERT INTO players(account_id,display_name,world_id,created_at,last_seen_at,version) VALUES
- ('alice','Alice','w',1,1,7),('bob','Bob','w',1,1,9),('carol','Carol','w',1,1,11);
+ ('alice','Alice','w',1,1,7),('bob','Bob','w',1,1,9),('carol','Carol','w',1,1,11),('dave','Dave','w',1,1,4);
  INSERT INTO player_place(account_id,area,x,y,place_set_version,last_wick_epoch,last_wick_starts_at) VALUES
- ('alice','wilds',-383.5,-1200,5,'wick-e',500),('bob','commons',376,40,6,'',NULL),('carol','village',2,3,7,'',NULL);
+ ('alice','wilds',-383.5,-1200,5,'wick-e',500),('bob','commons',376,40,6,'',NULL),('carol','village',2,3,7,'',NULL),('dave','commons',856.5,8,2,'',NULL);
  INSERT INTO story_marks VALUES('alice','wilds:turned','server',1);
  INSERT INTO wild_epochs VALUES('wick-e','w','wick','seed',3,'t:500:900',500,900);`)
 	if err != nil {
@@ -30,7 +30,9 @@ func TestOutdoors036UpgradePreservesCoordinatesAndRaisesBarrier(t *testing.T) {
 			version, barrier int
 		}{
 			{"alice", "outdoors", "wick-e", -383.5, -1200, 8, 8},
-			{"bob", "commons", "", 376, 40, 9, 6},
+			// Commons local pixels move by the footprint origin (-21, 24) tiles.
+			{"bob", "outdoors", "", 40, 424, 10, 10},
+			{"dave", "outdoors", "", 520.5, 392, 5, 5},
 			{"carol", "village", "", 2, 3, 11, 7},
 		} {
 			var area, epoch string

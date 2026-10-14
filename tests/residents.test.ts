@@ -18,7 +18,7 @@ import { handoverFor, paperFlag } from '../src/content/papers.ts';
 import { QUEST_STAGES, type QuestStage } from '../src/lib/state.ts';
 import { calendarAt } from '../src/lib/calendar.ts';
 import { buildArea } from '../src/game/worlds.ts';
-import { serveFixtureCommons } from './commons-fixture.ts';
+import { servedCommonsFixture } from './commons-fixture.ts';
 import { TERRAIN, TILE } from '../src/lib/tile.ts';
 
 const EPOCH = Date.parse('2026-01-05T00:00:00Z') / 1000;
@@ -201,10 +201,10 @@ test('resident talk is pure (no shared arrays)', () => {
 });
 
 test('residents stand on open ground in their places, clear of the quest NPCs and the spawn', () => {
-  serveFixtureCommons();
   const village = buildArea('village');
-  const commons = buildArea('commons');
-  const spot = (w: typeof village, id: string) => w.npcs.find((n) => n.id === id)!;
+  // The Commons is fixed ground on the open map: its served layout, in Commons tiles (as residents.json names spots).
+  const commons = servedCommonsFixture();
+  const spot = (w: { npcs: typeof village.npcs }, id: string) => w.npcs.find((n) => n.id === id)!;
   for (const [w, id] of [[village, 'hazel'], [village, 'finn'], [village, 'ada'], [commons, 'elara']] as const) {
     const n = spot(w, id);
     assert.ok(n, `${id} is placed`);
@@ -219,7 +219,9 @@ test('residents stand on open ground in their places, clear of the quest NPCs an
   assert.equal(finn.ty, mill.ty + mill.th, 'Finn stands on the ground in front of the mill');
   assert.ok(Math.abs(finn.tx - mill.door.tx) <= 1, 'beside the door');
   assert.deepEqual(spot(village, 'ada'), { id: 'ada', tx: 35, ty: 8, spot: 'window' });
-  const arch = commons.exits.find((e) => e.to === 'outdoors')!;
+  // The mouth under the Tangle's gate (world x 1..3, Commons tiles 22..24 on row 0).
+  const arch = { tx: 22, ty: 0, tw: 3 };
+  for (let x = arch.tx; x < arch.tx + arch.tw; x++) assert.equal(commons.solid[0]![x], false, 'the mouth is open');
   const elara = spot(commons, 'elara');
   assert.ok(Math.abs(elara.ty - arch.ty) <= 6 && elara.tx >= arch.tx && elara.tx <= arch.tx + arch.tw + 1);
   // Off the lane's walk: the Wilds path stays clear.

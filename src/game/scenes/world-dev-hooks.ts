@@ -11,7 +11,7 @@
 import Phaser from 'phaser'
 import type { AreaId } from '../../lib/state'
 import { devMainThreadTilesetHash } from '../area/terrain'
-import { bus } from '../events'
+import { bus, EV } from '../events'
 import { TILE, tileBottom, tileKey } from '../../lib/tile'
 import { TILE_DATA } from '../area/tile-art'
 import type { EnemyType } from '../worlds'
@@ -55,6 +55,15 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
       blocked: { up: b.blocked.up, down: b.blocked.down, left: b.blocked.left, right: b.blocked.right }
     }
   })
+  on('__fsDevShove', (dx, dy) => new Promise((resolve) => {
+    s.physics.world.once('worldstep', () => {
+      const sprite = s['hero'].sprite
+      const body = sprite.body as Phaser.Physics.Arcade.Body
+      body.position.x += dx
+      body.position.y += dy
+      s.events.once('postupdate', () => resolve({ x: sprite.x, y: sprite.y }))
+    })
+  }))
   on('__fsEnemies', () =>
     s['enemies'].enemies.map((e) => {
       const b = e.sprite.body as Phaser.Physics.Arcade.Body
@@ -80,7 +89,7 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
   on('__fsWorld', () => {
     const b = s.physics.world.bounds
     const world = s['world']
-    return { areaId: world.areaId, widthPx: world.widthPx, heightPx: world.heightPx, bounds: { x: b.x, y: b.y, w: b.width, h: b.height }, solid: world.solid, exits: world.exits.map((e) => ({ tx: e.tx, ty: e.ty, tw: e.tw, th: e.th, to: String(e.to), side: e.side, kind: e.kind })) }
+    return { areaId: world.areaId, widthPx: world.widthPx, heightPx: world.heightPx, bounds: { x: b.x, y: b.y, w: b.width, h: b.height }, solid: world.solid, exits: [...world.exits, ...(s['window']?.exits() ?? [])].map((e) => ({ tx: e.tx, ty: e.ty, tw: e.tw, th: e.th, to: String(e.to), side: e.side, kind: e.kind })) }
   })
   // Is a tile solid in the map's data? (The open map has no grid in __fsWorld: its chunks answer by world tile.)
   on('__fsTileSolid', (tx: number, ty: number) => {
@@ -145,7 +154,8 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
     s['hero'].iframes = 0
     s['hero'].damagePlayer(n, s['hero'].sprite.x - 1)
   })
-  // The open map's warp goes to a world tile (signed); every other area's to its tile.
+  // The open map's warp goes to a world tile (signed); every other area's to its tile
+  // (a fixed place's own, `commons`, onto the grid: its layout tile resolved, src/lib/location.ts).
   on('__fsDevWarp', (area: AreaId, tx: number, ty: number) => (area === 'outdoors' ? s['warpWilds'](tx, ty) : s['transitionTo'](area, { tx, ty })))
   on('__fsDevInsets', (v) => {
     if (v) setPlayInsets(v)
@@ -316,7 +326,10 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
       kinds[k] = (kinds[k] ?? 0) + 1
     }
     const tweens = s.tweens.getTweens()
-    return { list: s.children.length, tweens: tweens.length, transientTweens: tweens.filter(t => !t.isInfinite).length, statics: s.physics.world.staticBodies.size, kinds }
+    // Textures the scene's chunks made (ground paints, drift), and everything listening on the game's bus.
+    const textures = s.textures.getTextureKeys().filter((k) => /^wilds-(ground|drift):/.test(k)).length
+    const listeners = Object.values(EV).reduce((n, e) => n + bus.listenerCount(e), 0)
+    return { list: s.children.length, tweens: tweens.length, transientTweens: tweens.filter(t => !t.isInfinite).length, statics: s.physics.world.staticBodies.size, textures, listeners, kinds }
   })
   on('__fsPaths', () => {
     const paths = s['paths']

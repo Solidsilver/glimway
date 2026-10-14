@@ -15,6 +15,8 @@
  */
 import { TERRAIN } from '../tile.ts';
 import { loadWilds } from './data.ts';
+import { PLACES, fixedChunks } from '../places.ts';
+import { anchor } from '../location.ts';
 
 export interface MapChunk {
   cx: number;
@@ -53,6 +55,8 @@ export interface MapWay {
 export interface MapInput {
   frontier: { minCx: number; minCy: number; maxCx: number; maxCy: number };
   chunks: readonly MapChunk[];
+  /** The fixed footprints' chunks (the Commons): always drawn, whatever the wick. */
+  fixed?: readonly MapChunk[];
   glimpse: readonly { cx: number; cy: number; land: string; river: boolean }[];
   ways: readonly MapWay[];
   places: readonly MapPlace[];
@@ -117,10 +121,23 @@ export const MAP_COLOURS = {
   found: hex('#7a4bb0'),
 } as const;
 
-/** Colour for each TERRAIN id the open map uses. */
-const TERRAIN_COLOUR = new Map<number, RGB>(
-  loadWilds().grounds.map((g) => [(TERRAIN as Record<string, number>)[g.terrain]!, hex(GROUND_COLOURS[g.id] ?? '#888888')]),
-);
+/** Map colours of the curated grounds a fixed footprint (the Commons) is laid in, by TERRAIN name. */
+const CURATED_COLOURS: Record<string, string> = {
+  grass_a: '#a9b86e',
+  grass_b: '#9cae66',
+  grass_c: '#a9b86e',
+  flowers: '#b8c07a',
+  dirt: '#c4a874',
+  path_a: '#c4a874',
+  path_b: '#c4a874',
+  cobble: '#a59c88',
+  cobble_moss: '#9a9a80',
+};
+/** Colour for each TERRAIN id the open map uses (the curated grounds fixed ground uses, then the Wilds' own). */
+const TERRAIN_COLOUR = new Map<number, RGB>([
+  ...Object.entries(CURATED_COLOURS).map(([name, c]) => [(TERRAIN as Record<string, number>)[name]!, hex(c)] as [number, RGB]),
+  ...loadWilds().grounds.map((g) => [(TERRAIN as Record<string, number>)[g.terrain]!, hex(GROUND_COLOURS[g.id] ?? '#888888')] as [number, RGB]),
+]);
 const LAID = new Set(['laid-stone', 'laid-plank'].map((id) => (TERRAIN as Record<string, number>)[loadWilds().grounds.find((g) => g.id === id)!.terrain]!));
 
 const UNKNOWN = hex('#888888');
@@ -128,9 +145,29 @@ const darker = (c: RGB, k: number): RGB => [Math.round(c[0] * k), Math.round(c[1
 
 type Rect = { minCx: number; minCy: number; maxCx: number; maxCy: number };
 
-/** Everything the map could show: the frontier and the glimpse past it. */
+/** The fixed footprints' chunks (always on the map: the Commons, south of the gate). */
+export function fixedRects(): Rect[] {
+  return PLACES.fixed.map((p) => {
+    const c = fixedChunks(p);
+    return { minCx: c.x0, minCy: c.y0, maxCx: c.x1, maxCy: c.y1 };
+  });
+}
+
+/** On the map's grid: inside the frontier or on a fixed footprint. */
+export function onMapGrid(frontier: Rect, cx: number, cy: number): boolean {
+  const inRect = (r: Rect) => cx >= r.minCx && cx <= r.maxCx && cy >= r.minCy && cy <= r.maxCy;
+  return inRect(frontier) || fixedRects().some(inRect);
+}
+
+/** Everything the map could show: the frontier, the fixed footprints and the glimpse past them. */
 export function mapBounds(input: Pick<MapInput, 'frontier' | 'glimpse'>): Rect {
   const b = { ...input.frontier };
+  for (const r of fixedRects()) {
+    b.minCx = Math.min(b.minCx, r.minCx);
+    b.maxCx = Math.max(b.maxCx, r.maxCx);
+    b.minCy = Math.min(b.minCy, r.minCy);
+    b.maxCy = Math.max(b.maxCy, r.maxCy);
+  }
   for (const g of input.glimpse) {
     b.minCx = Math.min(b.minCx, g.cx);
     b.maxCx = Math.max(b.maxCx, g.cx);
@@ -163,6 +200,10 @@ export function mapFrame(input: MapInput): Rect {
   for (const p of loadWilds().places) {
     add(p.cx, p.cy);
     add(p.cx + p.width - 1, p.cy + p.height - 1);
+  }
+  for (const r of fixedRects()) {
+    add(r.minCx, r.minCy);
+    add(r.maxCx, r.maxCy);
   }
   for (const c of input.chunks) add(c.cx, c.cy);
   if (input.hero) tile(input.hero.tx, input.hero.ty);
@@ -308,18 +349,16 @@ export function mapMarks(input: MapInput): MapMarks {
     labels.push({ kind: 'place', text: name, x: p.tx, y: p.ty, ...(p.foundBy ? { sub: p.foundBy } : {}) });
   }
   // The footprints by name, and the Commons gate.
-  for (const fp of w.places) labels.push({ kind: 'footprint', text: fp.name.charAt(0).toUpperCase() + fp.name.slice(1), x: (fp.cx + fp.width / 2) * S, y: (fp.cy + fp.height / 2) * S });
+  for (const fp of [...w.places, ...PLACES.fixed]) labels.push({ kind: 'footprint', text: fp.name.charAt(0).toUpperCase() + fp.name.slice(1), x: (fp.cx + fp.width / 2) * S, y: (fp.cy + fp.height / 2) * S });
   const gate = gateTile();
   if (gate) labels.push({ kind: 'gate', text: input.words.gate, x: gate.tx, y: gate.ty });
   return { wayTiles, places, labels };
 }
 
-/** The Commons gate's tile on the open map (where the map opens when you're not out there). */
+/** The Commons gate's tile on the open map, its arch (`commons:arch`: where the map opens when you're not out there). */
 export function gateTile(): { tx: number; ty: number } | null {
-  const w = loadWilds();
-  const S = w.chunkSize;
-  const gate = w.places.find((p) => p.id === 'tangle')?.openings.find((o) => o.id === 'commons-gate');
-  return gate ? { tx: gate.cx * S + gate.offset + 1, ty: gate.cy * S + S - 1 } : null;
+  const a = anchor('commons:arch');
+  return a ? { tx: Math.floor(a.x / 16), ty: Math.floor(a.y / 16) } : null;
 }
 
 /**
@@ -402,7 +441,7 @@ export function mapPicture(input: MapInput): MapPicture {
       }
   };
   const f = input.frontier;
-  const inside = (cx: number, cy: number) => cx >= f.minCx && cx <= f.maxCx && cy >= f.minCy && cy <= f.maxCy;
+  const inside = (cx: number, cy: number) => onMapGrid(f, cx, cy);
   // Parchment for the frontier's unwalked land, a faint grid at chunk edges.
   for (let cy = f.minCy; cy <= f.maxCy; cy++)
     for (let cx = f.minCx; cx <= f.maxCx; cx++)
@@ -411,7 +450,7 @@ export function mapPicture(input: MapInput): MapPicture {
   // Past the drift: a pale wash of the land the glimpse names, hatched where the Wend runs on.
   for (const g of input.glimpse) if (!inside(g.cx, g.cy)) blit(glimpseRaster(g.land, g.river, g.cx, g.cy), g.cx, g.cy);
   // Walked land, in its own colours.
-  for (const c of input.chunks) if (inside(c.cx, c.cy)) blit(chunkRaster(c), c.cx, c.cy);
+  for (const c of [...input.chunks, ...(input.fixed ?? [])]) if (inside(c.cx, c.cy)) blit(chunkRaster(c), c.cx, c.cy);
   // The frontier's edge: a dashed line in the drift's colour.
   const x0 = (f.minCx - b.minCx) * S;
   const y0 = (f.minCy - b.minCy) * S;

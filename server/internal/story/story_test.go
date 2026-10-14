@@ -134,7 +134,8 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 	if _, e := r.Grant(context.Background(), tx, &s, "joss-penhallow-letter-map-case", now); e == nil {
 		t.Fatal("unbuilt grant")
 	}
-	w = &contract.Where{Area: "commons"}
+	// On the Commons: the arch, on the outdoors grid.
+	w = &contract.Where{Area: "outdoors", X: 40, Y: 424}
 	for _, p := range content.PapersByID {
 		if p.Source == "commons" && (p.Rule.Fact == "plot" || p.Rule.Fact == "foundation" || p.Rule.Fact == "door-fox") {
 			eligible(p.GetId(), w, false)
@@ -218,9 +219,10 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 		t.Fatal(s.State.Flags)
 	}
 	board := content.StoryRules.Boards["commons"]
-	eligible("notices-from-the-board", &contract.Where{Area: "commons", X: float64(board.GetTx()*16 + 8), Y: float64(board.GetTy()*16 + 8)}, true)
-	eligible("notices-from-the-board", &contract.Where{Area: "commons", X: 0, Y: 0}, false)
+	// The board stands in Commons layout tiles; the Commons is outdoors.
 	eligible("notices-from-the-board", &contract.Where{Area: "outdoors", X: float64((board.GetTx()-21)*16 + 8), Y: float64((board.GetTy()+24)*16 + 8)}, true)
+	eligible("notices-from-the-board", &contract.Where{Area: "outdoors", X: float64((board.GetTx()-21)*16 + 8 + 100), Y: float64((board.GetTy()+24)*16 + 8)}, false)
+	eligible("notices-from-the-board", &contract.Where{Area: "commons", X: float64(board.GetTx()*16 + 8), Y: float64(board.GetTy()*16 + 8)}, false)
 	eligible("to-the-bench-across", &contract.Where{Area: "outdoors", X: 40, Y: 392}, true)
 	eligible("to-the-bench-across", &contract.Where{Area: "outdoors", X: 40, Y: 376}, false)
 	before := store.JSON(s.State.Flags)

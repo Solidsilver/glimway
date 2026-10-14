@@ -81,7 +81,7 @@ export const worldCopy = {
   wardenTools: (n: number) =>
     `${n} warden-set ${plural(n, 'tool rests', 'tools rest')} in the shared chest. Take ${plural(n, 'it', 'them')} first, or ${plural(n, 'it stays', 'they stay')} behind.`,
   deedCost: (n: number) => `A deed there costs ${n} glims from Silas: only your first was free.`,
-  blockArea: 'Walk to the village or the Commons first.',
+  blockArea: 'Walk to the village, the Commons or your home first.',
   blockMail: (n: number) => `${n} ${plural(n, 'parcel you sent is', 'parcels you sent are')} still on the road. Recall ${plural(n, 'it', 'them')} at a mailbox first.`,
   blockOffline: 'Moving needs a connection.',
   blockPending: 'An earlier errand is still settling. Try again in a moment.',

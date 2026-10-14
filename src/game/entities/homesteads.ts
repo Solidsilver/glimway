@@ -28,7 +28,8 @@ import { bus, EV } from '../events'
 import type { Session } from '../session'
 import { tileCenter, tileFeet, tileKey, tileMid } from '../../lib/tile'
 import type { WorldData } from '../worlds'
-import { commonsServed, prepareCommons, type CommonsWorld } from '../commons-served'
+import type { CommonsLane } from '../wilds/fixed'
+import type { FixedHooks } from '../wilds/fixed-chunk'
 import type { LandWorld } from '../homeland'
 import { ROOM_BENCH, ROOM_HEARTH } from '../cottage'
 import { villageFor, type Village } from '../village'
@@ -55,6 +56,8 @@ export interface HomesteadDeps {
   hero: () => Phaser.Physics.Arcade.Sprite
   /** The hero, to sit on a placed seat (and stand back up). */
   sitter: () => { readonly isSeated: boolean; sit(pose: SeatPose): void; standUp(): void }
+  /** On the open map: the Commons lane (its gates and fixtures, world tiles), drawn a chunk at a time. */
+  commons: CommonsLane | null
   /** In a cottage (`in:home:<gate>`): which gate's homestead it stands on. */
   room: { gate: number } | null
   /** Walk into a cottage: an area change into `in:home:<gate>`. */
@@ -76,7 +79,7 @@ export class HomesteadLayer {
   readonly arranging: HomesteadArranging
   readonly homes: Homesteads
   readonly village: Village
-  readonly commons: CommonsWorld | null
+  readonly commons: CommonsLane | null
   readonly land: LandWorld | null
   /** The homestead this scene stands on (its land, or a cottage on it). */
   readonly gate: number | null
@@ -91,7 +94,7 @@ export class HomesteadLayer {
   ) {
     this.homes = homesteadsFor(deps.session)
     this.village = villageFor(deps.session)
-    this.commons = deps.world.areaId === 'commons' ? (deps.world as CommonsWorld) : null
+    this.commons = deps.commons
     const landGate = deps.room ? null : parseHomeArea(deps.world.areaId)
     this.land = landGate !== null ? (deps.world as LandWorld) : null
     this.gate = deps.room?.gate ?? landGate
@@ -100,13 +103,7 @@ export class HomesteadLayer {
     this.talk = new HomesteadTalk(this)
     this.arranging = new HomesteadArranging(this)
     this.yard = this.land ? new HomesteadYard(scene, deps.reducedMotion, () => deps.hero()) : null
-    if (this.commons?.served) this.art.buildCommonsFixtures()
-    else if (this.commons) {
-      // Meadow stands in for the Commons until its chunks come: redraw (and so
-      // rebuild) if they already have, and keep asking while they haven't.
-      this.scheduleRedraw()
-      scene.time.addEvent({ delay: 5000, loop: true, callback: () => void prepareCommons(deps.session) })
-    }
+    if (this.commons) this.art.buildCommonsFixtures()
     this.art.emitThumbs()
     const onChange = (p?: { gate?: number }) => this.scheduleRedraw(p?.gate)
     const onCommand = (c: PlacementCommand) => this.arranging.command(c)
@@ -332,11 +329,6 @@ export class HomesteadLayer {
 
   private redraw(gates?: Set<number>): void {
     if (this.commons) {
-      // Built on meadow before the served Commons arrived: rebuild on it.
-      if (!this.commons.served && commonsServed()) {
-        this.deps.rebuild()
-        return
-      }
       this.art.drawGates(gates)
       this.art.drawGuide()
     } else if (this.gate !== null && (!gates || gates.has(this.gate))) {
@@ -427,6 +419,15 @@ export class HomesteadLayer {
     return null
   }
 
+
+  /**
+   * The open map's fixed chunks attach and detach the lane's fixtures they
+   * own: the gates' signs and shelves, the hame (../wilds/fixed-chunk.ts).
+   */
+  readonly fixedHooks: FixedHooks = {
+    attach: (key) => this.art.attachChunk(key),
+    detach: (key) => this.art.detachChunk(key)
+  }
 
   /** Per frame: the way to your gate, and whether the hero may arrange their place. */
   update(dt: number): void {

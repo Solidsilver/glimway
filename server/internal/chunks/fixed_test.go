@@ -47,7 +47,7 @@ func servedBytes(t *testing.T, c *contract.WorldChunk) []byte {
 }
 
 // The fixed chunks' bytes are fixed for a layout revision, and the client's
-// copies (tests/fixtures/commons-<cx>-<cy>.bin: tests/commons-served.test.ts
+// copies (tests/fixtures/commons-<cx>-<cy>.bin: tests/commons-fixture.ts
 // builds the Commons from them) are these bytes. UPDATE_CLIENT_FIXTURES=1
 // writes them.
 func TestFixedChunkBytesPerRevision(t *testing.T) {

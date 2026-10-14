@@ -272,6 +272,10 @@ func TestLibraryDonationNeedsElaraWithinGrace(t *testing.T) {
 			before := x.expect("GET", "/api/state", nil, c, 200)
 			request := donateBody(s, "will-of-elias-fenn", "donate")
 			request["where"] = map[string]any{"area": tc.area, "x": 80, "y": 80}
+			if tc.area == "commons" {
+				at := commonsPx(80, 80)
+				request["where"] = map[string]any{"area": outdoorsArea, "x": at.X, "y": at.Y}
+			}
 			answer := x.lib("POST", "/api/library/donate", request, c, tc.status)
 			if tc.status == 409 {
 				if answer.Error.Code != "not-here" {

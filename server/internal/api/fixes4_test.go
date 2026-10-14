@@ -98,14 +98,12 @@ func TestFix4VillageHearthOnly(t *testing.T) {
 			c, s := x.ready("alice")
 			x.fund(x.account("alice"), 5, 5)
 			s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
-			doc := s.State
-			doc.Area = "commons"
-			doc.Position = rules.Position{X: 64, Y: 64}
+			doc := onCommons(s.State, 64, 64)
 			doc.HP = 0
 			if x.exp("POST", "/api/spend", spendBody(s, kind, "", "hearth", doc), c, 409).Error.Code != "not-at-safe-boundary" {
 				t.Fatal("commons hearth rest")
 			}
-			doc.Area = "village"
+			doc.Area, doc.Position = "village", rules.Position{X: 64, Y: 64}
 			x.exp("POST", "/api/spend", spendBody(s, kind, "", "hearth-village", doc), c, 200)
 		})
 	}

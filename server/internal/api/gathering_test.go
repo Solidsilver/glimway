@@ -52,10 +52,7 @@ func TestGatheringUnknownDefinitionsRollBack(t *testing.T) {
 
 // standAt is the progress of a player standing on (or beside) a tile.
 func standAt(s response, area string, tx, ty int) rules.State {
-	doc := s.State
-	doc.Area = area
-	doc.Position = rules.Position{X: float64(tx*16 + 8), Y: float64(ty*16 + 12)}
-	return doc
+	return atContentTile(s.State, area, tx, ty, 12)
 }
 
 // gatherIn is one gather's fields, standing at a tile of an area (in the

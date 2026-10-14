@@ -1,17 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import type { CommonsWorld } from '../src/game/commons-served.ts';
 import { buildRoom, ROOM_DOOR, ROOM_GRID } from '../src/game/cottage.ts';
 import { buildArea, hasAreaKind } from '../src/game/worlds.ts';
 import { buildLand, setLandSource } from '../src/game/homeland.ts';
 import { HOMESTEAD_DATA, gateTile } from '../src/lib/homestead.ts';
 import { LAND } from '../src/lib/homestead-land.ts';
 import { serveFixtureLand } from './land-fixture.ts';
-import { serveFixtureCommons, servedCommonsFixture } from './commons-fixture.ts';
+import { serveFixtureCommons, servedCommonsFixture, toCommons, type CommonsView } from './commons-fixture.ts';
+import { anchorTile } from '../src/game/wilds/fixed.ts';
 
 // Homestead land and the Commons are the server's: these tests stand on their served fixtures.
 serveFixtureLand('guest');
-serveFixtureCommons();
+const footprint = serveFixtureCommons();
 const commons = servedCommonsFixture();
 /** The plot lane between the two fences (content/homestead.json fenceX). */
 const LANE = { x0: HOMESTEAD_DATA.commons.fenceX[0] + 1, x1: HOMESTEAD_DATA.commons.fenceX[1] - 1 };
@@ -21,14 +21,14 @@ type Tile = { tx: number; ty: number };
 const key = (t: Tile) => `${t.tx},${t.ty}`;
 
 /** Static collision (solid tiles and every prop/tree/bush/rock tile). */
-function blocked(w: CommonsWorld | ReturnType<typeof buildRoom>): Set<string> {
+function blocked(w: CommonsView | ReturnType<typeof buildRoom>): Set<string> {
   const out = new Set<string>();
   for (let y = 0; y < w.height; y++) for (let x = 0; x < w.width; x++) if (w.solid[y][x]) out.add(key({ tx: x, ty: y }));
   for (const s of [...w.trees, ...w.bushes, ...w.rocks, ...w.props]) out.add(key(s));
   return out;
 }
 
-function reach(w: CommonsWorld | ReturnType<typeof buildRoom>, from: Tile): Set<string> {
+function reach(w: CommonsView | ReturnType<typeof buildRoom>, from: Tile): Set<string> {
   const b = blocked(w);
   const seen = new Set([key(from)]);
   const q = [from];
@@ -46,11 +46,9 @@ function reach(w: CommonsWorld | ReturnType<typeof buildRoom>, from: Tile): Set<
 
 const near = (r: Set<string>, t: Tile) => [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => r.has(key({ tx: t.tx + dx, ty: t.ty + dy })));
 
-test('the Commons is registered as an area, served; homestead lands resolve by gate', () => {
-  const w = buildArea('commons') as CommonsWorld;
-  assert.equal(w.areaId, 'commons');
-  assert.equal(w.served, true);
-  assert.deepEqual(w.ground, commons.ground);
+test('the Commons is fixed ground on the open map, no area of its own; homestead lands resolve by gate', () => {
+  assert.equal(hasAreaKind('commons'), false);
+  assert.ok(hasAreaKind('outdoors'));
   assert.equal(buildArea('home:4').areaId, 'home:4');
   assert.ok(hasAreaKind('home:0') && hasAreaKind('home:9999'));
   assert.ok(!hasAreaKind('home:01') && !hasAreaKind('home') && !hasAreaKind('home:x'));
@@ -92,8 +90,9 @@ test('every gate opens onto its homestead, and can be walked up to from the vill
     for (let y = g.ty; y <= g.ty + 1; y++) assert.ok(!w.solid[y][g.tx], `gate ${g.gate} gap is open`);
     // Coming back out of the land puts you on the lane in front of the gate.
     const land = buildArea(`home:${g.gate}`);
-    assert.deepEqual(land.exits[0].entry, g.entry);
-    assert.equal(land.exits[0].to, 'commons');
+    assert.deepEqual(toCommons(land.exits[0].entry), g.entry);
+    assert.deepEqual(land.exits[0].entry, anchorTile(`commons:gate:${g.gate}`));
+    assert.equal(land.exits[0].to, 'outdoors');
   }
   for (const [name, t] of Object.entries(w.features)) {
     if (name === 'lamps') continue;
@@ -105,7 +104,7 @@ test('every gate opens onto its homestead, and can be walked up to from the vill
 test('a homestead’s land: the site, the path to the gate mouth and the mailbox are reachable; the way back is the gate', () => {
   for (const gate of [0, 1, 5, 17]) {
     const land = buildLand(gate);
-    const r = reach(land as unknown as CommonsWorld, land.spawn);
+    const r = reach(land as unknown as CommonsView, land.spawn);
     assert.equal(land.exits.length, 1);
     const exit = land.exits[0];
     assert.equal(exit.ty, land.height - 1);
@@ -139,15 +138,18 @@ test('cleared tiles open up the land map; desolation grows over it', () => {
   }
 });
 
-test('the Commons gate leads back to Hearthwick and the north lane to the Wilds', () => {
+test('the Commons gate leads back to Hearthwick; the north lane is walked into the Wilds, through the mouth alone', () => {
   const w = commons;
   const village = w.exits.find((e) => e.to === 'village')!;
-  const wilds = w.exits.find((e) => e.to === 'outdoors')!;
   assert.equal(village.tx, 0);
-  assert.equal(wilds.ty, 0);
+  assert.equal(w.exits.some((e) => e.to === 'outdoors'), false, 'no portal at the arch');
+  // The footprint's north edge is solid but for the mouth, under the Tangle's gate (world x 1..3).
+  const open = footprint.solid[0]!.flatMap((s, x) => (s ? [] : [footprint.tx + x]));
+  assert.deepEqual(open, [1, 2, 3]);
   const v = buildArea('village');
-  const gate = v.exits.find((e) => e.to === 'commons')!;
+  const gate = v.exits.find((e) => e.to === 'outdoors')!;
   assert.equal(gate.tx + gate.tw, v.width, 'the Commons gate is on the village’s east edge');
+  assert.deepEqual(gate.entry, anchorTile('commons:west-path'));
   // The Lantern Road exit (the quest's) is untouched.
   assert.deepEqual(v.exits.find((e) => e.to === 'woodland'), { tx: v.width - 1, ty: 9, tw: 1, th: 3, to: 'woodland', entry: { tx: 2, ty: 15 } });
 });

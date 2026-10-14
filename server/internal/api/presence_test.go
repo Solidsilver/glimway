@@ -500,7 +500,7 @@ func TestPresenceJoinInsideTheCooldownWaitsForItsEnd(t *testing.T) {
 	bob.join("village")
 	joined := time.Now()
 	// Straight on, inside the cooldown: the Commons, then the deeds room.
-	bob.send(map[string]any{"type": "join", "area": "commons"})
+	bob.send(map[string]any{"type": "join", "area": "outdoors:0:1"})
 	bob.send(map[string]any{"type": "join", "area": "in:commons:yard:deeds"})
 	room := bob.expect("room")
 	if room.Area != "in:commons:yard:deeds" || len(room.Players) != 1 || room.Players[0].AccountID != x.account("alice") {
@@ -857,7 +857,7 @@ func TestPresenceExpiredTimerMustNotConsumeNewPendingJoin(t *testing.T) {
 	h.admit(p)
 	a := &Server{presence: h}
 	h.mu.Lock()
-	a.deferPresenceJoin(p, "commons", time.Millisecond)
+	a.deferPresenceJoin(p, "outdoors:0:1", time.Millisecond)
 	// Hold the hub lock past the cooldown: callback is due but cannot run.
 	time.Sleep(520 * time.Millisecond)
 	a.presenceJoin(p, "in:commons:yard:deeds", time.Now())
@@ -901,7 +901,7 @@ func TestPresenceDeferredAreaJoinKeepsFinalPosition(t *testing.T) {
 	oldRoom := wsConnect(t, ts, bc, b.Lease)
 	oldRoom.join("village")
 	destination := wsConnect(t, ts, cc, carol.Lease)
-	destination.join("commons")
+	destination.join("outdoors:0:1")
 	w := wsConnect(t, ts, c, s.Lease)
 	w.join("village")
 	oldRoom.expect("join")
@@ -912,8 +912,8 @@ func TestPresenceDeferredAreaJoinKeepsFinalPosition(t *testing.T) {
 		t.Fatal(inherited.Raw)
 	}
 	oldRoom.expect("join")
-	w.send(map[string]any{"type": "join", "area": "commons"})
-	pos := map[string]any{"type": "pos", "x": 100, "y": 120, "facing": map[string]any{"x": 0, "y": 1}, "moving": false}
+	w.send(map[string]any{"type": "join", "area": "outdoors:0:1"})
+	pos := map[string]any{"type": "pos", "x": 100, "y": 520, "facing": map[string]any{"x": 0, "y": 1}, "moving": false}
 	w.send(pos)
 	// Pending samples must keep the latest even inside the position throttle.
 	pos["x"] = 101
@@ -922,7 +922,7 @@ func TestPresenceDeferredAreaJoinKeepsFinalPosition(t *testing.T) {
 	time.Sleep(375 * time.Millisecond)
 	pos["x"] = 103
 	w.send(pos)
-	if room := w.expect("room"); room.Area != "commons" {
+	if room := w.expect("room"); room.Area != "outdoors:0:1" {
 		t.Fatal(room.Raw)
 	}
 	// No destination position may be relayed to the old room.
@@ -938,7 +938,7 @@ func TestPresenceDeferredAreaJoinKeepsFinalPosition(t *testing.T) {
 	got := p.pos
 	pending := p.pendingJoinPos
 	h.mu.Unlock()
-	if area != "commons" || got == nil || got.X != 103 || pending != nil {
+	if area != "outdoors:0:1" || got == nil || got.X != 103 || pending != nil {
 		t.Fatalf("deferred join position: area=%s pos=%v pending=%v", area, got, pending)
 	}
 }
@@ -951,7 +951,7 @@ func TestPresencePendingJoinDoesNotResurrectAfterImmediateJoin(t *testing.T) {
 	h.admit(p)
 	a := &Server{presence: h}
 	h.mu.Lock()
-	a.deferPresenceJoin(p, "commons", time.Millisecond)
+	a.deferPresenceJoin(p, "outdoors:0:1", time.Millisecond)
 	time.Sleep(20 * time.Millisecond)
 	a.presenceJoin(p, "in:commons:yard:deeds", time.Now())
 	h.mu.Unlock()
@@ -975,7 +975,7 @@ func TestPresencePendingJoinSkipsStoppedOrReplacedPeer(t *testing.T) {
 			h.admit(p)
 			a := &Server{presence: h}
 			h.mu.Lock()
-			a.deferPresenceJoin(p, "commons", time.Hour)
+			a.deferPresenceJoin(p, "outdoors:0:1", time.Hour)
 			p.pendingJoinPos = &presencePosition{X: 123}
 			switch mode {
 			case "close":
@@ -1009,11 +1009,11 @@ func TestPresenceDeferredRoomFullDoesNotLeaveOrJoin(t *testing.T) {
 	h.admit(p)
 	h.admit(observer)
 	for i := 0; i < int(h.config.GetMaxRoomPlayers()); i++ {
-		h.admit(&presencePeer{identity: presenceIdentity{ID: fmt.Sprint(i), World: "world"}, ctx: ctx, queue: make(chan []byte, 64), area: "commons"})
+		h.admit(&presencePeer{identity: presenceIdentity{ID: fmt.Sprint(i), World: "world"}, ctx: ctx, queue: make(chan []byte, 64), area: "outdoors:0:1"})
 	}
 	a := &Server{presence: h}
 	h.mu.Lock()
-	a.deferPresenceJoin(p, "commons", time.Millisecond)
+	a.deferPresenceJoin(p, "outdoors:0:1", time.Millisecond)
 	h.mu.Unlock()
 	time.Sleep(30 * time.Millisecond)
 	h.mu.Lock()
@@ -1077,11 +1077,11 @@ func TestPresenceReplacingPendingAreaDiscardsItsPosition(t *testing.T) {
 			h.admit(p)
 			a := &Server{presence: h}
 			h.mu.Lock()
-			a.deferPresenceJoin(p, "commons", time.Hour)
+			a.deferPresenceJoin(p, "outdoors:0:1", time.Hour)
 			p.pendingJoinPos = &presencePosition{X: 123, Y: 456}
 			area := replace
 			if replace == "same-pending" {
-				area = "commons"
+				area = "outdoors:0:1"
 			}
 			if replace == "deeds" {
 				area = "in:commons:yard:deeds"

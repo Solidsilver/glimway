@@ -30,8 +30,10 @@ import {
   frameTiles,
   glimpseColour,
   glimpseRaster,
+  mapBounds,
   mapFrame,
   mapMarks,
+  onMapGrid,
   shrinkRaster,
   type MapChunk,
   type MapInput,
@@ -147,8 +149,8 @@ export class MapRenderer {
     this.input = input
     const f = input.frontier
     this.byKey.clear()
-    for (const c of input.chunks) {
-      if (c.cx < f.minCx || c.cx > f.maxCx || c.cy < f.minCy || c.cy > f.maxCy) continue
+    for (const c of [...input.chunks, ...(input.fixed ?? [])]) {
+      if (!onMapGrid(f, c.cx, c.cy)) continue
       const key = `${c.cx},${c.cy}`
       const rev = c.rev ?? hashChunk(c)
       this.byKey.set(key, { ...c, rev })
@@ -257,11 +259,16 @@ export class MapRenderer {
       }
     }
 
-    // Walked land, at a resolution chosen from how big it lands on screen.
+    // Walked land (and the fixed footprints'), at a resolution chosen from how big it lands on screen.
     let drawn = 0
     let level: MapDrawStats['level'] = 'none'
-    if (fx0 <= fx1 && fy0 <= fy1) {
-      const walked = this.walkedIn(fx0, fy0, fx1, fy1)
+    const g = mapBounds(input)
+    const gx0 = Math.max(g.minCx, vc.minCx)
+    const gx1 = Math.min(g.maxCx, vc.maxCx)
+    const gy0 = Math.max(g.minCy, vc.minCy)
+    const gy1 = Math.min(g.maxCy, vc.maxCy)
+    if (gx0 <= gx1 && gy0 <= gy1) {
+      const walked = this.walkedIn(gx0, gy0, gx1, gy1)
       const chunkPx = S * k
       const o = walked.length > DETAIL_CHUNKS || chunkPx < DETAIL_MIN_PX ? this.overviewImage() : null
       if (!o) {
@@ -277,10 +284,10 @@ export class MapRenderer {
         // The overview, where each of its pixels is one chunk's (or a few tiles'), or smaller than a device pixel.
         level = 'overview'
         const per = o.chunksPerPx
-        const sx = Math.max(0, Math.floor((fx0 - o.minCx) / per))
-        const sy = Math.max(0, Math.floor((fy0 - o.minCy) / per))
-        const ex = Math.min(o.w, Math.ceil((fx1 + 1 - o.minCx) / per))
-        const ey = Math.min(o.h, Math.ceil((fy1 + 1 - o.minCy) / per))
+        const sx = Math.max(0, Math.floor((gx0 - o.minCx) / per))
+        const sy = Math.max(0, Math.floor((gy0 - o.minCy) / per))
+        const ex = Math.min(o.w, Math.ceil((gx1 + 1 - o.minCx) / per))
+        const ey = Math.min(o.h, Math.ceil((gy1 + 1 - o.minCy) / per))
         if (ex > sx && ey > sy) {
           ctx.imageSmoothingEnabled = chunkPx * per < 1
           const dx = X((o.minCx + sx * per) * S)

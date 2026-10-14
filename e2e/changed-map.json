@@ -13,7 +13,7 @@
     "package.json",
     "package-lock.json"
   ],
-  "ignore": ["**/*.md", "docs/**", ".agent/**", "tests/**", "e2e/changed-map.json", "deploy/**", "scripts/*-vectors.ts", "scripts/papers.ts", "scripts/webgl-renderer.ts", "scripts/e2e-artifacts.mjs", "perf/**", "playwright.perf.config.ts", "playwright.first-paint.perf.config.ts", "scripts/trace-hotspots.mjs", "scripts/png-diff.ts", "content/vectors/**", "content/**/*_test.go", "scripts/export-commons.ts", "scripts/lib/commons-builder.ts"],
+  "ignore": ["**/*.md", "docs/**", ".agent/**", "tests/**", "e2e/changed-map.json", "deploy/**", "scripts/*-vectors.ts", "scripts/papers.ts", "scripts/webgl-renderer.ts", "scripts/e2e-artifacts.mjs", "perf/**", "playwright.perf.config.ts", "playwright.first-paint.perf.config.ts", "scripts/trace-hotspots.mjs", "scripts/png-diff.ts", "content/vectors/**", "content/**/*_test.go"],
   "rules": [
     {
       "paths": ["src/lib/quests.ts", "src/game/goal-route.ts", "src/game/sync-safety.ts", "content/contract.json", "server/internal/rules/**"],
@@ -25,11 +25,15 @@
     },
     {
       "paths": ["server/internal/api/location_rules*.go", "server/internal/store/outdoors_upgrade_test.go", "server/internal/store/migrations/036_outdoors.sql"],
-      "specs": ["wilds.spec.ts", "open-map.spec.ts", "wilds-outer.spec.ts", "world-map.spec.ts"]
+      "specs": ["wilds.spec.ts", "open-map.spec.ts", "wilds-outer.spec.ts", "world-map.spec.ts", "seam.spec.ts", "homestead.spec.ts"]
     },
     {
-      "paths": ["content/layouts/**", "content/layouts.go", "content/places.*", "src/lib/places.ts", "src/lib/location.ts", "server/internal/location/**", "server/internal/chunks/fixed*.go", "server/internal/store/chunks*.go", "src/game/commons-served.ts"],
-      "specs": ["presence.spec.ts", "homestead.spec.ts", "yard.spec.ts", "residents.spec.ts", "repairs.spec.ts"]
+      "paths": ["content/layouts/**", "content/layouts.go", "content/places.*", "src/lib/places.ts", "src/lib/location.ts", "server/internal/location/**", "server/internal/chunks/fixed*.go", "server/internal/store/chunks*.go", "src/game/wilds/fixed*.ts", "src/lib/api/near.ts"],
+      "specs": ["presence.spec.ts", "homestead.spec.ts", "yard.spec.ts", "residents.spec.ts", "repairs.spec.ts", "seam.spec.ts", "wilds.spec.ts", "open-map.spec.ts", "world-map.spec.ts", "goal.spec.ts", "camera.spec.ts"]
+    },
+    {
+      "paths": ["src/game/safe-barrier.ts", "src/game/resident-cycle.ts", "src/game/entities/goal-guide.ts", "src/game/scenes/world-arrival.ts", "src/lib/world-moves.ts", "server/internal/store/rooms.go", "server/internal/api/worlds.go"],
+      "specs": ["seam.spec.ts", "yard.spec.ts", "residents.spec.ts", "goal.spec.ts", "party-worlds.spec.ts"]
     },
     {
       "paths": ["src/lib/api/queued-operation.ts", "src/game/link.ts", "server/internal/api/maintenance_phases_test.go", "server/internal/api/op.go", "server/internal/api/http.go", "server/internal/api/projection.go", "server/internal/api/mutation.go"],
@@ -54,11 +58,11 @@
     },
     {
       "paths": ["src/game/wilds/**", "src/game/perf.ts", "e2e/harness/**", "src/lib/wilds/**", "server/internal/wilds/**", "src/content/echoes.ts", "src/content/expansion-writing.ts", "src/game/expansion.ts"],
-      "specs": ["open-map.spec.ts", "window-order.spec.ts", "open-map-screens.spec.ts", "wilds.spec.ts", "wilds-outer.spec.ts", "wilds-screens.spec.ts", "echo-keepsakes.spec.ts", "paths.spec.ts", "rumour.spec.ts"]
+      "specs": ["open-map.spec.ts", "window-order.spec.ts", "open-map-screens.spec.ts", "wilds.spec.ts", "wilds-outer.spec.ts", "wilds-screens.spec.ts", "echo-keepsakes.spec.ts", "paths.spec.ts", "rumour.spec.ts", "seam.spec.ts"]
     },
     {
       "paths": ["src/ui/WorldMap.svelte", "src/ui/map-renderer.ts", "src/lib/wilds/map-view.ts", "src/lib/wilds/map-model.ts", "src/game/wilds/map-data.ts", "src/game/map-position.ts", "src/content/open-map.ts"],
-      "specs": ["world-map.spec.ts", "paths.spec.ts", "rumour.spec.ts"]
+      "specs": ["world-map.spec.ts", "paths.spec.ts", "rumour.spec.ts", "seam.spec.ts"]
     },
     {
       "paths": ["src/ui/JournalPanel.svelte", "src/game/rumour-watch.ts", "src/game/entities/world-talk.ts"],

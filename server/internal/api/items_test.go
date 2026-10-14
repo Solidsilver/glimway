@@ -476,8 +476,8 @@ func TestItemsGiveHandsOverToSomeoneNearby(t *testing.T) {
 	if x.opRefreshing(c, &s, "give", gift, 409).Error.Code != "not-together" {
 		t.Fatal("gave across the map")
 	}
-	x.stand(x.account("alice"), s.WorldID, "commons", 300, 300)
-	x.stand(x.account("bob"), s.WorldID, "commons", 330, 310)
+	x.standOnCommons(x.account("alice"), s.WorldID, 300, 300)
+	x.standOnCommons(x.account("bob"), s.WorldID, 330, 310)
 	x.refresh(bc, &b)
 	bobRev := b.Version
 	v := x.opRefreshing(c, &s, "give", gift, 200)
@@ -502,7 +502,7 @@ func TestItemsGiveHandsOverToSomeoneNearby(t *testing.T) {
 		t.Fatal("gave an heirloom")
 	}
 	x.opRefreshing(c, &s, "give", map[string]any{"toId": x.account("alice"), "asset": map[string]any{"kind": "item", "id": "lamp-wick", "qty": 1}}, 400)
-	x.stand(x.account("outsider"), o.WorldID, "commons", 300, 300)
+	x.standOnCommons(x.account("outsider"), o.WorldID, 300, 300)
 	x.opRefreshing(c, &s, "give", map[string]any{"toId": x.account("outsider"), "asset": map[string]any{"kind": "item", "id": "lamp-wick", "qty": 1}}, 403)
 	x.opRefreshing(c, &s, "give", map[string]any{"toId": x.account("bob"), "asset": map[string]any{"kind": "item", "id": "lamp-wick", "qty": 5}}, 409)
 	x.opRefreshing(c, &s, "give", map[string]any{"toId": x.account("bob"), "asset": map[string]any{"kind": "instance", "id": "bench-axe", "qty": 1, "instance": axe}}, 409)

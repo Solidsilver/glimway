@@ -23,6 +23,9 @@ import { gameNow } from '../clock.ts'
 import { effectiveTerrain, type ChunkTerrain } from './terrain.ts'
 import { groundChanges, knownPlaces, readRequested, refreshNear, wickEnded, wildsView } from './store.ts'
 import { seenAt, seenLandmarks, walkedChunks } from './walked.ts'
+import { PLACES } from '../../lib/places.ts'
+import { fixedChunkKeys, footprint, prepareFixed } from './fixed.ts'
+import { CHUNK_TILES } from './coords.ts'
 
 /** The chunks the map shows: walked this wick, and the Tangle (it never turns). */
 export function mapChunkKeys(walked: readonly string[]): string[] {
@@ -179,11 +182,15 @@ export async function loadMap(session: Session, opts: { read?: boolean } = {}): 
     for (const [key, g] of v.glimpse) glimpse.push({ ...parseChunkKey(key), land: g.land, river: g.river })
     for (const w of v.ways.values()) ways.push({ id: w.id, name: w.name, a: w.a, b: w.b, path: w.path.map((t) => ({ x: t.x, y: t.y })) })
   }
+  // The fixed footprints (the Commons), always: their own chunks, whatever the world or wick.
+  await prepareFixed(session)
+  if (!live()) superseded = true
+  const fixed = fixedMapChunks()
   if (superseded || !live()) return { ...none(null), scope, superseded: true }
   const st = session.state
   const hero = isWildsArea(st.area) && st.position ? { tx: Math.floor(st.position.x / 16), ty: Math.floor(st.position.y / 16) } : null
   return {
-    input: { frontier, chunks, glimpse, ways, places: [...places.values()], hero, words: { you: MAP_LABELS.you, gate: MAP_LABELS.gate } },
+    input: { frontier, chunks, fixed, glimpse, ways, places: [...places.values()], hero, words: { you: MAP_LABELS.you, gate: MAP_LABELS.gate } },
     scope,
     missing: null,
     offline: !link.online,
@@ -191,6 +198,28 @@ export async function loadMap(session: Session, opts: { read?: boolean } = {}): 
     ended,
     endsAt
   }
+}
+
+/** Each fixed footprint's chunks as the map draws them, made once a footprint (the same objects every load). */
+const fixedPictures = new WeakMap<object, MapChunk[]>()
+function fixedMapChunks(): MapChunk[] {
+  const out: MapChunk[] = []
+  for (const p of PLACES.fixed) {
+    const fp = footprint(p.id)
+    if (!fp) continue
+    let list = fixedPictures.get(fp)
+    if (!list) {
+      list = fixedChunkKeys(p).map(({ cx, cy }) => {
+        const lx = cx * CHUNK_TILES - fp.tx
+        const ly = cy * CHUNK_TILES - fp.ty
+        const rows = <T,>(grid: readonly (readonly T[])[]) => grid.slice(ly, ly + CHUNK_TILES).map((r) => r.slice(lx, lx + CHUNK_TILES))
+        return { cx, cy, ground: rows(fp.ground), solid: rows(fp.solid), rev: `${fp.epoch}:${cx},${cy}` }
+      })
+      fixedPictures.set(fp, list)
+    }
+    out.push(...list)
+  }
+  return out
 }
 
 /** Test seam: forget the map's caches (every scope's). */

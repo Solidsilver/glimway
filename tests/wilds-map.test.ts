@@ -28,17 +28,18 @@ const pixel = (p: { width: number; rgba: Uint8ClampedArray; originTx: number; or
 };
 
 test('the map frames what you know with a chunk round it, growing to the frontier and the glimpse past it', () => {
-  assert.deepEqual(mapBounds({ frontier: FRONTIER, glimpse: [] }), FRONTIER);
+  // The frontier and the Commons (fixed, cx -1..1, cy 1..2) south of the gate.
+  assert.deepEqual(mapBounds({ frontier: FRONTIER, glimpse: [] }), { ...FRONTIER, maxCy: 2 });
   const glimpse = [{ cx: -5, cy: -4, land: 'meadow', river: true }, { cx: 0, cy: -9, land: 'woods', river: false }];
-  assert.deepEqual(mapBounds({ frontier: FRONTIER, glimpse }), { minCx: -5, minCy: -9, maxCx: 4, maxCy: 0 });
-  // Fresh: the Tangle and the Whitequiet (cx -1..1, cy -5..0) and a chunk round them, never south of the gate.
-  assert.deepEqual(mapFrame(input({ glimpse })), { minCx: -2, minCy: -6, maxCx: 2, maxCy: 0 });
+  assert.deepEqual(mapBounds({ frontier: FRONTIER, glimpse }), { minCx: -5, minCy: -9, maxCx: 4, maxCy: 2 });
+  // Fresh: the Tangle, the Whitequiet and the Commons (cx -1..1, cy -5..2) and a chunk round them, never south of the Commons.
+  assert.deepEqual(mapFrame(input({ glimpse })), { minCx: -2, minCy: -6, maxCx: 2, maxCy: 2 });
   // Walked out to the west edge: the frame reaches the glimpse past it.
   const west = input({ glimpse, chunks: [chunk(-4, -4, TERRAIN.grass_c)], hero: { tx: -4 * S + 5, ty: -4 * S + 5 } });
-  assert.deepEqual(mapFrame(west), { minCx: -5, minCy: -6, maxCx: 2, maxCy: 0 });
+  assert.deepEqual(mapFrame(west), { minCx: -5, minCy: -6, maxCx: 2, maxCy: 2 });
   const p = mapPicture(west);
   assert.equal(p.width, 8 * S);
-  assert.equal(p.height, 7 * S);
+  assert.equal(p.height, 9 * S);
   assert.deepEqual([p.originTx, p.originTy], [-5 * S, -6 * S]);
   // Past the drift: a pale wash, see-through; and hatching where the Wend runs on.
   const wash = pixel(p, -5 * S + 3, -4 * S + 4);
@@ -100,7 +101,7 @@ test('ways, places, the footprints, the gate and you are marked and labelled', (
   const by = (kind: string) => p.labels.filter((l) => l.kind === kind);
   assert.deepEqual(by('way').map((l) => [l.text, l.x, l.y]), [["Tansy's way", 10 - p.originTx, -59 - p.originTy]]);
   assert.deepEqual(by('place').map((l) => [l.text, l.sub ?? null]), [['A camp glade', 'Tansy'], ['An outcrop', null]], 'a place not seen nor found stays off the map');
-  assert.deepEqual(by('footprint').map((l) => l.text), ['The Tangle', 'The Whitequiet']);
+  assert.deepEqual(by('footprint').map((l) => l.text), ['The Tangle', 'The Whitequiet', 'The Commons']);
   assert.deepEqual(by('gate').map((l) => l.text), ['Commons gate']);
   assert.deepEqual(by('you').map((l) => l.text), ['You']);
   // Labels sit inside the picture.

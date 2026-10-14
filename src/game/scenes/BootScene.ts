@@ -15,7 +15,8 @@ import { createPurseArt } from '../purse-art'
 import { createGlimsArt } from '../glims-art'
 import { createOpenMapArt } from '../wilds/open-map-art'
 import { HOMESTEAD_DATA } from '../../lib/homestead'
-import { prepareCommons } from '../commons-served'
+import { fixedPlaceOf, prepareFixed } from '../wilds/fixed'
+import { chunkOfPixel, isWildsArea } from '../wilds/coords'
 import type { Session } from '../session'
 
 /**
@@ -82,13 +83,15 @@ export class BootScene extends Phaser.Scene {
     createGlimsArt(this)
     createOpenMapArt(this)
 
-    // The Commons is served (../commons-served.ts): a save that starts there
-    // waits for its chunks (a few seconds at most; meadow stands in and
-    // rebuilds after); any other start only fetches them ahead.
+    // The Commons is fixed ground on the open map (../wilds/fixed.ts): a save
+    // that starts on it waits for its chunks (a few seconds at most; then the
+    // window attaches them when they come); any other start only fetches
+    // them ahead.
     const session = this.registry.get('session') as Session
-    const pending = prepareCommons(session)
+    const pending = prepareFixed(session)
     const start = () => this.scene.start('World')
-    if (!pending || session.state.area !== 'commons') {
+    const at = chunkOfPixel(session.state.position.x, session.state.position.y)
+    if (!pending || !isWildsArea(session.state.area) || !fixedPlaceOf(at.cx, at.cy)) {
       start()
       return
     }
@@ -103,5 +106,5 @@ export class BootScene extends Phaser.Scene {
   }
 }
 
-/** How long a start in the Commons waits for its chunks before the meadow stands in. */
+/** How long a start in the Commons waits for its chunks. */
 const COMMONS_WAIT_MS = 4000

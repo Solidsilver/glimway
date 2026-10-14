@@ -247,7 +247,7 @@ func TestIndependentPlaceAndVitalsWatermarks(t *testing.T) {
 		t.Fatal(err)
 	}
 	barrier := &contract.ReportBarrier{Client: before.State.Vitals.ReportClient, Generation: before.State.Vitals.ReportGeneration, Seq: 2}
-	request := &contract.MarkRequest{Op: &contract.OpHeader{Lease: s.Lease, Key: "unrelated-crafting", Report: barrier}, Where: &contract.Where{Area: "commons", X: 5, Y: 6}, Mark: "seen:fixture"}
+	request := &contract.MarkRequest{Op: &contract.OpHeader{Lease: s.Lease, Key: "unrelated-crafting", Report: barrier}, Where: &contract.Where{Area: outdoorsArea, X: commonsPx(5, 6).X, Y: commonsPx(5, 6).Y}, Mark: "seen:fixture"}
 	run := func(refill bool) *contract.Envelope {
 		r := httptest.NewRequest("POST", "/api/story/mark", nil)
 		r.AddCookie(c)

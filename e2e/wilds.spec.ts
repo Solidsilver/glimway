@@ -58,38 +58,41 @@ async function connectedWorld(page: Page, context: BrowserContext): Promise<void
   await waitForWorld(page)
 }
 
-// The exit check and the once-a-second position sample can run in the same
-// frame; the sample used to store the Commons spot as a Wilds position
-// (about one crossing in 60). Sampling every frame makes the crossing frame
-// always sample, so this fails every time without the fix (bugs #2).
-test('connected: the Commons arch leads into the Tangle (the gate on chunk 0,0)', async ({ page, context }) => {
+// The Commons is fixed ground on the open map (location-seam.md 6, S5): its
+// north arch is walked through, in one scene, and the save keeps world
+// pixels on both sides (bugs #2: a sample taken on the crossing frame used to
+// store a Commons spot as a Wilds position; sampling every frame catches it).
+test('connected: the Commons arch walks into the Tangle (the gate on chunk 0,0), in one scene', async ({ page, context }) => {
   await connectedWorld(page, context)
   await warp(page, 'commons', 23, 2)
+  await parkCreatures(page)
+  const before = (await wilds(page)).chunk
+  expect(before).toEqual({ cx: 0, cy: 1 })
+  const id = await page.evaluate(() => window.__fsWildsWindow!()!.id)
   await page.evaluate(() => (window as unknown as { __fsDevSampleEveryFrame: (on: boolean) => void }).__fsDevSampleEveryFrame(true))
-  const inWilds = () => page.evaluate(() => (window as unknown as { __fsSafety?: () => { areaId: string } | null }).__fsSafety?.()?.areaId === 'outdoors')
-  await holdUntil(page, 'ArrowUp', inWilds)
-  await waitForWilds(page)
+  const inTangle = () => page.evaluate(() => window.__fsPlayer!().y < 22 * 16 + 8)
+  await holdUntil(page, 'ArrowUp', inTangle)
   const dump = await wilds(page)
   expect(dump.chunk).toEqual({ cx: 0, cy: 0 })
-  // Just inside the gate, world tile (2, 22): the same in every epoch.
-  expect(dump.position).toEqual({ x: 2 * TILE + 8, y: 22 * TILE + 8 })
+  expect(await page.evaluate(() => window.__fsWildsWindow!()!.id), 'no scene restart').toBe(id)
+  const saved = await page.evaluate(() => (window as unknown as { __fsDevSaved: () => { area: string; position: { x: number; y: number } } }).__fsDevSaved())
+  expect(saved.area).toBe('outdoors')
+  expect(saved.position.y).toBeLessThan(24 * TILE)
 })
 
-test('connected: the Tangle leads back to the Commons arch', async ({ page, context }) => {
+test('connected: the Tangle walks back onto the Commons by its arch', async ({ page, context }) => {
   await connectedWorld(page, context)
   await warp(page, 'outdoors', 2, 22)
   await waitForWilds(page)
   await parkCreatures(page)
   expect((await wilds(page)).chunk).toEqual({ cx: 0, cy: 0 })
-  // South through the gate (world tiles 1–3 on row 23): the Commons, at the north arch.
-  const backInCommons = () =>
-    page.evaluate(() => (window as unknown as { __fsSafety?: () => { areaId: string } | null }).__fsSafety?.()?.areaId === 'commons')
-  await holdUntil(page, 'ArrowDown', backInCommons)
-  const hero = await page.evaluate(() => (window as unknown as { __fsPlayer: () => { x: number; y: number } }).__fsPlayer!())
-  expect(hero.x).toBe((23 + 0.5) * TILE)
-  expect(hero.y).toBe((2 + 0.5) * TILE)
-  const dump = await wilds(page).catch(() => null)
-  expect(dump).toBeNull() // the Wilds dump is gone with the open map
+  const id = await page.evaluate(() => window.__fsWildsWindow!()!.id)
+  // South through the gate (world tiles 1–3 on row 23) onto the Commons, past its arch (world tile 2, 26).
+  const onCommons = () => page.evaluate(() => window.__fsPlayer!().y >= 26 * 16)
+  await holdUntil(page, 'ArrowDown', onCommons)
+  expect((await wilds(page)).chunk).toEqual({ cx: 0, cy: 1 })
+  expect(await page.evaluate(() => window.__fsWildsWindow!()!.id)).toBe(id)
+  expect(await page.evaluate(() => window.__fsSafety!()!.safe), 'the Commons is safe ground').toBe(true)
 })
 
 test('connected: harvest, clear a camp, chest, POI, reload in place, the fallen lantern', async ({ page, context }) => {

@@ -1,12 +1,14 @@
 /**
  * Which area a build of the world scene plays, and where the hero arrives:
- * the open map (`wilds`: the save keeps world pixels; the hero stands there,
+ * the open map (`outdoors`: the save keeps world pixels; the hero stands there,
  * or on the nearest open tile if the land turned; the Turning says so once
  * the Wilds are read), or a registered area (rooms included: `in:…`). A save
- * in an area this build can't draw comes back in at the Commons arch.
+ * in an area this build can't draw comes back in at the Commons arch (the
+ * anchor `commons:arch`, on the open map).
  */
 import { tileCenter } from '../../lib/tile'
-import { COMMONS_FROM_WILDS } from '../commons-served'
+import { anchorTile } from '../wilds/fixed'
+import { OUTDOORS_AREA } from '../wilds/coords'
 import { homesteadsFor } from '../homestead'
 import type { Session } from '../session'
 import { buildArea, hasAreaKind, type WorldData } from '../worlds'
@@ -28,10 +30,10 @@ export function arrive(
   // A save (or a server relocation) in an area this build can't draw comes
   // back in at the Commons arch.
   if (!hasAreaKind(state.area)) {
-    const back = hasAreaKind('commons') ? { area: 'commons', at: COMMONS_FROM_WILDS } : { area: 'village', at: { tx: 7, ty: 11 } }
-    state.area = back.area
-    state.position = tileCenter(back.at.tx, back.at.ty)
-    entry = { ...back.at }
+    const at = anchorTile('commons:arch')
+    state.area = OUTDOORS_AREA
+    state.position = tileCenter(at.tx, at.ty)
+    entry = { ...at }
     session.saveSoon()
   }
   const world = buildArea(state.area)

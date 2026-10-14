@@ -87,7 +87,7 @@ const gatherReach = 48
 // nearPiece measures as the client does: from a little above the hero's
 // feet to the foot of the piece's tile (where its art stands).
 func nearPiece(s *store.Snapshot, area string, tx, ty int) bool {
-	space, tx, ty := contentTile(s.State.Area, area, tx, ty)
+	space, tx, ty := contentTile(area, tx, ty)
 	if s.State.Area != space {
 		return false
 	}

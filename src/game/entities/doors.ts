@@ -22,32 +22,42 @@ export interface DoorsDeps {
   enter: (room: string) => void
 }
 
+/**
+ * The front doors out to `area`, as interaction points: every room whose
+ * doorway leads there, on its door tile (`outside`, in the area's content
+ * tiles, placed by `where`; null leaves the door out).
+ */
+export function doorPoints(area: string, enter: (room: string) => void, where: (outside: { tx: number; ty: number }) => { tx: number; ty: number } | null = (t) => t): Interactable[] {
+  const points: Interactable[] = []
+  for (const room of ROOMS.rooms) {
+    const door = room.doors.find((d) => d.kind === 'door' && d.to === area && d.outside)
+    const at = door?.outside ? where(door.outside) : null
+    if (!at) continue
+    const who = residentOf(room.id)
+    // A shop stays open while its keeper steps out (Silas's Yard: no knock line, so no knock).
+    const out = () => who !== null && !!KNOCK_LINES[who] && !residentIn(room.id)
+    points.push({
+      id: `door:${room.id}`,
+      x: tileMid(at.tx),
+      y: tileBottom(at.ty) + 2,
+      label: () => (out() ? `Knock at ${room.name}` : `Go into ${room.name}`),
+      verb: () => (out() ? 'Knock' : 'Go in'),
+      markerOffset: 30,
+      activate: () => {
+        if (who && out()) {
+          const place = residentPlace(who)
+          const knock = place ? KNOCK_LINES[who]?.[place.spot] : null
+          if (knock) bus.emit(EV.toast, { text: `${NPC_NAMES[who]}, ${knock.from}: “${knock.line}”`, icon: 'speech', kind: 'info' })
+        }
+        enter(room.id)
+      }
+    })
+  }
+  return points
+}
+
 export class Doors {
   constructor(deps: DoorsDeps) {
-    const points: Interactable[] = []
-    for (const room of ROOMS.rooms) {
-      const door = room.doors.find((d) => d.kind === 'door' && d.to === deps.world.areaId && d.outside)
-      if (!door?.outside) continue
-      const who = residentOf(room.id)
-      // A shop stays open while its keeper steps out (Silas's Yard: no knock line, so no knock).
-      const out = () => who !== null && !!KNOCK_LINES[who] && !residentIn(room.id)
-      points.push({
-        id: `door:${room.id}`,
-        x: tileMid(door.outside.tx),
-        y: tileBottom(door.outside.ty) + 2,
-        label: () => (out() ? `Knock at ${room.name}` : `Go into ${room.name}`),
-        verb: () => (out() ? 'Knock' : 'Go in'),
-        markerOffset: 30,
-        activate: () => {
-          if (who && out()) {
-            const at = residentPlace(who)
-            const knock = at ? KNOCK_LINES[who]?.[at.spot] : null
-            if (knock) bus.emit(EV.toast, { text: `${NPC_NAMES[who]}, ${knock.from}: “${knock.line}”`, icon: 'speech', kind: 'info' })
-          }
-          deps.enter(room.id)
-        }
-      })
-    }
-    deps.interactables.register(this, points)
+    deps.interactables.register(this, doorPoints(deps.world.areaId, deps.enter))
   }
 }

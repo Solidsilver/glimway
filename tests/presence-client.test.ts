@@ -347,7 +347,7 @@ test('a witnessed beat reaches its handler; malformed ones are ignored', () => {
 test('lost transport reconnects with backoff, re-auths and re-joins', () => {
   const r = rig();
   r.live();
-  r.client.setArea('commons');
+  r.client.setArea('outdoors:0:1');
   r.sock().drop(1006);
   assert.equal(r.client.status, 'retrying');
   assert.equal(r.sockets.length, 1);
@@ -358,7 +358,7 @@ test('lost transport reconnects with backoff, re-auths and re-joins', () => {
   r.sock().open();
   r.sock().push({ type: 'ready', accountId: 'me' });
   assert.deepEqual(r.sentTypes(), ['auth', 'join']);
-  assert.equal(r.sock().sent[1].area, 'commons');
+  assert.equal(r.sock().sent[1].area, 'outdoors:0:1');
   // A failure soon after `ready` still counts: the next wait is ~2 s, not 1 s.
   r.sock().drop(1013);
   const before = r.sockets.length;
@@ -413,8 +413,8 @@ test('stop closes the socket and cancels everything; a new lease restarts it', (
 });
 
 test('helpers: areas, facing, backoff, close codes', () => {
-  for (const a of ['village', 'woodland', 'ruin', 'commons', 'outdoors:0:0', 'outdoors:-1:-2', 'outdoors:1:0']) assert.equal(isPresenceArea(a), true, a);
-  for (const a of ['outdoors', 'outdoors:01:1', 'outdoors:-0:0', 'wilds:inner-1:0:1', 'chunk:inner-1:0:0', 'cottage', '']) assert.equal(isPresenceArea(a), false, a);
+  for (const a of ['village', 'woodland', 'ruin', 'outdoors:0:0', 'outdoors:-1:-2', 'outdoors:1:0', 'outdoors:0:1', 'outdoors:-1:2']) assert.equal(isPresenceArea(a), true, a);
+  for (const a of ['commons', 'outdoors:0:3', 'outdoors', 'outdoors:01:1', 'outdoors:-0:0', 'wilds:inner-1:0:1', 'chunk:inner-1:0:0', 'cottage', '']) assert.equal(isPresenceArea(a), false, a);
   assert.equal(presenceAreaFor('village'), 'village');
   assert.equal(presenceAreaFor('outdoors'), null, 'the Wilds need a position');
   // The chunk you stand in (the server shares it with the 3×3 around it).
@@ -427,7 +427,9 @@ test('helpers: areas, facing, backoff, close codes', () => {
   assert.equal(sharedRoom('outdoors:0:0', 'outdoors:2:0'), false);
   assert.equal(sharedRoom('outdoors:-4:-8', 'outdoors:-4:-8'), true);
   assert.equal(sharedRoom('village', 'village'), true);
-  assert.equal(sharedRoom('village', 'commons'), false);
+  assert.equal(sharedRoom('village', 'outdoors:0:1'), false);
+  // Across the Commons' mouth: the Tangle's gate chunk and the Commons' arch chunk share.
+  assert.equal(sharedRoom('outdoors:0:0', 'outdoors:0:1'), true);
   assert.equal(sharedRoom('outdoors:0:0', null), false);
   assert.deepEqual(normalFacing({ x: 3, y: 4 }), { x: 0.6, y: 0.8 });
   assert.deepEqual(normalFacing({ x: 0, y: 0 }), { x: 0, y: 1 });

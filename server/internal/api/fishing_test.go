@@ -573,9 +573,7 @@ func TestFishBanksReachAndSeason(t *testing.T) {
 	pond, _ := content.WaterFor(millPondID)
 
 	// A cast from the Commons is refused whatever the client map says.
-	far := s.State
-	far.Area = "commons"
-	far.Position = rules.Position{X: 8 * 16, Y: 8 * 16}
+	far := onCommons(s.State, 8*16, 8*16)
 	if st, _, e, _ := x.request("POST", "/api/fishing/cast", castBody(s, fishKey(x, "cast"), "north", rod, far), c); st != 409 || e != "too-far-away" {
 		t.Fatal("cast from the Commons", st, e)
 	}

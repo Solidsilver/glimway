@@ -34,7 +34,6 @@ import { sfx } from '../sfx'
 import { TILE, tileAt, tileMid } from '../../lib/tile'
 import type { Session } from '../session'
 import type { WorldData } from '../worlds'
-import { commonsStand, type CommonsWorld } from '../commons-served'
 import { KNOCK, SIGNATURES, boltSpawn, cleaveStrike, mendStrike, shadowstepEnd, slashStrike, snapstrike, strikeCrits, strikeHits, wardMends, type Strike, type StrikeHit } from './fight-rules'
 import type { Enemy, EnemySystem } from './enemies'
 import type { Projectiles } from './projectiles'
@@ -640,7 +639,8 @@ export class Hero {
     if (entry) {
       px = tileMid(entry.tx)
       py = tileMid(entry.ty)
-      // The open map's land can stand anywhere (a warp, the land turned): never inside it.
+      // The open map's land can stand anywhere (a warp, the land turned): never inside it,
+      // nor in a pocket of fixed ground its arrivals don't reach (./../wilds/wilds-world.ts outdoorStandAt).
       const stand = this.deps.world.open?.standAt(px, py)
       if (stand) {
         px = stand.x
@@ -668,18 +668,6 @@ export class Hero {
       } else if (!inBounds || this.deps.world.solid[ty][tx]) {
         px = tileMid(this.deps.world.spawn.tx)
         py = tileMid(this.deps.world.spawn.ty)
-      }
-    }
-    // The served Commons: never in a pocket the arrivals don't reach (a walk
-    // on the meadow that stood in before its chunks came, or a save made
-    // there). The scene saves the moved spot once the hero stands.
-    if (this.deps.world.areaId === 'commons' && !this.deps.world.open) {
-      const tx = tileAt(px)
-      const ty = tileAt(py)
-      const stand = commonsStand(this.deps.world as CommonsWorld, tx, ty)
-      if (stand.tx !== tx || stand.ty !== ty) {
-        px = tileMid(stand.tx)
-        py = tileMid(stand.ty)
       }
     }
     this.shadow = this.scene.add.image(px, py - 1, 'shadow').setDepth(-1)

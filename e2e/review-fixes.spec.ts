@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { calendarOnServer, linkRev, linkStatus, moveServerClock, serverState } from './connected'
-import { frames, expectToast } from './helpers'
+import { commonsTile, frames, expectToast } from './helpers'
 import { claimDeed, earnGlims, freshPlayer, fund, go, homes, myHome, onMyLand, seeTheYard, silasSays, yardBuild } from './home-helpers'
 
 /**
@@ -80,26 +80,27 @@ test('finding 1: a purchase and an upgrade whose answers are lost resolve on rec
 })
 
 test('finding 2: an exit to an unregistered area is overgrown (no crash, the save stays put)', async ({ page, pageErrors }) => {
-  // The Commons arch leads into the Wilds now; a test-only exit stands in for
-  // any destination this build has no area kind for.
+  // The Commons is walked into from the Wilds now (one open map); a test-only
+  // exit, east of the square, stands in for any destination this build has no area kind for.
   await freshPlayer(page)
   await go(page, 'commons', 21, 19)
+  const exit = commonsTile(22, 19)
   const saved = () => page.evaluate(() => (window as unknown as { __fsDevSaved: () => { area: string; position: { x: number; y: number } } }).__fsDevSaved())
   const before = await saved()
-  expect(before.area).toBe('commons')
-  await page.evaluate(() => (window as unknown as { __fsDevAddExit: (e: unknown) => void }).__fsDevAddExit({ tx: 22, ty: 19, tw: 1, th: 1, to: 'nowhere-yet' }))
+  expect(before.area).toBe('outdoors')
+  await page.evaluate((t) => (window as unknown as { __fsDevAddExit: (e: unknown) => void }).__fsDevAddExit({ ...t, tw: 1, th: 1, to: 'nowhere-yet' }), exit)
   await page.keyboard.down('ArrowRight')
   await expectToast(page, 'The way is overgrown', { timeout: 10_000 })
   await page.keyboard.up('ArrowRight')
   await frames(page, 24)
   const s = await page.evaluate(() => (window as unknown as { __fsSafety: () => { areaId: string; transitioning: boolean } }).__fsSafety())
-  expect(s).toEqual(expect.objectContaining({ areaId: 'commons', transitioning: false }))
+  expect(s).toEqual(expect.objectContaining({ areaId: 'outdoors', transitioning: false }))
   // The save never named the unregistered area.
   const after = await saved()
-  expect(after.area).toBe('commons')
+  expect(after.area).toBe('outdoors')
   // The hero was stepped back off the exit tile.
   const p = await page.evaluate(() => (window as unknown as { __fsPlayer: () => { x: number } }).__fsPlayer())
-  expect(Math.floor(p.x / 16)).toBeLessThan(22)
+  expect(Math.floor(p.x / 16)).toBeLessThan(exit.tx)
   expect(pageErrors).toEqual([])
 })
 

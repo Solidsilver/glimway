@@ -30,6 +30,7 @@
  *
  * There is no local play: without a server the Wilds don't open.
  */
+import { prepareFixed } from './fixed.ts';
 import { MATERIALS, TRINKETS } from '../../content/expansion-writing.ts';
 import type { WildsEntityView, WildsLanternView } from '../../lib/api/types.ts';
 import type { ChunkGroundChanges, GroundChange, WildsEntityState, WildsEpoch as WildsEpochPb, WildsLantern, WildsNearResult, WildsWay } from '../../lib/gen/glimway/v1/wilds_pb.js';
@@ -611,7 +612,9 @@ export async function prepareWilds(session: Session, maxAgeMs = 0): Promise<bool
   if (!session.link) return false;
   if (!isWildsArea(session.state.area)) return wildsLive(session) !== null;
   const { cx, cy } = chunkOfPixel(session.state.position.x, session.state.position.y);
-  return refreshNear(session, cx, cy, maxAgeMs);
+  // The fixed footprints' chunks too (the Commons): the first window attaches them behind the fade.
+  const [read] = await Promise.all([refreshNear(session, cx, cy, maxAgeMs), prepareFixed(session)]);
+  return read;
 }
 
 /**

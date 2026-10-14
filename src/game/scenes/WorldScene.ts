@@ -58,12 +58,15 @@ import { parseHomeArea } from '../../lib/homestead'
 import { homeLights } from '../../lib/homestead-land'
 import { homesteadsFor } from '../homestead'
 import { prepareHomeLand } from '../homeland'
-import { prepareCommons } from '../commons-served'
+import { commonsLane } from '../wilds/fixed'
 import { isSafeArea } from '../../lib/habitica/sync'
 import { fingerInBracken } from '../../lib/quests'
-import { OUTDOORS_AREA, gateArrival, gateArrivalPosition, isWildsArea, wildsReturnTile } from '../wilds/coords'
+import { OUTDOORS_AREA, isWildsArea, chunkOfPixel, chunkKey } from '../wilds/coords'
+import { resolve } from '../../lib/location'
+import { holdOnSafe, stopAtEdge } from '../safe-barrier'
 import { prepareWilds } from '../wilds/store'
 import { WildsWindow } from '../wilds/window'
+import { waitingFixedAt } from '../wilds/wilds-world'
 import { WildsPaths } from '../wilds/paths'
 import { WildsMarks } from '../wilds/marks'
 import { watchRumour } from '../rumour-watch'
@@ -236,6 +239,7 @@ export class WorldScene extends Phaser.Scene {
     this.driftSaid = false
     this.occluders = []
     this.cinematic = false
+    this.safeSpot = null
     this.captureReleased = false
     this.reducedMotion = prefersReducedMotion()
     this.fx = new Effects(this, this.reducedMotion)
@@ -276,6 +280,7 @@ export class WorldScene extends Phaser.Scene {
       },
       this.pendingEntry
     )
+    this.waitingFixed = !!open && waitingFixedAt(this.hero.sprite.x, this.hero.sprite.y)
     if (this.pendingFacing) this.hero.facing.set(this.pendingFacing.x, this.pendingFacing.y)
     // The save names where the hero really stands from the first frame: a
     // saved spot that's blocked (a fresh game's default, a tile built over)
@@ -364,20 +369,19 @@ export class WorldScene extends Phaser.Scene {
     new RoomSpots({ world: this.world, session: this.session, interactables: this.interactables, hero: () => this.hero, present: (id) => this.npcs.npcs.some((n) => n.id === id && n.present) })
     const homeRoom = parseHomeRoom(this.world.areaId)
     this.homesteads = null
-    if (this.world.areaId === 'commons' || parseHomeArea(this.world.areaId) !== null || homeRoom !== null || isYardRoom(this.world.areaId)) {
-      this.homesteads = new HomesteadLayer(this, {
-        world: this.world,
-        session: this.session,
-        fx: this.fx,
-        reducedMotion: this.reducedMotion,
-        solidGroup: this.solids.group,
-        interactables: this.interactables,
-        hero: () => this.hero.sprite,
-        sitter: () => this.hero,
-        room: homeRoom !== null ? { gate: homeRoom } : null,
-        enterRoom: (gate) => this.goIn(homeRoomArea(gate)),
-        rebuild: () => this.rebuildArea()
-      })
+    // On the open map, the Commons lane: built once its chunks are here (they come with the Wilds' read).
+    const lane = open ? commonsLane() : null
+    if (lane || parseHomeArea(this.world.areaId) !== null || homeRoom !== null || isYardRoom(this.world.areaId)) this.homesteads = this.homesteadLayer(lane, homeRoom)
+    else if (open) {
+      // The Commons' chunks came after this build began (a first visit): the lane joins in then.
+      const late = () => {
+        const lane = commonsLane()
+        if (!lane || this.homesteads) return
+        this.homesteads = this.homesteadLayer(lane, null)
+        for (const key of this.window?.fixedKeys() ?? []) for (const draw of this.homesteads.fixedHooks.attach(key)) draw()
+      }
+      bus.on(EV.fixedReady, late)
+      this.events.once('shutdown', () => bus.off(EV.fixedReady, late))
     }
     this.actions = new WorldActions({
       scene: this,
@@ -443,7 +447,10 @@ export class WorldScene extends Phaser.Scene {
           }
         },
         reducedMotion: this.reducedMotion,
-        hero: () => this.hero.sprite
+        hero: () => this.hero.sprite,
+        interactables: this.interactables,
+        enter: (room) => this.goIn(room),
+        hooks: () => this.homesteads?.fixedHooks ?? null
       })
       // ?perf=1 samples the open map's display list and tweens (src/game/perf.ts).
       perfWatch(this)
@@ -576,6 +583,7 @@ export class WorldScene extends Phaser.Scene {
     this.goalGuide = new GoalGuide(this, {
       world: this.world,
       position: () => this.hero.sprite,
+      exits: () => this.window?.exits() ?? [],
       goal: () => goalTarget(this.session),
       npcAt: (id) => {
         const n = this.npcs.npcs.find((x) => x.id === id)
@@ -681,7 +689,7 @@ export class WorldScene extends Phaser.Scene {
       playHold({
         ui: uiBlocked(),
         transitioning: this.transitioning,
-        cinematic: this.cinematic,
+        cinematic: this.cinematic || this.waitingFixed,
         persisting: this.session.persistenceInFlight,
         placing: !!this.homesteads?.placing
       }),
@@ -727,6 +735,16 @@ export class WorldScene extends Phaser.Scene {
     // The shared world goes on under a menu: the open map's window, the camps'
     // rooms and claims, the Turning, and every server enemy (shared-fights.md 1.8).
     this.window?.update(dt)
+    const atChunk = chunkOfPixel(this.hero.sprite.x, this.hero.sprite.y)
+    if (this.waitingFixed && this.window?.fixedKeys().includes(chunkKey(atChunk.cx, atChunk.cy))) {
+      const at = this.world.open?.standAt(this.hero.sprite.x, this.hero.sprite.y)
+      if (at) {
+        ;(this.hero.sprite.body as Phaser.Physics.Arcade.Body).reset(at.x, at.y)
+        this.notePosition()
+        this.session.saveSoon()
+      }
+      this.waitingFixed = false
+    }
     this.wilds?.update()
     this.turning.update(dt)
     this.enemies.observe(dt)
@@ -750,6 +768,7 @@ export class WorldScene extends Phaser.Scene {
   /** This player's play: input, the local fights, bolts, exits. */
   private play(time: number, dt: number): void {
     this.hero.move(dt, this.devWalk ? this.devSteer() : this.controls.vector())
+    this.holdSafe(dt)
     this.enemies.update(dt)
     this.goalGuide.update(dt, this.hero.sprite, this.worldLive())
     this.projectiles.update(dt)
@@ -790,6 +809,45 @@ export class WorldScene extends Phaser.Scene {
         }
       }
     }
+  }
+
+  /** Where the hero last stood on safe ground while too hurt to fight (the zero-HP barrier's). */
+  private safeSpot: { x: number; y: number } | null = null
+  private waitingFixed = false
+
+  /**
+   * The zero-HP barrier (../safe-barrier.ts): too hurt to fight, a hero on
+   * safe ground can't step off it (on the open map, the Commons' mouth at
+   * y = 24). One already off safe ground (a legacy save) walks freely, home
+   * to rest.
+   */
+  private holdSafe(dt: number): void {
+    if (!this.session.zeroHpLocked) {
+      this.safeSpot = null
+      return
+    }
+    const h = this.hero.sprite
+    const area = this.world.areaId
+    const safe = (x: number, y: number) => safeArea(area, x, y)
+    const body = h.body as Phaser.Physics.Arcade.Body
+    if (safe(h.x, h.y)) this.safeSpot = { x: h.x, y: h.y }
+    // Arcade has already stepped the body, but postUpdate has not copied
+    // its displacement to the sprite yet. Catch a shove in this frame,
+    // before the unsafe step is ever displayed or saved.
+    const next = { x: h.x + body.position.x - body.prevFrame.x, y: h.y + body.position.y - body.prevFrame.y }
+    if (safe(next.x, next.y)) {
+      this.safeSpot = next
+      // The next step (a frame and a half ahead, for a slow frame) stops at the edge.
+      const v = stopAtEdge(safe, next, body.velocity, Math.max(dt, 1 / 30) * 1.5)
+      body.setVelocity(v.x, v.y)
+      return
+    }
+    const was = this.safeSpot
+    if (!was) return
+    const at = holdOnSafe(safe, was, next)
+    // A reset, so the step already taken isn't written to the sprite again after this update.
+    body.reset(at.x, at.y)
+    this.safeSpot = at
   }
 
   /** Dev: the steering toward the next waypoint (dropping those reached). */
@@ -862,12 +920,12 @@ export class WorldScene extends Phaser.Scene {
 
   /** World input is live only while the hero actually has control. */
   private worldLive(): boolean {
-    return !uiBlocked() && !this.transitioning && !this.cinematic && !this.session.persistenceInFlight &&
+    return !uiBlocked() && !this.transitioning && !this.cinematic && !this.waitingFixed && !this.session.persistenceInFlight &&
       !this.homesteads?.placing && performance.now() >= uiState.blockedUntil
   }
 
   private handleAction(): void {
-    if (uiBlocked() || this.cinematic || this.transitioning || this.homesteads?.placing || performance.now() < uiState.blockedUntil) return
+    if (uiBlocked() || this.cinematic || this.waitingFixed || this.transitioning || this.homesteads?.placing || performance.now() < uiState.blockedUntil) return
     // Whatever the prompt is on (free activities stay available at zero HP).
     if (this.interactables.activate()) return
     if (this.session.zeroHpLocked) return // too injured to fight; no auto revival
@@ -938,6 +996,7 @@ export class WorldScene extends Phaser.Scene {
    */
   private onRelocate(p: RelocatePayload): void {
     if (this.transitioning) return
+    this.safeSpot = null
     if (isWildsArea(p.area) && this.world.open) {
       const at = this.world.open.standAt(p.x, p.y)
       if (at && Math.hypot(at.x - this.hero.sprite.x, at.y - this.hero.sprite.y) < 24 * TILE) {
@@ -1011,17 +1070,20 @@ export class WorldScene extends Phaser.Scene {
 
   private checkExits(): void {
     if (this.transitioning) return
-    // Zero-HP gates expeditions only from the village; a legacy zero-HP save
-    // found outside may travel home freely (nothing heals en route).
-    // The Commons counts as home: a hurt hero may walk there to rest.
+    // Zero-HP gates expeditions only from safe ground; a legacy zero-HP save
+    // found outside may travel home freely (nothing heals en route). Safe
+    // ground's edge on the open map is a barrier of its own (holdSafe).
     const locked = this.session.zeroHpLocked && safeArea(this.world.areaId, this.hero.sprite.x, this.hero.sprite.y)
     const tx = tileAt(this.hero.sprite.x)
     const ty = tileAt(this.hero.sprite.y)
-    for (const exit of this.world.exits) {
+    // On the open map, the ways out of the attached fixed chunks too (the Commons' gates, the village path).
+    for (const exit of this.window ? [...this.world.exits, ...this.window.exits()] : this.world.exits) {
       if (locked && !safeArea(exit.to, exit.entry.tx * TILE + TILE / 2, exit.entry.ty * TILE + TILE / 2)) continue
       if (tx >= exit.tx && tx < exit.tx + exit.tw && ty >= exit.ty && ty < exit.ty + exit.th) {
-        // The open map is the server's: without a connection its gate stays shut.
-        if (!canEnter(exit.to) || (exit.to === OUTDOORS_AREA && !this.session.link)) {
+        // The open map is the server's: without a connection its gate stays shut. (A way out
+        // to a fixed place by its own name, a room's door to the Commons, leads onto the open map.)
+        const to = resolve(String(exit.to), exit.entry.tx, exit.entry.ty).space
+        if (!canEnter(to) || (to === OUTDOORS_AREA && !this.session.link)) {
           this.overgrown(exit)
           return
         }
@@ -1053,23 +1115,24 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private transitionTo(area: AreaId, entry: { tx: number; ty: number }, facing?: { x: number; y: number }): void {
+    // Content names Commons positions in Commons tiles (the Yard's door back
+    // out): since the join they lie on the open map's grid.
+    const at = resolve(String(area), entry.tx, entry.ty)
+    if (at.space !== area) {
+      area = at.space
+      entry = { tx: at.tx, ty: at.ty }
+    }
     if (!canEnter(area)) return
-    const state = this.session.state
-    const leavingWilds = isWildsArea(state.area)
+    const extra = facing ? { facing } : {}
     if (area === OUTDOORS_AREA) {
-      // Into the open map through the Commons gate: world pixels, just inside
-      // the gate on chunk (0, 0). The near read and its chunks load while the
-      // screen is dark, so the first window paints behind the fade.
-      this.moveTo({ area: OUTDOORS_AREA, position: gateArrivalPosition() }, { entry: gateArrival() }, { inDark: () => prepareWilds(this.session, 60_000) })
+      // Onto the open map at an anchor (the Commons' west path, a gate, the
+      // Yard's doorstep): the near read and its chunks load while the screen
+      // is dark, so the first window paints behind the fade.
+      this.moveTo({ area, position: tileCenter(entry.tx, entry.ty) }, { entry, ...extra }, { inDark: () => prepareWilds(this.session, 60_000) })
       return
     }
-    if (leavingWilds && area === 'commons') {
-      // The agreed handoff: back through the north arch.
-      const tile = wildsReturnTile()
-      entry = { tx: tile.tx, ty: tile.ty }
-    }
-    // A homestead's land and the Commons are the server's: fetched while the screen is dark.
-    this.moveTo({ area, position: tileCenter(entry.tx, entry.ty) }, { entry, ...(facing ? { facing } : {}) }, { inDark: () => (area === 'commons' ? prepareCommons(this.session) : prepareHomeLand(String(area))) })
+    // A homestead's land is the server's: fetched while the screen is dark.
+    this.moveTo({ area, position: tileCenter(entry.tx, entry.ty) }, { entry, ...extra }, { inDark: () => prepareHomeLand(String(area)) })
   }
 
   /** Dev: straight to a world tile of the open map (its chunks load while the screen is dark). */
@@ -1119,6 +1182,24 @@ export class WorldScene extends Phaser.Scene {
       default:
         return null
     }
+  }
+
+  /** The homestead layer: the Commons lane on the open map, a homestead's land, a cottage, the Yard. */
+  private homesteadLayer(lane: ReturnType<typeof commonsLane>, homeRoom: number | null): HomesteadLayer {
+    return new HomesteadLayer(this, {
+      world: this.world,
+      commons: lane,
+      session: this.session,
+      fx: this.fx,
+      reducedMotion: this.reducedMotion,
+      solidGroup: this.solids.group,
+      interactables: this.interactables,
+      hero: () => this.hero.sprite,
+      sitter: () => this.hero,
+      room: homeRoom !== null ? { gate: homeRoom } : null,
+      enterRoom: (gate) => this.goIn(homeRoomArea(gate)),
+      rebuild: () => this.rebuildArea()
+    })
   }
 
   /** The map changed under us (the lane grew, land was cleared): rebuild it where we stand. */

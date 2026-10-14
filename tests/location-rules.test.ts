@@ -11,14 +11,15 @@ import { pickupsIn } from '../src/lib/items.ts';
 import { isPresenceArea } from '../src/lib/presence-client.ts';
 import { hasAreaKind } from '../src/game/worlds.ts';
 
-test('location rules follow the hero across the safety boundary and through separate Commons', () => {
+test('location rules follow the hero across the safety boundary, on the Commons and off it', () => {
   for (const [area, x, y, safe, ride, id, moveSafe] of [
     ['commons', 376, 40, true, true, 'commons', true],
     ['outdoors', 40, 392, true, true, 'commons', true],
     ['outdoors', 40, 376, false, true, 'tangle', false],
     ['village', 400, 300, true, false, 'village', true],
-    ['home:0', 40, 40, true, true, 'home:0', false],
-    ['in:home:0', 80, 80, true, false, 'in:home:0', false],
+    // From a home a move arrives at its gate on the new world's Commons (the server's anchor).
+    ['home:0', 40, 40, true, true, 'home:0', true],
+    ['in:home:0', 80, 80, true, false, 'in:home:0', true],
     ['in:commons:yard', 40, 40, true, false, 'in:commons:yard', true],
   ] as const) {
     const state = { ...createNewGame(), area, position: { x, y } };

@@ -137,7 +137,7 @@ export function groundTileset(scene: Phaser.Scene): GroundTileset {
  * The cells drawn on one tile, bottom first: its terrain (the water under
  * a bridge's planks), then the Commons' path edges.
  */
-export function groundStack(world: WorldData, x: number, y: number, under: ReadonlyMap<string, number>, edges: boolean): string[] {
+export function groundStack(world: Pick<WorldData, 'ground' | 'width' | 'height'>, x: number, y: number, under: ReadonlyMap<string, number>, edges: boolean): string[] {
   const id = under.get(tileKey(x, y)) ?? world.ground[y][x]
   const out = id === TERRAIN.bridge ? ['pond-water'] : []
   out.push(TERRAIN_TO_EXPANSION[id] ?? 'grass')
@@ -146,7 +146,7 @@ export function groundStack(world: WorldData, x: number, y: number, under: Reado
 }
 
 /** Tiles a delivered building stands in for (only when its art loaded). */
-function groundUnder(scene: Phaser.Scene, world: WorldData): Map<string, number> {
+function groundUnder(scene: Phaser.Scene, world: Pick<WorldData, 'scenery'>): Map<string, number> {
   const under = new Map<string, number>()
   for (const s of world.scenery ?? []) {
     const g = s.groundUnder
@@ -154,6 +154,26 @@ function groundUnder(scene: Phaser.Scene, world: WorldData): Map<string, number>
     for (let y = g.ty; y < g.ty + g.th; y++) for (let x = g.tx; x < g.tx + g.tw; x++) under.set(tileKey(x, y), g.tile)
   }
   return under
+}
+
+/** What a ground is painted from: an area's terrain grid (and the buildings that stand in for tiles). */
+export type GroundGrid = Pick<WorldData, 'areaId' | 'ground' | 'width' | 'height' | 'scenery'>
+
+/**
+ * A map's ground on its painted tileset, ready to lay: one tilemap the size
+ * of the map, and each tile's cells (bottom first) as tileset indices. A
+ * curated area lays it whole (buildGround); a fixed footprint on the open
+ * map lays one chunk's rectangle at a time as it attaches (../wilds/fixed-chunk.ts).
+ */
+export interface GroundTiles {
+  map: Phaser.Tilemaps.Tilemap
+  tiles: Phaser.Tilemaps.Tileset
+  /** Tileset indices by layer, then [y][x]; -1 draws nothing. */
+  layers: number[][][]
+  /** Texels a world px (the layers are scaled by its inverse). */
+  density: number
+  /** The transitions still being painted (null once they're in). */
+  pending: Promise<void> | null
 }
 
 /**
@@ -167,10 +187,21 @@ export function buildGround(scene: Phaser.Scene, world: WorldData): Promise<void
     buildTangleGround(scene, world)
     return null
   }
-  if (scene.textures.exists(GROUND_PACKED_KEY) && (scene.cache.json.get(PACKED_MANIFEST_KEY) as PackedManifest | undefined)?.ground) return buildTiledGround(scene, world)
+  const g = groundTiles(scene, world, false)
+  if (!g) return null
+  layGround(g, { tx: 0, ty: 0, tw: world.width, th: world.height }, { x: 0, y: 0 }, -10, 'ground')
+  return g.pending
+}
+
+/**
+ * Paint (or reuse) a map's ground tileset and its tiles' cells. `edges`: the
+ * Commons pass's path edges on the old tileset (fixed ground: the Commons;
+ * the playtest-1 ground paints its own transitions everywhere).
+ */
+export function groundTiles(scene: Phaser.Scene, world: GroundGrid, edges: boolean): GroundTiles | null {
+  if (scene.textures.exists(GROUND_PACKED_KEY) && (scene.cache.json.get(PACKED_MANIFEST_KEY) as PackedManifest | undefined)?.ground) return tiledGround(scene, world)
   const ts = groundTileset(scene)
   const under = groundUnder(scene, world)
-  const edges = world.areaId === 'commons'
   const stacks = world.ground.map((row, y) => row.map((_, x) => groundStack(world, x, y, under, edges).map((n) => ts.index.get(n) ?? -1).filter((i) => i >= 0)))
   const depth = Math.max(1, ...stacks.flat().map((s) => s.length))
   const map = scene.make.tilemap({ width: world.width, height: world.height, tileWidth: ts.cell, tileHeight: ts.cell })
@@ -181,13 +212,26 @@ export function buildGround(scene: Phaser.Scene, world: WorldData): Promise<void
     c.x += TIE_BIAS
     c.y += TIE_BIAS
   }
-  for (let l = 0; l < depth; l++) {
-    const layer = map.createBlankLayer(`ground-${l}`, tiles)
-    if (!layer) continue
-    layer.putTilesAt(stacks.map((row) => row.map((s) => s[l] ?? -1)), 0, 0, false)
-    layer.setScale(1 / ts.density).setDepth(-10)
-  }
-  return null
+  const layers = Array.from({ length: depth }, (_, l) => stacks.map((row) => row.map((s) => s[l] ?? -1)))
+  return { map, tiles, layers, density: ts.density, pending: null }
+}
+
+/**
+ * Lay a rectangle of a painted ground (tiles of `g`'s map) at world pixel
+ * `at`, one tilemap layer a cell depth, named `${name}-<l>` (unique on the map).
+ */
+export function layGround(g: GroundTiles, rect: { tx: number; ty: number; tw: number; th: number }, at: { x: number; y: number }, depth: number, name: string): Phaser.Tilemaps.TilemapLayer[] {
+  const out: Phaser.Tilemaps.TilemapLayer[] = []
+  g.layers.forEach((grid, l) => {
+    const cells = grid.slice(rect.ty, rect.ty + rect.th).map((row) => row.slice(rect.tx, rect.tx + rect.tw))
+    if (!cells.some((row) => row.some((i) => i >= 0))) return
+    const layer = g.map.createBlankLayer(`${name}-${l}`, g.tiles, at.x, at.y, rect.tw, rect.th)
+    if (!layer) return
+    layer.putTilesAt(cells, 0, 0, false)
+    layer.setScale(1 / g.density).setDepth(depth)
+    out.push(layer)
+  })
+  return out
 }
 
 const GRASSY = new Set<number>([TERRAIN.grass_a, TERRAIN.grass_b, TERRAIN.grass_c, TERRAIN.flowers])
@@ -302,7 +346,7 @@ const PAINTED_TILESETS = 4
  * with any building's ground under it. The paint itself is a pure function
  * of these (ground-field.ts); a stale cache would show old ground.
  */
-export function tilesetSignature(world: WorldData, under: Map<string, number>, k: number, oldNames: string[], sheet: HTMLImageElement | HTMLCanvasElement | null, packed: PackedManifest['ground'], art: string): string {
+export function tilesetSignature(world: Pick<WorldData, 'ground'>, under: Map<string, number>, k: number, oldNames: string[], sheet: HTMLImageElement | HTMLCanvasElement | null, packed: PackedManifest['ground'], art: string): string {
   const parts: string[] = [
     String(k),
     art,
@@ -318,7 +362,7 @@ export function tilesetSignature(world: WorldData, under: Map<string, number>, k
   return parts.join('|')
 }
 
-function buildTiledGround(scene: Phaser.Scene, world: WorldData): Promise<void> | null {
+function tiledGround(scene: Phaser.Scene, world: GroundGrid): GroundTiles | null {
   const k = artDensity(scene)
   const cell = TILE * k
   const packed = (scene.cache.json.get(PACKED_MANIFEST_KEY) as PackedManifest).ground
@@ -389,18 +433,13 @@ function buildTiledGround(scene: Phaser.Scene, world: WorldData): Promise<void> 
     c.x += TIE_BIAS
     c.y += TIE_BIAS
   }
-  for (let l = 0; l < depth; l++) {
-    const layer = map.createBlankLayer(`ground-${l}`, tiles)
-    if (!layer) continue
-    layer.putTilesAt(stacks.map((row) => row.map((s) => (s[l] ? index.get(s[l]) ?? -1 : -1))), 0, 0, false)
-    layer.setScale(1 / k).setDepth(-10)
-  }
+  const layers = Array.from({ length: depth }, (_, l) => stacks.map((row) => row.map((s) => (s[l] ? index.get(s[l]) ?? -1 : -1))))
   lastView = { cells: names.length, edges: edgeCount, animated: animated.length, tileset: [canvas.width, canvas.height], density: k, area: world.areaId, complete: painted.complete, canvas }
   // Read-only, for playtests.
   expose('__fsGround', groundView, scene)
   const pending = painted.complete ? null : painted.done
   // Water: each animated cell shows its frame f's texture coordinates.
-  if (prefersReducedMotion()) return pending
+  if (prefersReducedMotion() || !animated.length) return { map, tiles, layers, density: k, pending }
   const frames = animated.map((a) => Array.from({ length: a.frames }, (_, f) => coords[a.index + f]))
   let f = 0
   scene.time.addEvent({
@@ -411,7 +450,7 @@ function buildTiledGround(scene: Phaser.Scene, world: WorldData): Promise<void> 
       animated.forEach((a, i) => (coords[a.index] = frames[i][f % a.frames]))
     },
   })
-  return pending
+  return { map, tiles, layers, density: k, pending }
 }
 
 /** The pond's animated frames, made at boot (src/game/ground-tiles.ts). */

@@ -139,7 +139,7 @@ export function closeAction(code: number, reason = ''): 'retry' | 'superseded' |
  * map's chunk rooms `outdoors:<cx>:<cy>` (signed; rooms are checked against the
  * content).
  */
-const AREA_RE = /^(village|woodland|ruin|commons|home:(0|[1-9]\d{0,3})|outdoors:(0|-?[1-9]\d*):(0|-?[1-9]\d*))$/;
+const AREA_RE = /^(village|woodland|ruin|home:(0|[1-9]\d{0,3})|outdoors:(0|-?[1-9]\d*):(0|-?[1-9]\d*))$/;
 
 export function isPresenceArea(area: string): boolean {
   if (area.startsWith('outdoors:')) { const c = roomChunk(area); return !!c && Number.isSafeInteger(c.cx) && Number.isSafeInteger(c.cy) && onGrid(c.cx, c.cy); }
