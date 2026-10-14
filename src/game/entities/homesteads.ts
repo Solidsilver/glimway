@@ -165,7 +165,7 @@ export class HomesteadLayer {
       stats: {
         gateDraws: this.art.gateDraws,
         tweens: this.scene.tweens.getTweens().length,
-        deadTweens: this.scene.tweens.getTweens().filter((t) => t.targets.some((o) => !(o as Phaser.GameObjects.GameObject).active)).length
+        deadTweens: this.scene.tweens.getTweens().filter((t) => (t.targets ?? []).some((o) => !(o as Phaser.GameObjects.GameObject).active)).length
       }
     }), { fresh: () => this.homes.fresh() }), scene)
     // Playtests: a tap on a land/room grid tile while arranging (as a pointer would).
