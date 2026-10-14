@@ -353,7 +353,7 @@ test('walking from the Tangle waits for fixed collision before crossing or savin
     await frames(page, 180)
     await page.keyboard.up('ArrowDown')
     expect((await hero(page)).y).toBeLessThan(MOUTH_Y)
-    expect((await serverState(page)).body.state.position.y).toBeLessThan(MOUTH_Y)
+    expect((await page.evaluate(() => window.__fsDevSaved!())).position.y).toBeLessThan(MOUTH_Y)
     expect((await win(page)).fixed).not.toContain('0,1')
   } finally {
     release()

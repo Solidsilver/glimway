@@ -206,7 +206,10 @@ export function groundTiles(scene: Phaser.Scene, world: GroundGrid, edges: boole
   const depth = Math.max(1, ...stacks.flat().map((s) => s.length))
   const map = scene.make.tilemap({ width: world.width, height: world.height, tileWidth: ts.cell, tileHeight: ts.cell })
   const tiles = map.addTilesetImage(ts.key, ts.key, ts.cell, ts.cell, 1, 2)
-  if (!tiles) return null
+  if (!tiles) {
+    map.destroy()
+    return null
+  }
   // Dense cells: decide sampling ties one way (TIE_BIAS), or the ground shimmers as the camera moves.
   if (ts.density > 1) for (const c of tiles.texCoordinates as { x: number; y: number }[]) {
     c.x += TIE_BIAS
@@ -427,7 +430,10 @@ function tiledGround(scene: Phaser.Scene, world: GroundGrid): GroundTiles | null
   const depth = Math.max(...stacks.flat().map((s) => s.length))
   const map = scene.make.tilemap({ width: world.width, height: world.height, tileWidth: cell, tileHeight: cell })
   const tiles = map.addTilesetImage(GROUND_TILESET_KEY, GROUND_TILESET_KEY, cell, cell, 1, 2)
-  if (!tiles) return null
+  if (!tiles) {
+    map.destroy()
+    return null
+  }
   const coords = tiles.texCoordinates as { x: number; y: number }[]
   if (k > 1) for (const c of coords) {
     c.x += TIE_BIAS

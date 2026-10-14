@@ -91,6 +91,7 @@ export class WildsWindow {
   private fixed = new Map<string, FixedChunk>()
   /** Each footprint's painted ground, laid a chunk at a time (one per footprint and scene). */
   private fixedGround = new Map<string, GroundTiles>()
+  private failedGround = new Set<string>()
   /** The attached chunks still being built, in attachment order (./window-chunk.ts BuildQueue). */
   readonly builds = new BuildQueue()
   private drifts = new Map<string, DriftChunk>()
@@ -295,7 +296,7 @@ export class WildsWindow {
     for (const key of plan.attach) {
       const { cx, cy } = parseChunkKey(key)
       if (fixedPlaceOf(cx, cy)) {
-        if (this.fixed.has(key)) continue
+        if (this.fixed.has(key) || this.failedGround.has(fixedPlaceOf(cx, cy)!.id)) continue
         const fp = footprintAt(cx, cy)
         if (!fp) {
           this.load(key)
@@ -492,8 +493,13 @@ export class WildsWindow {
   private groundFor(fp: FixedFootprint): GroundTiles | null {
     const had = this.fixedGround.get(fp.place.id)
     if (had) return had
+    if (this.failedGround.has(fp.place.id)) return null
     const g = groundTiles(this.deps.scene, { areaId: fp.place.id, ground: fp.ground, width: fp.w, height: fp.h, scenery: [] }, true)
     if (g) this.fixedGround.set(fp.place.id, g)
+    else {
+      this.failedGround.add(fp.place.id)
+      console.error(`Could not build fixed ground: ${fp.place.id}`)
+    }
     return g
   }
 
@@ -607,8 +613,12 @@ export class WildsWindow {
   }
 
   private destroy(): void {
+    if (this.gone) return
     this.gone = true
     this.release()
+    for (const c of this.attached.values()) c.destroy()
+    for (const c of this.fixed.values()) c.destroy()
+    for (const c of this.drifts.values()) c.destroy()
     for (const g of this.fixedGround.values()) g.map.destroy()
     this.fixedGround.clear()
     this.fixed.clear()

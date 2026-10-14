@@ -247,7 +247,11 @@ export class AttachedChunk implements Buildable {
   build(deadline: number): boolean {
     while (this.todo.length) {
       if (now() >= deadline) return false
-      if (!this.todo[0]!(deadline)) return false
+      try {
+        if (!this.todo[0]!(deadline)) return false
+      } catch (error) {
+        console.error(`Could not build chunk stage: ${this.key}`, error)
+      }
       this.todo.shift()
     }
     return true

@@ -154,6 +154,7 @@ class Instruments {
     const type = types.includes('long-animation-frame') ? 'long-animation-frame' : types.includes('longtask') ? 'longtask' : null
     if (!type) return
     this.observer = type
+    if (type === 'longtask') return
     new PerformanceObserver((list) => {
       for (const e of list.getEntries()) this.longFrame(e as PerformanceEntry & { blockingDuration?: number; scripts?: { invoker?: string; sourceFunctionName?: string; sourceURL?: string; duration: number }[] })
     }).observe({ type, buffered: true })

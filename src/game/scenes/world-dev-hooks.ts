@@ -282,10 +282,14 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
   // position follows (scene pixels, world pixels on the open map), so an
   // upload's merge never snaps the hero back.
   on('__fsDevPlace', (x, y) => {
-    s['hero'].sprite.setPosition(x, y)
-    s['hero'].sprite.setVelocity(0, 0)
-    s['session'].state.position = { x: Math.round(x), y: Math.round(y) }
-    s['session'].saveSoon()
+    ;(s['hero'].sprite.body as Phaser.Physics.Arcade.Body).reset(x, y)
+    s['safeSpot'] = null
+    s['fixedSpot'] = null
+    s['waitingFixed'] = !s['fixedReady'](x, y)
+    s['fixedWait'] = 0
+    s['commonsWaitSaid'] = false
+    s['notePosition']()
+    if (!s['waitingFixed']) s['session'].saveSoon()
   })
   // The stale sample an open conversation leaves behind (playtest 1, Silas's axe).
   on('__fsDevStalePosition', (x, y) => {
