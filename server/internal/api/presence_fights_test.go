@@ -152,7 +152,7 @@ type fightChunkCounter struct {
 
 // Chunk keeps only camp:0:0:0, so a test follows one room, and counts that
 // camp chunk's loads.
-func (c *fightChunkCounter) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, layer, cx, cy int32) (*chunkwire.WildsChunk, error) {
+func (c *fightChunkCounter) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, layer, cx, cy int32) (*chunkwire.WorldChunk, error) {
 	chunk, err := c.ChunkSource.Chunk(ctx, tx, world, epoch, layer, cx, cy)
 	if err != nil {
 		return nil, err
@@ -161,7 +161,7 @@ func (c *fightChunkCounter) Chunk(ctx context.Context, tx *sql.Tx, world, epoch 
 		c.calls.Add(1)
 		return chunk, nil
 	}
-	chunk = proto.Clone(chunk).(*chunkwire.WildsChunk)
+	chunk = proto.Clone(chunk).(*chunkwire.WorldChunk)
 	chunk.Entities = withoutCamps(chunk.Entities)
 	return chunk, nil
 }

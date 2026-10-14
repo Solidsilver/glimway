@@ -58,6 +58,7 @@ import { parseHomeArea } from '../../lib/homestead'
 import { homeLights } from '../../lib/homestead-land'
 import { homesteadsFor } from '../homestead'
 import { prepareHomeLand } from '../homeland'
+import { prepareCommons } from '../commons-served'
 import { isSafeArea } from '../../lib/habitica/sync'
 import { fingerInBracken } from '../../lib/quests'
 import { OUTDOORS_AREA, gateArrival, gateArrivalPosition, isWildsArea, wildsReturnTile } from '../wilds/coords'
@@ -1067,8 +1068,8 @@ export class WorldScene extends Phaser.Scene {
       const tile = wildsReturnTile()
       entry = { tx: tile.tx, ty: tile.ty }
     }
-    // A homestead's land is the server's: fetched while the screen is dark.
-    this.moveTo({ area, position: tileCenter(entry.tx, entry.ty) }, { entry, ...(facing ? { facing } : {}) }, { inDark: () => prepareHomeLand(String(area)) })
+    // A homestead's land and the Commons are the server's: fetched while the screen is dark.
+    this.moveTo({ area, position: tileCenter(entry.tx, entry.ty) }, { entry, ...(facing ? { facing } : {}) }, { inDark: () => (area === 'commons' ? prepareCommons(this.session) : prepareHomeLand(String(area))) })
   }
 
   /** Dev: straight to a world tile of the open map (its chunks load while the screen is dark). */

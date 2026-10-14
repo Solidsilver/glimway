@@ -244,4 +244,4 @@ export type {
 export type { PlayerState } from '../gen/glimway/v1/state_pb.js';
 export type { Where, ReportBarrier, Vitals, Place } from '../gen/glimway/v1/op_pb.js';
 export type { ReportRequest, ReportResult, QuestStepRequest, MarkRequest, MarkResult, TakePaperRequest, SettleEchoRequest, SettleEchoResult, FallRequest, FallResult, ProfileReport, ProfileResult } from '../gen/glimway/v1/operations_pb.js';
-export type { WildsChunk, HomesteadLand } from '../gen/glimway/v1/wilds_pb.js';
+export type { WorldChunk, HomesteadLand } from '../gen/glimway/v1/wilds_pb.js';

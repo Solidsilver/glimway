@@ -21,11 +21,11 @@ const (
 
 // Effective is a chunk's tiles with its changes on top. Changes may be nil.
 type Effective struct {
-	Chunk   *contract.WildsChunk
+	Chunk   *contract.WorldChunk
 	changes map[[2]uint32]*contract.GroundChange
 }
 
-func NewEffective(c *contract.WildsChunk, changes *contract.GroundChanges) Effective {
+func NewEffective(c *contract.WorldChunk, changes *contract.GroundChanges) Effective {
 	e := Effective{Chunk: c, changes: map[[2]uint32]*contract.GroundChange{}}
 	for _, g := range changes.GetChanges() {
 		e.changes[[2]uint32{g.Tx, g.Ty}] = g
@@ -104,7 +104,7 @@ func LayKind(kind string) *contentv1.WildsLayKind {
 }
 
 // DecorKindsAt are the decor kinds standing on a tile.
-func DecorKindsAt(c *contract.WildsChunk, x, y int) []string {
+func DecorKindsAt(c *contract.WorldChunk, x, y int) []string {
 	out := []string{}
 	if x < 0 || y < 0 {
 		return out

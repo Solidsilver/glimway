@@ -56,7 +56,7 @@ func chunkHash(c Chunk) string {
 // epochID is as long as a real one (store.Random: 64 hex characters).
 var epochID = strings.Repeat("0", 64)
 
-// encodeChunk is the stored and served bytes: the real WildsChunk message
+// encodeChunk is the stored and served bytes: the real WorldChunk message
 // (entities included).
 func encodeChunk(c Chunk) []byte {
 	b, err := proto.Marshal(ToProto(c, epochID))

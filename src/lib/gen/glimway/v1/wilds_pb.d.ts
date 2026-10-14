@@ -171,15 +171,124 @@ export declare type StorySiteValid = StorySite;
 export declare const StorySiteSchema: GenMessage<StorySite, {validType: StorySiteValid}>;
 
 /**
+ * Renamed WorldChunk (location-seam.md 1.4); nothing reads or writes this
+ * message. It stays whole because buf's FILE rule refuses deleting it until
+ * a release ships without it.
+ *
+ * @generated from message glimway.v1.WildsChunk
+ * @deprecated
+ */
+export declare type WildsChunk = Message<"glimway.v1.WildsChunk"> & {
+  /**
+   * @generated from field: string epoch_id = 1;
+   */
+  epochId: string;
+
+  /**
+   * @generated from field: string realm = 3;
+   */
+  realm: string;
+
+  /**
+   * @generated from field: sint32 layer = 4;
+   */
+  layer: number;
+
+  /**
+   * @generated from field: sint32 cx = 5;
+   */
+  cx: number;
+
+  /**
+   * @generated from field: sint32 cy = 6;
+   */
+  cy: number;
+
+  /**
+   * @generated from field: uint32 generator_version = 7;
+   */
+  generatorVersion: number;
+
+  /**
+   * @generated from field: uint32 size = 8;
+   */
+  size: number;
+
+  /**
+   * @generated from field: repeated string palette = 9;
+   */
+  palette: string[];
+
+  /**
+   * @generated from field: bytes ground = 10;
+   */
+  ground: Uint8Array;
+
+  /**
+   * @generated from field: bytes solid = 11;
+   */
+  solid: Uint8Array;
+
+  /**
+   * @generated from field: glimway.v1.DecorList decor = 13;
+   */
+  decor?: DecorList | undefined;
+
+  /**
+   * @generated from field: repeated glimway.v1.StorySite sites = 14;
+   */
+  sites: StorySite[];
+
+  /**
+   * @generated from field: string look = 16;
+   */
+  look: string;
+
+  /**
+   * @generated from field: string mark = 17;
+   */
+  mark: string;
+
+  /**
+   * @generated from field: repeated glimway.v1.WildsEntity entities = 18;
+   */
+  entities: WildsEntity[];
+
+  /**
+   * @generated from field: uint32 tier = 19;
+   */
+  tier: number;
+
+  /**
+   * @generated from field: string land = 20;
+   */
+  land: string;
+
+  /**
+   * @generated from field: repeated glimway.v1.WildsPlaceMark places = 21;
+   */
+  places: WildsPlaceMark[];
+};
+
+export declare type WildsChunkValid = WildsChunk;
+
+/**
+ * Describes the message glimway.v1.WildsChunk.
+ * Use `create(WildsChunkSchema)` to create a new message.
+ * @deprecated
+ */
+export declare const WildsChunkSchema: GenMessage<WildsChunk, {validType: WildsChunkValid}>;
+
+/**
  * Ground: two row-major cells per byte, low nibble first. Solid: eight cells
  * per byte, least significant bit first. Tiles are local; offsets are pixels.
  * The key is (world, realm, layer, cx, cy) on signed chunk coordinates
  * (open-map.md 2.1): tile (x, y) in world tiles lies in chunk
  * (floor(x/size), floor(y/size)); north is -y.
  *
- * @generated from message glimway.v1.WildsChunk
+ * @generated from message glimway.v1.WorldChunk
  */
-export declare type WildsChunk = Message<"glimway.v1.WildsChunk"> & {
+export declare type WorldChunk = Message<"glimway.v1.WorldChunk"> & {
   /**
    * @generated from field: string epoch_id = 1;
    */
@@ -276,15 +385,289 @@ export declare type WildsChunk = Message<"glimway.v1.WildsChunk"> & {
    * @generated from field: repeated glimway.v1.WildsPlaceMark places = 21;
    */
   places: WildsPlaceMark[];
+
+  /**
+   * Where the ground comes from (location-seam.md 1.1). A fixed chunk is an
+   * authored layout's (content/layouts/<layout>.json) at layout_revision;
+   * its epoch_id is the pseudo-epoch "fixed:<layout>@<revision>", its
+   * generator_version 0, its palette curated terrains, its look, land and
+   * tier unset, and it carries objects instead of decor, sites, entities or
+   * place marks.
+   *
+   * @generated from field: glimway.v1.ChunkSource source = 22;
+   */
+  source: ChunkSource;
+
+  /**
+   * @generated from field: uint32 layout_revision = 23;
+   */
+  layoutRevision: number;
+
+  /**
+   * @generated from field: repeated glimway.v1.Placed objects = 24;
+   */
+  objects: Placed[];
 };
 
-export declare type WildsChunkValid = WildsChunk;
+export declare type WorldChunkValid = WorldChunk;
 
 /**
- * Describes the message glimway.v1.WildsChunk.
- * Use `create(WildsChunkSchema)` to create a new message.
+ * Describes the message glimway.v1.WorldChunk.
+ * Use `create(WorldChunkSchema)` to create a new message.
  */
-export declare const WildsChunkSchema: GenMessage<WildsChunk, {validType: WildsChunkValid}>;
+export declare const WorldChunkSchema: GenMessage<WorldChunk, {validType: WorldChunkValid}>;
+
+/**
+ * An authored object on a fixed chunk (location-seam.md 1.2): a stable id, a
+ * kind, its tile (chunk-local; the chunk holding the tile owns the object
+ * and draws all of it, overhang included) and footprint, and what its kind
+ * needs. Kinds: tree, bush, rock (blocking pieces; a tree's variant is its
+ * canopy frame, width that canopy's width in px), overhang (a foreground
+ * occluder: variant its frame, width in px), prop and lamp (art with a
+ * collision base), scenery (drawn art), well, board, gate, sign, shelf
+ * (gate: its gate number; a gate also its side and the way through),
+ * exit, npc-post (npc, and the resident cycle's spot), repair (target, a
+ * repair site id) and gather (target, label). variant names the art
+ * (texture key or atlas frame), frame a frame in it. festival, when set,
+ * is the calendar festival or wick the object is out for.
+ *
+ * @generated from message glimway.v1.Placed
+ */
+export declare type Placed = Message<"glimway.v1.Placed"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string kind = 2;
+   */
+  kind: string;
+
+  /**
+   * @generated from field: uint32 tx = 3;
+   */
+  tx: number;
+
+  /**
+   * @generated from field: uint32 ty = 4;
+   */
+  ty: number;
+
+  /**
+   * @generated from field: uint32 tw = 5;
+   */
+  tw: number;
+
+  /**
+   * @generated from field: uint32 th = 6;
+   */
+  th: number;
+
+  /**
+   * @generated from field: string variant = 7;
+   */
+  variant: string;
+
+  /**
+   * @generated from field: string frame = 8;
+   */
+  frame: string;
+
+  /**
+   * @generated from field: string festival = 9;
+   */
+  festival: string;
+
+  /**
+   * @generated from field: glimway.v1.PlacedArt art = 10;
+   */
+  art?: PlacedArt | undefined;
+
+  /**
+   * @generated from field: glimway.v1.PlacedProp prop = 11;
+   */
+  prop?: PlacedProp | undefined;
+
+  /**
+   * @generated from field: glimway.v1.PlacedExit exit = 12;
+   */
+  exit?: PlacedExit | undefined;
+
+  /**
+   * @generated from field: uint32 gate = 13;
+   */
+  gate: number;
+
+  /**
+   * @generated from field: string side = 14;
+   */
+  side: string;
+
+  /**
+   * @generated from field: string npc = 15;
+   */
+  npc: string;
+
+  /**
+   * @generated from field: string spot = 16;
+   */
+  spot: string;
+
+  /**
+   * @generated from field: string target = 17;
+   */
+  target: string;
+
+  /**
+   * @generated from field: string label = 18;
+   */
+  label: string;
+
+  /**
+   * @generated from field: uint32 width = 19;
+   */
+  width: number;
+};
+
+export declare type PlacedValid = Placed;
+
+/**
+ * Describes the message glimway.v1.Placed.
+ * Use `create(PlacedSchema)` to create a new message.
+ */
+export declare const PlacedSchema: GenMessage<Placed, {validType: PlacedValid}>;
+
+/**
+ * Where a drawn piece's picture stands: its anchor in px from the object
+ * tile's north-west corner, bottom-centre unless origin_left (bottom-left).
+ * depth: a fixed draw depth; depth_y: sorted by the anchor (both unset: the
+ * renderer's default). tile: the piece stands for its object's tile (a
+ * gathered tuft goes with the tile).
+ *
+ * @generated from message glimway.v1.PlacedArt
+ */
+export declare type PlacedArt = Message<"glimway.v1.PlacedArt"> & {
+  /**
+   * @generated from field: sint32 ox = 1;
+   */
+  ox: number;
+
+  /**
+   * @generated from field: sint32 oy = 2;
+   */
+  oy: number;
+
+  /**
+   * @generated from field: bool origin_left = 3;
+   */
+  originLeft: boolean;
+
+  /**
+   * @generated from field: optional sint32 depth = 4;
+   */
+  depth?: number | undefined;
+
+  /**
+   * @generated from field: bool depth_y = 5;
+   */
+  depthY: boolean;
+
+  /**
+   * @generated from field: bool flip = 6;
+   */
+  flip: boolean;
+
+  /**
+   * @generated from field: optional uint32 tint = 7;
+   */
+  tint?: number | undefined;
+
+  /**
+   * @generated from field: bool tile = 8;
+   */
+  tile: boolean;
+};
+
+export declare type PlacedArtValid = PlacedArt;
+
+/**
+ * Describes the message glimway.v1.PlacedArt.
+ * Use `create(PlacedArtSchema)` to create a new message.
+ */
+export declare const PlacedArtSchema: GenMessage<PlacedArt, {validType: PlacedArtValid}>;
+
+/**
+ * An atlas prop: its display height and its collision box at the base, in
+ * px, and the light it carries (a lamp).
+ *
+ * @generated from message glimway.v1.PlacedProp
+ */
+export declare type PlacedProp = Message<"glimway.v1.PlacedProp"> & {
+  /**
+   * @generated from field: uint32 h = 1;
+   */
+  h: number;
+
+  /**
+   * @generated from field: uint32 body_w = 2;
+   */
+  bodyW: number;
+
+  /**
+   * @generated from field: uint32 body_h = 3;
+   */
+  bodyH: number;
+
+  /**
+   * @generated from field: string light = 4;
+   */
+  light: string;
+};
+
+export declare type PlacedPropValid = PlacedProp;
+
+/**
+ * Describes the message glimway.v1.PlacedProp.
+ * Use `create(PlacedPropSchema)` to create a new message.
+ */
+export declare const PlacedPropSchema: GenMessage<PlacedProp, {validType: PlacedPropValid}>;
+
+/**
+ * A way out: the area it leads to and where you arrive there. unlabelled
+ * hides its sign.
+ *
+ * @generated from message glimway.v1.PlacedExit
+ */
+export declare type PlacedExit = Message<"glimway.v1.PlacedExit"> & {
+  /**
+   * @generated from field: string to = 1;
+   */
+  to: string;
+
+  /**
+   * @generated from field: uint32 entry_tx = 2;
+   */
+  entryTx: number;
+
+  /**
+   * @generated from field: uint32 entry_ty = 3;
+   */
+  entryTy: number;
+
+  /**
+   * @generated from field: bool unlabelled = 4;
+   */
+  unlabelled: boolean;
+};
+
+export declare type PlacedExitValid = PlacedExit;
+
+/**
+ * Describes the message glimway.v1.PlacedExit.
+ * Use `create(PlacedExitSchema)` to create a new message.
+ */
+export declare const PlacedExitSchema: GenMessage<PlacedExit, {validType: PlacedExitValid}>;
 
 /**
  * A cell's place (open-map.md 2.2, 2.10): id "place:<cellX>:<cellY>", kind a
@@ -1104,6 +1487,15 @@ export declare type WildsNearResult = Message<"glimway.v1.WildsNearResult"> & {
    * @generated from field: repeated glimway.v1.WildsWay ways = 14;
    */
   ways: WildsWay[];
+
+  /**
+   * Every chunk of the window on the grid (location.OnGrid), row-major:
+   * its source ("fixed" or "generated") and the epoch its body is read
+   * under (a fixed chunk's pseudo-epoch). Only generated chunks carry state.
+   *
+   * @generated from field: repeated glimway.v1.NearChunk chunks = 15;
+   */
+  chunks: NearChunk[];
 };
 
 export declare type WildsNearResultValid = WildsNearResult;
@@ -1113,6 +1505,34 @@ export declare type WildsNearResultValid = WildsNearResult;
  * Use `create(WildsNearResultSchema)` to create a new message.
  */
 export declare const WildsNearResultSchema: GenMessage<WildsNearResult, {validType: WildsNearResultValid}>;
+
+/**
+ * @generated from message glimway.v1.NearChunk
+ */
+export declare type NearChunk = Message<"glimway.v1.NearChunk"> & {
+  /**
+   * @generated from field: glimway.v1.WildsChunkKey chunk = 1;
+   */
+  chunk?: WildsChunkKey | undefined;
+
+  /**
+   * @generated from field: string source = 2;
+   */
+  source: string;
+
+  /**
+   * @generated from field: string epoch = 3;
+   */
+  epoch: string;
+};
+
+export declare type NearChunkValid = NearChunk;
+
+/**
+ * Describes the message glimway.v1.NearChunk.
+ * Use `create(NearChunkSchema)` to create a new message.
+ */
+export declare const NearChunkSchema: GenMessage<NearChunk, {validType: NearChunkValid}>;
 
 /**
  * This wick's rumour (decision 19), in the state the client reads at start;
@@ -1349,4 +1769,27 @@ export enum SiteKind {
  * Describes the enum glimway.v1.SiteKind.
  */
 export declare const SiteKindSchema: GenEnum<SiteKind>;
+
+/**
+ * Unset is generated (still or wick): the generator never sets it, so the
+ * stored chunks' bytes are what they were before fixed chunks.
+ *
+ * @generated from enum glimway.v1.ChunkSource
+ */
+export enum ChunkSource {
+  /**
+   * @generated from enum value: CHUNK_SOURCE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: CHUNK_SOURCE_FIXED = 1;
+   */
+  FIXED = 1,
+}
+
+/**
+ * Describes the enum glimway.v1.ChunkSource.
+ */
+export declare const ChunkSourceSchema: GenEnum<ChunkSource>;
 

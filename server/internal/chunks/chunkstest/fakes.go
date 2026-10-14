@@ -18,12 +18,12 @@ type Key struct {
 // Fake returns copies so a caller cannot change the geometry of a later read.
 type Fake struct {
 	mu     sync.Mutex
-	Chunks map[Key]*contract.WildsChunk
+	Chunks map[Key]*contract.WorldChunk
 	Errors map[Key]error
 	Calls  []Key
 }
 
-func (f *Fake) Chunk(ctx context.Context, _ *sql.Tx, world, epoch string, layer, cx, cy int32) (*contract.WildsChunk, error) {
+func (f *Fake) Chunk(ctx context.Context, _ *sql.Tx, world, epoch string, layer, cx, cy int32) (*contract.WorldChunk, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func (f *Fake) Chunk(ctx context.Context, _ *sql.Tx, world, epoch string, layer,
 	if chunk == nil {
 		return nil, sql.ErrNoRows
 	}
-	return proto.Clone(chunk).(*contract.WildsChunk), nil
+	return proto.Clone(chunk).(*contract.WorldChunk), nil
 }
 
 type EpochKey struct{ World, Kind string }

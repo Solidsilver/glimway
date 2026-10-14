@@ -235,14 +235,26 @@ func writeOffLostDeed(ctx context.Context, tx *sql.Tx, home string, gate int, no
 	return nil
 }
 
-// gateCount is how many gates the lane shows: every claimed gate and at
-// least SpareGates unclaimed ones.
+// gateCount is how many gates the lane shows: the Commons' gates, its
+// frozen capacity (the layout has that many: location-seam.md 0 decision
+// 10), and a gate claimed past it before the freeze, if any. claim refuses
+// a new deed past the capacity.
 func gateCount(ctx context.Context, tx *sql.Tx, world string) (int, error) {
-	var n, top int
-	if err := tx.QueryRowContext(ctx, "SELECT count(*),COALESCE(MAX(gate)+1,0) FROM homesteads WHERE world_id=?", world).Scan(&n, &top); err != nil {
+	var top int
+	if err := tx.QueryRowContext(ctx, "SELECT COALESCE(MAX(gate)+1,0) FROM homesteads WHERE world_id=?", world).Scan(&top); err != nil {
 		return 0, err
 	}
-	return max(top, n+int(content.HomeRules.GetCommons().GetSpareGates())), nil
+	return max(top, commonsGates()), nil
+}
+
+// commonsGates is the Commons' gate capacity (its places.json gate anchors).
+func commonsGates() int {
+	for _, f := range content.PlacesRules.GetFixed() {
+		if f.GetId() == "commons" {
+			return content.GateCapacity(f)
+		}
+	}
+	return 0
 }
 
 // deedPrice is what a player pays Silas for the deed to an unclaimed gate:
@@ -288,6 +300,10 @@ func (a *Server) claim(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *
 			return fail(409, "gate-taken")
 		}
 		return reclaim(ctx, tx, s, held, now)
+	}
+	// A new deed only on a gate the Commons has.
+	if gate >= commonsGates() {
+		return fail(404, "invalid-gate")
 	}
 	price, err := deedPrice(ctx, tx, s.AccountID, s.WorldID, gate)
 	if err != nil {

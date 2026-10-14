@@ -16,7 +16,7 @@ type Generator interface {
 	// neighbours that lie in another, kept epoch (in 0.8 the Tangle's
 	// chunks beside a wick chunk), whose edges the new chunk copies at the
 	// seam (2.3). It is empty for a chunk with no such neighbour.
-	Chunk(epoch *contract.WildsEpoch, cx, cy int32, kept []Kept) (*contract.WildsChunk, error)
+	Chunk(epoch *contract.WildsEpoch, cx, cy int32, kept []Kept) (*contract.WorldChunk, error)
 	// Glimpses are chunks' main lands and whether the Wend crosses each,
 	// from the lands and river passes alone (decision 22), for chunks past
 	// the frontier that are never made: one answer per chunk, in order. A
@@ -31,7 +31,7 @@ type Generator interface {
 // chunk (CX, CY), one of the eight around the chunk being made.
 type Kept struct {
 	CX, CY int
-	Chunk  *contract.WildsChunk
+	Chunk  *contract.WorldChunk
 }
 
 // ChunkXY is a chunk's signed coordinates.

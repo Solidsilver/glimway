@@ -12,7 +12,7 @@
 import { readFileSync } from 'node:fs';
 import { clone } from '@bufbuild/protobuf';
 import { decodeChunk } from '../src/lib/api/chunks.ts';
-import { WildsChunkSchema, type WildsChunk } from '../src/lib/gen/glimway/v1/wilds_pb.js';
+import { WorldChunkSchema, type WorldChunk } from '../src/lib/gen/glimway/v1/wilds_pb.js';
 import { terrainOf, type ChunkTerrain } from '../src/game/wilds/terrain.ts';
 
 export type FixtureName = 'tangle' | 'whitequiet-0-5' | 'whitequiet-1-5' | 'whitequiet-0-4' | 'whitequiet-1-4' | 'road' | 'ford';
@@ -22,7 +22,7 @@ export function fixtureBytes(name: FixtureName): Uint8Array {
 }
 
 /** A fixture, decoded and validated as the client does. */
-export function fixtureChunk(name: FixtureName): WildsChunk {
+export function fixtureChunk(name: FixtureName): WorldChunk {
   return decodeChunk(fixtureBytes(name));
 }
 
@@ -35,8 +35,8 @@ export function fixtureTerrain(name: FixtureName): ChunkTerrain {
  * fixtures): the same body under other coordinates, its entity ids naming
  * the new chunk (`<kind>:<cx>:<cy>:<i>`).
  */
-export function chunkAt(name: FixtureName, cx: number, cy: number): WildsChunk {
-  const c = clone(WildsChunkSchema, fixtureChunk(name));
+export function chunkAt(name: FixtureName, cx: number, cy: number): WorldChunk {
+  const c = clone(WorldChunkSchema, fixtureChunk(name));
   c.cx = cx;
   c.cy = cy;
   c.entities.forEach((e, i) => (e.id = `${e.kind}:${cx}:${cy}:${i}`));

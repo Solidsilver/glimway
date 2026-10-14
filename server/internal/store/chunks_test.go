@@ -214,7 +214,7 @@ func TestChunksSeamsPassKeptNeighbours(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		solid := func(m *contract.WildsChunk, x, y int) bool { i := y*24 + x; return m.Solid[i/8]&(1<<(i%8)) != 0 }
+		solid := func(m *contract.WorldChunk, x, y int) bool { i := y*24 + x; return m.Solid[i/8]&(1<<(i%8)) != 0 }
 		for y := range 24 {
 			if solid(east, 0, y) != solid(tangle, 23, y) || solid(east, 1, y) != solid(tangle, 22, y) {
 				t.Fatalf("seam row %d differs", y)
@@ -422,5 +422,51 @@ INSERT INTO world_changes(world_id,realm,layer,chunk,epoch,entity,kind,state,cha
 	}
 	if countRows(t, s, "SELECT count(*) FROM world_changes WHERE realm='other-realm'") != 1 || countRows(t, s, "SELECT count(*) FROM world_changes WHERE world_id='world-b'") != 1 {
 		t.Fatal("another realm's or world's change went")
+	}
+}
+
+// A fixed footprint's chunks come from content before any epoch is read
+// (location-seam.md 4): in every world, only under the layout's current
+// pseudo-epoch, never stored, and kept in the LRU under that pseudo-epoch,
+// so a new revision is a new key. Any other epoch there, a fixed
+// pseudo-epoch off the footprint and another layer are refused.
+func TestChunksFixedSource(t *testing.T) {
+	s := chunkStore(t)
+	ctx := context.Background()
+	c := NewChunks(nil, fakegen.New())
+	epoch := chunks.FixedEpoch("commons", 1)
+	inTx(t, s, func(tx *sql.Tx) {
+		for _, world := range []string{"world-a", "world-b"} {
+			m, err := c.Chunk(ctx, tx, world, epoch, 0, -1, 2)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if m.Source != contract.ChunkSource_CHUNK_SOURCE_FIXED || m.EpochId != epoch || m.Cx != -1 || m.Cy != 2 || !proto.Equal(m, chunks.Fixed(epoch, -1, 2)) {
+				t.Fatalf("fixed chunk %+v", m)
+			}
+			m.Objects = nil // a caller's copy: the cache keeps its own
+		}
+		if m, _ := c.Chunk(ctx, tx, "world-a", epoch, 0, -1, 2); len(m.Objects) == 0 {
+			t.Fatal("a caller changed the cached chunk")
+		}
+		for _, bad := range []struct {
+			epoch         string
+			layer, cx, cy int32
+		}{
+			{chunks.FixedEpoch("commons", 2), 0, 0, 1}, // a revision not current
+			{"some-wick-epoch", 0, 0, 1},               // a stored epoch's id in the footprint
+			{epoch, 0, 0, 0},                           // the pseudo-epoch off the footprint
+			{epoch, 1, 0, 1},                           // another layer
+		} {
+			if _, err := c.Chunk(ctx, tx, "world-a", bad.epoch, bad.layer, bad.cx, bad.cy); !errors.Is(err, sql.ErrNoRows) {
+				t.Fatalf("%+v: %v", bad, err)
+			}
+		}
+	})
+	if n := countRows(t, s, "SELECT count(*) FROM wilds_chunks") + countRows(t, s, "SELECT count(*) FROM wild_epochs"); n != 0 {
+		t.Fatalf("a fixed read stored %d rows", n)
+	}
+	if c.get(chunkKey{epoch, 0, -1, 2}) == nil || c.get(chunkKey{chunks.FixedEpoch("commons", 2), 0, 0, 1}) != nil {
+		t.Fatal("the LRU keys fixed chunks by their revision's pseudo-epoch")
 	}
 }

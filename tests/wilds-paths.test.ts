@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { toBinary, type JsonValue } from '@bufbuild/protobuf';
 import { FakeOperations } from '../src/lib/api/operations.ts';
-import { WildsChunkSchema, type WildsWay } from '../src/lib/gen/glimway/v1/wilds_pb.js';
+import { WorldChunkSchema, type WildsWay } from '../src/lib/gen/glimway/v1/wilds_pb.js';
 import { epochKindAt } from '../src/lib/wilds/coords.ts';
 import { TERRAIN } from '../src/lib/tile.ts';
 import { loadWilds } from '../src/lib/wilds/data.ts';
@@ -123,7 +123,7 @@ async function loaded(): Promise<Session> {
       const still = epochKindAt(x, y) === 'still';
       const m = chunkAt(still ? 'tangle' : 'whitequiet-0-4', x, y);
       m.epochId = still ? NEAR.still.id : NEAR.wick.id;
-      ops.responses.set(`/api/wilds/chunk/${m.epochId}/0/${x}/${y}`, [toBinary(WildsChunkSchema, m)]);
+      ops.responses.set(`/api/wilds/chunk/${m.epochId}/0/${x}/${y}`, [toBinary(WorldChunkSchema, m)]);
     }
   assert.equal(await refreshNear(session, -2, -4), true);
   return session;

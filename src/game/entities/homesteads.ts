@@ -28,7 +28,7 @@ import { bus, EV } from '../events'
 import type { Session } from '../session'
 import { tileCenter, tileFeet, tileKey, tileMid } from '../../lib/tile'
 import type { WorldData } from '../worlds'
-import type { CommonsWorld } from '../commons'
+import { commonsServed, prepareCommons, type CommonsWorld } from '../commons-served'
 import type { LandWorld } from '../homeland'
 import { ROOM_BENCH, ROOM_HEARTH } from '../cottage'
 import { villageFor, type Village } from '../village'
@@ -100,7 +100,13 @@ export class HomesteadLayer {
     this.talk = new HomesteadTalk(this)
     this.arranging = new HomesteadArranging(this)
     this.yard = this.land ? new HomesteadYard(scene, deps.reducedMotion, () => deps.hero()) : null
-    if (this.commons) this.art.buildCommonsFixtures()
+    if (this.commons?.served) this.art.buildCommonsFixtures()
+    else if (this.commons) {
+      // Meadow stands in for the Commons until its chunks come: redraw (and so
+      // rebuild) if they already have, and keep asking while they haven't.
+      this.scheduleRedraw()
+      scene.time.addEvent({ delay: 5000, loop: true, callback: () => void prepareCommons(deps.session) })
+    }
     this.art.emitThumbs()
     const onChange = (p?: { gate?: number }) => this.scheduleRedraw(p?.gate)
     const onCommand = (c: PlacementCommand) => this.arranging.command(c)
@@ -326,7 +332,8 @@ export class HomesteadLayer {
 
   private redraw(gates?: Set<number>): void {
     if (this.commons) {
-      if (this.homes.gateCount > this.commons.gates.length) {
+      // Built on meadow before the served Commons arrived: rebuild on it.
+      if (!this.commons.served && commonsServed()) {
         this.deps.rebuild()
         return
       }

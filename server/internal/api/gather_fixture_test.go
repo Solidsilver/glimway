@@ -51,7 +51,7 @@ func (x *rig) gatherFixture(s response, fields map[string]any) {
 	id := "gather-fixture"
 	epoch := &contract.WildsEpoch{Id: id, Kind: wilds.EpochKindAt(cx, cy), GeneratorVersion: 3, StartsAt: float64(x.now.Load())}
 	x.api.Config.Epochs = &chunkstest.FakeEpochs{Values: map[chunkstest.EpochKey]*contract.WildsEpoch{{World: s.WorldID, Kind: epoch.Kind}: epoch}}
-	x.api.Config.Chunks = &chunkstest.Fake{Chunks: map[chunkstest.Key]*contract.WildsChunk{{World: s.WorldID, Epoch: id, CX: int32(cx), CY: int32(cy)}: {EpochId: id, Size: 24, Cx: int32(cx), Cy: int32(cy), Decor: &contract.DecorList{Kinds: []string{kind}, Kind: []uint32{0}, Tx: []uint32{uint32(tile[0] - cx*size)}, Ty: []uint32{uint32(tile[1] - cy*size)}}}}}
+	x.api.Config.Chunks = &chunkstest.Fake{Chunks: map[chunkstest.Key]*contract.WorldChunk{{World: s.WorldID, Epoch: id, CX: int32(cx), CY: int32(cy)}: {EpochId: id, Size: 24, Cx: int32(cx), Cy: int32(cy), Decor: &contract.DecorList{Kinds: []string{kind}, Kind: []uint32{0}, Tx: []uint32{uint32(tile[0] - cx*size)}, Ty: []uint32{uint32(tile[1] - cy*size)}}}}}
 	fields["tile"] = tile
 	fields["where"] = testWhere(doc)
 	delete(fields, "progress")

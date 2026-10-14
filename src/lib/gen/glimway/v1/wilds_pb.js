@@ -9,7 +9,7 @@ import { file_google_protobuf_wrappers } from "@bufbuild/protobuf/wkt";
  * Describes the file glimway/v1/wilds.proto.
  */
 export const file_glimway_v1_wilds = /*@__PURE__*/
-  fileDesc("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aXNwbGF5X25hbWUYAyABKAkSCQoBeBgEIAEoARIJCgF5GAUgASgBEiwKBmxpdF9ieRgGIAEoCzIcLmdvb2dsZS5wcm90b2J1Zi5TdHJpbmdWYWx1ZRIKCgJhdBgHIAEoARIsCgZsaXRfYXQYCCABKAsyHC5nb29nbGUucHJvdG9idWYuRG91YmxlVmFsdWUiPwoORWNob0Fzc2lnbm1lbnQSDAoEc2l0ZRgBIAEoCRIOCgZtZW1iZXIYAiABKAkSDwoHc2V0dGxlZBgDIAEoCCKjAwoRV2lsZHNSZWdpb25SZXN1bHQSJQoFZXBvY2gYASABKAsyFi5nbGltd2F5LnYxLldpbGRzRXBvY2gSLgoIZW50aXRpZXMYAiADKAsyHC5nbGltd2F5LnYxLldpbGRzRW50aXR5U3RhdGUSNwoPcGVyc29uYWxfY2xhaW1zGAMgAygLMh4uZ2xpbXdheS52MS5XaWxkc1BlcnNvbmFsQ2xhaW0SLwoLZGlzY292ZXJpZXMYBCADKAsyGi5nbGltd2F5LnYxLldpbGRzRGlzY292ZXJ5EioKCGxhbnRlcm5zGAUgAygLMhguZ2xpbXdheS52MS5XaWxkc0xhbnRlcm4SPwoJbWF0ZXJpYWxzGAYgAygLMiwuZ2xpbXdheS52MS5XaWxkc1JlZ2lvblJlc3VsdC5NYXRlcmlhbHNFbnRyeRIqCgZlY2hvZXMYByADKAsyGi5nbGltd2F5LnYxLkVjaG9Bc3NpZ25tZW50GjAKDk1hdGVyaWFsc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAToCOAE6AhgBIjkKDVdpbGRzRnJvbnRpZXISKAoEcmVjdBgBIAEoCzIaLmdsaW13YXkudjEuV2lsZHNDaHVua1JlY3QiTgoMR3JvdW5kQ2hhbmdlEgoKAnR4GAEgASgNEgoKAnR5GAIgASgNEg4KBmNoYW5nZRgDIAEoCRIKCgJieRgEIAEoCRIKCgJhdBgFIAEoASI6Cg1Hcm91bmRDaGFuZ2VzEikKB2NoYW5nZXMYASADKAsyGC5nbGltd2F5LnYxLkdyb3VuZENoYW5nZSJ5ChJDaHVua0dyb3VuZENoYW5nZXMSKAoFY2h1bmsYASABKAsyGS5nbGltd2F5LnYxLldpbGRzQ2h1bmtLZXkSDQoFZXBvY2gYAiABKAkSKgoHY2hhbmdlcxgDIAEoCzIZLmdsaW13YXkudjEuR3JvdW5kQ2hhbmdlcyJVCgxXaWxkc0dsaW1wc2USKAoFY2h1bmsYASABKAsyGS5nbGltd2F5LnYxLldpbGRzQ2h1bmtLZXkSDAoEbGFuZBgCIAEoCRINCgVyaXZlchgDIAEoCCIhCglXb3JsZFRpbGUSCQoBeBgBIAEoERIJCgF5GAIgASgRIuMBCghXaWxkc1dheRIKCgJpZBgBIAEoCRIJCgFhGAIgASgJEgkKAWIYAyABKAkSDAoEbmFtZRgEIAEoCRIKCgJieRgFIAEoCRINCgV0aWxlcxgGIAEoDRINCgVlcG9jaBgHIAEoCRIKCgJhdBgIIAEoARIjCgRwYXRoGAkgAygLMhUuZ2xpbXdheS52MS5Xb3JsZFRpbGUSJQoGc2lnbl9hGAogASgLMhUuZ2xpbXdheS52MS5Xb3JsZFRpbGUSJQoGc2lnbl9iGAsgASgLMhUuZ2xpbXdheS52MS5Xb3JsZFRpbGUiqAUKD1dpbGRzTmVhclJlc3VsdBIlCgVzdGlsbBgBIAEoCzIWLmdsaW13YXkudjEuV2lsZHNFcG9jaBIkCgR3aWNrGAIgASgLMhYuZ2xpbXdheS52MS5XaWxkc0Vwb2NoEisKCGZyb250aWVyGAMgASgLMhkuZ2xpbXdheS52MS5XaWxkc0Zyb250aWVyEikKBmNlbnRlchgEIAEoCzIZLmdsaW13YXkudjEuV2lsZHNDaHVua0tleRIOCgZyYWRpdXMYBSABKA0SLgoIZW50aXRpZXMYBiADKAsyHC5nbGltd2F5LnYxLldpbGRzRW50aXR5U3RhdGUSNwoPcGVyc29uYWxfY2xhaW1zGAcgAygLMh4uZ2xpbXdheS52MS5XaWxkc1BlcnNvbmFsQ2xhaW0SLwoLZGlzY292ZXJpZXMYCCADKAsyGi5nbGltd2F5LnYxLldpbGRzRGlzY292ZXJ5EioKCGxhbnRlcm5zGAkgAygLMhguZ2xpbXdheS52MS5XaWxkc0xhbnRlcm4SKgoGZWNob2VzGAogAygLMhouZ2xpbXdheS52MS5FY2hvQXNzaWdubWVudBIuCgZncm91bmQYCyADKAsyHi5nbGltd2F5LnYxLkNodW5rR3JvdW5kQ2hhbmdlcxI9CgltYXRlcmlhbHMYDCADKAsyKi5nbGltd2F5LnYxLldpbGRzTmVhclJlc3VsdC5NYXRlcmlhbHNFbnRyeRIpCgdnbGltcHNlGA0gAygLMhguZ2xpbXdheS52MS5XaWxkc0dsaW1wc2USIgoEd2F5cxgOIAMoCzIULmdsaW13YXkudjEuV2lsZHNXYXkaMAoOTWF0ZXJpYWxzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgBOgI4ASKOAQoLV2lsZHNSdW1vdXISDQoFZXBvY2gYASABKAkSDQoFcGxhY2UYAiABKAkSEAoIbGFuZG1hcmsYAyABKAkSDwoHY29tcGFzcxgEIAEoCRIMCgRyaW5nGAUgASgNEhIKCnBhc3Rfcml2ZXIYBiABKAgSDAoEc2l0ZRgHIAEoCRIOCgZvcGVuZWQYCCABKAgiKAoNV2lsZHNNYXRlcmlhbBIKCgJpZBgBIAEoCRILCgNxdHkYAiABKAEiaAoJV2lsZHNMb290EiwKCW1hdGVyaWFscxgBIAMoCzIZLmdsaW13YXkudjEuV2lsZHNNYXRlcmlhbBItCgd0cmlua2V0GAIgASgLMhwuZ29vZ2xlLnByb3RvYnVmLlN0cmluZ1ZhbHVlIlgKDUhvbWVzdGVhZExhbmQSDQoFd2lkdGgYASABKA0SDgoGaGVpZ2h0GAIgASgNEg0KBWNlbGxzGAMgAygJEhkKEWdlbmVyYXRvcl92ZXJzaW9uGAQgASgNKlQKA0RpchITCg9ESVJfVU5TUEVDSUZJRUQQABINCglESVJfTk9SVEgQARIMCghESVJfRUFTVBACEg0KCURJUl9TT1VUSBADEgwKCERJUl9XRVNUEAQq0QEKCFNpdGVLaW5kEhkKFVNJVEVfS0lORF9VTlNQRUNJRklFRBAAEhIKDlNJVEVfS0lORF9FQ0hPEAESEwoPU0lURV9LSU5EX0NBSVJOEAISEgoOU0lURV9LSU5EX05FU1QQAxITCg9TSVRFX0tJTkRfUExBTksQBBITCg9TSVRFX0tJTkRfR0lWRU4QBRITCg9TSVRFX0tJTkRfUkVFRFMQBhIYChRTSVRFX0tJTkRfTEFNUF9TVE9ORRAHEhQKEFNJVEVfS0lORF9SVU1PVVIQCEIxWi9nbGltd2F5L3NlcnZlci9pbnRlcm5hbC9nZW4vZ2xpbXdheS92MTtjb250cmFjdGIGcHJvdG8z", [file_google_protobuf_wrappers]);
+  fileDesc("ChZnbGltd2F5L3YxL3dpbGRzLnByb3RvEgpnbGltd2F5LnYxIh4KBFRpbGUSCgoCdHgYASABKA0SCgoCdHkYAiABKA0igQEKBEV4aXQSCgoCdHgYASABKA0SCgoCdHkYAiABKA0SCgoCdHcYAyABKA0SCgoCdGgYBCABKA0SHAoDZGlyGAUgASgOMg8uZ2xpbXdheS52MS5EaXISCgoCdG8YBiABKAkSHwoFZW50cnkYByABKAsyEC5nbGltd2F5LnYxLlRpbGUieAoJRGVjb3JMaXN0Eg0KBWtpbmRzGAEgAygJEgwKBGtpbmQYAiADKA0SCgoCdHgYAyADKA0SCgoCdHkYBCADKA0SCgoCb3gYBSADKBESCgoCb3kYBiADKBESDwoHdmFyaWFudBgHIAMoDRINCgVmbGFncxgIIAEoDCJTCglTdG9yeVNpdGUSCgoCaWQYASABKAkSIgoEa2luZBgCIAEoDjIULmdsaW13YXkudjEuU2l0ZUtpbmQSCgoCdHgYAyABKA0SCgoCdHkYBCABKA0itAMKCldpbGRzQ2h1bmsSEAoIZXBvY2hfaWQYASABKAkSDQoFcmVhbG0YAyABKAkSDQoFbGF5ZXIYBCABKBESCgoCY3gYBSABKBESCgoCY3kYBiABKBESGQoRZ2VuZXJhdG9yX3ZlcnNpb24YByABKA0SDAoEc2l6ZRgIIAEoDRIPCgdwYWxldHRlGAkgAygJEg4KBmdyb3VuZBgKIAEoDBINCgVzb2xpZBgLIAEoDBIkCgVkZWNvchgNIAEoCzIVLmdsaW13YXkudjEuRGVjb3JMaXN0EiQKBXNpdGVzGA4gAygLMhUuZ2xpbXdheS52MS5TdG9yeVNpdGUSDAoEbG9vaxgQIAEoCRIMCgRtYXJrGBEgASgJEikKCGVudGl0aWVzGBIgAygLMhcuZ2xpbXdheS52MS5XaWxkc0VudGl0eRIMCgR0aWVyGBMgASgNEgwKBGxhbmQYFCABKAkSKgoGcGxhY2VzGBUgAygLMhouZ2xpbXdheS52MS5XaWxkc1BsYWNlTWFyazoCGAFKBAgCEANKBAgMEA1KBAgPEBBSBnJlZ2lvblIFZXhpdHNSBXNwYXduIpcECgpXb3JsZENodW5rEhAKCGVwb2NoX2lkGAEgASgJEg0KBXJlYWxtGAMgASgJEg0KBWxheWVyGAQgASgREgoKAmN4GAUgASgREgoKAmN5GAYgASgREhkKEWdlbmVyYXRvcl92ZXJzaW9uGAcgASgNEgwKBHNpemUYCCABKA0SDwoHcGFsZXR0ZRgJIAMoCRIOCgZncm91bmQYCiABKAwSDQoFc29saWQYCyABKAwSJAoFZGVjb3IYDSABKAsyFS5nbGltd2F5LnYxLkRlY29yTGlzdBIkCgVzaXRlcxgOIAMoCzIVLmdsaW13YXkudjEuU3RvcnlTaXRlEgwKBGxvb2sYECABKAkSDAoEbWFyaxgRIAEoCRIpCghlbnRpdGllcxgSIAMoCzIXLmdsaW13YXkudjEuV2lsZHNFbnRpdHkSDAoEdGllchgTIAEoDRIMCgRsYW5kGBQgASgJEioKBnBsYWNlcxgVIAMoCzIaLmdsaW13YXkudjEuV2lsZHNQbGFjZU1hcmsSJwoGc291cmNlGBYgASgOMhcuZ2xpbXdheS52MS5DaHVua1NvdXJjZRIXCg9sYXlvdXRfcmV2aXNpb24YFyABKA0SIwoHb2JqZWN0cxgYIAMoCzISLmdsaW13YXkudjEuUGxhY2VkSgQIAhADSgQIDBANSgQIDxAQUgZyZWdpb25SBWV4aXRzUgVzcGF3biLZAgoGUGxhY2VkEgoKAmlkGAEgASgJEgwKBGtpbmQYAiABKAkSCgoCdHgYAyABKA0SCgoCdHkYBCABKA0SCgoCdHcYBSABKA0SCgoCdGgYBiABKA0SDwoHdmFyaWFudBgHIAEoCRINCgVmcmFtZRgIIAEoCRIQCghmZXN0aXZhbBgJIAEoCRIiCgNhcnQYCiABKAsyFS5nbGltd2F5LnYxLlBsYWNlZEFydBIkCgRwcm9wGAsgASgLMhYuZ2xpbXdheS52MS5QbGFjZWRQcm9wEiQKBGV4aXQYDCABKAsyFi5nbGltd2F5LnYxLlBsYWNlZEV4aXQSDAoEZ2F0ZRgNIAEoDRIMCgRzaWRlGA4gASgJEgsKA25wYxgPIAEoCRIMCgRzcG90GBAgASgJEg4KBnRhcmdldBgRIAEoCRINCgVsYWJlbBgSIAEoCRINCgV3aWR0aBgTIAEoDSKfAQoJUGxhY2VkQXJ0EgoKAm94GAEgASgREgoKAm95GAIgASgREhMKC29yaWdpbl9sZWZ0GAMgASgIEhIKBWRlcHRoGAQgASgRSACIAQESDwoHZGVwdGhfeRgFIAEoCBIMCgRmbGlwGAYgASgIEhEKBHRpbnQYByABKA1IAYgBARIMCgR0aWxlGAggASgIQggKBl9kZXB0aEIHCgVfdGludCJGCgpQbGFjZWRQcm9wEgkKAWgYASABKA0SDgoGYm9keV93GAIgASgNEg4KBmJvZHlfaBgDIAEoDRINCgVsaWdodBgEIAEoCSJQCgpQbGFjZWRFeGl0EgoKAnRvGAEgASgJEhAKCGVudHJ5X3R4GAIgASgNEhAKCGVudHJ5X3R5GAMgASgNEhIKCnVubGFiZWxsZWQYBCABKAgiQgoOV2lsZHNQbGFjZU1hcmsSCgoCaWQYASABKAkSDAoEa2luZBgCIAEoCRIKCgJ0eBgDIAEoDRIKCgJ0eRgEIAEoDSJFCg1XaWxkc0NodW5rS2V5Eg0KBXJlYWxtGAEgASgJEg0KBWxheWVyGAIgASgREgoKAmN4GAMgASgREgoKAmN5GAQgASgRIlAKDldpbGRzQ2h1bmtSZWN0Eg4KBm1pbl9jeBgBIAEoERIOCgZtaW5fY3kYAiABKBESDgoGbWF4X2N4GAMgASgREg4KBm1heF9jeRgEIAEoESJ9CgtXaWxkc0VudGl0eRIKCgJpZBgBIAEoCRIMCgRraW5kGAIgASgJEgoKAnR4GAMgASgNEgoKAnR5GAQgASgNEg8KB2VuZW1pZXMYBSADKAkSEAoIbWF0ZXJpYWwYBiABKAkSDAoEdGllchgHIAEoDRILCgNwb2kYCCABKAkiuAEKCldpbGRzRXBvY2gSCgoCaWQYASABKAkSEgoKd29ybGRfc2VlZBgCIAEoCRIZChFnZW5lcmF0b3JfdmVyc2lvbhgEIAEoDRIOCgZzZWFzb24YBSABKAkSEQoJc3RhcnRzX2F0GAYgASgBEi0KB2VuZHNfYXQYByABKAsyHC5nb29nbGUucHJvdG9idWYuRG91YmxlVmFsdWUSDAoEa2luZBgIIAEoCUoECAMQBFIJcmVnaW9uX2lkIs0BChBXaWxkc0VudGl0eVN0YXRlEgoKAmlkGAEgASgJEg0KBWN5Y2xlGAIgASgBEg0KBXN0YXRlGAMgASgJEhQKDGF2YWlsYWJsZV9hdBgEIAEoARIoCgJieRgFIAEoCzIcLmdvb2dsZS5wcm90b2J1Zi5TdHJpbmdWYWx1ZRIoCgJhdBgGIAEoCzIcLmdvb2dsZS5wcm90b2J1Zi5Eb3VibGVWYWx1ZRINCgVlcG9jaBgHIAEoCRIWCg5jYW1wX2NsYWltYWJsZRgIIAEoCCIzChJXaWxkc1BlcnNvbmFsQ2xhaW0SEQoJZW50aXR5X2lkGAEgASgJEgoKAmF0GAIgASgBImwKDldpbGRzRGlzY292ZXJ5EhEKCWVudGl0eV9pZBgBIAEoCRIOCgZwb2lfaWQYAiABKAkSFQoNZGlzY292ZXJlcl9pZBgDIAEoCRIUCgxkaXNwbGF5X25hbWUYBCABKAkSCgoCYXQYBSABKAEiwAEKDFdpbGRzTGFudGVybhIKCgJpZBgBIAEoCRIQCghvd25lcl9pZBgCIAEoCRIUCgxkaXNwbGF5X25hbWUYAyABKAkSCQoBeBgEIAEoARIJCgF5GAUgASgBEiwKBmxpdF9ieRgGIAEoCzIcLmdvb2dsZS5wcm90b2J1Zi5TdHJpbmdWYWx1ZRIKCgJhdBgHIAEoARIsCgZsaXRfYXQYCCABKAsyHC5nb29nbGUucHJvdG9idWYuRG91YmxlVmFsdWUiPwoORWNob0Fzc2lnbm1lbnQSDAoEc2l0ZRgBIAEoCRIOCgZtZW1iZXIYAiABKAkSDwoHc2V0dGxlZBgDIAEoCCKjAwoRV2lsZHNSZWdpb25SZXN1bHQSJQoFZXBvY2gYASABKAsyFi5nbGltd2F5LnYxLldpbGRzRXBvY2gSLgoIZW50aXRpZXMYAiADKAsyHC5nbGltd2F5LnYxLldpbGRzRW50aXR5U3RhdGUSNwoPcGVyc29uYWxfY2xhaW1zGAMgAygLMh4uZ2xpbXdheS52MS5XaWxkc1BlcnNvbmFsQ2xhaW0SLwoLZGlzY292ZXJpZXMYBCADKAsyGi5nbGltd2F5LnYxLldpbGRzRGlzY292ZXJ5EioKCGxhbnRlcm5zGAUgAygLMhguZ2xpbXdheS52MS5XaWxkc0xhbnRlcm4SPwoJbWF0ZXJpYWxzGAYgAygLMiwuZ2xpbXdheS52MS5XaWxkc1JlZ2lvblJlc3VsdC5NYXRlcmlhbHNFbnRyeRIqCgZlY2hvZXMYByADKAsyGi5nbGltd2F5LnYxLkVjaG9Bc3NpZ25tZW50GjAKDk1hdGVyaWFsc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoAToCOAE6AhgBIjkKDVdpbGRzRnJvbnRpZXISKAoEcmVjdBgBIAEoCzIaLmdsaW13YXkudjEuV2lsZHNDaHVua1JlY3QiTgoMR3JvdW5kQ2hhbmdlEgoKAnR4GAEgASgNEgoKAnR5GAIgASgNEg4KBmNoYW5nZRgDIAEoCRIKCgJieRgEIAEoCRIKCgJhdBgFIAEoASI6Cg1Hcm91bmRDaGFuZ2VzEikKB2NoYW5nZXMYASADKAsyGC5nbGltd2F5LnYxLkdyb3VuZENoYW5nZSJ5ChJDaHVua0dyb3VuZENoYW5nZXMSKAoFY2h1bmsYASABKAsyGS5nbGltd2F5LnYxLldpbGRzQ2h1bmtLZXkSDQoFZXBvY2gYAiABKAkSKgoHY2hhbmdlcxgDIAEoCzIZLmdsaW13YXkudjEuR3JvdW5kQ2hhbmdlcyJVCgxXaWxkc0dsaW1wc2USKAoFY2h1bmsYASABKAsyGS5nbGltd2F5LnYxLldpbGRzQ2h1bmtLZXkSDAoEbGFuZBgCIAEoCRINCgVyaXZlchgDIAEoCCIhCglXb3JsZFRpbGUSCQoBeBgBIAEoERIJCgF5GAIgASgRIuMBCghXaWxkc1dheRIKCgJpZBgBIAEoCRIJCgFhGAIgASgJEgkKAWIYAyABKAkSDAoEbmFtZRgEIAEoCRIKCgJieRgFIAEoCRINCgV0aWxlcxgGIAEoDRINCgVlcG9jaBgHIAEoCRIKCgJhdBgIIAEoARIjCgRwYXRoGAkgAygLMhUuZ2xpbXdheS52MS5Xb3JsZFRpbGUSJQoGc2lnbl9hGAogASgLMhUuZ2xpbXdheS52MS5Xb3JsZFRpbGUSJQoGc2lnbl9iGAsgASgLMhUuZ2xpbXdheS52MS5Xb3JsZFRpbGUizwUKD1dpbGRzTmVhclJlc3VsdBIlCgVzdGlsbBgBIAEoCzIWLmdsaW13YXkudjEuV2lsZHNFcG9jaBIkCgR3aWNrGAIgASgLMhYuZ2xpbXdheS52MS5XaWxkc0Vwb2NoEisKCGZyb250aWVyGAMgASgLMhkuZ2xpbXdheS52MS5XaWxkc0Zyb250aWVyEikKBmNlbnRlchgEIAEoCzIZLmdsaW13YXkudjEuV2lsZHNDaHVua0tleRIOCgZyYWRpdXMYBSABKA0SLgoIZW50aXRpZXMYBiADKAsyHC5nbGltd2F5LnYxLldpbGRzRW50aXR5U3RhdGUSNwoPcGVyc29uYWxfY2xhaW1zGAcgAygLMh4uZ2xpbXdheS52MS5XaWxkc1BlcnNvbmFsQ2xhaW0SLwoLZGlzY292ZXJpZXMYCCADKAsyGi5nbGltd2F5LnYxLldpbGRzRGlzY292ZXJ5EioKCGxhbnRlcm5zGAkgAygLMhguZ2xpbXdheS52MS5XaWxkc0xhbnRlcm4SKgoGZWNob2VzGAogAygLMhouZ2xpbXdheS52MS5FY2hvQXNzaWdubWVudBIuCgZncm91bmQYCyADKAsyHi5nbGltd2F5LnYxLkNodW5rR3JvdW5kQ2hhbmdlcxI9CgltYXRlcmlhbHMYDCADKAsyKi5nbGltd2F5LnYxLldpbGRzTmVhclJlc3VsdC5NYXRlcmlhbHNFbnRyeRIpCgdnbGltcHNlGA0gAygLMhguZ2xpbXdheS52MS5XaWxkc0dsaW1wc2USIgoEd2F5cxgOIAMoCzIULmdsaW13YXkudjEuV2lsZHNXYXkSJQoGY2h1bmtzGA8gAygLMhUuZ2xpbXdheS52MS5OZWFyQ2h1bmsaMAoOTWF0ZXJpYWxzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgBOgI4ASJUCglOZWFyQ2h1bmsSKAoFY2h1bmsYASABKAsyGS5nbGltd2F5LnYxLldpbGRzQ2h1bmtLZXkSDgoGc291cmNlGAIgASgJEg0KBWVwb2NoGAMgASgJIo4BCgtXaWxkc1J1bW91chINCgVlcG9jaBgBIAEoCRINCgVwbGFjZRgCIAEoCRIQCghsYW5kbWFyaxgDIAEoCRIPCgdjb21wYXNzGAQgASgJEgwKBHJpbmcYBSABKA0SEgoKcGFzdF9yaXZlchgGIAEoCBIMCgRzaXRlGAcgASgJEg4KBm9wZW5lZBgIIAEoCCIoCg1XaWxkc01hdGVyaWFsEgoKAmlkGAEgASgJEgsKA3F0eRgCIAEoASJoCglXaWxkc0xvb3QSLAoJbWF0ZXJpYWxzGAEgAygLMhkuZ2xpbXdheS52MS5XaWxkc01hdGVyaWFsEi0KB3RyaW5rZXQYAiABKAsyHC5nb29nbGUucHJvdG9idWYuU3RyaW5nVmFsdWUiWAoNSG9tZXN0ZWFkTGFuZBINCgV3aWR0aBgBIAEoDRIOCgZoZWlnaHQYAiABKA0SDQoFY2VsbHMYAyADKAkSGQoRZ2VuZXJhdG9yX3ZlcnNpb24YBCABKA0qVAoDRGlyEhMKD0RJUl9VTlNQRUNJRklFRBAAEg0KCURJUl9OT1JUSBABEgwKCERJUl9FQVNUEAISDQoJRElSX1NPVVRIEAMSDAoIRElSX1dFU1QQBCrRAQoIU2l0ZUtpbmQSGQoVU0lURV9LSU5EX1VOU1BFQ0lGSUVEEAASEgoOU0lURV9LSU5EX0VDSE8QARITCg9TSVRFX0tJTkRfQ0FJUk4QAhISCg5TSVRFX0tJTkRfTkVTVBADEhMKD1NJVEVfS0lORF9QTEFOSxAEEhMKD1NJVEVfS0lORF9HSVZFThAFEhMKD1NJVEVfS0lORF9SRUVEUxAGEhgKFFNJVEVfS0lORF9MQU1QX1NUT05FEAcSFAoQU0lURV9LSU5EX1JVTU9VUhAIKkMKC0NodW5rU291cmNlEhwKGENIVU5LX1NPVVJDRV9VTlNQRUNJRklFRBAAEhYKEkNIVU5LX1NPVVJDRV9GSVhFRBABQjFaL2dsaW13YXkvc2VydmVyL2ludGVybmFsL2dlbi9nbGltd2F5L3YxO2NvbnRyYWN0YgZwcm90bzM", [file_google_protobuf_wrappers]);
 
 /**
  * Describes the message glimway.v1.Tile.
@@ -42,79 +42,115 @@ export const StorySiteSchema = /*@__PURE__*/
 /**
  * Describes the message glimway.v1.WildsChunk.
  * Use `create(WildsChunkSchema)` to create a new message.
+ * @deprecated
  */
 export const WildsChunkSchema = /*@__PURE__*/
   messageDesc(file_glimway_v1_wilds, 4);
+
+/**
+ * Describes the message glimway.v1.WorldChunk.
+ * Use `create(WorldChunkSchema)` to create a new message.
+ */
+export const WorldChunkSchema = /*@__PURE__*/
+  messageDesc(file_glimway_v1_wilds, 5);
+
+/**
+ * Describes the message glimway.v1.Placed.
+ * Use `create(PlacedSchema)` to create a new message.
+ */
+export const PlacedSchema = /*@__PURE__*/
+  messageDesc(file_glimway_v1_wilds, 6);
+
+/**
+ * Describes the message glimway.v1.PlacedArt.
+ * Use `create(PlacedArtSchema)` to create a new message.
+ */
+export const PlacedArtSchema = /*@__PURE__*/
+  messageDesc(file_glimway_v1_wilds, 7);
+
+/**
+ * Describes the message glimway.v1.PlacedProp.
+ * Use `create(PlacedPropSchema)` to create a new message.
+ */
+export const PlacedPropSchema = /*@__PURE__*/
+  messageDesc(file_glimway_v1_wilds, 8);
+
+/**
+ * Describes the message glimway.v1.PlacedExit.
+ * Use `create(PlacedExitSchema)` to create a new message.
+ */
+export const PlacedExitSchema = /*@__PURE__*/
+  messageDesc(file_glimway_v1_wilds, 9);
 
 /**
  * Describes the message glimway.v1.WildsPlaceMark.
  * Use `create(WildsPlaceMarkSchema)` to create a new message.
  */
 export const WildsPlaceMarkSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_wilds, 5);
+  messageDesc(file_glimway_v1_wilds, 10);
 
 /**
  * Describes the message glimway.v1.WildsChunkKey.
  * Use `create(WildsChunkKeySchema)` to create a new message.
  */
 export const WildsChunkKeySchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_wilds, 6);
+  messageDesc(file_glimway_v1_wilds, 11);
 
 /**
  * Describes the message glimway.v1.WildsChunkRect.
  * Use `create(WildsChunkRectSchema)` to create a new message.
  */
 export const WildsChunkRectSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_wilds, 7);
+  messageDesc(file_glimway_v1_wilds, 12);
 
 /**
  * Describes the message glimway.v1.WildsEntity.
  * Use `create(WildsEntitySchema)` to create a new message.
  */
 export const WildsEntitySchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_wilds, 8);
+  messageDesc(file_glimway_v1_wilds, 13);
 
 /**
  * Describes the message glimway.v1.WildsEpoch.
  * Use `create(WildsEpochSchema)` to create a new message.
  */
 export const WildsEpochSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_wilds, 9);
+  messageDesc(file_glimway_v1_wilds, 14);
 
 /**
  * Describes the message glimway.v1.WildsEntityState.
  * Use `create(WildsEntityStateSchema)` to create a new message.
  */
 export const WildsEntityStateSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_wilds, 10);
+  messageDesc(file_glimway_v1_wilds, 15);
 
 /**
  * Describes the message glimway.v1.WildsPersonalClaim.
  * Use `create(WildsPersonalClaimSchema)` to create a new message.
  */
 export const WildsPersonalClaimSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_wilds, 11);
+  messageDesc(file_glimway_v1_wilds, 16);
 
 /**
  * Describes the message glimway.v1.WildsDiscovery.
  * Use `create(WildsDiscoverySchema)` to create a new message.
  */
 export const WildsDiscoverySchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_wilds, 12);
+  messageDesc(file_glimway_v1_wilds, 17);
 
 /**
  * Describes the message glimway.v1.WildsLantern.
  * Use `create(WildsLanternSchema)` to create a new message.
  */
 export const WildsLanternSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_wilds, 13);
+  messageDesc(file_glimway_v1_wilds, 18);
 
 /**
  * Describes the message glimway.v1.EchoAssignment.
  * Use `create(EchoAssignmentSchema)` to create a new message.
  */
 export const EchoAssignmentSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_wilds, 14);
+  messageDesc(file_glimway_v1_wilds, 19);
 
 /**
  * Describes the message glimway.v1.WildsRegionResult.
@@ -122,91 +158,98 @@ export const EchoAssignmentSchema = /*@__PURE__*/
  * @deprecated
  */
 export const WildsRegionResultSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_wilds, 15);
+  messageDesc(file_glimway_v1_wilds, 20);
 
 /**
  * Describes the message glimway.v1.WildsFrontier.
  * Use `create(WildsFrontierSchema)` to create a new message.
  */
 export const WildsFrontierSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_wilds, 16);
+  messageDesc(file_glimway_v1_wilds, 21);
 
 /**
  * Describes the message glimway.v1.GroundChange.
  * Use `create(GroundChangeSchema)` to create a new message.
  */
 export const GroundChangeSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_wilds, 17);
+  messageDesc(file_glimway_v1_wilds, 22);
 
 /**
  * Describes the message glimway.v1.GroundChanges.
  * Use `create(GroundChangesSchema)` to create a new message.
  */
 export const GroundChangesSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_wilds, 18);
+  messageDesc(file_glimway_v1_wilds, 23);
 
 /**
  * Describes the message glimway.v1.ChunkGroundChanges.
  * Use `create(ChunkGroundChangesSchema)` to create a new message.
  */
 export const ChunkGroundChangesSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_wilds, 19);
+  messageDesc(file_glimway_v1_wilds, 24);
 
 /**
  * Describes the message glimway.v1.WildsGlimpse.
  * Use `create(WildsGlimpseSchema)` to create a new message.
  */
 export const WildsGlimpseSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_wilds, 20);
+  messageDesc(file_glimway_v1_wilds, 25);
 
 /**
  * Describes the message glimway.v1.WorldTile.
  * Use `create(WorldTileSchema)` to create a new message.
  */
 export const WorldTileSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_wilds, 21);
+  messageDesc(file_glimway_v1_wilds, 26);
 
 /**
  * Describes the message glimway.v1.WildsWay.
  * Use `create(WildsWaySchema)` to create a new message.
  */
 export const WildsWaySchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_wilds, 22);
+  messageDesc(file_glimway_v1_wilds, 27);
 
 /**
  * Describes the message glimway.v1.WildsNearResult.
  * Use `create(WildsNearResultSchema)` to create a new message.
  */
 export const WildsNearResultSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_wilds, 23);
+  messageDesc(file_glimway_v1_wilds, 28);
+
+/**
+ * Describes the message glimway.v1.NearChunk.
+ * Use `create(NearChunkSchema)` to create a new message.
+ */
+export const NearChunkSchema = /*@__PURE__*/
+  messageDesc(file_glimway_v1_wilds, 29);
 
 /**
  * Describes the message glimway.v1.WildsRumour.
  * Use `create(WildsRumourSchema)` to create a new message.
  */
 export const WildsRumourSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_wilds, 24);
+  messageDesc(file_glimway_v1_wilds, 30);
 
 /**
  * Describes the message glimway.v1.WildsMaterial.
  * Use `create(WildsMaterialSchema)` to create a new message.
  */
 export const WildsMaterialSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_wilds, 25);
+  messageDesc(file_glimway_v1_wilds, 31);
 
 /**
  * Describes the message glimway.v1.WildsLoot.
  * Use `create(WildsLootSchema)` to create a new message.
  */
 export const WildsLootSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_wilds, 26);
+  messageDesc(file_glimway_v1_wilds, 32);
 
 /**
  * Describes the message glimway.v1.HomesteadLand.
  * Use `create(HomesteadLandSchema)` to create a new message.
  */
 export const HomesteadLandSchema = /*@__PURE__*/
-  messageDesc(file_glimway_v1_wilds, 27);
+  messageDesc(file_glimway_v1_wilds, 33);
 
 /**
  * Describes the enum glimway.v1.Dir.
@@ -235,4 +278,19 @@ export const SiteKindSchema = /*@__PURE__*/
  */
 export const SiteKind = /*@__PURE__*/
   tsEnum(SiteKindSchema);
+
+/**
+ * Describes the enum glimway.v1.ChunkSource.
+ */
+export const ChunkSourceSchema = /*@__PURE__*/
+  enumDesc(file_glimway_v1_wilds, 2);
+
+/**
+ * Unset is generated (still or wick): the generator never sets it, so the
+ * stored chunks' bytes are what they were before fixed chunks.
+ *
+ * @generated from enum glimway.v1.ChunkSource
+ */
+export const ChunkSource = /*@__PURE__*/
+  tsEnum(ChunkSourceSchema);
 

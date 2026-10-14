@@ -87,10 +87,10 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 	// The Whitequiet: chunks -1..1, -5..-3, on the wick epoch.
 	epoch := &contract.WildsEpoch{Id: "e1", GeneratorVersion: 3, WorldSeed: "seed", Kind: "wick", Season: "Mudrise", StartsAt: float64(now)}
 	es := &chunkstest.FakeEpochs{Values: map[chunkstest.EpochKey]*contract.WildsEpoch{{World: "w", Kind: "wick"}: epoch}}
-	source := &chunkstest.Fake{Chunks: map[chunkstest.Key]*contract.WildsChunk{}}
+	source := &chunkstest.Fake{Chunks: map[chunkstest.Key]*contract.WorldChunk{}}
 	for cy := -5; cy <= -3; cy++ {
 		for cx := -1; cx <= 1; cx++ {
-			source.Chunks[chunkstest.Key{World: "w", Epoch: "e1", CX: int32(cx), CY: int32(cy)}] = &contract.WildsChunk{Size: 24, Cx: int32(cx), Cy: int32(cy), Mark: "Mudrise"}
+			source.Chunks[chunkstest.Key{World: "w", Epoch: "e1", CX: int32(cx), CY: int32(cy)}] = &contract.WorldChunk{Size: 24, Cx: int32(cx), Cy: int32(cy), Mark: "Mudrise"}
 		}
 	}
 	site := &contract.StorySite{Id: "cairn", Kind: contract.SiteKind_SITE_KIND_CAIRN, Tx: 3, Ty: 4}

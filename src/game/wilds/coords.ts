@@ -14,7 +14,7 @@
  * with the server); this adds pixels, the gate, and the scene's area id.
  */
 import { TILE } from '../../lib/tile.ts';
-import { COMMONS_FROM_WILDS } from '../commons.ts';
+import { COMMONS_FROM_WILDS } from '../commons-served.ts';
 import { floorDiv } from '../../lib/wilds/coords.ts';
 import { loadWilds } from '../../lib/wilds/data.ts';
 import type { AreaId } from '../../lib/state.ts';
@@ -76,7 +76,7 @@ export function gateArrivalPosition(): { x: number; y: number } {
 
 /**
  * The Commons tile a player leaving the Wilds arrives at (just inside the
- * north arch — the agreed handoff with the Commons; see src/game/commons.ts).
+ * north arch — the agreed handoff with the Commons: its `arch` anchor).
  */
 export function wildsReturnTile(): { tx: number; ty: number } {
   return { ...COMMONS_FROM_WILDS };

@@ -8,7 +8,7 @@
  * Chunks come only from the server (game/wilds/chunks.ts fetches, validates
  * and caches them); nothing here generates terrain.
  */
-import { SiteKind as SiteKindPb, type WildsChunk } from '../../lib/gen/glimway/v1/wilds_pb.js';
+import { SiteKind as SiteKindPb, type WorldChunk } from '../../lib/gen/glimway/v1/wilds_pb.js';
 import type { WildsEntityKind } from '../../lib/wilds/types.ts';
 import type { SiteKind, StorySite } from '../../lib/wilds/outer.ts';
 import { TERRAIN, tileBottom, tileKey, tileMid } from '../../lib/tile.ts';
@@ -93,7 +93,7 @@ const SITE_KINDS: Record<number, SiteKind> = {
 };
 
 /** Unpack a validated chunk (lib/api/chunks.ts decodeChunk). Throws on names this build can't draw. */
-export function terrainOf(chunk: WildsChunk): ChunkTerrain {
+export function terrainOf(chunk: WorldChunk): ChunkTerrain {
   const S = chunk.size;
   const palette = chunk.palette.map((name) => {
     const id = (TERRAIN as Record<string, number>)[name];

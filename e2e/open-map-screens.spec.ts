@@ -4,7 +4,7 @@ import { waitForWilds, warp, wildsWindow } from './helpers'
 import { freshPlayer } from './home-helpers'
 import { decodeChunk } from '../src/lib/api/chunks.ts'
 import { epochKindAt } from '../src/lib/wilds/coords.ts'
-import type { WildsChunk } from '../src/lib/gen/glimway/v1/wilds_pb.js'
+import type { WorldChunk } from '../src/lib/gen/glimway/v1/wilds_pb.js'
 
 /**
  * The open map on screen, from a real world (generator v3 on the Go
@@ -34,7 +34,7 @@ async function shot(page: Page, name: string): Promise<void> {
 const pinScreensWorld = (page: Page) => pinWorld(page, 'open-map-screens')
 
 /** Every chunk of the 0.8 frontier, as the server serves them. */
-async function frontierChunks(page: Page): Promise<WildsChunk[]> {
+async function frontierChunks(page: Page): Promise<WorldChunk[]> {
   const epochs = new Map<string, string>()
   for (const [cx, cy] of [[-2, -6], [3, -6], [-2, -1], [3, -1]]) {
     const res = await page.request.get(`/api/wilds/near/${cx}/${cy}`, CONTRACT)
@@ -43,7 +43,7 @@ async function frontierChunks(page: Page): Promise<WildsChunk[]> {
     epochs.set('still', near.still.id)
     epochs.set('wick', near.wick.id)
   }
-  const out: WildsChunk[] = []
+  const out: WorldChunk[] = []
   for (let cy = -8; cy <= 0; cy++)
     for (let cx = -4; cx <= 4; cx++) {
       const epoch = epochs.get(epochKindAt(cx, cy))!
@@ -55,10 +55,10 @@ async function frontierChunks(page: Page): Promise<WildsChunk[]> {
 }
 
 /** The world tile of a chunk-local tile. */
-const world = (c: WildsChunk, tx: number, ty: number) => ({ tx: c.cx * S + tx, ty: c.cy * S + ty })
+const world = (c: WorldChunk, tx: number, ty: number) => ({ tx: c.cx * S + tx, ty: c.cy * S + ty })
 
 /** The first tile of a chunk whose ground is `terrain` (palette name), or null. */
-function tileOf(c: WildsChunk, terrain: string): { tx: number; ty: number } | null {
+function tileOf(c: WorldChunk, terrain: string): { tx: number; ty: number } | null {
   const k = c.palette.indexOf(terrain)
   if (k < 0) return null
   for (let i = 0; i < S * S; i++) if (((c.ground[i >> 1]! >> (4 * (i & 1))) & 15) === k) return world(c, i % S, Math.floor(i / S))
@@ -116,14 +116,14 @@ for (const [device, vp] of [['desktop', { width: 1200, height: 760 }], ['phone',
     // Where woods meets meadow across a chunk edge (no box edges along it): an
     // east-west pair and a north-south pair of chunks of different lands.
     const byKey = new Map(chunks.map((c) => [`${c.cx},${c.cy}`, c]))
-    const meadowShare = (c: WildsChunk) => {
+    const meadowShare = (c: WorldChunk) => {
       const k = c.palette.indexOf('grass_c')
       if (k < 0) return 0
       let n = 0
       for (let i = 0; i < S * S; i++) if (((c.ground[i >> 1]! >> (4 * (i & 1))) & 15) === k) n++
       return n / (S * S)
     }
-    const differ = (a: WildsChunk, b: WildsChunk) => Math.abs(meadowShare(a) - meadowShare(b)) > 0.25
+    const differ = (a: WorldChunk, b: WorldChunk) => Math.abs(meadowShare(a) - meadowShare(b)) > 0.25
     const ew = chunks.find((c) => byKey.get(`${c.cx + 1},${c.cy}`) && differ(c, byKey.get(`${c.cx + 1},${c.cy}`)!))
     if (ew) await visit(page, { tx: (ew.cx + 1) * S, ty: ew.cy * S + S / 2 }, `80-open-map-border-ew-${device}`)
     const ns = chunks.find((c) => byKey.get(`${c.cx},${c.cy + 1}`) && differ(c, byKey.get(`${c.cx},${c.cy + 1}`)!))

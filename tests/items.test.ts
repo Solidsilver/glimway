@@ -37,7 +37,7 @@ import type { InstanceView, ItemsView } from '../src/lib/api/types.ts';
 import { serializeItemVectors } from '../scripts/items-vectors.ts';
 import { buildArea, type WorldData } from '../src/game/worlds.ts';
 import { allPlacements } from '../src/content/papers.ts';
-import { buildCommons } from '../src/game/commons.ts';
+import { servedCommonsFixture } from './commons-fixture.ts';
 
 // ------------------------------------------------------------ the data
 
@@ -156,7 +156,7 @@ test('the off hand is tucked away while sitting or fighting, and comes back afte
 });
 
 test('menders stand where Silas and Orrin do', () => {
-  const commons = buildCommons();
+  const commons = servedCommonsFixture();
   const village = buildArea('village');
   const silas = ITEM_RULES.menders.find((m) => m.npc === 'silas')!;
   const orrin = ITEM_RULES.menders.find((m) => m.npc === 'orrin')!;

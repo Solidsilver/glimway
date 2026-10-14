@@ -47,7 +47,7 @@ func TestOpenMapWithGeneratorV3(t *testing.T) {
 		if err = rows.Scan(&epoch, &cx, &cy, &size, &blob); err != nil {
 			t.Fatal(err)
 		}
-		m := &contract.WildsChunk{}
+		m := &contract.WorldChunk{}
 		if err = proto.Unmarshal(blob, m); err != nil || chunks.Validate(m) != nil || int(m.Cx) != cx || int(m.Cy) != cy {
 			t.Fatalf("stored chunk %d,%d: %v %v", cx, cy, err, chunks.Validate(m))
 		}

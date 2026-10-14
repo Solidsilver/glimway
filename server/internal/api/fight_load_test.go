@@ -642,12 +642,12 @@ func (a fightLoadCPUSample) busyPercent() float64 {
 // Three base enemies + two nearby friends make the five-enemy budget case.
 type fightLoadChunks struct{ chunks.ChunkSource }
 
-func (s fightLoadChunks) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, layer, cx, cy int32) (*chunkwire.WildsChunk, error) {
+func (s fightLoadChunks) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, layer, cx, cy int32) (*chunkwire.WorldChunk, error) {
 	c, err := s.ChunkSource.Chunk(ctx, tx, world, epoch, layer, cx, cy)
 	if err != nil {
 		return nil, err
 	}
-	c = proto.Clone(c).(*chunkwire.WildsChunk)
+	c = proto.Clone(c).(*chunkwire.WorldChunk)
 	for _, e := range c.Entities {
 		if e.Kind == "camp" {
 			e.Enemies = []string{"wisp", "beetle", "wisp"}

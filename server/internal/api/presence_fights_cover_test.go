@@ -179,7 +179,7 @@ type blockingChunks struct {
 	once             sync.Once
 }
 
-func (c *blockingChunks) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, layer, cx, cy int32) (*chunkwire.WildsChunk, error) {
+func (c *blockingChunks) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, layer, cx, cy int32) (*chunkwire.WorldChunk, error) {
 	c.once.Do(func() { close(c.entered); <-c.release })
 	return c.ChunkSource.Chunk(ctx, tx, world, epoch, layer, cx, cy)
 }

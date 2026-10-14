@@ -1,0 +1,87 @@
+syntax = "proto3";
+package glimway.content.v1;
+option go_package = "glimway/gen/glimway/content/v1;contentv1";
+import "buf/validate/validate.proto";
+
+// An authored layout (content/layouts/<id>.json; docs/design/
+// location-seam.md 1.2): the ground of a fixed place in places.json, which
+// the server slices into fixed chunks and serves under the pseudo-epoch
+// "fixed:<id>@<revision>" (server/internal/chunks/fixed.go). The Commons'
+// was exported once from the client's old builder
+// (scripts/export-commons.ts); it is edited as data from here on.
+//
+// Tiles are layout tiles: world tile minus the place's origin. The grid
+// covers the place's whole footprint (code rule): its north-west tile is
+// (tx, ty), and it runs `width` tiles east and `height` south. Any change
+// bumps `revision` here and in places.json together (code rule), so every
+// cache keyed by the pseudo-epoch lets the old chunks go.
+message Layout {
+  string id = 1 [(buf.validate.field).string = {min_len: 1, max_len: 32, pattern: "^[a-z][a-z0-9-]*$"}];
+  int32 revision = 2 [(buf.validate.field).int32 = {gte: 1, lte: 1000000}];
+  int32 tx = 3 [(buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
+  int32 ty = 4 [(buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
+  int32 width = 5 [(buf.validate.field).int32 = {gte: 1, lte: 384}];
+  int32 height = 6 [(buf.validate.field).int32 = {gte: 1, lte: 384}];
+  // One character a ground: the character's curated terrain (src/lib/
+  // tile.ts TERRAIN; content.CuratedTerrains).
+  map<string, string> palette = 7 [(buf.validate.field).map = {min_pairs: 1, max_pairs: 26}];
+  // Rows north to south, one palette character a tile.
+  repeated string ground = 8;
+  // Rows north to south: '#' blocks a walker, '.' doesn't.
+  repeated string solid = 9;
+  // What stands on the ground. Ids unique; every object's tile on the grid.
+  repeated LayoutObject objects = 10;
+}
+
+// An object (location-seam.md 1.2), as WorldChunk's Placed carries it but in
+// layout tiles. The kinds and what each needs are in
+// server/internal/chunks/fixed.go (layoutKinds).
+message LayoutObject {
+  string id = 1 [(buf.validate.field).string = {min_len: 1, max_len: 64}];
+  string kind = 2 [(buf.validate.field).string = {in: ["tree", "bush", "rock", "overhang", "prop", "lamp", "scenery", "well", "board", "gate", "sign", "shelf", "exit", "npc-post", "repair", "gather"]}];
+  int32 tx = 3;
+  int32 ty = 4;
+  int32 tw = 5 [(buf.validate.field).int32 = {gte: 0, lte: 24}];
+  int32 th = 6 [(buf.validate.field).int32 = {gte: 0, lte: 24}];
+  string variant = 7 [(buf.validate.field).string.max_len = 64];
+  string frame = 8 [(buf.validate.field).string.max_len = 64];
+  string festival = 9 [(buf.validate.field).string.max_len = 32];
+  LayoutArt art = 10;
+  LayoutProp prop = 11;
+  LayoutExit exit = 12;
+  int32 gate = 13 [(buf.validate.field).int32 = {gte: 0, lte: 9999}];
+  string side = 14 [(buf.validate.field).string = {in: ["", "west", "east"]}];
+  string npc = 15 [(buf.validate.field).string.max_len = 32];
+  string spot = 16 [(buf.validate.field).string.max_len = 32];
+  string target = 17 [(buf.validate.field).string.max_len = 64];
+  string label = 18 [(buf.validate.field).string.max_len = 80];
+  int32 width = 19 [(buf.validate.field).int32 = {gte: 0, lte: 512}];
+}
+
+// Where a drawn piece's picture stands (WorldChunk's PlacedArt).
+message LayoutArt {
+  int32 ox = 1 [(buf.validate.field).int32 = {gte: -512, lte: 512}];
+  int32 oy = 2 [(buf.validate.field).int32 = {gte: -512, lte: 512}];
+  bool origin_left = 3;
+  optional int32 depth = 4 [(buf.validate.field).int32 = {gte: -10000, lte: 10000}];
+  bool depth_y = 5;
+  bool flip = 6;
+  optional uint32 tint = 7 [(buf.validate.field).uint32.lte = 16777215];
+  bool tile = 8;
+}
+
+// An atlas prop's display height, collision base and light.
+message LayoutProp {
+  int32 h = 1 [(buf.validate.field).int32 = {gte: 1, lte: 512}];
+  int32 body_w = 2 [(buf.validate.field).int32 = {gte: 0, lte: 512}];
+  int32 body_h = 3 [(buf.validate.field).int32 = {gte: 0, lte: 512}];
+  string light = 4 [(buf.validate.field).string.max_len = 32];
+}
+
+// A way out: the area and its arrival tile (that area's own tiles).
+message LayoutExit {
+  string to = 1 [(buf.validate.field).string = {min_len: 1, max_len: 64}];
+  int32 entry_tx = 2 [(buf.validate.field).int32 = {gte: 0, lte: 4096}];
+  int32 entry_ty = 3 [(buf.validate.field).int32 = {gte: 0, lte: 4096}];
+  bool unlabelled = 4;
+}

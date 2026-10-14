@@ -72,7 +72,7 @@ func terrain(id string) string { return chunks.GroundByID(id).GetTerrain() }
 
 // Chunk makes the fake chunk. A kept neighbour's two edge tiles are copied
 // onto this chunk's side of the seam (solid where solid), as v3 does.
-func (g *Generator) Chunk(e *contract.WildsEpoch, cx, cy int32, kept []chunks.Kept) (*contract.WildsChunk, error) {
+func (g *Generator) Chunk(e *contract.WildsEpoch, cx, cy int32, kept []chunks.Kept) (*contract.WorldChunk, error) {
 	g.mu.Lock()
 	g.Calls = append(g.Calls, Call{Epoch: e.Id, CX: cx, CY: cy, Kept: kept})
 	g.mu.Unlock()
@@ -97,7 +97,7 @@ func (g *Generator) Chunk(e *contract.WildsEpoch, cx, cy int32, kept []chunks.Ke
 	solid[at(Water)], solid[Water[1]*S+Water[0]+1] = true, true
 	ground[at(Ford)], ground[at(Road)] = 2, 3
 
-	c := &contract.WildsChunk{
+	c := &contract.WorldChunk{
 		EpochId: e.Id, Realm: w.GetRealm(), Cx: cx, Cy: cy, GeneratorVersion: uint32(g.Version()), Size: uint32(S),
 		Palette: palette, Look: look, Tier: uint32(wilds.Tier(x, y)), Land: land,
 		Decor: &contract.DecorList{},

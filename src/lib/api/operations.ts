@@ -4,7 +4,7 @@ import { ApiError } from './errors.ts';
 import { decodeWire } from './wire.ts';
 import { decodePlayerState, validatePlayerState } from './state-contract.ts';
 import { EnvelopeSchema, LoginRequestSchema, PlayRequestSchema, SessionResponseSchema, StateResponseSchema, PlayResponseSchema, WorldChooseRequestSchema, type Envelope, type LoginRequest, type PlayRequest, type SessionResponse, type StateResponse, type PlayResponse } from '../gen/glimway/v1/state_pb.js';
-import { WildsNearResultSchema, HomesteadLandSchema, type WildsChunk, type WildsNearResult, type HomesteadLand } from '../gen/glimway/v1/wilds_pb.js';
+import { WildsNearResultSchema, HomesteadLandSchema, type WorldChunk, type WildsNearResult, type HomesteadLand } from '../gen/glimway/v1/wilds_pb.js';
 import { decodeChunk } from './chunks.ts';
 import { validateNear } from './near.ts';
 import { type CompanionsRequest, type MountHomeRequest, type MountOutRequest, type StableExtendRequest, type StallRequest } from '../gen/glimway/v1/companions_pb.js';
@@ -22,7 +22,7 @@ export interface OperationsApi {
   worldChoice(): Promise<SessionResponse>;
   worldChoose(choice: 'own' | 'party'): Promise<SessionResponse>;
   logout(): Promise<void>;
-  chunk(epoch: string, layer: number, cx: number, cy: number): Promise<WildsChunk>;
+  chunk(epoch: string, layer: number, cx: number, cy: number): Promise<WorldChunk>;
   /** The open map's near read around a chunk (open-map.md 2.4). */
   near(cx: number, cy: number): Promise<WildsNearResult>;
   homeLand(gate: number): Promise<HomesteadLand>;

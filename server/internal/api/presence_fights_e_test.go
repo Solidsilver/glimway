@@ -20,12 +20,12 @@ import (
 // keeps its generated camp.
 type beetleCampSource struct{ chunks.ChunkSource }
 
-func (s beetleCampSource) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, layer, cx, cy int32) (*chunkwire.WildsChunk, error) {
+func (s beetleCampSource) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, layer, cx, cy int32) (*chunkwire.WorldChunk, error) {
 	c, err := s.ChunkSource.Chunk(ctx, tx, world, epoch, layer, cx, cy)
 	if err != nil || cx != 0 || cy != 0 {
 		return c, err
 	}
-	c = proto.Clone(c).(*chunkwire.WildsChunk)
+	c = proto.Clone(c).(*chunkwire.WorldChunk)
 	for _, e := range c.Entities {
 		if e.Kind == "camp" {
 			e.Enemies = []string{"beetle", "wisp"}
@@ -37,12 +37,12 @@ func (s beetleCampSource) Chunk(ctx context.Context, tx *sql.Tx, world, epoch st
 // camplessChunks strips every camp, for tests that walk the Wilds without fights.
 type camplessChunks struct{ chunks.ChunkSource }
 
-func (s camplessChunks) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, layer, cx, cy int32) (*chunkwire.WildsChunk, error) {
+func (s camplessChunks) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, layer, cx, cy int32) (*chunkwire.WorldChunk, error) {
 	c, err := s.ChunkSource.Chunk(ctx, tx, world, epoch, layer, cx, cy)
 	if err != nil {
 		return nil, err
 	}
-	c = proto.Clone(c).(*chunkwire.WildsChunk)
+	c = proto.Clone(c).(*chunkwire.WorldChunk)
 	c.Entities = withoutCamps(c.Entities)
 	return c, nil
 }
