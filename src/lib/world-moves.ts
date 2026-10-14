@@ -1,11 +1,11 @@
+import { at } from './location.ts';
 /**
  * Moving to another world (docs/expansion-design.md "Worlds"): what keeps a
  * move from starting, checked in the browser before asking the server, which
  * checks the same things again (server/internal/api/worlds.go).
  */
 
-/** Where a move may start (the server's rules.SafeAreas). Homesteads don't count. */
-export const MOVE_AREAS: readonly string[] = ['village', 'commons']
+/** A move may start on ground the location lookup marks safe. */
 
 /**
  * - `offline`: no connection (or another device holds the lease);
@@ -18,12 +18,12 @@ export const MOVE_AREAS: readonly string[] = ['village', 'commons']
  */
 export type MoveBlock = 'offline' | 'pending' | 'area' | 'mail' | 'cooldown'
 
-export function moveBlocks(o: { area: string; outgoing: number; online: boolean; pending: boolean; opensIn?: number; cooled?: boolean }): MoveBlock[] {
+export function moveBlocks(o: { area: string; position?: { x: number; y: number }; outgoing: number; online: boolean; pending: boolean; opensIn?: number; cooled?: boolean }): MoveBlock[] {
   const out: MoveBlock[] = []
   if (!o.online) out.push('offline')
   if (o.pending) out.push('pending')
   if ((o.opensIn ?? 0) > 0 || o.cooled) out.push('cooldown')
-  if (!MOVE_AREAS.includes(o.area)) out.push('area')
+  if (!at(o.area, o.position?.x ?? 0, o.position?.y ?? 0).safe) out.push('area')
   if (o.outgoing > 0) out.push('mail')
   return out
 }

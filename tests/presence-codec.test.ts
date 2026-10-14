@@ -58,7 +58,7 @@ test('presence codec: a relayed Ward-light carries the hub\'s pulse; a client ne
 });
 
 test('presence codec: a frame is its events in order; a bad event is skipped, a bad frame throws', () => {
-  assert.equal(PRESENCE_PROTOCOL, 'glimway.presence.v3');
+  assert.equal(PRESENCE_PROTOCOL, 'glimway.presence.v4');
   const pos = { type: 'pos', accountId: 'bob', x: 10, y: 20, facing: { x: 1, y: 0 }, moving: true };
   const frame = encodeTestFrame([{ type: 'ready', accountId: 'alice' }, pos, { type: 'leave', accountId: 'bob' }]);
   assert.deepEqual(decodePresenceFrame(frame).map((m) => m.type), ['ready', 'pos', 'leave']);

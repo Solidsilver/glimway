@@ -220,13 +220,13 @@ test('the frontier is cx -4..4, cy -8..0 (the client’s twin of frontier.Inside
 
 test('the open map is one area but three places on the HUD: the Tangle, the Whitequiet, beyond', async () => {
   const { displayArea, areaInfo } = await import('../src/content/world.ts');
-  const at = (tx: number, ty: number) => displayArea({ area: 'wilds', position: { x: tx * 16 + 8, y: ty * 16 + 8 } });
-  assert.equal(at(2, 22), 'wilds');
-  assert.equal(at(12, -60), 'wilds:whitequiet');
-  assert.equal(at(12, -150), 'wilds:beyond');
-  assert.equal(at(-60, -12), 'wilds:beyond');
+  const at = (tx: number, ty: number) => displayArea({ area: 'outdoors', position: { x: tx * 16 + 8, y: ty * 16 + 8 } });
+  assert.equal(at(2, 22), 'tangle');
+  assert.equal(at(12, -60), 'whitequiet');
+  assert.equal(at(12, -150), 'beyond');
+  assert.equal(at(-60, -12), 'beyond');
   assert.equal(displayArea({ area: 'commons', position: { x: 0, y: 0 } }), 'commons');
-  assert.equal(areaInfo('wilds').name, 'The Tangle');
-  assert.equal(areaInfo('wilds:whitequiet').name, 'The Whitequiet');
-  assert.ok(areaInfo('wilds:beyond').name.length > 0);
+  assert.equal(areaInfo('outdoors').name, 'The Tangle');
+  assert.equal(areaInfo('whitequiet').name, 'The Whitequiet');
+  assert.ok(areaInfo('beyond').name.length > 0);
 });

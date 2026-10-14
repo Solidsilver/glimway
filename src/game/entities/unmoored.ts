@@ -150,7 +150,7 @@ export class Unmoored {
       this.clearVisuals()
       return
     }
-    if (isSafeArea(this.deps.world.areaId)) {
+    if (isSafeArea(this.deps.world.areaId, this.deps.hero?.() ?? { x: 0, y: 0 })) {
       this.state.lamplightTimer += dt
       if (this.state.lamplightTimer >= LAMPLIGHT_S) this.clear()
     } else {

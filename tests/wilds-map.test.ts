@@ -129,20 +129,20 @@ test('walked and seen are kept per wick, with where each landmark stands', () =>
 });
 
 test('the HUD names the meadow and the Wend past the Whitequiet, from the land the scene has loaded', () => {
-  const at = (tx: number, ty: number) => displayArea({ area: 'wilds', position: { x: tx * 16 + 8, y: ty * 16 + 8 } });
+  const at = (tx: number, ty: number) => displayArea({ area: 'outdoors', position: { x: tx * 16 + 8, y: ty * 16 + 8 } });
   setWildsLand((tx) => (tx < -60 ? 'wend' : tx > 60 ? 'meadow' : null));
   try {
-    assert.equal(at(12, -60), 'wilds:whitequiet', 'the footprints come first');
-    assert.equal(at(12, -150), 'wilds:beyond');
-    assert.equal(at(-70, -100), 'wilds:wend');
-    assert.equal(at(70, -100), 'wilds:meadow');
-    assert.equal(areaInfo('wilds:wend').name, 'The Wend');
-    assert.equal(areaInfo('wilds:meadow').name, 'The meadow');
-    assert.equal(areaInfo('wilds:beyond').name, 'The Wilds');
+    assert.equal(at(12, -60), 'whitequiet', 'the footprints come first');
+    assert.equal(at(12, -150), 'beyond');
+    assert.equal(at(-70, -100), 'wend');
+    assert.equal(at(70, -100), 'meadow');
+    assert.equal(areaInfo('wend').name, 'The Wend');
+    assert.equal(areaInfo('meadow').name, 'The meadow');
+    assert.equal(areaInfo('beyond').name, 'The Wilds');
   } finally {
     setWildsLand(null);
   }
-  assert.equal(at(70, -100), 'wilds:beyond', 'with nothing loaded, the woods');
+  assert.equal(at(70, -100), 'beyond', 'with nothing loaded, the woods');
 });
 
 test('a label wholly off screen (yours too) never pushes out one that shows', () => {

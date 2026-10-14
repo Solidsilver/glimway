@@ -140,5 +140,9 @@
   {
     "name": "035_fight_falls.sql",
     "sha256": "a334a045f6322118cc6d675380a6285f3a217ffdd5c188a2d96e595d39835af5"
+  },
+  {
+    "name": "036_outdoors.sql",
+    "sha256": "d091b880c40001c3c4893dbb2bc35d97f637ec3b8c8f7b5218a56e75c750a365"
   }
 ]

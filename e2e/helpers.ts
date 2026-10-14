@@ -142,7 +142,7 @@ export async function settled(page: Page, match: { area?: string; prefix?: strin
 }
 
 export async function waitForArea(page: Page, area: AreaId): Promise<void> {
-  if (area === 'wilds') await waitForWilds(page)
+  if (area === 'outdoors') await waitForWilds(page)
   else await settled(page, { area: String(area) })
 }
 
@@ -151,7 +151,7 @@ export async function waitForArea(page: Page, area: AreaId): Promise<void> {
  * hero's chunk attached by the window. Returns the hero's chunk (`cx,cy`).
  */
 export async function waitForWilds(page: Page): Promise<string> {
-  await settled(page, { area: 'wilds' })
+  await settled(page, { area: 'outdoors' })
   const handle = await page.waitForFunction(() => {
     const h = window
     const d = h.__fsWilds?.()

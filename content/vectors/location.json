@@ -629,12 +629,12 @@
       }
     },
     {
-      "name": "a space nothing names (wilds until the outdoors rename)",
-      "space": "wilds",
+      "name": "a space nothing names",
+      "space": "unknown",
       "x": 0,
       "y": 0,
       "place": {
-        "id": "wilds",
+        "id": "unknown",
         "safe": false,
         "ride": false,
         "sync": false,

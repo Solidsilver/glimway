@@ -108,7 +108,7 @@
     if (mode === 'title' || !session) return null // nothing has started: the journey begins in the village
     const safety = syncSafety()
     if (!safety) return 'The world is still waking up — try again in a moment.'
-    if (!isSafeArea(session.state.area)) return syncCopy.goSafe
+    if (!isSafeArea(session.state.area, session.state.position)) return syncCopy.goSafe
     if (safety.transitioning) return 'Finish walking through the gate first.'
     if (safety.dialogueOpen) return 'Finish your conversation first.'
     if (safety.enemiesNear) return 'Not with creatures this close!'

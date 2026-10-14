@@ -118,7 +118,7 @@ func TestSeasonalGatherSpots(t *testing.T) {
 	// ...and in the Tangle, where a flower patch is picked, not dug, in
 	// Bloom. Out of the wick the same patch gives its herbs again.
 	c = x.jumpToAs("alice", "mark", "Amberfall")
-	r = x.opRefreshing(c, &s, "gather", gatherIn(s, "wilds", [2]int{20, 20}, spade, "dig", "herbs", "v2"), 200)
+	r = x.opRefreshing(c, &s, "gather", gatherIn(s, "outdoors", [2]int{20, 20}, spade, "dig", "herbs", "v2"), 200)
 	for _, g := range r.Result.Gathered {
 		if g.ItemDef == "bloom-flowers" {
 			t.Fatal("herbs in Amberfall gave blooms")
@@ -147,7 +147,7 @@ func TestAmberfallSapFromTangleTreesOnly(t *testing.T) {
 	c = x.jumpToAs("alice", "mark", "Amberfall")
 	sap := 0
 	for i := 0; i < int(content.GatheringRules.GetCaps().GetDay().GetChop()) && sap == 0; i++ {
-		r := x.opRefreshing(c, &s, "gather", gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", fmt.Sprintf("v%d", i/int(content.GatheringRules.GetCaps().GetVisit().GetChop()))), 200)
+		r := x.opRefreshing(c, &s, "gather", gatherIn(s, "outdoors", here, axe, "chop", "tangle-tree", fmt.Sprintf("v%d", i/int(content.GatheringRules.GetCaps().GetVisit().GetChop()))), 200)
 		for _, g := range r.Result.Gathered {
 			if g.ItemDef == "amberfall-sap" {
 				sap += g.Qty
@@ -177,11 +177,11 @@ func TestAmberfallSapFromTangleTreesOnly(t *testing.T) {
 	// wear or cap), and its plain trees give timber only.
 	x.now.Add(86400)
 	c = x.login("alice", "")
-	if x.opRefreshing(c, &s, "gather", inRegion(gatherIn(s, "wilds", here, axe, "chop", "tangle-tree", "o0"), "whitequiet"), 409).Error.Code != "cannot-gather-here" {
+	if x.opRefreshing(c, &s, "gather", inRegion(gatherIn(s, "outdoors", here, axe, "chop", "tangle-tree", "o0"), "whitequiet"), 409).Error.Code != "cannot-gather-here" {
 		t.Fatal("a Tangle tree out in the drift")
 	}
 	for i := 0; i < int(content.GatheringRules.GetCaps().GetDay().GetChop()); i++ {
-		r := x.opRefreshing(c, &s, "gather", inRegion(gatherIn(s, "wilds", here, axe, "chop", "tree", fmt.Sprintf("o%d", i/int(content.GatheringRules.GetCaps().GetVisit().GetChop()))), "whitequiet"), 200)
+		r := x.opRefreshing(c, &s, "gather", inRegion(gatherIn(s, "outdoors", here, axe, "chop", "tree", fmt.Sprintf("o%d", i/int(content.GatheringRules.GetCaps().GetVisit().GetChop()))), "whitequiet"), 200)
 		for _, g := range r.Result.Gathered {
 			if g.ItemDef == "amberfall-sap" {
 				t.Fatal("the outer drift's trees gave sap")

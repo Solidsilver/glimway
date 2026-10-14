@@ -17,7 +17,7 @@ import type { GuideContext } from '../lib/guides.ts';
  * - `hearth`: the hearth in your cottage
  * - `wilds`: the Tangle, through the Commons arch
  */
-export type GuideWhere = 'silas' | 'pell' | 'gate' | 'door' | 'mailbox' | 'bench' | 'hearth' | 'wilds';
+export type GuideWhere = 'silas' | 'pell' | 'gate' | 'door' | 'mailbox' | 'bench' | 'hearth' | 'outdoors';
 
 interface GuideStep {
   text: string;
@@ -62,11 +62,11 @@ export const GUIDES: GuideDef[] = [
     blurb: 'The Wilds give back what they’re done with: windfall, stone, fibre and amber.',
     needsWorld: true,
     steps: [
-      { text: 'Walk up the Commons lane and through the arch into the Tangle.', done: inTangle, where: 'wilds' },
+      { text: 'Walk up the Commons lane and through the arch into the Tangle.', done: inTangle, where: 'outdoors' },
       {
         text: 'Take your axe, pick or spade in hand, then work a tree, a stone or a stump. Camps and chests give too.',
         done: (c) => inTangle(c) && materialsTotal(c) >= 10,
-        where: 'wilds',
+        where: 'outdoors',
       },
     ],
   },
@@ -81,7 +81,7 @@ export const GUIDES: GuideDef[] = [
       {
         text: 'Bring 20 timber, 10 stone and 8 fibre back from the Wilds.',
         done: (c) => cottage(c) && (workshop(c) || has(c, WORKSHOP_MATERIALS)),
-        where: 'wilds',
+        where: 'outdoors',
       },
       { text: 'Ask Silas to build on a workshop.', done: workshop, where: 'silas' },
       { text: 'At the bench in your cottage, make a bench axe, pick or spade.', done: madeTool, where: 'bench' },

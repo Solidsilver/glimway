@@ -156,7 +156,7 @@ func TestFightSocketCastsGoThroughAllowAbility(t *testing.T) {
 	cfg.RevalidateMs = 10000
 	ts := startPresence(t, x, cfg)
 	w := wsConnect(t, ts, c, s.Lease)
-	w.join("wilds:0:0")
+	w.join("outdoors:0:0")
 	w.send(map[string]any{"type": "pos", "x": 185, "y": 208, "facing": map[string]any{"x": 1, "y": 0}, "moving": false})
 	join := socketFight(t, w, "fightJoin").GetFightJoin()
 	h := x.api.presence

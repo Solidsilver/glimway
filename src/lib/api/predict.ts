@@ -37,7 +37,7 @@ const VILLAGE_SPAWN = { x: 400, y: 300 };
 
 /**
  * A server place's area as the game keeps it: the same id. The open map is
- * one area, `wilds`, its positions world pixels (open-map.md 2.4).
+ * one area, `outdoors`, its positions world pixels (open-map.md 2.4).
  */
 export function areaOfPlace(area: string): { area: string } {
   return { area };

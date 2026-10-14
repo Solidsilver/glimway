@@ -7,6 +7,8 @@ import type { AreaId } from '../lib/state'
 
 export interface SyncSafety {
   areaId: AreaId
+  position?: { x: number; y: number }
+  safe?: boolean
   transitioning: boolean
   dialogueOpen: boolean
   enemiesNear: boolean

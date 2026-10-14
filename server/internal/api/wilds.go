@@ -15,6 +15,7 @@ import (
 	"glimway/server/internal/chunks"
 	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v1"
+	"glimway/server/internal/location"
 	"glimway/server/internal/ports"
 	"glimway/server/internal/store"
 	"glimway/server/internal/story"
@@ -30,8 +31,8 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-// wildsArea is the `where` area of the open map: one area, world pixels.
-const wildsArea = "wilds"
+// outdoorsArea is the `where` area of the open map: one area, world pixels.
+const outdoorsArea = string(location.Outdoors)
 
 // generationOf is a stored epoch's generation parameters (loot seeds).
 func generationOf(e *contract.WildsEpoch) wilds.Epoch { return wildsgen.Epoch(e) }
@@ -242,10 +243,13 @@ func wildsTileOf(x, y float64) (int, int) { return wilds.TileOfPixel(x, y) }
 // nearWithin: the player stands in the Wilds, inside the frontier, within r
 // tiles of the world tile (x, y).
 func nearWithin(s store.Snapshot, x, y, r int) error {
-	if s.State.Area != wildsArea {
+	if !generatedPlace(s.State.Area, s.State.Position.X, s.State.Position.Y) {
 		return fail(409, "not-in-wilds")
 	}
 	px, py := wildsTileOf(s.State.Position.X, s.State.Position.Y)
+	if location.SourceOf(wilds.ChunkOf(x, y)).Kind != location.SourceGenerated {
+		return fail(409, "not-in-wilds")
+	}
 	if !frontier.Inside(s.WorldID, wilds.FloorDiv(px, chunkSize()), wilds.FloorDiv(py, chunkSize())) {
 		return fail(409, "beyond-frontier")
 	}
@@ -696,7 +700,7 @@ func (w wildsService) PlaceFallen(ctx context.Context, tx *sql.Tx, s *store.Snap
 	none := func(reason string) (ports.FallLantern, error) {
 		return ports.FallLantern{Lantern: "none", Reason: reason}, nil
 	}
-	if where == nil || where.Area != wildsArea {
+	if where == nil || !generatedPlace(where.Area, where.X, where.Y) {
 		return none("not-wilds")
 	}
 	if epoch == nil || epoch.Id == "" {

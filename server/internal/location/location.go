@@ -19,8 +19,8 @@ import (
 
 	"glimway/content"
 	"glimway/server/internal/frontier"
-	"glimway/server/internal/rules"
 	"glimway/server/internal/wilds"
+	"regexp"
 )
 
 // Space is the coordinate frame a position is in, and the saved area:
@@ -87,6 +87,8 @@ type Place struct {
 
 const tilePx = 16
 
+var homeSpace = regexp.MustCompile(`^home:(0|[1-9][0-9]{0,3})$`)
+
 // fixedAt is the fixed place whose footprint holds chunk (cx, cy), or nil.
 func fixedAt(cx, cy int) *content.FixedPlace {
 	for _, f := range content.PlacesRules.GetFixed() {
@@ -127,7 +129,7 @@ func spaceRules(root string) *content.PlaceRules {
 		return s.GetWoodland()
 	case root == "ruin":
 		return s.GetRuin()
-	case rules.HomeGate(root) >= 0:
+	case homeSpace.MatchString(root):
 		return s.GetHome()
 	}
 	if f := fixedByID(root); f != nil {

@@ -1,3 +1,4 @@
+import { at } from '../lib/location.ts'
 /**
  * Session owns the live GameState, applies quest events through the shared
  * state module, and persists at meaningful boundaries (never per frame).
@@ -23,7 +24,7 @@ import { checkSpend, grantGlims, spendGlims, type GlimSpend, type SpendCheck, ty
 import { saveCurrent, saveGame } from '../lib/save.ts'
 import { bus, EV, type StatsPayload } from './events.ts'
 import type { Link, QuestStepOutcome } from './link.ts'
-import { DEFEATED, FOUND, isClientMark, placeArea } from '../lib/api/predict.ts'
+import { DEFEATED, FOUND, isClientMark } from '../lib/api/predict.ts'
 import { itemsFor } from './items.ts'
 import { serverNow } from './clock.ts'
 import { displayArea } from '../content/world.ts'
@@ -182,7 +183,7 @@ export class Session {
     return {
       // The world's clock (and the dev clock): the cycle and the waits are the server's.
       now: serverNow(),
-      area: placeArea(this.state),
+      area: at(this.state.area, this.state.position.x, this.state.position.y).id,
       glims: this.state.glims,
       carrying: (def) => this.carrying(def),
       gateAt: this.state.questGateAt?.[quest],
@@ -285,7 +286,7 @@ export class Session {
   checkQuests(): void {
     if (this.destroyed || this.persistenceInFlight) return
     const s = this.state
-    const ctx = { area: placeArea(s), flags: s.flags, defeated: s.defeatedEnemies, carrying: (def: string) => this.carrying(def) }
+    const ctx = { area: at(s.area, s.position.x, s.position.y).id, flags: s.flags, defeated: s.defeatedEnemies, carrying: (def: string) => this.carrying(def) }
     for (const { quest, step } of autoSteps(s.quests, this.needs, ctx)) this.autoStep(quest, step)
     for (const { quest, step } of stepsBy('sync', 'glims', s.quests, this.needs)) {
       const base = this.syncBase.get(quest.id)

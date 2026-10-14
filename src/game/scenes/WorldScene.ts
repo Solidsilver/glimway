@@ -60,7 +60,7 @@ import { homesteadsFor } from '../homestead'
 import { prepareHomeLand } from '../homeland'
 import { isSafeArea } from '../../lib/habitica/sync'
 import { fingerInBracken } from '../../lib/quests'
-import { WILDS_AREA, gateArrival, gateArrivalPosition, isWildsArea, wildsReturnTile } from '../wilds/coords'
+import { OUTDOORS_AREA, gateArrival, gateArrivalPosition, isWildsArea, wildsReturnTile } from '../wilds/coords'
 import { prepareWilds } from '../wilds/store'
 import { WildsWindow } from '../wilds/window'
 import { WildsPaths } from '../wilds/paths'
@@ -116,9 +116,9 @@ function trayFocused(): boolean {
 }
 
 /** Areas where the zero-HP lock still lets you walk (home to rest): the village, the Commons, homesteads. */
-const safeArea = (area: string) => isSafeArea(area)
+const safeArea = (area: string, x = 0, y = 0) => isSafeArea(area, { x, y })
 
-/** Can the scene go here? Every registered area (the open map, `wilds`, among them). */
+/** Can the scene go here? Every registered area (the open map, `outdoors`, among them). */
 function canEnter(area: string): boolean {
   return hasAreaKind(area)
 }
@@ -574,6 +574,7 @@ export class WorldScene extends Phaser.Scene {
     presenceMoments(this, { session: this.session, world: this.world, enemies: this.enemies, hero: () => this.hero.sprite })
     this.goalGuide = new GoalGuide(this, {
       world: this.world,
+      position: () => this.hero.sprite,
       goal: () => goalTarget(this.session),
       npcAt: (id) => {
         const n = this.npcs.npcs.find((x) => x.id === id)
@@ -607,6 +608,8 @@ export class WorldScene extends Phaser.Scene {
       const py = this.hero.sprite.y
       return {
         areaId: this.world.areaId,
+        position: { x: px, y: py },
+        safe: isSafeArea(this.world.areaId, { x: px, y: py }),
         transitioning: this.transitioning,
         dialogueOpen: uiState.dialogueOpen,
         enemiesNear: this.enemies.enemies.some((e) => Math.hypot(e.x - px, e.y - py) < 200)
@@ -1010,14 +1013,14 @@ export class WorldScene extends Phaser.Scene {
     // Zero-HP gates expeditions only from the village; a legacy zero-HP save
     // found outside may travel home freely (nothing heals en route).
     // The Commons counts as home: a hurt hero may walk there to rest.
-    const locked = this.session.zeroHpLocked && safeArea(this.world.areaId)
+    const locked = this.session.zeroHpLocked && safeArea(this.world.areaId, this.hero.sprite.x, this.hero.sprite.y)
     const tx = tileAt(this.hero.sprite.x)
     const ty = tileAt(this.hero.sprite.y)
     for (const exit of this.world.exits) {
-      if (locked && !safeArea(exit.to)) continue
+      if (locked && !safeArea(exit.to, exit.entry.tx * TILE + TILE / 2, exit.entry.ty * TILE + TILE / 2)) continue
       if (tx >= exit.tx && tx < exit.tx + exit.tw && ty >= exit.ty && ty < exit.ty + exit.th) {
         // The open map is the server's: without a connection its gate stays shut.
-        if (!canEnter(exit.to) || (exit.to === WILDS_AREA && !this.session.link)) {
+        if (!canEnter(exit.to) || (exit.to === OUTDOORS_AREA && !this.session.link)) {
           this.overgrown(exit)
           return
         }
@@ -1052,11 +1055,11 @@ export class WorldScene extends Phaser.Scene {
     if (!canEnter(area)) return
     const state = this.session.state
     const leavingWilds = isWildsArea(state.area)
-    if (area === WILDS_AREA) {
+    if (area === OUTDOORS_AREA) {
       // Into the open map through the Commons gate: world pixels, just inside
       // the gate on chunk (0, 0). The near read and its chunks load while the
       // screen is dark, so the first window paints behind the fade.
-      this.moveTo({ area: WILDS_AREA, position: gateArrivalPosition() }, { entry: gateArrival() }, { inDark: () => prepareWilds(this.session, 60_000) })
+      this.moveTo({ area: OUTDOORS_AREA, position: gateArrivalPosition() }, { entry: gateArrival() }, { inDark: () => prepareWilds(this.session, 60_000) })
       return
     }
     if (leavingWilds && area === 'commons') {
@@ -1071,7 +1074,7 @@ export class WorldScene extends Phaser.Scene {
   /** Dev: straight to a world tile of the open map (its chunks load while the screen is dark). */
   private warpWilds(tx: number, ty: number): void {
     if (this.transitioning) return
-    this.moveTo({ area: WILDS_AREA, position: tileCenter(tx, ty) }, { entry: { tx, ty } }, { inDark: () => prepareWilds(this.session, 0) })
+    this.moveTo({ area: OUTDOORS_AREA, position: tileCenter(tx, ty) }, { entry: { tx, ty } }, { inDark: () => prepareWilds(this.session, 0) })
   }
 
   /**

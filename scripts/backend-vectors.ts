@@ -23,7 +23,7 @@ export function vectors() {
   xp.push({ level: 2, mark: 10, total: null, next: xpToNextLevel(2), result: { ...creditXp(10, { level: 2 }), mark: 10 } });
   const sync = [];
   const saveOf = (state: GameState, imported = true, baseline: HabiticaProfile | undefined = base): SyncedSave => ({ state: validateSave(state), vitalsSource: imported ? 'imported' : 'demo', ...(baseline ? { importedProfile: baseline } : {}) });
-  for (const area of ['village', 'woodland', 'ruin', 'commons', 'wilds'] as const) {
+  for (const area of ['village', 'woodland', 'ruin', 'commons', 'outdoors'] as const) {
     for (const hp of [0, 4.5, base.hp, base.maxHp]) {
       for (const mode of ['same', 'heal', 'fall', 'max-up', 'cosmetic', 'account', 'no-exp', 'no-baseline', 'first', 'restricted']) {
         const state = { ...createNewGame(), area, hp, maxHp: base.maxHp, mana: 2, maxMana: base.maxMp, glimXp: lifetimeXp(base.level, base.exp ?? 0) };

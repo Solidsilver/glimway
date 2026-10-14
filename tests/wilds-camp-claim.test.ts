@@ -46,7 +46,7 @@ async function rig() {
     return m;
   };
   const session = {
-    state: { area: 'wilds' },
+    state: { area: 'outdoors' },
     link: {
       status: 'online',
       api: { operations: { near: async () => next, chunk } },

@@ -38,7 +38,7 @@ test('each seasonal material turns up only in its season, from the source the do
   assert.equal(blooms?.wick, 'Bloom');
   assert.ok(inSeason(blooms!, dayAt(firstOf('wick', 'Bloom'))));
   assert.equal(inSeason(blooms!, dayAt(firstOf('wick', 'Light'))), false);
-  for (const area of ['commons', 'wilds']) assert.ok(gatheringOffered(area, 'bloom-patch'), `bloom patches in the ${area}`);
+  for (const area of ['commons', 'outdoors']) assert.ok(gatheringOffered(area, 'bloom-patch'), `bloom patches in the ${area}`);
 
   const ice = gatheringTarget('pond-ice');
   assert.ok(ice, 'the frozen pond is a gather target');
@@ -49,7 +49,7 @@ test('each seasonal material turns up only in its season, from the source the do
   const sap = tangleTree?.yields.find((y) => y.item === 'amberfall-sap');
   assert.ok(sap, 'the Tangle trees let their sap go in Amberfall');
   assert.equal(sap?.mark, 'Amberfall');
-  assert.ok(gatheringOffered('wilds', 'tangle-tree'));
+  assert.ok(gatheringOffered('outdoors', 'tangle-tree'));
   assert.equal(gatheringOffered('woodland', 'tangle-tree'), false);
   const woodsTree = gatheringTarget('tree');
   assert.equal(woodsTree?.yields.some((y) => y.item === 'amberfall-sap'), false);
@@ -165,7 +165,7 @@ test('the Tangle’s trees are Tangle trees; the outer drift’s are plain trees
   assert.equal(drift.get('tangle-tree') ?? 0, 0, 'no Tangle trees past the crossing');
   assert.ok((drift.get('tree') ?? 0) > 0, 'the outer drift’s trees are plain trees');
   assert.equal(gatheringTarget('tree')?.yields.some((y) => y.item === 'amberfall-sap'), false);
-  for (const t of [...inner.keys(), ...drift.keys()]) assert.ok(gatheringOffered('wilds', t), `the server allows ${t} in the wilds`);
+  for (const t of [...inner.keys(), ...drift.keys()]) assert.ok(gatheringOffered('outdoors', t), `the server allows ${t} in the wilds`);
 });
 
 test('a dried-flower stack draws the delivered dried posy', () => {

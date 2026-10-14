@@ -67,7 +67,7 @@ export declare type OpHeaderValid = OpHeader;
 export declare const OpHeaderSchema: GenMessage<OpHeader, {validType: OpHeaderValid}>;
 
 /**
- * In the open map (contract 8) a Wilds place is area "wilds" with x and y in
+ * In the open map (contract 8) a Wilds place is area "outdoors" with x and y in
  * world pixels, signed (open-map.md 2.4); "wilds:<region>" with
  * region-wide pixels is generator v2's, until lanes O-C and O-D move it.
  *

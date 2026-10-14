@@ -149,3 +149,8 @@ export function resolve(area: string, tx: number, ty: number, places: Places = P
   const f = fixedById(area, places);
   return f ? { space: OUTDOORS, tx: tx + f.origin.tx, ty: ty + f.origin.ty } : { space: area, tx, ty };
 }
+
+/** Content coordinates in the current scene's frame (Commons stays local until the join). */
+export function contentTile(current: string, area: string, tx: number, ty: number): { space: string; tx: number; ty: number } {
+  return current === area ? { space: area, tx, ty } : resolve(area, tx, ty);
+}

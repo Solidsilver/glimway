@@ -5,8 +5,8 @@ import (
 	"errors"
 	"github.com/coder/websocket"
 	"glimway/content"
-	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v2"
+	"glimway/server/internal/location"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"glimway/server/internal/wilds"
@@ -19,11 +19,11 @@ import (
 	"time"
 )
 
-// validPresenceRoom: an area, or a Wilds chunk's room "wilds:<cx>:<cy>"
+// validPresenceRoom: an area, or a Wilds chunk's room "outdoors:<cx>:<cy>"
 // (signed, inside the frontier; open-map.md 2.4).
 func validPresenceRoom(area string) bool {
 	if validArea(area) {
-		return area != wildsArea
+		return area != outdoorsArea
 	}
 	_, _, ok := wildsRoomChunk(area)
 	return ok
@@ -32,7 +32,7 @@ func validPresenceRoom(area string) bool {
 // wildsRoomChunk is the chunk a Wilds room names.
 func wildsRoomChunk(room string) (cx, cy int, ok bool) {
 	parts := strings.Split(room, ":")
-	if len(parts) != 3 || parts[0] != wildsArea || len(room) > 64 {
+	if len(parts) != 3 || parts[0] != outdoorsArea || len(room) > 64 {
 		return 0, 0, false
 	}
 	x, err := strconv.Atoi(parts[1])
@@ -40,7 +40,7 @@ func wildsRoomChunk(room string) (cx, cy int, ok bool) {
 		return 0, 0, false
 	}
 	y, err := strconv.Atoi(parts[2])
-	if err != nil || strconv.Itoa(y) != parts[2] || !frontier.Inside("", x, y) {
+	if err != nil || strconv.Itoa(y) != parts[2] || !location.OnGrid("", x, y) {
 		return 0, 0, false
 	}
 	return x, y, true
@@ -51,7 +51,7 @@ func wildsRoomChunk(room string) (cx, cy int, ok bool) {
 func positionInsideFrontier(world string, x, y float64) bool {
 	tx, ty := wilds.TileOfPixel(x, y)
 	cx, cy := wilds.ChunkOf(tx, ty)
-	return frontier.Inside(world, cx, cy)
+	return location.OnGrid(world, cx, cy)
 }
 
 // sharedRoom: two rooms see each other. An area's room sees only itself; a

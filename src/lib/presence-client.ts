@@ -1,3 +1,4 @@
+import { onGrid } from './location.ts';
 /**
  * Presence protocol client: one WebSocket to `/ws` for a connected session
  * that holds the play lease. Wire protocol: server/internal/api/presence.go
@@ -135,30 +136,31 @@ export function closeAction(code: number, reason = ''): 'retry' | 'superseded' |
 
 /**
  * Server-accepted presence areas: curated areas, homesteads, and the open
- * map's chunk rooms `wilds:<cx>:<cy>` (signed; rooms are checked against the
+ * map's chunk rooms `outdoors:<cx>:<cy>` (signed; rooms are checked against the
  * content).
  */
-const AREA_RE = /^(village|woodland|ruin|commons|home:(0|[1-9]\d{0,3})|wilds:(0|-?[1-9]\d*):(0|-?[1-9]\d*))$/;
+const AREA_RE = /^(village|woodland|ruin|commons|home:(0|[1-9]\d{0,3})|outdoors:(0|-?[1-9]\d*):(0|-?[1-9]\d*))$/;
 
 export function isPresenceArea(area: string): boolean {
+  if (area.startsWith('outdoors:')) { const c = roomChunk(area); return !!c && Number.isSafeInteger(c.cx) && Number.isSafeInteger(c.cy) && onGrid(c.cx, c.cy); }
   return AREA_RE.test(area) || knownRoom(area);
 }
 
 /**
  * The open map's presence room for a world pixel: the chunk it stands in,
- * `wilds:<cx>:<cy>`. The socket holds one room a client; the server shares
+ * `outdoors:<cx>:<cy>`. The socket holds one room a client; the server shares
  * a chunk's room with its eight neighbours' (`sharedRoom`), so you see
  * everyone in the 3×3 around you (open-map.md 2.4), and the room changes as
  * you cross a chunk edge.
  */
 export function wildsPresenceRoom(x: number, y: number): string {
   const { cx, cy } = chunkOf(Math.floor(x / TILE), Math.floor(y / TILE));
-  return `wilds:${cx}:${cy}`;
+  return `outdoors:${cx}:${cy}`;
 }
 
 /** The chunk a Wilds room names, or null. */
 function roomChunk(room: string): { cx: number; cy: number } | null {
-  const m = /^wilds:(0|-?[1-9]\d*):(0|-?[1-9]\d*)$/.exec(room);
+  const m = /^outdoors:(0|-?[1-9]\d*):(0|-?[1-9]\d*)$/.exec(room);
   return m ? { cx: Number(m[1]), cy: Number(m[2]) } : null;
 }
 
@@ -182,7 +184,7 @@ export function sharedRoom(a: string | null, b: string | null): boolean {
  * no room (null).
  */
 export function presenceAreaFor(areaId: string, at?: { x: number; y: number }): string | null {
-  if (areaId === 'wilds') return at ? wildsPresenceRoom(at.x, at.y) : null;
+  if (areaId === 'outdoors') return at ? wildsPresenceRoom(at.x, at.y) : null;
   return isPresenceArea(areaId) ? areaId : null;
 }
 

@@ -94,9 +94,9 @@ test('every findable paper has a way into the game (or is reported as needing a 
 // ---------------------------------------------------------------- save markers
 
 test('a Wilds save is the area and world pixels, nothing else (the region markers went with the regions)', () => {
-  const s = { ...createNewGame(), area: 'wilds' as const, position: { x: -424, y: -744 }, wildsRegion: 'outer-1', outerSeason: outerSeasonAt(NOW) };
+  const s = { ...createNewGame(), area: 'outdoors' as const, position: { x: -424, y: -744 }, wildsRegion: 'outer-1', outerSeason: outerSeasonAt(NOW) };
   const v = validateSave(s);
-  assert.deepEqual([v.area, v.position], ['wilds', { x: -424, y: -744 }]);
+  assert.deepEqual([v.area, v.position], ['outdoors', { x: -424, y: -744 }]);
   assert.equal('wildsRegion' in v, false);
   assert.equal('outerSeason' in v, false);
 });

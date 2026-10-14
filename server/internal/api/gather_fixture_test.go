@@ -10,7 +10,7 @@ import (
 // Budget/yield tests use explicit geometry fakes; geometry validation has its own tests.
 func (x *rig) gatherFixture(s response, fields map[string]any) {
 	doc, ok := fields["progress"].(rules.State)
-	if !ok || doc.Area != "wilds" {
+	if !ok || doc.Area != "outdoors" {
 		return
 	}
 	// Tiles are world tiles: the Tangle's chunk (0,0) holds 0..23 each way;

@@ -10,6 +10,7 @@ import (
 	"glimway/server/internal/chunks"
 	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v1"
+	"glimway/server/internal/location"
 	"glimway/server/internal/ports"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
@@ -97,9 +98,9 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 	}
 	switch p.Source {
 	case "placed":
-		return w.Area == q.GetArea() && content.QuestIndex("lantern-road", s.State.Quests["lantern-road"]) >= content.QuestIndex(defaultStage(q.GetAfter())) && near(w, float64(q.GetTx()*16+8), float64(q.GetTy()*16+8)), nil
+		return location.At(location.Space(w.Area), w.X, w.Y).ID == q.GetArea() && content.QuestIndex("lantern-road", s.State.Quests["lantern-road"]) >= content.QuestIndex(defaultStage(q.GetAfter())) && nearContent(w, q.GetArea(), int(q.GetTx()), int(q.GetTy())), nil
 	case "quest", "gift":
-		return q.GetFrom() != "" && w.Area == q.GetArea() && content.QuestIndex("lantern-road", s.State.Quests["lantern-road"]) >= content.QuestIndex(q.GetStage()), nil
+		return q.GetFrom() != "" && location.At(location.Space(w.Area), w.X, w.Y).ID == q.GetArea() && content.QuestIndex("lantern-road", s.State.Quests["lantern-road"]) >= content.QuestIndex(q.GetStage()), nil
 	case "village-project":
 		var due bool
 		// A finished project in this world holds the paper, and this player helped build it
@@ -108,7 +109,7 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 		return due, err
 	case "commons":
 		// On the Commons or in one of its rooms (the deed is bought in Pell's office at the Yard).
-		if content.RootArea(w.Area) != "commons" {
+		if location.At(location.Space(w.Area), w.X, w.Y).ID != "commons" && content.RootArea(w.Area) != "commons" {
 			return false, nil
 		}
 		var due bool
@@ -132,8 +133,8 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 		return due, err
 	case "turning":
 		if q.GetFact() == "board" {
-			board, ok := content.StoryRules.GetBoards()[w.Area]
-			return ok && near(w, float64(board.GetTx()*16+8), float64(board.GetTy()*16+8)), nil
+			board, ok := content.StoryRules.GetBoards()[location.At(location.Space(w.Area), w.X, w.Y).ID]
+			return ok && nearContent(w, location.At(location.Space(w.Area), w.X, w.Y).ID, int(board.GetTx()), int(board.GetTy())), nil
 		}
 		if q.GetFact() == "turning" {
 			return false, nil
@@ -142,7 +143,7 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 	if q.GetSite() == "" && in.Entity == "" && q.GetMember() == "" {
 		return false, nil
 	}
-	if w.Area != "wilds" || r.Epochs == nil || r.Chunks == nil {
+	if w.Area != string(location.Outdoors) || location.At(location.Space(w.Area), w.X, w.Y).Source.Kind != location.SourceGenerated || r.Epochs == nil || r.Chunks == nil {
 		return false, nil
 	}
 	now := r.readTime(ctx)
@@ -300,11 +301,11 @@ func defaultStage(s string) string {
 // standing on land that turns at the wick (the Whitequiet and the Beyond)
 // remembers this wick's epoch, and a newer one marks wilds:turned.
 func (r Rules) Record(ctx context.Context, tx *sql.Tx, s *store.Snapshot, w *contract.Where, now int64) error {
-	if w.Area != "wilds" || r.Epochs == nil {
+	if w.Area != string(location.Outdoors) || r.Epochs == nil {
 		return nil
 	}
 	tx0, ty0 := wilds.TileOfPixel(w.X, w.Y)
-	if cx, cy := wilds.ChunkOf(tx0, ty0); wilds.EpochKindAt(cx, cy) != "wick" {
+	if cx, cy := wilds.ChunkOf(tx0, ty0); location.SourceOf(cx, cy).Kind != location.SourceGenerated || location.SourceOf(cx, cy).EpochKind != "wick" {
 		return nil
 	}
 	epoch, err := r.Epochs.Current(ctx, tx, s.WorldID, "wick", now)
@@ -344,4 +345,13 @@ func (r Rules) readTime(ctx context.Context) time.Time {
 		return r.Now()
 	}
 	return time.Now()
+}
+
+// Content still names Commons-local tiles while its scene is separate.
+func nearContent(w *contract.Where, area string, tx, ty int) bool {
+	space := location.Space(area)
+	if w.Area != area {
+		space, tx, ty = location.Resolve(area, tx, ty)
+	}
+	return w.Area == string(space) && near(w, float64(tx*16+8), float64(ty*16+8))
 }

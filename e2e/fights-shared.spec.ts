@@ -44,7 +44,7 @@ async function windups(page: Page): Promise<WindupBand[]> {
 }
 
 async function enterCamp(page: Page, tile: { tx: number; ty: number }): Promise<void> {
-  await warp(page, 'wilds', tile.tx, tile.ty)
+  await warp(page, 'outdoors', tile.tx, tile.ty)
   await waitForWilds(page)
   await waitForLive(page)
 }
@@ -105,7 +105,7 @@ test('two players share wind-ups, menus, reconnect, confirmed deaths and persona
       return !!old && (Math.abs(e.x - old.x) + Math.abs(e.y - old.y) > 4 || e.state !== old.state)
     }), { message: 'server enemies update while the menu holds local play' }).toBe(true)
     await page.keyboard.press('Escape')
-    await reenter(other, 'wilds')
+    await reenter(other, 'outdoors')
     await expect.poll(async () => (await enemies(other, camp.id)).map(e => e.id).sort()).toEqual((await enemies(page, camp.id)).map(e => e.id).sort())
     const observedIds = (await enemies(other, camp.id)).map(e => e.id)
     expect(new Set(observedIds).size, `duplicate IDs in one enemy snapshot: ${observedIds.join(', ')}`).toBe(observedIds.length)

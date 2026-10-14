@@ -70,7 +70,7 @@ export class InvalidSaveError extends Error {
 
 // Curated areas are buildable by the existing standalone frontend.
 export const AREAS: readonly AreaId[] = ['village', 'woodland', 'ruin'];
-const SAVE_AREAS: readonly AreaId[] = [...AREAS, 'commons', 'wilds'];
+const SAVE_AREAS: readonly AreaId[] = [...AREAS, 'commons', 'outdoors'];
 
 /** A homestead's land behind Commons gate g: `home:<g>` (0..9999, no leading zeros). */
 export const HOME_AREA_RE = /^home:(0|[1-9]\d{0,3})$/;

@@ -22,9 +22,9 @@ function rig(latency = { lag: 0, jitter: 0 }) {
     }
     now = end
   }
-  // The server's frames (v3) carry one or more events; one here.
+  // The server's frames (v4) carry one or more events; one here.
   const push = (event: NonNullable<Parameters<typeof create<typeof PresenceMessageSchema>>[1]>['event']) => socket.onmessage?.({ data: toBinary(PresenceFrameSchema, create(PresenceFrameSchema, { events: [create(PresenceMessageSchema, { event })] })) })
-  feed.setArea('wilds:0:0'); socket.onopen?.({})
+  feed.setArea('outdoors:0:0'); socket.onopen?.({})
   push({ case: 'ready', value: { accountId: 'me' } }); advance(latency.lag + latency.jitter)
   return { feed, socket, sent, advance, push }
 }
@@ -70,8 +70,8 @@ test('lag+jitter is applied both ways in WebSocket order, and stop cancels queue
 })
 test('room edge pruning and reconnect discard old rooms and reset the socket counter', () => {
   const r = rig(); r.push({ case: 'fightJoin', value: join })
-  r.feed.setArea('wilds:1:0'); assert.equal(r.feed.fights.rooms.size, 1)
-  r.feed.setArea('wilds:2:0'); assert.equal(r.feed.fights.rooms.size, 0)
+  r.feed.setArea('outdoors:1:0'); assert.equal(r.feed.fights.rooms.size, 1)
+  r.feed.setArea('outdoors:2:0'); assert.equal(r.feed.fights.rooms.size, 0)
   assert.equal(r.feed.nextSwing(), 0); assert.equal(r.feed.nextSwing(), 1)
   r.socket.onclose?.({ code: 1006 }); assert.equal(r.feed.fights.seed, 0)
   r.advance(1500); r.socket.onopen?.({}); r.push({ case: 'ready', value: { accountId: 'me' } })
@@ -93,7 +93,7 @@ test('unsent closing socket and synchronous send failure create no pending resul
 test('chunk-edge ROOM_CLOSED retains targets for a swing and the fresh same-key join resyncs them', () => {
   const r = rig(); r.push({ case: 'fightJoin', value: join }); r.advance(100); r.feed.fights.observe()
   const original = r.feed.fights.draw()[0]!.incarnation
-  r.feed.setArea('wilds:1:0')
+  r.feed.setArea('outdoors:1:0')
   r.push({ case: 'fightEvent', value: { room: 1, tick: 100, kind: 5 } }); r.advance(100); r.feed.fights.observe()
   assert.equal(r.feed.fights.draw().length, 1)
   assert.equal(r.feed.swing({ kind: 1, x: 100, y: 100, facing: { x: 0, y: 0 }, tool: false, swingCounter: 0, seenTick: 101, seenOffsetMs: 0, predicted: [{ room: 1, enemy: 0 }] }), true)

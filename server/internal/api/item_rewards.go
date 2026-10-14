@@ -51,7 +51,7 @@ func (a *Server) returnKeepsake(ctx context.Context, tx *sql.Tx, s *store.Snapsh
 			return fail(409, "too-far-away")
 		}
 	case "bett", "nan":
-		if s.State.Area != wildsArea {
+		if !generatedPlace(s.State.Area, s.State.Position.X, s.State.Position.Y) {
 			return fail(409, "too-far-away")
 		}
 	default:
@@ -119,7 +119,7 @@ func (a *Server) grantHeirloom(ctx context.Context, tx *sql.Tx, s *store.Snapsho
 			return fail(409, "too-far-away")
 		}
 	case "nans-lamplighter-pole":
-		if s.State.Area != wildsArea {
+		if !generatedPlace(s.State.Area, s.State.Position.X, s.State.Position.Y) {
 			return fail(409, "too-far-away")
 		}
 	default:

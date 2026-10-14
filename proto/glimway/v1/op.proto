@@ -4,7 +4,7 @@ option go_package = "glimway/server/internal/gen/glimway/v1;contract";
 
 message ReportBarrier { string client = 1; string generation = 2; double seq = 3; }
 message OpHeader { string lease = 1; string key = 2; ReportBarrier report = 3; }
-// In the open map (contract 8) a Wilds place is area "wilds" with x and y in
+// In the open map (contract 8) a Wilds place is area "outdoors" with x and y in
 // world pixels, signed (open-map.md 2.4); "wilds:<region>" with
 // region-wide pixels is generator v2's, until lanes O-C and O-D move it.
 message Where { string area = 1; double x = 2; double y = 3; }

@@ -34,12 +34,12 @@ for (const [device, vp] of sizes) {
     await pasteAndConnect(page, id)
     await waitForWorld(page)
     // In: just inside the Commons gate.
-    await warp(page, 'wilds', 2, 22)
+    await warp(page, 'outdoors', 2, 22)
     await waitForWilds(page)
     await shot(page, `20-wilds-entry-${device}`)
 
     // The Tangle's middle (its 3×3 is the window), then the Whitequiet's.
-    await warp(page, 'wilds', 12, -12)
+    await warp(page, 'outdoors', 12, -12)
     await waitForWilds(page)
     await shot(page, `21-wilds-tangle-middle-${device}`)
 
@@ -62,7 +62,7 @@ for (const [device, vp] of sizes) {
     const warpTo = async (target: WildsDump['entities'][number]) => {
       const spot = await approach(target)
       const at = worldTileOf(target)
-      await warp(page, 'wilds', at.tx + (spot[0] as number), at.ty + (spot[1] as number))
+      await warp(page, 'outdoors', at.tx + (spot[0] as number), at.ty + (spot[1] as number))
       await waitForWilds(page)
       expect((await wilds(page)).chunk).toEqual(target.chunk)
     }
@@ -104,7 +104,7 @@ for (const [device, vp] of sizes) {
     await readDialogue(page)
 
     // The Whitequiet: the deep drift's look.
-    await warp(page, 'wilds', 12, -4 * 24 + 12)
+    await warp(page, 'outdoors', 12, -4 * 24 + 12)
     await waitForWilds(page)
     await shot(page, `28-wilds-whitequiet-${device}`)
 
@@ -119,7 +119,7 @@ async function fallAndFindLantern(page: Page, device: string): Promise<void> {
   // The collapse wakes the hero back in the village; wait for it to settle.
   await page.waitForFunction(() => (window as unknown as { __fsSafety?: () => { areaId: string } | null }).__fsSafety?.()?.areaId === 'village', undefined, { timeout: 20_000 })
   await settled(page, { area: 'village' })
-  await warp(page, 'wilds', Math.floor(fellAt.x / TILE), Math.floor(fellAt.y / TILE))
+  await warp(page, 'outdoors', Math.floor(fellAt.x / TILE), Math.floor(fellAt.y / TILE))
   await waitForWilds(page)
   await expect.poll(async () => (await wilds(page)).lanterns.some((l) => l.own && !l.lit)).toBe(true)
   const lantern = (await wilds(page)).lanterns.find((l) => l.own && !l.lit)!
@@ -151,7 +151,7 @@ for (const [device, vp] of sizes) {
     await pasteAndConnect(page, id)
     await waitForWorld(page)
     // The Tangle's middle, away from the gate (a camp's knockback can't send us home).
-    await warp(page, 'wilds', 12, -12)
+    await warp(page, 'outdoors', 12, -12)
     await waitForWilds(page)
     await fallAndFindLantern(page, device)
   })

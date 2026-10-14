@@ -62,7 +62,7 @@ test('a lay whose answer is lost keeps showing; its replay (same key) settles it
   r.server.on('POST /api/wilds/lay', 'network');
   const token = store.predictGround(-2, -4, 5, 5, change55, { id: 'stone', delta: -1 });
   ops.trackOp({ key: 'lay-1', kind: 'lay', world: r.link.worldId, wick: WICK, epoch: WICK, cx: -2, cy: -4, token, material: 'stone' });
-  const answer = await r.link.wildsPath('lay', { epoch: WICK, x: -43, y: -91, kind: 'stone', where: { area: 'wilds', x: -680, y: -1448 }, key: 'lay-1' });
+  const answer = await r.link.wildsPath('lay', { epoch: WICK, x: -43, y: -91, kind: 'stone', where: { area: 'outdoors', x: -680, y: -1448 }, key: 'lay-1' });
   assert.deepEqual(answer, { ok: false, code: 'pending' });
   assert.deepEqual(settled(r), [], 'pending is no outcome');
   assert.ok(ops.tracked('lay-1'));
@@ -104,7 +104,7 @@ test('a discover whose answer is lost is never asked again under a new key while
   const r = await rig(t);
   await online(r);
   r.server.on('POST /api/wilds/discover', 'network');
-  const session = { link: r.link, state: { area: 'wilds', position: { x: 0, y: 0 } } } as never;
+  const session = { link: r.link, state: { area: 'outdoors', position: { x: 0, y: 0 } } } as never;
   assert.equal(ops.mayAsk('place:1:-1'), true);
   await ops.discoverPlace(session, { id: 'place:1:-1', cx: 2, cy: -4 }, { x: 0, y: 0 });
   assert.equal(r.server.sent('POST /api/wilds/discover').length, 1);
@@ -189,7 +189,7 @@ async function layable(): Promise<{ tx: number; ty: number }> {
 }
 
 function scenePaths(link: Record<string, unknown>, hero: { x: number; y: number }) {
-  const session = { link: { status: 'online', accountId: 'me', worldId: 'w', ...link }, state: { area: 'wilds', position: hero } };
+  const session = { link: { status: 'online', accountId: 'me', worldId: 'w', ...link }, state: { area: 'outdoors', position: hero } };
   const scene = { input: { keyboard: null }, events: { once() {} } };
   return new WildsPaths(scene as never, { session: session as never, interactables: { register() {} } as never, fx: { sparkBurst() {} } as never, reducedMotion: true, hero: () => ({ sprite: hero, facing: { x: 1, y: 0 } }), notePosition() {}, live: () => true });
 }
@@ -253,7 +253,7 @@ test('the rumour’s bundle is not claimed under the next wick when the fresh re
     m.epochId = epoch;
     return m;
   } };
-  const session = { state: { area: 'wilds' }, link: { status: 'online', api: { operations: api }, wildsClaim: async (req: unknown) => ((claimed = req), { ok: false, code: 'entity-not-found' }) } };
+  const session = { state: { area: 'outdoors' }, link: { status: 'online', api: { operations: api }, wildsClaim: async (req: unknown) => ((claimed = req), { ok: false, code: 'entity-not-found' }) } };
   const turnings: unknown[] = [];
   const onTurning = (p: unknown) => turnings.push(p);
   bus.on(EV.turning, onTurning);

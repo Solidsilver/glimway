@@ -1,3 +1,4 @@
+import { resolve, contentTile } from '../lib/location.ts';
 /**
  * Papers — the owner's found texts as collectible, readable things.
  *
@@ -284,10 +285,13 @@ export function placedPapersIn(area: string, stage: QuestStage, flags: readonly 
   return PAPERS.filter(
     (p): p is PlacedPaper =>
       p.source.kind === 'placed' &&
-      p.source.area === area &&
+      (p.source.area === area || resolve(p.source.area, p.source.tx, p.source.ty).space === area) &&
       !flags.includes(paperFlag(p.id)) &&
       (!p.source.after || stageAtLeast(stage, p.source.after)),
-  );
+  ).map((p) => {
+    const spot = contentTile(area, p.source.area, p.source.tx, p.source.ty);
+    return { ...p, source: { ...p.source, area: spot.space, tx: spot.tx, ty: spot.ty } };
+  });
 }
 
 /** Every placement, regardless of state (for layout tests). */

@@ -5,8 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"glimway/content"
-	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v1"
+	"glimway/server/internal/location"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"glimway/server/internal/wilds"
@@ -226,12 +226,12 @@ func finiteWhere(where *contract.Where) bool {
 // inside the frontier (open-map.md 2.6); any other area is not the
 // frontier's business.
 func wildsWhereInside(where *contract.Where) bool {
-	if where.Area != wildsArea {
+	if where.Area != outdoorsArea {
 		return true
 	}
 	tx, ty := wilds.TileOfPixel(where.X, where.Y)
 	cx, cy := wilds.ChunkOf(tx, ty)
-	return frontier.Inside("", cx, cy)
+	return location.OnGrid("", cx, cy)
 }
 
 func rulesPosition(w *contract.Where) rules.Position { return rules.Position{X: w.X, Y: w.Y} }

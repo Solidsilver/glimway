@@ -1,3 +1,4 @@
+import { at, contentTile } from '../lib/location.ts';
 /**
  * The four heirloom tools, given through story beats (docs/items/catalogue.md):
  *  1. Brack felling axe — Silas (Wheel & Wick guildhouse, knowing Hollis's name)
@@ -200,7 +201,7 @@ export type HeirloomRefusal = 'too-far' | 'not-yet' | 'granted' | 'offline' | 'b
 
 /** What the client knows when deciding whether to offer (the server checks the same). */
 export interface HeirloomContext {
-  /** The save's area ("commons", "village", "wilds"), as progress carries it. */
+  /** The save's area ("commons", "village", "outdoors"), as progress carries it. */
   area: string;
   /** Where the hero stands now, in the save's pixels (as progress carries it). */
   x: number;
@@ -216,7 +217,9 @@ export interface HeirloomContext {
 }
 
 function within(c: Pick<HeirloomContext, 'area' | 'x' | 'y'>, area: string, tx: number, ty: number, r: number, tile = 16): boolean {
-  if (c.area !== area) return false;
+  const spot = contentTile(c.area, area, tx, ty);
+  if (c.area !== spot.space) return false;
+  tx = spot.tx; ty = spot.ty;
   const dx = c.x - (tx * tile + tile / 2);
   const dy = c.y - (ty * tile + tile / 2);
   return dx * dx + dy * dy <= (r * tile) * (r * tile);
@@ -253,7 +256,7 @@ function heirloomInReach(id: HeirloomId, c: Pick<HeirloomContext, 'area' | 'x' |
       return !!r && within(c, r.area, r.tx, r.ty, RESIDENT_REACH_TILES);
     }
     case 'nans-lamplighter-pole':
-      return c.area === 'wilds';
+      return c.area === 'outdoors' && at(c.area, c.x, c.y).source.kind === 'generated';
   }
 }
 

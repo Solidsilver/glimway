@@ -62,7 +62,7 @@ func calendarResponse(day content.CalendarDay) *contract.CalendarResponse {
 	return out
 }
 
-const presenceProtocol = "glimway.presence.v3"
+const presenceProtocol = "glimway.presence.v4"
 
 // presenceFrameBytes caps batches. A lone event may use the full frame limit.
 const (

@@ -146,7 +146,7 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
     s['hero'].damagePlayer(n, s['hero'].sprite.x - 1)
   })
   // The open map's warp goes to a world tile (signed); every other area's to its tile.
-  on('__fsDevWarp', (area: AreaId, tx: number, ty: number) => (area === 'wilds' ? s['warpWilds'](tx, ty) : s['transitionTo'](area, { tx, ty })))
+  on('__fsDevWarp', (area: AreaId, tx: number, ty: number) => (area === 'outdoors' ? s['warpWilds'](tx, ty) : s['transitionTo'](area, { tx, ty })))
   on('__fsDevInsets', (v) => {
     if (v) setPlayInsets(v)
     return { ...playInsets }

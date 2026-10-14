@@ -1,3 +1,4 @@
+import { at } from '../../lib/location.ts';
 /**
  * The imported hero's visual: a layered Habitica avatar that breathes when
  * still, steps when walking and faces the way it goes, the trailing pet
@@ -157,7 +158,7 @@ export class AvatarVisual {
     this.fallbackNotified = carried.fallbackNotified
     this.partialNotified = carried.partialNotified
     // Never ridden indoors, nor in the village: the mount waits at the door, or comes on the lead.
-    if (this.indoors || deps.world.areaId === 'village') this.riding = false
+    if (!at(deps.world.areaId, deps.hero().sprite.x, deps.hero().sprite.y).ride) this.riding = false
     this.mountShown = this.mountOut
     if (!this.mountShown) this.riding = false
     const onCompanions = () => this.onCompanions()
@@ -306,7 +307,8 @@ export class AvatarVisual {
       riding: this.riding,
       stable: !!mine?.items.some((i) => i.itemDef === HOMESTEAD_DATA.stable.item && i.scene === 'outdoor'),
       mounts: this.deps.session.importedProfile?.mounts.length ?? 0,
-      area: this.deps.world.areaId
+      area: this.deps.world.areaId,
+      position: this.deps.hero().sprite
     })
     if (refusal) {
       bus.emit(EV.toast, { text: RIDE_WORDS[refusal] })
@@ -403,7 +405,7 @@ export class AvatarVisual {
 
   /** A sync committed a new profile: riding rules re-checked, layers rebuilt. */
   onProfileChanged(): void {
-    this.riding = this.riding && this.deps.world.areaId !== 'village' && !!this.mountOut
+    this.riding = this.riding && at(this.deps.world.areaId, this.deps.hero().sprite.x, this.deps.hero().sprite.y).ride && !!this.mountOut
     void this.build()
     this.showButtons()
   }
@@ -470,7 +472,7 @@ export class AvatarVisual {
       this.led.update({ x: hero.sprite.x, y: hero.sprite.y, hand, faceRight: this.faceRight, seated: !!seat, dt, time })
     }
     // Auto-dismount entering the village: you lead it through the gate.
-    if (this.riding && world.areaId === 'village') {
+    if (this.riding && !at(world.areaId, hero.sprite.x, hero.sprite.y).ride) {
       this.riding = false
       void this.build()
       bus.emit(EV.toast, { text: RIDE_WORDS.gate, kind: 'thought' })

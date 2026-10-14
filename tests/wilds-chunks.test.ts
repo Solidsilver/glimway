@@ -83,7 +83,7 @@ test('the chunk cache fetches each chunk once and forgets old epochs', async () 
 /** A connected session as far as the Wilds store and operations read it. */
 function fakeSession(ops: FakeOperations): Session {
   const link = { api: { operations: ops.api }, lease: 'lease-1', status: 'online', busy: false, accountId: 'me' };
-  return { link, state: { area: 'wilds', position: { x: 0, y: 0 }, flags: [] } } as unknown as Session;
+  return { link, state: { area: 'outdoors', position: { x: 0, y: 0 }, flags: [] } } as unknown as Session;
 }
 
 /** A near read around (cx, cy) as the server writes it: the fixture's, moved, with its own extras. */

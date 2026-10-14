@@ -433,8 +433,8 @@ func TestWorldMoveRefusedWhenUnsafe(t *testing.T) {
 	x.refresh(hc, &h)
 	before := x.worldReq("GET", "/api/state", nil, hc, 200).Snapshot
 
-	// Only from the village or the Commons.
-	for _, area := range []string{"woodland", "wilds", "home:0"} {
+	// Only from ground the lookup marks safe.
+	for _, area := range []string{"woodland", "outdoors"} {
 		if e := x.worldReq("POST", "/api/world/move", moveBody(h, "unsafe-"+area, o.WorldID, area), hc, 409).Error.Code; e != "not-at-safe-boundary" {
 			t.Fatal(area, e)
 		}

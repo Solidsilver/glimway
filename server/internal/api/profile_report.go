@@ -5,6 +5,7 @@ import (
 	"errors"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/habitica"
+	"glimway/server/internal/location"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -65,7 +66,7 @@ func (a *Server) profileReport(w http.ResponseWriter, r *http.Request) error {
 	if p.ID != subject {
 		return refuse(fail(409, "account-switch"))
 	}
-	if !rules.IsSafeArea(s.State.Area) {
+	if !location.At(location.Space(s.State.Area), s.State.Position.X, s.State.Position.Y).Safe {
 		return refuse(fail(409, "not-at-safe-boundary"))
 	}
 	p.MP = math.Min(p.MP, p.MaxMP)

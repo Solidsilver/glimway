@@ -200,7 +200,7 @@ test('arriving in the Wilds reports it; walking on across the open map does not 
   };
   r.link.arrived();
   await settle();
-  r.session.state.area = 'wilds';
+  r.session.state.area = 'outdoors';
   r.session.state.position = { x: 40, y: 360 };
   r.link.arrived();
   await settle();
@@ -208,8 +208,8 @@ test('arriving in the Wilds reports it; walking on across the open map does not 
   r.session.state.position = { x: 40, y: -1200 };
   r.link.arrived();
   await settle();
-  assert.deepEqual(reports(r).map((b) => b.place.area), ['commons', 'wilds']);
-  assert.deepEqual(reports(r)[1]!.place, { area: 'wilds', x: 40, y: 360 });
+  assert.deepEqual(reports(r).map((b) => b.place.area), ['commons', 'outdoors']);
+  assert.deepEqual(reports(r)[1]!.place, { area: 'outdoors', x: 40, y: 360 });
 });
 
 test('a fall names where the hero stands when it falls', async (t) => {

@@ -249,7 +249,7 @@ func TestReturningKeepsakes(t *testing.T) {
 	x.stack(x.account("alice"), "beeswax-candle", "", 1)
 	x.conserved(x.account("alice"))
 	wildsDoc := s.State
-	wildsDoc.Area = "wilds"
+	wildsDoc.Area = "outdoors"
 	retBett := x.opRefreshing(c, &s, "return", map[string]any{"itemDef": "beeswax-candle", "target": "bett", "progress": wildsDoc}, 200)
 	if retBett.Result.Returned != "beeswax-candle" || !slices.Contains(retBett.Snapshot.State.Flags, "echo:bett:softened") {
 		t.Fatalf("expected echo:bett:softened flag, got %+v", retBett.Snapshot.State.Flags)

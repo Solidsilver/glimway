@@ -1,3 +1,4 @@
+import { contentTile, resolve } from './location.ts';
 /**
  * Item definitions (content/items.json; docs/items/), validated against the
  * schema (proto/glimway/content/v1/items.proto) the same way the Go loader
@@ -39,7 +40,7 @@ export type ItemDef = Omit<ItemDefValid, 'kind' | 'tab' | 'grade' | 'atZero' | '
   atZero?: 'breaks' | 'blunt' | 'cracked';
   fitting?: FittingKind;
 };
-export type ItemPickup = Omit<ItemPickupValid, 'area'> & { area: (typeof PICKUP_AREAS)[number] };
+export type ItemPickup = Omit<ItemPickupValid, 'area'> & { area: (typeof PICKUP_AREAS)[number] | 'outdoors' };
 /** A person or stall that sells goods: a named resident, or a festival-day stall. */
 export type ItemSeller = Omit<ItemSellerValid, 'area' | 'tx' | 'ty'> & { area: string; tx: number; ty: number };
 /** A mender: at a fixed spot (area, tx, ty), or `with` a resident, wherever their cycle has them (`menderAt`). */
@@ -320,7 +321,14 @@ export function heldEffects(d: ItemDef, cls: string | null): ItemEffect[] {
 
 /** Pickups lying in an area that this player hasn't taken yet. */
 export function pickupsIn(area: string, taken: readonly string[]): ItemPickup[] {
-  return ITEMS.pickups.filter((p) => p.area === area && !taken.includes(p.id));
+  return ITEMS.pickups
+    .filter((p) => (p.area === area || resolve(p.area, p.tx, p.ty).space === area) && !taken.includes(p.id))
+    .map((p) => {
+      if (p.area === area) return p;
+      const spot = resolve(p.area, p.tx, p.ty);
+      // Only fixed content crosses to outdoors; curated scenes keep their own frame.
+      return { ...p, area: 'outdoors' as const, tx: spot.tx, ty: spot.ty };
+    });
 }
 
 export function pickupById(id: string): ItemPickup | null {
@@ -341,10 +349,12 @@ export function menderAt(m: ItemMender, now: number): ResidentPlace | null {
  */
 export function menderReaches(m: ItemMender, area: string, x: number, y: number, now: number, tile = 16): boolean {
   const at = menderAt(m, now);
-  if (!at || at.area !== area) return false;
+  if (!at) return false;
+  const spot = contentTile(area, at.area, at.tx, at.ty);
+  if (spot.space !== area) return false;
   if (m.with && roomFor(area)) return true;
-  const dx = x - (at.tx * tile + tile / 2);
-  const dy = y - (at.ty * tile + tile / 2);
+  const dx = x - (spot.tx * tile + tile / 2);
+  const dy = y - (spot.ty * tile + tile / 2);
   const r = m.radiusTiles * tile;
   return dx * dx + dy * dy <= r * r;
 }

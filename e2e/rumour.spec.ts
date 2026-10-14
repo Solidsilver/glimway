@@ -77,13 +77,13 @@ test('Elara tells the rumour; the place is found first and the bundle opens once
 
   // Out to the find: its chunk is named by the site.
   const [, sx, sy] = /^rumour:(-?\d+):(-?\d+)$/.exec(r.site)!.map(Number)
-  await warp(page, 'wilds', sx! * S + 12, sy! * S + 12)
+  await warp(page, 'outdoors', sx! * S + 12, sy! * S + 12)
   await waitForWilds(page)
   const site = (await wilds(page)).sites.find((s) => (s as { id?: string }).id === r.site) as { tx: number; ty: number; cx: number; cy: number } | undefined
   expect(site, 'the bundle in its chunk').toBeTruthy()
   const bx = site!.cx * S + site!.tx
   const by = site!.cy * S + site!.ty
-  await warp(page, 'wilds', bx, by + 1)
+  await warp(page, 'outdoors', bx, by + 1)
   await waitForWilds(page)
   await page.evaluate(() => (window as unknown as Hooks).__fsDevParkCreatures())
 
@@ -109,7 +109,7 @@ test('Elara tells the rumour; the place is found first and the bundle opens once
     await freshPlayer(other, 'Wren', invite.code)
     // Wren's screen on the world's clock (wickSlack's other pages).
     await calendarOnServer(other)
-    await warp(other, 'wilds', 12, -12)
+    await warp(other, 'outdoors', 12, -12)
     await waitForWilds(other)
     // The world map (M), its Details open for the list of places.
     await other.keyboard.press('m')
@@ -118,7 +118,7 @@ test('Elara tells the rumour; the place is found first and the bundle opens once
     await expect(other.getByTestId('map-places')).toContainText('Found by Tansy', { timeout: 20_000 })
     await shot(other, '99-world-map-found-by-desktop')
     await other.keyboard.press('Escape')
-    await warp(other, 'wilds', bx, by + 1)
+    await warp(other, 'outdoors', bx, by + 1)
     await waitForWilds(other)
     await other.evaluate(() => (window as unknown as Hooks).__fsDevParkCreatures())
     await expectToast(other, 'Tansy got here first this wick.', { timeout: 20_000 })

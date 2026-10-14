@@ -268,7 +268,7 @@ export async function openTitleGuide(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'I have them' }).click()
 }
 
-/** Wait for connected play: the world is live and the lease is held (`'wilds'`: the open map). */
+/** Wait for connected play: the world is live and the lease is held (`'outdoors'`: the open map). */
 export async function waitForWorld(page: Page, area: string = 'village'): Promise<void> {
   await page.waitForFunction((a) => {
     const s = (window as unknown as { __fsSafety?: () => { areaId: string; transitioning: boolean } | null }).__fsSafety?.()

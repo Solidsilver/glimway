@@ -60,7 +60,7 @@ test('curated fights: the real local owner update and Hero.land keep contact, da
 
 test('the Wilds always draw their camps from the server: no flag, and no local camp path left', () => {
   const scene: any = { events: { on() {}, once() {}, off() {} }, time: { now: 0, delayedCall() {} }, add: { graphics: () => ({ setDepth() { return this } }) } }
-  const wilds: any = new EnemySystem(scene, { world: { areaId: 'wilds', enemies: [] }, hero: () => ({}), fx: {} } as any, {} as any)
+  const wilds: any = new EnemySystem(scene, { world: { areaId: 'outdoors', enemies: [] }, hero: () => ({}), fx: {} } as any, {} as any)
   assert.notEqual(wilds.server, null)
   assert.equal(typeof wilds.removeWilds, 'undefined'); assert.equal(typeof wilds.removeLocalCamp, 'undefined')
   const woodland: any = new EnemySystem(scene, { world: { areaId: 'woodland', enemies: [] }, hero: () => ({}), fx: {} } as any, {} as any)

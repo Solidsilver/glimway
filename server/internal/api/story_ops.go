@@ -39,7 +39,7 @@ func (a *Server) questStep(w http.ResponseWriter, r *http.Request) error {
 		if err := questPrerequisites(*s, quest); err != nil {
 			return nil, err
 		}
-		if step.GetAt() != "" && s.State.Area != step.GetAt() {
+		if step.GetAt() != "" && placeID(*s) != step.GetAt() {
 			return nil, fail(409, "wrong-area")
 		}
 		if err := questTrigger(ctx, tx, s, req.Quest, step, now); err != nil {
@@ -133,13 +133,13 @@ func (a *Server) mark(w http.ResponseWriter, r *http.Request) error {
 				if !ok {
 					return nil, fail(409, "unknown-mark")
 				}
-				if s.State.Area != area {
+				if placeID(*s) != area {
 					return nil, fail(409, "wrong-area")
 				}
 			}
 		}
 		// A mark's area holds in its rooms too: Silas is met at his counter in the Yard as well as on the Commons.
-		if area := content.StoryRules.GetAreas()[req.Mark]; area != "" && !(area == "home" && rules.HomeGate(s.State.Area) >= 0) && s.State.Area != area && content.RootArea(s.State.Area) != area {
+		if area := content.StoryRules.GetAreas()[req.Mark]; area != "" && !(area == "home" && rules.HomeGate(s.State.Area) >= 0) && placeID(*s) != area && content.RootArea(s.State.Area) != area {
 			return nil, fail(409, "wrong-area")
 		}
 		added := false
@@ -202,7 +202,7 @@ func (a *Server) fall(w http.ResponseWriter, r *http.Request) error {
 		s.State.Area = "village"
 		s.State.Position = rules.NewState().Position
 		out := &contract.FallResult{Vitals: &contract.Vitals{Hp: s.State.HP, Mana: s.State.Mana, MaxHp: s.State.MaxHP, MaxMana: s.State.MaxMana}, Place: &contract.Place{Area: s.State.Area, X: s.State.Position.X, Y: s.State.Position.Y}, Lantern: "none", Reason: "not-wilds"}
-		if req.Where.Area == wildsArea {
+		if generatedPlace(req.Where.Area, req.Where.X, req.Where.Y) {
 			out.Reason = "epoch-missing"
 			if a.Config.Epochs != nil && a.Config.Lanterns != nil {
 				tx0, ty0 := wildsTileOf(req.Where.X, req.Where.Y)

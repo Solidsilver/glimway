@@ -28,7 +28,7 @@ function rig(t: TestContext) {
   store.applyNear(near)
   t.after(() => { store.resetWilds({ quiet: true }); forgetChunks() })
   const session = {
-    state: { area: 'wilds' },
+    state: { area: 'outdoors' },
     link: {
       status: 'online', accountId: 'hero',
       api: { operations: {

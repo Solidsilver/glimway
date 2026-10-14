@@ -86,7 +86,7 @@ export const COMMONS_FROM_VILLAGE = { tx: 2, ty: 21 }
 export const COMMONS_FROM_WILDS = { tx: 23, ty: 2 }
 /**
  * The Wilds' entry chunk spawn by its south `commons` gap (src/lib/wilds/gen-v1.ts:
- * inward.commons). The Wilds client owns where a 'wilds' exit really lands.
+ * inward.commons). The Wilds client owns where a 'outdoors' exit really lands.
  */
 const WILDS_ENTRY = { tx: 2, ty: 22 }
 
@@ -405,7 +405,7 @@ export function buildCommons(gateCount = 0): CommonsWorld {
   // ---- framing trees: a thick border, gaps only for the gate and the arch
   const exits: ExitDef[] = [
     { tx: 0, ty: CROSS.y0, tw: 1, th: CROSS.y1 - CROSS.y0 + 1, to: 'village', entry: { tx: 39, ty: 15 } },
-    { tx: LANE.path0, ty: 0, tw: LANE.path1 - LANE.path0 + 1, th: 1, to: 'wilds', entry: { ...WILDS_ENTRY } },
+    { tx: LANE.path0, ty: 0, tw: LANE.path1 - LANE.path0 + 1, th: 1, to: 'outdoors', entry: { ...WILDS_ENTRY } },
     // Every gate leads onto its homestead's land (signs are the homestead layer's).
     ...gates.map((g) => ({ tx: g.tx, ty: g.ty, tw: 1, th: 2, to: homeArea(g.gate), entry: landEntry(), label: null }))
   ]

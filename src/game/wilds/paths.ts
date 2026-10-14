@@ -247,7 +247,7 @@ export class WildsPaths {
   private whereNow(): { area: string; x: number; y: number } {
     this.deps.notePosition()
     const h = this.deps.hero().sprite
-    return { area: 'wilds', x: Math.round(h.x), y: Math.round(h.y) }
+    return { area: 'outdoors', x: Math.round(h.x), y: Math.round(h.y) }
   }
 
   /** Clear the tile (world tiles): the tool in hand, within reach. */

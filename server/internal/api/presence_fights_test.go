@@ -45,7 +45,7 @@ func queuedFightResult(t *testing.T, p *presencePeer) *wire.FightSwingResult {
 func unitFightPeer(t *testing.T, h *presenceHub) *presencePeer {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
-	p := &presencePeer{identity: presenceIdentity{ID: "alice", World: "world", Magic: presenceMagic{Kit: rules.CombatKitFor(nil, "", 0)}}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 64), area: "wilds:0:0", pos: &presencePosition{X: 0, Y: 112}, fightRooms: map[uint32]*presenceFightRoom{}}
+	p := &presencePeer{identity: presenceIdentity{ID: "alice", World: "world", Magic: presenceMagic{Kit: rules.CombatKitFor(nil, "", 0)}}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 64), area: "outdoors:0:0", pos: &presencePosition{X: 0, Y: 112}, fightRooms: map[uint32]*presenceFightRoom{}}
 	h.admit(p)
 	h.fightObserver(p)
 	p.identity.Magic.Kit.CritChance = 0
@@ -232,14 +232,14 @@ func TestFightSocketWakeSharedJoinResultsLeaveAndReconnect(t *testing.T) {
 	ms.Store(x.now.Load() * 1000)
 	x.api.presence.clock = func() time.Time { return time.UnixMilli(ms.Load()) }
 	a := wsConnect(t, ts, c, s.Lease)
-	a.join("wilds:0:0")
+	a.join("outdoors:0:0")
 	a.send(map[string]any{"type": "pos", "x": 185, "y": 208, "facing": map[string]any{"x": 1, "y": 0}, "moving": false})
 	join := socketFight(t, a, "fightJoin").GetFightJoin()
 	if join.RoomKey.World != world || join.RoomKey.Realm != content.WildsRules.GetRealm() || join.CritSeed == 0 || len(join.Enemies) != 1 || join.Enemies[0].Id != "wilds:camp:0:0:0:0" {
 		t.Fatal(join)
 	}
 	b := wsConnect(t, ts, bc, bs.Lease)
-	b.join("wilds:1:0")
+	b.join("outdoors:1:0")
 	// Adjacent chunk observers receive the same room, not another sim.
 	b.send(map[string]any{"type": "pos", "x": 390, "y": 208, "facing": map[string]any{"x": -1, "y": 0}, "moving": false})
 	other := socketFight(t, b, "fightJoin").GetFightJoin()
@@ -277,7 +277,7 @@ func TestFightSocketWakeSharedJoinResultsLeaveAndReconnect(t *testing.T) {
 	// Its own join for the area it inherited (a reload inside the leave
 	// grace names its area only after the registration's join went out)
 	// announces the covered room again, on the same handle and seed.
-	replacement.join("wilds:0:0")
+	replacement.join("outdoors:0:0")
 	again := socketFight(t, replacement, "fightJoin").GetFightJoin()
 	if again.Room != join.Room || again.CritSeed != fresh.CritSeed || len(again.Enemies) != 1 {
 		t.Fatal("a join for the held area did not announce the room again", again)

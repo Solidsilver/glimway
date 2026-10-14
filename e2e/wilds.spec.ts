@@ -66,7 +66,7 @@ test('connected: the Commons arch leads into the Tangle (the gate on chunk 0,0)'
   await connectedWorld(page, context)
   await warp(page, 'commons', 23, 2)
   await page.evaluate(() => (window as unknown as { __fsDevSampleEveryFrame: (on: boolean) => void }).__fsDevSampleEveryFrame(true))
-  const inWilds = () => page.evaluate(() => (window as unknown as { __fsSafety?: () => { areaId: string } | null }).__fsSafety?.()?.areaId === 'wilds')
+  const inWilds = () => page.evaluate(() => (window as unknown as { __fsSafety?: () => { areaId: string } | null }).__fsSafety?.()?.areaId === 'outdoors')
   await holdUntil(page, 'ArrowUp', inWilds)
   await waitForWilds(page)
   const dump = await wilds(page)
@@ -77,7 +77,7 @@ test('connected: the Commons arch leads into the Tangle (the gate on chunk 0,0)'
 
 test('connected: the Tangle leads back to the Commons arch', async ({ page, context }) => {
   await connectedWorld(page, context)
-  await warp(page, 'wilds', 2, 22)
+  await warp(page, 'outdoors', 2, 22)
   await waitForWilds(page)
   await parkCreatures(page)
   expect((await wilds(page)).chunk).toEqual({ cx: 0, cy: 0 })
@@ -96,7 +96,7 @@ test('connected: harvest, clear a camp, chest, POI, reload in place, the fallen 
   await connectedWorld(page, context)
   // In through the gate's tile; the Tangle's middle chunk (0, -1) holds the
   // 3×3 of the Tangle (and the Whitequiet's south row) in its window.
-  await warp(page, 'wilds', 12, -12)
+  await warp(page, 'outdoors', 12, -12)
   await waitForWilds(page)
   let dump = await wilds(page)
   expect(dump.epochId, 'the server’s epoch').not.toBe('')
@@ -168,7 +168,7 @@ test('connected: harvest, clear a camp, chest, POI, reload in place, the fallen 
   // The hero was set down without a scene change: this tab saves the spot, then the world has it.
   await page.evaluate(() => (window as unknown as { __fsDevSaveSoon: () => void }).__fsDevSaveSoon())
   await expect.poll(() => page.evaluate(() => (window as unknown as { __fsDevSaved: () => { pending: boolean } }).__fsDevSaved().pending)).toBe(false)
-  await reenter(page, 'wilds')
+  await reenter(page, 'outdoors')
   await waitForWilds(page)
   const reloaded = await wilds(page)
   expect(reloaded.chunk).toEqual(beforeChunk)
@@ -180,7 +180,7 @@ test('connected: harvest, clear a camp, chest, POI, reload in place, the fallen 
   await page.evaluate((n) => (window as unknown as { __fsDevHurt: (n: number) => void }).__fsDevHurt(n), 999)
   // Defeat wakes the hero in the village; walk back in and find the lantern.
   await page.waitForFunction(() => (window as unknown as { __fsSafety?: () => { areaId: string } | null }).__fsSafety?.()?.areaId === 'village', undefined, { timeout: 20_000 })
-  await warp(page, 'wilds', Math.floor(hurtAt.x / TILE), Math.floor(hurtAt.y / TILE))
+  await warp(page, 'outdoors', Math.floor(hurtAt.x / TILE), Math.floor(hurtAt.y / TILE))
   await waitForWilds(page)
   await expect.poll(async () => (await wilds(page)).lanterns.some((l) => l.own && !l.lit)).toBe(true)
   const lantern = (await wilds(page)).lanterns.find((l) => l.own)!
@@ -194,7 +194,7 @@ const CLAIM_SEED = 'e2e-claims'
 test('connected: server persistence keeps the claim across a second visit', { tag: '@smoke' }, async ({ page, context }) => {
   await connectedWorld(page, context)
   await pinWorld(page, CLAIM_SEED)
-  await warp(page, 'wilds', 12, -12)
+  await warp(page, 'outdoors', 12, -12)
   await windowWhole(page)
   // A fixed node: the pinned Tangle's middle chunk (0, -1), its first node by id.
   const node = (await wilds(page)).entities
@@ -211,7 +211,7 @@ test('connected: server persistence keeps the claim across a second visit', { ta
   await expect.poll(committed, { timeout: SERVER_ANSWER_MS, message: `${node!.id} harvested on the server` }).toBe('harvested')
 
   // Reload and come back: the node is still depleted on the server's clock.
-  await reenter(page, 'wilds')
+  await reenter(page, 'outdoors')
   await waitForWilds(page)
   await chunkWhole(page, worldTileOf(node!))
   await expect.poll(stateOf, { timeout: SERVER_ANSWER_MS, message: `${node!.id} still harvested after the reload` }).toBe('harvested')

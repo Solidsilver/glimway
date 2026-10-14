@@ -1,5 +1,5 @@
-import { rootArea } from '../rooms.ts';
-import { HOME_AREA_RE, recoverFromDefeat, validateSave, type GameState } from '../state.ts';
+import { at } from '../location.ts';
+import { recoverFromDefeat, validateSave, type GameState } from '../state.ts';
 import { validateHabiticaProfile } from './mapping.ts';
 import { creditXp, grantGlims, grantWelcome, lifetimeXp } from '../glims.ts';
 import type {
@@ -63,15 +63,12 @@ export class SyncRejectedError extends Error {
  * Matches the server's `rules.IsSafeArea`. A cottage is part of its
  * homestead (the save keeps saying `home:<g>` inside one).
  */
-const SAFE_AREAS: readonly string[] = ['village', 'commons'];
-
-export function isSafeArea(area: string): boolean {
-  const root = rootArea(area);
-  return SAFE_AREAS.includes(root) || HOME_AREA_RE.test(root);
+export function isSafeArea(area: string, position = { x: 0, y: 0 }): boolean {
+  return at(area, position.x, position.y).safe;
 }
 
 export function isSafeBoundary(state: GameState): boolean {
-  return isSafeArea(state.area);
+  return at(state.area, state.position.x, state.position.y).sync;
 }
 
 /**
