@@ -336,14 +336,13 @@ export function sceneryOf(o: FixedObject): ScenerySpot | null {
 }
 
 /**
- * An exit or gate as a way out, in world tiles (null for a way to the open
- * map itself: the joined footprint is walked into, not through a portal).
+ * An exit or gate as a way out, in world tiles (null without exit data).
  * Its arrival is the destination's own tile, as the layout names it; its
  * side, the footprint edge it is nearest.
  */
 export function exitOf(o: FixedObject, fp: Pick<FixedFootprint, 'tx' | 'ty' | 'w' | 'h'>): ExitDef | null {
   const e = o.exit
-  if (!e || e.to === 'outdoors') return null
+  if (!e) return null
   const side = o.tw > o.th ? (o.ty - fp.ty < fp.h / 2 ? 'north' : 'south') : o.tx - fp.tx < fp.w / 2 ? 'west' : 'east'
   return { tx: o.tx, ty: o.ty, tw: o.tw, th: o.th, to: e.to, entry: { tx: e.entryTx, ty: e.entryTy }, side, ...(e.unlabelled ? { label: null } : {}) }
 }
@@ -388,14 +387,14 @@ export function commonsLane(): CommonsLane | null {
 
 /**
  * The residents posted on fixed ground (Silas by his sawhorse, Elara at her
- * camp), in world tiles, once the chunks are here. The open map stands them
- * for its whole scene for now; per-chunk residents come with lane S5b.
+ * camp), in world tiles, once the chunks are here. A chunk asks only for
+ * its own posts while it attaches.
  */
-export function fixedNpcs(): NpcSpot[] {
+export function fixedNpcs(key?: string): NpcSpot[] {
   const out: NpcSpot[] = []
   for (const fp of footprints.values())
-    for (const list of fp.objects.values())
-      for (const o of list) if (o.kind === 'npc-post') out.push({ id: o.npc as NpcId, tx: o.tx, ty: o.ty, ...(o.spot ? { spot: o.spot } : {}) })
+    for (const [k, list] of fp.objects)
+      for (const o of list) if ((!key || key === k) && o.kind === 'npc-post') out.push({ id: o.npc as NpcId, tx: o.tx, ty: o.ty, ...(o.spot ? { spot: o.spot } : {}) })
   return out
 }
 

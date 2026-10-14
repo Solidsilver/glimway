@@ -4,7 +4,7 @@
       "id": "commons",
       "name": "the Commons",
       "layout": "commons",
-      "revision": 2,
+      "revision": 3,
       "origin": { "tx": -21, "ty": 24 },
       "cx": -1,
       "cy": 1,

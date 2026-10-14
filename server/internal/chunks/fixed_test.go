@@ -22,6 +22,7 @@ import (
 // keeps under the old pseudo-epoch: bump the revision (layout and
 // places.json), then add the new revision's sum here.
 var fixedGolden = map[string]string{
+	"fixed:commons@3": "94c62797a42d53ccc90c047743df49173d05cc7c6046d3234a0160fb27a33597", // S5b: the arch is a walk, with no dead exit
 	"fixed:commons@1": "31bb7cef34f631043f12fb88bee3a523bf875837c9c6d1add88ea5e7f66daf76",
 	"fixed:commons@2": "01b51ecf0b5618817193a9be2a6689c2f79780b38ca539046b3d419668caf728", // S3: the arch leads outdoors
 }
@@ -147,7 +148,7 @@ func TestValidateFixedChunks(t *testing.T) {
 		"object id twice":   func(c *contract.WorldChunk) { c.Objects[1].Id = c.Objects[0].Id },
 		"object without id": func(c *contract.WorldChunk) { c.Objects[0].Id = "" },
 	} {
-		c := proto.Clone(Fixed(FixedEpoch("commons", 2), 0, 1)).(*contract.WorldChunk)
+		c := proto.Clone(Fixed(FixedEpoch("commons", 3), 0, 1)).(*contract.WorldChunk)
 		edit(c)
 		if Validate(c) == nil {
 			t.Errorf("%s: accepted", name)
@@ -324,7 +325,7 @@ func TestServedCommonsEdgesAndGates(t *testing.T) {
 		}
 	}
 	gates := content.GateCapacity(f)
-	if len(exits) != gates+2 || exits["exit:village"] != "village" || exits["exit:arch"] != "outdoors" {
+	if len(exits) != gates+1 || exits["exit:village"] != "village" {
 		t.Fatalf("ways out: %v", exits)
 	}
 	for g := range gates {

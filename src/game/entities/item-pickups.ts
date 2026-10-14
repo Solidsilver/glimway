@@ -8,6 +8,7 @@
  * It registers `pickup:*` points (./interactables). Worlds only:
  * a guest has nowhere to keep a tool, so nothing lies here for them.
  */
+import { FixedScope } from '../wilds/fixed-scope'
 import type Phaser from 'phaser'
 import { pickupsIn, type ItemPickup } from '../../lib/items'
 import { bus, EV } from '../events'
@@ -37,10 +38,23 @@ interface Lying {
 }
 
 export class ItemPickups {
+  private scope: FixedScope
+
+  attachChunk(key: string): void {
+    this.scope.keys.add(key)
+    this.sync()
+  }
+
+  detachChunk(key: string): void {
+    this.scope.keys.delete(key)
+    this.sync()
+  }
+
   private lying = new Map<string, Lying>()
   private busy = false
 
   constructor(private scene: Phaser.Scene, private deps: ItemPickupDeps) {
+    this.scope = new FixedScope(!!deps.world.open)
     const items = itemsFor(deps.session)
     const sync = () => {
       if (scene.sys?.isActive()) this.sync()
@@ -86,7 +100,7 @@ export class ItemPickups {
   private sync(): void {
     const { session, world } = this.deps
     const items = itemsFor(session)
-    const want = session.link && items.view ? pickupsIn(world.areaId, items.pickedUp()) : []
+    const want = session.link && items.view ? pickupsIn(world.areaId, items.pickedUp()).filter((p) => this.scope.has(p.tx, p.ty)) : []
     const ids = new Set(want.map((p) => p.id))
     for (const id of [...this.lying.keys()]) if (!ids.has(id)) this.remove(id)
     for (const p of want) if (!this.lying.has(p.id)) this.place(p)
@@ -133,7 +147,9 @@ export class ItemPickups {
     const l = this.lying.get(id)
     if (!l) return
     l.timer?.remove()
-    if (this.deps.reducedMotion) {
+    this.scene.tweens.killTweensOf(l.twinkle)
+    if (this.deps.reducedMotion || this.deps.world.open) {
+      this.scene.tweens.killTweensOf(l.image)
       l.image.destroy()
       l.twinkle.destroy()
     } else {

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from './fixtures'
-import { serverState, sql, accountOf, CONTRACT, served, reenter, seedStory } from './connected'
+import { serverState, sql, accountOf, CONTRACT, served, reenter, seedStory, waitForWorld } from './connected'
 import { readFileSync } from 'node:fs'
 import { COMMONS_ORIGIN, commonsTile, inCommons, waitForArea, waitForLive, player, expectAreaCard, expectToast, SERVER_ANSWER_MS } from './helpers'
 import { area, earnGlims, freshPlayer, fund, go, homeAt, homes, hurt, landOf, lane, myHome, place, readOn, shot, silasSays, talk, throughGate, type Home, DEED_BOUGHT, yardBuild, pellSays, DEEDS, AT_PELL, manageDeed, giveUpPlace } from './home-helpers'
@@ -147,8 +147,12 @@ test('the Commons: a save in a walled-in pocket of the woods stands on reached g
   expect(pocket, 'the layout has a walled-in pocket').not.toBeNull()
   const [px, py] = pocket!
   const at = commonsTile(px, py)
+  // Stop the live scene's position reports before seeding its replacement save.
+  await page.goto('about:blank')
   seedStory(id, { place: { area: 'outdoors', x: at.tx * 16 + 8, y: at.ty * 16 + 8 } })
-  await reenter(page, 'outdoors')
+  await page.goto('/')
+  await page.getByTestId('continue-world').click()
+  await waitForWorld(page, 'outdoors')
   const back = commonsKey(await player(page))
   expect(back).not.toBe(`${px},${py}`)
   expect(reach.has(back), 'a pocket save recovers to reached ground').toBe(true)

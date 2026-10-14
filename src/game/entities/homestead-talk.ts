@@ -265,7 +265,7 @@ export class HomesteadTalk {
         CARTING_DAY_NOTICE
       ])
     })
-    out.push({ id: 'home:board', ...at(f.board, 2), label: 'Read the notice board', verb: 'Look', markerOffset: 32, activate: openBoard })
+    out.push({ id: 'home:board', ...at(f.board, 2), label: 'Read the notice board', verb: 'Look', marker: () => this.home.village.calendar.notice ? 'talk' : null, markerOffset: 32, activate: openBoard })
     out.push({
       id: 'home:well',
       ...at({ tx: f.well.tx, ty: f.well.ty }, 4),

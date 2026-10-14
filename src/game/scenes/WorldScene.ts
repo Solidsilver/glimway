@@ -59,6 +59,7 @@ import { homeLights } from '../../lib/homestead-land'
 import { homesteadsFor } from '../homestead'
 import { prepareHomeLand } from '../homeland'
 import { commonsLane } from '../wilds/fixed'
+import { FixedLife } from '../wilds/fixed-life'
 import { isSafeArea } from '../../lib/habitica/sync'
 import { fingerInBracken } from '../../lib/quests'
 import { OUTDOORS_AREA, isWildsArea, chunkOfPixel, chunkKey } from '../wilds/coords'
@@ -261,7 +262,7 @@ export class WorldScene extends Phaser.Scene {
     // Everything the action button can be used on registers here (entities/interactables).
     this.interactables = new Interactables(this, { reducedMotion: this.reducedMotion })
     const papers = new PaperPickups(this, { world: this.world, session: this.session, fx: this.fx, reducedMotion: this.reducedMotion, interactables: this.interactables })
-    new WorldTalk({ world: this.world, session: this.session, village: villageFor(this.session), interactables: this.interactables, papers })
+    const talk = new WorldTalk({ world: this.world, session: this.session, village: villageFor(this.session), interactables: this.interactables, papers })
     this.hero = new Hero(
       this,
       {
@@ -293,7 +294,7 @@ export class WorldScene extends Phaser.Scene {
     this.session.link?.arrived()
     this.avatar = new AvatarVisual(this, { session: this.session, world: this.world, hero: () => this.hero, reducedMotion: this.reducedMotion, live: () => this.worldLive(), baySpot: (mount) => this.homesteads?.baySpot(mount) ?? null })
     this.offHand = new OffHandVisual(this, this.session, () => this.hero, () => this.avatar)
-    this.npcs = new Npcs(this, this.world)
+    this.npcs = new Npcs(this, this.world, open ? this.solids.group : undefined)
     this.interactables.setAway((id) => this.npcs.away(id))
     this.interactables.setGone((id) => this.npcs.gone(id))
     this.projectiles = new Projectiles(this, this.fx, () => this.enemies)
@@ -311,9 +312,9 @@ export class WorldScene extends Phaser.Scene {
     )
     this.interactables.register(this.enemies, [this.enemies.warden.speakPoint()])
     // Village life (calendar, festivals, notice boards, project changes) everywhere.
-    new VillageLayer(this, { world: this.world, session: this.session, reducedMotion: this.reducedMotion, interactables: this.interactables })
+    const village = new VillageLayer(this, { world: this.world, session: this.session, reducedMotion: this.reducedMotion, interactables: this.interactables, schedule: (job) => this.window?.builds.add(job), unschedule: (job) => this.window?.builds.drop(job) })
     // Small world touches: smell the flowers, sit on a bench, read the signs.
-    new Touches({ world: this.world, interactables: this.interactables, hero: () => this.hero, fx: this.fx })
+    const touches = new Touches({ world: this.world, interactables: this.interactables, hero: () => this.hero, fx: this.fx })
     // Things lying about to pick up (a world's; the server keeps who took what).
     const pickups = new ItemPickups(this, { world: this.world, session: this.session, fx: this.fx, reducedMotion: this.reducedMotion, interactables: this.interactables })
     // The workable pieces (trees, boulders, stumps, patches) — wilds chunks,
@@ -407,6 +408,7 @@ export class WorldScene extends Phaser.Scene {
       npcs: this.npcs,
       reducedMotion: this.reducedMotion,
       block: (tx, ty, on) => {
+        this.npcs.block(tx, ty, on)
         for (const body of this.solids.props.get(tileKey(tx, ty)) ?? []) (body.body as Phaser.Physics.Arcade.StaticBody).enable = on
       },
       onScreen: (x, y) => this.cameras.main.worldView.contains(x, y)
@@ -432,6 +434,7 @@ export class WorldScene extends Phaser.Scene {
         interactables: this.interactables,
         hero: () => this.hero.sprite
       }))
+      const fixedLife = new FixedLife({ world: this.world, npcs: this.npcs, cycle, talk, pickups, papers, repairs, touches, village, homes: () => this.homesteads?.fixedHooks ?? null })
       this.window = new WildsWindow({
         scene: this,
         session: this.session,
@@ -450,7 +453,7 @@ export class WorldScene extends Phaser.Scene {
         hero: () => this.hero.sprite,
         interactables: this.interactables,
         enter: (room) => this.goIn(room),
-        hooks: () => this.homesteads?.fixedHooks ?? null
+        hooks: () => fixedLife
       })
       // ?perf=1 samples the open map's display list and tweens (src/game/perf.ts).
       perfWatch(this)

@@ -17,6 +17,7 @@
  * draws it and turns presses into actions. Everything it draws is rebuilt
  * when that data changes.
  */
+import { FixedScope } from '../wilds/fixed-scope'
 import Phaser from 'phaser'
 import { parseHomeArea } from '../../lib/homestead'
 import { clearable, servedLand } from '../../lib/homestead-land'
@@ -26,7 +27,7 @@ import { homeBay, type BayWalk } from '../../lib/stable-layout'
 import { type SeatPose } from '../seats'
 import { bus, EV } from '../events'
 import type { Session } from '../session'
-import { tileCenter, tileFeet, tileKey, tileMid } from '../../lib/tile'
+import { TILE, tileCenter, tileFeet, tileKey, tileMid } from '../../lib/tile'
 import type { WorldData } from '../worlds'
 import type { CommonsLane } from '../wilds/fixed'
 import type { FixedHooks } from '../wilds/fixed-chunk'
@@ -340,7 +341,7 @@ export class HomesteadLayer {
         this.recheckAt(nextHomecoming(this.here()?.stalls ?? [], this.homes.myId, homeward, Date.now()))
       } else this.art.drawRoom()
     }
-    this.deps.interactables.register(this, this.talk.interactionList())
+    this.publishInteractions()
     if (this.arranging.placement) this.arranging.refreshPlacement()
   }
 
@@ -424,9 +425,29 @@ export class HomesteadLayer {
    * The open map's fixed chunks attach and detach the lane's fixtures they
    * own: the gates' signs and shelves, the hame (../wilds/fixed-chunk.ts).
    */
+  private fixedScope = new FixedScope(true)
+
+  private publishInteractions(): void {
+    const points = this.talk.interactionList().filter((p) => !this.commons || this.fixedScope.has(Math.floor(p.x / TILE), Math.floor((p.y - 8) / TILE)))
+    this.deps.interactables.register(this, points)
+  }
+
+  attachFixedChunk(key: string): (() => void)[] {
+    return [...this.art.attachChunk(key), () => {
+      this.fixedScope.keys.add(key)
+      this.publishInteractions()
+    }]
+  }
+
+  detachFixedChunk(key: string): void {
+    this.fixedScope.keys.delete(key)
+    this.art.detachChunk(key)
+    this.publishInteractions()
+  }
+
   readonly fixedHooks: FixedHooks = {
-    attach: (key) => this.art.attachChunk(key),
-    detach: (key) => this.art.detachChunk(key)
+    attach: (key) => this.attachFixedChunk(key),
+    detach: (key) => this.detachFixedChunk(key)
   }
 
   /** Per frame: the way to your gate, and whether the hero may arrange their place. */

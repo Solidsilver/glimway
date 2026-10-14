@@ -9,13 +9,15 @@
  * them there: absent, they're hidden; at a change they walk a short path
  * (`walkPath`) and fade.
  */
+import { staticBox } from '../area/collision'
+import { destroyStatics, enableStatics } from '../area/bulk'
 import type Phaser from 'phaser'
 import { tileBottom, tileMid } from '../../lib/tile'
 import { commonsAnim, commonsArt } from '../commons-pass'
 import { isResident, residentName, RESIDENT_IDS } from '../../content/residents'
 import { BUILDER_NPC_DATA } from '../../content/expansion-writing'
 import { PELL } from '../../content/pell'
-import type { InteractId, WorldData } from '../worlds'
+import type { InteractId, NpcSpot, WorldData } from '../worlds'
 import { PEOPLE_KEY, hasPerson, peopleDensity, personAnim, sitFrame } from '../people'
 import type { PersonId } from '../atlas-plan'
 import { NPC_SPEED, ROUTINES, atHome, newWalker, tickWalker, type Walker } from '../npc-routines'
@@ -67,6 +69,8 @@ export interface NpcEntity {
   spot: string | null
   /** Here now (a resident whose cycle is elsewhere is hidden, and can't be talked to). */
   present: boolean
+  /** A fixed resident's body belongs to the chunk with their spot. */
+  body?: Phaser.Physics.Arcade.Image
   /** Sits at their spot (Elara at her desk): the sit pose, behind the furniture, no routine. */
   seated?: boolean
   /** Walking a scripted path (the cycle's walk to a door, or in from it): points left, then what to do. */
@@ -77,11 +81,17 @@ export class Npcs {
   readonly npcs: NpcEntity[] = []
   private readonly still = prefersReducedMotion()
 
-  constructor(scene: Phaser.Scene, private world: WorldData) {
-    const k = peopleDensity(scene)
+  constructor(private scene: Phaser.Scene, private world: WorldData, private solids?: Phaser.Physics.Arcade.StaticGroup) {
     // Read-only, for playtests: the walking residents' poses.
     expose('__fsNpcs', () => this.view(), scene)
-    for (const n of world.npcs) {
+    this.add(world.npcs)
+  }
+
+  add(spots: readonly NpcSpot[]): void {
+    const scene = this.scene
+    const k = peopleDensity(scene)
+    const before = this.npcs.length
+    for (const n of spots) {
       const x = tileMid(n.tx)
       const y = tileBottom(n.ty)
       if (k && hasPerson(scene, n.id)) {
@@ -118,6 +128,29 @@ export class Npcs {
           ease: 'Sine.easeInOut'
         })
       }
+    }
+    for (const n of this.npcs.slice(before)) {
+      n.home ??= { x: n.sprite.x, y: n.sprite.y }
+      if (this.solids) {
+        n.body = staticBox(scene, n.home.x, n.home.y - 3, 12, 6)
+        enableStatics(scene.physics.world as never, this.solids as never, [n.body] as never)
+      }
+    }
+  }
+
+  block(tx: number, ty: number, on: boolean): void {
+    for (const n of this.npcs) if (n.body && n.home?.x === tileMid(tx) && n.home.y === tileBottom(ty)) (n.body.body as Phaser.Physics.Arcade.StaticBody).enable = on
+  }
+
+  remove(ids: readonly string[]): void {
+    for (let i = this.npcs.length - 1; i >= 0; i--) {
+      const n = this.npcs[i]!
+      if (!ids.includes(n.id)) continue
+      this.scene.tweens.killTweensOf(n.sprite)
+      n.path = undefined
+      if (n.body && this.solids) destroyStatics(this.scene.physics.world as never, this.solids as never, [n.body] as never)
+      n.sprite.destroy()
+      this.npcs.splice(i, 1)
     }
   }
 

@@ -69,6 +69,11 @@ function withChoice(d: Dialogue, choice: DialogueChoice): Dialogue {
 
 export class WorldTalk {
   constructor(private deps: WorldTalkDeps) {
+    this.refresh()
+  }
+
+  refresh(): void {
+    const deps = this.deps
     const { world } = deps
     const points: Interactable[] = []
     for (const n of world.npcs) {

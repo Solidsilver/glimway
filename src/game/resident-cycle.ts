@@ -71,8 +71,11 @@ export function doorFor(id: string, area: string, other: string): { step: { tx: 
     return { step, door: { tx: x, ty: y } }
   }
   const home = residentById(id)?.home
-  const front = home ? roomFor(home)?.doors.find((d) => d.kind === 'door' && d.to === area && d.outside) : null
-  return front?.outside ? { step: { tx: front.entry.tx, ty: front.entry.ty }, door: { tx: front.outside.tx, ty: front.outside.ty } } : null
+  const front = home ? roomFor(home)?.doors.find((d) => d.kind === 'door' && (d.to === area || resolve(d.to, d.entry.tx, d.entry.ty).space === area) && d.outside) : null
+  if (!front?.outside) return null
+  const step = resolve(front.to, front.entry.tx, front.entry.ty)
+  const door = resolve(front.to, front.outside.tx, front.outside.ty)
+  return { step: { tx: step.tx, ty: step.ty }, door: { tx: door.tx, ty: door.ty } }
 }
 
 /** A straight two-leg walk (across, then up or down: the last leg meets a door head on), in feet px. */
@@ -101,6 +104,11 @@ export class ResidentCycle {
     // Where the clock says, at once.
     for (const n of this.cycled()) this.place(n, this.due(n))
     scene.time.addEvent({ delay: 1000, loop: true, callback: () => this.check() })
+  }
+
+  /** Newly attached residents start at the clock's spot, without an arrival walk. */
+  attach(ids: readonly string[]): void {
+    for (const n of this.cycled()) if (ids.includes(n.id)) this.place(n, this.due(n))
   }
 
   /** Called after anyone comes or goes (the room's lights, the smoke outside). */

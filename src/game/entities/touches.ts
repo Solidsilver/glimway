@@ -14,7 +14,7 @@ import { FLOWER_LINES, SIT_LINES, nextLine, signCopy } from '../../content/touch
 import { bus, EV } from '../events'
 import { TERRAIN, tileBottom, tileMid } from '../../lib/tile'
 import { sfx } from '../sfx'
-import type { InteractId, PropSpot, WorldData } from '../worlds'
+import type { ExitDef, InteractId, PropSpot, WorldData } from '../worlds'
 import type { Interactable, Interactables } from './interactables'
 import type { Hero } from './hero'
 import type { Effects } from './fx'
@@ -62,6 +62,26 @@ export class Touches {
   constructor(private deps: TouchesDeps) {
     this.build(deps.world)
     deps.interactables.register(this, this.points)
+  }
+
+  /** A fixed exit's read belongs to its source chunk, even when the post leans across its edge. */
+  attachChunk(owner: object, exits: readonly ExitDef[], height: number, place: string): void {
+    const points = this.points
+    this.points = []
+    for (const e of exits) this.exit(e, height, place)
+    this.deps.interactables.register(owner, this.points)
+    this.points = points
+  }
+
+  detachChunk(owner: object): void {
+    this.deps.interactables.register(owner, [])
+  }
+
+  private exit(e: ExitDef, height: number, place: string): void {
+    const at = gateSignAt({ height }, e)
+    if (!at) return
+    const { x, y } = at
+    this.add(`touch:sign:gate:${e.tx},${e.ty}` as InteractId, x, y, 'Read the sign', { kind: 'sign', x, y, signKey: `gate:${place}:${e.to}` })
   }
 
   // ------------------------------------------------------------ the touches
@@ -126,17 +146,7 @@ export class Touches {
     // Exit signs: the post each named edge exit's label stands on (../area/exits.ts),
     // inside the map edge so reading one doesn't walk you out (a room's doorway
     // and stairs have no sign to read).
-    for (const e of w.exits) {
-      const at = gateSignAt(w, e)
-      if (!at) continue
-      const { x, y } = at
-      this.add(`touch:sign:gate:${e.tx},${e.ty}` as InteractId, x, y, 'Read the sign', {
-        kind: 'sign',
-        x,
-        y,
-        signKey: `gate:${w.areaId}:${e.to}`
-      })
-    }
+    for (const e of w.exits) this.exit(e, w.height, w.areaId)
   }
 
   /** The props that can be touched: benches, planters, milestones, signs. */

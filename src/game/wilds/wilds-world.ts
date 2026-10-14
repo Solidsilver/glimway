@@ -14,7 +14,7 @@ import { groundAt, solidAt } from './ground-view.ts'
 import { wildsFrontier } from './store.ts'
 import { loadWilds } from '../../lib/wilds/data.ts'
 import { PLACES, fixedChunks } from '../../lib/places.ts'
-import { anchorTile, fixedGroundAt, fixedNpcs, fixedPlaceOf, fixedSolidAt, fixedStand, footprintAt } from './fixed.ts'
+import { anchorTile, fixedGroundAt, fixedPlaceOf, fixedSolidAt, fixedStand, footprintAt } from './fixed.ts'
 import { nearestOpen } from './window-plan.ts'
 
 /** How far past the frontier the camera may look (the drift and its glimpse), in px. */
@@ -107,7 +107,7 @@ export function buildWildsWorld(): WorldData {
     bushes: [],
     rocks: [],
     // The Commons' residents (scene-wide until residents attach per chunk: S5b).
-    npcs: fixedNpcs(),
+    npcs: [],
     enemies: [],
     exits: [],
     props: [],
