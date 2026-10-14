@@ -1,3 +1,4 @@
+import { homeDoorstep } from '../src/lib/lots.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ROOMS as ROOM_DATA, knownRoom, roomFor, roomParent, rootArea } from '../src/lib/rooms.ts';
@@ -11,7 +12,6 @@ import { SEATED_MANA_BONUS, manaRegenRate } from '../src/game/seats.ts';
 import { residentAt } from '../src/lib/residents.ts';
 import { doorFor, residentPlace, residentIn, twoLegs } from '../src/game/resident-cycle.ts';
 import { ROOM_ENTRY, homeRoomArea, parseHomeRoom } from '../src/game/cottage.ts';
-import { landDoor } from '../src/game/homeland.ts';
 import { roomZoomFor, zoomFor } from '../src/game/viewport.ts';
 import { isPresenceArea, presenceAreaFor } from '../src/lib/presence-client.ts';
 import { isSafeArea } from '../src/lib/habitica/sync.ts';
@@ -149,8 +149,8 @@ test('the cottage is the place in:home:<gate>: in by its door, out onto the land
   assert.equal(w.areaId, 'in:home:7');
   assert.deepEqual(w.spawn, ROOM_ENTRY);
   const out = w.exits[0];
-  assert.equal(out.to, 'home:7');
-  assert.deepEqual(out.entry, landDoor().doorstep);
+  assert.equal(out.to, 'outdoors');
+  assert.deepEqual(out.entry, homeDoorstep(7));
   assert.equal(out.side, 'south');
   assert.equal(out.kind, 'door');
 });

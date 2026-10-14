@@ -75,7 +75,7 @@ test('Commons and homesteads are safe, Wilds is unsafe, and home rest retains ea
 });
 
 test('gate tiles are where the Commons map draws them (same table as the Go test)', () => {
-  const want = [[19, 9], [28, 9], [19, 13], [28, 13], [19, 28], [28, 28], [19, 33], [28, 33], [19, 38], [28, 38], [19, 43]];
+  const want = [[-61,43],[-37,43],[-61,67],[-37,67],[-61,91],[-37,91],[-61,115],[-37,115]];
   want.forEach(([tx, ty], g) => assert.deepEqual([gateTile(g).tx, gateTile(g).ty], [tx, ty], `gate ${g}`));
   assert.equal(HOMESTEAD_DATA.commons.tileSize, 16);
 });
@@ -100,7 +100,7 @@ test('the local placement check mirrors the server rules', () => {
   assert.equal(checkPlacement(home, fern, 'outdoor', s.x - 3, s.y + 3, 0), null);
   assert.equal(checkPlacement(home, fern, 'outdoor', HOMESTEAD_DATA.land.width, 0, 0), 'out-of-bounds');
   assert.equal(checkPlacement(home, fern, 'outdoor', s.x, s.y, 0), 'placement-overlap'); // the home site
-  assert.equal(checkPlacement(home, fern, 'outdoor', 2, 2, 0), 'unlit');
+  assert.equal(checkPlacement(home, fern, 'outdoor', 2, 2, 0), 'placement-overlap');
   assert.equal(checkPlacement(home, fern, 'indoor', 0, 1, 0), 'placement-overlap'); // the chair
   assert.equal(checkPlacement(home, fern, 'indoor', 5, 9, 0), 'placement-overlap'); // the doorway
   assert.equal(checkPlacement(home, chair, 'outdoor', 0, 0, 0), 'invalid-placement');

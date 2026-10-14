@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"glimway/content"
+	"google.golang.org/protobuf/encoding/protojson"
 	"maps"
 	"os"
 	"slices"
@@ -29,7 +30,14 @@ func TestGoldenLands(t *testing.T) {
 	if err = json.Unmarshal(b, &lands); err != nil || len(lands) == 0 {
 		t.Fatal("goldens", err)
 	}
-	cfg := content.HomeRules.GetLand()
+	cfg := &content.HomeLand{}
+	old, err := os.ReadFile("testdata/generator-1.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = protojson.Unmarshal(old, cfg); err != nil {
+		t.Fatal(err)
+	}
 	for _, l := range lands {
 		if s := Seed(l.WorldID, l.Gate, cfg); s != l.Seed {
 			t.Fatalf("seed %s/%d: %d want %d", l.WorldID, l.Gate, s, l.Seed)

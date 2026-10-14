@@ -137,6 +137,8 @@ func (a *Server) homeMutation(w http.ResponseWriter, r *http.Request) error {
 	// A leave changes the leaver's avatar (the choices gated away, the mount
 	// home) and empties their stalls: their room and the stable's land hear it.
 	var account string
+	var changedWorld string
+	changedGate := -1
 	var avatar *presenceAvatarMsg
 	var room presenceRoom
 	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
@@ -149,6 +151,7 @@ func (a *Server) homeMutation(w http.ResponseWriter, r *http.Request) error {
 			return nil, err
 		}
 		var instanceID, status string
+		changedWorld = s.WorldID
 		switch op {
 		case "claim":
 			err = a.claim(ctx, tx, s, &req, member, now)
@@ -162,6 +165,7 @@ func (a *Server) homeMutation(w http.ResponseWriter, r *http.Request) error {
 			if h, err = loadHome(ctx, tx, homeID, s.AccountID, now); err != nil {
 				return nil, err
 			}
+			changedGate = h.Gate
 			switch op {
 			case "upgrade":
 				err = upgradeHome(ctx, tx, s, h, &req, now)
@@ -195,6 +199,7 @@ func (a *Server) homeMutation(w http.ResponseWriter, r *http.Request) error {
 		}
 		result := &contract.HomesteadResult{Materials: materialCountsProto(m), ItemId: instanceID, Status: status}
 		if home != nil {
+			changedGate = home.Gate
 			result.Home = homeViewProto(*home)
 		}
 		return mixedOpResult(result)
@@ -202,5 +207,6 @@ func (a *Server) homeMutation(w http.ResponseWriter, r *http.Request) error {
 		if avatar != nil {
 			a.avatarChanged(account, avatar, room)
 		}
+		a.homeChanged(changedWorld, changedGate)
 	})
 }

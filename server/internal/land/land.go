@@ -63,15 +63,21 @@ func Generate(seed uint32, cfg *content.HomeLand) Land {
 		}
 	}
 	protected := func(x, y int) bool {
-		return (x >= int(site.GetX())-1 && x <= int(site.GetX())+int(site.GetW()) && y >= int(site.GetY())-1 && y <= siteBottom) ||
+		return (cfg.GetGenerator() == 2 && (x < 3 || x > 20 || y < 2 || y > 18 || x == 13 && y == 18)) || (x >= int(site.GetX())-1 && x <= int(site.GetX())+int(site.GetW()) && y >= int(site.GetY())-1 && y <= siteBottom) ||
 			(x >= int(gate.GetX())-1 && x <= int(gate.GetX())+int(gate.GetW()) && y >= siteBottom)
 	}
 	rng := wilds.NewRng(seed)
 	if rng.NextInt(1000) < int(cfg.GetStreamPermille()) {
 		side := rng.NextInt(2)
 		lo, hi := 2, 9
+		if cfg.GetGenerator() == 2 {
+			lo, hi = 3, 6
+		}
 		if side != 0 {
 			lo, hi = W-10, W-3
+			if cfg.GetGenerator() == 2 {
+				lo, hi = 17, 20
+			}
 		}
 		x := lo + rng.NextInt(hi-lo+1)
 		ford := 3 + rng.NextInt(H-6)

@@ -818,7 +818,7 @@ func TestTheStablesLandHearsTheMountGoAndCome(t *testing.T) {
 	x.pinWorld(&a)
 	h, x0, y0 := standingStable(x, ac, &a, 1)
 	x.companionOp("POST", "/api/stable/stall", body(a, "in", map[string]any{"homeId": h.ID, "stall": 1, "mount": "Wolf-Shade"}), ac, 200)
-	land := fmt.Sprintf("home:%d", h.Gate)
+	land := "outdoors:-2:1"
 	visitor := x.peerAt("visitor", a.WorldID, land)
 	away := x.peerAt("away", a.WorldID, "village")
 	otherWorld := x.peerAt("other-world", "elsewhere", land)
@@ -914,7 +914,7 @@ func TestTheLandHearsALeaveButNotAnEmptyGoHome(t *testing.T) {
 	x.pinWorld(&a)
 	h, x0, y0 := standingStable(x, ac, &a, 1)
 	x.companionOp("POST", "/api/stable/stall", body(a, "in", map[string]any{"homeId": h.ID, "stall": 1, "mount": "Wolf-Shade"}), ac, 200)
-	visitor := x.peerAt("visitor", a.WorldID, fmt.Sprintf("home:%d", h.Gate))
+	visitor := x.peerAt("visitor", a.WorldID, "outdoors:-2:1")
 	drain := func() {
 		for len(visitor.queue) > 0 {
 			<-visitor.queue

@@ -96,6 +96,12 @@ export declare type PresenceMessage = Message<"glimway.v2.PresenceMessage"> & {
     case: "avatarChange";
   } | {
     /**
+     * @generated from field: glimway.v2.PresenceHomeChanged home_changed = 18;
+     */
+    value: PresenceHomeChanged;
+    case: "homeChanged";
+  } | {
+    /**
      * @generated from field: glimway.v2.FightSwing fight_swing = 13;
      */
     value: FightSwing;
@@ -210,6 +216,12 @@ export declare type PresenceMessageValid = Message<"glimway.v2.PresenceMessage">
      */
     value: PresenceAvatarChangeValid;
     case: "avatarChange";
+  } | {
+    /**
+     * @generated from field: glimway.v2.PresenceHomeChanged home_changed = 18;
+     */
+    value: PresenceHomeChangedValid;
+    case: "homeChanged";
   } | {
     /**
      * @generated from field: glimway.v2.FightSwing fight_swing = 13;
@@ -526,6 +538,24 @@ export declare const PresenceAbilitySchema: GenMessage<PresenceAbility, {validTy
  * mount-home commit. The server is the only writer of PresenceAvatar's
  * selected_pet and selected_mount.
  *
+ * @generated from message glimway.v2.PresenceHomeChanged
+ */
+export declare type PresenceHomeChanged = Message<"glimway.v2.PresenceHomeChanged"> & {
+  /**
+   * @generated from field: uint32 gate = 1;
+   */
+  gate: number;
+};
+
+export declare type PresenceHomeChangedValid = PresenceHomeChanged;
+
+/**
+ * Describes the message glimway.v2.PresenceHomeChanged.
+ * Use `create(PresenceHomeChangedSchema)` to create a new message.
+ */
+export declare const PresenceHomeChangedSchema: GenMessage<PresenceHomeChanged, {validType: PresenceHomeChangedValid}>;
+
+/**
  * @generated from message glimway.v2.PresenceAvatarChange
  */
 export declare type PresenceAvatarChange = Message<"glimway.v2.PresenceAvatarChange"> & {

@@ -33,7 +33,7 @@ func gatherCaps(action string) (visit, day int) {
 // ownLand: the caller's homestead when `area` is its land (nil, refused,
 // for anyone else's: visiting is read-only).
 func ownLand(ctx context.Context, tx *sql.Tx, s *store.Snapshot, area string, now int64, refusal string) (*homeView, error) {
-	gate := rules.HomeGate(area)
+	gate := homeGateAt(s)
 	if gate < 0 {
 		return nil, fail(409, refusal)
 	}
@@ -189,7 +189,7 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 	var home *homeView
 	var tile [2]int
 	lit := false
-	if rules.HomeGate(area) >= 0 {
+	if homeGateAt(s) >= 0 && (area == outdoorsArea || rules.HomeGate(area) >= 0) {
 		var err error
 		if home, err = ownLand(ctx, tx, s, area, now, "cannot-gather-here"); err != nil {
 			return chunkError(err)
@@ -201,6 +201,7 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 		if !nearPiece(s, area, tile[0], tile[1]) {
 			return fail(409, "too-far-away")
 		}
+		tile[0], tile[1] = localHomeTile(s, tile[0], tile[1])
 		lit = land.Lit(connectedLights(placedItems(*home), ""), tile[0], tile[1])
 		if !homeTarget(landKind(*home, tile[0], tile[1]), req.Target, req.Action, lit) {
 			return fail(409, "cannot-gather-here")

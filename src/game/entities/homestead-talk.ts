@@ -179,8 +179,8 @@ export class HomesteadTalk {
       if (!home) {
         out.push({
           id: 'home:stake',
-          x: (L.site.x + L.site.w / 2) * TILE,
-          y: (L.site.y + L.site.h - 1) * TILE + 2,
+          x: (L.gridOrigin?.x ?? 0) + (L.site.x + L.site.w / 2) * TILE,
+          y: (L.gridOrigin?.y ?? 0) + (L.site.y + L.site.h - 1) * TILE + 2,
           label: 'Read the sign',
           verb: 'Read',
           markerOffset: 16,
@@ -219,8 +219,8 @@ export class HomesteadTalk {
         if (it.itemDef !== POST || it.scene !== 'outdoor' || it.x === null || it.y === null) continue
         out.push({
           id: `home:post:${it.id}`,
-          x: tileMid(it.x),
-          y: tileBottom(it.y) + 2,
+          x: (L.gridOrigin?.x ?? 0) + tileMid(it.x),
+          y: (L.gridOrigin?.y ?? 0) + tileBottom(it.y) + 2,
           label: `Read the lamp${it.name ? `: ${short(it.name, 20)}` : ''}`,
           verb: 'Read',
           markerOffset: 36,

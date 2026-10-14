@@ -1788,6 +1788,7 @@ type CommonsResult struct {
 	GateCount     int32                  `protobuf:"varint,2,opt,name=gate_count,json=gateCount,proto3" json:"gate_count,omitempty"`
 	Mine          *CommonsMine           `protobuf:"bytes,3,opt,name=mine,proto3" json:"mine,omitempty"`
 	Invites       []*DeedInvite          `protobuf:"bytes,4,rep,name=invites,proto3" json:"invites,omitempty"`
+	Homes         []*HomeView            `protobuf:"bytes,5,rep,name=homes,proto3" json:"homes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1846,6 +1847,13 @@ func (x *CommonsResult) GetMine() *CommonsMine {
 func (x *CommonsResult) GetInvites() []*DeedInvite {
 	if x != nil {
 		return x.Invites
+	}
+	return nil
+}
+
+func (x *CommonsResult) GetHomes() []*HomeView {
+	if x != nil {
+		return x.Homes
 	}
 	return nil
 }
@@ -2876,13 +2884,14 @@ const file_glimway_v1_village_proto_rawDesc = "" +
 	"\x0fto_confirmed_at\x18\a \x01(\v2\x1c.google.protobuf.DoubleValueR\rtoConfirmedAt\":\n" +
 	"\vCommonsMine\x12\x17\n" +
 	"\ahome_id\x18\x01 \x01(\tR\x06homeId\x12\x12\n" +
-	"\x04gate\x18\x02 \x01(\x05R\x04gate\"\xb9\x01\n" +
+	"\x04gate\x18\x02 \x01(\x05R\x04gate\"\xe5\x01\n" +
 	"\rCommonsResult\x12*\n" +
 	"\x05gates\x18\x01 \x03(\v2\x14.glimway.v1.GateViewR\x05gates\x12\x1d\n" +
 	"\n" +
 	"gate_count\x18\x02 \x01(\x05R\tgateCount\x12+\n" +
 	"\x04mine\x18\x03 \x01(\v2\x17.glimway.v1.CommonsMineR\x04mine\x120\n" +
-	"\ainvites\x18\x04 \x03(\v2\x16.glimway.v1.DeedInviteR\ainvites\"\xec\x04\n" +
+	"\ainvites\x18\x04 \x03(\v2\x16.glimway.v1.DeedInviteR\ainvites\x12*\n" +
+	"\x05homes\x18\x05 \x03(\v2\x14.glimway.v1.HomeViewR\x05homes\"\xec\x04\n" +
 	"\vProjectView\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
@@ -3110,31 +3119,32 @@ var file_glimway_v1_village_proto_depIdxs = []int32{
 	20, // 65: glimway.v1.CommonsResult.gates:type_name -> glimway.v1.GateView
 	22, // 66: glimway.v1.CommonsResult.mine:type_name -> glimway.v1.CommonsMine
 	21, // 67: glimway.v1.CommonsResult.invites:type_name -> glimway.v1.DeedInvite
-	36, // 68: glimway.v1.ProjectView.required:type_name -> glimway.v1.ProjectView.RequiredEntry
-	37, // 69: glimway.v1.ProjectView.contributed:type_name -> glimway.v1.ProjectView.ContributedEntry
-	38, // 70: glimway.v1.ProjectView.mine:type_name -> glimway.v1.ProjectView.MineEntry
-	46, // 71: glimway.v1.ProjectView.completed_at:type_name -> google.protobuf.DoubleValue
-	47, // 72: glimway.v1.ProjectView.world_flag:type_name -> google.protobuf.StringValue
-	24, // 73: glimway.v1.ProjectsResult.projects:type_name -> glimway.v1.ProjectView
-	43, // 74: glimway.v1.ContributeRequest.op:type_name -> glimway.v1.OpHeader
-	44, // 75: glimway.v1.ContributeRequest.where:type_name -> glimway.v1.Where
-	39, // 76: glimway.v1.ContributeRequest.materials:type_name -> glimway.v1.ContributeRequest.MaterialsEntry
-	24, // 77: glimway.v1.ContributeResult.projects:type_name -> glimway.v1.ProjectView
-	40, // 78: glimway.v1.ContributeResult.materials:type_name -> glimway.v1.ContributeResult.MaterialsEntry
-	28, // 79: glimway.v1.ChoreView.pos:type_name -> glimway.v1.RepairPos
-	29, // 80: glimway.v1.RepairsResult.open:type_name -> glimway.v1.ChoreView
-	30, // 81: glimway.v1.RepairsResult.mended:type_name -> glimway.v1.MendedView
-	31, // 82: glimway.v1.RepairsResult.history:type_name -> glimway.v1.ChoreHistoryView
-	43, // 83: glimway.v1.MendRequest.op:type_name -> glimway.v1.OpHeader
-	44, // 84: glimway.v1.MendRequest.where:type_name -> glimway.v1.Where
-	32, // 85: glimway.v1.MendResult.repairs:type_name -> glimway.v1.RepairsResult
-	34, // 86: glimway.v1.MendResult.gift:type_name -> glimway.v1.RepairGift
-	50, // 87: glimway.v1.MendResult.items:type_name -> glimway.v1.ItemsView
-	88, // [88:88] is the sub-list for method output_type
-	88, // [88:88] is the sub-list for method input_type
-	88, // [88:88] is the sub-list for extension type_name
-	88, // [88:88] is the sub-list for extension extendee
-	0,  // [0:88] is the sub-list for field type_name
+	41, // 68: glimway.v1.CommonsResult.homes:type_name -> glimway.v1.HomeView
+	36, // 69: glimway.v1.ProjectView.required:type_name -> glimway.v1.ProjectView.RequiredEntry
+	37, // 70: glimway.v1.ProjectView.contributed:type_name -> glimway.v1.ProjectView.ContributedEntry
+	38, // 71: glimway.v1.ProjectView.mine:type_name -> glimway.v1.ProjectView.MineEntry
+	46, // 72: glimway.v1.ProjectView.completed_at:type_name -> google.protobuf.DoubleValue
+	47, // 73: glimway.v1.ProjectView.world_flag:type_name -> google.protobuf.StringValue
+	24, // 74: glimway.v1.ProjectsResult.projects:type_name -> glimway.v1.ProjectView
+	43, // 75: glimway.v1.ContributeRequest.op:type_name -> glimway.v1.OpHeader
+	44, // 76: glimway.v1.ContributeRequest.where:type_name -> glimway.v1.Where
+	39, // 77: glimway.v1.ContributeRequest.materials:type_name -> glimway.v1.ContributeRequest.MaterialsEntry
+	24, // 78: glimway.v1.ContributeResult.projects:type_name -> glimway.v1.ProjectView
+	40, // 79: glimway.v1.ContributeResult.materials:type_name -> glimway.v1.ContributeResult.MaterialsEntry
+	28, // 80: glimway.v1.ChoreView.pos:type_name -> glimway.v1.RepairPos
+	29, // 81: glimway.v1.RepairsResult.open:type_name -> glimway.v1.ChoreView
+	30, // 82: glimway.v1.RepairsResult.mended:type_name -> glimway.v1.MendedView
+	31, // 83: glimway.v1.RepairsResult.history:type_name -> glimway.v1.ChoreHistoryView
+	43, // 84: glimway.v1.MendRequest.op:type_name -> glimway.v1.OpHeader
+	44, // 85: glimway.v1.MendRequest.where:type_name -> glimway.v1.Where
+	32, // 86: glimway.v1.MendResult.repairs:type_name -> glimway.v1.RepairsResult
+	34, // 87: glimway.v1.MendResult.gift:type_name -> glimway.v1.RepairGift
+	50, // 88: glimway.v1.MendResult.items:type_name -> glimway.v1.ItemsView
+	89, // [89:89] is the sub-list for method output_type
+	89, // [89:89] is the sub-list for method input_type
+	89, // [89:89] is the sub-list for extension type_name
+	89, // [89:89] is the sub-list for extension extendee
+	0,  // [0:89] is the sub-list for field type_name
 }
 
 func init() { file_glimway_v1_village_proto_init() }

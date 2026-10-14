@@ -81,6 +81,7 @@ export interface PresenceHandlers {
   /** Someone standing near you reached a story beat (the server says who and which). */
   witness?(w: { beat: string; accountId: string; name: string }): void;
   /** Someone's look changed: their follower, or the mount that's out (crafts.md 2.4, 3.4). */
+  homeChanged?(gate: number): void;
   avatarChange?(accountId: string, avatar: PresenceAvatar): void;
 }
 
@@ -499,6 +500,7 @@ export class PresenceClient {
           ...(m.pose ? { pose: m.pose } : {}),
         });
         break;
+      case 'homeChanged': this.handlers.homeChanged?.(m.gate); break;
       case 'avatarChange':
         this.handlers.avatarChange?.(m.accountId, m.avatar);
         break;

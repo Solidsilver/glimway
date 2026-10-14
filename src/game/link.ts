@@ -91,7 +91,7 @@ export type RemoteSpendResult = null | SpendReason | 'offline' | 'superseded' | 
 export type HomeRead<T> = { ok: true; value: T } | { ok: false; code: ApiErrorCode | 'offline' | 'superseded' }
 
 /** The Commons lane as the game keeps it. */
-export type CommonsLaneView = Pick<CommonsResponse, 'gates' | 'gateCount' | 'mine' | 'invites'>
+export type CommonsLaneView = Pick<CommonsResponse, 'gates' | 'gateCount' | 'mine' | 'invites' | 'homes'>
 
 export type HomeActionResult =
   | { ok: true; home: HomeView | null; materials: Record<string, number>; itemId?: string; status?: 'joined' | 'waiting' }
@@ -1733,7 +1733,7 @@ export class Link {
   async readCommons(): Promise<HomeRead<CommonsLaneView>> {
     return this.read(async () => {
       const r = await this.api.run((raw) => raw.commons())
-      return { gates: r.gates, gateCount: r.gateCount, mine: r.mine, invites: r.invites }
+      return { gates: r.gates, gateCount: r.gateCount, mine: r.mine, invites: r.invites, ...(r.homes ? { homes: r.homes } : {}) }
     })
   }
 

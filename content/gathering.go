@@ -111,7 +111,7 @@ func GatheringTargetFor(targetID string) (*GatheringTarget, bool) {
 // GatheringOffered: whether a place (a progress area: "wilds", "woodland",
 // "home:<gate>") has pieces of a target at all. Anywhere else has none.
 func GatheringOffered(area, target string) bool {
-	if strings.HasPrefix(area, "home:") {
+	if strings.HasPrefix(area, "home:") || strings.HasPrefix(area, "lot:") {
 		area = "home"
 	}
 	return slices.Contains(GatheringRules.GetAreas()[area].GetTargets(), target)

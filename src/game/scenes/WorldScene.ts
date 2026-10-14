@@ -1256,7 +1256,8 @@ export class WorldScene extends Phaser.Scene {
       sitter: () => this.hero,
       room: homeRoom !== null ? { gate: homeRoom } : null,
       enterRoom: (gate) => this.goIn(homeRoomArea(gate)),
-      rebuild: () => this.rebuildArea()
+      rebuild: () => this.rebuildArea(),
+      refreshLot: (key) => this.window?.refreshFixed(key)
     })
   }
 

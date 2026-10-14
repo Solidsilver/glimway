@@ -20,7 +20,7 @@ const places = {
   fixed: [
     { id: 'hearthwick', name: 'Hearthwick', kind: 'layout', layout: 'hearthwick', revision: 1, origin, cx: -1, cy: 1, width: 3, height: 3, rules: rules('village'),
       zones: [{ id: 'town-walk', place: 'hearthwick', tx: 0, ty: 20, w: 69, h: 49, rules: rules('village', false) }], anchors },
-    { id: 'homestead-lots', name: 'Homestead Lane', kind: 'plots', layout: 'homestead-lots', revision: 1, origin: tile(-72, 24), cx: -3, cy: 1, width: 2, height: 4, rules: rules('home'),
+    { id: 'homestead-lots', name: 'Homestead Lane', kind: 'plots', layout: 'homestead-lots', revision: 2, origin: tile(-72, 24), cx: -3, cy: 1, width: 2, height: 4, rules: rules('home'),
       zones: Array.from({ length: 8 }, (_, g) => ({ id: `lot-${g}`, place: `lot:${g}`, tx: (g % 2) * 24, ty: Math.floor(g / 2) * 24, w: 24, h: 24, rules: rules('home') })), anchors: [] },
   ], generated: { safe: false, ride: true, sync: false, rest: 'none' },
   spaces: { woodland: { safe: false, ride: true, sync: false, rest: 'none' }, ruin: { safe: false, ride: true, sync: false, rest: 'none' } },
@@ -135,7 +135,14 @@ for (let y = 0; y < 96; y++) for (let x = 22; x <= 25; x++) {
 for (let y = 0; y < 96; y++) for (const x of [0, 1, 46, 47])
   if (!(x < 2 ? [44, 45, 46, 47] : [20, 21, 22, 23, 44, 45, 46, 47]).includes(y)) lotSolid[y]![x] = '#';
 for (const y of [0, 1, 94, 95]) for (let x = 0; x < 48; x++) if (x < 22 || x > 25) lotSolid[y]![x] = '#';
-const plots = { id:'homestead-lots', revision:1, tx:0, ty:0, width:48, height:96, palette, ground:lotGround.map(r=>r.join('')), solid:lotSolid.map(r=>r.join('')), objects:[] };
+const lotObjects: LayoutObject[] = [];
+for (let gate = 0; gate < 8; gate++) {
+  const x = gate % 2 * 24, y = Math.floor(gate / 2) * 24;
+  for (const [id, kind, tx, ty] of [['gate', 'gate', 11, 19], ['sign', 'sign', 9, 20], ['shelf', 'shelf', 14, 20]] as const)
+    lotObjects.push({ id: `lot:${gate}:${id}`, kind, tx: x + tx, ty: y + ty, gate, ...(kind === 'gate' ? { side: gate % 2 ? 'east' : 'west', tw: 2, th: 1, target: 'lot-entry' } : {}) } as LayoutObject);
+  for (const tx of [2, 14]) lotObjects.push({ id: `lot:${gate}:fence:${tx}`, kind: 'scenery', tx: x + tx, ty: y + 19, variant: 'fence-h-8', art: { ox: 0, oy: 16, originLeft: true } } as LayoutObject);
+}
+const plots = { id:'homestead-lots', revision:2, tx:0, ty:0, width:48, height:96, palette, ground:lotGround.map(r=>r.join('')), solid:lotSolid.map(r=>r.join('')), objects:lotObjects };
 for (const [path, doc] of [['content/places.json',places],['content/layouts/hearthwick.json',town],['content/layouts/homestead-lots.json',plots]] as const)
   writeFileSync(path, JSON.stringify(doc,null,2)+'\n');
 if (existsSync('content/layouts/commons.json')) unlinkSync('content/layouts/commons.json');

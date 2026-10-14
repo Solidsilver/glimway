@@ -50,12 +50,14 @@ export class HomesteadYard {
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly reducedMotion: boolean,
-    private readonly hero: () => { x: number; y: number }
+    private readonly hero: () => { x: number; y: number },
+    private readonly origin = { x: 0, y: 0 },
+    private readonly companionLoader = loadCompanion
   ) {}
 
   /** The homestead changed (or was read): rebuild when its yard or its ground changed. */
   sync(home: HomeView | null): void {
-    const land = home ? servedLand(home.gate) : null
+    const land = home ? servedLand(home.gate, home.worldId) : null
     const sig = home && land ? JSON.stringify([home.landSeed, home.yardPets, home.cleared, home.items.filter((i) => i.scene === 'outdoor').map((i) => [i.id, i.x, i.y, i.rotation, i.stalls])]) : ''
     if (sig === this.shown) return
     this.shown = sig
@@ -73,16 +75,17 @@ export class HomesteadYard {
   }
 
   private async load(v: YardPetView): Promise<void> {
-    const keys = await loadCompanion(this.scene, v.key, 'pet')
+    const keys = await this.companionLoader(this.scene, v.key, 'pet')
     if (this.gone || !keys || !this.pets.includes(v)) return
-    v.image = this.scene.add.image(v.x, v.y, keys[0]).setOrigin(0.5, 1).setScale(COMPANION_SCALE)
+    v.image = this.scene.add.image(v.x + this.origin.x, v.y + this.origin.y, keys[0]).setOrigin(0.5, 1).setScale(COMPANION_SCALE)
   }
 
   /** Per frame; `dt` in seconds (the scene's). */
   update(dt: number): void {
     if (!this.tiles) return
     const now = serverNow()
-    const hero = this.hero()
+    const worldHero = this.hero()
+    const hero = { x: worldHero.x - this.origin.x, y: worldHero.y - this.origin.y }
     const time = this.scene.time.now
     for (const v of this.pets) {
       const at = yardPetAt(this.tiles, v.key, v.slot, now)
@@ -131,7 +134,7 @@ export class HomesteadYard {
     const widenX = nap ? 1.12 : sat ? 1.06 : 1
     let lift = 0
     if (time < v.hopUntil && !this.reducedMotion) lift = -Math.round(3 * Math.sin(((v.hopUntil - time) / 320) * Math.PI))
-    img.setPosition(Math.round(v.x), Math.round(v.y + lift)).setDepth(v.y)
+    img.setPosition(Math.round(v.x + this.origin.x), Math.round(v.y + lift + this.origin.y)).setDepth(v.y + this.origin.y)
     img.setScale(COMPANION_SCALE * widenX * (v.faceRight ? -1 : 1), COMPANION_SCALE * squashY)
     if (nap && !v.z) {
       v.z = this.scene.add
@@ -142,14 +145,14 @@ export class HomesteadYard {
       v.z.destroy()
       v.z = null
     }
-    v.z?.setPosition(Math.round(v.x + (v.faceRight ? -5 : 5)), Math.round(v.y - 9)).setDepth(v.y + 0.5)
+    v.z?.setPosition(Math.round(v.x + this.origin.x + (v.faceRight ? -5 : 5)), Math.round(v.y + this.origin.y - 9)).setDepth(v.y + this.origin.y + 0.5)
   }
 
   /** The yard pets drawn here, for Pet (crafts.md 2.1). */
   petPoints(): { id: string; x: number; y: number; hop: () => void }[] {
     return this.pets
       .filter((v) => v.image)
-      .map((v) => ({ id: `yard:${v.owner}:${v.slot}`, x: v.x, y: v.y, hop: () => (v.hopUntil = this.scene.time.now + 320) }))
+      .map((v) => ({ id: `yard:${v.owner}:${v.slot}`, x: v.x + this.origin.x, y: v.y + this.origin.y, hop: () => (v.hopUntil = this.scene.time.now + 320) }))
   }
 
   /** Read-only, for playtests. */

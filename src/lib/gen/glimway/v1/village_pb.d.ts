@@ -946,6 +946,11 @@ export declare type CommonsResult = Message<"glimway.v1.CommonsResult"> & {
    * @generated from field: repeated glimway.v1.DeedInvite invites = 4;
    */
   invites: DeedInvite[];
+
+  /**
+   * @generated from field: repeated glimway.v1.HomeView homes = 5;
+   */
+  homes: HomeView[];
 };
 
 export declare type CommonsResultValid = CommonsResult;

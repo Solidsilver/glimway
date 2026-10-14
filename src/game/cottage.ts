@@ -1,3 +1,4 @@
+import { homeDoorstep } from '../lib/lots.ts'
 /**
  * Inside a cottage: one room, a 12×10 floor (content/homestead.json
  * "indoor", the decoration grid) under a timber-framed back wall with the
@@ -8,7 +9,7 @@
  * hearth is checked against your deed by that area. The way out puts you on
  * the doorstep of the homestead's land, facing away from the door.
  */
-import { HOMESTEAD_DATA, homeArea } from '../lib/homestead.ts'
+import { HOMESTEAD_DATA } from '../lib/homestead.ts'
 import { TERRAIN, TILE } from '../lib/tile.ts'
 import type { WorldData } from './worlds.ts'
 
@@ -28,7 +29,7 @@ export const ROOM_HEARTH = { x: 173, y: 3 * TILE + 4, fireY: 42 }
 export const ROOM_CHEST = { x: 40 }
 export const ROOM_BENCH = { x: 115 }
 
-export function buildRoom(gate: number, doorstep: { tx: number; ty: number }): WorldData {
+export function buildRoom(gate: number, _doorstep: { tx: number; ty: number }): WorldData {
   const W = ROOM_COLS
   const H = ROOM_ROWS
   const ground: number[][] = []
@@ -58,7 +59,7 @@ export function buildRoom(gate: number, doorstep: { tx: number; ty: number }): W
     rocks: [],
     npcs: [],
     enemies: [],
-    exits: [{ tx: ROOM_DOOR.tx, ty: ROOM_DOOR.ty, tw: 2, th: 1, to: homeArea(gate), entry: { ...doorstep }, label: null, side: 'south', kind: 'door' }],
+    exits: [{ tx: ROOM_DOOR.tx, ty: ROOM_DOOR.ty, tw: 2, th: 1, to: 'outdoors', entry: homeDoorstep(gate), label: null, side: 'south', kind: 'door' }],
     props: [],
     scenery: [{ key: 'room-walls', x: 0, y: H * TILE, originX: 0, depth: -5 }],
     discoverySpots: [],

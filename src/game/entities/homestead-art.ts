@@ -51,6 +51,7 @@ export class HomesteadArt {
   private opaque = new Map<string, { l: number; t: number; r: number; b: number }>()
   /** The way to your gate (Commons): a bobbing marker over it and an arrow at the screen's edge. */
   guide: { marker: Phaser.GameObjects.Image; arrow: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text } | null = null
+  private landTimers: Phaser.Time.TimerEvent[] = []
   private shade: Phaser.GameObjects.Graphics | null = null
 
   constructor(private readonly home: HomesteadLayer) {
@@ -191,6 +192,10 @@ export class HomesteadArt {
       const d = this.gateDrawn.get(slot.gate) ?? { objects: [], bodies: [] }
       this.clear(d)
       this.gateDrawn.set(slot.gate, d)
+      for (const tx of [slot.tx - 1, slot.tx + 2]) {
+        const x = tileMid(tx), y = tileBottom(slot.ty)
+        this.add(d, this.scene.add.image(x, y, 'gatepost-small').setOrigin(0.5, 1).setDepth(y))
+      }
       this.drawGateSign(d, slot)
       this.drawGateShelf(d, slot)
     }
@@ -246,7 +251,7 @@ export class HomesteadArt {
     const g = this.home.homes.myGate
     const show = g !== null && !this.deps.session.state.flags.includes(HOME_FLAGS.arrived)
     const slot = show ? this.home.commons!.gates.find((s) => s.gate === g) : undefined
-    if (!slot) {
+    if (!slot || !this.chunks.has(slot.chunk)) {
       if (this.guide) {
         this.scene.tweens.killTweensOf(this.guide.marker)
         this.guide.marker.destroy()
@@ -299,6 +304,20 @@ export class HomesteadArt {
 
   // ---- a homestead's land
 
+  destroyLand(): void { for (const t of this.landTimers) t.remove(); this.landTimers = []; this.clear(this.homeDrawn); this.shade?.destroy(); this.shade = null }
+
+  landSteps(): (() => void)[] {
+    const L = this.home.land!, home = this.home.here(), d = this.homeDrawn
+    const ox = L.gridOrigin?.x ?? 0, oy = L.gridOrigin?.y ?? 0
+    if (!home) return [() => this.drawLand()]
+    return [
+      () => { this.destroyLand(); this.drawShade() },
+      () => home.tier >= 1 ? this.drawCottage(d, L.origin.x, L.origin.y, home.tier, home.desolate) : this.drawCamp(d, L.origin.x, L.origin.y, home.desolate),
+      () => this.drawMailbox(d, home.member && this.home.village.waitingCount() > 0),
+      ...home.items.filter((i) => i.scene === 'outdoor').map((item) => () => this.drawItems(d, { ...home, items: [item] }, 'outdoor', ox, oy, home.desolate))
+    ]
+  }
+
   drawLand(): void {
     const d = this.homeDrawn
     this.clear(d)
@@ -309,8 +328,8 @@ export class HomesteadArt {
     this.drawShade()
     if (!home) {
       // Unclaimed: a stake and a sign on the site, nothing else.
-      const sx = (L.site.x + L.site.w / 2) * TILE
-      const sy = (L.site.y + L.site.h - 1) * TILE
+      const sx = (L.gridOrigin?.x ?? 0) + (L.site.x + L.site.w / 2) * TILE
+      const sy = (L.gridOrigin?.y ?? 0) + (L.site.y + L.site.h - 1) * TILE
       this.add(d, this.scene.add.image(sx, sy, 'plot-sign-reserved').setOrigin(0.5, 1).setDepth(sy))
       this.add(
         d,
@@ -321,14 +340,14 @@ export class HomesteadArt {
       )
       this.addBody(d, sx, sy - 3, 6, 6)
       for (const [x, y] of [[L.site.x, L.site.y], [L.site.x + L.site.w, L.site.y], [L.site.x, L.site.y + L.site.h], [L.site.x + L.site.w, L.site.y + L.site.h]])
-        this.add(d, this.scene.add.image(x * TILE, y * TILE, 'stake').setOrigin(0.5, 1).setDepth(y * TILE))
+        this.add(d, this.scene.add.image((L.gridOrigin?.x ?? 0) + x * TILE, (L.gridOrigin?.y ?? 0) + y * TILE, 'stake').setOrigin(0.5, 1).setDepth(y * TILE))
       return
     }
     const desolate = home.desolate
     if (home.tier >= 1) this.drawCottage(d, ox, oy, home.tier, desolate)
     else this.drawCamp(d, ox, oy, desolate)
     this.drawMailbox(d, home.member && this.home.village.waitingCount() > 0)
-    this.drawItems(d, home, 'outdoor', 0, 0, desolate)
+    this.drawItems(d, home, 'outdoor', L.gridOrigin?.x ?? 0, L.gridOrigin?.y ?? 0, desolate)
   }
 
   /**
@@ -346,8 +365,8 @@ export class HomesteadArt {
     const lights = this.lights(home)
     const g = this.scene.add.graphics().setDepth(-3.5)
     g.fillStyle(0x0c0c18, home.desolate ? 0.38 : 0.28)
-    for (let y = 1; y < L.height - 1; y++)
-      for (let x = 1; x < L.width - 1; x++) if (!isLit(lights, x, y)) g.fillRect(x * TILE, y * TILE, TILE, TILE)
+    for (let y = L.gridOrigin ? 2 : 1; y < (L.gridOrigin ? 19 : L.height - 1); y++)
+      for (let x = L.gridOrigin ? 3 : 1; x < (L.gridOrigin ? 21 : L.width - 1); x++) if (!isLit(lights, x, y)) g.fillRect((L.gridOrigin?.x ?? 0) + x * TILE, (L.gridOrigin?.y ?? 0) + y * TILE, TILE, TILE)
     this.shade = g
   }
 
@@ -370,6 +389,7 @@ export class HomesteadArt {
       else if (!this.deps.reducedMotion) {
         let f = 0
         const t = S.time.addEvent({ delay: 260, loop: true, callback: () => flame.active && flame.setTexture(`camp-flame-${(f = 1 - f)}`) })
+        this.landTimers.push(t)
         flame.once('destroy', () => t.remove())
       }
       const glow = this.add(d, S.add.image(ox + 138, oy + 52, 'glow').setBlendMode(Phaser.BlendModes.ADD).setScale(0.7).setAlpha(0.7).setDepth(4001))
@@ -501,8 +521,8 @@ export class HomesteadArt {
   decoSpot(it: HomeInstance, scene: HomeScene): { x: number; y: number } {
     const def = homeItem(it.itemDef)
     const [fw, fh] = rotatedFootprint(def ? grownItem(def, it) : ({ footprint: [1, 1] } as HomeItem), it.rotation ?? 0)
-    const ox = (scene === 'indoor' ? ROOM_GRID.tx * TILE : 0)
-    const oy = (scene === 'indoor' ? ROOM_GRID.ty * TILE : 0)
+    const ox = (scene === 'indoor' ? ROOM_GRID.tx * TILE : this.home.land?.gridOrigin?.x ?? 0)
+    const oy = (scene === 'indoor' ? ROOM_GRID.ty * TILE : this.home.land?.gridOrigin?.y ?? 0)
     return { x: ox + (it.x ?? 0) * TILE + (fw * TILE) / 2, y: oy + ((it.y ?? 0) + fh) * TILE - 4 }
   }
 

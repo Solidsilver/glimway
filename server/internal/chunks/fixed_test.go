@@ -20,7 +20,7 @@ import (
 // must bump the revision and add a new hash, never rewrite an old revision.
 var fixedGolden = map[string]string{
 	"fixed:hearthwick@1":     "cae46a3a036da6743da6a4956b722378abfd17effd9616fc492e8a29820e7dea",
-	"fixed:homestead-lots@1": "2c7f155efbfd000c01eac7dc4f1fdc5633c49538e86d6544774b2e72cdae177b",
+	"fixed:homestead-lots@2": "b924f6a133449eec58a8ea0caebc3baac42dcc3dd8ce30debeeaa8029393ce39",
 }
 
 func servedBytes(t *testing.T, c *contract.WorldChunk) []byte {

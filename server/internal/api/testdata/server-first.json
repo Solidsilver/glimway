@@ -168,7 +168,8 @@
       "gates": [],
       "gateCount": 0,
       "mine": null,
-      "invites": []
+      "invites": [],
+      "homes": []
     }
   },
   {
@@ -217,6 +218,87 @@
           "expiresAt": 1,
           "fromConfirmedAt": 1,
           "toConfirmedAt": 1
+        }
+      ],
+      "homes": [
+        {
+          "id": "fixture",
+          "gate": 1,
+          "worldId": "fixture",
+          "tier": 1,
+          "members": [
+            {
+              "id": "fixture",
+              "displayName": "fixture"
+            }
+          ],
+          "member": true,
+          "desolate": true,
+          "vacantSince": 1,
+          "landSeed": 1,
+          "cleared": [
+            {
+              "x": 1,
+              "y": 1
+            }
+          ],
+          "stumps": [
+            {
+              "x": 1,
+              "y": 1
+            }
+          ],
+          "plants": [
+            {
+              "id": "fixture",
+              "itemDef": "fixture",
+              "x": 1,
+              "y": 1,
+              "plantedAt": 1,
+              "plantedDay": 1,
+              "lit": true
+            }
+          ],
+          "postsBought": 1,
+          "nextPost": {
+            "fixture": 1
+          },
+          "outdoor": {
+            "width": 1,
+            "height": 1
+          },
+          "indoor": {
+            "width": 1,
+            "height": 1
+          },
+          "items": [
+            {
+              "id": "fixture",
+              "itemDef": "fixture",
+              "scene": "fixture",
+              "x": 1,
+              "y": 1,
+              "rotation": 1,
+              "name": "fixture",
+              "stalls": 1
+            }
+          ],
+          "stalls": [
+            {
+              "stall": 1,
+              "mount": "fixture",
+              "ownerId": "fixture",
+              "ownerName": "fixture",
+              "out": true
+            }
+          ],
+          "yardPets": [
+            {
+              "ownerId": "fixture",
+              "pet": "fixture",
+              "slot": 1
+            }
+          ]
         }
       ]
     }
@@ -12187,6 +12269,7 @@
             "shelfStocked": false
           }
         ],
+        "homes": [],
         "invites": [],
         "mine": null
       }

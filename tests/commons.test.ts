@@ -1,3 +1,5 @@
+import { commonsLane, fixedStand, fixedSolidAt } from '../src/game/wilds/fixed.ts';
+import { homeDoorstep, lotOrigin } from '../src/lib/lots.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildRoom, ROOM_DOOR, ROOM_GRID } from '../src/game/cottage.ts';
@@ -6,7 +8,7 @@ import { buildLand, setLandSource } from '../src/game/homeland.ts';
 import { HOMESTEAD_DATA, gateTile } from '../src/lib/homestead.ts';
 import { LAND } from '../src/lib/homestead-land.ts';
 import { serveFixtureLand } from './land-fixture.ts';
-import { serveFixtureCommons, servedCommonsFixture, toCommons, type CommonsView } from './commons-fixture.ts';
+import { serveFixtureCommons, serveFixtureLots, servedCommonsFixture, type CommonsView } from './commons-fixture.ts';
 import { anchorTile } from '../src/game/wilds/fixed.ts';
 
 // Homestead land and the Commons are the server's: these tests stand on their served fixtures.
@@ -14,7 +16,6 @@ serveFixtureLand('guest');
 const footprint = serveFixtureCommons();
 const commons = servedCommonsFixture();
 /** The plot lane between the two fences (content/homestead.json fenceX). */
-const LANE = { x0: HOMESTEAD_DATA.commons.fenceX[0] + 1, x1: HOMESTEAD_DATA.commons.fenceX[1] - 1 };
 import { TILE } from '../src/lib/tile.ts';
 
 type Tile = { tx: number; ty: number };
@@ -54,51 +55,39 @@ test('the Commons is fixed ground on the open map, no area of its own; homestead
   assert.ok(!hasAreaKind('home:01') && !hasAreaKind('home') && !hasAreaKind('home:x'));
 });
 
-test('gate slots sit exactly where the shared layout (and the server) put them, in the fences', { skip: "T4: plot overlays replace the Commons gate slots" }, () => {
-  assert.equal(commons.gates.length, 8, 'the frozen capacity');
-  for (const slot of commons.gates) {
-    const g = slot.gate;
-    const t = gateTile(g);
-    assert.deepEqual({ tx: slot.tx, ty: slot.ty, side: slot.side }, { tx: t.tx, ty: t.ty, side: t.side }, `gate ${g}`);
-    assert.equal(slot.tx, HOMESTEAD_DATA.commons.fenceX[g % 2]);
-    // The sign and the way back out stand on the lane side of the fence.
-    assert.ok(slot.side === 'west' ? slot.entry.tx > slot.tx && slot.entry.tx >= LANE.x0 : slot.entry.tx < slot.tx && slot.entry.tx <= LANE.x1);
+test('gate slots sit exactly where the served lots put their south fence gaps', () => {
+  serveFixtureLots();
+  const lane = commonsLane()!;
+  assert.equal(lane.gates.length, 8);
+  for (const slot of lane.gates) {
+    const o = lotOrigin(slot.gate);
+    assert.deepEqual({ tx: slot.tx, ty: slot.ty, side: slot.side }, gateTile(slot.gate));
+    assert.deepEqual(slot.sign, { tx: o.tx + 9, ty: o.ty + 20 });
+    assert.deepEqual(slot.shelf, { tx: o.tx + 14, ty: o.ty + 20 });
+    assert.equal(slot.chunk, `${o.tx / 24},${o.ty / 24}`);
   }
 });
 
-test('west gate shelf and neighbouring gate sign have separate prompt positions', { skip: "T4: attach signs and shelves on the seamless lots" }, () => {
-  const shelf = commons.gates[0]!.shelf;
-  const sign = commons.gates[2]!.sign;
-  assert.ok(Math.hypot(shelf.tx - sign.tx, shelf.ty - sign.ty) > 1);
+test('west gate shelf and neighbouring gate sign have separate prompt positions', () => {
+  serveFixtureLots();
+  const gates = commonsLane()!.gates;
+  for (const g of gates) assert.ok(Math.hypot(g.shelf.tx - g.sign.tx, g.shelf.ty - g.sign.ty) >= 5);
 });
 
-test('the lane holds every gate the Commons has, and more than the spares', { skip: "T4: lot overlays replace the old gate lane" }, () => {
-  assert.ok(commons.gates.length >= HOMESTEAD_DATA.commons.spareGates);
-  for (const g of commons.gates) assert.ok((g.ty + 3) * TILE <= commons.heightPx - 2 * TILE, `gate ${g.gate} fits on the map`);
+test('the lane holds exactly eight chunk lots, beyond the old spare count', () => {
+  serveFixtureLots();
+  assert.equal(commonsLane()!.gates.length, 8);
+  assert.ok(commonsLane()!.gates.length > HOMESTEAD_DATA.commons.spareGates);
 });
 
-test('every gate opens onto its homestead, and can be walked up to from the village gate', { skip: "T4: lots have cottage doors rather than gate portals" }, () => {
-  const w = commons;
-  const r = reach(w, w.spawn);
-  for (const g of w.gates) {
-    const exit = w.exits.find((e) => e.to === `home:${g.gate}`);
-    assert.ok(exit, `gate ${g.gate} has an exit`);
-    assert.deepEqual({ tx: exit!.tx, ty: exit!.ty, tw: exit!.tw, th: exit!.th }, { tx: g.tx, ty: g.ty, tw: 1, th: 2 });
-    assert.equal(exit!.label, null, 'the homestead layer draws the gate’s own sign');
-    assert.ok(r.has(key(g.entry)), `gate ${g.gate}: the lane in front of it is unreachable`);
-    assert.ok(near(r, g.sign), `gate ${g.gate} sign unreachable`);
-    for (let y = g.ty; y <= g.ty + 1; y++) assert.ok(!w.solid[y][g.tx], `gate ${g.gate} gap is open`);
-    // Coming back out of the land puts you on the lane in front of the gate.
-    const land = buildArea(`home:${g.gate}`);
-    assert.deepEqual(toCommons(land.exits[0].entry), g.entry);
-    assert.deepEqual(land.exits[0].entry, anchorTile(`commons:gate:${g.gate}`));
-    assert.equal(land.exits[0].to, 'outdoors');
+test('every lot doorstep and gate connects to the public lanes without a gate portal', () => {
+  const fp = serveFixtureLots();
+  for (const g of commonsLane()!.gates) {
+    assert.deepEqual(fixedStand(g.entry.tx, g.entry.ty), g.entry);
+    assert.deepEqual(fixedStand(homeDoorstep(g.gate).tx, homeDoorstep(g.gate).ty), homeDoorstep(g.gate));
+    assert.ok(!fp.objects.get(g.chunk)!.some((o) => o.exit), 'lot entrance is a walk, not a portal');
+    for (const tx of [g.tx, g.tx + 1]) assert.equal(fixedSolidAt(tx, g.ty), false);
   }
-  for (const [name, t] of Object.entries(w.features)) {
-    if (name === 'lamps') continue;
-    assert.ok(near(r, t as Tile), `${name} cannot be walked up to`);
-  }
-  for (const e of w.exits) assert.ok(r.has(key(e)), `exit to ${e.to} unreachable`);
 });
 
 test('a homestead’s land: the site, the path to the gate mouth and the mailbox are reachable; the way back is the gate', () => {
@@ -161,8 +150,8 @@ test('inside a cottage: the floor is the 12×10 grid, the door leads to the door
   for (let y = 0; y < HOMESTEAD_DATA.indoor.height; y++)
     for (let x = 0; x < HOMESTEAD_DATA.indoor.width; x++) assert.ok(r.has(key({ tx: ROOM_GRID.tx + x, ty: ROOM_GRID.ty + y })), `floor ${x},${y}`);
   const door = room.exits[0];
-  assert.equal(door.to, 'home:7');
-  assert.deepEqual(door.entry, doorstep);
+  assert.equal(door.to, 'outdoors');
+  assert.deepEqual(door.entry, homeDoorstep(7));
   assert.equal(door.label, null);
   assert.ok(r.has(key(ROOM_DOOR)));
   // The doorway inside is reserved: nobody walls themselves in.

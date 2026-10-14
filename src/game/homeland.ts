@@ -71,6 +71,7 @@ export function setLandSource(s: LandSource): void {
 
 export interface LandWorld extends WorldData {
   gate: number
+  gridOrigin?: { x: number; y: number }
   land: Land
   /** False while the server's land for this gate hasn't arrived (plain ground stands in). */
   served: boolean
@@ -286,7 +287,7 @@ export function buildLand(gate: number): LandWorld {
     doorstep,
     // The old 16×12 plot's art sat with the site at (4, 0): keep that framing.
     origin: { x: (s.x - 4) * TILE, y: s.y * TILE },
-    mailbox: { tx: L.gate.x + L.gate.w, ty: s.y + s.h },
+    mailbox: { tx: L.gate.x + L.gate.w, ty: L.generator === 2 ? 18 : s.y + s.h },
     desolate
   }
 }

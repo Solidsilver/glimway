@@ -454,9 +454,9 @@ func TestChunksFixedSource(t *testing.T) {
 			layer, cx, cy int32
 		}{
 			{chunks.FixedEpoch("hearthwick", 2), 0, 0, 1}, // a revision not current
-			{"some-wick-epoch", 0, 0, 1},               // a stored epoch's id in the footprint
-			{epoch, 0, 0, 0},                           // the pseudo-epoch off the footprint
-			{epoch, 1, 0, 1},                           // another layer
+			{"some-wick-epoch", 0, 0, 1},                  // a stored epoch's id in the footprint
+			{epoch, 0, 0, 0},                              // the pseudo-epoch off the footprint
+			{epoch, 1, 0, 1},                              // another layer
 		} {
 			if _, err := c.Chunk(ctx, tx, "world-a", bad.epoch, bad.layer, bad.cx, bad.cy); !errors.Is(err, sql.ErrNoRows) {
 				t.Fatalf("%+v: %v", bad, err)
@@ -469,4 +469,32 @@ func TestChunksFixedSource(t *testing.T) {
 	if c.get(chunkKey{epoch, 0, -1, 2}) == nil || c.get(chunkKey{chunks.FixedEpoch("hearthwick", 2), 0, 0, 1}) != nil {
 		t.Fatal("the LRU keys fixed chunks by their revision's pseudo-epoch")
 	}
+}
+
+func TestPlotSourceIsWorldSpecific(t *testing.T) {
+	s := chunkStore(t)
+	c := NewChunks(nil, fakegen.New())
+	ctx := context.Background()
+	inTx(t, s, func(tx *sql.Tx) {
+		for gate := 0; gate < 8; gate++ {
+			x, y := chunks.LotOrigin(gate)
+			cx, cy := int32(x/24), int32(y/24)
+			a, err := c.Chunk(ctx, tx, "world-a", chunks.PlotEpoch("world-a", gate), 0, cx, cy)
+			if err != nil {
+				t.Fatal(err)
+			}
+			b, err := c.Chunk(ctx, tx, "world-b", chunks.PlotEpoch("world-b", gate), 0, cx, cy)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if proto.Equal(a, b) {
+				t.Fatal("cross-world cache reuse")
+			}
+			for _, bad := range []string{chunks.PlotEpoch("world-b", gate), chunks.FixedEpoch("homestead-lots", 1), chunks.FixedEpoch("homestead-lots", 2), chunks.PlotEpoch("world-a", (gate+1)%8)} {
+				if _, err := c.Chunk(ctx, tx, "world-a", bad, 0, cx, cy); err != sql.ErrNoRows {
+					t.Fatalf("accepted %s: %v", bad, err)
+				}
+			}
+		}
+	})
 }

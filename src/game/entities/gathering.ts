@@ -1,3 +1,4 @@
+import { lotAt } from '../../lib/lots.ts'
 import { at } from '../../lib/location.ts';
 /**
  * Gathering (docs/items/crafting-and-repair.md, "Gathering"): the workable
@@ -146,7 +147,7 @@ export class Gathering {
         markerOffset: 14,
         label: spot.label,
         verb: gatheringVerb(target?.action ?? 'chop', target?.verb),
-        available: () => !this.busy && actionOf(spot) === heldNow().kind && this.live(),
+        available: () => !this.busy && actionOf(spot) === heldNow().kind && this.live() && (this.deps.world.areaId !== 'outdoors' || lotAt(Math.floor(spot.tx / 24), Math.floor(spot.ty / 24)) === null || homesteadsFor(this.deps.session).myGate === lotAt(Math.floor(spot.tx / 24), Math.floor(spot.ty / 24))),
         activate: () => void this.work(spot)
       }
       this.points.set(point, spot)
@@ -263,7 +264,7 @@ export class Gathering {
           return
         }
       }
-      const home = parseHomeArea(session.state.area) !== null
+      const home = parseHomeArea(session.state.area) !== null || /^lot:[0-7]$/.test(at(session.state.area, hero.sprite.x, hero.sprite.y).id)
       this.deps.notePosition()
       const wilds = session.state.area === OUTDOORS_AREA && at(session.state.area, hero.sprite.x, hero.sprite.y).source.kind === 'generated'
       // The server checks the piece against its own land or chunk: home tiles

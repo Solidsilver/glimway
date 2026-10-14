@@ -53,6 +53,7 @@ export class HomesteadArranging {
   private readonly deps: HomesteadDeps
 
   placement: Placement | null = null
+  private reframeTimer: Phaser.Time.TimerEvent | null = null
   private arrange: ArrangeView = { available: false, scene: null, tier: 0 }
   private arrangeTimer = 0
   /** The tray's last view (playtests read the piece's spot from it). */
@@ -103,6 +104,8 @@ export class HomesteadArranging {
       rows = HOMESTEAD_DATA.indoor.height
     } else {
       if (!this.home.land) return
+      ox = this.home.land.gridOrigin?.x ?? 0
+      oy = this.home.land.gridOrigin?.y ?? 0
       cols = this.home.land.width
       rows = this.home.land.height
     }
@@ -146,7 +149,8 @@ export class HomesteadArranging {
   /** The screen changed shape mid-arrange: frame the piece (or the grid) again. */
   private reframe(): void {
     // After this frame: the camera's own viewport and zoom update on resize too.
-    this.scene.time.delayedCall(0, () => this.reframeNow())
+    this.reframeTimer?.remove()
+    this.reframeTimer = this.scene.time.delayedCall(0, () => { this.reframeTimer = null; this.reframeNow() })
   }
 
   private reframeNow(): void {
@@ -179,6 +183,8 @@ export class HomesteadArranging {
   endPlacement(animate = true): void {
     const p = this.placement
     if (!p) return
+    this.reframeTimer?.remove()
+    this.reframeTimer = null
     p.overlay.destroy()
     p.ghost?.destroy()
     this.placement = null

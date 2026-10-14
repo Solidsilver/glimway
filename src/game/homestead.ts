@@ -260,6 +260,7 @@ export class Homesteads {
       this.laneSeq = mark
       contradicted = this.adoptLane(lane.value, mark)
     }
+    for (const home of lane.value.homes ?? []) this.adoptHomeRead(home, mark)
     this.status = 'ready'
     // Only a lane that changed is redrawn (Silas and Pell re-read it every conversation).
     if (JSON.stringify([this.gates, this.gateCount, this.invites, this.myGateValue, this.status]) !== before) this.emit('roster')

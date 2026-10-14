@@ -139,7 +139,7 @@ func (a *Server) mark(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 		// A mark's area holds in its rooms too: Silas is met at his counter in the Yard as well as on the Commons.
-		if area := content.StoryRules.GetAreas()[req.Mark]; area != "" && !(area == "home" && rules.HomeGate(s.State.Area) >= 0) && placeID(*s) != area && content.RootArea(s.State.Area) != area {
+		if area := content.StoryRules.GetAreas()[req.Mark]; area != "" && !(area == "home" && homeGateAt(s) >= 0) && placeID(*s) != area && content.RootArea(s.State.Area) != area {
 			return nil, fail(409, "wrong-area")
 		}
 		added := false

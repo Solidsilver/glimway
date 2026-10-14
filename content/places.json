@@ -134,7 +134,7 @@
       "name": "Homestead Lane",
       "kind": "plots",
       "layout": "homestead-lots",
-      "revision": 1,
+      "revision": 2,
       "origin": {
         "tx": -72,
         "ty": 24

@@ -117,7 +117,7 @@ export interface GoalGuideDeps {
   marked: (id: string) => boolean
   /** Whose homestead this is (null: not a homestead), and a guide step's point here. */
   placeKind: () => 'home' | 'cottage' | 'other-home' | 'other-cottage' | null
-  guidePoint: (where: GuideWhere) => { x: number; y: number } | null
+  guidePoint: (where: GuideWhere | 'lane') => { x: number; y: number } | null
   reducedMotion: boolean
 }
 
@@ -154,7 +154,8 @@ export class GoalGuide {
     const id = String(this.deps.world.areaId)
     if (id === 'outdoors') {
       const p = this.deps.position?.() ?? { x: 0, y: 0 }
-      return at(id, p.x, p.y).id
+      const place = at(id, p.x, p.y).id
+      return place.startsWith('lot:') ? this.deps.placeKind() ?? place : place
     }
     if (id.startsWith('chunk:')) return 'tangle'
     return this.deps.placeKind() ?? id
@@ -194,6 +195,10 @@ export class GoalGuide {
   /** The way out of this place that gets closest to `goal`. */
   private wayToward(goal: string): { x: number; y: number; here: false } | null {
     const from = this.place()
+    if ((from === 'home' || from === 'other-home') && steps('hearthwick', goal) < steps(from, goal)) {
+      const lane = this.deps.guidePoint('lane')
+      if (lane) return { ...lane, here: false }
+    }
     // Out of the Commons to your own land: your gate on the lane, not an exit.
     if (from === 'hearthwick' && steps('home', goal) < steps('hearthwick', goal)) {
       const g = this.deps.guidePoint('gate')

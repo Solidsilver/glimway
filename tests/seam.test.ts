@@ -35,6 +35,14 @@ class FakeObject {
     this.texture = texture;
     this.type = type;
   }
+  once() { return this; }
+  fillStyle() { return this; }
+  fillRect() { return this; }
+  lineStyle() { return this; }
+  strokeRect() { return this; }
+  lineBetween() { return this; }
+  strokeCircle() { return this; }
+  clear() { return this; }
   setScrollFactor() { return this; }
   setTexture(key: string) { this.texture.key = key; return this; }
   setOrigin() { return this; }
@@ -78,7 +86,7 @@ const { chunkCacheKey, forgetChunks } = await import('../src/game/wilds/chunks.t
 const { fixedEpoch } = await import('../src/lib/api/chunks.ts');
 const { at, onGrid } = await import('../src/lib/location.ts');
 const { bus, EV } = await import('../src/game/events.ts');
-const { serveFixtureCommons, COMMONS_PLACE } = await import('./commons-fixture.ts');
+const { serveFixtureCommons, serveFixtureLots, COMMONS_PLACE } = await import('./commons-fixture.ts');
 const { TILE } = await import('../src/lib/tile.ts');
 const { holdOnSafe, stopAtEdge } = await import('../src/game/safe-barrier.ts');
 
@@ -104,10 +112,11 @@ class FakeScene {
     remove: (key: string) => { const i = this.textures.added.indexOf(key); if (i >= 0) this.textures.added.splice(i, 1); },
   };
   events = new EventEmitter();
-  cameras = { main: { width: 1200, height: 760, zoom: 2 } };
+  cameras = { main: { width: 1200, height: 760, zoom: 2, midPoint: { x: 0, y: 0 }, stopFollow() {}, startFollow() {}, pan() {} } };
   sys = { isActive: () => true };
   anims = { exists: () => false, create() {} };
-  input = { keyboard: new EventEmitter() };
+  input = Object.assign(new EventEmitter(), { keyboard: new EventEmitter() });
+  scale = new EventEmitter();
   timers = new Set<unknown>();
   time = {
     addEvent: () => {
@@ -136,6 +145,7 @@ class FakeScene {
     },
   };
   add = {
+    graphics: () => this.put(new FakeObject(this, 0, 0, { key: '' }, 'Graphics')),
     image: (x: number, y: number, key: string) => this.put(new FakeObject(this, x, y, { key })),
     sprite: (x: number, y: number, key: string) => this.put(new FakeObject(this, x, y, { key }, 'Sprite')),
     rectangle: (x: number, y: number) => this.put(new FakeObject(this, x, y, { key: '' }, 'Rectangle')),
@@ -307,8 +317,9 @@ test('the lane’s gate signs, shelves and hame come and go with the chunk that 
   assert.deepEqual(count(), [0, 0]);
 });
 
-test('a stocked gate shelf detaches after Phaser has destroyed the static group', { skip: "T4: plot shelf lifecycle" }, () => {
+test('a stocked gate shelf detaches after Phaser has destroyed the static group', () => {
   serveFixtureCommons();
+  serveFixtureLots();
   const scene = new FakeScene();
   const lane = commonsLane()!;
   const slot = lane.gates[0]!;
@@ -963,4 +974,135 @@ test('a cast answer after bank detach or scene destroy cancels its reservation a
     r.scene.events.emit('destroy');
     assert.deepEqual(snapshot(r), before);
   }
+});
+
+test('six claimed lots build in slices, refresh and detach without retaining home resources', async () => {
+  const { HomesteadLayer } = await import('../src/game/entities/homesteads.ts');
+  const { LotHomes } = await import('../src/game/wilds/lot-chunk.ts');
+  const { HomesteadTalk } = await import('../src/game/entities/homestead-talk.ts');
+  const { FixedScope } = await import('../src/game/wilds/fixed-scope.ts');
+  const { serveFixtureLand } = await import('./land-fixture.ts');
+  const { createNewGame } = await import('../src/lib/state.ts');
+  serveFixtureLots();
+  serveFixtureLand('guest', 8);
+  const { setLandSource } = await import('../src/game/homeland.ts');
+  setLandSource({ worldId: () => 'guest', state: () => null, fetchLand: () => null });
+  const r = rig();
+  const owners = new Map<unknown, unknown[]>();
+  const refreshes: string[] = [];
+  const hero = { x: -61 * TILE + 8, y: 32 * TILE + 12, setVelocity() {} };
+  const homes = new Map(Array.from({ length: 6 }, (_, gate) => [gate, {
+    id: `home-${gate}`, worldId: 'guest', gate, tier: gate % 2 ? 2 : 0, landSeed: gate,
+    member: gate === 0, desolate: false, members: [{ id: `owner-${gate}`, displayName: 'Owner' }],
+    cleared: [], stumps: [], plants: [], yardPets: [{ pet: 'Cat-Base', ownerId: `owner-${gate}`, slot: 1 }], stalls: [],
+    items: [
+      { id: `stool-${gate}`, itemDef: 'wooden-stool', scene: 'outdoor', x: 9, y: 11, rotation: 0 },
+      { id: `stable-${gate}`, itemDef: 'stable', scene: 'outdoor', x: 14, y: 11, rotation: 0, stalls: 1 }
+    ]
+  }]));
+  const root = Object.assign(Object.create(HomesteadLayer.prototype), {
+    scene: r.scene, gate: null, land: null, gone: false, yardRoom: null, commons: commonsLane(),
+    homes: { homes, connected: false, myGate: null, myId: 'owner-0', status: 'guest', arrived() {}, gateInfo: () => ({ shelf: true, homeId: 'claimed', names: ['Owner'] }) },
+    village: { waitingCount: () => 0 }, fixedScope: new FixedScope(true),
+    deps: { session: { state: createNewGame(), link: null }, reducedMotion: false, hero: () => hero, solidGroup: r.scene.solids,
+      world: { open: true, areaId: 'outdoors', npcs: [] }, refreshLot: (key: string) => refreshes.push(key),
+      interactables: { register: (owner: unknown, points: unknown[]) => points.length ? owners.set(owner, points) : owners.delete(owner) } }
+  }) as InstanceType<typeof HomesteadLayer>;
+  Object.assign(root, { lots: new LotHomes(root), art: new HomesteadArt(root), talk: new HomesteadTalk(root) });
+  const { HomesteadYard } = await import('../src/game/entities/homestead-yard.ts');
+  const pendingPets: ((keys: string[]) => void)[] = [];
+  const before = { ...snapshot(r), timers: r.scene.timers.size };
+  const keys = ['-3,1', '-2,1', '-3,2', '-2,2', '-3,3', '-2,3'];
+  for (let round = 0; round < 3; round++) {
+    const steps = keys.map((key) => root.attachFixedChunk(key));
+    for (const [gate, { child }] of root.lots!['lots']) Object.assign(child, { yard: new HomesteadYard(r.scene as never, false, () => hero, { x: (-72 + gate % 2 * 24) * TILE, y: (24 + Math.floor(gate / 2) * 24) * TILE }, () => new Promise((resolve) => pendingPets.push(resolve))) });
+    assert.ok(steps.every((s) => s.length >= 7), 'site, mailbox and each furnishing are separate steps');
+    assert.deepEqual({ ...snapshot(r), timers: r.scene.timers.size }, before, 'enqueueing draws nothing');
+    // Simulate an exhausted frame, then one home step per lot per frame.
+    const jobs = steps.map((queue) => ({ build(deadline: number) { while (queue.length && performance.now() < deadline) queue.shift()!(); return !queue.length; }, destroy() {} }));
+    jobs.forEach((j) => assert.equal(j.build(performance.now() - 1), false));
+    assert.deepEqual({ ...snapshot(r), timers: r.scene.timers.size }, before);
+    while (steps.some((s) => s.length)) steps.forEach((s) => s.shift()?.());
+    if (round === 0) {
+      pendingPets.splice(0).forEach((resolve) => resolve(['yard-pet-fixture']));
+      await Promise.resolve(); await Promise.resolve();
+      assert.equal(r.scene.children.list.filter((o) => o.texture.key === 'yard-pet-fixture').length, 6);
+      assert.ok(r.scene.children.list.filter((o) => o.texture.key === 'yard-pet-fixture').every((o) => o.x < 0 && o.y >= 24 * TILE));
+    }
+    assert.ok(r.scene.children.list.some((o) => o.texture.key === 'camp-patch'));
+    assert.ok(r.scene.children.list.some((o) => o.texture.key.startsWith('cottage')));
+    assert.ok([...owners.keys()].length >= 6, 'each lot publishes its own interactions');
+    const child = root.lots!['lots'].get(0)!.child;
+    const originalWindow = globalThis.window;
+    const dom = new EventEmitter();
+    globalThis.window = { addEventListener: (e: string, fn: (...args: unknown[]) => void) => dom.on(e, fn), removeEventListener: (e: string, fn: (...args: unknown[]) => void) => dom.off(e, fn) } as unknown as Window & typeof globalThis;
+    try {
+      child.arranging.update(1);
+      child.arranging.startPlacement();
+      assert.equal(child.arranging.placement?.ox, -72 * TILE);
+      assert.equal(child.arranging.placement?.oy, 24 * TILE);
+      assert.equal(child.arranging.placement?.cols, 24);
+      root.lots!.refresh(new Set([0]));
+      assert.equal(refreshes.at(-1), '-3,1');
+      root.detachFixedChunk('-3,1');
+      assert.equal(dom.listenerCount('keydown'), 0);
+      assert.equal(r.scene.input.listenerCount('pointerdown'), 0);
+      assert.equal(r.scene.scale.listenerCount('resize'), 0);
+    } finally { globalThis.window = originalWindow; }
+    keys.slice(1).forEach((key) => root.detachFixedChunk(key));
+    pendingPets.splice(0).forEach((resolve) => resolve(['yard-pet-fixture']));
+    await Promise.resolve(); await Promise.resolve();
+    assert.equal(owners.size, 0);
+    assert.deepEqual({ ...snapshot(r), timers: r.scene.timers.size }, before);
+    // Streaming away halfway through construction makes queued steps inert.
+    const partial = root.attachFixedChunk(keys[0]!);
+    partial.shift()!();
+    root.detachFixedChunk(keys[0]!);
+    partial.forEach((step) => step());
+    assert.deepEqual({ ...snapshot(r), timers: r.scene.timers.size }, before);
+  }
+  root.lots!.destroy();
+});
+
+test('plot overlays open only cleared local obstacles and restore the immutable base', async () => {
+  const { applyLotHome } = await import('../src/game/wilds/fixed.ts');
+  serveFixtureLots();
+  const base = footprint('homestead-lots')!;
+  const obstacle = base.objects.get('-3,1')!.find((o) => o.id.startsWith('land:'))!;
+  const x = obstacle.tx + 72, y = obstacle.ty - 24;
+  const savedSolid = base.solid.map((r) => [...r]);
+  const home = { worldId: 'fixture-world', cleared: [[x, y]], stumps: [], plants: [] };
+  applyLotHome(0, home as never);
+  assert.equal(fixedSolidAt(obstacle.tx, obstacle.ty), false);
+  assert.ok(!footprint('homestead-lots')!.objects.get('-3,1')!.some((o) => o.id === obstacle.id));
+  assert.deepEqual(base.solid, savedSolid, 'cached base stays immutable');
+  applyLotHome(0, null);
+  assert.equal(fixedSolidAt(obstacle.tx, obstacle.ty), true);
+  applyLotHome(0, { ...home, worldId: 'other-world' } as never);
+  assert.equal(fixedSolidAt(obstacle.tx, obstacle.ty), true, 'old-world state cannot clear this world');
+});
+
+test('a late plot read from a previous world cannot replace the new world footprint', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { decodeChunk } = await import('../src/lib/api/chunks.ts');
+  const { prepareFixed } = await import('../src/game/wilds/fixed.ts');
+  const { lotAt } = await import('../src/lib/lots.ts');
+  serveFixtureCommons();
+  forgetChunks();
+  const waiting: { epoch: string; cx: number; cy: number; resolve: (value: unknown) => void }[] = [];
+  const api = { chunk: (epoch: string, _layer: number, cx: number, cy: number) => new Promise((resolve) => waiting.push({ epoch, cx, cy, resolve })) };
+  const old = prepareFixed({ link: { worldId: 'old-world', api: { operations: api } } } as never);
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  const fresh = prepareFixed({ link: { worldId: 'new-world', api: { operations: api } } } as never);
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  const answer = (world: string) => waiting.filter((w) => w.epoch.startsWith(`plot:${world}:`)).forEach((w) => {
+    const chunk = decodeChunk(readFileSync(new URL(`./fixtures/plot-${lotAt(w.cx, w.cy)}.bin`, import.meta.url)));
+    w.resolve({ ...chunk, epochId: w.epoch });
+  });
+  assert.equal(waiting.length, 16);
+  answer('new-world'); await fresh;
+  assert.equal(footprint('homestead-lots')?.epoch, 'plot:new-world@2');
+  answer('old-world'); await old;
+  assert.equal(footprint('homestead-lots')?.epoch, 'plot:new-world@2');
+  forgetFixed(); forgetChunks(); serveFixtureCommons(); serveFixtureLots();
 });

@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"glimway/content"
+	"glimway/server/internal/chunks"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/land"
 	profiles "glimway/server/internal/profile"
@@ -233,7 +234,15 @@ func (a *Server) mountOut(w http.ResponseWriter, r *http.Request) error {
 		}
 		// Walk up to the bay: `where` is home:<gate> of this homestead and
 		// within two tiles of the stall (3.3).
-		if req.Where == nil || req.Where.Area != fmt.Sprintf("home:%d", h.Gate) || !nearStall(req.Where, stallRect(*stable, int(req.GetStall()))) {
+		bay := stallRect(*stable, int(req.GetStall()))
+		area := fmt.Sprintf("home:%d", h.Gate)
+		if req.Where != nil && req.Where.Area == outdoorsArea {
+			ox, oy := chunks.LotOrigin(h.Gate)
+			bay.x += ox
+			bay.y += oy
+			area = outdoorsArea
+		}
+		if req.Where == nil || req.Where.Area != area || !nearStall(req.Where, bay) {
 			return nil, fail(409, "too-far-away")
 		}
 		var owner, key string
@@ -338,11 +347,14 @@ func (a *Server) stableExtend(w http.ResponseWriter, r *http.Request) error {
 	if err := decodeOp(w, r, req); err != nil {
 		return err
 	}
+	var world string
+	var gate int
 	return a.keyedOp(w, r, req.Op, req.Where, req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
 		h, err := stableHome(ctx, tx, s, req.GetHomeId(), now)
 		if err != nil {
 			return nil, err
 		}
+		world, gate = s.WorldID, h.Gate
 		stable := stablePlaced(h)
 		if stable == nil {
 			return nil, fail(409, "no-stable")
@@ -419,5 +431,5 @@ func (a *Server) stableExtend(w http.ResponseWriter, r *http.Request) error {
 			out.Home = homeViewProto(*home)
 		}
 		return out, nil
-	})
+	}, func() { a.homeChanged(world, gate) })
 }

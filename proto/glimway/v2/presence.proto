@@ -22,6 +22,7 @@ message PresenceMessage {
     PresenceWitness witness = 10;
     PresenceAbility ability = 11;
     PresenceAvatarChange avatar_change = 12;
+    PresenceHomeChanged home_changed = 18;
     FightSwing fight_swing = 13;
     FightJoin fight_join = 14;
     FightDelta fight_delta = 15;
@@ -63,6 +64,7 @@ message PresenceAbility {
 // follower, the mount that is out): sent after a companions, mount-out or
 // mount-home commit. The server is the only writer of PresenceAvatar's
 // selected_pet and selected_mount.
+message PresenceHomeChanged { uint32 gate = 1; }
 message PresenceAvatarChange { string account_id = 1; PresenceAvatar avatar = 2; }
 message PresenceGift { string from_name = 1; string kind = 2; string item_def = 3; int32 qty = 4; }
 message PresenceWitness { string beat = 1; string account_id = 2; string name = 3; }

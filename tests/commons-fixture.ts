@@ -93,3 +93,9 @@ export function servedTownFixture(day: FixedDay = { festival: null, wick: 'Quiet
   } })
   return { ...view, ground: grid(fp.ground), solid: grid(fp.solid), trees: view.trees.map(world), bushes: view.bushes.map(world), rocks: view.rocks.map(world), props: view.props.map(world), npcs: fixedNpcs(), exits: view.exits.map(world), gates: [], features: commonsLane()!.features, spawn: anchorTile('hearthwick:spawn') }
 }
+
+/** All eight seeded lot chunks, served under a world-specific immutable identity. */
+export function serveFixtureLots(): FixedFootprint {
+  const place = PLACES.fixed.find((f) => f.id === 'homestead-lots')!;
+  return serveFixed(place, Array.from({ length: 8 }, (_, gate) => decodeChunk(new Uint8Array(readFileSync(new URL(`./fixtures/plot-${gate}.bin`, import.meta.url))))));
+}

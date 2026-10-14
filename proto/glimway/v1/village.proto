@@ -157,6 +157,7 @@ message CommonsResult {
   int32 gate_count = 2;
   CommonsMine mine = 3;
   repeated DeedInvite invites = 4;
+  repeated HomeView homes = 5;
 }
 
 // ---- projects ----

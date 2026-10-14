@@ -111,7 +111,7 @@ message HomeLand {
     message: "the starting light sits inside the land"
     expression: "this.start_light.x < this.width && this.start_light.y < this.height"
   };
-  int32 generator = 1 [(buf.validate.field).int32.const = 1];
+  int32 generator = 1 [(buf.validate.field).int32.const = 2];
   int32 width = 2 [(buf.validate.field).int32 = {gte: 20, lte: 120}];
   int32 height = 3 [(buf.validate.field).int32 = {gte: 16, lte: 120}];
   HomeRect site = 4 [(buf.validate.field).required = true];

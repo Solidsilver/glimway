@@ -51,7 +51,7 @@ export function gatheringTarget(id: string): GatheringTarget | undefined {
 /** Whether a place (a progress area) has pieces of a target at all (the server checks the same). */
 export function gatheringOffered(area: string, target: string, position = { x: 0, y: 0 }): boolean {
   const place = at(area, position.x, position.y);
-  const kind = area.startsWith('home:') ? 'home' : area === 'outdoors' ? (place.source.kind === 'generated' ? 'wilds' : place.id) : place.id;
+  const kind = area.startsWith('home:') || place.id.startsWith('lot:') ? 'home' : area === 'outdoors' ? (place.source.kind === 'generated' ? 'wilds' : place.id) : place.id;
   return (GATHERING_DATA.areas[kind]?.targets ?? []).includes(target);
 }
 
@@ -122,7 +122,7 @@ export function gatherArea(area: string, position = { x: 0, y: 0 }): boolean {
  * come back when you leave and return.
  */
 export function keepsWork(area: string, lit: boolean): boolean {
-  return area.startsWith('home:') && lit;
+  return (area.startsWith('home:') || area.startsWith('lot:')) && lit;
 }
 
 /** The button word for a gathering action (the touch action button); a target's own word wins. */

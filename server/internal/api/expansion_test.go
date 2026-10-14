@@ -22,6 +22,7 @@ type expansionResponse struct {
 	LandSeed  uint32         `json:"landSeed"`
 	Materials map[string]int `json:"materials"`
 	Gates     []gateView     `json:"gates"`
+	Homes     []homeView     `json:"homes"`
 	GateCount int            `json:"gateCount"`
 	Mine      *struct {
 		HomeID string `json:"homeId"`

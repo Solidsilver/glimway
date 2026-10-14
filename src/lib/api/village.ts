@@ -295,6 +295,7 @@ export type DeedInvite = {
 };
 
 export type CommonsResponse = Snapshot & {
+  homes?: HomeView[];
   gates: GateInfo[];
   gateCount: number;
   mine: { homeId: string; gate: number } | null;
@@ -322,6 +323,7 @@ export function parseCommons(raw: unknown): CommonsResponse {
     const out = decodeWire(CommonsResultSchema, obj(raw));
     return {
       ...parseSnapshot(raw),
+      ...(out.homes.length ? { homes: out.homes.map(projectHome) } : {}),
       gates: out.gates.map(gateInfo),
       gateCount: out.gateCount,
       mine: out.mine ? { homeId: out.mine.homeId, gate: out.mine.gate } : null,

@@ -1,3 +1,6 @@
+import type { HomeView } from '../../lib/api/types.ts'
+import { lotOrigin } from '../../lib/lots.ts'
+import { lotAt, plotEpoch, plotIdentity } from '../../lib/lots.ts'
 /**
  * Fixed ground on the open map (docs/design/location-seam.md 1.2, 4, lane
  * S5): an authored layout's chunks (the Commons', content/layouts, sliced by
@@ -24,7 +27,7 @@ import { TERRAIN, TILE } from '../../lib/tile.ts'
 import { EV, bus } from '../events.ts'
 import type { Session } from '../session.ts'
 import type { ExitDef, NpcId, NpcSpot, ScenerySpot } from '../worlds.ts'
-import { loadFixedChunk } from './chunks.ts'
+import { loadFixedChunk, keepPlotWorld } from './chunks.ts'
 import { CHUNK_TILES, chunkKey } from './coords.ts'
 
 /** One layout object, in world tiles, as its chunk serves it. */
@@ -73,7 +76,7 @@ export interface FixedFootprint {
 /** One homestead gate on the lane, in world tiles. */
 export interface GateSlot {
   gate: number
-  /** The gap in the fence (two tiles tall: ty and ty + 1). */
+  /** The two-tile horizontal gap in the lot fence. */
   tx: number
   ty: number
   /** Which fence: the land lies west (or east) of the lane. */
@@ -117,6 +120,8 @@ export interface FixedDay {
 
 const footprints = new Map<string, FixedFootprint>()
 let loading: Promise<void> | null = null
+let loadingWorld = ''
+let desiredWorld = ''
 
 /** An anchor ("hearthwick:arch") as its world tile. */
 export function anchorTile(id: string): { tx: number; ty: number } {
@@ -165,31 +170,39 @@ export function fixedReady(): boolean {
  * cache when it has them). Without a server there is nothing to fetch.
  */
 export function prepareFixed(session: Pick<Session, 'link'>): Promise<void> | null {
+  const world = session.link?.worldId ?? ''
+  desiredWorld = world
+  keepPlotWorld(world)
+  const plots = footprints.get('homestead-lots')
+  if (plots && plots.epoch !== `plot:${world}@2`) footprints.delete('homestead-lots')
   if (fixedReady()) return Promise.resolve()
   const api = session.link?.api.operations
   if (!api) return null
-  if (!loading) {
-    loading = Promise.all(PLACES.fixed.filter((p) => !footprints.has(p.id)).map((p) => loadFootprint(api, p)))
+  if (!loading || loadingWorld !== world) {
+    loadingWorld = world
+    const request = Promise.all(PLACES.fixed.filter((p) => !footprints.has(p.id)).map((p) => loadFootprint(api, p, world)))
       .then(() => {
-        bus.emit(EV.fixedReady)
+        if (desiredWorld === world) bus.emit(EV.fixedReady)
       })
       .catch(() => undefined)
       .finally(() => {
-        loading = null
+        if (loading === request) loading = null
       })
+    loading = request
   }
   return loading
 }
 
-async function loadFootprint(api: Pick<OperationsApi, 'chunk'>, place: FixedPlace): Promise<void> {
+async function loadFootprint(api: Pick<OperationsApi, 'chunk'>, place: FixedPlace, world: string): Promise<void> {
   const epoch = fixedEpoch(place.layout, place.revision)
-  const chunks = await Promise.all(fixedChunkKeys(place).map(({ cx, cy }) => loadFixedChunk(api, epoch, cx, cy)))
-  footprints.set(place.id, assembleFootprint(place, chunks))
+  const chunks = await Promise.all(fixedChunkKeys(place).map(({ cx, cy }) => loadFixedChunk(api, place.id === 'homestead-lots' ? plotEpoch(world, lotAt(cx, cy)!) : epoch, cx, cy)))
+  if (desiredWorld === world) serveFixed(place, chunks)
 }
 
 /** A footprint from its served chunks (any order). */
 export function assembleFootprint(place: FixedPlace, chunks: readonly WorldChunk[]): FixedFootprint {
-  const epoch = fixedEpoch(place.layout, place.revision)
+  const plot = chunks[0] && plotIdentity(chunks[0].epochId)
+  const epoch = plot ? `plot:${plot.world}@2` : fixedEpoch(place.layout, place.revision)
   const { x0, y0, x1, y1 } = fixedChunks(place)
   const w = (x1 - x0 + 1) * CHUNK_TILES
   const h = (y1 - y0 + 1) * CHUNK_TILES
@@ -197,7 +210,7 @@ export function assembleFootprint(place: FixedPlace, chunks: readonly WorldChunk
   const solid: boolean[][] = Array.from({ length: h }, () => Array<boolean>(w).fill(true))
   const objects = new Map<string, FixedObject[]>()
   for (const c of chunks) {
-    if (c.epochId !== epoch) throw new Error(`[glimway] a ${place.id} chunk of ${c.epochId}`)
+    if (c.epochId !== (plot ? plotEpoch(plot.world, lotAt(c.cx, c.cy)!) : epoch)) throw new Error(`[glimway] a ${place.id} chunk of ${c.epochId}`)
     if (c.cx < x0 || c.cx > x1 || c.cy < y0 || c.cy > y1) throw new Error(`[glimway] chunk ${c.cx},${c.cy} is not ${place.id}'s`)
     const lx0 = (c.cx - x0) * CHUNK_TILES
     const ly0 = (c.cy - y0) * CHUNK_TILES
@@ -358,7 +371,7 @@ export function commonsLane(): CommonsLane | null {
   const slots = new Map<number, Partial<GateSlot>>()
   const lamps: { tx: number; ty: number }[] = []
   const slot = (g: number) => slots.get(g) ?? slots.set(g, { gate: g }).get(g)!
-  for (const [key, list] of fp.objects)
+  for (const place of [fp, footprints.get('homestead-lots')].filter((p): p is FixedFootprint => !!p)) for (const [key, list] of place.objects)
     for (const o of list) {
       const at = { tx: o.tx, ty: o.ty }
       named.set(o.id, at)
@@ -409,12 +422,42 @@ export function chunkOfTile(tx: number, ty: number): string {
 /** Test seam: forget the footprints. */
 export function forgetFixed(): void {
   footprints.clear()
+  plotBase = null
   loading = null
+  desiredWorld = ''
 }
 
 /** Test seam: a footprint as if its chunks were served. */
 export function serveFixed(place: FixedPlace, chunks: readonly WorldChunk[]): FixedFootprint {
   const fp = assembleFootprint(place, chunks)
+  if (place.id === 'homestead-lots') plotBase = fp
   footprints.set(place.id, fp)
   return fp
+}
+
+
+let plotBase: FixedFootprint | null = null
+/** Mutable home state changes collision and standing pieces, never the cached base bytes. */
+export function applyLotHome(gate: number, home: HomeView | null): void {
+  const current = footprints.get('homestead-lots'), base = plotBase
+  if (!current || !base || gate < 0 || gate > 7) return
+  if (home && current.epoch !== `plot:${home.worldId}@2`) home = null
+  const o = lotOrigin(gate), key = `${o.tx / 24},${o.ty / 24}`
+  const fp = { ...current, solid: current.solid.map((r) => [...r]), objects: new Map(current.objects) }
+  for (let y = 0; y < 24; y++) for (let x = 0; x < 24; x++) fp.solid[o.ty - fp.ty + y]![o.tx - fp.tx + x] = base.solid[o.ty - base.ty + y]![o.tx - base.tx + x]!
+  const cleared = new Set((home?.cleared ?? []).map(([x,y]) => `${x},${y}`))
+  const stumps = new Set((home?.stumps ?? []).map(([x,y]) => `${x},${y}`))
+  const objects = (base.objects.get(key) ?? []).flatMap((object) => {
+    const tile = `${object.tx-o.tx},${object.ty-o.ty}`
+    if (object.id.startsWith('land:') && cleared.has(tile)) return []
+    if (object.target === 'tree' && stumps.has(tile)) return [{ ...object, target: 'stump', label: 'Dig the stump', frame: 'stump-0' }]
+    return [object]
+  })
+  for (const [x,y] of home?.cleared ?? []) if (x>=3 && x<=20 && y>=1 && y<=18 && base.objects.get(key)?.some((p) => p.id === `land:${x},${y}`)) fp.solid[o.ty-fp.ty+y]![o.tx-fp.tx+x] = false
+  const template = (base.objects.get(key) ?? []).find((o) => o.art)!
+  for (const p of home?.plants ?? []) objects.push({ ...template, id: `plant:${p.id}`, kind: 'scenery', tx: o.tx+p.x, ty: o.ty+p.y, tw: 0, th: 0, variant: 'tangle-decor', frame: p.itemDef === 'turncap-spawn' ? 'turncaps-0' : p.itemDef === 'iron-oak-acorn' ? 'fern-0' : 'flowers-0', target: '', art: { ...template.art!, ox: 8, oy: 16, originLeft: false, depthY: true, tile: true } })
+  if (home?.desolate) for (let x=3;x<=20;x+=2) objects.push({ ...template, id: `desolate:${gate}:${x}`, kind: 'scenery', tx:o.tx+x, ty:o.ty+17, tw:0, th:0, variant:'tangle-decor', frame:'grass-0', target:'', art:{ ...template.art!,ox:8,oy:16,originLeft:false,depthY:true,tile:true,tint:0xaaa09a } })
+  fp.objects.set(key, objects)
+  fp.reach = joinedGround(fp)
+  footprints.set('homestead-lots', fp)
 }

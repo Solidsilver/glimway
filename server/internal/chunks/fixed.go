@@ -160,6 +160,10 @@ var placedKinds = []string{"tree", "bush", "rock", "overhang", "prop", "lamp", "
 func validateFixed(c *contract.WorldChunk) error {
 	S := uint32(content.WildsRules.GetChunkSize())
 	layout, revision, ok := ParseFixedEpoch(c.EpochId)
+	_, _, isPlot := PlotIdentity(c.EpochId)
+	if _, gate, plot := PlotIdentity(c.EpochId); plot {
+		layout, revision, ok = "homestead-lots", 2, LotAt(int(c.Cx), int(c.Cy)) == gate
+	}
 	if !ok || c.Size != S || c.Realm != content.WildsRules.GetRealm() || c.Layer != 0 || c.GeneratorVersion != 0 || c.LayoutRevision != uint32(revision) {
 		return fmt.Errorf("invalid chunk identity")
 	}
@@ -167,7 +171,7 @@ func validateFixed(c *contract.WorldChunk) error {
 	if src.Kind != location.SourceFixed || src.Layout != layout || src.Revision != revision {
 		return fmt.Errorf("unknown layout %s@%d at chunk %d,%d", layout, revision, c.Cx, c.Cy)
 	}
-	if c.Look != "" || c.Mark != "" || c.Tier != 0 || c.Land != "" || c.Decor != nil || len(c.Sites) > 0 || len(c.Entities) > 0 || len(c.Places) > 0 {
+	if (c.Look != "" && !(isPlot && c.Look == "tangle")) || c.Mark != "" || c.Tier != 0 || c.Land != "" || c.Decor != nil || len(c.Sites) > 0 || len(c.Entities) > 0 || len(c.Places) > 0 {
 		return fmt.Errorf("a fixed chunk carries generated geometry")
 	}
 	cells := int(S * S)

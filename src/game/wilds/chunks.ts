@@ -116,8 +116,11 @@ export function chunkCacheKey(epochId: string, cx: number, cy: number): string {
  * Forget every chunk not of these epochs or of a current fixed layout, here
  * and in IndexedDB (and every other version's).
  */
+let plotWorld = ''
+export function keepPlotWorld(world: string): void { plotWorld = world }
+
 export async function pruneChunks(currentEpochs: readonly string[], fixedEpochs: readonly string[] = FIXED_EPOCHS): Promise<void> {
-  const kept = [...currentEpochs, ...fixedEpochs];
+  const kept = [...currentEpochs, ...fixedEpochs, ...new Set([...fixedMemory.values()].filter((c) => c.epochId.startsWith(`plot:${plotWorld}:`)).map((c) => c.epochId))];
   const keepKey = (key: string) => key.startsWith(PREFIX) && kept.some((e) => key.startsWith(`${PREFIX}${e}:`));
   for (const key of [...fixedMemory.keys()]) if (!keepKey(key)) fixedMemory.delete(key);
   for (const key of [...memory.keys()]) if (!keepKey(key)) memory.delete(key);

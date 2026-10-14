@@ -1,6 +1,6 @@
 {
   "id": "homestead-lots",
-  "revision": 1,
+  "revision": 2,
   "tx": 0,
   "ty": 0,
   "width": 48,
@@ -216,5 +216,398 @@
     "######################....######################",
     "######################....######################"
   ],
-  "objects": []
+  "objects": [
+    {
+      "id": "lot:0:gate",
+      "kind": "gate",
+      "tx": 11,
+      "ty": 19,
+      "gate": 0,
+      "side": "west",
+      "tw": 2,
+      "th": 1,
+      "target": "lot-entry"
+    },
+    {
+      "id": "lot:0:sign",
+      "kind": "sign",
+      "tx": 9,
+      "ty": 20,
+      "gate": 0
+    },
+    {
+      "id": "lot:0:shelf",
+      "kind": "shelf",
+      "tx": 14,
+      "ty": 20,
+      "gate": 0
+    },
+    {
+      "id": "lot:0:fence:2",
+      "kind": "scenery",
+      "tx": 2,
+      "ty": 19,
+      "variant": "fence-h-8",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:0:fence:14",
+      "kind": "scenery",
+      "tx": 14,
+      "ty": 19,
+      "variant": "fence-h-8",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:1:gate",
+      "kind": "gate",
+      "tx": 35,
+      "ty": 19,
+      "gate": 1,
+      "side": "east",
+      "tw": 2,
+      "th": 1,
+      "target": "lot-entry"
+    },
+    {
+      "id": "lot:1:sign",
+      "kind": "sign",
+      "tx": 33,
+      "ty": 20,
+      "gate": 1
+    },
+    {
+      "id": "lot:1:shelf",
+      "kind": "shelf",
+      "tx": 38,
+      "ty": 20,
+      "gate": 1
+    },
+    {
+      "id": "lot:1:fence:2",
+      "kind": "scenery",
+      "tx": 26,
+      "ty": 19,
+      "variant": "fence-h-8",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:1:fence:14",
+      "kind": "scenery",
+      "tx": 38,
+      "ty": 19,
+      "variant": "fence-h-8",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:2:gate",
+      "kind": "gate",
+      "tx": 11,
+      "ty": 43,
+      "gate": 2,
+      "side": "west",
+      "tw": 2,
+      "th": 1,
+      "target": "lot-entry"
+    },
+    {
+      "id": "lot:2:sign",
+      "kind": "sign",
+      "tx": 9,
+      "ty": 44,
+      "gate": 2
+    },
+    {
+      "id": "lot:2:shelf",
+      "kind": "shelf",
+      "tx": 14,
+      "ty": 44,
+      "gate": 2
+    },
+    {
+      "id": "lot:2:fence:2",
+      "kind": "scenery",
+      "tx": 2,
+      "ty": 43,
+      "variant": "fence-h-8",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:2:fence:14",
+      "kind": "scenery",
+      "tx": 14,
+      "ty": 43,
+      "variant": "fence-h-8",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:3:gate",
+      "kind": "gate",
+      "tx": 35,
+      "ty": 43,
+      "gate": 3,
+      "side": "east",
+      "tw": 2,
+      "th": 1,
+      "target": "lot-entry"
+    },
+    {
+      "id": "lot:3:sign",
+      "kind": "sign",
+      "tx": 33,
+      "ty": 44,
+      "gate": 3
+    },
+    {
+      "id": "lot:3:shelf",
+      "kind": "shelf",
+      "tx": 38,
+      "ty": 44,
+      "gate": 3
+    },
+    {
+      "id": "lot:3:fence:2",
+      "kind": "scenery",
+      "tx": 26,
+      "ty": 43,
+      "variant": "fence-h-8",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:3:fence:14",
+      "kind": "scenery",
+      "tx": 38,
+      "ty": 43,
+      "variant": "fence-h-8",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:4:gate",
+      "kind": "gate",
+      "tx": 11,
+      "ty": 67,
+      "gate": 4,
+      "side": "west",
+      "tw": 2,
+      "th": 1,
+      "target": "lot-entry"
+    },
+    {
+      "id": "lot:4:sign",
+      "kind": "sign",
+      "tx": 9,
+      "ty": 68,
+      "gate": 4
+    },
+    {
+      "id": "lot:4:shelf",
+      "kind": "shelf",
+      "tx": 14,
+      "ty": 68,
+      "gate": 4
+    },
+    {
+      "id": "lot:4:fence:2",
+      "kind": "scenery",
+      "tx": 2,
+      "ty": 67,
+      "variant": "fence-h-8",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:4:fence:14",
+      "kind": "scenery",
+      "tx": 14,
+      "ty": 67,
+      "variant": "fence-h-8",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:5:gate",
+      "kind": "gate",
+      "tx": 35,
+      "ty": 67,
+      "gate": 5,
+      "side": "east",
+      "tw": 2,
+      "th": 1,
+      "target": "lot-entry"
+    },
+    {
+      "id": "lot:5:sign",
+      "kind": "sign",
+      "tx": 33,
+      "ty": 68,
+      "gate": 5
+    },
+    {
+      "id": "lot:5:shelf",
+      "kind": "shelf",
+      "tx": 38,
+      "ty": 68,
+      "gate": 5
+    },
+    {
+      "id": "lot:5:fence:2",
+      "kind": "scenery",
+      "tx": 26,
+      "ty": 67,
+      "variant": "fence-h-8",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:5:fence:14",
+      "kind": "scenery",
+      "tx": 38,
+      "ty": 67,
+      "variant": "fence-h-8",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:6:gate",
+      "kind": "gate",
+      "tx": 11,
+      "ty": 91,
+      "gate": 6,
+      "side": "west",
+      "tw": 2,
+      "th": 1,
+      "target": "lot-entry"
+    },
+    {
+      "id": "lot:6:sign",
+      "kind": "sign",
+      "tx": 9,
+      "ty": 92,
+      "gate": 6
+    },
+    {
+      "id": "lot:6:shelf",
+      "kind": "shelf",
+      "tx": 14,
+      "ty": 92,
+      "gate": 6
+    },
+    {
+      "id": "lot:6:fence:2",
+      "kind": "scenery",
+      "tx": 2,
+      "ty": 91,
+      "variant": "fence-h-8",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:6:fence:14",
+      "kind": "scenery",
+      "tx": 14,
+      "ty": 91,
+      "variant": "fence-h-8",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:7:gate",
+      "kind": "gate",
+      "tx": 35,
+      "ty": 91,
+      "gate": 7,
+      "side": "east",
+      "tw": 2,
+      "th": 1,
+      "target": "lot-entry"
+    },
+    {
+      "id": "lot:7:sign",
+      "kind": "sign",
+      "tx": 33,
+      "ty": 92,
+      "gate": 7
+    },
+    {
+      "id": "lot:7:shelf",
+      "kind": "shelf",
+      "tx": 38,
+      "ty": 92,
+      "gate": 7
+    },
+    {
+      "id": "lot:7:fence:2",
+      "kind": "scenery",
+      "tx": 26,
+      "ty": 91,
+      "variant": "fence-h-8",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    },
+    {
+      "id": "lot:7:fence:14",
+      "kind": "scenery",
+      "tx": 38,
+      "ty": 91,
+      "variant": "fence-h-8",
+      "art": {
+        "ox": 0,
+        "oy": 16,
+        "originLeft": true
+      }
+    }
+  ]
 }

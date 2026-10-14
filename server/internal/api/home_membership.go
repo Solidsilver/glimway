@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"glimway/content"
 	contract "glimway/server/internal/gen/glimway/v1"
-	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"slices"
 	"strings"
@@ -158,7 +157,7 @@ func heroAvatar(ctx context.Context, tx *sql.Tx, s *store.Snapshot) (*presenceAv
 // checkHomeRest requires the cottage on a gate named by your deed, or, before
 // there is a cottage (tier 0), the bedroll on that land.
 func checkHomeRest(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) error {
-	gate := rules.HomeGate(content.RootArea(s.State.Area))
+	gate := homeGateAt(s)
 	inside := strings.HasPrefix(s.State.Area, "in:home:")
 	if gate < 0 {
 		return fail(409, "not-at-own-plot")

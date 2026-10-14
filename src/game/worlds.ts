@@ -32,6 +32,7 @@ export type GlimSpotId = 'hearth' | 'road-1' | 'road-2' | 'road-3' | 'chest'
  * `wilds:<id>` a claim in a Wilds chunk, 'warden' the naming spoken to it.
  */
 export type InteractId =
+  | `lot:${number}:${string}`
   | NpcId
   | 'clue'
   | 'lantern'

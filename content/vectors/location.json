@@ -1,5 +1,5 @@
 {
-  "comment": "One town \u00a71 world-tile contract. Shared Go/TS vectors; positions enumerate content and served layout targets. The expanded generated frontier surrounds fixed places; fixed plots exist now as a T4 placeholder.",
+  "comment": "One town §1 world-tile contract. Shared Go/TS vectors; positions enumerate content and served layout targets. The expanded generated frontier surrounds fixed places; fixed plots exist now as a T4 placeholder.",
   "at": [
     {
       "name": "north unsafe",
@@ -300,7 +300,7 @@
         "source": {
           "kind": "fixed",
           "layout": "homestead-lots",
-          "revision": 1,
+          "revision": 2,
           "epochKind": ""
         }
       }
@@ -338,7 +338,7 @@
         "source": {
           "kind": "fixed",
           "layout": "homestead-lots",
-          "revision": 1,
+          "revision": 2,
           "epochKind": ""
         }
       }
@@ -357,7 +357,7 @@
         "source": {
           "kind": "fixed",
           "layout": "homestead-lots",
-          "revision": 1,
+          "revision": 2,
           "epochKind": ""
         }
       }
@@ -376,7 +376,7 @@
         "source": {
           "kind": "fixed",
           "layout": "homestead-lots",
-          "revision": 1,
+          "revision": 2,
           "epochKind": ""
         }
       }
@@ -395,7 +395,7 @@
         "source": {
           "kind": "fixed",
           "layout": "homestead-lots",
-          "revision": 1,
+          "revision": 2,
           "epochKind": ""
         }
       }
@@ -414,7 +414,7 @@
         "source": {
           "kind": "fixed",
           "layout": "homestead-lots",
-          "revision": 1,
+          "revision": 2,
           "epochKind": ""
         }
       }
@@ -433,7 +433,7 @@
         "source": {
           "kind": "fixed",
           "layout": "homestead-lots",
-          "revision": 1,
+          "revision": 2,
           "epochKind": ""
         }
       }
@@ -452,7 +452,7 @@
         "source": {
           "kind": "fixed",
           "layout": "homestead-lots",
-          "revision": 1,
+          "revision": 2,
           "epochKind": ""
         }
       }
@@ -471,7 +471,7 @@
         "source": {
           "kind": "fixed",
           "layout": "homestead-lots",
-          "revision": 1,
+          "revision": 2,
           "epochKind": ""
         }
       }
@@ -636,7 +636,7 @@
       "source": {
         "kind": "fixed",
         "layout": "homestead-lots",
-        "revision": 1,
+        "revision": 2,
         "epochKind": ""
       }
     },
@@ -648,7 +648,7 @@
       "source": {
         "kind": "fixed",
         "layout": "homestead-lots",
-        "revision": 1,
+        "revision": 2,
         "epochKind": ""
       }
     },
@@ -1594,7 +1594,7 @@
     }
   ],
   "bounds": {
-    "comment": "Two places laid at the schema's bounds (places.proto: chunks \u00b132768, tiles \u00b12^20) beside the shipped Commons, through the loader, then every lookup near them. Worked with big integers, so a runtime that wraps int32 disagrees (the S1 review's P2).",
+    "comment": "Two places laid at the schema's bounds (places.proto: chunks ±32768, tiles ±2^20) beside the shipped Commons, through the loader, then every lookup near them. Worked with big integers, so a runtime that wraps int32 disagrees (the S1 review's P2).",
     "fixed": [
       {
         "id": "edge-east",

@@ -1,3 +1,5 @@
+import { lotAt } from '../../lib/lots.ts'
+import { homesteadsFor } from '../homestead.ts'
 import { onSceneEnd } from '../scene-end.ts'
 /**
  * The open map's moving window (docs/design/open-map.md 2.5, 2.6, 2.10):
@@ -35,7 +37,7 @@ import { seasonMark } from '../../lib/wilds/outer.ts'
 import { gameNow } from '../clock.ts'
 import type { Session } from '../session.ts'
 import { CHUNK_TILES, chunkKey, chunkOfPixel, parseChunkKey } from './coords.ts'
-import { fixedPlaceOf, footprint, footprintAt, prepareFixed, sceneryOf, type FixedFootprint } from './fixed.ts'
+import { fixedPlaceOf, footprint, footprintAt, prepareFixed, applyLotHome, sceneryOf, type FixedFootprint } from './fixed.ts'
 import { FixedChunk, type FixedChunkDeps } from './fixed-chunk.ts'
 import type { ExitDef } from '../worlds.ts'
 import { PLACES, fixedChunks } from '../../lib/places.ts'
@@ -322,7 +324,7 @@ export class WildsWindow {
       const { cx, cy } = parseChunkKey(key)
       if (fixedPlaceOf(cx, cy)) {
         if (this.fixed.has(key) || this.failedGround.has(fixedPlaceOf(cx, cy)!.id)) continue
-        const fp = footprintAt(cx, cy)
+        let fp = footprintAt(cx, cy)
         if (!fp) {
           this.load(key)
           continue
@@ -473,6 +475,11 @@ export class WildsWindow {
   private attachFixed(fp: FixedFootprint, cx: number, cy: number): void {
     perfTime('attach:fixed', () => {
       const { scene, session } = this.deps
+      const gate = lotAt(cx, cy)
+      if (gate !== null) {
+        applyLotHome(gate, homesteadsFor(this.deps.session).homes.get(gate) ?? null)
+        fp = footprintAt(cx,cy)!
+      }
       const ground = this.groundFor(fp)
       if (!ground) return
       const c = new FixedChunk(
@@ -504,6 +511,9 @@ export class WildsWindow {
     })
   }
 
+  /** Mutable home overlays rebuild through the same window budget, without a scene restart. */
+  refreshFixed(key: string): void { if (this.fixed.has(key)) this.seasonalPending.add(key) }
+
   /** Fixed ground and collision are attached, even if its drawing is still building. */
   hasFixed(cx: number, cy: number): boolean {
     return this.fixed.has(chunkKey(cx, cy))
@@ -519,7 +529,7 @@ export class WildsWindow {
     const had = this.fixedGround.get(fp.place.id)
     if (had) return had
     if (this.failedGround.has(fp.place.id)) return null
-    const g = groundTiles(this.deps.scene, { areaId: fp.place.id, ground: fp.ground, width: fp.w, height: fp.h, scenery: [...fp.objects.values()].flat().flatMap((o) => {
+    const g = groundTiles(this.deps.scene, { areaId: fp.place.id, ...(fp.place.id === 'homestead-lots' ? { groundStyle: 'tangle' as const, groundMark: null } : {}), ground: fp.ground, width: fp.w, height: fp.h, scenery: [...fp.objects.values()].flat().flatMap((o) => {
       const s = sceneryOf(o)
       if (!s?.groundUnder) return []
       return [{ ...s, groundUnder: { ...s.groundUnder, tx: s.groundUnder.tx - fp.tx, ty: s.groundUnder.ty - fp.ty } }]

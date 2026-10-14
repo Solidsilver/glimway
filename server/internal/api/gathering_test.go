@@ -421,11 +421,20 @@ func TestPlantingAtHome(t *testing.T) {
 		return x.opRefreshing(c, &s, "plant", map[string]any{"itemDef": def, "tile": tile, "progress": standAt(s, area, at[0], at[1])}, status)
 	}
 
-	litTile := litSpots(h)[0]
+	var litTile [2]int
+	for _, candidate := range litSpots(h) {
+		if plantGround(h)[candidate] {
+			litTile = candidate
+			break
+		}
+	}
+	if litTile == [2]int{} {
+		t.Fatal("no lit planting ground")
+	}
 	var darkTile [2]int
 	for _, t := range landTiles(h, land.Grass, false) {
 		// Room to wander: open grass all round.
-		if landKind(h, t[0]+1, t[1]) == land.Grass && landKind(h, t[0]-1, t[1]) == land.Grass && landKind(h, t[0], t[1]+1) == land.Grass && landKind(h, t[0], t[1]-1) == land.Grass {
+		if plantGround(h)[t] && landKind(h, t[0]+1, t[1]) == land.Grass && landKind(h, t[0]-1, t[1]) == land.Grass && landKind(h, t[0], t[1]+1) == land.Grass && landKind(h, t[0], t[1]-1) == land.Grass {
 			darkTile = t
 			break
 		}
@@ -603,6 +612,11 @@ func TestPlantingNeverStacksIsCappedAndBlocksPlacement(t *testing.T) {
 // first back onto it (plantsOf counts who stands where).
 func TestPlantsNeverShareATile(t *testing.T) {
 	h := homeView{Gate: 0, LandSeed: 1234, Items: []homeInstance{}}
+	// A cleared garden provides neighbouring plant tiles on the smaller lot.
+	for _, kind := range []byte{land.Tree, land.Stump, land.Boulder} {
+		h.Cleared = append(h.Cleared, landTiles(h, kind, false)...)
+		h.Cleared = append(h.Cleared, landTiles(h, kind, true)...)
+	}
 	open := plantGround(h)
 	var r [2]int
 	for _, tl := range landTiles(h, land.Grass, false) {

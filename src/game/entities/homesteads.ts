@@ -1,3 +1,4 @@
+import { homeEntrance } from '../../lib/lots.ts'
 /**
  * Homesteads in the scene. Four places:
  *
@@ -17,6 +18,7 @@
  * draws it and turns presses into actions. Everything it draws is rebuilt
  * when that data changes.
  */
+import { LotHomes } from '../wilds/lot-chunk.ts'
 import { FixedScope } from '../wilds/fixed-scope'
 import Phaser from 'phaser'
 import { parseHomeArea } from '../../lib/homestead'
@@ -65,6 +67,7 @@ export interface HomesteadDeps {
   enterRoom: (gate: number, doorstep: { tx: number; ty: number }) => void
   /** The map no longer matches the data (the lane grew, land was cleared): rebuild it. */
   rebuild: () => void
+  refreshLot?: (key: string) => void
 }
 
 /** A homestead is read again for a mount's coming or going at most this often (ms). */
@@ -88,6 +91,7 @@ export class HomesteadLayer {
   readonly yardRoom: string | null
   /** Its yard pets, on the land (./homestead-yard.ts). */
   readonly yard: HomesteadYard | null
+  readonly lots: LotHomes | null
 
   constructor(
     readonly scene: Phaser.Scene,
@@ -104,12 +108,17 @@ export class HomesteadLayer {
     this.talk = new HomesteadTalk(this)
     this.arranging = new HomesteadArranging(this)
     this.yard = this.land ? new HomesteadYard(scene, deps.reducedMotion, () => deps.hero()) : null
+    this.lots = deps.world.open ? new LotHomes(this) : null
     if (this.commons) this.art.buildCommonsFixtures()
     this.art.emitThumbs()
     const onChange = (p?: { gate?: number }) => this.scheduleRedraw(p?.gate)
-    const onCommand = (c: PlacementCommand) => this.arranging.command(c)
-    const onArrange = () => this.arranging.startPlacement()
-    const onHomeAction = (p: { action: string }) => void this.talk.onAction(p.action)
+    const onCommand = (c: PlacementCommand) => (this.lots?.active()?.arranging ?? this.arranging).command(c)
+    const onArrange = () => (this.lots?.active()?.arranging ?? this.arranging).startPlacement()
+    const onHomeAction = (p: { action: string }) => void (this.lots?.actionOwner?.talk ?? this.lots?.active()?.talk ?? this.talk).onAction(p.action)
+    const onInvalidated = ({ gate }: { gate: number }) => {
+      if (this.lots?.has(gate) || this.gate === gate) void this.homes.fetchHome(gate)
+    }
+    bus.on(EV.homeInvalidated, onInvalidated)
     bus.on(EV.homeAction, onHomeAction)
     bus.on(EV.homeChanged, onChange)
     // Mail changes your mailbox flag: just your place.
@@ -129,7 +138,11 @@ export class HomesteadLayer {
       this.gone = true
       this.talk.silasHold.release()
     })
-    scene.events.once('shutdown', () => {
+    onSceneEnd(scene, () => {
+      this.homecoming?.remove()
+      this.redrawTimer?.remove()
+      this.lots?.destroy()
+      bus.off(EV.homeInvalidated, onInvalidated)
       bus.off(EV.homeChanged, onChange)
       bus.off(EV.villageChanged, onVillage)
       bus.off(EV.homeCommand, onCommand)
@@ -151,17 +164,17 @@ export class HomesteadLayer {
       invites: this.homes.invites,
       mine: this.homes.mine,
       goal: this.homes.goal(),
-      here: this.gate === null ? null : this.homes.homes.get(this.gate) ?? null,
+      here: this.lots?.active()?.here() ?? (this.gate === null ? null : this.homes.homes.get(this.gate) ?? null),
       slots: this.commons?.gates.map((g) => ({ gate: g.gate, tx: g.tx, ty: g.ty, side: g.side, sign: g.sign, entry: g.entry, shelf: g.shelf })) ?? [],
       features: this.commons?.features ?? null,
       land: this.land ? { gate: this.land.gate, door: this.land.door, doorstep: this.land.doorstep, mailbox: this.land.mailbox, site: this.land.site, desolate: this.land.desolate } : null,
       guide: this.art.guide ? { x: this.art.guide.marker.x, y: this.art.guide.marker.y, arrow: this.art.guide.arrow.visible } : null,
-      placing: !!this.arranging.placement,
-      yard: this.yard?.debug() ?? [],
+      placing: this.placing,
+      yard: (this.lots?.active()?.yard ?? this.yard)?.debug() ?? [],
       stalls: this.here()?.stalls ?? [],
       // The mounts standing in their bays on screen (./homestead-stable.ts tags each image).
       stalled: [...new Set(this.scene.children.list.filter((o) => o.active && typeof o.getData('stalled') === 'string').map((o) => o.getData('stalled') as string))],
-      placement: this.arranging.placement ? this.arranging.placementView : null,
+      placement: (this.lots?.active()?.arranging ?? this.arranging).placementView,
       stats: {
         gateDraws: this.art.gateDraws,
         tweens: this.scene.tweens.getTweens().length,
@@ -170,8 +183,9 @@ export class HomesteadLayer {
     }), { fresh: () => this.homes.fresh() }), scene)
     // Playtests: a tap on a land/room grid tile while arranging (as a pointer would).
     expose('__fsDevTapTile', (x, y) => {
-      const p = this.arranging.placement
-      if (p) this.arranging.onPointer({ worldX: p.ox + tileMid(x), worldY: p.oy + tileMid(y) } as Phaser.Input.Pointer)
+      const arranging = this.lots?.active()?.arranging ?? this.arranging
+      const p = arranging.placement
+      if (p) arranging.onPointer({ worldX: p.ox + tileMid(x), worldY: p.oy + tileMid(y) } as Phaser.Input.Pointer)
     }, scene)
     this.redraw()
     if (this.commons || this.yardRoom) void this.homes.load()
@@ -187,7 +201,7 @@ export class HomesteadLayer {
   gone = false
   /** Placement mode owns input: the hero waits. */
   get placing(): boolean {
-    return this.arranging.placement !== null
+    return this.arranging.placement !== null || !!this.lots?.active()?.arranging.placement
   }
 
   /** The homestead this scene shows (null: unclaimed land, or not read yet). */
@@ -197,7 +211,12 @@ export class HomesteadLayer {
 
   /** Where your `mount` walks into its bay on this land, or null when its bay isn't here (Go home, ./avatar.ts). */
   baySpot(mount: string): BayWalk | null {
-    return this.land ? homeBay(this.here(), this.homes.myId, mount) : null
+    const child = this.lots?.active()
+    const L = child?.land ?? this.land, h = child?.here() ?? this.here()
+    const bay = L ? homeBay(h, this.homes.myId, mount) : null
+    if (!bay || !L?.gridOrigin) return bay
+    const { x, y } = L.gridOrigin
+    return { front: { x: bay.front.x + x, y: bay.front.y + y }, stand: { x: bay.stand.x + x, y: bay.stand.y + y }, depth: bay.depth + y }
   }
 
   /**
@@ -220,6 +239,7 @@ export class HomesteadLayer {
 
   /** Your companions changed: redraw if a bay filled or emptied, else watch for a mount walking home. */
   private onCompanionsChange(): void {
+    if (this.lots) { this.lots.companions(); return }
     const home = this.here()
     if (!this.land || !home) return
     const next = stableNext(home.stalls, this.stallsHere(), this.stallsDrawn, this.homes.myId, homeward, Date.now())
@@ -243,6 +263,7 @@ export class HomesteadLayer {
    * then home) ends with one more read after the last.
    */
   private onCompanionsOf(accountId: string): void {
+    if (this.lots) { this.lots.companionsOf(accountId); return }
     const home = this.here()
     if (!this.land || !home || accountId === this.homes.myId) return
     if (!home.members.some((m) => m.id === accountId) && !home.stalls.some((s) => s.ownerId === accountId)) return
@@ -309,6 +330,7 @@ export class HomesteadLayer {
 
   /** Gates whose drawing needs refreshing, or 'all'; flushed once per frame. */
   private pending: Set<number> | 'all' | null = null
+  private redrawTimer: Phaser.Time.TimerEvent | null = null
   /** Coalesce change events: one redraw a frame, only of the gates that changed. */
   scheduleRedraw(gate?: number): void {
     const first = this.pending === null
@@ -318,18 +340,20 @@ export class HomesteadLayer {
       set.add(gate)
       this.pending = set
     }
-    if (first) this.scene.time.delayedCall(0, () => this.flushRedraw())
+    if (first) this.redrawTimer = this.scene.time.delayedCall(0, () => this.flushRedraw())
   }
 
   private flushRedraw(): void {
+    this.redrawTimer = null
     const p = this.pending
     this.pending = null
-    if (!p || !this.scene.sys.isActive()) return
+    if (this.gone || !p || !this.scene.sys.isActive()) return
     this.redraw(p === 'all' ? undefined : p)
   }
 
   private redraw(gates?: Set<number>): void {
     if (this.commons) {
+      if (this.lots) this.lots.refresh(gates)
       this.art.drawGates(gates)
       this.art.drawGuide()
     } else if (this.gate !== null && (!gates || gates.has(this.gate))) {
@@ -386,6 +410,8 @@ export class HomesteadLayer {
    * not a homestead (the goal needle's way-finding, src/game/entities/goal-guide.ts).
    */
   get placeKind(): 'home' | 'cottage' | 'other-home' | 'other-cottage' | null {
+    const active = this.lots?.active()
+    if (active) return active.placeKind
     if (this.gate === null) return null
     const own = this.gate === this.homes.myGate
     if (this.deps.room) return own ? 'cottage' : 'other-cottage'
@@ -399,7 +425,12 @@ export class HomesteadLayer {
    * found by their hour: ./goal-guide.ts.)
    */
   guidePoint(where: string): { x: number; y: number } | null {
+    if (where === 'lane') { const active = this.lots?.active(); return active ? tileCenter(homeEntrance(active.gate!).tx, homeEntrance(active.gate!).ty) : null }
     const mine = this.homes.myGate
+    if (this.lots && where !== 'gate') {
+      const child = this.lots.active()
+      if (child) return child.guidePoint(where)
+    }
     if (this.commons) {
       if (where === 'gate' && mine !== null) {
         const slot = this.commons.gates.find((g) => g.gate === mine)
@@ -433,15 +464,17 @@ export class HomesteadLayer {
   }
 
   attachFixedChunk(key: string): (() => void)[] {
-    return [...this.art.attachChunk(key), () => {
+    return [...(this.lots?.attach(key) ?? []), ...this.art.attachChunk(key), () => {
       this.fixedScope.keys.add(key)
       this.publishInteractions()
     }]
   }
 
   detachFixedChunk(key: string): void {
+    this.lots?.detach(key)
     this.fixedScope.keys.delete(key)
     this.art.detachChunk(key)
+    this.art.drawGuide()
     this.publishInteractions()
   }
 
@@ -453,7 +486,8 @@ export class HomesteadLayer {
   /** Per frame: the way to your gate, and whether the hero may arrange their place. */
   update(dt: number): void {
     this.art.updateGuide()
-    this.arranging.update(dt)
+    if (this.lots) this.lots.update(dt)
+    else this.arranging.update(dt)
     this.yard?.update(dt)
   }
 

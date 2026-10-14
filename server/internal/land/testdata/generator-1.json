@@ -1,0 +1,25 @@
+{
+  "generator": 1,
+  "width": 40,
+  "height": 30,
+  "site": {
+    "x": 16,
+    "y": 6,
+    "w": 8,
+    "h": 6
+  },
+  "gate": {
+    "x": 19,
+    "w": 2
+  },
+  "startLight": {
+    "x": 20,
+    "y": 10,
+    "radius": 7
+  },
+  "trees": 130,
+  "stumps": 14,
+  "boulders": 8,
+  "streamPermille": 350,
+  "slopePermille": 350
+}
