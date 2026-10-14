@@ -111,6 +111,7 @@ export interface CommonsLane {
 /** What the calendar has out today: an object tagged with either is drawn. */
 export interface FixedDay {
   festival: string | null
+  mark?: string
   wick: string
 }
 
@@ -244,10 +245,11 @@ function joinedGround(fp: FixedFootprint): Uint8Array {
   const { w, h, solid } = fp
   const out = new Uint8Array(w * h)
   const queue: [number, number][] = []
-  for (const a of fp.place.anchors) {
-    const x = a.tx + fp.place.origin.tx - fp.tx
-    const y = a.ty + fp.place.origin.ty - fp.ty
-    if (x < 0 || y < 0 || x >= w || y >= h || solid[y]![x]) continue
+  // Lot anchors are owned by Hearthwick but stand on the lots footprint.
+  for (const place of PLACES.fixed) for (const a of place.anchors) {
+    const x = a.tx + place.origin.tx - fp.tx
+    const y = a.ty + place.origin.ty - fp.ty
+    if (x < 0 || y < 0 || x >= w || y >= h || solid[y]![x] || out[y * w + x]) continue
     out[y * w + x] = 1
     queue.push([x, y])
   }
@@ -315,7 +317,7 @@ export function fixedStand(tx: number, ty: number): { tx: number; ty: number } |
 
 /** Is an object out today? (Untagged ones always are.) */
 export function objectOut(o: Pick<FixedObject, 'festival'>, day: FixedDay): boolean {
-  return !o.festival || o.festival === day.festival || o.festival === day.wick
+  return !o.festival || o.festival === day.festival || o.festival === day.wick || o.festival === day.mark
 }
 
 /** An object's drawn picture as scenery, in world px. */
@@ -325,6 +327,7 @@ export function sceneryOf(o: FixedObject): ScenerySpot | null {
   return {
     key: o.variant,
     ...(o.frame ? { frame: o.frame } : {}),
+    ...(o.kind === 'scenery' && o.tw > 0 && o.th > 0 ? { groundUnder: { tx: o.tx, ty: o.ty - o.th + 1, tw: o.tw, th: o.th, tile: TERRAIN.grass_a } } : {}),
     x: o.tx * TILE + a.ox,
     y: o.ty * TILE + a.oy,
     ...(a.originLeft ? { originX: 0 } : {}),
@@ -344,7 +347,7 @@ export function exitOf(o: FixedObject, fp: Pick<FixedFootprint, 'tx' | 'ty' | 'w
   const e = o.exit
   if (!e) return null
   const side = o.tw > o.th ? (o.ty - fp.ty < fp.h / 2 ? 'north' : 'south') : o.tx - fp.tx < fp.w / 2 ? 'west' : 'east'
-  return { tx: o.tx, ty: o.ty, tw: o.tw, th: o.th, to: e.to, entry: { tx: e.entryTx, ty: e.entryTy }, side, ...(e.unlabelled ? { label: null } : {}) }
+  return { tx: o.tx, ty: o.ty, tw: o.tw, th: o.th, to: e.to, entry: { tx: e.entryTx, ty: e.entryTy }, side, ...(e.unlabelled ? { label: null } : o.label ? { label: o.label } : {}) }
 }
 
 /** The Commons lane (gates and fixtures) in world tiles, once its chunks are here. */

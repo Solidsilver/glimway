@@ -1,3 +1,4 @@
+import { onSceneEnd } from './scene-end.ts'
 /**
  * The residents on their shared hour (docs/design/indoors.md 4): where
  * Hazel and Finn are is a pure function of the server's clock (`cycleAt`
@@ -103,7 +104,8 @@ export class ResidentCycle {
     this.deps = deps
     // Where the clock says, at once.
     for (const n of this.cycled()) this.place(n, this.due(n))
-    scene.time.addEvent({ delay: 1000, loop: true, callback: () => this.check() })
+    const timer = scene.time.addEvent({ delay: 1000, loop: true, callback: () => this.check() })
+    onSceneEnd(scene, () => { timer.remove(); this.listeners = [] })
   }
 
   /** Newly attached residents start at the clock's spot, without an arrival walk. */

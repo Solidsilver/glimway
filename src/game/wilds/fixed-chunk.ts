@@ -292,7 +292,7 @@ export class FixedChunk implements Buildable {
   private gather(): void {
     const spots: GatherSpot[] = this.objects
       .filter((o) => o.kind === 'gather')
-      .map((o) => ({ target: o.target, label: o.label, tx: o.tx, ty: o.ty, art: { key: o.variant } }))
+      .map((o) => ({ target: o.target, label: o.label, tx: o.tx, ty: o.ty, art: { key: o.variant, ...(o.frame ? { frame: o.frame } : {}) } }))
     if (!spots.length) return
     this.deps.gathering()?.addChunk(this.key, spots)
     this.gathered = true

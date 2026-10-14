@@ -136,7 +136,8 @@ test('every exit has a way back, and you arrive beside it', () => {
     for (const e of worlds[area].exits) {
       if (EXTERNAL.includes(e.to)) continue;
       const dest = worlds[e.to];
-      const back = dest.exits.find((x) => x.to === area);
+      const back = dest.exits.find((x) => x.to === area || (area === 'village' && e.to === 'woodland' && x.to === 'outdoors'));
+      if (area === 'village' && e.to === 'woodland') assert.deepEqual(back?.entry, { tx: 42, ty: 62 }, 'legacy builder’s return now enters the outdoor town');
       if (!back) assert.fail(`${e.to} has no exit back to ${area}`);
       const blocked = blockedTiles(dest);
       assert.ok(!blocked.has(key(e.entry)), `${area}→${e.to} entry ${key(e.entry)} is blocked`);
@@ -178,10 +179,10 @@ test('every glim spot sits on its prop and the three road lanterns are in Bracke
   assert.deepEqual(worlds.ruin.glimSpots.map((e) => e.id), ['chest']);
 });
 
-test('the journey reads in one direction: village → woodland → ruin', () => {
+test('the woodland journey keeps its east/west direction and returns to the outdoor town', () => {
   const edgeTo = (from: AreaId, to: AreaId) => edgeOf(worlds[from], worlds[from].exits.find((e) => e.to === to)!);
   assert.equal(edgeTo('village', 'woodland'), 'east');
   assert.equal(edgeTo('woodland', 'ruin'), 'east');
-  assert.equal(edgeTo('woodland', 'village'), 'west');
+  assert.equal(edgeTo('woodland', 'outdoors'), 'west');
   assert.equal(edgeTo('ruin', 'woodland'), 'west');
 });

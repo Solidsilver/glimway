@@ -17,7 +17,7 @@ import { isPresenceArea, presenceAreaFor } from '../src/lib/presence-client.ts';
 import { isSafeArea } from '../src/lib/habitica/sync.ts';
 import { createNewGame, validateSave } from '../src/lib/state.ts';
 import { TILE, tileFeet } from '../src/lib/tile.ts';
-import { serveFixtureCommons, servedCommonsFixture, toCommons } from './commons-fixture.ts';
+import { serveFixtureCommons, servedCommonsFixture, servedTownFixture, toCommons } from './commons-fixture.ts';
 
 // The Commons is the server's: these tests stand on its served chunks.
 serveFixtureCommons();
@@ -205,11 +205,11 @@ test('who’s home: a room’s resident is in while their spot is in it (the lof
   assert.ok(!residentIn('in:village:library', at(0)), 'Elara is at camp before opening');
 });
 
-test('residents are placed at every spot they have in an area; the cycle says which one they stand at', { skip: "T3: outdoor residents attach from fixed chunks" }, () => {
+test('residents are placed at every spot they have in an area; the cycle says which one they stand at', () => {
   assert.deepEqual(residentSpotsIn('in:village:bakery'), [{ id: 'hazel', tx: 4, ty: 6, spot: 'kitchen' }]);
   assert.deepEqual(residentSpotsIn('in:village:mill:2'), [{ id: 'finn', tx: 7, ty: 5, spot: 'loft' }]);
-  const village = buildArea('hearthwick').npcs.filter((n) => n.spot);
-  assert.deepEqual(village.map((n) => `${n.id}:${n.spot}`).sort(), ['ada:window', 'finn:door', 'hazel:square']);
+  const village = servedTownFixture().npcs.filter((n) => n.spot);
+  assert.deepEqual(village.map((n) => `${n.id}:${n.spot}`).sort(), ['ada:window', 'elara:camp', 'finn:door', 'hazel:square', 'silas:yard']);
   // Every spot is open floor.
   for (const def of ROOMS) for (const n of residentSpotsIn(def.id)) assert.equal(buildArea(def.id).solid[n.ty][n.tx], false, `${n.id} at ${def.id}`);
 });

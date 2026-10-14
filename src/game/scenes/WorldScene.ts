@@ -437,7 +437,7 @@ export class WorldScene extends Phaser.Scene {
         interactables: this.interactables,
         hero: () => this.hero.sprite
       }))
-      const fixedLife = new FixedLife({ world: this.world, npcs: this.npcs, cycle, talk, pickups, papers, repairs, touches, village, homes: () => this.homesteads?.fixedHooks ?? null })
+      const fixedLife = new FixedLife({ world: this.world, npcs: this.npcs, cycle, talk, pickups, papers, repairs, touches, village, fishing: this.fishing ?? undefined, pip: this.pipWalkOn ?? undefined, homes: () => this.homesteads?.fixedHooks ?? null })
       this.window = new WildsWindow({
         scene: this,
         session: this.session,

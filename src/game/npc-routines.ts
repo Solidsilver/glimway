@@ -27,6 +27,12 @@ const wait = (s: number): Step => ({ kind: 'wait', s })
 
 /** Routines by resident and area; each loop ends where it started (the resident's spot). */
 export const ROUTINES: Readonly<Record<string, Readonly<Record<string, readonly Step[]>>>> = {
+  hearthwick: {
+    mara: [wait(7), walk(16, 61), walk(16, 64), wait(3), walk(14, 64), walk(14, 61)],
+    hazel: [wait(9), walk(9, 63), walk(8, 63), walk(8, 62), { kind: 'sit', tx: 8, ty: 61, s: 16 }, walk(8, 63), walk(11, 63)],
+    pip: [wait(5), walk(11, 75), walk(11, 73), walk(9, 73), wait(2), walk(9, 75), walk(10, 75)],
+    orrin: [wait(12), walk(19, 57), walk(19, 55), wait(4), walk(17, 55), walk(17, 57)],
+  },
   village: {
     // Mara walks a slow square by the well and looks up the road.
     mara: [wait(7), walk(18, 13), walk(18, 11), wait(3), walk(16, 11), walk(16, 13)],

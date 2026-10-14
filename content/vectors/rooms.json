@@ -1078,6 +1078,142 @@
           "value": "in:commons:yard"
         }
       ]
+    },
+    {
+      "name": "indoor-spot-tx--1",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "spots",
+            "kitchen-hearth",
+            "tx"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "indoor-spot-tx-128",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "spots",
+            "kitchen-hearth",
+            "tx"
+          ],
+          "value": 128
+        }
+      ]
+    },
+    {
+      "name": "indoor-spot-ty--1",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "spots",
+            "kitchen-hearth",
+            "ty"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "indoor-spot-ty-128",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "spots",
+            "kitchen-hearth",
+            "ty"
+          ],
+          "value": 128
+        }
+      ]
+    },
+    {
+      "name": "indoor-light-tx--1",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "lights",
+            0,
+            "tx"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "indoor-light-tx-128",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "lights",
+            0,
+            "tx"
+          ],
+          "value": 128
+        }
+      ]
+    },
+    {
+      "name": "indoor-light-ty--1",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "lights",
+            0,
+            "ty"
+          ],
+          "value": -1
+        }
+      ]
+    },
+    {
+      "name": "indoor-light-ty-128",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "rooms",
+            0,
+            "lights",
+            0,
+            "ty"
+          ],
+          "value": 128
+        }
+      ]
     }
   ],
   "residents": [

@@ -27,7 +27,6 @@ import { grantPaper } from '../papers'
 import { itemsFor } from '../items'
 import { keepsakeAsk } from '../keepsakes'
 import type { VillagePanel } from '../village'
-import { openBoard } from './village-life'
 import { HOME_FLAGS, PAPERS, SILAS, lotName } from '../homestead'
 import type { Interactable, MarkerKind } from './interactables'
 import { DialogueHold } from '../dialogue-hold'
@@ -265,7 +264,6 @@ export class HomesteadTalk {
         CARTING_DAY_NOTICE
       ])
     })
-    out.push({ id: 'home:board', ...at(f.board, 2), label: 'Read the notice board', verb: 'Look', marker: () => this.home.village.calendar.notice ? 'talk' : null, markerOffset: 32, activate: openBoard })
     out.push({
       id: 'home:well',
       ...at({ tx: f.well.tx, ty: f.well.ty }, 4),

@@ -1,3 +1,4 @@
+import { fixedStand } from '../src/game/wilds/fixed.ts';
 import itemsRaw from '../content/items.json' with { type: 'json' };
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -37,7 +38,7 @@ import type { InstanceView, ItemsView } from '../src/lib/api/types.ts';
 import { serializeItemVectors } from '../scripts/items-vectors.ts';
 import { buildArea, type WorldData } from '../src/game/worlds.ts';
 import { allPlacements } from '../src/content/papers.ts';
-import { servedCommonsFixture } from './commons-fixture.ts';
+import { servedTownFixture } from './commons-fixture.ts';
 
 // ------------------------------------------------------------ the data
 
@@ -155,22 +156,22 @@ test('the off hand is tucked away while sitting or fighting, and comes back afte
   assert.equal(offHandTuck({ seated: true, fighting: false }, 5000, 0).tucked, true);
 });
 
-test('menders stand where Silas and Orrin do', { skip: "T3: town NPC posts replace the old village builder" }, () => {
-  const commons = servedCommonsFixture();
-  const village = buildArea('village');
+test('menders stand where Silas and Orrin do', () => {
+  const commons = servedTownFixture();
+  const village = servedTownFixture();
   const silas = ITEM_RULES.menders.find((m) => m.npc === 'silas')!;
   const orrin = ITEM_RULES.menders.find((m) => m.npc === 'orrin')!;
   const o = village.npcs.find((n) => n.id === 'orrin')!;
   assert.deepEqual([orrin.tx, orrin.ty], [o.tx, o.ty]);
-  assert.equal(menderNear('village', o.tx * 16 + 8, o.ty * 16 + 30, 0)?.npc, 'orrin');
-  assert.equal(menderNear('village', 0, 0, 0), null);
-  assert.equal(menderNear('commons', o.tx * 16 + 8, o.ty * 16 + 8, 0), null, 'right spot, wrong area');
+  assert.equal(menderNear('outdoors', o.tx * 16 + 8, o.ty * 16 + 30, 0)?.npc, 'orrin');
+  assert.equal(menderNear('outdoors', 0, 0, 0), null);
+  assert.equal(menderNear('tangle', o.tx * 16 + 8, o.ty * 16 + 8, 0), null, 'right spot, wrong area');
   // Silas mends wherever his cycle has him: by the sawhorse at minute 10
   // of the hour, at his counter at minute 40 (content/residents.json).
   const yard = commons.features.silas;
-  assert.deepEqual(menderAt(silas, 600), { area: 'commons', ...yard });
-  assert.equal(menderNear('commons', yard.tx * 16 + 8, yard.ty * 16 + 8, 600)?.npc, 'silas');
-  assert.equal(menderNear('commons', yard.tx * 16 + 8, yard.ty * 16 + 8, 2400), null, 'he is inside');
+  assert.deepEqual(menderAt(silas, 600), { area: 'hearthwick', ...yard });
+  assert.equal(menderNear('outdoors', yard.tx * 16 + 8, yard.ty * 16 + 8, 600)?.npc, 'silas');
+  assert.equal(menderNear('outdoors', yard.tx * 16 + 8, yard.ty * 16 + 8, 2400), null, 'he is inside');
   const counter = menderAt(silas, 2400)!;
   assert.equal(counter.area, 'in:commons:yard');
   assert.equal(menderNear('in:commons:yard', counter.tx * 16 + 8, counter.ty * 16 + 24, 2400)?.npc, 'silas');
@@ -213,21 +214,22 @@ function reachable(w: WorldData): Set<string> {
   return seen;
 }
 
-test('every pickup lies on a walkable, reachable tile, clear of exits and other things to press E at', { skip: "T3: retire the old builder fixture; shared served-town flood covers pickups" }, () => {
+test('every pickup lies on a walkable, reachable tile, clear of exits and other things to press E at', () => {
   assert.ok(ITEMS.pickups.length >= 3);
   for (const p of ITEMS.pickups) {
     // The Commons is fixed ground on the open map: its served layout, in Commons tiles (as items.json names them).
-    const w = p.area === 'hearthwick' ? ({ ...servedCommonsFixture(), glimSpots: [], discoverySpots: [], well: null, mural: null, shrine: null } as unknown as WorldData) : buildArea(p.area);
+    const w = p.area === 'hearthwick' ? ({ ...servedTownFixture(), glimSpots: [], discoverySpots: [], well: null, mural: null, shrine: null } as unknown as WorldData) : buildArea(p.area);
     const t = { tx: p.tx, ty: p.ty };
+    if (p.area === 'hearthwick') assert.deepEqual(fixedStand(p.tx, p.ty), t, `${p.id} joins the town flood`);
     assert.ok(!blocked(w).has(key(t)), `${p.id} at ${key(t)} is not walkable`);
-    assert.ok(reachable(w).has(key(t)), `${p.id} at ${key(t)} cannot be reached`);
+    assert.ok(p.area === 'hearthwick' ? fixedStand(p.tx, p.ty) : reachable(w).has(key(t)), `${p.id} at ${key(t)} cannot be reached`);
     assert.ok(!w.exits.some((e) => t.tx >= e.tx - 1 && t.tx <= e.tx + e.tw && t.ty >= e.ty - 1 && t.ty <= e.ty + e.th), `${p.id} sits on an exit`);
     const others: Tile[] = [...w.npcs, ...w.glimSpots, ...w.discoverySpots, ...allPlacements().filter((q) => q.source.area === p.area).map((q) => q.source)];
     for (const s of [w.mural, w.shrine, w.library, w.well]) if (s) others.push(s);
     for (const q of ITEMS.pickups) if (q !== p && q.area === p.area) others.push(q);
     for (const o of others) assert.ok(Math.hypot(o.tx - t.tx, o.ty - t.ty) >= 3, `${p.id} is crowded by ${key(o)}`);
   }
-  assert.deepEqual(pickupsIn('village', ['well-rope-coil']).map((p) => p.id), ['oatcake-parcel'], 'taken ones are gone');
+  assert.deepEqual(pickupsIn('hearthwick', ['well-rope-coil']).map((p) => p.id), ['lane-glove', 'oatcake-parcel'], 'taken ones are gone');
 });
 
 // ------------------------------------------------------------ the model in the panel

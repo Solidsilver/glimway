@@ -617,7 +617,7 @@ function buildWoodland(): WorldData {
   ]
 
   const woodlandExits: ExitDef[] = [
-    { tx: 0, ty: 14, tw: 1, th: 3, to: 'village', entry: { tx: 39, ty: 10 } },
+    { tx: 0, ty: 14, tw: 1, th: 3, to: OUTDOORS_AREA, entry: anchorTile('hearthwick:east-road'), label: 'Hearthwick' },
     { tx: W - 1, ty: 21, tw: 1, th: 3, to: 'ruin', entry: { tx: 2, ty: 13 } }
   ]
   const trees = collectTrees(g)

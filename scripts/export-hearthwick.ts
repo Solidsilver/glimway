@@ -47,17 +47,17 @@ function piece(id: string, variant: string, x: number, y: number): void {
 }
 function fence(x0: number, y0: number, x1: number, y1: number): void {
   rect(x0, y0, x1, y1, '.', true);
-  object(`fence:${x0},${y0}`, 'scenery', x0, y1, { variant: x0 === x1 ? `fence-v-${y1 - y0 + 1}` : `fence-h-${x1 - x0 + 1}`, art: { originLeft: true } as LayoutObject['art'] });
+  object(`fence:${x0},${y0}`, 'scenery', x0, y1, { variant: x0 === x1 ? `fence-v-${y1 - y0 + 1}` : `fence-h-${x1 - x0 + 1}`, art: { ox: 0, oy: 16, originLeft: true } as LayoutObject['art'] });
 }
 function house(id: string, variant: string, x: number, y: number, w: number, doorX: number, windowX?: number): void {
   rect(x, y, x + w - 1, y + 1, 'r', true);
   rect(x, y + 2, x + w - 1, y + 3, 'h', true);
   rect(doorX, y + 3, doorX, y + 3, 'd', true);
   if (windowX !== undefined) rect(windowX, y + 2, windowX, y + 2, 'w', true);
-  object(id, 'scenery', x, y + 3, { variant, tw: w, th: 4, art: { ox: w * 8, oy: 0 } as LayoutObject['art'] });
+  object(id, 'scenery', x, y + 3, { variant, tw: w, th: 4, art: { ox: w * 8, oy: 16 } as LayoutObject['art'] });
 }
 // Outer woods: every edge is closed except the authored road mouths.
-rect(-24, 24, 47, 26, ',', true); rect(-24, 93, 47, 95, ',', true);
+rect(-24, 24, 47, 25, ',', true); rect(-24, 93, 47, 95, ',', true);
 rect(-24, 24, -22, 95, ',', true); rect(45, 24, 47, 95, ',', true);
 // Six-tile roads, narrowing only at boundary posts.
 rect(1, 24, 3, 24, ':'); rect(0, 25, 5, 43, '=');
@@ -88,8 +88,8 @@ prop('hearth', 'lantern-post', 10, 60, 32, 'village');
 prop('patched-bench', 'patched-bench', 8, 61, 18);
 prop('trail-sign', 'trail-sign', 16, 59, 24);
 prop('bread-basket', 'bread-basket', -13, 59, 12);
-rect(12, 60, 12, 61, 'h', true); rect(13, 61, 13, 61, 'h', true);
-object('town-well', 'well', 12, 60, { variant: 'commons-well' }); rect(12, 56, 12, 56, '.', true);
+rect(12, 60, 13, 61, 'h', true);
+object('town-well', 'well', 12, 61, { variant: 'commons-well', art: { ox: 16, oy: 16 } as LayoutObject['art'] }); rect(12, 56, 12, 56, '.', true);
 object('town-board', 'board', 12, 56, { variant: 'notice-board' });
 object('gate-hame', 'scenery', 0, 43, { variant: 'gatepost-small' });
 piece('camp-pack', 'commons-art:wilds-pack', 7, 26); piece('camp-fire', 'commons-art:wilds-fire-ring', 7, 28);
@@ -108,14 +108,14 @@ for (const [target, festival, coords] of [
   ['bloom-patch', 'Bloom', [[11,37],[12,37],[13,37],[11,38],[12,38]]],
   ['freshet-shore', 'Mudrise', [[34,72],[36,72],[38,72]]],
   ['pond-ice', 'Quiet', [[34,73],[37,73],[38,75]]],
-] as const) for (const [i, [x,y]] of coords.entries()) object(`gather:${target}:${i}`, 'gather', x, y, { target, festival, label: target === 'bloom-patch' ? 'Pick Bloom flowers' : target === 'pond-ice' ? 'Break the pond ice' : 'Sweep the freshet shore', variant: target === 'pond-ice' ? 'pond-ice' : target === 'bloom-patch' ? 'wildflowers' : 'tangle-decor', ...(target === 'freshet-shore' ? { frame: `pebbles-${i}` } : {}), art: { tile: true } as LayoutObject['art'] });
+] as const) for (const [i, [x,y]] of coords.entries()) object(`gather:${target}:${i}`, 'gather', x, y, { target, festival, label: target === 'bloom-patch' ? 'Pick Bloom flowers' : target === 'pond-ice' ? 'Break the pond ice' : 'Sweep the freshet shore', variant: target === 'pond-ice' ? 'pond-ice' : target === 'bloom-patch' ? 'wildflowers' : 'tangle-decor', ...(target === 'freshet-shore' ? { frame: `pebbles-${i}` } : {}), art: { ox: 8, oy: 16, depthY: true, tile: true } as LayoutObject['art'] });
 // The only curated outdoor portal: Brackenwood. All four roads are walks.
 object('exit:woodland', 'exit', 41, 64, { tw: 3, th: 1, label: 'Brackenwood & Ashwatch', exit: { to: 'woodland', entryTx: 2, entryTy: 15 } as LayoutObject['exit'] });
 for (const [id, x, y, label] of [['north',1,25,'Beyond the arch: the Tangle.'], ['east',44,57,'Beyond the posts: the Eastern Reaches.'], ['south',7,92,'Beyond the posts: the Southern Mere.'], ['west',-23,67,'Homestead Lane & the Western Drift.']] as const)
   object(`boundary:${id}`, 'scenery', x, y, { variant: 'gatepost-small', label });
 for (const [id, x, y] of [['north',4,26], ['east',44,61], ['south',11,92], ['west',-21,72]] as const) prop(`lamp:${id}`, 'lantern-post', x, y, 32, 'village');
 for (const [id, variant, x, y] of [['madder-stall','stall-a',-5,35],['stall-b','stall-b',-1,38],['stall-c','stall-c',9,33],['bunting','bunting-96',2,31]] as const)
-  object(id, 'scenery', x, y, { variant, festival: 'Carting Day' });
+  object(id, 'scenery', x, y, { variant, festival: 'Carting Day', ...(id === 'bunting' ? { art: { ox: 8, oy: 16, depth: 5000 } as LayoutObject['art'] } : {}) });
 // Wood silhouettes occupy only solid boundary tiles; no object blocks a mouth.
 for (let y = 24; y <= 95; y += 3) for (const x of [-24,47]) if (solid[y - 24]![x + 24] === '#') object(`tree:${x},${y}`, 'tree', x, y, { variant: 'oak-canopy', width: 48 });
 const town = { id: 'hearthwick', revision: 1, tx: 0, ty: 0, width: 72, height: 72, palette, ground: ground.map(r => r.join('')), solid: solid.map(r => r.join('')), objects };
@@ -134,6 +134,7 @@ for (let y = 0; y < 96; y++) for (let x = 22; x <= 25; x++) {
 // Only the middle cross-lane opens the western boundary into the Wilds.
 for (let y = 0; y < 96; y++) for (const x of [0, 1, 46, 47])
   if (!(x < 2 ? [44, 45, 46, 47] : [20, 21, 22, 23, 44, 45, 46, 47]).includes(y)) lotSolid[y]![x] = '#';
+for (const y of [0, 1, 94, 95]) for (let x = 0; x < 48; x++) if (x < 22 || x > 25) lotSolid[y]![x] = '#';
 const plots = { id:'homestead-lots', revision:1, tx:0, ty:0, width:48, height:96, palette, ground:lotGround.map(r=>r.join('')), solid:lotSolid.map(r=>r.join('')), objects:[] };
 for (const [path, doc] of [['content/places.json',places],['content/layouts/hearthwick.json',town],['content/layouts/homestead-lots.json',plots]] as const)
   writeFileSync(path, JSON.stringify(doc,null,2)+'\n');

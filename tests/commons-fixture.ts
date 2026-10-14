@@ -7,7 +7,7 @@ import { decodeChunk } from '../src/lib/api/chunks.ts';
 import type { WorldChunk } from '../src/lib/gen/glimway/v1/wilds_pb.js';
 import { PLACES } from '../src/lib/places.ts';
 import { TILE } from '../src/lib/tile.ts';
-import { anchorTile, assembleFootprint, commonsLane, exitOf, fixedChunkKeys, objectOut, serveFixed, type FixedDay, type FixedFootprint, type GateSlot, type CommonsFeatures } from '../src/game/wilds/fixed.ts';
+import { anchorTile, assembleFootprint, commonsLane, exitOf, fixedChunkKeys, fixedNpcs, objectOut, serveFixed, type FixedDay, type FixedFootprint, type GateSlot, type CommonsFeatures } from '../src/game/wilds/fixed.ts';
 import type { ExitDef, NpcId, NpcSpot, PropSpot } from '../src/game/worlds.ts';
 
 export const COMMONS_PLACE = PLACES.fixed.find((f) => f.id === 'hearthwick')!;
@@ -78,4 +78,18 @@ export function servedCommonsFixture(day: FixedDay = { festival: null, wick: 'Qu
   const f = lane.features;
   view.features = { gate: toCommons(f.gate), hame: toCommons(f.hame), well: toCommons(f.well), board: toCommons(f.board), silas: toCommons(f.silas), toolbox: toCommons(f.toolbox), firebox: toCommons(f.firebox), skids: toCommons(f.skids), lamps: f.lamps.map(toCommons) };
   return view;
+}
+
+/** World-coordinate geometry for the town scene tests, read from server fixtures. */
+export function servedTownFixture(day: FixedDay = { festival: null, wick: 'Quiet' }): CommonsView {
+  const fp = serveFixtureCommons()
+  const view = servedCommonsFixture(day)
+  const world = <T extends { tx: number; ty: number }>(t: T) => ({ ...t, tx: t.tx + O.tx, ty: t.ty + O.ty })
+  const grid = <T>(g: T[][]): T[][] => new Proxy(g, { get(target, y) {
+    if (typeof y === 'string' && /^-?\d+$/.test(y)) return new Proxy(target[Number(y) - fp.ty] ?? [], { get(row, x) {
+      return typeof x === 'string' && /^-?\d+$/.test(x) ? row[Number(x) - fp.tx] : Reflect.get(row, x)
+    } })
+    return Reflect.get(target, y)
+  } })
+  return { ...view, ground: grid(fp.ground), solid: grid(fp.solid), trees: view.trees.map(world), bushes: view.bushes.map(world), rocks: view.rocks.map(world), props: view.props.map(world), npcs: fixedNpcs(), exits: view.exits.map(world), gates: [], features: commonsLane()!.features, spawn: anchorTile('hearthwick:spawn') }
 }

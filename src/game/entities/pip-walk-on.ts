@@ -1,3 +1,4 @@
+import { onSceneEnd } from '../scene-end.ts'
 /**
  * Pip's walk-on (docs/design/quests.md 3, indoors.md 5.7): as Orrin sets
  * the signpost (the opening reaches `set-post`), Pip runs up from the
@@ -7,7 +8,8 @@
 import type Phaser from 'phaser'
 import { bus, EV, type QuestPayload } from '../events'
 import { openDialogue } from '../dialogue'
-import { tileAt } from '../../lib/tile'
+import { tileAt, tileFeet } from '../../lib/tile'
+import { townPath } from '../wilds/town-path.ts'
 import { twoLegs } from '../resident-cycle'
 import type { Npcs } from './npcs'
 import type { WorldData } from '../worlds'
@@ -27,35 +29,61 @@ export interface PipWalkOnDeps {
 
 export class PipWalkOn {
   private running = false
+  private stopped = false
+  private closed: (() => void) | null = null
 
   constructor(scene: Phaser.Scene, private deps: PipWalkOnDeps) {
-    if (deps.world.areaId !== 'village') return
+    if (deps.world.areaId !== 'village' && !deps.world.open) return
     // The opening's step comes with the quest event (lane C's `{ quest, step }`).
     const onQuest = (p: QuestPayload & { quest?: string; step?: string }) => {
       if (p.quest === 'signpost' && p.step === 'set-post') this.play()
     }
     bus.on(EV.quest, onQuest)
-    scene.events.once('shutdown', () => bus.off(EV.quest, onQuest))
+    const cleanup = () => {
+      this.stopped = true
+      this.running = false
+      bus.off(EV.quest, onQuest)
+      this.cancelConversation()
+    }
+    onSceneEnd(scene, cleanup)
+  }
+
+  private cancelConversation(): void {
+    if (this.closed) bus.off(EV.dialogueClosed, this.closed)
+    this.closed = null
+  }
+
+  /** A streamed-out Pip cannot finish a conversation or start a return walk. */
+  detachChunk(): void {
+    if (!this.deps.npcs.npcs.some((n) => n.id === 'pip')) {
+      this.cancelConversation()
+      this.running = false
+    }
   }
 
   /** Run up to the hero, say the message, run home. False when Pip isn't here (or already running). */
   play(): boolean {
     const pip = this.deps.npcs.npcs.find((n) => n.id === 'pip')
-    if (!pip || !pip.home || this.running) return false
+    if (this.stopped || !pip || !pip.home || this.running) return false
     this.running = true
     const hero = this.deps.hero()
     const from = { tx: tileAt(pip.home.x), ty: tileAt(pip.home.y - 1) }
     // Beside the hero, a step to their right.
     const to = { tx: tileAt(hero.x) + 1, ty: tileAt(hero.y - 1) }
-    const there = twoLegs(from, to)
+    const there = this.deps.world.open ? townPath(from, to, this.deps.world.open.solidAt)?.map((t) => tileFeet(t.tx, t.ty)) : twoLegs(from, to)
+    if (!there) { this.running = false; return false }
     this.deps.npcs.walkPath(pip, there, () => {
+      if (this.stopped || !this.deps.npcs.npcs.includes(pip)) return
       openDialogue({ id: 'pip', speaker: 'Pip', lines: PIP_MESSAGE })
-      bus.once(EV.dialogueClosed, () => {
-        this.deps.npcs.walkPath(pip, [...twoLegs(to, from)], () => {
+      this.closed = () => {
+        this.closed = null
+        if (this.stopped || !this.deps.npcs.npcs.includes(pip)) return
+        this.deps.npcs.walkPath(pip, [...there].reverse().slice(1).concat([tileFeet(from.tx, from.ty)]), () => {
           this.deps.npcs.place(pip, true)
           this.running = false
         }, RUN)
-      })
+      }
+      bus.once(EV.dialogueClosed, this.closed)
     }, RUN)
     return true
   }

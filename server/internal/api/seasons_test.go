@@ -443,7 +443,7 @@ func TestSilasYardSellsFromTheShopAndBesideHim(t *testing.T) {
 	if buy(at("hearthwick", yard.GetTx(), yard.GetTy()), 409).Error.Code != "too-far-away" {
 		t.Fatal("bought by the sawhorse while he's indoors")
 	}
-	if buy(at("hearthwick", 51, 21), 409).Error.Code != "too-far-away" {
+	if buy(at("hearthwick", 4, 60), 409).Error.Code != "too-far-away" {
 		t.Fatal("bought on the Commons while he's indoors")
 	}
 	if buy(at("in:commons:yard:deeds", 2, 6), 409).Error.Code != "too-far-away" {

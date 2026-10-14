@@ -106,7 +106,8 @@ class FakeScene {
   events = new EventEmitter();
   cameras = { main: { width: 1200, height: 760, zoom: 2 } };
   sys = { isActive: () => true };
-  anims = { exists: () => false };
+  anims = { exists: () => false, create() {} };
+  input = { keyboard: new EventEmitter() };
   timers = new Set<unknown>();
   time = {
     addEvent: () => {
@@ -114,7 +115,11 @@ class FakeScene {
       this.timers.add(timer);
       return timer;
     },
-    delayedCall: () => ({ remove() {} }),
+    delayedCall: () => {
+      const timer = { remove: () => this.timers.delete(timer) };
+      this.timers.add(timer);
+      return timer;
+    },
   };
   bodies = new Set<unknown>();
   physics = {
@@ -180,7 +185,7 @@ function rig() {
     tileArt,
     gathering: () => ({ addChunk: (k: string, s: unknown[]) => gatherChunks.set(k, s), removeChunk: (k: string) => gatherChunks.delete(k) }),
     occluders: { add: (l: { image: unknown }[]) => l.forEach((o) => occluders.add(o.image)), remove: (l: unknown[]) => l.forEach((o) => occluders.delete(o)) },
-    interactables: { register: (owner: object, p: unknown[]) => (p.length ? points.set(owner, p) : points.delete(owner)) },
+    interactables: { invalidatePrompt() {}, register: (owner: object, p: unknown[]) => (p.length ? points.set(owner, p) : points.delete(owner)) },
     reducedMotion: false,
     ground: g.ground,
     day: () => ({ festival: 'Carting Day', wick: 'Bloom' }),
@@ -416,7 +421,7 @@ test('failed fixed reads wait before retrying instead of fetching every frame', 
 });
 
 
-test('Commons residents, pickups, papers, repairs, festival dressing and exit reads leave nothing after three attaches', { skip: "T3: update town-life lifecycle fixture for the new layout" }, async () => {
+test('Commons residents, pickups, papers, repairs, festival dressing and exit reads leave nothing after three attaches', async () => {
   const { Interactables } = await import('../src/game/entities/interactables.ts');
   const { HomesteadLayer } = await import('../src/game/entities/homesteads.ts');
   const { HomesteadTalk } = await import('../src/game/entities/homestead-talk.ts');
@@ -429,6 +434,8 @@ test('Commons residents, pickups, papers, repairs, festival dressing and exit re
   const { ItemPickups } = await import('../src/game/entities/item-pickups.ts');
   const { RepairsLayer } = await import('../src/game/entities/repairs.ts');
   const { VillageLayer } = await import('../src/game/entities/village-life.ts');
+  const { Fishing } = await import('../src/game/entities/fishing.ts');
+  const { PipWalkOn } = await import('../src/game/entities/pip-walk-on.ts');
   const { Touches } = await import('../src/game/entities/touches.ts');
   const { buildWildsWorld } = await import('../src/game/wilds/wilds-world.ts');
   const { villageFor } = await import('../src/game/village.ts');
@@ -438,34 +445,30 @@ test('Commons residents, pickups, papers, repairs, festival dressing and exit re
   const { PAPERS } = await import('../src/content/papers.ts');
   const placed = PAPERS.find((p) => p.source.kind === 'placed')!;
   const originalSource = placed.source;
-  placed.source = { kind: 'placed', area: 'hearthwick', tx: 24, ty: 18, look: 'folded', spot: 'test fixture' };
+  placed.source = { kind: 'placed', area: 'hearthwick', tx: 24, ty: 62, look: 'folded', spot: 'test fixture' };
   const { setGameNow } = await import('../src/game/clock.ts');
   const r = rig();
   const originalDocument = globalThis.document;
   globalThis.document = { createElement: () => ({ getContext: () => ({ fillRect() {} }) }) } as unknown as Document;
   r.scene.textures.exists = (key) => !key?.startsWith('repair-') || r.scene.textures.added.includes(key);
-  // The frozen Commons has no window or water tiles; exercise their terrain rules without changing its layout.
-  const { TERRAIN } = await import('../src/lib/tile.ts');
-  const windowTile = r.fp.ground[6]![34]!;
-  const waterTile = r.fp.ground[7]![35]!;
-  r.fp.ground[6]![34] = TERRAIN.window;
-  r.fp.ground[7]![35] = TERRAIN.water_a;
   const world = buildWildsWorld();
   const interactions = new Interactables(r.scene as never, { reducedMotion: false });
   r.deps.interactables = interactions as never;
   const state = createNewGame();
-  const session = { state, questStage: 'complete', link: {} } as never;
+  const session = { state, questStage: 'complete', link: { server: {}, readWaters: async () => ({ ok: true, value: [] }) }, checkSpend: () => ({ ok: false, cost: 1, reason: 'full' }) } as never;
   // The real HomesteadLayer creates this session model before markers read it.
   const { homesteadsFor } = await import('../src/game/homestead.ts');
   homesteadsFor(session);
   const model = villageFor(session);
   model.ensureCalendar = () => {};
   model.loadProjects = async () => {};
+  model.worldFlags = ['project:well-canopy:complete', 'project:cooley-window-fund:complete'];
   model.repairsStatus = 'ready';
   model.repairs.open = repairsForArea('outdoors').map((d) => ({ id: d.id })) as never;
   const items = itemsFor(session);
   items.view = { pickedUp: [], stacks: [], instances: [], pockets: [] } as never;
   items.pickedUp = () => [];
+  const rootListeners = Object.values(EV).reduce((n, e) => n + bus.listenerCount(e as never), 0);
   const deps = { world, session, fx: {}, reducedMotion: false, interactables: r.deps.interactables } as never;
   const scene = r.scene as never;
   const npcs = new Npcs(scene, world, r.scene.solids as never);
@@ -482,30 +485,38 @@ test('Commons residents, pickups, papers, repairs, festival dressing and exit re
     fixedScope: new FixedScope(true),
   }) as InstanceType<typeof HomesteadLayer>;
   Object.assign(home, { art: new HomesteadArt(home), talk: new HomesteadTalk(home) });
-  const life = new FixedLife({ world, npcs, cycle, talk, pickups, papers, repairs, village, touches, homes: () => ({ attach: (key) => home.attachFixedChunk(key), detach: (key) => home.detachFixedChunk(key) }) });
+  const fishing = new Fishing(scene, { ...(deps as object), hero: () => ({ sprite: { x: 536, y: 1166 } }), notePosition() {} } as never);
+  const pip = new PipWalkOn(scene, { world, npcs, hero: () => ({ x: 280, y: 920 }) });
+  const life = new FixedLife({ world, npcs, cycle, talk, pickups, papers, repairs, village, touches, fishing, pip, homes: () => ({ attach: (key) => home.attachFixedChunk(key), detach: (key) => home.detachFixedChunk(key) }) });
   r.deps.hooks = () => life as never;
   interactions.buildMarkers();
   const count = () => ({ ...snapshot(r), timers: r.scene.timers.size, points: interactions.list.length, owners: interactions['byOwner'].size, people: npcs.npcs.length, posts: world.npcs.length });
   setGameNow(Date.parse('2026-01-05T00:05:00Z') / 1000);
   const before = count();
   assert.equal(before.objects, 1, 'only the persistent interaction key hint before chunks');
-  assert.deepEqual(doorFor('silas', 'outdoors', 'in:commons:yard'), { step: { tx: 32, ty: 42 }, door: { tx: 32, ty: 41 } });
+  assert.deepEqual(doorFor('silas', 'outdoors', 'in:commons:yard'), { step: { tx: 34, ty: 35 }, door: { tx: 34, ty: 34 } });
   for (const festival of ['Carting Day', 'Closure Night', 'Amberwake', 'The Breaking']) {
     model.calendar = { ...model.calendar, festival, notice: 'A fixture notice' } as never;
     bus.emit(EV.villageChanged, { what: 'calendar' });
+    r.deps.day = () => ({ festival, wick: 'Bloom' });
     for (let round = 0; round < 3; round++) {
       const chunks = [...r.fp.objects.keys()].map((k) => {
         const [cx, cy] = k.split(',').map(Number) as [number, number];
         return new FixedChunk(r.deps as never, r.fp, cx, cy);
       });
       for (const c of chunks) r.builds.finish(c);
-      assert.equal(npcs.npcs.length, 2);
+      assert.equal(npcs.npcs.length, 8);
       assert.ok(pickups.ids().length > 0, 'pickups drawn');
       assert.ok(papers.lying().length > 0, 'papers drawn');
       assert.ok(repairs.ids().length > 0, 'repairs drawn');
       const points = interactions.list;
-      for (const id of ['home:hame', 'home:board', 'home:well', 'home:toolbox', 'home:firebox', 'silas', 'home:sign:0', 'home:shelf:0']) assert.ok(points.some((p) => p.id === id), id);
-      assert.equal(points.find((p) => p.id === 'home:board')?.marker?.(), model.calendar.notice ? 'talk' : null);
+      for (const id of ['home:hame', 'village:board', 'village:hopper', 'hearth', 'home:well', 'home:toolbox', 'home:firebox', 'silas', 'touch:bench:8,61', 'touch:sign:post:16,59']) assert.ok(points.some((p) => p.id === id), id);
+      assert.equal(points.find((p) => p.id === 'village:board')?.marker?.(), model.calendar.notice ? 'talk' : null);
+      assert.ok(points.some((p) => p.id.startsWith('fish:')), 'fishing banks attached');
+      assert.ok(points.some((p) => p.id.startsWith('touch:sign:boundary:')), 'boundary labels readable');
+      assert.ok(village['millView'], 'served mill wheel drawn');
+      assert.equal(r.scene.children.list.filter((o) => o.texture.key === 'well-canopy').length, 1);
+      assert.equal(r.scene.children.list.filter((o) => o.texture.key === 'spark' && o.x === 520 && o.y === 842).length, 1, 'Ada’s permanent window light');
       assert.ok(points.some((p) => p.id === 'elara'), 'resident talk registered');
       assert.ok(points.some((p) => p.id.startsWith('touch:sign:gate:')), 'exit post readable');
       if (festival === 'Carting Day') {
@@ -531,6 +542,13 @@ test('Commons residents, pickups, papers, repairs, festival dressing and exit re
       assert.ok(afterRepair.every((o, i) => o === dressing[i]), 'festival objects are retained');
       assert.ok(dressing.every((o) => (o as unknown as FakeObject).alive), 'festival objects stay on screen');
       assert.ok(interactions['markers'].size > 0, 'marker images and bob tweens are built');
+      const timersBeforeProject = r.scene.timers.size;
+      model.worldFlags = [...model.worldFlags.filter((f) => f !== 'project:mill-wheel:complete'), ...(round % 2 ? ['project:mill-wheel:complete'] : [])];
+      bus.emit(EV.villageChanged, { what: 'projects' });
+      r.builds.step(Infinity);
+      assert.equal(village['millView']?.mended, !!(round % 2), 'project refresh changes the served wheel');
+      assert.equal(r.scene.timers.size, timersBeforeProject, 'project refresh replaces its timer');
+      assert.equal([...village['chunks'].values()].reduce((n, c) => n + c.timers.length, 0), 1, 'one wheel timer');
       // A watched departure is cancelled by teardown, including its collision body.
       cycle.check(Date.parse('2026-01-05T00:21:00Z') / 1000);
       assert.ok(npcs.npcs.find((n) => n.id === 'silas')?.path, 'Silas walks to his door on outdoors');
@@ -546,7 +564,7 @@ test('Commons residents, pickups, papers, repairs, festival dressing and exit re
   }
   // Newly attached Elara must start hidden while she is at the library desk.
   setGameNow(Date.parse('2026-01-05T00:21:00Z') / 1000);
-  const key = chunkOfTile(5, 29);
+  const key = chunkOfTile(6, 27);
   for (const step of life.attach(key)) step();
   assert.equal(npcs.npcs.find((n) => n.id === 'elara')?.spot, 'camp');
   assert.equal(npcs.npcs.find((n) => n.id === 'elara')?.present, false);
@@ -562,15 +580,28 @@ test('Commons residents, pickups, papers, repairs, festival dressing and exit re
   life.detach(exitKey);
   exit.festival = exitFestival;
   model.calendar = { ...model.calendar, festival: 'Closure Night' } as never;
-  for (const step of village.attachChunk(key)) step();
+  r.deps.day = () => ({ festival: 'Closure Night', wick: 'Quiet' });
+  const closing = [...r.fp.objects.keys()].map((key) => { const [cx, cy] = key.split(',').map(Number); return new FixedChunk(r.deps as never, r.fp, cx!, cy!); });
+  for (const c of closing) r.builds.finish(c);
+  // The window registers after the entities; exercise that shutdown order
+  // with active pickups, NPCs, wheel, lamps and interactions still attached.
+  r.scene.events.once('shutdown', () => { for (const c of closing) c.destroy(); });
   assert.ok(r.scene.children.list.some((o) => o.type === 'Rectangle'));
   r.scene.events.emit('shutdown');
+  assert.equal(snapshot(r).objects, 1, 'only the scene-owned key hint remains');
+  assert.equal(snapshot(r).tweens, 0);
+  assert.equal(snapshot(r).bodies, 0);
+  assert.equal(snapshot(r).gathered, 0);
+  assert.equal(interactions.list.length, 0);
+  assert.equal(npcs.npcs.length, 0);
   assert.equal(r.scene.events.listenerCount('prerender'), 0, 'shade update listener released');
   assert.equal(r.scene.children.list.filter((o) => o.type === 'Rectangle').length, 0, 'scene teardown releases active shade');
   assert.equal(village['chunks'].size, 0);
+  assert.equal(r.scene.timers.size, 0, 'all scene timers released');
+  assert.equal(r.scene.input.keyboard.listenerCount('keydown'), 0);
+  assert.equal(r.scene.events.listenerCount('destroy'), 0, 'alternate scene-end hooks removed on shutdown');
+  assert.equal(snapshot(r).listeners, rootListeners, 'all town bus listeners released');
   globalThis.document = originalDocument;
-  r.fp.ground[6]![34] = windowTile;
-  r.fp.ground[7]![35] = waterTile;
   placed.source = originalSource;
   setGameNow(null);
   r.scene.events.emit('shutdown');
@@ -779,4 +810,157 @@ test('null fixed ground reports once and is never rebuilt each frame', (t) => {
   assert.equal(destroyed, 1, 'failed tilemap is released');
   assert.equal(errors.length, 1);
   assert.equal(w.hasFixed(0, 1), false);
+});
+
+test('all eight lot anchors seed their physical footprint and preserve saved world pixels', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { decodeChunk } = await import('../src/lib/api/chunks.ts');
+  const { PLACES } = await import('../src/lib/places.ts');
+  const { fixedChunkKeys, serveFixed } = await import('../src/game/wilds/fixed.ts');
+  const { outdoorStandAt } = await import('../src/game/wilds/wilds-world.ts');
+  const place = PLACES.fixed.find((p) => p.id === 'homestead-lots')!;
+  const fp = serveFixed(place, fixedChunkKeys(place).map(({ cx, cy }) => decodeChunk(new Uint8Array(readFileSync(new URL(`./fixtures/homestead-lots-${cx}-${cy}.bin`, import.meta.url))))));
+  assert.ok(fp.reach.some(Boolean));
+  for (let gate = 0; gate < 8; gate++) {
+    const t = anchorTile(`hearthwick:lot:${gate}`);
+    assert.deepEqual(fixedStand(t.tx, t.ty), t, `lot ${gate} remains on its doorstep`);
+    const p = { x: t.tx * 16 + 6, y: t.ty * 16 + 9 };
+    assert.deepEqual(outdoorStandAt(p.x, p.y), p, `lot ${gate} keeps saved pixels`);
+  }
+});
+
+test('served artwork meets its collision footprint and woodland returns to the town anchor', async () => {
+  const { sceneryOf, exitOf } = await import('../src/game/wilds/fixed.ts');
+  const { buildArea } = await import('../src/game/worlds.ts');
+  const fp = serveFixtureCommons();
+  const objects = [...fp.objects.values()].flat();
+  for (const o of objects.filter((o) => o.id.startsWith('fence:') || (o.kind === 'scenery' && o.tw > 0))) {
+    assert.equal(sceneryOf(o)!.y, (o.ty + 1) * 16, o.id);
+    if (o.tw > 0) assert.deepEqual(sceneryOf(o)!.groundUnder, { tx: o.tx, ty: o.ty - o.th + 1, tw: o.tw, th: o.th, tile: 0 });
+  }
+  for (const o of objects.filter((o) => o.kind === 'gather')) {
+    assert.equal(o.art!.ox, 8); assert.equal(o.art!.oy, 16); assert.equal(o.art!.tile, true);
+  }
+  const well = objects.find((o) => o.id === 'town-well')!;
+  assert.deepEqual({ x: sceneryOf(well)!.x, y: sceneryOf(well)!.y }, { x: 208, y: 992 });
+  for (const ty of [60, 61]) for (const tx of [12, 13]) assert.equal(fixedSolidAt(tx, ty), true);
+  const woodland = objects.find((o) => o.id === 'exit:woodland')!;
+  assert.equal(exitOf(woodland, fp)!.label, woodland.label);
+  const back = buildArea('woodland').exits.find((e) => e.tx === 0)!;
+  assert.equal(back.to, 'outdoors'); assert.deepEqual(back.entry, anchorTile('hearthwick:east-road'));
+  assert.equal(objects.find((o) => o.id === 'bunting')!.art!.depth, 5000);
+});
+
+test('calendar marks attach Mudrise shore and Quiet ice with their authored gather frames', () => {
+  for (const [mark, wick, expected] of [['Mudrise', 'Thaw', 'freshet-shore'], ['Quiet', 'Leaf', 'pond-ice'], ['Bloom', 'Bloom', 'bloom-patch']]) {
+    const r = rig();
+    r.deps.day = () => ({ festival: '', wick: wick!, mark: mark! });
+    const before = snapshot(r);
+    const chunks = [...r.fp.objects.keys()].map((key) => { const [cx, cy] = key.split(',').map(Number); return new FixedChunk(r.deps as never, r.fp, cx!, cy!); });
+    for (const c of chunks) r.builds.finish(c);
+    const spots = [...r.gatherChunks.values()].flat() as { target: string; art: { frame?: string } }[];
+    assert.equal(spots.filter((s) => s.target === expected).length, expected === 'bloom-patch' ? 5 : 3, mark);
+    if (expected === 'freshet-shore') assert.deepEqual(spots.filter((s) => s.target === expected).map((s) => s.art.frame).sort(), ['pebbles-0', 'pebbles-1', 'pebbles-2']);
+    for (const c of chunks) c.destroy();
+    assert.deepEqual(snapshot(r), before);
+  }
+});
+
+test('fishing floats use served ground and bank detach removes landing effects and timers', async () => {
+  const { Fishing } = await import('../src/game/entities/fishing.ts');
+  const { buildWildsWorld } = await import('../src/game/wilds/wilds-world.ts');
+  const { createNewGame } = await import('../src/lib/state.ts');
+  const r = rig(), world = buildWildsWorld();
+  const before = snapshot(r);
+  const fishing = new Fishing(r.scene as never, { world, session: { state: createNewGame(), link: null }, fx: {}, reducedMotion: true, hero: () => ({ sprite: { x: 552, y: 1166 } }), interactables: r.deps.interactables, notePosition() {} } as never);
+  assert.equal(r.points.size, 0, 'no bank markers before a chunk attaches');
+  fishing.attachChunk('1,3');
+  Object.assign(fishing, { line: { water: 'water:village:mill-pond', bank: 'north', species: 'mill-roach', readyAt: Infinity, holdUntil: Infinity, predicted: false } });
+  const at = fishing['floatSpot']();
+  assert.ok(at, 'the open world has pond water despite its empty legacy ground grid');
+  fishing['landing'](at, 'mill-roach');
+  assert.ok(r.scene.timers.size > 0);
+  assert.ok(snapshot(r).objects > before.objects);
+  fishing.detachChunk('1,3');
+  assert.equal(r.scene.timers.size, 0);
+  assert.equal(r.points.size, 0);
+  assert.equal(snapshot(r).objects, before.objects);
+  assert.equal(snapshot(r).tweens, before.tweens);
+  r.scene.events.emit('destroy');
+  assert.deepEqual(snapshot(r), before, 'destroy without shutdown releases fishing listeners');
+  assert.equal(r.scene.input.keyboard.listenerCount('keydown'), 0);
+  assert.equal(r.scene.events.listenerCount('shutdown'), 0);
+});
+
+test('Pip runs out through the garden gap and her conversation listener leaves with her post', async () => {
+  const { PipWalkOn } = await import('../src/game/entities/pip-walk-on.ts');
+  const { Npcs } = await import('../src/game/entities/npcs.ts');
+  const { fixedNpcs } = await import('../src/game/wilds/fixed.ts');
+  const { buildWildsWorld } = await import('../src/game/wilds/wilds-world.ts');
+  const { uiState } = await import('../src/game/input.ts');
+  const r = rig(), world = buildWildsWorld();
+  world.npcs = fixedNpcs().filter((n) => n.id === 'pip');
+  const npcs = new Npcs(r.scene as never, world, r.scene.solids as never);
+  const before = snapshot(r).listeners;
+  const pip = new PipWalkOn(r.scene as never, { world, npcs, hero: () => ({ x: 280, y: 928 }) });
+  assert.equal(pip.play(), true);
+  const person = npcs.npcs[0]!;
+  assert.ok(person.path!.points.some((p) => Math.floor(p.x / 16) === 9 && Math.floor((p.y - 1) / 16) === 76), 'garden rail gap is on the path');
+  for (const p of person.path!.points) assert.equal(world.open!.solidAt(Math.floor(p.x / 16), Math.floor((p.y - 1) / 16)), false);
+  person.path!.done();
+  assert.ok(pip['closed'], 'waiting for the message to close');
+  npcs.remove(['pip']); pip.detachChunk();
+  assert.equal(pip['closed'], null);
+  r.scene.events.emit('destroy');
+  assert.equal(snapshot(r).listeners, before);
+  assert.equal(r.scene.events.listenerCount('shutdown'), 0);
+  uiState.dialogueOpen = false;
+});
+
+test('GoalGuide routes outdoor town goals directly and follows the arch and served room doors', async () => {
+  const { GoalGuide } = await import('../src/game/entities/goal-guide.ts');
+  const { buildWildsWorld } = await import('../src/game/wilds/wilds-world.ts');
+  const { exitOf } = await import('../src/game/wilds/fixed.ts');
+  const r = rig(), world = buildWildsWorld();
+  let position = { x: 72, y: 968 };
+  let goal: unknown = { kind: 'quest', where: { area: 'hearthwick', npc: 'orrin' } };
+  const guide = new GoalGuide(r.scene as never, { world, position: () => position, goal: () => goal, npcAt: () => ({ x: 280, y: 928 }), spotAt: () => null, enemyAt: () => null, wardenAt: () => null, lootAt: () => null, placeKind: () => null, guidePoint: () => ({ x: -568, y: 1096 }), reducedMotion: true, exits: () => [...r.fp.objects.values()].flat().map((o) => exitOf(o, r.fp)).filter(Boolean) } as never);
+  assert.deepEqual(guide.target(), { x: 280, y: 928, here: true, id: 'orrin' });
+  goal = { kind: 'guide', where: 'gate' };
+  assert.deepEqual(guide.target(), { x: -568, y: 1096, here: true });
+  position = { x: 40, y: 360 };
+  assert.deepEqual(guide.target(), { x: 40, y: 424, here: false }, 'Tangle leads through Hearthwick’s arch');
+  position = { x: 72, y: 968 };
+  goal = { kind: 'quest', where: { area: 'in:village:library', spot: 'shelves' } };
+  const target = guide.target()!;
+  assert.equal(target.here, false);
+  assert.equal(Math.floor(target.x / 16), -11, 'library door uses its signed world tile');
+  r.scene.events.emit('destroy');
+  assert.equal(r.scene.children.list.length, 0);
+});
+
+test('a cast answer after bank detach or scene destroy cancels its reservation and cannot restore the line', async () => {
+  const { Fishing } = await import('../src/game/entities/fishing.ts');
+  const { FISHING } = await import('../src/lib/fishing.ts');
+  const { buildWildsWorld } = await import('../src/game/wilds/wilds-world.ts');
+  const { createNewGame } = await import('../src/lib/state.ts');
+  for (const end of ['detach', 'destroy']) {
+    const r = rig(), before = snapshot(r);
+    let answer!: (r: unknown) => void;
+    const cancelled: string[] = [];
+    const link = { online: true, server: {}, readWaters: async () => ({ ok: true, value: [] }), fishCast: () => new Promise((resolve) => { answer = resolve; }), fishCancel: async (id: string) => { cancelled.push(id); return { ok: true }; } };
+    const fishing = new Fishing(r.scene as never, { world: buildWildsWorld(), session: { state: createNewGame(), link }, fx: {}, reducedMotion: true, hero: () => ({ sprite: { x: 552, y: 1166 } }), interactables: r.deps.interactables, notePosition() {} } as never);
+    Object.assign(fishing, { rodInHand: () => 'fixture-rod', drawLine() {} });
+    fishing.attachChunk('1,3');
+    const water = FISHING.waters[0]!, bank = water.banks[0]!;
+    const cast = fishing['cast'](water, bank);
+    if (end === 'detach') fishing.detachChunk('1,3');
+    else r.scene.events.emit('destroy');
+    answer({ ok: true, result: { cast: { id: 'late-cast', water: water.id, bank: bank.id, species: 'mill-roach', readyAt: 0, holdUntil: Infinity, band: 'healthy' }, band: 'healthy' } });
+    await cast;
+    assert.deepEqual(cancelled, ['late-cast'], end);
+    assert.equal(fishing.view().line, null);
+    r.scene.events.emit('destroy');
+    assert.deepEqual(snapshot(r), before);
+  }
 });

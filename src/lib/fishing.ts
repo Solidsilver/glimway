@@ -329,6 +329,6 @@ export function rodPose(hand: { x: number; y: number }, float: { x: number; y: n
 }
 
 /** Server nearBank twin: same place and distance to an authored bank tile. */
-export function nearBank(area: string, x: number, y: number, water: FishWater, bank: FishBank): boolean {
-  return at(area, x, y).id === water.area && bankDistance(bank, x, y) <= castReachPx();
+export function nearBank(area: string, x: number, y: number, water: FishWater, bank: FishBank, radius = castReachPx()): boolean {
+  return at(area, x, y).id === water.area && bankDistance(bank, x, y) <= radius;
 }

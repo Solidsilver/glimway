@@ -7,7 +7,7 @@ import { tileFeet } from '../src/lib/tile.ts'
 import { facingOf } from '../src/game/people.ts'
 import { buildArea } from '../src/game/worlds.ts'
 import { TERRAIN } from '../src/lib/tile.ts'
-import { servedCommonsFixture } from './commons-fixture.ts'
+import { servedCommonsFixture, servedTownFixture } from './commons-fixture.ts'
 
 // The Commons is the server's: these tests stand on its served chunks.
 
@@ -178,9 +178,10 @@ function routeTiles(home: { tx: number; ty: number }, steps: readonly Step[]): {
   return out
 }
 
-test('routines: every leg crosses open ground (no walls, props, trees or people) and comes home', { skip: "T3: move ROUTINES to Hearthwick world tiles" }, () => {
+test('routines: every leg crosses open ground (no walls, props, trees or people) and comes home', () => {
   for (const [area, routines] of Object.entries(ROUTINES)) {
-    const w = buildArea(area as 'village')
+    if (area === 'village') continue // Legacy builder stays until T5; outdoor content posts moved to town.
+    const w = area === 'hearthwick' ? servedTownFixture() : buildArea(area as 'village')
     const blocked = new Set<string>()
     for (const t of [...w.trees, ...w.bushes, ...w.rocks, ...w.props]) blocked.add(`${t.tx},${t.ty}`)
     for (const [id, steps] of Object.entries(routines)) {

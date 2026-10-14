@@ -458,8 +458,7 @@
     },
     {
       "name": "negative-tx",
-      "valid": false,
-      "rule": "int32.gte",
+      "valid": true,
       "edits": [
         {
           "path": [
@@ -549,6 +548,154 @@
             "recovery_seconds"
           ],
           "value": 600
+        }
+      ]
+    },
+    {
+      "name": "bank-tx--1048576",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "banks",
+            0,
+            "tiles",
+            0,
+            "tx"
+          ],
+          "value": -1048576
+        }
+      ]
+    },
+    {
+      "name": "bank-tx-1048576",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "banks",
+            0,
+            "tiles",
+            0,
+            "tx"
+          ],
+          "value": 1048576
+        }
+      ]
+    },
+    {
+      "name": "bank-tx--1048577",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "banks",
+            0,
+            "tiles",
+            0,
+            "tx"
+          ],
+          "value": -1048577
+        }
+      ]
+    },
+    {
+      "name": "bank-tx-1048577",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "banks",
+            0,
+            "tiles",
+            0,
+            "tx"
+          ],
+          "value": 1048577
+        }
+      ]
+    },
+    {
+      "name": "bank-ty--1048576",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "banks",
+            0,
+            "tiles",
+            0,
+            "ty"
+          ],
+          "value": -1048576
+        }
+      ]
+    },
+    {
+      "name": "bank-ty-1048576",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "banks",
+            0,
+            "tiles",
+            0,
+            "ty"
+          ],
+          "value": 1048576
+        }
+      ]
+    },
+    {
+      "name": "bank-ty--1048577",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "banks",
+            0,
+            "tiles",
+            0,
+            "ty"
+          ],
+          "value": -1048577
+        }
+      ]
+    },
+    {
+      "name": "bank-ty-1048577",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "waters",
+            0,
+            "banks",
+            0,
+            "tiles",
+            0,
+            "ty"
+          ],
+          "value": 1048577
         }
       ]
     }

@@ -119,14 +119,14 @@ message RoomFurnishing {
 }
 
 message RoomSpot {
-  optional int32 tx = 1 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
-  optional int32 ty = 2 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
+  optional int32 tx = 1 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: 0, lte: 127}];
+  optional int32 ty = 2 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: 0, lte: 127}];
   string label = 3 [(buf.validate.field).string.min_len = 1];
 }
 
 message RoomLight {
-  optional int32 tx = 1 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
-  optional int32 ty = 2 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
+  optional int32 tx = 1 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: 0, lte: 127}];
+  optional int32 ty = 2 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: 0, lte: 127}];
   string kind = 3 [(buf.validate.field).string = {in: ["hearth", "lamp", "window"]}];
   int32 r = 4 [(buf.validate.field).int32 = {gte: 1, lte: 128}];
 }

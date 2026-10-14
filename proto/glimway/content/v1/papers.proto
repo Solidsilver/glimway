@@ -22,7 +22,7 @@ message Paper {
   option (buf.validate.message).cel = {
     id: "paper.placed"
     message: "a placed paper names an area and a tile on it"
-    expression: "this.source != \"placed\" || (this.rule.area != \"\" && this.rule.tx >= 0 && this.rule.ty >= 0)"
+    expression: "this.source != \"placed\" || (this.rule.area != \"\" && this.rule.tx >= -1048576 && this.rule.tx <= 1048576 && this.rule.ty >= -1048576 && this.rule.ty <= 1048576)"
   };
   option (buf.validate.message).cel = {
     id: "paper.stage"
@@ -72,8 +72,8 @@ message Paper {
 message PaperRule {
   string kind = 1;
   string area = 2;
-  int32 tx = 3;
-  int32 ty = 4;
+  int32 tx = 3 [(buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
+  int32 ty = 4 [(buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
   string after = 5;
   string stage = 6;
   string from = 7;

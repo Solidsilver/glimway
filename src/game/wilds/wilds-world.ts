@@ -114,7 +114,7 @@ export function buildWildsWorld(): WorldData {
     villageLantern: null,
     glimSpots: [],
     // Nowhere else to stand: just inside the Commons' north arch.
-    spawn: anchorTile('hearthwick:arch'),
+    spawn: anchorTile('hearthwick:spawn'),
     scenery: [],
     gathering: [],
     open: {

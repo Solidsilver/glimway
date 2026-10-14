@@ -20,6 +20,7 @@ import type { Hero } from './hero'
 import type { Effects } from './fx'
 import { benchSeat } from '../seats'
 import { gateSignAt } from '../area/exits'
+import type { FixedObject } from '../wilds/fixed.ts'
 import { openDialogue } from '../dialogue'
 
 /** A touchable spot: what it is, where, and (for signs) what it says. */
@@ -28,6 +29,7 @@ interface TouchSpec {
   x: number
   y: number
   signKey?: string
+  text?: string
 }
 
 export interface TouchesDeps {
@@ -65,10 +67,17 @@ export class Touches {
   }
 
   /** A fixed exit's read belongs to its source chunk, even when the post leans across its edge. */
-  attachChunk(owner: object, exits: readonly ExitDef[], height: number, place: string): void {
+  attachChunk(owner: object, exits: readonly ExitDef[], height: number, place: string, objects: readonly FixedObject[] = []): void {
     const points = this.points
     this.points = []
     for (const e of exits) this.exit(e, height, place)
+    for (const o of objects) {
+      if (o.prop) this.prop({ areaId: place } as WorldData, { tx: o.tx, ty: o.ty, frame: o.variant, h: o.prop.h, body: [o.prop.bodyW, o.prop.bodyH] })
+      if (o.id.startsWith('boundary:') && o.label) {
+        const x = tileMid(o.tx), y = tileBottom(o.ty)
+        this.add(`touch:sign:${o.id}` as InteractId, x, y, 'Read the sign', { kind: 'sign', x, y, text: o.label })
+      }
+    }
     this.deps.interactables.register(owner, this.points)
     this.points = points
   }
@@ -105,7 +114,7 @@ export class Touches {
   }
 
   private useSign(id: InteractId, spec: TouchSpec): void {
-    const copy = signCopy(spec.signKey ?? 'sign:generic')
+    const copy = spec.text ? { speaker: 'Sign', lines: [spec.text] } : signCopy(spec.signKey ?? 'sign:generic')
     openDialogue({ id, speaker: copy.speaker, lines: [this.take(id, copy.lines)] })
   }
 
@@ -166,7 +175,7 @@ export class Touches {
       })
     } else if (p.frame === 'trail-sign') {
       // The village signpost leans on purpose; the road's signs lean with it.
-      const post = w.areaId === 'village'
+      const post = (w.areaId === 'village' || w.areaId === 'hearthwick')
       this.add(`touch:sign:${post ? 'post' : 'route'}:${p.tx},${p.ty}` as InteractId, x, y, post ? 'Read the signpost' : 'Read the route sign', {
         kind: 'sign',
         x,

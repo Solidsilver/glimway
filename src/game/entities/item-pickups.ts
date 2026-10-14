@@ -1,3 +1,4 @@
+import { onSceneEnd } from '../scene-end.ts'
 /**
  * Things lying in the world to pick up (docs/hands-on-design.md section 2,
  * "Picking things up"): a coil of rope by the well, a glove on the lane, a
@@ -38,6 +39,7 @@ interface Lying {
 }
 
 export class ItemPickups {
+  private stopped = false
   private scope: FixedScope
 
   attachChunk(key: string): void {
@@ -60,10 +62,11 @@ export class ItemPickups {
       if (scene.sys?.isActive()) this.sync()
     }
     bus.on(EV.itemsChanged, sync)
-    scene.events.once('shutdown', () => {
+    onSceneEnd(scene, () => {
       bus.off(EV.itemsChanged, sync)
-      for (const l of this.lying.values()) l.timer?.remove()
-      this.lying.clear()
+      this.stopped = true
+      this.scope.keys.clear()
+      this.sync()
     })
     // What's been taken comes from the server; until then nothing lies here.
     if (deps.session.link && !items.view) void items.load()
@@ -100,7 +103,7 @@ export class ItemPickups {
   private sync(): void {
     const { session, world } = this.deps
     const items = itemsFor(session)
-    const want = session.link && items.view ? pickupsIn(world.areaId, items.pickedUp()).filter((p) => this.scope.has(p.tx, p.ty)) : []
+    const want = !this.stopped && session.link && items.view ? pickupsIn(world.areaId, items.pickedUp()).filter((p) => this.scope.has(p.tx, p.ty)) : []
     const ids = new Set(want.map((p) => p.id))
     for (const id of [...this.lying.keys()]) if (!ids.has(id)) this.remove(id)
     for (const p of want) if (!this.lying.has(p.id)) this.place(p)
@@ -148,7 +151,7 @@ export class ItemPickups {
     if (!l) return
     l.timer?.remove()
     this.scene.tweens.killTweensOf(l.twinkle)
-    if (this.deps.reducedMotion || this.deps.world.open) {
+    if (this.stopped || this.deps.reducedMotion || this.deps.world.open) {
       this.scene.tweens.killTweensOf(l.image)
       l.image.destroy()
       l.twinkle.destroy()

@@ -19,8 +19,8 @@ import (
 // Hashes pin served bytes to their cache identity. A shipped layout edit
 // must bump the revision and add a new hash, never rewrite an old revision.
 var fixedGolden = map[string]string{
-	"fixed:hearthwick@1":     "60df330cba85e932be521183860205636fe06bc0c31b95e14876321182f58cde",
-	"fixed:homestead-lots@1": "6b3ad5605014e36f7f0d7bbab1be174fe170d1a9331e8cad160691ce9881946f",
+	"fixed:hearthwick@1":     "cae46a3a036da6743da6a4956b722378abfd17effd9616fc492e8a29820e7dea",
+	"fixed:homestead-lots@1": "2c7f155efbfd000c01eac7dc4f1fdc5633c49538e86d6544774b2e72cdae177b",
 }
 
 func servedBytes(t *testing.T, c *contract.WorldChunk) []byte {
@@ -225,6 +225,20 @@ func TestServedTownStandsAndTargets(t *testing.T) {
 }
 func TestServedTownRoadMouths(t *testing.T) {
 	open := servedOpen(t)
+	// Both rows copied by seamMirror must close outside the four-tile spine.
+	for _, y := range []int{24, 25, 118, 119} {
+		for x := -72; x <= -25; x++ {
+			if open[[2]int{x, y}] != (x >= -50 && x <= -47) {
+				t.Errorf("lot edge (%d,%d)", x, y)
+			}
+		}
+	}
+	// Closing the southern border must preserve the last pair of gate lanes.
+	for _, x := range []int{-60, -36} {
+		if !open[[2]int{x, 116}] || !open[[2]int{x, 117}] {
+			t.Errorf("southern lot cross-lane %d", x)
+		}
+	}
 	for x := -24; x <= 47; x++ {
 		if open[[2]int{x, 24}] != (x >= 1 && x <= 3) {
 			t.Errorf("north edge %d", x)

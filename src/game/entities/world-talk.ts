@@ -5,6 +5,7 @@
  * its marker ("!" moves the story on, "…" someone has news) and the
  * conversation it opens.
  */
+import { at } from '../../lib/location.ts'
 import { dialogueFor, glimDialogue, type Dialogue, type DialogueChoice } from '../../content/world'
 import { GLIM_COSTS, isLit, ROAD_LANTERNS, type GlimSpend, type RoadLanternId } from '../../lib/glims'
 import { ITEMS } from '../../lib/items'
@@ -111,13 +112,16 @@ export class WorldTalk {
         activate: () => this.talk('lantern')
       })
     }
-    for (const spot of world.glimSpots) {
+    const roomLight = world.room?.def.lights[0]
+    const glims = world.room && roomLight && at(world.areaId, 0, 0).rest === 'village' ? [...world.glimSpots, { id: 'hearth' as const, tx: roomLight.tx, ty: roomLight.ty }] : world.glimSpots
+    for (const spot of glims) {
       const id = spot.id
       points.push({
         id,
         x: tileMid(spot.tx),
         y: tileBottom(spot.ty),
         label: () => this.glimLabel(id),
+        ...(id === 'hearth' ? { available: () => at(deps.session.state.area, deps.session.state.position.x, deps.session.state.position.y).rest === 'village' } : {}),
         marker: () => (this.glimSpotReady(id) ? 'talk' : null),
         markerOffset: id === 'hearth' ? 36 : id === 'chest' ? 22 : 32,
         activate: () => this.talk(id)

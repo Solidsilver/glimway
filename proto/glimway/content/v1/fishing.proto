@@ -63,8 +63,8 @@ message FishBank {
 
 // A tile a player stands on (client tiles; 0 is a legal coordinate).
 message FishTile {
-  int32 tx = 1 [(buf.validate.field).int32.gte = 0];
-  int32 ty = 2 [(buf.validate.field).int32.gte = 0];
+  int32 tx = 1 [(buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
+  int32 ty = 2 [(buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
 }
 
 // One species row: the catalogue item a kept fish becomes, and its weight
