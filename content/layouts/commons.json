@@ -1,6 +1,6 @@
 {
   "id": "commons",
-  "revision": 1,
+  "revision": 2,
   "tx": -3,
   "ty": 0,
   "width": 72,
@@ -1323,7 +1323,7 @@
     {"id":"npc-post:elara","kind":"npc-post","tx":26,"ty":5,"npc":"elara"},
     {"id":"npc-post:silas","kind":"npc-post","tx":48,"ty":19,"npc":"silas","spot":"yard"},
     {"id":"exit:village","kind":"exit","tx":0,"ty":19,"tw":1,"th":4,"exit":{"to":"village","entryTx":39,"entryTy":15}},
-    {"id":"exit:arch","kind":"exit","tx":22,"ty":0,"tw":3,"th":1,"exit":{"to":"wilds","entryTx":2,"entryTy":22}},
+    {"id":"exit:arch","kind":"exit","tx":22,"ty":0,"tw":3,"th":1,"exit":{"to":"outdoors","entryTx":2,"entryTy":22}},
     {"id":"gate:0","kind":"gate","tx":19,"ty":9,"tw":1,"th":2,"gate":0,"side":"west","exit":{"to":"home:0","entryTx":19,"entryTy":28,"unlabelled":true}},
     {"id":"sign:0","kind":"sign","tx":21,"ty":8,"gate":0},
     {"id":"shelf:0","kind":"shelf","tx":22,"ty":11,"gate":0},

@@ -151,8 +151,8 @@ for (const e of world.exits) {
   if (e.side !== undefined || e.kind !== undefined || (e.label !== undefined && e.label !== null)) throw new Error(`exit to ${e.to}: a field the export doesn't carry`)
   if (e.to.startsWith('home:')) continue
   // The arch: only over the Tangle's gate (the tile east of it is closed above).
-  const tw = e.to === 'wilds' ? openTop.length : e.tw
-  add({ id: e.to === 'wilds' ? 'exit:arch' : `exit:${e.to}`, kind: 'exit', tx: e.tx, ty: e.ty, tw, th: e.th, exit: exitOf(e) })
+  const tw = e.to === 'outdoors' ? openTop.length : e.tw
+  add({ id: e.to === 'outdoors' ? 'exit:arch' : `exit:${e.to}`, kind: 'exit', tx: e.tx, ty: e.ty, tw, th: e.th, exit: exitOf(e) })
 }
 for (const g of world.gates) {
   const e = world.exits.find((e) => e.to === `home:${g.gate}`)!

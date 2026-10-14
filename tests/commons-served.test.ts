@@ -33,7 +33,7 @@ for (const bloom of [false, true]) {
     solid[0]![25] = false;
     assert.deepEqual(solid, want.solid);
     for (const k of ['trees', 'bushes', 'rocks', 'props', 'scenery', 'gathering', 'npcs'] as const) assert.deepEqual(bag(got[k]), bag(want[k]), k);
-    const arch = want.exits.find((e) => e.to === 'wilds')!;
+    const arch = want.exits.find((e) => e.to === 'outdoors')!;
     assert.equal(arch.tw, 4);
     assert.deepEqual(bag(got.exits), bag(want.exits.map((e) => (e === arch ? { ...e, tw: 3 } : e))), 'exits');
     assert.deepEqual(bag(got.foreground), bag(commonsForeground(want)), 'foreground');
@@ -63,10 +63,10 @@ test('the arrivals are the Commons anchors', () => {
 test('fixed chunks validate as the server’s do; a fixed chunk of an unknown layout or revision is refused', () => {
   const chunks = commonsFixtureChunks();
   assert.equal(chunks.length, 6);
-  for (const c of chunks) assert.equal(c.epochId, 'fixed:commons@1');
+  for (const c of chunks) assert.equal(c.epochId, 'fixed:commons@2');
   const edits: Record<string, (c: WorldChunk) => void> = {
     'unknown layout': (c) => { c.epochId = 'fixed:village@1'; },
-    'another revision': (c) => { c.epochId = 'fixed:commons@2'; c.layoutRevision = 2; },
+    'another revision': (c) => { c.epochId = 'fixed:commons@1'; c.layoutRevision = 1; },
     'outside the place': (c) => { c.cx = 2; },
     'generator version': (c) => { c.generatorVersion = 3; },
     'generated land': (c) => { c.land = 'woods'; },
@@ -103,9 +103,9 @@ test('every curated terrain a palette may name is a client terrain', () => {
 
 test('the client keeps fixed chunks under their revision: a new revision is a new key', async () => {
   forgetChunks();
-  assert.equal(COMMONS_EPOCH, fixedEpoch('commons', 1));
+  assert.equal(COMMONS_EPOCH, fixedEpoch('commons', 2));
   assert.notEqual(chunkCacheKey(fixedEpoch('commons', 1), 0, 1), chunkCacheKey(fixedEpoch('commons', 2), 0, 1));
-  assert.match(chunkCacheKey(COMMONS_EPOCH, 0, 1), /:fixed:commons@1:0:1$/);
+  assert.match(chunkCacheKey(COMMONS_EPOCH, 0, 1), /:fixed:commons@2:0:1$/);
   const calls: string[] = [];
   const api = {
     async chunk(epoch: string, layer: number, cx: number, cy: number) {
@@ -116,7 +116,7 @@ test('the client keeps fixed chunks under their revision: a new revision is a ne
   const a = await loadFixedChunk(api, COMMONS_EPOCH, 0, 1);
   const b = await loadFixedChunk(api, COMMONS_EPOCH, 0, 1);
   assert.equal(a, b);
-  assert.deepEqual(calls, ['fixed:commons@1/0/0/1']);
+  assert.deepEqual(calls, ['fixed:commons@2/0/0/1']);
   forgetChunks();
 });
 
