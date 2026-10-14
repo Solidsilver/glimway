@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import type { CDPSession } from '@playwright/test'
 import { expect, test, type Page } from '../e2e/fixtures'
 import { CONTRACT, pinWorld, serverState, waitForWorld } from '../e2e/connected'
-import { freshPlayer, throughGate } from '../e2e/home-helpers'
+import { freshPlayer, homes, throughGate } from '../e2e/home-helpers'
 import { exitTo, holdUntil, parkCreatures, player, waitForWilds, warp, windowWhole } from '../e2e/helpers'
 
 const OUT = process.env.PERF_OUT || 'test-results/perf'
@@ -17,12 +17,14 @@ const phase = (page: Page, name: string) => page.evaluate((n) => window.__fsPerf
 const report = (page: Page) => page.evaluate(() => window.__fsPerf!())
 const reset = (page: Page) => page.evaluate(() => window.__fsPerfReset!())
 
-async function enter(page: Page): Promise<void> {
+async function enter(page: Page): Promise<number> {
   await freshPlayer(page)
   await pinWorld(page, 'perf-seam')
   await page.goto('/?perf=1')
+  const begun = Date.now()
   await page.getByTestId('continue-world').click()
   await waitForWorld(page)
+  return Date.now() - begun
 }
 
 async function resources(page: Page, cdp: CDPSession) {
@@ -115,18 +117,23 @@ for (const mode of ['desktop', 'phone'] as const) {
 
     test('repeated straight, diagonal and turn-back crossings, plus chunk churn', async ({ page }) => {
       const cdp = await page.context().newCDPSession(page)
-      await enter(page)
+      const bootToPlayableMs = await enter(page)
       if (mode === 'phone') await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 })
-      await warp(page, 'outdoors', 2, 26)
+      await warp(page, 'outdoors', 2, -12)
       await parkCreatures(page)
       await windowWhole(page)
       const arrival = await report(page)
       const id = await page.evaluate(() => window.__fsWildsWindow!()!.id)
       await reset(page)
-      // Warm both sides' slack before comparing identical resident windows.
+      await phase(page, 'first-crossing')
+      // First walk into the Commons attaches every fixed chunk on walking frames;
+      // then warm both sides' slack before comparing identical resident windows.
+      expect(await walkTo(page, { minTx: 2, maxTx: 2, minTy: 26, maxTy: 26 })).toBe(true)
       await walk(page, [[2, 21], [2, 26]])
       await windowWhole(page)
       await page.waitForTimeout(1500)
+      const firstCrossing = await report(page)
+      await phase(page, 'start')
       await reset(page)
       const start = await resources(page, cdp)
       const checkpoints = []
@@ -157,7 +164,7 @@ for (const mode of ['desktop', 'phone'] as const) {
       await page.waitForTimeout(1500)
       const end = await resources(page, cdp)
       const r = await report(page)
-      write(mode, { mode, cpuThrottle: mode === 'phone' ? 4 : 1, viewport: page.viewportSize(), dpr: await page.evaluate(() => devicePixelRatio), crossingsPerPattern: { straight: CROSSINGS, diagonal: CROSSINGS, 'turn-back': CROSSINGS * 2 }, buildBudgetMs: 4, arrival, ...r, resources: { start, checkpoints, churnResources, end } })
+      write(mode, { mode, cpuThrottle: mode === 'phone' ? 4 : 1, viewport: page.viewportSize(), dpr: await page.evaluate(() => devicePixelRatio), crossingsPerPattern: { straight: CROSSINGS, diagonal: CROSSINGS, 'turn-back': CROSSINGS * 2 }, buildBudgetMs: 4, bootToPlayableMs, arrival, firstCrossing, ...r, resources: { start, checkpoints, churnResources, end } })
       console.log(`seam ${mode}: ${JSON.stringify(r.phases)}; heap ${start.heap}→${end.heap}, list ${start.list}→${end.list}, textures ${start.textures}→${end.textures}`)
       expect(end.textures).toBe(start.textures)
       expect(end.listeners).toBe(start.listeners)
@@ -276,6 +283,7 @@ for (const network of ['slow-network', 'fixed-only'] as const) for (const from o
       return { t: performance.now(), x: h.x, y: h.y, savedX: s.position.x, savedY: s.position.y, ground: window.__fsGroundAt!(Math.floor(h.x / 16), Math.floor(h.y / 16)), attached: !!w?.attached.includes(key), whole: !!w?.ready }
     })
     if (from === 'home') {
+      await expect.poll(async () => (await homes(page)).status).not.toBe('loading')
       const exit = await exitTo(page, 'outdoors')
       await page.evaluate((e) => window.__fsDevPlace!((e.tx + e.tw / 2) * 16, (e.ty - 1) * 16 + 8), exit)
       await holdUntil(page, 'ArrowDown', async () => (await page.evaluate(() => window.__fsWorld!().areaId)) === 'outdoors')
@@ -312,7 +320,10 @@ for (const network of ['slow-network', 'fixed-only'] as const) for (const from o
     expect(Math.floor(after.x / 16)).toBe(expected.tx)
     expect(Math.floor(after.y / 16)).toBe(expected.ty)
     expect(await page.evaluate(() => window.__fsTileSolid!(Math.floor(window.__fsPlayer!().x / 16), Math.floor(window.__fsPlayer!().y / 16)))).toBe(false)
-    await expect.poll(() => page.evaluate(() => window.__fsDevSaved!().pending)).toBe(false)
+    await expect.poll(async () => {
+      const s = await page.evaluate(() => window.__fsDevSaved!())
+      return !s.pending && Math.hypot(s.position.x - after.x, s.position.y - after.y) < 5
+    }).toBe(true)
     const saved = await page.evaluate(() => window.__fsDevSaved!())
     expect(Math.hypot(saved.position.x - after.x, saved.position.y - after.y)).toBeLessThan(5)
     await expect.poll(async () => {

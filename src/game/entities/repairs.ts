@@ -68,7 +68,6 @@ export class RepairsLayer {
     this.sync()
   }
 
-  private made = new Set<string>()
   private standing = new Map<string, Standing>()
   private kept = new Map<string, Standing>()
   private busy = false
@@ -149,11 +148,6 @@ export class RepairsLayer {
       if (!this.kept.has(d.id) && (d.target === 'well' || d.target === 'fence')) this.kept.set(d.id, this.place(d, true))
     }
     this.publish(want)
-    const used = new Set([...this.standing.values(), ...this.kept.values()].map((s) => s.image.texture.key))
-    for (const key of this.made) if (!used.has(key)) {
-      this.scene.textures.remove(key)
-      this.made.delete(key)
-    }
   }
 
   private publish(want: RepairDef[]): void {
@@ -181,9 +175,7 @@ export class RepairsLayer {
   private place(def: RepairDef, mended: boolean): Standing {
     const { x, y, depth } = this.at(def)
     const key = `repair-${def.target}-${mended ? 'mended' : 'broken'}`
-    const existed = this.scene.textures.exists(key)
     const made = ensureRepairTexture(this.scene, key)
-    if (this.deps.world.open && made && !existed) this.made.add(key)
     const image = this.scene.add
       .image(x, y, made ? key : 'px')
       .setOrigin(0.5, 1)

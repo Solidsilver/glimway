@@ -3,6 +3,7 @@ import { generateTextures } from '../textures'
 import { createGlimwayAnimations, preloadGlimwayExpansion } from '../expansion'
 import { createRuntimeArt, installRuntimeAliases, preloadRuntimeArt } from '../runtime-art'
 import { generateCommonsArt, generateDecorationArt } from '../commons-art'
+import { generateRepairArt } from '../repairs-art'
 import { createCommonsPass, preloadCommonsPass } from '../commons-pass'
 import { installCommonsPass } from '../commons-pass-install'
 import { createItemsPass, installItemsPass, preloadItemsPass } from '../items-pass'
@@ -50,6 +51,7 @@ export class BootScene extends Phaser.Scene {
     generateTextures(this)
     // The Commons and homesteads: what the Commons pass doesn't deliver (./commons-art).
     generateCommonsArt(this)
+    generateRepairArt(this)
     generateDecorationArt(this, HOMESTEAD_DATA.items)
     // Commons pass: native `commons-art:` textures and animations, then the
     // delivered frames installed under the scenes' keys (before the
