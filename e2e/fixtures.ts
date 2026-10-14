@@ -54,7 +54,7 @@ export const test = base.extend<{ pageErrors: string[]; backend: void }, { e2eBa
   pageErrors: [
     async ({ page }, use) => {
       const errors: string[] = []
-      page.on('pageerror', (e) => errors.push(e.message))
+      page.on('pageerror', (e) => errors.push(e.stack ?? e.message))
       await use(errors)
       expect(errors, 'uncaught page errors').toEqual([])
     },

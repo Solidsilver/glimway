@@ -312,7 +312,7 @@ test('Carting Day dressing and Commons interactions leave with their chunks and 
   await expect.poll(dressing).toBe(3)
   for (let round = 0; round < 3; round++) {
     await place(-60)
-    expect((await win(page)).fixed).toEqual([])
+    await expect.poll(async () => (await win(page)).fixed, { timeout: 5_000, message: 'fixed chunks drain while standing still' }).toEqual([])
     expect(await dressing()).toBe(0)
     expect(await page.evaluate(() => window.__fsNpcs!().map((n) => n.id))).toEqual([])
     expect(await page.evaluate(() => window.__fsPickups!())).toEqual([])

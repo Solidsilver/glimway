@@ -161,7 +161,9 @@ export class HomesteadArt {
       o.destroy()
     }
     for (const b of d.bodies) {
-      this.deps.solidGroup.remove(b, true, true)
+      // Phaser may destroy the static group before the window detaches its chunks.
+      if (this.deps.solidGroup.children) this.deps.solidGroup.remove(b, true, true)
+      else b.destroy()
     }
     d.objects = []
     d.bodies = []
