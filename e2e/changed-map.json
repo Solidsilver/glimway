@@ -13,7 +13,7 @@
     "package.json",
     "package-lock.json"
   ],
-  "ignore": ["**/*.md", "docs/**", ".agent/**", "tests/**", "e2e/changed-map.json", "deploy/**", "scripts/*-vectors.ts", "scripts/papers.ts", "scripts/webgl-renderer.ts", "scripts/e2e-artifacts.mjs", "perf/**", "playwright.perf.config.ts", "playwright.first-paint.perf.config.ts", "scripts/trace-hotspots.mjs", "scripts/png-diff.ts", "content/vectors/**", "content/**/*_test.go"],
+  "ignore": ["**/*.md", "docs/**", ".agent/**", "tests/**", "e2e/changed-map.json", "deploy/**", "scripts/*-vectors.ts", "scripts/papers.ts", "scripts/webgl-renderer.ts", "scripts/e2e-artifacts.mjs", "perf/**", "playwright.perf.config.ts", "playwright.first-paint.perf.config.ts", "scripts/trace-hotspots.mjs", "scripts/png-diff.ts", "content/vectors/**", "content/**/*_test.go", "content/places.*", "src/lib/places.ts", "src/lib/location.ts", "server/internal/location/**"],
   "rules": [
     {
       "paths": ["src/lib/api/queued-operation.ts", "src/game/link.ts", "server/internal/api/maintenance_phases_test.go", "server/internal/api/op.go", "server/internal/api/http.go", "server/internal/api/projection.go", "server/internal/api/mutation.go"],
