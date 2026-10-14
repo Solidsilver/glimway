@@ -106,7 +106,7 @@ export function buildWildsWorld(): WorldData {
     trees: [],
     bushes: [],
     rocks: [],
-    // The Commons' residents (scene-wide until residents attach per chunk: S5b).
+    // The Commons' residents attach with their fixed chunks.
     npcs: [],
     enemies: [],
     exits: [],

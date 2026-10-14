@@ -1320,7 +1320,7 @@
     {"id":"gather:bloom-patch:34,24","kind":"gather","tx":34,"ty":24,"variant":"wildflowers","festival":"Bloom","target":"bloom-patch","label":"Pick the bloom flowers","art":{"ox":8,"oy":16,"depthY":true,"tile":true}},
     {"id":"gather:bloom-patch:36,24","kind":"gather","tx":36,"ty":24,"variant":"wildflowers","festival":"Bloom","target":"bloom-patch","label":"Pick the bloom flowers","art":{"ox":8,"oy":16,"depthY":true,"tile":true}},
     {"id":"hame","kind":"repair","tx":3,"ty":18,"target":"gate-hame"},
-    {"id":"npc-post:elara","kind":"npc-post","tx":26,"ty":5,"npc":"elara"},
+    {"id":"npc-post:elara","kind":"npc-post","tx":26,"ty":5,"npc":"elara","spot":"camp"},
     {"id":"npc-post:silas","kind":"npc-post","tx":48,"ty":19,"npc":"silas","spot":"yard"},
     {"id":"exit:village","kind":"exit","tx":0,"ty":19,"tw":1,"th":4,"exit":{"to":"village","entryTx":39,"entryTy":15}},
     {"id":"gate:0","kind":"gate","tx":19,"ty":9,"tw":1,"th":2,"gate":0,"side":"west","exit":{"to":"home:0","entryTx":19,"entryTy":28,"unlabelled":true}},

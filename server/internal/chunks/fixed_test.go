@@ -22,7 +22,7 @@ import (
 // keeps under the old pseudo-epoch: bump the revision (layout and
 // places.json), then add the new revision's sum here.
 var fixedGolden = map[string]string{
-	"fixed:commons@3": "94c62797a42d53ccc90c047743df49173d05cc7c6046d3234a0160fb27a33597", // S5b: the arch is a walk, with no dead exit
+	"fixed:commons@3": "46376b02426205021cab08c5a626406b6a85555346e2b2e1a088e5cafb7f89f1", // S5b: the arch is a walk; Elara follows her camp cycle
 	"fixed:commons@1": "31bb7cef34f631043f12fb88bee3a523bf875837c9c6d1add88ea5e7f66daf76",
 	"fixed:commons@2": "01b51ecf0b5618817193a9be2a6689c2f79780b38ca539046b3d419668caf728", // S3: the arch leads outdoors
 }

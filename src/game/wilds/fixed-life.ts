@@ -1,5 +1,7 @@
 /** The Commons layers share the fixed chunks' build and teardown lifecycle. */
-import { fixedNpcs, footprintAt, exitOf } from './fixed.ts'
+import { fixedNpcs, footprintAt, exitOf, objectOut } from './fixed.ts'
+import { calendarAt } from '../../lib/calendar.ts'
+import { gameNow } from '../clock.ts'
 import type { FixedHooks } from './fixed-chunk.ts'
 import type { ExitDef, WorldData } from '../worlds.ts'
 import type { Npcs } from '../entities/npcs.ts'
@@ -47,7 +49,8 @@ export class FixedLife implements FixedHooks {
       () => papers.attachChunk(key),
       () => repairs.attachChunk(key),
       () => {
-        if (fp) touches.attachChunk(owner, (fp.objects.get(key) ?? []).map((o) => exitOf(o, fp)).filter((e): e is ExitDef => e !== null), fp.ty + fp.h, fp.place.id)
+        const day = calendarAt(gameNow())
+        if (fp) touches.attachChunk(owner, (fp.objects.get(key) ?? []).filter((o) => objectOut(o, day)).map((o) => exitOf(o, fp)).filter((e): e is ExitDef => e !== null), fp.ty + fp.h, fp.place.id)
       },
       ...(this.deps.homes()?.attach(key) ?? []),
       ...village.attachChunk(key)

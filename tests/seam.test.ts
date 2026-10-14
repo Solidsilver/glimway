@@ -17,6 +17,7 @@ import { EventEmitter } from 'node:events';
 const Phaser = (await import('phaser')).default as Record<string, unknown>;
 class FakeObject {
   alive = true;
+  active = true;
   body: unknown;
   data = new Map<string, unknown>();
   width = 64;
@@ -33,6 +34,8 @@ class FakeObject {
     this.texture = texture;
     this.type = type;
   }
+  setScrollFactor() { return this; }
+  setTexture(key: string) { this.texture.key = key; return this; }
   setOrigin() { return this; }
   setDepth() { return this; }
   setFlipX() { return this; }
@@ -45,7 +48,7 @@ class FakeObject {
   setVisible() { return this; }
   setPosition(x: number, y: number) { this.x = x; this.y = y; return this; }
   play() { return this; }
-  setDisplaySize() { return this; }
+  setDisplaySize(width: number, height: number) { this.width = width; this.height = height; return this; }
   setData(k: string, v: unknown) { this.data.set(k, v); return this; }
   getData(k: string) { return this.data.get(k); }
   getBounds() { return { contains: () => false }; }
@@ -100,6 +103,7 @@ class FakeScene {
     remove: (key: string) => { const i = this.textures.added.indexOf(key); if (i >= 0) this.textures.added.splice(i, 1); },
   };
   events = new EventEmitter();
+  cameras = { main: { width: 1200, height: 760, zoom: 2 } };
   sys = { isActive: () => true };
   anims = { exists: () => false };
   timers = new Set<unknown>();
@@ -425,6 +429,9 @@ test('Commons residents, pickups, papers, repairs, festival dressing and exit re
   r.deps.interactables = interactions as never;
   const state = createNewGame();
   const session = { state, questStage: 'complete', link: {} } as never;
+  // The real HomesteadLayer creates this session model before markers read it.
+  const { homesteadsFor } = await import('../src/game/homestead.ts');
+  homesteadsFor(session);
   const model = villageFor(session);
   model.ensureCalendar = () => {};
   model.loadProjects = async () => {};
@@ -451,13 +458,15 @@ test('Commons residents, pickups, papers, repairs, festival dressing and exit re
   Object.assign(home, { art: new HomesteadArt(home), talk: new HomesteadTalk(home) });
   const life = new FixedLife({ world, npcs, cycle, talk, pickups, papers, repairs, village, touches, homes: () => ({ attach: (key) => home.attachFixedChunk(key), detach: (key) => home.detachFixedChunk(key) }) });
   r.deps.hooks = () => life as never;
+  interactions.buildMarkers();
   const count = () => ({ ...snapshot(r), timers: r.scene.timers.size, points: interactions.list.length, owners: interactions['byOwner'].size, people: npcs.npcs.length, posts: world.npcs.length });
-  const before = count();
-  assert.equal(before.objects, 0, 'no Commons objects before their chunks');
-  assert.deepEqual(doorFor('silas', 'outdoors', 'in:commons:yard'), { step: { tx: 32, ty: 42 }, door: { tx: 32, ty: 41 } });
   setGameNow(Date.parse('2026-01-05T00:05:00Z') / 1000);
+  const before = count();
+  assert.equal(before.objects, 1, 'only the persistent interaction key hint before chunks');
+  assert.deepEqual(doorFor('silas', 'outdoors', 'in:commons:yard'), { step: { tx: 32, ty: 42 }, door: { tx: 32, ty: 41 } });
   for (const festival of ['Carting Day', 'Closure Night', 'Amberwake', 'The Breaking']) {
     model.calendar = { ...model.calendar, festival, notice: 'A fixture notice' } as never;
+    bus.emit(EV.villageChanged, { what: 'calendar' });
     for (let round = 0; round < 3; round++) {
       const chunks = [...r.fp.objects.keys()].map((k) => {
         const [cx, cy] = k.split(',').map(Number) as [number, number];
@@ -479,17 +488,60 @@ test('Commons residents, pickups, papers, repairs, festival dressing and exit re
       }
       if (festival === 'Amberwake' || festival === 'Closure Night') assert.ok(r.scene.children.list.some((o) => o.texture.key.includes('window-lamp-glow')), 'window lamps');
       if (festival === 'The Breaking') assert.ok(r.scene.children.list.some((o) => o.texture.key.includes('candle-hull')), 'Breaking candles');
-      if (festival === 'Closure Night') assert.equal(r.scene.children.list.filter((o) => o.type === 'Rectangle').length, 6);
+      if (festival === 'Closure Night') {
+        assert.equal(r.scene.children.list.filter((o) => o.type === 'Rectangle').length, 1, 'one shade across the camera view');
+        r.scene.cameras.main.width = 960;
+        r.scene.cameras.main.zoom = 1.5;
+        r.scene.events.emit('prerender');
+        const shade = r.scene.children.list.find((o) => o.type === 'Rectangle')!;
+        assert.equal(shade.width, 640);
+        assert.equal(shade.height, 760 / 1.5);
+        assert.equal(shade.x, 480);
+      }
+      const dressing = [...village['chunks'].values()].flatMap((c) => c.drawn);
+      bus.emit(EV.villageChanged, { what: 'repairs' });
+      const afterRepair = [...village['chunks'].values()].flatMap((c) => c.drawn);
+      assert.equal(afterRepair.length, dressing.length, 'repair refresh preserves dressing');
+      assert.ok(afterRepair.every((o, i) => o === dressing[i]), 'festival objects are retained');
+      assert.ok(dressing.every((o) => (o as unknown as FakeObject).alive), 'festival objects stay on screen');
+      assert.ok(interactions['markers'].size > 0, 'marker images and bob tweens are built');
       // A watched departure is cancelled by teardown, including its collision body.
       cycle.check(Date.parse('2026-01-05T00:21:00Z') / 1000);
       assert.ok(npcs.npcs.find((n) => n.id === 'silas')?.path, 'Silas walks to his door on outdoors');
+      model.calendar = { ...model.calendar, festival: festival === 'Carting Day' ? 'Closure Night' : 'Carting Day' } as never;
       bus.emit(EV.villageChanged, { what: 'calendar' });
       r.builds.step(-1);
       for (const c of chunks) c.destroy();
       r.builds.step(Infinity);
+      model.calendar = { ...model.calendar, festival } as never;
+      bus.emit(EV.villageChanged, { what: 'calendar' });
       assert.deepEqual(count(), before, `${festival}, round ${round}: nothing left`);
     }
   }
+  // Newly attached Elara must start hidden while she is at the library desk.
+  setGameNow(Date.parse('2026-01-05T00:21:00Z') / 1000);
+  const key = chunkOfTile(5, 29);
+  for (const step of life.attach(key)) step();
+  assert.equal(npcs.npcs.find((n) => n.id === 'elara')?.spot, 'camp');
+  assert.equal(npcs.npcs.find((n) => n.id === 'elara')?.present, false);
+  assert.equal(npcs.gone('elara'), true);
+  life.detach(key);
+  assert.deepEqual(count(), before, 'desk-phase attachment leaves nothing');
+  const exit = [...r.fp.objects.values()].flat().find((o) => o.id === 'exit:village')!;
+  const exitFestival = exit.festival;
+  exit.festival = 'fixture-off';
+  const exitKey = chunkOfTile(exit.tx, exit.ty);
+  for (const step of life.attach(exitKey)) step();
+  assert.ok(!interactions.list.some((p) => p.id.startsWith('touch:sign:gate:')), 'out-of-season exit has no readable sign');
+  life.detach(exitKey);
+  exit.festival = exitFestival;
+  model.calendar = { ...model.calendar, festival: 'Closure Night' } as never;
+  for (const step of village.attachChunk(key)) step();
+  assert.ok(r.scene.children.list.some((o) => o.type === 'Rectangle'));
+  r.scene.events.emit('shutdown');
+  assert.equal(r.scene.events.listenerCount('prerender'), 0, 'shade update listener released');
+  assert.equal(r.scene.children.list.filter((o) => o.type === 'Rectangle').length, 0, 'scene teardown releases active shade');
+  assert.equal(village['chunks'].size, 0);
   globalThis.document = originalDocument;
   r.fp.ground[6]![34] = windowTile;
   r.fp.ground[7]![35] = waterTile;

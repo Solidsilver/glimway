@@ -80,7 +80,7 @@ import { QUEST_ACTION } from '../../content/quests/index.ts'
 import { LIBRARY_ACTION } from '../../content/residents.ts'
 import { openLibrary } from '../library-open.ts'
 import { WildsEntities } from '../wilds/entities'
-import { setSyncSafety } from '../sync-safety'
+import { enemiesNearForSync, setSyncSafety } from '../sync-safety'
 import { onSceneEnd } from '../scene-end'
 import { exposeWorldHooks } from './world-dev-hooks'
 import { playHold, runFrame, type WorldFrame } from './world-frame'
@@ -624,7 +624,7 @@ export class WorldScene extends Phaser.Scene {
         safe: isSafeArea(this.world.areaId, { x: px, y: py }),
         transitioning: this.transitioning,
         dialogueOpen: uiState.dialogueOpen,
-        enemiesNear: this.enemies.enemies.some((e) => Math.hypot(e.x - px, e.y - py) < 200)
+        enemiesNear: enemiesNearForSync(this.world.areaId, { x: px, y: py }, this.enemies.enemies)
       }
     })
     onSceneEnd(this, dropSafety)

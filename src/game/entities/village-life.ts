@@ -24,7 +24,7 @@ import type { Session } from '../session'
 import { TERRAIN, TILE, tileBottom, tileMid } from '../../lib/tile'
 import type { WorldData } from '../worlds'
 import { chunkOfTile, footprintAt, commonsLane } from '../wilds/fixed'
-import { CHUNK_PX, CHUNK_TILES } from '../wilds/coords'
+import { CHUNK_TILES } from '../wilds/coords'
 import type { Buildable } from '../wilds/window-chunk'
 import { FixedScope } from '../wilds/fixed-scope'
 import { resolve } from '../../lib/location'
@@ -62,11 +62,29 @@ export class VillageLayer {
   private chunks = new Map<string, { drawn: Phaser.GameObjects.GameObject[]; job: Buildable | null }>()
   private drawing: Phaser.GameObjects.GameObject[] | null = null
 
+  private festivalDrawn: string | null | undefined
+  private shade: Phaser.GameObjects.Rectangle | null = null
+  private stopped = false
+
+  /** One camera-wide shade, including the fog and Tangle beyond fixed ground. */
+  private syncShade = (): void => {
+    const night = !this.stopped && this.chunks.size > 0 && this.village.calendar.festival === 'Closure Night'
+    if (!night) {
+      this.shade?.destroy()
+      this.shade = null
+      return
+    }
+    const camera = this.scene.cameras.main
+    this.shade ??= this.scene.add.rectangle(0, 0, 1, 1, 0x101428, 0.42).setScrollFactor(0).setDepth(3990)
+    this.shade.setPosition(camera.width / 2, camera.height / 2).setDisplaySize(camera.width / camera.zoom, camera.height / camera.zoom)
+  }
+
   attachChunk(key: string): (() => void)[] {
     this.detachChunk(key)
     this.scope.keys.add(key)
     const chunk = { drawn: [] as Phaser.GameObjects.GameObject[], job: null as Buildable | null }
     this.chunks.set(key, chunk)
+    this.syncShade()
     const steps = this.festivalSteps(key).map((step) => () => {
       if (this.chunks.get(key) !== chunk) return
       this.drawing = chunk.drawn
@@ -84,6 +102,7 @@ export class VillageLayer {
       o.destroy()
     }
     this.chunks.delete(key)
+    this.syncShade()
     this.scope.keys.delete(key)
     this.syncInteractions()
   }
@@ -126,7 +145,6 @@ export class VillageLayer {
       const h = commonsLane()?.features.hame
       if (h) at(h.tx, h.ty, () => this.glow(tileMid(h.tx), tileBottom(h.ty) - 24, 0.6, 0.9))
     }
-    if (name === 'Closure Night') steps.push(() => this.add(this.scene.add.rectangle(cx * CHUNK_PX, cy * CHUNK_PX, CHUNK_PX, CHUNK_PX, 0x101428, 0.42).setOrigin(0, 0).setDepth(3990)))
     for (const o of fp.objects.get(key) ?? []) {
       if (name === 'Closure Night' && o.prop?.light) steps.push(() => this.glow(tileMid(o.tx), tileBottom(o.ty) - o.prop!.h * 0.72, 1.1, 0.9))
     }
@@ -149,6 +167,16 @@ export class VillageLayer {
 
   constructor(private scene: Phaser.Scene, private deps: VillageDeps) {
     this.scope = new FixedScope(!!deps.world.open)
+    if (deps.world.open) {
+      scene.events.on('prerender', this.syncShade)
+      const cleanup = () => {
+        this.stopped = true
+        scene.events.off('prerender', this.syncShade)
+        for (const key of [...this.chunks.keys()]) this.detachChunk(key)
+      }
+      scene.events.once('shutdown', cleanup)
+      scene.events.once('destroy', cleanup)
+    }
     this.village = villageFor(deps.session)
     // A destroyed game (a session swap) never shuts its scene down: drop the
     // listener either way, and never draw into a scene that is gone.
@@ -266,6 +294,17 @@ export class VillageLayer {
   }
 
   private redraw(): void {
+    if (this.deps.world.open) {
+      this.syncInteractions()
+      const festival = this.village.calendar.festival
+      if (festival !== this.festivalDrawn) {
+        this.festivalDrawn = festival
+        this.refreshChunks()
+        this.syncShade()
+      }
+      if (festival && this.lane()) this.greet(festival)
+      return
+    }
     for (const o of this.drawn) {
       this.scene.tweens.killTweensOf(o)
       o.destroy()
@@ -275,12 +314,6 @@ export class VillageLayer {
     this.millTimer = null
     this.syncInteractions()
     const w = this.deps.world
-    if (w.open) {
-      this.refreshChunks()
-      const festival = this.village.calendar.festival
-      if (festival && this.lane()) this.greet(festival)
-      return
-    }
     if (w.areaId === 'village') this.villageChanges()
     if (w.areaId === 'woodland') this.footbridge(this.village.hasWorldFlag('project:north-bridge:complete'))
     const festival = this.village.calendar.festival

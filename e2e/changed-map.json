@@ -16,7 +16,7 @@
   "ignore": ["**/*.md", "docs/**", ".agent/**", "tests/**", "e2e/changed-map.json", "deploy/**", "scripts/*-vectors.ts", "scripts/papers.ts", "scripts/webgl-renderer.ts", "scripts/e2e-artifacts.mjs", "perf/**", "playwright.perf.config.ts", "playwright.first-paint.perf.config.ts", "scripts/trace-hotspots.mjs", "scripts/png-diff.ts", "content/vectors/**", "content/**/*_test.go"],
   "rules": [
     {
-      "paths": ["src/game/wilds/fixed-life.ts", "src/game/wilds/fixed-scope.ts", "src/game/entities/homesteads.ts", "src/game/entities/homestead-talk.ts", "src/game/entities/npcs.ts", "src/game/entities/world-talk.ts", "src/game/entities/repairs.ts", "src/game/entities/item-pickups.ts", "src/game/entities/papers.ts", "src/game/entities/village-life.ts", "src/game/entities/touches.ts"],
+      "paths": ["src/game/entities/interactables.ts", "src/game/wilds/fixed-life.ts", "src/game/wilds/fixed-scope.ts", "src/game/entities/homesteads.ts", "src/game/entities/homestead-talk.ts", "src/game/entities/npcs.ts", "src/game/entities/world-talk.ts", "src/game/entities/repairs.ts", "src/game/entities/item-pickups.ts", "src/game/entities/papers.ts", "src/game/entities/village-life.ts", "src/game/entities/touches.ts"],
       "specs": ["seam.spec.ts", "residents.spec.ts", "homestead.spec.ts", "yard.spec.ts", "village.spec.ts", "open-map.spec.ts"]
     },
     {
