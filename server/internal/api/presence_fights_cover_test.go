@@ -27,7 +27,7 @@ func coverFixture(t *testing.T) (*presenceHub, *presencePeer, *presenceFightRoom
 	h := newPresenceHub(nil, func() time.Time { return now })
 	a := &Server{presence: h}
 	ctx, cancel := context.WithCancel(context.Background())
-	p := &presencePeer{identity: presenceIdentity{ID: "alice", World: "world", Magic: presenceMagic{Kit: rules.CombatKitFor(nil, "", 0)}}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 16), area: "wilds:0:0", pos: &presencePosition{X: 0, Y: 112}}
+	p := &presencePeer{identity: presenceIdentity{ID: "alice", World: "world", Magic: presenceMagic{Kit: rules.CombatKitFor(nil, "", 0)}}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 16), area: "outdoors:0:0", pos: &presencePosition{X: 0, Y: 112}}
 	h.admit(p)
 	key := fights.Key{World: "world", Realm: "hearthwick", Epoch: "epoch"}
 	g := fights.Geometry{Size: 24, Open: make([]bool, 24*24)}
@@ -196,7 +196,7 @@ func TestFightWakeRescansWhenPeerMovedMeanwhile(t *testing.T) {
 	// Far from the 3x3 the wake is loading, still inside the frontier.
 	h := x.api.presence
 	h.mu.Lock()
-	p.area = "wilds:3:-4"
+	p.area = "outdoors:3:-4"
 	p.pos = &presencePosition{X: 3*384 + 200, Y: -4*384 + 208}
 	h.mu.Unlock()
 	close(source.release)

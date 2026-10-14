@@ -6,8 +6,8 @@
  *   pixels [16·tx, 16·tx + 16), and lies in chunk (floor(tx/24),
  *   floor(ty/24)). North is -y; chunk (0, 0) is the one the Commons gate
  *   opens into.
- * - The save keeps `area: 'wilds'` and the hero's world pixels; an
- *   operation's `where` is the same (`area: 'wilds'`, x, y), and the server
+ * - The save keeps `area: 'outdoors'` and the hero's world pixels; an
+ *   operation's `where` is the same (`area: 'outdoors'`, x, y), and the server
  *   reads `floor(position / 16)` world tiles.
  *
  * The pure tile and chunk rules are src/lib/wilds/coords.ts (shared vectors
@@ -21,7 +21,7 @@ import type { AreaId } from '../../lib/state.ts';
 
 
 /** The saved area id for anywhere in the Wilds, and the scene's area id there. */
-export const WILDS_AREA: AreaId = 'wilds';
+export const OUTDOORS_AREA: AreaId = 'outdoors';
 
 export const CHUNK_TILES = loadWilds().chunkSize;
 /** One chunk's side length in pixels. */
@@ -29,7 +29,7 @@ export const CHUNK_PX = CHUNK_TILES * TILE;
 
 /** True in the Wilds. */
 export function isWildsArea(areaId: string): boolean {
-  return areaId === WILDS_AREA;
+  return areaId === OUTDOORS_AREA;
 }
 
 /** The chunk a world pixel lies in. */

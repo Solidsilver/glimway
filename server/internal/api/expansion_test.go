@@ -303,7 +303,7 @@ func TestHomeRestAndSafeBoundaries(t *testing.T) {
 		s.Snapshot = x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, p, doc), c, 200).Snapshot
 	}
 	doc = s.State
-	doc.Area = "wilds"
+	doc.Area = "outdoors"
 	request := x.profileBodyWithSeededReport(s, p, doc)
 	before := x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	x.expect("POST", "/api/profile", request, c, 409)

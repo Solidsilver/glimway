@@ -67,12 +67,12 @@ test('swings per action with and without bite fitting', () => {
 });
 
 test('a visit is one stay: the same while you rebuild, new when you leave and return', () => {
-  assert.equal(visitKey('wilds'), 'wilds', 'the open map is one stay');
+  assert.equal(visitKey('outdoors'), 'outdoors', 'the open map is one stay');
   assert.equal(visitKey('home:0'), 'home:0');
-  const a = visitIdFor('wilds');
-  assert.equal(visitIdFor('wilds'), a, 'a scene rebuild is the same visit');
+  const a = visitIdFor('outdoors');
+  assert.equal(visitIdFor('outdoors'), a, 'a scene rebuild is the same visit');
   const b = visitIdFor('commons');
-  assert.notEqual(visitIdFor('wilds'), a, 'leaving and coming back is a new visit');
+  assert.notEqual(visitIdFor('outdoors'), a, 'leaving and coming back is a new visit');
   assert.notEqual(b, a);
 });
 
@@ -157,11 +157,11 @@ test('a tool’s feel: Bite takes a swing off, Heft quickens, a dull warden-set 
 });
 
 test('the drift: only your land inside lamplight keeps what you work; everywhere else regrows', () => {
-  for (const area of ['wilds', 'woodland', 'home:0', 'village', 'commons']) assert.ok(gatherArea(area), `${area} offers work`);
+  for (const area of ['outdoors', 'woodland', 'home:0', 'village', 'commons']) assert.ok(gatherArea(area), `${area} offers work`);
   for (const area of ['ruin', 'cottage']) assert.ok(!gatherArea(area), `${area} offers none`);
   assert.equal(keepsWork('home:3', true), true, 'inside lamplight: a stump stays a stump');
   assert.equal(keepsWork('home:3', false), false, 'the unlit edge regrows like the Tangle');
-  assert.equal(keepsWork('wilds', true), false, 'the Tangle always comes back');
+  assert.equal(keepsWork('outdoors', true), false, 'the Tangle always comes back');
   assert.equal(keepsWork('woodland', false), false);
 });
 
@@ -246,13 +246,13 @@ test('a planted sapling is drawn as itself, an herb or spawn as a patch of the w
 });
 
 test('a stay remembers its work; a new visit starts fresh', () => {
-  const first = visitIdFor('wilds');
+  const first = visitIdFor('outdoors');
   const done = visitWork(first);
   done.worked.set('chunk:inner-1:0:0:4,5', 'stump');
   done.enough.add('chop');
-  assert.equal(visitWork(visitIdFor('wilds')).worked.get('chunk:inner-1:0:0:4,5'), 'stump', 'a rebuild in the same stay keeps it');
+  assert.equal(visitWork(visitIdFor('outdoors')).worked.get('chunk:inner-1:0:0:4,5'), 'stump', 'a rebuild in the same stay keeps it');
   visitIdFor('commons');
-  const again = visitWork(visitIdFor('wilds'));
+  const again = visitWork(visitIdFor('outdoors'));
   assert.equal(again.worked.size, 0, 'leaving and coming back: the woods have regrown');
   assert.equal(again.enough.size, 0, 'and give again');
 });
@@ -289,9 +289,9 @@ test('wear is told in a line: giving out, going blunt, a fitting wearing away', 
 
 test('each place offers only the pieces the server allows there', () => {
   for (const region of ['tangle', 'whitequiet-0-4', 'road', 'ford'] as const) {
-    for (const s of chunkGather(fixtureTerrain(region))) assert.ok(gatheringOffered('wilds', s.target), `wilds: ${s.target}`);
+    for (const s of chunkGather(fixtureTerrain(region))) assert.ok(gatheringOffered('outdoors', s.target), `wilds: ${s.target}`);
   }
-  for (const s of Object.values(GATHER_OF)) assert.ok(gatheringOffered("wilds", s!.target), `wilds kind: ${s!.target}`);
+  for (const s of Object.values(GATHER_OF)) assert.ok(gatheringOffered("outdoors", s!.target), `wilds kind: ${s!.target}`);
   for (const s of buildArea('woodland').gathering ?? []) assert.ok(gatheringOffered('woodland', s.target), `woodland: ${s.target}`);
   for (const s of buildArea('home:0').gathering ?? []) assert.ok(gatheringOffered('home:0', s.target), `home: ${s.target}`);
   assert.ok(!gatheringOffered('woodland', 'hollow-tree'));

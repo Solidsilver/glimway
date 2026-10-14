@@ -11,9 +11,9 @@ test('queued requests preserve zeros, empty fields, caller keys, and the absence
   assert.deepEqual(settle.body, { op: { lease: '', key: 'settle-key' }, where, cast: '', keep: false });
   const cancel = queuedRequest('fish-cancel', { cast: 'cast-id' }, 'cancel-key', where);
   assert.deepEqual(cancel.body, { op: { lease: '', key: 'cancel-key' }, cast: 'cast-id' });
-  const lay = queuedRequest('wilds-lay', { epoch: 'epoch', x: 0, y: -24, kind: '' }, '', { area: 'wilds', x: 0, y: -384 });
+  const lay = queuedRequest('wilds-lay', { epoch: 'epoch', x: 0, y: -24, kind: '' }, '', { area: 'outdoors', x: 0, y: -384 });
   assert.equal(lay.key, '', 'an explicitly supplied empty key is not replaced');
-  assert.deepEqual(lay.body, { op: { lease: '', key: '' }, epoch: 'epoch', where: { area: 'wilds', x: 0, y: -384 }, x: 0, y: -24, kind: '' });
+  assert.deepEqual(lay.body, { op: { lease: '', key: '' }, epoch: 'epoch', where: { area: 'outdoors', x: 0, y: -384 }, x: 0, y: -24, kind: '' });
 });
 
 test('queued results reject a different case or absent value before exposing success', () => {

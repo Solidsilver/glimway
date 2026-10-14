@@ -1,5 +1,5 @@
-import { rootArea } from '../rooms.ts';
-import { HOME_AREA_RE, recoverFromDefeat, validateSave, type GameState } from '../state.ts';
+import { at } from '../location.ts';
+import { recoverFromDefeat, validateSave, type GameState } from '../state.ts';
 import { validateHabiticaProfile } from './mapping.ts';
 import { creditXp, grantGlims, grantWelcome, lifetimeXp } from '../glims.ts';
 import type {
@@ -57,21 +57,13 @@ export class SyncRejectedError extends Error {
   }
 }
 
-/**
- * Safe areas, where syncs (and rests) may happen: Hearthwick village,
- * Hearthwick Commons, and every homestead's land behind its gates (`home:<g>`).
- * Matches the server's `rules.IsSafeArea`. A cottage is part of its
- * homestead (the save keeps saying `home:<g>` inside one).
- */
-const SAFE_AREAS: readonly string[] = ['village', 'commons'];
-
-export function isSafeArea(area: string): boolean {
-  const root = rootArea(area);
-  return SAFE_AREAS.includes(root) || HOME_AREA_RE.test(root);
+/** Location safety at the supplied position, matching `rules.IsSafeArea`. */
+export function isSafeArea(area: string, position: GameState['position']): boolean {
+  return at(area, position.x, position.y).safe;
 }
 
 export function isSafeBoundary(state: GameState): boolean {
-  return isSafeArea(state.area);
+  return at(state.area, state.position.x, state.position.y).sync;
 }
 
 /**

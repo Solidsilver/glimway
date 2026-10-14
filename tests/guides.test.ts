@@ -72,7 +72,7 @@ test('guides: a fresh player starts at the first step; the deed is Pell’s, the
   const p = guideProgress(guideById('first-tool')!, base());
   assert.equal(p.current, 0);
   assert.equal(p.steps[0].where, 'pell');
-  assert.deepEqual(p.steps.map((s) => s.where), ['pell', 'silas', 'wilds', 'silas', 'bench']);
+  assert.deepEqual(p.steps.map((s) => s.where), ['pell', 'silas', 'outdoors', 'silas', 'bench']);
   // Every deed step goes to Pell; Silas keeps the building.
   for (const g of GUIDES) for (const s of g.steps) if (/deed/i.test(s.text)) assert.equal(s.where, 'pell', s.text);
   // Enough materials but no workshop yet: that step is done, Silas is next.

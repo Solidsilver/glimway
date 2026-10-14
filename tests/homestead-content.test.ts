@@ -58,7 +58,7 @@ test('Commons and homesteads are safe, Wilds is unsafe, and home rest retains ea
   const state = { ...createNewGame(), area: 'commons', hp: 0, glims: 4, xpGlims: 0 };
   assert.ok(isSafeBoundary(state));
   assert.ok(isSafeBoundary({ ...state, area: 'home:3' }));
-  assert.ok(!isSafeBoundary({ ...state, area: 'wilds' }));
+  assert.ok(!isSafeBoundary({ ...state, area: 'outdoors' }));
   assert.ok(!isSafeBoundary({ ...state, area: 'home:03' }));
   assert.equal(validateSave(state).area, 'commons');
   assert.equal(validateSave({ ...state, area: 'home:12' }).area, 'home:12');

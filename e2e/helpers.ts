@@ -142,7 +142,7 @@ export async function settled(page: Page, match: { area?: string; prefix?: strin
 }
 
 export async function waitForArea(page: Page, area: AreaId): Promise<void> {
-  if (area === 'wilds') await waitForWilds(page)
+  if (area === 'outdoors') await waitForWilds(page)
   else await settled(page, { area: String(area) })
 }
 
@@ -151,7 +151,7 @@ export async function waitForArea(page: Page, area: AreaId): Promise<void> {
  * hero's chunk attached by the window. Returns the hero's chunk (`cx,cy`).
  */
 export async function waitForWilds(page: Page): Promise<string> {
-  await settled(page, { area: 'wilds' })
+  await settled(page, { area: 'outdoors' })
   const handle = await page.waitForFunction(() => {
     const h = window
     const d = h.__fsWilds?.()
@@ -479,7 +479,7 @@ export async function wildsWindow(page: Page): Promise<WildsWindowView | null> {
   return page.evaluate(() => window.__fsWildsWindow?.() ?? null)
 }
 
-/** Warp to a tile: the open map's (`wilds`) are world tiles, signed; every other area's its own. */
+/** Warp to a tile: the open map's (`outdoors`) are world tiles, signed; every other area's its own. */
 export async function warp(page: Page, area: AreaId, tx: number, ty: number): Promise<void> {
   // The warp starts the transition at once (a refused warp leaves us here).
   await page.evaluate(([a, x, y]) => window.__fsDevWarp!(a, x, y), [area, tx, ty] as const)

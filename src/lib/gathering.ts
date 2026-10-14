@@ -1,3 +1,4 @@
+import { at } from './location.ts';
 /**
  * Gathering rules, caps, targets and yields (content/gathering.json; docs/items/).
  * Shared with the Go server (content/gathering.go).
@@ -48,8 +49,9 @@ export function gatheringTarget(id: string): GatheringTarget | undefined {
 }
 
 /** Whether a place (a progress area) has pieces of a target at all (the server checks the same). */
-export function gatheringOffered(area: string, target: string): boolean {
-  const kind = area.startsWith('home:') ? 'home' : area;
+export function gatheringOffered(area: string, target: string, position = { x: 0, y: 0 }): boolean {
+  const place = at(area, position.x, position.y);
+  const kind = area.startsWith('home:') ? 'home' : area === 'outdoors' ? (place.source.kind === 'generated' ? 'wilds' : place.id) : place.id;
   return (GATHERING_DATA.areas[kind]?.targets ?? []).includes(target);
 }
 
@@ -108,8 +110,9 @@ export function swingPlan(action: string, tool: ToolFeel): { swings: number; ms:
 }
 
 /** Where the woods can be worked: the Tangle and the Whitequiet, the woods, home land, and the village's water (in season). */
-export function gatherArea(area: string): boolean {
-  return area === 'wilds' || area === 'woodland' || area === 'village' || area === 'commons' || area.startsWith('home:');
+export function gatherArea(area: string, position = { x: 0, y: 0 }): boolean {
+  const place = at(area, position.x, position.y);
+  return (area === 'outdoors' && place.source.kind === 'generated') || ['woodland', 'village', 'commons'].includes(place.id) || place.rest === 'home';
 }
 
 /**

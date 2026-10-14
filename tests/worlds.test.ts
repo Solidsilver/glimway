@@ -19,7 +19,7 @@ const BUILT: AreaId[] = [...AREAS, 'commons', 'home:0', 'home:1'];
 /** A homestead gate in a Commons fence is a door in the map, not an edge (and so is its way back). */
 const isGateDoor = (from: string, e: ExitDef) => /^home:/.test(e.to) || /^home:/.test(from);
 /** Registered by another client module (the Wilds): exits may lead there. */
-const EXTERNAL = ['wilds'];
+const EXTERNAL = ['outdoors'];
 
 const worlds = Object.fromEntries(BUILT.map((a) => [a, buildArea(a)])) as Record<AreaId, WorldData>;
 

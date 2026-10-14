@@ -89,7 +89,7 @@ test('the validator refuses malformed rows, like content/items.go', () => {
     ['off-hand item that holds nothing', (v) => delete v.items.find((d) => d.id === 'carters-lantern')!.held],
     ['missing trinket', (v) => (v.items = v.items.filter((d) => d.id !== 'whittled-fox'))],
     ['two tools in one pickup', (v) => (v.pickups.find((p) => p.id === 'dropped-bucket')!.qty = 2)],
-    ['pickup off the map of areas', (v) => ((v.pickups[0] as { area: string }).area = 'wilds')],
+    ['pickup off the map of areas', (v) => ((v.pickups[0] as { area: string }).area = 'outdoors')],
     ['hold that wears faster', (v) => (v.rules.wear.holdPointsPerUse = 9)],
   ];
   for (const [name, mutate] of cases) {

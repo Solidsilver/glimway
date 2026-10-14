@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"glimway/content"
+	"glimway/server/internal/location"
 	"math"
 	"reflect"
 	"slices"
@@ -12,7 +13,6 @@ import (
 )
 
 var E = content.Rules
-var SafeAreas = map[string]bool{"village": true, "commons": true}
 
 // HomeGate is the gate number of a homestead map's area id ("home:<g>",
 // canonical 0..9999), or -1 for anything else.
@@ -31,11 +31,9 @@ func HomeGate(area string) int {
 	return n
 }
 
-// IsSafeArea: where syncs and rests may happen (the village, the Commons
-// and every homestead map).
-func IsSafeArea(area string) bool {
-	area = content.RootArea(area)
-	return SafeAreas[area] || HomeGate(area) >= 0
+// IsSafeArea reports the location's safety at the supplied position.
+func IsSafeArea(area string, position Position) bool {
+	return location.At(location.Space(area), position.X, position.Y).Safe
 }
 
 var Stages = []string{"new", "accepted", "clue-found", "guardian-defeated", "lantern-lit", "complete"}
@@ -286,7 +284,7 @@ type SyncResult struct {
 
 func Sync(save Save, p Profile, atSafe bool) SyncResult {
 	r := SyncResult{Save: save}
-	if !IsSafeArea(save.State.Area) || !atSafe {
+	if !location.At(location.Space(save.State.Area), save.State.Position.X, save.State.Position.Y).Sync || !atSafe {
 		r.Status = "rejected"
 		r.Reason = "not-at-safe-boundary"
 		return r

@@ -79,6 +79,7 @@
   const blocks = $derived.by(() => {
     const b = moveBlocks({
       area: session.state.area,
+      position: session.state.position,
       outgoing: leaving?.outgoing ?? 0,
       online: ui.link?.status === 'online',
       pending,

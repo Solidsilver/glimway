@@ -142,7 +142,7 @@ test('cleared tiles open up the land map; desolation grows over it', () => {
 test('the Commons gate leads back to Hearthwick and the north lane to the Wilds', () => {
   const w = buildCommons();
   const village = w.exits.find((e) => e.to === 'village')!;
-  const wilds = w.exits.find((e) => e.to === 'wilds')!;
+  const wilds = w.exits.find((e) => e.to === 'outdoors')!;
   assert.equal(village.tx, 0);
   assert.equal(wilds.ty, 0);
   const v = buildArea('village');

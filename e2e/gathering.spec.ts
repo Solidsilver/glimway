@@ -205,7 +205,7 @@ test('chopping a tree in the Tangle: wear, timber, a stump to dig, and regrowth'
 
   // The Tangle of a pinned world (still land: the same trees every run).
   await pinWorld(page, GATHER_SEED)
-  await warp(page, 'wilds', 20, 20)
+  await warp(page, 'outdoors', 20, 20)
   await windowWhole(page)
   // A path-side tree: its canopy is drawn by the foreground pass (it fades
   // when walked under). That canopy used to stay standing over the stump.
@@ -249,7 +249,7 @@ test('chopping a tree in the Tangle: wear, timber, a stump to dig, and regrowth'
   // The same chunk built again within the visit: the dug-out tree stays
   // open ground, with nothing drawn on it (its canopy neither).
   const chunk = (await gather(page))!.area
-  await warp(page, 'wilds', 20, 20)
+  await warp(page, 'outdoors', 20, 20)
   await chunkWhole(page, spot)
   expect((await gather(page))!.area).toBe(chunk)
   await expect.poll(async () => spotAt(page, spot)).toBeNull()
@@ -258,7 +258,7 @@ test('chopping a tree in the Tangle: wear, timber, a stump to dig, and regrowth'
 
   // The drift: leave, come back, and the woods have regrown.
   await warp(page, 'commons', 23, 19)
-  await warp(page, 'wilds', 20, 20)
+  await warp(page, 'outdoors', 20, 20)
   await chunkWhole(page, spot)
   await expect.poll(async () => spotAt(page, spot)).toMatch(/^(tangle-tree|ash)$/)
 })
@@ -294,7 +294,7 @@ test('past the cap the wood says so in words, and the trees shuffle out of reach
   const day = Math.floor(noon / 86400)
   sql(`INSERT INTO gathering_caps(account_id,action,day,day_count,area,visit_id,visit_count,updated_at) VALUES('${accountOf(id)}','chop',${day},29,'','',0,0);`)
 
-  await warp(page, 'wilds', 20, 20)
+  await warp(page, 'outdoors', 20, 20)
   await windowWhole(page)
   await workOne(page, ['tangle-tree', 'ash'], /Chop the (tree|ash)/)
   await expect.poll(async () => usesLeft(page, axe)).toBe(29)

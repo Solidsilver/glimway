@@ -1,3 +1,4 @@
+import { at } from '../../lib/location.ts';
 /**
  * Gathering (docs/items/crafting-and-repair.md, "Gathering"): the workable
  * pieces of a wilds chunk (the Tangle and the Whitequiet), the woods, and
@@ -28,7 +29,7 @@ import { ITEM_ART_FALLBACK, itemIcon } from '../items-pass'
 import { homesteadsFor } from '../homestead'
 import { plantScenery } from '../homeland'
 import { lookAtlasKey } from '../wilds/wilds-looks'
-import { WILDS_AREA } from '../wilds/coords'
+import { OUTDOORS_AREA } from '../wilds/coords'
 import { ensureSceneryArt } from '../area/props'
 import { bus, EV } from '../events'
 import { TILE, tileBottom, tileKey, tileMid } from '../../lib/tile'
@@ -264,7 +265,7 @@ export class Gathering {
       }
       const home = parseHomeArea(session.state.area) !== null
       this.deps.notePosition()
-      const wilds = session.state.area === WILDS_AREA
+      const wilds = session.state.area === OUTDOORS_AREA && at(session.state.area, hero.sprite.x, hero.sprite.y).source.kind === 'generated'
       // The server checks the piece against its own land or chunk: home tiles
       // and the open map's world tiles as they are.
       const tile: [number, number] | undefined = home || wilds ? [spot.tx, spot.ty] : undefined

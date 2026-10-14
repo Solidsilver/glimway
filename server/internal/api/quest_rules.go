@@ -74,15 +74,15 @@ func questTrigger(ctx context.Context, tx *sql.Tx, s *store.Snapshot, quest stri
 	}
 	switch {
 	case t.GetTalk() != "":
-		if !personHere(t.GetTalk(), s.State.Area, now) {
+		if !personHere(t.GetTalk(), placeID(*s), now) {
 			return fail(409, "not-here")
 		}
 	case t.GetUse() != "":
-		if s.State.Area != content.QuestSpotArea(t.GetUse()) {
+		if placeID(*s) != content.QuestSpotArea(t.GetUse()) {
 			return fail(409, "wrong-area")
 		}
 	case t.GetReach() != "":
-		if s.State.Area != t.GetReach() {
+		if placeID(*s) != t.GetReach() {
 			return fail(409, "wrong-area")
 		}
 	case t.GetDefeat() != "":
@@ -125,7 +125,7 @@ func checkQuestGate(ctx context.Context, tx *sql.Tx, s *store.Snapshot, quest st
 	if g == nil {
 		return nil
 	}
-	if g.GetWith() != "" && !personHere(g.GetWith(), s.State.Area, now) {
+	if g.GetWith() != "" && !personHere(g.GetWith(), placeID(*s), now) {
 		return fail(409, "not-here")
 	}
 	if wait := g.GetWait(); wait != nil {

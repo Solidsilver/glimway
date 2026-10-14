@@ -66,7 +66,7 @@ function tileOf(c: WildsChunk, terrain: string): { tx: number; ty: number } | nu
 }
 
 async function visit(page: Page, at: { tx: number; ty: number }, name: string): Promise<void> {
-  await warp(page, 'wilds', at.tx, at.ty)
+  await warp(page, 'outdoors', at.tx, at.ty)
   await waitForWilds(page)
   // The ring's landmarks and the drift come a few frames after the 3×3.
   await expect.poll(async () => (await wildsWindow(page))?.far.length ?? 0, { timeout: 10_000 }).toBeGreaterThan(0)
@@ -193,7 +193,7 @@ test('walking the Lantern Road across chunk edges keeps the frames steady', asyn
     const [x, y] = k.split(',').map(Number)
     path.unshift({ x: x! * 16 + 8, y: y! * 16 + 12 })
   }
-  await warp(page, 'wilds', start[0], start[1])
+  await warp(page, 'outdoors', start[0], start[1])
   await waitForWilds(page)
   await page.evaluate(() => (window as unknown as { __fsDevParkCreatures: () => void }).__fsDevParkCreatures())
   const timing = page.evaluate(() => (window as unknown as { __fsDevFrameTimes: (ms: number) => Promise<{ gap: { p50: number; p95: number } }> }).__fsDevFrameTimes(6000))

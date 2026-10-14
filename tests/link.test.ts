@@ -41,14 +41,14 @@ test('an unrelated answer never heals the combat overlay', async (t) => {
 
 test('a reload after a Wilds claim starts in the Wilds, not offline', async (t) => {
   // World pixels, signed (the open map: north of the gate is -y).
-  const r = await rig(t, { state: S({ area: 'wilds', x: 424, y: -744 }) });
-  assert.deepEqual([r.session.state.area, r.session.state.position], ['wilds', { x: 424, y: -744 }]);
-  await online(r, S({ area: 'wilds', x: 50, y: 60 }));
+  const r = await rig(t, { state: S({ area: 'outdoors', x: 424, y: -744 }) });
+  assert.deepEqual([r.session.state.area, r.session.state.position], ['outdoors', { x: 424, y: -744 }]);
+  await online(r, S({ area: 'outdoors', x: 50, y: 60 }));
   assert.equal(r.link.status, 'online');
   r.link.mark('seen:a');
-  r.server.on('POST /api/story/mark', markOk(S({ version: 2, area: 'wilds', marks: ['seen:a'] }), 'seen:a'));
+  r.server.on('POST /api/story/mark', markOk(S({ version: 2, area: 'outdoors', marks: ['seen:a'] }), 'seen:a'));
   await r.link.flush();
-  assert.deepEqual(r.server.sent('POST /api/story/mark')[0]!.body.where, { area: 'wilds', x: 424, y: -744 }, 'where is the Wilds and world pixels');
+  assert.deepEqual(r.server.sent('POST /api/story/mark')[0]!.body.where, { area: 'outdoors', x: 424, y: -744 }, 'where is the Wilds and world pixels');
 });
 
 // ---------------------------------------------------------------- prediction
@@ -734,7 +734,7 @@ test('Wilds operations go through the outbox: the lease, a key and where, and th
   const sent = r.server.sent('POST /api/wilds/claim')[0]!.body;
   assert.equal(sent.op.lease, 'L1');
   assert.ok(sent.op.key.length > 0);
-  assert.deepEqual(sent.where, { area: 'wilds', x: 100, y: -1200 }, 'world pixels, whole');
+  assert.deepEqual(sent.where, { area: 'outdoors', x: 100, y: -1200 }, 'world pixels, whole');
   assert.equal(sent.cycle, 2);
   assert.equal(r.link.rev, 2, 'the answer’s state is the world’s now');
   assert.equal(r.session.state.glims, 4);

@@ -87,7 +87,7 @@ test.describe('in a world', () => {
     await mail.getByRole('tab', { name: 'Send something' }).click()
     await shot(page, 'art-ui-mail-desktop')
     await page.keyboard.press('Escape')
-    await warp(page, 'wilds', 2, 22)
+    await warp(page, 'outdoors', 2, 22)
     await waitForWilds(page)
     await page.keyboard.press('c')
     await expect(page.locator('[aria-labelledby="char-title"]')).toBeVisible()

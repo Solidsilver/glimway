@@ -13,6 +13,12 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+### For players
+
+### Technical
+
+- Location seam S3: saved area `wilds` becomes `outdoors` (clean break), contract 11 and `glimway.presence.v4` chunk rooms. Migration 036 preserves world pixels and raises placement barriers. Safety, sync, riding, named-place rules and generated-ground eligibility use the shared location lookup. Commons remains a separate space until S5; S3 and S5 must ship in the same release.
+
 ## [0.9.1] - 2026-10-13
 
 ### For players

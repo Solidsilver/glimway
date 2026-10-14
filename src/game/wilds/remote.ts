@@ -17,7 +17,7 @@ export interface WildsWhere {
   y: number;
 }
 
-const whereOf = (w: WildsWhere) => ({ area: 'wilds', x: Math.round(w.x), y: Math.round(w.y) });
+const whereOf = (w: WildsWhere) => ({ area: 'outdoors', x: Math.round(w.x), y: Math.round(w.y) });
 
 export function claimEntity(session: Session, req: { epoch: string; entityId: string; cycle: number; where: WildsWhere }): Promise<Outcome<WildsClaimResult>> {
   const link = session.link;

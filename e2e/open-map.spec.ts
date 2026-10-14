@@ -162,7 +162,7 @@ test('walk from the gate through the Tangle into the Whitequiet and on, with no 
   await freshPlayer(page)
   // North through the Commons arch: the open map, just inside the gate.
   await warp(page, 'commons', 23, 2)
-  const inWilds = () => page.evaluate(() => (window as unknown as { __fsSafety?: () => { areaId: string } | null }).__fsSafety?.()?.areaId === 'wilds')
+  const inWilds = () => page.evaluate(() => (window as unknown as { __fsSafety?: () => { areaId: string } | null }).__fsSafety?.()?.areaId === 'outdoors')
   await holdUntil(page, 'ArrowUp', inWilds)
   await waitForWilds(page)
   const start = await wilds(page)
@@ -191,7 +191,7 @@ test('walk from the gate through the Tangle into the Whitequiet and on, with no 
     const w = (await wildsWindow(page))!
     expect(w.id, 'the same window: the scene never restarted').toBe(win.id)
     expect(w.center).toEqual(here.chunk)
-    expect(await page.evaluate(() => (window as unknown as { __fsSafety: () => { areaId: string } }).__fsSafety().areaId)).toBe('wilds')
+    expect(await page.evaluate(() => (window as unknown as { __fsSafety: () => { areaId: string } }).__fsSafety().areaId)).toBe('outdoors')
     if (cy === -3) {
       expect(here.epochId, 'the Whitequiet turns: the wick’s epoch').toBe(here.wickEpoch)
       await shot(page, '61-open-map-whitequiet-desktop')
@@ -213,7 +213,7 @@ test('walk from the gate through the Tangle into the Whitequiet and on, with no 
   const before = await steady(page, () => player(page), { frames: 4, seconds: 20, message: 'hero position after the open-map walk' })
   await expect.poll(async () => {
     const st = (await serverState(page)).body.state as { area: string; position: { x: number; y: number } }
-    return st.area === 'wilds' && Math.hypot(st.position.x - before.x, st.position.y - before.y) <= 17
+    return st.area === 'outdoors' && Math.hypot(st.position.x - before.x, st.position.y - before.y) <= 17
   }, { timeout: 20_000 }).toBe(true)
   // And this tab's own record has it (a reload starts from the place the page last saved).
   await page.evaluate(() => (window as unknown as { __fsDevSaveSoon: () => void }).__fsDevSaveSoon())
@@ -224,10 +224,10 @@ test('walk from the gate through the Tangle into the Whitequiet and on, with no 
     const { area, position } = (window as unknown as { __fsDevSaved: () => { area: string; position: { x: number; y: number } } }).__fsDevSaved()
     return { area, ...position }
   }), { frames: 3, seconds: 20, message: 'local save position after the walk' })
-  expect(saved.area).toBe('wilds')
+  expect(saved.area).toBe('outdoors')
   expect(Math.abs(saved.x - before.x), 'local save x matches the settled hero').toBeLessThanOrEqual(17)
   expect(Math.abs(saved.y - before.y), 'local save y matches the settled hero').toBeLessThanOrEqual(17)
-  await reenter(page, 'wilds')
+  await reenter(page, 'outdoors')
   // Reload rebuilds the enemy system: keep this walking/save test quiet too.
   await parkCreatures(page)
   await waitForWilds(page)
@@ -278,7 +278,7 @@ test('the drift at the frontier stops you, and says so the first time', async ({
   let corridor: Awaited<ReturnType<typeof northCorridor>> = null
   const tried: string[] = []
   for (const cx of [0, -3, 3]) {
-    await warp(page, 'wilds', cx * S + 12, edge + 12)
+    await warp(page, 'outdoors', cx * S + 12, edge + 12)
     await windowWhole(page)
     const w = (await wildsWindow(page))!
     expect(w.drift.length, 'past the edge is the drift').toBeGreaterThan(0)
@@ -303,7 +303,7 @@ test('the drift at the frontier stops you, and says so the first time', async ({
   }
   expect((await player(page)).y, 'the hero never passes the frontier').toBeGreaterThanOrEqual(frontierTop)
   await shot(page, '63-open-map-drift-desktop')
-  await settled(page, { area: 'wilds' })
+  await settled(page, { area: 'outdoors' })
 })
 
 type Remote = { name: string; x: number; y: number; alpha: number }
@@ -329,9 +329,9 @@ test('two players in neighbouring chunks see each other; two chunks apart they d
   await waitForWorld(other)
 
   // Ash by the east edge of the Tangle's middle chunk (0, -1); Rowan just over it in (1, -1).
-  await warp(page, 'wilds', 22, -12)
+  await warp(page, 'outdoors', 22, -12)
   await waitForWilds(page)
-  await warp(other, 'wilds', 25, -12)
+  await warp(other, 'outdoors', 25, -12)
   await waitForWilds(other)
   expect((await wilds(page)).chunk).toEqual({ cx: 0, cy: -1 })
   expect((await wilds(other)).chunk).toEqual({ cx: 1, cy: -1 })
@@ -344,7 +344,7 @@ test('two players in neighbouring chunks see each other; two chunks apart they d
   await shot(page, '64-open-map-two-players-desktop')
 
   // Rowan goes two chunks further east: out of Ash's 3×3, so they part.
-  await warp(other, 'wilds', 3 * S + 12, -12)
+  await warp(other, 'outdoors', 3 * S + 12, -12)
   await waitForWilds(other)
   await expect.poll(async () => (await remotes(page)).length, { timeout: 15_000 }).toBe(0)
   await ctx.close()
@@ -427,7 +427,7 @@ async function standAt(p: Page, at: { tx: number; ty: number }): Promise<void> {
 test('chunks walked in and out leave nothing behind: the tweens, the collision bodies and what is drawn come back to the same', async ({ page }) => {
   test.setTimeout(150_000)
   await freshPlayer(page)
-  await warp(page, 'wilds', 12, -12)
+  await warp(page, 'outdoors', 12, -12)
   await waitForWilds(page)
   await page.evaluate(() => (window as unknown as { __fsDevParkCreatures: () => void }).__fsDevParkCreatures())
   // Two spots three chunks apart: moving between them swaps the whole 3×3
@@ -454,7 +454,7 @@ test('chunks walked in and out leave nothing behind: the tweens, the collision b
 test('stepping back and forth over a chunk edge builds and drops nothing; the 3×3 around the hero is always whole', async ({ page }) => {
   test.setTimeout(150_000)
   await freshPlayer(page)
-  await warp(page, 'wilds', 12, -12)
+  await warp(page, 'outdoors', 12, -12)
   await waitForWilds(page)
   await page.evaluate(() => (window as unknown as { __fsDevParkCreatures: () => void }).__fsDevParkCreatures())
   // Stay on the intended side and within the window's eight-tile retention
@@ -487,7 +487,7 @@ const MOTES = 26
 test('the Whitequiet’s motes drift with each outer chunk, stay through its sites redrawing, and go with it', async ({ page }) => {
   test.setTimeout(150_000)
   await freshPlayer(page)
-  await warp(page, 'wilds', 12, -3 * S + 12)
+  await warp(page, 'outdoors', 12, -3 * S + 12)
   await waitForWilds(page)
   await page.evaluate(() => (window as unknown as { __fsDevParkCreatures: () => void }).__fsDevParkCreatures())
   const here = (await openNear(page, 12, -3 * S + 12))!
@@ -516,7 +516,7 @@ test.describe('with reduced motion', () => {
   test('the Whitequiet’s motes stand still', async ({ page }) => {
     test.setTimeout(120_000)
     await freshPlayer(page)
-    await warp(page, 'wilds', 12, -3 * S + 12)
+    await warp(page, 'outdoors', 12, -3 * S + 12)
     await waitForWilds(page)
     await standAt(page, (await openNear(page, 12, -3 * S + 12))!)
     const outer = (await steady(page, () => wildsWindow(page), { frames: 4, seconds: 20, message: 'reduced-motion Whitequiet window' }))!.outer

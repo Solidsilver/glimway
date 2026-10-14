@@ -1,3 +1,4 @@
+import { at } from './location.ts';
 /**
  * Habitica companions as the game shows them (crafts.md 2): names, species
  * groups and the follower a hero walks with. Rule 1 of 0.5: the game shows
@@ -146,10 +147,9 @@ export type RideRefusal = 'noStable' | 'noMounts' | 'inStall' | 'indoors' | 'vil
  * mount to stall, then the stall itself. Getting down is always allowed;
  * getting up waits outside a room (`in:…`) and outside the village.
  */
-export function rideRefusal(s: { mountOut: string; riding: boolean; stable: boolean; mounts: number; area: string }): RideRefusal | null {
+export function rideRefusal(s: { mountOut: string; riding: boolean; stable: boolean; mounts: number; area: string; position?: { x: number; y: number } }): RideRefusal | null {
   if (!s.mountOut) return !s.stable ? 'noStable' : s.mounts === 0 ? 'noMounts' : 'inStall'
   if (s.riding) return null
-  if (s.area.startsWith('in:')) return 'indoors'
-  if (s.area === 'village') return 'village'
+  if (!at(s.area, s.position?.x ?? 0, s.position?.y ?? 0).ride) return s.area.startsWith('in:') ? 'indoors' : 'village'
   return null
 }

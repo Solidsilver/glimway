@@ -1,3 +1,4 @@
+import { at } from '../../lib/location.ts'
 /**
  * Where the quest goal is, shown rather than told: the HUD's needle turns
  * toward it (EV.goalDir), and when it's off screen a small lantern glint
@@ -43,12 +44,14 @@ const ROAD: Record<string, string[]> = {
   village: ['woodland', 'commons'],
   woodland: ['village', 'ruin'],
   ruin: ['woodland'],
-  commons: ['village', 'home', 'wilds'],
+  commons: ['village', 'home', 'tangle'],
   home: ['commons', 'cottage'],
   cottage: ['home'],
   'other-home': ['commons', 'other-cottage'],
   'other-cottage': ['other-home'],
-  wilds: ['commons']
+  tangle: ['commons', 'whitequiet', 'beyond'],
+  whitequiet: ['tangle', 'beyond'],
+  beyond: ['tangle', 'whitequiet']
 }
 
 // Every room opens off its parent (a floor off the floor below).
@@ -67,7 +70,7 @@ const WHERE_PLACE: Record<GuideWhere, string> = {
   mailbox: 'home',
   bench: 'cottage',
   hearth: 'cottage',
-  wilds: 'wilds'
+  outdoors: 'tangle'
 }
 
 /** The steps that happen with a person: the needle follows them by their hour (src/lib/residents.ts). */
@@ -96,6 +99,7 @@ function steps(from: string, to: string): number {
 
 export interface GoalGuideDeps {
   world: WorldData
+  position?: () => { x: number; y: number }
   /** What to head for: a pinned guide's step, or a quest step's `where` (null: nothing). */
   goal: () => GoalTarget | null
   /** Live positions: an NPC's sprite, an interactable, the warden (null when absent). */
@@ -145,7 +149,11 @@ export class GoalGuide {
   /** This scene as a place on the road (ROAD's keys). */
   private place(): string {
     const id = String(this.deps.world.areaId)
-    if (id === 'wilds' || id.startsWith('chunk:')) return 'wilds'
+    if (id === 'outdoors') {
+      const p = this.deps.position?.() ?? { x: 0, y: 0 }
+      return at(id, p.x, p.y).id
+    }
+    if (id.startsWith('chunk:')) return 'tangle'
     return this.deps.placeKind() ?? id
   }
 
@@ -161,8 +169,8 @@ export class GoalGuide {
   private towardQuest(where: QuestWhere): { x: number; y: number; here: boolean; id?: string } | null {
     const place = questPlace(where, serverNow())
     if (!place) return null
-    if (String(this.deps.world.areaId) === place.area) {
-      const p = questPointHere(where, place.resident, this.deps)
+    if (String(this.deps.world.areaId) === place.area || this.place() === place.area) {
+      const p = questPointHere(where, place.resident, this.deps, this.deps.world.areaId)
       return p ? { ...p, here: true } : null
     }
     return this.wayToward(place.area)
@@ -208,7 +216,7 @@ export class GoalGuide {
     }
     for (const e of this.deps.world.exits) {
       const to = String(e.to)
-      const node = /^home:\d+$/.test(to) ? (from === 'cottage' ? 'home' : 'other-home') : to.startsWith('chunk:') ? 'wilds' : to
+      const node = /^home:\d+$/.test(to) ? (from === 'cottage' ? 'home' : 'other-home') : to === 'outdoors' || to.startsWith('chunk:') ? at('outdoors', e.entry.tx * TILE + TILE / 2, e.entry.ty * TILE + TILE / 2).id : to
       const n = steps(node, goal)
       if (n < bestSteps) {
         bestSteps = n

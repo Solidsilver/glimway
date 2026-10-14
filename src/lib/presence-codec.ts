@@ -2,7 +2,7 @@ import { create, fromBinary, toBinary, type Message } from '@bufbuild/protobuf';
 import { FightSwingSchema, PresenceFrameSchema, PresenceMessageSchema, PresenceAuthSchema, PresenceJoinSchema, PresencePositionSchema, PresenceEmoteSchema, PresenceHeartbeatSchema, PresenceAbilitySchema, type PresenceAvatar as WireAvatar, type PresenceMessage as WireMessage, type PresencePlayer as WirePlayer, type PresencePosition as WirePosition } from './gen/glimway/v2/presence_pb.js';
 import { PRESENCE_POSES, type PresenceAvatar, type PresenceClientMessage, type PresencePlayer, type PresencePose, type PresencePosition, type PresenceServerMessage } from './presence.ts';
 
-export const PRESENCE_PROTOCOL = 'glimway.presence.v3';
+export const PRESENCE_PROTOCOL = 'glimway.presence.v4';
 
 export function encodePresence(message: PresenceClientMessage): Uint8Array {
   // create() builds generated messages directly; presence never passes through JSON.
@@ -44,7 +44,7 @@ function player(p: WirePlayer): PresencePlayer {
 }
 
 /**
- * One server frame (v3): the events it carries, in order, each decoded as
+ * One server frame (v4): the events it carries, in order, each decoded as
  * if it had come alone. An event this build doesn't know, or one that fails
  * its checks, is left out without losing the others. Anything that isn't a
  * binary frame decodes to no events.

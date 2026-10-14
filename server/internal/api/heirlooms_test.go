@@ -403,7 +403,7 @@ func TestHeirloomNansLamplighterPole(t *testing.T) {
 
 	// 1. Condition unmet: Nan's echo not settled
 	wildsDoc := s.State
-	wildsDoc.Area = "wilds"
+	wildsDoc.Area = "outdoors"
 	wildsDoc.Position = rules.Position{X: 160, Y: 160}
 	bad := x.items("POST", "/api/items/heirloom", body(s, "pole-unmet", map[string]any{
 		"itemDef":  "nans-lamplighter-pole",

@@ -174,7 +174,7 @@ test('M and the Map button open it full screen; M and Escape close it once; J go
 test('out in the Wilds: close up on you, zoom kept between openings, drag, wheel, keys, pinch, show all; you move on it without the land being read again; nothing under it acts', async ({ page }) => {
   test.setTimeout(180_000)
   await freshPlayer(page)
-  await warp(page, 'wilds', 12, -60)
+  await warp(page, 'outdoors', 12, -60)
   await waitForWilds(page)
   await page.evaluate(() => (window as unknown as Hooks).__fsDevParkCreatures())
   await waitForLive(page)
@@ -357,7 +357,7 @@ test('out in the Wilds: close up on you, zoom kept between openings, drag, wheel
 test('an open map follows the connection, and expires its wick on time (the game clock) with no read, then comes back with one', async ({ page, context }) => {
   test.setTimeout(150_000)
   await freshPlayer(page)
-  await warp(page, 'wilds', 12, -60)
+  await warp(page, 'outdoors', 12, -60)
   await waitForWilds(page)
   await waitForLive(page)
   await page.keyboard.press('m')
@@ -407,7 +407,7 @@ test.describe('a 360 px phone', () => {
   test('the HUD’s Map button fits beside the others; the map’s tools are 44 px and clear of each other, upright and on its side', async ({ page }) => {
     test.setTimeout(150_000)
     await freshPlayer(page)
-    await warp(page, 'wilds', 12, -60)
+    await warp(page, 'outdoors', 12, -60)
     await waitForWilds(page)
 
     const overlaps = (a: { x: number; y: number; width: number; height: number }, b: typeof a) => a.x < b.x + b.width - 0.5 && b.x < a.x + a.width - 0.5 && a.y < b.y + b.height - 0.5 && b.y < a.y + a.height - 0.5

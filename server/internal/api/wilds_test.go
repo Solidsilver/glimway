@@ -143,12 +143,12 @@ func entityChunkOf(e *contract.WildsEntity) (int, int) {
 func at(e *contract.WildsEntity, dx int) *contract.Where {
 	cx, cy := entityChunkOf(e)
 	S := int(content.WildsRules.GetChunkSize())
-	return &contract.Where{Area: wildsArea, X: float64((cx*S + int(e.Tx) + dx) * 16), Y: float64((cy*S + int(e.Ty)) * 16)}
+	return &contract.Where{Area: outdoorsArea, X: float64((cx*S + int(e.Tx) + dx) * 16), Y: float64((cy*S + int(e.Ty)) * 16)}
 }
 
 // atTile is the world-pixel `where` at a world tile's centre.
 func atTile(tx, ty int) *contract.Where {
-	return &contract.Where{Area: wildsArea, X: float64(tx*16 + 8), Y: float64(ty*16 + 8)}
+	return &contract.Where{Area: outdoorsArea, X: float64(tx*16 + 8), Y: float64(ty*16 + 8)}
 }
 
 func op(lease, key string) *contract.OpHeader { return &contract.OpHeader{Lease: lease, Key: key} }
@@ -541,7 +541,7 @@ func TestWildsClaimReach(t *testing.T) {
 			t.Fatal(kind, code)
 		}
 		// Chunk-local pixels never stand for world pixels.
-		local := &contract.Where{Area: "wilds", X: float64(e.Tx * 16), Y: float64(e.Ty * 16)}
+		local := &contract.Where{Area: "outdoors", X: float64(e.Tx * 16), Y: float64(e.Ty * 16)}
 		if !strings.HasPrefix(e.Id, kind+":0:0:") && !strings.HasPrefix(e.Id, kind+":0:-1:") {
 			x.claim(c, s, kind+"-local", v.Epoch.Id, e, 0, local, 409)
 		}
@@ -549,7 +549,7 @@ func TestWildsClaimReach(t *testing.T) {
 	}
 	// A refusal still moved nobody: the last committed place is the claim's.
 	state := x.expect("GET", "/api/state", nil, c, 200)
-	if state.State.Area != "wilds" {
+	if state.State.Area != "outdoors" {
 		t.Fatal("place", state.State.Area)
 	}
 }

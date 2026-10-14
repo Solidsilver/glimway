@@ -116,7 +116,7 @@ async function loaded(): Promise<Session> {
   resetWilds();
   const ops = new FakeOperations();
   const link = { api: { operations: ops.api }, lease: 'lease-1', status: 'online', busy: false, accountId: 'me' };
-  const session = { link, state: { area: 'wilds', position: { x: 0, y: 0 }, flags: [] } } as unknown as Session;
+  const session = { link, state: { area: 'outdoors', position: { x: 0, y: 0 }, flags: [] } } as unknown as Session;
   ops.responses.set('/api/wilds/near/-2/-4', [NEAR as JsonValue]);
   for (let y = -6; y <= -2; y++)
     for (let x = -4; x <= 0; x++) {

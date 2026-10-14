@@ -167,7 +167,7 @@ export class EnemySystem {
       else this.warden.placeRestingWarden(roadStep(state) === 'new' || roadStep(state) === 'accepted' ? 'dormant' : 'settled')
     }
     this.hpBars = scene.add.graphics().setDepth(5000)
-    if (world.areaId === 'wilds') this.server = new ServerEnemies(this)
+    if (world.areaId === 'outdoors') this.server = new ServerEnemies(this)
   }
 
   get enemies(): Enemy[] {

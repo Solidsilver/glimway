@@ -153,7 +153,7 @@ test('clear a thicket with a spade, lay stone after the turning-land confirm, se
   let spot: Awaited<ReturnType<typeof standByThicket>> = null
   const why: string[] = []
   for (const [cx, cy] of [[2, -4], [-2, -4], [2, -7], [-2, -7], [0, -7], [3, -1], [-3, -1]] as const) {
-    await warp(page, 'wilds', cx * S + 12, cy * S + 12)
+    await warp(page, 'outdoors', cx * S + 12, cy * S + 12)
     await windowWhole(page)
     await parkCreatures(page)
     await hold(page, 'dig')
@@ -215,7 +215,7 @@ test('clear a thicket with a spade, lay stone after the turning-land confirm, se
   try {
     await freshPlayer(other, 'Wren', invite.code)
     await calendarOnServer(other)
-    await warp(other, 'wilds', stand.tx, stand.ty)
+    await warp(other, 'outdoors', stand.tx, stand.ty)
     await waitForWilds(other)
     await other.evaluate(() => (window as unknown as Hooks).__fsDevParkCreatures())
     await expect.poll(async () => (await tileAt(other, stand.tx, stand.ty))?.change ?? null, { timeout: 20_000 }).toEqual({ change: 'stone', by: accountOf(id) })
@@ -293,7 +293,7 @@ test('the joining tile of a run between two places makes a named way, with signs
   // Two neighbouring places, both in view: search from the middle of the ring past the Whitequiet.
   let plan: { a: string; b: string; run: { tx: number; ty: number }[] } | null = null
   for (const [cx, cy] of [[0, -6], [2, -4], [-2, -4], [2, -1], [-2, -1], [2, -7], [-2, -7]] as const) {
-    await warp(page, 'wilds', cx * S + 12, cy * S + 12)
+    await warp(page, 'outdoors', cx * S + 12, cy * S + 12)
     await waitForWilds(page)
     plan = await page.evaluate(({ radii, openings }) => {
       const w = window as unknown as Hooks
@@ -369,7 +369,7 @@ test('the joining tile of a run between two places makes a named way, with signs
   }
 
   // Stand in the gap (a fresh read brings the run) and lay the joining stone.
-  await warp(page, 'wilds', gap.tx, gap.ty)
+  await warp(page, 'outdoors', gap.tx, gap.ty)
   await waitForWilds(page)
   await page.evaluate(() => (window as unknown as Hooks).__fsDevParkCreatures())
   // The endpoint can be outside this near read; the stone beside the gap cannot.
@@ -388,7 +388,7 @@ test('the joining tile of a run between two places makes a named way, with signs
   expect(way!.signA && way!.signB).toBeTruthy()
 
   // Its signs stand at each end, named.
-  await warp(page, 'wilds', way!.signA!.x, way!.signA!.y + 1)
+  await warp(page, 'outdoors', way!.signA!.x, way!.signA!.y + 1)
   await waitForWilds(page)
   await expect.poll(async () => (await page.evaluate(() => (window as unknown as Hooks).__fsMarks()))?.signs ?? []).toContain(way!.id)
   await shot(page, '94-paths-way-sign-desktop')
@@ -396,7 +396,7 @@ test('the joining tile of a run between two places makes a named way, with signs
   // The world map (M): the walked land, the way along its tiles, its name on the map and in Details.
   // The label is at the way's midpoint; the close-up map opens on the hero.
   // An endpoint can be too far away for the label to be in the viewport.
-  await warp(page, 'wilds', gap.tx, gap.ty)
+  await warp(page, 'outdoors', gap.tx, gap.ty)
   await waitForWilds(page)
   await parkCreatures(page)
   await page.setViewportSize({ width: 1200, height: 760 })
@@ -428,12 +428,12 @@ test('the joining tile of a run between two places makes a named way, with signs
   const other = await ctx.newPage()
   await freshPlayer(other, 'Wren', invite.code)
   const otherWays = async () => ((await paths(other))?.ways ?? []).map((w) => w.id)
-  await warp(other, 'wilds', gap.tx, gap.ty + 1)
+  await warp(other, 'outdoors', gap.tx, gap.ty + 1)
   await waitForWilds(other)
   await expect.poll(otherWays, { timeout: 15_000 }).toContain(way!.id)
 
   // Lift the joining stone: the run no longer joins the two places, and the way is broken.
-  await warp(page, 'wilds', gap.tx, gap.ty)
+  await warp(page, 'outdoors', gap.tx, gap.ty)
   await waitForWilds(page)
   await page.evaluate(() => (window as unknown as Hooks).__fsDevParkCreatures())
   await pathKeyReady(page, gap, 'lift')
@@ -443,7 +443,7 @@ test('the joining tile of a run between two places makes a named way, with signs
   expect((await paths(page))!.ways.some((w) => w.id === way!.id)).toBe(false)
   // Wren's next read of that land no longer names it: its name, its signs and its line go there too.
   try {
-    await warp(other, 'wilds', gap.tx + 1, gap.ty + 1)
+    await warp(other, 'outdoors', gap.tx + 1, gap.ty + 1)
     await waitForWilds(other)
     await expect.poll(otherWays, { timeout: 15_000 }).not.toContain(way!.id)
     await expect.poll(async () => (await other.evaluate(() => (window as unknown as Hooks).__fsMarks()))?.signs ?? []).not.toContain(way!.id)
@@ -462,7 +462,7 @@ test.describe('on a phone', () => {
     giveInstance(id, 'bench-spade', { max: 90 })
     fund(id, { materials: { stone: 10 } })
     // The Tangle keeps its paths (no turning-land confirm): an open tile in its middle chunk.
-    await warp(page, 'wilds', 12, -12)
+    await warp(page, 'outdoors', 12, -12)
     await waitForWilds(page)
     const open = await page.evaluate(() => {
       const w = window as unknown as Hooks
@@ -475,7 +475,7 @@ test.describe('on a phone', () => {
       return null
     })
     expect(open).not.toBeNull()
-    await warp(page, 'wilds', open!.tx, open!.ty)
+    await warp(page, 'outdoors', open!.tx, open!.ty)
     await waitForWilds(page)
     await page.evaluate(() => (window as unknown as Hooks).__fsDevParkCreatures())
     await hold(page, 'dig')

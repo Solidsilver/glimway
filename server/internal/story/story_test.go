@@ -150,7 +150,7 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 		}
 	}
 	// World pixels: the cairn's tile in chunk (-1, -5).
-	w = &contract.Where{Area: "wilds", X: (-24+3)*16 + 8, Y: (-5*24+4)*16 + 8}
+	w = &contract.Where{Area: "outdoors", X: (-24+3)*16 + 8, Y: (-5*24+4)*16 + 8}
 	eligible("mary-fenns-cairn-slip", w, false)
 	s.State.Flags = []string{"paper:will-of-elias-fenn"}
 	eligible("mary-fenns-cairn-slip", w, true)
@@ -184,7 +184,7 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 					at = e
 				}
 			}
-			where := &contract.Where{Area: "wilds", X: float64((int(at.CX)*24+8)*16 + 8), Y: float64((int(at.CY)*24+8)*16 + 8)}
+			where := &contract.Where{Area: "outdoors", X: float64((int(at.CX)*24+8)*16 + 8), Y: float64((int(at.CY)*24+8)*16 + 8)}
 			input := ports.PaperInput{Paper: p.GetId(), Epoch: "e1", Site: assigned.Site, Where: where}
 			if due, e := r.Eligible(context.Background(), tx, s, input); e != nil || due {
 				t.Fatal("unsettled Echo paper", due, e)
@@ -220,11 +220,17 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 	board := content.StoryRules.Boards["commons"]
 	eligible("notices-from-the-board", &contract.Where{Area: "commons", X: float64(board.GetTx()*16 + 8), Y: float64(board.GetTy()*16 + 8)}, true)
 	eligible("notices-from-the-board", &contract.Where{Area: "commons", X: 0, Y: 0}, false)
+	eligible("notices-from-the-board", &contract.Where{Area: "outdoors", X: float64((board.GetTx()-21)*16 + 8), Y: float64((board.GetTy()+24)*16 + 8)}, true)
+	eligible("to-the-bench-across", &contract.Where{Area: "outdoors", X: 40, Y: 392}, true)
+	eligible("to-the-bench-across", &contract.Where{Area: "outdoors", X: 40, Y: 376}, false)
 	before := store.JSON(s.State.Flags)
 	// Standing in the Tangle (the still epoch) records no turning.
 	epoch.Id = "e3"
+	if err = r.Record(context.Background(), tx, &s, &contract.Where{Area: "outdoors", X: 40, Y: 392}, now+3); err != nil || store.JSON(s.State.Flags) != before {
+		t.Fatal("fixed Commons recorded a turning", err)
+	}
 	epoch.StartsAt += 5
-	if err = r.Record(context.Background(), tx, &s, &contract.Where{Area: "wilds", X: 8, Y: -8}, now+3); err != nil || store.JSON(s.State.Flags) != before {
+	if err = r.Record(context.Background(), tx, &s, &contract.Where{Area: "outdoors", X: 8, Y: -8}, now+3); err != nil || store.JSON(s.State.Flags) != before {
 		t.Fatal("the Tangle recorded a turning", err)
 	}
 	epoch.StartsAt -= 5

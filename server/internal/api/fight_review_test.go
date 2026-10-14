@@ -34,7 +34,7 @@ func TestLegacyClearedCampWakesDownUntilItsTimer(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	S := int(content.WildsRules.GetChunkSize())
-	p := &presencePeer{identity: identity, account: &presenceAccount{}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 256), area: fmt.Sprintf("wilds:%d:%d", cx, cy), pos: &presencePosition{X: float64((cx*S+int(camp.Tx))*16 + 8), Y: float64((cy*S + int(camp.Ty)) * 16)}, fightRooms: map[uint32]*presenceFightRoom{}}
+	p := &presencePeer{identity: identity, account: &presenceAccount{}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 256), area: fmt.Sprintf("outdoors:%d:%d", cx, cy), pos: &presencePosition{X: float64((cx*S+int(camp.Tx))*16 + 8), Y: float64((cy*S + int(camp.Ty)) * 16)}, fightRooms: map[uint32]*presenceFightRoom{}}
 	x.api.presence.admit(p)
 	t.Cleanup(x.api.ClosePresence)
 	x.api.syncFightPresence(p)

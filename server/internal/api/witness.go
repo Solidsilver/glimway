@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	contract "glimway/server/internal/gen/glimway/v2"
+	"glimway/server/internal/location"
 	"glimway/server/internal/store"
 	"strings"
 	"unicode"
@@ -20,8 +21,8 @@ const WitnessTiles = 10
 // Ashwatch Ruin; Echo camps in a Wilds chunk.
 func beatRoom(beat, area, room string) bool {
 	if strings.HasPrefix(beat, "echo:") {
-		_, _, ok := wildsRoomChunk(room)
-		return area == wildsArea && ok
+		cx, cy, ok := wildsRoomChunk(room)
+		return area == outdoorsArea && ok && location.SourceOf(cx, cy).Kind == location.SourceGenerated
 	}
 	return area == "ruin" && room == "ruin"
 }

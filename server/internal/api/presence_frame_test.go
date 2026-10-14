@@ -15,7 +15,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// Server frames (presence v3): a writer puts whatever is queued when it
+// Server frames (presence v4): a writer puts whatever is queued when it
 // wakes into one PresenceFrame, assembled by prefixing the shared event
 // bytes, capped so no frame is larger than max(presenceFrameBytes, one event).
 

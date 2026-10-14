@@ -9,7 +9,7 @@ func TestWildsGatherRequiresStoredSpeciesAndReach(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	tool := x.instance(s.AccountID, "bench-axe", -1, "")
-	fields := gatherIn(s, "wilds", [2]int{20, 20}, tool, "chop", "tangle-tree", "visit")
+	fields := gatherIn(s, "outdoors", [2]int{20, 20}, tool, "chop", "tangle-tree", "visit")
 	x.gatherFixture(s, fields)
 	fake := x.api.Config.Chunks.(*chunkstest.Fake)
 	for _, chunk := range fake.Chunks {
@@ -30,7 +30,7 @@ func TestWildsGatherRequiresStoredSpeciesAndReach(t *testing.T) {
 		chunk.Decor.Kinds = []string{"oak"}
 	}
 	req["op"].(map[string]any)["key"] = "far"
-	req["where"] = map[string]any{"area": "wilds", "x": 100, "y": 100}
+	req["where"] = map[string]any{"area": "outdoors", "x": 100, "y": 100}
 	if got := x.items("POST", "/api/items/gather", req, c, 409).Error.Code; got != "too-far-away" {
 		t.Fatal(got)
 	}

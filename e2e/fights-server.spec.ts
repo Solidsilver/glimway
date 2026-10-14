@@ -36,12 +36,12 @@ test('server wisp observes menus and close/resync; press predicts but death wait
   await page.goto('/?perf=1')
   await page.getByRole('button', { name: /^Continue/ }).click()
   await waitForLive(page)
-  await go(page, 'wilds', 5, 5)
+  await go(page, 'outdoors', 5, 5)
   await expect.poll(() => !!socket).toBe(true)
   const hero = await player(page)
   const tick = Math.floor(Date.now() / 100) >>> 0
   const send = (event: NonNullable<Parameters<typeof create<typeof PresenceMessageSchema>>[1]>['event']) => socket!.send(serverFrame(event))
-  send({ case: 'fightJoin', value: { room: 41, tick, critSeed: 123, roomKey: { world: 'fake', realm: 'wilds', layer: 0, cx: 0, cy: 0, epoch: 'still' }, enemies: [{ enemy: 0, id: `${camp}:0`, campId: camp, kind: 1, x: Math.round(hero.x + 14), y: Math.round(hero.y), state: 1, stateTick: tick, hp: 28, maxHp: 28, facing: 0 }] } })
+  send({ case: 'fightJoin', value: { room: 41, tick, critSeed: 123, roomKey: { world: 'fake', realm: 'outdoors', layer: 0, cx: 0, cy: 0, epoch: 'still' }, enemies: [{ enemy: 0, id: `${camp}:0`, campId: camp, kind: 1, x: Math.round(hero.x + 14), y: Math.round(hero.y), state: 1, stateTick: tick, hp: 28, maxHp: 28, facing: 0 }] } })
   await expect.poll(() => serverEnemy(page)).not.toBeNull()
   expect((await serverEnemy(page))!.bodyEnabled).toBe(false)
   await page.getByRole('button', { name: 'Menu (Esc)' }).click()
@@ -74,7 +74,7 @@ test('server wisp observes menus and close/resync; press predicts but death wait
   if (swing.case === 'fightSwing') expect(swing.value.predicted.map(t => [t.room, t.enemy])).toEqual([[41, 0]])
   expect((await serverEnemy(page))!.hp).toBe(28)
   const refreshTick = Math.floor(Date.now() / 100) >>> 0
-  send({ case: 'fightJoin', value: { room: 41, tick: refreshTick, critSeed: 123, roomKey: { world: 'fake', realm: 'wilds', layer: 0, cx: 0, cy: 0, epoch: 'still' }, enemies: [{ enemy: 0, id: `${camp}:0`, campId: camp, kind: 1, x: Math.round(hero.x + 22), y: Math.round(hero.y), state: 2, stateTick: (tick + 1) >>> 0, hp: 28, maxHp: 28, facing: 0 }] } })
+  send({ case: 'fightJoin', value: { room: 41, tick: refreshTick, critSeed: 123, roomKey: { world: 'fake', realm: 'outdoors', layer: 0, cx: 0, cy: 0, epoch: 'still' }, enemies: [{ enemy: 0, id: `${camp}:0`, campId: camp, kind: 1, x: Math.round(hero.x + 22), y: Math.round(hero.y), state: 2, stateTick: (tick + 1) >>> 0, hp: 28, maxHp: 28, facing: 0 }] } })
   await expect.poll(async () => (await serverEnemy(page))?.state).toBe('telegraph')
   const deathTick = (refreshTick + 1) >>> 0
   send({ case: 'fightDelta', value: { room: 41, tick: deathTick, changed: [{ enemy: 0, hp: 0, state: 6, stateTick: deathTick }] } })

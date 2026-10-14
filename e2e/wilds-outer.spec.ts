@@ -25,7 +25,7 @@ async function shot(page: Page, name: string): Promise<void> {
 
 /** Into the Whitequiet's middle: its 3×3 is the window. */
 async function whitequiet(page: Page): Promise<WildsDump> {
-  await warp(page, 'wilds', MIDDLE.tx, MIDDLE.ty)
+  await warp(page, 'outdoors', MIDDLE.tx, MIDDLE.ty)
   await waitForWilds(page)
   const dump = await wilds(page)
   expect(dump.chunk).toEqual({ cx: 0, cy: -4 })
@@ -77,7 +77,7 @@ test('in the Whitequiet, an Echo settled, the land turns in place and gives a te
   expect(planned).toBeDefined()
   const def = ECHOES.find((e) => e.member === planned.echo)!
   const camp = worldTileOf(planned)
-  await warp(page, 'wilds', camp.tx, camp.ty + 1)
+  await warp(page, 'outdoors', camp.tx, camp.ty + 1)
   await waitForWilds(page)
   dump = await wilds(page)
   expect(dump.sites.find((st) => st.id === planned.id)).toMatchObject({ kind: 'echo', echo: def.member, settled: false })
@@ -119,7 +119,7 @@ test('in the Whitequiet, an Echo settled, the land turns in place and gives a te
   await whitequiet(page)
   await expect.poll(async () => (await wilds(page)).sites.find((s) => s.kind === 'given')?.find).toBe('nan-greer-trail-journal')
   const given = worldTileOf((await wilds(page)).sites.find((s) => s.kind === 'given')!)
-  await warp(page, 'wilds', given.tx, given.ty + 1)
+  await warp(page, 'outdoors', given.tx, given.ty + 1)
   await waitForWilds(page)
   await expect(page.locator('.prompt')).toContainText('Pick up the bundle')
   await page.keyboard.press('e')
@@ -144,7 +144,7 @@ test('a place in the Whitequiet reloads there, and a turned wick leaves you wher
   await wickSlack(page)
   await whitequiet(page)
   // The place is the server's now: reload, and Continue puts you back there.
-  await warp(page, 'wilds', 12, -5 * S + 21)
+  await warp(page, 'outdoors', 12, -5 * S + 21)
   await waitForWilds(page)
   // This checks saved places, not combat. Parking protects setup, but a
   // reload makes a fresh scene: stand on open ground away from every camp
@@ -167,7 +167,7 @@ test('a place in the Whitequiet reloads there, and a turned wick leaves you wher
   }, camps)
   expect(quiet, 'open ground away from the camps').toBeDefined()
   expect(quiet.gap, 'the saved place is at least 200 px from every nearby camp').toBeGreaterThanOrEqual(200 / 16)
-  await warp(page, 'wilds', quiet.tx, quiet.ty)
+  await warp(page, 'outdoors', quiet.tx, quiet.ty)
   await waitForWilds(page)
   await parkCreatures(page)
   let previous = await player(page)
@@ -186,7 +186,7 @@ test('a place in the Whitequiet reloads there, and a turned wick leaves you wher
     await expect.poll(async () => {
       const st = (await serverState(page)).body.state as { area: string; position: { x: number; y: number } }
       latestSaved = st
-      return st.area === 'wilds' && Math.hypot(st.position.x - here.x, st.position.y - here.y) <= 1
+      return st.area === 'outdoors' && Math.hypot(st.position.x - here.x, st.position.y - here.y) <= 1
     }, { timeout: 20_000 }).toBe(true)
   } catch (error) {
     console.error('saved-position debug', { here, latestSaved })
@@ -194,7 +194,7 @@ test('a place in the Whitequiet reloads there, and a turned wick leaves you wher
   }
   await page.evaluate(() => (window as unknown as { __fsDevSaveSoon: () => void }).__fsDevSaveSoon())
   await expect.poll(() => page.evaluate(() => (window as unknown as { __fsDevSaved: () => { pending: boolean } }).__fsDevSaved().pending)).toBe(false)
-  await reenter(page, 'wilds')
+  await reenter(page, 'outdoors')
   await waitForWilds(page)
   await parkCreatures(page)
   const back = await player(page)
@@ -240,7 +240,7 @@ test.describe('in a world', () => {
         Math.min(...others.map((e) => Math.hypot(e.tx - at.tx - b[0], e.ty - at.ty - b[1])), 99) -
         Math.min(...others.map((e) => Math.hypot(e.tx - at.tx - a[0], e.ty - at.ty - a[1])), 99)
     )
-    await warp(page, 'wilds', at.tx + offsets[0][0], at.ty + offsets[0][1])
+    await warp(page, 'outdoors', at.tx + offsets[0][0], at.ty + offsets[0][1])
     await waitForWilds(page)
     await expect(page.locator('.prompt')).toContainText(/chop|cut|gather|pry/i)
     await page.keyboard.press('e')
@@ -255,13 +255,13 @@ test.describe('in a world', () => {
     // the new wick on the way in and say it turned while you were away).
     const next = dump.entities.find((e) => e.kind !== 'camp' && e.claimable && e.id !== node.id && e.chunk.cx === node.chunk.cx && e.chunk.cy === node.chunk.cy)
       ?? dump.entities.find((e) => e.kind !== 'camp' && e.claimable && e.id !== node.id)!
-    await warp(page, 'wilds', worldTileOf(next).tx + 1, worldTileOf(next).ty)
+    await warp(page, 'outdoors', worldTileOf(next).tx + 1, worldTileOf(next).ty)
     await waitForWilds(page)
     await expect(page.locator('.prompt')).not.toBeEmpty()
     await moveServerClock(page, Number(dump.season.split(':')[2]) + 1)
     await page.keyboard.press('e')
     await waitTurning(page, null)
-    expect(await page.evaluate(() => (window as unknown as { __fsSafety: () => { areaId: string } }).__fsSafety().areaId)).toBe('wilds')
+    expect(await page.evaluate(() => (window as unknown as { __fsSafety: () => { areaId: string } }).__fsSafety().areaId)).toBe('outdoors')
     await expectToast(page, SEASON_SHIFT_NOTICE)
     expect((await wilds(page)).epochId, 'the server’s epoch').toBeTruthy()
   })

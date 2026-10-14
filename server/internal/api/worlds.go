@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"glimway/content"
 	contract "glimway/server/internal/gen/glimway/v1"
+	"glimway/server/internal/location"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"net/http"
@@ -502,10 +503,17 @@ func moveResultProto(world worldView, from string, leftHome bool, returned int) 
 	return &contract.WorldMoveResult{World: worldViewProto(world), From: from, LeftHome: leftHome, Returned: int32(returned)}
 }
 
+// worldMoveSafe keeps homes out of world moves until S5 replaces the arrival
+// reset with a destination anchor; homesteads belong to their current world.
+func worldMoveSafe(s *store.Snapshot) bool {
+	return rules.HomeGate(content.RootArea(s.State.Area)) < 0 &&
+		location.At(location.Space(s.State.Area), s.State.Position.X, s.State.Position.Y).Safe
+}
+
 // worldMove moves the caller to their party's world or to one they own, in
-// one keyed transaction (relocate), from the village or the Commons, at most
-// once a day, and only once parcels they sent are home (a move never takes
-// back a gift on its own).
+// one keyed transaction (relocate), from safe village or Commons ground
+// (including rooms), at most once a day, and only once parcels they sent are
+// home (a move never takes back a gift on its own).
 func (a *Server) worldMove(w http.ResponseWriter, r *http.Request) error {
 	var req contract.WorldMoveRequest
 	if err := decodeOp(w, r, &req); err != nil {
@@ -516,7 +524,7 @@ func (a *Server) worldMove(w http.ResponseWriter, r *http.Request) error {
 	}
 	mover := ""
 	return a.keyedOp(w, r, req.Op, req.Where, &req, func(ctx context.Context, tx *sql.Tx, s *store.Snapshot, now int64) (any, error) {
-		if !rules.SafeAreas[content.RootArea(s.State.Area)] {
+		if !worldMoveSafe(s) {
 			return nil, fail(409, "not-at-safe-boundary")
 		}
 		from := s.WorldID
@@ -571,7 +579,8 @@ func (a *Server) worldMove(w http.ResponseWriter, r *http.Request) error {
 // worldLeave ("Leave now") moves someone who has left the party whose world
 // they live in to a world of their own (made when they have none) straight
 // away, without waiting out the grace period or the move cooldown. The
-// other move rules hold: from the village or the Commons, parcels home first.
+// other move rules hold: safe village or Commons ground (including rooms),
+// parcels home first.
 func (a *Server) worldLeave(w http.ResponseWriter, r *http.Request) error {
 	var req contract.WorldLeaveRequest
 	if err := decodeOp(w, r, &req); err != nil {
@@ -586,7 +595,7 @@ func (a *Server) worldLeave(w http.ResponseWriter, r *http.Request) error {
 		if !leaverOf(here, s.HabiticaPartyID) {
 			return nil, fail(409, "still-in-party")
 		}
-		if !rules.SafeAreas[content.RootArea(s.State.Area)] {
+		if !worldMoveSafe(s) {
 			return nil, fail(409, "not-at-safe-boundary")
 		}
 		before, err := leaving(ctx, tx, *s)
@@ -622,9 +631,9 @@ func (a *Server) worldLeave(w http.ResponseWriter, r *http.Request) error {
 // partyResidence runs at sign-in, with the party just verified: a resident
 // of a party's world who is back in that party is no longer warned; one who
 // isn't is warned from now (party_left_at), and once PartyGrace has passed
-// is moved out to a world of their own (relocate), wherever they stood: off
-// the safe paths they arrive in the village, and parcels they sent stay on
-// the road (their recipients can still take them). Reports a move.
+// is moved out to a world of their own (relocate), wherever they stood.
+// From homes or unsafe ground they arrive at the village spawn; parcels
+// they sent stay on the road (their recipients can still take them). Reports a move.
 func partyResidence(ctx context.Context, logf fishingLog, tx *sql.Tx, s *store.Snapshot, party *string, now int64, at float64) (bool, error) {
 	here, err := loadWorldRef(ctx, tx, s.WorldID)
 	if err != nil || !here.Party {
@@ -649,7 +658,7 @@ func partyResidence(ctx context.Context, logf fishingLog, tx *sql.Tx, s *store.S
 	if err != nil {
 		return false, err
 	}
-	if !rules.SafeAreas[content.RootArea(s.State.Area)] {
+	if !worldMoveSafe(s) {
 		start := rules.NewState()
 		s.State.Area, s.State.Position = start.Area, start.Position
 	}

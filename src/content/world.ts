@@ -1,8 +1,8 @@
+import { at } from '../lib/location.ts';
 import type { AreaId, GameState, QuestStage } from '../lib/state.ts';
 import { LANTERN_ROAD, QUESTS, reachedIndex, type QuestRecord } from '../lib/quests.ts';
 import { SIGNPOST_BETWEEN } from './quests/signpost.ts';
 import { roomFor } from '../lib/rooms.ts';
-import { chunkOf, footprintAt } from '../lib/wilds/coords.ts';
 import { OPEN_MAP_CARDS } from './open-map.ts';
 import { GLIM_COSTS, XP_PER_GLIM, checkSpend, chestOpened, isLit, type RoadLanternId } from '../lib/glims.ts';
 import { HEARTHWICK_COMMONS, WILDS_INNER } from './expansion-writing.ts';
@@ -159,28 +159,28 @@ export const locations: Record<AreaId, LocationInfo> = {
 
 /**
  * Location info for any area id — including the generated ones (Wilds saves
- * report `wilds` and their `chunk:…` areas; the Commons before its own
+ * report `outdoors` and their `chunk:…` areas; the Commons before its own
  * entry). Unknown ids get a generic card, so a new area can never crash a
  * title or a banner.
  */
 /**
  * The area id to name a save's place by: as saved, except on the open map,
  * which is one area but three places by where you stand: the Tangle
- * (`wilds`), the Whitequiet (`wilds:whitequiet`) and the land beyond:
- * by the Wend (`wilds:wend`), in meadow (`wilds:meadow`), or the woods past
- * the Whitequiet (`wilds:beyond`). The land comes from the loaded chunks
+ * (`tangle`), the Whitequiet (`whitequiet`) and the land beyond:
+ * by the Wend (`wend`), in meadow (`meadow`), or the woods past
+ * the Whitequiet (`beyond`). The land comes from the loaded chunks
  * (`setWildsLand`, the open map's scene); without them it's the woods.
  */
 export function displayArea(state: { area: AreaId; position?: { x: number; y: number } }): AreaId {
-  if (state.area !== 'wilds' || !state.position) return state.area;
+  if (state.area !== 'outdoors' || !state.position) return state.area;
   const tx = Math.floor(state.position.x / 16);
   const ty = Math.floor(state.position.y / 16);
-  const { cx, cy } = chunkOf(tx, ty);
-  const place = footprintAt(cx, cy)?.id;
-  if (place === 'tangle') return 'wilds';
-  if (place === 'whitequiet') return 'wilds:whitequiet';
+  const place = at(state.area, state.position.x, state.position.y).id;
+  if (place === 'commons') return 'commons';
+  if (place === 'tangle') return 'tangle';
+  if (place === 'whitequiet') return 'whitequiet';
   const land = wildsLand?.(tx, ty) ?? null;
-  return land === 'wend' ? 'wilds:wend' : land === 'meadow' ? 'wilds:meadow' : 'wilds:beyond';
+  return land === 'wend' ? 'wend' : land === 'meadow' ? 'meadow' : 'beyond';
 }
 
 let wildsLand: ((tx: number, ty: number) => 'wend' | 'meadow' | null) | null = null;
@@ -245,11 +245,11 @@ export function areaInfo(areaId: AreaId): LocationInfo {
   if (areaId === 'cottage' || /^in:home:\d+$/.test(areaId)) return { name: 'Cottage', eyebrow: 'Behind the Commons gates', tagline: 'Four skids, a slate roof, a fox over the door.', description: 'One room on iron-oak skids, pegged not nailed.' };
   const lot = /^home:(\d+)$/.exec(areaId);
   if (lot) return { name: `Lot ${Number(lot[1]) + 1}`, eyebrow: 'Behind the Commons gates', tagline: 'Wild land, held by lamplight.', description: 'Land past a Commons gate: trees, stumps and stones, and whatever the deed-holders have built where their lamps reach.' };
-  if (areaId === 'wilds:whitequiet' || areaId.startsWith('chunk:outer-')) return WILDS_OUTER.location;
-  if (areaId === 'wilds:beyond') return OPEN_MAP_CARDS.beyond;
-  if (areaId === 'wilds:meadow') return OPEN_MAP_CARDS.meadow;
-  if (areaId === 'wilds:wend') return OPEN_MAP_CARDS.wend;
-  if (areaId === 'wilds' || areaId.startsWith('chunk:')) return WILDS_INNER.location;
+  if (areaId === 'whitequiet' || areaId.startsWith('chunk:outer-')) return WILDS_OUTER.location;
+  if (areaId === 'beyond') return OPEN_MAP_CARDS.beyond;
+  if (areaId === 'meadow') return OPEN_MAP_CARDS.meadow;
+  if (areaId === 'wend') return OPEN_MAP_CARDS.wend;
+  if (areaId === 'tangle' || areaId === 'outdoors' || areaId.startsWith('chunk:')) return WILDS_INNER.location;
   return { name: titleCase(areaId), eyebrow: 'Somewhere new', tagline: '', description: '' };
 }
 

@@ -153,7 +153,7 @@ test('the cottage is the place in:home:<gate>: in by its door, out onto the land
 test('rooms are save places, safe places and presence rooms of their own', () => {
   for (const area of ['in:village:bakery', 'in:village:mill:2', 'in:home:3']) {
     assert.equal(validateSave({ ...createNewGame(), area }).area, area, `${area} saves`);
-    assert.ok(isSafeArea(area), `${area} is safe (its root is)`);
+    assert.ok(isSafeArea(area, { x: 80, y: 80 }), `${area} is safe (its root is)`);
     assert.ok(isPresenceArea(area), `${area} is a presence room`);
     assert.equal(presenceAreaFor(area), area, 'passed through unchanged');
   }

@@ -44,7 +44,7 @@ func adapterFightFixture(t *testing.T) (*rig, *presencePeer, *http.Cookie, respo
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	p := &presencePeer{identity: identity, account: &presenceAccount{}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 256), area: "wilds:0:0", pos: &presencePosition{X: 185, Y: 208}, fightRooms: map[uint32]*presenceFightRoom{}}
+	p := &presencePeer{identity: identity, account: &presenceAccount{}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 256), area: "outdoors:0:0", pos: &presencePosition{X: 185, Y: 208}, fightRooms: map[uint32]*presenceFightRoom{}}
 	x.api.presence.admit(p)
 	t.Cleanup(x.api.ClosePresence)
 	return x, p, cookie, state
@@ -392,7 +392,7 @@ func TestFightReportCommitRefreshesDownAndRetargets(t *testing.T) {
 	if windup.GetTarget() != p.identity.ID {
 		t.Fatal("setup did not target Alice", windup)
 	}
-	x.reportState(c, state, 0, state.State.Mana, map[string]any{"area": "wilds", "x": 185, "y": 208})
+	x.reportState(c, state, 0, state.State.Mana, map[string]any{"area": "outdoors", "x": 185, "y": 208})
 	h.mu.Lock()
 	down := p.identity.Magic.Down
 	h.handleFightSwing(p, swingForPeer(p, &wire.FightTarget{Room: join.Room, Enemy: 0}))
@@ -482,7 +482,7 @@ func TestFightWildsChunkCrossingRetainsJoinAndSwingCoverage(t *testing.T) {
 	cfg.RevalidateMs = 10000
 	ts := startPresence(t, x, cfg)
 	w := wsConnect(t, ts, c, state.Lease)
-	w.join("wilds:0:0")
+	w.join("outdoors:0:0")
 	w.send(map[string]any{"type": "pos", "x": 365, "y": 208, "facing": map[string]any{"x": 1, "y": 0}, "moving": false})
 	join := socketFight(t, w, "fightJoin").GetFightJoin()
 	h := x.api.presence
@@ -490,7 +490,7 @@ func TestFightWildsChunkCrossingRetainsJoinAndSwingCoverage(t *testing.T) {
 	peer := h.peers[x.account("alice")]
 	peer.identity.Magic.Kit.CritChance = 0
 	h.mu.Unlock()
-	w.join("wilds:1:0")
+	w.join("outdoors:1:0")
 	w.none() // No ROOM_CLOSED and no replacement FightJoin.
 	tick, _ := rules.FightTickAt(x.now.Load() * 1000)
 	// The position report has not arrived yet. Retained coverage still judges
@@ -514,7 +514,7 @@ func TestFightWildsChunkCrossingRetainsJoinAndSwingCoverage(t *testing.T) {
 	}
 	// A label alone is not physical coverage: keep it until the next position
 	// actually moves beyond the camp's 3x3, then close only that view.
-	w.join("wilds:2:0")
+	w.join("outdoors:2:0")
 	w.none()
 	h.mu.Lock()
 	peer.lastPos = time.Time{}

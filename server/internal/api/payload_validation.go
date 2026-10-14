@@ -57,7 +57,7 @@ func validArea(area string) bool {
 	if slices.Contains([]string{"village", "woodland", "ruin", "commons"}, area) || rules.HomeGate(area) >= 0 || content.KnownRoom(area) {
 		return true
 	}
-	return area == wildsArea
+	return area == outdoorsArea
 }
 
 // Witness flags compose bounded ids and a human display name, rather than one

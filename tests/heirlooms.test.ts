@@ -157,8 +157,8 @@ test('Orrin, Ada and Nan\'s camp use the server\'s conditions and reach', () => 
   assert.deepEqual(heirloomReadiness('ada-garden-spade', ctx({ ...ada, flags: ['ada-oil-gifts:3'] })), { ok: true });
   assert.deepEqual(heirloomReadiness('ada-garden-spade', ctx({ ...ada, x: ada.x - RESIDENT_REACH_TILES * 16 - 1, flags: ['ada-oil-gifts:3'] })), { ok: false, why: 'too-far' });
 
-  assert.equal(heirloomReadiness('nans-lamplighter-pole', ctx({ area: 'wilds' })), null, 'Nan\'s echo must be settled');
-  assert.deepEqual(heirloomReadiness('nans-lamplighter-pole', ctx({ area: 'wilds', flags: ['echo:nan'] })), { ok: true });
+  assert.equal(heirloomReadiness('nans-lamplighter-pole', ctx({ area: 'outdoors' })), null, 'Nan\'s echo must be settled');
+  assert.deepEqual(heirloomReadiness('nans-lamplighter-pole', ctx({ area: 'outdoors', flags: ['echo:nan'] })), { ok: true });
   assert.deepEqual(heirloomReadiness('nans-lamplighter-pole', ctx({ area: 'village', flags: ['echo:nan'] })), { ok: false, why: 'too-far' });
 });
 

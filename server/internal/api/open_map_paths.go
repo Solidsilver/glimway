@@ -11,6 +11,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"glimway/server/internal/location"
 	"net/http"
 	"slices"
 	"sort"
@@ -55,6 +56,9 @@ func decodeGround(b []byte) (*contract.GroundChanges, error) {
 
 // groundChanges is a chunk's changes under its epoch (none: empty).
 func groundChanges(ctx context.Context, tx *sql.Tx, world string, e *contract.WildsEpoch, cx, cy int, now int64) (*contract.GroundChanges, error) {
+	if location.SourceOf(cx, cy).Kind != location.SourceGenerated {
+		return &contract.GroundChanges{}, nil
+	}
 	row, err := worldchange.Get(ctx, tx, groundKey(world, e, cx, cy), groundKind, now)
 	if err != nil || row == nil {
 		return &contract.GroundChanges{Changes: []*contract.GroundChange{}}, err
@@ -65,6 +69,9 @@ func groundChanges(ctx context.Context, tx *sql.Tx, world string, e *contract.Wi
 // putGround stores a chunk's changes, one a tile in row-major order; none
 // left deletes the row.
 func putGround(ctx context.Context, tx *sql.Tx, world string, e *contract.WildsEpoch, cx, cy int, g *contract.GroundChanges, by string, now int64) error {
+	if location.SourceOf(cx, cy).Kind != location.SourceGenerated {
+		return fail(409, "not-in-wilds")
+	}
 	key := groundKey(world, e, cx, cy)
 	if len(g.Changes) == 0 {
 		return worldchange.Delete(ctx, tx, key)

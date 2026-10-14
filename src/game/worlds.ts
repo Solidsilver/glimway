@@ -3,7 +3,7 @@
  * deterministically from code (seeded), and the area-kind registry every
  * area resolves through (those three, the Commons, homestead land by
  * `home:<gate>`, the rooms by `in:…` (./room-kind.ts: the village rooms and
- * the cottages), and the open map, `wilds` (./wilds/wilds-world.ts)).
+ * the cottages), and the open map, `outdoors` (./wilds/wilds-world.ts)).
  */
 import type { AreaId } from '../lib/state.ts'
 import { repairFor } from '../lib/repairs.ts'
@@ -831,7 +831,7 @@ const AREA_KINDS: Record<string, AreaKind> = {
   // The lane's length follows the world's gate count (src/game/homestead.ts keeps it).
   commons: { build: () => buildCommons(commonsGateCount), foreground: commonsForeground },
   // The open map: one area, its chunks attached as you walk (src/game/wilds/window.ts).
-  wilds: { build: () => buildWildsWorld(), foreground: () => [] }
+  outdoors: { build: () => buildWildsWorld(), foreground: () => [] }
 }
 
 /** How many gates the Commons lane must show (the roster's count, once known). */

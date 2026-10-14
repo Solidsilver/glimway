@@ -73,7 +73,7 @@ test('a settled member is asked once, then moves into the party’s world', asyn
   await expect(other.getByTestId('party-prompt')).toHaveCount(0)
 
   // A look at Hal's own Wilds first (the region read is kept a while).
-  await warp(other, 'wilds', 2, 22)
+  await warp(other, 'outdoors', 2, 22)
   await waitForWilds(other)
   const ownEpoch = (await wilds(other)).epochId
 
@@ -129,9 +129,9 @@ test('a settled member is asked once, then moves into the party’s world', asyn
 
   // The Wilds are Olive's now, not the ones Hal walked a minute ago.
   await road.click()
-  await warp(page, 'wilds', 2, 22)
+  await warp(page, 'outdoors', 2, 22)
   await waitForWilds(page)
-  await warp(other, 'wilds', 2, 22)
+  await warp(other, 'outdoors', 2, 22)
   await waitForWilds(other)
   const now = (await wilds(other)).epochId
   expect(now).not.toBe(ownEpoch)

@@ -685,21 +685,21 @@ func TestWardCreditAcrossChunkEdges(t *testing.T) {
 	for _, crossing := range []bool{false, true} {
 		t.Run(fmt.Sprint("crossing=", crossing), func(t *testing.T) {
 			h := newPresenceHub(nil, func() time.Time { return time.Unix(100, 0) })
-			friend := &presencePeer{identity: presenceIdentity{ID: "friend", World: "world"}, area: "wilds:1:-1", pos: &presencePosition{X: 385, Y: -10}}
+			friend := &presencePeer{identity: presenceIdentity{ID: "friend", World: "world"}, area: "outdoors:1:-1", pos: &presencePosition{X: 385, Y: -10}}
 			if crossing {
-				friend.area = "wilds:0:-1"
+				friend.area = "outdoors:0:-1"
 				friend.pos.X = 382
 			}
 			h.admit(friend)
-			h.admit(&presencePeer{identity: presenceIdentity{ID: "other-world", World: "elsewhere"}, area: "wilds:1:-1", pos: &presencePosition{X: 385, Y: -10}})
-			h.admit(&presencePeer{identity: presenceIdentity{ID: "far", World: "world"}, area: "wilds:1:-1", pos: &presencePosition{X: 470, Y: -10}})
+			h.admit(&presencePeer{identity: presenceIdentity{ID: "other-world", World: "elsewhere"}, area: "outdoors:1:-1", pos: &presencePosition{X: 385, Y: -10}})
+			h.admit(&presencePeer{identity: presenceIdentity{ID: "far", World: "world"}, area: "outdoors:1:-1", pos: &presencePosition{X: 470, Y: -10}})
 			h.admit(&presencePeer{identity: presenceIdentity{ID: "curated", World: "world"}, area: "village", pos: &presencePosition{X: 385, Y: -10}})
-			h.wardPulse("world", "wilds:0:-1", "caster", 383, -10, 64, 3)
+			h.wardPulse("world", "outdoors:0:-1", "caster", 383, -10, 64, 3)
 			if crossing {
-				friend.area = "wilds:1:-1"
+				friend.area = "outdoors:1:-1"
 				friend.pos.X = 385
 			}
-			h.wardPulse("world", "wilds:0:-1", "caster", 383, -10, 64, 3)
+			h.wardPulse("world", "outdoors:0:-1", "caster", 383, -10, 64, 3)
 			if got := h.reserveWardCredit("friend", 1); got != 6 {
 				t.Fatalf("friend credit = %v, want 6", got)
 			}

@@ -1,3 +1,4 @@
+import { resolve } from './location.ts';
 import repairsRaw from '../../content/repairs.json' with { type: 'json' };
 import { decodeContent } from './content-proto.ts';
 import { RepairsSchema, type RepairDefValid, type RepairsValid } from './gen/glimway/content/v1/repairs_pb.js';
@@ -42,5 +43,11 @@ export function repairFor(id: string): RepairDef | undefined {
 }
 
 export function repairsForArea(area: string): RepairDef[] {
-  return REPAIR_RULES.repairs.filter((r) => r.area === area);
+  return REPAIR_RULES.repairs
+    .filter((r) => r.area === area || resolve(r.area, r.pos.tx, r.pos.ty).space === area)
+    .map((r) => {
+      if (r.area === area) return r;
+      const spot = resolve(r.area, r.pos.tx, r.pos.ty);
+      return { ...r, area: spot.space, pos: { ...r.pos, tx: spot.tx, ty: spot.ty } };
+    });
 }

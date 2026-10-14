@@ -7,7 +7,7 @@
  */
 import { TILE } from '../../lib/tile.ts'
 import type { WorldData } from '../worlds.ts'
-import { CHUNK_PX, WILDS_AREA, gateArrival, gateTiles, wildsReturnTile } from './coords.ts'
+import { CHUNK_PX, OUTDOORS_AREA, gateArrival, gateTiles, wildsReturnTile } from './coords.ts'
 import { groundAt, solidAt, standAt } from './ground-view.ts'
 import { wildsFrontier } from './store.ts'
 import { loadWilds } from '../../lib/wilds/data.ts'
@@ -34,7 +34,7 @@ export function buildWildsWorld(): WorldData {
   const bounds = frontierBounds()
   const gate = gateTiles()
   return {
-    areaId: WILDS_AREA,
+    areaId: OUTDOORS_AREA,
     width: 0,
     height: 0,
     widthPx: bounds.w,

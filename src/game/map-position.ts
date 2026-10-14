@@ -10,7 +10,7 @@
  */
 
 export interface MapPosition {
-  /** The scene's area (WILDS_AREA out on the open map). */
+  /** The scene's area (OUTDOORS_AREA out on the open map). */
   area: string
   /** The world the scene belongs to ('' for a guest). */
   world: string

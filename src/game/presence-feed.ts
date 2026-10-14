@@ -104,7 +104,7 @@ export class PresenceFeed {
         ready: () => { this.fights.clear(); this.swingCounter = 0 },
         fight: (m) => {
           if (m.type === 'fightJoin') {
-            if (m.roomKey && sharedRoom(`wilds:${m.roomKey.cx}:${m.roomKey.cy}`, this.area)) this.fights.join(m)
+            if (m.roomKey && sharedRoom(`outdoors:${m.roomKey.cx}:${m.roomKey.cy}`, this.area)) this.fights.join(m)
           }
           else if (m.type === 'fightDelta') this.fights.delta(m)
           else if (m.type === 'fightEvent') this.fights.event(m)
@@ -161,7 +161,7 @@ export class PresenceFeed {
       // Everyone we knew was somewhere else now, unless the rooms share (the
       // open map's neighbouring chunks: the server's next roster settles who left).
       if (!sharedRoom(this.area, area)) this.peers.clear()
-      for (const [handle, room] of this.fights.rooms) if (!sharedRoom(`wilds:${room.key.cx}:${room.key.cy}`, area)) this.fights.drop(handle)
+      for (const [handle, room] of this.fights.rooms) if (!sharedRoom(`outdoors:${room.key.cx}:${room.key.cy}`, area)) this.fights.drop(handle)
       this.area = area
       this.publish()
     }

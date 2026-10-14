@@ -9,6 +9,7 @@ import (
 	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/land"
+	"glimway/server/internal/location"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"glimway/server/internal/wilds"
@@ -86,7 +87,8 @@ const gatherReach = 48
 // nearPiece measures as the client does: from a little above the hero's
 // feet to the foot of the piece's tile (where its art stands).
 func nearPiece(s *store.Snapshot, area string, tx, ty int) bool {
-	if s.State.Area != area {
+	space, tx, ty := contentTile(s.State.Area, area, tx, ty)
+	if s.State.Area != space {
 		return false
 	}
 	dx := s.State.Position.X - float64(tx*wildsTileSize+wildsTileSize/2)
@@ -124,19 +126,27 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 	// Where the player is, from this operation's where, and
 	// whether that place has such a piece at all.
 	area := s.State.Area
-	if !content.GatheringOffered(area, req.Target) {
+	place := location.At(location.Space(area), s.State.Position.X, s.State.Position.Y)
+	offered := place.ID
+	if place.Source.Kind == location.SourceGenerated && area == outdoorsArea {
+		offered = "wilds"
+	}
+	if !content.GatheringOffered(offered, req.Target) {
 		return fail(409, "cannot-gather-here")
 	}
 	// The Wilds: the tile is a world tile, in the chunk's current epoch.
 	// The Tangle's own trees, and their Amberfall sap, stand in the Tangle
 	// only ("on trees in the Tangle"); the drift's trees are plain trees.
-	if area == wildsArea {
+	if area == outdoorsArea && place.Source.Kind == location.SourceGenerated {
 		if len(req.Tile) != 2 {
 			return fail(400, "tile-required")
 		}
 		size := chunkSize()
 		tx0, ty0 := int(req.Tile[0]), int(req.Tile[1])
 		cx, cy := wilds.FloorDiv(tx0, size), wilds.FloorDiv(ty0, size)
+		if location.SourceOf(cx, cy).Kind != location.SourceGenerated {
+			return fail(409, "cannot-gather-here")
+		}
 		if !frontier.Inside(s.WorldID, cx, cy) {
 			return fail(409, "beyond-frontier")
 		}

@@ -1,3 +1,4 @@
+import { at } from './location.ts';
 /**
  * The quest tree's predictor (docs/design/indoors.md 5): pure, like
  * ./guides.ts. A save keeps one record per quest, the last step it
@@ -168,6 +169,7 @@ export interface GateContext {
   now: number;
   /** The `where.area` the step would be sent with. */
   area: string;
+  position?: { x: number; y: number };
   glims: number;
   /** How many of a server item (or a keepsake) you carry. */
   carrying: (def: string) => number;
@@ -239,6 +241,7 @@ export function waitWords(opensAt: number, now: number, wait?: QuestWait): strin
 /** What the automatic triggers (`reach`, `carry`, `flag`, `defeat`) can see now. */
 export interface TriggerContext {
   area: string;
+  position?: { x: number; y: number };
   flags: readonly string[];
   defeated: readonly string[];
   carrying: (def: string) => number;
@@ -249,7 +252,7 @@ function autoMet(t: QuestTrigger, ctx: TriggerContext): boolean {
   const carry = trigger(t, 'carry');
   const flag = trigger(t, 'flag');
   const defeat = trigger(t, 'defeat');
-  if (reach) return ctx.area === reach;
+  if (reach) return (ctx.position ? at(ctx.area, ctx.position.x, ctx.position.y).id : ctx.area) === reach;
   if (carry) return ctx.carrying(carry) > 0;
   if (flag) return ctx.flags.includes(flag);
   if (defeat) return ctx.defeated.includes(defeat);
@@ -264,7 +267,7 @@ export function autoSteps(record: QuestRecord, needs: NeedsContext, ctx: Trigger
     const s = nextStep(q, record);
     // A started quest only, or the first step of one that starts by itself (the library's `reach`).
     // A step `at` an area is only taken there (the world refuses it elsewhere: wrong-area).
-    if (s && autoMet(s.do, ctx) && !s.gate && (!s.at || s.at === ctx.area) && (record[q.id] !== undefined || !q.start || 'new' in q.start)) out.push({ quest: q.id, step: s.id });
+    if (s && autoMet(s.do, ctx) && !s.gate && (!s.at || s.at === (ctx.position ? at(ctx.area, ctx.position.x, ctx.position.y).id : ctx.area)) && (record[q.id] !== undefined || !q.start || 'new' in q.start)) out.push({ quest: q.id, step: s.id });
   }
   return out;
 }
