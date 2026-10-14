@@ -373,10 +373,10 @@ export class VillageLayer {
     const find = (id: string) => objects.find((o) => o.id === id)!
     const mill = find('mill'), ada = find('house-ada')
     if (!mill || !ada) return null
-    const wheel = { tx: mill.tx + mill.tw - 1, ty: mill.ty - 1 }
+    const wheel = { tx: mill.tx + mill.tw, ty: mill.ty }
     let window = { tx: ada.tx, ty: ada.ty - ada.th + 1 }
     for (let ty = ada.ty - ada.th + 1; ty <= ada.ty; ty++) for (let tx = ada.tx; tx < ada.tx + ada.tw; tx++) if (fp.ground[ty - fp.ty]?.[tx - fp.tx] === TERRAIN.window) window = { tx, ty }
-    return { board: find('town-board'), well: find('town-well'), window, mill: { hopper: find('mill-hopper'), wheel: { ...wheel, x: tileMid(wheel.tx), y: tileMid(wheel.ty) } } }
+    return { board: find('town-board'), well: find('town-well'), window, mill: { hopper: find('mill-hopper'), wheel: { ...wheel, x: wheel.tx * TILE + 7, y: wheel.ty * TILE + 4 } } }
   }
 
   private millOwner: string | null = null

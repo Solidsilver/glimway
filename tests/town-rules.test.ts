@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 import vectors from '../content/vectors/town-rules.json' with { type: 'json' };
 import { at } from '../src/lib/location.ts';
 import { bankFor, nearBank, waterFor, watersForArea } from '../src/lib/fishing.ts';
-import { gatheringOffered } from '../src/lib/gathering.ts';
+import layout from '../content/layouts/hearthwick.json' with { type: 'json' };
+import { fixedGatherAt, gatherArea, gatheringOffered } from '../src/lib/gathering.ts';
 import { createNewGame, recoverFromDefeat } from '../src/lib/state.ts';
 import { predict } from '../src/lib/api/predict.ts';
 
@@ -14,6 +15,7 @@ test('town rule parity uses saved world pixels (shared Go/TS vectors)', () => {
   for (const c of vectors.cases) {
     assert.equal(at(c.area, c.x, c.y).rest, c.rest, `${c.name}: rest`);
     assert.equal(gatheringOffered(c.area, c.target, c), c.gather, `${c.name}: gathering`);
+    assert.equal(gatherArea(c.area, c), c.gatherArea, `${c.name}: gatherArea`);
     assert.equal(nearBank(c.area, c.x, c.y, water, bank), c.fish, `${c.name}: fishing`);
   }
   assert.deepEqual(watersForArea('outdoors').map(w => w.id), [water.id]);
@@ -34,4 +36,9 @@ test('quest gate prediction uses the same place as server personHere', () => {
     const got = checkGate(step, { area: c.area, position: c, now: c.now, glims: 0, carrying: () => 0, gateAt: undefined, online: true });
     assert.equal(got.ok, c.here, c.name);
   }
+});
+
+test('authored gathering needs the matching tile within reach (shared Go/TS vectors)', () => {
+ const objects = layout.objects.filter((o) => o.kind === 'gather').map((o) => ({ kind: o.kind, target: o.target!, tx: o.tx - 24, ty: o.ty + 24 }));
+ for (const c of vectors.fixedGather) assert.equal(fixedGatherAt(c, c.tile, c.target, objects), c.allowed, c.name);
 });

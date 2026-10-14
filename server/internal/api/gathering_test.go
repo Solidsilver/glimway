@@ -59,7 +59,7 @@ func standAt(s response, area string, tx, ty int) rules.State {
 // Wilds, the Tangle unless the fields say otherwise).
 func gatherIn(s response, area string, tile [2]int, tool, action, target, visit string) map[string]any {
 	f := map[string]any{"tool": tool, "action": action, "target": target, "visitId": visit, "progress": standAt(s, area, tile[0], tile[1])}
-	if rules.HomeGate(area) >= 0 {
+	if rules.HomeGate(area) >= 0 || area == "hearthwick" {
 		f["tile"] = tile
 	}
 	if area == "outdoors" {

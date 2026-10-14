@@ -218,7 +218,7 @@ export class Fishing {
             verb: FISHING_VERBS.cast,
             tool: 'fish',
             // The point's marker sits under the tile; the offer follows the server's measure (where to the tile's middle).
-            available: () => !this.busy && !this.line && !this.landed && heldNow().kind === 'fish' && bankOpen(bank, this.mark()) && this.live() && this.heroWithin(bank, castReachPx()),
+            available: () => !this.busy && !this.line && !this.landed && heldNow().kind === 'fish' && bankOpen(bank, this.mark()) && this.live() && this.heroWithin(water, bank, castReachPx()),
             activate: () => void this.cast(water, bank)
           })
           // While a line is out from this bank: pull it in, or reel once the float dips.
@@ -235,7 +235,7 @@ export class Fishing {
             verb: () => (this.landed ? FISHING_VERBS.keep : this.phase() === 'ready' ? FISHING_VERBS.reel : FISHING_VERBS.pull),
             // Landed: the prompt names both choices and their keys (Keep on E, Let it go on Q).
             alt: () => (this.landed ? { key: LET_GO_KEY, label: FISHING_VERBS.release } : null),
-            available: () => !this.busy && this.lineFrom(water, bank) && this.heroWithin(bank, leaveReachPx()),
+            available: () => !this.busy && this.lineFrom(water, bank) && this.heroWithin(water, bank, leaveReachPx()),
             activate: () => {
               if (this.landed) void this.settle(true)
               else if (this.phase() === 'ready') this.reel()
@@ -249,9 +249,9 @@ export class Fishing {
   }
 
   /** The hero's feet within `px` of the bank, measured as the server measures `where` (to a bank tile's middle). */
-  private heroWithin(bank: FishBank, px: number): boolean {
+  private heroWithin(water: FishWater, bank: FishBank, px: number): boolean {
     const hero = this.deps.hero().sprite
-    return nearBank(this.deps.world.areaId, hero.x, hero.y, waterFor((this.landed ?? this.line)?.water ?? this.waters[0]!.id)!, bank, px)
+    return nearBank(this.deps.world.areaId, hero.x, hero.y, water, bank, px)
   }
 
   private lineFrom(water: FishWater, bank: FishBank): boolean {

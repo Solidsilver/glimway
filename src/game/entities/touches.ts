@@ -90,7 +90,7 @@ export class Touches {
     const at = gateSignAt({ height }, e)
     if (!at) return
     const { x, y } = at
-    this.add(`touch:sign:gate:${e.tx},${e.ty}` as InteractId, x, y, 'Read the sign', { kind: 'sign', x, y, signKey: `gate:${place}:${e.to}` })
+    this.add(`touch:sign:gate:${e.tx},${e.ty}` as InteractId, x, y, 'Read the sign', { kind: 'sign', x, y, signKey: gateSignKey(place, String(e.to)) })
   }
 
   // ------------------------------------------------------------ the touches
@@ -184,4 +184,11 @@ export class Touches {
       })
     }
   }
+}
+
+/** Historical lore keys remain stable while the outdoor place names change. */
+export function gateSignKey(place: string, to: string): string {
+  const origin = place === 'hearthwick' ? 'village' : place
+  const destination = origin === 'woodland' && (to === 'outdoors' || to === 'hearthwick') ? 'village' : to
+  return `gate:${origin}:${destination}`
 }

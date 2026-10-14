@@ -111,8 +111,9 @@ export function swingPlan(action: string, tool: ToolFeel): { swings: number; ms:
 
 /** Where the woods can be worked: the Tangle and the Whitequiet, the woods, home land, and the village's water (in season). */
 export function gatherArea(area: string, position = { x: 0, y: 0 }): boolean {
+  if (area.startsWith('in:')) return false;
   const place = at(area, position.x, position.y);
-  return (area === 'outdoors' && place.source.kind === 'generated') || ['woodland', 'hearthwick'].includes(place.id) || place.rest === 'home';
+  return (area === 'outdoors' && place.source.kind === 'generated') || ['woodland', 'hearthwick'].includes(place.id) || place.id.startsWith('lot:') || /^home:\d+$/.test(area);
 }
 
 /**
@@ -240,4 +241,11 @@ export function wearLine(wear: { broke: boolean; state: string; wornOut: readonl
   }
   if (wear.wornOut.length) return `${wear.wornOut.map(fittingName).join(' and ').replace(/^t/, 'T')} wore away.`;
   return null;
+}
+
+/** An authored piece, measured from the hero's feet just as the server does. */
+export function fixedGatherAt(position: { x: number; y: number }, tile: readonly number[], target: string, objects: readonly { kind: string; target: string; tx: number; ty: number }[]): boolean {
+  if (tile.length !== 2) return false;
+  const [tx, ty] = tile as readonly [number, number];
+  return Math.hypot(position.x - (tx * 16 + 8), position.y - 8 - (ty + 1) * 16) <= 48 && objects.some((o) => o.kind === 'gather' && o.target === target && o.tx === tx && o.ty === ty);
 }

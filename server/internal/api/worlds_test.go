@@ -496,7 +496,7 @@ func TestWorldMoveRefusedWhenUnsafe(t *testing.T) {
 // safe ground and arrives outside its gate on the new world's Commons
 // (anchor hearthwick:lot:<g>), or at the arch for a gate the Commons lacks.
 func TestWorldMoveFromAHomeArrivesAtItsGate(t *testing.T) {
-	for _, row := range []struct{ area, anchor string }{{"home:3", "hearthwick:lot:3"}, {"in:home:5", "hearthwick:lot:5"}, {"home:9", "hearthwick:arch"}} {
+	for _, row := range []struct{ area, anchor string }{{"home:3", "hearthwick:lot:3"}, {"in:home:5", "hearthwick:lot:5"}, {"home:9", "hearthwick:arch"}, {"outdoors", "hearthwick:lot:3"}} {
 		t.Run(row.area, func(t *testing.T) {
 			x := newRig(t)
 			x.hero("olive", "Olive", "p1")
@@ -509,6 +509,9 @@ func TestWorldMoveFromAHomeArrivesAtItsGate(t *testing.T) {
 			req := moveBody(h, "from-home", o.WorldID, row.area)
 			doc := h.State
 			doc.Area, doc.Position = row.area, rules.Position{X: 80, Y: 80}
+			if row.area == "outdoors" {
+				doc.Position = rules.Position{X: -42*16 + 8, Y: 58*16 + 8}
+			}
 			req["progress"] = doc
 			moved := x.worldReq("POST", "/api/world/move", req, hc, 200)
 			space, ax, ay, ok := location.Anchor(row.anchor)

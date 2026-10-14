@@ -227,6 +227,10 @@ export class GoalGuide {
     }
     // On the open map the Commons and the Tangle meet at the arch: walked, not an exit.
     if (here === 'outdoors') {
+      if (from === 'hearthwick' && steps('woodland', goal) < steps(from, goal)) {
+        const east = anchor('hearthwick:east-road')!
+        return { x: east.x, y: east.y, here: false }
+      }
       const arch = anchor('hearthwick:arch')
       const mouth = gateTiles()
       for (const [node, x, y] of [['hearthwick', arch?.x, arch?.y], ['tangle', (mouth.tx + mouth.tw / 2) * TILE, mouth.ty * TILE]] as const) {

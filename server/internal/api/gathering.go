@@ -186,6 +186,28 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 			return fail(409, "cannot-gather-here")
 		}
 	}
+	// Authored town pieces are as tile-specific as generated decor.
+	if area == outdoorsArea && place.Source.Kind == location.SourceFixed && homeGateAt(s) < 0 {
+		if len(req.Tile) != 2 {
+			return fail(400, "tile-required")
+		}
+		x, y := int(req.Tile[0]), int(req.Tile[1])
+		if !nearPiece(s, area, x, y) {
+			return fail(409, "too-far-away")
+		}
+		cx, cy := wilds.FloorDiv(x, chunkSize()), wilds.FloorDiv(y, chunkSize())
+		source := location.SourceOf(cx, cy)
+		if source.Kind != location.SourceFixed || source.Layout != place.Source.Layout {
+			return fail(409, "cannot-gather-here")
+		}
+		chunk, err := a.Config.Chunks.Chunk(ctx, tx, s.WorldID, chunks.FixedEpoch(source.Layout, source.Revision), 0, int32(cx), int32(cy))
+		if err != nil {
+			return chunkError(err)
+		}
+		if !fixedGatherAt(s, chunk, req.Target, x, y) {
+			return fail(409, "cannot-gather-here")
+		}
+	}
 	var home *homeView
 	var tile [2]int
 	lit := false
@@ -349,4 +371,14 @@ func gatherDecor(target, kind string) bool {
 	default:
 		return false
 	}
+}
+
+// fixedGatherAt validates the served object and the same foot-distance as the client.
+func fixedGatherAt(s *store.Snapshot, chunk *contract.WorldChunk, target string, x, y int) bool {
+	if chunk == nil || !nearPiece(s, outdoorsArea, x, y) {
+		return false
+	}
+	return slices.ContainsFunc(chunk.Objects, func(o *contract.Placed) bool {
+		return o.Kind == "gather" && o.Target == target && int(chunk.Cx)*chunkSize()+int(o.Tx) == x && int(chunk.Cy)*chunkSize()+int(o.Ty) == y
+	})
 }

@@ -92,10 +92,26 @@ func TestSeasonalGatherSpots(t *testing.T) {
 		t.Fatal("swept the shore out of Mudrise")
 	}
 	c = x.jumpToAs("alice", "wick", "Smoke")
-	if x.opRefreshing(c, &s, "gather", gatherIn(s, "hearthwick", [2]int{16, 35}, spade, "dig", "bloom-patch", "v1"), 409).Error.Code != "not-in-season" {
+	if x.opRefreshing(c, &s, "gather", gatherIn(s, "hearthwick", [2]int{11, 37}, spade, "dig", "bloom-patch", "v1"), 409).Error.Code != "not-in-season" {
 		t.Fatal("picked blooms out of the Bloom wick")
 	}
 
+	// Town offers a target only at its actual authored piece, within reach.
+	c = x.jumpToAs("alice", "mark", "Mudrise")
+	missing := gatherIn(s, "hearthwick", [2]int{4, 60}, spade, "dig", "freshet-shore", "wrong")
+	delete(missing, "tile")
+	if got := x.opRefreshing(c, &s, "gather", missing, 400).Error.Code; got != "tile-required" {
+		t.Fatal(got)
+	}
+	wrong := gatherIn(s, "hearthwick", [2]int{35, 72}, spade, "dig", "freshet-shore", "wrong")
+	if got := x.opRefreshing(c, &s, "gather", wrong, 409).Error.Code; got != "cannot-gather-here" {
+		t.Fatal(got)
+	}
+	far := gatherIn(s, "hearthwick", [2]int{4, 60}, spade, "dig", "freshet-shore", "wrong")
+	far["tile"] = shore
+	if got := x.opRefreshing(c, &s, "gather", far, 409).Error.Code; got != "too-far-away" {
+		t.Fatal(got)
+	}
 	// Mudrise: the freshet shore by the village water sweeps up walnut shells.
 	c = x.jumpToAs("alice", "mark", "Mudrise")
 	r := x.opRefreshing(c, &s, "gather", gatherIn(s, "hearthwick", shore, spade, "dig", "freshet-shore", "v1"), 200)
@@ -109,10 +125,10 @@ func TestSeasonalGatherSpots(t *testing.T) {
 
 	// Bloom-wick: bloom flowers, in the Commons...
 	c = x.jumpToAs("alice", "wick", "Bloom")
-	if x.opRefreshing(c, &s, "gather", gatherIn(s, "ruin", [2]int{16, 35}, spade, "dig", "bloom-patch", "v2"), 409).Error.Code != "cannot-gather-here" {
+	if x.opRefreshing(c, &s, "gather", gatherIn(s, "ruin", [2]int{11, 37}, spade, "dig", "bloom-patch", "v2"), 409).Error.Code != "cannot-gather-here" {
 		t.Fatal("the ruin offered town blooms")
 	}
-	r = x.opRefreshing(c, &s, "gather", gatherIn(s, "hearthwick", [2]int{16, 35}, spade, "dig", "bloom-patch", "c1"), 200)
+	r = x.opRefreshing(c, &s, "gather", gatherIn(s, "hearthwick", [2]int{11, 37}, spade, "dig", "bloom-patch", "c1"), 200)
 	if n := stackQty(r.Result.Items, "bloom-flowers"); n < 1 || n > 2 {
 		t.Fatalf("bloom flowers %d", n)
 	}

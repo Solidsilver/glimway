@@ -350,14 +350,11 @@ func (m *frontierMap) mustReachAll(t *testing.T) {
 		for k := 0; k < len(piece); k++ {
 			j := piece[k]
 			x, y := j%m.W, j/m.W
-			if x == 0 || y == 0 || x == m.W-1 || y == m.H-1 || !insideReach(FloorDiv(m.x0+x, chunkSize()), FloorDiv(m.y0+y, chunkSize())) {
+			if frontierExitTile(m.x0+x, m.y0+y) {
 				off = true
 			}
 			for _, d := range dirs4 {
 				nx, ny := x+d[0], y+d[1]
-				if !insideReach(FloorDiv(m.x0+nx, chunkSize()), FloorDiv(m.y0+ny, chunkSize())) {
-					off = true
-				}
 				if nx < 0 || ny < 0 || nx >= m.W || ny >= m.H {
 					continue
 				}
@@ -758,27 +755,22 @@ func TestV3PlacesAndRumour(t *testing.T) {
 	picked := map[string]bool{}
 	rings := map[int]bool{}
 	past := 0
-	for _, ws := range v3Worlds(40) {
+	for seedIndex, ws := range v3Worlds(40) {
 		seed, season := ws[0], ws[1]
 		e := WickEpoch(seed, season)
 		m := buildFrontier(t, seed, season)
 		w := newWorld(e)
 		places := w.rumourPlaces()
-		expected := 0
-		x0, y0, x1, y1 := frontierChunks()
-		ax, ay := CellOf(x0, y0)
-		bx, by := CellOf(x1, y1)
-		for cy := ay; cy <= by; cy++ {
-			for cx := ax; cx <= bx; cx++ {
-				if p := w.place(cx, cy); p != nil && insideReach(p.CX, p.CY) {
-					expected++
-				}
-			}
-		}
+		// Pinned per seed, independent of the enumeration/filter implementation.
+		counts := [...]int{15, 14, 15, 16, 14, 13, 14, 13, 15, 13, 15, 15, 15, 15, 16, 14, 15, 15, 16, 14, 15, 15, 15, 14, 15, 14, 16, 14, 14, 14, 14, 14, 13, 13, 16, 15, 13, 16, 15, 13}
+		expected := counts[seedIndex]
 		if len(places) != expected {
 			t.Fatalf("%s: %d rumour places; want %d", seed, len(places), expected)
 		}
 		for _, p := range places {
+			if FixedFootprintAt(p.CX, p.CY) != nil || !insideReach(p.CX, p.CY) {
+				t.Fatal("rumour place is not generated frontier ground")
+			}
 			ch := m.chunks[[2]int{p.CX, p.CY}]
 			if FootprintCell(p.CellX, p.CellY) {
 				t.Fatalf("%s: place %s in a footprint's cell", seed, p.ID)
@@ -1234,6 +1226,48 @@ func TestV3TownReach(t *testing.T) {
 					}
 				}
 			}
+		}
+	}
+}
+
+// A stepped frontier exit is a tile on the facing edge, not an entire chunk
+// neighbouring a missing chunk. Whole connected components may lead to drift.
+func frontierExitTile(tx, ty int) bool {
+	S := chunkSize()
+	if !insideReach(FloorDiv(tx, S), FloorDiv(ty, S)) {
+		return false
+	}
+	for _, d := range dirs4 {
+		if !insideReach(FloorDiv(tx+d[0], S), FloorDiv(ty+d[1], S)) {
+			return true
+		}
+	}
+	return false
+}
+func TestFrontierExitRequiresFacingTile(t *testing.T) {
+	for _, c := range []struct {
+		x, y int
+		exit bool
+	}{{-132, -48, true}, {-132, -47, false}, {-132, -36, false}, {-144, -36, true}, {-145, -36, false}} {
+		if got := frontierExitTile(c.x, c.y); got != c.exit {
+			t.Fatalf("%d,%d exit %v", c.x, c.y, got)
+		}
+	}
+}
+func TestTownInternalPortsHaveNoGeneratedRoute(t *testing.T) {
+	w := newWorld(WickEpoch("internal-ports", "t:100:200"))
+	for _, c := range []struct {
+		id string
+		dx int
+	}{{"hearthwick", -1}, {"homestead-lots", 1}} {
+		var p *content.FixedPlace
+		for _, f := range content.PlacesRules.GetFixed() {
+			if f.GetId() == c.id {
+				p = f
+			}
+		}
+		if _, _, ok := w.fixedPort(p, c.dx, 0); ok {
+			t.Fatal("internal fixed join created generated route", c.id)
 		}
 	}
 }

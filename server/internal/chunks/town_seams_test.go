@@ -5,7 +5,9 @@ import (
 	"testing"
 
 	"glimway/content"
+	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/wilds"
+	"google.golang.org/protobuf/proto"
 )
 
 // Exercise the supplied fixed bytes, rather than the generator's authored
@@ -18,10 +20,24 @@ func TestTownFixedSeams(t *testing.T) {
 			for cy := y0; cy <= y1; cy++ {
 				for cx := x0; cx <= x1; cx++ {
 					fixed := Fixed(FixedEpoch(p.GetLayout(), p.GetRevision()), int32(cx), int32(cy))
-					for _, d := range [][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}} {
+					for _, d := range [][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-1, -1}, {-1, 1}, {1, -1}, {1, 1}} {
 						nx, ny := cx+d[0], cy+d[1]
 						if wilds.FixedFootprintAt(nx, ny) != nil || wilds.EpochKindAt(nx, ny) != wilds.EpochWick {
 							continue
+						}
+						// Side seams take precedence when a diagonal's corner also
+						// borders fixed/still ground. Test true diagonal-only corners.
+						if d[0] != 0 && d[1] != 0 {
+							blocked := false
+							for _, side := range [][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}} {
+								sx, sy := nx+side[0], ny+side[1]
+								if wilds.FixedFootprintAt(sx, sy) != nil || wilds.EpochKindAt(sx, sy) != wilds.EpochWick {
+									blocked = true
+								}
+							}
+							if blocked {
+								continue
+							}
 						}
 						var kept []wilds.Kept
 						for dy := -1; dy <= 1; dy++ {
@@ -35,18 +51,31 @@ func TestTownFixedSeams(t *testing.T) {
 						if err != nil {
 							t.Fatal(err)
 						}
-						for off := 0; off < S; off++ {
+						limit := S
+						if d[0] != 0 && d[1] != 0 {
+							limit = 2
+						}
+						for off := 0; off < limit; off++ {
 							for band := 0; band < 2; band++ {
 								fx, fy, gx, gy := off, off, off, off
-								switch {
-								case d[0] < 0:
+								if d[0] < 0 {
 									fx, gx = band, S-1-band
-								case d[0] > 0:
+								}
+								if d[0] > 0 {
 									fx, gx = S-1-band, band
-								case d[1] < 0:
+								}
+								if d[1] < 0 {
 									fy, gy = band, S-1-band
-								default:
+								}
+								if d[1] > 0 {
 									fy, gy = S-1-band, band
+								}
+								if d[0] != 0 && d[1] != 0 {
+									if d[1] < 0 {
+										fy, gy = off, S-1-off
+									} else {
+										fy, gy = S-1-off, off
+									}
 								}
 								if !ch.Solid[gy*S+gx] != wilds.Walkable(fixed, fx, fy) {
 									t.Fatalf("seed %d %s edge %v at %d band %d differs", seed, p.GetId(), d, off, band)
@@ -62,7 +91,7 @@ func TestTownFixedSeams(t *testing.T) {
 
 // Kept bytes are authoritative; T4 supplies a world-specific plot base.
 func TestTownSeamUsesSuppliedBytes(t *testing.T) {
-	fixed := Fixed(FixedEpoch("hearthwick", 1), 0, 3)
+	fixed := proto.Clone(Fixed(FixedEpoch("hearthwick", 1), 0, 3)).(*contract.WorldChunk)
 	i := 23*24 + 5
 	if wilds.Walkable(fixed, 5, 23) {
 		t.Fatal("fixture wall unexpectedly open")
@@ -71,6 +100,9 @@ func TestTownSeamUsesSuppliedBytes(t *testing.T) {
 	ch, err := wilds.GenerateV3(wilds.WickEpoch("stored-edge", "t:100:200"), 0, 4, []wilds.Kept{{CX: 0, CY: 3, Chunk: fixed}})
 	if err != nil {
 		t.Fatal(err)
+	}
+	if !wilds.Walkable(fixed, 5, 23) || wilds.Walkable(Fixed(FixedEpoch("hearthwick", 1), 0, 3), 5, 23) {
+		t.Fatal("supplied edit mutated shared fixed cache")
 	}
 	if ch.Solid[5] {
 		t.Fatal("authored fallback replaced supplied fixed edge")

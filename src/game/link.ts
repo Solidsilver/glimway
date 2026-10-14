@@ -1,3 +1,4 @@
+import { anchor } from '../lib/location.ts'
 import { operationHasPlace, queuedRequest, queuedResult, type OperationFields, type OperationOutcome, type OperationValue, type QueuedOperationKind } from '../lib/api/queued-operation.ts'
 import { queuedOperationRoutes as TYPED } from '../lib/api/operation-routes.ts'
 /**
@@ -314,8 +315,8 @@ function sameRequest(entry: OutboxEntry, path: string, body: Record<string, unkn
   return strip(JSON.parse(entry.body) as Record<string, unknown>) === strip(body)
 }
 
-/** The village spawn a fall wakes at (the server's own place comes with its answer). */
-const VILLAGE_SPAWN = { area: 'village', x: 400, y: 300 }
+/** The town well a fall wakes at (the server's own place comes with its answer). */
+const TOWN_WELL = { area: 'outdoors', x: anchor('hearthwick:well')!.x, y: anchor('hearthwick:well')!.y }
 
 /** An answer that arrived but proves nothing (the wrong result, no state): retried, not "offline". */
 const untrusted = () => new ApiError('bad-response', { status: 200 })
@@ -1622,7 +1623,7 @@ export class Link {
     const { outcome } = await this.submit('fall', TYPED.fall!.path, key, body, {
       offline: true,
       fall: point,
-      prepare: (id) => this.reports.fall(id, VILLAGE_SPAWN, point),
+      prepare: (id) => this.reports.fall(id, TOWN_WELL, point),
       undo: () => this.reports.restore(before)
     })
     if (!outcome.ok) return null

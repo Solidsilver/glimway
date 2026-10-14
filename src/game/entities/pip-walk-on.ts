@@ -68,9 +68,14 @@ export class PipWalkOn {
     this.running = true
     const hero = this.deps.hero()
     const from = { tx: tileAt(pip.home.x), ty: tileAt(pip.home.y - 1) }
-    // Beside the hero, a step to their right.
-    const to = { tx: tileAt(hero.x) + 1, ty: tileAt(hero.y - 1) }
-    const there = this.deps.world.open ? townPath(from, to, this.deps.world.open.solidAt)?.map((t) => tileFeet(t.tx, t.ty)) : twoLegs(from, to)
+    // Choose a reachable neighbour: the signpost may occupy the east tile.
+    const hx = tileAt(hero.x), hy = tileAt(hero.y - 1)
+    const candidates = [{ tx: hx + 1, ty: hy }, { tx: hx - 1, ty: hy }, { tx: hx, ty: hy + 1 }, { tx: hx, ty: hy - 1 }]
+    let there: { x: number; y: number }[] | null | undefined
+    for (const to of candidates) {
+      there = this.deps.world.open ? townPath(from, to, this.deps.world.open.solidAt)?.map((t) => tileFeet(t.tx, t.ty)) : twoLegs(from, to)
+      if (there) break
+    }
     if (!there) { this.running = false; return false }
     this.deps.npcs.walkPath(pip, there, () => {
       if (this.stopped || !this.deps.npcs.npcs.includes(pip)) return

@@ -263,3 +263,17 @@ test('the level mark: told on load without news, and a crossing of 20 names the 
   assert.equal(toasts(r).filter((x) => x.startsWith('New at')).length, 1, 'said once');
   assert.deepEqual(r.link.magic, { levelMark: 20, classMark: 'mage' });
 });
+
+test('the first durable fall boundary reloads at the authored well before noteLive rewrites it', async (t) => {
+ const store = memoryOutboxStore();
+ const save = store.save.bind(store);
+ const captured: import('../src/lib/api/outbox.ts').OutboxRecord[] = [];
+ store.save = (record) => { if (record.entries.some((e) => e.kind === 'fall')) captured.push(structuredClone(record)); return save(record); };
+ const first = await rig(t, { store, state: S({ hp: 40 }) });
+ first.session.state.area = 'woodland'; first.session.state.hp = 0;
+ await first.link.fall(); first.link.stop();
+ assert.ok(captured.length);
+ assert.deepEqual(captured[0]!.reports!.next.place, { area: 'outdoors', x: 184, y: 1000 });
+ const next = await rig(t, { store, record: captured[0]!, state: S({ hp: 40 }) });
+ assert.deepEqual({ area: next.session.state.area, ...next.session.state.position }, { area: 'outdoors', x: 184, y: 1000 });
+});

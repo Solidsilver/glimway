@@ -155,7 +155,7 @@ func (w *world) fixedPort(p *content.FixedPlace, dx, dy int) (end, way pt, ok bo
 		case dx > 0:
 			x, y = 47, 59
 		case dx < 0:
-			x, y = -24, 69
+			return pt{}, pt{}, false
 		case dy > 0:
 			x, y = 9, 95
 		default:

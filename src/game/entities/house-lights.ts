@@ -13,6 +13,9 @@
  * names (the mill has none to smoke from).
  */
 import type Phaser from 'phaser'
+import { onSceneEnd } from '../scene-end'
+import { chunkOfTile, footprint } from '../wilds/fixed'
+import { TILE } from '../../lib/tile'
 import { ROOMS } from '../../lib/rooms'
 import { hasInArt, inArt } from '../indoors-art'
 import { residentIn, residentOf } from '../resident-cycle'
@@ -30,6 +33,7 @@ const WINDOW_GLASS: Readonly<Record<string, { x: number; y: number; w: number; h
 }
 
 interface Lit {
+  chunk: string
   room: string
   resident: string | null
   /** The dimmed glass (shown while the resident is out). */
@@ -40,11 +44,31 @@ interface Lit {
 export class HouseLights {
   private lit: Lit[] = []
 
-  constructor(scene: Phaser.Scene, deps: { world: WorldData; reducedMotion: boolean }) {
+  private chunks = new Set<string>()
+  constructor(private scene: Phaser.Scene, private deps: { world: WorldData; reducedMotion: boolean }) {
+    if (!deps.world.open) this.draw()
+    onSceneEnd(scene, () => this.destroy())
+  }
+
+  attachChunk(key: string): (() => void)[] {
+    this.chunks.add(key)
+    return [() => { if (this.chunks.has(key)) { this.detachDrawn(key); this.draw(key) } }]
+  }
+
+  private draw(key?: string): void {
+    const { scene, deps } = this
     for (const room of ROOMS.rooms) {
       const out = room.outside
-      if (!out || room.parent !== deps.world.areaId || /:\d+$/.test(room.id)) continue
-      const glass = WINDOW_GLASS[out.building]
+      if (!out || room.parent !== (deps.world.open ? 'hearthwick' : deps.world.areaId) || /:\d+$/.test(room.id)) continue
+      const window = out.window
+      if (key && (!window || chunkOfTile(window.tx, window.ty) !== key)) continue
+      const old = WINDOW_GLASS[out.building]
+      const building = [...(footprint('hearthwick')?.objects.values() ?? [])].flat().find((o) => o.id === (out.building === 'tolley-mill' ? 'mill' : out.building))
+      const glass = deps.world.open && window && old ? {
+        x: window.tx * TILE + (out.building === 'house-west' ? 10 : -1),
+        y: window.ty * TILE + (out.building === 'house-west' ? 7 : 6),
+        w: old.w, h: old.h, base: building ? building.ty * TILE + (building.art?.oy ?? TILE) : (window.ty + 2) * TILE
+      } : old
       const resident = residentOf(room.id)
       const dark = glass && resident ? scene.add.rectangle(glass.x, glass.y, glass.w, glass.h, 0x26304a, 0.78).setOrigin(0, 0).setDepth(glass.base + 0.5) : null
       let smoke: Phaser.GameObjects.Sprite | null = null
@@ -52,10 +76,20 @@ export class HouseLights {
         smoke = scene.add.sprite(out.chimney.x, out.chimney.y, inArt('chimney-smoke-0')).setOrigin(0.5, 1).setDepth(5000).setAlpha(0.75)
         if (!deps.reducedMotion && scene.anims.exists(inArt('chimney-smoke'))) smoke.play(inArt('chimney-smoke'))
       }
-      this.lit.push({ room: room.id, resident, dark, smoke })
+      this.lit.push({ room: room.id, resident, dark, smoke, chunk: key ?? '' })
     }
     this.refresh()
   }
+
+  private detachDrawn(key: string): void {
+    this.lit = this.lit.filter((l) => {
+      if (l.chunk !== key) return true
+      l.dark?.destroy(); l.smoke?.destroy()
+      return false
+    })
+  }
+  detachChunk(key: string): void { this.chunks.delete(key); this.detachDrawn(key) }
+  destroy(): void { for (const l of this.lit) { l.dark?.destroy(); l.smoke?.destroy() }; this.lit = []; this.chunks.clear() }
 
   /** Lit and smoking while the resident is home (a room with no resident: lit, no smoke). */
   refresh(): void {

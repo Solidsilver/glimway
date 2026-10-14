@@ -15,6 +15,8 @@ the game can show the first part as "What's new":
 
 ### For players
 
+- Town recovery, seasonal gathering, mill-wheel art, resident window lights, Pip’s arrival and road guidance now respect the streamed town’s positions.
+
 - Homestead lots now grow world-specific land beside Hearthwick, with camps, cottages, furnishings and stables that stream in as you approach.
 
 - Hearthwick’s streamed town chunks now draw residents, pond fishing, the mill wheel, project lights and seasonal gatherings; their decorations and interactions leave with each chunk.

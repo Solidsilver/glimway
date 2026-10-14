@@ -13,6 +13,7 @@ import type { RepairsLayer } from '../entities/repairs.ts'
 import type { Touches } from '../entities/touches.ts'
 import type { PipWalkOn } from '../entities/pip-walk-on.ts'
 import type { Fishing } from '../entities/fishing.ts'
+import type { HouseLights } from '../entities/house-lights.ts'
 import type { VillageLayer } from '../entities/village-life.ts'
 
 export interface FixedLifeDeps {
@@ -25,6 +26,7 @@ export interface FixedLifeDeps {
   repairs: RepairsLayer
   touches: Touches
   village: VillageLayer
+  lights?: HouseLights
   pip?: PipWalkOn
   fishing?: Fishing
   homes: () => FixedHooks | null
@@ -62,6 +64,7 @@ export class FixedLife implements FixedHooks {
         if (fp) touches.attachChunk(owner, (fp.objects.get(key) ?? []).filter((o) => objectOut(o, day)).map((o) => exitOf(o, fp)).filter((e): e is ExitDef => e !== null), fp.ty + fp.h, fp.place.id, (fp.objects.get(key) ?? []).filter((o) => objectOut(o, day)))
       },
       ...(this.deps.homes()?.attach(key) ?? []),
+      ...(this.deps.lights?.attachChunk(key) ?? []),
       ...village.attachChunk(key)
     ]
   }
@@ -82,6 +85,7 @@ export class FixedLife implements FixedHooks {
     if (owner) touches.detachChunk(owner)
     this.exitOwners.delete(key)
     this.deps.homes()?.detach(key)
+    this.deps.lights?.detachChunk(key)
     village.detachChunk(key)
   }
 }

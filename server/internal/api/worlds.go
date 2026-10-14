@@ -516,7 +516,7 @@ func worldMoveSafe(s *store.Snapshot) bool {
 // Commons (anchor hearthwick:lot:<g>; the arch if the Commons has no such
 // gate). The place is the server's: a barrier drops older reports.
 func arriveFromHome(s *store.Snapshot) {
-	gate := rules.HomeGate(content.RootArea(s.State.Area))
+	gate := homeGateAt(s)
 	if gate < 0 {
 		return
 	}

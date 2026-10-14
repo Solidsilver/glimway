@@ -3,9 +3,11 @@ package api
 import (
 	"encoding/json"
 	"glimway/content"
+	"glimway/server/internal/chunks"
 	"glimway/server/internal/location"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
+	"glimway/server/internal/wilds"
 	"os"
 	"strings"
 	"testing"
@@ -27,10 +29,16 @@ func TestTownRuleVectors(t *testing.T) {
 			X, Y             float64
 			Here             bool
 		}
+		FixedGather []struct {
+			Name, Target string
+			X, Y         float64
+			Tile         []int
+			Allowed      bool
+		}
 		Cases []struct {
 			Name, Area, Rest, Target string
 			X, Y                     float64
-			Gather, Fish             bool
+			Gather, GatherArea, Fish bool
 		}
 	}
 	if err = json.Unmarshal(raw, &v); err != nil {
@@ -51,6 +59,19 @@ func TestTownRuleVectors(t *testing.T) {
 	if area != v.Recovery.Area || p != (rules.Position{X: v.Recovery.X, Y: v.Recovery.Y}) {
 		t.Fatal("recovery", area, p)
 	}
+	for _, c := range v.FixedGather {
+		s := store.Snapshot{State: rules.NewTownState()}
+		s.State.Position = rules.Position{X: c.X, Y: c.Y}
+		got := false
+		if len(c.Tile) == 2 {
+			x, y := c.Tile[0], c.Tile[1]
+			cx, cy := wilds.FloorDiv(x, 24), wilds.FloorDiv(y, 24)
+			got = fixedGatherAt(&s, chunks.Fixed(chunks.FixedEpoch("hearthwick", 1), int32(cx), int32(cy)), c.Target, x, y)
+		}
+		if got != c.Allowed {
+			t.Fatalf("%s: fixed gather %v", c.Name, got)
+		}
+	}
 	water, _ := content.WaterFor("water:village:mill-pond")
 	bank, _ := content.BankFor(water, "north")
 	for _, c := range v.Cases {
@@ -62,6 +83,14 @@ func TestTownRuleVectors(t *testing.T) {
 			offered := place.ID
 			if c.Area == "outdoors" && place.Source.Kind == location.SourceGenerated {
 				offered = "wilds"
+			}
+			kind := offered
+			if strings.HasPrefix(kind, "lot:") || strings.HasPrefix(kind, "home:") {
+				kind = "home"
+			}
+			canGather := !strings.HasPrefix(c.Area, "in:") && len(content.GatheringRules.GetAreas()[kind].GetTargets()) > 0
+			if canGather != c.GatherArea {
+				t.Fatal("gatherArea", canGather)
 			}
 			if got := content.GatheringOffered(offered, c.Target); got != c.Gather {
 				t.Fatal("gather", got)
