@@ -11,6 +11,7 @@
  * It registers `repair:*` points (./interactables). Worlds only:
  * the chores list is server state, and guests have no world to mend.
  */
+import { FixedScope } from '../wilds/fixed-scope'
 import type Phaser from 'phaser'
 import { itemDef } from '../../lib/items'
 import { repairFor, repairsForArea, type RepairDef } from '../../lib/repairs'
@@ -55,11 +56,25 @@ interface Standing {
 }
 
 export class RepairsLayer {
+  private scope: FixedScope
+
+  attachChunk(key: string): void {
+    this.scope.keys.add(key)
+    this.sync()
+  }
+
+  detachChunk(key: string): void {
+    this.scope.keys.delete(key)
+    this.sync()
+  }
+
+  private made = new Set<string>()
   private standing = new Map<string, Standing>()
   private kept = new Map<string, Standing>()
   private busy = false
 
   constructor(private scene: Phaser.Scene, private deps: RepairsDeps) {
+    this.scope = new FixedScope(!!deps.world.open)
     const village = villageFor(deps.session)
     const sync = () => {
       if (scene.sys?.isActive()) this.sync()
@@ -117,7 +132,7 @@ export class RepairsLayer {
     const { session, world } = this.deps
     const village = villageFor(session)
     const open = new Set(village.repairs.open.map((c) => c.id))
-    const here = session.link ? repairsForArea(world.areaId) : []
+    const here = session.link ? repairsForArea(world.areaId).filter((d) => this.scope.has(d.pos.tx, d.pos.ty)) : []
     const want = here.filter((d) => open.has(d.id))
     const mended = session.link ? here.filter((d) => !open.has(d.id) && village.repairs.mended.some((m) => m.repairId === d.id)) : []
     for (const [id, s] of this.standing) {
@@ -131,9 +146,14 @@ export class RepairsLayer {
     }
     for (const d of want) if (!this.standing.has(d.id)) this.standing.set(d.id, this.place(d, false))
     for (const d of mended) {
-      if (d.target === 'well' || d.target === 'fence') this.kept.set(d.id, this.place(d, true))
+      if (!this.kept.has(d.id) && (d.target === 'well' || d.target === 'fence')) this.kept.set(d.id, this.place(d, true))
     }
     this.publish(want)
+    const used = new Set([...this.standing.values(), ...this.kept.values()].map((s) => s.image.texture.key))
+    for (const key of this.made) if (!used.has(key)) {
+      this.scene.textures.remove(key)
+      this.made.delete(key)
+    }
   }
 
   private publish(want: RepairDef[]): void {
@@ -161,7 +181,9 @@ export class RepairsLayer {
   private place(def: RepairDef, mended: boolean): Standing {
     const { x, y, depth } = this.at(def)
     const key = `repair-${def.target}-${mended ? 'mended' : 'broken'}`
+    const existed = this.scene.textures.exists(key)
     const made = ensureRepairTexture(this.scene, key)
+    if (this.deps.world.open && made && !existed) this.made.add(key)
     const image = this.scene.add
       .image(x, y, made ? key : 'px')
       .setOrigin(0.5, 1)

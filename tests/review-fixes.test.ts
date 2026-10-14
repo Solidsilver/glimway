@@ -7,7 +7,7 @@ import { dirname, join } from 'node:path'
 import { installDirs, installStaged } from '../scripts/atlas-install.ts'
 import { hook, type FsHooks } from '../src/game/dev-hooks.ts'
 import { onSceneEnd } from '../src/game/scene-end.ts'
-import { setSyncSafety, syncSafety, type SyncSafety } from '../src/game/sync-safety.ts'
+import { enemiesNearForSync, setSyncSafety, syncSafety, type SyncSafety } from '../src/game/sync-safety.ts'
 import { DialogueHold } from '../src/game/dialogue-hold.ts'
 
 /**
@@ -133,6 +133,15 @@ test('hooks: one without a scene stays until replaced', () => {
 })
 
 // ---------------------------------------------------------------- sync safety
+
+test('sync safety: creatures across the mouth cannot block sync on safe Commons ground', () => {
+  const creature = { x: 40, y: 360 }
+  assert.equal(enemiesNearForSync('outdoors', { x: 40, y: 424 }, [creature]), false)
+  assert.equal(enemiesNearForSync('outdoors', { x: 40, y: 384 }, [creature]), false)
+  assert.equal(enemiesNearForSync('outdoors', { x: 40, y: 383 }, [creature]), true)
+  assert.equal(enemiesNearForSync('outdoors', { x: 400, y: 360 }, [creature]), false)
+  assert.equal(enemiesNearForSync('village', { x: 40, y: 424 }, [creature]), true)
+})
 
 const answer = (areaId: string): (() => SyncSafety) => () => ({ areaId, transitioning: false, dialogueOpen: false, enemiesNear: false })
 

@@ -23,7 +23,10 @@ import { millHopperLines } from '../../content/residents'
 import type { Session } from '../session'
 import { TERRAIN, TILE, tileBottom, tileMid } from '../../lib/tile'
 import type { WorldData } from '../worlds'
-import { commonsLane } from '../wilds/fixed'
+import { chunkOfTile, footprintAt, commonsLane } from '../wilds/fixed'
+import { CHUNK_TILES } from '../wilds/coords'
+import type { Buildable } from '../wilds/window-chunk'
+import { FixedScope } from '../wilds/fixed-scope'
 import { resolve } from '../../lib/location'
 import { villageFor, type Village } from '../village'
 import { calendarFind } from '../../lib/wilds/stories'
@@ -40,6 +43,8 @@ export interface VillageDeps {
   session: Session
   reducedMotion: boolean
   interactables: Interactables
+  schedule?: (job: Buildable) => void
+  unschedule?: (job: Buildable) => void
 }
 
 /** Ada Cooley's house: the east house (its window), per the village layout. */
@@ -53,8 +58,125 @@ let projectsReadAt = 0
 export class VillageLayer {
   private readonly village: Village
   private drawn: Phaser.GameObjects.GameObject[] = []
+  private scope: FixedScope
+  private chunks = new Map<string, { drawn: Phaser.GameObjects.GameObject[]; job: Buildable | null }>()
+  private drawing: Phaser.GameObjects.GameObject[] | null = null
+
+  private festivalDrawn: string | null | undefined
+  private shade: Phaser.GameObjects.Rectangle | null = null
+  private stopped = false
+
+  /** One camera-wide shade, including the fog and Tangle beyond fixed ground. */
+  private syncShade = (): void => {
+    const night = !this.stopped && this.chunks.size > 0 && this.village.calendar.festival === 'Closure Night'
+    if (!night) {
+      this.shade?.destroy()
+      this.shade = null
+      return
+    }
+    const camera = this.scene.cameras.main
+    this.shade ??= this.scene.add.rectangle(0, 0, 1, 1, 0x101428, 0.42).setScrollFactor(0).setDepth(3990)
+    this.shade.setPosition(camera.width / 2, camera.height / 2).setDisplaySize(camera.width / camera.zoom, camera.height / camera.zoom)
+  }
+
+  attachChunk(key: string): (() => void)[] {
+    this.detachChunk(key)
+    this.scope.keys.add(key)
+    const chunk = { drawn: [] as Phaser.GameObjects.GameObject[], job: null as Buildable | null }
+    this.chunks.set(key, chunk)
+    this.syncShade()
+    const steps = this.festivalSteps(key).map((step) => () => {
+      if (this.chunks.get(key) !== chunk) return
+      this.drawing = chunk.drawn
+      try { step() } finally { this.drawing = null }
+    })
+    this.syncInteractions()
+    return steps
+  }
+
+  detachChunk(key: string): void {
+    const chunk = this.chunks.get(key)
+    if (chunk?.job) this.deps.unschedule?.(chunk.job)
+    if (chunk) for (const o of chunk.drawn) {
+      this.scene.tweens.killTweensOf(o)
+      o.destroy()
+    }
+    this.chunks.delete(key)
+    this.syncShade()
+    this.scope.keys.delete(key)
+    this.syncInteractions()
+  }
+
+  /** Dressing changes use the same window budget as initial attachment. */
+  private refreshChunks(): void {
+    for (const key of [...this.chunks.keys()]) {
+      const steps = [...this.attachChunk(key)]
+      const chunk = this.chunks.get(key)!
+      const job: Buildable = { build: (deadline) => {
+        while (steps.length && performance.now() < deadline) steps.shift()!()
+        if (!steps.length) chunk.job = null
+        return !steps.length
+      } }
+      chunk.job = job
+      this.deps.schedule?.(job)
+    }
+  }
+
+  private festivalSteps(key: string): (() => void)[] {
+    const [cx, cy] = key.split(',').map(Number) as [number, number]
+    const fp = footprintAt(cx, cy)
+    const name = this.village.calendar.festival
+    if (!fp || !name) return []
+    const steps: (() => void)[] = []
+    const at = (tx: number, ty: number, draw: () => void) => {
+      if (chunkOfTile(tx, ty) === key) steps.push(draw)
+    }
+    if (name === 'Carting Day') {
+      const madder = sellerFor('madder-stall')
+      for (const [art, tx, ty] of [['stall-a', madder?.tx ?? 8, madder?.ty ?? 18], ['stall-b', 13, 18], ['stall-c', 10, 24]] as const) {
+        const t = resolve('commons', tx, ty)
+        at(t.tx, t.ty, () => {
+          const y = tileBottom(t.ty)
+          this.add(this.scene.add.image(tileMid(t.tx), y, art).setOrigin(0.5, 1).setDepth(y))
+        })
+      }
+      const square = resolve('commons', 23, 17)
+      at(square.tx, square.ty, () => this.add(this.scene.add.image(tileMid(square.tx), square.ty * TILE - 18, 'bunting-96').setOrigin(0.5, 0).setDepth(5000)))
+      const h = commonsLane()?.features.hame
+      if (h) at(h.tx, h.ty, () => this.glow(tileMid(h.tx), tileBottom(h.ty) - 24, 0.6, 0.9))
+    }
+    for (const o of fp.objects.get(key) ?? []) {
+      if (name === 'Closure Night' && o.prop?.light) steps.push(() => this.glow(tileMid(o.tx), tileBottom(o.ty) - o.prop!.h * 0.72, 1.1, 0.9))
+    }
+    for (let ty = cy * CHUNK_TILES; ty < (cy + 1) * CHUNK_TILES; ty++) for (let tx = cx * CHUNK_TILES; tx < (cx + 1) * CHUNK_TILES; tx++) {
+      const terrain = fp.ground[ty - fp.ty]![tx - fp.tx]
+      if ((name === 'Amberwake' || name === 'Closure Night') && terrain === TERRAIN.window) steps.push(() => this.windowGlow(tileMid(tx), ty * TILE + 6))
+      if (name === 'The Breaking' && (terrain === TERRAIN.water_a || terrain === TERRAIN.water_b) && (tx + ty) % 7 === 0) steps.push(() => this.candle(tileMid(tx), tileMid(ty), Math.abs(tx + ty) % 6))
+    }
+    return steps
+  }
+
+  private candle(x: number, y: number, i: number): void {
+    const hull = this.add(this.scene.add.image(x, y, commonsArt(this.scene, `candle-hull-${i % 3}`) ?? 'candle-hull').setOrigin(0.5, 1).setDepth(y))
+    const flame = this.glow(x, y - 9, 0.25, 0.9)
+    if (!this.deps.reducedMotion) {
+      this.scene.tweens.add({ targets: [hull, flame], x: `+=${10 + (i % 3) * 6}`, duration: 5000 + i * 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+      this.scene.tweens.add({ targets: hull, y: y - 1, duration: 900 + i * 90, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' })
+    }
+  }
 
   constructor(private scene: Phaser.Scene, private deps: VillageDeps) {
+    this.scope = new FixedScope(!!deps.world.open)
+    if (deps.world.open) {
+      scene.events.on('prerender', this.syncShade)
+      const cleanup = () => {
+        this.stopped = true
+        scene.events.off('prerender', this.syncShade)
+        for (const key of [...this.chunks.keys()]) this.detachChunk(key)
+      }
+      scene.events.once('shutdown', cleanup)
+      scene.events.once('destroy', cleanup)
+    }
     this.village = villageFor(deps.session)
     // A destroyed game (a session swap) never shuts its scene down: drop the
     // listener either way, and never draw into a scene that is gone.
@@ -141,10 +263,11 @@ export class VillageLayer {
       list.push({ id: 'village:stall', x: tileMid(at.tx), y: tileBottom(at.ty) + 2, label: stall.goods[0]?.label ?? 'Visit the madder stall', verb: 'Buy', marker: notice, markerOffset: 32, activate: () => this.visitStall() })
     }
     // Only when it changed: replacing the list rebuilds its markers.
-    const key = list.map((i) => i.id).join(',')
+    const here = list.filter((i) => this.scope.has(Math.floor(i.x / TILE), Math.floor((i.y - 8) / TILE)))
+    const key = here.map((i) => i.id).join(',')
     if (key === this.interactionKey) return
     this.interactionKey = key
-    this.deps.interactables.register(this, list)
+    this.deps.interactables.register(this, here)
   }
 
   private interactionKey: string | null = null
@@ -165,11 +288,23 @@ export class VillageLayer {
   // ------------------------------------------------------------ drawing
 
   private add<T extends Phaser.GameObjects.GameObject>(o: T): T {
-    this.drawn.push(o)
+    const drawn = this.drawing ?? this.drawn
+    drawn.push(o)
     return o
   }
 
   private redraw(): void {
+    if (this.deps.world.open) {
+      this.syncInteractions()
+      const festival = this.village.calendar.festival
+      if (festival !== this.festivalDrawn) {
+        this.festivalDrawn = festival
+        this.refreshChunks()
+        this.syncShade()
+      }
+      if (festival && this.lane()) this.greet(festival)
+      return
+    }
     for (const o of this.drawn) {
       this.scene.tweens.killTweensOf(o)
       o.destroy()
@@ -303,31 +438,11 @@ export class VillageLayer {
   private festival(name: string): void {
     const w = this.deps.world
     if (name === 'Carting Day') {
-      const lane = this.lane()
-      if (lane) {
-        // Stalls along the cross lane between the gate and the square; the
-        // red one is the madder stall, where its seller row stands. (Commons
-        // tiles, on the grid since the join; drawn for the whole scene until
-        // festival dressing is per chunk.)
-        const madder = sellerFor('madder-stall')
-        const stalls: [string, number, number][] = [['stall-a', madder?.tx ?? 8, madder?.ty ?? 18], ['stall-b', 13, 18], ['stall-c', 10, 24]]
-        for (const [key, tx, ty] of stalls) {
-          const at = resolve('commons', tx, ty)
-          const x = tileMid(at.tx)
-          const y = tileBottom(at.ty)
-          this.add(this.scene.add.image(x, y, key).setOrigin(0.5, 1).setDepth(y))
-        }
-        const square = resolve('commons', 23, 17)
-        this.add(this.scene.add.image((square.tx + 0.5) * TILE, square.ty * TILE - 18, 'bunting-96').setOrigin(0.5, 0).setDepth(5000))
-        const h = lane.features.hame
-        this.glow(tileMid(h.tx), tileBottom(h.ty) - 24, 0.6, 0.9)
-      } else if (w.villageLantern) {
+      if (w.villageLantern) {
         const l = w.villageLantern
         this.add(this.scene.add.image(l.tx * TILE + 24, l.ty * TILE - 14, 'bunting-64').setOrigin(0.5, 0).setDepth(5000))
       }
     }
-    // The rest of the dressing is the village's (the open map's comes per chunk later).
-    if (w.open) return
     if (name === 'Amberwake' || name === 'Closure Night') {
       // A hearth-grade lamp in every window.
       for (const t of this.tilesOf(TERRAIN.window)) this.windowGlow(tileMid(t.tx), t.ty * TILE + 6)

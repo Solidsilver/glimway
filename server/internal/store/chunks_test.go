@@ -434,7 +434,7 @@ func TestChunksFixedSource(t *testing.T) {
 	s := chunkStore(t)
 	ctx := context.Background()
 	c := NewChunks(nil, fakegen.New())
-	epoch := chunks.FixedEpoch("commons", 2)
+	epoch := chunks.FixedEpoch("commons", 3)
 	inTx(t, s, func(tx *sql.Tx) {
 		for _, world := range []string{"world-a", "world-b"} {
 			m, err := c.Chunk(ctx, tx, world, epoch, 0, -1, 2)

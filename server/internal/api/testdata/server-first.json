@@ -11160,7 +11160,7 @@
     "name": "glimway.v1.WorldChunk",
     "case": "valid-fixed",
     "json": {
-      "epochId": "fixed:commons@2",
+      "epochId": "fixed:commons@3",
       "realm": "hearthwick",
       "layer": 0,
       "cx": 0,
@@ -11187,7 +11187,7 @@
       "land": "",
       "places": [],
       "source": "CHUNK_SOURCE_FIXED",
-      "layoutRevision": 2,
+      "layoutRevision": 3,
       "objects": [
         {
           "id": "tree:32,3",
@@ -15677,33 +15677,7 @@
           "gate": 0,
           "side": "",
           "npc": "elara",
-          "spot": "",
-          "target": "",
-          "label": "",
-          "width": 0
-        },
-        {
-          "id": "exit:arch",
-          "kind": "exit",
-          "tx": 1,
-          "ty": 0,
-          "tw": 3,
-          "th": 1,
-          "variant": "",
-          "frame": "",
-          "festival": "",
-          "art": null,
-          "prop": null,
-          "exit": {
-            "to": "outdoors",
-            "entryTx": 2,
-            "entryTy": 22,
-            "unlabelled": false
-          },
-          "gate": 0,
-          "side": "",
-          "npc": "",
-          "spot": "",
+          "spot": "camp",
           "target": "",
           "label": "",
           "width": 0

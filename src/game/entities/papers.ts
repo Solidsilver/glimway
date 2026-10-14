@@ -7,6 +7,7 @@
  * Interactables asks this module for its interaction points and hands back
  * any interaction it owns, so WorldScene only constructs it.
  */
+import { FixedScope } from '../wilds/fixed-scope'
 import type Phaser from 'phaser'
 import { beatsDue, handoverFor, LOOK_LABEL, paperById, placedPapersIn, type PickupLook } from '../../content/papers'
 import { bus, EV, type DialogueClosedPayload, type QuestPayload } from '../events'
@@ -55,11 +56,24 @@ export function papersGlintBright(session: Session): boolean {
 }
 
 export class PaperPickups {
+  private scope: FixedScope
+
+  attachChunk(key: string): void {
+    this.scope.keys.add(key)
+    this.onWorldRefresh()
+  }
+
+  detachChunk(key: string): void {
+    this.scope.keys.delete(key)
+    this.onWorldRefresh()
+  }
+
   private pickups = new Map<string, Pickup>()
   /** Paper an NPC is handing over in the open conversation (granted on close). */
   private pendingHandover: string | null = null
 
   constructor(private scene: Phaser.Scene, private deps: PaperDeps) {
+    this.scope = new FixedScope(!!deps.world.open)
     this.build()
     if (deps.world.library) {
       // The building carries its open book over the door: the hanging sign
@@ -120,7 +134,7 @@ export class PaperPickups {
 
   private build(): void {
     const { world, session } = this.deps
-    for (const p of placedPapersIn(world.areaId, session.questStage, session.state.flags)) this.addPickup(p)
+    for (const p of placedPapersIn(world.areaId, session.questStage, session.state.flags)) if (this.scope.has(p.source.tx, p.source.ty)) this.addPickup(p)
   }
 
   /** One paper lying here, drawn with its glint. */
@@ -155,7 +169,9 @@ export class PaperPickups {
     const p = this.pickups.get(paperId)
     if (!p) return
     p.timer?.remove()
-    if (this.deps.reducedMotion) {
+    this.scene.tweens.killTweensOf(p.twinkle)
+    if (this.deps.reducedMotion || this.deps.world.open) {
+      this.scene.tweens.killTweensOf(p.image)
       p.image.destroy()
       p.twinkle.destroy()
     } else {
@@ -193,7 +209,7 @@ export class PaperPickups {
    * refused a take this one predicted, and the paper lies here again.
    */
   private onWorldRefresh(): void {
-    const due = placedPapersIn(this.deps.world.areaId, this.deps.session.questStage, this.deps.session.state.flags)
+    const due = placedPapersIn(this.deps.world.areaId, this.deps.session.questStage, this.deps.session.state.flags).filter((p) => this.scope.has(p.source.tx, p.source.ty))
     const { add, remove } = pickupChanges(this.pickups.keys(), due.map((p) => p.id))
     for (const id of remove) this.removePickup(id)
     for (const p of due) if (add.includes(p.id)) this.addPickup(p)

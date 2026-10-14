@@ -15,11 +15,13 @@ the game can show the first part as "What's new":
 
 ### For players
 
+- Commons residents now walk to the Yard door when their hour changes. Festival dressing and readable exit posts follow the chunks around you.
 - **The Commons and the Tangle are one walk.** Step through the Commons' north arch straight into the Tangle and back, with no loading screen. Too hurt to fight, you can't step out of the Commons into the Tangle.
 - **The world map shows the Commons**, and you on it.
 
 ### Technical
 
+- Location seam S5b: residents and their bodies, repairs, pickups, papers, festivals and Commons interactions attach and detach with fixed chunks. Calendar redraws use the window build budget. Commons layout revision 3 removes the dead arch exit; contract 11 and presence v4 are unchanged, with no migration.
 - Location seam S5a: the Commons' fixed chunks attach to the open map's window (one scene; the arch portal, the S2 adapter and the frozen builder are gone). Migration 036 also moves `commons` places onto the grid (−336, +384) with a barrier bump; `commons` is no longer a saved area. Room recovery and world moves from homes land on Commons anchors. Residents, repairs and festival dressing per chunk follow in S5b.
 - Location seam S3: saved area `wilds` becomes `outdoors` (clean break), contract 11 and `glimway.presence.v4` chunk rooms. Migration 036 preserves world pixels and raises placement barriers. Safety, sync, riding, named-place rules and generated-ground eligibility use the shared location lookup. Commons remains a separate space until S5; S3 and S5 must ship in the same release.
 

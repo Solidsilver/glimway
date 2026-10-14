@@ -80,6 +80,46 @@ func TestReportPersistentManaCooldownAndReplay(t *testing.T) {
 		t.Fatal(third)
 	}
 }
+
+// A server-set place has a newer watermark than the live scene's report basis.
+func TestReportOlderBasisPreservesServerPlace(t *testing.T) {
+	x := newRig(t)
+	c, p := x.reportSetup()
+	tx, err := x.db.DB.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	s, err := store.Load(context.Background(), tx, x.account("alice"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.State.Area = "village"
+	s.State.Position.X, s.State.Position.Y = 2, 3
+	s.PlaceWritten = true
+	if err = store.Persist(context.Background(), tx, &s, x.now.Load()); err != nil {
+		t.Fatal(err)
+	}
+	if err = tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	out := x.sendReport(c, p, 1, p.State.Version, 5, 0, 0, "ruin")
+	if !out.GetReport().Accepted || out.GetReport().StaleBasis || !out.GetReport().PlaceIgnored {
+		t.Fatal(out)
+	}
+	if out.State.Place.Area != "village" || out.State.Place.X != 2 || out.State.Place.Y != 3 {
+		t.Fatal("stale report overwrote the server-set place", out.State.Place)
+	}
+	var area string
+	var px, py float64
+	if err = x.db.DB.QueryRow("SELECT area,x,y FROM player_place WHERE account_id=?", x.account("alice")).Scan(&area, &px, &py); err != nil {
+		t.Fatal(err)
+	}
+	if area != "village" || px != 2 || py != 3 {
+		t.Fatal("stored place changed", area, px, py)
+	}
+}
+
 func TestReportWatermarksAndBarrier(t *testing.T) {
 	x := newRig(t)
 	c, p := x.reportSetup()

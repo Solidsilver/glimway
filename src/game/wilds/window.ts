@@ -92,7 +92,7 @@ export class WildsWindow {
   /** Each footprint's painted ground, laid a chunk at a time (one per footprint and scene). */
   private fixedGround = new Map<string, GroundTiles>()
   /** The attached chunks still being built, in attachment order (./window-chunk.ts BuildQueue). */
-  private readonly builds = new BuildQueue<AttachedChunk | FixedChunk>()
+  readonly builds = new BuildQueue()
   private drifts = new Map<string, DriftChunk>()
   private paints = new Map<string, PaintedChunk>()
   private far = new Map<string, Phaser.GameObjects.Image[]>()

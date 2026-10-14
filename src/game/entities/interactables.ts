@@ -116,7 +116,8 @@ export class Interactables {
       this.list.length = kept
       for (const it of old) this.forget(it)
     }
-    this.byOwner.set(owner, points)
+    if (points.length) this.byOwner.set(owner, points)
+    else this.byOwner.delete(owner)
     this.list.push(...points)
     if (this.markersBuilt) {
       for (const it of points) this.addMarker(it)

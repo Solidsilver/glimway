@@ -2,6 +2,7 @@ import { expect, test, type Page } from './fixtures'
 import type { Browser, BrowserContext } from '@playwright/test'
 import { allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, reenter, routeHabitica, serverState, setHabitica, syncFromMenu, waitForWorld } from './connected'
 import { commonsTile, exitTo, frames, holdUntil, inCommons, parkCreatures, player, waitForWilds, waitGame, warp, wildsWindow } from './helpers'
+import { setHour } from './room-helpers'
 import { go, homes, throughGate } from './home-helpers'
 
 /**
@@ -270,4 +271,55 @@ test('at zero HP the mouth holds: the Commons is home ground, the Tangle is not'
   await parkCreatures(page)
   await frames(page, 3)
   expect(await hero(page)).toMatchObject({ x: GATE_IN.tx * TILE + 8, y: GATE_IN.ty * TILE + 8 })
+})
+
+test('Silas walks to the Yard door when his hour changes on the open map', async ({ page, context }) => {
+  await connected(page, context)
+  await setHour(page, { minute: 5 })
+  await warp(page, 'commons', 48, 21)
+  await parkCreatures(page)
+  const id = (await win(page)).id
+  await expect.poll(() => page.evaluate(() => window.__fsNpcs!().find((n) => n.id === 'silas')?.present)).toBe(true)
+  await setHour(page, { minute: 21 })
+  await expect.poll(() => page.evaluate(() => window.__fsNpcs!().find((n) => n.id === 'silas')?.walking), { intervals: [50] }).toBe(true)
+  const door = commonsTile(53, 17)
+  await expect.poll(() => page.evaluate(([x, y]) => {
+    const n = window.__fsNpcs!().find((n) => n.id === 'silas')
+    return !!n && Math.abs(n.x - x) < 2 && Math.abs(n.y - y) < 2
+  }, [door.tx * TILE + 8, (door.ty + 1) * TILE] as const), { intervals: [50], timeout: 10_000 }).toBe(true)
+  await expect.poll(() => page.evaluate(() => window.__fsNpcs!().find((n) => n.id === 'silas')?.walking)).toBe(false)
+  expect((await win(page)).id).toBe(id)
+})
+
+test('Carting Day dressing and Commons interactions leave with their chunks and return three times', async ({ page, context }) => {
+  await connected(page, context)
+  const carting = Date.parse('2026-01-05T00:00:00Z') / 1000 + (5 * 7 + 5) * 86400 + 300
+  await page.evaluate((t) => window.__fsDevCalendar!(t), carting)
+  await warp(page, 'outdoors', 2, 44)
+  await parkCreatures(page)
+  const id = (await win(page)).id
+  const dressing = () => page.evaluate(() => {
+    const kinds = window.__fsSceneSize!().kinds
+    return ['a', 'b', 'c'].reduce((n, s) => n + (kinds[`Image:stall-${s}`] ?? 0), 0)
+  })
+  const place = async (ty: number) => {
+    await page.evaluate((ty) => window.__fsDevPlace!(40, ty * 16 + 12), ty)
+    await expect.poll(async () => {
+      const w = await win(page)
+      return w.ready && w.center?.cy === Math.floor(ty / 24)
+    }, { timeout: 20_000 }).toBe(true)
+  }
+  await expect.poll(dressing).toBe(3)
+  for (let round = 0; round < 3; round++) {
+    await place(-60)
+    expect((await win(page)).fixed).toEqual([])
+    expect(await dressing()).toBe(0)
+    expect(await page.evaluate(() => window.__fsNpcs!().map((n) => n.id))).toEqual([])
+    expect(await page.evaluate(() => window.__fsPickups!())).toEqual([])
+    expect(await page.evaluate(() => window.__fsRepairs!())).toEqual([])
+    await place(44)
+    await expect.poll(dressing).toBe(3)
+    expect((await win(page)).id).toBe(id)
+    expect(await page.evaluate(() => window.__fsNpcs!().map((n) => n.id).sort())).toEqual(['elara', 'silas'])
+  }
 })
