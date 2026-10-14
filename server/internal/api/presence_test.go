@@ -847,3 +847,261 @@ func TestPresenceWildsPositionsStayInsideTheFrontier(t *testing.T) {
 	}
 	bob.none()
 }
+
+// Regression coverage for deferred joins and their socket lifecycle.
+func TestPresenceExpiredTimerMustNotConsumeNewPendingJoin(t *testing.T) {
+	h := newPresenceHub(nil, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	p := &presencePeer{identity: presenceIdentity{ID: "alice", World: "world"}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 64), area: "village", clientJoined: true, lastJoin: time.Now()}
+	h.admit(p)
+	a := &Server{presence: h}
+	h.mu.Lock()
+	a.deferPresenceJoin(p, "commons", time.Millisecond)
+	// Hold the hub lock past the cooldown: callback is due but cannot run.
+	time.Sleep(520 * time.Millisecond)
+	a.presenceJoin(p, "in:commons:yard:deeds", time.Now())
+	a.deferPresenceJoin(p, "village", 500*time.Millisecond)
+	h.mu.Unlock()
+	time.Sleep(40 * time.Millisecond)
+	h.mu.Lock()
+	got := p.area
+	timer := p.joinTimer
+	pending := p.pendingJoin
+	h.mu.Unlock()
+	if got != "in:commons:yard:deeds" || timer == nil || pending != "village" {
+		t.Fatalf("old timer consumed new pending join before its 500ms cooldown: area=%s", got)
+	}
+	// The stale callback must not clear the new timer: it still joins later.
+	deadline := time.Now().Add(time.Second)
+	for {
+		h.mu.Lock()
+		area := p.area
+		timer := p.joinTimer
+		h.mu.Unlock()
+		if area == "village" && timer == nil {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("fresh timer never completed its join")
+		}
+		time.Sleep(time.Millisecond)
+	}
+
+}
+
+func TestPresenceDeferredAreaJoinKeepsFinalPosition(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	bc, b := x.member("bob", s.WorldID)
+	cc, carol := x.member("carol", s.WorldID)
+	cfg := presenceTestConfig()
+	cfg.JoinCooldownMs = 500
+	ts := startPresence(t, x, cfg)
+	oldRoom := wsConnect(t, ts, bc, b.Lease)
+	oldRoom.join("village")
+	destination := wsConnect(t, ts, cc, carol.Lease)
+	destination.join("commons")
+	w := wsConnect(t, ts, c, s.Lease)
+	w.join("village")
+	oldRoom.expect("join")
+	// A fresh client after a fast reload has a fresh pacing clock; the server
+	// inherits lastJoin from the replaced same-lease socket.
+	w = wsConnect(t, ts, c, s.Lease)
+	if inherited := w.expect("room"); inherited.Area != "village" {
+		t.Fatal(inherited.Raw)
+	}
+	oldRoom.expect("join")
+	w.send(map[string]any{"type": "join", "area": "commons"})
+	pos := map[string]any{"type": "pos", "x": 100, "y": 120, "facing": map[string]any{"x": 0, "y": 1}, "moving": false}
+	w.send(pos)
+	// Pending samples must keep the latest even inside the position throttle.
+	pos["x"] = 101
+	w.send(pos)
+	// Matches the client's one final-stop retry: 3 * ceil(1000 / 8) ms.
+	time.Sleep(375 * time.Millisecond)
+	pos["x"] = 103
+	w.send(pos)
+	if room := w.expect("room"); room.Area != "commons" {
+		t.Fatal(room.Raw)
+	}
+	// No destination position may be relayed to the old room.
+	oldRoom.expect("leave")
+	oldRoom.none()
+	if arrived := destination.expect("join"); arrived.Player.Pos == nil || arrived.Player.Pos.X != 103 {
+		t.Fatal("destination announcement lost latest position", arrived.Raw)
+	}
+	h := x.api.presence
+	h.mu.Lock()
+	p := h.peers[x.account("alice")]
+	area := p.area
+	got := p.pos
+	pending := p.pendingJoinPos
+	h.mu.Unlock()
+	if area != "commons" || got == nil || got.X != 103 || pending != nil {
+		t.Fatalf("deferred join position: area=%s pos=%v pending=%v", area, got, pending)
+	}
+}
+
+func TestPresencePendingJoinDoesNotResurrectAfterImmediateJoin(t *testing.T) {
+	h := newPresenceHub(nil, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	p := &presencePeer{identity: presenceIdentity{ID: "alice", World: "world"}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 64), area: "village", clientJoined: true}
+	h.admit(p)
+	a := &Server{presence: h}
+	h.mu.Lock()
+	a.deferPresenceJoin(p, "commons", time.Millisecond)
+	time.Sleep(20 * time.Millisecond)
+	a.presenceJoin(p, "in:commons:yard:deeds", time.Now())
+	h.mu.Unlock()
+	time.Sleep(30 * time.Millisecond)
+	h.mu.Lock()
+	got := p.area
+	timer := p.joinTimer
+	h.mu.Unlock()
+	if got != "in:commons:yard:deeds" || timer != nil {
+		t.Fatalf("stale resurrection: %s timer=%v", got, timer)
+	}
+}
+
+func TestPresencePendingJoinSkipsStoppedOrReplacedPeer(t *testing.T) {
+	for _, mode := range []string{"close", "replace", "remove"} {
+		t.Run(mode, func(t *testing.T) {
+			h := newPresenceHub(nil, nil)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			p := &presencePeer{identity: presenceIdentity{ID: "alice", World: "world"}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 64), area: "village", clientJoined: true}
+			h.admit(p)
+			a := &Server{presence: h}
+			h.mu.Lock()
+			a.deferPresenceJoin(p, "commons", time.Hour)
+			p.pendingJoinPos = &presencePosition{X: 123}
+			switch mode {
+			case "close":
+				p.stop(websocket.StatusNormalClosure, "close")
+			case "replace":
+				h.admit(&presencePeer{identity: p.identity})
+			case "remove":
+				h.remove(p)
+			}
+			h.mu.Unlock()
+			time.Sleep(30 * time.Millisecond)
+			h.mu.Lock()
+			got := p.area
+			timer := p.joinTimer
+			pending := p.pendingJoin
+			pos := p.pendingJoinPos
+			h.mu.Unlock()
+			if got != "village" || timer != nil || pending != "" || pos != nil {
+				t.Fatalf("inactive peer joined: %s timer=%v", got, timer)
+			}
+		})
+	}
+}
+
+func TestPresenceDeferredRoomFullDoesNotLeaveOrJoin(t *testing.T) {
+	h := newPresenceHub(nil, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	p := &presencePeer{identity: presenceIdentity{ID: "alice", World: "world"}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 64), area: "village", clientJoined: true}
+	observer := &presencePeer{identity: presenceIdentity{ID: "observer", World: "world"}, ctx: ctx, queue: make(chan []byte, 64), area: "village"}
+	h.admit(p)
+	h.admit(observer)
+	for i := 0; i < int(h.config.GetMaxRoomPlayers()); i++ {
+		h.admit(&presencePeer{identity: presenceIdentity{ID: fmt.Sprint(i), World: "world"}, ctx: ctx, queue: make(chan []byte, 64), area: "commons"})
+	}
+	a := &Server{presence: h}
+	h.mu.Lock()
+	a.deferPresenceJoin(p, "commons", time.Millisecond)
+	h.mu.Unlock()
+	time.Sleep(30 * time.Millisecond)
+	h.mu.Lock()
+	area := p.area
+	code := p.closeCode
+	cancelled := p.ctx.Err() != nil
+	events := len(observer.queue)
+	h.mu.Unlock()
+	if area != "village" || code != websocket.StatusTryAgainLater || !cancelled || events != 0 {
+		t.Fatalf("room-full: area=%s code=%v cancelled=%v observer events=%d", area, code, cancelled, events)
+	}
+}
+
+func TestPresenceDeferredFirstSameRoomJoinReannouncesFights(t *testing.T) {
+	h, p, room, _, joined := coverFixture(t)
+	a := &Server{presence: h}
+	h.mu.Lock()
+	// All physical locations resolved, so this probe needs no store wake.
+	for y := -1; y <= 1; y++ {
+		for x := -1; x <= 1; x++ {
+			loc := fightLocation{world: p.identity.World, realm: room.key.Realm, cx: int32(x), cy: int32(y)}
+			key := room.key
+			key.CX = int32(x)
+			key.CY = int32(y)
+			h.fightLocations[loc] = fightLocationEpoch{key: key}
+			if x != 0 || y != 0 {
+				h.fightFailedWakes[key] = true
+			}
+		}
+	}
+	h.coverFightRoom(p, room)
+	h.mu.Unlock()
+	awaitJoin(t, joined)
+	h.mu.Lock()
+	p.clientJoined = false
+	a.deferPresenceJoin(p, p.area, time.Millisecond)
+	h.mu.Unlock()
+	awaitJoin(t, joined)
+	time.Sleep(30 * time.Millisecond)
+	h.mu.Lock()
+	first := p.clientJoined
+	view := p.fightRooms[room.handle] == room
+	h.mu.Unlock()
+	if !first || !view {
+		t.Fatalf("first join missing: joined=%v covered=%v", first, view)
+	}
+	select {
+	case <-joined:
+		t.Fatal("double fight join")
+	default:
+	}
+}
+
+func TestPresenceReplacingPendingAreaDiscardsItsPosition(t *testing.T) {
+	for _, replace := range []string{"same-pending", "deeds", "village"} {
+		t.Run(replace, func(t *testing.T) {
+			h := newPresenceHub(nil, nil)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			p := &presencePeer{identity: presenceIdentity{ID: "alice", World: "world"}, ctx: ctx, cancel: cancel, queue: make(chan []byte, 64), area: "village", clientJoined: true}
+			h.admit(p)
+			a := &Server{presence: h}
+			h.mu.Lock()
+			a.deferPresenceJoin(p, "commons", time.Hour)
+			p.pendingJoinPos = &presencePosition{X: 123, Y: 456}
+			area := replace
+			if replace == "same-pending" {
+				area = "commons"
+			}
+			if replace == "deeds" {
+				area = "in:commons:yard:deeds"
+			}
+			a.deferPresenceJoin(p, area, time.Hour)
+			kept := p.pendingJoinPos != nil
+			a.presenceJoin(p, area, time.Now())
+			got := p.pos
+			timer := p.joinTimer
+			h.mu.Unlock()
+			if replace == "same-pending" {
+				if !kept || got == nil || got.X != 123 {
+					t.Fatalf("duplicate destination discarded sample: %v", got)
+				}
+			} else if kept || got != nil {
+				t.Fatalf("replaced destination kept stale sample: %v", got)
+			}
+			if timer != nil {
+				t.Fatal("completed join retained timer")
+			}
+		})
+	}
+}
