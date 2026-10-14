@@ -6,7 +6,7 @@ import { mapChunkKeys } from '../src/game/wilds/map-data.ts';
 import { forgetWalked, markSeen, markWalked, seenAt, seenLandmarks, walkedChunks } from '../src/game/wilds/walked.ts';
 import { displayArea, setWildsLand, areaInfo } from '../src/content/world.ts';
 
-const FRONTIER = { minCx: -4, minCy: -8, maxCx: 4, maxCy: 0 };
+const FRONTIER = { minCx: -6, minCy: -8, maxCx: 4, maxCy: 7 };
 const S = 24;
 
 /** A chunk of one ground, a solid tree at local (1, 1), laid stone at (2, 2). */
@@ -27,19 +27,19 @@ const pixel = (p: { width: number; rgba: Uint8ClampedArray; originTx: number; or
   return [p.rgba[i], p.rgba[i + 1], p.rgba[i + 2], p.rgba[i + 3]];
 };
 
-test('the map frames what you know with a chunk round it, growing to the frontier and the glimpse past it', { skip: "T5: map bounds include town and lots" }, () => {
-  // The frontier and the Commons (fixed, cx -1..1, cy 1..2) south of the gate.
-  assert.deepEqual(mapBounds({ frontier: FRONTIER, glimpse: [] }), { ...FRONTIER, maxCy: 2 });
+test('the map frames what you know with a chunk round it, growing to the frontier and the glimpse past it', () => {
+  // The reach union already contains all town and lot chunks.
+  assert.deepEqual(mapBounds({ frontier: FRONTIER, glimpse: [] }), FRONTIER);
   const glimpse = [{ cx: -5, cy: -4, land: 'meadow', river: true }, { cx: 0, cy: -9, land: 'woods', river: false }];
-  assert.deepEqual(mapBounds({ frontier: FRONTIER, glimpse }), { minCx: -5, minCy: -9, maxCx: 4, maxCy: 2 });
-  // Fresh: the Tangle, the Whitequiet and the Commons (cx -1..1, cy -5..2) and a chunk round them, never south of the Commons.
-  assert.deepEqual(mapFrame(input({ glimpse })), { minCx: -2, minCy: -6, maxCx: 2, maxCy: 2 });
+  assert.deepEqual(mapBounds({ frontier: FRONTIER, glimpse }), { minCx: -6, minCy: -9, maxCx: 4, maxCy: 7 });
+  // Fresh: all four footprints plus a chunk around them.
+  assert.deepEqual(mapFrame(input({ glimpse })), { minCx: -4, minCy: -6, maxCx: 2, maxCy: 5 });
   // Walked out to the west edge: the frame reaches the glimpse past it.
   const west = input({ glimpse, chunks: [chunk(-4, -4, TERRAIN.grass_c)], hero: { tx: -4 * S + 5, ty: -4 * S + 5 } });
-  assert.deepEqual(mapFrame(west), { minCx: -5, minCy: -6, maxCx: 2, maxCy: 2 });
+  assert.deepEqual(mapFrame(west), { minCx: -5, minCy: -6, maxCx: 2, maxCy: 5 });
   const p = mapPicture(west);
   assert.equal(p.width, 8 * S);
-  assert.equal(p.height, 9 * S);
+  assert.equal(p.height, 12 * S);
   assert.deepEqual([p.originTx, p.originTy], [-5 * S, -6 * S]);
   // Past the drift: a pale wash, see-through; and hatching where the Wend runs on.
   const wash = pixel(p, -5 * S + 3, -4 * S + 4);
@@ -50,7 +50,7 @@ test('the map frames what you know with a chunk round it, growing to the frontie
   // Nothing at all where neither the frontier nor a glimpse reaches.
   assert.equal(pixel(p, -5 * S + 1, -6 * S + 1)[3], 0);
   // Everything walked: the whole frontier and its glimpse.
-  const everywhere = input({ glimpse, chunks: [chunk(-4, -8, TERRAIN.grass_b), chunk(4, 0, TERRAIN.grass_b)] });
+  const everywhere = input({ glimpse, chunks: [chunk(-6, 2, TERRAIN.grass_b), chunk(4, -8, TERRAIN.grass_b), chunk(1, 7, TERRAIN.grass_b)] });
   assert.deepEqual(mapFrame(everywhere), mapBounds(everywhere));
 });
 

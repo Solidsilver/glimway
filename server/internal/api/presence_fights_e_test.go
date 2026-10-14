@@ -12,6 +12,7 @@ import (
 	"glimway/server/internal/frontier"
 	chunkwire "glimway/server/internal/gen/glimway/v1"
 	wire "glimway/server/internal/gen/glimway/v2"
+	"glimway/server/internal/location"
 	"glimway/server/internal/rules"
 	"google.golang.org/protobuf/proto"
 )
@@ -57,7 +58,7 @@ func TestFightEveryCampChunkInThe3x3Wakes(t *testing.T) {
 	want := 0
 	for dy := -1; dy <= 1; dy++ {
 		for dx := -1; dx <= 1; dx++ {
-			if frontier.Inside(p.identity.World, dx, dy) {
+			if frontier.Inside(p.identity.World, dx, dy) && location.SourceOf(dx, dy).Kind == location.SourceGenerated {
 				want++
 			}
 		}

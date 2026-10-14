@@ -1,5 +1,5 @@
 {
-  "comment": "One town \u00a71 world-tile contract. Shared Go/TS vectors; positions enumerate content and served layout targets. T2 expands the generated frontier; fixed plots exist now as a T4 placeholder.",
+  "comment": "One town \u00a71 world-tile contract. Shared Go/TS vectors; positions enumerate content and served layout targets. The expanded generated frontier surrounds fixed places; fixed plots exist now as a T4 placeholder.",
   "at": [
     {
       "name": "north unsafe",
@@ -790,28 +790,28 @@
         -4,
         2
       ],
-      "onGrid": false
+      "onGrid": true
     },
     {
       "chunk": [
         2,
         2
       ],
-      "onGrid": false
+      "onGrid": true
     },
     {
       "chunk": [
         0,
         4
       ],
-      "onGrid": false
+      "onGrid": true
     },
     {
       "chunk": [
         -3,
         5
       ],
-      "onGrid": false
+      "onGrid": true
     },
     {
       "chunk": [
@@ -2038,7 +2038,7 @@
           -32769,
           -32768
         ],
-        "onGrid": false
+        "onGrid": true
       }
     ],
     "anchors": [

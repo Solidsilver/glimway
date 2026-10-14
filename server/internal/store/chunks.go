@@ -289,7 +289,19 @@ func (c *Chunks) make(ctx context.Context, tx *sql.Tx, world string, e *contract
 		for dy := int32(-1); dy <= 1; dy++ {
 			for dx := int32(-1); dx <= 1; dx++ {
 				nx, ny := x+int(dx), y+int(dy)
-				if dx == 0 && dy == 0 || wilds.EpochKindAt(nx, ny) != EpochStill || !frontier.Inside(world, nx, ny) {
+				if dx == 0 && dy == 0 {
+					continue
+				}
+				src := location.SourceOf(nx, ny)
+				if src.Kind == location.SourceFixed {
+					m, err := c.Chunk(ctx, tx, world, chunks.FixedEpoch(src.Layout, src.Revision), 0, int32(nx), int32(ny))
+					if err != nil {
+						return nil, fmt.Errorf("fixed kept side of %d,%d: %w", x, y, err)
+					}
+					kept = append(kept, chunks.Kept{CX: nx, CY: ny, Chunk: m})
+					continue
+				}
+				if wilds.EpochKindAt(nx, ny) != EpochStill || !frontier.Inside(world, nx, ny) {
 					continue
 				}
 				if still == nil {

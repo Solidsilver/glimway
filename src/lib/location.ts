@@ -124,7 +124,7 @@ export function sourceOf(cx: number, cy: number, places: Places = PLACES): Sourc
 
 /** An outdoor chunk exists: generated land may be made there (the frontier), or a fixed footprint covers it. */
 export function onGrid(cx: number, cy: number, places: Places = PLACES): boolean {
-  return insideFrontier(cx, cy) || fixedAt(cx, cy, places) !== undefined;
+  return insideFrontier(cx, cy, places.fixed) || fixedAt(cx, cy, places) !== undefined;
 }
 
 /** "<place>:<anchor>" ("hearthwick:arch", "hearthwick:lot:3") as its space and its tile's centre in world pixels. */

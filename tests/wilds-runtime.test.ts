@@ -59,10 +59,10 @@ test('at the frontier the window’s far side is the drift: never fetched, never
   assert.equal(corner.drift.length, 5);
   assert.equal(corner.fetch.length, 9);
   assert.ok(corner.drift.includes('-5,-9') && corner.drift.includes('-3,-9') && corner.drift.includes('-5,-7'));
-  // The gate's chunk: the village lies south (cy 1 is outside the frontier).
+  // The Tangle gate now opens into fixed town ground inside the frontier.
   const gate = planWindow(0, 0, inside);
-  assert.deepEqual(gate.drift.sort(), ['-1,1', '0,1', '1,1']);
-  assert.equal(gate.attach.length, 6);
+  assert.deepEqual(gate.drift, []);
+  assert.equal(gate.attach.length, 9);
 });
 
 test('a chunk is painted once every neighbour inside the frontier is known', () => {
@@ -213,10 +213,10 @@ test('walked chunks and seen landmarks are kept per wick on the device', () => {
   assert.deepEqual(walkedChunks('wick-b'), [], 'a new wick starts empty');
 });
 
-test('the frontier is cx -4..4, cy -8..0 (the client’s twin of frontier.Inside)', () => {
+test('the frontier reach union spans cx -6..4, cy -8..7', () => {
   let n = 0;
-  for (let cy = -10; cy <= 2; cy++) for (let cx = -6; cx <= 6; cx++) if (inside(cx, cy)) n++;
-  assert.equal(n, 81);
+  for (let cy = -10; cy <= 9; cy++) for (let cx = -8; cx <= 6; cx++) if (inside(cx, cy)) n++;
+  assert.equal(n, 161);
 });
 
 test('the open map is one area but three places on the HUD: the Tangle, the Whitequiet, beyond', async () => {

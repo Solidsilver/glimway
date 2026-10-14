@@ -307,7 +307,7 @@ func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, cx, cy 
 		var at []chunks.ChunkXY
 		for y := cy - NearRadius - glimpseReach; y <= cy+NearRadius+glimpseReach; y++ {
 			for x := cx - NearRadius - glimpseReach; x <= cx+NearRadius+glimpseReach; x++ {
-				if frontier.Inside(s.WorldID, x, y) || y > int(content.WildsRules.GetFrontier().GetSouthLimit()) || max(x0-x, x-x1, y0-y, y-y1) > glimpseReach {
+				if frontier.Inside(s.WorldID, x, y) || y > int(content.WildsRules.GetFrontier().GetSouthLimit()) || wilds.NearestFootprint(x, y) > int(content.WildsRules.GetFrontier().GetReach())+glimpseReach {
 					continue
 				}
 				at = append(at, chunks.ChunkXY{CX: int32(x), CY: int32(y)})
@@ -398,7 +398,7 @@ func (a *Server) findPlace(ctx context.Context, tx *sql.Tx, world string, e *con
 	for dy := -1; dy <= 1; dy++ {
 		for dx := -1; dx <= 1; dx++ {
 			x, y := cx+dx, cy+dy
-			if !frontier.Inside(world, x, y) || wilds.EpochKindAt(x, y) != e.Kind {
+			if !frontier.Inside(world, x, y) || location.SourceOf(x, y).Kind != location.SourceGenerated || wilds.EpochKindAt(x, y) != e.Kind {
 				continue
 			}
 			m, err := a.Config.Chunks.Chunk(ctx, tx, world, e.Id, 0, int32(x), int32(y))

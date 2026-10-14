@@ -15,6 +15,7 @@
  */
 import { TERRAIN } from '../tile.ts';
 import { loadWilds } from './data.ts';
+import { frontierRect, insideFrontier } from './coords.ts';
 import { PLACES, fixedChunks } from '../places.ts';
 import { anchor } from '../location.ts';
 
@@ -145,7 +146,7 @@ const darker = (c: RGB, k: number): RGB => [Math.round(c[0] * k), Math.round(c[1
 
 type Rect = { minCx: number; minCy: number; maxCx: number; maxCy: number };
 
-/** The fixed footprints' chunks (always on the map: the Commons, south of the gate). */
+/** The fixed footprints' chunks (always on the map: Hearthwick and the lots). */
 export function fixedRects(): Rect[] {
   return PLACES.fixed.map((p) => {
     const c = fixedChunks(p);
@@ -156,7 +157,27 @@ export function fixedRects(): Rect[] {
 /** On the map's grid: inside the frontier or on a fixed footprint. */
 export function onMapGrid(frontier: Rect, cx: number, cy: number): boolean {
   const inRect = (r: Rect) => cx >= r.minCx && cx <= r.maxCx && cy >= r.minCy && cy <= r.maxCy;
-  return inRect(frontier) || fixedRects().some(inRect);
+  return (inRect(frontier) && insideFrontier(cx, cy)) || fixedRects().some(inRect);
+}
+
+/** Tile segments along the actual reach union, including its stepped corners. */
+export function mapEdges(frontier: Rect): { x0: number; y0: number; x1: number; y1: number }[] {
+  const S = loadWilds().chunkSize;
+  const edges = [];
+  const bounds = frontierRect();
+  frontier = {
+    minCx: Math.max(frontier.minCx, bounds.minCx), minCy: Math.max(frontier.minCy, bounds.minCy),
+    maxCx: Math.min(frontier.maxCx, bounds.maxCx), maxCy: Math.min(frontier.maxCy, bounds.maxCy),
+  };
+  for (let cy = frontier.minCy; cy <= frontier.maxCy; cy++) for (let cx = frontier.minCx; cx <= frontier.maxCx; cx++) {
+    if (!onMapGrid(frontier, cx, cy)) continue;
+    const x = cx * S, y = cy * S;
+    if (!onMapGrid(frontier, cx - 1, cy)) edges.push({ x0: x, y0: y, x1: x, y1: y + S });
+    if (!onMapGrid(frontier, cx + 1, cy)) edges.push({ x0: x + S, y0: y, x1: x + S, y1: y + S });
+    if (!onMapGrid(frontier, cx, cy - 1)) edges.push({ x0: x, y0: y, x1: x + S, y1: y });
+    if (!onMapGrid(frontier, cx, cy + 1)) edges.push({ x0: x, y0: y + S, x1: x + S, y1: y + S });
+  }
+  return edges;
 }
 
 /** Everything the map could show: the frontier, the fixed footprints and the glimpse past them. */
@@ -445,27 +466,23 @@ export function mapPicture(input: MapInput): MapPicture {
   // Parchment for the frontier's unwalked land, a faint grid at chunk edges.
   for (let cy = f.minCy; cy <= f.maxCy; cy++)
     for (let cx = f.minCx; cx <= f.maxCx; cx++)
-      for (let ly = 0; ly < S; ly++)
+      if (inside(cx, cy)) for (let ly = 0; ly < S; ly++)
         for (let lx = 0; lx < S; lx++) put((cx - b.minCx) * S + lx, (cy - b.minCy) * S + ly, lx === 0 || ly === 0 ? MAP_COLOURS.grid : MAP_COLOURS.parchment);
   // Past the drift: a pale wash of the land the glimpse names, hatched where the Wend runs on.
   for (const g of input.glimpse) if (!inside(g.cx, g.cy)) blit(glimpseRaster(g.land, g.river, g.cx, g.cy), g.cx, g.cy);
   // Walked land, in its own colours.
   for (const c of [...input.chunks, ...(input.fixed ?? [])]) if (inside(c.cx, c.cy)) blit(chunkRaster(c), c.cx, c.cy);
   // The frontier's edge: a dashed line in the drift's colour.
-  const x0 = (f.minCx - b.minCx) * S;
-  const y0 = (f.minCy - b.minCy) * S;
-  const x1 = (f.maxCx - b.minCx + 1) * S - 1;
-  const y1 = (f.maxCy - b.minCy + 1) * S - 1;
-  for (let x = x0; x <= x1; x++)
-    if (x % 4 < 2) {
-      put(x, y0, MAP_COLOURS.drift);
-      put(x, y1, MAP_COLOURS.drift);
+  for (const e of mapEdges(f)) {
+    const vertical = e.x0 === e.x1;
+    for (let n = 0; n < S; n++) if (n % 4 < 2) {
+      const tx = e.x0 + (vertical ? 0 : n), ty = e.y0 + (vertical ? n : 0);
+      // Paint on the interior side of the boundary.
+      const x = vertical && !inside(Math.floor(tx / S), Math.floor(ty / S)) ? tx - 1 : tx;
+      const y = !vertical && !inside(Math.floor(tx / S), Math.floor(ty / S)) ? ty - 1 : ty;
+      put(x - originTx, y - originTy, MAP_COLOURS.drift);
     }
-  for (let y = y0; y <= y1; y++)
-    if (y % 4 < 2) {
-      put(x0, y, MAP_COLOURS.drift);
-      put(x1, y, MAP_COLOURS.drift);
-    }
+  }
 
   const marks = mapMarks(input);
   for (const t of marks.wayTiles) put(t.x - originTx, t.y - originTy, MAP_COLOURS.way);

@@ -19,7 +19,7 @@ func TestOutdoorsPresenceV4Grammar(t *testing.T) {
 			t.Error("refused", room)
 		}
 	}
-	for _, room := range []string{"wilds", "wilds:0:0", "outdoors", "outdoors:00:0", "outdoors:-0:0", "outdoors:+1:0", "outdoors:2:4", "outdoors:5:0", "outdoors:0:0:0", "commons"} {
+	for _, room := range []string{"wilds", "wilds:0:0", "outdoors", "outdoors:00:0", "outdoors:-0:0", "outdoors:+1:0", "outdoors:5:4", "outdoors:5:0", "outdoors:0:0:0", "commons"} {
 		if validPresenceRoom(room) {
 			t.Error("accepted", room)
 		}

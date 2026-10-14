@@ -1,5 +1,7 @@
 package wilds
 
+import "glimway/content"
+
 // Pass 3, the Wend (open-map.md 2.2, decisions 2, 12 and 17). One river per
 // wick: a seeded polyline that enters the 0.8 frontier from one of
 // river.enters (north or west), bends through the west, and leaves at the
@@ -26,13 +28,14 @@ type river struct {
 // riverBounds: the furthest east the river's centre may run at row y.
 type riverBounds struct {
 	stillTop, eastStill, eastNorth int
+	fixedTop, eastFixed            int
 }
 
 func newRiverBounds() riverBounds {
 	S := chunkSize()
 	data := contentRules().GetRiver()
 	halfMax := (int(data.GetMaxWidth()) + 1) / 2
-	b := riverBounds{stillTop: 1 << 30, eastStill: 1 << 30, eastNorth: 1 << 30}
+	b := riverBounds{stillTop: 1 << 30, eastStill: 1 << 30, eastNorth: 1 << 30, fixedTop: 1 << 30, eastFixed: 1 << 30}
 	for _, p := range contentRules().Places {
 		x0, y0 := int(p.GetCx())*S, int(p.GetCy())*S
 		if p.GetEpochKind() == EpochStill {
@@ -42,12 +45,19 @@ func newRiverBounds() riverBounds {
 			b.eastNorth = min(b.eastNorth, x0+S-1-riverMargin-halfMax)
 		}
 	}
+	for _, p := range content.PlacesRules.GetFixed() {
+		b.fixedTop = min(b.fixedTop, int(p.GetCy())*S)
+		b.eastFixed = min(b.eastFixed, int(p.GetCx())*S-riverMargin-halfMax)
+	}
 	b.eastNorth = min(b.eastNorth, b.eastStill+S) // never further east than the west column
 	return b
 }
 
 // east is the furthest east (tiles) the centre may run at row y.
 func (b riverBounds) east(y int) int {
+	if y >= b.fixedTop-riverMargin-chunkSize()/2 {
+		return min(b.eastFixed, b.eastStill)
+	}
 	if y >= b.stillTop-riverMargin-chunkSize()/2 {
 		return b.eastStill
 	}
@@ -61,6 +71,13 @@ func newRiver(w *world) *river {
 	minCx, minCy, _, maxCy := frontierChunks()
 	X0, Y0, Y1 := minCx*S, minCy*S, (maxCy+1)*S-1
 	bounds := newRiverBounds()
+	// The northern reach is narrower than the town/lots reach. Enter through
+	// its actual west edge, while leaving two chunks west of the lots.
+	northWest := int(contentRules().Places[0].GetCx()) - int(contentRules().GetFrontier().GetReach())
+	for _, p := range contentRules().Places {
+		northWest = min(northWest, int(p.GetCx())-int(contentRules().GetFrontier().GetReach()))
+	}
+	entryX := northWest * S
 	at := func(x, y int) pt { return tileCentre(x, y) }
 
 	var start, second pt
@@ -68,14 +85,14 @@ func newRiver(w *world) *river {
 	switch enters[rng.NextInt(len(enters))] {
 	case "west":
 		ys := rng.Between(Y0+S, bounds.stillTop-2*S)
-		start = at(X0-3*S, ys)
-		second = at(X0+S/2, clamp(ys+rng.Spread(S/2), Y0+S/2, bounds.stillTop-2*S))
+		start = at(entryX-3*S, ys)
+		second = at(entryX+S/2, clamp(ys+rng.Spread(S/2), Y0+S/2, bounds.stillTop-2*S))
 	default: // north (an east entry would cross the road: read as north)
-		xs := rng.Between(X0+S, bounds.eastNorth-8)
+		xs := rng.Between(entryX+S, bounds.eastNorth-8)
 		start = at(xs, Y0-3*S)
-		second = at(clamp(xs+rng.Spread(S/2), X0+S, bounds.eastNorth-8), Y0+S/2)
+		second = at(clamp(xs+rng.Spread(S/2), entryX+S, bounds.eastNorth-8), Y0+S/2)
 	}
-	exitEast := min((int(data.GetLeavesMaxCx())+1)*S-1, bounds.eastStill) - 8
+	exitEast := min((int(data.GetLeavesMaxCx())+1)*S-1, bounds.east(Y1)) - 8
 	xx := rng.Between(X0+S, max(exitEast, X0+S))
 	exit := at(xx, Y1)
 	end := at(xx+rng.Spread(S/2), Y1+3*S)
@@ -93,8 +110,12 @@ func newRiver(w *world) *river {
 			if e := bounds.east(y); x > e {
 				p.x = tileCentre(e, y).x
 			}
-			if inside && x < west {
-				p.x = tileCentre(west, y).x
+			westAt := west
+			if y < bounds.fixedTop-int(contentRules().GetFrontier().GetReach())*S {
+				westAt = max(westAt, entryX+S/2+(hi+1)/2)
+			}
+			if inside && x < westAt {
+				p.x = tileCentre(westAt, y).x
 			}
 			return p
 		}

@@ -1,3 +1,4 @@
+import { insideFrontier } from '../../lib/wilds/coords.ts';
 /**
  * The Wilds store: the client's picture of the open map, keyed by chunk
  * (docs/design/open-map.md 2.4, 2.5), shared by the scene and the panels.
@@ -59,7 +60,7 @@ export interface WildsEpoch {
   endsAt: number | null;
 }
 
-/** The frontier the server enforces, as an inclusive chunk rectangle (0.8; 0.9 adds held chunks). */
+/** The bounding rectangle of the frontier; content reach determines membership. */
 export interface FrontierRect {
   minCx: number;
   minCy: number;
@@ -208,7 +209,7 @@ export function wildsFrontier(): FrontierRect | null {
 /** Inside the frontier the server named (the client treats everything else as solid). */
 export function insideNamedFrontier(cx: number, cy: number): boolean {
   const f = view?.frontier;
-  return !!f && cx >= f.minCx && cx <= f.maxCx && cy >= f.minCy && cy <= f.maxCy;
+  return !!f && insideFrontier(cx, cy) && cx >= f.minCx && cx <= f.maxCx && cy >= f.minCy && cy <= f.maxCy;
 }
 
 /** When the wick ends (Unix seconds), or null before a read. */

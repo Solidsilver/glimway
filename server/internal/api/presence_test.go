@@ -605,7 +605,7 @@ func TestPresenceMessageValidation(t *testing.T) {
 		{"region-room", map[string]any{"type": "join", "area": "wilds:inner-1:0:0"}, false},
 		{"bare-wilds", map[string]any{"type": "join", "area": "outdoors"}, false},
 		{"beyond-frontier", map[string]any{"type": "join", "area": "outdoors:5:0"}, false},
-		{"south-of-the-gate", map[string]any{"type": "join", "area": "outdoors:2:4"}, false},
+		{"south-of-the-gate", map[string]any{"type": "join", "area": "outdoors:5:4"}, false},
 		{"chunk-canonical", map[string]any{"type": "join", "area": "outdoors:00:-1"}, false},
 		{"position-without-room", positionMessage(0), false},
 		{"position-bounds", positionMessage(1e7), true},
@@ -826,9 +826,9 @@ func TestPresenceWildsPositionsStayInsideTheFrontier(t *testing.T) {
 	const chunk = 24 * 16
 	for name, p := range map[string][2]float64{
 		"east":  {5*chunk + 8, -chunk + 8},
-		"west":  {-4*chunk - 8, -chunk + 8},
+		"west":  {-6*chunk - 8, -chunk + 8},
 		"north": {8, -8*chunk - 8},
-		"south": {2*chunk + 8, 4*chunk + 8},
+		"south": {2*chunk + 8, 8*chunk + 8},
 	} {
 		a.send(at(p[0], p[1]))
 		select {

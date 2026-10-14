@@ -34,6 +34,7 @@ import {
   mapFrame,
   mapMarks,
   onMapGrid,
+  mapEdges,
   shrinkRaster,
   type MapChunk,
   type MapInput,
@@ -48,7 +49,7 @@ export type MakeImage = (rgba: Uint8ClampedArray, w: number, h: number) => Canva
 /** The canvas calls the renderer makes (a CanvasRenderingContext2D, or a test's recorder). */
 export type MapCtx = Pick<
   CanvasRenderingContext2D,
-  'setTransform' | 'clearRect' | 'fillRect' | 'drawImage' | 'strokeRect' | 'setLineDash' | 'fillStyle' | 'strokeStyle' | 'lineWidth' | 'globalAlpha' | 'imageSmoothingEnabled'
+  'beginPath' | 'moveTo' | 'lineTo' | 'stroke' | 'setTransform' | 'clearRect' | 'fillRect' | 'drawImage' | 'strokeRect' | 'setLineDash' | 'fillStyle' | 'strokeStyle' | 'lineWidth' | 'globalAlpha' | 'imageSmoothingEnabled'
 >
 
 /** Chunk rasters kept at most (24×24 RGBA each: about 2.25 MiB of pixels in all). */
@@ -230,7 +231,7 @@ export class MapRenderer {
     // Past the drift: the glimpse's wash (hatched for the Wend, close in).
     for (const g of input.glimpse) {
       if (g.cx < vc.minCx || g.cx > vc.maxCx || g.cy < vc.minCy || g.cy > vc.maxCy) continue
-      if (g.cx >= f.minCx && g.cx <= f.maxCx && g.cy >= f.minCy && g.cy <= f.maxCy) continue
+      if (onMapGrid(f, g.cx, g.cy)) continue
       const x0 = X(g.cx * S)
       const y0 = Y(g.cy * S)
       const w = X((g.cx + 1) * S) - x0
@@ -248,14 +249,17 @@ export class MapRenderer {
     const fx1 = Math.min(f.maxCx, vc.maxCx)
     const fy0 = Math.max(f.minCy, vc.minCy)
     const fy1 = Math.min(f.maxCy, vc.maxCy)
-    if (fx0 <= fx1 && fy0 <= fy1) {
+    ctx.fillStyle = css(MAP_COLOURS.parchment)
+    for (let cy = fy0; cy <= fy1; cy++) for (let cx = fx0; cx <= fx1; cx++) {
+      if (!onMapGrid(f, cx, cy)) continue
+      const x = X(cx * S), y = Y(cy * S), w = X((cx + 1) * S) - x, h = Y((cy + 1) * S) - y
       ctx.fillStyle = css(MAP_COLOURS.parchment)
-      ctx.fillRect(X(fx0 * S), Y(fy0 * S), X((fx1 + 1) * S) - X(fx0 * S), Y((fy1 + 1) * S) - Y(fy0 * S))
+      ctx.fillRect(x, y, w, h)
       if (chunkCss >= 12) {
         ctx.fillStyle = css(MAP_COLOURS.grid)
         const line = Math.max(1, Math.round(r))
-        for (let cx = fx0; cx <= fx1; cx++) ctx.fillRect(X(cx * S), Y(fy0 * S), line, Y((fy1 + 1) * S) - Y(fy0 * S))
-        for (let cy = fy0; cy <= fy1; cy++) ctx.fillRect(X(fx0 * S), Y(cy * S), X((fx1 + 1) * S) - X(fx0 * S), line)
+        ctx.fillRect(x, y, line, h)
+        ctx.fillRect(x, y, w, line)
       }
     }
 
@@ -313,8 +317,12 @@ export class MapRenderer {
     ctx.strokeStyle = css(MAP_COLOURS.drift)
     ctx.lineWidth = Math.max(1, Math.round(2 * r))
     ctx.setLineDash([6 * r, 6 * r])
-    const half = ctx.lineWidth / 2
-    ctx.strokeRect(X(f.minCx * S) + half, Y(f.minCy * S) + half, X((f.maxCx + 1) * S) - X(f.minCx * S) - 2 * half, Y((f.maxCy + 1) * S) - Y(f.minCy * S) - 2 * half)
+    ctx.beginPath()
+    for (const e of mapEdges(f)) {
+      ctx.moveTo(X(e.x0), Y(e.y0))
+      ctx.lineTo(X(e.x1), Y(e.y1))
+    }
+    ctx.stroke()
     ctx.setLineDash([])
 
     // Ways along their tiles, then the places' crosses, never smaller than a pixel or two.

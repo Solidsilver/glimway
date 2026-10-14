@@ -202,7 +202,7 @@ test('the open map contract 8 shapes decode through the facade (open-map.md 2.4,
   fake.responses.set('/api/wilds/near/-2/-4', [get('glimway.v1.WildsNearResult', 'valid-near')]);
   const near = await fake.api.near(-2, -4);
   assert.deepEqual([near.still!.kind, near.wick!.kind, near.center!.cx, near.center!.cy, near.radius], ['still', 'wick', -2, -4, 2]);
-  assert.deepEqual(near.frontier!.rect, create(wilds.WildsChunkRectSchema, { minCx: -4, minCy: -8, maxCx: 4, maxCy: 0 }));
+  assert.deepEqual(near.frontier!.rect, create(wilds.WildsChunkRectSchema, { minCx: -6, minCy: -8, maxCx: 4, maxCy: 7 }));
   assert.equal(near.ground[0]!.changes!.changes[1]!.change, 'stone');
   assert.deepEqual([near.glimpse[0]!.land, near.glimpse[0]!.river, near.ways[0]!.name], ['meadow', true, "Fixture's way"]);
   // A window answered for another chunk is refused.

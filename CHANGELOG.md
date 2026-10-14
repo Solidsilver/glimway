@@ -15,6 +15,7 @@ the game can show the first part as "What's new":
 
 ### For players
 
+- Paths around Hearthwick now reach the southern outskirts and cross the Wend west of the homesteads.
 - Hearthwick brings the village and Carters’ Apron together, with roads north, east, south and west.
 
 ## [0.10.0] - 2026-10-14

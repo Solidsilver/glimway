@@ -287,7 +287,7 @@ func TestServerFirstWireFixtures(t *testing.T) {
 	add("valid-near", &contract.WildsNearResult{
 		Still:    &contract.WildsEpoch{Id: "still-epoch", WorldSeed: "world-seed", Kind: "still", GeneratorVersion: 3, Season: "0", StartsAt: 1791300000},
 		Wick:     &contract.WildsEpoch{Id: "wick-epoch", WorldSeed: "world-seed", Kind: "wick", GeneratorVersion: 3, Season: "t:1791300000:1791500000", StartsAt: 1791300000, EndsAt: wrapperspb.Double(1791500000)},
-		Frontier: &contract.WildsFrontier{Rect: &contract.WildsChunkRect{MinCx: -4, MinCy: -8, MaxCx: 4, MaxCy: 0}},
+		Frontier: &contract.WildsFrontier{Rect: &contract.WildsChunkRect{MinCx: -6, MinCy: -8, MaxCx: 4, MaxCy: 7}},
 		Center:   key(-2, -4), Radius: 2,
 		Entities: []*contract.WildsEntityState{{Id: "node:-2:-4:0", Epoch: "wick-epoch", Cycle: 1, State: "harvested", AvailableAt: 1791400020, By: wrapperspb.String("fixture-account"), At: wrapperspb.Double(1791400000)}}, PersonalClaims: []*contract.WildsPersonalClaim{{EntityId: "chest:-2:-4:0", At: 1791400000}},
 		Discoveries: []*contract.WildsDiscovery{{EntityId: "place:-1:-2", DiscovererId: "fixture-account", DisplayName: "Fixture", At: 1791400000}},

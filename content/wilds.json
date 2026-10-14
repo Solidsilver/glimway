@@ -1003,7 +1003,7 @@
   ],
   "frontier": {
     "reach": 3,
-    "southLimit": 0
+    "southLimit": 7
   },
   "paths": {
     "clearTools": [

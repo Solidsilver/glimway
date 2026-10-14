@@ -9857,10 +9857,10 @@
       },
       "frontier": {
         "rect": {
-          "minCx": -4,
+          "minCx": -6,
           "minCy": -8,
           "maxCx": 4,
-          "maxCy": 0
+          "maxCy": 7
         }
       },
       "center": {
