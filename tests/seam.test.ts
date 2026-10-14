@@ -66,6 +66,19 @@ class FakeObject {
 Phaser.Physics = { Arcade: { Image: class extends FakeObject { constructor(_s: unknown, x: number, y: number) { super(null, x, y, { key: 'px' }, 'Body'); } }, StaticBody: class { enable = true; } } };
 Phaser.BlendModes = { ADD: 1 };
 
+// Phaser is a stub here, so this stands in for Phaser.GameObjects.Text: sign-labels.ts
+// rasterizes a label through scene.make.text and reads its canvas and displayed size.
+class FakeText {
+  static n = 0;
+  canvas = { width: 12, height: 8 };
+  width = 12;
+  height = 8;
+  texture = { key: `fake-text-${FakeText.n++}` };
+  constructor(_scene?: unknown, _x?: number, _y?: number, _text?: string, _style?: unknown) {}
+  destroy() {}
+}
+Object.assign(Phaser, { GameObjects: { Text: FakeText } });
+
 const { FixedChunk } = await import('../src/game/wilds/fixed-chunk.ts');
 const { footprint, forgetFixed, fixedSolidAt, fixedGroundAt, fixedStand, anchorTile, commonsLane, chunkOfTile, objectOut } = await import('../src/game/wilds/fixed.ts');
 const { outdoorStandAt, outdoorSolidAt, gridBounds, waitingFixedAt } = await import('../src/game/wilds/wilds-world.ts');
@@ -99,7 +112,7 @@ class FakeScene {
   textures = {
     added: [] as string[],
     exists: (_key?: string) => true,
-    get: () => ({ customData: { density: 0 }, has: () => true, get: () => ({ height: 32, width: 32 }) }),
+    get: () => ({ customData: { density: 0, w: 7, resolution: 1 }, has: () => true, get: () => ({ height: 32, width: 32 }) }),
     addCanvas: (key: string) => {
       this.textures.added.push(key);
       return { customData: {} };
@@ -145,6 +158,7 @@ class FakeScene {
       const o = new FakeObject(this, c.x, c.y, { key: c.key });
       return add ? this.put(o) : o;
     },
+    text: (c: { x?: number; y?: number; text?: string; style?: unknown }) => new FakeText(this, c.x ?? 0, c.y ?? 0, c.text, c.style),
   };
   private put(o: FakeObject): FakeObject {
     this.children.list.push(o);
@@ -303,6 +317,105 @@ test('the lane’s gate signs, shelves and hame come and go with the chunk that 
   assert.deepEqual(count(), [objects, tweens], 'a redraw replaces, never adds');
   for (const k of keys) art.detachChunk(k);
   assert.deepEqual(count(), [0, 0]);
+});
+
+test('a chunk sign label is rasterized once and drawn from cache on re-attach', () => {
+  serveFixtureCommons();
+  const scene = new FakeScene();
+  // Canvas textures live in the texture manager: track them by key so a
+  // re-attach finds its cached entry instead of rasterizing again.
+  const canvases = new Map<string, { customData: Record<string, unknown> }>();
+  Object.assign(scene.textures, {
+    exists: (key?: string) => !!key && canvases.has(key),
+    get: (key: string) => canvases.get(key) ?? { customData: {} },
+    addCanvas: (key: string) => {
+      const t = { customData: {} as Record<string, unknown> };
+      canvases.set(key, t);
+      scene.textures.added.push(key);
+      return t;
+    },
+  });
+  // signLabel rasterizes through a (stubbed) Phaser Text and clones its canvas.
+  const originalDocument = globalThis.document;
+  globalThis.document = {
+    createElement: () => ({ width: 0, height: 0, getContext: () => ({ drawImage() {} }) }),
+  } as unknown as Document;
+  try {
+    const lane = commonsLane()!;
+    const home = {
+      scene,
+      deps: { reducedMotion: false, solidGroup: scene.solids, session: { state: { flags: [] } } },
+      commons: lane,
+      homes: { gateInfo: () => null, status: 'guest', myGate: null },
+    };
+    const art = new HomesteadArt(home as never);
+    const keys = [...new Set(lane.gates.map((g) => g.chunk))];
+
+    assert.deepEqual(scene.textures.added, [], 'nothing drawn before a chunk attaches');
+    for (const k of keys) for (const step of art.attachChunk(k)) step();
+    const first = [...scene.textures.added];
+    assert.ok(first.length > 0, 'gate sign labels rasterized on attach');
+
+    for (const k of keys) art.detachChunk(k);
+    assert.deepEqual(scene.textures.added, first, 'detach keeps cached label textures');
+
+    for (const k of keys) for (const step of art.attachChunk(k)) step();
+    assert.deepEqual(scene.textures.added, first, 're-attach draws from cache, no new texture');
+  } finally {
+    globalThis.document = originalDocument;
+  }
+});
+
+test('a label drawn before its font loads is not cached; a later attach caches it', () => {
+  serveFixtureCommons();
+  const scene = new FakeScene();
+  const canvases = new Map<string, { customData: Record<string, unknown> }>();
+  Object.assign(scene.textures, {
+    exists: (key?: string) => !!key && canvases.has(key),
+    get: (key: string) => canvases.get(key) ?? { customData: {} },
+    addCanvas: (key: string) => {
+      const t = { customData: {} as Record<string, unknown> };
+      canvases.set(key, t);
+      scene.textures.added.push(key);
+      return t;
+    },
+  });
+  let fontReady = false;
+  const originalDocument = globalThis.document;
+  globalThis.document = {
+    createElement: () => ({ width: 0, height: 0, getContext: () => ({ drawImage() {} }) }),
+    fonts: { check: () => fontReady },
+  } as unknown as Document;
+  try {
+    const lane = commonsLane()!;
+    const home = {
+      scene,
+      deps: { reducedMotion: false, solidGroup: scene.solids, session: { state: { flags: [] } } },
+      commons: lane,
+      homes: { gateInfo: () => null, status: 'guest', myGate: null },
+    };
+    const art = new HomesteadArt(home as never);
+    const keys = [...new Set(lane.gates.map((g) => g.chunk))];
+
+    // Font not loaded yet: labels draw as plain text and are never cached.
+    for (const k of keys) for (const step of art.attachChunk(k)) step();
+    assert.deepEqual(scene.textures.added, [], 'not-ready labels are not cached');
+    assert.ok(scene.children.list.some((o) => o.type === 'Text'), 'drawn as plain text');
+
+    // The font loads; a redraw caches the right font.
+    fontReady = true;
+    for (const k of keys) art.detachChunk(k);
+    for (const k of keys) for (const step of art.attachChunk(k)) step();
+    const first = [...scene.textures.added];
+    assert.ok(first.length > 0, 'cached once the font is ready');
+
+    // And a re-attach still draws from that cache.
+    for (const k of keys) art.detachChunk(k);
+    for (const k of keys) for (const step of art.attachChunk(k)) step();
+    assert.deepEqual(scene.textures.added, first, 're-attach keeps the cached font');
+  } finally {
+    globalThis.document = originalDocument;
+  }
 });
 
 test('a stocked gate shelf detaches after Phaser has destroyed the static group', () => {
@@ -637,25 +750,16 @@ test('draining releases generated and drift textures outside the fetched ring on
   assert.deepEqual([...w['paints'].keys()], ['9,8']);
 });
 
-test('fixed exit signs yield between exits when a label uses the slice', (t) => {
+test('fixed exit signs draw from cached labels without using the slice', (t) => {
   const r = rig();
   const exit = [...r.fp.objects.values()].flat().find((o) => o.id === 'exit:village')!;
   const fp = { ...r.fp, objects: new Map([['0,1', [exit, exit, exit]]]) };
-  let clock = 0;
-  t.mock.method(performance, 'now', () => clock);
+  // Cached labels cost nothing to draw, so a chunk's exits never yield mid-signs.
+  t.mock.method(performance, 'now', () => 0);
   const c = new FixedChunk(r.deps as never, fp, 0, 1);
-  const text = r.scene.add.text;
-  let labels = 0;
-  t.mock.method(r.scene.add, 'text', (...args: Parameters<typeof text>) => {
-    labels++;
-    clock += 5;
-    return text(...args);
-  });
-  assert.equal(c.build(4), false);
-  assert.equal(labels, 1, 'remaining exits wait for another frame');
-  r.builds.finish(c);
+  assert.equal(c.build(4), true, 'all exit signs draw in one pass');
   assert.equal(c.whole, true);
-  assert.equal(labels, 3);
+  assert.equal(r.scene.children.list.filter((o) => o.texture.key.startsWith('sign-label:')).length, 3, 'one cached label image per exit');
   c.destroy();
 });
 
