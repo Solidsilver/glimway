@@ -12,6 +12,7 @@ import './helpers/scene-modules.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
+import { registerHooks } from 'node:module';
 
 // Phaser is a stub in node tests: give it what a fixed chunk's collision and glows touch.
 const Phaser = (await import('phaser')).default as Record<string, unknown>;
@@ -121,7 +122,7 @@ class FakeScene {
     add: { existing: (o: FakeObject) => ((o.body = { enable: true }), this.bodies.add(o.body), o) },
   };
   solids = {
-    children: undefined,
+    children: {},
     members: new Set<FakeObject>(),
     add: (o: FakeObject) => this.solids.members.add(o),
     remove: (o: FakeObject) => {
@@ -548,4 +549,191 @@ test('Commons residents, pickups, papers, repairs, festival dressing and exit re
   placed.source = originalSource;
   setGameNow(null);
   r.scene.events.emit('shutdown');
+});
+
+
+test('fixed pieces stop after each piece once the slice expires', (t) => {
+  const r = rig();
+  const piece = [...r.fp.objects.values()].flat().find((o) => o.kind === 'well')!;
+  const fp = { ...r.fp, objects: new Map([['0,1', [piece, piece, piece, piece]]]) };
+  let clock = 0;
+  t.mock.method(performance, 'now', () => clock);
+  const c = new FixedChunk(r.deps as never, fp, 0, 1);
+  const image = r.scene.add.image;
+  let drawn = 0;
+  t.mock.method(r.scene.add, 'image', (...args: Parameters<typeof image>) => {
+    drawn++;
+    clock += 2;
+    return image(...args);
+  });
+  assert.equal(c.build(3), false);
+  assert.equal(drawn, 2, 'a third piece does not start after the second passes the deadline');
+  r.builds.finish(c);
+  assert.equal(c.whole, true);
+  assert.equal(drawn, 4);
+  c.destroy();
+});
+
+
+test('window teardown drains a row one chunk per frame even while standing still', () => {
+  const w = Object.create(WildsWindow.prototype) as InstanceType<typeof WildsWindow>;
+  const dropped: string[] = [];
+  const chunks = (keys: string[]) => new Map(keys.map((key) => [key, { destroy: () => dropped.push(key) }]));
+  Object.assign(w, { deps: { hero: () => ({ x: 40, y: 428 }) }, plan: { attach: [], drift: [] }, heroTile: '', drops: 0,
+    attached: chunks(['8,8', '9,8', '10,8']), fixed: chunks(['8,9', '9,9', '10,9']), drifts: new Map() });
+  for (let i = 0; i < 6; i++) {
+    w['dropBehind']();
+    assert.equal(dropped.length, i + 1, 'one chunk per call on the same tile');
+  }
+  w['dropBehind']();
+  assert.equal(w['drops'], 6);
+  assert.equal(w['attached'].size + w['fixed'].size, 0);
+});
+
+test('fixed exit signs yield between exits when a label uses the slice', (t) => {
+  const r = rig();
+  const exit = [...r.fp.objects.values()].flat().find((o) => o.id === 'exit:village')!;
+  const fp = { ...r.fp, objects: new Map([['0,1', [exit, exit, exit]]]) };
+  let clock = 0;
+  t.mock.method(performance, 'now', () => clock);
+  const c = new FixedChunk(r.deps as never, fp, 0, 1);
+  const text = r.scene.add.text;
+  let labels = 0;
+  t.mock.method(r.scene.add, 'text', (...args: Parameters<typeof text>) => {
+    labels++;
+    clock += 5;
+    return text(...args);
+  });
+  assert.equal(c.build(4), false);
+  assert.equal(labels, 1, 'remaining exits wait for another frame');
+  r.builds.finish(c);
+  assert.equal(c.whole, true);
+  assert.equal(labels, 3);
+  c.destroy();
+});
+
+// Exercise the scene guards together: Body.reset also moves the sprite.
+test('zero HP mouth slide and safeSpot stay on attached fixed ground', async () => {
+  Phaser.Scene = class {};
+  const hook = registerHooks({ resolve(specifier, context, next) {
+    if (specifier.endsWith('/store.svelte')) return { url: 'data:text/javascript,export const ui = {}', shortCircuit: true };
+    return next(specifier, context);
+  } });
+  const { WorldScene } = await import('../src/game/scenes/WorldScene.ts');
+  hook.deregister();
+  const s = Object.create(WorldScene.prototype) as InstanceType<typeof WorldScene>;
+  const h = { x: 382, y: 386, body: {} };
+  const body = { position: { x: 4, y: -64 }, prevFrame: { x: 0, y: 0 }, velocity: { x: 80, y: -80 },
+    reset(x: number, y: number) { h.x = x; h.y = y; this.position = { x: 0, y: 0 }; },
+    setVelocity(x: number, y: number) { this.velocity = { x, y }; } };
+  h.body = body;
+  Object.assign(s, { hero: { sprite: h, halt() {} }, session: { zeroHpLocked: true, state: { position: {} } },
+    world: { areaId: 'outdoors' }, window: { hasFixed: (cx: number, cy: number) => cx === 0 && cy === 1 }, safeSpot: null });
+  s['holdSafe'](1 / 60);
+  s['holdFixed'](1 / 60);
+  assert.deepEqual({ x: h.x, y: h.y }, { x: 382, y: 386 });
+  assert.deepEqual(s['safeSpot'], { x: 382, y: 386 });
+  // A safe but undelivered diagonal step must not become the saved safeSpot.
+  body.position = { x: 4, y: 4 };
+  s['holdSafe'](1 / 60);
+  assert.deepEqual(s['safeSpot'], { x: 382, y: 390 });
+  assert.equal(s['fixedReady'](s['safeSpot']!.x, s['safeSpot']!.y), true);
+  body.position = { x: 4, y: -64 };
+  s['holdSafe'](1 / 60);
+  s['holdFixed'](1 / 60);
+  s['notePosition']();
+  assert.ok(h.x < 384);
+  assert.ok(s['session'].state.position.x < 384);
+  // A reset/warp onto missing ground cannot disable the fixed guard.
+  h.x = 386;
+  h.y = 386;
+  s['holdFixed'](1 / 60);
+  assert.ok(h.x < 384);
+  const boot = new WorldScene();
+  Object.assign(boot, { session: {}, waitingFixed: true, fixedWait: 3.9 });
+  assert.equal(boot['frame'].hold(), 'cinematic');
+  Object.assign(boot, { fixedWait: 4 });
+  assert.equal(boot['frame'].hold(), null, 'cinematic hold ends after four seconds');
+  const cues: string[] = [];
+  const cue = (p: { text: string }) => cues.push(p.text);
+  bus.on(EV.toast, cue);
+  try {
+    boot['waitForCommons']();
+    boot['waitForCommons']();
+    assert.deepEqual(cues, ['Waiting for the Commons…']);
+  } finally { bus.off(EV.toast, cue); }
+});
+
+test('a throwing build stage is dropped and later stages and chunks continue', (t) => {
+  const r = rig();
+  const c = new FixedChunk(r.deps as never, r.fp, 0, 1);
+  let throws = 0, later = 0;
+  Object.assign(c, { todo: [() => { throws++; throw new Error('bad sign'); }, () => { later++; return true; }] });
+  const errors: unknown[][] = [];
+  t.mock.method(console, 'error', (...args: unknown[]) => errors.push(args));
+  let following = 0;
+  r.builds.add({ build: () => { following++; return true; } } as never);
+  r.builds.step(Infinity);
+  r.builds.step(Infinity);
+  assert.equal(throws, 1);
+  assert.equal(later, 1);
+  assert.equal(following, 1);
+  assert.equal(errors.length, 1);
+  assert.equal(c.whole, true);
+  c.destroy();
+});
+
+test('drain keeps the chunk under the hero and reattaches a returned fixed chunk once', () => {
+  const r = rig();
+  const w = Object.create(WildsWindow.prototype) as InstanceType<typeof WildsWindow>;
+  const hero = { x: 40, y: 428 };
+  const c = new FixedChunk(r.deps as never, r.fp, 0, 1);
+  Object.assign(w, { deps: { ...r.deps, hero: () => hero, session: {} }, builds: r.builds,
+    fixed: new Map([['0,1', c]]), attached: new Map(), drifts: new Map(), far: new Map(),
+    fixedGround: new Map([['commons', r.g.ground]]), failedGround: new Set(),
+    plan: { attach: [], drift: [], ring: [] }, waiters: [], heroTile: '', drops: 0, attaches: 1 });
+  w['dropBehind']();
+  assert.equal(w.hasFixed(0, 1), true, 'ground under hero is retained outside plan');
+  hero.y = -1000;
+  w['dropBehind']();
+  assert.equal(w.hasFixed(0, 1), false);
+  r.builds.step(Infinity);
+  assert.equal(c.whole, true, 'destroy clears its pending stages');
+  hero.y = 428;
+  Object.assign(w, { plan: { attach: ['0,1'], drift: [], ring: [] } });
+  w['step']();
+  w['step']();
+  assert.equal(w['attaches'], 2, 'one replacement attachment');
+  assert.equal(w['fixed'].size, 1);
+  w['fixed'].get('0,1')!.destroy();
+});
+
+test('window shutdown destroys chunks still waiting in the drain', () => {
+  const w = Object.create(WildsWindow.prototype) as InstanceType<typeof WildsWindow>;
+  const dropped: string[] = [];
+  const chunks = (key: string) => new Map([[key, { destroy: () => dropped.push(key) }]]);
+  Object.assign(w, { attached: chunks('generated'), fixed: chunks('fixed'), drifts: chunks('drift'),
+    fixedGround: new Map(), paints: new Map(), far: new Map(), waiters: [] });
+  w['destroy']();
+  w['destroy']();
+  assert.deepEqual(dropped, ['generated', 'fixed', 'drift']);
+});
+
+test('null fixed ground reports once and is never rebuilt each frame', (t) => {
+  let maps = 0, destroyed = 0;
+  const errors: unknown[][] = [];
+  t.mock.method(console, 'error', (...args: unknown[]) => errors.push(args));
+  const scene = { sys: { game: { renderer: { type: 1 } } }, textures: { exists: () => true },
+    cache: { json: { get: () => null } }, make: { tilemap: () => {
+      maps++;
+      return { addTilesetImage: () => null, destroy: () => { destroyed++; } };
+    } } };
+  const w = Object.create(WildsWindow.prototype) as InstanceType<typeof WildsWindow>;
+  Object.assign(w, { deps: { scene }, fixedGround: new Map(), failedGround: new Set(), fixed: new Map() });
+  const fp = footprint('commons')!;
+  for (let i = 0; i < 60; i++) w['attachFixed'](fp, 0, 1);
+  assert.equal(maps, 1);
+  assert.equal(destroyed, 1, 'failed tilemap is released');
+  assert.equal(errors.length, 1);
+  assert.equal(w.hasFixed(0, 1), false);
 });

@@ -125,3 +125,11 @@ test('static bodies go into the world and the group in one go, and out in one pa
   assert.ok(go.every((o) => o.destroyed && listeners.get(o) === 0))
   assert.ok(bodies.every((b) => !b.enable && b.world === undefined && b.gameObject === undefined), 'the bodies are let go')
 })
+
+test('chunk solids can be released after Phaser has destroyed their group', () => {
+  let destroyed = 0
+  const group = { children: undefined, remove: () => assert.fail('group is already destroyed') }
+  const solid = { body: undefined, on() {}, off() {}, destroy: () => { destroyed++ } }
+  destroyStatics({} as never, group as never, [solid] as never)
+  assert.equal(destroyed, 1)
+})

@@ -184,7 +184,8 @@ export function destroyStatics(world: StaticWorld, group: StaticGroupLike, solid
   if (!solids.length) return
   if (!bulkable(world, group)) {
     for (const o of solids) {
-      ;(group.remove as (o: Solid) => unknown).call(group, o)
+      // Phaser may have destroyed the group before chunk shutdown runs.
+      if (group.children) (group.remove as (o: Solid) => unknown).call(group, o)
       o.destroy()
     }
     return

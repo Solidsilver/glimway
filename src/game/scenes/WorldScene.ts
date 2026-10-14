@@ -58,7 +58,7 @@ import { parseHomeArea } from '../../lib/homestead'
 import { homeLights } from '../../lib/homestead-land'
 import { homesteadsFor } from '../homestead'
 import { prepareHomeLand } from '../homeland'
-import { commonsLane } from '../wilds/fixed'
+import { commonsLane, fixedPlaceOf } from '../wilds/fixed'
 import { FixedLife } from '../wilds/fixed-life'
 import { isSafeArea } from '../../lib/habitica/sync'
 import { fingerInBracken } from '../../lib/quests'
@@ -241,6 +241,9 @@ export class WorldScene extends Phaser.Scene {
     this.occluders = []
     this.cinematic = false
     this.safeSpot = null
+    this.fixedSpot = null
+    this.fixedWait = 0
+    this.commonsWaitSaid = false
     this.captureReleased = false
     this.reducedMotion = prefersReducedMotion()
     this.fx = new Effects(this, this.reducedMotion)
@@ -692,7 +695,7 @@ export class WorldScene extends Phaser.Scene {
       playHold({
         ui: uiBlocked(),
         transitioning: this.transitioning,
-        cinematic: this.cinematic || this.waitingFixed,
+        cinematic: this.cinematic || (this.waitingFixed && this.fixedWait < 4),
         persisting: this.session.persistenceInFlight,
         placing: !!this.homesteads?.placing
       }),
@@ -738,6 +741,10 @@ export class WorldScene extends Phaser.Scene {
     // The shared world goes on under a menu: the open map's window, the camps'
     // rooms and claims, the Turning, and every server enemy (shared-fights.md 1.8).
     this.window?.update(dt)
+    if (this.waitingFixed) {
+      this.fixedWait += dt
+      if (this.fixedWait >= 4) this.waitForCommons()
+    }
     const atChunk = chunkOfPixel(this.hero.sprite.x, this.hero.sprite.y)
     if (this.waitingFixed && this.window?.fixedKeys().includes(chunkKey(atChunk.cx, atChunk.cy))) {
       const at = this.world.open?.standAt(this.hero.sprite.x, this.hero.sprite.y)
@@ -747,6 +754,8 @@ export class WorldScene extends Phaser.Scene {
         this.session.saveSoon()
       }
       this.waitingFixed = false
+      this.fixedWait = 0
+      this.commonsWaitSaid = false
     }
     this.wilds?.update()
     this.turning.update(dt)
@@ -772,6 +781,7 @@ export class WorldScene extends Phaser.Scene {
   private play(time: number, dt: number): void {
     this.hero.move(dt, this.devWalk ? this.devSteer() : this.controls.vector())
     this.holdSafe(dt)
+    this.holdFixed(dt)
     this.enemies.update(dt)
     this.goalGuide.update(dt, this.hero.sprite, this.worldLive())
     this.projectiles.update(dt)
@@ -814,6 +824,50 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
+  /** Undelivered fixed ground is a boundary, including a step Arcade has already taken. */
+  private holdFixed(dt: number): void {
+    if (!this.window) return
+    const ready = (x: number, y: number) => this.fixedReady(x, y)
+    const h = this.hero.sprite
+    if (!ready(h.x, h.y)) {
+      if (this.fixedSpot && ready(this.fixedSpot.x, this.fixedSpot.y)) {
+        ;(h.body as Phaser.Physics.Arcade.Body).reset(this.fixedSpot.x, this.fixedSpot.y)
+      } else {
+        ;(h.body as Phaser.Physics.Arcade.Body).reset(h.x, h.y)
+        this.hero.halt()
+      }
+      this.waitForCommons()
+      return
+    }
+    this.fixedSpot = { x: h.x, y: h.y }
+    const body = h.body as Phaser.Physics.Arcade.Body
+    const next = { x: h.x + body.position.x - body.prevFrame.x, y: h.y + body.position.y - body.prevFrame.y }
+    if (!ready(next.x, next.y)) {
+      this.waitForCommons()
+      const at = holdOnSafe(ready, h, next)
+      body.reset(at.x, at.y)
+      return
+    }
+    const v = stopAtEdge(ready, next, body.velocity, Math.max(dt, 1 / 30) * 1.5)
+    if (v.x !== body.velocity.x || v.y !== body.velocity.y) this.waitForCommons()
+    body.setVelocity(v.x, v.y)
+  }
+
+  private fixedReady(x: number, y: number): boolean {
+    const at = chunkOfPixel(x, y)
+    return !this.window || !fixedPlaceOf(at.cx, at.cy) || this.window.hasFixed(at.cx, at.cy)
+  }
+
+  private waitForCommons(): void {
+    if (this.commonsWaitSaid) return
+    this.commonsWaitSaid = true
+    bus.emit(EV.toast, { text: 'Waiting for the Commons…', icon: 'map', kind: 'thought' })
+  }
+
+  private fixedSpot: { x: number; y: number } | null = null
+  private fixedWait = 0
+  private commonsWaitSaid = false
+
   /** Where the hero last stood on safe ground while too hurt to fight (the zero-HP barrier's). */
   private safeSpot: { x: number; y: number } | null = null
   private waitingFixed = false
@@ -831,7 +885,7 @@ export class WorldScene extends Phaser.Scene {
     }
     const h = this.hero.sprite
     const area = this.world.areaId
-    const safe = (x: number, y: number) => safeArea(area, x, y)
+    const safe = (x: number, y: number) => safeArea(area, x, y) && this.fixedReady(x, y)
     const body = h.body as Phaser.Physics.Arcade.Body
     if (safe(h.x, h.y)) this.safeSpot = { x: h.x, y: h.y }
     // Arcade has already stepped the body, but postUpdate has not copied
@@ -845,8 +899,9 @@ export class WorldScene extends Phaser.Scene {
       body.setVelocity(v.x, v.y)
       return
     }
+    if (!this.fixedReady(next.x, next.y)) this.waitForCommons()
     const was = this.safeSpot
-    if (!was) return
+    if (!was || !safe(was.x, was.y)) return
     const at = holdOnSafe(safe, was, next)
     // A reset, so the step already taken isn't written to the sprite again after this update.
     body.reset(at.x, at.y)
@@ -871,7 +926,7 @@ export class WorldScene extends Phaser.Scene {
    * measures reach from where the hero really is).
    */
   private notePosition(): void {
-    if (this.transitioning) return
+    if (this.transitioning || !this.fixedReady(this.hero.sprite.x, this.hero.sprite.y)) return
     // Positions are the scene's pixels everywhere; on the open map those are
     // world pixels (one convention for saves, reloads, claims and reports).
     this.session.state.position = { x: Math.round(this.hero.sprite.x), y: Math.round(this.hero.sprite.y) }

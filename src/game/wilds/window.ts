@@ -91,6 +91,7 @@ export class WildsWindow {
   private fixed = new Map<string, FixedChunk>()
   /** Each footprint's painted ground, laid a chunk at a time (one per footprint and scene). */
   private fixedGround = new Map<string, GroundTiles>()
+  private failedGround = new Set<string>()
   /** The attached chunks still being built, in attachment order (./window-chunk.ts BuildQueue). */
   readonly builds = new BuildQueue()
   private drifts = new Map<string, DriftChunk>()
@@ -157,7 +158,7 @@ export class WildsWindow {
    * across an edge keep which is on top.
    */
   private buildSome(): void {
-    this.builds.step(performance.now() + BUILD_MS)
+    perfTime('build:slice', () => this.builds.step(performance.now() + BUILD_MS))
   }
 
   /** Whether a chunk out of the 3×3 is still kept (the hero is less than SLACK_TILES past the edge it left by). */
@@ -180,15 +181,25 @@ export class WildsWindow {
       c.destroy()
       this.attached.delete(key)
       this.drops++
+      // A row can take a long frame to tear down on phones. Drain one
+      // chunk per frame, even when the hero has stopped on this tile.
+      this.heroTile = ''
+      return
     }
     for (const [key, c] of this.fixed) if (!plan.attach.includes(key) && !this.kept(key)) {
       c.destroy()
       this.fixed.delete(key)
       this.drops++
+      // A row can take a long frame to tear down on phones. Drain one
+      // chunk per frame, even when the hero has stopped on this tile.
+      this.heroTile = ''
+      return
     }
     for (const [key, d] of this.drifts) if (!plan.drift.includes(key) && !this.kept(key)) {
       d.destroy()
       this.drifts.delete(key)
+      this.heroTile = ''
+      return
     }
   }
 
@@ -285,7 +296,7 @@ export class WildsWindow {
     for (const key of plan.attach) {
       const { cx, cy } = parseChunkKey(key)
       if (fixedPlaceOf(cx, cy)) {
-        if (this.fixed.has(key)) continue
+        if (this.fixed.has(key) || this.failedGround.has(fixedPlaceOf(cx, cy)!.id)) continue
         const fp = footprintAt(cx, cy)
         if (!fp) {
           this.load(key)
@@ -412,7 +423,7 @@ export class WildsWindow {
   }
 
   private attach(key: string): void {
-    perfTime('attach', () => this.attachNow(key))
+    perfTime('attach:generated', () => this.attachNow(key))
   }
 
   private attachNow(key: string): void {
@@ -435,7 +446,7 @@ export class WildsWindow {
 
   /** Attach a fixed chunk: its ground laid from its footprint's painted tileset (painted on first use). */
   private attachFixed(fp: FixedFootprint, cx: number, cy: number): void {
-    perfTime('attach', () => {
+    perfTime('attach:fixed', () => {
       const { scene, session } = this.deps
       const ground = this.groundFor(fp)
       if (!ground) return
@@ -468,6 +479,11 @@ export class WildsWindow {
     })
   }
 
+  /** Fixed ground and collision are attached, even if its drawing is still building. */
+  hasFixed(cx: number, cy: number): boolean {
+    return this.fixed.has(chunkKey(cx, cy))
+  }
+
   /** The fixed chunks attached now. */
   fixedKeys(): string[] {
     return [...this.fixed.keys()]
@@ -477,8 +493,13 @@ export class WildsWindow {
   private groundFor(fp: FixedFootprint): GroundTiles | null {
     const had = this.fixedGround.get(fp.place.id)
     if (had) return had
+    if (this.failedGround.has(fp.place.id)) return null
     const g = groundTiles(this.deps.scene, { areaId: fp.place.id, ground: fp.ground, width: fp.w, height: fp.h, scenery: [] }, true)
     if (g) this.fixedGround.set(fp.place.id, g)
+    else {
+      this.failedGround.add(fp.place.id)
+      console.error(`Could not build fixed ground: ${fp.place.id}`)
+    }
     return g
   }
 
@@ -592,8 +613,12 @@ export class WildsWindow {
   }
 
   private destroy(): void {
+    if (this.gone) return
     this.gone = true
     this.release()
+    for (const c of this.attached.values()) c.destroy()
+    for (const c of this.fixed.values()) c.destroy()
+    for (const c of this.drifts.values()) c.destroy()
     for (const g of this.fixedGround.values()) g.map.destroy()
     this.fixedGround.clear()
     this.fixed.clear()

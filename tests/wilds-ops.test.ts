@@ -380,3 +380,18 @@ test('chunks are built in the order they were attached, and finishing one early 
   q.step(Infinity);
   assert.equal(log.length, 5, 'a dropped chunk is never built further');
 });
+
+
+test('generated builds stop between stages when the slice expires', (t) => {
+  let clock = 0;
+  t.mock.method(performance, 'now', () => clock);
+  const c = Object.create(AttachedChunk.prototype) as InstanceType<typeof AttachedChunk>;
+  const ran: string[] = [];
+  c['todo'] = [() => { ran.push('scenery'); clock += 5; return true; }, () => { ran.push('gathering'); return true; }];
+  assert.equal(c.build(0), false);
+  assert.deepEqual(ran, [], 'an expired slice starts nothing');
+  assert.equal(c.build(4), false);
+  assert.deepEqual(ran, ['scenery'], 'gathering waits after scenery uses the slice');
+  assert.equal(c.build(Infinity), true);
+  assert.deepEqual(ran, ['scenery', 'gathering']);
+});

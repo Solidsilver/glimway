@@ -325,7 +325,7 @@ export class WildsEntities {
     const key = chunkKey(chunk.cx, chunk.cy)
     this.detach(key, false)
     const epoch = chunkEpoch(chunk.cx, chunk.cy) ?? wildsEpoch('wick')
-    const sites = perfTime('attach:sites', () => new WildsSites(
+    const sites = perfTime('attach:generated:sites', () => new WildsSites(
       this.scene,
       { session: this.deps.session, fx: this.deps.fx, reducedMotion: this.deps.reducedMotion, interactables: this.deps.interactables, hero: this.deps.hero },
       epoch,

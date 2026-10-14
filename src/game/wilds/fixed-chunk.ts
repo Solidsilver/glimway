@@ -101,47 +101,55 @@ export class FixedChunk implements Buildable {
     this.exits = this.objects.map((o) => exitOf(o, fp)).filter((e): e is ExitDef => e !== null)
     const lx = cx * CHUNK_TILES - fp.tx
     const ly = cy * CHUNK_TILES - fp.ty
-    perfTime('attach:ground', () => {
+    perfTime('attach:fixed:ground', () => {
       this.layers = layGround(deps.ground, { tx: lx, ty: ly, tw: CHUNK_TILES, th: CHUNK_TILES }, { x: cx * CHUNK_TILES * TILE, y: cy * CHUNK_TILES * TILE }, GROUND_DEPTH, `fixed-${this.key}-${++laid}`)
     })
-    perfTime('attach:collision', () => this.collide(lx, ly))
+    perfTime('attach:fixed:collision', () => this.collide(lx, ly))
     let next = 0
     let fixtures: (() => void)[] | null = null
     const standing = this.objects.filter((o) => o.kind === 'tree' || o.kind === 'bush' || o.kind === 'rock')
     const drawn = this.objects.filter((o) => o.kind !== 'tree' && o.kind !== 'bush' && o.kind !== 'rock')
     this.todo = [
-      (deadline) => perfTime('attach:trees', () => {
+      (deadline) => perfTime('attach:fixed:trees', () => {
         next = this.standing(standing, next, deadline)
         if (next < standing.length) return false
         next = 0
         return true
       }),
-      (deadline) => perfTime('attach:pieces', () => {
+      (deadline) => perfTime('attach:fixed:pieces', () => {
         next = this.pieces(drawn, next, deadline)
         if (next < drawn.length) return false
         next = 0
         return true
       }),
-      () => perfTime('attach:signs', () => {
+      () => perfTime('attach:fixed:lights', () => {
         if (this.lights.length) this.deps.light(this.lights)
-        for (const e of this.exits) this.signs.push(...exitSign(deps.scene, { height: fp.ty + fp.h }, e, deps.reducedMotion))
         return true
       }),
-      () => perfTime('attach:gathering', () => {
+      (deadline) => perfTime('attach:fixed:signs', () => {
+        while (next < this.exits.length) {
+          if (now() >= deadline) return false
+          this.signs.push(...exitSign(deps.scene, { height: fp.ty + fp.h }, this.exits[next++]!, deps.reducedMotion))
+        }
+        next = 0
+        return true
+      }),
+      () => perfTime('attach:fixed:gathering', () => {
         this.gather()
         return true
       }),
-      () => perfTime('attach:doors', () => {
+      () => perfTime('attach:fixed:doors', () => {
         this.frontDoors()
         return true
       }),
-      (deadline) => perfTime('attach:fixtures', () => {
+      (deadline) => perfTime('attach:fixed:fixtures', () => {
         if (!fixtures) {
           const hooks = deps.hooks()
           fixtures = hooks ? hooks.attach(this.key) : []
           this.hooked = !!hooks
         }
         while (fixtures.length) {
+          if (now() >= deadline) break
           fixtures.shift()!()
           if (now() > deadline) break
         }
@@ -155,7 +163,11 @@ export class FixedChunk implements Buildable {
   build(deadline: number): boolean {
     while (this.todo.length) {
       if (now() >= deadline) return false
-      if (!this.todo[0]!(deadline)) return false
+      try {
+        if (!this.todo[0]!(deadline)) return false
+      } catch (error) {
+        console.error(`Could not build chunk stage: ${this.key}`, error)
+      }
       this.todo.shift()
     }
     return true
@@ -206,7 +218,7 @@ export class FixedChunk implements Buildable {
     const fading: Occluder[] = []
     let i = from
     for (; i < list.length; i++) {
-      if ((i - from) % 16 === 15 && now() > deadline) break
+      if (i > from && now() >= deadline) break
       const o = list[i]!
       const x = tileMid(o.tx)
       const y = tileBottom(o.ty)
@@ -246,7 +258,7 @@ export class FixedChunk implements Buildable {
     const props = scene.textures.exists('fingersnap-props') ? scene.textures.get('fingersnap-props') : null
     let i = from
     for (; i < list.length; i++) {
-      if ((i - from) % 2 === 1 && now() > deadline) break
+      if (i > from && now() >= deadline) break
       const o = list[i]!
       const s = sceneryOf(o)
       if (s && ensureSceneryArt(scene, s.key)) {

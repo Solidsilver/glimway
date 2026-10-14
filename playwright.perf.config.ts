@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test'
 import base from './playwright.config.ts'
 
 /**
- * The walk (perf/walk.perf.ts): walking the open map with ?perf=1 and
+ * The walk (perf/walk.perf.ts) and Commons–Tangle seam (perf/seam.perf.ts): walking the open map with ?perf=1 and
  * reporting long frames, frame times and what the scene holds
  * (docs/testing.md, "Performance"). Its own config, outside the e2e suites
  * and never in CI: one worker, nothing else running beside it.
