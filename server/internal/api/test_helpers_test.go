@@ -684,7 +684,7 @@ func (x *rig) cacheAccounts() {
 }
 
 func testWhere(s rules.State) map[string]any {
-	area := s.Area
+	area := string(location.ContentSpace(s.Area))
 	return map[string]any{"area": area, "x": s.Position.X, "y": s.Position.Y}
 }
 
@@ -723,14 +723,21 @@ func decodeLegacyDomainHTTP[T any](x *rig, w *httptest.ResponseRecorder) T {
 
 func testContract() string { return strconv.Itoa(content.ContractNumber) }
 
-// commonsPx is a Commons layout pixel on the outdoors grid: the fixed
-// footprint's origin tile is (-21, 24), so (x-336, y+384).
-func commonsPx(x, y float64) rules.Position {
-	space, tx, ty := location.Resolve("commons", 0, 0)
-	if space != location.Outdoors {
-		panic("the Commons left the outdoors")
+// atAnchor places a scenario at a named outdoor anchor. New town tests use
+// anchors instead of duplicating layout coordinates.
+func atAnchor(s rules.State, id string) rules.State {
+	space, x, y, ok := location.Anchor(id)
+	if !ok {
+		panic("unknown test anchor: " + id)
 	}
-	return rules.Position{X: x + float64(tx*16), Y: y + float64(ty*16)}
+	s.Area, s.Position = string(space), rules.Position{X: x, Y: y}
+	return s
+}
+
+// commonsPx preserves old scenario offsets until T3 replaces those fixtures.
+// It is deliberately not a production origin-adding bridge.
+func commonsPx(x, y float64) rules.Position {
+	return rules.Position{X: x - 336, Y: y + 384}
 }
 
 // onCommons is a state standing at a Commons layout pixel.
@@ -752,11 +759,10 @@ func (x *rig) standOnCommons(id, world string, lx, ly float64) {
 	x.stand(id, world, outdoorsRoom(p), p.X, p.Y)
 }
 
-// atContentTile stands a state on an area-local content tile, footDy px
-// down into it: Commons tiles resolve onto the outdoors grid, other areas
-// are their own frame.
+// atContentTile stands a state on a content world tile, footDy px down
+// into it. Place labels map to outdoors; coordinates stay unchanged.
 func atContentTile(s rules.State, area string, tx, ty int, footDy float64) rules.State {
-	space, wx, wy := location.Resolve(area, tx, ty)
-	s.Area, s.Position = string(space), rules.Position{X: float64(wx*16 + 8), Y: float64(wy*16) + footDy}
+	space, wx, wy := contentTile(area, tx, ty)
+	s.Area, s.Position = space, rules.Position{X: float64(wx*16 + 8), Y: float64(wy*16) + footDy}
 	return s
 }

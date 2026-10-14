@@ -1,5 +1,5 @@
 import { knownRoom } from './rooms.ts';
-import { resolve } from './location.ts';
+import { contentSpace } from './location.ts';
 // Area builders register IDs at runtime; save validation uses SAVE_AREAS below.
 export type AreaId = 'village' | 'woodland' | 'ruin' | (string & {});
 
@@ -77,16 +77,13 @@ const SAVE_AREAS: readonly AreaId[] = [...AREAS, 'outdoors'];
  * map (the Commons: docs/design/location-seam.md 3). A save still there is
  * read onto the grid, at the same spot.
  */
-const JOINED_AREAS: readonly string[] = ['commons'];
 
 /** A homestead's land behind Commons gate g: `home:<g>` (0..9999, no leading zeros). */
 export const HOME_AREA_RE = /^home:(0|[1-9]\d{0,3})$/;
 
 /** A saved spot, onto the grid if it named a joined place's own frame. */
 function onGrid(area: string, x: number, y: number): { area: AreaId; position: { x: number; y: number } } {
-  if (!JOINED_AREAS.includes(area)) return { area, position: { x, y } };
-  const o = resolve(area, 0, 0);
-  return { area: o.space, position: { x: x + o.tx * 16, y: y + o.ty * 16 } };
+  return { area: contentSpace(area), position: { x, y } };
 }
 
 /** Can a save say it is here? The fixed areas, any homestead's land, and the rooms (a cottage, a village room). */
@@ -250,7 +247,7 @@ export function validateSave(data: unknown): GameState {
     );
   }
 
-  if (!isSaveArea(data.area) && !JOINED_AREAS.includes(data.area as string)) {
+  if (!isSaveArea(data.area)) {
     throw new InvalidSaveError(
       `expected one of ${SAVE_AREAS.map((a) => JSON.stringify(a)).join(', ')} home:<gate> or a room, got ${describe(data.area)}`,
       'area',

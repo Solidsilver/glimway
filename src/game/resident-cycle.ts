@@ -16,7 +16,7 @@
 import type Phaser from 'phaser'
 import { roomFootprints, roomFor } from '../lib/rooms.ts'
 import { RESIDENTS, residentAt, residentById, type ResidentPlace } from '../lib/residents.ts'
-import { resolve } from '../lib/location.ts'
+import { contentPosition } from '../lib/location.ts'
 import { cycleAt } from '../lib/clock.ts'
 import { tileBottom, tileFeet, tileMid } from '../lib/tile.ts'
 import { serverNow } from './clock.ts'
@@ -71,10 +71,10 @@ export function doorFor(id: string, area: string, other: string): { step: { tx: 
     return { step, door: { tx: x, ty: y } }
   }
   const home = residentById(id)?.home
-  const front = home ? roomFor(home)?.doors.find((d) => d.kind === 'door' && (d.to === area || resolve(d.to, d.entry.tx, d.entry.ty).space === area) && d.outside) : null
+  const front = home ? roomFor(home)?.doors.find((d) => d.kind === 'door' && (d.to === area || contentPosition(d.to, d.entry.tx, d.entry.ty).space === area) && d.outside) : null
   if (!front?.outside) return null
-  const step = resolve(front.to, front.entry.tx, front.entry.ty)
-  const door = resolve(front.to, front.outside.tx, front.outside.ty)
+  const step = contentPosition(front.to, front.entry.tx, front.entry.ty)
+  const door = contentPosition(front.to, front.outside.tx, front.outside.ty)
   return { step: { tx: step.tx, ty: step.ty }, door: { tx: door.tx, ty: door.ty } }
 }
 
@@ -129,7 +129,7 @@ export class ResidentCycle {
   private spotTile(n: NpcEntity): { tx: number; ty: number } | null {
     const s = n.spot ? residentById(n.id)?.spots[n.spot] : null
     // A spot on fixed ground (the Commons) is named in its own tiles: on the grid since the join.
-    const t = s ? resolve(s.area, s.tx, s.ty) : null
+    const t = s ? contentPosition(s.area, s.tx, s.ty) : null
     return t ? { tx: t.tx, ty: t.ty } : null
   }
 

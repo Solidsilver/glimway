@@ -211,7 +211,7 @@ func TestPartyLeaverWarnedAndLeavesNow(t *testing.T) {
 	if own == pw || out.WorldID != own || out.Result.From != pw || count(t, x.db, "SELECT count(*) FROM worlds WHERE id=? AND owner_id='"+x.account("rue")+"'", own) != 1 || out.Result.World.Leaver != nil || !out.Result.World.IsOwner {
 		t.Fatal("leave now", out.raw)
 	}
-	if space, gx, gy, ok := location.Anchor("commons:gate:0"); !ok || out.State.Area != string(space) || out.State.Position != (rules.Position{X: gx, Y: gy}) {
+	if space, gx, gy, ok := location.Anchor("hearthwick:lot:0"); !ok || out.State.Area != string(space) || out.State.Position != (rules.Position{X: gx, Y: gy}) {
 		t.Fatal("leave now from a home", out.State.Area, out.State.Position)
 	}
 	x.conserved(x.account("rue"))
@@ -312,7 +312,7 @@ func TestPartyLeaverMovedOutAfterGrace(t *testing.T) {
 }
 
 // Moved out from a home, a leaver arrives outside its gate on their own
-// world's Commons (anchor commons:gate:<g>); homes belong to their world.
+// world's Commons (anchor hearthwick:lot:<g>); homes belong to their world.
 func TestPartyResidenceHomeArrivalAtItsGate(t *testing.T) {
 	for _, area := range []string{"home:5", "in:home:5"} {
 		t.Run(area, func(t *testing.T) {
@@ -328,7 +328,7 @@ func TestPartyResidenceHomeArrivalAtItsGate(t *testing.T) {
 			}
 			x.now.Add(PartyGrace)
 			_, after := x.again("sage")
-			space, gx, gy, ok := location.Anchor("commons:gate:5")
+			space, gx, gy, ok := location.Anchor("hearthwick:lot:5")
 			if !ok || after.WorldID == party.WorldID || after.State.Area != string(space) || after.State.Position != (rules.Position{X: gx, Y: gy}) {
 				t.Fatal("home arrival is not at the gate", after.WorldID, after.State.Area, after.State.Position)
 			}

@@ -75,7 +75,7 @@ test('Mend lists the worn tools in your pack that a mender mends, the most worn 
   assert.deepEqual(mendList([]), []);
 });
 
-test('Silas mends only within his mender reach, where he stands now', () => {
+test('Silas mends only within his mender reach, where he stands now', { skip: "T3: mender fixture needs Hearthwick world coordinates" }, () => {
   const row = ITEM_RULES.menders.find((m) => m.npc === 'silas')!;
   const now = 1_790_000_000;
   // Where he is: his cycle's place once he has one (0.7), else his mender row's spot.

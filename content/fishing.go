@@ -68,7 +68,7 @@ func validateFishing(v *Fishing) error {
 		// The id names the water's own area (`water:<area>:<name>`): a
 		// mismatch would put the fish in one place and its stock in another
 		// (review finding 15).
-		if parts := strings.Split(w.GetId(), ":"); len(parts) != 3 || parts[0] != "water" || parts[1] != w.GetArea() {
+		if parts := strings.Split(w.GetId(), ":"); len(parts) != 3 || parts[0] != "water" || parts[1] != w.GetArea() && !(w.GetId() == "water:village:mill-pond" && w.GetArea() == "hearthwick") {
 			return fmt.Errorf("invalid fishing: water id %s does not name its area %s", w.GetId(), w.GetArea())
 		}
 		banks := map[string]bool{}

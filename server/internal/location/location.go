@@ -2,7 +2,7 @@
 // location-seam.md 1.2, shared-fights.md 1.11): which place a position in a
 // space is in and what that place allows, which source a chunk's ground
 // comes from, whether an outdoor chunk exists, and where anchors and
-// area-local content tiles lie on the grid. It is pure: content only
+// world-tile content positions lie on the grid. It is pure: content only
 // (content/places.json, content/wilds.json), no store. src/lib/location.ts
 // is the twin; both replay content/vectors/location.json.
 //
@@ -124,13 +124,14 @@ func spaceRules(root string) *content.PlaceRules {
 	s := content.PlacesRules.GetSpaces()
 	switch {
 	case root == "village":
-		return s.GetVillage()
+		// T5: remove the legacy outdoor space when saved places migrate.
+		return &content.PlaceRules{Safe: true, Ride: false, Sync: true, Rest: "village"}
 	case root == "woodland":
 		return s.GetWoodland()
 	case root == "ruin":
 		return s.GetRuin()
 	case homeSpace.MatchString(root):
-		return s.GetHome()
+		return &content.PlaceRules{Safe: true, Ride: true, Sync: true, Rest: "home"}
 	}
 	if f := fixedByID(root); f != nil {
 		return f.GetRules()
@@ -141,8 +142,7 @@ func spaceRules(root string) *content.PlaceRules {
 // At is the place a position is in (world pixels in the space's frame).
 // Outdoors it is a fixed footprint's zone or the footprint itself, else the
 // generated place: a Wilds footprint's id or the Beyond. A fixed place's own
-// id as the space (the Commons before the join) reads its layout pixels
-// through the origin, so the answer is the same before and after. A room
+// id as the space reads world pixels unchanged. A room
 // takes its root space's rules and never allows riding. Any other space is
 // its own place, allowing nothing. At doesn't ask whether the chunk is on
 // the grid (OnGrid does).
@@ -172,7 +172,7 @@ func At(space Space, x, y float64) Place {
 		return p
 	}
 	if f := fixedByID(string(space)); f != nil {
-		return At(Outdoors, x+float64(f.GetOrigin().GetTx())*tilePx, y+float64(f.GetOrigin().GetTy())*tilePx)
+		return At(Outdoors, x, y)
 	}
 	if strings.HasPrefix(string(space), "in:") {
 		r := spaceRules(content.RootArea(string(space)))
@@ -205,7 +205,7 @@ func OnGrid(world string, cx, cy int) bool {
 	return frontier.Inside(world, cx, cy) || fixedAt(cx, cy) != nil
 }
 
-// Anchor resolves "<place>:<anchor>" ("commons:arch", "commons:gate:3") to
+// Anchor resolves "<place>:<anchor>" ("hearthwick:arch", "hearthwick:lot:3") to
 // its space and the centre of its tile in world pixels.
 func Anchor(id string) (Space, float64, float64, bool) {
 	place, name, ok := strings.Cut(id, ":")
@@ -226,15 +226,18 @@ func Anchor(id string) (Space, float64, float64, bool) {
 	return "", 0, 0, false
 }
 
-// Resolve carries an area-local content tile into its space: a fixed
-// place's layout tile ("commons") moves by the place's origin into
-// outdoors; any other area is its own space and the tile is unchanged. It
-// bridges content that names Commons positions in Commons tiles (items,
-// repairs, residents, rooms, story boards) until the town redesign moves
-// them to anchors.
-func Resolve(area string, tx, ty int) (Space, int, int) {
-	if f := fixedByID(area); f != nil {
-		return Outdoors, tx + int(f.GetOrigin().GetTx()), ty + int(f.GetOrigin().GetTy())
+// ContentSpace maps a named fixed place or lot to the outdoor space.
+// Content coordinates are already world tiles and are never translated.
+func ContentSpace(area string) Space {
+	for _, f := range content.PlacesRules.GetFixed() {
+		if f.GetId() == area {
+			return Outdoors
+		}
+		for _, z := range f.GetZones() {
+			if z.GetPlace() == area {
+				return Outdoors
+			}
+		}
 	}
-	return Space(area), tx, ty
+	return Space(area)
 }

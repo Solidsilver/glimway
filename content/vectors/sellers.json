@@ -50,7 +50,7 @@
           0,
           "area"
         ],
-        "value": "village"
+        "value": "hearthwick"
       }
     ],
     "valid": false
@@ -106,7 +106,7 @@
           2,
           "area"
         ],
-        "value": "commons"
+        "value": "hearthwick"
       }
     ],
     "valid": true

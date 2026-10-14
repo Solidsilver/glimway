@@ -48,7 +48,7 @@ func TestRepairsContent(t *testing.T) {
 	}
 
 	well, ok := RepairFor("well-rope")
-	if !ok || well.GetPart() != "fibre-rope" || well.GetTarget() != "well" || well.GetPos().GetTx() != 13 || well.GetPos().GetTy() != 12 {
+	if !ok || well.GetPart() != "fibre-rope" || well.GetTarget() != "well" || well.GetPos().GetTx() != 12 || well.GetPos().GetTy() != 60 {
 		t.Fatalf("unexpected well-rope definition: %+v", well)
 	}
 	if well.GetResident() != "hazel" || well.GetReaction() != "Bread tastes of the well again." {
@@ -59,7 +59,7 @@ func TestRepairsContent(t *testing.T) {
 	}
 
 	fence, ok := RepairFor("fence-rail")
-	if !ok || fence.GetPart() != "split-rail" || fence.GetPos().GetTx() != 27 || fence.GetPos().GetTy() != 18 || fence.GetResident() != "silas" {
+	if !ok || fence.GetPart() != "split-rail" || fence.GetPos().GetTx() != 9 || fence.GetPos().GetTy() != 76 || fence.GetResident() != "silas" {
 		t.Fatalf("unexpected fence-rail definition: %+v", fence)
 	}
 
@@ -79,7 +79,7 @@ func TestRepairsContent(t *testing.T) {
 	}
 
 	hame, ok := RepairFor("gate-hame")
-	if !ok || hame.GetPart() != "oilcloth-wrap" || hame.GetArea() != "commons" || hame.GetResident() != "silas" {
+	if !ok || hame.GetPart() != "oilcloth-wrap" || hame.GetArea() != "hearthwick" || hame.GetResident() != "silas" {
 		t.Fatalf("unexpected gate-hame definition: %+v", hame)
 	}
 }

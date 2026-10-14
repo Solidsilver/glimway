@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -30,13 +29,11 @@ type vectorPlace struct {
 	Source vectorSource `json:"source"`
 }
 
-type vectorResolve struct {
+type vectorPosition struct {
 	Source string `json:"source"`
 	Kind   string `json:"kind"`
 	Area   string `json:"area"`
 	Tile   [2]int `json:"tile"`
-	Space  string `json:"space"`
-	At     [2]int `json:"at"`
 }
 
 // vectorLookups are the rows every lookup replays: for the shipped places
@@ -57,7 +54,7 @@ type vectorLookups struct {
 		Space string     `json:"space"`
 		At    [2]float64 `json:"at"`
 	} `json:"anchors"`
-	Resolve []vectorResolve `json:"resolve"`
+	Positions []vectorPosition `json:"positions"`
 }
 
 type vectorDoc struct {
@@ -173,7 +170,7 @@ func TestLookupVectors(t *testing.T) {
 	checkLookups(t, readVectors(t).vectorLookups)
 }
 
-// checkLookups replays the SourceOf, OnGrid, Anchor and Resolve rows.
+// checkLookups replays the SourceOf, OnGrid and Anchor rows.
 func checkLookups(t *testing.T, doc vectorLookups) {
 	t.Helper()
 	for _, v := range doc.SourceOf {
@@ -192,94 +189,42 @@ func checkLookups(t *testing.T, doc vectorLookups) {
 			t.Errorf("Anchor(%q) = %s %v %v %v, want %+v", v.ID, space, x, y, ok, v)
 		}
 	}
-	for _, v := range doc.Resolve {
-		space, tx, ty := Resolve(v.Area, v.Tile[0], v.Tile[1])
-		if string(space) != v.Space || [2]int{tx, ty} != v.At {
-			t.Errorf("Resolve(%s, %v) = %s %d %d, want %s %v", v.Area, v.Tile, space, tx, ty, v.Space, v.At)
+
+}
+
+// Positions carry world tiles: a place label only maps to a saved space.
+func TestTownPositionsOnTheGrid(t *testing.T) {
+	for _, v := range readVectors(t).Positions {
+		cx, cy := wilds.ChunkOf(v.Tile[0], v.Tile[1])
+		space := ContentSpace(v.Area)
+		if space != Outdoors || !OnGrid("w", cx, cy) || At(space, float64(v.Tile[0]*16+8), float64(v.Tile[1]*16+8)).ID != "hearthwick" {
+			t.Errorf("%s is outside Hearthwick", v.Source)
 		}
 	}
 }
 
-// Every anchor and every content position in Commons tiles lands on the
-// grid in the Commons (the stand/target check against the Commons' solid
-// ground is the node test's, which can build today's Commons; the served
-// layout brings it to Go).
-func TestCommonsPositionsOnTheGrid(t *testing.T) {
-	check := func(what string, space Space, px, py float64) {
-		t.Helper()
-		tx, ty := wilds.TileOfPixel(px, py)
-		cx, cy := wilds.ChunkOf(tx, ty)
-		if space != Outdoors || !OnGrid("w", cx, cy) || At(space, px, py).ID != "commons" {
-			t.Errorf("%s: %s tile %d,%d is off the grid or out of the Commons", what, space, tx, ty)
+func TestLotAnchors(t *testing.T) {
+	for g := 0; g < 8; g++ {
+		space, x, y, ok := Anchor(fmt.Sprintf("hearthwick:lot:%d", g))
+		tx, ty := -60+24*(g%2), 44+24*(g/2)
+		if !ok || space != Outdoors || x != float64(tx*16+8) || y != float64(ty*16+8) {
+			t.Fatalf("lot %d: %s %v,%v", g, space, x, y)
+		}
+		if id := At(space, x, y).ID; id != fmt.Sprintf("lot:%d", g) {
+			t.Fatalf("lot %d is %s", g, id)
 		}
 	}
-	for _, f := range content.PlacesRules.GetFixed() {
-		for _, a := range f.GetAnchors() {
-			id := f.GetId() + ":" + a.GetId()
-			space, x, y, ok := Anchor(id)
-			if !ok {
-				t.Fatalf("anchor %s does not resolve", id)
-			}
-			check(id, space, x, y)
-		}
-	}
-	for _, v := range readVectors(t).Resolve {
-		if v.Source == "" {
-			continue
-		}
-		space, tx, ty := Resolve(v.Area, v.Tile[0], v.Tile[1])
-		check(v.Source, space, float64(tx*16+8), float64(ty*16+8))
+	if content.GateCapacity(fixedByID("hearthwick")) != 8 {
+		t.Fatal("town must have eight lot anchors")
 	}
 }
 
-// The gate anchors are the lane tiles beside the homestead gates
-// (content/homestead.json "commons"), one for each gate the frozen Commons
-// holds: gate:0 up to the capacity, no gaps.
-func TestGateAnchorsFollowTheLane(t *testing.T) {
-	lane := content.HomeRules.GetCommons()
-	commons := fixedByID("commons")
-	gates := 0
-	for _, a := range commons.GetAnchors() {
-		if strings.HasPrefix(a.GetId(), "gate:") {
-			gates++
-		}
-	}
-	// Owner decision (location-seam §0 10, §7 1): eight gates, two chunk rows.
-	if gates != 8 {
-		t.Fatalf("%d gate anchors, want the decided 8", gates)
-	}
-	if gates < int(lane.GetSpareGates()) {
-		t.Fatalf("%d gate anchors, fewer than the %d spare gates", gates, lane.GetSpareGates())
-	}
-	rows := lane.GetGateRows()
-	for g := range gates {
-		row, last := g/2, len(rows)-1
-		ty := int(rows[min(row, last)])
-		if row > last {
-			ty += (row - last) * int(lane.GetRowPitch())
-		}
-		tx := int(lane.GetFenceX()[g%2]) + 1
-		if g%2 == 1 {
-			tx = int(lane.GetFenceX()[1]) - 1
-		}
-		i := slices.IndexFunc(commons.GetAnchors(), func(a *content.PlaceAnchor) bool { return a.GetId() == fmt.Sprintf("gate:%d", g) })
-		if i < 0 {
-			t.Fatalf("no anchor gate:%d", g)
-		}
-		if a := commons.GetAnchors()[i]; int(a.GetTx()) != tx || int(a.GetTy()) != ty {
-			t.Errorf("gate:%d at %d,%d, want the lane tile %d,%d", g, a.GetTx(), a.GetTy(), tx, ty)
-		}
-	}
-}
-
-// commonsPositions walks the content files for positions in Commons tiles:
-// an object whose `area` (or a door's `to`) is "commons" holding tx/ty
-// itself or in a child object, and a {tx, ty} object keyed "commons" (the
-// story's boards). Paths name list entries by id: the walk is the node
-// test's, word for word, so both refuse the same missing vector.
-func commonsPositions(t *testing.T) []string {
+// townPositions walks the content for world tiles whose place is Hearthwick,
+// including inherited area ownership (fishing banks). Both twins compare
+// coordinates and source paths, so a stale vector cannot conceal a move.
+func townPositions(t *testing.T) map[string][2]int {
 	t.Helper()
-	var out []string
+	out := map[string][2]int{}
 	tile := func(v any) bool {
 		m, ok := v.(map[string]any)
 		if !ok {
@@ -289,13 +234,19 @@ func commonsPositions(t *testing.T) []string {
 		_, y := m["ty"].(float64)
 		return x && y
 	}
-	var walk func(path string, v any)
-	walk = func(path string, v any) {
+	var walk func(path string, v any, inherited bool)
+	walk = func(path string, v any, inherited bool) {
 		switch v := v.(type) {
 		case map[string]any:
-			own := v["area"] == "commons" || v["to"] == "commons"
+			own := inherited
+			if _, ok := v["area"]; ok {
+				own = v["area"] == "hearthwick"
+			}
+			if _, ok := v["to"]; ok {
+				own = v["to"] == "hearthwick"
+			}
 			if own && tile(v) {
-				out = append(out, path)
+				out[path] = [2]int{int(v["tx"].(float64)), int(v["ty"].(float64))}
 			}
 			keys := make([]string, 0, len(v))
 			for k := range v {
@@ -303,11 +254,12 @@ func commonsPositions(t *testing.T) []string {
 			}
 			sort.Strings(keys)
 			for _, k := range keys {
-				if tile(v[k]) && (own || k == "commons") {
-					out = append(out, path+"."+k)
+				if tile(v[k]) && (own || k == "hearthwick") {
+					m := v[k].(map[string]any)
+					out[path+"."+k] = [2]int{int(m["tx"].(float64)), int(m["ty"].(float64))}
 					continue
 				}
-				walk(path+"."+k, v[k])
+				walk(path+"."+k, v[k], own)
 			}
 		case []any:
 			for i, item := range v {
@@ -317,7 +269,7 @@ func commonsPositions(t *testing.T) []string {
 						name = id
 					}
 				}
-				walk(path+"."+name, item)
+				walk(path+"."+name, item, inherited)
 			}
 		}
 	}
@@ -337,22 +289,24 @@ func commonsPositions(t *testing.T) []string {
 		if err := json.Unmarshal(raw, &doc); err != nil {
 			t.Fatal(err)
 		}
-		walk(strings.TrimSuffix(f, ".json"), doc)
+		walk(strings.TrimSuffix(f, ".json"), doc, false)
 	}
-	sort.Strings(out)
 	return out
 }
 
-func TestEveryCommonsPositionHasAVector(t *testing.T) {
-	var vectors []string
-	for _, v := range readVectors(t).Resolve {
-		if v.Source != "" {
-			vectors = append(vectors, v.Source)
+func TestEveryTownPositionHasAVector(t *testing.T) {
+	remaining := townPositions(t)
+	for _, v := range readVectors(t).Positions {
+		if strings.HasPrefix(v.Source, "layout.") || strings.Contains(v.Source, ",") {
+			continue
 		}
+		if got, ok := remaining[v.Source]; !ok || got != v.Tile {
+			t.Errorf("%s: content %v, vector %v", v.Source, got, v.Tile)
+		}
+		delete(remaining, v.Source)
 	}
-	sort.Strings(vectors)
-	if got := commonsPositions(t); !slices.Equal(got, vectors) {
-		t.Fatalf("content positions in Commons tiles %v, vectors %v", got, vectors)
+	if len(remaining) > 0 {
+		t.Fatalf("town positions without vectors: %v", remaining)
 	}
 }
 

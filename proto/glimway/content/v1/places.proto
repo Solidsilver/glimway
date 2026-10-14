@@ -44,12 +44,13 @@ message PlaceRules {
   string rest = 4 [(buf.validate.field).string = {in: ["none", "village", "home"]}];
 }
 
-// The curated spaces not yet on the grid. `home` covers every `home:<g>`.
+// Curated outdoor spaces not yet on the grid. Home and town rooms inherit
+// rules from their indoor root; legacy outdoor spaces retire in T5.
 message SpaceRules {
-  PlaceRules village = 1 [(buf.validate.field).required = true];
+  reserved 1, 4;
+  reserved "village", "home";
   PlaceRules woodland = 2 [(buf.validate.field).required = true];
   PlaceRules ruin = 3 [(buf.validate.field).required = true];
-  PlaceRules home = 4 [(buf.validate.field).required = true];
 }
 
 // A fixed footprint: a layout (its id and revision name the served chunks'
@@ -57,7 +58,8 @@ message SpaceRules {
 // (0, 0) at world tile `origin`. The footprint is the chunk rectangle with
 // north-west chunk (cx, cy), `width` chunks east and `height` south; every
 // chunk in it is fixed. Zones and anchors are in layout tiles (world tile
-// minus origin) and lie inside the footprint (code rules).
+// minus origin). Zones lie inside their footprint. Anchors may name tiles
+// on another declared fixed footprint (town lot anchors).
 message FixedPlace {
   string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
   // How the words name it ("the Commons").
@@ -75,9 +77,11 @@ message FixedPlace {
   // Ids unique in the place (code rule).
   repeated PlaceZone zones = 11;
   // Stable positions doors, arrivals and recovery refer to, as
-  // `<place>:<anchor>` ("commons:arch", "commons:gate:3"). Ids unique in the
+  // `<place>:<anchor>` ("hearthwick:spawn", "hearthwick:lot:3"). Ids unique in the
   // place (code rule).
   repeated PlaceAnchor anchors = 12;
+  // Plots use a lane-only placeholder until the lot composer lands in T4.
+  string kind = 13 [(buf.validate.field).string = {in: ["", "layout", "plots"]}];
 }
 
 // A world tile.
@@ -90,7 +94,7 @@ message PlaceTile {
 // id and rules.
 message PlaceZone {
   string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
-  string place = 2 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
+  string place = 2 [(buf.validate.field).string.pattern = "^[a-z0-9-]+(:[0-9]+)?$"];
   optional sint32 tx = 3 [(buf.validate.field).required = true, (buf.validate.field).sint32 = {gte: -1048576, lte: 1048576}];
   optional sint32 ty = 4 [(buf.validate.field).required = true, (buf.validate.field).sint32 = {gte: -1048576, lte: 1048576}];
   // At most a footprint's side (16 chunks of 24 tiles).

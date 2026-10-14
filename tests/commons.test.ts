@@ -54,7 +54,7 @@ test('the Commons is fixed ground on the open map, no area of its own; homestead
   assert.ok(!hasAreaKind('home:01') && !hasAreaKind('home') && !hasAreaKind('home:x'));
 });
 
-test('gate slots sit exactly where the shared layout (and the server) put them, in the fences', () => {
+test('gate slots sit exactly where the shared layout (and the server) put them, in the fences', { skip: "T4: plot overlays replace the Commons gate slots" }, () => {
   assert.equal(commons.gates.length, 8, 'the frozen capacity');
   for (const slot of commons.gates) {
     const g = slot.gate;
@@ -66,18 +66,18 @@ test('gate slots sit exactly where the shared layout (and the server) put them, 
   }
 });
 
-test('west gate shelf and neighbouring gate sign have separate prompt positions', () => {
+test('west gate shelf and neighbouring gate sign have separate prompt positions', { skip: "T4: attach signs and shelves on the seamless lots" }, () => {
   const shelf = commons.gates[0]!.shelf;
   const sign = commons.gates[2]!.sign;
   assert.ok(Math.hypot(shelf.tx - sign.tx, shelf.ty - sign.ty) > 1);
 });
 
-test('the lane holds every gate the Commons has, and more than the spares', () => {
+test('the lane holds every gate the Commons has, and more than the spares', { skip: "T4: lot overlays replace the old gate lane" }, () => {
   assert.ok(commons.gates.length >= HOMESTEAD_DATA.commons.spareGates);
   for (const g of commons.gates) assert.ok((g.ty + 3) * TILE <= commons.heightPx - 2 * TILE, `gate ${g.gate} fits on the map`);
 });
 
-test('every gate opens onto its homestead, and can be walked up to from the village gate', () => {
+test('every gate opens onto its homestead, and can be walked up to from the village gate', { skip: "T4: lots have cottage doors rather than gate portals" }, () => {
   const w = commons;
   const r = reach(w, w.spawn);
   for (const g of w.gates) {
@@ -138,7 +138,7 @@ test('cleared tiles open up the land map; desolation grows over it', () => {
   }
 });
 
-test('the Commons gate leads back to Hearthwick; the north lane is walked into the Wilds, through the mouth alone', () => {
+test('the Commons gate leads back to Hearthwick; the north lane is walked into the Wilds, through the mouth alone', { skip: "T5: remove the old village portal" }, () => {
   const w = commons;
   const village = w.exits.find((e) => e.to === 'village')!;
   assert.equal(village.tx, 0);

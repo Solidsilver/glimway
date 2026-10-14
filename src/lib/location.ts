@@ -2,7 +2,7 @@
  * The one lookup for "where am I" (docs/design/location-seam.md 1.2): which
  * place a position in a space is in and what that place allows, which
  * source a chunk's ground comes from, whether an outdoor chunk exists, and
- * where anchors and area-local content tiles lie on the grid. The client
+ * where anchors lie on the grid. The client
  * predicts with it; the server (server/internal/location, the twin)
  * decides. Both replay content/vectors/location.json.
  *
@@ -37,7 +37,7 @@ export type RestKind = 'none' | 'village' | 'home';
 
 /**
  * The named region a position is in and what it allows. `id` is a place id
- * ("commons", "tangle", "whitequiet", "beyond", a zone's place) or, off the
+ * ("hearthwick", "lot:0", "tangle", "whitequiet", "beyond") or, off the
  * grid, the space itself ("village", "home:3", "in:commons:yard").
  */
 export interface Place {
@@ -75,10 +75,11 @@ const HOME = /^home:(0|[1-9]\d{0,3})$/;
 /** The rules of a space beside the grid, by its root ("village", "home:3"), if anything names it. */
 function spaceRules(root: string, places: Places): PlaceRules | undefined {
   const s = places.spaces;
-  if (root === 'village') return s.village;
+  // T5: retire the legacy outdoor scenes with validArea and save migration.
+  if (root === 'village') return { $typeName: 'glimway.content.v1.PlaceRules', safe: true, ride: false, sync: true, rest: 'village' };
   if (root === 'woodland') return s.woodland;
   if (root === 'ruin') return s.ruin;
-  if (HOME.test(root)) return s.home;
+  if (HOME.test(root)) return { $typeName: 'glimway.content.v1.PlaceRules', safe: true, ride: true, sync: true, rest: 'home' };
   return fixedById(root, places)?.rules;
 }
 
@@ -86,8 +87,7 @@ function spaceRules(root: string, places: Places): PlaceRules | undefined {
  * The place a position is in (world pixels in the space's frame). Outdoors
  * it is a fixed footprint's zone or the footprint itself, else the
  * generated place: a Wilds footprint's id or the Beyond. A fixed place's
- * own id as the space (the Commons before the join) reads its layout pixels
- * through the origin. A room takes its root space's rules and never allows
+ * own id as the space reads world pixels unchanged. A room takes its root space's rules and never allows
  * riding. Any other space is its own place, allowing nothing. It doesn't
  * ask whether the chunk is on the grid (onGrid does).
  */
@@ -103,8 +103,7 @@ export function at(space: Space, x: number, y: number, places: Places = PLACES):
     }
     return withRules(footprintAt(cx, cy)?.id ?? BEYOND, places.generated, { kind: 'generated', layout: '', revision: 0, epochKind: epochKindAt(cx, cy) });
   }
-  const f = fixedById(space, places);
-  if (f) return at(OUTDOORS, x + f.origin.tx * TILE, y + f.origin.ty * TILE, places);
+  if (fixedById(space, places)) return at(OUTDOORS, x, y, places);
   if (space.startsWith('in:')) {
     const r = spaceRules(rootArea(space), places);
     return r ? { ...withRules(space, r), ride: false } : nowhere(space);
@@ -128,7 +127,7 @@ export function onGrid(cx: number, cy: number, places: Places = PLACES): boolean
   return insideFrontier(cx, cy) || fixedAt(cx, cy, places) !== undefined;
 }
 
-/** "<place>:<anchor>" ("commons:arch", "commons:gate:3") as its space and its tile's centre in world pixels. */
+/** "<place>:<anchor>" ("hearthwick:arch", "hearthwick:lot:3") as its space and its tile's centre in world pixels. */
 export function anchor(id: string, places: Places = PLACES): { space: Space; x: number; y: number } | null {
   const i = id.indexOf(':');
   if (i < 0) return null;
@@ -138,19 +137,12 @@ export function anchor(id: string, places: Places = PLACES): { space: Space; x: 
   return { space: OUTDOORS, x: (a.tx + f.origin.tx) * TILE + TILE / 2, y: (a.ty + f.origin.ty) * TILE + TILE / 2 };
 }
 
-/**
- * An area-local content tile in its space: a fixed place's layout tile
- * ("commons") moves by the place's origin into outdoors; any other area is
- * its own space and the tile is unchanged. The bridge for content naming
- * Commons positions in Commons tiles until the town redesign moves them to
- * anchors.
+/** Content already carries world tiles. Only a place name changes to its
+ * saved space; coordinates are never translated (one-town §6.2).
  */
-export function resolve(area: string, tx: number, ty: number, places: Places = PLACES): { space: Space; tx: number; ty: number } {
-  const f = fixedById(area, places);
-  return f ? { space: OUTDOORS, tx: tx + f.origin.tx, ty: ty + f.origin.ty } : { space: area, tx, ty };
+export function contentPosition(area: string, tx: number, ty: number): { space: Space; tx: number; ty: number } {
+  return { space: contentSpace(area), tx, ty };
 }
-
-/** Content coordinates in the current scene's frame (Commons stays local until the join). */
-export function contentTile(current: string, area: string, tx: number, ty: number): { space: string; tx: number; ty: number } {
-  return current === area ? { space: area, tx, ty } : resolve(area, tx, ty);
+export function contentSpace(area: string): Space {
+  return PLACES.fixed.some(f => f.id === area || f.zones.some(z => z.place === area)) ? OUTDOORS : area;
 }

@@ -24,7 +24,7 @@ message Gathering {
   // Commons. Which named targets exist is a code rule.
   map<string, GatheringArea> areas = 5 [(buf.validate.field).map = {
     min_pairs: 3
-    keys: {string: {in: ["wilds", "woodland", "home", "village", "commons"]}}
+    keys: {string: {in: ["wilds", "woodland", "home", "hearthwick"]}}
   }];
   // The gatherable pieces, by id.
   map<string, GatheringTarget> targets = 6 [(buf.validate.field).map = {

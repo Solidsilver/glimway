@@ -33992,7 +33992,7 @@
             "ty": 6
           },
           "square": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 12,
             "ty": 15
           }
@@ -34032,7 +34032,7 @@
             "ty": 6
           },
           "square": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 12,
             "ty": 15
           }
@@ -34072,7 +34072,7 @@
             "ty": 6
           },
           "square": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 12,
             "ty": 15
           }
@@ -34111,7 +34111,7 @@
             "ty": 6
           },
           "square": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 12,
             "ty": 15
           }
@@ -34150,7 +34150,7 @@
             "ty": 6
           },
           "square": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 12,
             "ty": 15
           }
@@ -34190,7 +34190,7 @@
             "ty": 6
           },
           "square": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 12,
             "ty": 15
           }
@@ -34230,7 +34230,7 @@
             "ty": 6
           },
           "square": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 12,
             "ty": 15
           }
@@ -34270,7 +34270,7 @@
             "ty": 6
           },
           "square": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 12,
             "ty": 15
           }
@@ -34310,7 +34310,7 @@
             "ty": 6
           },
           "square": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 12,
             "ty": 15
           }
@@ -34349,7 +34349,7 @@
             "ty": 6
           },
           "square": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 12,
             "ty": 15
           }
@@ -34389,7 +34389,7 @@
             "ty": 6
           },
           "square": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 12,
             "ty": 15
           }
@@ -34434,7 +34434,7 @@
             "ty": 5
           },
           "door": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 30,
             "ty": 23
           }
@@ -34482,7 +34482,7 @@
             "ty": 5
           },
           "door": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 30,
             "ty": 23
           }
@@ -34531,7 +34531,7 @@
             "ty": 5
           },
           "door": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 30,
             "ty": 23
           }
@@ -34580,7 +34580,7 @@
             "ty": 5
           },
           "door": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 30,
             "ty": 23
           }
@@ -34629,7 +34629,7 @@
             "ty": 5
           },
           "door": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 30,
             "ty": 23
           }
@@ -34678,7 +34678,7 @@
             "ty": 5
           },
           "door": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 30,
             "ty": 23
           }
@@ -34727,7 +34727,7 @@
             "ty": 5
           },
           "door": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 30,
             "ty": 23
           }
@@ -34775,7 +34775,7 @@
             "ty": 5
           },
           "door": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 30,
             "ty": 23
           }
@@ -34812,7 +34812,7 @@
         "id": "ada",
         "spots": {
           "window": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 35,
             "ty": 8
           }
@@ -34840,7 +34840,7 @@
         "id": "ada",
         "spots": {
           "window": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 35,
             "ty": 8
           }
@@ -34868,7 +34868,7 @@
         "id": "ada",
         "spots": {
           "window": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 35,
             "ty": 8
           }
@@ -34897,12 +34897,12 @@
         "offsetMinutes": 55,
         "spots": {
           "a": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 1,
             "ty": 1
           },
           "b": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 2,
             "ty": 2
           }
@@ -34935,12 +34935,12 @@
         "offsetMinutes": 55,
         "spots": {
           "a": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 1,
             "ty": 1
           },
           "b": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 2,
             "ty": 2
           }
@@ -34974,12 +34974,12 @@
         "offsetMinutes": 55,
         "spots": {
           "a": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 1,
             "ty": 1
           },
           "b": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 2,
             "ty": 2
           }
@@ -35019,7 +35019,7 @@
             "ty": 6
           },
           "square": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 12,
             "ty": 15
           }
@@ -35059,7 +35059,7 @@
             "seated": true
           },
           "camp": {
-            "area": "commons",
+            "area": "hearthwick",
             "tx": 26,
             "ty": 5
           }
@@ -35099,7 +35099,7 @@
             "seated": true
           },
           "camp": {
-            "area": "commons",
+            "area": "hearthwick",
             "tx": 26,
             "ty": 5
           }
@@ -35139,7 +35139,7 @@
             "seated": true
           },
           "camp": {
-            "area": "commons",
+            "area": "hearthwick",
             "tx": 26,
             "ty": 5
           }
@@ -35179,7 +35179,7 @@
             "seated": true
           },
           "camp": {
-            "area": "commons",
+            "area": "hearthwick",
             "tx": 26,
             "ty": 5
           }
@@ -35220,7 +35220,7 @@
             "seated": true
           },
           "camp": {
-            "area": "commons",
+            "area": "hearthwick",
             "tx": 26,
             "ty": 5
           }
@@ -35261,7 +35261,7 @@
             "seated": true
           },
           "camp": {
-            "area": "commons",
+            "area": "hearthwick",
             "tx": 26,
             "ty": 5
           }
@@ -35302,7 +35302,7 @@
             "seated": true
           },
           "camp": {
-            "area": "commons",
+            "area": "hearthwick",
             "tx": 26,
             "ty": 5
           }
@@ -35343,7 +35343,7 @@
             "seated": true
           },
           "camp": {
-            "area": "commons",
+            "area": "hearthwick",
             "tx": 26,
             "ty": 5
           }
@@ -35383,7 +35383,7 @@
             "seated": true
           },
           "camp": {
-            "area": "commons",
+            "area": "hearthwick",
             "tx": 26,
             "ty": 5
           }
@@ -35423,7 +35423,7 @@
             "seated": true
           },
           "camp": {
-            "area": "commons",
+            "area": "hearthwick",
             "tx": 26,
             "ty": 5
           }
@@ -35463,7 +35463,7 @@
             "seated": true
           },
           "camp": {
-            "area": "commons",
+            "area": "hearthwick",
             "tx": 26,
             "ty": 5
           }
@@ -35504,7 +35504,7 @@
             "seated": true
           },
           "camp": {
-            "area": "commons",
+            "area": "hearthwick",
             "tx": 26,
             "ty": 5
           }
@@ -35545,7 +35545,7 @@
             "seated": true
           },
           "camp": {
-            "area": "commons",
+            "area": "hearthwick",
             "tx": 26,
             "ty": 5
           }
@@ -35586,7 +35586,7 @@
             "seated": true
           },
           "camp": {
-            "area": "commons",
+            "area": "hearthwick",
             "tx": 26,
             "ty": 5
           }
@@ -35627,7 +35627,7 @@
             "seated": true
           },
           "camp": {
-            "area": "commons",
+            "area": "hearthwick",
             "tx": 26,
             "ty": 5
           }
@@ -35667,7 +35667,7 @@
             "seated": true
           },
           "camp": {
-            "area": "commons",
+            "area": "hearthwick",
             "tx": 26,
             "ty": 5
           }
@@ -35707,7 +35707,7 @@
             "seated": true
           },
           "camp": {
-            "area": "commons",
+            "area": "hearthwick",
             "tx": 26,
             "ty": 5
           }
@@ -35748,7 +35748,7 @@
             "seated": true
           },
           "camp": {
-            "area": "commons",
+            "area": "hearthwick",
             "tx": 26,
             "ty": 5
           }

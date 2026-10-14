@@ -14,9 +14,8 @@ func placeID(s store.Snapshot) string {
 	return location.At(location.Space(s.State.Area), s.State.Position.X, s.State.Position.Y).ID
 }
 
-// contentTile carries a content tile (area-local: Commons positions in
-// Commons layout tiles) into its space; other areas are their own frame.
+// contentTile maps a content place to its saved space. Tiles are already
+// world tiles; they never move by a fixed footprint origin.
 func contentTile(area string, tx, ty int) (string, int, int) {
-	space, x, y := location.Resolve(area, tx, ty)
-	return string(space), x, y
+	return string(location.ContentSpace(area)), tx, ty
 }

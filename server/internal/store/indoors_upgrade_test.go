@@ -105,13 +105,16 @@ func TestRemovedRoomReadRecovery(t *testing.T) {
 			t.Fatal(err)
 		}
 		want := "village"
+		if area == "in:village:bakery" || area == "in:village:removed" {
+			want = "outdoors"
+		}
 		if area == "in:village:mill:2" {
 			want = "in:village:mill"
 		}
 		if loaded.State.Area != want {
 			t.Fatal(area, loaded.State.Area)
 		}
-		if area == "in:village:bakery" && loaded.State.Position != (rules.Position{X: 120, Y: 136}) {
+		if area == "in:village:bakery" && loaded.State.Position != (rules.Position{X: -168, Y: 952}) {
 			t.Fatal("lost doorstep", loaded.State.Position)
 		}
 		version := loaded.Version
@@ -129,8 +132,8 @@ func TestRemovedRoomReadRecovery(t *testing.T) {
 
 // A removed Commons room comes back onto the outdoors grid (location-seam.md
 // §3): a surviving door to the Commons lands on its doorstep, resolved
-// through the footprint's origin (the Yard's is anchor commons:yard-door),
-// and a room with no door left lands on anchor commons:arch.
+// through the footprint's origin (the Yard's is anchor hearthwick:yard-door),
+// and a room with no door left lands on anchor hearthwick:arch.
 func TestRemovedCommonsRoomRecoversToAnchors(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "rooms.sqlite")
 	db := oldAccount026(t, path, false, true)
@@ -148,7 +151,7 @@ func TestRemovedCommonsRoomRecoversToAnchors(t *testing.T) {
 	}
 	var front *content.RoomDoor
 	for _, door := range yard.GetDoors() {
-		if door.GetTo() == "commons" {
+		if door.GetTo() == "hearthwick" {
 			front = door
 		}
 	}
@@ -169,14 +172,14 @@ func TestRemovedCommonsRoomRecoversToAnchors(t *testing.T) {
 		}
 	}
 	doorstep := func() (string, float64, float64) {
-		space, x, y, ok := location.Anchor("commons:yard-door")
+		space, x, y, ok := location.Anchor("hearthwick:yard-door")
 		if !ok {
 			t.Fatal("no yard-door anchor")
 		}
 		return string(space), x, y
 	}
 	arch := func() (string, float64, float64) {
-		space, x, y, ok := location.Anchor("commons:arch")
+		space, x, y, ok := location.Anchor("hearthwick:spawn")
 		if !ok {
 			t.Fatal("no arch anchor")
 		}
@@ -206,7 +209,7 @@ func TestRemovedCommonsRoomRecoversToAnchors(t *testing.T) {
 		}
 	}
 	// The yard's doorstep is the door's entry carried onto the grid.
-	if _, x, y := doorstep(); x != float64((53-21)*16+8) || y != float64((18+24)*16+8) {
+	if _, x, y := doorstep(); x != float64(34*16+8) || y != float64(35*16+8) {
 		t.Fatal("yard-door anchor moved", x, y)
 	}
 }

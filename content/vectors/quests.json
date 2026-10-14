@@ -728,7 +728,7 @@
             "where",
             "area"
           ],
-          "value": "village"
+          "value": "hearthwick"
         }
       ],
       "rule": "where target oil-lamp"
@@ -967,7 +967,7 @@
             0,
             "at"
           ],
-          "value": "village"
+          "value": "hearthwick"
         }
       ]
     },
@@ -1079,7 +1079,7 @@
           ],
           "value": {
             "ui": "journal",
-            "area": "village"
+            "area": "hearthwick"
           }
         }
       ]

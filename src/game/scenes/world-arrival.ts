@@ -4,7 +4,7 @@
  * or on the nearest open tile if the land turned; the Turning says so once
  * the Wilds are read), or a registered area (rooms included: `in:…`). A save
  * in an area this build can't draw comes back in at the Commons arch (the
- * anchor `commons:arch`, on the open map).
+ * anchor `hearthwick:arch`, on the open map).
  */
 import { tileCenter } from '../../lib/tile'
 import { anchorTile } from '../wilds/fixed'
@@ -30,7 +30,7 @@ export function arrive(
   // A save (or a server relocation) in an area this build can't draw comes
   // back in at the Commons arch.
   if (!hasAreaKind(state.area)) {
-    const at = anchorTile('commons:arch')
+    const at = anchorTile('hearthwick:arch')
     state.area = OUTDOORS_AREA
     state.position = tileCenter(at.tx, at.ty)
     entry = { ...at }

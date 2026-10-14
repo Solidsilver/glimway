@@ -117,7 +117,7 @@ export interface FixedDay {
 const footprints = new Map<string, FixedFootprint>()
 let loading: Promise<void> | null = null
 
-/** An anchor ("commons:arch") as its world tile. */
+/** An anchor ("hearthwick:arch") as its world tile. */
 export function anchorTile(id: string): { tx: number; ty: number } {
   const a = anchor(id)
   if (!a) throw new Error(`[glimway] no anchor ${id}`)
@@ -126,7 +126,7 @@ export function anchorTile(id: string): { tx: number; ty: number } {
 
 /** Where you come back out of homestead gate `gate` onto the Commons: its gate anchor (the arch past the frozen capacity). */
 export function gateAnchor(gate: number): { tx: number; ty: number } {
-  return anchor(`commons:gate:${gate}`) ? anchorTile(`commons:gate:${gate}`) : anchorTile('commons:arch')
+  return anchor(`hearthwick:lot:${gate}`) ? anchorTile(`hearthwick:lot:${gate}`) : anchorTile('hearthwick:arch')
 }
 
 /** The fixed place a chunk lies in, or null. */
@@ -349,7 +349,7 @@ export function exitOf(o: FixedObject, fp: Pick<FixedFootprint, 'tx' | 'ty' | 'w
 
 /** The Commons lane (gates and fixtures) in world tiles, once its chunks are here. */
 export function commonsLane(): CommonsLane | null {
-  const fp = footprints.get('commons')
+  const fp = footprints.get('hearthwick')
   if (!fp) return null
   const named = new Map<string, { tx: number; ty: number }>()
   const slots = new Map<number, Partial<GateSlot>>()
@@ -360,7 +360,7 @@ export function commonsLane(): CommonsLane | null {
       const at = { tx: o.tx, ty: o.ty }
       named.set(o.id, at)
       if (o.kind === 'lamp') lamps.push(at)
-      else if (o.kind === 'gate') Object.assign(slot(o.gate), { tx: o.tx, ty: o.ty, side: o.side as GateSlot['side'], entry: anchorTile(`commons:gate:${o.gate}`) })
+      else if (o.kind === 'gate') Object.assign(slot(o.gate), { tx: o.tx, ty: o.ty, side: o.side as GateSlot['side'], entry: anchorTile(`hearthwick:lot:${o.gate}`) })
       else if (o.kind === 'sign') Object.assign(slot(o.gate), { sign: at, chunk: key })
       else if (o.kind === 'shelf') slot(o.gate).shelf = at
     }
@@ -372,11 +372,11 @@ export function commonsLane(): CommonsLane | null {
   return {
     gates: [...slots.values()].sort((a, b) => a.gate! - b.gate!) as GateSlot[],
     features: {
-      gate: feature('commons-gate'),
-      hame: feature('hame'),
-      well: feature('well'),
-      board: feature('board'),
-      silas: feature('npc-post:silas'),
+      gate: anchorTile('hearthwick:arch'),
+      hame: feature('gate-hame'),
+      well: feature('town-well'),
+      board: feature('town-board'),
+      silas: feature('npc:silas'),
       toolbox: feature('toolbox'),
       firebox: feature('firebox'),
       skids: feature('skids'),

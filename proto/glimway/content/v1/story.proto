@@ -24,12 +24,12 @@ message Story {
   map<string, string> npcs = 6 [(buf.validate.field).map = {
     min_pairs: 1
     keys: {string: {pattern: "^[a-z0-9-]{1,100}$"}}
-    values: {string: {in: ["village", "woodland", "ruin", "commons"]}}
+    values: {string: {in: ["hearthwick", "woodland", "ruin"]}}
   }];
   map<string, string> spots = 7 [(buf.validate.field).map = {
     min_pairs: 1
     keys: {string: {pattern: "^[a-z0-9-]{1,100}$"}}
-    values: {string: {in: ["village", "woodland", "ruin", "commons"]}}
+    values: {string: {in: ["hearthwick", "woodland", "ruin"]}}
   }];
   repeated string quest_items = 8 [(buf.validate.field).repeated = {
     min_items: 1

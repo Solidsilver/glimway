@@ -434,7 +434,7 @@ func TestChunksFixedSource(t *testing.T) {
 	s := chunkStore(t)
 	ctx := context.Background()
 	c := NewChunks(nil, fakegen.New())
-	epoch := chunks.FixedEpoch("commons", 3)
+	epoch := chunks.FixedEpoch("hearthwick", 1)
 	inTx(t, s, func(tx *sql.Tx) {
 		for _, world := range []string{"world-a", "world-b"} {
 			m, err := c.Chunk(ctx, tx, world, epoch, 0, -1, 2)
@@ -453,7 +453,7 @@ func TestChunksFixedSource(t *testing.T) {
 			epoch         string
 			layer, cx, cy int32
 		}{
-			{chunks.FixedEpoch("commons", 1), 0, 0, 1}, // a revision not current
+			{chunks.FixedEpoch("hearthwick", 2), 0, 0, 1}, // a revision not current
 			{"some-wick-epoch", 0, 0, 1},               // a stored epoch's id in the footprint
 			{epoch, 0, 0, 0},                           // the pseudo-epoch off the footprint
 			{epoch, 1, 0, 1},                           // another layer
@@ -466,7 +466,7 @@ func TestChunksFixedSource(t *testing.T) {
 	if n := countRows(t, s, "SELECT count(*) FROM wilds_chunks") + countRows(t, s, "SELECT count(*) FROM wild_epochs"); n != 0 {
 		t.Fatalf("a fixed read stored %d rows", n)
 	}
-	if c.get(chunkKey{epoch, 0, -1, 2}) == nil || c.get(chunkKey{chunks.FixedEpoch("commons", 1), 0, 0, 1}) != nil {
+	if c.get(chunkKey{epoch, 0, -1, 2}) == nil || c.get(chunkKey{chunks.FixedEpoch("hearthwick", 2), 0, 0, 1}) != nil {
 		t.Fatal("the LRU keys fixed chunks by their revision's pseudo-epoch")
 	}
 }

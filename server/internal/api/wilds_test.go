@@ -267,7 +267,7 @@ func TestWildsNearMakesEpochsAndChunks(t *testing.T) {
 		t.Fatal("a second read wrote")
 	}
 	// Off the grid: refused, and nothing is made.
-	for _, at := range [][2]int{{5, 0}, {0, 3}, {-2, 1}, {-5, -4}, {0, -9}} {
+	for _, at := range [][2]int{{5, 0}, {2, 4}, {-4, 1}, {-5, -4}, {0, -9}} {
 		x.near(c, at[0], at[1], 409)
 	}
 	for _, path := range []string{"0", "0/-1/2", "x/1", "01/1", "0/-01", ""} {
@@ -285,7 +285,7 @@ func TestWildsNearMakesEpochsAndChunks(t *testing.T) {
 	for _, ch := range commons.Chunks {
 		listed[[2]int32{ch.Chunk.Cx, ch.Chunk.Cy}] = ch.Source + " " + ch.Epoch
 	}
-	if len(listed) != 16 || listed[[2]int32{0, 1}] != "fixed fixed:commons@3" || listed[[2]int32{1, 2}] != "fixed fixed:commons@3" || listed[[2]int32{0, 0}] != "generated "+n.Still.Id || listed[[2]int32{2, -1}] != "generated "+n.Wick.Id {
+	if len(listed) != 22 || listed[[2]int32{0, 1}] != "fixed fixed:hearthwick@1" || listed[[2]int32{1, 2}] != "fixed fixed:hearthwick@1" || listed[[2]int32{0, 0}] != "generated "+n.Still.Id || listed[[2]int32{2, -1}] != "generated "+n.Wick.Id {
 		t.Fatal("the window's chunks", listed)
 	}
 	for _, e := range commons.Entities {

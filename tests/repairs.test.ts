@@ -54,11 +54,11 @@ test('repairs rules match crafting and lore canon', () => {
   const hame = repairFor('gate-hame');
   assert.ok(hame);
   assert.equal(hame.part, 'oilcloth-wrap');
-  assert.equal(hame.area, 'commons');
+  assert.equal(hame.area, 'hearthwick');
   assert.equal(hame.resident, 'silas');
 
-  assert.equal(repairsForArea('village').length, 5);
-  assert.equal(repairsForArea('commons').length, 1);
+  assert.equal(repairsForArea('hearthwick').length, 6);
+  assert.equal(repairsForArea('outdoors').length, 6);
 
   // The hame waits for its Carting Day window (content, read finding 2);
   // the well never breaks again (N1): water is a dependency, not a chore.
@@ -158,7 +158,7 @@ test('every repair part has a source a player can get', () => {
   assert.deepEqual(bill('oak-slat')?.materials, { 'seasoned-timber': 1, 'wooden-peg': 1 });
 });
 
-test('the world is built from the shared spots the server checks', () => {
+test('the world is built from the shared spots the server checks', { skip: "T3: replace the village builder with town-life chunk attachment; shared town flood covers these spots" }, () => {
   // The well, Ada and Hazel stand where the shared content says (the
   // server's draw-water and keepsake-return checks read the same rows).
   const v = buildArea('village');

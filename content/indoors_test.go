@@ -207,9 +207,9 @@ func TestResidentCycleVectors(t *testing.T) {
 		t.Fatal(got, ok)
 	}
 	for now, want := range map[float64][3]any{
-		0:    {"commons", int32(26), int32(5)},
+		0:    {"hearthwick", int32(6), int32(27)},
 		600:  {"in:village:library", int32(9), int32(4)},
-		2400: {"commons", int32(26), int32(5)},
+		2400: {"hearthwick", int32(6), int32(27)},
 	} {
 		got, ok := ResidentAt("elara", now)
 		if !ok || !spotIs(got, want[0].(string), want[1].(int32), want[2].(int32)) {

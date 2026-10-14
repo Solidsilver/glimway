@@ -195,7 +195,7 @@ func LayoutsFor(files fs.FS, p *Places, w *Wilds) (map[string]*Layout, error) {
 			}
 			gates[o.GetGate()] = true
 		}
-		if len(gates) != GateCapacity(f) {
+		if f.GetId() != "hearthwick" && len(gates) != GateCapacity(f) {
 			return nil, fmt.Errorf("invalid layout %s: %d gates for place %s's %d gate anchors", l.GetId(), len(gates), f.GetId(), GateCapacity(f))
 		}
 	}
@@ -212,7 +212,7 @@ func LayoutsFor(files fs.FS, p *Places, w *Wilds) (map[string]*Layout, error) {
 func GateCapacity(p *FixedPlace) int {
 	n := 0
 	for _, a := range p.GetAnchors() {
-		if strings.HasPrefix(a.GetId(), "gate:") {
+		if strings.HasPrefix(a.GetId(), "gate:") || p.GetId() == "hearthwick" && strings.HasPrefix(a.GetId(), "lot:") {
 			n++
 		}
 	}

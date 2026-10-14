@@ -6,7 +6,6 @@ import (
 	"glimway/content"
 	"glimway/server/internal/location"
 	"glimway/server/internal/rules"
-	"math"
 	"strings"
 
 	"google.golang.org/protobuf/proto"
@@ -15,22 +14,19 @@ import (
 // Keep the shipped doorsteps when a room's authored row is retired. New
 // retired rooms should retain their last doorstep here before deleting data.
 var retiredRoomDoors = map[string]*content.RoomTile{
-	"in:village:bakery":  {Tx: proto.Int32(7), Ty: proto.Int32(8)},
-	"in:village:mill":    {Tx: proto.Int32(29), Ty: proto.Int32(23)},
-	"in:village:library": {Tx: proto.Int32(4), Ty: proto.Int32(18)},
+	"in:village:bakery":  {Tx: proto.Int32(-11), Ty: proto.Int32(59)},
+	"in:village:mill":    {Tx: proto.Int32(29), Ty: proto.Int32(77)},
+	"in:village:library": {Tx: proto.Int32(-11), Ty: proto.Int32(77)},
 }
 
-// commonsFallback is where a removed Commons room with no surviving door
-// lands: the arch, as the Commons fallback (location-seam.md §3).
-const commonsFallback = "commons:arch"
+// townFallback is where a removed town room with no surviving door lands
+// (one-town §6.2).
+const townFallback = "hearthwick:spawn"
 
-// onGrid carries a place on a fixed footprint's layout ("commons", the door
-// metadata's frame) into its space: outdoors, by the footprint's origin.
-// Any other area is returned unchanged.
+// onGrid maps a content place label to the saved space, keeping its world
+// pixels unchanged.
 func onGrid(area string, p rules.Position) (string, rules.Position) {
-	tx, ty := int(math.Floor(p.X/16)), int(math.Floor(p.Y/16))
-	space, wx, wy := location.Resolve(area, tx, ty)
-	return string(space), rules.Position{X: p.X + float64((wx-tx)*16), Y: p.Y + float64((wy-ty)*16)}
+	return string(location.ContentSpace(area)), p
 }
 
 // Recover removed rooms on reads too, before projecting a saved place.
@@ -73,10 +69,10 @@ func recoverRoom(ctx context.Context, tx *sql.Tx, s *Snapshot) error {
 			}
 		}
 		if door, ok := retiredRoomDoors[strings.TrimSuffix(area, ":2")]; ok && position == rules.NewState().Position {
-			next, position = "village", rules.Position{X: float64(door.GetTx()*16 + 8), Y: float64(door.GetTy()*16 + 8)}
+			next, position = "hearthwick", rules.Position{X: float64(door.GetTx()*16 + 8), Y: float64(door.GetTy()*16 + 8)}
 		}
-		if next == "village" && position == rules.NewState().Position && content.RootArea(area) == "commons" {
-			if space, x, y, ok := location.Anchor(commonsFallback); ok {
+		if next == "village" && position == rules.NewState().Position && content.RootArea(area) == "hearthwick" {
+			if space, x, y, ok := location.Anchor(townFallback); ok {
 				next, position = string(space), rules.Position{X: x, Y: y}
 			}
 		}

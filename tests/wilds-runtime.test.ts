@@ -32,7 +32,7 @@ test('world pixels: signed, floor-divided into chunks of 384 px', () => {
 
 test('the Commons gate: three tiles on chunk (0, 0)’s south edge, over the Commons’ arch on the chunk below', () => {
   assert.deepEqual(gateTiles(), { tx: 1, ty: 23, tw: 3, th: 1 });
-  const arch = anchor('commons:arch')!;
+  const arch = anchor('hearthwick:arch')!;
   assert.deepEqual(arch, { space: 'outdoors', x: 40, y: 424 });
   assert.deepEqual(chunkOfPixel(arch.x, arch.y), { cx: 0, cy: 1 });
 });

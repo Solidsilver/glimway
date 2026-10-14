@@ -38,7 +38,7 @@ type (
 // tab, fitting or effect type is a code change on both sides
 // (src/lib/items.ts mirrors these), never just data.
 var (
-	PickupAreas     = []string{"village", "woodland", "ruin", "commons"}
+	PickupAreas     = []string{"hearthwick", "woodland", "ruin"}
 	instancedKinds  = []string{"tool", "off-hand", "carry-gear", "fitting"}
 	ImplementedUses = []string{"restore-hp", "restore-mana", "clear-unmoored", "ease-unmoored"}
 	atZeroForGrade  = map[string][]string{"cheap": {"breaks"}, "heirloom": {"blunt", "cracked"}, "special": {"never"}}

@@ -14,7 +14,7 @@
     {
       "id": "in:village:bakery",
       "name": "Hazel's kitchen",
-      "parent": "village",
+      "parent": "hearthwick",
       "map": [
         "##############",
         "#==w==OOO==w=#",
@@ -33,14 +33,14 @@
           "kind": "door",
           "at": "D",
           "side": "south",
-          "to": "village",
+          "to": "hearthwick",
           "outside": {
-            "tx": 7,
-            "ty": 7
+            "tx": -11,
+            "ty": 58
           },
           "entry": {
-            "tx": 7,
-            "ty": 8
+            "tx": -11,
+            "ty": 59
           }
         }
       ],
@@ -104,12 +104,12 @@
       "outside": {
         "building": "house-west",
         "window": {
-          "tx": 9,
-          "ty": 6
+          "tx": -9,
+          "ty": 57
         },
         "chimney": {
-          "x": 99,
-          "y": 81
+          "x": -189,
+          "y": 897
         }
       },
       "furnishings": [
@@ -171,7 +171,7 @@
     {
       "id": "in:village:mill",
       "name": "Finn's mill",
-      "parent": "village",
+      "parent": "hearthwick",
       "map": [
         "##############",
         "#=w==========#",
@@ -191,14 +191,14 @@
           "kind": "door",
           "at": "D",
           "side": "south",
-          "to": "village",
+          "to": "hearthwick",
           "outside": {
             "tx": 29,
-            "ty": 22
+            "ty": 76
           },
           "entry": {
             "tx": 29,
-            "ty": 23
+            "ty": 77
           }
         },
         {
@@ -261,7 +261,7 @@
         "building": "tolley-mill",
         "window": {
           "tx": 30,
-          "ty": 20
+          "ty": 74
         }
       },
       "furnishings": [
@@ -329,7 +329,7 @@
     {
       "id": "in:village:mill:2",
       "name": "The sack loft",
-      "parent": "village",
+      "parent": "hearthwick",
       "map": [
         "##############",
         "#=w=====w==HH#",
@@ -431,7 +431,7 @@
     {
       "id": "in:village:library",
       "name": "The library reading room",
-      "parent": "village",
+      "parent": "hearthwick",
       "map": [
         "##############",
         "#SS=SS=SS=SS=#",
@@ -450,14 +450,14 @@
           "kind": "door",
           "at": "D",
           "side": "south",
-          "to": "village",
+          "to": "hearthwick",
           "outside": {
-            "tx": 4,
-            "ty": 17
+            "tx": -11,
+            "ty": 76
           },
           "entry": {
-            "tx": 4,
-            "ty": 18
+            "tx": -11,
+            "ty": 77
           }
         }
       ],
@@ -561,8 +561,8 @@
       "outside": {
         "building": "library",
         "window": {
-          "tx": 5,
-          "ty": 15
+          "tx": -10,
+          "ty": 74
         }
       },
       "furnishings": [
@@ -625,7 +625,7 @@
     {
       "id": "in:commons:yard",
       "name": "Silas's Yard",
-      "parent": "commons",
+      "parent": "hearthwick",
       "map": [
         "##############",
         "#RRRw====wMMM#",
@@ -644,14 +644,14 @@
           "kind": "door",
           "at": "D",
           "side": "south",
-          "to": "commons",
+          "to": "hearthwick",
           "outside": {
-            "tx": 53,
-            "ty": 17
+            "tx": 34,
+            "ty": 34
           },
           "entry": {
-            "tx": 53,
-            "ty": 18
+            "tx": 34,
+            "ty": 35
           }
         },
         {
@@ -815,7 +815,7 @@
     {
       "id": "in:commons:yard:deeds",
       "name": "Pell's office",
-      "parent": "commons",
+      "parent": "hearthwick",
       "map": [
         "##########",
         "#PPPw===w#",

@@ -246,7 +246,7 @@ func gateCount() int {
 // commonsGates is the Commons' gate capacity (its places.json gate anchors).
 func commonsGates() int {
 	for _, f := range content.PlacesRules.GetFixed() {
-		if f.GetId() == "commons" {
+		if f.GetId() == "hearthwick" {
 			return content.GateCapacity(f)
 		}
 	}

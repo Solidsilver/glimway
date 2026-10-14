@@ -27,7 +27,7 @@ import { chunkOfTile, footprintAt, commonsLane } from '../wilds/fixed'
 import { CHUNK_TILES } from '../wilds/coords'
 import type { Buildable } from '../wilds/window-chunk'
 import { FixedScope } from '../wilds/fixed-scope'
-import { resolve } from '../../lib/location'
+import { contentPosition } from '../../lib/location'
 import { villageFor, type Village } from '../village'
 import { calendarFind } from '../../lib/wilds/stories'
 import { sellerFor } from '../../lib/items'
@@ -134,13 +134,13 @@ export class VillageLayer {
     if (name === 'Carting Day') {
       const madder = sellerFor('madder-stall')
       for (const [art, tx, ty] of [['stall-a', madder?.tx ?? 8, madder?.ty ?? 18], ['stall-b', 13, 18], ['stall-c', 10, 24]] as const) {
-        const t = resolve('commons', tx, ty)
+        const t = contentPosition('commons', tx, ty)
         at(t.tx, t.ty, () => {
           const y = tileBottom(t.ty)
           this.add(this.scene.add.image(tileMid(t.tx), y, art).setOrigin(0.5, 1).setDepth(y))
         })
       }
-      const square = resolve('commons', 23, 17)
+      const square = contentPosition('commons', 23, 17)
       at(square.tx, square.ty, () => this.add(this.scene.add.image(tileMid(square.tx), square.ty * TILE - 18, 'bunting-96').setOrigin(0.5, 0).setDepth(5000)))
       const h = commonsLane()?.features.hame
       if (h) at(h.tx, h.ty, () => this.glow(tileMid(h.tx), tileBottom(h.ty) - 24, 0.6, 0.9))
@@ -259,7 +259,7 @@ export class VillageLayer {
     // the square on the day, and not otherwise.
     if (lane && this.village.calendar.festival === 'Carting Day' && sellerFor('madder-stall')) {
       const stall = sellerFor('madder-stall')!
-      const at = resolve(stall.area, stall.tx, stall.ty)
+      const at = contentPosition(stall.area, stall.tx, stall.ty)
       list.push({ id: 'village:stall', x: tileMid(at.tx), y: tileBottom(at.ty) + 2, label: stall.goods[0]?.label ?? 'Visit the madder stall', verb: 'Buy', marker: notice, markerOffset: 32, activate: () => this.visitStall() })
     }
     // Only when it changed: replacing the list rebuilds its markers.

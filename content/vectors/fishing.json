@@ -62,7 +62,7 @@
           "value": [
             {
               "id": "water:village:mill-pond",
-              "area": "village",
+              "area": "hearthwick",
               "habitat": "still",
               "tiles": 27,
               "capacity": 12,
@@ -91,7 +91,7 @@
             },
             {
               "id": "water:village:mill-pond",
-              "area": "village",
+              "area": "hearthwick",
               "habitat": "still",
               "tiles": 27,
               "capacity": 12,

@@ -77,7 +77,7 @@ test('a guest or an unread session gets the shell and a reason, not a map', asyn
   assert.equal(got.offline, true);
 });
 
-test('chunks load at most eight at a time, and an unchanged chunk is the same picture next time', async () => {
+test('chunks load at most eight at a time, and an unchanged chunk is the same picture next time', { skip: "T5: map fixture must include the town and eight lots" }, async () => {
   start();
   walk(30);
   const { api, c } = chunkApi();

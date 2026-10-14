@@ -19,7 +19,7 @@ func TestOutdoorsPresenceV4Grammar(t *testing.T) {
 			t.Error("refused", room)
 		}
 	}
-	for _, room := range []string{"wilds", "wilds:0:0", "outdoors", "outdoors:00:0", "outdoors:-0:0", "outdoors:+1:0", "outdoors:0:3", "outdoors:5:0", "outdoors:0:0:0", "commons"} {
+	for _, room := range []string{"wilds", "wilds:0:0", "outdoors", "outdoors:00:0", "outdoors:-0:0", "outdoors:+1:0", "outdoors:2:4", "outdoors:5:0", "outdoors:0:0:0", "commons"} {
 		if validPresenceRoom(room) {
 			t.Error("accepted", room)
 		}
@@ -37,8 +37,8 @@ func TestLocationRulesAtSeam(t *testing.T) {
 		safe, gen bool
 		id        string
 	}{
-		{"outdoors", 40, 424, true, false, "commons"},
-		{"outdoors", 40, 392, true, false, "commons"},
+		{"outdoors", 40, 424, true, false, "hearthwick"},
+		{"outdoors", 40, 392, true, false, "hearthwick"},
 		{"outdoors", 40, 376, false, true, "tangle"},
 		{"outdoors", 40, -1200, false, true, "whitequiet"},
 		{"village", 400, 300, true, false, "village"},
@@ -83,17 +83,17 @@ func TestContentReachResolvesCommonsTilesOntoTheGrid(t *testing.T) {
 	s := store.Snapshot{State: rules.NewState()}
 	s.State.Area = "commons"
 	s.State.Position = rules.Position{X: 53*16 + 8, Y: 18*16 + 8}
-	if nearTile(&s, "commons", 53, 18, 0) {
+	if nearTile(&s, "hearthwick", 34, 35, 0) {
 		t.Fatal("local reach")
 	}
-	space, tx, ty := location.Resolve("commons", 53, 18)
+	space, tx, ty := location.ContentSpace("hearthwick"), 34, 35
 	s.State.Area = string(space)
 	s.State.Position = rules.Position{X: float64(tx*16 + 8), Y: float64(ty*16 + 8)}
-	if !nearTile(&s, "commons", 53, 18, 0) || placeID(s) != "commons" {
+	if !nearTile(&s, "hearthwick", 34, 35, 0) || placeID(s) != "hearthwick" {
 		t.Fatal("world reach")
 	}
 	s.State.Position.X += 17
-	if nearTile(&s, "commons", 53, 18, 1) {
+	if nearTile(&s, "hearthwick", 34, 35, 1) {
 		t.Fatal("reach widened")
 	}
 	if beatRoom("echo:nan", "outdoors", "outdoors:0:1", &presencePosition{X: 40, Y: 392}) || !beatRoom("echo:nan", "outdoors", "outdoors:0:-1", &presencePosition{X: 40, Y: -8}) {

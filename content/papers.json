@@ -156,9 +156,9 @@
       "section": "field-notes",
       "rule": {
         "kind": "placed",
-        "area": "village",
-        "tx": 25,
-        "ty": 14
+        "area": "hearthwick",
+        "tx": 7,
+        "ty": 72
       }
     },
     {
@@ -187,9 +187,9 @@
       "section": "stories",
       "rule": {
         "kind": "placed",
-        "area": "village",
-        "tx": 39,
-        "ty": 2
+        "area": "hearthwick",
+        "tx": 36,
+        "ty": 49
       }
     },
     {
@@ -220,9 +220,9 @@
       "section": "field-notes",
       "rule": {
         "kind": "placed",
-        "area": "village",
+        "area": "hearthwick",
         "tx": 40,
-        "ty": 22
+        "ty": 76
       }
     },
     {

@@ -1,3 +1,4 @@
+import { anchor } from '../src/lib/location.ts'
 import type { FsHooks } from '../src/game/dev-hooks.ts'
 import { expect, type Page } from '@playwright/test'
 
@@ -143,7 +144,7 @@ export async function settled(page: Page, match: { area?: string; prefix?: strin
 
 export async function waitForArea(page: Page, area: AreaId): Promise<void> {
   // The Commons is fixed ground on the open map (location-seam.md 3): waiting for it is waiting for the open map.
-  if (area === 'outdoors' || area === 'commons') await waitForWilds(page)
+  if (area === 'outdoors' || area === 'commons' || area === 'village' || area === 'hearthwick' || area.startsWith('hearthwick:')) await waitForWilds(page)
   else await settled(page, { area: String(area) })
 }
 
@@ -485,7 +486,15 @@ export async function wildsWindow(page: Page): Promise<WildsWindowView | null> {
  * other area's its own. `commons` takes Commons tiles (as content names
  * them) and lands on the open map at the same spot (`commonsTile`).
  */
-export async function warp(page: Page, area: AreaId, tx: number, ty: number): Promise<void> {
+export async function warp(page: Page, area: AreaId, tx?: number, ty?: number): Promise<void> {
+  const named = anchor(area)
+  if (named) {
+    tx = Math.floor(named.x / 16); ty = Math.floor(named.y / 16); area = named.space
+  } else if (area === 'village' || area === 'hearthwick') {
+    const spawn = anchor('hearthwick:spawn')!
+    tx ??= Math.floor(spawn.x / 16); ty ??= Math.floor(spawn.y / 16); area = 'outdoors'
+  }
+  if (tx === undefined || ty === undefined) throw new Error(`warp needs an anchor or tile: ${area}`)
   // The warp starts the transition at once (a refused warp leaves us here).
   await page.evaluate(([a, x, y]) => window.__fsDevWarp!(a, x, y), [area, tx, ty] as const)
   await waitForArea(page, area)

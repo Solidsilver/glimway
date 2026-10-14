@@ -406,8 +406,8 @@ function buildVillage(): WorldData {
 
   const villageExits: ExitDef[] = [
     { tx: W - 1, ty: 9, tw: 1, th: 3, to: 'woodland', entry: { tx: 2, ty: 15 } },
-    // Into the Commons on the open map, just inside its west gate (the anchor `commons:west-path`).
-    { tx: W - 1, ty: 14, tw: 1, th: 3, to: OUTDOORS_AREA, entry: anchorTile('commons:west-path'), label: 'Hearthwick Commons' }
+    // Into the Commons on the open map, just inside its west gate (the anchor `hearthwick:west-gate`).
+    { tx: W - 1, ty: 14, tw: 1, th: 3, to: OUTDOORS_AREA, entry: anchorTile('hearthwick:west-gate'), label: 'Hearthwick Commons' }
   ]
   const trees = collectTrees(g)
   const scatteredBushes = scatter(g, rng, 6, [...npcs, well, villageLantern]).filter((b) => !nearExit({ exits: villageExits }, b.tx, b.ty))

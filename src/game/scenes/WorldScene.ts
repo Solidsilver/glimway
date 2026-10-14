@@ -63,7 +63,7 @@ import { FixedLife } from '../wilds/fixed-life'
 import { isSafeArea } from '../../lib/habitica/sync'
 import { fingerInBracken } from '../../lib/quests'
 import { OUTDOORS_AREA, isWildsArea, chunkOfPixel, chunkKey } from '../wilds/coords'
-import { resolve } from '../../lib/location'
+import { contentPosition } from '../../lib/location'
 import { holdOnSafe, stopAtEdge } from '../safe-barrier'
 import { prepareWilds } from '../wilds/store'
 import { WildsWindow } from '../wilds/window'
@@ -1140,7 +1140,7 @@ export class WorldScene extends Phaser.Scene {
       if (tx >= exit.tx && tx < exit.tx + exit.tw && ty >= exit.ty && ty < exit.ty + exit.th) {
         // The open map is the server's: without a connection its gate stays shut. (A way out
         // to a fixed place by its own name, a room's door to the Commons, leads onto the open map.)
-        const to = resolve(String(exit.to), exit.entry.tx, exit.entry.ty).space
+        const to = contentPosition(String(exit.to), exit.entry.tx, exit.entry.ty).space
         if (!canEnter(to) || (to === OUTDOORS_AREA && !this.session.link)) {
           this.overgrown(exit)
           return
@@ -1175,7 +1175,7 @@ export class WorldScene extends Phaser.Scene {
   private transitionTo(area: AreaId, entry: { tx: number; ty: number }, facing?: { x: number; y: number }): void {
     // Content names Commons positions in Commons tiles (the Yard's door back
     // out): since the join they lie on the open map's grid.
-    const at = resolve(String(area), entry.tx, entry.ty)
+    const at = contentPosition(String(area), entry.tx, entry.ty)
     if (at.space !== area) {
       area = at.space
       entry = { tx: at.tx, ty: at.ty }

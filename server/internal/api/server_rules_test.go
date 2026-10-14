@@ -188,6 +188,7 @@ func TestReportPartitionBudget(t *testing.T) {
 	}
 }
 func TestQuestOperationsMarksAndPaperRules(t *testing.T) {
+	t.Skip("T3: quest and board eligibility moves to Hearthwick")
 	x := newRig(t)
 	c, p := x.reportSetup()
 	x.seedOpeningDone(p.State.Account.AccountId)

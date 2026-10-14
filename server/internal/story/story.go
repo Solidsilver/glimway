@@ -347,9 +347,9 @@ func (r Rules) readTime(ctx context.Context) time.Time {
 	return time.Now()
 }
 
-// Content names Commons positions in Commons layout tiles; Resolve carries
-// them onto the outdoors grid (other areas are their own frame).
+// Content positions already use world tiles. A place label maps to its
+// saved space without translating the coordinates.
 func nearContent(w *contract.Where, area string, tx, ty int) bool {
-	space, tx, ty := location.Resolve(area, tx, ty)
+	space := location.ContentSpace(area)
 	return w.Area == string(space) && near(w, float64(tx*16+8), float64(ty*16+8))
 }

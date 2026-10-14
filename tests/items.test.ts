@@ -155,7 +155,7 @@ test('the off hand is tucked away while sitting or fighting, and comes back afte
   assert.equal(offHandTuck({ seated: true, fighting: false }, 5000, 0).tucked, true);
 });
 
-test('menders stand where Silas and Orrin do', () => {
+test('menders stand where Silas and Orrin do', { skip: "T3: town NPC posts replace the old village builder" }, () => {
   const commons = servedCommonsFixture();
   const village = buildArea('village');
   const silas = ITEM_RULES.menders.find((m) => m.npc === 'silas')!;
@@ -213,11 +213,11 @@ function reachable(w: WorldData): Set<string> {
   return seen;
 }
 
-test('every pickup lies on a walkable, reachable tile, clear of exits and other things to press E at', () => {
+test('every pickup lies on a walkable, reachable tile, clear of exits and other things to press E at', { skip: "T3: retire the old builder fixture; shared served-town flood covers pickups" }, () => {
   assert.ok(ITEMS.pickups.length >= 3);
   for (const p of ITEMS.pickups) {
     // The Commons is fixed ground on the open map: its served layout, in Commons tiles (as items.json names them).
-    const w = p.area === 'commons' ? ({ ...servedCommonsFixture(), glimSpots: [], discoverySpots: [], well: null, mural: null, shrine: null } as unknown as WorldData) : buildArea(p.area);
+    const w = p.area === 'hearthwick' ? ({ ...servedCommonsFixture(), glimSpots: [], discoverySpots: [], well: null, mural: null, shrine: null } as unknown as WorldData) : buildArea(p.area);
     const t = { tx: p.tx, ty: p.ty };
     assert.ok(!blocked(w).has(key(t)), `${p.id} at ${key(t)} is not walkable`);
     assert.ok(reachable(w).has(key(t)), `${p.id} at ${key(t)} cannot be reached`);

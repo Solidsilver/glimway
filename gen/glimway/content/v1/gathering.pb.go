@@ -466,13 +466,14 @@ var File_glimway_content_v1_gathering_proto protoreflect.FileDescriptor
 
 const file_glimway_content_v1_gathering_proto_rawDesc = "" +
 	"\n" +
-	"\"glimway/content/v1/gathering.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\x9a\x06\n" +
+	"\"glimway/content/v1/gathering.proto\x12\x12glimway.content.v1\x1a\x1bbuf/validate/validate.proto\"\x94\x06\n" +
 	"\tGathering\x12g\n" +
 	"\x06swings\x18\x01 \x03(\v2).glimway.content.v1.Gathering.SwingsEntryB$\xbaH!\x9a\x01\x1e\b\x03\"\x14r\x12R\x04chopR\x05breakR\x03dig*\x04\x1a\x02(\x01R\x06swings\x12=\n" +
 	"\x04caps\x18\x02 \x01(\v2!.glimway.content.v1.GatheringCapsB\x06\xbaH\x03\xc8\x01\x01R\x04caps\x12\"\n" +
 	"\rsoft_cap_line\x18\x03 \x01(\tR\vsoftCapLine\x12/\n" +
-	"\x0fplants_per_home\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\rplantsPerHome\x12u\n" +
-	"\x05areas\x18\x05 \x03(\v2(.glimway.content.v1.Gathering.AreasEntryB5\xbaH2\x9a\x01/\b\x03\"+r)R\x05wildsR\bwoodlandR\x04homeR\avillageR\acommonsR\x05areas\x12f\n" +
+	"\x0fplants_per_home\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\rplantsPerHome\x12o\n" +
+	"\x05areas\x18\x05 \x03(\v2(.glimway.content.v1.Gathering.AreasEntryB/\xbaH,\x9a\x01)\b\x03\"%r#R\x05wildsR\bwoodlandR\x04homeR\n" +
+	"hearthwickR\x05areas\x12f\n" +
 	"\atargets\x18\x06 \x03(\v2*.glimway.content.v1.Gathering.TargetsEntryB \xbaH\x1d\x9a\x01\x1a\b\x01\"\x16r\x142\x12^[a-z0-9-]{1,100}$R\atargets\x128\n" +
 	"\x05seeds\x18\a \x03(\tB\"\xbaH\x1f\x92\x01\x1c\b\x01\x18\x01\"\x16r\x142\x12^[a-z0-9-]{1,100}$R\x05seeds\x1a9\n" +
 	"\vSwingsEntry\x12\x10\n" +

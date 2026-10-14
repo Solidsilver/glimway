@@ -1,4 +1,4 @@
-import { at, contentTile } from '../lib/location.ts';
+import { at, contentPosition } from '../lib/location.ts';
 /**
  * The four heirloom tools, given through story beats (docs/items/catalogue.md):
  *  1. Brack felling axe — Silas (Wheel & Wick guildhouse, knowing Hollis's name)
@@ -217,7 +217,7 @@ export interface HeirloomContext {
 }
 
 function within(c: Pick<HeirloomContext, 'area' | 'x' | 'y'>, area: string, tx: number, ty: number, r: number, tile = 16): boolean {
-  const spot = contentTile(c.area, area, tx, ty);
+  const spot = contentPosition(area, tx, ty);
   if (c.area !== spot.space) return false;
   tx = spot.tx; ty = spot.ty;
   const dx = c.x - (tx * tile + tile / 2);

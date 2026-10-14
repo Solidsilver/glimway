@@ -513,16 +513,16 @@ func worldMoveSafe(s *store.Snapshot) bool {
 
 // arriveFromHome: a home belongs to its world, so whoever moves from a
 // home's land or rooms arrives outside its gate on the destination's
-// Commons (anchor commons:gate:<g>; the arch if the Commons has no such
+// Commons (anchor hearthwick:lot:<g>; the arch if the Commons has no such
 // gate). The place is the server's: a barrier drops older reports.
 func arriveFromHome(s *store.Snapshot) {
 	gate := rules.HomeGate(content.RootArea(s.State.Area))
 	if gate < 0 {
 		return
 	}
-	space, x, y, ok := location.Anchor(fmt.Sprintf("commons:gate:%d", gate))
+	space, x, y, ok := location.Anchor(fmt.Sprintf("hearthwick:lot:%d", gate))
 	if !ok {
-		space, x, y, _ = location.Anchor("commons:arch")
+		space, x, y, _ = location.Anchor("hearthwick:arch")
 	}
 	s.State.Area, s.State.Position = string(space), rules.Position{X: x, Y: y}
 	s.PlaceWritten = true

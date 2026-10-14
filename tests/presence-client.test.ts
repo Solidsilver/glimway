@@ -414,7 +414,7 @@ test('stop closes the socket and cancels everything; a new lease restarts it', (
 
 test('helpers: areas, facing, backoff, close codes', () => {
   for (const a of ['village', 'woodland', 'ruin', 'outdoors:0:0', 'outdoors:-1:-2', 'outdoors:1:0', 'outdoors:0:1', 'outdoors:-1:2']) assert.equal(isPresenceArea(a), true, a);
-  for (const a of ['commons', 'outdoors:0:3', 'outdoors', 'outdoors:01:1', 'outdoors:-0:0', 'wilds:inner-1:0:1', 'chunk:inner-1:0:0', 'cottage', '']) assert.equal(isPresenceArea(a), false, a);
+  for (const a of ['commons', 'outdoors:2:4', 'outdoors', 'outdoors:01:1', 'outdoors:-0:0', 'wilds:inner-1:0:1', 'chunk:inner-1:0:0', 'cottage', '']) assert.equal(isPresenceArea(a), false, a);
   assert.equal(presenceAreaFor('village'), 'village');
   assert.equal(presenceAreaFor('outdoors'), null, 'the Wilds need a position');
   // The chunk you stand in (the server shares it with the 3×3 around it).

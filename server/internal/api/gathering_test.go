@@ -444,7 +444,7 @@ func TestPlantingAtHome(t *testing.T) {
 	if plant("birch-sapling", litTile, [2]int{litTile[0] + 5, litTile[1]}, 409).Error.Code != "too-far-away" {
 		t.Fatal("planted from afar")
 	}
-	if x.opRefreshing(c, &s, "plant", map[string]any{"itemDef": "birch-sapling", "tile": litTile, "progress": standAt(s, "commons", litTile[0], litTile[1])}, 409).Error.Code != "cannot-plant-here" {
+	if x.opRefreshing(c, &s, "plant", map[string]any{"itemDef": "birch-sapling", "tile": litTile, "progress": atAnchor(s.State, "hearthwick:spawn")}, 409).Error.Code != "cannot-plant-here" {
 		t.Fatal("planted in the Commons")
 	}
 

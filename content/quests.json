@@ -15,7 +15,7 @@
       "steps": [
         {
           "id": "accepted",
-          "at": "village",
+          "at": "hearthwick",
           "items": [],
           "marks": [],
           "papers": [],
@@ -24,7 +24,7 @@
           "goal": "Hear Mara out about the road",
           "objective": "Mara has a question for you about the dark lantern road. Find her in the Hearthwick square.",
           "where": {
-            "area": "village",
+            "area": "hearthwick",
             "npc": "mara"
           },
           "do": {
@@ -117,7 +117,7 @@
         },
         {
           "id": "complete",
-          "at": "village",
+          "at": "hearthwick",
           "items": [],
           "marks": [
             "found:lantern-road-restored"
@@ -128,7 +128,7 @@
           "goal": "Tell Mara the light is back",
           "objective": "Return to Mara in Hearthwick and tell her the light is back.",
           "where": {
-            "area": "village",
+            "area": "hearthwick",
             "npc": "mara"
           },
           "do": {
@@ -149,7 +149,7 @@
       "steps": [
         {
           "id": "meet-orrin",
-          "at": "village",
+          "at": "hearthwick",
           "items": [],
           "marks": [],
           "papers": [],
@@ -158,7 +158,7 @@
           "goal": "See what Orrin’s grumbling about",
           "objective": "Someone up a ladder by the signpost in the square is arguing with it. Go and see.",
           "where": {
-            "area": "village",
+            "area": "hearthwick",
             "npc": "orrin"
           },
           "do": {
@@ -191,7 +191,7 @@
         },
         {
           "id": "bring-finger",
-          "at": "village",
+          "at": "hearthwick",
           "items": [],
           "marks": [],
           "papers": [],
@@ -200,7 +200,7 @@
           "goal": "Take the finger back to Orrin",
           "objective": "Bring the east finger back to Orrin at the signpost.",
           "where": {
-            "area": "village",
+            "area": "hearthwick",
             "npc": "orrin"
           },
           "do": {
@@ -230,7 +230,7 @@
         },
         {
           "id": "set-post",
-          "at": "village",
+          "at": "hearthwick",
           "items": [],
           "marks": [],
           "papers": [],
@@ -239,7 +239,7 @@
           "goal": "Read the lean back to Orrin",
           "objective": "Read the lean back to Orrin so he can set the post.",
           "where": {
-            "area": "village",
+            "area": "hearthwick",
             "npc": "orrin"
           },
           "do": {
@@ -248,7 +248,7 @@
         },
         {
           "id": "see-mara",
-          "at": "village",
+          "at": "hearthwick",
           "items": [],
           "marks": [],
           "papers": [],
@@ -257,7 +257,7 @@
           "goal": "Find Mara and her ledger",
           "objective": "Pip says Mara has the ledger open in the square and the soup on. Go and see her.",
           "where": {
-            "area": "village",
+            "area": "hearthwick",
             "npc": "mara"
           },
           "do": {
@@ -311,7 +311,7 @@
       "steps": [
         {
           "id": "hear-mara",
-          "at": "village",
+          "at": "hearthwick",
           "items": [],
           "marks": [],
           "papers": [],
@@ -320,7 +320,7 @@
           "goal": "Ask Mara about your own day",
           "objective": "Mara says whatever you get done in your own day counts. Ask her what she means.",
           "where": {
-            "area": "village",
+            "area": "hearthwick",
             "npc": "mara"
           },
           "do": {
@@ -343,7 +343,7 @@
         },
         {
           "id": "show-mara",
-          "at": "village",
+          "at": "hearthwick",
           "items": [
             "tally-token"
           ],
@@ -354,7 +354,7 @@
           "goal": "Show Mara what you did",
           "objective": "Tell Mara what you got done, and she’ll write it in.",
           "where": {
-            "area": "village",
+            "area": "hearthwick",
             "npc": "mara"
           },
           "do": {
@@ -741,7 +741,7 @@
           "goal": "Catch a roach from the mill race",
           "objective": "Take the rod from your belt and stand on the sand above the wheel, where the race runs all year. Cast, wait for the dip, and keep what comes up.",
           "where": {
-            "area": "village"
+            "area": "hearthwick"
           },
           "do": {
             "carry": "mill-roach"

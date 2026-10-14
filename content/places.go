@@ -122,14 +122,23 @@ func placesRules(p *Places, w *Wilds) error {
 				return bad("%s: duplicate anchor %s", id, a.GetId())
 			}
 			anchors[a.GetId()] = true
-			if !inside(int(a.GetTx()), int(a.GetTy())) {
+			wx, wy := int(a.GetTx())+ox, int(a.GetTy())+oy
+			onFixed := slices.ContainsFunc(p.GetFixed(), func(other *FixedPlace) bool {
+				x0, y0, x1, y1 := FixedChunks(other)
+				return wx >= x0*S && wx < (x1+1)*S && wy >= y0*S && wy < (y1+1)*S
+			})
+			if !onFixed {
 				return bad("%s anchor %s: outside the footprint", id, a.GetId())
 			}
 		}
 		// The gate anchors are the frozen capacity: gate:0 up to gate:n-1.
 		gates := map[int]bool{}
 		for _, a := range f.GetAnchors() {
-			n, ok := strings.CutPrefix(a.GetId(), "gate:")
+			prefix := "gate:"
+			if id == "hearthwick" {
+				prefix = "lot:"
+			}
+			n, ok := strings.CutPrefix(a.GetId(), prefix)
 			if !ok {
 				continue
 			}

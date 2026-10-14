@@ -18,14 +18,15 @@ message Rooms {
 }
 
 // Room maps are 16-pixel tiles. Floors and side rooms share an outdoor
-// parent; the building follows from the id (in:village:bakery -> village,
+// parent; persisted village/Commons room IDs now have Hearthwick as parent.
+// The building follows from the id (in:village:bakery -> hearthwick,
 // in:village:mill:2 -> in:village:mill, in:commons:yard:deeds ->
 // in:commons:yard) and is checked in code, beside RoomParent.
 message Room {
   option (buf.validate.message).cel = {
     id: "room.parent_region"
     message: "a room's parent is its region (floors included)"
-    expression: "this.id.startsWith(\"in:\" + this.parent + \":\")"
+    expression: "(this.parent == \"hearthwick\" ? (this.id.startsWith(\"in:village:\") || this.id.startsWith(\"in:commons:\")) : this.id.startsWith(\"in:\" + this.parent + \":\"))"
   };
   option (buf.validate.message).cel = {
     id: "room.map_rows"
@@ -56,7 +57,7 @@ message Room {
   string name = 2 [(buf.validate.field).string.min_len = 1];
   // Always the region: the room.parent_region rule (id starts with
   // "in:" + parent + ":") leaves a floor's id no other option.
-  string parent = 3 [(buf.validate.field).string.pattern = "^(village|woodland|ruin|commons)$"];
+  string parent = 3 [(buf.validate.field).string.pattern = "^(hearthwick|woodland|ruin)$"];
   repeated string map = 4 [(buf.validate.field).repeated = {min_items: 3, max_items: 128}];
   repeated RoomDoor doors = 5 [(buf.validate.field).repeated.min_items = 1];
   repeated RoomProp props = 6;
@@ -118,14 +119,14 @@ message RoomFurnishing {
 }
 
 message RoomSpot {
-  optional int32 tx = 1 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
-  optional int32 ty = 2 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  optional int32 tx = 1 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
+  optional int32 ty = 2 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
   string label = 3 [(buf.validate.field).string.min_len = 1];
 }
 
 message RoomLight {
-  optional int32 tx = 1 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
-  optional int32 ty = 2 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  optional int32 tx = 1 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
+  optional int32 ty = 2 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
   string kind = 3 [(buf.validate.field).string = {in: ["hearth", "lamp", "window"]}];
   int32 r = 4 [(buf.validate.field).int32 = {gte: 1, lte: 128}];
 }
@@ -135,12 +136,12 @@ message RoomOutside {
   RoomTile window = 2;
   Chimney chimney = 3;
   message Chimney {
-    optional int32 x = 1 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
-    optional int32 y = 2 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+    optional int32 x = 1 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
+    optional int32 y = 2 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
   }
 }
 
 message RoomTile {
-  optional int32 tx = 1 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
-  optional int32 ty = 2 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  optional int32 tx = 1 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
+  optional int32 ty = 2 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
 }

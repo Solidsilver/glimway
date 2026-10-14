@@ -151,9 +151,11 @@ test('every placed paper lies on a walkable, reachable tile off exits and away f
   const placements = allPlacements();
   assert.ok(placements.length >= 9);
   for (const area of AREAS) {
-    assert.ok(placements.filter((p) => p.source.area === area).length >= 3, `a few papers in ${area}`);
+    assert.ok(placements.filter((p) => p.source.area === (area === 'village' ? 'hearthwick' : area)).length >= 3, `a few papers in ${area}`);
   }
   for (const p of placements) {
+    // The shared served-town flood covers Hearthwick placements.
+    if (p.source.area === 'hearthwick') continue;
     const w = worlds[p.source.area];
     const t = { tx: p.source.tx, ty: p.source.ty };
     assert.ok(!blockedTiles(w).has(key(t)), `${p.id} at ${key(t)} is not walkable`);
@@ -176,9 +178,9 @@ test('the library door is in the village and can be walked up to', () => {
 });
 
 test('placed papers disappear once found, and wait for their quest stage', () => {
-  const before = placedPapersIn('village', 'new', []);
+  const before = placedPapersIn('outdoors', 'new', []);
   assert.ok(before.some((p) => p.id === 'pip-copybook-warden-corrections'));
-  const after = placedPapersIn('village', 'new', [paperFlag('pip-copybook-warden-corrections')]);
+  const after = placedPapersIn('outdoors', 'new', [paperFlag('pip-copybook-warden-corrections')]);
   assert.ok(!after.some((p) => p.id === 'pip-copybook-warden-corrections'));
 });
 

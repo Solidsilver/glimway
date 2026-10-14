@@ -2,7 +2,7 @@
   "room": {
     "id": "in:village:library",
     "name": "The library reading room",
-    "parent": "village",
+    "parent": "hearthwick",
     "map": [
       "##############",
       "#SS=SS=SS=SS=#",
@@ -21,14 +21,14 @@
         "kind": "door",
         "at": "D",
         "side": "south",
-        "to": "village",
+        "to": "hearthwick",
         "outside": {
-          "tx": 4,
-          "ty": 17
+          "tx": -11,
+          "ty": 76
         },
         "entry": {
-          "tx": 4,
-          "ty": 18
+          "tx": -11,
+          "ty": 77
         }
       }
     ],

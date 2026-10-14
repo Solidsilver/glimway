@@ -33,7 +33,7 @@ message RepairDef {
   // The part that mends it: an item id in the catalogue, of a kind a player
   // can hold — checked in code (the items catalogue is another family).
   string part = 3;
-  string area = 4 [(buf.validate.field).string = {in: ["village", "commons"]}];
+  string area = 4 [(buf.validate.field).string = {in: ["hearthwick"]}];
   // What broke ("well", "fence"): the world map's own vocabulary.
   string target = 5;
   RepairPos pos = 6 [(buf.validate.field).required = true];
@@ -57,8 +57,8 @@ message RepairDef {
 
 // Where the broken piece stands (village tiles).
 message RepairPos {
-  optional int32 tx = 1 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
-  optional int32 ty = 2 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 0];
+  optional int32 tx = 1 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
+  optional int32 ty = 2 [(buf.validate.field).required = true, (buf.validate.field).int32 = {gte: -1048576, lte: 1048576}];
 }
 
 // The gift mending pays.

@@ -355,9 +355,9 @@ export function mapMarks(input: MapInput): MapMarks {
   return { wayTiles, places, labels };
 }
 
-/** The Commons gate's tile on the open map, its arch (`commons:arch`: where the map opens when you're not out there). */
+/** The Commons gate's tile on the open map, its arch (`hearthwick:arch`: where the map opens when you're not out there). */
 export function gateTile(): { tx: number; ty: number } | null {
-  const a = anchor('commons:arch');
+  const a = anchor('hearthwick:arch');
   return a ? { tx: Math.floor(a.x / 16), ty: Math.floor(a.y / 16) } : null;
 }
 

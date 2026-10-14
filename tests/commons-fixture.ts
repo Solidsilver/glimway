@@ -1,14 +1,6 @@
-/**
- * The Commons as the server serves it, for client tests: tests/fixtures/
- * commons-<cx>-<cy>.bin are the six fixed chunks of content/layouts/
- * commons.json, written and checked current by server/internal/chunks
- * TestFixedChunkBytesPerRevision (UPDATE_CLIENT_FIXTURES=1).
- *
- * The game keeps the Commons in world tiles, on the open map's grid
- * (src/game/wilds/fixed.ts). Content still names Commons positions in
- * Commons tiles (location.resolve bridges them), so content tests read the
- * served Commons through `servedCommonsFixture`: the old map's frame (62×42
- * from layout tile 0,0), in Commons tiles.
+/** Served Hearthwick fixtures, in layout tiles for the old rendering
+ * harness. Function names remain until the T3/T4 scene fixtures are replaced;
+ * production content always uses world tiles without translation.
  */
 import { readFileSync } from 'node:fs';
 import { decodeChunk } from '../src/lib/api/chunks.ts';
@@ -18,16 +10,16 @@ import { TILE } from '../src/lib/tile.ts';
 import { anchorTile, assembleFootprint, commonsLane, exitOf, fixedChunkKeys, objectOut, serveFixed, type FixedDay, type FixedFootprint, type GateSlot, type CommonsFeatures } from '../src/game/wilds/fixed.ts';
 import type { ExitDef, NpcId, NpcSpot, PropSpot } from '../src/game/worlds.ts';
 
-export const COMMONS_PLACE = PLACES.fixed.find((f) => f.id === 'commons')!;
+export const COMMONS_PLACE = PLACES.fixed.find((f) => f.id === 'hearthwick')!;
 const O = COMMONS_PLACE.origin;
-/** The old map's frame in Commons tiles. */
-const MAP = { w: 62, h: 42 };
+/** The town's 72×72 layout frame. */
+const MAP = { w: 72, h: 72 };
 
 export function commonsFixtureBytes(cx: number, cy: number): Uint8Array {
-  return new Uint8Array(readFileSync(new URL(`./fixtures/commons-${cx}-${cy}.bin`, import.meta.url)));
+  return new Uint8Array(readFileSync(new URL(`./fixtures/hearthwick-${cx}-${cy}.bin`, import.meta.url)));
 }
 
-/** The six chunks, decoded and validated as the client does, row-major. */
+/** The nine town chunks, decoded and validated as the client does, row-major. */
 export function commonsFixtureChunks(): WorldChunk[] {
   return fixedChunkKeys(COMMONS_PLACE).map(({ cx, cy }) => decodeChunk(commonsFixtureBytes(cx, cy)));
 }
@@ -56,7 +48,7 @@ export interface CommonsView {
   exits: ExitDef[];
   gates: GateSlot[];
   features: CommonsFeatures;
-  /** Arriving from Hearthwick: the `west-path` anchor. */
+  /** The town spawn in layout tiles. */
   spawn: { tx: number; ty: number };
 }
 
@@ -66,7 +58,7 @@ export function servedCommonsFixture(day: FixedDay = { festival: null, wick: 'Qu
   const at = (x: number, y: number) => ({ x: x + O.tx - fp.tx, y: y + O.ty - fp.ty });
   const ground = Array.from({ length: MAP.h }, (_, y) => Array.from({ length: MAP.w }, (_, x) => fp.ground[at(x, y).y]![at(x, y).x]!));
   const solid = Array.from({ length: MAP.h }, (_, y) => Array.from({ length: MAP.w }, (_, x) => fp.solid[at(x, y).y]![at(x, y).x]!));
-  const view: CommonsView = { width: MAP.w, height: MAP.h, widthPx: MAP.w * TILE, heightPx: MAP.h * TILE, ground, solid, trees: [], bushes: [], rocks: [], props: [], npcs: [], exits: [], gates: [], features: null as never, spawn: toCommons(anchorTile('commons:west-path')) };
+  const view: CommonsView = { width: MAP.w, height: MAP.h, widthPx: MAP.w * TILE, heightPx: MAP.h * TILE, ground, solid, trees: [], bushes: [], rocks: [], props: [], npcs: [], exits: [], gates: [], features: null as never, spawn: toCommons(anchorTile('hearthwick:spawn')) };
   const onMap = (t: { tx: number; ty: number }) => t.tx >= 0 && t.ty >= 0 && t.tx < MAP.w && t.ty < MAP.h;
   for (const list of fp.objects.values())
     for (const o of list) {

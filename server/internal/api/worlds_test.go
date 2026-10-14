@@ -491,9 +491,9 @@ func TestWorldMoveRefusedWhenUnsafe(t *testing.T) {
 
 // A home belongs to its world: a move from a home's land or rooms is from
 // safe ground and arrives outside its gate on the new world's Commons
-// (anchor commons:gate:<g>), or at the arch for a gate the Commons lacks.
+// (anchor hearthwick:lot:<g>), or at the arch for a gate the Commons lacks.
 func TestWorldMoveFromAHomeArrivesAtItsGate(t *testing.T) {
-	for _, row := range []struct{ area, anchor string }{{"home:3", "commons:gate:3"}, {"in:home:5", "commons:gate:5"}, {"home:9", "commons:arch"}} {
+	for _, row := range []struct{ area, anchor string }{{"home:3", "hearthwick:lot:3"}, {"in:home:5", "hearthwick:lot:5"}, {"home:9", "hearthwick:arch"}} {
 		t.Run(row.area, func(t *testing.T) {
 			x := newRig(t)
 			x.hero("olive", "Olive", "p1")
@@ -728,10 +728,10 @@ func TestWorldMoveFromHomeTakesPresenceToArrivalRoom(t *testing.T) {
 			bc, b := x.member("bob", h.WorldID)
 			ts := startPresence(t, x, presenceTestConfig())
 			gate := rules.HomeGate(content.RootArea(area))
-			name := fmt.Sprintf("commons:gate:%d", gate)
+			name := fmt.Sprintf("hearthwick:lot:%d", gate)
 			_, ax, ay, ok := location.Anchor(name)
 			if !ok {
-				_, ax, ay, _ = location.Anchor("commons:arch")
+				_, ax, ay, _ = location.Anchor("hearthwick:arch")
 			}
 			room := outdoorsRoom(rules.Position{X: ax, Y: ay})
 			olive := wsConnect(t, ts, oc, o.Lease)

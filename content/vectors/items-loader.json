@@ -1081,9 +1081,9 @@
       ]
     },
     {
-      "name": "mender-negative-tx",
+      "name": "mender-out-of-range-tx",
       "valid": false,
-      "rule": "int32.gte",
+      "rule": "int32.gte_lte",
       "edits": [
         {
           "path": [
@@ -1092,7 +1092,7 @@
             1,
             "tx"
           ],
-          "value": -1
+          "value": -1048577
         }
       ]
     },
@@ -1124,7 +1124,7 @@
             0,
             "area"
           ],
-          "value": "commons"
+          "value": "hearthwick"
         }
       ]
     },
@@ -1185,7 +1185,7 @@
             3,
             "shop"
           ],
-          "value": "commons"
+          "value": "hearthwick"
         }
       ]
     },
@@ -1319,9 +1319,9 @@
       ]
     },
     {
-      "name": "pickup-negative-ty",
+      "name": "pickup-out-of-range-ty",
       "valid": false,
-      "rule": "int32.gte",
+      "rule": "int32.gte_lte",
       "edits": [
         {
           "path": [
@@ -1329,7 +1329,7 @@
             0,
             "ty"
           ],
-          "value": -1
+          "value": -1048577
         }
       ]
     },

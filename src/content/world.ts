@@ -176,7 +176,7 @@ export function displayArea(state: { area: AreaId; position?: { x: number; y: nu
   const tx = Math.floor(state.position.x / 16);
   const ty = Math.floor(state.position.y / 16);
   const place = at(state.area, state.position.x, state.position.y).id;
-  if (place === 'commons') return 'commons';
+  if (place === 'hearthwick' || place.startsWith('lot:')) return place;
   if (place === 'tangle') return 'tangle';
   if (place === 'whitequiet') return 'whitequiet';
   const land = wildsLand?.(tx, ty) ?? null;

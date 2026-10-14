@@ -160,7 +160,7 @@
               "kind": "door",
               "at": "D",
               "side": "south",
-              "to": "village",
+              "to": "hearthwick",
               "outside": {
                 "tx": 29,
                 "ty": 22
@@ -1055,7 +1055,7 @@
               "kind": "door",
               "at": "D",
               "side": "south",
-              "to": "commons",
+              "to": "hearthwick",
               "outside": {
                 "tx": 53,
                 "ty": 17
@@ -1228,7 +1228,7 @@
             "extra"
           ],
           "value": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 1,
             "ty": 1
           }
@@ -1248,7 +1248,7 @@
             "square"
           ],
           "value": {
-            "area": "village",
+            "area": "hearthwick",
             "tx": 12
           }
         }
@@ -1508,21 +1508,21 @@
   ],
   "parents": [
     {
-      "area": "village",
-      "parent": "village",
-      "root": "village",
+      "area": "hearthwick",
+      "parent": "hearthwick",
+      "root": "hearthwick",
       "known": false
     },
     {
       "area": "in:village:bakery",
-      "parent": "village",
-      "root": "village",
+      "parent": "hearthwick",
+      "root": "hearthwick",
       "known": true
     },
     {
       "area": "in:village:mill:2",
       "parent": "in:village:mill",
-      "root": "village",
+      "root": "hearthwick",
       "known": true
     },
     {
@@ -1558,7 +1558,7 @@
     {
       "area": "in:village:missing:2",
       "parent": "in:village:missing",
-      "root": "village",
+      "root": "hearthwick",
       "known": false
     },
     {
@@ -1570,13 +1570,13 @@
     {
       "area": "in:commons:yard:deeds",
       "parent": "in:commons:yard",
-      "root": "commons",
+      "root": "hearthwick",
       "known": true
     },
     {
       "area": "in:commons:yard:attic",
       "parent": "in:commons:yard",
-      "root": "commons",
+      "root": "hearthwick",
       "known": false
     },
     {

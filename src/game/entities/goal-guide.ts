@@ -1,4 +1,4 @@
-import { anchor, at, resolve } from '../../lib/location.ts'
+import { anchor, at, contentPosition } from '../../lib/location.ts'
 /**
  * Where the quest goal is, shown rather than told: the HUD's needle turns
  * toward it (EV.goalDir), and when it's off screen a small lantern glint
@@ -214,7 +214,7 @@ export class GoalGuide {
       const door = room.doors.find((d) => d.kind === 'door' && d.to === space && d.outside)
       if (!door?.outside) continue
       const n = steps(room.id, goal)
-      const t = resolve(space, door.outside.tx, door.outside.ty)
+      const t = contentPosition(space, door.outside.tx, door.outside.ty)
       if (n < bestSteps) {
         bestSteps = n
         best = { x: (t.tx + 0.5) * TILE, y: (t.ty + 0.5) * TILE }
@@ -222,7 +222,7 @@ export class GoalGuide {
     }
     // On the open map the Commons and the Tangle meet at the arch: walked, not an exit.
     if (here === 'outdoors') {
-      const arch = anchor('commons:arch')
+      const arch = anchor('hearthwick:arch')
       const mouth = gateTiles()
       for (const [node, x, y] of [['commons', arch?.x, arch?.y], ['tangle', (mouth.tx + mouth.tw / 2) * TILE, mouth.ty * TILE]] as const) {
         if (node === from || x === undefined || y === undefined) continue

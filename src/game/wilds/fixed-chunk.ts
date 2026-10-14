@@ -16,7 +16,7 @@
  */
 import type Phaser from 'phaser'
 import { TILE, tileBottom, tileKey, tileMid } from '../../lib/tile.ts'
-import { resolve } from '../../lib/location.ts'
+import { contentPosition } from '../../lib/location.ts'
 import { addAll, destroyAll, destroyStatics, enableStatics, looseImage } from '../area/bulk.ts'
 import { staticBox } from '../area/collision.ts'
 import { ensureSceneryArt } from '../area/props.ts'
@@ -302,7 +302,7 @@ export class FixedChunk implements Buildable {
   private frontDoors(): void {
     const place = this.fp.place.id
     const points = doorPoints(place, this.deps.enter, (t) => {
-      const r = resolve(place, t.tx, t.ty)
+      const r = contentPosition(place, t.tx, t.ty)
       return Math.floor(r.tx / CHUNK_TILES) === this.cx && Math.floor(r.ty / CHUNK_TILES) === this.cy ? { tx: r.tx, ty: r.ty } : null
     })
     if (!points.length) return

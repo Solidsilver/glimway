@@ -45,14 +45,10 @@
         "stump"
       ]
     },
-    "village": {
+    "hearthwick": {
       "targets": [
         "freshet-shore",
-        "pond-ice"
-      ]
-    },
-    "commons": {
-      "targets": [
+        "pond-ice",
         "bloom-patch"
       ]
     }

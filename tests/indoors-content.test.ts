@@ -45,9 +45,9 @@ test('shared resident cycle phase and grace vectors', () => {
     assert.deepEqual(cycleAt(resident,v.now),v.expected); assert.deepEqual(cycleSpotsNear(resident,v.now,v.graceSeconds),v.near);
   }
   assert.deepEqual(residentAt('finn',2700), { area:'in:village:mill:2',tx:7,ty:5 });
-  assert.deepEqual(residentAt('elara',0), { area:'commons',tx:26,ty:5 });
+  assert.deepEqual(residentAt('elara',0), { area:'hearthwick',tx:6,ty:27 });
   assert.deepEqual(residentAt('elara',600), { area:'in:village:library',tx:9,ty:4,seated:true });
-  assert.deepEqual(residentAt('elara',2400), { area:'commons',tx:26,ty:5 });
+  assert.deepEqual(residentAt('elara',2400), { area:'hearthwick',tx:6,ty:27 });
   assert.equal(residentAt('missing',0),null); assert.equal(residentById('missing'),null);
 });
 
@@ -81,6 +81,6 @@ test('shared resident seller schema', async () => {
     else assert.throws(() => validateItems(value), v.name);
   }
   assert.equal(sellerFor('hazels-kitchen', 0)?.area, 'in:village:bakery');
-  assert.equal(sellerFor('hazels-kitchen', 3000)?.area, 'village');
+  assert.equal(sellerFor('hazels-kitchen', 3000)?.area, 'hearthwick');
   assert.equal(sellerFor('finns-mill-door', 3000)?.area, 'in:village:mill:2');
 });
