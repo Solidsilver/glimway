@@ -8,6 +8,7 @@
  * copy is wrong the server refuses or clamps and the prediction rolls back.
  * No network, no storage.
  */
+import { anchor } from '../location.ts';
 import { toJson } from '@bufbuild/protobuf';
 import { HabiticaProfileSchema } from '../gen/glimway/v1/profile_pb.js';
 import type { PlayerState } from '../gen/glimway/v1/state_pb.js';
@@ -33,7 +34,8 @@ export function isClientMark(mark: string): boolean {
   return CLIENT_MARKS.includes(mark) || CLIENT_PREFIXES.some((p) => mark.startsWith(p) && mark.length > p.length);
 }
 
-const VILLAGE_SPAWN = { x: 400, y: 300 };
+const TOWN_SPAWN = anchor('hearthwick:spawn')!;
+const TOWN_WELL = anchor('hearthwick:well')!;
 
 /**
  * A server place's area as the game keeps it: the same id. The open map is
@@ -82,13 +84,13 @@ export function gameStateOf(p: PlayerState): GameState {
   }
   // When each quest last reached a gated step (or its first): waits count from it.
   const gateAt = story.gateAt;
-  // A place this build can't draw never stops the load: the hero wakes at the village spawn.
+  // A place this build can't draw never stops the load: the hero wakes at the town spawn.
   let at: { area: string; position: { x: number; y: number } } = { ...areaOfPlace(place.area), position: { x: place.x, y: place.y } };
   try {
     validateSave({ ...createNewGame(), ...at });
   } catch {
     console.warn('[glimway] a place this build doesn\u2019t know', place.area);
-    at = { area: 'village', position: { ...VILLAGE_SPAWN } };
+    at = { area: 'outdoors', position: { x: TOWN_SPAWN.x, y: TOWN_SPAWN.y } };
   }
   return validateSave({
     ...createNewGame(),
@@ -171,7 +173,7 @@ export function predict(state: GameState, op: Prediction, ctx: PredictContext): 
     case 'settle-echo':
       return { ...state, flags: unique(state.flags, `echo:${op.member}`) };
     case 'fall':
-      return { ...state, ...fallRecovery(state, ctx.profile), area: 'village', position: { ...VILLAGE_SPAWN } };
+      return { ...state, ...fallRecovery(state, ctx.profile), area: 'outdoors', position: { x: TOWN_WELL.x, y: TOWN_WELL.y } };
     case 'glims':
       return predictGlims(state, op.delta);
     case 'companions':

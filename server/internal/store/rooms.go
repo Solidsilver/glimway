@@ -36,7 +36,8 @@ func recoverRoom(ctx context.Context, tx *sql.Tx, s *Snapshot) error {
 		return nil
 	}
 	parent := content.RoomParent(area)
-	next, position := "village", rules.NewState().Position
+	start := rules.NewTownState()
+	next, position := start.Area, start.Position
 	if room, ok := content.RoomFor(parent); ok {
 		for _, door := range room.GetDoors() {
 			if door.GetTo() == area {
@@ -68,10 +69,10 @@ func recoverRoom(ctx context.Context, tx *sql.Tx, s *Snapshot) error {
 				}
 			}
 		}
-		if door, ok := retiredRoomDoors[strings.TrimSuffix(area, ":2")]; ok && position == rules.NewState().Position {
+		if door, ok := retiredRoomDoors[strings.TrimSuffix(area, ":2")]; ok && position == rules.NewTownState().Position {
 			next, position = "hearthwick", rules.Position{X: float64(door.GetTx()*16 + 8), Y: float64(door.GetTy()*16 + 8)}
 		}
-		if next == "village" && position == rules.NewState().Position && content.RootArea(area) == "hearthwick" {
+		if next == start.Area && position == start.Position && content.RootArea(area) == "hearthwick" {
 			if space, x, y, ok := location.Anchor(townFallback); ok {
 				next, position = string(space), rules.Position{X: x, Y: y}
 			}

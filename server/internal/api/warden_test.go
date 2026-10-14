@@ -278,7 +278,7 @@ func TestWardenDullingUseCountAcrossToolsAndHold(t *testing.T) {
 // quest gift still lands, but no warden-stone sliver comes with it, then or
 // on any later upload. Slivers are deep-country finds.
 func TestSettlingTheWardenGrantsNoSliver(t *testing.T) {
-	t.Skip("T3: onboarding fixture returns to the outdoor town")
+
 	x := newRig(t)
 	c, s := x.ready("alice")
 	x.seedOpeningDone(s.AccountID)

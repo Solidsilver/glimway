@@ -1,3 +1,4 @@
+import { contentSpace } from '../src/lib/location.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -123,10 +124,10 @@ const orrinRow = ITEM_RULES.menders.find((m) => m.npc === 'orrin')!;
 const adaRow = ITEM_RULES.residents.find((r) => r.id === 'ada')!;
 
 function ctx(over: Partial<HeirloomContext>): HeirloomContext {
-  return { area: 'commons', ...centre(silasYard), flags: [], worldFlags: [], online: true, inFlight: false, now: 600, ...over };
+  return { area: 'outdoors', ...centre(silasYard), flags: [], worldFlags: [], online: true, inFlight: false, now: 600, ...over };
 }
 
-test('Silas offers the axe only where and when the server grants it', { skip: "T3: outdoor heirloom checks need town coordinates" }, () => {
+test('Silas offers the axe only where and when the server grants it', () => {
   const knows = ['echo:hollis'];
   assert.deepEqual(heirloomReadiness('brack-felling-axe', ctx({ flags: knows })), { ok: true });
   // No beat at all before Hollis's name is known, or once the axe is given.
@@ -140,25 +141,25 @@ test('Silas offers the axe only where and when the server grants it', { skip: "T
   assert.deepEqual(heirloomReadiness('brack-felling-axe', ctx({ flags: knows, area: 'village' })), { ok: false, why: 'too-far' });
   // He follows his cycle: at minute 40 he's at his counter, not the sawhorse.
   assert.deepEqual(heirloomReadiness('brack-felling-axe', ctx({ flags: knows, now: 2400 })), { ok: false, why: 'too-far' });
-  assert.deepEqual(heirloomReadiness('brack-felling-axe', ctx({ flags: knows, now: 2400, area: silasCounter.area, ...centre(silasCounter) })), { ok: true });
+  assert.deepEqual(heirloomReadiness('brack-felling-axe', ctx({ flags: knows, now: 2400, area: contentSpace(silasCounter.area), ...centre(silasCounter) })), { ok: true });
   assert.deepEqual(heirloomReadiness('brack-felling-axe', ctx({ flags: knows, online: false })), { ok: false, why: 'offline' });
   assert.deepEqual(heirloomReadiness('brack-felling-axe', ctx({ flags: knows, inFlight: true })), { ok: false, why: 'busy' });
 });
 
-test('Orrin, Ada and Nan\'s camp use the server\'s conditions and reach', { skip: "T3: outdoor heirloom checks need town coordinates" }, () => {
+test('Orrin, Ada and Nan\'s camp use the server\'s conditions and reach', () => {
   assert.ok(orrinRow.tx !== undefined && orrinRow.ty !== undefined);
-  const orrin = { area: orrinRow.area, ...centre({ tx: orrinRow.tx, ty: orrinRow.ty }) };
+  const orrin = { area: contentSpace(orrinRow.area!), ...centre({ tx: orrinRow.tx, ty: orrinRow.ty }) };
   assert.equal(heirloomReadiness('orrins-mason-pick', ctx({ ...orrin })), null, 'the bridge must stand first');
   assert.deepEqual(heirloomReadiness('orrins-mason-pick', ctx({ ...orrin, worldFlags: [NORTH_BRIDGE_DONE] })), { ok: true });
   assert.deepEqual(heirloomReadiness('orrins-mason-pick', ctx({ ...orrin, x: orrin.x, y: orrin.y + orrinRow.radiusTiles * 16 + 2, worldFlags: [NORTH_BRIDGE_DONE] })), { ok: false, why: 'too-far' });
 
-  const ada = { area: adaRow.area, ...centre(adaRow) };
+  const ada = { area: contentSpace(adaRow.area), ...centre(adaRow) };
   assert.equal(heirloomReadiness('ada-garden-spade', ctx({ ...ada, flags: ['ada-oil-gifts:2'] })), null);
   assert.deepEqual(heirloomReadiness('ada-garden-spade', ctx({ ...ada, flags: ['ada-oil-gifts:3'] })), { ok: true });
   assert.deepEqual(heirloomReadiness('ada-garden-spade', ctx({ ...ada, x: ada.x - RESIDENT_REACH_TILES * 16 - 1, flags: ['ada-oil-gifts:3'] })), { ok: false, why: 'too-far' });
 
   assert.equal(heirloomReadiness('nans-lamplighter-pole', ctx({ area: 'outdoors' })), null, 'Nan\'s echo must be settled');
-  assert.deepEqual(heirloomReadiness('nans-lamplighter-pole', ctx({ area: 'outdoors', flags: ['echo:nan'] })), { ok: true });
+  assert.deepEqual(heirloomReadiness('nans-lamplighter-pole', ctx({ area: 'outdoors', x: 8, y: -376, flags: ['echo:nan'] })), { ok: true });
   assert.deepEqual(heirloomReadiness('nans-lamplighter-pole', ctx({ area: 'village', flags: ['echo:nan'] })), { ok: false, why: 'too-far' });
 });
 

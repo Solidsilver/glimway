@@ -183,9 +183,29 @@ func ValidProfile(p Profile) bool {
 	}
 	return true
 }
-func NewState() State {
-	return State{Version: 1, Area: "village", Position: Position{400, 300}, Quest: "new", Quests: map[string]string{}, ReachedAt: map[string]int64{}, GateAt: map[string]int64{}, HP: 40, MaxHP: 40, Mana: 20, MaxMana: 20, Inventory: []string{"field-journal", "hearthwick-map"}, Discoveries: []string{}, DefeatedEnemies: []string{}, Flags: []string{}}
+
+// TownAnchor returns an authored town arrival in saved world pixels.
+func TownAnchor(id string) (string, Position) {
+	space, x, y, ok := location.Anchor("hearthwick:" + id)
+	if !ok {
+		panic("missing town anchor: " + id)
+	}
+	return string(space), Position{X: x, Y: y}
 }
+
+// NewState is the historical default used by checksum-pinned backfills.
+// Current runtime arrivals use NewTownState.
+func NewState() State {
+	return State{Version: 1, Area: "village", Position: Position{X: 400, Y: 300}, Quest: "new", Quests: map[string]string{}, ReachedAt: map[string]int64{}, GateAt: map[string]int64{}, HP: 40, MaxHP: 40, Mana: 20, MaxMana: 20, Inventory: []string{"field-journal", "hearthwick-map"}, Discoveries: []string{}, DefeatedEnemies: []string{}, Flags: []string{}}
+}
+
+// NewTownState starts a new journey at the authored Square spawn.
+func NewTownState() State {
+	state := NewState()
+	state.Area, state.Position = TownAnchor("spawn")
+	return state
+}
+
 func XPToNextLevel(level float64) float64 {
 	l := math.Max(1, math.Floor(level))
 	if l < 5 {

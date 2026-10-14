@@ -47,7 +47,7 @@ func TestLocationRulesAtSeam(t *testing.T) {
 		{"wilds", 40, 376, false, false, "wilds"},
 	} {
 		t.Run(row.area+row.id, func(t *testing.T) {
-			s := store.Snapshot{State: rules.NewState()}
+			s := store.Snapshot{State: rules.NewTownState()}
 			s.State.Area = row.area
 			s.State.Position = rules.Position{X: row.x, Y: row.y}
 			// Shared eligibility for profile reports, world moves, sync and lamplight.
@@ -80,7 +80,7 @@ func TestLocationRulesAtSeam(t *testing.T) {
 // Content names Commons positions in layout tiles; reach resolves them onto
 // the outdoors grid, and the old local frame reaches nothing.
 func TestContentReachResolvesCommonsTilesOntoTheGrid(t *testing.T) {
-	s := store.Snapshot{State: rules.NewState()}
+	s := store.Snapshot{State: rules.NewTownState()}
 	s.State.Area = "commons"
 	s.State.Position = rules.Position{X: 53*16 + 8, Y: 18*16 + 8}
 	if nearTile(&s, "hearthwick", 34, 35, 0) {

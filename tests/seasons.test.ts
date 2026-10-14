@@ -26,7 +26,7 @@ function firstOf(kind: 'mark' | 'wick' | 'festival', want: string): number {
   throw new Error(`no ${kind} ${want} in the year`);
 }
 
-test('each seasonal material turns up only in its season, from the source the doc names', { skip: "T3: gathering moves from village scene to town chunks" }, () => {
+test('each seasonal material turns up only in its season, from the source the doc names', () => {
   const shore = gatheringTarget('freshet-shore');
   assert.ok(shore, 'the freshet shore is a gather target');
   assert.equal(shore?.mark, 'Mudrise');
@@ -38,12 +38,12 @@ test('each seasonal material turns up only in its season, from the source the do
   assert.equal(blooms?.wick, 'Bloom');
   assert.ok(inSeason(blooms!, dayAt(firstOf('wick', 'Bloom'))));
   assert.equal(inSeason(blooms!, dayAt(firstOf('wick', 'Light'))), false);
-  for (const area of ['commons', 'outdoors']) assert.ok(gatheringOffered(area, 'bloom-patch'), `bloom patches in the ${area}`);
+  for (const area of ['hearthwick', 'outdoors']) assert.ok(gatheringOffered(area, 'bloom-patch', { x: 40, y: 392 }), `bloom patches in the ${area}`);
 
   const ice = gatheringTarget('pond-ice');
   assert.ok(ice, 'the frozen pond is a gather target');
   assert.equal(ice?.mark, 'Quiet');
-  assert.ok(gatheringOffered('village', 'pond-ice'));
+  assert.ok(gatheringOffered('outdoors', 'pond-ice', { x: 552, y: 1160 }));
 
   const tangleTree = gatheringTarget('tangle-tree');
   const sap = tangleTree?.yields.find((y) => y.item === 'amberfall-sap');
@@ -55,11 +55,11 @@ test('each seasonal material turns up only in its season, from the source the do
   assert.equal(woodsTree?.yields.some((y) => y.item === 'amberfall-sap'), false);
 });
 
-test('the seasonal pieces stand where the seasons put them, and nowhere else', { skip: "T3: town seasonal chunk attachment" }, () => {
-  assert.ok(gatheringOffered('village', 'freshet-shore'));
+test('the seasonal pieces stand where the seasons put them, and nowhere else', () => {
+  assert.ok(gatheringOffered('outdoors', 'freshet-shore', { x: 552, y: 1160 }));
   assert.equal(gatheringOffered('commons', 'freshet-shore'), false);
-  assert.equal(gatheringOffered('village', 'bloom-patch'), false);
-  assert.ok(gatherArea('village') && gatherArea('commons'));
+  assert.ok(gatheringOffered('outdoors', 'bloom-patch', { x: 40, y: 392 }));
+  assert.ok(gatherArea('outdoors', { x: 40, y: 392 }) && gatherArea('hearthwick', { x: 40, y: 392 }));
   assert.equal(gatherArea('ruin'), false);
 });
 
@@ -88,7 +88,7 @@ test('bloom flowers dry into dried flowers, and the frame takes either', () => {
   assert.deepEqual(frame?.swaps?.['bloom-flowers']?.standIns, ['dried-flowers']);
 });
 
-test('the last materials have their people: Hazel’s tallow, Finn’s flour, and the day’s stall', { skip: "T3: seasonal seller fixture needs town world coordinates" }, () => {
+test('the last materials have their people: Hazel’s tallow, Finn’s flour, and the day’s stall', () => {
   const tallow = sellerFor('hazels-kitchen');
   assert.ok(tallow, 'Hazel sells tallow');
   assert.equal(tallow?.goods[0]?.item, 'tallow');
@@ -101,7 +101,7 @@ test('the last materials have their people: Hazel’s tallow, Finn’s flour, an
   assert.equal(stall?.festival, 'Carting Day');
   assert.equal(stall?.goods[0]?.item, 'madder-scraps');
   assert.equal(stall?.goods[0]?.cap, 4, 'the stall’s baskets empty for the day');
-  assert.ok(stall?.area === 'commons');
+  assert.ok(stall?.area === 'hearthwick');
   // Everyone named is somewhere the game knows.
   for (const s of ITEMS.sellers ?? []) {
     assert.ok(s.radiusTiles >= 1);

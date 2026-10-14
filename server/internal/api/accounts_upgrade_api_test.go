@@ -15,7 +15,7 @@ import (
 // together. SQL 001–025 builds the old schema; their Go backfill has no old rows
 // to visit here. The populated rows then run production's full 026–028 upgrade.
 func TestHistoricalAccountUpgradeThroughAPI(t *testing.T) {
-	t.Skip("T3: old village onboarding fixture needs the outdoor story rules")
+
 	x := newRig(t)
 	path := filepath.Join(x.dir, "historical.sqlite")
 	old, err := sql.Open("sqlite", path)
@@ -127,7 +127,7 @@ func TestHistoricalAccountUpgradeThroughAPI(t *testing.T) {
 	if play.State.Quest != "lantern-lit" || play.State.Area != "outdoors" || play.State.Position != (rules.Position{X: 2*16 + 8, Y: 26*16 + 8}) {
 		t.Fatal("rich story did not upgrade", play)
 	}
-	play = x.reportState(login, play, 10, 0, map[string]any{"area": "village", "x": 400, "y": 300})
+	play = x.reportState(login, play, 10, 0, map[string]any{"area": "outdoors", "x": 72, "y": 968})
 	request := body(play, "upgrade-complete", map[string]any{"quest": "lantern-road", "to": "complete"})
 	completed := x.expect("POST", "/api/quest/step", request, login, 200)
 	if completed.State.Quest != "complete" || completed.State.Glims != 12 {
@@ -139,7 +139,7 @@ func TestHistoricalAccountUpgradeThroughAPI(t *testing.T) {
 		t.Fatal("upgrade repaid guardian/completion")
 	}
 	completed.Lease = play.Lease
-	completed = x.reportState(login, completed, 10, 0, map[string]any{"area": "village", "x": 400, "y": 300})
+	completed = x.reportState(login, completed, 10, 0, map[string]any{"area": "outdoors", "x": 72, "y": 968})
 	rest := body(completed, "upgrade-rest", map[string]any{"kind": "rest"})
 	x.reportBeforeVitals(login, rest["op"].(map[string]any))
 	x.expect("POST", "/api/spend", rest, login, 200)

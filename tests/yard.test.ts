@@ -1,3 +1,4 @@
+import { contentSpace } from '../src/lib/location.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { YARD_TABS, boughtToday, defaultYardTab, furnishFilter, leftToday, mendList, mergeBought, nextTier, silasInReach, utcDayStart, yardGoods } from '../src/ui/yard.ts';
@@ -75,7 +76,7 @@ test('Mend lists the worn tools in your pack that a mender mends, the most worn 
   assert.deepEqual(mendList([]), []);
 });
 
-test('Silas mends only within his mender reach, where he stands now', { skip: "T3: mender fixture needs Hearthwick world coordinates" }, () => {
+test('Silas mends only within his mender reach, where he stands now', () => {
   const row = ITEM_RULES.menders.find((m) => m.npc === 'silas')!;
   const now = 1_790_000_000;
   // Where he is: his cycle's place once he has one (0.7), else his mender row's spot.
@@ -83,9 +84,9 @@ test('Silas mends only within his mender reach, where he stands now', { skip: "T
   assert.ok(at.area);
   assert.ok(at.tx !== undefined && at.ty !== undefined);
   const mid = { x: at.tx * TILE + TILE / 2, y: at.ty * TILE + TILE / 2 };
-  assert.equal(silasInReach({ area: at.area, ...mid }, now), true);
-  assert.equal(silasInReach({ area: at.area, x: mid.x + (row.radiusTiles - 1) * TILE, y: mid.y }, now), true);
-  assert.equal(silasInReach({ area: at.area, x: mid.x + (row.radiusTiles + 1) * TILE, y: mid.y }, now), false);
+  assert.equal(silasInReach({ area: contentSpace(at.area), ...mid }, now), true);
+  assert.equal(silasInReach({ area: contentSpace(at.area), x: mid.x + (row.radiusTiles - 1) * TILE, y: mid.y }, now), true);
+  assert.equal(silasInReach({ area: contentSpace(at.area), x: mid.x + (row.radiusTiles + 1) * TILE, y: mid.y }, now), false);
   assert.equal(silasInReach({ area: 'village', ...mid }, now), false);
 });
 

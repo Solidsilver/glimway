@@ -27,7 +27,7 @@ func TestFallRecoveryReplayAndMissingGeometry(t *testing.T) {
 	}
 	out := read(req)
 	f := out.GetFall()
-	if f == nil || f.Vitals.Hp != 13 || f.Vitals.Mana != 10 || f.Place.Area != "village" || f.Vitals.VitalsSetVersion != out.State.Version || f.Place.PlaceSetVersion != out.State.Version {
+	if f == nil || f.Vitals.Hp != 13 || f.Vitals.Mana != 10 || f.Place.Area != "outdoors" || f.Place.X != 184 || f.Place.Y != 1000 || f.Vitals.VitalsSetVersion != out.State.Version || f.Place.PlaceSetVersion != out.State.Version {
 		t.Fatal(out)
 	}
 	s = x.expect("GET", "/api/state", nil, c, 200)
@@ -42,7 +42,7 @@ func TestFallRecoveryReplayAndMissingGeometry(t *testing.T) {
 	}}
 	req = body(s, "no-geometry", map[string]any{"where": map[string]any{"area": "outdoors", "x": 300, "y": -1000}})
 	out = read(req)
-	if out.GetFall().Lantern != "none" || out.GetFall().Reason != "generator-unavailable" || out.State.Place.Area != "village" {
+	if out.GetFall().Lantern != "none" || out.GetFall().Reason != "generator-unavailable" || out.State.Place.Area != "outdoors" {
 		t.Fatal(out)
 	}
 	// A zero Habitica HP baseline remains zero even though a fall was requested.

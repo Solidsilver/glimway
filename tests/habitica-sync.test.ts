@@ -245,14 +245,14 @@ test('syncProfile without a stored baseline adopts one without crediting vitals'
   assert.deepEqual(result.save.importedProfile, profile);
 });
 
-test('resolveDefeatRecovery: demo rule is full recovery in the village', () => {
+test('resolveDefeatRecovery: demo rule is full recovery at the town well', () => {
   const hurt: SyncedSave = {
     state: { ...storyState(), area: 'ruin', position: { x: 12, y: 34 }, hp: 1, mana: 0 },
     vitalsSource: 'demo',
   };
   const result = resolveDefeatRecovery(hurt);
   assert.equal(result.vitalsSource, 'demo');
-  assert.equal(result.state.area, 'village');
+  assert.equal(result.state.area, 'outdoors');
   assert.equal(result.state.hp, result.state.maxHp);
   assert.equal(result.state.mana, result.state.maxMana);
   assert.equal(result.state.quests["lantern-road"], 'clue-found');
@@ -268,7 +268,7 @@ test('resolveDefeatRecovery: imported capped by last imported HP/MP', () => {
   };
 
   const result = resolveDefeatRecovery(hurt);
-  assert.equal(result.state.area, 'village');
+  assert.equal(result.state.area, 'outdoors');
   // min(last imported hp 41, ceil(50 * 0.25) = 13) = 13
   assert.equal(result.state.hp, Math.min(profile.hp, Math.ceil(50 * IMPORTED_RECOVERY.hpMaxFraction)));
   // min(last imported mp 30, ceil(36 * 0.5) = 18) = 18

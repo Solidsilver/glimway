@@ -192,7 +192,7 @@ export type GateResult =
 export function personAreas(id: string, now: number, at: string): string[] {
   const r = residentById(id);
   if (r) return [...new Set(cycleSpotsNear(r, now, RESIDENTS.graceSeconds).map((spot) => r.spots[spot]!.area))];
-  return at ? [at] : ['village'];
+  return at ? [at] : ['hearthwick'];
 }
 
 export type QuestWait = NonNullable<QuestGate['wait']>;
@@ -213,7 +213,8 @@ export function waitOpensAt(wait: QuestWait, since: number, calendar: Calendar =
 export function checkGate(step: QuestStepDef, ctx: GateContext): GateResult {
   const g = step.gate;
   if (!g) return { ok: true };
-  if (g.with && !personAreas(g.with, ctx.now, step.at).includes(ctx.area)) return { ok: false, why: 'not-here' };
+  const place = ctx.position ? at(ctx.area, ctx.position.x, ctx.position.y).id : ctx.area;
+  if (g.with && !personAreas(g.with, ctx.now, step.at).includes(place)) return { ok: false, why: 'not-here' };
   if (g.wait && ctx.gateAt !== undefined) {
     const opensAt = waitOpensAt(g.wait, ctx.gateAt, ctx.calendar);
     if (ctx.now < opensAt) return { ok: false, why: 'not-yet', opensAt };

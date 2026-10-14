@@ -108,8 +108,8 @@ func (r Rules) Eligible(ctx context.Context, tx *sql.Tx, s store.Snapshot, in po
 		err := tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM project_papers p WHERE p.world_id=? AND p.paper_id=? AND EXISTS(SELECT 1 FROM contributions c WHERE c.world_id=p.world_id AND c.project_def=p.project_def AND c.account_id=?))", s.WorldID, in.Paper, s.AccountID).Scan(&due)
 		return due, err
 	case "commons":
-		// On the Commons or in one of its rooms (the deed is bought in Pell's office at the Yard).
-		if location.At(location.Space(w.Area), w.X, w.Y).ID != "commons" && content.RootArea(w.Area) != "commons" {
+		// Town and its rooms share eligibility (the deed is bought in Pell's office).
+		if location.At(location.Space(w.Area), w.X, w.Y).ID != "hearthwick" && content.RootArea(w.Area) != "hearthwick" {
 			return false, nil
 		}
 		var due bool

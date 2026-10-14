@@ -33,7 +33,7 @@ test('location rules follow the hero across the safety boundary, on the Commons 
   assert.equal(displayArea({ area: 'outdoors', position: { x: 40, y: 376 } }), 'tangle');
 });
 
-test('fixed ground offers its own gathering and content placements; the old saved space is refused', { skip: "T3: gatheringOffered must include the new town place" }, () => {
+test('fixed ground offers its own gathering and content placements; the old saved space is refused', () => {
   assert.equal(gatheringOffered('outdoors', 'tree', { x: 40, y: 392 }), false);
   assert.equal(gatheringOffered('outdoors', 'bloom-patch', { x: 40, y: 392 }), true);
   assert.equal(gatheringOffered('outdoors', 'tree', { x: 40, y: 376 }), true);

@@ -1,5 +1,5 @@
 import { knownRoom } from './rooms.ts';
-import { contentSpace } from './location.ts';
+import { anchor, contentSpace } from './location.ts';
 // Area builders register IDs at runtime; save validation uses SAVE_AREAS below.
 export type AreaId = 'village' | 'woodland' | 'ruin' | (string & {});
 
@@ -107,14 +107,15 @@ const DEFAULT_HP = 40;
 const DEFAULT_MAX_MANA = 20;
 const DEFAULT_MANA = 20;
 
-const DEFAULT_POSITION = { x: 400, y: 300 } as const;
+const DEFAULT_POSITION = anchor('hearthwick:spawn')!;
+const RECOVERY_POSITION = anchor('hearthwick:well')!;
 
 const STARTING_INVENTORY: readonly string[] = ['field-journal', 'hearthwick-map'];
 
 export function createNewGame(): GameState {
   return {
     version: SAVE_VERSION,
-    area: 'village',
+    area: 'outdoors',
     position: { x: DEFAULT_POSITION.x, y: DEFAULT_POSITION.y },
     quests: {},
     hp: DEFAULT_HP,
@@ -321,7 +322,7 @@ export function validateSave(data: unknown): GameState {
 
 /**
  * The guest (demo vitals) defeat rule: the player returns to the Hearthwick
- * spawn and recovers full demo health and mana. Quests, inventory,
+ * well and recovers full demo health and mana. Quests, inventory,
  * discoveries, defeated enemies, and play time are kept, so story progress
  * survives defeat. Imported vitals go through resolveDefeatRecovery
  * (src/lib/habitica/sync.ts), which caps them; see docs/runtime-contract.md.
@@ -330,8 +331,8 @@ export function recoverFromDefeat(state: GameState): GameState {
   const current = validateSave(state);
   return {
     ...current,
-    area: 'village',
-    position: { x: DEFAULT_POSITION.x, y: DEFAULT_POSITION.y },
+    area: 'outdoors',
+    position: { x: RECOVERY_POSITION.x, y: RECOVERY_POSITION.y },
     hp: current.maxHp,
     mana: current.maxMana,
   };

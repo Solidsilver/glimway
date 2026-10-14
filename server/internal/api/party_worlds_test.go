@@ -285,7 +285,7 @@ func TestPartyLeaverMovedOutAfterGrace(t *testing.T) {
 	x.now.Add(1)
 	st, after, e, sc := x.request("POST", "/api/session", map[string]any{"userId": "sage", "token": secret}, nil)
 	own := x.worldOf("sage")
-	if st != 200 || own == pw || after.WorldID != own || after.State.Area != "village" || count(t, x.db, "SELECT count(*) FROM worlds WHERE id=? AND owner_id='"+x.account("sage")+"'", own) != 1 {
+	if st != 200 || own == pw || after.WorldID != own || after.State.Area != "outdoors" || count(t, x.db, "SELECT count(*) FROM worlds WHERE id=? AND owner_id='"+x.account("sage")+"'", own) != 1 {
 		t.Fatal("moved out", st, e, after.WorldID, after.State.Area)
 	}
 	// What comes along and what stays.

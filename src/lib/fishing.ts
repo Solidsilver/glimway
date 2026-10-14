@@ -5,6 +5,7 @@
  * species. The stock itself is server state; the band from a stock is only
  * ever a preview here.
  */
+import { at, contentSpace } from './location.ts';
 import raw from '../../content/fishing.json' with { type: 'json' };
 import { decodeContent } from './content-proto.ts';
 import { FishingSchema, type FishingValid, type FishBandValid, type FishWaterValid, type FishBankValid } from './gen/glimway/content/v1/fishing_pb.js';
@@ -65,7 +66,7 @@ export function bankFor(water: FishWater, id: string): FishBank | undefined {
 
 /** The waters of one area (the GET /api/fishing/waters?area= answer's rows). */
 export function watersForArea(area: string): FishWater[] {
-  return FISHING.waters.filter((w) => w.area === area);
+  return FISHING.waters.filter((w) => w.area === area || contentSpace(w.area) === area);
 }
 
 /** The wait to a bite in a band, in seconds. */
@@ -325,4 +326,9 @@ export function rodPose(hand: { x: number; y: number }, float: { x: number; y: n
     rotation: flipX ? -rot : rot,
     tip: { x: hand.x + (flipX ? -1 : 1) * Math.cos(want) * len, y: hand.y + Math.sin(want) * len },
   };
+}
+
+/** Server nearBank twin: same place and distance to an authored bank tile. */
+export function nearBank(area: string, x: number, y: number, water: FishWater, bank: FishBank): boolean {
+  return at(area, x, y).id === water.area && bankDistance(bank, x, y) <= castReachPx();
 }

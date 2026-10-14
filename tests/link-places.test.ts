@@ -26,15 +26,15 @@ test('a report whose place the world refuses: the hero goes where the world says
   r.server.on('POST /api/report', refuse('invalid-position', S({ version: 2 })));
   r.link.reportSoon();
   await r.link.flush();
-  assert.equal(r.session.state.area, 'village', 'back outside');
-  assert.deepEqual(r.session.state.position, { x: 400, y: 300 });
+  assert.equal(r.session.state.area, 'outdoors', 'back outside');
+  assert.deepEqual(r.session.state.position, { x: 72, y: 968 });
   assert.equal(r.link.status, 'online', 'a refused place is not server trouble');
   // The refused report is gone; the next one names the world's place.
   r.server.on('POST /api/report', (c: Call) => env(S({ version: 3 }), { report: { seq: c.body.seq, accepted: true, staleBasis: false, casts: 0, client: c.body.client, generation: c.body.generation, basis: c.body.basis, placeIgnored: false, abilityCasts: {}, allyHeal: 0 } }));
   r.link.reportSoon();
   await r.link.flush();
   const sent = r.server.sent('POST /api/report').map((c) => c.body.place.area);
-  assert.deepEqual(sent, ['in:village:bakery', 'village']);
+  assert.deepEqual(sent, ['in:village:bakery', 'outdoors']);
 });
 
 test('a reload after a refused place starts where the world says, not in the room', async (t) => {
@@ -50,8 +50,8 @@ test('a reload after a refused place starts where the world says, not in the roo
 
   const record = await store.load('fixture-account', 'dev');
   const next = await rig(t, { store, record, state: S({ version: 2 }) });
-  assert.equal(next.session.state.area, 'village');
-  assert.deepEqual(next.session.state.position, { x: 400, y: 300 });
+  assert.equal(next.session.state.area, 'outdoors');
+  assert.deepEqual(next.session.state.position, { x: 72, y: 968 });
 });
 
 test('a reload that replays a room report the world then refuses ends outside too', async (t) => {
@@ -74,7 +74,7 @@ test('a reload that replays a room report the world then refuses ends outside to
   await next.link.reconnect(false);
   await next.link.flush();
   assert.ok(next.server.sent('POST /api/report').some((c) => c.body.place.area === ROOM.area), 'the room report was replayed');
-  assert.equal(next.session.state.area, 'village');
+  assert.equal(next.session.state.area, 'outdoors');
 });
 
 test('an accepted report whose place the world ignored: still standing there, the hero goes where the world holds them', async (t) => {
@@ -85,7 +85,7 @@ test('an accepted report whose place the world ignored: still standing there, th
   r.server.on('POST /api/report', ignored);
   r.link.reportSoon();
   await r.link.flush();
-  assert.equal(r.session.state.area, 'village');
+  assert.equal(r.session.state.area, 'outdoors');
 
   // Moved on since the report was captured: the next report says so, nobody is pulled back.
   walkIn(r);
@@ -117,6 +117,6 @@ test('an ignored place in the same area is a stale sample: nobody is pulled back
   r.server.on('POST /api/report', (c: Call) => env(S({ version: 2 }), { report: { seq: c.body.seq, accepted: true, staleBasis: false, casts: 0, client: c.body.client, generation: c.body.generation, basis: c.body.basis, placeIgnored: true, abilityCasts: {}, allyHeal: 0 } }));
   r.link.reportSoon();
   await r.link.flush();
-  assert.equal(r.session.state.area, 'village');
+  assert.equal(r.session.state.area, 'outdoors');
   assert.deepEqual(r.session.state.position, { x: 520, y: 260 }, 'where the hero walked to');
 });

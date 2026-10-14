@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/coder/websocket"
+	"glimway/server/internal/rules"
 )
 
 type witnessed struct {
@@ -27,7 +28,11 @@ func (w *wsClient) witness() witnessed {
 func (x *rig) quest(c *http.Cookie, s *response, to, area string) {
 	x.t.Helper()
 	doc := s.State
-	doc.Area = area
+	if area == "village" || area == "hearthwick" {
+		doc.Area, doc.Position = rules.TownAnchor("spawn")
+	} else {
+		doc.Area = area
+	}
 	if to == "guardian-defeated" {
 		s.Snapshot = x.expect("POST", "/api/story/mark", body(*s, "quest-defeat-mark", map[string]any{"mark": "defeated:stone-warden", "where": testWhere(doc)}), c, 200).Snapshot
 	}
@@ -36,7 +41,7 @@ func (x *rig) quest(c *http.Cookie, s *response, to, area string) {
 }
 
 func TestWitnessRelayedFromTheBeatToThoseNearby(t *testing.T) {
-	t.Skip("T3: quest witness fixture needs outdoor onboarding")
+
 	x := newRig(t)
 	ts := startPresence(t, x, presenceTestConfig())
 	x.hero("olive", "Olive", "p1")

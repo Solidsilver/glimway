@@ -443,6 +443,9 @@ func TestWorldMoveRefusedWhenUnsafe(t *testing.T) {
 	// north of the Commons mouth).
 	for _, area := range []string{"woodland", "outdoors"} {
 		req := moveBody(h, "unsafe-"+area, o.WorldID, area)
+		if area == "outdoors" {
+			req["where"] = map[string]any{"area": area, "x": 8, "y": -376}
+		}
 		if e := x.worldReq("POST", "/api/world/move", req, hc, 409).Error.Code; e != "not-at-safe-boundary" {
 			t.Fatal(area, e)
 		}

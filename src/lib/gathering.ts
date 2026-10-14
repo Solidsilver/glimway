@@ -112,7 +112,7 @@ export function swingPlan(action: string, tool: ToolFeel): { swings: number; ms:
 /** Where the woods can be worked: the Tangle and the Whitequiet, the woods, home land, and the village's water (in season). */
 export function gatherArea(area: string, position = { x: 0, y: 0 }): boolean {
   const place = at(area, position.x, position.y);
-  return (area === 'outdoors' && place.source.kind === 'generated') || ['woodland', 'village', 'commons'].includes(place.id) || place.rest === 'home';
+  return (area === 'outdoors' && place.source.kind === 'generated') || ['woodland', 'hearthwick'].includes(place.id) || place.rest === 'home';
 }
 
 /**

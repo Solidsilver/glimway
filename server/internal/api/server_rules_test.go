@@ -167,7 +167,7 @@ func TestReportPartitionBudget(t *testing.T) {
 	class := "healer"
 	p := profile("hero", 1, 0, 50)
 	p.Class = &class
-	s := store.Snapshot{State: rules.NewState(), ImportedProfile: &p, LevelMark: 10}
+	s := store.Snapshot{State: rules.NewTownState(), ImportedProfile: &p, LevelMark: 10}
 	s.State.HP = 10
 	s.State.MaxMana = 200
 	s.State.Mana = 100
@@ -188,14 +188,26 @@ func TestReportPartitionBudget(t *testing.T) {
 	}
 }
 func TestQuestOperationsMarksAndPaperRules(t *testing.T) {
-	t.Skip("T3: quest and board eligibility moves to Hearthwick")
+
 	x := newRig(t)
 	c, p := x.reportSetup()
 	x.seedOpeningDone(p.State.Account.AccountId)
 	request := func(path, key string, fields map[string]any, area string, status int) *contract.Envelope {
 		t.Helper()
 		fields["op"] = map[string]any{"lease": p.Lease, "key": key}
-		fields["where"] = map[string]any{"area": area, "x": 25*16 + 8, "y": 14*16 + 8}
+		doc := rules.NewTownState()
+		if area == "village" || area == "hearthwick" {
+			doc.Area, doc.Position = rules.TownAnchor("spawn")
+		} else {
+			doc.Area = area
+			doc.Position = rules.Position{X: 408, Y: 232}
+		}
+		if paper, ok := fields["paper"].(string); ok {
+			if p, ok := content.PapersByID[paper]; ok && p.Source == "placed" && p.Rule.Area == "hearthwick" {
+				doc = atContentTile(doc, p.Rule.Area, int(p.Rule.GetTx()), int(p.Rule.GetTy()), 8)
+			}
+		}
+		fields["where"] = testWhere(doc)
 		w := x.rawHTTP("POST", path, fields, c)
 		if w.Code != status {
 			t.Fatal(w.Code, w.Body.String())

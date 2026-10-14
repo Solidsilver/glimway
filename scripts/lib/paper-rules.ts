@@ -8,23 +8,23 @@ export interface PaperRule {
 }
 const FIND_RULES: Record<string, Omit<PaperRule, 'kind'>> = {
   "to-the-bench-across": {
-    "area": "commons",
+    "area": "hearthwick",
     "fact": "silas-toolbox"
   },
   "silas-pine-offcut-scrap": {
-    "area": "commons",
+    "area": "hearthwick",
     "fact": "door-fox"
   },
   "orrins-drift-slap-foundation-standard": {
-    "area": "commons",
+    "area": "hearthwick",
     "fact": "foundation"
   },
   "deed-of-sale-commons-plot": {
-    "area": "commons",
+    "area": "hearthwick",
     "fact": "plot"
   },
   "the-hame-polishers-list": {
-    "area": "commons",
+    "area": "hearthwick",
     "fact": "carting-day"
   },
   "joss-penhallow-letter-map-case": {
@@ -99,7 +99,7 @@ export function designedRule(id: string): PaperRule | undefined {
   const s = designedSource(id);
   if (!s) return undefined;
   if (s.kind === 'placed') return { kind: s.kind, area: s.area, tx: s.tx, ty: s.ty, ...(s.after ? { after: s.after } : {}) };
-  if (s.kind === 'quest' || s.kind === 'gift') return { kind: s.kind, stage: s.stage, ...('from' in s && s.from ? { from: s.from, area: 'village' } : {}) };
+  if (s.kind === 'quest' || s.kind === 'gift') return { kind: s.kind, stage: s.stage, ...('from' in s && s.from ? { from: s.from, area: 'hearthwick' } : {}) };
   return { kind: s.kind, ...FIND_RULES[id] };
 }
 

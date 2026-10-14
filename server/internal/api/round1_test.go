@@ -17,7 +17,7 @@ import (
 )
 
 func TestEveryClientMarkNamespaceThroughOperation(t *testing.T) {
-	t.Skip("T3: room story eligibility must use the unified town root")
+
 	x := newRig(t)
 	c, s := x.ready("alice")
 	// Examples from the builders in residents, heard, guides, nudges, unmoored,
@@ -48,7 +48,7 @@ func TestEveryClientMarkNamespaceThroughOperation(t *testing.T) {
 		}
 	}
 	// An area's mark holds in its rooms (Silas at his counter in the Yard), never elsewhere.
-	for area, ok := range map[string]bool{"in:commons:yard": true, "in:commons:yard:deeds": true, "village": false, "in:village:bakery": false} {
+	for area, ok := range map[string]bool{"in:commons:yard": true, "in:commons:yard:deeds": true, "village": false, "in:village:bakery": true} {
 		c2, s2 := x.ready("met-" + strings.ReplaceAll(area, ":", "-"))
 		w := x.rawHTTP("POST", "/api/story/mark", body(s2, "met-silas", map[string]any{"mark": "home:met-silas", "where": map[string]any{"area": area, "x": 40, "y": 40}}), c2)
 		if ok && w.Code != 200 || !ok && (w.Code != 409 || !strings.Contains(w.Body.String(), "wrong-area")) {
@@ -110,7 +110,7 @@ func TestTerminalSpendRefusalReplaysWithCurrentState(t *testing.T) {
 }
 
 func TestQuestWrongAreaRollsBackEveryReward(t *testing.T) {
-	t.Skip("T3: quest fixture needs outdoor onboarding coordinates")
+
 	x := newRig(t)
 	c, s := x.ready("alice")
 	x.seedOpeningDone(s.AccountID)

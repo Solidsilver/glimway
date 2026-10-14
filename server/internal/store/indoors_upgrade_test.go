@@ -104,7 +104,7 @@ func TestRemovedRoomReadRecovery(t *testing.T) {
 			tx.Rollback()
 			t.Fatal(err)
 		}
-		want := "village"
+		want := "outdoors"
 		if area == "in:village:bakery" || area == "in:village:removed" {
 			want = "outdoors"
 		}

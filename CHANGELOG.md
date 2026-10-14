@@ -15,6 +15,8 @@ the game can show the first part as "What's new":
 
 ### For players
 
+- Hearthwick now offers rest, pond fishing and town story beats outdoors; new arrivals start in the Square, and falls return you to the well.
+
 - Paths around Hearthwick now reach the southern outskirts and cross the Wend west of the homesteads.
 - Hearthwick brings the village and Carters’ Apron together, with roads north, east, south and west.
 

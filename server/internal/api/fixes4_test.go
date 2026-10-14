@@ -91,19 +91,20 @@ func TestFix4InventoryAuthority(t *testing.T) {
 		t.Fatal("legacy document revives revoked loot")
 	}
 }
-func TestFix4VillageHearthOnly(t *testing.T) {
+func TestTownRestUsesPlaceRules(t *testing.T) {
 	for _, kind := range []string{"rest"} {
 		t.Run(kind, func(t *testing.T) {
 			x := newRig(t)
 			c, s := x.ready("alice")
 			x.fund(x.account("alice"), 5, 5)
 			s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
-			doc := onCommons(s.State, 64, 64)
+			doc := s.State
+			doc.Area, doc.Position = "outdoors", rules.Position{X: 8, Y: -376}
 			doc.HP = 0
 			if x.exp("POST", "/api/spend", spendBody(s, kind, "", "hearth", doc), c, 409).Error.Code != "not-at-safe-boundary" {
-				t.Fatal("commons hearth rest")
+				t.Fatal("Tangle rest")
 			}
-			doc.Area, doc.Position = "village", rules.Position{X: 64, Y: 64}
+			doc.Area, doc.Position = rules.TownAnchor("well")
 			x.exp("POST", "/api/spend", spendBody(s, kind, "", "hearth-village", doc), c, 200)
 		})
 	}

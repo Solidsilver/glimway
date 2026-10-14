@@ -103,7 +103,7 @@ func TestRoomPositionAndPresence(t *testing.T) {
 }
 
 func TestResidentChecksWithGraceAndReach(t *testing.T) {
-	s := store.Snapshot{State: rules.NewState()}
+	s := store.Snapshot{State: rules.NewTownState()}
 	hazel, _ := content.ResidentByID("hazel")
 	for _, row := range []struct {
 		now  int64
@@ -261,7 +261,7 @@ func TestQuestPrerequisitesAndHabitica(t *testing.T) {
 	first := plainStep("first")
 	last := plainStep("last")
 	fixtureQuests(t, &content.Quest{Id: "test-before", Steps: []*content.QuestStep{first, last}})
-	s := store.Snapshot{State: rules.NewState(), ProfileSource: "demo"}
+	s := store.Snapshot{State: rules.NewTownState(), ProfileSource: "demo"}
 	habitica := "habitica"
 	q := &content.Quest{After: []string{"test-before:first"}, Needs: habitica}
 	if questPrerequisites(s, q) == nil {
@@ -381,7 +381,7 @@ func TestOpeningTopupOnce(t *testing.T) {
 }
 
 func TestIndoorsRestAndGathering(t *testing.T) {
-	t.Skip("T3: rest and gathering need the Hearthwick place rules")
+
 	x := newRig(t)
 	c, s := x.ready("alice")
 	x.fund(s.AccountID, 10, 0)
@@ -487,7 +487,7 @@ func (x *rig) seedOpeningDone(account string) {
 }
 
 func TestAuthoredOpeningUnlocksLanternRoad(t *testing.T) {
-	t.Skip("T3: tutorial NPC/spot eligibility moves to Hearthwick")
+
 	x := newRig(t)
 	c, s := x.ready("alice")
 	refused := x.exp("POST", "/api/quest/step", body(s, "before-opening", map[string]any{"quest": "lantern-road", "to": "accepted"}), c, 409)
@@ -517,7 +517,7 @@ func TestAuthoredOpeningUnlocksLanternRoad(t *testing.T) {
 		}
 	}
 	doc := s.State
-	doc.Area = "village"
+	doc.Area, doc.Position = rules.TownAnchor("spawn")
 	s.Snapshot = x.expect("POST", "/api/quest/step", body(s, "after-opening", map[string]any{"quest": "lantern-road", "to": "accepted", "where": testWhere(doc)}), c, 200).Snapshot
 	if s.State.Quests["lantern-road"] != "accepted" {
 		t.Fatal(s.State.Quests)

@@ -12,7 +12,7 @@ import { road } from './helpers/quests.ts';
 test('createNewGame returns a valid fresh demo state', () => {
   const state = createNewGame();
   assert.equal(state.version, 1);
-  assert.equal(state.area, 'village');
+  assert.equal(state.area, 'outdoors');
   assert.deepEqual(state.quests, {});
   assert.equal(state.hp, state.maxHp);
   assert.equal(state.mana, state.maxMana);
@@ -112,7 +112,7 @@ test('validateSave rejects missing required fields', () => {
   assert.throws(() => validateSave(partial), InvalidSaveError);
 });
 
-test('recoverFromDefeat: demo rule returns to village with full resources and keeps story', () => {
+test('recoverFromDefeat: demo rule returns to the town well with full resources and keeps story', () => {
   let state = createNewGame();
   state = road(state, 'accept', 'find-clue');
   const hurt: GameState = {
@@ -124,7 +124,7 @@ test('recoverFromDefeat: demo rule returns to village with full resources and ke
     playSeconds: 120,
   };
   const recovered = recoverFromDefeat(hurt);
-  assert.equal(recovered.area, 'village');
+  assert.equal(recovered.area, 'outdoors');
   assert.equal(recovered.hp, recovered.maxHp);
   assert.equal(recovered.mana, recovered.maxMana);
   assert.equal(recovered.quests['lantern-road'], 'clue-found');

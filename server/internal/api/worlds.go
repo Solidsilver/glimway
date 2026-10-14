@@ -679,7 +679,7 @@ func partyResidence(ctx context.Context, logf fishingLog, tx *sql.Tx, s *store.S
 		return false, err
 	}
 	if !worldMoveSafe(s) {
-		start := rules.NewState()
+		start := rules.NewTownState()
 		s.State.Area, s.State.Position = start.Area, start.Position
 	}
 	if _, _, err = relocate(ctx, logf, tx, s, target, now, at); err != nil {

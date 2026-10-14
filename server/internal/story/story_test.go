@@ -16,7 +16,7 @@ import (
 
 func TestEchoAssignmentRestrictionsAndStability(t *testing.T) {
 	r := Rules{}
-	s := store.Snapshot{State: rules.NewState()}
+	s := store.Snapshot{State: rules.NewTownState()}
 	in := ports.EchoInput{Epoch: &contract.WildsEpoch{WorldSeed: "seed", Kind: "wick", Season: "Mudrise"}}
 	for i := 0; i < 12; i++ {
 		in.Sites = append(in.Sites, ports.EchoSite{CX: int32(i%3 - 1), Site: &contract.StorySite{Id: string(rune('a' + i)), Kind: contract.SiteKind_SITE_KIND_ECHO}})
@@ -97,7 +97,7 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 	site := &contract.StorySite{Id: "cairn", Kind: contract.SiteKind_SITE_KIND_CAIRN, Tx: 3, Ty: 4}
 	source.Chunks[chunkstest.Key{World: "w", Epoch: "e1", CX: -1, CY: -5}].Sites = []*contract.StorySite{site}
 	r := Rules{Chunks: source, Epochs: es, Now: func() time.Time { return time.Unix(now, 0) }}
-	s := store.Snapshot{AccountID: "a", WorldID: "w", State: rules.NewState()}
+	s := store.Snapshot{AccountID: "a", WorldID: "w", State: rules.NewTownState()}
 	eligible := func(id string, w *contract.Where, want bool) {
 		t.Helper()
 		got, e := r.Eligible(context.Background(), tx, s, ports.PaperInput{Paper: id, Where: w, Epoch: "e1", Site: site.Id})
@@ -127,7 +127,7 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 	eligible("pip-copybook-warden-corrections", w, true)
 	w.X += 100
 	eligible("pip-copybook-warden-corrections", w, false)
-	w = &contract.Where{Area: "village"}
+	w = &contract.Where{Area: "outdoors", X: 72, Y: 968}
 	eligible("ashwatch-ledger-excerpts", w, false)
 	s.State.Quests["lantern-road"] = "clue-found"
 	eligible("ashwatch-ledger-excerpts", w, true)
@@ -136,7 +136,7 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 		t.Fatal("unbuilt grant")
 	}
 	t.Run("town-home-facts", func(t *testing.T) {
-		t.Skip("T3: unify Commons home-paper eligibility with Hearthwick")
+
 		// On the Commons: the arch, on the outdoors grid.
 		w = &contract.Where{Area: "outdoors", X: 40, Y: 424}
 		for _, p := range content.PapersByID {
@@ -148,9 +148,9 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 		for _, p := range content.PapersByID {
 			if p.Source == "commons" && (p.Rule.Fact == "plot" || p.Rule.Fact == "foundation" || p.Rule.Fact == "door-fox") {
 				eligible(p.GetId(), w, true)
-				// The Commons' rooms count (the deed is bought in Pell's office); the village's don't.
+				// All town rooms share Hearthwick's eligibility.
 				eligible(p.GetId(), &contract.Where{Area: "in:commons:yard:deeds"}, true)
-				eligible(p.GetId(), &contract.Where{Area: "in:village:bakery"}, false)
+				eligible(p.GetId(), &contract.Where{Area: "in:village:bakery"}, true)
 			}
 		}
 	})
@@ -228,7 +228,7 @@ func TestPaperFactsSitesEchoesAndTurning(t *testing.T) {
 	eligible("notices-from-the-board", &contract.Where{Area: "outdoors", X: float64(board.GetTx()*16 + 8 + 100), Y: float64(board.GetTy()*16 + 8)}, false)
 	eligible("notices-from-the-board", &contract.Where{Area: "commons", X: float64(board.GetTx()*16 + 8), Y: float64(board.GetTy()*16 + 8)}, false)
 	t.Run("town-bench-paper", func(t *testing.T) {
-		t.Skip("T3: town bench paper eligibility replaces the Commons predicate")
+
 		eligible("to-the-bench-across", &contract.Where{Area: "outdoors", X: 40, Y: 392}, true)
 	})
 	eligible("to-the-bench-across", &contract.Where{Area: "outdoors", X: 40, Y: 376}, false)

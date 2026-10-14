@@ -1,0 +1,211 @@
+{
+  "comment": "T3a server/client rule parity: saved world pixels, place-based rest and gathering, Mill Pond reach, authored arrivals.",
+  "spawn": {
+    "area": "outdoors",
+    "x": 72,
+    "y": 968
+  },
+  "recovery": {
+    "area": "outdoors",
+    "x": 184,
+    "y": 1000
+  },
+  "cases": [
+    {
+      "name": "town square",
+      "area": "outdoors",
+      "x": 72,
+      "y": 968,
+      "rest": "village",
+      "target": "tree",
+      "gather": false,
+      "fish": false
+    },
+    {
+      "name": "apron blooms",
+      "area": "outdoors",
+      "x": 264,
+      "y": 568,
+      "rest": "village",
+      "target": "bloom-patch",
+      "gather": true,
+      "fish": false
+    },
+    {
+      "name": "north arch",
+      "area": "outdoors",
+      "x": 40,
+      "y": 392,
+      "rest": "village",
+      "target": "bloom-patch",
+      "gather": true,
+      "fish": false
+    },
+    {
+      "name": "Tangle",
+      "area": "outdoors",
+      "x": 40,
+      "y": 376,
+      "rest": "none",
+      "target": "tree",
+      "gather": true,
+      "fish": false
+    },
+    {
+      "name": "southern outskirts",
+      "area": "outdoors",
+      "x": 152,
+      "y": 1544,
+      "rest": "none",
+      "target": "pond-ice",
+      "gather": false,
+      "fish": false
+    },
+    {
+      "name": "western outskirts",
+      "area": "outdoors",
+      "x": -1544,
+      "y": 1112,
+      "rest": "none",
+      "target": "freshet-shore",
+      "gather": false,
+      "fish": false
+    },
+    {
+      "name": "lot doorstep",
+      "area": "outdoors",
+      "x": -952,
+      "y": 712,
+      "rest": "home",
+      "target": "bloom-patch",
+      "gather": false,
+      "fish": false
+    },
+    {
+      "name": "town library",
+      "area": "in:village:library",
+      "x": 80,
+      "y": 80,
+      "rest": "village",
+      "target": "tree",
+      "gather": false,
+      "fish": false
+    },
+    {
+      "name": "Yard office",
+      "area": "in:commons:yard:deeds",
+      "x": 80,
+      "y": 80,
+      "rest": "village",
+      "target": "bloom-patch",
+      "gather": false,
+      "fish": false
+    },
+    {
+      "name": "pond shore",
+      "area": "outdoors",
+      "x": 552,
+      "y": 1160,
+      "rest": "village",
+      "target": "freshet-shore",
+      "gather": true,
+      "fish": true
+    },
+    {
+      "name": "pond ice",
+      "area": "outdoors",
+      "x": 552,
+      "y": 1176,
+      "rest": "village",
+      "target": "pond-ice",
+      "gather": true,
+      "fish": true
+    },
+    {
+      "name": "exact cast radius",
+      "area": "outdoors",
+      "x": 552,
+      "y": 1136,
+      "rest": "village",
+      "target": "tree",
+      "gather": false,
+      "fish": true
+    },
+    {
+      "name": "outside cast radius",
+      "area": "outdoors",
+      "x": 552,
+      "y": 1135.99,
+      "rest": "village",
+      "target": "tree",
+      "gather": false,
+      "fish": false
+    },
+    {
+      "name": "legacy village is not the pond place",
+      "area": "village",
+      "x": 552,
+      "y": 1160,
+      "rest": "village",
+      "target": "pond-ice",
+      "gather": false,
+      "fish": false
+    }
+  ],
+  "gates": [
+    {
+      "name": "Silas outside",
+      "with": "silas",
+      "now": 600,
+      "area": "outdoors",
+      "x": 552,
+      "y": 568,
+      "here": true
+    },
+    {
+      "name": "Silas outside from Tangle",
+      "with": "silas",
+      "now": 600,
+      "area": "outdoors",
+      "x": 40,
+      "y": 376,
+      "here": false
+    },
+    {
+      "name": "Silas at counter",
+      "with": "silas",
+      "now": 2400,
+      "area": "in:commons:yard",
+      "x": 80,
+      "y": 80,
+      "here": true
+    },
+    {
+      "name": "counter time outside",
+      "with": "silas",
+      "now": 2400,
+      "area": "outdoors",
+      "x": 552,
+      "y": 568,
+      "here": false
+    },
+    {
+      "name": "Mara town",
+      "with": "mara",
+      "now": 600,
+      "area": "outdoors",
+      "x": 72,
+      "y": 968,
+      "here": true
+    },
+    {
+      "name": "Mara outskirts",
+      "with": "mara",
+      "now": 600,
+      "area": "outdoors",
+      "x": 152,
+      "y": 1544,
+      "here": false
+    }
+  ]
+}
