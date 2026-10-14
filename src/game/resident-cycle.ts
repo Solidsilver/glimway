@@ -16,6 +16,7 @@
 import type Phaser from 'phaser'
 import { roomFootprints, roomFor } from '../lib/rooms.ts'
 import { RESIDENTS, residentAt, residentById, type ResidentPlace } from '../lib/residents.ts'
+import { resolve } from '../lib/location.ts'
 import { cycleAt } from '../lib/clock.ts'
 import { tileBottom, tileFeet, tileMid } from '../lib/tile.ts'
 import { serverNow } from './clock.ts'
@@ -119,7 +120,9 @@ export class ResidentCycle {
 
   private spotTile(n: NpcEntity): { tx: number; ty: number } | null {
     const s = n.spot ? residentById(n.id)?.spots[n.spot] : null
-    return s ? { tx: s.tx, ty: s.ty } : null
+    // A spot on fixed ground (the Commons) is named in its own tiles: on the grid since the join.
+    const t = s ? resolve(s.area, s.tx, s.ty) : null
+    return t ? { tx: t.tx, ty: t.ty } : null
   }
 
   private place(n: NpcEntity, present: boolean): void {

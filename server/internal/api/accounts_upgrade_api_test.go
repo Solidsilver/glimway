@@ -123,7 +123,7 @@ func TestHistoricalAccountUpgradeThroughAPI(t *testing.T) {
 	// Prove the fake Habitica path still maps the old subject and first mutation works.
 	login := x.login("legacy-owner", "")
 	play := x.expect("POST", "/api/play", map[string]any{"clientId": "upgrade-client"}, login, 200)
-	if play.State.Quest != "lantern-lit" || play.State.Area != "commons" || play.State.Position != (rules.Position{X: 23*16 + 8, Y: 2*16 + 8}) {
+	if play.State.Quest != "lantern-lit" || play.State.Area != "outdoors" || play.State.Position != (rules.Position{X: 2*16 + 8, Y: 26*16 + 8}) {
 		t.Fatal("rich story did not upgrade", play)
 	}
 	play = x.reportState(login, play, 10, 0, map[string]any{"area": "village", "x": 400, "y": 300})

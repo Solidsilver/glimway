@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"glimway/content"
+	"glimway/server/internal/location"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"net/http"
@@ -201,18 +202,17 @@ func TestPartyLeaverWarnedAndLeavesNow(t *testing.T) {
 	if e := x.worldReq("POST", "/api/world/leave", body(r, "woods", map[string]any{"progress": doc}), rc, 409).Error.Code; e != "not-at-safe-boundary" {
 		t.Fatal(e)
 	}
-	for _, area := range []string{"home:0", "in:home:0"} {
-		doc.Area, doc.Position = area, rules.Position{X: 80, Y: 80}
-		if e := x.worldReq("POST", "/api/world/leave", body(r, "unsafe-"+area, map[string]any{"progress": doc}), rc, 409).Error.Code; e != "not-at-safe-boundary" {
-			t.Fatal(area, e)
-		}
-	}
-	doc.Area = "village"
+	// From a home's rooms (safe ground): she arrives outside its gate on her
+	// own world's Commons, since the home stays with its world.
+	doc.Area, doc.Position = "in:home:0", rules.Position{X: 80, Y: 80}
 	x.conserved(x.account("rue"))
 	out := x.worldReq("POST", "/api/world/leave", body(r, "leave", map[string]any{"progress": doc}), rc, 200)
 	own := x.worldOf("rue")
 	if own == pw || out.WorldID != own || out.Result.From != pw || count(t, x.db, "SELECT count(*) FROM worlds WHERE id=? AND owner_id='"+x.account("rue")+"'", own) != 1 || out.Result.World.Leaver != nil || !out.Result.World.IsOwner {
 		t.Fatal("leave now", out.raw)
+	}
+	if space, gx, gy, ok := location.Anchor("commons:gate:0"); !ok || out.State.Area != string(space) || out.State.Position != (rules.Position{X: gx, Y: gy}) {
+		t.Fatal("leave now from a home", out.State.Area, out.State.Position)
 	}
 	x.conserved(x.account("rue"))
 
@@ -311,7 +311,9 @@ func TestPartyLeaverMovedOutAfterGrace(t *testing.T) {
 	}
 }
 
-func TestPartyResidenceResetsHomeArrivalUntilS5(t *testing.T) {
+// Moved out from a home, a leaver arrives outside its gate on their own
+// world's Commons (anchor commons:gate:<g>); homes belong to their world.
+func TestPartyResidenceHomeArrivalAtItsGate(t *testing.T) {
 	for _, area := range []string{"home:5", "in:home:5"} {
 		t.Run(area, func(t *testing.T) {
 			x := newRig(t)
@@ -326,9 +328,9 @@ func TestPartyResidenceResetsHomeArrivalUntilS5(t *testing.T) {
 			}
 			x.now.Add(PartyGrace)
 			_, after := x.again("sage")
-			start := rules.NewState()
-			if after.WorldID == party.WorldID || after.State.Area != start.Area || after.State.Position != start.Position {
-				t.Fatal("home arrival did not reset to village spawn", after.WorldID, after.State.Area, after.State.Position)
+			space, gx, gy, ok := location.Anchor("commons:gate:5")
+			if !ok || after.WorldID == party.WorldID || after.State.Area != string(space) || after.State.Position != (rules.Position{X: gx, Y: gy}) {
+				t.Fatal("home arrival is not at the gate", after.WorldID, after.State.Area, after.State.Position)
 			}
 		})
 	}

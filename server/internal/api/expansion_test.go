@@ -117,8 +117,7 @@ func litSpots(h homeView) [][2]int {
 func TestHomesteadClaimAccessAndCommonsRoster(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	doc := s.State
-	doc.Area = "commons"
+	doc := onCommons(s.State, 376, 40)
 	s.Snapshot = x.reportState(c, s, doc.HP, doc.Mana, testWhere(doc)).Snapshot
 	if count(t, x.db, "SELECT count(*) FROM homesteads") != 0 {
 		t.Fatal("visiting the Commons no longer grants a plot")
@@ -327,6 +326,9 @@ func TestHomeRestAndSafeBoundaries(t *testing.T) {
 		doc = s.State
 		doc.HP = 1
 		doc.Area = area
+		if area == "commons" {
+			doc = onCommons(doc, 376, 40)
+		}
 		want := 409
 		if area == "in:home:00" {
 			want = 409
@@ -340,10 +342,14 @@ func TestHomeRestAndSafeBoundaries(t *testing.T) {
 	for _, area := range []string{"commons", "home:0", "home:7", "in:village:library", "in:village:mill:2", "in:home:0"} {
 		doc = s.State
 		doc.Area = area
+		if area == "commons" {
+			doc = onCommons(doc, 376, 40)
+		}
 		s.Snapshot = x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, p, doc), c, 200).Snapshot
 	}
 	doc = s.State
-	doc.Area = "outdoors"
+	// The Tangle, just past the Commons mouth: not safe.
+	doc.Area, doc.Position = "outdoors", rules.Position{X: 40, Y: 376}
 	request := x.profileBodyWithSeededReport(s, p, doc)
 	before := x.expect("GET", "/api/state", nil, c, 200).Snapshot
 	x.expect("POST", "/api/profile", request, c, 409)

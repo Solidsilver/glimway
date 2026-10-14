@@ -2,7 +2,7 @@ import { expect, type Page } from './fixtures'
 import type { Locator } from '@playwright/test'
 import { accountOf, allow, CONTRACT, newUser, openTitleGuide, pasteAndConnect, pastOpening, routeHabitica, setHabitica, sql, syncFromMenu, waitForWorld, served } from './connected'
 import { landFromCells, type Land } from '../src/lib/homestead-land.ts'
-import { dialogueState, frames, readDialogue, settled, waitForArea, waitForLive, expectToast, SERVER_ANSWER_MS } from './helpers'
+import { dialogueState, frames, inCommons, readDialogue, settled, waitForArea, waitForLive, expectToast, SERVER_ANSWER_MS } from './helpers'
 import { setHour } from './room-helpers'
 import { residentAt } from '../src/lib/residents.ts'
 
@@ -12,7 +12,8 @@ import { residentAt } from '../src/lib/residents.ts'
  */
 
 const OUT = '.agent/screens'
-export type Area = 'village' | 'woodland' | 'ruin' | 'commons' | 'in:commons:yard' | 'in:commons:yard:deeds' | `in:home:${number}` | `home:${number}`
+/** `commons`: a warp in Commons tiles (as content names them), landing on the open map (`outdoors`). */
+export type Area = 'village' | 'woodland' | 'ruin' | 'commons' | 'outdoors' | 'in:commons:yard' | 'in:commons:yard:deeds' | `in:home:${number}` | `home:${number}`
 
 type Item = { id: string; itemDef: string; scene: string | null; x: number | null; y: number | null; rotation: number | null; name?: string | null }
 export interface Home {
@@ -67,7 +68,7 @@ export async function shot(page: Page, name: string): Promise<void> {
   await page.waitForTimeout(400)
 }
 
-/** Dev warp, for any area id (the Commons included). */
+/** Dev warp, for any area id (`commons`: Commons tiles, onto the open map; `outdoors`: world tiles). */
 export async function go(page: Page, to: string, tx: number, ty: number): Promise<void> {
   // The warp starts the transition at once (a refused warp leaves us here).
   await page.evaluate(([a, x, y]) => (window as unknown as { __fsDevWarp: (a: string, x: number, y: number) => void }).__fsDevWarp(a as string, x as number, y as number), [to, tx, ty] as const)
@@ -304,11 +305,11 @@ export async function myHome(page: Page, _id?: string): Promise<Home> {
 
 /** Walk through gate g from the lane in front of it, onto its land. */
 export async function throughGate(page: Page, gate: number): Promise<void> {
-  // The lane's slots are the Commons scene's (from the Yard, say, step out first).
-  if ((await area(page)) !== 'commons') await go(page, 'commons', 23, 19)
+  // The lane's slots are the open map's, in world tiles (from the Yard, say, step out first).
+  if (!(await inCommons(page))) await go(page, 'commons', 23, 19)
   const v = await homes(page)
   const slot = v.slots.find((s) => s.gate === gate)!
-  await go(page, 'commons', slot.entry.tx, slot.entry.ty)
+  await go(page, 'outdoors', slot.entry.tx, slot.entry.ty)
   const key = slot.side === 'west' ? 'ArrowLeft' : 'ArrowRight'
   await page.keyboard.down(key)
   await waitForArea(page, `home:${gate}` as Area)
@@ -379,7 +380,7 @@ export const DEED_BOUGHT = /Entered: Lot|received and logged/
 /** Through your own gate onto your land; the land's fixed spots (door, doorstep, mailbox, site). */
 export async function toMyLand(page: Page): Promise<NonNullable<HomesView['land']>> {
   const gate = (await lane(page)).mine!.gate
-  if ((await area(page)) !== 'commons') await go(page, 'commons', 23, 19)
+  if (!(await inCommons(page))) await go(page, 'commons', 23, 19)
   await expect.poll(async () => (await homes(page)).status, { timeout: SERVER_ANSWER_MS }).toBe('ready')
   await throughGate(page, gate)
   await expect.poll(async () => (await homes(page)).land, { timeout: SERVER_ANSWER_MS }).not.toBeNull()

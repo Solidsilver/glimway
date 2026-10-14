@@ -54,7 +54,8 @@ func validatePayload(m protoreflect.Message) error {
 	return err
 }
 func validArea(area string) bool {
-	if slices.Contains([]string{"village", "woodland", "ruin", "commons"}, area) || rules.HomeGate(area) >= 0 || content.KnownRoom(area) {
+	// The Commons is outdoors (fixed footprint), not a saved area of its own.
+	if slices.Contains([]string{"village", "woodland", "ruin"}, area) || rules.HomeGate(area) >= 0 || content.KnownRoom(area) {
 		return true
 	}
 	return area == outdoorsArea

@@ -7,8 +7,7 @@ import placesRaw from '../content/places.json' with { type: 'json' };
 import { anchor, at, onGrid, resolve, sourceOf, OUTDOORS } from '../src/lib/location.ts';
 import { PLACES, gateCapacity, validatePlaces, type Places } from '../src/lib/places.ts';
 import { chunkOf } from '../src/lib/wilds/coords.ts';
-import type { CommonsWorld } from '../src/game/commons-served.ts';
-import { servedCommonsFixture } from './commons-fixture.ts';
+import { servedCommonsFixture, type CommonsView } from './commons-fixture.ts';
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts';
 import { refusalMatchesRule } from './helpers/vector-rule.ts';
 
@@ -108,7 +107,7 @@ const gates = gateCapacity(PLACES.fixed.find((f) => f.id === 'commons')!);
 const commons = servedCommonsFixture();
 type Tile = { tx: number; ty: number };
 const key = (t: Tile) => `${t.tx},${t.ty}`;
-function blocked(w: CommonsWorld): Set<string> {
+function blocked(w: CommonsView): Set<string> {
   const out = new Set<string>();
   for (let y = 0; y < w.height; y++) for (let x = 0; x < w.width; x++) if (w.solid[y]![x]) out.add(key({ tx: x, ty: y }));
   for (const s of [...w.trees, ...w.bushes, ...w.rocks, ...w.props]) out.add(key(s));

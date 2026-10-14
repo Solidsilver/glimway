@@ -71,13 +71,19 @@ func TestStory028Upgrade(t *testing.T) {
 			tx, _ := s.DB.Begin()
 			defer tx.Rollback()
 			snap, e := Load(context.Background(), tx, "owner-subject")
+			// 028 sends a Wilds save to the Commons arch; 036 then moves it onto
+			// the outdoors grid (anchor commons:arch) with one more version.
+			wantVersion := int64(8)
+			if kind == "wilds" {
+				wantVersion = 9
+			}
 			if e != nil {
 				t.Fatal(e)
 			}
-			if snap.State.Quests["lantern-road"] != "complete" || snap.State.PlaySeconds != 123 || snap.Version != 8 || len(questInventory(snap.State.Inventory)) != 3 {
+			if snap.State.Quests["lantern-road"] != "complete" || snap.State.PlaySeconds != 123 || snap.Version != wantVersion || len(questInventory(snap.State.Inventory)) != 3 {
 				t.Fatal(JSON(snap))
 			}
-			if kind == "wilds" && (snap.State.Area != "commons" || snap.State.Position != (rules.Position{X: 23*16 + 8, Y: 2*16 + 8})) {
+			if kind == "wilds" && (snap.State.Area != "outdoors" || snap.State.Position != (rules.Position{X: 2*16 + 8, Y: 26*16 + 8})) {
 				t.Fatal(snap.State.Area)
 			}
 			if kind == "home-valid" && snap.State.Area != "home:0" || kind == "home-invalid" && snap.State.Area != "village" {
@@ -88,7 +94,8 @@ func TestStory028Upgrade(t *testing.T) {
 			}
 			var at float64
 			var version int64
-			if e = tx.QueryRow("SELECT vitals_at,vitals_set_version FROM player_vitals").Scan(&at, &version); e != nil || at < before || version != snap.Version {
+			// The vitals were set at 8; 036's place move doesn't touch them.
+			if e = tx.QueryRow("SELECT vitals_at,vitals_set_version FROM player_vitals").Scan(&at, &version); e != nil || at < before || version != 8 {
 				t.Fatal("vitals migration", at, version, e)
 			}
 			for _, mark := range []string{"lit:road-1", "opened:shrine-chest", "met:mara@accepted", "heard:mara@intro", "witness:echo-nan:old-id:Olive", "donated:eleven-days@2026-10-07"} {

@@ -1,4 +1,4 @@
-import { at } from '../../lib/location.ts'
+import { anchor, at, resolve } from '../../lib/location.ts'
 /**
  * Where the quest goal is, shown rather than told: the HUD's needle turns
  * toward it (EV.goalDir), and when it's off screen a small lantern glint
@@ -25,7 +25,8 @@ import Phaser from 'phaser'
 import { bus, EV, type GoalDirPayload } from '../events'
 import { TILE } from '../../lib/tile'
 import { canvasRatio, playInsets } from '../viewport'
-import type { WorldData } from '../worlds'
+import type { ExitDef, WorldData } from '../worlds'
+import { gateTiles } from '../wilds/coords'
 import type { GuideWhere } from '../../content/guides'
 import { expose } from '../dev-hooks'
 import type { GoalTarget } from '../guide-pin'
@@ -100,6 +101,8 @@ function steps(from: string, to: string): number {
 export interface GoalGuideDeps {
   world: WorldData
   position?: () => { x: number; y: number }
+  /** The ways out attached now beyond the world's own (the open map's fixed chunks: the Commons' gates and west path). */
+  exits?: () => readonly ExitDef[]
   /** What to head for: a pinned guide's step, or a quest step's `where` (null: nothing). */
   goal: () => GoalTarget | null
   /** Live positions: an NPC's sprite, an interactable, the warden (null when absent). */
@@ -203,18 +206,34 @@ export class GoalGuide {
     }
     let best: { x: number; y: number } | null = null
     let bestSteps = Infinity
-    // A room's front door out here (the Yard's under Silas's sign, the bakery's on the square).
+    // A room's front door out here (the Yard's under Silas's sign, the bakery's on the square);
+    // on the open map, the doors of the place you're in (content names them in its own tiles).
     const here = String(this.deps.world.areaId)
+    const space = here === 'outdoors' ? from : here
     for (const room of ROOMS.rooms) {
-      const door = room.doors.find((d) => d.kind === 'door' && d.to === here && d.outside)
+      const door = room.doors.find((d) => d.kind === 'door' && d.to === space && d.outside)
       if (!door?.outside) continue
       const n = steps(room.id, goal)
+      const t = resolve(space, door.outside.tx, door.outside.ty)
       if (n < bestSteps) {
         bestSteps = n
-        best = { x: (door.outside.tx + 0.5) * TILE, y: (door.outside.ty + 0.5) * TILE }
+        best = { x: (t.tx + 0.5) * TILE, y: (t.ty + 0.5) * TILE }
       }
     }
-    for (const e of this.deps.world.exits) {
+    // On the open map the Commons and the Tangle meet at the arch: walked, not an exit.
+    if (here === 'outdoors') {
+      const arch = anchor('commons:arch')
+      const mouth = gateTiles()
+      for (const [node, x, y] of [['commons', arch?.x, arch?.y], ['tangle', (mouth.tx + mouth.tw / 2) * TILE, mouth.ty * TILE]] as const) {
+        if (node === from || x === undefined || y === undefined) continue
+        const n = steps(node, goal)
+        if (n < bestSteps) {
+          bestSteps = n
+          best = { x, y }
+        }
+      }
+    }
+    for (const e of [...this.deps.world.exits, ...(this.deps.exits?.() ?? [])]) {
       const to = String(e.to)
       const node = /^home:\d+$/.test(to) ? (from === 'cottage' ? 'home' : 'other-home') : to === 'outdoors' || to.startsWith('chunk:') ? at('outdoors', e.entry.tx * TILE + TILE / 2, e.entry.ty * TILE + TILE / 2).id : to
       const n = steps(node, goal)

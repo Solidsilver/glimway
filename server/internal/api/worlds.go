@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"glimway/content"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/location"
@@ -490,6 +491,7 @@ func relocate(ctx context.Context, logf fishingLog, tx *sql.Tx, s *store.Snapsho
 		}
 	}
 	s.WorldID = target.ID
+	arriveFromHome(s)
 	if err = store.Credit(ctx, tx, s, 0, 0, "world-move", from+">"+target.ID, nil, now); err != nil {
 		return false, 0, err
 	}
@@ -503,17 +505,34 @@ func moveResultProto(world worldView, from string, leftHome bool, returned int) 
 	return &contract.WorldMoveResult{World: worldViewProto(world), From: from, LeftHome: leftHome, Returned: int32(returned)}
 }
 
-// worldMoveSafe keeps homes out of world moves until S5 replaces the arrival
-// reset with a destination anchor; homesteads belong to their current world.
+// worldMoveSafe: a world move starts from safe ground (the lookup at the
+// position): the village, the Commons, a home's land, and their rooms.
 func worldMoveSafe(s *store.Snapshot) bool {
-	return rules.HomeGate(content.RootArea(s.State.Area)) < 0 &&
-		location.At(location.Space(s.State.Area), s.State.Position.X, s.State.Position.Y).Safe
+	return location.At(location.Space(s.State.Area), s.State.Position.X, s.State.Position.Y).Safe
+}
+
+// arriveFromHome: a home belongs to its world, so whoever moves from a
+// home's land or rooms arrives outside its gate on the destination's
+// Commons (anchor commons:gate:<g>; the arch if the Commons has no such
+// gate). The place is the server's: a barrier drops older reports.
+func arriveFromHome(s *store.Snapshot) {
+	gate := rules.HomeGate(content.RootArea(s.State.Area))
+	if gate < 0 {
+		return
+	}
+	space, x, y, ok := location.Anchor(fmt.Sprintf("commons:gate:%d", gate))
+	if !ok {
+		space, x, y, _ = location.Anchor("commons:arch")
+	}
+	s.State.Area, s.State.Position = string(space), rules.Position{X: x, Y: y}
+	s.PlaceWritten = true
 }
 
 // worldMove moves the caller to their party's world or to one they own, in
-// one keyed transaction (relocate), from safe village or Commons ground
-// (including rooms), at most once a day, and only once parcels they sent are
-// home (a move never takes back a gift on its own).
+// one keyed transaction (relocate), from safe ground (village, Commons or
+// home, including rooms; from a home they arrive at its gate), at most once
+// a day, and only once parcels they sent are home (a move never takes back
+// a gift on its own).
 func (a *Server) worldMove(w http.ResponseWriter, r *http.Request) error {
 	var req contract.WorldMoveRequest
 	if err := decodeOp(w, r, &req); err != nil {
@@ -579,8 +598,8 @@ func (a *Server) worldMove(w http.ResponseWriter, r *http.Request) error {
 // worldLeave ("Leave now") moves someone who has left the party whose world
 // they live in to a world of their own (made when they have none) straight
 // away, without waiting out the grace period or the move cooldown. The
-// other move rules hold: safe village or Commons ground (including rooms),
-// parcels home first.
+// other move rules hold: safe ground (village, Commons or home, including
+// rooms; from a home they arrive at its gate), parcels home first.
 func (a *Server) worldLeave(w http.ResponseWriter, r *http.Request) error {
 	var req contract.WorldLeaveRequest
 	if err := decodeOp(w, r, &req); err != nil {
@@ -632,8 +651,9 @@ func (a *Server) worldLeave(w http.ResponseWriter, r *http.Request) error {
 // of a party's world who is back in that party is no longer warned; one who
 // isn't is warned from now (party_left_at), and once PartyGrace has passed
 // is moved out to a world of their own (relocate), wherever they stood.
-// From homes or unsafe ground they arrive at the village spawn; parcels
-// they sent stay on the road (their recipients can still take them). Reports a move.
+// From a home they arrive at its gate on the new world's Commons, from
+// unsafe ground at the village spawn; parcels they sent stay on the road
+// (their recipients can still take them). Reports a move.
 func partyResidence(ctx context.Context, logf fishingLog, tx *sql.Tx, s *store.Snapshot, party *string, now int64, at float64) (bool, error) {
 	here, err := loadWorldRef(ctx, tx, s.WorldID)
 	if err != nil || !here.Party {

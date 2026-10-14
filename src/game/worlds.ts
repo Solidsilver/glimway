@@ -1,7 +1,7 @@
 /**
  * World builder: the first areas (village, woodland, ruin), generated
  * deterministically from code (seeded), and the area-kind registry every
- * area resolves through (those three, the Commons, homestead land by
+ * area resolves through (those three, homestead land by
  * `home:<gate>`, the rooms by `in:…` (./room-kind.ts: the village rooms and
  * the cottages), and the open map, `outdoors` (./wilds/wilds-world.ts)).
  */
@@ -9,7 +9,8 @@ import type { AreaId } from '../lib/state.ts'
 import { repairFor } from '../lib/repairs.ts'
 import { calendarAt } from '../lib/calendar.ts'
 import { TERRAIN, TILE, tileBottom, tileMid } from '../lib/tile.ts'
-import { servedCommons, COMMONS_FROM_VILLAGE, type CommonsWorld } from './commons-served.ts'
+import { anchorTile } from './wilds/fixed.ts'
+import { OUTDOORS_AREA } from './wilds/coords.ts'
 import { homeLandKind } from './homeland.ts'
 import { residentSpotsIn, roomKind, type RoomScene } from './room-kind.ts'
 import { gameNow } from './clock.ts'
@@ -405,7 +406,8 @@ function buildVillage(): WorldData {
 
   const villageExits: ExitDef[] = [
     { tx: W - 1, ty: 9, tw: 1, th: 3, to: 'woodland', entry: { tx: 2, ty: 15 } },
-    { tx: W - 1, ty: 14, tw: 1, th: 3, to: 'commons', entry: { ...COMMONS_FROM_VILLAGE } }
+    // Into the Commons on the open map, just inside its west gate (the anchor `commons:west-path`).
+    { tx: W - 1, ty: 14, tw: 1, th: 3, to: OUTDOORS_AREA, entry: anchorTile('commons:west-path'), label: 'Hearthwick Commons' }
   ]
   const trees = collectTrees(g)
   const scatteredBushes = scatter(g, rng, 6, [...npcs, well, villageLantern]).filter((b) => !nearExit({ exits: villageExits }, b.tx, b.ty))
@@ -828,9 +830,8 @@ const AREA_KINDS: Record<string, AreaKind> = {
   village: { build: buildVillage, foreground: villageForeground },
   woodland: { build: buildWoodland, foreground: woodlandForeground },
   ruin: { build: buildRuin, foreground: ruinForeground },
-  // Served by the server as fixed chunks (./commons-served.ts), behind its portals until the join.
-  commons: { build: servedCommons, foreground: (world) => (world as CommonsWorld).foreground },
-  // The open map: one area, its chunks attached as you walk (src/game/wilds/window.ts).
+  // The open map: one area, its chunks attached as you walk (src/game/wilds/window.ts),
+  // the Commons' fixed chunks among them (./wilds/fixed.ts).
   outdoors: { build: () => buildWildsWorld(), foreground: () => [] }
 }
 

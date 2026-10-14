@@ -196,6 +196,8 @@ for (const [name, vp] of [['desktop', { width: 1200, height: 760 }], ['phone', {
     await go(page, 'commons', 23, 19)
     await go(other, 'commons', 25, 19)
     await seeEachOther(page, other)
+    // The Commons is on the open map: its square is chunk (0, 1)'s room.
+    expect((await presenceState(page))?.area).toBe('outdoors:0:1')
     await shot('21-presence-commons')
 
     await page.keyboard.press('g')

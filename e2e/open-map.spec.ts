@@ -160,18 +160,22 @@ async function stopFrameGaps(page: Page): Promise<{ frames: number; p50: number;
 test('walk from the gate through the Tangle into the Whitequiet and on, with no scene change; reload in place', async ({ page }) => {
   test.setTimeout(240_000)
   await freshPlayer(page)
-  // North through the Commons arch: the open map, just inside the gate.
+  // North from the Commons through its arch: the open map, one scene, into the Tangle's gate chunk.
   await warp(page, 'commons', 23, 2)
-  const inWilds = () => page.evaluate(() => (window as unknown as { __fsSafety?: () => { areaId: string } | null }).__fsSafety?.()?.areaId === 'outdoors')
-  await holdUntil(page, 'ArrowUp', inWilds)
+  const win = (await wildsWindow(page))!
+  await holdUntil(page, 'ArrowUp', () => page.evaluate(() => (window as unknown as { __fsPlayer: () => { y: number } }).__fsPlayer().y < 22 * 16 + 8))
   await waitForWilds(page)
   const start = await wilds(page)
   expect(start.chunk).toEqual({ cx: 0, cy: 0 })
-  expect(start.position).toEqual({ x: 40, y: 360 })
   expect(start.epochId).toBe(start.stillEpoch)
-  const win = (await wildsWindow(page))!
-  expect(win.attached.length).toBe(6) // the 3×3 minus the row south of the gate (the village side)
-  expect(win.drift.sort()).toEqual(['-1,1', '0,1', '1,1'])
+  const gate = (await wildsWindow(page))!
+  expect(gate.id, 'walked in, no scene change').toBe(win.id)
+  // The whole 3×3: the Tangle's row, the gate's and the Commons' (fixed) south of it; no drift.
+  // (The Commons' far row stays a few steps more: the slack behind a crossing.)
+  const around = [-1, 0, 1].flatMap((dy) => [-1, 0, 1].map((dx) => `${dx},${dy}`))
+  expect(gate.attached).toEqual(expect.arrayContaining(around))
+  expect(gate.fixed).toEqual(expect.arrayContaining(['-1,1', '0,1', '1,1']))
+  expect(gate.drift).toEqual([])
   await shot(page, '60-open-map-gate-desktop')
 
   // North chunk by chunk: (0,-1), (0,-2) in the Tangle, over the crossing into
@@ -350,7 +354,7 @@ test('two players in neighbouring chunks see each other; two chunks apart they d
   await ctx.close()
 })
 
-type SceneSize = { list: number; tweens: number; transientTweens: number; statics: number; kinds: Record<string, number> }
+type SceneSize = { list: number; tweens: number; transientTweens: number; statics: number; textures: number; listeners: number; kinds: Record<string, number> }
 const sceneSize = (p: Page) => p.evaluate(() => (window as unknown as { __fsSceneSize: () => SceneSize }).__fsSceneSize())
 
 /** The churn invariant: animation frames are one sprite; thought bubbles come and go. */
@@ -363,7 +367,7 @@ async function sceneResources(p: Page) {
     drawn[key] = (drawn[key] ?? 0) + n
   }
   // steady compares JSON, so changing display-list order must not change the sample.
-  return { tweens: z.tweens, transientTweens: z.transientTweens, statics: z.statics, drawn: Object.fromEntries(Object.entries(drawn).sort(([a], [b]) => a.localeCompare(b))) }
+  return { tweens: z.tweens, transientTweens: z.transientTweens, statics: z.statics, textures: z.textures, listeners: z.listeners, drawn: Object.fromEntries(Object.entries(drawn).sort(([a], [b]) => a.localeCompare(b))) }
 }
 
 /** Only the motes and their tween lifetime matter to a site redraw. */
@@ -448,6 +452,34 @@ test('chunks walked in and out leave nothing behind: the tweens, the collision b
   }
   await campSpritesReady(page)
   const after = await steady(page, () => sceneResources(page), { frames: 5, seconds: 20, message: 'open-map scene counts after churn', ready: z => z.transientTweens === 0 })
+  expect(after, 'after four trips').toEqual(before)
+})
+
+test('the Commons’ fixed chunks walked in and out leave nothing behind either', async ({ page }) => {
+  test.setTimeout(150_000)
+  await freshPlayer(page)
+  // The Commons' square (fixed chunk 0,1, its lamps glowing) and the Tangle three chunks north:
+  // standing at one then the other swaps the whole 3×3 (fixed and generated chunks both).
+  await warp(page, 'outdoors', 2, 44)
+  await waitForWilds(page)
+  await page.evaluate(() => (window as unknown as { __fsDevParkCreatures: () => void }).__fsDevParkCreatures())
+  const a = (await openNear(page, 2, 44))!
+  await standAt(page, (await openNear(page, 2, 44 - 2 * S))!)
+  const b = (await openNear(page, 2, 44 - 3 * S))!
+  expect(a && b, 'open ground at both spots').toBeTruthy()
+  await standAt(page, b)
+  await standAt(page, a)
+  expect((await wildsWindow(page))!.fixed.length, 'the Commons attached').toBe(6)
+  await campSpritesReady(page)
+  const before = await steady(page, () => sceneResources(page), { frames: 5, seconds: 20, message: 'Commons scene counts before churn', ready: z => z.transientTweens === 0 })
+  expect(before.drawn['Image:fingersnap-foreground'] ?? 0, 'the Commons’ canopies are drawn').toBeGreaterThan(500)
+  for (let i = 0; i < 4; i++) {
+    await standAt(page, b)
+    expect((await wildsWindow(page))!.fixed, 'the Commons detached').toEqual([])
+    await standAt(page, a)
+  }
+  await campSpritesReady(page)
+  const after = await steady(page, () => sceneResources(page), { frames: 5, seconds: 20, message: 'Commons scene counts after churn', ready: z => z.transientTweens === 0 })
   expect(after, 'after four trips').toEqual(before)
 })
 

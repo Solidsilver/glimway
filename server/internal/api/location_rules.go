@@ -14,11 +14,9 @@ func placeID(s store.Snapshot) string {
 	return location.At(location.Space(s.State.Area), s.State.Position.X, s.State.Position.Y).ID
 }
 
-// contentTile bridges the separate Commons scene until S5 joins it to outdoors.
-func contentTile(current, area string, tx, ty int) (string, int, int) {
-	if current == area {
-		return area, tx, ty
-	}
+// contentTile carries a content tile (area-local: Commons positions in
+// Commons layout tiles) into its space; other areas are their own frame.
+func contentTile(area string, tx, ty int) (string, int, int) {
 	space, x, y := location.Resolve(area, tx, ty)
 	return string(space), x, y
 }

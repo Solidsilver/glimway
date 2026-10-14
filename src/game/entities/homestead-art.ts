@@ -15,7 +15,7 @@ import type { HomeView } from '../../lib/api/types'
 import { decoSeat, type ArtBox, type SeatPose } from '../seats'
 import { bus, EV } from '../events'
 import { TILE, tileBottom, tileFeet, tileMid } from '../../lib/tile'
-import type { GateSlot } from '../commons-served'
+import { chunkOfTile, type GateSlot } from '../wilds/fixed'
 import { decoFlat, decoKey } from '../commons-art'
 import { itemsFrame, itemWorldArt } from '../items-pass'
 import { commonsAnim, commonsDataUrl } from '../commons-pass'
@@ -61,17 +61,48 @@ export class HomesteadArt {
   // ------------------------------------------------------------ fixtures
 
   buildCommonsFixtures(): void {
-    const f = this.home.commons!.features
     // (Silas is one of the Commons' NPCs, out by his sawhorse while his hour has him there: ../entities/npcs.ts.)
-    // The hame on the north gatepost, kept polished: a glint now and then.
+    this.emitSilasPortrait()
+  }
+
+  /** The open map's chunks of the Commons attached now: only their fixtures are drawn. */
+  private chunks = new Set<string>()
+  private hameDrawn: Drawn = { objects: [], bodies: [] }
+
+  /** A Commons chunk attached: the drawing of the gates and the hame it owns, a step each (the chunk spreads them over frames). */
+  attachChunk(key: string): (() => void)[] {
+    const lane = this.home.commons
+    if (!lane) return []
+    this.chunks.add(key)
+    const steps = lane.gates.filter((g) => g.chunk === key).map((g) => () => this.chunks.has(key) && this.drawGates(new Set([g.gate])))
+    if (chunkOfTile(lane.features.hame.tx, lane.features.hame.ty) === key) steps.push(() => this.chunks.has(key) && this.drawHame())
+    return steps
+  }
+
+  /** A Commons chunk detached: what it owned goes (tweens, bodies and all). */
+  detachChunk(key: string): void {
+    const lane = this.home.commons
+    if (!lane || !this.chunks.delete(key)) return
+    for (const slot of lane.gates) {
+      if (slot.chunk !== key) continue
+      const d = this.gateDrawn.get(slot.gate)
+      if (d) this.clear(d)
+      this.gateDrawn.delete(slot.gate)
+    }
+    if (chunkOfTile(lane.features.hame.tx, lane.features.hame.ty) === key) this.clear(this.hameDrawn)
+  }
+
+  /** The hame on the north gatepost, kept polished: a glint now and then. */
+  private drawHame(): void {
+    const f = this.home.commons!.features
+    this.clear(this.hameDrawn)
     const hx = tileMid(f.hame.tx)
     const hy = tileBottom(f.hame.ty) - 34
-    this.scene.add.image(hx + 1, hy, 'hame').setOrigin(0.5, 0).setDepth(tileBottom(f.hame.ty) + 1)
-    const glint = this.scene.add.image(hx - 4, hy + 4, 'spark').setDepth(tileBottom(f.hame.ty) + 2).setAlpha(0)
+    this.add(this.hameDrawn, this.scene.add.image(hx + 1, hy, 'hame').setOrigin(0.5, 0).setDepth(tileBottom(f.hame.ty) + 1))
+    const glint = this.add(this.hameDrawn, this.scene.add.image(hx - 4, hy + 4, 'spark').setDepth(tileBottom(f.hame.ty) + 2).setAlpha(0))
     if (!this.deps.reducedMotion) {
       this.scene.tweens.add({ targets: glint, alpha: 1, scale: 1.4, duration: 260, yoyo: true, repeat: -1, repeatDelay: 2600, ease: 'Sine.easeInOut' })
     }
-    this.emitSilasPortrait()
   }
 
   /** The decoration art for the shop and tray, scaled up crisp. */
@@ -152,6 +183,8 @@ export class HomesteadArt {
   drawGates(only?: Set<number>): void {
     for (const slot of this.home.commons!.gates) {
       if (only && !only.has(slot.gate)) continue
+      // Drawn by the chunk that owns it, while it is attached.
+      if (!this.chunks.has(slot.chunk)) continue
       this.gateDraws++
       const d = this.gateDrawn.get(slot.gate) ?? { objects: [], bodies: [] }
       this.clear(d)

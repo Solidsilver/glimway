@@ -3,10 +3,13 @@ package store
 import (
 	"context"
 	"glimway/content"
+	"glimway/server/internal/location"
 	"glimway/server/internal/rules"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"google.golang.org/protobuf/proto"
 )
 
 func TestQuestTree029Upgrade(t *testing.T) {
@@ -121,5 +124,89 @@ func TestRemovedRoomReadRecovery(t *testing.T) {
 		if err != nil || again.Version != version || again.State.Position != loaded.State.Position {
 			t.Fatal(again, err)
 		}
+	}
+}
+
+// A removed Commons room comes back onto the outdoors grid (location-seam.md
+// §3): a surviving door to the Commons lands on its doorstep, resolved
+// through the footprint's origin (the Yard's is anchor commons:yard-door),
+// and a room with no door left lands on anchor commons:arch.
+func TestRemovedCommonsRoomRecoversToAnchors(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "rooms.sqlite")
+	db := oldAccount026(t, path, false, true)
+	db.Close()
+	s, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	original := content.RoomRules.Rooms
+	t.Cleanup(func() { content.RoomRules.Rooms = original })
+	yard, ok := content.RoomFor("in:commons:yard")
+	if !ok {
+		t.Fatal("no yard")
+	}
+	var front *content.RoomDoor
+	for _, door := range yard.GetDoors() {
+		if door.GetTo() == "commons" {
+			front = door
+		}
+	}
+	if front == nil {
+		t.Fatal("the yard has no door to the Commons")
+	}
+	// The Yard is retired; its office survives and keeps the front door.
+	content.RoomRules.Rooms = nil
+	for _, room := range original {
+		switch room.GetId() {
+		case "in:commons:yard":
+		case "in:commons:yard:deeds":
+			office := proto.Clone(room).(*content.Room)
+			office.Doors = append(office.Doors, front)
+			content.RoomRules.Rooms = append(content.RoomRules.Rooms, office)
+		default:
+			content.RoomRules.Rooms = append(content.RoomRules.Rooms, room)
+		}
+	}
+	doorstep := func() (string, float64, float64) {
+		space, x, y, ok := location.Anchor("commons:yard-door")
+		if !ok {
+			t.Fatal("no yard-door anchor")
+		}
+		return string(space), x, y
+	}
+	arch := func() (string, float64, float64) {
+		space, x, y, ok := location.Anchor("commons:arch")
+		if !ok {
+			t.Fatal("no arch anchor")
+		}
+		return string(space), x, y
+	}
+	for area, want := range map[string]func() (string, float64, float64){"in:commons:yard": doorstep, "in:commons:gone": arch} {
+		if _, err = s.DB.Exec("UPDATE player_place SET area=?,x=80,y=80", area); err != nil {
+			t.Fatal(err)
+		}
+		space, x, y := want()
+		if space != "outdoors" {
+			t.Fatal(area, space)
+		}
+		for pass := 0; pass < 2; pass++ {
+			tx, _ := s.DB.Begin()
+			loaded, err := Load(context.Background(), tx, "owner-subject")
+			if err != nil {
+				tx.Rollback()
+				t.Fatal(err)
+			}
+			if loaded.State.Area != space || loaded.State.Position != (rules.Position{X: x, Y: y}) {
+				t.Fatal(area, pass, loaded.State.Area, loaded.State.Position)
+			}
+			if err = tx.Commit(); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	// The yard's doorstep is the door's entry carried onto the grid.
+	if _, x, y := doorstep(); x != float64((53-21)*16+8) || y != float64((18+24)*16+8) {
+		t.Fatal("yard-door anchor moved", x, y)
 	}
 }

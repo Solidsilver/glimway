@@ -90,7 +90,12 @@ for (const [name, viewport] of phones) {
       ['village', cols - 2, 1],
       ['village', 1, rows - 2],
       ['village', cols - 2, rows - 2],
-      ['ruin', 15, 3]
+      ['ruin', 15, 3],
+      // The Commons on the open map (Commons tiles): the camera frames the joined bounds, the arch and the far corners.
+      ['commons', 2, 21],
+      ['commons', 23, 3],
+      ['commons', 23, 38],
+      ['commons', 56, 22]
     ]
     for (const [area, tx, ty] of spots) {
       await warp(page, area, tx, ty)

@@ -1,5 +1,4 @@
 import { at } from './location.ts';
-import { rootArea } from './rooms.ts';
 /**
  * Moving to another world (docs/expansion-design.md "Worlds"): what keeps a
  * move from starting, checked in the browser before asking the server, which
@@ -24,7 +23,8 @@ export function moveBlocks(o: { area: string; position?: { x: number; y: number 
   if (!o.online) out.push('offline')
   if (o.pending) out.push('pending')
   if ((o.opensIn ?? 0) > 0 || o.cooled) out.push('cooldown')
-  if (rootArea(o.area).startsWith('home:') || !at(o.area, o.position?.x ?? 0, o.position?.y ?? 0).safe) out.push('area')
+  // Safe ground: the village, the Commons, a home (you arrive at its gate on the new world's Commons).
+  if (!at(o.area, o.position?.x ?? 0, o.position?.y ?? 0).safe) out.push('area')
   if (o.outgoing > 0) out.push('mail')
   return out
 }

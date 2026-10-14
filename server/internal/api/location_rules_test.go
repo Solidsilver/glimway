@@ -14,17 +14,18 @@ func TestOutdoorsPresenceV4Grammar(t *testing.T) {
 	if presenceProtocol != "glimway.presence.v4" {
 		t.Fatal(presenceProtocol)
 	}
-	for _, room := range []string{"outdoors:0:0", "outdoors:-1:-1", "outdoors:-1:1", "outdoors:1:2", "commons", "home:0", "in:commons:yard"} {
+	for _, room := range []string{"outdoors:0:0", "outdoors:-1:-1", "outdoors:-1:1", "outdoors:1:2", "home:0", "in:commons:yard"} {
 		if !validPresenceRoom(room) {
 			t.Error("refused", room)
 		}
 	}
-	for _, room := range []string{"wilds", "wilds:0:0", "outdoors", "outdoors:00:0", "outdoors:-0:0", "outdoors:+1:0", "outdoors:0:3", "outdoors:5:0", "outdoors:0:0:0"} {
+	for _, room := range []string{"wilds", "wilds:0:0", "outdoors", "outdoors:00:0", "outdoors:-0:0", "outdoors:+1:0", "outdoors:0:3", "outdoors:5:0", "outdoors:0:0:0", "commons"} {
 		if validPresenceRoom(room) {
 			t.Error("accepted", room)
 		}
 	}
-	if validArea("wilds") || !validArea("outdoors") || !validArea("commons") {
+	// The Commons is outdoors (S5): no saved area or room of its own.
+	if validArea("wilds") || !validArea("outdoors") || validArea("commons") || !validArea("in:commons:yard") {
 		t.Fatal("saved-space grammar")
 	}
 }
@@ -36,7 +37,7 @@ func TestLocationRulesAtSeam(t *testing.T) {
 		safe, gen bool
 		id        string
 	}{
-		{"commons", 376, 40, true, false, "commons"},
+		{"outdoors", 40, 424, true, false, "commons"},
 		{"outdoors", 40, 392, true, false, "commons"},
 		{"outdoors", 40, 376, false, true, "tangle"},
 		{"outdoors", 40, -1200, false, true, "whitequiet"},
@@ -76,11 +77,13 @@ func TestLocationRulesAtSeam(t *testing.T) {
 	}
 }
 
-func TestContentReachAcrossSeparateCommonsAndOutdoorFrames(t *testing.T) {
+// Content names Commons positions in layout tiles; reach resolves them onto
+// the outdoors grid, and the old local frame reaches nothing.
+func TestContentReachResolvesCommonsTilesOntoTheGrid(t *testing.T) {
 	s := store.Snapshot{State: rules.NewState()}
 	s.State.Area = "commons"
 	s.State.Position = rules.Position{X: 53*16 + 8, Y: 18*16 + 8}
-	if !nearTile(&s, "commons", 53, 18, 0) {
+	if nearTile(&s, "commons", 53, 18, 0) {
 		t.Fatal("local reach")
 	}
 	space, tx, ty := location.Resolve("commons", 53, 18)

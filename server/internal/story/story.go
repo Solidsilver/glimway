@@ -347,11 +347,9 @@ func (r Rules) readTime(ctx context.Context) time.Time {
 	return time.Now()
 }
 
-// Content still names Commons-local tiles while its scene is separate.
+// Content names Commons positions in Commons layout tiles; Resolve carries
+// them onto the outdoors grid (other areas are their own frame).
 func nearContent(w *contract.Where, area string, tx, ty int) bool {
-	space := location.Space(area)
-	if w.Area != area {
-		space, tx, ty = location.Resolve(area, tx, ty)
-	}
+	space, tx, ty := location.Resolve(area, tx, ty)
 	return w.Area == string(space) && near(w, float64(tx*16+8), float64(ty*16+8))
 }

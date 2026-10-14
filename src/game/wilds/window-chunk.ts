@@ -41,8 +41,7 @@ import { lookAtlasKey, wildsLook } from './wilds-looks.ts'
 import type { WildsEntities } from './entities.ts'
 import { FORD_H, FORD_V, PATH_PLANK_H, PATH_PLANK_V, PATH_STONE, ROAD_PAVING, VEIL, VEIL_ANIM } from './open-map-art.ts'
 import { fordLines, fordStone, openSides, softTile } from './soft-tiles.ts'
-import type { FrontierRect, Glimpse } from './store.ts'
-import { frontierDistance } from './window-plan.ts'
+import type { Glimpse } from './store.ts'
 import { perfSpan, perfTime, perfWithout } from '../perf.ts'
 
 /**
@@ -137,9 +136,9 @@ export function groundTexture(scene: Phaser.Scene, key: string, rgba: Uint8Clamp
 /**
  * Paint a chunk past the frontier: the glimpse's land (a meadow's colour,
  * the Wend's glint), trees standing in it where it's woods, all fogging into
- * the void with distance from the edge (decision 22).
+ * the void with distance from the grid's edge (decision 22; `distance`, in px).
  */
-export function paintDriftChunk(scene: Phaser.Scene, cx: number, cy: number, glimpse: Glimpse | null, mark: string | null, frontier: FrontierRect, worldSeed: string, key: string): Painted {
+export function paintDriftChunk(scene: Phaser.Scene, cx: number, cy: number, glimpse: Glimpse | null, mark: string | null, distance: (wx: number, wy: number) => number, worldSeed: string, key: string): Painted {
   const start = now()
   const look = wildsLook('outer', mark)
   const seed = fnv1a32(worldSeed)
@@ -154,9 +153,9 @@ export function paintDriftChunk(scene: Phaser.Scene, cx: number, cy: number, gli
   paintDrift(img.data, x0, y0, CHUNK_PX, CHUNK_PX, look.ground, glimpse, seed)
   ctx.putImageData(img, 0, 0)
   const wooded = glimpse?.land !== 'meadow'
-  paintDriftTrees(scene, ctx, x0, y0, CHUNK_PX, CHUNK_PX, lookAtlasKey('outer', mark), seed, (tx, ty) => (wooded ? true : hash01(tx, ty, seed ^ 0x77) < 0.08) && frontierDistance(frontier, tx * TILE + 8, ty * TILE + 8) > TILE)
+  paintDriftTrees(scene, ctx, x0, y0, CHUNK_PX, CHUNK_PX, lookAtlasKey('outer', mark), seed, (tx, ty) => (wooded ? true : hash01(tx, ty, seed ^ 0x77) < 0.08) && distance(tx * TILE + 8, ty * TILE + 8) > TILE)
   const fogged = ctx.getImageData(0, 0, CHUNK_PX, CHUNK_PX)
-  fogDrift(fogged.data, x0, y0, CHUNK_PX, CHUNK_PX, (wx, wy) => frontierDistance(frontier, wx, wy))
+  fogDrift(fogged.data, x0, y0, CHUNK_PX, CHUNK_PX, distance)
   ctx.putImageData(fogged, 0, 0)
   if (scene.textures.exists(key)) scene.textures.remove(key)
   scene.textures.addCanvas(key, canvas)

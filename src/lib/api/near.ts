@@ -6,6 +6,7 @@
 import type { WildsChunkKey, WildsNearResult, WorldTile } from '../gen/glimway/v1/wilds_pb.js';
 import { loadWilds } from '../wilds/data.ts';
 import { epochKindAt } from '../wilds/coords.ts';
+import { onGrid } from '../location.ts';
 
 /** The near read always answers the 5×5 chunks around the asked one. */
 export const NEAR_RADIUS = 2;
@@ -23,7 +24,8 @@ export function validateNear(out: WildsNearResult, cx: number, cy: number): Wild
   const f = out.frontier?.rect;
   if (!f || f.minCx > f.maxCx || f.minCy > f.maxCy) throw new Error('invalid frontier');
   const inFrontier = (k: { cx: number; cy: number }) => k.cx >= f.minCx && k.cx <= f.maxCx && k.cy >= f.minCy && k.cy <= f.maxCy;
-  if (!inFrontier(c)) throw new Error('invalid near window');
+  // A centre on the grid: inside the frontier, or on a fixed footprint (the Commons: location-seam.md 1.4).
+  if (!inFrontier(c) && !onGrid(c.cx, c.cy)) throw new Error('invalid near window');
   const keyed = (k: WildsChunkKey | undefined): k is WildsChunkKey => !!k && k.realm === w.realm && k.layer === 0;
   const inWindow = (k: WildsChunkKey) => Math.abs(k.cx - cx) <= NEAR_RADIUS && Math.abs(k.cy - cy) <= NEAR_RADIUS;
   // A chunk's epoch follows from its coordinates: the still epoch inside a

@@ -288,8 +288,7 @@ func bySeller(s response, seller string, now int64) rules.State {
 			p, _ := content.ResidentAt(spot.GetWith(), float64(now))
 			area, tx, ty = p.GetArea(), int(p.GetTx()), int(p.GetTy())
 		}
-		doc.Area = area
-		doc.Position = rules.Position{X: float64(tx*16 + 8), Y: float64(ty*16 + 12)}
+		doc = atContentTile(doc, area, tx, ty, 12)
 	}
 	return doc
 }
@@ -297,9 +296,7 @@ func bySeller(s response, seller string, now int64) rules.State {
 // byResident is the progress doc standing where a resident's cycle has them at now.
 func byResident(doc rules.State, id string, now int64) rules.State {
 	p, _ := content.ResidentAt(id, float64(now))
-	doc.Area = p.GetArea()
-	doc.Position = rules.Position{X: float64(int(p.GetTx())*16 + 8), Y: float64(int(p.GetTy())*16 + 12)}
-	return doc
+	return atContentTile(doc, p.GetArea(), int(p.GetTx()), int(p.GetTy()), 12)
 }
 
 // residentPhase moves the rig's clock forward to the next moment a resident
@@ -420,10 +417,7 @@ func TestSilasYardSellsFromTheShopAndBesideHim(t *testing.T) {
 	seller, _ := content.SellerFor("silas-yard")
 	silas, _ := content.ResidentByID("silas")
 	at := func(area string, tx, ty int32) rules.State {
-		doc := s.State
-		doc.Area = area
-		doc.Position = rules.Position{X: float64(tx*16 + 8), Y: float64(ty*16 + 12)}
-		return doc
+		return atContentTile(s.State, area, int(tx), int(ty), 12)
 	}
 	buy := func(doc rules.State, status int) itemsResponse {
 		return x.opRefreshing(c, &s, "buy", map[string]any{"seller": "silas-yard", "good": "timber", "progress": doc}, status)

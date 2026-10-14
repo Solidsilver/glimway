@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"glimway/content"
+	"glimway/server/internal/location"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"net/http"
@@ -69,9 +70,13 @@ func (x *rig) worldOf(id string) string {
 
 // moveBody: a move from a safe spot (or the given area), with the current
 // lease, revision and progress.
+// moveBody stands in an area ("commons": on the Commons, by the arch).
 func moveBody(s response, key, world, area string) map[string]any {
 	doc := s.State
 	doc.Area = area
+	if area == "commons" {
+		doc = onCommons(doc, 376, 40)
+	}
 	return body(s, key, map[string]any{"worldId": world, "progress": doc})
 }
 
@@ -434,14 +439,10 @@ func TestWorldMoveRefusedWhenUnsafe(t *testing.T) {
 	x.refresh(hc, &h)
 	before := x.worldReq("GET", "/api/state", nil, hc, 200).Snapshot
 
-	// Safe ground outside homes, until S5 arrival anchors land.
-	for _, area := range []string{"woodland", "outdoors", "home:0", "in:home:0"} {
+	// Safe ground only: the woodland, and the Tangle (the default spot is
+	// north of the Commons mouth).
+	for _, area := range []string{"woodland", "outdoors"} {
 		req := moveBody(h, "unsafe-"+area, o.WorldID, area)
-		if area == "in:home:0" {
-			doc := h.State
-			doc.Area, doc.Position = area, rules.Position{X: 80, Y: 80}
-			req["progress"] = doc
-		}
 		if e := x.worldReq("POST", "/api/world/move", req, hc, 409).Error.Code; e != "not-at-safe-boundary" {
 			t.Fatal(area, e)
 		}
@@ -485,6 +486,39 @@ func TestWorldMoveRefusedWhenUnsafe(t *testing.T) {
 	moved := x.worldReq("POST", "/api/world/move", moveBody(h, "go", o.WorldID, "commons"), hc, 200)
 	if x.worldOf("hal") != o.WorldID || moved.WorldID != o.WorldID || moved.Result.From != b.WorldID {
 		t.Fatal("move after recall", moved.raw)
+	}
+}
+
+// A home belongs to its world: a move from a home's land or rooms is from
+// safe ground and arrives outside its gate on the new world's Commons
+// (anchor commons:gate:<g>), or at the arch for a gate the Commons lacks.
+func TestWorldMoveFromAHomeArrivesAtItsGate(t *testing.T) {
+	for _, row := range []struct{ area, anchor string }{{"home:3", "commons:gate:3"}, {"in:home:5", "commons:gate:5"}, {"home:9", "commons:arch"}} {
+		t.Run(row.area, func(t *testing.T) {
+			x := newRig(t)
+			x.hero("olive", "Olive", "p1")
+			_, o := x.ready("olive")
+			x.now.Add(10)
+			x.hero("hal", "Hal", "")
+			x.ready("hal")
+			x.hero("hal", "Hal", "p1")
+			hc, h := x.again("hal")
+			req := moveBody(h, "from-home", o.WorldID, row.area)
+			doc := h.State
+			doc.Area, doc.Position = row.area, rules.Position{X: 80, Y: 80}
+			req["progress"] = doc
+			moved := x.worldReq("POST", "/api/world/move", req, hc, 200)
+			space, ax, ay, ok := location.Anchor(row.anchor)
+			if !ok || x.worldOf("hal") != o.WorldID || moved.State.Area != string(space) || moved.State.Position != (rules.Position{X: ax, Y: ay}) {
+				t.Fatal("arrival", moved.State.Area, moved.State.Position)
+			}
+			// The server's place holds over an older report: the barrier moved.
+			var area string
+			var set int64
+			if err := x.db.DB.QueryRow("SELECT area,place_set_version FROM player_place WHERE account_id=?", x.account("hal")).Scan(&area, &set); err != nil || area != string(space) || set != moved.Version {
+				t.Fatal("stored arrival", area, set, moved.Version, err)
+			}
+		})
 	}
 }
 
@@ -558,7 +592,7 @@ func TestWorldMoveCarriesPackAndChestAndLeavesTheRest(t *testing.T) {
 		t.Fatal("move answer", moved.raw)
 	}
 	// Comes with them: character, story, embers, pack and personal chest.
-	if moved.State.Glims != embers || moved.State.Quest != quest || moved.State.Area != "commons" {
+	if moved.State.Glims != embers || moved.State.Quest != quest || moved.State.Area != "outdoors" || moved.State.Position != commonsPx(376, 40) {
 		t.Fatal("character changed")
 	}
 	if !reflect.DeepEqual(stacks("pack", x.account("hal")), pack) || instances("pack", x.account("hal")) != packTools || !reflect.DeepEqual(stacks("personal", x.account("hal")), personal) {
@@ -650,13 +684,15 @@ func TestWorldMoveTakesPresenceAlong(t *testing.T) {
 	x.hero("hal", "Hal", "p1")
 	hc, h := x.again("hal")
 	bc, b := x.member("bob", h.WorldID)
+	// The arch's chunk room: the Commons is outdoors.
+	commonsRoom := outdoorsRoom(commonsPx(376, 40))
 
 	olive := wsConnect(t, ts, oc, o.Lease)
-	olive.join("commons")
+	olive.join(commonsRoom)
 	bob := wsConnect(t, ts, bc, b.Lease)
-	bob.join("commons")
+	bob.join(commonsRoom)
 	hal := wsConnect(t, ts, hc, h.Lease)
-	if r := hal.join("commons"); len(r.Players) != 1 || r.Players[0].AccountID != x.account("bob") {
+	if r := hal.join(commonsRoom); len(r.Players) != 1 || r.Players[0].AccountID != x.account("bob") {
 		t.Fatal("before", r.Raw)
 	}
 	bob.expect("join")
@@ -665,7 +701,7 @@ func TestWorldMoveTakesPresenceAlong(t *testing.T) {
 	if bob.expect("leave").AccountID != x.account("hal") {
 		t.Fatal("old room still has them")
 	}
-	if r := hal.expect("room"); r.Area != "commons" || len(r.Players) != 1 || r.Players[0].AccountID != x.account("olive") {
+	if r := hal.expect("room"); r.Area != commonsRoom || len(r.Players) != 1 || r.Players[0].AccountID != x.account("olive") {
 		t.Fatal("new room", r.Raw)
 	}
 	if j := olive.expect("join"); j.Player.AccountID != x.account("hal") {

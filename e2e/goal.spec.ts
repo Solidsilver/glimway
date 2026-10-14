@@ -75,7 +75,8 @@ test.describe('pinned guides', () => {
     await frames(page, 30)
     g = await goal(page)
     expect(g.dir.here, 'Pell is indoors').toBe(false)
-    expect(g.target).toMatchObject({ x: 53.5 * 16, y: 17.5 * 16 })
+    // (The door's Commons tile 53,17, on the open map's grid: world tile 32,41.)
+    expect(g.target).toMatchObject({ x: 32.5 * 16, y: 41.5 * 16 })
     // In the shop, the side door; in Pell's office, Pell.
     await go(page, 'in:commons:yard', 7, 7)
     await waitForLive(page)

@@ -73,9 +73,7 @@ func TestHeirloomBrackFellingAxe(t *testing.T) {
 		t.Fatalf("expected too-far-away, got %s", badFar.Error.Code)
 	}
 	// By the sawhorse while he's at his counter: out of reach.
-	yardDoc := conditionMetDoc
-	yardDoc.Area = yard.GetArea()
-	yardDoc.Position = rules.Position{X: float64(yard.GetTx()*16 + 8), Y: float64(yard.GetTy()*16 + 12)}
+	yardDoc := atContentTile(conditionMetDoc, yard.GetArea(), int(yard.GetTx()), int(yard.GetTy()), 12)
 	if bad := x.items("POST", "/api/items/heirloom", body(s, "axe-yard-while-indoors", map[string]any{"itemDef": "brack-felling-axe", "progress": yardDoc}), c, 409); bad.Error.Code != "too-far-away" {
 		t.Fatalf("expected too-far-away in the yard, got %s", bad.Error.Code)
 	}
@@ -169,8 +167,7 @@ func TestHeirloomOrrinsMasonPick(t *testing.T) {
 
 	// Proximity check: bridge mended, but player is far away in Commons
 	farDoc := atOrrinDoc
-	farDoc.Area = "commons"
-	farDoc.Position = rules.Position{X: 100, Y: 100}
+	farDoc = onCommons(farDoc, 100, 100)
 	badFar := x.items("POST", "/api/items/heirloom", body(s, "pick-far", map[string]any{
 		"itemDef":  "orrins-mason-pick",
 		"progress": farDoc,
@@ -266,8 +263,7 @@ func TestHeirloomAdaGardenSpadeAndOil(t *testing.T) {
 	x.stack(x.account("alice"), "hearth-oil", "", 3)
 	x.conserved(x.account("alice"))
 	farDoc := atAdaDoc
-	farDoc.Area = "commons"
-	farDoc.Position = rules.Position{X: 100, Y: 100}
+	farDoc = onCommons(farDoc, 100, 100)
 	badOilFar := x.items("POST", "/api/items/ada-oil", body(s, "oil-far", map[string]any{
 		"itemDef":  "hearth-oil",
 		"progress": farDoc,

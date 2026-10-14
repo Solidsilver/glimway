@@ -16,7 +16,10 @@
  * with the home site and path, marked `served: false`, and rebuilds when the
  * land comes (EV.homeChanged, reason `land`).
  */
-import { HOMESTEAD_DATA, gateTile, homeArea, parseHomeArea } from '../lib/homestead.ts'
+import { HOMESTEAD_DATA, homeArea, parseHomeArea } from '../lib/homestead.ts'
+import { gateAnchor } from './wilds/fixed.ts'
+import { OUTDOORS_AREA } from './wilds/coords.ts'
+import { exitName } from './area/exits.ts'
 import { LAND, landFromCells, rememberLand, servedLand, type Land } from '../lib/homestead-land.ts'
 import { EV, bus } from './events.ts'
 import { DECOR_ART, TANGLE_GROUND, type DecorKind } from './wilds/decor.ts'
@@ -80,12 +83,6 @@ export interface LandWorld extends WorldData {
   origin: { x: number; y: number }
   mailbox: { tx: number; ty: number }
   desolate: boolean
-}
-
-/** Where you arrive on the Commons coming back out of gate g (the lane side of it). */
-function commonsEntryFor(gate: number): { tx: number; ty: number } {
-  const t = gateTile(gate)
-  return { tx: t.side === 'west' ? t.tx + 1 : t.tx - 1, ty: t.ty }
 }
 
 /** Where you arrive on a homestead's land through its gate. */
@@ -268,7 +265,7 @@ export function buildLand(gate: number): LandWorld {
     rocks: [],
     npcs: [],
     enemies: [],
-    exits: [{ tx: L.gate.x, ty: H - 1, tw: L.gate.w, th: 1, to: 'commons', entry: commonsEntryFor(gate) }],
+    exits: [{ tx: L.gate.x, ty: H - 1, tw: L.gate.w, th: 1, to: OUTDOORS_AREA, entry: gateAnchor(gate), label: exitName('commons') }],
     props: [],
     scenery,
     gathering,

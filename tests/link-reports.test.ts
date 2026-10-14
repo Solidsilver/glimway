@@ -191,9 +191,9 @@ test('the ten-second deadline reports even an idle hero at full vitals, every ti
 
 // ---------------------------------------------------------------- 13. area and region reports
 
-test('arriving in the Wilds reports it; walking on across the open map does not (one area)', async (t) => {
-  const r = await rig(t, { state: S({ area: 'commons', x: 100, y: 100 }) });
-  await online(r, S({ area: 'commons', x: 100, y: 100 }));
+test('arriving on the open map reports it; walking on from the Commons across the open map does not (one area)', async (t) => {
+  const r = await rig(t, { state: S({ area: 'village', x: 100, y: 100 }) });
+  await online(r, S({ area: 'village', x: 100, y: 100 }));
   r.server.on('POST /api/report', keeper(r));
   const settle = async () => {
     for (let i = 0; i < 5; i++) await tick();
@@ -201,15 +201,18 @@ test('arriving in the Wilds reports it; walking on across the open map does not 
   r.link.arrived();
   await settle();
   r.session.state.area = 'outdoors';
+  r.session.state.position = { x: 40, y: 424 };
+  r.link.arrived();
+  await settle();
+  // Through the Commons' mouth into the Tangle, and on into the Whitequiet: the same area.
   r.session.state.position = { x: 40, y: 360 };
   r.link.arrived();
   await settle();
-  // Over a chunk edge and into the Whitequiet: the same area.
   r.session.state.position = { x: 40, y: -1200 };
   r.link.arrived();
   await settle();
-  assert.deepEqual(reports(r).map((b) => b.place.area), ['commons', 'outdoors']);
-  assert.deepEqual(reports(r)[1]!.place, { area: 'outdoors', x: 40, y: 360 });
+  assert.deepEqual(reports(r).map((b) => b.place.area), ['village', 'outdoors']);
+  assert.deepEqual(reports(r)[1]!.place, { area: 'outdoors', x: 40, y: 424 });
 });
 
 test('a fall names where the hero stands when it falls', async (t) => {

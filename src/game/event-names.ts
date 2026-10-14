@@ -93,6 +93,8 @@ export const EV = {
   fallSettled: 'game:fall-settled',
   /** The Wilds region changed (loaded, claimed, materials moved): { materials }. */
   wilds: 'ui:wilds',
+  /** Every fixed footprint's chunks have arrived (src/game/wilds/fixed.ts). */
+  fixedReady: 'game:fixed-ready',
   /** The dev/playtest clock moved (the calendar and the outer Wilds follow). */
   clock: 'game:clock',
   /** The outer Wilds turned under the player (an ended epoch): { reason }. */
@@ -483,6 +485,7 @@ export interface EventMap {
   [EV.worldRefresh]: void
   [EV.fallSettled]: { lantern: string }
   [EV.wilds]: WildsPayload
+  [EV.fixedReady]: void
   [EV.clock]: void
   [EV.turning]: { reason: 'epoch-ended' }
   [EV.planted]: { plant: HomePlantView }

@@ -18,7 +18,7 @@ import (
 const residentReachTiles = 4
 
 func nearTile(s *store.Snapshot, area string, tx, ty, r int) bool {
-	space, tx, ty := contentTile(s.State.Area, area, tx, ty)
+	space, tx, ty := contentTile(area, tx, ty)
 	if s.State.Area != space {
 		return false
 	}

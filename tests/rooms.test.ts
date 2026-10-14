@@ -17,7 +17,7 @@ import { isPresenceArea, presenceAreaFor } from '../src/lib/presence-client.ts';
 import { isSafeArea } from '../src/lib/habitica/sync.ts';
 import { createNewGame, validateSave } from '../src/lib/state.ts';
 import { TILE, tileFeet } from '../src/lib/tile.ts';
-import { serveFixtureCommons } from './commons-fixture.ts';
+import { serveFixtureCommons, servedCommonsFixture } from './commons-fixture.ts';
 
 // The Commons is the server's: these tests stand on its served chunks.
 serveFixtureCommons();
@@ -88,7 +88,8 @@ test('a doorway leads out to the doorstep on the parent, facing away from the do
     assert.deepEqual(facingFor({ side: out.side!, kind: out.kind }), { x: 0, y: 1 });
     // The parent: the door tile is solid (you press it), the doorstep is open.
     const door = def.doors.find((d) => d.kind === 'door')!;
-    const parent = buildArea(def.parent);
+    // The Commons is fixed ground on the open map: its served layout, in Commons tiles (as rooms.json names the door).
+    const parent = def.parent === 'commons' ? servedCommonsFixture() : buildArea(def.parent);
     assert.equal(parent.solid[door.outside!.ty][door.outside!.tx], true, `${def.id}: the door tile is the house's`);
     assert.equal(parent.solid[out.entry.ty][out.entry.tx], false, `${def.id}: the doorstep is open`);
     assert.equal(out.entry.ty, door.outside!.ty + 1, 'the doorstep is just below the door');

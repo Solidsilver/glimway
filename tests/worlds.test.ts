@@ -17,8 +17,8 @@ serveFixtureCommons();
 type Tile = { tx: number; ty: number };
 type Edge = 'west' | 'east' | 'north' | 'south';
 
-/** Every area this build draws: the quest areas, the Commons, and the lands behind its eight gates. */
-const BUILT: AreaId[] = [...AREAS, 'commons', ...Array.from({ length: 8 }, (_, g) => `home:${g}` as AreaId)];
+/** Every curated area this build draws: the quest areas and the lands behind the Commons' eight gates (the Commons is fixed ground on the open map). */
+const BUILT: AreaId[] = [...AREAS, ...Array.from({ length: 8 }, (_, g) => `home:${g}` as AreaId)];
 
 /** A homestead gate in a Commons fence is a door in the map, not an edge (and so is its way back). */
 const isGateDoor = (from: string, e: ExitDef) => /^home:/.test(e.to) || /^home:/.test(from);

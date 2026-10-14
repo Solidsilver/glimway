@@ -354,6 +354,25 @@ test('out in the Wilds: close up on you, zoom kept between openings, drag, wheel
   await page.keyboard.press('Escape')
 })
 
+test('on the Commons the map shows you: its fixed chunks are on the grid, south of the Tangle’s gate', async ({ page }) => {
+  await freshPlayer(page)
+  await warp(page, 'commons', 23, 19)
+  await waitForLive(page)
+  await page.keyboard.press('m')
+  const s = await mapReady(page)
+  expect(s.outside, 'the Commons is on the open map').toBe(false)
+  await expect(page.getByTestId('map-you')).toHaveCount(1)
+  await expect(page.getByTestId('map-notes')).not.toContainText('outside the Wilds')
+  // You stand on Commons tile (23, 19): world tile (2, 43).
+  expect(s.hero).toEqual({ x: 2.5, y: 43.5 })
+  // The frame reaches the Commons' south edge (world row 71) and the Tangle north of it.
+  expect(s.frame!.maxTy).toBeGreaterThanOrEqual(71)
+  expect(s.frame!.minTy).toBeLessThan(0)
+  centredOnYou(s)
+  await shot(page, 'world-map-commons-desktop')
+  await page.keyboard.press('Escape')
+})
+
 test('an open map follows the connection, and expires its wick on time (the game clock) with no read, then comes back with one', async ({ page, context }) => {
   test.setTimeout(150_000)
   await freshPlayer(page)

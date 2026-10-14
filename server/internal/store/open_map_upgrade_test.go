@@ -11,7 +11,8 @@ import (
 // a fallen lantern; players saved in the Tangle, in the Whitequiet and in
 // the village; packs, a home chest, story marks and Echo progress. After
 // the upgrade the Wilds' rows are gone, the region tables with them, the
-// two Wilds players stand at the Commons arch with a new version, and
+// two Wilds players stand at the Commons arch (moved onto the outdoors grid
+// by 036) with a new version, and
 // everything else is as it was.
 func TestOpenMap034UpgradeIsACleanBreak(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "upgrade.sqlite")
@@ -73,7 +74,7 @@ INSERT INTO item_stacks(location,owner,item_def,maker_id,qty) VALUES('pack','ali
 		return p
 	}
 	for _, id := range []string{"alice", "bob"} {
-		if p := read(id); p.area != "commons" || p.x != 376 || p.y != 40 || p.version != 8 || p.set != 8 || p.epoch != "" || p.hasStart {
+		if p := read(id); p.area != "outdoors" || p.x != 40 || p.y != 424 || p.version != 9 || p.set != 9 || p.epoch != "" || p.hasStart {
 			t.Errorf("%s: %+v", id, p)
 		}
 	}

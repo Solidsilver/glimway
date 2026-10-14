@@ -4,7 +4,8 @@ import { TERRAIN } from '../src/lib/tile.ts';
 import { loadWilds, wildsGround } from '../src/lib/wilds/data.ts';
 import { insideFrontier } from '../src/lib/wilds/coords.ts';
 import { walkFactor } from '../src/lib/wilds/walk.ts';
-import { CHUNK_PX, chunkKey, chunkOfPixel, gateArrival, gateArrivalPosition, gateTiles, parseChunkKey, worldTile } from '../src/game/wilds/coords.ts';
+import { CHUNK_PX, chunkKey, chunkOfPixel, gateTiles, parseChunkKey, worldTile } from '../src/game/wilds/coords.ts';
+import { anchor } from '../src/lib/location.ts';
 import { crossed, frontierDistance, keepAttached, nearestOpen, paintable, planWindow, SLACK_TILES, veilEdges } from '../src/game/wilds/window-plan.ts';
 import { chunkGather, chunkLandmarks, chunkScenery, effectiveTerrain, LANDMARK_KINDS } from '../src/game/wilds/terrain.ts';
 import { OPEN_MAP_DECOR_KINDS, openMapDecor } from '../src/game/wilds/open-map-art.ts';
@@ -29,11 +30,11 @@ test('world pixels: signed, floor-divided into chunks of 384 px', () => {
   assert.deepEqual(parseChunkKey(chunkKey(-3, -7)), { cx: -3, cy: -7 });
 });
 
-test('the Commons gate: three tiles on chunk (0, 0)’s south edge, and you arrive one in from its middle', () => {
+test('the Commons gate: three tiles on chunk (0, 0)’s south edge, over the Commons’ arch on the chunk below', () => {
   assert.deepEqual(gateTiles(), { tx: 1, ty: 23, tw: 3, th: 1 });
-  assert.deepEqual(gateArrival(), { tx: 2, ty: 22 });
-  assert.deepEqual(gateArrivalPosition(), { x: 40, y: 360 });
-  assert.deepEqual(chunkOfPixel(gateArrivalPosition().x, gateArrivalPosition().y), { cx: 0, cy: 0 });
+  const arch = anchor('commons:arch')!;
+  assert.deepEqual(arch, { space: 'outdoors', x: 40, y: 424 });
+  assert.deepEqual(chunkOfPixel(arch.x, arch.y), { cx: 0, cy: 1 });
 });
 
 // ---------------------------------------------------------------- the window

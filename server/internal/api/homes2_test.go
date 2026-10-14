@@ -112,7 +112,7 @@ func TestHomes2JointDeedNeedsBothAtTheTableWithinTheWindow(t *testing.T) {
 	if x.homeOpRefreshing(bc, &b, "joint", joint, 409).Error.Code != "partner-not-at-table" {
 		t.Fatal("partner in another room")
 	}
-	x.stand(x.account("alice"), a.WorldID, "commons", 824, 344)
+	x.standOnCommons(x.account("alice"), a.WorldID, 824, 344)
 	if x.homeOpRefreshing(bc, &b, "joint", joint, 409).Error.Code != "partner-not-at-table" {
 		t.Fatal("partner at the old table on the Commons")
 	}

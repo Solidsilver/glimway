@@ -225,10 +225,8 @@ func TestReturningKeepsakes(t *testing.T) {
 	x.stack(x.account("alice"), "whittled-fox", "", 1)
 	x.conserved(x.account("alice"))
 	x.residentPhase("silas", "counter")
-	onCommons := s.State
-	onCommons.Area = "commons"
-	onCommons.Position = rules.Position{X: float64(51*16 + 8), Y: float64(21*16 + 8)}
-	if bad := x.opRefreshing(c, &s, "return", map[string]any{"itemDef": "whittled-fox", "target": "silas", "progress": onCommons}, 409); bad.Error.Code != "too-far-away" {
+	commonsDoc := atContentTile(s.State, "commons", 51, 21, 8)
+	if bad := x.opRefreshing(c, &s, "return", map[string]any{"itemDef": "whittled-fox", "target": "silas", "progress": commonsDoc}, 409); bad.Error.Code != "too-far-away" {
 		t.Fatalf("expected too-far-away on the Commons, got %s", bad.Error.Code)
 	}
 	silasDoc := byResident(s.State, "silas", x.now.Load())
@@ -359,9 +357,7 @@ func TestRepairsWeatherCyclesThroughEverything(t *testing.T) {
 	}
 	doc := func(id string, st *response) map[string]any {
 		def := byID[id]
-		d := st.State
-		d.Area = def.GetArea()
-		d.Position = rules.Position{X: float64(int(def.GetPos().GetTx())*16 + 8), Y: float64(int(def.GetPos().GetTy())*16 + 8)}
+		d := atContentTile(st.State, def.GetArea(), int(def.GetPos().GetTx()), int(def.GetPos().GetTy()), 8)
 		return map[string]any{"progress": d}
 	}
 	for _, id := range content.RepairRules.Rules.Scripted {
