@@ -28,10 +28,13 @@
  */
 import type Phaser from 'phaser'
 import { refreshLanternVisuals } from '../area/lanterns.ts'
+import { ensureSceneryArt } from '../area/props.ts'
 import { groundTiles, type GroundTiles } from '../area/terrain.ts'
 import { calendarAt } from '../../lib/calendar.ts'
 import { seasonMark } from '../../lib/wilds/outer.ts'
 import { gameNow } from '../clock.ts'
+import { bus, EV } from '../events.ts'
+import { generateRepairArt } from '../repairs-art.ts'
 import type { Session } from '../session.ts'
 import { CHUNK_TILES, chunkKey, chunkOfPixel, parseChunkKey } from './coords.ts'
 import { fixedPlaceOf, footprint, footprintAt, prepareFixed, type FixedFootprint } from './fixed.ts'
@@ -70,6 +73,23 @@ export function gridDistance(f: { minCx: number; minCy: number; maxCx: number; m
     d = Math.min(d, frontierDistance({ minCx: c.x0, minCy: c.y0, maxCx: c.x1, maxCy: c.y1 }, wx, wy))
   }
   return d
+}
+
+/** Keys of the code-drawn scenery textures a fixed footprint's chunks can ask for. */
+function fixedArtKeys(fp: FixedFootprint): string[] {
+  const seen = new Set<string>()
+  for (const list of fp.objects.values()) {
+    for (const o of list) {
+      if (o.variant && !seen.has(o.variant)) seen.add(o.variant)
+    }
+  }
+  return [...seen]
+}
+
+/** Pre-warm every code-drawn texture a fixed footprint's chunks need. */
+export function prewarmFixedArt(scene: Phaser.Scene, fp: FixedFootprint): void {
+  generateRepairArt(scene)
+  for (const key of fixedArtKeys(fp)) ensureSceneryArt(scene, key)
 }
 
 /** A painted chunk texture and what it was painted from. */
@@ -119,10 +139,27 @@ export class WildsWindow {
 
   constructor(private deps: WindowDeps) {
     deps.scene.events.once('shutdown', () => this.destroy())
-    // The fixed footprints' ground (its tilemap and cells) is laid out now, behind the scene's fade, not on a walking frame.
+    bus.on(EV.fixedReady, this.onFixedReady)
+    // The fixed footprints' ground (its tilemap and cells) and code-drawn
+    // textures are prepared now, behind the scene's fade, not on a walking frame.
+    this.now = true
+    try {
+      for (const p of PLACES.fixed) {
+        const fp = footprint(p.id)
+        if (fp) perfTime('fixed-ground', () => this.groundFor(fp))
+      }
+    } finally {
+      this.now = false
+    }
+  }
+
+  private readonly onFixedReady = (): void => {
+    if (this.gone || !this.deps.scene?.make) return
     for (const p of PLACES.fixed) {
       const fp = footprint(p.id)
-      if (fp) perfTime('fixed-ground', () => this.groundFor(fp))
+      if (fp && !this.fixedGround.has(p.id) && !this.failedGround.has(p.id)) {
+        perfTime('fixed-ground', () => this.groundFor(fp))
+      }
     }
   }
 
@@ -505,12 +542,35 @@ export class WildsWindow {
     if (had) return had
     if (this.failedGround.has(fp.place.id)) return null
     const g = groundTiles(this.deps.scene, { areaId: fp.place.id, ground: fp.ground, width: fp.w, height: fp.h, scenery: [] }, true)
-    if (g) this.fixedGround.set(fp.place.id, g)
-    else {
+    if (g) {
+      this.fixedGround.set(fp.place.id, g)
+      this.prewarm(fp)
+    } else {
       this.failedGround.add(fp.place.id)
       console.error(`Could not build fixed ground: ${fp.place.id}`)
     }
     return g
+  }
+
+  /** Pre-warm a footprint's code-drawn textures: at once behind the fade, or spread across the hold. */
+  private prewarm(fp: FixedFootprint): void {
+    if (this.now || !this.builds || perfWithout('spread')) {
+      perfTime('fixed-art', () => prewarmFixedArt(this.deps.scene, fp))
+      return
+    }
+    const keys = fixedArtKeys(fp)
+    let repairs = false
+    this.builds.add({
+      build: (deadline) =>
+        perfTime('fixed-art', () => {
+          if (!repairs) {
+            generateRepairArt(this.deps.scene)
+            repairs = true
+          }
+          while (keys.length && performance.now() < deadline) ensureSceneryArt(this.deps.scene, keys.shift()!)
+          return !keys.length
+        })
+    })
   }
 
   /** The ways out of the attached fixed chunks, in world tiles (the scene checks them as the hero walks). */
@@ -625,6 +685,7 @@ export class WildsWindow {
   private destroy(): void {
     if (this.gone) return
     this.gone = true
+    bus.off(EV.fixedReady, this.onFixedReady)
     this.release()
     for (const c of this.attached.values()) c.destroy()
     for (const c of this.fixed.values()) c.destroy()

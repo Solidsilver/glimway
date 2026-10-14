@@ -69,7 +69,7 @@ Phaser.BlendModes = { ADD: 1 };
 const { FixedChunk } = await import('../src/game/wilds/fixed-chunk.ts');
 const { footprint, forgetFixed, fixedSolidAt, fixedGroundAt, fixedStand, anchorTile, commonsLane, chunkOfTile, objectOut } = await import('../src/game/wilds/fixed.ts');
 const { outdoorStandAt, outdoorSolidAt, gridBounds, waitingFixedAt } = await import('../src/game/wilds/wilds-world.ts');
-const { WildsWindow, onWindow, gridDistance } = await import('../src/game/wilds/window.ts');
+const { WildsWindow, onWindow, gridDistance, prewarmFixedArt } = await import('../src/game/wilds/window.ts');
 const { BuildQueue } = await import('../src/game/wilds/window-chunk.ts');
 const { TileArt } = await import('../src/game/area/tile-art.ts');
 const { refreshLanternVisuals } = await import('../src/game/area/lanterns.ts');
@@ -100,7 +100,10 @@ class FakeScene {
     added: [] as string[],
     exists: (_key?: string) => true,
     get: () => ({ customData: { density: 0 }, has: () => true, get: () => ({ height: 32, width: 32 }) }),
-    addCanvas: (key: string) => this.textures.added.push(key),
+    addCanvas: (key: string) => {
+      this.textures.added.push(key);
+      return { customData: {} };
+    },
     remove: (key: string) => { const i = this.textures.added.indexOf(key); if (i >= 0) this.textures.added.splice(i, 1); },
   };
   events = new EventEmitter();
@@ -442,8 +445,9 @@ test('Commons residents, pickups, papers, repairs, festival dressing and exit re
   const { setGameNow } = await import('../src/game/clock.ts');
   const r = rig();
   const originalDocument = globalThis.document;
-  globalThis.document = { createElement: () => ({ getContext: () => ({ fillRect() {} }) }) } as unknown as Document;
+  globalThis.document = { createElement: () => ({ getContext: () => ({ fillRect() {}, setTransform() {} }) }) } as unknown as Document;
   r.scene.textures.exists = (key) => !key?.startsWith('repair-') || r.scene.textures.added.includes(key);
+  prewarmFixedArt(r.scene as never, r.fp);
   // The frozen Commons has no window or water tiles; exercise their terrain rules without changing its layout.
   const { TERRAIN } = await import('../src/lib/tile.ts');
   const windowTile = r.fp.ground[6]![34]!;
@@ -779,4 +783,96 @@ test('null fixed ground reports once and is never rebuilt each frame', (t) => {
   assert.equal(destroyed, 1, 'failed tilemap is released');
   assert.equal(errors.length, 1);
   assert.equal(w.hasFixed(0, 1), false);
+});
+
+test('fixed chunk attach makes no new textures after pre-warming, including when the footprint arrives on fixedReady', async (t) => {
+  const { Interactables } = await import('../src/game/entities/interactables.ts');
+  const { RepairsLayer } = await import('../src/game/entities/repairs.ts');
+  const { buildWildsWorld } = await import('../src/game/wilds/wilds-world.ts');
+  const { villageFor } = await import('../src/game/village.ts');
+  const { createNewGame } = await import('../src/lib/state.ts');
+  const { repairsForArea } = await import('../src/lib/repairs.ts');
+  const r = rig();
+  const originalDocument = globalThis.document;
+  globalThis.document = {
+    createElement: () => ({
+      width: 0,
+      height: 0,
+      getContext: () => ({
+        imageSmoothingEnabled: false,
+        globalAlpha: 1,
+        fillStyle: '',
+        fillRect() {},
+        setTransform() {},
+        drawImage() {},
+        getImageData: (_x: number, _y: number, w: number, h: number) => ({ data: new Uint8ClampedArray(w * h * 4) }),
+        putImageData() {},
+      }),
+    }),
+  } as unknown as Document;
+  try {
+    const lazy = (key?: string) => !!key && (/^(hedge|fence)-(h|v)-/.test(key) || key.startsWith('repair-'));
+    r.scene.textures.exists = (key) => !lazy(key) || r.scene.textures.added.includes(key!);
+    const world = buildWildsWorld();
+    const interactions = new Interactables(r.scene as never, { reducedMotion: false });
+    r.deps.interactables = interactions as never;
+    const session = { state: createNewGame(), questStage: 'complete', link: {} } as never;
+    const model = villageFor(session);
+    model.repairsStatus = 'ready';
+    model.repairs.open = repairsForArea('outdoors').map((d) => ({ id: d.id })) as never;
+    const repairs = new RepairsLayer(r.scene as never, { world, session, fx: {}, reducedMotion: false, interactables: r.deps.interactables } as never);
+    r.deps.hooks = () => ({
+      attach: (key: string) => [() => repairs.attachChunk(key)],
+      detach: (key: string) => repairs.detachChunk(key),
+    }) as never;
+
+    assert.deepEqual(r.scene.textures.added, []);
+    prewarmFixedArt(r.scene as never, r.fp);
+    const warmed: string[] = [...r.scene.textures.added];
+    for (const run of ['fence-v-1', 'fence-v-2', 'fence-v-3', 'fence-v-5', 'fence-v-6', 'fence-v-15', 'fence-h-14', 'repair-hame-broken']) {
+      assert.ok(warmed.includes(run), `pre-warmed ${run}`);
+    }
+
+    for (let round = 0; round < 2; round++) {
+      const chunks = [...r.fp.objects.keys()].map((k) => {
+        const [cx, cy] = k.split(',').map(Number) as [number, number];
+        return new FixedChunk(r.deps as never, r.fp, cx, cy);
+      });
+      for (const c of chunks) r.builds.finish(c);
+      assert.deepEqual(r.scene.textures.added, warmed, `round ${round}: attach makes no new textures`);
+      for (const c of chunks) c.destroy();
+      assert.deepEqual(r.scene.textures.added, warmed, `round ${round}: detach keeps pre-warmed textures`);
+    }
+
+    // Late arrival during the boot hold: EV.fixedReady queues pre-warming onto builds and spreads it across slices.
+    r.scene.textures.added.length = 0;
+    forgetFixed();
+    const winScene = {
+      ...r.scene,
+      sys: { isActive: () => true, game: { renderer: { type: 1 } } },
+      cache: { json: { get: () => null } },
+      make: {
+        ...r.scene.make,
+        tilemap: () => ({
+          ...r.g.ground.map,
+          addTilesetImage: () => ({ texCoordinates: [] }),
+          destroy() {},
+        }),
+      },
+    };
+    const w = new WildsWindow({ ...r.deps, scene: winScene as never, hero: () => ({ x: 40, y: 424 }), session } as never);
+    assert.deepEqual(r.scene.textures.added, [], 'nothing warmed before fixed chunks arrive');
+    serveFixtureCommons();
+    let clock = 0;
+    t.mock.method(performance, 'now', () => (clock += 2));
+    bus.emit(EV.fixedReady);
+    assert.equal(w.builds['waiting'].length, 1, 'pre-warm job queued on builds');
+    w.builds.step(5);
+    assert.ok(r.scene.textures.added.length > 0 && r.scene.textures.added.length < warmed.length, 'spread across slices');
+    w.builds.step(Infinity);
+    assert.deepEqual(r.scene.textures.added, warmed, 'all footprint textures warmed before chunks build');
+    w['destroy']();
+  } finally {
+    globalThis.document = originalDocument;
+  }
 });
