@@ -13,17 +13,45 @@ the game can show the first part as "What's new":
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-14
+
 ### For players
 
-- Commons residents now walk to the Yard door when their hour changes. Festival dressing and readable exit posts follow the chunks around you.
-- **The Commons and the Tangle are one walk.** Step through the Commons' north arch straight into the Tangle and back, with no loading screen. Too hurt to fight, you can't step out of the Commons into the Tangle.
+- **The Commons and the Tangle are one walk.** Step through the Commons' north
+  arch straight into the Tangle and back, with no loading screen. Too hurt to
+  fight, you can't step out of the Commons into the Tangle.
+- **The Commons is safe ground.** Tangle creatures can't reach or shoot you
+  there, and you can't start a fight from it. You can sync on the Commons even
+  with creatures close by across the mouth.
+- **Homes open onto the Commons.** Moving out of a home leaves you at its gate.
 - **The world map shows the Commons**, and you on it.
+- Commons residents keep their hours and walk to the Yard door when their hour
+  changes. Festival dressing and readable exit posts come and go with the
+  ground around you.
+- On a slow connection you wait at the edge of the Commons until it arrives.
 
 ### Technical
 
+- **Deploy note:** the server refuses to start if any homestead has a gate of 8
+  or more (the Commons holds eight gates). Check live homes before upgrading.
+- Location seam S6: `perf/seam.perf.ts` (crossings, two players, slow arrivals,
+  desktop and throttled phone). The hero is held off fixed ground that hasn't
+  attached, and positions there are never saved; the zero-HP barrier and that
+  guard share one predicate. Row teardown drains one chunk per frame;
+  build stages check deadlines per object and contain a throwing stage;
+  `window.destroy()` tears down every chunk.
 - Location seam S5b: residents and their bodies, repairs, pickups, papers, festivals and Commons interactions attach and detach with fixed chunks. Calendar redraws use the window build budget. Commons layout revision 3 removes the dead arch exit; contract 11 and presence v4 are unchanged, with no migration.
 - Location seam S5a: the Commons' fixed chunks attach to the open map's window (one scene; the arch portal, the S2 adapter and the frozen builder are gone). Migration 036 also moves `commons` places onto the grid (−336, +384) with a barrier bump; `commons` is no longer a saved area. Room recovery and world moves from homes land on Commons anchors. Residents, repairs and festival dressing per chunk follow in S5b.
 - Location seam S3: saved area `wilds` becomes `outdoors` (clean break), contract 11 and `glimway.presence.v4` chunk rooms. Migration 036 preserves world pixels and raises placement barriers. Safety, sync, riding, named-place rules and generated-ground eligibility use the shared location lookup. Commons remains a separate space until S5; S3 and S5 must ship in the same release.
+- Location seam S4: safe-ground target drop and bolt stop; no fighting from safe
+  ground; safe players don't scale camps; presence rooms per `OnGrid` chunk.
+- Location seam S2: the Commons is a served fixed layout (frozen at eight
+  gates). Presence defers a join that arrives inside its cooldown instead of
+  dropping it.
+- Location seam S1: `content/places.json`, the `location` package in Go and TS,
+  and shared vectors.
+- Refactor stages 1–6 (first slices): honest typed tests, verified dead code,
+  shared helpers, one queued-operation path in Link, explicit server phases.
 
 ## [0.9.1] - 2026-10-13
 
@@ -691,7 +719,8 @@ The first public release.
   under its own licence; contributions under the DCO.
 - Unit tests, Go tests and Playwright playtests.
 
-[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.9.1...HEAD
+[Unreleased]: https://github.com/Solidsilver/glimway/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/Solidsilver/glimway/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/Solidsilver/glimway/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/Solidsilver/glimway/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/Solidsilver/glimway/compare/v0.7.0...v0.8.0
