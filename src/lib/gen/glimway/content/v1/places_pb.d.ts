@@ -11,6 +11,12 @@ import type { Message } from "@bufbuild/protobuf";
 export declare const file_glimway_content_v1_places: GenFile;
 
 /**
+ * Bounds: every tile coordinate here (origins, zones, anchors) lies within
+ * ±2^20 tiles and every chunk within ±32768 chunks (±786432 tiles), so a
+ * world tile (origin + layout tile) stays within ±2^21 and a world pixel
+ * within ±2^25: exact in a float64, and in an int32 in either runtime, so
+ * the Go lookup and its TypeScript twin compute the same thing.
+ *
  * The places over the outdoor grid and the rules of the spaces beside it
  * (content/places.json; docs/design/location-seam.md 1.2): read by the
  * server's lookup (server/internal/location) and its client twin
@@ -49,6 +55,12 @@ export declare type Places = Message<"glimway.content.v1.Places"> & {
 };
 
 /**
+ * Bounds: every tile coordinate here (origins, zones, anchors) lies within
+ * ±2^20 tiles and every chunk within ±32768 chunks (±786432 tiles), so a
+ * world tile (origin + layout tile) stays within ±2^21 and a world pixel
+ * within ±2^25: exact in a float64, and in an int32 in either runtime, so
+ * the Go lookup and its TypeScript twin compute the same thing.
+ *
  * The places over the outdoor grid and the rules of the spaces beside it
  * (content/places.json; docs/design/location-seam.md 1.2): read by the
  * server's lookup (server/internal/location) and its client twin
@@ -429,6 +441,8 @@ export declare type PlaceZone = Message<"glimway.content.v1.PlaceZone"> & {
   ty?: number | undefined;
 
   /**
+   * At most a footprint's side (16 chunks of 24 tiles).
+   *
    * @generated from field: int32 w = 5;
    */
   w: number;
@@ -472,6 +486,8 @@ export declare type PlaceZoneValid = Message<"glimway.content.v1.PlaceZone"> & {
   ty: number;
 
   /**
+   * At most a footprint's side (16 chunks of 24 tiles).
+   *
    * @generated from field: int32 w = 5;
    */
   w: number;

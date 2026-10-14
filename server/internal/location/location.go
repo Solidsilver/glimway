@@ -8,7 +8,10 @@
 //
 // Positions are world pixels, as Where and saved places carry them; tiles
 // are 16 px and chunks content/wilds.json's chunkSize tiles, both signed
-// and floor-divided (server/internal/wilds/coords.go).
+// and floor-divided (server/internal/wilds/coords.go). Content coordinates
+// are int32 on the schema, bounded so every sum and product below is exact
+// (places.proto); each is widened to int or float64 before arithmetic all
+// the same, as the TypeScript twin's numbers are.
 package location
 
 import (
@@ -149,7 +152,8 @@ func At(space Space, x, y float64) Place {
 			lx, ly := tx-int(f.GetOrigin().GetTx()), ty-int(f.GetOrigin().GetTy())
 			p := withRules(f.GetId(), f.GetRules())
 			for _, z := range f.GetZones() {
-				if lx >= int(z.GetTx()) && lx < int(z.GetTx()+z.GetW()) && ly >= int(z.GetTy()) && ly < int(z.GetTy()+z.GetH()) {
+				zx, zy := int(z.GetTx()), int(z.GetTy())
+				if lx >= zx && lx < zx+int(z.GetW()) && ly >= zy && ly < zy+int(z.GetH()) {
 					p = withRules(z.GetPlace(), z.GetRules())
 					break
 				}
@@ -166,7 +170,7 @@ func At(space Space, x, y float64) Place {
 		return p
 	}
 	if f := fixedByID(string(space)); f != nil {
-		return At(Outdoors, x+float64(f.GetOrigin().GetTx()*tilePx), y+float64(f.GetOrigin().GetTy()*tilePx))
+		return At(Outdoors, x+float64(f.GetOrigin().GetTx())*tilePx, y+float64(f.GetOrigin().GetTy())*tilePx)
 	}
 	if strings.HasPrefix(string(space), "in:") {
 		r := spaceRules(content.RootArea(string(space)))
@@ -212,9 +216,9 @@ func Anchor(id string) (Space, float64, float64, bool) {
 	}
 	for _, a := range f.GetAnchors() {
 		if a.GetId() == name {
-			tx := int(a.GetTx() + f.GetOrigin().GetTx())
-			ty := int(a.GetTy() + f.GetOrigin().GetTy())
-			return Outdoors, float64(tx*tilePx + tilePx/2), float64(ty*tilePx + tilePx/2), true
+			tx := int(a.GetTx()) + int(f.GetOrigin().GetTx())
+			ty := int(a.GetTy()) + int(f.GetOrigin().GetTy())
+			return Outdoors, float64(tx)*tilePx + tilePx/2, float64(ty)*tilePx + tilePx/2, true
 		}
 	}
 	return "", 0, 0, false

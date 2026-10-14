@@ -2,7 +2,10 @@ package content
 
 import (
 	"fmt"
+	"regexp"
 	"slices"
+	"strconv"
+	"strings"
 
 	contentv1 "glimway/gen/glimway/content/v1"
 )
@@ -66,7 +69,8 @@ var placeSpaces = []string{"outdoors", "beyond", "village", "woodland", "ruin", 
 // loader's (src/lib/places.ts), word for word. Fixed places have unique ids
 // that no Wilds footprint or space uses, lie apart from each other and from
 // the Wilds footprints, and keep their zones and anchors inside their own
-// footprint; zone and anchor ids are unique in their place.
+// footprint; zone and anchor ids are unique in their place; gate anchors
+// are numbered gate:0 to gate:n-1, n being the place's gate capacity.
 func placesRules(p *Places, w *Wilds) error {
 	bad := func(format string, args ...any) error {
 		return fmt.Errorf("invalid places: "+format, args...)
@@ -78,7 +82,7 @@ func placesRules(p *Places, w *Wilds) error {
 	}
 	var taken []rect
 	for _, f := range w.GetPlaces() {
-		taken = append(taken, rect{f.GetId(), int(f.GetCx()), int(f.GetCy()), int(f.GetCx() + f.GetWidth() - 1), int(f.GetCy() + f.GetHeight() - 1)})
+		taken = append(taken, rect{f.GetId(), int(f.GetCx()), int(f.GetCy()), int(f.GetCx()) + int(f.GetWidth()) - 1, int(f.GetCy()) + int(f.GetHeight()) - 1})
 	}
 	seen := map[string]bool{}
 	for _, f := range p.GetFixed() {
@@ -122,6 +126,26 @@ func placesRules(p *Places, w *Wilds) error {
 				return bad("%s anchor %s: outside the footprint", id, a.GetId())
 			}
 		}
+		// The gate anchors are the frozen capacity: gate:0 up to gate:n-1.
+		gates := map[int]bool{}
+		for _, a := range f.GetAnchors() {
+			n, ok := strings.CutPrefix(a.GetId(), "gate:")
+			if !ok {
+				continue
+			}
+			if !gateNumber.MatchString(n) {
+				return bad("%s anchor %s: not a gate number", id, a.GetId())
+			}
+			g, _ := strconv.Atoi(n)
+			gates[g] = true
+		}
+		for g := range len(gates) {
+			if !gates[g] {
+				return bad("%s: gate anchors skip gate:%d", id, g)
+			}
+		}
 	}
 	return nil
 }
+
+var gateNumber = regexp.MustCompile(`^(0|[1-9][0-9]{0,3})$`)

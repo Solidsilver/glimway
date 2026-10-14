@@ -22,6 +22,12 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Bounds: every tile coordinate here (origins, zones, anchors) lies within
+// ±2^20 tiles and every chunk within ±32768 chunks (±786432 tiles), so a
+// world tile (origin + layout tile) stays within ±2^21 and a world pixel
+// within ±2^25: exact in a float64, and in an int32 in either runtime, so
+// the Go lookup and its TypeScript twin compute the same thing.
+//
 // The places over the outdoor grid and the rules of the spaces beside it
 // (content/places.json; docs/design/location-seam.md 1.2): read by the
 // server's lookup (server/internal/location) and its client twin
@@ -437,14 +443,15 @@ func (x *PlaceTile) GetTy() int32 {
 // A rectangle of layout tiles, `w` by `h` from (tx, ty), with its own place
 // id and rules.
 type PlaceZone struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Place         string                 `protobuf:"bytes,2,opt,name=place,proto3" json:"place,omitempty"`
-	Tx            *int32                 `protobuf:"zigzag32,3,opt,name=tx,proto3,oneof" json:"tx,omitempty"`
-	Ty            *int32                 `protobuf:"zigzag32,4,opt,name=ty,proto3,oneof" json:"ty,omitempty"`
-	W             int32                  `protobuf:"varint,5,opt,name=w,proto3" json:"w,omitempty"`
-	H             int32                  `protobuf:"varint,6,opt,name=h,proto3" json:"h,omitempty"`
-	Rules         *PlaceRules            `protobuf:"bytes,7,opt,name=rules,proto3" json:"rules,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Place string                 `protobuf:"bytes,2,opt,name=place,proto3" json:"place,omitempty"`
+	Tx    *int32                 `protobuf:"zigzag32,3,opt,name=tx,proto3,oneof" json:"tx,omitempty"`
+	Ty    *int32                 `protobuf:"zigzag32,4,opt,name=ty,proto3,oneof" json:"ty,omitempty"`
+	// At most a footprint's side (16 chunks of 24 tiles).
+	W             int32       `protobuf:"varint,5,opt,name=w,proto3" json:"w,omitempty"`
+	H             int32       `protobuf:"varint,6,opt,name=h,proto3" json:"h,omitempty"`
+	Rules         *PlaceRules `protobuf:"bytes,7,opt,name=rules,proto3" json:"rules,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -610,16 +617,16 @@ const file_glimway_content_v1_places_proto_rawDesc = "" +
 	"\avillage\x18\x01 \x01(\v2\x1e.glimway.content.v1.PlaceRulesB\x06\xbaH\x03\xc8\x01\x01R\avillage\x12B\n" +
 	"\bwoodland\x18\x02 \x01(\v2\x1e.glimway.content.v1.PlaceRulesB\x06\xbaH\x03\xc8\x01\x01R\bwoodland\x12:\n" +
 	"\x04ruin\x18\x03 \x01(\v2\x1e.glimway.content.v1.PlaceRulesB\x06\xbaH\x03\xc8\x01\x01R\x04ruin\x12:\n" +
-	"\x04home\x18\x04 \x01(\v2\x1e.glimway.content.v1.PlaceRulesB\x06\xbaH\x03\xc8\x01\x01R\x04home\"\xa7\x04\n" +
+	"\x04home\x18\x04 \x01(\v2\x1e.glimway.content.v1.PlaceRulesB\x06\xbaH\x03\xc8\x01\x01R\x04home\"\xbb\x04\n" +
 	"\n" +
 	"FixedPlace\x12)\n" +
 	"\x02id\x18\x01 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x02id\x12\x1d\n" +
 	"\x04name\x18\x02 \x01(\tB\t\xbaH\x06r\x04\x10\x01\x18<R\x04name\x121\n" +
 	"\x06layout\x18\x03 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x06layout\x12#\n" +
 	"\brevision\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\brevision\x12=\n" +
-	"\x06origin\x18\x05 \x01(\v2\x1d.glimway.content.v1.PlaceTileB\x06\xbaH\x03\xc8\x01\x01R\x06origin\x12\x1b\n" +
-	"\x02cx\x18\x06 \x01(\x11B\x06\xbaH\x03\xc8\x01\x01H\x00R\x02cx\x88\x01\x01\x12\x1b\n" +
-	"\x02cy\x18\a \x01(\x11B\x06\xbaH\x03\xc8\x01\x01H\x01R\x02cy\x88\x01\x01\x12\x1f\n" +
+	"\x06origin\x18\x05 \x01(\v2\x1d.glimway.content.v1.PlaceTileB\x06\xbaH\x03\xc8\x01\x01R\x06origin\x12%\n" +
+	"\x02cx\x18\x06 \x01(\x11B\x10\xbaH\r\xc8\x01\x01:\b\x18\x80\x80\x04(\xff\xff\x03H\x00R\x02cx\x88\x01\x01\x12%\n" +
+	"\x02cy\x18\a \x01(\x11B\x10\xbaH\r\xc8\x01\x01:\b\x18\x80\x80\x04(\xff\xff\x03H\x01R\x02cy\x88\x01\x01\x12\x1f\n" +
 	"\x05width\x18\b \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x10(\x01R\x05width\x12!\n" +
 	"\x06height\x18\t \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x10(\x01R\x06height\x12<\n" +
 	"\x05rules\x18\n" +
@@ -627,26 +634,28 @@ const file_glimway_content_v1_places_proto_rawDesc = "" +
 	"\x05zones\x18\v \x03(\v2\x1d.glimway.content.v1.PlaceZoneR\x05zones\x129\n" +
 	"\aanchors\x18\f \x03(\v2\x1f.glimway.content.v1.PlaceAnchorR\aanchorsB\x05\n" +
 	"\x03_cxB\x05\n" +
-	"\x03_cy\"S\n" +
-	"\tPlaceTile\x12\x1b\n" +
-	"\x02tx\x18\x01 \x01(\x11B\x06\xbaH\x03\xc8\x01\x01H\x00R\x02tx\x88\x01\x01\x12\x1b\n" +
-	"\x02ty\x18\x02 \x01(\x11B\x06\xbaH\x03\xc8\x01\x01H\x01R\x02ty\x88\x01\x01B\x05\n" +
+	"\x03_cy\"i\n" +
+	"\tPlaceTile\x12&\n" +
+	"\x02tx\x18\x01 \x01(\x11B\x11\xbaH\x0e\xc8\x01\x01:\t\x18\x80\x80\x80\x01(\xff\xff\x7fH\x00R\x02tx\x88\x01\x01\x12&\n" +
+	"\x02ty\x18\x02 \x01(\x11B\x11\xbaH\x0e\xc8\x01\x01:\t\x18\x80\x80\x80\x01(\xff\xff\x7fH\x01R\x02ty\x88\x01\x01B\x05\n" +
 	"\x03_txB\x05\n" +
-	"\x03_ty\"\x9b\x02\n" +
+	"\x03_ty\"\xb7\x02\n" +
 	"\tPlaceZone\x12)\n" +
 	"\x02id\x18\x01 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x02id\x12/\n" +
-	"\x05place\x18\x02 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x05place\x12\x1b\n" +
-	"\x02tx\x18\x03 \x01(\x11B\x06\xbaH\x03\xc8\x01\x01H\x00R\x02tx\x88\x01\x01\x12\x1b\n" +
-	"\x02ty\x18\x04 \x01(\x11B\x06\xbaH\x03\xc8\x01\x01H\x01R\x02ty\x88\x01\x01\x12\x15\n" +
-	"\x01w\x18\x05 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x01w\x12\x15\n" +
-	"\x01h\x18\x06 \x01(\x05B\a\xbaH\x04\x1a\x02(\x01R\x01h\x12<\n" +
+	"\x05place\x18\x02 \x01(\tB\x19\xbaH\x16r\x142\x12^[a-z0-9-]{1,100}$R\x05place\x12&\n" +
+	"\x02tx\x18\x03 \x01(\x11B\x11\xbaH\x0e\xc8\x01\x01:\t\x18\x80\x80\x80\x01(\xff\xff\x7fH\x00R\x02tx\x88\x01\x01\x12&\n" +
+	"\x02ty\x18\x04 \x01(\x11B\x11\xbaH\x0e\xc8\x01\x01:\t\x18\x80\x80\x80\x01(\xff\xff\x7fH\x01R\x02ty\x88\x01\x01\x12\x18\n" +
+	"\x01w\x18\x05 \x01(\x05B\n" +
+	"\xbaH\a\x1a\x05\x18\x80\x03(\x01R\x01w\x12\x18\n" +
+	"\x01h\x18\x06 \x01(\x05B\n" +
+	"\xbaH\a\x1a\x05\x18\x80\x03(\x01R\x01h\x12<\n" +
 	"\x05rules\x18\a \x01(\v2\x1e.glimway.content.v1.PlaceRulesB\x06\xbaH\x03\xc8\x01\x01R\x05rulesB\x05\n" +
 	"\x03_txB\x05\n" +
-	"\x03_ty\"\x88\x01\n" +
+	"\x03_ty\"\x9e\x01\n" +
 	"\vPlaceAnchor\x121\n" +
-	"\x02id\x18\x01 \x01(\tB!\xbaH\x1er\x1c2\x1a^[a-z0-9-]+(:[a-z0-9-]+)*$R\x02id\x12\x1b\n" +
-	"\x02tx\x18\x02 \x01(\x11B\x06\xbaH\x03\xc8\x01\x01H\x00R\x02tx\x88\x01\x01\x12\x1b\n" +
-	"\x02ty\x18\x03 \x01(\x11B\x06\xbaH\x03\xc8\x01\x01H\x01R\x02ty\x88\x01\x01B\x05\n" +
+	"\x02id\x18\x01 \x01(\tB!\xbaH\x1er\x1c2\x1a^[a-z0-9-]+(:[a-z0-9-]+)*$R\x02id\x12&\n" +
+	"\x02tx\x18\x02 \x01(\x11B\x11\xbaH\x0e\xc8\x01\x01:\t\x18\x80\x80\x80\x01(\xff\xff\x7fH\x00R\x02tx\x88\x01\x01\x12&\n" +
+	"\x02ty\x18\x03 \x01(\x11B\x11\xbaH\x0e\xc8\x01\x01:\t\x18\x80\x80\x80\x01(\xff\xff\x7fH\x01R\x02ty\x88\x01\x01B\x05\n" +
 	"\x03_txB\x05\n" +
 	"\x03_tyB*Z(glimway/gen/glimway/content/v1;contentv1b\x06proto3"
 

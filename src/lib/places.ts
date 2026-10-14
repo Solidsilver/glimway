@@ -58,7 +58,21 @@ function placesRules(p: Places, w: WildsData): void {
       anchors.add(a.id);
       if (!inside(a.tx, a.ty)) bad(`${f.id} anchor ${a.id}: outside the footprint`);
     }
+    // The gate anchors are the frozen capacity: gate:0 up to gate:n-1.
+    const gates = new Set<number>();
+    for (const a of f.anchors) {
+      if (!a.id.startsWith('gate:')) continue;
+      const n = a.id.slice('gate:'.length);
+      if (!/^(0|[1-9][0-9]{0,3})$/.test(n)) bad(`${f.id} anchor ${a.id}: not a gate number`);
+      gates.add(Number(n));
+    }
+    for (let g = 0; g < gates.size; g++) if (!gates.has(g)) bad(`${f.id}: gate anchors skip gate:${g}`);
   }
+}
+
+/** A fixed place's gate capacity: its gate anchors, gate:0 to gate:n-1 (the loader's rule). */
+export function gateCapacity(p: FixedPlace): number {
+  return p.anchors.filter((a) => a.id.startsWith('gate:')).length;
 }
 
 /** Reads places JSON through the schema, then the rules that span entries and files. */

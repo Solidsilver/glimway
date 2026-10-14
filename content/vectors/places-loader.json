@@ -544,7 +544,7 @@
     {
       "name": "empty-zone",
       "valid": false,
-      "rule": "int32.gte",
+      "rule": "int32.gte_lte",
       "edits": [
         {
           "path": [
@@ -559,6 +559,467 @@
               "tx": 0,
               "ty": 0,
               "w": 0,
+              "h": 1,
+              "rules": {
+                "safe": true,
+                "ride": true,
+                "sync": true,
+                "rest": "none"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "gate-gap",
+      "valid": false,
+      "rule": "commons: gate anchors skip gate:7",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "anchors",
+            10,
+            "id"
+          ],
+          "value": "gate:8"
+        }
+      ]
+    },
+    {
+      "name": "gates-from-one",
+      "valid": false,
+      "rule": "commons: gate anchors skip gate:0",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "anchors",
+            3,
+            "id"
+          ],
+          "value": "gate:8"
+        }
+      ]
+    },
+    {
+      "name": "gate-not-a-number",
+      "valid": false,
+      "rule": "commons anchor gate:x: not a gate number",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "anchors",
+            10,
+            "id"
+          ],
+          "value": "gate:x"
+        }
+      ]
+    },
+    {
+      "name": "gate-leading-zero",
+      "valid": false,
+      "rule": "commons anchor gate:07: not a gate number",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "anchors",
+            10,
+            "id"
+          ],
+          "value": "gate:07"
+        }
+      ]
+    },
+    {
+      "name": "places-at-the-bounds",
+      "valid": true,
+      "edits": [
+        {
+          "path": [
+            "fixed"
+          ],
+          "value": [
+            {
+              "id": "commons",
+              "name": "the Commons",
+              "layout": "commons",
+              "revision": 1,
+              "origin": {
+                "tx": -21,
+                "ty": 24
+              },
+              "cx": -1,
+              "cy": 1,
+              "width": 3,
+              "height": 2,
+              "rules": {
+                "safe": true,
+                "ride": true,
+                "sync": true,
+                "rest": "none"
+              },
+              "zones": [],
+              "anchors": [
+                {
+                  "id": "arch",
+                  "tx": 23,
+                  "ty": 2
+                },
+                {
+                  "id": "west-path",
+                  "tx": 2,
+                  "ty": 21
+                },
+                {
+                  "id": "yard-door",
+                  "tx": 53,
+                  "ty": 18
+                },
+                {
+                  "id": "gate:0",
+                  "tx": 20,
+                  "ty": 9
+                },
+                {
+                  "id": "gate:1",
+                  "tx": 27,
+                  "ty": 9
+                },
+                {
+                  "id": "gate:2",
+                  "tx": 20,
+                  "ty": 13
+                },
+                {
+                  "id": "gate:3",
+                  "tx": 27,
+                  "ty": 13
+                },
+                {
+                  "id": "gate:4",
+                  "tx": 20,
+                  "ty": 28
+                },
+                {
+                  "id": "gate:5",
+                  "tx": 27,
+                  "ty": 28
+                },
+                {
+                  "id": "gate:6",
+                  "tx": 20,
+                  "ty": 33
+                },
+                {
+                  "id": "gate:7",
+                  "tx": 27,
+                  "ty": 33
+                }
+              ]
+            },
+            {
+              "id": "edge-east",
+              "name": "a place",
+              "layout": "edge-east",
+              "revision": 1,
+              "origin": {
+                "tx": 1048576,
+                "ty": 1048576
+              },
+              "cx": 32768,
+              "cy": 32768,
+              "width": 1,
+              "height": 1,
+              "rules": {
+                "safe": true,
+                "ride": true,
+                "sync": true,
+                "rest": "none"
+              },
+              "zones": [],
+              "anchors": []
+            },
+            {
+              "id": "edge-west",
+              "name": "a place",
+              "layout": "edge-west",
+              "revision": 1,
+              "origin": {
+                "tx": -1048576,
+                "ty": -1048576
+              },
+              "cx": -32768,
+              "cy": -32768,
+              "width": 1,
+              "height": 1,
+              "rules": {
+                "safe": true,
+                "ride": true,
+                "sync": true,
+                "rest": "none"
+              },
+              "zones": [],
+              "anchors": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "review-origin-wraps-times-16",
+      "valid": false,
+      "rule": "sint32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "origin",
+            "tx"
+          ],
+          "value": 134217728
+        },
+        {
+          "path": [
+            "fixed",
+            0,
+            "cx"
+          ],
+          "value": 5592405
+        }
+      ]
+    },
+    {
+      "name": "review-origin-wraps-negative",
+      "valid": false,
+      "rule": "sint32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "origin",
+            "tx"
+          ],
+          "value": -134217729
+        },
+        {
+          "path": [
+            "fixed",
+            0,
+            "cx"
+          ],
+          "value": -5592406
+        }
+      ]
+    },
+    {
+      "name": "review-anchor-plus-origin-wraps",
+      "valid": false,
+      "rule": "sint32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "origin",
+            "tx"
+          ],
+          "value": 2147483640
+        },
+        {
+          "path": [
+            "fixed",
+            0,
+            "cx"
+          ],
+          "value": 89478485
+        }
+      ]
+    },
+    {
+      "name": "review-zone-tx-plus-w-wraps",
+      "valid": false,
+      "rule": "sint32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "origin",
+            "tx"
+          ],
+          "value": -2147483640
+        },
+        {
+          "path": [
+            "fixed",
+            0,
+            "anchors"
+          ],
+          "value": []
+        },
+        {
+          "path": [
+            "fixed",
+            0,
+            "zones"
+          ],
+          "value": [
+            {
+              "id": "mouth",
+              "place": "commons-mouth",
+              "tx": 2147483640,
+              "ty": 0,
+              "w": 48,
+              "h": 2,
+              "rules": {
+                "safe": false,
+                "ride": true,
+                "sync": false,
+                "rest": "none"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "origin-past-the-bound",
+      "valid": false,
+      "rule": "sint32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "origin",
+            "tx"
+          ],
+          "value": 1048577
+        }
+      ]
+    },
+    {
+      "name": "origin-past-the-negative-bound",
+      "valid": false,
+      "rule": "sint32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "origin",
+            "ty"
+          ],
+          "value": -1048577
+        }
+      ]
+    },
+    {
+      "name": "chunk-past-the-bound",
+      "valid": false,
+      "rule": "sint32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "cy"
+          ],
+          "value": 32769
+        }
+      ]
+    },
+    {
+      "name": "chunk-past-the-negative-bound",
+      "valid": false,
+      "rule": "sint32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "cx"
+          ],
+          "value": -32769
+        }
+      ]
+    },
+    {
+      "name": "anchor-past-the-bound",
+      "valid": false,
+      "rule": "sint32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "anchors",
+            0,
+            "tx"
+          ],
+          "value": 1048577
+        }
+      ]
+    },
+    {
+      "name": "zone-past-the-bound",
+      "valid": false,
+      "rule": "sint32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "zones"
+          ],
+          "value": [
+            {
+              "id": "lane",
+              "place": "lane",
+              "tx": -1048577,
+              "ty": 0,
+              "w": 1,
+              "h": 1,
+              "rules": {
+                "safe": true,
+                "ride": true,
+                "sync": true,
+                "rest": "none"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "zone-wider-than-a-footprint",
+      "valid": false,
+      "rule": "int32.gte_lte",
+      "edits": [
+        {
+          "path": [
+            "fixed",
+            0,
+            "zones"
+          ],
+          "value": [
+            {
+              "id": "lane",
+              "place": "lane",
+              "tx": 0,
+              "ty": 0,
+              "w": 385,
               "h": 1,
               "rules": {
                 "safe": true,

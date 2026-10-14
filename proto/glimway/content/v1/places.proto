@@ -3,6 +3,12 @@ package glimway.content.v1;
 option go_package = "glimway/gen/glimway/content/v1;contentv1";
 import "buf/validate/validate.proto";
 
+// Bounds: every tile coordinate here (origins, zones, anchors) lies within
+// ±2^20 tiles and every chunk within ±32768 chunks (±786432 tiles), so a
+// world tile (origin + layout tile) stays within ±2^21 and a world pixel
+// within ±2^25: exact in a float64, and in an int32 in either runtime, so
+// the Go lookup and its TypeScript twin compute the same thing.
+//
 // The places over the outdoor grid and the rules of the spaces beside it
 // (content/places.json; docs/design/location-seam.md 1.2): read by the
 // server's lookup (server/internal/location) and its client twin
@@ -59,8 +65,8 @@ message FixedPlace {
   string layout = 3 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
   int32 revision = 4 [(buf.validate.field).int32.gte = 1];
   PlaceTile origin = 5 [(buf.validate.field).required = true];
-  optional sint32 cx = 6 [(buf.validate.field).required = true];
-  optional sint32 cy = 7 [(buf.validate.field).required = true];
+  optional sint32 cx = 6 [(buf.validate.field).required = true, (buf.validate.field).sint32 = {gte: -32768, lte: 32768}];
+  optional sint32 cy = 7 [(buf.validate.field).required = true, (buf.validate.field).sint32 = {gte: -32768, lte: 32768}];
   int32 width = 8 [(buf.validate.field).int32 = {gte: 1, lte: 16}];
   int32 height = 9 [(buf.validate.field).int32 = {gte: 1, lte: 16}];
   // The footprint's rules where no zone says otherwise.
@@ -76,8 +82,8 @@ message FixedPlace {
 
 // A world tile.
 message PlaceTile {
-  optional sint32 tx = 1 [(buf.validate.field).required = true];
-  optional sint32 ty = 2 [(buf.validate.field).required = true];
+  optional sint32 tx = 1 [(buf.validate.field).required = true, (buf.validate.field).sint32 = {gte: -1048576, lte: 1048576}];
+  optional sint32 ty = 2 [(buf.validate.field).required = true, (buf.validate.field).sint32 = {gte: -1048576, lte: 1048576}];
 }
 
 // A rectangle of layout tiles, `w` by `h` from (tx, ty), with its own place
@@ -85,16 +91,17 @@ message PlaceTile {
 message PlaceZone {
   string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
   string place = 2 [(buf.validate.field).string.pattern = "^[a-z0-9-]{1,100}$"];
-  optional sint32 tx = 3 [(buf.validate.field).required = true];
-  optional sint32 ty = 4 [(buf.validate.field).required = true];
-  int32 w = 5 [(buf.validate.field).int32.gte = 1];
-  int32 h = 6 [(buf.validate.field).int32.gte = 1];
+  optional sint32 tx = 3 [(buf.validate.field).required = true, (buf.validate.field).sint32 = {gte: -1048576, lte: 1048576}];
+  optional sint32 ty = 4 [(buf.validate.field).required = true, (buf.validate.field).sint32 = {gte: -1048576, lte: 1048576}];
+  // At most a footprint's side (16 chunks of 24 tiles).
+  int32 w = 5 [(buf.validate.field).int32 = {gte: 1, lte: 384}];
+  int32 h = 6 [(buf.validate.field).int32 = {gte: 1, lte: 384}];
   PlaceRules rules = 7 [(buf.validate.field).required = true];
 }
 
 // An anchor: a layout tile a position resolves to (its centre).
 message PlaceAnchor {
   string id = 1 [(buf.validate.field).string.pattern = "^[a-z0-9-]+(:[a-z0-9-]+)*$"];
-  optional sint32 tx = 2 [(buf.validate.field).required = true];
-  optional sint32 ty = 3 [(buf.validate.field).required = true];
+  optional sint32 tx = 2 [(buf.validate.field).required = true, (buf.validate.field).sint32 = {gte: -1048576, lte: 1048576}];
+  optional sint32 ty = 3 [(buf.validate.field).required = true, (buf.validate.field).sint32 = {gte: -1048576, lte: 1048576}];
 }

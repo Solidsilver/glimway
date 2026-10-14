@@ -39,7 +39,9 @@ type vectorResolve struct {
 	At     [2]int `json:"at"`
 }
 
-type vectorDoc struct {
+// vectorLookups are the rows every lookup replays: for the shipped places
+// at the top level, for the places laid at the schema's bounds in `bounds`.
+type vectorLookups struct {
 	At       []vectorAt `json:"at"`
 	SourceOf []struct {
 		Chunk  [2]int       `json:"chunk"`
@@ -56,10 +58,18 @@ type vectorDoc struct {
 		At    [2]float64 `json:"at"`
 	} `json:"anchors"`
 	Resolve []vectorResolve `json:"resolve"`
-	Zones   struct {
+}
+
+type vectorDoc struct {
+	vectorLookups
+	Zones struct {
 		Zones json.RawMessage `json:"zones"`
 		At    []vectorAt      `json:"at"`
 	} `json:"zones"`
+	Bounds struct {
+		vectorLookups
+		Fixed []json.RawMessage `json:"fixed"`
+	} `json:"bounds"`
 }
 
 type vectorAt struct {
@@ -102,10 +112,10 @@ func TestAtVectors(t *testing.T) {
 	checkAt(t, readVectors(t).At)
 }
 
-// The shipped Commons has no zones; the vectors lay two over it, through
-// the loader, and ask again.
-func TestAtZoneVectors(t *testing.T) {
-	doc := readVectors(t)
+// withPlaces decodes the shipped places as edited, through the loader, and
+// makes them the lookup's places for the rest of the test.
+func withPlaces(t *testing.T, edit func(places map[string]any)) {
+	t.Helper()
 	raw, err := content.FS.ReadFile("places.json")
 	if err != nil {
 		t.Fatal(err)
@@ -114,26 +124,58 @@ func TestAtZoneVectors(t *testing.T) {
 	if err := json.Unmarshal(raw, &places); err != nil {
 		t.Fatal(err)
 	}
-	var zones any
-	if err := json.Unmarshal(doc.Zones.Zones, &zones); err != nil {
-		t.Fatal(err)
-	}
-	places["fixed"].([]any)[0].(map[string]any)["zones"] = zones
+	edit(places)
 	if raw, err = json.Marshal(places); err != nil {
 		t.Fatal(err)
 	}
-	zoned, err := content.DecodePlaces(raw)
+	edited, err := content.DecodePlaces(raw)
 	if err != nil {
 		t.Fatal(err)
 	}
 	shipped := content.PlacesRules
-	content.PlacesRules = zoned
+	content.PlacesRules = edited
 	t.Cleanup(func() { content.PlacesRules = shipped })
+}
+
+func decodeAny(t *testing.T, raw json.RawMessage) any {
+	t.Helper()
+	var v any
+	if err := json.Unmarshal(raw, &v); err != nil {
+		t.Fatal(err)
+	}
+	return v
+}
+
+// The shipped Commons has no zones; the vectors lay two over it, through
+// the loader, and ask again.
+func TestAtZoneVectors(t *testing.T) {
+	doc := readVectors(t)
+	withPlaces(t, func(places map[string]any) {
+		places["fixed"].([]any)[0].(map[string]any)["zones"] = decodeAny(t, doc.Zones.Zones)
+	})
 	checkAt(t, doc.Zones.At)
 }
 
-func TestSourceAndGridVectors(t *testing.T) {
+// Two places at the schema's bounds beside the Commons: every lookup near
+// them, worked with big integers, so arithmetic that wraps int32 fails.
+func TestBoundsVectors(t *testing.T) {
 	doc := readVectors(t)
+	withPlaces(t, func(places map[string]any) {
+		for _, f := range doc.Bounds.Fixed {
+			places["fixed"] = append(places["fixed"].([]any), decodeAny(t, f))
+		}
+	})
+	checkAt(t, doc.Bounds.At)
+	checkLookups(t, doc.Bounds.vectorLookups)
+}
+
+func TestLookupVectors(t *testing.T) {
+	checkLookups(t, readVectors(t).vectorLookups)
+}
+
+// checkLookups replays the SourceOf, OnGrid, Anchor and Resolve rows.
+func checkLookups(t *testing.T, doc vectorLookups) {
+	t.Helper()
 	for _, v := range doc.SourceOf {
 		if got := sourceVector(SourceOf(v.Chunk[0], v.Chunk[1])); got != v.Source {
 			t.Errorf("SourceOf%v = %+v, want %+v", v.Chunk, got, v.Source)
@@ -144,19 +186,13 @@ func TestSourceAndGridVectors(t *testing.T) {
 			t.Errorf("OnGrid%v = %v", v.Chunk, got)
 		}
 	}
-}
-
-func TestAnchorVectors(t *testing.T) {
-	for _, v := range readVectors(t).Anchors {
+	for _, v := range doc.Anchors {
 		space, x, y, ok := Anchor(v.ID)
 		if ok != v.OK || string(space) != v.Space || [2]float64{x, y} != v.At {
 			t.Errorf("Anchor(%q) = %s %v %v %v, want %+v", v.ID, space, x, y, ok, v)
 		}
 	}
-}
-
-func TestResolveVectors(t *testing.T) {
-	for _, v := range readVectors(t).Resolve {
+	for _, v := range doc.Resolve {
 		space, tx, ty := Resolve(v.Area, v.Tile[0], v.Tile[1])
 		if string(space) != v.Space || [2]int{tx, ty} != v.At {
 			t.Errorf("Resolve(%s, %v) = %s %d %d, want %s %v", v.Area, v.Tile, space, tx, ty, v.Space, v.At)
@@ -207,6 +243,10 @@ func TestGateAnchorsFollowTheLane(t *testing.T) {
 		if strings.HasPrefix(a.GetId(), "gate:") {
 			gates++
 		}
+	}
+	// Owner decision (location-seam §0 10, §7 1): eight gates, two chunk rows.
+	if gates != 8 {
+		t.Fatalf("%d gate anchors, want the decided 8", gates)
 	}
 	if gates < int(lane.GetSpareGates()) {
 		t.Fatalf("%d gate anchors, fewer than the %d spare gates", gates, lane.GetSpareGates())

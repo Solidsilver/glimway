@@ -5,7 +5,7 @@ import vectors from '../content/vectors/location.json' with { type: 'json' };
 import loaderVectors from '../content/vectors/places-loader.json' with { type: 'json' };
 import placesRaw from '../content/places.json' with { type: 'json' };
 import { anchor, at, onGrid, resolve, sourceOf, OUTDOORS } from '../src/lib/location.ts';
-import { PLACES, validatePlaces } from '../src/lib/places.ts';
+import { PLACES, gateCapacity, validatePlaces, type Places } from '../src/lib/places.ts';
 import { chunkOf } from '../src/lib/wilds/coords.ts';
 import { buildCommons, gateSlot, type CommonsWorld } from '../src/game/commons.ts';
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts';
@@ -24,19 +24,30 @@ test('at: zones laid over the Commons, first holding zone wins (shared vectors)'
   for (const v of vectors.zones.at) assert.deepEqual(at(v.space, v.x, v.y, places), v.place, v.name);
 });
 
-test('sourceOf and onGrid (shared vectors)', () => {
-  for (const v of vectors.sourceOf) assert.deepEqual(sourceOf(v.chunk[0]!, v.chunk[1]!), v.source, `chunk ${v.chunk}`);
-  for (const v of vectors.onGrid) assert.equal(onGrid(v.chunk[0]!, v.chunk[1]!), v.onGrid, `chunk ${v.chunk}`);
+type Lookups = Pick<typeof vectors, 'sourceOf' | 'onGrid' | 'anchors' | 'resolve'>;
+
+/** Replays the sourceOf, onGrid, anchor and resolve rows. */
+function checkLookups(doc: Lookups, places: Places = PLACES): void {
+  for (const v of doc.sourceOf) assert.deepEqual(sourceOf(v.chunk[0]!, v.chunk[1]!, places), v.source, `chunk ${v.chunk}`);
+  for (const v of doc.onGrid) assert.equal(onGrid(v.chunk[0]!, v.chunk[1]!, places), v.onGrid, `chunk ${v.chunk}`);
+  for (const v of doc.anchors) {
+    assert.deepEqual(anchor(v.id, places), v.ok ? { space: v.space, x: v.at[0], y: v.at[1] } : null, v.id);
+  }
+  for (const v of doc.resolve) {
+    assert.deepEqual(resolve(v.area, v.tile[0]!, v.tile[1]!, places), { space: v.space, tx: v.at[0], ty: v.at[1] }, `${v.area} ${v.tile}`);
+  }
+}
+
+test('sourceOf, onGrid, anchors and resolve (shared vectors)', () => {
+  checkLookups(vectors);
 });
 
-test('anchors and resolve (shared vectors)', () => {
-  for (const v of vectors.anchors) {
-    const got = anchor(v.id);
-    assert.deepEqual(got, v.ok ? { space: v.space, x: v.at[0], y: v.at[1] } : null, v.id);
-  }
-  for (const v of vectors.resolve) {
-    assert.deepEqual(resolve(v.area, v.tile[0]!, v.tile[1]!), { space: v.space, tx: v.at[0], ty: v.at[1] }, `${v.area} ${v.tile}`);
-  }
+test('every lookup beside two places at the schema bounds (shared vectors)', () => {
+  const edited = structuredClone(placesRaw) as { fixed: unknown[] };
+  edited.fixed.push(...vectors.bounds.fixed);
+  const places = validatePlaces(edited);
+  for (const v of vectors.bounds.at) assert.deepEqual(at(v.space, v.x, v.y, places), v.place, v.name);
+  checkLookups(vectors.bounds, places);
 });
 
 for (const v of loaderVectors.loader) test(`shared places loader: ${v.name}`, () => {
@@ -88,10 +99,10 @@ test('every content position in Commons tiles has a resolve vector', () => {
   assert.deepEqual(commonsPositions(), sources);
 });
 
-// Today's Commons at the frozen capacity (one gate per gate anchor): what
+// Today's Commons at the frozen capacity (eight gates, one per gate anchor): what
 // blocks a walker, and what a walker reaches from the village path.
-const gates = PLACES.fixed.find((f) => f.id === 'commons')!.anchors.filter((a) => a.id.startsWith('gate:')).length;
-const commons = buildCommons(gates);
+const gates = gateCapacity(PLACES.fixed.find((f) => f.id === 'commons')!);
+const commons = buildCommons(8);
 type Tile = { tx: number; ty: number };
 const key = (t: Tile) => `${t.tx},${t.ty}`;
 function blocked(w: CommonsWorld): Set<string> {
@@ -119,6 +130,8 @@ const reached = (() => {
 
 test('the frozen Commons fits its footprint, and its gate anchors are the lane tiles by the gates', () => {
   const f = PLACES.fixed.find((f) => f.id === 'commons')!;
+  // Owner decision (location-seam §0 10, §7 1): eight gates, two chunk rows.
+  assert.equal(gates, 8);
   assert.ok(gates >= HOMESTEAD_DATA.commons.spareGates);
   const S = 24;
   const [x0, y0] = [f.cx * S - f.origin.tx, f.cy * S - f.origin.ty];

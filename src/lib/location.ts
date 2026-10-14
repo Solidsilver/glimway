@@ -8,8 +8,10 @@
  *
  * Positions are world pixels, as `where` and saved places carry them;
  * tiles are 16 px and chunks content/wilds.json's chunkSize tiles, signed
- * and floor-divided (src/lib/wilds/coords.ts). Each function takes the
- * places as its last argument, defaulting to the shipped ones.
+ * and floor-divided (src/lib/wilds/coords.ts). Content coordinates are
+ * bounded (places.proto) so every expression is exact in both runtimes.
+ * Each function takes the places as its last argument, defaulting to the
+ * shipped ones.
  */
 import { PLACES, fixedChunks, type FixedPlace, type PlaceRules, type Places } from './places.ts';
 import { rootArea } from './rooms.ts';

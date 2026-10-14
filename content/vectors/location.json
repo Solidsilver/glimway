@@ -1000,20 +1000,11 @@
     },
     {
       "id": "commons:gate:8",
-      "ok": true,
-      "space": "outdoors",
+      "ok": false,
+      "space": "",
       "at": [
-        -8,
-        1000
-      ]
-    },
-    {
-      "id": "commons:gate:9",
-      "ok": true,
-      "space": "outdoors",
-      "at": [
-        104,
-        1000
+        0,
+        0
       ]
     },
     {
@@ -1429,6 +1420,565 @@
             "epochKind": ""
           }
         }
+      }
+    ]
+  },
+  "bounds": {
+    "comment": "Two places laid at the schema's bounds (places.proto: chunks \u00b132768, tiles \u00b12^20) beside the shipped Commons, through the loader, then every lookup near them. Worked with big integers, so a runtime that wraps int32 disagrees (the S1 review's P2).",
+    "fixed": [
+      {
+        "id": "edge-east",
+        "name": "a place at the bounds",
+        "layout": "edge-east",
+        "revision": 1,
+        "origin": {
+          "tx": 1048576,
+          "ty": 1048576
+        },
+        "cx": 32768,
+        "cy": 32768,
+        "width": 1,
+        "height": 1,
+        "rules": {
+          "safe": true,
+          "ride": false,
+          "sync": true,
+          "rest": "none"
+        },
+        "zones": [
+          {
+            "id": "far",
+            "place": "edge-east-far",
+            "tx": -262144,
+            "ty": -262144,
+            "w": 2,
+            "h": 1,
+            "rules": {
+              "safe": false,
+              "ride": true,
+              "sync": false,
+              "rest": "none"
+            }
+          }
+        ],
+        "anchors": [
+          {
+            "id": "corner",
+            "tx": -262144,
+            "ty": -262144
+          },
+          {
+            "id": "far-corner",
+            "tx": -262121,
+            "ty": -262121
+          }
+        ]
+      },
+      {
+        "id": "edge-west",
+        "name": "a place at the bounds",
+        "layout": "edge-west",
+        "revision": 3,
+        "origin": {
+          "tx": -1048576,
+          "ty": -1048576
+        },
+        "cx": -32768,
+        "cy": -32768,
+        "width": 1,
+        "height": 1,
+        "rules": {
+          "safe": true,
+          "ride": true,
+          "sync": false,
+          "rest": "none"
+        },
+        "zones": [
+          {
+            "id": "far",
+            "place": "edge-west-far",
+            "tx": 262166,
+            "ty": 262167,
+            "w": 2,
+            "h": 1,
+            "rules": {
+              "safe": false,
+              "ride": true,
+              "sync": false,
+              "rest": "none"
+            }
+          }
+        ],
+        "anchors": [
+          {
+            "id": "corner",
+            "tx": 262144,
+            "ty": 262144
+          },
+          {
+            "id": "far-corner",
+            "tx": 262167,
+            "ty": 262167
+          }
+        ]
+      }
+    ],
+    "at": [
+      {
+        "name": "edge-east: its zone's first tile",
+        "space": "outdoors",
+        "x": 12582920,
+        "y": 12582920,
+        "place": {
+          "id": "edge-east-far",
+          "safe": false,
+          "ride": true,
+          "sync": false,
+          "rest": "none",
+          "source": {
+            "kind": "fixed",
+            "layout": "edge-east",
+            "revision": 1,
+            "epochKind": ""
+          }
+        }
+      },
+      {
+        "name": "edge-east: its zone's last tile",
+        "space": "outdoors",
+        "x": 12582936,
+        "y": 12582920,
+        "place": {
+          "id": "edge-east-far",
+          "safe": false,
+          "ride": true,
+          "sync": false,
+          "rest": "none",
+          "source": {
+            "kind": "fixed",
+            "layout": "edge-east",
+            "revision": 1,
+            "epochKind": ""
+          }
+        }
+      },
+      {
+        "name": "edge-east: past its zone",
+        "space": "outdoors",
+        "x": 12582952,
+        "y": 12582920,
+        "place": {
+          "id": "edge-east",
+          "safe": true,
+          "ride": false,
+          "sync": true,
+          "rest": "none",
+          "source": {
+            "kind": "fixed",
+            "layout": "edge-east",
+            "revision": 1,
+            "epochKind": ""
+          }
+        }
+      },
+      {
+        "name": "edge-east: its last pixel",
+        "space": "outdoors",
+        "x": 12583295.75,
+        "y": 12583295.75,
+        "place": {
+          "id": "edge-east",
+          "safe": true,
+          "ride": false,
+          "sync": true,
+          "rest": "none",
+          "source": {
+            "kind": "fixed",
+            "layout": "edge-east",
+            "revision": 1,
+            "epochKind": ""
+          }
+        }
+      },
+      {
+        "name": "east of edge-east",
+        "space": "outdoors",
+        "x": 12583296,
+        "y": 12582920,
+        "place": {
+          "id": "beyond",
+          "safe": false,
+          "ride": true,
+          "sync": false,
+          "rest": "none",
+          "source": {
+            "kind": "generated",
+            "layout": "",
+            "revision": 0,
+            "epochKind": "wick"
+          }
+        }
+      },
+      {
+        "name": "west of edge-east",
+        "space": "outdoors",
+        "x": 12582911.75,
+        "y": 12582920,
+        "place": {
+          "id": "beyond",
+          "safe": false,
+          "ride": true,
+          "sync": false,
+          "rest": "none",
+          "source": {
+            "kind": "generated",
+            "layout": "",
+            "revision": 0,
+            "epochKind": "wick"
+          }
+        }
+      },
+      {
+        "name": "edge-east as its own space: layout pixels through the origin",
+        "space": "edge-east",
+        "x": -4194296,
+        "y": -4194296,
+        "place": {
+          "id": "edge-east-far",
+          "safe": false,
+          "ride": true,
+          "sync": false,
+          "rest": "none",
+          "source": {
+            "kind": "fixed",
+            "layout": "edge-east",
+            "revision": 1,
+            "epochKind": ""
+          }
+        }
+      },
+      {
+        "name": "edge-west: its zone's last tile",
+        "space": "outdoors",
+        "x": -12582536,
+        "y": -12582536,
+        "place": {
+          "id": "edge-west-far",
+          "safe": false,
+          "ride": true,
+          "sync": false,
+          "rest": "none",
+          "source": {
+            "kind": "fixed",
+            "layout": "edge-west",
+            "revision": 3,
+            "epochKind": ""
+          }
+        }
+      },
+      {
+        "name": "edge-west: its zone's first tile",
+        "space": "outdoors",
+        "x": -12582552,
+        "y": -12582536,
+        "place": {
+          "id": "edge-west-far",
+          "safe": false,
+          "ride": true,
+          "sync": false,
+          "rest": "none",
+          "source": {
+            "kind": "fixed",
+            "layout": "edge-west",
+            "revision": 3,
+            "epochKind": ""
+          }
+        }
+      },
+      {
+        "name": "edge-west: past its zone",
+        "space": "outdoors",
+        "x": -12582568,
+        "y": -12582536,
+        "place": {
+          "id": "edge-west",
+          "safe": true,
+          "ride": true,
+          "sync": false,
+          "rest": "none",
+          "source": {
+            "kind": "fixed",
+            "layout": "edge-west",
+            "revision": 3,
+            "epochKind": ""
+          }
+        }
+      },
+      {
+        "name": "edge-west: its first pixel",
+        "space": "outdoors",
+        "x": -12582912,
+        "y": -12582912,
+        "place": {
+          "id": "edge-west",
+          "safe": true,
+          "ride": true,
+          "sync": false,
+          "rest": "none",
+          "source": {
+            "kind": "fixed",
+            "layout": "edge-west",
+            "revision": 3,
+            "epochKind": ""
+          }
+        }
+      },
+      {
+        "name": "north-west of edge-west",
+        "space": "outdoors",
+        "x": -12582912.5,
+        "y": -12582912.5,
+        "place": {
+          "id": "beyond",
+          "safe": false,
+          "ride": true,
+          "sync": false,
+          "rest": "none",
+          "source": {
+            "kind": "generated",
+            "layout": "",
+            "revision": 0,
+            "epochKind": "wick"
+          }
+        }
+      },
+      {
+        "name": "south of edge-west",
+        "space": "outdoors",
+        "x": -12582904,
+        "y": -12582528,
+        "place": {
+          "id": "beyond",
+          "safe": false,
+          "ride": true,
+          "sync": false,
+          "rest": "none",
+          "source": {
+            "kind": "generated",
+            "layout": "",
+            "revision": 0,
+            "epochKind": "wick"
+          }
+        }
+      },
+      {
+        "name": "edge-west as its own space: layout pixels through the origin",
+        "space": "edge-west",
+        "x": 4194680,
+        "y": 4194680,
+        "place": {
+          "id": "edge-west-far",
+          "safe": false,
+          "ride": true,
+          "sync": false,
+          "rest": "none",
+          "source": {
+            "kind": "fixed",
+            "layout": "edge-west",
+            "revision": 3,
+            "epochKind": ""
+          }
+        }
+      }
+    ],
+    "sourceOf": [
+      {
+        "chunk": [
+          32768,
+          32768
+        ],
+        "source": {
+          "kind": "fixed",
+          "layout": "edge-east",
+          "revision": 1,
+          "epochKind": ""
+        }
+      },
+      {
+        "chunk": [
+          32767,
+          32768
+        ],
+        "source": {
+          "kind": "generated",
+          "layout": "",
+          "revision": 0,
+          "epochKind": "wick"
+        }
+      },
+      {
+        "chunk": [
+          -32768,
+          -32768
+        ],
+        "source": {
+          "kind": "fixed",
+          "layout": "edge-west",
+          "revision": 3,
+          "epochKind": ""
+        }
+      },
+      {
+        "chunk": [
+          -32768,
+          -32767
+        ],
+        "source": {
+          "kind": "generated",
+          "layout": "",
+          "revision": 0,
+          "epochKind": "wick"
+        }
+      }
+    ],
+    "onGrid": [
+      {
+        "chunk": [
+          32768,
+          32768
+        ],
+        "onGrid": true
+      },
+      {
+        "chunk": [
+          32769,
+          32768
+        ],
+        "onGrid": false
+      },
+      {
+        "chunk": [
+          -32768,
+          -32768
+        ],
+        "onGrid": true
+      },
+      {
+        "chunk": [
+          -32769,
+          -32768
+        ],
+        "onGrid": false
+      }
+    ],
+    "anchors": [
+      {
+        "id": "edge-east:corner",
+        "ok": true,
+        "space": "outdoors",
+        "at": [
+          12582920,
+          12582920
+        ]
+      },
+      {
+        "id": "edge-east:far-corner",
+        "ok": true,
+        "space": "outdoors",
+        "at": [
+          12583288,
+          12583288
+        ]
+      },
+      {
+        "id": "edge-west:corner",
+        "ok": true,
+        "space": "outdoors",
+        "at": [
+          -12582904,
+          -12582904
+        ]
+      },
+      {
+        "id": "edge-west:far-corner",
+        "ok": true,
+        "space": "outdoors",
+        "at": [
+          -12582536,
+          -12582536
+        ]
+      }
+    ],
+    "resolve": [
+      {
+        "source": "",
+        "kind": "",
+        "area": "edge-east",
+        "tile": [
+          -262144,
+          -262144
+        ],
+        "space": "outdoors",
+        "at": [
+          786432,
+          786432
+        ]
+      },
+      {
+        "source": "",
+        "kind": "",
+        "area": "edge-east",
+        "tile": [
+          -262121,
+          -262121
+        ],
+        "space": "outdoors",
+        "at": [
+          786455,
+          786455
+        ]
+      },
+      {
+        "source": "",
+        "kind": "",
+        "area": "edge-west",
+        "tile": [
+          262144,
+          262144
+        ],
+        "space": "outdoors",
+        "at": [
+          -786432,
+          -786432
+        ]
+      },
+      {
+        "source": "",
+        "kind": "",
+        "area": "edge-west",
+        "tile": [
+          262167,
+          262167
+        ],
+        "space": "outdoors",
+        "at": [
+          -786409,
+          -786409
+        ]
+      },
+      {
+        "source": "",
+        "kind": "",
+        "area": "edge-east",
+        "tile": [
+          1048576,
+          -1048576
+        ],
+        "space": "outdoors",
+        "at": [
+          2097152,
+          0
+        ]
       }
     ]
   }
