@@ -714,6 +714,51 @@ func TestWorldMoveTakesPresenceAlong(t *testing.T) {
 	bob.none()
 }
 
+func TestWorldMoveFromHomeTakesPresenceToArrivalRoom(t *testing.T) {
+	for _, area := range []string{"home:3", "in:home:5", "home:9"} {
+		t.Run(area, func(t *testing.T) {
+			x := newRig(t)
+			x.hero("olive", "Olive", "p1")
+			oc, o := x.ready("olive")
+			x.now.Add(10)
+			x.hero("hal", "Hal", "")
+			x.ready("hal")
+			x.hero("hal", "Hal", "p1")
+			hc, h := x.again("hal")
+			bc, b := x.member("bob", h.WorldID)
+			ts := startPresence(t, x, presenceTestConfig())
+			gate := rules.HomeGate(content.RootArea(area))
+			name := fmt.Sprintf("commons:gate:%d", gate)
+			_, ax, ay, ok := location.Anchor(name)
+			if !ok {
+				_, ax, ay, _ = location.Anchor("commons:arch")
+			}
+			room := outdoorsRoom(rules.Position{X: ax, Y: ay})
+			olive := wsConnect(t, ts, oc, o.Lease)
+			olive.join(room)
+			bob := wsConnect(t, ts, bc, b.Lease)
+			bob.join(area)
+			hal := wsConnect(t, ts, hc, h.Lease)
+			hal.join(area)
+			bob.expect("join")
+			req := moveBody(h, "from-home", o.WorldID, area)
+			doc := h.State
+			doc.Area, doc.Position = area, rules.Position{X: 80, Y: 80}
+			req["progress"] = doc
+			x.worldReq("POST", "/api/world/move", req, hc, 200)
+			if bob.expect("leave").AccountID != x.account("hal") {
+				t.Fatal("old home still has mover")
+			}
+			if r := hal.expect("room"); r.Area != room || len(r.Players) != 1 || r.Players[0].AccountID != x.account("olive") {
+				t.Fatal("destination roster", r.Raw)
+			}
+			if j := olive.expect("join"); j.Area != room || j.Player.AccountID != x.account("hal") {
+				t.Fatal("destination join", j.Raw)
+			}
+		})
+	}
+}
+
 // A thank-you note stays readable after its sender moves on.
 func TestThanksReadableAfterSenderMoves(t *testing.T) {
 	x := newRig(t)

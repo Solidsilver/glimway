@@ -154,6 +154,7 @@ export class FixedChunk implements Buildable {
   /** Build what is left until `deadline` (performance.now(), ms): true once the chunk is whole. */
   build(deadline: number): boolean {
     while (this.todo.length) {
+      if (now() >= deadline) return false
       if (!this.todo[0]!(deadline)) return false
       this.todo.shift()
     }

@@ -140,3 +140,11 @@ test('a save from before the quest tree loads its lantern road, with the opening
   assert.deepEqual(validateSave({ ...base, quest: 'new' }).quests, {});
   assert.deepEqual(validateSave({ ...base, quest: 'clue-found' }).quests, { 'lantern-road': 'clue-found', signpost: 'light-first-lamp' });
 });
+
+
+test('a legacy Commons save moves its pixels onto the grid exactly once', () => {
+  const loaded = validateSave({ ...createNewGame(), area: 'commons', position: { x: 376.5, y: 40.25 } });
+  assert.equal(loaded.area, 'outdoors');
+  assert.deepEqual(loaded.position, { x: 40.5, y: 424.25 });
+  assert.deepEqual(validateSave(loaded), loaded);
+});

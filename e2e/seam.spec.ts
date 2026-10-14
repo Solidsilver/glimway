@@ -167,6 +167,52 @@ test('a reload on either side of the mouth comes back where it was', async ({ pa
   }
 })
 
+test('a slow fixed-chunk read preserves a Commons save beyond the boot wait', async ({ page, context }) => {
+  await connected(page, context);
+  const tile = commonsTile(23, 16);
+  const position = { x: tile.tx * TILE + 8, y: tile.ty * TILE + 8 };
+  await warp(page, 'outdoors', tile.tx, tile.ty);
+  await page.evaluate(() => (window as unknown as { __fsDevSaveSoon: () => void }).__fsDevSaveSoon());
+  await expect.poll(async () => (await serverState(page)).body.state.position).toEqual(position);
+  // Force the next page to fetch the immutable chunks instead of using IndexedDB.
+  await page.evaluate(() => new Promise<void>((resolve, reject) => {
+    const request = indexedDB.open('glimway-chunks');
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      const db = request.result;
+      const tx = db.transaction('chunks', 'readwrite');
+      tx.objectStore('chunks').clear();
+      tx.oncomplete = () => { db.close(); resolve(); };
+      tx.onerror = () => { db.close(); reject(tx.error); };
+    };
+  }));
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  const fixedRoute = /\/api\/wilds\/chunk\/fixed(?::|%3A)/;
+  let requests = 0;
+  await page.route(fixedRoute, async (route) => {
+    // The pre-game read fails; Boot retries and its bounded wait expires.
+    if (++requests <= 6) { await route.abort(); return; }
+    await held;
+    await route.continue();
+  });
+  try {
+    await reenter(page, 'outdoors'); // Boot starts the scene after its four-second wait.
+    expect(await hero(page)).toMatchObject(position);
+    await page.keyboard.down('ArrowDown');
+    await frames(page, 15);
+    await page.keyboard.up('ArrowDown');
+    expect(await hero(page)).toMatchObject(position);
+    expect((await serverState(page)).body.state.position).toEqual(position);
+  } finally {
+    release();
+    await page.keyboard.up('ArrowDown');
+  }
+  await waitForWilds(page);
+  expect(await hero(page)).toMatchObject(position);
+  await page.unroute(fixedRoute);
+});
+
 test('the Yard’s door and a home gate bring you back out onto their anchors', async ({ page, context }) => {
   await connected(page, context)
   // Out of the Yard: its doorstep (anchor commons:yard-door, Commons tile 53,18).
@@ -213,4 +259,15 @@ test('at zero HP the mouth holds: the Commons is home ground, the Tangle is not'
   const h = await hero(page)
   expect(h.y).toBeGreaterThanOrEqual(MOUTH_Y)
   expect(h.y).toBeLessThan(MOUTH_Y + 2 * TILE)
+  // A shove already integrated by Arcade must be stopped before postUpdate
+  // writes it to the sprite; checking a later frame would miss the bypass.
+  const shoved = await page.evaluate(() => (window as unknown as { __fsDevShove: (dx: number, dy: number) => Promise<Hero> }).__fsDevShove(4, -64))
+  expect(shoved.y).toBeGreaterThanOrEqual(MOUTH_Y)
+  expect(shoved.x).toBeCloseTo(h.x + 4)
+  // A scene rebuild must forget the previous scene's safe spot. A legacy
+  // zero-HP arrival in the Tangle can still walk home from where it arrived.
+  await warp(page, 'outdoors', GATE_IN.tx, GATE_IN.ty)
+  await parkCreatures(page)
+  await frames(page, 3)
+  expect(await hero(page)).toMatchObject({ x: GATE_IN.tx * TILE + 8, y: GATE_IN.ty * TILE + 8 })
 })

@@ -61,13 +61,13 @@ Phaser.BlendModes = { ADD: 1 };
 
 const { FixedChunk } = await import('../src/game/wilds/fixed-chunk.ts');
 const { footprint, forgetFixed, fixedSolidAt, fixedGroundAt, fixedStand, anchorTile, commonsLane, chunkOfTile, objectOut } = await import('../src/game/wilds/fixed.ts');
-const { outdoorStandAt, outdoorSolidAt, gridBounds } = await import('../src/game/wilds/wilds-world.ts');
-const { onWindow, gridDistance } = await import('../src/game/wilds/window.ts');
+const { outdoorStandAt, outdoorSolidAt, gridBounds, waitingFixedAt } = await import('../src/game/wilds/wilds-world.ts');
+const { WildsWindow, onWindow, gridDistance } = await import('../src/game/wilds/window.ts');
 const { BuildQueue } = await import('../src/game/wilds/window-chunk.ts');
 const { TileArt } = await import('../src/game/area/tile-art.ts');
 const { refreshLanternVisuals } = await import('../src/game/area/lanterns.ts');
 const { HomesteadArt } = await import('../src/game/entities/homestead-art.ts');
-const { chunkCacheKey } = await import('../src/game/wilds/chunks.ts');
+const { chunkCacheKey, forgetChunks } = await import('../src/game/wilds/chunks.ts');
 const { fixedEpoch } = await import('../src/lib/api/chunks.ts');
 const { at, onGrid } = await import('../src/lib/location.ts');
 const { bus, EV } = await import('../src/game/events.ts');
@@ -223,6 +223,18 @@ test('a chunk dropped before it was built never builds, and still leaves nothing
   assert.deepEqual(snapshot(r), before);
 });
 
+test('a fixed chunk defers all drawing when its build deadline has passed', () => {
+  const r = rig();
+  const c = new FixedChunk(r.deps as never, r.fp, 0, 1);
+  const before = snapshot(r);
+  assert.equal(c.build(-1), false);
+  assert.deepEqual(snapshot(r), before, 'no scenery, signs or fixtures built after the deadline');
+  r.builds.finish(c);
+  assert.equal(c.whole, true);
+  assert.ok(snapshot(r).objects > before.objects);
+  c.destroy();
+});
+
 test('one owner per object: each is served in, and drawn by, the chunk holding its tile', () => {
   const fp = footprint('commons') ?? serveFixtureCommons();
   const seen = new Set<string>();
@@ -271,7 +283,10 @@ test('fixed ground answers the open map’s lookups; a pocket stands at the near
   forgetFixed();
   assert.equal(fixedSolidAt(2, 26), true, 'solid while the chunks aren’t here');
   assert.equal(fixedStand(2, 26), null);
+  assert.equal(waitingFixedAt(40, 700), true);
+  assert.deepEqual(outdoorStandAt(40, 700), { x: 40, y: 700 }, 'a slow read preserves the saved position');
   const fp = serveFixtureCommons();
+  assert.equal(waitingFixedAt(40, 700), false);
   const arch = anchorTile('commons:arch');
   assert.deepEqual(arch, { tx: 2, ty: 26 });
   assert.equal(fixedSolidAt(arch.tx, arch.ty), false);
@@ -327,4 +342,27 @@ test('fixed chunks are cached per layout revision under their pseudo-epoch', () 
   assert.equal(fixedEpoch(COMMONS_PLACE.layout, COMMONS_PLACE.revision), 'fixed:commons@2');
   assert.match(chunkCacheKey(fixedEpoch('commons', 2), 0, 1), /:fixed:commons@2:0:1$/);
   assert.notEqual(chunkCacheKey(fixedEpoch('commons', 2), 0, 1), chunkCacheKey(fixedEpoch('commons', 3), 0, 1));
+});
+
+test('failed fixed reads wait before retrying instead of fetching every frame', async () => {
+  forgetFixed();
+  forgetChunks();
+  let calls = 0;
+  const window = new WildsWindow({
+    scene: { events: { once() {} } },
+    session: { link: { api: { operations: { chunk: async () => { calls++; throw new Error('offline'); } } } } },
+  } as never);
+  const flushed = () => new Promise<void>((resolve) => setImmediate(resolve));
+  window['load']('0,1');
+  await flushed();
+  assert.equal(calls, 6, 'one shared footprint fetch');
+  for (let frame = 0; frame < 60; frame++) window['load']('0,1');
+  await flushed();
+  assert.equal(calls, 6, 'failed reads are paced');
+  window['retryAt'].set('0,1', 0);
+  window['load']('0,1');
+  await flushed();
+  assert.equal(calls, 12, 'retry after the backoff');
+  window['destroy']();
+  serveFixtureCommons();
 });

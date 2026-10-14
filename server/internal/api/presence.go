@@ -464,13 +464,15 @@ func (a *Server) ClosePresence() {
 // moveWorld: the old room sees the player leave; they rejoin their area's
 // room in the new world. If that room is full they get an empty roster (so
 // the old world's players clear) and wait for their next join.
-func (h *presenceHub) moveWorld(p *presencePeer, world string) {
+func (h *presenceHub) moveWorld(p *presencePeer, world, area string) {
+	p.cancelJoin()
 	if p.area != "" {
 		h.broadcast(p, &contract.PresenceLeave{AccountId: p.identity.ID})
 	}
 	h.leaveFights(p, true)
 	h.unindex(p)
 	p.identity.World = world
+	p.area = area
 	h.admit(p)
 	p.pos = nil
 	if p.area == "" {

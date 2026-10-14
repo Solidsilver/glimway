@@ -57,6 +57,8 @@ export interface FsHooks {
   __fsGroundAt: (tx: number, ty: number) => number | null
   /** Walk through waypoints (world px) as if steered; whether a walk is still going. */
   __fsDevWalk: (path: { x: number; y: number }[]) => void
+  /** Displace the physics body during its next step, returning the feet after postUpdate. */
+  __fsDevShove: (dx: number, dy: number) => Promise<{ x: number; y: number }>
   __fsDevWalking: () => boolean
   /** The waypoints a dev walk has still to reach, the next first (null: not walking). */
   __fsDevWalkLeft: () => { x: number; y: number }[] | null

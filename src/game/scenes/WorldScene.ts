@@ -61,11 +61,12 @@ import { prepareHomeLand } from '../homeland'
 import { commonsLane } from '../wilds/fixed'
 import { isSafeArea } from '../../lib/habitica/sync'
 import { fingerInBracken } from '../../lib/quests'
-import { OUTDOORS_AREA, isWildsArea } from '../wilds/coords'
+import { OUTDOORS_AREA, isWildsArea, chunkOfPixel, chunkKey } from '../wilds/coords'
 import { resolve } from '../../lib/location'
 import { holdOnSafe, stopAtEdge } from '../safe-barrier'
 import { prepareWilds } from '../wilds/store'
 import { WildsWindow } from '../wilds/window'
+import { waitingFixedAt } from '../wilds/wilds-world'
 import { WildsPaths } from '../wilds/paths'
 import { WildsMarks } from '../wilds/marks'
 import { watchRumour } from '../rumour-watch'
@@ -238,6 +239,7 @@ export class WorldScene extends Phaser.Scene {
     this.driftSaid = false
     this.occluders = []
     this.cinematic = false
+    this.safeSpot = null
     this.captureReleased = false
     this.reducedMotion = prefersReducedMotion()
     this.fx = new Effects(this, this.reducedMotion)
@@ -278,6 +280,7 @@ export class WorldScene extends Phaser.Scene {
       },
       this.pendingEntry
     )
+    this.waitingFixed = !!open && waitingFixedAt(this.hero.sprite.x, this.hero.sprite.y)
     if (this.pendingFacing) this.hero.facing.set(this.pendingFacing.x, this.pendingFacing.y)
     // The save names where the hero really stands from the first frame: a
     // saved spot that's blocked (a fresh game's default, a tile built over)
@@ -686,7 +689,7 @@ export class WorldScene extends Phaser.Scene {
       playHold({
         ui: uiBlocked(),
         transitioning: this.transitioning,
-        cinematic: this.cinematic,
+        cinematic: this.cinematic || this.waitingFixed,
         persisting: this.session.persistenceInFlight,
         placing: !!this.homesteads?.placing
       }),
@@ -732,6 +735,16 @@ export class WorldScene extends Phaser.Scene {
     // The shared world goes on under a menu: the open map's window, the camps'
     // rooms and claims, the Turning, and every server enemy (shared-fights.md 1.8).
     this.window?.update(dt)
+    const atChunk = chunkOfPixel(this.hero.sprite.x, this.hero.sprite.y)
+    if (this.waitingFixed && this.window?.fixedKeys().includes(chunkKey(atChunk.cx, atChunk.cy))) {
+      const at = this.world.open?.standAt(this.hero.sprite.x, this.hero.sprite.y)
+      if (at) {
+        ;(this.hero.sprite.body as Phaser.Physics.Arcade.Body).reset(at.x, at.y)
+        this.notePosition()
+        this.session.saveSoon()
+      }
+      this.waitingFixed = false
+    }
     this.wilds?.update()
     this.turning.update(dt)
     this.enemies.observe(dt)
@@ -800,6 +813,7 @@ export class WorldScene extends Phaser.Scene {
 
   /** Where the hero last stood on safe ground while too hurt to fight (the zero-HP barrier's). */
   private safeSpot: { x: number; y: number } | null = null
+  private waitingFixed = false
 
   /**
    * The zero-HP barrier (../safe-barrier.ts): too hurt to fight, a hero on
@@ -816,16 +830,21 @@ export class WorldScene extends Phaser.Scene {
     const area = this.world.areaId
     const safe = (x: number, y: number) => safeArea(area, x, y)
     const body = h.body as Phaser.Physics.Arcade.Body
-    if (safe(h.x, h.y)) {
-      this.safeSpot = { x: h.x, y: h.y }
+    if (safe(h.x, h.y)) this.safeSpot = { x: h.x, y: h.y }
+    // Arcade has already stepped the body, but postUpdate has not copied
+    // its displacement to the sprite yet. Catch a shove in this frame,
+    // before the unsafe step is ever displayed or saved.
+    const next = { x: h.x + body.position.x - body.prevFrame.x, y: h.y + body.position.y - body.prevFrame.y }
+    if (safe(next.x, next.y)) {
+      this.safeSpot = next
       // The next step (a frame and a half ahead, for a slow frame) stops at the edge.
-      const v = stopAtEdge(safe, { x: h.x, y: h.y }, body.velocity, Math.max(dt, 1 / 30) * 1.5)
+      const v = stopAtEdge(safe, next, body.velocity, Math.max(dt, 1 / 30) * 1.5)
       body.setVelocity(v.x, v.y)
       return
     }
     const was = this.safeSpot
     if (!was) return
-    const at = holdOnSafe(safe, was, { x: h.x, y: h.y })
+    const at = holdOnSafe(safe, was, next)
     // A reset, so the step already taken isn't written to the sprite again after this update.
     body.reset(at.x, at.y)
     this.safeSpot = at
@@ -901,12 +920,12 @@ export class WorldScene extends Phaser.Scene {
 
   /** World input is live only while the hero actually has control. */
   private worldLive(): boolean {
-    return !uiBlocked() && !this.transitioning && !this.cinematic && !this.session.persistenceInFlight &&
+    return !uiBlocked() && !this.transitioning && !this.cinematic && !this.waitingFixed && !this.session.persistenceInFlight &&
       !this.homesteads?.placing && performance.now() >= uiState.blockedUntil
   }
 
   private handleAction(): void {
-    if (uiBlocked() || this.cinematic || this.transitioning || this.homesteads?.placing || performance.now() < uiState.blockedUntil) return
+    if (uiBlocked() || this.cinematic || this.waitingFixed || this.transitioning || this.homesteads?.placing || performance.now() < uiState.blockedUntil) return
     // Whatever the prompt is on (free activities stay available at zero HP).
     if (this.interactables.activate()) return
     if (this.session.zeroHpLocked) return // too injured to fight; no auto revival

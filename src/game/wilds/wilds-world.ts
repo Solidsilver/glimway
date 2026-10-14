@@ -14,7 +14,7 @@ import { groundAt, solidAt } from './ground-view.ts'
 import { wildsFrontier } from './store.ts'
 import { loadWilds } from '../../lib/wilds/data.ts'
 import { PLACES, fixedChunks } from '../../lib/places.ts'
-import { anchorTile, fixedGroundAt, fixedNpcs, fixedPlaceOf, fixedSolidAt, fixedStand } from './fixed.ts'
+import { anchorTile, fixedGroundAt, fixedNpcs, fixedPlaceOf, fixedSolidAt, fixedStand, footprintAt } from './fixed.ts'
 import { nearestOpen } from './window-plan.ts'
 
 /** How far past the frontier the camera may look (the drift and its glimpse), in px. */
@@ -54,6 +54,13 @@ export function gridBounds(): { x: number; y: number; w: number; h: number } {
 
 const onFixed = (tx: number, ty: number) => fixedPlaceOf(Math.floor(tx / CHUNK_TILES), Math.floor(ty / CHUNK_TILES)) !== null
 
+/** Fixed ground not delivered yet: keep the arrival and hold play until its chunk attaches. */
+export function waitingFixedAt(x: number, y: number): boolean {
+  const cx = Math.floor(x / (CHUNK_TILES * TILE))
+  const cy = Math.floor(y / (CHUNK_TILES * TILE))
+  return !!fixedPlaceOf(cx, cy) && !footprintAt(cx, cy)
+}
+
 /** The ground at a world tile: a fixed footprint's, else the generated land's (null where nothing is known). */
 export function outdoorGroundAt(tx: number, ty: number): number | null {
   return onFixed(tx, ty) ? fixedGroundAt(tx, ty) : groundAt(tx, ty)
@@ -74,6 +81,9 @@ export function outdoorStandAt(x: number, y: number): { x: number; y: number } |
   const tx = Math.floor(x / TILE)
   const ty = Math.floor(y / TILE)
   if (onFixed(tx, ty)) {
+    // Boot's bounded wait can expire before the chunks arrive. Missing
+    // ground is not evidence that the saved spot is blocked.
+    if (waitingFixedAt(x, y)) return { x, y }
     const t = fixedStand(tx, ty)
     if (!t) return null
     return t.tx === tx && t.ty === ty ? { x, y } : { x: t.tx * TILE + TILE / 2, y: t.ty * TILE + TILE / 2 }

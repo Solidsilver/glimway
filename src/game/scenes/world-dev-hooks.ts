@@ -55,6 +55,15 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
       blocked: { up: b.blocked.up, down: b.blocked.down, left: b.blocked.left, right: b.blocked.right }
     }
   })
+  on('__fsDevShove', (dx, dy) => new Promise((resolve) => {
+    s.physics.world.once('worldstep', () => {
+      const sprite = s['hero'].sprite
+      const body = sprite.body as Phaser.Physics.Arcade.Body
+      body.position.x += dx
+      body.position.y += dy
+      s.events.once('postupdate', () => resolve({ x: sprite.x, y: sprite.y }))
+    })
+  }))
   on('__fsEnemies', () =>
     s['enemies'].enemies.map((e) => {
       const b = e.sprite.body as Phaser.Physics.Arcade.Body

@@ -10,6 +10,7 @@ import (
 	profiles "glimway/server/internal/profile"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
+	"glimway/server/internal/wilds"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"slices"
@@ -109,6 +110,18 @@ func (a *Server) checkPresence(parent context.Context, p *presencePeer) {
 	h.mu.Unlock()
 	ctx, cancel := context.WithTimeout(parent, millis(int(h.config.GetWriteTimeoutMs())))
 	code, reason, world, magic, err := a.revalidatePresence(ctx, p, known)
+	area := ""
+	if err == nil && world != "" {
+		// A relocation can also change spaces (home -> Commons). Read the
+		// committed destination outside the hub lock, under the same check.
+		var x, y float64
+		err = a.Store.DB.QueryRowContext(ctx, `SELECT pp.area,pp.x,pp.y FROM player_place pp JOIN players p ON p.account_id=pp.account_id WHERE p.account_id=? AND p.world_id=?`, p.identity.ID, world).Scan(&area, &x, &y)
+		if err == nil && area == outdoorsArea {
+			tx, ty := wilds.TileOfPixel(x, y)
+			cx, cy := wilds.ChunkOf(tx, ty)
+			area = fmt.Sprintf("outdoors:%d:%d", cx, cy)
+		}
+	}
 	cancel()
 	h.mu.Lock()
 	defer func() { h.mu.Unlock(); a.syncFightPresence(p) }()
@@ -136,8 +149,8 @@ func (a *Server) checkPresence(parent context.Context, p *presencePeer) {
 		return
 	}
 	p.identity.Magic = magic
-	if world != "" && world != p.identity.World {
-		h.moveWorld(p, world)
+	if err == nil && world != "" && world != p.identity.World {
+		h.moveWorld(p, world, area)
 	}
 }
 

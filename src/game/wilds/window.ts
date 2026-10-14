@@ -251,7 +251,12 @@ export class WildsWindow {
   private load(key: string): void {
     const { cx, cy } = parseChunkKey(key)
     if (fixedPlaceOf(cx, cy)) {
-      if (!footprintAt(cx, cy)) void prepareFixed(this.deps.session)
+      if (footprintAt(cx, cy) || this.loading.has(key) || Date.now() < (this.retryAt.get(key) ?? 0)) return
+      this.loading.add(key)
+      void Promise.resolve(prepareFixed(this.deps.session)).finally(() => {
+        if (!footprintAt(cx, cy)) this.retryAt.set(key, Date.now() + 5000)
+        this.loading.delete(key)
+      })
       return
     }
     if (chunkTerrain(cx, cy) || this.loading.has(key) || Date.now() < (this.retryAt.get(key) ?? 0)) return
