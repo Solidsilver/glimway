@@ -370,7 +370,8 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
       left: gathering.leftView(),
       last: gathering.lastOutcome(),
       lights,
-      hint: gathering.hinted()
+      hint: gathering.hinted(),
+      hintSettled: gathering.hintSettled()
     }
   })
   // Playtests of fishing (crafts.md 5): the line, the landed fish, the bands read.

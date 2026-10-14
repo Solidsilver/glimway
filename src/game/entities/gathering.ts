@@ -355,6 +355,11 @@ export class Gathering {
     return this.ghostFor && this.ghost?.visible ? { tx: this.ghostFor.tx, ty: this.ghostFor.ty } : null
   }
 
+  /** The stationary hint has had its chance to appear (playtests). */
+  hintSettled(): boolean {
+    return this.still >= 0.8
+  }
+
   /** The nearest piece in reach that the held item can't work. */
   private wrongToolSpot(hero: { x: number; y: number }): GatherSpot | null {
     const kind = heldNow().kind

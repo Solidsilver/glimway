@@ -429,6 +429,12 @@ async function standAt(p: Page, at: { tx: number; ty: number }): Promise<void> {
   }, { timeout: 20_000 }).toBe(true)
 }
 
+/** Let the lazy tool hint settle too: a new hint image is legitimate, not a chunk leak. */
+async function standForChurn(p: Page, at: { tx: number; ty: number }): Promise<void> {
+  await standAt(p, at)
+  await waitGame(p, () => p.evaluate(() => (window as unknown as { __fsGather: () => { hintSettled: boolean } }).__fsGather().hintSettled), v => v, { seconds: 5, message: 'the stationary gathering hint has settled' })
+}
+
 test('chunks walked in and out leave nothing behind: the tweens, the collision bodies and what is drawn come back to the same', async ({ page }) => {
   test.setTimeout(150_000)
   await freshPlayer(page)
@@ -441,15 +447,15 @@ test('chunks walked in and out leave nothing behind: the tweens, the collision b
   await standAt(page, (await openNear(page, 12, -12 - 2 * S))!)
   const b = (await openNear(page, 12, -12 - 3 * S))!
   expect(a && b, 'open ground at both spots').toBeTruthy()
-  await standAt(page, b)
-  await standAt(page, a)
+  await standForChurn(page, b)
+  await standForChurn(page, a)
   await campSpritesReady(page)
   const before = await steady(page, () => sceneResources(page), { frames: 5, seconds: 20, message: 'open-map scene counts before churn', ready: z => z.transientTweens === 0 })
   expect(before.tweens, 'something glints here (the test needs tweens to watch)').toBeGreaterThan(0)
   expect(Object.keys(before.drawn).some((k) => k.startsWith('Blitter:')), 'flat decals are drawn by a blitter a chunk').toBe(true)
   for (let i = 0; i < 4; i++) {
-    await standAt(page, b)
-    await standAt(page, a)
+    await standForChurn(page, b)
+    await standForChurn(page, a)
   }
   await campSpritesReady(page)
   const after = await steady(page, () => sceneResources(page), { frames: 5, seconds: 20, message: 'open-map scene counts after churn', ready: z => z.transientTweens === 0 })
@@ -463,21 +469,22 @@ test('the Commons’ fixed chunks walked in and out leave nothing behind either'
   // standing at one then the other swaps the whole 3×3 (fixed and generated chunks both).
   await warp(page, 'outdoors', 2, 44)
   await waitForWilds(page)
+  await windowWhole(page)
   await page.evaluate(() => (window as unknown as { __fsDevParkCreatures: () => void }).__fsDevParkCreatures())
   const a = (await openNear(page, 2, 44))!
   await standAt(page, (await openNear(page, 2, 44 - 2 * S))!)
   const b = (await openNear(page, 2, 44 - 3 * S))!
   expect(a && b, 'open ground at both spots').toBeTruthy()
-  await standAt(page, b)
-  await standAt(page, a)
+  await standForChurn(page, b)
+  await standForChurn(page, a)
   expect((await wildsWindow(page))!.fixed.length, 'the Commons attached').toBe(6)
   await campSpritesReady(page)
   const before = await steady(page, () => sceneResources(page), { frames: 5, seconds: 20, message: 'Commons scene counts before churn', ready: z => z.transientTweens === 0 })
   expect(before.drawn['Image:fingersnap-foreground'] ?? 0, 'the Commons’ canopies are drawn').toBeGreaterThan(500)
   for (let i = 0; i < 4; i++) {
-    await standAt(page, b)
+    await standForChurn(page, b)
     expect((await wildsWindow(page))!.fixed, 'the Commons detached').toEqual([])
-    await standAt(page, a)
+    await standForChurn(page, a)
   }
   await campSpritesReady(page)
   const after = await steady(page, () => sceneResources(page), { frames: 5, seconds: 20, message: 'Commons scene counts after churn', ready: z => z.transientTweens === 0 })

@@ -42,6 +42,12 @@ const tileAt = (page: Page, tx: number, ty: number) => page.evaluate(([x, y]) =>
 /** The exact tile and its context action must be stable before a single keyboard press. */
 async function pathKeyReady(page: Page, at: { tx: number; ty: number }, action: 'lay' | 'lift'): Promise<void> {
   await page.bringToFront()
+  await windowWhole(page)
+  await parkCreatures(page)
+  // A warp restarts the scene: a camp can hit and shove the hero before
+  // the post-arrival park. Put the fixture back on its exact joining tile
+  // once the window is built and creatures (including late arrivals) are parked.
+  await page.evaluate(([x, y]) => (window as unknown as { __fsDevPlace: (x: number, y: number) => void }).__fsDevPlace(x, y), [at.tx * 16 + 8, at.ty * 16 + 8] as const)
   const label = action === 'lay' ? 'Lay stone' : 'Lift the stone'
   const button = action === 'lay' ? 'path-lay-stone:' : 'path-lift:'
   await expect(page.getByTestId('context-buttons').getByRole('button', { name: label, exact: true })).toBeVisible()
@@ -50,7 +56,7 @@ async function pathKeyReady(page: Page, at: { tx: number; ty: number }, action: 
     const hero = w.__fsPlayer()
     return { live: w.__fsFrame().live, tx: Math.floor(hero.x / 16), ty: Math.floor(hero.y / 16), buttons: w.__fsPaths()?.buttons ?? '' }
   }), {
-    frames: 3, seconds: 10, message: `the joining stone is ready for the ${action} key`,
+    frames: 3, seconds: 10, message: `the joining stone at ${at.tx},${at.ty} is ready for the ${action} key`,
     ready: s => s.live && s.tx === at.tx && s.ty === at.ty && s.buttons.includes(button)
   })
 }
