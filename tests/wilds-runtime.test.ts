@@ -14,7 +14,7 @@ import { chunkAt, fixtureTerrain } from './wilds-fixture.ts';
 import { terrainOf } from '../src/game/wilds/terrain.ts';
 import { decodeChunk } from '../src/lib/api/chunks.ts';
 import { toBinary } from '@bufbuild/protobuf';
-import { WildsChunkSchema } from '../src/lib/gen/glimway/v1/wilds_pb.js';
+import { WorldChunkSchema } from '../src/lib/gen/glimway/v1/wilds_pb.js';
 
 // ---------------------------------------------------------------- coordinates
 
@@ -177,7 +177,7 @@ test('a chunk’s scenery and pieces stand at world tiles; landmarks are drawn f
   m.decor!.variant.push(0);
   if (m.decor!.flags.length < Math.ceil(m.decor!.kind.length / 4)) m.decor!.flags = Uint8Array.from([...m.decor!.flags, 0]);
   m.places = [{ $typeName: 'glimway.v1.WildsPlaceMark', id: 'place:-1:-1', kind: 'camp-glade', tx: 10, ty: 11 }];
-  const t = terrainOf(decodeChunk(toBinary(WildsChunkSchema, m)));
+  const t = terrainOf(decodeChunk(toBinary(WorldChunkSchema, m)));
   const scenery = chunkScenery(t, () => true);
   assert.equal(scenery.length, t.decor.length);
   for (const s of scenery) assert.ok(s.tx! >= -48 && s.tx! < -24 && s.ty! >= -120 && s.ty! < -96, `${s.tx},${s.ty} in chunk (-2,-5)`);
@@ -187,7 +187,7 @@ test('a chunk’s scenery and pieces stand at world tiles; landmarks are drawn f
   assert.deepEqual(chunkLandmarks(t, () => true).map((l) => l.place), ['place:-1:-1']);
   // A dark lamp stone by the road is a landmark too.
   m.sites.push({ $typeName: 'glimway.v1.StorySite', id: 'lamp-stone:-2:-5', kind: 7, tx: 3, ty: 4 });
-  const road = terrainOf(decodeChunk(toBinary(WildsChunkSchema, m)));
+  const road = terrainOf(decodeChunk(toBinary(WorldChunkSchema, m)));
   assert.ok(chunkLandmarks(road, () => true).some((l) => l.key === 'om-art:lamp-stone-dark' && l.tx === -48 + 3));
   for (const g of chunkGather(t)) assert.ok(g.tx >= -48 && g.tx < -24);
 });

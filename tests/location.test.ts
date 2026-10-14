@@ -7,7 +7,8 @@ import placesRaw from '../content/places.json' with { type: 'json' };
 import { anchor, at, onGrid, resolve, sourceOf, OUTDOORS } from '../src/lib/location.ts';
 import { PLACES, gateCapacity, validatePlaces, type Places } from '../src/lib/places.ts';
 import { chunkOf } from '../src/lib/wilds/coords.ts';
-import { buildCommons, gateSlot, type CommonsWorld } from '../src/game/commons.ts';
+import type { CommonsWorld } from '../src/game/commons-served.ts';
+import { servedCommonsFixture } from './commons-fixture.ts';
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts';
 import { refusalMatchesRule } from './helpers/vector-rule.ts';
 
@@ -99,10 +100,12 @@ test('every content position in Commons tiles has a resolve vector', () => {
   assert.deepEqual(commonsPositions(), sources);
 });
 
-// Today's Commons at the frozen capacity (eight gates, one per gate anchor): what
-// blocks a walker, and what a walker reaches from the village path.
+// The Commons as served (its fixed chunks at the frozen capacity, eight gates,
+// one per gate anchor): what blocks a walker, and what a walker reaches from
+// the village path. server/internal/chunks TestServedCommonsStandsAndTargets
+// is the same check in Go.
 const gates = gateCapacity(PLACES.fixed.find((f) => f.id === 'commons')!);
-const commons = buildCommons(8);
+const commons = servedCommonsFixture();
 type Tile = { tx: number; ty: number };
 const key = (t: Tile) => `${t.tx},${t.ty}`;
 function blocked(w: CommonsWorld): Set<string> {
@@ -137,9 +140,12 @@ test('the frozen Commons fits its footprint, and its gate anchors are the lane t
   const [x0, y0] = [f.cx * S - f.origin.tx, f.cy * S - f.origin.ty];
   const [x1, y1] = [x0 + f.width * S - 1, y0 + f.height * S - 1];
   assert.ok(x0 <= 0 && y0 <= 0 && commons.width - 1 <= x1 && commons.height - 1 <= y1, `Commons ${commons.width}x${commons.height} in layout tiles ${x0},${y0}..${x1},${y1}`);
+  assert.equal(commons.gates.length, gates);
   for (let g = 0; g < gates; g++) {
     const a = f.anchors.find((a) => a.id === `gate:${g}`);
-    assert.deepEqual(a && { tx: a.tx, ty: a.ty }, gateSlot(g).entry, `gate:${g}`);
+    const slot = commons.gates[g]!;
+    // The lane tile beside the gate's gap.
+    assert.deepEqual(a && { tx: a.tx, ty: a.ty }, { tx: slot.tx + (slot.side === 'west' ? 1 : -1), ty: slot.ty }, `gate:${g}`);
   }
 });
 

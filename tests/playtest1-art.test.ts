@@ -7,6 +7,10 @@ import { tileFeet } from '../src/lib/tile.ts'
 import { facingOf } from '../src/game/people.ts'
 import { buildArea } from '../src/game/worlds.ts'
 import { TERRAIN } from '../src/lib/tile.ts'
+import { serveFixtureCommons } from './commons-fixture.ts'
+
+// The Commons is the server's: these tests stand on its served chunks.
+serveFixtureCommons()
 
 /** A noisy 64-texel tile: stripes and speckle, different per seed, never seamless. */
 function noiseTile(seed: number, n = 64): Rgba {

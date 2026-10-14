@@ -19,7 +19,7 @@ const (
 // edge tiles facing the new chunk are read.
 type Kept struct {
 	CX, CY int
-	Chunk  *contract.WildsChunk
+	Chunk  *contract.WorldChunk
 }
 
 // GenerateV3 makes one chunk of the open map: a pure function of (e, cx,
@@ -43,7 +43,7 @@ func (w *world) chunk(cx, cy int, kept []Kept) (Chunk, error) {
 	if err != nil {
 		return Chunk{}, err
 	}
-	kr := &keptReader{w: w.still(), stored: map[[2]int]*contract.WildsChunk{}, made: map[[2]int][]baseTile{}}
+	kr := &keptReader{w: w.still(), stored: map[[2]int]*contract.WorldChunk{}, made: map[[2]int][]baseTile{}}
 	for _, k := range kept {
 		kr.stored[[2]int{k.CX, k.CY}] = k.Chunk
 	}

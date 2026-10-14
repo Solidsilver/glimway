@@ -331,6 +331,10 @@ func run(args []string) error {
 			return fmt.Errorf("unknown command")
 		}
 	}
+	// A home past the Commons' gates would have no gate on the lane: refuse to serve rather than lose it.
+	if err = api.CheckHomesteadGates(ctx, s.DB); err != nil {
+		return err
+	}
 	logger := log.New(os.Stdout, "glimway ", log.LstdFlags|log.LUTC)
 	handler := api.New(s, habitica.New(*base, *tag), api.Config{Now: clock.now, SecureCookie: *secure, Logger: logger, TrustedProxies: proxies, LoginConcurrency: *concurrency, LoginRate: *rate, LoginGlobalRate: *globalRate, SpriteCacheDir: *spriteDir, SpriteBaseURL: *spriteBase, PartyAdmissionOff: !*partyAdmission, PresenceFlushMs: *presenceFlush, Version: version, Build: build})
 	defer handler.ClosePresence()

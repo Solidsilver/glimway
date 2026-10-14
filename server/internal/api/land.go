@@ -22,11 +22,7 @@ const LandGeneratorVersion = 2
 // Land is a gate's land in the caller's world (ports.HomeLandSource). Gates
 // past the world's gate count are sql.ErrNoRows.
 func (w wildsService) Land(ctx context.Context, tx *sql.Tx, world string, gate int32) (*contract.HomesteadLand, error) {
-	n, err := gateCount(ctx, tx, world)
-	if err != nil {
-		return nil, err
-	}
-	if gate < 0 || int(gate) >= n {
+	if gate < 0 || int(gate) >= gateCount() {
 		return nil, sql.ErrNoRows
 	}
 	cfg := content.HomeRules.GetLand()

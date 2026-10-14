@@ -22,7 +22,7 @@ func Epoch(e *contract.WildsEpoch) wilds.Epoch {
 
 func (V3) Version() int { return wilds.GeneratorV3 }
 
-func (V3) Chunk(e *contract.WildsEpoch, cx, cy int32, kept []chunks.Kept) (*contract.WildsChunk, error) {
+func (V3) Chunk(e *contract.WildsEpoch, cx, cy int32, kept []chunks.Kept) (*contract.WorldChunk, error) {
 	k := make([]wilds.Kept, len(kept))
 	for i, n := range kept {
 		k[i] = wilds.Kept{CX: n.CX, CY: n.CY, Chunk: n.Chunk}

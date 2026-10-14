@@ -2,6 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildArea, type ExitDef, type WorldData } from '../src/game/worlds.ts';
 import { AREAS, type AreaId } from '../src/lib/state.ts';
+import { serveFixtureCommons } from './commons-fixture.ts';
+
+// The Commons is the server's: these tests stand on its served chunks.
+serveFixtureCommons();
 
 /**
  * Map-layout rules the runtime relies on. These catch the class of bug where
@@ -13,8 +17,8 @@ import { AREAS, type AreaId } from '../src/lib/state.ts';
 type Tile = { tx: number; ty: number };
 type Edge = 'west' | 'east' | 'north' | 'south';
 
-/** Every area this build draws: the quest areas, the Commons, and the lands behind its first gates. */
-const BUILT: AreaId[] = [...AREAS, 'commons', 'home:0', 'home:1'];
+/** Every area this build draws: the quest areas, the Commons, and the lands behind its eight gates. */
+const BUILT: AreaId[] = [...AREAS, 'commons', ...Array.from({ length: 8 }, (_, g) => `home:${g}` as AreaId)];
 
 /** A homestead gate in a Commons fence is a door in the map, not an edge (and so is its way back). */
 const isGateDoor = (from: string, e: ExitDef) => /^home:/.test(e.to) || /^home:/.test(from);

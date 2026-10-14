@@ -19,6 +19,7 @@ import (
 	"glimway/server/internal/chunks"
 	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v1"
+	"glimway/server/internal/location"
 	"glimway/server/internal/wilds"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -52,7 +53,7 @@ type chunkKey struct {
 
 type cached struct {
 	key   chunkKey
-	chunk *contract.WildsChunk
+	chunk *contract.WorldChunk
 }
 
 func NewChunks(now func() time.Time, g chunks.Generator) *Chunks {
@@ -199,7 +200,27 @@ func deleteStaleEpochs(ctx context.Context, tx *sql.Tx, world, kind, season stri
 // may be rolled back with it (a refused operation, a savepoint). So a cache
 // hit counts only when the chunk's row exists in the caller's transaction,
 // read in the same query as the epoch.
-func (c *Chunks) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, layer, cx, cy int32) (*contract.WildsChunk, error) {
+//
+// A chunk of a fixed footprint (location.SourceOf) is the fixed source's,
+// in every world, before any epoch is read: only under its layout's
+// current pseudo-epoch ("fixed:<layout>@<revision>"), never stored, kept in
+// the LRU under that pseudo-epoch (a new revision is a new key). Any other
+// epoch there, or a fixed pseudo-epoch anywhere else, is sql.ErrNoRows.
+func (c *Chunks) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, layer, cx, cy int32) (*contract.WorldChunk, error) {
+	if src := location.SourceOf(int(cx), int(cy)); src.Kind == location.SourceFixed || chunks.IsFixedEpoch(epoch) {
+		if src.Kind != location.SourceFixed || layer != 0 || epoch != chunks.FixedEpoch(src.Layout, src.Revision) {
+			return nil, sql.ErrNoRows
+		}
+		key := chunkKey{epoch, layer, cx, cy}
+		m := c.get(key)
+		if m == nil {
+			if m = chunks.Fixed(epoch, cx, cy); m == nil {
+				return nil, sql.ErrNoRows
+			}
+			c.put(key, m)
+		}
+		return proto.Clone(m).(*contract.WorldChunk), nil
+	}
 	var e contract.WildsEpoch
 	var starts int64
 	var ends sql.NullInt64
@@ -228,25 +249,25 @@ func (c *Chunks) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, lay
 			return nil, err
 		}
 		c.put(key, m)
-		return proto.Clone(m).(*contract.WildsChunk), nil
+		return proto.Clone(m).(*contract.WorldChunk), nil
 	}
 	if m := c.get(key); m != nil {
-		return proto.Clone(m).(*contract.WildsChunk), nil
+		return proto.Clone(m).(*contract.WorldChunk), nil
 	}
 	m, err := c.stored(ctx, tx, key)
 	if err != nil {
 		return nil, err
 	}
 	c.put(key, m)
-	return proto.Clone(m).(*contract.WildsChunk), nil
+	return proto.Clone(m).(*contract.WorldChunk), nil
 }
 
-func (c *Chunks) stored(ctx context.Context, tx *sql.Tx, k chunkKey) (*contract.WildsChunk, error) {
+func (c *Chunks) stored(ctx context.Context, tx *sql.Tx, k chunkKey) (*contract.WorldChunk, error) {
 	var blob []byte
 	if err := tx.QueryRowContext(ctx, "SELECT blob FROM wilds_chunks WHERE epoch_id=? AND layer=? AND cx=? AND cy=?", k.epoch, k.layer, k.cx, k.cy).Scan(&blob); err != nil {
 		return nil, err
 	}
-	m := &contract.WildsChunk{}
+	m := &contract.WorldChunk{}
 	if err := proto.Unmarshal(blob, m); err != nil {
 		return nil, err
 	}
@@ -254,7 +275,7 @@ func (c *Chunks) stored(ctx context.Context, tx *sql.Tx, k chunkKey) (*contract.
 }
 
 // make generates a chunk and stores it, then answers what is stored.
-func (c *Chunks) make(ctx context.Context, tx *sql.Tx, world string, e *contract.WildsEpoch, layer, cx, cy int32) (*contract.WildsChunk, error) {
+func (c *Chunks) make(ctx context.Context, tx *sql.Tx, world string, e *contract.WildsEpoch, layer, cx, cy int32) (*contract.WorldChunk, error) {
 	x, y := int(cx), int(cy)
 	if layer != 0 || !frontier.Inside(world, x, y) || wilds.EpochKindAt(x, y) != e.Kind {
 		return nil, sql.ErrNoRows
@@ -320,7 +341,7 @@ func (c *Chunks) now() int64 {
 	return c.Now().Unix()
 }
 
-func (c *Chunks) get(k chunkKey) *contract.WildsChunk {
+func (c *Chunks) get(k chunkKey) *contract.WorldChunk {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.byKey == nil {
@@ -344,7 +365,7 @@ func (c *Chunks) drop(k chunkKey) {
 	}
 }
 
-func (c *Chunks) put(k chunkKey, m *contract.WildsChunk) {
+func (c *Chunks) put(k chunkKey, m *contract.WorldChunk) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.byKey == nil {

@@ -59,7 +59,7 @@ type baseTile struct {
 // caller passed it, else as generator v3 makes it (its band is its base).
 type keptReader struct {
 	w      *world // the kept epoch's world
-	stored map[[2]int]*contract.WildsChunk
+	stored map[[2]int]*contract.WorldChunk
 	made   map[[2]int][]baseTile
 }
 

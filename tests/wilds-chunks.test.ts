@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fromJson, toBinary, type JsonValue } from '@bufbuild/protobuf';
 import { decodeChunk } from '../src/lib/api/chunks.ts';
 import { FakeOperations } from '../src/lib/api/operations.ts';
-import { WildsChunkSchema, WildsNearResultSchema } from '../src/lib/gen/glimway/v1/wilds_pb.js';
+import { WorldChunkSchema, WildsNearResultSchema } from '../src/lib/gen/glimway/v1/wilds_pb.js';
 import { TERRAIN } from '../src/lib/tile.ts';
 import { epochKindAt } from '../src/lib/wilds/coords.ts';
 import { DECOR_ART } from '../src/game/wilds/decor.ts';
@@ -51,16 +51,16 @@ test('a served chunk unpacks into grids, decor, sites, bodies, its tier and land
   // A place's landmark mark comes with its chunk.
   const placed = chunkAt('whitequiet-0-4', 0, -4);
   placed.places = [{ $typeName: 'glimway.v1.WildsPlaceMark', id: 'place:0:-1', kind: 'ruin', tx: 5, ty: 6 }];
-  assert.deepEqual(decodeChunk(toBinary(WildsChunkSchema, placed)).places.map((p) => p.id), ['place:0:-1']);
+  assert.deepEqual(decodeChunk(toBinary(WorldChunkSchema, placed)).places.map((p) => p.id), ['place:0:-1']);
 });
 
 test('decoding refuses a tampered chunk', () => {
   const m = fixtureChunk('tangle');
   m.decor!.tx.pop();
-  assert.throws(() => decodeChunk(toBinary(WildsChunkSchema, m)));
+  assert.throws(() => decodeChunk(toBinary(WorldChunkSchema, m)));
   const bad = fixtureChunk('tangle');
   bad.ground[0] = 0xff;
-  assert.throws(() => decodeChunk(toBinary(WildsChunkSchema, bad)));
+  assert.throws(() => decodeChunk(toBinary(WorldChunkSchema, bad)));
 });
 
 test('the chunk cache fetches each chunk once and forgets old epochs', async () => {
@@ -105,7 +105,7 @@ function serveWindow(ops: FakeOperations, cx: number, cy: number, wick = NEAR.wi
       m.epochId = epoch;
       // The fixture's states name node 0 of each chunk.
       Object.assign(m.entities[0]!, { id: `node:${x}:${y}:0`, kind: 'node', material: 'stone', enemies: [], tier: 0, poi: '' });
-      ops.responses.set(`/api/wilds/chunk/${epoch}/0/${x}/${y}`, [toBinary(WildsChunkSchema, m)]);
+      ops.responses.set(`/api/wilds/chunk/${epoch}/0/${x}/${y}`, [toBinary(WorldChunkSchema, m)]);
     }
 }
 

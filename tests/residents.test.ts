@@ -18,6 +18,7 @@ import { handoverFor, paperFlag } from '../src/content/papers.ts';
 import { QUEST_STAGES, type QuestStage } from '../src/lib/state.ts';
 import { calendarAt } from '../src/lib/calendar.ts';
 import { buildArea } from '../src/game/worlds.ts';
+import { serveFixtureCommons } from './commons-fixture.ts';
 import { TERRAIN, TILE } from '../src/lib/tile.ts';
 
 const EPOCH = Date.parse('2026-01-05T00:00:00Z') / 1000;
@@ -200,6 +201,7 @@ test('resident talk is pure (no shared arrays)', () => {
 });
 
 test('residents stand on open ground in their places, clear of the quest NPCs and the spawn', () => {
+  serveFixtureCommons();
   const village = buildArea('village');
   const commons = buildArea('commons');
   const spot = (w: typeof village, id: string) => w.npcs.find((n) => n.id === id)!;

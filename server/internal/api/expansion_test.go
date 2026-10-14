@@ -10,6 +10,7 @@ import (
 	"glimway/server/internal/store"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 )
@@ -124,7 +125,8 @@ func TestHomesteadClaimAccessAndCommonsRoster(t *testing.T) {
 	}
 	rev := s.Version
 	lane := x.exp("GET", "/api/commons", nil, c, 200)
-	if lane.Version != rev || lane.GateCount != int(content.HomeRules.GetCommons().GetSpareGates()) || lane.Mine != nil || len(lane.Gates) != lane.GateCount || lane.Gates[0].HomeID != nil || lane.Gates[0].Price == nil || *lane.Gates[0].Price != 0 {
+	// The lane is the Commons' eight gates (its frozen capacity), all open.
+	if lane.Version != rev || lane.GateCount != 8 || lane.Mine != nil || len(lane.Gates) != lane.GateCount || lane.Gates[0].HomeID != nil || lane.Gates[0].Price == nil || *lane.Gates[0].Price != 0 {
 		t.Fatal("empty lane", lane.GateCount)
 	}
 	// An unclaimed gate can be visited: wild land, no home.
@@ -132,14 +134,18 @@ func TestHomesteadClaimAccessAndCommonsRoster(t *testing.T) {
 	if g.Home != nil || g.LandSeed != land.Seed(s.WorldID, 1, content.HomeRules.Land) || g.Version != rev {
 		t.Fatal("unclaimed land")
 	}
-	x.exp("GET", "/api/homestead/gate/2", nil, c, 404)
+	x.exp("GET", "/api/homestead/gate/7", nil, c, 200)
+	x.exp("GET", "/api/homestead/gate/8", nil, c, 404)
 	x.exp("GET", "/api/homestead/gate/01", nil, c, 404)
+	if v := x.exp("POST", "/api/homestead/claim", body(s, "past", map[string]any{"gate": 8}), c, 404); v.Error.Code != "invalid-gate" {
+		t.Fatal("a claim past the capacity", v.Error.Code)
+	}
 	h := x.claimGate(c, &s, 1)
 	if h.Tier != 0 || h.Indoor != nil || !h.Member || len(h.Members) != 1 || h.Members[0].ID != x.account("alice") || len(h.Items) != 0 {
 		t.Fatal("campsite")
 	}
 	lane = x.exp("GET", "/api/commons", nil, c, 200)
-	if lane.GateCount != 3 || lane.Mine == nil || lane.Mine.Gate != 1 || !lane.Gates[1].Mine || len(lane.Gates[1].Names) != 1 || lane.Gates[1].Members[0].ID != x.account("alice") || lane.Gates[0].Price == nil {
+	if lane.GateCount != 8 || lane.Mine == nil || lane.Mine.Gate != 1 || !lane.Gates[1].Mine || len(lane.Gates[1].Names) != 1 || lane.Gates[1].Members[0].ID != x.account("alice") || lane.Gates[0].Price == nil {
 		t.Fatal("lane after claim", lane.GateCount)
 	}
 	bc, b := x.member("bob", s.WorldID)
@@ -159,6 +165,40 @@ func TestHomesteadClaimAccessAndCommonsRoster(t *testing.T) {
 		t.Fatal("cross-world home")
 	}
 }
+
+// The lane is the Commons' frozen capacity, whatever the database holds: a
+// gate past it can't be claimed or reclaimed, and a home sitting there keeps
+// the server from starting (CheckHomesteadGates) rather than lose its gate.
+func TestHomesteadPastTheCommonsCapacity(t *testing.T) {
+	x := newRig(t)
+	c, s := x.ready("alice")
+	ctx := context.Background()
+	if err := CheckHomesteadGates(ctx, x.db.DB); err != nil {
+		t.Fatal("a database within the capacity", err)
+	}
+	x.claimGate(c, &s, 7)
+	if err := CheckHomesteadGates(ctx, x.db.DB); err != nil {
+		t.Fatal("a home at the last gate", err)
+	}
+	if _, err := x.db.DB.Exec("INSERT INTO homesteads(id,world_id,gate,claimed_at,vacant_since) VALUES('old-home',?,9,0,0)", s.WorldID); err != nil {
+		t.Fatal(err)
+	}
+	err := CheckHomesteadGates(ctx, x.db.DB)
+	if err == nil || !strings.Contains(err.Error(), "homestead old-home") || !strings.Contains(err.Error(), "gate 9") || !strings.Contains(err.Error(), s.WorldID) {
+		t.Fatal("startup refuses a home past the capacity", err)
+	}
+	if lane := x.exp("GET", "/api/commons", nil, c, 200); lane.GateCount != 8 || len(lane.Gates) != 8 {
+		t.Fatal("the lane is the capacity", lane.GateCount)
+	}
+	bc, b := x.member("bob", s.WorldID)
+	for _, gate := range []int{8, 9} {
+		if v := x.exp("POST", "/api/homestead/claim", body(b, fmt.Sprint("past-", gate), map[string]any{"gate": gate}), bc, 404); v.Error.Code != "invalid-gate" {
+			t.Fatal("a claim past the capacity", gate, v.Error.Code)
+		}
+	}
+	x.exp("GET", "/api/homestead/gate/9", nil, bc, 404)
+}
+
 func TestHomesteadTransactionsIdempotencyAndPlacement(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")

@@ -174,7 +174,7 @@ func TestHomes2MembershipInvariantsAndEqualMembers(t *testing.T) {
 	if x.homeOpRefreshing(bc, &b, "claim", map[string]any{"gate": 0}, 409).Error.Code != "gate-taken" {
 		t.Fatal("taken gate")
 	}
-	if x.homeOpRefreshing(bc, &b, "claim", map[string]any{"gate": 3}, 404).Error.Code != "invalid-gate" {
+	if x.homeOpRefreshing(bc, &b, "claim", map[string]any{"gate": 8}, 404).Error.Code != "invalid-gate" {
 		t.Fatal("gate past the lane")
 	}
 	if x.homeOpRefreshing(bc, &b, "buy", map[string]any{"itemDef": "wooden-stool"}, 409).Error.Code != "not-a-member" {

@@ -1,4 +1,12 @@
 /**
+ * The Commons as the client built it until the location seam's lane S2
+ * (docs/design/location-seam.md 6), frozen. It is no longer game code: the
+ * server serves the Commons from content/layouts/commons.json, which
+ * scripts/export-commons.ts exported from this builder at the frozen
+ * capacity (eight gates). It stays as the export's source and as the
+ * reference the served Commons is checked against (tests/commons-served.
+ * test.ts) until S5 joins the Commons to the grid; then it goes.
+ *
  * Hearthwick Commons — the map. A clearing of tall grass and stumps past the
  * east gate, where carters once staged for the lantern road; now it is being
  * taken up as homesteads, and Silas builds the houses.
@@ -25,14 +33,12 @@
  * homestead layer (src/game/entities/homesteads.ts) adds what changes —
  * the signs on the gates, Silas, the way to your own gate.
  */
-import { HOMESTEAD_DATA, gateRowCount, gateTile, homeArea } from '../lib/homestead.ts'
-import { residentById } from '../lib/residents.ts'
-import { calendarAt } from '../lib/calendar.ts'
-import { landEntry } from './homeland.ts'
-import { gameNow } from './clock.ts'
-import { TERRAIN, TILE, tileBottom, tileKey, tileMid } from '../lib/tile.ts'
-import type { ExitDef, ForegroundSpot, GatherSpot, PropSpot, ScenerySpot, WorldData } from './worlds.ts'
-import { layoutHash01 } from '../lib/hash.ts'
+import { HOMESTEAD_DATA, gateRowCount, gateTile, homeArea } from '../../src/lib/homestead.ts'
+import { residentById } from '../../src/lib/residents.ts'
+import { landEntry } from '../../src/game/homeland.ts'
+import { TERRAIN, TILE, tileBottom, tileKey, tileMid } from '../../src/lib/tile.ts'
+import type { ExitDef, ForegroundSpot, GatherSpot, PropSpot, ScenerySpot, WorldData } from '../../src/game/worlds.ts'
+import { layoutHash01 } from '../../src/lib/hash.ts'
 
 /** One homestead gate on the lane, in Commons tiles. */
 export interface GateSlot {
@@ -128,7 +134,8 @@ export function commonsRows(gateCount: number): number {
 
 // ---------------------------------------------------------------- builder
 
-export function buildCommons(gateCount = 0): CommonsWorld {
+/** `bloom`: the Bloom wick's flower spots are out (the game read the calendar). */
+export function buildCommons(gateCount = 0, bloom = false): CommonsWorld {
   const rows = commonsRows(gateCount)
   const gates = Array.from({ length: Math.max(gateCount, HOMESTEAD_DATA.commons.spareGates) }, (_, i) => gateSlot(i))
   const lastRowY = Math.max(...Array.from({ length: rows * 2 }, (_, i) => gateTile(i).ty))
@@ -388,7 +395,7 @@ export function buildCommons(gateCount = 0): CommonsWorld {
   // caps hold you — and the server re-checks the season from its own
   // clock and calendar.
   const gathering: GatherSpot[] = []
-  if (calendarAt(gameNow()).wick === 'Bloom') {
+  if (bloom) {
     let n = 0
     for (let y = BAND.y0; y <= BAND.y1 && n < 8; y++) {
       for (let x = 6; x < YARD.x0 - 2 && n < 8; x++) {

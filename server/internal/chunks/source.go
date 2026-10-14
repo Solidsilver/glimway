@@ -14,7 +14,7 @@ var ErrEpochEnded = errors.New("epoch ended")
 // Source reads only stored geometry in the caller's transaction. Implementations
 // check world ownership and epoch lifetime; cx/cy are signed for the open map.
 type ChunkSource interface {
-	Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, layer, cx, cy int32) (*contract.WildsChunk, error)
+	Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, layer, cx, cy int32) (*contract.WorldChunk, error)
 }
 
 // EpochComposition reads and makes a world's epochs by kind (open-map.md

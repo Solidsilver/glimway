@@ -51,33 +51,33 @@ func TestOpenMapValidatorRefusals(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for name, change := range map[string]func(*contract.WildsChunk){
-		"version":    func(c *contract.WildsChunk) { c.GeneratorVersion = 1 },
-		"realm":      func(c *contract.WildsChunk) { c.Realm = "elsewhere" },
-		"layer":      func(c *contract.WildsChunk) { c.Layer = 1 },
-		"tier":       func(c *contract.WildsChunk) { c.Tier = 4 },
-		"land":       func(c *contract.WildsChunk) { c.Land = "lake" },
-		"palette":    func(c *contract.WildsChunk) { c.Palette[0] = "lava" },
-		"decor kind": func(c *contract.WildsChunk) { c.Decor.Kinds[0] = "statue" },
-		"packing":    func(c *contract.WildsChunk) { c.Solid = c.Solid[1:] },
-		"site kind":  func(c *contract.WildsChunk) { c.Sites = append(c.Sites, &contract.StorySite{Id: "x", Kind: 99}) },
-		"place kind": func(c *contract.WildsChunk) {
+	for name, change := range map[string]func(*contract.WorldChunk){
+		"version":    func(c *contract.WorldChunk) { c.GeneratorVersion = 1 },
+		"realm":      func(c *contract.WorldChunk) { c.Realm = "elsewhere" },
+		"layer":      func(c *contract.WorldChunk) { c.Layer = 1 },
+		"tier":       func(c *contract.WorldChunk) { c.Tier = 4 },
+		"land":       func(c *contract.WorldChunk) { c.Land = "lake" },
+		"palette":    func(c *contract.WorldChunk) { c.Palette[0] = "lava" },
+		"decor kind": func(c *contract.WorldChunk) { c.Decor.Kinds[0] = "statue" },
+		"packing":    func(c *contract.WorldChunk) { c.Solid = c.Solid[1:] },
+		"site kind":  func(c *contract.WorldChunk) { c.Sites = append(c.Sites, &contract.StorySite{Id: "x", Kind: 99}) },
+		"place kind": func(c *contract.WorldChunk) {
 			c.Places = []*contract.WildsPlaceMark{{Id: "place:1:-2", Kind: "castle"}}
 		},
-		"place id": func(c *contract.WildsChunk) { c.Places = []*contract.WildsPlaceMark{{Id: "place:a", Kind: "ruin"}} },
-		"place tile": func(c *contract.WildsChunk) {
+		"place id": func(c *contract.WorldChunk) { c.Places = []*contract.WildsPlaceMark{{Id: "place:a", Kind: "ruin"}} },
+		"place tile": func(c *contract.WorldChunk) {
 			c.Places = []*contract.WildsPlaceMark{{Id: "place:1:-2", Kind: "ruin", Tx: 24}}
 		},
-		"duplicate ids": func(c *contract.WildsChunk) { c.Entities[1].Id = c.Entities[0].Id },
-		"chest tier":    func(c *contract.WildsChunk) { c.Entities[2].Tier = 9 },
+		"duplicate ids": func(c *contract.WorldChunk) { c.Entities[1].Id = c.Entities[0].Id },
+		"chest tier":    func(c *contract.WorldChunk) { c.Entities[2].Tier = 9 },
 	} {
-		c := proto.Clone(good).(*contract.WildsChunk)
+		c := proto.Clone(good).(*contract.WorldChunk)
 		change(c)
 		if chunks.Validate(c) == nil {
 			t.Errorf("%s: accepted", name)
 		}
 	}
-	rumour := proto.Clone(good).(*contract.WildsChunk)
+	rumour := proto.Clone(good).(*contract.WorldChunk)
 	rumour.Sites = append(rumour.Sites, &contract.StorySite{Id: "rumour:-3:-7", Kind: contract.SiteKind_SITE_KIND_RUMOUR, Tx: 1, Ty: 1}, &contract.StorySite{Id: "lamp-stone:-3:-7", Kind: contract.SiteKind_SITE_KIND_LAMP_STONE, Tx: 2, Ty: 1})
 	if err := chunks.Validate(rumour); err != nil {
 		t.Fatal("the new site kinds:", err)

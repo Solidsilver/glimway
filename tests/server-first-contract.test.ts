@@ -69,9 +69,9 @@ test('typed operations facade and fake expose session, play and operation contra
   const api = createApiClient({ fetchImpl: (async (_url, init) => { headers = new Headers(init?.headers); return new Response(JSON.stringify({ state: valid, leaseActive: false }), { headers: { 'content-type': 'application/json' } }); }) as typeof fetch });
   await api.operations.state(); assert.equal(headers!.get('X-Glimway-Contract'), String(CONTRACT_NUMBER));
 });
-function chunk() { return create(wilds.WildsChunkSchema, { epochId: 'epoch', realm: 'hearthwick', look: 'tangle', generatorVersion: 3, size: 24, cx: 1, cy: 0, tier: 1, land: 'woods', palette: ['grass'], ground: new Uint8Array(288), solid: new Uint8Array(72), decor: { kinds: ['tree'], kind: [0], tx: [2], ty: [3], ox: [1], oy: [-2], variant: [0], flags: new Uint8Array(1) }, entities: [{ id: 'node:1:0:0', kind: 'node', tx: 3, ty: 4, material: 'timber' }], places: [{ id: 'place:0:-1', kind: 'ruin', tx: 9, ty: 9 }] }); }
+function chunk() { return create(wilds.WorldChunkSchema, { epochId: 'epoch', realm: 'hearthwick', look: 'tangle', generatorVersion: 3, size: 24, cx: 1, cy: 0, tier: 1, land: 'woods', palette: ['grass'], ground: new Uint8Array(288), solid: new Uint8Array(72), decor: { kinds: ['tree'], kind: [0], tx: [2], ty: [3], ox: [1], oy: [-2], variant: [0], flags: new Uint8Array(1) }, entities: [{ id: 'node:1:0:0', kind: 'node', tx: 3, ty: 4, material: 'timber' }], places: [{ id: 'place:0:-1', kind: 'ruin', tx: 9, ty: 9 }] }); }
 test('packed chunks validate identity, bodies, decor and places on binary decode (open-map.md 2.5)', async () => {
-  const c = chunk(); assert.deepEqual(decodeChunk(toBinary(wilds.WildsChunkSchema, c)), c);
+  const c = chunk(); assert.deepEqual(decodeChunk(toBinary(wilds.WorldChunkSchema, c)), c);
   assert.equal(entityIn(c, 'node:1:0:0')!.material, 'timber'); assert.deepEqual(decorAt(c, 2, 3), [0]);
   // Signed coordinates, anywhere: the frontier moves, chunks don't.
   c.cx = -40; c.cy = -9; validateChunk(c);
@@ -123,7 +123,7 @@ test('report keepalive and returned geometry identities are enforced', async () 
   const facade = createOperationsApi(async (_method, _path, _body, options) => { extra = options; return envelope; });
   await facade.report(create(operations.ReportRequestSchema), { keepalive: true });
   assert.deepEqual(extra, { keepalive: true });
-  const bytes = toBinary(wilds.WildsChunkSchema, chunk());
+  const bytes = toBinary(wilds.WorldChunkSchema, chunk());
   const geometry = createOperationsApi(async () => bytes);
   assert.equal((await geometry.chunk('epoch', 0, 1, 0)).cx, 1);
   for (const args of [['wrong-epoch', 0, 1, 0], ['epoch', -1, 1, 0], ['epoch', 0, 0, 0], ['epoch', 0, 1, 1]] as const) await assert.rejects(geometry.chunk(args[0], args[1], args[2], args[3]), { code: 'bad-response' });
@@ -210,8 +210,13 @@ test('the open map contract 8 shapes decode through the facade (open-map.md 2.4,
   await assert.rejects(fake.api.near(0, 0), { code: 'bad-response' });
   const cases: [string, 'wildsClear' | 'wildsLay' | 'wildsLift' | 'wildsDiscover'][] = [['wilds-clear', 'wildsClear'], ['wilds-lay-way', 'wildsLay'], ['wilds-lift', 'wildsLift'], ['discover-first', 'wildsDiscover']];
   for (const [kind, want] of cases) assert.equal(decodeEnvelope(get('glimway.v1.Envelope', kind)).result.case, want, kind);
-  const chunk = decodeWire(wilds.WildsChunkSchema, get('glimway.v1.WildsChunk', 'valid-open-map'));
+  const chunk = decodeWire(wilds.WorldChunkSchema, get('glimway.v1.WorldChunk', 'valid-open-map'));
   assert.deepEqual([chunk.cx, chunk.cy, chunk.tier, chunk.land, chunk.places[0]!.id, chunk.sites[0]!.kind], [-3, -7, 3, 'meadow', 'place:-1:-2', wilds.SiteKind.RUMOUR]);
+  // A fixed chunk as served (location-seam.md 1.4): the Commons' heart, its objects, through the client's validator.
+  const fixed = decodeChunk(toBinary(wilds.WorldChunkSchema, decodeWire(wilds.WorldChunkSchema, get('glimway.v1.WorldChunk', 'valid-fixed'))));
+  assert.deepEqual([fixed.source, fixed.epochId, fixed.layoutRevision, fixed.cx, fixed.cy], [wilds.ChunkSource.FIXED, 'fixed:commons@2', 2, 0, 1]);
+  assert.ok(fixed.objects.some((o) => o.id === 'well' && o.kind === 'well'));
+  assert.deepEqual(near.chunks.map((c) => [c.chunk!.cx, c.chunk!.cy, c.source, c.epoch]), [[-2, -4, 'generated', 'wick-epoch']]);
 });
 
 test('the near read refuses a window, ground or way that breaks its contract (review round 1)', async () => {

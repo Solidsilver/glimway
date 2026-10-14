@@ -12,8 +12,8 @@ import (
 )
 
 // validChunk is a small open-map chunk: a Tangle chunk on signed coordinates.
-func validChunk() *contract.WildsChunk {
-	return &contract.WildsChunk{EpochId: "epoch", Realm: "hearthwick", Look: "tangle", Cx: 1, Cy: -1, GeneratorVersion: 3, Size: 24, Tier: 1, Land: "woods", Palette: []string{"grass_b"}, Ground: make([]byte, 288), Solid: make([]byte, 72), Decor: &contract.DecorList{Kinds: []string{"oak"}, Kind: []uint32{0}, Tx: []uint32{2}, Ty: []uint32{3}, Ox: []int32{1}, Oy: []int32{-2}, Variant: []uint32{0}, Flags: []byte{0}}, Entities: []*contract.WildsEntity{{Id: "node:1:-1:0", Kind: "node", Tx: 3, Ty: 4, Material: "timber"}}}
+func validChunk() *contract.WorldChunk {
+	return &contract.WorldChunk{EpochId: "epoch", Realm: "hearthwick", Look: "tangle", Cx: 1, Cy: -1, GeneratorVersion: 3, Size: 24, Tier: 1, Land: "woods", Palette: []string{"grass_b"}, Ground: make([]byte, 288), Solid: make([]byte, 72), Decor: &contract.DecorList{Kinds: []string{"oak"}, Kind: []uint32{0}, Tx: []uint32{2}, Ty: []uint32{3}, Ox: []int32{1}, Oy: []int32{-2}, Variant: []uint32{0}, Flags: []byte{0}}, Entities: []*contract.WildsEntity{{Id: "node:1:-1:0", Kind: "node", Tx: 3, Ty: 4, Material: "timber"}}}
 }
 func TestStoredGeometryAndExecutableFakes(t *testing.T) {
 	ctx := context.Background()
@@ -38,7 +38,7 @@ func TestStoredGeometryAndExecutableFakes(t *testing.T) {
 		t.Fatal("bad decor accepted")
 	}
 	key := chunkstest.Key{World: "world", Epoch: "epoch", Layer: 0, CX: 1, CY: -1}
-	f := &chunkstest.Fake{Chunks: map[chunkstest.Key]*contract.WildsChunk{key: validChunk()}, Errors: map[chunkstest.Key]error{}}
+	f := &chunkstest.Fake{Chunks: map[chunkstest.Key]*contract.WorldChunk{key: validChunk()}, Errors: map[chunkstest.Key]error{}}
 	read, err := f.Chunk(ctx, nil, "world", "epoch", 0, 1, -1)
 	if err != nil {
 		t.Fatal(err)

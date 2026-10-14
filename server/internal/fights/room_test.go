@@ -236,7 +236,7 @@ func TestPositionReportsAndAttackShareMovementCap(t *testing.T) {
 	}
 }
 func TestCircleCollisionFrozenGeometryAndLeash(t *testing.T) {
-	chunk := &chunkwire.WildsChunk{Size: 24, Solid: make([]byte, 72)}
+	chunk := &chunkwire.WorldChunk{Size: 24, Solid: make([]byte, 72)}
 	chunk.Solid[(7*24+8)/8] |= 1 << uint((7*24+8)%8)
 	eff := chunks.NewEffective(chunk, nil)
 	g := GeometryAtWake(eff)

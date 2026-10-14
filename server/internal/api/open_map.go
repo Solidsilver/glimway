@@ -27,6 +27,7 @@ import (
 	"glimway/server/internal/chunks"
 	"glimway/server/internal/frontier"
 	contract "glimway/server/internal/gen/glimway/v1"
+	"glimway/server/internal/location"
 	"glimway/server/internal/ports"
 	"glimway/server/internal/store"
 	"glimway/server/internal/story"
@@ -105,7 +106,7 @@ func (a *Server) nearRead(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
-	if !frontier.Inside(s.WorldID, cx, cy) {
+	if !location.OnGrid(s.WorldID, cx, cy) {
 		return fail(409, "beyond-frontier")
 	}
 	view, err := a.near(r.Context(), tx, s, cx, cy, a.requestTime(r.Context()).Unix())
@@ -132,8 +133,11 @@ func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, cx, cy 
 		Entities: []*contract.WildsEntityState{}, PersonalClaims: []*contract.WildsPersonalClaim{},
 		Discoveries: []*contract.WildsDiscovery{}, Lanterns: []*contract.WildsLantern{}, Echoes: []*contract.EchoAssignment{},
 		Ground: []*contract.ChunkGroundChanges{}, Materials: map[string]float64{}, Glimpse: []*contract.WildsGlimpse{}, Ways: []*contract.WildsWay{},
+		Chunks: []*contract.NearChunk{},
 	}
-	// The window's chunks, inside the frontier, row-major.
+	// The window's chunks on the grid, row-major: a fixed chunk is listed
+	// (its body comes from content, under its pseudo-epoch, and it has no
+	// state); a generated one, inside the frontier, is read for its state.
 	type entityAt struct {
 		epoch, kind string
 	}
@@ -145,11 +149,16 @@ func (a *Server) near(ctx context.Context, tx *sql.Tx, s store.Snapshot, cx, cy 
 	whitequiet := false
 	for y := cy - NearRadius; y <= cy+NearRadius; y++ {
 		for x := cx - NearRadius; x <= cx+NearRadius; x++ {
+			if src := location.SourceOf(x, y); src.Kind == location.SourceFixed {
+				out.Chunks = append(out.Chunks, &contract.NearChunk{Chunk: chunkKeyProto(x, y), Source: src.Kind.String(), Epoch: chunks.FixedEpoch(src.Layout, src.Revision)})
+				continue
+			}
 			if !frontier.Inside(s.WorldID, x, y) {
 				continue
 			}
 			window[[2]int{x, y}] = true
 			e := ep.of(x, y)
+			out.Chunks = append(out.Chunks, &contract.NearChunk{Chunk: chunkKeyProto(x, y), Source: location.SourceGenerated.String(), Epoch: e.Id})
 			m, err := a.Config.Chunks.Chunk(ctx, tx, s.WorldID, e.Id, 0, int32(x), int32(y))
 			if err != nil {
 				return nil, err

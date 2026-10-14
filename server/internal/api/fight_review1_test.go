@@ -24,7 +24,7 @@ type reviewGroundChunks struct {
 	loads            atomic.Int32
 }
 
-func (s *reviewGroundChunks) Chunk(ctx context.Context, _ *sql.Tx, _, epoch string, layer, cx, cy int32) (*contract.WildsChunk, error) {
+func (s *reviewGroundChunks) Chunk(ctx context.Context, _ *sql.Tx, _, epoch string, layer, cx, cy int32) (*contract.WorldChunk, error) {
 	if cx == 0 && cy == 0 {
 		s.loads.Add(1)
 	}
@@ -37,7 +37,7 @@ func (s *reviewGroundChunks) Chunk(ctx context.Context, _ *sql.Tx, _, epoch stri
 			}
 		})
 	}
-	c := &contract.WildsChunk{EpochId: epoch, Realm: content.WildsRules.GetRealm(), Layer: layer, Cx: cx, Cy: cy, Size: 24, Solid: make([]byte, 72)}
+	c := &contract.WorldChunk{EpochId: epoch, Realm: content.WildsRules.GetRealm(), Layer: layer, Cx: cx, Cy: cy, Size: 24, Solid: make([]byte, 72)}
 	c.Solid[26/8] |= 1 << (26 % 8) // wall at local tile (2,1)
 	return c, ctx.Err()
 }

@@ -85,8 +85,15 @@ type presencePeer struct {
 	detached               bool
 	// clientJoined: this socket's client has named an area (its first Join).
 	// Rooms covered before that were announced before it could take them.
-	clientJoined          bool
-	grace                 *time.Timer
+	clientJoined bool
+	grace        *time.Timer
+	// pendingJoin: a join that came inside the cooldown, made when it ends
+	// (joinTimer); empty when none waits.
+	pendingJoin           string
+	pendingJoinPos        *presencePosition
+	joinTimer             *time.Timer
+	joinGeneration        uint64
+	joinCancel            func() bool
 	fightToken            string
 	critSeed, lastCounter uint32
 	hasCounter            bool
@@ -99,6 +106,23 @@ type presencePeer struct {
 // close frame after cancellation and the read loop remains available for pong.
 func (p *presencePeer) stop(code websocket.StatusCode, reason string) {
 	p.stopOnce.Do(func() { p.closeCode = code; p.closeReason = reason; p.cancel() })
+}
+
+// cancelJoin invalidates even a callback already waiting for h.mu. Callers
+// hold h.mu; stop may run without that lock, so its context callback does
+// the cleanup under the lock instead.
+func (p *presencePeer) cancelJoin() {
+	p.joinGeneration++
+	if p.joinTimer != nil {
+		p.joinTimer.Stop()
+		p.joinTimer = nil
+	}
+	if p.joinCancel != nil {
+		p.joinCancel()
+		p.joinCancel = nil
+	}
+	p.pendingJoin = ""
+	p.pendingJoinPos = nil
 }
 
 type presenceHub struct {
@@ -245,6 +269,7 @@ func (h *presenceHub) release(reservation presenceReservation) {
 // h.mu.
 func (h *presenceHub) admit(p *presencePeer) {
 	if old := h.peers[p.identity.ID]; old != nil && old != p {
+		old.cancelJoin()
 		h.unindex(old)
 	}
 	h.peers[p.identity.ID] = p
@@ -343,6 +368,7 @@ func (h *presenceHub) broadcastWhere(sender *presencePeer, b []byte, err error, 
 }
 
 func (h *presenceHub) remove(p *presencePeer) {
+	p.cancelJoin()
 	if h.peers[p.identity.ID] != p {
 		return
 	}
@@ -360,6 +386,7 @@ func (h *presenceHub) remove(p *presencePeer) {
 func (h *presenceHub) detach(p *presencePeer) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	p.cancelJoin()
 	if h.peers[p.identity.ID] != p {
 		return
 	}

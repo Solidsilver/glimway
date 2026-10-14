@@ -16,7 +16,6 @@ import type { CommonsLaneView } from './link.ts'
 import type { Refusal } from '../lib/api/errors.ts'
 import { homeErrorText } from '../content/errors.ts'
 import { BUILDER_NPC_DATA, SIGN_FORMAT } from '../content/expansion-writing.ts'
-import { setCommonsGateCount } from './worlds.ts'
 import { setLandSource } from './homeland.ts'
 import { villageFor } from './village.ts'
 import { bus, EV, type MutationResolvedPayload } from './events.ts'
@@ -307,7 +306,6 @@ export class Homesteads {
     this.gateCount = v.gateCount
     this.invites = v.invites
     this.myGateValue = v.mine?.gate ?? null
-    setCommonsGateCount(this.gateCount)
     if (before !== this.myGateValue) this.emitGoal()
     for (const row of this.gates) if (this.homes.get(row.gate) && !this.cacheAgrees(row.gate)) contradicted.push(row.gate)
     return contradicted

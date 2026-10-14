@@ -40,7 +40,7 @@ type wildsView struct {
 	Lanterns       []*contract.WildsLantern
 	Echoes         []*contract.EchoAssignment
 	Materials      map[string]float64
-	chunks         []*contract.WildsChunk
+	chunks         []*contract.WorldChunk
 	bodies         []*contract.WildsEntity
 }
 
@@ -116,7 +116,7 @@ func (x *rig) wilds(c *http.Cookie, footprint string) wildsView {
 	return v
 }
 
-func (x *rig) chunk(c *http.Cookie, epoch string, layer, cx, cy, status int) *contract.WildsChunk {
+func (x *rig) chunk(c *http.Cookie, epoch string, layer, cx, cy, status int) *contract.WorldChunk {
 	x.t.Helper()
 	w := x.rawHTTP("GET", fmt.Sprintf("/api/wilds/chunk/%s/%d/%d/%d", epoch, layer, cx, cy), nil, c)
 	if w.Code != status {
@@ -125,7 +125,7 @@ func (x *rig) chunk(c *http.Cookie, epoch string, layer, cx, cy, status int) *co
 	if status != 200 {
 		return nil
 	}
-	m := &contract.WildsChunk{}
+	m := &contract.WorldChunk{}
 	if err := proto.Unmarshal(w.Body.Bytes(), m); err != nil {
 		x.t.Fatal(err)
 	}
@@ -266,8 +266,8 @@ func TestWildsNearMakesEpochsAndChunks(t *testing.T) {
 	if again.Still.Id != n.Still.Id || again.Wick.Id != n.Wick.Id || before != count(t, x.db, sum) {
 		t.Fatal("a second read wrote")
 	}
-	// Outside the frontier: refused, and nothing is made.
-	for _, at := range [][2]int{{5, 0}, {0, 1}, {-5, -4}, {0, -9}} {
+	// Off the grid: refused, and nothing is made.
+	for _, at := range [][2]int{{5, 0}, {0, 3}, {-2, 1}, {-5, -4}, {0, -9}} {
 		x.near(c, at[0], at[1], 409)
 	}
 	for _, path := range []string{"0", "0/-1/2", "x/1", "01/1", "0/-01", ""} {
@@ -277,6 +277,21 @@ func TestWildsNearMakesEpochsAndChunks(t *testing.T) {
 	}
 	if before != count(t, x.db, sum) {
 		t.Fatal("a refused read wrote")
+	}
+	// In the Commons' fixed footprint: the window lists every chunk on the
+	// grid with its source and epoch, and only generated chunks carry state.
+	commons := x.near(c, 0, 1, 200)
+	listed := map[[2]int32]string{}
+	for _, ch := range commons.Chunks {
+		listed[[2]int32{ch.Chunk.Cx, ch.Chunk.Cy}] = ch.Source + " " + ch.Epoch
+	}
+	if len(listed) != 16 || listed[[2]int32{0, 1}] != "fixed fixed:commons@2" || listed[[2]int32{1, 2}] != "fixed fixed:commons@2" || listed[[2]int32{0, 0}] != "generated "+n.Still.Id || listed[[2]int32{2, -1}] != "generated "+n.Wick.Id {
+		t.Fatal("the window's chunks", listed)
+	}
+	for _, e := range commons.Entities {
+		if !strings.Contains(e.Id, ":-1:") && !strings.Contains(e.Id, ":0:") {
+			t.Fatal("state off the generated chunks", e.Id)
+		}
 	}
 	if w := x.rawHTTP("GET", "/api/wilds/region/inner-1", nil, c); w.Code != 404 {
 		t.Fatal("the region read is gone", w.Code)

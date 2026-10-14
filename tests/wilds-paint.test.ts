@@ -11,7 +11,7 @@ import { wildsLook } from '../src/game/wilds/wilds-looks.ts';
 import { terrainOf, type ChunkTerrain } from '../src/game/wilds/terrain.ts';
 import { decodeChunk } from '../src/lib/api/chunks.ts';
 import { toBinary } from '@bufbuild/protobuf';
-import { WildsChunkSchema } from '../src/lib/gen/glimway/v1/wilds_pb.js';
+import { WorldChunkSchema } from '../src/lib/gen/glimway/v1/wilds_pb.js';
 import { frontierDistance } from '../src/game/wilds/window-plan.ts';
 import { chunkAt, fixtureTerrain } from './wilds-fixture.ts';
 
@@ -23,7 +23,7 @@ const t = (id: string) => (TERRAIN as Record<string, number>)[wildsGround(id).te
 function world(): { chunks: Map<string, ChunkTerrain>; src: GroundSource } {
   const chunks = new Map<string, ChunkTerrain>();
   for (const [cx, cy] of [[0, -4], [1, -4], [0, -3], [1, -3]] as const) {
-    const c = terrainOf(decodeChunk(toBinary(WildsChunkSchema, chunkAt('whitequiet-0-4', cx, cy))));
+    const c = terrainOf(decodeChunk(toBinary(WorldChunkSchema, chunkAt('whitequiet-0-4', cx, cy))));
     // Meadow, a river with its bank and a ford, paving and a laid path, across the edges.
     for (let y = 0; y < S; y++) {
       c.ground[y]![0] = t('meadow');

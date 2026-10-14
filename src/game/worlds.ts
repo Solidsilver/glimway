@@ -9,7 +9,7 @@ import type { AreaId } from '../lib/state.ts'
 import { repairFor } from '../lib/repairs.ts'
 import { calendarAt } from '../lib/calendar.ts'
 import { TERRAIN, TILE, tileBottom, tileMid } from '../lib/tile.ts'
-import { buildCommons, commonsForeground, COMMONS_FROM_VILLAGE } from './commons.ts'
+import { servedCommons, COMMONS_FROM_VILLAGE, type CommonsWorld } from './commons-served.ts'
 import { homeLandKind } from './homeland.ts'
 import { residentSpotsIn, roomKind, type RoomScene } from './room-kind.ts'
 import { gameNow } from './clock.ts'
@@ -828,16 +828,10 @@ const AREA_KINDS: Record<string, AreaKind> = {
   village: { build: buildVillage, foreground: villageForeground },
   woodland: { build: buildWoodland, foreground: woodlandForeground },
   ruin: { build: buildRuin, foreground: ruinForeground },
-  // The lane's length follows the world's gate count (src/game/homestead.ts keeps it).
-  commons: { build: () => buildCommons(commonsGateCount), foreground: commonsForeground },
+  // Served by the server as fixed chunks (./commons-served.ts), behind its portals until the join.
+  commons: { build: servedCommons, foreground: (world) => (world as CommonsWorld).foreground },
   // The open map: one area, its chunks attached as you walk (src/game/wilds/window.ts).
   outdoors: { build: () => buildWildsWorld(), foreground: () => [] }
-}
-
-/** How many gates the Commons lane must show (the roster's count, once known). */
-let commonsGateCount = 0
-export function setCommonsGateCount(n: number): void {
-  commonsGateCount = Math.max(0, Math.floor(n))
 }
 
 /** Registered kinds, then families resolved by id (a homestead's land behind each gate: `home:<gate>`; the rooms: `in:…`). */

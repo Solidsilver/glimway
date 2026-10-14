@@ -15,6 +15,8 @@ import { createPurseArt } from '../purse-art'
 import { createGlimsArt } from '../glims-art'
 import { createOpenMapArt } from '../wilds/open-map-art'
 import { HOMESTEAD_DATA } from '../../lib/homestead'
+import { prepareCommons } from '../commons-served'
+import type { Session } from '../session'
 
 /**
  * Boot: loads the delivered art (the expansion atlases, the runtime pass of
@@ -80,6 +82,26 @@ export class BootScene extends Phaser.Scene {
     createGlimsArt(this)
     createOpenMapArt(this)
 
-    this.scene.start('World')
+    // The Commons is served (../commons-served.ts): a save that starts there
+    // waits for its chunks (a few seconds at most; meadow stands in and
+    // rebuilds after); any other start only fetches them ahead.
+    const session = this.registry.get('session') as Session
+    const pending = prepareCommons(session)
+    const start = () => this.scene.start('World')
+    if (!pending || session.state.area !== 'commons') {
+      start()
+      return
+    }
+    let started = false
+    const once = () => {
+      if (started || !this.sys.game) return
+      started = true
+      start()
+    }
+    void pending.finally(once)
+    this.time.delayedCall(COMMONS_WAIT_MS, once)
   }
 }
+
+/** How long a start in the Commons waits for its chunks before the meadow stands in. */
+const COMMONS_WAIT_MS = 4000

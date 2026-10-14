@@ -5,7 +5,7 @@ import { allKeepsakeLines, echoKeepsakeOffer, keepsakeAsk, keepsakeReturnAction,
 import { itemDef, ITEMS, ITEM_RULES } from '../src/lib/items.ts';
 import { CRAFTING } from '../src/lib/workshop.ts';
 import { buildArea } from '../src/game/worlds.ts';
-import { buildCommons } from '../src/game/commons.ts';
+import { serveFixtureCommons, servedCommonsFixture } from './commons-fixture.ts';
 import { residentById } from '../src/lib/residents.ts';
 
 test('repairs rules match crafting and lore canon', () => {
@@ -159,6 +159,7 @@ test('every repair part has a source a player can get', () => {
 });
 
 test('the world is built from the shared spots the server checks', () => {
+  serveFixtureCommons();
   // The well, Ada and Hazel stand where the shared content says (the
   // server's draw-water and keepsake-return checks read the same rows).
   const v = buildArea('village');
@@ -174,5 +175,5 @@ test('the world is built from the shared spots the server checks', () => {
   const silas = ITEM_RULES.menders.find((m) => m.npc === 'silas')!;
   assert.equal(silas.with, 'silas');
   const yard = residentById('silas')!.spots.yard!;
-  assert.deepEqual(buildCommons().features.silas, { tx: yard.tx, ty: yard.ty });
+  assert.deepEqual(servedCommonsFixture().features.silas, { tx: yard.tx, ty: yard.ty });
 });

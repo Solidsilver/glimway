@@ -17,6 +17,10 @@ import { isPresenceArea, presenceAreaFor } from '../src/lib/presence-client.ts';
 import { isSafeArea } from '../src/lib/habitica/sync.ts';
 import { createNewGame, validateSave } from '../src/lib/state.ts';
 import { TILE, tileFeet } from '../src/lib/tile.ts';
+import { serveFixtureCommons } from './commons-fixture.ts';
+
+// The Commons is the server's: these tests stand on its served chunks.
+serveFixtureCommons();
 
 const ROOMS = ROOM_DATA.rooms;
 const GRACE = RESIDENTS.graceSeconds;

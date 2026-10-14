@@ -1,8 +1,9 @@
 import { expect, test, type Page } from './fixtures'
-import { serverState, sql, accountOf, CONTRACT, served } from './connected'
-import { waitForArea, waitForLive, player, expectAreaCard, expectToast, SERVER_ANSWER_MS } from './helpers'
+import { serverState, sql, accountOf, CONTRACT, served, reenter, seedStory } from './connected'
+import { waitForArea, waitForLive, player, world, expectAreaCard, expectToast, SERVER_ANSWER_MS } from './helpers'
 import { area, earnGlims, freshPlayer, fund, go, homeAt, homes, hurt, landOf, lane, myHome, place, readOn, shot, silasSays, talk, throughGate, type Home, DEED_BOUGHT, yardBuild, pellSays, DEEDS, AT_PELL, manageDeed, giveUpPlace } from './home-helpers'
 import { HOMESTEAD_DATA } from '../src/lib/homestead.ts'
+import { PLACES } from '../src/lib/places.ts'
 import { LAND, buildableKind, clearable, clearedSet, effectiveKind, homeLights, isLit, type Land } from '../src/lib/homestead-land.ts'
 
 /**
@@ -100,6 +101,69 @@ test('the Commons gate: walk in from Hearthwick and back, and through an unclaim
   await waitForArea(page, 'village')
   await page.keyboard.up('ArrowLeft')
   expect((await player(page)).x).toBeGreaterThan(36 * 16)
+})
+
+/** The Commons tiles an arrival anchor's ground reaches (content/places.json), as "tx,ty". */
+function reachedCommons(solid: boolean[][]): Set<string> {
+  const anchors = PLACES.fixed.find((f) => f.id === 'commons')!.anchors
+  const queue = anchors.map((a) => [a.tx, a.ty]).filter(([x, y]) => !solid[y]![x])
+  const reach = new Set(queue.map(([x, y]) => `${x},${y}`))
+  while (queue.length) {
+    const [x, y] = queue.shift()!
+    for (const [nx, ny] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]) {
+      if (ny < 0 || ny >= solid.length || nx < 0 || nx >= solid[0]!.length || solid[ny]![nx] || reach.has(`${nx},${ny}`)) continue
+      reach.add(`${nx},${ny}`)
+      queue.push([nx, ny])
+    }
+  }
+  return reach
+}
+const tileKey = (p: { x: number; y: number }) => `${Math.floor(p.x / 16)},${Math.floor(p.y / 16)}`
+
+// Review P1 (lane S2): meadow stands in while the Commons' chunks are on
+// their way, so a hero can walk into what the served map walls in: an open
+// pocket among the verge trees. When the map comes the hero stands on ground
+// the arrivals reach, the save says so, and a reload (or a save that names
+// the pocket) lands there too.
+test('the Commons: a walk on the meadow into the walled-in woods ends on reached ground once the map comes, and after a reload', async ({ page }) => {
+  let allow = false
+  await page.route(/\/api\/wilds\/chunk\/fixed/, (r) => (allow ? r.continue() : r.fulfill({ status: 503, body: '' })))
+  const id = await freshPlayer(page)
+  await go(page, 'commons', 14, 5)
+  await waitForLive(page)
+  expect((await world(page)).exits).toHaveLength(0)
+  // West along row 5 into the woods (all meadow for now).
+  await page.keyboard.down('ArrowLeft')
+  await expect.poll(async () => Math.floor((await player(page)).x / 16), { intervals: [30] }).toBeLessThanOrEqual(3)
+  await page.keyboard.up('ArrowLeft')
+  const pocket = tileKey(await player(page))
+
+  allow = true
+  await expect.poll(async () => (await world(page)).exits.length, { timeout: 20_000 }).toBe(10)
+  await waitForLive(page)
+  const map = await world(page)
+  const reach = reachedCommons(map.solid)
+  const [px, py] = pocket.split(',').map(Number)
+  expect(map.solid[py!]![px!], `${pocket} is open ground`).toBe(false)
+  expect(reach.has(pocket), `${pocket} is walled in`).toBe(false)
+  expect(reach.has(tileKey(await player(page))), 'the hero stands on reached ground').toBe(true)
+  // The save has it (the server's place), not the pocket.
+  const account = accountOf(id)
+  await expect
+    .poll(() => {
+      const [area, x, y] = sql(`SELECT area,x,y FROM player_place WHERE account_id='${account}';`).split('|')
+      return area === 'commons' && reach.has(tileKey({ x: Number(x), y: Number(y) }))
+    }, { timeout: SERVER_ANSWER_MS })
+    .toBe(true)
+  await reenter(page, 'commons')
+  expect(reach.has(tileKey(await player(page))), 'reloaded on reached ground').toBe(true)
+
+  // A save that names the pocket recovers onto reached ground as well.
+  seedStory(id, { place: { area: 'commons', x: px! * 16 + 8, y: py! * 16 + 8 } })
+  await reenter(page, 'commons')
+  const back = tileKey(await player(page))
+  expect(back).not.toBe(pocket)
+  expect(reach.has(back), 'a pocket save recovers to reached ground').toBe(true)
 })
 
 test('claim and guidance, then expansion: lantern posts, naming, clearing, cottage, rest at home', async ({ page }) => {

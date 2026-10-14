@@ -7,7 +7,7 @@ import (
 	contentv1 "glimway/gen/glimway/content/v1"
 )
 
-//go:embed *.json
+//go:embed *.json layouts/*.json
 var FS embed.FS
 
 // The shared economy contract (content/economy.json): glim pricing, sync

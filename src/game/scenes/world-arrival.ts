@@ -6,7 +6,7 @@
  * in an area this build can't draw comes back in at the Commons arch.
  */
 import { tileCenter } from '../../lib/tile'
-import { COMMONS_FROM_WILDS } from '../commons'
+import { COMMONS_FROM_WILDS } from '../commons-served'
 import { homesteadsFor } from '../homestead'
 import type { Session } from '../session'
 import { buildArea, hasAreaKind, type WorldData } from '../worlds'

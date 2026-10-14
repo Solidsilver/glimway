@@ -21,11 +21,15 @@ func knownLook(look string) bool {
 // Validate checks immutable geometry, before storage and after binary decode
 // (open-map.md 2.2, 2.5): identity, sizes, the palette and decor against
 // content's vocabularies, sites, entities and place marks. World ownership
-// and lifetime remain the transactional source's responsibility.
-func Validate(c *contract.WildsChunk) error {
+// and lifetime remain the transactional source's responsibility. A fixed
+// chunk is validateFixed's; a generated one never takes a fixed epoch id.
+func Validate(c *contract.WorldChunk) error {
+	if c != nil && c.Source == contract.ChunkSource_CHUNK_SOURCE_FIXED {
+		return validateFixed(c)
+	}
 	w := content.WildsRules
 	S := uint32(w.GetChunkSize())
-	if c == nil || c.Size != S || c.EpochId == "" || c.GeneratorVersion < 3 || c.Realm != w.GetRealm() || c.Layer != 0 || !knownLook(c.Look) || len(c.Mark) > 64 {
+	if c == nil || c.Source != contract.ChunkSource_CHUNK_SOURCE_UNSPECIFIED || c.LayoutRevision != 0 || len(c.Objects) > 0 || IsFixedEpoch(c.EpochId) || c.Size != S || c.EpochId == "" || c.GeneratorVersion < 3 || c.Realm != w.GetRealm() || c.Layer != 0 || !knownLook(c.Look) || len(c.Mark) > 64 {
 		return fmt.Errorf("invalid chunk identity")
 	}
 	if c.Tier < 1 || int(c.Tier) > len(w.Tiers) || !slices.ContainsFunc(w.Lands, func(l *content.WildsLand) bool { return l.GetId() == c.Land }) {
@@ -131,7 +135,7 @@ func GroundByID(id string) *content.WildsGround {
 	return nil
 }
 
-func Entity(c *contract.WildsChunk, id string) (*contract.WildsEntity, error) {
+func Entity(c *contract.WorldChunk, id string) (*contract.WildsEntity, error) {
 	for _, e := range c.Entities {
 		if e.Id == id {
 			return proto.Clone(e).(*contract.WildsEntity), nil
@@ -139,7 +143,7 @@ func Entity(c *contract.WildsChunk, id string) (*contract.WildsEntity, error) {
 	}
 	return nil, sql.ErrNoRows
 }
-func DecorAt(c *contract.WildsChunk, x, y uint32) []int {
+func DecorAt(c *contract.WorldChunk, x, y uint32) []int {
 	out := []int{}
 	if c.Decor != nil {
 		for i, tx := range c.Decor.Tx {
@@ -152,7 +156,7 @@ func DecorAt(c *contract.WildsChunk, x, y uint32) []int {
 }
 
 // DecorWithin returns indices whose tile centres are within radius tiles.
-func DecorWithin(c *contract.WildsChunk, x, y, radius float64) []int {
+func DecorWithin(c *contract.WorldChunk, x, y, radius float64) []int {
 	out := []int{}
 	if c == nil || c.Decor == nil || radius < 0 {
 		return out

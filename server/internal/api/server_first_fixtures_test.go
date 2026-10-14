@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"glimway/server/internal/chunks"
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/store"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -192,7 +193,7 @@ func TestServerFirstWireFixtures(t *testing.T) {
 		}
 		fixtures = append(fixtures, wireFixture{"mixed", route, raw, ""})
 	}
-	chunk := &contract.WildsChunk{EpochId: "epoch", Realm: "hearthwick", Look: "tangle", Cx: 1, Cy: 0, GeneratorVersion: 3, Size: 24, Tier: 1, Land: "woods", Palette: []string{"grass_b"}, Ground: make([]byte, 288), Solid: make([]byte, 72), Decor: &contract.DecorList{Kinds: []string{"oak"}, Kind: []uint32{0}, Tx: []uint32{2}, Ty: []uint32{3}, Ox: []int32{1}, Oy: []int32{-2}, Variant: []uint32{0}, Flags: []byte{0}}, Entities: []*contract.WildsEntity{{Id: "node:1:0:0", Kind: "node", Tx: 3, Ty: 4, Material: "timber"}}, Sites: []*contract.StorySite{{Id: "echo", Kind: contract.SiteKind_SITE_KIND_ECHO, Tx: 3, Ty: 5}}}
+	chunk := &contract.WorldChunk{EpochId: "epoch", Realm: "hearthwick", Look: "tangle", Cx: 1, Cy: 0, GeneratorVersion: 3, Size: 24, Tier: 1, Land: "woods", Palette: []string{"grass_b"}, Ground: make([]byte, 288), Solid: make([]byte, 72), Decor: &contract.DecorList{Kinds: []string{"oak"}, Kind: []uint32{0}, Tx: []uint32{2}, Ty: []uint32{3}, Ox: []int32{1}, Oy: []int32{-2}, Variant: []uint32{0}, Flags: []byte{0}}, Entities: []*contract.WildsEntity{{Id: "node:1:0:0", Kind: "node", Tx: 3, Ty: 4, Material: "timber"}}, Sites: []*contract.StorySite{{Id: "echo", Kind: contract.SiteKind_SITE_KIND_ECHO, Tx: 3, Ty: 5}}}
 	chunkJSON, err := (protojson.MarshalOptions{EmitUnpopulated: true}).Marshal(chunk)
 	if err != nil {
 		t.Fatal(err)
@@ -201,7 +202,7 @@ func TestServerFirstWireFixtures(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fixtures = append(fixtures, wireFixture{"glimway.v1.WildsChunk", "valid", chunkJSON, hex.EncodeToString(binary)})
+	fixtures = append(fixtures, wireFixture{"glimway.v1.WorldChunk", "valid", chunkJSON, hex.EncodeToString(binary)})
 
 	add := func(kind string, message proto.Message) {
 		raw, err := (protojson.MarshalOptions{EmitUnpopulated: true}).Marshal(message)
@@ -280,7 +281,9 @@ func TestServerFirstWireFixtures(t *testing.T) {
 	branchAC := newWay("place:-1:-2", "place:0:-2", "Fixture's way", line([2]int32{-22, -150}, [2]int32{12, -150}, [2]int32{12, -167}), [2]int32{-22, -151}, [2]int32{13, -167})
 	branchBC := newWay("place:0:-2", "place:1:-2", "Peer's way", line([2]int32{12, -167}, [2]int32{12, -150}, [2]int32{47, -150}), [2]int32{11, -167}, [2]int32{47, -151})
 	branchBC.By = "peer-account"
-	add("valid-open-map", &contract.WildsChunk{EpochId: "wick-epoch", Realm: "hearthwick", Look: "outer", Cx: -3, Cy: -7, GeneratorVersion: 3, Size: 24, Palette: []string{"grass_c"}, Ground: make([]byte, 288), Solid: make([]byte, 72), Decor: &contract.DecorList{Kinds: []string{"split-oak"}, Kind: []uint32{0}, Tx: []uint32{12}, Ty: []uint32{12}, Ox: []int32{0}, Oy: []int32{0}, Variant: []uint32{0}, Flags: []byte{0}}, Sites: []*contract.StorySite{{Id: "rumour:-3:-7", Kind: contract.SiteKind_SITE_KIND_RUMOUR, Tx: 12, Ty: 13}}, Tier: 3, Land: "meadow", Places: []*contract.WildsPlaceMark{{Id: "place:-1:-2", Kind: "camp-glade", Tx: 12, Ty: 12}}})
+	add("valid-open-map", &contract.WorldChunk{EpochId: "wick-epoch", Realm: "hearthwick", Look: "outer", Cx: -3, Cy: -7, GeneratorVersion: 3, Size: 24, Palette: []string{"grass_c"}, Ground: make([]byte, 288), Solid: make([]byte, 72), Decor: &contract.DecorList{Kinds: []string{"split-oak"}, Kind: []uint32{0}, Tx: []uint32{12}, Ty: []uint32{12}, Ox: []int32{0}, Oy: []int32{0}, Variant: []uint32{0}, Flags: []byte{0}}, Sites: []*contract.StorySite{{Id: "rumour:-3:-7", Kind: contract.SiteKind_SITE_KIND_RUMOUR, Tx: 12, Ty: 13}}, Tier: 3, Land: "meadow", Places: []*contract.WildsPlaceMark{{Id: "place:-1:-2", Kind: "camp-glade", Tx: 12, Ty: 12}}})
+	// A fixed chunk as served: the Commons' heart (layout revision 2).
+	add("valid-fixed", chunks.Fixed(chunks.FixedEpoch("commons", 2), 0, 1))
 	add("valid-near", &contract.WildsNearResult{
 		Still:    &contract.WildsEpoch{Id: "still-epoch", WorldSeed: "world-seed", Kind: "still", GeneratorVersion: 3, Season: "0", StartsAt: 1791300000},
 		Wick:     &contract.WildsEpoch{Id: "wick-epoch", WorldSeed: "world-seed", Kind: "wick", GeneratorVersion: 3, Season: "t:1791300000:1791500000", StartsAt: 1791300000, EndsAt: wrapperspb.Double(1791500000)},
@@ -292,6 +295,7 @@ func TestServerFirstWireFixtures(t *testing.T) {
 		Ground: []*contract.ChunkGroundChanges{ground}, Materials: map[string]float64{"stone": 4},
 		Glimpse: []*contract.WildsGlimpse{{Chunk: key(-5, -4), Land: "meadow", River: true}},
 		Ways:    []*contract.WildsWay{way},
+		Chunks:  []*contract.NearChunk{{Chunk: key(-2, -4), Source: "generated", Epoch: "wick-epoch"}},
 	})
 	add("rumour", &contract.WildsRumour{Epoch: "wick-epoch", Place: "place:-1:-2", Landmark: "split-oak", Compass: "nw", Ring: 2, PastRiver: true, Site: "rumour:-3:-7"})
 	loot := &contract.WildsLoot{Materials: []*contract.WildsMaterial{{Id: "timber", Qty: 2}}, Trinket: wrapperspb.String("beeswax-candle")}

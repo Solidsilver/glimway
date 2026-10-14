@@ -990,7 +990,7 @@ func TestV3ChunkShape(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			var pm contract.WildsChunk
+			var pm contract.WorldChunk
 			if err := proto.Unmarshal(b, &pm); err != nil {
 				t.Fatal(err)
 			}

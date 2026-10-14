@@ -21,13 +21,13 @@ var siteKinds = map[SiteKind]contract.SiteKind{
 	SiteRumour:    contract.SiteKind_SITE_KIND_RUMOUR,
 }
 
-// ToProto packs a generated chunk as the stored and served WildsChunk:
+// ToProto packs a generated chunk as the stored and served WorldChunk:
 // ground as palette nibbles, solid as bits, decor as parallel arrays with
 // two flag bits per piece (flip, overhang), layer 0. A v3 chunk carries its
 // tier, land and places (region, exits and spawn are deprecated and left
 // empty).
-func ToProto(c Chunk, epochID string) *contract.WildsChunk {
-	out := &contract.WildsChunk{
+func ToProto(c Chunk, epochID string) *contract.WorldChunk {
+	out := &contract.WorldChunk{
 		EpochId:          epochID,
 		Realm:            Realm,
 		Cx:               int32(c.CX),
@@ -108,7 +108,7 @@ func EntityFromProto(e *contract.WildsEntity) Entity {
 }
 
 // Walkable reads a packed chunk's solid bit (false outside the chunk).
-func Walkable(c *contract.WildsChunk, tx, ty int) bool {
+func Walkable(c *contract.WorldChunk, tx, ty int) bool {
 	S := int(c.Size)
 	if tx < 0 || ty < 0 || tx >= S || ty >= S {
 		return false

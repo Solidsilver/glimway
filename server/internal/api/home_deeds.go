@@ -235,14 +235,40 @@ func writeOffLostDeed(ctx context.Context, tx *sql.Tx, home string, gate int, no
 	return nil
 }
 
-// gateCount is how many gates the lane shows: every claimed gate and at
-// least SpareGates unclaimed ones.
-func gateCount(ctx context.Context, tx *sql.Tx, world string) (int, error) {
-	var n, top int
-	if err := tx.QueryRowContext(ctx, "SELECT count(*),COALESCE(MAX(gate)+1,0) FROM homesteads WHERE world_id=?", world).Scan(&n, &top); err != nil {
-		return 0, err
+// gateCount is how many gates the lane shows: the Commons' frozen capacity
+// (its layout has that many gates: location-seam.md 0 decision 10). No home
+// sits past it: claim refuses those gates, and CheckHomesteadGates keeps the
+// server from starting on a database where one does.
+func gateCount() int {
+	return commonsGates()
+}
+
+// commonsGates is the Commons' gate capacity (its places.json gate anchors).
+func commonsGates() int {
+	for _, f := range content.PlacesRules.GetFixed() {
+		if f.GetId() == "commons" {
+			return content.GateCapacity(f)
+		}
 	}
-	return max(top, n+int(content.HomeRules.GetCommons().GetSpareGates())), nil
+	return 0
+}
+
+// CheckHomesteadGates refuses a database with a homestead past the Commons'
+// gate capacity: the lane has no gate there, so its members could never
+// reach it. The server runs it at startup; move such a home to a free gate
+// first.
+func CheckHomesteadGates(ctx context.Context, db *sql.DB) error {
+	n := commonsGates()
+	var id, world string
+	var gate int
+	err := db.QueryRowContext(ctx, "SELECT id,world_id,gate FROM homesteads WHERE gate>=? ORDER BY world_id,gate LIMIT 1", n).Scan(&id, &world, &gate)
+	if err == sql.ErrNoRows {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	return fmt.Errorf("homestead %s (world %s) is at gate %d, past the Commons' %d gates (0-%d): move it to a free gate below %d before starting the server", id, world, gate, n, n-1, n)
 }
 
 // deedPrice is what a player pays Silas for the deed to an unclaimed gate:
@@ -267,17 +293,13 @@ func (a *Server) claim(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req *
 	if member {
 		return fail(409, "already-homesteaded")
 	}
-	n, err := gateCount(ctx, tx, s.WorldID)
-	if err != nil {
-		return err
-	}
-	if req.Gate == nil || req.Gate.GetValue() < 0 || req.Gate.GetValue() >= int32(n) {
+	if req.Gate == nil || req.Gate.GetValue() < 0 || req.Gate.GetValue() >= int32(gateCount()) {
 		return fail(404, "invalid-gate")
 	}
 	gate := int(req.Gate.GetValue())
 	var held string
 	var vacant *int64
-	err = tx.QueryRowContext(ctx, "SELECT id,vacant_since FROM homesteads WHERE world_id=? AND gate=?", s.WorldID, gate).Scan(&held, &vacant)
+	err := tx.QueryRowContext(ctx, "SELECT id,vacant_since FROM homesteads WHERE world_id=? AND gate=?", s.WorldID, gate).Scan(&held, &vacant)
 	if err != nil && err != sql.ErrNoRows {
 		return err
 	}

@@ -252,14 +252,14 @@ func (f *fightEpochFixture) Create(ctx context.Context, tx *sql.Tx, world, kind 
 }
 
 type fightChunkFixture struct {
-	chunks map[string]*chunkwire.WildsChunk
+	chunks map[string]*chunkwire.WorldChunk
 	calls  atomic.Int64
 }
 
 // Chunk serves the epoch's chunk at any coordinates; only (0,0) keeps its
 // camp, and calls counts that camp chunk's loads.
-func (f *fightChunkFixture) Chunk(_ context.Context, _ *sql.Tx, _, epoch string, _, cx, cy int32) (*chunkwire.WildsChunk, error) {
-	c := proto.Clone(f.chunks[epoch]).(*chunkwire.WildsChunk)
+func (f *fightChunkFixture) Chunk(_ context.Context, _ *sql.Tx, _, epoch string, _, cx, cy int32) (*chunkwire.WorldChunk, error) {
+	c := proto.Clone(f.chunks[epoch]).(*chunkwire.WorldChunk)
 	c.Cx, c.Cy = cx, cy
 	if cx == 0 && cy == 0 {
 		f.calls.Add(1)
@@ -271,7 +271,7 @@ func (f *fightChunkFixture) Chunk(_ context.Context, _ *sql.Tx, _, epoch string,
 func epochAdapterFixture(t *testing.T, x *rig) (*fightEpochFixture, *fightChunkFixture) {
 	turn := x.now.Load() + 1
 	epochs := &fightEpochFixture{first: &chunkwire.WildsEpoch{Id: "first", Kind: "still", WorldSeed: "seed", EndsAt: wrapperspb.Double(float64(turn))}, second: &chunkwire.WildsEpoch{Id: "second", Kind: "still", WorldSeed: "seed"}, turn: turn}
-	source := &fightChunkFixture{chunks: map[string]*chunkwire.WildsChunk{}}
+	source := &fightChunkFixture{chunks: map[string]*chunkwire.WorldChunk{}}
 	for _, ep := range []*chunkwire.WildsEpoch{epochs.first, epochs.second} {
 		chunk, err := fakegen.New().Chunk(ep, 0, 0, nil)
 		if err != nil {
@@ -462,10 +462,10 @@ func TestFightFirstFrameIsJoin(t *testing.T) {
 
 type edgeFightChunk struct{ source chunks.ChunkSource }
 
-func (e edgeFightChunk) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, layer, cx, cy int32) (*chunkwire.WildsChunk, error) {
+func (e edgeFightChunk) Chunk(ctx context.Context, tx *sql.Tx, world, epoch string, layer, cx, cy int32) (*chunkwire.WorldChunk, error) {
 	c, err := e.source.Chunk(ctx, tx, world, epoch, layer, cx, cy)
 	if err == nil {
-		c = proto.Clone(c).(*chunkwire.WildsChunk)
+		c = proto.Clone(c).(*chunkwire.WorldChunk)
 		for _, entity := range c.Entities {
 			if entity.Id == "camp:0:0:0" {
 				entity.Tx = 23

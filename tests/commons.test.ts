@@ -1,15 +1,20 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildCommons, commonsRows, gateSlot, LANE, type CommonsWorld } from '../src/game/commons.ts';
+import type { CommonsWorld } from '../src/game/commons-served.ts';
 import { buildRoom, ROOM_DOOR, ROOM_GRID } from '../src/game/cottage.ts';
 import { buildArea, hasAreaKind } from '../src/game/worlds.ts';
 import { buildLand, setLandSource } from '../src/game/homeland.ts';
 import { HOMESTEAD_DATA, gateTile } from '../src/lib/homestead.ts';
 import { LAND } from '../src/lib/homestead-land.ts';
 import { serveFixtureLand } from './land-fixture.ts';
+import { serveFixtureCommons, servedCommonsFixture } from './commons-fixture.ts';
 
-// Homestead land is the server's: these tests stand on its served fixture.
+// Homestead land and the Commons are the server's: these tests stand on their served fixtures.
 serveFixtureLand('guest');
+serveFixtureCommons();
+const commons = servedCommonsFixture();
+/** The plot lane between the two fences (content/homestead.json fenceX). */
+const LANE = { x0: HOMESTEAD_DATA.commons.fenceX[0] + 1, x1: HOMESTEAD_DATA.commons.fenceX[1] - 1 };
 import { TILE } from '../src/lib/tile.ts';
 
 type Tile = { tx: number; ty: number };
@@ -41,19 +46,22 @@ function reach(w: CommonsWorld | ReturnType<typeof buildRoom>, from: Tile): Set<
 
 const near = (r: Set<string>, t: Tile) => [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => r.has(key({ tx: t.tx + dx, ty: t.ty + dy })));
 
-test('the Commons is deterministic and registered as an area; homestead lands resolve by gate', () => {
-  assert.deepEqual(buildCommons(3).ground, buildCommons(3).ground);
-  assert.equal(buildArea('commons').areaId, 'commons');
+test('the Commons is registered as an area, served; homestead lands resolve by gate', () => {
+  const w = buildArea('commons') as CommonsWorld;
+  assert.equal(w.areaId, 'commons');
+  assert.equal(w.served, true);
+  assert.deepEqual(w.ground, commons.ground);
   assert.equal(buildArea('home:4').areaId, 'home:4');
   assert.ok(hasAreaKind('home:0') && hasAreaKind('home:9999'));
   assert.ok(!hasAreaKind('home:01') && !hasAreaKind('home') && !hasAreaKind('home:x'));
 });
 
 test('gate slots sit exactly where the shared layout (and the server) put them, in the fences', () => {
-  for (let g = 0; g < 12; g++) {
-    const slot = gateSlot(g);
+  assert.equal(commons.gates.length, 8, 'the frozen capacity');
+  for (const slot of commons.gates) {
+    const g = slot.gate;
     const t = gateTile(g);
-    assert.deepEqual({ tx: slot.tx, ty: slot.ty }, { tx: t.tx, ty: t.ty }, `gate ${g}`);
+    assert.deepEqual({ tx: slot.tx, ty: slot.ty, side: slot.side }, { tx: t.tx, ty: t.ty, side: t.side }, `gate ${g}`);
     assert.equal(slot.tx, HOMESTEAD_DATA.commons.fenceX[g % 2]);
     // The sign and the way back out stand on the lane side of the fence.
     assert.ok(slot.side === 'west' ? slot.entry.tx > slot.tx && slot.entry.tx >= LANE.x0 : slot.entry.tx < slot.tx && slot.entry.tx <= LANE.x1);
@@ -61,46 +69,38 @@ test('gate slots sit exactly where the shared layout (and the server) put them, 
 });
 
 test('west gate shelf and neighbouring gate sign have separate prompt positions', () => {
-  const shelf = gateSlot(0).shelf;
-  const sign = gateSlot(2).sign;
+  const shelf = commons.gates[0]!.shelf;
+  const sign = commons.gates[2]!.sign;
   assert.ok(Math.hypot(shelf.tx - sign.tx, shelf.ty - sign.ty) > 1);
 });
 
-test('the lane grows a row of gates at a time and always shows spares', () => {
-  const rows = HOMESTEAD_DATA.commons.gateRows.length;
-  assert.equal(commonsRows(0), rows);
-  assert.equal(commonsRows(rows * 2), rows);
-  assert.equal(commonsRows(rows * 2 + 1), rows + 1);
-  assert.equal(buildCommons(0).gates.length, HOMESTEAD_DATA.commons.spareGates);
-  const w = buildCommons(13);
-  assert.equal(w.gates.length, 13);
-  for (const g of w.gates) assert.ok((g.ty + 3) * TILE <= w.heightPx - 2 * TILE, `gate ${g.gate} fits on the map`);
+test('the lane holds every gate the Commons has, and more than the spares', () => {
+  assert.ok(commons.gates.length >= HOMESTEAD_DATA.commons.spareGates);
+  for (const g of commons.gates) assert.ok((g.ty + 3) * TILE <= commons.heightPx - 2 * TILE, `gate ${g.gate} fits on the map`);
 });
 
-for (const count of [0, 6, 11]) {
-  test(`every gate opens onto its homestead, and can be walked up to from the village gate (${count} gates)`, () => {
-    const w = buildCommons(count);
-    const r = reach(w, w.spawn);
-    for (const g of w.gates) {
-      const exit = w.exits.find((e) => e.to === `home:${g.gate}`);
-      assert.ok(exit, `gate ${g.gate} has an exit`);
-      assert.deepEqual({ tx: exit!.tx, ty: exit!.ty, tw: exit!.tw, th: exit!.th }, { tx: g.tx, ty: g.ty, tw: 1, th: 2 });
-      assert.equal(exit!.label, null, 'the homestead layer draws the gate’s own sign');
-      assert.ok(r.has(key(g.entry)), `gate ${g.gate}: the lane in front of it is unreachable`);
-      assert.ok(near(r, g.sign), `gate ${g.gate} sign unreachable`);
-      for (let y = g.ty; y <= g.ty + 1; y++) assert.ok(!w.solid[y][g.tx], `gate ${g.gate} gap is open`);
-      // Coming back out of the land puts you on the lane in front of the gate.
-      const land = buildArea(`home:${g.gate}`);
-      assert.deepEqual(land.exits[0].entry, g.entry);
-      assert.equal(land.exits[0].to, 'commons');
-    }
-    for (const [name, t] of Object.entries(w.features)) {
-      if (name === 'lamps') continue;
-      assert.ok(near(r, t as Tile), `${name} cannot be walked up to`);
-    }
-    for (const e of w.exits) assert.ok(r.has(key(e)), `exit to ${e.to} unreachable`);
-  });
-}
+test('every gate opens onto its homestead, and can be walked up to from the village gate', () => {
+  const w = commons;
+  const r = reach(w, w.spawn);
+  for (const g of w.gates) {
+    const exit = w.exits.find((e) => e.to === `home:${g.gate}`);
+    assert.ok(exit, `gate ${g.gate} has an exit`);
+    assert.deepEqual({ tx: exit!.tx, ty: exit!.ty, tw: exit!.tw, th: exit!.th }, { tx: g.tx, ty: g.ty, tw: 1, th: 2 });
+    assert.equal(exit!.label, null, 'the homestead layer draws the gate’s own sign');
+    assert.ok(r.has(key(g.entry)), `gate ${g.gate}: the lane in front of it is unreachable`);
+    assert.ok(near(r, g.sign), `gate ${g.gate} sign unreachable`);
+    for (let y = g.ty; y <= g.ty + 1; y++) assert.ok(!w.solid[y][g.tx], `gate ${g.gate} gap is open`);
+    // Coming back out of the land puts you on the lane in front of the gate.
+    const land = buildArea(`home:${g.gate}`);
+    assert.deepEqual(land.exits[0].entry, g.entry);
+    assert.equal(land.exits[0].to, 'commons');
+  }
+  for (const [name, t] of Object.entries(w.features)) {
+    if (name === 'lamps') continue;
+    assert.ok(near(r, t as Tile), `${name} cannot be walked up to`);
+  }
+  for (const e of w.exits) assert.ok(r.has(key(e)), `exit to ${e.to} unreachable`);
+});
 
 test('a homestead’s land: the site, the path to the gate mouth and the mailbox are reachable; the way back is the gate', () => {
   for (const gate of [0, 1, 5, 17]) {
@@ -140,7 +140,7 @@ test('cleared tiles open up the land map; desolation grows over it', () => {
 });
 
 test('the Commons gate leads back to Hearthwick and the north lane to the Wilds', () => {
-  const w = buildCommons();
+  const w = commons;
   const village = w.exits.find((e) => e.to === 'village')!;
   const wilds = w.exits.find((e) => e.to === 'outdoors')!;
   assert.equal(village.tx, 0);
@@ -169,10 +169,10 @@ test('inside a cottage: the floor is the 12×10 grid, the door leads to the door
   assert.equal(ROOM_GRID.ty + mat.y + mat.h, ROOM_DOOR.ty);
 });
 
-test('a huge Commons is drawn in ground chunks no texture limit can refuse', async () => {
+test('a huge area is drawn in ground chunks no texture limit can refuse', async () => {
   const { groundChunks, GROUND_CHUNK_TILES } = await import('../src/game/area/terrain.ts');
-  const w = buildCommons(320); // 320 gates: a lane well past the 8192 px texture limit
-  assert.ok(w.heightPx > 8192);
+  const w = { width: 62, height: 820 }; // a map well past the 8192 px texture limit
+  assert.ok(w.height * TILE > 8192);
   const chunks = groundChunks(w.width, w.height);
   for (const c of chunks) assert.ok(c.tw * TILE <= 1024 && c.th * TILE <= 1024 && c.tw <= GROUND_CHUNK_TILES);
   // Every tile is covered exactly once.
