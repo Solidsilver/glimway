@@ -323,3 +323,44 @@ test('Carting Day dressing and Commons interactions leave with their chunks and 
     expect(await page.evaluate(() => window.__fsNpcs!().map((n) => n.id).sort())).toEqual(['elara', 'silas'])
   }
 })
+
+test('walking from the Tangle waits for fixed collision before crossing or saving into the Commons', async ({ page, context }) => {
+  await connected(page, context)
+  await warp(page, 'outdoors', 2, 22)
+  await page.evaluate(() => window.__fsDevSaveSoon!())
+  await expect.poll(async () => (await serverState(page)).body.state.position).toEqual({ x: 40, y: 360 })
+  await page.goto('/')
+  await page.evaluate(() => new Promise<void>((resolve, reject) => {
+    const request = indexedDB.open('glimway-chunks')
+    request.onerror = () => reject(request.error)
+    request.onsuccess = () => {
+      const db = request.result
+      const tx = db.transaction('chunks', 'readwrite')
+      tx.objectStore('chunks').clear()
+      tx.oncomplete = () => { db.close(); resolve() }
+      tx.onerror = () => { db.close(); reject(tx.error) }
+    }
+  }))
+  let release!: () => void
+  const held = new Promise<void>((resolve) => { release = resolve })
+  const fixedRoute = /\/api\/wilds\/chunk\/fixed(?::|%3A)/
+  await page.route(fixedRoute, async (route) => { await held; await route.continue() })
+  try {
+    await page.getByTestId('continue-world').click()
+    await waitForWorld(page, 'outdoors')
+    await parkCreatures(page)
+    await page.keyboard.down('ArrowDown')
+    await frames(page, 180)
+    await page.keyboard.up('ArrowDown')
+    expect((await hero(page)).y).toBeLessThan(MOUTH_Y)
+    expect((await serverState(page)).body.state.position.y).toBeLessThan(MOUTH_Y)
+    expect((await win(page)).fixed).not.toContain('0,1')
+  } finally {
+    release()
+    await page.keyboard.up('ArrowDown')
+  }
+  await expect.poll(async () => (await win(page)).fixed).toContain('0,1')
+  await walkTo(page, 'ArrowDown', 26 * TILE)
+  expect(await inCommons(page)).toBe(true)
+  await page.unroute(fixedRoute)
+})

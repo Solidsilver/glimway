@@ -90,6 +90,8 @@ export interface PerfReport {
   /** Frame times overall: count per bucket (upper edge, ms). */
   histogram: Record<string, number>
   long: LongFrame[]
+  /** Browser tasks over 50 ms, observed independently of animation frames. */
+  tasks: LongFrame[]
   /** Totals per stage: how often it ran, its time in all and its longest run. */
   stages: Record<string, { n: number; ms: number; max: number }>
   samples: PerfSample[]
@@ -111,6 +113,8 @@ class Instruments {
   observer: PerfReport['observer'] = 'none'
   private spans: Span[] = []
   private long: LongFrame[] = []
+  private tasks: LongFrame[] = []
+  private resetAt = 0
   private frames = new Map<string, number[]>()
   private histogram = BUCKETS.map(() => 0)
   private stages = new Map<string, { n: number; ms: number; max: number }>()
@@ -142,6 +146,11 @@ class Instruments {
 
   private observe(): void {
     const types = (PerformanceObserver as unknown as { supportedEntryTypes?: string[] }).supportedEntryTypes ?? []
+    if (types.includes('longtask')) {
+      new PerformanceObserver((list) => {
+        for (const e of list.getEntries()) this.longFrame(e, this.tasks)
+      }).observe({ type: 'longtask', buffered: true })
+    }
     const type = types.includes('long-animation-frame') ? 'long-animation-frame' : types.includes('longtask') ? 'longtask' : null
     if (!type) return
     this.observer = type
@@ -150,7 +159,8 @@ class Instruments {
     }).observe({ type, buffered: true })
   }
 
-  private longFrame(e: PerformanceEntry & { blockingDuration?: number; scripts?: { invoker?: string; sourceFunctionName?: string; sourceURL?: string; duration: number }[] }): void {
+  private longFrame(e: PerformanceEntry & { blockingDuration?: number; scripts?: { invoker?: string; sourceFunctionName?: string; sourceURL?: string; duration: number }[] }, target = this.long): void {
+    if (e.startTime < this.resetAt) return
     const end = e.startTime + e.duration
     const stages: Record<string, number> = {}
     for (const s of this.spans) {
@@ -160,8 +170,8 @@ class Instruments {
     }
     const top = [...(e.scripts ?? [])].sort((a, b) => b.duration - a.duration)[0]
     const script = top ? `${top.sourceFunctionName || top.invoker || '?'} ${(top.sourceURL ?? '').split('/').pop()?.split('?')[0] ?? ''} ${round(top.duration)}ms`.trim() : null
-    this.long.push({ t: round(e.startTime), ms: round(e.duration), blocking: round(e.blockingDuration ?? Math.max(0, e.duration - 50)), phase: this.phase, stages, script })
-    if (this.long.length > 2000) this.long.shift()
+    target.push({ t: round(e.startTime), ms: round(e.duration), blocking: round(e.blockingDuration ?? Math.max(0, e.duration - 50)), phase: this.phase, stages, script })
+    if (target.length > 2000) target.shift()
   }
 
   private frame(ms: number): void {
@@ -247,11 +257,13 @@ class Instruments {
     const stages: PerfReport['stages'] = {}
     for (const [name, s] of this.stages) stages[name] = { n: s.n, ms: round(s.ms), max: round(s.max) }
     const domAdded = Object.fromEntries([...this.domAdded].sort((a, b) => b[1] - a[1]).slice(0, 20))
-    return { fights: this.fights, on: true, phase: this.phase, observer: this.observer, phases, histogram, long: [...this.long], stages, samples: [...this.samples], domAdded }
+    return { fights: this.fights, on: true, phase: this.phase, observer: this.observer, phases, histogram, long: [...this.long], tasks: [...this.tasks], stages, samples: [...this.samples], domAdded }
   }
 
   reset(): void {
     this.long = []
+    this.tasks = []
+    this.resetAt = now()
     this.frames.clear()
     this.histogram = BUCKETS.map(() => 0)
     this.stages.clear()

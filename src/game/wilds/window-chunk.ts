@@ -211,25 +211,25 @@ export class AttachedChunk implements Buildable {
     const o = chunkOrigin(terrain)
     this.ground = scene.add.image(o.tx * TILE, o.ty * TILE, groundKey).setOrigin(0, 0).setDepth(GROUND_DEPTH)
     this.images.push(this.ground)
-    perfTime('attach:collision', () => this.collide())
+    perfTime('attach:generated:collision', () => this.collide())
     const spots = chunkScenery(this.terrain, (key) => scene.textures.exists(key))
     let next = 0
     let row = 0
     const fords: { tx: number; ty: number }[] = []
     this.todo = [
-      (deadline) => perfTime('attach:tile-art', () => {
+      (deadline) => perfTime('attach:generated:tile-art', () => {
         row = this.tileArt(row, fords, deadline)
         return row >= this.terrain.size
       }),
-      (deadline) => perfTime('attach:scenery', () => {
+      (deadline) => perfTime('attach:generated:scenery', () => {
         next = this.scenery(spots, next, deadline)
         return next >= spots.length
       }),
-      () => perfTime('attach:gathering', () => {
+      () => perfTime('attach:generated:gathering', () => {
         deps.gathering()?.addChunk(this.key, deps.gather(this.terrain))
         return true
       }),
-      () => perfTime('attach:things', () => {
+      () => perfTime('attach:generated:things', () => {
         deps.entities.attach(this.terrain)
         return true
       }),
@@ -246,6 +246,7 @@ export class AttachedChunk implements Buildable {
   /** Build what is left until `deadline` (performance.now(), ms): true once the chunk is whole. */
   build(deadline: number): boolean {
     while (this.todo.length) {
+      if (now() >= deadline) return false
       if (!this.todo[0]!(deadline)) return false
       this.todo.shift()
     }
@@ -496,7 +497,7 @@ export class AttachedChunk implements Buildable {
     let i = from
     this.batch(() => {
       for (; i < spots.length; i++) {
-        if ((i - from) % 8 === 7 && now() > deadline) break
+        if (i > from && now() >= deadline) break
         const s = spots[i]!
         if (!ensureSceneryArt(scene, s.key)) continue
         if (s.decal && !perfWithout('bake')) {

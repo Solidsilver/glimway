@@ -58,7 +58,7 @@ import { parseHomeArea } from '../../lib/homestead'
 import { homeLights } from '../../lib/homestead-land'
 import { homesteadsFor } from '../homestead'
 import { prepareHomeLand } from '../homeland'
-import { commonsLane } from '../wilds/fixed'
+import { commonsLane, fixedPlaceOf } from '../wilds/fixed'
 import { FixedLife } from '../wilds/fixed-life'
 import { isSafeArea } from '../../lib/habitica/sync'
 import { fingerInBracken } from '../../lib/quests'
@@ -772,6 +772,7 @@ export class WorldScene extends Phaser.Scene {
   private play(time: number, dt: number): void {
     this.hero.move(dt, this.devWalk ? this.devSteer() : this.controls.vector())
     this.holdSafe(dt)
+    this.holdFixed(dt)
     this.enemies.update(dt)
     this.goalGuide.update(dt, this.hero.sprite, this.worldLive())
     this.projectiles.update(dt)
@@ -812,6 +813,28 @@ export class WorldScene extends Phaser.Scene {
         }
       }
     }
+  }
+
+  /** Undelivered fixed ground is a boundary, including a step Arcade has already taken. */
+  private holdFixed(dt: number): void {
+    const window = this.window
+    if (!window) return
+    const ready = (x: number, y: number) => {
+      const at = chunkOfPixel(x, y)
+      return !fixedPlaceOf(at.cx, at.cy) || window.hasFixed(at.cx, at.cy)
+    }
+    const h = this.hero.sprite
+    // An arrival already on missing fixed ground is held by waitingFixed.
+    if (!ready(h.x, h.y)) return
+    const body = h.body as Phaser.Physics.Arcade.Body
+    const next = { x: h.x + body.position.x - body.prevFrame.x, y: h.y + body.position.y - body.prevFrame.y }
+    if (!ready(next.x, next.y)) {
+      const at = holdOnSafe(ready, h, next)
+      body.reset(at.x, at.y)
+      return
+    }
+    const v = stopAtEdge(ready, next, body.velocity, Math.max(dt, 1 / 30) * 1.5)
+    body.setVelocity(v.x, v.y)
   }
 
   /** Where the hero last stood on safe ground while too hurt to fight (the zero-HP barrier's). */

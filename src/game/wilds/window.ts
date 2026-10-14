@@ -157,7 +157,7 @@ export class WildsWindow {
    * across an edge keep which is on top.
    */
   private buildSome(): void {
-    this.builds.step(performance.now() + BUILD_MS)
+    perfTime('build:slice', () => this.builds.step(performance.now() + BUILD_MS))
   }
 
   /** Whether a chunk out of the 3×3 is still kept (the hero is less than SLACK_TILES past the edge it left by). */
@@ -180,15 +180,25 @@ export class WildsWindow {
       c.destroy()
       this.attached.delete(key)
       this.drops++
+      // A row can take a long frame to tear down on phones. Drain one
+      // chunk per frame, even when the hero has stopped on this tile.
+      this.heroTile = ''
+      return
     }
     for (const [key, c] of this.fixed) if (!plan.attach.includes(key) && !this.kept(key)) {
       c.destroy()
       this.fixed.delete(key)
       this.drops++
+      // A row can take a long frame to tear down on phones. Drain one
+      // chunk per frame, even when the hero has stopped on this tile.
+      this.heroTile = ''
+      return
     }
     for (const [key, d] of this.drifts) if (!plan.drift.includes(key) && !this.kept(key)) {
       d.destroy()
       this.drifts.delete(key)
+      this.heroTile = ''
+      return
     }
   }
 
@@ -412,7 +422,7 @@ export class WildsWindow {
   }
 
   private attach(key: string): void {
-    perfTime('attach', () => this.attachNow(key))
+    perfTime('attach:generated', () => this.attachNow(key))
   }
 
   private attachNow(key: string): void {
@@ -435,7 +445,7 @@ export class WildsWindow {
 
   /** Attach a fixed chunk: its ground laid from its footprint's painted tileset (painted on first use). */
   private attachFixed(fp: FixedFootprint, cx: number, cy: number): void {
-    perfTime('attach', () => {
+    perfTime('attach:fixed', () => {
       const { scene, session } = this.deps
       const ground = this.groundFor(fp)
       if (!ground) return
@@ -466,6 +476,11 @@ export class WildsWindow {
       this.attaches++
       if (this.now || perfWithout('spread')) this.builds.finish(c)
     })
+  }
+
+  /** Fixed ground and collision are attached, even if its drawing is still building. */
+  hasFixed(cx: number, cy: number): boolean {
+    return this.fixed.has(chunkKey(cx, cy))
   }
 
   /** The fixed chunks attached now. */

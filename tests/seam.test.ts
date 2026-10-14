@@ -549,3 +549,62 @@ test('Commons residents, pickups, papers, repairs, festival dressing and exit re
   setGameNow(null);
   r.scene.events.emit('shutdown');
 });
+
+
+test('fixed pieces stop after each piece once the slice expires', (t) => {
+  const r = rig();
+  const piece = [...r.fp.objects.values()].flat().find((o) => o.kind === 'well')!;
+  const fp = { ...r.fp, objects: new Map([['0,1', [piece, piece, piece, piece]]]) };
+  let clock = 0;
+  t.mock.method(performance, 'now', () => clock);
+  const c = new FixedChunk(r.deps as never, fp, 0, 1);
+  const image = r.scene.add.image;
+  let drawn = 0;
+  t.mock.method(r.scene.add, 'image', (...args: Parameters<typeof image>) => {
+    drawn++;
+    clock += 2;
+    return image(...args);
+  });
+  assert.equal(c.build(3), false);
+  assert.equal(drawn, 2, 'a third piece does not start after the second passes the deadline');
+  r.builds.finish(c);
+  assert.equal(c.whole, true);
+  c.destroy();
+});
+
+
+test('window teardown drains a row one chunk per frame even while standing still', () => {
+  const w = Object.create(WildsWindow.prototype) as InstanceType<typeof WildsWindow>;
+  const dropped: string[] = [];
+  const chunks = (keys: string[]) => new Map(keys.map((key) => [key, { destroy: () => dropped.push(key) }]));
+  Object.assign(w, { deps: { hero: () => ({ x: 40, y: 428 }) }, plan: { attach: [], drift: [] }, heroTile: '', drops: 0,
+    attached: chunks(['8,8', '9,8', '10,8']), fixed: chunks(['8,9', '9,9', '10,9']), drifts: new Map() });
+  for (let i = 0; i < 6; i++) {
+    w['dropBehind']();
+    assert.equal(dropped.length, i + 1, 'one chunk per call on the same tile');
+  }
+  w['dropBehind']();
+  assert.equal(w['drops'], 6);
+  assert.equal(w['attached'].size + w['fixed'].size, 0);
+});
+
+test('fixed exit signs yield between exits when a label uses the slice', (t) => {
+  const r = rig();
+  const exit = [...r.fp.objects.values()].flat().find((o) => o.id === 'exit:village')!;
+  const fp = { ...r.fp, objects: new Map([['0,1', [exit, exit, exit]]]) };
+  let clock = 0;
+  t.mock.method(performance, 'now', () => clock);
+  const c = new FixedChunk(r.deps as never, fp, 0, 1);
+  const text = r.scene.add.text;
+  let labels = 0;
+  t.mock.method(r.scene.add, 'text', (...args: Parameters<typeof text>) => {
+    labels++;
+    clock += 5;
+    return text(...args);
+  });
+  assert.equal(c.build(4), false);
+  assert.equal(labels, 1, 'remaining exits wait for another frame');
+  r.builds.finish(c);
+  assert.equal(c.whole, true);
+  c.destroy();
+});

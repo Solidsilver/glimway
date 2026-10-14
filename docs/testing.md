@@ -285,6 +285,34 @@ records a Chrome trace beside the summary; `PERF_WITHOUT=…` passes
 `without`. Nothing else heavy should run beside it, and Vite reloads the
 page when a source file changes, so don't edit while it walks.
 
+**The Commons–Tangle seam** (`perf/seam.perf.ts`) uses the same config and a
+pinned seed (`perf-seam`). It walks straight, diagonally and with turn-backs
+at the mouth (at least twelve crossings per pattern), then walks beyond the
+window's slack and returns ten times, without restarting the scene. Desktop
+and phone emulation (390×844, DPR 3, touch, 4× CPU throttle) record frame
+percentiles, independent long tasks, fixed/generated build stages against
+`BUILD_MS = 4`, and collected heap, display objects, bodies, listeners and
+textures. Forced collection is labelled `resources`, outside walking phases.
+Two-client walks sample mutual visibility in transit and check both presence
+rooms on every crossing. Cold arrivals cover boot, home and Tangle with
+200 ms latency / 500 KB/s download / 100 KB/s upload, and separately hold
+only fixed reads until six seconds after the scene appears (boot also fails
+the first read). Arrival reports include positions while waiting and time
+from delivery to the whole window; they check the local and server saves.
+
+```sh
+E2E_PORT=63827 GOFLAGS=-buildvcs=false PERF_LABEL=before npm run perf:walk -- --grep seam --workers=1
+E2E_PORT=63827 GOFLAGS=-buildvcs=false PERF_LABEL=after npm run perf:walk -- --grep seam --workers=1
+```
+
+Set `PERF_OUT` to keep raw reports outside Playwright's cleared results
+directory. `PERF_SEAM_LAPS=2` is a short incremental probe; the acceptance
+run uses the default ten laps. Phone emulation is CPU/render evidence; the
+owner's physical-phone place and movement checklist remains separate.
+The seam's stage names are `attach:fixed:*`, `attach:generated:*`, and
+`build:slice`; synchronous ground/collision attachment is reported separately
+from the drawing queue. One drawing operation can overrun the deadline.
+
 **Recording a trace by hand.** Open the game with `?perf=1`, open DevTools ›
 Performance, tick *Screenshots* off and *JavaScript samples* on, record while
 walking, and save the profile (a `.json.gz`). Then:
