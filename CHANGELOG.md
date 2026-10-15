@@ -25,7 +25,7 @@ the game can show the first part as "What's new":
 
 ### Technical
 
-- **Deploy note:** migration 037 moves saved player places (`village`, `commons`, legacy outdoor places, and `home:*`) onto the outdoors grid, applying a version barrier. Outdoor homestead furniture, clears, stumps, and plants shift to match the new lot frame; pieces or plants that do not fit the lot bounds or fall on reserved cells are moved to storage or archived. Let the game sync before updating.
+- **Deploy note:** migration 037 moves saved player places (`village`, `commons`, legacy outdoor places, and `home:*`) onto the outdoors grid, applying a version barrier. Outdoor homestead furniture, clears, stumps, and plants shift to match the new lot frame; pieces that do not fit, stand on blocked ground, or lose connected light return to home storage. Displaced plants return a seed to storage and their history is archived; stored stables keep their stalls and mounts for re-placement. Untagged old local saves already labelled outdoors keep their coordinates; new local saves carry a layout tag. Let the game sync before updating.
 - One-town cutover (T5): retired standalone `village` and `home:<g>` outdoor spaces in favour of `outdoors`. Dropped deprecated village builder, standalone homeland scene, and legacy commons shims.
 
 ## [0.10.0] - 2026-10-14

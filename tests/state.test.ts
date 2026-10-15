@@ -49,6 +49,7 @@ test('validateSave accepts a well-formed state and strips foreign fields', () =>
     'glims',
     'hp',
     'inventory',
+    'layout',
     'mana',
     'maxHp',
     'maxMana',
@@ -147,4 +148,15 @@ test('a legacy Commons save moves its pixels onto the grid exactly once', () => 
   assert.equal(loaded.area, 'outdoors');
   assert.deepEqual(loaded.position, { x: 40, y: 424 });
   assert.deepEqual(validateSave(loaded), loaded);
+});
+
+
+test('ambiguous untagged outdoors saves preserve coordinates and acquire a layout tag', () => {
+  const old = { ...createNewGame(), position: { x: -801.5, y: 1050.25 } };
+  delete old.layout;
+  const current = validateSave(old);
+  assert.deepEqual(current.position, old.position);
+  assert.equal(current.layout, 'one-town-v1');
+  assert.throws(() => validateSave({ ...current, layout: 'future-town' }), /unsupported world layout/);
+  assert.deepEqual(validateSave(current), current);
 });

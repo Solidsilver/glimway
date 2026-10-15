@@ -14,7 +14,6 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 	"slices"
-	"strings"
 	"time"
 )
 
@@ -248,7 +247,7 @@ type presenceRoom struct{ world, area string }
 
 // homeRoom is a homestead land's room (the stable stands there).
 func homeRoom(world string, gate int) presenceRoom {
-	return presenceRoom{world: world, area: "outdoors"}
+	return presenceRoom{world: world, area: fmt.Sprintf("lot-watch:%d", gate)}
 }
 
 // avatarChanged tells the room what a companion change did to a player's
@@ -277,7 +276,11 @@ func (a *Server) avatarChanged(id string, avatar *presenceAvatarMsg, also ...pre
 			continue // the player, and their own room, which heard it above
 		}
 		if !slices.ContainsFunc(also, func(room presenceRoom) bool {
-			return room.world == other.identity.World && (room.area == other.area || room.area == "outdoors" && strings.HasPrefix(other.area, "outdoors:"))
+			return room.world == other.identity.World && (room.area == other.area || func() bool {
+				var gate int
+				_, e := fmt.Sscanf(room.area, "lot-watch:%d", &gate)
+				return e == nil && hearsLot(other.area, gate)
+			}())
 		}) {
 			continue
 		}

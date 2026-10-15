@@ -155,7 +155,7 @@ export class GoalGuide {
     if (id === 'outdoors') {
       const p = this.deps.position?.() ?? { x: 0, y: 0 }
       const place = at(id, p.x, p.y).id
-      return place.startsWith('lot:') ? this.deps.placeKind() ?? place : place
+      return place.startsWith('lot:') ? this.deps.placeKind() ?? 'hearthwick' : place
     }
     if (id.startsWith('chunk:')) return 'tangle'
     return this.deps.placeKind() ?? id

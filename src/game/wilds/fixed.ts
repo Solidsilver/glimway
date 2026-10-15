@@ -317,6 +317,7 @@ export function fixedStand(tx: number, ty: number): { tx: number; ty: number } |
   const fp = footprintOfTile(tx, ty)
   if (!fp) return null
   const l = local(fp, tx, ty)!
+  if (!fp.reach.length) fp.reach = joinedGround(fp)
   if (fp.reach[l.y * fp.w + l.x]) return { tx, ty }
   let best: { tx: number; ty: number } | null = null
   let bestD = Infinity
@@ -371,7 +372,7 @@ export function exitOf(o: FixedObject, fp: Pick<FixedFootprint, 'tx' | 'ty' | 'w
 /** The Commons lane (gates and fixtures) in world tiles, once its chunks are here. */
 export function commonsLane(): CommonsLane | null {
   const fp = footprints.get('hearthwick')
-  if (!fp) return null
+  if (!fp || !footprints.has('homestead-lots')) return null
   const named = new Map<string, { tx: number; ty: number }>()
   const slots = new Map<number, Partial<GateSlot>>()
   const lamps: { tx: number; ty: number }[] = []
@@ -448,7 +449,7 @@ export function applyLotHome(gate: number, home: HomeView | null): void {
   if (!current || !base || gate < 0 || gate > 7) return
   if (home && current.epoch !== `plot:${home.worldId}@2`) home = null
   const o = lotOrigin(gate), key = `${o.tx / 24},${o.ty / 24}`
-  const fp = { ...current, solid: current.solid.map((r) => [...r]), objects: new Map(current.objects) }
+  const fp = { ...current, solid: current.solid.map((r, y) => y >= o.ty-current.ty && y < o.ty-current.ty+24 ? [...r] : r), objects: new Map(current.objects) }
   for (let y = 0; y < 24; y++) for (let x = 0; x < 24; x++) fp.solid[o.ty - fp.ty + y]![o.tx - fp.tx + x] = base.solid[o.ty - base.ty + y]![o.tx - base.tx + x]!
   const cleared = new Set((home?.cleared ?? []).map(([x,y]) => `${x},${y}`))
   const stumps = new Set((home?.stumps ?? []).map(([x,y]) => `${x},${y}`))
@@ -459,10 +460,16 @@ export function applyLotHome(gate: number, home: HomeView | null): void {
     return [object]
   })
   for (const [x,y] of home?.cleared ?? []) if (x>=3 && x<=20 && y>=1 && y<=18 && base.objects.get(key)?.some((p) => p.id === `land:${x},${y}`)) fp.solid[o.ty-fp.ty+y]![o.tx-fp.tx+x] = false
-  const template = (base.objects.get(key) ?? []).find((o) => o.art)!
-  for (const p of home?.plants ?? []) objects.push({ ...template, id: `plant:${p.id}`, kind: 'scenery', tx: o.tx+p.x, ty: o.ty+p.y, tw: 0, th: 0, variant: 'tangle-decor', frame: p.itemDef === 'turncap-spawn' ? 'turncaps-0' : p.itemDef === 'iron-oak-acorn' ? 'fern-0' : 'flowers-0', target: '', art: { ...template.art!, ox: 8, oy: 16, originLeft: false, depthY: true, tile: true } })
-  if (home?.desolate) for (let x=3;x<=20;x+=2) objects.push({ ...template, id: `desolate:${gate}:${x}`, kind: 'scenery', tx:o.tx+x, ty:o.ty+17, tw:0, th:0, variant:'tangle-decor', frame:'grass-0', target:'', art:{ ...template.art!,ox:8,oy:16,originLeft:false,depthY:true,tile:true,tint:0xaaa09a } })
+  const decor = (id: string, tx: number, ty: number, frame: string, tint?: number): FixedObject => ({
+    id, kind: 'scenery', tx, ty, tw: 0, th: 0, variant: 'tangle-decor', frame,
+    festival: '', width: 0, gate, side: '', npc: '', spot: '', target: '', label: '',
+    prop: undefined, exit: undefined,
+    art: { $typeName: 'glimway.v1.PlacedArt', ox: 8, oy: 16, originLeft: false, depthY: true, flip: false, tile: true, ...(tint === undefined ? {} : { tint }) }
+  })
+  for (const p of home?.plants ?? []) objects.push(decor(`plant:${p.id}`, o.tx+p.x, o.ty+p.y, p.itemDef === 'turncap-spawn' ? 'turncaps-0' : p.itemDef === 'iron-oak-acorn' ? 'fern-0' : 'flowers-0'))
+  if (home?.desolate) for (let x=3;x<=20;x+=2) objects.push(decor(`desolate:${gate}:${x}`, o.tx+x, o.ty+17, 'grass-0', 0xaaa09a))
   fp.objects.set(key, objects)
-  fp.reach = joinedGround(fp)
+  // Recompute only when stand recovery/pathfinding actually requests reachability.
+  fp.reach = new Uint8Array(0)
   footprints.set('homestead-lots', fp)
 }

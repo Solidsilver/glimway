@@ -10,6 +10,14 @@ import (
 	"strings"
 )
 
+// PlotRevision changes only with a deliberately versioned plot-byte format.
+const PlotRevision = 2
+
+// InsideLot excludes the public lane and fence bands; the gate row belongs inside.
+func InsideLot(x, y int) bool {
+	return x >= 3 && x <= 20 && (y >= 2 && y <= 18 || y == 19 && x >= 11 && x <= 12)
+}
+
 // Lot origins and epoch identity keep immutable land separate from home overlays.
 func LotAt(cx, cy int) int {
 	if cx < -3 || cx > -2 || cy < 1 || cy > 4 {
@@ -17,14 +25,16 @@ func LotAt(cx, cy int) int {
 	}
 	return (cy-1)*2 + cx + 3
 }
-func LotOrigin(gate int) (int, int)           { return -72 + (gate%2)*24, 24 + (gate/2)*24 }
-func PlotEpoch(world string, gate int) string { return fmt.Sprintf("plot:%s:%d@2", world, gate) }
+func LotOrigin(gate int) (int, int) { return -72 + (gate%2)*24, 24 + (gate/2)*24 }
+func PlotEpoch(world string, gate int) string {
+	return fmt.Sprintf("plot:%s:%d@%d", world, gate, PlotRevision)
+}
 func PlotIdentity(epoch string) (string, int, bool) {
 	rest, ok := strings.CutPrefix(epoch, "plot:")
 	if !ok {
 		return "", 0, false
 	}
-	rest, ok = strings.CutSuffix(rest, "@2")
+	rest, ok = strings.CutSuffix(rest, fmt.Sprintf("@%d", PlotRevision))
 	if !ok {
 		return "", 0, false
 	}
@@ -44,7 +54,11 @@ func Plot(world string, gate int) *contract.WorldChunk {
 	}
 	x0, y0 := LotOrigin(gate)
 	cx, cy := int32(x0/24), int32(y0/24)
-	c := proto.Clone(Fixed(FixedEpoch("homestead-lots", 2), cx, cy)).(*contract.WorldChunk)
+	base := Fixed(FixedEpoch("homestead-lots", PlotRevision), cx, cy)
+	if base == nil {
+		return nil
+	}
+	c := proto.Clone(base).(*contract.WorldChunk)
 	c.EpochId = PlotEpoch(world, gate)
 	c.Look = "tangle"
 	l := land.Generate(land.Seed(world, gate, content.HomeRules.GetLand()), content.HomeRules.GetLand())

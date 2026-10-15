@@ -34,7 +34,7 @@ func gatherCaps(action string) (visit, day int) {
 // for anyone else's: visiting is read-only).
 func ownLand(ctx context.Context, tx *sql.Tx, s *store.Snapshot, area string, now int64, refusal string) (*homeView, error) {
 	gate := homeGateAt(s)
-	if gate < 0 {
+	if gate < 0 || !onPrivateLot(s, gate) {
 		return nil, fail(409, refusal)
 	}
 	id, ok, err := memberOf(ctx, tx, s.AccountID)
@@ -207,6 +207,9 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 		if !fixedGatherAt(s, chunk, req.Target, x, y) {
 			return fail(409, "cannot-gather-here")
 		}
+	}
+	if g := homeGateAt(s); area == outdoorsArea && g >= 0 && !onPrivateLot(s, g) {
+		return fail(409, "cannot-gather-here")
 	}
 	var home *homeView
 	var tile [2]int

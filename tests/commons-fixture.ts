@@ -26,6 +26,7 @@ export function commonsFixtureChunks(): WorldChunk[] {
 
 /** The game's footprint draws from the fixture, as if the server had served it. */
 export function serveFixtureCommons(): FixedFootprint {
+  serveFixtureLots();
   return serveFixed(COMMONS_PLACE, commonsFixtureChunks());
 }
 
@@ -72,7 +73,7 @@ export function servedCommonsFixture(day: FixedDay = { festival: null, wick: 'Qu
       const e = exitOf(o, fp);
       if (e) view.exits.push({ ...e, ...toCommons(e) });
     }
-  if (!commonsLane()) serveFixed(COMMONS_PLACE, commonsFixtureChunks());
+  if (!commonsLane()) serveFixtureCommons();
   const lane = commonsLane()!;
   view.gates = lane.gates.map((g) => ({ ...g, ...toCommons(g), sign: toCommons(g.sign), shelf: toCommons(g.shelf), entry: toCommons(g.entry) }));
   const f = lane.features;

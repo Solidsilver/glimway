@@ -313,7 +313,7 @@ test('the lane’s gate signs, shelves and hame come and go with the chunk that 
   const keys = [...new Set(lane.gates.map((g) => g.chunk).concat(chunkOfTile(lane.features.hame.tx, lane.features.hame.ty)))];
   for (const k of keys) for (const step of art.attachChunk(k)) step();
   const [objects, tweens] = count();
-  assert.equal(objects, lane.gates.length * 2 + 2, 'a sign and its words a gate, the hame and its glint');
+  assert.equal(objects, lane.gates.length * 4 + 2, 'gate posts, sign and its words; the hame and its glint');
   assert.equal(tweens, 1, 'the hame’s glint');
   art.drawGates();
   assert.deepEqual(count(), [objects, tweens], 'a redraw replaces, never adds');
@@ -1054,7 +1054,10 @@ test('six claimed lots build in slices, refresh and detach without retaining hom
       assert.equal(child.arranging.placement?.oy, 24 * TILE);
       assert.equal(child.arranging.placement?.cols, 24);
       root.lots!.refresh(new Set([0]));
-      assert.equal(refreshes.at(-1), '-3,1');
+      assert.equal(refreshes.length, round, 'active Arrange defers its fixed refresh');
+      child.arranging.endPlacement();
+      root.lots!.update(0);
+      assert.equal(refreshes.at(-1), '-3,1', 'deferred refresh flushes after Arrange');
       root.detachFixedChunk('-3,1');
       assert.equal(dom.listenerCount('keydown'), 0);
       assert.equal(r.scene.input.listenerCount('pointerdown'), 0);
@@ -1166,4 +1169,130 @@ test('fishing proximity uses the supplied water rather than the first water in t
  const fish=Object.assign(Object.create(Fishing.prototype),{deps:{world:{areaId:'outdoors'},hero:()=>({sprite:{x:(bank.tiles[0]!.tx+0.5)*16,y:(bank.tiles[0]!.ty+0.5)*16}})},waters:[{...first,area:'woodland'}]}) as InstanceType<typeof Fishing>;
  assert.equal(fish['heroWithin'](first,bank,48),true);
  assert.equal(fish['heroWithin']({...first,area:'woodland'},bank,48),false);
+});
+
+
+test('real window chunks slice six lot facades, defer Arrange refresh and clean up on shutdown', async (t) => {
+  const { HomesteadLayer } = await import('../src/game/entities/homesteads.ts');
+  const { LotHomes } = await import('../src/game/wilds/lot-chunk.ts');
+  const { HomesteadTalk } = await import('../src/game/entities/homestead-talk.ts');
+  const { FixedScope } = await import('../src/game/wilds/fixed-scope.ts');
+  const { serveFixtureLand } = await import('./land-fixture.ts');
+  const { createNewGame } = await import('../src/lib/state.ts');
+  serveFixtureLots();
+  serveFixtureLand('guest', 8);
+  const { setLandSource } = await import('../src/game/lot-land.ts');
+  setLandSource({ worldId: () => 'guest', state: () => null, fetchLand: () => null });
+  const r = rig();
+  const owners = new Map<unknown, unknown[]>();
+  const refreshes: string[] = [];
+  const hero = { x: -61 * TILE + 8, y: 32 * TILE + 12, setVelocity() {} };
+  const homes = new Map(Array.from({ length: 6 }, (_, gate) => [gate, {
+    id: `home-${gate}`, worldId: 'guest', gate, tier: gate % 2 ? 2 : 0, landSeed: gate,
+    member: gate === 0, desolate: false, members: [{ id: `owner-${gate}`, displayName: 'Owner' }],
+    cleared: [], stumps: [], plants: [], yardPets: [{ pet: 'Cat-Base', ownerId: `owner-${gate}`, slot: 1 }], stalls: [],
+    items: [
+      { id: `stool-${gate}`, itemDef: 'wooden-stool', scene: 'outdoor', x: 9, y: 11, rotation: 0 },
+      { id: `stable-${gate}`, itemDef: 'stable', scene: 'outdoor', x: 14, y: 11, rotation: 0, stalls: 1 }
+    ]
+  }]));
+  const root = Object.assign(Object.create(HomesteadLayer.prototype), {
+    scene: r.scene, gate: null, land: null, gone: false, yardRoom: null, commons: commonsLane(),
+    homes: { homes, connected: false, myGate: null, myId: 'owner-0', status: 'guest', arrived() {}, gateInfo: () => ({ shelf: true, homeId: 'claimed', names: ['Owner'] }) },
+    village: { waitingCount: () => 0 }, fixedScope: new FixedScope(true),
+    deps: { session: { state: createNewGame(), link: null }, reducedMotion: false, hero: () => hero, solidGroup: r.scene.solids,
+      world: { open: true, areaId: 'outdoors', npcs: [] }, refreshLot: (key: string) => refreshes.push(key),
+      interactables: { register: (owner: unknown, points: unknown[]) => points.length ? owners.set(owner, points) : owners.delete(owner) } }
+  }) as InstanceType<typeof HomesteadLayer>;
+  Object.assign(root, { lots: new LotHomes(root), art: new HomesteadArt(root), talk: new HomesteadTalk(root) });
+
+  // Only the tilemap renderer is faked. Window plans, chunk construction,
+  // the build queue, facade drawing and scene shutdown are production paths.
+  const groundProto = WildsWindow.prototype as unknown as { groundFor: () => unknown };
+  t.mock.method(groundProto, 'groundFor', () => r.g.ground);
+  let following = true;
+  r.scene.cameras.main.stopFollow = () => { following = false; };
+  r.scene.cameras.main.startFollow = () => { following = true; };
+  const w = new WildsWindow({ ...r.deps, session: root.deps.session, hero: () => hero, hooks: () => ({ attach: (key: string) => root.attachFixedChunk(key), detach: (key: string, refreshing?: boolean) => root.detachFixedChunk(key, refreshing) }) } as never);
+  Object.assign(root.deps, { refreshLot: (key: string) => w.refreshFixed(key) });
+  // A position-derived 3x3 window centred on the shared spine contains six lots.
+  hero.x=-48*TILE; hero.y=60*TILE;
+  w['recentre'](-2,2);
+  w['plan']!.attach = w['plan']!.attach.filter((key) => key.startsWith('-3,') || key.startsWith('-2,'));
+  for (let i=0;i<6;i++) assert.equal(w['step'](),true);
+  assert.equal(w['fixed'].size,6);
+  assert.equal(root.lots!['lots'].size,0,'fixture stage has not run synchronously');
+  let clock=0;
+  t.mock.method(performance,'now',()=>{clock+=0.01;return clock;});
+  w.builds.step(clock+1);
+  assert.ok([...w['fixed'].values()].some((c)=>!c.whole),'one walking slice never drains all chunks');
+  for(let i=0;i<500 && [...w['fixed'].values()].some((c)=>!c.whole);i++) w.builds.step(clock+8);
+  assert.equal(root.lots!['lots'].size,6);
+  // An invalidation while a read is in flight must get one follow-up read,
+  // even before a facade exists; rebuilding a facade must not reset freshness.
+  let reads=0;const answers: (()=>void)[]=[];
+  Object.assign(root.homes,{connected:true,fetchHome:async(gate:number)=>{if(gate===0){reads++;await new Promise<void>((resolve)=>answers.push(resolve));}return homes.get(gate);}});
+  root.lots!.invalidate(0);root.lots!.invalidate(0);
+  assert.equal(reads,1);
+  answers.shift()!();await Promise.resolve();await Promise.resolve();
+  assert.equal(reads,2);
+  answers.shift()!();await Promise.resolve();await Promise.resolve();
+  const child=root.lots!['lots'].get(0)!.child;
+  hero.x=-61*TILE+8;hero.y=32*TILE+8;
+  const originalWindow=globalThis.window;
+  const dom=new EventEmitter();
+  globalThis.window={addEventListener:(e:string,fn:()=>void)=>dom.on(e,fn),removeEventListener:(e:string,fn:()=>void)=>dom.off(e,fn)} as unknown as Window & typeof globalThis;
+  try {
+    child.arranging.update(1);child.arranging.startPlacement();assert.equal(following,false);
+    root.lots!.refresh(new Set([0,1]));
+    assert.equal(w['seasonalPending'].has('-3,1'),false,'placing lot waits');
+    assert.equal(w['seasonalPending'].has('-2,1'),true,'other lot still refreshes');
+    child.arranging.endPlacement();assert.equal(following,true);
+    root.lots!.update(0);assert.equal(w['seasonalPending'].has('-3,1'),true);
+    const old=w['fixed'].get('-2,1')!;
+    w.update(0);assert.equal(old.whole,true,'old pending job is cancelled');
+    w.update(0); // the deferred active-lot key also rebuilds through the window queue
+    for(let i=0;i<500 && [...w['fixed'].values()].some((c)=>!c.whole);i++) w.builds.step(clock+8);
+    assert.equal(reads,2,'overlay rebuild did not fetch again');
+    assert.equal(root.lots!['read'].has(0),true);
+    // Mid-Arrange shutdown exercises the real chunk detach path and restores follow.
+    const active=root.lots!['lots'].get(0)!.child;
+    active.arranging.update(1);active.arranging.startPlacement();assert.equal(following,false);
+    r.scene.events.emit('shutdown');
+    assert.equal(following,true);assert.equal(root.lots!['lots'].size,0);
+    assert.equal(root.lots!['read'].has(0),false,'real streaming/scene detach requires a fresh read on revisit');
+    assert.equal(dom.listenerCount('keydown'),0);
+    assert.equal(r.scene.input.listenerCount('pointerdown'),0);
+    assert.equal(r.scene.scale.listenerCount('resize'),0);
+    assert.equal(w['fixed'].size,0);
+    w.builds.step(clock+1000);
+    assert.equal(r.scene.solids.members.size,0);
+    assert.equal(r.scene.bodies.size,0);
+  } finally {globalThis.window=originalWindow;w['destroy']();root.lots!.destroy();}
+});
+
+test('late fixed fixtures join once through the queue, including an already built chunk', () => {
+  serveFixtureCommons();const r=rig();let ready=false,attaches=0,draws=0;
+  const hooks={ attach:()=>{attaches++;return [()=>draws++];},detach:()=>{} };
+  const c=new FixedChunk({...r.deps,hooks:()=>ready?hooks:null} as never,r.fp,0,1);
+  r.builds.step(Infinity);assert.equal(draws,0);
+  ready=true;c.fixturesReady();c.fixturesReady();
+  assert.equal(draws,0,'late callback never draws synchronously');
+  r.builds.step(Infinity);assert.equal(attaches,1);assert.equal(draws,1);
+  c.fixturesReady();r.builds.step(Infinity);assert.equal(draws,1);
+  c.destroy();
+});
+
+test('a late homestead layer joins an existing FixedLife hook once, without rebuilding the other fixtures', async () => {
+  const { FixedLife } = await import('../src/game/wilds/fixed-life.ts');
+  serveFixtureCommons();const r=rig();let ready=false,attaches=0,draws=0,detaches=0;
+  const homeHooks={attach:()=>{attaches++;return [()=>draws++];},detach:()=>{detaches++;}};
+  const life=new FixedLife({homes:()=>ready?homeHooks:null} as never);
+  const hooks={attach:()=>[],late:(key:string)=>life.late(key),detach:(key:string)=>{if(life['homeKeys'].delete(key))homeHooks.detach();}};
+  const c=new FixedChunk({...r.deps,hooks:()=>hooks} as never,r.fp,0,1);
+  r.builds.step(Infinity);
+  ready=true;c.fixturesReady();c.fixturesReady();
+  assert.equal(attaches,1);assert.equal(draws,0);
+  r.builds.step(Infinity);assert.equal(draws,1);
+  c.destroy();assert.equal(detaches,1);
 });

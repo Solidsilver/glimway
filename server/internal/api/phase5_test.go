@@ -196,6 +196,7 @@ func TestPhase5StorageConservationAndPlacement(t *testing.T) {
 	s.Snapshot = crafted.Snapshot
 	ids := crafted.Result.InstanceIDs
 	spot := litSpots(*crafted.Result.Home)[0]
+	x.standForHome(&s, "outdoor")
 	place := body(s, "place", map[string]any{"itemId": ids[0], "scene": "outdoor", "x": spot[0], "y": spot[1], "rotation": 0})
 	update(&s, x.exp("POST", "/api/homestead/place", place, c, 200))
 	assets := []*content.Asset{{Kind: "material", Id: "timber", Qty: 7}, {Kind: "item", Id: giftTrinket, Qty: 5}, {Kind: "decoration", Id: "wooden-stool", Qty: 1}}
@@ -244,6 +245,7 @@ func TestPhase5MailAssetsWorldScopeAndReplay(t *testing.T) {
 	s.Snapshot = crafted.Snapshot
 	chair := crafted.Result.InstanceIDs[0]
 	// Placed goods are unavailable for shipping.
+	x.standForHome(&s, "indoor")
 	update(&s, x.exp("POST", "/api/homestead/place", body(s, "place-chair", map[string]any{"itemId": chair, "scene": "indoor", "x": 0, "y": 0, "rotation": 0}), c, 200))
 	deco := &content.Asset{Kind: "decoration", Id: "reading-chair", Qty: 1}
 	x.p5("POST", "/api/mail", body(s, "placed", map[string]any{"toId": x.account("bob"), "asset": deco}), c, 409)

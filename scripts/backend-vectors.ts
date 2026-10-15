@@ -71,7 +71,7 @@ export function vectors() {
  */
 function legacyState(s: Record<string, unknown>): Record<string, unknown> {
   if (!('quests' in s)) return s;
-  return Object.fromEntries(Object.entries(s).filter(([k]) => k !== 'questGateAt').map(([k, v]) => (k === 'quests' ? ['quest', (v as Record<string, string>)['lantern-road'] ?? 'new'] : [k, v])));
+  return Object.fromEntries(Object.entries(s).filter(([k]) => k !== 'questGateAt' && k !== 'layout').map(([k, v]) => (k === 'quests' ? ['quest', (v as Record<string, string>)['lantern-road'] ?? 'new'] : [k, v])));
 }
 /** Deduplicate immutable state fields while retaining self-contained JSON. */
 export const serializeVectors = () => {

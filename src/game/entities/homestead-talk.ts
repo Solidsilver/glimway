@@ -1,3 +1,4 @@
+import { lotAtPixel } from '../../lib/lots'
 /**
  * Homesteads, talked to: everything you can use on the Commons, at Silas's
  * Yard, on a homestead's land and in a cottage (each point with its own
@@ -282,7 +283,7 @@ export class HomesteadTalk {
       } else if (info?.mine) {
         const unplaced = this.home.homes.mine?.items.find((i) => i.itemDef === 'gate-shelf' && i.scene === null)
         if (unplaced) {
-          out.push({ id: `home:place-shelf:${unplaced.id}`, ...at(slot.shelf, 2), label: 'Set out your gate shelf', verb: 'Place', markerOffset: 16, activate: () => void this.placeGateShelf(unplaced.id) })
+          out.push({ id: `home:place-shelf:${unplaced.id}`, ...at(slot.shelf, 2), label: 'Set out your gate shelf', verb: 'Place', markerOffset: 16, reach: 52, clickReach: 52, available: () => this.insideGate(slot.gate), activate: () => void this.placeGateShelf(unplaced.id) })
         }
       }
     }
@@ -366,7 +367,7 @@ export class HomesteadTalk {
       } else {
         const unplaced = this.home.homes.mine?.items.find((i) => i.itemDef === 'gate-shelf' && i.scene === null)
         if (unplaced) {
-          choices.push({ text: 'Set out your gate shelf', action: `home:place-shelf:${unplaced.id}` })
+          choices.push({ text: 'Set out your gate shelf', action: `home:place-shelf:${unplaced.id}`, disabled: !this.insideGate(gate), ...(!this.insideGate(gate) ? { note: 'Step inside your gate' } : {}) })
         }
       }
     }
@@ -542,7 +543,18 @@ export class HomesteadTalk {
     if (action === MANAGE_DEED) return openDeedPanel()
   }
 
+  private insideGate(gate: number): boolean {
+    const p = this.deps.hero()
+    return this.deps.world.areaId === 'outdoors' && lotAtPixel(p.x,p.y) === gate
+  }
+
   private async placeGateShelf(itemId: string): Promise<void> {
+    const gate = this.home.homes.myGate
+    if (gate === null || !this.insideGate(gate)) {
+      this.say({ speaker: 'Gate Shelf', lines: ['Step inside your gate to set out the shelf.'] })
+      return
+    }
+    bus.emit(EV.notePosition)
     const r = await this.home.homes.act({ op: 'place', itemId, scene: 'gate', x: 0, y: 0, rotation: 0 })
     if (r.ok) {
       sfx('pop')

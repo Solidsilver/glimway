@@ -1,3 +1,4 @@
+import { TERRAIN } from '../../lib/tile.ts'
 /** The Commons layers share the fixed chunks' build and teardown lifecycle. */
 import { chunkOfTile, fixedNpcs, footprintAt, exitOf, objectOut } from './fixed.ts'
 import { calendarAt } from '../../lib/calendar.ts'
@@ -33,6 +34,7 @@ export interface FixedLifeDeps {
 }
 
 export class FixedLife implements FixedHooks {
+  private homeKeys = new Set<string>()
   private exitOwners = new Map<string, object>()
 
   constructor(private deps: FixedLifeDeps) {}
@@ -61,15 +63,24 @@ export class FixedLife implements FixedHooks {
       () => repairs.attachChunk(key),
       () => {
         const day = calendarAt(gameNow())
-        if (fp) touches.attachChunk(owner, (fp.objects.get(key) ?? []).filter((o) => objectOut(o, day)).map((o) => exitOf(o, fp)).filter((e): e is ExitDef => e !== null), fp.ty + fp.h, fp.place.id, (fp.objects.get(key) ?? []).filter((o) => objectOut(o, day)))
+        const flowers: { tx: number; ty: number }[] = []
+        if (fp) for (let y=cy*24;y<(cy+1)*24;y++) for (let x=cx*24;x<(cx+1)*24;x++) if (fp.ground[y-fp.ty]?.[x-fp.tx] === TERRAIN.flowers) flowers.push({tx:x,ty:y})
+        if (fp) touches.attachChunk(owner, (fp.objects.get(key) ?? []).filter((o) => objectOut(o, day)).map((o) => exitOf(o, fp)).filter((e): e is ExitDef => e !== null), fp.ty + fp.h, fp.place.id, (fp.objects.get(key) ?? []).filter((o) => objectOut(o, day)), flowers)
       },
-      ...(this.deps.homes()?.attach(key) ?? []),
+      ...this.late(key),
       ...(this.deps.lights?.attachChunk(key) ?? []),
       ...village.attachChunk(key)
     ]
   }
 
-  detach(key: string): void {
+  late(key: string): (() => void)[] {
+    const homes = this.deps.homes()
+    if (!homes || this.homeKeys.has(key)) return []
+    this.homeKeys.add(key)
+    return homes.attach(key)
+  }
+
+  detach(key: string, refreshing = false): void {
     const { world, npcs, talk, pickups, papers, repairs, touches, village } = this.deps
     const ids = fixedNpcs(key).map((n) => n.id)
     npcs.remove(ids)
@@ -84,7 +95,7 @@ export class FixedLife implements FixedHooks {
     const owner = this.exitOwners.get(key)
     if (owner) touches.detachChunk(owner)
     this.exitOwners.delete(key)
-    this.deps.homes()?.detach(key)
+    if (this.homeKeys.delete(key)) this.deps.homes()?.detach(key, refreshing)
     this.deps.lights?.detachChunk(key)
     village.detachChunk(key)
   }

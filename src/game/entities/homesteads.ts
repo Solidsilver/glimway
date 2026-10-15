@@ -115,7 +115,8 @@ export class HomesteadLayer {
     const onArrange = () => (this.lots?.active()?.arranging ?? this.arranging).startPlacement()
     const onHomeAction = (p: { action: string }) => void (this.lots?.actionOwner?.talk ?? this.lots?.active()?.talk ?? this.talk).onAction(p.action)
     const onInvalidated = ({ gate }: { gate: number }) => {
-      if (this.lots?.has(gate) || this.gate === gate) void this.homes.fetchHome(gate)
+      if (this.lots) this.lots.invalidate(gate)
+      else if (this.gate === gate) void this.homes.fetchHome(gate)
     }
     bus.on(EV.homeInvalidated, onInvalidated)
     bus.on(EV.homeAction, onHomeAction)
@@ -479,8 +480,8 @@ export class HomesteadLayer {
     }]
   }
 
-  detachFixedChunk(key: string): void {
-    this.lots?.detach(key)
+  detachFixedChunk(key: string, refreshing = false): void {
+    this.lots?.detach(key, refreshing)
     this.fixedScope.keys.delete(key)
     this.art.detachChunk(key)
     this.art.drawGuide()
@@ -489,7 +490,7 @@ export class HomesteadLayer {
 
   readonly fixedHooks: FixedHooks = {
     attach: (key) => this.attachFixedChunk(key),
-    detach: (key) => this.detachFixedChunk(key)
+    detach: (key, refreshing) => this.detachFixedChunk(key, refreshing)
   }
 
   /** Per frame: the way to your gate, and whether the hero may arrange their place. */

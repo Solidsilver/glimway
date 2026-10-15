@@ -219,6 +219,7 @@ func TestHomesteadTransactionsIdempotencyAndPlacement(t *testing.T) {
 	x.exp("POST", "/api/homestead/buy", req, c, 409)
 	x.exp("POST", "/api/homestead/buy", body(s, "chair-too-soon", map[string]any{"itemDef": "reading-chair"}), c, 409)
 	place := func(key, id, scene string, px, py, rotation int, status int) expansionResponse {
+		x.standForHome(&s, scene)
 		return x.exp("POST", "/api/homestead/place", body(s, key, map[string]any{"itemId": id, "scene": scene, "x": px, "y": py, "rotation": rotation}), c, status)
 	}
 	place("no-indoor", fern, "indoor", 0, 0, 0, 409)

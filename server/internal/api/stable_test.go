@@ -946,3 +946,38 @@ func TestTheLandHearsALeaveButNotAnEmptyGoHome(t *testing.T) {
 		t.Fatal("the land heard nothing of the leave")
 	}
 }
+
+func TestStoredStableKeepsMountsThroughWithdrawalAndReplacement(t *testing.T) {
+	x := newRig(t)
+	p := profile("owner", 1, 0, 20)
+	p.Mounts = []string{"Wolf-Shade"}
+	x.set(p)
+	c, s := x.ready("owner")
+	x.pinWorld(&s)
+	h, x0, y0 := standingStable(x, c, &s, 1)
+	x.companionOp("POST", "/api/stable/stall", body(s, "stall", map[string]any{"homeId": h.ID, "stall": 1, "mount": "Wolf-Shade"}), c, 200)
+	stable := stablePlaced(h)
+	if stable == nil {
+		t.Fatal("no stable")
+	}
+	// Exactly the cutover storage action; occupied-stable player removal remains refused.
+	exec(t, x, "UPDATE homestead_items SET location='storage',scene=NULL,x=NULL,y=NULL,rotation=NULL WHERE id=?", stable.ID)
+	if got := x.home(c).Stalls; len(got) != 0 {
+		t.Fatal("stored stable draws no mounts", got)
+	}
+	if count(t, x.db, "SELECT count(*) FROM homestead_stalls WHERE homestead_id=? AND mount_key='Wolf-Shade'", h.ID) != 1 {
+		t.Fatal("lost stored stall")
+	}
+	x.refresh(c, &s)
+	s.Snapshot = x.p5("POST", "/api/storage", body(s, "withdraw-stable", map[string]any{"direction": "withdraw", "asset": content.Asset{Kind: "decoration", Id: "stable", Qty: 1}}), c, 200).Snapshot
+	x.homeOpRefreshing(c, &s, "place", map[string]any{"itemId": stable.ID, "scene": "outdoor", "x": x0, "y": y0, "rotation": 0}, 200)
+	restored := x.home(c)
+	if len(restored.Stalls) != 1 || restored.Stalls[0].Mount != "Wolf-Shade" {
+		t.Fatal("mount did not return", restored.Stalls)
+	}
+	x.refresh(c, &s)
+	req := body(s, "saddle-restored", map[string]any{"homeId": h.ID, "stall": 1, "where": atBay(restored, x0, y0, 1)})
+	if got := x.companionOp("POST", "/api/stable/out", req, c, 200).Result.Companions; got.MountOut != "Wolf-Shade" {
+		t.Fatal("restored mount cannot saddle", got)
+	}
+}

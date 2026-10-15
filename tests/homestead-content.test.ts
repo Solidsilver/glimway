@@ -123,3 +123,20 @@ test('Silas’s Yard: buildings come from the content flag, in a section of thei
   const data = { ...HOMESTEAD_DATA, items: HOMESTEAD_DATA.items.map((i) => (i.id === 'wooden-stool' ? { ...i, building: true } : i.id === HOMESTEAD_DATA.stable.item ? { ...i, craftOnly: true } : i)) };
   assert.deepEqual(shopSections(data).buildings.map((i) => i.id), ['wooden-stool']);
 });
+
+test('lot geometry agrees with authored footprint and the public lane is outside private services', async () => {
+  const { PLACES } = await import('../src/lib/places.ts');
+  const { lotOrigin, lotAt, lotAtPixel } = await import('../src/lib/lots.ts');
+  const place = PLACES.fixed.find((p) => p.id === 'homestead-lots')!;
+  assert.deepEqual({ tx: place.origin.tx, ty: place.origin.ty }, { tx: -72, ty: 24 });
+  assert.equal(place.revision, 2);
+  assert.equal(place.width, 2);
+  assert.equal(place.height, 4);
+  for (let gate=0;gate<8;gate++) {
+    const o=lotOrigin(gate);
+    assert.equal(lotAt(o.tx/24,o.ty/24),gate);
+    for (const [x,y,want] of [[11,19,gate],[12,19,gate],[3,18,gate],[20,2,gate],[11,20,null],[22,10,null],[3,19,null],[2,10,null]]) {
+      assert.equal(lotAtPixel((o.tx+x!)*16+8,(o.ty+y!)*16+8),want);
+    }
+  }
+});

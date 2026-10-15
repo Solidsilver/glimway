@@ -89,3 +89,37 @@ func TestPlotClientFixtures(t *testing.T) {
 		}
 	}
 }
+
+func TestPlotGeometryMatchesAuthoredContent(t *testing.T) {
+	var found bool
+	for _, f := range content.PlacesRules.GetFixed() {
+		if f.GetId() != "homestead-lots" {
+			continue
+		}
+		found = true
+		if f.GetRevision() != PlotRevision || f.GetOrigin().GetTx() != -72 || f.GetOrigin().GetTy() != 24 || f.GetWidth() != 2 || f.GetHeight() != 4 {
+			t.Fatal("update versioned plot geometry with content", f)
+		}
+	}
+	if !found {
+		t.Fatal("missing lots footprint")
+	}
+	// Pin every mirrored outer band, including ground as well as collision.
+	// Internal horizontal seams between lots are not mirrored by generated land.
+	for gate := 0; gate < 8; gate++ {
+		c := Plot("seam-check", gate)
+		b := Fixed(FixedEpoch("homestead-lots", PlotRevision), c.Cx, c.Cy)
+		for y := 0; y < 24; y++ {
+			for x := 0; x < 24; x++ {
+				if !(x < 2 || x >= 22 || y >= 22 || gate < 2 && y < 2) {
+					continue
+				}
+				i := y*24 + x
+				shift := uint(4 * (i % 2))
+				if c.Palette[(c.Ground[i/2]>>shift)&15] != b.Palette[(b.Ground[i/2]>>shift)&15] || (c.Solid[i/8]>>uint(i%8))&1 != (b.Solid[i/8]>>uint(i%8))&1 {
+					t.Fatalf("mirrored seam %d %d,%d", gate, x, y)
+				}
+			}
+		}
+	}
+}

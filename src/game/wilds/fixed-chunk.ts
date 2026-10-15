@@ -43,7 +43,8 @@ import { perfSpan, perfTime } from '../perf.ts'
  */
 export interface FixedHooks {
   attach(key: string): (() => void)[]
-  detach(key: string): void
+  detach(key: string, refreshing?: boolean): void
+  late?(key: string): (() => void)[]
 }
 
 export interface FixedChunkDeps {
@@ -106,7 +107,6 @@ export class FixedChunk implements Buildable {
     })
     perfTime('attach:fixed:collision', () => this.collide(lx, ly))
     let next = 0
-    let fixtures: (() => void)[] | null = null
     const standing = this.objects.filter((o) => o.kind === 'tree' || o.kind === 'bush' || o.kind === 'rock')
     const drawn = this.objects.filter((o) => o.kind !== 'tree' && o.kind !== 'bush' && o.kind !== 'rock')
     this.todo = [
@@ -142,19 +142,7 @@ export class FixedChunk implements Buildable {
         this.frontDoors()
         return true
       }),
-      (deadline) => perfTime('attach:fixed:fixtures', () => {
-        if (!fixtures) {
-          const hooks = deps.hooks()
-          fixtures = hooks ? hooks.attach(this.key) : []
-          this.hooked = !!hooks
-        }
-        while (fixtures.length) {
-          if (now() >= deadline) break
-          fixtures.shift()!()
-          if (now() > deadline) break
-        }
-        return !fixtures.length
-      })
+      (deadline) => this.buildFixtures(deadline)
     ]
     deps.builds?.add(this)
   }
@@ -171,6 +159,35 @@ export class FixedChunk implements Buildable {
       this.todo.shift()
     }
     return true
+  }
+
+  private fixtures: (() => void)[] | null = null
+
+  private buildFixtures(deadline: number): boolean {
+    if (!this.fixtures) {
+      const hooks = this.deps.hooks()
+      if (!hooks) return true
+      this.fixtures = hooks.attach(this.key)
+      this.hooked = true
+    }
+    while (this.fixtures.length && now() < deadline) this.fixtures.shift()!()
+    return !this.fixtures.length
+  }
+
+  fixturesReady(): void {
+    if (this.hooked) {
+      const steps = this.deps.hooks()?.late?.(this.key) ?? []
+      if (!steps.length) return
+      const wasWhole = this.whole
+      this.todo.push((deadline) => {
+        while (steps.length && now() < deadline) steps.shift()!()
+        return !steps.length
+      })
+      if (wasWhole) this.deps.builds?.add(this)
+    } else if (!this.todo.length) {
+      this.todo.push((deadline) => this.buildFixtures(deadline))
+      this.deps.builds?.add(this)
+    }
   }
 
   /** Everything built. */
@@ -290,10 +307,9 @@ export class FixedChunk implements Buildable {
 
   /** Its workable pieces (the Bloom patches, on their day). */
   private gather(): void {
-    const labelOf = (o: FixedObject) => o.label === 'Work the tree' ? 'Chop the tree' : o.label === 'Work the boulder' ? 'Break the boulder' : o.label === 'Work the stump' ? 'Dig the stump' : o.label
     const spots: GatherSpot[] = this.objects
       .filter((o) => o.kind === 'gather')
-      .map((o) => ({ target: o.target, label: labelOf(o), tx: o.tx, ty: o.ty, art: { key: o.variant, ...(o.frame ? { frame: o.frame } : {}) } }))
+      .map((o) => ({ target: o.target, label: o.label, tx: o.tx, ty: o.ty, art: { key: o.variant, ...(o.frame ? { frame: o.frame } : {}) } }))
     if (!spots.length) return
     this.deps.gathering()?.addChunk(this.key, spots)
     this.gathered = true
@@ -312,12 +328,12 @@ export class FixedChunk implements Buildable {
   }
 
   /** The chunk left the window: everything it put in the scene goes (what was never built, never was). */
-  destroy(): void {
+  destroy(refreshing = false): void {
     const done = perfSpan('detach')
     const { scene } = this.deps
     this.deps.builds?.drop(this)
     this.todo = []
-    if (this.hooked) this.deps.hooks()?.detach(this.key)
+    if (this.hooked) this.deps.hooks()?.detach(this.key, refreshing)
     if (this.doors) this.deps.interactables.register(this, [])
     if (this.gathered) this.deps.gathering()?.removeChunk(this.key)
     if (this.fading.length) this.deps.occluders.remove(this.fading)

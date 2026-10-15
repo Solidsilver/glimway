@@ -67,7 +67,7 @@ export class Touches {
   }
 
   /** A fixed exit's read belongs to its source chunk, even when the post leans across its edge. */
-  attachChunk(owner: object, exits: readonly ExitDef[], height: number, place: string, objects: readonly FixedObject[] = []): void {
+  attachChunk(owner: object, exits: readonly ExitDef[], height: number, place: string, objects: readonly FixedObject[] = [], flowers: readonly { tx: number; ty: number }[] = []): void {
     const points = this.points
     this.points = []
     for (const e of exits) this.exit(e, height, place)
@@ -78,8 +78,9 @@ export class Touches {
         this.add(`touch:sign:${o.id}` as InteractId, x, y, 'Read the sign', { kind: 'sign', x, y, text: o.label })
       }
     }
-    if (place === 'hearthwick' && objects.some((o) => Math.floor(o.tx / 24) === 0 && Math.floor(o.ty / 24) === 2)) {
-      this.prop({ areaId: place } as WorldData, { tx: 22, ty: 55, frame: 'flower-planter', h: 16, body: [14, 6] })
+    for (const t of flowers) {
+      const x=tileMid(t.tx), y=tileMid(t.ty)
+      this.add(`touch:flowers:${t.tx},${t.ty}` as InteractId,x,y,'Smell the flowers',{kind:'flowers',x,y})
     }
     this.deps.interactables.register(owner, this.points)
     this.points = points

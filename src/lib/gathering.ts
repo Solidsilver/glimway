@@ -1,3 +1,4 @@
+import { lotAtPixel } from './lots.ts';
 import { at } from './location.ts';
 /**
  * Gathering rules, caps, targets and yields (content/gathering.json; docs/items/).
@@ -51,6 +52,7 @@ export function gatheringTarget(id: string): GatheringTarget | undefined {
 /** Whether a place (a progress area) has pieces of a target at all (the server checks the same). */
 export function gatheringOffered(area: string, target: string, position = { x: 0, y: 0 }): boolean {
   const place = at(area, position.x, position.y);
+  if (place.id.startsWith('lot:') && lotAtPixel(position.x, position.y) === null) return false;
   const kind = place.id.startsWith('lot:') ? 'home' : area === 'outdoors' ? (place.source.kind === 'generated' ? 'wilds' : place.id) : place.id;
   return (GATHERING_DATA.areas[kind]?.targets ?? []).includes(target);
 }
@@ -113,6 +115,7 @@ export function swingPlan(action: string, tool: ToolFeel): { swings: number; ms:
 export function gatherArea(area: string, position = { x: 0, y: 0 }): boolean {
   if (area.startsWith('in:')) return false;
   const place = at(area, position.x, position.y);
+  if (place.id.startsWith('lot:') && lotAtPixel(position.x, position.y) === null) return false;
   return (area === 'outdoors' && place.source.kind === 'generated') || ['woodland', 'hearthwick'].includes(place.id) || place.id.startsWith('lot:');
 }
 
@@ -248,4 +251,11 @@ export function fixedGatherAt(position: { x: number; y: number }, tile: readonly
   if (tile.length !== 2) return false;
   const [tx, ty] = tile as readonly [number, number];
   return Math.hypot(position.x - (tx * 16 + 8), position.y - 8 - (ty + 1) * 16) <= 48 && objects.some((o) => o.kind === 'gather' && o.target === target && o.tx === tx && o.ty === ty);
+}
+
+/** Action labels follow target semantics rather than matching authored English. */
+export function gatheringLabel(target: string, authored: string): string {
+  const noun = ({ tree: 'tree', boulder: 'boulder', stump: 'stump' } as Record<string, string>)[target];
+  const action = gatheringTarget(target)?.action;
+  return noun && action ? `${gatheringVerb(action)} the ${noun}` : authored;
 }

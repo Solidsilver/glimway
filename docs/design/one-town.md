@@ -591,3 +591,19 @@ Decisions 1–5 were settled in the design conversation for this lane (§0); the
 | 6 | **Existing outdoor home items outside the new `24×24` lot bounds** | Shift outdoor items by `(-8, -3)` so the cottage site (`16,6 → 8,3`) and nearby pieces keep their relative spot; return any piece in the old far margins to the home's **storage chest** (`location = 'storage'`) so nothing is lost. | **Decided 2026-10-14:** as recommended. |
 | 7 | **Saved `village` and step-3 Commons player positions** | Move `village` saves to `hearthwick:spawn` `(4, 60)` and step-3 Commons saves (`y >= 384`) to `hearthwick:arch` `(2, 26)` with a version barrier bump; keep Tangle/Wilds (`y < 384`) and `in:*` room saves at their exact coordinates. | **Decided 2026-10-14:** as recommended. |
 | 8 | **Room IDs (`in:village:bakery`, `in:commons:yard`, etc.)** | Keep the internal room IDs (`in:village:*`, `in:commons:yard*`, `in:home:*`) unchanged in `rooms.json` and saves while pointing their outdoor doors to `"hearthwick"` / lot doorsteps. Avoids churning room IDs in quests and saves. | **Decided 2026-10-14:** as recommended. |
+
+
+### T5 local-save compatibility (owner decision, 2026-10-14)
+
+New local saves carry `layout: "one-town-v1"`. Untagged version-1 files that
+already say `outdoors` keep their coordinates: pre-0.10 Commons exports cannot
+be distinguished reliably from current outdoor saves. Only the once-only
+server migration 037 applies the `y >= 384` relocation. Explicit retired
+village/Commons/home save names still import at the authored spawn/arch/doorstep.
+Displaced plants return a seed to home storage and retain archived history;
+a seed is compensation, not the preserved grown plant. Stored stables keep
+their stalls and mounts, which become available after re-placement.
+Plot services require private ground (`lx=3..20, ly=2..18`, plus the gate
+cells `lx=11..12, ly=19`); public lanes remain outside. Whole-lot Arrange, including saw clearing,
+requires presence inside that fence; tool gathering and planting also require
+individual target reach.

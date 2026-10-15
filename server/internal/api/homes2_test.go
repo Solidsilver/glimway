@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"glimway/content"
+	"glimway/server/internal/chunks"
 	"glimway/server/internal/land"
+	"glimway/server/internal/rules"
 	"net/http"
 	"testing"
 )
@@ -48,6 +50,17 @@ func (x *rig) home(c *http.Cookie) homeView {
 func (x *rig) homeOpRefreshing(c *http.Cookie, s *response, op string, fields map[string]any, status int) expansionResponse {
 	x.t.Helper()
 	x.refresh(c, s)
+	// Legacy furnishing scenarios run while standing in the edited scene.
+	// Raw presence-negative requests deliberately bypass this fixture helper.
+	if (op == "place" || op == "move" || op == "remove" || op == "clear") && fields["where"] == nil && fields["progress"] == nil {
+		scene, _ := fields["scene"].(string)
+		if op == "remove" || op == "move" {
+			if id, ok := fields["itemId"].(string); ok {
+				_ = x.db.DB.QueryRow("SELECT COALESCE(scene,'') FROM homestead_items WHERE id=?", id).Scan(&scene)
+			}
+		}
+		x.standForHome(s, scene)
+	}
 	v := x.exp("POST", "/api/homestead/"+op, body(*s, fmt.Sprintf("%s-%d-%d-%d", op, s.Version, x.now.Load(), keySeq()), fields), c, status)
 	if status == 200 {
 		update(s, v)
@@ -677,5 +690,21 @@ func TestHomes2CrossWorldIsolation(t *testing.T) {
 	}
 	if count(t, x.db, "SELECT count(*) FROM homestead_members WHERE homestead_id=?", h.ID) != 1 {
 		t.Fatal("joined across worlds")
+	}
+}
+
+// standForHome gives a furnishing fixture an actual location in its own home.
+func (x *rig) standForHome(s *response, scene string) {
+	x.t.Helper()
+	var gate int
+	if err := x.db.DB.QueryRow("SELECT h.gate FROM homestead_members m JOIN homesteads h ON h.id=m.homestead_id WHERE m.account_id=?", s.AccountID).Scan(&gate); err != nil {
+		return
+	}
+	s.State.Area = "outdoors"
+	ox, oy := chunks.LotOrigin(gate)
+	s.State.Position = rules.Position{X: float64((ox+11)*16 + 8), Y: float64((oy+8)*16 + 8)}
+	if scene == "indoor" {
+		s.State.Area = fmt.Sprintf("in:home:%d", gate)
+		s.State.Position = rules.Position{X: 80, Y: 80}
 	}
 }

@@ -1,3 +1,4 @@
+import { lotAtPixel } from '../../lib/lots'
 /**
  * Homesteads, arranged: placement mode for a member on their own land or in
  * their cottage. The tray (src/ui/HomeBar.svelte) and the keys move, turn,
@@ -68,6 +69,9 @@ export class HomesteadArranging {
 
   /** A few times a second: is the hero somewhere they may arrange their own place? */
   update(dt: number): void {
+    if (this.placement && this.home.land && lotAtPixel(this.deps.hero().x,this.deps.hero().y) !== this.home.gate) {
+      this.endPlacement(false)
+    }
     this.arrangeTimer -= dt
     if (this.arrangeTimer > 0) return
     this.arrangeTimer = 0.25
@@ -75,7 +79,7 @@ export class HomesteadArranging {
     let next: ArrangeView = { available: false, scene: null, tier: home?.tier ?? 0 }
     if (home?.member && !this.placement) {
       if (this.deps.room) next = { available: true, scene: 'indoor', tier: home.tier }
-      else if (this.home.land) next = { available: true, scene: 'outdoor', tier: home.tier }
+      else if (this.home.land && lotAtPixel(this.deps.hero().x,this.deps.hero().y) === this.home.gate) next = { available: true, scene: 'outdoor', tier: home.tier }
     }
     if (next.available !== this.arrange.available || next.scene !== this.arrange.scene || next.tier !== this.arrange.tier) this.emitArrange(next)
   }
@@ -92,6 +96,7 @@ export class HomesteadArranging {
 
   startPlacement(): void {
     if (this.placement || !this.arrange.available || !this.arrange.scene) return
+    if (this.home.land && lotAtPixel(this.deps.hero().x,this.deps.hero().y) !== this.home.gate) return
     const scene = this.arrange.scene
     let ox = 0
     let oy = 0

@@ -145,15 +145,13 @@ export class WildsWindow {
     if (stale) {
       this.seasonalPending.delete(stale)
       const had = this.fixed.has(stale)
-      this.fixed.get(stale)?.destroy()
+      this.fixed.get(stale)?.destroy(true)
       this.fixed.delete(stale)
       if (had && this.plan?.attach.includes(stale)) {
         const { cx, cy } = parseChunkKey(stale)
         const fp = footprintAt(cx, cy)
         if (fp && !this.failedGround.has(fp.place.id)) {
           this.attachFixed(fp, cx, cy)
-          const c = this.fixed.get(stale)
-          if (c) this.builds.finish(c)
         }
       }
     }
@@ -523,6 +521,11 @@ export class WildsWindow {
 
   /** Mutable home overlays rebuild through the same window budget, without a scene restart. */
   refreshFixed(key: string): void { if (this.fixed.has(key)) this.seasonalPending.add(key) }
+
+  /** Late layers join pending/built chunks through their existing budgeted job. */
+  fixturesReady(): void {
+    for (const c of this.fixed.values()) c.fixturesReady()
+  }
 
   /** Fixed ground and collision are attached, even if its drawing is still building. */
   hasFixed(cx: number, cy: number): boolean {

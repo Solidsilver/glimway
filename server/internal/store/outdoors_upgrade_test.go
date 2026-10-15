@@ -115,3 +115,70 @@ func TestOneTown037UpgradePreservesHomesAndMovesSavedPlaces(t *testing.T) {
 		s.Close()
 	}
 }
+
+func TestOneTown037StoresBlockedAndUnlitPieces(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ground.sqlite")
+	old := newUpgradeFixture(t, path, "036_outdoors.sql", nil)
+	_, err := old.Exec(`INSERT INTO worlds(id,owner_id,seed,created_at) VALUES('frozen-world','owner','seed',1);
+ INSERT INTO players(account_id,display_name,world_id,created_at,last_seen_at) VALUES('owner','Owner','frozen-world',1,1);
+ INSERT INTO homesteads(id,world_id,gate,tier,claimed_at) VALUES('h','frozen-world',0,1,1);
+ INSERT INTO homestead_members VALUES('owner','h',1);`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ground := generate037("frozen-world", 0)
+	blocked, dark, cleared := [2]int{-1, -1}, [2]int{-1, -1}, [2]int{-1, -1}
+	for y := 2; y <= 18; y++ {
+		for x := 3; x <= 20; x++ {
+			if reserved037(x, y) {
+				continue
+			}
+			lit := lit037([][3]int{{12, 7, 7}}, x, y)
+			k := ground[y*24+x]
+			if lit && (k == 1 || k == 2 || k == 3) {
+				if blocked[0] < 0 {
+					blocked = [2]int{x, y}
+				} else if cleared[0] < 0 {
+					cleared = [2]int{x, y}
+				}
+			}
+			if !lit && k == 0 && dark[0] < 0 {
+				dark = [2]int{x, y}
+			}
+		}
+	}
+	if blocked[0] < 0 || dark[0] < 0 || cleared[0] < 0 {
+		t.Fatal("frozen fixture lacks required ground")
+	}
+	for id, p := range map[string][2]int{"blocked": blocked, "dark": dark, "cleared": cleared} {
+		if _, err = old.Exec(`INSERT INTO homestead_items(id,item_def,location,homestead_id,scene,x,y,rotation) VALUES(?,'wooden-stool','placed','h','outdoor',?,?,0)`, id, p[0]+8, p[1]+3); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err = old.Exec(`INSERT INTO homestead_cleared(homestead_id,x,y) VALUES('h',?,?)`, cleared[0]+8, cleared[1]+3); err != nil {
+		t.Fatal(err)
+	}
+	// A multi-bay stable that no longer fits keeps its exact ID and stall rows.
+	_, err = old.Exec(`INSERT INTO homestead_items(id,item_def,location,homestead_id,scene,x,y,rotation,stalls) VALUES('stable','stable','placed','h','outdoor',26,14,0,3);
+ INSERT INTO homestead_stalls(homestead_id,stall,mount_key,owner_id) VALUES('h',3,'Wolf-Shade','owner');`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	old.Close()
+	for n := 0; n < 2; n++ {
+		s, err := Open(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for id, want := range map[string]string{"blocked": "storage", "dark": "storage", "cleared": "placed", "stable": "storage"} {
+			var got string
+			if err = s.DB.QueryRow("SELECT location FROM homestead_items WHERE id=?", id).Scan(&got); err != nil || got != want {
+				t.Fatal(id, got, want, err)
+			}
+		}
+		if fallRows(t, s, "SELECT count(*) FROM homestead_stalls WHERE homestead_id='h' AND stall=3 AND mount_key='Wolf-Shade'") != 1 {
+			t.Fatal("lost stored mount")
+		}
+		s.Close()
+	}
+}

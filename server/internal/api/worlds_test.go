@@ -552,6 +552,7 @@ func TestWorldMoveCarriesPackAndChestAndLeavesTheRest(t *testing.T) {
 	crafted := x.p5("POST", "/api/craft", body(h, "stools", map[string]any{"recipeId": "craft-wooden-stool", "qty": 1}), hc, 200)
 	h.Snapshot = crafted.Snapshot
 	spot := litSpots(*crafted.Result.Home)[0]
+	x.standForHome(&h, "outdoor")
 	update(&h, x.exp("POST", "/api/homestead/place", body(h, "place", map[string]any{"itemId": crafted.Result.InstanceIDs[0], "scene": "outdoor", "x": spot[0], "y": spot[1], "rotation": 0}), hc, 200))
 	h.Snapshot = x.p5("POST", "/api/storage", body(h, "shared", map[string]any{"direction": "deposit", "asset": content.Asset{Kind: "material", Id: "timber", Qty: 7}}), hc, 200).Snapshot
 	h.Snapshot = x.p5("POST", "/api/storage", body(h, "personal", map[string]any{"direction": "deposit", "chest": "personal", "asset": content.Asset{Kind: "material", Id: "stone", Qty: 4}}), hc, 200).Snapshot

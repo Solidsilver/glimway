@@ -47,6 +47,7 @@ func TestFix4PlacementNeedsTierForIndoors(t *testing.T) {
 	x.claimGate(c, &s, 0)
 	v := x.exp("POST", "/api/homestead/buy", body(s, "stool", map[string]any{"itemDef": "wooden-stool"}), c, 200)
 	update(&s, v)
+	x.standForHome(&s, "indoor")
 	req := body(s, "place", map[string]any{"itemId": v.Result.ItemID, "scene": "indoor", "x": 0, "y": 0, "rotation": 0})
 	if x.exp("POST", "/api/homestead/place", req, c, 409).Error.Code != "tier-required" {
 		t.Fatal("campsite has no indoors")

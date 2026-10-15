@@ -489,7 +489,7 @@ export interface EventMap {
   [EV.fixedReady]: void
   [EV.clock]: void
   [EV.turning]: { reason: 'epoch-ended' }
-  [EV.planted]: { plant: HomePlantView }
+  [EV.planted]: { plant: HomePlantView; gate: number; worldId: string }
   [EV.notePosition]: void
   [EV.action]: void
   [EV.cast]: void

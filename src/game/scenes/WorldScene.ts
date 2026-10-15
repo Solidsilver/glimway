@@ -54,9 +54,6 @@ import { villageFor } from '../village'
 import { VillageLayer } from '../entities/village-life'
 import { Touches } from '../entities/touches'
 import { ROOM_ENTRY, homeRoomArea, parseHomeRoom } from '../cottage'
-import { homeLights } from '../../lib/homestead-land'
-import { lotOrigin } from '../../lib/lots'
-import { homesteadsFor } from '../homestead'
 import { commonsLane, fixedPlaceOf } from '../wilds/fixed'
 import { FixedLife } from '../wilds/fixed-life'
 import { isSafeArea } from '../../lib/habitica/sync'
@@ -381,7 +378,7 @@ export class WorldScene extends Phaser.Scene {
         const lane = commonsLane()
         if (!lane || this.homesteads) return
         this.homesteads = this.homesteadLayer(lane, null)
-        for (const key of this.window?.fixedKeys() ?? []) for (const draw of this.homesteads.fixedHooks.attach(key)) draw()
+        this.window?.fixturesReady()
       }
       bus.on(EV.fixedReady, late)
       this.events.once('shutdown', () => bus.off(EV.fixedReady, late))
@@ -1035,15 +1032,6 @@ export class WorldScene extends Phaser.Scene {
   }
 
   /** My homestead's lamps on this land (the light that holds the ground). */
-  private myLights(): { x: number; y: number; radius: number }[] {
-    if (this.world.areaId !== 'outdoors') return []
-    const mine = homesteadsFor(this.session).mine
-    if (!mine) return []
-    const origin = lotOrigin(mine.gate)
-    return homeLights(
-      mine.items.filter((i) => i.itemDef === 'lantern-post' && i.scene === 'outdoor' && i.x !== null && i.y !== null) as { x: number; y: number }[]
-    ).map((l) => ({ x: origin.tx + l.x, y: origin.ty + l.y, radius: l.radius }))
-  }
 
   /**
    * Connected play: the server's area/position won (a stale merge after
@@ -1257,9 +1245,7 @@ export class WorldScene extends Phaser.Scene {
       room: homeRoom !== null ? { gate: homeRoom } : null,
       enterRoom: (gate) => this.goIn(homeRoomArea(gate)),
       rebuild: () => this.rebuildArea(),
-      refreshLot: (key) => {
-        if (!this.homesteads?.placing) this.window?.refreshFixed(key)
-      }
+      refreshLot: (key) => this.window?.refreshFixed(key)
     })
   }
 

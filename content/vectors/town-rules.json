@@ -78,7 +78,7 @@
       "gatherArea": true
     },
     {
-      "name": "lot doorstep",
+      "name": "public lot entrance",
       "area": "outdoors",
       "x": -952,
       "y": 712,
@@ -86,7 +86,7 @@
       "target": "bloom-patch",
       "gather": false,
       "fish": false,
-      "gatherArea": true
+      "gatherArea": false
     },
     {
       "name": "town library",
@@ -186,6 +186,17 @@
       "gather": false,
       "fish": false,
       "gatherArea": false
+    },
+    {
+      "name": "private lot doorstep",
+      "area": "outdoors",
+      "x": -968,
+      "y": 520,
+      "rest": "home",
+      "target": "tree",
+      "gather": true,
+      "fish": false,
+      "gatherArea": true
     }
   ],
   "gates": [

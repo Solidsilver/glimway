@@ -23,6 +23,7 @@ export type QuestEvent =
 
 export interface GameState {
   version: 1;
+  layout?: 'one-town-v1';
   area: AreaId;
   position: { x: number; y: number };
   /** Quest id → the step reached (src/lib/quests.ts). No entry: not started. */
@@ -116,6 +117,7 @@ const STARTING_INVENTORY: readonly string[] = ['field-journal', 'hearthwick-map'
 export function createNewGame(): GameState {
   return {
     version: SAVE_VERSION,
+    layout: 'one-town-v1',
     area: 'outdoors',
     position: { x: DEFAULT_POSITION.x, y: DEFAULT_POSITION.y },
     quests: {},
@@ -249,6 +251,10 @@ export function validateSave(data: unknown): GameState {
     );
   }
 
+  if (data.layout !== undefined && data.layout !== 'one-town-v1') {
+    throw new InvalidSaveError(`unsupported world layout ${describe(data.layout)}`, 'layout');
+  }
+
   if (!isPlainObject(data.position)) {
     throw new InvalidSaveError(
       `expected an object with numeric x and y, got ${describe(data.position)}`,
@@ -268,7 +274,7 @@ export function validateSave(data: unknown): GameState {
   if (!isPlainObject(data)) throw new InvalidSaveError('invalid cutover save');
   if (!isSaveArea(data.area)) {
     throw new InvalidSaveError(
-      `expected one of ${SAVE_AREAS.map((a) => JSON.stringify(a)).join(', ')} home:<gate> or a room, got ${describe(data.area)}`,
+      `expected one of ${SAVE_AREAS.map((a) => JSON.stringify(a)).join(', ')} or a known room, got ${describe(data.area)}`,
       'area',
     );
   }
@@ -314,6 +320,7 @@ export function validateSave(data: unknown): GameState {
   return {
     ...(wickEpoch ? { wickEpoch } : {}),
     version: SAVE_VERSION,
+    layout: 'one-town-v1',
     ...onGrid(data.area as string, x, y),
     quests,
     ...(questGateAt ? { questGateAt } : {}),

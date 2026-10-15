@@ -6,6 +6,7 @@ import (
 	"glimway/server/internal/location"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -32,4 +33,14 @@ func localHomeTile(s *store.Snapshot, x, y int) (int, int) {
 		}
 	}
 	return x, y
+}
+
+// onPrivateLot is a service boundary, distinct from the whole-zone identity
+// used for world-move arrivals and presence subscriptions.
+func onPrivateLot(s *store.Snapshot, gate int) bool {
+	if s.State.Area != outdoorsArea || homeGateAt(s) != gate {
+		return false
+	}
+	ox, oy := chunks.LotOrigin(gate)
+	return chunks.InsideLot(int(math.Floor(s.State.Position.X/16))-ox, int(math.Floor(s.State.Position.Y/16))-oy)
 }
