@@ -181,8 +181,8 @@ for (const [name, vp] of [['desktop', { width: 1200, height: 760 }], ['phone', {
       await animationsDone(page)
       await page.screenshot({ path: `.agent/screens/${n}-${name}.png` })
     }
-    await go(page, 'village', 16, 18)
-    await go(other, 'village', 18, 18)
+    await go(page, 'outdoors', 16, 66)
+    await go(other, 'outdoors', 18, 66)
     await seeEachOther(page, other)
     await other.bringToFront()
     await other.keyboard.press('g')
@@ -193,8 +193,8 @@ for (const [name, vp] of [['desktop', { width: 1200, height: 760 }], ['phone', {
     await expect.poll(async () => (await remotes(page))[0]?.bubbleAlpha, { timeout: 5_000 }).toBe(1)
     await shot('20-presence-village')
 
-    await go(page, 'commons', 23, 19)
-    await go(other, 'commons', 25, 19)
+    await go(page, 'outdoors', 2, 43)
+    await go(other, 'outdoors', 1, 43)
     await seeEachOther(page, other)
     // The Commons is on the open map: its square is chunk (0, 1)'s room.
     expect((await presenceState(page))?.area).toBe('outdoors:0:1')

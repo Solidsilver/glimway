@@ -31,12 +31,12 @@ func TestEveryClientMarkNamespaceThroughOperation(t *testing.T) {
 		if !ok {
 			t.Fatal("builder vector missing", ns.Prefix)
 		}
-		area, at := "village", rules.Position{X: 400, Y: 300}
+		area, at := "in:village:library", rules.Position{X: 80, Y: 80}
 		if ns.Prefix == "home:met-silas" {
 			area, at = outdoorsArea, commonsPx(400, 300)
 		}
 		if ns.Prefix == "home:arrived" {
-			area = "home:42"
+			area, at = outdoorsArea, rules.Position{X: -968, Y: 520}
 		}
 		if ns.Prefix == "found:" || ns.Prefix == "defeated:" {
 			area = "woodland"
@@ -48,7 +48,7 @@ func TestEveryClientMarkNamespaceThroughOperation(t *testing.T) {
 		}
 	}
 	// An area's mark holds in its rooms (Silas at his counter in the Yard), never elsewhere.
-	for area, ok := range map[string]bool{"in:commons:yard": true, "in:commons:yard:deeds": true, "village": false, "in:village:bakery": true} {
+	for area, ok := range map[string]bool{"in:commons:yard": true, "in:commons:yard:deeds": true, "in:home:0": false, "woodland": false} {
 		c2, s2 := x.ready("met-" + strings.ReplaceAll(area, ":", "-"))
 		w := x.rawHTTP("POST", "/api/story/mark", body(s2, "met-silas", map[string]any{"mark": "home:met-silas", "where": map[string]any{"area": area, "x": 40, "y": 40}}), c2)
 		if ok && w.Code != 200 || !ok && (w.Code != 409 || !strings.Contains(w.Body.String(), "wrong-area")) {
@@ -66,8 +66,8 @@ func TestEveryClientMarkNamespaceThroughOperation(t *testing.T) {
 func TestTerminalSpendRefusalReplaysWithCurrentState(t *testing.T) {
 	x := newRig(t)
 	c, p := x.reportSetup()
-	first := x.sendReport(c, p, 1, p.State.Version, 10, 0, 0, "village")
-	req := &contract.SpendRequest{Op: &contract.OpHeader{Lease: p.Lease, Key: "short-forever", Report: &contract.ReportBarrier{Client: "tab-a", Generation: p.ReportGeneration, Seq: 1}}, Where: &contract.Where{Area: "village", X: 400, Y: 300}, Kind: "rest"}
+	first := x.sendReport(c, p, 1, p.State.Version, 10, 0, 0, "in:village:library")
+	req := &contract.SpendRequest{Op: &contract.OpHeader{Lease: p.Lease, Key: "short-forever", Report: &contract.ReportBarrier{Client: "tab-a", Generation: p.ReportGeneration, Seq: 1}}, Where: &contract.Where{Area: "in:village:library", X: 80, Y: 80}, Kind: "rest"}
 	send := func() *contract.Refusal {
 		t.Helper()
 		raw, _ := protojson.Marshal(req)
@@ -114,10 +114,10 @@ func TestQuestWrongAreaRollsBackEveryReward(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
 	x.seedOpeningDone(s.AccountID)
-	x.quest(c, &s, "accepted", "village")
+	x.quest(c, &s, "accepted", "in:village:library")
 	x.quest(c, &s, "clue-found", "ruin")
 	before := x.expect("GET", "/api/state", nil, c, 200)
-	w := x.rawHTTP("POST", "/api/quest/step", body(s, "wrong-area", map[string]any{"quest": "lantern-road", "to": "guardian-defeated", "where": map[string]any{"area": "village", "x": 400, "y": 300}}), c)
+	w := x.rawHTTP("POST", "/api/quest/step", body(s, "wrong-area", map[string]any{"quest": "lantern-road", "to": "guardian-defeated", "where": map[string]any{"area": "in:village:library", "x": 80, "y": 80}}), c)
 	if w.Code != 409 || !strings.Contains(w.Body.String(), "wrong-area") {
 		t.Fatal(w.Body.String())
 	}
@@ -152,16 +152,16 @@ func TestReportCooldownWithAmpleManaAndPlayTimeGeneration(t *testing.T) {
 	if _, err = x.db.DB.Exec("UPDATE sync_baselines SET level_mark=10 WHERE account_id=?", x.account("alice")); err != nil {
 		t.Fatal(err)
 	}
-	a := x.sendReport(c, p, 1, float64(s.Version), 50, 200, 1, "village")
+	a := x.sendReport(c, p, 1, float64(s.Version), 50, 200, 1, "in:village:library")
 	if a.GetReport().Casts != 1 || a.State.Story.PlaySeconds != 0 || a.State.Vitals.Mana < 60 {
 		t.Fatal(a)
 	}
-	b := x.sendReport(c, p, 2, a.State.Version, 50, 200, 1, "village")
+	b := x.sendReport(c, p, 2, a.State.Version, 50, 200, 1, "in:village:library")
 	if b.GetReport().Casts != 0 || b.State.Vitals.Mana != a.State.Vitals.Mana {
 		t.Fatal("same-time cooldown reused", a, b)
 	}
 	x.now.Add(100)
-	d := x.sendReport(c, p, 3, b.State.Version, 50, 200, 0, "village")
+	d := x.sendReport(c, p, 3, b.State.Version, 50, 200, 0, "in:village:library")
 	if d.State.Story.PlaySeconds != 30 {
 		t.Fatal("gap cap", d)
 	}
@@ -170,14 +170,14 @@ func TestReportCooldownWithAmpleManaAndPlayTimeGeneration(t *testing.T) {
 	if w.Code != 200 || protojson.Unmarshal(w.Body.Bytes(), &replacement) != nil {
 		t.Fatal(w.Code, w.Body.String())
 	}
-	old := &contract.ReportRequest{Lease: replacement.Lease, Client: "tab-a", Generation: p.ReportGeneration, Seq: 4, Basis: d.State.Version, Hp: 1, Place: &contract.Where{Area: "village"}}
+	old := &contract.ReportRequest{Lease: replacement.Lease, Client: "tab-a", Generation: p.ReportGeneration, Seq: 4, Basis: d.State.Version, Hp: 1, Place: &contract.Where{Area: "in:village:library"}}
 	raw, _ := protojson.Marshal(old)
 	w = x.rawHTTP("POST", "/api/report", json.RawMessage(raw), c)
 	if w.Code != 409 || !strings.Contains(w.Body.String(), "superseded") || strings.Contains(w.Body.String(), `"state"`) {
 		t.Fatal("retired generation", w.Body.String())
 	}
 	x.now.Add(60)
-	fresh := &contract.ReportRequest{Lease: replacement.Lease, Client: "tab-b", Generation: replacement.ReportGeneration, Seq: 1, Basis: replacement.State.Version, Hp: replacement.State.Vitals.Hp, Mana: replacement.State.Vitals.Mana, Place: &contract.Where{Area: "village"}}
+	fresh := &contract.ReportRequest{Lease: replacement.Lease, Client: "tab-b", Generation: replacement.ReportGeneration, Seq: 1, Basis: replacement.State.Version, Hp: replacement.State.Vitals.Hp, Mana: replacement.State.Vitals.Mana, Place: &contract.Where{Area: "in:village:library"}}
 	raw, _ = protojson.Marshal(fresh)
 	w = x.rawHTTP("POST", "/api/report", json.RawMessage(raw), c)
 	var out contract.Envelope
@@ -209,7 +209,7 @@ func TestSubsecondFallDoesNotCreateCombatBudget(t *testing.T) {
 	}
 	clock := time.Unix(x.now.Load()+1, 900_000_000)
 	x.api.Config.Now = func() time.Time { return clock }
-	req := &contract.FallRequest{Op: &contract.OpHeader{Lease: p.Lease, Key: "fractional-fall"}, Where: &contract.Where{Area: "woodland", X: 400, Y: 300}}
+	req := &contract.FallRequest{Op: &contract.OpHeader{Lease: p.Lease, Key: "fractional-fall"}, Where: &contract.Where{Area: "woodland", X: 80, Y: 80}}
 	raw, _ := protojson.Marshal(req)
 	w := x.rawHTTP("POST", "/api/fall", json.RawMessage(raw), c)
 	var fall contract.Envelope
@@ -223,7 +223,7 @@ func TestSubsecondFallDoesNotCreateCombatBudget(t *testing.T) {
 	}
 	clock = time.Unix(clock.Unix()+1, 0)
 	// 15 recovered mana + only 0.1s regeneration cannot fund an 18-mana cast.
-	out := x.sendReport(c, p, 1, fall.State.Version, 50, 30, 2, "village")
+	out := x.sendReport(c, p, 1, fall.State.Version, 50, 30, 2, "in:village:library")
 	if out.GetReport().Casts != 0 || out.State.Vitals.Mana >= 17 {
 		t.Fatal("refill created mana/time", out)
 	}

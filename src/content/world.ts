@@ -133,13 +133,7 @@ function titleCase(id: string): string {
 }
 
 export const locations: Record<AreaId, LocationInfo> = {
-  village: {
-    name: 'Hearthwick',
-    eyebrow: 'The village of',
-    tagline: 'The land forgets what it isn’t reminded of. Hearthwick reminds it.',
-    description:
-      'A hillside village of patched slate roofs at the top of the Low Road. Every window keeps a lamp, and one has kept it lit all night for thirty years. The dark lantern road starts at the east gate.',
-  },
+  outdoors: WILDS_INNER.location,
   woodland: {
     name: 'Brackenwood Path',
     eyebrow: 'The old lantern road',
@@ -154,7 +148,7 @@ export const locations: Record<AreaId, LocationInfo> = {
     description:
       'The Keeper’s old waystation: grey blocks, heather through the floor, a route stone in the alcove. Past the broken arch the hilltop shrine waits, and a stone warden stands on the path, arms out.',
   },
-  commons: HEARTHWICK_COMMONS,
+  hearthwick: HEARTHWICK_COMMONS,
 };
 
 /**
@@ -241,9 +235,8 @@ export function areaInfo(areaId: AreaId): LocationInfo {
   if (known) return known;
   const room = roomInfo(areaId);
   if (room) return room;
-  if (areaId === 'commons') return HEARTHWICK_COMMONS;
   if (areaId === 'cottage' || /^in:home:\d+$/.test(areaId)) return { name: 'Cottage', eyebrow: 'Behind the Commons gates', tagline: 'Four skids, a slate roof, a fox over the door.', description: 'One room on iron-oak skids, pegged not nailed.' };
-  const lot = /^home:(\d+)$/.exec(areaId);
+  const lot = /^lot:(\d+)$/.exec(areaId);
   if (lot) return { name: `Lot ${Number(lot[1]) + 1}`, eyebrow: 'Behind the Commons gates', tagline: 'Wild land, held by lamplight.', description: 'Land past a Commons gate: trees, stumps and stones, and whatever the deed-holders have built where their lamps reach.' };
   if (areaId === 'whitequiet' || areaId.startsWith('chunk:outer-')) return WILDS_OUTER.location;
   if (areaId === 'beyond') return OPEN_MAP_CARDS.beyond;

@@ -15,15 +15,18 @@ the game can show the first part as "What's new":
 
 ### For players
 
+- **The whole town is one walk.** Hearthwick and the eight homestead lots are part of the open map. Walk straight from the Town Square through the Carters' Apron, out the four town gates, or along the lanes to the homestead lots without loading screens or portals.
 - Town recovery, seasonal gathering, mill-wheel art, resident window lights, Pip’s arrival and road guidance now respect the streamed town’s positions.
-
 - Homestead lots now grow world-specific land beside Hearthwick, with camps, cottages, furnishings and stables that stream in as you approach.
-
 - Hearthwick’s streamed town chunks now draw residents, pond fishing, the mill wheel, project lights and seasonal gatherings; their decorations and interactions leave with each chunk.
 - Hearthwick now offers rest, pond fishing and town story beats outdoors; new arrivals start in the Square, and falls return you to the well.
-
 - Paths around Hearthwick now reach the southern outskirts and cross the Wend west of the homesteads.
 - Hearthwick brings the village and Carters’ Apron together, with roads north, east, south and west.
+
+### Technical
+
+- **Deploy note:** migration 037 moves saved player places (`village`, `commons`, legacy outdoor places, and `home:*`) onto the outdoors grid, applying a version barrier. Outdoor homestead furniture, clears, stumps, and plants shift to match the new lot frame; pieces or plants that do not fit the lot bounds or fall on reserved cells are moved to storage or archived. Let the game sync before updating.
+- One-town cutover (T5): retired standalone `village` and `home:<g>` outdoor spaces in favour of `outdoors`. Dropped deprecated village builder, standalone homeland scene, and legacy commons shims.
 
 ## [0.10.0] - 2026-10-14
 

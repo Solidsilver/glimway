@@ -763,7 +763,7 @@ func TestFishWorldMoveClosesAnOpenCast(t *testing.T) {
 		t.Fatal("stock", stock)
 	}
 
-	moved := x.worldReq("POST", "/api/world/move", moveBody(s, "move", pw, "village"), c, 200)
+	moved := x.worldReq("POST", "/api/world/move", moveBody(s, "move", pw, "in:village:library"), c, 200)
 	if moved.Snapshot.WorldID != pw {
 		t.Fatal("moved", moved.raw)
 	}

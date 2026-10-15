@@ -33,16 +33,6 @@ export const ROUTINES: Readonly<Record<string, Readonly<Record<string, readonly 
     pip: [wait(5), walk(11, 75), walk(11, 73), walk(9, 73), wait(2), walk(9, 75), walk(10, 75)],
     orrin: [wait(12), walk(19, 57), walk(19, 55), wait(4), walk(17, 55), walk(17, 57)],
   },
-  village: {
-    // Mara walks a slow square by the well and looks up the road.
-    mara: [wait(7), walk(18, 13), walk(18, 11), wait(3), walk(16, 11), walk(16, 13)],
-    // Hazel takes her basket to the bench by the lantern and sits a while.
-    hazel: [wait(9), walk(9, 15), walk(9, 14), { kind: 'sit', tx: 9, ty: 13, s: 16 }, walk(9, 15), walk(12, 15)],
-    // Pip runs a lap of the garden.
-    pip: [wait(5), walk(26, 17), walk(26, 15), walk(28, 15), wait(2), walk(28, 17)],
-    // Orrin checks the road a few steps east, and comes back.
-    orrin: [wait(12), walk(23, 9), wait(4), walk(21, 9)],
-  },
   // Indoors, while her hour has her in (src/game/resident-cycle.ts).
   'in:village:bakery': {
     // Hazel goes from the dough on the worktable to the oven, and back.

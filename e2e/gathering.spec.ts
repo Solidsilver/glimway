@@ -1,9 +1,10 @@
 import type { Page } from './fixtures'
 import { expect, test } from './fixtures'
-import { sql, accountOf, moveServerClock, pinWorld, refusal } from './connected'
+import { sql, accountOf, moveServerClock, pinWorld, refusal, reenter } from './connected'
 import { claimDeed, freshPlayer, fund, giveInstance, homeAt, landOf, shot, toMyLand, type Home } from './home-helpers'
 import { chunkWhole, diagnose, expectToast, parkCreatures, player, pressOn, readDialogue, standFor, targetNow, waitForLive, warp, windowWhole } from './helpers'
 import { HOMESTEAD_DATA, plantable } from '../src/lib/homestead.ts'
+import { lotOrigin } from '../src/lib/lots.ts'
 import { gatheringTarget } from '../src/lib/gathering.ts'
 import { homeLights, isLit } from '../src/lib/homestead-land.ts'
 
@@ -205,6 +206,7 @@ test('chopping a tree in the Tangle: wear, timber, a stump to dig, and regrowth'
 
   // The Tangle of a pinned world (still land: the same trees every run).
   await pinWorld(page, GATHER_SEED)
+  await reenter(page)
   await warp(page, 'outdoors', 20, 20)
   await windowWhole(page)
   // A path-side tree: its canopy is drawn by the foreground pass (it fades
@@ -258,7 +260,7 @@ test('chopping a tree in the Tangle: wear, timber, a stump to dig, and regrowth'
 
   // The drift: leave the outdoor space, come back, and the woods have regrown.
   // The Commons is part of the same outdoor visit now.
-  await warp(page, 'village', 23, 19)
+  await warp(page, 'in:village:bakery', 5, 5)
   await warp(page, 'outdoors', 20, 20)
   await chunkWhole(page, spot)
   await expect.poll(async () => spotAt(page, spot)).toMatch(/^(tangle-tree|ash)$/)
@@ -294,6 +296,7 @@ test('past the cap the wood says so in words, and the trees shuffle out of reach
   const noon = await moveServerClock(page, nextUtcNoon(await moveServerClock(page, 0)))
   const day = Math.floor(noon / 86400)
   sql(`INSERT INTO gathering_caps(account_id,action,day,day_count,area,visit_id,visit_count,updated_at) VALUES('${accountOf(id)}','chop',${day},29,'','',0,0);`)
+  await reenter(page)
 
   await warp(page, 'outdoors', 20, 20)
   await windowWhole(page)
@@ -316,17 +319,18 @@ test('on your land: inside the lamps a stump stays, the unlit edge regrows, and 
   fund(id, { items: { 'birch-sapling': 1 } })
   await claimDeed(page)
   const land = await toMyLand(page)
+  const origin = lotOrigin(land.gate)
   await expect.poll(async () => (await gather(page))?.spots.length ?? 0).toBeGreaterThan(0)
 
   // Inside the lamplight: the stump is kept by the server.
   const lit = await workOne(page, ['tree', 'iron-oak'], /Chop the/, { lit: true })
-  await expect.poll(async () => (await landAt(page, land.gate))?.stumps ?? []).toContainEqual([lit.tx, lit.ty])
+  await expect.poll(async () => (await landAt(page, land.gate))?.stumps ?? []).toContainEqual([lit.tx - origin.tx, lit.ty - origin.ty])
   await expect.poll(async () => spotAt(page, lit)).toBe('stump')
   await shot(page, 'gathering-land-stump')
   // Out on the unlit edge: felled here and now, never kept.
   const dark = await workOne(page, ['tree', 'iron-oak'], /Chop the/, { lit: false })
   await expect.poll(async () => spotAt(page, dark)).toBe('stump')
-  expect((await landAt(page, land.gate))?.stumps ?? []).not.toContainEqual([dark.tx, dark.ty])
+  expect((await landAt(page, land.gate))?.stumps ?? []).not.toContainEqual([dark.tx - origin.tx, dark.ty - origin.ty])
   await expect.poll(async () => usesLeft(page, axe)).toBe(28)
 
   // Plant a sapling on open grass in the lamplight, from the inventory.
@@ -335,11 +339,11 @@ test('on your land: inside the lamps a stump stays, the unlit edge regrows, and 
   const lights = homeLights(home.items.filter((i) => i.itemDef === 'lantern-post' && i.scene === 'outdoor' && i.x !== null) as { x: number; y: number }[])
   const at = await player(page)
   const open: [number, number][] = []
-  for (let y = 1; y < 29; y++) for (let x = 1; x < 39; x++) if (isLit(lights, x, y) && plantable({ ...home, items: home.items as never, plants: home.plants ?? [] }, x, y, HOMESTEAD_DATA, ground)) open.push([x, y])
-  open.sort((a, b) => Math.hypot(a[0] * 16 - at.x, a[1] * 16 - at.y) - Math.hypot(b[0] * 16 - at.x, b[1] * 16 - at.y))
+  for (let y = 1; y < ground.height - 1; y++) for (let x = 1; x < ground.width - 1; x++) if (isLit(lights, x, y) && plantable({ ...home, items: home.items as never, plants: home.plants ?? [] }, x, y, HOMESTEAD_DATA, ground)) open.push([x, y])
+  open.sort((a, b) => Math.hypot((origin.tx + a[0]) * 16 - at.x, (origin.ty + a[1]) * 16 - at.y) - Math.hypot((origin.tx + b[0]) * 16 - at.x, (origin.ty + b[1]) * 16 - at.y))
   let tile: [number, number] | null = null
   for (const t of open) {
-    if (await settle(page, { x: t[0] * 16 + 8, y: t[1] * 16 + 10 })) {
+    if (await settle(page, { x: (origin.tx + t[0]) * 16 + 8, y: (origin.ty + t[1]) * 16 + 10 })) {
       tile = t
       break
     }
@@ -359,10 +363,11 @@ test('on your land: inside the lamps a stump stays, the unlit edge regrows, and 
   await expect.poll(async () => (await landAt(page, land.gate))?.plants ?? []).toContainEqual(expect.objectContaining({ itemDef: 'birch-sapling', x: tile![0], y: tile![1], lit: true }))
   // Step off it to see it standing there.
   const beside = open.find((t) => t !== tile && Math.abs(t[0] - tile![0]) + Math.abs(t[1] - tile![1]) === 2)
-  if (beside) await settle(page, { x: beside[0] * 16 + 8, y: beside[1] * 16 + 10 })
+  if (beside) await settle(page, { x: (origin.tx + beside[0]) * 16 + 8, y: (origin.ty + beside[1]) * 16 + 10 })
   await shot(page, 'gathering-land-planted')
 
   // Leave and come back: the lit stump and the sapling stay, the edge has regrown.
+  await warp(page, 'in:village:bakery', 5, 5)
   await toMyLand(page)
   await expect.poll(async () => spotAt(page, lit)).toBe('stump')
   await expect.poll(async () => spotAt(page, dark)).toMatch(/^(tree|iron-oak)$/)
@@ -372,9 +377,9 @@ test('on your land: inside the lamps a stump stays, the unlit edge regrows, and 
   await page.waitForFunction((a) => {
     const s = (window as unknown as { __fsSafety?: () => { areaId: string; transitioning: boolean } | null }).__fsSafety?.()
     return !!s && !s.transitioning && s.areaId === a
-  }, `home:${land.gate}`)
+  }, 'outdoors')
   const after = await landAt(page, land.gate)
-  expect(after?.stumps ?? []).toContainEqual([lit.tx, lit.ty])
+  expect(after?.stumps ?? []).toContainEqual([lit.tx - origin.tx, lit.ty - origin.ty])
   expect(after?.plants ?? []).toContainEqual(expect.objectContaining({ itemDef: 'birch-sapling', x: tile![0], y: tile![1] }))
   await expect.poll(async () => usesLeft(page, axe)).toBe(28)
 })

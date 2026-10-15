@@ -18,10 +18,10 @@ const DAY = 86400
 type Area = Parameters<typeof warp>[1]
 
 const RESIDENTS = [
-  { id: 'hazel', name: 'Hazel', full: 'Hazel Penhallow', area: 'village', stand: [11, 15], intro: /Hazel Penhallow/ },
-  { id: 'finn', name: 'Finn', full: 'Finn Tolley', area: 'village', stand: [31, 23], intro: /Finn Tolley, the miller/ },
-  { id: 'ada', name: 'Ada', full: 'Ada Cooley', area: 'village', stand: [34, 8], intro: /Ada Cooley\./ },
-  { id: 'elara', name: 'Elara', full: 'Elara Quill', area: 'commons', stand: [25, 5], intro: /Elara Quill: forager/ }
+  { id: 'hazel', name: 'Hazel', full: 'Hazel Penhallow', area: 'outdoors', stand: [11, 64], intro: /Hazel Penhallow/ },
+  { id: 'finn', name: 'Finn', full: 'Finn Tolley', area: 'outdoors', stand: [30, 78], intro: /Finn Tolley, the miller/ },
+  { id: 'ada', name: 'Ada', full: 'Ada Cooley', area: 'outdoors', stand: [32, 56], intro: /Ada Cooley\./ },
+  { id: 'elara', name: 'Elara', full: 'Elara Quill', area: 'outdoors', stand: [6, 28], intro: /Elara Quill: forager/ }
 ] as const
 
 /** Set Hearthwick's clock (dev hook) and wait for the village to read it (at :57, when Hazel and Finn are out). */
@@ -69,7 +69,7 @@ test('meeting each resident: an introduction, their portrait, and a journal entr
   for (const r of RESIDENTS) {
     await warp(page, r.area as Area, r.stand[0], r.stand[1])
     // Let a new area's title card clear before the screen.
-    if (process.env.SCREENS) await page.waitForTimeout(r.area === 'commons' ? 4000 : 600)
+    if (process.env.SCREENS) await page.waitForTimeout(600)
     await shot(page, `resident-${r.id}-in-place-desktop`)
     const lines = await converse(page, r.name, `resident-${r.id}-dialogue-desktop`, { bust: true, toast: `${r.full}: noted in your journal.` })
     expect(lines.join(' ')).toMatch(r.intro)
@@ -95,7 +95,7 @@ test('Elara’s line follows the calendar: the wick, the Mark, and the day befor
   await freshPlayer(page)
   // The last day of Amber-wick: she has posted the Turning for tomorrow.
   await setDay(page, 8, 7)
-  await warp(page, 'commons', 25, 5)
+  await warp(page, 'outdoors', 6, 28)
   const first = await converse(page, 'Elara')
   expect(first.join(' ')).toMatch(/Elara Quill: forager/)
   expect(first.at(-1)).toMatch(/^Dark of Amber-wick tomorrow: the outer Wilds turn\. I’ve posted it\./)
@@ -117,13 +117,13 @@ test('once the road is lit, Hazel hands over her own recipe card', async ({ page
   await seedStory(id, { quest: 'complete', marks: ['met:hazel@new'] })
   await reenter(page)
   await residentsOut(page)
-  await warp(page, 'village', 11, 15)
+  await warp(page, 'outdoors', 11, 64)
   const lines = await converse(page, 'Hazel', 'resident-hazel-late-desktop')
   expect(lines.join(' ')).toMatch(/My brother Joss was a runner/)
   expect(lines.join(' ')).toMatch(/Take the card off my wall/)
   await expect.poll(async () => (await serverState(page)).body.state.flags, { timeout: 10_000 }).toContain('paper:keepers-twists-recipe-card')
   // Pip no longer has it to give.
-  await warp(page, 'village', 28, 16)
+  await warp(page, 'outdoors', 10, 75)
   const pip = await converse(page, 'Pip')
   expect(pip.join(' ')).not.toMatch(/card off the bakery wall/)
 })
@@ -135,7 +135,7 @@ test('who speaks first: Hazel’s own lines, then Set to Rise’s reminder; with
   await seedStory(id, { quest: 'complete', quests: { 'set-to-rise': 'fetch-flour' }, marks: ['met:hazel@new', 'paper:keepers-twists-recipe-card'] })
   await reenter(page)
   await residentsOut(page, { server: true })
-  await warp(page, 'village', 11, 15)
+  await warp(page, 'outdoors', 11, 64)
 
   // No flour yet: her own late lines first (the card's, now that it's read), then the reminder,
   // its offer shown disabled.

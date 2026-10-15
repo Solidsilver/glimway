@@ -222,7 +222,7 @@ func TestPartyLeaverWarnedAndLeavesNow(t *testing.T) {
 	x.hero("hal", "Hal", "p1")
 	hc, h := x.again("hal")
 	home := h.WorldID
-	h.Snapshot = x.worldReq("POST", "/api/world/move", moveBody(h, "in", pw, "village"), hc, 200).Snapshot
+	h.Snapshot = x.worldReq("POST", "/api/world/move", moveBody(h, "in", pw, "in:village:library"), hc, 200).Snapshot
 	x.hero("hal", "Hal", "")
 	hc, h = x.playAs("hal", "")
 	if v = x.worldReq("GET", "/api/world", nil, hc, 200); v.MoveOpensIn == 0 || v.Leaver == nil || !v.Leaver.HasOwn {
@@ -314,8 +314,14 @@ func TestPartyLeaverMovedOutAfterGrace(t *testing.T) {
 // Moved out from a home, a leaver arrives outside its gate on their own
 // world's Commons (anchor hearthwick:lot:<g>); homes belong to their world.
 func TestPartyResidenceHomeArrivalAtItsGate(t *testing.T) {
-	for _, area := range []string{"home:5", "in:home:5"} {
-		t.Run(area, func(t *testing.T) {
+	for _, tc := range []struct {
+		name, area string
+		x, y       float64
+	}{
+		{"lot:5", "outdoors", -42*16 + 8, 80*16 + 8},
+		{"in:home:5", "in:home:5", 80, 80},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
 			x := newRig(t)
 			x.hero("olive", "Olive", "p1")
 			_, party := x.ready("olive")
@@ -323,7 +329,7 @@ func TestPartyResidenceHomeArrivalAtItsGate(t *testing.T) {
 			x.ready("sage")
 			x.hero("sage", "Sage", "")
 			x.login("sage", "")
-			if _, err := x.db.DB.Exec("UPDATE player_place SET area=?, x=80, y=80 WHERE account_id=?", area, x.account("sage")); err != nil {
+			if _, err := x.db.DB.Exec("UPDATE player_place SET area=?, x=?, y=? WHERE account_id=?", tc.area, tc.x, tc.y, x.account("sage")); err != nil {
 				t.Fatal(err)
 			}
 			x.now.Add(PartyGrace)

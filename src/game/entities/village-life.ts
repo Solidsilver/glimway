@@ -519,11 +519,11 @@ export class VillageLayer {
     const d = this.village.calendar
     const key = `${d.wickNumber}:${d.day}:${this.deps.world.areaId}`
     if (greeted.has(key)) return
-    greeted.add(key)
     this.greetingTimer?.remove()
     this.greetingTimer = this.scene.time.delayedCall(1800, () => {
       this.greetingTimer = null
-      if (!this.scene.sys.isActive()) return
+      if (!this.scene.sys.isActive() || greeted.has(key)) return
+      greeted.add(key)
       bus.emit(EV.toast, { text: `${name}. ${FESTIVAL_NOTES[name] ?? ''}`.trim(), icon: 'lantern' })
     })
   }

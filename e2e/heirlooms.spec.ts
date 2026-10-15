@@ -47,8 +47,8 @@ test.describe('heirloom story beats', () => {
       await (window as unknown as { __fsVillage?: () => { loadProjects?: () => Promise<void> } }).__fsVillage?.().loadProjects?.()
     })
 
-    // Stand by Orrin in Village (tx: 21, ty: 10)
-    await warp(page, 'village', 21, 10)
+    // Stand by Orrin in Village
+    await warp(page, 'outdoors', 17, 58)
     await expect(page.locator('.prompt')).toContainText('Talk to Orrin')
     await waitForLive(page)
 
@@ -84,7 +84,7 @@ test.describe('heirloom story beats', () => {
 
     // Stand by Silas out in his yard (his cycle: minute 10 of the hour), by the sawhorse
     await setHour(page, { minute: 10, server: true })
-    await warp(page, 'commons', 48, 20)
+    await warp(page, 'outdoors', 29, 37)
     await expect(page.locator('.prompt')).toContainText('Talk to Silas')
     await waitForLive(page)
 
@@ -113,8 +113,8 @@ test.describe('heirloom story beats', () => {
     fund(id, { items: { 'hearth-oil': 3 } })
     await packHolds(page, 'hearth-oil')
 
-    // Stand by Ada in Village (tx: 36, ty: 8)
-    await warp(page, 'village', 36, 8)
+    // Stand by Ada in Village
+    await warp(page, 'outdoors', 32, 56)
     await expect(page.locator('.prompt')).toContainText('Talk to Ada')
     await waitForLive(page)
 

@@ -20,8 +20,8 @@ func TestWardenSliverFittingAndSingleCarriedRestriction(t *testing.T) {
 	sliver1 := x.instance(x.account("alice"), "warden-sliver", -1, "")
 	sliver2 := x.instance(x.account("alice"), "warden-sliver", -1, "")
 
-	x.stand(x.account("alice"), s.WorldID, "village", 100, 100)
-	x.stand(x.account("bob"), s.WorldID, "village", 120, 100)
+	x.stand(x.account("alice"), s.WorldID, "in:village:library", 100, 100)
+	x.stand(x.account("bob"), s.WorldID, "in:village:library", 120, 100)
 
 	// Fitting first sliver onto the axe succeeds.
 	fit1 := x.opRefreshing(c, &s, "fit", map[string]any{"tool": axe, "instance": sliver1}, 200)

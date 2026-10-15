@@ -56,7 +56,7 @@ func TestKeyedOpCurrentReplayAndAtomicRefusal(t *testing.T) {
 	x := newRig(t)
 	cookie, s := x.ready("alice")
 	calls := 0
-	request := &contract.MarkRequest{Op: &contract.OpHeader{Lease: s.Lease, Key: "key"}, Mark: "seen:client-mark", Where: &contract.Where{Area: "village", X: 2, Y: 3}}
+	request := &contract.MarkRequest{Op: &contract.OpHeader{Lease: s.Lease, Key: "key"}, Mark: "seen:client-mark", Where: &contract.Where{Area: "in:village:library", X: 2, Y: 3}}
 	run := func(apply func(context.Context, *sql.Tx, *store.Snapshot, int64) (any, error)) *httptest.ResponseRecorder {
 		r := httptest.NewRequest("POST", "https://game.test/api/story/mark", nil)
 		r.AddCookie(cookie)
@@ -301,7 +301,7 @@ func TestSharedBoundsAndStatefulPlacementRefusals(t *testing.T) {
 			t.Fatal(w.Code, w.Body.String())
 		}
 	}
-	w := x.rawHTTP("POST", "/api/story/mark", map[string]any{"where": map[string]any{"area": "village"}}, c)
+	w := x.rawHTTP("POST", "/api/story/mark", map[string]any{"where": map[string]any{"area": "in:village:library"}}, c)
 	if w.Code != 400 || !strings.Contains(w.Body.String(), "invalid-json") {
 		t.Fatal(w.Code, w.Body.String())
 	}

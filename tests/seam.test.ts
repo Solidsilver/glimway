@@ -996,7 +996,7 @@ test('six claimed lots build in slices, refresh and detach without retaining hom
   const { createNewGame } = await import('../src/lib/state.ts');
   serveFixtureLots();
   serveFixtureLand('guest', 8);
-  const { setLandSource } = await import('../src/game/homeland.ts');
+  const { setLandSource } = await import('../src/game/lot-land.ts');
   setLandSource({ worldId: () => 'guest', state: () => null, fetchLand: () => null });
   const r = rig();
   const owners = new Map<unknown, unknown[]>();
@@ -1110,10 +1110,15 @@ test('a late plot read from a previous world cannot replace the new world footpr
     const chunk = decodeChunk(readFileSync(new URL(`./fixtures/plot-${lotAt(w.cx, w.cy)}.bin`, import.meta.url)));
     w.resolve({ ...chunk, epochId: w.epoch });
   });
-  assert.equal(waiting.length, 16);
-  answer('new-world'); await fresh;
-  assert.equal(footprint('homestead-lots')?.epoch, 'plot:new-world@2');
-  answer('old-world'); await old;
+  assert.equal(waiting.length, 8);
+  // Concurrency limit of 8: resolve old requests to release slots for new world requests
+  answer('old-world');
+  await old;
+  assert.equal(footprint('homestead-lots'), null, 'old completion cannot install into new world');
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  assert.equal(waiting.filter((w) => w.epoch.startsWith('plot:new-world:')).length, 8);
+  answer('new-world');
+  await fresh;
   assert.equal(footprint('homestead-lots')?.epoch, 'plot:new-world@2');
   forgetFixed(); forgetChunks(); serveFixtureCommons(); serveFixtureLots();
 });

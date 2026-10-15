@@ -3,7 +3,6 @@ package api
 import (
 	"fmt"
 	"glimway/content"
-	"glimway/server/internal/rules"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"math"
 	"regexp"
@@ -55,7 +54,7 @@ func validatePayload(m protoreflect.Message) error {
 }
 func validArea(area string) bool {
 	// The Commons is outdoors (fixed footprint), not a saved area of its own.
-	if slices.Contains([]string{"village", "woodland", "ruin"}, area) || rules.HomeGate(area) >= 0 || content.KnownRoom(area) {
+	if slices.Contains([]string{"woodland", "ruin"}, area) || content.KnownRoom(area) {
 		return true
 	}
 	return area == outdoorsArea

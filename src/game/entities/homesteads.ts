@@ -21,7 +21,6 @@ import { homeEntrance } from '../../lib/lots.ts'
 import { LotHomes } from '../wilds/lot-chunk.ts'
 import { FixedScope } from '../wilds/fixed-scope'
 import Phaser from 'phaser'
-import { parseHomeArea } from '../../lib/homestead'
 import { clearable, servedLand } from '../../lib/homestead-land'
 import type { HomeView, StallView } from '../../lib/api/types'
 import { baySig, nextHomecoming, stableNext, stallsShown } from '../../lib/companions'
@@ -33,7 +32,7 @@ import { TILE, tileCenter, tileFeet, tileKey, tileMid } from '../../lib/tile'
 import type { WorldData } from '../worlds'
 import type { CommonsLane } from '../wilds/fixed'
 import type { FixedHooks } from '../wilds/fixed-chunk'
-import type { LandWorld } from '../homeland'
+import type { LandWorld } from '../lot-land'
 import { ROOM_BENCH, ROOM_HEARTH } from '../cottage'
 import { villageFor, type Village } from '../village'
 import { homesteadsFor, lotName, signText, type Homesteads, type PlacementCommand } from '../homestead'
@@ -100,7 +99,7 @@ export class HomesteadLayer {
     this.homes = homesteadsFor(deps.session)
     this.village = villageFor(deps.session)
     this.commons = deps.commons
-    const landGate = deps.room ? null : parseHomeArea(deps.world.areaId)
+    const landGate = null
     this.land = landGate !== null ? (deps.world as LandWorld) : null
     this.gate = deps.room?.gate ?? landGate
     this.yardRoom = isYardRoom(deps.world.areaId) ? deps.world.areaId : null
@@ -167,7 +166,13 @@ export class HomesteadLayer {
       here: this.lots?.active()?.here() ?? (this.gate === null ? null : this.homes.homes.get(this.gate) ?? null),
       slots: this.commons?.gates.map((g) => ({ gate: g.gate, tx: g.tx, ty: g.ty, side: g.side, sign: g.sign, entry: g.entry, shelf: g.shelf })) ?? [],
       features: this.commons?.features ?? null,
-      land: this.land ? { gate: this.land.gate, door: this.land.door, doorstep: this.land.doorstep, mailbox: this.land.mailbox, site: this.land.site, desolate: this.land.desolate } : null,
+      land: (() => {
+        const L = this.lots?.active()?.land ?? this.land
+        if (!L) return null
+        const ox = (L.gridOrigin?.x ?? 0) / TILE, oy = (L.gridOrigin?.y ?? 0) / TILE
+        const local = (t: { tx: number; ty: number }) => ({ tx: t.tx - ox, ty: t.ty - oy })
+        return { gate: L.gate, door: local(L.door), doorstep: local(L.doorstep), mailbox: local(L.mailbox), site: L.site, desolate: L.desolate }
+      })(),
       guide: this.art.guide ? { x: this.art.guide.marker.x, y: this.art.guide.marker.y, arrow: this.art.guide.arrow.visible } : null,
       placing: this.placing,
       yard: (this.lots?.active()?.yard ?? this.yard)?.debug() ?? [],
@@ -196,7 +201,7 @@ export class HomesteadLayer {
     else if (this.land || deps.room) this.announcePending = true
   }
 
-  private announcePending = false
+  announcePending = false
   /** The scene ended (async work that outlives it stops). */
   gone = false
   /** Placement mode owns input: the hero waits. */
@@ -217,6 +222,10 @@ export class HomesteadLayer {
     if (!bay || !L?.gridOrigin) return bay
     const { x, y } = L.gridOrigin
     return { front: { x: bay.front.x + x, y: bay.front.y + y }, stand: { x: bay.stand.x + x, y: bay.stand.y + y }, depth: bay.depth + y }
+  }
+
+  petPoints() {
+    return this.lots ? this.lots.petPoints() : this.yard?.petPoints() ?? []
   }
 
   /**
@@ -376,7 +385,7 @@ export class HomesteadLayer {
     return `${home.members.map((m) => m.displayName || 'A neighbour').slice(0, 2).join(' & ')}’s Place`
   }
 
-  private announce(): void {
+  announce(): void {
     const gate = this.gate!
     const home = this.here()
     const mine = !!home?.member

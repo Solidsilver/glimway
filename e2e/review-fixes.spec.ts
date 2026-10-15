@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { calendarOnServer, linkRev, linkStatus, moveServerClock, serverState } from './connected'
-import { commonsTile, frames, expectToast } from './helpers'
+import { frames, expectToast } from './helpers'
 import { claimDeed, earnGlims, freshPlayer, fund, go, homes, myHome, onMyLand, seeTheYard, silasSays, yardBuild } from './home-helpers'
 
 /**
@@ -49,7 +49,7 @@ test('finding 1: a purchase and an upgrade whose answers are lost resolve on rec
   // A step while offline: the reconnect has a write of its own to send before
   // it replays the purchase (whose stored answer then carries an older rev).
   await expect.poll(() => linkStatus(page)).toBe('offline')
-  await go(page, 'commons', 48, 22)
+  await go(page, 'outdoors', 24, 46)
   // The link reconnects by itself and replays the same request: it landed.
   await expectToast(page, 'went through after all', { timeout: 30_000 })
   await expect.poll(() => linkStatus(page)).toBe('online')
@@ -83,8 +83,8 @@ test('finding 2: an exit to an unregistered area is overgrown (no crash, the sav
   // The Commons is walked into from the Wilds now (one open map); a test-only
   // exit, east of the square, stands in for any destination this build has no area kind for.
   await freshPlayer(page)
-  await go(page, 'commons', 21, 19)
-  const exit = commonsTile(22, 19)
+  await go(page, 'outdoors', -3, 43)
+  const exit = { tx: 1, ty: 43 }
   const saved = () => page.evaluate(() => (window as unknown as { __fsDevSaved: () => { area: string; position: { x: number; y: number } } }).__fsDevSaved())
   const before = await saved()
   expect(before.area).toBe('outdoors')
@@ -111,7 +111,7 @@ test('findings 4 and 6: materials show on a fresh read; purchases redraw one plo
   fund(id, { materials: { fiber: 20 } })
   await claim(page)
   // Back on the lane (the deed was bought in Pell's office): the panel opens where you stand.
-  await go(page, 'commons', 23, 19)
+  await go(page, 'outdoors', 34, 35)
   await expect.poll(async () => (await homes(page)).status).toBe('ready')
   const loaded = await stats(page)
   // The lane's gates drawn once at start, plus the claimed gate: never N² rebuilds.

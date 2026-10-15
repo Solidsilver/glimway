@@ -50,7 +50,7 @@ test('riding: M says where riding starts, and the saddle waits outside rooms and
   assert.equal(at({ mountOut: 'Wolf-Base' }), null);
   assert.equal(at({ mountOut: 'Wolf-Base', area: 'in:mill' }), 'indoors');
   assert.equal(at({ mountOut: 'Wolf-Base', area: 'village' }), 'village');
-  assert.equal(at({ mountOut: 'Wolf-Base', area: 'home:3' }), null, 'your own land rides');
+  assert.equal(at({ mountOut: 'Wolf-Base', area: 'outdoors', position: { x: -584, y: 904 } }), null, 'your own land rides');
   // Ridden: getting down is always allowed, wherever you are.
   assert.equal(at({ mountOut: 'Wolf-Base', riding: true, area: 'village' }), null);
   assert.equal(at({ mountOut: 'Wolf-Base', riding: true, area: 'in:mill' }), null);

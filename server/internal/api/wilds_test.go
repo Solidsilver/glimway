@@ -541,7 +541,7 @@ func TestWildsClaimReach(t *testing.T) {
 	x.campFell(s.WorldID, v.Epoch.Id, v.kind(t, "camp"), 0, x.account("alice"))
 	for _, kind := range []string{"node", "camp", "chest", "poi"} {
 		e := v.kind(t, kind)
-		if _, code := x.claim(c, s, kind+"-village", v.Epoch.Id, e, 0, &contract.Where{Area: "village", X: 10, Y: 10}, 409); code != "not-in-wilds" {
+		if _, code := x.claim(c, s, kind+"-village", v.Epoch.Id, e, 0, &contract.Where{Area: "in:village:library", X: 10, Y: 10}, 409); code != "not-in-wilds" {
 			t.Fatal(kind, code)
 		}
 		wrong := at(e, 0)
@@ -678,7 +678,7 @@ func TestWildsFallenLanterns(t *testing.T) {
 		where  *contract.Where
 		reason string
 	}{
-		{"curated", v.Epoch, &contract.Where{Area: "village", X: 100, Y: 100}, "not-wilds"},
+		{"curated", v.Epoch, &contract.Where{Area: "in:village:library", X: 100, Y: 100}, "not-wilds"},
 		{"no epoch", nil, here, "epoch-missing"},
 		{"wick land on the still epoch", v.Epoch, atTile(2*24+1, -24+1), "invalid-place"},
 		{"outside the frontier", v.Epoch, atTile(5*24, -10), "invalid-place"},
@@ -730,7 +730,7 @@ func TestWildsRelight(t *testing.T) {
 	first := x.fall("alice", v.Epoch, here)
 	second := x.fall("alice", v.Epoch, here)
 	relight(bc, b, "obsolete", "alice", first.ID, here, 404)
-	if _, code := relight(bc, b, "village", "alice", second.ID, &contract.Where{Area: "village", X: 1, Y: 1}, 409); code != "not-in-wilds" {
+	if _, code := relight(bc, b, "in:village:library", "alice", second.ID, &contract.Where{Area: "in:village:library", X: 1, Y: 1}, 409); code != "not-in-wilds" {
 		t.Fatal(code)
 	}
 	if _, code := relight(bc, b, "far", "alice", second.ID, atTile(tx+4, ty), 409); code != "too-far-away" {

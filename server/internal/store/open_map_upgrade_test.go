@@ -74,11 +74,11 @@ INSERT INTO item_stacks(location,owner,item_def,maker_id,qty) VALUES('pack','ali
 		return p
 	}
 	for _, id := range []string{"alice", "bob"} {
-		if p := read(id); p.area != "outdoors" || p.x != 40 || p.y != 424 || p.version != 9 || p.set != 9 || p.epoch != "" || p.hasStart {
+		if p := read(id); p.area != "outdoors" || p.x != 40 || p.y != 424 || p.version != 10 || p.set != 10 || p.epoch != "" || p.hasStart {
 			t.Errorf("%s: %+v", id, p)
 		}
 	}
-	if p := read("carol"); p.area != "village" || p.x != 2 || p.version != 7 || p.set != 7 || p.epoch != "outer-e" || !p.hasStart {
+	if p := read("carol"); p.area != "outdoors" || p.x != 72 || p.y != 968 || p.version != 8 || p.set != 8 || p.epoch != "outer-e" || !p.hasStart {
 		t.Errorf("carol moved: %+v", p)
 	}
 	if count("SELECT count(*) FROM story_marks") != 3 || count("SELECT COALESCE(SUM(qty),0) FROM item_stacks") != 17 || count("SELECT count(*) FROM world_changes") != 1 {

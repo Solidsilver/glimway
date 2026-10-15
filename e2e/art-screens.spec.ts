@@ -50,7 +50,7 @@ test.describe('in a world', () => {
       await page.waitForTimeout(250)
     }
     await expect(dialogue).toBeHidden()
-    await go(page, 'commons', 23, 19)
+    await go(page, 'outdoors', 34, 35)
 
     await yardBuild(page, 'cottage')
     await expect.poll(async () => (await myHome(page, id)).tier).toBe(1)
@@ -107,7 +107,7 @@ test.describe('in a world', () => {
 test('the settled warden at its post', async ({ page }) => {
   test.setTimeout(150_000)
   await freshPlayer(page)
-  await warp(page, 'village', 16, 14)
+  await warp(page, 'outdoors', 14, 62)
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)
   await talkThrough(page, /Copy the naming from the stone/)

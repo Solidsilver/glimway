@@ -1,7 +1,8 @@
+import { homeDoorstep } from './lots.ts';
 import { knownRoom } from './rooms.ts';
 import { anchor, contentSpace } from './location.ts';
 // Area builders register IDs at runtime; save validation uses SAVE_AREAS below.
-export type AreaId = 'village' | 'woodland' | 'ruin' | (string & {});
+export type AreaId = 'outdoors' | 'woodland' | 'ruin' | (string & {});
 
 /** The lantern road's step reached (`'new'` before it starts): what the game's older reads follow. */
 export type QuestStage =
@@ -70,7 +71,7 @@ export class InvalidSaveError extends Error {
 }
 
 // Curated areas are buildable by the existing standalone frontend.
-export const AREAS: readonly AreaId[] = ['village', 'woodland', 'ruin'];
+export const AREAS: readonly AreaId[] = ['woodland', 'ruin'];
 const SAVE_AREAS: readonly AreaId[] = [...AREAS, 'outdoors'];
 /**
  * A fixed place's own frame, as saves named it before it joined the open
@@ -88,7 +89,7 @@ function onGrid(area: string, x: number, y: number): { area: AreaId; position: {
 
 /** Can a save say it is here? The fixed areas, any homestead's land, and the rooms (a cottage, a village room). */
 function isSaveArea(area: unknown): area is AreaId {
-  return typeof area === 'string' && ((SAVE_AREAS as readonly string[]).includes(area) || HOME_AREA_RE.test(area) || knownRoom(area));
+  return typeof area === 'string' && ((SAVE_AREAS as readonly string[]).includes(area) || knownRoom(area));
 }
 
 export const QUEST_STAGES: readonly QuestStage[] = [
@@ -248,6 +249,23 @@ export function validateSave(data: unknown): GameState {
     );
   }
 
+  if (!isPlainObject(data.position)) {
+    throw new InvalidSaveError(
+      `expected an object with numeric x and y, got ${describe(data.position)}`,
+      'position',
+    );
+  }
+  requireFiniteNumber(data.position.x, 'position.x');
+  requireFiniteNumber(data.position.y, 'position.y');
+
+  // Import retired local save frames once; current saves only name live spaces.
+  if (data.area === 'village' || data.area === 'commons' || (typeof data.area === 'string' && HOME_AREA_RE.test(data.area))) {
+    const gate = typeof data.area === 'string' && HOME_AREA_RE.test(data.area) ? Number(data.area.slice(5)) : null;
+    const p = gate !== null && gate < 8 ? homeDoorstep(gate) : null;
+    const fallback = anchor(data.area === 'village' ? 'hearthwick:spawn' : 'hearthwick:arch')!;
+    data = { ...data, area: 'outdoors', position: p ? { x: p.tx * 16 + 8, y: p.ty * 16 + 8 } : { x: fallback.x, y: fallback.y } };
+  }
+  if (!isPlainObject(data)) throw new InvalidSaveError('invalid cutover save');
   if (!isSaveArea(data.area)) {
     throw new InvalidSaveError(
       `expected one of ${SAVE_AREAS.map((a) => JSON.stringify(a)).join(', ')} home:<gate> or a room, got ${describe(data.area)}`,
@@ -255,14 +273,9 @@ export function validateSave(data: unknown): GameState {
     );
   }
 
-  if (!isPlainObject(data.position)) {
-    throw new InvalidSaveError(
-      `expected an object with numeric x and y, got ${describe(data.position)}`,
-      'position',
-    );
-  }
-  const x = requireFiniteNumber(data.position.x, 'position.x');
-  const y = requireFiniteNumber(data.position.y, 'position.y');
+  const pos = data.position as { x: number; y: number };
+  const x = requireFiniteNumber(pos.x, 'position.x');
+  const y = requireFiniteNumber(pos.y, 'position.y');
 
   const quests = validateQuests(data);
   const questGateAt = isPlainObject(data.questGateAt) ? numberMap(data.questGateAt) : undefined;

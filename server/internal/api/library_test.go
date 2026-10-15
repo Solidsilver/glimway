@@ -261,7 +261,7 @@ func TestLibraryDonationNeedsElaraWithinGrace(t *testing.T) {
 		{"hour-wrap", 3600, "in:village:library", 409},
 		{"next-arrival-grace", 4110, "in:village:library", 200},
 		{"outside-with-elara", 3000, "commons", 409},
-		{"outside-library", 1200, "village", 409},
+		{"outside-library", 1200, outdoorsArea, 409},
 		{"other-room", 1200, "in:village:bakery", 409},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

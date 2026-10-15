@@ -131,9 +131,6 @@ export function anchorTile(id: string): { tx: number; ty: number } {
 }
 
 /** Where you come back out of homestead gate `gate` onto the Commons: its gate anchor (the arch past the frozen capacity). */
-export function gateAnchor(gate: number): { tx: number; ty: number } {
-  return anchor(`hearthwick:lot:${gate}`) ? anchorTile(`hearthwick:lot:${gate}`) : anchorTile('hearthwick:arch')
-}
 
 /** The fixed place a chunk lies in, or null. */
 export function fixedPlaceOf(cx: number, cy: number): FixedPlace | null {
@@ -193,9 +190,17 @@ export function prepareFixed(session: Pick<Session, 'link'>): Promise<void> | nu
   return loading
 }
 
+let fixedReads = 0
+const fixedWaiting: (() => void)[] = []
+async function limitedFixed<T>(read: () => Promise<T>): Promise<T> {
+ if (fixedReads >= 8) await new Promise<void>((resolve) => fixedWaiting.push(resolve))
+ else fixedReads++
+ try { return await read() } finally { const next = fixedWaiting.shift(); if (next) next(); else fixedReads-- }
+}
+
 async function loadFootprint(api: Pick<OperationsApi, 'chunk'>, place: FixedPlace, world: string): Promise<void> {
   const epoch = fixedEpoch(place.layout, place.revision)
-  const chunks = await Promise.all(fixedChunkKeys(place).map(({ cx, cy }) => loadFixedChunk(api, place.id === 'homestead-lots' ? plotEpoch(world, lotAt(cx, cy)!) : epoch, cx, cy)))
+  const chunks = await Promise.all(fixedChunkKeys(place).map(({ cx, cy }) => limitedFixed(() => loadFixedChunk(api, place.id === 'homestead-lots' ? plotEpoch(world, lotAt(cx, cy)!) : epoch, cx, cy))))
   if (desiredWorld === world) serveFixed(place, chunks)
 }
 
@@ -450,7 +455,7 @@ export function applyLotHome(gate: number, home: HomeView | null): void {
   const objects = (base.objects.get(key) ?? []).flatMap((object) => {
     const tile = `${object.tx-o.tx},${object.ty-o.ty}`
     if (object.id.startsWith('land:') && cleared.has(tile)) return []
-    if (object.target === 'tree' && stumps.has(tile)) return [{ ...object, target: 'stump', label: 'Dig the stump', frame: 'stump-0' }]
+    if ((object.target === 'tree' || object.target === 'iron-oak') && stumps.has(tile)) return [{ ...object, target: 'stump', label: 'Dig the stump', frame: 'stump-0' }]
     return [object]
   })
   for (const [x,y] of home?.cleared ?? []) if (x>=3 && x<=20 && y>=1 && y<=18 && base.objects.get(key)?.some((p) => p.id === `land:${x},${y}`)) fp.solid[o.ty-fp.ty+y]![o.tx-fp.tx+x] = false

@@ -16,9 +16,9 @@ test('location rules follow the hero across the safety boundary, on the Commons 
     ['hearthwick', 40, 424, true, true, 'hearthwick', true],
     ['outdoors', 40, 392, true, true, 'hearthwick', true],
     ['outdoors', 40, 376, false, true, 'tangle', false],
-    ['village', 400, 300, true, false, 'village', true],
+    ['village', 400, 300, false, false, 'village', false],
     // From a home a move arrives at its gate on the new world's Commons (the server's anchor).
-    ['home:0', 40, 40, true, true, 'home:0', true],
+    ['home:0', 40, 40, false, false, 'home:0', false],
     ['in:home:0', 80, 80, true, false, 'in:home:0', true],
     ['in:commons:yard', 40, 40, true, false, 'in:commons:yard', true],
   ] as const) {

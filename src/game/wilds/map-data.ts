@@ -11,6 +11,8 @@
  * gate names the epochs. Zooming and panning never come here: only new
  * input (a read, a path, a find) does.
  */
+import { roomFor } from '../../lib/rooms.ts'
+import { homeDoorstep } from '../../lib/lots.ts'
 import { MAP_LABELS } from '../../content/open-map.ts'
 import { loadWilds } from '../../lib/wilds/data.ts'
 import type { GroundChange } from '../../lib/gen/glimway/v1/wilds_pb.js'
@@ -188,7 +190,7 @@ export async function loadMap(session: Session, opts: { read?: boolean } = {}): 
   const fixed = fixedMapChunks()
   if (superseded || !live()) return { ...none(null), scope, superseded: true }
   const st = session.state
-  const hero = isWildsArea(st.area) && st.position ? { tx: Math.floor(st.position.x / 16), ty: Math.floor(st.position.y / 16) } : null
+  const hero = mapHeroTile(st.area, st.position)
   return {
     input: { frontier, chunks, fixed, glimpse, ways, places: [...places.values()], hero, words: { you: MAP_LABELS.you, gate: MAP_LABELS.gate } },
     scope,
@@ -296,4 +298,22 @@ async function findPlace(
     }
   }
   return null
+}
+
+/** Rooms retain local pixels; the outdoor map marks their exterior doorway. */
+export function mapHeroTile(area: string, position?: { x: number; y: number }): { tx: number; ty: number } | null {
+ if (isWildsArea(area)) return position ? { tx: Math.floor(position.x / 16), ty: Math.floor(position.y / 16) } : null
+ const home = /^in:home:([0-7])$/.exec(area)
+ if (home) return homeDoorstep(Number(home[1]))
+ const queue = [area], seen = new Set<string>()
+ while (queue.length) {
+  const id = queue.shift()!
+  if (seen.has(id)) continue
+  seen.add(id)
+  for (const door of roomFor(id)?.doors ?? []) {
+   if (door.outside && door.to === 'hearthwick') return { tx: door.outside.tx, ty: door.outside.ty }
+   if (door.to.startsWith('in:')) queue.push(door.to)
+  }
+ }
+ return null
 }

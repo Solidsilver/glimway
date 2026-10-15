@@ -265,7 +265,7 @@ export function exposeWorldHooks(s: WorldScene, layers: WorldHookLayers): void {
   // Roll from inside the frame loop, so playtests can react to an aim lock without input latency.
   on('__fsDevDodge', (dx, dy) => s['hero'].tryDodge(new Phaser.Math.Vector2(dx, dy)))
   // One swing of the hero's weapon, wherever they stand (the off hand tucks away).
-  on('__fsDevAttack', () => s['hero'].tryAttack())
+  on('__fsDevAttack', () => s['hero'].tryAttack({ force: true }))
   // Set the area's creatures aside (frozen, off the map) for a quiet chunk.
   on('__fsDevParkCreatures', () => s['enemies'].parkAll())
   on('__fsDevStrike', (n: number, type?: EnemyType) => {

@@ -51,19 +51,19 @@ async function frameTimes(page: Page, device: string): Promise<void> {
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 })
   await cdp.detach()
   writeFileSync(`${OUT}/${TAG}-frames-${device}.json`, JSON.stringify({ cpuThrottle: 4, idle, walking, drawn }, null, 1))
-  await warp(page, 'village', 19, 14)
+  await warp(page, 'outdoors', 19, 62)
 }
 
 async function outdoorScreens(page: Page, device: string): Promise<void> {
   // The village square: Mara by the well, the cottages around it.
-  await warp(page, 'village', 19, 14)
+  await warp(page, 'outdoors', 19, 62)
   await snap(page, 'village-square', device)
   await frameTimes(page, device)
   await closeUp(page, 'resident-mara', device, 16 * 16 + 8, 13 * 16 + 4, 90)
   // The Commons lane and its square, Elara at her post up the lane.
-  await warp(page, 'commons', 23, 19)
+  await warp(page, 'outdoors', 34, 35)
   await snap(page, 'commons-lane', device)
-  await warp(page, 'commons', 25, 7)
+  await warp(page, 'outdoors', 1, 31)
   await closeUp(page, 'resident-elara', device, 26 * 16 + 8, 5 * 16 + 4, 90)
   // Texture memory after the village and the Commons (the GPU's RGBA bytes).
   const mem = await page.evaluate(() => (window as unknown as { __fsDevTextureMemory: () => unknown }).__fsDevTextureMemory())

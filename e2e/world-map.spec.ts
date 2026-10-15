@@ -78,6 +78,7 @@ async function mapReady(page: Page): Promise<MapState> {
 test('M and the Map button open it full screen; M and Escape close it once; J goes on to the Journal; chords, repeats and typing don’t', async ({ page }) => {
   test.setTimeout(120_000)
   await freshPlayer(page)
+  await warp(page, 'in:village:bakery', 7, 4)
   await waitForLive(page)
 
   // M: the whole screen, over the HUD (inert under it), focus on the map.
@@ -328,7 +329,7 @@ test('out in the Wilds: close up on you, zoom kept between openings, drag, wheel
   expect(await page.evaluate(() => document.activeElement === document.body || document.activeElement === null)).toBe(true)
 
   // Opened just as you leave the Wilds: from its first frame it shows you outside, never the Wilds' last spot.
-  await page.evaluate(() => (window as unknown as Hooks).__fsDevWarp('village', 16, 14))
+  await page.evaluate(() => (window as unknown as Hooks).__fsDevWarp('woodland', 16, 14))
   await page.keyboard.press('m')
   const seen = await page.evaluate(
     () =>
@@ -356,7 +357,7 @@ test('out in the Wilds: close up on you, zoom kept between openings, drag, wheel
 
 test('on the Commons the map shows you: its fixed chunks are on the grid, south of the Tangle’s gate', async ({ page }) => {
   await freshPlayer(page)
-  await warp(page, 'commons', 23, 19)
+  await warp(page, 'outdoors', 2, 43)
   await waitForLive(page)
   await page.keyboard.press('m')
   const s = await mapReady(page)

@@ -54,10 +54,9 @@ import { villageFor } from '../village'
 import { VillageLayer } from '../entities/village-life'
 import { Touches } from '../entities/touches'
 import { ROOM_ENTRY, homeRoomArea, parseHomeRoom } from '../cottage'
-import { parseHomeArea } from '../../lib/homestead'
 import { homeLights } from '../../lib/homestead-land'
+import { lotOrigin } from '../../lib/lots'
 import { homesteadsFor } from '../homestead'
-import { prepareHomeLand } from '../homeland'
 import { commonsLane, fixedPlaceOf } from '../wilds/fixed'
 import { FixedLife } from '../wilds/fixed-life'
 import { isSafeArea } from '../../lib/habitica/sync'
@@ -375,7 +374,7 @@ export class WorldScene extends Phaser.Scene {
     this.homesteads = null
     // On the open map, the Commons lane: built once its chunks are here (they come with the Wilds' read).
     const lane = open ? commonsLane() : null
-    if (lane || parseHomeArea(this.world.areaId) !== null || homeRoom !== null || isYardRoom(this.world.areaId)) this.homesteads = this.homesteadLayer(lane, homeRoom)
+    if (lane || homeRoom !== null || isYardRoom(this.world.areaId)) this.homesteads = this.homesteadLayer(lane, homeRoom)
     else if (open) {
       // The Commons' chunks came after this build began (a first visit): the lane joins in then.
       const late = () => {
@@ -580,7 +579,7 @@ export class WorldScene extends Phaser.Scene {
       () => [
         ...(this.avatar.follower ? [{ id: 'mine', x: this.avatar.follower.x, y: this.avatar.follower.y, hop: () => this.avatar.follower?.hop() }] : []),
         ...this.remotePlayers.pets(),
-        ...(this.homesteads?.yard?.petPoints() ?? [])
+        ...(this.homesteads?.petPoints() ?? [])
       ],
       // The prompt offers the pet only with empty hands (src/lib/pet-gating.ts).
       () => heldNow().kind
@@ -1037,12 +1036,13 @@ export class WorldScene extends Phaser.Scene {
 
   /** My homestead's lamps on this land (the light that holds the ground). */
   private myLights(): { x: number; y: number; radius: number }[] {
-    if (parseHomeArea(this.world.areaId) === null) return []
+    if (this.world.areaId !== 'outdoors') return []
     const mine = homesteadsFor(this.session).mine
     if (!mine) return []
+    const origin = lotOrigin(mine.gate)
     return homeLights(
       mine.items.filter((i) => i.itemDef === 'lantern-post' && i.scene === 'outdoor' && i.x !== null && i.y !== null) as { x: number; y: number }[]
-    )
+    ).map((l) => ({ x: origin.tx + l.x, y: origin.ty + l.y, radius: l.radius }))
   }
 
   /**
@@ -1190,7 +1190,7 @@ export class WorldScene extends Phaser.Scene {
       return
     }
     // A homestead's land is the server's: fetched while the screen is dark.
-    this.moveTo({ area, position: tileCenter(entry.tx, entry.ty) }, { entry, ...extra }, { inDark: () => prepareHomeLand(String(area)) })
+    this.moveTo({ area, position: tileCenter(entry.tx, entry.ty) }, { entry, ...extra })
   }
 
   /** Dev: straight to a world tile of the open map (its chunks load while the screen is dark). */
@@ -1257,7 +1257,9 @@ export class WorldScene extends Phaser.Scene {
       room: homeRoom !== null ? { gate: homeRoom } : null,
       enterRoom: (gate) => this.goIn(homeRoomArea(gate)),
       rebuild: () => this.rebuildArea(),
-      refreshLot: (key) => this.window?.refreshFixed(key)
+      refreshLot: (key) => {
+        if (!this.homesteads?.placing) this.window?.refreshFixed(key)
+      }
     })
   }
 

@@ -88,11 +88,11 @@ func TestTownRuleVectors(t *testing.T) {
 			if strings.HasPrefix(kind, "lot:") || strings.HasPrefix(kind, "home:") {
 				kind = "home"
 			}
-			canGather := !strings.HasPrefix(c.Area, "in:") && len(content.GatheringRules.GetAreas()[kind].GetTargets()) > 0
+			canGather := validArea(c.Area) && !strings.HasPrefix(c.Area, "in:") && len(content.GatheringRules.GetAreas()[kind].GetTargets()) > 0
 			if canGather != c.GatherArea {
 				t.Fatal("gatherArea", canGather)
 			}
-			if got := content.GatheringOffered(offered, c.Target); got != c.Gather {
+			if got := validArea(c.Area) && content.GatheringOffered(offered, c.Target); got != c.Gather {
 				t.Fatal("gather", got)
 			}
 			s := store.Snapshot{State: rules.NewTownState()}

@@ -23,7 +23,7 @@ test('the opening: Orrin, the finger, the lean in the journal, Mara’s ledger, 
   await expect(goal(page)).toContainText('See what Orrin’s grumbling about')
 
   // Orrin, up his ladder: either reply takes the step.
-  await warp(page, 'village', 21, 10)
+  await warp(page, 'outdoors', 17, 58)
   await openTalk(page, /Talk to Orrin/)
   await readDialogue(page, { pick: /I’ll fetch it/ })
   await expect.poll(() => step(page, 'signpost')).toBe('meet-orrin')
@@ -43,7 +43,7 @@ test('the opening: Orrin, the finger, the lean in the journal, Mara’s ledger, 
   await expect.poll(async () => (await goalHook(page)).glow).toBeNull()
   await expect(goal(page).getByTestId('goal-here')).toHaveCount(0)
 
-  await warp(page, 'village', 21, 10)
+  await warp(page, 'outdoors', 17, 58)
   await talkThrough(page, /Talk to Orrin/)
   await expect.poll(() => step(page, 'signpost')).toBe('bring-finger')
   // Write the lean down: the book glows, and the journal opens on Quests with the opening on top.
@@ -70,7 +70,7 @@ test('the opening: Orrin, the finger, the lean in the journal, Mara’s ledger, 
   await expect.poll(() => step(page, 'signpost')).toBe('set-post')
 
   // Mara writes it in the ledger: five glims, and her top-up of three more for a hero with none.
-  await warp(page, 'village', 16, 14)
+  await warp(page, 'outdoors', 14, 62)
   await talkThrough(page, /Talk to Mara/)
   await expect.poll(() => step(page, 'signpost')).toBe('see-mara')
   await expectToast(page, /\+8 glims/, { timeout: 15_000 })
@@ -84,7 +84,7 @@ test('the opening: Orrin, the finger, the lean in the journal, Mara’s ledger, 
 
   // And the lantern road begins with Mara.
   await expect(goal(page)).toContainText('Hear Mara out about the road')
-  await warp(page, 'village', 16, 14)
+  await warp(page, 'outdoors', 14, 62)
   await talkThrough(page, /Talk to Mara/)
   await expectStage(page, 'accepted')
 })

@@ -1,25 +1,7 @@
-/**
- * A homestead's land, the map behind a Commons gate (area `home:<gate>`):
- * wild ground the server generates per gate and serves (GET /api/homestead/
- * land/<gate>; the same land it validates against), drawn with the Tangle's look — woods
- * floor, its trees, stumps and stones — with the home site near the top,
- * a path down to the gate mouth in the south edge, and the way back to the
- * Commons through it.
- *
- * What changes (the camp or cottage, decorations, lantern posts and their
- * light, cleared tiles, desolation) comes from the homestead state through
- * `setLandSource`; the scene layer (src/game/entities/homesteads.ts) draws
- * the buildings and pieces on top.
- *
- * The land is fetched once per gate and world (prepareHomeLand, before a
- * scene enters a home). A map built before it arrives shows plain ground
- * with the home site and path, marked `served: false`, and rebuilds when the
- * land comes (EV.homeChanged, reason `land`).
- */
-import { HOMESTEAD_DATA, homeArea, parseHomeArea } from '../lib/homestead.ts'
-import { gateAnchor } from './wilds/fixed.ts'
+/** Lot-local land data for streamed home art and Arrange. No standalone scene
+ * or area registration: walking and collision belong to the fixed window. */
+import { HOMESTEAD_DATA } from '../lib/homestead.ts'
 import { OUTDOORS_AREA } from './wilds/coords.ts'
-import { exitName } from './area/exits.ts'
 import { LAND, landFromCells, rememberLand, servedLand, type Land } from '../lib/homestead-land.ts'
 import { EV, bus } from './events.ts'
 import { DECOR_ART, TANGLE_GROUND, type DecorKind } from './wilds/decor.ts'
@@ -120,12 +102,6 @@ function loadLand(gate: number): Promise<void> {
     loading.set(key, pending)
   }
   return pending
-}
-
-/** Before a scene enters `home:<gate>`: its land, fetched while the screen is dark. */
-export function prepareHomeLand(area: string): Promise<void> | null {
-  const gate = parseHomeArea(area)
-  return gate === null ? null : loadLand(gate)
 }
 
 /** Plain ground while the served land is on its way: edge, grass, the gate path. */
@@ -251,7 +227,7 @@ export function buildLand(gate: number): LandWorld {
   // they were put; outside, wherever they've wandered to). Small, and
   // walked through: a sapling is its own sprite, a patch the woods' own.
   for (const p of plants) scenery.push(plantScenery(p, atlas))
-  const area = homeArea(gate)
+  const area = OUTDOORS_AREA
   const { door, doorstep } = landDoor()
   return {
     areaId: area,
@@ -266,7 +242,7 @@ export function buildLand(gate: number): LandWorld {
     rocks: [],
     npcs: [],
     enemies: [],
-    exits: [{ tx: L.gate.x, ty: H - 1, tw: L.gate.w, th: 1, to: OUTDOORS_AREA, entry: gateAnchor(gate), label: exitName('commons') }],
+    exits: [],
     props: [],
     scenery,
     gathering,
@@ -292,8 +268,3 @@ export function buildLand(gate: number): LandWorld {
   }
 }
 
-/** The area kind for `home:<gate>` ids (null for any other id): see worlds.ts. */
-export function homeLandKind(id: string): { build: () => WorldData; foreground: () => [] } | null {
-  const gate = parseHomeArea(id)
-  return gate === null ? null : { build: () => buildLand(gate), foreground: () => [] }
-}

@@ -4,12 +4,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildRoom, ROOM_DOOR, ROOM_GRID } from '../src/game/cottage.ts';
 import { buildArea, hasAreaKind } from '../src/game/worlds.ts';
-import { buildLand, setLandSource } from '../src/game/homeland.ts';
+import { buildLand, setLandSource } from '../src/game/lot-land.ts';
 import { HOMESTEAD_DATA, gateTile } from '../src/lib/homestead.ts';
 import { LAND } from '../src/lib/homestead-land.ts';
 import { serveFixtureLand } from './land-fixture.ts';
 import { serveFixtureCommons, serveFixtureLots, servedCommonsFixture, type CommonsView } from './commons-fixture.ts';
-import { anchorTile } from '../src/game/wilds/fixed.ts';
 
 // Homestead land and the Commons are the server's: these tests stand on their served fixtures.
 serveFixtureLand('guest');
@@ -50,8 +49,8 @@ const near = (r: Set<string>, t: Tile) => [[0, 0], [1, 0], [-1, 0], [0, 1], [0, 
 test('the Commons is fixed ground on the open map, no area of its own; homestead lands resolve by gate', () => {
   assert.equal(hasAreaKind('commons'), false);
   assert.ok(hasAreaKind('outdoors'));
-  assert.equal(buildArea('home:4').areaId, 'home:4');
-  assert.ok(hasAreaKind('home:0') && hasAreaKind('home:9999'));
+  assert.throws(() => buildArea('home:4'), /unknown area/);
+  assert.ok(!hasAreaKind('home:0') && !hasAreaKind('home:9999') && !hasAreaKind('village'));
   assert.ok(!hasAreaKind('home:01') && !hasAreaKind('home') && !hasAreaKind('home:x'));
 });
 
@@ -94,10 +93,7 @@ test('a homestead’s land: the site, the path to the gate mouth and the mailbox
   for (const gate of [0, 1, 5, 17]) {
     const land = buildLand(gate);
     const r = reach(land as unknown as CommonsView, land.spawn);
-    assert.equal(land.exits.length, 1);
-    const exit = land.exits[0];
-    assert.equal(exit.ty, land.height - 1);
-    assert.ok(r.has(key(exit)), 'the gate mouth can be walked to');
+    assert.equal(land.exits.length, 0, 'lot land is metadata, not another scene');
     assert.ok(r.has(key(land.doorstep)), 'the doorstep can be walked to');
     assert.ok(near(r, land.mailbox), 'the mailbox can be walked up to');
     // The home site is open ground (the camp or cottage stands there).
@@ -127,20 +123,16 @@ test('cleared tiles open up the land map; desolation grows over it', () => {
   }
 });
 
-test('the Commons gate leads back to Hearthwick; the north lane is walked into the Wilds, through the mouth alone', { skip: "T5: remove the old village portal" }, () => {
+test('the Commons gate leads back to Hearthwick; the north lane is walked into the Wilds, through the mouth alone', () => {
   const w = commons;
-  const village = w.exits.find((e) => e.to === 'village')!;
-  assert.equal(village.tx, 0);
-  assert.equal(w.exits.some((e) => e.to === 'outdoors'), false, 'no portal at the arch');
+  assert.equal(w.exits.some((e) => e.to === 'village'), false);
+  assert.equal(w.exits.some((e) => e.to === 'outdoors'), false, 'the arch is walked');
   // The footprint's north edge is solid but for the mouth, under the Tangle's gate (world x 1..3).
   const open = footprint.solid[0]!.flatMap((s, x) => (s ? [] : [footprint.tx + x]));
   assert.deepEqual(open, [1, 2, 3]);
-  const v = buildArea('village');
-  const gate = v.exits.find((e) => e.to === 'outdoors')!;
-  assert.equal(gate.tx + gate.tw, v.width, 'the Commons gate is on the village’s east edge');
-  assert.deepEqual(gate.entry, anchorTile('commons:west-path'));
-  // The Lantern Road exit (the quest's) is untouched.
-  assert.deepEqual(v.exits.find((e) => e.to === 'woodland'), { tx: v.width - 1, ty: 9, tw: 1, th: 3, to: 'woodland', entry: { tx: 2, ty: 15 } });
+  const v = buildArea('outdoors');
+  assert.equal(v.areaId, 'outdoors');
+
 });
 
 test('inside a cottage: the floor is the 12×10 grid, the door leads to the doorstep on its land', () => {

@@ -19,7 +19,7 @@ import (
 // old-database upgrade while every checksum still passes. The real freeze is
 // the upgrade tests — `TestStory028Upgrade` and the 026 upgrade tests.
 //
-//go:embed migrations/*.sql migrations/history.json migration_003_backfill.go migration_026_backfill.go migration_028_backfill.go
+//go:embed migrations/*.sql migrations/history.json migration_003_backfill.go migration_026_backfill.go migration_028_backfill.go migration_037_backfill.go
 var migrations embed.FS
 
 type migrationRecord struct {
@@ -33,6 +33,7 @@ var migrationBackfills = map[string]func(*sql.Tx) error{
 	"migration_003_backfill.go": initializeLossReferences,
 	"migration_026_backfill.go": finishOrigins026,
 	"migration_028_backfill.go": moveStory028,
+	"migration_037_backfill.go": moveHomes037,
 }
 
 func migrationHistory() ([]migrationRecord, error) {

@@ -82,7 +82,7 @@ test.describe('fishing at the mill pond', () => {
     test.skip(!(await fishingServed(page)), 'needs lane D’s fishing routes')
     await seasonOf(page, id, 'Carting')
     const rod = giveInstance(id, 'willow-rod', { max: ROD_MAX })
-    await warp(page, 'village', 36, 18)
+    await warp(page, 'outdoors', 36, 72)
     await holdRod(page)
     await expect(page.locator('.prompt')).toContainText(BANK_LINE)
 
@@ -124,7 +124,7 @@ test.describe('fishing at the mill pond', () => {
     test.skip(!(await fishingServed(page)), 'needs lane D’s fishing routes')
     await seasonOf(page, id, 'Carting')
     giveInstance(id, 'willow-rod', { max: ROD_MAX })
-    await warp(page, 'village', 39, 20)
+    await warp(page, 'outdoors', 39, 73)
     await holdRod(page)
     await expect(page.locator('.prompt')).toContainText(BANK_LINE)
     await waitForLive(page)
@@ -140,7 +140,7 @@ test.describe('fishing at the mill pond', () => {
     await expect(page.locator('.prompt')).toContainText('Something’s on your line')
 
     // Off the bank: the line comes in and the fish stays in the water.
-    await warp(page, 'village', 30, 12)
+    await warp(page, 'outdoors', 30, 54)
     await expect.poll(async () => (await fishing(page))?.line ?? null).toBeNull()
   })
 
@@ -150,7 +150,7 @@ test.describe('fishing at the mill pond', () => {
     test.skip(!(await fishingServed(page)), 'needs lane D’s fishing routes')
     await seasonOf(page, id, 'Carting')
     giveInstance(id, 'willow-rod', { max: ROD_MAX })
-    await warp(page, 'village', 36, 18)
+    await warp(page, 'outdoors', 36, 72)
     await holdRod(page)
     await castAndWait(page)
     await waitForLive(page)
@@ -172,7 +172,7 @@ test.describe('fishing at the mill pond', () => {
     test.skip(!(await fishingServed(page)), 'needs lane D’s fishing routes')
     await seasonOf(page, id, 'Carting')
     giveInstance(id, 'willow-rod', { max: ROD_MAX })
-    await warp(page, 'village', 37, 18)
+    await warp(page, 'outdoors', 37, 72)
     await holdRod(page)
     await expect(page.locator('.prompt')).toContainText(BANK_LINE)
     await waitForLive(page)
@@ -195,12 +195,12 @@ test.describe('fishing at the mill pond', () => {
     test.skip(!(await fishingServed(page)), 'needs lane D’s fishing routes')
     await seasonOf(page, id, 'Quiet')
     giveInstance(id, 'willow-rod', { max: ROD_MAX })
-    await warp(page, 'village', 36, 18)
+    await warp(page, 'outdoors', 36, 72)
     await holdRod(page)
     await waitForLive(page)
     // Nothing to cast from: no fishing prompt at all (the prompt may be absent altogether).
     await expect(page.locator('.prompt', { hasText: BANK_LINE })).toHaveCount(0)
-    await warp(page, 'village', 32, 19)
+    await warp(page, 'outdoors', 32, 73)
     await castAndWait(page)
     await expect.poll(async () => (await fishing(page))?.line?.bank).toBe('race')
   })
@@ -228,7 +228,7 @@ test('A Line in the Race: Finn’s rod, a roach from the race, and Hazel’s car
   await residentsOut(page, { server: true })
 
   // Finn's hoist comes first while it's waiting; once it's under way he mentions the rod.
-  await warp(page, 'village', 31, 23)
+  await warp(page, 'outdoors', 30, 78)
   await talkUntil(page, /Talk to Finn/, /look at it/)
   await expect.poll(async () => (await quests(page))['stuck-hoist']).toBe('hear-finn')
   await talkUntil(page, /Talk to Finn/, /Take the rod/)
@@ -238,7 +238,7 @@ test('A Line in the Race: Finn’s rod, a roach from the race, and Hazel’s car
 
   // The roach: caught at the race when the server fishes, else put in the pack.
   if (served) {
-    await warp(page, 'village', 32, 19)
+    await warp(page, 'outdoors', 32, 73)
     await holdRod(page)
     await castAndWait(page)
     await waitForLive(page)
@@ -253,7 +253,7 @@ test('A Line in the Race: Finn’s rod, a roach from the race, and Hazel’s car
 
   // Hazel in the square takes the roach and gives the card.
   await residentsOut(page, { server: true })
-  await warp(page, 'village', 13, 15)
+  await warp(page, 'outdoors', 11, 64)
   await talkUntil(page, /Talk to Hazel/, /Show her the roach/)
   await expect.poll(async () => (await quests(page))['a-line-in-the-race'], { timeout: 15_000 }).toBe('show-hazel')
   await reloadPack(page)

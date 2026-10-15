@@ -17,7 +17,7 @@ test.describe('the world', () => {
   test('the journal checklist copies the naming and settles the warden', async ({ page }) => {
     await freshPlayer(page)
     // Steps show as they are reached: accept the quest, copy the naming.
-    await go(page, 'village', 16, 14)
+    await go(page, 'outdoors', 14, 62)
     await talkThrough(page, /Talk to Mara/)
     await go(page, 'ruin', 15, 3)
     await talkThrough(page, /Copy the naming from the stone/)
@@ -93,7 +93,7 @@ test.describe('in a world', () => {
     await openTitleGuide(page)
     await pasteAndConnect(page, id)
     await waitForWorld(page)
-    await go(page, 'commons', 2, 21)
+    await go(page, 'outdoors', -24, 45)
     await syncFromMenu(page)
     await expectToast(page, 'glims into your hand')
     await expect.poll(async () => (await serverState(page)).body.state.glims).toBe(3)

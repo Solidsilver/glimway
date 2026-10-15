@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"glimway/content"
+	"glimway/server/internal/chunks"
 	"glimway/server/internal/location"
 	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
@@ -74,6 +75,9 @@ func (x *rig) worldOf(id string) string {
 func moveBody(s response, key, world, area string) map[string]any {
 	doc := s.State
 	doc.Area = area
+	if content.KnownRoom(area) {
+		doc.Position = rules.Position{X: 80, Y: 80}
+	}
 	if area == "commons" {
 		doc = onCommons(doc, 376, 40)
 	}
@@ -451,22 +455,22 @@ func TestWorldMoveRefusedWhenUnsafe(t *testing.T) {
 		}
 	}
 	// The lease and revision rules hold.
-	stale := moveBody(h, "stale", o.WorldID, "village")
+	stale := moveBody(h, "stale", o.WorldID, "in:village:library")
 	stale["baseRev"] = h.Version - 1
 	if e := x.worldReq("POST", "/api/world/move", stale, hc, 400).Error.Code; e != "invalid-json" {
 		t.Fatal(e)
 	}
-	old := moveBody(h, "lease", o.WorldID, "village")
+	old := moveBody(h, "lease", o.WorldID, "in:village:library")
 	old["op"].(map[string]any)["lease"] = "old"
 	if e := x.worldReq("POST", "/api/world/move", old, hc, 409).Error.Code; e != "superseded" {
 		t.Fatal(e)
 	}
 	// Not their party's world, not theirs, not anywhere.
-	if e := x.worldReq("POST", "/api/world/move", moveBody(h, "stranger", stranger.WorldID, "village"), hc, 403).Error.Code; e != "world-access-denied" {
+	if e := x.worldReq("POST", "/api/world/move", moveBody(h, "stranger", stranger.WorldID, "in:village:library"), hc, 403).Error.Code; e != "world-access-denied" {
 		t.Fatal(e)
 	}
-	x.worldReq("POST", "/api/world/move", moveBody(h, "nowhere", "nowhere", "village"), hc, 404)
-	x.worldReq("POST", "/api/world/move", moveBody(h, "here", h.WorldID, "village"), hc, 409)
+	x.worldReq("POST", "/api/world/move", moveBody(h, "nowhere", "nowhere", "in:village:library"), hc, 404)
+	x.worldReq("POST", "/api/world/move", moveBody(h, "here", h.WorldID, "in:village:library"), hc, 409)
 
 	// Parcels on the road from them must come home first.
 	sent := x.p5("POST", "/api/mail", body(h, "send", map[string]any{"toId": x.account("bob"), "asset": content.Asset{Kind: "material", Id: "timber", Qty: 5}}), hc, 200)
@@ -474,7 +478,7 @@ func TestWorldMoveRefusedWhenUnsafe(t *testing.T) {
 	if v := x.worldReq("GET", "/api/world", nil, hc, 200); v.Leaving.Outgoing != 1 {
 		t.Fatal("outgoing", v.raw)
 	}
-	if e := x.worldReq("POST", "/api/world/move", moveBody(h, "mail", o.WorldID, "village"), hc, 409).Error.Code; e != "mail-in-flight" {
+	if e := x.worldReq("POST", "/api/world/move", moveBody(h, "mail", o.WorldID, "in:village:library"), hc, 409).Error.Code; e != "mail-in-flight" {
 		t.Fatal(e)
 	}
 	after := x.worldReq("GET", "/api/state", nil, hc, 200).Snapshot
@@ -647,7 +651,7 @@ func TestWorldMoveCarriesPackAndChestAndLeavesTheRest(t *testing.T) {
 	// doesn't move.
 	x.now.Add(MoveCooldown)
 	h.Snapshot = moved.Snapshot
-	back := x.worldReq("POST", "/api/world/move", moveBody(h, "move-2", from, "village"), hc, 200)
+	back := x.worldReq("POST", "/api/world/move", moveBody(h, "move-2", from, "in:village:library"), hc, 200)
 	if x.worldOf("hal") != from || back.Result.LeftHome {
 		t.Fatal("move back")
 	}
@@ -740,12 +744,21 @@ func TestWorldMoveFromHomeTakesPresenceToArrivalRoom(t *testing.T) {
 				_, ax, ay, _ = location.Anchor("hearthwick:arch")
 			}
 			room := outdoorsRoom(rules.Position{X: ax, Y: ay})
+			joinRoom := area
+			if gate := rules.HomeGate(area); gate >= 0 {
+				if gate < 8 {
+					ox, oy := chunks.LotOrigin(gate)
+					joinRoom = fmt.Sprintf("outdoors:%d:%d", ox/24, oy/24)
+				} else {
+					joinRoom = "outdoors:0:1"
+				}
+			}
 			olive := wsConnect(t, ts, oc, o.Lease)
 			olive.join(room)
 			bob := wsConnect(t, ts, bc, b.Lease)
-			bob.join(area)
+			bob.join(joinRoom)
 			hal := wsConnect(t, ts, hc, h.Lease)
-			hal.join(area)
+			hal.join(joinRoom)
 			bob.expect("join")
 			req := moveBody(h, "from-home", o.WorldID, area)
 			doc := h.State
@@ -793,7 +806,7 @@ func TestThanksReadableAfterSenderMoves(t *testing.T) {
 	if _, err := x.db.DB.Exec("INSERT INTO mail(id,world_id,from_id,to_id,kind,item_def,qty,instance_ids,makers,sent_at) VALUES(?,?,?,?,'thanks','',0,'[]','[]',?)", toHal, o.WorldID, x.account("bob"), x.account("hal"), x.now.Load()); err != nil {
 		t.Fatal(err)
 	}
-	moved := x.worldReq("POST", "/api/world/move", moveBody(h, "home", own, "village"), hc, 200)
+	moved := x.worldReq("POST", "/api/world/move", moveBody(h, "home", own, "in:village:library"), hc, 200)
 	if moved.Result.Returned != 0 || count(t, x.db, "SELECT count(*) FROM mail WHERE id=? AND returned_at IS NULL", toHal) != 1 {
 		t.Fatal("a thank-you note was sent back")
 	}
@@ -829,7 +842,7 @@ func TestWorldMoveCooldown(t *testing.T) {
 		t.Fatal("never moved, yet waiting", v.raw)
 	}
 	at := x.now.Load()
-	first := moveBody(h, "go", pw, "village")
+	first := moveBody(h, "go", pw, "in:village:library")
 	moved := x.worldReq("POST", "/api/world/move", first, hc, 200)
 	if moved.Result.World.MoveOpensAt != at+MoveCooldown {
 		t.Fatal("the move's answer doesn't say when the next opens", moved.raw)
@@ -839,7 +852,7 @@ func TestWorldMoveCooldown(t *testing.T) {
 	if v := x.worldReq("GET", "/api/world", nil, hc, 200); v.MoveOpensAt != at+MoveCooldown || v.OwnWorld == nil || v.OwnWorld.ID != own {
 		t.Fatal("view during the cooldown", v.raw)
 	}
-	if e := x.worldReq("POST", "/api/world/move", moveBody(h, "back-early", own, "village"), hc, 409).Error.Code; e != "move-cooldown" {
+	if e := x.worldReq("POST", "/api/world/move", moveBody(h, "back-early", own, "in:village:library"), hc, 409).Error.Code; e != "move-cooldown" {
 		t.Fatal(e)
 	}
 	after := x.worldReq("GET", "/api/state", nil, hc, 200).Snapshot
@@ -854,7 +867,7 @@ func TestWorldMoveCooldown(t *testing.T) {
 	if v := x.worldReq("GET", "/api/world", nil, hc, 200); v.MoveOpensAt != 0 {
 		t.Fatal("still waiting after a day", v.raw)
 	}
-	back := x.worldReq("POST", "/api/world/move", moveBody(h, "back", own, "village"), hc, 200)
+	back := x.worldReq("POST", "/api/world/move", moveBody(h, "back", own, "in:village:library"), hc, 200)
 	if x.worldOf("hal") != own || back.Result.World.MoveOpensAt != x.now.Load()+MoveCooldown {
 		t.Fatal("move after the cooldown", back.raw)
 	}
@@ -896,18 +909,18 @@ func TestPersonOwnedWorldsKeepWorking(t *testing.T) {
 	// Rue, who came by Bob's code and has no party, can't follow there.
 	var r response
 	rc, r = x.again("rue")
-	if e := x.worldReq("POST", "/api/world/move", moveBody(r, "follow", pw, "village"), rc, 403).Error.Code; e != "world-access-denied" {
+	if e := x.worldReq("POST", "/api/world/move", moveBody(r, "follow", pw, "in:village:library"), rc, 403).Error.Code; e != "world-access-denied" {
 		t.Fatal(e)
 	}
 	// Bob goes to the party's world and, a day later, home again; Rue's
 	// still there, and Bob's codes lead to where he is.
-	moved := x.worldReq("POST", "/api/world/move", moveBody(b, "party", pw, "village"), bc, 200)
+	moved := x.worldReq("POST", "/api/world/move", moveBody(b, "party", pw, "in:village:library"), bc, 200)
 	b.Snapshot = moved.Snapshot
 	if mv := moved.Result.World; !mv.PartyHome || mv.OwnWorld == nil || mv.OwnWorld.ID != bobWorld || mv.OwnWorld.Members != 1 || mv.OwnWorld.OwnerHere {
 		t.Fatal("in the party's world", moved.raw)
 	}
 	x.now.Add(MoveCooldown)
-	x.worldReq("POST", "/api/world/move", moveBody(b, "home", bobWorld, "village"), bc, 200)
+	x.worldReq("POST", "/api/world/move", moveBody(b, "home", bobWorld, "in:village:library"), bc, 200)
 	if x.worldOf("bob") != bobWorld || x.worldOf("rue") != bobWorld {
 		t.Fatal("home again")
 	}
@@ -939,7 +952,7 @@ func TestWorldMoveRetargetsInvites(t *testing.T) {
 		t.Fatal("setup")
 	}
 	// Into the party's world, which takes no codes: Hal's keep naming his own.
-	moved := x.worldReq("POST", "/api/world/move", moveBody(h, "go", o.WorldID, "village"), hc, 200)
+	moved := x.worldReq("POST", "/api/world/move", moveBody(h, "go", o.WorldID, "in:village:library"), hc, 200)
 	if count(t, x.db, "SELECT count(*) FROM invites WHERE code_hash IN (?,?,?) AND world_id=?", waiting.ID, revoked.ID, used.ID, from) != 3 {
 		t.Fatal("codes followed Hal into the party's world")
 	}
@@ -953,10 +966,10 @@ func TestWorldMoveRetargetsInvites(t *testing.T) {
 	}
 	h.Snapshot = moved.Snapshot
 	x.now.Add(MoveCooldown)
-	h.Snapshot = x.worldReq("POST", "/api/world/move", moveBody(h, "back", from, "village"), hc, 200).Snapshot
+	h.Snapshot = x.worldReq("POST", "/api/world/move", moveBody(h, "back", from, "in:village:library"), hc, 200).Snapshot
 	next := inviteReq(t, x, "POST", "/api/invites", hc, 200)
 	x.now.Add(MoveCooldown)
-	x.worldReq("POST", "/api/world/move", moveBody(h, "on", "hal-2", "village"), hc, 200)
+	x.worldReq("POST", "/api/world/move", moveBody(h, "on", "hal-2", "in:village:library"), hc, 200)
 	if count(t, x.db, "SELECT count(*) FROM invites WHERE code_hash=? AND world_id='hal-2'", next.ID) != 1 || count(t, x.db, "SELECT count(*) FROM invites WHERE code_hash IN (?,?) AND world_id=?", revoked.ID, used.ID, from) != 2 {
 		t.Fatal("waiting code didn't follow, or used and revoked ones changed")
 	}
@@ -997,11 +1010,11 @@ func TestWorldMoveIntoAFullRoom(t *testing.T) {
 	x.hero("hal", "Hal", "p1")
 	hc, h := x.again("hal")
 	olive := wsConnect(t, ts, oc, o.Lease)
-	olive.join("village")
+	olive.join("in:village:library")
 	hal := wsConnect(t, ts, hc, h.Lease)
-	hal.join("village")
-	x.worldReq("POST", "/api/world/move", moveBody(h, "go", o.WorldID, "village"), hc, 200)
-	if r := hal.expect("room"); r.Area != "village" || len(r.Players) != 0 {
+	hal.join("in:village:library")
+	x.worldReq("POST", "/api/world/move", moveBody(h, "go", o.WorldID, "in:village:library"), hc, 200)
+	if r := hal.expect("room"); r.Area != "in:village:library" || len(r.Players) != 0 {
 		t.Fatal("full room", r.Raw)
 	}
 	olive.none()

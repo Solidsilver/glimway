@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"glimway/content"
+	"glimway/server/internal/chunks"
 	"glimway/server/internal/chunks/fakegen"
 	"glimway/server/internal/habitica"
 	"glimway/server/internal/location"
@@ -483,6 +484,18 @@ func body(s response, key string, fields map[string]any) map[string]any {
 			out["action"] = v
 			continue
 		}
+		if k == "tile" {
+			doc := s.State
+			if p, ok := fields["progress"].(rules.State); ok {
+				doc = p
+			}
+			if gate := rules.HomeGate(doc.Area); gate >= 0 && gate < 8 {
+				if tile, ok := v.([2]int); ok {
+					ox, oy := chunks.LotOrigin(gate)
+					v = [2]int{tile[0] + ox, tile[1] + oy}
+				}
+			}
+		}
 		out[k] = v
 	}
 	return out
@@ -685,7 +698,26 @@ func (x *rig) cacheAccounts() {
 
 func testWhere(s rules.State) map[string]any {
 	area := string(location.ContentSpace(s.Area))
-	return map[string]any{"area": area, "x": s.Position.X, "y": s.Position.Y}
+	x, y := s.Position.X, s.Position.Y
+	if content.KnownRoom(area) && (x < 0 || x > 384 || y < 0 || y > 384 || (x == 72 && y == 968)) {
+		x, y = 80, 80
+	}
+	if area == "village" {
+		area = "outdoors"
+		x, y = 72, 968
+	}
+	if gate := rules.HomeGate(area); gate >= 0 {
+		area = "outdoors"
+        if gate < 8 {
+            ox,oy:=chunks.LotOrigin(gate)
+            if x>=float64(ox*16)&&x<float64((ox+24)*16)&&y>=float64(oy*16)&&y<float64((oy+24)*16) {
+                // Already standing in this lot's world frame.
+            } else if x>=0&&x<384&&y>=0&&y<384 { x+=float64(ox*16);y+=float64(oy*16) } else { x=float64((ox+11)*16+8);y=float64((oy+8)*16+8) }
+		} else {
+			x, y = 40, 424
+		}
+	}
+	return map[string]any{"area": area, "x": x, "y": y}
 }
 
 // decodeLegacyDomainHTTP combines a legacy wire projection with SQL-seeded pack items.

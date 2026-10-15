@@ -251,7 +251,7 @@ export class HomesteadArt {
     const g = this.home.homes.myGate
     const show = g !== null && !this.deps.session.state.flags.includes(HOME_FLAGS.arrived)
     const slot = show ? this.home.commons!.gates.find((s) => s.gate === g) : undefined
-    if (!slot || !this.chunks.has(slot.chunk)) {
+    if (!slot) {
       if (this.guide) {
         this.scene.tweens.killTweensOf(this.guide.marker)
         this.guide.marker.destroy()
@@ -340,7 +340,7 @@ export class HomesteadArt {
       )
       this.addBody(d, sx, sy - 3, 6, 6)
       for (const [x, y] of [[L.site.x, L.site.y], [L.site.x + L.site.w, L.site.y], [L.site.x, L.site.y + L.site.h], [L.site.x + L.site.w, L.site.y + L.site.h]])
-        this.add(d, this.scene.add.image((L.gridOrigin?.x ?? 0) + x * TILE, (L.gridOrigin?.y ?? 0) + y * TILE, 'stake').setOrigin(0.5, 1).setDepth(y * TILE))
+        this.add(d, this.scene.add.image((L.gridOrigin?.x ?? 0) + x * TILE, (L.gridOrigin?.y ?? 0) + y * TILE, 'stake').setOrigin(0.5, 1).setDepth((L.gridOrigin?.y ?? 0) + y * TILE))
       return
     }
     const desolate = home.desolate

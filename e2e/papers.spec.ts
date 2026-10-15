@@ -17,7 +17,7 @@ const PIP_PAGE = 'pip-copybook-warden-corrections'
 
 async function pickUpPipsPage(page: Page): Promise<void> {
   // Inside the garden fence, one tile below the page in its far corner.
-  await warp(page, 'village', 25, 15)
+  await warp(page, 'outdoors', 7, 72)
   expect(await lying(page)).toContain(PIP_PAGE)
   await expect(page.locator('.prompt')).toContainText('Pick up the folded paper')
   await page.keyboard.press('e')
@@ -52,7 +52,7 @@ test('pick up a paper in the world, read it in the journal, and it stays found a
 
   // Reload: still found, still gone from the garden.
   await reenter(page)
-  await warp(page, 'village', 25, 15)
+  await warp(page, 'outdoors', 10, 74)
   expect(await lying(page)).not.toContain(PIP_PAGE)
   await page.keyboard.press('j')
   await page.getByRole('dialog', { name: 'Journal' }).getByRole('tab', { name: /Papers/ }).click()
@@ -61,11 +61,11 @@ test('pick up a paper in the world, read it in the journal, and it stays found a
 
 test('Mara hands over the ledger pages once the closure mark is found', async ({ page }) => {
   await freshPlayer(page)
-  await warp(page, 'village', 16, 14)
+  await warp(page, 'outdoors', 14, 62)
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)
   await talkThrough(page, /Copy the naming from the stone/)
-  await warp(page, 'village', 16, 14)
+  await warp(page, 'outdoors', 14, 62)
   await talkThrough(page, /Talk to Mara/)
   await expectToast(page, 'Found: The Ashwatch Ledger — Excerpts')
   await expect.poll(() => savedFlags(page)).toContain('paper:ashwatch-ledger-excerpts')
@@ -73,7 +73,7 @@ test('Mara hands over the ledger pages once the closure mark is found', async ({
 
 test('settling the warden opens its chest: Orrin’s “Eleven Days” is found', async ({ page }) => {
   await freshPlayer(page)
-  await warp(page, 'village', 16, 14)
+  await warp(page, 'outdoors', 14, 62)
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)
   await talkThrough(page, /Copy the naming from the stone/)

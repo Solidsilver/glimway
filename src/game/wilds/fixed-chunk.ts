@@ -290,9 +290,10 @@ export class FixedChunk implements Buildable {
 
   /** Its workable pieces (the Bloom patches, on their day). */
   private gather(): void {
+    const labelOf = (o: FixedObject) => o.label === 'Work the tree' ? 'Chop the tree' : o.label === 'Work the boulder' ? 'Break the boulder' : o.label === 'Work the stump' ? 'Dig the stump' : o.label
     const spots: GatherSpot[] = this.objects
       .filter((o) => o.kind === 'gather')
-      .map((o) => ({ target: o.target, label: o.label, tx: o.tx, ty: o.ty, art: { key: o.variant, ...(o.frame ? { frame: o.frame } : {}) } }))
+      .map((o) => ({ target: o.target, label: labelOf(o), tx: o.tx, ty: o.ty, art: { key: o.variant, ...(o.frame ? { frame: o.frame } : {}) } }))
     if (!spots.length) return
     this.deps.gathering()?.addChunk(this.key, spots)
     this.gathered = true

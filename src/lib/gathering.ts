@@ -51,7 +51,7 @@ export function gatheringTarget(id: string): GatheringTarget | undefined {
 /** Whether a place (a progress area) has pieces of a target at all (the server checks the same). */
 export function gatheringOffered(area: string, target: string, position = { x: 0, y: 0 }): boolean {
   const place = at(area, position.x, position.y);
-  const kind = area.startsWith('home:') || place.id.startsWith('lot:') ? 'home' : area === 'outdoors' ? (place.source.kind === 'generated' ? 'wilds' : place.id) : place.id;
+  const kind = place.id.startsWith('lot:') ? 'home' : area === 'outdoors' ? (place.source.kind === 'generated' ? 'wilds' : place.id) : place.id;
   return (GATHERING_DATA.areas[kind]?.targets ?? []).includes(target);
 }
 
@@ -113,7 +113,7 @@ export function swingPlan(action: string, tool: ToolFeel): { swings: number; ms:
 export function gatherArea(area: string, position = { x: 0, y: 0 }): boolean {
   if (area.startsWith('in:')) return false;
   const place = at(area, position.x, position.y);
-  return (area === 'outdoors' && place.source.kind === 'generated') || ['woodland', 'hearthwick'].includes(place.id) || place.id.startsWith('lot:') || /^home:\d+$/.test(area);
+  return (area === 'outdoors' && place.source.kind === 'generated') || ['woodland', 'hearthwick'].includes(place.id) || place.id.startsWith('lot:');
 }
 
 /**

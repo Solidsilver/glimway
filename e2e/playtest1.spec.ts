@@ -5,6 +5,7 @@ import { dialogueState, frames, holdUntil, openTalk, readDialogue, untilChoices,
 import { allow, habiticaURL, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, setHabitica, sql, syncFromMenu, waitForWorld, accountOf, refusal, seedMarks } from './connected'
 import { claimDeed, earnGlims, freshPlayer, homes, intoCottage, toMyLand, go } from './home-helpers'
 import { HEIRLOOM_REFUSALS } from '../src/content/heirlooms.ts'
+import { lotOrigin } from '../src/lib/lots.ts'
 import { setHour } from './room-helpers'
 
 /**
@@ -148,7 +149,7 @@ for (const device of ['desktop', 'phone'] as const) {
         for (const n of OUTFIT_SPRITES) await expect.poll(() => texture(page, `fs-asset-${n}`)).not.toBeNull()
         await expect.poll(async () => (await seat(page)).avatar).not.toBeNull()
         expect((await toasts(page)).filter((t) => /left off|couldn’t be fetched|art cache/.test(t))).toEqual([])
-        await warp(page, 'village', 18, 14)
+        await warp(page, 'outdoors', 16, 62)
         await snap(page, 'avatar', device)
 
         // A reload draws it all again from the device's own cache: nothing asked for.
@@ -164,7 +165,7 @@ for (const device of ['desktop', 'phone'] as const) {
       test('standing still the hero breathes, walking it steps and faces the way it goes', async ({ page }) => {
         await standInSprites(page.context())
         await outfittedPlayer(page)
-        await warp(page, 'village', 18, 14)
+        await warp(page, 'outdoors', 16, 62)
         await expect.poll(async () => (await seat(page)).avatar).not.toBeNull()
         // Still: the body never moves (no float); the shoulders rise one pixel now and then.
         const still: NonNullable<SeatView['avatar']>[] = []
@@ -191,7 +192,7 @@ for (const device of ['desktop', 'phone'] as const) {
         await page.evaluate(() => (window as unknown as { __fsDevAddFlag: (f: string) => void }).__fsDevAddFlag('echo:hollis'))
         // Silas out in his yard (his cycle: minute 10 of the hour), by the sawhorse.
         await setHour(page, { minute: 10, server: true })
-        await warp(page, 'commons', 48, 20)
+        await warp(page, 'outdoors', 29, 37)
         await openTalk(page, 'Talk to Silas')
         const choices = await untilChoices(page)
         expect(choices.some((c) => /Take the Brack felling axe/.test(c.text))).toBe(true)
@@ -214,7 +215,7 @@ for (const device of ['desktop', 'phone'] as const) {
         // The server says no (as it would to someone it measured too far off).
         await page.route('**/api/items/heirloom', async (route) => route.fulfill(await refusal(page, 'too-far-away')))
         await setHour(page, { minute: 10, server: true })
-        await warp(page, 'commons', 48, 20)
+        await warp(page, 'outdoors', 29, 37)
         await openTalk(page, 'Talk to Silas')
         await untilChoices(page)
         await page.locator('.choice', { hasText: /Take the Brack felling axe/ }).click()
@@ -241,20 +242,22 @@ for (const device of ['desktop', 'phone'] as const) {
         const stool = `pt1-${id}-stool`
         sql(`INSERT INTO homestead_items(id,item_def,location,homestead_id,scene,x,y,rotation) VALUES('${stool}','wooden-stool','placed',${home},'outdoor',${tx},${ty},0);`)
         // Back out and through the gate again: the land is read afresh, stool and all.
-        await go(page, 'commons', 23, 19)
+        await go(page, 'outdoors', 34, 35)
         await toMyLand(page)
         await expect.poll(async () => (await homes(page)).here?.items.some((i) => i.id === stool) ?? false).toBe(true)
-        await page.evaluate(([x, y]) => (window as unknown as { __fsDevPlace: (x: number, y: number) => void }).__fsDevPlace(x, y), [tx * 16 + 8, (ty + 1) * 16 + 6] as const)
+        const o = lotOrigin(land.gate)
+        const wx = o.tx + tx, wy = o.ty + ty
+        await page.evaluate(([x, y]) => (window as unknown as { __fsDevPlace: (x: number, y: number) => void }).__fsDevPlace(x, y), [wx * 16 + 8, (wy + 1) * 16 + 6] as const)
         await expect(page.locator('.prompt')).toContainText('Sit on the stool')
         await act(page, device)
         await expect.poll(async () => (await seat(page)).seated).toBe(true)
         const s = await seat(page)
         // On the stool's round top (its art fills the tile), just in front of it.
         expect(s.seat!.facing).toBe('down')
-        expect(s.seat!.depth).toBe((ty + 1) * 16 + 0.5)
-        expect(Math.abs(s.seat!.x - (tx * 16 + 8))).toBeLessThanOrEqual(1)
-        expect(s.seat!.y).toBeGreaterThan(ty * 16)
-        expect(s.seat!.y).toBeLessThan((ty + 1) * 16 - 4)
+        expect(s.seat!.depth).toBe((wy + 1) * 16 + 0.5)
+        expect(Math.abs(s.seat!.x - (wx * 16 + 8))).toBeLessThanOrEqual(1)
+        expect(s.seat!.y).toBeGreaterThan(wy * 16)
+        expect(s.seat!.y).toBeLessThan((wy + 1) * 16 - 4)
         expect(s.heroCrop).toBe(true)
         await snap(page, 'sit-stool', device)
         await expect(page.locator('.prompt')).toContainText('Stand up')
@@ -331,31 +334,31 @@ for (const device of ['desktop', 'phone'] as const) {
         await outfittedPlayer(page)
         await expect.poll(async () => (await seat(page)).avatar).not.toBeNull()
         const standing = (await seat(page)).avatar!
-        await warp(page, 'village', 9, 14)
+        await warp(page, 'outdoors', 8, 62)
         await expect(page.locator('.prompt')).toContainText('Sit on the bench')
         await act(page, device)
         await expect.poll(async () => (await seat(page)).avatar?.seated).toBe(true)
         const s = await seat(page)
-        // The bench's base is the tile bottom (y 224), its depth 224.
-        expect(s.seat).toEqual({ x: 152, y: 218, depth: 224.5, facing: 'down' })
-        expect(s.avatar!.depth).toBe(224.5)
+        // The bench's base is the tile bottom (y 992), its depth 992.5.
+        expect(s.seat).toEqual({ x: 136, y: 986, depth: 992.5, facing: 'down' })
+        expect(s.avatar!.depth).toBe(992.5)
         expect(Math.abs(s.avatar!.scaleY)).toBe(Math.abs(standing.scaleY))
-        expect(s.avatar!.x).toBe(152)
-        expect(s.avatar!.y).toBeLessThan(224)
+        expect(s.avatar!.x).toBe(136)
+        expect(s.avatar!.y).toBeLessThan(992)
         await snap(page, 'sit-bench-avatar', device)
       })
     })
 
     test('the hero sits on the village bench: on the seat, cut at the lap, not squashed', async ({ page }) => {
       await freshPlayer(page)
-      await warp(page, 'village', 9, 14)
+      await warp(page, 'outdoors', 8, 62)
       const standing = await seat(page)
       await expect(page.locator('.prompt')).toContainText('Sit on the bench')
       await act(page, device)
       await expect.poll(async () => (await seat(page)).seated).toBe(true)
       const s = await seat(page)
-      expect(s.seat).toEqual({ x: 152, y: 218, depth: 224.5, facing: 'down' })
-      expect(s.heroDepth).toBe(224.5)
+      expect(s.seat).toEqual({ x: 136, y: 986, depth: 992.5, facing: 'down' })
+      expect(s.heroDepth).toBe(992.5)
       expect(s.heroCrop).toBe(true)
       expect(s.heroScale).toEqual(standing.heroScale)
       await snap(page, 'sit-bench', device)
@@ -416,7 +419,7 @@ test.describe('reduced motion', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await standInSprites(page.context())
     await outfittedPlayer(page)
-    await warp(page, 'village', 18, 14)
+    await warp(page, 'outdoors', 16, 62)
     await expect.poll(async () => (await seat(page)).avatar).not.toBeNull()
     for (let i = 0; i < 20; i++) {
       const a = (await seat(page)).avatar!

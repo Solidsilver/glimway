@@ -112,7 +112,7 @@ export class WorldTalk {
         activate: () => this.talk('lantern')
       })
     }
-    const roomLight = world.room?.def.lights[0]
+    const roomLight = world.room?.def.lights.find((l) => l.kind === 'hearth')
     const glims = world.room && roomLight && at(world.areaId, 0, 0).rest === 'village' ? [...world.glimSpots, { id: 'hearth' as const, tx: roomLight.tx, ty: roomLight.ty }] : world.glimSpots
     for (const spot of glims) {
       const id = spot.id

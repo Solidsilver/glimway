@@ -42,7 +42,7 @@ const glimsOf = async (page: Page) => {
  */
 async function silasOutside(page: Page): Promise<{ area: string; tx: number; ty: number }> {
   const at = residentAt('silas', await setHour(page, { minute: 10, server: true }))!
-  expect(at.area).toBe('commons')
+  expect(at.area).toBe('hearthwick')
   return at
 }
 
@@ -102,7 +102,7 @@ test('the Yard panel: Build first while the cottage is to raise, a buy on Furnis
   await yard.getByRole('button', { name: 'Close Silas’s yard' }).click()
 
   // Away from Silas: Mend says why, and its button stays shut.
-  await go(page, 'commons', 23, 19)
+  await go(page, 'outdoors', 2, 43)
   await openYard(page, 'mend')
   await expect(yard.getByRole('tab', { name: 'Mend' })).toHaveAttribute('aria-selected', 'true')
   await expect(yard.getByTestId('mend-away')).toHaveText(SILAS_YARD.mendAway)
@@ -200,7 +200,7 @@ test('Manage your deed: offer at the table; a signature waiting on you, signed b
   const b = await freshPlayer(other, 'Bram', code)
 
   // Away from the table: the panel says where to stand.
-  await go(page, 'commons', 23, 19)
+  await go(page, 'outdoors', 34, 35)
   await openDeed(page)
   const deed = page.getByRole('dialog', { name: DEED_PANEL_COPY.title })
   await expect(deed.getByTestId('deed-place')).toHaveText(DEED_PANEL_COPY.where('Tansy’s Place', `Lot ${gate + 1}`))
@@ -253,7 +253,7 @@ test('Manage your deed: offer at the table; a signature waiting on you, signed b
   expect((await lane(other)).mine).toBeNull()
 
   // "Waiting for you": Tansy signs it back, but only at the table.
-  await go(page, 'commons', 23, 19)
+  await go(page, 'outdoors', 34, 35)
   await openDeed(page)
   const back = deed.locator(`[data-sign-back="${accountOf(b)}"]`)
   await expect(back).toContainText('Bram has signed', { timeout: 10_000 })
@@ -300,7 +300,7 @@ test('the walk-in Yard: in at the front door, Silas’s short talk, Pell’s fir
 
   // The front door under his sign on the Commons: in, without a knock. He's
   // not by the sawhorse while his hour has him inside.
-  await go(page, 'commons', 53, 18)
+  await go(page, 'outdoors', 34, 35)
   expect(await silasPresent(page), 'no Silas on the Commons at minute 30').toBe(false)
   await expect(page.locator('.prompt')).toContainText(/Go into Silas.s Yard/)
   await waitForLive(page)
@@ -410,7 +410,7 @@ test('the walk-in Yard: in at the front door, Silas’s short talk, Pell’s fir
   await yard.getByRole('button', { name: 'Close Silas’s yard' }).click()
 
   // Out on the Commons he's by the sawhorse; the needle now follows the gate's marker.
-  await go(page, 'commons', 53, 18)
+  await go(page, 'outdoors', 34, 35)
   expect(await silasPresent(page), 'Silas by the sawhorse at minute 10').toBe(true)
   await expect.poll(async () => (await quests(page)).goal).not.toEqual({ kind: 'guide', where: 'gate' })
 })

@@ -128,7 +128,7 @@ const at = (x: number, moving = true) => ({ x, y: 100, facing: { x: 1, y: 0 }, m
 
 test('auth goes first, in the message (never the URL); nothing else until ready', () => {
   const r = rig();
-  r.client.setArea('village');
+  r.client.setArea('in:village:library');
   r.client.position(at(10, false));
   r.client.start('lease-abc');
   assert.equal(r.sock().url, 'ws://test/ws');
@@ -138,28 +138,28 @@ test('auth goes first, in the message (never the URL); nothing else until ready'
   assert.equal(r.client.emote('wave'), false, 'no emotes before ready');
   r.sock().push({ type: 'ready', accountId: 'me' });
   assert.deepEqual(r.sentTypes(), ['auth', 'join']);
-  assert.equal(r.sock().sent[1].area, 'village');
+  assert.equal(r.sock().sent[1].area, 'in:village:library');
   assert.equal(r.client.status, 'live');
 });
 
 test('after the room roster, peers learn where we stand (even standing still)', () => {
   const r = rig();
   r.live();
-  r.client.setArea('village');
+  r.client.setArea('in:village:library');
   r.client.position(at(40, false));
-  r.sock().push({ type: 'room', area: 'village', players: [player('bob')] });
+  r.sock().push({ type: 'room', area: 'in:village:library', players: [player('bob')] });
   r.clock.advance(200);
   const pos = r.sock().sent.filter((m) => m.type === 'pos');
   assert.equal(pos.length, 1);
   assert.deepEqual(pos[0], { type: 'pos', x: 40, y: 100, facing: { x: 1, y: 0 }, moving: false });
-  assert.deepEqual(r.events[0], { room: 'village', players: ['bob'] });
+  assert.deepEqual(r.events[0], { room: 'in:village:library', players: ['bob'] });
 });
 
 test('positions go out at most 8 Hz while moving; the latest sample is not lost; a final stop follows', () => {
   const r = rig();
   r.live();
-  r.client.setArea('village');
-  r.sock().push({ type: 'room', area: 'village', players: [] });
+  r.client.setArea('in:village:library');
+  r.sock().push({ type: 'room', area: 'in:village:library', players: [] });
   // 60 frames in a second of walking.
   for (let i = 0; i < 60; i++) {
     r.client.position(at(i));
@@ -193,8 +193,8 @@ test('position spacing never drops below 125 ms', () => {
     if (decodeTestPresence(d).type === 'pos') stamps.push(r.clock.now);
     send(d);
   };
-  r.client.setArea('village');
-  r.sock().push({ type: 'room', area: 'village', players: [] });
+  r.client.setArea('in:village:library');
+  r.sock().push({ type: 'room', area: 'in:village:library', players: [] });
   for (let i = 0; i < 100; i++) {
     r.client.position(at(i));
     r.clock.advance(7);
@@ -208,8 +208,8 @@ test('bugs #1: a final stop the server dropped for arriving too soon still lands
   // the last one it took. Model it, with network jitter on each send.
   const r = rig();
   r.live();
-  r.client.setArea('village');
-  r.sock().push({ type: 'room', area: 'village', players: [] });
+  r.client.setArea('in:village:library');
+  r.sock().push({ type: 'room', area: 'in:village:library', players: [] });
   const s = r.sock();
   const jitter = [60, 0, 60, 0, 60, 0, 60, 0, 60, 0];
   let n = 0;
@@ -235,8 +235,8 @@ test('bugs #1: a final stop the server dropped for arriving too soon still lands
 test('bugs #1: the stop repeat yields to a newer move and to a room change', () => {
   const r = rig();
   r.live();
-  r.client.setArea('village');
-  r.sock().push({ type: 'room', area: 'village', players: [] });
+  r.client.setArea('in:village:library');
+  r.sock().push({ type: 'room', area: 'in:village:library', players: [] });
   r.client.position(at(5, false));
   r.clock.advance(50);
   r.client.position(at(6)); // walking again before the repeat
@@ -255,16 +255,16 @@ test('bugs #1: the stop repeat yields to a newer move and to a room change', () 
 test('area changes are paced by the join cooldown, and the latest area wins', () => {
   const r = rig();
   r.live();
-  r.client.setArea('village');
+  r.client.setArea('in:village:library');
   r.client.setArea('woodland');
   r.client.setArea('ruin');
-  assert.deepEqual(r.sock().sent.filter((m) => m.type === 'join').map((m) => m.area), ['village']);
+  assert.deepEqual(r.sock().sent.filter((m) => m.type === 'join').map((m) => m.area), ['in:village:library']);
   r.clock.advance(499);
   assert.equal(r.sock().sent.filter((m) => m.type === 'join').length, 1);
   r.clock.advance(2);
-  assert.deepEqual(r.sock().sent.filter((m) => m.type === 'join').map((m) => m.area), ['village', 'ruin']);
+  assert.deepEqual(r.sock().sent.filter((m) => m.type === 'join').map((m) => m.area), ['in:village:library', 'ruin']);
   // A roster for the area we left is ignored.
-  r.sock().push({ type: 'room', area: 'village', players: [player('ghost')] });
+  r.sock().push({ type: 'room', area: 'in:village:library', players: [player('ghost')] });
   assert.equal(r.events.length, 0);
   // An area presence doesn't cover sends nothing.
   r.client.setArea('somewhere-else');
@@ -275,7 +275,7 @@ test('area changes are paced by the join cooldown, and the latest area wins', ()
 test('emotes: shared ids only, one per 2 s', () => {
   const r = rig();
   r.live();
-  r.client.setArea('village');
+  r.client.setArea('in:village:library');
   assert.equal(r.client.emote('dance'), false);
   assert.equal(r.client.emote('wave'), true);
   assert.equal(r.client.emote('cheer'), false);
@@ -289,7 +289,7 @@ test('moves: table ids only, each on its own cooldown; the room’s casts come t
   const r = rig();
   r.live();
   assert.equal(r.client.ability('kindle', 10, 20), false, 'nothing before an area');
-  r.client.setArea('village');
+  r.client.setArea('in:village:library');
   assert.equal(r.client.ability('firestorm', 10, 20), false);
   assert.equal(r.client.ability('kindle', 10, 20), true);
   assert.equal(r.client.ability('kindle', 11, 20), false, 'Kindle cools for 5 s, as the hub keeps it');
@@ -306,7 +306,7 @@ test('moves: table ids only, each on its own cooldown; the room’s casts come t
 test('a still socket sends a heartbeat about every 20 s; activity postpones it', () => {
   const r = rig();
   r.live();
-  r.client.setArea('village');
+  r.client.setArea('in:village:library');
   r.clock.advance(19_000);
   assert.equal(r.sentTypes().filter((t) => t === 'heartbeat').length, 0);
   r.clock.advance(1_500);
@@ -322,15 +322,15 @@ test('a still socket sends a heartbeat about every 20 s; activity postpones it',
 test('relayed messages reach the handlers; malformed ones are ignored', () => {
   const r = rig();
   r.live();
-  r.client.setArea('village');
-  r.sock().push({ type: 'join', area: 'village', player: player('bob') });
+  r.client.setArea('in:village:library');
+  r.sock().push({ type: 'join', area: 'in:village:library', player: player('bob') });
   r.sock().push({ type: 'pos', accountId: 'bob', x: 5, y: 6, facing: { x: 0, y: 1 }, moving: true });
   r.sock().push({ type: 'pos', accountId: 'bob', x: 'nope', y: 6 });
   r.sock().push({ type: 'emote', accountId: 'bob', id: 'wave' });
   r.sock().push({ type: 'emote', accountId: 'bob', id: 'not-an-emote' });
   r.sock().push({ type: 'leave', accountId: 'bob' });
   r.sock().onmessage?.({ data: '{nope' });
-  assert.deepEqual(r.events, [{ join: 'village', id: 'bob' }, { pos: 'bob', x: 5 }, { emote: 'bob', id: 'wave' }, { leave: 'bob' }]);
+  assert.deepEqual(r.events, [{ join: 'in:village:library', id: 'bob' }, { pos: 'bob', x: 5 }, { emote: 'bob', id: 'wave' }, { leave: 'bob' }]);
 });
 
 test('a witnessed beat reaches its handler; malformed ones are ignored', () => {
@@ -397,7 +397,7 @@ test('superseded, unauthorized, replaced and protocol rejections stop for good',
 test('stop closes the socket and cancels everything; a new lease restarts it', () => {
   const r = rig();
   r.live();
-  r.client.setArea('village');
+  r.client.setArea('in:village:library');
   r.client.stop();
   assert.equal(r.sock().closedWith, 1000);
   assert.equal(r.client.status, 'off');
@@ -413,9 +413,9 @@ test('stop closes the socket and cancels everything; a new lease restarts it', (
 });
 
 test('helpers: areas, facing, backoff, close codes', () => {
-  for (const a of ['village', 'woodland', 'ruin', 'outdoors:0:0', 'outdoors:-1:-2', 'outdoors:1:0', 'outdoors:0:1', 'outdoors:-1:2']) assert.equal(isPresenceArea(a), true, a);
+  for (const a of ['in:village:library', 'woodland', 'ruin', 'outdoors:0:0', 'outdoors:-1:-2', 'outdoors:1:0', 'outdoors:0:1', 'outdoors:-1:2']) assert.equal(isPresenceArea(a), true, a);
   for (const a of ['commons', 'outdoors:5:4', 'outdoors', 'outdoors:01:1', 'outdoors:-0:0', 'wilds:inner-1:0:1', 'chunk:inner-1:0:0', 'cottage', '']) assert.equal(isPresenceArea(a), false, a);
-  assert.equal(presenceAreaFor('village'), 'village');
+  assert.equal(presenceAreaFor('in:village:library'), 'in:village:library');
   assert.equal(presenceAreaFor('outdoors'), null, 'the Wilds need a position');
   // The chunk you stand in (the server shares it with the 3×3 around it).
   assert.equal(presenceAreaFor('outdoors', { x: 40, y: 360 }), 'outdoors:0:0');
@@ -426,8 +426,8 @@ test('helpers: areas, facing, backoff, close codes', () => {
   assert.equal(sharedRoom('outdoors:0:0', 'outdoors:1:-1'), true);
   assert.equal(sharedRoom('outdoors:0:0', 'outdoors:2:0'), false);
   assert.equal(sharedRoom('outdoors:-4:-8', 'outdoors:-4:-8'), true);
-  assert.equal(sharedRoom('village', 'village'), true);
-  assert.equal(sharedRoom('village', 'outdoors:0:1'), false);
+  assert.equal(sharedRoom('in:village:library', 'in:village:library'), true);
+  assert.equal(sharedRoom('in:village:library', 'outdoors:0:1'), false);
   // Across the Commons' mouth: the Tangle's gate chunk and the Commons' arch chunk share.
   assert.equal(sharedRoom('outdoors:0:0', 'outdoors:0:1'), true);
   assert.equal(sharedRoom('outdoors:0:0', null), false);
@@ -522,11 +522,11 @@ test('a room the server refuses (1008 invalid-room) is a place, not a bug: off t
   r.clock.advance(60_000);
   assert.equal(r.sockets.length, 1);
   // Out to the village: the same lease opens again and joins there.
-  r.client.setArea('village');
+  r.client.setArea('in:village:library');
   assert.equal(r.sockets.length, 2);
   r.sock().open();
   r.sock().push({ type: 'ready', accountId: 'me' });
   assert.equal(r.client.status, 'live');
-  assert.deepEqual(r.sock().sent.at(-1), { type: 'join', area: 'village' });
+  assert.deepEqual(r.sock().sent.at(-1), { type: 'join', area: 'in:village:library' });
   assert.equal(closeAction(1008, 'invalid-room'), 'room-refused');
 });

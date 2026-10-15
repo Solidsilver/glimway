@@ -165,7 +165,7 @@ func TestQuestGatesAtomicReplayAndTimes(t *testing.T) {
 	for i, row := range []struct {
 		now        int64
 		area, code string
-	}{{4000, "village", "not-here"}, {3600, "in:village:bakery", "not-yet"}, {7200, "in:village:bakery", "short"}} {
+	}{{4000, "in:village:library", "not-here"}, {3600, "in:village:bakery", "not-yet"}, {7200, "in:village:bakery", "short"}} {
 		x.now.Store(row.now)
 		got := call("test-bread", "finish", fmt.Sprint("refuse", i), row.area, 409)
 		if got.Error.Code != row.code {
@@ -226,7 +226,7 @@ func TestQuestTriggerPredicates(t *testing.T) {
 	cases := []struct {
 		trigger *content.QuestTrigger
 		success bool
-	}{{trig("open", "journal"), true}, {trig("reach", "in:village:library"), true}, {trig("reach", "village"), false}, {trig("use", "library-shelf"), true}, {trig("use", "sponge-bowl"), false}, {trig("talk", "mara"), false}, {trig("defeat", "stone-warden"), false}, {trig("carry", "flour"), false}, {trig("carry", "tally-token"), false}, {trig("flag", "library:lamp"), false}, {trig("sync", "glims"), false}}
+	}{{trig("open", "journal"), true}, {trig("reach", "in:village:library"), true}, {trig("reach", "outdoors"), false}, {trig("use", "library-shelf"), true}, {trig("use", "sponge-bowl"), false}, {trig("talk", "mara"), false}, {trig("defeat", "stone-warden"), false}, {trig("carry", "flour"), false}, {trig("carry", "tally-token"), false}, {trig("flag", "library:lamp"), false}, {trig("sync", "glims"), false}}
 	for _, row := range cases {
 		err = questTrigger(context.Background(), tx, &snap, "test", &content.QuestStep{Do: row.trigger}, 100)
 		if (err == nil) != row.success {
@@ -423,7 +423,7 @@ func TestRoomsHaveSeparatePresence(t *testing.T) {
 	ts := startPresence(t, x, presenceTestConfig())
 	alice := wsConnect(t, ts, c, s.Lease)
 	bob := wsConnect(t, ts, bc, b.Lease)
-	if len(alice.join("in:village:mill").Players) != 0 || len(bob.join("village").Players) != 0 {
+	if len(alice.join("in:village:mill").Players) != 0 || len(bob.join("in:village:library").Players) != 0 {
 		t.Fatal("indoors leaked outdoors")
 	}
 	alice.none()

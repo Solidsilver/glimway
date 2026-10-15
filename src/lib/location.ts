@@ -73,13 +73,11 @@ function fixedSource(f: FixedPlace): Source {
 const HOME = /^home:(0|[1-9]\d{0,3})$/;
 
 /** The rules of a space beside the grid, by its root ("village", "home:3"), if anything names it. */
-function spaceRules(root: string, places: Places): PlaceRules | undefined {
+function spaceRules(root: string, places: Places, room = false): PlaceRules | undefined {
   const s = places.spaces;
-  // T5: retire the legacy outdoor scenes with validArea and save migration.
-  if (root === 'village') return { $typeName: 'glimway.content.v1.PlaceRules', safe: true, ride: false, sync: true, rest: 'village' };
   if (root === 'woodland') return s.woodland;
   if (root === 'ruin') return s.ruin;
-  if (HOME.test(root)) return { $typeName: 'glimway.content.v1.PlaceRules', safe: true, ride: true, sync: true, rest: 'home' };
+  if (room && HOME.test(root)) return { $typeName: 'glimway.content.v1.PlaceRules', safe: true, ride: true, sync: true, rest: 'home' };
   return fixedById(root, places)?.rules;
 }
 
@@ -105,7 +103,7 @@ export function at(space: Space, x: number, y: number, places: Places = PLACES):
   }
   if (fixedById(space, places)) return at(OUTDOORS, x, y, places);
   if (space.startsWith('in:')) {
-    const r = spaceRules(rootArea(space), places);
+    const r = spaceRules(rootArea(space), places, true);
     return r ? { ...withRules(space, r), ride: false } : nowhere(space);
   }
   const r = spaceRules(space, places);

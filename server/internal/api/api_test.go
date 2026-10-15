@@ -328,7 +328,7 @@ func TestLargeDeathLossIsAcceptedWithoutCredit(t *testing.T) {
 func TestHTTPValidationAndScrubbedLogging(t *testing.T) {
 	x := newRig(t)
 	c, s := x.ready("alice")
-	for _, body := range []any{map[string]any{}, map[string]any{"version": 1, "area": "village"}, map[string]any{"version": 1, "area": "village", "position": map[string]any{"x": 0, "y": 0}, "quest": "new", "hp": 0, "mana": 0, "playSeconds": 0, "inventory": []string{}, "discoveries": []string{}, "defeatedEnemies": []string{}, "flags": []string{}}} {
+	for _, body := range []any{map[string]any{}, map[string]any{"version": 1, "area": "in:village:library"}, map[string]any{"version": 1, "area": "in:village:library", "position": map[string]any{"x": 0, "y": 0}, "quest": "new", "hp": 0, "mana": 0, "playSeconds": 0, "inventory": []string{}, "discoveries": []string{}, "defeatedEnemies": []string{}, "flags": []string{}}} {
 		m := map[string]any{"lease": s.Lease, "baseRev": s.Version, "doc": body}
 		code, _, _, _ := x.request("PUT", "/api/progress", m, c)
 		if code != 404 {

@@ -82,7 +82,7 @@ test('labels that would overlap at the size shown are left off, the most useful 
   assert.deepEqual(fitLabels(labels, 7).map((l) => l.kind).sort(), ['gate', 'place', 'way', 'you'], 'zoomed in, all of them fit');
 });
 
-test('ways, places, the footprints, the gate and you are marked and labelled', { skip: "T5: town and lot map labels" }, () => {
+test('ways, places, the footprints, the gate and you are marked and labelled', () => {
   const p = mapPicture(
     input({
       ways: [{ id: 'way:a:b', name: "Tansy's way", a: 'place:0:-2', b: 'place:1:-1', path: [{ x: 10, y: -60 }, { x: 10, y: -59 }, { x: 10, y: -58 }] }],
@@ -101,7 +101,7 @@ test('ways, places, the footprints, the gate and you are marked and labelled', {
   const by = (kind: string) => p.labels.filter((l) => l.kind === kind);
   assert.deepEqual(by('way').map((l) => [l.text, l.x, l.y]), [["Tansy's way", 10 - p.originTx, -59 - p.originTy]]);
   assert.deepEqual(by('place').map((l) => [l.text, l.sub ?? null]), [['A camp glade', 'Tansy'], ['An outcrop', null]], 'a place not seen nor found stays off the map');
-  assert.deepEqual(by('footprint').map((l) => l.text), ['The Tangle', 'The Whitequiet', 'The Commons']);
+  assert.deepEqual(by('footprint').map((l) => l.text), ['The Tangle', 'The Whitequiet', 'Hearthwick', 'Homestead Lane', ...Array.from({ length: 8 }, (_, g) => `Lot ${g + 1}`)]);
   assert.deepEqual(by('gate').map((l) => l.text), ['Commons gate']);
   assert.deepEqual(by('you').map((l) => l.text), ['You']);
   // Labels sit inside the picture.

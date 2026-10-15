@@ -120,17 +120,14 @@ func fixedSource(f *content.FixedPlace) Source {
 
 // spaceRules are the rules of a space beside the grid, by its root
 // ("village", "home:3"), or nil for a space nothing names.
-func spaceRules(root string) *content.PlaceRules {
+func spaceRules(root string, room bool) *content.PlaceRules {
 	s := content.PlacesRules.GetSpaces()
 	switch {
-	case root == "village":
-		// T5: remove the legacy outdoor space when saved places migrate.
-		return &content.PlaceRules{Safe: true, Ride: false, Sync: true, Rest: "village"}
 	case root == "woodland":
 		return s.GetWoodland()
 	case root == "ruin":
 		return s.GetRuin()
-	case homeSpace.MatchString(root):
+	case room && homeSpace.MatchString(root):
 		return &content.PlaceRules{Safe: true, Ride: true, Sync: true, Rest: "home"}
 	}
 	if f := fixedByID(root); f != nil {
@@ -175,7 +172,7 @@ func At(space Space, x, y float64) Place {
 		return At(Outdoors, x, y)
 	}
 	if strings.HasPrefix(string(space), "in:") {
-		r := spaceRules(content.RootArea(string(space)))
+		r := spaceRules(content.RootArea(string(space)), true)
 		if r == nil {
 			return Place{ID: string(space), Rest: RestNone}
 		}
@@ -183,7 +180,7 @@ func At(space Space, x, y float64) Place {
 		p.Ride = false
 		return p
 	}
-	if r := spaceRules(string(space)); r != nil {
+	if r := spaceRules(string(space), false); r != nil {
 		return withRules(string(space), r)
 	}
 	return Place{ID: string(space), Rest: RestNone}

@@ -192,9 +192,9 @@ export class HomesteadArranging {
     this.scene.input.off('pointerdown', this.onPointer, this)
     this.scene.scale.off('resize', this.reframe, this)
     bus.emit(EV.homePlacement, null)
+    const cam = this.scene.cameras.main
+    cam.startFollow(this.deps.hero(), true, 0.12, 0.12)
     if (animate) {
-      const cam = this.scene.cameras.main
-      cam.startFollow(this.deps.hero(), true, 0.12, 0.12)
       // A short grace so the key that closed the tray doesn't swing a sword.
       uiState.blockedUntil = performance.now() + 220
     }

@@ -78,6 +78,9 @@ export class Touches {
         this.add(`touch:sign:${o.id}` as InteractId, x, y, 'Read the sign', { kind: 'sign', x, y, text: o.label })
       }
     }
+    if (place === 'hearthwick' && objects.some((o) => Math.floor(o.tx / 24) === 0 && Math.floor(o.ty / 24) === 2)) {
+      this.prop({ areaId: place } as WorldData, { tx: 22, ty: 55, frame: 'flower-planter', h: 16, body: [14, 6] })
+    }
     this.deps.interactables.register(owner, this.points)
     this.points = points
   }

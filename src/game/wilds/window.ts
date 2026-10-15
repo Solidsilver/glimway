@@ -144,8 +144,18 @@ export class WildsWindow {
     const stale = this.seasonalPending.values().next().value
     if (stale) {
       this.seasonalPending.delete(stale)
+      const had = this.fixed.has(stale)
       this.fixed.get(stale)?.destroy()
       this.fixed.delete(stale)
+      if (had && this.plan?.attach.includes(stale)) {
+        const { cx, cy } = parseChunkKey(stale)
+        const fp = footprintAt(cx, cy)
+        if (fp && !this.failedGround.has(fp.place.id)) {
+          this.attachFixed(fp, cx, cy)
+          const c = this.fixed.get(stale)
+          if (c) this.builds.finish(c)
+        }
+      }
     }
     const hero = this.deps.hero()
     const at = chunkOfPixel(hero.x, hero.y)
@@ -319,7 +329,7 @@ export class WildsWindow {
   private step(): boolean {
     const plan = this.plan
     if (!plan) return false
-    const known = (cx: number, cy: number) => !!chunkTerrain(cx, cy)
+    const known = (cx: number, cy: number) => fixedPlaceOf(cx, cy) !== null || !!chunkTerrain(cx, cy)
     for (const key of plan.attach) {
       const { cx, cy } = parseChunkKey(key)
       if (fixedPlaceOf(cx, cy)) {

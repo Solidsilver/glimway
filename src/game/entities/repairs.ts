@@ -170,6 +170,7 @@ export class RepairsLayer {
       // "The well's rotten rope" → "Mend the well's rotten rope".
       label: `Mend ${d.name.charAt(0).toLowerCase()}${d.name.slice(1)}`,
       verb: 'Mend',
+      rank: 1,
       marker: () => 'quest',
       markerOffset: 30,
       activate: () => this.mend(d.id)

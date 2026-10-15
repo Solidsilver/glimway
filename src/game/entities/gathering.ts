@@ -1,4 +1,4 @@
-import { lotAt } from '../../lib/lots.ts'
+import { lotAt, lotOrigin } from '../../lib/lots.ts'
 import { at } from '../../lib/location.ts';
 /**
  * Gathering (docs/items/crafting-and-repair.md, "Gathering"): the workable
@@ -28,7 +28,7 @@ import { itemErrorText } from '../../content/errors'
 import { heldNow } from '../held'
 import { ITEM_ART_FALLBACK, itemIcon } from '../items-pass'
 import { homesteadsFor } from '../homestead'
-import { plantScenery } from '../homeland'
+import { plantScenery } from '../lot-land'
 import { lookAtlasKey } from '../wilds/wilds-looks'
 import { OUTDOORS_AREA } from '../wilds/coords'
 import { ensureSceneryArt } from '../area/props'
@@ -266,10 +266,10 @@ export class Gathering {
       }
       const home = parseHomeArea(session.state.area) !== null || /^lot:[0-7]$/.test(at(session.state.area, hero.sprite.x, hero.sprite.y).id)
       this.deps.notePosition()
-      const wilds = session.state.area === OUTDOORS_AREA && at(session.state.area, hero.sprite.x, hero.sprite.y).source.kind === 'generated'
+      const open = session.state.area === OUTDOORS_AREA
       // The server checks the piece against its own land or chunk: home tiles
       // and the open map's world tiles as they are.
-      const tile: [number, number] | undefined = home || wilds ? [spot.tx, spot.ty] : undefined
+      const tile: [number, number] | undefined = home || open ? [spot.tx, spot.ty] : undefined
       const r = await itemsFor(session).gather(tool.id, target.action, spot.target, this.visit, { tile })
       // The answer can outlive this build of the area (a snap-back rebuilt
       // it mid-request): it goes to whichever build is up now.
@@ -432,7 +432,9 @@ export class Gathering {
     if (worn) bus.emit(EV.toast, { text: worn, icon: 'bag' })
     // Inside your lamplight the server kept the change: read the home again
     // so the next build of the land (a reload, a later visit) shows it.
-    const gate = parseHomeArea(this.deps.session.state.area)
+    const hero = this.deps.hero().sprite
+    const place = at(this.deps.session.state.area, hero.x, hero.y)
+    const gate = parseHomeArea(this.deps.session.state.area) ?? (place.id.startsWith('lot:') ? Number(place.id.slice(4)) : null)
     if (gate !== null && result.land) void homesteadsFor(this.deps.session).fetchHome(gate)
   }
 
@@ -500,9 +502,12 @@ export class Gathering {
 
   /** Something planted on this land: draw it where it went in. */
   private onPlanted(p: { plant: HomePlantView }): void {
-    const gate = parseHomeArea(this.deps.world.areaId)
+    const hero = this.deps.hero().sprite
+    const place = at(this.deps.world.areaId, hero.x, hero.y)
+    const gate = parseHomeArea(this.deps.world.areaId) ?? (place.id.startsWith('lot:') ? Number(place.id.slice(4)) : null)
     if (gate === null || this.deps.session.state.area !== this.deps.world.areaId) return
-    const s = plantScenery(p.plant, lookAtlasKey('tangle', null))
+    const o = this.deps.world.areaId === OUTDOORS_AREA ? lotOrigin(gate) : { tx: 0, ty: 0 }
+    const s = plantScenery({ ...p.plant, x: o.tx + p.plant.x, y: o.ty + p.plant.y }, lookAtlasKey('tangle', null))
     if (!ensureSceneryArt(this.scene, s.key)) return
     const img = this.scene.add.image(s.x, s.y, s.key, s.frame).setOrigin(0.5, 1).setFlipX(s.flipX ?? false).setDepth(s.y)
     if (img.height > TILE) img.setScale(TILE / img.height)

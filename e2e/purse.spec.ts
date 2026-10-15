@@ -283,7 +283,7 @@ test('buying flour from Finn at its one price in glims', async ({ page }) => {
   const before = glimsOf(id)
   await expect(hudGlims(page)).toHaveText(String(before))
   await residentsOut(page, { server: true })
-  await warp(page, 'village', 31, 23)
+  await warp(page, 'outdoors', 30, 78)
   let offered = false
   for (let i = 0; i < 3 && !offered; i++) {
     await waitForLive(page)
@@ -316,7 +316,7 @@ test('a priced shelf slot: a friend buys it in glims, and both logs name the oth
   const a = accountOf(wren)
   sql(`INSERT INTO homestead_items (id, item_def, location, account_id, homestead_id) VALUES ('shelf-${wren}', 'gate-shelf', 'inventory', '${a}', NULL);
        INSERT INTO ledger (account_id, currency, delta, earned_delta, reason, ref, created_at) VALUES ('${a}', 'decoration:gate-shelf', 1, 0, 'test-grant', 'shelf-${wren}', unixepoch());`)
-  await go(page, 'commons', 25, 10)
+  await go(page, 'outdoors', 1, 34)
   const slot = (await homes(page)).slots.find((s) => s.gate === gate)! as HomesView['slots'][number] & { shelf: { tx: number; ty: number } }
   const [sx, sy] = [slot.shelf.tx * 16 + 8, slot.shelf.ty * 16 + 18]
   await place(page, sx, sy)
@@ -343,7 +343,7 @@ test('a priced shelf slot: a friend buys it in glims, and both logs name the oth
   seedGlims(ivy, 20)
   await rereadState(other)
   const ivyBefore = glimsOf(ivy)
-  await go(other, 'commons', 25, 10)
+  await go(other, 'outdoors', 1, 34)
   await place(other, sx, sy)
   await expect(other.locator('.prompt')).toContainText('Look at the gift shelf')
   await other.keyboard.press('e')
@@ -366,7 +366,7 @@ test('a priced shelf slot: a friend buys it in glims, and both logs name the oth
 
 /** Open your mailbox (you stand at it on your own land). */
 async function openMailbox(page: Page): Promise<ReturnType<Page['getByRole']>> {
-  await go(page, 'commons', 23, 19)
+  await go(page, 'outdoors', 34, 35)
   await expect.poll(async () => (await homes(page)).status).toBe('ready')
   await atMyMailbox(page)
   await expect(page.locator('.prompt')).toContainText('Check your mailbox')
@@ -435,8 +435,8 @@ test('handing glims to a friend standing near; refused from across the square', 
   await rereadState(page)
   const ashStart = glimsOf(ash)
   const rowanStart = glimsOf(rowan)
-  await go(page, 'commons', 30, 24)
-  await go(other, 'commons', 31, 24)
+  await go(page, 'outdoors', 6, 48)
+  await go(other, 'outdoors', 7, 48)
   const remotes = (p: Page) => p.evaluate(() => ((window as unknown as { __fsRemote?: () => { name: string }[] }).__fsRemote?.() ?? []).map((r) => r.name))
   await expect.poll(() => remotes(page), { timeout: 15_000 }).toEqual(['Rowan'])
 
@@ -458,10 +458,10 @@ test('handing glims to a friend standing near; refused from across the square', 
   await row.getByRole('button', { name: 'Give…' }).click()
   await row.locator(`[data-give-glims-to="${accountOf(rowan)}"]`).click()
   await row.getByTestId('give-glims-amount').fill('5')
-  await go(other, 'commons', 8, 30)
+  await go(other, 'outdoors', 15, 48)
   // Still in the Commons (so still on Ash's screen), but past the give
-  // radius (content/items.json: 3 tiles) from Ash at (30, 24).
-  const tilesFromAsh = (p: Page) => p.evaluate(() => ((window as unknown as { __fsRemote?: () => { name: string; x: number; y: number }[] }).__fsRemote?.() ?? []).filter((r) => r.name === 'Rowan').map((r) => Math.hypot(r.x - (30 * 16 + 8), r.y - (24 * 16 + 8)) / 16))
+  // radius (content/items.json: 3 tiles) from Ash at (6, 48).
+  const tilesFromAsh = (p: Page) => p.evaluate(() => ((window as unknown as { __fsRemote?: () => { name: string; x: number; y: number }[] }).__fsRemote?.() ?? []).filter((r) => r.name === 'Rowan').map((r) => Math.hypot(r.x - (6 * 16 + 8), r.y - (48 * 16 + 8)) / 16))
   await expect.poll(async () => (await tilesFromAsh(page))[0] ?? 0, { timeout: 15_000 }).toBeGreaterThan(3)
   await row.getByTestId('give-glims').click()
   await expect(inv.getByTestId('inv-message')).toHaveText('Stand next to them to hand it over.')

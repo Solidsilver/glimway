@@ -323,7 +323,7 @@ func TestHomeRestAndSafeBoundaries(t *testing.T) {
 	if v := x.exp("POST", "/api/spend", spendBody(s, "home-rest", "", "doorstep", doc), c, 409); v.Error.Code != "not-at-own-plot" {
 		t.Fatal("doorstep rest with a cottage", v.Error.Code)
 	}
-	for name, area := range map[string]string{"other-home": "in:home:1", "commons": "commons", "village": "village", "padded": "in:home:00"} {
+	for name, area := range map[string]string{"other-home": "in:home:1", "commons": "commons", "in:village:library": "in:village:library", "padded": "in:home:00"} {
 		doc = s.State
 		doc.HP = 1
 		doc.Area = area
@@ -340,12 +340,19 @@ func TestHomeRestAndSafeBoundaries(t *testing.T) {
 		}
 	}
 	p := profile("alice", 1, 0, 20)
-	for _, area := range []string{"commons", "home:0", "home:7", "in:village:library", "in:village:mill:2", "in:home:0"} {
+	for _, tc := range []struct {
+		area string
+		pos  rules.Position
+	}{
+		{"outdoors", commonsPx(376, 40)},
+		{"outdoors", rules.Position{X: -968, Y: 520}},
+		{"outdoors", rules.Position{X: -37*16 + 8, Y: 104*16 + 8}},
+		{"in:village:library", rules.Position{X: 80, Y: 80}},
+		{"in:village:mill:2", rules.Position{X: 80, Y: 80}},
+		{"in:home:0", rules.Position{X: 80, Y: 80}},
+	} {
 		doc = s.State
-		doc.Area = area
-		if area == "commons" {
-			doc = onCommons(doc, 376, 40)
-		}
+		doc.Area, doc.Position = tc.area, tc.pos
 		s.Snapshot = x.expect("POST", "/api/profile", x.profileBodyWithSeededReport(s, p, doc), c, 200).Snapshot
 	}
 	doc = s.State

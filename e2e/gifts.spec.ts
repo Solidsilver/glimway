@@ -34,7 +34,7 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
        VALUES ('${aWren}', 'decoration:gate-shelf', 1, 0, 'test-grant', 'shelf-${idWren}', unixepoch());`)
 
   // Step out to the Commons lane
-  await go(page, 'commons', 25, 10)
+  await go(page, 'outdoors', 1, 34)
 
   // Find Wren's gate slot coordinates from homes view
   const hView = await homes(page)
@@ -103,7 +103,7 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   const ctxFinn = await browser.newContext({ baseURL })
   const pageFinn = await ctxFinn.newPage()
   const idFinn = await freshPlayer(pageFinn, 'Finn', inviteCode)
-  await go(pageFinn, 'commons', 25, 10)
+  await go(pageFinn, 'outdoors', 1, 34)
   await expect.poll(async () => {
     const gate = (await homes(pageFinn)).gates.find((g) => g.gate === gateWren) as (HomesView['gates'][number] & { shelf?: boolean }) | undefined
     return gate?.shelf
@@ -144,7 +144,7 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   const ctxIra = await browser.newContext({ baseURL })
   const pageIra = await ctxIra.newPage()
   const idIra = await freshPlayer(pageIra, 'Ira', (await inviteIra.json()).code as string)
-  await go(pageIra, 'commons', 25, 10)
+  await go(pageIra, 'outdoors', 1, 34)
   await expect.poll(async () => (await homes(pageIra)).gates.find((g) => g.gate === gateWren)?.shelf).toBe(true)
   await place(pageIra, shelfPx, shelfPy)
   await expect(pageIra.locator('.prompt')).toContainText('Look at the gift shelf')
@@ -169,7 +169,7 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   await freshPlayer(pageOne, 'Moss', (await inviteOne.json()).code as string)
   await freshPlayer(pageTwo, 'Reed', (await inviteTwo.json()).code as string)
   for (const traveller of [pageOne, pageTwo]) {
-    await go(traveller, 'commons', 25, 10)
+    await go(traveller, 'outdoors', 1, 34)
     await expect.poll(async () => (await homes(traveller)).gates.find((g) => g.gate === gateWren)?.shelf).toBe(true)
     await place(traveller, shelfPx, shelfPy)
     await expect(traveller.locator('.prompt')).toContainText('Look at the gift shelf')
@@ -224,7 +224,7 @@ test('maker thank-you mail: when item made by someone else is used, maker receiv
   await hurt(pageFinn, 20)
 
   // Finn travels to village (far from Wren who is in commons or home)
-  await go(pageFinn, 'village', 15, 10)
+  await go(pageFinn, 'outdoors', 16, 60)
 
   // Finn opens inventory and uses the comfrey salve
   const inv = pageFinn.getByRole('dialog', { name: 'Inventory' })

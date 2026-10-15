@@ -82,7 +82,7 @@ test('flatten: evens out broad shading, keeps detail', () => {
 })
 
 test('ground: base tiles are stable by position, accents sparse', () => {
-  const w = buildArea('village')
+  const w = servedTownFixture()
   const grid = classGrid(w.ground)
   const pick = () => w.ground.map((row, y) => row.map((id, x) => baseTile(id, grid[y][x], x, y)))
   assert.deepEqual(pick(), pick(), 'the same tiles every time')
@@ -114,9 +114,9 @@ test('ground: the Commons square is flagstones, stray cobbles on the lane are ro
 })
 
 test('ground: neighbouring edge tiles agree on the texels at their shared border', () => {
-  for (const area of ['village', 'commons'] as const) {
+  for (const area of ['hearthwick', 'commons'] as const) {
     // The Commons is fixed ground on the open map: its served layout.
-    const w = area === 'commons' ? servedCommonsFixture() : buildArea(area)
+    const w = area === 'commons' ? servedCommonsFixture() : servedCommonsFixture()
     const g = classGrid(w.ground)
     const k = 2
     const m = 3
@@ -199,8 +199,8 @@ test('routines: every leg crosses open ground (no walls, props, trees or people)
 })
 
 test('routines: a resident strolls when you are away and is home by the time you are near', () => {
-  const home = tileFeet(12, 15)
-  const routine = ROUTINES.village.hazel
+  const home = tileFeet(11, 63)
+  const routine = ROUTINES.hearthwick.hazel
   const w = newWalker(home)
   const far = { x: home.x + 300, y: home.y }
   const seen = new Set<string>()

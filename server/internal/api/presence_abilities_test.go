@@ -129,9 +129,9 @@ func TestPresenceAbilityRelayAndCooldown(t *testing.T) {
 	bc, bs := x.member("bob", s.WorldID)
 	ts := startPresence(t, x, presenceTestConfig())
 	alice := wsConnect(t, ts, c, s.Lease)
-	alice.join("village")
+	alice.join("in:village:library")
 	bob := wsConnect(t, ts, bc, bs.Lease)
-	bob.join("village")
+	bob.join("in:village:library")
 	alice.expect("join")
 
 	// A cast is measured where its sender stands: both say where they are
@@ -182,7 +182,7 @@ func TestPresenceCastChecks(t *testing.T) {
 	// client's throttle allowed for, and a reconnect never resets cooldowns.
 	now := time.Unix(1_000_000, 0)
 	h := newPresenceHub(presenceTestConfig(), func() time.Time { return now })
-	caster := &presencePeer{identity: presenceIdentity{ID: "a", Magic: presenceMagic{Class: "mage", LevelMark: 30}}, area: "village", pos: &presencePosition{X: 320, Y: 320, Moving: true}}
+	caster := &presencePeer{identity: presenceIdentity{ID: "a", Magic: presenceMagic{Class: "mage", LevelMark: 30}}, area: "in:village:library", pos: &presencePosition{X: 320, Y: 320, Moving: true}}
 	cast := func(x, y float64) bool {
 		return h.allowAbility(caster, h.now(), &v2.PresenceAbility{Ability: "kindle", X: x, Y: y})
 	}
@@ -241,7 +241,7 @@ func TestPresenceCastChecks(t *testing.T) {
 	}
 	// And nothing before the first position: after a join there is no place
 	// to measure a cast against (review finding 16).
-	noPos := &presencePeer{identity: caster.identity, area: "village"}
+	noPos := &presencePeer{identity: caster.identity, area: "in:village:library"}
 	if h.allowAbility(noPos, h.now(), &v2.PresenceAbility{Ability: "kindle", X: 320, Y: 320}) {
 		t.Fatal("a cast before the first position was taken")
 	}
@@ -278,12 +278,12 @@ func TestPresenceWardCreditHealsAFriend(t *testing.T) {
 	cc, cs := x.member("carol", s.WorldID)
 	ts := startPresence(t, x, presenceTestConfig())
 	alice := wsConnect(t, ts, c, s.Lease)
-	alice.join("village")
+	alice.join("in:village:library")
 	bob := wsConnect(t, ts, bc, bs.Lease)
-	bob.join("village")
+	bob.join("in:village:library")
 	alice.expect("join")
 	carol := wsConnect(t, ts, cc, cs.Lease)
-	carol.join("village")
+	carol.join("in:village:library")
 	alice.expect("join")
 	bob.expect("join")
 	carol.send(position(500, 500))
@@ -374,9 +374,9 @@ func TestPresenceMovingCastRelaysAndCreditsTheWard(t *testing.T) {
 	bc, bs := x.member("bob", s.WorldID)
 	ts := startPresence(t, x, presenceTestConfig())
 	alice := wsConnect(t, ts, c, s.Lease)
-	alice.join("village")
+	alice.join("in:village:library")
 	bob := wsConnect(t, ts, bc, bs.Lease)
-	bob.join("village")
+	bob.join("in:village:library")
 	alice.expect("join")
 	// Alice's last sent position is (320, 320), sent while walking; 150 ms
 	// later she has walked 25 px on and casts there without flushing a
@@ -482,7 +482,7 @@ func TestTwoConcurrentReportsSpendOneWardCredit(t *testing.T) {
 	h.mu.Unlock()
 	bobPlay := x.playResponse(bc)
 	report := func(seq, hp float64) *httptest.ResponseRecorder {
-		body, _ := protojson.Marshal(&contract.ReportRequest{Lease: bobPlay.Lease, Client: "tab-a", Generation: bobPlay.ReportGeneration, Seq: seq, Basis: bobPlay.State.Version, Hp: hp, Mana: 50, Place: &contract.Where{Area: "village", X: 400, Y: 300}})
+		body, _ := protojson.Marshal(&contract.ReportRequest{Lease: bobPlay.Lease, Client: "tab-a", Generation: bobPlay.ReportGeneration, Seq: seq, Basis: bobPlay.State.Version, Hp: hp, Mana: 50, Place: &contract.Where{Area: "in:village:library", X: 80, Y: 80}})
 		r := httptest.NewRequest("POST", "/api/report", bytes.NewReader(body))
 		r.Header.Set("X-Glimway-Contract", testContract())
 		r.Header.Set("Content-Type", "application/json")
@@ -540,12 +540,12 @@ func TestWardCreditSpendsOnlyWhatTheReportNeeded(t *testing.T) {
 	cc, cs := x.member("carol", s.WorldID)
 	ts := startPresence(t, x, presenceTestConfig())
 	alice := wsConnect(t, ts, c, s.Lease)
-	alice.join("village")
+	alice.join("in:village:library")
 	bob := wsConnect(t, ts, bc, bs.Lease)
-	bob.join("village")
+	bob.join("in:village:library")
 	alice.expect("join")
 	carol := wsConnect(t, ts, cc, cs.Lease)
-	carol.join("village")
+	carol.join("in:village:library")
 	alice.expect("join")
 	bob.expect("join")
 	for _, w := range []*wsClient{alice, bob, carol} {
@@ -607,9 +607,9 @@ func TestWardCreditExpiryAndZeroHP(t *testing.T) {
 	bc, bs := x.member("bob", s.WorldID)
 	ts := startPresence(t, x, presenceTestConfig())
 	alice := wsConnect(t, ts, c, s.Lease)
-	alice.join("village")
+	alice.join("in:village:library")
 	bob := wsConnect(t, ts, bc, bs.Lease)
-	bob.join("village")
+	bob.join("in:village:library")
 	alice.expect("join")
 	alice.send(position(320, 320))
 	bob.expect("pos")
@@ -693,7 +693,7 @@ func TestWardCreditAcrossChunkEdges(t *testing.T) {
 			h.admit(friend)
 			h.admit(&presencePeer{identity: presenceIdentity{ID: "other-world", World: "elsewhere"}, area: "outdoors:1:-1", pos: &presencePosition{X: 385, Y: -10}})
 			h.admit(&presencePeer{identity: presenceIdentity{ID: "far", World: "world"}, area: "outdoors:1:-1", pos: &presencePosition{X: 470, Y: -10}})
-			h.admit(&presencePeer{identity: presenceIdentity{ID: "curated", World: "world"}, area: "village", pos: &presencePosition{X: 385, Y: -10}})
+			h.admit(&presencePeer{identity: presenceIdentity{ID: "curated", World: "world"}, area: "in:village:library", pos: &presencePosition{X: 385, Y: -10}})
 			h.wardPulse("world", "outdoors:0:-1", "caster", 383, -10, 64, 3)
 			if crossing {
 				friend.area = "outdoors:1:-1"

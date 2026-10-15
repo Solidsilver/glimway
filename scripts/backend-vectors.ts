@@ -25,7 +25,7 @@ export function vectors() {
   const saveOf = (state: GameState, imported = true, baseline: HabiticaProfile | undefined = base): SyncedSave => ({ state: validateSave(state), vitalsSource: imported ? 'imported' : 'demo', ...(baseline ? { importedProfile: baseline } : {}) });
   // Town safety and the Tangle's unsafe ground share the outdoors saved space.
   const town = createNewGame().position;
-  for (const [area, position] of [['village'], ['woodland'], ['ruin'], ['outdoors', town], ['outdoors', { x: 8, y: -376 }]] as const) {
+  for (const [area, position] of [['outdoors', town], ['woodland'], ['ruin'], ['outdoors', town], ['outdoors', { x: 8, y: -376 }]] as const) {
     for (const hp of [0, 4.5, base.hp, base.maxHp]) {
       for (const mode of ['same', 'heal', 'fall', 'max-up', 'cosmetic', 'account', 'no-exp', 'no-baseline', 'first', 'restricted']) {
         const state = { ...createNewGame(), area, ...(position ? { position } : {}), hp, maxHp: base.maxHp, mana: 2, maxMana: base.maxMp, glimXp: lifetimeXp(base.level, base.exp ?? 0) };

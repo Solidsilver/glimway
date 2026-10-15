@@ -152,18 +152,18 @@ test('refused upgrades back off toward 30 s even with link checks every 2 s (rev
 
 test('a reconnect roster moves peers who moved while we were away, and clears unknown positions (review-6 #3)', () => {
   const r = rig();
-  r.feed.setArea('village');
+  r.feed.setArea('in:village:library');
   r.ready();
   r.sock().push({
     type: 'room',
-    area: 'village',
+    area: 'in:village:library',
     players: [
       { accountId: 'bob', displayName: 'Bob', avatar: null, pos: { x: 10, y: 20, facing: { x: 1, y: 0 }, moving: false } },
       { accountId: 'cy', displayName: 'Cy', avatar: null, pos: { x: 50, y: 50, facing: { x: 0, y: 1 }, moving: false } },
     ],
   });
   r.c.advance(1_000);
-  const drawn = (id: string) => r.feed.peersIn('village').find((p) => p.accountId === id)?.track.at(r.c.now());
+  const drawn = (id: string) => r.feed.peersIn('in:village:library').find((p) => p.accountId === id)?.track.at(r.c.now());
   assert.equal(drawn('bob')?.x, 10);
   // Our transport drops; Bob walks to x=500 and stops meanwhile.
   r.sock().drop(1006);
@@ -172,7 +172,7 @@ test('a reconnect roster moves peers who moved while we were away, and clears un
   r.ready();
   r.sock().push({
     type: 'room',
-    area: 'village',
+    area: 'in:village:library',
     players: [
       { accountId: 'bob', displayName: 'Bob', avatar: null, pos: { x: 500, y: 20, facing: { x: 1, y: 0 }, moving: false } },
       { accountId: 'cy', displayName: 'Cy', avatar: null, pos: null },
@@ -186,11 +186,11 @@ test('a reconnect roster moves peers who moved while we were away, and clears un
 
 test('maker heart range uses the same six tile radius as the server', () => {
   const r = rig();
-  r.feed.setArea('village');
+  r.feed.setArea('in:village:library');
   r.ready();
   r.feed.position({ x: 0, y: 0, facing: { x: 0, y: 1 }, moving: false });
   r.sock().push({
-    type: 'room', area: 'village', players: [
+    type: 'room', area: 'in:village:library', players: [
       { accountId: 'near', displayName: 'Near', avatar: null, pos: { x: 96, y: 0, facing: { x: 0, y: 1 }, moving: false } },
       { accountId: 'far', displayName: 'Far', avatar: null, pos: { x: 97, y: 0, facing: { x: 0, y: 1 }, moving: false } },
     ],
@@ -220,13 +220,13 @@ test('stop closes the socket and removes the poll and the bus listener (review-6
 
 test('crafts: a peer\'s pose follows their positions, a look change mid-visit is redrawn, and our pose goes out', () => {
   const r = rig();
-  r.feed.setArea('village');
+  r.feed.setArea('in:village:library');
   r.ready();
   const avatar = JSON.parse(JSON.stringify(
     { appearance: { size: 'slim', shirt: 'blue', skin: 'fair', hairColor: 'brown', hairStyle: 1, background: '', hairBangs: 0, hairMustache: 0, hairBeard: 0, hairFlower: 0 }, equipped: {}, costume: {}, useCostume: false, selectedPet: 'Fox-Golden', selectedMount: 'Wolf-Shade' },
   ));
-  r.sock().push({ type: 'room', area: 'village', players: [{ accountId: 'bob', displayName: 'Bob', avatar, pos: { x: 10, y: 20, facing: { x: 1, y: 0 }, moving: true, pose: 'riding' } }] });
-  const bob = () => r.feed.peersIn('village').find((p) => p.accountId === 'bob')!;
+  r.sock().push({ type: 'room', area: 'in:village:library', players: [{ accountId: 'bob', displayName: 'Bob', avatar, pos: { x: 10, y: 20, facing: { x: 1, y: 0 }, moving: true, pose: 'riding' } }] });
+  const bob = () => r.feed.peersIn('in:village:library').find((p) => p.accountId === 'bob')!;
   assert.equal(bob().pose, 'riding');
   assert.equal(bob().avatar?.selectedPet, 'Fox-Golden');
   r.sock().push({ type: 'pos', accountId: 'bob', x: 12, y: 20, facing: { x: 1, y: 0 }, moving: true });
@@ -245,7 +245,7 @@ test('crafts: a peer\'s pose follows their positions, a look change mid-visit is
   r.sock().push({ type: 'avatarChange', accountId: 'bob', avatar: { ...avatar, selectedPet: 'Owl-Spooky', selectedMount: '' } });
   r.sock().push({ type: 'avatarChange', accountId: 'bob', avatar: { ...avatar, selectedPet: 'Owl-Spooky', selectedMount: 'Wolf-Shade' } });
   assert.deepEqual(heard, ['carol', 'bob']);
-  assert.equal(r.feed.peersIn('village').some((p) => p.accountId === 'carol'), false);
+  assert.equal(r.feed.peersIn('in:village:library').some((p) => p.accountId === 'carol'), false);
   // Ours: a pose change at the same spot is still news.
   r.c.advance(1_000);
   r.feed.position({ x: 5, y: 5, facing: { x: 0, y: 1 }, moving: false });

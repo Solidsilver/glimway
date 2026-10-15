@@ -12,9 +12,9 @@ export type RoomId = 'in:village:bakery' | 'in:village:mill' | 'in:village:mill:
 
 /** Each front door's doorstep in the village (the tile you press the door from). */
 export const DOORSTEP: Readonly<Record<string, [number, number]>> = {
-  'in:village:bakery': [7, 8],
-  'in:village:mill': [29, 23],
-  'in:village:library': [4, 18]
+  'in:village:bakery': [-11, 59],
+  'in:village:mill': [29, 77],
+  'in:village:library': [-11, 77]
 }
 
 export type RoomView = {
@@ -40,8 +40,8 @@ export async function inRoom(page: Page, area: string): Promise<void> {
 /** Stand on a front door's doorstep in the village and go in (E, or the touch button). */
 export async function goIn(page: Page, room: string, opts: { touch?: boolean; prompt?: RegExp } = {}): Promise<void> {
   const [tx, ty] = DOORSTEP[room]
-  await page.evaluate(([x, y]) => (window as unknown as { __fsDevWarp: (a: string, x: number, y: number) => void }).__fsDevWarp('village', x, y), [tx, ty] as const)
-  await settled(page, { area: 'village' })
+  await page.evaluate(([x, y]) => (window as unknown as { __fsDevWarp: (a: string, x: number, y: number) => void }).__fsDevWarp('outdoors', x, y), [tx, ty] as const)
+  await settled(page, { area: 'outdoors' })
   await expect(page.locator('.prompt')).toContainText(opts.prompt ?? /Go into|Knock at/)
   await waitForLive(page)
   if (opts.touch) await page.locator('.controls .act').tap()

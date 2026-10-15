@@ -1,3 +1,4 @@
+import { footprint } from '../src/game/wilds/fixed.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -17,7 +18,6 @@ import { journalEntries } from '../src/content/world.ts';
 import { handoverFor, paperFlag } from '../src/content/papers.ts';
 import { QUEST_STAGES, type QuestStage } from '../src/lib/state.ts';
 import { calendarAt } from '../src/lib/calendar.ts';
-import { buildArea } from '../src/game/worlds.ts';
 import { servedTownFixture } from './commons-fixture.ts';
 import { TERRAIN, TILE } from '../src/lib/tile.ts';
 
@@ -217,29 +217,16 @@ test('residents stand on open ground in their places, clear of the quest NPCs an
 });
 
 test('the Tolley mill sits on the pond’s edge, clear of the quest, the library, Ada and Hazel', () => {
-  const village = buildArea('village');
-  const m = village.mill!;
-  assert.ok(m, 'the village has a mill');
-  // Its footprint is solid, the wheel stands at the water's edge, and the
-  // hopper is solid against the west wall.
-  for (let y = m.ty; y < m.ty + m.th; y++) for (let x = m.tx; x < m.tx + m.tw; x++) assert.ok(village.solid[y][x], `${x},${y}`);
-  const wheel = { tx: Math.floor(m.wheel.x / TILE), ty: Math.floor(m.wheel.y / TILE) };
-  assert.ok(village.solid[wheel.ty][wheel.tx], 'the wheel blocks its own tile');
-  assert.equal(wheel.tx, m.tx + m.tw, 'on the east wall');
-  assert.ok([TERRAIN.water_a, TERRAIN.water_b].some(tile => tile === village.ground[wheel.ty][wheel.tx + 1]), 'pond water beside the wheel');
-  assert.ok(village.solid[m.hopper.ty][m.hopper.tx]);
-  assert.ok(m.hopper.tx === m.tx - 1 && m.hopper.ty >= m.ty && m.hopper.ty < m.ty + m.th, 'hopper against the west wall');
-  // The door opens onto walkable ground, and the garden's gap above still opens onto grass.
-  assert.equal(village.solid[m.door.ty + 1][m.door.tx], false);
-  assert.equal(village.solid[19][27], false);
-  // Nothing of the quest, the library, Ada's house or Hazel in or against it.
-  const inMill = (p: { tx: number; ty: number }) => p.tx >= m.tx - 1 && p.tx <= m.tx + m.tw && p.ty >= m.ty - 1 && p.ty <= m.ty + m.th;
-  for (const n of village.npcs.filter((n) => n.id !== 'finn')) assert.ok(!inMill(n), n.id);
-  for (const p of [village.library!, village.board!, village.well!, village.spawn]) assert.ok(!inMill(p), `${p.tx},${p.ty}`);
-  for (const b of [...village.bushes, ...village.rocks]) assert.ok(!inMill(b), `${b.tx},${b.ty}`);
-  for (const e of village.exits) assert.ok(!inMill({ tx: e.tx, ty: e.ty }));
-  const keys = (village.scenery ?? []).map((s) => s.key);
-  assert.ok(keys.includes('mill-house') && keys.includes('mill-hopper'));
+  const town = servedTownFixture();
+  const fp = footprint('hearthwick')!;
+  const mill = [...fp.objects.values()].flat().find((o) => o.id === 'mill')!;
+  for (let y = mill.ty - mill.th + 1; y <= mill.ty; y++) for (let x = mill.tx; x < mill.tx + mill.tw; x++) assert.ok(town.solid[y][x]);
+  assert.ok(([TERRAIN.water_a, TERRAIN.water_b] as number[]).includes(town.ground[76][33]), 'race beside the east wall');
+  assert.equal(town.solid[78][29], false, 'mill doorway approach is open');
+  const inMill = (p: { tx: number; ty: number }) => p.tx >= 27 && p.tx <= 32 && p.ty >= 72 && p.ty <= 77;
+  for (const n of town.npcs.filter((n) => n.id !== 'finn')) assert.ok(!inMill(n), n.id);
+  for (const p of [{ tx: -11, ty: 77 }, town.features.board, town.features.well, town.spawn]) assert.ok(!inMill(p));
+
 });
 
 test('the hopper’s tally is a mystery until Finn’s paper says what it counts', () => {

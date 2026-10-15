@@ -317,7 +317,7 @@ func TestServerFirstWireFixtures(t *testing.T) {
 	}
 	// A keyed domain write uses production's transaction and mixed result writer.
 	play := x.expect("POST", "/api/play", map[string]any{"clientId": "tab-a"}, c, 200)
-	request := &contract.MarkRequest{Op: &contract.OpHeader{Lease: play.Lease, Key: "fixture-domain"}, Where: &contract.Where{Area: "village", X: 2, Y: 3}, Mark: "seen:fixture"}
+	request := &contract.MarkRequest{Op: &contract.OpHeader{Lease: play.Lease, Key: "fixture-domain"}, Where: &contract.Where{Area: "in:village:library", X: 2, Y: 3}, Mark: "seen:fixture"}
 	req := httptest.NewRequest("POST", "/api/items/gather", nil)
 	req.AddCookie(c)
 	mutation := httptest.NewRecorder()

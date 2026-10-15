@@ -246,8 +246,8 @@ func TestWardrobeLookGoesOutAsTheCostume(t *testing.T) {
 	x.ownGear(alice, "head_armoire_admiralsBicorne")
 	// The player and a friend in one room: the friend's screen updates
 	// mid-visit when the choice changes.
-	x.stand(alice, s.WorldID, "village", 100, 100)
-	x.stand("friend", s.WorldID, "village", 130, 110)
+	x.stand(alice, s.WorldID, "in:village:library", 100, 100)
+	x.stand("friend", s.WorldID, "in:village:library", 130, 110)
 	avatar := func() *presenceAvatarMsg {
 		who, err := x.api.presenceIdentity(context.Background(), store.Hash(c.Value), true)
 		if err != nil {
@@ -301,8 +301,8 @@ func TestALapsedPieceReachesFriendsScreens(t *testing.T) {
 	}
 	x.chooseWardrobe(c, s, "wear", map[string]string{"head": "head_armoire_admiralsBicorne", "armor": "armor_warrior_1"}, 200)
 
-	x.stand(alice, s.WorldID, "village", 100, 100)
-	x.stand("friend", s.WorldID, "village", 130, 110)
+	x.stand(alice, s.WorldID, "in:village:library", 100, 100)
+	x.stand("friend", s.WorldID, "in:village:library", 130, 110)
 	h := x.api.presence
 	h.mu.Lock()
 	friend := h.peers["friend"]

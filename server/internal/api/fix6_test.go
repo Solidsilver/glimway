@@ -46,7 +46,7 @@ func TestFix6PresenceAdmissionCaps(t *testing.T) {
 			if err == nil || response == nil || response.StatusCode != 429 || response.Header.Get("Retry-After") == "" {
 				t.Fatalf("%s cap not enforced: %v %v", scope, response, err)
 			}
-			wsConnect(t, ts, bc, b.Lease).join("village")
+			wsConnect(t, ts, bc, b.Lease).join("in:village:library")
 			_ = s
 		})
 	}
@@ -72,9 +72,9 @@ func TestFix6PresenceDBQueriesDoNotHoldHub(t *testing.T) {
 			cfg.RevalidateMs = 120000
 			ts := startPresence(t, x, cfg)
 			bob := wsConnect(t, ts, bc, b.Lease)
-			bob.join("village")
+			bob.join("in:village:library")
 			other := wsConnect(t, ts, cc, carol.Lease)
-			other.join("village")
+			other.join("in:village:library")
 			bob.expect("join")
 			conn, _, err := dialPresence(t, ts, c, ts.URL)
 			if err != nil {
@@ -127,7 +127,7 @@ func TestFix6PresenceTransientRevalidationKeepsSocket(t *testing.T) {
 	waitPresenceDBWait(t, x, before)
 	time.Sleep(60 * time.Millisecond)
 	tx.Rollback()
-	alice.join("village")
+	alice.join("in:village:library")
 	time.Sleep(70 * time.Millisecond)
 	if err := x.db.Allow(context.Background(), "alice", false, x.now.Load()); err != nil {
 		t.Fatal(err)
@@ -143,9 +143,9 @@ func TestFix6PresenceRevalidationDoesNotBlockOutbound(t *testing.T) {
 	cfg.WriteTimeoutMs = 1000
 	ts := startPresence(t, x, cfg)
 	alice := wsConnect(t, ts, c, s.Lease)
-	alice.join("village")
+	alice.join("in:village:library")
 	bob := wsConnect(t, ts, bc, b.Lease)
-	bob.join("village")
+	bob.join("in:village:library")
 	alice.expect("join")
 	tx, err := x.db.DB.Begin()
 	if err != nil {
@@ -255,7 +255,7 @@ func TestFix6PresenceTransientIngressExcessRecovers(t *testing.T) {
 		alice.send(map[string]any{"type": "heartbeat"})
 	}
 	time.Sleep(200 * time.Millisecond)
-	alice.join("village")
+	alice.join("in:village:library")
 }
 func TestFix6PresenceReservationMapsRelease(t *testing.T) {
 	x := newRig(t)

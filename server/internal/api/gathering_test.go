@@ -163,9 +163,9 @@ func TestGatheringWearAndYields(t *testing.T) {
 	axe := x.instance(s.AccountID, "bench-axe", -1, "")
 	here := [2]int{20, 20}
 
-	// Only in the woods: not in the village.
-	if x.opRefreshing(c, &s, "gather", gatherIn(s, "village", here, axe, "chop", "tree", "v1"), 409).Error.Code != "cannot-gather-here" {
-		t.Fatal("chopped in the village")
+	// Only in the woods: not in the village or indoors.
+	if got := x.opRefreshing(c, &s, "gather", gatherIn(s, "in:village:library", [2]int{5, 5}, axe, "chop", "tree", "v1"), 409).Error.Code; got != "cannot-gather-here" {
+		t.Fatalf("chopped in the village: got %s, want cannot-gather-here", got)
 	}
 	// The tool must suit the target.
 	if x.opRefreshing(c, &s, "gather", gatherIn(s, "outdoors", here, axe, "break", "tree", "v1"), 409).Error.Code != "wrong-tool" {

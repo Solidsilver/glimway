@@ -63,7 +63,7 @@ func TestHeirloomBrackFellingAxe(t *testing.T) {
 
 	// Proximity check: condition met, but player is far away in Village
 	farDoc := conditionMetDoc
-	farDoc.Area = "village"
+	farDoc.Area = "in:village:library"
 	farDoc.Position = rules.Position{X: 100, Y: 100}
 	badFar := x.items("POST", "/api/items/heirloom", body(s, "axe-far", map[string]any{
 		"itemDef":  "brack-felling-axe",
@@ -416,7 +416,8 @@ func TestHeirloomNansLamplighterPole(t *testing.T) {
 
 	// Proximity check: condition met, but player is in village
 	villageDoc := conditionDoc
-	villageDoc.Area = "village"
+	villageDoc.Area = "in:village:library"
+	villageDoc.Position = rules.Position{X: 80, Y: 80}
 	badFar := x.items("POST", "/api/items/heirloom", body(s, "pole-far", map[string]any{
 		"itemDef":  "nans-lamplighter-pole",
 		"progress": villageDoc,

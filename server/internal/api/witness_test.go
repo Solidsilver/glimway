@@ -28,7 +28,7 @@ func (w *wsClient) witness() witnessed {
 func (x *rig) quest(c *http.Cookie, s *response, to, area string) {
 	x.t.Helper()
 	doc := s.State
-	if area == "village" || area == "hearthwick" {
+	if area == "in:village:library" || area == "hearthwick" {
 		doc.Area, doc.Position = rules.TownAnchor("spawn")
 	} else {
 		doc.Area = area
@@ -89,7 +89,7 @@ func TestWitnessRelayedFromTheBeatToThoseNearby(t *testing.T) {
 	// Olive speaks the naming in the ruin: Bob was there; Cal stood too far
 	// off, Eve was in the woods, and Dee's ruin is another world's.
 	doc := o.State
-	x.quest(oc, &o, "accepted", "village")
+	x.quest(oc, &o, "accepted", "in:village:library")
 	doc.Area, doc.Quest = "ruin", "clue-found"
 	x.quest(oc, &o, doc.Quest, doc.Area)
 	bob.none()
@@ -157,7 +157,7 @@ func TestWitnessEchoAndOnlyLiveMoments(t *testing.T) {
 	}
 	x.api.presenceWitness(o.WorldID, o.AccountID, "Renamed", "outdoors", "echo:nan")
 	bob.none()
-	x.api.presenceWitness(o.WorldID, o.AccountID, o.DisplayName, "village", "echo:tam")
+	x.api.presenceWitness(o.WorldID, o.AccountID, o.DisplayName, "in:village:library", "echo:tam")
 	bob.none()
 	if got := x.expect("GET", "/api/state", nil, bc, 200); got.Version != recorded.Version {
 		t.Fatal("repeat bumped witness")

@@ -1,3 +1,6 @@
+import { roomFor } from '../src/lib/rooms.ts';
+import { fixedStand, fixedSolidAt } from '../src/game/wilds/fixed.ts';
+import { serveFixtureCommons } from './commons-fixture.ts';
 import { designedRule } from '../scripts/lib/paper-rules.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -170,10 +173,11 @@ test('every placed paper lies on a walkable, reachable tile off exits and away f
 });
 
 test('the library door is in the village and can be walked up to', () => {
-  const w = worlds.village;
-  assert.ok(w.library, 'village has a library');
-  const below = { tx: w.library!.tx, ty: w.library!.ty + 1 };
-  assert.ok(reachable(w).has(key(below)), 'the tile in front of the door is reachable');
+  serveFixtureCommons();
+  const door = roomFor('in:village:library')!.doors.find((d) => d.outside)!.outside!;
+  const below = { tx: door.tx, ty: door.ty + 1 };
+  assert.deepEqual(fixedStand(below.tx, below.ty), below, 'library doorstep belongs to served reachable ground');
+  assert.equal(fixedSolidAt(below.tx, below.ty), false);
   assert.ok(!worlds.woodland.library && !worlds.ruin.library);
 });
 

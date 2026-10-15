@@ -19,7 +19,7 @@ test('quest glims light a road lantern; the chest says what it needs', async ({ 
   // can outlast the default timeout.
   test.slow()
   await freshPlayer(page)
-  await warp(page, 'village', 16, 14)
+  await warp(page, 'outdoors', 14, 62)
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)
   await talkThrough(page, /Copy the naming from the stone/)
@@ -42,7 +42,7 @@ test('quest glims light a road lantern; the chest says what it needs', async ({ 
   await warp(page, 'ruin', 17, 12)
   await talkThrough(page, /Light the lantern/)
   await expectStage(page, 'lantern-lit')
-  await warp(page, 'village', 16, 14)
+  await warp(page, 'outdoors', 14, 62)
   await talkThrough(page, /Talk to Mara/)
   await expectStage(page, 'complete')
   await page.getByRole('button', { name: 'Keep exploring' }).click()
@@ -64,7 +64,7 @@ test('a warm rest spends glims from the world, and Habitica syncs bring them', a
 
   // Get hurt, then rest by the village lantern.
   await page.evaluate(() => (window as unknown as { __fsDevHurt: (n: number) => void }).__fsDevHurt(6))
-  await warp(page, 'village', 11, 13)
+  await warp(page, 'outdoors', 10, 61)
   await openTalk(page, 'Rest by the lantern')
   await untilChoices(page)
   const choice = page.locator('.choice', { hasText: 'Rest by the flame' })

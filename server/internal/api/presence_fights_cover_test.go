@@ -219,15 +219,15 @@ func TestFightWakeRescansWhenPeerMovedMeanwhile(t *testing.T) {
 func TestFixturePeersKeepWorldIndex(t *testing.T) {
 	t.Run("replace_world", func(t *testing.T) {
 		x := newRig(t)
-		x.stand("fixture-peer", "old-world", "village", 10, 10)
-		x.stand("fixture-peer", "new-world", "village", 10, 10)
+		x.stand("fixture-peer", "old-world", "in:village:library", 10, 10)
+		x.stand("fixture-peer", "new-world", "in:village:library", 10, 10)
 		if x.api.presence.worlds["old-world"]["fixture-peer"] != nil {
 			t.Fatal("stand left the replaced peer in its old world's index")
 		}
 	})
 	t.Run("remove", func(t *testing.T) {
 		x := newRig(t)
-		x.stand("fixture-peer", "world", "village", 10, 10)
+		x.stand("fixture-peer", "world", "in:village:library", 10, 10)
 		x.stand("fixture-peer", "world", "", 0, 0)
 		if x.api.presence.worlds["world"]["fixture-peer"] != nil {
 			t.Fatal("stand removed the peer but kept it indexed")

@@ -105,7 +105,7 @@ func TestPresenceBinaryRejectsMalformedFrames(t *testing.T) {
 		{"unknown-nested", websocket.MessageBinary, []byte{0x2a, 2, 0x78, 1}, websocket.StatusPolicyViolation},
 	}
 	for name, payload := range map[string]proto.Message{
-		"server-join-player":  &contract.PresenceJoin{Area: "village", Player: &contract.PresencePlayer{AccountId: "bob"}},
+		"server-join-player":  &contract.PresenceJoin{Area: "in:village:library", Player: &contract.PresencePlayer{AccountId: "bob"}},
 		"server-position-id":  &contract.PresencePosition{AccountId: proto.String("bob"), X: proto.Float64(0), Y: proto.Float64(0), Facing: &contract.PresenceFacing{X: proto.Float64(0), Y: proto.Float64(1)}, Moving: proto.Bool(false)},
 		"server-emote-id":     &contract.PresenceEmote{Id: "wave", AccountId: proto.String("bob")},
 		"server-ready":        &contract.PresenceReady{AccountId: "bob"},
@@ -128,7 +128,7 @@ func TestPresenceBinaryRejectsMalformedFrames(t *testing.T) {
 			c, s := x.ready("alice")
 			ts := startPresence(t, x, presenceTestConfig())
 			w := wsBinaryConnect(t, ts, c, s.Lease)
-			w.join("village")
+			w.join("in:village:library")
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 			defer cancel()
 			if err := w.conn.Write(ctx, tt.typ, tt.bytes); err != nil {

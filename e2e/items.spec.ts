@@ -95,7 +95,7 @@ test('a bench axe wears to nothing and breaks; an heirloom blunts, and Silas men
   // mends it for glims while you talk; the materials stay in the pack.
   seedGlims(id, 4)
   await setHour(page, { minute: 10, server: true })
-  await go(page, 'commons', 48, 21)
+  await go(page, 'outdoors', 29, 37)
   await openInventory(page, /Tools/)
   await pick(page, `inst:${brack}`)
   await brackRow.getByRole('button', { name: 'Mend…' }).click()
@@ -158,7 +158,7 @@ test('a twist mends you; the fox goes in a pocket, and the lantern rides in the 
 
 test('things lying in the world can be picked up, once', { tag: '@smoke' }, async ({ page }) => {
   await freshPlayer(page, 'Moss')
-  await go(page, 'village', 10, 10)
+  await go(page, 'outdoors', 9, 58)
   await expect.poll(() => page.evaluate(() => (window as unknown as { __fsPickups: () => string[] }).__fsPickups())).toContain('well-rope-coil')
   await expect(page.locator('.prompt')).toContainText('Pick up the coil of rope')
   if (process.env.SCREENS) await page.waitForTimeout(2500) // the area title fades
@@ -222,8 +222,8 @@ test('standing together, one player hands another something they made', async ({
   fund(ash, { items: { 'lamp-wick': 2 }, maker: ash })
   const glove = 'work-glove'
   fund(ash, { items: { [glove]: 1 } })
-  await go(page, 'commons', 30, 24)
-  await go(other, 'commons', 31, 24)
+  await go(page, 'outdoors', -11, 78)
+  await go(other, 'outdoors', -10, 78)
   const remotes = (p: Page) => p.evaluate(() => ((window as unknown as { __fsRemote?: () => { name: string }[] }).__fsRemote?.() ?? []).map((r) => r.name))
   await expect.poll(() => remotes(page), { timeout: 15_000 }).toEqual(['Rowan'])
   await expect.poll(() => remotes(other), { timeout: 15_000 }).toEqual(['Ash'])
@@ -248,10 +248,10 @@ test('standing together, one player hands another something they made', async ({
   await closeInventory(other)
 
   // Apart, nobody is offered.
-  await go(other, 'village', 20, 20)
-  // Rowan's page, still in front, joins the village room (a join waits out its cooldown).
+  await go(other, 'outdoors', 34, 35)
+  // Rowan's page, still in front, joins the other chunk's room (a join waits out its cooldown).
   const presenceArea = (p: Page) => p.evaluate(() => (window as unknown as { __fsPresence?: () => { area: string | null } }).__fsPresence?.()?.area ?? null)
-  await expect.poll(() => presenceArea(other), { timeout: 15_000 }).toBe('village')
+  await expect.poll(() => presenceArea(other), { timeout: 15_000 }).toBe('outdoors:1:1')
   await page.bringToFront()
   await closeInventory(page)
   await expect.poll(() => remotes(page), { timeout: 15_000 }).toEqual([])

@@ -47,7 +47,7 @@ test('a hero without a class fights with what’s in hand: no ✦, the finger-wi
   await page.screenshot({ path: 'test-results/abilities-classless-wisp.png' })
 
   // The Warden: blows only clink; the naming settles it, through the action button.
-  await warp(page, 'village', 16, 14)
+  await warp(page, 'outdoors', 14, 62)
   await talkThrough(page, /Talk to Mara/)
   await warp(page, 'ruin', 15, 3)
   await talkThrough(page, /Copy the naming from the stone/)
@@ -99,7 +99,7 @@ test('a level-20 mage casts Kindle on R: a patch ahead, its own cooldown, and th
   expect((await moves(page)).patches.length).toBe(1)
 
   // Arriving somewhere else reports at once (mana returns 5 a second, so sooner is clearer).
-  await warp(page, 'village', 16, 18)
+  await warp(page, 'outdoors', 16, 66)
   const sent = await report
   const body = sent.postDataJSON()
   const seconds = (Date.now() - castAt) / 1000
@@ -114,7 +114,7 @@ test('a friend’s Ward-light, as the hub relays it, mends the hero inside its c
   test.setTimeout(60_000)
   // The default hero comes in at 41 of 50 health.
   await freshPlayer(page, 'Rowan')
-  await warp(page, 'village', 16, 18)
+  await warp(page, 'outdoors', 16, 66)
   await waitForLive(page)
   const hero = () => page.evaluate(() => (window as unknown as { __fsPlayer: () => { x: number; y: number } }).__fsPlayer())
   const before = await hp(page)
@@ -140,7 +140,7 @@ test('a friend’s Ward-light, as the hub relays it, mends the hero inside its c
 test('a friend’s Stand, Kindle and Echo, as the hub relays them, are drawn where they name, and go when they end', async ({ page }) => {
   test.setTimeout(60_000)
   await freshPlayer(page, 'Rowan')
-  await warp(page, 'village', 16, 18)
+  await warp(page, 'outdoors', 16, 66)
   await waitForLive(page)
   const at = await page.evaluate(() => (window as unknown as { __fsPlayer: () => { x: number; y: number } }).__fsPlayer())
   const casts = [
@@ -180,8 +180,8 @@ test('two players: one Ward-light, and the other’s health rises with its pulse
   await pasteAndConnect(other, rowan, { invite: invite.code })
   await waitForWorld(other)
 
-  await warp(page, 'village', 16, 18)
-  await warp(other, 'village', 16, 18)
+  await warp(page, 'outdoors', 16, 66)
+  await warp(other, 'outdoors', 16, 66)
   const remotes = (p: Page) => p.evaluate(() => ((window as unknown as { __fsRemote?: () => { name: string }[] }).__fsRemote?.() ?? []).map((r) => r.name))
   await expect.poll(() => remotes(page), { timeout: 15_000 }).toEqual(['Rowan'])
   await expect.poll(() => remotes(other), { timeout: 15_000 }).toEqual(['Ash'])

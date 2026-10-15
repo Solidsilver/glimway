@@ -159,7 +159,7 @@
       "area": "village",
       "x": 552,
       "y": 1160,
-      "rest": "village",
+      "rest": "none",
       "target": "pond-ice",
       "gather": false,
       "fish": false,
@@ -170,11 +170,11 @@
       "area": "home:0",
       "x": 184,
       "y": 136,
-      "rest": "home",
+      "rest": "none",
       "target": "tree",
-      "gather": true,
+      "gather": false,
       "fish": false,
-      "gatherArea": true
+      "gatherArea": false
     },
     {
       "name": "inside cottage",

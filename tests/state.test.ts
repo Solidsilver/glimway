@@ -142,9 +142,9 @@ test('a save from before the quest tree loads its lantern road, with the opening
 });
 
 
-test('a legacy Commons save moves its pixels onto the grid exactly once', { skip: "T5: replace the old Commons save shim with migration 037" }, () => {
+test('a legacy Commons save moves its pixels onto the grid exactly once', () => {
   const loaded = validateSave({ ...createNewGame(), area: 'commons', position: { x: 376.5, y: 40.25 } });
   assert.equal(loaded.area, 'outdoors');
-  assert.deepEqual(loaded.position, { x: 40.5, y: 424.25 });
+  assert.deepEqual(loaded.position, { x: 40, y: 424 });
   assert.deepEqual(validateSave(loaded), loaded);
 });

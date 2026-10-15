@@ -162,9 +162,6 @@ export function gateTile(gate: number, _data: HomesteadData = HOMESTEAD_DATA): {
 }
 
 /** The area id of gate g's homestead map. */
-export function homeArea(gate: number): string {
-  return `home:${gate}`;
-}
 
 /** Gate number of a `home:<g>` area id (null for anything else). */
 export function parseHomeArea(area: string): number | null {

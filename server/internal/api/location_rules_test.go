@@ -14,18 +14,18 @@ func TestOutdoorsPresenceV4Grammar(t *testing.T) {
 	if presenceProtocol != "glimway.presence.v4" {
 		t.Fatal(presenceProtocol)
 	}
-	for _, room := range []string{"outdoors:0:0", "outdoors:-1:-1", "outdoors:-1:1", "outdoors:1:2", "home:0", "in:commons:yard"} {
+	for _, room := range []string{"outdoors:0:0", "outdoors:-1:-1", "outdoors:-1:1", "outdoors:1:2", "in:home:0", "in:commons:yard"} {
 		if !validPresenceRoom(room) {
 			t.Error("refused", room)
 		}
 	}
-	for _, room := range []string{"wilds", "wilds:0:0", "outdoors", "outdoors:00:0", "outdoors:-0:0", "outdoors:+1:0", "outdoors:5:4", "outdoors:5:0", "outdoors:0:0:0", "commons"} {
+	for _, room := range []string{"wilds", "wilds:0:0", "outdoors", "outdoors:00:0", "outdoors:-0:0", "outdoors:+1:0", "outdoors:5:4", "outdoors:5:0", "outdoors:0:0:0", "commons", "home:0", "village"} {
 		if validPresenceRoom(room) {
 			t.Error("accepted", room)
 		}
 	}
 	// The Commons is outdoors (S5): no saved area or room of its own.
-	if validArea("wilds") || !validArea("outdoors") || validArea("commons") || !validArea("in:commons:yard") {
+	if validArea("wilds") || !validArea("outdoors") || validArea("commons") || validArea("home:0") || validArea("village") || !validArea("in:commons:yard") {
 		t.Fatal("saved-space grammar")
 	}
 }
@@ -41,8 +41,8 @@ func TestLocationRulesAtSeam(t *testing.T) {
 		{"outdoors", 40, 392, true, false, "hearthwick"},
 		{"outdoors", 40, 376, false, true, "tangle"},
 		{"outdoors", 40, -1200, false, true, "whitequiet"},
-		{"village", 400, 300, true, false, "village"},
-		{"home:0", 40, 40, true, false, "home:0"},
+		{"in:village:library", 400, 300, true, false, "in:village:library"},
+		{"outdoors", -968, 520, true, false, "lot:0"},
 		{"in:commons:yard", 40, 40, true, false, "in:commons:yard"},
 		{"wilds", 40, 376, false, false, "wilds"},
 	} {

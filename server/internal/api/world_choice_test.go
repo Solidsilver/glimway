@@ -129,12 +129,12 @@ func TestWorldChoiceOwnWorldThenMoveLater(t *testing.T) {
 	}
 	// Reversible through the move, and the cooldown counts from that move.
 	r := x.expect("POST", "/api/play", map[string]any{"clientId": "tab-a"}, c, 200)
-	moved := x.worldReq("POST", "/api/world/move", moveBody(r, "join", pw, "village"), c, 200)
+	moved := x.worldReq("POST", "/api/world/move", moveBody(r, "join", pw, "in:village:library"), c, 200)
 	if moved.Result.World.World.ID != pw || x.worldOf("rue") != pw {
 		t.Fatal("moved", moved.raw)
 	}
 	r.Snapshot = moved.Snapshot
-	if st, _, e, _ := x.request("POST", "/api/world/move", moveBody(r, "back", s.WorldID, "village"), c); st != 409 || e != "move-cooldown" {
+	if st, _, e, _ := x.request("POST", "/api/world/move", moveBody(r, "back", s.WorldID, "in:village:library"), c); st != 409 || e != "move-cooldown" {
 		t.Fatal("cooldown", st, e)
 	}
 }

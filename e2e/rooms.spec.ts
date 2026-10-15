@@ -34,7 +34,7 @@ async function refuseReportFrom(page: Page, area: string): Promise<void> {
     // A moment later than a world would answer, so the room is seen to settle first.
     await new Promise((r) => setTimeout(r, 1500))
     const { state } = await (await page.request.get('/api/state', CONTRACT)).json()
-    state.place = { ...state.place, area: 'village', x: 7 * 16 + 8, y: 8 * 16 + 8 }
+    state.place = { ...state.place, area: 'outdoors', x: -11 * 16 + 8, y: 59 * 16 + 8 }
     await route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ error: { code: 'invalid-position' }, state }) })
   })
 }
@@ -46,7 +46,7 @@ const npc = (page: Page, id: string) => page.evaluate((who) => (window as unknow
 async function walkOut(page: Page): Promise<void> {
   await waitForLive(page)
   await page.keyboard.down('ArrowDown')
-  await settled(page, { area: 'village' })
+  await settled(page, { area: 'outdoors' })
   await page.keyboard.up('ArrowDown')
 }
 
@@ -122,7 +122,7 @@ test('a resident at the change of the hour: Hazel walks out of her kitchen, and 
   await walkOut(page)
   await expect.poll(async () => (await npc(page, 'hazel'))?.present).toBe(true)
   expect((await roomView(page)).houses.find((h) => h.room === 'in:village:bakery')).toMatchObject({ window: false, smoke: false })
-  await warp(page, 'village', ...DOORSTEP['in:village:bakery'])
+  await warp(page, 'outdoors', ...DOORSTEP['in:village:bakery'])
   await expect(page.locator('.prompt')).toContainText(/Knock at Hazel.s kitchen/)
   await waitForLive(page)
   await page.keyboard.press('e')
@@ -160,7 +160,7 @@ test('two players in one room see each other, and the room is left behind on the
   await shot(page, 'room-mill-two-players')
   // Out in the village, the mill's room is left behind.
   await walkOut(other)
-  await waitForArea(other, 'village')
+  await waitForArea(other, 'outdoors')
   await expect.poll(async () => (await presence(page)).peers.length, { timeout: 20_000 }).toBe(0)
   await ctx.close()
 })
@@ -171,13 +171,13 @@ test('a room place the world refuses: the hero is put back where the world says,
   await refuseReportFrom(page, 'in:village:bakery')
   await goIn(page, 'in:village:bakery')
   // The arrival's report is refused: back outside, by the world's place (where the server holds the hero).
-  await settled(page, { area: 'village' })
+  await settled(page, { area: 'outdoors' })
   const at = await player(page)
-  expect(Math.hypot(at.x - (7 * 16 + 8), at.y - (8 * 16 + 8)), 'on the place the world said').toBeLessThan(24)
+  expect(Math.hypot(at.x - (-11 * 16 + 8), at.y - (59 * 16 + 8)), 'on the place the world said').toBeLessThan(24)
   // The next report names that place, so the world holds it, and a reload starts there.
   await page.unroute('**/api/report')
-  await expect.poll(async () => (await serverState(page)).body.state.area, { timeout: 20_000 }).toBe('village')
-  await reenter(page, 'village')
+  await expect.poll(async () => (await serverState(page)).body.state.area, { timeout: 20_000 }).toBe('outdoors')
+  await reenter(page, 'outdoors')
 })
 
 test('on a phone the whole room is in view, all four walls; standing at the hearth warms you', async ({ browser, baseURL }) => {
@@ -199,8 +199,8 @@ test('on a phone the whole room is in view, all four walls; standing at the hear
     expect(box.tl.y, `${r.id}: the back wall`).toBeGreaterThanOrEqual(0)
     expect(box.br.x, `${r.id}: the east wall`).toBeLessThanOrEqual(390)
     expect(box.br.y, `${r.id}: the near wall`).toBeLessThanOrEqual(844)
-    await page.evaluate(() => (window as unknown as { __fsDevWarp: (a: string, x: number, y: number) => void }).__fsDevWarp('village', 8, 10))
-    await settled(page, { area: 'village' })
+    await page.evaluate(() => (window as unknown as { __fsDevWarp: (a: string, x: number, y: number) => void }).__fsDevWarp('outdoors', 4, 60))
+    await settled(page, { area: 'outdoors' })
   }
   // The kitchen's oven: standing on its apron, the seated bonus without a seat.
   await goIn(page, 'in:village:bakery', { touch: true })

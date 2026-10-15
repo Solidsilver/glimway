@@ -164,7 +164,7 @@ test('journal and dialogue are pure (no shared mutable arrays)', () => {
 });
 
 test('locations cover the three quest areas and the Commons, with names and descriptions', () => {
-  assert.deepEqual(Object.keys(locations).sort(), ['commons', 'ruin', 'village', 'woodland']);
+  assert.deepEqual(Object.keys(locations).sort(), ['hearthwick', 'outdoors', 'ruin', 'woodland']);
   for (const [area, info] of Object.entries(locations)) {
     assert.ok(info.name.length > 0, `${area} needs a name`);
     assert.ok(info.description.length > 30, `${area} description too short`);

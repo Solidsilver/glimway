@@ -144,5 +144,11 @@
   {
     "name": "036_outdoors.sql",
     "sha256": "45af553fb7b6450c3848cad3d451a1897ba1e804c26ab28dee8a1b5bf7e20b57"
+  },
+  {
+    "name": "037_one_town.sql",
+    "sha256": "e09292da3b1405318772353448897f5c4dcbfbb0c1b0824c1c40f813172e7a0a",
+    "backfill": "migration_037_backfill.go",
+    "backfillSha256": "4a63eb0cd95fe8995482e79e9e7b92a8532239d0a2636e88297732194645cf3f"
   }
 ]

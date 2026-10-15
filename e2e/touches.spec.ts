@@ -22,13 +22,16 @@ test('the bench seats the hero, mana comes back, movement stands up', async ({ p
   // A level-10 warrior: Cleave on F spends the mana (the default level-2 hero has no moves yet).
   await freshPlayer(page, 'Tansy', undefined, { lvl: 10 })
 
-  // Spend some mana first, so the seated regen has something to fill.
-  await warp(page, 'village', 9, 14)
+  // Spend some mana first in the woods, so the seated regen has something to fill.
+  await warp(page, 'woodland', 15, 20)
   await waitForLive(page)
   const manaNow = async () => Number((await manaMeter(page).getAttribute('aria-valuenow')) ?? NaN)
   const before = await manaNow()
   await page.keyboard.press('f')
   await expect.poll(manaNow).toBeLessThan(before)
+
+  await warp(page, 'outdoors', 8, 62)
+  await waitForLive(page)
 
   await expect(page.locator('.prompt')).toContainText('Sit on the bench')
   await page.keyboard.press('e')
@@ -49,7 +52,7 @@ test('the bench seats the hero, mana comes back, movement stands up', async ({ p
 
 test('smelling the flowers says something different each time', async ({ page }) => {
   await freshPlayer(page)
-  await warp(page, 'village', 22, 8) // the planter by the lane
+  await warp(page, 'outdoors', 22, 56) // the planter by the lane
   await expect(page.locator('.prompt')).toContainText('Smell the flowers')
 
   const before = await toastCount(page)
@@ -68,7 +71,7 @@ test('smelling the flowers says something different each time', async ({ page })
 
 test('reading the signpost opens a conversation and closes it', async ({ page }) => {
   await freshPlayer(page)
-  await warp(page, 'village', 15, 12) // the signpost by the square
+  await warp(page, 'outdoors', 15, 60) // the signpost by the square
   await expect(page.locator('.prompt')).toContainText('Read the signpost')
   await page.keyboard.press('e')
   const dialogue = page.getByRole('dialog', { name: /Conversation with/ })
@@ -85,8 +88,8 @@ test.describe('phone', () => {
 
   test('the touch action button sits you down and stands you up', async ({ page }) => {
     await freshPlayer(page)
-    await waitForArea(page, 'village')
-    await warp(page, 'village', 9, 14)
+    await waitForArea(page, 'outdoors')
+    await warp(page, 'outdoors', 8, 62)
 
     const act = page.locator('.controls .act')
     await expect(act).toHaveAttribute('aria-label', 'Sit on the bench')
@@ -101,8 +104,8 @@ test.describe('phone', () => {
 
   test('smelling the planter works from the action button', async ({ page }) => {
     await freshPlayer(page)
-    await waitForArea(page, 'village')
-    await warp(page, 'village', 22, 8)
+    await waitForArea(page, 'outdoors')
+    await warp(page, 'outdoors', 22, 56)
     const act = page.locator('.controls .act')
     await expect(act).toHaveAttribute('aria-label', 'Smell the flowers')
     await act.tap()
@@ -129,7 +132,7 @@ test.describe('screens (SCREENS=1)', () => {
 
   test('sitting on the bench, and a flower line', async ({ page }) => {
     await freshPlayer(page)
-    await warp(page, 'village', 9, 14)
+    await warp(page, 'outdoors', 8, 62)
     await expect(page.locator('.prompt')).toContainText('Sit on the bench')
     await page.keyboard.press('e')
     await expect.poll(async () => (await seat(page))?.seated).toBe(true)
@@ -137,7 +140,7 @@ test.describe('screens (SCREENS=1)', () => {
     await expect.poll(async () => SIT_LINES.includes((await thought(page)) ?? '')).toBe(true)
     await shot(page, 'touch-sit')
 
-    await warp(page, 'village', 22, 8)
+    await warp(page, 'outdoors', 22, 56)
     await expect(page.locator('.prompt')).toContainText('Smell the flowers')
     await page.keyboard.press('e')
     await expect.poll(async () => FLOWER_LINES.includes((await thought(page)) ?? '')).toBe(true)

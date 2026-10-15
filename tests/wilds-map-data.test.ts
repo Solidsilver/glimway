@@ -13,6 +13,9 @@ import { fromJson, type JsonValue } from '@bufbuild/protobuf';
 
 const { WildsNearResultSchema } = await import('../src/lib/gen/glimway/v1/wilds_pb.js');
 const store = await import('../src/game/wilds/store.ts');
+const { forgetFixed } = await import('../src/game/wilds/fixed.ts');
+const { decodeChunk } = await import('../src/lib/api/chunks.ts');
+const { lotAt } = await import('../src/lib/lots.ts');
 const { forgetChunks } = await import('../src/game/wilds/chunks.ts');
 const { loadMap, forgetMapData, forgetMapRead, MAP_LOAD_CONCURRENCY } = await import('../src/game/wilds/map-data.ts');
 const { forgetWalked, markWalked } = await import('../src/game/wilds/walked.ts');
@@ -25,6 +28,7 @@ const WICK = NEAR.wick.id as string;
 function start(edit: (j: Record<string, any>) => void = () => {}): void {
   store.resetWilds({ quiet: true });
   forgetChunks();
+  forgetFixed();
   forgetMapData();
   forgetMapRead();
   forgetWalked();
@@ -51,7 +55,7 @@ function chunkApi(o: { fail?: (cx: number, cy: number) => boolean } = {}) {
       await new Promise((r) => setTimeout(r, 2));
       c.running--;
       if (o.fail?.(cx, cy)) throw new Error('no chunk');
-      const m = chunkAt('whitequiet-0-5', cx, cy);
+      const m = epoch.startsWith('fixed:') ? decodeChunk(readFileSync(new URL(`./fixtures/hearthwick-${cx}-${cy}.bin`, import.meta.url))) : epoch.startsWith('plot:') ? decodeChunk(readFileSync(new URL(`./fixtures/plot-${lotAt(cx, cy)}.bin`, import.meta.url))) : chunkAt('whitequiet-0-5', cx, cy);
       m.epochId = epoch;
       return m;
     },
@@ -60,7 +64,7 @@ function chunkApi(o: { fail?: (cx: number, cy: number) => boolean } = {}) {
 }
 
 const session = (api: unknown, o: { online?: boolean; world?: string; area?: string } = {}) =>
-  ({ state: { area: o.area ?? 'village' }, link: { online: o.online ?? true, status: (o.online ?? true) ? 'online' : 'offline', worldId: o.world ?? 'world-a', api: { operations: api } } }) as never;
+  ({ state: { area: o.area ?? 'outdoors', position: { x: 72, y: 968 } }, link: { online: o.online ?? true, status: (o.online ?? true) ? 'online' : 'offline', worldId: o.world ?? 'world-a', api: { operations: api } } }) as never;
 
 /** Walk a block of Beyond chunks this wick. */
 function walk(n: number): void {
@@ -77,7 +81,7 @@ test('a guest or an unread session gets the shell and a reason, not a map', asyn
   assert.equal(got.offline, true);
 });
 
-test('chunks load at most eight at a time, and an unchanged chunk is the same picture next time', { skip: "T5: map fixture must include the town and eight lots" }, async () => {
+test('chunks load at most eight at a time, and an unchanged chunk is the same picture next time', async () => {
   start();
   walk(30);
   const { api, c } = chunkApi();
@@ -181,7 +185,7 @@ function heldApi() {
     chunk: async (epoch: string, _l: number, cx: number, cy: number) => {
       c.asked++;
       await gate;
-      const m = chunkAt('whitequiet-0-5', cx, cy);
+      const m = epoch.startsWith('fixed:') ? decodeChunk(readFileSync(new URL(`./fixtures/hearthwick-${cx}-${cy}.bin`, import.meta.url))) : epoch.startsWith('plot:') ? decodeChunk(readFileSync(new URL(`./fixtures/plot-${lotAt(cx, cy)}.bin`, import.meta.url))) : chunkAt('whitequiet-0-5', cx, cy);
       m.epochId = epoch;
       return m;
     },
@@ -251,3 +255,15 @@ test('a turning during a load (the map closed and opened again on the new wick) 
   assert.equal(again.input!.chunks.length, n);
   for (const ch of again.input!.chunks) assert.doesNotMatch(ch.rev!, new RegExp(WICK));
 });
+
+test('indoor hero map-dot resolves to the exterior door on hearthwick or lot doorstep', async () => {
+  const { mapHeroTile } = await import('../src/game/wilds/map-data.ts');
+  assert.deepEqual(mapHeroTile('in:home:0'), { tx: -61, ty: 32 });
+  assert.deepEqual(mapHeroTile('in:village:bakery'), { tx: -11, ty: 58 });
+  assert.deepEqual(mapHeroTile('in:village:mill'), { tx: 29, ty: 76 });
+  assert.deepEqual(mapHeroTile('in:village:mill:2'), { tx: 29, ty: 76 }, 'nested mill loft resolves through ground mill');
+  assert.deepEqual(mapHeroTile('in:commons:yard:deeds'), { tx: 34, ty: 34 }, 'nested deeds office resolves through yard');
+  assert.deepEqual(mapHeroTile('outdoors', { x: 64, y: 32 }), { tx: 4, ty: 2 });
+  assert.equal(mapHeroTile('unknown-area'), null);
+});
+
