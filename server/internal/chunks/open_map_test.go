@@ -1,6 +1,7 @@
 package chunks_test
 
 import (
+	"fmt"
 	"testing"
 
 	"glimway/server/internal/chunks"
@@ -141,7 +142,12 @@ func TestFakeRumourIsAPlace(t *testing.T) {
 	if _, ok, _ := g.Rumour(fakeEpoch("still")); ok {
 		t.Fatal("the still epoch has a rumour")
 	}
-	if len(fakegen.Cells()) != 13 {
+	// The cells whose middle chunk lies in the frontier, less the footprints'
+	// (the Tangle's, the Whitequiet's and the six the 5×4 fixed block
+	// touches). The block's columns at cx -2 and 2 move the frontier to cx
+	// -5..5, which leaves the middle chunks of cells x = ±2 (cx ±6) out.
+	want := [][2]int{{-1, -2}, {0, -2}, {1, -2}, {-1, -1}, {1, -1}, {-1, 0}, {1, 0}}
+	if fmt.Sprint(fakegen.Cells()) != fmt.Sprint(want) {
 		t.Fatal("place cells", fakegen.Cells())
 	}
 }

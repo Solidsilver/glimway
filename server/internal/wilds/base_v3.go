@@ -28,6 +28,8 @@ import (
 //  7. An edge gap, in the two edge tiles each side.
 //  8. The land's floor: solid where its thicketPermille says (woods: all),
 //     else open, by the world-coordinate land field, edge tiles included.
+//     Beside an open fixed edge, the soft band and the feather past it
+//     (seams.go) thin it.
 //     Among the edge tiles, open land that would be shut in is shut
 //     (edgeOpen), so neither chunk is left with open ground it may not
 //     carve to.
@@ -46,6 +48,7 @@ const (
 	bRoute
 	bBank
 	bGap
+	bSoft // the soft band beside an open fixed edge (seams.go)
 )
 
 type baseTile struct {
@@ -324,7 +327,22 @@ func (w *world) fillRaw(x0, y0, x1, y1 int, kept *keptReader) []baseTile {
 			}
 			t.kind = bField
 			t.ground = lg.floor
-			t.walk = !w.thicketAt(tx, ty, int(landData(land).GetThicketPermille()))
+			permille := int(landData(land).GetThicketPermille())
+			if s, ok := w.softAt(tx, ty); ok {
+				if s.depth == softDepth {
+					t.kind = bSoft
+					t.walk = !w.softSolid(s) || !w.thicketAt(tx, ty, permille)
+					if t.walk {
+						t.ground = lg.open
+					}
+					continue
+				}
+				if t.walk = !w.thicketAt(tx, ty, permille*featherPermille[s.depth-softDepth-1]/1000); t.walk {
+					t.ground = lg.open
+				}
+				continue
+			}
+			t.walk = !w.thicketAt(tx, ty, permille)
 		}
 	}
 	return out
