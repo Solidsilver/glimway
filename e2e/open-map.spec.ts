@@ -539,7 +539,15 @@ test('the Whitequiet’s motes drift with each outer chunk, stay through its sit
 
   // A paper found redraws every site layer (its key counts paper flags): the motes stay, nothing doubles.
   await page.evaluate(() => (window as unknown as { __fsDevAddFlag: (f: string) => void }).__fsDevAddFlag('paper:motes-test'))
-  const after = await steady(page, () => moteResources(page), { frames: 5, seconds: 20, message: 'Whitequiet scene counts after redraw' })
+  await frames(page, 5)
+  await expect.poll(async () => moteResources(page), {
+    timeout: 20_000,
+    message: 'Whitequiet scene counts settle after redraw'
+  }).toEqual({
+    motes: MOTES * outer.length,
+    tweens: before.tweens
+  })
+  const after = await moteResources(page)
   expect(after.motes, 'the motes survive the redraw').toBe(MOTES * outer.length)
   expect(after.tweens, 'and so do their tweens (no more, no fewer)').toBe(before.tweens)
 

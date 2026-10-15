@@ -1,6 +1,6 @@
 import { expect, test, type Page } from './fixtures'
 import { allow, CONTRACT, linkStatus, newUser, openTitleGuide, pasteAndConnect, routeHabitica, serverState, TOKEN, waitForWorld } from './connected'
-import { openTalk, talkThrough, untilChoices, warp, expectToast, atTile, standOf, talkSpotOf } from './helpers'
+import { openTalk, talkThrough, untilChoices, expectToast, atTile, standOf, talkSpotOf } from './helpers'
 
 /**
  * Layout checks and screenshots for the connected-play screens, at desktop

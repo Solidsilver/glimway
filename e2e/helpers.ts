@@ -1,6 +1,7 @@
 import { anchor } from '../src/lib/location.ts'
 import type { FsHooks } from '../src/game/dev-hooks.ts'
 import { expect, type Page } from '@playwright/test'
+import type { TilePoint } from './positions.ts'
 
 /**
  * Playtest helpers. Movement and interaction go through real keyboard input;

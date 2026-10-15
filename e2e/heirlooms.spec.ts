@@ -6,7 +6,6 @@ import {
   readDialogue,
   untilChoices,
   waitForLive,
-  warp,
   atTile,
   talkSpotOf
 } from './helpers'
