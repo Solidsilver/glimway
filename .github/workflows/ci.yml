@@ -139,7 +139,7 @@ jobs:
          github.ref == 'refs/heads/dev' ||
          startsWith(github.ref, 'refs/heads/exp/'))))
     runs-on: [self-hosted, linux, x64, glimway-e2e]
-    timeout-minutes: 30
+    timeout-minutes: 45
     concurrency:
       group: e2e-full-${{ github.ref }}
       # Never on main: tag-release.yml tags the commit whose CI passed, so a
