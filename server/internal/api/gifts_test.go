@@ -722,8 +722,8 @@ func TestGateShelfRemovalPresenceAfterTravellers(t *testing.T) {
 	item := x.decoration(x.account("alice"), "gate-shelf")
 	x.homeOpRefreshing(ac, &a, "place", map[string]any{"itemId": item, "scene": "gate"}, 200)
 	ox, oy := chunks.LotOrigin(h.Gate)
-	public := map[string]any{"area": "outdoors", "x": (ox+14)*16 + 8, "y": (oy+20)*16 + 18}
-	inside := map[string]any{"area": "outdoors", "x": (ox+12)*16 + 8, "y": (oy+19)*16 + 8}
+	public := map[string]any{"area": "outdoors", "x": (ox+25)*16 + 8, "y": (oy+14)*16 + 8}
+	inside := map[string]any{"area": "outdoors", "x": (ox+22)*16 + 8, "y": (oy+11)*16 + 8}
 	remove := func(where map[string]any, status int) expansionResponse {
 		return x.homeOpRefreshing(ac, &a, "remove", map[string]any{"itemId": item, "where": where}, status)
 	}

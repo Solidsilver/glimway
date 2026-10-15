@@ -422,7 +422,7 @@ export declare const HomeRectSchema: GenMessage<HomeRect, {validType: HomeRectVa
 
 /**
  * Every homestead's wild land: its size, the home site (camp/cottage), the
- * gate mouth on the south edge, the starting light, and how much of the
+ * shared path stem, the starting light, and how much of the
  * wild the generator scatters (server/internal/land).
  *
  * @generated from message glimway.content.v1.HomeLand
@@ -482,11 +482,16 @@ export declare type HomeLand = Message<"glimway.content.v1.HomeLand"> & {
    * @generated from field: int32 slope_permille = 11;
    */
   slopePermille: number;
+
+  /**
+   * @generated from field: map<string, glimway.content.v1.HomeLandSide> sides = 12;
+   */
+  sides: { [key: string]: HomeLandSide };
 };
 
 /**
  * Every homestead's wild land: its size, the home site (camp/cottage), the
- * gate mouth on the south edge, the starting light, and how much of the
+ * shared path stem, the starting light, and how much of the
  * wild the generator scatters (server/internal/land).
  *
  * @generated from message glimway.content.v1.HomeLand
@@ -546,6 +551,11 @@ export declare type HomeLandValid = Message<"glimway.content.v1.HomeLand"> & {
    * @generated from field: int32 slope_permille = 11;
    */
   slopePermille: number;
+
+  /**
+   * @generated from field: map<string, glimway.content.v1.HomeLandSide> sides = 12;
+   */
+  sides: { [key: string]: HomeLandSideValid };
 };
 
 /**
@@ -555,7 +565,47 @@ export declare type HomeLandValid = Message<"glimway.content.v1.HomeLand"> & {
 export declare const HomeLandSchema: GenMessage<HomeLand, {validType: HomeLandValid}>;
 
 /**
- * The gate mouth: a span of the south edge (its x and width in tiles).
+ * Ground and obstacle mix on either side of town. The home site never mirrors.
+ *
+ * @generated from message glimway.content.v1.HomeLandSide
+ */
+export declare type HomeLandSide = Message<"glimway.content.v1.HomeLandSide"> & {
+  /**
+   * @generated from field: string ground = 1;
+   */
+  ground: string;
+
+  /**
+   * @generated from field: int32 trees = 2;
+   */
+  trees: number;
+
+  /**
+   * @generated from field: int32 stumps = 3;
+   */
+  stumps: number;
+
+  /**
+   * @generated from field: int32 boulders = 4;
+   */
+  boulders: number;
+
+  /**
+   * @generated from field: int32 flowers = 5;
+   */
+  flowers: number;
+};
+
+export declare type HomeLandSideValid = HomeLandSide;
+
+/**
+ * Describes the message glimway.content.v1.HomeLandSide.
+ * Use `create(HomeLandSideSchema)` to create a new message.
+ */
+export declare const HomeLandSideSchema: GenMessage<HomeLandSide, {validType: HomeLandSideValid}>;
+
+/**
+ * The shared vertical path stem: x and width in lot-local tiles.
  *
  * @generated from message glimway.content.v1.HomeGate
  */
@@ -572,7 +622,7 @@ export declare type HomeGate = Message<"glimway.content.v1.HomeGate"> & {
 };
 
 /**
- * The gate mouth: a span of the south edge (its x and width in tiles).
+ * The shared vertical path stem: x and width in lot-local tiles.
  *
  * @generated from message glimway.content.v1.HomeGate
  */
@@ -695,7 +745,7 @@ export declare type HomeStartLightValid = Message<"glimway.content.v1.HomeStartL
 export declare const HomeStartLightSchema: GenMessage<HomeStartLight, {validType: HomeStartLightValid}>;
 
 /**
- * The homestead gates along the Commons lane (client tiles). Gate g is on
+ * The homestead gates in the block-local frame (world x+48, y-24). Gate g is on
  * side g%2 (fence column FenceX[side]) in row g/2: the listed rows, then
  * one more every RowPitch tiles. DeedTable is where a joint deed is
  * signed: Pell's table, in the deed office (a room's pixels, with the reach
@@ -741,7 +791,7 @@ export declare type CommonsLane = Message<"glimway.content.v1.CommonsLane"> & {
 };
 
 /**
- * The homestead gates along the Commons lane (client tiles). Gate g is on
+ * The homestead gates in the block-local frame (world x+48, y-24). Gate g is on
  * side g%2 (fence column FenceX[side]) in row g/2: the listed rows, then
  * one more every RowPitch tiles. DeedTable is where a joint deed is
  * signed: Pell's table, in the deed office (a room's pixels, with the reach

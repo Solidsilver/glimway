@@ -383,7 +383,7 @@ func (a *Server) stableExtend(w http.ResponseWriter, r *http.Request) error {
 				}
 			}
 		}
-		for _, v := range content.HomeRules.GetOutdoorReserved() {
+		for _, v := range content.HomeOutdoorReserved(h.Gate) {
 			if ext.overlaps(rect{int(v.GetX()), int(v.GetY()), int(v.GetW()), int(v.GetH())}) {
 				return nil, fail(409, "placement-overlap")
 			}

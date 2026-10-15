@@ -5,7 +5,7 @@
       "name": "Hearthwick",
       "kind": "layout",
       "layout": "hearthwick",
-      "revision": 1,
+      "revision": 2,
       "origin": {
         "tx": -24,
         "ty": 24
@@ -13,7 +13,7 @@
       "cx": -1,
       "cy": 1,
       "width": 3,
-      "height": 3,
+      "height": 4,
       "rules": {
         "safe": true,
         "ride": true,
@@ -24,10 +24,10 @@
         {
           "id": "town-walk",
           "place": "hearthwick",
-          "tx": 0,
-          "ty": 20,
-          "w": 69,
-          "h": 49,
+          "tx": 18,
+          "ty": 18,
+          "w": 38,
+          "h": 38,
           "rules": {
             "safe": true,
             "ride": false,
@@ -39,13 +39,13 @@
       "anchors": [
         {
           "id": "spawn",
-          "tx": 28,
+          "tx": 29,
           "ty": 36
         },
         {
           "id": "well",
-          "tx": 35,
-          "ty": 38
+          "tx": 33,
+          "ty": 41
         },
         {
           "id": "arch",
@@ -54,94 +54,104 @@
         },
         {
           "id": "east-road",
-          "tx": 66,
-          "ty": 38
+          "tx": 63,
+          "ty": 36
         },
         {
           "id": "south-gate",
-          "tx": 33,
-          "ty": 68
+          "tx": 36,
+          "ty": 92
         },
         {
-          "id": "west-gate",
-          "tx": 2,
-          "ty": 45
+          "id": "west-wildgate",
+          "tx": 1,
+          "ty": 47
+        },
+        {
+          "id": "east-wildgate",
+          "tx": 70,
+          "ty": 47
         },
         {
           "id": "bakery-door",
-          "tx": 13,
-          "ty": 35
+          "tx": 30,
+          "ty": 30
         },
         {
           "id": "library-door",
-          "tx": 13,
-          "ty": 53
+          "tx": 24,
+          "ty": 42
         },
         {
           "id": "yard-door",
-          "tx": 58,
-          "ty": 11
+          "tx": 10,
+          "ty": 80
         },
         {
           "id": "mill-door",
-          "tx": 53,
-          "ty": 53
+          "tx": 45,
+          "ty": 80
+        },
+        {
+          "id": "land-office-door",
+          "tx": 47,
+          "ty": 35
         },
         {
           "id": "lot:0",
-          "tx": -36,
-          "ty": 20
+          "tx": 1,
+          "ty": 11
         },
         {
           "id": "lot:1",
-          "tx": -12,
-          "ty": 20
+          "tx": 70,
+          "ty": 11
         },
         {
           "id": "lot:2",
-          "tx": -36,
-          "ty": 44
+          "tx": 1,
+          "ty": 35
         },
         {
           "id": "lot:3",
-          "tx": -12,
-          "ty": 44
+          "tx": 70,
+          "ty": 35
         },
         {
           "id": "lot:4",
-          "tx": -36,
-          "ty": 68
+          "tx": 1,
+          "ty": 59
         },
         {
           "id": "lot:5",
-          "tx": -12,
-          "ty": 68
+          "tx": 70,
+          "ty": 59
         },
         {
           "id": "lot:6",
-          "tx": -36,
-          "ty": 92
+          "tx": 1,
+          "ty": 83
         },
         {
           "id": "lot:7",
-          "tx": -12,
-          "ty": 92
+          "tx": 70,
+          "ty": 83
         }
       ]
     },
     {
-      "id": "homestead-lots",
-      "name": "Homestead Lane",
+      "id": "lots-west",
+      "name": "West Row",
       "kind": "plots",
-      "layout": "homestead-lots",
+      "layout": "lots-west",
       "revision": 3,
       "origin": {
-        "tx": -72,
+        "tx": -48,
         "ty": 24
       },
-      "cx": -3,
+      "cx": -2,
       "cy": 1,
-      "width": 2,
+      "width": 1,
       "height": 4,
       "rules": {
         "safe": true,
@@ -154,20 +164,6 @@
           "id": "lot-0",
           "place": "lot:0",
           "tx": 0,
-          "ty": 0,
-          "w": 24,
-          "h": 24,
-          "rules": {
-            "safe": true,
-            "ride": true,
-            "sync": true,
-            "rest": "home"
-          }
-        },
-        {
-          "id": "lot-1",
-          "place": "lot:1",
-          "tx": 24,
           "ty": 0,
           "w": 24,
           "h": 24,
@@ -193,37 +189,9 @@
           }
         },
         {
-          "id": "lot-3",
-          "place": "lot:3",
-          "tx": 24,
-          "ty": 24,
-          "w": 24,
-          "h": 24,
-          "rules": {
-            "safe": true,
-            "ride": true,
-            "sync": true,
-            "rest": "home"
-          }
-        },
-        {
           "id": "lot-4",
           "place": "lot:4",
           "tx": 0,
-          "ty": 48,
-          "w": 24,
-          "h": 24,
-          "rules": {
-            "safe": true,
-            "ride": true,
-            "sync": true,
-            "rest": "home"
-          }
-        },
-        {
-          "id": "lot-5",
-          "place": "lot:5",
-          "tx": 24,
           "ty": 48,
           "w": 24,
           "h": 24,
@@ -247,11 +215,77 @@
             "sync": true,
             "rest": "home"
           }
+        }
+      ],
+      "anchors": []
+    },
+    {
+      "id": "lots-east",
+      "name": "East Row",
+      "kind": "plots",
+      "layout": "lots-east",
+      "revision": 3,
+      "origin": {
+        "tx": 48,
+        "ty": 24
+      },
+      "cx": 2,
+      "cy": 1,
+      "width": 1,
+      "height": 4,
+      "rules": {
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "home"
+      },
+      "zones": [
+        {
+          "id": "lot-1",
+          "place": "lot:1",
+          "tx": 0,
+          "ty": 0,
+          "w": 24,
+          "h": 24,
+          "rules": {
+            "safe": true,
+            "ride": true,
+            "sync": true,
+            "rest": "home"
+          }
+        },
+        {
+          "id": "lot-3",
+          "place": "lot:3",
+          "tx": 0,
+          "ty": 24,
+          "w": 24,
+          "h": 24,
+          "rules": {
+            "safe": true,
+            "ride": true,
+            "sync": true,
+            "rest": "home"
+          }
+        },
+        {
+          "id": "lot-5",
+          "place": "lot:5",
+          "tx": 0,
+          "ty": 48,
+          "w": 24,
+          "h": 24,
+          "rules": {
+            "safe": true,
+            "ride": true,
+            "sync": true,
+            "rest": "home"
+          }
         },
         {
           "id": "lot-7",
           "place": "lot:7",
-          "tx": 24,
+          "tx": 0,
           "ty": 72,
           "w": 24,
           "h": 24,

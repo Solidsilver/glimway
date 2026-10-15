@@ -208,7 +208,7 @@ test('residents stand on open ground in their places, clear of the quest NPCs an
     assert.ok(Math.hypot(town.spawn.tx - n.tx, town.spawn.ty - n.ty) * TILE > 48, `${n.id} is clear of spawn`);
     for (const b of [...town.bushes, ...town.rocks]) assert.ok(b.tx !== n.tx || b.ty !== n.ty);
   }
-  assert.deepEqual(town.npcs.find((n) => n.id === 'ada'), { id: 'ada', tx: 32, ty: 55, spot: 'window' });
+  assert.deepEqual(town.npcs.find((n) => n.id === 'ada'), { id: 'ada', tx: -15, ty: 49, spot: 'window' });
   const elara = town.npcs.find((n) => n.id === 'elara')!;
   assert.deepEqual(elara, { id: 'elara', tx: 6, ty: 27, spot: 'camp' });
   assert.equal(town.solid[26][6], false, 'the pack can be reached from the west');
@@ -221,11 +221,11 @@ test('the Tolley mill sits on the pond’s edge, clear of the quest, the library
   const fp = footprint('hearthwick')!;
   const mill = [...fp.objects.values()].flat().find((o) => o.id === 'mill')!;
   for (let y = mill.ty - mill.th + 1; y <= mill.ty; y++) for (let x = mill.tx; x < mill.tx + mill.tw; x++) assert.ok(town.solid[y][x]);
-  assert.ok(([TERRAIN.water_a, TERRAIN.water_b] as number[]).includes(town.ground[76][33]), 'race beside the east wall');
-  assert.equal(town.solid[78][29], false, 'mill doorway approach is open');
-  const inMill = (p: { tx: number; ty: number }) => p.tx >= 27 && p.tx <= 32 && p.ty >= 72 && p.ty <= 77;
+  assert.ok(([TERRAIN.water_a, TERRAIN.water_b] as number[]).includes(town.ground[103][24]), 'race beside the east wall');
+  assert.equal(town.solid[105][21], false, 'mill doorway approach is open');
+  const inMill = (p: { tx: number; ty: number }) => p.tx >= 19 && p.tx <= 24 && p.ty >= 99 && p.ty <= 104;
   for (const n of town.npcs.filter((n) => n.id !== 'finn')) assert.ok(!inMill(n), n.id);
-  for (const p of [{ tx: -11, ty: 77 }, town.features.board, town.features.well, town.spawn]) assert.ok(!inMill(p));
+  for (const p of [{ tx: 0, ty: 66 }, town.features.board, town.features.well, town.spawn]) assert.ok(!inMill(p));
 
 });
 

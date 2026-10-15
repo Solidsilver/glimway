@@ -199,7 +199,7 @@ test('routines: every leg crosses open ground (no walls, props, trees or people)
 })
 
 test('routines: a resident strolls when you are away and is home by the time you are near', () => {
-  const home = tileFeet(11, 63)
+  const home = tileFeet(9, 63)
   const routine = ROUTINES.hearthwick.hazel
   const w = newWalker(home)
   const far = { x: home.x + 300, y: home.y }

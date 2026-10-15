@@ -214,7 +214,7 @@ test('the open map contract 8 shapes decode through the facade (open-map.md 2.4,
   assert.deepEqual([chunk.cx, chunk.cy, chunk.tier, chunk.land, chunk.places[0]!.id, chunk.sites[0]!.kind], [-3, -7, 3, 'meadow', 'place:-1:-2', wilds.SiteKind.RUMOUR]);
   // A fixed chunk as served (location-seam.md 1.4): the Commons' heart, its objects, through the client's validator.
   const fixed = decodeChunk(toBinary(wilds.WorldChunkSchema, decodeWire(wilds.WorldChunkSchema, get('glimway.v1.WorldChunk', 'valid-fixed'))));
-  assert.deepEqual([fixed.source, fixed.epochId, fixed.layoutRevision, fixed.cx, fixed.cy], [wilds.ChunkSource.FIXED, 'fixed:hearthwick@1', 1, 0, 2]);
+  assert.deepEqual([fixed.source, fixed.epochId, fixed.layoutRevision, fixed.cx, fixed.cy], [wilds.ChunkSource.FIXED, 'fixed:hearthwick@2', 2, 0, 2]);
   assert.ok(fixed.objects.some((o) => o.id === 'town-well' && o.kind === 'well'));
   assert.deepEqual(near.chunks.map((c) => [c.chunk!.cx, c.chunk!.cy, c.source, c.epoch]), [[-2, -4, 'generated', 'wick-epoch']]);
 });

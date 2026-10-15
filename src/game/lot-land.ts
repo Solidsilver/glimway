@@ -1,3 +1,4 @@
+import { lotService } from '../lib/lots.ts'
 /** Lot-local land data for streamed home art and Arrange. No standalone scene
  * or area registration: walking and collision belong to the fixed window. */
 import { HOMESTEAD_DATA } from '../lib/homestead.ts'
@@ -69,9 +70,8 @@ export interface LandWorld extends WorldData {
 }
 
 /** Where you arrive on a homestead's land through its gate. */
-export function landEntry(): { tx: number; ty: number } {
-  const L = HOMESTEAD_DATA.land
-  return { tx: L.gate.x, ty: L.height - 2 }
+export function landEntry(gate = 0): { tx: number; ty: number } {
+  return { tx: gate % 2 ? 0 : 23, ty: 11 }
 }
 
 /** The cottage door on any gate's land (left of its two tiles), and the doorstep you come out onto. */
@@ -105,13 +105,13 @@ function loadLand(gate: number): Promise<void> {
 }
 
 /** Plain ground while the served land is on its way: edge, grass, the gate path. */
-function provisionalLand(): Land {
+function provisionalLand(gate: number): Land {
   const L = HOMESTEAD_DATA.land
   const tiles = new Uint8Array(L.width * L.height)
   for (let y = 0; y < L.height; y++) {
     for (let x = 0; x < L.width; x++) {
-      const path = x >= L.gate.x && x < L.gate.x + L.gate.w && y >= L.site.y + L.site.h
-      const edge = x === 0 || y === 0 || x === L.width - 1 || y === L.height - 1
+      const path = x >= 11 && x <= 12 && y >= 9 && y <= 12 || y >= 11 && y <= 12 && (gate % 2 ? x <= 12 : x >= 11)
+      const edge = y <= 1 || y >= 22 || x === (gate % 2 ? 0 : 23)
       tiles[y * L.width + x] = path ? LAND.PATH : edge ? LAND.EDGE : LAND.GRASS
     }
   }
@@ -124,7 +124,7 @@ export function buildLand(gate: number): LandWorld {
   const L = HOMESTEAD_DATA.land
   const known = servedLand(gate, source.worldId())
   if (!known) void loadLand(gate)
-  const land = known ?? provisionalLand()
+  const land = known ?? provisionalLand(gate)
   const st = source.state(gate)
   const cleared = new Set((st?.cleared ?? []).map(([x, y]) => tileKey(x, y)))
   const stumps = new Set((st?.stumps ?? []).map(([x, y]) => tileKey(x, y)))
@@ -222,7 +222,7 @@ export function buildLand(gate: number): LandWorld {
     solid.push(so)
   }
   // The gate mouth stays open (the way back to the Commons).
-  for (let x = L.gate.x; x < L.gate.x + L.gate.w; x++) solid[H - 1][x] = false
+  for (const y of [11,12]) solid[y][gate % 2 ? 0 : 23] = false
   // Planted things stand where the server says (inside lamplight where
   // they were put; outside, wherever they've wandered to). Small, and
   // walked through: a sapling is its own sprite, a patch the woods' own.
@@ -254,7 +254,7 @@ export function buildLand(gate: number): LandWorld {
     shrine: null,
     villageLantern: null,
     glimSpots: [],
-    spawn: landEntry(),
+    spawn: landEntry(gate),
     gate,
     land,
     served: known !== null,
@@ -263,7 +263,7 @@ export function buildLand(gate: number): LandWorld {
     doorstep,
     // The old 16×12 plot's art sat with the site at (4, 0): keep that framing.
     origin: { x: (s.x - 4) * TILE, y: s.y * TILE },
-    mailbox: { tx: L.gate.x + L.gate.w, ty: L.generator === 2 ? 18 : s.y + s.h },
+    mailbox: { tx: lotService(gate, 'mailbox').x, ty: 10 },
     desolate
   }
 }

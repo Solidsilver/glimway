@@ -139,7 +139,7 @@ test('a Wilds place loads: the open map is one area, its position world pixels',
   assert.deepEqual([snap.state.area, snap.state.position], ['outdoors', { x: -424, y: -744 }]);
   // A place this build can't draw never fails the load.
   const lost = at('somewhere-new');
-  assert.deepEqual([lost.area, lost.position], ['outdoors', { x: 72, y: 968 }]);
+  assert.deepEqual([lost.area, lost.position], ['outdoors', { x: 88, y: 968 }]);
 });
 
 test('places: every area as it is in where.area, the open map as wilds', () => {
@@ -190,6 +190,6 @@ test('fall recovery: a quarter of max HP and half of max mana, rounded up, never
 test('the wick epoch the server last recorded the place in comes with the state', () => {
   const s = gameStateOf(state((j) => (j.place = { area: 'outdoors', x: 424, y: -744, placeSetVersion: 0, wickEpoch: 'e-old' })));
   assert.equal(s.wickEpoch, 'e-old');
-  const none = gameStateOf(state((j) => (j.place = { area: 'outdoors', x: 72, y: 968, placeSetVersion: 0, wickEpoch: '' })));
+  const none = gameStateOf(state((j) => (j.place = { area: 'outdoors', x: 88, y: 968, placeSetVersion: 0, wickEpoch: '' })));
   assert.equal(none.wickEpoch, undefined);
 });

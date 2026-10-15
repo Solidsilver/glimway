@@ -18,7 +18,7 @@ type ground struct {
 }
 
 func groundOf(h homeView) ground {
-	g := ground{land.Generate(h.LandSeed, content.HomeRules.GetLand()), map[[2]int]bool{}}
+	g := ground{land.GenerateLot(h.LandSeed, content.HomeRules.GetLand(), h.Gate), map[[2]int]bool{}}
 	for _, c := range h.Cleared {
 		g.cleared[c] = true
 	}
@@ -156,7 +156,7 @@ func validatePlacement(h homeView, item homeInstance, r *contract.HomesteadReque
 	if h.Tier < int(def.GetMinTier()) || (r.Scene == "indoor" && h.Indoor == nil) {
 		return fail(409, "tier-required")
 	}
-	grid, reserved := h.Outdoor, content.HomeRules.GetOutdoorReserved()
+	grid, reserved := h.Outdoor, content.HomeOutdoorReserved(h.Gate)
 	if r.Scene == "indoor" {
 		grid, reserved = h.Indoor, content.HomeRules.GetIndoorReserved()
 	}

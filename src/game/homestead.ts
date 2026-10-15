@@ -1,3 +1,4 @@
+import { lotName } from '../lib/lots.ts'
 /**
  * Homesteads, game side: the Commons lane of gates (who holds each one),
  * the homesteads seen so far (one map each, behind its gate), and every
@@ -94,9 +95,7 @@ export interface PlacementView {
 export type ActResult = { ok: true; itemId?: string; status?: 'joined' | 'waiting' } | Refusal
 
 /** "Lot 3": how a gate is named to players (gates count from 0). */
-export function lotName(gate: number): string {
-  return `Lot ${gate + 1}`
-}
+export { lotName } from '../lib/lots.ts'
 
 /**
  * One per session. Holds the lane and the homesteads seen so far, and

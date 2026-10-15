@@ -13,7 +13,7 @@
  * No DOM, no Phaser, no network: src/ui/map-renderer.ts draws what's in
  * view from these pieces, and src/ui/WorldMap.svelte holds the view.
  */
-import { homeDoorstep } from '../lots.ts';
+import { homeDoorstep, lotName } from '../lots.ts';
 import { TERRAIN } from '../tile.ts';
 import { loadWilds } from './data.ts';
 import { frontierRect, insideFrontier } from './coords.ts';
@@ -372,7 +372,7 @@ export function mapMarks(input: MapInput): MapMarks {
   }
   // The footprints by name, and the Commons gate.
   for (const fp of [...w.places, ...PLACES.fixed]) labels.push({ kind: 'footprint', text: fp.name.charAt(0).toUpperCase() + fp.name.slice(1), x: (fp.cx + fp.width / 2) * S, y: (fp.cy + fp.height / 2) * S });
-  for (let g = 0; g < 8; g++) { const p = homeDoorstep(g); labels.push({ kind: 'footprint', text: `Lot ${g + 1}`, x: p.tx, y: p.ty }); }
+  for (let g = 0; g < 8; g++) { const p = homeDoorstep(g); labels.push({ kind: 'footprint', text: lotName(g), x: p.tx, y: p.ty }); }
   const gate = gateTile();
   if (gate) labels.push({ kind: 'gate', text: input.words.gate, x: gate.tx, y: gate.ty });
   return { wayTiles, places, labels };

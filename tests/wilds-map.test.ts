@@ -33,12 +33,12 @@ test('the map frames what you know with a chunk round it, growing to the frontie
   const glimpse = [{ cx: -5, cy: -4, land: 'meadow', river: true }, { cx: 0, cy: -9, land: 'woods', river: false }];
   assert.deepEqual(mapBounds({ frontier: FRONTIER, glimpse }), { minCx: -6, minCy: -9, maxCx: 4, maxCy: 7 });
   // Fresh: all four footprints plus a chunk around them.
-  assert.deepEqual(mapFrame(input({ glimpse })), { minCx: -4, minCy: -6, maxCx: 2, maxCy: 5 });
+  assert.deepEqual(mapFrame(input({ glimpse })), { minCx: -3, minCy: -6, maxCx: 3, maxCy: 5 });
   // Walked out to the west edge: the frame reaches the glimpse past it.
   const west = input({ glimpse, chunks: [chunk(-4, -4, TERRAIN.grass_c)], hero: { tx: -4 * S + 5, ty: -4 * S + 5 } });
-  assert.deepEqual(mapFrame(west), { minCx: -5, minCy: -6, maxCx: 2, maxCy: 5 });
+  assert.deepEqual(mapFrame(west), { minCx: -5, minCy: -6, maxCx: 3, maxCy: 5 });
   const p = mapPicture(west);
-  assert.equal(p.width, 8 * S);
+  assert.equal(p.width, 9 * S);
   assert.equal(p.height, 12 * S);
   assert.deepEqual([p.originTx, p.originTy], [-5 * S, -6 * S]);
   // Past the drift: a pale wash, see-through; and hatching where the Wend runs on.
@@ -101,7 +101,7 @@ test('ways, places, the footprints, the gate and you are marked and labelled', (
   const by = (kind: string) => p.labels.filter((l) => l.kind === kind);
   assert.deepEqual(by('way').map((l) => [l.text, l.x, l.y]), [["Tansy's way", 10 - p.originTx, -59 - p.originTy]]);
   assert.deepEqual(by('place').map((l) => [l.text, l.sub ?? null]), [['A camp glade', 'Tansy'], ['An outcrop', null]], 'a place not seen nor found stays off the map');
-  assert.deepEqual(by('footprint').map((l) => l.text), ['The Tangle', 'The Whitequiet', 'Hearthwick', 'Homestead Lane', ...Array.from({ length: 8 }, (_, g) => `Lot ${g + 1}`)]);
+  assert.deepEqual(by('footprint').map((l) => l.text), ['The Tangle', 'The Whitequiet', 'Hearthwick', 'West Row', 'East Row', ...Array.from({ length: 8 }, (_, g) => `${g % 2 ? 'East' : 'West'} Row ${Math.floor(g / 2) + 1}`)]);
   assert.deepEqual(by('gate').map((l) => l.text), ['Commons gate']);
   assert.deepEqual(by('you').map((l) => l.text), ['You']);
   // Labels sit inside the picture.

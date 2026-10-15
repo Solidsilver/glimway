@@ -58,7 +58,7 @@ test('quest reach predicates use the named place and retain outdoor wire space',
   const { autoSteps } = await import('../src/lib/quests.ts');
   const { questPointHere } = await import('../src/game/goal-route.ts');
   const look = { npcAt: () => null, spotAt: () => null, wardenAt: () => null, enemyAt: () => null, lootAt: () => null };
-  assert.deepEqual(questPointHere({ npc: 'silas', area: 'hearthwick' }, { area: 'hearthwick', tx: 34, ty: 35 }, look, 'outdoors'), { id: 'silas', x: 34 * 16 + 8, y: 35 * 16 + 8 });
+  assert.deepEqual(questPointHere({ npc: 'silas', area: 'hearthwick' }, { area: 'hearthwick', tx: -14, ty: 104 }, look, 'outdoors'), { id: 'silas', x: -14 * 16 + 8, y: 104 * 16 + 8 });
   const context = { flags: [], defeated: [], carrying: () => 0 };
   assert.deepEqual(autoSteps({}, { habitica: false }, { ...context, area: 'outdoors', position: { x: 40, y: 392 } }), autoSteps({}, { habitica: false }, { ...context, area: 'hearthwick' }));
 });

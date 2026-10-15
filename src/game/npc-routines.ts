@@ -28,10 +28,10 @@ const wait = (s: number): Step => ({ kind: 'wait', s })
 /** Routines by resident and area; each loop ends where it started (the resident's spot). */
 export const ROUTINES: Readonly<Record<string, Readonly<Record<string, readonly Step[]>>>> = {
   hearthwick: {
-    mara: [wait(7), walk(16, 61), walk(16, 64), wait(3), walk(14, 64), walk(14, 61)],
-    hazel: [wait(9), walk(9, 63), walk(8, 63), walk(8, 62), { kind: 'sit', tx: 8, ty: 61, s: 16 }, walk(8, 63), walk(11, 63)],
-    pip: [wait(5), walk(11, 75), walk(11, 73), walk(9, 73), wait(2), walk(9, 75), walk(10, 75)],
-    orrin: [wait(12), walk(19, 57), walk(19, 55), wait(4), walk(17, 55), walk(17, 57)],
+    mara: [wait(7), walk(10,57), walk(16,57), walk(16,64), wait(3), walk(11,64), walk(11,59), walk(10,59)],
+    hazel: [wait(9), walk(10,63), walk(10,65), walk(9,65), { kind: 'sit', tx: 9, ty: 64, s: 16 }, walk(9,65), walk(10,65), walk(11,65), walk(11,54), walk(6,54), wait(4), walk(11,54), walk(11,63), walk(9,63)],
+    pip: [wait(5), walk(-7,75), walk(-7,71), walk(-10,71), wait(2), walk(-10,75), walk(-8,75)],
+    orrin: [wait(12), walk(20,60), walk(35,60), wait(4), walk(20,60), walk(20,58)],
   },
   // Indoors, while her hour has her in (src/game/resident-cycle.ts).
   'in:village:bakery': {

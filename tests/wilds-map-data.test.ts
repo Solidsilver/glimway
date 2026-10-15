@@ -64,7 +64,7 @@ function chunkApi(o: { fail?: (cx: number, cy: number) => boolean } = {}) {
 }
 
 const session = (api: unknown, o: { online?: boolean; world?: string; area?: string } = {}) =>
-  ({ state: { area: o.area ?? 'outdoors', position: { x: 72, y: 968 } }, link: { online: o.online ?? true, status: (o.online ?? true) ? 'online' : 'offline', worldId: o.world ?? 'world-a', api: { operations: api } } }) as never;
+  ({ state: { area: o.area ?? 'outdoors', position: { x: 88, y: 968 } }, link: { online: o.online ?? true, status: (o.online ?? true) ? 'online' : 'offline', worldId: o.world ?? 'world-a', api: { operations: api } } }) as never;
 
 /** Walk a block of Beyond chunks this wick. */
 function walk(n: number): void {
@@ -258,11 +258,11 @@ test('a turning during a load (the map closed and opened again on the new wick) 
 
 test('indoor hero map-dot resolves to the exterior door on hearthwick or lot doorstep', async () => {
   const { mapHeroTile } = await import('../src/game/wilds/map-data.ts');
-  assert.deepEqual(mapHeroTile('in:home:0'), { tx: -61, ty: 32 });
-  assert.deepEqual(mapHeroTile('in:village:bakery'), { tx: -11, ty: 58 });
-  assert.deepEqual(mapHeroTile('in:village:mill'), { tx: 29, ty: 76 });
-  assert.deepEqual(mapHeroTile('in:village:mill:2'), { tx: 29, ty: 76 }, 'nested mill loft resolves through ground mill');
-  assert.deepEqual(mapHeroTile('in:commons:yard:deeds'), { tx: 34, ty: 34 }, 'nested deeds office resolves through yard');
+  assert.deepEqual(mapHeroTile('in:home:0'), { tx: -37, ty: 32 });
+  assert.deepEqual(mapHeroTile('in:village:bakery'), { tx: 6, ty: 53 });
+  assert.deepEqual(mapHeroTile('in:village:mill'), { tx: 21, ty: 103 });
+  assert.deepEqual(mapHeroTile('in:village:mill:2'), { tx: 21, ty: 103 }, 'nested mill loft resolves through ground mill');
+  assert.deepEqual(mapHeroTile('in:commons:yard:deeds'), { tx: 23, ty: 58 }, 'land office has its own town door');
   assert.deepEqual(mapHeroTile('outdoors', { x: 64, y: 32 }), { tx: 4, ty: 2 });
   assert.equal(mapHeroTile('unknown-area'), null);
 });

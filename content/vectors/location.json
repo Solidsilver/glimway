@@ -1,5 +1,5 @@
 {
-  "comment": "One town §1 world-tile contract. Shared Go/TS vectors; positions enumerate content and served layout targets. The expanded generated frontier surrounds fixed places; fixed plots exist now as a T4 placeholder.",
+  "comment": "Hearthwick 2 world-tile contract: 3x4 town with west/east lot columns. Regenerate with node scripts/hearthwick-location-vectors.ts.",
   "at": [
     {
       "name": "north unsafe",
@@ -34,7 +34,7 @@
         "source": {
           "kind": "fixed",
           "layout": "hearthwick",
-          "revision": 1,
+          "revision": 2,
           "epochKind": ""
         }
       }
@@ -47,13 +47,13 @@
       "place": {
         "id": "hearthwick",
         "safe": true,
-        "ride": true,
+        "ride": false,
         "sync": true,
         "rest": "village",
         "source": {
           "kind": "fixed",
           "layout": "hearthwick",
-          "revision": 1,
+          "revision": 2,
           "epochKind": ""
         }
       }
@@ -72,7 +72,7 @@
         "source": {
           "kind": "fixed",
           "layout": "hearthwick",
-          "revision": 1,
+          "revision": 2,
           "epochKind": ""
         }
       }
@@ -91,7 +91,7 @@
         "source": {
           "kind": "fixed",
           "layout": "hearthwick",
-          "revision": 1,
+          "revision": 2,
           "epochKind": ""
         }
       }
@@ -104,13 +104,13 @@
       "place": {
         "id": "hearthwick",
         "safe": true,
-        "ride": false,
+        "ride": true,
         "sync": true,
         "rest": "village",
         "source": {
           "kind": "fixed",
           "layout": "hearthwick",
-          "revision": 1,
+          "revision": 2,
           "epochKind": ""
         }
       }
@@ -123,13 +123,13 @@
       "place": {
         "id": "hearthwick",
         "safe": true,
-        "ride": false,
+        "ride": true,
         "sync": true,
         "rest": "village",
         "source": {
           "kind": "fixed",
           "layout": "hearthwick",
-          "revision": 1,
+          "revision": 2,
           "epochKind": ""
         }
       }
@@ -148,7 +148,7 @@
         "source": {
           "kind": "fixed",
           "layout": "hearthwick",
-          "revision": 1,
+          "revision": 2,
           "epochKind": ""
         }
       }
@@ -167,7 +167,7 @@
         "source": {
           "kind": "fixed",
           "layout": "hearthwick",
-          "revision": 1,
+          "revision": 2,
           "epochKind": ""
         }
       }
@@ -178,16 +178,16 @@
       "x": 776,
       "y": 952,
       "place": {
-        "id": "beyond",
-        "safe": false,
+        "id": "lot:3",
+        "safe": true,
         "ride": true,
-        "sync": false,
-        "rest": "none",
+        "sync": true,
+        "rest": "home",
         "source": {
-          "kind": "generated",
-          "layout": "",
-          "revision": 0,
-          "epochKind": "wick"
+          "kind": "fixed",
+          "layout": "lots-east",
+          "revision": 3,
+          "epochKind": ""
         }
       }
     },
@@ -199,13 +199,13 @@
       "place": {
         "id": "hearthwick",
         "safe": true,
-        "ride": false,
+        "ride": true,
         "sync": true,
         "rest": "village",
         "source": {
           "kind": "fixed",
           "layout": "hearthwick",
-          "revision": 1,
+          "revision": 2,
           "epochKind": ""
         }
       }
@@ -224,7 +224,7 @@
         "source": {
           "kind": "fixed",
           "layout": "hearthwick",
-          "revision": 1,
+          "revision": 2,
           "epochKind": ""
         }
       }
@@ -243,7 +243,7 @@
         "source": {
           "kind": "fixed",
           "layout": "hearthwick",
-          "revision": 1,
+          "revision": 2,
           "epochKind": ""
         }
       }
@@ -254,16 +254,16 @@
       "x": 152,
       "y": 1544,
       "place": {
-        "id": "beyond",
-        "safe": false,
+        "id": "hearthwick",
+        "safe": true,
         "ride": true,
-        "sync": false,
-        "rest": "none",
+        "sync": true,
+        "rest": "village",
         "source": {
-          "kind": "generated",
-          "layout": "",
-          "revision": 0,
-          "epochKind": "wick"
+          "kind": "fixed",
+          "layout": "hearthwick",
+          "revision": 2,
+          "epochKind": ""
         }
       }
     },
@@ -292,16 +292,16 @@
       "x": -1144,
       "y": 1112,
       "place": {
-        "id": "lot:2",
-        "safe": true,
+        "id": "beyond",
+        "safe": false,
         "ride": true,
-        "sync": true,
-        "rest": "home",
+        "sync": false,
+        "rest": "none",
         "source": {
-          "kind": "fixed",
-          "layout": "homestead-lots",
-          "revision": 3,
-          "epochKind": ""
+          "kind": "generated",
+          "layout": "",
+          "revision": 0,
+          "epochKind": "wick"
         }
       }
     },
@@ -330,16 +330,16 @@
       "x": -968,
       "y": 520,
       "place": {
-        "id": "lot:0",
-        "safe": true,
+        "id": "beyond",
+        "safe": false,
         "ride": true,
-        "sync": true,
-        "rest": "home",
+        "sync": false,
+        "rest": "none",
         "source": {
-          "kind": "fixed",
-          "layout": "homestead-lots",
-          "revision": 3,
-          "epochKind": ""
+          "kind": "generated",
+          "layout": "",
+          "revision": 0,
+          "epochKind": "wick"
         }
       }
     },
@@ -349,14 +349,14 @@
       "x": -584,
       "y": 520,
       "place": {
-        "id": "lot:1",
+        "id": "lot:0",
         "safe": true,
         "ride": true,
         "sync": true,
         "rest": "home",
         "source": {
           "kind": "fixed",
-          "layout": "homestead-lots",
+          "layout": "lots-west",
           "revision": 3,
           "epochKind": ""
         }
@@ -368,16 +368,16 @@
       "x": -968,
       "y": 904,
       "place": {
-        "id": "lot:2",
-        "safe": true,
+        "id": "beyond",
+        "safe": false,
         "ride": true,
-        "sync": true,
-        "rest": "home",
+        "sync": false,
+        "rest": "none",
         "source": {
-          "kind": "fixed",
-          "layout": "homestead-lots",
-          "revision": 3,
-          "epochKind": ""
+          "kind": "generated",
+          "layout": "",
+          "revision": 0,
+          "epochKind": "wick"
         }
       }
     },
@@ -387,14 +387,14 @@
       "x": -584,
       "y": 904,
       "place": {
-        "id": "lot:3",
+        "id": "lot:2",
         "safe": true,
         "ride": true,
         "sync": true,
         "rest": "home",
         "source": {
           "kind": "fixed",
-          "layout": "homestead-lots",
+          "layout": "lots-west",
           "revision": 3,
           "epochKind": ""
         }
@@ -406,16 +406,16 @@
       "x": -968,
       "y": 1288,
       "place": {
-        "id": "lot:4",
-        "safe": true,
+        "id": "beyond",
+        "safe": false,
         "ride": true,
-        "sync": true,
-        "rest": "home",
+        "sync": false,
+        "rest": "none",
         "source": {
-          "kind": "fixed",
-          "layout": "homestead-lots",
-          "revision": 3,
-          "epochKind": ""
+          "kind": "generated",
+          "layout": "",
+          "revision": 0,
+          "epochKind": "wick"
         }
       }
     },
@@ -425,14 +425,14 @@
       "x": -584,
       "y": 1288,
       "place": {
-        "id": "lot:5",
+        "id": "lot:4",
         "safe": true,
         "ride": true,
         "sync": true,
         "rest": "home",
         "source": {
           "kind": "fixed",
-          "layout": "homestead-lots",
+          "layout": "lots-west",
           "revision": 3,
           "epochKind": ""
         }
@@ -444,16 +444,16 @@
       "x": -968,
       "y": 1672,
       "place": {
-        "id": "lot:6",
-        "safe": true,
+        "id": "beyond",
+        "safe": false,
         "ride": true,
-        "sync": true,
-        "rest": "home",
+        "sync": false,
+        "rest": "none",
         "source": {
-          "kind": "fixed",
-          "layout": "homestead-lots",
-          "revision": 3,
-          "epochKind": ""
+          "kind": "generated",
+          "layout": "",
+          "revision": 0,
+          "epochKind": "wick"
         }
       }
     },
@@ -463,14 +463,14 @@
       "x": -584,
       "y": 1672,
       "place": {
-        "id": "lot:7",
+        "id": "lot:6",
         "safe": true,
         "ride": true,
         "sync": true,
         "rest": "home",
         "source": {
           "kind": "fixed",
-          "layout": "homestead-lots",
+          "layout": "lots-west",
           "revision": 3,
           "epochKind": ""
         }
@@ -589,6 +589,158 @@
           "epochKind": ""
         }
       }
+    },
+    {
+      "name": "southfields",
+      "space": "outdoors",
+      "x": 200,
+      "y": 1768,
+      "place": {
+        "id": "hearthwick",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "village",
+        "source": {
+          "kind": "fixed",
+          "layout": "hearthwick",
+          "revision": 2,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "west lot",
+      "space": "outdoors",
+      "x": -584,
+      "y": 520,
+      "place": {
+        "id": "lot:0",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "home",
+        "source": {
+          "kind": "fixed",
+          "layout": "lots-west",
+          "revision": 3,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "east lot",
+      "space": "outdoors",
+      "x": 952,
+      "y": 520,
+      "place": {
+        "id": "lot:1",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "home",
+        "source": {
+          "kind": "fixed",
+          "layout": "lots-east",
+          "revision": 3,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "west wildgate",
+      "space": "outdoors",
+      "x": -568,
+      "y": 1144,
+      "place": {
+        "id": "lot:2",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "home",
+        "source": {
+          "kind": "fixed",
+          "layout": "lots-west",
+          "revision": 3,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "east wildgate",
+      "space": "outdoors",
+      "x": 968,
+      "y": 1160,
+      "place": {
+        "id": "lot:5",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "home",
+        "source": {
+          "kind": "fixed",
+          "layout": "lots-east",
+          "revision": 3,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "south gate",
+      "space": "outdoors",
+      "x": 200,
+      "y": 1912,
+      "place": {
+        "id": "hearthwick",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "village",
+        "source": {
+          "kind": "fixed",
+          "layout": "hearthwick",
+          "revision": 2,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "west lane",
+      "space": "outdoors",
+      "x": -360,
+      "y": 568,
+      "place": {
+        "id": "hearthwick",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "village",
+        "source": {
+          "kind": "fixed",
+          "layout": "hearthwick",
+          "revision": 2,
+          "epochKind": ""
+        }
+      }
+    },
+    {
+      "name": "east lane",
+      "space": "outdoors",
+      "x": 744,
+      "y": 568,
+      "place": {
+        "id": "hearthwick",
+        "safe": true,
+        "ride": true,
+        "sync": true,
+        "rest": "village",
+        "source": {
+          "kind": "fixed",
+          "layout": "hearthwick",
+          "revision": 2,
+          "epochKind": ""
+        }
+      }
     }
   ],
   "sourceOf": [
@@ -600,7 +752,7 @@
       "source": {
         "kind": "fixed",
         "layout": "hearthwick",
-        "revision": 1,
+        "revision": 2,
         "epochKind": ""
       }
     },
@@ -612,7 +764,7 @@
       "source": {
         "kind": "fixed",
         "layout": "hearthwick",
-        "revision": 1,
+        "revision": 2,
         "epochKind": ""
       }
     },
@@ -624,7 +776,7 @@
       "source": {
         "kind": "fixed",
         "layout": "hearthwick",
-        "revision": 1,
+        "revision": 2,
         "epochKind": ""
       }
     },
@@ -634,10 +786,10 @@
         1
       ],
       "source": {
-        "kind": "fixed",
-        "layout": "homestead-lots",
-        "revision": 3,
-        "epochKind": ""
+        "kind": "generated",
+        "layout": "",
+        "revision": 0,
+        "epochKind": "wick"
       }
     },
     {
@@ -647,7 +799,7 @@
       ],
       "source": {
         "kind": "fixed",
-        "layout": "homestead-lots",
+        "layout": "lots-west",
         "revision": 3,
         "epochKind": ""
       }
@@ -670,10 +822,10 @@
         2
       ],
       "source": {
-        "kind": "generated",
-        "layout": "",
-        "revision": 0,
-        "epochKind": "wick"
+        "kind": "fixed",
+        "layout": "lots-east",
+        "revision": 3,
+        "epochKind": ""
       }
     },
     {
@@ -682,10 +834,10 @@
         4
       ],
       "source": {
-        "kind": "generated",
-        "layout": "",
-        "revision": 0,
-        "epochKind": "wick"
+        "kind": "fixed",
+        "layout": "hearthwick",
+        "revision": 2,
+        "epochKind": ""
       }
     },
     {
@@ -839,7 +991,7 @@
         5,
         0
       ],
-      "onGrid": false
+      "onGrid": true
     }
   ],
   "anchors": [
@@ -848,7 +1000,7 @@
       "ok": true,
       "space": "outdoors",
       "at": [
-        72,
+        88,
         968
       ]
     },
@@ -857,8 +1009,8 @@
       "ok": true,
       "space": "outdoors",
       "at": [
-        184,
-        1000
+        152,
+        1048
       ]
     },
     {
@@ -875,8 +1027,8 @@
       "ok": true,
       "space": "outdoors",
       "at": [
-        680,
-        1000
+        632,
+        968
       ]
     },
     {
@@ -884,17 +1036,17 @@
       "ok": true,
       "space": "outdoors",
       "at": [
-        152,
-        1480
+        200,
+        1864
       ]
     },
     {
       "id": "hearthwick:west-gate",
-      "ok": true,
-      "space": "outdoors",
+      "ok": false,
+      "space": "",
       "at": [
-        -344,
-        1112
+        0,
+        0
       ]
     },
     {
@@ -902,8 +1054,8 @@
       "ok": true,
       "space": "outdoors",
       "at": [
-        -168,
-        952
+        104,
+        872
       ]
     },
     {
@@ -911,8 +1063,8 @@
       "ok": true,
       "space": "outdoors",
       "at": [
-        -168,
-        1240
+        8,
+        1064
       ]
     },
     {
@@ -920,8 +1072,8 @@
       "ok": true,
       "space": "outdoors",
       "at": [
-        552,
-        568
+        -216,
+        1672
       ]
     },
     {
@@ -929,8 +1081,8 @@
       "ok": true,
       "space": "outdoors",
       "at": [
-        472,
-        1240
+        344,
+        1672
       ]
     },
     {
@@ -938,8 +1090,8 @@
       "ok": true,
       "space": "outdoors",
       "at": [
-        -952,
-        712
+        -360,
+        568
       ]
     },
     {
@@ -947,8 +1099,8 @@
       "ok": true,
       "space": "outdoors",
       "at": [
-        -568,
-        712
+        744,
+        568
       ]
     },
     {
@@ -956,8 +1108,8 @@
       "ok": true,
       "space": "outdoors",
       "at": [
-        -952,
-        1096
+        -360,
+        952
       ]
     },
     {
@@ -965,8 +1117,8 @@
       "ok": true,
       "space": "outdoors",
       "at": [
-        -568,
-        1096
+        744,
+        952
       ]
     },
     {
@@ -974,8 +1126,8 @@
       "ok": true,
       "space": "outdoors",
       "at": [
-        -952,
-        1480
+        -360,
+        1336
       ]
     },
     {
@@ -983,8 +1135,8 @@
       "ok": true,
       "space": "outdoors",
       "at": [
-        -568,
-        1480
+        744,
+        1336
       ]
     },
     {
@@ -992,8 +1144,8 @@
       "ok": true,
       "space": "outdoors",
       "at": [
-        -952,
-        1864
+        -360,
+        1720
       ]
     },
     {
@@ -1001,8 +1153,8 @@
       "ok": true,
       "space": "outdoors",
       "at": [
-        -568,
-        1864
+        744,
+        1720
       ]
     },
     {
@@ -1040,52 +1192,43 @@
         0,
         0
       ]
+    },
+    {
+      "id": "hearthwick:west-wildgate",
+      "ok": true,
+      "space": "outdoors",
+      "at": [
+        -360,
+        1144
+      ]
+    },
+    {
+      "id": "hearthwick:east-wildgate",
+      "ok": true,
+      "space": "outdoors",
+      "at": [
+        744,
+        1144
+      ]
+    },
+    {
+      "id": "hearthwick:land-office-door",
+      "ok": true,
+      "space": "outdoors",
+      "at": [
+        376,
+        952
+      ]
     }
   ],
   "positions": [
-    {
-      "source": "fishing.waters.water:village:mill-pond.banks.east.tiles.0",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        39,
-        73
-      ]
-    },
-    {
-      "source": "fishing.waters.water:village:mill-pond.banks.east.tiles.1",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        39,
-        74
-      ]
-    },
-    {
-      "source": "fishing.waters.water:village:mill-pond.banks.east.tiles.2",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        39,
-        75
-      ]
-    },
-    {
-      "source": "fishing.waters.water:village:mill-pond.banks.east.tiles.3",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        39,
-        76
-      ]
-    },
     {
       "source": "fishing.waters.water:village:mill-pond.banks.north.tiles.0",
       "kind": "stand",
       "area": "hearthwick",
       "tile": [
-        34,
-        72
+        25,
+        98
       ]
     },
     {
@@ -1093,8 +1236,8 @@
       "kind": "stand",
       "area": "hearthwick",
       "tile": [
-        35,
-        72
+        26,
+        98
       ]
     },
     {
@@ -1102,8 +1245,8 @@
       "kind": "stand",
       "area": "hearthwick",
       "tile": [
-        36,
-        72
+        27,
+        98
       ]
     },
     {
@@ -1111,8 +1254,8 @@
       "kind": "stand",
       "area": "hearthwick",
       "tile": [
-        37,
-        72
+        28,
+        98
       ]
     },
     {
@@ -1120,8 +1263,89 @@
       "kind": "stand",
       "area": "hearthwick",
       "tile": [
-        38,
-        72
+        29,
+        98
+      ]
+    },
+    {
+      "source": "fishing.waters.water:village:mill-pond.banks.north.tiles.5",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        30,
+        98
+      ]
+    },
+    {
+      "source": "fishing.waters.water:village:mill-pond.banks.north.tiles.6",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        31,
+        98
+      ]
+    },
+    {
+      "source": "fishing.waters.water:village:mill-pond.banks.north.tiles.7",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        32,
+        98
+      ]
+    },
+    {
+      "source": "fishing.waters.water:village:mill-pond.banks.east.tiles.0",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        34,
+        99
+      ]
+    },
+    {
+      "source": "fishing.waters.water:village:mill-pond.banks.east.tiles.1",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        34,
+        100
+      ]
+    },
+    {
+      "source": "fishing.waters.water:village:mill-pond.banks.east.tiles.2",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        34,
+        101
+      ]
+    },
+    {
+      "source": "fishing.waters.water:village:mill-pond.banks.east.tiles.3",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        34,
+        102
+      ]
+    },
+    {
+      "source": "fishing.waters.water:village:mill-pond.banks.east.tiles.4",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        34,
+        103
+      ]
+    },
+    {
+      "source": "fishing.waters.water:village:mill-pond.banks.east.tiles.5",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        34,
+        104
       ]
     },
     {
@@ -1129,26 +1353,8 @@
       "kind": "stand",
       "area": "hearthwick",
       "tile": [
-        32,
-        73
-      ]
-    },
-    {
-      "source": "items.pickups.lane-glove",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        8,
-        36
-      ]
-    },
-    {
-      "source": "items.pickups.oatcake-parcel",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        29,
-        55
+        24,
+        100
       ]
     },
     {
@@ -1156,8 +1362,26 @@
       "kind": "stand",
       "area": "hearthwick",
       "tile": [
-        9,
-        57
+        6,
+        65
+      ]
+    },
+    {
+      "source": "items.pickups.lane-glove",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        -8,
+        31
+      ]
+    },
+    {
+      "source": "items.pickups.oatcake-parcel",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        -12,
+        49
       ]
     },
     {
@@ -1165,8 +1389,8 @@
       "kind": "stand",
       "area": "hearthwick",
       "tile": [
-        17,
-        57
+        20,
+        58
       ]
     },
     {
@@ -1174,224 +1398,8 @@
       "kind": "stand",
       "area": "hearthwick",
       "tile": [
-        -5,
-        35
-      ]
-    },
-    {
-      "source": "layout.exit:woodland",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        41,
-        64
-      ]
-    },
-    {
-      "source": "layout.gather:bloom-patch:0",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        11,
-        37
-      ]
-    },
-    {
-      "source": "layout.gather:bloom-patch:1",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        12,
-        37
-      ]
-    },
-    {
-      "source": "layout.gather:bloom-patch:2",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        13,
-        37
-      ]
-    },
-    {
-      "source": "layout.gather:bloom-patch:3",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        11,
-        38
-      ]
-    },
-    {
-      "source": "layout.gather:bloom-patch:4",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        12,
-        38
-      ]
-    },
-    {
-      "source": "layout.gather:freshet-shore:0",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        34,
-        72
-      ]
-    },
-    {
-      "source": "layout.gather:freshet-shore:1",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        36,
-        72
-      ]
-    },
-    {
-      "source": "layout.gather:freshet-shore:2",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        38,
-        72
-      ]
-    },
-    {
-      "source": "layout.gather:pond-ice:0",
-      "kind": "target",
-      "area": "hearthwick",
-      "tile": [
-        34,
-        73
-      ]
-    },
-    {
-      "source": "layout.gather:pond-ice:1",
-      "kind": "target",
-      "area": "hearthwick",
-      "tile": [
-        37,
-        73
-      ]
-    },
-    {
-      "source": "layout.gather:pond-ice:2",
-      "kind": "target",
-      "area": "hearthwick",
-      "tile": [
-        38,
-        75
-      ]
-    },
-    {
-      "source": "layout.npc:ada",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        32,
-        55
-      ]
-    },
-    {
-      "source": "layout.npc:elara",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        6,
-        27
-      ]
-    },
-    {
-      "source": "layout.npc:finn",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        30,
-        77
-      ]
-    },
-    {
-      "source": "layout.npc:hazel",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        11,
-        63
-      ]
-    },
-    {
-      "source": "layout.npc:mara",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
         14,
-        61
-      ]
-    },
-    {
-      "source": "layout.npc:orrin",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        17,
-        57
-      ]
-    },
-    {
-      "source": "layout.npc:pip",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        10,
-        75
-      ]
-    },
-    {
-      "source": "layout.npc:silas",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        29,
-        36
-      ]
-    },
-    {
-      "source": "papers.36,49",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        36,
-        49
-      ]
-    },
-    {
-      "source": "papers.40,76",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        40,
-        76
-      ]
-    },
-    {
-      "source": "papers.7,72",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        7,
-        72
-      ]
-    },
-    {
-      "source": "papers.papers.elaras-note-in-pips-copybook.rule",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        40,
-        76
+        66
       ]
     },
     {
@@ -1399,7 +1407,7 @@
       "kind": "stand",
       "area": "hearthwick",
       "tile": [
-        7,
+        -10,
         72
       ]
     },
@@ -1408,53 +1416,17 @@
       "kind": "stand",
       "area": "hearthwick",
       "tile": [
-        36,
-        49
-      ]
-    },
-    {
-      "source": "repairs.repairs.bench-slat.pos",
-      "kind": "target",
-      "area": "hearthwick",
-      "tile": [
-        8,
-        61
-      ]
-    },
-    {
-      "source": "repairs.repairs.fence-rail.pos",
-      "kind": "target",
-      "area": "hearthwick",
-      "tile": [
-        9,
-        76
-      ]
-    },
-    {
-      "source": "repairs.repairs.gate-hame.pos",
-      "kind": "target",
-      "area": "hearthwick",
-      "tile": [
-        0,
+        -12,
         43
       ]
     },
     {
-      "source": "repairs.repairs.library-roof.pos",
-      "kind": "target",
+      "source": "papers.papers.elaras-note-in-pips-copybook.rule",
+      "kind": "stand",
       "area": "hearthwick",
       "tile": [
-        -11,
-        76
-      ]
-    },
-    {
-      "source": "repairs.repairs.village-lamp.pos",
-      "kind": "target",
-      "area": "hearthwick",
-      "tile": [
-        10,
-        60
+        35,
+        104
       ]
     },
     {
@@ -1462,8 +1434,71 @@
       "kind": "target",
       "area": "hearthwick",
       "tile": [
+        7,
+        64
+      ]
+    },
+    {
+      "source": "repairs.repairs.fence-rail.pos",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        -8,
+        76
+      ]
+    },
+    {
+      "source": "repairs.repairs.library-roof.pos",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        0,
+        65
+      ]
+    },
+    {
+      "source": "repairs.repairs.bench-slat.pos",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        9,
+        64
+      ]
+    },
+    {
+      "source": "repairs.repairs.village-lamp.pos",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
         12,
-        60
+        62
+      ]
+    },
+    {
+      "source": "repairs.repairs.gate-hame.pos",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        -4,
+        31
+      ]
+    },
+    {
+      "source": "residents.residents.hazel.spots.square",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        9,
+        63
+      ]
+    },
+    {
+      "source": "residents.residents.finn.spots.door",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        21,
+        105
       ]
     },
     {
@@ -1471,8 +1506,8 @@
       "kind": "stand",
       "area": "hearthwick",
       "tile": [
-        32,
-        55
+        -15,
+        49
       ]
     },
     {
@@ -1485,48 +1520,12 @@
       ]
     },
     {
-      "source": "residents.residents.finn.spots.door",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        30,
-        77
-      ]
-    },
-    {
-      "source": "residents.residents.hazel.spots.square",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        11,
-        63
-      ]
-    },
-    {
       "source": "residents.residents.silas.spots.yard",
       "kind": "stand",
       "area": "hearthwick",
       "tile": [
-        29,
-        36
-      ]
-    },
-    {
-      "source": "rooms.rooms.in:commons:yard.doors.front.entry",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        34,
-        35
-      ]
-    },
-    {
-      "source": "rooms.rooms.in:commons:yard.doors.front.outside",
-      "kind": "target",
-      "area": "hearthwick",
-      "tile": [
-        34,
-        34
+        -16,
+        108
       ]
     },
     {
@@ -1534,8 +1533,8 @@
       "kind": "stand",
       "area": "hearthwick",
       "tile": [
-        -11,
-        59
+        6,
+        54
       ]
     },
     {
@@ -1543,26 +1542,8 @@
       "kind": "target",
       "area": "hearthwick",
       "tile": [
-        -11,
-        58
-      ]
-    },
-    {
-      "source": "rooms.rooms.in:village:library.doors.front.entry",
-      "kind": "stand",
-      "area": "hearthwick",
-      "tile": [
-        -11,
-        77
-      ]
-    },
-    {
-      "source": "rooms.rooms.in:village:library.doors.front.outside",
-      "kind": "target",
-      "area": "hearthwick",
-      "tile": [
-        -11,
-        76
+        6,
+        53
       ]
     },
     {
@@ -1570,8 +1551,8 @@
       "kind": "stand",
       "area": "hearthwick",
       "tile": [
-        29,
-        77
+        21,
+        104
       ]
     },
     {
@@ -1579,8 +1560,62 @@
       "kind": "target",
       "area": "hearthwick",
       "tile": [
-        29,
-        76
+        21,
+        103
+      ]
+    },
+    {
+      "source": "rooms.rooms.in:village:library.doors.front.entry",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        0,
+        66
+      ]
+    },
+    {
+      "source": "rooms.rooms.in:village:library.doors.front.outside",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        0,
+        65
+      ]
+    },
+    {
+      "source": "rooms.rooms.in:commons:yard.doors.front.entry",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        -14,
+        104
+      ]
+    },
+    {
+      "source": "rooms.rooms.in:commons:yard.doors.front.outside",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        -14,
+        103
+      ]
+    },
+    {
+      "source": "rooms.rooms.in:commons:yard:deeds.doors.front.entry",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        23,
+        59
+      ]
+    },
+    {
+      "source": "rooms.rooms.in:commons:yard:deeds.doors.front.outside",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        23,
+        58
       ]
     },
     {
@@ -1588,13 +1623,220 @@
       "kind": "target",
       "area": "hearthwick",
       "tile": [
-        12,
-        56
+        17,
+        55
+      ]
+    },
+    {
+      "source": "layout.npc:mara",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        10,
+        59
+      ]
+    },
+    {
+      "source": "layout.npc:orrin",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        20,
+        58
+      ]
+    },
+    {
+      "source": "layout.npc:pip",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        -8,
+        75
+      ]
+    },
+    {
+      "source": "layout.npc:hazel",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        9,
+        63
+      ]
+    },
+    {
+      "source": "layout.npc:finn",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        21,
+        105
+      ]
+    },
+    {
+      "source": "layout.npc:ada",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        -15,
+        49
+      ]
+    },
+    {
+      "source": "layout.npc:elara",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        6,
+        27
+      ]
+    },
+    {
+      "source": "layout.npc:silas",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        -16,
+        108
+      ]
+    },
+    {
+      "source": "layout.gather:bloom-patch:0",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        19,
+        33
+      ]
+    },
+    {
+      "source": "layout.gather:bloom-patch:1",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        22,
+        33
+      ]
+    },
+    {
+      "source": "layout.gather:bloom-patch:2",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        25,
+        33
+      ]
+    },
+    {
+      "source": "layout.gather:bloom-patch:3",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        28,
+        33
+      ]
+    },
+    {
+      "source": "layout.gather:bloom-patch:4",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        31,
+        33
+      ]
+    },
+    {
+      "source": "layout.gather:freshet-shore:0",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        26,
+        98
+      ]
+    },
+    {
+      "source": "layout.gather:freshet-shore:1",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        29,
+        98
+      ]
+    },
+    {
+      "source": "layout.gather:freshet-shore:2",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        32,
+        98
+      ]
+    },
+    {
+      "source": "layout.gather:pond-ice:0",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        26,
+        99
+      ]
+    },
+    {
+      "source": "layout.gather:pond-ice:1",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        29,
+        99
+      ]
+    },
+    {
+      "source": "layout.gather:pond-ice:2",
+      "kind": "target",
+      "area": "hearthwick",
+      "tile": [
+        33,
+        103
+      ]
+    },
+    {
+      "source": "layout.exit:woodland",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        38,
+        62
+      ]
+    },
+    {
+      "source": "papers.-10,72",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        -10,
+        72
+      ]
+    },
+    {
+      "source": "papers.-12,43",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        -12,
+        43
+      ]
+    },
+    {
+      "source": "papers.35,104",
+      "kind": "stand",
+      "area": "hearthwick",
+      "tile": [
+        35,
+        104
       ]
     }
   ],
   "bounds": {
-    "comment": "Two places laid at the schema's bounds (places.proto: chunks \u00b132768, tiles \u00b12^20) beside the shipped Commons, through the loader, then every lookup near them. Worked with big integers, so a runtime that wraps int32 disagrees (the S1 review's P2).",
+    "comment": "Two places laid at the schema's bounds (places.proto: chunks ±32768, tiles ±2^20) beside the shipped Commons, through the loader, then every lookup near them. Worked with big integers, so a runtime that wraps int32 disagrees (the S1 review's P2).",
     "fixed": [
       {
         "id": "edge-east",
@@ -2126,7 +2368,7 @@
           "source": {
             "kind": "fixed",
             "layout": "hearthwick",
-            "revision": 1,
+            "revision": 2,
             "epochKind": ""
           }
         }

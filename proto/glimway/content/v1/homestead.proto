@@ -93,7 +93,7 @@ message HomeRect {
 }
 
 // Every homestead's wild land: its size, the home site (camp/cottage), the
-// gate mouth on the south edge, the starting light, and how much of the
+// shared path stem, the starting light, and how much of the
 // wild the generator scatters (server/internal/land).
 message HomeLand {
   option (buf.validate.message).cel = {
@@ -122,9 +122,19 @@ message HomeLand {
   int32 boulders = 9 [(buf.validate.field).int32.gte = 0];
   int32 stream_permille = 10 [(buf.validate.field).int32 = {gte: 0, lte: 1000}];
   int32 slope_permille = 11 [(buf.validate.field).int32 = {gte: 0, lte: 1000}];
+  map<string, HomeLandSide> sides = 12;
 }
 
-// The gate mouth: a span of the south edge (its x and width in tiles).
+// Ground and obstacle mix on either side of town. The home site never mirrors.
+message HomeLandSide {
+  string ground = 1 [(buf.validate.field).string = {in: ["woods", "meadow"]}];
+  int32 trees = 2 [(buf.validate.field).int32.gte = 0];
+  int32 stumps = 3 [(buf.validate.field).int32.gte = 0];
+  int32 boulders = 4 [(buf.validate.field).int32.gte = 0];
+  int32 flowers = 5 [(buf.validate.field).int32.gte = 0];
+}
+
+// The shared vertical path stem: x and width in lot-local tiles.
 message HomeGate {
   optional int32 x = 1 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 1];
   optional int32 w = 2 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 1];
@@ -144,7 +154,7 @@ message HomeStartLight {
   optional int32 radius = 3 [(buf.validate.field).required = true, (buf.validate.field).int32.gte = 1];
 }
 
-// The homestead gates along the Commons lane (client tiles). Gate g is on
+// The homestead gates in the block-local frame (world x+48, y-24). Gate g is on
 // side g%2 (fence column FenceX[side]) in row g/2: the listed rows, then
 // one more every RowPitch tiles. DeedTable is where a joint deed is
 // signed: Pell's table, in the deed office (a room's pixels, with the reach

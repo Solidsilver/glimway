@@ -264,11 +264,11 @@ test('every Commons chunk attaches every kind of object it owns and detaches lea
     assert.ok(during.objects > before.objects + 50, 'trees, canopies, pieces, signs drawn');
     assert.ok(during.tweens > before.tweens, 'lamp glows and exit chevrons pulse');
     assert.ok(during.solids > 0 && during.bodies > 0, 'collision');
-    assert.equal(during.layers, 9, 'one ground layer a chunk');
+    assert.equal(during.layers, 12, 'one ground layer a chunk');
     assert.ok(during.points >= 1, 'the Yard’s door');
     assert.ok(during.gathered >= 1, 'the Bloom patches, out today');
     assert.ok(during.occluders > 0, 'canopies and overhangs fade');
-    assert.equal(during.hooked, 9, 'the lane’s fixtures attach with their chunks');
+    assert.equal(during.hooked, 12, 'the lane’s fixtures attach with their chunks');
     assert.deepEqual(chunks.flatMap(c => c.exits).map(e => e.to), ['woodland'], 'only Brackenwood is a curated outdoor portal');
     assert.ok(!chunks.some((c) => c.exits.some((e) => e.to === 'outdoors')), 'no portal at the arch');
     for (const c of chunks) c.destroy();
@@ -482,8 +482,8 @@ test('fixed ground answers the open map’s lookups; a pocket stands at the near
   assert.deepEqual(fixedStand(arch.tx, arch.ty), arch);
   assert.deepEqual(outdoorStandAt(arch.tx * TILE + 8, arch.ty * TILE + 8), { x: arch.tx * TILE + 8, y: arch.ty * TILE + 8 });
   // The verge woods: solid, and a hero saved there stands on reachable ground.
-  assert.equal(outdoorSolidAt(fp.tx, fp.ty + 30), true);
-  const s = outdoorStandAt(fp.tx * TILE + 8, (fp.ty + 30) * TILE + 8)!;
+  assert.equal(outdoorSolidAt(fp.tx + 36, fp.ty + 36), true);
+  const s = outdoorStandAt((fp.tx + 36) * TILE + 8, (fp.ty + 36) * TILE + 8)!;
   const t = { tx: Math.floor(s.x / TILE), ty: Math.floor(s.y / TILE) };
   assert.equal(fp.reach[(t.ty - fp.ty) * fp.w + (t.tx - fp.tx)], 1);
   // An open pocket the arrivals don't reach moves too.
@@ -500,12 +500,12 @@ test('the window’s grid is the frontier and the Commons; the drift fogs from b
   // The window's grid answers before a read only for fixed chunks (the frontier is the server's).
   assert.equal(onWindow(0, 1), true);
   assert.equal(onWindow(-1, 2), true);
-  assert.equal(onWindow(2, 1), false, 'beside the Commons: the drift');
+  assert.equal(onWindow(3, 1), false, 'beside the Commons: the drift');
   assert.equal(onWindow(0, 3), true, 'south of it: the drift');
   assert.equal(onGrid(0, 1), true);
   const f = { minCx: -4, minCy: -8, maxCx: 4, maxCy: 0 };
   assert.equal(gridDistance(f, 40, 424), 0, 'on the Commons');
-  assert.ok(gridDistance(f, 2.5 * 384, 1.5 * 384) > 0 && gridDistance(f, 2.5 * 384, 1.5 * 384) <= 384, 'a chunk off the Commons');
+  assert.ok(gridDistance(f, 3.5 * 384, 1.5 * 384) > 0 && gridDistance(f, 3.5 * 384, 1.5 * 384) <= 384, 'a chunk off the Commons');
   const b = gridBounds();
   assert.ok(b.y + b.h >= 3 * 384, 'the bounds reach the Commons’ south edge');
 });
@@ -527,7 +527,7 @@ test('the mouth is the seam: safe on the Commons side, not on the Tangle’s; th
 });
 
 test('fixed chunks are cached per layout revision under their pseudo-epoch', () => {
-  assert.equal(fixedEpoch(COMMONS_PLACE.layout, COMMONS_PLACE.revision), 'fixed:hearthwick@1');
+  assert.equal(fixedEpoch(COMMONS_PLACE.layout, COMMONS_PLACE.revision), 'fixed:hearthwick@2');
   assert.match(chunkCacheKey(fixedEpoch('hearthwick', 2), 0, 1), /:fixed:hearthwick@2:0:1$/);
   assert.notEqual(chunkCacheKey(fixedEpoch('hearthwick', 2), 0, 1), chunkCacheKey(fixedEpoch('hearthwick', 3), 0, 1));
 });
@@ -543,14 +543,14 @@ test('failed fixed reads wait before retrying instead of fetching every frame', 
   const flushed = () => new Promise<void>((resolve) => setImmediate(resolve));
   window['load']('0,1');
   await flushed();
-  assert.equal(calls, 17, 'one shared footprint fetch');
+  assert.equal(calls, 20, 'one shared footprint fetch');
   for (let frame = 0; frame < 60; frame++) window['load']('0,1');
   await flushed();
-  assert.equal(calls, 17, 'failed reads are paced');
+  assert.equal(calls, 20, 'failed reads are paced');
   window['retryAt'].set('0,1', 0);
   window['load']('0,1');
   await flushed();
-  assert.equal(calls, 34, 'retry after the backoff');
+  assert.equal(calls, 40, 'retry after the backoff');
   window['destroy']();
   serveFixtureCommons();
 });
@@ -632,7 +632,7 @@ test('Commons residents, pickups, papers, repairs, festival dressing and exit re
   setGameNow(Date.parse('2026-01-05T00:05:00Z') / 1000);
   const before = count();
   assert.equal(before.objects, 1, 'only the persistent interaction key hint before chunks');
-  assert.deepEqual(doorFor('silas', 'outdoors', 'in:commons:yard'), { step: { tx: 34, ty: 35 }, door: { tx: 34, ty: 34 } });
+  assert.deepEqual(doorFor('silas', 'outdoors', 'in:commons:yard'), { step: { tx: -14, ty: 104 }, door: { tx: -14, ty: 103 } });
   for (const festival of ['Carting Day', 'Closure Night', 'Amberwake', 'The Breaking']) {
     model.calendar = { ...model.calendar, festival, notice: 'A fixture notice' } as never;
     bus.emit(EV.villageChanged, { what: 'calendar' });
@@ -648,16 +648,16 @@ test('Commons residents, pickups, papers, repairs, festival dressing and exit re
       assert.ok(papers.lying().length > 0, 'papers drawn');
       assert.ok(repairs.ids().length > 0, 'repairs drawn');
       const points = interactions.list;
-      for (const id of ['home:hame', 'village:board', 'village:hopper', 'hearth', 'home:well', 'home:toolbox', 'home:firebox', 'silas', 'touch:bench:8,61', 'touch:sign:post:16,59']) assert.ok(points.some((p) => p.id === id), id);
+      for (const id of ['home:hame', 'village:board', 'village:hopper', 'hearth', 'home:well', 'home:toolbox', 'home:firebox', 'silas', 'touch:bench:9,64', 'touch:sign:post:19,58']) assert.ok(points.some((p) => p.id === id), id);
       assert.equal(points.find((p) => p.id === 'village:board')?.marker?.(), model.calendar.notice ? 'talk' : null);
       assert.ok(points.some((p) => p.id.startsWith('fish:')), 'fishing banks attached');
       assert.ok(points.some((p) => p.id.startsWith('touch:sign:boundary:')), 'boundary labels readable');
-      assert.deepEqual({ x: village['millView']?.x, y: village['millView']?.y }, { x: 519, y: 1220 });
-      const wheel = r.scene.children.list.find((o) => o.x === 519 && o.y === 1220)!;
-      assert.ok(wheel.depth > 1232, 'wheel sorts in front of mill house');
+      assert.deepEqual({ x: village['millView']?.x, y: village['millView']?.y }, { x: 391, y: 1652 });
+      const wheel = r.scene.children.list.find((o) => o.x === 391 && o.y === 1652)!;
+      assert.ok(wheel.depth > 1664, 'wheel sorts in front of mill house');
       assert.ok(lights.view().length >= 2, 'outdoor resident light overlays attach');
       assert.equal(r.scene.children.list.filter((o) => o.texture.key === 'well-canopy').length, 1);
-      assert.equal(r.scene.children.list.filter((o) => o.texture.key === 'spark' && o.x === 520 && o.y === 842).length, 1, 'Ada’s permanent window light');
+      assert.equal(r.scene.children.list.filter((o) => o.texture.key === 'spark' && o.x === -232 && o.y === 746).length, 1, 'Ada’s permanent window light');
       assert.ok(points.some((p) => p.id === 'elara'), 'resident talk registered');
       assert.ok(points.some((p) => p.id.startsWith('touch:sign:gate:')), 'exit post readable');
       if (festival === 'Carting Day') {
@@ -950,9 +950,10 @@ test('all eight lot anchors seed their physical footprint and preserve saved wor
   const { PLACES } = await import('../src/lib/places.ts');
   const { fixedChunkKeys, serveFixed } = await import('../src/game/wilds/fixed.ts');
   const { outdoorStandAt } = await import('../src/game/wilds/wilds-world.ts');
-  const place = PLACES.fixed.find((p) => p.id === 'homestead-lots')!;
-  const fp = serveFixed(place, fixedChunkKeys(place).map(({ cx, cy }) => decodeChunk(new Uint8Array(readFileSync(new URL(`./fixtures/homestead-lots-${cx}-${cy}.bin`, import.meta.url))))));
-  assert.ok(fp.reach.some(Boolean));
+  for (const place of PLACES.fixed.filter(p => p.kind === 'plots')) {
+    const fp = serveFixed(place, fixedChunkKeys(place).map(({ cx, cy }) => decodeChunk(new Uint8Array(readFileSync(new URL(`./fixtures/${place.id}-${cx}-${cy}.bin`, import.meta.url))))));
+    assert.ok(fp.reach.some(Boolean));
+  }
   for (let gate = 0; gate < 8; gate++) {
     const t = anchorTile(`hearthwick:lot:${gate}`);
     assert.deepEqual(fixedStand(t.tx, t.ty), t, `lot ${gate} remains on its doorstep`);
@@ -968,13 +969,13 @@ test('served artwork meets its collision footprint and woodland returns to the t
   const objects = [...fp.objects.values()].flat();
   for (const o of objects.filter((o) => o.id.startsWith('fence:') || (o.kind === 'scenery' && o.tw > 0))) {
     assert.equal(sceneryOf(o)!.y, (o.ty + 1) * 16, o.id);
-    if (o.tw > 0) assert.deepEqual(sceneryOf(o)!.groundUnder, { tx: o.tx, ty: o.ty - o.th + 1, tw: o.tw, th: o.th, tile: 0 });
+    if (o.tw > 0 && o.variant !== 'tool-crate') assert.deepEqual(sceneryOf(o)!.groundUnder, { tx: o.tx, ty: o.ty - o.th + 1, tw: o.tw, th: o.th, tile: 0 });
   }
   for (const o of objects.filter((o) => o.kind === 'gather')) {
     assert.equal(o.art!.ox, 8); assert.equal(o.art!.oy, 16); assert.equal(o.art!.tile, true);
   }
   const well = objects.find((o) => o.id === 'town-well')!;
-  assert.deepEqual({ x: sceneryOf(well)!.x, y: sceneryOf(well)!.y }, { x: 208, y: 992 });
+  assert.deepEqual({ x: sceneryOf(well)!.x, y: sceneryOf(well)!.y }, { x: 128, y: 1040 });
   for (const ty of [60, 61]) for (const tx of [12, 13]) assert.equal(fixedSolidAt(tx, ty), true);
   const woodland = objects.find((o) => o.id === 'exit:woodland')!;
   assert.equal(exitOf(woodland, fp)!.label, woodland.label);
@@ -1034,11 +1035,11 @@ test('Pip runs out through the garden gap and her conversation listener leaves w
   world.npcs = fixedNpcs().filter((n) => n.id === 'pip');
   const npcs = new Npcs(r.scene as never, world, r.scene.solids as never);
   const before = snapshot(r).listeners;
-  assert.equal(world.open!.solidAt(16, 59), true, 'signpost occupies preferred target');
-  const pip = new PipWalkOn(r.scene as never, { world, npcs, hero: () => ({ x: 15 * 16 + 8, y: 59 * 16 + 12 }) });
+  assert.equal(world.open!.solidAt(19, 58), true, 'signpost occupies preferred target');
+  const pip = new PipWalkOn(r.scene as never, { world, npcs, hero: () => ({ x: 18 * 16 + 8, y: 58 * 16 + 12 }) });
   assert.equal(pip.play(), true);
   const person = npcs.npcs[0]!;
-  assert.ok(person.path!.points.some((p) => Math.floor(p.x / 16) === 9 && Math.floor((p.y - 1) / 16) === 76), 'garden rail gap is on the path');
+  assert.ok(person.path!.points.some((p) => Math.floor(p.x / 16) === -8 && Math.floor((p.y - 1) / 16) === 76), 'garden rail gap is on the path');
   for (const p of person.path!.points) assert.equal(world.open!.solidAt(Math.floor(p.x / 16), Math.floor((p.y - 1) / 16)), false);
   person.path!.done();
   assert.ok(pip['closed'], 'waiting for the message to close');
@@ -1054,21 +1055,21 @@ test('GoalGuide routes outdoor town goals directly and follows the arch and serv
   const { GoalGuide } = await import('../src/game/entities/goal-guide.ts');
   const { buildWildsWorld } = await import('../src/game/wilds/wilds-world.ts');
   const r = rig(), world = buildWildsWorld();
-  let position = { x: 72, y: 968 };
+  let position = { x: 88, y: 968 };
   let goal: unknown = { kind: 'quest', where: { area: 'hearthwick', npc: 'orrin' } };
   const guide = new GoalGuide(r.scene as never, { world, position: () => position, goal: () => goal, npcAt: () => ({ x: 280, y: 928 }), spotAt: () => null, enemyAt: () => null, wardenAt: () => null, lootAt: () => null, placeKind: () => null, guidePoint: () => ({ x: -568, y: 1096 }), reducedMotion: true, exits: () => [] } as never);
   assert.deepEqual(guide.target(), { x: 280, y: 928, here: true, id: 'orrin' });
   goal = { kind: 'quest', where: { area: 'woodland', spot: 'test' } };
-  assert.deepEqual(guide.target(), { x: 680, y: 1000, here: false }, 'east-road anchor works before its exit chunk attaches');
+  assert.deepEqual(guide.target(), { x: 632, y: 968, here: false }, 'east-road anchor works before its exit chunk attaches');
   goal = { kind: 'guide', where: 'gate' };
   assert.deepEqual(guide.target(), { x: -568, y: 1096, here: true });
   position = { x: 40, y: 360 };
   assert.deepEqual(guide.target(), { x: 40, y: 424, here: false }, 'Tangle leads through Hearthwick’s arch');
-  position = { x: 72, y: 968 };
+  position = { x: 88, y: 968 };
   goal = { kind: 'quest', where: { area: 'in:village:library', spot: 'shelves' } };
   const target = guide.target()!;
   assert.equal(target.here, false);
-  assert.equal(Math.floor(target.x / 16), -11, 'library door uses its signed world tile');
+  assert.equal(Math.floor(target.x / 16), 0, 'library door uses its signed world tile');
   r.scene.events.emit('destroy');
   assert.equal(r.scene.children.list.length, 0);
 });
@@ -1113,7 +1114,7 @@ test('six claimed lots build in slices, refresh and detach without retaining hom
   const r = rig();
   const owners = new Map<unknown, unknown[]>();
   const refreshes: string[] = [];
-  const hero = { x: -61 * TILE + 8, y: 32 * TILE + 12, setVelocity() {} };
+  const hero = { x: -37 * TILE + 8, y: 32 * TILE + 12, setVelocity() {} };
   const homes = new Map(Array.from({ length: 6 }, (_, gate) => [gate, {
     id: `home-${gate}`, worldId: 'guest', gate, tier: gate % 2 ? 2 : 0, landSeed: gate,
     member: gate === 0, desolate: false, members: [{ id: `owner-${gate}`, displayName: 'Owner' }],
@@ -1135,10 +1136,10 @@ test('six claimed lots build in slices, refresh and detach without retaining hom
   const { HomesteadYard } = await import('../src/game/entities/homestead-yard.ts');
   const pendingPets: ((keys: string[]) => void)[] = [];
   const before = { ...snapshot(r), timers: r.scene.timers.size };
-  const keys = ['-3,1', '-2,1', '-3,2', '-2,2', '-3,3', '-2,3'];
+  const keys = ['-2,1', '2,1', '-2,2', '2,2', '-2,3', '2,3'];
   for (let round = 0; round < 3; round++) {
     const steps = keys.map((key) => root.attachFixedChunk(key));
-    for (const [gate, { child }] of root.lots!['lots']) Object.assign(child, { yard: new HomesteadYard(r.scene as never, false, () => hero, { x: (-72 + gate % 2 * 24) * TILE, y: (24 + Math.floor(gate / 2) * 24) * TILE }, () => new Promise((resolve) => pendingPets.push(resolve))) });
+    for (const [gate, { child }] of root.lots!['lots']) Object.assign(child, { yard: new HomesteadYard(r.scene as never, false, () => hero, { x: (gate % 2 ? 48 : -48) * TILE, y: (24 + Math.floor(gate / 2) * 24) * TILE }, () => new Promise((resolve) => pendingPets.push(resolve))) });
     assert.ok(steps.every((s) => s.length >= 7), 'site, mailbox and each furnishing are separate steps');
     assert.deepEqual({ ...snapshot(r), timers: r.scene.timers.size }, before, 'enqueueing draws nothing');
     // Simulate an exhausted frame, then one home step per lot per frame.
@@ -1150,7 +1151,7 @@ test('six claimed lots build in slices, refresh and detach without retaining hom
       pendingPets.splice(0).forEach((resolve) => resolve(['yard-pet-fixture']));
       await Promise.resolve(); await Promise.resolve();
       assert.equal(r.scene.children.list.filter((o) => o.texture.key === 'yard-pet-fixture').length, 6);
-      assert.ok(r.scene.children.list.filter((o) => o.texture.key === 'yard-pet-fixture').every((o) => o.x < 0 && o.y >= 24 * TILE));
+      assert.ok(r.scene.children.list.filter((o) => o.texture.key === 'yard-pet-fixture').every((o) => (o.x < -24 * TILE || o.x >= 48 * TILE) && o.y >= 24 * TILE));
     }
     assert.ok(r.scene.children.list.some((o) => o.texture.key === 'camp-patch'));
     assert.ok(r.scene.children.list.some((o) => o.texture.key.startsWith('cottage')));
@@ -1162,15 +1163,15 @@ test('six claimed lots build in slices, refresh and detach without retaining hom
     try {
       child.arranging.update(1);
       child.arranging.startPlacement();
-      assert.equal(child.arranging.placement?.ox, -72 * TILE);
+      assert.equal(child.arranging.placement?.ox, -48 * TILE);
       assert.equal(child.arranging.placement?.oy, 24 * TILE);
       assert.equal(child.arranging.placement?.cols, 24);
       root.lots!.refresh(new Set([0]));
       assert.equal(refreshes.length, round, 'active Arrange defers its fixed refresh');
       child.arranging.endPlacement();
       root.lots!.update(0);
-      assert.equal(refreshes.at(-1), '-3,1', 'deferred refresh flushes after Arrange');
-      root.detachFixedChunk('-3,1');
+      assert.equal(refreshes.at(-1), '-2,1', 'deferred refresh flushes after Arrange');
+      root.detachFixedChunk('-2,1');
       assert.equal(dom.listenerCount('keydown'), 0);
       assert.equal(r.scene.input.listenerCount('pointerdown'), 0);
       assert.equal(r.scene.scale.listenerCount('resize'), 0);
@@ -1193,14 +1194,14 @@ test('six claimed lots build in slices, refresh and detach without retaining hom
 test('plot overlays open only cleared local obstacles and restore the immutable base', async () => {
   const { applyLotHome } = await import('../src/game/wilds/fixed.ts');
   serveFixtureLots();
-  const base = footprint('homestead-lots')!;
-  const obstacle = base.objects.get('-3,1')!.find((o) => o.id.startsWith('land:'))!;
-  const x = obstacle.tx + 72, y = obstacle.ty - 24;
+  const base = footprint('lots-west')!;
+  const obstacle = base.objects.get('-2,1')!.find((o) => o.id.startsWith('land:'))!;
+  const x = obstacle.tx + 48, y = obstacle.ty - 24;
   const savedSolid = base.solid.map((r) => [...r]);
   const home = { worldId: 'fixture-world', cleared: [[x, y]], stumps: [], plants: [] };
   applyLotHome(0, home as never);
   assert.equal(fixedSolidAt(obstacle.tx, obstacle.ty), false);
-  assert.ok(!footprint('homestead-lots')!.objects.get('-3,1')!.some((o) => o.id === obstacle.id));
+  assert.ok(!footprint('lots-west')!.objects.get('-2,1')!.some((o) => o.id === obstacle.id));
   assert.deepEqual(base.solid, savedSolid, 'cached base stays immutable');
   applyLotHome(0, null);
   assert.equal(fixedSolidAt(obstacle.tx, obstacle.ty), true);
@@ -1229,12 +1230,12 @@ test('a late plot read from a previous world cannot replace the new world footpr
   // Concurrency limit of 8: resolve old requests to release slots for new world requests
   answer('old-world');
   await old;
-  assert.equal(footprint('homestead-lots'), null, 'old completion cannot install into new world');
+  assert.equal(footprint('lots-west'), null, 'old completion cannot install into new world');
   await new Promise<void>((resolve) => setImmediate(resolve));
   assert.equal(waiting.filter((w) => w.epoch.startsWith('plot:new-world:')).length, 8);
   answer('new-world');
   await fresh;
-  assert.equal(footprint('homestead-lots')?.epoch, 'plot:new-world@3');
+  assert.equal(footprint('lots-west')?.epoch, 'plot:new-world@3');
   forgetFixed(); forgetChunks(); serveFixtureCommons(); serveFixtureLots();
 });
 
@@ -1262,7 +1263,7 @@ test('HouseLights owns world-coordinate glass and smoke only while its chunk is 
  steps.forEach((draw)=>draw());
  const glass=r.scene.children.list.find((o)=>o.type==='Rectangle')!;
  assert.deepEqual({x:glass.x,y:glass.y},{x:window.tx*16+10,y:window.ty*16+7});
- assert.ok(glass.depth>900,'glass sorts above the world building');
+ assert.ok(glass.depth>53*16,'glass sorts above the world building');
  assert.ok(r.scene.children.list.some((o)=>o.x===chimney.x && o.y===chimney.y));
  lights.refresh();
  assert.equal(glass.visible,!lights.view().find((l)=>l.room===room.id)!.window);
@@ -1284,7 +1285,7 @@ test('fishing proximity uses the supplied water rather than the first water in t
 });
 
 
-test('real window chunks slice six lot facades, defer Arrange refresh and clean up on shutdown', async (t) => {
+test('real window chunks slice three lot facades, defer Arrange refresh and clean up on shutdown', async (t) => {
   const { HomesteadLayer } = await import('../src/game/entities/homesteads.ts');
   const { LotHomes } = await import('../src/game/wilds/lot-chunk.ts');
   const { HomesteadTalk } = await import('../src/game/entities/homestead-talk.ts');
@@ -1298,7 +1299,7 @@ test('real window chunks slice six lot facades, defer Arrange refresh and clean 
   const r = rig();
   const owners = new Map<unknown, unknown[]>();
   const refreshes: string[] = [];
-  const hero = { x: -61 * TILE + 8, y: 32 * TILE + 12, setVelocity() {} };
+  const hero = { x: -37 * TILE + 8, y: 32 * TILE + 12, setVelocity() {} };
   const homes = new Map(Array.from({ length: 6 }, (_, gate) => [gate, {
     id: `home-${gate}`, worldId: 'guest', gate, tier: gate % 2 ? 2 : 0, landSeed: gate,
     member: gate === 0, desolate: false, members: [{ id: `owner-${gate}`, displayName: 'Owner' }],
@@ -1327,19 +1328,19 @@ test('real window chunks slice six lot facades, defer Arrange refresh and clean 
   r.scene.cameras.main.startFollow = () => { following = true; };
   const w = new WildsWindow({ ...r.deps, session: root.deps.session, hero: () => hero, hooks: () => ({ attach: (key: string) => root.attachFixedChunk(key), detach: (key: string, refreshing?: boolean) => root.detachFixedChunk(key, refreshing) }) } as never);
   Object.assign(root.deps, { refreshLot: (key: string) => w.refreshFixed(key) });
-  // A position-derived 3x3 window centred on the shared spine contains six lots.
+  // A position-derived 3x3 window centred on the west row contains three lots.
   hero.x=-48*TILE; hero.y=60*TILE;
   w['recentre'](-2,2);
-  w['plan']!.attach = w['plan']!.attach.filter((key) => key.startsWith('-3,') || key.startsWith('-2,'));
-  for (let i=0;i<6;i++) assert.equal(w['step'](),true);
-  assert.equal(w['fixed'].size,6);
+  w['plan']!.attach = w['plan']!.attach.filter((key) => key.startsWith('-2,'));
+  for (let i=0;i<3;i++) assert.equal(w['step'](),true);
+  assert.equal(w['fixed'].size,3);
   assert.equal(root.lots!['lots'].size,0,'fixture stage has not run synchronously');
   let clock=0;
   t.mock.method(performance,'now',()=>{clock+=0.01;return clock;});
   w.builds.step(clock+1);
   assert.ok([...w['fixed'].values()].some((c)=>!c.whole),'one walking slice never drains all chunks');
   for(let i=0;i<500 && [...w['fixed'].values()].some((c)=>!c.whole);i++) w.builds.step(clock+8);
-  assert.equal(root.lots!['lots'].size,6);
+  assert.equal(root.lots!['lots'].size,3);
   // An invalidation while a read is in flight must get one follow-up read,
   // even before a facade exists; rebuilding a facade must not reset freshness.
   let reads=0;const answers: (()=>void)[]=[];
@@ -1350,18 +1351,18 @@ test('real window chunks slice six lot facades, defer Arrange refresh and clean 
   assert.equal(reads,2);
   answers.shift()!();await Promise.resolve();await Promise.resolve();
   const child=root.lots!['lots'].get(0)!.child;
-  hero.x=-61*TILE+8;hero.y=32*TILE+8;
+  hero.x=-37*TILE+8;hero.y=32*TILE+8;
   const originalWindow=globalThis.window;
   const dom=new EventEmitter();
   globalThis.window={addEventListener:(e:string,fn:()=>void)=>dom.on(e,fn),removeEventListener:(e:string,fn:()=>void)=>dom.off(e,fn)} as unknown as Window & typeof globalThis;
   try {
     child.arranging.update(1);child.arranging.startPlacement();assert.equal(following,false);
-    root.lots!.refresh(new Set([0,1]));
-    assert.equal(w['seasonalPending'].has('-3,1'),false,'placing lot waits');
-    assert.equal(w['seasonalPending'].has('-2,1'),true,'other lot still refreshes');
+    root.lots!.refresh(new Set([0,2]));
+    assert.equal(w['seasonalPending'].has('-2,1'),false,'placing lot waits');
+    assert.equal(w['seasonalPending'].has('-2,2'),true,'other lot still refreshes');
     child.arranging.endPlacement();assert.equal(following,true);
-    root.lots!.update(0);assert.equal(w['seasonalPending'].has('-3,1'),true);
-    const old=w['fixed'].get('-2,1')!;
+    root.lots!.update(0);assert.equal(w['seasonalPending'].has('-2,1'),true);
+    const old=w['fixed'].get('-2,2')!;
     w.update(0);assert.equal(old.whole,true,'old pending job is cancelled');
     w.update(0); // the deferred active-lot key also rebuilds through the window queue
     for(let i=0;i<500 && [...w['fixed'].values()].some((c)=>!c.whole);i++) w.builds.step(clock+8);
@@ -1416,7 +1417,7 @@ test('a usable gate shelf placement beats a nearer mailbox, only inside its own 
   const { Interactables } = await import('../src/game/entities/interactables.ts');
   const lane = commonsLane()!;
   const slot = lane.gates[0]!;
-  const hero = { x: (slot.tx + 1) * 16 + 8, y: slot.ty * 16 + 8 };
+  const hero = { x: (slot.tx - 1) * 16 + 8, y: slot.ty * 16 + 8 };
   const scene = new FakeScene();
   const talk = new HomesteadTalk({ scene, deps: { world: { areaId: 'outdoors', npcs: [] }, hero: () => hero }, commons: lane,
     homes: { gateInfo: (gate: number) => ({ mine: gate === 0 }), mine: { items: [{ id: 'new-shelf', itemDef: 'gate-shelf', scene: null }] } },
@@ -1427,7 +1428,7 @@ test('a usable gate shelf placement beats a nearer mailbox, only inside its own 
   const mailbox = { id: 'home:mail', x: hero.x + 16, y: hero.y - 16, label: 'Open the mailbox', activate() {} } as const;
   picker.register({}, [mailbox, placement]);
   assert.equal(picker.pick(hero)?.id, placement.id);
-  hero.y += 16; // Public lane immediately south of the gate.
+  hero.x += 48; // Public lane east of the gate.
   assert.notEqual(picker.pick(hero)?.id, placement.id);
 });
 
@@ -1462,7 +1463,7 @@ test('the owner can open the placed shelf from inside the gate to put it away', 
   const { HomesteadTalk } = await import('../src/game/entities/homestead-talk.ts');
   const { Interactables } = await import('../src/game/entities/interactables.ts');
   const slot = commonsLane()!.gates[0]!;
-  const hero = { x: (slot.tx + 1) * 16 + 8, y: slot.ty * 16 + 8 };
+  const hero = { x: (slot.tx - 1) * 16 + 8, y: slot.ty * 16 + 8 };
   const scene = new FakeScene();
   const talk = new HomesteadTalk({ scene, deps: { world: { areaId: 'outdoors', npcs: [] }, hero: () => hero }, commons: commonsLane(),
     homes: { gateInfo: (gate: number) => ({ mine: gate === 0, shelf: gate === 0 }) },
@@ -1470,7 +1471,7 @@ test('the owner can open the placed shelf from inside the gate to put it away', 
   const picker = new Interactables(scene as never, { reducedMotion: true });
   picker.register({}, [...talk.interactionList(), { id: 'home:mail', x: hero.x + 16, y: hero.y - 16, label: 'Open the mailbox', activate() {} }]);
   assert.equal(picker.pick(hero)?.label, 'Look at the gift shelf', 'management must be reachable where removal is permitted');
-  hero.y += 16;
+  hero.x += 48;
   const management = picker.list.find((p) => p.id === 'home:manage-shelf:0')!;
   assert.equal(management.available?.(), false, 'the priority management point stops at the fence');
 });
@@ -1483,7 +1484,7 @@ test('fixed chunk attach makes no new textures after pre-warming, including when
   const { createNewGame } = await import('../src/lib/state.ts');
   const { repairsForArea } = await import('../src/lib/repairs.ts');
   const r = rig();
-  const footprints = [r.fp, footprint('homestead-lots')!];
+  const footprints = [r.fp, footprint('lots-west')!, footprint('lots-east')!];
   const originalDocument = globalThis.document;
   globalThis.document = {
     createElement: () => ({
@@ -1520,7 +1521,7 @@ test('fixed chunk attach makes no new textures after pre-warming, including when
     assert.deepEqual(r.scene.textures.added, []);
     for (const fp of footprints) prewarmFixedArt(r.scene as never, fp);
     const warmed: string[] = [...r.scene.textures.added];
-    for (const run of ['fence-v-5', 'fence-v-15', 'fence-h-14', 'fence-h-8', 'repair-hame-broken']) {
+    for (const run of ['fence-v-9', 'fence-h-24', 'repair-hame-broken']) {
       assert.ok(warmed.includes(run), `pre-warmed ${run}`);
     }
 
@@ -1558,9 +1559,9 @@ test('fixed chunk attach makes no new textures after pre-warming, including when
     let clock = 0;
     t.mock.method(performance, 'now', () => (clock += 2));
     bus.emit(EV.fixedReady);
-    assert.equal(w.builds['waiting'].length, 2, 'town and lots each queue a pre-warm job');
+    assert.equal(w.builds['waiting'].length, 3, 'town and lots each queue a pre-warm job');
     bus.emit(EV.fixedReady);
-    assert.equal(w.builds['waiting'].length, 2, 'another fixed-ready event does not duplicate pre-warming');
+    assert.equal(w.builds['waiting'].length, 3, 'another fixed-ready event does not duplicate pre-warming');
     w.builds.step(5);
     assert.ok(r.scene.textures.added.length > 0 && r.scene.textures.added.length < warmed.length, 'spread across slices');
     w.builds.step(Infinity);
@@ -1575,15 +1576,15 @@ test('fixed chunk attach makes no new textures after pre-warming, including when
 test('claimed lot shade reaches the fence and rear edge, replaces one texture, and leaves public lanes clear', () => {
   const scene = new FakeScene();
   let claimed = true;
-  const home = { scene, deps: {}, land: { width: 24, height: 24, gridOrigin: { x: -1152, y: 384 } }, here: () => claimed ? { items: [], desolate: false } : null };
+  const home = { scene, deps: {}, land: { width: 24, height: 24, gridOrigin: { x: -768, y: 384 } }, here: () => claimed ? { items: [], desolate: false } : null };
   const art = new HomesteadArt(home as never);
   const created: number[][] = [];
   const make = scene.textures.createCanvas;
   scene.textures.createCanvas = (key: string, ...size: number[]) => { created.push(size); return make(key); };
   art.drawShade();
   const image = scene.children.list.find((o) => o.texture.key.startsWith('lot-shade:'))!;
-  assert.deepEqual([image.x, image.y], [-1120, 384], 'shade starts at the fence margin and back edge');
-  assert.deepEqual(created, [[320, 320]], 'ends at x22/y20 before the public spine/cross-lane');
+  assert.deepEqual([image.x, image.y], [-768, 400], 'shade starts at the fence margin and back edge');
+  assert.deepEqual(created, [[384, 352]], 'covers both fence margins and the open back, excluding verge paths');
   art.drawShade();
   assert.equal(scene.textures.added.filter((key) => key.startsWith('lot-shade:')).length, 1);
   assert.equal(image.alive, false, 'redraw destroys the old image before its texture');

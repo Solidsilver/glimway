@@ -318,7 +318,7 @@ func TestPartyResidenceHomeArrivalAtItsGate(t *testing.T) {
 		name, area string
 		x, y       float64
 	}{
-		{"lot:5", "outdoors", -42*16 + 8, 80*16 + 8},
+		{"lot:5", "outdoors", 59*16 + 8, 80*16 + 8},
 		{"in:home:5", "in:home:5", 80, 80},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

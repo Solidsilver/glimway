@@ -137,7 +137,7 @@ test('every exit has a way back, and you arrive beside it', () => {
       if (EXTERNAL.includes(e.to)) continue;
       const dest = worlds[e.to];
       const back = dest.exits.find((x) => x.to === area || (area === 'village' && e.to === 'woodland' && x.to === 'outdoors'));
-      if (area === 'village' && e.to === 'woodland') assert.deepEqual(back?.entry, { tx: 42, ty: 62 }, 'legacy builder’s return now enters the outdoor town');
+      if (area === 'village' && e.to === 'woodland') assert.deepEqual(back?.entry, { tx: 39, ty: 60 }, 'legacy builder’s return now enters the outdoor town');
       if (!back) assert.fail(`${e.to} has no exit back to ${area}`);
       const blocked = blockedTiles(dest);
       assert.ok(!blocked.has(key(e.entry)), `${area}→${e.to} entry ${key(e.entry)} is blocked`);

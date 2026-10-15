@@ -955,6 +955,325 @@
         {
           "path": [
             "rooms",
+            4
+          ],
+          "value": {
+            "id": "in:commons:yard",
+            "name": "Silas's Yard",
+            "parent": "hearthwick",
+            "map": [
+              "##############",
+              "#RRRw====wMMM#",
+              "#RRR......MMM#",
+              "#.....CCC....#",
+              "#............#",
+              "#............E",
+              "#............E",
+              "#............#",
+              "#......@.....#",
+              "######DD######"
+            ],
+            "doors": [
+              {
+                "id": "front",
+                "kind": "door",
+                "at": "D",
+                "side": "south",
+                "to": "hearthwick",
+                "outside": {
+                  "tx": 34,
+                  "ty": 34
+                },
+                "entry": {
+                  "tx": 34,
+                  "ty": 35
+                }
+              },
+              {
+                "id": "office",
+                "kind": "inner",
+                "at": "E",
+                "side": "east",
+                "to": "in:commons:yard:deeds",
+                "entry": {
+                  "tx": 1,
+                  "ty": 3
+                }
+              }
+            ],
+            "props": [
+              {
+                "art": "yard-timber-rack",
+                "char": "R",
+                "solid": true
+              },
+              {
+                "art": "yard-counter",
+                "char": "C",
+                "solid": true
+              },
+              {
+                "art": "yard-mending-bench",
+                "char": "M",
+                "solid": true
+              },
+              {
+                "art": "kit-side-doorway",
+                "char": "E",
+                "solid": false,
+                "facing": "left"
+              }
+            ],
+            "spots": {
+              "yard-materials": {
+                "tx": 2,
+                "ty": 3,
+                "label": "Look at the timber"
+              },
+              "yard-mend": {
+                "tx": 10,
+                "ty": 3,
+                "label": "Look at the mending bench"
+              },
+              "yard-furnish": {
+                "tx": 2,
+                "ty": 5,
+                "label": "Look at the pieces"
+              },
+              "yard-counter": {
+                "tx": 7,
+                "ty": 4,
+                "label": "Look at the counter"
+              }
+            },
+            "lights": [
+              {
+                "tx": 4,
+                "ty": 2,
+                "kind": "window",
+                "r": 3
+              },
+              {
+                "tx": 9,
+                "ty": 2,
+                "kind": "window",
+                "r": 3
+              },
+              {
+                "tx": 7,
+                "ty": 3,
+                "kind": "lamp",
+                "r": 4
+              }
+            ],
+            "outside": {
+              "building": "cottage-silas"
+            },
+            "furnishings": [
+              {
+                "piece": "wall-pegs-tools",
+                "tx": 6,
+                "ty": 1
+              },
+              {
+                "piece": "calendar",
+                "tx": 5,
+                "ty": 1
+              },
+              {
+                "piece": "rug-braided",
+                "tx": 1,
+                "ty": 5
+              },
+              {
+                "piece": "chair-side",
+                "facing": "right",
+                "tx": 1,
+                "ty": 5
+              },
+              {
+                "piece": "small-table",
+                "tx": 2,
+                "ty": 5
+              },
+              {
+                "piece": "candle-holder",
+                "parent": 4
+              },
+              {
+                "piece": "wooden-stool",
+                "tx": 3,
+                "ty": 5
+              },
+              {
+                "piece": "iron-lantern",
+                "tx": 3,
+                "ty": 6
+              },
+              {
+                "piece": "woven-basket",
+                "tx": 1,
+                "ty": 6
+              },
+              {
+                "piece": "barrel",
+                "tx": 12,
+                "ty": 8
+              },
+              {
+                "piece": "crate",
+                "tx": 11,
+                "ty": 8
+              },
+              {
+                "piece": "sack",
+                "tx": 10,
+                "ty": 8
+              },
+              {
+                "piece": "crate",
+                "tx": 1,
+                "ty": 8
+              },
+              {
+                "piece": "potted-fern",
+                "tx": 2,
+                "ty": 8
+              },
+              {
+                "piece": "rug-patchwork",
+                "tx": 5,
+                "ty": 5
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "rooms",
+            5
+          ],
+          "value": {
+            "id": "in:commons:yard:deeds",
+            "name": "Pell's office",
+            "parent": "hearthwick",
+            "map": [
+              "##########",
+              "#PPPw===w#",
+              "#PPP.....L",
+              "E.....k..#",
+              "E....TTT.#",
+              "#....TTT.#",
+              "b........#",
+              "##########"
+            ],
+            "doors": [
+              {
+                "id": "shop",
+                "kind": "inner",
+                "at": "E",
+                "side": "west",
+                "to": "in:commons:yard",
+                "entry": {
+                  "tx": 12,
+                  "ty": 5
+                }
+              }
+            ],
+            "props": [
+              {
+                "art": "deeds-pigeonholes",
+                "char": "P",
+                "solid": true
+              },
+              {
+                "art": "deeds-clerk-desk",
+                "char": "k",
+                "solid": true
+              },
+              {
+                "art": "deeds-table",
+                "char": "T",
+                "solid": true
+              },
+              {
+                "art": "kit-side-doorway",
+                "char": "E",
+                "solid": false,
+                "facing": "right"
+              },
+              {
+                "art": "library-side-shelves",
+                "char": "L",
+                "solid": true,
+                "facing": "left"
+              },
+              {
+                "art": "library-side-shelf-short",
+                "char": "b",
+                "solid": true,
+                "facing": "right"
+              }
+            ],
+            "spots": {},
+            "lights": [
+              {
+                "tx": 4,
+                "ty": 2,
+                "kind": "window",
+                "r": 3
+              },
+              {
+                "tx": 8,
+                "ty": 2,
+                "kind": "window",
+                "r": 3
+              },
+              {
+                "tx": 6,
+                "ty": 4,
+                "kind": "lamp",
+                "r": 4
+              }
+            ],
+            "furnishings": [
+              {
+                "piece": "calendar",
+                "tx": 6,
+                "ty": 1
+              },
+              {
+                "piece": "chair-side",
+                "facing": "right",
+                "tx": 4,
+                "ty": 4
+              },
+              {
+                "piece": "chair-side",
+                "facing": "left",
+                "tx": 8,
+                "ty": 4
+              },
+              {
+                "piece": "crate",
+                "tx": 8,
+                "ty": 6
+              },
+              {
+                "piece": "candle",
+                "parent": 3
+              },
+              {
+                "piece": "woven-basket",
+                "tx": 1,
+                "ty": 6
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "rooms",
             4,
             "props",
             3,
@@ -972,6 +1291,325 @@
         {
           "path": [
             "rooms",
+            4
+          ],
+          "value": {
+            "id": "in:commons:yard",
+            "name": "Silas's Yard",
+            "parent": "hearthwick",
+            "map": [
+              "##############",
+              "#RRRw====wMMM#",
+              "#RRR......MMM#",
+              "#.....CCC....#",
+              "#............#",
+              "#............E",
+              "#............E",
+              "#............#",
+              "#......@.....#",
+              "######DD######"
+            ],
+            "doors": [
+              {
+                "id": "front",
+                "kind": "door",
+                "at": "D",
+                "side": "south",
+                "to": "hearthwick",
+                "outside": {
+                  "tx": 34,
+                  "ty": 34
+                },
+                "entry": {
+                  "tx": 34,
+                  "ty": 35
+                }
+              },
+              {
+                "id": "office",
+                "kind": "inner",
+                "at": "E",
+                "side": "east",
+                "to": "in:commons:yard:deeds",
+                "entry": {
+                  "tx": 1,
+                  "ty": 3
+                }
+              }
+            ],
+            "props": [
+              {
+                "art": "yard-timber-rack",
+                "char": "R",
+                "solid": true
+              },
+              {
+                "art": "yard-counter",
+                "char": "C",
+                "solid": true
+              },
+              {
+                "art": "yard-mending-bench",
+                "char": "M",
+                "solid": true
+              },
+              {
+                "art": "kit-side-doorway",
+                "char": "E",
+                "solid": false,
+                "facing": "left"
+              }
+            ],
+            "spots": {
+              "yard-materials": {
+                "tx": 2,
+                "ty": 3,
+                "label": "Look at the timber"
+              },
+              "yard-mend": {
+                "tx": 10,
+                "ty": 3,
+                "label": "Look at the mending bench"
+              },
+              "yard-furnish": {
+                "tx": 2,
+                "ty": 5,
+                "label": "Look at the pieces"
+              },
+              "yard-counter": {
+                "tx": 7,
+                "ty": 4,
+                "label": "Look at the counter"
+              }
+            },
+            "lights": [
+              {
+                "tx": 4,
+                "ty": 2,
+                "kind": "window",
+                "r": 3
+              },
+              {
+                "tx": 9,
+                "ty": 2,
+                "kind": "window",
+                "r": 3
+              },
+              {
+                "tx": 7,
+                "ty": 3,
+                "kind": "lamp",
+                "r": 4
+              }
+            ],
+            "outside": {
+              "building": "cottage-silas"
+            },
+            "furnishings": [
+              {
+                "piece": "wall-pegs-tools",
+                "tx": 6,
+                "ty": 1
+              },
+              {
+                "piece": "calendar",
+                "tx": 5,
+                "ty": 1
+              },
+              {
+                "piece": "rug-braided",
+                "tx": 1,
+                "ty": 5
+              },
+              {
+                "piece": "chair-side",
+                "facing": "right",
+                "tx": 1,
+                "ty": 5
+              },
+              {
+                "piece": "small-table",
+                "tx": 2,
+                "ty": 5
+              },
+              {
+                "piece": "candle-holder",
+                "parent": 4
+              },
+              {
+                "piece": "wooden-stool",
+                "tx": 3,
+                "ty": 5
+              },
+              {
+                "piece": "iron-lantern",
+                "tx": 3,
+                "ty": 6
+              },
+              {
+                "piece": "woven-basket",
+                "tx": 1,
+                "ty": 6
+              },
+              {
+                "piece": "barrel",
+                "tx": 12,
+                "ty": 8
+              },
+              {
+                "piece": "crate",
+                "tx": 11,
+                "ty": 8
+              },
+              {
+                "piece": "sack",
+                "tx": 10,
+                "ty": 8
+              },
+              {
+                "piece": "crate",
+                "tx": 1,
+                "ty": 8
+              },
+              {
+                "piece": "potted-fern",
+                "tx": 2,
+                "ty": 8
+              },
+              {
+                "piece": "rug-patchwork",
+                "tx": 5,
+                "ty": 5
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "rooms",
+            5
+          ],
+          "value": {
+            "id": "in:commons:yard:deeds",
+            "name": "Pell's office",
+            "parent": "hearthwick",
+            "map": [
+              "##########",
+              "#PPPw===w#",
+              "#PPP.....L",
+              "E.....k..#",
+              "E....TTT.#",
+              "#....TTT.#",
+              "b........#",
+              "##########"
+            ],
+            "doors": [
+              {
+                "id": "shop",
+                "kind": "inner",
+                "at": "E",
+                "side": "west",
+                "to": "in:commons:yard",
+                "entry": {
+                  "tx": 12,
+                  "ty": 5
+                }
+              }
+            ],
+            "props": [
+              {
+                "art": "deeds-pigeonholes",
+                "char": "P",
+                "solid": true
+              },
+              {
+                "art": "deeds-clerk-desk",
+                "char": "k",
+                "solid": true
+              },
+              {
+                "art": "deeds-table",
+                "char": "T",
+                "solid": true
+              },
+              {
+                "art": "kit-side-doorway",
+                "char": "E",
+                "solid": false,
+                "facing": "right"
+              },
+              {
+                "art": "library-side-shelves",
+                "char": "L",
+                "solid": true,
+                "facing": "left"
+              },
+              {
+                "art": "library-side-shelf-short",
+                "char": "b",
+                "solid": true,
+                "facing": "right"
+              }
+            ],
+            "spots": {},
+            "lights": [
+              {
+                "tx": 4,
+                "ty": 2,
+                "kind": "window",
+                "r": 3
+              },
+              {
+                "tx": 8,
+                "ty": 2,
+                "kind": "window",
+                "r": 3
+              },
+              {
+                "tx": 6,
+                "ty": 4,
+                "kind": "lamp",
+                "r": 4
+              }
+            ],
+            "furnishings": [
+              {
+                "piece": "calendar",
+                "tx": 6,
+                "ty": 1
+              },
+              {
+                "piece": "chair-side",
+                "facing": "right",
+                "tx": 4,
+                "ty": 4
+              },
+              {
+                "piece": "chair-side",
+                "facing": "left",
+                "tx": 8,
+                "ty": 4
+              },
+              {
+                "piece": "crate",
+                "tx": 8,
+                "ty": 6
+              },
+              {
+                "piece": "candle",
+                "parent": 3
+              },
+              {
+                "piece": "woven-basket",
+                "tx": 1,
+                "ty": 6
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "rooms",
             4,
             "doors",
             1,
@@ -986,6 +1624,325 @@
       "valid": false,
       "rule": "inner target",
       "edits": [
+        {
+          "path": [
+            "rooms",
+            4
+          ],
+          "value": {
+            "id": "in:commons:yard",
+            "name": "Silas's Yard",
+            "parent": "hearthwick",
+            "map": [
+              "##############",
+              "#RRRw====wMMM#",
+              "#RRR......MMM#",
+              "#.....CCC....#",
+              "#............#",
+              "#............E",
+              "#............E",
+              "#............#",
+              "#......@.....#",
+              "######DD######"
+            ],
+            "doors": [
+              {
+                "id": "front",
+                "kind": "door",
+                "at": "D",
+                "side": "south",
+                "to": "hearthwick",
+                "outside": {
+                  "tx": 34,
+                  "ty": 34
+                },
+                "entry": {
+                  "tx": 34,
+                  "ty": 35
+                }
+              },
+              {
+                "id": "office",
+                "kind": "inner",
+                "at": "E",
+                "side": "east",
+                "to": "in:commons:yard:deeds",
+                "entry": {
+                  "tx": 1,
+                  "ty": 3
+                }
+              }
+            ],
+            "props": [
+              {
+                "art": "yard-timber-rack",
+                "char": "R",
+                "solid": true
+              },
+              {
+                "art": "yard-counter",
+                "char": "C",
+                "solid": true
+              },
+              {
+                "art": "yard-mending-bench",
+                "char": "M",
+                "solid": true
+              },
+              {
+                "art": "kit-side-doorway",
+                "char": "E",
+                "solid": false,
+                "facing": "left"
+              }
+            ],
+            "spots": {
+              "yard-materials": {
+                "tx": 2,
+                "ty": 3,
+                "label": "Look at the timber"
+              },
+              "yard-mend": {
+                "tx": 10,
+                "ty": 3,
+                "label": "Look at the mending bench"
+              },
+              "yard-furnish": {
+                "tx": 2,
+                "ty": 5,
+                "label": "Look at the pieces"
+              },
+              "yard-counter": {
+                "tx": 7,
+                "ty": 4,
+                "label": "Look at the counter"
+              }
+            },
+            "lights": [
+              {
+                "tx": 4,
+                "ty": 2,
+                "kind": "window",
+                "r": 3
+              },
+              {
+                "tx": 9,
+                "ty": 2,
+                "kind": "window",
+                "r": 3
+              },
+              {
+                "tx": 7,
+                "ty": 3,
+                "kind": "lamp",
+                "r": 4
+              }
+            ],
+            "outside": {
+              "building": "cottage-silas"
+            },
+            "furnishings": [
+              {
+                "piece": "wall-pegs-tools",
+                "tx": 6,
+                "ty": 1
+              },
+              {
+                "piece": "calendar",
+                "tx": 5,
+                "ty": 1
+              },
+              {
+                "piece": "rug-braided",
+                "tx": 1,
+                "ty": 5
+              },
+              {
+                "piece": "chair-side",
+                "facing": "right",
+                "tx": 1,
+                "ty": 5
+              },
+              {
+                "piece": "small-table",
+                "tx": 2,
+                "ty": 5
+              },
+              {
+                "piece": "candle-holder",
+                "parent": 4
+              },
+              {
+                "piece": "wooden-stool",
+                "tx": 3,
+                "ty": 5
+              },
+              {
+                "piece": "iron-lantern",
+                "tx": 3,
+                "ty": 6
+              },
+              {
+                "piece": "woven-basket",
+                "tx": 1,
+                "ty": 6
+              },
+              {
+                "piece": "barrel",
+                "tx": 12,
+                "ty": 8
+              },
+              {
+                "piece": "crate",
+                "tx": 11,
+                "ty": 8
+              },
+              {
+                "piece": "sack",
+                "tx": 10,
+                "ty": 8
+              },
+              {
+                "piece": "crate",
+                "tx": 1,
+                "ty": 8
+              },
+              {
+                "piece": "potted-fern",
+                "tx": 2,
+                "ty": 8
+              },
+              {
+                "piece": "rug-patchwork",
+                "tx": 5,
+                "ty": 5
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "rooms",
+            5
+          ],
+          "value": {
+            "id": "in:commons:yard:deeds",
+            "name": "Pell's office",
+            "parent": "hearthwick",
+            "map": [
+              "##########",
+              "#PPPw===w#",
+              "#PPP.....L",
+              "E.....k..#",
+              "E....TTT.#",
+              "#....TTT.#",
+              "b........#",
+              "##########"
+            ],
+            "doors": [
+              {
+                "id": "shop",
+                "kind": "inner",
+                "at": "E",
+                "side": "west",
+                "to": "in:commons:yard",
+                "entry": {
+                  "tx": 12,
+                  "ty": 5
+                }
+              }
+            ],
+            "props": [
+              {
+                "art": "deeds-pigeonholes",
+                "char": "P",
+                "solid": true
+              },
+              {
+                "art": "deeds-clerk-desk",
+                "char": "k",
+                "solid": true
+              },
+              {
+                "art": "deeds-table",
+                "char": "T",
+                "solid": true
+              },
+              {
+                "art": "kit-side-doorway",
+                "char": "E",
+                "solid": false,
+                "facing": "right"
+              },
+              {
+                "art": "library-side-shelves",
+                "char": "L",
+                "solid": true,
+                "facing": "left"
+              },
+              {
+                "art": "library-side-shelf-short",
+                "char": "b",
+                "solid": true,
+                "facing": "right"
+              }
+            ],
+            "spots": {},
+            "lights": [
+              {
+                "tx": 4,
+                "ty": 2,
+                "kind": "window",
+                "r": 3
+              },
+              {
+                "tx": 8,
+                "ty": 2,
+                "kind": "window",
+                "r": 3
+              },
+              {
+                "tx": 6,
+                "ty": 4,
+                "kind": "lamp",
+                "r": 4
+              }
+            ],
+            "furnishings": [
+              {
+                "piece": "calendar",
+                "tx": 6,
+                "ty": 1
+              },
+              {
+                "piece": "chair-side",
+                "facing": "right",
+                "tx": 4,
+                "ty": 4
+              },
+              {
+                "piece": "chair-side",
+                "facing": "left",
+                "tx": 8,
+                "ty": 4
+              },
+              {
+                "piece": "crate",
+                "tx": 8,
+                "ty": 6
+              },
+              {
+                "piece": "candle",
+                "parent": 3
+              },
+              {
+                "piece": "woven-basket",
+                "tx": 1,
+                "ty": 6
+              }
+            ]
+          }
+        },
         {
           "path": [
             "rooms",
@@ -1009,6 +1966,325 @@
         {
           "path": [
             "rooms",
+            4
+          ],
+          "value": {
+            "id": "in:commons:yard",
+            "name": "Silas's Yard",
+            "parent": "hearthwick",
+            "map": [
+              "##############",
+              "#RRRw====wMMM#",
+              "#RRR......MMM#",
+              "#.....CCC....#",
+              "#............#",
+              "#............E",
+              "#............E",
+              "#............#",
+              "#......@.....#",
+              "######DD######"
+            ],
+            "doors": [
+              {
+                "id": "front",
+                "kind": "door",
+                "at": "D",
+                "side": "south",
+                "to": "hearthwick",
+                "outside": {
+                  "tx": 34,
+                  "ty": 34
+                },
+                "entry": {
+                  "tx": 34,
+                  "ty": 35
+                }
+              },
+              {
+                "id": "office",
+                "kind": "inner",
+                "at": "E",
+                "side": "east",
+                "to": "in:commons:yard:deeds",
+                "entry": {
+                  "tx": 1,
+                  "ty": 3
+                }
+              }
+            ],
+            "props": [
+              {
+                "art": "yard-timber-rack",
+                "char": "R",
+                "solid": true
+              },
+              {
+                "art": "yard-counter",
+                "char": "C",
+                "solid": true
+              },
+              {
+                "art": "yard-mending-bench",
+                "char": "M",
+                "solid": true
+              },
+              {
+                "art": "kit-side-doorway",
+                "char": "E",
+                "solid": false,
+                "facing": "left"
+              }
+            ],
+            "spots": {
+              "yard-materials": {
+                "tx": 2,
+                "ty": 3,
+                "label": "Look at the timber"
+              },
+              "yard-mend": {
+                "tx": 10,
+                "ty": 3,
+                "label": "Look at the mending bench"
+              },
+              "yard-furnish": {
+                "tx": 2,
+                "ty": 5,
+                "label": "Look at the pieces"
+              },
+              "yard-counter": {
+                "tx": 7,
+                "ty": 4,
+                "label": "Look at the counter"
+              }
+            },
+            "lights": [
+              {
+                "tx": 4,
+                "ty": 2,
+                "kind": "window",
+                "r": 3
+              },
+              {
+                "tx": 9,
+                "ty": 2,
+                "kind": "window",
+                "r": 3
+              },
+              {
+                "tx": 7,
+                "ty": 3,
+                "kind": "lamp",
+                "r": 4
+              }
+            ],
+            "outside": {
+              "building": "cottage-silas"
+            },
+            "furnishings": [
+              {
+                "piece": "wall-pegs-tools",
+                "tx": 6,
+                "ty": 1
+              },
+              {
+                "piece": "calendar",
+                "tx": 5,
+                "ty": 1
+              },
+              {
+                "piece": "rug-braided",
+                "tx": 1,
+                "ty": 5
+              },
+              {
+                "piece": "chair-side",
+                "facing": "right",
+                "tx": 1,
+                "ty": 5
+              },
+              {
+                "piece": "small-table",
+                "tx": 2,
+                "ty": 5
+              },
+              {
+                "piece": "candle-holder",
+                "parent": 4
+              },
+              {
+                "piece": "wooden-stool",
+                "tx": 3,
+                "ty": 5
+              },
+              {
+                "piece": "iron-lantern",
+                "tx": 3,
+                "ty": 6
+              },
+              {
+                "piece": "woven-basket",
+                "tx": 1,
+                "ty": 6
+              },
+              {
+                "piece": "barrel",
+                "tx": 12,
+                "ty": 8
+              },
+              {
+                "piece": "crate",
+                "tx": 11,
+                "ty": 8
+              },
+              {
+                "piece": "sack",
+                "tx": 10,
+                "ty": 8
+              },
+              {
+                "piece": "crate",
+                "tx": 1,
+                "ty": 8
+              },
+              {
+                "piece": "potted-fern",
+                "tx": 2,
+                "ty": 8
+              },
+              {
+                "piece": "rug-patchwork",
+                "tx": 5,
+                "ty": 5
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "rooms",
+            5
+          ],
+          "value": {
+            "id": "in:commons:yard:deeds",
+            "name": "Pell's office",
+            "parent": "hearthwick",
+            "map": [
+              "##########",
+              "#PPPw===w#",
+              "#PPP.....L",
+              "E.....k..#",
+              "E....TTT.#",
+              "#....TTT.#",
+              "b........#",
+              "##########"
+            ],
+            "doors": [
+              {
+                "id": "shop",
+                "kind": "inner",
+                "at": "E",
+                "side": "west",
+                "to": "in:commons:yard",
+                "entry": {
+                  "tx": 12,
+                  "ty": 5
+                }
+              }
+            ],
+            "props": [
+              {
+                "art": "deeds-pigeonholes",
+                "char": "P",
+                "solid": true
+              },
+              {
+                "art": "deeds-clerk-desk",
+                "char": "k",
+                "solid": true
+              },
+              {
+                "art": "deeds-table",
+                "char": "T",
+                "solid": true
+              },
+              {
+                "art": "kit-side-doorway",
+                "char": "E",
+                "solid": false,
+                "facing": "right"
+              },
+              {
+                "art": "library-side-shelves",
+                "char": "L",
+                "solid": true,
+                "facing": "left"
+              },
+              {
+                "art": "library-side-shelf-short",
+                "char": "b",
+                "solid": true,
+                "facing": "right"
+              }
+            ],
+            "spots": {},
+            "lights": [
+              {
+                "tx": 4,
+                "ty": 2,
+                "kind": "window",
+                "r": 3
+              },
+              {
+                "tx": 8,
+                "ty": 2,
+                "kind": "window",
+                "r": 3
+              },
+              {
+                "tx": 6,
+                "ty": 4,
+                "kind": "lamp",
+                "r": 4
+              }
+            ],
+            "furnishings": [
+              {
+                "piece": "calendar",
+                "tx": 6,
+                "ty": 1
+              },
+              {
+                "piece": "chair-side",
+                "facing": "right",
+                "tx": 4,
+                "ty": 4
+              },
+              {
+                "piece": "chair-side",
+                "facing": "left",
+                "tx": 8,
+                "ty": 4
+              },
+              {
+                "piece": "crate",
+                "tx": 8,
+                "ty": 6
+              },
+              {
+                "piece": "candle",
+                "parent": 3
+              },
+              {
+                "piece": "woven-basket",
+                "tx": 1,
+                "ty": 6
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "rooms",
             4,
             "doors",
             1,
@@ -1023,6 +2299,325 @@
       "valid": false,
       "rule": "room_door.shape",
       "edits": [
+        {
+          "path": [
+            "rooms",
+            4
+          ],
+          "value": {
+            "id": "in:commons:yard",
+            "name": "Silas's Yard",
+            "parent": "hearthwick",
+            "map": [
+              "##############",
+              "#RRRw====wMMM#",
+              "#RRR......MMM#",
+              "#.....CCC....#",
+              "#............#",
+              "#............E",
+              "#............E",
+              "#............#",
+              "#......@.....#",
+              "######DD######"
+            ],
+            "doors": [
+              {
+                "id": "front",
+                "kind": "door",
+                "at": "D",
+                "side": "south",
+                "to": "hearthwick",
+                "outside": {
+                  "tx": 34,
+                  "ty": 34
+                },
+                "entry": {
+                  "tx": 34,
+                  "ty": 35
+                }
+              },
+              {
+                "id": "office",
+                "kind": "inner",
+                "at": "E",
+                "side": "east",
+                "to": "in:commons:yard:deeds",
+                "entry": {
+                  "tx": 1,
+                  "ty": 3
+                }
+              }
+            ],
+            "props": [
+              {
+                "art": "yard-timber-rack",
+                "char": "R",
+                "solid": true
+              },
+              {
+                "art": "yard-counter",
+                "char": "C",
+                "solid": true
+              },
+              {
+                "art": "yard-mending-bench",
+                "char": "M",
+                "solid": true
+              },
+              {
+                "art": "kit-side-doorway",
+                "char": "E",
+                "solid": false,
+                "facing": "left"
+              }
+            ],
+            "spots": {
+              "yard-materials": {
+                "tx": 2,
+                "ty": 3,
+                "label": "Look at the timber"
+              },
+              "yard-mend": {
+                "tx": 10,
+                "ty": 3,
+                "label": "Look at the mending bench"
+              },
+              "yard-furnish": {
+                "tx": 2,
+                "ty": 5,
+                "label": "Look at the pieces"
+              },
+              "yard-counter": {
+                "tx": 7,
+                "ty": 4,
+                "label": "Look at the counter"
+              }
+            },
+            "lights": [
+              {
+                "tx": 4,
+                "ty": 2,
+                "kind": "window",
+                "r": 3
+              },
+              {
+                "tx": 9,
+                "ty": 2,
+                "kind": "window",
+                "r": 3
+              },
+              {
+                "tx": 7,
+                "ty": 3,
+                "kind": "lamp",
+                "r": 4
+              }
+            ],
+            "outside": {
+              "building": "cottage-silas"
+            },
+            "furnishings": [
+              {
+                "piece": "wall-pegs-tools",
+                "tx": 6,
+                "ty": 1
+              },
+              {
+                "piece": "calendar",
+                "tx": 5,
+                "ty": 1
+              },
+              {
+                "piece": "rug-braided",
+                "tx": 1,
+                "ty": 5
+              },
+              {
+                "piece": "chair-side",
+                "facing": "right",
+                "tx": 1,
+                "ty": 5
+              },
+              {
+                "piece": "small-table",
+                "tx": 2,
+                "ty": 5
+              },
+              {
+                "piece": "candle-holder",
+                "parent": 4
+              },
+              {
+                "piece": "wooden-stool",
+                "tx": 3,
+                "ty": 5
+              },
+              {
+                "piece": "iron-lantern",
+                "tx": 3,
+                "ty": 6
+              },
+              {
+                "piece": "woven-basket",
+                "tx": 1,
+                "ty": 6
+              },
+              {
+                "piece": "barrel",
+                "tx": 12,
+                "ty": 8
+              },
+              {
+                "piece": "crate",
+                "tx": 11,
+                "ty": 8
+              },
+              {
+                "piece": "sack",
+                "tx": 10,
+                "ty": 8
+              },
+              {
+                "piece": "crate",
+                "tx": 1,
+                "ty": 8
+              },
+              {
+                "piece": "potted-fern",
+                "tx": 2,
+                "ty": 8
+              },
+              {
+                "piece": "rug-patchwork",
+                "tx": 5,
+                "ty": 5
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "rooms",
+            5
+          ],
+          "value": {
+            "id": "in:commons:yard:deeds",
+            "name": "Pell's office",
+            "parent": "hearthwick",
+            "map": [
+              "##########",
+              "#PPPw===w#",
+              "#PPP.....L",
+              "E.....k..#",
+              "E....TTT.#",
+              "#....TTT.#",
+              "b........#",
+              "##########"
+            ],
+            "doors": [
+              {
+                "id": "shop",
+                "kind": "inner",
+                "at": "E",
+                "side": "west",
+                "to": "in:commons:yard",
+                "entry": {
+                  "tx": 12,
+                  "ty": 5
+                }
+              }
+            ],
+            "props": [
+              {
+                "art": "deeds-pigeonholes",
+                "char": "P",
+                "solid": true
+              },
+              {
+                "art": "deeds-clerk-desk",
+                "char": "k",
+                "solid": true
+              },
+              {
+                "art": "deeds-table",
+                "char": "T",
+                "solid": true
+              },
+              {
+                "art": "kit-side-doorway",
+                "char": "E",
+                "solid": false,
+                "facing": "right"
+              },
+              {
+                "art": "library-side-shelves",
+                "char": "L",
+                "solid": true,
+                "facing": "left"
+              },
+              {
+                "art": "library-side-shelf-short",
+                "char": "b",
+                "solid": true,
+                "facing": "right"
+              }
+            ],
+            "spots": {},
+            "lights": [
+              {
+                "tx": 4,
+                "ty": 2,
+                "kind": "window",
+                "r": 3
+              },
+              {
+                "tx": 8,
+                "ty": 2,
+                "kind": "window",
+                "r": 3
+              },
+              {
+                "tx": 6,
+                "ty": 4,
+                "kind": "lamp",
+                "r": 4
+              }
+            ],
+            "furnishings": [
+              {
+                "piece": "calendar",
+                "tx": 6,
+                "ty": 1
+              },
+              {
+                "piece": "chair-side",
+                "facing": "right",
+                "tx": 4,
+                "ty": 4
+              },
+              {
+                "piece": "chair-side",
+                "facing": "left",
+                "tx": 8,
+                "ty": 4
+              },
+              {
+                "piece": "crate",
+                "tx": 8,
+                "ty": 6
+              },
+              {
+                "piece": "candle",
+                "parent": 3
+              },
+              {
+                "piece": "woven-basket",
+                "tx": 1,
+                "ty": 6
+              }
+            ]
+          }
+        },
         {
           "path": [
             "rooms",
@@ -1043,6 +2638,325 @@
       "valid": false,
       "rule": "open boundary",
       "edits": [
+        {
+          "path": [
+            "rooms",
+            4
+          ],
+          "value": {
+            "id": "in:commons:yard",
+            "name": "Silas's Yard",
+            "parent": "hearthwick",
+            "map": [
+              "##############",
+              "#RRRw====wMMM#",
+              "#RRR......MMM#",
+              "#.....CCC....#",
+              "#............#",
+              "#............E",
+              "#............E",
+              "#............#",
+              "#......@.....#",
+              "######DD######"
+            ],
+            "doors": [
+              {
+                "id": "front",
+                "kind": "door",
+                "at": "D",
+                "side": "south",
+                "to": "hearthwick",
+                "outside": {
+                  "tx": 34,
+                  "ty": 34
+                },
+                "entry": {
+                  "tx": 34,
+                  "ty": 35
+                }
+              },
+              {
+                "id": "office",
+                "kind": "inner",
+                "at": "E",
+                "side": "east",
+                "to": "in:commons:yard:deeds",
+                "entry": {
+                  "tx": 1,
+                  "ty": 3
+                }
+              }
+            ],
+            "props": [
+              {
+                "art": "yard-timber-rack",
+                "char": "R",
+                "solid": true
+              },
+              {
+                "art": "yard-counter",
+                "char": "C",
+                "solid": true
+              },
+              {
+                "art": "yard-mending-bench",
+                "char": "M",
+                "solid": true
+              },
+              {
+                "art": "kit-side-doorway",
+                "char": "E",
+                "solid": false,
+                "facing": "left"
+              }
+            ],
+            "spots": {
+              "yard-materials": {
+                "tx": 2,
+                "ty": 3,
+                "label": "Look at the timber"
+              },
+              "yard-mend": {
+                "tx": 10,
+                "ty": 3,
+                "label": "Look at the mending bench"
+              },
+              "yard-furnish": {
+                "tx": 2,
+                "ty": 5,
+                "label": "Look at the pieces"
+              },
+              "yard-counter": {
+                "tx": 7,
+                "ty": 4,
+                "label": "Look at the counter"
+              }
+            },
+            "lights": [
+              {
+                "tx": 4,
+                "ty": 2,
+                "kind": "window",
+                "r": 3
+              },
+              {
+                "tx": 9,
+                "ty": 2,
+                "kind": "window",
+                "r": 3
+              },
+              {
+                "tx": 7,
+                "ty": 3,
+                "kind": "lamp",
+                "r": 4
+              }
+            ],
+            "outside": {
+              "building": "cottage-silas"
+            },
+            "furnishings": [
+              {
+                "piece": "wall-pegs-tools",
+                "tx": 6,
+                "ty": 1
+              },
+              {
+                "piece": "calendar",
+                "tx": 5,
+                "ty": 1
+              },
+              {
+                "piece": "rug-braided",
+                "tx": 1,
+                "ty": 5
+              },
+              {
+                "piece": "chair-side",
+                "facing": "right",
+                "tx": 1,
+                "ty": 5
+              },
+              {
+                "piece": "small-table",
+                "tx": 2,
+                "ty": 5
+              },
+              {
+                "piece": "candle-holder",
+                "parent": 4
+              },
+              {
+                "piece": "wooden-stool",
+                "tx": 3,
+                "ty": 5
+              },
+              {
+                "piece": "iron-lantern",
+                "tx": 3,
+                "ty": 6
+              },
+              {
+                "piece": "woven-basket",
+                "tx": 1,
+                "ty": 6
+              },
+              {
+                "piece": "barrel",
+                "tx": 12,
+                "ty": 8
+              },
+              {
+                "piece": "crate",
+                "tx": 11,
+                "ty": 8
+              },
+              {
+                "piece": "sack",
+                "tx": 10,
+                "ty": 8
+              },
+              {
+                "piece": "crate",
+                "tx": 1,
+                "ty": 8
+              },
+              {
+                "piece": "potted-fern",
+                "tx": 2,
+                "ty": 8
+              },
+              {
+                "piece": "rug-patchwork",
+                "tx": 5,
+                "ty": 5
+              }
+            ]
+          }
+        },
+        {
+          "path": [
+            "rooms",
+            5
+          ],
+          "value": {
+            "id": "in:commons:yard:deeds",
+            "name": "Pell's office",
+            "parent": "hearthwick",
+            "map": [
+              "##########",
+              "#PPPw===w#",
+              "#PPP.....L",
+              "E.....k..#",
+              "E....TTT.#",
+              "#....TTT.#",
+              "b........#",
+              "##########"
+            ],
+            "doors": [
+              {
+                "id": "shop",
+                "kind": "inner",
+                "at": "E",
+                "side": "west",
+                "to": "in:commons:yard",
+                "entry": {
+                  "tx": 12,
+                  "ty": 5
+                }
+              }
+            ],
+            "props": [
+              {
+                "art": "deeds-pigeonholes",
+                "char": "P",
+                "solid": true
+              },
+              {
+                "art": "deeds-clerk-desk",
+                "char": "k",
+                "solid": true
+              },
+              {
+                "art": "deeds-table",
+                "char": "T",
+                "solid": true
+              },
+              {
+                "art": "kit-side-doorway",
+                "char": "E",
+                "solid": false,
+                "facing": "right"
+              },
+              {
+                "art": "library-side-shelves",
+                "char": "L",
+                "solid": true,
+                "facing": "left"
+              },
+              {
+                "art": "library-side-shelf-short",
+                "char": "b",
+                "solid": true,
+                "facing": "right"
+              }
+            ],
+            "spots": {},
+            "lights": [
+              {
+                "tx": 4,
+                "ty": 2,
+                "kind": "window",
+                "r": 3
+              },
+              {
+                "tx": 8,
+                "ty": 2,
+                "kind": "window",
+                "r": 3
+              },
+              {
+                "tx": 6,
+                "ty": 4,
+                "kind": "lamp",
+                "r": 4
+              }
+            ],
+            "furnishings": [
+              {
+                "piece": "calendar",
+                "tx": 6,
+                "ty": 1
+              },
+              {
+                "piece": "chair-side",
+                "facing": "right",
+                "tx": 4,
+                "ty": 4
+              },
+              {
+                "piece": "chair-side",
+                "facing": "left",
+                "tx": 8,
+                "ty": 4
+              },
+              {
+                "piece": "crate",
+                "tx": 8,
+                "ty": 6
+              },
+              {
+                "piece": "candle",
+                "parent": 3
+              },
+              {
+                "piece": "woven-basket",
+                "tx": 1,
+                "ty": 6
+              }
+            ]
+          }
+        },
         {
           "path": [
             "rooms",

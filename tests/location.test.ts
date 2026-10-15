@@ -76,8 +76,8 @@ test('eight lot anchors and cottage approaches belong to their numbered lots', (
   assert.equal(gateCapacity(PLACES.fixed[0]!), 8);
   for (let g=0;g<8;g++) {
     const a=anchor(`hearthwick:lot:${g}`)!;
-    assert.equal(at(a.space,a.x,a.y).id,`lot:${g}`);
-    assert.deepEqual([Math.floor(a.x/16), Math.floor(a.y/16)],[-60+24*(g%2),44+24*Math.floor(g/2)]);
+    assert.equal(at(a.space,a.x,a.y).id,'hearthwick');
+    assert.deepEqual([Math.floor(a.x/16), Math.floor(a.y/16)],[g%2?46:-23,35+24*Math.floor(g/2)]);
   }
 });
 test('every door, anchor, NPC, repair, pickup, paper and bank is reachable from spawn and all four gates', townReachability);

@@ -19,7 +19,7 @@ func TestOutdoorsPresenceV4Grammar(t *testing.T) {
 			t.Error("refused", room)
 		}
 	}
-	for _, room := range []string{"wilds", "wilds:0:0", "outdoors", "outdoors:00:0", "outdoors:-0:0", "outdoors:+1:0", "outdoors:5:4", "outdoors:5:0", "outdoors:0:0:0", "commons", "home:0", "village"} {
+	for _, room := range []string{"wilds", "wilds:0:0", "outdoors", "outdoors:00:0", "outdoors:-0:0", "outdoors:+1:0", "outdoors:6:4", "outdoors:6:0", "outdoors:0:0:0", "commons", "home:0", "village"} {
 		if validPresenceRoom(room) {
 			t.Error("accepted", room)
 		}
@@ -42,7 +42,7 @@ func TestLocationRulesAtSeam(t *testing.T) {
 		{"outdoors", 40, 376, false, true, "tangle"},
 		{"outdoors", 40, -1200, false, true, "whitequiet"},
 		{"in:village:library", 400, 300, true, false, "in:village:library"},
-		{"outdoors", -968, 520, true, false, "lot:0"},
+		{"outdoors", -584, 520, true, false, "lot:0"},
 		{"in:commons:yard", 40, 40, true, false, "in:commons:yard"},
 		{"wilds", 40, 376, false, false, "wilds"},
 	} {

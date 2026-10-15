@@ -579,7 +579,7 @@ export class WildsWindow {
     const had = this.fixedGround.get(fp.place.id)
     if (had) return had
     if (this.failedGround.has(fp.place.id)) return null
-    const g = groundTiles(this.deps.scene, { areaId: fp.place.id, ...(fp.place.id === 'homestead-lots' ? { groundStyle: 'tangle' as const, groundMark: null } : {}), ground: fp.ground, width: fp.w, height: fp.h, scenery: [...fp.objects.values()].flat().flatMap((o) => {
+    const g = groundTiles(this.deps.scene, { areaId: fp.place.id, ...(fp.place.kind === 'plots' ? { groundStyle: 'tangle' as const, groundMark: null } : {}), ground: fp.ground, width: fp.w, height: fp.h, scenery: [...fp.objects.values()].flat().flatMap((o) => {
       const s = sceneryOf(o)
       if (!s?.groundUnder) return []
       return [{ ...s, groundUnder: { ...s.groundUnder, tx: s.groundUnder.tx - fp.tx, ty: s.groundUnder.ty - fp.ty } }]

@@ -197,8 +197,8 @@ export class HomesteadArt {
       const d = this.gateDrawn.get(slot.gate) ?? { objects: [], bodies: [] }
       this.clear(d)
       this.gateDrawn.set(slot.gate, d)
-      for (const tx of [slot.tx - 1, slot.tx + 2]) {
-        const x = tileMid(tx), y = tileBottom(slot.ty)
+      for (const ty of [slot.ty - 1, slot.ty + 2]) {
+        const x = tileMid(slot.tx), y = tileBottom(ty)
         this.add(d, this.scene.add.image(x, y, 'gatepost-small').setOrigin(0.5, 1).setDepth(y))
       }
       this.drawGateSign(d, slot)
@@ -357,7 +357,7 @@ export class HomesteadArt {
     const home = this.home.here()
     if (!home) return
     // Fence margins belong visually to the plot; cross-lanes and the spine do not.
-    const bounds = L.gridOrigin ? { x: 2, y: 0, w: L.width - 4, h: L.height - 4 } : { x: 1, y: 1, w: L.width - 2, h: L.height - 2 }
+    const bounds = L.gridOrigin ? { x: 0, y: 1, w: L.width, h: L.height - 2 } : { x: 1, y: 1, w: L.width - 2, h: L.height - 2 }
     const key = `lot-shade:${shadeId++}`
     const texture = this.scene.textures.createCanvas(key, bounds.w * TILE, bounds.h * TILE)!
     const ctx = texture.context

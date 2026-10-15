@@ -13,7 +13,7 @@ import type { ExitDef, NpcId, NpcSpot, PropSpot } from '../src/game/worlds.ts';
 export const COMMONS_PLACE = PLACES.fixed.find((f) => f.id === 'hearthwick')!;
 const O = COMMONS_PLACE.origin;
 /** The town's 72×72 layout frame. */
-const MAP = { w: 72, h: 72 };
+const MAP = { w: 72, h: 96 };
 
 export function commonsFixtureBytes(cx: number, cy: number): Uint8Array {
   return new Uint8Array(readFileSync(new URL(`./fixtures/hearthwick-${cx}-${cy}.bin`, import.meta.url)));
@@ -97,6 +97,10 @@ export function servedTownFixture(day: FixedDay = { festival: null, wick: 'Quiet
 
 /** All eight seeded lot chunks, served under a world-specific immutable identity. */
 export function serveFixtureLots(): FixedFootprint {
-  const place = PLACES.fixed.find((f) => f.id === 'homestead-lots')!;
-  return serveFixed(place, Array.from({ length: 8 }, (_, gate) => decodeChunk(new Uint8Array(readFileSync(new URL(`./fixtures/plot-${gate}.bin`, import.meta.url))))));
+  let result: FixedFootprint | null = null;
+  for (const place of PLACES.fixed.filter(p => p.kind === 'plots')) result = serveFixed(place, Array.from({ length: 4 }, (_, row) => {
+    const gate = row * 2 + (place.id === 'lots-east' ? 1 : 0);
+    return decodeChunk(new Uint8Array(readFileSync(new URL(`./fixtures/plot-${gate}.bin`, import.meta.url))));
+  }));
+  return result!;
 }

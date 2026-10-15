@@ -209,7 +209,7 @@ func TestRemovedCommonsRoomRecoversToAnchors(t *testing.T) {
 		}
 	}
 	// The yard's doorstep is the door's entry carried onto the grid.
-	if _, x, y := doorstep(); x != float64(34*16+8) || y != float64(35*16+8) {
+	if _, x, y := doorstep(); x != float64(-14*16+8) || y != float64(104*16+8) {
 		t.Fatal("yard-door anchor moved", x, y)
 	}
 }

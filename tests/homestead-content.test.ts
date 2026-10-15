@@ -75,7 +75,7 @@ test('Commons and homesteads are safe, Wilds is unsafe, and home rest retains ea
 });
 
 test('gate tiles are where the Commons map draws them (same table as the Go test)', () => {
-  const want = [[-61,43],[-37,43],[-61,67],[-37,67],[-61,91],[-37,91],[-61,115],[-37,115]];
+  const want = [[-25,35],[48,35],[-25,59],[48,59],[-25,83],[48,83],[-25,107],[48,107]];
   want.forEach(([tx, ty], g) => assert.deepEqual([gateTile(g).tx, gateTile(g).ty], [tx, ty], `gate ${g}`));
   assert.equal(HOMESTEAD_DATA.commons.tileSize, 16);
 });
@@ -100,7 +100,7 @@ test('the local placement check mirrors the server rules', () => {
   assert.equal(checkPlacement(home, fern, 'outdoor', s.x - 3, s.y + 3, 0), null);
   assert.equal(checkPlacement(home, fern, 'outdoor', HOMESTEAD_DATA.land.width, 0, 0), 'out-of-bounds');
   assert.equal(checkPlacement(home, fern, 'outdoor', s.x, s.y, 0), 'placement-overlap'); // the home site
-  assert.equal(checkPlacement(home, fern, 'outdoor', 2, 2, 0), 'placement-overlap');
+  assert.equal(checkPlacement(home, fern, 'outdoor', 0, 2, 0), 'placement-overlap');
   assert.equal(checkPlacement(home, fern, 'indoor', 0, 1, 0), 'placement-overlap'); // the chair
   assert.equal(checkPlacement(home, fern, 'indoor', 5, 9, 0), 'placement-overlap'); // the doorway
   assert.equal(checkPlacement(home, chair, 'outdoor', 0, 0, 0), 'invalid-placement');
@@ -127,16 +127,15 @@ test('Silas’s Yard: buildings come from the content flag, in a section of thei
 test('lot geometry agrees with authored footprint and the public lane is outside private services', async () => {
   const { PLACES } = await import('../src/lib/places.ts');
   const { lotOrigin, lotAt, lotAtPixel, PLOT_REVISION } = await import('../src/lib/lots.ts');
-  const place = PLACES.fixed.find((p) => p.id === 'homestead-lots')!;
-  assert.deepEqual({ tx: place.origin.tx, ty: place.origin.ty }, { tx: -72, ty: 24 });
-  assert.equal(place.revision, PLOT_REVISION);
-  assert.equal(place.width, 2);
-  assert.equal(place.height, 4);
-  for (let gate=0;gate<8;gate++) {
-    const o=lotOrigin(gate);
+  for (const place of PLACES.fixed.filter(p=>p.kind==='plots')) {
+    assert.equal(place.revision, PLOT_REVISION);
+    assert.equal(place.width, 1);
+    assert.equal(place.height, 4);
+  }
+  for(let gate=0;gate<8;gate++) {
+    const o=lotOrigin(gate),front=gate%2?0:23,back=gate%2?23:0;
     assert.equal(lotAt(o.tx/24,o.ty/24),gate);
-    for (const [x,y,want] of [[11,19,gate],[12,19,gate],[3,18,gate],[20,2,gate],[11,20,null],[22,10,null],[3,19,null],[2,10,null]]) {
-      assert.equal(lotAtPixel((o.tx+x!)*16+8,(o.ty+y!)*16+8),want);
-    }
+    assert.equal(o.tx,gate%2?48:-48);
+    for(const [x,y,want] of [[front,11,gate],[front,12,gate],[1,2,gate],[22,21,gate],[back,10,null],[1,1,null],[22,22,null],[front,13,null]])assert.equal(lotAtPixel((o.tx+x!)*16+8,(o.ty+y!)*16+8),want);
   }
 });

@@ -19,9 +19,9 @@ import (
 // Hashes pin served bytes to their cache identity. A shipped layout edit
 // must bump the revision and add a new hash, never rewrite an old revision.
 var fixedGolden = map[string]string{
-	"fixed:homestead-lots@3": "f19887376540b6de9929851716012a605db97a92eff8f5d9bdd16bbeaa475f50",
-	"fixed:hearthwick@1":     "cae46a3a036da6743da6a4956b722378abfd17effd9616fc492e8a29820e7dea",
-	"fixed:homestead-lots@2": "b924f6a133449eec58a8ea0caebc3baac42dcc3dd8ce30debeeaa8029393ce39",
+	"fixed:hearthwick@2": "9ebfe66ce1d53d5d82106b573eb48467bf98270ebdcad010bc9bc89c28a80527",
+	"fixed:lots-west@3":  "27c85257c16a1fa126affc7c2622adac91fe44aabccfa540789deac64235daf6",
+	"fixed:lots-east@3":  "936291deb0a9743ededdb000bef48a8fb53789aa7c7c39ec755c4f4ba8bff79e",
 }
 
 func servedBytes(t *testing.T, c *contract.WorldChunk) []byte {
@@ -70,7 +70,7 @@ func TestFixedChunkBytesPerRevision(t *testing.T) {
 	}
 }
 func TestFixedEpochs(t *testing.T) {
-	if FixedEpoch("hearthwick", 1) != "fixed:hearthwick@1" {
+	if FixedEpoch("hearthwick", 2) != "fixed:hearthwick@2" {
 		t.Fatal("epoch")
 	}
 	if l, r, ok := ParseFixedEpoch("fixed:hearthwick@12"); !ok || l != "hearthwick" || r != 12 {
@@ -85,8 +85,8 @@ func TestFixedEpochs(t *testing.T) {
 func TestValidateFixedChunks(t *testing.T) {
 	for name, edit := range map[string]func(*contract.WorldChunk){
 		"unknown layout":     func(c *contract.WorldChunk) { c.EpochId = "fixed:missing@1" },
-		"another revision":   func(c *contract.WorldChunk) { c.EpochId = "fixed:hearthwick@2"; c.LayoutRevision = 2 },
-		"revision mismatch":  func(c *contract.WorldChunk) { c.LayoutRevision = 2 },
+		"another revision":   func(c *contract.WorldChunk) { c.EpochId = "fixed:hearthwick@3"; c.LayoutRevision = 3 },
+		"revision mismatch":  func(c *contract.WorldChunk) { c.LayoutRevision = 3 },
 		"outside place":      func(c *contract.WorldChunk) { c.Cx = 2 },
 		"not fixed epoch":    func(c *contract.WorldChunk) { c.EpochId = "still-epoch" },
 		"generator":          func(c *contract.WorldChunk) { c.GeneratorVersion = 3 },
@@ -103,7 +103,7 @@ func TestValidateFixedChunks(t *testing.T) {
 		"object id":     func(c *contract.WorldChunk) { c.Objects[1].Id = c.Objects[0].Id },
 		"empty id":      func(c *contract.WorldChunk) { c.Objects[0].Id = "" },
 	} {
-		c := proto.Clone(Fixed("fixed:hearthwick@1", 0, 1)).(*contract.WorldChunk)
+		c := proto.Clone(Fixed("fixed:hearthwick@2", 0, 1)).(*contract.WorldChunk)
 		edit(c)
 		if Validate(c) == nil {
 			t.Errorf("accepted %s", name)
@@ -115,7 +115,7 @@ func TestValidateFixedChunks(t *testing.T) {
 	if err := Validate(generated()); err != nil {
 		t.Fatal(err)
 	}
-	for _, edit := range []func(*contract.WorldChunk){func(c *contract.WorldChunk) { c.EpochId = "fixed:hearthwick@1" }, func(c *contract.WorldChunk) { c.LayoutRevision = 1 }, func(c *contract.WorldChunk) { c.Objects = []*contract.Placed{{Id: "tree:0,0", Kind: "tree"}} }} {
+	for _, edit := range []func(*contract.WorldChunk){func(c *contract.WorldChunk) { c.EpochId = "fixed:hearthwick@2" }, func(c *contract.WorldChunk) { c.LayoutRevision = 1 }, func(c *contract.WorldChunk) { c.Objects = []*contract.Placed{{Id: "tree:0,0", Kind: "tree"}} }} {
 		c := generated()
 		edit(c)
 		if Validate(c) == nil {
@@ -181,7 +181,7 @@ func TestServedTownStandsAndTargets(t *testing.T) {
 	if len(doc.Positions) == 0 {
 		t.Fatal("no positions")
 	}
-	for _, from := range [][2]int{{4, 60}, {2, 24}, {47, 59}, {9, 95}, {-72, 69}} {
+	for _, from := range [][2]int{{5, 60}, {2, 24}, {47, 59}, {12, 119}, {-48, 71}, {71, 72}} {
 		t.Run(fmt.Sprint(from), func(t *testing.T) {
 			if !open[from] {
 				t.Fatal("blocked flood start")
@@ -217,7 +217,8 @@ func TestServedTownStandsAndTargets(t *testing.T) {
 				}
 			}
 			for g := 0; g < 8; g++ {
-				if !seen[[2]int{-61 + 24*(g%2), 32 + 24*(g/2)}] {
+				ox, oy := LotOrigin(g)
+				if !seen[[2]int{ox + 11, oy + 8}] {
 					t.Errorf("lot:%d doorstep unreachable", g)
 				}
 			}
@@ -226,38 +227,40 @@ func TestServedTownStandsAndTargets(t *testing.T) {
 }
 func TestServedTownRoadMouths(t *testing.T) {
 	open := servedOpen(t)
-	// Both rows copied by seamMirror must close outside the four-tile spine.
-	for _, y := range []int{24, 25, 118, 119} {
-		for x := -72; x <= -25; x++ {
-			if open[[2]int{x, y}] != (x >= -50 && x <= -47) {
-				t.Errorf("lot edge (%d,%d)", x, y)
+	for x := -24; x <= 47; x++ {
+		if open[[2]int{x, 24}] != (x >= 1 && x <= 3) {
+			t.Errorf("north %d", x)
+		}
+		if open[[2]int{x, 119}] != (x <= -22 || x >= 45 || x >= 11 && x <= 13) {
+			t.Errorf("south %d", x)
+		}
+	}
+	for y := 25; y <= 119; y++ {
+		for _, x := range []int{-24, 47} {
+			if !open[[2]int{x, y}] {
+				t.Errorf("lot row %d,%d", x, y)
 			}
 		}
 	}
-	// Closing the southern border must preserve the last pair of gate lanes.
-	for _, x := range []int{-60, -36} {
-		if !open[[2]int{x, 116}] || !open[[2]int{x, 117}] {
-			t.Errorf("southern lot cross-lane %d", x)
+	for g := 0; g < 8; g++ {
+		ox, oy := LotOrigin(g)
+		back := ox
+		if g%2 == 1 {
+			back += 23
+		}
+		for y := 2; y <= 21; y++ {
+			if !open[[2]int{back, oy + y}] {
+				t.Errorf("back %d,%d", back, oy+y)
+			}
 		}
 	}
-	for x := -24; x <= 47; x++ {
-		if open[[2]int{x, 24}] != (x >= 1 && x <= 3) {
-			t.Errorf("north edge %d", x)
-		}
-	}
-	for y := 24; y <= 95; y++ {
-		if open[[2]int{47, y}] != (y >= 58 && y <= 60) {
-			t.Errorf("east edge %d", y)
-		}
-	}
-	for x := -24; x <= 47; x++ {
-		if open[[2]int{x, 95}] != (x >= 8 && x <= 10) {
-			t.Errorf("south edge %d", x)
-		}
-	}
-	for y := 24; y <= 119; y++ {
-		if open[[2]int{-72, y}] != (y >= 68 && y <= 71) {
-			t.Errorf("west edge %d", y)
+	for _, y := range []int{71, 72} {
+		for _, ox := range []int{-48, 48} {
+			for x := ox; x < ox+24; x++ {
+				if !open[[2]int{x, y}] {
+					t.Errorf("wildgate %d,%d", x, y)
+				}
+			}
 		}
 	}
 }

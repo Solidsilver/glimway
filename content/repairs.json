@@ -15,8 +15,8 @@
       "area": "hearthwick",
       "target": "well",
       "pos": {
-        "tx": 12,
-        "ty": 60
+        "tx": 7,
+        "ty": 64
       },
       "resident": "hazel",
       "reaction": "Bread tastes of the well again.",
@@ -38,7 +38,7 @@
       "area": "hearthwick",
       "target": "fence",
       "pos": {
-        "tx": 9,
+        "tx": -8,
         "ty": 76
       },
       "resident": "silas",
@@ -55,8 +55,8 @@
       "area": "hearthwick",
       "target": "library",
       "pos": {
-        "tx": -11,
-        "ty": 76
+        "tx": 0,
+        "ty": 65
       },
       "resident": "mara",
       "reaction": "The drip’s stopped. I’ve put the bucket away.",
@@ -72,8 +72,8 @@
       "area": "hearthwick",
       "target": "bench",
       "pos": {
-        "tx": 8,
-        "ty": 61
+        "tx": 9,
+        "ty": 64
       },
       "resident": "orrin",
       "reaction": "That’s a true slat. Good oak.",
@@ -89,8 +89,8 @@
       "area": "hearthwick",
       "target": "lamp",
       "pos": {
-        "tx": 10,
-        "ty": 60
+        "tx": 12,
+        "ty": 62
       },
       "resident": "ada",
       "reaction": "Burns steady now. Good wick.",
@@ -106,8 +106,8 @@
       "area": "hearthwick",
       "target": "hame",
       "pos": {
-        "tx": 0,
-        "ty": 43
+        "tx": -4,
+        "ty": 31
       },
       "resident": "silas",
       "reaction": "Shines the way Hollis kept it.",

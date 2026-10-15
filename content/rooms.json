@@ -35,12 +35,12 @@
           "side": "south",
           "to": "hearthwick",
           "outside": {
-            "tx": -11,
-            "ty": 58
+            "tx": 6,
+            "ty": 53
           },
           "entry": {
-            "tx": -11,
-            "ty": 59
+            "tx": 6,
+            "ty": 54
           }
         }
       ],
@@ -104,12 +104,12 @@
       "outside": {
         "building": "house-west",
         "window": {
-          "tx": -9,
-          "ty": 57
+          "tx": 8,
+          "ty": 52
         },
         "chimney": {
-          "x": -189,
-          "y": 897
+          "x": 83,
+          "y": 817
         }
       },
       "furnishings": [
@@ -193,12 +193,12 @@
           "side": "south",
           "to": "hearthwick",
           "outside": {
-            "tx": 29,
-            "ty": 76
+            "tx": 21,
+            "ty": 103
           },
           "entry": {
-            "tx": 29,
-            "ty": 77
+            "tx": 21,
+            "ty": 104
           }
         },
         {
@@ -452,12 +452,12 @@
           "side": "south",
           "to": "hearthwick",
           "outside": {
-            "tx": -11,
-            "ty": 76
+            "tx": 0,
+            "ty": 65
           },
           "entry": {
-            "tx": -11,
-            "ty": 77
+            "tx": 0,
+            "ty": 66
           }
         }
       ],
@@ -561,8 +561,8 @@
       "outside": {
         "building": "library",
         "window": {
-          "tx": -10,
-          "ty": 74
+          "tx": 1,
+          "ty": 63
         }
       },
       "furnishings": [
@@ -632,8 +632,8 @@
         "#RRR......MMM#",
         "#.....CCC....#",
         "#............#",
-        "#............E",
-        "#............E",
+        "#............#",
+        "#............#",
         "#............#",
         "#......@.....#",
         "######DD######"
@@ -646,23 +646,12 @@
           "side": "south",
           "to": "hearthwick",
           "outside": {
-            "tx": 34,
-            "ty": 34
+            "tx": -14,
+            "ty": 103
           },
           "entry": {
-            "tx": 34,
-            "ty": 35
-          }
-        },
-        {
-          "id": "office",
-          "kind": "inner",
-          "at": "E",
-          "side": "east",
-          "to": "in:commons:yard:deeds",
-          "entry": {
-            "tx": 1,
-            "ty": 3
+            "tx": -14,
+            "ty": 104
           }
         }
       ],
@@ -681,12 +670,6 @@
           "art": "yard-mending-bench",
           "char": "M",
           "solid": true
-        },
-        {
-          "art": "kit-side-doorway",
-          "char": "E",
-          "solid": false,
-          "facing": "left"
         }
       ],
       "spots": {
@@ -814,28 +797,32 @@
     },
     {
       "id": "in:commons:yard:deeds",
-      "name": "Pell's office",
+      "name": "Pell's land office",
       "parent": "hearthwick",
       "map": [
         "##########",
         "#PPPw===w#",
         "#PPP.....L",
-        "E.....k..#",
-        "E....TTT.#",
+        "#.....k..#",
         "#....TTT.#",
-        "b........#",
-        "##########"
+        "#....TTT.#",
+        "b...@....#",
+        "####DD####"
       ],
       "doors": [
         {
-          "id": "shop",
-          "kind": "inner",
-          "at": "E",
-          "side": "west",
-          "to": "in:commons:yard",
+          "id": "front",
+          "kind": "door",
+          "at": "D",
+          "side": "south",
+          "to": "hearthwick",
+          "outside": {
+            "tx": 23,
+            "ty": 58
+          },
           "entry": {
-            "tx": 12,
-            "ty": 5
+            "tx": 23,
+            "ty": 59
           }
         }
       ],
@@ -854,12 +841,6 @@
           "art": "deeds-table",
           "char": "T",
           "solid": true
-        },
-        {
-          "art": "kit-side-doorway",
-          "char": "E",
-          "solid": false,
-          "facing": "right"
         },
         {
           "art": "library-side-shelves",

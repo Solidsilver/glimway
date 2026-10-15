@@ -514,7 +514,7 @@ func TestWorldMoveFromAHomeArrivesAtItsGate(t *testing.T) {
 			doc := h.State
 			doc.Area, doc.Position = row.area, rules.Position{X: 80, Y: 80}
 			if row.area == "outdoors" {
-				doc.Position = rules.Position{X: -42*16 + 8, Y: 58*16 + 8}
+				doc.Position = rules.Position{X: 59*16 + 8, Y: 58*16 + 8}
 			}
 			req["progress"] = doc
 			moved := x.worldReq("POST", "/api/world/move", req, hc, 200)

@@ -233,7 +233,7 @@ func TestWildsNearMakesEpochsAndChunks(t *testing.T) {
 	if n.Center.Cx != 0 || n.Center.Cy != -1 || n.Center.Realm != "hearthwick" || n.Center.Layer != 0 || n.Radius != 2 {
 		t.Fatalf("window %+v %d", n.Center, n.Radius)
 	}
-	if r := n.Frontier.Rect; r.MinCx != -6 || r.MinCy != -8 || r.MaxCx != 4 || r.MaxCy != 7 {
+	if r := n.Frontier.Rect; r.MinCx != -5 || r.MinCy != -8 || r.MaxCx != 5 || r.MaxCy != 7 {
 		t.Fatalf("frontier %+v", r)
 	}
 	// The window around (0,-1) is chunks -2..2 by -3..0 inside the frontier:

@@ -157,7 +157,7 @@
       "rule": {
         "kind": "placed",
         "area": "hearthwick",
-        "tx": 7,
+        "tx": -10,
         "ty": 72
       }
     },
@@ -188,8 +188,8 @@
       "rule": {
         "kind": "placed",
         "area": "hearthwick",
-        "tx": 36,
-        "ty": 49
+        "tx": -12,
+        "ty": 43
       }
     },
     {
@@ -221,8 +221,8 @@
       "rule": {
         "kind": "placed",
         "area": "hearthwick",
-        "tx": 40,
-        "ty": 76
+        "tx": 35,
+        "ty": 104
       }
     },
     {
