@@ -310,7 +310,8 @@ func TestHomeRestAndSafeBoundaries(t *testing.T) {
 	// Before the cottage (tier 0) the bedroll on the land rests you; once it stands, only inside.
 	doc = s.State
 	doc.HP = 1
-	doc.Area = "home:0"
+	doc.Area = "outdoors"
+	doc.Position.X, doc.Position.Y = -968, 520
 	s = x.reportState(c, s, doc.HP, doc.Mana, testWhere(doc))
 	x.expect("POST", "/api/spend", spendBody(s, "home-rest", "", "bedroll", doc), c, 200)
 	s.Snapshot = x.expect("GET", "/api/state", nil, c, 200).Snapshot
@@ -319,7 +320,8 @@ func TestHomeRestAndSafeBoundaries(t *testing.T) {
 	}
 	doc = s.State
 	doc.HP = 1
-	doc.Area = "home:0"
+	doc.Area = "outdoors"
+	doc.Position.X, doc.Position.Y = -968, 520
 	s = x.reportState(c, s, doc.HP, doc.Mana, testWhere(doc))
 	if v := x.exp("POST", "/api/spend", spendBody(s, "home-rest", "", "doorstep", doc), c, 409); v.Error.Code != "not-at-own-plot" {
 		t.Fatal("doorstep rest with a cottage", v.Error.Code)
@@ -328,6 +330,7 @@ func TestHomeRestAndSafeBoundaries(t *testing.T) {
 		doc = s.State
 		doc.HP = 1
 		doc.Area = area
+		doc.Position.X, doc.Position.Y = 80, 80
 		if area == "commons" {
 			doc = onCommons(doc, 376, 40)
 		}

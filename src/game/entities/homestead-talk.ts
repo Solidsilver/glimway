@@ -283,7 +283,8 @@ export class HomesteadTalk {
       } else if (info?.mine) {
         const unplaced = this.home.homes.mine?.items.find((i) => i.itemDef === 'gate-shelf' && i.scene === null)
         if (unplaced) {
-          out.push({ id: `home:place-shelf:${unplaced.id}`, ...at(slot.shelf, 2), label: 'Set out your gate shelf', verb: 'Place', markerOffset: 16, reach: 52, clickReach: 52, available: () => this.insideGate(slot.gate), activate: () => void this.placeGateShelf(unplaced.id) })
+          // Beat the nearer mailbox while the owner is inside the gate.
+          out.push({ id: `home:place-shelf:${unplaced.id}`, rank: 1, ...at(slot.shelf, 2), label: 'Set out your gate shelf', verb: 'Place', markerOffset: 16, reach: 52, clickReach: 52, available: () => this.insideGate(slot.gate), activate: () => void this.placeGateShelf(unplaced.id) })
         }
       }
     }

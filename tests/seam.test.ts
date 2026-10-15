@@ -1296,3 +1296,50 @@ test('a late homestead layer joins an existing FixedLife hook once, without rebu
   r.builds.step(Infinity);assert.equal(draws,1);
   c.destroy();assert.equal(detaches,1);
 });
+
+test('a usable gate shelf placement beats a nearer mailbox, only inside its own gate', async () => {
+  serveFixtureCommons();
+  serveFixtureLots();
+  const { HomesteadTalk } = await import('../src/game/entities/homestead-talk.ts');
+  const { Interactables } = await import('../src/game/entities/interactables.ts');
+  const lane = commonsLane()!;
+  const slot = lane.gates[0]!;
+  const hero = { x: (slot.tx + 1) * 16 + 8, y: slot.ty * 16 + 8 };
+  const scene = new FakeScene();
+  const talk = new HomesteadTalk({ scene, deps: { world: { areaId: 'outdoors', npcs: [] }, hero: () => hero }, commons: lane,
+    homes: { gateInfo: (gate: number) => ({ mine: gate === 0 }), mine: { items: [{ id: 'new-shelf', itemDef: 'gate-shelf', scene: null }] } },
+  } as never);
+  const placement = talk.interactionList().find((p) => p.id === 'home:place-shelf:new-shelf')!;
+  assert.ok(placement);
+  const picker = new Interactables(scene as never, { reducedMotion: true });
+  const mailbox = { id: 'home:mail', x: hero.x + 16, y: hero.y - 16, label: 'Open the mailbox', activate() {} } as const;
+  picker.register({}, [mailbox, placement]);
+  assert.equal(picker.pick(hero)?.id, placement.id);
+  hero.y += 16; // Public lane immediately south of the gate.
+  assert.notEqual(picker.pick(hero)?.id, placement.id);
+});
+
+test('flower touches belong to visible authored flowers and detach with their chunk', async () => {
+  const fp = serveFixtureCommons();
+  const { Touches } = await import('../src/game/entities/touches.ts');
+  const { Interactables } = await import('../src/game/entities/interactables.ts');
+  const picker = new Interactables(new FakeScene() as never, { reducedMotion: true });
+  const touches = new Touches({ world: { props: [], exits: [] }, interactables: picker } as never);
+  const flowers = [...fp.objects.values()].flat().filter((o) => o.variant === 'wildflowers' && o.art);
+  assert.ok(flowers.length > 0, 'real Bloom flower art is served in Hearthwick');
+  const owner = {};
+  touches.attachChunk(owner, [], 0, 'hearthwick', flowers.filter((o) => objectOut(o, { festival: null, wick: 'Quiet' })));
+  assert.equal(picker.list.length, 0);
+  touches.attachChunk(owner, [], 0, 'hearthwick', flowers.filter((o) => objectOut(o, { festival: null, wick: 'Bloom' })));
+  assert.equal(picker.list.length, flowers.length);
+  for (const flower of flowers) {
+    const point = picker.pick({ x: flower.tx * 16 + flower.art!.ox, y: flower.ty * 16 + flower.art!.oy });
+    assert.equal(point?.verb, 'Smell');
+  }
+  touches.detachChunk(owner);
+  assert.equal(picker.list.length, 0);
+  touches.attachFlowers(owner, [{ x: -120, y: -50 }]);
+  assert.equal(picker.pick({ x: -120, y: -50 })?.verb, 'Smell');
+  touches.attachFlowers(owner, []);
+  assert.equal(picker.list.length, 0, 'a picked generated flower loses its touch');
+});

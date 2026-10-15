@@ -182,3 +182,35 @@ func TestOneTown037StoresBlockedAndUnlitPieces(t *testing.T) {
 		s.Close()
 	}
 }
+
+// Way-lamps are free fall markers, not item-backed furnishings. Preserve their
+// complete records rather than inventing an unrelated inventory refund.
+func TestOneTown037ArchivesWickLampsBeforeExpiry(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "lamps.sqlite")
+	old := newUpgradeFixture(t, path, "036_outdoors.sql", nil)
+	_, err := old.Exec(`INSERT INTO worlds(id,owner_id,seed,created_at) VALUES('w','alice','seed',1);
+ INSERT INTO players(account_id,display_name,world_id,created_at,last_seen_at) VALUES('alice','Alice','w',1,1),('bob','Bob','w',1,1);
+ INSERT INTO wild_epochs VALUES('wick','w','wick','seed',3,'t:1:9',1,9),('still','w','still','seed',3,'0',1,NULL);
+ INSERT INTO lanterns(id,epoch,world_id,owner_id,x,y,lit_by,at,lit_at) VALUES
+ ('fallen','wick','w','alice',-40,99,'bob',12,13),('kept','still','w','bob',1,2,NULL,14,NULL);`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	old.Close()
+	for pass := 0; pass < 2; pass++ {
+		s, err := Open(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if fallRows(t, s, `SELECT count(*) FROM one_town_lantern_archive WHERE id='fallen' AND epoch='wick' AND world_id='w' AND owner_id='alice' AND x=-40 AND y=99 AND lit_by='bob' AND at=12 AND lit_at=13`) != 1 || fallRows(t, s, `SELECT count(*) FROM one_town_lantern_archive`) != 1 {
+			t.Fatal("lamp recovery record lost or duplicated")
+		}
+		if fallRows(t, s, `SELECT count(*) FROM lanterns WHERE id='kept' AND epoch='still' AND owner_id='bob'`) != 1 || fallRows(t, s, `SELECT count(*) FROM lanterns WHERE id='fallen'`) != 0 {
+			t.Fatal("wrong epoch expired")
+		}
+		if fallRows(t, s, `SELECT count(*) FROM item_stacks`) != 0 || fallRows(t, s, `SELECT count(*) FROM homestead_items`) != 0 {
+			t.Fatal("free lamp minted inventory")
+		}
+		s.Close()
+	}
+}

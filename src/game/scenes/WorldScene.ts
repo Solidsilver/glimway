@@ -440,6 +440,7 @@ export class WorldScene extends Phaser.Scene {
         solids: this.solids.group,
         tileArt: this.tileArt,
         gathering: () => this.gathering,
+        touches,
         entities: wilds,
         occluders: {
           add: (list) => this.occluders.push(...list),

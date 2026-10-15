@@ -696,10 +696,12 @@ func (x *rig) cacheAccounts() {
 	}
 }
 
+// testWhere adapts remaining legacy village/home scenario fixtures. Room fixtures
+// only substitute the new-player outdoor spawn; other coordinates stay literal.
 func testWhere(s rules.State) map[string]any {
 	area := string(location.ContentSpace(s.Area))
 	x, y := s.Position.X, s.Position.Y
-	if content.KnownRoom(area) && (x < 0 || x > 384 || y < 0 || y > 384 || (x == 72 && y == 968)) {
+	if content.KnownRoom(area) && (x == 72 && y == 968) {
 		x, y = 80, 80
 	}
 	if area == "village" {
@@ -708,11 +710,17 @@ func testWhere(s rules.State) map[string]any {
 	}
 	if gate := rules.HomeGate(area); gate >= 0 {
 		area = "outdoors"
-        if gate < 8 {
-            ox,oy:=chunks.LotOrigin(gate)
-            if x>=float64(ox*16)&&x<float64((ox+24)*16)&&y>=float64(oy*16)&&y<float64((oy+24)*16) {
-                // Already standing in this lot's world frame.
-            } else if x>=0&&x<384&&y>=0&&y<384 { x+=float64(ox*16);y+=float64(oy*16) } else { x=float64((ox+11)*16+8);y=float64((oy+8)*16+8) }
+		if gate < 8 {
+			ox, oy := chunks.LotOrigin(gate)
+			if x >= float64(ox*16) && x < float64((ox+24)*16) && y >= float64(oy*16) && y < float64((oy+24)*16) {
+				// Already standing in this lot's world frame.
+			} else if x >= 0 && x < 384 && y >= 0 && y < 384 {
+				x += float64(ox * 16)
+				y += float64(oy * 16)
+			} else {
+				x = float64((ox+11)*16 + 8)
+				y = float64((oy+8)*16 + 8)
+			}
 		} else {
 			x, y = 40, 424
 		}

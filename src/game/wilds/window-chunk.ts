@@ -1,3 +1,4 @@
+import type { Touches } from '../entities/touches.ts'
 /**
  * One chunk of the open map in the scene (docs/design/open-map.md 2.5,
  * 2.6): painted once, off the walking frame, then attached while it is in
@@ -57,6 +58,7 @@ export interface ChunkDeps {
   solids: Phaser.Physics.Arcade.StaticGroup
   tileArt: TileArt<Phaser.GameObjects.Image>
   gathering: () => Gathering | null
+  touches?: Pick<Touches, 'attachFlowers' | 'detachChunk'>
   entities: WildsEntities
   occluders: { add(list: Occluder[]): void; remove(images: readonly Phaser.GameObjects.Image[]): void }
   reducedMotion: boolean
@@ -225,6 +227,10 @@ export class AttachedChunk implements Buildable {
         next = this.scenery(spots, next, deadline)
         return next >= spots.length
       }),
+      () => {
+        this.refreshFlowers()
+        return true
+      },
       () => perfTime('attach:generated:gathering', () => {
         deps.gathering()?.addChunk(this.key, deps.gather(this.terrain))
         return true
@@ -255,6 +261,11 @@ export class AttachedChunk implements Buildable {
       this.todo.shift()
     }
     return true
+  }
+
+  private refreshFlowers(): void {
+    const flowers = chunkScenery({ ...this.terrain, decor: this.terrain.decor.filter((d) => d.kind === 'flowers') }, (key) => this.deps.scene.textures.exists(key))
+    this.deps.touches?.attachFlowers(this, flowers)
   }
 
   /** Everything built: its scenery, pieces, things and sites are all in. */
@@ -355,6 +366,7 @@ export class AttachedChunk implements Buildable {
       if (!this.relay(tx, ty)) beyond(tx, ty)
     }
     if (opened.length) this.deps.gathering()?.addChunk(this.key, this.deps.gather(this.terrain))
+    this.refreshFlowers()
     return true
   }
 
@@ -544,6 +556,7 @@ export class AttachedChunk implements Buildable {
     const done = perfSpan('detach')
     this.deps.builds?.drop(this)
     this.todo = []
+    this.deps.touches?.detachChunk(this)
     perfTime('detach:things', () => this.deps.entities.detach(this.key))
     perfTime('detach:gathering', () => this.deps.gathering()?.removeChunk(this.key))
     perfTime('detach:occluders', () => this.fading.length && this.deps.occluders.remove(this.fading))

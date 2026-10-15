@@ -1,3 +1,4 @@
+import { calendarAt } from '../src/lib/calendar.ts'
 import { devices } from '@playwright/test'
 import { expect, test, type Page } from './fixtures'
 import { holdUntil, readDialogue, toastAfter, toastCount, warp, waitForArea, waitForLive, expectLine } from './helpers'
@@ -18,6 +19,15 @@ const seat = (page: Page) => page.evaluate(() => (window as unknown as { __fsSea
 /** The thought above the hero now (src/game/entities/thoughts.ts), or null. */
 const thought = (page: Page) => page.evaluate(() => (window as unknown as { __fsThoughts?: () => { current: string | null } }).__fsThoughts?.().current ?? null)
 const manaMeter = (page: Page) => page.getByRole('meter', { name: 'Mana' })
+/** Bloom's authored flowers at Hearthwick (world tiles 11..13, 37..38). */
+async function visitFlowers(page: Page): Promise<void> {
+  let t = Date.UTC(2026, 0, 1) / 1000
+  while (calendarAt(t).mark !== 'Bloom') t += 86400
+  await page.evaluate((t) => (window as unknown as { __fsDevCalendar: (t: number) => void }).__fsDevCalendar(t), t)
+  await warp(page, 'outdoors', 12, 38)
+  await waitForLive(page)
+}
+
 test('the bench seats the hero, mana comes back, movement stands up', async ({ page }) => {
   // A level-10 warrior: Cleave on F spends the mana (the default level-2 hero has no moves yet).
   await freshPlayer(page, 'Tansy', undefined, { lvl: 10 })
@@ -52,7 +62,7 @@ test('the bench seats the hero, mana comes back, movement stands up', async ({ p
 
 test('smelling the flowers says something different each time', async ({ page }) => {
   await freshPlayer(page)
-  await warp(page, 'outdoors', 22, 56) // the planter by the lane
+  await visitFlowers(page)
   await expect(page.locator('.prompt')).toContainText('Smell the flowers')
 
   const before = await toastCount(page)
@@ -102,10 +112,10 @@ test.describe('phone', () => {
     await expect.poll(async () => (await seat(page))?.seated).toBe(false)
   })
 
-  test('smelling the planter works from the action button', async ({ page }) => {
+  test('smelling the flowers works from the action button', async ({ page }) => {
     await freshPlayer(page)
     await waitForArea(page, 'outdoors')
-    await warp(page, 'outdoors', 22, 56)
+    await visitFlowers(page)
     const act = page.locator('.controls .act')
     await expect(act).toHaveAttribute('aria-label', 'Smell the flowers')
     await act.tap()
@@ -140,7 +150,7 @@ test.describe('screens (SCREENS=1)', () => {
     await expect.poll(async () => SIT_LINES.includes((await thought(page)) ?? '')).toBe(true)
     await shot(page, 'touch-sit')
 
-    await warp(page, 'outdoors', 22, 56)
+    await visitFlowers(page)
     await expect(page.locator('.prompt')).toContainText('Smell the flowers')
     await page.keyboard.press('e')
     await expect.poll(async () => FLOWER_LINES.includes((await thought(page)) ?? '')).toBe(true)

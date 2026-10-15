@@ -149,6 +149,8 @@ test('a twist mends you; the fox goes in a pocket, and the lantern rides in the 
   await closeInventory(page)
   // Drawn at the hero's side, and put away while fighting.
   await expect.poll(() => page.evaluate(() => (window as unknown as { __fsOffHand: () => string | null }).__fsOffHand())).toBe('carters-lantern')
+  await go(page, 'woodland', 15, 20)
+  await waitForLive(page)
   await page.evaluate(() => (window as unknown as { __fsDevAttack: () => void }).__fsDevAttack())
   // Within the swing (game time; checked every frame, so the short gap can't slip by).
   const offHand = (want: string | null) => (window as unknown as { __fsOffHand: () => string | null }).__fsOffHand() === want

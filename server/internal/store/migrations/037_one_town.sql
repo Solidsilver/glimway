@@ -9,7 +9,17 @@ UPDATE player_place SET
    THEN (24+24*(CAST(substr(area,6) AS INTEGER)/2)+8)*16+8 ELSE 424 END,
  area='outdoors',place_set_version=(SELECT version FROM players p WHERE p.account_id=player_place.account_id)
  WHERE area='village' OR area='commons' OR (area='outdoors' AND y>=384) OR area GLOB 'home:[0-9]*';
--- These wick bytes predate the new fixed neighbours. Fresh epochs get new IDs.
+-- Fallen way-lamps are free markers, with no inventory source item to refund.
+-- Preserve every marker and its owner outside the expiring epoch for recovery.
+CREATE TABLE one_town_lantern_archive(
+ id TEXT PRIMARY KEY, epoch TEXT NOT NULL, world_id TEXT NOT NULL,
+ owner_id TEXT NOT NULL, x INTEGER NOT NULL, y INTEGER NOT NULL,
+ lit_by TEXT, at INTEGER NOT NULL, lit_at INTEGER
+);
+INSERT INTO one_town_lantern_archive
+ SELECT l.id,l.epoch,l.world_id,l.owner_id,l.x,l.y,l.lit_by,l.at,l.lit_at FROM lanterns l JOIN wild_epochs e ON e.id=l.epoch WHERE e.kind='wick';
+-- Expire wick terrain and all epoch-owned gameplay state, as at season change:
+-- falls, camp claims, personal claims and discoveries. Fresh epochs get new IDs.
 DELETE FROM world_changes WHERE epoch IN (SELECT id FROM wild_epochs WHERE kind='wick');
 UPDATE player_place SET last_wick_epoch='',last_wick_starts_at=NULL WHERE last_wick_epoch IN (SELECT id FROM wild_epochs WHERE kind='wick');
 DELETE FROM wild_epochs WHERE kind='wick';

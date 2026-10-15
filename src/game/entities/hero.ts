@@ -342,8 +342,8 @@ export class Hero {
    * weapon's damage (src/game/held.ts). `toward` turns to face a point first
    * (a mouse click).
    */
-  tryAttack(opts: { tool?: boolean; toward?: { x: number; y: number }; force?: boolean } = {}): void {
-    if (!opts.force && !canStartFight(this.deps.world.areaId, this.sprite)) return
+  tryAttack(opts: { tool?: boolean; toward?: { x: number; y: number } } = {}): void {
+    if (!canStartFight(this.deps.world.areaId, this.sprite)) return
     if (this.seat) return // no fighting from a bench; move to stand up
     const kit = this.kit()
     if (this.attackCooldown > 0 || this.deps.transitioning()) return

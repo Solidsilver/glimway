@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { serializeHomesteadVectors } from '../scripts/homestead-vectors.ts';
 import { FIXTURE_LAND } from './land-fixture.ts';
-import { HOMESTEAD_DATA, checkPlacement, checkRemoval, cleanPostName, gateTile, parseHomeArea, type HomeInstance } from '../src/lib/homestead.ts';
+import { HOMESTEAD_DATA, checkPlacement, checkRemoval, cleanPostName, gateTile, type HomeInstance } from '../src/lib/homestead.ts';
 import { LAND, landAt, landFromCells, postCost, rememberLand, servedLand } from '../src/lib/homestead-land.ts';
 
 test('shared post name vectors reject every Unicode control before tidying', () => {
@@ -45,13 +45,11 @@ test('lantern posts cost more each time', () => {
   for (let n = 1; n < 8; n++) assert.ok(total(n) > total(n - 1));
 });
 
-test('gates alternate sides down the lane and home areas parse', () => {
+test('gates alternate sides down the lane and reject invalid lots', () => {
   assert.deepEqual(gateTile(0), { tx: -61, ty: 43, side: 'west' });
   assert.equal(gateTile(1).side, 'east');
   assert.equal(gateTile(7).ty, 115);
   assert.throws(() => gateTile(8));
-  assert.equal(parseHomeArea('home:12'), 12);
-  for (const bad of ['home:', 'home:01', 'home:-1', 'home:1x', 'commons', 'home:99999']) assert.equal(parseHomeArea(bad), null);
 });
 
 const post = (id: string, x: number | null, y: number | null): HomeInstance => ({ id, itemDef: 'lantern-post', scene: x === null ? null : 'outdoor', x, y, rotation: x === null ? null : 0, name: 'Ada’s Lamp' });

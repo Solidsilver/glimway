@@ -10,7 +10,6 @@ import (
 	contract "glimway/server/internal/gen/glimway/v1"
 	"glimway/server/internal/land"
 	"glimway/server/internal/location"
-	"glimway/server/internal/rules"
 	"glimway/server/internal/store"
 	"glimway/server/internal/wilds"
 	"slices"
@@ -214,7 +213,7 @@ func (a *Server) gather(ctx context.Context, tx *sql.Tx, s *store.Snapshot, req 
 	var home *homeView
 	var tile [2]int
 	lit := false
-	if homeGateAt(s) >= 0 && (area == outdoorsArea || rules.HomeGate(area) >= 0) {
+	if homeGateAt(s) >= 0 && area == outdoorsArea {
 		var err error
 		if home, err = ownLand(ctx, tx, s, area, now, "cannot-gather-here"); err != nil {
 			return chunkError(err)

@@ -1,6 +1,6 @@
 import type { HomeView } from '../../lib/api/types.ts'
 import { lotOrigin } from '../../lib/lots.ts'
-import { lotAt, plotEpoch, plotIdentity } from '../../lib/lots.ts'
+import { lotAt, plotEpoch, plotIdentity, PLOT_REVISION } from '../../lib/lots.ts'
 /**
  * Fixed ground on the open map (docs/design/location-seam.md 1.2, 4, lane
  * S5): an authored layout's chunks (the Commons', content/layouts, sliced by
@@ -171,7 +171,7 @@ export function prepareFixed(session: Pick<Session, 'link'>): Promise<void> | nu
   desiredWorld = world
   keepPlotWorld(world)
   const plots = footprints.get('homestead-lots')
-  if (plots && plots.epoch !== `plot:${world}@2`) footprints.delete('homestead-lots')
+  if (plots && plots.epoch !== `plot:${world}@${PLOT_REVISION}`) footprints.delete('homestead-lots')
   if (fixedReady()) return Promise.resolve()
   const api = session.link?.api.operations
   if (!api) return null
@@ -207,7 +207,7 @@ async function loadFootprint(api: Pick<OperationsApi, 'chunk'>, place: FixedPlac
 /** A footprint from its served chunks (any order). */
 export function assembleFootprint(place: FixedPlace, chunks: readonly WorldChunk[]): FixedFootprint {
   const plot = chunks[0] && plotIdentity(chunks[0].epochId)
-  const epoch = plot ? `plot:${plot.world}@2` : fixedEpoch(place.layout, place.revision)
+  const epoch = plot ? `plot:${plot.world}@${PLOT_REVISION}` : fixedEpoch(place.layout, place.revision)
   const { x0, y0, x1, y1 } = fixedChunks(place)
   const w = (x1 - x0 + 1) * CHUNK_TILES
   const h = (y1 - y0 + 1) * CHUNK_TILES
@@ -447,7 +447,7 @@ let plotBase: FixedFootprint | null = null
 export function applyLotHome(gate: number, home: HomeView | null): void {
   const current = footprints.get('homestead-lots'), base = plotBase
   if (!current || !base || gate < 0 || gate > 7) return
-  if (home && current.epoch !== `plot:${home.worldId}@2`) home = null
+  if (home && current.epoch !== `plot:${home.worldId}@${PLOT_REVISION}`) home = null
   const o = lotOrigin(gate), key = `${o.tx / 24},${o.ty / 24}`
   const fp = { ...current, solid: current.solid.map((r, y) => y >= o.ty-current.ty && y < o.ty-current.ty+24 ? [...r] : r), objects: new Map(current.objects) }
   for (let y = 0; y < 24; y++) for (let x = 0; x < 24; x++) fp.solid[o.ty - fp.ty + y]![o.tx - fp.tx + x] = base.solid[o.ty - base.ty + y]![o.tx - base.tx + x]!

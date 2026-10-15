@@ -185,9 +185,15 @@ test('out in the Wilds: close up on you, zoom kept between openings, drag, wheel
   expect(s.outside).toBe(false)
   await expect(page.getByTestId('map-you')).toBeVisible()
   await expect(page.locator('[data-label="you"]')).toBeVisible()
-  expect(s.view!.scale).toBe(openingScale(s.vp, CHUNK))
   // On you, as far as the clamp allows (a small walked area sits in the middle on that axis).
-  centredOnYou(s)
+  await expect.poll(async () => {
+    s = await mapReady(page)
+    try {
+      expect(s.view!.scale).toBe(openingScale(s.vp, CHUNK))
+      centredOnYou(s)
+      return true
+    } catch { return false }
+  }).toBe(true)
 
   // Two steps in, then close and open again: the zoom is kept, the view centred on you again.
   await page.getByTestId('map-zoom-in').click()

@@ -161,14 +161,6 @@ export function gateTile(gate: number, _data: HomesteadData = HOMESTEAD_DATA): {
   return { tx: o.tx + 11, ty: o.ty + 19, side: gate % 2 ? 'east' : 'west' };
 }
 
-/** The area id of gate g's homestead map. */
-
-/** Gate number of a `home:<g>` area id (null for anything else). */
-export function parseHomeArea(area: string): number | null {
-  const m = /^home:(0|[1-9]\d{0,3})$/.exec(area);
-  return m ? Number(m[1]) : null;
-}
-
 export function homeItem(id: string): HomeItem | undefined {
   return HOMESTEAD_DATA.items.find((i) => i.id === id);
 }

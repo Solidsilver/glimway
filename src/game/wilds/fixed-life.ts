@@ -1,4 +1,3 @@
-import { TERRAIN } from '../../lib/tile.ts'
 /** The Commons layers share the fixed chunks' build and teardown lifecycle. */
 import { chunkOfTile, fixedNpcs, footprintAt, exitOf, objectOut } from './fixed.ts'
 import { calendarAt } from '../../lib/calendar.ts'
@@ -63,9 +62,7 @@ export class FixedLife implements FixedHooks {
       () => repairs.attachChunk(key),
       () => {
         const day = calendarAt(gameNow())
-        const flowers: { tx: number; ty: number }[] = []
-        if (fp) for (let y=cy*24;y<(cy+1)*24;y++) for (let x=cx*24;x<(cx+1)*24;x++) if (fp.ground[y-fp.ty]?.[x-fp.tx] === TERRAIN.flowers) flowers.push({tx:x,ty:y})
-        if (fp) touches.attachChunk(owner, (fp.objects.get(key) ?? []).filter((o) => objectOut(o, day)).map((o) => exitOf(o, fp)).filter((e): e is ExitDef => e !== null), fp.ty + fp.h, fp.place.id, (fp.objects.get(key) ?? []).filter((o) => objectOut(o, day)), flowers)
+        if (fp) touches.attachChunk(owner, (fp.objects.get(key) ?? []).filter((o) => objectOut(o, day)).map((o) => exitOf(o, fp)).filter((e): e is ExitDef => e !== null), fp.ty + fp.h, fp.place.id, (fp.objects.get(key) ?? []).filter((o) => objectOut(o, day)))
       },
       ...this.late(key),
       ...(this.deps.lights?.attachChunk(key) ?? []),

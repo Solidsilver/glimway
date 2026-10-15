@@ -319,7 +319,7 @@ test('a priced shelf slot: a friend buys it in glims, and both logs name the oth
   await go(page, 'outdoors', 1, 34)
   const slot = (await homes(page)).slots.find((s) => s.gate === gate)! as HomesView['slots'][number] & { shelf: { tx: number; ty: number } }
   const [sx, sy] = [slot.shelf.tx * 16 + 8, slot.shelf.ty * 16 + 18]
-  await place(page, sx, sy)
+  await place(page, (slot.tx + 1) * 16 + 8, slot.ty * 16 + 8)
   await expect(page.locator('.prompt')).toContainText('Set out your gate shelf')
   await page.keyboard.press('e')
   await expect.poll(async () => (await homes(page)).mine?.items.some((i) => i.itemDef === 'gate-shelf' && i.scene === 'gate')).toBe(true)

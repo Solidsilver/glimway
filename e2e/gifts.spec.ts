@@ -43,7 +43,7 @@ test('gate shelf: place shelf on Commons lane, stock it, traveller takes gift, d
   const shelfPy = slotWren.shelf.ty * 16 + 18
 
   // Walk up to Wren's gate shelf position
-  await place(page, shelfPx, shelfPy)
+  await place(page, (slotWren.tx + 1) * 16 + 8, slotWren.ty * 16 + 8)
 
   // Prompt should say "Set out your gate shelf"
   await expect(page.locator('.prompt')).toContainText('Set out your gate shelf')
