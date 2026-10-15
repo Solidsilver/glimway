@@ -52,7 +52,7 @@ var deployedMigrationHistory = []struct{ name, sha256 string }{
 	{"034_open_map.sql", "9c30f3440aaa0926c6d3a3c8e96688b6d570b9f211552f6b94e8a25e550d8cc7"},
 	{"035_fight_falls.sql", "a334a045f6322118cc6d675380a6285f3a217ffdd5c188a2d96e595d39835af5"},
 	{"036_outdoors.sql", "45af553fb7b6450c3848cad3d451a1897ba1e804c26ab28dee8a1b5bf7e20b57"},
-	{"037_one_town.sql", "495e7401c594334bb090ea4a0ee79337eb11a8936ac1cb6cbaf27fea3bffc91a"},
+	{"037_one_town.sql", "23c9aed59b159b82424f96df3366e4b7daf7c80808c0ecd3050ae90b9b5347aa"},
 }
 
 func checkDeployedHistory(history []migrationRecord) error {

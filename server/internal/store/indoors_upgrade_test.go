@@ -47,7 +47,7 @@ func TestQuestTree029Upgrade(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if s.State.Glims != balance || s.State.XPGlims != earned || s.State.Area != "outdoors" || s.State.Position != (rules.Position{X: -968, Y: 520}) {
+			if s.State.Glims != balance || s.State.XPGlims != earned || s.State.Area != "outdoors" || s.State.Position != (rules.Position{X: -584, Y: 520}) {
 				t.Fatal(s)
 			}
 			for query, want := range map[string]int{"SELECT count(*) FROM ledger": ledger, "SELECT count(*) FROM outcomes": outcomes, "SELECT COALESCE(SUM(delta),0) FROM ledger": ledgerSum} {

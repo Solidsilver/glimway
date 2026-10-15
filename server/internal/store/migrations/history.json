@@ -147,8 +147,8 @@
   },
   {
     "name": "037_one_town.sql",
-    "sha256": "495e7401c594334bb090ea4a0ee79337eb11a8936ac1cb6cbaf27fea3bffc91a",
+    "sha256": "23c9aed59b159b82424f96df3366e4b7daf7c80808c0ecd3050ae90b9b5347aa",
     "backfill": "migration_037_backfill.go",
-    "backfillSha256": "cdbb50c688b521477eb09fdfc47f2872cfe2f089826a88d00a11c6e88eef3c32"
+    "backfillSha256": "43d6aacda852c33b0db4ea6f603646d240d07685f80938d59cffb3dd31b2d304"
   }
 ]

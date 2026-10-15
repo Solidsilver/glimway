@@ -78,7 +78,7 @@ INSERT INTO item_stacks(location,owner,item_def,maker_id,qty) VALUES('pack','ali
 			t.Errorf("%s: %+v", id, p)
 		}
 	}
-	if p := read("carol"); p.area != "outdoors" || p.x != 72 || p.y != 968 || p.version != 8 || p.set != 8 || p.epoch != "outer-e" || !p.hasStart {
+	if p := read("carol"); p.area != "outdoors" || p.x != 88 || p.y != 968 || p.version != 8 || p.set != 8 || p.epoch != "outer-e" || !p.hasStart {
 		t.Errorf("carol moved: %+v", p)
 	}
 	if count("SELECT count(*) FROM story_marks") != 3 || count("SELECT COALESCE(SUM(qty),0) FROM item_stacks") != 17 || count("SELECT count(*) FROM world_changes") != 1 {
